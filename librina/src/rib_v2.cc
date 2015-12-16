@@ -2052,7 +2052,7 @@ void RIBDaemon::store_connection(const cdap_rib::con_handle_t& con){
 	__ae_version_key_t key;
 	std::map<__ae_version_key_t, RIB*>::const_iterator it;
 	const uint64_t ver = con.version_.version_;
-	const std::string& ae = con.dest_.ae_name_;
+	const std::string& ae = con.src_.ae_name_;
 	const int port_id = con.port_id;
 
 	//Prepare the key

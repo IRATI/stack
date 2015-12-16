@@ -1274,10 +1274,10 @@ int testIpcmAssignToDIFRequestMessage() {
 	DIFConfiguration difConfiguration;
 	difInformation.set_dif_type(NORMAL_IPC_PROCESS);
 	difInformation.set_dif_name(difName);
-	Parameter * parameter = new Parameter("interface", "eth0");
+	PolicyParameter * parameter = new PolicyParameter("interface", "eth0");
 	difConfiguration.add_parameter(*parameter);
 	delete parameter;
-	parameter = new Parameter("vlanid", "430");
+	parameter = new PolicyParameter("vlanid", "430");
 	difConfiguration.add_parameter(*parameter);
 	difConfiguration.set_address(34);
 	delete parameter;
@@ -1558,10 +1558,10 @@ int testIpcmUpdateDIFConfigurationRequestMessage() {
 
         IpcmUpdateDIFConfigurationRequestMessage message;
         DIFConfiguration difConfiguration;
-        Parameter * parameter = new Parameter("interface", "eth0");
+        PolicyParameter * parameter = new PolicyParameter("interface", "eth0");
         difConfiguration.add_parameter(*parameter);
         delete parameter;
-        parameter = new Parameter("vlanid", "430");
+        parameter = new PolicyParameter("vlanid", "430");
         difConfiguration.add_parameter(*parameter);
         delete parameter;
         message.setDIFConfiguration(difConfiguration);

@@ -9,11 +9,13 @@ SUBDIRS = tclap encoders
 #
 #Libs
 #
+librinad_ladir = $(pkgincludedir)/ipcm
 lib_LTLIBRARIES = librinad.la
 
 #Distributable headers
-librinad_ladir = $(pkgincludedir)/ipcm
-librinad_la_HEADERS = encoder.h
+librinad_la_HEADERS = 
+	encoder.h \
+	configuration.h
 
 librinad_la_CFLAGS   =
 librinad_la_CPPFLAGS =				\
@@ -31,15 +33,12 @@ librinad_la_SOURCES  =					\
 	rina-configuration.cc rina-configuration.h	\
 	configuration.h    configuration.cc   \
 	encoder.cc	      encoder.h			\
-	structures_mad.h 					\
-	encoders_mad.h		encoders_mad.cc \
 			      concurrency.h
 
 commonheadersdir = $(includedir)/rinad/common
-commonheaders_HEADERS =   \
-	encoder.h         \
-	encoders_mad.h    \
-	structures_mad.h
+commonheaders_HEADERS = \
+	encoder.h	\
+	configuration.h
 
 encodersheadersdir = $(includedir)/rinad/common/encoders
 # Here 'make' has entered the build/rinad/src/common directory,
@@ -56,9 +55,6 @@ encodersheaders_HEADERS =					\
 	encoders/FlowStateGroupMessage.pb.h			\
 	encoders/FlowStateMessage.pb.h				\
 	encoders/MA-IPCP.pb.h					\
-	encoders/Makefile.am					\
-	encoders/Makefile.in					\
-	encoders/Makefile.inc					\
 	encoders/NeighborArrayMessage.pb.h			\
 	encoders/NeighborMessage.pb.h				\
 	encoders/PolicyDescriptorMessage.pb.h			\

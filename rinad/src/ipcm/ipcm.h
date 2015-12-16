@@ -30,6 +30,7 @@
 #include <map>
 #include <vector>
 #include <utility>
+#include <string>
 
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
@@ -348,7 +349,9 @@ public:
 			rinad::DIFTemplate * dif_template,
 			const rina::ApplicationProcessNamingInformation&
 				difName);
-
+	ipcm_res_t assign_to_dif(Addon* callee, Promise* promise,
+		const unsigned short ipcp_id, rina::DIFInformation &dif_info,
+		const rina::ApplicationProcessNamingInformation &dif_name);
 	//
 	// Register an IPCP to a single DIF
 	//
@@ -854,6 +857,12 @@ private:
 	void io_loop(void);
 
 	friend class Singleton<rinad::IPCManager_>;
+
+	void pre_assign_to_dif(Addon* callee,
+			const rina::ApplicationProcessNamingInformation& dif_name,
+			const unsigned short ipcp_id, IPCMIPCProcess*& ipcp);
+	void assign_to_dif(Addon* callee, Promise *promise,
+			rina::DIFInformation dif_info, IPCMIPCProcess* ipcp);
 };
 
 

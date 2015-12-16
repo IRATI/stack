@@ -50,32 +50,6 @@ private:
 	ErrorCode result_;
 };
 
-///Object exchanged between applications processes that
-///contains the source and destination addresses of the processes
-///and optional authentication information, as well as an
-///encoded CDAP Message. It is used to exchange CDAP messages
-///between APs without having a CDAP session previously established
-///(it can be seen as a one message session)
-class ADataObject {
-public:
-	static const std::string A_DATA;
-	static const std::string A_DATA_OBJECT_CLASS;
-	static const std::string A_DATA_OBJECT_NAME;
-
-	ADataObject();
-	ADataObject(unsigned int source_address,
-		    unsigned int dest_address);
-	~ADataObject();
-
-	//The address of the source AP (or IPCP)
-	unsigned int source_address_;
-
-	//The address of the destination AP (or IPCP)
-	unsigned int dest_address_;
-
-	ser_obj_t encoded_cdap_message_;
-};
-
 //TODO: remove this => convert to a pure struct or use the class directly
 typedef CDAPMessage cdap_m_t;
 
@@ -159,7 +133,32 @@ class CDAPMessageFactory
 						 int invoke_id);
  private:
 	static const int ABSTRACT_SYNTAX_VERSION;
-	;
+};
+
+///Object exchanged between applications processes that
+///contains the source and destination addresses of the processes
+///and optional authentication information, as well as an
+///encoded CDAP Message. It is used to exchange CDAP messages
+///between APs without having a CDAP session previously established
+///(it can be seen as a one message session)
+class ADataObject {
+public:
+	static const std::string A_DATA;
+	static const std::string A_DATA_OBJECT_CLASS;
+	static const std::string A_DATA_OBJECT_NAME;
+
+	ADataObject();
+	ADataObject(unsigned int source_address,
+		    unsigned int dest_address);
+	~ADataObject();
+
+	//The address of the source AP (or IPCP)
+	unsigned int source_address_;
+
+	//The address of the destination AP (or IPCP)
+	unsigned int dest_address_;
+
+	ser_obj_t encoded_cdap_message_;
 };
 
 class CDAPCallbackInterface
@@ -580,6 +579,7 @@ public:
 
 	/// Authentication Policy information
 	cdap_rib::auth_policy_t auth_policy_;
+
 
 	/// DestinationApplication-Entity-Instance-Id (string), optional, not validated by CDAP.
 	/// Specific instance of the Application Entity that the source application

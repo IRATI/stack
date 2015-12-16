@@ -35,10 +35,10 @@
 int ipcp_id = 1;
 
 bool test_flow () {
-	rinad::FlowEncoder encoder;
+	rinad::encoders::FlowEncoder encoder;
 	rina::ser_obj_t encoded_obj;
 
-	rinad::Flow flow_to_encode;
+	rinad::configs::Flow flow_to_encode;
 	std::list<rina::Connection*> connection_list;
 	rina::Connection *pconnection_to_encode = new rina::Connection;
 	rina::DTPConfig dtp_config_to_encode;
@@ -87,7 +87,7 @@ bool test_flow () {
 	encoder.encode(flow_to_encode, encoded_obj);
 
 	// Decode
-	rinad::Flow flow_decoded;
+	rinad::configs::Flow flow_decoded;
 	encoder.decode(encoded_obj, flow_decoded);
 
 	// Assert
@@ -166,7 +166,7 @@ bool test_flow () {
 }
 
 bool test_data_transfer_constants() {
-	rinad::DataTransferConstantsEncoder encoder;
+	rinad::encoders::DataTransferConstantsEncoder encoder;
 	rina::ser_obj_t encoded_obj;
 	rina::DataTransferConstants dtc;
 	rina::DataTransferConstants recovered_obj;
@@ -242,7 +242,7 @@ bool test_data_transfer_constants() {
 }
 
 bool test_directory_forwarding_table_entry() {
-	rinad::DFTEEncoder encoder;
+	rinad::encoders::DFTEEncoder encoder;
 	rina::ser_obj_t encoded_obj;
 	rina::DirectoryForwardingTableEntry dfte;
 	rina::DirectoryForwardingTableEntry recovered_obj;
@@ -290,7 +290,7 @@ bool test_directory_forwarding_table_entry() {
 }
 
 bool test_directory_forwarding_table_entry_list() {
-	rinad::DFTEListEncoder encoder;
+	rinad::encoders::DFTEListEncoder encoder;
 	rina::ser_obj_t encoded_obj;
 	std::list<rina::DirectoryForwardingTableEntry> dfte_list;
 	rina::DirectoryForwardingTableEntry dfte1;
@@ -324,13 +324,13 @@ bool test_directory_forwarding_table_entry_list() {
 }
 
 bool test_enrollment_information_request() {
-	rinad::EnrollmentInformationRequestEncoder encoder;
+	rinad::encoders::EnrollmentInformationRequestEncoder encoder;
 	rina::ser_obj_t encoded_obj;
 
-	rinad::EnrollmentInformationRequest request;
+	rinad::configs::EnrollmentInformationRequest request;
 	rina::ApplicationProcessNamingInformation name1;
 	rina::ApplicationProcessNamingInformation name2;
-	rinad::EnrollmentInformationRequest recovered_obj;
+	rinad::configs::EnrollmentInformationRequest recovered_obj;
 
 	name1.processName = "dif1";
 	name2.processName = "dif2";
@@ -354,7 +354,7 @@ bool test_enrollment_information_request() {
 }
 
 bool test_qos_cube() {
-	rinad::QoSCubeEncoder encoder;
+	rinad::encoders::QoSCubeEncoder encoder;
 	rina::ser_obj_t encoded_obj;
 	rina::QoSCube cube;
 	rina::QoSCube recovered_obj;
@@ -444,7 +444,7 @@ bool test_qos_cube() {
 }
 
 bool test_qos_cube_list() {
-	rinad::QoSCubeListEncoder encoder;
+	rinad::encoders::QoSCubeListEncoder encoder;
 	rina::ser_obj_t encoded_obj;
 	std::list<rina::QoSCube> cube_list;
 	rina::QoSCube cube1;
@@ -466,7 +466,7 @@ bool test_qos_cube_list() {
 }
 
 bool test_whatevercast_name() {
-	rinad::WhatevercastNameEncoder encoder;
+	rinad::encoders::WhatevercastNameEncoder encoder;
 	rina::ser_obj_t encoded_obj;
 	rina::WhatevercastName name;
 	rina::WhatevercastName recovered_obj;
@@ -496,7 +496,7 @@ bool test_whatevercast_name() {
 }
 
 bool test_whatevercast_name_list() {
-	rinad::WhatevercastNameListEncoder encoder;
+	rinad::encoders::WhatevercastNameListEncoder encoder;
 	rina::ser_obj_t encoded_obj;
 	std::list<rina::WhatevercastName> name_list;
 	rina::WhatevercastName name1;
@@ -518,7 +518,7 @@ bool test_whatevercast_name_list() {
 }
 
 bool test_neighbor() {
-	rinad::NeighborEncoder encoder;
+	rinad::encoders::NeighborEncoder encoder;
 	rina::ser_obj_t encoded_obj;
 	rina::Neighbor nei;
 	rina::Neighbor recovered_obj;
@@ -553,7 +553,7 @@ bool test_neighbor() {
 }
 
 bool test_neighbor_list() {
-	rinad::NeighborListEncoder encoder;
+	rinad::encoders::NeighborListEncoder encoder;
 	rina::ser_obj_t encoded_obj;
 	std::list<rina::Neighbor> nei_list;
 	rina::Neighbor nei1;
@@ -592,79 +592,79 @@ bool test_watchdog() {
 }
 
 bool test_nhopt_entry() {
-	rinad::RoutingTableEntryEncoder encoder;
-	rina::RoutingTableEntry entry;
-	rina::RoutingTableEntry recovered_obj;
-	rina::ser_obj_t encoded_obj;
+    rinad::encoders::RoutingTableEntryEncoder encoder;
+    rina::RoutingTableEntry entry;
+    rina::RoutingTableEntry recovered_obj;
+    rina::ser_obj_t encoded_obj;
 
-	entry.address = 25;
-	entry.qosId = 3;
-	entry.cost = 10;
-	rina::NHopAltList list1;
-	list1.alts.push_back(12);
-	list1.alts.push_back(43);
-	entry.nextHopAddresses.push_back(list1);
-	rina::NHopAltList list2;
-	list2.alts.push_back(42);
-	list2.alts.push_back(124);
-	list2.alts.push_back(982);
-	entry.nextHopAddresses.push_back(list2);
+    entry.address = 25;
+    entry.qosId = 3;
+    entry.cost = 10;
+    rina::NHopAltList list1;
+    list1.alts.push_back(12);
+    list1.alts.push_back(43);
+    entry.nextHopAddresses.push_back(list1);
+    rina::NHopAltList list2;
+    list2.alts.push_back(42);
+    list2.alts.push_back(124);
+    list2.alts.push_back(982);
+    entry.nextHopAddresses.push_back(list2);
 
-	encoder.encode(entry, encoded_obj);
-	encoder.decode(encoded_obj, recovered_obj);
+    encoder.encode(entry, encoded_obj);
+    encoder.decode(encoded_obj, recovered_obj);
 
-	if (entry.address != recovered_obj.address)
-		return false;
+    if (entry.address != recovered_obj.address)
+        return false;
 
-	if (entry.qosId != recovered_obj.qosId)
-		return false;
+    if (entry.qosId != recovered_obj.qosId)
+        return false;
 
-	if (entry.cost != recovered_obj.cost)
-		return false;
+    if (entry.cost != recovered_obj.cost)
+        return false;
 
-	if (entry.nextHopAddresses.size() != recovered_obj.nextHopAddresses.size())
-		return false;
+    if (entry.nextHopAddresses.size() != recovered_obj.nextHopAddresses.size())
+        return false;
 
-	LOG_IPCP_INFO("Routing Table Entry Encoder tested successfully");
-	return true;
+    LOG_IPCP_INFO("Routing Table Entry Encoder tested successfully");
+    return true;
 }
 
 bool test_pduft_entry() {
-	rinad::PDUForwardingTableEntryEncoder encoder;
-	rina::PDUForwardingTableEntry entry;
-	rina::PDUForwardingTableEntry recovered_obj;
-	rina::ser_obj_t encoded_obj;
+    rinad::encoders::PDUForwardingTableEntryEncoder encoder;
+    rina::PDUForwardingTableEntry entry;
+    rina::PDUForwardingTableEntry recovered_obj;
+    rina::ser_obj_t encoded_obj;
 
-	entry.address = 25;
-	entry.qosId = 3;
-	entry.cost = 10;
-	rina::PortIdAltlist list1;
-	list1.alts.push_back(12);
-	list1.alts.push_back(43);
-	entry.portIdAltlists.push_back(list1);
-	rina::PortIdAltlist list2;
-	list2.alts.push_back(42);
-	list2.alts.push_back(124);
-	list2.alts.push_back(982);
-	entry.portIdAltlists.push_back(list2);
+    entry.address = 25;
+    entry.qosId = 3;
+    entry.cost = 10;
+    rina::PortIdAltlist list1;
+    list1.alts.push_back(12);
+    list1.alts.push_back(43);
+    entry.portIdAltlists.push_back(list1);
+    rina::PortIdAltlist list2;
+    list2.alts.push_back(42);
+    list2.alts.push_back(124);
+    list2.alts.push_back(982);
+    entry.portIdAltlists.push_back(list2);
 
-	encoder.encode(entry, encoded_obj);
-	encoder.decode(encoded_obj, recovered_obj);
+    encoder.encode(entry, encoded_obj);
+    encoder.decode(encoded_obj, recovered_obj);
 
-	if (entry.address != recovered_obj.address)
-		return false;
+    if (entry.address != recovered_obj.address)
+        return false;
 
-	if (entry.qosId != recovered_obj.qosId)
-		return false;
+    if (entry.qosId != recovered_obj.qosId)
+        return false;
 
-	if (entry.cost != recovered_obj.cost)
-		return false;
+    if (entry.cost != recovered_obj.cost)
+        return false;
 
-	if (entry.portIdAltlists.size() != recovered_obj.portIdAltlists.size())
-		return false;
+    if (entry.portIdAltlists.size() != recovered_obj.portIdAltlists.size())
+        return false;
 
-	LOG_IPCP_INFO("PDU Forwarding Table Entry Encoder tested successfully");
-	return true;
+    LOG_IPCP_INFO("PDU Forwarding Table Entry Encoder tested successfully");
+    return true;
 }
 
 int main()

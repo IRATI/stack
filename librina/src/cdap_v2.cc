@@ -27,6 +27,7 @@
 #include "librina/application.h"
 #include "librina/timer.h"
 #include "librina/cdap_v2.h"
+#include "librina/exceptions.h"
 
 #include "CDAP.pb.h"
 
@@ -651,6 +652,7 @@ void CDAPMessageFactory::getReleaseConnectionResponseMessage(cdap_m_t & msg,
 							     int invoke_id)
 {
 	msg.op_code_ = cdap_m_t::M_RELEASE_R;
+
 	msg.flags_ = flags.flags_;
 	msg.invoke_id_ = invoke_id;
 	msg.result_ = res.code_;
@@ -2568,7 +2570,7 @@ void GPBSerializer::deserializeMessage(const ser_obj_t &message,
 				gpfCDAPMessage.authpolicy().versions(i));
 	}
 	if (gpfCDAPMessage.authpolicy().has_options()) {
-		result.auth_policy_.options.message_ = new char[gpfCDAPMessage.authpolicy().options().size()];
+		result.auth_policy_.options.message_ = new unsigned char[gpfCDAPMessage.authpolicy().options().size()];
 		result.auth_policy_.options.size_ = gpfCDAPMessage.authpolicy().options().size();
 		memcpy(result.auth_policy_.options.message_,
 		       gpfCDAPMessage.authpolicy().options().data(),
@@ -2614,7 +2616,8 @@ void GPBSerializer::deserializeMessage(const ser_obj_t &message,
 	// OBJ_VALUE
 	if (gpfCDAPMessage.has_objvalue()) {
 		messages::objVal_t obj_val_t = gpfCDAPMessage.objvalue();
-		char *byte_val = new char[obj_val_t.byteval().size()];
+		char unsigned *byte_val = new
+				unsigned char[obj_val_t.byteval().size()];
 		memcpy(byte_val, obj_val_t.byteval().data(),
 		       obj_val_t.byteval().size());
 		result.obj_value_.message_ = byte_val;
@@ -2730,7 +2733,7 @@ void GPBSerializer::serializeMessage(const cdap_m_t &cdapMessage,
 	gpfCDAPMessage.set_version(cdapMessage.version_);
 
 	int size = gpfCDAPMessage.ByteSize();
-	result.message_ = new char[size];
+	result.message_ = new unsigned char[size];
 	result.size_ = size;
 	gpfCDAPMessage.SerializeToArray(result.message_, size);
 }
@@ -3030,7 +3033,6 @@ int CDAPProvider::remote_write(const cdap_rib::con_handle_t &con,
 		m_sent.invoke_id_ = invoke_id;
 		inv_id = invoke_id;
 	}
-
 	send(m_sent, con);
 	return inv_id;
 }
@@ -3302,7 +3304,7 @@ void AppCDAPIOHandler::process_message(const ser_obj_t &message,
 	obj.inst_ = m_rcv.obj_inst_;
 	obj.name_ = m_rcv.obj_name_;
 	obj.value_.size_ = m_rcv.obj_value_.size_;
-	obj.value_.message_ = new char[obj.value_.size_];
+	obj.value_.message_ = new unsigned char[obj.value_.size_];
 	memcpy(obj.value_.message_, m_rcv.obj_value_.message_,
 	       m_rcv.obj_value_.size_);
 	// Filter
@@ -3709,7 +3711,7 @@ void StringEncoder::encode(const std::string& obj, ser_obj_t& serobj)
 
 	//Allocate memory
 	serobj.size_ = s.ByteSize();
-	serobj.message_ = new char[serobj.size_];
+	serobj.message_ = new unsigned char[serobj.size_];
 
 	if (!serobj.message_)
 		throw rina::Exception("out of memory");  //TODO improve this
@@ -3733,7 +3735,7 @@ void IntEncoder::encode(const int &obj, ser_obj_t& serobj)
 	gpb.set_value(obj);
 
 	serobj.size_ = gpb.ByteSize();
-	serobj.message_ = new char[serobj.size_];
+	serobj.message_ = new unsigned char[serobj.size_];
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
 

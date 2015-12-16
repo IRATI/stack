@@ -166,7 +166,7 @@ void BaseEnrollmentStateMachine::sendDFTEntries()
 	}
 
 	try {
-		DFTEListEncoder encoder;
+		encoders::DFTEListEncoder encoder;
 		rina::cdap_rib::obj_info_t obj;
 		obj.class_ = DFTRIBObj::class_name;
 		obj.name_ = DFTRIBObj::object_name;
@@ -256,7 +256,7 @@ public:
 	/// Have to check if I can start operating (if not wait
 	/// until M_START operationStatus). If I can start and have enough information,
 	/// create or update all the objects received during the enrollment phase.
-	void stop(const EnrollmentInformationRequest& eiRequest,
+	void stop(const configs::EnrollmentInformationRequest& eiRequest,
 		  int invoke_id,
 		  rina::cdap_rib::con_handle_t con_handle);
 
@@ -439,7 +439,7 @@ void EnrolleeStateMachine::connectResponse(int result,
 
 	//Send M_START with EnrollmentInformation object
 	try{
-		EnrollmentInformationRequest eiRequest;
+		configs::EnrollmentInformationRequest eiRequest;
 		std::list<rina::ApplicationProcessNamingInformation>::const_iterator it;
 		std::vector<rina::ApplicationRegistration *> registrations =
 				rina::extendedIPCManager->getRegisteredApplications();
@@ -459,7 +459,7 @@ void EnrolleeStateMachine::connectResponse(int result,
 			ipc_process_->set_dif_information(difInformation);
 		}
 
-		EnrollmentInformationRequestEncoder encoder;
+		encoders::EnrollmentInformationRequestEncoder encoder;
 		rina::cdap_rib::obj_info_t obj;
 		obj.class_ = EnrollmentRIBObject::class_name;
 		obj.name_ = EnrollmentRIBObject::object_name;
@@ -517,8 +517,8 @@ void EnrolleeStateMachine::remoteStartResult(const rina::cdap_rib::con_handle_t 
 	}
 
 	//Update address
-	EnrollmentInformationRequestEncoder encoder;
-	EnrollmentInformationRequest eiResp;
+	encoders::EnrollmentInformationRequestEncoder encoder;
+	configs::EnrollmentInformationRequest eiResp;
 	encoder.decode(obj.value_, eiResp);
 	if (eiResp.address_ != 0) {
 		ipc_process_->get_dif_information().dif_configuration_.address_ = eiResp.address_;
@@ -532,7 +532,7 @@ void EnrolleeStateMachine::remoteStartResult(const rina::cdap_rib::con_handle_t 
 	state_ = STATE_WAIT_STOP_ENROLLMENT_RESPONSE;
 }
 
-void EnrolleeStateMachine::stop(const EnrollmentInformationRequest& eiRequest,
+void EnrolleeStateMachine::stop(const configs::EnrollmentInformationRequest& eiRequest,
 				int invoke_id,
 				rina::cdap_rib::con_handle_t con_handle)
 {
@@ -760,12 +760,12 @@ void EnrolleeStateMachine::remoteReadResult(const rina::cdap_rib::con_handle_t &
 	}
 
 	if (obj.name_.compare(DataTransferRIBObj::object_name) == 0) {
-		DataTransferConstantsEncoder encoder;
+		encoders::DataTransferConstantsEncoder encoder;
 		rina::DataTransferConstants constants;
 		encoder.decode(obj.value_, constants);
 		ipc_process_->get_dif_information().dif_configuration_.efcp_configuration_.data_transfer_constants_ = constants;
 	}else if (obj.name_.compare(QoSCubesRIBObject::object_name) == 0) {
-		QoSCubeListEncoder encoder;
+		encoders::QoSCubeListEncoder encoder;
 		std::list<rina::QoSCube> cubes;
 		encoder.decode(obj.value_, cubes);
 		std::list<rina::QoSCube>::const_iterator it;
@@ -773,7 +773,7 @@ void EnrolleeStateMachine::remoteReadResult(const rina::cdap_rib::con_handle_t &
 			ipc_process_->resource_allocator_->addQoSCube(*it);
 		}
 	}else if (obj.name_.compare(NeighborsRIBObj::object_name) == 0) {
-		NeighborListEncoder encoder;
+		encoders::NeighborListEncoder encoder;
 		std::list<rina::Neighbor> neighbors;
 		encoder.decode(obj.value_, neighbors);
 
@@ -865,9 +865,8 @@ public:
 	/// @param eiRequest
 	/// @param invoke_id to reply to the message
 	/// @param cdapSessionDescriptor
-	void start(EnrollmentInformationRequest& eiRequest,
-		   int invoke_id,
-		   const rina::cdap_rib::con_handle_t &con);
+	void start(configs::EnrollmentInformationRequest& eiRequest,
+		   int invoke_id, const rina::cdap_rib::con_handle_t &con);
 
 	/// The response of the stop operation has been received, send M_START operation without
 	/// waiting for an answer and consider the process enrolled
@@ -1110,7 +1109,7 @@ void EnrollerStateMachine::sendDIFStaticInformation()
 
 	if (names.size() > 0) {
 		try {
-			WhatevercastNameListEncoder encoder;
+			encoders::WhatevercastNameListEncoder encoder;
 			rina::cdap_rib::obj_info_t obj;
 			obj.class_ = WhateverCastNamesRIBObj::class_name;
 			obj.name_ = WhateverCastNamesRIBObj::object_name;
@@ -1130,12 +1129,12 @@ void EnrollerStateMachine::sendDIFStaticInformation()
 	}
 
 	try {
-		DataTransferConstantsEncoder encoder;
+		encoders::DataTransferConstantsEncoder encoder;
 		rina::cdap_rib::obj_info_t obj;
 		obj.class_ = DataTransferRIBObj::class_name;
 		obj.name_ = DataTransferRIBObj::object_name;
-		encoder.encode(ipc_process_->get_dif_information().dif_configuration_.efcp_configuration_.data_transfer_constants_,
-			       obj.value_);
+		encoder.encode(ipc_process_->get_dif_information().dif_configuration_.
+			efcp_configuration_.data_transfer_constants_, obj.value_);
 		rina::cdap_rib::filt_info_t filt;
 		rina::cdap_rib::flags_t flags;
 
@@ -1154,7 +1153,7 @@ void EnrollerStateMachine::sendDIFStaticInformation()
 
 	if (cubes.size() > 0) {
 		try {
-			QoSCubeListEncoder encoder;
+			encoders::QoSCubeListEncoder encoder;
 			rina::cdap_rib::obj_info_t obj;
 			obj.class_ = QoSCubesRIBObject::class_name;
 			obj.name_ = QoSCubesRIBObject::object_name;
@@ -1174,7 +1173,7 @@ void EnrollerStateMachine::sendDIFStaticInformation()
 	}
 }
 
-void EnrollerStateMachine::start(EnrollmentInformationRequest& eiRequest,
+void EnrollerStateMachine::start(configs::EnrollmentInformationRequest& eiRequest,
 				 int invoke_id,
 				 const rina::cdap_rib::con_handle_t &con_handle)
 {
@@ -1246,7 +1245,7 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest& eiRequest,
 		obj.class_ = EnrollmentRIBObject::class_name;
 		obj.name_ = EnrollmentRIBObject::object_name;
 		if (requiresInitialization) {
-			EnrollmentInformationRequestEncoder encoder;
+			encoders::EnrollmentInformationRequestEncoder encoder;
 			encoder.encode(eiRequest, obj.value_);
 		}
 		rina::cdap_rib::flags_t flags;
@@ -1280,7 +1279,7 @@ void EnrollerStateMachine::start(EnrollmentInformationRequest& eiRequest,
 		rina::cdap_rib::obj_info_t obj;
 		obj.class_ = EnrollmentRIBObject::class_name;
 		obj.name_ = EnrollmentRIBObject::object_name;
-		EnrollmentInformationRequestEncoder encoder;
+		encoders::EnrollmentInformationRequestEncoder encoder;
 		encoder.encode(eiRequest, obj.value_);
 		rina::cdap_rib::flags_t flags;
 		rina::cdap_rib::filt_info_t filt;
@@ -1400,10 +1399,10 @@ void EnrollmentRIBObject::start(const rina::cdap_rib::con_handle_t &con_handle,
 		return;
 	}
 
-	EnrollmentInformationRequest eiRequest;
+	configs::EnrollmentInformationRequest eiRequest;
 	eiRequest.address_ = 0;
 	if (obj_req.message_) {
-		EnrollmentInformationRequestEncoder encoder;
+		encoders::EnrollmentInformationRequestEncoder encoder;
 		encoder.decode(obj_req, eiRequest);
 	}
 	stateMachine->start(eiRequest,
@@ -1438,10 +1437,10 @@ void EnrollmentRIBObject::stop(const rina::cdap_rib::con_handle_t &con_handle,
 		return;
 	}
 
-	EnrollmentInformationRequest eiRequest;
+	configs::EnrollmentInformationRequest eiRequest;
 	eiRequest.address_ = 0;
 	if (obj_req.message_) {
-		EnrollmentInformationRequestEncoder encoder;
+		encoders::EnrollmentInformationRequestEncoder encoder;
 		encoder.decode(obj_req, eiRequest);
 	}
 	stateMachine->stop(eiRequest,

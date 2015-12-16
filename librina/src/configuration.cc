@@ -959,6 +959,11 @@ DataTransferConstants::DataTransferConstants() {
 	rate_length_ = 0;
 	frame_length_ = 0;
 	ctrl_sequence_number_length_ = 0;
+    seq_rollover_thres_ = 0;
+    dif_concatenation_ = false;
+    dif_fragmentation_ = false;
+	max_time_to_keep_ret_ = 0;
+	max_time_to_ack_ = 0;
 }
 
 unsigned short DataTransferConstants::get_address_length() const {
@@ -1124,7 +1129,7 @@ EFCPConfiguration::~EFCPConfiguration() {
 	}
 }
 
-const std::list<QoSCube*>& EFCPConfiguration::get_qos_cubes() const {
+const std::list<QoSCube *>& EFCPConfiguration::get_qos_cubes() const{
 	return qos_cubes_;
 }
 
@@ -1335,6 +1340,15 @@ AddressPrefixConfiguration::AddressPrefixConfiguration() {
 	address_prefix_ = 0;
 }
 
+// Class AddressingConfiguration
+void AddressingConfiguration::addAddress(StaticIPCProcessAddress &addr)
+{
+	static_address_.push_back(addr);
+}
+void AddressingConfiguration::addPrefix(AddressPrefixConfiguration &pref)
+{
+	address_prefixes_.push_back(pref);
+}
 //Class AuthSDUProtectionProfile
 std::string AuthSDUProtectionProfile::to_string()
 {
@@ -1384,15 +1398,15 @@ void DIFConfiguration::set_address(unsigned int address) {
 	address_ = address;
 }
 
-const std::list<Parameter>& DIFConfiguration::get_parameters() const {
+const std::list<PolicyParameter>& DIFConfiguration::get_parameters() const {
 	return parameters_;
 }
 
-void DIFConfiguration::set_parameters(const std::list<Parameter>& parameters) {
+void DIFConfiguration::set_parameters(const std::list<PolicyParameter>& parameters) {
 	parameters_ = parameters;
 }
 
-void DIFConfiguration::add_parameter(const Parameter& parameter){
+void DIFConfiguration::add_parameter(const PolicyParameter& parameter){
 	parameters_.push_back(parameter);
 }
 
@@ -1452,4 +1466,4 @@ void DIFInformation::set_dif_configuration(
 	dif_configuration_ = dif_configuration;
 }
 
-}
+} //namespace rina

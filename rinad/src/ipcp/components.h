@@ -35,6 +35,7 @@
 #include <librina/rib_v2.h>
 #include <librina/security-manager.h>
 #include "common/encoder.h"
+#include "common/configuration.h"
 
 namespace rinad {
 
@@ -130,7 +131,7 @@ class IFlowAllocatorInstance;
 class IFlowAllocatorPs : public rina::IPolicySet {
 // This class is used by the IPCP to access the plugin functionalities
 public:
-        virtual Flow *newFlowRequest(IPCProcess * ipc_process,
+        virtual configs::Flow *newFlowRequest(IPCProcess * ipc_process,
                         const rina::FlowRequestEvent& flowRequestEvent) = 0;
 
         virtual ~IFlowAllocatorPs() {}
@@ -181,7 +182,7 @@ public:
 	/// Process, it forwards the Create_Request to the IPC Process designated by the address.
 	/// @param cdapMessage
 	/// @param underlyingPortId
-	virtual void createFlowRequestMessageReceived(Flow * flow,
+	virtual void createFlowRequestMessageReceived(configs::Flow * flow,
 						      const std::string& object_name,
 						      int invoke_id) = 0;
 
@@ -190,8 +191,8 @@ public:
 	virtual void removeFlowAllocatorInstance(int portId) = 0;
 
         // Plugin support
-	virtual Flow * createFlow() = 0;
-	virtual void destroyFlow(Flow *) = 0;
+	virtual configs::Flow* createFlow() = 0;
+	virtual void destroyFlow(configs::Flow *) = 0;
 };
 
 class IRoutingPs : public rina::IPolicySet {
@@ -388,7 +389,7 @@ public:
 	virtual bool isAllowedToJoinDIF(const rina::Neighbor& newMember) = 0;
 
 	/// Decide if a new flow to the IPC process should be accepted
-	virtual bool acceptFlow(const Flow& newFlow) = 0;
+	virtual bool acceptFlow(const configs::Flow& newFlow) = 0;
 
         virtual ~ISecurityManagerPs() {}
 };
@@ -427,6 +428,7 @@ public:
 
 /// Interface that provides the RIB Daemon API
 class IPCPRIBDaemon : public rina::rib::RIBDaemonAE, public IPCProcessComponent {
+
 public:
 	IPCPRIBDaemon() { };
 	virtual ~IPCPRIBDaemon(){};

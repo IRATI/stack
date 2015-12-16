@@ -26,6 +26,7 @@
 #include "ipcp-logging.h"
 
 #include "namespace-manager.h"
+#include "common/encoder.h"
 
 namespace rinad {
 
@@ -58,7 +59,7 @@ void WhateverCastNameRIBObj::read(const rina::cdap_rib::con_handle_t &con,
 				  rina::cdap_rib::res_info_t& res)
 {
 	if (name) {
-		WhatevercastNameEncoder encoder;
+		encoders::WhatevercastNameEncoder encoder;
 		encoder.encode(*name, obj_reply.value_);
 	}
 
@@ -88,7 +89,7 @@ void WhateverCastNamesRIBObj::create(const rina::cdap_rib::con_handle_t &con,
 				     rina::cdap_rib::res_info_t& res)
 {
 	std::list<rina::WhatevercastName> namesToCreate;
-	WhatevercastNameListEncoder encoder;
+	encoders::WhatevercastNameListEncoder encoder;
 
 	//1 Decode list of names
 	encoder.decode(obj_req, namesToCreate);
@@ -147,7 +148,7 @@ void DFTEntryRIBObj::read(const rina::cdap_rib::con_handle_t &con,
 			  rina::cdap_rib::res_info_t& res)
 {
 	if (entry) {
-		DFTEEncoder encoder;
+		encoders::DFTEEncoder encoder;
 		encoder.encode(*entry, obj_reply.value_);
 	}
 
@@ -207,7 +208,7 @@ void DFTRIBObj::create(const rina::cdap_rib::con_handle_t &con_handle,
 	std::list<rina::DirectoryForwardingTableEntry> entriesToCreateOrUpdate;
 	std::list<rina::DirectoryForwardingTableEntry> entriesToCreate;
 	rina::DirectoryForwardingTableEntry * entry;
-	DFTEListEncoder encoder;
+	encoders::DFTEListEncoder encoder;
 
 	//1 Decode list of names
 	encoder.decode(obj_req, entriesToCreateOrUpdate);
@@ -330,7 +331,7 @@ void NamespaceManager::addDFTEntries(const std::list<rina::DirectoryForwardingTa
 
 	std::vector<int> session_ids;
 	rina::cdap::getProvider()->get_session_manager()->getAllCDAPSessionIds(session_ids);
-	DFTEListEncoder encoder;
+	encoders::DFTEListEncoder encoder;
 	rina::cdap_rib::obj_info_t obj;
 	obj.class_ = DFTRIBObj::class_name;
 	obj.name_ = DFTRIBObj::object_name;

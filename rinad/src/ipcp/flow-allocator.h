@@ -46,7 +46,7 @@ public:
 
 	/// Return the Flow object associated to this Flow Allocator Instance
 	/// @return
-	virtual Flow * get_flow() const = 0;
+	virtual configs::Flow * get_flow() const = 0;
 
 	/// True if FAI is no longer operative, false otherwise
 	virtual bool isFinished() const = 0;
@@ -74,7 +74,7 @@ public:
 	/// @param portId the destination portid as decided by the Flow allocator
 	/// @param requestMessate the CDAP request message
 	/// @param underlyingPortId the port id to reply later on
-	virtual void createFlowRequestMessageReceived(Flow * flow, const std::string& object_name,
+	virtual void createFlowRequestMessageReceived(configs::Flow* flow, const std::string& object_name,
 						      int invoke_id) = 0;
 
 	/// When the FAI gets a Allocate_Response from the destination application,
@@ -256,7 +256,7 @@ public:
 	IFlowAllocatorInstance * getFAI(int portId);
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
-	void createFlowRequestMessageReceived(Flow * flow,
+	void createFlowRequestMessageReceived(configs::Flow * flow,
 					      const std::string& object_name,
 					      int invoke_id);
 	void submitAllocateRequest(rina::FlowRequestEvent& flowRequestEvent);
@@ -271,8 +271,8 @@ public:
 	void removeFlowAllocatorInstance(int portId);
 
         // Plugin support
-        Flow * createFlow() { return new Flow(); }
-        void destroyFlow(Flow *flow) { if (flow) delete flow; }
+        configs::Flow* createFlow() { return new configs::Flow(); }
+        void destroyFlow(configs::Flow* flow) { if (flow) delete flow; }
 
 private:
 	IPCPRIBDaemon * rib_daemon_;
@@ -307,7 +307,7 @@ public:
 	~FlowAllocatorInstance();
 	void set_application_entity(rina::ApplicationEntity * ae);
 	int get_port_id() const;
-	Flow * get_flow() const;
+	configs::Flow * get_flow() const;
 	bool isFinished() const;
 	unsigned int get_allocate_response_message_handle() const;
 	void set_allocate_response_message_handle(
@@ -315,7 +315,7 @@ public:
 	void submitAllocateRequest(const rina::FlowRequestEvent& event);
 	void processCreateConnectionResponseEvent(
 			const rina::CreateConnectionResponseEvent& event);
-	void createFlowRequestMessageReceived(Flow * flow,
+	void createFlowRequestMessageReceived(configs::Flow * flow,
 					      const std::string& object_name,
 					      int invoke_id);
 	void processCreateConnectionResultEvent(
@@ -369,7 +369,7 @@ private:
 	int port_id_;
 
 	/// The flow object related to this Flow Allocator Instance
-	Flow * flow_;
+	configs::Flow * flow_;
 
 	/// The event requesting the allocation of the flow
 	rina::FlowRequestEvent flow_request_event_;

@@ -75,7 +75,7 @@ void QoSCubeRIBObject::read(const rina::cdap_rib::con_handle_t &con,
 			    rina::cdap_rib::res_info_t& res)
 {
 	if (qos_cube) {
-		QoSCubeEncoder encoder;
+		encoders::QoSCubeEncoder encoder;
 		encoder.encode(*qos_cube, obj_reply.value_);
 	}
 
@@ -169,7 +169,7 @@ void NextHopTEntryRIBObj::read(const rina::cdap_rib::con_handle_t &con,
 			       rina::cdap_rib::res_info_t& res)
 {
 	if (rt_entry) {
-		RoutingTableEntryEncoder encoder;
+		encoders::RoutingTableEntryEncoder encoder;
 		encoder.encode(*rt_entry, obj_reply.value_);
 	}
 
@@ -210,7 +210,7 @@ void PDUFTEntryRIBObj::read(const rina::cdap_rib::con_handle_t &con,
 			    rina::cdap_rib::res_info_t& res)
 {
 	if (ft_entry) {
-		PDUForwardingTableEntryEncoder encoder;
+		encoders::PDUForwardingTableEntryEncoder encoder;
 		encoder.encode(*ft_entry, obj_reply.value_);
 	}
 

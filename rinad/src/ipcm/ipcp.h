@@ -29,6 +29,8 @@
 #include <map>
 #include <vector>
 #include <utility>
+#include <list>
+#include <string>
 
 #include <librina/common.h>
 #include <librina/ipc-manager.h>

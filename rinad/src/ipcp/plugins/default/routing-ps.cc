@@ -1863,7 +1863,7 @@ void FlowStateObjectEncoder::encode(const FlowStateObject &obj,
 	fso_helpers::toGPB(obj, gpb);
 
 	serobj.size_ = gpb.ByteSize();
-	serobj.message_ = new char[serobj.size_];
+	serobj.message_ = new unsigned char[serobj.size_];
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
 
@@ -1890,7 +1890,7 @@ void FlowStateObjectListEncoder::encode(const std::list<FlowStateObject> &obj,
 	}
 
 	serobj.size_ = gpb.ByteSize();
-	serobj.message_ = new char[serobj.size_];
+	serobj.message_ = new unsigned char[serobj.size_];
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
 
@@ -1899,7 +1899,6 @@ void FlowStateObjectListEncoder::decode(const rina::ser_obj_t &serobj,
 {
 	rina::messages::flowStateObjectGroup_t gpb;
 	gpb.ParseFromArray(serobj.message_, serobj.size_);
-
 	for(int i=0; i<gpb.flow_state_objects_size(); i++)
 	{
 		FlowStateObject fso;

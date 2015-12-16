@@ -23,7 +23,6 @@
 #ifndef ENCODER_H_
 #define ENCODER_H_
 #ifdef __cplusplus
-
 #include <librina/common.h>
 #include <librina/configuration.h>
 #include <librina/ipc-process.h>
@@ -33,156 +32,179 @@
 #include <list>
 
 namespace rinad {
+namespace encoders {
 
 /// Encoder of the DataTransferConstants object
-class DataTransferConstantsEncoder: 
-	public rina::Encoder<rina::DataTransferConstants> 
-{
-public:
-	void encode(const rina::DataTransferConstants &obj, 
-		rina::ser_obj_t& serobj);
-	void decode(const rina::ser_obj_t &serobj, 
-		rina::DataTransferConstants &des_obj);
+class DataTransferConstantsEncoder : public rina::Encoder<
+                rina::DataTransferConstants> {
+ public:
+        void encode(const rina::DataTransferConstants &obj,
+                    rina::ser_obj_t& serobj);
+        void decode(const rina::ser_obj_t &serobj,
+                    rina::DataTransferConstants &des_obj);
 };
 
 /// Encoder of DirectoryForwardingTableEntry object
-class DFTEEncoder: 
-	public rina::Encoder<rina::DirectoryForwardingTableEntry> 
-{
-public:
-	void encode(const rina::DirectoryForwardingTableEntry &obj, 
-		rina::ser_obj_t& serobj);
-	void decode(const rina::ser_obj_t &serobj, 
-		rina::DirectoryForwardingTableEntry &des_obj);
+class DFTEEncoder : public rina::Encoder<rina::DirectoryForwardingTableEntry> {
+ public:
+        void encode(const rina::DirectoryForwardingTableEntry &obj,
+                    rina::ser_obj_t& serobj);
+        void decode(const rina::ser_obj_t &serobj,
+                    rina::DirectoryForwardingTableEntry &des_obj);
 };
 
 /// Encoder of DirectoryForwardingTableEntryList object
-class DFTEListEncoder: 
-	public rina::Encoder< std::list<rina::DirectoryForwardingTableEntry> >
-{
-public:
-	void encode(const std::list<rina::DirectoryForwardingTableEntry> &obj,
-		rina::ser_obj_t& serobj);
-	void decode(const rina::ser_obj_t &serobj, 
-		std::list<rina::DirectoryForwardingTableEntry> &des_obj);
+class DFTEListEncoder : public rina::Encoder<
+                std::list<rina::DirectoryForwardingTableEntry> > {
+ public:
+        void encode(const std::list<rina::DirectoryForwardingTableEntry> &obj,
+                    rina::ser_obj_t& serobj);
+        void decode(const rina::ser_obj_t &serobj,
+                    std::list<rina::DirectoryForwardingTableEntry> &des_obj);
 };
 
 /// Encoder of QoSCube object
-class QoSCubeEncoder: public rina::Encoder<rina::QoSCube> 
-{
-public:
-	void encode(const rina::QoSCube &obj, rina::ser_obj_t& serobj);
-	void decode(const rina::ser_obj_t &serobj, 
-		rina::QoSCube &des_obj);
+class QoSCubeEncoder : public rina::Encoder<rina::QoSCube> {
+ public:
+        void encode(const rina::QoSCube &obj, rina::ser_obj_t& serobj);
+        void decode(const rina::ser_obj_t &serobj, rina::QoSCube &des_obj);
 };
 
 /// Encoder of QoSCube list object
-class QoSCubeListEncoder: public rina::Encoder<std::list<rina::QoSCube> >
-{
-public:
-	void encodePointers(const std::list<rina::QoSCube*> &obj,
-			    rina::ser_obj_t& serobj);
-	void encode(const std::list<rina::QoSCube> &obj, 
-		rina::ser_obj_t& serobj);
-	void decode(const rina::ser_obj_t &serobj, 
-		std::list<rina::QoSCube> &des_obj);
+class QoSCubeListEncoder : public rina::Encoder<std::list<rina::QoSCube> > {
+ public:
+        void encodePointers(const std::list<rina::QoSCube*> &obj,
+                            rina::ser_obj_t& serobj);
+        void encode(const std::list<rina::QoSCube> &obj,
+                    rina::ser_obj_t& serobj);
+        void decode(const rina::ser_obj_t &serobj,
+                    std::list<rina::QoSCube> &des_obj);
 };
 
 /// Encoder of WhatevercastName object
-class WhatevercastNameEncoder: public rina::Encoder<rina::WhatevercastName> 
-{
-public:
-	void encode(const rina::WhatevercastName &obj, 
-		rina::ser_obj_t& serobj);
-	void decode(const rina::ser_obj_t &serobj, 
-		rina::WhatevercastName &des_obj);
+class WhatevercastNameEncoder : public rina::Encoder<rina::WhatevercastName> {
+ public:
+        void encode(const rina::WhatevercastName &obj, rina::ser_obj_t& serobj);
+        void decode(const rina::ser_obj_t &serobj,
+                    rina::WhatevercastName &des_obj);
 };
 
 /// Encoder of WhatevercastName list object
-class WhatevercastNameListEncoder: 
-	public rina::Encoder<std::list<rina::WhatevercastName> >
-{
-public:
-	void encode(const std::list<rina::WhatevercastName> &obj,
-		rina::ser_obj_t& serobj);
-	void decode(const rina::ser_obj_t &serobj, 
-		std::list<rina::WhatevercastName> &des_obj);
+class WhatevercastNameListEncoder : public rina::Encoder<
+                std::list<rina::WhatevercastName> > {
+ public:
+        void encode(const std::list<rina::WhatevercastName> &obj,
+                    rina::ser_obj_t& serobj);
+        void decode(const rina::ser_obj_t &serobj,
+                    std::list<rina::WhatevercastName> &des_obj);
 };
 
-
 /// Encoder of Neighbor object
-class NeighborEncoder: public rina::Encoder<rina::Neighbor> 
-{
-public:
-	void encode(const rina::Neighbor &obj, rina::ser_obj_t& serobj);
-	void decode(const rina::ser_obj_t &serobj, 
-		rina::Neighbor &des_obj);
+class NeighborEncoder : public rina::Encoder<rina::Neighbor> {
+ public:
+        void encode(const rina::Neighbor &obj, rina::ser_obj_t& serobj);
+        void decode(const rina::ser_obj_t &serobj, rina::Neighbor &des_obj);
 };
 
 /// Encoder of Neighbor list object
-class NeighborListEncoder: public rina::Encoder<std::list<rina::Neighbor> >
-{
-public:
-	void encode(const std::list<rina::Neighbor> &obj,
-		rina::ser_obj_t& serobj);
-	void decode(const rina::ser_obj_t &serobj, 
-		std::list<rina::Neighbor> &des_obj);
+class NeighborListEncoder : public rina::Encoder<std::list<rina::Neighbor> > {
+ public:
+        void encode(const std::list<rina::Neighbor> &obj,
+                    rina::ser_obj_t& serobj);
+        void decode(const rina::ser_obj_t &serobj,
+                    std::list<rina::Neighbor> &des_obj);
 };
 
 /// Encoder of the AData object
-class ADataObjectEncoder: public rina::Encoder<rina::cdap::ADataObject>
-{
-public:
-	void encode(const rina::cdap::ADataObject &obj, rina::ser_obj_t& serobj);
-	void decode(const rina::ser_obj_t &serobj, rina::cdap::ADataObject &des_obj);
+class ADataObjectEncoder : public rina::Encoder<rina::cdap::ADataObject> {
+ public:
+        void encode(const rina::cdap::ADataObject &obj,
+                    rina::ser_obj_t& serobj);
+        void decode(const rina::ser_obj_t &serobj,
+                    rina::cdap::ADataObject &des_obj);
 };
 
 /// Encoder of a list of EnrollmentInformationRequest
-class EnrollmentInformationRequestEncoder: 
-	public rina::Encoder<EnrollmentInformationRequest> {
-public:
-	void encode(const EnrollmentInformationRequest &obj, 
-		rina::ser_obj_t& serobj);
-	void decode(const rina::ser_obj_t &serobj, 
-		EnrollmentInformationRequest &des_obj);
+class EnrollmentInformationRequestEncoder : public rina::Encoder<
+                configs::EnrollmentInformationRequest> {
+ public:
+        void encode(const configs::EnrollmentInformationRequest &obj,
+                    rina::ser_obj_t& serobj);
+        void decode(const rina::ser_obj_t &serobj,
+                    configs::EnrollmentInformationRequest &des_obj);
 };
 
 /// Encoder of the Flow
-class FlowEncoder: public rina::Encoder<Flow> {
-public:
-	void encode(const Flow &obj, rina::ser_obj_t& serobj);
-	void decode(const rina::ser_obj_t &serobj, Flow &des_obj);
+class FlowEncoder : public rina::Encoder<configs::Flow> {
+ public:
+        void encode(const configs::Flow &obj, rina::ser_obj_t& serobj);
+        void decode(const rina::ser_obj_t &serobj, configs::Flow &des_obj);
 };
 
 /// Encoder of the RoutingTableEntry
-class RoutingTableEntryEncoder: public rina::Encoder<rina::RoutingTableEntry> {
-public:
-	void encode(const rina::RoutingTableEntry &obj, rina::ser_obj_t& serobj);
-	void decode(const rina::ser_obj_t &serobj, rina::RoutingTableEntry &des_obj);
+class RoutingTableEntryEncoder : public rina::Encoder<rina::RoutingTableEntry> {
+ public:
+        void encode(const rina::RoutingTableEntry &obj,
+                    rina::ser_obj_t& serobj);
+        void decode(const rina::ser_obj_t &serobj,
+                    rina::RoutingTableEntry &des_obj);
 };
 
 /// Encoder of the PDUForwardingTableEntry
-class PDUForwardingTableEntryEncoder: public rina::Encoder<rina::PDUForwardingTableEntry> {
-public:
-	void encode(const rina::PDUForwardingTableEntry &obj, rina::ser_obj_t& serobj);
-	void decode(const rina::ser_obj_t &serobj, rina::PDUForwardingTableEntry &des_obj);
+class PDUForwardingTableEntryEncoder : public rina::Encoder<
+                rina::PDUForwardingTableEntry> {
+ public:
+        void encode(const rina::PDUForwardingTableEntry &obj,
+                    rina::ser_obj_t& serobj);
+        void decode(const rina::ser_obj_t &serobj,
+                    rina::PDUForwardingTableEntry &des_obj);
 };
 
 /// Encoder of the Connection
-class DTPInformationEncoder: public rina::Encoder<rina::DTPInformation> {
-public:
-	void encode(const rina::DTPInformation &obj, rina::ser_obj_t& serobj);
-	void decode(const rina::ser_obj_t &serobj, rina::DTPInformation &des_obj);
+class DTPInformationEncoder : public rina::Encoder<rina::DTPInformation> {
+ public:
+        void encode(const rina::DTPInformation &obj, rina::ser_obj_t& serobj);
+        void decode(const rina::ser_obj_t &serobj,
+                    rina::DTPInformation &des_obj);
 };
 
 /// Encoder of the Connection
-class DTCPInformationEncoder: public rina::Encoder<rina::DTCPConfig> {
-public:
-	void encode(const rina::DTCPConfig &obj, rina::ser_obj_t& serobj);
-	void decode(const rina::ser_obj_t &serobj, rina::DTCPConfig &des_obj);
+class DTCPInformationEncoder : public rina::Encoder<rina::DTCPConfig> {
+ public:
+        void encode(const rina::DTCPConfig &obj, rina::ser_obj_t& serobj);
+        void decode(const rina::ser_obj_t &serobj, rina::DTCPConfig &des_obj);
 };
 
-}
+/// Encoder of IPCPConfig
+class IPCPConfigEncoder : public rina::Encoder<configs::ipcp_config_t> {
+
+ public:
+        void encode(const configs::ipcp_config_t &obj,
+                    rina::ser_obj_t& ser_obj);
+        void decode(const rina::ser_obj_t &ser_obj,
+                    configs::ipcp_config_t& obj);
+        std::string get_type() const
+        {
+                return "ipcp-config";
+        }
+        ;
+};
+
+/// Encoder IPCP
+class IPCPEncoder : public rina::Encoder<configs::ipcp_t> {
+ public:
+        void encode(const configs::ipcp_t &obj, rina::ser_obj_t& serobj);
+        void decode(const rina::ser_obj_t &serobj, configs::ipcp_t& des_obj);
+
+        std::string get_type() const
+        {
+                return "ipcp";
+        }
+        ;
+};
+
+}  //namespace encoders
+}  //namespace rinad
 
 #endif
 #endif /// ENCODER_H_////

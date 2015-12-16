@@ -15,7 +15,7 @@ SWIG_JAVA_FLAGS = -java -package eu.irati.librinad
 CLEANFILES =
 
 # XXX FIXME: Prerequisites for this rule are broken ...
-wrap.stamp: $(top_srcdir)/wrap/*.i $(top_srcdir)/src/common/encoders_mad.h
+wrap.stamp: $(top_srcdir)/wrap/*.i $(top_srcdir)/src/common/*.h
 	rm -f wrap.tmp
 	touch wrap.tmp
 	rm -r -f $(JAVA_DIR)/eu/irati/librinad   &&			\

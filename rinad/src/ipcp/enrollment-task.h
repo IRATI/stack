@@ -346,7 +346,6 @@ public:
 		  const int invoke_id,
 		  rina::cdap_rib::obj_info_t &obj_reply,
 		  rina::cdap_rib::res_info_t& res);
-
 	void startObject();
 	void stopObject();
 

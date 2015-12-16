@@ -106,7 +106,6 @@ public:
 	const std::string& get_class() const {
 		return class_name;
 	};
-
 	void read(const rina::cdap_rib::con_handle_t &con,
 		  const std::string& fqn,
 		  const std::string& class_,
