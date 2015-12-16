@@ -19,7 +19,6 @@
 #include <string>
 #include <climits>
 
-#include "librina/configuration.h"
 #include "ipcp/ipcp-logging.h"
 #include "ipcp/components.h"
 
@@ -28,27 +27,33 @@ namespace rinad {
 class FlowAllocatorPs: public IFlowAllocatorPs {
 public:
 	FlowAllocatorPs(IFlowAllocator * dm);
-	configs::Flow *newFlowRequest(IPCProcess * ipc_process,
-			const rina::FlowRequestEvent& flowRequestEvent);
-	int set_policy_set_param(const std::string& name,
-							 const std::string& value);
+
+	configs::Flow *newFlowRequest(
+		IPCProcess * ipc_process,
+		const rina::FlowRequestEvent& flowRequestEvent);
+
+	int set_policy_set_param(
+		const std::string& name,
+		const std::string& value);
+
 	virtual ~FlowAllocatorPs() {}
 
 private:
         // Data model of the security manager component.
         IFlowAllocator * dm;
 
-        rina::QoSCube * selectQoSCube(const rina::FlowSpecification& flowSpec);
+        rina::QoSCube * selectQoSCube(
+		const rina::FlowSpecification& flowSpec);
 };
 
 FlowAllocatorPs::FlowAllocatorPs(IFlowAllocator * dm_) : dm(dm_) {
 
 }
 
-Flow * FlowAllocatorPs::newFlowRequest(
+configs::Flow * FlowAllocatorPs::newFlowRequest(
 	IPCProcess * ipc_process, const rina::FlowRequestEvent& event) {
 
-	Flow* flow;
+	configs::Flow* flow;
 	rina::QoSCube * qosCube = NULL;
 
 	rina::Connection * connection = NULL;
@@ -63,7 +68,7 @@ Flow * FlowAllocatorPs::newFlowRequest(
 	flow->hop_count = 3;
 	flow->max_create_flow_retries = 1;
 	flow->source = true;
-	flow->state = Flow::ALLOCATION_IN_PROGRESS;
+	flow->state = configs::Flow::ALLOCATION_IN_PROGRESS;
 
 	//
 	// Try to select a qos cube which is suitable for this connection.
