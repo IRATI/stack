@@ -5,7 +5,7 @@
 #
 
 
-EXTRA_CFLAGS=-Wtype-limits -I/pristine/linux/net/rina/
+EXTRA_CFLAGS=-Wtype-limits -Inet/rina/
 
 obj-m	+= cdrr.o
 cdrr-y	:= dtcp-ps-cdrr.o

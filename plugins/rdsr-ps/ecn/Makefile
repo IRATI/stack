@@ -4,7 +4,7 @@
 # Author: Kewin Rausch <kewin.rausch@create-net.org>
 #
 
-EXTRA_CFLAGS=-Wtype-limits -I/pristine/linux/net/rina/
+EXTRA_CFLAGS=-Wtype-limits -Inet/rina/
 
 obj-m	+= ecn.o
 ecn-y	:= rmt-ps-ecn.o

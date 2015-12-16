@@ -3,16 +3,20 @@
 #
 # Author: Kewin Rausch <kewin.rausch@create-net.org>
 #
+# Root folder.
+root=/pristine
+# Userspace compiled folder.
+rootu=/pristine/userspace 
 # Final directory where to put the policy.
-out-dir=/pristine/userspace/lib/rinad/ipcp/
+out-dir=$(rootu)/lib/rinad/ipcp/
 # Librina headers.
-librina-dir=/pristine/librina/include
+librina-dir=$(root)/librina/include
 # Rinad elements.
-rinad-dir=/pristine/rinad/src
+rinad-dir=$(root)/rinad/src
 # Rinad compiled elements.
-rinad-out-dir=/pristine/build/rinad/src/
+rinad-out-dir=$(root)/build/rinad/src/
 # Compiled libraries.
-lib-dir=/pristine/userspace/lib
+lib-dir=$(rootu)/lib
 
 all:
 	cp fare.manifest $(out-dir)
