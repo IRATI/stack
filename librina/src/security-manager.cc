@@ -475,7 +475,7 @@ void encode_ssh2_auth_options(const SSH2AuthOptions& options,
 	}
 
 	int size = gpb_options.ByteSize();
-	result.message_ = new char[size];
+	result.message_ = new unsigned char[size];
 	result.size_ = size;
 	gpb_options.SerializeToArray(result.message_, size);
 }
@@ -498,7 +498,7 @@ void encode_client_chall_reply_ssh2(const UcharArray& client_chall_reply,
 	}
 
 	int size = gpb_chall.ByteSize();
-	result.message_ = new char[size];
+	result.message_ = new unsigned char[size];
 	result.size_ = size;
 	gpb_chall.SerializeToArray(result.message_ , size);
 }
@@ -1313,7 +1313,6 @@ int AuthSSH2PolicySet::process_client_challenge_message(const cdap::CDAPMessage&
 		encode_client_chall_reply_ssh2(hashed_challenge,
 					       encrypted_server_challenge,
 					       obj_info.value_);
-
 		rib_daemon->remote_write(sc->con, obj_info, flags, filt, NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());

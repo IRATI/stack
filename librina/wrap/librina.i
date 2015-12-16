@@ -29,7 +29,6 @@
 SWIG_JAVABODY_PROXY(public, public, SWIGTYPE)
 SWIG_JAVABODY_TYPEWRAPPER(public, public, public, SWIGTYPE)
 
-
 /**
  * void * typemaps. 
  * These are input typemaps for mapping a Java byte[] array to a C void array.
@@ -59,38 +58,51 @@ SWIG_JAVABODY_TYPEWRAPPER(public, public, public, SWIGTYPE)
 %typemap(javaout) void * {
         return $jnicall;
  }
+ 
+/**
+* unsigned char* typemaps. 
+* These are input typemaps for mapping a c++ unsigned char * to a Java byte[].
+*/
+%typemap(jni) unsigned char * message_ "jbyteArray"
+%typemap(jtype) unsigned char * message_ "byte[]"
+%typemap(jstype) unsigned char * message_ "byte[]"
+%typemap(javaout) unsigned char * message_ {
+    return $jnicall;
+}
+%typemap(out) signed char * message_ {
+    $result = JCALL1(NewByteArray, jenv, arg1->contentLength);
+    JCALL4(SetByteArrayRegion, jenv, $result, 0, arg1->contentLength, $1);
+}
+%typemap(in) unsigned char *message_ {
+    $1 = (unsigned char *)JCALL2(GetByteArrayElements, jenv, $input, 0);
+}
+%typemap(javain) unsigned char *message_ "$javainput"
 
 /**
- * char * typemaps. 
- * These are input typemaps for mapping a Java byte[] array to a C char array.
- * Note that as a Java array is used and thus passeed by reference, the C
- * routine can return data to Java via the parameter.
- *
- * Example usage wrapping:
- *   void foo(char *array);
- *  
- * Java usage:
- *   byte b[] = new byte[20];
- *   modulename.foo(b);
- */
-/*
-%typemap(jni)    char * "jbyteArray"
-%typemap(jtype)  char * "byte[]"
-%typemap(jstype) char * "byte[]"
-%typemap(in)     char * {
-        $1 = (char *) JCALL2(GetByteArrayElements, jenv, $input, 0); 
-}
-
-%typemap(argout) char * {
-        JCALL3(ReleaseByteArrayElements, jenv, $input, (jbyte *) $1, 0); 
-}
-
-%typemap(javain) char * "$javainput"
-
-%typemap(javaout) char * {
-        return $jnicall;
- }
+* std::string & typemaps. 
+* These are input typemaps for mapping a c++ std::string& to a Java String[].
 */
+
+%typemap(jstype) std::string& INPUT "String[]"
+%typemap(jtype) std::string& INPUT "String[]"
+%typemap(jni) std::string& INPUT "jobjectArray"
+%typemap(javain)  std::string& INPUT "$javainput"
+%typemap(in) std::string& INPUT (std::string temp) {
+  if (!$input) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "array null");
+    return $null;
+  }
+  if (JCALL1(GetArrayLength, jenv, $input) == 0) {
+    SWIG_JavaThrowException(jenv, SWIG_JavaIndexOutOfBoundsException, "Array must contain at least 1 element");
+  }
+  $1 = &temp;
+}
+%typemap(argout) std::string& INPUT {
+  jstring jvalue = JCALL1(NewStringUTF, jenv, temp$argnum.c_str()); 
+  JCALL3(SetObjectArrayElement, jenv, $input, 0, jvalue);
+}
+%apply  std::string& INPUT { std::string & des_obj }
+
 /* Define the class eu.irati.librina.Exception */
 %typemap(javabase) rina::Exception "java.lang.RuntimeException";
 %typemap(javacode) rina::Exception %{
@@ -447,6 +459,7 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 #include "librina/cdap_rib_structures.h"
 #include "librina/cdap_v2.h"
 #include "librina/ipc-api.h"
+#include "librina/configuration.h"
 %}
 
 %feature("director") rina::cdap::CDAPCallbackInterface;
@@ -481,11 +494,19 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(assign) rina::ser_obj::operator=(const ser_obj &other);
 %rename(assign) rina::cdap_rib::auth_policy::operator=(const auth_policy &other);
 %rename(assign) rina::Neighbor::operator=(const Neighbor &other);
+%rename(equals) rina::PolicyParameter::operator==(const PolicyParameter &other) const;
+%rename(differs) rina::PolicyParameter::operator!=(const PolicyParameter &other) const;
+%rename(equals) rina::PolicyConfig::operator==(const PolicyConfig &other) const;
+%rename(differs) rina::PolicyConfig::operator!=(const PolicyConfig &other) const;
+%rename(equals) rina::QoSCube::operator==(const QoSCube &other) const;
+%rename(differs) rina::QoSCube::operator!=(const QoSCube &other) const;
+%rename(assign) rina::EFCPConfiguration::operator=(const EFCPConfiguration &other);
 
 %include "librina/exceptions.h"
 %include "librina/patterns.h"
 %include "librina/concurrency.h"
 %include "librina/common.h"
+%include "librina/configuration.h"
 
 namespace rina {
 namespace cdap {
@@ -501,7 +522,6 @@ class cdap_m_t;
 %include "librina/cdap_rib_structures.h"
 %include "librina/cdap_v2.h"
 %include "librina/ipc-api.h"
-
 
 /* Macro for defining collection iterators */
 %define MAKE_COLLECTION_ITERABLE( ITERATORNAME, JTYPE, CPPCOLLECTION, CPPTYPE )

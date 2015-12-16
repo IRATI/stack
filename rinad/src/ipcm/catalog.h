@@ -3,19 +3,20 @@
  *
  *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA  02110-1301  USA
  */
 
 #ifndef __CATALOG_H__
@@ -87,17 +88,17 @@ public:
 	void import();
 	void add_plugin(const std::string& plugin_name,
 		        const std::string& plugin_path);
-	int load_by_template(Addon *addon, unsigned int ipcp_id,
-			     const rinad::DIFTemplate *dif_template);
+	int load(Addon *addon, unsigned int ipcp_id,
+			const rina::DIFConfiguration& t);
 
 	int load_policy_set(Addon *addon, unsigned int ipcp_id,
-			    const rina::PsInfo& psinfo);
+			const rina::PsInfo& psinfo);
 
 	int plugin_loaded(const std::string& plugin_name,
-			  unsigned int ipcp_id, bool load);
+			 unsigned int ipcp_id, bool load);
 
 	int policy_set_selected(const rina::PsInfo& ps_info,
-			        unsigned int id);
+			unsigned int id);
 
 	void ipcp_destroyed(unsigned int ipcp_id);
 

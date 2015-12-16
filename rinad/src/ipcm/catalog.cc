@@ -3,19 +3,20 @@
  *
  *    Vincenzo Maffione     <v.maffione@nextworks.it>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA  02110-1301  USA
  */
 
 #include <cstdlib>
@@ -175,63 +176,64 @@ void Catalog::psinfo_from_psconfig(list< rina::PsInfo >& psinfo_list,
 	psinfo_list.push_back(rina::PsInfo(ps_name, component, ps_version));
 }
 
-int Catalog::load_by_template(Addon *addon, unsigned int ipcp_id,
-			      const rinad::DIFTemplate *t)
+int Catalog::load(Addon *addon, unsigned int ipcp_id,
+			      const rina::DIFConfiguration& t)
 {
 	list< rina::PsInfo > required_policy_sets;
 
 	// Collect into a list all the policy sets specified
 	// by the template
 	psinfo_from_psconfig(required_policy_sets, "rmt",
-			     t->rmtConfiguration.policy_set_);
+			     t.rmt_configuration_.policy_set_);
 
 	psinfo_from_psconfig(required_policy_sets, "pff",
-			     t->rmtConfiguration.pft_conf_.policy_set_);
+			     t.rmt_configuration_.pft_conf_.policy_set_);
 
 	psinfo_from_psconfig(required_policy_sets, "enrollment-task",
-			     t->etConfiguration.policy_set_);
+			     t.et_configuration_.policy_set_);
 
 	psinfo_from_psconfig(required_policy_sets, "security-manager",
-			     t->secManConfiguration.policy_set_);
+			     t.sm_configuration_.policy_set_);
 
 	psinfo_from_psconfig(required_policy_sets, "flow-allocator",
-			     t->faConfiguration.policy_set_);
+			     t.fa_configuration_.policy_set_);
 
 	psinfo_from_psconfig(required_policy_sets, "namespace-manager",
-			     t->nsmConfiguration.policy_set_);
+			     t.nsm_configuration_.policy_set_);
 
 	psinfo_from_psconfig(required_policy_sets, "resource-allocator",
-			     t->raConfiguration.pduftg_conf_.policy_set_);
+			     t.ra_configuration_.pduftg_conf_.policy_set_);
 
 	psinfo_from_psconfig(required_policy_sets, "routing",
-			     t->routingConfiguration.policy_set_);
+			     t.routing_configuration_.policy_set_);
 
-	for (list<rina::QoSCube>::const_iterator qit = t->qosCubes.begin();
-					qit != t->qosCubes.end(); qit++) {
+	for (list<rina::QoSCube*>::const_iterator qit =
+			t.efcp_configuration_.qos_cubes_.begin();
+			qit != t.efcp_configuration_.qos_cubes_.end(); qit++) {
 		psinfo_from_psconfig(required_policy_sets, "dtp",
-				     qit->dtp_config_.dtp_policy_set_);
+				     (*qit)->dtp_config_.dtp_policy_set_);
 		psinfo_from_psconfig(required_policy_sets, "dtcp",
-				     qit->dtcp_config_.dtcp_policy_set_);
+				     (*qit)->dtcp_config_.dtcp_policy_set_);
 	}
 
-        psinfo_from_psconfig(required_policy_sets, "crypto",
-                t->secManConfiguration.default_auth_profile.encryptPolicy);
-        psinfo_from_psconfig(required_policy_sets, "errc",
-                t->secManConfiguration.default_auth_profile.crcPolicy);
-        psinfo_from_psconfig(required_policy_sets, "ttl",
-                t->secManConfiguration.default_auth_profile.ttlPolicy);
+	psinfo_from_psconfig(required_policy_sets, "crypto",
+			t.sm_configuration_.default_auth_profile.encryptPolicy);
+	psinfo_from_psconfig(required_policy_sets, "errc",
+			t.sm_configuration_.default_auth_profile.crcPolicy);
+	psinfo_from_psconfig(required_policy_sets, "ttl",
+			t.sm_configuration_.default_auth_profile.ttlPolicy);
 
-        for (map<std::string, rina::AuthSDUProtectionProfile>::const_iterator
-                pit = t->secManConfiguration.specific_auth_profiles.begin();
-                    pit !=t->secManConfiguration.specific_auth_profiles.end();
-                        pit++) {
-		psinfo_from_psconfig(required_policy_sets, "crypto",
-				     pit->second.encryptPolicy);
-		psinfo_from_psconfig(required_policy_sets, "errc",
-				     pit->second.crcPolicy);
-		psinfo_from_psconfig(required_policy_sets, "ttl",
-				     pit->second.ttlPolicy);
-        }
+	for (map<std::string, rina::AuthSDUProtectionProfile>::const_iterator
+			pit = t.sm_configuration_.specific_auth_profiles.begin();
+				pit !=t.sm_configuration_.specific_auth_profiles.end();
+					pit++) {
+	psinfo_from_psconfig(required_policy_sets, "crypto",
+				 pit->second.encryptPolicy);
+	psinfo_from_psconfig(required_policy_sets, "errc",
+				 pit->second.crcPolicy);
+	psinfo_from_psconfig(required_policy_sets, "ttl",
+				 pit->second.ttlPolicy);
+	}
 
 	// Load all the policy sets in the list
 	for (list<rina::PsInfo>::iterator i=required_policy_sets.begin();

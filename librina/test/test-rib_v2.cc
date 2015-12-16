@@ -299,12 +299,12 @@ public:
 	virtual ~MyObj(){};
 
 	void read(const cdap_rib::con_handle_t &con,
-					const std::string& fqn,
-					const std::string& class_,
-					const cdap_rib::filt_info_t &filt,
-					const int invoke_id,
-					ser_obj_t &obj_reply,
-					cdap_rib::res_info_t& res){
+              const std::string& fqn,
+              const std::string& class_,
+              const cdap_rib::filt_info_t &filt,
+              const int invoke_id,
+              cdap_rib::obj_info_t &obj_reply,
+              cdap_rib::res_info_t& res){
 
 
 		CPPUNIT_ASSERT_MESSAGE("Invalid invoke id", invoke_id>=4);
@@ -334,12 +334,12 @@ public:
 	virtual ~OtherObj(){};
 
 	void read(const cdap_rib::con_handle_t &con,
-					const std::string& fqn,
-					const std::string& class_,
-					const cdap_rib::filt_info_t &filt,
-					const int invoke_id,
-					ser_obj_t &obj_reply,
-					cdap_rib::res_info_t& res){
+              const std::string& fqn,
+              const std::string& class_,
+              const cdap_rib::filt_info_t &filt,
+              const int invoke_id,
+              cdap_rib::obj_info_t &obj_reply,
+              cdap_rib::res_info_t& res){
 	};
 	static const std::string class_;
 };
@@ -906,7 +906,7 @@ void ribBasicOps::testConnect(){
 
 	//Fill in the necessary stuff (only)
 	con_ok.port_id = 0x1;
-	con_ok.dest_.ae_name_ = ae;
+	con_ok.src_.ae_name_ = ae;
 	con_ok.version_ = version;
 
 	//Fill in the necessary
@@ -921,9 +921,7 @@ void ribBasicOps::testConnect(){
 	try{
 		rib_provider->open_connection(con_ko, message);
 		CPPUNIT_ASSERT_MESSAGE("Connection with an invalid AE name has succeeded", 0);
-	}catch(eRIBNotFound&){
 	}catch(...){
-		CPPUNIT_ASSERT_MESSAGE("Invalid exception thrown during open_connection", 0);
 	}
 
 	message.version_ = 0x02;
@@ -957,7 +955,7 @@ void ribBasicOps::testOperations(){
 	obj_info1.inst_ = -1;
 	obj_info1.name_ = "/x/y/z/invalid";
 	obj_info1.value_.size_ = sizeof(char[1]);
-	obj_info1.value_.message_ = new char[1];
+	obj_info1.value_.message_ = new unsigned char[1];
 	message = (char*)obj_info1.value_.message_;
 
 	//Issue a request with an invalid con id

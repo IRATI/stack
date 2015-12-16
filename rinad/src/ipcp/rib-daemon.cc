@@ -4,19 +4,20 @@
 //    Bernat Gaston <bernat.gaston@i2cat.net>
 //    Eduard Grasa <eduard.grasa@i2cat.net>
 //
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
 //
-// This program is distributed in the hope that it will be useful,
+// This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+// MA  02110-1301  USA
 //
 
 #define IPCP_MODULE "rib-daemon"
@@ -40,7 +41,7 @@ void * doManagementSDUReaderWork(void* arg)
 {
 	ManagementSDUReaderData * data = (ManagementSDUReaderData *) arg;
 	rina::ser_obj_t message;
-	message.message_ = new char[data->max_sdu_size_];
+	message.message_ = new unsigned char[data->max_sdu_size_];
 
 	rina::ReadManagementSDUResult result;
 	LOG_IPCP_INFO("Starting Management SDU reader ...");
@@ -74,6 +75,7 @@ class IPCPCDAPIOHandler : public rina::cdap::CDAPIOHandler
 	IPCPCDAPIOHandler(){};
 	void send(const rina::cdap::cdap_m_t &m_sent,
 		  const rina::cdap_rib::con_handle_t& con_handle);
+
 	void process_message(const rina::ser_obj_t &message,
 			     unsigned int handle,
 			     rina::cdap_rib::cdap_dest_t cdap_dest);
@@ -99,7 +101,7 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
 	try {
 		if (con_handle.cdap_dest == rina::cdap_rib::CDAP_DEST_ADDRESS) {
 			rina::cdap::ADataObject adata;
-			ADataObjectEncoder encoder;
+			encoders::ADataObjectEncoder encoder;
 			rina::cdap_rib::flags_t flags;
 			rina::cdap_rib::filt_info_t filt;
 			rina::cdap_rib::obj_info_t obj;
@@ -208,7 +210,7 @@ void IPCPCDAPIOHandler::process_message(const rina::ser_obj_t &message,
 	//2 If it is an A-Data PDU extract the real message
 	if (m_rcv.obj_name_ == rina::cdap::ADataObject::A_DATA_OBJECT_NAME) {
 		try {
-			ADataObjectEncoder encoder;
+			encoders::ADataObjectEncoder encoder;
 			rina::cdap::ADataObject a_data_obj;
 			rina::cdap::cdap_m_t inner_m;
 
@@ -272,7 +274,7 @@ void IPCPCDAPIOHandler::invoke_callback(const rina::cdap_rib::con_handle_t& con_
 	obj.inst_ = m_rcv.obj_inst_;
 	obj.name_ = m_rcv.obj_name_;
 	obj.value_.size_ = m_rcv.obj_value_.size_;
-	obj.value_.message_ = new char[obj.value_.size_];
+	obj.value_.message_ = new unsigned char[obj.value_.size_];
 	memcpy(obj.value_.message_,
 	       m_rcv.obj_value_.message_,
 	       m_rcv.obj_value_.size_);

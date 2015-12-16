@@ -4,19 +4,20 @@
 //    Bernat Gaston <bernat.gaston@i2cat.net>
 //    Eduard Grasa <eduard.grasa@i2cat.net>
 //
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
 //
-// This program is distributed in the hope that it will be useful,
+// This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
 //
-// You should have a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+// MA  02110-1301  USA
 //
 
 #include <sstream>
@@ -34,6 +35,7 @@
 #include "common/concurrency.h"
 #include "common/encoders/EnrollmentInformationMessage.pb.h"
 #include "ipcp/enrollment-task.h"
+#include "common/encoder.h"
 
 namespace rinad {
 
@@ -68,7 +70,7 @@ void NeighborRIBObj::read(const rina::cdap_rib::con_handle_t &con,
 			  rina::cdap_rib::res_info_t& res)
 {
 	if (neighbor) {
-		NeighborEncoder encoder;
+		encoders::NeighborEncoder encoder;
 		encoder.encode(*neighbor, obj_reply.value_);
 	}
 
@@ -96,7 +98,7 @@ void NeighborsRIBObj::create(const rina::cdap_rib::con_handle_t &con,
 {
 	rina::Lockable lock;
 	rina::ScopedLock g(lock);
-	NeighborListEncoder encoder;
+	encoders::NeighborListEncoder encoder;
 	std::list<rina::Neighbor> neighbors;
 	std::stringstream ss;
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
@@ -508,7 +510,7 @@ void IEnrollmentStateMachine::sendNeighbors()
 		rina::cdap_rib::obj_info_t obj;
 		rina::cdap_rib::flags_t flags;
 		rina::cdap_rib::filt_info_t filt;
-		NeighborListEncoder encoder;
+		encoders::NeighborListEncoder encoder;
 		obj.class_ = NeighborsRIBObj::class_name;
 		obj.name_ = NeighborsRIBObj::object_name;
 		encoder.encode(neighbors_to_send, obj.value_);

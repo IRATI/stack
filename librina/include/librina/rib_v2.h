@@ -946,6 +946,7 @@ public:
 	virtual RIBDaemonProxy * getProxy() = 0;
 };
 
+
 } //namespace rib
 } //namespace rina
 #endif /* RIB_PROVIDER_H_ */

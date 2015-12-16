@@ -9,12 +9,6 @@
 		"/lib/modules/4.1.10-irati/extra"
 	]
     },
-    "applicationToDIFMappings": [
-        {
-            "encodedAppName": "rina.apps.echotime.server-1--",
-            "difName": "300"
-        }
-    ],
     "ipcProcessesToCreate": [
         {
             "apName": "test-eth",

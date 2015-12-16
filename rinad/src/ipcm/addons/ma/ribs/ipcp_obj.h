@@ -14,8 +14,8 @@
 #include <librina/common.h>
 
 //Encoders and structs
-#include "structures_mad.h"
-#include "encoders_mad.h"
+#include "configuration.h"
+#include "encoder.h"
 
 namespace rinad{
 namespace mad{
@@ -74,12 +74,9 @@ public:
 	int processID_;
 
 protected:
-	static int createIPCP(rinad::mad_manager::ipcp_config_t &object);
-	static bool assignToDIF(rinad::mad_manager::ipcp_config_t &object, int ipcp_id);
-	static bool registerAtDIFs(rinad::mad_manager::ipcp_config_t &object, int ipcp_id);
-
-private:
-	mad_manager::IPCPEncoder encoder;
+	static int createIPCP(rinad::configs::ipcp_config_t &object);
+	static bool assignToDIF(rinad::configs::ipcp_config_t &object, int ipcp_id);
+	static bool registerAtDIFs(rinad::configs::ipcp_config_t &object, int ipcp_id);
 };
 
 }; //namespace rib_v1

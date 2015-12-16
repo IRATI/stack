@@ -56,5 +56,8 @@ int                  policy_param_bind(struct policy *      policy,
                                        struct policy_parm * param);
 int                  policy_param_unbind(struct policy *      policy,
                                          struct policy_parm * param);
+void policy_for_each(struct policy * policy,
+                     void * opaque,
+                     int        (* f)(struct policy_parm * entry, void * opaque));
 
 #endif

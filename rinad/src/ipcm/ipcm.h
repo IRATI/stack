@@ -5,19 +5,20 @@
  *    Eduard Grasa          <eduard.grasa@i2cat.net>
  *    Marc Sune         <marc.sune (at) bisdn.de>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA  02110-1301  USA
  */
 
 #ifndef __IPCM_H__
@@ -29,12 +30,14 @@
 #include <map>
 #include <vector>
 #include <utility>
+#include <string>
 
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
 #include <librina/patterns.h>
 
 #include "dif-template-manager.h"
+#include "dif-allocator.h"
 #include "catalog.h"
 
 //Addons
@@ -346,7 +349,9 @@ public:
 			rinad::DIFTemplate * dif_template,
 			const rina::ApplicationProcessNamingInformation&
 				difName);
-
+	ipcm_res_t assign_to_dif(Addon* callee, Promise* promise,
+		const unsigned short ipcp_id, rina::DIFInformation &dif_info,
+		const rina::ApplicationProcessNamingInformation &dif_name);
 	//
 	// Register an IPCP to a single DIF
 	//
@@ -827,6 +832,9 @@ public:
 	//The DIF template manager
 	DIFTemplateManager * dif_template_manager;
 
+	//The DIF Allocator
+	DIFAllocator * dif_allocator;
+
 	//Catalog of policies
 	Catalog catalog;
 
@@ -849,6 +857,12 @@ private:
 	void io_loop(void);
 
 	friend class Singleton<rinad::IPCManager_>;
+
+	void pre_assign_to_dif(Addon* callee,
+			const rina::ApplicationProcessNamingInformation& dif_name,
+			const unsigned short ipcp_id, IPCMIPCProcess*& ipcp);
+	void assign_to_dif(Addon* callee, Promise *promise,
+			rina::DIFInformation dif_info, IPCMIPCProcess* ipcp);
 };
 
 

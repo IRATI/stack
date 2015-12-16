@@ -33,7 +33,7 @@ ipcmanager.conf: ipcmanager.conf.in \
 	chmod a-w $@.tmp
 	mv $@.tmp $@
 
-CLEANFILES    += ipcmanager.conf default.dif shim-eth-vlan.dif
-BUILT_SOURCES += ipcmanager.conf default.dif shim-eth-vlan.dif
-EXTRA_DIST    += ipcmanager.conf.in default.dif shim-eth-vlan.dif
-sysconf_DATA  += ipcmanager.conf default.dif shim-eth-vlan.dif
+CLEANFILES    += ipcmanager.conf default.dif shim-eth-vlan.dif da.map
+BUILT_SOURCES += ipcmanager.conf default.dif shim-eth-vlan.dif da.map
+EXTRA_DIST    += ipcmanager.conf.in default.dif shim-eth-vlan.dif da.map
+sysconf_DATA  += ipcmanager.conf default.dif shim-eth-vlan.dif da.map

@@ -611,7 +611,7 @@ public:
 
 typedef struct ser_obj {
 	int size_;
-	char* message_;
+	unsigned char * message_;
 
 	ser_obj() : size_(0), message_(0) {};
 
@@ -625,7 +625,7 @@ typedef struct ser_obj {
 	ser_obj& operator=(const ser_obj &other)
 	{
 		size_ = other.size_;
-		message_ = new char[size_];
+		message_ = new unsigned char[size_];
 		memcpy(message_, other.message_, size_);
 		return *this;
 	}

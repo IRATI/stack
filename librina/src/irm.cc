@@ -428,7 +428,6 @@ const std::string UnderlayingDIFRIBObj::class_name = "UnderlayingDIF";
 const std::string UnderlayingDIFRIBObj::object_name_prefix = "/ipcmanagement/irm/underdifs/difName=";
 const std::string UnderlayingDIFRIBObj::parent_class_name = "UnderlayingDIFs";
 const std::string UnderlayingDIFRIBObj::parent_object_name = "/ipcmanagement/irm/underdifs";
-
 UnderlayingDIFRIBObj::UnderlayingDIFRIBObj(const DIFProperties& dif_info)
 		: rib::RIBObj(class_name), dif_properties(dif_info)
 {
@@ -466,7 +465,7 @@ void DIFPropertiesEncoder::encode(const DIFProperties &obj,
 	gpb.set_dif_name(obj.DIFName.processName);
 
 	serobj.size_ = gpb.ByteSize();
-	serobj.message_ = new char[serobj.size_];
+	serobj.message_ = new unsigned char[serobj.size_];
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
 
@@ -504,7 +503,7 @@ void FlowInformationEncoder::encode(const FlowInformation &obj,
 	gpb.set_state((messages::flowStateValues_t) obj.state);
 
 	serobj.size_ = gpb.ByteSize();
-	serobj.message_ = new char[serobj.size_];
+	serobj.message_ = new unsigned char[serobj.size_];
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
 

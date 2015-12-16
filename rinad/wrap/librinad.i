@@ -30,6 +30,14 @@
 
 %pragma(java) jniclassimports=%{
 import eu.irati.librina.ser_obj_t;
+import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.FlowSpecification;
+import eu.irati.librina.Neighbor;
+import eu.irati.librina.ADataObject;
+import eu.irati.librina.DataTransferConstants;
+import eu.irati.librina.DTCPConfig;
+import eu.irati.librina.DIFInformation;
+import eu.irati.librina.QoSCube;
 %}
 
 /**
@@ -63,53 +71,53 @@ import eu.irati.librina.ser_obj_t;
         return $jnicall;
  }
  
-/**
-* std::string & typemaps. 
-* These are input typemaps for mapping a c++ std::string& to a Java String[].
-*/
-
-%typemap(jstype) std::string& INPUT "String[]"
-%typemap(jtype) std::string& INPUT "String[]"
-%typemap(jni) std::string& INPUT "jobjectArray"
-%typemap(javain)  std::string& INPUT "$javainput"
-%typemap(in) std::string& INPUT (std::string temp) {
-  if (!$input) {
-    SWIG_JavaThrowException(jenv, SWIG_JavaNullPointerException, "array null");
-    return $null;
-  }
-  if (JCALL1(GetArrayLength, jenv, $input) == 0) {
-    SWIG_JavaThrowException(jenv, SWIG_JavaIndexOutOfBoundsException, "Array must contain at least 1 element");
-  }
-  $1 = &temp;
-}
-%typemap(argout) std::string& INPUT {
-  jstring jvalue = JCALL1(NewStringUTF, jenv, temp$argnum.c_str()); 
-  JCALL3(SetObjectArrayElement, jenv, $input, 0, jvalue);
-}
-%apply  std::string& INPUT { std::string & des_obj }
- 
 %typemap(javaimports) SWIGTYPE 
 %{
 import eu.irati.librina.ser_obj_t;
+import eu.irati.librina.ApplicationProcessNamingInformation;
+import eu.irati.librina.FlowSpecification;
+import eu.irati.librina.Neighbor;
+import eu.irati.librina.ADataObject;
+import eu.irati.librina.DataTransferConstants;
+import eu.irati.librina.DTCPConfig;
+import eu.irati.librina.DIFInformation;
+import eu.irati.librina.QoSCube;
 %}
 
 %{
-#include "structures_mad.h"
+#include "librina/common.h"
+#include "configuration.h"
 #include "librina/cdap_rib_structures.h"
-#include "encoders_mad.h"
+#include "encoder.h"
 #include <string>
 %}
 
 
-%include "structures_mad.h"
+%include "configuration.h"
 
-namespace rinad{
-namespace mad_manager{
-%template(TempIPCPConfigEncoder) Encoder<ipcp_config_t>;
-%template(TempIPCPEncoder) Encoder<ipcp_t>;
-}}
+namespace rina{
+%template(TempDTEncoder) Encoder< rina::DataTransferConstants >;
+%template(TempDFTEncoder) Encoder<rina::DirectoryForwardingTableEntry>;
+%template(TempDFTLEncoder) Encoder<std::list<rina::DirectoryForwardingTableEntry> >;
+%template(TempQOSCEncoder) Encoder<rina::QoSCube>;
+%template(TempQOSCLEncoder) Encoder<std::list<rina::QoSCube> >;
+%template(TempWNEncoder) Encoder<rina::WhatevercastName>;
+%template(TempWNLEncoder) Encoder<std::list<rina::WhatevercastName> >;
+%template(TempNeEncoder) Encoder<rina::Neighbor>;
+%template(TempNeLEncoder) Encoder<std::list<rina::Neighbor> >;
+%template(TempADOEncoder) Encoder<cdap::ADataObject>;
+%template(TempIPCPConfigEncoder) Encoder<rinad::configs::ipcp_config_t>;
+%template(TempIPCPEncoder) Encoder<rinad::configs::ipcp_t>;
+%template(TempEIREncoder) Encoder<rinad::configs::EnrollmentInformationRequest>;
+%template(TempFEncoder) Encoder<rinad::configs::Flow>;
+%template(TempRTEncoder) Encoder<rina::RoutingTableEntry >;
+%template(TempPDUFTEncoder) Encoder<rina::PDUForwardingTableEntry >;
+%template(TempDTPIEncoder) Encoder<rina::DTPInformation >;
+%template(TempDTCPCEncoder) Encoder<rina::DTCPConfig >;
+}
 
-%include "encoders_mad.h"
+%include "encoder.h"
+
 
 /* Macro for defining collection iterators */
 %define MAKE_COLLECTION_ITERABLE( ITERATORNAME, JTYPE, CPPCOLLECTION, CPPTYPE )

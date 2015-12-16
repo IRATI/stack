@@ -3,29 +3,27 @@
  *
  *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA  02110-1301  USA
  */
 
 #ifndef __DIF_VALIDATOR_H__
 #define __DIF_VALIDATOR_H__
 
 #include <cstdlib>
-#include <iostream>
-#include <map>
 #include <vector>
-#include <utility>
 
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
@@ -51,12 +49,11 @@ public:
                 SHIM_HV,
                 SHIM_NOT_DEFINED
         };
-        DIFConfigValidator(const rina::DIFConfiguration &dif_config,
-                        const rina::DIFInformation &dif_info, std::string type);
+        DIFConfigValidator(const rina::DIFInformation &dif_info,
+        		std::string type);
         bool validateConfigs();
 private:
         Types type_;
-        const rina::DIFConfiguration &dif_config_;
         const rina::DIFInformation &dif_info_;
 
 	bool validateShimEth();
@@ -71,6 +68,7 @@ private:
 	bool qosCubes();
 	bool knownIPCProcessAddresses();
 	bool pdufTableGeneratorConfiguration();
+	void print_log(const std::string& message, std::stringstream& result);
 };
 
 

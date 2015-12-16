@@ -9,16 +9,6 @@
 		"/lib/modules/4.1.10-irati/extra"
 	]
     },
-    "applicationToDIFMappings": [
-        {
-            "encodedAppName": "rina.apps.echotime.server-1--",
-            "difName": "test-shim-dif-hv"
-        },
-        {
-            "encodedAppName": "rina.apps.echotime.client-1--",
-            "difName": "test-shim-dif-hv"
-        }
-    ],
     "ipcProcessesToCreate": [
         {
             "apName": "test-hv",

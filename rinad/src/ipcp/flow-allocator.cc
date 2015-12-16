@@ -4,19 +4,20 @@
 //    Bernat Gaston <bernat.gaston@i2cat.net>
 //    Eduard Grasa <eduard.grasa@i2cat.net>
 //
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
 //
-// This program is distributed in the hope that it will be useful,
+// This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+// MA  02110-1301  USA
 //
 
 #include <climits>
@@ -29,6 +30,8 @@
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
 #include "ipcp/ipc-process.h"
 #include "flow-allocator.h"
+#include "common/encoder.h"
+#include "common/configuration.h"
 
 namespace rinad {
 
@@ -51,9 +54,9 @@ void FlowRIBObject::read(const rina::cdap_rib::con_handle_t &con,
 			 rina::cdap_rib::obj_info_t &obj_reply,
 			 rina::cdap_rib::res_info_t& res)
 {
-	Flow * flow = flow_allocator_instance_->get_flow();
+	configs::Flow * flow = flow_allocator_instance_->get_flow();
 	if (flow) {
-		FlowEncoder encoder;
+		encoders::FlowEncoder encoder;
 		encoder.encode(*flow, obj_reply.value_);
 	}
 
@@ -82,11 +85,11 @@ void FlowRIBObject::create_cb(const rina::rib::rib_handle_t rib,
 			      rina::ser_obj_t &obj_reply,
 			      rina::cdap_rib::res_info_t& res)
 {
-	FlowEncoder encoder;
-	Flow rcv_flow;
+	encoders::FlowEncoder encoder;
+	configs::Flow rcv_flow;
 	encoder.decode(obj_req, rcv_flow);
 
-	Flow * flow = new Flow(rcv_flow);
+	configs::Flow * flow = new configs::Flow(rcv_flow);
 	IPCPFactory::getIPCP()->flow_allocator_->createFlowRequestMessageReceived(flow,
 							  	  	  	  fqn,
 							  	  	  	  invoke_id);
@@ -139,7 +142,7 @@ void ConnectionRIBObject::read(const rina::cdap_rib::con_handle_t &con,
 			       rina::cdap_rib::obj_info_t &obj_reply,
 			       rina::cdap_rib::res_info_t& res)
 {
-	DTPInformationEncoder encoder;
+	encoders::DTPInformationEncoder encoder;
 	rina::DTPInformation dtp_info(fai->get_flow()->getActiveConnection());
 	encoder.encode(dtp_info, obj_reply.value_);
 
@@ -179,7 +182,7 @@ void DTCPRIBObject::read(const rina::cdap_rib::con_handle_t &con,
 			 rina::cdap_rib::obj_info_t &obj_reply,
 			 rina::cdap_rib::res_info_t& res)
 {
-	DTCPInformationEncoder encoder;
+	encoders::DTCPInformationEncoder encoder;
 	encoder.encode(fai->get_flow()->getActiveConnection()->dtcpConfig,
 		       obj_reply.value_);
 
@@ -261,7 +264,7 @@ void FlowAllocator::populateRIB()
 }
 
 void FlowAllocator::createFlowRequestMessageReceived(
-		Flow * flow,
+		configs::Flow * flow,
 		const std::string& object_name,
 		int invoke_id)
 {
@@ -540,7 +543,7 @@ int FlowAllocatorInstance::get_port_id() const
 	return port_id_;
 }
 
-Flow * FlowAllocatorInstance::get_flow() const
+configs::Flow * FlowAllocatorInstance::get_flow() const
 {
 	return flow_;
 }
@@ -574,13 +577,16 @@ void FlowAllocatorInstance::submitAllocateRequest(const rina::FlowRequestEvent& 
 {
 	IFlowAllocatorPs * faps =
 		dynamic_cast<IFlowAllocatorPs *>(flow_allocator_->ps);
+	if (!faps) {
+		std::stringstream ss;
+		ss << "Flow allocator policy is NULL ";
+		throw rina::Exception(ss.str().c_str());
+	}
+
 	rina::ScopedLock g(lock_);
 
 	flow_request_event_ = event;
-
 	flow_ = faps->newFlowRequest(ipc_process_, flow_request_event_);
-
-	LOG_IPCP_DBG("Generated flow object");
 
 	//1 Check directory to see to what IPC process the CDAP M_CREATE request has to be delivered
 	unsigned int destinationAddress = namespace_manager_->getDFTNextHop(
@@ -669,7 +675,7 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::Cre
 			rina::cdap_rib::flags_t flags;
 			rina::cdap_rib::filt_info_t filt;
 			rina::cdap_rib::obj_info_t obj;
-			FlowEncoder encoder;
+			encoders::FlowEncoder encoder;
 			obj.class_ = FlowRIBObject::class_name;
 			obj.name_ = object_name_;
 			encoder.encode(*flow_, obj.value_);
@@ -690,7 +696,7 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::Cre
 	} else {
 		//Destination application is registered at this IPC Process
 		//Bypass RIB Daemon and call Flow Allocator directly
-		Flow * dest_flow = new Flow(*flow_);
+		configs::Flow * dest_flow = new configs::Flow(*flow_);
 		flow_allocator_->createFlowRequestMessageReceived(dest_flow, object_name_, 0);
 	}
 
@@ -698,7 +704,7 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::Cre
 	lock_.unlock();
 }
 
-void FlowAllocatorInstance::createFlowRequestMessageReceived(Flow * flow,
+void FlowAllocatorInstance::createFlowRequestMessageReceived(configs::Flow * flow,
 							     const std::string& object_name,
 							     int invoke_id)
 {
@@ -746,7 +752,7 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(Flow * flow,
 				rina::cdap_rib::flags_t flags;
 				rina::cdap_rib::filt_info_t filt;
 				rina::cdap_rib::obj_info_t obj;
-				FlowEncoder encoder;
+				encoders::FlowEncoder encoder;
 				obj.class_ = FlowRIBObject::class_name;
 				obj.name_ = object_name_;
 				encoder.encode(*flow_, obj.value_);
@@ -849,7 +855,7 @@ void FlowAllocatorInstance::submitAllocateResponse(const rina::AllocateFlowRespo
 				rina::cdap_rib::flags_t flags;
 				rina::cdap_rib::filt_info_t filt;
 				rina::cdap_rib::obj_info_t obj;
-				FlowEncoder encoder;
+				encoders::FlowEncoder encoder;
 				obj.class_ = FlowRIBObject::class_name;
 				obj.name_ = object_name_;
 				encoder.encode(*flow_, obj.value_);
@@ -892,10 +898,10 @@ void FlowAllocatorInstance::submitAllocateResponse(const rina::AllocateFlowRespo
 				return;
 			}
 
-			Flow * source_flow = new Flow(*flow_);
+			configs::Flow* source_flow = new configs::Flow(*flow_);
 			rina::cdap_rib::con_handle_t con;
 			rina::cdap_rib::obj_info_t obj;
-			FlowEncoder encoder;
+			encoders::FlowEncoder encoder;
 			obj.class_ = FlowRIBObject::class_name;
 			obj.name_ = source_flow->getKey();
 			encoder.encode(*source_flow, obj.value_);
@@ -906,7 +912,7 @@ void FlowAllocatorInstance::submitAllocateResponse(const rina::AllocateFlowRespo
 		}
 
 		try {
-			flow_->state = Flow::ALLOCATED;
+			flow_->state = configs::Flow::ALLOCATED;
 			rina::rib::RIBObj * obj = new FlowRIBObject(ipc_process_, this);
 			rib_daemon_->addObjRIB(object_name_, &obj);
 
@@ -935,7 +941,7 @@ void FlowAllocatorInstance::submitAllocateResponse(const rina::AllocateFlowRespo
 			rina::cdap_rib::flags_t flags;
 			rina::cdap_rib::filt_info_t filt;
 			rina::cdap_rib::obj_info_t obj;
-			FlowEncoder encoder;
+			encoders::FlowEncoder encoder;
 			obj.class_ = FlowRIBObject::class_name;
 			obj.name_ = object_name_;
 			encoder.encode(*flow_, obj.value_);
@@ -1016,7 +1022,7 @@ void FlowAllocatorInstance::processUpdateConnectionResponseEvent(
 
 	//Update connection was successful
 	try {
-		flow_->state = Flow::ALLOCATED;
+		flow_->state = configs::Flow::ALLOCATED;
 		rina::rib::RIBObj * obj = new FlowRIBObject(ipc_process_, this);
 		rib_daemon_->addObjRIB(object_name_, &obj);
 
@@ -1062,7 +1068,7 @@ void FlowAllocatorInstance::submitDeallocate(
 
 	try {
 		//1 Update flow state
-		flow_->state = Flow::WAITING_2_MPL_BEFORE_TEARING_DOWN;
+		flow_->state = configs::Flow::WAITING_2_MPL_BEFORE_TEARING_DOWN;
 		state = WAITING_2_MPL_BEFORE_TEARING_DOWN;
 
 		//2 Send M_DELETE
@@ -1112,7 +1118,7 @@ void FlowAllocatorInstance::deleteFlowRequestMessageReceived()
 	}
 
 	//1 Update flow state
-	flow_->state = Flow::WAITING_2_MPL_BEFORE_TEARING_DOWN;
+	flow_->state = configs::Flow::WAITING_2_MPL_BEFORE_TEARING_DOWN;
 	state = WAITING_2_MPL_BEFORE_TEARING_DOWN;
 
 	//3 Wait 2*MPL before tearing down the flow
@@ -1199,8 +1205,8 @@ void FlowAllocatorInstance::remoteCreateResult(const rina::cdap_rib::con_handle_
 	//Update the EFCP connection with the destination cep-id
 	try {
 		if (obj.value_.message_) {
-			FlowEncoder encoder;
-			Flow receivedFlow;
+			encoders::FlowEncoder encoder;
+			configs::Flow receivedFlow;
 			encoder.decode(obj.value_, receivedFlow);
 			flow_->destination_port_id = receivedFlow.destination_port_id;
 			flow_->getActiveConnection()->setDestCepId(
@@ -1264,7 +1270,7 @@ void DataTransferRIBObj::read(const rina::cdap_rib::con_handle_t &con,
 			      rina::ser_obj_t &obj_reply,
 			      rina::cdap_rib::res_info_t& res)
 {
-	DataTransferConstantsEncoder encoder;
+	encoders::DataTransferConstantsEncoder encoder;
 	encoder.encode(ipc_process_->get_dif_information().dif_configuration_.efcp_configuration_.data_transfer_constants_,
 		       obj_reply);
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
