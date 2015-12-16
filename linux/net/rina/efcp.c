@@ -47,7 +47,7 @@
 #include "dt-utils.h"
 #include "dtp-ps.h"
 #include "policies.h"
-#include "sysfs-utils.h"
+#include "rds/robjects.h"
 
 enum efcp_state {
         EFCP_ALLOCATED = 1,
@@ -106,11 +106,11 @@ static ssize_t efcp_attr_show(struct kobject *		     kobj,
 		return sprintf(buf, "%u\n", dt_sv_mpl(instance->dt));
 	return 0;
 }
-DECLARE_SYSFS_OPS(efcp);
-DECLARE_SYSFS_ATTRS(efcp, src_address, dst_address, src_cep_id, dst_cep_id,
+RINA_SYSFS_OPS(efcp);
+RINA_ATTRS(efcp, src_address, dst_address, src_cep_id, dst_cep_id,
 	qos_id, port_id, a_timer, r_timer, tr_timeout, max_flow_pdu_size,
 	max_flow_sdu_size, max_packet_life);
-DECLARE_SYSFS_KTYPE(efcp);
+RINA_KTYPE(efcp);
 
 struct efcp_container {
 	struct kset *        kset;
@@ -224,7 +224,7 @@ static int efcp_destroy(struct efcp * instance)
                 connection_destroy(instance->connection);
         }
 
-	kobject_del(&instance->kobj);
+	robject_del(&instance->kobj);
         rkfree(instance);
 
         LOG_DBG("EFCP instance %pK finalized successfully", instance);
@@ -674,16 +674,12 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 
         tmp->connection = connection;
 
-	tmp->kobj.kset = container->kset;
-	if (!tmp->kobj.kset) {
-                efcp_destroy(tmp);
-                return cep_id_bad();
-	}
-	if (kobject_init_and_add(&tmp->kobj,
-				 &efcp_ktype,
-				 NULL,
-				 "%d",
-				 cep_id)) {
+	if (robject_kset_init_and_add(&tmp->kobj,
+				      &efcp_ktype,
+				      container->kset,
+				      "%d",
+				      cep_id)) {
+		LOG_ERR("Could not add connection tp sysfs");
                 efcp_destroy(tmp);
                 return cep_id_bad();
 	}

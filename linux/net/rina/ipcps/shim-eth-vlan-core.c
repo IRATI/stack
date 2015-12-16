@@ -51,7 +51,7 @@
 #include "rinarp/rinarp.h"
 #include "rinarp/arp826-utils.h"
 #include "shim-eth.h"
-#include "sysfs-utils.h"
+#include "rds/robjects.h"
 
 #define DEFAULT_QDISC_MAX_SIZE 50
 #define DEFAULT_QDISC_ENABLE_SIZE 10
@@ -181,9 +181,9 @@ static ssize_t eth_vlan_ipcp_attr_show(struct kobject *        kobj,
 
 	return 0;
 }
-DECLARE_SYSFS_OPS(eth_vlan_ipcp);
-DECLARE_SYSFS_ATTRS(eth_vlan_ipcp, name, type, dif, address, vlan_id, iface);
-DECLARE_SYSFS_KTYPE(eth_vlan_ipcp);
+RINA_SYSFS_OPS(eth_vlan_ipcp);
+RINA_ATTRS(eth_vlan_ipcp, name, type, dif, address, vlan_id, iface);
+RINA_KTYPE(eth_vlan_ipcp);
 
 static DEFINE_SPINLOCK(data_instances_lock);
 static struct list_head data_instances_list;

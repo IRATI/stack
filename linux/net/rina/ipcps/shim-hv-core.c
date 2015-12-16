@@ -40,7 +40,7 @@
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
 #include "vmpi.h"
-#include "sysfs-utils.h"
+#include "rds/robjects.h"
 
 /* FIXME: Pigsty workaround, to be removed immediately */
 #if defined(CONFIG_VMPI_KVM_GUEST) && !defined(CONFIG_VMPI_KVM_GUEST_MODULE)
@@ -141,9 +141,9 @@ static ssize_t shim_hv_ipcp_attr_show(struct kobject *        kobj,
 
 	return 0;
 }
-DECLARE_SYSFS_OPS(shim_hv_ipcp);
-DECLARE_SYSFS_ATTRS(shim_hv_ipcp, name, tpye, dif);
-DECLARE_SYSFS_KTYPE(shim_hv_ipcp);
+RINA_SYSFS_OPS(shim_hv_ipcp);
+RINA_ATTRS(shim_hv_ipcp, name, tpye, dif);
+RINA_KTYPE(shim_hv_ipcp);
 
 static unsigned int
 port_id_to_channel(struct ipcp_instance_data *priv, port_id_t port_id)

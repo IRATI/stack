@@ -40,7 +40,7 @@
 #include "dtp-ps.h"
 #include "policies.h"
 #include "serdes.h"
-#include "sysfs-utils.h"
+#include "rds/robjects.h"
 
 static struct policy_set_list policy_sets = {
         .head = LIST_HEAD_INIT(policy_sets.head)
@@ -200,12 +200,12 @@ static ssize_t dtp_attr_show(struct kobject *		     kobj,
 	}
 	return 0;
 }
-DECLARE_SYSFS_OPS(dtp);
-DECLARE_SYSFS_ATTRS(dtp, init_a_timer, max_sdu_gap, partial_delivery,
+RINA_SYSFS_OPS(dtp);
+RINA_ATTRS(dtp, init_a_timer, max_sdu_gap, partial_delivery,
 		    incomplete_delivery, in_order_delivery, seq_num_rollover_th,
 		    drop_pdus, err_pdus, tx_pdus, tx_bytes, rx_pdus, rx_bytes,
 		    ps_name);
-DECLARE_SYSFS_KTYPE(dtp);
+RINA_KTYPE(dtp);
 
 struct dt * dtp_dt(struct dtp * dtp)
 {
@@ -1185,7 +1185,7 @@ struct dtp * dtp_create(struct dt * dt,
 
         tmp->parent = dt;
 
-	if (kobject_init_and_add(&tmp->kobj,
+	if (robject_init_and_add(&tmp->kobj,
 				 &dtp_ktype,
 				 parent,
 				 "dtp")) {
@@ -1276,7 +1276,7 @@ int dtp_destroy(struct dtp * instance)
         if (instance->cfg) dtp_config_destroy(instance->cfg);
         rina_component_fini(&instance->base);
 
-	kobject_del(&instance->kobj);
+	robject_del(&instance->kobj);
         rkfree(instance);
 
         LOG_DBG("Instance %pK destroyed successfully", instance);

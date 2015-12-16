@@ -35,7 +35,7 @@
 #include "debug.h"
 #include "policies.h"
 #include "rmt-ps-default.h"
-#include "sysfs-utils.h"
+#include "rds/robjects.h"
 
 #define DEFAULT_Q_MAX 1000
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
@@ -66,9 +66,9 @@ static ssize_t rmt_ps_attr_show(struct kobject *        kobj,
 	}
 	return 0;
 }
-DECLARE_SYSFS_OPS(rmt_ps);
-DECLARE_SYSFS_ATTRS(rmt_ps, q_max);
-DECLARE_SYSFS_KTYPE(rmt_ps);
+RINA_SYSFS_OPS(rmt_ps);
+RINA_ATTRS(rmt_ps, q_max);
+RINA_KTYPE(rmt_ps);
 
 static struct rmt_queue *rmt_queue_create(port_id_t port)
 {
@@ -285,10 +285,12 @@ struct ps_base *rmt_ps_default_create(struct rina_component *component)
 		rkfree(ps);
 		return NULL;
 	}
-	/* FIXME: workaround so that kobject_add does not bang */
-	memset(&data->kobj, 0x00, sizeof(data->kobj));
-	kobject_init_and_add(&data->kobj, &rmt_ps_ktype,
-				rmt_kobject(rmt), "ps");
+	if (robject_init_and_add(&data->kobj, &rmt_ps_ktype,
+				rmt_kobject(rmt), "ps")) {
+		rkfree(data);
+		rkfree(ps);
+		return NULL;
+	}
 
 	ps->base.set_policy_set_param = NULL; /* default */
 	ps->dm = rmt;
@@ -329,7 +331,7 @@ void rmt_ps_default_destroy(struct ps_base *bps)
 
 	if (bps) {
 		if (data)
-			kobject_del(&data->kobj);
+			robject_del(&data->kobj);
 			rkfree(data);
 		rkfree(ps);
 	}

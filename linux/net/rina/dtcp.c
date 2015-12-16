@@ -38,7 +38,7 @@
 #include "policies.h"
 #include "rds/rmem.h"
 #include "debug.h"
-#include "sysfs-utils.h"
+#include "rds/robjects.h"
 
 static struct policy_set_list policy_sets = {
         .head = LIST_HEAD_INIT(policy_sets.head)
@@ -988,9 +988,9 @@ static ssize_t dtcp_attr_show(struct kobject *		     kobj,
 	}
 	return 0;
 }
-DECLARE_SYSFS_OPS(dtcp);
-DECLARE_SYSFS_ATTRS(dtcp, rtt, srtt, rttvar, ps_name);
-DECLARE_SYSFS_KTYPE(dtcp);
+RINA_SYSFS_OPS(dtcp);
+RINA_ATTRS(dtcp, rtt, srtt, rttvar, ps_name);
+RINA_KTYPE(dtcp);
 
 static int push_pdus_rmt(struct dtcp * dtcp)
 {
@@ -1948,7 +1948,7 @@ struct dtcp * dtcp_create(struct dt *          dt,
 
         tmp->parent = dt;
 
-	if (kobject_init_and_add(&tmp->kobj,
+	if (robject_init_and_add(&tmp->kobj,
 				 &dtcp_ktype,
 				 parent,
 				 "dtcp")) {
@@ -1988,18 +1988,18 @@ struct dtcp * dtcp_create(struct dt *          dt,
         /* FIXME: fixups to the state-vector should be placed here */
 
         if (dtcp_flow_ctrl(dtcp_cfg)) {
-		DECLARE_AND_ADD_SYSFS_ATTRS(&tmp->kobj, dtcp, closed_win_q_length, closed_win_q_size);
+		RINA_DECLARE_AND_ADD_ATTRS(&tmp->kobj, dtcp, closed_win_q_length, closed_win_q_size);
                 if (dtcp_window_based_fctrl(dtcp_cfg)) {
-			DECLARE_AND_ADD_SYSFS_ATTRS(&tmp->kobj, dtcp, sndr_credit, rcvr_credit,
+			RINA_DECLARE_AND_ADD_ATTRS(&tmp->kobj, dtcp, sndr_credit, rcvr_credit,
 				snd_rt_win_edge, rcv_rt_win_edge);
 		}
                 if (dtcp_rate_based_fctrl(dtcp_cfg)) {
-			DECLARE_AND_ADD_SYSFS_ATTRS(&tmp->kobj, dtcp, pdu_per_time_unit, time_unit,
+			RINA_DECLARE_AND_ADD_ATTRS(&tmp->kobj, dtcp, pdu_per_time_unit, time_unit,
 				sndr_rate, rcvr_rate, pdus_rcvd_in_time_unit, last_time);
 		}
 	}
 	if (dtcp_rtx_ctrl(dtcp_cfg)) {
-		DECLARE_AND_ADD_SYSFS_ATTRS(&tmp->kobj, dtcp, data_retransmit_max, last_snd_data_ack,
+		RINA_DECLARE_AND_ADD_ATTRS(&tmp->kobj, dtcp, data_retransmit_max, last_snd_data_ack,
 			last_rcv_data_ack, snd_lf_win, rtx_q_length, rtx_drop_pdus);
 	}
 
@@ -2022,7 +2022,7 @@ int dtcp_destroy(struct dtcp * instance)
         if (instance->sv)       rkfree(instance->sv);
         if (instance->cfg)      dtcp_config_destroy(instance->cfg);
         rina_component_fini(&instance->base);
-	kobject_del(&instance->kobj);
+	robject_del(&instance->kobj);
         rkfree(instance);
 
         LOG_DBG("Instance %pK destroyed successfully", instance);

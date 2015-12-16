@@ -61,9 +61,9 @@ static ssize_t pff_attr_show(struct kobject *        kobj,
 	}
 	return 0;
 }
-DECLARE_SYSFS_OPS(pff);
-DECLARE_SYSFS_ATTRS(pff, ps_name, ps_version);
-DECLARE_SYSFS_KTYPE(pff);
+RINA_SYSFS_OPS(pff);
+RINA_ATTRS(pff, ps_name, ps_version);
+RINA_KTYPE(pff);
 */
 
 static bool __pff_is_ok(struct pff * instance)

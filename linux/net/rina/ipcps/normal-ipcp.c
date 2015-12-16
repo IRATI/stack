@@ -43,7 +43,7 @@
 #include "rmt.h"
 #include "sdup.h"
 #include "efcp-utils.h"
-#include "sysfs-utils.h"
+#include "rds/robjects.h"
 
 /*  FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
@@ -124,9 +124,9 @@ static ssize_t normal_ipcp_attr_show(struct kobject *        kobj,
 
 	return 0;
 }
-DECLARE_SYSFS_OPS(normal_ipcp);
-DECLARE_SYSFS_ATTRS(normal_ipcp, name, type, dif, address);
-DECLARE_SYSFS_KTYPE(normal_ipcp);
+RINA_SYSFS_OPS(normal_ipcp);
+RINA_ATTRS(normal_ipcp, name, type, dif, address);
+RINA_KTYPE(normal_ipcp);
 
 static struct normal_flow * find_flow(struct ipcp_instance_data * data,
                                       port_id_t                   port_id)

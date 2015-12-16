@@ -50,7 +50,7 @@
 #include "ipcp-instances.h"
 #include "ipcp-utils.h"
 #include "rmt-ps-default.h"
-#include "sysfs-utils.h"
+#include "rds/robjects.h"
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 #define MAX_PDUS_SENT_PER_CYCLE 10
@@ -151,13 +151,13 @@ static ssize_t rmt_n1_port_attr_show(struct kobject *        kobj,
 	}
 	return 0;
 }
-DECLARE_SYSFS_OPS(rmt);
-DECLARE_SYSFS_ATTRS(rmt, ps_name);
-DECLARE_SYSFS_KTYPE(rmt);
-DECLARE_SYSFS_OPS(rmt_n1_port);
-DECLARE_SYSFS_ATTRS(rmt_n1_port, queued_pdus, drop_pdus, err_pdus, tx_pdus,
+RINA_SYSFS_OPS(rmt);
+RINA_ATTRS(rmt, ps_name);
+RINA_KTYPE(rmt);
+RINA_SYSFS_OPS(rmt_n1_port);
+RINA_ATTRS(rmt_n1_port, queued_pdus, drop_pdus, err_pdus, tx_pdus,
 	tx_bytes, rx_pdus, rx_bytes);
-DECLARE_SYSFS_KTYPE(rmt_n1_port);
+RINA_KTYPE(rmt_n1_port);
 
 static struct rmt_n1_port *n1_port_create(port_id_t id,
 					  struct ipcp_instance *n1_ipcp)
@@ -170,7 +170,7 @@ static struct rmt_n1_port *n1_port_create(port_id_t id,
 	if (!tmp)
 		return NULL;
 
-	kobject_init(&tmp->kobj, &rmt_n1_port_ktype);
+	robject_init(&tmp->kobj, &rmt_n1_port_ktype);
 	INIT_HLIST_NODE(&tmp->hlist);
 
 	tmp->port_id = id;
@@ -217,7 +217,7 @@ static int n1_port_destroy(struct rmt_n1_port *n1p)
 
 	hash_del(&n1p->hlist);
 
-	kobject_del(&n1p->kobj);
+	robject_del(&n1p->kobj);
 
 	if (n1p->sdup_port)
 		sdup_destroy_port_config(n1p->sdup_port);
@@ -533,7 +533,7 @@ int rmt_destroy(struct rmt *instance)
 	if (instance->rmt_cfg)
 		rmt_config_destroy(instance->rmt_cfg);
 
-	kobject_del(&instance->kobj);
+	robject_del(&instance->kobj);
 
 	rina_component_fini(&instance->base);
 
@@ -1194,8 +1194,10 @@ int rmt_n1port_bind(struct rmt *instance,
 	tmp = n1_port_create(id, n1_ipcp);
 	if (!tmp)
 		return -1;
-	tmp->kobj.kset = instance->n1_ports->kset;
-	kobject_add(&tmp->kobj, NULL, "%d", id);
+	if (robject_kset_add(&tmp->kobj, instance->n1_ports->kset, "%d", id)) {
+		n1_port_destroy(tmp);
+		return -1;
+	}
 
 	rcu_read_lock();
 	ps = container_of(rcu_dereference(instance->base.ps),
@@ -1531,7 +1533,7 @@ struct rmt *rmt_create(struct kfa *kfa,
 	tmp->sdup = sdup;
 	rina_component_init(&tmp->base);
 
-	if (kobject_init_and_add(&tmp->kobj, &rmt_ktype, parent, "rmt")) {
+	if (robject_init_and_add(&tmp->kobj, &rmt_ktype, parent, "rmt")) {
                 LOG_ERR("Failed to create RMT sysfs entry");
                 rmt_destroy(tmp);
                 return NULL;

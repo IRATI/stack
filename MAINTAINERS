@@ -87,10 +87,6 @@ F: linux/net/rina/rina.h
 F: linux/net/rina/sdu*
 F: linux/net/rina/utils*
 
-Sysfs
-M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>
-F: linux/net/rina/sysfs-utils*
-
 SDK
 M: Vincenzo Maffione <v.maffione (at) nextworks.it>
 F: linux/net/rina/policies*
