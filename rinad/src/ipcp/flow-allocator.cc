@@ -1269,6 +1269,12 @@ void FlowAllocatorInstance::sync_with_kernel()
 	SysfsHelper::get_dtp_rx_pdus(ipc_process_->get_id(),
 				     con->sourceCepId,
 				     con->stats.rx_pdus);
+	SysfsHelper::get_dtp_drop_pdus(ipc_process_->get_id(),
+				       con->sourceCepId,
+				       con->stats.drop_pdus);
+	SysfsHelper::get_dtp_error_pdus(ipc_process_->get_id(),
+				        con->sourceCepId,
+				        con->stats.err_pdus);
 }
 
 //CLASS TEARDOWNFLOW TIMERTASK

@@ -52,13 +52,21 @@ public:
 				   int src_cep_id,
 				   unsigned int & value);
 
+	static int get_dtp_drop_pdus(int ipcp_id,
+				     int src_cep_id,
+				     unsigned int & value);
+
+	static int get_dtp_error_pdus(int ipcp_id,
+				      int src_cep_id,
+				      unsigned int & value);
+
 	static int get_rmt_queued_pdus(int ipcp_id,
 				       int port_id,
 				       unsigned int & value);
 
-	static int get_rmt_dropped_pdus(int ipcp_id,
-				        int port_id,
-				        unsigned int & value);
+	static int get_rmt_drop_pdus(int ipcp_id,
+				     int port_id,
+				     unsigned int & value);
 
 	static int get_rmt_error_pdus(int ipcp_id,
 				      int port_id,

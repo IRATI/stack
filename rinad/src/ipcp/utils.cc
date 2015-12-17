@@ -181,7 +181,7 @@ int SysfsHelper::get_dtp_tx_bytes(int ipcp_id,
 	std::string file_name;
 
 	ss << ipcp_prefix << ipcp_id << connections
-	   << src_cep_id << "/tx_bytes";
+	   << src_cep_id << "/dtp/tx_bytes";
 	file_name = ss.str();
 
 	return get_value_as_ulong(file_name, value);
@@ -195,7 +195,7 @@ int SysfsHelper::get_dtp_rx_bytes(int ipcp_id,
 	std::string file_name;
 
 	ss << ipcp_prefix << ipcp_id << connections
-	   << src_cep_id << "/rx_bytes";
+	   << src_cep_id << "/dtp/rx_bytes";
 	file_name = ss.str();
 
 	return get_value_as_ulong(file_name, value);
@@ -209,7 +209,7 @@ int SysfsHelper::get_dtp_tx_pdus(int ipcp_id,
 	std::string file_name;
 
 	ss << ipcp_prefix << ipcp_id << connections
-	   << src_cep_id << "/tx_pdus";
+	   << src_cep_id << "/dtp/tx_pdus";
 	file_name = ss.str();
 
 	return get_value_as_uint(file_name, value);
@@ -223,11 +223,40 @@ int SysfsHelper::get_dtp_rx_pdus(int ipcp_id,
 	std::string file_name;
 
 	ss << ipcp_prefix << ipcp_id << connections
-	   << src_cep_id << "/rx_pdus";
+	   << src_cep_id << "/dtp/rx_pdus";
 	file_name = ss.str();
 
 	return get_value_as_uint(file_name, value);
 }
+
+int SysfsHelper::get_dtp_drop_pdus(int ipcp_id,
+			  	   int src_cep_id,
+				   unsigned int & value)
+{
+	std::stringstream ss;
+	std::string file_name;
+
+	ss << ipcp_prefix << ipcp_id << connections
+	   << src_cep_id << "/dtp/drop_pdus";
+	file_name = ss.str();
+
+	return get_value_as_uint(file_name, value);
+}
+
+int SysfsHelper::get_dtp_error_pdus(int ipcp_id,
+			  	   int src_cep_id,
+				   unsigned int & value)
+{
+	std::stringstream ss;
+	std::string file_name;
+
+	ss << ipcp_prefix << ipcp_id << connections
+	   << src_cep_id << "/dtp/err_pdus";
+	file_name = ss.str();
+
+	return get_value_as_uint(file_name, value);
+}
+
 
 int SysfsHelper::get_rmt_queued_pdus(int ipcp_id,
 			       	     int port_id,
@@ -243,15 +272,15 @@ int SysfsHelper::get_rmt_queued_pdus(int ipcp_id,
 	return get_value_as_uint(file_name, value);
 }
 
-int SysfsHelper::get_rmt_dropped_pdus(int ipcp_id,
-			       	      int port_id,
-			       	      unsigned int & value)
+int SysfsHelper::get_rmt_drop_pdus(int ipcp_id,
+			     	   int port_id,
+			       	   unsigned int & value)
 {
 	std::stringstream ss;
 	std::string file_name;
 
 	ss << ipcp_prefix << ipcp_id << rmt_ports
-	   << port_id << "/dropped_pdus";
+	   << port_id << "/drop_pdus";
 	file_name = ss.str();
 
 	return get_value_as_uint(file_name, value);
@@ -265,7 +294,7 @@ int SysfsHelper::get_rmt_error_pdus(int ipcp_id,
 	std::string file_name;
 
 	ss << ipcp_prefix << ipcp_id << rmt_ports
-	   << port_id << "/error_pdus";
+	   << port_id << "/err_pdus";
 	file_name = ss.str();
 
 	return get_value_as_uint(file_name, value);

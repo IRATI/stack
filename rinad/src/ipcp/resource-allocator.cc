@@ -109,7 +109,7 @@ void QoSCubesRIBObject::create(const rina::cdap_rib::con_handle_t &con,
 void RMTN1Flow::sync_with_kernel()
 {
 	SysfsHelper::get_rmt_queued_pdus(ipcp_id, port_id, queued_pdus);
-	SysfsHelper::get_rmt_dropped_pdus(ipcp_id, port_id, dropped_pdus);
+	SysfsHelper::get_rmt_drop_pdus(ipcp_id, port_id, dropped_pdus);
 	SysfsHelper::get_rmt_error_pdus(ipcp_id, port_id, error_pdus);
 	SysfsHelper::get_rmt_rx_pdus(ipcp_id, port_id, rx_pdus);
 	SysfsHelper::get_rmt_tx_pdus(ipcp_id, port_id, tx_pdus);

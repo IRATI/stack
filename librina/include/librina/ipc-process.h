@@ -735,12 +735,14 @@ extern Singleton<ExtendedIPCManager> extendedIPCManager;
 class DTPStatistics {
 public:
 	DTPStatistics() : tx_bytes(0), tx_pdus(0),
-		rx_bytes(0), rx_pdus(0) {};
+		rx_bytes(0), rx_pdus(0), drop_pdus(0), err_pdus(0) {};
 
 	unsigned long tx_bytes;
 	unsigned int tx_pdus;
 	unsigned long rx_bytes;
 	unsigned int rx_pdus;
+	unsigned int drop_pdus;
+	unsigned int err_pdus;
 };
 
 /**
