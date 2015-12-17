@@ -26,7 +26,27 @@
 #define RINA_SYSFSUTILS_H
 
 #include <linux/kobject.h>
+#include <linux/sysfs.h>
 #include <linux/string.h>
+
+struct robject {
+	struct kobject kobj;
+};
+
+struct robj_type {
+	struct kobj_type ktype;
+};
+
+struct rset {
+	struct kset * kset;
+};
+
+struct robj_attribute {
+	struct kobj_attribute kattr;
+	ssize_t (* show)(struct robject * robj,
+		         struct robj_attribute * attr,
+		         char * buf);
+};
 
 /* Supports maximum 24 arguments, aka sysfs attributes, to be defined at once */
 #define _GET_NTH_ARG(				\
@@ -80,11 +100,15 @@
         _func_6, _func_5, _func_4, _func_3, _func_2, _func_1, _func_0)	\
 	(x, y, ##__VA_ARGS__)
 
-/* Declares a kobj_attribute object */
-#define _DECLARE_ATTR(COMP_NAME, ATTR_NAME)				 \
-        static struct kobj_attribute ATTR_NAME##_attr = {		 \
-		.attr = {.name = __stringify(ATTR_NAME),.mode = S_IRUGO},\
-        	.show = _CAT(COMP_NAME, _attr_show),			 \
+/* Declares a robj_attribute object */
+#define _DECLARE_ATTR(COMP_NAME, ATTR_NAME)				\
+	static struct robj_attribute ATTR_NAME##_attr = {		\
+        	.kattr = {						\
+			.attr = {.name = __stringify(ATTR_NAME),	\
+				 .mode = S_IRUGO},			\
+        		.show = robject_attr_show_redirect,		\
+		},							\
+		.show = _CAT(COMP_NAME, _attr_show),			\
 	};
 
 /* Declares a sysfs_ops object with is show function*/
@@ -102,9 +126,9 @@ static const struct sysfs_ops COMP_NAME##_sysfs_ops = {			\
 };
 
 #define _ADD_KTYPE_ATTR(COMP_NAME, ATTR_NAME) 				\
-	&ATTR_NAME##_attr.attr,
+	&ATTR_NAME##_attr.kattr.attr,
 
-/* Declares all the attributes for the kobject to be exported by sysfs
+/* Declares all the attributes for the robject to be exported by sysfs
  * Requires the .show function to be previously declared as
  * <comp_name>_attr_show
  */
@@ -114,78 +138,67 @@ static const struct sysfs_ops COMP_NAME##_sysfs_ops = {			\
 	_CALL_FOR_EACH(_ADD_KTYPE_ATTR, COMP_NAME, ##__VA_ARGS__)	\
 	NULL, };
 
-/* Declares the kobj_type object for the component */
+/* Declares the robj_type object for the component */
 #define RINA_KTYPE(COMP_NAME)						\
-	static struct kobj_type COMP_NAME##_ktype = {			\
-	        .sysfs_ops     = &COMP_NAME##_sysfs_ops,		\
-	        .default_attrs = COMP_NAME##_attrs,			\
-	        .release       = NULL,					\
+	static struct robj_type COMP_NAME##_rtype = {			\
+		.ktype = {						\
+	        	.sysfs_ops     = &COMP_NAME##_sysfs_ops,	\
+	        	.default_attrs = COMP_NAME##_attrs,		\
+	        	.release       = NULL,				\
+		}							\
 	};
 
-/* Declares an empty kobj_type object for the component. No sysfs_ops nor
+/* Declares an empty robj_type object for the component. No sysfs_ops nor
  * default_attrs initialized*/
-#define RINA_EMTPY_KTYPE(COMP_NAME)					\
-	static struct kobj_type COMP_NAME##_ktype = {			\
-	        .release       = NULL,					\
+#define RINA_EMPTY_KTYPE(COMP_NAME)					\
+	static struct robj_type COMP_NAME##_rtype = {			\
+		.ktype = {.release = NULL,}				\
 	};
 
-/* Adds an attribute to an existing kobject */
-#define _ADD_ATTR_TO_KOBJ(KOBJ, ATTR_NAME)				\
-	sysfs_create_file(KOBJ, &ATTR_NAME##_attr.attr);
+/* Adds an attribute to an existing robject */
+#define _ADD_ATTR_TO_ROBJ(ROBJ, ATTR_NAME)				\
+	sysfs_create_file(ROBJ.kobj, &ATTR_NAME##_attr.kattr.attr);
 
 /* Declares a new attribute and adds it to an existing kobject */
-#define RINA_DECLARE_AND_ADD_ATTRS(kobj, COMP_NAME, ...)		\
+#define RINA_DECLARE_AND_ADD_ATTRS(robj, COMP_NAME, ...)		\
 	_CALL_FOR_EACH(_DECLARE_ATTR, COMP_NAME, ##__VA_ARGS__)		\
-	_CALL_FOR_EACH(_ADD_ATTR_TO_KOBJ, kobj, ##__VA_ARGS__)
+	_CALL_FOR_EACH(_ADD_ATTR_TO_ROBJ, robj, ##__VA_ARGS__)
 
-#define __PREPARE_ROBJECT_WRAPPER					\
-	va_list args;							\
-	char * s;							\
-	va_start(args, fmt);						\
-	s = kvasprintf(GFP_ATOMIC, fmt, args);				\
-	va_end(args);
+ssize_t robject_attr_show_redirect(struct kobject *	   kobj,
+                         	   struct kobj_attribute * attr,
+                                   char *		   buf);
 
-static inline void
-robject_init(struct kobject *kobj, struct kobj_type *ktype)
-{
-	memset(kobj, 0x00, sizeof(*kobj));
-	kobject_init(kobj, ktype);
-}
 
-static inline int
-robject_add(struct kobject *kobj, struct kobject *parent, const char *fmt, ...)
-{
-	__PREPARE_ROBJECT_WRAPPER
-	return kobject_add(kobj, parent, fmt, args);
-}
+const char * robject_attr_name(struct robj_attribute * attr);
 
-static inline int
-robject_init_and_add(struct kobject *kobj, struct kobj_type *ktype,
-		     struct kobject *parent, const char *fmt, ...)
-{
-	__PREPARE_ROBJECT_WRAPPER
-	memset(kobj, 0x00, sizeof(*kobj));
-	return kobject_init_and_add(kobj, ktype, parent, s);
-}
+const char * robject_name(struct robject * robj);
 
-static inline void robject_del(struct kobject *kobj)
-{ kobject_del(kobj); }
+inline void
+robject_init(struct robject *robj, struct robj_type *rtype);
 
-static inline int
-robject_kset_add(struct kobject *kobj, struct kset *parentkset,
-		 const char *fmt, ...)
-{
-	__PREPARE_ROBJECT_WRAPPER
-	kobj->kset = parentkset;
-	return kobject_add(kobj, NULL, s);
-}
+inline int
+robject_add(struct robject *robj, struct robject *parent, const char *fmt, ...);
 
-static inline int
-robject_kset_init_and_add(struct kobject *kobj, struct kobj_type *ktype,
-			  struct kset *parentkset, const char *fmt, ...)
-{
-	__PREPARE_ROBJECT_WRAPPER
-	kobj->kset = parentkset;
-	return kobject_init_and_add(kobj, ktype, NULL, s);
-}
+inline int
+robject_init_and_add(struct robject *robj, struct robj_type *rtype,
+		     struct robject *parent, const char *fmt, ...);
+
+inline void
+robject_del(struct robject *robj);
+
+inline int
+robject_rset_add(struct robject *robj, struct rset *parentset,
+		 const char *fmt, ...);
+
+inline int
+robject_rset_init_and_add(struct robject *robj, struct robj_type *rtype,
+			  struct rset *parentkset, const char *fmt, ...);
+
+inline struct rset *
+rset_create_and_add(const char *name, struct robject *parent);
+
+inline void
+rset_unregister(struct rset * set);
+
+struct robject *rset_find_obj(struct rset *rset, const char *name);
 #endif

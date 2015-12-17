@@ -29,6 +29,7 @@
 #include "du.h"
 #include "rnl.h"
 #include "kfa.h"
+#include "rds/robjects.h"
 
 struct kipcm;
 extern struct kipcm * default_kipcm;
@@ -36,7 +37,7 @@ extern struct kipcm * default_kipcm;
  * The following functions represent the KIPCM northbound interface
  */
 
-int kipcm_init(struct kobject * parent);
+int kipcm_init(struct robject * parent);
 int kipcm_fini(struct kipcm * kipcm);
 
 /*
@@ -134,6 +135,6 @@ int            kipcm_notify_flow_dealloc(ipc_process_id_t ipc_id,
 struct ipcp_instance * kipcm_find_ipcp_by_name(struct kipcm * kipcm,
                                                struct name *  name);
 
-struct kset * kipcm_kset(struct kipcm * kipcm);
+struct rset * kipcm_rset(struct kipcm * kipcm);
 
 #endif

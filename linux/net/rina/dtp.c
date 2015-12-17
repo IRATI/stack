@@ -40,7 +40,6 @@
 #include "dtp-ps.h"
 #include "policies.h"
 #include "serdes.h"
-#include "rds/robjects.h"
 
 static struct policy_set_list policy_sets = {
         .head = LIST_HEAD_INIT(policy_sets.head)
@@ -89,7 +88,7 @@ struct dtp {
                 struct rtimer * a;
                 struct rtimer * rate_window;
         } timers;
-	struct kobject		  kobj;
+	struct robject		  robj;
 };
 
 static struct dtp_sv default_sv = {
@@ -135,67 +134,67 @@ static struct dtp_sv default_sv = {
 		sv->stats.name##_bytes);			\
         spin_unlock_irqrestore(&sv->lock, flags);
 
-static ssize_t dtp_attr_show(struct kobject *		     kobj,
-                         	     struct kobj_attribute * attr,
+static ssize_t dtp_attr_show(struct robject *		     robj,
+                         	     struct robj_attribute * attr,
                                      char *		     buf)
 {
 	struct dtp * instance;
 	unsigned int stats_ret;
 	unsigned long flags;
 
-	instance = container_of(kobj, struct dtp, kobj);
+	instance = container_of(robj, struct dtp, robj);
 	if (!instance || !instance->cfg || !instance->sv)
 		return 0;
 
-	if (strcmp(attr->attr.name, "init_a_timer") == 0) {
+	if (strcmp(robject_attr_name(attr), "init_a_timer") == 0) {
 		return sprintf(buf, "%u\n",
 			dtp_conf_initial_a_timer(instance->cfg));
 	}
-	if (strcmp(attr->attr.name, "max_sdu_gap") == 0) {
+	if (strcmp(robject_attr_name(attr), "max_sdu_gap") == 0) {
 		return sprintf(buf, "%u\n",
 			dtp_conf_max_sdu_gap(instance->cfg));
 	}
-	if (strcmp(attr->attr.name, "partial_delivery") == 0) {
+	if (strcmp(robject_attr_name(attr), "partial_delivery") == 0) {
 		return sprintf(buf, "%u\n",
 			dtp_conf_partial_del(instance->cfg) ? 1 : 0);
 	}
-	if (strcmp(attr->attr.name, "incomplete_delivery") == 0) {
+	if (strcmp(robject_attr_name(attr), "incomplete_delivery") == 0) {
 		return sprintf(buf, "%u\n",
 			dtp_conf_incomplete_del(instance->cfg) ? 1 : 0);
 	}
-	if (strcmp(attr->attr.name, "in_order_delivery") == 0) {
+	if (strcmp(robject_attr_name(attr), "in_order_delivery") == 0) {
 		return sprintf(buf, "%u\n",
 			dtp_conf_in_order_del(instance->cfg) ? 1 : 0);
 	}
-	if (strcmp(attr->attr.name, "seq_num_rollover_th") == 0) {
+	if (strcmp(robject_attr_name(attr), "seq_num_rollover_th") == 0) {
 		return sprintf(buf, "%d\n",
 			dtp_conf_seq_num_ro_th(instance->cfg));
 	}
-	if (strcmp(attr->attr.name, "drop_pdus") == 0) {
+	if (strcmp(robject_attr_name(attr), "drop_pdus") == 0) {
 		stats_get(drop_pdus, instance->sv, stats_ret, flags);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
-	if (strcmp(attr->attr.name, "err_pdus") == 0) {
+	if (strcmp(robject_attr_name(attr), "err_pdus") == 0) {
 		stats_get(err_pdus, instance->sv, stats_ret, flags);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
-	if (strcmp(attr->attr.name, "tx_pdus") == 0) {
+	if (strcmp(robject_attr_name(attr), "tx_pdus") == 0) {
 		stats_get(tx_pdus, instance->sv, stats_ret, flags);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
-	if (strcmp(attr->attr.name, "tx_bytes") == 0) {
+	if (strcmp(robject_attr_name(attr), "tx_bytes") == 0) {
 		stats_get(tx_bytes, instance->sv, stats_ret, flags);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
-	if (strcmp(attr->attr.name, "rx_pdus") == 0) {
+	if (strcmp(robject_attr_name(attr), "rx_pdus") == 0) {
 		stats_get(rx_pdus, instance->sv, stats_ret, flags);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
-	if (strcmp(attr->attr.name, "rx_bytes") == 0) {
+	if (strcmp(robject_attr_name(attr), "rx_bytes") == 0) {
 		stats_get(rx_bytes, instance->sv, stats_ret, flags);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
-	if (strcmp(attr->attr.name, "ps_name") == 0) {
+	if (strcmp(robject_attr_name(attr), "ps_name") == 0) {
 		return sprintf(buf, "%s\n", instance->base.ps_factory->name);
 	}
 	return 0;
@@ -1156,7 +1155,7 @@ EXPORT_SYMBOL(dtp_set_policy_set_param);
 struct dtp * dtp_create(struct dt * dt,
                         struct rmt *        rmt,
                         struct dtp_config * dtp_cfg,
-			struct kobject *    parent)
+			struct robject *    parent)
 {
         struct dtp * tmp;
         string_t *   ps_name;
@@ -1185,8 +1184,8 @@ struct dtp * dtp_create(struct dt * dt,
 
         tmp->parent = dt;
 
-	if (robject_init_and_add(&tmp->kobj,
-				 &dtp_ktype,
+	if (robject_init_and_add(&tmp->robj,
+				 &dtp_rtype,
 				 parent,
 				 "dtp")) {
                 dtp_destroy(tmp);
@@ -1276,7 +1275,7 @@ int dtp_destroy(struct dtp * instance)
         if (instance->cfg) dtp_config_destroy(instance->cfg);
         rina_component_fini(&instance->base);
 
-	robject_del(&instance->kobj);
+	robject_del(&instance->robj);
         rkfree(instance);
 
         LOG_DBG("Instance %pK destroyed successfully", instance);

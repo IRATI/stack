@@ -22,8 +22,8 @@
 #define RINA_IPCP_INSTANCES_H
 
 #include <linux/list.h>
-#include <linux/kobject.h>
 
+#include "rds/robjects.h"
 #include "du.h"
 #include "buffer.h"
 
@@ -352,7 +352,7 @@ struct ipcp_factory;
 
 /* FIXME: Hide this data structure */
 struct ipcp_instance {
-        struct kobject              kobj;
+        struct robject              robj;
 
         /* FIXME: Should be hidden and not fixed up in KIPCM ... */
         struct ipcp_factory *       factory; /* The parent factory */

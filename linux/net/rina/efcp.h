@@ -26,6 +26,7 @@
 #include "ipcp-instances.h"
 #include "kfa.h"
 #include "connection.h"
+#include "rds/robjects.h"
 
 struct rmt;
 
@@ -33,7 +34,7 @@ struct rmt;
 struct efcp_container;
 
 struct efcp_container * efcp_container_create(struct kfa * kfa,
-					      struct kobject * parent);
+					      struct robject * parent);
 int                     efcp_container_destroy(struct efcp_container * c);
 int                     efcp_container_config_set(struct efcp_config *   efcpc,
                                                   struct efcp_container * c);

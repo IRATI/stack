@@ -21,9 +21,8 @@
 #ifndef RINA_IPCP_FACTORIES_H
 #define RINA_IPCP_FACTORIES_H
 
-#include <linux/kobject.h>
-
 #include "common.h"
+#include "rds/robjects.h"
 #include "ipcp-instances.h"
 
 struct ipcp_factory_data;
@@ -41,14 +40,14 @@ struct ipcp_factory_ops {
 
 /* FIXME: Hide this data structure */
 struct ipcp_factory {
-        struct kobject                  kobj;
+        struct robject                  robj;
         struct ipcp_factory_data *      data;
         const struct ipcp_factory_ops * ops;
 };
 
 struct ipcp_factories;
 
-struct ipcp_factories * ipcpf_init(struct kobject * parent);
+struct ipcp_factories * ipcpf_init(struct robject * parent);
 
 int                     ipcpf_fini(struct ipcp_factories * factories);
 

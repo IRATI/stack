@@ -146,23 +146,23 @@ struct interface_data_mapping {
         struct ipcp_instance_data * data;
 };
 
-static ssize_t eth_vlan_ipcp_attr_show(struct kobject *        kobj,
-                         	       struct kobj_attribute * attr,
+static ssize_t eth_vlan_ipcp_attr_show(struct robject *        robj,
+                         	       struct robj_attribute * attr,
                                        char *                  buf)
 {
 	struct ipcp_instance * instance;
 
-	instance = container_of(kobj, struct ipcp_instance, kobj);
+	instance = container_of(robj, struct ipcp_instance, robj);
 	if (!instance || !instance->data)
 		return 0;
 
-	if (strcmp(attr->attr.name, "name") == 0)
+	if (strcmp(robject_attr_name(attr), "name") == 0)
 		return sprintf(buf, "%s\n",
 			name_tostring(instance->data->name));
-	if (strcmp(attr->attr.name, "dif") == 0)
+	if (strcmp(robject_attr_name(attr), "dif") == 0)
 		return sprintf(buf, "%s\n",
 			name_tostring(instance->data->dif_name));
-	if (strcmp(attr->attr.name, "address") == 0)
+	if (strcmp(robject_attr_name(attr), "address") == 0)
                 return sprintf(buf,
 		               "%02X:%02X:%02X:%02X:%02X:%02X\n",
                                instance->data->dev->dev_addr[5],
@@ -171,11 +171,11 @@ static ssize_t eth_vlan_ipcp_attr_show(struct kobject *        kobj,
                                instance->data->dev->dev_addr[2],
                                instance->data->dev->dev_addr[1],
                                instance->data->dev->dev_addr[0]);
-	if (strcmp(attr->attr.name, "type") == 0)
+	if (strcmp(robject_attr_name(attr), "type") == 0)
 		return sprintf(buf, "shim-eth-vlan\n");
-	if (strcmp(attr->attr.name, "vlan_id") == 0)
+	if (strcmp(robject_attr_name(attr), "vlan_id") == 0)
 		return sprintf(buf, "%u\n", instance->data->info->vlan_id);
-	if (strcmp(attr->attr.name, "iface") == 0)
+	if (strcmp(robject_attr_name(attr), "iface") == 0)
 		return sprintf(buf, "%s\n",
 			instance->data->info->interface_name);
 
@@ -1904,16 +1904,11 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
         /* fill it properly */
         inst->ops  = &eth_vlan_instance_ops;
 
-	inst->kobj.kset = kipcm_kset(default_kipcm);
-	if (!inst->kobj.kset) {
-		rkfree(inst);
-		return NULL;
-	}
-	if (kobject_init_and_add(&inst->kobj,
-				 &eth_vlan_ipcp_ktype,
-				 NULL,
-				 "%u",
-				 id)) {
+	if (robject_rset_init_and_add(&inst->robj,
+				      &eth_vlan_ipcp_rtype,
+				      kipcm_rset(default_kipcm),
+				      "%u",
+				      id)) {
 		rkfree(inst);
 		return NULL;
 	}
@@ -2058,7 +2053,7 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                                 rkfree(mapping);
                         }
 
-                        kobject_del(&instance->kobj);
+                        robject_del(&instance->robj);
 
                         /*
                          * Might cause problems:

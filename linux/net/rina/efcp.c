@@ -22,7 +22,6 @@
  */
 
 #include <linux/export.h>
-#include <linux/kobject.h>
 /* For wait_queue */
 #include <linux/sched.h>
 #include <linux/wait.h>
@@ -47,7 +46,6 @@
 #include "dt-utils.h"
 #include "dtp-ps.h"
 #include "policies.h"
-#include "rds/robjects.h"
 
 enum efcp_state {
         EFCP_ALLOCATED = 1,
@@ -61,48 +59,48 @@ struct efcp {
         struct efcp_container * container;
         enum efcp_state         state;
         atomic_t                pending_ops;
-	struct kobject          kobj;
+	struct robject          robj;
 };
 
-static ssize_t efcp_attr_show(struct kobject *		     kobj,
-                         	     struct kobj_attribute * attr,
+static ssize_t efcp_attr_show(struct robject *		     robj,
+                         	     struct robj_attribute * attr,
                                      char *		     buf)
 {
 	struct efcp * instance;
 
-	instance = container_of(kobj, struct efcp, kobj);
+	instance = container_of(robj, struct efcp, robj);
 	if (!instance || !instance->connection || !instance->dt)
 		return 0;
 
-	if (strcmp(attr->attr.name, "src_address") == 0)
+	if (strcmp(robject_attr_name(attr), "src_address") == 0)
 		return sprintf(buf, "%u\n",
 			connection_src_addr(instance->connection));
-	if (strcmp(attr->attr.name, "dst_address") == 0)
+	if (strcmp(robject_attr_name(attr), "dst_address") == 0)
 		return sprintf(buf, "%u\n",
 			connection_dst_addr(instance->connection));
-	if (strcmp(attr->attr.name, "src_cep_id") == 0)
+	if (strcmp(robject_attr_name(attr), "src_cep_id") == 0)
 		return sprintf(buf, "%d\n",
 			connection_src_cep_id(instance->connection));
-	if (strcmp(attr->attr.name, "dst_cep_id") == 0)
+	if (strcmp(robject_attr_name(attr), "dst_cep_id") == 0)
 		return sprintf(buf, "%d\n",
 			connection_dst_cep_id(instance->connection));
-	if (strcmp(attr->attr.name, "qos_id") == 0)
+	if (strcmp(robject_attr_name(attr), "qos_id") == 0)
 		return sprintf(buf, "%u\n",
 			connection_qos_id(instance->connection));
-	if (strcmp(attr->attr.name, "port_id") == 0)
+	if (strcmp(robject_attr_name(attr), "port_id") == 0)
 		return sprintf(buf, "%u\n",
 			connection_port_id(instance->connection));
-	if (strcmp(attr->attr.name, "a_timer") == 0)
+	if (strcmp(robject_attr_name(attr), "a_timer") == 0)
 		return sprintf(buf, "%u\n", dt_sv_a(instance->dt));
-	if (strcmp(attr->attr.name, "r_timer") == 0)
+	if (strcmp(robject_attr_name(attr), "r_timer") == 0)
 		return sprintf(buf, "%u\n", dt_sv_r(instance->dt));
-	if (strcmp(attr->attr.name, "tr_timeout") == 0)
+	if (strcmp(robject_attr_name(attr), "tr_timeout") == 0)
 		return sprintf(buf, "%u\n", dt_sv_tr(instance->dt));
-	if (strcmp(attr->attr.name, "max_flow_pdu_size") == 0)
+	if (strcmp(robject_attr_name(attr), "max_flow_pdu_size") == 0)
 		return sprintf(buf, "%u\n", dt_sv_max_pdu_size(instance->dt));
-	if (strcmp(attr->attr.name, "max_flow_sdu_size") == 0)
+	if (strcmp(robject_attr_name(attr), "max_flow_sdu_size") == 0)
 		return sprintf(buf, "%u\n", dt_sv_max_sdu_size(instance->dt));
-	if (strcmp(attr->attr.name, "max_packet_life") == 0)
+	if (strcmp(robject_attr_name(attr), "max_packet_life") == 0)
 		return sprintf(buf, "%u\n", dt_sv_mpl(instance->dt));
 	return 0;
 }
@@ -113,7 +111,7 @@ RINA_ATTRS(efcp, src_address, dst_address, src_cep_id, dst_cep_id,
 RINA_KTYPE(efcp);
 
 struct efcp_container {
-	struct kset *        kset;
+	struct rset *        rset;
         struct efcp_imap *   instances;
         struct cidm *        cidm;
         struct efcp_config * config;
@@ -224,7 +222,7 @@ static int efcp_destroy(struct efcp * instance)
                 connection_destroy(instance->connection);
         }
 
-	robject_del(&instance->kobj);
+	robject_del(&instance->robj);
         rkfree(instance);
 
         LOG_DBG("EFCP instance %pK finalized successfully", instance);
@@ -232,7 +230,7 @@ static int efcp_destroy(struct efcp * instance)
         return 0;
 }
 
-struct efcp_container * efcp_container_create(struct kfa * kfa, struct kobject * parent)
+struct efcp_container * efcp_container_create(struct kfa * kfa, struct robject * parent)
 {
         struct efcp_container * container;
 
@@ -245,7 +243,7 @@ struct efcp_container * efcp_container_create(struct kfa * kfa, struct kobject *
         if (!container)
                 return NULL;
 
-	container->kset        = NULL;
+	container->rset        = NULL;
         container->instances   = efcp_imap_create();
         container->cidm        = cidm_create();
         if (!container->instances ||
@@ -259,8 +257,8 @@ struct efcp_container * efcp_container_create(struct kfa * kfa, struct kobject *
         spin_lock_init(&container->lock);
 	init_waitqueue_head(&container->del_wq);
 
-	container->kset = kset_create_and_add("connections", NULL, parent);
-	if (!container->kset) {
+	container->rset = rset_create_and_add("connections", parent);
+	if (!container->rset) {
                 LOG_ERR("Failed to create EFCP container sysfs entrance");
                 efcp_container_destroy(container);
                 return NULL;
@@ -283,7 +281,7 @@ int efcp_container_destroy(struct efcp_container * container)
 
         if (container->config)     efcp_config_destroy(container->config);
 
-	if (container->kset)       kset_unregister(container->kset);
+	if (container->rset)       rset_unregister(container->rset);
         rkfree(container);
 
         return 0;
@@ -674,9 +672,9 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 
         tmp->connection = connection;
 
-	if (robject_kset_init_and_add(&tmp->kobj,
-				      &efcp_ktype,
-				      container->kset,
+	if (robject_rset_init_and_add(&tmp->robj,
+				      &efcp_rtype,
+				      container->rset,
 				      "%d",
 				      cep_id)) {
 		LOG_ERR("Could not add connection tp sysfs");
@@ -696,7 +694,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         dtp = dtp_create(tmp->dt,
                          container->rmt,
                          dtp_cfg,
-			 &tmp->kobj);
+			 &tmp->robj);
         if (!dtp) {
                 efcp_destroy(tmp);
                 return cep_id_bad();
@@ -721,7 +719,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 dtcp = dtcp_create(tmp->dt,
                                    container->rmt,
                                    dtcp_cfg,
-				   &tmp->kobj);
+				   &tmp->robj);
                 if (!dtcp) {
                         efcp_destroy(tmp);
                         return cep_id_bad();

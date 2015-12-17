@@ -24,7 +24,6 @@
 #define RINA_RMT_H
 
 #include <linux/hashtable.h>
-#include <linux/kobject.h>
 
 #include "common.h"
 #include "du.h"
@@ -33,6 +32,7 @@
 #include "ipcp-instances.h"
 #include "ps-factory.h"
 #include "sdup.h"
+#include "rds/robjects.h"
 
 struct rmt;
 
@@ -86,13 +86,13 @@ struct rmt_n1_port {
 	struct n1_port_stats	stats;
 	bool			wbusy;
 	void 			*rmt_ps_queues;
-	struct kobject		kobj;
+	struct robject		robj;
 };
 
 struct rmt	  *rmt_create(struct kfa *kfa,
 			      struct efcp_container *efcpc,
 			      struct sdup *sdup,
-			      struct kobject *parent);
+			      struct robject *parent);
 int		   rmt_destroy(struct rmt *instance);
 int		   rmt_address_set(struct rmt *instance,
 				   address_t address);
@@ -137,5 +137,5 @@ int		   rmt_set_policy_set_param(struct rmt *rmt,
 					    const string_t *name,
 					    const string_t *value);
 struct rmt	  *rmt_from_component(struct rina_component *component);
-struct kobject    *rmt_kobject(struct rmt * instance);
+struct robject    *rmt_robject(struct rmt * instance);
 #endif

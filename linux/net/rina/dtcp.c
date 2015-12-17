@@ -38,7 +38,6 @@
 #include "policies.h"
 #include "rds/rmem.h"
 #include "debug.h"
-#include "rds/robjects.h"
 
 static struct policy_set_list policy_sets = {
         .head = LIST_HEAD_INIT(policy_sets.head)
@@ -168,7 +167,7 @@ struct dtcp {
         struct rmt *           rmt;
 
         atomic_t               cpdus_in_transit;
-	struct kobject         kobj;
+	struct robject         robj;
 };
 
 struct dt * dtcp_dt(struct dtcp * dtcp)
@@ -901,89 +900,89 @@ void update_credit_and_rt_wind_edge(struct dtcp * dtcp, uint_t credit)
 }
 EXPORT_SYMBOL(update_credit_and_rt_wind_edge);
 
-static ssize_t dtcp_attr_show(struct kobject *		     kobj,
-                         	     struct kobj_attribute * attr,
+static ssize_t dtcp_attr_show(struct robject *		     robj,
+                         	     struct robj_attribute * attr,
                                      char *		     buf)
 {
 	struct dtcp * instance;
 
-	instance = container_of(kobj, struct dtcp, kobj);
+	instance = container_of(robj, struct dtcp, robj);
 	if (!instance || !instance->sv || !instance->parent || !instance->cfg)
 		return 0;
 
-	if (strcmp(attr->attr.name, "rtt") == 0) {
+	if (strcmp(robject_attr_name(attr), "rtt") == 0) {
 		return sprintf(buf, "%u\n", dtcp_rtt(instance));
 	}
-	if (strcmp(attr->attr.name, "srtt") == 0) {
+	if (strcmp(robject_attr_name(attr), "srtt") == 0) {
 		return sprintf(buf, "%u\n", dtcp_srtt(instance));
 	}
-	if (strcmp(attr->attr.name, "rttvar") == 0) {
+	if (strcmp(robject_attr_name(attr), "rttvar") == 0) {
 		return sprintf(buf, "%u\n", dtcp_rttvar(instance));
 	}
 	/* Flow control */
-	if (strcmp(attr->attr.name, "closed_win_q_length") == 0) {
+	if (strcmp(robject_attr_name(attr), "closed_win_q_length") == 0) {
 		return sprintf(buf, "%zu\n", cwq_size(dt_cwq(instance->parent)));
 	}
-	if (strcmp(attr->attr.name, "closed_win_q_size") == 0) {
+	if (strcmp(robject_attr_name(attr), "closed_win_q_size") == 0) {
 		return sprintf(buf, "%u\n",
 			dtcp_max_closed_winq_length(instance->cfg));
 	}
 	/* Win based */
-	if (strcmp(attr->attr.name, "sndr_credit") == 0) {
+	if (strcmp(robject_attr_name(attr), "sndr_credit") == 0) {
 		return sprintf(buf, "%u\n", dtcp_sndr_credit(instance));
 	}
-	if (strcmp(attr->attr.name, "rcvr_credit") == 0) {
+	if (strcmp(robject_attr_name(attr), "rcvr_credit") == 0) {
 		return sprintf(buf, "%u\n", dtcp_rcvr_credit(instance));
 	}
-	if (strcmp(attr->attr.name, "snd_rt_win_edge") == 0) {
+	if (strcmp(robject_attr_name(attr), "snd_rt_win_edge") == 0) {
 		return sprintf(buf, "%u\n", dtcp_snd_rt_win(instance));
 	}
-	if (strcmp(attr->attr.name, "rcv_rt_win_edge") == 0) {
+	if (strcmp(robject_attr_name(attr), "rcv_rt_win_edge") == 0) {
 		return sprintf(buf, "%u\n", dtcp_rcv_rt_win(instance));
 	}
 	/* Rate based */
-	if (strcmp(attr->attr.name, "pdus_per_time_unit") == 0) {
+	if (strcmp(robject_attr_name(attr), "pdus_per_time_unit") == 0) {
 		return sprintf(buf, "%u\n", dtcp_pdus_per_time_unit(instance));
 	}
-	if (strcmp(attr->attr.name, "time_unit") == 0) {
+	if (strcmp(robject_attr_name(attr), "time_unit") == 0) {
 		return sprintf(buf, "%u\n", dtcp_time_unit(instance));
 	}
-	if (strcmp(attr->attr.name, "sndr_rate") == 0) {
+	if (strcmp(robject_attr_name(attr), "sndr_rate") == 0) {
 		return sprintf(buf, "%u\n", dtcp_sndr_rate(instance));
 	}
-	if (strcmp(attr->attr.name, "rcvr_rate") == 0) {
+	if (strcmp(robject_attr_name(attr), "rcvr_rate") == 0) {
 		return sprintf(buf, "%u\n", dtcp_rcvr_rate(instance));
 	}
-	if (strcmp(attr->attr.name, "pdus_rcvd_in_time_unit") == 0) {
+	if (strcmp(robject_attr_name(attr), "pdus_rcvd_in_time_unit") == 0) {
 		return sprintf(buf, "%u\n", dtcp_recv_itu(instance));
 	}
-	if (strcmp(attr->attr.name, "last_time") == 0) {
+	if (strcmp(robject_attr_name(attr), "last_time") == 0) {
 		struct timespec s;
 		dtcp_last_time(instance, &s);
 		return sprintf(buf, "%lld.%.9ld\n",
 			(long long) s.tv_sec, s.tv_nsec);
 	}
 	/* Rtx control */
-	if (strcmp(attr->attr.name, "data_retransmit_max") == 0) {
+	if (strcmp(robject_attr_name(attr), "data_retransmit_max") == 0) {
 		return sprintf(buf, "%u\n", dtcp_data_retransmit_max(instance->cfg));
 	}
-	if (strcmp(attr->attr.name, "last_snd_data_ack") == 0) {
+	if (strcmp(robject_attr_name(attr), "last_snd_data_ack") == 0) {
 		return sprintf(buf, "%u\n", last_snd_data_ack(instance));
 	}
-	if (strcmp(attr->attr.name, "last_rcv_data_ack") == 0) {
+	if (strcmp(robject_attr_name(attr), "last_rcv_data_ack") == 0) {
 		return sprintf(buf, "%u\n", last_rcv_data_ack(instance));
 	}
-	if (strcmp(attr->attr.name, "snd_lf_win") == 0) {
+	if (strcmp(robject_attr_name(attr), "snd_lf_win") == 0) {
 		return sprintf(buf, "%u\n", dtcp_snd_lf_win(instance));
 	}
-	if (strcmp(attr->attr.name, "rtx_q_length") == 0) {
+	if (strcmp(robject_attr_name(attr), "rtx_q_length") == 0) {
 		return sprintf(buf, "%u\n", rtxq_size(dt_rtxq(instance->parent)));
 	}
-	if (strcmp(attr->attr.name, "rtx_drop_pdus") == 0) {
+	if (strcmp(robject_attr_name(attr), "rtx_drop_pdus") == 0) {
 		return sprintf(buf, "%u\n",
 			rtxq_drop_pdus(dt_rtxq(instance->parent)));
 	}
-	if (strcmp(attr->attr.name, "ps_name") == 0) {
+	if (strcmp(robject_attr_name(attr), "ps_name") == 0) {
 		return sprintf(buf, "%s\n",instance->base.ps_factory->name);
 	}
 	return 0;
@@ -1922,7 +1921,7 @@ EXPORT_SYMBOL(dtcp_set_policy_set_param);
 struct dtcp * dtcp_create(struct dt *          dt,
                           struct rmt *         rmt,
                           struct dtcp_config * dtcp_cfg,
-			  struct kobject *     parent)
+			  struct robject *     parent)
 {
         struct dtcp * tmp;
         string_t *    ps_name;
@@ -1948,8 +1947,8 @@ struct dtcp * dtcp_create(struct dt *          dt,
 
         tmp->parent = dt;
 
-	if (robject_init_and_add(&tmp->kobj,
-				 &dtcp_ktype,
+	if (robject_init_and_add(&tmp->robj,
+				 &dtcp_rtype,
 				 parent,
 				 "dtcp")) {
                 dtcp_destroy(tmp);
@@ -1988,18 +1987,18 @@ struct dtcp * dtcp_create(struct dt *          dt,
         /* FIXME: fixups to the state-vector should be placed here */
 
         if (dtcp_flow_ctrl(dtcp_cfg)) {
-		RINA_DECLARE_AND_ADD_ATTRS(&tmp->kobj, dtcp, closed_win_q_length, closed_win_q_size);
+		RINA_DECLARE_AND_ADD_ATTRS(&tmp->robj, dtcp, closed_win_q_length, closed_win_q_size);
                 if (dtcp_window_based_fctrl(dtcp_cfg)) {
-			RINA_DECLARE_AND_ADD_ATTRS(&tmp->kobj, dtcp, sndr_credit, rcvr_credit,
+			RINA_DECLARE_AND_ADD_ATTRS(&tmp->robj, dtcp, sndr_credit, rcvr_credit,
 				snd_rt_win_edge, rcv_rt_win_edge);
 		}
                 if (dtcp_rate_based_fctrl(dtcp_cfg)) {
-			RINA_DECLARE_AND_ADD_ATTRS(&tmp->kobj, dtcp, pdu_per_time_unit, time_unit,
+			RINA_DECLARE_AND_ADD_ATTRS(&tmp->robj, dtcp, pdu_per_time_unit, time_unit,
 				sndr_rate, rcvr_rate, pdus_rcvd_in_time_unit, last_time);
 		}
 	}
 	if (dtcp_rtx_ctrl(dtcp_cfg)) {
-		RINA_DECLARE_AND_ADD_ATTRS(&tmp->kobj, dtcp, data_retransmit_max, last_snd_data_ack,
+		RINA_DECLARE_AND_ADD_ATTRS(&tmp->robj, dtcp, data_retransmit_max, last_snd_data_ack,
 			last_rcv_data_ack, snd_lf_win, rtx_q_length, rtx_drop_pdus);
 	}
 
@@ -2022,7 +2021,7 @@ int dtcp_destroy(struct dtcp * instance)
         if (instance->sv)       rkfree(instance->sv);
         if (instance->cfg)      dtcp_config_destroy(instance->cfg);
         rina_component_fini(&instance->base);
-	robject_del(&instance->kobj);
+	robject_del(&instance->robj);
         rkfree(instance);
 
         LOG_DBG("Instance %pK destroyed successfully", instance);

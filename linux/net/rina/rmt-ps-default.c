@@ -48,20 +48,20 @@ struct rmt_queue {
 
 struct rmt_ps_default_data {
 	unsigned int q_max;
-	struct kobject kobj;
+	struct robject robj;
 };
 
-static ssize_t rmt_ps_attr_show(struct kobject *        kobj,
-                         	struct kobj_attribute * attr,
+static ssize_t rmt_ps_attr_show(struct robject *        robj,
+                         	struct robj_attribute * attr,
                                 char *                  buf)
 {
 	struct rmt_ps_default_data * data;
 
-	data = container_of(kobj, struct rmt_ps_default_data, kobj);
+	data = container_of(robj, struct rmt_ps_default_data, robj);
 	if (!data)
 		return 0;
 
-	if (strcmp(attr->attr.name, "q_max") == 0) {
+	if (strcmp(robject_attr_name(attr), "q_max") == 0) {
 		return sprintf(buf, "%u\n", data->q_max);
 	}
 	return 0;
@@ -285,8 +285,8 @@ struct ps_base *rmt_ps_default_create(struct rina_component *component)
 		rkfree(ps);
 		return NULL;
 	}
-	if (robject_init_and_add(&data->kobj, &rmt_ps_ktype,
-				rmt_kobject(rmt), "ps")) {
+	if (robject_init_and_add(&data->robj, &rmt_ps_rtype,
+				rmt_robject(rmt), "ps")) {
 		rkfree(data);
 		rkfree(ps);
 		return NULL;
@@ -331,7 +331,7 @@ void rmt_ps_default_destroy(struct ps_base *bps)
 
 	if (bps) {
 		if (data)
-			robject_del(&data->kobj);
+			robject_del(&data->robj);
 			rkfree(data);
 		rkfree(ps);
 	}

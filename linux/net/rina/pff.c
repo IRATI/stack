@@ -21,7 +21,6 @@
 
 #include <linux/rculist.h>
 #include <linux/slab.h>
-#include <linux/kobject.h>
 
 #define RINA_PREFIX "pff"
 
@@ -37,25 +36,25 @@ static struct policy_set_list policy_sets = {
 
 struct pff {
         struct rina_component base;
-        struct kset * kset;
+        struct rset * rset;
 };
 
 /*
-static ssize_t pff_attr_show(struct kobject *        kobj,
-                             struct kobj_attribute * attr,
+static ssize_t pff_attr_show(struct robject *        robj,
+                             struct robj_attribute * attr,
                              char *                  buf)
 {
 	struct pff * pff;
 
-	 = container_of(kobj, struct rmt, kobj);
+	 = container_of(robj, struct rmt, robj);
 	if (!rmt || !rmt->rmt_cfg || !rmt->rmt_cfg->policy_set)
 		return 0;
 
-	if (strcmp(attr->attr.name, "ps_name") == 0) {
+	if (strcmp(robject_attr_name(attr), "ps_name") == 0) {
 		return sprintf(buf, "%s\n",
 			policy_name(rmt->rmt_cfg->policy_set));
 	}
-	if (strcmp(attr->attr.name, "ps_name") == 0) {
+	if (strcmp(robject_attr_name(attr), "ps_name") == 0) {
 		return sprintf(buf, "%s\n",
 			policy_version(rmt->rmt_cfg->policy_set));
 	}
@@ -69,7 +68,7 @@ RINA_KTYPE(pff);
 static bool __pff_is_ok(struct pff * instance)
 { return instance ? true : false; }
 
-static struct pff * pff_create_gfp(struct kobject * parent, gfp_t flags)
+static struct pff * pff_create_gfp(struct robject * parent, gfp_t flags)
 {
         struct pff * tmp;
 
@@ -77,11 +76,11 @@ static struct pff * pff_create_gfp(struct kobject * parent, gfp_t flags)
         if (!tmp)
                 return NULL;
 
-        tmp->kset = NULL;
+        tmp->rset = NULL;
         rina_component_init(&tmp->base);
 
-	tmp->kset = kset_create_and_add("pff", NULL, parent);
-	if (!tmp->kset) {
+	tmp->rset = rset_create_and_add("pff", parent);
+	if (!tmp->rset) {
                 LOG_ERR("Failed to create PFF sysfs entry");
                 pff_destroy(tmp);
                 return NULL;
@@ -102,7 +101,7 @@ struct pff * pff_create_ni(void)
 { return pff_create_gfp(GFP_ATOMIC); }
 #endif
 
-struct pff * pff_create(struct kobject * parent)
+struct pff * pff_create(struct robject * parent)
 { return pff_create_gfp(parent, GFP_KERNEL); }
 
 int pff_destroy(struct pff * instance)
@@ -110,8 +109,8 @@ int pff_destroy(struct pff * instance)
         if (!__pff_is_ok(instance))
                 return -1;
 
-	if (instance->kset)
-		kset_unregister(instance->kset);
+	if (instance->rset)
+		rset_unregister(instance->rset);
 
         rina_component_fini(&instance->base);
 
@@ -398,9 +397,9 @@ struct pff_ps * pff_ps_get(struct pff * pff)
                             struct pff_ps, base);
 }
 
-struct kset * pff_kset(struct pff * pff)
-{ return pff->kset; }
-EXPORT_SYMBOL(pff_kset);
+struct rset * pff_rset(struct pff * pff)
+{ return pff->rset; }
+EXPORT_SYMBOL(pff_rset);
 
 struct pff * pff_from_component(struct rina_component * component)
 { return container_of(component, struct pff, base); }

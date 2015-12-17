@@ -27,13 +27,14 @@
 #include "kfa.h"
 #include "dt.h"
 #include "ps-factory.h"
+#include "rds/robjects.h"
 
 #define DTP_INACTIVITY_TIMERS_ENABLE 1
 
 struct dtp * dtp_create(struct dt *         dt,
                         struct rmt *        rmt,
                         struct dtp_config * dtp_cfg,
-			struct kobject *    parent);
+			struct robject *    parent);
 int          dtp_destroy(struct dtp * instance);
 
 int          dtp_sv_init(struct dtp * dtp,

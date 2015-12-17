@@ -120,23 +120,23 @@ struct name_list_element {
         struct name      application_name;
 };
 
-static ssize_t shim_hv_ipcp_attr_show(struct kobject *        kobj,
-                         	     struct kobj_attribute * attr,
+static ssize_t shim_hv_ipcp_attr_show(struct robject *        robj,
+                         	     struct robj_attribute * attr,
                                      char *                  buf)
 {
 	struct ipcp_instance * instance;
 
-	instance = container_of(kobj, struct ipcp_instance, kobj);
+	instance = container_of(robj, struct ipcp_instance, robj);
 	if (!instance || !instance->data)
 		return 0;
 
-	if (strcmp(attr->attr.name, "name") == 0)
+	if (strcmp(robject_attr_name(attr), "name") == 0)
 		return sprintf(buf, "%s\n",
 			name_tostring(&instance->data->name));
-	if (strcmp(attr->attr.name, "dif") == 0)
+	if (strcmp(robject_attr_name(attr), "dif") == 0)
 		return sprintf(buf, "%s\n",
 			name_tostring(&instance->data->dif_name));
-	if (strcmp(attr->attr.name, "type") == 0)
+	if (strcmp(robject_attr_name(attr), "type") == 0)
 		return sprintf(buf, "shim_hv\n");
 
 	return 0;
@@ -1244,14 +1244,11 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
 
         ipcp->ops = &shim_hv_ipcp_ops;
 
-	ipcp->kobj.kset = kipcm_kset(default_kipcm);
-	if (!ipcp->kobj.kset) {
-		goto alloc_data;
-	if (kobject_init_and_add(&ipcp->kobj,
-				 &shim_hv_ipcp_ktype,
-				 NULL,
-				 "%u",
-				 id))
+	if (robject_rset_init_and_add(&ipcp->robj,
+				      &shim_hv_ipcp_rtype,
+				      kipcm_rset(default_kipcm),
+				      "%u",
+				      id))
 		goto alloc_data;
 
         /* Allocate private data for the new shim IPC process. */
@@ -1340,7 +1337,7 @@ shim_hv_factory_ipcp_destroy(struct ipcp_factory_data * factory_data,
         name_fini(&ipcp->data->name);
         rkfree(ipcp->data->vmpi.channels);
         name_fini(&ipcp->data->dif_name);
-        kobject_del(&ipcp->kobj);
+        robject_del(&ipcp->robj);
         LOG_DBGF("ipcp destroyed (id = %d)", ipcp->data->id);
         rkfree(ipcp->data);
         rkfree(ipcp);

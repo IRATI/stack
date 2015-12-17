@@ -43,7 +43,6 @@
 #include "rmt.h"
 #include "sdup.h"
 #include "efcp-utils.h"
-#include "rds/robjects.h"
 
 /*  FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
@@ -101,25 +100,25 @@ struct normal_flow {
         struct list_head       list;
 };
 
-static ssize_t normal_ipcp_attr_show(struct kobject *        kobj,
-                         	     struct kobj_attribute * attr,
+static ssize_t normal_ipcp_attr_show(struct robject *        robj,
+                         	     struct robj_attribute * attr,
                                      char *                  buf)
 {
 	struct ipcp_instance * instance;
 
-	instance = container_of(kobj, struct ipcp_instance, kobj);
+	instance = container_of(robj, struct ipcp_instance, robj);
 	if (!instance || !instance->data)
 		return 0;
 
-	if (strcmp(attr->attr.name, "name") == 0)
+	if (strcmp(robject_attr_name(attr), "name") == 0)
 		return sprintf(buf, "%s\n",
 			name_tostring(&instance->data->name));
-	if (strcmp(attr->attr.name, "dif") == 0)
+	if (strcmp(robject_attr_name(attr), "dif") == 0)
 		return sprintf(buf, "%s\n",
 			name_tostring(&instance->data->dif_name));
-	if (strcmp(attr->attr.name, "address") == 0)
+	if (strcmp(robject_attr_name(attr), "address") == 0)
 		return sprintf(buf, "%u\n", instance->data->address);
-	if (strcmp(attr->attr.name, "type") == 0)
+	if (strcmp(robject_attr_name(attr), "type") == 0)
 		return sprintf(buf, "normal\n");
 
 	return 0;
@@ -1310,16 +1309,11 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
 
         instance->ops = &normal_instance_ops;
 
-	instance->kobj.kset = kipcm_kset(default_kipcm);
-	if (!instance->kobj.kset) {
-		rkfree(instance);
-		return NULL;
-	}
-	if (kobject_init_and_add(&instance->kobj,
-				 &normal_ipcp_ktype,
-				 NULL,
-				 "%u",
-				 id)) {
+	if (robject_rset_init_and_add(&instance->robj,
+				      &normal_ipcp_rtype,
+				      kipcm_rset(default_kipcm),
+				      "%u",
+				      id)) {
 		rkfree(instance);
 		return NULL;
 	}
@@ -1348,7 +1342,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         instance->data->kfa = kipcm_kfa(default_kipcm);
 
         instance->data->efcpc = efcp_container_create(instance->data->kfa,
-						      &instance->kobj);
+						      &instance->robj);
         if (!instance->data->efcpc) {
                 rkfree(instance->data);
                 rkfree(instance);
@@ -1367,7 +1361,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         instance->data->rmt = rmt_create(instance->data->kfa,
                                          instance->data->efcpc,
 					 instance->data->sdup,
-					 &instance->kobj);
+					 &instance->robj);
         if (!instance->data->rmt) {
                 LOG_ERR("Failed creation of RMT instance");
 		sdup_destroy(instance->data->sdup);
@@ -1446,7 +1440,7 @@ static int normal_destroy(struct ipcp_factory_data * data,
                 return -1;
         }
 
-        kobject_del(&instance->kobj);
+        robject_del(&instance->robj);
 
         sdup_destroy(tmp->sdup);
         efcp_container_destroy(tmp->efcpc);

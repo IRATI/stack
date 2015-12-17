@@ -97,26 +97,26 @@ struct pft_entry {
         qos_id_t         qos_id;
         struct list_head ports;
         struct list_head next;
-	struct kobject   kobj;
+	struct robject   robj;
 };
 
-static ssize_t pft_entry_attr_show(struct kobject *        kobj,
-                        	   struct kobj_attribute * attr,
+static ssize_t pft_entry_attr_show(struct robject *        robj,
+                        	   struct robj_attribute * attr,
                                    char *                  buf)
 {
 	struct pft_entry * entry;
 
-	entry = container_of(kobj, struct pft_entry, kobj);
+	entry = container_of(robj, struct pft_entry, robj);
 	if (!entry)
 		return 0;
 
-	if (strcmp(attr->attr.name, "dest_addr") == 0) {
+	if (strcmp(robject_attr_name(attr), "dest_addr") == 0) {
 		return sprintf(buf, "%u\n", entry->destination);
 	}
-	if (strcmp(attr->attr.name, "qos_id") == 0) {
+	if (strcmp(robject_attr_name(attr), "qos_id") == 0) {
 		return sprintf(buf, "%u\n", entry->qos_id);
 	}
-	if (strcmp(attr->attr.name, "ports") == 0) {
+	if (strcmp(robject_attr_name(attr), "ports") == 0) {
 		int offset = 0;
 		struct pft_port_entry * pos;
         	list_for_each_entry(pos, &entry->ports, next) {
@@ -147,7 +147,7 @@ static struct pft_entry * pfte_create_gfp(gfp_t     flags,
         INIT_LIST_HEAD(&tmp->ports);
         INIT_LIST_HEAD(&tmp->next);
 
-	robject_init(&tmp->kobj, &pft_entry_ktype);
+	robject_init(&tmp->robj, &pft_entry_rtype);
 
         return tmp;
 }
@@ -180,7 +180,7 @@ static void pfte_destroy(struct pft_entry * entry)
         }
 
         list_del(&entry->next);
-	robject_del(&entry->kobj);
+	robject_del(&entry->robj);
         rkfree(entry);
 }
 
@@ -337,7 +337,7 @@ int default_add(struct pff_ps *        ps,
                         spin_unlock(&priv->lock);
                         return -1;
                 }
-		robject_kset_add(&tmp->kobj, pff_kset(ps->dm), "%u", tmp->destination);
+		robject_rset_add(&tmp->robj, pff_rset(ps->dm), "%u", tmp->destination);
                 list_add(&tmp->next, &priv->entries);
         }
 

@@ -25,6 +25,7 @@
 #include "du.h"
 #include "dt.h"
 #include "ps-factory.h"
+#include "rds/robjects.h"
 
 struct dtcp_config;
 struct dtcp_fctrl_config;
@@ -35,7 +36,7 @@ struct rmt;
 struct dtcp *        dtcp_create(struct dt *          dt,
                                  struct rmt *         rmt,
                                  struct dtcp_config * dtcp_cfg,
-				 struct kobject *     parent);
+				 struct robject *     parent);
 
 int                  dtcp_destroy(struct dtcp * instance);
 
