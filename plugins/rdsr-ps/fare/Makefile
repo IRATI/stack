@@ -1,14 +1,14 @@
 # Set INSTALLDIR environment variable to the directory containing
 # the IRATI installation
 
+INSTALLDIR=/users/krausch/pristine/userspace
+
 ifndef INSTALLDIR
 $(error The INSTALLDIR environment variable is not set)
 endif
 
-PLUGIN_NAME = sm-example
-SOURCES     =					\
-	plugin.cc				\
-	sm-example.cc
+PLUGIN_NAME = fare
+SOURCES     = fa-ps-fare.cc
 
 CXX        = g++
 CXXFLAGS   = -Wall -Werror -fPIC

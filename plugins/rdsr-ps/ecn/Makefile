@@ -15,8 +15,6 @@ all:
 install:
 	make -C /lib/modules/$(shell uname -r)/build M=$(shell pwd) modules_install
 	cp ecn.manifest /lib/modules/$(shell uname -r)/extra/
-	depmod -a
 
 clean:
 	make -C /lib/modules/$(shell uname -r)/build M=$(shell pwd) clean
-	depmod -a

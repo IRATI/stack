@@ -96,11 +96,11 @@ static unsigned int cdrr_reset_time = CDRR_DEFAULT_RESET_TIME;
 /* The link capacity assumed. Bytes per seconds.
  */
  static unsigned int cdrr_link_capacity = CDRR_DEFAULT_LINK_CAPACITY;
-#endif
 
 /* Time frame to assign to the efcp connections.
  */
 static unsigned int cdrr_time_frame = CDRR_DEFAULT_TIME_FRAME;
+#endif
 
 /* Size of elements currently active in the catalog.
  */
