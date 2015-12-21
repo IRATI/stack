@@ -1,0 +1,11 @@
+{
+        "PluginName": "ecn",
+        "PluginVersion": "1",
+        "PolicySets" : [
+                {
+                        "Name": "ecn",
+                        "Component": "rmt",
+                        "Version" : "1"
+                }
+        ]
+}
