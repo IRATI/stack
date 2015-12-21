@@ -358,13 +358,20 @@ static struct ps_base *
 rmt_ps_red_create(struct rina_component * component)
 {
         struct rmt * rmt = rmt_from_component(component);
-        struct rmt_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
-        struct red_rmt_ps_data * data = rkzalloc(sizeof(*data), GFP_KERNEL);
+        struct rmt_ps * ps;
+        struct red_rmt_ps_data * data;
 	struct policy_parm * ps_param;
 	struct rmt_config * rmt_cfg;
 
+        ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
         if (!ps) {
                 return NULL;
+        }
+
+        data = rkzalloc(sizeof(*data), GFP_KERNEL);
+        if (!data) {
+            kfree(ps);
+            return NULL;
         }
 
         ps->base.set_policy_set_param = red_rmt_ps_set_policy_set_param;
@@ -373,6 +380,13 @@ rmt_ps_red_create(struct rina_component * component)
 	ps->priv = data;
 
 	rmt_cfg = rmt_config_get(rmt);
+        if (!rmt_cfg) {
+            LOG_ERR("No RMT config found");
+            kfree(ps);
+            kfree(data);
+            return NULL;
+        }
+
 	ps_param = policy_param_find(rmt_cfg->policy_set, "qmax_p");
 	if (!ps_param)
 		LOG_WARN("No PS param qmax_p");
