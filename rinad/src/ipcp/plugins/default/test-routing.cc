@@ -831,7 +831,7 @@ int getRoutingTable_MultipathGraphRoutesTo4_2() {
 	*          node3
 	*/
 	
-	std::list<rinad::FlowStateObject *> objects;
+	std::list<rinad::FlowStateObject > objects;
 
 	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 1, true, 1, 1);
 	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 1, true, 1, 1);
@@ -841,14 +841,14 @@ int getRoutingTable_MultipathGraphRoutesTo4_2() {
 	rinad::FlowStateObject fso6 = rinad::FlowStateObject(2, 4, 1, true, 1, 1);
 	rinad::FlowStateObject fso7 = rinad::FlowStateObject(4, 3, 1, true, 1, 1);
 	rinad::FlowStateObject fso8 = rinad::FlowStateObject(3, 4, 1, true, 1, 1);
-	objects.push_back(&fso1);
-	objects.push_back(&fso2);
-	objects.push_back(&fso3);
-	objects.push_back(&fso4);
-	objects.push_back(&fso5);
-	objects.push_back(&fso6);
-	objects.push_back(&fso7);
-	objects.push_back(&fso8);
+	objects.push_back(fso1);
+	objects.push_back(fso2);
+	objects.push_back(fso3);
+	objects.push_back(fso4);
+	objects.push_back(fso5);
+	objects.push_back(fso6);
+	objects.push_back(fso7);
+	objects.push_back(fso8);
 
 	rinad::IRoutingAlgorithm * routingAlgorithm =
 	    new rinad::ECMPDijkstraAlgorithm();
@@ -906,7 +906,7 @@ int getRoutingTable_MultipathGraphRoutesTest() {
 	*	   -- node5 --
 	*/
 
-	std::list<rinad::FlowStateObject *> objects;
+	std::list<rinad::FlowStateObject> objects;
 	rinad::FlowStateObject fso1 = rinad::FlowStateObject(1, 2, 2, true, 1, 1);
 	rinad::FlowStateObject fso2 = rinad::FlowStateObject(2, 1, 2, true, 1, 1);
 	rinad::FlowStateObject fso3 = rinad::FlowStateObject(1, 3, 1, true, 1, 1);
@@ -921,20 +921,20 @@ int getRoutingTable_MultipathGraphRoutesTest() {
 	rinad::FlowStateObject fso12 = rinad::FlowStateObject(5, 4, 2, true, 1, 1);
 	rinad::FlowStateObject fso13 = rinad::FlowStateObject(5, 1, 1, true, 1, 1);
 	rinad::FlowStateObject fso14 = rinad::FlowStateObject(4, 5, 2, true, 1, 1);
-	objects.push_back(&fso1);
-	objects.push_back(&fso2);
-	objects.push_back(&fso3);
-	objects.push_back(&fso4);
-	objects.push_back(&fso5);
-	objects.push_back(&fso6);
-	objects.push_back(&fso7);
-	objects.push_back(&fso8);
-	objects.push_back(&fso9);
-	objects.push_back(&fso10);
-	objects.push_back(&fso11);
-	objects.push_back(&fso12);
-	objects.push_back(&fso13);
-	objects.push_back(&fso14);
+	objects.push_back(fso1);
+	objects.push_back(fso2);
+	objects.push_back(fso3);
+	objects.push_back(fso4);
+	objects.push_back(fso5);
+	objects.push_back(fso6);
+	objects.push_back(fso7);
+	objects.push_back(fso8);
+	objects.push_back(fso9);
+	objects.push_back(fso10);
+	objects.push_back(fso11);
+	objects.push_back(fso12);
+	objects.push_back(fso13);
+	objects.push_back(fso14);
 
 	rinad::IRoutingAlgorithm * routingAlgorithm =
 	    new rinad::ECMPDijkstraAlgorithm();
