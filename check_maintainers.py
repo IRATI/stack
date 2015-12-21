@@ -108,8 +108,9 @@ def scan_paths(maintainers, paths):
 
 				validate_maintainers(maintainers, name)
 
-def list_maintainers(maintainers, opt):
+def list_maintainers(maintainers, opt, grouped):
 
+	mfiles = dict()
 	try:
 		int(opt)
 		is_int = True
@@ -146,9 +147,22 @@ def list_maintainers(maintainers, opt):
 			continue
 		if n == 0:
 			continue
-		print("F: "+f_)
-		for m in ms:
-			print("\t"+m)
+
+		if not grouped:
+			print("F: "+f_)
+			for m in ms:
+				print("\t"+m)
+		else:
+			for m in ms:
+				if m not in mfiles:
+					mfiles[m] = list()
+				mfiles[m].append(f_)
+	if grouped:
+		for m in mfiles:
+			print("M: "+m)
+			for f in mfiles[m]:
+				print ("\t"+f)
+
 
 #Main routine
 def main():
@@ -156,10 +170,11 @@ def main():
 	parser = ArgumentParser(description=" %s - check maintainers script.\n\n"
 				"Check sanity of the MAINTAINERS file and list maintainers for a patch/series." % (__file__),
 				epilog="Examples:\n"
-				" %s \t\t\t-- check MAINTAINERS file sanity and against the current tree\n"
+				" %s \t\t\t\t-- check MAINTAINERS file sanity and against the current tree\n"
 				" %s -n 0001-feature.patch\t-- list *only* the maintainers of the files affected by the patch\n"
-				" %s -n -l 20\t\t-- list *only* the maintainers of the files affected by the last 20 patches (git diff HEAD~20)\n"
-				" %s -n -l v0.9.0\t\t-- list *only* the maintainers of the files affected by the last 20 patches (git diff v0.9.0)" % (__file__, __file__,__file__,__file__),
+				" %s -n -l 20\t\t\t-- list *only* the maintainers of the files affected by the last 20 patches (git diff HEAD~20)\n"
+				" %s -n -l 20 -m\t\t-- list *only* the maintainers of the files affected by the last 20 patches (git diff HEAD~20) grouped by maintaner\n"
+				" %s -n -l v0.9.0\t\t-- list *only* the maintainers of the files affected by the last 20 patches (git diff v0.9.0)" % (__file__,	__file__,__file__,__file__,__file__),
                                 add_help=True,
 				formatter_class=RawTextHelpFormatter)
 
@@ -171,6 +186,10 @@ def main():
 			dest="patchset", default=False,
 			help="List maintainers for a patch/series of patches.\n"
 				"PATCHSET can be: a patch file, or the number of commits \nfrom HEAD or commit SHA")
+
+	parser.add_argument("--dont-group-by-maintainer",
+			dest="grouped", action="store_false", default=True,
+			help="If \"-l\" selected, don't group modified files by maintainer.\n")
 	args = parser.parse_args()
 
 	try:
@@ -185,7 +204,7 @@ def main():
 		scan_paths(maintainers, PATHS_TO_CHECK)
 	#List maintainers
 	if args.patchset:
-		list_maintainers(maintainers, args.patchset)
+		list_maintainers(maintainers, args.patchset, args.grouped)
 
 	if errors > 0:
 		print("Number of errors: %s" % errors)
