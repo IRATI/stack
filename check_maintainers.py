@@ -187,9 +187,9 @@ def main():
 			help="List maintainers for a patch/series of patches.\n"
 				"PATCHSET can be: a patch file, or the number of commits \nfrom HEAD or commit SHA")
 
-	parser.add_argument("-g", "--grouped-by-maintainer",
-			dest="grouped", action="store_true", default=False,
-			help="If \"-l\" selected, present the list of maintainers for a patch/series of patches where modified files are grouped by maintainers.\n")
+	parser.add_argument("--dont-group-by-maintainer",
+			dest="grouped", action="store_false", default=True,
+			help="If \"-l\" selected, don't group modified files by maintainer.\n")
 	args = parser.parse_args()
 
 	try:
