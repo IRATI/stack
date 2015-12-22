@@ -23,6 +23,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <map>
 #include <vector>
 #include <string>
@@ -34,6 +35,8 @@
 #include <librina/logs.h>
 #include <librina/json/json.h>
 #include "ipcm.h"
+
+#define CONF_FILE_LAST_VERSION "ipcm_conf_file_version"
 
 using namespace std;
 
@@ -395,6 +398,52 @@ void parse_ipc_to_create(const Json::Value          root,
         }
 }
 
+void check_conf_file_version(const Json::Value& root, const std::string& f)
+{
+	std::string last_version, f_version;
+	char answer = 'x';
+	ifstream file;
+	size_t pos;
+	stringstream ss;
+
+	f_version = root.get("configFileVersion", f_version).asString();
+
+	pos = f.rfind("/");
+	if (pos == std::string::npos) {
+		ss << ".";
+	} else {
+		ss << f.substr(0, pos);
+	}
+	ss << "/" << CONF_FILE_LAST_VERSION;
+
+        file.open(ss.str().c_str());
+        if (file.fail()) {
+                LOG_ERR("Failed to open last config version file");
+                return;
+        }
+	std::getline(file, last_version);
+        file.close();
+
+	if (f_version.compare(last_version)) {
+		if (f_version.empty())
+			std::cout << "\nconfigFileVersion is not specified in current configuration file. ";
+		else
+			std::cout << "\nCurrent configuration file version is "
+			<< f_version << " but last version is " << last_version << ". ";
+		std::cout << "Do you wanna continue?" << endl;
+		while (answer != 'y' && answer != 'n') {
+			std::cout << "(y/n): " << endl;
+			std::cin >> answer;
+		}
+		if (answer == 'y')
+			return;
+		else {
+			std::cout << "Exiting..." << endl;
+			exit(EXIT_SUCCESS);
+		}
+	}
+}
+
 void parse_local_conf(const Json::Value &         root,
                       rinad::LocalConfiguration & local)
 {
@@ -491,6 +540,7 @@ bool parse_configuration(std::string& file_loc)
         rinad::RINAConfiguration config;
 
 	config.configuration_file = file_loc;
+	check_conf_file_version(root, file_loc);
         parse_local_conf(root, config.local);
         parse_ipc_to_create(root, config.ipcProcessesToCreate);
         parse_dif_configs(root, config.difConfigurations);

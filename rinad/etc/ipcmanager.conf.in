@@ -1,4 +1,5 @@
 {
+  "configFileVersion" : "1.4.1",
   "localConfiguration" : {
     "installationPath" : "@prefix@/bin",
     "libraryPath" : "@libdir@",
