@@ -249,7 +249,7 @@ struct ps_base *rmt_ps_default_create(struct rina_component *component)
 	struct rmt_ps *ps;
 	struct rmt_ps_default_data *data;
 	struct rmt_config *rmt_cfg;
-	struct policy_parm *parm;
+	struct policy_parm *parm = NULL;
 
 	rmt = rmt_from_component(component);
 	if(!rmt)
@@ -270,20 +270,20 @@ struct ps_base *rmt_ps_default_create(struct rina_component *component)
 	ps->priv = data;
 
 	rmt_cfg = rmt_config_get(rmt);
-	if(!rmt_cfg) {
-		rkfree(data);
-		rkfree(ps);
-		return NULL;
+	if (rmt_cfg) {
+		/* RMT config is available at assign-to-dif time, but
+		 * not available at set-policy-set time. */
+		parm = policy_param_find(rmt_cfg->policy_set, "q_max");
 	}
 
-	parm = policy_param_find(rmt_cfg->policy_set, "q_max");
 	if (!parm) {
 		LOG_WARN("No PS param q_max");
 		data->q_max = DEFAULT_Q_MAX;
-	} else
+	} else {
 		rmt_ps_default_set_policy_set_param(&ps->base,
 						    policy_param_name(parm),
 						    policy_param_value(parm));
+        }
 
 	ps->rmt_dequeue_policy = default_rmt_dequeue_policy;
 	ps->rmt_enqueue_policy = default_rmt_enqueue_policy;

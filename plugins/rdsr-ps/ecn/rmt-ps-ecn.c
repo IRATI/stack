@@ -394,7 +394,7 @@ static struct ps_base * ecn_create(struct rina_component * component) {
 	struct rmt_ps *ps;
 	struct rmt_ps_default_data *data;
 	struct rmt_config *rmt_cfg;
-	struct policy_parm *parm;
+	struct policy_parm *parm = NULL;
 
 	rmt = rmt_from_component(component);
 	if(!rmt)
@@ -424,15 +424,11 @@ static struct ps_base * ecn_create(struct rina_component * component) {
 	ps->priv = data;
 
 	rmt_cfg = rmt_config_get(rmt);
-
-	if(!rmt_cfg) {
-		ecn_queue_set_destroy(data->outqs);
-		rkfree(data);
-		rkfree(ps);
-		return NULL;
+	if (rmt_cfg) {
+		/* This is available at assign-to-dif time, but not at
+		 * select-policy-set time. */
+		parm = policy_param_find(rmt_cfg->policy_set, "q_max");
 	}
-
-	parm = policy_param_find(rmt_cfg->policy_set, "q_max");
 
 	if (!parm) {
 		LOG_WARN("No PS param q_max");

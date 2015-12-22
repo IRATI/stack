@@ -806,7 +806,12 @@ rmt_ps_cher_urg_create(struct rina_component * component)
         ps->priv = data;
 
         rmt_cfg = rmt_config_get(rmt);
-        policy_for_each(rmt_cfg->policy_set, data, rmt_config_apply);
+	if (rmt_cfg) {
+		policy_for_each(rmt_cfg->policy_set, data, rmt_config_apply);
+	} else {
+		/* TODO provide a suitable default for all the parameters. */
+		LOG_WARN("Missing defaults");
+	}
 
         ps->rmt_dequeue_policy = cu_rmt_dequeue_policy;
         ps->rmt_enqueue_policy = cu_rmt_enqueue_policy;
