@@ -161,6 +161,10 @@ M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>
 F: plugins/dummy/*
 F: plugins/red/*
 
+Plugins build system
+M: Vincenzo Maffione <v.maffione (at) nextworks.it>
+F: plugins/Makefile
+
 Jain's Congestion Avoidance plugin:
 M: Leonardo Bergesio <leonardo.bergesio (at) i2cat.net>
 F: plugins/cong_avoidance/*
