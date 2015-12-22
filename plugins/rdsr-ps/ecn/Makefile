@@ -4,17 +4,20 @@
 # Author: Kewin Rausch <kewin.rausch@create-net.org>
 #
 
+KDIR=../../../linux
+KREL=$(shell cd $(KDIR) && make kernelrelease)
+
 EXTRA_CFLAGS=-Wtype-limits -Inet/rina/
 
 obj-m	+= ecn.o
 ecn-y	:= rmt-ps-ecn.o
 
 all:
-	make -C /lib/modules/$(shell uname -r)/build M=$(shell pwd)
+	$(MAKE) -C $(KDIR) M=$(shell pwd)
 
 install:
-	make -C /lib/modules/$(shell uname -r)/build M=$(shell pwd) modules_install
-	cp ecn.manifest /lib/modules/$(shell uname -r)/extra/
+	$(MAKE) -C $(KDIR) M=$(shell pwd) modules_install
+	cp ecn.manifest /lib/modules/$(KREL)/extra/
 
 clean:
-	make -C /lib/modules/$(shell uname -r)/build M=$(shell pwd) clean
+	$(MAKE) -C $(KDIR) M=$(shell pwd) clean

@@ -3,7 +3,7 @@
 #
 
 KDIR=../../linux
-KREL=`uname -r`
+KREL=$(shell cd $(KDIR) && make kernelrelease)
 
 ifneq ($(KERNELRELEASE),)
 
