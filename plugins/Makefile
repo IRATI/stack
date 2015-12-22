@@ -6,26 +6,28 @@ endif
 
 ifndef KDIR
 $(warning "KDIR will be set to the linux directory of the repository")
-KDIR=../linux
+KDIR=$(shell echo `pwd`/../linux)
 endif
 
+KREL=$(shell make -s -C $(KDIR) kernelrelease)
+
 all:
-	for i in $(directories); do 					\
-		cd $$i || continue; 					\
-		KDIR=$(KDIR) INSTALLDIR=$(INSTALLDIR) make; 		\
-		cd ..; 							\
+	for i in $(directories); do 						\
+		cd $$i || continue; 						\
+		make KDIR=$(KDIR) INSTALLDIR=$(INSTALLDIR) KREL=$(KREL); 	\
+		cd ..; 								\
 	done
 
 clean:
-	for i in $(directories); do 					\
-		cd $$i || continue; 					\
-		KDIR=$(KDIR) INSTALLDIR=$(INSTALLDIR) make clean; 	\
-		cd ..; 							\
+	for i in $(directories); do 						\
+		cd $$i || continue; 						\
+		make KDIR=$(KDIR) INSTALLDIR=$(INSTALLDIR) KREL=$(KREL) clean; 	\
+		cd ..; 								\
 	done
 
 install:
-	for i in $(directories); do 					\
-		cd $$i || continue; 					\
-		KDIR=$(KDIR) INSTALLDIR=$(INSTALLDIR) make install; 	\
-		cd ..; 							\
+	for i in $(directories); do 						\
+		cd $$i || continue; 						\
+		make KDIR=$(KDIR) INSTALLDIR=$(INSTALLDIR) KREL=$(KREL) install;\
+		cd ..; 								\
 	done

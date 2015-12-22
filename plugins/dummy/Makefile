@@ -2,8 +2,6 @@
 # Written by Francesco Salvestrini <f.salvestrini@nextworks.it>
 #
 
-KDIR=../../linux
-
 ifneq ($(KERNELRELEASE),)
 
 ccflags-y = -Wtype-limits -Inet/rina
@@ -13,6 +11,11 @@ obj-m := dummy-plugin.o
 dummy-plugin-y := dummy-plugin-ps.o rmt-ps-dummy.o dtcp-ps-dummy.o dtp-ps-dummy.o pft-ps-dummy.o
 
 else
+
+ifndef KDIR
+$(warning "KDIR will be set to the linux directory of the repository")
+KDIR=../../linux
+endif
 
 all:
 	$(MAKE) -C $(KDIR) M=$$PWD
