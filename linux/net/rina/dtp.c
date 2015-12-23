@@ -837,6 +837,7 @@ finish:
         LOG_DBG("Finish process_Atimer_expiration");
         return pci_ret;
 }
+EXPORT_SYMBOL(process_A_expiration);
 
 static bool seqq_is_empty(struct squeue * queue)
 {
