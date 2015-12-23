@@ -72,7 +72,8 @@ int
 robject_add(struct robject *robj, struct robject *parent, const char *fmt, ...)
 {
 	__PREPARE_ROBJECT_WRAPPER
-	return kobject_add(to_kobj(robj), &parent->kobj, fmt, args);
+	return kobject_add(to_kobj(robj), parent ? &parent->kobj : NULL,
+			   fmt, args);
 }
 EXPORT_SYMBOL(robject_add);
 
@@ -83,7 +84,7 @@ robject_init_and_add(struct robject *robj, struct robj_type *rtype,
 	__PREPARE_ROBJECT_WRAPPER
 	memset(to_kobj(robj), 0x00, sizeof(robj->kobj));
 	return kobject_init_and_add(to_kobj(robj), to_ktype(rtype),
-				    &parent->kobj, s);
+				    parent ? &parent->kobj : NULL, s);
 }
 EXPORT_SYMBOL(robject_init_and_add);
 
