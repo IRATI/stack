@@ -354,14 +354,40 @@ static int red_rmt_ps_set_policy_set_param(struct ps_base * bps,
         return 0;
 }
 
+static int
+rmt_ps_load_param(struct rmt_ps *ps, const char *param_name, const char *dflt)
+{
+	struct rmt_config * rmt_cfg;
+	struct policy_parm * ps_param;
+
+	rmt_cfg = rmt_config_get(ps->dm);
+
+        if (rmt_cfg) {
+		/* This is availble at assign-to-dif time but it is not
+		 * available at select-policy-set time. */
+		ps_param = policy_param_find(rmt_cfg->policy_set, param_name);
+        } else {
+		ps_param = NULL;
+	}
+
+	if (!ps_param) {
+		LOG_WARN("No PS param %s", param_name);
+		(void)dflt;
+	} else {
+		red_rmt_ps_set_policy_set_param(&ps->base,
+						policy_param_name(ps_param),
+						policy_param_value(ps_param));
+	}
+
+	return 0;
+}
+
 static struct ps_base *
 rmt_ps_red_create(struct rina_component * component)
 {
         struct rmt * rmt = rmt_from_component(component);
         struct rmt_ps * ps;
         struct red_rmt_ps_data * data;
-	struct policy_parm * ps_param;
-	struct rmt_config * rmt_cfg;
 
         ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
         if (!ps) {
@@ -379,70 +405,13 @@ rmt_ps_red_create(struct rina_component * component)
 
 	ps->priv = data;
 
-	rmt_cfg = rmt_config_get(rmt);
-        if (!rmt_cfg) {
-            LOG_ERR("No RMT config found");
-            kfree(ps);
-            kfree(data);
-            return NULL;
-        }
-
-	ps_param = policy_param_find(rmt_cfg->policy_set, "qmax_p");
-	if (!ps_param)
-		LOG_WARN("No PS param qmax_p");
-	else
-		red_rmt_ps_set_policy_set_param(&ps->base,
-						policy_param_name(ps_param),
-						policy_param_value(ps_param));
-
-	ps_param = policy_param_find(rmt_cfg->policy_set, "qth_min_p");
-	if (!ps_param)
-		LOG_WARN("No PS param qth_min_p");
-	else
-		red_rmt_ps_set_policy_set_param(&ps->base,
-						policy_param_name(ps_param),
-						policy_param_value(ps_param));
-
-	ps_param = policy_param_find(rmt_cfg->policy_set, "qth_max_p");
-	if (!ps_param)
-		LOG_WARN("No PS param qth_max_p");
-	else
-		red_rmt_ps_set_policy_set_param(&ps->base,
-						policy_param_name(ps_param),
-						policy_param_value(ps_param));
-
-	ps_param = policy_param_find(rmt_cfg->policy_set, "Wlog_p");
-	if (!ps_param)
-		LOG_WARN("No PS param Wlog_p");
-	else
-		red_rmt_ps_set_policy_set_param(&ps->base,
-						policy_param_name(ps_param),
-						policy_param_value(ps_param));
-
-	ps_param = policy_param_find(rmt_cfg->policy_set, "Plog_p");
-	if (!ps_param)
-		LOG_WARN("No PS param Plog_p");
-	else
-		red_rmt_ps_set_policy_set_param(&ps->base,
-						policy_param_name(ps_param),
-						policy_param_value(ps_param));
-
-	ps_param = policy_param_find(rmt_cfg->policy_set, "Scell_log_p");
-	if (!ps_param)
-		LOG_DBG("No PS param Scell_log_p");
-	else
-		red_rmt_ps_set_policy_set_param(&ps->base,
-						policy_param_name(ps_param),
-						policy_param_value(ps_param));
-
-	ps_param = policy_param_find(rmt_cfg->policy_set, "stab_address_p");
-	if (!ps_param) {
-		LOG_DBG("No PS param stab_address");
-		data->stab = NULL;
-	} else
-		red_rmt_ps_set_policy_set_param(&ps->base,
-						policy_param_name(ps_param),
-						policy_param_value(ps_param));
+	rmt_ps_load_param(ps, "qmax_p", NULL);
+	rmt_ps_load_param(ps, "qth_min_p", NULL);
+	rmt_ps_load_param(ps, "qth_max_p", NULL);
+	rmt_ps_load_param(ps, "Wlog_p", NULL);
+	rmt_ps_load_param(ps, "Plog_p", NULL);
+	rmt_ps_load_param(ps, "Scell_log_p", NULL);
+	rmt_ps_load_param(ps, "stab_address_p", NULL);
 
         ps->rmt_enqueue_policy = red_rmt_enqueue_policy;
         ps->rmt_dequeue_policy = red_rmt_dequeue_policy;
