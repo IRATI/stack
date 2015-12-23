@@ -1,0 +1,10 @@
+Flow Allocation Rate Enforcement policy for OpenIRATI.
+Author: Kewin Rausch <kewin.rausch@create-net.org>
+
+********************************************************************************
+RESUME
+********************************************************************************
+This simply policy allows to extract, from the flow specifications, the average
+bandwidth value and assign it to the rate dtcp configuration sending rate. Such
+policy allows you to start AE instances which requires a personalized rate on 
+the same QoS cube. 

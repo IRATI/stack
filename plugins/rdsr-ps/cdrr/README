@@ -1,0 +1,62 @@
+Congestion Detection Rate Reduction policy for OpenIRATI.
+Author: Kewin Rausch <kewin.rausch@create-net.org>
+
+********************************************************************************
+RESUME
+********************************************************************************
+This is a DTCP level policy. It stores the value of the QoS avg. bandwidth as 
+the preferred minimum rate at which the flow must be set in case of congestion.
+Until a congestion occurs at receiver side, the policy allows the flow to speed
+up at a given rate, which is called reset-rate (if you set it to the real 
+link rate then you will be able to use all the offered resources).
+
+********************************************************************************
+NO ECN
+********************************************************************************
+The mechanism can be used without ECN flagged packets, using a simple congestion
+guessing heuristic. You have to compile the policy with the pre-processor symbol
+CDRR_NO_ECN in order to do it (see upper part of the code source).
+
+Such heuristic just count the active flows and sum up the reset rate given; if 
+the sum exceed a given link capacity value, then the server is marked as 
+congested and all the flows are adjusted to their avg. bandwidth.
+
+As default only 32 concurrent flows are handled; you can change this value 
+setting the pre-processor macro CDRR_MAX_FLOWS before the compilation.
+
+********************************************************************************
+IMPORTANT DECLARATIONs
+********************************************************************************
+Just at the begin of the policy there are declared the important statement for
+the code sheet, such as:
+
+CDRR_DEFAULT_RESET_RATE
+	Rate at which adapt if no congestion is detected. Should be set in 
+	accord with CDRR_DEFAULT_TIME_FRAME.
+	Value in bytes.
+
+CDRR_DEFAULT_LINK_CAPACITY
+	Link maximum capacity. Should be set in accord with 
+	CDRR_DEFAULT_TIME_FRAME.
+	Value in bytes.
+
+CDRR_DEFAULT_TIME_FRAME
+	Time frame for computation of the rate based flow control.
+	Value in ms.
+	
+CDRR_DEFAULT_RESET_TIME
+	Reset time for the NO ECN mechanism. This is the amount of time which
+	should pass before considering the flow as no more emitting. 
+	Value in ms.
+	
+********************************************************************************
+PARAMETERS
+********************************************************************************
+mgb
+	Parametric policy which allows to change the Minimum Granted Bandwidth
+	for this flow at runtime.
+	
+reset_rate
+	Parametric policy which allows to change the rate at which the flow is
+	set if no congestion is detected along its route.
+	

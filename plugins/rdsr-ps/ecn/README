@@ -1,0 +1,34 @@
+Congestion Explicit Congestion Notification for OpenIRATI.
+Author: Kewin Rausch <kewin.rausch@create-net.org>
+
+********************************************************************************
+RESUME
+********************************************************************************
+This is a simple RMT policy which start to mark packets with congestion flags
+when a threshold is overcomed in the RMT buffers. In IRATI the RMT buffers 
+begins to be used when the ipcp signal a problem in dispatching a pdu. This is 
+caused usually by some block in the flows (rate credit consumed) or if the NIC
+driver is not able to catch up the speed at which datagram are offered.
+
+********************************************************************************
+IMPORTANT DECLARATIONs
+********************************************************************************
+
+ECN_THRE
+	This defined ow many pdu can be safely enqueued before marking them as
+	congested during dequeuing operation. This limit is maintained low on 
+	porpouse (5 pdus).
+	
+ECN_TIMED_LOG
+	Uncomment this symbol to obtain a logging mechanism of the RMT queue 
+	status without having the kernel log overruned of messages. This 
+	mechanism will also report if, during the log procedures, some pdu were
+	dropped (due the reaching of queue default limit). 
+	
+********************************************************************************
+PARAMETERS
+********************************************************************************
+q_thre
+	This parametric policy changes the threshold of the ports that will be 
+	created from this point on. It wont change threshold of previously
+	created ports.

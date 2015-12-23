@@ -173,31 +173,31 @@ const char * robject_attr_name(struct robj_attribute * attr);
 
 const char * robject_name(struct robject * robj);
 
-inline void
+void
 robject_init(struct robject *robj, struct robj_type *rtype);
 
-inline int
+int
 robject_add(struct robject *robj, struct robject *parent, const char *fmt, ...);
 
-inline int
+int
 robject_init_and_add(struct robject *robj, struct robj_type *rtype,
 		     struct robject *parent, const char *fmt, ...);
 
-inline void
+void
 robject_del(struct robject *robj);
 
-inline int
+int
 robject_rset_add(struct robject *robj, struct rset *parentset,
 		 const char *fmt, ...);
 
-inline int
+int
 robject_rset_init_and_add(struct robject *robj, struct robj_type *rtype,
 			  struct rset *parentkset, const char *fmt, ...);
 
-inline struct rset *
+struct rset *
 rset_create_and_add(const char *name, struct robject *parent);
 
-inline void
+void
 rset_unregister(struct rset * set);
 
 struct robject *rset_find_obj(struct rset *rset, const char *name);

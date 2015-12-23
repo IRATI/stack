@@ -60,7 +60,7 @@ ssize_t robject_attr_show_redirect(struct kobject *	   kobj,
 }
 EXPORT_SYMBOL(robject_attr_show_redirect);
 
-inline void
+void
 robject_init(struct robject *robj, struct robj_type *rtype)
 {
 	memset(to_kobj(robj), 0x00, sizeof(robj->kobj));
@@ -68,7 +68,7 @@ robject_init(struct robject *robj, struct robj_type *rtype)
 }
 EXPORT_SYMBOL(robject_init);
 
-inline int
+int
 robject_add(struct robject *robj, struct robject *parent, const char *fmt, ...)
 {
 	__PREPARE_ROBJECT_WRAPPER
@@ -76,7 +76,7 @@ robject_add(struct robject *robj, struct robject *parent, const char *fmt, ...)
 }
 EXPORT_SYMBOL(robject_add);
 
-inline int
+int
 robject_init_and_add(struct robject *robj, struct robj_type *rtype,
 		     struct robject *parent, const char *fmt, ...)
 {
@@ -88,11 +88,11 @@ robject_init_and_add(struct robject *robj, struct robj_type *rtype,
 EXPORT_SYMBOL(robject_init_and_add);
 
 
-inline void robject_del(struct robject *robj)
+void robject_del(struct robject *robj)
 { kobject_del(to_kobj(robj)); }
 EXPORT_SYMBOL(robject_del);
 
-inline int
+int
 robject_rset_add(struct robject *robj, struct rset *parentset,
 		 const char *fmt, ...)
 {
@@ -104,7 +104,7 @@ robject_rset_add(struct robject *robj, struct rset *parentset,
 }
 EXPORT_SYMBOL(robject_rset_add);
 
-inline int
+int
 robject_rset_init_and_add(struct robject *robj, struct robj_type *rtype,
 			  struct rset *parentset, const char *fmt, ...)
 {
@@ -116,7 +116,7 @@ robject_rset_init_and_add(struct robject *robj, struct robj_type *rtype,
 }
 EXPORT_SYMBOL(robject_rset_init_and_add);
 
-inline struct rset *
+struct rset *
 rset_create_and_add(const char *name, struct robject *parent)
 {
 	struct rset * rset;
@@ -126,7 +126,7 @@ rset_create_and_add(const char *name, struct robject *parent)
 }
 EXPORT_SYMBOL(rset_create_and_add);
 
-inline void
+void
 rset_unregister(struct rset * set)
 { return kset_unregister(to_kset(set)); }
 EXPORT_SYMBOL(rset_unregister);
