@@ -36,7 +36,7 @@
 #include <librina/json/json.h>
 #include "ipcm.h"
 
-#define CONF_FILE_CUR_VERSION "ipcm_conf_file_version"
+#define CONF_FILE_CUR_VERSION "1.4.1"
 
 using namespace std;
 
@@ -398,38 +398,18 @@ void parse_ipc_to_create(const Json::Value          root,
         }
 }
 
-void check_conf_file_version(const Json::Value& root, const std::string& f)
+void check_conf_file_version(const Json::Value& root, const std::string& cur_version)
 {
-	std::string last_version, f_version;
-	char answer = 'x';
-	ifstream file;
-	size_t pos;
-	stringstream ss;
+	std::string f_version;
 
 	f_version = root.get("configFileVersion", f_version).asString();
 
-	pos = f.rfind("/");
-	if (pos == std::string::npos) {
-		ss << ".";
-	} else {
-		ss << f.substr(0, pos);
-	}
-	ss << "/" << CONF_FILE_CUR_VERSION;
-
-        file.open(ss.str().c_str());
-        if (file.fail()) {
-                LOG_ERR("Failed to open last config version file");
-                return;
-        }
-	std::getline(file, last_version);
-        file.close();
-
-	if (f_version != last_version) {
+	if (f_version != cur_version) {
 		if (f_version.empty())
 			std::cout << "\nconfigFileVersion is not specified in current configuration file. " << endl;
 		else
 			std::cout << "\nCurrent configuration file version is "
-			<< f_version << " but last version is " << last_version << "." << endl;
+			<< f_version << " but last version is " << cur_version << "." << endl;
 		std::cout << "Exiting..." << endl;
 		exit(EXIT_FAILURE);
 	}
@@ -531,7 +511,8 @@ bool parse_configuration(std::string& file_loc)
         rinad::RINAConfiguration config;
 
 	config.configuration_file = file_loc;
-	check_conf_file_version(root, file_loc);
+	config.configuration_file_version = CONF_FILE_CUR_VERSION;
+	check_conf_file_version(root, config.configuration_file_version);
         parse_local_conf(root, config.local);
         parse_ipc_to_create(root, config.ipcProcessesToCreate);
         parse_dif_configs(root, config.difConfigurations);
