@@ -413,7 +413,7 @@ void check_conf_file_version(const Json::Value& root, const std::string& cur_ver
 		LOG_ERR("configFileVersion is missing in configuration file");
 	} else {
 		LOG_ERR("Configuration file version mismatch: expected = '%s',"
-			"provided = '%s'", cur_version.c_str(), f_version.c_str());
+			" provided = '%s'", cur_version.c_str(), f_version.c_str());
 	}
 	LOG_INFO("Exiting...");
 	exit(EXIT_FAILURE);
