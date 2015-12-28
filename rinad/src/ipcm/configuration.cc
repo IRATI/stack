@@ -404,15 +404,19 @@ void check_conf_file_version(const Json::Value& root, const std::string& cur_ver
 
 	f_version = root.get("configFileVersion", f_version).asString();
 
-	if (f_version != cur_version) {
-		if (f_version.empty())
-			std::cout << "\nconfigFileVersion is not specified in current configuration file. " << endl;
-		else
-			std::cout << "\nCurrent configuration file version is "
-			<< f_version << " but last version is " << cur_version << "." << endl;
-		std::cout << "Exiting..." << endl;
-		exit(EXIT_FAILURE);
+	if (f_version == cur_version) {
+		/* ok */
+		return;
 	}
+
+	if (f_version.empty()) {
+		LOG_ERR("configFileVersion is missing in configuration file");
+	} else {
+		LOG_ERR("Configuration file version mismatch: expected = '%s',"
+			" provided = '%s'", cur_version.c_str(), f_version.c_str());
+	}
+	LOG_INFO("Exiting...");
+	exit(EXIT_FAILURE);
 }
 
 void parse_local_conf(const Json::Value &         root,
