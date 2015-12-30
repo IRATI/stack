@@ -49,9 +49,16 @@ void * doManagementSDUReaderWork(void* arg)
 		try {
 			result = rina::kernelIPCProcess->readManagementSDU(message.message_,
 									   data->max_sdu_size_);
-		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Problems reading management SDU: %s", e.what());
-			continue;
+		}
+		catch (rina::ReadSDUException  &e)
+		{
+		        LOG_IPCP_ERR("Problems reading management SDU: %s", e.what());
+		        continue;
+		}
+		catch(rina::IPCException &e)
+		{
+	                LOG_IPCP_ERR("Problems reading management SDU: %s", e.what());
+	                break;
 		}
 
 		message.size_ = result.bytesRead;
