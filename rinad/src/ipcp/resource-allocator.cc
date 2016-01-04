@@ -364,9 +364,6 @@ ResourceAllocator::ResourceAllocator() : IResourceAllocator() {
 }
 
 ResourceAllocator::~ResourceAllocator() {
-	if (n_minus_one_flow_manager_) {
-		delete n_minus_one_flow_manager_;
-	}
 }
 
 void ResourceAllocator::set_application_process(rina::ApplicationProcess * ap)

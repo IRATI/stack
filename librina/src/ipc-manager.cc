@@ -618,7 +618,12 @@ void IPCProcessFactory::destroy(IPCProcessProxy* ipcp)
 	resultKernel = syscallDestroyIPCProcess(ipcp->id);
 
 	if (ipcp->getType().compare(NORMAL_IPC_PROCESS) == 0)
+	{
+		resultUserSpace = kill(ipcp->getPid(), SIGINT);
+		// TODO: Change magic number
+		usleep(1000000);
 		resultUserSpace = kill(ipcp->getPid(), SIGKILL);
+	}
 #endif
 
 	delete ipcp;
