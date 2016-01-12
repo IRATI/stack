@@ -40,8 +40,9 @@
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
 
 struct rmt_queue {
-	struct rfifo	 *queue;
-	port_id_t	  pid;
+	struct rfifo *dt_queue;
+	struct rfifo *mgt_queue;
+	port_id_t    pid;
 };
 
 struct rmt_ps_default_data {
@@ -56,8 +57,15 @@ static struct rmt_queue *rmt_queue_create(port_id_t port)
 	if (!tmp)
 		return NULL;
 
-	tmp->queue = rfifo_create_ni();
-	if (!tmp->queue) {
+	tmp->dt_queue = rfifo_create_ni();
+	if (!tmp->dt_queue) {
+		rkfree(tmp);
+		return NULL;
+	}
+
+	tmp->mgt_queue = rfifo_create_ni();
+	if (!tmp->mgt_queue) {
+		rfifo_destroy(tmp->dt_queue, (void (*)(void *)) pdu_destroy);
 		rkfree(tmp);
 		return NULL;
 	}
@@ -74,8 +82,11 @@ static int rmt_queue_destroy(struct rmt_queue *q)
 		return -1;
 	}
 
-	if (q->queue)
-		rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
+	if (q->dt_queue)
+		rfifo_destroy(q->dt_queue, (void (*)(void *)) pdu_destroy);
+
+	if (q->mgt_queue)
+		rfifo_destroy(q->mgt_queue, (void (*)(void *)) pdu_destroy);
 
 	rkfree(q);
 
@@ -139,6 +150,7 @@ int default_rmt_enqueue_policy(struct rmt_ps	  *ps,
 {
 	struct rmt_queue *q;
 	struct rmt_ps_default_data *data = ps->priv;
+	pdu_type_t pdu_type;
 
 	if (!ps || !n1_port || !pdu) {
 		LOG_ERR("Wrong input parameters");
@@ -153,12 +165,18 @@ int default_rmt_enqueue_policy(struct rmt_ps	  *ps,
 		return RMT_PS_ENQ_ERR;
 	}
 
-	if (rfifo_length(q->queue) >= data->q_max) {
+	pdu_type = pci_type(pdu_pci_get_ro(pdu));
+	if (pdu_type == PDU_TYPE_MGMT) {
+		rfifo_push_ni(q->mgt_queue, pdu);
+		return RMT_PS_ENQ_SCHED;
+	}
+
+	if (rfifo_length(q->dt_queue) >= data->q_max) {
 		pdu_destroy(pdu);
 		return RMT_PS_ENQ_DROP;
 	}
 
-	rfifo_push_ni(q->queue, pdu);
+	rfifo_push_ni(q->dt_queue, pdu);
 	return RMT_PS_ENQ_SCHED;
 }
 EXPORT_SYMBOL(default_rmt_enqueue_policy);
@@ -181,7 +199,11 @@ struct pdu *default_rmt_dequeue_policy(struct rmt_ps	  *ps,
 		return NULL;
 	}
 
-	ret_pdu = rfifo_pop(q->queue);
+	if (!rfifo_is_empty(q->mgt_queue))
+		ret_pdu = rfifo_pop(q->mgt_queue);
+	else
+		ret_pdu = rfifo_pop(q->dt_queue);
+
 	if (!ret_pdu) {
 		LOG_ERR("Could not dequeue scheduled pdu");
 		return NULL;
@@ -227,7 +249,7 @@ struct ps_base *rmt_ps_default_create(struct rina_component *component)
 	struct rmt_ps *ps;
 	struct rmt_ps_default_data *data;
 	struct rmt_config *rmt_cfg;
-	struct policy_parm *parm;
+	struct policy_parm *parm = NULL;
 
 	rmt = rmt_from_component(component);
 	if(!rmt)
@@ -248,20 +270,20 @@ struct ps_base *rmt_ps_default_create(struct rina_component *component)
 	ps->priv = data;
 
 	rmt_cfg = rmt_config_get(rmt);
-	if(!rmt_cfg) {
-		rkfree(data);
-		rkfree(ps);
-		return NULL;
+	if (rmt_cfg) {
+		/* RMT config is available at assign-to-dif time, but
+		 * not available at set-policy-set time. */
+		parm = policy_param_find(rmt_cfg->policy_set, "q_max");
 	}
 
-	parm = policy_param_find(rmt_cfg->policy_set, "q_max");
 	if (!parm) {
 		LOG_WARN("No PS param q_max");
 		data->q_max = DEFAULT_Q_MAX;
-	} else
+	} else {
 		rmt_ps_default_set_policy_set_param(&ps->base,
 						    policy_param_name(parm),
 						    policy_param_value(parm));
+        }
 
 	ps->rmt_dequeue_policy = default_rmt_dequeue_policy;
 	ps->rmt_enqueue_policy = default_rmt_enqueue_policy;

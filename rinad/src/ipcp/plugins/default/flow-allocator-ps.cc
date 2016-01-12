@@ -3,19 +3,20 @@
 //
 //    Vincenzo Maffione <v.maffione@nextworks.it>
 //
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
+// This library is free software; you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public
+// License as published by the Free Software Foundation; either
+// version 2.1 of the License, or (at your option) any later version.
 //
-// This program is distributed in the hope that it will be useful,
+// This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// Lesser General Public License for more details.
 //
-// You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+// You should have received a copy of the GNU Lesser General Public
+// License along with this library; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+// MA  02110-1301  USA
 //
 
 #define IPCP_MODULE "flow-allocator-ps-default"
@@ -30,11 +31,11 @@ namespace rinad {
 class FlowAllocatorPs: public IFlowAllocatorPs {
 public:
 	FlowAllocatorPs(IFlowAllocator * dm);
-        virtual Flow *newFlowRequest(IPCProcess * ipc_process,
-                                     const rina::FlowRequestEvent& event);
-        int set_policy_set_param(const std::string& name,
-                                 const std::string& value);
-        virtual ~FlowAllocatorPs() {}
+	configs::Flow *newFlowRequest(IPCProcess * ipc_process,
+			const rina::FlowRequestEvent& flowRequestEvent);
+	int set_policy_set_param(const std::string& name,
+							 const std::string& value);
+	virtual ~FlowAllocatorPs() {}
 
 private:
         // Data model of the security manager component.
@@ -47,11 +48,11 @@ FlowAllocatorPs::FlowAllocatorPs(IFlowAllocator * dm_) : dm(dm_)
 { }
 
 
-Flow * FlowAllocatorPs::newFlowRequest(IPCProcess * ipc_process,
+configs::Flow * FlowAllocatorPs::newFlowRequest(IPCProcess * ipc_process,
                                        const rina::FlowRequestEvent&
                                        event)
 {
-	Flow* flow;
+	configs::Flow* flow;
 	rina::QoSCube * qosCube = NULL;
 
 	flow = dm->createFlow();
@@ -60,7 +61,7 @@ Flow * FlowAllocatorPs::newFlowRequest(IPCProcess * ipc_process,
 	flow->hop_count = 3;
 	flow->max_create_flow_retries = 1;
 	flow->source = true;
-	flow->state = Flow::ALLOCATION_IN_PROGRESS;
+	flow->state = configs::Flow::ALLOCATION_IN_PROGRESS;
 
 	std::list<rina::Connection*> connections;
 	try {
@@ -145,11 +146,11 @@ class FlowAllocatorRoundRobinPs: public IFlowAllocatorPs {
 public:
 	FlowAllocatorRoundRobinPs(IFlowAllocator * dm_) :
 		dm(dm_), last_qos_index(0) {};
-        Flow *newFlowRequest(IPCProcess * ipc_process,
-                             const rina::FlowRequestEvent& event);
-        int set_policy_set_param(const std::string& name,
-        			 const std::string& value);
-        virtual ~FlowAllocatorRoundRobinPs() {}
+	configs::Flow *newFlowRequest(IPCProcess * ipc_process,
+			const rina::FlowRequestEvent& event);
+	int set_policy_set_param(const std::string& name,
+			const std::string& value);
+	virtual ~FlowAllocatorRoundRobinPs() {}
 
 private:
         // Data model of the security manager component.
@@ -157,10 +158,10 @@ private:
         int last_qos_index;
 };
 
-Flow * FlowAllocatorRoundRobinPs::newFlowRequest(IPCProcess * ipc_process,
+configs::Flow * FlowAllocatorRoundRobinPs::newFlowRequest(IPCProcess * ipc_process,
                                        	         const rina::FlowRequestEvent& event)
 {
-	Flow* flow;
+	configs::Flow* flow;
 	rina::QoSCube * qosCube = NULL;
 	std::list<rina::Connection*> connections;
         std::list<rina::QoSCube*> qosCubes = dm->ipcp->resource_allocator_->getQoSCubes();
@@ -197,7 +198,7 @@ Flow * FlowAllocatorRoundRobinPs::newFlowRequest(IPCProcess * ipc_process,
 	flow->hop_count = 3;
 	flow->max_create_flow_retries = 1;
 	flow->source = true;
-	flow->state = Flow::ALLOCATION_IN_PROGRESS;
+	flow->state = configs::Flow::ALLOCATION_IN_PROGRESS;
 
 	rina::Connection * connection = new rina::Connection();
 	connection->portId = event.portId;

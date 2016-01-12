@@ -28,6 +28,7 @@
 #include <map>
 #include <string>
 #include <list>
+#include "stddef.h"
 
 #include "librina/patterns.h"
 #include "librina/concurrency.h"

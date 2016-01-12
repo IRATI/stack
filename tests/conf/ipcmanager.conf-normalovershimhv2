@@ -1,4 +1,5 @@
 {
+    "configFileVersion": "1.4.1",
     "localConfiguration": {
         "installationPath": "/usr/local/irati/bin",
         "libraryPath": "/usr/local/irati/lib",
@@ -9,16 +10,6 @@
 		"/lib/modules/4.1.10-irati/extra"
 	]
     },
-    "applicationToDIFMappings": [
-        {
-            "encodedAppName": "rina.apps.echotime.server-1--",
-            "difName": "test-normal.DIF"
-        },
-        {
-            "encodedAppName": "rina.apps.echotime.client-1--",
-            "difName": "test-normal.DIF"
-        }
-    ],
     "ipcProcessesToCreate": [
         {
             "apName": "test-shim-hv.IPCP",

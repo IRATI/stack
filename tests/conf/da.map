@@ -1,0 +1,15 @@
+{
+  "applicationToDIFMappings" : [ {
+    "encodedAppName" : "rina.utils.apps.echo.server-1--",
+    "difName" : "normal.DIF" 
+  }, {
+    "encodedAppName" : "rina.utils.apps.echo.client-1--",
+    "difName" : "normal.DIF" 
+  }, {
+    "encodedAppName" : "rina.utils.apps.rinaperf.server-1--",
+    "difName" : "normal.DIF" 
+  }, {
+    "encodedAppName" : "rina.utils.apps.rinaperf.client-1--",
+    "difName" : "normal.DIF" 
+  }]
+}

@@ -1,0 +1,15 @@
+{
+  "applicationToDIFMappings" : [ {
+    "encodedAppName" : "traffic.generator.server-1--",
+    "difName" : "normal.DIF"
+  }, {
+    "encodedAppName" : "traffic.generator.client-1--",
+    "difName" : "normal.DIF"
+  }, {
+    "encodedAppName" : "rina.apps.echotime.server-1--",
+    "difName" : "normal.DIF"
+  }, {
+    "encodedAppName" : "rina.apps.echotime.client-1--",
+    "difName" : "normal.DIF" 
+  }]
+}

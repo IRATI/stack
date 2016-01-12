@@ -864,7 +864,7 @@ std::string UcharArray::toString()
 void UcharArray::get_seralized_object(ser_obj_t& result)
 {
 	result.size_ = length;
-	result.message_ = new char[result.size_];
+	result.message_ = new unsigned char[result.size_];
 	memcpy(result.message_, data, result.size_);
 }
 

@@ -1,32 +1,112 @@
-package rinad.mad_manager.messages;
+package rina.messages;
+import "ApplicationProcessNamingInfoMessage.proto";
+import "DataTransferConstantsMessage.proto";
+import "PolicyDescriptorMessage.proto";
+import "QoSCubeMessage.proto";
+import "CommonMessages.proto";
 
 option optimize_for = LITE_RUNTIME;
 
-
-//Simple types
-message str{
-	optional string value = 1;  //Serialized string
-}
-
 //Contains the information of an IPCP
 message ipcp{
-	required uint32 processId = 1;		//Process ID
-	required string processName = 2;	//Process name
+	optional applicationProcessNamingInfo_t process = 1;		//Process ID
 }
 
+// contains flow allocator configuration
+message fa_config_t
+{
+        optional policyDescriptor_t policy_set = 1;        		// Policy set for Flow Allocator
+        optional uint32 max_create_flow_retries = 2;					        // Maximum number of attempts to retry the flow allocation
+        optional policyDescriptor_t allocate_notify_policy = 3;
+        optional policyDescriptor_t allocate_retry_policy = 4;
+        optional policyDescriptor_t new_flow_request_policy = 5;
+        optional policyDescriptor_t seq_rollover_policy = 6;
+}
+
+// contains RMT Configuration
+message rmt_config_t{
+	optional policyDescriptor_t policy_set = 1; 		// QMonitor Policy, MaxQ Policy and Scheduling Policy
+	optional policyDescriptor_t pft_conf = 2;			// Configuration of the PFT
+}
+
+// Contains EFCP configuration
+message efcp_config_t{
+	optional dataTransferConstants_t data_transfer_constants = 1;
+	optional policyDescriptor_t unknown_flowpolicy = 2;
+	repeated qosCube_t qos_cubes = 3;
+}
+
+// Containes one address
+message static_addr_config_t{
+	optional string ap_name = 1;
+	optional string ap_instance = 2;
+	optional uint32 address = 3;
+}
+
+// Contains prefix configuration
+message addre_pref_config_t{
+	optional uint32 address_prefix = 1;					// The address prefix
+	optional string organization = 2;					// The organization whose addresses start by the prefix
+}
+
+// Contains assigment of thr addresses configuration
+message addr_config_t{
+	repeated static_addr_config_t address = 1;
+	repeated addre_pref_config_t prefixes = 2;
+}
+
+// Contains  namespace manager configuration
+message nsm_config_t{
+	optional addr_config_t addressing_config = 1;
+	optional policyDescriptor_t policy_set = 2;
+}
+
+// Contains auth SDU Protection profile
+message sduprotection_config_t{
+	optional policyDescriptor_t authPolicy = 1;			//The authentication-encryption-compression policy set
+	optional policyDescriptor_t encryptPolicy = 2;		// The encryption policy configuration (name/version)
+	optional policyDescriptor_t crcPolicy = 3;			// The CRC policy config
+	optional policyDescriptor_t ttlPolicy = 4;			// The TTL policy config
+	optional string dif_name = 5;
+}
+
+// Contains security managment configuration
+message security_config_t{
+	optional policyDescriptor_t policy_set = 1;
+	optional sduprotection_config_t default_auth_profile = 2;
+	repeated sduprotection_config_t specific_auth_profiles = 3;
+}
+
+// Contains configuration of a DIF
+message dif_config_t{
+	optional uint32 address = 1;						// The address of the IPC Process in the DIF
+	optional efcp_config_t efcp_config = 2;				// Configuration of the Error and Flow Control Protocol
+	optional rmt_config_t rmt_config = 3;				// Configuration of the Relaying and Multiplexing Task
+	optional fa_config_t fa_config = 4;					// Flow Allocator configuration parameters of the DIF
+	optional policyDescriptor_t et_config = 5;			// Configuration of the enrollment Task
+	optional nsm_config_t nsm_config = 6;				// Configuration of the NamespaceManager
+	optional policyDescriptor_t routing_config = 7;		// Configuration of routing
+	optional policyDescriptor_t ra_config = 8;			// Configuration of the Resource Allocator
+	optional security_config_t sm_config = 9;			// Configuration of the security manager
+	repeated property_t parameters = 10;				// Other configuration parameters of the DIF				
+}
+// Contains information about a DIF
+message dif_info_t
+{
+	optional string dif_type = 1;							// The type of DIF	
+	optional applicationProcessNamingInfo_t dif_name = 2;	// The name of the DIF
+	optional dif_config_t dif_config = 3;					// The DIF Configuration (qoscubes, policies, parameters, etc)
+}
 // Contains the information about the neighbor to use for the enrollment
-message enrollment_config{
-	required string neighbor_name = 1;				//the name of the neighbor
-	required string neighbor_instance = 2;			//the instance of the neighbor
-	required string enrollment_dif = 3;				//the dif to use in the enrollment
-	required string enrollment_underlying_dif = 4;   //the underlying dif to use in the enrollment
+message neighbor_config_t{
+	optional applicationProcessNamingInfo_t neighbor_name = 1;			//the name of the neighbor
+	optional applicationProcessNamingInfo_t under_dif = 2;				//the underlying dif to use in the enrollment
+	optional applicationProcessNamingInfo_t dif = 3;   					//the dif to use in the enrollment
 }
 //Contains the information to setup a new IPCP Process
-message ipcp_config{
-	required string process_name = 1;  			//the name of the process
-	required string process_instance = 2;  		//the instance of the process
-	required string process_type = 3;  			//the type of the process
-	repeated string difs_to_register = 4;  		//the DIF to register the IPCP
-	optional string dif_to_assign = 5;  		//the DIF to assign the IPCP
-	optional enrollment_config enrollment_info = 6;	//enrollment information
+message ipcp_config_t{
+	optional applicationProcessNamingInfo_t process_name = 1;  			//the name of the process
+	optional dif_info_t dif_to_assign = 2;  		//the DIF to assign the IPCP
+	repeated applicationProcessNamingInfo_t difs_to_register = 3;  		//the DIF to register the IPCP
+	repeated neighbor_config_t neighbors = 4;							//neighbor information
 }

@@ -1,4 +1,5 @@
 {
+    "configFileVersion": "1.4.1",
     "localConfiguration": {
         "installationPath": "/usr/local/irati/bin",
         "libraryPath": "/usr/local/irati/lib",
@@ -7,25 +8,8 @@
 	"pluginsPaths": [
 		"/usr/local/irati/lib/rinad/ipcp",
 		"/lib/modules/4.1.10-irati/extra"
-	],
-        "cdapTimeoutInMs": 10000,
-        "enrollmentTimeoutInMs": 10000,
-        "flowAllocatorTimeoutInMs": 15000,
-        "watchdogPeriodInMs": 60000,
-        "declaredDeadIntervalInMs": 120000,
-        "neighborsEnrollerPeriodInMs": 10000,
-        "lengthOfFlowQueues": 10
+	]
     },
-    "applicationToDIFMappings": [
-        {
-            "encodedAppName": "rina.apps.echotime.server-1--",
-            "difName": "n.DIF"
-        },
-        {
-            "encodedAppName": "rina.apps.echotime.client-1--",
-            "difName": "n.DIF"
-        }
-    ],
     "ipcProcessesToCreate": [
         {
             "apName": "h.hv.nxw.IPCP",

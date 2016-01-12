@@ -173,6 +173,14 @@ Loop-Free Alternate plugin:
 M: Sander Vrijders <sander.vrijders (at) intec.ugent.be>
 F: plugins/lfa/
 
+Multipath-forwarding plugin (ECMP-like):
+M: Javier Garcia <javier.garcial (at) atos.net>
+F: plugins/multipath/
+
+Simple Cherish-Urgency scheduling plugin:
+M: Miquel Tarzan <miquel.tarzan (at) i2cat.net>
+F: plugins/cherish-urgency/
+
 User space: librina
 -------------------
 

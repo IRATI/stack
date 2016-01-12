@@ -45,6 +45,7 @@ ipcm_SOURCES  =								\
 	configuration.cc		configuration.h			\
 	flow-alloc-handlers.cc		flow-alloc-handlers.h		\
 	policies-handlers.cc						\
+	dif-allocator.cc		dif-allocator.h			\
 	dif-template-manager.cc		dif-template-manager.h		\
 	catalog.cc			catalog.h
 

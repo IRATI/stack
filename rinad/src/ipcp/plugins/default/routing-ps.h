@@ -1,34 +1,69 @@
+
+
 /*
  * Link-state routing policy
  *
  *    Bernat Gaston <bernat.gaston@i2cat.net>
  *    Eduard Grasa <eduard.grasa@i2cat.net>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA  02110-1301  USA
  */
 
 #ifndef IPCP_LINK_STATE_ROUTING_HH
 #define IPCP_LINK_STATE_ROUTING_HH
 
 #include <set>
+#include <stdint.h>
 #include <librina/internal-events.h>
 #include <librina/timer.h>
 
 #include "ipcp/components.h"
 
 namespace rinad {
+
+struct TreeNode {
+    unsigned int addr;
+    int metric;
+    std::set<TreeNode*> chldel;
+    std::set<TreeNode*> chl;
+    TreeNode(){
+            addr = 0;
+            metric = UINT16_MAX;
+    }
+    TreeNode(const unsigned int &_addr, const int &_metric){
+        addr = _addr;
+        metric = _metric;
+    }
+    bool operator == (const TreeNode &b) const
+    {
+        return addr == b.addr;
+    }
+    bool operator < (const TreeNode &b) const
+    {
+        return addr < b.addr;
+    }
+
+    ~TreeNode(){
+	std::set<TreeNode*>::iterator c;
+        for(c=chldel.begin(); c != chldel.end(); ++c){
+            delete *c;
+        }
+    }
+
+};
 
 class LinkStateRoutingPolicy;
 
@@ -158,6 +193,43 @@ private:
 	bool isNeighbor(Edge * edge, unsigned int node) const;
 	bool isSettled(unsigned int node) const;
 	unsigned int getNextHop(unsigned int address, unsigned int sourceAddress);
+	void clear();
+};
+
+/// The routing algorithm used to compute the PDU forwarding table is a Shortest
+/// Path First (SPF) algorithm using ECMP approach. Instances of the algorithm 
+/// are run independently and concurrently by all IPC processes in their forwarding 
+/// table generator component, upon detection of an N-1 flow allocation/deallocation/state change.
+class ECMPDijkstraAlgorithm : public IRoutingAlgorithm {
+public:
+	ECMPDijkstraAlgorithm();
+	std::list<rina::RoutingTableEntry *> computeRoutingTable(const Graph& graph,
+		    	    	    	    	    	     	 const std::list<FlowStateObject>& fsoList,
+		    	    	    	    	    	     	 unsigned int source_address);
+	void computeShortestDistances(const Graph& graph,
+				      unsigned int source_address,
+				      std::map<unsigned int, int>& distances);
+
+private:
+	std::set<unsigned int> settled_nodes_;
+	std::set<unsigned int> unsettled_nodes_;
+	std::set<unsigned int> minimum_nodes_;
+	std::map<unsigned int, std::list<TreeNode *> > predecessors_;
+	std::map<unsigned int, int> distances_;
+	TreeNode* t;
+	void execute(const Graph& graph,
+		     unsigned int source);
+	void addRecursive(std::list<rina::RoutingTableEntry *> &table,
+			  int qos,
+			  unsigned int next,
+			  TreeNode * node);
+	std::list<rina::RoutingTableEntry *>::iterator findEntry(std::list<rina::RoutingTableEntry *> &table,
+							    	 unsigned int addr);
+	void getMinimum();
+	void findMinimalDistances (const Graph& graph, TreeNode * pred);
+	int getShortestDistance(unsigned int destination) const;
+	bool isNeighbor(Edge * edge, unsigned int node) const;
+	bool isSettled(unsigned int node) const;
 	void clear();
 };
 
@@ -366,7 +438,6 @@ class FlowStateManager {
 public:
 	static const int NO_AVOID_PORT;
 	static const long WAIT_UNTIL_REMOVE_OBJECT;
-
 	FlowStateManager(rina::Timer* new_timer,
 			unsigned int max_age);
 	~FlowStateManager();
@@ -399,10 +470,10 @@ private:
 
 class ComputeRoutingTimerTask : public rina::TimerTask {
 public:
-	ComputeRoutingTimerTask(LinkStateRoutingPolicy * lsr_policy,
-			long delay);
-	~ComputeRoutingTimerTask() throw(){};
-	void run();
+    ComputeRoutingTimerTask(LinkStateRoutingPolicy * lsr_policy,
+            long delay);
+    ~ComputeRoutingTimerTask() throw(){};
+    void run();
 
 private:
 	LinkStateRoutingPolicy* lsr_policy_;
@@ -411,26 +482,26 @@ private:
 
 class PropagateFSODBTimerTask : public rina::TimerTask {
 public:
-	PropagateFSODBTimerTask(LinkStateRoutingPolicy * lsr_policy,
-			long delay);
-	~PropagateFSODBTimerTask() throw(){};
-	void run();
+    PropagateFSODBTimerTask(LinkStateRoutingPolicy * lsr_policy,
+            long delay);
+    ~PropagateFSODBTimerTask() throw(){};
+    void run();
 
 private:
-	LinkStateRoutingPolicy * lsr_policy_;
-	long delay_;
+    LinkStateRoutingPolicy * lsr_policy_;
+    long delay_;
 };
 
 class UpdateAgeTimerTask : public rina::TimerTask {
 public:
-	UpdateAgeTimerTask(LinkStateRoutingPolicy * lsr_policy,
-			long delay);
-	~UpdateAgeTimerTask() throw(){};
-	void run();
+    UpdateAgeTimerTask(LinkStateRoutingPolicy * lsr_policy,
+            long delay);
+    ~UpdateAgeTimerTask() throw(){};
+    void run();
 
 private:
-	LinkStateRoutingPolicy * lsr_policy_;
-	long delay_;
+    LinkStateRoutingPolicy * lsr_policy_;
+    long delay_;
 };
 
 /// This routing policy uses a Flow State Database
@@ -468,6 +539,7 @@ public:
         static const int WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT = 101;
         static const int WAIT_UNTIL_AGE_INCREMENT_DEFAULT = 997;
         static const std::string DIJKSTRA_ALG;
+        static const std::string ECMP_DIJKSTRA_ALG;
 
 	LinkStateRoutingPolicy(IPCProcess * ipcp);
 	~LinkStateRoutingPolicy();
@@ -578,3 +650,5 @@ public:
 }
 
 #endif
+
+

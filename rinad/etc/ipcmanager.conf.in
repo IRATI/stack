@@ -1,4 +1,5 @@
 {
+  "configFileVersion" : "1.4.1",
   "localConfiguration" : {
     "installationPath" : "@prefix@/bin",
     "libraryPath" : "@libdir@",
@@ -6,19 +7,6 @@
     "consolePort" : 32766,
     "pluginsPaths" : ["@libdir@/rinad/ipcp"]
   },
-  "applicationToDIFMappings" : [ {
-    "encodedAppName" : "rina.utils.apps.echo.server-1--",
-    "difName" : "normal.DIF" 
-  }, {
-    "encodedAppName" : "rina.utils.apps.echo.client-1--",
-    "difName" : "normal.DIF" 
-  }, {
-    "encodedAppName" : "rina.utils.apps.rinaperf.server-1--",
-    "difName" : "normal.DIF" 
-  }, {
-    "encodedAppName" : "rina.utils.apps.rinaperf.client-1--",
-    "difName" : "normal.DIF" 
-  }],
   "ipcProcessesToCreate" : [ {
     "type" : "shim-eth-vlan",
     "apName" : "test-eth-vlan",

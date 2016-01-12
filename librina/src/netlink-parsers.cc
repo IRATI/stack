@@ -1300,12 +1300,12 @@ DIFProperties * parseDIFPropertiesObject(nlattr *nested){
 	return result;
 }
 
-int putParameterObject(nl_msg* netlinkMessage, const Parameter& object){
+int putParameterObject(nl_msg* netlinkMessage, const PolicyParameter& object){
 	NLA_PUT_STRING(netlinkMessage, PARAM_ATTR_NAME,
-			object.name.c_str());
+			object.name_.c_str());
 
 	NLA_PUT_STRING(netlinkMessage, PARAM_ATTR_VALUE,
-				object.value.c_str());
+				object.value_.c_str());
 
 	return 0;
 
@@ -1315,8 +1315,8 @@ int putParameterObject(nl_msg* netlinkMessage, const Parameter& object){
 }
 
 int putListOfParameters(
-		nl_msg* netlinkMessage, const std::list<Parameter>& parameters){
-	std::list<Parameter>::const_iterator iterator;
+		nl_msg* netlinkMessage, const std::list<PolicyParameter>& parameters){
+	std::list<PolicyParameter>::const_iterator iterator;
 	struct nlattr *parameter;
 	int i = 0;
 
@@ -1377,13 +1377,13 @@ int parseListOfDIFConfigurationParameters(nlattr *nested,
 		DIFConfiguration * difConfiguration){
 	nlattr * nla;
 	int rem;
-	Parameter * parameter;
+	PolicyParameter* parameter;
 
 	for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
 		     nla_ok(nla, rem);
 		     nla = nla_next(nla, &(rem))){
 		/* validate & parse attribute */
-		parameter = parseParameter(nla);
+		parameter = parsePolicyParameterObject(nla);
 		if (parameter == 0){
 			return -1;
 		}
@@ -9484,7 +9484,7 @@ parseIpcmFwdCDAPMsgMessage(nlmsghdr *hdr){
 
 	if (attrs[IFCM_ATTR_CDAP_MSG]) {
 		size_t msglen = nla_len(attrs[IFCM_ATTR_CDAP_MSG]);
-		char *msgbuf = new char[msglen];
+		unsigned char *msgbuf = new unsigned char[msglen];
 
 		// XXX or nla_get_data() ?
 		memcpy(msgbuf, nla_data(attrs[IFCM_ATTR_CDAP_MSG]), msglen);

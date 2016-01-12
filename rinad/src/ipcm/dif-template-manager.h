@@ -4,19 +4,20 @@
  *    Vincenzo Maffione     <v.maffione@nextworks.it>
  *    Marc Sune             <marc.sune (at) bisdn.de>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA  02110-1301  USA
  */
 
 #ifndef __DIF_TEMPLATE_MONITOR_H__
@@ -27,18 +28,20 @@
 #include <librina/concurrency.h>
 
 #include "rina-configuration.h"
+#include "dif-allocator.h"
 
 namespace rinad {
 
 class DIFTemplateManager;
 
 /// Monitors the folder of the DIF templates
-class DIFTemplateMonitor: public rina::SimpleThread {
+class DIFConfigFolderMonitor: public rina::SimpleThread {
 public:
-	DIFTemplateMonitor(rina::ThreadAttributes * thread_attrs,
-			   const std::string& folder,
-			   DIFTemplateManager * dtm);
-	~DIFTemplateMonitor() throw();
+	DIFConfigFolderMonitor(rina::ThreadAttributes * thread_attrs,
+			       const std::string& folder,
+			       DIFTemplateManager * dtm,
+			       DIFAllocator * da);
+	~DIFConfigFolderMonitor() throw();
 	void do_stop();
 	int run();
 
@@ -47,6 +50,7 @@ private:
 	void process_events(int fd);
 
 	DIFTemplateManager * dif_template_manager;
+	DIFAllocator * dif_allocator;
 	std::string folder_name;
 	bool stop;
 	rina::Lockable lock;
@@ -56,7 +60,8 @@ class DIFTemplateManager {
 public:
 	static const std::string DEFAULT_TEMPLATE_NAME;
 
-	DIFTemplateManager(const std::string& folder);
+	DIFTemplateManager(const std::string& folder,
+			   DIFAllocator * dif_allocator);
 	virtual ~DIFTemplateManager(void);
 	rinad::DIFTemplate * get_dif_template(const std::string& name);
 	void add_dif_template(const std::string& name, rinad::DIFTemplate * dif_template);
@@ -75,7 +80,7 @@ private:
 	std::map<std::string, rinad::DIFTemplate *> dif_templates;
 
 	rina::ReadWriteLockable templates_lock;
-	DIFTemplateMonitor * template_monitor;
+	DIFConfigFolderMonitor * monitor;
 	rinad::DIFTemplate * default_template;
 };
 

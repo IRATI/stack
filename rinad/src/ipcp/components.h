@@ -6,19 +6,20 @@
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA  02110-1301  USA
  */
 
 #ifndef IPCP_COMPONENTS_HH
@@ -34,6 +35,7 @@
 #include <librina/rib_v2.h>
 #include <librina/security-manager.h>
 #include "common/encoder.h"
+#include "common/configuration.h"
 
 namespace rinad {
 
@@ -129,7 +131,7 @@ class IFlowAllocatorInstance;
 class IFlowAllocatorPs : public rina::IPolicySet {
 // This class is used by the IPCP to access the plugin functionalities
 public:
-        virtual Flow *newFlowRequest(IPCProcess * ipc_process,
+        virtual configs::Flow *newFlowRequest(IPCProcess * ipc_process,
                         const rina::FlowRequestEvent& flowRequestEvent) = 0;
 
         virtual ~IFlowAllocatorPs() {}
@@ -180,7 +182,7 @@ public:
 	/// Process, it forwards the Create_Request to the IPC Process designated by the address.
 	/// @param cdapMessage
 	/// @param underlyingPortId
-	virtual void createFlowRequestMessageReceived(Flow * flow,
+	virtual void createFlowRequestMessageReceived(configs::Flow * flow,
 						      const std::string& object_name,
 						      int invoke_id) = 0;
 
@@ -189,8 +191,8 @@ public:
 	virtual void removeFlowAllocatorInstance(int portId) = 0;
 
         // Plugin support
-	virtual Flow * createFlow() = 0;
-	virtual void destroyFlow(Flow *) = 0;
+	virtual configs::Flow* createFlow() = 0;
+	virtual void destroyFlow(configs::Flow *) = 0;
 };
 
 class IRoutingPs : public rina::IPolicySet {
@@ -387,7 +389,7 @@ public:
 	virtual bool isAllowedToJoinDIF(const rina::Neighbor& newMember) = 0;
 
 	/// Decide if a new flow to the IPC process should be accepted
-	virtual bool acceptFlow(const Flow& newFlow) = 0;
+	virtual bool acceptFlow(const configs::Flow& newFlow) = 0;
 
         virtual ~ISecurityManagerPs() {}
 };
@@ -426,6 +428,7 @@ public:
 
 /// Interface that provides the RIB Daemon API
 class IPCPRIBDaemon : public rina::rib::RIBDaemonAE, public IPCProcessComponent {
+
 public:
 	IPCPRIBDaemon() { };
 	virtual ~IPCPRIBDaemon(){};

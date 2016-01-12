@@ -1,15 +1,14 @@
 #include "dif-validator.h"
+#include <sstream>
 
 #define RINA_PREFIX "ipcm.dif-validator"
 #include <librina/logs.h>
 
-using namespace std;
-
 namespace rinad {
 
-DIFConfigValidator::DIFConfigValidator(const rina::DIFConfiguration &dif_config,
-		const rina::DIFInformation &dif_info, std::string type)
-		:dif_config_(dif_config), dif_info_(dif_info)
+DIFConfigValidator::DIFConfigValidator(const rina::DIFInformation &dif_info,
+		std::string type)
+		: dif_info_(dif_info)
 {
 	if (type == "normal-ipc")
 		type_ = NORMAL;
@@ -43,7 +42,7 @@ bool DIFConfigValidator::validateConfigs()
 
 bool DIFConfigValidator::validateShimEth()
 {
-	vector<string> expected_params;
+	std::vector<std::string> expected_params;
 
 	expected_params.push_back("interface-name");
 
@@ -58,7 +57,7 @@ bool DIFConfigValidator::validateShimTcpUdp()
 
 bool DIFConfigValidator::validateShimHv()
 {
-	vector<string> expected_params;
+	std::vector<std::string> expected_params;
 
 	expected_params.push_back("vmpi-id");
 
@@ -84,19 +83,19 @@ bool DIFConfigValidator::validateBasicDIFConfigs()
 }
 
 bool DIFConfigValidator::validateConfigParameters(
-			const vector<string>& expected_params)
+			const std::vector<std::string>& expected_params)
 {
-	vector<bool> found_params(expected_params.size());
+	std::vector<bool> found_params(expected_params.size());
 
 	for (unsigned int i = 0; i < found_params.size(); i++) {
 		found_params[i] = false;
 	}
 
 	for (unsigned int i = 0; i < expected_params.size(); i++) {
-		for (std::list<rina::Parameter>::const_iterator it =
-			dif_config_.parameters_.begin();
-				it != dif_config_.parameters_.end(); it++) {
-			if (it->name == expected_params[i]) {
+		for (std::list<rina::PolicyParameter>::const_iterator it =
+			dif_info_.dif_configuration_.parameters_.begin();
+				it != dif_info_.dif_configuration_.parameters_.end(); it++) {
+			if (it->name_ == expected_params[i]) {
 				found_params[i] = true;
 				break;
 			}
@@ -113,41 +112,108 @@ bool DIFConfigValidator::validateConfigParameters(
 }
 
 bool DIFConfigValidator::dataTransferConstants() {
-	rina::DataTransferConstants data_trans_config = dif_config_.efcp_configuration_
+	rina::DataTransferConstants data_trans_config = 
+		dif_info_.dif_configuration_.efcp_configuration_
 			.data_transfer_constants_;
-	bool result = data_trans_config.address_length_ != 0 &&
-		      data_trans_config.qos_id_length_ != 0 &&
-		      data_trans_config.port_id_length_ != 0 &&
-		      data_trans_config.cep_id_length_ != 0 &&
-		      data_trans_config.sequence_number_length_ != 0 &&
-		      data_trans_config.ctrl_sequence_number_length_ != 0 &&
-		      data_trans_config.length_length_ != 0 &&
-		      data_trans_config.max_pdu_size_ != 0 &&
-		      data_trans_config.rate_length_ != 0 &&
-		      data_trans_config.frame_length_ != 0 &&
-		      data_trans_config.max_pdu_lifetime_ != 0;
+	std::stringstream ss;
+	ss << "Data Transfer Constants configuration failed: ";
+	bool result = true;
+	if(data_trans_config.address_length_ == 0)
+	{
+		result = false;
+		ss<<"address_length, ";
+	}
+	if(data_trans_config.qos_id_length_ == 0)
+	{
+		result = false;
+		ss<<"qos_id_length, ";
+	}
+	if(data_trans_config.port_id_length_ == 0)
+	{
+		result = false;
+		ss<<"port_id_length, ";
+	}
+	if(data_trans_config.cep_id_length_ == 0)
+	{
+		result = false;
+		ss<<"cep_id_length, ";
+	}
+	if(data_trans_config.sequence_number_length_ == 0)
+	{
+		result = false;
+		ss<<"sequence_number_length, ";
+	}
+	if(data_trans_config.ctrl_sequence_number_length_ == 0)
+	{
+		result = false;
+		ss<<"ctrl_sequence_number_length, ";
+	}
+	if(data_trans_config.length_length_ == 0)
+	{
+		result = false;
+		ss<<"length_length, ";
+	}
+	if(data_trans_config.max_pdu_size_ == 0)
+	{
+		result = false;
+		ss<<"max_pdu_size, ";
+	}
+	if(data_trans_config.rate_length_ == 0)
+	{
+		result = false;
+		ss<<"rate_length, ";
+	}
+	if(data_trans_config.frame_length_ == 0)
+	{
+		result = false;
+		ss<<"frame_length, ";
+	}
+	if(data_trans_config.max_pdu_lifetime_ == 0)
+	{
+		result = false;
+		ss<<"max_pdu_lifetime, ";
+	}
 	if (!result)
-		LOG_ERR("Data Transfer Constants configuration failed");
+	{
+		std::stringstream result;
+		print_log(ss.str(), result);
+		LOG_ERR("%s", result.str().c_str());
+	}
+
 	return result;
 }
 
 bool DIFConfigValidator::qosCubes()
 {
+	std::string s = "";
 	bool result =
-		dif_config_.efcp_configuration_.qos_cubes_.begin()
-		!= dif_config_.efcp_configuration_.qos_cubes_.end();
+		dif_info_.dif_configuration_.efcp_configuration_.qos_cubes_.begin()
+		!= dif_info_.dif_configuration_.efcp_configuration_.qos_cubes_.end();
+	if(!result)
+		s  = s + "No QOS Cube defined";
 
-	for (std::list<rina::QoSCube*>::const_iterator it = dif_config_.
-		     efcp_configuration_.qos_cubes_.begin();
-	     it != dif_config_.efcp_configuration_.qos_cubes_.end();
+	for (std::list<rina::QoSCube*>::const_iterator it = 
+		dif_info_.dif_configuration_.efcp_configuration_.qos_cubes_.begin();
+	     it != 
+		 dif_info_.dif_configuration_.efcp_configuration_.qos_cubes_.end();
 	     ++it) {
 		bool temp_result =  !(*it)->name_.empty() &&
 			(*it)->id_ != 0;
+		if(!temp_result)
+		{
+			std::stringstream aux;
+			aux << "QOS name or ID empty. Name: "<<(*it)->name_<< " ID: "<<(*it)->id_;
+			s = s + aux.str();
+		}
 		result = result && temp_result;
 	}
 
 	if (!result)
-		LOG_ERR("QoS Cubes configuration failed");
+	{
+		std::stringstream result_msg;
+		print_log(s, result_msg);
+		LOG_ERR("%s", result_msg.str().c_str());
+	}
 
 	return result;
 }
@@ -155,7 +221,7 @@ bool DIFConfigValidator::qosCubes()
 bool DIFConfigValidator::knownIPCProcessAddresses()
 {
 	std::list<rina::StaticIPCProcessAddress> staticAddress =
-			dif_config_.nsm_configuration_.
+			dif_info_.dif_configuration_.nsm_configuration_.
 			addressing_configuration_.static_address_;
 	bool result = staticAddress.begin() != staticAddress.end();
 	for (std::list<rina::StaticIPCProcessAddress>::iterator it =
@@ -167,24 +233,21 @@ bool DIFConfigValidator::knownIPCProcessAddresses()
 	}
 
 	if (!result)
-		LOG_ERR("Know IPCP Processes Addresses configuration failed");
+	{
+		std::stringstream result;
+		print_log("Know IPCP Processes Addresses configuration failed", result);
+		LOG_ERR("%s", result.str().c_str());
+	}
 
 	return result;
 }
 
-/*
-bool DIFConfigValidator::pdufTableGeneratorConfiguration()
+void DIFConfigValidator::print_log(const std::string& message, std::stringstream& result)
 {
-	bool result =
-		dif_config_.pduft_generator_configuration_.
-		pduft_generator_policy_.name_.compare("LinkState") == 0 &&
-		dif_config_.pduft_generator_configuration_.
-		pduft_generator_policy_.version_.compare("0") == 0;
-	if (!result)
-		LOG_ERR("PDUFT Generator configuration failed");
-
-	return result;
+	result << "\n //////////////////////////////////////////////// \n" <<
+			 "//////          DIF VALIDATOR ERROR    ///////// \n" <<
+			 "//////" << message << "////////"<< "\n" <<
+			 "////////////////////////////////////////////////";
 }
-*/
 
 } //rinad namespace
