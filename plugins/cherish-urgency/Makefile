@@ -2,9 +2,6 @@
 # Written by Francesco Salvestrini <f.salvestrini@nextworks.it>
 #
 
-KDIR=../../linux
-KREL=`uname -r`
-
 ifneq ($(KERNELRELEASE),)
 
 ccflags-y = -Wtype-limits -Inet/rina
@@ -14,6 +11,15 @@ obj-m := cherish-urgency-plugin.o
 cherish-urgency-plugin-y := cherish-urgency.o
 
 else
+
+ifndef KDIR
+$(warning "KDIR will be set to the linux directory of the repository")
+KDIR=../../linux
+endif
+
+ifndef KREL
+KREL=$(shell make -s -C $(KDIR) kernelrelease)
+endif
 
 all:
 	$(MAKE) -C $(KDIR) M=$$PWD
