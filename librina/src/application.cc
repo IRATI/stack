@@ -192,14 +192,27 @@ const std::string ApplicationEntity::SECURITY_MANAGER_AE_NAME =
                 "security-manager";
 
 //Class App Policy Manager
+
 AppPolicyManager::~AppPolicyManager()
 {
+        clear();
+}
+
+void AppPolicyManager::clear()
+{
+        for(std::vector<rina::PsFactory>::iterator it =
+                        ae_policy_factories.begin();
+                        it != ae_policy_factories.end(); ++it)
+        {
+                it->refcnt = 0;
+        }
         for (std::map<std::string, void *>::iterator it =
                         plugins_handles.begin(); it != plugins_handles.end();
                         it++)
         {
                 plugin_unload(it->first);
         }
+        plugins_handles.clear();
 }
 
 std::vector<rina::PsFactory>::iterator AppPolicyManager::psFactoryLookup(
@@ -417,7 +430,7 @@ int AppPolicyManager::plugin_load(const std::string& plugin_dir,
 int AppPolicyManager::plugin_unload(const std::string& plugin_name)
 {
         std::map<std::string, void *>::iterator mit;
-        std::vector<std::vector<PsFactory>::iterator> unpublish_list;
+        std::vector<PsFactory> unpublish_list;
 
         mit = plugins_handles.find(plugin_name);
         if (mit == plugins_handles.end())
@@ -436,23 +449,25 @@ int AppPolicyManager::plugin_unload(const std::string& plugin_name)
                 {
                         if (it->refcnt > 0)
                         {
-                                LOG_ERR("Cannot unload plugin %s: it is " "in use",
-                                        plugin_name.c_str());
+                                LOG_ERR("Cannot unload plugin %s: it is " "in use by %d AE",
+                                        plugin_name.c_str(), it->refcnt);
                                 return -1;
                         }
-                        unpublish_list.push_back(it);
+                        unpublish_list.push_back(*it);
                 }
         }
 
         // Unpublish all the policy sets published by this plugin
         for (unsigned int i = 0; i < unpublish_list.size(); i++)
         {
-                psFactoryUnpublish(unpublish_list[i]->info);
+                psFactoryUnpublish(unpublish_list[i].info);
         }
 
         /* Unload the plugin only if */
         dlclose(mit->second);
         plugins_handles.erase(mit);
+
+        LOG_INFO("Plugin %s unloaded successfully", plugin_name.c_str());
 
         return 0;
 }
@@ -460,6 +475,7 @@ int AppPolicyManager::plugin_unload(const std::string& plugin_name)
 //Class Application Process
 ApplicationProcess::~ApplicationProcess()
 {
+        clear();
         entities.deleteValues();
 }
 

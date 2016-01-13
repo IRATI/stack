@@ -55,6 +55,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
                 std::stringstream ss;
                 ss << IPCP_LOG_IPCP_FILE_PREFIX << "-" << id;
                 rina::initialize(log_level, log_file);
+                LOG_DBG("IPCProcessImpl");
                 rina::extendedIPCManager->ipcManagerPort = ipc_manager_port;
                 rina::extendedIPCManager->ipcProcessId = id;
                 rina::kernelIPCProcess->ipcProcessId = id;
@@ -81,12 +82,12 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         add_entity(internal_event_manager_);
         add_entity(rib_daemon_);
         add_entity(enrollment_task_);
+        add_entity(routing_component_);
         add_entity(resource_allocator_->get_n_minus_one_flow_manager());
         add_entity(resource_allocator_);
         add_entity(namespace_manager_);
         add_entity(flow_allocator_);
         add_entity(security_manager_);
-        add_entity(routing_component_);
 
         try {
                 rina::ApplicationProcessNamingInformation naming_info(name_, instance_);
@@ -109,73 +110,6 @@ IPCProcessImpl::~IPCProcessImpl() {
 
 	if (delimiter_) {
 		delete delimiter_;
-	}
-
-	if (internal_event_manager_) {
-		delete internal_event_manager_;
-	}
-
-	if (enrollment_task_) {
-		if (enrollment_task_->ps) {
-			psDestroy(rina::ApplicationEntity::ENROLLMENT_TASK_AE_NAME,
-				  enrollment_task_->selected_ps_name,
-				  enrollment_task_->ps);
-		}
-		delete enrollment_task_;
-	}
-
-	if (flow_allocator_) {
-		if (flow_allocator_->ps) {
-			psDestroy(IFlowAllocator::FLOW_ALLOCATOR_AE_NAME,
-				  flow_allocator_->selected_ps_name,
-				  flow_allocator_->ps);
-		}
-		delete flow_allocator_;
-	}
-
-	if (namespace_manager_) {
-		if (namespace_manager_->ps) {
-			psDestroy(INamespaceManager::NAMESPACE_MANAGER_AE_NAME,
-				  namespace_manager_->selected_ps_name,
-				  namespace_manager_->ps);
-		}
-		delete namespace_manager_;
-	}
-
-	if (resource_allocator_) {
-		if (resource_allocator_->ps) {
-			psDestroy(IResourceAllocator::RESOURCE_ALLOCATOR_AE_NAME,
-				  resource_allocator_->selected_ps_name,
-				  resource_allocator_->ps);
-		}
-		delete resource_allocator_;
-	}
-
-	if (security_manager_) {
-		if (security_manager_->ps) {
-			psDestroy(rina::ApplicationEntity::SECURITY_MANAGER_AE_NAME,
-				  security_manager_->selected_ps_name,
-				  security_manager_->ps);
-		}
-		delete security_manager_;
-	}
-
-	if (routing_component_) {
-		if (routing_component_->ps) {
-			psDestroy(IRoutingComponent::ROUTING_COMPONENT_AE_NAME,
-				  routing_component_->selected_ps_name,
-				  routing_component_->ps);
-		}
-		delete routing_component_;
-	}
-
-	if (rib_daemon_) {
-		if (rib_daemon_->ps) {
-			psDestroy(IPCPRIBDaemon::RIB_DAEMON_AE_NAME,
-				  rib_daemon_->selected_ps_name,
-				  rib_daemon_->ps);
-		}
-		delete rib_daemon_;
 	}
 }
 
@@ -608,7 +542,7 @@ void IPCProcessImpl::event_loop(void){
 
 	rina::IPCEvent *e;
 
-	bool keep_running = true;
+	keep_running = true;
 
 	LOG_DBG("Starting main I/O loop...");
 

@@ -69,6 +69,7 @@ public:
 	//Event loop (run)
 	void event_loop(void);
 
+	bool keep_running;
 private:
         IPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
                         unsigned short id, unsigned int ipc_manager_port,
