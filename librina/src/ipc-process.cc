@@ -23,6 +23,7 @@
 
 #include <ostream>
 #include <sstream>
+#include <errno.h>
 
 #define RINA_PREFIX "librina.ipc-process"
 
@@ -1319,8 +1320,16 @@ ReadManagementSDUResult KernelIPCProcess::readManagementSDU(void * sdu,
         int portId = 0;
         int result = syscallReadManagementSDU(ipcProcessId, sdu, &portId,
                         maxBytes);
-        if (result < 0) {
-                throw ReadSDUException();
+
+        if (result < 0)
+        {
+                switch(result) {
+                case -ESRCH:
+                        throw IPCException("the IPCP or the needed parts of the ipcp do not exist");
+                        break;
+                default:
+                        throw ReadSDUException("Unknown error");
+                }
         }
 
         readResult.setPortId(portId);
