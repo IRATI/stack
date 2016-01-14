@@ -562,6 +562,7 @@ static int pfte_port_id_altlists_copy(struct pft_entry * entry,
 
 		alt->ports = rkmalloc(cnt * sizeof(*(alt->ports)), GFP_ATOMIC);
 		if (!alt->ports) {
+			rkfree(alt);
 			return -1;
 		}
 
@@ -651,6 +652,7 @@ pff_ps_multipath_create(struct rina_component * component)
 
         ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
         if (!ps) {
+        	rkfree(priv);
                 return NULL;
         }
 
