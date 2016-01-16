@@ -1,4 +1,5 @@
 {
+    "configFileVersion": "1.4.1",
     "localConfiguration": {
         "installationPath": "/usr/local/irati/bin",
         "libraryPath": "/usr/local/irati/lib",

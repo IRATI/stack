@@ -23,6 +23,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <map>
 #include <vector>
 #include <string>
@@ -34,6 +35,8 @@
 #include <librina/logs.h>
 #include <librina/json/json.h>
 #include "ipcm.h"
+
+#define CONF_FILE_CUR_VERSION "1.4.1"
 
 using namespace std;
 
@@ -395,6 +398,27 @@ void parse_ipc_to_create(const Json::Value          root,
         }
 }
 
+void check_conf_file_version(const Json::Value& root, const std::string& cur_version)
+{
+	std::string f_version;
+
+	f_version = root.get("configFileVersion", f_version).asString();
+
+	if (f_version == cur_version) {
+		/* ok */
+		return;
+	}
+
+	if (f_version.empty()) {
+		LOG_ERR("configFileVersion is missing in configuration file");
+	} else {
+		LOG_ERR("Configuration file version mismatch: expected = '%s',"
+			" provided = '%s'", cur_version.c_str(), f_version.c_str());
+	}
+	LOG_INFO("Exiting...");
+	exit(EXIT_FAILURE);
+}
+
 void parse_local_conf(const Json::Value &         root,
                       rinad::LocalConfiguration & local)
 {
@@ -491,6 +515,8 @@ bool parse_configuration(std::string& file_loc)
         rinad::RINAConfiguration config;
 
 	config.configuration_file = file_loc;
+	config.configuration_file_version = CONF_FILE_CUR_VERSION;
+	check_conf_file_version(root, config.configuration_file_version);
         parse_local_conf(root, config.local);
         parse_ipc_to_create(root, config.ipcProcessesToCreate);
         parse_dif_configs(root, config.difConfigurations);

@@ -154,9 +154,8 @@ unlock();
 void* doWorkTimer(void *arg) {
 	Timer *timer = (Timer*) arg;
 	Sleep sleep;
-	while (timer->is_continue()) {
-		sleep.sleepForMili(500);
-		timer->get_task_scheduler()->runTasks();
+	while (timer->execute_tasks()) {
+                sleep.sleepForMili(500);
 	}
 	return (void *) 0;
 }
@@ -212,10 +211,13 @@ void Timer::cancel() {
 TaskScheduler* Timer::get_task_scheduler() const {
 	return task_scheduler;
 }
-bool Timer::is_continue() {
-	bool result;
+bool Timer::execute_tasks() {
 	continue_lock_.lock();
-	result = continue_;
+        bool result = continue_;
+	if (result)
+	{
+	        get_task_scheduler()->runTasks();
+	}
 	continue_lock_.unlock();
 	return result;
 }
