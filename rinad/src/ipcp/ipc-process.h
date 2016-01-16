@@ -91,6 +91,7 @@ public:
         // Cause relevant IPCP components to sync with information
         // exported by the kernel via sysfs
         void sync_with_kernel();
+	bool keep_running;
 
 private:
         IPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,

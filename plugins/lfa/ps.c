@@ -598,8 +598,10 @@ static int pfte_port_id_altlists_copy(struct pft_entry *entry,
 	alt->num_ports = i;
 
 	alt->ports = rkmalloc(i * sizeof(*(alt->ports)), GFP_ATOMIC);
-	if (!alt->ports)
+	if (!alt->ports) {
+		rkfree(alt);
 		return -1;
+	}
 
 	/* Fill in the ports */
 	i = 0;
@@ -667,8 +669,10 @@ pff_ps_lfa_create(struct rina_component *component)
 	INIT_LIST_HEAD(&priv->ports_down);
 
 	ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
-	if (!ps)
+	if (!ps) {
+		rkfree(priv);
 		return NULL;
+	}
 
 	ps->base.set_policy_set_param = NULL; /* default */
 	ps->dm = pff;

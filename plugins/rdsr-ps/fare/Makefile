@@ -28,7 +28,7 @@ $(PLUGIN_NAME).so: $(OBJECTS)
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 
 clean:
-	rm -f $(OBJECTS)
+	rm -f $(OBJECTS) $(PLUGIN_NAME).so
 
 install:
 	install $(PLUGIN_NAME).so $(INSTALLDIR)/lib/rinad/ipcp

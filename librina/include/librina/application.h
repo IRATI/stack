@@ -201,6 +201,7 @@ class AppPolicyManager {
 public:
 	AppPolicyManager() { };
 	virtual ~AppPolicyManager();
+	virtual void clear();
 	virtual std::vector<PsFactory>::iterator
                   psFactoryLookup(const PsInfo& ps_info);
 	virtual int psFactoryPublish(const PsFactory& factory,
@@ -212,12 +213,10 @@ public:
 	virtual int psDestroy(const std::string& ae_name,
                               const std::string& name,
                               IPolicySet * instance);
-
 protected:
 	int plugin_load(const std::string& plugin_dir,
 			const std::string& name);
 	int plugin_unload(const std::string& name);
-
 private:
 	std::vector<rina::PsFactory> ae_policy_factories;
 	std::map< std::string, void * > plugins_handles;

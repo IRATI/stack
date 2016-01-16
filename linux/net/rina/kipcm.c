@@ -2258,7 +2258,7 @@ int kipcm_mgmt_sdu_read(struct kipcm *    kipcm,
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
-                return -1;
+                return -ESRCH;
         }
 
         KIPCM_LOCK(kipcm);
@@ -2266,20 +2266,20 @@ int kipcm_mgmt_sdu_read(struct kipcm *    kipcm,
         if (!ipcp) {
                 LOG_ERR("Could not find IPC Process with id %d", id);
                 KIPCM_UNLOCK(kipcm);
-                return -1;
+                return -ESRCH;
         }
 
         if (!ipcp->ops) {
                 LOG_ERR("Bogus IPCP ops, bailing out");
                 KIPCM_UNLOCK(kipcm);
-                return -1;
+                return -ESRCH;
         }
 
         if (!ipcp->ops->mgmt_sdu_read) {
                 LOG_ERR("The IPC Process %d doesn't support this operation",
                         id);
                 KIPCM_UNLOCK(kipcm);
-                return -1;
+                return -ESRCH;
         }
         KIPCM_UNLOCK(kipcm);
 

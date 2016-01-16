@@ -202,6 +202,11 @@ class RINAConfiguration {
 	 */
 	std::string configuration_file;
 
+	/*
+	 * The version of the configuration file
+	 */
+	std::string configuration_file_version;
+
         bool lookup_dif_template_mappings(
                         const rina::ApplicationProcessNamingInformation& dif_name,
                         DIFTemplateMapping& result) const;

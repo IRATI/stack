@@ -69,9 +69,8 @@ public:
 	~Timer();
 	void scheduleTask(TimerTask* task, long delay_ms);
 	void cancelTask(TimerTask *task);
-	void clear();
 	TaskScheduler* get_task_scheduler() const;
-	bool is_continue();
+	bool execute_tasks();
 private:
 	void cancel();
 	Thread *thread_;
