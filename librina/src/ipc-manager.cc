@@ -73,6 +73,11 @@ void initializeIPCManager(unsigned int        localPort,
 	}
 }
 
+void destroyIPCManager()
+{
+	librina_finalize();
+}
+
 /* CLASS IPC PROCESS*/
 const std::string IPCProcessProxy::error_assigning_to_dif =
 		"Error assigning IPC Process to DIF";

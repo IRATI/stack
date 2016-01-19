@@ -1841,6 +1841,12 @@ void IPCManager_::run()
 
     //I/O thread
     delete io_thread;
+
+    // Destroy RINAManager
+    rina::destroyIPCManager();
+
+    // Shutdown Protobuf Library
+    google::protobuf::ShutdownProtobufLibrary();
 }
 
 //static
@@ -2039,8 +2045,6 @@ void IPCManager_::io_loop()
 
     //TODO: probably move this to a private method if it starts to grow
     LOG_DBG("Stopping I/O loop...");
-    google::protobuf::ShutdownProtobufLibrary();
-
 }
 
 }  //rinad namespace

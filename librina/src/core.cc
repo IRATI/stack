@@ -555,6 +555,8 @@ void RINAManager::initialize()
 
 RINAManager::~RINAManager()
 {
+  void* status;
+  netlinkMessageReader->join(&status);
   delete netlinkManager;
   delete netlinkMessageReader;
   delete eventQueue;

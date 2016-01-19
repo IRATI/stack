@@ -1080,4 +1080,9 @@ void initialize(const std::string& logLevel,
         librinaInitializationLock.unlock();
 }
 
+void librina_finalize(){
+	// delete rinaManager Singleton
+	rinaManager.~Singleton();
+}
+
 }
