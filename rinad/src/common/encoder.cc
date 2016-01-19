@@ -33,7 +33,6 @@
 #include "encoders/QoSCubeArrayMessage.pb.h"
 #include "encoders/WhatevercastNameArrayMessage.pb.h"
 #include "encoders/NeighborArrayMessage.pb.h"
-#include "encoders/IntType.pb.h"
 #include "encoders/QoSSpecification.pb.h"
 #include "encoders/FlowMessage.pb.h"
 #include "encoders/EnrollmentInformationMessage.pb.h"
