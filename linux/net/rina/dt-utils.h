@@ -48,9 +48,7 @@ int                 cwq_flush(struct cwq * q);
 ssize_t             cwq_size(struct cwq * q);
 void                cwq_deliver(struct cwq * queue,
                                 struct dt *  dt,
-                                struct rmt * rmt,
-                                address_t    address,
-                                qos_id_t     qos_id);
+                                struct rmt * rmt);
 seq_num_t            cwq_peek(struct cwq * queue);
 
 struct rtxq;
@@ -61,6 +59,8 @@ struct rtxq *       rtxq_create_ni(struct dt *  dt,
                                    struct rmt * rmt);
 int                 rtxq_destroy(struct rtxq * q);
 
+int		    rtxq_size(struct rtxq * q);
+int		    rtxq_drop_pdus(struct rtxq * q);
 /* FIXME: Where do we keep the rexmsntimer for the PDU? */
 struct rtxq_entry * rtxq_entry_peek(struct rtxq * q,
                                     seq_num_t sn);
@@ -80,14 +80,6 @@ int                 rtxq_nack(struct rtxq * q,
 int                 rtxq_flush(struct rtxq * q);
 
 int 		    dt_pdu_send(struct dt *  dt,
-        	    	    struct rmt * rmt,
-        	    	    address_t    address,
-        	    	    qos_id_t     qos_id,
+        	    	        struct rmt * rmt,
                                 struct pdu * pdu);
-int 		    common_efcp_pdu_send(struct efcp * efcp,
-        	    	             struct rmt *  rmt,
-        	    	             address_t     address,
-        	    		     qos_id_t      qos_id,
-        	    		     struct pdu *  pdu);
-
 #endif

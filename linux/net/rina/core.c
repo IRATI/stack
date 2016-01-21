@@ -20,7 +20,6 @@
 
 #include <linux/export.h>
 #include <linux/init.h>
-#include <linux/kobject.h>
 #include <linux/sysfs.h>
 
 #define RINA_PREFIX "core"
@@ -30,6 +29,7 @@
 #include "rnl.h"
 #include "kipcm.h"
 #include "utils.h"
+#include "rds/robjects.h"
 
 #define MK_RINA_VERSION(MAJOR, MINOR, MICRO)                            \
         (((MAJOR & 0xFF) << 24) | ((MINOR & 0xFF) << 16) | (MICRO & 0xFFFF))
@@ -38,34 +38,24 @@
 #define RINA_VERSION_MINOR(V) ((V >> 16) & 0xFF)
 #define RINA_VERSION_MICRO(V) ((V      ) & 0xFFFF)
 
-static struct kset * root_kset = NULL;
-static uint32_t      version   = MK_RINA_VERSION(1, 4, 1);
+static struct robject core_object;
+static uint32_t version = MK_RINA_VERSION(1, 4, 1);
 
-#if 0
-uint32_t rina_version(void)
-{ return version; }
-EXPORT_SYMBOL(rina_version);
-#endif
-
-static ssize_t version_show(struct kobject *        kobj,
-                            struct kobj_attribute * attr,
-                            char *                  buff)
+static ssize_t core_attr_show(struct robject *        robj,
+                              struct robj_attribute * attr,
+                              char *                  buff)
 {
-        return sprintf(buff, "%d.%d.%d\n",
+	if (strcmp(robject_attr_name(attr), "version") == 0)
+        	return sprintf(buff, "%d.%d.%d\n",
                        RINA_VERSION_MAJOR(version),
                        RINA_VERSION_MINOR(version),
                        RINA_VERSION_MICRO(version));
+	return 0;
 }
-RINA_ATTR_RO(version);
 
-static struct attribute * root_attrs[] = {
-        &version_attr.attr,
-        NULL
-};
-
-static struct attribute_group root_attr_group = {
-        .attrs = root_attrs
-};
+RINA_SYSFS_OPS(core);
+RINA_ATTRS(core, version);
+RINA_KTYPE(core);
 
 static int __init rina_core_init(void)
 {
@@ -74,33 +64,23 @@ static int __init rina_core_init(void)
         if (rina_debug_init())
                 return -1;
 
-        LOG_DBG("Creating root kset");
-        root_kset = kset_create_and_add("rina", NULL, NULL);
-        if (!root_kset) {
-                LOG_ERR("Cannot initialize root kset, bailing out");
+        LOG_DBG("Creating root rset");
+        if (robject_init_and_add(&core_object, &core_rtype, NULL, "rina")) {
+                LOG_ERR("Cannot initialize root rset, bailing out");
                 rina_debug_exit();
                 return -1;
-        }
-
-        LOG_DBG("Creating sysfs group");
-        if (sysfs_create_group(&root_kset->kobj, &root_attr_group)) {
-                LOG_ERR("Cannot create root sysfs group");
-                kset_unregister(root_kset);
-                rina_debug_exit();
-                return -1;
-        }
-
+	}
         LOG_DBG("Initializing RNL");
         if (rnl_init()) {
-                kset_unregister(root_kset);
+		robject_del(&core_object);
                 rina_debug_exit();
                 return -1;
         }
 
 	LOG_DBG("Initializing KIPCM");
-        if (kipcm_init(&root_kset->kobj)) {
+        if (kipcm_init(&core_object)) {
                 rnl_exit();
-                kset_unregister(root_kset);
+		robject_del(&core_object);
                 rina_debug_exit();
                 return -1;
         }

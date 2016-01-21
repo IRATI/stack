@@ -36,12 +36,39 @@ static struct policy_set_list policy_sets = {
 
 struct pff {
         struct rina_component base;
+        struct rset * rset;
 };
+
+/*
+static ssize_t pff_attr_show(struct robject *        robj,
+                             struct robj_attribute * attr,
+                             char *                  buf)
+{
+	struct pff * pff;
+
+	 = container_of(robj, struct rmt, robj);
+	if (!rmt || !rmt->rmt_cfg || !rmt->rmt_cfg->policy_set)
+		return 0;
+
+	if (strcmp(robject_attr_name(attr), "ps_name") == 0) {
+		return sprintf(buf, "%s\n",
+			policy_name(rmt->rmt_cfg->policy_set));
+	}
+	if (strcmp(robject_attr_name(attr), "ps_name") == 0) {
+		return sprintf(buf, "%s\n",
+			policy_version(rmt->rmt_cfg->policy_set));
+	}
+	return 0;
+}
+RINA_SYSFS_OPS(pff);
+RINA_ATTRS(pff, ps_name, ps_version);
+RINA_KTYPE(pff);
+*/
 
 static bool __pff_is_ok(struct pff * instance)
 { return instance ? true : false; }
 
-static struct pff * pff_create_gfp(gfp_t flags)
+static struct pff * pff_create_gfp(struct robject * parent, gfp_t flags)
 {
         struct pff * tmp;
 
@@ -49,7 +76,15 @@ static struct pff * pff_create_gfp(gfp_t flags)
         if (!tmp)
                 return NULL;
 
+        tmp->rset = NULL;
         rina_component_init(&tmp->base);
+
+	tmp->rset = rset_create_and_add("pff", parent);
+	if (!tmp->rset) {
+                LOG_ERR("Failed to create PFF sysfs entry");
+                pff_destroy(tmp);
+                return NULL;
+	}
 
         /* Try to select the default policy-set. */
         if (pff_select_policy_set(tmp, "", RINA_PS_DEFAULT_NAME)) {
@@ -66,13 +101,16 @@ struct pff * pff_create_ni(void)
 { return pff_create_gfp(GFP_ATOMIC); }
 #endif
 
-struct pff * pff_create(void)
-{ return pff_create_gfp(GFP_KERNEL); }
+struct pff * pff_create(struct robject * parent)
+{ return pff_create_gfp(parent, GFP_KERNEL); }
 
 int pff_destroy(struct pff * instance)
 {
         if (!__pff_is_ok(instance))
                 return -1;
+
+	if (instance->rset)
+		rset_unregister(instance->rset);
 
         rina_component_fini(&instance->base);
 
@@ -339,16 +377,14 @@ int pff_set_policy_set_param(struct pff * pff,
 
                 ps = container_of(rcu_dereference(pff->base.ps),
                                   struct pff_ps, base);
-                if (!ps) {
+                if (!ps)
                         LOG_ERR("No policy-set selected for this PFF");
-                } else {
+                 else
                         LOG_ERR("Unknown PFF parameter policy '%s'", name);
-                }
 
                 rcu_read_unlock();
-        } else {
+        } else
                 ret = base_set_policy_set_param(&pff->base, path, name, value);
-        }
 
         return ret;
 }
@@ -360,6 +396,10 @@ struct pff_ps * pff_ps_get(struct pff * pff)
         return container_of(rcu_dereference(pff->base.ps),
                             struct pff_ps, base);
 }
+
+struct rset * pff_rset(struct pff * pff)
+{ return pff->rset; }
+EXPORT_SYMBOL(pff_rset);
 
 struct pff * pff_from_component(struct rina_component * component)
 { return container_of(component, struct pff, base); }

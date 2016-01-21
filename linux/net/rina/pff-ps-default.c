@@ -32,6 +32,7 @@
 #include "rds/rtimer.h"
 #include "pff-ps-default.h"
 #include "debug.h"
+#include "rds/robjects.h"
 
 /* FIXME: This representation is crappy and MUST be changed */
 struct pft_port_entry {
@@ -96,7 +97,40 @@ struct pft_entry {
         qos_id_t         qos_id;
         struct list_head ports;
         struct list_head next;
+	struct robject   robj;
 };
+
+static ssize_t pft_entry_attr_show(struct robject *        robj,
+                        	   struct robj_attribute * attr,
+                                   char *                  buf)
+{
+	struct pft_entry * entry;
+
+	entry = container_of(robj, struct pft_entry, robj);
+	if (!entry)
+		return 0;
+
+	if (strcmp(robject_attr_name(attr), "dest_addr") == 0) {
+		return sprintf(buf, "%u\n", entry->destination);
+	}
+	if (strcmp(robject_attr_name(attr), "qos_id") == 0) {
+		return sprintf(buf, "%u\n", entry->qos_id);
+	}
+	if (strcmp(robject_attr_name(attr), "ports") == 0) {
+		int offset = 0;
+		struct pft_port_entry * pos;
+        	list_for_each_entry(pos, &entry->ports, next) {
+			offset += sprintf(buf + offset, "%u ", pos->port_id);
+        	}
+		if (offset > 1)
+			sprintf(buf + offset -1, "\n");
+		return offset;
+	}
+	return 0;
+}
+RINA_SYSFS_OPS(pft_entry);
+RINA_ATTRS(pft_entry, dest_addr, qos_id, ports);
+RINA_KTYPE(pft_entry);
 
 static struct pft_entry * pfte_create_gfp(gfp_t     flags,
                                           address_t destination,
@@ -104,7 +138,7 @@ static struct pft_entry * pfte_create_gfp(gfp_t     flags,
 {
         struct pft_entry * tmp;
 
-        tmp = rkmalloc(sizeof(*tmp), flags);
+        tmp = rkzalloc(sizeof(*tmp), flags);
         if (!tmp)
                 return NULL;
 
@@ -112,6 +146,8 @@ static struct pft_entry * pfte_create_gfp(gfp_t     flags,
         tmp->qos_id      = qos_id;
         INIT_LIST_HEAD(&tmp->ports);
         INIT_LIST_HEAD(&tmp->next);
+
+	robject_init(&tmp->robj, &pft_entry_rtype);
 
         return tmp;
 }
@@ -144,6 +180,7 @@ static void pfte_destroy(struct pft_entry * entry)
         }
 
         list_del(&entry->next);
+	robject_del(&entry->robj);
         rkfree(entry);
 }
 
@@ -300,7 +337,7 @@ int default_add(struct pff_ps *        ps,
                         spin_unlock(&priv->lock);
                         return -1;
                 }
-
+		robject_rset_add(&tmp->robj, pff_rset(ps->dm), "%u", tmp->destination);
                 list_add(&tmp->next, &priv->entries);
         }
 

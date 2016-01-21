@@ -732,6 +732,19 @@ public:
  */
 extern Singleton<ExtendedIPCManager> extendedIPCManager;
 
+class DTPStatistics {
+public:
+	DTPStatistics() : tx_bytes(0), tx_pdus(0),
+		rx_bytes(0), rx_pdus(0), drop_pdus(0), err_pdus(0) {};
+
+	unsigned long tx_bytes;
+	unsigned int tx_pdus;
+	unsigned long rx_bytes;
+	unsigned int rx_pdus;
+	unsigned int drop_pdus;
+	unsigned int err_pdus;
+};
+
 /**
  * Represents the data to create an EFCP connection
  */
@@ -761,17 +774,8 @@ public:
         /** The DTCP connection policies */
         DTCPConfig dtcpConfig;
 
-        /** PDUs transmitted in this connection */
-	unsigned int pdus_tx;
-
-	/** PDUs received in this connection */
-	unsigned int pdus_rx;
-
-	/** Bytes transmitted in this connection */
-	unsigned long bytes_tx;
-
-	/** Bytes received in this connection */
-	unsigned long bytes_rx;
+        /** Connection statistics */
+	DTPStatistics stats;
 
         /**
          * The id of the IPC Process using the flow supported by this
@@ -811,11 +815,7 @@ struct DTPInformation {
 	unsigned int qos_id;
 	unsigned int port_id;
 	DTPConfig dtp_config;
-
-	unsigned int pdus_tx;
-	unsigned int pdus_rx;
-	unsigned long bytes_tx;
-	unsigned long bytes_rx;
+	DTPStatistics stats;
 
 	DTPInformation();
 	DTPInformation(Connection * connection);

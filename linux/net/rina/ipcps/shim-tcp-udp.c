@@ -46,6 +46,7 @@
 #include "du.h"
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
+#include "rds/robjects.h"
 
 #define CUBE_UNRELIABLE 0
 #define CUBE_RELIABLE   1
@@ -171,6 +172,33 @@ struct exp_reg {
         struct name *    app_name;
         int              port;
 };
+
+static ssize_t shim_tcp_udp_ipcp_attr_show(struct robject *        robj,
+					   struct robj_attribute * attr,
+					   char *                  buf)
+{
+	struct ipcp_instance * instance;
+
+	instance = container_of(robj, struct ipcp_instance, robj);
+	if (!instance || !instance->data)
+		return 0;
+
+	if (strcmp(robject_attr_name(attr), "name") == 0)
+		return sprintf(buf, "%s\n",
+			name_tostring(instance->data->name));
+	if (strcmp(robject_attr_name(attr), "dif") == 0)
+		return sprintf(buf, "%s\n",
+			name_tostring(instance->data->dif_name));
+	if (strcmp(robject_attr_name(attr), "type") == 0)
+		return sprintf(buf, "shim-tcp-udp\n");
+	if (strcmp(robject_attr_name(attr), "host_name") == 0)
+		return sprintf(buf, "%pI4\n", &instance->data->host_name);
+
+	return 0;
+}
+RINA_SYSFS_OPS(shim_tcp_udp_ipcp);
+RINA_ATTRS(shim_tcp_udp_ipcp, name, type, dif, host_name);
+RINA_KTYPE(shim_tcp_udp_ipcp);
 
 static struct host_ipcp_instance_mapping *
 inst_data_mapping_get(__be32 host_name)
@@ -2578,6 +2606,17 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
 
         /* fill it properly */
         inst->ops  = &tcp_udp_instance_ops;
+
+	if (robject_rset_init_and_add(&inst->robj,
+				      &shim_tcp_udp_ipcp_rtype,
+				      kipcm_rset(default_kipcm),
+				      "%u",
+				      id)) {
+		rkfree(inst);
+		return NULL;
+	}
+
+
         inst->data = rkzalloc(sizeof(struct ipcp_instance_data), GFP_KERNEL);
         if (!inst->data) {
                 LOG_ERR("Could not allocate memory for IPCP instance data");
@@ -2717,6 +2756,8 @@ static int tcp_udp_destroy(struct ipcp_factory_data * data,
                                 spin_unlock(&data_instances_lock);
                                 kfree(mapping);
                         }
+
+                        robject_del(&instance->robj);
 
                         rkfree(pos);
                         rkfree(instance);

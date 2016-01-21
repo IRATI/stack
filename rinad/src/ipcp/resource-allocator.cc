@@ -28,6 +28,7 @@
 
 #include "ipcp-logging.h"
 #include "resource-allocator.h"
+#include "utils.h"
 
 namespace rinad {
 
@@ -104,21 +105,36 @@ void QoSCubesRIBObject::create(const rina::cdap_rib::con_handle_t &con,
 	LOG_IPCP_ERR("Missing code");
 }
 
+//Class RMTN1Flow
+void RMTN1Flow::sync_with_kernel()
+{
+	SysfsHelper::get_rmt_queued_pdus(ipcp_id, port_id, queued_pdus);
+	SysfsHelper::get_rmt_drop_pdus(ipcp_id, port_id, dropped_pdus);
+	SysfsHelper::get_rmt_error_pdus(ipcp_id, port_id, error_pdus);
+	SysfsHelper::get_rmt_rx_pdus(ipcp_id, port_id, rx_pdus);
+	SysfsHelper::get_rmt_tx_pdus(ipcp_id, port_id, tx_pdus);
+	SysfsHelper::get_rmt_rx_bytes(ipcp_id, port_id, rx_bytes);
+	SysfsHelper::get_rmt_tx_bytes(ipcp_id, port_id, tx_bytes);
+}
+
 // Class RMTN1Flow RIB object
 const std::string RMTN1FlowRIBObj::class_name = "RMTN1Flow";
 const std::string RMTN1FlowRIBObj::object_name_prefix = "/rmt/n1flows/port_id=";
 
-RMTN1FlowRIBObj::RMTN1FlowRIBObj(const rina::FlowInformation& info)
+RMTN1FlowRIBObj::RMTN1FlowRIBObj(RMTN1Flow * flow)
 	: rina::rib::RIBObj(class_name)
 {
-	port_id = info.portId;
-	started = true;
+	n1_flow = flow;
 }
 
 const std::string RMTN1FlowRIBObj::get_displayable_value() const
 {
 	std::stringstream ss;
-	ss << "Port-id: " << port_id << "; Started: " << started;
+	ss << "Port-id: " << n1_flow->port_id << "; Enabled: " << n1_flow->enabled
+	   << "; Queued pdus: " << n1_flow->queued_pdus << "; Dropped pdus: " << n1_flow->dropped_pdus
+	   << "; Error pdus: " << n1_flow->dropped_pdus << std::endl;
+	ss << "Tx: " << n1_flow->tx_bytes << " (bytes),  " << n1_flow->tx_pdus << " (pdus); "
+	   << "Rx: " << n1_flow->rx_bytes << " (bytes), " << n1_flow->rx_pdus << " (pdus)";
 	return ss.str();
 }
 
@@ -430,9 +446,26 @@ void ResourceAllocator::eventHappened(rina::InternalEvent * event)
 	}
 }
 
+void ResourceAllocator::sync_with_kernel()
+{
+	std::map<int, RMTN1Flow*>::iterator iterator;
+
+	n1_flows_lock.lock();
+	for(iterator = n1_flows.begin(); iterator != n1_flows.end(); ++iterator) {
+		iterator->second->sync_with_kernel();
+	}
+	n1_flows_lock.unlock();
+}
+
 void ResourceAllocator::nMinusOneFlowAllocated(rina::NMinusOneFlowAllocatedEvent * flowEvent)
 {
-	rina::rib::RIBObj * rib_obj = new RMTN1FlowRIBObj(flowEvent->flow_information_);
+	n1_flows_lock.lock();
+	RMTN1Flow * flow = new RMTN1Flow(flowEvent->flow_information_.portId,
+					 ipcp->get_id());
+	n1_flows[flow->port_id] = flow;
+	n1_flows_lock.unlock();
+
+	rina::rib::RIBObj * rib_obj = new RMTN1FlowRIBObj(flow);
 	std::stringstream ss;
 	ss << RMTN1FlowRIBObj::object_name_prefix
 	   << flowEvent->flow_information_.portId;
@@ -447,13 +480,26 @@ void ResourceAllocator::nMinusOneFlowAllocated(rina::NMinusOneFlowAllocatedEvent
 
 void ResourceAllocator::nMinusOneFlowDeallocated(rina::NMinusOneFlowDeallocatedEvent  * event)
 {
+	std::map<int, RMTN1Flow*>::iterator iterator;
+	RMTN1Flow * flow;
+
+	n1_flows_lock.lock();
+	iterator = n1_flows.find(event->port_id_);
+	if (iterator == n1_flows.end())
+		return;
+	flow = iterator->second;
+	n1_flows.erase(iterator);
+	n1_flows_lock.unlock();
+
 	std::stringstream ss;
 	ss << RMTN1FlowRIBObj::object_name_prefix
 	   << event->port_id_;
 
 	try {
 		rib_daemon_->removeObjRIB(ss.str());
+		delete flow;
 	} catch (rina::Exception &e) {
+		delete flow;
 		LOG_IPCP_ERR("Problems removing object from RIB: %s",
 			     e.what());
 	}

@@ -73,9 +73,30 @@ public:
 	const static std::string object_name;
 };
 
+class RMTN1Flow {
+public:
+	RMTN1Flow(int pid, unsigned short ipcp) : ipcp_id(ipcp),
+		port_id(pid), enabled(true), queued_pdus(0),
+		dropped_pdus(0), error_pdus(0), tx_pdus(0),
+		rx_pdus(0), tx_bytes(0), rx_bytes(0) { };
+
+	void sync_with_kernel();
+
+	unsigned short ipcp_id;
+	int port_id;
+	bool enabled;
+	unsigned int queued_pdus;
+	unsigned int dropped_pdus;
+	unsigned int error_pdus;
+	unsigned int tx_pdus;
+	unsigned int rx_pdus;
+	unsigned long tx_bytes;
+	unsigned long rx_bytes;
+};
+
 class RMTN1FlowRIBObj: public rina::rib::RIBObj {
 public:
-	RMTN1FlowRIBObj(const rina::FlowInformation & flow_info);
+	RMTN1FlowRIBObj(RMTN1Flow * flow);
 	const std::string get_displayable_value() const;
 
 	const std::string& get_class() const {
@@ -94,8 +115,7 @@ public:
 	const static std::string object_name_prefix;
 
 private:
-	int port_id;
-	bool started;
+	RMTN1Flow * n1_flow;
 };
 
 class NextHopTEntryRIBObj: public rina::rib::RIBObj {
@@ -196,6 +216,8 @@ public:
 
 	void eventHappened(rina::InternalEvent * event);
 
+	void sync_with_kernel();
+
 private:
 	/// Create initial RIB objects
 	void populateRIB();
@@ -215,6 +237,9 @@ private:
 	rina::Lockable lock;
 	rina::ThreadSafeMapOfPointers<std::string, rina::PDUForwardingTableEntry> pduft;
 	rina::ThreadSafeMapOfPointers<std::string, rina::RoutingTableEntry> rt;
+
+	std::map<int, RMTN1Flow *> n1_flows;
+	rina::Lockable n1_flows_lock;
 };
 
 } //namespace rinad

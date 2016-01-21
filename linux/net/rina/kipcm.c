@@ -22,7 +22,6 @@
 
 #include <linux/kernel.h>
 #include <linux/export.h>
-#include <linux/kobject.h>
 #include <linux/mutex.h>
 #include <linux/hardirq.h>
 
@@ -51,10 +50,10 @@ struct flow_messages {
 };
 
 struct kipcm {
-	/* FIXME: LB: instances and kset replicate the same info (list of
-	 * ipcps), instances could be probably removed if we stay with kobjs
+	/* FIXME: LB: instances and rset replicate the same info (list of
+	 * ipcps), instances could be probably removed if we stay with robjs
 	 */
-	struct kset *           kset;
+	struct rset *           rset;
         struct mutex            lock;
         struct ipcp_factories * factories;
         struct ipcp_imap *      instances;
@@ -65,24 +64,6 @@ struct kipcm {
 
 struct kipcm * default_kipcm;
 EXPORT_SYMBOL(default_kipcm);
-
-/* FIXME: LB: this ktype is for IPCPs, not to be used here
-
-static ssize_t kipcm_ipcp_show(struct kobject *   kobj,
-                               struct attribute * attr,
-                               char *             buf)
-{ return sprintf(buf, "%s", kobject_name(kobj)); }
-
-static const struct sysfs_ops kipcm_ipcp_sysfs_ops = {
-        .show = kipcm_ipcp_show
-};
-
-static struct kobj_type kipcm_ipcp_ktype = {
-        .sysfs_ops     = &kipcm_ipcp_sysfs_ops,
-        .default_attrs = NULL,
-        .release       = NULL,
-};
-*/
 
 message_handler_cb kipcm_handlers[RINA_C_MAX];
 
@@ -1676,7 +1657,7 @@ static int netlink_handlers_register(struct kipcm * kipcm)
         return 0;
 }
 
-int kipcm_init(struct kobject * parent)
+int kipcm_init(struct robject * parent)
 {
         struct kipcm * tmp;
 
@@ -1805,8 +1786,8 @@ int kipcm_init(struct kobject * parent)
                 return -1;
         }
 
-	tmp->kset = kset_create_and_add("ipcps", NULL, parent);
-	if (!tmp->kset) {
+	tmp->rset = rset_create_and_add("ipcps", parent);
+	if (!tmp->rset) {
 		LOG_ERR("Could not initialize IPCP sys entry");
         	if (netlink_handlers_unregister(tmp->rnls)) {
         	        /* FIXME: What should we do here ? */
@@ -1890,7 +1871,7 @@ int kipcm_fini(struct kipcm * kipcm)
 
         KIPCM_LOCK_FINI(kipcm);
 
-	kset_unregister(kipcm->kset);
+	rset_unregister(kipcm->rset);
         rkfree(kipcm);
 	default_kipcm = NULL;
 
@@ -2518,3 +2499,14 @@ struct kfa * kipcm_kfa(struct kipcm * kipcm)
         return kipcm->kfa;
 }
 EXPORT_SYMBOL(kipcm_kfa);
+
+struct rset * kipcm_rset(struct kipcm * kipcm)
+{
+        if (!kipcm) {
+                LOG_ERR("Bogus kipcm instance passed, bailing out");
+                return NULL;
+        }
+
+        return kipcm->rset;
+}
+EXPORT_SYMBOL(kipcm_rset);

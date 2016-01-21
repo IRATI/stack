@@ -119,6 +119,7 @@ public:
 	virtual unsigned int get_allocate_response_message_handle() const = 0;
 	virtual void set_allocate_response_message_handle(
 			unsigned int allocate_response_message_handle) = 0;
+	virtual void sync_with_kernel() = 0;
 };
 
 /// Representation of a flow object in the RIB
@@ -269,6 +270,7 @@ public:
 			const rina::UpdateConnectionResponseEvent& event);
 	void submitDeallocate(const rina::FlowDeallocateRequestEvent& event);
 	void removeFlowAllocatorInstance(int portId);
+	void sync_with_kernel();
 
         // Plugin support
         configs::Flow* createFlow() { return new configs::Flow(); }
@@ -343,6 +345,8 @@ public:
 	void remoteCreateResult(const rina::cdap_rib::con_handle_t &con,
 				const rina::cdap_rib::obj_info_t &obj,
 				const rina::cdap_rib::res_info_t &res);
+
+	void sync_with_kernel();
 
 private:
 

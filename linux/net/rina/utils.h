@@ -21,15 +21,6 @@
 #ifndef RINA_UTILS_H
 #define RINA_UTILS_H
 
-#include <linux/kobject.h>
-#define RINA_ATTR_RO(NAME)                              \
-        static struct kobj_attribute NAME##_attr =      \
-                __ATTR_RO(NAME)
-
-#define RINA_ATTR_RW(NAME)                                      \
-        static struct kobj_attribute NAME##_attr =              \
-                __ATTR(NAME, 0644, NAME##show, NAME##store)
-
 bool    is_value_in_range(int value, int min_value, int max_value);
 
 /* Syscalls */

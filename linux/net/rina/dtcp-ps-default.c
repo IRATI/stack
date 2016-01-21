@@ -61,7 +61,7 @@ default_lost_control_pdu(struct dtcp_ps * ps)
                 return -1;
         }
 
-        if (dtcp_pdu_send(dtcp, pdu_ctrl))
+        if (dt_pdu_send(dtcp->parent, pdu_ctrl))
                 return -1;
 #endif
 

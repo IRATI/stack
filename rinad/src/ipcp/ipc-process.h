@@ -29,6 +29,26 @@
 namespace rinad {
 
 class IPCPFactory;
+class IPCProcessImpl;
+
+/// Periodically causes the IPCP Daemon to synchronize
+/// with the kernel
+class KernelSyncTrigger : public rina::SimpleThread {
+public:
+	KernelSyncTrigger(rina::ThreadAttributes * threadAttributes,
+			  IPCProcessImpl * ipcp,
+			  unsigned int sync_period);
+	~KernelSyncTrigger() throw() {};
+
+	int run();
+	void finish();
+
+private:
+	bool end;
+	IPCProcessImpl * ipcp;
+	unsigned int period_in_ms;
+	rina::Sleep sleep;
+};
 
 class IPCProcessImpl: public IPCProcess {
 	friend class IPCPFactory;
@@ -65,11 +85,14 @@ public:
         void processFwdCDAPMsgEvent(
                 const rina::FwdCDAPMsgEvent& event);
 
-
 	//Event loop (run)
 	void event_loop(void);
 
+        // Cause relevant IPCP components to sync with information
+        // exported by the kernel via sysfs
+        void sync_with_kernel();
 	bool keep_running;
+
 private:
         IPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
                         unsigned short id, unsigned int ipc_manager_port,
@@ -82,7 +105,8 @@ private:
         std::map<unsigned int, rina::SelectPolicySetRequestEvent>
                 pending_select_policy_set_events;
         rina::Lockable * lock_;
-		rina::DIFInformation dif_information_;
+	rina::DIFInformation dif_information_;
+	KernelSyncTrigger * kernel_sync;
 };
 
 class IPCPFactory{
