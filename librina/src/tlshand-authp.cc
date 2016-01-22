@@ -21,6 +21,7 @@
 
 #include <time.h>
 #include <openssl/err.h>
+#include <openssl/pem.h>
 #include <openssl/rand.h>
 
 #define RINA_PREFIX "librina.tls-handshake"
@@ -82,7 +83,7 @@ void encode_tls_hand_auth_options(const TLSHandAuthOptions& options,
 	}
 
 	int size = gpb_options.ByteSize();
-	result.message_ = new char[size];
+	result.message_ = new unsigned char[size];
 	result.size_ = size;
 	gpb_options.SerializeToArray(result.message_, size);
 }
@@ -103,7 +104,7 @@ void encode_server_hello_tls_hand(const TLSHandRandom& random,
 	gpb_hello.set_compress_method(compress_method);
 
 	int size = gpb_hello.ByteSize();
-	result.message_ = new char[size];
+	result.message_ = new unsigned char[size];
 	result.size_ = size;
 	gpb_hello.SerializeToArray(result.message_ , size);
 }

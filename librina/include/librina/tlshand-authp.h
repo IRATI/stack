@@ -138,6 +138,7 @@ public:
 private:
 	int process_server_hello_message(const cdap::CDAPMessage& message,
 					 int session_id);
+	int load_credentials(TLSHandSecurityContext * sc);
 
 	rib::RIBDaemonProxy * rib_daemon;
 	ISecurityManager * sec_man;
