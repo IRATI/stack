@@ -462,13 +462,18 @@ void * doNetlinkMessageReaderWork(void * arg)
   IPCEvent * event;
 
   //Continuously try to read incoming Netlink messages
-  while (true) {
+  while (myRINAManager->keep_on_reading) {
     //Receive message
     try {
       LOG_DBG("Waiting for message %d", netlinkManager->getLocalPort());
       incomingMessage = netlinkManager->getMessage();
     } catch (NetlinkException &e) {
       LOG_ERR("Error receiving netlink message. %s", e.what());
+      continue;
+    }
+
+    if (incomingMessage == NULL){
+      // Timeout while waiting for a message
       continue;
     }
 
@@ -543,6 +548,8 @@ void RINAManager::initialize()
   eventQueue = new BlockingFIFOQueue<IPCEvent>();
   LOG_DBG("Initialized event queue");
 
+  keep_on_reading = true;
+
   //3 Start Netlink message reader thread
   ThreadAttributes threadAttributes;
   threadAttributes.setJoinable();
@@ -556,6 +563,7 @@ void RINAManager::initialize()
 RINAManager::~RINAManager()
 {
   void* status;
+  keep_on_reading = false;
   netlinkMessageReader->join(&status);
   delete netlinkManager;
   delete netlinkMessageReader;

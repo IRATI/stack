@@ -25,6 +25,9 @@
 #include <netlink/genl/ctrl.h>
 #include <netlink/socket.h>
 
+#include <sys/time.h>
+#include <sys/select.h>
+
 #define RINA_PREFIX "librina.nl-manager"
 
 #include "librina/logs.h"
@@ -224,15 +227,28 @@ BaseNetlinkMessage * NetlinkManager::getMessage() {
 	struct ucred *creds = NULL;
 	int numBytes;
 
-        memset(&nla, 0, sizeof(nla));
-        numBytes = nl_recv(socket, &nla, &buf, &creds);
-	if (numBytes <= 0) {
-		LOG_ERR("%s %d",
+	// Use Select to implement a read with timeout
+	struct timeval timeout = {2,0};
+	fd_set readset;
+	FD_ZERO(&readset);
+	int res, fd_socket = nl_socket_get_fd(socket);
+	FD_SET(fd_socket, &readset);
+
+	if ((res = select(fd_socket+1, &readset, NULL, NULL, &timeout))>0
+		&& FD_ISSET(fd_socket, &readset)){
+
+		memset(&nla, 0, sizeof(nla));
+		numBytes = nl_recv(socket, &nla, &buf, &creds);
+		if (numBytes <= 0) {
+			LOG_ERR("%s %d",
 				NetlinkException::error_receiving_netlink_message.c_str(),
 				numBytes);
-		throw NetlinkException(
+			throw NetlinkException(
 				NetlinkException::error_receiving_netlink_message);
+		}
 	}
+	else
+		return NULL;
 
 	hdr = (struct nlmsghdr *) buf;
 	nlhdr = (genlmsghdr *) nlmsg_data(hdr);
