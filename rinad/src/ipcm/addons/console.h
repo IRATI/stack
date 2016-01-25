@@ -100,7 +100,7 @@ class IPCMConsole : public Addon {
         public:
                 IPCMConsole(const unsigned int port);
                 void body();
-		int read_with_timeout(int cfd, char *cmdbuf, int buff_size);
+		int read_command_with_timeout(int cfd, char *cmdbuf, int buff_size);
 		int accept_with_timeout(int sfd, struct sockaddr_in
 			client_address, socklen_t address_len);
                 virtual ~IPCMConsole() throw();

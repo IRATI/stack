@@ -226,7 +226,7 @@ IPCMConsole::init()
 	return sfd;
 }
 
-int IPCMConsole::read_with_timeout(int cfd, char *cmdbuf, int buff_size)
+int IPCMConsole::read_command_with_timeout(int cfd, char *cmdbuf, int buff_size)
 {
 	char *tmpbuf = cmdbuf;
 	int total_read = 0;
@@ -327,7 +327,7 @@ void IPCMConsole::body()
 				break;
 			}
 
-			n = read_with_timeout(cfd, cmdbuf, sizeof(cmdbuf));
+			n = read_command_with_timeout(cfd, cmdbuf, sizeof(cmdbuf));
 			if (n < 0) {
 				ss  << " Error [" << errno <<
 					"] calling read() " << endl;
