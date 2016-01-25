@@ -54,6 +54,8 @@ typedef uint8_t pdu_flags_t;
 #define PDU_TYPE_SNACK_AND_FC  0xCE /* Selective NACK and Flow Control */
 /* Management PDUs */
 #define PDU_TYPE_MGMT          0x40 /* Management */
+/* Number of different PDU types */
+#define PDU_TYPES              12 + 1 /* one slot for base PCI size */
 
 typedef uint8_t pdu_type_t;
 

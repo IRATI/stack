@@ -47,11 +47,6 @@
 /*  FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
 
-struct normal_info {
-        struct name * name;
-        struct name * dif_name;
-};
-
 enum mgmt_state {
         MGMT_DATA_READY,
         MGMT_DATA_DESTROYED
@@ -69,8 +64,9 @@ struct ipcp_instance_data {
         /* FIXME: add missing needed attributes */
         ipc_process_id_t        id;
         u32                     nl_port;
+        struct name             name;
+        struct name             dif_name;
         struct list_head        flows;
-        struct normal_info *    info;
         /*  FIXME: Remove it as soon as the kipcm_kfa gets removed*/
         struct kfa *            kfa;
         struct efcp_container * efcpc;
@@ -103,6 +99,33 @@ struct normal_flow {
         struct ipcp_instance * user_ipcp;
         struct list_head       list;
 };
+
+static ssize_t normal_ipcp_attr_show(struct robject *        robj,
+                         	     struct robj_attribute * attr,
+                                     char *                  buf)
+{
+	struct ipcp_instance * instance;
+
+	instance = container_of(robj, struct ipcp_instance, robj);
+	if (!instance || !instance->data)
+		return 0;
+
+	if (strcmp(robject_attr_name(attr), "name") == 0)
+		return sprintf(buf, "%s\n",
+			name_tostring(&instance->data->name));
+	if (strcmp(robject_attr_name(attr), "dif") == 0)
+		return sprintf(buf, "%s\n",
+			name_tostring(&instance->data->dif_name));
+	if (strcmp(robject_attr_name(attr), "address") == 0)
+		return sprintf(buf, "%u\n", instance->data->address);
+	if (strcmp(robject_attr_name(attr), "type") == 0)
+		return sprintf(buf, "normal\n");
+
+	return 0;
+}
+RINA_SYSFS_OPS(normal_ipcp);
+RINA_ATTRS(normal_ipcp, name, type, dif, address);
+RINA_KTYPE(normal_ipcp);
 
 static struct normal_flow * find_flow(struct ipcp_instance_data * data,
                                       port_id_t                   port_id)
@@ -625,8 +648,12 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         struct sdup_config * sdup_config;
         struct rmt_config *  rmt_config;
 
-        data->info->dif_name = name_dup(dif_information->dif_name);
-        data->address        = dif_information->configuration->address;
+        if (name_cpy(dif_information->dif_name, &data->dif_name)) {
+                LOG_ERR("%s: name_cpy() failed", __func__);
+                return -1;
+        }
+
+        data->address  = dif_information->configuration->address;
 
         efcp_config = dif_information->configuration->efcp_config;
 
@@ -956,19 +983,17 @@ static int normal_pff_flush(struct ipcp_instance_data * data)
 static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
 {
         ASSERT(data);
-        ASSERT(data->info);
-        ASSERT(name_is_ok(data->info->name));
+        ASSERT(name_is_ok(&data->name));
 
-        return data->info->name;
+        return &data->name;
 }
 
 static const struct name * normal_dif_name(struct ipcp_instance_data * data)
 {
         ASSERT(data);
-        ASSERT(data->info);
-        ASSERT(name_is_ok(data->info->dif_name));
+        ASSERT(name_is_ok(&data->dif_name));
 
-        return data->info->dif_name;
+        return &data->dif_name;
 }
 
 typedef const string_t *const_string;
@@ -1282,7 +1307,16 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
-        instance->ops  = &normal_instance_ops;
+        instance->ops = &normal_instance_ops;
+
+	if (robject_rset_init_and_add(&instance->robj,
+				      &normal_ipcp_rtype,
+				      kipcm_rset(default_kipcm),
+				      "%u",
+				      id)) {
+		rkfree(instance);
+		return NULL;
+	}
 
         /* FIXME: Rearrange the mess creating the data */
         instance->data = rkzalloc(sizeof(struct ipcp_instance_data),
@@ -1296,21 +1330,9 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
 
         instance->data->id      = id;
         instance->data->nl_port = data->nl_port;
-        instance->data->info    = rkzalloc(sizeof(struct normal_info),
-                                           GFP_KERNEL);
-        if (!instance->data->info) {
-                LOG_ERR("Could not allocate memory for normal ipcp info");
-                rkfree(instance->data);
-                rkfree(instance);
-                return NULL;
-        }
 
-        /* FIXME: This (whole) function has to be rehersed HEAVILY */
-
-        instance->data->info->name = name_dup(name);
-        if (!instance->data->info->name) {
+        if (name_cpy(name, &instance->data->name)) {
                 LOG_ERR("Failed creation of ipc name");
-                rkfree(instance->data->info);
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -1319,10 +1341,9 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         /*  FIXME: Remove as soon as the kipcm_kfa gets removed */
         instance->data->kfa = kipcm_kfa(default_kipcm);
 
-        instance->data->efcpc = efcp_container_create(instance->data->kfa);
+        instance->data->efcpc = efcp_container_create(instance->data->kfa,
+						      &instance->robj);
         if (!instance->data->efcpc) {
-                name_destroy(instance->data->info->name);
-                rkfree(instance->data->info);
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -1332,23 +1353,19 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         if (!instance->data->sdup) {
                 LOG_ERR("Failed creation of SDUP instance");
                 efcp_container_destroy(instance->data->efcpc);
-                name_destroy(instance->data->info->name);
-                rkfree(instance->data->info);
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
         }
 
-        instance->data->rmt = rmt_create(instance,
-                                         instance->data->kfa,
+        instance->data->rmt = rmt_create(instance->data->kfa,
                                          instance->data->efcpc,
-					 instance->data->sdup);
+					 instance->data->sdup,
+					 &instance->robj);
         if (!instance->data->rmt) {
                 LOG_ERR("Failed creation of RMT instance");
 		sdup_destroy(instance->data->sdup);
                 efcp_container_destroy(instance->data->efcpc);
-                name_destroy(instance->data->info->name);
-                rkfree(instance->data->info);
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -1359,8 +1376,6 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 rmt_destroy(instance->data->rmt);
 		sdup_destroy(instance->data->sdup);
                 efcp_container_destroy(instance->data->efcpc);
-                name_destroy(instance->data->info->name);
-                rkfree(instance->data->info);
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -1372,8 +1387,6 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 rmt_destroy(instance->data->rmt);
 		sdup_destroy(instance->data->sdup);
                 efcp_container_destroy(instance->data->efcpc);
-                name_destroy(instance->data->info->name);
-                rkfree(instance->data->info);
                 rkfree(instance->data);
                 rkfree(instance);
                 return NULL;
@@ -1427,13 +1440,7 @@ static int normal_destroy(struct ipcp_factory_data * data,
                 return -1;
         }
 
-        if (tmp->info) {
-                if (tmp->info->dif_name)
-                        name_destroy(tmp->info->dif_name);
-                if (tmp->info->name)
-                        name_destroy(tmp->info->name);
-                rkfree(tmp->info);
-        }
+        robject_del(&instance->robj);
 
         sdup_destroy(tmp->sdup);
         efcp_container_destroy(tmp->efcpc);

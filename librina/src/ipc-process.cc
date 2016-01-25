@@ -23,6 +23,7 @@
 
 #include <ostream>
 #include <sstream>
+#include <errno.h>
 
 #define RINA_PREFIX "librina.ipc-process"
 
@@ -813,10 +814,6 @@ DTPInformation::DTPInformation()
 	dest_address = 0;
 	qos_id = 0;
 	port_id = 0;
-	pdus_tx = 0;
-	pdus_rx = 0;
-	bytes_tx = 0;
-	bytes_rx = 0;
 }
 
 DTPInformation::DTPInformation(Connection * connection)
@@ -828,10 +825,7 @@ DTPInformation::DTPInformation(Connection * connection)
 	qos_id = connection->qosId;
 	port_id = connection->portId;
 	dtp_config = connection->dtpConfig;
-	pdus_tx = connection->pdus_tx;
-	pdus_rx = connection->pdus_rx;
-	bytes_tx = connection->bytes_rx;
-	bytes_rx = connection->bytes_tx;
+	stats = connection->stats;
 }
 
 const std::string DTPInformation::toString() const
@@ -841,8 +835,8 @@ const std::string DTPInformation::toString() const
 	   << "; Addresses: src = " << src_address << ", dest = " << dest_address
 	   << "; Qos-id: " << qos_id << "; Port-id: " << port_id << std::endl;
 	ss << " DTP config: " << dtp_config.toString();
-	ss << " Tx: pdus = " << pdus_tx << ", Bytes = " << bytes_tx
-	   << " RX: pdus = " << pdus_rx << ", Bytes = " << bytes_rx << std::endl;
+	ss << " Tx: pdus = " << stats.tx_pdus << ", Bytes = " << stats.tx_bytes
+	   << " RX: pdus = " << stats.rx_pdus << ", Bytes = " << stats.rx_bytes << std::endl;
 
 	return ss.str();
 }
@@ -1319,8 +1313,16 @@ ReadManagementSDUResult KernelIPCProcess::readManagementSDU(void * sdu,
         int portId = 0;
         int result = syscallReadManagementSDU(ipcProcessId, sdu, &portId,
                         maxBytes);
-        if (result < 0) {
-                throw ReadSDUException();
+
+        if (result < 0)
+        {
+                switch(result) {
+                case -ESRCH:
+                        throw IPCException("the IPCP or the needed parts of the ipcp do not exist");
+                        break;
+                default:
+                        throw ReadSDUException("Unknown error");
+                }
         }
 
         readResult.setPortId(portId);

@@ -17,4 +17,5 @@ obj-$(CONFIG_RINA) +=				\
 	 rfifo.o				\
 	 rref.o					\
 	 rtimer.o				\
+	 robjects.o				\
 	 rds.o

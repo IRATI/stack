@@ -32,6 +32,7 @@
 #include "ipcp-instances.h"
 #include "ps-factory.h"
 #include "sdup.h"
+#include "rds/robjects.h"
 
 struct rmt;
 
@@ -65,8 +66,12 @@ enum flow_state {
 
 struct n1_port_stats {
 	unsigned int plen; /* port len, all pdus enqueued in PS queue/s */
-	unsigned int pdrop;
-	unsigned int perr;
+	unsigned int drop_pdus;
+	unsigned int err_pdus;
+	unsigned int tx_pdus;
+	unsigned int tx_bytes;
+	unsigned int rx_pdus;
+	unsigned int rx_bytes;
 };
 
 struct rmt_n1_port {
@@ -81,17 +86,19 @@ struct rmt_n1_port {
 	struct n1_port_stats	stats;
 	bool			wbusy;
 	void 			*rmt_ps_queues;
+	struct robject		robj;
 };
 
-struct rmt	  *rmt_create(struct ipcp_instance *parent,
-			      struct kfa *kfa,
+struct rmt	  *rmt_create(struct kfa *kfa,
 			      struct efcp_container *efcpc,
-			      struct sdup *sdup);
+			      struct sdup *sdup,
+			      struct robject *parent);
 int		   rmt_destroy(struct rmt *instance);
 int		   rmt_address_set(struct rmt *instance,
 				   address_t address);
 int		   rmt_dt_cons_set(struct rmt *instance,
 				   struct dt_cons *dt_cons);
+struct serdes *    rmt_serdes(struct rmt * instance);
 int		   rmt_config_set(struct rmt *instance,
 				  struct rmt_config *rmt_config);
 struct rmt_config *rmt_config_get(struct rmt *instance);
@@ -130,5 +137,5 @@ int		   rmt_set_policy_set_param(struct rmt *rmt,
 					    const string_t *name,
 					    const string_t *value);
 struct rmt	  *rmt_from_component(struct rina_component *component);
-
+struct robject    *rmt_robject(struct rmt * instance);
 #endif

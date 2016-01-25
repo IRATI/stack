@@ -40,6 +40,7 @@
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
 #include "vmpi.h"
+#include "rds/robjects.h"
 
 /* FIXME: Pigsty workaround, to be removed immediately */
 #if defined(CONFIG_VMPI_KVM_GUEST) && !defined(CONFIG_VMPI_KVM_GUEST_MODULE)
@@ -118,6 +119,31 @@ struct name_list_element {
         struct list_head node;
         struct name      application_name;
 };
+
+static ssize_t shim_hv_ipcp_attr_show(struct robject *        robj,
+                         	     struct robj_attribute * attr,
+                                     char *                  buf)
+{
+	struct ipcp_instance * instance;
+
+	instance = container_of(robj, struct ipcp_instance, robj);
+	if (!instance || !instance->data)
+		return 0;
+
+	if (strcmp(robject_attr_name(attr), "name") == 0)
+		return sprintf(buf, "%s\n",
+			name_tostring(&instance->data->name));
+	if (strcmp(robject_attr_name(attr), "dif") == 0)
+		return sprintf(buf, "%s\n",
+			name_tostring(&instance->data->dif_name));
+	if (strcmp(robject_attr_name(attr), "type") == 0)
+		return sprintf(buf, "shim_hv\n");
+
+	return 0;
+}
+RINA_SYSFS_OPS(shim_hv_ipcp);
+RINA_ATTRS(shim_hv_ipcp, name, tpye, dif);
+RINA_KTYPE(shim_hv_ipcp);
 
 static unsigned int
 port_id_to_channel(struct ipcp_instance_data *priv, port_id_t port_id)
@@ -1218,6 +1244,13 @@ shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
 
         ipcp->ops = &shim_hv_ipcp_ops;
 
+	if (robject_rset_init_and_add(&ipcp->robj,
+				      &shim_hv_ipcp_rtype,
+				      kipcm_rset(default_kipcm),
+				      "%u",
+				      id))
+		goto alloc_data;
+
         /* Allocate private data for the new shim IPC process. */
         ipcp->data = priv = rkzalloc(sizeof(struct ipcp_instance_data),
                                      GFP_KERNEL);
@@ -1304,6 +1337,7 @@ shim_hv_factory_ipcp_destroy(struct ipcp_factory_data * factory_data,
         name_fini(&ipcp->data->name);
         rkfree(ipcp->data->vmpi.channels);
         name_fini(&ipcp->data->dif_name);
+        robject_del(&ipcp->robj);
         LOG_DBGF("ipcp destroyed (id = %d)", ipcp->data->id);
         rkfree(ipcp->data);
         rkfree(ipcp);

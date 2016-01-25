@@ -26,13 +26,15 @@
 #include "ipcp-instances.h"
 #include "kfa.h"
 #include "connection.h"
+#include "rds/robjects.h"
 
 struct rmt;
 
 /* The container holding all the EFCP instances for an IPC Process */
 struct efcp_container;
 
-struct efcp_container * efcp_container_create(struct kfa * kfa);
+struct efcp_container * efcp_container_create(struct kfa * kfa,
+					      struct robject * parent);
 int                     efcp_container_destroy(struct efcp_container * c);
 int                     efcp_container_config_set(struct efcp_config *   efcpc,
                                                   struct efcp_container * c);

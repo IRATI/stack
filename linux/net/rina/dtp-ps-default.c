@@ -43,7 +43,6 @@ default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
 {
         struct dtp *  dtp = ps->dm;
         struct dt  *  dt;
-        struct efcp * efcp;
 
         if (!dtp) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -58,13 +57,6 @@ default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
                 return -1;
         }
 
-        efcp = dt_efcp(dt);
-        if (!efcp) {
-                LOG_ERR("Passed instance has no EFCP, cannot run policy");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
         /* Post SDU to RMT */
         LOG_DBG("defaultTxPolicy - sending to rmt");
         if (dtp_sv_max_seq_nr_set(dtp,
@@ -75,9 +67,7 @@ default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
 
         LOG_DBG("local_soft_irq_pending: %d", local_softirq_pending());
 
-        return common_efcp_pdu_send(efcp, dtp_rmt(dtp),
-				    pci_destination(pdu_pci_get_ro(pdu)),
-				    pci_qos_id(pdu_pci_get_ro(pdu)), pdu);
+        return dt_pdu_send(dt, dtp_rmt(dtp), pdu);
 }
 
 int

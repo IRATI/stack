@@ -1,5 +1,4 @@
 /*
-
  * RMT (Relaying and Multiplexing Task)
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
@@ -78,7 +77,85 @@ struct rmt {
 	struct pff_cache cache;
 	struct rmt_config *rmt_cfg;
 	struct sdup *sdup;
+	struct robject robj;
 };
+
+#define stats_get(name, n1_port, retval, flags)					\
+        spin_lock_irqsave(&n1_port->lock, flags);				\
+        retval = n1_port->stats.name;						\
+        spin_unlock_irqrestore(&n1_port->lock, flags);
+
+#define stats_inc(name, n1_port, bytes)						\
+        n1_port->stats.name##_pdus++;						\
+	n1_port->stats.name##_bytes += (unsigned int) bytes;			\
+        LOG_DBG("PDUs __STRINGIFY(name) %u (%u)",				\
+		n1_port->stats.name##_pdus, n1_port->stats.name##_bytes);
+
+static ssize_t rmt_attr_show(struct robject *        robj,
+                             struct robj_attribute * attr,
+                             char *                  buf)
+{
+	struct rmt * rmt;
+
+	rmt = container_of(robj, struct rmt, robj);
+	if (!rmt || !rmt->base.ps)
+		return 0;
+
+	if (strcmp(robject_attr_name(attr), "ps_name") == 0) {
+		return sprintf(buf, "%s\n", rmt->base.ps_factory->name);
+	}
+	return 0;
+}
+
+static ssize_t rmt_n1_port_attr_show(struct robject *        robj,
+                         	     struct robj_attribute * attr,
+                                     char *                  buf)
+{
+	struct rmt_n1_port * n1_port;
+	unsigned int stats_ret;
+	unsigned long flags;
+
+	n1_port = container_of(robj, struct rmt_n1_port, robj);
+	if (!n1_port)
+		return 0;
+
+	if (strcmp(robject_attr_name(attr), "queued_pdus") == 0) {
+		stats_get(plen, n1_port, stats_ret, flags);
+		return sprintf(buf, "%u\n", stats_ret);
+	}
+	if (strcmp(robject_attr_name(attr), "drop_pdus") == 0) {
+		stats_get(drop_pdus, n1_port, stats_ret, flags);
+		return sprintf(buf, "%u\n", stats_ret);
+	}
+	if (strcmp(robject_attr_name(attr), "err_pdus") == 0) {
+		stats_get(err_pdus, n1_port, stats_ret, flags);
+		return sprintf(buf, "%u\n", stats_ret);
+	}
+	if (strcmp(robject_attr_name(attr), "tx_pdus") == 0) {
+		stats_get(tx_pdus, n1_port, stats_ret, flags);
+		return sprintf(buf, "%u\n", stats_ret);
+	}
+	if (strcmp(robject_attr_name(attr), "rx_pdus") == 0) {
+		stats_get(rx_pdus, n1_port, stats_ret, flags);
+		return sprintf(buf, "%u\n", stats_ret);
+	}
+	if (strcmp(robject_attr_name(attr), "tx_bytes") == 0) {
+		stats_get(tx_bytes, n1_port, stats_ret, flags);
+		return sprintf(buf, "%u\n", stats_ret);
+	}
+	if (strcmp(robject_attr_name(attr), "rx_bytes") == 0) {
+		stats_get(rx_bytes, n1_port, stats_ret, flags);
+		return sprintf(buf, "%u\n", stats_ret);
+	}
+	return 0;
+}
+RINA_SYSFS_OPS(rmt);
+RINA_ATTRS(rmt, ps_name);
+RINA_KTYPE(rmt);
+RINA_SYSFS_OPS(rmt_n1_port);
+RINA_ATTRS(rmt_n1_port, queued_pdus, drop_pdus, err_pdus, tx_pdus,
+	tx_bytes, rx_pdus, rx_bytes);
+RINA_KTYPE(rmt_n1_port);
 
 static struct rmt_n1_port *n1_port_create(port_id_t id,
 					  struct ipcp_instance *n1_ipcp)
@@ -91,6 +168,7 @@ static struct rmt_n1_port *n1_port_create(port_id_t id,
 	if (!tmp)
 		return NULL;
 
+	robject_init(&tmp->robj, &rmt_n1_port_rtype);
 	INIT_HLIST_NODE(&tmp->hlist);
 
 	tmp->port_id = id;
@@ -100,8 +178,12 @@ static struct rmt_n1_port *n1_port_create(port_id_t id,
 	atomic_set(&tmp->refs_c, 0);
 	tmp->wbusy = false;
 	tmp->stats.plen = 0;
-	tmp->stats.pdrop = 0;
-	tmp->stats.perr = 0;
+	tmp->stats.drop_pdus = 0;
+	tmp->stats.err_pdus = 0;
+	tmp->stats.tx_pdus = 0;
+	tmp->stats.tx_bytes = 0;
+	tmp->stats.rx_pdus = 0;
+	tmp->stats.rx_bytes = 0;
 	spin_lock_init(&tmp->lock);
 
 	LOG_DBG("N-1 port %pK created successfully (port-id = %d)", tmp, id);
@@ -132,6 +214,8 @@ static int n1_port_destroy(struct rmt_n1_port *n1p)
 	LOG_DBG("Destroying N-1 port %pK (port-id = %d)", n1p, n1p->port_id);
 
 	hash_del(&n1p->hlist);
+
+	robject_del(&n1p->robj);
 
 	if (n1p->sdup_port)
 		sdup_destroy_port_config(n1p->sdup_port);
@@ -167,25 +251,10 @@ static int n1_port_cleanup(struct rmt *instance,
 }
 
 struct n1pmap {
-	/* FIXME: Has to be moved in the pipelines */
 	spinlock_t lock;
-
+	struct rset * rset;
 	DECLARE_HASHTABLE(n1_ports, 7);
 };
-
-static struct n1pmap *n1pmap_create(void)
-{
-	struct n1pmap *tmp;
-
-	tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-	if (!tmp)
-		return NULL;
-
-	hash_init(tmp->n1_ports);
-	spin_lock_init(&tmp->lock);
-
-	return tmp;
-}
 
 static int n1pmap_destroy(struct rmt *instance)
 {
@@ -212,8 +281,34 @@ static int n1pmap_destroy(struct rmt *instance)
 	}
 	spin_unlock_irqrestore(&m->lock, flags);
 
+	if (m->rset)
+		rset_unregister(m->rset);
+
 	rkfree(m);
 	return 0;
+}
+
+static struct n1pmap *n1pmap_create(struct robject * parent)
+{
+	struct n1pmap *tmp;
+
+	tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+	if (!tmp)
+		return NULL;
+
+	tmp->rset = NULL;
+
+	hash_init(tmp->n1_ports);
+	spin_lock_init(&tmp->lock);
+
+	tmp->rset = rset_create_and_add("n1_ports", parent);
+	if (!tmp->rset) {
+                LOG_ERR("Failed to create n1_ports sysfs entry");
+                rkfree(tmp);
+                return NULL;
+	}
+
+	return tmp;
 }
 
 #define n1_port_lock(port, flags)	\
@@ -436,6 +531,8 @@ int rmt_destroy(struct rmt *instance)
 	if (instance->rmt_cfg)
 		rmt_config_destroy(instance->rmt_cfg);
 
+	robject_del(&instance->robj);
+
 	rina_component_fini(&instance->base);
 
 	rkfree(instance);
@@ -487,6 +584,27 @@ int rmt_dt_cons_set(struct rmt *instance,
 	return 0;
 }
 EXPORT_SYMBOL(rmt_dt_cons_set);
+
+struct serdes * rmt_serdes(struct rmt * instance)
+{
+	if (!instance || !instance->serdes) {
+		LOG_ERR("Bogus instance passed");
+		return NULL;
+	}
+
+	return instance->serdes;
+}
+
+struct robject * rmt_robject(struct rmt * instance)
+{
+	if (!instance) {
+		LOG_ERR("Bogus instance passed");
+		return NULL;
+	}
+
+	return &instance->robj;
+}
+EXPORT_SYMBOL(rmt_robject);
 
 struct rmt_config *rmt_config_get(struct rmt *instance)
 {
@@ -540,6 +658,7 @@ static int n1_port_write_sdu(struct rmt *rmt,
 {
 	int ret;
 	unsigned long flags;
+	ssize_t bytes = buffer_length(sdu_buffer_ro(sdu));
 
 	LOG_DBG("Gonna send SDU to port-id %d", n1_port->port_id);
 	ret = n1_port->n1_ipcp->ops->sdu_write(n1_port->n1_ipcp->data,
@@ -565,10 +684,10 @@ static int n1_port_write_sdu(struct rmt *rmt,
 			n1_port->state = N1_PORT_STATE_DISABLED;
 
 		n1_port_unlock(n1_port, flags);
-		return 0;
+		return ret;
 	}
 
-	return ret;
+	return (int) bytes;
 }
 
 static struct sdu * generate_sdu_from_pdu(struct rmt * rmt,
@@ -753,10 +872,11 @@ static void send_worker(unsigned long o)
 			ret =  n1_port_write_sdu(rmt, n1_port, sdu);
 			spin_lock(&n1_port->lock);
 
-			if (ret)
+			if (ret < 0)
 				break;
 
 			pdus_sent++;
+			stats_inc(tx, n1_port, ret);
 		}
 
 		if (n1_port->state == N1_PORT_STATE_ENABLED &&
@@ -799,6 +919,7 @@ int rmt_send_port_id(struct rmt *instance,
 		LOG_ERR("Bogus PDU passed");
 		return -1;
 	}
+
 	if (!instance) {
 		LOG_ERR("Bogus RMT passed");
 		pdu_destroy(pdu);
@@ -839,15 +960,14 @@ int rmt_send_port_id(struct rmt *instance,
 		switch (ret) {
 		case RMT_PS_ENQ_SCHED:
 			n1_port->stats.plen++;
-			/* FIXME LB: can this be done before releasing the port? */
 			tasklet_hi_schedule(&instance->egress_tasklet);
 			break;
 		case RMT_PS_ENQ_DROP:
-			n1_port->stats.pdrop++;
+			n1_port->stats.drop_pdus++;
 			LOG_DBG("PDU dropped while enqueing");
 			break;
 		case RMT_PS_ENQ_ERR:
-			n1_port->stats.perr++;
+			n1_port->stats.err_pdus++;
 			LOG_DBG("Some error occurred while enqueuing PDU");
 			break;
 		default:
@@ -866,10 +986,14 @@ int rmt_send_port_id(struct rmt *instance,
 	/*FIXME LB: This is just horrible, needs to be rethinked */
 	n1_port_lock(n1_port, flags);
 	n1_port->wbusy = false;
+	if (ret >= 0) {
+		stats_inc(tx, n1_port, ret);
+		ret = 0;
+	} else if (ret == -EAGAIN)
+		ret = 0;
 	n1_port_unlock(n1_port, flags);
 	n1pmap_release(instance, n1_port);
 	return ret;
-
 }
 EXPORT_SYMBOL(rmt_send_port_id);
 
@@ -1068,6 +1192,10 @@ int rmt_n1port_bind(struct rmt *instance,
 	tmp = n1_port_create(id, n1_ipcp);
 	if (!tmp)
 		return -1;
+	if (robject_rset_add(&tmp->robj, instance->n1_ports->rset, "%d", id)) {
+		n1_port_destroy(tmp);
+		return -1;
+	}
 
 	rcu_read_lock();
 	ps = container_of(rcu_dereference(instance->base.ps),
@@ -1236,6 +1364,7 @@ int rmt_receive(struct rmt *rmt,
 	struct buffer *buf;
 	struct rmt_n1_port *n1_port;
 	size_t ttl;
+	ssize_t bytes;
 
 	if (!sdu_is_ok(sdu)) {
 		LOG_ERR("Bogus SDU passed");
@@ -1266,6 +1395,7 @@ int rmt_receive(struct rmt *rmt,
 	}
 
 	sdu_destroy(sdu);
+	bytes = buffer_length(buf);
 
 	pdu_ser = pdu_ser_create_buffer_with_ni(buf);
 	if (!pdu_ser) {
@@ -1280,6 +1410,7 @@ int rmt_receive(struct rmt *rmt,
                 pdu_ser_destroy(pdu_ser);
 		return -1;
 	}
+	stats_inc(rx, n1_port, bytes);
 
 	/* SDU Protection */
 	if (sdup_unprotect_pdu(n1_port->sdup_port, pdu_ser)) {
@@ -1377,10 +1508,10 @@ int rmt_receive(struct rmt *rmt,
 }
 EXPORT_SYMBOL(rmt_receive);
 
-struct rmt *rmt_create(struct ipcp_instance *parent,
-		       struct kfa *kfa,
+struct rmt *rmt_create(struct kfa *kfa,
 		       struct efcp_container *efcpc,
-		       struct sdup *sdup)
+		       struct sdup *sdup,
+		       struct robject *parent)
 {
 	struct rmt *tmp;
 
@@ -1394,18 +1525,25 @@ struct rmt *rmt_create(struct ipcp_instance *parent,
 		return NULL;
 
 	tmp->address = address_bad();
-	tmp->parent = parent;
+	tmp->parent = container_of(parent, struct ipcp_instance, robj);
 	tmp->kfa = kfa;
 	tmp->efcpc = efcpc;
-	tmp->sdup      = sdup;
+	tmp->sdup = sdup;
 	rina_component_init(&tmp->base);
-	tmp->pff = pff_create();
+
+	if (robject_init_and_add(&tmp->robj, &rmt_rtype, parent, "rmt")) {
+                LOG_ERR("Failed to create RMT sysfs entry");
+                rmt_destroy(tmp);
+                return NULL;
+	}
+
+	tmp->pff = pff_create(&tmp->robj);
 	if (!tmp->pff) {
 		rmt_destroy(tmp);
 		return NULL;
 	}
 
-	tmp->n1_ports = n1pmap_create();
+	tmp->n1_ports = n1pmap_create(&tmp->robj);
 	if (!tmp->n1_ports) {
 		LOG_ERR("Failed to create N-1 ports map");
 		rmt_destroy(tmp);

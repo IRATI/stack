@@ -33,7 +33,6 @@
 #include "encoders/QoSCubeArrayMessage.pb.h"
 #include "encoders/WhatevercastNameArrayMessage.pb.h"
 #include "encoders/NeighborArrayMessage.pb.h"
-#include "encoders/IntType.pb.h"
 #include "encoders/QoSSpecification.pb.h"
 #include "encoders/FlowMessage.pb.h"
 #include "encoders/EnrollmentInformationMessage.pb.h"
@@ -241,7 +240,7 @@ void DFTEListEncoder::encode(
 {
 	rina::messages::directoryForwardingTableEntrySet_t gpb;
 
-	for (std::list<rina::DirectoryForwardingTableEntry>::const_iterator 
+	for (std::list<rina::DirectoryForwardingTableEntry>::const_iterator
 		it = obj.begin(); it != obj.end(); ++it) {
 			rina::messages::directoryForwardingTableEntry_t *gpb_dft;
 			gpb_dft = gpb.add_directoryforwardingtableentry();
@@ -252,7 +251,7 @@ void DFTEListEncoder::encode(
 	serobj.message_ = new unsigned char[serobj.size_];
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
-void DFTEListEncoder::decode(const rina::ser_obj_t &serobj, 
+void DFTEListEncoder::decode(const rina::ser_obj_t &serobj,
 	std::list<rina::DirectoryForwardingTableEntry> &des_obj)
 {
 	rina::messages::directoryForwardingTableEntrySet_t gpb;
@@ -645,12 +644,12 @@ void QoSCubeListEncoder::encodePointers(const std::list<rina::QoSCube*> &obj,
 }
 
 /// CLASS QoSCubeListEncoder
-void QoSCubeListEncoder::encode(const std::list<rina::QoSCube> &obj, 
+void QoSCubeListEncoder::encode(const std::list<rina::QoSCube> &obj,
 	rina::ser_obj_t& serobj)
 {
 	rina::messages::qosCubes_t gpb;
 
-	for (std::list<rina::QoSCube>::const_iterator it = obj.begin(); 
+	for (std::list<rina::QoSCube>::const_iterator it = obj.begin();
 		it != obj.end(); ++it) {
 		rina::messages::qosCube_t *gpb_cube;
 		gpb_cube = gpb.add_qoscube();
@@ -662,7 +661,7 @@ void QoSCubeListEncoder::encode(const std::list<rina::QoSCube> &obj,
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 
 }
-void QoSCubeListEncoder::decode(const rina::ser_obj_t &serobj, 
+void QoSCubeListEncoder::decode(const rina::ser_obj_t &serobj,
 	std::list<rina::QoSCube> &des_obj)
 {
 	rina::messages::qosCubes_t gpb;
@@ -1176,43 +1175,43 @@ void PDUForwardingTableEntryEncoder::decode(
 void DTPInformationEncoder::encode(const rina::DTPInformation &obj,
                                    rina::ser_obj_t& serobj)
 {
-        rina::messages::connection_t gpb;
+	rina::messages::connection_t gpb;
 
-        gpb.set_src_cep_id(obj.src_cep_id);
-        gpb.set_dest_cep_id(obj.dest_cep_id);
-        gpb.set_qos_id(obj.qos_id);
-        gpb.set_src_address(obj.src_address);
-        gpb.set_dest_address(obj.dest_address);
-        gpb.set_port_id(obj.port_id);
-        gpb.set_allocated_dtp_config(
-                        cube_helpers::get_dtpConfig_t(obj.dtp_config));
-        gpb.set_pdus_tx(obj.pdus_tx);
-        gpb.set_pdus_rx(obj.pdus_rx);
-        gpb.set_bytes_tx(obj.bytes_tx);
-        gpb.set_bytes_rx(obj.bytes_rx);
+	gpb.set_src_cep_id(obj.src_cep_id);
+	gpb.set_dest_cep_id(obj.dest_cep_id);
+	gpb.set_qos_id(obj.qos_id);
+	gpb.set_src_address(obj.src_address);
+	gpb.set_dest_address(obj.dest_address);
+	gpb.set_port_id(obj.port_id);
+	gpb.set_allocated_dtp_config(
+		cube_helpers::get_dtpConfig_t(obj.dtp_config));
+	gpb.set_pdus_tx(obj.stats.tx_pdus);
+	gpb.set_pdus_rx(obj.stats.rx_pdus);
+	gpb.set_bytes_tx(obj.stats.tx_bytes);
+	gpb.set_bytes_rx(obj.stats.rx_bytes);
 
-        serobj.size_ = gpb.ByteSize();
-        serobj.message_ = new unsigned char[serobj.size_];
-        gpb.SerializeToArray(serobj.message_, serobj.size_);
+	serobj.size_ = gpb.ByteSize();
+	serobj.message_ = new unsigned char[serobj.size_];
+	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
 
 void DTPInformationEncoder::decode(const rina::ser_obj_t &serobj,
                                    rina::DTPInformation &des_obj)
 {
-        rina::messages::connection_t gpb;
+	rina::messages::connection_t gpb;
 
-        gpb.ParseFromArray(serobj.message_, serobj.size_);
+	gpb.ParseFromArray(serobj.message_, serobj.size_);
 
-        des_obj.src_cep_id = gpb.src_cep_id();
-        des_obj.dest_cep_id = gpb.dest_cep_id();
-        des_obj.src_address = gpb.src_address();
-        des_obj.dest_address = gpb.dest_address();
-        des_obj.port_id = gpb.port_id();
-        cube_helpers::get_DTPConfig(gpb.dtp_config(), des_obj.dtp_config);
-        des_obj.pdus_tx = gpb.pdus_tx();
-        des_obj.pdus_rx = gpb.pdus_rx();
-        des_obj.bytes_tx = gpb.bytes_tx();
-        des_obj.bytes_rx = gpb.bytes_rx();
+	des_obj.src_cep_id = gpb.src_cep_id();
+	des_obj.dest_cep_id = gpb.dest_cep_id();
+	des_obj.src_address = gpb.src_address();
+	des_obj.dest_address = gpb.dest_address();
+	des_obj.port_id = gpb.port_id();
+	cube_helpers::get_DTPConfig(gpb.dtp_config(), des_obj.dtp_config);
+	des_obj.stats.tx_pdus = gpb.pdus_tx();
+	des_obj.stats.rx_pdus = gpb.pdus_rx();
+	des_obj.stats.tx_bytes = gpb.bytes_tx();
+	des_obj.stats.rx_bytes = gpb.bytes_rx();
 }
 
 void DTCPInformationEncoder::encode(const rina::DTCPConfig &obj,

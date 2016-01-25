@@ -420,7 +420,7 @@ SYSCALL_DEFINE4(management_sdu_read,
 
 	if (retval) {
 		SYSCALL_DUMP_EXIT;
-		return -EFAULT;
+		return retval;
 	}
 
 	if (!sdu_wpi_is_ok(tmp)) {

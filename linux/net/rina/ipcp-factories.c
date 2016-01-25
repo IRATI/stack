@@ -18,8 +18,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <linux/kobject.h>
-
 #define RINA_PREFIX "ipcp-factories"
 
 #include "logs.h"
@@ -28,10 +26,10 @@
 #include "ipcp-factories.h"
 
 struct ipcp_factories {
-        struct kset * set;
+        struct rset * set;
 };
 
-#define to_ipcp(O) container_of(O, struct ipcp_factory, kobj)
+#define to_ipcp(O) container_of(O, struct ipcp_factory, robj)
 
 static bool ops_are_ok(const struct ipcp_factory_ops * ops)
 {
@@ -39,22 +37,17 @@ static bool ops_are_ok(const struct ipcp_factory_ops * ops)
                 true : false;
 }
 
-static ssize_t factory_show(struct kobject *   kobj,
-                            struct attribute * attr,
-                            char *             buf)
-{ return sprintf(buf, "%s", kobject_name(kobj)); }
+/* NOTE: this seems not to be needed since factories name are already presented
+ * in sysfs as the dir names
+ * static ssize_t ipcp_factory_show(struct robject *   robj,
+ *                                  struct attribute * attr,
+ *                                  char *             buf)
+ * { return sprintf(buf, "%s", robject_name(robj)); }
+ */
+RINA_SYSFS_OPS(ipcp_factory);
+RINA_EMPTY_KTYPE(ipcp_factory);
 
-static const struct sysfs_ops ipcp_factory_sysfs_ops = {
-        .show = factory_show
-};
-
-static struct kobj_type ipcp_factory_ktype = {
-        .sysfs_ops     = &ipcp_factory_sysfs_ops,
-        .default_attrs = NULL,
-        .release       = NULL,
-};
-
-struct ipcp_factories * ipcpf_init(struct kobject * parent)
+struct ipcp_factories * ipcpf_init(struct robject * parent)
 {
         struct ipcp_factories * temp;
 
@@ -64,7 +57,7 @@ struct ipcp_factories * ipcpf_init(struct kobject * parent)
         if (!temp)
                 return NULL;
 
-        temp->set = kset_create_and_add("ipcp-factories", NULL, parent);
+        temp->set = rset_create_and_add("ipcp-factories", parent);
         if (!temp->set) {
                 LOG_ERR("Cannot initialize layer");
                 return NULL;
@@ -89,7 +82,7 @@ int ipcpf_fini(struct ipcp_factories * factories)
         /* All thetemplates have to be unregistered from now on */
         ASSERT(list_empty(&factories->set->list));
 
-        kset_unregister(factories->set);
+        rset_unregister(factories->set);
 
         rkfree(factories);
 
@@ -104,14 +97,17 @@ static bool string_is_ok(const char * name)
 struct ipcp_factory * ipcpf_find(struct ipcp_factories * factories,
                                  const char *            name)
 {
-        struct kobject * k;
+        struct robject * k;
 
         if (!factories || !factories->set || !string_is_ok(name))
                 return NULL;
 
-        k = kset_find_obj(factories->set, name);
+        k = rset_find_obj(factories->set, name);
         if (k) {
-                kobject_put(k);
+		/* kobject_put is not needed since the struct factory is the one to be
+		 * freed
+                robject_put(k);
+		*/
                 return to_ipcp(k);
         }
 
@@ -156,11 +152,13 @@ struct ipcp_factory * ipcpf_register(struct ipcp_factories *         factories,
 
         factory->data      = data;
         factory->ops       = ops;
-        factory->kobj.kset = factories->set;
-        if (kobject_init_and_add(&factory->kobj, &ipcp_factory_ktype, NULL,
-                                 "%s", name)) {
+        if (robject_rset_init_and_add(&factory->robj, &ipcp_factory_rtype,
+		factories->set, "%s", name)) {
                 LOG_ERR("Cannot add factory '%s' to the set", name);
-                kobject_put(&factory->kobj);
+		/* kobject_put is not needed since the struct factory is the one to be
+		 * freed
+                robject_put(&factory->robj);
+		*/
 
                 rkfree(factory);
                 return NULL;
@@ -168,14 +166,17 @@ struct ipcp_factory * ipcpf_register(struct ipcp_factories *         factories,
 
         if (factory->ops->init(factory->data)) {
                 LOG_ERR("Cannot initialize factory '%s'", name);
-                kobject_put(&factory->kobj);
+		/* kobject_put is not needed since the struct factory is the one to be
+		 * freed
+                robject_put(&factory->robj);
+		*/
                 rkfree(factory);
                 return NULL;
         }
 
         /* Double checking for bugs */
         LOG_INFO("Factory '%s' registered successfully",
-                 kobject_name(&factory->kobj));
+                 robject_name(&factory->robj));
 
         return factory;
 }
@@ -196,7 +197,7 @@ int ipcpf_unregister(struct ipcp_factories * factories,
                 return -1;
         }
 
-        name = kobject_name(&factory->kobj);
+        name = robject_name(&factory->robj);
         ASSERT(string_is_ok(name));
 
         LOG_DBG("Unregistering factory '%s'", name);
@@ -215,8 +216,11 @@ int ipcpf_unregister(struct ipcp_factories * factories,
                 LOG_ERR("Cannot finalize factory '%s'", name);
         }
 
-        kobject_del(&factory->kobj);
-        kobject_put(&factory->kobj);
+        robject_del(&factory->robj);
+	/* kobject_put is not needed since the struct factory is the one to be
+	 * freed
+        robject_put(&factory->robj);
+	*/
 
         rkfree(factory);
 

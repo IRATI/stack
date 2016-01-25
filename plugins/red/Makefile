@@ -2,9 +2,6 @@
 # Written by Francesco Salvestrini <f.salvestrini@nextworks.it>
 #
 
-KDIR=../../linux
-KREL=`uname -r`
-
 ifneq ($(KERNELRELEASE),)
 
 ccflags-y = -Wtype-limits -Inet/rina
@@ -14,6 +11,15 @@ obj-m := red-plugin.o
 red-plugin-y := rmt-ps-debug.o dtcp-ps-debug.o red-ps.o rmt-ps-red.o dtcp-ps-red.o
 
 else
+
+ifndef KDIR
+$(warning "KDIR will be set to the linux directory of the repository")
+KDIR=../../linux
+endif
+
+ifndef
+KREL=$(shell make -s -C $(KDIR) kernelrelease)
+endif
 
 all:
 	$(MAKE) -C $(KDIR) M=$$PWD

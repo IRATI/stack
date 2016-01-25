@@ -32,6 +32,7 @@
 #include "flow-allocator.h"
 #include "common/encoder.h"
 #include "common/configuration.h"
+#include "utils.h"
 
 namespace rinad {
 
@@ -157,8 +158,8 @@ const std::string ConnectionRIBObject::get_displayable_value() const
 	   << "; Addresses: src = " << con->sourceAddress << ", dest = " << con->destAddress
 	   << "; Qos-id: " << con->qosId << "; Port-id: " << con->portId << std::endl;
 	ss << "DTP config: " << con->dtpConfig.toString();
-	ss << "Tx: pdus = " << con->pdus_tx << ", Bytes = " << con->bytes_tx
-	   << "; RX: pdus = " << con->pdus_rx << ", Bytes = " << con->bytes_rx << std::endl;
+	ss << "Tx: pdus = " << con->stats.tx_pdus << ", Bytes = " << con->stats.tx_bytes
+	   << "; RX: pdus = " << con->stats.rx_pdus << ", Bytes = " << con->stats.rx_bytes << std::endl;
 
 	return ss.str();
 }
@@ -496,6 +497,23 @@ void FlowAllocator::removeFlowAllocatorInstance(int portId)
 		dynamic_cast<IFlowAllocatorInstance*>(remove_instance(ss.str()));
 	if (fai) {
 		delete fai;
+	}
+}
+
+void FlowAllocator::sync_with_kernel()
+{
+	IFlowAllocatorInstance * fai = NULL;
+	std::list<rina::ApplicationEntityInstance*>::iterator it;
+	std::list<rina::ApplicationEntityInstance*> entities = get_all_instances();
+
+	for (it = entities.begin(); it != entities.end(); ++it) {
+		fai = dynamic_cast<IFlowAllocatorInstance*>(*it);
+		if (!fai) {
+			LOG_IPCP_ERR("Problems casting to IFlowAllocatorInstance");
+			continue;
+		}
+
+		fai->sync_with_kernel();
 	}
 }
 
@@ -1233,6 +1251,30 @@ void FlowAllocatorInstance::remoteCreateResult(const rina::cdap_rib::con_handle_
 		releaseUnlockRemove();
 		return;
 	}
+}
+
+void FlowAllocatorInstance::sync_with_kernel()
+{
+	rina::Connection * con = flow_->getActiveConnection();
+
+	SysfsHelper::get_dtp_tx_bytes(ipc_process_->get_id(),
+				      con->sourceCepId,
+				      con->stats.tx_bytes);
+	SysfsHelper::get_dtp_rx_bytes(ipc_process_->get_id(),
+				      con->sourceCepId,
+				      con->stats.rx_bytes);
+	SysfsHelper::get_dtp_tx_pdus(ipc_process_->get_id(),
+				     con->sourceCepId,
+				     con->stats.tx_pdus);
+	SysfsHelper::get_dtp_rx_pdus(ipc_process_->get_id(),
+				     con->sourceCepId,
+				     con->stats.rx_pdus);
+	SysfsHelper::get_dtp_drop_pdus(ipc_process_->get_id(),
+				       con->sourceCepId,
+				       con->stats.drop_pdus);
+	SysfsHelper::get_dtp_error_pdus(ipc_process_->get_id(),
+				        con->sourceCepId,
+				        con->stats.err_pdus);
 }
 
 //CLASS TEARDOWNFLOW TIMERTASK

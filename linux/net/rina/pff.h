@@ -24,11 +24,12 @@
 
 #include "common.h"
 #include "ps-factory.h"
+#include "rds/robjects.h"
 
 struct pff;
 struct pci;
 
-struct pff *    pff_create(void);
+struct pff *    pff_create(struct robject * parent);
 int             pff_destroy(struct pff * instance);
 
 bool            pff_is_ok(struct pff * instance);
@@ -64,7 +65,7 @@ int             pff_set_policy_set_param(struct pff * pff,
                                          const char * value);
 
 struct pff_ps * pff_ps_get(struct pff * pff);
-
+struct rset *   pff_rset(struct pff * pff);
 struct pff *    pff_from_component(struct rina_component * component);
 
 #endif

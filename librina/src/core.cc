@@ -103,14 +103,20 @@ void RINANetlinkEndpoint::setApplicationProcessName(
 
 /* CLASS NETLINK PORT ID MAP */
 NetlinkPortIdMap::~NetlinkPortIdMap(){
-  std::map<std::string, RINANetlinkEndpoint*>::iterator iterator;
-
-  for (iterator = applicationNameMappings.begin();
-      iterator != applicationNameMappings.end(); ++iterator) {
-    if (iterator->second) {
-      delete iterator->second;
-    }
-  }
+        for (std::map<unsigned short, RINANetlinkEndpoint *>::iterator iterator
+                        = ipcProcessIdMappings.begin();
+                        iterator != ipcProcessIdMappings.end(); ++iterator) {
+                if (iterator->second) {
+                        delete iterator->second;
+                }
+        }
+        for (std::map<std::string, RINANetlinkEndpoint*>::iterator iterator
+                  = applicationNameMappings.begin();
+                  iterator != applicationNameMappings.end(); ++iterator) {
+                if (iterator->second) {
+                        delete iterator->second;
+                }
+        }
 }
 
 void NetlinkPortIdMap::putIPCProcessIdToNelinkPortIdMapping(
@@ -426,6 +432,7 @@ IPCEvent * NetlinkPortIdMap::osProcessFinalized(unsigned int nl_portid)
     if (iterator->second->getNetlinkPortId() == nl_portid) {
       apNamingInfo = iterator->second->getApplicationProcessName();
       foundAppName = true;
+      delete iterator->second;
       applicationNameMappings.erase(iterator);
       break;
     }
@@ -440,6 +447,7 @@ IPCEvent * NetlinkPortIdMap::osProcessFinalized(unsigned int nl_portid)
       iterator2 != ipcProcessIdMappings.end(); ++iterator2) {
     if (iterator2->second->getNetlinkPortId() == nl_portid) {
       ipcProcessId = iterator2->first;
+      delete iterator2->second;
       ipcProcessIdMappings.erase(iterator2);
       break;
     }
