@@ -473,7 +473,6 @@ void * doNetlinkMessageReaderWork(void * arg)
   while (myRINAManager->keep_on_reading) {
     //Receive message
     try {
-      LOG_DBG("Waiting for message %d", netlinkManager->getLocalPort());
       incomingMessage = netlinkManager->getMessage();
     } catch (NetlinkException &e) {
       LOG_ERR("Error receiving netlink message. %s", e.what());
