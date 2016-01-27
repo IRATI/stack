@@ -131,8 +131,9 @@ std::string PolicyConfig::get_param_value_as_string(const std::string& name) con
 			return it->value_;
 		}
 	}
-
-	throw Exception("Parameter not found");
+  std::stringstream ss;
+  ss << "Parameter '" << name << "' not found.";
+	throw Exception(ss.str().c_str());
 }
 
 long PolicyConfig::get_param_value_as_long(const std::string& name) const
@@ -143,7 +144,9 @@ long PolicyConfig::get_param_value_as_long(const std::string& name) const
 	std::string value = get_param_value_as_string(name);
 	result = strtol(value.c_str(), &dummy, 10);
 	if (!value.size() || *dummy != '\0') {
-		throw Exception("Error converting value to long");
+    std::stringstream ss;
+    ss << "Parameter '" << name << "' error converting value to long.";
+		throw Exception(ss.str().c_str());
 	}
 
 	return result;
@@ -157,7 +160,9 @@ float PolicyConfig::get_param_value_as_float(const std::string& name) const
 	std::string value = get_param_value_as_string(name);
 	result = strtof(value.c_str(), &dummy);
 	if (!value.size() || *dummy != '\0') {
-		throw Exception("Error converting value to float");
+    std::stringstream ss;
+    ss << "Parameter '" << name << "' error converting value to float.";
+		throw Exception(ss.str().c_str());
 	}
 
 	return result;
@@ -176,7 +181,9 @@ unsigned long PolicyConfig::get_param_value_as_ulong(const std::string& name) co
 	std::string value = get_param_value_as_string(name);
 	result = strtoul(value.c_str(), &dummy, 10);
 	if (!value.size() || *dummy != '\0') {
-		throw Exception("Error converting value to int");
+    std::stringstream ss;
+    ss << "Parameter '" << name << "' error converting value to ulong.";
+		throw Exception(ss.str().c_str());
 	}
 
 	return result;
