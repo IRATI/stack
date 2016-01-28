@@ -79,8 +79,12 @@ int ipcpf_fini(struct ipcp_factories * factories)
                 return -1;
         }
 
-        /* All thetemplates have to be unregistered from now on */
-        ASSERT(list_empty(&factories->set->list));
+        /* All the templates have to be unregistered from now on */
+	/* In order to maintain the robject abstraction the kset should not be
+	 * accessed here. If accesing to the internal list is required
+	 * somewhere else, an API must be added. Since this is debugging code we
+	 * can use this workaround in the meantime */
+        ASSERT(list_empty(&factories->set->kset->list));
 
         rset_unregister(factories->set);
 
@@ -103,13 +107,8 @@ struct ipcp_factory * ipcpf_find(struct ipcp_factories * factories,
                 return NULL;
 
         k = rset_find_obj(factories->set, name);
-        if (k) {
-		/* kobject_put is not needed since the struct factory is the one to be
-		 * freed
-                robject_put(k);
-		*/
+        if (k)
                 return to_ipcp(k);
-        }
 
         return NULL;
 }
