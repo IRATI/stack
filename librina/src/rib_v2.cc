@@ -1955,6 +1955,8 @@ rib_handle_t RIBDaemon::get(const cdap_rib::vers_info_t& v,
 void RIBDaemon::destroyRIB(const rib_handle_t& handle){
 	//Retreive the RIB
 	RIB* rib = getRIB(handle);
+	if (rib == NULL)
+		throw eRIBNotFound();
 	delete rib;
 }
 
