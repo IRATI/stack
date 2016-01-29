@@ -147,6 +147,15 @@ rina::rib::rib_handle_t createRIB(void){
 	return rib;
 }
 
+
+void destroyRIB(const rina::rib::rib_handle_t& rib){
+	//uint64_t version = 0x1ULL;
+	//vers.version_ = version;
+	rina::rib::RIBDaemonProxy *const ribd = RIBFactory::getProxy();
+	ribd->destroyRIB(rib);
+}
+
+
 void associateRIBtoAE(const rina::rib::rib_handle_t& rib,
 						const std::string& ae_name){
 	rina::rib::RIBDaemonProxy *const ribd = RIBFactory::getProxy();

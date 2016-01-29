@@ -771,7 +771,11 @@ void initialize(unsigned int localPort, const std::string& logLevel,
  */
 void initialize(const std::string& logLevel,
                 const std::string& pathToLogFile);
+
+void librina_finalize();
+
 }
+
 #endif
 
 #endif

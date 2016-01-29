@@ -155,6 +155,7 @@ IPCMConsole::IPCMConsole(const unsigned int port_) :
 			ConsoleCmdInfo(&IPCMConsole::update_catalog,
 				"USAGE: update-catalog");
 
+	keep_on_running = true;
 	rina::ThreadAttributes ta;
 	worker = new rina::Thread(console_function, this, &ta);
 	worker->start();
@@ -162,6 +163,9 @@ IPCMConsole::IPCMConsole(const unsigned int port_) :
 
 IPCMConsole::~IPCMConsole() throw()
 {
+	void *status;
+	this->keep_on_running = false;
+	worker->join(&status);
 	delete worker;
 }
 
@@ -222,6 +226,72 @@ IPCMConsole::init()
 	return sfd;
 }
 
+int IPCMConsole::read_command_with_timeout(int cfd, char *cmdbuf, int buff_size)
+{
+	char *tmpbuf = cmdbuf;
+	int total_read = 0;
+	ostringstream ss;
+
+	while(this->keep_on_running) {
+		struct timeval timeout = {2,0};
+		fd_set readset;
+		FD_ZERO(&readset);
+		int res, n;
+		FD_SET(cfd, &readset);
+
+		if ((res = select(cfd+1, &readset, NULL, NULL, &timeout))>0
+			&& FD_ISSET(cfd, &readset)){
+
+			n = read(cfd, tmpbuf, buff_size-total_read);
+			if(n == 0){
+				return total_read;
+			}else if(n < 0){
+				// Error on read
+				return n;
+			}else{
+				int i;
+				for(i=0; i<n; i++){
+					total_read++;
+					tmpbuf++;
+					if(*tmpbuf == '\n')
+						return total_read;
+				}
+			}
+		}else if(res<0){
+			ss  << " Error [" << errno <<
+				"] calling select() " << endl;
+			FLUSH_LOG(ERR, ss);
+			return res;
+		}
+	}
+}
+
+
+int IPCMConsole::accept_with_timeout(int sfd, struct
+	sockaddr_in client_address, socklen_t address_len)
+{
+	ostringstream ss;
+	while(this->keep_on_running) {
+		struct timeval timeout = {2,0};
+		fd_set readset;
+		FD_ZERO(&readset);
+		int res;
+		FD_SET(sfd, &readset);
+		if ((res = select(sfd+1, &readset, NULL, NULL, &timeout))>0
+			&& FD_ISSET(sfd, &readset)){
+
+			return accept(sfd, reinterpret_cast<struct sockaddr *>(
+				&client_address), &address_len);
+
+		}else if(res<0){
+			ss  << " Error [" << errno <<
+				"] calling select() " << endl;
+			FLUSH_LOG(ERR, ss);
+			return res;
+		}
+	}
+}
+
 void IPCMConsole::body()
 {
 	ostringstream ss;
@@ -233,7 +303,7 @@ void IPCMConsole::body()
 
 	LOG_DBG("Console starts [fd=%d]\n", sfd);
 
-	for (;;) {
+	while (this->keep_on_running) {
 		int cfd;
 		struct sockaddr_in client_address;
 		socklen_t address_len = sizeof(client_address);
@@ -241,8 +311,8 @@ void IPCMConsole::body()
 		int cmdret;
 		int n;
 
-		cfd = accept(sfd, reinterpret_cast<struct sockaddr *>(
-			     &client_address), &address_len);
+		cfd = accept_with_timeout(sfd, client_address, address_len);
+
 		if (cfd < 0) {
 			ss  << " Error [" << errno <<
 				"] calling accept() " << endl;
@@ -250,14 +320,14 @@ void IPCMConsole::body()
 			continue;
 		}
 
-		for (;;) {
+		while (this->keep_on_running) {
 			outstream << "IPCM >>> ";
 			if (flush_output(cfd)) {
 				close(cfd);
 				break;
 			}
 
-			n = read(cfd, cmdbuf, sizeof(cmdbuf));
+			n = read_command_with_timeout(cfd, cmdbuf, sizeof(cmdbuf));
 			if (n < 0) {
 				ss  << " Error [" << errno <<
 					"] calling read() " << endl;

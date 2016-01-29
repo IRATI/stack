@@ -27,6 +27,11 @@ void createSchema(void);
 rina::rib::rib_handle_t createRIB(void);
 
 ///
+/// Destroy a RIB
+///
+void destroyRIB(const rina::rib::rib_handle_t& rib);
+
+///
 /// Associate RIB to AE
 ///
 void associateRIBtoAE(const rina::rib::rib_handle_t& rib,

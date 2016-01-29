@@ -494,11 +494,40 @@ RIB::RIB(const rib_handle_t& handle_, RIBSchema *const schema_,
 }
 
 RIB::~RIB() {
+	std::list<int64_t> *child_list;
+	int64_t inst_id;
+	RIBObj* obj;
+	std::map<int64_t, RIBObj*>::iterator it;
 
 	//Mutual exclusion
 	WriteScopedLock wlock(rwlock);
 
-	//TODO: remove objects
+	//Remove objects
+	for(it = obj_inst_map.begin(); it != obj_inst_map.end(); it++){
+		inst_id = it->first;
+		obj = it->second;
+
+		//If there, remove from the cache
+		if(obj->delegates){
+			//Remove cached delegated objs
+			deleg_cache.clear();
+			num_of_deleg--;
+		}
+		try{
+			child_list = obj_inst_child_map[inst_id];
+		}catch(...){
+			LOG_ERR("Unable to recover the children list/parent"
+				"children list for object '" PRId64 "';"
+				"corrupted internal state!",inst_id);
+			continue;
+		}
+		if (child_list != NULL){
+			delete child_list;
+		}
+		delete obj;
+	}
+
+
 	//TODO: remove schema if allocated by us?
 }
 
@@ -1924,7 +1953,11 @@ rib_handle_t RIBDaemon::get(const cdap_rib::vers_info_t& v,
 }
 
 void RIBDaemon::destroyRIB(const rib_handle_t& handle){
-	throw eNotImplemented();
+	//Retreive the RIB
+	RIB* rib = getRIB(handle);
+	if (rib == NULL)
+		throw eRIBNotFound();
+	delete rib;
 }
 
 void RIBDaemon::associateRIBtoAE(const rib_handle_t& handle,

@@ -1272,6 +1272,8 @@ void ribBasicOps::testRIBDestruction(){
 		CPPUNIT_ASSERT_MESSAGE("Destroy invalid RIB succeeded", 0);
 	}catch(eNotImplemented& e){
 
+	}catch(eRIBNotFound& e){
+		CPPUNIT_ASSERT_MESSAGE("Destroy invalid RIB succeeded", true);
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Wrong exception thrown during destroy invalid RIB", 0);
 	}
@@ -1289,7 +1291,7 @@ void ribBasicOps::testRIBDestruction(){
 	//Destroy an inexistent RIB (not yet implemented)
 	try{
 		ribd->destroyRIB(handle);
-		CPPUNIT_ASSERT_MESSAGE("Destroy a valid RIB succeeded", 0);
+		CPPUNIT_ASSERT_MESSAGE("Destroy a valid RIB succeeded", true);
 	}catch(eNotImplemented& e){
 
 	}catch(...){

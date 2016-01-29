@@ -271,6 +271,10 @@ void initializeIPCManager(unsigned int localPort,
                 const std::string& logLevel,
                 const std::string& pathToLogFolder);
 
+/** Destroys the IPC Manager
+*/
+void destroyIPCManager();
+
 /**
  * Event informing that an application has requested the
  * properties of one or more DIFs
