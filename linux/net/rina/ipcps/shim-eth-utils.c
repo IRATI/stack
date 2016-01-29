@@ -20,6 +20,7 @@
 
 #include <linux/export.h>
 #include <linux/types.h>
+#include <linux/rtnetlink.h>
 #include <net/pkt_sched.h>
 #include <net/sch_generic.h>
 
@@ -150,6 +151,8 @@ void restore_qdisc(struct net_device * dev)
 
 	ASSERT(dev);
 
+	rtnl_lock();
+
 	if (dev->flags & IFF_UP)
 		dev_deactivate(dev);
 
@@ -169,6 +172,8 @@ void restore_qdisc(struct net_device * dev)
 
 	if (dev->flags & IFF_UP)
 		dev_activate(dev);
+
+	rtnl_unlock();
 }
 EXPORT_SYMBOL(restore_qdisc);
 
@@ -195,6 +200,7 @@ int  update_qdisc(struct net_device * dev,
 		return 0;
 	}
 
+	rtnl_lock();
 	/* For each TX queue, create a new shim-eth-qdisc instance, attach
 	 * it to the queue and then destroy the old qdisc
 	 */
@@ -204,6 +210,7 @@ int  update_qdisc(struct net_device * dev,
 		if (!qdisc) {
 			LOG_ERR("Problems creating shim-eth-qdisc");
 			restore_qdisc(dev);
+			rtnl_unlock();
 			return -1;
 		}
 
@@ -213,6 +220,7 @@ int  update_qdisc(struct net_device * dev,
 			LOG_ERR("Problems initializing shim-eth-qdisc");
 			qdisc_destroy(qdisc);
 			restore_qdisc(dev);
+			rtnl_unlock();
 			return -1;
 		}
 
@@ -231,6 +239,7 @@ int  update_qdisc(struct net_device * dev,
 	if (dev->flags & IFF_UP)
 		dev_activate(dev);
 
+	rtnl_unlock();
 	return 0;
 }
 EXPORT_SYMBOL(update_qdisc);
