@@ -45,6 +45,7 @@ testsLIBS =	$(COMMONLIBS)
 test_routing_SOURCES  =					    \
 	test-routing.cc							\
 	../../components.cc	   ../../components.h \
+	../../utils.cc	   ../../utils.h \
 	../../ipc-process.cc	   ../../ipc-process.h \
 	../../namespace-manager.cc ../../namespace-manager.h \
 	../../flow-allocator.cc    ../../flow-allocator.h \
@@ -61,6 +62,7 @@ test_routing_LDADD    = $(testsLIBS)
 test_encoders_SOURCES  =			\
 	test-encoders.cc			\
 	../../components.cc	   ../../components.h \
+	../../utils.cc	   ../../utils.h \
 	../../ipc-process.cc	   ../../ipc-process.h \
 	../../namespace-manager.cc ../../namespace-manager.h \
 	../../flow-allocator.cc    ../../flow-allocator.h \
