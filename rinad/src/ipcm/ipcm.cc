@@ -1601,6 +1601,7 @@ ipcm_res_t IPCManager_::unregister_app_from_ipcp(
             ss
                     << "Unable to allocate memory for the transaction object. Out of memory! ";
             FLUSH_LOG(ERR, ss);
+            delete trans;
             throw rina::Exception();
         }
 
@@ -1609,6 +1610,7 @@ ipcm_res_t IPCManager_::unregister_app_from_ipcp(
         {
             ss << "Unable to add transaction; out of memory? ";
             FLUSH_LOG(ERR, ss);
+            delete trans;
             throw rina::Exception();
         }
 
@@ -1619,6 +1621,7 @@ ipcm_res_t IPCManager_::unregister_app_from_ipcp(
                         "process " << slave_ipcp->get_name().toString()
                 << std::endl;
         FLUSH_LOG(INFO, ss);
+        delete trans;
     } catch (rina::ConcurrentException& e)
     {
         ss << ": Error while unregistering application "
@@ -1626,6 +1629,7 @@ ipcm_res_t IPCManager_::unregister_app_from_ipcp(
                         "process " << slave_ipcp->get_name().toString()
                 << ". Operation timedout." << std::endl;
         FLUSH_LOG(ERR, ss);
+        delete trans;
         return IPCM_FAILURE;
     } catch (rina::IpcmUnregisterApplicationException& e)
     {
@@ -1633,15 +1637,16 @@ ipcm_res_t IPCManager_::unregister_app_from_ipcp(
                 << req_event.applicationName.toString() << " from IPC "
                         "process " << slave_ipcp->get_name().toString()
                 << std::endl;
+        delete trans;
         FLUSH_LOG(ERR, ss);
         return IPCM_FAILURE;
     } catch (rina::Exception& e)
     {
         ss << ": Unknown error while unregistering application " << std::endl;
         FLUSH_LOG(ERR, ss);
+        delete trans;
         return IPCM_FAILURE;
     }
-
     return IPCM_PENDING;
 }
 
