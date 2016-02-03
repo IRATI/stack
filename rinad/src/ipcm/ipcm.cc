@@ -1822,9 +1822,6 @@ void IPCManager_::run()
     //Cleanup
     LOG_DBG("Cleaning the house...");
 
-    //Destroy all addons (stop them)
-    Addon::destroy_all();
-
     //Destroy all IPCPs
     std::vector<IPCMIPCProcess *> ipcps;
     ipcp_factory_.listIPCProcesses(ipcps);
@@ -1839,6 +1836,9 @@ void IPCManager_::run()
                      (*it)->get_id());
         }
     }
+
+    //Destroy all addons (stop them)
+    Addon::destroy_all();
 
     //Join the I/O loop thread
     keep_running = false;
