@@ -323,27 +323,29 @@ void IPCMConsole::body()
 		while (this->keep_on_running) {
 			outstream << "IPCM >>> ";
 			if (flush_output(cfd)) {
-				close(cfd);
 				break;
 			}
 
 			n = read_command_with_timeout(cfd, cmdbuf, sizeof(cmdbuf));
-			if (n < 0) {
-				ss  << " Error [" << errno <<
-					"] calling read() " << endl;
-				FLUSH_LOG(ERR, ss);
-				close(cfd);
+			if (n <= 0) {
+				if (n) {
+					ss  << " Error [" << errno <<
+						"] calling read() " << endl;
+					FLUSH_LOG(ERR, ss);
+				}
 				break;
 			}
 
 			cmdret = process_command(cfd, cmdbuf, n);
 			if (cmdret == CMDRETSTOP) {
-				close(cfd);
 				break;
 			}
 		}
+
+		close(cfd);
 	}
 
+	close(sfd);
 	LOG_DBG("Console stops\n");
 }
 
