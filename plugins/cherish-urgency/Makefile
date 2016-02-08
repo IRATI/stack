@@ -30,6 +30,7 @@ clean:
 install:
 	$(MAKE) -C $(KDIR) M=$$PWD modules_install
 	cp cherish-urgency-plugin.manifest /lib/modules/$(KREL)/extra/
+	depmod -a
 
 uninstall:
 	@echo "This target has not been implemented yet"
