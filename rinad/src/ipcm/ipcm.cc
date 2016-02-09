@@ -1609,6 +1609,7 @@ ipcm_res_t IPCManager_::unregister_app_from_ipcp(
         {
             ss << "Unable to add transaction; out of memory? ";
             FLUSH_LOG(ERR, ss);
+            delete trans;
             throw rina::Exception();
         }
 
