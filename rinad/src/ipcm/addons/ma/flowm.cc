@@ -515,8 +515,6 @@ FlowManager::~FlowManager()
 	it = workers.begin();
 
 	while (it != workers.end()) {
-		//Stop and join
-		//it->second->stop();
 
 		//Keep next
 		next = it;
