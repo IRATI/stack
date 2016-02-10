@@ -486,7 +486,6 @@ static int mp_next_hop(struct pff_ps * ps,
         qos_id_t                qos_id;
         struct pft_entry *      tmp;
         unsigned long           flags;
-	struct pft_port_entry * pos;
 	struct pft_port_entry * port;
 
         priv = (struct pff_ps_priv *) ps->priv;
