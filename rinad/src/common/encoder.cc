@@ -271,18 +271,9 @@ rina::messages::dtpConfig_t* get_dtpConfig_t(const rina::DTPConfig &conf)
 {
         rina::messages::dtpConfig_t *gpf_conf = new rina::messages::dtpConfig_t;
         gpf_conf->set_dtcppresent(conf.is_dtcp_present());
-        gpf_conf->set_allocated_initialseqnumpolicy(
-                        helpers::get_policyDescriptor_t(
-                                        conf.get_initial_seq_num_policy()));
         gpf_conf->set_seqnumrolloverthreshold(
                         conf.get_seq_num_rollover_threshold());
         gpf_conf->set_initialatimer(conf.get_initial_a_timer());
-        gpf_conf->set_allocated_rcvrtimerinactivitypolicy(
-                        helpers::get_policyDescriptor_t(
-                                        conf.get_rcvr_timer_inactivity_policy()));
-        gpf_conf->set_allocated_sendertimerinactiviypolicy(
-                        helpers::get_policyDescriptor_t(
-                                        conf.get_sender_timer_inactivity_policy()));
         gpf_conf->set_allocated_dtppolicyset(
                         helpers::get_policyDescriptor_t(
                                         conf.get_dtp_policy_set()));
@@ -295,13 +286,6 @@ void get_DTPConfig(const rina::messages::dtpConfig_t &gpf_conf,
 {
         conf.set_dtcp_present(gpf_conf.dtcppresent());
         rina::PolicyConfig p_conf;
-        helpers::get_PolicyConfig(gpf_conf.rcvrtimerinactivitypolicy(), p_conf);
-        conf.set_rcvr_timer_inactivity_policy(p_conf);
-        helpers::get_PolicyConfig(gpf_conf.sendertimerinactiviypolicy(),
-                                  p_conf);
-        conf.set_sender_timer_inactivity_policy(p_conf);
-        helpers::get_PolicyConfig(gpf_conf.initialseqnumpolicy(), p_conf);
-        conf.set_initial_seq_num_policy(p_conf);
         helpers::get_PolicyConfig(gpf_conf.dtppolicyset(), p_conf);
         conf.set_dtp_policy_set(p_conf);
         conf.set_seq_num_rollover_threshold(gpf_conf.seqnumrolloverthreshold());

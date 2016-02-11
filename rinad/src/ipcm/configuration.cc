@@ -288,18 +288,6 @@ void parse_efcp_policies(const Json::Value  root,
                         cube.dtcp_config_ = dtpcc;
                 }
 
-                parse_policy(efcp_conf,
-                             "rcvrTimerInactivityPolicy",
-                             dtpc.rcvr_timer_inactivity_policy_);
-
-                parse_policy(efcp_conf,
-                             "senderTimerInactivityPolicy",
-                             dtpc.sender_timer_inactivity_policy_);
-
-                parse_policy(efcp_conf,
-                             "initialSeqNumPolicy",
-                             dtpc.initial_seq_num_policy_);
-
                 dtpc.seq_num_rollover_threshold_ =
                         efcp_conf.get("seqNumRolloverThreshold",
                                     dtpc.seq_num_rollover_threshold_).asUInt();
