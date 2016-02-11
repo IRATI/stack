@@ -1105,7 +1105,8 @@ void FlowStateObjects::deprecateObject(const std::string& fqn,
 	}
 }
 
-void FlowStateObjects::deprecateObjects(unsigned int address,
+void FlowStateObjects::deprecateObjects(unsigned int neigh_address,
+                                        unsigned int address,
 		     	     	        unsigned int max_age)
 {
 	rina::ScopedLock g(lock);
@@ -1113,7 +1114,7 @@ void FlowStateObjects::deprecateObjects(unsigned int address,
 	std::map<std::string, FlowStateObject *>::iterator it;
 	for (it = objects.begin(); it != objects.end();
 			++it) {
-		if (it->second->get_neighboraddress() == address ||
+		if (it->second->get_neighboraddress() == neigh_address &&
 				it->second->get_address() == address) {
 			it->second->deprecateObject(max_age);
 			modified_ = true;
@@ -1428,9 +1429,10 @@ void FlowStateManager::getAllFSOs(std::list<FlowStateObject>& list) const
 	fsos->getAllFSOs(list);
 }
 
-void FlowStateManager::deprecateObjectsNeighbor(unsigned int address)
+void FlowStateManager::deprecateObjectsNeighbor(unsigned int neigh_address,
+                                                unsigned int address)
 {
-	fsos->deprecateObjects(address,
+	fsos->deprecateObjects(neigh_address, address,
 			       maximum_age);
 }
 
@@ -1664,7 +1666,7 @@ void LinkStateRoutingPolicy::processFlowDeallocatedEvent(
 
 void LinkStateRoutingPolicy::processNeighborLostEvent(
 		rina::ConnectiviyToNeighborLostEvent* event) {
-	db_->deprecateObjectsNeighbor(event->neighbor_.address_);
+	db_->deprecateObjectsNeighbor(event->neighbor_.address_, ipc_process_->get_address());
 }
 
 
