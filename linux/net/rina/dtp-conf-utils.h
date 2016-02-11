@@ -29,15 +29,6 @@ struct dtp_config * dtp_config_create(void);
 struct dtp_config * dtp_config_create_ni(void);
 int                 dtp_config_destroy(struct dtp_config * cfg);
 
-struct policy * dtp_conf_initial_sequence_number(struct dtp_config * cfg);
-int             dtp_conf_initial_sequence_number_set(struct dtp_config * cfg,
-                                                     struct policy *     p);
-struct policy * dtp_conf_receiver_inactivity_timer(struct dtp_config * cfg);
-int             dtp_conf_receiver_inactivity_timer_set(struct dtp_config * cfg,
-                                                       struct policy *     p);
-struct policy * dtp_conf_sender_inactivity_timer(struct dtp_config * cfg);
-int             dtp_conf_sender_inactivity_timer_set(struct dtp_config * cfg,
-                                                     struct policy *     p);
 bool            dtp_conf_dtcp_present(struct dtp_config * cfg);
 int             dtp_conf_dtcp_present_set(struct dtp_config * cfg, bool present);
 int             dtp_conf_seq_num_ro_th(struct dtp_config * cfg);

@@ -27,13 +27,6 @@
 #include "policies.h"
 
 struct dtp_config {
-        /* FIXME The following three "policies" are unused, useless
-         * and duplicated - they already exist as function pointers
-         * (dtp-ps.h). They have to be removed here, and therefore
-         * from netlink (kernespace+userspace) and from librina. */
-        struct policy *      initial_sequence_number;
-        struct policy *      receiver_inactivity_timer;
-        struct policy *      sender_inactivity_timer;
         bool                 dtcp_present;
         /* Sequence number rollover threshold */
         int                  seq_num_ro_th;
@@ -50,12 +43,6 @@ int dtp_config_destroy(struct dtp_config * cfg)
 {
         if (!cfg)
                 return -1;
-        if (cfg->initial_sequence_number)
-                policy_destroy(cfg->initial_sequence_number);
-        if (cfg->receiver_inactivity_timer)
-                policy_destroy(cfg->receiver_inactivity_timer);
-        if (cfg->sender_inactivity_timer)
-                policy_destroy(cfg->sender_inactivity_timer);
         if (cfg->dtp_ps)
                 policy_destroy(cfg->dtp_ps);
 
@@ -77,24 +64,6 @@ static struct dtp_config * dtp_config_create_gfp(gfp_t flags)
         if (!tmp->dtp_ps)
                 goto clean;
 
-        tmp->initial_sequence_number = policy_create();
-        if (!tmp->initial_sequence_number) {
-                LOG_ERR("Could not create initial_sequence_number");
-                goto clean;
-        }
-
-        tmp->receiver_inactivity_timer = policy_create();
-        if (!tmp->receiver_inactivity_timer) {
-                LOG_ERR("Could not create receiver_inactivity_timer policy");
-                goto clean;
-        }
-
-        tmp->sender_inactivity_timer = policy_create();
-        if (!tmp->sender_inactivity_timer) {
-                LOG_ERR("Could not create sender_inactivity_timer policy");
-                goto clean;
-        }
-
         return tmp;
 
 clean:
@@ -109,54 +78,6 @@ EXPORT_SYMBOL(dtp_config_create);
 struct dtp_config * dtp_config_create_ni(void)
 { return dtp_config_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(dtp_config_create_ni);
-
-struct policy * dtp_conf_initial_sequence_number(struct dtp_config * cfg)
-{
-        if (!cfg) return NULL;
-        return cfg->initial_sequence_number;
-}
-EXPORT_SYMBOL(dtp_conf_initial_sequence_number);
-
-int dtp_conf_initial_sequence_number_set(struct dtp_config * cfg,
-                                    struct policy *     p)
-{
-        if (!cfg || p) return -1;
-        cfg->initial_sequence_number = p;
-        return 0;
-}
-EXPORT_SYMBOL(dtp_conf_initial_sequence_number_set);
-
-struct policy * dtp_conf_receiver_inactivity_timer(struct dtp_config * cfg)
-{
-        if (!cfg) return NULL;
-        return cfg->receiver_inactivity_timer;
-}
-EXPORT_SYMBOL(dtp_conf_receiver_inactivity_timer);
-
-int dtp_conf_receiver_inactivity_timer_set(struct dtp_config * cfg,
-                                      struct policy *     p)
-{
-        if (!cfg || p) return -1;
-        cfg->receiver_inactivity_timer = p;
-        return 0;
-}
-EXPORT_SYMBOL(dtp_conf_receiver_inactivity_timer_set);
-
-struct policy * dtp_conf_sender_inactivity_timer(struct dtp_config * cfg)
-{
-        if (!cfg) return NULL;
-        return cfg->sender_inactivity_timer;
-}
-EXPORT_SYMBOL(dtp_conf_sender_inactivity_timer);
-
-int dtp_conf_sender_inactivity_timer_set(struct dtp_config * cfg,
-                                struct policy *     p)
-{
-        if (!cfg || p) return -1;
-        cfg->sender_inactivity_timer = p;
-        return 0;
-}
-EXPORT_SYMBOL(dtp_conf_sender_inactivity_timer_set);
 
 bool dtp_conf_dtcp_present(struct dtp_config * cfg)
 {
