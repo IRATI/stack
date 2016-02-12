@@ -568,7 +568,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                 flow->addr.sin_port        = htons(entry->port);
 
                 LOG_DBG("Max allowable gap is %d", fspec->max_allowable_gap);
-                if (!fspec->max_allowable_gap == 0) {
+                if (fspec->max_allowable_gap != 0) {
                         LOG_DBG("Unreliable flow requested");
                         flow->fspec_id = 0;
 
