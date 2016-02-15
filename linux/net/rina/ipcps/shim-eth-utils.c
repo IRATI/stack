@@ -147,7 +147,6 @@ void restore_qdisc(struct net_device * dev)
 {
 	struct Qdisc * 		    qdisc;
 	unsigned int   		    q_index;
-	struct netdev_queue *       queue;
 
 	ASSERT(dev);
 
@@ -160,13 +159,9 @@ void restore_qdisc(struct net_device * dev)
 	 * the kernel will create default ones when activating the device)
 	 */
 	for (q_index = 0; q_index < dev->num_tx_queues; q_index++) {
-		queue = netdev_get_tx_queue(dev, q_index);
-		qdisc = queue->qdisc_sleeping;
-		if (qdisc) {
-			rcu_assign_pointer(queue->qdisc, &noop_qdisc);
-			queue->qdisc_sleeping = &noop_qdisc;
+		qdisc = dev_graft_qdisc(&dev->_tx[q_index], NULL);
+		if (qdisc && qdisc != &noop_qdisc)
 			qdisc_destroy(qdisc);
-		}
 	}
 	dev->qdisc = &noop_qdisc;
 
@@ -185,7 +180,6 @@ int  update_qdisc(struct net_device * dev,
 	struct Qdisc *        oqdisc;
 	struct nlattr         attr;
 	unsigned int   	      q_index;
-	struct netdev_queue * queue;
 
 	ASSERT(dev);
 
@@ -205,12 +199,13 @@ int  update_qdisc(struct net_device * dev,
 	 * it to the queue and then destroy the old qdisc
 	 */
 	for (q_index = 0; q_index < dev->num_tx_queues; q_index++) {
-		queue = netdev_get_tx_queue(dev, q_index);
-		qdisc = qdisc_create_dflt(queue, &shim_eth_qdisc_ops, 0);
+		qdisc = qdisc_create_dflt(&dev->_tx[q_index],
+					  &shim_eth_qdisc_ops,
+					  0);
 		if (!qdisc) {
 			LOG_ERR("Problems creating shim-eth-qdisc");
-			restore_qdisc(dev);
 			rtnl_unlock();
+			restore_qdisc(dev);
 			return -1;
 		}
 
@@ -219,12 +214,12 @@ int  update_qdisc(struct net_device * dev,
 		if (shim_eth_qdisc_init(qdisc, &attr)) {
 			LOG_ERR("Problems initializing shim-eth-qdisc");
 			qdisc_destroy(qdisc);
-			restore_qdisc(dev);
 			rtnl_unlock();
+			restore_qdisc(dev);
 			return -1;
 		}
 
-		oqdisc = dev_graft_qdisc(queue, qdisc);
+		oqdisc = dev_graft_qdisc(&dev->_tx[q_index], qdisc);
 		if (oqdisc && oqdisc != &noop_qdisc)
 			qdisc_destroy(oqdisc);
 	}
@@ -232,9 +227,7 @@ int  update_qdisc(struct net_device * dev,
 	if (dev->flags & IFF_UP)
 		dev_deactivate(dev);
 
-	queue = netdev_get_tx_queue(dev, 0);
-	dev->qdisc = queue->qdisc_sleeping;
-	atomic_inc(&dev->qdisc->refcnt);
+	dev->qdisc = netdev_get_tx_queue(dev, 0)->qdisc_sleeping;
 
 	if (dev->flags & IFF_UP)
 		dev_activate(dev);
