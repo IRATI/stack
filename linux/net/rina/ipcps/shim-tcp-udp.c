@@ -425,6 +425,8 @@ static int flow_destroy(struct ipcp_instance_data * data,
         spin_unlock(&data->lock);
 
         /* FIXME: Check for leaks */
+        if (flow->sdu_queue)
+                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
         rkfree(flow);
 
         return 0;
@@ -566,7 +568,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                 flow->addr.sin_port        = htons(entry->port);
 
                 LOG_DBG("Max allowable gap is %d", fspec->max_allowable_gap);
-                if (!fspec->max_allowable_gap == 0) {
+                if (fspec->max_allowable_gap != 0) {
                         LOG_DBG("Unreliable flow requested");
                         flow->fspec_id = 0;
 
@@ -806,23 +808,15 @@ tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
-                                   port_id_t                   id)
+static int flow_deallocate(struct ipcp_instance_data * data,
+			   struct shim_tcp_udp_flow * flow)
 {
-        struct shim_tcp_udp_flow * flow;
         struct reg_app_data *      app;
         struct rcv_data *          recvd;
         unsigned long              flags;
 
-        LOG_HBEAT;
-
-        ASSERT(data);
-
-        flow = find_flow_by_port(data, id);
-        if (!flow) {
-                LOG_ERR("Flow does not exist, cannot remove");
-                return -1;
-        }
+	ASSERT(data);
+	ASSERT(flow);
 
         app = find_app_by_socket(data, flow->sock);
 
@@ -849,6 +843,24 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
         unbind_and_destroy_flow(data, flow);
 
         return 0;
+}
+
+static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
+                                   port_id_t                   id)
+{
+        struct shim_tcp_udp_flow * flow;
+
+        LOG_HBEAT;
+
+        ASSERT(data);
+
+        flow = find_flow_by_port(data, id);
+        if (!flow) {
+                LOG_ERR("Flow does not exist, cannot remove");
+                return -1;
+        }
+
+        return flow_deallocate(data, flow);
 }
 
 int recv_msg(struct socket *      sock,
@@ -1713,6 +1725,47 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
         return 0;
 }
 
+static int application_unregister(struct ipcp_instance_data * data,
+				  struct reg_app_data * app)
+{
+	ASSERT(data);
+        ASSERT(app);
+
+	lock_sock(app->udpsock->sk);
+	write_lock_bh(&app->udpsock->sk->sk_callback_lock);
+	app->udpsock->sk->sk_data_ready = app->udpsock->sk->sk_user_data;
+	app->udpsock->sk->sk_user_data  = NULL;
+	write_unlock_bh(&app->udpsock->sk->sk_callback_lock);
+	release_sock(app->udpsock->sk);
+
+	kernel_sock_shutdown(app->udpsock, SHUT_RDWR);
+	sock_release(app->udpsock);
+
+	LOG_DBG("UDP socket destroyed");
+
+	lock_sock(app->tcpsock->sk);
+	write_lock_bh(&app->tcpsock->sk->sk_callback_lock);
+	app->tcpsock->sk->sk_data_ready = app->tcpsock->sk->sk_user_data;
+	app->tcpsock->sk->sk_user_data  = NULL;
+	write_unlock_bh(&app->tcpsock->sk->sk_callback_lock);
+	release_sock(app->tcpsock->sk);
+
+	kernel_sock_shutdown(app->tcpsock, SHUT_RDWR);
+	sock_release(app->tcpsock);
+
+	LOG_DBG("TCP socket destroyed");
+
+	name_destroy(app->app_name);
+
+	spin_lock(&data->lock);
+	list_del(&app->list);
+	spin_unlock(&data->lock);
+
+	rkfree(app);
+
+	return 0;
+}
+
 static int tcp_udp_application_unregister(struct ipcp_instance_data * data,
                                           const struct name *         name)
 {
@@ -1731,38 +1784,7 @@ static int tcp_udp_application_unregister(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        lock_sock(app->udpsock->sk);
-        write_lock_bh(&app->udpsock->sk->sk_callback_lock);
-        app->udpsock->sk->sk_data_ready = app->udpsock->sk->sk_user_data;
-        app->udpsock->sk->sk_user_data  = NULL;
-        write_unlock_bh(&app->udpsock->sk->sk_callback_lock);
-        release_sock(app->udpsock->sk);
-
-        sock_release(app->udpsock);
-
-        LOG_DBG("UDP socket destroyed");
-
-        lock_sock(app->tcpsock->sk);
-        write_lock_bh(&app->tcpsock->sk->sk_callback_lock);
-        app->tcpsock->sk->sk_data_ready = app->tcpsock->sk->sk_user_data;
-        app->tcpsock->sk->sk_user_data  = NULL;
-        write_unlock_bh(&app->tcpsock->sk->sk_callback_lock);
-        release_sock(app->tcpsock->sk);
-
-        kernel_sock_shutdown(app->tcpsock, SHUT_RDWR);
-        sock_release(app->tcpsock);
-
-        LOG_DBG("TCP socket destroyed");
-
-        name_destroy(app->app_name);
-
-        spin_lock(&data->lock);
-        list_del(&app->list);
-        spin_unlock(&data->lock);
-
-        rkfree(app);
-
-        return 0;
+        return application_unregister(data, app);
 }
 
 static int get_nxt_len(char ** enc,
@@ -2718,6 +2740,8 @@ static int tcp_udp_destroy(struct ipcp_factory_data * data,
 {
         struct host_ipcp_instance_mapping * mapping;
         struct ipcp_instance_data         * pos, * next;
+        struct shim_tcp_udp_flow 	  * flow, * nflow;
+        struct reg_app_data	 	  * reg_app, *nreg_app;
 
         LOG_HBEAT;
 
@@ -2729,6 +2753,18 @@ static int tcp_udp_destroy(struct ipcp_factory_data * data,
         list_for_each_entry_safe(pos, next, &data->instances, list) {
                 if (pos->id == instance->data->id) {
                         LOG_DBG("Instance is %pK", pos);
+
+                        /* Destroy existing flows */
+                        list_for_each_entry_safe(flow, nflow,
+                        			 &pos->flows, list) {
+                        	flow_deallocate(pos, flow);
+                        }
+
+                        /* Unregister existing applications */
+                        list_for_each_entry_safe(reg_app, nreg_app,
+                        			 &pos->reg_apps, list) {
+                        	application_unregister(pos, reg_app);
+                        }
 
                         /* Unbind from the instances set */
                         spin_lock(&data->lock);

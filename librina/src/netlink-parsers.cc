@@ -3009,24 +3009,11 @@ parseDTCPConfigObject(nlattr *nested) {
 int putDTPConfigObject(nl_msg* netlinkMessage,
 		const DTPConfig& object) {
 
-        struct nlattr *initSeqNumPolicy, *rtimerInacPolicy,
-                *stimerInacPolicy, *dtpPolicySet;
+        struct nlattr *dtpPolicySet;
 
         if (object.is_dtcp_present()){
                 NLA_PUT_FLAG(netlinkMessage, DCA_ATTR_DTCP_PRESENT);
         }
-
-        if (!(initSeqNumPolicy = nla_nest_start(netlinkMessage,
-                        DCA_ATTR_INIT_SEQ_NUM_POLICY))) {
-                goto nla_put_failure;
-        }
-
-        if (putPolicyConfigObject(netlinkMessage,
-                        object.get_initial_seq_num_policy())< 0) {
-                goto nla_put_failure;
-        }
-
-        nla_nest_end(netlinkMessage, initSeqNumPolicy);
 
         if (!(dtpPolicySet = nla_nest_start(
                         netlinkMessage, DCA_ATTR_DTP_POLICY_SET))) {
@@ -3037,30 +3024,6 @@ int putDTPConfigObject(nl_msg* netlinkMessage,
                 goto nla_put_failure;
         }
         nla_nest_end(netlinkMessage, dtpPolicySet);
-
-        if (!(stimerInacPolicy = nla_nest_start(netlinkMessage,
-                        DCA_ATTR_SNDR_TIMER_INAC_POLICY))) {
-                goto nla_put_failure;
-        }
-
-        if (putPolicyConfigObject(netlinkMessage,
-                        object.get_sender_timer_inactivity_policy())< 0) {
-                goto nla_put_failure;
-        }
-
-        nla_nest_end(netlinkMessage, stimerInacPolicy);
-
-        if (!(rtimerInacPolicy = nla_nest_start(netlinkMessage,
-                        DCA_ATTR_RCVR_TIMER_INAC_POLICY))) {
-                goto nla_put_failure;
-        }
-
-        if (putPolicyConfigObject(netlinkMessage,
-                        object.get_rcvr_timer_inactivity_policy())< 0) {
-                goto nla_put_failure;
-        }
-
-        nla_nest_end(netlinkMessage, rtimerInacPolicy);
 
         NLA_PUT_U32(netlinkMessage, DCA_ATTR_SEQ_NUM_ROLLOVER,
                         object.get_seq_num_rollover_threshold());
@@ -3099,15 +3062,6 @@ parseDTPConfigObject(nlattr *nested) {
         attr_policy[DCA_ATTR_DTP_POLICY_SET].type = NLA_NESTED;
         attr_policy[DCA_ATTR_DTP_POLICY_SET].minlen = 0;
         attr_policy[DCA_ATTR_DTP_POLICY_SET].maxlen = 0;
-	attr_policy[DCA_ATTR_RCVR_TIMER_INAC_POLICY].type = NLA_NESTED;
-	attr_policy[DCA_ATTR_RCVR_TIMER_INAC_POLICY].minlen = 0;
-	attr_policy[DCA_ATTR_RCVR_TIMER_INAC_POLICY].maxlen = 0;
-	attr_policy[DCA_ATTR_SNDR_TIMER_INAC_POLICY].type = NLA_NESTED;
-	attr_policy[DCA_ATTR_SNDR_TIMER_INAC_POLICY].minlen = 0;
-	attr_policy[DCA_ATTR_SNDR_TIMER_INAC_POLICY].maxlen = 0;
-	attr_policy[DCA_ATTR_INIT_SEQ_NUM_POLICY].type = NLA_NESTED;
-	attr_policy[DCA_ATTR_INIT_SEQ_NUM_POLICY].minlen = 0;
-	attr_policy[DCA_ATTR_INIT_SEQ_NUM_POLICY].maxlen = 0;
 	attr_policy[DCA_ATTR_SEQ_NUM_ROLLOVER].type = NLA_U32;
 	attr_policy[DCA_ATTR_SEQ_NUM_ROLLOVER].minlen = 4;
 	attr_policy[DCA_ATTR_SEQ_NUM_ROLLOVER].maxlen = 4;
@@ -3137,9 +3091,6 @@ parseDTPConfigObject(nlattr *nested) {
 
 	DTPConfig * result =
 			new DTPConfig();
-	PolicyConfig * initSeqNumPolicy;
-        PolicyConfig * sTimerInacPolicy;
-        PolicyConfig * rTimerInacPolicy;
         PolicyConfig * dtpPolicySet;
 
 	if (attrs[DCA_ATTR_DTCP_PRESENT]) {
@@ -3159,42 +3110,6 @@ parseDTPConfigObject(nlattr *nested) {
                         delete dtpPolicySet;
                 }
         }
-
-	if (attrs[DCA_ATTR_SNDR_TIMER_INAC_POLICY]){
-		sTimerInacPolicy = parsePolicyConfigObject(
-				attrs[DCA_ATTR_SNDR_TIMER_INAC_POLICY]);
-		if (sTimerInacPolicy == 0) {
-			delete result;
-			return 0;
-		} else {
-			result->set_sender_timer_inactivity_policy(*sTimerInacPolicy);
-			delete sTimerInacPolicy;
-		}
-	}
-
-	if (attrs[DCA_ATTR_RCVR_TIMER_INAC_POLICY]){
-		rTimerInacPolicy = parsePolicyConfigObject(
-				attrs[DCA_ATTR_RCVR_TIMER_INAC_POLICY]);
-		if (rTimerInacPolicy == 0) {
-			delete result;
-			return 0;
-		} else {
-			result->set_rcvr_timer_inactivity_policy(*rTimerInacPolicy);
-			delete rTimerInacPolicy;
-		}
-	}
-
-	if (attrs[DCA_ATTR_INIT_SEQ_NUM_POLICY]){
-	        initSeqNumPolicy = parsePolicyConfigObject(
-	                        attrs[DCA_ATTR_INIT_SEQ_NUM_POLICY]);
-	        if (initSeqNumPolicy == 0) {
-	                delete result;
-	                return 0;
-	        } else {
-	                result->set_initial_seq_num_policy(*initSeqNumPolicy);
-	                delete initSeqNumPolicy;
-	        }
-	}
 
 	if (attrs[DCA_ATTR_SEQ_NUM_ROLLOVER]) {
 	        result->set_seq_num_rollover_threshold(

@@ -54,7 +54,6 @@ bool test_flow () {
 	dtp_config_to_encode.set_dtcp_present(true);
 	dtp_config_to_encode.set_seq_num_rollover_threshold(1234);
 	dtp_config_to_encode.set_initial_a_timer(14561);
-	dtp_config_to_encode.set_initial_seq_num_policy(rina::PolicyConfig("policy1", "23"));
 	dtp_config_to_encode.set_dtp_policy_set(rina::PolicyConfig("policy2", "26"));
 	dtcp_config_to_encode.set_dtcp_policy_set(rina::PolicyConfig("policy3", "27"));
 	dtcp_config_to_encode.set_rtx_control(true);
@@ -101,8 +100,6 @@ bool test_flow () {
 	if ( dtp_config_to_encode.get_seq_num_rollover_threshold() != dtp_config_decoded.get_seq_num_rollover_threshold())
 		return false;
 	if ( dtp_config_to_encode.get_initial_a_timer() != dtp_config_decoded.get_initial_a_timer())
-		return false;
-	if ( dtp_config_to_encode.get_initial_seq_num_policy() != dtp_config_decoded.get_initial_seq_num_policy())
 		return false;
 	if ( dtp_config_to_encode.get_dtp_policy_set() != dtp_config_decoded.get_dtp_policy_set())
 		return false;
@@ -373,7 +370,6 @@ bool test_qos_cube() {
 	cube.undetected_bit_error_rate_ = 2;
 	cube.dtp_config_.dtcp_present_ = true;
 	cube.dtp_config_.initial_a_timer_ = 23;
-	cube.dtp_config_.initial_seq_num_policy_.name_ = "test-policy";
 
 	encoder.encode(cube, encoded_obj);
 	encoder.decode(encoded_obj, recovered_obj);
@@ -431,11 +427,6 @@ bool test_qos_cube() {
 	}
 
 	if (cube.dtp_config_.initial_a_timer_ != recovered_obj.dtp_config_.initial_a_timer_) {
-		return false;
-	}
-
-	if (cube.dtp_config_.initial_seq_num_policy_.name_.compare(
-			recovered_obj.dtp_config_.initial_seq_num_policy_.name_) != 0) {
 		return false;
 	}
 
