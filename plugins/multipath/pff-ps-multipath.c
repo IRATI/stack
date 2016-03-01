@@ -486,7 +486,6 @@ static int mp_next_hop(struct pff_ps * ps,
         qos_id_t                qos_id;
         struct pft_entry *      tmp;
         unsigned long           flags;
-	struct pft_port_entry * pos;
 	struct pft_port_entry * port;
 
         priv = (struct pff_ps_priv *) ps->priv;
@@ -525,14 +524,17 @@ static int mp_next_hop(struct pff_ps * ps,
                 return -1;
         }
 
-	list_for_each_entry(pos, &tmp->ports, next) {
-	}
-
         /* 
          * Hash-threshold algorithm based on
          * CRC16 Linux kernel implementation
         */
         port = select_entry(tmp, pci);
+	if (!port) {
+                LOG_ERR("Could not select destination port for dest "
+                         "address %u and qos_id %d", destination, qos_id);
+                spin_unlock_irqrestore(&priv->lock, flags);
+                return -1;
+         }
 
         if (pfte_ports_copy(port, ports, count)) {
                 spin_unlock_irqrestore(&priv->lock, flags);

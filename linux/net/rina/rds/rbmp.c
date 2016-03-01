@@ -53,7 +53,7 @@ static struct rbmp * rbmp_create_gfp(gfp_t flags, size_t bits, ssize_t offset)
         tmp->offset = offset;
         bitmap_zero(tmp->bitmap, BITS_IN_BITMAP);
 
-        return NULL;
+        return tmp;
 }
 
 struct rbmp * rbmp_create(size_t bits, ssize_t offset)

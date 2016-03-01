@@ -684,38 +684,12 @@ void DTPConfig::set_dtp_policy_set(
 	dtp_policy_set_ = dtp_policy_set;
 }
 
-const PolicyConfig& DTPConfig::get_rcvr_timer_inactivity_policy() const {
-	return rcvr_timer_inactivity_policy_;
-}
-
-void DTPConfig::set_rcvr_timer_inactivity_policy(
-                const PolicyConfig& rcvr_timer_inactivity_policy) {
-	rcvr_timer_inactivity_policy_ = rcvr_timer_inactivity_policy;
-}
-
-const PolicyConfig& DTPConfig::get_sender_timer_inactivity_policy() const {
-	return sender_timer_inactivity_policy_;
-}
-
-void DTPConfig::set_sender_timer_inactivity_policy(
-                const PolicyConfig& sender_timer_inactivity_policy) {
-	sender_timer_inactivity_policy_ = sender_timer_inactivity_policy;
-}
-
 bool DTPConfig::is_dtcp_present() const {
 	return dtcp_present_;
 }
 
 void DTPConfig::set_dtcp_present(bool dtcp_present) {
 	dtcp_present_ = dtcp_present;
-}
-
-const PolicyConfig& DTPConfig::get_initial_seq_num_policy() const {
-	return initial_seq_num_policy_;
-}
-
-void DTPConfig::set_initial_seq_num_policy(const PolicyConfig& initial_seq_num_policy) {
-	initial_seq_num_policy_ = initial_seq_num_policy;
 }
 
 unsigned int DTPConfig::get_seq_num_rollover_threshold() const {
@@ -770,15 +744,9 @@ const std::string DTPConfig::toString() const {
         std::stringstream ss;
         ss<<"DTP Policy Set (name/version): "<<dtp_policy_set_.get_name();
         ss<<"/"<<dtp_policy_set_.get_version();
-        ss<<"Sder time inactivity policy (name/version): "<<sender_timer_inactivity_policy_.get_name();
-        ss<<"/"<<sender_timer_inactivity_policy_.get_version();
-        ss<<"; Rcvr time inactivity policy (name/version): "<<rcvr_timer_inactivity_policy_.get_name();
-        ss<<"/"<<rcvr_timer_inactivity_policy_.get_version()<<std::endl;
         ss<<"DTCP present: "<<dtcp_present_;
         ss<<"; Initial A-timer: "<<initial_a_timer_;
         ss<<"; Seq. num roll. threshold: "<<seq_num_rollover_threshold_;
-        ss<<"; Initial seq. num policy (name/version): ";
-        ss<<initial_seq_num_policy_.get_name()<<"/"<<initial_seq_num_policy_.get_version()<<std::endl;
         ss<<"; Partial delivery: "<<partial_delivery_;
         ss<<"; In order delivery: "<<in_order_delivery_;
         ss<<"; Max allowed SDU gap: "<<max_sdu_gap_<<std::endl;

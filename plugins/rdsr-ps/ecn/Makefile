@@ -31,6 +31,7 @@ clean:
 install:
 	$(MAKE) -C $(KDIR) M=$$PWD modules_install
 	cp ecn.manifest /lib/modules/$(KREL)/extra/
+	depmod -a
 
 uninstall:
 	@echo "This target has not been implemented yet"

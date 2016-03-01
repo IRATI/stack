@@ -157,9 +157,6 @@ enum dtcp_config_params_attrs_list {
 
 enum dtp_config_params_attrs_list {
         DTPCA_ATTR_DTCP_PRESENT = 1,
-        DTPCA_ATTR_RCVR_TIMER_INAC_POLICY,
-        DTPCA_ATTR_SNDR_TIMER_INAC_POLICY,
-        DTPCA_ATTR_INIT_SEQ_NUM_POLICY,
         DTPCA_ATTR_SEQ_NUM_ROLLOVER,
         DTPCA_ATTR_INIT_A_TIMER,
         DTPCA_ATTR_PARTIAL_DELIVERY,

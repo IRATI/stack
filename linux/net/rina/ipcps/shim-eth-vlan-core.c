@@ -2006,9 +2006,11 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                                 unbind_and_destroy_flow(pos, flow);
                         }
 
-			/* Restore default qdisc */
-                        if (qdisc_should_be_restored(pos->phy_dev))
-                        	restore_qdisc(pos->phy_dev);
+                        /* Restore default qdisc */
+                        if (pos->phy_dev) {
+                        	if (qdisc_should_be_restored(pos->phy_dev))
+                        		restore_qdisc(pos->phy_dev);
+                        }
 
                         /* Remove packet handler if there is one */
                         if (pos->eth_vlan_packet_type->dev)
