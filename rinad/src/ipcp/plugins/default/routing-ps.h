@@ -369,7 +369,7 @@ public:
 	bool addObject(const FlowStateObject& object);
 	void deprecateObject(const std::string& fqn, 
 			     unsigned int max_age);
-	void deprecateObjects(unsigned int address,
+	void deprecateObjects(unsigned int neigh_address, unsigned int address,
 			      unsigned int max_age);
 	FlowStateObject * getObject(const std::string& fqn);
 	void getModifiedFSOs(std::list<FlowStateObject *>& result);
@@ -449,8 +449,10 @@ public:
 		       int avoid_port);
 	/// Set a FSO ready for removal
 	void deprecateObject(std::string fqn);
-	void deprecateObjectsNeighbor(unsigned int address);
-	std::map <int, std::list<FlowStateObject*> > prepareForPropagation(const std::list<rina::FlowInformation>& flows);
+	void deprecateObjectsNeighbor(unsigned int neigh_address,
+	                              unsigned int address);
+	std::map <int, std::list<FlowStateObject*> > prepareForPropagation
+	        (const std::list<rina::FlowInformation>& flows);
 	void incrementAge();
 	void updateObjects(const std::list<FlowStateObject>& newObjects,
 			   unsigned int avoidPort,
