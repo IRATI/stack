@@ -1534,11 +1534,17 @@ enum IpcmFwdCDAPMsgMessageAttributes {
 
 #define IFCM_ATTR_MAX (__IFCM_ATTR_MAX -1)
 
-int putIpcmFwdCDAPMsgMessageObject(nl_msg* netlinkMessage,
-		const IpcmFwdCDAPMsgMessage& object);
+int putIpcmFwdCDAPRequestMessageObject(nl_msg* netlinkMessage,
+		const IpcmFwdCDAPRequestMessage& object);
 
-IpcmFwdCDAPMsgMessage * parseIpcmFwdCDAPMsgMessage(
+IpcmFwdCDAPRequestMessage * parseIpcmFwdCDAPRequestMessage(
 		nlmsghdr *hdr);
+
+int putIpcmFwdCDAPResponseMessageObject(nl_msg* netlinkMessage,
+                const IpcmFwdCDAPResponseMessage& object);
+
+IpcmFwdCDAPResponseMessage * parseIpcmFwdCDAPResponseMessage(
+                nlmsghdr *hdr);
 
 }
 

@@ -918,7 +918,9 @@ int IPCMConsole::read_ipcp_ribobj(std::vector<std::string>& args)
 		return CMDRETCONT;
 	}
 
-	if (IPCManager->read_ipcp_ribobj(this,
+	// CAREFUL, DELEGATION OBJECT SET TO NULL, this function is only
+	// for testing, return result is not being processed.
+	if (IPCManager->delegate_ipcp_ribobj(NULL,
 					 &promise,
 					 ipcp_id,
 					 args[2],

@@ -561,8 +561,8 @@ void IPCProcessImpl::processPluginLoadRequestEvent(
         return;
 }
 
-void IPCProcessImpl::processFwdCDAPMsgEvent(
-                        const rina::FwdCDAPMsgEvent& event)
+void IPCProcessImpl::processFwdCDAPMsgRequestEvent(
+                        const rina::FwdCDAPMsgRequestEvent& event)
 {
 	if (!event.sermsg.message_) {
 		LOG_IPCP_ERR("No CDAP message to be forwarded");
@@ -756,8 +756,8 @@ void IPCProcessImpl::event_loop(void){
 				break;
 			case rina::IPC_PROCESS_FWD_CDAP_MSG:
 				{
-				DOWNCAST_DECL(e, rina::FwdCDAPMsgEvent, event);
-				processFwdCDAPMsgEvent(*event);
+				DOWNCAST_DECL(e, rina::FwdCDAPMsgRequestEvent, event);
+				processFwdCDAPMsgRequestEvent(*event);
 				}
 				break;
 

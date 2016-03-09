@@ -208,7 +208,6 @@ void NetlinkManager::sendMessage(BaseNetlinkMessage * message) {
 
 void NetlinkManager::sendMessageOfMaxSize(BaseNetlinkMessage * message, size_t maxSize) {
         struct nl_msg* netlinkMessage;
-
         netlinkMessage = nlmsg_alloc_size(maxSize);
         if (!netlinkMessage) {
                 throw NetlinkException("Error allocating Netlink Message structure");

@@ -483,7 +483,7 @@ public:
 				   std::list<rina::PsInfo>& result);
 
         //
-        // Just used for testing support for IPCP RIB delegation
+        // Function that sends a delegated obj to an IPCP
         //
 	// @param promise Promise object containing the future result of the
 	// operation. The promise shall always be accessible until the
@@ -495,7 +495,7 @@ public:
         //
         // @ret IPCM_PENDING if the NL message could be sent to the IPCP,
         // IPCM_FAILURE otherwise
-	ipcm_res_t read_ipcp_ribobj(Addon* callee,
+	ipcm_res_t delegate_ipcp_ribobj(rina::rib::DelegationObj* obj,
 				    Promise* promise,
 			      	    const unsigned short ipcp_id,
 			      	    const std::string& object_class,
@@ -544,6 +544,25 @@ public:
 	inline void stop(void){
 		req_to_stop = true;
 	}
+
+	/// returns the forwarded object sent with invoke_id and
+	/// removes it from the map
+	/// @param invoke_id
+	/// @return rina::rib::DelegationObj*
+        rina::rib::DelegationObj* get_forwarded_object(int invoke_id);
+
+        //Generator of opaque identifiers
+        rina::ConsecutiveUnsignedIntegerGenerator __tid_gen;
+
+        //The DIF template manager
+        DIFTemplateManager * dif_template_manager;
+
+        //The DIF Allocator
+        DIFAllocator * dif_allocator;
+
+        //Catalog of policies
+        Catalog catalog;
+
 
 protected:
 
@@ -825,19 +844,6 @@ protected:
 	// RINA configuration internal state
 	rinad::RINAConfiguration config;
 
-public:
-	//Generator of opaque identifiers
-	rina::ConsecutiveUnsignedIntegerGenerator __tid_gen;
-
-	//The DIF template manager
-	DIFTemplateManager * dif_template_manager;
-
-	//The DIF Allocator
-	DIFAllocator * dif_allocator;
-
-	//Catalog of policies
-	Catalog catalog;
-
 private:
 	//Singleton
 	IPCManager_();
@@ -863,6 +869,11 @@ private:
 			const unsigned short ipcp_id, IPCMIPCProcess*& ipcp);
 	void assign_to_dif(Addon* callee, Promise *promise,
 			rina::DIFInformation dif_info, IPCMIPCProcess* ipcp);
+	// Obtain and reserva an invoke_id
+	int reserve_invoke_id(rina::rib::DelegationObj* obj);
+
+	rina::Lockable* forwarded_calls_lock;
+	std::map<int, rina::rib::DelegationObj*> forwarded_calls;
 };
 
 
