@@ -48,8 +48,11 @@ IAuthPolicySet::IAuthPolicySet(const std::string& type_)
 
 //Class AuthNonePolicySet
 cdap_rib::auth_policy_t AuthNonePolicySet::get_auth_policy(int session_id,
+							   const cdap_rib::ep_info_t& peer_ap,
 					                   const AuthSDUProtectionProfile& profile)
 {
+	(void) peer_ap;
+
 	if (profile.authPolicy.name_ != type) {
 		LOG_ERR("Wrong policy name: %s", profile.authPolicy.name_.c_str());
 		throw Exception();
@@ -69,8 +72,11 @@ cdap_rib::auth_policy_t AuthNonePolicySet::get_auth_policy(int session_id,
 
 rina::IAuthPolicySet::AuthStatus AuthNonePolicySet::initiate_authentication(const cdap_rib::auth_policy_t& auth_policy,
 									    const AuthSDUProtectionProfile& profile,
+									    const cdap_rib::ep_info_t& peer_ap,
 								      	    int session_id)
 {
+	(void) peer_ap;
+
 	if (auth_policy.name != type) {
 		LOG_ERR("Wrong policy name: %s", auth_policy.name.c_str());
 		return rina::IAuthPolicySet::FAILED;
@@ -152,8 +158,11 @@ AuthPasswordPolicySet::AuthPasswordPolicySet(rib::RIBDaemonProxy * ribd, ISecuri
 // will have to demonstrate that it knows the password by encrypting
 // a random challenge with a password string
 cdap_rib::auth_policy_t AuthPasswordPolicySet::get_auth_policy(int session_id,
+							       const cdap_rib::ep_info_t& peer_ap,
 						               const AuthSDUProtectionProfile& profile)
 {
+	(void) peer_ap;
+
 	if (profile.authPolicy.name_ != type) {
 		LOG_ERR("Wrong policy name: %s", profile.authPolicy.name_.c_str());
 		throw Exception();
@@ -227,8 +236,11 @@ std::string AuthPasswordPolicySet::decrypt_challenge(const std::string& encrypte
 
 rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(const cdap_rib::auth_policy_t& auth_policy,
 										const AuthSDUProtectionProfile& profile,
+										const cdap_rib::ep_info_t& peer_ap,
 								      	        int session_id)
 {
+	(void) peer_ap;
+
 	if (auth_policy.name != type) {
 		LOG_ERR("Wrong policy name: %s", auth_policy.name.c_str());
 		return rina::IAuthPolicySet::FAILED;
@@ -538,6 +550,9 @@ const std::string SSH2SecurityContext::MAC_ALGORITHM = "macAlg";
 const std::string SSH2SecurityContext::COMPRESSION_ALGORITHM = "compressAlg";
 const std::string SSH2SecurityContext::KEYSTORE_PATH = "keystore";
 const std::string SSH2SecurityContext::KEYSTORE_PASSWORD = "keystorePass";
+const std::string SSH2SecurityContext::KEY = "key";
+const std::string SSH2SecurityContext::PUBLIC_KEY = "public_key";
+const std::string SSH2SecurityContext::KNOWN_IPCPS = "known_ipcps";
 
 SSH2SecurityContext::~SSH2SecurityContext()
 {
@@ -555,6 +570,11 @@ SSH2SecurityContext::~SSH2SecurityContext()
 		RSA_free(auth_keypair);
 		auth_keypair = NULL;
 	}
+
+	if (auth_peer_pub_key) {
+		RSA_free(auth_peer_pub_key);
+		auth_peer_pub_key = NULL;
+	}
 }
 
 CryptoState SSH2SecurityContext::get_crypto_state(bool enable_crypto_tx,
@@ -570,6 +590,7 @@ CryptoState SSH2SecurityContext::get_crypto_state(bool enable_crypto_tx,
 }
 
 SSH2SecurityContext::SSH2SecurityContext(int session_id,
+		 	   	         const std::string & peer_app_name,
 				   	 const AuthSDUProtectionProfile& profile)
 		: ISecurityContext(session_id)
 {
@@ -586,16 +607,19 @@ SSH2SecurityContext::SSH2SecurityContext(int session_id,
 	ttlPolicy = profile.ttlPolicy;
 	encrypt_policy_config = profile.encryptPolicy;
 	con.port_id = session_id;
+	peer_ap_name = peer_app_name;
 
 	dh_peer_pub_key = NULL;
 	dh_state = NULL;
 	auth_keypair = NULL;
+	auth_peer_pub_key = NULL;
 	timer_task = NULL;
 
 	state = BEGIN;
 }
 
 SSH2SecurityContext::SSH2SecurityContext(int session_id,
+					 const std::string& peer_app_name,
 					 const AuthSDUProtectionProfile& profile,
 					 SSH2AuthOptions * options)
 		: ISecurityContext(session_id)
@@ -638,10 +662,12 @@ SSH2SecurityContext::SSH2SecurityContext(int session_id,
 	ttlPolicy = profile.ttlPolicy;
 	encrypt_policy_config = profile.encryptPolicy;
 	con.port_id = session_id;
+	peer_ap_name = peer_app_name;
 
 	dh_peer_pub_key = NULL;
 	dh_state = NULL;
 	auth_keypair = NULL;
+	auth_peer_pub_key = NULL;
 	timer_task = NULL;
 
 	state = BEGIN;
@@ -749,6 +775,7 @@ unsigned char * AuthSSH2PolicySet::BN_to_binary(BIGNUM *b, int *len)
 }
 
 cdap_rib::auth_policy_t AuthSSH2PolicySet::get_auth_policy(int session_id,
+							   const cdap_rib::ep_info_t& peer_ap,
 					            	   const AuthSDUProtectionProfile& profile)
 {
 	if (profile.authPolicy.name_ != type) {
@@ -770,7 +797,9 @@ cdap_rib::auth_policy_t AuthSSH2PolicySet::get_auth_policy(int session_id,
 	auth_policy.name = IAuthPolicySet::AUTH_SSH2;
 	auth_policy.versions.push_back(profile.authPolicy.version_);
 
-	SSH2SecurityContext * sc = new SSH2SecurityContext(session_id, profile);
+	SSH2SecurityContext * sc = new SSH2SecurityContext(session_id,
+							   peer_ap.ap_name_,
+							   profile);
 
 	//Load authentication keys from the keystore
 	if (load_authentication_keys(sc) != 0) {
@@ -811,21 +840,45 @@ cdap_rib::auth_policy_t AuthSSH2PolicySet::get_auth_policy(int session_id,
 int AuthSSH2PolicySet::load_authentication_keys(SSH2SecurityContext * sc)
 {
 	BIO * keystore;
+	std::stringstream ss;
 
-	keystore =  BIO_new_file(sc->keystore_path.c_str(), "r");
+	ss << sc->keystore_path << "/" << SSH2SecurityContext::KEY;
+	keystore =  BIO_new_file(ss.str().c_str(), "r");
 	if (!keystore) {
 		LOG_ERR("Problems opening keystore file at: %s",
-			sc->keystore_path.c_str());
+			ss.str().c_str());
 		return -1;
 	}
 
 	//TODO fix problems with reading private keys from encrypted repos
 	//we should use sc->keystore_pass.c_str() as the last argument
 	sc->auth_keypair = PEM_read_bio_RSAPrivateKey(keystore, NULL, 0, NULL);
+	ss.str(std::string());
+	ss.clear();
 	BIO_free(keystore);
 
 	if (!sc->auth_keypair) {
 		LOG_ERR("Problems reading RSA key pair from keystore: %s",
+			ERR_error_string(ERR_get_error(), NULL));
+		return -1;
+	}
+
+	//Read peer public key from keystore
+	ss << sc->keystore_path << "/" << sc->peer_ap_name;
+	keystore =  BIO_new_file(ss.str().c_str(), "r");
+	if (!keystore) {
+		LOG_ERR("Problems opening keystore file at: %s",
+			ss.str().c_str());
+		return -1;
+	}
+
+	//TODO fix problems with reading private keys from encrypted repos
+	//we should use sc->keystore_pass.c_str() as the last argument
+	sc->auth_peer_pub_key = PEM_read_bio_RSAPublicKey(keystore, NULL, 0, NULL);
+	BIO_free(keystore);
+
+	if (!sc->auth_peer_pub_key) {
+		LOG_ERR("Problems reading RSA public key from keystore: %s",
 			ERR_error_string(ERR_get_error(), NULL));
 		return -1;
 	}
@@ -880,6 +933,7 @@ int AuthSSH2PolicySet::edh_init_keys(SSH2SecurityContext * sc)
 
 IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(const cdap_rib::auth_policy_t& auth_policy,
 								      const AuthSDUProtectionProfile& profile,
+								      const cdap_rib::ep_info_t& peer_ap,
 								      int session_id)
 {
 	if (auth_policy.name != type) {
@@ -906,7 +960,10 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(const cdap
 
 	SSH2SecurityContext * sc;
 	try {
-		sc = new SSH2SecurityContext(session_id, profile, &options);
+		sc = new SSH2SecurityContext(session_id,
+					     peer_ap.ap_name_,
+					     profile,
+					     &options);
 	} catch (Exception &e){
 		return IAuthPolicySet::FAILED;
 	}
@@ -1244,7 +1301,7 @@ int AuthSSH2PolicySet::encrypt_chall_with_pub_key(SSH2SecurityContext * sc,
 	encrypted_chall.length = RSA_public_encrypt(sc->challenge.length,
 						   sc->challenge.data,
 						   encrypted_chall.data,
-						   sc->auth_keypair,
+						   sc->auth_peer_pub_key,
 						   RSA_PKCS1_OAEP_PADDING);
 
 	if (encrypted_chall.length == -1) {

@@ -18,7 +18,7 @@ do
         rx_pdus=$(head -n 1 "/sys/rina/ipcps/$1/rmt/n1_ports/$2/rx_pdus")
 	tx_pdus=$(head -n 1 "/sys/rina/ipcps/$1/rmt/n1_ports/$2/tx_pdus")
 	q_pdus=$(head -n 1 "/sys/rina/ipcps/$1/rmt/n1_ports/$2/queued_pdus")
-	drop_pdus=$(head -n 1 "/sys/rina/ipcps/$1/rmt/n1_ports/$2/dropped_pdus")
+	drop_pdus=$(head -n 1 "/sys/rina/ipcps/$1/rmt/n1_ports/$2/drop_pdus")
 
 	echo "$time  $rx_pdus  $tx_pdus  $q_pdus  $drop_pdus" >> $3
         counter=$((counter+1))
