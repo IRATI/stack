@@ -874,7 +874,7 @@ int AuthSSH2PolicySet::load_authentication_keys(SSH2SecurityContext * sc)
 
 	//TODO fix problems with reading private keys from encrypted repos
 	//we should use sc->keystore_pass.c_str() as the last argument
-	sc->auth_peer_pub_key = PEM_read_bio_RSAPublicKey(keystore, NULL, 0, NULL);
+	sc->auth_peer_pub_key = PEM_read_bio_RSA_PUBKEY(keystore, NULL, 0, NULL);
 	BIO_free(keystore);
 
 	if (!sc->auth_peer_pub_key) {
@@ -895,7 +895,7 @@ int AuthSSH2PolicySet::load_authentication_keys(SSH2SecurityContext * sc)
 	//maximum length of the data to be encrypted must be less than RSA_size(rsa) - 41
 	sc->challenge.length = rsa_size - 42;
 
-	LOG_DBG("Read RSA key pair from keystore");
+	LOG_DBG("Read RSA keys from keystore");
 	return 0;
 }
 
