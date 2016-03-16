@@ -23,6 +23,7 @@ message authOptsTLSHandshake_t {
 	repeated string cipher_suites = 3;		// Supported cipher suites, sorted by preference
 	repeated string compress_methods = 4;		// Supported compression methods, sorted by preference
 	optional uint32 ap_con_id = 5;
+	repeated string encrypt_algs = 6;		// Supported encryption algorithms
 }
 
 message serverHelloTLSHandshake_t {
@@ -32,4 +33,20 @@ message serverHelloTLSHandshake_t {
 	optional string cipher_suite = 4;		// Cipher suite chosen for the connection
 	optional string compress_method = 5;		// Compression method chosen for the connection
 	optional uint32 ap_con_id = 6;			// Application connection id
+}
+
+message CertificateTLSHandshake_t {
+	optional bytes certificate_chain = 1;			// The encoded certificate chain
+}
+
+message clientKeyExchangeTLSHandshake_t {
+	optional bytes enc_pmaster_secret = 1;			// The encrypted pre-master secret
+}	
+
+message clientCertificateVerifyTLSHandshake_t {		// The encrypted hashed messages 
+	optional bytes enc_verify_hash = 1;
+}
+
+message FinishMessageTLSHandshake_t {
+	optional bytes opaque_verify_data = 1;			//opaque verify message protected with new algorithm
 }

@@ -54,6 +54,9 @@ public:
 
 	/// Supported compression methods, sorted by order of preference
 	std::list<std::string> compress_methods;
+
+	/// Supported encryption algorithms
+	std::list<std::string> encrypt_algs;
 };
 
 ///Captures all data of the TLS HAndshake security context
@@ -74,11 +77,27 @@ public:
 	static const std::string KEYSTORE_PATH;
 	static const std::string KEYSTORE_PASSWORD;
 
+
+	static const std::string CERTIFICATE_PATH;
+	static const std::string MY_CERTIFICATE;
+	static const std::string PRIV_KEY_PATH;
+
+	static const std::string ENCRYPTION_ALGORITHM;
+
+
         enum State {
         	BEGIN,
-                WAIT_SERVER_HELLO,
-                WAIT_SERVER_CERTIFICATE,
-                DONE
+                WAIT_SERVER_HELLO_and_CERTIFICATE,
+		WAIT_CLIENT_CERTIFICATE_and_KEYS, //and change cipher spec and verify, name could be better
+		CLIENT_SENDING_DATA,
+		SERVER_SENDING_CIPHER,
+		WAIT_SERVER_CIPHER,
+		WAIT_SERVER_FINISH,
+		SERVER_SENDING_FINISH,
+		REQUESTED_ENABLE_ENCRYPTION_SERVER,
+		REQUESTED_ENABLE_DECRYPTION_SERVER,
+		REQUESTED_ENABLE_ENCRYPTION_DECRYPTION_CLIENT,
+		DONE
         };
 
         State state;
@@ -90,9 +109,38 @@ public:
 	std::string cipher_suite;
 	std::string compress_method;
 
+	std::string encrypt_alg;
+
 	/// Authentication Keystore path and password
 	std::string keystore_path;
 	std::string keystore_password;
+
+	//Authentication Certificate and path
+	std::string certificate_path;
+	std::string priv_key_path;
+
+	//Master secret
+	UcharArray master_secret;
+
+	//Hash generated in finish message, 12Bytes;
+	UcharArray verify_data;
+
+	//Hash of TLS handshake messages (5mess*32length);
+	UcharArray verify_hash;
+
+	//Encryption keys for kernel
+	UcharArray encrypt_key;
+
+	//Certificate presence
+	bool cert_received;
+	bool hello_received;
+
+	//Presence of received client messages
+	bool client_cert_received;
+	bool client_keys_received;
+	bool client_cert_verify_received;
+	bool client_cipher_received;
+
 
 	/// Encryption policy configuration
 	PolicyConfig encrypt_policy_config;
@@ -103,6 +151,9 @@ public:
 
 	// Owned by a timer
 	CancelAuthTimerTask * timer_task;
+
+	X509 * cert;
+	X509 *other_cert;
 
 private:
 	//return -1 if options are valid, 0 otherwise
@@ -118,14 +169,24 @@ public:
 	static const std::string EDH_EXCHANGE;
 	static const int MIN_RSA_KEY_PAIR_LENGTH;
 	static const std::string SERVER_HELLO;
+	static const std::string SERVER_CERTIFICATE;
+	static const std::string CLIENT_CERTIFICATE;
+	static const std::string CLIENT_KEY_EXCHANGE;
+	static const std::string CLIENT_CERTIFICATE_VERIFY;
+	static const std::string CLIENT_CHANGE_CIPHER_SPEC;
+	static const std::string SERVER_CHANGE_CIPHER_SPEC;
+	static const std::string CLIENT_FINISH;
+	static const std::string SERVER_FINISH;
 
 	AuthTLSHandPolicySet(rib::RIBDaemonProxy * ribd,
 			     ISecurityManager * sm);
 	virtual ~AuthTLSHandPolicySet();
 	cdap_rib::auth_policy_t get_auth_policy(int session_id,
+						const cdap_rib::ep_info_t& peer_ap,
 				   	        const AuthSDUProtectionProfile& profile);
 	AuthStatus initiate_authentication(const cdap_rib::auth_policy_t& auth_policy,
 				           const AuthSDUProtectionProfile& profile,
+					   const cdap_rib::ep_info_t& peer_ap,
 					   int session_id);
 	int process_incoming_message(const cdap::CDAPMessage& message, int session_id);
 	int set_policy_set_param(const std::string& name,
@@ -136,9 +197,43 @@ public:
 	AuthStatus crypto_state_updated(int port_id);
 
 private:
-	int process_server_hello_message(const cdap::CDAPMessage& message,
+	AuthStatus process_server_hello_message(const cdap::CDAPMessage& message,
 					 int session_id);
+	AuthStatus process_server_certificate_message(const cdap::CDAPMessage& message,
+						 int session_id);
+	AuthStatus process_client_certificate_message(const cdap::CDAPMessage& message,
+							 int session_id);
+	AuthStatus process_client_key_exchange_message(const cdap::CDAPMessage& message,
+								 int session_id);
+	AuthStatus process_client_certificate_verify_message(const cdap::CDAPMessage& message,
+									 int session_id);
+	AuthStatus process_client_change_cipher_spec_message(const cdap::CDAPMessage& message,
+			int session_id);
+	AuthStatus process_server_change_cipher_spec_message (const cdap::CDAPMessage& message,
+			int session_id);
+	AuthStatus process_client_finish_message(const cdap::CDAPMessage& message,
+			int session_id);
+	AuthStatus process_server_finish_message(const cdap::CDAPMessage& message,
+			int session_id);
+	AuthStatus send_client_messages(TLSHandSecurityContext * sc);
+	AuthStatus send_client_certificate(TLSHandSecurityContext * sc);
+	AuthStatus send_client_key_exchange(TLSHandSecurityContext * sc);
+	AuthStatus send_client_certificate_verify(TLSHandSecurityContext * sc);
+	AuthStatus send_client_change_cipher_spec(TLSHandSecurityContext * sc);
+	AuthStatus send_server_change_cipher_spec(TLSHandSecurityContext * sc);
+	AuthStatus send_client_finish(TLSHandSecurityContext * sc);
+
 	int load_credentials(TLSHandSecurityContext * sc);
+	int prf(UcharArray& generated_hash, UcharArray& secret, const std::string& slabel, UcharArray& pre_seed);
+
+	//Load the authentication certificate
+	int load_authentication_certificate(TLSHandSecurityContext * sc);
+
+	//encryption/decryption
+	int generate_encryption_key(TLSHandSecurityContext * sc);
+	AuthStatus decryption_enabled_server(TLSHandSecurityContext * sc);
+	AuthStatus encryption_decryption_enabled_client(TLSHandSecurityContext * sc);
+	AuthStatus encryption_enabled_server (TLSHandSecurityContext * sc);
 
 	rib::RIBDaemonProxy * rib_daemon;
 	ISecurityManager * sec_man;
