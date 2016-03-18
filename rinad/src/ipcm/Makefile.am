@@ -13,7 +13,8 @@ CLEANFILES   =
 CPPFLAGS_EXTRA =					\
 	-DDEFAULT_BINDIR=\"$(bindir)\"			\
 	-DDEFAULT_LIBDIR=\"$(libdir)\"			\
-	-DDEFAULT_LOGDIR=\"$(localstatedir)/log\"
+	-DDEFAULT_LOGDIR=\"$(localstatedir)/log\"	\
+	-DDEFAULT_RUNDIR=\"$(runstatedir)\"
 
 #
 #IPCM
@@ -92,3 +93,9 @@ CLEANFILES += rinad-ipcm.pc
 
 pkgconfigdir   = $(libdir)/pkgconfig
 pkgconfig_DATA = rinad-ipcm.pc
+
+# --runstatedir is new to Autoconf 2.70
+runstatedir ?= $(localstatedir)/run
+
+install-data-local:
+	$(MKDIR_P) $(runstatedir)

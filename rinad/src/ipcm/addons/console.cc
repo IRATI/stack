@@ -22,12 +22,14 @@
  */
 
 #include <cstdlib>
+#include <cstddef>
 #include <iostream>
 #include <map>
 #include <vector>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/types.h>
-#include <arpa/inet.h>
+#include <sys/un.h>
 #include <unistd.h>
 #include <cstring>
 #include <cerrno>
@@ -76,9 +78,9 @@ console_function(void *opaque)
 	return NULL;
 }
 
-IPCMConsole::IPCMConsole(const unsigned int port_) :
+IPCMConsole::IPCMConsole(const std::string& socket_path_) :
 		Addon(IPCMConsole::NAME),
-		port(port_)
+		socket_path(socket_path_)
 {
 	commands_map["help"] = ConsoleCmdInfo(&IPCMConsole::help,
 				"USAGE: help [<command>]");
@@ -166,57 +168,58 @@ IPCMConsole::~IPCMConsole() throw()
 	void *status;
 	this->keep_on_running = false;
 	worker->join(&status);
+	if (socket_path[0] != '@') {
+		cleanup_filesystem_socket();
+	}
 	delete worker;
 }
 
-//TODO use unix sockets!
+bool
+IPCMConsole::cleanup_filesystem_socket()
+{
+	struct stat stat;
+	const char *path = socket_path.c_str();
+	// Ignore if it's not a socket to avoid data loss;
+	// bind() will fail and we'll output a log there.
+	return lstat(path, &stat) || !S_ISSOCK(stat.st_mode) || !unlink(path);
+}
+
 int
 IPCMConsole::init()
 {
-	ostringstream ss;
-	struct sockaddr_in server_address;
+	struct sockaddr_un sa_un;
 	int sfd = -1;
-	int optval = 1;
-	int ret;
+	unsigned len = socket_path.size();
 
-	memset(&server_address, 0, sizeof(server_address));
-	server_address.sin_family = AF_INET;
-	inet_pton(AF_INET, "127.0.0.1", &server_address.sin_addr);
-	server_address.sin_port = htons(port);
+	if (len >= sizeof sa_un.sun_path) {
+		LOG_ERR("AF_UNIX path too long");
+		return -1;
+	}
 
+	socket_path.copy(sa_un.sun_path, len);
+	if (socket_path[0] == '@') {
+		sa_un.sun_path[0] = 0; // abstract unix socket
+	} else if (!cleanup_filesystem_socket()) {
+		LOG_ERR("Error [%i] unlinking %s", errno, socket_path.c_str());
+		return -1;
+	}
+	len += offsetof(struct sockaddr_un, sun_path);
+
+	sa_un.sun_family = AF_UNIX;
 	try {
-		sfd = socket(AF_INET, SOCK_STREAM, 0);
+		sfd = socket(sa_un.sun_family, SOCK_STREAM, 0);
 		if (sfd < 0) {
-			ss  << " Error [" << errno <<
-				"] calling socket() " << endl;
-			throw rina::Exception();
+			throw rina::Exception("socket");
 		}
-
-		ret = setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR,
-				&optval, sizeof(optval));
-		if (ret < 0) {
-			ss  << " Error [" << errno <<
-				"] calling setsockopt(SOL_SOCKET, "
-				"SO_REUSEADDR, 1)" << endl;
-			FLUSH_LOG(WARN, ss);
+		if (bind(sfd, reinterpret_cast<struct sockaddr *>(&sa_un),
+				len)) {
+			throw rina::Exception("bind");
 		}
-
-		ret = bind(sfd, reinterpret_cast<struct sockaddr *>(&server_address),
-				sizeof(server_address));
-		if (ret < 0) {
-			ss  << " Error [" << errno <<
-				"] calling bind() " << endl;
-			throw rina::Exception();
-		}
-
-		ret = listen(sfd, 5);
-		if (ret < 0) {
-			ss  << " Error [" << errno <<
-				"] calling listen() " << endl;
-			throw rina::Exception();
+		if (listen(sfd, 5)) {
+			throw rina::Exception("listen");
 		}
 	} catch (rina::Exception& e) {
-		FLUSH_LOG(ERR, ss);
+		LOG_ERR("Error [%i] calling %s()", errno, e.what());
 		if (sfd >= 0) {
 			close(sfd);
 			sfd = -1;
@@ -254,8 +257,8 @@ int IPCMConsole::read_with_timeout(int cfd, void *buf, size_t count)
 }
 
 
-int IPCMConsole::accept_with_timeout(int sfd, struct
-	sockaddr_in client_address, socklen_t address_len)
+int IPCMConsole::accept_with_timeout(int sfd, struct sockaddr *addr,
+				     socklen_t *addrlen)
 {
 	const char *fname;
 	while(this->keep_on_running) {
@@ -266,8 +269,7 @@ int IPCMConsole::accept_with_timeout(int sfd, struct
 
 		int res = select(sfd+1, &readset, NULL, NULL, &timeout);
 		if (res > 0) {
-			res = accept(sfd, reinterpret_cast<struct sockaddr *>(
-				&client_address), &address_len);
+			res = accept(sfd, addr, addrlen);
 			if (res >= 0) {
 				return res;
 			}
@@ -295,14 +297,12 @@ void IPCMConsole::body()
 
 	while (this->keep_on_running) {
 		int cfd;
-		struct sockaddr_in client_address;
-		socklen_t address_len = sizeof(client_address);
 		char *cmdbuf, *p, *q;
 		unsigned tail, size;
 		int cmdret;
 		int n;
 
-		cfd = accept_with_timeout(sfd, client_address, address_len);
+		cfd = accept_with_timeout(sfd, NULL, NULL);
 		if (cfd < 0) {
 			break;
 		}

@@ -417,10 +417,10 @@ void parse_local_conf(const Json::Value &         root,
 		return;
 	}
 
-	local.consolePort = local_conf.get("consolePort",
-					   local.consolePort).asInt();
-	if (local.consolePort == 0) {
-		local.consolePort = 32766;
+	local.consoleSocket = local_conf.get("consoleSocket",
+					   local.consoleSocket).asString();
+	if (local.consoleSocket.empty()) {
+		local.consoleSocket = DEFAULT_RUNDIR "/ipcm-console.sock";
 	}
 
 	local.installationPath = local_conf.get("installationPath",
