@@ -350,10 +350,16 @@ const std::string OtherObj::class_ = "OtherObj";
 static int deleg_start_operations = 0;
 //Delegation type
 class MyDelegationObj : public DelegationObj{
-
 public:
-	MyDelegationObj(){}
+	MyDelegationObj(): DelegationObj(MyDelegationObj::class_){};
 	virtual ~MyDelegationObj(){};
+
+        void forward_object(const rina::cdap_rib::con_handle_t& con,
+                                    const rina::cdap_rib::obj_info_t &obj,
+                                    const rina::cdap_rib::flags_t &flags,
+                                    const rina::cdap_rib::filt_info_t &filt,
+                                    int invoke_id) {};
+        void forwarded_object_response(const cdap_rib::res_info_t &res) {};
 
 	const std::string& get_class() const{
 		return class_;

@@ -1366,7 +1366,7 @@ void EnrollerStateMachine::enrollmentCompleted()
 
 //Class EnrollmentRIBObject
 const std::string EnrollmentRIBObject::class_name = "Enrollment";
-const std::string EnrollmentRIBObject::object_name = "/difmanagement/enrollment";
+const std::string EnrollmentRIBObject::object_name = "/difManagement/enrollment";
 
 EnrollmentRIBObject::EnrollmentRIBObject(IPCProcess * ipc_process) :
 	IPCPRIBObj(ipc_process, class_name)
@@ -1517,7 +1517,7 @@ void EnrollmentTaskPs::populate_rib()
 		rib_daemon->addObjRIB(OperationalStatusRIBObject::object_name, &tmp);
 
 		tmp = new rina::rib::RIBObj("Naming");
-		rib_daemon->addObjRIB("/difmanagement/naming", &tmp);
+		rib_daemon->addObjRIB("/difManagement/naming", &tmp);
 
 		tmp = new AddressRIBObject(ipcp);
 		rib_daemon->addObjRIB(AddressRIBObject::object_name, &tmp);

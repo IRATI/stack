@@ -716,6 +716,16 @@ public:
 	void pluginLoadResponse(const PluginLoadRequestEvent& event,
                                 int result);
 
+        /**
+         * Forward to the IPC Manager a CDAP request message
+         * @param event Seqnum of the event that triggered the operation
+         * @param The serialized CDAP message to forward
+         * @throws FwdCDAPMsgException
+         */
+        void forwardCDAPRequest(unsigned sequenceNumber,
+                                 const ser_obj_t& sermsg,
+                                 int result);
+
 	/**
 	 * Forward to the IPC Manager a CDAP response message
 	 * @param event Seqnum of the event that triggered the operation

@@ -562,6 +562,39 @@ EXTRA_DIST +=                                   \
 protoSOURCES += QoSSpecification.pb.cc QoSSpecification.pb.h
 
 
+RIBObjectData.stamp: RIBObjectData.proto
+	rm -f RIBObjectData.tmp
+	touch RIBObjectData.tmp
+	$(PROTOC) -I$(builddir) -I$(srcdir)	\
+		--cpp_out=$(builddir)		\
+		$(srcdir)/RIBObjectData.proto
+	mv -f RIBObjectData.tmp $@
+
+RIBObjectData.pb.h RIBObjectData.pb.cc: RIBObjectData.stamp
+	if test -f $@; then :; else \
+	  trap 'rm -rf RIBObjectData.lock RIBObjectData.stamp' 1 2 13 15; \
+	  if mkdir RIBObjectData.lock 2>/dev/null; then \
+	    rm -f RIBObjectData.stamp; \
+	    $(MAKE) $(AM_MAKEFLAGS) RIBObjectData.stamp; \
+	    result=$$?; rm -rf RIBObjectData.lock; exit $$result; \
+	  else \
+	    while test -d RIBObjectData.lock; do sleep 1; done; \
+	    test -f RIBObjectData.stamp; \
+	  fi; \
+	fi
+
+DISTCLEANFILES +=                               \
+        RIBObjectData.pb.h RIBObjectData.pb.cc RIBObjectData.stamp
+
+MOSTLYCLEANFILES +=                             \
+        RIBObjectData.tmp
+
+EXTRA_DIST +=                                   \
+        RIBObjectData.proto
+
+protoSOURCES += RIBObjectData.pb.cc RIBObjectData.pb.h
+
+
 RoutingForwarding.stamp: RoutingForwarding.proto
 	rm -f RoutingForwarding.tmp
 	touch RoutingForwarding.tmp

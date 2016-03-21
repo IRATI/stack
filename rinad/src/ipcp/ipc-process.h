@@ -82,8 +82,8 @@ public:
                 const rina::SelectPolicySetResponseEvent& event);
         void processPluginLoadRequestEvent(
                 const rina::PluginLoadRequestEvent& event);
-        void processFwdCDAPMsgEvent(
-                const rina::FwdCDAPMsgEvent& event);
+        void processFwdCDAPMsgRequestEvent(
+                const rina::FwdCDAPMsgRequestEvent& event);
 
 	//Event loop (run)
 	void event_loop(void);

@@ -459,7 +459,7 @@ void IPCMIPCProcess::forwardCDAPMessage(const rina::cdap::CDAPMessage& msg,
 
 	encoder.encode(msg, encoded_msg);
 
-	proxy_->forwardCDAPMessage(encoded_msg,
+	proxy_->forwardCDAPRequestMessage(encoded_msg,
 				   opaque);
 }
 

@@ -114,6 +114,7 @@ namespace rina{
 %template(TempPDUFTEncoder) Encoder<rina::PDUForwardingTableEntry >;
 %template(TempDTPIEncoder) Encoder<rina::DTPInformation >;
 %template(TempDTCPCEncoder) Encoder<rina::DTCPConfig >;
+%template(TempRIBObjectDataEncoder) rina::Encoder< std::list< rina::rib::RIBObjectData > >;
 }
 
 %include "encoder.h"

@@ -480,12 +480,12 @@ void IPCProcessProxy::pluginLoad(const std::string& name, bool load,
 #endif
 }
 
-void IPCProcessProxy::forwardCDAPMessage(const ser_obj_t& sermsg,
+void IPCProcessProxy::forwardCDAPRequestMessage(const ser_obj_t& sermsg,
 					 unsigned int opaque)
 {
 #if STUB_API
 #else
-	IpcmFwdCDAPMsgMessage message;
+	IpcmFwdCDAPRequestMessage message;
         message.sermsg = sermsg;
 	message.result = 0;  // unused when IPC Manager sends
 	message.setDestIpcProcessId(id);
@@ -500,6 +500,28 @@ void IPCProcessProxy::forwardCDAPMessage(const ser_obj_t& sermsg,
 	}
 #endif
 }
+
+void IPCProcessProxy::forwardCDAPResponseMessage(const ser_obj_t& sermsg,
+                                         unsigned int opaque)
+{
+#if STUB_API
+#else
+        IpcmFwdCDAPResponseMessage message;
+        message.sermsg = sermsg;
+        message.result = 0;  // unused when IPC Manager sends
+        message.setDestIpcProcessId(id);
+        message.setDestPortId(portId);
+        message.setRequestMessage(true);
+        message.setSequenceNumber(opaque);
+
+        try {
+                rinaManager->sendMessage(&message, false);
+        } catch (NetlinkException &e) {
+                throw FwdCDAPMsgException(e.what());
+        }
+#endif
+}
+
 
 /** CLASS IPC PROCESS FACTORY */
 const std::string IPCProcessFactory::unknown_ipc_process_error =

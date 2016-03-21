@@ -62,4 +62,5 @@ encodersheaders_HEADERS =					\
 	encoders/QoSCubeMessage.pb.h				\
 	encoders/QoSSpecification.pb.h				\
 	encoders/WhatevercastNameArrayMessage.pb.h		\
-	encoders/WhatevercastNameMessage.pb.h
+	encoders/WhatevercastNameMessage.pb.h		\
+	encoders/RIBObjectData.pb.h
