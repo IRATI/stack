@@ -338,8 +338,6 @@ void EnrolleeStateMachine::initiateEnrollment(const rina::EnrollmentRequest& enr
 		rina::cdap_rib::ep_info_t src_ep;
 		rina::cdap_rib::ep_info_t dest_ep;
 		rina::cdap_rib::vers_info_t vers;
-		rina::cdap_rib::auth_policy_t auth = auth_ps_->get_auth_policy(portId,
-									       profile);
 
 		src_ep.ap_name_ = ipc_process_->get_name();
 		src_ep.ap_inst_ = ipc_process_->get_instance();
@@ -348,6 +346,10 @@ void EnrolleeStateMachine::initiateEnrollment(const rina::EnrollmentRequest& enr
 		dest_ep.ap_name_ = remote_peer_.name_.processName;
 		dest_ep.ap_inst_ = remote_peer_.name_.processInstance;
 		dest_ep.ae_name_ = IPCProcess::MANAGEMENT_AE;
+
+		rina::cdap_rib::auth_policy_t auth = auth_ps_->get_auth_policy(portId,
+									       dest_ep,
+									       profile);
 
 		vers.version_ = 0x01;
 
@@ -957,6 +959,7 @@ void EnrollerStateMachine::connect(const rina::cdap::CDAPMessage& message,
 	rina::IAuthPolicySet::AuthStatus auth_status =
 			auth_ps_->initiate_authentication(message.auth_policy_,
 							  profile,
+							  con_handle.dest_,
 							  con.port_id);
 	if (auth_status == rina::IAuthPolicySet::FAILED) {
 		lock_.unlock();
