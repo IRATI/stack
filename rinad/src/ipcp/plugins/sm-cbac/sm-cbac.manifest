@@ -1,0 +1,11 @@
+{
+        "PluginName": "sm-cbac",
+        "PluginVersion": "1",
+        "PolicySets" : [
+                {
+                        "Name": "cbac",
+                        "Component": "security-manager",
+                        "Version" : "1"
+                }
+        ]
+}

@@ -185,6 +185,7 @@ AC_CONFIG_FILES([
     src/ipcp/plugins/Makefile
     src/ipcp/plugins/default/Makefile
     src/ipcp/plugins/sm-passwd/Makefile
+    src/ipcp/plugins/sm-cbac/Makefile
     src/ipcm/Makefile
     src/ipcm/addons/Makefile
     src/ipcm/addons/ma/Makefile
