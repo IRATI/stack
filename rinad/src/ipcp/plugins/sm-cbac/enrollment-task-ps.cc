@@ -1046,20 +1046,22 @@ void EnrollerStateMachine::authentication_successful()
 
 	LOG_IPCP_DBG("Authentication successful, deciding if new member can join the DIF...");
 	
-	// Get Ac Profile Store From Security Config
-	std::string profile_store_path = ipc_process_->security_manager_->config.policy_set_.
-					get_param_value_as_string("ACprofilestore");
+	// Get AC Profile Store From Security Config
+	
+        //std::string profile_store_path = ipc_process_->security_manager_->config.policy_set_.
+	//				get_param_value_as_string("ACprofilestore");
 					
-	if (profile_store_path == std::string()) {
-		LOG_IPCP_DBG("No Profile Store set!")  
+	//if (profile_store_path == std::string()) {
+	//	LOG_IPCP_DBG("No Profile Store set!"); 
 		//TODO handle absent profile store
-	}
+	//}
 	
 	
-	if (!smps->isAllowedToJoinDIF(remote_peer_, 
-					      ipc_process_->get_dif_information().get_dif_name(),
-					      profile_store_path)) {
-		LOG_IPCP_WARN("Security Manager rejected enrollment attempt, aborting enrollment");
+// 	if (!smps->isAllowedToJoinDIF(remote_peer_, 
+// 					      ipc_process_->get_dif_information().get_dif_name(),
+// 					      profile_store_path)) {
+	if (!smps->isAllowedToJoinDIF(remote_peer_)) {
+                 LOG_IPCP_WARN("Security Manager rejected enrollment attempt, aborting enrollment");
 		abortEnrollment(remote_peer_.name_,
 				con.port_id,
 				ENROLLMENT_NOT_ALLOWED,

@@ -23,6 +23,8 @@ sm_cbac_la_LIBADD   =
 sm_cbac_la_LDFLAGS  = -module
 sm_cbac_la_SOURCES  =			\
 	sm-cbac-plugin.cc		\
+	security-manager-cbac.cc	\
+	enrollment-task-ps.cc		\
 	../../components.h		\
 	../../components.cc
 
