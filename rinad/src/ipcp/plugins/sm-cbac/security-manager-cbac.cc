@@ -8,58 +8,14 @@
 #include <list>
 #include "ipcp/components.h"
 #include <librina/json/json.h>
-
-using namespace std;
+#include "security-manager-cbac.h"
+//using namespace std;
 namespace rinad {
 
-//----------------------------------
-
-/* The profile of a RIB */
-typedef struct RIBProfile {
-	std::string rib_type;
-	std::string rib_group;
-} RIBProfile_t;
-
-/* The profile of an IPC Process */
-typedef struct IPCPProfile {
-
-        rina::ApplicationProcessNamingInformation ipcp_name;
-        rina::ApplicationProcessNamingInformation ipcp_difName;
-	std::string ipcp_type;
-	std::string ipcp_group;
-	RIBProfile_t ipcp_rib_profile;
-	//DIFProfile ipcp_dif_profile;
-} IPCPProfile_t;
-
-
-  /* The profile of a DIF */
-typedef struct DIFProfile {
-        rina::ApplicationProcessNamingInformation dif_name;
-	std::string dif_type; //FIXME: merge/replace (?) with dif_type_ in DIFInformation
-	std::string dif_group;
-} DIFProfile_t;
-
-
-//----------------------------------
-
-class ProfileParser {
-public:
-        ProfileParser() {};
-        bool parseProfile(const std::string fileName);
-        virtual ~ProfileParser() {};
-        bool getDIFProfileByName(const rina::ApplicationProcessNamingInformation&, DIFProfile_t&);
-        bool getIPCPProfileByName(const rina::ApplicationProcessNamingInformation&, IPCPProfile_t&);
-  
-private:
-  
-        std::list<DIFProfile_t> difProfileList;
-        std::list<IPCPProfile_t> ipcpProfileList;
-        std::list<RIBProfile_t> ribProfileList;
-};
-
 /**
- * Parse AC config file with jsoncpp
+ * class ProfileParser: Parse AC config file with jsoncpp
  * **/
+
 bool ProfileParser::parseProfile(const std::string fileName)
 {
 	
@@ -149,41 +105,9 @@ bool ProfileParser::getIPCPProfileByName(const rina::ApplicationProcessNamingInf
 
 	return false;
 }
-//-----------------------------------
-
-typedef enum{
-	/// The enrollement AC was successful
-	AC_ENR_SUCCESS = 0,
-
-	/* List of errors */
-
-	/// AC enrollement error
-	AC_ENR_ERROR = -1,
-	/// Group of IPCP and DIF are different
-	//AC_ENR_DIFF_GROUP = -2,
-	
-} ac_code_t;
-
-typedef struct ac_result_info {
-	/// Result code of the operation
-	ac_code_t code_;
-
-	/// Result-Reason (string), optional in the responses, forbidden in the requests
-	/// Additional explanation of the result_
-	std::string reason_;
-
-	ac_result_info() {};
-} ac_res_info_t;
-
-//-----------------------------------
-class AccessControl{
-public:
-	AccessControl();
-	bool checkJoinDIF(DIFProfile_t&, IPCPProfile_t&, ac_res_info_t&);
-	void generateToken();
-	virtual ~AccessControl() {}
-	static const std::string IPCP_DIF_FROM_DIFFERENT_GROUPS;
-};
+/*** 
+ * clacc AccessControl: effective AC algorithm
+ * **/
 
 AccessControl::AccessControl()
 {
@@ -207,28 +131,16 @@ bool AccessControl::checkJoinDIF(DIFProfile_t& difProfile, IPCPProfile_t& newMem
 	return true;
 }
 
-void AccessControl::generateToken()
+void AccessControl::generateToken(DIFProfile_t& difProfile, IPCPProfile_t& newMemberProfile, 
+                                 ac_res_info_t& result)
 {
-  
+        
 }
 
 //-----------------------------------
-class SecurityManagerCBACPs: public ISecurityManagerPs {
-public:
-	SecurityManagerCBACPs(IPCPSecurityManager * dm);
-	bool isAllowedToJoinDIF(const rina::Neighbor& newMember); 
-                                //const rina::ApplicationProcessNamingInformation, std::string);
-	bool acceptFlow(const configs::Flow& newFlow);
-	int set_policy_set_param(const std::string& name,
-			const std::string& value);
-	virtual ~SecurityManagerCBACPs() {}
-
-private:
-	// Data model of the security manager component.
-	IPCPSecurityManager * dm;
-	int max_retries;
-	AccessControl * access_control_;
-};
+/**
+ * class SecurityManagerCBACPs
+ * **/
 
 SecurityManagerCBACPs::SecurityManagerCBACPs(IPCPSecurityManager * dm_)
 						: dm(dm_)
@@ -275,8 +187,9 @@ bool SecurityManagerCBACPs::isAllowedToJoinDIF(const rina::Neighbor& newMember)
 	ac_res_info_t res;
 	access_control_->checkJoinDIF(difProfile, newMemberProfile, res);
 	if (res.code_ == 0){
-		LOG_IPCP_DBG("Allowing IPC Process %s to join the DIF",
+		LOG_IPCP_DBG("Allowing IPC Process %s to join the DIF. Going to generate token",
 		     newMember.name_.processName.c_str());
+                access_control_->generateToken();
 		return true;
 	}
 	if (res.code_ != 0){
@@ -286,6 +199,11 @@ bool SecurityManagerCBACPs::isAllowedToJoinDIF(const rina::Neighbor& newMember)
 	}
 	
 }
+
+void getToken(const rina::Neighbor& newMember){
+       
+}
+
 
 bool SecurityManagerCBACPs::acceptFlow(const configs::Flow& newFlow)
 {

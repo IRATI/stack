@@ -24,6 +24,7 @@ sm_cbac_la_LDFLAGS  = -module
 sm_cbac_la_SOURCES  =			\
 	sm-cbac-plugin.cc		\
 	security-manager-cbac.cc	\
+	security-manager-cbac.h		\
 	enrollment-task-ps.cc		\
 	../../components.h		\
 	../../components.cc

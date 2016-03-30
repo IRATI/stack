@@ -31,7 +31,9 @@
 #include "ipcp/flow-allocator.h"
 #include "ipcp/namespace-manager.h"
 #include "ipcp/resource-allocator.h"
+#include "security-manager-cbac.h"
 
+//class SecurityManagerCBACPs;
 namespace rinad {
 
 /// The base class that contains the common aspects of both
@@ -1046,20 +1048,7 @@ void EnrollerStateMachine::authentication_successful()
 
 	LOG_IPCP_DBG("Authentication successful, deciding if new member can join the DIF...");
 	
-	// Get AC Profile Store From Security Config
 	
-        //std::string profile_store_path = ipc_process_->security_manager_->config.policy_set_.
-	//				get_param_value_as_string("ACprofilestore");
-					
-	//if (profile_store_path == std::string()) {
-	//	LOG_IPCP_DBG("No Profile Store set!"); 
-		//TODO handle absent profile store
-	//}
-	
-	
-// 	if (!smps->isAllowedToJoinDIF(remote_peer_, 
-// 					      ipc_process_->get_dif_information().get_dif_name(),
-// 					      profile_store_path)) {
 	if (!smps->isAllowedToJoinDIF(remote_peer_)) {
                  LOG_IPCP_WARN("Security Manager rejected enrollment attempt, aborting enrollment");
 		abortEnrollment(remote_peer_.name_,
@@ -1068,7 +1057,12 @@ void EnrollerStateMachine::authentication_successful()
 				true);
 		return;
 	}
+        
+        SecurityManagerCBACPs* smcbac = dynamic_cast<SecurityManagerCBACPs *> (smps); 
+        
+        smcbac->getToken(remote_peer_);
 
+        
 	//Send M_CONNECT_R
 	try{
 		rina::cdap_rib::res_info_t res;
