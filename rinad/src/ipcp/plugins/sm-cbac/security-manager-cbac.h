@@ -83,19 +83,40 @@ private:
 };
 
 //-----------------------------------
+
+typedef struct Capability{
+        std::string ressource;
+        std::string operation;
+        Capability() {}
+        Capability(std::string res, std::string oper) : ressource(res), operation(oper) {}
+} Capability_t;
+
+typedef struct Token{
+        unsigned short token_id;
+        unsigned short ipcp_issuer_id;
+        unsigned short ipcp_holder_id;
+        std::string audience;
+        int issued_time;
+        int token_nbf;
+        int token_exp;
+        std::list<Capability> token_cap;
+        std::string token_sign;
+} token_t;
+
+
 class AccessControl{
 public:
         AccessControl();
         bool checkJoinDIF(DIFProfile_t&, IPCPProfile_t&, ac_res_info_t&);
-        void generateToken();
+        std::list<Capability_t> & computeCapabilities(DIFProfile_t&, IPCPProfile_t&);
+        void generateToken(DIFProfile_t&, IPCPProfile_t&);
         virtual ~AccessControl() {}
         static const std::string IPCP_DIF_FROM_DIFFERENT_GROUPS;
 };
 
-typedef token{
 
-    
-}
+
+
 
 //-----------------------------------
 class SecurityManagerCBACPs: public ISecurityManagerPs {
@@ -106,7 +127,7 @@ public:
         bool acceptFlow(const configs::Flow& newFlow);
         int set_policy_set_param(const std::string& name,
                         const std::string& value);
-        void getToken();
+        void getToken(const rina::Neighbor&);
         virtual ~SecurityManagerCBACPs() {}
         
 private:

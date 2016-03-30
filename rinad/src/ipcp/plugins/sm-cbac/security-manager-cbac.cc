@@ -131,8 +131,30 @@ bool AccessControl::checkJoinDIF(DIFProfile_t& difProfile, IPCPProfile_t& newMem
 	return true;
 }
 
-void AccessControl::generateToken(DIFProfile_t& difProfile, IPCPProfile_t& newMemberProfile, 
-                                 ac_res_info_t& result)
+std::list<Capability_t>& AccessControl::computeCapabilities(DIFProfile_t& difProfile, 
+                                                            IPCPProfile_t& newMemberProfile)
+{
+        
+        std::list<Capability_t> result;
+        if ( newMemberProfile.ipcp_group == "PRIMARY_IPCP" || 
+                    difProfile.dif_group == newMemberProfile.ipcp_group ){
+                Capability_t cap = Capability_t("all", "all");
+                result.push_back(cap); 
+        }
+        
+        if (newMemberProfile.ipcp_type == "BORDER_ROUTER"){
+                Capability_t cap = Capability_t("PDU_FWD_TABLE", "RW");
+                result.push_back(cap); 
+                cap = Capability_t("IPCP_ADDR_TABLE", "R");
+                result.push_back(cap); 
+            
+        }
+        return result;
+    
+}
+
+
+void AccessControl::generateToken(DIFProfile_t& difProfile, IPCPProfile_t& newMemberProfile)
 {
         
 }
@@ -189,7 +211,7 @@ bool SecurityManagerCBACPs::isAllowedToJoinDIF(const rina::Neighbor& newMember)
 	if (res.code_ == 0){
 		LOG_IPCP_DBG("Allowing IPC Process %s to join the DIF. Going to generate token",
 		     newMember.name_.processName.c_str());
-                access_control_->generateToken();
+                access_control_->generateToken(difProfile, newMemberProfile);
 		return true;
 	}
 	if (res.code_ != 0){
