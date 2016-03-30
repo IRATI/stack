@@ -154,8 +154,21 @@ std::list<Capability_t>& AccessControl::computeCapabilities(DIFProfile_t& difPro
 }
 
 
-void AccessControl::generateToken(DIFProfile_t& difProfile, IPCPProfile_t& newMemberProfile)
+void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& difProfile,
+                                  IPCPProfile_t& newMemberProfile)
 {
+        std::list<Capability_t> result = computeCapabilities(difProfile, newMemberProfile); 
+        Token_t token;
+        
+        token.token_id = issuerIpcpId; // TODO
+        token.ipcp_issuer_id = issuerIpcpId;
+        token.ipcp_holder_name = newMemberProfile.ipcp_name; //TODO
+        token.audience = "all";
+//         token.issued_time = get_current_time_in_ms();
+//         token.token_nbf = get_current_time_in_ms();
+//         token.token_exp = get_current_time_in_ms() * 10000;
+        token.token_cap = result; 
+        token.token_sign = "signature";
         
 }
 
@@ -168,6 +181,7 @@ SecurityManagerCBACPs::SecurityManagerCBACPs(IPCPSecurityManager * dm_)
 						: dm(dm_)
 {
 	access_control_ = new AccessControl();
+        my_ipcp_id = dm->ipcp->get_id();
 }
 
 
@@ -211,7 +225,8 @@ bool SecurityManagerCBACPs::isAllowedToJoinDIF(const rina::Neighbor& newMember)
 	if (res.code_ == 0){
 		LOG_IPCP_DBG("Allowing IPC Process %s to join the DIF. Going to generate token",
 		     newMember.name_.processName.c_str());
-                access_control_->generateToken(difProfile, newMemberProfile);
+                
+                access_control_->generateToken(my_ipcp_id, difProfile, newMemberProfile);
 		return true;
 	}
 	if (res.code_ != 0){

@@ -8,6 +8,7 @@
 #include <list>
 #include "ipcp/components.h"
 #include <librina/json/json.h>
+// #include <librina/timer.h>
 
 using namespace std;
 namespace rinad {
@@ -94,14 +95,14 @@ typedef struct Capability{
 typedef struct Token{
         unsigned short token_id;
         unsigned short ipcp_issuer_id;
-        unsigned short ipcp_holder_id;
+        rina::ApplicationProcessNamingInformation ipcp_holder_name; // TODO: may be replace by ipcp id?/*unsigned short*/ 
         std::string audience;
         int issued_time;
         int token_nbf;
         int token_exp;
         std::list<Capability> token_cap;
         std::string token_sign;
-} token_t;
+} Token_t;
 
 
 class AccessControl{
@@ -109,7 +110,7 @@ public:
         AccessControl();
         bool checkJoinDIF(DIFProfile_t&, IPCPProfile_t&, ac_res_info_t&);
         std::list<Capability_t> & computeCapabilities(DIFProfile_t&, IPCPProfile_t&);
-        void generateToken(DIFProfile_t&, IPCPProfile_t&);
+        void generateToken(unsigned short, DIFProfile_t&, IPCPProfile_t&);
         virtual ~AccessControl() {}
         static const std::string IPCP_DIF_FROM_DIFFERENT_GROUPS;
 };
@@ -135,6 +136,7 @@ private:
         IPCPSecurityManager * dm;
         int max_retries;
         AccessControl * access_control_;
+        unsigned short my_ipcp_id;
 };
 
 
