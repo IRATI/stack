@@ -1051,7 +1051,7 @@ void EnrollerStateMachine::authentication_successful()
 	
 	if (!smps->isAllowedToJoinDIF(remote_peer_)) {
                  LOG_IPCP_WARN("Security Manager rejected enrollment attempt, aborting enrollment");
-		abortEnrollment(remote_peer_.name_,
+		 abortEnrollment(remote_peer_.name_,
 				con.port_id,
 				ENROLLMENT_NOT_ALLOWED,
 				true);
@@ -1059,9 +1059,16 @@ void EnrollerStateMachine::authentication_successful()
 	}
         
         SecurityManagerCBACPs* smcbac = dynamic_cast<SecurityManagerCBACPs *> (smps); 
+        Token_t token;
+        if (!smcbac->generateToken(remote_peer_, token)){
+                LOG_IPCP_WARN("Security Manager failed to generate Token, aborting enrollment");
+                abortEnrollment(remote_peer_.name_,
+                                con.port_id,
+                                ENROLLMENT_NOT_ALLOWED, //TODO specify abort reason
+                                true);
+                return;
+        }
         
-        smcbac->getToken(remote_peer_);
-
         
 	//Send M_CONNECT_R
 	try{

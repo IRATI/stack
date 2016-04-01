@@ -155,18 +155,18 @@ std::list<Capability_t>& AccessControl::computeCapabilities(DIFProfile_t& difPro
 
 
 void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& difProfile,
-                                  IPCPProfile_t& newMemberProfile)
+                                  IPCPProfile_t& newMemberProfile, Token_t& token)
 {
         std::list<Capability_t> result = computeCapabilities(difProfile, newMemberProfile); 
-        Token_t token;
         
-        token.token_id = issuerIpcpId; // TODO
+        token.token_id = issuerIpcpId; // TODO name or id?
         token.ipcp_issuer_id = issuerIpcpId;
-        token.ipcp_holder_name = newMemberProfile.ipcp_name; //TODO
+        token.ipcp_holder_name = newMemberProfile.ipcp_name; //TODO name or id?
         token.audience = "all";
-//         token.issued_time = get_current_time_in_ms();
-//         token.token_nbf = get_current_time_in_ms();
-//         token.token_exp = get_current_time_in_ms() * 10000;
+        rina::Time currentTime;
+        token.issued_time = currentTime.get_current_time_in_ms();
+        token.token_nbf = currentTime.get_current_time_in_ms();
+        token.token_exp = currentTime.get_current_time_in_ms() * 10000;
         token.token_cap = result; 
         token.token_sign = "signature";
         
@@ -182,14 +182,14 @@ SecurityManagerCBACPs::SecurityManagerCBACPs(IPCPSecurityManager * dm_)
 {
 	access_control_ = new AccessControl();
         my_ipcp_id = dm->ipcp->get_id();
+        my_dif_name = dm->ipcp->get_dif_information().dif_name_;
 }
 
 
 bool SecurityManagerCBACPs::isAllowedToJoinDIF(const rina::Neighbor& newMember)
 {
     
-        const rina::ApplicationProcessNamingInformation difName = 
-                        dm->ipcp->get_dif_information().dif_name_;
+       
         const std::string   profileFile = dm->ipcp->get_dif_information().
                     get_dif_configuration().sm_configuration_.policy_set_.
                     get_param_value_as_string("ACprofilestore");
@@ -213,7 +213,7 @@ bool SecurityManagerCBACPs::isAllowedToJoinDIF(const rina::Neighbor& newMember)
 	
 
 	DIFProfile_t difProfile; 
-	if (!profileParser.getDIFProfileByName(difName, difProfile)){
+	if (!profileParser.getDIFProfileByName(my_dif_name, difProfile)){
 		LOG_IPCP_DBG("No Profile for my DIF, not allowing IPCProcess %s to join DIF!",
 				newMember.name_.processName.c_str());
 		return false;
@@ -226,7 +226,7 @@ bool SecurityManagerCBACPs::isAllowedToJoinDIF(const rina::Neighbor& newMember)
 		LOG_IPCP_DBG("Allowing IPC Process %s to join the DIF. Going to generate token",
 		     newMember.name_.processName.c_str());
                 
-                access_control_->generateToken(my_ipcp_id, difProfile, newMemberProfile);
+                //access_control_->generateToken(my_ipcp_id, difProfile, newMemberProfile);
 		return true;
 	}
 	if (res.code_ != 0){
@@ -237,8 +237,27 @@ bool SecurityManagerCBACPs::isAllowedToJoinDIF(const rina::Neighbor& newMember)
 	
 }
 
-void getToken(const rina::Neighbor& newMember){
-       
+bool SecurityManagerCBACPs::generateToken(const rina::Neighbor& newMember, Token_t& token){
+    
+        ProfileParser profileParser;
+        
+        DIFProfile_t difProfile; 
+        if (!profileParser.getDIFProfileByName(my_dif_name, difProfile)){
+                LOG_IPCP_DBG("No Profile for my DIF, not allowing IPCProcess %s to join DIF!",
+                                newMember.name_.processName.c_str());
+                return false;
+        }
+        
+        IPCPProfile_t newMemberProfile;
+        
+        if (!profileParser.getIPCPProfileByName(newMember.name_, newMemberProfile)){
+                LOG_IPCP_DBG("No Profile for this newMember %s; not allowing it to join DIF!" ,
+                       newMember.name_.processName.c_str());
+                return false;
+        }
+        
+        access_control_->generateToken(my_ipcp_id, difProfile, newMemberProfile, token);
+        return true;
 }
 
 
