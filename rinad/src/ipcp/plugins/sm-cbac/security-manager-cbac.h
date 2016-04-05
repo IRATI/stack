@@ -110,7 +110,7 @@ public:
         AccessControl();
         bool checkJoinDIF(DIFProfile_t&, IPCPProfile_t&, ac_res_info_t&);
         std::list<Capability_t> computeCapabilities(DIFProfile_t&, IPCPProfile_t&);
-        void generateToken(unsigned short, DIFProfile_t&, IPCPProfile_t&, Token_t &);
+        void generateToken(unsigned short, DIFProfile_t&, IPCPProfile_t&, rina::cdap_rib::auth_policy_t & auth);
         virtual ~AccessControl() {}
         static const std::string IPCP_DIF_FROM_DIFFERENT_GROUPS;
 };
@@ -123,13 +123,16 @@ public:
 class SecurityManagerCBACPs: public ISecurityManagerPs {
 public:
         SecurityManagerCBACPs(IPCPSecurityManager * dm);
-        bool isAllowedToJoinDIF(const rina::Neighbor& newMember); 
+//         bool isAllowedToJoinDIF(const rina::Neighbor& newMember); 
                                 //const rina::ApplicationProcessNamingInformation, std::string);
+        int isAllowedToJoinDIF(const rina::Neighbor& newMember,
+                               rina::cdap_rib::auth_policy_t & auth);
+        int storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth);
         bool acceptFlow(const configs::Flow& newFlow);
         int set_policy_set_param(const std::string& name,
                         const std::string& value);
-        bool generateToken(const rina::Neighbor&, Token_t &);
-        bool getToken(const rina::Neighbor&, rina::ser_obj_t&);
+        // bool generateToken(const rina::Neighbor&, Token_t &);
+        // bool getToken(const rina::Neighbor&, rina::ser_obj_t&);
         virtual ~SecurityManagerCBACPs() {}
         
 private:

@@ -12,8 +12,10 @@
 #include "sm-cbac.pb.h"
 //using namespace std;
 namespace rinad {
+const std::string AC_CBAC = "AC_CBAC";
+const std::string AC_CBAC_VERSION = "1";
+const std::string AccessControl::IPCP_DIF_FROM_DIFFERENT_GROUPS = "IPCP_DIF_FROM_DIFFERENT_GROUPS";
 
-    
 //----------------------------
 //FIXME: merge/use the helpers in rinad/src/common/encoder.cc
     
@@ -225,9 +227,10 @@ std::list<Capability_t> AccessControl::computeCapabilities(DIFProfile_t& difProf
 
 
 void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& difProfile,
-                                  IPCPProfile_t& newMemberProfile, Token_t& token)
+                                  IPCPProfile_t& newMemberProfile, rina::cdap_rib::auth_policy_t & auth)
 {
         std::list<Capability_t> result = computeCapabilities(difProfile, newMemberProfile); 
+        Token_t token;
         
         token.token_id = issuerIpcpId; // TODO name or id?
         token.ipcp_issuer_id = issuerIpcpId;
@@ -240,10 +243,16 @@ void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& dif
         token.token_cap = result; 
         token.token_sign = "signature";
         
-        
         // token should be encoded as ser_obj_t
+        rina::ser_obj_t options;
+        serializeToken(token, options);
         
+        // fill auth structure
         
+//         cdap_rib::auth_policy_t auth;
+        auth.name = AC_CBAC;
+        auth.versions.push_back(AC_CBAC_VERSION);
+        auth.options = options;
 }
 //-----------------------------------
 /**
@@ -259,7 +268,8 @@ SecurityManagerCBACPs::SecurityManagerCBACPs(IPCPSecurityManager * dm_)
 }
 
 
-bool SecurityManagerCBACPs::isAllowedToJoinDIF(const rina::Neighbor& newMember)
+int SecurityManagerCBACPs::isAllowedToJoinDIF(const rina::Neighbor& newMember,
+                                               rina::cdap_rib::auth_policy_t & auth)
 {
     
        
@@ -272,7 +282,7 @@ bool SecurityManagerCBACPs::isAllowedToJoinDIF(const rina::Neighbor& newMember)
         
         if (!profileParser.parseProfile(profileFile)){
                 LOG_IPCP_DBG("Error Parsing Profile file");
-                return false;
+                return -1;
         }
 
 	IPCPProfile_t newMemberProfile;
@@ -281,7 +291,7 @@ bool SecurityManagerCBACPs::isAllowedToJoinDIF(const rina::Neighbor& newMember)
 	if (!profileParser.getIPCPProfileByName(newMember.name_, newMemberProfile)){
 		LOG_IPCP_DBG("No Profile for this newMember %s; not allowing it to join DIF!" ,
 		       newMember.name_.processName.c_str());
-		return false;
+		return -1;
 	}
 	
 
@@ -289,7 +299,7 @@ bool SecurityManagerCBACPs::isAllowedToJoinDIF(const rina::Neighbor& newMember)
 	if (!profileParser.getDIFProfileByName(my_dif_name, difProfile)){
 		LOG_IPCP_DBG("No Profile for my DIF, not allowing IPCProcess %s to join DIF!",
 				newMember.name_.processName.c_str());
-		return false;
+		return -1;
 	}
 	
 	// Enrollment AC algorithm
@@ -299,17 +309,25 @@ bool SecurityManagerCBACPs::isAllowedToJoinDIF(const rina::Neighbor& newMember)
 		LOG_IPCP_DBG("Allowing IPC Process %s to join the DIF. Going to generate token",
 		     newMember.name_.processName.c_str());
                 
-                //access_control_->generateToken(my_ipcp_id, difProfile, newMemberProfile);
-		return true;
+                access_control_->generateToken(my_ipcp_id, difProfile, newMemberProfile, auth);
+		return 0;
 	}
 	if (res.code_ != 0){
 		LOG_IPCP_DBG("NOT Allowing IPC Process %s to join the DIF because of %s",
 		     newMember.name_.processName.c_str(), res.reason_.c_str());
-		return false;
+		return -1;
 	}
 	
 }
 
+int SecurityManagerCBACPs::storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth)
+{
+        (void) auth;
+        return 0;
+}
+
+
+#if 0
 bool SecurityManagerCBACPs::getToken(const rina::Neighbor& newMember,
                                       rina::ser_obj_t &result)
 {
@@ -347,7 +365,7 @@ bool SecurityManagerCBACPs::generateToken(const rina::Neighbor& newMember, Token
         return true;
 }
 
-
+#endif
 bool SecurityManagerCBACPs::acceptFlow(const configs::Flow& newFlow)
 {
 	LOG_IPCP_DBG("Accepting flow from remote application %s",
