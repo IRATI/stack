@@ -476,9 +476,9 @@ ipcm_res_t IPCManager_::assign_to_dif(
     std::ostringstream ss;
     IPCMIPCProcess* ipcp;
 
-    pre_assign_to_dif(callee, dif_name, ipcp_id, ipcp);
     try
     {
+	pre_assign_to_dif(callee, dif_name, ipcp_id, ipcp);
         // Load plugin catalog
         catalog.load(callee, ipcp_id, dif_info.dif_configuration_);
         // assign to diff
@@ -519,11 +519,11 @@ ipcm_res_t IPCManager_::assign_to_dif(
     rina::DIFInformation dif_info;
     rina::DIFConfiguration dif_config;
     std::ostringstream ss;
-    IPCMIPCProcess* ipcp;
+    IPCMIPCProcess* ipcp = NULL;
 
-    pre_assign_to_dif(callee, dif_name, ipcp_id, ipcp);
     try
     {
+	pre_assign_to_dif(callee, dif_name, ipcp_id, ipcp);
 
         // Fill in the DIFConfiguration object.
         if (ipcp->get_type() == rina::NORMAL_IPC_PROCESS)
@@ -621,15 +621,24 @@ ipcm_res_t IPCManager_::assign_to_dif(
 
     } catch (rina::ConcurrentException& e)
     {
-        ss << "Error while assigning " << ipcp->get_name().toString()
-                << " to DIF " << dif_name.toString() << ". Operation timedout"
-                << std::endl;
+        if (ipcp){
+		ss << "Error while assigning " << ipcp->get_name().toString()
+			<< " to DIF " << dif_name.toString()
+			<< ". Operation timedout" << std::endl;
+	}
+	else {
+		ss << "Error while assigning ipcp to DIF" << std::endl;
+	}
         FLUSH_LOG(ERR, ss);
         return IPCM_FAILURE;
     } catch (rina::AssignToDIFException& e)
     {
-        ss << "Error while assigning " << ipcp->get_name().toString()
-                << " to DIF " << dif_name.toString() << std::endl;
+	if (ipcp){
+	        ss << "Error while assigning " << ipcp->get_name().toString()
+			<< " to DIF " << dif_name.toString() << std::endl;
+	} else {
+		ss << "Error while assigning ipcp to DIF" << std::endl;
+	}
         FLUSH_LOG(ERR, ss);
         return IPCM_FAILURE;
     } catch (rina::BadConfigurationException& e)
