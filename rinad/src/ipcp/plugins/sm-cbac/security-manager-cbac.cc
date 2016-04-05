@@ -9,10 +9,80 @@
 #include "ipcp/components.h"
 #include <librina/json/json.h>
 #include "security-manager-cbac.h"
+#include "sm-cbac.pb.h"
 //using namespace std;
 namespace rinad {
 
-/**
+    
+//----------------------------
+//FIXME: merge/use the helpers in rinad/src/common/encoder.cc
+    
+namespace cbac_helpers {
+
+void get_NewApplicationProcessNamingInfo_t(
+                const rina::ApplicationProcessNamingInformation &name,
+                rina::messages::newApplicationProcessNamingInfo_t &gpb)
+{
+        gpb.set_applicationprocessname(name.processName);
+        gpb.set_applicationprocessinstance(name.processInstance);
+        gpb.set_applicationentityname(name.entityName);
+        gpb.set_applicationentityinstance(name.entityInstance);
+}
+
+rina::messages::newApplicationProcessNamingInfo_t* get_NewApplicationProcessNamingInfo_t(
+                const rina::ApplicationProcessNamingInformation &name)
+{
+        rina::messages::newApplicationProcessNamingInfo_t *gpb =
+                        new rina::messages::newApplicationProcessNamingInfo_t;
+        get_NewApplicationProcessNamingInfo_t(name, *gpb);
+        return gpb;
+}
+}
+//----------------------------    
+   
+void serializeToken(const Token_t &token, 
+                        rina::ser_obj_t &result)
+{
+
+        rina::messages::smCbacToken_t gpbToken;
+        
+        //fill in the token message object
+        gpbToken.set_token_id(token.token_id);
+        gpbToken.set_ipcp_issuer_id(token.ipcp_issuer_id);
+        
+        gpbToken.set_allocated_ipcp_holder_name(cbac_helpers::get_NewApplicationProcessNamingInfo_t(
+                                        token.ipcp_holder_name));
+        
+        gpbToken.set_audience(token.audience);
+        gpbToken.set_issued_time(token.issued_time);
+        gpbToken.set_token_nbf(token.token_nbf);
+        gpbToken.set_token_exp(token.token_exp);
+        
+        // Token capability        
+        
+        std::list<Capability_t> tokenCapList = token.token_cap;
+        for(std::list<Capability_t>::iterator it = tokenCapList.begin();
+                it != tokenCapList.end(); ++it) {
+                
+                Capability_t c = *it;
+                
+                rina::messages::smCapability_t * allocatedCap = gpbToken.add_token_cap();
+                allocatedCap->set_ressource(c.ressource);
+                allocatedCap->set_operation(c.operation);
+        }
+    
+        gpbToken.set_token_sign(token.token_sign);
+
+        //serializing
+        int size = gpbToken.ByteSize();
+        result.message_ = new unsigned char[size];
+        result.size_ = size;
+        gpbToken.SerializeToArray(result.message_, size);
+        
+}
+
+//----------------------------
+ /**
  * class ProfileParser: Parse AC config file with jsoncpp
  * **/
 
@@ -131,7 +201,7 @@ bool AccessControl::checkJoinDIF(DIFProfile_t& difProfile, IPCPProfile_t& newMem
 	return true;
 }
 
-std::list<Capability_t>& AccessControl::computeCapabilities(DIFProfile_t& difProfile, 
+std::list<Capability_t> AccessControl::computeCapabilities(DIFProfile_t& difProfile, 
                                                             IPCPProfile_t& newMemberProfile)
 {
         
@@ -161,7 +231,7 @@ void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& dif
         
         token.token_id = issuerIpcpId; // TODO name or id?
         token.ipcp_issuer_id = issuerIpcpId;
-        token.ipcp_holder_name = newMemberProfile.ipcp_name; //TODO name or id?
+        token.ipcp_holder_name = newMemberProfile.ipcp_name; //TODO name or id? (.processName)
         token.audience = "all";
         rina::Time currentTime;
         token.issued_time = currentTime.get_current_time_in_ms();
@@ -170,8 +240,11 @@ void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& dif
         token.token_cap = result; 
         token.token_sign = "signature";
         
+        
+        // token should be encoded as ser_obj_t
+        
+        
 }
-
 //-----------------------------------
 /**
  * class SecurityManagerCBACPs
@@ -237,7 +310,21 @@ bool SecurityManagerCBACPs::isAllowedToJoinDIF(const rina::Neighbor& newMember)
 	
 }
 
-bool SecurityManagerCBACPs::generateToken(const rina::Neighbor& newMember, Token_t& token){
+bool SecurityManagerCBACPs::getToken(const rina::Neighbor& newMember,
+                                      rina::ser_obj_t &result)
+{
+         Token_t token;
+         if (!generateToken(newMember, token)){
+         
+             return false;
+         }
+         serializeToken(token, result);
+         return true;
+         
+}
+
+bool SecurityManagerCBACPs::generateToken(const rina::Neighbor& newMember, Token_t& token)
+{
     
         ProfileParser profileParser;
         

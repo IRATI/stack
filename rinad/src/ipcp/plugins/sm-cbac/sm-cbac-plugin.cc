@@ -2,13 +2,14 @@
 #include "../../ipcp-logging.h"
 
 #include "ipcp/components.h"
+#include "security-manager-cbac.h"
 
 namespace rinad {
 
 extern "C" rina::IPolicySet *
 createCBACPs(rina::ApplicationEntity * ctx)
 {
-	IPCPSecurityManager * sm = dynamic_cast<IPCPSecurityManager *>(ctx);
+        IPCPSecurityManager * sm = dynamic_cast<IPCPSecurityManager *>(ctx);
         if (!sm || !sm->get_application_process()) {
                 return NULL;
         }
@@ -19,9 +20,9 @@ createCBACPs(rina::ApplicationEntity * ctx)
         	return NULL;
         }
 
-        //TODO instantiate policy set here
-        //return new CBACBlabla(param1, param2);
-        return NULL;
+        // instantiate policy set here
+        return new SecurityManagerCBACPs(sm);
+        //return NULL;
 }
 
 extern "C" void

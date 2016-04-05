@@ -1058,8 +1058,18 @@ void EnrollerStateMachine::authentication_successful()
 		return;
 	}
         
-        SecurityManagerCBACPs* smcbac = dynamic_cast<SecurityManagerCBACPs *> (smps); 
-        Token_t token;
+//         SecurityManagerCBACPs* smcbac = dynamic_cast<SecurityManagerCBACPs *> (smps); 
+//         ser_obj_t result;
+//         if (!smcbac.getToken(remote_peer_, result)){
+//              LOG_IPCP_WARN("Security Manager failed to generate Token, aborting enrollment");
+//              abortEnrollment(remote_peer_.name_,
+//                                 con.port_id,
+//                                 ENROLLMENT_NOT_ALLOWED, //TODO specify abort reason
+//                                 true);
+//                 return;
+//         }
+        
+        /*Token_t token;
         if (!smcbac->generateToken(remote_peer_, token)){
                 LOG_IPCP_WARN("Security Manager failed to generate Token, aborting enrollment");
                 abortEnrollment(remote_peer_.name_,
@@ -1067,7 +1077,7 @@ void EnrollerStateMachine::authentication_successful()
                                 ENROLLMENT_NOT_ALLOWED, //TODO specify abort reason
                                 true);
                 return;
-        }
+        }*/
         
         
 	//Send M_CONNECT_R

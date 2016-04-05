@@ -109,7 +109,7 @@ class AccessControl{
 public:
         AccessControl();
         bool checkJoinDIF(DIFProfile_t&, IPCPProfile_t&, ac_res_info_t&);
-        std::list<Capability_t> & computeCapabilities(DIFProfile_t&, IPCPProfile_t&);
+        std::list<Capability_t> computeCapabilities(DIFProfile_t&, IPCPProfile_t&);
         void generateToken(unsigned short, DIFProfile_t&, IPCPProfile_t&, Token_t &);
         virtual ~AccessControl() {}
         static const std::string IPCP_DIF_FROM_DIFFERENT_GROUPS;
@@ -129,6 +129,7 @@ public:
         int set_policy_set_param(const std::string& name,
                         const std::string& value);
         bool generateToken(const rina::Neighbor&, Token_t &);
+        bool getToken(const rina::Neighbor&, rina::ser_obj_t&);
         virtual ~SecurityManagerCBACPs() {}
         
 private:

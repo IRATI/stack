@@ -4,8 +4,19 @@
 # Written by: Vincenzo Maffione <v DOT maffione AT nextworks DOT it>
 #
 
-EXTRA_DIST   =
-CLEANFILES   =
+include Makefile.inc
+
+# EXTRA_DIST   =
+# CLEANFILES   =
+# MOSTLYCLEANFILES = 
+# DISTCLEANFILES = 
+# protoSOURCES = 
+# 
+# EXTRA_DIST += sm-cbac.proto
+# protoSOURCES += sm-cbac.pb.cc sm-cbac.pb.h
+# #DISTCLEANFILES += sm-cbac.pb.h
+# BUILT_SOURCES = 
+#EXTRA_DIST = sm-cbac.proto
 
 COMMONCPPFLAGS =				\
 	$(CPPFLAGS_EXTRA)			\
@@ -18,8 +29,12 @@ plugins_LTLIBRARIES =
 
 sm_cbac_la_CFLAGS   =
 sm_cbac_la_CPPFLAGS =			\
-	$(COMMONCPPFLAGS)
-sm_cbac_la_LIBADD   =
+	$(COMMONCPPFLAGS)		\
+	$(LIBPROTOBUF_CFLAGS)
+sm_cbac_la_LIBADD   =  $(LIBPROTOBUF_LIBS)	\
+	$(COMMONLIBS) -ldl
+	
+	
 sm_cbac_la_LDFLAGS  = -module
 sm_cbac_la_SOURCES  =			\
 	sm-cbac-plugin.cc		\
@@ -27,8 +42,12 @@ sm_cbac_la_SOURCES  =			\
 	security-manager-cbac.h		\
 	enrollment-task-ps.cc		\
 	../../components.h		\
-	../../components.cc
+	../../components.cc	\
+	$(protoSOURCES)
 
 plugins_LTLIBRARIES += sm-cbac.la
-
+BUILT_SOURCES = $(protoSOURCES)
 dist_plugins_DATA = sm-cbac.manifest
+
+
+
