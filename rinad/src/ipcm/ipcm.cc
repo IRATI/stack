@@ -474,7 +474,7 @@ ipcm_res_t IPCManager_::assign_to_dif(
         const rina::ApplicationProcessNamingInformation &dif_name)
 {
     std::ostringstream ss;
-    IPCMIPCProcess* ipcp;
+    IPCMIPCProcess* ipcp = NULL;
 
     try
     {
@@ -486,15 +486,23 @@ ipcm_res_t IPCManager_::assign_to_dif(
 
     } catch (rina::ConcurrentException& e)
     {
-        ss << "Error while assigning " << ipcp->get_name().toString()
-                << " to DIF " << dif_name.toString() << ". Operation timedout"
-                << std::endl;
+	if (ipcp){
+		ss << "Error while assigning " << ipcp->get_name().toString()
+			<< " to DIF " << dif_name.toString()
+			<< ". Operation timedout" << std::endl;
+	}else{
+		ss << "Error while assigning ipcp to DIF" << std::endl;
+	}
         FLUSH_LOG(ERR, ss);
         return IPCM_FAILURE;
     } catch (rina::AssignToDIFException& e)
     {
-        ss << "Error while assigning " << ipcp->get_name().toString()
-                << " to DIF " << dif_name.toString() << std::endl;
+	if (ipcp){
+		ss << "Error while assigning " << ipcp->get_name().toString()
+			<< " to DIF " << dif_name.toString() << std::endl;
+	}else{
+		ss << "Error while assigning ipcp to DIF" << std::endl;
+	}
         FLUSH_LOG(ERR, ss);
         return IPCM_FAILURE;
     } catch (rina::BadConfigurationException& e)
