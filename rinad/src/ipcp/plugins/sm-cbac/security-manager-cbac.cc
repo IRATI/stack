@@ -183,13 +183,14 @@ bool ProfileParser::getIPCPProfileByName(const rina::ApplicationProcessNamingInf
 
 AccessControl::AccessControl()
 {
-	
+	LOG_IPCP_DBG("Creating AccessControl Class");
 }
 
 /** an example of AC check at the enrollment phase **/
 bool AccessControl::checkJoinDIF(DIFProfile_t& difProfile, IPCPProfile_t& newMemberProfile, 
                                  ac_res_info_t& result)
 {
+        LOG_IPCP_DBG("AC: Check to join DIF");
 	if ( newMemberProfile.ipcp_group == "PRIMARY_IPCP" ){
 		result.code_ = AC_ENR_SUCCESS;
 		return true;
@@ -262,9 +263,11 @@ void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& dif
 SecurityManagerCBACPs::SecurityManagerCBACPs(IPCPSecurityManager * dm_)
 						: dm(dm_)
 {
-	access_control_ = new AccessControl();
+
+        access_control_ = new AccessControl();
         my_ipcp_id = dm->ipcp->get_id();
-        my_dif_name = dm->ipcp->get_dif_information().dif_name_;
+        LOG_IPCP_DBG("Creating SecurityManagerCBACPs class: my_ipcp_id %d", my_ipcp_id);
+       
 }
 
 
@@ -272,7 +275,9 @@ int SecurityManagerCBACPs::isAllowedToJoinDIF(const rina::Neighbor& newMember,
                                                rina::cdap_rib::auth_policy_t & auth)
 {
     
-       
+        my_dif_name = dm->ipcp->get_dif_information().dif_name_;
+        LOG_IPCP_DBG("SecurityManagerCBACPs class: isAllowedToJoinDIF my_dif_name %s", 
+                     my_dif_name.processName.c_str());
         const std::string   profileFile = dm->ipcp->get_dif_information().
                     get_dif_configuration().sm_configuration_.policy_set_.
                     get_param_value_as_string("ACprofilestore");
@@ -287,7 +292,9 @@ int SecurityManagerCBACPs::isAllowedToJoinDIF(const rina::Neighbor& newMember,
 
 	IPCPProfile_t newMemberProfile;
 	
-	
+	LOG_IPCP_DBG("Parsing profile of newMember %s...." ,
+                       newMember.name_.processName.c_str());
+        
 	if (!profileParser.getIPCPProfileByName(newMember.name_, newMemberProfile)){
 		LOG_IPCP_DBG("No Profile for this newMember %s; not allowing it to join DIF!" ,
 		       newMember.name_.processName.c_str());
@@ -296,6 +303,9 @@ int SecurityManagerCBACPs::isAllowedToJoinDIF(const rina::Neighbor& newMember,
 	
 
 	DIFProfile_t difProfile; 
+        LOG_IPCP_DBG("Parsing profile of DIF  %s...." ,
+                       my_dif_name.processName.c_str());
+        
 	if (!profileParser.getDIFProfileByName(my_dif_name, difProfile)){
 		LOG_IPCP_DBG("No Profile for my DIF, not allowing IPCProcess %s to join DIF!",
 				newMember.name_.processName.c_str());

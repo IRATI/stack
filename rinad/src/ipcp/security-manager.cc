@@ -45,13 +45,15 @@ void IPCPSecurityManager::set_dif_configuration(const rina::DIFConfiguration& di
 {
 	config = dif_configuration.sm_configuration_;
 
-	// If no policy set is specified, use default
+        // If no policy set is specified, use default
 	if (config.policy_set_.name_ == std::string()) {
+                LOG_DBG("IPCPSecurityManager: No policy Set specified, use default");
 		config.policy_set_.name_ = rina::IPolicySet::DEFAULT_PS_SET_NAME;
 	}
 
 	// If no default authentication policy is specified, use AUTH_NONE
 	if (config.default_auth_profile.authPolicy.name_ == std::string()) {
+                LOG_DBG("IPCPSecurityManager: No Auth policy Set specified, use AUTH-NONE");
 		config.default_auth_profile.authPolicy.name_ = rina::IAuthPolicySet::AUTH_NONE;
 		config.default_auth_profile.authPolicy.version_ = RINA_DEFAULT_POLICY_VERSION;
 	}
@@ -60,7 +62,6 @@ void IPCPSecurityManager::set_dif_configuration(const rina::DIFConfiguration& di
 	if (select_policy_set(std::string(), ps_name) != 0) {
 		throw rina::Exception("Cannot create Security Manager policy-set");
 	}
-
         add_auth_policy_set(rina::IAuthPolicySet::AUTH_NONE);
         add_auth_policy_set(rina::IAuthPolicySet::AUTH_PASSWORD);
         add_auth_policy_set(rina::IAuthPolicySet::AUTH_SSH2);
@@ -68,6 +69,7 @@ void IPCPSecurityManager::set_dif_configuration(const rina::DIFConfiguration& di
 
 rina::AuthSDUProtectionProfile IPCPSecurityManager::get_auth_sdup_profile(const std::string& under_dif_name)
 {
+        LOG_DBG("IPCPSecurityManager: update crypto state (under-dif-name %s)", under_dif_name.c_str());
 	std::map<std::string, rina::AuthSDUProtectionProfile>::const_iterator it =
 			config.specific_auth_profiles.find(under_dif_name);
 	if (it == config.specific_auth_profiles.end()) {
@@ -102,7 +104,7 @@ void IPCPSecurityManager::process_update_crypto_state_response(const rina::Updat
 
 	lock.lock();
 
-	std::map<unsigned int, rina::IAuthPolicySet *>::iterator it =
+        std::map<unsigned int, rina::IAuthPolicySet *>::iterator it =
 			pending_update_crypto_state_requests.find(event.sequenceNumber);
 	if (it == pending_update_crypto_state_requests.end()) {
 		lock.unlock();
