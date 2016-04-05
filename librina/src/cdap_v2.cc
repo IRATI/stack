@@ -2792,6 +2792,10 @@ class CDAPProvider : public CDAPProviderInterface
 	void send_open_connection_result(const cdap_rib::con_handle_t &con,
 				         const cdap_rib::res_info_t &res,
 				         int invoke_id);
+	void send_open_connection_result(const cdap_rib::con_handle_t &con,
+					 const cdap_rib::res_info_t &res,
+					 const cdap_rib::auth_policy_t &auth,
+					 int invoke_id);
 	void send_close_connection_result(unsigned int port,
 				       	  const cdap_rib::flags_t &flags,
 				       	  const cdap_rib::res_info_t &res,
@@ -3111,6 +3115,21 @@ void CDAPProvider::send_open_connection_result(const cdap_rib::con_handle_t &con
 	send(m_sent, con);
 }
 
+void CDAPProvider::send_open_connection_result(const cdap_rib::con_handle_t &con,
+					       const cdap_rib::res_info_t &res,
+					       const cdap_rib::auth_policy_t &auth,
+					       int invoke_id)
+{
+	cdap_m_t m_sent;
+
+	manager_->getOpenConnectionResponseMessage(m_sent,
+						   con,
+						   res,
+						   invoke_id);
+	m_sent.auth_policy_ = auth;
+	send(m_sent, con);
+}
+
 void CDAPProvider::send_close_connection_result(unsigned int port,
 					        const cdap_rib::flags_t &flags,
 					        const cdap_rib::res_info_t &res,
@@ -3377,7 +3396,8 @@ void AppCDAPIOHandler::process_message(const ser_obj_t &message,
 		//Remote
 		case cdap_m_t::M_CONNECT_R:
 			callback_->remote_open_connection_result(con,
-								 res);
+								 res,
+								 m_rcv.auth_policy_);
 			break;
 		case cdap_m_t::M_RELEASE_R:
 			callback_->remote_close_connection_result(con,
@@ -3466,9 +3486,9 @@ void AppCDAPIOHandler::send(const cdap_m_t & m_sent,
 CDAPCallbackInterface::~CDAPCallbackInterface()
 {
 }
-void CDAPCallbackInterface::remote_open_connection_result(
-		const cdap_rib::con_handle_t &con,
-		const cdap_rib::result_info &res)
+void CDAPCallbackInterface::remote_open_connection_result(const cdap_rib::con_handle_t &con,
+							  const cdap_rib::result_info &res,
+							  const rina::cdap_rib::auth_policy_t &auth)
 {
 	LOG_INFO("Callback open_connection_result operation not implemented");
 }
@@ -3477,9 +3497,8 @@ void CDAPCallbackInterface::open_connection(const cdap_rib::con_handle_t &con,
 {
 	LOG_INFO("Callback open_connection operation not implemented");
 }
-void CDAPCallbackInterface::remote_close_connection_result(
-		const cdap_rib::con_handle_t &con,
-		const cdap_rib::result_info &res)
+void CDAPCallbackInterface::remote_close_connection_result(const cdap_rib::con_handle_t &con,
+							   const cdap_rib::result_info &res)
 {
 	LOG_INFO("Callback close_connection_result operation not implemented");
 

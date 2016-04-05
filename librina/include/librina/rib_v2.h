@@ -48,7 +48,8 @@ public:
 			     const cdap_rib::con_handle_t &con) = 0;
 	/// A remote Connect response has been received.
 	virtual void connectResult(const cdap_rib::res_info_t &res,
-				   const cdap_rib::con_handle_t &con) = 0;
+				   const cdap_rib::con_handle_t &con,
+				   const rina::cdap_rib::auth_policy_t& auth) = 0;
 	/// A remote Release request has been received.
 	virtual void release(int invoke_id,
 			     const cdap_rib::con_handle_t &con) = 0;

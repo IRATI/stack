@@ -176,9 +176,11 @@ void RIBConHandler::connect(const rina::cdap::CDAPMessage& message,
 
 void RIBConHandler::connectResult(
 		const rina::cdap_rib::res_info_t &res,
-		const rina::cdap_rib::con_handle_t &con) {
+		const rina::cdap_rib::con_handle_t &con,
+		const rina::cdap_rib::auth_policy_t &auth) {
 	(void) res;
 	(void) con;
+	(void) auth;
 }
 void RIBConHandler::release(int message_id,
 				const rina::cdap_rib::con_handle_t &con) {
