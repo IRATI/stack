@@ -1632,7 +1632,8 @@ protected:
 
 	//Remote
 	void remote_open_connection_result(const cdap_rib::con_handle_t &con,
-					   const cdap_rib::result_info &res);
+					   const cdap_rib::result_info &res,
+					   const rina::cdap_rib::auth_policy_t &auth);
 	void remote_close_connection_result(const cdap_rib::con_handle_t &con,
 					    const cdap_rib::result_info &res);
 	void remote_create_result(const cdap_rib::con_handle_t &con,
@@ -2166,10 +2167,11 @@ void RIBDaemon::remove_connection(const cdap_rib::con_handle_t& con){
 //
 
 void RIBDaemon::remote_open_connection_result(const cdap_rib::con_handle_t &con,
-					      const cdap_rib::res_info_t &res)
+					      const cdap_rib::res_info_t &res,
+					      const rina::cdap_rib::auth_policy_t &auth)
 {
 	// FIXME remove invoke_id
-	app_con_callback_->connectResult(res, con);
+	app_con_callback_->connectResult(res, con, auth);
 
 	if (res.code_ == cdap_rib::CDAP_SUCCESS) {
 		try {

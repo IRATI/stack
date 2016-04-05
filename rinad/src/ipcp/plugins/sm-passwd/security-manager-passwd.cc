@@ -12,7 +12,9 @@ namespace rinad {
 class SecurityManagerPasswdPs: public ISecurityManagerPs {
 public:
 	SecurityManagerPasswdPs(IPCPSecurityManager * dm);
-	bool isAllowedToJoinDIF(const rina::Neighbor& newMember);
+	int isAllowedToJoinDIF(const rina::Neighbor& newMember,
+			       rina::cdap_rib::auth_policy_t& auth);
+	int storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth);
 	bool acceptFlow(const configs::Flow& newFlow);
 	int set_policy_set_param(const std::string& name,
 			const std::string& value);
@@ -31,12 +33,19 @@ SecurityManagerPasswdPs::SecurityManagerPasswdPs(IPCPSecurityManager * dm_)
 }
 
 
-bool SecurityManagerPasswdPs::isAllowedToJoinDIF(const rina::Neighbor&
-						 newMember)
+int SecurityManagerPasswdPs::isAllowedToJoinDIF(const rina::Neighbor &newMember,
+						rina::cdap_rib::auth_policy_t& auth)
 {
+	(void) auth;
 	LOG_IPCP_DBG("Allowing IPC Process %s to join the DIF",
 		     newMember.name_.processName.c_str());
-	return true;
+	return 0;
+}
+
+int storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth)
+{
+	(void) auth;
+	return 0;
 }
 
 bool SecurityManagerPasswdPs::acceptFlow(const configs::Flow& newFlow)

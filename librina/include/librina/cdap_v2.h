@@ -169,7 +169,8 @@ class CDAPCallbackInterface
 	// Remote operation results
 	//
 	virtual void remote_open_connection_result(const cdap_rib::con_handle_t &con,
-						   const cdap_rib::result_info &res);
+						   const cdap_rib::result_info &res,
+						   const rina::cdap_rib::auth_policy_t &auth);
 	virtual void remote_close_connection_result(const cdap_rib::con_handle_t &con,
 						    const cdap_rib::result_info &res);
 	virtual void remote_create_result(const cdap_rib::con_handle_t &con,
@@ -355,6 +356,10 @@ public:
 	//
 	virtual void send_open_connection_result(const cdap_rib::con_handle_t &con,
 						 const cdap_rib::res_info_t &res,
+						 int invoke_id) = 0;
+	virtual void send_open_connection_result(const cdap_rib::con_handle_t &con,
+						 const cdap_rib::res_info_t &res,
+						 const cdap_rib::auth_policy_t &auth,
 						 int invoke_id) = 0;
 	virtual void send_close_connection_result(unsigned int port,
 						  const cdap_rib::flags_t &flags,

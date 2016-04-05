@@ -364,7 +364,8 @@ void IPCPCDAPIOHandler::invoke_callback(const rina::cdap_rib::con_handle_t& con_
 		//Remote
 		case rina::cdap::cdap_m_t::M_CONNECT_R:
 			callback_->remote_open_connection_result(con_handle,
-								 res);
+								 res,
+								 m_rcv.auth_policy_);
 			break;
 		case rina::cdap::cdap_m_t::M_RELEASE_R:
 			callback_->remote_close_connection_result(con_handle,

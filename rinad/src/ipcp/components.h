@@ -120,7 +120,8 @@ public:
 			     	      const rina::cdap_rib::con_handle_t &con) = 0;
         virtual void connect_response_received(int result,
         				       const std::string& result_reason,
-        				       const rina::cdap_rib::con_handle_t &con) = 0;
+        				       const rina::cdap_rib::con_handle_t &con,
+					       const rina::cdap_rib::auth_policy_t& auth) = 0;
         virtual void process_authentication_message(const rina::cdap::CDAPMessage& message,
         					    const rina::cdap_rib::con_handle_t &con) = 0;
 	virtual void authentication_completed(int port_id, bool success) = 0;
@@ -389,8 +390,13 @@ public:
 class ISecurityManagerPs : public rina::IPolicySet {
 // This class is used by the IPCP to access the plugin functionalities
 public:
-	/// Decide if an IPC Process is allowed to join a DIF
-	virtual bool isAllowedToJoinDIF(const rina::Neighbor& newMember) = 0;
+	/// Decide if an IPC Process is allowed to join a DIF.
+	/// 0 success, < 0 error
+	virtual int isAllowedToJoinDIF(const rina::Neighbor& newMember,
+				       rina::cdap_rib::auth_policy_t & auth) = 0;
+
+	//Validate and store access control credentials.0 success, < 0 error.
+	virtual int storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth) = 0;
 
 	/// Decide if a new flow to the IPC process should be accepted
 	virtual bool acceptFlow(const configs::Flow& newFlow) = 0;
