@@ -1926,10 +1926,11 @@ static void undo_assignment(struct ipcp_instance_data * data)
 
 static int parse_dir_entry(struct ipcp_instance_data * data, char **blob)
 {
+        int                result = -1;
         unsigned int       len, port_nr;
         __be32             ip_addr;
-        char               * ap, * ae, * ip, * port;
-        struct name *      app_name;
+        char               * pn = 0, * pi = 0, * en = 0, * ei = 0;
+        char               * ip = 0, * port = 0;
         struct dir_entry * dir_entry;
 
         LOG_HBEAT;
@@ -1941,77 +1942,33 @@ static int parse_dir_entry(struct ipcp_instance_data * data, char **blob)
                 return -1;
 
         /* len:aplen:aelen:iplen:port */
-        /* Get AP name */
-        len = 0;
-        ap  = 0;
-        if (get_nxt_val(&ap, blob, &len)) {
+        if (get_nxt_val(&pn, blob, &len)
+         || get_nxt_val(&en, blob, &len)
+         || get_nxt_val(&ip, blob, &len)
+         || get_nxt_val(&port, blob, &len)) {
                 LOG_ERR("Failed to get next value");
-                rkfree(dir_entry);
-                return -1;
-        }
-
-        /* Get AE name */
-        ae = 0;
-        if (get_nxt_val(&ae, blob, &len)) {
-                LOG_ERR("Failed to get next value");
-                rkfree(ap);
-                rkfree(dir_entry);
-                return -1;
-        }
-
-        /* Get IP address */
-        ip = 0;
-        if (get_nxt_val(&ip, blob, &len)) {
-                LOG_ERR("Failed to get next value");
-                rkfree(ae);
-                rkfree(ap);
-                rkfree(dir_entry);
-                return -1;
+                goto out;
         }
 
         if (ip_string_to_int(ip, &ip_addr)) {
                 LOG_ERR("Failed to convert ip to int");
-                rkfree(ip);
-                rkfree(ae);
-                rkfree(ap);
-                rkfree(dir_entry);
-                return -1;
-        }
-        rkfree(ip);
-
-        /* Get port number */
-        port = 0;
-        if (get_nxt_val(&port, blob, &len)) {
-                LOG_ERR("Failed to get next value");
-                rkfree(ae);
-                rkfree(ap);
-                rkfree(dir_entry);
-                return -1;
+                goto out;
         }
 
         if (kstrtouint(port, 10, &port_nr)) {
                 LOG_ERR("Failed to convert int");
-                rkfree(port);
-                rkfree(ae);
-                rkfree(ap);
-                rkfree(dir_entry);
-                return -1;
+                goto out;
         }
-        rkfree(port);
 
-        app_name = name_create();
-        if (!name_init_with(app_name,
-                            ap, rkstrdup_ni(""),
-                            ae, rkstrdup_ni(""))) {
-                LOG_ERR("Failed to init name");
-                rkfree(ae);
-                rkfree(ap);
-                rkfree(dir_entry);
-                return -1;
+        if (!(pi = rkstrdup(""))
+         || !(ei = rkstrdup(""))
+         || !(dir_entry->app_name = name_create())) {
+                LOG_ERR("Failed to get memory");
+                goto out;
         }
 
         INIT_LIST_HEAD(&dir_entry->list);
-        dir_entry->app_name   = app_name;
+        name_init_with(dir_entry->app_name, pn, pi, en, ei);
         dir_entry->ip_address = ip_addr;
         dir_entry->port       = port_nr;
 
@@ -2020,16 +1977,33 @@ static int parse_dir_entry(struct ipcp_instance_data * data, char **blob)
         spin_unlock(&data->lock);
 
         LOG_DBG("Added a new dir entry");
+        result = 0;
 
-        return 0;
+out:
+        if (port)
+               rkfree(port);
+        if (ip)
+               rkfree(ip);
+        if (result) {
+                if (pn)
+                      rkfree(pn);
+                if (pi)
+                      rkfree(pi);
+                if (en)
+                      rkfree(en);
+                if (ei)
+                      rkfree(ei);
+                rkfree(dir_entry);
+        }
+        return result;
 }
 
 static int parse_exp_reg_entry(struct ipcp_instance_data * data, char ** blob)
 {
+        int              result = -1;
         struct exp_reg * exp_reg;
-        unsigned int     len, port_nr;
-        char           * ap, * ae, * port;
-        struct name *    app_name;
+        unsigned int     len;
+        char             * pn = 0, * pi = 0, * en = 0, * ei = 0, * port = 0;
 
         ASSERT(*blob);
 
@@ -2038,65 +2012,50 @@ static int parse_exp_reg_entry(struct ipcp_instance_data * data, char ** blob)
                 return -1;
 
         /* len:aplen:aelen:port */
-        /* Get AP name */
-        len = 0;
-        ap  = 0;
-        if (get_nxt_val(&ap, blob, &len)) {
+        if (get_nxt_val(&pn, blob, &len)
+         || get_nxt_val(&en, blob, &len)
+         || get_nxt_val(&port, blob, &len)) {
                 LOG_ERR("Failed to get next value");
-                rkfree(exp_reg);
-                return -1;
+                goto out;
         }
 
-        /* Get AE name */
-        ae = 0;
-        if (get_nxt_val(&ae, blob, &len)) {
-                LOG_ERR("Failed to get next value");
-                rkfree(ap);
-                rkfree(exp_reg);
-                return -1;
-        }
-
-        /* Get port number */
-        port = 0;
-        if (get_nxt_val(&port, blob, &len)) {
-                LOG_ERR("Failed to get next value");
-                rkfree(ae);
-                rkfree(ap);
-                rkfree(exp_reg);
-                return -1;
-        }
-
-        if (kstrtouint(port, 10, &port_nr)) {
+        if (kstrtouint(port, 10, &exp_reg->port)) {
                 LOG_ERR("Failed to convert int");
-                rkfree(port);
-                rkfree(ae);
-                rkfree(ap);
-                rkfree(exp_reg);
-                return -1;
+                goto out;
         }
-        rkfree(port);
+
+        if (!(pi = rkstrdup(""))
+         || !(ei = rkstrdup(""))
+         || !(exp_reg->app_name = name_create())) {
+                LOG_ERR("Failed to get memory");
+                goto out;
+        }
 
         INIT_LIST_HEAD(&exp_reg->list);
-        app_name = name_create();
-        if (!name_init_with(app_name,
-                            ap, rkstrdup_ni(""),
-                            ae, rkstrdup_ni(""))) {
-                LOG_ERR("Failed to init name");
-                rkfree(ae);
-                rkfree(ap);
-                rkfree(exp_reg);
-                return -1;
-        }
-        exp_reg->app_name = app_name;
-        exp_reg->port     = port_nr;
+        name_init_with(exp_reg->app_name, pn, pi, en, ei);
 
         spin_lock(&data->lock);
         list_add(&exp_reg->list, &data->exp_regs);
         spin_unlock(&data->lock);
 
         LOG_DBG("Added a new exp reg entry");
+        result = 0;
 
-        return 0;
+out:
+        if (port)
+               rkfree(port);
+        if (result) {
+                if (pn)
+                      rkfree(pn);
+                if (pi)
+                      rkfree(pi);
+                if (en)
+                      rkfree(en);
+                if (ei)
+                      rkfree(ei);
+                rkfree(exp_reg);
+        }
+        return result;
 }
 
 static int parse_assign_conf(struct ipcp_instance_data * data,
@@ -2121,7 +2080,7 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
 
                         ASSERT(entry->value);
 
-                        copy = rkstrdup_ni(entry->value);
+                        copy = rkstrdup(entry->value);
                         if (!copy) {
                                 LOG_ERR("Failed to dup value");
                                 return -1;
@@ -2145,7 +2104,7 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
 
                         ASSERT(entry->value);
 
-                        copy = rkstrdup_ni(entry->value);
+                        copy = rkstrdup(entry->value);
                         if (!copy) {
                                 LOG_ERR("Failed to dup value");
                                 return -1;
@@ -2172,7 +2131,7 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
 
                         ASSERT(entry->value);
 
-                        copy = rkstrdup_ni(entry->value);
+                        copy = rkstrdup(entry->value);
                         if (!copy) {
                                 LOG_ERR("Failed to dup value");
                                 return -1;
