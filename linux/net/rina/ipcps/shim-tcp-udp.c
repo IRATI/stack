@@ -50,6 +50,7 @@
 
 #define CUBE_UNRELIABLE 0
 #define CUBE_RELIABLE   1
+#define SEND_WQ_MAX_SIZE 1000
 
 static struct workqueue_struct * rcv_wq;
 static struct workqueue_struct * snd_wq;
@@ -57,6 +58,7 @@ static struct work_struct        rcv_work;
 static struct work_struct        snd_work;
 static struct list_head          rcv_wq_data;
 static struct list_head          snd_wq_data;
+static int snd_wq_size;
 static DEFINE_SPINLOCK(rcv_wq_lock);
 static DEFINE_SPINLOCK(snd_wq_lock);
 
@@ -172,6 +174,11 @@ struct exp_reg {
         struct name *    app_name;
         int              port;
 };
+
+static struct ipcp_factory_data {
+        spinlock_t lock;
+        struct list_head instances;
+} tcp_udp_data;
 
 static ssize_t shim_tcp_udp_ipcp_attr_show(struct robject *        robj,
 					   struct robj_attribute * attr,
@@ -2328,6 +2335,7 @@ static int tcp_sdu_write(struct shim_tcp_udp_flow * flow,
                                 len + sizeof(__be16) - total);
                 if (size < 0) {
                         LOG_ERR("error during sdu write (tcp): %d", size);
+                        rkfree(buf);
                         return -1;
                 }
                 total += size;
@@ -2347,6 +2355,13 @@ static int tcp_udp_sdu_write(struct ipcp_instance_data * data,
 
         LOG_DBG("Callback on tcp_udp_sdu_write");
 
+        spin_lock_irqsave(&snd_wq_lock, flags);
+        if (snd_wq_size == SEND_WQ_MAX_SIZE) {
+        	spin_unlock_irqrestore(&snd_wq_lock, flags);
+        	LOG_DBG("Output SDU queue is full, try later");
+        	return -EAGAIN;
+        }
+
         snd_data = rkmalloc(sizeof(*snd_data), GFP_ATOMIC);
         if (!snd_data) {
                 LOG_ERR("Could not allocate snd_data");
@@ -2358,8 +2373,8 @@ static int tcp_udp_sdu_write(struct ipcp_instance_data * data,
         snd_data->sdu  = sdu;
         INIT_LIST_HEAD(&snd_data->list);
 
-        spin_lock_irqsave(&snd_wq_lock, flags);
         list_add_tail(&snd_data->list, &snd_wq_data);
+        snd_wq_size++;
         spin_unlock_irqrestore(&snd_wq_lock, flags);
 
         queue_work(snd_wq, &snd_work);
@@ -2428,15 +2443,39 @@ static int __tcp_udp_sdu_write(struct ipcp_instance_data * data,
         return 0;
 }
 
+static void enable_all_flows(void)
+{
+	struct ipcp_instance_data * pos, *next;
+	struct shim_tcp_udp_flow  * flow, *nflow;
+	unsigned long               flags;
+
+	list_for_each_entry_safe(pos, next, &(tcp_udp_data.instances), list) {
+		spin_lock_irqsave(&pos->lock, flags);
+		list_for_each_entry_safe(flow, nflow, &pos->flows, list) {
+			if (flow->user_ipcp && flow->user_ipcp->ops)
+				flow->user_ipcp->ops->enable_write(flow->user_ipcp->data,
+								   flow->port_id);
+		}
+		spin_unlock_irqrestore(&pos->lock, flags);
+	}
+}
+
 static void tcp_udp_write_worker(struct work_struct * w)
 {
-        struct snd_data * snd_data, * next;
-        unsigned long     flags;
+        struct snd_data           * snd_data, * next;
+        unsigned long               flags;
 
         /* FIXME: more efficient locking and better cleanup */
         spin_lock_irqsave(&snd_wq_lock, flags);
+
         list_for_each_entry_safe(snd_data, next, &snd_wq_data, list) {
                 list_del(&snd_data->list);
+                snd_wq_size --;
+                if (snd_wq_size == SEND_WQ_MAX_SIZE - 1) {
+                	spin_unlock_irqrestore(&snd_wq_lock, flags);
+                	enable_all_flows();
+                	spin_lock_irqsave(&snd_wq_lock, flags);
+                }
                 spin_unlock_irqrestore(&snd_wq_lock, flags);
 
                 __tcp_udp_sdu_write(snd_data->data,
@@ -2528,11 +2567,6 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
         .dif_name		   = tcp_udp_dif_name
 };
 
-static struct ipcp_factory_data {
-        spinlock_t lock;
-        struct list_head instances;
-} tcp_udp_data;
-
 static int tcp_udp_init(struct ipcp_factory_data * data)
 {
         LOG_HBEAT;
@@ -2551,6 +2585,8 @@ static int tcp_udp_init(struct ipcp_factory_data * data)
 
         INIT_WORK(&rcv_work, tcp_udp_rcv_worker);
         INIT_WORK(&snd_work, tcp_udp_write_worker);
+
+        snd_wq_size = 0;
 
         LOG_INFO("%s initialized", SHIM_NAME);
 
