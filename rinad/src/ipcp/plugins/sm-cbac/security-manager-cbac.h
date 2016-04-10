@@ -25,7 +25,7 @@ typedef struct RIBProfile {
 typedef struct IPCPProfile {
 
         rina::ApplicationProcessNamingInformation ipcp_name;
-        rina::ApplicationProcessNamingInformation ipcp_difName;
+        rina::ApplicationProcessNamingInformation ipcp_difName; //XXX check if used
         std::string ipcp_type;
         std::string ipcp_group;
         RIBProfile_t ipcp_rib_profile;
@@ -75,7 +75,7 @@ public:
         virtual ~ProfileParser() {};
         bool getDIFProfileByName(const rina::ApplicationProcessNamingInformation&, DIFProfile_t&);
         bool getIPCPProfileByName(const rina::ApplicationProcessNamingInformation&, IPCPProfile_t&);
-  
+        string toString() const; 
 private:
   
         std::list<DIFProfile_t> difProfileList;

@@ -46,6 +46,7 @@ void serializeToken(const Token_t &token,
                         rina::ser_obj_t &result)
 {
 
+        LOG_IPCP_DBG("Serializing token..");
         rina::messages::smCbacToken_t gpbToken;
         
         //fill in the token message object
@@ -82,7 +83,39 @@ void serializeToken(const Token_t &token,
         gpbToken.SerializeToArray(result.message_, size);
         
 }
+//---------------------------
+string ProfileParser::toString() const
+{
+        stringstream ss;
 
+        for (list<DIFProfile_t>::const_iterator it =
+                        difProfileList.begin();
+                                it != difProfileList.end(); it++) {
+                ss << "DIF Profile:" << endl;
+                ss << "\tName: " << it->dif_name.toString() << endl;
+                ss << "\tDIF Type: " << it->dif_type.c_str() << endl;
+                ss << "\tDIF Group: " << it->dif_group.c_str() << endl;
+                ss << "**" << endl;
+        } 
+        ss << "********" << endl;
+        for (list<IPCPProfile_t>::const_iterator nit =
+                        ipcpProfileList.begin();
+                                nit != ipcpProfileList.end(); nit++) {
+                ss << "\tIPCP Profile:" << endl;
+                ss << "\t\tName: " << nit->ipcp_name.toString() << endl;
+                ss << "\t\tType: " << nit->ipcp_type.c_str() << endl;
+                ss << "\t\tGroup: " << nit->ipcp_group.c_str() << endl;
+                //FIXME: not set
+                //ss << "\t\tDIF: " << nit->ipcp_difName.name.c_str() << endl;
+                ss << "\t\tRIB type: " <<
+                        nit->ipcp_rib_profile.rib_type.c_str() << endl;
+                ss << "\t\tRIB group: " <<
+                        nit->ipcp_rib_profile.rib_group.c_str() << endl;
+                ss << "**" << endl;
+        }
+
+        return ss.str();
+}
 //----------------------------
  /**
  * class ProfileParser: Parse AC config file with jsoncpp
@@ -94,7 +127,9 @@ bool ProfileParser::parseProfile(const std::string fileName)
 	Json::Value  root;
 	Json::Reader reader;
 	ifstream     file;
-
+        
+        LOG_IPCP_DBG("Parsing file %s", fileName.c_str());
+        
 	file.open(fileName.c_str(), std::ifstream::in);
 	if (file.fail()) {
 		LOG_ERR("Failed to open AC profile file");
@@ -146,6 +181,7 @@ bool ProfileParser::parseProfile(const std::string fileName)
 		ipcpProfileList.push_back(ipcp);
 				
 	}
+	LOG_IPCP_DBG("Profiles parsed: %s", toString().c_str());
 	return true;
 	
 }
@@ -153,6 +189,7 @@ bool ProfileParser::parseProfile(const std::string fileName)
 bool ProfileParser::getDIFProfileByName(const rina::ApplicationProcessNamingInformation& difName,
 					DIFProfile_t& result)
 {
+        //FIXME: check comparaison
 	for (list<DIFProfile_t>::const_iterator it = difProfileList.begin();
 					it != difProfileList.end(); it++) {
 		if (it->dif_name == difName) {
@@ -169,7 +206,9 @@ bool ProfileParser::getIPCPProfileByName(const rina::ApplicationProcessNamingInf
 {
 	for (list<IPCPProfile_t>::const_iterator it = ipcpProfileList.begin();
 					it != ipcpProfileList.end(); it++) {
-		if (it->ipcp_name == ipcpName) {
+                LOG_IPCP_DBG("Comparing [%s] and [%s]",
+                    it->ipcp_name.toString().c_str(), ipcpName.processName.c_str());
+		if (it->ipcp_name.processName == ipcpName.processName) {
 			result = *it;
 			return true;
 		}
@@ -190,7 +229,8 @@ AccessControl::AccessControl()
 bool AccessControl::checkJoinDIF(DIFProfile_t& difProfile, IPCPProfile_t& newMemberProfile, 
                                  ac_res_info_t& result)
 {
-        LOG_IPCP_DBG("AC: Check to join DIF");
+        LOG_IPCP_DBG("AC: Check to join DIF in progress...");
+        
 	if ( newMemberProfile.ipcp_group == "PRIMARY_IPCP" ){
 		result.code_ = AC_ENR_SUCCESS;
 		return true;
@@ -208,6 +248,7 @@ std::list<Capability_t> AccessControl::computeCapabilities(DIFProfile_t& difProf
                                                             IPCPProfile_t& newMemberProfile)
 {
         
+        LOG_IPCP_DBG("AC: Compute capabilities...");
         std::list<Capability_t> result;
         if ( newMemberProfile.ipcp_group == "PRIMARY_IPCP" || 
                     difProfile.dif_group == newMemberProfile.ipcp_group ){
