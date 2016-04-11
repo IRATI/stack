@@ -396,7 +396,16 @@ public:
 				       rina::cdap_rib::auth_policy_t & auth) = 0;
 
 	//Validate and store access control credentials.0 success, < 0 error.
-	virtual int storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth) = 0;
+	virtual int storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth,
+					    const rina::cdap_rib::con_handle_t & con) = 0;
+
+	virtual int getAccessControlCreds(rina::cdap_rib::auth_policy_t & auth,
+					  const rina::cdap_rib::con_handle_t & con) = 0;
+
+	virtual int checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
+				      const rina::cdap_rib::con_handle_t & con,
+				      const rina::cdap::cdap_m_t::Opcode opcode,
+				      const std::string obj_name) = 0;
 
 	/// Decide if a new flow to the IPC process should be accepted
 	virtual bool acceptFlow(const configs::Flow& newFlow) = 0;

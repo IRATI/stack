@@ -23,6 +23,10 @@ COMMONCPPFLAGS =				\
 	$(LIBRINA_CFLAGS)			\
 	-I$(top_srcdir)/src			\
 	-I$(top_srcdir)/src/common
+	
+COMMONLIBS =								\
+	$(builddir)/../../../common/librinad.la	\
+	$(LIBRINA_LIBS)
 
 pluginsdir          = $(pkglibdir)/ipcp
 plugins_LTLIBRARIES =

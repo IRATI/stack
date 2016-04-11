@@ -247,6 +247,7 @@ public:
 	/// @param result_reason
 	void connectResponse(int result,
 			     const std::string& result_reason,
+			     const rina::cdap_rib::con_handle_t & con,
 			     const rina::cdap_rib::auth_policy_t& auth);
 
 	void remoteStartResult(const rina::cdap_rib::con_handle_t &con,
@@ -420,6 +421,7 @@ void EnrolleeStateMachine::authentication_completed(bool success)
 
 void EnrolleeStateMachine::connectResponse(int result,
 					   const std::string& result_reason,
+					   const rina::cdap_rib::con_handle_t & con,
 					   const rina::cdap_rib::auth_policy_t& auth)
 {
 	rina::ScopedLock g(lock_);
@@ -448,7 +450,7 @@ void EnrolleeStateMachine::connectResponse(int result,
 	ISecurityManagerPs *smps = dynamic_cast<ISecurityManagerPs *>(sec_man_->ps);
 	assert(smps);
 
-	if (smps->storeAccessControlCreds(auth) != 0){
+	if (smps->storeAccessControlCreds(auth, con) != 0){
 		state_ = STATE_NULL;
 		enrollment_task_->enrollmentFailed(remote_peer_.name_,
 				con.port_id,
@@ -1599,6 +1601,7 @@ void EnrollmentTaskPs::connect_response_received(int result,
 									      false);
 		stateMachine->connectResponse(result,
 					      result_reason,
+					      con_handle,
 					      auth);
 	}catch(rina::Exception &e){
 		//Error getting the enrollment state machine

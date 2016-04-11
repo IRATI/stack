@@ -13,8 +13,15 @@ class SecurityManagerPasswdPs: public ISecurityManagerPs {
 public:
 	SecurityManagerPasswdPs(IPCPSecurityManager * dm);
 	int isAllowedToJoinDIF(const rina::Neighbor& newMember,
-			       rina::cdap_rib::auth_policy_t& auth);
-	int storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth);
+			       rina::cdap_rib::auth_policy_t & auth);
+	int storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth,
+				    const rina::cdap_rib::con_handle_t & con);
+	int getAccessControlCreds(rina::cdap_rib::auth_policy_t & auth,
+			          const rina::cdap_rib::con_handle_t & con);
+	int checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
+			      const rina::cdap_rib::con_handle_t & con,
+			      const rina::cdap::cdap_m_t::Opcode opcode,
+			      const std::string obj_name);
 	bool acceptFlow(const configs::Flow& newFlow);
 	int set_policy_set_param(const std::string& name,
 			const std::string& value);
@@ -42,9 +49,31 @@ int SecurityManagerPasswdPs::isAllowedToJoinDIF(const rina::Neighbor &newMember,
 	return 0;
 }
 
-int storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth)
+int SecurityManagerPasswdPs::storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth,
+			    	    	    	     const rina::cdap_rib::con_handle_t & con)
 {
 	(void) auth;
+	(void) con;
+	return 0;
+}
+
+int SecurityManagerPasswdPs::getAccessControlCreds(rina::cdap_rib::auth_policy_t & auth,
+		          	  	  	   const rina::cdap_rib::con_handle_t & con)
+{
+	(void) auth;
+	(void) con;
+	return 0;
+}
+
+int SecurityManagerPasswdPs::checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
+		      	      	      	       const rina::cdap_rib::con_handle_t & con,
+					       const rina::cdap::cdap_m_t::Opcode opcode,
+					       const std::string obj_name)
+{
+	(void) auth;
+	(void) con;
+	(void) opcode;
+	(void) obj_name;
 	return 0;
 }
 
