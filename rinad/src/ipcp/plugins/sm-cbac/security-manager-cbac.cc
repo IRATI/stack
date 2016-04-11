@@ -15,7 +15,7 @@ namespace rinad {
 const std::string AC_CBAC = "AC_CBAC";
 const std::string AC_CBAC_VERSION = "1";
 const std::string AccessControl::IPCP_DIF_FROM_DIFFERENT_GROUPS = "IPCP_DIF_FROM_DIFFERENT_GROUPS";
-
+const int VALIDITY_TIME_IN_HOURS = 2;
 //----------------------------
 //FIXME: merge/use the helpers in rinad/src/common/encoder.cc
     
@@ -339,9 +339,10 @@ void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& dif
         token.ipcp_holder_name = newMemberProfile.ipcp_name; //TODO name or id? (.processName)
         token.audience = "all";
         rina::Time currentTime;
-        token.issued_time = currentTime.get_current_time_in_ms();
-        token.token_nbf = currentTime.get_current_time_in_ms();
-        token.token_exp = currentTime.get_current_time_in_ms() * 10000;
+        int t = currentTime.get_current_time_in_ms();
+        token.issued_time = t;
+        token.token_nbf = t; //token valid immediately
+        token.token_exp = VALIDITY_TIME_IN_HOURS;; // after this time, the token will be invalid
         token.token_cap = result; 
         token.token_sign = "signature";
         
@@ -431,9 +432,39 @@ int SecurityManagerCBACPs::isAllowedToJoinDIF(const rina::Neighbor& newMember,
 	
 }
 
-int SecurityManagerCBACPs::storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth)
+int SecurityManagerCBACPs::storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth,
+                                               const rina::cdap_rib::con_handle_t & con)
+{
+        LOG_IPCP_DBG("Storing AC Credentials of IPCP %s (token coming from %s)",
+                     con.src_.ap_name_.c_str(), con.dest_.ap_name_.c_str());
+        
+        Token_t token;
+        deserializeToken(auth.options, token);
+        
+        LOG_IPCP_DBG("Received token : %s", token.toString().c_str());
+        token_per_ipcp[con.src_.ap_name_.c_str()] = & token;
+        return 0;
+}
+
+int SecurityManagerCBACPs::getAccessControlCreds(rina::cdap_rib::auth_policy_t & auth,
+                                             const rina::cdap_rib::con_handle_t & con)
 {
         (void) auth;
+        (void) con;
+
+        return 0;
+}
+
+int SecurityManagerCBACPs::checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
+                                         const rina::cdap_rib::con_handle_t & con,
+                                         const rina::cdap::cdap_m_t::Opcode opcode,
+                                         const std::string obj_name)
+{
+        (void) auth;
+        (void) con;
+        (void) opcode;
+        (void) obj_name;
+
         return 0;
 }
 

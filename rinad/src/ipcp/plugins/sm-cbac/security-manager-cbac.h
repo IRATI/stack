@@ -90,6 +90,15 @@ typedef struct Capability{
         std::string operation;
         Capability() {}
         Capability(std::string res, std::string oper) : ressource(res), operation(oper) {}
+        string toString() const
+        {
+                stringstream ss;
+                
+                ss << "\t Ressource :" << ressource.c_str() << endl; 
+                ss << "\t Operation :" << operation.c_str() << endl;
+                return ss.str();
+        }
+        
 } Capability_t;
 
 typedef struct Token{
@@ -102,6 +111,29 @@ typedef struct Token{
         int token_exp;
         std::list<Capability> token_cap;
         std::string token_sign;
+        string toString() const
+        {
+                stringstream ss;
+                
+                ss << "\nToken id:" << token_id << endl;
+                ss << "Token issuer_id:" << ipcp_issuer_id << endl;
+                ss << "Token ipcp_holder_name:" << ipcp_holder_name.toString() << endl;
+                ss << "Token audience:" << audience.c_str() << endl;
+                ss << "Token issued_time:" << issued_time << endl;
+                ss << "Token token_nbf:" << token_nbf << endl;
+                ss << "Token token_exp:" << token_exp << endl;
+                int i = 1;
+                for (list<Capability_t>::const_iterator it =
+                                token_cap.begin(); 
+                                it != token_cap.end(); it++) {
+                        ss << "Capability " << i << ":"<< endl;
+                        ss << it->toString() << endl;
+                        i ++;
+                                    
+                }
+                                        
+                return ss.str();
+        }
 } Token_t;
 
 
@@ -127,7 +159,14 @@ public:
                                 //const rina::ApplicationProcessNamingInformation, std::string);
         int isAllowedToJoinDIF(const rina::Neighbor& newMember,
                                rina::cdap_rib::auth_policy_t & auth);
-        int storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth);
+        int storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth,
+                                    const rina::cdap_rib::con_handle_t & con);
+        int getAccessControlCreds(rina::cdap_rib::auth_policy_t & auth,
+                                  const rina::cdap_rib::con_handle_t & con);
+        int checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
+                              const rina::cdap_rib::con_handle_t & con,
+                              const rina::cdap::cdap_m_t::Opcode opcode,
+                              const std::string obj_name);
         bool acceptFlow(const configs::Flow& newFlow);
         int set_policy_set_param(const std::string& name,
                         const std::string& value);
@@ -142,6 +181,7 @@ private:
         AccessControl * access_control_;
         unsigned short my_ipcp_id;
         rina::ApplicationProcessNamingInformation my_dif_name;
+        std::map<std::string, Token_t*> token_per_ipcp;
 };
 
 
