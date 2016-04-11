@@ -39,7 +39,57 @@ rina::messages::newApplicationProcessNamingInfo_t* get_NewApplicationProcessNami
         get_NewApplicationProcessNamingInfo_t(name, *gpb);
         return gpb;
 }
+
+void get_NewApplicationProcessNamingInformation(
+                const rina::messages::newApplicationProcessNamingInfo_t &gpf_app,
+                rina::ApplicationProcessNamingInformation &app)
+{
+        app.processName = gpf_app.applicationprocessname();
+        app.processInstance = gpf_app.applicationprocessinstance();
+        app.entityName = gpf_app.applicationentityname();
+        app.entityInstance = gpf_app.applicationentityinstance();
 }
+
+void toModelCap(const rina::messages::smCapability_t &gpb_cap, 
+                            Capability_t &des_cap)
+{
+        des_cap.ressource = gpb_cap.ressource();
+        des_cap.operation = gpb_cap.operation();
+}
+
+void toModelToken(const rina::messages::smCbacToken_t &gpb_token, 
+                            Token_t &des_token)
+{
+    
+        des_token.token_id = gpb_token.token_id();
+        des_token.ipcp_issuer_id = gpb_token.ipcp_issuer_id();
+        
+        
+        
+        rina::ApplicationProcessNamingInformation app_name;
+        cbac_helpers::get_NewApplicationProcessNamingInformation(gpb_token.ipcp_holder_name(),
+                                                         app_name);
+        
+        des_token.ipcp_holder_name = app_name;
+        
+        des_token.audience = gpb_token.audience();
+        des_token.issued_time = gpb_token.issued_time();
+        des_token.token_nbf = gpb_token.token_nbf();
+        des_token.token_exp = gpb_token.token_exp();
+        
+        
+        for (int i = 0; i < gpb_token.token_cap_size(); i++)
+        {
+                Capability_t cap; // = new Capability_t();
+                cbac_helpers::toModelCap(gpb_token.token_cap(i), cap);
+                des_token.token_cap.push_back(cap);
+        }
+        
+        des_token.token_sign = gpb_token.token_sign();
+}       
+
+} //cbac-helpers
+
 //----------------------------    
    
 void serializeToken(const Token_t &token, 
@@ -81,6 +131,16 @@ void serializeToken(const Token_t &token,
         result.message_ = new unsigned char[size];
         result.size_ = size;
         gpbToken.SerializeToArray(result.message_, size);
+        
+}
+
+void deserializeToken(const rina::ser_obj_t &serobj,
+                                Token_t &des_token)
+{
+    
+        rina::messages::smCbacToken_t gpb;
+        gpb.ParseFromArray(serobj.message_, serobj.size_);
+        cbac_helpers::toModelToken(gpb, des_token);
         
 }
 //---------------------------
@@ -291,7 +351,7 @@ void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& dif
         
         // fill auth structure
         
-//         cdap_rib::auth_policy_t auth;
+        // cdap_rib::auth_policy_t auth;
         auth.name = AC_CBAC;
         auth.versions.push_back(AC_CBAC_VERSION);
         auth.options = options;
