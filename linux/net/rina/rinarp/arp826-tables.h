@@ -76,10 +76,10 @@ struct table_entry * tbl_find_by_gpa(struct table *     instance,
  */
 int                  tbls_init(void);
 void                 tbls_fini(void);
-int                  tbls_create(struct net_device * device,
+struct table *       tbls_create(struct net_device * device,
                                  uint16_t            ptype,
                                  size_t              hwl);
-int                  tbls_create_ni(struct net_device * device,
+struct table *       tbls_create_ni(struct net_device * device,
                                     uint16_t            ptype,
                                     size_t              hwl);
 int                  tbls_destroy(struct net_device * device,
