@@ -74,3 +74,6 @@ check-kernel-debug:
 
 check-all:
 	cd test && $(MAKE) $(AM_MAKEFLAGS) check-all
+
+install-data-local:
+	$(MKDIR_P) $(localstatedir)/log
