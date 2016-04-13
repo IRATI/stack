@@ -570,7 +570,7 @@ public:
 			unsigned int opaque);
 
 	/**
-	 * Invoked by the IPC Manager to forward a CDAP message to
+	 * Invoked by the IPC Manager to forward a CDAPrequest message to
          * IPC process, so that the latter can process the message
 	 * through its RIB
 	 *
@@ -579,8 +579,21 @@ public:
 	 * @throws ForwardCDAPException if an error happens during
          *         the process
 	 */
-	void forwardCDAPMessage(const ser_obj_t& sermsg,
+	void forwardCDAPRequestMessage(const ser_obj_t& sermsg,
 				unsigned int opaque);
+
+        /**
+         * Invoked by the IPC Manager to forward a CDAP response message to
+         * IPC process, so that the latter can process the message
+         * through its RIB
+         *
+         * @param sermsg The serialized message
+         * @param opaque an opaque identifier to correlate requests and responses
+         * @throws ForwardCDAPException if an error happens during
+         *         the process
+         */
+        void forwardCDAPResponseMessage(const ser_obj_t& sermsg,
+                                unsigned int opaque);
 };
 
 /**

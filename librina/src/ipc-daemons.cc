@@ -58,13 +58,23 @@ PluginLoadResponseEvent::PluginLoadResponseEvent(
 { this->result = result; }
 
 /* CLASS FWD CDAP MSG REQUEST EVENT */
-FwdCDAPMsgEvent::FwdCDAPMsgEvent(const ser_obj_t& sm,
+FwdCDAPMsgRequestEvent::FwdCDAPMsgRequestEvent(const ser_obj_t& sm,
 				 int result, unsigned int sequenceNumber) :
 				IPCEvent(IPC_PROCESS_FWD_CDAP_MSG,
                                          sequenceNumber)
 {
         this->sermsg = sm;
 	this->result = result;
+}
+
+/* CLASS FWD CDAP MSG REQUEST EVENT */
+FwdCDAPMsgResponseEvent::FwdCDAPMsgResponseEvent(const ser_obj_t& sm,
+                                 int result, unsigned int sequenceNumber) :
+                                IPCEvent(IPC_PROCESS_FWD_CDAP_RESPONSE_MSG,
+                                         sequenceNumber)
+{
+        this->sermsg = sm;
+        this->result = result;
 }
 
 }

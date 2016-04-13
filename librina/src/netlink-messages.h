@@ -95,7 +95,8 @@ enum RINANetlinkOperationCode{
 	RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE, /* 57 IPC Manager -> Application */
         RINA_C_IPCM_PLUGIN_LOAD_REQUEST, /* 58, IPC Manager -> IPC Process */
         RINA_C_IPCM_PLUGIN_LOAD_RESPONSE, /* 59, IPC Process -> IPC Manager */
-        RINA_C_IPCM_FWD_CDAP_MSG_REQUEST, /* 60, IPC Manager -> IPC Process */
+        RINA_C_IPCM_FWD_CDAP_MSG_REQUEST, /* 60, IPC Manager <-> IPC Process */
+        RINA_C_IPCM_FWD_CDAP_MSG_RESPONSE, /* 61, IPC Manager <-> IPC Process */
 	__RINA_C_MAX,
  };
 
@@ -1084,11 +1085,10 @@ public:
 };
 
 /**
- * Used by the IPC Manager to forward a CDAP message to an IPC process
- * and by the IPC process for forwarding back the response
- * IPC Manager -> IPC Process or IPC Process --> IPC Manager
+ * Used by the IPC Manager or the IPCProcess to forward
+ * a CDAP request message to an IPC process or the IPCManager
  */
-class IpcmFwdCDAPMsgMessage:
+class IpcmFwdCDAPRequestMessage:
 		public BaseNetlinkMessage {
 public:
 	/** The serialized object containing the message to be forwarded */
@@ -1098,8 +1098,26 @@ public:
 	 *  back a CDAP response to the IPC Manager. */
 	int result;
 
-	IpcmFwdCDAPMsgMessage();
+	IpcmFwdCDAPRequestMessage();
 	IPCEvent* toIPCEvent();
+};
+
+/**
+ * Used by the IPC Manager or the IPCProcess to forward
+ * a CDAP response message to an IPC process or the IPCManager
+ */
+class IpcmFwdCDAPResponseMessage:
+                public BaseNetlinkMessage {
+public:
+        /** The serialized object containing the message to be forwarded */
+        ser_obj_t sermsg;
+
+        /** Result of a forward operation, used only when IPC Process forwards
+         *  back a CDAP response to the IPC Manager. */
+        int result;
+
+        IpcmFwdCDAPResponseMessage();
+        IPCEvent* toIPCEvent();
 };
 
 /**

@@ -685,6 +685,32 @@ void ExtendedIPCManager::pluginLoadResponse(
 #endif
 }
 
+void ExtendedIPCManager::forwardCDAPRequest(unsigned int sequenceNumber,
+                                             const ser_obj_t& sermsg,
+                                             int result)
+{
+#if STUB_API
+        //Do nothing
+#else
+        IpcmFwdCDAPRequestMessage requestMessage;
+
+        requestMessage.sermsg = sermsg;
+        requestMessage.result = result;
+        requestMessage.setSequenceNumber(sequenceNumber);
+        requestMessage.setSourceIpcProcessId(ipcProcessId);
+        requestMessage.setDestPortId(ipcManagerPort);
+        requestMessage.setResponseMessage(true);
+        int size = get_page_size() + sermsg.size_;
+        try {
+                rinaManager->sendMessageOfMaxSize(&requestMessage,
+                                                  size,
+                                                  false);
+        } catch (NetlinkException &e) {
+                throw FwdCDAPMsgException(e.what());
+        }
+#endif
+}
+
 void ExtendedIPCManager::forwardCDAPResponse(unsigned int sequenceNumber,
 					     const ser_obj_t& sermsg,
 					     int result)
@@ -692,7 +718,7 @@ void ExtendedIPCManager::forwardCDAPResponse(unsigned int sequenceNumber,
 #if STUB_API
 	//Do nothing
 #else
-	IpcmFwdCDAPMsgMessage responseMessage;
+	IpcmFwdCDAPResponseMessage responseMessage;
 
 	responseMessage.sermsg = sermsg;
 	responseMessage.result = result;
@@ -700,8 +726,11 @@ void ExtendedIPCManager::forwardCDAPResponse(unsigned int sequenceNumber,
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
         responseMessage.setDestPortId(ipcManagerPort);
 	responseMessage.setResponseMessage(true);
+	int size = get_page_size() + sermsg.size_;
 	try {
-		rinaManager->sendMessage(&responseMessage, false);
+		rinaManager->sendMessageOfMaxSize(&responseMessage,
+		                                  2 * size,
+                                                  false);
 	} catch (NetlinkException &e) {
 		throw FwdCDAPMsgException(e.what());
 	}

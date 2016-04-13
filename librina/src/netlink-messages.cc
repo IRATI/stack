@@ -1613,14 +1613,25 @@ IPCEvent* IpcmPluginLoadRequestMessage::toIPCEvent(){
 }
 
 /* CLASS FWD CDAP MSG REQUEST MESSAGE */
-IpcmFwdCDAPMsgMessage::IpcmFwdCDAPMsgMessage():
+IpcmFwdCDAPRequestMessage::IpcmFwdCDAPRequestMessage():
                 BaseNetlinkMessage(RINA_C_IPCM_FWD_CDAP_MSG_REQUEST) {
 }
 
-IPCEvent* IpcmFwdCDAPMsgMessage::toIPCEvent(){
-	IPCEvent * event = new FwdCDAPMsgEvent(sermsg, result,
+IPCEvent* IpcmFwdCDAPRequestMessage::toIPCEvent(){
+	IPCEvent * event = new FwdCDAPMsgRequestEvent(sermsg, result,
 			                       getSequenceNumber());
 	return event;
+}
+
+/* CLASS FWD CDAP MSG RESPONSE MESSAGE */
+IpcmFwdCDAPResponseMessage::IpcmFwdCDAPResponseMessage():
+                BaseNetlinkMessage(RINA_C_IPCM_FWD_CDAP_MSG_RESPONSE) {
+}
+
+IPCEvent* IpcmFwdCDAPResponseMessage::toIPCEvent(){
+        IPCEvent * event = new FwdCDAPMsgResponseEvent(sermsg, result,
+                                               getSequenceNumber());
+        return event;
 }
 
 /* CLASS PLUGIN LOAD RESPONSE MESSAGE */

@@ -38,6 +38,7 @@
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
 #include <librina/plugin-info.h>
+#include <librina/concurrency.h>
 
 #define RINA_PREFIX "ipcm"
 #include <librina/logs.h>
@@ -87,7 +88,7 @@ IPCManager_::IPCManager_()
           dif_template_manager(NULL),
           dif_allocator(NULL)
 {
-
+        forwarded_calls_lock = new rina::Lockable();
 }
 
 IPCManager_::~IPCManager_()
@@ -101,6 +102,8 @@ IPCManager_::~IPCManager_()
     {
         delete dif_allocator;
     }
+    forwarded_calls.clear();
+    delete forwarded_calls_lock;
 }
 
 void IPCManager_::init(const std::string& loglevel, std::string& config_file)
@@ -474,11 +477,11 @@ ipcm_res_t IPCManager_::assign_to_dif(
         const rina::ApplicationProcessNamingInformation &dif_name)
 {
     std::ostringstream ss;
-    IPCMIPCProcess* ipcp;
+    IPCMIPCProcess* ipcp = NULL;
 
-    pre_assign_to_dif(callee, dif_name, ipcp_id, ipcp);
     try
     {
+	pre_assign_to_dif(callee, dif_name, ipcp_id, ipcp);
         // Load plugin catalog
         catalog.load(callee, ipcp_id, dif_info.dif_configuration_);
         // assign to diff
@@ -486,15 +489,23 @@ ipcm_res_t IPCManager_::assign_to_dif(
 
     } catch (rina::ConcurrentException& e)
     {
-        ss << "Error while assigning " << ipcp->get_name().toString()
-                << " to DIF " << dif_name.toString() << ". Operation timedout"
-                << std::endl;
+	if (ipcp){
+		ss << "Error while assigning " << ipcp->get_name().toString()
+			<< " to DIF " << dif_name.toString()
+			<< ". Operation timedout" << std::endl;
+	}else{
+		ss << "Error while assigning ipcp to DIF" << std::endl;
+	}
         FLUSH_LOG(ERR, ss);
         return IPCM_FAILURE;
     } catch (rina::AssignToDIFException& e)
     {
-        ss << "Error while assigning " << ipcp->get_name().toString()
-                << " to DIF " << dif_name.toString() << std::endl;
+	if (ipcp){
+		ss << "Error while assigning " << ipcp->get_name().toString()
+			<< " to DIF " << dif_name.toString() << std::endl;
+	}else{
+		ss << "Error while assigning ipcp to DIF" << std::endl;
+	}
         FLUSH_LOG(ERR, ss);
         return IPCM_FAILURE;
     } catch (rina::BadConfigurationException& e)
@@ -519,11 +530,11 @@ ipcm_res_t IPCManager_::assign_to_dif(
     rina::DIFInformation dif_info;
     rina::DIFConfiguration dif_config;
     std::ostringstream ss;
-    IPCMIPCProcess* ipcp;
+    IPCMIPCProcess* ipcp = NULL;
 
-    pre_assign_to_dif(callee, dif_name, ipcp_id, ipcp);
     try
     {
+	pre_assign_to_dif(callee, dif_name, ipcp_id, ipcp);
 
         // Fill in the DIFConfiguration object.
         if (ipcp->get_type() == rina::NORMAL_IPC_PROCESS)
@@ -621,15 +632,24 @@ ipcm_res_t IPCManager_::assign_to_dif(
 
     } catch (rina::ConcurrentException& e)
     {
-        ss << "Error while assigning " << ipcp->get_name().toString()
-                << " to DIF " << dif_name.toString() << ". Operation timedout"
-                << std::endl;
+        if (ipcp){
+		ss << "Error while assigning " << ipcp->get_name().toString()
+			<< " to DIF " << dif_name.toString()
+			<< ". Operation timedout" << std::endl;
+	}
+	else {
+		ss << "Error while assigning ipcp to DIF" << std::endl;
+	}
         FLUSH_LOG(ERR, ss);
         return IPCM_FAILURE;
     } catch (rina::AssignToDIFException& e)
     {
-        ss << "Error while assigning " << ipcp->get_name().toString()
-                << " to DIF " << dif_name.toString() << std::endl;
+	if (ipcp){
+	        ss << "Error while assigning " << ipcp->get_name().toString()
+			<< " to DIF " << dif_name.toString() << std::endl;
+	} else {
+		ss << "Error while assigning ipcp to DIF" << std::endl;
+	}
         FLUSH_LOG(ERR, ss);
         return IPCM_FAILURE;
     } catch (rina::BadConfigurationException& e)
@@ -1239,6 +1259,20 @@ ipcm_res_t IPCManager_::set_policy_set_param(Addon* callee, Promise* promise,
     return IPCM_PENDING;
 }
 
+int IPCManager_::reserve_invoke_id(rina::rib::DelegationObj* obj)
+{
+       int invoke_id = 0;
+       rina::ScopedLock(*forwarded_calls_lock);
+       do
+       {
+               invoke_id++;
+       }while(forwarded_calls.find(invoke_id) != forwarded_calls.end());
+       forwarded_calls[invoke_id] = obj;
+
+       return invoke_id;
+}
+
+
 static std::string extract_subcomponent_name(const std::string& cpath)
 {
     size_t l = cpath.rfind(".");
@@ -1508,7 +1542,8 @@ ipcm_res_t IPCManager_::update_catalog(Addon* callee)
     return IPCM_SUCCESS;
 }
 
-ipcm_res_t IPCManager_::read_ipcp_ribobj(Addon* callee, Promise* promise,
+ipcm_res_t IPCManager_::delegate_ipcp_ribobj(rina::rib::DelegationObj* obj,
+                                         Promise* promise,
                                          const unsigned short ipcp_id,
                                          const std::string& object_class,
                                          const std::string& object_name,
@@ -1535,10 +1570,10 @@ ipcm_res_t IPCManager_::read_ipcp_ribobj(Addon* callee, Promise* promise,
         msg.op_code_ = rina::cdap::cdap_m_t::M_READ;
         msg.obj_class_ = object_class;
         msg.obj_name_ = object_name;
-        msg.invoke_id_ = 15;
+        msg.invoke_id_ = reserve_invoke_id(obj);
         msg.scope_ = scope;
 
-        trans = new TransactionState(callee, promise);
+        trans = new TransactionState(NULL, promise);
         if (!trans)
         {
             ss
@@ -1601,7 +1636,6 @@ ipcm_res_t IPCManager_::unregister_app_from_ipcp(
             ss
                     << "Unable to allocate memory for the transaction object. Out of memory! ";
             FLUSH_LOG(ERR, ss);
-            delete trans;
             throw rina::Exception();
         }
 
@@ -1621,7 +1655,6 @@ ipcm_res_t IPCManager_::unregister_app_from_ipcp(
                         "process " << slave_ipcp->get_name().toString()
                 << std::endl;
         FLUSH_LOG(INFO, ss);
-        delete trans;
     } catch (rina::ConcurrentException& e)
     {
         ss << ": Error while unregistering application "
@@ -1629,7 +1662,7 @@ ipcm_res_t IPCManager_::unregister_app_from_ipcp(
                         "process " << slave_ipcp->get_name().toString()
                 << ". Operation timedout." << std::endl;
         FLUSH_LOG(ERR, ss);
-        delete trans;
+        remove_transaction_state(trans->tid);
         return IPCM_FAILURE;
     } catch (rina::IpcmUnregisterApplicationException& e)
     {
@@ -1637,14 +1670,14 @@ ipcm_res_t IPCManager_::unregister_app_from_ipcp(
                 << req_event.applicationName.toString() << " from IPC "
                         "process " << slave_ipcp->get_name().toString()
                 << std::endl;
-        delete trans;
+        remove_transaction_state(trans->tid);
         FLUSH_LOG(ERR, ss);
         return IPCM_FAILURE;
     } catch (rina::Exception& e)
     {
         ss << ": Unknown error while unregistering application " << std::endl;
         FLUSH_LOG(ERR, ss);
-        delete trans;
+        remove_transaction_state(trans->tid);
         return IPCM_FAILURE;
     }
     return IPCM_PENDING;
@@ -1852,6 +1885,22 @@ void IPCManager_::run()
 
     // Shutdown Protobuf Library
     google::protobuf::ShutdownProtobufLibrary();
+}
+
+rina::rib::DelegationObj* IPCManager_::get_forwarded_object(int invoke_id)
+{
+        rina::ScopedLock(*forwarded_calls_lock);
+        rina::rib::DelegationObj* obj;
+        std::map<int, rina::rib::DelegationObj*>::iterator it =
+                        forwarded_calls.find(invoke_id);
+        if (it == forwarded_calls.end())
+                return NULL;
+        else
+        {
+                obj = it->second;
+                forwarded_calls.erase(it);
+                return obj;
+        }
 }
 
 //static

@@ -288,18 +288,6 @@ void parse_efcp_policies(const Json::Value  root,
                         cube.dtcp_config_ = dtpcc;
                 }
 
-                parse_policy(efcp_conf,
-                             "rcvrTimerInactivityPolicy",
-                             dtpc.rcvr_timer_inactivity_policy_);
-
-                parse_policy(efcp_conf,
-                             "senderTimerInactivityPolicy",
-                             dtpc.sender_timer_inactivity_policy_);
-
-                parse_policy(efcp_conf,
-                             "initialSeqNumPolicy",
-                             dtpc.initial_seq_num_policy_);
-
                 dtpc.seq_num_rollover_threshold_ =
                         efcp_conf.get("seqNumRolloverThreshold",
                                     dtpc.seq_num_rollover_threshold_).asUInt();
@@ -429,10 +417,10 @@ void parse_local_conf(const Json::Value &         root,
 		return;
 	}
 
-	local.consolePort = local_conf.get("consolePort",
-					   local.consolePort).asInt();
-	if (local.consolePort == 0) {
-		local.consolePort = 32766;
+	local.consoleSocket = local_conf.get("consoleSocket",
+					   local.consoleSocket).asString();
+	if (local.consoleSocket.empty()) {
+		local.consoleSocket = DEFAULT_RUNDIR "/ipcm-console.sock";
 	}
 
 	local.installationPath = local_conf.get("installationPath",
