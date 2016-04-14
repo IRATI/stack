@@ -50,6 +50,7 @@
 
 #define CUBE_UNRELIABLE 0
 #define CUBE_RELIABLE   1
+#define SEND_WQ_MAX_SIZE 1000
 
 static struct workqueue_struct * rcv_wq;
 static struct workqueue_struct * snd_wq;
@@ -57,6 +58,7 @@ static struct work_struct        rcv_work;
 static struct work_struct        snd_work;
 static struct list_head          rcv_wq_data;
 static struct list_head          snd_wq_data;
+static int snd_wq_size;
 static DEFINE_SPINLOCK(rcv_wq_lock);
 static DEFINE_SPINLOCK(snd_wq_lock);
 
@@ -173,6 +175,11 @@ struct exp_reg {
         int              port;
 };
 
+static struct ipcp_factory_data {
+        spinlock_t lock;
+        struct list_head instances;
+} tcp_udp_data;
+
 static ssize_t shim_tcp_udp_ipcp_attr_show(struct robject *        robj,
 					   struct robj_attribute * attr,
 					   char *                  buf)
@@ -272,22 +279,23 @@ find_flow_by_port(struct ipcp_instance_data * data,
                   port_id_t                   id)
 {
         struct shim_tcp_udp_flow * flow;
+        unsigned long		   flags;
 
         LOG_HBEAT;
 
         ASSERT(data);
         ASSERT(is_port_id_ok(id));
 
-        spin_lock(&data->lock);
+        spin_lock_irqsave(&data->lock, flags);
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->port_id == id) {
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
                         return flow;
                 }
         }
 
-        spin_unlock(&data->lock);
+        spin_unlock_irqrestore(&data->lock, flags);
 
         return NULL;
 }
@@ -297,21 +305,22 @@ find_flow_by_socket(struct ipcp_instance_data * data,
                     const struct socket *       sock)
 {
         struct shim_tcp_udp_flow * flow;
+        unsigned long 		   flags;
 
         LOG_HBEAT;
 
         ASSERT(data);
 
-        spin_lock(&data->lock);
+        spin_lock_irqsave(&data->lock, flags);
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->sock == sock) {
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
                         return flow;
                 }
         }
 
-        spin_unlock(&data->lock);
+        spin_unlock_irqrestore(&data->lock, flags);
 
         return NULL;
 }
@@ -356,32 +365,33 @@ find_app_by_socket(struct ipcp_instance_data * data,
                    const struct socket *       sock)
 {
         struct reg_app_data * app;
+        unsigned long	      flags;
 
         LOG_HBEAT;
 
         ASSERT(data);
         ASSERT(sock);
 
-        spin_lock(&data->lock);
+        spin_lock_irqsave(&data->lock, flags);
 
         /* FIXME: Shrink this code */
         if (sock->type == SOCK_DGRAM) {
                 list_for_each_entry(app, &data->reg_apps, list) {
                         if (app->udpsock == sock) {
-                                spin_unlock(&data->lock);
+                                spin_unlock_irqrestore(&data->lock, flags);
                                 return app;
                         }
                 }
         } else {
                 list_for_each_entry(app, &data->reg_apps, list) {
                         if (app->tcpsock == sock) {
-                                spin_unlock(&data->lock);
+                                spin_unlock_irqrestore(&data->lock, flags);
                                 return app;
                         }
                 }
         }
 
-        spin_unlock(&data->lock);
+        spin_unlock_irqrestore(&data->lock, flags);
 
         return NULL;
 }
@@ -938,10 +948,11 @@ static int udp_process_msg(struct ipcp_instance_data * data,
         char *                      buf;
         int                         size;
         struct ipcp_instance      * ipcp, * user_ipcp;
+        unsigned long		    flags;
 
         LOG_HBEAT;
 
-        buf = rkmalloc(CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE, GFP_KERNEL);
+        buf = rkmalloc(CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE, GFP_ATOMIC);
         if(!buf)
                 return -1;
 
@@ -954,7 +965,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        sdubuf = buffer_create_from(buf, size);
+        sdubuf = buffer_create_from_ni(buf, size);
         if (!sdubuf) {
                 LOG_ERR("Could not create buffer");
                 rkfree(buf);
@@ -963,17 +974,17 @@ static int udp_process_msg(struct ipcp_instance_data * data,
 
         rkfree(buf);
 
-        du = sdu_create_buffer_with(sdubuf);
+        du = sdu_create_buffer_with_ni(sdubuf);
         if (!du) {
                 LOG_ERR("Couldn't create sdu");
                 buffer_destroy(sdubuf);
                 return -1;
         }
 
-        spin_lock(&data->lock);
+        spin_lock_irqsave(&data->lock, flags);
         flow = find_udp_flow(data, &addr, sock);
         if (!flow) {
-                spin_unlock(&data->lock);
+                spin_unlock_irqrestore(&data->lock, flags);
                 LOG_DBG("No flow found, creating it");
 
                 app = find_app_by_socket(data, sock);
@@ -1027,10 +1038,10 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                         return -1;
                 }
 
-                spin_lock(&data->lock);
+                spin_lock_irqsave(&data->lock, flags);
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
-                spin_unlock(&data->lock);
+                spin_unlock_irqrestore(&data->lock, flags);
                 LOG_DBG("Added UDP flow");
 
                 if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
@@ -1102,7 +1113,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 LOG_DBG("Flow exists, handling SDU");
 
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
 
                         LOG_DBG("Port is ALLOCATED, "
                                 "queueing frame in user-IPCP");
@@ -1123,7 +1134,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                                 "queueing frame in SDU queue");
 
                         if (rfifo_push(flow->sdu_queue, du)) {
-                                spin_unlock(&data->lock);
+                                spin_unlock_irqrestore(&data->lock, flags);
 
                                 LOG_ERR("Failed to write %zd bytes"
                                         "into the fifo",
@@ -1133,16 +1144,16 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                                 return -1;
                         }
 
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
                 } else if (flow->port_id_state == PORT_STATE_NULL) {
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
 
                         LOG_DBG("Port is NULL, "
                                 "dropping SDU");
 
                         sdu_destroy(du);
                 } else {
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
                         LOG_ERR("Port state is unhandled");
                 }
         }
@@ -1160,6 +1171,7 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
         char            sbuf[2];
         int             size;
         __be16          nlen;
+        unsigned long   flags;
 
         LOG_HBEAT;
 
@@ -1189,7 +1201,7 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
         flow->bytes_left = (int) ntohs(nlen);
         LOG_DBG("Incoming message is %d bytes long", flow->bytes_left);
 
-        buf = rkmalloc(flow->bytes_left, GFP_KERNEL);
+        buf = rkmalloc(flow->bytes_left, GFP_ATOMIC);
         if(!buf)
                 return -1; /* FIXME: Check this return value */
 
@@ -1204,23 +1216,23 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
 
         if (size == flow->bytes_left) {
                 flow->bytes_left = 0;
-                sdubuf = buffer_create_with(buf, size);
+                sdubuf = buffer_create_with_ni(buf, size);
                 if (!sdubuf) {
                         LOG_ERR("Could not create buffer");
                         rkfree(buf);
                         return -1;
                 }
 
-                du = sdu_create_buffer_with(sdubuf);
+                du = sdu_create_buffer_with_ni(sdubuf);
                 if (!du) {
                         LOG_ERR("Couldn't create sdu");
                         buffer_destroy(sdubuf);
                         return -1;
                 }
 
-                spin_lock(&data->lock);
+                spin_lock_irqsave(&data->lock, flags);
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
 
                         ASSERT(flow->user_ipcp);
                         ASSERT(flow->user_ipcp->ops);
@@ -1238,7 +1250,7 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
                                 "queueing frame in SDU queue");
 
                         if (rfifo_push_ni(flow->sdu_queue, du)) {
-                                spin_unlock(&data->lock);
+                                spin_unlock_irqrestore(&data->lock, flags);
 
                                 LOG_ERR("Failed to write %zd bytes"
                                         "into the fifo",
@@ -1248,9 +1260,9 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
                                 return -1;
                         }
 
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
                 } else if (flow->port_id_state == PORT_STATE_NULL) {
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
                         sdu_destroy(du);
                 }
 
@@ -1273,6 +1285,7 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
         struct buffer * sdubuf;
         struct sdu *    du;
         int             start, size;
+        unsigned long   flags;
 
         LOG_HBEAT;
 
@@ -1287,23 +1300,23 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
 
         if (size == flow->bytes_left) {
                 flow->bytes_left = 0;
-                sdubuf = buffer_create_with(flow->buf, flow->lbuf);
+                sdubuf = buffer_create_with_ni(flow->buf, flow->lbuf);
                 if (!sdubuf) {
                         rkfree(flow->buf);
                         LOG_ERR("Could not create buffer");
                         return -1;
                 }
 
-                du = sdu_create_buffer_with(sdubuf);
+                du = sdu_create_buffer_with_ni(sdubuf);
                 if (!du) {
                         LOG_ERR("Couldn't create sdu");
                         buffer_destroy(sdubuf);
                         return -1;
                 }
 
-                spin_lock(&data->lock);
+                spin_lock_irqsave(&data->lock, flags);
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
 
                         ASSERT(flow->user_ipcp);
                         ASSERT(flow->user_ipcp->ops);
@@ -1321,7 +1334,7 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
                                 "queueing frame in SDU queue");
 
                         if (rfifo_push_ni(flow->sdu_queue, du)) {
-                                spin_unlock(&data->lock);
+                                spin_unlock_irqrestore(&data->lock, flags);
 
                                 LOG_ERR("Failed to write %zd bytes"
                                         "into the fifo",
@@ -1331,9 +1344,9 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
                                 return -1;
                         }
 
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
                 } else if (flow->port_id_state == PORT_STATE_NULL) {
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
                         sdu_destroy(du);
                 }
 
@@ -1423,6 +1436,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
         struct name *              sname;
         int                        err;
         struct ipcp_instance     * ipcp, * user_ipcp;
+        unsigned long		   flags;
 
         LOG_HBEAT;
 
@@ -1472,10 +1486,10 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                 flow->port_id       = kfa_port_id_reserve(data->kfa, data->id);
                 flow->sock          = acsock;
 
-                spin_lock(&data->lock);
+                spin_lock_irqsave(&data->lock, flags);
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
-                spin_unlock(&data->lock);
+                spin_unlock_irqrestore(&data->lock, flags);
                 LOG_DBG("TCP flow added");
 
                 memset(&flow->addr, 0, sizeof(struct sockaddr_in));
@@ -2321,6 +2335,7 @@ static int tcp_sdu_write(struct shim_tcp_udp_flow * flow,
                                 len + sizeof(__be16) - total);
                 if (size < 0) {
                         LOG_ERR("error during sdu write (tcp): %d", size);
+                        rkfree(buf);
                         return -1;
                 }
                 total += size;
@@ -2340,6 +2355,13 @@ static int tcp_udp_sdu_write(struct ipcp_instance_data * data,
 
         LOG_DBG("Callback on tcp_udp_sdu_write");
 
+        spin_lock_irqsave(&snd_wq_lock, flags);
+        if (snd_wq_size == SEND_WQ_MAX_SIZE) {
+        	spin_unlock_irqrestore(&snd_wq_lock, flags);
+        	LOG_DBG("Output SDU queue is full, try later");
+        	return -EAGAIN;
+        }
+
         snd_data = rkmalloc(sizeof(*snd_data), GFP_ATOMIC);
         if (!snd_data) {
                 LOG_ERR("Could not allocate snd_data");
@@ -2351,8 +2373,8 @@ static int tcp_udp_sdu_write(struct ipcp_instance_data * data,
         snd_data->sdu  = sdu;
         INIT_LIST_HEAD(&snd_data->list);
 
-        spin_lock_irqsave(&snd_wq_lock, flags);
         list_add_tail(&snd_data->list, &snd_wq_data);
+        snd_wq_size++;
         spin_unlock_irqrestore(&snd_wq_lock, flags);
 
         queue_work(snd_wq, &snd_work);
@@ -2365,6 +2387,7 @@ static int __tcp_udp_sdu_write(struct ipcp_instance_data * data,
 {
         struct shim_tcp_udp_flow * flow;
         int                        size;
+        unsigned long	   	   flags;
 
         ASSERT(data);
         ASSERT(sdu);
@@ -2379,16 +2402,16 @@ static int __tcp_udp_sdu_write(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        spin_lock(&data->lock);
+        spin_lock_irqsave(&data->lock, flags);
         if (flow->port_id_state != PORT_STATE_ALLOCATED) {
                 sdu_destroy(sdu);
-                spin_unlock(&data->lock);
+                spin_unlock_irqrestore(&data->lock, flags);
 
                 LOG_ERR("Flow is not in the right state to call this");
 
                 return -1;
         }
-        spin_unlock(&data->lock);
+        spin_unlock_irqrestore(&data->lock, flags);
 
         if (flow->fspec_id == 0) {
                 /* We are sending an UDP message */
@@ -2420,15 +2443,39 @@ static int __tcp_udp_sdu_write(struct ipcp_instance_data * data,
         return 0;
 }
 
+static void enable_all_flows(void)
+{
+	struct ipcp_instance_data * pos, *next;
+	struct shim_tcp_udp_flow  * flow, *nflow;
+	unsigned long               flags;
+
+	list_for_each_entry_safe(pos, next, &(tcp_udp_data.instances), list) {
+		spin_lock_irqsave(&pos->lock, flags);
+		list_for_each_entry_safe(flow, nflow, &pos->flows, list) {
+			if (flow->user_ipcp && flow->user_ipcp->ops)
+				flow->user_ipcp->ops->enable_write(flow->user_ipcp->data,
+								   flow->port_id);
+		}
+		spin_unlock_irqrestore(&pos->lock, flags);
+	}
+}
+
 static void tcp_udp_write_worker(struct work_struct * w)
 {
-        struct snd_data * snd_data, * next;
-        unsigned long     flags;
+        struct snd_data           * snd_data, * next;
+        unsigned long               flags;
 
         /* FIXME: more efficient locking and better cleanup */
         spin_lock_irqsave(&snd_wq_lock, flags);
+
         list_for_each_entry_safe(snd_data, next, &snd_wq_data, list) {
                 list_del(&snd_data->list);
+                snd_wq_size --;
+                if (snd_wq_size == SEND_WQ_MAX_SIZE - 1) {
+                	spin_unlock_irqrestore(&snd_wq_lock, flags);
+                	enable_all_flows();
+                	spin_lock_irqsave(&snd_wq_lock, flags);
+                }
                 spin_unlock_irqrestore(&snd_wq_lock, flags);
 
                 __tcp_udp_sdu_write(snd_data->data,
@@ -2520,11 +2567,6 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
         .dif_name		   = tcp_udp_dif_name
 };
 
-static struct ipcp_factory_data {
-        spinlock_t lock;
-        struct list_head instances;
-} tcp_udp_data;
-
 static int tcp_udp_init(struct ipcp_factory_data * data)
 {
         LOG_HBEAT;
@@ -2543,6 +2585,8 @@ static int tcp_udp_init(struct ipcp_factory_data * data)
 
         INIT_WORK(&rcv_work, tcp_udp_rcv_worker);
         INIT_WORK(&snd_work, tcp_udp_write_worker);
+
+        snd_wq_size = 0;
 
         LOG_INFO("%s initialized", SHIM_NAME);
 
