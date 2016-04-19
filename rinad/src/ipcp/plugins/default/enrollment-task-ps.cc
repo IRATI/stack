@@ -447,7 +447,7 @@ void EnrolleeStateMachine::connectResponse(int result,
 	// If "auth" contents are not valid, it will return an error and
 	// enrollment should be aborted. Otherwise it should store the "token" or any other
 	// type of credential in "auth" - if any - and return 0.
-	ISecurityManagerPs *smps = dynamic_cast<ISecurityManagerPs *>(sec_man_->ps);
+	rina::ISecurityManagerPs *smps = dynamic_cast<rina::ISecurityManagerPs *>(sec_man_->ps);
 	assert(smps);
 
 	if (smps->storeAccessControlCreds(auth, con) != 0){
@@ -1059,12 +1059,12 @@ void EnrollerStateMachine::authentication_successful()
 {
 	rina::ScopedLock scopedLock(lock_);
 
-	ISecurityManagerPs *smps = dynamic_cast<ISecurityManagerPs *>(sec_man_->ps);
+	rina::ISecurityManagerPs *smps = dynamic_cast<rina::ISecurityManagerPs *>(sec_man_->ps);
 	assert(smps);
 	rina::cdap_rib::auth_policy_t auth;
 
 	LOG_IPCP_DBG("Authentication successful, deciding if new member can join the DIF...");
-	if (smps->isAllowedToJoinDIF(remote_peer_, auth) != 0) {
+	if (smps->isAllowedToJoinDAF(remote_peer_, auth) != 0) {
 		LOG_IPCP_WARN("Security Manager rejected enrollment attempt, aborting enrollment");
 		abortEnrollment(remote_peer_.name_,
 				con.port_id,

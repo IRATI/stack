@@ -85,6 +85,31 @@ public:
 	std::string type;
 };
 
+/// MAIN security manager PS, mainly dealing with access control policies
+/// for the DAF (joining the DAF) and the DAP's RIB.
+class ISecurityManagerPs : public IPolicySet {
+// This class is used by the IPCP to access the plugin functionalities
+public:
+	/// Decide if an IPC Process is allowed to join a DIF.
+	/// 0 success, < 0 error
+	virtual int isAllowedToJoinDAF(const Neighbor& newMember,
+				       cdap_rib::auth_policy_t & auth) = 0;
+
+	//Validate and store access control credentials.0 success, < 0 error.
+	virtual int storeAccessControlCreds(const cdap_rib::auth_policy_t & auth,
+					    const cdap_rib::con_handle_t & con) = 0;
+
+	virtual int getAccessControlCreds(cdap_rib::auth_policy_t & auth,
+					  const cdap_rib::con_handle_t & con) = 0;
+
+	virtual int checkRIBOperation(const cdap_rib::auth_policy_t & auth,
+				      const cdap_rib::con_handle_t & con,
+				      const cdap::cdap_m_t::Opcode opcode,
+				      const std::string obj_name) = 0;
+
+        virtual ~ISecurityManagerPs() {}
+};
+
 class ISecurityManager;
 
 class AuthNonePolicySet : public IAuthPolicySet {

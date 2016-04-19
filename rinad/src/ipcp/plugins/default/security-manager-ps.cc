@@ -30,10 +30,10 @@
 
 namespace rinad {
 
-class SecurityManagerPs: public ISecurityManagerPs {
+class SecurityManagerPs: public IPCPSecurityManagerPs {
 public:
 	SecurityManagerPs(IPCPSecurityManager * dm);
-	int isAllowedToJoinDIF(const rina::Neighbor& newMember,
+	int isAllowedToJoinDAF(const rina::Neighbor& newMember,
 			       rina::cdap_rib::auth_policy_t & auth);
 	int storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth,
 				    const rina::cdap_rib::con_handle_t & con);
@@ -57,7 +57,7 @@ SecurityManagerPs::SecurityManagerPs(IPCPSecurityManager * dm_) : dm(dm_)
 {
 }
 
-int SecurityManagerPs::isAllowedToJoinDIF(const rina::Neighbor& newMember,
+int SecurityManagerPs::isAllowedToJoinDAF(const rina::Neighbor& newMember,
 					  rina::cdap_rib::auth_policy_t & auth)
 {
 	(void) auth;
