@@ -102,10 +102,11 @@ public:
 	virtual int getAccessControlCreds(cdap_rib::auth_policy_t & auth,
 					  const cdap_rib::con_handle_t & con) = 0;
 
-	virtual int checkRIBOperation(const cdap_rib::auth_policy_t & auth,
-				      const cdap_rib::con_handle_t & con,
-				      const cdap::cdap_m_t::Opcode opcode,
-				      const std::string obj_name) = 0;
+	virtual void checkRIBOperation(const cdap_rib::auth_policy_t & auth,
+				       const cdap_rib::con_handle_t & con,
+				       const cdap::cdap_m_t::Opcode opcode,
+				       const std::string obj_name,
+				       cdap_rib::res_info_t& res) = 0;
 
         virtual ~ISecurityManagerPs() {}
 };

@@ -790,6 +790,8 @@ public:
         ///
         std::list<RIBObjectData> get_rib_objects_data(const rib_handle_t& handle);
 
+        int set_security_manager(ApplicationEntity * sec_man);
+
 
         //-------------------------------------------------------------------//
         //                         RIB Client                                //

@@ -322,42 +322,49 @@ void IPCPCDAPIOHandler::invoke_callback(const rina::cdap_rib::con_handle_t& con_
 			callback_->delete_request(con_handle,
 						  obj,
 						  filt,
+						  m_rcv.auth_policy_,
 						  invoke_id);
 			break;
 		case rina::cdap::cdap_m_t::M_CREATE:
 			callback_->create_request(con_handle,
 						  obj,
 						  filt,
+						  m_rcv.auth_policy_,
 						  invoke_id);
 			break;
 		case rina::cdap::cdap_m_t::M_READ:
 			callback_->read_request(con_handle,
 						obj,
 						filt,
+						m_rcv.auth_policy_,
 						invoke_id);
 			break;
 		case rina::cdap::cdap_m_t::M_CANCELREAD:
 			callback_->cancel_read_request(con_handle,
 						       obj,
 						       filt,
+						       m_rcv.auth_policy_,
 						       invoke_id);
 			break;
 		case rina::cdap::cdap_m_t::M_WRITE:
 			callback_->write_request(con_handle,
 						 obj,
 						 filt,
+						 m_rcv.auth_policy_,
 						 invoke_id);
 			break;
 		case rina::cdap::cdap_m_t::M_START:
 			callback_->start_request(con_handle,
 						 obj,
 						 filt,
+						 m_rcv.auth_policy_,
 						 invoke_id);
 			break;
 		case rina::cdap::cdap_m_t::M_STOP:
 			callback_->stop_request(con_handle,
 						obj,
 						filt,
+						m_rcv.auth_policy_,
 						invoke_id);
 			break;
 
@@ -510,6 +517,7 @@ void IPCPRIBDaemonImpl::set_application_process(rina::ApplicationProcess * ap)
 		return;
 	}
 
+	ribd->set_security_manager(ap->get_security_manager());
 
         n_minus_one_flow_manager_ = ipcp->resource_allocator_->get_n_minus_one_flow_manager();
 
