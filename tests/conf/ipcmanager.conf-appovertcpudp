@@ -3,7 +3,7 @@
     "localConfiguration" : {
         "installationPath" : "/usr/local/irati/bin",
         "libraryPath" : "/usr/local/irati/lib",
-        "consolePort" : 32766
+        "consolePort" : "/usr/local/irati/var/run/ipcm-console.sock"
     },
     "ipcProcessesToCreate" : [ {
         "apName" : "test-shim",

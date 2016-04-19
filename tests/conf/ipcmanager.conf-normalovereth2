@@ -4,7 +4,7 @@
         "installationPath": "/usr/local/irati/bin",
         "libraryPath": "/usr/local/irati/lib",
     	"logPath": "/usr/local/irati/var/log",
-        "consolePort": 32766,
+        "consoleSocket": "/usr/local/irati/var/run/ipcm-console.sock",
 	"pluginsPaths": [
 		"/usr/local/irati/lib/rinad/ipcp",
 		"/lib/modules/4.1.10-irati/extra"
