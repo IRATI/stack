@@ -1,4 +1,4 @@
-#define IPCP_MODULE "security-manager-ps-cbac"
+#define IPCP_MODULE "security-manager-ps-cba0c"
 #include "../../ipcp-logging.h"
 
 #include <string>
@@ -10,6 +10,17 @@
 #include <librina/json/json.h>
 #include "security-manager-cbac.h"
 #include "sm-cbac.pb.h"
+
+// #include <cstdlib>
+// #include <openssl/bio.h>
+#include <openssl/err.h>
+#include <openssl/md5.h>
+// #include <openssl/pem.h>
+// #include <openssl/rand.h>
+#include <openssl/sha.h>
+#include <openssl/ssl.h>
+
+
 //using namespace std;
 namespace rinad {
 const std::string AC_CBAC = "AC_CBAC";
@@ -85,14 +96,70 @@ void toModelToken(const rina::messages::smCbacToken_t &gpb_token,
                 des_token.token_cap.push_back(cap);
         }
         
-        des_token.token_sign = gpb_token.token_sign();
 }       
+
+void toModelTokenPlusSignature(const rina::messages::smCbacTokenPlusSign_t &gpb_token_sign, 
+                            TokenPlusSignature_t &des_token_sign)
+{
+        
+        Token_t &des_token = des_token_sign.token;
+        
+        rina::messages::smCbacToken_t gpb_token = gpb_token_sign.token();
+        toModelToken(gpb_token, des_token);
+        
+        des_token_sign.token_sign = gpb_token_sign.token_sign();
+}       
+
+
+
+int hashToken(const rina::UcharArray &input, rina::UcharArray &result, std::string encrypt_alg)
+{
+        
+        if (encrypt_alg == SSL_TXT_AES128) {
+                result.length = 16;
+                result.data = new unsigned char[16];
+                MD5(result.data, result.length, result.data);
+
+        } else if (encrypt_alg == SSL_TXT_AES256) {
+                result.length = 32;
+                result.data = new unsigned char[32];
+                SHA256(input.data, input.length, result.data);
+        }
+
+        LOG_DBG("Generated hash of length %d bytes: %s",
+                        result.length,
+                        result.toString().c_str());
+        
+        return 0;
+}
+
+int encryptHashedTokenWithPrivateKey(rina::UcharArray &input, rina::UcharArray &result, 
+                                     RSA * my_private_key)
+{
+        
+        
+        result.data = new unsigned char[RSA_size(my_private_key)]; // XXX: supposed to be the private key
+        
+        result.length = RSA_private_encrypt(input.length,
+                                                   input.data,
+                                                   result.data,
+                                                   my_private_key,
+                                                   RSA_PKCS1_PADDING);
+
+        if (result.length == -1) {
+                LOG_ERR("Error encrypting challenge with RSA private key: %s",
+                        ERR_error_string(ERR_get_error(), NULL));
+                return -1;
+        }
+
+        return 0;
+}
 
 } //cbac-helpers
 
-//----------------------------    
-   
-void serializeToken(const Token_t &token, 
+//----------------------------
+#if 0
+void serializeTokenWithoutSignature(const Token_t &token, 
                         rina::ser_obj_t &result)
 {
 
@@ -133,7 +200,97 @@ void serializeToken(const Token_t &token,
         gpbToken.SerializeToArray(result.message_, size);
         
 }
+#endif
 
+void serializeToken(const Token_t &token, 
+                        rina::ser_obj_t &result)
+{
+
+        LOG_IPCP_DBG("Serializing token..");
+        rina::messages::smCbacToken_t gpbToken;
+        
+        //fill in the token message object
+        gpbToken.set_token_id(token.token_id);
+        gpbToken.set_ipcp_issuer_id(token.ipcp_issuer_id);
+        
+        gpbToken.set_allocated_ipcp_holder_name(cbac_helpers::get_NewApplicationProcessNamingInfo_t(
+                                        token.ipcp_holder_name));
+        
+        gpbToken.set_audience(token.audience);
+        gpbToken.set_issued_time(token.issued_time);
+        gpbToken.set_token_nbf(token.token_nbf);
+        gpbToken.set_token_exp(token.token_exp);
+        
+        // Token capability        
+        
+        std::list<Capability_t> tokenCapList = token.token_cap;
+        for(std::list<Capability_t>::iterator it = tokenCapList.begin();
+                it != tokenCapList.end(); ++it) {
+                
+                Capability_t c = *it;
+                
+                rina::messages::smCapability_t * allocatedCap = gpbToken.add_token_cap();
+                allocatedCap->set_ressource(c.ressource);
+                allocatedCap->set_operation(c.operation);
+        }
+        
+        //serializing
+        int size = gpbToken.ByteSize();
+        result.message_ = new unsigned char[size];
+        result.size_ = size;
+        gpbToken.SerializeToArray(result.message_, size);
+        
+}
+
+void serializeTokenPlusSignature(const TokenPlusSignature_t &tokenSign, 
+                        rina::ser_obj_t &result)
+{
+
+        LOG_IPCP_DBG("Serializing token and signature...");
+        
+        rina::messages::smCbacTokenPlusSign_t gpbTokenSign;
+        
+        
+        rina::messages::smCbacToken_t* gpbToken = 
+                new rina::messages::smCbacToken_t();
+        
+        
+        Token_t token = tokenSign.token;
+        //fill in the token message object
+        gpbToken->set_token_id(token.token_id);
+        gpbToken->set_ipcp_issuer_id(token.ipcp_issuer_id);
+        
+        gpbToken->set_allocated_ipcp_holder_name(cbac_helpers::get_NewApplicationProcessNamingInfo_t(
+                                        token.ipcp_holder_name));
+        
+        gpbToken->set_audience(token.audience);
+        gpbToken->set_issued_time(token.issued_time);
+        gpbToken->set_token_nbf(token.token_nbf);
+        gpbToken->set_token_exp(token.token_exp);
+        // Token capability        
+        
+        std::list<Capability_t> tokenCapList = token.token_cap;
+        for(std::list<Capability_t>::iterator it = tokenCapList.begin();
+                it != tokenCapList.end(); ++it) {
+                
+                Capability_t c = *it;
+                
+                rina::messages::smCapability_t * allocatedCap = gpbToken->add_token_cap();
+                allocatedCap->set_ressource(c.ressource);
+                allocatedCap->set_operation(c.operation);
+        }
+        //gpbTokenSign.set_allocated_token(&gpbToken);
+        
+        gpbTokenSign.set_allocated_token(gpbToken);
+        gpbTokenSign.set_token_sign(tokenSign.token_sign);
+        //serializing
+        int size = gpbTokenSign.ByteSize();
+        result.message_ = new unsigned char[size];
+        result.size_ = size;
+        gpbTokenSign.SerializeToArray(result.message_, size);
+        
+}
+#if 0
 void deserializeToken(const rina::ser_obj_t &serobj,
                                 Token_t &des_token)
 {
@@ -141,6 +298,16 @@ void deserializeToken(const rina::ser_obj_t &serobj,
         rina::messages::smCbacToken_t gpb;
         gpb.ParseFromArray(serobj.message_, serobj.size_);
         cbac_helpers::toModelToken(gpb, des_token);
+        
+}
+#endif
+void deserializeTokenPlusSign(const rina::ser_obj_t &serobj,
+                                TokenPlusSignature_t &des_token_sign)
+{
+    
+        rina::messages::smCbacTokenPlusSign_t gpb;
+        gpb.ParseFromArray(serobj.message_, serobj.size_);
+        cbac_helpers::toModelTokenPlusSignature(gpb, des_token_sign);
         
 }
 //---------------------------
@@ -327,11 +494,31 @@ std::list<Capability_t> AccessControl::computeCapabilities(DIFProfile_t& difProf
     
 }
 
+void AccessControl::generateTokenSignature(Token_t &token, std::string encrypt_alg, 
+                                   RSA * my_private_key,  rina::UcharArray &signature)
+{
+         // variable fitting
+        rina::ser_obj_t ser_token;
+        serializeToken(token, ser_token);
+        rina::UcharArray token_char(&ser_token);
+        
+        // hash then encrypt token
+        rina::UcharArray result;
+        cbac_helpers::hashToken(token_char, result, 
+                                encrypt_alg);
+
+        cbac_helpers::encryptHashedTokenWithPrivateKey(result, signature, 
+                                     my_private_key);
+        
+}
 
 void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& difProfile,
                                   IPCPProfile_t& newMemberProfile, rina::cdap_rib::auth_policy_t & auth)
 {
         std::list<Capability_t> result = computeCapabilities(difProfile, newMemberProfile); 
+        
+        TokenPlusSignature_t tokenSign;
+        
         Token_t token;
         
         token.token_id = issuerIpcpId; // TODO name or id?
@@ -344,11 +531,21 @@ void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& dif
         token.token_nbf = t; //token valid immediately
         token.token_exp = VALIDITY_TIME_IN_HOURS;; // after this time, the token will be invalid
         token.token_cap = result; 
-        token.token_sign = "signature";
         
+        //fill signature
+#if 0
+        rina::UcharArray &signature;
+        generateTokenSignature(Token_t &token, std:::string encrypt_alg, 
+            RSA * my_private_key, signature); //XXX
+        token.token_sign = signature; //XXX
+#endif                                   
+                               
+        //token.token_sign = "signature"; //XXX
+        tokenSign.token = token;
+        tokenSign.token_sign = "signature"; //XXX
         // token should be encoded as ser_obj_t
         rina::ser_obj_t options;
-        serializeToken(token, options);
+        serializeTokenPlusSignature(tokenSign, options); //XXX
         
         // fill auth structure
         
@@ -380,7 +577,7 @@ int SecurityManagerCBACPs::isAllowedToJoinDIF(const rina::Neighbor& newMember,
         my_dif_name = dm->ipcp->get_dif_information().dif_name_;
         LOG_IPCP_DBG("SecurityManagerCBACPs class: isAllowedToJoinDIF my_dif_name %s", 
                      my_dif_name.processName.c_str());
-        const std::string   profileFile = dm->ipcp->get_dif_information().
+        const std::string profileFile = dm->ipcp->get_dif_information().
                     get_dif_configuration().sm_configuration_.policy_set_.
                     get_param_value_as_string("ACprofilestore");
 	
@@ -438,11 +635,11 @@ int SecurityManagerCBACPs::storeAccessControlCreds(const rina::cdap_rib::auth_po
         LOG_IPCP_DBG("Storing AC Credentials of IPCP %s (token coming from %s)",
                      con.src_.ap_name_.c_str(), con.dest_.ap_name_.c_str());
         
-        Token_t token;
-        deserializeToken(auth.options, token);
+        TokenPlusSignature_t tokenSign;
+        deserializeTokenPlusSign(auth.options, tokenSign);
         
-        LOG_IPCP_DBG("Received token : %s", token.toString().c_str());
-        token_per_ipcp[con.src_.ap_name_.c_str()] = & token;
+        LOG_IPCP_DBG("Received token : %s", tokenSign.toString().c_str());
+        token_sign_per_ipcp[con.src_.ap_name_.c_str()] = & tokenSign;
         return 0;
 }
 

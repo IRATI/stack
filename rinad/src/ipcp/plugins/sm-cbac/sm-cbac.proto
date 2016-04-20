@@ -26,5 +26,11 @@ message smCbacToken_t {
         required uint32 token_nbf = 6;
         required uint32 token_exp = 7;
         repeated smCapability_t token_cap = 18;
-        required string token_sign = 19; 
+        //required string token_sign = 19; 
+}
+
+message smCbacTokenPlusSign_t {
+        
+        required smCbacToken_t token = 1;
+        required string token_sign = 2; 
 }

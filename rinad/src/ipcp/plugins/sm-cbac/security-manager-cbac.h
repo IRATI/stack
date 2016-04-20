@@ -110,7 +110,7 @@ typedef struct Token{
         int token_nbf;
         int token_exp;
         std::list<Capability> token_cap;
-        std::string token_sign;
+        //std::string token_sign;
         string toString() const
         {
                 stringstream ss;
@@ -131,18 +131,34 @@ typedef struct Token{
                         i ++;
                                     
                 }
-                                        
+                //ss << "Token token_sign:" << token_sign << endl;                      
                 return ss.str();
         }
 } Token_t;
 
+typedef struct TokenPlusSignature{
 
+        Token_t token;
+        std::string token_sign;
+        string toString() const
+        {
+                stringstream ss;
+                ss << "\nToken :"<< token.toString() << endl;
+                ss << "Token Signature: " << token_sign << endl;
+                return ss.str();
+                
+        }
+} TokenPlusSignature_t;
+
+//--------------------------------
 class AccessControl{
 public:
         AccessControl();
         bool checkJoinDIF(DIFProfile_t&, IPCPProfile_t&, ac_res_info_t&);
         std::list<Capability_t> computeCapabilities(DIFProfile_t&, IPCPProfile_t&);
         void generateToken(unsigned short, DIFProfile_t&, IPCPProfile_t&, rina::cdap_rib::auth_policy_t & auth);
+        void generateTokenSignature(Token_t &token, std::string encrypt_alg, 
+                                   RSA * my_private_key,  rina::UcharArray &signature);
         virtual ~AccessControl() {}
         static const std::string IPCP_DIF_FROM_DIFFERENT_GROUPS;
 };
@@ -181,7 +197,7 @@ private:
         AccessControl * access_control_;
         unsigned short my_ipcp_id;
         rina::ApplicationProcessNamingInformation my_dif_name;
-        std::map<std::string, Token_t*> token_per_ipcp;
+        std::map<std::string, TokenPlusSignature_t*> token_sign_per_ipcp;
 };
 
 
