@@ -27,6 +27,9 @@ const std::string AC_CBAC = "AC_CBAC";
 const std::string AC_CBAC_VERSION = "1";
 const std::string AccessControl::IPCP_DIF_FROM_DIFFERENT_GROUPS = "IPCP_DIF_FROM_DIFFERENT_GROUPS";
 const int VALIDITY_TIME_IN_HOURS = 2;
+const std::string KEY = "key";
+const std::string PUBLIC_KEY = "public_key";
+
 //----------------------------
 //FIXME: merge/use the helpers in rinad/src/common/encoder.cc
     
@@ -451,7 +454,74 @@ AccessControl::AccessControl()
 {
 	LOG_IPCP_DBG("Creating AccessControl Class");
 }
+#if 0
+int SecurityManagerCBACPs::load_authentication_keys(SSH2SecurityContext * sc)
+{
+        BIO * keystore;
+        std::stringstream ss;
+        
+        std::string keystore_path = dm->ipcp->get_dif_information().
+                    get_dif_configuration().sm_configuration_.policy_set_.
+                    get_param_value_as_string("storeKey");
+        
+        
+        ss << sc->keystore_path << "/" << KEY;
+        keystore =  BIO_new_file(ss.str().c_str(), "r");
+        if (!keystore) {
+                LOG_ERR("Problems opening keystore file at: %s",
+                        ss.str().c_str());
+                return -1;
+        }
 
+        //TODO fix problems with reading private keys from encrypted repos
+        //we should use sc->keystore_pass.c_str() as the last argument
+        RSA auth_keypair = PEM_read_bio_RSAPrivateKey(keystore, NULL, 0, NULL);
+        ss.str(std::string());
+        ss.clear();
+        BIO_free(keystore);
+
+        if (auth_keypair) {
+                LOG_ERR("Problems reading RSA key pair from keystore: %s",
+                        ERR_error_string(ERR_get_error(), NULL));
+                return -1;
+        }
+
+        //Read peer public key from keystore
+        ss << sc->keystore_path << "/" << sc->peer_ap_name;
+        keystore =  BIO_new_file(ss.str().c_str(), "r");
+        if (!keystore) {
+                LOG_ERR("Problems opening keystore file at: %s",
+                        ss.str().c_str());
+                return -1;
+        }
+
+        //TODO fix problems with reading private keys from encrypted repos
+        //we should use sc->keystore_pass.c_str() as the last argument
+        sc->auth_peer_pub_key = PEM_read_bio_RSA_PUBKEY(keystore, NULL, 0, NULL);
+        BIO_free(keystore);
+
+        if (!sc->auth_peer_pub_key) {
+                LOG_ERR("Problems reading RSA public key from keystore: %s",
+                        ERR_error_string(ERR_get_error(), NULL));
+                return -1;
+        }
+
+        int rsa_size = RSA_size(sc->auth_keypair);
+        if (rsa_size < MIN_RSA_KEY_PAIR_LENGTH) {
+                LOG_ERR("RSA keypair size is too low. Minimum: %d, actual: %d",
+                                MIN_RSA_KEY_PAIR_LENGTH, sc->challenge.length);
+                RSA_free(sc->auth_keypair);
+                return -1;
+        }
+
+        //Since we'll use RSA encryption with RSA_PKCS1_OAEP_PADDING padding, the
+        //maximum length of the data to be encrypted must be less than RSA_size(rsa) - 41
+        sc->challenge.length = rsa_size - 42;
+
+        LOG_DBG("Read RSA keys from keystore");
+        return 0;
+}
+#endif
 /** an example of AC check at the enrollment phase **/
 bool AccessControl::checkJoinDIF(DIFProfile_t& difProfile, IPCPProfile_t& newMemberProfile, 
                                  ac_res_info_t& result)

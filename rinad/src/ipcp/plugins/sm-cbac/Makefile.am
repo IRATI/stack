@@ -44,11 +44,10 @@ sm_cbac_la_SOURCES  =			\
 	sm-cbac-plugin.cc		\
 	security-manager-cbac.cc	\
 	security-manager-cbac.h		\
-	enrollment-task-ps.cc		\
 	../../components.h		\
 	../../components.cc	\
 	$(protoSOURCES)
-
+	
 plugins_LTLIBRARIES += sm-cbac.la
 BUILT_SOURCES = $(protoSOURCES)
 dist_plugins_DATA = sm-cbac.manifest
