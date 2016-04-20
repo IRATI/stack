@@ -1064,7 +1064,9 @@ void EnrollerStateMachine::authentication_successful()
 	rina::cdap_rib::auth_policy_t auth;
 
 	LOG_IPCP_DBG("Authentication successful, deciding if new member can join the DIF...");
-	if (smps->isAllowedToJoinDAF(remote_peer_, auth) != 0) {
+	if (smps->isAllowedToJoinDAF(con_handle_,
+				     remote_peer_,
+				     auth) != 0) {
 		LOG_IPCP_WARN("Security Manager rejected enrollment attempt, aborting enrollment");
 		abortEnrollment(remote_peer_.name_,
 				con.port_id,

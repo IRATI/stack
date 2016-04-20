@@ -33,7 +33,8 @@ namespace rinad {
 class SecurityManagerPs: public IPCPSecurityManagerPs {
 public:
 	SecurityManagerPs(IPCPSecurityManager * dm);
-	int isAllowedToJoinDAF(const rina::Neighbor& newMember,
+	int isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t & con,
+			       const rina::Neighbor& newMember,
 			       rina::cdap_rib::auth_policy_t & auth);
 	int storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth,
 				    const rina::cdap_rib::con_handle_t & con);
@@ -58,9 +59,11 @@ SecurityManagerPs::SecurityManagerPs(IPCPSecurityManager * dm_) : dm(dm_)
 {
 }
 
-int SecurityManagerPs::isAllowedToJoinDAF(const rina::Neighbor& newMember,
+int SecurityManagerPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t & con,
+					  const rina::Neighbor& newMember,
 					  rina::cdap_rib::auth_policy_t & auth)
 {
+	(void) con;
 	(void) auth;
 	LOG_IPCP_DBG("Allowing IPC Process %s to join the DIF",
 		     newMember.name_.processName.c_str());

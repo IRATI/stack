@@ -92,7 +92,8 @@ class ISecurityManagerPs : public IPolicySet {
 public:
 	/// Decide if an IPC Process is allowed to join a DIF.
 	/// 0 success, < 0 error
-	virtual int isAllowedToJoinDAF(const Neighbor& newMember,
+	virtual int isAllowedToJoinDAF(const cdap_rib::con_handle_t & con,
+				       const Neighbor& newMember,
 				       cdap_rib::auth_policy_t & auth) = 0;
 
 	//Validate and store access control credentials.0 success, < 0 error.
