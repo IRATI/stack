@@ -726,8 +726,8 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(configs::Flow * flo
 							     const std::string& object_name,
 							     int invoke_id)
 {
-	ISecurityManagerPs *smps =
-		dynamic_cast<ISecurityManagerPs *>(security_manager_->ps);
+	IPCPSecurityManagerPs *smps =
+		dynamic_cast<IPCPSecurityManagerPs *>(security_manager_->ps);
 
 	assert(smps);
 

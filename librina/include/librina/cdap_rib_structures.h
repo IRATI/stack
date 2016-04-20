@@ -172,6 +172,8 @@ typedef enum{
 	CDAP_SER_DES_ERRORSUPPORTED = -5,
 	/// Connection rejected
 	CDAP_APP_CONNECTION_REJECTED = -6,
+	/// Not enough access rights
+	CDAP_APP_NO_ACCESS_RIGHTS = -7,
 	/// 
 }res_code_t;
 

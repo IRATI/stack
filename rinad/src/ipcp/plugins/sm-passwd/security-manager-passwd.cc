@@ -9,19 +9,20 @@
 
 namespace rinad {
 
-class SecurityManagerPasswdPs: public ISecurityManagerPs {
+class SecurityManagerPasswdPs: public IPCPSecurityManagerPs {
 public:
 	SecurityManagerPasswdPs(IPCPSecurityManager * dm);
-	int isAllowedToJoinDIF(const rina::Neighbor& newMember,
+	int isAllowedToJoinDAF(const rina::Neighbor& newMember,
 			       rina::cdap_rib::auth_policy_t & auth);
 	int storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth,
 				    const rina::cdap_rib::con_handle_t & con);
 	int getAccessControlCreds(rina::cdap_rib::auth_policy_t & auth,
 			          const rina::cdap_rib::con_handle_t & con);
-	int checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
-			      const rina::cdap_rib::con_handle_t & con,
-			      const rina::cdap::cdap_m_t::Opcode opcode,
-			      const std::string obj_name);
+	void checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
+			       const rina::cdap_rib::con_handle_t & con,
+			       const rina::cdap::cdap_m_t::Opcode opcode,
+			       const std::string obj_name,
+			       rina::cdap_rib::res_info_t& res);
 	bool acceptFlow(const configs::Flow& newFlow);
 	int set_policy_set_param(const std::string& name,
 			const std::string& value);
@@ -40,7 +41,7 @@ SecurityManagerPasswdPs::SecurityManagerPasswdPs(IPCPSecurityManager * dm_)
 }
 
 
-int SecurityManagerPasswdPs::isAllowedToJoinDIF(const rina::Neighbor &newMember,
+int SecurityManagerPasswdPs::isAllowedToJoinDAF(const rina::Neighbor &newMember,
 						rina::cdap_rib::auth_policy_t& auth)
 {
 	(void) auth;
@@ -65,16 +66,18 @@ int SecurityManagerPasswdPs::getAccessControlCreds(rina::cdap_rib::auth_policy_t
 	return 0;
 }
 
-int SecurityManagerPasswdPs::checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
-		      	      	      	       const rina::cdap_rib::con_handle_t & con,
-					       const rina::cdap::cdap_m_t::Opcode opcode,
-					       const std::string obj_name)
+void SecurityManagerPasswdPs::checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
+		      	      	      	        const rina::cdap_rib::con_handle_t & con,
+					        const rina::cdap::cdap_m_t::Opcode opcode,
+					        const std::string obj_name,
+						rina::cdap_rib::res_info_t& res)
 {
 	(void) auth;
 	(void) con;
 	(void) opcode;
 	(void) obj_name;
-	return 0;
+
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
 
 bool SecurityManagerPasswdPs::acceptFlow(const configs::Flow& newFlow)

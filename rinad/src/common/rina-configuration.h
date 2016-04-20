@@ -144,10 +144,10 @@ struct IPCProcessToCreate {
 struct LocalConfiguration {
 
         /*
-         * The port where the IPC Manager is listening for incoming local
-         * TCP connections from administrators
+         * The unix socket where the IPC Manager is listening for incoming
+         * connections from administrators
          */
-        int consolePort;
+        std::string consoleSocket;
 
         /* The path to the RINA binaries installation in the system */
         std::string installationPath;
@@ -163,8 +163,7 @@ struct LocalConfiguration {
 
         std::string toString() const;
 
-        LocalConfiguration() :
-                        consolePort(32766){ }
+        LocalConfiguration() { }
 };
 
 struct DIFTemplateMapping {

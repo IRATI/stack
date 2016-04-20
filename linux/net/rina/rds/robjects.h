@@ -157,7 +157,7 @@ static const struct sysfs_ops COMP_NAME##_sysfs_ops = {			\
 
 /* Adds an attribute to an existing robject */
 #define _ADD_ATTR_TO_ROBJ(ROBJ, ATTR_NAME)				\
-	sysfs_create_file(ROBJ.kobj, &ATTR_NAME##_attr.kattr.attr);
+	if (sysfs_create_file(ROBJ.kobj, &ATTR_NAME##_attr.kattr.attr));\
 
 /* Declares a new attribute and adds it to an existing kobject */
 #define RINA_DECLARE_AND_ADD_ATTRS(robj, COMP_NAME, ...)		\

@@ -30,7 +30,6 @@
 #include <vector>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <arpa/inet.h>
 #include <unistd.h>
 #include <cstring>
 #include <cerrno>
@@ -67,12 +66,15 @@ class IPCMConsole : public Addon {
 
                 std::map<std::string, ConsoleCmdInfo> commands_map;
                 std::ostringstream outstream;
+                std::string socket_path;
 
                 int init(void);
                 int process_command(int cfd, char *cmdbuf, int size);
                 int flush_output(int cfd);
                 int plugin_load_unload(std::vector<std::string>& args,
                                        bool load);
+                bool cleanup_filesystem_socket();
+
 
                 // Console commands functions
                 int quit(std::vector<std::string>& args);
@@ -98,17 +100,14 @@ class IPCMConsole : public Addon {
                 int update_catalog(std::vector<std::string>& args);
 
         public:
-                IPCMConsole(const unsigned int port);
+                IPCMConsole(const std::string& socket_path);
                 void body();
-		int read_command_with_timeout(int cfd, char *cmdbuf, int buff_size);
-		int accept_with_timeout(int sfd, struct sockaddr_in
-			client_address, socklen_t address_len);
+		int read_with_timeout(int cfd, void *buf, size_t count);
+		int accept_with_timeout(int sfd, struct sockaddr *addr,
+					socklen_t *addrlen);
                 virtual ~IPCMConsole() throw();
 		static const std::string NAME;
 		bool keep_on_running;
-	private:
-		//Local console port
-		const unsigned int port;
 };
 
 }
