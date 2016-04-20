@@ -7,10 +7,10 @@
 #include <sstream>
 #include <list>
 #include "ipcp/components.h"
+
 #include <librina/json/json.h>
 #include "security-manager-cbac.h"
 #include "sm-cbac.pb.h"
-
 // #include <cstdlib>
 // #include <openssl/bio.h>
 #include <openssl/err.h>
@@ -37,7 +37,7 @@ namespace cbac_helpers {
 
 void get_NewApplicationProcessNamingInfo_t(
                 const rina::ApplicationProcessNamingInformation &name,
-                rina::messages::newApplicationProcessNamingInfo_t &gpb)
+                rina::messages::applicationProcessNamingInfo_t &gpb)
 {
         gpb.set_applicationprocessname(name.processName);
         gpb.set_applicationprocessinstance(name.processInstance);
@@ -45,17 +45,17 @@ void get_NewApplicationProcessNamingInfo_t(
         gpb.set_applicationentityinstance(name.entityInstance);
 }
 
-rina::messages::newApplicationProcessNamingInfo_t* get_NewApplicationProcessNamingInfo_t(
+rina::messages::applicationProcessNamingInfo_t* get_NewApplicationProcessNamingInfo_t(
                 const rina::ApplicationProcessNamingInformation &name)
 {
-        rina::messages::newApplicationProcessNamingInfo_t *gpb =
-                        new rina::messages::newApplicationProcessNamingInfo_t;
+        rina::messages::applicationProcessNamingInfo_t *gpb =
+                        new rina::messages::applicationProcessNamingInfo_t;
         get_NewApplicationProcessNamingInfo_t(name, *gpb);
         return gpb;
 }
 
 void get_NewApplicationProcessNamingInformation(
-                const rina::messages::newApplicationProcessNamingInfo_t &gpf_app,
+                const rina::messages::applicationProcessNamingInfo_t &gpf_app,
                 rina::ApplicationProcessNamingInformation &app)
 {
         app.processName = gpf_app.applicationprocessname();

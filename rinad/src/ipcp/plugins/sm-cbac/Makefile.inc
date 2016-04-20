@@ -3,17 +3,22 @@ CLEANFILES   =
 DISTCLEANFILES = 
 protoSOURCES = 
 MOSTLYCLEANFILES = 
+#--proto_path="/root/pristine/stack/rinad/src"           \
 #OTHER = "/pristine/userspace/include/rinad/common/encoders/"
-#OTHERPROTOPATH = "/root/pristine/stack/rinad/src/common/encoders/"
+#OTHERPROTOPATH = "/root/pristine/stack/rinad/src/common/encoders/" 
+# "/pristine/userspace/include/rinad/common/encoders/"
+# "/root/pristine/stack/rinad/src/common/encoders/"
 #-I$(OTHER) -I$(OTHERPROTOPATH)
 #--proto_path -I$(OTHER)
+
+othersrcdir="/root/pristine/stack/rinad/src/common/encoders"
 
 sm-cbac.stamp: sm-cbac.proto
 	rm -f sm-cbac.tmp
 	touch sm-cbac.tmp
-	$(PROTOC) -I$(builddir) -I$(srcdir)  \
+	$(PROTOC) -I$(builddir) -I$(srcdir)  -I$(othersrcdir)\
                 --cpp_out=$(builddir)           \
-                $(srcdir)/sm-cbac.proto
+                $(srcdir)/sm-cbac.proto $(othersrcdir)/ApplicationProcessNamingInfoMessage.proto
 	mv -f sm-cbac.tmp $@
 
 sm-cbac.pb.h sm-cbac.pb.cc: sm-cbac.stamp
@@ -38,4 +43,3 @@ EXTRA_DIST +=                                   \
         sm-cbac.proto
 
 protoSOURCES += sm-cbac.pb.cc sm-cbac.pb.h
-
