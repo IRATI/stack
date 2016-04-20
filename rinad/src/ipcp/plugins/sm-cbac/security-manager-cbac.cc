@@ -1,4 +1,4 @@
-#define IPCP_MODULE "security-manager-ps-cba0c"
+#define IPCP_MODULE "security-manager-ps-cbac"
 #include "../../ipcp-logging.h"
 
 #include <string>
@@ -570,7 +570,7 @@ SecurityManagerCBACPs::SecurityManagerCBACPs(IPCPSecurityManager * dm_)
 }
 
 
-int SecurityManagerCBACPs::isAllowedToJoinDIF(const rina::Neighbor& newMember,
+int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::Neighbor& newMember,
                                                rina::cdap_rib::auth_policy_t & auth)
 {
     
@@ -652,17 +652,18 @@ int SecurityManagerCBACPs::getAccessControlCreds(rina::cdap_rib::auth_policy_t &
         return 0;
 }
 
-int SecurityManagerCBACPs::checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
-                                         const rina::cdap_rib::con_handle_t & con,
-                                         const rina::cdap::cdap_m_t::Opcode opcode,
-                                         const std::string obj_name)
+void SecurityManagerCBACPs::checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
+                                          const rina::cdap_rib::con_handle_t & con,
+                                          const rina::cdap::cdap_m_t::Opcode opcode,
+                                          const std::string obj_name,
+                                          rina::cdap_rib::res_info_t& res)
 {
         (void) auth;
         (void) con;
         (void) opcode;
         (void) obj_name;
 
-        return 0;
+        res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
 
 

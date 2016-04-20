@@ -168,21 +168,22 @@ public:
 
 
 //-----------------------------------
-class SecurityManagerCBACPs: public ISecurityManagerPs {
+class SecurityManagerCBACPs: public IPCPSecurityManagerPs {
 public:
         SecurityManagerCBACPs(IPCPSecurityManager * dm);
 //         bool isAllowedToJoinDIF(const rina::Neighbor& newMember); 
                                 //const rina::ApplicationProcessNamingInformation, std::string);
-        int isAllowedToJoinDIF(const rina::Neighbor& newMember,
+        int isAllowedToJoinDAF(const rina::Neighbor& newMember,
                                rina::cdap_rib::auth_policy_t & auth);
         int storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth,
                                     const rina::cdap_rib::con_handle_t & con);
         int getAccessControlCreds(rina::cdap_rib::auth_policy_t & auth,
                                   const rina::cdap_rib::con_handle_t & con);
-        int checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
+        void checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
                               const rina::cdap_rib::con_handle_t & con,
                               const rina::cdap::cdap_m_t::Opcode opcode,
-                              const std::string obj_name);
+                              const std::string obj_name,
+                              rina::cdap_rib::res_info_t& res);
         bool acceptFlow(const configs::Flow& newFlow);
         int set_policy_set_param(const std::string& name,
                         const std::string& value);
