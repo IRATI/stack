@@ -31,5 +31,5 @@ message smCbacToken_t {
 message smCbacTokenPlusSign_t {
         
         required smCbacToken_t token = 1;
-        required string token_sign = 2; 
+        required bytes token_sign = 2; 
 }

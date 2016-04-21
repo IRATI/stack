@@ -139,12 +139,12 @@ typedef struct Token{
 typedef struct TokenPlusSignature{
 
         Token_t token;
-        std::string token_sign;
-        string toString() const
+        rina::UcharArray token_sign;
+        string toString()
         {
                 stringstream ss;
                 ss << "\nToken :"<< token.toString() << endl;
-                ss << "Token Signature: " << token_sign << endl;
+                ss << "Token Signature: " << token_sign.toString().c_str() << endl;
                 return ss.str();
                 
         }
@@ -156,7 +156,8 @@ public:
         AccessControl();
         bool checkJoinDIF(DIFProfile_t&, IPCPProfile_t&, ac_res_info_t&);
         std::list<Capability_t> computeCapabilities(DIFProfile_t&, IPCPProfile_t&);
-        void generateToken(unsigned short, DIFProfile_t&, IPCPProfile_t&, rina::cdap_rib::auth_policy_t & auth);
+        void generateToken(unsigned short, DIFProfile_t&, IPCPProfile_t&, 
+                           rina::cdap_rib::auth_policy_t &, rina::SSH2SecurityContext* );
         void generateTokenSignature(Token_t &token, std::string encrypt_alg, 
                                    RSA * my_private_key,  rina::UcharArray &signature);
         virtual ~AccessControl() {}
@@ -173,12 +174,16 @@ public:
         SecurityManagerCBACPs(IPCPSecurityManager * dm);
 //         bool isAllowedToJoinDIF(const rina::Neighbor& newMember); 
                                 //const rina::ApplicationProcessNamingInformation, std::string);
-        int isAllowedToJoinDAF(const rina::Neighbor& newMember,
+        int initialize_CBAC(const rina::cdap_rib::con_handle_t&);
+        int isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t & con,
+                               const rina::Neighbor& newMember,
                                rina::cdap_rib::auth_policy_t & auth);
         int storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth,
                                     const rina::cdap_rib::con_handle_t & con);
         int getAccessControlCreds(rina::cdap_rib::auth_policy_t & auth,
                                   const rina::cdap_rib::con_handle_t & con);
+        int checkTokenSignature(Token_t &token, 
+                                  rina::UcharArray & signature, std::string encrypt_alg);
         void checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
                               const rina::cdap_rib::con_handle_t & con,
                               const rina::cdap::cdap_m_t::Opcode opcode,
@@ -194,11 +199,13 @@ public:
 private:
         // Data model of the security manager component.
         IPCPSecurityManager * dm;
+        rina::SSH2SecurityContext * my_sc;
         int max_retries;
         AccessControl * access_control_;
         unsigned short my_ipcp_id;
         rina::ApplicationProcessNamingInformation my_dif_name;
         std::map<std::string, TokenPlusSignature_t*> token_sign_per_ipcp;
+        rina::Lockable lock;
 };
 
 
