@@ -27,9 +27,7 @@ const std::string AC_CBAC = "AC_CBAC";
 const std::string AC_CBAC_VERSION = "1";
 const std::string AccessControl::IPCP_DIF_FROM_DIFFERENT_GROUPS = "IPCP_DIF_FROM_DIFFERENT_GROUPS";
 const int VALIDITY_TIME_IN_HOURS = 2;
-const std::string KEY = "key";
-const std::string PUBLIC_KEY = "public_key";
-const std::string ENCRYPT_ALG = "SSL_TXT_AES128"; // FIXME: move to config 
+const std::string ENCRYPT_ALG = SSL_TXT_AES256; //SSL_TXT_AES128; // FIXME: move to config 
 
 //----------------------------
 //FIXME: merge/use the helpers in rinad/src/common/encoder.cc
@@ -118,26 +116,26 @@ void toModelTokenPlusSignature(const rina::messages::smCbacTokenPlusSign_t &gpb_
 }       
 
 
-int hashToken(const rina::UcharArray &input, rina::UcharArray &result, 
+int hashToken(rina::UcharArray &input, rina::UcharArray &result, 
               std::string encrypt_alg)
 {
-        LOG_IPCP_DBG("start hashing, encrypt_alg %s",
+        LOG_IPCP_DBG("Start Token hashing, encrypt_alg %s",
                     encrypt_alg.c_str());
         
         if (encrypt_alg == SSL_TXT_AES128) {
-                LOG_DBG("1");
                 result.length = 16;
                 result.data = new unsigned char[16];
-                MD5(result.data, result.length, result.data);
+                MD5(input.data, input.length, result.data);
 
         } else if (encrypt_alg == SSL_TXT_AES256) {
-                LOG_DBG("2");
                 result.length = 32;
                 result.data = new unsigned char[32];
                 SHA256(input.data, input.length, result.data);
         }
 
-        LOG_IPCP_DBG("Generated hash of length %d bytes: %s",
+        LOG_IPCP_DBG("Generated hash: input %d bytes [%s] output of length %d bytes [%s]",
+                        input.length,
+                        input.toString().c_str(),
                         result.length,
                         result.toString().c_str());
         
@@ -149,8 +147,11 @@ int encryptHashedTokenWithPrivateKey(rina::UcharArray &input, rina::UcharArray &
 {
         
         
-        result.data = new unsigned char[RSA_size(my_private_key)]; // XXX: supposed to be the private key
-        
+        result.data = new unsigned char[RSA_size(my_private_key)];
+        // as we use the private encrypt with RSA_PKCS1_PADDING passing, 
+        // we need input to check: len(input) = RSA_size() - 11
+        // hashed(token) is either 16 bytes or 32 bytes, so ok        
+        assert(input.length < RSA_size(my_private_key) - 11);
         result.length = RSA_private_encrypt(input.length,
                                                    input.data,
                                                    result.data,
@@ -169,49 +170,6 @@ int encryptHashedTokenWithPrivateKey(rina::UcharArray &input, rina::UcharArray &
 } //cbac-helpers
 
 //----------------------------
-#if 0
-void serializeTokenWithoutSignature(const Token_t &token, 
-                        rina::ser_obj_t &result)
-{
-
-        LOG_IPCP_DBG("Serializing token..");
-        rina::messages::smCbacToken_t gpbToken;
-        
-        //fill in the token message object
-        gpbToken.set_token_id(token.token_id);
-        gpbToken.set_ipcp_issuer_id(token.ipcp_issuer_id);
-        
-        gpbToken.set_allocated_ipcp_holder_name(cbac_helpers::get_NewApplicationProcessNamingInfo_t(
-                                        token.ipcp_holder_name));
-        
-        gpbToken.set_audience(token.audience);
-        gpbToken.set_issued_time(token.issued_time);
-        gpbToken.set_token_nbf(token.token_nbf);
-        gpbToken.set_token_exp(token.token_exp);
-        
-        // Token capability        
-        
-        std::list<Capability_t> tokenCapList = token.token_cap;
-        for(std::list<Capability_t>::iterator it = tokenCapList.begin();
-                it != tokenCapList.end(); ++it) {
-                
-                Capability_t c = *it;
-                
-                rina::messages::smCapability_t * allocatedCap = gpbToken.add_token_cap();
-                allocatedCap->set_ressource(c.ressource);
-                allocatedCap->set_operation(c.operation);
-        }
-    
-        gpbToken.set_token_sign(token.token_sign);
-
-        //serializing
-        int size = gpbToken.ByteSize();
-        result.message_ = new unsigned char[size];
-        result.size_ = size;
-        gpbToken.SerializeToArray(result.message_, size);
-        
-}
-#endif
 
 void serializeToken(const Token_t &token, 
                         rina::ser_obj_t &result)
@@ -463,74 +421,7 @@ AccessControl::AccessControl()
 {
 	LOG_IPCP_DBG("Creating AccessControl Class");
 }
-#if 0
-int SecurityManagerCBACPs::load_authentication_keys(SSH2SecurityContext * sc)
-{
-        BIO * keystore;
-        std::stringstream ss;
-        
-        std::string keystore_path = dm->ipcp->get_dif_information().
-                    get_dif_configuration().sm_configuration_.policy_set_.
-                    get_param_value_as_string("storeKey");
-        
-        
-        ss << sc->keystore_path << "/" << KEY;
-        keystore =  BIO_new_file(ss.str().c_str(), "r");
-        if (!keystore) {
-                LOG_ERR("Problems opening keystore file at: %s",
-                        ss.str().c_str());
-                return -1;
-        }
 
-        //TODO fix problems with reading private keys from encrypted repos
-        //we should use sc->keystore_pass.c_str() as the last argument
-        RSA auth_keypair = PEM_read_bio_RSAPrivateKey(keystore, NULL, 0, NULL);
-        ss.str(std::string());
-        ss.clear();
-        BIO_free(keystore);
-
-        if (auth_keypair) {
-                LOG_ERR("Problems reading RSA key pair from keystore: %s",
-                        ERR_error_string(ERR_get_error(), NULL));
-                return -1;
-        }
-
-        //Read peer public key from keystore
-        ss << sc->keystore_path << "/" << sc->peer_ap_name;
-        keystore =  BIO_new_file(ss.str().c_str(), "r");
-        if (!keystore) {
-                LOG_ERR("Problems opening keystore file at: %s",
-                        ss.str().c_str());
-                return -1;
-        }
-
-        //TODO fix problems with reading private keys from encrypted repos
-        //we should use sc->keystore_pass.c_str() as the last argument
-        sc->auth_peer_pub_key = PEM_read_bio_RSA_PUBKEY(keystore, NULL, 0, NULL);
-        BIO_free(keystore);
-
-        if (!sc->auth_peer_pub_key) {
-                LOG_ERR("Problems reading RSA public key from keystore: %s",
-                        ERR_error_string(ERR_get_error(), NULL));
-                return -1;
-        }
-
-        int rsa_size = RSA_size(sc->auth_keypair);
-        if (rsa_size < MIN_RSA_KEY_PAIR_LENGTH) {
-                LOG_ERR("RSA keypair size is too low. Minimum: %d, actual: %d",
-                                MIN_RSA_KEY_PAIR_LENGTH, sc->challenge.length);
-                RSA_free(sc->auth_keypair);
-                return -1;
-        }
-
-        //Since we'll use RSA encryption with RSA_PKCS1_OAEP_PADDING padding, the
-        //maximum length of the data to be encrypted must be less than RSA_size(rsa) - 41
-        sc->challenge.length = rsa_size - 42;
-
-        LOG_DBG("Read RSA keys from keystore");
-        return 0;
-}
-#endif
 /** an example of AC check at the enrollment phase **/
 bool AccessControl::checkJoinDIF(DIFProfile_t& difProfile, IPCPProfile_t& newMemberProfile, 
                                  ac_res_info_t& result)
@@ -577,20 +468,19 @@ void AccessControl::generateTokenSignature(Token_t &token, std::string encrypt_a
                                    RSA * my_private_key,  rina::UcharArray &signature)
 {
          // variable fitting
-        LOG_IPCP_DBG("start signature generation..");
+        LOG_IPCP_DBG("Generating Token Signature..");
         rina::ser_obj_t ser_token;
         serializeToken(token, ser_token);
-        LOG_IPCP_DBG("token serialized...");
         rina::UcharArray token_char(&ser_token);
-        LOG_IPCP_DBG("token serialized 2 ...");
+        
         // hash then encrypt token
         rina::UcharArray result;
         cbac_helpers::hashToken(token_char, result, 
                                 encrypt_alg);
-        LOG_IPCP_DBG("token hashed...");
         cbac_helpers::encryptHashedTokenWithPrivateKey(result, signature, 
                                      my_private_key);
-        LOG_IPCP_DBG("signature ready...");
+        LOG_IPCP_DBG("Signature ready:  %d bytes: [%s]", 
+                     result.length, result.toString().c_str());
 }
 
 void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& difProfile,
@@ -602,7 +492,7 @@ void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& dif
         TokenPlusSignature_t tokenSign;
         
         Token_t token;
-        LOG_IPCP_DBG("start generated token ");
+        LOG_IPCP_DBG("Generating Token");
         token.token_id = issuerIpcpId; // TODO name or id?
         token.ipcp_issuer_id = issuerIpcpId;
         token.ipcp_holder_name = newMemberProfile.ipcp_name; //TODO name or id? (.processName)
@@ -613,26 +503,18 @@ void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& dif
         token.token_nbf = t; //token valid immediately
         token.token_exp = VALIDITY_TIME_IN_HOURS;; // after this time, the token will be invalid
         token.token_cap = result; 
-        LOG_IPCP_DBG("generated token ");
         
         //fill signature
-        /*if (!sc->auth_keypair)
-            LOG_IPCP_DBG("null key pair ");
-        else 
-            LOG_IPCP_DBG("next step");
-        */
+        
         generateTokenSignature(token, ENCRYPT_ALG, 
             sc->auth_keypair, tokenSign.token_sign);
-        LOG_IPCP_DBG("generated token signature ");
         tokenSign.token = token;
-        LOG_IPCP_DBG("assigned token ");
         // token should be encoded as ser_obj_t
         rina::ser_obj_t options;
-        serializeTokenPlusSignature(tokenSign, options); //XXX
-        LOG_IPCP_DBG("serialize tokenSign ");
+        serializeTokenPlusSignature(tokenSign, options); 
+        
         // fill auth structure
         
-        // cdap_rib::auth_policy_t auth;
         auth.name = AC_CBAC;
         auth.versions.push_back(AC_CBAC_VERSION);
         auth.options = options;
@@ -653,9 +535,8 @@ SecurityManagerCBACPs::SecurityManagerCBACPs(IPCPSecurityManager * dm_)
 }
 
 
-int SecurityManagerCBACPs::initialize_CBAC(const rina::cdap_rib::con_handle_t &con){
+int SecurityManagerCBACPs::initialize_SC(const rina::cdap_rib::con_handle_t &con){
         
-        my_dif_name = dm->ipcp->get_dif_information().dif_name_;
         
         //rina::ScopedLock sc_lock(lock);
         my_sc = dynamic_cast<rina::SSH2SecurityContext *>(dm->get_security_context(con.port_id));
@@ -672,16 +553,10 @@ int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t
                                                rina::cdap_rib::auth_policy_t &auth)
 {
     
-        if (initialize_CBAC(con) != 0){
-        
-            LOG_IPCP_ERR("Error initializing CBAC, return ...");
-            return -1;
-        }
-        assert(my_sc);
-        LOG_IPCP_DBG("SecurityManagerCBACPs: Initialized");
-        
+        my_dif_name = dm->ipcp->get_dif_information().dif_name_;
         LOG_IPCP_DBG("SecurityManagerCBACPs: isAllowedToJoinDAF my_dif_name %s", 
                      my_dif_name.processName.c_str());
+        
         
         std::string authPolicyName = con.auth_.name;
         if (authPolicyName == rina::IAuthPolicySet::AUTH_NONE 
@@ -694,6 +569,15 @@ int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t
         LOG_IPCP_DBG("SecurityManagerCBACPs: Joint AuthPloicyName is %s",
                 authPolicyName.c_str());
         
+        //here authPolicyName should be either SSH2 (or TLS in the future)
+        if (initialize_SC(con) != 0){
+            LOG_IPCP_ERR("Error initializing CBAC SC, return ...");
+            return -1;
+        }
+        assert(my_sc);
+        
+        LOG_IPCP_DBG("SecurityManagerCBACPs: Initialized Security Context");
+                
         
         const std::string profileFile = dm->ipcp->get_dif_information().
                     get_dif_configuration().sm_configuration_.policy_set_.
@@ -750,41 +634,37 @@ int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t
 int SecurityManagerCBACPs::checkTokenSignature(Token_t &token, rina::UcharArray & signature, 
                                                std::string encrypt_alg)
 {
-        LOG_IPCP_DBG("check token");
         
-        //hash(token) ? decrypt-pub_issuer(sign)
-        
+        //objective: hash(token) =? decrypt_public_key_issuer(signature)
+        assert(my_sc);
         rina::ser_obj_t ser_token;
         serializeToken(token, ser_token);
         
         rina::UcharArray token_char(&ser_token);
-        LOG_IPCP_DBG("hashing received token");
         // hash then encrypt token
         rina::UcharArray result;
         cbac_helpers::hashToken(token_char, result, encrypt_alg);
-        
-        
+                
         rina::UcharArray decrypt_sign;
         decrypt_sign.data = new unsigned char[RSA_size(my_sc->auth_peer_pub_key)];
         decrypt_sign.length = RSA_public_decrypt(signature.length,
                                                signature.data,
                                                decrypt_sign.data,
                                                my_sc->auth_peer_pub_key,
-                                               RSA_PKCS1_PADDING); //XXX check
+                                               RSA_PKCS1_PADDING);
 
         if (decrypt_sign.length == -1) {
                 LOG_ERR("Error decrypting raw signature with peer public key: %s",
                         ERR_error_string(ERR_get_error(), NULL));
                 return -1;
         }
-        LOG_IPCP_DBG("Comparing: %s and %s", 
-                decrypt_sign.toString().c_str(), result.toString().c_str());
+        
         if (result == decrypt_sign){
-                LOG_IPCP_DBG("valid signature");
+                LOG_IPCP_DBG("Valid signature");
                 return 0;
         } 
                
-        LOG_IPCP_DBG("invalid valid signature");
+        LOG_IPCP_DBG("Invalid signature");
         return -1;
         
 }
@@ -792,21 +672,34 @@ int SecurityManagerCBACPs::checkTokenSignature(Token_t &token, rina::UcharArray 
 int SecurityManagerCBACPs::storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth,
                                                const rina::cdap_rib::con_handle_t & con)
 {
+        
         LOG_IPCP_DBG("Storing AC Credentials of IPCP %s (token coming from %s)",
                      con.src_.ap_name_.c_str(), con.dest_.ap_name_.c_str());
+        
+        if (my_dif_name.toString() == std::string()){
+                my_dif_name = dm->ipcp->get_dif_information().dif_name_;
+                LOG_IPCP_DBG("SecurityManagerCBACPs: isAllowedToJoinDAF my_dif_name %s", 
+                     my_dif_name.processName.c_str());
+        }
+        
+        if(!my_sc){
+                //here authPolicyName should be either SSH2, (or TLS in the future)
+                if (initialize_SC(con) != 0){
+                        LOG_IPCP_ERR("Error initializing CBAC SC, return ...");
+                        return -1;
+                }
+        }
+        
+        assert(my_sc);
         
         TokenPlusSignature_t tokenSign;
         deserializeTokenPlusSign(auth.options, tokenSign); //FIXME: test if not empty
         
-        LOG_IPCP_DBG("Received token : %s", tokenSign.toString().c_str());
-        token_sign_per_ipcp[con.src_.ap_name_.c_str()] = & tokenSign;
-        
-        if (!checkTokenSignature(tokenSign.token, tokenSign.token_sign, 
-                                                ENCRYPT_ALG)){
-            LOG_IPCP_DBG("failed token check");
+        if (checkTokenSignature(tokenSign.token, tokenSign.token_sign, 
+                                                ENCRYPT_ALG) == -1){
+            LOG_IPCP_DBG("Failed token signature validation");
                 
         }
-        
         
         return 0;
 }

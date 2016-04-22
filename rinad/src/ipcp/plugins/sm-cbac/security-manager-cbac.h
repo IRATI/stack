@@ -174,7 +174,7 @@ public:
         SecurityManagerCBACPs(IPCPSecurityManager * dm);
 //         bool isAllowedToJoinDIF(const rina::Neighbor& newMember); 
                                 //const rina::ApplicationProcessNamingInformation, std::string);
-        int initialize_CBAC(const rina::cdap_rib::con_handle_t&);
+        int initialize_SC(const rina::cdap_rib::con_handle_t&);
         int isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t & con,
                                const rina::Neighbor& newMember,
                                rina::cdap_rib::auth_policy_t & auth);
