@@ -55,7 +55,8 @@ struct sdu *sdu_create_gfp(size_t data_len, gfp_t flags)
 	}
 
 	/* init PCI */
-	memset(&tmp->pci, 0x00, sizeof(tmp->pci));
+	tmp->pci.h = NULL;
+	//memset(&tmp->pci, 0x00, sizeof(tmp->pci));
 
 	tmp->cfg = NULL;
 	tmp->sdup_head = NULL;
@@ -216,6 +217,37 @@ int sdu_shrink(struct sdu *sdu, size_t bytes)
 	return 0;
 }
 EXPORT_SYMBOL(sdu_shrink);
+
+/* For shim HV */
+int sdu_pop(struct sdu *sdu, size_t bytes)
+{
+	struct du *du;
+
+	if (unlikely(!is_sdu_ok(sdu)))
+		return -1;
+	if (unlikely(!bytes))
+		return 0; /* This is a NO-OP */
+
+	du = to_du(sdu);
+	skb_pull(du->skb, bytes);
+	return 0;
+}
+EXPORT_SYMBOL(sdu_pop);
+
+int sdu_push(struct sdu *sdu, size_t bytes)
+{
+	struct du *du;
+
+	if (unlikely(!is_sdu_ok(sdu)))
+		return -1;
+	if (unlikely(!bytes))
+		return 0; /* This is a NO-OP */
+
+	du = to_du(sdu);
+	skb_push(du->skb, bytes);
+	return 0;
+}
+EXPORT_SYMBOL(sdu_push);
 
 /* SDU_WPI */
 struct sdu_wpi *sdu_wpi_create_gfp(size_t data_len, gfp_t flags)

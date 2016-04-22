@@ -74,9 +74,9 @@ struct vmpi_hdr {
         uint32_t channel;
 } __attribute__((packed));
 
-//#define VMPI_BUF_CAN_PUSH
+#define VMPI_BUF_CAN_PUSH
 
-//#define VERBOSE
+#define VERBOSE
 #ifdef VERBOSE
 #define IFV(x) x
 #else   /* !VERBOSE */

@@ -190,22 +190,20 @@ handle_guest_tx(struct vmpi_impl_info *vi)
                 if (unlikely(vb == NULL)) {
                         printk("vmpi_buf_alloc(%lu) failed\n", len);
                 } else {
+#ifdef VMPI_BUF_CAN_PUSH
                         iov = vq->iov;
-#ifdef VMPI_CAN_PUSH
                         len = iovec_to_buf(&iov, &out, vmpi_buf_data(vb),
-                                           vmpi_buf_size(vb));
-                        vmpi_buf_set_len(vb, len);
+                                           	vmpi_buf_len(vb));
                         hdr.channel = ((struct vmpi_hdr *)
                                       vmpi_buf_data(vb))->channel;
                         vmpi_buf_pop(vb, sizeof(struct vmpi_hdr));
 #else
-                        iovec_to_buf(&iov, &out, &hdr, sizeof(hdr));
-                        len = iovec_to_buf(&iov, &out, vmpi_buf_data(vb),
-                                           vmpi_buf_size(vb));
-                        vmpi_buf_set_len(vb, len);
+			ovec_to_buf(&iov, &out, &hdr, sizeof(hdr));
+			len = iovec_to_buf(&iov, &out, vmpi_buf_data(vb),
+							vmpi_buf_len(vb));
+			vmpi_buf_set_len(vb, len);
 #endif
-
-                        if (unlikely(!vi->read_cb)) {
+			if (unlikely(!vi->read_cb)) {
                                 vmpi_buf_free(vb);
                         } else {
                                 vi->read_cb(vi->cb_data, hdr.channel, vb);
@@ -235,7 +233,10 @@ int
 vmpi_impl_write_buf(struct vmpi_impl_info *vi, struct vmpi_buf *vb,
                     unsigned int channel)
 {
+#ifndef VMPI_BUF_CAN_PUSH
         struct vmpi_impl_queue *nvq = &vi->vqs[VHOST_MPI_VQ_RX];
+#endif
+	struct vmpi_buf_node *vbn;
 
         spin_lock_bh(&vi->write_lock);
         if (vi->write_len >= WR_Q_MAXLEN) {
@@ -249,7 +250,12 @@ vmpi_impl_write_buf(struct vmpi_impl_info *vi, struct vmpi_buf *vb,
         nvq->hdrs[nvq->hdr_tail].channel = channel;
         nvq->hdr_tail = (nvq->hdr_tail + 1) & VMPI_RING_SIZE_MASK;
 #endif
-        list_add_tail(&vb->node, &vi->write);
+	vbn = vmpi_buf_node_alloc(vb, GFP_ATOMIC);
+	if (!vbn) {
+                spin_unlock_bh(&vi->write_lock);
+                return -EAGAIN;
+	}
+        list_add_tail(&vbn->node, &vi->write);
         vi->write_len++;
         vi->stats.txreq++;
         spin_unlock_bh(&vi->write_lock);
@@ -271,11 +277,12 @@ static int
 peek_head_len(struct vmpi_impl_info *vi)
 {
         int ret = 0;
+	struct vmpi_buf_node * vbn;
 
         spin_lock_bh(&vi->write_lock);
         if (vi->write_len) {
-                ret = vmpi_buf_len(list_first_entry(&vi->write,
-                                                    struct vmpi_buf, node));
+                vbn = list_first_entry(&vi->write, struct vmpi_buf_node, node);
+                ret = vmpi_buf_len(vbn->vb);
 #ifndef VMPI_BUF_CAN_PUSH
                 ret += sizeof(struct vmpi_hdr);
 #endif /* ! VMPI_BUF_CAN_PUSH */
@@ -375,6 +382,7 @@ handle_guest_rx(struct vmpi_impl_info *vi)
         s16 headcount;
         size_t len;
         void *opaque;
+        struct vmpi_buf_node *vbn = NULL;
         struct vmpi_buf *vb = NULL;
         struct iovec *iov;
 
@@ -415,8 +423,10 @@ handle_guest_rx(struct vmpi_impl_info *vi)
                 iov = vq->iov;
 
                 spin_lock_bh(&vi->write_lock);
-                vb = list_first_entry(&vi->write, struct vmpi_buf, node);
-                list_del(&vb->node);
+                vbn = list_first_entry(&vi->write, struct vmpi_buf_node, node);
+                vb = vbn->vb;
+                list_del(&vbn->node);
+		vmpi_buf_node_free(vbn);
                 vi->write_len--;
 #ifndef VMPI_BUF_CAN_PUSH
                 iovec_from_buf(&iov, &in, nvq->hdrs + nvq->hdr_head,

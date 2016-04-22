@@ -63,6 +63,9 @@ struct sdu	*sdu_from_pdu(struct pdu *pdu);
 
 /* For shim TCP/UDP */
 int			sdu_shrink(struct sdu *sdu, size_t bytes);
+/* For shim HV */
+int			sdu_pop(struct sdu *sdu, size_t bytes);
+int			sdu_push(struct sdu *sdu, size_t bytes);
 
 /* For SDU_WPI */
 struct sdu_wpi		*sdu_wpi_create(size_t data_len);
