@@ -267,6 +267,7 @@ static unsigned sockaddr_init(union address *         sa,
 		return sizeof sa->in6;
 	}
 	ASSERT(0);
+	return 0;
 }
 
 static unsigned sockaddr_copy(union address * src, union address * dst)
@@ -280,6 +281,7 @@ static unsigned sockaddr_copy(union address * src, union address * dst)
 		return sizeof dst->in6;
 	}
 	ASSERT(0);
+	return 0;
 }
 
 static ssize_t shim_tcp_udp_ipcp_attr_show(struct robject *        robj,
