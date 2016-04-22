@@ -517,8 +517,6 @@ void IPCPRIBDaemonImpl::set_application_process(rina::ApplicationProcess * ap)
 		return;
 	}
 
-	ribd->set_security_manager(ap->get_security_manager());
-
         n_minus_one_flow_manager_ = ipcp->resource_allocator_->get_n_minus_one_flow_manager();
 
         subscribeToEvents();
