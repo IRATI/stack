@@ -23,9 +23,6 @@
 
 #include <linux/skbuff.h>
 
-#define MAX_PCIS_LEN (40 * 5)
-#define MAX_TAIL_LEN 20
-
 /* NOTE: This is just to be included by [pdu,sdu,pci].[ch] */
 
 struct pci {

@@ -201,6 +201,23 @@ int sdu_destroy(struct sdu *sdu)
 }
 EXPORT_SYMBOL(sdu_destroy);
 
+/* For shim TCP/UDP */
+int sdu_shrink(struct sdu *sdu, size_t bytes)
+{
+	struct du *du;
+
+	if (unlikely(!is_sdu_ok(sdu)))
+		return -1;
+	if (unlikely(bytes <= 0))
+		return 0; /* This is a NO-OP */
+
+	du = to_du(sdu);
+	skb_trim(du->skb, du->skb->len - bytes);
+	return 0;
+}
+EXPORT_SYMBOL(sdu_shrink);
+
+/* SDU_WPI */
 struct sdu_wpi *sdu_wpi_create_gfp(size_t data_len, gfp_t flags)
 {
 	struct sdu_wpi *tmp;

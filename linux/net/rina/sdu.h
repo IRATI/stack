@@ -28,6 +28,9 @@
 
 #include "common.h"
 
+#define MAX_PCIS_LEN (40 * 5)
+#define MAX_TAIL_LEN 20
+
 struct efcp_config;
 struct pdu;
 
@@ -58,6 +61,10 @@ int		sdu_efcp_config_bind(struct sdu *sdu,
 					     struct efcp_config *cfg);
 struct sdu	*sdu_from_pdu(struct pdu *pdu);
 
+/* For shim TCP/UDP */
+int			sdu_shrink(struct sdu *sdu, size_t bytes);
+
+/* For SDU_WPI */
 struct sdu_wpi		*sdu_wpi_create(size_t data_len);
 struct sdu_wpi		*sdu_wpi_create_ni(size_t data_len);
 int			sdu_wpi_destroy(struct sdu_wpi *s);
