@@ -719,11 +719,11 @@ void SecurityManagerCBACPs::checkRIBOperation(const rina::cdap_rib::auth_policy_
                                           const std::string obj_name,
                                           rina::cdap_rib::res_info_t& res)
 {
-        (void) auth;
+        /*(void) auth;
         (void) con;
         (void) opcode;
-        (void) obj_name;
-
+        (void) obj_name;*/
+        LOG_IPCP_DBG("Check RIB operation: OK");
         res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
 

@@ -561,7 +561,9 @@ void RIB::check_operation_allowed(const cdap_rib::auth_policy_t & auth,
 				  const std::string obj_name,
 				  cdap_rib::res_info_t& res)
 {
-	if (!security_m) {
+	LOG_DBG("RIB::check_operation_allowed");
+        if (!security_m) {
+                LOG_DBG("RIB:: no security manager, positive check");
 		res.code_ = cdap_rib::CDAP_SUCCESS;
 		return;
 	}
