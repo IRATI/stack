@@ -12,7 +12,7 @@
 #include "security-manager-cbac.h"
 #include "sm-cbac.pb.h"
 // #include <cstdlib>
-// #include <openssl/bio.h>
+#include <openssl/bio.h>
 #include <openssl/err.h>
 #include <openssl/md5.h>
 // #include <openssl/pem.h>
@@ -28,7 +28,7 @@ const std::string AC_CBAC_VERSION = "1";
 const std::string AccessControl::IPCP_DIF_FROM_DIFFERENT_GROUPS = "IPCP_DIF_FROM_DIFFERENT_GROUPS";
 const int VALIDITY_TIME_IN_HOURS = 2;
 const std::string ENCRYPT_ALG = SSL_TXT_AES256; //SSL_TXT_AES128; // FIXME: move to config 
-
+const std::string TOKEN_GEN_NAME = "B.IRATI"; //FIXME: move to config
 //----------------------------
 //FIXME: merge/use the helpers in rinad/src/common/encoder.cc
     
@@ -584,7 +584,7 @@ void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& dif
         int t = currentTime.get_current_time_in_ms();
         token.issued_time = t;
         token.token_nbf = t; //token valid immediately
-        token.token_exp = VALIDITY_TIME_IN_HOURS;; // after this time, the token will be invalid
+        token.token_exp = VALIDITY_TIME_IN_HOURS; // after this time, the token will be invalid
         token.token_cap = result; 
         
         //fill signature
@@ -613,6 +613,7 @@ SecurityManagerCBACPs::SecurityManagerCBACPs(IPCPSecurityManager * dm_)
 
         access_control_ = new AccessControl();
         my_ipcp_id = dm->ipcp->get_id();
+        trusted_ap_name.push_back("B.IRATI");
         LOG_IPCP_DBG("Creating SecurityManagerCBACPs: my_ipcp_id %d", my_ipcp_id);
        
 }
@@ -714,11 +715,37 @@ int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t
 	
 }
 
+// In addition to securityContext, any IPCP needs to load 
+// the public key of the token generator
+RSA* SecurityManagerCBACPs::loadTokenGeneratorPublicKey(std::string token_gen_name)
+{
+        BIO * keystore;
+        std::stringstream ss;
+        //Read peer public key from keystore
+        ss << my_sc->keystore_path << "/" << token_gen_name;
+        keystore =  BIO_new_file(ss.str().c_str(), "r");
+        if (!keystore) {
+                LOG_ERR("Problems opening keystore file at: %s",
+                        ss.str().c_str());
+                return NULL;
+        }
+        
+        RSA* token_generator_pub_key = PEM_read_bio_RSA_PUBKEY(keystore, NULL, 0, NULL);
+        BIO_free(keystore);
+        if (!token_generator_pub_key) {
+                LOG_ERR("Problems reading RSA public key from keystore: %s",
+                        ERR_error_string(ERR_get_error(), NULL));
+                return NULL;
+        }
+        return token_generator_pub_key;
+}
+
 int SecurityManagerCBACPs::checkTokenSignature(Token_t &token, rina::UcharArray & signature, 
                                                std::string encrypt_alg)
 {
         
         //objective: hash(token) =? decrypt_public_key_issuer(signature)
+        LOG_IPCP_DBG("Start token signature validation");
         assert(my_sc);
         rina::ser_obj_t ser_token;
         serializeToken(token, ser_token);
@@ -727,17 +754,22 @@ int SecurityManagerCBACPs::checkTokenSignature(Token_t &token, rina::UcharArray 
         // hash then encrypt token
         rina::UcharArray result;
         cbac_helpers::hashToken(token_char, result, encrypt_alg);
-                
+        RSA* token_generator_pub_key = loadTokenGeneratorPublicKey(TOKEN_GEN_NAME);
+        if (token_generator_pub_key == NULL){
+                LOG_IPCP_ERR("Signature verification failed, because of absent public key");
+                return -1;
+        }
+        
         rina::UcharArray decrypt_sign;
-        decrypt_sign.data = new unsigned char[RSA_size(my_sc->auth_peer_pub_key)];
+        decrypt_sign.data = new unsigned char[RSA_size(token_generator_pub_key/*my_sc->auth_peer_pub_key*/)];
         decrypt_sign.length = RSA_public_decrypt(signature.length,
                                                signature.data,
                                                decrypt_sign.data,
-                                               my_sc->auth_peer_pub_key,
+                                               token_generator_pub_key/*my_sc->auth_peer_pub_key*/,
                                                RSA_PKCS1_PADDING);
 
         if (decrypt_sign.length == -1) {
-                LOG_ERR("Error decrypting raw signature with peer public key: %s",
+                LOG_IPCP_ERR("Error decrypting raw signature with peer public key: %s",
                         ERR_error_string(ERR_get_error(), NULL));
                 return -1;
         }
@@ -774,7 +806,7 @@ int SecurityManagerCBACPs::storeAccessControlCreds(const rina::cdap_rib::auth_po
                 }
         }
         
-        assert(my_sc);
+        /*assert(my_sc);
         
         TokenPlusSignature_t tokenSign;
         deserializeTokenPlusSign(auth.options, tokenSign); //FIXME: test if not empty
@@ -784,7 +816,7 @@ int SecurityManagerCBACPs::storeAccessControlCreds(const rina::cdap_rib::auth_po
             LOG_IPCP_DBG("Failed token signature validation");
                 
         }
-        
+        */
         token_sign_per_ipcp[con.src_.ap_name_.c_str()] = auth.options; //Serialized tokenSignature
         //token_sign_per_ipcp[con] = &tokenSign;
         
@@ -794,7 +826,9 @@ int SecurityManagerCBACPs::storeAccessControlCreds(const rina::cdap_rib::auth_po
 int SecurityManagerCBACPs::getAccessControlCreds(rina::cdap_rib::auth_policy_t & auth,
                                              const rina::cdap_rib::con_handle_t & con)
 {
-        
+        //FIXME: why con.src_.ap_name is in some cases empty!!
+        LOG_IPCP_DBG("Asked to get MY AC Credentials, src %s, dest %s, src-ae-name %s, dest-ae-name %s",
+                con.src_.ap_name_.c_str(), con.dest_.ap_name_.c_str(), con.src_.ae_name_.c_str(), con.dest_.ae_name_.c_str());
         if (token_sign_per_ipcp.find(con.src_.ap_name_.c_str()) == 
                 token_sign_per_ipcp.end()){
                 LOG_IPCP_DBG("Asked to get MY AC Credentials [of %s], but Not found !",
@@ -806,6 +840,74 @@ int SecurityManagerCBACPs::getAccessControlCreds(rina::cdap_rib::auth_policy_t &
         auth.options = token_sign_per_ipcp[con.src_.ap_name_.c_str()];
 
         return 0;
+}
+
+int SecurityManagerCBACPs::checkTokenValidity(const rina::cdap_rib::auth_policy_t & auth, std::string requestor)
+{
+        LOG_IPCP_DBG("START CHECK TOKEN VALIDITY");
+        TokenPlusSignature_t tokenSign;
+        deserializeTokenPlusSign(auth.options, tokenSign);
+        Token_t token = tokenSign.token;
+        stringstream ss;
+        ss << "Validating token:" << endl;
+        
+        //1. check audience
+        if (token.audience == "all" /*|| token.audience == my_ipcp_name*/){
+                //         if (std::find(trusted_ap_name.begin(), trusted_ap_name.end(), requestor) != trusted_ap_name.end())
+        
+                ss << "\t 1. Valid audience, continue validation" << endl;
+                LOG_IPCP_DBG("%s", ss.str().c_str());
+        }else{
+                ss << "\t 1. I am not in the audience, failed token validation" << endl;
+                LOG_IPCP_DBG("%s", ss.str().c_str());
+                return -1;
+        }
+        
+        //2. check token_holder == requestor
+        if (token.ipcp_holder_name.processName == requestor){
+                ss << "\t 2. Token holder is the requestor, continue validation" << endl;
+                LOG_IPCP_DBG("%s", ss.str().c_str());
+        }else{
+                ss << "\t 2. Token holder is NOT the requestor, failed token validation" << endl;
+                LOG_IPCP_DBG("%s", ss.str().c_str());
+                return -1;
+        }
+        
+        //3. check nbf
+        rina::Time currentTime;
+        int now = currentTime.get_current_time_in_ms();
+        if(token.token_nbf <= now){
+                ss << "\t 3. Token nbf is valid, continue token validation"<< endl;
+                LOG_IPCP_DBG("%s", ss.str().c_str());
+        }else{
+                ss << "\t 3. Token cannot not be used yet, failed token validation" << endl;
+                LOG_IPCP_DBG("%s", ss.str().c_str());
+                return -1;
+        }
+        
+        //4. check expiration time
+        int until = token.token_exp * 3600 * 1000 + token.issued_time;
+        if(until >= now){
+                ss << "\t 4. Token has not expired yet, continue token validation"<< endl;
+                LOG_IPCP_DBG("%s", ss.str().c_str());
+        }else{
+                ss << "\t 4. Token has expired, failed token validation" << endl;
+                LOG_IPCP_DBG("%s", ss.str().c_str());
+                return -1;
+        }
+        
+        //5. check signature
+        
+        if (checkTokenSignature(token, tokenSign.token_sign, 
+                                                ENCRYPT_ALG) == -1){
+                ss << "\t 5. Token Signature invalid, failed token validation" << endl;
+                LOG_IPCP_DBG("%s", ss.str().c_str());
+                return -1; 
+        } 
+        ss << "\t 5. Token Signature valid, token is valid"<< endl;
+        LOG_IPCP_DBG("%s", ss.str().c_str());
+        return 0;
+        
 }
 
 void SecurityManagerCBACPs::checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
@@ -840,12 +942,74 @@ void SecurityManagerCBACPs::checkRIBOperation(const rina::cdap_rib::auth_policy_
         } con_handle_t;
 
         */
+        
         LOG_IPCP_DBG("Check RIB operation: %s", 
                      cbac_helpers::operationToString(con, opcode, obj_name).c_str());
         
+        std::string requestor = con.dest_.ap_name_;
+        if (requestor == std::string()){
+                LOG_IPCP_ERR("Empty requestor name field!");
+                res.code_ = rina::cdap_rib::CDAP_ERROR;
+                return;
+        }
+        
+        if (std::find(trusted_ap_name.begin(), trusted_ap_name.end(), requestor) 
+                != trusted_ap_name.end()){
+                LOG_IPCP_DBG("Requestor is in Trusted list, grant access for any operation");
+                res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+                return;
+        }
+        
+        if (checkTokenValidity(auth, requestor) < 0){
+                LOG_IPCP_DBG("Invalid Token, NO access");
+                res.code_ = rina::cdap_rib::CDAP_ERROR;
+                return;   
+        }
+        
+        stringstream ss;
+        switch(opcode) {
+                case rina::cdap::cdap_m_t::M_START:
+                        if (auth.options.size_ == 0){
+                                ss << "START operation : empty token field; NO access" << endl;
+                                LOG_IPCP_ERR("%s", ss.str().c_str());
+                                res.code_ = rina::cdap_rib::CDAP_ERROR;
+                        }
+                        else{
+                                ss << "START operation : token field here; Grant access" << endl;
+                                LOG_IPCP_DBG("%s", ss.str().c_str());
+                                res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+                        }                        
+                        break;
+                case rina::cdap::cdap_m_t::M_STOP:
+                       if (auth.options.size_ == 0){
+                                ss << "STOP operation : empty token field; NO access" << endl;
+                                LOG_IPCP_ERR("%s", ss.str().c_str());
+                                res.code_ = rina::cdap_rib::CDAP_ERROR;
+                        }
+                        else{
+                                ss << "STOP operation : token field here; Grant access" << endl;
+                                LOG_IPCP_DBG("%s", ss.str().c_str());
+                                res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+                        }                        
+                        break;
+                case rina::cdap::cdap_m_t::M_CONNECT:
+                        ss << "OK!"<< endl; 
+                        LOG_IPCP_ERR("%s", ss.str().c_str());
+                        break;
+                case rina::cdap::cdap_m_t::M_WRITE:
+                        ss << "OK!"<< endl;
+                default:
+                        ss << "Unrecognized operation!"<< endl;
+                        LOG_IPCP_ERR("%s", ss.str().c_str());
+                        break;
+        }
+        //return;
+            
+        
+        
         if (auth.options.size_ == 0){
                 LOG_IPCP_ERR("Check RIB operation: empty token field");
-                res.code_ = rina::cdap_rib::CDAP_ERROR;
+                res.code_ = rina::cdap_rib::CDAP_SUCCESS; //CDAP_ERROR;
                 return;
         }
         

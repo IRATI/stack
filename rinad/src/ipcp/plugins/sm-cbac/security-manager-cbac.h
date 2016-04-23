@@ -105,7 +105,7 @@ typedef struct Token{
         unsigned short token_id;
         unsigned short ipcp_issuer_id;
         rina::ApplicationProcessNamingInformation ipcp_holder_name; // TODO: may be replace by ipcp id?/*unsigned short*/ 
-        std::string audience;
+        std::string audience; // FIXME: convert to string list
         int issued_time;
         int token_nbf;
         int token_exp;
@@ -182,8 +182,13 @@ public:
                                     const rina::cdap_rib::con_handle_t & con);
         int getAccessControlCreds(rina::cdap_rib::auth_policy_t & auth,
                                   const rina::cdap_rib::con_handle_t & con);
+        int checkTokenValidity(const rina::cdap_rib::auth_policy_t & auth, 
+                                                       std::string requestor);
         int checkTokenSignature(Token_t &token, 
                                   rina::UcharArray & signature, std::string encrypt_alg);
+        RSA* loadTokenGeneratorPublicKey(std::string token_gen_name);
+//                                    RSA* token_generator_pub_key);
+
         void checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
                               const rina::cdap_rib::con_handle_t & con,
                               const rina::cdap::cdap_m_t::Opcode opcode,
@@ -204,6 +209,7 @@ private:
         AccessControl * access_control_;
         unsigned short my_ipcp_id;
         rina::ApplicationProcessNamingInformation my_dif_name;
+        std::list<std::string> trusted_ap_name;
         //std::map<std::string, TokenPlusSignature_t*> token_sign_per_ipcp;
         std::map<std::string, rina::ser_obj_t> token_sign_per_ipcp;
         //std::map<rina::cdap_rib::con_handle_t, TokenPlusSignature_t*> token_sign_per_ipcp;
