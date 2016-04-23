@@ -167,6 +167,89 @@ int encryptHashedTokenWithPrivateKey(rina::UcharArray &input, rina::UcharArray &
         return 0;
 }
 
+std::string opcodeToString(rina::cdap::cdap_m_t::Opcode opCode)
+{
+        std::string result;
+
+        switch(opCode) {
+                case rina::cdap::cdap_m_t::M_CONNECT:
+                        result = "0_M_CONNECT";
+                        break;
+                case rina::cdap::cdap_m_t::M_CONNECT_R:
+                        result = "1_M_CONNECT_R";
+                        break;
+                case rina::cdap::cdap_m_t::M_RELEASE:
+                        result = "2_M_RELEASE";
+                        break;
+                case rina::cdap::cdap_m_t::M_RELEASE_R:
+                        result = "3_M_RELEASER";
+                        break;
+                case rina::cdap::cdap_m_t::M_CREATE:
+                        result = "4_M_CREATE";
+                        break;
+                case rina::cdap::cdap_m_t::M_CREATE_R:
+                        result = "5_M_CREATE_R";
+                        break;
+                case rina::cdap::cdap_m_t::M_DELETE:
+                        result = "6_M_DELETE";
+                        break;
+                case rina::cdap::cdap_m_t::M_DELETE_R:
+                        result = "7_M_DELETE_R";
+                        break;
+                case rina::cdap::cdap_m_t::M_READ:
+                        result = "8_M_READ";
+                        break;
+                case rina::cdap::cdap_m_t::M_READ_R:
+                        result = "9_M_READ_R";
+                        break;
+                case rina::cdap::cdap_m_t::M_CANCELREAD:
+                        result = "10_M_CANCELREAD";
+                        break;
+                case rina::cdap::cdap_m_t::M_CANCELREAD_R:
+                        result = "11_M_CANCELREAD_R";
+                        break;
+                case rina::cdap::cdap_m_t::M_WRITE:
+                        result = "12_M_WRITE";
+                        break;
+                case rina::cdap::cdap_m_t::M_WRITE_R:
+                        result = "13_M_WRITE_R";
+                        break;
+                case rina::cdap::cdap_m_t::M_START:
+                        result = "14_M_START";
+                        break;
+                case rina::cdap::cdap_m_t::M_START_R:
+                        result = "15_M_START_r";
+                        break;
+                case rina::cdap::cdap_m_t::M_STOP:
+                        result = "16_M_STOP";
+                        break;
+                case rina::cdap::cdap_m_t::M_STOP_R:
+                        result = "17_M_STOP_R";
+                        break;
+                case rina::cdap::cdap_m_t::NONE_OPCODE:
+                        result = "18_NON_OPCODE";
+                        break;
+                default:
+                        result = "Wrong operation code";
+                }
+
+        return result;
+}
+
+std::string operationToString( //const rina::cdap_rib::auth_policy_t & auth,
+                                const rina::cdap_rib::con_handle_t & con,
+                                const rina::cdap::cdap_m_t::Opcode opcode,
+                                const std::string obj_name)
+{
+        stringstream ss;
+        
+        ss << "\nOpcode:" << opcodeToString(opcode).c_str() << endl;
+        ss << "Object name:" << obj_name << endl;
+        ss << "From:" << con.dest_.ap_name_.c_str() << endl;
+        return ss.str();
+}
+
+
 } //cbac-helpers
 
 //----------------------------
@@ -673,8 +756,9 @@ int SecurityManagerCBACPs::storeAccessControlCreds(const rina::cdap_rib::auth_po
                                                const rina::cdap_rib::con_handle_t & con)
 {
         
-        LOG_IPCP_DBG("Storing AC Credentials of IPCP %s (token coming from %s)",
-                     con.src_.ap_name_.c_str(), con.dest_.ap_name_.c_str());
+        LOG_IPCP_DBG("Storing AC Credentials of IPCP %s (token assigned from %s to %s)",
+                     con.src_.ap_name_.c_str(),
+                     con.dest_.ap_name_.c_str(), con.src_.ap_name_.c_str());
         
         if (my_dif_name.toString() == std::string()){
                 my_dif_name = dm->ipcp->get_dif_information().dif_name_;
@@ -701,14 +785,25 @@ int SecurityManagerCBACPs::storeAccessControlCreds(const rina::cdap_rib::auth_po
                 
         }
         
+        token_sign_per_ipcp[con.src_.ap_name_.c_str()] = auth.options; //Serialized tokenSignature
+        //token_sign_per_ipcp[con] = &tokenSign;
+        
         return 0;
 }
 
 int SecurityManagerCBACPs::getAccessControlCreds(rina::cdap_rib::auth_policy_t & auth,
                                              const rina::cdap_rib::con_handle_t & con)
 {
-        (void) auth;
-        (void) con;
+        
+        if (token_sign_per_ipcp.find(con.src_.ap_name_.c_str()) == 
+                token_sign_per_ipcp.end()){
+                LOG_IPCP_DBG("Asked to get MY AC Credentials [of %s], but Not found !",
+                    con.src_.ap_name_.c_str()); // XXX: empty at first authentication steps
+                return 0;
+        }
+        LOG_IPCP_DBG("Asked to get MY AC Credentials [of %s].",
+                    con.src_.ap_name_.c_str());
+        auth.options = token_sign_per_ipcp[con.src_.ap_name_.c_str()];
 
         return 0;
 }
@@ -722,7 +817,45 @@ void SecurityManagerCBACPs::checkRIBOperation(const rina::cdap_rib::auth_policy_
         /*(void) auth;
         (void) con;
         (void) opcode;
-        (void) obj_name;*/
+        (void) obj_name;
+        typedef struct connection_handler {
+        unsigned int port_id;
+        cdap_dest_t cdap_dest;
+        int abs_syntax;
+        ep_info_t src_;
+        ep_info_t dest_;
+        auth_policy_t auth_;
+        vers_info_t version_;
+
+        //if the message was forwarded by the IPCM
+        //this is the sequence number (otherwise 0)
+        unsigned int fwd_mgs_seqn;
+
+        connection_handler() {
+                cdap_dest = CDAP_DEST_PORT;
+                abs_syntax = 0;
+                port_id = 0;
+                fwd_mgs_seqn = 0;
+        };
+        } con_handle_t;
+
+        */
+        LOG_IPCP_DBG("Check RIB operation: %s", 
+                     cbac_helpers::operationToString(con, opcode, obj_name).c_str());
+        
+        if (auth.options.size_ == 0){
+                LOG_IPCP_ERR("Check RIB operation: empty token field");
+                res.code_ = rina::cdap_rib::CDAP_ERROR;
+                return;
+        }
+        
+        TokenPlusSignature_t tokenSign;
+        deserializeTokenPlusSign(auth.options, tokenSign);
+        
+        LOG_IPCP_DBG("Check RIB operation: %s",
+                        tokenSign.toString().c_str());
+                     
+        
         LOG_IPCP_DBG("Check RIB operation: OK");
         res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }

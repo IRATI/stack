@@ -204,7 +204,9 @@ private:
         AccessControl * access_control_;
         unsigned short my_ipcp_id;
         rina::ApplicationProcessNamingInformation my_dif_name;
-        std::map<std::string, TokenPlusSignature_t*> token_sign_per_ipcp;
+        //std::map<std::string, TokenPlusSignature_t*> token_sign_per_ipcp;
+        std::map<std::string, rina::ser_obj_t> token_sign_per_ipcp;
+        //std::map<rina::cdap_rib::con_handle_t, TokenPlusSignature_t*> token_sign_per_ipcp;
         rina::Lockable lock;
 };
 
