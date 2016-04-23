@@ -20,7 +20,7 @@ message smCbacToken_t {
         required uint32 token_id = 1; /*unsigned short*/
         required uint32 ipcp_issuer_id = 2; /*unsigned short*/
         required rina.messages.applicationProcessNamingInfo_t ipcp_holder_name = 3;
-        required string audience = 4;
+        repeated string audience = 4;
         required uint32 issued_time = 5; /*int*/
         required uint32 token_nbf = 6;
         required uint32 token_exp = 7;

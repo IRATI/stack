@@ -105,7 +105,7 @@ typedef struct Token{
         unsigned short token_id;
         unsigned short ipcp_issuer_id;
         rina::ApplicationProcessNamingInformation ipcp_holder_name; // TODO: may be replace by ipcp id?/*unsigned short*/ 
-        std::string audience; // FIXME: convert to string list
+        std::list<std::string> audience; // FIXME: convert to string list
         int issued_time;
         int token_nbf;
         int token_exp;
@@ -118,7 +118,12 @@ typedef struct Token{
                 ss << "\nToken id:" << token_id << endl;
                 ss << "Token issuer_id:" << ipcp_issuer_id << endl;
                 ss << "Token ipcp_holder_name:" << ipcp_holder_name.toString() << endl;
-                ss << "Token audience:" << audience.c_str() << endl;
+                ss << "Token audience:" << endl;
+                for (list<std::string>::const_iterator it =
+                                audience.begin(); 
+                                it != audience.end(); it++) {
+                        ss << "\t IPCP: "<< it->c_str() << endl;
+                }
                 ss << "Token issued_time:" << issued_time << endl;
                 ss << "Token token_nbf:" << token_nbf << endl;
                 ss << "Token token_exp:" << token_exp << endl;
@@ -186,7 +191,7 @@ public:
                                                        std::string requestor);
         int checkTokenSignature(Token_t &token, 
                                   rina::UcharArray & signature, std::string encrypt_alg);
-        RSA* loadTokenGeneratorPublicKey(std::string token_gen_name);
+        RSA* loadTokenGeneratorPublicKey();
 //                                    RSA* token_generator_pub_key);
 
         void checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
@@ -205,13 +210,16 @@ private:
         // Data model of the security manager component.
         IPCPSecurityManager * dm;
         rina::SSH2SecurityContext * my_sc;
+        std::string token_gen_name;
         int max_retries;
         AccessControl * access_control_;
         unsigned short my_ipcp_id;
+        std::string my_ipcp_name;
         rina::ApplicationProcessNamingInformation my_dif_name;
         std::list<std::string> trusted_ap_name;
         //std::map<std::string, TokenPlusSignature_t*> token_sign_per_ipcp;
-        std::map<std::string, rina::ser_obj_t> token_sign_per_ipcp;
+        //std::map<std::string, rina::ser_obj_t> token_sign_per_ipcp;
+        rina::ser_obj_t my_token;
         //std::map<rina::cdap_rib::con_handle_t, TokenPlusSignature_t*> token_sign_per_ipcp;
         rina::Lockable lock;
 };
