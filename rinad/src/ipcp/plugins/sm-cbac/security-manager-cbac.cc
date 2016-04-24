@@ -27,8 +27,6 @@ const std::string AC_CBAC = "AC_CBAC";
 const std::string AC_CBAC_VERSION = "1";
 const std::string AccessControl::IPCP_DIF_FROM_DIFFERENT_GROUPS = "IPCP_DIF_FROM_DIFFERENT_GROUPS";
 const int VALIDITY_TIME_IN_HOURS = 2;
-const std::string ENCRYPT_ALG = SSL_TXT_AES256; //SSL_TXT_AES128; // FIXME: move to config 
-const std::string TOKEN_GEN_NAME = "B.IRATI"; //FIXME: move to config
 //----------------------------
 //FIXME: merge/use the helpers in rinad/src/common/encoder.cc
     
@@ -580,7 +578,7 @@ void AccessControl::generateTokenSignature(Token_t &token, std::string encrypt_a
 
 void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& difProfile,
                                   IPCPProfile_t& newMemberProfile, rina::cdap_rib::auth_policy_t & auth,
-                                  rina::SSH2SecurityContext *sc)
+                                  rina::SSH2SecurityContext *sc, std::string encryptAlgo)
 {
         std::list<Capability_t> result = computeCapabilities(difProfile, newMemberProfile); 
         
@@ -601,7 +599,7 @@ void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& dif
         
         //fill signature
         
-        generateTokenSignature(token, ENCRYPT_ALG, 
+        generateTokenSignature(token, encryptAlgo, 
             sc->auth_keypair, tokenSign.token_sign);
         tokenSign.token = token;
         // token should be encoded as ser_obj_t
@@ -628,10 +626,8 @@ SecurityManagerCBACPs::SecurityManagerCBACPs(IPCPSecurityManager * dm_)
         my_ipcp_id = dm->ipcp->get_id();
         my_ipcp_name = dm->ipcp->get_name();
         trusted_ap_name.push_back("B.IRATI");
-        token_gen_name = TOKEN_GEN_NAME; //FIXME: read from config
         LOG_IPCP_DBG("Creating SecurityManagerCBACPs: my_ipcp_id %d name %s", my_ipcp_id, 
                        my_ipcp_name.c_str());
-        
 }
 
 
@@ -647,13 +643,47 @@ int SecurityManagerCBACPs::initialize_SC(const rina::cdap_rib::con_handle_t &con
         }
         return 0;
 }
+
+std::string getStringParamFromConfig(std::string paramName, IPCPSecurityManager *dm){
+        std::string result = dm->ipcp->get_dif_information().
+                    get_dif_configuration().sm_configuration_.policy_set_.
+                    get_param_value_as_string(paramName);
+        return result;
+}
+/*
+int updateFromConfig(){
         
+        my_config.profileFile = dm->ipcp->get_dif_information().
+                    get_dif_configuration().sm_configuration_.policy_set_.
+                    get_param_value_as_string("ACprofilestore");
+        if (my_config.profileFile == std::string()){
+            LOG_IPCP_ERR("Missing ProfileParser parameter configuration!");
+                return -1;
+        }
+        my_config.tokenGenIpcpName = dm->ipcp->get_dif_information().
+                    get_dif_configuration().sm_configuration_.policy_set_.
+                    get_param_value_as_string("TokenGenIPCPName");
+        if (my_config.tokenGenIpcpName == std::string()){
+            LOG_IPCP_ERR("Missing tokenGenIpcpName parameter configuration!");
+                return -1;
+        }             
+        my_config.encryptAlgo = dm->ipcp->get_dif_information().
+                    get_dif_configuration().sm_configuration_.policy_set_.
+                    get_param_value_as_string("EncryptAlgo");
+        if (my_config.encryptAlgo == std::string()){
+            LOG_IPCP_ERR("Missing encryptAlgo parameter configuration!");
+                return -1;
+        }
+        return 0;
+}
+*/
+
 int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t &con, 
                                               const rina::Neighbor &newMember,
                                                rina::cdap_rib::auth_policy_t &auth)
 {
-    
         my_dif_name = dm->ipcp->get_dif_information().dif_name_;
+        
         LOG_IPCP_DBG("SecurityManagerCBACPs: isAllowedToJoinDAF my_dif_name %s", 
                      my_dif_name.processName.c_str());
         
@@ -677,11 +707,12 @@ int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t
         assert(my_sc);
         
         LOG_IPCP_DBG("SecurityManagerCBACPs: Initialized Security Context");
-                
         
-        const std::string profileFile = dm->ipcp->get_dif_information().
-                    get_dif_configuration().sm_configuration_.policy_set_.
-                    get_param_value_as_string("ACprofilestore");
+        const std::string profileFile = getStringParamFromConfig("ACprofilestore", dm);
+        if (profileFile == std::string()){
+                LOG_IPCP_ERR("Missing ProfileParser parameter configuration!");
+                return -1;
+        }
 	
         // Read Profile From AC Profile Store
 	ProfileParser profileParser;
@@ -717,11 +748,16 @@ int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t
 	ac_res_info_t res;
 	access_control_->checkJoinDIF(difProfile, newMemberProfile, res);
 	if (res.code_ == 0){
-		LOG_IPCP_DBG("Allowing IPC Process %s to join the DIF. Going to generate token",
-		     newMember.name_.processName.c_str());
-                
-                access_control_->generateToken(my_ipcp_id, difProfile, newMemberProfile, auth, my_sc);
-		return 0;
+                    LOG_IPCP_DBG("Allowing IPC Process %s to join the DIF. Going to generate token",
+                        newMember.name_.processName.c_str());
+                    std::string encryptAlgo = getStringParamFromConfig("EncryptAlgo", dm);
+                    if (encryptAlgo == std::string()){
+                            LOG_IPCP_ERR("Missing EncryptAlgo parameter configuration!");
+                            return -1;
+                    }
+                    access_control_->generateToken(my_ipcp_id, difProfile, newMemberProfile, 
+                    auth, my_sc, encryptAlgo) ;
+                    return 0;
 	}
 	if (res.code_ != 0){
 		LOG_IPCP_DBG("NOT Allowing IPC Process %s to join the DIF because of %s",
@@ -738,7 +774,13 @@ RSA* SecurityManagerCBACPs::loadTokenGeneratorPublicKey()
         BIO * keystore;
         std::stringstream ss;
         //Read peer public key from keystore
-        ss << my_sc->keystore_path << "/" << token_gen_name;
+        std::string tokenGenIpcpName = getStringParamFromConfig("TokenGenIPCPName", dm);
+        if (tokenGenIpcpName == std::string()){
+            LOG_IPCP_ERR("Missing tokenGenIpcpName parameter configuration!");
+                return NULL;
+        }
+                    
+        ss << my_sc->keystore_path << "/" << tokenGenIpcpName;
         keystore =  BIO_new_file(ss.str().c_str(), "r");
         if (!keystore) {
                 LOG_ERR("Problems opening keystore file at: %s",
@@ -821,6 +863,7 @@ int SecurityManagerCBACPs::storeAccessControlCreds(const rina::cdap_rib::auth_po
                 }
         }
         
+        
         /*assert(my_sc);
         if (checkTokenSignature(tokenSign.token, tokenSign.token_sign, 
                                                 ENCRYPT_ALG) == -1){
@@ -848,7 +891,7 @@ int SecurityManagerCBACPs::getAccessControlCreds(rina::cdap_rib::auth_policy_t &
 {
         //NOTE: con not used
         if (my_token.size_ <= 0){
-                LOG_IPCP_DBG("Asked to get MY AC Credentials BUT token not there");
+                LOG_IPCP_DBG("Asked to get MY AC Credentials BUT token is not there");
                 return 0;
         }
         
@@ -858,7 +901,8 @@ int SecurityManagerCBACPs::getAccessControlCreds(rina::cdap_rib::auth_policy_t &
         return 0;
 }
 
-int SecurityManagerCBACPs::checkTokenValidity(const rina::cdap_rib::auth_policy_t & auth, std::string requestor)
+int SecurityManagerCBACPs::checkTokenValidity(const rina::cdap_rib::auth_policy_t & auth,
+                                              std::string requestor)
 {
         TokenPlusSignature_t tokenSign;
         deserializeTokenPlusSign(auth.options, tokenSign);
@@ -915,9 +959,14 @@ int SecurityManagerCBACPs::checkTokenValidity(const rina::cdap_rib::auth_policy_
         }
         
         //5. check signature
+        std::string encryptAlgo = getStringParamFromConfig("EncryptAlgo", dm);
+        if (encryptAlgo == std::string()){
+                LOG_IPCP_ERR("Missing EncryptAlgo parameter configuration!");
+                return -1;
+        }
         
         if (checkTokenSignature(token, tokenSign.token_sign, 
-                                                ENCRYPT_ALG) == -1){
+                                                encryptAlgo) == -1){
                 ss << "\n\t 5. Token Signature invalid, failed token validation" << endl;
                 LOG_IPCP_DBG("%s", ss.str().c_str());
                 return -1; 

@@ -155,6 +155,13 @@ typedef struct TokenPlusSignature{
         }
 } TokenPlusSignature_t;
 
+/*
+typedef struct Config{
+        std::string profileFile;
+        std::string tokenGenIpcpName ;
+        std::string encryptAlgo;
+} Config_t;
+*/
 //--------------------------------
 class AccessControl{
 public:
@@ -162,16 +169,12 @@ public:
         bool checkJoinDIF(DIFProfile_t&, IPCPProfile_t&, ac_res_info_t&);
         std::list<Capability_t> computeCapabilities(DIFProfile_t&, IPCPProfile_t&);
         void generateToken(unsigned short, DIFProfile_t&, IPCPProfile_t&, 
-                           rina::cdap_rib::auth_policy_t &, rina::SSH2SecurityContext* );
+                           rina::cdap_rib::auth_policy_t &, rina::SSH2SecurityContext*, std::string);
         void generateTokenSignature(Token_t &token, std::string encrypt_alg, 
                                    RSA * my_private_key,  rina::UcharArray &signature);
         virtual ~AccessControl() {}
         static const std::string IPCP_DIF_FROM_DIFFERENT_GROUPS;
 };
-
-
-
-
 
 //-----------------------------------
 class SecurityManagerCBACPs: public IPCPSecurityManagerPs {
@@ -210,7 +213,8 @@ private:
         // Data model of the security manager component.
         IPCPSecurityManager * dm;
         rina::SSH2SecurityContext * my_sc;
-        std::string token_gen_name;
+        //std::string token_gen_name;
+//         Config_t my_config;
         int max_retries;
         AccessControl * access_control_;
         unsigned short my_ipcp_id;
