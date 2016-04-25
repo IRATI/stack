@@ -208,7 +208,7 @@ static void hostname_init(struct hostname *     host_name,
 		host_name->in6 = sa->in6.sin6_addr;
 		break;
 	default:
-		ASSERT(0);
+		unreachable();
 	}
 }
 
@@ -224,7 +224,7 @@ static bool hostname_is_equal(const struct hostname * a,
 		case AF_INET6:
 			return !memcmp(&a->in6, &b->in6, 16);
 		}
-		ASSERT(0);
+		unreachable();
 	}
 	return false;
 }
@@ -245,7 +245,7 @@ static bool sockaddr_is_equal(const union address * a,
 			    && !memcmp(&a->in6.sin6_addr, &b->in6.sin6_addr, 16)
 			    && a->in6.sin6_scope_id == b->in6.sin6_scope_id;
 		}
-		ASSERT(0);
+		unreachable();
 	}
 	return false;
 }
@@ -309,7 +309,7 @@ static ssize_t shim_tcp_udp_ipcp_attr_show(struct robject *        robj,
 			return sprintf(buf, "%pI6c\n",
 				&instance->data->host_name.in6);
 		default:
-			ASSERT(0);
+			unreachable();
 		case AF_UNSPEC:;
 		}
 
@@ -1676,7 +1676,7 @@ static int tcp_udp_rcv_process_msg(struct sock * sk)
                 LOG_DBG("Found sockname (%pI6c)", &own.in6.sin6_addr);
                 break;
         default:
-                ASSERT(0);
+                unreachable();
         }
 
         hostname_init(&host_name, &own);
