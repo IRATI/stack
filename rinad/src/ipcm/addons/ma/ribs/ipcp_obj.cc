@@ -9,7 +9,6 @@
 #include "../agent.h"
 #include "../../../ipcm.h"
 #include "../ribf.h"
-#include "ribd_obj.h"
 
 namespace rinad {
 namespace mad {
