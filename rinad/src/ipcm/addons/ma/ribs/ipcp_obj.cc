@@ -81,7 +81,7 @@ void IPCPObj::forward_object(const rina::cdap_rib::con_handle_t& con,
        IPCManager->delegate_ipcp_ribobj(this, &promise, processID_ , obj.class_, object_name, filt.scope_);
 }
 
-void IPCPObj::forwarded_object_response(const rina::cdap_rib::res_info_t &res)
+void IPCPObj::forwarded_object_response(rina::cdap::cdap_m_t *msg)
 {
         /*
         void remote_read_result(const cdap_rib::con_handle_t& con,
@@ -91,8 +91,9 @@ void IPCPObj::forwarded_object_response(const rina::cdap_rib::res_info_t &res)
                                int invoke_id);
         */
 
-        rina::cdap::getProvider()->send_read_result(params.con, params.obj,
-                                                    params.flags, res, params.invoke_id);
+		msg->flags_ = params.flags.flags_;
+		msg->invoke_id_ = params.invoke_id;
+		rina::cdap::getProvider()->send_cdap_result(params.con,  msg);
 }
 
 void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,

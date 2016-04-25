@@ -488,7 +488,7 @@ public:
 	                            const rina::cdap_rib::flags_t &flags,
 	                            const rina::cdap_rib::filt_info_t &filt,
 	                            int invoke_id) = 0;
-	virtual void forwarded_object_response(const cdap_rib::res_info_t &res) = 0;
+	virtual void forwarded_object_response(rina::cdap::cdap_m_t *msg) = 0;
 };
 
 ///
@@ -520,6 +520,7 @@ typedef int64_t rib_handle_t;
 ///
 /// Schema's create callback prototype
 ///
+#ifndef SWIG
 typedef void (*create_cb_t)(const rib_handle_t rib,
 			    const cdap_rib::con_handle_t &con,
 			    const std::string& fqn,
@@ -529,7 +530,7 @@ typedef void (*create_cb_t)(const rib_handle_t rib,
 			    const ser_obj_t &obj_req,
 			    ser_obj_t &obj_reply,
 			    cdap_rib::res_info_t& res);
-
+#endif
 ///
 /// RIB Schema Object
 ///
@@ -900,9 +901,9 @@ private:
                             RIBObj** o);
         //Constructor
         RIBDaemonProxy(RIBDaemon* ribd_);
-
+#ifndef SWIG
         friend RIBDaemonProxy* RIBDaemonProxyFactory();
-
+#endif
         RIBDaemon* ribd;
 };
 
