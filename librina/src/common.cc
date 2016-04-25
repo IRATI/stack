@@ -1069,10 +1069,11 @@ void initialize(const std::string& logLevel,
                 throw InitializationException("Librina already initialized");
         }
 
-        setLogLevel(logLevel.c_str());
         if (setLogFile(pathToLogFile.c_str()) != 0) {
                 LOG_WARN("Error setting log file, using stdout only");
         }
+
+        setLogLevel(logLevel.c_str());
 
         rinaManager->getNetlinkManager();
 

@@ -1424,12 +1424,18 @@ ipcm_res_t IPCManager_::plugin_load_kernel(const std::string& plugin_name,
     } else if (pid == 0)
     {
         // child
-        if (load)
-        {
+	int nfd;
+
+	// redirect stdout to /dev/null
+	nfd = open("/dev/null", O_WRONLY);
+	dup2(nfd, STDOUT_FILENO);
+	// redirect stderr to stdout
+	dup2(STDOUT_FILENO, STDERR_FILENO);
+
+        if (load) {
             execlp("modprobe", "modprobe", plugin_name.c_str(), NULL);
 
-        } else
-        {
+        } else {
             execlp("modprobe", "modprobe", "-r", plugin_name.c_str(), NULL);
         }
 
