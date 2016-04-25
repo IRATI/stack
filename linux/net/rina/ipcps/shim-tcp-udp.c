@@ -668,7 +668,8 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                 /* FIXME: This should be done with DNS or DHT */
                 entry = find_dir_entry(data, dest);
                 if (!entry) {
-                        LOG_ERR("Directory entry not found");
+                        LOG_ERR("Directory entry not found for <APN=%s AEN=%s>",
+                                dest->process_name, dest->entity_name);
                         list_del(&flow->list);
                         rkfree(flow);
                         return -1;
@@ -1758,7 +1759,9 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
 
         exp_reg = find_exp_reg(data, name);
         if (!exp_reg) {
-                LOG_ERR("That application is not expected to register");
+                LOG_ERR("That application is not expected to register"
+                        " <APN=%s AEN=%s>",
+                        name->process_name, name->entity_name);
                 rkfree(app);
                 return -1;
         }
