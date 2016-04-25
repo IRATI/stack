@@ -266,8 +266,7 @@ static unsigned sockaddr_init(union address *         sa,
 		sa->in6.sin6_flowinfo = sa->in6.sin6_scope_id = 0;
 		return sizeof sa->in6;
 	}
-	ASSERT(0);
-	return 0;
+	unreachable();
 }
 
 static unsigned sockaddr_copy(union address * src, union address * dst)
@@ -280,8 +279,7 @@ static unsigned sockaddr_copy(union address * src, union address * dst)
 		dst->in6 = src->in6;
 		return sizeof dst->in6;
 	}
-	ASSERT(0);
-	return 0;
+	unreachable();
 }
 
 static ssize_t shim_tcp_udp_ipcp_attr_show(struct robject *        robj,
