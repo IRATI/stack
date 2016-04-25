@@ -2263,20 +2263,19 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
         if (parse_assign_conf(data,
                               dif_information->configuration)) {
                 LOG_ERR("Failed to parse configuration");
-                name_destroy(data->dif_name);
-                data->dif_name = NULL;
-                undo_assignment(data);
-                return -1;
+                goto err;
+        }
+
+        if (inst_data_mapping_get(&data->host_name)) {
+                LOG_ERR("Error duplicating hostname, bailing out");
+                goto err;
         }
 
         mapping = rkmalloc(sizeof(struct host_ipcp_instance_mapping),
                            GFP_KERNEL);
         if (!mapping) {
                 LOG_ERR("Failed to allocate memory");
-                name_destroy(data->dif_name);
-                data->dif_name = NULL;
-                undo_assignment(data);
-                return -1;
+                goto err;
         }
 
         mapping->host_name = data->host_name;
@@ -2288,6 +2287,12 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
         spin_unlock(&data_instances_lock);
 
         return 0;
+
+err:
+        name_destroy(data->dif_name);
+        data->dif_name = NULL;
+        undo_assignment(data);
+        return -1;
 }
 
 static int tcp_udp_update_dif_config(struct ipcp_instance_data * data,
