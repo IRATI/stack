@@ -3440,6 +3440,11 @@ void RIBDaemonAE::set_application_process(ApplicationProcess * ap)
 	(void) ap;
 }
 
+int RIBDaemonAE::set_security_manager(ApplicationEntity * sec_man)
+{
+	return getProxy()->set_security_manager(sec_man);
+}
+
 //
 // RIB library routines
 //

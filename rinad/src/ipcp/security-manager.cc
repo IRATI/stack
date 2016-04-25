@@ -39,6 +39,8 @@ void IPCPSecurityManager::set_application_process(rina::ApplicationProcess * ap)
 		LOG_IPCP_ERR("Bogus instance of IPCP passed, return");
 		return;
 	}
+
+	ipcp->rib_daemon_->set_security_manager(this);
 }
 
 void IPCPSecurityManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)

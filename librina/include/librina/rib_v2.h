@@ -952,6 +952,7 @@ public:
 		ApplicationEntity(ApplicationEntity::RIB_DAEMON_AE_NAME) {};
 
 	virtual void set_application_process(ApplicationProcess * ap);
+	int set_security_manager(ApplicationEntity * sec_man);
 	virtual RIBDaemonProxy * getProxy() = 0;
 };
 
