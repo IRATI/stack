@@ -1602,7 +1602,7 @@ int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
 
         dbg_seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
 
-        LOG_DBG("DTCP Sending ACK (CPU: %d)", smp_processor_id());
+        LOG_DBG("DTCP Sending ACK %u (CPU: %d)", dbg_seq_num, smp_processor_id());
         dump_we(dtcp, pdu_pci_get_rw(pdu));
 
         if (dtcp_pdu_send(dtcp, pdu)){
