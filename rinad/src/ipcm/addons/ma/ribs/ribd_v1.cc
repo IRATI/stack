@@ -29,7 +29,6 @@
 
 //Object definitions
 #include "ipcp_obj.h"
-#include "ribd_obj.h"
 
 namespace rinad {
 namespace mad {

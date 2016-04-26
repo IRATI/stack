@@ -59,7 +59,7 @@ public:
 	                    const rina::cdap_rib::filt_info_t &filt,
 	                    int invoke_id);
 
-	void forwarded_object_response(const rina::cdap_rib::res_info_t &res);
+	void forwarded_object_response(rina::cdap::cdap_m_t *msg);
 	//Create callback
 	static void create_cb(const rina::rib::rib_handle_t rib,
 			const rina::cdap_rib::con_handle_t &con,

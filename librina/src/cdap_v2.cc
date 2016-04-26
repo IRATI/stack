@@ -2828,6 +2828,7 @@ class CDAPProvider : public CDAPProviderInterface
 			      const cdap_rib::flags_t &flags,
 			      const cdap_rib::res_info_t &res,
 			      int invoke_id);
+	void send_cdap_result(const cdap_rib::con_handle_t &con, cdap::cdap_m_t *cdap_m);
 
 	// Process and incoming CDAP message
 	void process_message(const ser_obj_t &message,
@@ -3241,6 +3242,13 @@ void CDAPProvider::send_stop_result(const cdap_rib::con_handle_t &con,
 					       res,
 					       invoke_id);
 	send(m_sent, con);
+}
+
+void CDAPProvider::send_cdap_result(const cdap_rib::con_handle_t &con,
+		cdap::cdap_m_t *cdap_m)
+{
+	send(*cdap_m, con);
+	delete cdap_m;
 }
 
 void CDAPProvider::process_message(const ser_obj_t &message,

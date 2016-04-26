@@ -395,7 +395,7 @@ void* ActiveWorker::run(void* param)
 
 void FlowManager::process_fwd_cdap_msg_response(rina::FwdCDAPMsgResponseEvent* fwdevent)
 {
-	rina::cdap::CDAPMessage rmsg;
+	rina::cdap::cdap_m_t *rmsg = new rina::cdap::cdap_m_t;
 
 	LOG_DBG("Received forwarded CDAP response, result %d",
 			fwdevent->result);
@@ -406,16 +406,12 @@ void FlowManager::process_fwd_cdap_msg_response(rina::FwdCDAPMsgResponseEvent* f
 	}
 
 	rina::cdap::getProvider()->get_session_manager()->decodeCDAPMessage(fwdevent->sermsg,
-									    rmsg);
-	rina::rib::DelegationObj* del_obj = rinad::IPCManager->get_forwarded_object(rmsg.invoke_id_);
-	rina::cdap_rib::res_info_t res;
-	res.code_ = static_cast<rina::cdap_rib::res_code_t>(rmsg.result_);
-	res.reason_ = rmsg.result_reason_;
-	del_obj->forwarded_object_response(res);
-
+									    *rmsg);
+	rina::rib::DelegationObj* del_obj = rinad::IPCManager->get_forwarded_object(rmsg->invoke_id_);
 	LOG_DBG("Delegated CDAP response: %s, value %p",
-		rmsg.to_string().c_str(),
-		rmsg.obj_value_.message_);
+		rmsg->to_string().c_str(),
+		rmsg->obj_value_.message_);
+	del_obj->forwarded_object_response(rmsg);
 }
 
 //Process an event coming from librina

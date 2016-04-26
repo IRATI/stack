@@ -277,6 +277,8 @@ public:
 				      const cdap_rib::flags_t &flags,
 				      const cdap_rib::res_info_t &res,
 				      int invoke_id) {};
+	virtual void send_cdap_result(const cdap_rib::con_handle_t &con,
+			cdap::cdap_m_t *cdap_m)	{};
 	virtual void process_message(const ser_obj_t &message,
 				     unsigned int port,
 				     cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT) {};
@@ -359,7 +361,7 @@ public:
                                     const rina::cdap_rib::flags_t &flags,
                                     const rina::cdap_rib::filt_info_t &filt,
                                     int invoke_id) {};
-        void forwarded_object_response(const cdap_rib::res_info_t &res) {};
+        void forwarded_object_response(rina::cdap::cdap_m_t *msg){};
 
 	const std::string& get_class() const{
 		return class_;
