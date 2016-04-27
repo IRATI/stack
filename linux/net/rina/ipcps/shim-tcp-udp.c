@@ -208,7 +208,7 @@ static void hostname_init(struct hostname *     host_name,
 		host_name->in6 = sa->in6.sin6_addr;
 		break;
 	default:
-		ASSERT(0);
+		unreachable();
 	}
 }
 
@@ -224,7 +224,7 @@ static bool hostname_is_equal(const struct hostname * a,
 		case AF_INET6:
 			return !memcmp(&a->in6, &b->in6, 16);
 		}
-		ASSERT(0);
+		unreachable();
 	}
 	return false;
 }
@@ -245,7 +245,7 @@ static bool sockaddr_is_equal(const union address * a,
 			    && !memcmp(&a->in6.sin6_addr, &b->in6.sin6_addr, 16)
 			    && a->in6.sin6_scope_id == b->in6.sin6_scope_id;
 		}
-		ASSERT(0);
+		unreachable();
 	}
 	return false;
 }
@@ -309,7 +309,7 @@ static ssize_t shim_tcp_udp_ipcp_attr_show(struct robject *        robj,
 			return sprintf(buf, "%pI6c\n",
 				&instance->data->host_name.in6);
 		default:
-			ASSERT(0);
+			unreachable();
 		case AF_UNSPEC:;
 		}
 
@@ -668,7 +668,8 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                 /* FIXME: This should be done with DNS or DHT */
                 entry = find_dir_entry(data, dest);
                 if (!entry) {
-                        LOG_ERR("Directory entry not found");
+                        LOG_ERR("Directory entry not found for <APN=%s AEN=%s>",
+                                dest->process_name, dest->entity_name);
                         list_del(&flow->list);
                         rkfree(flow);
                         return -1;
@@ -1675,7 +1676,7 @@ static int tcp_udp_rcv_process_msg(struct sock * sk)
                 LOG_DBG("Found sockname (%pI6c)", &own.in6.sin6_addr);
                 break;
         default:
-                ASSERT(0);
+                unreachable();
         }
 
         hostname_init(&host_name, &own);
@@ -1758,7 +1759,9 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
 
         exp_reg = find_exp_reg(data, name);
         if (!exp_reg) {
-                LOG_ERR("That application is not expected to register");
+                LOG_ERR("That application is not expected to register"
+                        " <APN=%s AEN=%s>",
+                        name->process_name, name->entity_name);
                 rkfree(app);
                 return -1;
         }
@@ -2260,20 +2263,19 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
         if (parse_assign_conf(data,
                               dif_information->configuration)) {
                 LOG_ERR("Failed to parse configuration");
-                name_destroy(data->dif_name);
-                data->dif_name = NULL;
-                undo_assignment(data);
-                return -1;
+                goto err;
+        }
+
+        if (inst_data_mapping_get(&data->host_name)) {
+                LOG_ERR("Error duplicating hostname, bailing out");
+                goto err;
         }
 
         mapping = rkmalloc(sizeof(struct host_ipcp_instance_mapping),
                            GFP_KERNEL);
         if (!mapping) {
                 LOG_ERR("Failed to allocate memory");
-                name_destroy(data->dif_name);
-                data->dif_name = NULL;
-                undo_assignment(data);
-                return -1;
+                goto err;
         }
 
         mapping->host_name = data->host_name;
@@ -2285,6 +2287,12 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
         spin_unlock(&data_instances_lock);
 
         return 0;
+
+err:
+        name_destroy(data->dif_name);
+        data->dif_name = NULL;
+        undo_assignment(data);
+        return -1;
 }
 
 static int tcp_udp_update_dif_config(struct ipcp_instance_data * data,
