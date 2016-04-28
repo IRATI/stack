@@ -92,7 +92,7 @@ AS_IF([test "$want_debug" = "yes"],[
     AX_CHECK_COMPILE_FLAG([ -g ], [
         CXXFLAGS_EXTRA="$CXXFLAGS_EXTRA -g"
     ])
-    AS_IF([`echo $CXXFLAGS|$GREP '\\\-O2'`],[
+    AS_IF([echo $CXXFLAGS|$GREP '\-O2' > /dev/null],[
         AC_MSG_NOTICE([Patching flags])
         CXXFLAGS="`echo $CXXFLAGS | $SED -e 's|-O2||'`"
         AC_MSG_NOTICE([Flags are now '$CXXFLAGS'])
