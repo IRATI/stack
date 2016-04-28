@@ -1556,7 +1556,7 @@ ipcm_res_t IPCManager_::delegate_ipcp_ribobj(rina::rib::DelegationObj* obj,
                                          int scope)
 {
     IPCMIPCProcess * ipcp;
-    TransactionState* trans;
+   // TransactionState* trans;
     std::ostringstream ss;
 
     try
@@ -1578,7 +1578,7 @@ ipcm_res_t IPCManager_::delegate_ipcp_ribobj(rina::rib::DelegationObj* obj,
         msg.obj_name_ = object_name;
         msg.invoke_id_ = reserve_invoke_id(obj);
         msg.scope_ = scope;
-
+/*
         trans = new TransactionState(NULL, promise);
         if (!trans)
         {
@@ -1595,8 +1595,8 @@ ipcm_res_t IPCManager_::delegate_ipcp_ribobj(rina::rib::DelegationObj* obj,
             FLUSH_LOG(ERR, ss);
             throw rina::Exception();
         }
-
-        ipcp->forwardCDAPMessage(msg, trans->tid);
+*/
+        ipcp->forwardCDAPMessage(msg, 0);
 
         ss << "Forwarded CDAPMessage to IPC process "
                 << ipcp->get_name().toString() << std::endl;

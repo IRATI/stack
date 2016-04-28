@@ -195,10 +195,9 @@ const std::string ApplicationEntity::SECURITY_MANAGER_AE_NAME =
 
 AppPolicyManager::~AppPolicyManager()
 {
-        clear();
 }
 
-void AppPolicyManager::clear()
+void AppPolicyManager::clear_policies()
 {
         for(std::vector<rina::PsFactory>::iterator it =
                         ae_policy_factories.begin();
@@ -475,8 +474,7 @@ int AppPolicyManager::plugin_unload(const std::string& plugin_name)
 //Class Application Process
 ApplicationProcess::~ApplicationProcess()
 {
-        clear();
-        entities.deleteValues();
+        clear_policies();
 }
 
 const std::string& ApplicationProcess::get_name() const

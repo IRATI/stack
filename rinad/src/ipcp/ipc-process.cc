@@ -132,6 +132,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 }
 
 IPCProcessImpl::~IPCProcessImpl() {
+
 	if (lock_) {
 		delete lock_;
 	}
@@ -145,6 +146,13 @@ IPCProcessImpl::~IPCProcessImpl() {
 	if (delimiter_) {
 		delete delimiter_;
 	}
+	delete flow_allocator_;
+	delete security_manager_;
+	delete namespace_manager_;
+	delete routing_component_;
+	delete resource_allocator_;
+	delete rib_daemon_;
+	delete enrollment_task_;
 }
 
 unsigned short IPCProcessImpl::get_id() {

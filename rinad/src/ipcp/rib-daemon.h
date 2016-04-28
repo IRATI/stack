@@ -63,8 +63,9 @@ void * doManagementSDUReaderWork(void* data);
 ///Full implementation of the RIB Daemon
 class IPCPRIBDaemonImpl : public IPCPRIBDaemon, public rina::InternalEventListener {
 public:
-	IPCPRIBDaemonImpl(rina::cacep::AppConHandlerInterface *app_con_callback);
-	rina::rib::RIBDaemonProxy * getProxy();
+		IPCPRIBDaemonImpl(rina::cacep::AppConHandlerInterface *app_con_callback);
+		~IPCPRIBDaemonImpl();
+		rina::rib::RIBDaemonProxy * getProxy();
         void set_application_process(rina::ApplicationProcess * ap);
         void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
         void eventHappened(rina::InternalEvent * event);

@@ -204,6 +204,11 @@ FlowAllocator::FlowAllocator() : IFlowAllocator()
 	namespace_manager_ = 0;
 }
 
+FlowAllocator::~FlowAllocator()
+{
+	delete ps;
+}
+
 IFlowAllocatorInstance * FlowAllocator::getFAI(int portId)
 {
 	std::stringstream ss;
@@ -1118,6 +1123,7 @@ void FlowAllocatorInstance::submitDeallocate(
 		//3 Wait 2*MPL before tearing down the flow
 		TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(
 				this, object_name_, true);
+
 		timer.scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems processing flow deallocation request: %s",
@@ -1143,6 +1149,7 @@ void FlowAllocatorInstance::deleteFlowRequestMessageReceived()
 	TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(this,
 								      object_name_,
 								      true);
+
 	timer.scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
 
 	//4 Inform IPC Manager

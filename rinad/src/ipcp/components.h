@@ -216,9 +216,9 @@ public:
 class RoutingComponent: public IRoutingComponent {
 public:
 	RoutingComponent() : IRoutingComponent() { };
+    ~RoutingComponent();
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
-        ~RoutingComponent() {};
 };
 
 /// Namespace Manager Interface
@@ -404,7 +404,7 @@ public:
 	IPCPSecurityManager(){ };
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
-	~IPCPSecurityManager() {};
+	~IPCPSecurityManager();
 	rina::AuthSDUProtectionProfile get_auth_sdup_profile(const std::string& under_dif_name);
         rina::IAuthPolicySet::AuthStatus update_crypto_state(const rina::CryptoState& state,
         						     rina::IAuthPolicySet * caller);
