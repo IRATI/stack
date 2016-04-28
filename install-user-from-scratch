@@ -10,7 +10,7 @@
 #
 PREFIX=`echo "$1"|sed -e "s,\/$,,"`
 SRCDIR=`pwd`
-FLAGS="--enable-debug"
+#FLAGS="--enable-debug"
 
 #
 # Do not touch under this line
