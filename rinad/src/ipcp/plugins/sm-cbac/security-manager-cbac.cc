@@ -525,12 +525,13 @@ bool AccessControl::checkJoinDIF(DIFProfile_t& difProfile, IPCPProfile_t& newMem
 		result.code_ = AC_ENR_SUCCESS;
 		return true;
 	}
-		
+        
 	if ( difProfile.dif_group != newMemberProfile.ipcp_group ){
 		result.code_ = AC_ENR_ERROR;
 		result.reason_ = IPCP_DIF_FROM_DIFFERENT_GROUPS;
 		return false;
 	}
+	result.code_ = AC_ENR_SUCCESS;
 	return true;
 }
 
@@ -547,12 +548,19 @@ std::list<Capability_t> AccessControl::computeCapabilities(DIFProfile_t& difProf
         }
         
         if (newMemberProfile.ipcp_type == "BORDER_ROUTER"){
-                Capability_t cap = Capability_t("PDU_FWD_TABLE", "RW");
+                Capability_t cap = Capability_t("PDU_FWD_TABLE", "READ");
                 result.push_back(cap); 
-                cap = Capability_t("IPCP_ADDR_TABLE", "R");
+                cap = Capability_t("PDU_FWD_TABLE", "WRITE");
+                result.push_back(cap);
+                cap = Capability_t("IPCP_ADDR_TABLE", "READ");
+                result.push_back(cap);
+                cap = Capability_t("flows", "READ");
                 result.push_back(cap); 
-            
+                cap = Capability_t("flows", "WRITE");
+                result.push_back(cap); 
         }
+        Capability_t cap = Capability_t("watchdog", "READ");
+        result.push_back(cap);
         return result;
     
 }
@@ -588,7 +596,7 @@ void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& dif
         LOG_IPCP_DBG("Generating Token...");
         token.token_id = issuerIpcpId; // TODO name or id?
         token.ipcp_issuer_id = issuerIpcpId;
-        token.ipcp_holder_name = newMemberProfile.ipcp_name; //TODO name or id? (.processName)
+        token.ipcp_holder_name = newMemberProfile.ipcp_name;
         token.audience.push_back("all");
         rina::Time currentTime;
         int t = currentTime.get_current_time_in_ms();
@@ -677,6 +685,44 @@ int updateFromConfig(){
         return 0;
 }
 */
+int SecurityManagerCBACPs::loadProfilesByName(const rina::ApplicationProcessNamingInformation &ipcpProfileHolder, IPCPProfile_t &requestedIPCPProfile,
+                                             const rina::ApplicationProcessNamingInformation &difProfileHolder, DIFProfile_t &requestedDIFProfile)
+{
+        
+        const std::string profileFile = getStringParamFromConfig("ACprofilestore", dm);
+        if (profileFile == std::string()){
+                LOG_IPCP_ERR("Missing ProfileParser parameter configuration!");
+                return -1;
+        }
+        
+        // Read Profile From AC Profile Store
+        ProfileParser profileParser;
+        
+        if (!profileParser.parseProfile(profileFile)){
+                LOG_IPCP_DBG("Error Parsing Profile file");
+                return -1;
+        }
+
+        LOG_IPCP_DBG("Parsing profile of %s...." ,
+                       ipcpProfileHolder.processName.c_str());
+        
+        if (!profileParser.getIPCPProfileByName(ipcpProfileHolder, requestedIPCPProfile)){
+                LOG_IPCP_DBG("No Profile for this newMember %s; not allowing it to join DIF!" ,
+                            ipcpProfileHolder.processName.c_str());
+                return -1;
+        }
+        
+        LOG_IPCP_DBG("Parsing profile of DIF  %s...." ,
+                       difProfileHolder.processName.c_str());
+        
+        if (!profileParser.getDIFProfileByName(difProfileHolder, requestedDIFProfile)){
+                LOG_IPCP_DBG("No Profile for my DIF, not allowing IPCProcess %s to join DIF!",
+                                ipcpProfileHolder.processName.c_str());
+                return -1;
+        }
+        
+        return 0;
+}
 
 int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t &con, 
                                               const rina::Neighbor &newMember,
@@ -708,42 +754,10 @@ int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t
         
         LOG_IPCP_DBG("SecurityManagerCBACPs: Initialized Security Context");
         
-        const std::string profileFile = getStringParamFromConfig("ACprofilestore", dm);
-        if (profileFile == std::string()){
-                LOG_IPCP_ERR("Missing ProfileParser parameter configuration!");
-                return -1;
-        }
-	
-        // Read Profile From AC Profile Store
-	ProfileParser profileParser;
+        IPCPProfile_t newMemberProfile;
+        DIFProfile_t difProfile; 
+        loadProfilesByName(newMember.name_, newMemberProfile, my_dif_name, difProfile);
         
-        if (!profileParser.parseProfile(profileFile)){
-                LOG_IPCP_DBG("Error Parsing Profile file");
-                return -1;
-        }
-
-	IPCPProfile_t newMemberProfile;
-	
-	LOG_IPCP_DBG("Parsing profile of newMember %s...." ,
-                       newMember.name_.processName.c_str());
-        
-	if (!profileParser.getIPCPProfileByName(newMember.name_, newMemberProfile)){
-		LOG_IPCP_DBG("No Profile for this newMember %s; not allowing it to join DIF!" ,
-		       newMember.name_.processName.c_str());
-		return -1;
-	}
-	
-
-	DIFProfile_t difProfile; 
-        LOG_IPCP_DBG("Parsing profile of DIF  %s...." ,
-                       my_dif_name.processName.c_str());
-        
-	if (!profileParser.getDIFProfileByName(my_dif_name, difProfile)){
-		LOG_IPCP_DBG("No Profile for my DIF, not allowing IPCProcess %s to join DIF!",
-				newMember.name_.processName.c_str());
-		return -1;
-	}
-	
 	// Enrollment AC algorithm
 	ac_res_info_t res;
 	access_control_->checkJoinDIF(difProfile, newMemberProfile, res);
@@ -760,7 +774,7 @@ int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t
                     return 0;
 	}
 	if (res.code_ != 0){
-		LOG_IPCP_DBG("NOT Allowing IPC Process %s to join the DIF because of %s",
+		LOG_IPCP_ERR("NOT Allowing IPC Process %s to join the DIF because of %s",
 		     newMember.name_.processName.c_str(), res.reason_.c_str());
 		return -1;
 	}
@@ -798,7 +812,7 @@ RSA* SecurityManagerCBACPs::loadTokenGeneratorPublicKey()
         return token_generator_pub_key;
 }
 
-int SecurityManagerCBACPs::checkTokenSignature(Token_t &token, rina::UcharArray & signature, 
+int SecurityManagerCBACPs::checkTokenSignature(const Token_t &token, const rina::UcharArray & signature, 
                                                std::string encrypt_alg)
 {
         
@@ -901,11 +915,10 @@ int SecurityManagerCBACPs::getAccessControlCreds(rina::cdap_rib::auth_policy_t &
         return 0;
 }
 
-int SecurityManagerCBACPs::checkTokenValidity(const rina::cdap_rib::auth_policy_t & auth,
+int SecurityManagerCBACPs::checkTokenValidity(const TokenPlusSignature_t &tokenSign,//const rina::cdap_rib::auth_policy_t & auth,
                                               std::string requestor)
 {
-        TokenPlusSignature_t tokenSign;
-        deserializeTokenPlusSign(auth.options, tokenSign);
+        
         Token_t token = tokenSign.token;
         stringstream ss;
         ss << "Validating token..." << endl;
@@ -930,7 +943,7 @@ int SecurityManagerCBACPs::checkTokenValidity(const rina::cdap_rib::auth_policy_
         }else{
                 ss << "\n\t 2. Token holder is NOT the requestor, failed token validation" << endl;
                 LOG_IPCP_DBG("%s", ss.str().c_str());
-                return -1;
+                //return -1; //FIXME: need to return
         }
         
         //3. check nbf
@@ -977,6 +990,7 @@ int SecurityManagerCBACPs::checkTokenValidity(const rina::cdap_rib::auth_policy_
         
 }
 
+
 void SecurityManagerCBACPs::checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
                                           const rina::cdap_rib::con_handle_t & con,
                                           const rina::cdap::cdap_m_t::Opcode opcode,
@@ -1015,9 +1029,19 @@ void SecurityManagerCBACPs::checkRIBOperation(const rina::cdap_rib::auth_policy_
         
         std::string requestor = con.dest_.ap_name_;
         if (requestor == std::string()){
-                LOG_IPCP_ERR("Empty requestor name field!");
-                res.code_ = rina::cdap_rib::CDAP_ERROR;
-                return;
+                LOG_IPCP_ERR("Empty requestor name field! hack this for the moment");
+                if (auth.options.size_ < 0){
+                        LOG_IPCP_ERR("neither con_handle information nor token, hack cannot work");
+                        res.code_ = rina::cdap_rib::CDAP_ERROR;
+                        return;
+                }
+                //get token
+                TokenPlusSignature_t tokenSign;
+                deserializeTokenPlusSign(auth.options, tokenSign);
+                requestor = tokenSign.token.ipcp_holder_name.processName; // FIXME: to remove after fixing con_handle empty fields bug
+                
+                // res.code_ = rina::cdap_rib::CDAP_ERROR;
+                //return; //FIXME: need to return, to fix after fixing con_handle empty fields bug
         }
         
         if (std::find(trusted_ap_name.begin(), trusted_ap_name.end(), requestor) 
@@ -1027,11 +1051,40 @@ void SecurityManagerCBACPs::checkRIBOperation(const rina::cdap_rib::auth_policy_
                 return;
         }
         
-        if (checkTokenValidity(auth, requestor) < 0){
+        //FIXME: clean up with the previous hack
+        TokenPlusSignature_t tokenSign;
+        deserializeTokenPlusSign(auth.options, tokenSign);
+        if (checkTokenValidity(tokenSign, requestor) < 0){
                 LOG_IPCP_ERR("Invalid Token, NO access");
                 res.code_ = rina::cdap_rib::CDAP_ERROR;
                 return;   
         }
+        
+        Token_t token = tokenSign.token;    
+        std::list<Capability_t> tokenCapList = token.token_cap;
+            
+        for(std::list<Capability_t>::iterator it = tokenCapList.begin();
+                it != tokenCapList.end(); ++it) {
+                if (it->compare(obj_name, cbac_helpers::opcodeToString(opcode)) ||
+                    it->compare("all", "all")){
+                        LOG_IPCP_DBG("Request is included in requestor capability; Grant access");
+                        res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+                        return;
+                }
+        }
+        
+        LOG_IPCP_DBG("Request in NOT in requestor capability; Continue check");
+        LOG_IPCP_DBG("Loading profiles...");
+
+        IPCPProfile_t myProfile;
+        DIFProfile_t myDIFProfile; 
+        loadProfilesByName(rina::ApplicationProcessNamingInformation(
+                        my_ipcp_name, string()), myProfile, my_dif_name, myDIFProfile);
+        
+        IPCPProfile_t peerProfile;
+        DIFProfile_t peerDIFProfile;
+        loadProfilesByName(tokenSign.token.ipcp_holder_name, peerProfile, my_dif_name, peerDIFProfile);
+        
         
         stringstream ss;
         switch(opcode) {

@@ -98,6 +98,15 @@ typedef struct Capability{
                 ss << "\t Operation :" << operation.c_str() << endl;
                 return ss.str();
         }
+        bool compare(std::string objname, std::string oper){
+            if(objname == ressource && oper == operation)
+                return true;
+            std::size_t foundObj = ressource.find(objname);
+            std::size_t foundOper = operation.find(oper);
+            if (foundObj != std::string::npos && foundOper != std::string::npos)
+                return true;
+            return false;
+        }
         
 } Capability_t;
 
@@ -105,7 +114,7 @@ typedef struct Token{
         unsigned short token_id;
         unsigned short ipcp_issuer_id;
         rina::ApplicationProcessNamingInformation ipcp_holder_name; // TODO: may be replace by ipcp id?/*unsigned short*/ 
-        std::list<std::string> audience; // FIXME: convert to string list
+        std::list<std::string> audience;
         int issued_time;
         int token_nbf;
         int token_exp;
@@ -183,6 +192,8 @@ public:
 //         bool isAllowedToJoinDIF(const rina::Neighbor& newMember); 
                                 //const rina::ApplicationProcessNamingInformation, std::string);
         int initialize_SC(const rina::cdap_rib::con_handle_t&);
+        int loadProfilesByName(const rina::ApplicationProcessNamingInformation &ipcpProfileHolder, IPCPProfile_t &requestedIPCPProfile,
+                                             const rina::ApplicationProcessNamingInformation &difProfileHolder, DIFProfile_t &requestedDIFProfile);
         int isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t & con,
                                const rina::Neighbor& newMember,
                                rina::cdap_rib::auth_policy_t & auth);
@@ -190,10 +201,10 @@ public:
                                     const rina::cdap_rib::con_handle_t & con);
         int getAccessControlCreds(rina::cdap_rib::auth_policy_t & auth,
                                   const rina::cdap_rib::con_handle_t & con);
-        int checkTokenValidity(const rina::cdap_rib::auth_policy_t & auth, 
+        int checkTokenValidity(const TokenPlusSignature_t &tokenSign, // rina::cdap_rib::auth_policy_t & auth, 
                                                        std::string requestor);
-        int checkTokenSignature(Token_t &token, 
-                                  rina::UcharArray & signature, std::string encrypt_alg);
+        int checkTokenSignature(const Token_t &token, 
+                                  const rina::UcharArray & signature, std::string encrypt_alg);
         RSA* loadTokenGeneratorPublicKey();
 //                                    RSA* token_generator_pub_key);
 
