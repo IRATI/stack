@@ -1154,9 +1154,6 @@ parseDTCPConfigObject(nlattr *nested);
 /* ConnectionPolicies class */
 enum DTPConfigAttributes {
 	DCA_ATTR_DTCP_PRESENT = 1,
-	DCA_ATTR_RCVR_TIMER_INAC_POLICY,
-	DCA_ATTR_SNDR_TIMER_INAC_POLICY,
-	DCA_ATTR_INIT_SEQ_NUM_POLICY,
 	DCA_ATTR_SEQ_NUM_ROLLOVER,
 	DCA_ATTR_INIT_A_TIMER,
 	DCA_ATTR_PARTIAL_DELIVERY,
@@ -1537,11 +1534,17 @@ enum IpcmFwdCDAPMsgMessageAttributes {
 
 #define IFCM_ATTR_MAX (__IFCM_ATTR_MAX -1)
 
-int putIpcmFwdCDAPMsgMessageObject(nl_msg* netlinkMessage,
-		const IpcmFwdCDAPMsgMessage& object);
+int putIpcmFwdCDAPRequestMessageObject(nl_msg* netlinkMessage,
+		const IpcmFwdCDAPRequestMessage& object);
 
-IpcmFwdCDAPMsgMessage * parseIpcmFwdCDAPMsgMessage(
+IpcmFwdCDAPRequestMessage * parseIpcmFwdCDAPRequestMessage(
 		nlmsghdr *hdr);
+
+int putIpcmFwdCDAPResponseMessageObject(nl_msg* netlinkMessage,
+                const IpcmFwdCDAPResponseMessage& object);
+
+IpcmFwdCDAPResponseMessage * parseIpcmFwdCDAPResponseMessage(
+                nlmsghdr *hdr);
 
 }
 

@@ -205,6 +205,7 @@ class RIBObjectData;
 ///
 /// Base RIB Object. API for the create/delete/read/write/start/stop RIB
 /// functionality for certain objects (identified by objectNames)
+class RIB;
 class RIBObj{
 
 public:
@@ -437,6 +438,8 @@ protected:
 	//Class name
 	const std::string class_name;
 
+	RIB *rib;
+
 	//Them too; promiscuous?
 	friend class RIB;
 };
@@ -466,11 +469,6 @@ private:
 
 ///
 /// Delegation object class
-///
-#define RIB_DELEG_CN "DelegationObj"
-
-
-///
 /// This class is used to capture operations on objects in a part of the tree
 /// without having to add explicitely the objects (catch all)
 ///
@@ -478,12 +476,19 @@ class DelegationObj : public RIBObj{
 
 public:
 	/// Constructor
-	DelegationObj(void) : RIBObj(RIB_DELEG_CN) {
+	DelegationObj(const std::string &class_name) : RIBObj(class_name) {
 		delegates = true;
 	};
 
 	//Destructor
 	~DelegationObj(void){};
+
+	virtual void forward_object(const rina::cdap_rib::con_handle_t& con,
+	                            const rina::cdap_rib::obj_info_t &obj,
+	                            const rina::cdap_rib::flags_t &flags,
+	                            const rina::cdap_rib::filt_info_t &filt,
+	                            int invoke_id) = 0;
+	virtual void forwarded_object_response(rina::cdap::cdap_m_t *msg) = 0;
 };
 
 ///
@@ -515,6 +520,7 @@ typedef int64_t rib_handle_t;
 ///
 /// Schema's create callback prototype
 ///
+#ifndef SWIG
 typedef void (*create_cb_t)(const rib_handle_t rib,
 			    const cdap_rib::con_handle_t &con,
 			    const std::string& fqn,
@@ -524,7 +530,7 @@ typedef void (*create_cb_t)(const rib_handle_t rib,
 			    const ser_obj_t &obj_req,
 			    ser_obj_t &obj_reply,
 			    cdap_rib::res_info_t& res);
-
+#endif
 ///
 /// RIB Schema Object
 ///
@@ -555,349 +561,350 @@ class RIBDaemonProxy {
 
 public:
 
-	//-------------------------------------------------------------------//
-	//                         Local RIBs                                //
-	//-------------------------------------------------------------------//
+        //-------------------------------------------------------------------//
+        //                         Local RIBs                                //
+        //-------------------------------------------------------------------//
 
 
-	///
-	/// Create a RIB schema
-	///
-	///
-	/// @throws eSchemaExists and Exception
-	///
-	void createSchema(const cdap_rib::vers_info_t& version,
-						const char separator = '/');
-	///
-	/// List registered RIB versions
-	///
-	std::list<cdap_rib::vers_info_t> listVersions(void);
+        ///
+        /// Create a RIB schema
+        ///
+        ///
+        /// @throws eSchemaExists and Exception
+        ///
+        void createSchema(const cdap_rib::vers_info_t& version,
+                                                const char separator = '/');
+        ///
+        /// List registered RIB versions
+        ///
+        std::list<cdap_rib::vers_info_t> listVersions(void);
 
-	///
-	/// Register a callback for CREATE operations
-	///
-	/// This method registers a callback method for CREATE operations. The
-	/// callback can be registered either:
-	///
-	/// * For a class name *and* fully qualified name, in many locations in
-	///   the tree as needed. (specific)
-	/// * For a class name (generic)
-	///
-	/// Specific registrations always have preference over a generic.
-	///
-	/// @param version Schema version
-	/// @param class_ Mandatory classhandle The handle of the RIB
-	/// @param fqn Fully qualified name (position in the tree)
-	/// @param cb Pointer to the callback method
-	///
-	/// @throws eSchemaNotFound, eSchemaInvalidClass and eSchemaCBRegExists
-	///
-	void addCreateCallbackSchema(const cdap_rib::vers_info_t& version,
-				     const std::string& class_,
-				     const std::string& fqn_,
-				     create_cb_t cb);
+        ///
+        /// Register a callback for CREATE operations
+        ///
+        /// This method registers a callback method for CREATE operations. The
+        /// callback can be registered either:
+        ///
+        /// * For a class name *and* fully qualified name, in many locations in
+        ///   the tree as needed. (specific)
+        /// * For a class name (generic)
+        ///
+        /// Specific registrations always have preference over a generic.
+        ///
+        /// @param version Schema version
+        /// @param class_ Mandatory classhandle The handle of the RIB
+        /// @param fqn Fully qualified name (position in the tree)
+        /// @param cb Pointer to the callback method
+        ///
+        /// @throws eSchemaNotFound, eSchemaInvalidClass and eSchemaCBRegExists
+        ///
+        void addCreateCallbackSchema(const cdap_rib::vers_info_t& version,
+                                     const std::string& class_,
+                                     const std::string& fqn_,
+                                     create_cb_t cb);
 
-	///
-	/// Destroys a RIB schema
-	///
-	/// This method destroy a previously created schema. The schema shall
-	/// not be currently used by any RIB instance or eSchemaInUse exception
-	/// will be thrown.
-	///
-	/// @throws eSchemaInUse, eSchemaNotFound and Exception
-	///
-	void destroySchema(const cdap_rib::vers_info_t& version);
+        ///
+        /// Destroys a RIB schema
+        ///
+        /// This method destroy a previously created schema. The schema shall
+        /// not be currently used by any RIB instance or eSchemaInUse exception
+        /// will be thrown.
+        ///
+        /// @throws eSchemaInUse, eSchemaNotFound and Exception
+        ///
+        void destroySchema(const cdap_rib::vers_info_t& version);
 
-	///
-	/// Create a RIB
-	///
-	/// This method creates an empty RIB and returns a handle to it. The
-	/// RIB instance won't be operational until it has been associated to
-	/// one or more Application Entities (AEs).
-	///
-	/// @ret The RIB handle
-	/// @throws Exception on failure
-	///
-	rib_handle_t createRIB(const cdap_rib::vers_info_t& version);
+        ///
+        /// Create a RIB
+        ///
+        /// This method creates an empty RIB and returns a handle to it. The
+        /// RIB instance won't be operational until it has been associated to
+        /// one or more Application Entities (AEs).
+        ///
+        /// @ret The RIB handle
+        /// @throws Exception on failure
+        ///
+        rib_handle_t createRIB(const cdap_rib::vers_info_t& version);
 
-	///
-	/// Destroy a RIB instance
-	///
-	/// Destroys a previously created RIB instance. The instance shall not
-	/// be assocated to any AE or it will throw eRIBInUse
-	///
-	/// @throws eRIBInUse, eRIBNotFound or Exception on failure
-	void destroyRIB(const rib_handle_t& handle);
+        ///
+        /// Destroy a RIB instance
+        ///
+        /// Destroys a previously created RIB instance. The instance shall not
+        /// be assocated to any AE or it will throw eRIBInUse
+        ///
+        /// @throws eRIBInUse, eRIBNotFound or Exception on failure
+        void destroyRIB(const rib_handle_t& handle);
 
-	///
-	/// Associate a RIB to an Applicatin Entity (AE)
-	///
-	/// @throws eRIBNotFound, eRIBAlreadyAssociated or Exception on failure
-	///
-	void associateRIBtoAE(const rib_handle_t& handle,
-						const std::string& ae_name);
+        ///
+        /// Associate a RIB to an Applicatin Entity (AE)
+        ///
+        /// @throws eRIBNotFound, eRIBAlreadyAssociated or Exception on failure
+        ///
+        void associateRIBtoAE(const rib_handle_t& handle,
+                                                const std::string& ae_name);
 
-	/// Deassociate RIB from an Application Entity
-	///
-	/// This method deassociates a RIB from an AE. This method does NOT
-	/// destroy the RIB instance.
-	///
-	/// @throws eRIBNotFound, eRIBNotAssociated and Exception
-	///
-	void deassociateRIBfromAE(const rib_handle_t& handle,
-				  const std::string& ae_name);
+        /// Deassociate RIB from an Application Entity
+        ///
+        /// This method deassociates a RIB from an AE. This method does NOT
+        /// destroy the RIB instance.
+        ///
+        /// @throws eRIBNotFound, eRIBNotAssociated and Exception
+        ///
+        void deassociateRIBfromAE(const rib_handle_t& handle,
+                                  const std::string& ae_name);
 
-	///
-	/// Retrieve the handle to a RIB
-	///
-	/// @param version RIB version
-	/// @param Application Entity Name
-	///
-	/// @ret A handle to a RIB
-	/// @throws eRIBNotFound
-	///
-	rib_handle_t get(const cdap_rib::vers_info_t& version,
-			 const std::string& ae_name);
+        ///
+        /// Retrieve the handle to a RIB
+        ///
+        /// @param version RIB version
+        /// @param Application Entity Name
+        ///
+        /// @ret A handle to a RIB
+        /// @throws eRIBNotFound
+        ///
+        rib_handle_t get(const cdap_rib::vers_info_t& version,
+                         const std::string& ae_name);
 
-	///
-	/// Add an object to a RIB
-	///
-	/// This method attempts to add an object to the existing RIB (handle).
-	/// On success, *obj is set to NULL and the callee shall not retain any
-	/// copy of that pointer.
-	///
-	/// On failure the adequate exception is thrown, and no changes to obj
-	/// will be made.
-	///
-	/// @param handle The handle of the RIB
-	/// @param fqn Fully qualified name (position in the tree)
-	/// @param obj A pointer (to a pointer) to the object, that derives
-	/// from RIBObj.
-	///
-	/// @ret The instance id of the object created
-	/// @throws eRIBNotFound, eObjExists, eObjInvalid, eObjNoParent
-	///
-	template<typename T>
-	int64_t addObjRIB(const rib_handle_t& handle,
-			  const std::string& fqn,
-			  T** obj)
-	{
-		RIBObj** obj_;
-		//Recover the base class
-		try{
-			obj_ = reinterpret_cast<RIBObj**>(obj);
-		}catch(...){
-			throw eObjInvalid();
-		}
-		return __addObjRIB(handle, fqn, obj_);
-	}
+        ///
+        /// Add an object to a RIB
+        ///
+        /// This method attempts to add an object to the existing RIB (handle).
+        /// On success, *obj is set to NULL and the callee shall not retain any
+        /// copy of that pointer.
+        ///
+        /// On failure the adequate exception is thrown, and no changes to obj
+        /// will be made.
+        ///
+        /// @param handle The handle of the RIB
+        /// @param fqn Fully qualified name (position in the tree)
+        /// @param obj A pointer (to a pointer) to the object, that derives
+        /// from RIBObj.
+        ///
+        /// @ret The instance id of the object created
+        /// @throws eRIBNotFound, eObjExists, eObjInvalid, eObjNoParent
+        ///
+        template<typename T>
+        int64_t addObjRIB(const rib_handle_t& handle,
+                          const std::string& fqn,
+                          T** obj)
+        {
+                RIBObj** obj_;
+                //Recover the base class
+                try{
+                        obj_ = reinterpret_cast<RIBObj**>(obj);
+                }catch(...){
+                        throw eObjInvalid();
+                }
+                return __addObjRIB(handle, fqn, obj_);
+        }
 
-	///
-	/// Retrieve the instance ID of an object given its fully
-	/// qualified name.
-	///
-	/// @param handle The handle of the RIB
-	/// @param fqn Fully Qualified Name of the object
-	/// @param class__ Optional parameter. When defined (!=""), the class
-	/// name of the object is checked to be strictly equl to class_
-	///
-	/// @ret The instance id of the object
-	/// @throws eRIBNotFound, eObjDoesNotExist and eObjClassMismatch
-	/// if class_ is defined.
-	///
-	int64_t getObjInstId(const rib_handle_t& handle,
-			     const std::string& fqn,
-			     const std::string& class_="");
+        ///
+        /// Retrieve the instance ID of an object given its fully
+        /// qualified name.
+        ///
+        /// @param handle The handle of the RIB
+        /// @param fqn Fully Qualified Name of the object
+        /// @param class__ Optional parameter. When defined (!=""), the class
+        /// name of the object is checked to be strictly equl to class_
+        ///
+        /// @ret The instance id of the object
+        /// @throws eRIBNotFound, eObjDoesNotExist and eObjClassMismatch
+        /// if class_ is defined.
+        ///
+        int64_t getObjInstId(const rib_handle_t& handle,
+                             const std::string& fqn,
+                             const std::string& class_="");
 
-	///
-	/// Get parent's fully qualified name
-	///
-	/// @param handle The handle of the RIB
-	/// @param fqn Fully Qualified Name of the child object
-	///
-	/// @ret Parent's Fqn
-	/// @throws eRIBNotFound, eObjDoesNotExist
-	///
-	std::string getObjParentFqn(const rib_handle_t& handle,
-				    const std::string& fqn);
+        ///
+        /// Get parent's fully qualified name
+        ///
+        /// @param handle The handle of the RIB
+        /// @param fqn Fully Qualified Name of the child object
+        ///
+        /// @ret Parent's Fqn
+        /// @throws eRIBNotFound, eObjDoesNotExist
+        ///
+        std::string getObjParentFqn(const rib_handle_t& handle,
+                                    const std::string& fqn);
 
-	///
-	/// Retrieve the fully qualified name given the instance ID of an
-	/// object
-	///
-	/// @param handle The handle of the RIB
-	/// @param inst_id Object's instance id
-	/// @param class__ Optional parameter. When defined (!=""), the class
-	///
-	/// @ret The fully qualified name
-	/// @throws eRIBNotFound, eObjDoesNotExist and eObjClassMismatch
-	/// if class_ is defined
-	///
-	std::string getObjFqn(const rib_handle_t& handle,
-			      const int64_t inst_id,
-			      const std::string& class_="");
-	///
-	/// Retrieve the class name of an object given the instance ID.
-	///
-	/// @param handle The handle of the RIB
-	/// @param inst_id Object's instance id
-	/// @ret The class name
-	/// @throws eRIBNotFound, eObjDoesNotExist and eObjClassMismatch
-	///
-	std::string getObjClass(const rib_handle_t& handle,
-				const int64_t inst_id);
-	///
-	/// Remove an object to a RIB
-	///
-	/// This method removes an object previously added to the RIB
-	///
-	/// On failure the adequate exception is thrown and no changes will
-	/// be performed in the RIB.
-	///
-	/// @param handle The handle of the RIB
-	/// @param inst_id The object instance ID
-	///
-	/// @throws eRIBNotFound, eObjDoesNotExist
-	///
-	void removeObjRIB(const rib_handle_t& handle,
-			  const int64_t inst_id);
-	void removeObjRIB(const rib_handle_t& handle,
-			  const std::string fqdn);
+        ///
+        /// Retrieve the fully qualified name given the instance ID of an
+        /// object
+        ///
+        /// @param handle The handle of the RIB
+        /// @param inst_id Object's instance id
+        /// @param class__ Optional parameter. When defined (!=""), the class
+        ///
+        /// @ret The fully qualified name
+        /// @throws eRIBNotFound, eObjDoesNotExist and eObjClassMismatch
+        /// if class_ is defined
+        ///
+        std::string getObjFqn(const rib_handle_t& handle,
+                              const int64_t inst_id,
+                              const std::string& class_="");
+        ///
+        /// Retrieve the class name of an object given the instance ID.
+        ///
+        /// @param handle The handle of the RIB
+        /// @param inst_id Object's instance id
+        /// @ret The class name
+        /// @throws eRIBNotFound, eObjDoesNotExist and eObjClassMismatch
+        ///
+        std::string getObjClass(const rib_handle_t& handle,
+                                const int64_t inst_id);
+        ///
+        /// Remove an object to a RIB
+        ///
+        /// This method removes an object previously added to the RIB
+        ///
+        /// On failure the adequate exception is thrown and no changes will
+        /// be performed in the RIB.
+        ///
+        /// @param handle The handle of the RIB
+        /// @param inst_id The object instance ID
+        ///
+        /// @throws eRIBNotFound, eObjDoesNotExist
+        ///
+        void removeObjRIB(const rib_handle_t& handle,
+                          const int64_t inst_id);
+        void removeObjRIB(const rib_handle_t& handle,
+                          const std::string fqdn);
 
-	///
-	/// Check if an object is already in the RIB
-	///
-	/// Returns true if the object is in the RIB, false otherwise
-	///
-	/// @param handle The handle of the RIB
-	/// @param fqdn The object fqdn
-	///
-	bool containsObj(const rib_handle_t& handle,
-			 const std::string fqdn);
+        ///
+        /// Check if an object is already in the RIB
+        ///
+        /// Returns true if the object is in the RIB, false otherwise
+        ///
+        /// @param handle The handle of the RIB
+        /// @param fqdn The object fqdn
+        ///
+        bool containsObj(const rib_handle_t& handle,
+                         const std::string fqdn);
 
-	///
-	/// Get the list of all the objects in the RIB
-	///
-	/// @param handle The handle of the RIB
-	///
-	/// @throws eRIBNotFound, eObjDoesNotExist
-	///
-	std::list<RIBObjectData> get_rib_objects_data(const rib_handle_t& handle);
+        ///
+        /// Get the list of all the objects in the RIB
+        ///
+        /// @param handle The handle of the RIB
+        ///
+        /// @throws eRIBNotFound, eObjDoesNotExist
+        ///
+        std::list<RIBObjectData> get_rib_objects_data(const rib_handle_t& handle);
 
 
-	//-------------------------------------------------------------------//
-	//                         RIB Client                                //
-	//-------------------------------------------------------------------//
+        //-------------------------------------------------------------------//
+        //                         RIB Client                                //
+        //-------------------------------------------------------------------//
 
-	///
-	/// Establish a CDAP connection to a remote RIB
-	///
-	/// @param ver RIB version
-	/// @param src Application source information
-	/// @param dst Application dst information
-	/// @param auth CDAP Authentication context
-	/// @param port_id Flow port id to be used
-	/// @ret A CDAP connection handle
-	///
-	cdap_rib::con_handle_t remote_open_connection(const cdap_rib::vers_info_t &ver,
-						      const cdap_rib::ep_info_t &src,
-						      const cdap_rib::ep_info_t &dest,
-						      const cdap_rib::auth_policy &auth,
-						      int port_id);
+        ///
+        /// Establish a CDAP connection to a remote RIB
+        ///
+        /// @param ver RIB version
+        /// @param src Application source information
+        /// @param dst Application dst information
+        /// @param auth CDAP Authentication context
+        /// @param port_id Flow port id to be used
+        /// @ret A CDAP connection handle
+        ///
+        cdap_rib::con_handle_t remote_open_connection(const cdap_rib::vers_info_t &ver,
+                                                      const cdap_rib::ep_info_t &src,
+                                                      const cdap_rib::ep_info_t &dest,
+                                                      const cdap_rib::auth_policy &auth,
+                                                      int port_id);
 
-	///
-	/// Close a CDAP connection to a remote RIB
-	///
-	/// @ret success/failure
-	///
-	int remote_close_connection(unsigned int port);
+        ///
+        /// Close a CDAP connection to a remote RIB
+        ///
+        /// @ret success/failure
+        ///
+        int remote_close_connection(unsigned int port);
 
-	///
-	/// Perform a create operation over an object of the remote RIB
-	///
-	/// @ret success/failure
-	///
-	int remote_create(const cdap_rib::con_handle_t& con,
-			  const cdap_rib::obj_info_t &obj,
-			  const cdap_rib::flags_t &flags,
-			  const cdap_rib::filt_info_t &filt,
-			  RIBOpsRespHandler * resp_handler);
+        ///
+        /// Perform a create operation over an object of the remote RIB
+        ///
+        /// @ret success/failure
+        ///
+        int remote_create(const cdap_rib::con_handle_t& con,
+                          const cdap_rib::obj_info_t &obj,
+                          const cdap_rib::flags_t &flags,
+                          const cdap_rib::filt_info_t &filt,
+                          RIBOpsRespHandler * resp_handler);
 
-	///
-	/// Perform a delete operation over an object of the remote RIB
-	///
-	/// @ret success/failure
-	///
-	int remote_delete(const cdap_rib::con_handle_t& con,
-			  const cdap_rib::obj_info_t &obj,
-			  const cdap_rib::flags_t &flags,
-			  const cdap_rib::filt_info_t &filt,
-			  RIBOpsRespHandler * resp_handler);
+        ///
+        /// Perform a delete operation over an object of the remote RIB
+        ///
+        /// @ret success/failure
+        ///
+        int remote_delete(const cdap_rib::con_handle_t& con,
+                          const cdap_rib::obj_info_t &obj,
+                          const cdap_rib::flags_t &flags,
+                          const cdap_rib::filt_info_t &filt,
+                          RIBOpsRespHandler * resp_handler);
 
-	///
-	/// Perform a read operation over an object of the remote RIB
-	///
-	/// @ret success/failure
-	///
-	int remote_read(const cdap_rib::con_handle_t& con,
-			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::flags_t &flags,
-			const cdap_rib::filt_info_t &filt,
-			RIBOpsRespHandler * resp_handler);
-	///
-	/// Perform a cancel read operation over an object of the remote RIB
-	///
-	/// @ret success/failure
-	///
-	int remote_cancel_read(const cdap_rib::con_handle_t& con,
-			       const cdap_rib::flags_t &flags,
-			       int invoke_id,
-			       RIBOpsRespHandler * resp_handler);
+        ///
+        /// Perform a read operation over an object of the remote RIB
+        ///
+        /// @ret success/failure
+        ///
+        int remote_read(const cdap_rib::con_handle_t& con,
+                        const cdap_rib::obj_info_t &obj,
+                        const cdap_rib::flags_t &flags,
+                        const cdap_rib::filt_info_t &filt,
+                        RIBOpsRespHandler * resp_handler);
 
-	///
-	/// Perform a write operation over an object of the remote RIB
-	///
-	/// @ret success/failure
-	///
-	int remote_write(const cdap_rib::con_handle_t& con,
-			 const cdap_rib::obj_info_t &obj,
-			 const cdap_rib::flags_t &flags,
-			 const cdap_rib::filt_info_t &filt,
-			 RIBOpsRespHandler * resp_handler);
+        ///
+        /// Perform a cancel read operation over an object of the remote RIB
+        ///
+        /// @ret success/failure
+        ///
+        int remote_cancel_read(const cdap_rib::con_handle_t& con,
+                               const cdap_rib::flags_t &flags,
+                               int invoke_id,
+                               RIBOpsRespHandler * resp_handler);
 
-	///
-	/// Perform a start operation over an object of the remote RIB
-	///
-	/// @ret success/failure
-	///
-	int remote_start(const cdap_rib::con_handle_t& con,
-			 const cdap_rib::obj_info_t &obj,
-			 const cdap_rib::flags_t &flags,
-			 const cdap_rib::filt_info_t &filt,
-			 RIBOpsRespHandler * resp_handler);
+        ///
+        /// Perform a write operation over an object of the remote RIB
+        ///
+        /// @ret success/failure
+        ///
+        int remote_write(const cdap_rib::con_handle_t& con,
+                         const cdap_rib::obj_info_t &obj,
+                         const cdap_rib::flags_t &flags,
+                         const cdap_rib::filt_info_t &filt,
+                         RIBOpsRespHandler * resp_handler);
 
-	///
-	/// Perform a stop operation over an object of the remote RIB
-	///
-	/// @ret success/failure
-	///
-	int remote_stop(const cdap_rib::con_handle_t& con,
-			const cdap_rib::obj_info_t &obj,
-			const cdap_rib::flags_t &flags,
-			const cdap_rib::filt_info_t &filt,
-			RIBOpsRespHandler * resp_handler);
+        ///
+        /// Perform a start operation over an object of the remote RIB
+        ///
+        /// @ret success/failure
+        ///
+        int remote_start(const cdap_rib::con_handle_t& con,
+                         const cdap_rib::obj_info_t &obj,
+                         const cdap_rib::flags_t &flags,
+                         const cdap_rib::filt_info_t &filt,
+                         RIBOpsRespHandler * resp_handler);
+
+        ///
+        /// Perform a stop operation over an object of the remote RIB
+        ///
+        /// @ret success/failure
+        ///
+        int remote_stop(const cdap_rib::con_handle_t& con,
+                        const cdap_rib::obj_info_t &obj,
+                        const cdap_rib::flags_t &flags,
+                        const cdap_rib::filt_info_t &filt,
+                        RIBOpsRespHandler * resp_handler);
 
 private:
-	///@internal
-	int64_t __addObjRIB(const rib_handle_t& h,
-			    const std::string& fqn,
-			    RIBObj** o);
-	//Constructor
-	RIBDaemonProxy(RIBDaemon* ribd_);
-
-	friend RIBDaemonProxy* RIBDaemonProxyFactory();
-
-	RIBDaemon* ribd;
+        ///@internal
+        int64_t __addObjRIB(const rib_handle_t& h,
+                            const std::string& fqn,
+                            RIBObj** o);
+        //Constructor
+        RIBDaemonProxy(RIBDaemon* ribd_);
+#ifndef SWIG
+        friend RIBDaemonProxy* RIBDaemonProxyFactory();
+#endif
+        RIBDaemon* ribd;
 };
 
 /// Contains the data of an object in the RIB

@@ -395,8 +395,6 @@ class DTPConfig {
 #ifndef SWIG
     bool is_dtcp_present() const;
     void set_dtcp_present(bool dtcp_present);
-    const PolicyConfig& get_initial_seq_num_policy() const;
-    void set_initial_seq_num_policy(const PolicyConfig& initial_seq_num_policy);
     unsigned int get_seq_num_rollover_threshold() const;
     void set_seq_num_rollover_threshold(
             unsigned int seq_num_rollover_threshold);
@@ -414,12 +412,6 @@ class DTPConfig {
     void set_dtp_policy_set(const PolicyConfig& dtp_policy_set);
     const PolicyConfig& get_dtcp_policy_set() const;
     void set_dtcp_policy_set(const PolicyConfig& dtcp_policy_set);
-    const PolicyConfig& get_rcvr_timer_inactivity_policy() const;
-    void set_rcvr_timer_inactivity_policy(
-            const PolicyConfig& rcvr_timer_inactivity_policy);
-    const PolicyConfig& get_sender_timer_inactivity_policy() const;
-    void set_sender_timer_inactivity_policy(
-            const PolicyConfig& sender_timer_inactivity_policy);
 #endif
     const std::string toString() const;
 
@@ -428,22 +420,6 @@ class DTPConfig {
 
     /// Policy Set for DTP.
     PolicyConfig dtp_policy_set_;
-
-    /// used when DTCP is in use. If no PDUs arrive in this time period,
-    /// the receiver should expect a DRF in the next Transfer PDU. If not,
-    /// something is very wrong. The timeout value should generally be set
-    /// to 3(MPL+R+A).
-    PolicyConfig rcvr_timer_inactivity_policy_;
-
-    /// used when DTCP is in use. This timer is used to detect long periods
-    /// of no traffic, indicating that a DRF should be sent. If not,
-    /// something is very wrong. The timeout value should generally be set
-    /// to 2(MPL+R+A).
-    PolicyConfig sender_timer_inactivity_policy_;
-
-    /// This policy allows some discretion in selecting the initial sequence
-    /// number, when DRF is going to be sent.
-    PolicyConfig initial_seq_num_policy_;
 
     /// When the sequence number is increasing beyond this value, the
     /// sequence number space is close to rolling over, a new connection

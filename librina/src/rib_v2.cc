@@ -696,6 +696,7 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 
 	cdap_rib::res_info_t res;
 	std::list<RIBObj*> objects;
+        RIBObj* rib_obj = NULL;
 
 	/* RAII scope for RIB scoped lock (read) */
 	{
@@ -703,6 +704,15 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 		ReadScopedLock rlock(rwlock);
 
 		int64_t id = get_obj_inst_id(obj.name_);
+		// Check if we have to delegate the call
+		rib_obj = get_obj(id);
+		if(id >0 && rib_obj->delegates &&
+		   obj.name_.compare(rib_obj->fqn) != 0)
+		{
+		        DelegationObj *del_obj = (DelegationObj*)rib_obj;
+		        del_obj->forward_object(con, obj, flags, filt, invoke_id);
+		        return;
+		}
 
 		//Get all objects affected by the operation
 		get_objects_to_operate(id,
@@ -731,7 +741,6 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 	}
 
 	std::list<RIBObj*>::iterator it;
-	RIBObj* rib_obj = NULL;
 	unsigned int count = 0;
 	for (it = objects.begin(); it != objects.end(); ++it) {
 		rib_obj = *it;
@@ -1166,6 +1175,7 @@ int64_t RIB::add_obj(const std::string& fqn, RIBObj** obj_) {
 
 	//Note that obj_ cannot be NULL (checked by RIBDaemon)
 	RIBObj* obj = *obj_;
+	obj->rib = this;
 
 	if(!obj){
 		LOG_ERR("Unable to add object(%p) at '%s'; object is NULL!",
@@ -2378,11 +2388,11 @@ std::list<RIBObjectData> RIBDaemon::get_rib_objects_data(const rib_handle_t& han
 }
 
 int RIBDaemon::remote_operation(const cdap_rib::con_handle_t& con,
-				cdap::CDAPMessage::Opcode opcode,
-		  	        const cdap_rib::obj_info_t &obj,
-		  	        const cdap_rib::flags_t &flags,
-		  	        const cdap_rib::filt_info_t &filt,
-		  	        RIBOpsRespHandler * resp_handler)
+                                cdap::CDAPMessage::Opcode opcode,
+                                const cdap_rib::obj_info_t &obj,
+                                const cdap_rib::flags_t &flags,
+                                const cdap_rib::filt_info_t &filt,
+                                RIBOpsRespHandler * resp_handler)
 {
 	int result = 0;
 	int invoke_id = 0;
@@ -3105,11 +3115,11 @@ int RIBDaemonProxy::remote_cancel_read(const cdap_rib::con_handle_t& con,
 	cdap_rib::filt_info_t filt;
 
 	return ribd->remote_operation(con,
-				      cdap::CDAPMessage::M_CANCELREAD,
-				      obj,
-				      flags,
-				      filt,
-				      resp_handler);
+                              cdap::CDAPMessage::M_CANCELREAD,
+                              obj,
+                              flags,
+                              filt,
+                              resp_handler);
 }
 
 // Perform a write operation over an object of the remote RIB
@@ -3120,11 +3130,11 @@ int RIBDaemonProxy::remote_write(const cdap_rib::con_handle_t& con,
 			 	 RIBOpsRespHandler * resp_handler)
 {
 	return ribd->remote_operation(con,
-				      cdap::CDAPMessage::M_WRITE,
-				      obj,
-				      flags,
-				      filt,
-				      resp_handler);
+                              cdap::CDAPMessage::M_WRITE,
+                              obj,
+                              flags,
+                              filt,
+                              resp_handler);
 }
 
 // Perform a start operation over an object of the remote RIB
@@ -3135,11 +3145,11 @@ int RIBDaemonProxy::remote_start(const cdap_rib::con_handle_t& con,
 			 	 RIBOpsRespHandler * resp_handler)
 {
 	return ribd->remote_operation(con,
-				      cdap::CDAPMessage::M_START,
-				      obj,
-				      flags,
-				      filt,
-				      resp_handler);
+                              cdap::CDAPMessage::M_START,
+                              obj,
+                              flags,
+                              filt,
+                              resp_handler);
 }
 
 // Perform a stop operation over an object of the remote RIB
@@ -3150,11 +3160,11 @@ int RIBDaemonProxy::remote_stop(const cdap_rib::con_handle_t& con,
 				RIBOpsRespHandler * resp_handler)
 {
 	return ribd->remote_operation(con,
-				      cdap::CDAPMessage::M_STOP,
-				      obj,
-				      flags,
-				      filt,
-				      resp_handler);
+                                cdap::CDAPMessage::M_STOP,
+                                obj,
+                                flags,
+                                filt,
+                                resp_handler);
 }
 
 // Class RIBDaemonAE

@@ -62,6 +62,7 @@ public:
 
 	/// get auth_policy
 	virtual cdap_rib::auth_policy_t get_auth_policy(int session_id,
+							const cdap_rib::ep_info_t& peer_ap,
 					   	 	const AuthSDUProtectionProfile& profile) = 0;
 
 	/// initiate the authentication of a remote AE. Any values originated
@@ -69,6 +70,7 @@ public:
 	/// corresponding security context
 	virtual AuthStatus initiate_authentication(const cdap_rib::auth_policy_t& auth_policy,
 						   const AuthSDUProtectionProfile& profile,
+						   const cdap_rib::ep_info_t& peer_ap,
 						   int session_id) = 0;
 
 	/// Process an incoming CDAP message
@@ -91,9 +93,11 @@ public:
 		IAuthPolicySet(IAuthPolicySet::AUTH_NONE), sec_man(sm) { };
 	virtual ~AuthNonePolicySet() { };
 	cdap_rib::auth_policy_t get_auth_policy(int session_id,
+						const cdap_rib::ep_info_t& peer_ap,
 				   	 	const AuthSDUProtectionProfile& profile);
 	AuthStatus initiate_authentication(const cdap_rib::auth_policy_t& auth_policy,
 					   const AuthSDUProtectionProfile& profile,
+					   const cdap_rib::ep_info_t& peer_ap,
 					   int session_id);
 	int process_incoming_message(const cdap::CDAPMessage& message, int session_id);
 	int set_policy_set_param(const std::string& name,
@@ -150,9 +154,11 @@ public:
 			      ISecurityManager * sec_man);
 	~AuthPasswordPolicySet() { };
 	cdap_rib::auth_policy_t get_auth_policy(int session_id,
+						const cdap_rib::ep_info_t& peer_ap,
 				   	        const AuthSDUProtectionProfile& profile);
 	AuthStatus initiate_authentication(const cdap_rib::auth_policy_t& auth_policy,
 					   const AuthSDUProtectionProfile& profile,
+					   const cdap_rib::ep_info_t& peer_ap,
 					   int session_id);
 	int process_incoming_message(const cdap::CDAPMessage& message,
 				     int session_id);
@@ -221,9 +227,14 @@ class SSH2SecurityContext : public ISecurityContext {
 public:
 	SSH2SecurityContext(int session_id) : ISecurityContext(session_id),
 			state(BEGIN), dh_state(NULL), dh_peer_pub_key(NULL),
-			auth_keypair(NULL), timer_task(NULL) { };
-	SSH2SecurityContext(int session_id, const AuthSDUProtectionProfile& profile);
-	SSH2SecurityContext(int session_id, const AuthSDUProtectionProfile& profile,
+			auth_keypair(NULL), auth_peer_pub_key(NULL),
+			timer_task(NULL) { };
+	SSH2SecurityContext(int session_id,
+			    const std::string& peer_ap_name,
+			    const AuthSDUProtectionProfile& profile);
+	SSH2SecurityContext(int session_id,
+			    const std::string& peer_ap_name,
+			    const AuthSDUProtectionProfile& profile,
 			    SSH2AuthOptions * options);
 	~SSH2SecurityContext();
 	CryptoState get_crypto_state(bool enable_crypto_tx,
@@ -235,6 +246,9 @@ public:
 	static const std::string COMPRESSION_ALGORITHM;
 	static const std::string KEYSTORE_PATH;
 	static const std::string KEYSTORE_PASSWORD;
+	static const std::string KEY;
+	static const std::string PUBLIC_KEY;
+	static const std::string KNOWN_IPCPS;
 
         enum State {
         	BEGIN,
@@ -275,8 +289,14 @@ public:
 	///The encryption key
 	UcharArray encrypt_key;
 
-	/// RSA * key pair used for authentication
+	/// My RSA * key pair (used for authentication)
 	RSA * auth_keypair;
+
+	/// Public key of the IPCP I'm authenticating against
+	RSA * auth_peer_pub_key;
+
+	/// Application process name of the IPCP I'm authenticating against
+	std::string peer_ap_name;
 
 	/// Challenge sent to peer so that he proofs it has the DIF's key
 	UcharArray challenge;
@@ -330,9 +350,11 @@ public:
 	AuthSSH2PolicySet(rib::RIBDaemonProxy * ribd, ISecurityManager * sm);
 	virtual ~AuthSSH2PolicySet();
 	cdap_rib::auth_policy_t get_auth_policy(int session_id,
+						const cdap_rib::ep_info_t& peer_ap,
 				   	        const AuthSDUProtectionProfile& profile);
 	AuthStatus initiate_authentication(const cdap_rib::auth_policy_t& auth_policy,
 				           const AuthSDUProtectionProfile& profile,
+				           const cdap_rib::ep_info_t& peer_ap,
 					   int session_id);
 	int process_incoming_message(const cdap::CDAPMessage& message, int session_id);
 	int set_policy_set_param(const std::string& name,

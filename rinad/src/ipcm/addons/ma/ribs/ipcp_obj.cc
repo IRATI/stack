@@ -1,13 +1,14 @@
 #include "ipcp_obj.h"
 
 #define RINA_PREFIX "ipcm.mad.ipcp_obj"
+#include <cstddef>
+
 #include <librina/logs.h>
 #include <librina/exceptions.h>
 
 #include "../agent.h"
 #include "../../../ipcm.h"
 #include "../ribf.h"
-#include "ribd_obj.h"
 
 namespace rinad {
 namespace mad {
@@ -18,10 +19,9 @@ const std::string IPCPObj::class_name = "IPCProcess";
 
 //Class
 IPCPObj::IPCPObj(int ipcp_id)
-                : RIBObj(class_name),
-                  processID_(ipcp_id)
+                : DelegationObj(class_name)
 {
-
+        processID_ = ipcp_id;
 }
 
 void IPCPObj::read(const rina::cdap_rib::con_handle_t &con,
@@ -58,6 +58,41 @@ bool IPCPObj::delete_(const rina::cdap_rib::con_handle_t &con,
         }
 
         return true;
+}
+
+void IPCPObj::forward_object(const rina::cdap_rib::con_handle_t& con,
+                const rina::cdap_rib::obj_info_t &obj,
+                const rina::cdap_rib::flags_t &flags,
+                const rina::cdap_rib::filt_info_t &filt,
+                const int invoke_id)
+{
+       Promise promise;
+       params.con =  con;
+       params.flags = flags;
+       params.obj = obj;
+       params.invoke_id = invoke_id;
+
+       int pos = obj.name_.rfind("ipcProcessID");
+       std::string object_name = obj.name_.substr(pos);
+       pos = object_name.find("/");
+       object_name = object_name.substr(pos);
+
+       IPCManager->delegate_ipcp_ribobj(this, &promise, processID_ , obj.class_, object_name, filt.scope_);
+}
+
+void IPCPObj::forwarded_object_response(rina::cdap::cdap_m_t *msg)
+{
+        /*
+        void remote_read_result(const cdap_rib::con_handle_t& con,
+                               const cdap_rib::obj_info_t &obj,
+                               const cdap_rib::flags_t &flags,
+                               const cdap_rib::res_info_t &res,
+                               int invoke_id);
+        */
+
+		msg->flags_ = params.flags.flags_;
+		msg->invoke_id_ = params.invoke_id;
+		rina::cdap::getProvider()->send_cdap_result(params.con,  msg);
 }
 
 void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
@@ -138,10 +173,6 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
         try
         {
                 RIBFactory::getProxy()->addObjRIB(rib, fqn, &ipcp);
-
-                std::string rib_name = fqn + "/ribDaemon";
-                RIBDaemonObj *tmp = new RIBDaemonObj(ipcp_id);
-                RIBFactory::getProxy()->addObjRIB(rib, rib_name, &tmp);
         } catch (...)
         {
                 LOG_ERR("Create operation failed: for ipcp id '%d' in path '%s'. Out of memory.",

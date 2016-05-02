@@ -139,7 +139,7 @@ private:
 	void store_event(rina::IPCEvent* event);
 
 	// Manage a CDAP response delegated to an IPC process
-	void process_fwd_cdap_msg_response(rina::FwdCDAPMsgEvent* fwdevent);
+	void process_fwd_cdap_msg_response(rina::FwdCDAPMsgResponseEvent* fwdevent);
 
 	// Pending events  seqnum <-> event
 	std::map<unsigned int, rina::IPCEvent*> pending_events;

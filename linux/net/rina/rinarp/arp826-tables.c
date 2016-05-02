@@ -474,10 +474,10 @@ struct table * tbls_find(struct net_device * device, uint16_t ptype)
         return tmap_entry_value(e);
 }
 
-static int tbls_create_gfp(gfp_t               flags,
-                           struct net_device * device,
-                           uint16_t            ptype,
-                           size_t              hwlen)
+static struct table * tbls_create_gfp(gfp_t               flags,
+                                      struct net_device * device,
+                                      uint16_t            ptype,
+                                      size_t              hwlen)
 {
         struct table * cl;
         unsigned long  irqflags;
@@ -487,15 +487,15 @@ static int tbls_create_gfp(gfp_t               flags,
 
         cl = tbls_find(device, ptype);
         if (cl) {
-                LOG_WARN("Table for ptype 0x%04X already created", ptype);
-                return 0;
+                LOG_ERR("Table for ptype 0x%04X already created", ptype);
+                return NULL;
         }
 
         cl = tbl_create_gfp(flags, hwlen);
         if (!cl) {
                 LOG_ERR("Cannot create table for ptype 0x%04X, hwlen %zd",
                         ptype, hwlen);
-                return -1;
+                return NULL;
         }
 
         LOG_DBG("Now adding the new table to the tables map");
@@ -506,7 +506,7 @@ static int tbls_create_gfp(gfp_t               flags,
 
                 tbl_destroy(cl);
 
-                return -1;
+                return NULL;
         }
         spin_unlock_irqrestore(&tables_lock, irqflags);
 
@@ -514,17 +514,17 @@ static int tbls_create_gfp(gfp_t               flags,
                 "(device = %pK, ptype = 0x%04X, hwlen = %zd)",
                 device, ptype, hwlen);
 
-        return 0;
+        return cl;
 }
 
-int tbls_create_ni(struct net_device * device,
-                   uint16_t            ptype,
-                   size_t              hwlen)
+struct table * tbls_create_ni(struct net_device * device,
+                              uint16_t            ptype,
+                              size_t              hwlen)
 { return tbls_create_gfp(GFP_ATOMIC, device, ptype, hwlen); }
 
-int tbls_create(struct net_device * device,
-                uint16_t            ptype,
-                size_t              hwlen)
+struct table * tbls_create(struct net_device * device,
+                           uint16_t            ptype,
+                           size_t              hwlen)
 { return tbls_create_gfp(GFP_KERNEL, device, ptype, hwlen); }
 
 int tbls_destroy(struct net_device * device, uint16_t ptype)
@@ -616,9 +616,12 @@ int arp826_add(struct net_device * device,
 
         cl = tbls_find(device, ptype);
         if (!cl) {
-                LOG_ERR("Cannot add GPA/GHA couple, "
-                        "there is no table for ptype 0x%04x", ptype);
-                return -1;
+                LOG_DBG("No table exists for this device yet, creating it");
+                cl = tbls_create(device, ETH_P_RINA, 6);
+                if (cl == NULL) {
+                           LOG_ERR("Cannot create a new table");
+                           return -1;
+                }
         }
 
         tmp_pa = gpa_dup_gfp(GFP_ATOMIC, pa);
@@ -645,7 +648,7 @@ int arp826_add(struct net_device * device,
         LOG_DBG("Adding the GPA/GHA entry to the 0x%x04 table", ptype);
 
         if (tbl_add(cl, e)) {
-                LOG_ERR("Cannot add to the 0x%04x table, rolling back", ptype);
+                LOG_ERR("Cannot add to the 0x%x04 table, rolling back", ptype);
                 tble_destroy(e);
                 return -1;
         }

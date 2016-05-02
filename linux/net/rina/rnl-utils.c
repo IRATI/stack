@@ -2210,12 +2210,6 @@ static int parse_dtp_config(struct nlattr *     attr,
 
         attr_policy[DTPCA_ATTR_DTCP_PRESENT].type           = NLA_FLAG;
         attr_policy[DTPCA_ATTR_DTCP_PRESENT].len            = 0;
-        attr_policy[DTPCA_ATTR_RCVR_TIMER_INAC_POLICY].type = NLA_NESTED;
-        attr_policy[DTPCA_ATTR_RCVR_TIMER_INAC_POLICY].len  = 0;
-        attr_policy[DTPCA_ATTR_SNDR_TIMER_INAC_POLICY].type = NLA_NESTED;
-        attr_policy[DTPCA_ATTR_SNDR_TIMER_INAC_POLICY].len  = 0;
-        attr_policy[DTPCA_ATTR_INIT_SEQ_NUM_POLICY].type    = NLA_NESTED;
-        attr_policy[DTPCA_ATTR_INIT_SEQ_NUM_POLICY].len     = 0;
         attr_policy[DTPCA_ATTR_SEQ_NUM_ROLLOVER].type       = NLA_U32;
         attr_policy[DTPCA_ATTR_SEQ_NUM_ROLLOVER].len        = 4;
         attr_policy[DTPCA_ATTR_INIT_A_TIMER].type           = NLA_U32;
@@ -2239,26 +2233,6 @@ static int parse_dtp_config(struct nlattr *     attr,
         if (attrs[DTPCA_ATTR_DTCP_PRESENT])
                 dtp_conf_dtcp_present_set(cfg,
                         nla_get_flag(attrs[DTPCA_ATTR_DTCP_PRESENT]));
-
-
-        if (attrs[DTPCA_ATTR_RCVR_TIMER_INAC_POLICY])
-                if (parse_policy(attrs[DTPCA_ATTR_RCVR_TIMER_INAC_POLICY],
-                                 dtp_conf_receiver_inactivity_timer(cfg)))
-                        return -1;
-
-        if (attrs[DTPCA_ATTR_SNDR_TIMER_INAC_POLICY])
-                if (parse_policy(attrs[DTPCA_ATTR_SNDR_TIMER_INAC_POLICY],
-                                 dtp_conf_sender_inactivity_timer(cfg)))
-                        return -1;
-
-        if (attrs[DTPCA_ATTR_INIT_SEQ_NUM_POLICY]) {
-                if (parse_policy(attrs[DTPCA_ATTR_INIT_SEQ_NUM_POLICY],
-                                 dtp_conf_initial_sequence_number(cfg))) {
-                        LOG_ERR("Could not parse initial_sequence_number "
-                                "policy");
-                        return -1;
-                }
-        }
 
         if (attrs[DTPCA_ATTR_SEQ_NUM_ROLLOVER])
                 dtp_conf_seq_num_ro_th_set(cfg,

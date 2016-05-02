@@ -25,5 +25,4 @@ librinad_ma_ribs_la_LIBADD   =				\
 
 librinad_ma_ribs_la_SOURCES  =				\
 	ipcp_obj.cc   					\
-	ribd_obj.cc					\
 	ribd_v1.cc

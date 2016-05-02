@@ -38,6 +38,7 @@
 #include "encoders/EnrollmentInformationMessage.pb.h"
 #include "encoders/RoutingForwarding.pb.h"
 #include "encoders/MA-IPCP.pb.h"
+#include "encoders/RIBObjectData.pb.h"
 
 namespace rinad {
 namespace encoders {
@@ -271,18 +272,9 @@ rina::messages::dtpConfig_t* get_dtpConfig_t(const rina::DTPConfig &conf)
 {
         rina::messages::dtpConfig_t *gpf_conf = new rina::messages::dtpConfig_t;
         gpf_conf->set_dtcppresent(conf.is_dtcp_present());
-        gpf_conf->set_allocated_initialseqnumpolicy(
-                        helpers::get_policyDescriptor_t(
-                                        conf.get_initial_seq_num_policy()));
         gpf_conf->set_seqnumrolloverthreshold(
                         conf.get_seq_num_rollover_threshold());
         gpf_conf->set_initialatimer(conf.get_initial_a_timer());
-        gpf_conf->set_allocated_rcvrtimerinactivitypolicy(
-                        helpers::get_policyDescriptor_t(
-                                        conf.get_rcvr_timer_inactivity_policy()));
-        gpf_conf->set_allocated_sendertimerinactiviypolicy(
-                        helpers::get_policyDescriptor_t(
-                                        conf.get_sender_timer_inactivity_policy()));
         gpf_conf->set_allocated_dtppolicyset(
                         helpers::get_policyDescriptor_t(
                                         conf.get_dtp_policy_set()));
@@ -295,13 +287,6 @@ void get_DTPConfig(const rina::messages::dtpConfig_t &gpf_conf,
 {
         conf.set_dtcp_present(gpf_conf.dtcppresent());
         rina::PolicyConfig p_conf;
-        helpers::get_PolicyConfig(gpf_conf.rcvrtimerinactivitypolicy(), p_conf);
-        conf.set_rcvr_timer_inactivity_policy(p_conf);
-        helpers::get_PolicyConfig(gpf_conf.sendertimerinactiviypolicy(),
-                                  p_conf);
-        conf.set_sender_timer_inactivity_policy(p_conf);
-        helpers::get_PolicyConfig(gpf_conf.initialseqnumpolicy(), p_conf);
-        conf.set_initial_seq_num_policy(p_conf);
         helpers::get_PolicyConfig(gpf_conf.dtppolicyset(), p_conf);
         conf.set_dtp_policy_set(p_conf);
         conf.set_seq_num_rollover_threshold(gpf_conf.seqnumrolloverthreshold());
@@ -1720,6 +1705,52 @@ void IPCPEncoder::decode(const rina::ser_obj_t& serobj,
         des_obj.process.processName = gpb.process().applicationprocessname();
         des_obj.process.processInstance = gpb.process()
                         .applicationprocessinstance();
+}
+
+
+//CLASS RIBObjectDataListEncoder
+void RIBObjectDataListEncoder::encode(
+                const std::list<rina::rib::RIBObjectData> &obj,
+                rina::ser_obj_t& serobj)
+{
+        rina::messages::RIBObjectDataList_t gpb;
+
+        for (std::list<rina::rib::RIBObjectData>::const_iterator it = obj.begin();
+                        it != obj.end(); ++it)
+        {
+                rina::messages::RIBObjectData_t *gpb_obj = gpb.add_objects();
+                gpb_obj->set_class_(it->class_);
+                gpb_obj->set_name(it->name_);
+                gpb_obj->set_instance(it->instance_);
+                gpb_obj->set_displayable_value(it->displayable_value_);
+        }
+
+        //Allocate memory
+        serobj.size_ = gpb.ByteSize();
+        serobj.message_ = new unsigned char[serobj.size_];
+
+        if (!serobj.message_)
+                throw rina::Exception("out of memory");  //TODO improve this
+
+        //Serialize and return
+        gpb.SerializeToArray(serobj.message_, serobj.size_);
+}
+
+void RIBObjectDataListEncoder::decode(const rina::ser_obj_t &serobj,
+            std::list<rina::rib::RIBObjectData>& des_obj)
+{
+        rina::messages::RIBObjectDataList_t gpb;
+        gpb.ParseFromArray(serobj.message_, serobj.size_);
+
+        for (int i = 0; i < gpb.objects_size(); i++)
+        {
+                rina::rib::RIBObjectData obj;
+                obj.class_ = gpb.objects(i).class_();
+                obj.name_ = gpb.objects(i).name();
+                obj.instance_ = gpb.objects(i).instance();
+                obj.displayable_value_ = gpb.objects(i).displayable_value();
+                des_obj.push_back(obj);
+        }
 }
 
 }  //namespace encoders

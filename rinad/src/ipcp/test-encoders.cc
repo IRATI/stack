@@ -54,7 +54,6 @@ bool test_flow () {
 	dtp_config_to_encode.set_dtcp_present(true);
 	dtp_config_to_encode.set_seq_num_rollover_threshold(1234);
 	dtp_config_to_encode.set_initial_a_timer(14561);
-	dtp_config_to_encode.set_initial_seq_num_policy(rina::PolicyConfig("policy1", "23"));
 	dtp_config_to_encode.set_dtp_policy_set(rina::PolicyConfig("policy2", "26"));
 	dtcp_config_to_encode.set_dtcp_policy_set(rina::PolicyConfig("policy3", "27"));
 	dtcp_config_to_encode.set_rtx_control(true);
@@ -101,8 +100,6 @@ bool test_flow () {
 	if ( dtp_config_to_encode.get_seq_num_rollover_threshold() != dtp_config_decoded.get_seq_num_rollover_threshold())
 		return false;
 	if ( dtp_config_to_encode.get_initial_a_timer() != dtp_config_decoded.get_initial_a_timer())
-		return false;
-	if ( dtp_config_to_encode.get_initial_seq_num_policy() != dtp_config_decoded.get_initial_seq_num_policy())
 		return false;
 	if ( dtp_config_to_encode.get_dtp_policy_set() != dtp_config_decoded.get_dtp_policy_set())
 		return false;
@@ -373,7 +370,6 @@ bool test_qos_cube() {
 	cube.undetected_bit_error_rate_ = 2;
 	cube.dtp_config_.dtcp_present_ = true;
 	cube.dtp_config_.initial_a_timer_ = 23;
-	cube.dtp_config_.initial_seq_num_policy_.name_ = "test-policy";
 
 	encoder.encode(cube, encoded_obj);
 	encoder.decode(encoded_obj, recovered_obj);
@@ -431,11 +427,6 @@ bool test_qos_cube() {
 	}
 
 	if (cube.dtp_config_.initial_a_timer_ != recovered_obj.dtp_config_.initial_a_timer_) {
-		return false;
-	}
-
-	if (cube.dtp_config_.initial_seq_num_policy_.name_.compare(
-			recovered_obj.dtp_config_.initial_seq_num_policy_.name_) != 0) {
 		return false;
 	}
 
@@ -667,6 +658,60 @@ bool test_pduft_entry() {
     return true;
 }
 
+
+bool test_ribobjectdatalist() {
+    rinad::encoders::RIBObjectDataListEncoder encoder;
+    std::list<rina::rib::RIBObjectData> objts;
+    std::list<rina::rib::RIBObjectData> recovered_objts;
+    rina::ser_obj_t encoded_obj;
+
+    rina::rib::RIBObjectData obj1;
+    obj1.class_ = "object1_class";
+    obj1.name_ = "object1_name";
+    obj1.instance_ = 1;
+    obj1.displayable_value_ = obj1.name_ + " - " + obj1.class_;
+    objts.push_back(obj1);
+
+    rina::rib::RIBObjectData obj2;
+    obj2.class_ = "object2_class";
+    obj2.name_ = "object2_name";
+    obj2.instance_ = 2;
+    obj2.displayable_value_ = obj2.name_ + " - " + obj2.class_;
+    objts.push_back(obj2);
+
+    encoder.encode(objts, encoded_obj);
+    encoder.decode(encoded_obj, recovered_objts);
+
+    if (recovered_objts.front().class_ != obj1.class_)
+        return false;
+
+    if (recovered_objts.front().name_ != obj1.name_)
+        return false;
+
+    if (recovered_objts.front().instance_ != obj1.instance_)
+        return false;
+
+    if (recovered_objts.front().displayable_value_ != obj1.displayable_value_)
+        return false;
+
+    recovered_objts.pop_front();
+    if (recovered_objts.front().class_ != obj2.class_)
+        return false;
+
+    if (recovered_objts.front().name_ != obj2.name_)
+        return false;
+
+    if (recovered_objts.front().instance_ != obj2.instance_)
+        return false;
+
+    if (recovered_objts.front().displayable_value_ != obj2.displayable_value_)
+        return false;
+
+    LOG_IPCP_INFO("RIBDataObjectList Encoder tested successfully");
+    return true;
+}
+
+
 int main()
 {
 	bool result = test_data_transfer_constants();
@@ -753,5 +798,10 @@ int main()
 		return -1;
 	}
 
+        result = test_ribobjectdatalist();
+        if (!result) {
+                LOG_IPCP_ERR("Problems testing RIBObjectDataList Encoder");
+                return -1;
+        }
 	return 0;
 }
