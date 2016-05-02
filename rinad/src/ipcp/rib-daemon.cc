@@ -450,6 +450,11 @@ IPCPRIBDaemonImpl::IPCPRIBDaemonImpl(rina::cacep::AppConHandlerInterface *app_co
 	initialize_rib_daemon(app_con_callback);
 }
 
+IPCPRIBDaemonImpl::~IPCPRIBDaemonImpl()
+{
+	rina::rib::fini();
+}
+
 rina::rib::RIBDaemonProxy * IPCPRIBDaemonImpl::getProxy()
 {
 	if (ribd)

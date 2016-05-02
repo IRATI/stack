@@ -241,6 +241,12 @@ NamespaceManager::NamespaceManager() : INamespaceManager()
 	rib_daemon_ = 0;
 }
 
+NamespaceManager::~NamespaceManager()
+{
+	delete ps;
+}
+
+
 void NamespaceManager::set_application_process(rina::ApplicationProcess * ap)
 {
 	if (!ap)

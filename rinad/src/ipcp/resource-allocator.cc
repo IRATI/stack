@@ -380,6 +380,7 @@ ResourceAllocator::ResourceAllocator() : IResourceAllocator() {
 }
 
 ResourceAllocator::~ResourceAllocator() {
+	delete ps;
 }
 
 void ResourceAllocator::set_application_process(rina::ApplicationProcess * ap)

@@ -323,6 +323,7 @@ private:
 	rina::ThreadSafeMapOfPointers<unsigned int, rina::EnrollmentRequest> port_ids_pending_to_be_allocated_;
 
 	rina::ThreadSafeMapOfPointers<std::string, rina::Neighbor> neighbors;
+	IPCPEnrollmentTaskPS * ipcp_ps;
 };
 
 /// Handles the operations related to the "daf.management.operationalStatus" object

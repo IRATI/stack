@@ -74,7 +74,7 @@ public:
 		void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 		int set_policy_set_param(const std::string& name,
 			const std::string& value);
-		virtual ~LinkStateRoutingPs() {}
+		~LinkStateRoutingPs();
 
 private:
         // Data model of the routing component.
@@ -578,7 +578,7 @@ public:
 	/// the Òalgorithm to compute the forwarding tableÓ section. If the FSDB is not marked as
 	/// ÒmodifiedÓ nothing happens.
 	void routingTableUpdate();
-	rina::Timer timer_;
+	rina::Timer *timer_;
 private:
 	static const int MAXIMUM_BUFFER_SIZE;
 	IPCProcess * ipc_process_;

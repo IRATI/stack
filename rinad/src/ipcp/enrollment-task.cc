@@ -566,6 +566,7 @@ EnrollmentTask::EnrollmentTask() : IPCPEnrollmentTask()
 
 EnrollmentTask::~EnrollmentTask()
 {
+	delete ps;
 	if (neighbors_enroller_) {
 		delete neighbors_enroller_;
 	}

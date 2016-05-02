@@ -1783,13 +1783,20 @@ RIBDaemon::RIBDaemon(cacep::AppConHandlerInterface *app_con_callback,
 }
 
 RIBDaemon::~RIBDaemon() {
-	LOG_INFO("RIBDaemon destructor called");
-	// Delete all schemas
-	std::map<uint64_t, RIBSchema*>::iterator it;
-	for(it = ver_schema_map.begin(); it != ver_schema_map.end(); it++){
+	// Delete all RIBS
+	for(std::map<rib_handle_t, RIB*>::iterator it = handle_rib_map.begin();
+			it != handle_rib_map.end(); it++){
 		if(it->second)
 			delete it->second;
 	}
+
+	// Delete all schemas
+	for(std::map<uint64_t, RIBSchema*>::iterator it = ver_schema_map.begin();
+			it != ver_schema_map.end(); it++){
+		if(it->second)
+			delete it->second;
+	}
+	cdap::fini();
 }
 
 int64_t RIBDaemon::get_new_handle(void){
@@ -1968,6 +1975,7 @@ void RIBDaemon::destroyRIB(const rib_handle_t& handle){
 	if (rib == NULL)
 		throw eRIBNotFound();
 	delete rib;
+	handle_rib_map.erase(handle);
 }
 
 void RIBDaemon::associateRIBtoAE(const rib_handle_t& handle,
