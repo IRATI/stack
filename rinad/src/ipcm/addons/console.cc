@@ -188,6 +188,8 @@ int
 IPCMConsole::init()
 {
 	struct sockaddr_un sa_un;
+	char fill[108] = "";
+	memcpy(sa_un.sun_path, fill, 108);
 	int sfd = -1;
 	unsigned len = socket_path.size();
 
