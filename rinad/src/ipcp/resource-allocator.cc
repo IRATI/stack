@@ -359,6 +359,10 @@ bool IPCPFlowAcceptor::accept_flow(const rina::FlowRequestEvent& event)
 		return false;
 	}
 
+	//Temporary workaround to deal with flows requested by unknown IPCPs (due to use of shim-tcp-udp)
+	if (event.remoteApplicationName.processName == "Unknown app")
+		return true;
+
 	//TODO deal with the different AEs (Management vs. Data transfer), right now assuming the flow
 	//is both used for data transfer and management purposes
 	try {
