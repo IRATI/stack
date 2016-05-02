@@ -1032,22 +1032,6 @@ int send_msg(struct socket *      sock,
         return size;
 }
 
-char * tcp_udp_int_to_string(int data)
-{
-	char * result;
-
-        result = rkmalloc(10, GFP_ATOMIC);
-        if(!result)
-                return NULL;
-
-        if (sprintf(result, "%d\n", data) < 0) {
-        	rkfree(result);
-        	return NULL;
-        }
-
-	return result;
-}
-
 static int udp_process_msg(struct ipcp_instance_data * data,
                            struct socket *             sock)
 {
@@ -1061,7 +1045,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
         int                         size;
         struct ipcp_instance      * ipcp, * user_ipcp;
         unsigned long		    flags;
-        char *			    api_string;
+        char			    api_string[10];
 
         LOG_HBEAT;
 
@@ -1197,8 +1181,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 }
 
                 /* FIXME: This sets the name to the server? */
-                api_string = tcp_udp_int_to_string(flow->port_id);
-                if (!api_string){
+                if (sprintf(&api_string[0], "%d\n", flow->port_id) < 0){
                 	kfa_port_id_release(data->kfa, flow->port_id);
                 	unbind_and_destroy_flow(data, flow);
                         return -1;
@@ -1207,7 +1190,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 sname = name_create_ni();
                 if (!name_init_from_ni(sname,
                 		       "Unknown app",
-				       (const string_t*) api_string,
+				       (const string_t*) &api_string[0],
 				       "",
 				       "")) {
                         name_destroy(sname);
@@ -1558,7 +1541,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
         int                        err;
         struct ipcp_instance     * ipcp, * user_ipcp;
         unsigned long		   flags;
-        char *	   api_string;
+        char	   		   api_string[10];
 
         LOG_HBEAT;
 
@@ -1648,8 +1631,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
 
                 LOG_DBG("Queue has been created");
 
-                api_string = tcp_udp_int_to_string(flow->port_id);
-                if (!api_string){
+                if (sprintf(&api_string[0], "%d\n", flow->port_id) < 0){
                 	kfa_port_id_release(data->kfa, flow->port_id);
                 	unbind_and_destroy_flow(data, flow);
                         return -1;
@@ -1658,7 +1640,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                 sname = name_create_ni();
                 if (!name_init_from_ni(sname,
                 		       "Unknown app",
-				       (const string_t*) api_string,
+				       (const string_t*) &api_string[0],
 				       "",
 				       "")) {
                         name_destroy(sname);
