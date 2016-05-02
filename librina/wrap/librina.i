@@ -503,13 +503,13 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(differs) rina::QoSCube::operator!=(const QoSCube &other) const;
 %rename(assign) rina::EFCPConfiguration::operator=(const EFCPConfiguration &other);
 
-#This is for separating rib::init and rib::fini from cdap::init and cdap::fini
+/* This is for separating rib::init and rib::fini from cdap::init and cdap::fini */
 %rename(cdap_init) rina::cdap::init(cdap::CDAPCallbackInterface *callback, cdap_rib::concrete_syntax_t& syntax, bool is_IPCP);
 %rename(cdap_fini) rina::cdap::fini(void);
 %rename(rib_init) rina::rib::init(cacep::AppConHandlerInterface *app_con_callback, cdap_rib::cdap_params params);
 %rename(rib_fini) rina::rib::fini(void);
 
-#This is for avoiding a file name too long to be managed
+/* This is for avoiding a file name too long to be managed. */
 
 namespace rina {
 namespace rib{
