@@ -1045,7 +1045,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
         int                         size;
         struct ipcp_instance      * ipcp, * user_ipcp;
         unsigned long		    flags;
-        char			    api_string[10];
+        char			    api_string[12];
 
         LOG_HBEAT;
 
@@ -1181,7 +1181,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 }
 
                 /* FIXME: This sets the name to the server? */
-                if (sprintf(&api_string[0], "%d\n", flow->port_id) < 0){
+                if (sprintf(&api_string[0], "%d", flow->port_id) < 0){
                 	kfa_port_id_release(data->kfa, flow->port_id);
                 	unbind_and_destroy_flow(data, flow);
                         return -1;
@@ -1541,7 +1541,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
         int                        err;
         struct ipcp_instance     * ipcp, * user_ipcp;
         unsigned long		   flags;
-        char	   		   api_string[10];
+        char	   		   api_string[12];
 
         LOG_HBEAT;
 
@@ -1631,7 +1631,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
 
                 LOG_DBG("Queue has been created");
 
-                if (sprintf(&api_string[0], "%d\n", flow->port_id) < 0){
+                if (sprintf(&api_string[0], "%d", flow->port_id) < 0){
                 	kfa_port_id_release(data->kfa, flow->port_id);
                 	unbind_and_destroy_flow(data, flow);
                         return -1;
