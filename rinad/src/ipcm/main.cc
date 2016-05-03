@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <assert.h>
 #include <signal.h>
 
@@ -62,6 +63,10 @@ void handler(int signum)
 		case SIGTERM:
 		case SIGHUP:
 			rinad::IPCManager->stop();
+			break;
+		case SIGCHLD:
+			waitpid(WAIT_ANY, NULL, WNOHANG);
+			LOG_DBG("Child IPC Process Daemon died, removed from process table");
 			break;
 		default:
 			LOG_CRIT("Got unknown signal %d", signum);
@@ -202,6 +207,11 @@ int main(int argc, char * argv[])
                 return EXIT_FAILURE;
         }
         LOG_DBG("SIGPIPE handler installed successfully");
+
+	if (signal(SIGCHLD, handler) == SIG_ERR) {
+		LOG_ERR("Could not install SIGCHLD handler!");
+	}
+        LOG_DBG("SIGCHLD handler installed successfully");
 
 	//Launch wrapped main
 	try {
