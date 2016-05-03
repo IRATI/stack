@@ -153,13 +153,13 @@ static ssize_t rmt_n1_port_attr_show(struct robject *        robj,
 		spin_lock_irqsave(&n1_port->lock, flags);
 		wbusy = n1_port->wbusy;
 		spin_unlock_irqrestore(&n1_port->lock, flags);
-		return sprintf(buf, "%s", wbusy?"true":"false");
+		return sprintf(buf, "%s\n", wbusy?"true":"false");
 	}
 	if (strcmp(robject_attr_name(attr), "state") == 0) {
 		spin_lock_irqsave(&n1_port->lock, flags);
 		state = n1_port->state;
 		spin_unlock_irqrestore(&n1_port->lock, flags);
-		return sprintf(buf, "%d", (int) state);
+		return sprintf(buf, "%d\n", (int) state);
 	}
 	return 0;
 }
@@ -893,8 +893,9 @@ static void send_worker(unsigned long o)
 			stats_inc(tx, n1_port, ret);
 		}
 
-		if (n1_port->state == N1_PORT_STATE_ENABLED &&
-			n1_port->stats.plen)
+		if ((n1_port->state == N1_PORT_STATE_ENABLED ||
+		    n1_port->state == N1_PORT_STATE_DO_NOT_DISABLE) &&
+		    n1_port->stats.plen)
 			reschedule++;
 
 		rcu_read_unlock();
