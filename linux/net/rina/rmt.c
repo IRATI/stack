@@ -114,6 +114,8 @@ static ssize_t rmt_n1_port_attr_show(struct robject *        robj,
 	struct rmt_n1_port * n1_port;
 	unsigned int stats_ret;
 	unsigned long flags;
+	bool wbusy;
+	enum flow_state state;
 
 	n1_port = container_of(robj, struct rmt_n1_port, robj);
 	if (!n1_port)
@@ -147,6 +149,18 @@ static ssize_t rmt_n1_port_attr_show(struct robject *        robj,
 		stats_get(rx_bytes, n1_port, stats_ret, flags);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
+	if (strcmp(robject_attr_name(attr), "wbusy") == 0) {
+		spin_lock_irqsave(&n1_port->lock, flags);
+		wbusy = n1_port->wbusy;
+		spin_unlock_irqrestore(&n1_port->lock, flags);
+		return sprintf(buf, "%s", wbusy?"true":"false");
+	}
+	if (strcmp(robject_attr_name(attr), "state") == 0) {
+		spin_lock_irqsave(&n1_port->lock, flags);
+		state = n1_port->state;
+		spin_unlock_irqrestore(&n1_port->lock, flags);
+		return sprintf(buf, "%d", (int) state);
+	}
 	return 0;
 }
 RINA_SYSFS_OPS(rmt);
@@ -154,7 +168,7 @@ RINA_ATTRS(rmt, ps_name);
 RINA_KTYPE(rmt);
 RINA_SYSFS_OPS(rmt_n1_port);
 RINA_ATTRS(rmt_n1_port, queued_pdus, drop_pdus, err_pdus, tx_pdus,
-	tx_bytes, rx_pdus, rx_bytes);
+	   tx_bytes, rx_pdus, rx_bytes, wbusy, state);
 RINA_KTYPE(rmt_n1_port);
 
 static struct rmt_n1_port *n1_port_create(port_id_t id,
