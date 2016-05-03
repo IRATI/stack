@@ -25,6 +25,7 @@
 #include <net/sch_generic.h>
 
 #define RINA_PREFIX "shim-eth-utils"
+#define MAX_NOTIFICATIONS 5
 
 #include "logs.h"
 #include "debug.h"
@@ -39,6 +40,8 @@
 struct shim_eth_qdisc_priv {
 	uint16_t q_max_size;
 	uint16_t q_enable_thres;
+	uint16_t notifications;
+	bool 	 started_notifying;
 };
 
 static int shim_eth_qdisc_enqueue(struct sk_buff *skb, struct Qdisc *qdisc)
@@ -61,6 +64,9 @@ static int shim_eth_qdisc_enqueue(struct sk_buff *skb, struct Qdisc *qdisc)
 	if (skb_queue_len(&qdisc->q) < priv->q_max_size)
 		return __qdisc_enqueue_tail(skb, qdisc, &qdisc->q);
 
+	priv->notifications = MAX_NOTIFICATIONS;
+	priv->started_notifying = false;
+
 	return qdisc_drop(skb, qdisc);
 }
 
@@ -77,8 +83,15 @@ static struct sk_buff * shim_eth_qdisc_dequeue(struct Qdisc *qdisc)
 
 	if (skb_queue_len(&qdisc->q) > 0) {
 		struct sk_buff *skb = __qdisc_dequeue_head(qdisc, &qdisc->q);
-		if (skb_queue_len(&qdisc->q) == priv->q_enable_thres)
+		if (skb_queue_len(&qdisc->q) == priv->q_enable_thres &&
+				priv->notifications == MAX_NOTIFICATIONS)
+			priv->started_notifying = true;
+
+		if (priv->started_notifying && priv->notifications > 0) {
 			enable_write_all(qdisc->dev_queue->dev);
+			priv->notifications--;
+		}
+
 		return skb;
 	}
 
@@ -110,6 +123,8 @@ static int shim_eth_qdisc_init(struct Qdisc *qdisc, struct nlattr *opt)
 	priv = qdisc_priv(qdisc);
 	priv->q_max_size = opt->nla_len;
 	priv->q_enable_thres = opt->nla_type;
+	priv->notifications = 0;
+	priv->started_notifying = false;
 	skb_queue_head_init(&qdisc->q);
 
 	LOG_INFO("shim-eth-qdisc-init: max size: %u, enable thres: %u",

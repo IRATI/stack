@@ -1110,11 +1110,12 @@ int rmt_enable_port_id(struct rmt *instance,
 	}
 
 	n1_port->state = N1_PORT_STATE_ENABLED;
+	LOG_DBG("Changed state to ENABLED");
+
+exit:
 	if (n1_port->stats.plen)
 		tasklet_hi_schedule(&instance->egress_tasklet);
 
-	LOG_DBG("Changed state to ENABLED");
-exit:
 	n1_port_unlock_release(n1_port, flags);
 
 	return ret;
