@@ -186,13 +186,15 @@ EXPORT_SYMBOL(dtcp_config_get);
 
 int dtcp_pdu_send(struct dtcp * dtcp, struct pdu * pdu)
 {
+	struct dtp * dtp;
+
         ASSERT(dtcp);
         ASSERT(dtcp->rmt);
         ASSERT(dtcp->parent);
 
-        return dt_pdu_send(dtcp->parent,
-                           dtcp->rmt,
-                           pdu);
+        dtp = dt_dtp(dtcp->parent);
+
+        return dtp_pdu_ctrl_send(dtp, pdu);
 }
 EXPORT_SYMBOL(dtcp_pdu_send);
 

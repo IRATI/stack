@@ -40,6 +40,10 @@
 #include "dtp-ps.h"
 #include "policies.h"
 #include "serdes.h"
+#include "rds/ringq.h"
+
+#define TO_POST_LENGTH 100
+#define TO_SEND_LENGTH 16
 
 static struct policy_set_list policy_sets = {
         .head = LIST_HEAD_INIT(policy_sets.head)
@@ -82,6 +86,8 @@ struct dtp {
         struct dtp_config *       cfg;
         struct rmt *              rmt;
         struct squeue *           seqq;
+        struct ringq *            to_post;
+        struct ringq *            to_send;
         struct {
                 struct rtimer * sender_inactivity;
                 struct rtimer * receiver_inactivity;
@@ -706,7 +712,6 @@ struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         struct seq_queue_entry * pos, * n;
         struct dtp_ps *          ps;
         struct dtcp_ps *         dtcp_ps;
-        struct rqueue *          to_post;
         struct pci *             pci, * pci_ret = NULL;
 
         ASSERT(dtp);
@@ -738,12 +743,6 @@ struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
         LOG_DBG("Processing A timer expiration");
 
-        to_post = rqueue_create_ni();
-        if (!to_post) {
-                LOG_ERR("Could not create to_post list in A timer");
-                return NULL;
-        }
-
         spin_lock_bh(&seqq->lock);
         LWE = dt_sv_rcv_lft_win(dt);
         LOG_DBG("LWEU: Original LWE = %u", LWE);
@@ -771,7 +770,7 @@ struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         list_del(&pos->next);
                         seq_queue_entry_destroy(pos);
 
-                        if (rqueue_tail_push_ni(to_post, pdu)) {
+                        if (ringq_push(dtp->to_post, pdu)) {
                                 LOG_ERR("Could not post PDU %u while A timer"
                                         "(in-order)", seq_num);
                         }
@@ -804,7 +803,7 @@ struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         list_del(&pos->next);
                         seq_queue_entry_destroy(pos);
 
-                        if (rqueue_tail_push_ni(to_post, pdu)) {
+                        if (ringq_push(dtp->to_post, pdu)) {
                                 LOG_ERR("Could not post PDU %u while A timer"
                                         "(expiration)", seq_num);
                         }
@@ -822,12 +821,11 @@ finish:
         pci_ret = pci_dup_ni(pci_ret);
         spin_unlock_bh(&seqq->lock);
 
-        while (!rqueue_is_empty(to_post)) {
-                pdu = (struct pdu *) rqueue_head_pop(to_post);
+        while (!ringq_is_empty(dtp->to_post)) {
+                pdu = (struct pdu *) ringq_pop(dtp->to_post);
                 if (pdu)
                         pdu_post(dtp, pdu);
         }
-        rqueue_destroy(to_post, (void (*)(void *)) pdu_destroy);
         LOG_DBG("Finish process_Atimer_expiration");
         return pci_ret;
 }
@@ -871,8 +869,14 @@ static void tf_a(void * o)
                 if (dtcp_sending_ack_policy(dtcp)){
                         LOG_ERR("sending_ack failed");
                         rtimer_start(dtp->timers.a, a/AF);
-                        return;
                 }
+                while (!ringq_is_empty(dtp->to_send)) {
+                        struct pdu * pdu_ctrl;
+                        pdu_ctrl = ringq_pop(dtp->to_send);
+                        if (pdu_ctrl) {
+                               dt_pdu_send(dt, dtp->rmt, pdu_ctrl);
+                         }
+                 }
         } else {
                 pci = process_A_expiration(dtp, dtcp);
                 if (pci) pci_destroy(pci);
@@ -1225,6 +1229,19 @@ struct dtp * dtp_create(struct dt * dt,
                 return NULL;
         }
 
+        tmp->to_post = ringq_create(TO_POST_LENGTH);
+        if (!tmp->to_post) {
+                LOG_ERR("Unable to create to_post queue; bailing out");
+               dtp_destroy(tmp);
+               return NULL;
+        }
+        tmp->to_send = ringq_create(TO_SEND_LENGTH);
+        if (!tmp->to_send) {
+               LOG_ERR("Unable to create to_send queue; bailing out");
+               dtp_destroy(tmp);
+               return NULL;
+        }
+
         rina_component_init(&tmp->base);
 
         ps_name = (string_t *) policy_name(dtp_conf_ps_get(dtp_cfg));
@@ -1266,6 +1283,10 @@ int dtp_destroy(struct dtp * instance)
                 rtimer_destroy(instance->timers.receiver_inactivity);
         if (instance->timers.rate_window)
                 rtimer_destroy(instance->timers.rate_window);
+        if (instance->to_post) ringq_destroy(instance->to_post,
+                               (void (*)(void *)) pdu_destroy);
+        if (instance->to_send) ringq_destroy(instance->to_send,
+                               (void (*)(void *)) pdu_destroy);
 
         if (instance->seqq) squeue_destroy(instance->seqq);
         if (instance->sv)   rkfree(instance->sv);
@@ -1598,6 +1619,12 @@ static bool are_there_pdus(struct seq_queue * queue, seq_num_t LWE)
         return false;
 }
 
+int dtp_pdu_ctrl_send(struct dtp * dtp, struct pdu * pdu)
+{
+	return ringq_push(dtp->to_send, pdu);
+}
+
+
 int dtp_receive(struct dtp * instance,
                 struct pdu * pdu)
 {
@@ -1613,7 +1640,6 @@ int dtp_receive(struct dtp * instance,
         bool             in_order;
         bool             rtx_ctrl = false;
         seq_num_t        max_sdu_gap;
-        struct rqueue *  to_post;
 	int              sbytes;
 	struct efcp *		efcp = 0;
 
@@ -1693,11 +1719,17 @@ int dtp_receive(struct dtp * instance,
                         spin_lock_bh(&instance->seqq->lock);
                         dtp_squeue_flush(instance);
                         dt_sv_rcv_lft_win_set(dt, seq_num);
-                        spin_unlock_bh(&instance->seqq->lock);
                         if (dtcp) {
                                 if (dtcp_sv_update(dtcp, pci)) {
                                         LOG_ERR("Failed to update dtcp sv");
                                         return -1;
+                                }
+                        }
+                        spin_unlock_bh(&instance->seqq->lock);
+                        while (!ringq_is_empty(instance->to_send)) {
+                                struct pdu * pdu_ctrl = ringq_pop(instance->to_send);
+                                if (pdu_ctrl) {
+                                       dt_pdu_send(dt, instance->rmt, pdu_ctrl);
                                 }
                         }
                         pdu_post(instance, pdu);
@@ -1775,11 +1807,13 @@ int dtp_receive(struct dtp * instance,
                         return 0;
                 }
 
+                spin_lock_bh(&instance->seqq->lock);
                 set_lft_win_edge = !(dtcp_rtx_ctrl(dtcp_config_get(dtcp)) &&
                                      ((seq_num -LWE) > (max_sdu_gap + 1)));
 
                 if (set_lft_win_edge) {
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
+                                spin_unlock_bh(&instance->seqq->lock);
                                 LOG_ERR("Failed to set new left window edge");
                                 goto fail;
                         }
@@ -1787,8 +1821,17 @@ int dtp_receive(struct dtp * instance,
 
                 if (dtcp) {
                         if (dtcp_sv_update(dtcp, pci)) {
+                                spin_unlock_bh(&instance->seqq->lock);
                                 LOG_ERR("Failed to update dtcp sv");
                                 goto fail;
+                        }
+                        spin_unlock_bh(&instance->seqq->lock);
+                        while (!ringq_is_empty(instance->to_send)) {
+                                struct pdu * pdu_ctrl;
+                                pdu_ctrl = ringq_pop(instance->to_send);
+                                if (pdu_ctrl) {
+                                       dt_pdu_send(dt, instance->rmt, pdu_ctrl);
+                                }
                         }
                         if (!set_lft_win_edge) {
                                 pdu_destroy(pdu);
@@ -1808,19 +1851,12 @@ int dtp_receive(struct dtp * instance,
         }
 
         spin_lock_bh(&instance->seqq->lock);
-	/* FIXME we must avoid allocating memory here */
-        to_post = rqueue_create_ni();
-        if (!to_post) {
-                LOG_ERR("Could not create to_post queue");
-                pdu_destroy(pdu);
-                return -1;
-        }
 
         LWE = dt_sv_rcv_lft_win(dt);
         LOG_DBG("DTP receive LWE: %u", LWE);
         if (seq_num == LWE + 1) {
                 dt_sv_rcv_lft_win_set(dt, seq_num);
-                rqueue_tail_push_ni(to_post, pdu);
+                ringq_push(instance->to_post, pdu);
                 LWE = seq_num;
         } else {
                 seq_queue_push_ni(instance->seqq->queue, pdu);
@@ -1833,29 +1869,36 @@ int dtp_receive(struct dtp * instance,
                 seq_num = pci_sequence_number_get(pci);
                 LWE     = seq_num;
                 dt_sv_rcv_lft_win_set(dt, seq_num);
-                rqueue_tail_push_ni(to_post, pdu);
+                ringq_push(instance->to_post, pdu);
+        }
+        if (dtcp) {
+                if (dtcp_sv_update(dtcp, pci)) {
+                        LOG_ERR("Failed to update dtcp sv");
+                }
         }
         spin_unlock_bh(&instance->seqq->lock);
+
+        while (!ringq_is_empty(instance->to_send)) {
+        	struct pdu * pdu_ctrl = ringq_pop(instance->to_send);
+                if (pdu_ctrl) {
+                	dt_pdu_send(dt, instance->rmt, pdu_ctrl);
+                }
+
+        }
 
         if (list_empty(&instance->seqq->queue->head))
                 rtimer_stop(instance->timers.a);
         else
                 rtimer_start(instance->timers.a, a/AF);
 
-        if (dtcp) {
-                if (dtcp_sv_update(dtcp, pci)) {
-                        LOG_ERR("Failed to update dtcp sv");
-                }
-        }
-        while (!rqueue_is_empty(to_post)) {
-                pdu = (struct pdu *) rqueue_head_pop(to_post);
+        while (!ringq_is_empty(instance->to_post)) {
+                pdu = (struct pdu *) ringq_pop(instance->to_post);
                 if (pdu) {
                 	sbytes = buffer_length(pdu_buffer_get_ro(pdu));
                         pdu_post(instance, pdu);
 			stats_inc_bytes(rx, sv, sbytes);
 		}
         }
-        rqueue_destroy(to_post, (void (*)(void *)) pdu_destroy);
 
         LOG_DBG("DTP receive ended...");
         return 0;

@@ -32,5 +32,8 @@
 #include "rtimer.h"
 #include "rwq.h"
 #include "rstr.h"
+#include "ringq.h"
+
+bool regression_tests_rds(void);
 
 #endif
