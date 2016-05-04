@@ -46,6 +46,15 @@ struct sdup_crypto_ps_default_data {
 	bool 		enable_encryption;
 	bool		enable_decryption;
 
+	/*next seq num to be used on tx*/
+	unsigned int    tx_seq_num;
+	/*highest received seq number (most significant bit of bitmap)*/
+	unsigned int    rx_seq_num;
+	/*bitmap of received seq numbers*/
+	unsigned char * seq_bmap;
+	unsigned int seq_bmap_len;
+	unsigned int seq_win_size;
+
 	string_t *      enc_key_tx;
 	string_t *      enc_key_rx;
 	string_t *      mac_key_tx;
@@ -81,6 +90,11 @@ static struct sdup_crypto_ps_default_data * priv_data_create(void)
 	data->message_digest = NULL;
 	data->compress_alg = NULL;
 
+	data->tx_seq_num = 0;
+	data->rx_seq_num = 0;
+	data->seq_bmap = NULL;
+	data->seq_win_size = 0;
+	data->seq_bmap_len = 0;
 	return data;
 }
 
@@ -130,6 +144,11 @@ static void priv_data_destroy(struct sdup_crypto_ps_default_data * data)
 	if (data->message_digest) {
 		rkfree(data->message_digest);
 		data->message_digest = NULL;
+	}
+
+	if (data->seq_bmap) {
+		rkfree(data->seq_bmap);
+		data->seq_bmap = NULL;
 	}
 
 	rkfree(data);
@@ -439,11 +458,124 @@ static int check_hmac(struct sdup_crypto_ps_default_data * priv_data,
 	return 0;
 }
 
+static int add_seq_num(struct sdup_crypto_ps_default_data * priv_data,
+		       struct pdu_ser * pdu)
+{
+	struct buffer * buf;
+	char *		data;
+
+	if (!priv_data || !pdu){
+		LOG_ERR("Encryption arguments not initialized!");
+		return -1;
+	}
+
+	/* encryption and therefore sequence numbers are disabled */
+	if (!priv_data->enable_encryption)
+		return 0;
+
+	buf = pdu_ser_buffer(pdu);
+
+	if (pdu_ser_head_grow_gfp(GFP_ATOMIC,
+				  pdu,
+				  sizeof(priv_data->tx_seq_num))){
+		LOG_ERR("Failed to grow ser PDU");
+		return -1;
+	}
+
+	data = buffer_data_rw(buf);
+	memcpy(data, &priv_data->tx_seq_num, sizeof(priv_data->tx_seq_num));
+
+	LOG_DBG("Added sequence number %u", priv_data->tx_seq_num);
+
+	priv_data->tx_seq_num += 1;
+
+	return 0;
+}
+
+static int del_seq_num(struct sdup_crypto_ps_default_data * priv_data,
+		       struct pdu_ser * pdu)
+{
+	struct buffer * buf;
+	char *		data;
+	unsigned int    seq_num;
+	long int	min_seq_num;
+	int		i, shift_length;
+	unsigned char * bmap;
+	unsigned int	bit_pos, byte_pos;
+
+	if (!priv_data || !pdu){
+		LOG_ERR("Encryption arguments not initialized!");
+		return -1;
+	}
+
+	/* decryption and therefore sequence numbers are disabled */
+	if (!priv_data->enable_decryption)
+		return 0;
+
+	buf = pdu_ser_buffer(pdu);
+	data = buffer_data_rw(buf);
+
+	memcpy(&seq_num, data, sizeof(priv_data->tx_seq_num));
+
+	if (pdu_ser_head_shrink_gfp(GFP_ATOMIC,
+				    pdu,
+				    sizeof(priv_data->tx_seq_num))){
+		LOG_ERR("Failed to grow ser PDU");
+		return -1;
+	}
+
+	LOG_DBG("Got sequence number %u", seq_num);
+
+	if (priv_data->seq_win_size == 0)
+		return 0;
+
+	min_seq_num = (long int)priv_data->rx_seq_num - priv_data->seq_win_size;
+	if (seq_num < min_seq_num){
+		LOG_ERR("Sequence number %u is too old", seq_num);
+		return -1;
+	} else {
+		//shift bitmap to right
+		shift_length = seq_num - priv_data->rx_seq_num;
+		bmap = priv_data->seq_bmap;
+		while (shift_length-- > 0){
+			for (i = priv_data->seq_bmap_len - 1; i>=0; i--){
+				bmap[i] >>= 1;
+				if (i>0 && bmap[i-1] & 1){
+					bmap[i] |= 1<<7;
+				}
+			}
+		}
+
+		//set new highest received sequence number
+		if (seq_num > priv_data->rx_seq_num)
+			priv_data->rx_seq_num = seq_num;
+
+		bit_pos = priv_data->rx_seq_num - seq_num;
+		byte_pos = bit_pos / 8;
+		bit_pos = 7 - (bit_pos % 8);
+
+		//check bitmap for duplicate sequence number
+		if (bmap[byte_pos] & (1 << bit_pos)){
+			LOG_ERR("Sequence number %u already received.",
+				seq_num);
+			return -1;
+		} else {
+			bmap[byte_pos] |= 1 << bit_pos;
+			return 0;
+		}
+	}
+	return 0;
+}
+
 int default_sdup_apply_crypto(struct sdup_crypto_ps * ps,
 			      struct pdu_ser * pdu)
 {
 	int result = 0;
 	struct sdup_crypto_ps_default_data * priv_data = ps->priv;
+
+	result = add_seq_num(priv_data, pdu);
+	if (result)
+		return result;
 
 	result = add_hmac(priv_data, pdu);
 	if (result)
@@ -473,6 +605,10 @@ int default_sdup_remove_crypto(struct sdup_crypto_ps * ps,
 		return result;
 
 	result = check_hmac(priv_data, pdu);
+	if (result)
+		return result;
+
+	result = del_seq_num(priv_data, pdu);
 	if (result)
 		return result;
 
@@ -669,6 +805,37 @@ struct ps_base * sdup_crypto_ps_default_create(struct rina_component * component
 			LOG_DBG("Message digest is %s", data->message_digest);
 		} else {
 			LOG_DBG("Unsupported message digest %s", aux);
+		}
+
+		parameter = policy_param_find(conf->crypto_policy,
+					      "seq_win_size");
+		if (!parameter) {
+			data->seq_win_size = 0;
+		} else {
+			aux = policy_param_value(parameter);
+			if (kstrtoint(aux, 10, &data->seq_win_size)) {
+				LOG_ERR("Problems copying 'seq_win_size' value");
+				rkfree(ps);
+				priv_data_destroy(data);
+				return NULL;
+			}
+
+			data->seq_bmap_len = data->seq_win_size / 8;
+			if (data->seq_win_size % 8) {
+				data->seq_bmap_len += 1;
+			}
+
+			data->seq_bmap = rkzalloc(data->seq_bmap_len,
+						  GFP_KERNEL);
+			if (!data->seq_bmap) {
+				LOG_ERR("Problems allocating sequence number window.");
+				rkfree(ps);
+				priv_data_destroy(data);
+				return NULL;
+			}
+
+			LOG_DBG("Sequence number window size is %d",
+				data->seq_win_size);
 		}
 
 	} else {
