@@ -137,6 +137,8 @@ default_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
         /* Invoke delimiting and update left window edge */
 
         pci = process_A_expiration(dtp, dtcp);
+        if (!pci)
+                return 0;
 
         return dtcp_sv_update(ps->dm, pci);
 }
