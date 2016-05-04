@@ -65,8 +65,10 @@ void handler(int signum)
 			rinad::IPCManager->stop();
 			break;
 		case SIGCHLD:
-			waitpid(WAIT_ANY, NULL, WNOHANG);
-			LOG_DBG("Child IPC Process Daemon died, removed from process table");
+			while (waitpid(WAIT_ANY, NULL, WNOHANG) > 0) {
+				LOG_DBG("Child IPC Process Daemon died, removed from process table");
+			}
+
 			break;
 		default:
 			LOG_CRIT("Got unknown signal %d", signum);
