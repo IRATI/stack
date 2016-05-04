@@ -53,6 +53,8 @@ using namespace TCLAP;
 
 void handler(int signum)
 {
+	int pid;
+
 	switch(signum){
 		case SIGSEGV:
 			LOG_CRIT("Got signal SIGSEGV");
@@ -65,9 +67,13 @@ void handler(int signum)
 			rinad::IPCManager->stop();
 			break;
 		case SIGCHLD:
-			while (waitpid(WAIT_ANY, NULL, WNOHANG) > 0) {
-				LOG_DBG("Child IPC Process Daemon died, removed from process table");
+			while (pid = waitpid(WAIT_ANY, NULL, WNOHANG), pid > 0) {
+				LOG_DBG("Child IPC Process Daemon %d died, removed from process table",
+					pid);
 			}
+
+			if (pid)
+				LOG_ERR("Waitpid returned error %d", pid);
 
 			break;
 		default:
