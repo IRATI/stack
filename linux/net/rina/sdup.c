@@ -313,7 +313,8 @@ static void sdup_port_destroy(struct sdup_port * instance)
 };
 
 static struct sdup_port * sdup_port_create(port_id_t port_id,
-				    struct dup_config_entry * dup_conf)
+					   struct dup_config_entry * dup_conf,
+					   struct dt_cons * dt_cons)
 {
 	struct sdup_port * tmp;
 	const string_t * crypto_ps_name;
@@ -334,6 +335,7 @@ static struct sdup_port * sdup_port_create(port_id_t port_id,
 
 	tmp->port_id = port_id;
 	tmp->conf = dup_conf;
+	tmp->dt_cons = dt_cons;
 
 	if (dup_conf->crypto_policy) {
 		crypto_ps_name = policy_name(dup_conf->crypto_policy);
@@ -610,6 +612,25 @@ int sdup_config_set(struct sdup *        instance,
 }
 EXPORT_SYMBOL(sdup_config_set);
 
+int sdup_dt_cons_set(struct sdup *        instance,
+		     struct dt_cons *     dt_cons)
+{
+	if (!instance) {
+		LOG_ERR("Bogus instance passed");
+		return -1;
+	}
+
+	if (!dt_cons) {
+		LOG_ERR("Bogus dt_cons passed");
+		return -1;
+	}
+
+	instance->dt_cons = dt_cons;
+
+	return 0;
+}
+EXPORT_SYMBOL(sdup_dt_cons_set);
+
 struct sdup * sdup_create(struct ipcp_instance * parent)
 {
 	struct sdup * tmp;
@@ -673,7 +694,7 @@ struct sdup_port * sdup_init_port_config(struct sdup * instance,
 		return NULL;
 	}
 
-	tmp = sdup_port_create(port_id, dup_conf);
+	tmp = sdup_port_create(port_id, dup_conf, instance->dt_cons);
 	if (!tmp) {
 		LOG_ERR("Problems creating SDUP port for port_id %d", port_id);
 		return NULL;
