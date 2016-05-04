@@ -26,6 +26,7 @@
 #include <linux/crypto.h>
 #include <linux/scatterlist.h>
 #include <linux/random.h>
+#include <crypto/hash.h>
 
 #define RINA_PREFIX "sdup-crypto-ps-default"
 
@@ -39,11 +40,16 @@ struct sdup_crypto_ps_default_data {
 	struct crypto_blkcipher * tx_blkcipher;
 	struct crypto_blkcipher * rx_blkcipher;
 
+	struct crypto_shash * tx_shash;
+	struct crypto_shash * rx_shash;
+
 	bool 		enable_encryption;
 	bool		enable_decryption;
 
 	string_t *      enc_key_tx;
 	string_t *      enc_key_rx;
+	string_t *      mac_key_tx;
+	string_t *      mac_key_rx;
 
 	string_t * 	encryption_cipher;
 	string_t * 	message_digest;
@@ -60,11 +66,16 @@ static struct sdup_crypto_ps_default_data * priv_data_create(void)
 	data->tx_blkcipher = NULL;
 	data->rx_blkcipher = NULL;
 
+	data->tx_shash = NULL;
+	data->rx_shash = NULL;
+
 	data->enable_decryption = false;
 	data->enable_encryption = false;
 
 	data->enc_key_tx = NULL;
 	data->enc_key_rx = NULL;
+	data->mac_key_tx = NULL;
+	data->mac_key_rx = NULL;
 
 	data->encryption_cipher = NULL;
 	data->message_digest = NULL;
@@ -83,6 +94,11 @@ static void priv_data_destroy(struct sdup_crypto_ps_default_data * data)
 	if (data->rx_blkcipher)
 		crypto_free_blkcipher(data->rx_blkcipher);
 
+	if (data->tx_shash)
+		crypto_free_shash(data->tx_shash);
+	if (data->rx_shash)
+		crypto_free_shash(data->rx_shash);
+
 	if (data->enc_key_tx) {
 		rkfree(data->enc_key_tx);
 		data->enc_key_tx = NULL;
@@ -90,6 +106,15 @@ static void priv_data_destroy(struct sdup_crypto_ps_default_data * data)
 	if (data->enc_key_rx) {
 		rkfree(data->enc_key_rx);
 		data->enc_key_rx = NULL;
+	}
+
+	if (data->mac_key_tx) {
+		rkfree(data->mac_key_tx);
+		data->mac_key_tx = NULL;
+	}
+	if (data->mac_key_rx) {
+		rkfree(data->mac_key_rx);
+		data->mac_key_rx = NULL;
 	}
 
 	if (data->compress_alg) {
@@ -317,11 +342,112 @@ static int decrypt(struct sdup_crypto_ps_default_data * priv_data,
 	return 0;
 }
 
+static int add_hmac(struct sdup_crypto_ps_default_data * priv_data,
+		    struct pdu_ser * pdu)
+{
+	struct buffer *		buf;
+	unsigned int		buffer_size;
+	void *			data;
+	unsigned int		digest_size;
+	SHASH_DESC_ON_STACK(shash, priv_data->tx_shash);
+
+	if (!priv_data || !pdu){
+		LOG_ERR("HMAC arguments not initialized!");
+		return -1;
+	}
+
+	/* encryption is disabled so hmac is disabled*/
+	if (priv_data->tx_shash == NULL ||
+	    !priv_data->enable_encryption)
+		return 0;
+
+	buf = pdu_ser_buffer(pdu);
+	buffer_size = buffer_length(buf);
+	digest_size = crypto_shash_digestsize(priv_data->tx_shash);
+
+	if (pdu_ser_tail_grow_gfp(pdu, digest_size)){
+		LOG_ERR("Failed to grow ser PDU for HMAC");
+		return -1;
+	}
+
+	data = buffer_data_rw(buf);
+
+	shash->flags = 0;
+	shash->tfm = priv_data->tx_shash;
+
+	if (crypto_shash_digest(shash, data, buffer_size, data+buffer_size)) {
+		LOG_ERR("HMAC calculation failed!");
+		return -1;
+	}
+
+	return 0;
+}
+
+static int check_hmac(struct sdup_crypto_ps_default_data * priv_data,
+		      struct pdu_ser * pdu)
+{
+	struct buffer *		buf;
+	unsigned int		buffer_size;
+	void *			data;
+	unsigned int		digest_size;
+	char *			verify_digest;
+	SHASH_DESC_ON_STACK(shash, priv_data->tx_shash);
+
+	if (!priv_data || !pdu){
+		LOG_ERR("HMAC arguments not initialized!");
+		return -1;
+	}
+
+	/* decryption is disabled so hmac is disabled*/
+	if (priv_data->rx_shash == NULL ||
+	    !priv_data->enable_decryption)
+		return 0;
+
+	buf = pdu_ser_buffer(pdu);
+	buffer_size = buffer_length(buf);
+	data = buffer_data_rw(buf);
+
+	digest_size = crypto_shash_digestsize(priv_data->tx_shash);
+	verify_digest = rkzalloc(digest_size, GFP_KERNEL);
+	if(!verify_digest){
+		LOG_ERR("HMAC allocation failed!");
+		return -1;
+	}
+
+	shash->flags = 0;
+	shash->tfm = priv_data->rx_shash;
+
+	if (crypto_shash_digest(shash, data, buffer_size-digest_size, verify_digest)) {
+		LOG_ERR("HMAC calculation failed!");
+		rkfree(verify_digest);
+		return -1;
+	}
+
+	if (memcmp(verify_digest, data+buffer_size-digest_size, digest_size)){
+		LOG_ERR("HMAC verification FAILED!");
+		rkfree(verify_digest);
+		return -1;
+	}
+
+	if (pdu_ser_tail_shrink_gfp(pdu, digest_size)){
+		LOG_ERR("Failed to shrink serialized PDU");
+		rkfree(verify_digest);
+		return -1;
+	}
+
+	rkfree(verify_digest);
+	return 0;
+}
+
 int default_sdup_apply_crypto(struct sdup_crypto_ps * ps,
 			      struct pdu_ser * pdu)
 {
 	int result = 0;
 	struct sdup_crypto_ps_default_data * priv_data = ps->priv;
+
+	result = add_hmac(priv_data, pdu);
+	if (result)
+		return result;
 
 	result = add_padding(priv_data, pdu);
 	if (result)
@@ -342,7 +468,15 @@ int default_sdup_remove_crypto(struct sdup_crypto_ps * ps,
 	if (result)
 		return result;
 
-	return remove_padding(priv_data, pdu);
+	result = remove_padding(priv_data, pdu);
+	if (result)
+		return result;
+
+	result = check_hmac(priv_data, pdu);
+	if (result)
+		return result;
+
+	return result;
 }
 EXPORT_SYMBOL(default_sdup_remove_crypto);
 
@@ -366,6 +500,15 @@ int default_sdup_update_crypto_state(struct sdup_crypto_ps * ps,
 		return -1;
 	}
 
+	if (!state->mac_key_tx) {
+		LOG_ERR("Bogus tx mac key passed");
+		return -1;
+	}
+	if (!state->mac_key_rx) {
+		LOG_ERR("Bogus rx mac key passed");
+		return -1;
+	}
+
 	priv_data = ps->priv;
 
 	if (!priv_data->tx_blkcipher) {
@@ -380,12 +523,32 @@ int default_sdup_update_crypto_state(struct sdup_crypto_ps * ps,
 		return -1;
 	}
 
+	if (!priv_data->tx_shash) {
+		LOG_ERR("TX shash is not set for N-1 port %d",
+			ps->dm->port_id);
+		return -1;
+	}
+
+	if (!priv_data->rx_shash) {
+		LOG_ERR("RX shash is not set for N-1 port %d",
+			ps->dm->port_id);
+		return -1;
+	}
+
 	if (!priv_data->enable_decryption && state->enable_crypto_rx){
 		priv_data->enable_decryption = state->enable_crypto_rx;
 		if (crypto_blkcipher_setkey(priv_data->rx_blkcipher,
 					    buffer_data_ro(state->encrypt_key_rx),
 					    buffer_length(state->encrypt_key_rx))) {
 			LOG_ERR("Could not set decryption key for N-1 port %d",
+				ps->dm->port_id);
+			return -1;
+		}
+
+		if (crypto_shash_setkey(priv_data->rx_shash,
+					buffer_data_ro(state->mac_key_rx),
+					buffer_length(state->mac_key_rx))) {
+			LOG_ERR("Could not set rx mac key for N-1 port %d",
 				ps->dm->port_id);
 			return -1;
 		}
@@ -396,6 +559,14 @@ int default_sdup_update_crypto_state(struct sdup_crypto_ps * ps,
 					    buffer_data_ro(state->encrypt_key_tx),
 					    buffer_length(state->encrypt_key_tx))) {
 			LOG_ERR("Could not set encryption key for N-1 port %d",
+				ps->dm->port_id);
+			return -1;
+		}
+
+		if (crypto_shash_setkey(priv_data->tx_shash,
+					buffer_data_ro(state->mac_key_tx),
+					buffer_length(state->mac_key_tx))) {
+			LOG_ERR("Could not set tx mac key for N-1 port %d",
 				ps->dm->port_id);
 			return -1;
 		}
@@ -480,8 +651,8 @@ struct ps_base * sdup_crypto_ps_default_create(struct rina_component * component
 		}
 
 		aux = policy_param_value(parameter);
-		if (string_cmp(aux, "SHA1") == 0) {
-			if (string_dup("sha1", &data->message_digest)) {
+		if (string_cmp(aux, "SHA256") == 0) {
+			if (string_dup("hmac(sha256)", &data->message_digest)) {
 				LOG_ERR("Problems copying 'digest' value");
 				rkfree(ps);
 				priv_data_destroy(data);
@@ -489,7 +660,7 @@ struct ps_base * sdup_crypto_ps_default_create(struct rina_component * component
 			}
 			LOG_DBG("Message digest is %s", data->message_digest);
 		} else if (string_cmp(aux, "MD5") == 0) {
-			if (string_dup("md5", &data->message_digest)) {
+			if (string_dup("hmac(md5)", &data->message_digest)) {
 				LOG_ERR("Problems copying 'digest' value)");
 				rkfree(ps);
 				priv_data_destroy(data);
@@ -513,6 +684,9 @@ struct ps_base * sdup_crypto_ps_default_create(struct rina_component * component
 	data->rx_blkcipher = crypto_alloc_blkcipher(data->encryption_cipher,
 						    0,0);
 
+	data->tx_shash = crypto_alloc_shash(data->message_digest, 0,0);
+	data->rx_shash = crypto_alloc_shash(data->message_digest, 0,0);
+
 	if (IS_ERR(data->tx_blkcipher)) {
 		LOG_ERR("could not allocate tx blkcipher handle for %s\n",
 			data->encryption_cipher);
@@ -523,6 +697,21 @@ struct ps_base * sdup_crypto_ps_default_create(struct rina_component * component
 	if (IS_ERR(data->rx_blkcipher)) {
 		LOG_ERR("could not allocate rx blkcipher handle for %s\n",
 			data->encryption_cipher);
+		rkfree(ps);
+		priv_data_destroy(data);
+		return NULL;
+	}
+
+	if (IS_ERR(data->tx_shash)) {
+		LOG_ERR("could not allocate tx shash handle for %s\n",
+			data->message_digest);
+		rkfree(ps);
+		priv_data_destroy(data);
+		return NULL;
+	}
+	if (IS_ERR(data->rx_shash)) {
+		LOG_ERR("could not allocate rx shash handle for %s\n",
+			data->message_digest);
 		rkfree(ps);
 		priv_data_destroy(data);
 		return NULL;
