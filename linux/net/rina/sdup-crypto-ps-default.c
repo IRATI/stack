@@ -25,6 +25,7 @@
 #include <linux/hashtable.h>
 #include <linux/crypto.h>
 #include <linux/scatterlist.h>
+#include <linux/random.h>
 
 #define RINA_PREFIX "sdup-crypto-ps-default"
 
@@ -35,9 +36,15 @@
 #include "debug.h"
 
 struct sdup_crypto_ps_default_data {
-	struct crypto_blkcipher * blkcipher;
+	struct crypto_blkcipher * tx_blkcipher;
+	struct crypto_blkcipher * rx_blkcipher;
+
 	bool 		enable_encryption;
 	bool		enable_decryption;
+
+	string_t *      enc_key_tx;
+	string_t *      enc_key_rx;
+
 	string_t * 	encryption_cipher;
 	string_t * 	message_digest;
 	string_t * 	compress_alg;
@@ -46,13 +53,19 @@ struct sdup_crypto_ps_default_data {
 static struct sdup_crypto_ps_default_data * priv_data_create(void)
 {
 	struct sdup_crypto_ps_default_data * data =
-			rkmalloc(sizeof(*data), GFP_KERNEL);
+		rkmalloc(sizeof(*data), GFP_KERNEL);
 	if (!data)
 		return NULL;
 
-	data->blkcipher = NULL;
+	data->tx_blkcipher = NULL;
+	data->rx_blkcipher = NULL;
+
 	data->enable_decryption = false;
 	data->enable_encryption = false;
+
+	data->enc_key_tx = NULL;
+	data->enc_key_rx = NULL;
+
 	data->encryption_cipher = NULL;
 	data->message_digest = NULL;
 	data->compress_alg = NULL;
@@ -65,8 +78,19 @@ static void priv_data_destroy(struct sdup_crypto_ps_default_data * data)
 	if (!data)
 		return;
 
-	if (data->blkcipher)
-		crypto_free_blkcipher(data->blkcipher);
+	if (data->tx_blkcipher)
+		crypto_free_blkcipher(data->tx_blkcipher);
+	if (data->rx_blkcipher)
+		crypto_free_blkcipher(data->rx_blkcipher);
+
+	if (data->enc_key_tx) {
+		rkfree(data->enc_key_tx);
+		data->enc_key_tx = NULL;
+	}
+	if (data->enc_key_rx) {
+		rkfree(data->enc_key_rx);
+		data->enc_key_rx = NULL;
+	}
 
 	if (data->compress_alg) {
 		rkfree(data->compress_alg);
@@ -86,13 +110,13 @@ static void priv_data_destroy(struct sdup_crypto_ps_default_data * data)
 	rkfree(data);
 }
 
-static int default_sdup_add_padding_policy(struct sdup_crypto_ps_default_data * priv_data,
-				    	   struct pdu_ser * pdu)
+static int add_padding(struct sdup_crypto_ps_default_data * priv_data,
+		       struct pdu_ser * pdu)
 {
 	struct buffer * buf;
-	ssize_t		buffer_size;
-	ssize_t		padded_size;
-	ssize_t		blk_size;
+	unsigned int	buffer_size;
+	unsigned int	padded_size;
+	unsigned int	blk_size;
 	char *		data;
 	int i;
 
@@ -102,16 +126,13 @@ static int default_sdup_add_padding_policy(struct sdup_crypto_ps_default_data * 
 	}
 
 	/* encryption and therefore padding is disabled */
-	if (priv_data->blkcipher == NULL ||
-	    !priv_data->enable_encryption)
+	if (!priv_data->enable_encryption)
 		return 0;
 
-	LOG_DBG("PADDING!");
-
 	buf = pdu_ser_buffer(pdu);
-	blk_size = crypto_blkcipher_blocksize(priv_data->blkcipher);
+	blk_size = crypto_blkcipher_blocksize(priv_data->tx_blkcipher);
 	buffer_size = buffer_length(buf);
-	padded_size = (buffer_size/blk_size + 1) * blk_size;
+	padded_size = buffer_size + blk_size - (buffer_size % blk_size);
 
 	if (pdu_ser_tail_grow_gfp(pdu, padded_size - buffer_size)){
 		LOG_ERR("Failed to grow ser PDU");
@@ -127,13 +148,13 @@ static int default_sdup_add_padding_policy(struct sdup_crypto_ps_default_data * 
 	return 0;
 }
 
-static int default_sdup_remove_padding_policy(struct sdup_crypto_ps_default_data * priv_data,
-				       	      struct pdu_ser * pdu)
+static int remove_padding(struct sdup_crypto_ps_default_data * priv_data,
+			  struct pdu_ser * pdu)
 {
 	struct buffer *	buf;
 	const char *	data;
-	ssize_t		len;
-	ssize_t		pad_len;
+	unsigned int	len;
+	unsigned int	pad_len;
 	int		i;
 
 	if (!priv_data || !pdu){
@@ -142,11 +163,9 @@ static int default_sdup_remove_padding_policy(struct sdup_crypto_ps_default_data
 	}
 
 	/* decryption and therefore padding is disabled */
-	if (priv_data->blkcipher == NULL ||
-	    !priv_data->enable_decryption)
+	if (!priv_data->enable_decryption)
 		return 0;
 
-	LOG_DBG("UNPADDING!");
 	buf = pdu_ser_buffer(pdu);
 	data = buffer_data_ro(buf);
 	len = buffer_length(buf);
@@ -169,15 +188,16 @@ static int default_sdup_remove_padding_policy(struct sdup_crypto_ps_default_data
 	return 0;
 }
 
-static int default_sdup_encrypt_policy(struct sdup_crypto_ps_default_data * priv_data,
-				       struct pdu_ser * pdu)
+static int encrypt(struct sdup_crypto_ps_default_data * priv_data,
+		   struct pdu_ser * pdu)
 {
 	struct blkcipher_desc	desc;
-	struct scatterlist	sg_src;
-	struct scatterlist	sg_dst;
+	struct scatterlist	sg;
 	struct buffer *		buf;
-	ssize_t			buffer_size;
+	unsigned int		buffer_size;
 	void *			data;
+	char *                  iv;
+	unsigned int		ivsize;
 
 	if (!priv_data || !pdu){
 		LOG_ERR("Encryption arguments not initialized!");
@@ -185,38 +205,64 @@ static int default_sdup_encrypt_policy(struct sdup_crypto_ps_default_data * priv
 	}
 
 	/* encryption is disabled */
-	if (priv_data->blkcipher == NULL ||
+	if (priv_data->tx_blkcipher == NULL ||
 	    !priv_data->enable_encryption)
 		return 0;
 
-	LOG_DBG("ENCRYPT!");
-
 	desc.flags = 0;
-	desc.tfm = priv_data->blkcipher;
+	desc.tfm = priv_data->tx_blkcipher;
+
 	buf = pdu_ser_buffer(pdu);
 	buffer_size = buffer_length(buf);
 	data = buffer_data_rw(buf);
 
-	sg_init_one(&sg_src, data, buffer_size);
-	sg_init_one(&sg_dst, data, buffer_size);
+	iv = NULL;
+	ivsize = crypto_blkcipher_ivsize(priv_data->tx_blkcipher);
+	if (ivsize) {
+		iv = rkzalloc(ivsize, GFP_KERNEL);
+		if (!iv){
+			LOG_ERR("IV allocation failed!");
+		}
+		get_random_bytes(iv, ivsize);
+	}
 
-	if (crypto_blkcipher_encrypt(&desc, &sg_dst, &sg_src, buffer_size)) {
+	sg_init_one(&sg, data, buffer_size);
+
+	if (iv)
+		crypto_blkcipher_set_iv(priv_data->tx_blkcipher, iv, ivsize);
+
+	if (crypto_blkcipher_encrypt(&desc, &sg, &sg, buffer_size)) {
 		LOG_ERR("Encryption failed!");
+		if (iv)
+			rkfree(iv);
 		return -1;
 	}
 
+	if (pdu_ser_head_grow_gfp(GFP_ATOMIC, pdu, ivsize)){
+		LOG_ERR("Failed to grow ser PDU for IV");
+		if (iv)
+			rkfree(iv);
+		return -1;
+	}
+
+	data = buffer_data_rw(buf);
+	memcpy(data, iv, ivsize);
+
+	if (iv)
+		rkfree(iv);
 	return 0;
 }
 
-static int default_sdup_decrypt_policy(struct sdup_crypto_ps_default_data * priv_data,
-				       struct pdu_ser * pdu)
+static int decrypt(struct sdup_crypto_ps_default_data * priv_data,
+		   struct pdu_ser * pdu)
 {
 	struct blkcipher_desc	desc;
-	struct scatterlist	sg_src;
-	struct scatterlist	sg_dst;
+	struct scatterlist	sg;
 	struct buffer *		buf;
-	ssize_t			buffer_size;
+	unsigned int		buffer_size;
 	void *			data;
+	char *                  iv;
+	unsigned int		ivsize;
 
 	if (!priv_data || !pdu){
 		LOG_ERR("Failed decryption");
@@ -224,26 +270,50 @@ static int default_sdup_decrypt_policy(struct sdup_crypto_ps_default_data * priv
 	}
 
 	/* decryption is disabled */
-	if (priv_data->blkcipher == NULL ||
+	if (priv_data->rx_blkcipher == NULL ||
 	    !priv_data->enable_decryption)
 		return 0;
 
-	LOG_DBG("DECRYPT!");
+	buf = pdu_ser_buffer(pdu);
+	data = buffer_data_rw(buf);
+
+	iv = NULL;
+	ivsize = crypto_blkcipher_ivsize(priv_data->rx_blkcipher);
+	if (ivsize) {
+		iv = rkzalloc(ivsize, GFP_KERNEL);
+		if (!iv){
+			LOG_ERR("IV allocation failed!");
+		}
+		memcpy(iv, data, ivsize);
+
+		if (pdu_ser_head_shrink_gfp(GFP_ATOMIC, pdu, ivsize)){
+			LOG_ERR("Failed to shrink ser PDU by IV");
+			if (iv)
+				rkfree(iv);
+			return -1;
+		}
+	}
 
 	desc.flags = 0;
-	desc.tfm = priv_data->blkcipher;
+	desc.tfm = priv_data->rx_blkcipher;
 	buf = pdu_ser_buffer(pdu);
 	buffer_size = buffer_length(buf);
 	data = buffer_data_rw(buf);
 
-	sg_init_one(&sg_src, data, buffer_size);
-	sg_init_one(&sg_dst, data, buffer_size);
+	sg_init_one(&sg, data, buffer_size);
 
-	if (crypto_blkcipher_decrypt(&desc, &sg_dst, &sg_src, buffer_size)) {
+	if (iv)
+		crypto_blkcipher_set_iv(priv_data->rx_blkcipher, iv, ivsize);
+
+	if (crypto_blkcipher_decrypt(&desc, &sg, &sg, buffer_size)) {
 		LOG_ERR("Decryption failed!");
+		if (iv)
+			rkfree(iv);
 		return -1;
 	}
 
+	if (iv)
+		rkfree(iv);
 	return 0;
 }
 
@@ -253,11 +323,11 @@ int default_sdup_apply_crypto(struct sdup_crypto_ps * ps,
 	int result = 0;
 	struct sdup_crypto_ps_default_data * priv_data = ps->priv;
 
-	result = default_sdup_add_padding_policy(priv_data, pdu);
+	result = add_padding(priv_data, pdu);
 	if (result)
 		return result;
 
-	return default_sdup_encrypt_policy(priv_data, pdu);
+	return encrypt(priv_data, pdu);
 }
 EXPORT_SYMBOL(default_sdup_apply_crypto);
 
@@ -266,12 +336,13 @@ int default_sdup_remove_crypto(struct sdup_crypto_ps * ps,
 {
 	int result = 0;
 	struct sdup_crypto_ps_default_data * priv_data = ps->priv;
+	struct sdup_port * port = ps->dm;
 
-	result = default_sdup_decrypt_policy(priv_data, pdu);
+	result = decrypt(priv_data, pdu);
 	if (result)
 		return result;
 
-	return default_sdup_remove_padding_policy(priv_data, pdu);
+	return remove_padding(priv_data, pdu);
 }
 EXPORT_SYMBOL(default_sdup_remove_crypto);
 
@@ -287,34 +358,47 @@ int default_sdup_update_crypto_state(struct sdup_crypto_ps * ps,
 	}
 
 	if (!state->encrypt_key_tx) {
-		LOG_ERR("Bogus encryption key passed");
+		LOG_ERR("Bogus tx encryption key passed");
+		return -1;
+	}
+	if (!state->encrypt_key_rx) {
+		LOG_ERR("Bogus rx encryption key passed");
 		return -1;
 	}
 
 	priv_data = ps->priv;
 
-	if (!priv_data->blkcipher) {
-		LOG_ERR("Block cipher is not set for N-1 port %d",
+	if (!priv_data->tx_blkcipher) {
+		LOG_ERR("TX Block cipher is not set for N-1 port %d",
 			ps->dm->port_id);
 		return -1;
 	}
 
-	if (!priv_data->enable_decryption &&
-	    !priv_data->enable_encryption) {
-		if (crypto_blkcipher_setkey(priv_data->blkcipher,
+	if (!priv_data->rx_blkcipher) {
+		LOG_ERR("RX Block cipher is not set for N-1 port %d",
+			ps->dm->port_id);
+		return -1;
+	}
+
+	if (!priv_data->enable_decryption && state->enable_crypto_rx){
+		priv_data->enable_decryption = state->enable_crypto_rx;
+		if (crypto_blkcipher_setkey(priv_data->rx_blkcipher,
+					    buffer_data_ro(state->encrypt_key_rx),
+					    buffer_length(state->encrypt_key_rx))) {
+			LOG_ERR("Could not set decryption key for N-1 port %d",
+				ps->dm->port_id);
+			return -1;
+		}
+	}
+	if (!priv_data->enable_encryption && state->enable_crypto_tx){
+		priv_data->enable_encryption = state->enable_crypto_tx;
+		if (crypto_blkcipher_setkey(priv_data->tx_blkcipher,
 					    buffer_data_ro(state->encrypt_key_tx),
 					    buffer_length(state->encrypt_key_tx))) {
 			LOG_ERR("Could not set encryption key for N-1 port %d",
 				ps->dm->port_id);
 			return -1;
 		}
-	}
-
-	if (!priv_data->enable_decryption){
-		priv_data->enable_decryption = state->enable_crypto_rx;
-	}
-	if (!priv_data->enable_encryption){
-		priv_data->enable_encryption = state->enable_crypto_tx;
 	}
 
 	LOG_DBG("Crypto rx enabled state: %d", state->enable_crypto_rx);
@@ -357,83 +441,92 @@ struct ps_base * sdup_crypto_ps_default_create(struct rina_component * component
 	}
 
 	ps->dm          = sdup_port;
-        ps->priv        = data;
+	ps->priv        = data;
 
-        /* Parse policy parameters */
-        if (conf->crypto_policy) {
-        	parameter = policy_param_find(conf->crypto_policy,
-        				      "encryptAlg");
-        	if (!parameter) {
-        		LOG_ERR("Could not find 'encryptAlg' in crypto policy");
-        		rkfree(ps);
-        		priv_data_destroy(data);
-        		return NULL;
-        	}
+	/* Parse policy parameters */
+	if (conf->crypto_policy) {
+		parameter = policy_param_find(conf->crypto_policy,
+					      "encryptAlg");
+		if (!parameter) {
+			LOG_ERR("Could not find 'encryptAlg' in crypto policy");
+			rkfree(ps);
+			priv_data_destroy(data);
+			return NULL;
+		}
 
-        	aux = policy_param_value(parameter);
-        	if (string_cmp(aux, "AES128") == 0 ||
-        			string_cmp(aux, "AES256") == 0) {
-        		if (string_dup("ecb(aes)",
-        				&data->encryption_cipher)) {
-        			LOG_ERR("Problems copying 'encryptAlg' value");
-        			rkfree(ps);
-        			priv_data_destroy(data);
-        			return NULL;
-        		}
-        		LOG_DBG("Encryption cipher is %s",
-        			data->encryption_cipher);
-        	} else {
-        		LOG_DBG("Unsupported encryption cipher %s", aux);
-        	}
+		aux = policy_param_value(parameter);
+		if (string_cmp(aux, "AES128") == 0 ||
+		    string_cmp(aux, "AES256") == 0) {
+			if (string_dup("ecb(aes)",
+				       &data->encryption_cipher)) {
+				LOG_ERR("Problems copying 'encryptAlg' value");
+				rkfree(ps);
+				priv_data_destroy(data);
+				return NULL;
+			}
+			LOG_DBG("Encryption cipher is %s",
+				data->encryption_cipher);
+		} else {
+			LOG_DBG("Unsupported encryption cipher %s", aux);
+		}
 
-        	parameter = policy_param_find(conf->crypto_policy,
-        				      "macAlg");
-        	if (!parameter) {
-        		LOG_ERR("Could not find 'macAlg' in crypto policy");
-        		rkfree(ps);
-        		priv_data_destroy(data);
-        		return NULL;
-        	}
+		parameter = policy_param_find(conf->crypto_policy,
+					      "macAlg");
+		if (!parameter) {
+			LOG_ERR("Could not find 'macAlg' in crypto policy");
+			rkfree(ps);
+			priv_data_destroy(data);
+			return NULL;
+		}
 
-        	aux = policy_param_value(parameter);
-        	if (string_cmp(aux, "SHA1") == 0) {
-        		if (string_dup("sha1", &data->message_digest)) {
-        			LOG_ERR("Problems copying 'digest' value");
-        			rkfree(ps);
-        			priv_data_destroy(data);
-        			return NULL;
-        		}
-        		LOG_DBG("Message digest is %s", data->message_digest);
-        	} else if (string_cmp(aux, "MD5") == 0) {
-        		if (string_dup("md5", &data->message_digest)) {
-        			LOG_ERR("Problems copying 'digest' value)");
-           			rkfree(ps);
-           			priv_data_destroy(data);
-           			return NULL;
-        		}
-        		LOG_DBG("Message digest is %s", data->message_digest);
-        	} else {
-        		LOG_DBG("Unsupported message digest %s", aux);
-        	}
-        } else {
-        	LOG_ERR("Bogus configuration passed");
+		aux = policy_param_value(parameter);
+		if (string_cmp(aux, "SHA1") == 0) {
+			if (string_dup("sha1", &data->message_digest)) {
+				LOG_ERR("Problems copying 'digest' value");
+				rkfree(ps);
+				priv_data_destroy(data);
+				return NULL;
+			}
+			LOG_DBG("Message digest is %s", data->message_digest);
+		} else if (string_cmp(aux, "MD5") == 0) {
+			if (string_dup("md5", &data->message_digest)) {
+				LOG_ERR("Problems copying 'digest' value)");
+				rkfree(ps);
+				priv_data_destroy(data);
+				return NULL;
+			}
+			LOG_DBG("Message digest is %s", data->message_digest);
+		} else {
+			LOG_DBG("Unsupported message digest %s", aux);
+		}
+
+	} else {
+		LOG_ERR("Bogus configuration passed");
 		rkfree(ps);
 		priv_data_destroy(data);
 		return NULL;
-        }
+	}
 
-        /* Instantiate block cipher */
-        data->blkcipher =
-        		crypto_alloc_blkcipher(data->encryption_cipher,
-        				       0,
-        				       0);
-        if (IS_ERR(data->blkcipher)) {
-        	LOG_ERR("could not allocate blkcipher handle for %s\n",
-        		data->encryption_cipher);
+	/* Instantiate block cipher */
+	data->tx_blkcipher = crypto_alloc_blkcipher(data->encryption_cipher,
+						    0,0);
+	data->rx_blkcipher = crypto_alloc_blkcipher(data->encryption_cipher,
+						    0,0);
+
+	if (IS_ERR(data->tx_blkcipher)) {
+		LOG_ERR("could not allocate tx blkcipher handle for %s\n",
+			data->encryption_cipher);
 		rkfree(ps);
 		priv_data_destroy(data);
-        	return NULL;
-        }
+		return NULL;
+	}
+	if (IS_ERR(data->rx_blkcipher)) {
+		LOG_ERR("could not allocate rx blkcipher handle for %s\n",
+			data->encryption_cipher);
+		rkfree(ps);
+		priv_data_destroy(data);
+		return NULL;
+	}
 
 	/* SDUP policy functions*/
 	ps->sdup_apply_crypto		= default_sdup_apply_crypto;
