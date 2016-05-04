@@ -277,6 +277,10 @@ public:
 	UcharArray encrypt_key_client;
 	UcharArray encrypt_key_server;
 
+	///The hmac keys
+	UcharArray mac_key_client;
+	UcharArray mac_key_server;
+
 	/// RSA * key pair used for authentication
 	RSA * auth_keypair;
 

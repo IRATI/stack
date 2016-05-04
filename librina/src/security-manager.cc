@@ -569,9 +569,13 @@ CryptoState SSH2SecurityContext::get_crypto_state(bool enable_crypto_tx,
 	if (isserver) {
 		result.encrypt_key_rx = encrypt_key_client;
 		result.encrypt_key_tx = encrypt_key_server;
+		result.mac_key_rx = mac_key_client;
+		result.mac_key_tx = mac_key_server;
 	} else {
 		result.encrypt_key_tx = encrypt_key_client;
 		result.encrypt_key_rx = encrypt_key_server;
+		result.mac_key_tx = mac_key_client;
+		result.mac_key_rx = mac_key_server;
 	}
 
 	return result;
@@ -627,7 +631,9 @@ SSH2SecurityContext::SSH2SecurityContext(int session_id,
 	}
 
 	option = options->mac_algs.front();
-	if (option != SSL_TXT_MD5 && option != SSL_TXT_SHA1) {
+	if (option != SSL_TXT_MD5 &&
+	    option != SSL_TXT_SHA1 &&
+	    option != SSL_TXT_SHA256) {
 		LOG_ERR("Unsupported MAC algorithm: %s",
 			option.c_str());
 		throw Exception();
@@ -1005,12 +1011,53 @@ int AuthSSH2PolicySet::edh_generate_shared_secret(SSH2SecurityContext * sc)
 		SHA256((const unsigned char*)hash_base.c_str(), hash_base.length(), sc->encrypt_key_server.data);
 	}
 
+	if (sc->mac_alg == SSL_TXT_MD5) {
+		sc->mac_key_client.length = 16;
+		sc->mac_key_client.data = new unsigned char[16];
+		sc->mac_key_server.length = 16;
+		sc->mac_key_server.data = new unsigned char[16];
+
+		hash_base = std::string((const char *)sc->shared_secret.data, sc->shared_secret.length) + "C";
+		MD5((const unsigned char*)hash_base.c_str(), hash_base.length(), sc->mac_key_client.data);
+
+		hash_base = std::string((const char *)sc->shared_secret.data, sc->shared_secret.length) + "D";
+		MD5((const unsigned char*)hash_base.c_str(), hash_base.length(), sc->mac_key_server.data);
+	} else if (sc->mac_alg == SSL_TXT_SHA1){
+		sc->mac_key_client.length = 20;
+		sc->mac_key_client.data = new unsigned char[20];
+		sc->mac_key_server.length = 20;
+		sc->mac_key_server.data = new unsigned char[20];
+
+		hash_base = std::string((const char *)sc->shared_secret.data, sc->shared_secret.length) + "C";
+		SHA1((const unsigned char*)hash_base.c_str(), hash_base.length(), sc->mac_key_client.data);
+
+		hash_base = std::string((const char *)sc->shared_secret.data, sc->shared_secret.length) + "D";
+		SHA1((const unsigned char*)hash_base.c_str(), hash_base.length(), sc->mac_key_server.data);
+	} else if (sc->mac_alg == SSL_TXT_SHA256){
+		sc->mac_key_client.length = 32;
+		sc->mac_key_client.data = new unsigned char[32];
+		sc->mac_key_server.length = 32;
+		sc->mac_key_server.data = new unsigned char[32];
+
+		hash_base = std::string((const char *)sc->shared_secret.data, sc->shared_secret.length) + "C";
+		SHA256((const unsigned char*)hash_base.c_str(), hash_base.length(), sc->mac_key_client.data);
+
+		hash_base = std::string((const char *)sc->shared_secret.data, sc->shared_secret.length) + "D";
+		SHA256((const unsigned char*)hash_base.c_str(), hash_base.length(), sc->mac_key_server.data);
+	}
+
 	LOG_DBG("Generated client encryption key of length %d bytes: %s",
 			sc->encrypt_key_client.length,
 			sc->encrypt_key_client.toString().c_str());
 	LOG_DBG("Generated server encryption key of length %d bytes: %s",
 			sc->encrypt_key_server.length,
 			sc->encrypt_key_server.toString().c_str());
+	LOG_DBG("Generated client mac key of length %d bytes: %s",
+			sc->mac_key_client.length,
+			sc->mac_key_client.toString().c_str());
+	LOG_DBG("Generated server mac key of length %d bytes: %s",
+			sc->mac_key_server.length,
+			sc->mac_key_server.toString().c_str());
 
 	return 0;
 }
