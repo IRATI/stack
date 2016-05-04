@@ -43,6 +43,10 @@ struct sdup_crypto_ps_default_data {
 	struct crypto_shash * tx_shash;
 	struct crypto_shash * rx_shash;
 
+	struct crypto_comp * compress;
+	unsigned int comp_scratch_size;
+	char * comp_scratch;
+
 	bool 		enable_encryption;
 	bool		enable_decryption;
 
@@ -78,6 +82,10 @@ static struct sdup_crypto_ps_default_data * priv_data_create(void)
 	data->tx_shash = NULL;
 	data->rx_shash = NULL;
 
+	data->compress = NULL;
+	data->comp_scratch = NULL;
+	data->comp_scratch_size = 0;
+
 	data->enable_decryption = false;
 	data->enable_encryption = false;
 
@@ -112,6 +120,11 @@ static void priv_data_destroy(struct sdup_crypto_ps_default_data * data)
 		crypto_free_shash(data->tx_shash);
 	if (data->rx_shash)
 		crypto_free_shash(data->rx_shash);
+
+	if (data->compress)
+		crypto_free_comp(data->compress);
+	if (data->comp_scratch)
+		rkfree(data->comp_scratch);
 
 	if (data->enc_key_tx) {
 		rkfree(data->enc_key_tx);
@@ -458,6 +471,102 @@ static int check_hmac(struct sdup_crypto_ps_default_data * priv_data,
 	return 0;
 }
 
+static int compress(struct sdup_crypto_ps_default_data * priv_data,
+		    struct pdu_ser * pdu)
+{
+	struct buffer *		buf;
+	unsigned int		buffer_size;
+	void *			data;
+	unsigned int		compressed_size;
+	char *                  compressed_data;
+	char *                  tmp;
+	int err;
+
+	if (!priv_data || !pdu){
+		LOG_ERR("Compression arguments not initialized!");
+		return -1;
+	}
+
+	/* encryption is disabled so compression is disabled*/
+	if (priv_data->compress == NULL ||
+	    !priv_data->enable_encryption)
+		return 0;
+
+	buf = pdu_ser_buffer(pdu);
+	buffer_size = buffer_length(buf);
+	data = buffer_data_rw(buf);
+
+	compressed_size = priv_data->comp_scratch_size;
+	compressed_data = priv_data->comp_scratch;
+
+	err = crypto_comp_compress(priv_data->compress,
+				   data, buffer_size,
+				   compressed_data, &compressed_size);
+
+	if (err){
+		LOG_ERR("Failed compression!");
+		return -1;
+	}
+
+	tmp = rkzalloc(compressed_size, GFP_KERNEL);
+	if (!tmp){
+		LOG_ERR("Failed allocation of new buffer!");
+		return -1;
+	}
+	memcpy(tmp, compressed_data, compressed_size);
+
+	buffer_assign(buf, tmp, compressed_size);
+
+	return 0;
+}
+
+static int decompress(struct sdup_crypto_ps_default_data * priv_data,
+		      u_int32_t max_pdu_size,
+		      struct pdu_ser * pdu)
+{
+	struct buffer *		buf;
+	unsigned int		buffer_size;
+	void *			data;
+	void *			decompressed_data;
+	unsigned int		decompressed_size;
+	int err;
+
+	if (!priv_data || !pdu){
+		LOG_ERR("Decompression arguments not initialized!");
+		return -1;
+	}
+
+	/* decryption is disabled so decompression is disabled*/
+	if (priv_data->compress == NULL ||
+	    !priv_data->enable_decryption)
+		return 0;
+
+	buf = pdu_ser_buffer(pdu);
+	buffer_size = buffer_length(buf);
+	data = buffer_data_rw(buf);
+
+	decompressed_size = max_pdu_size;
+	decompressed_data = rkzalloc(decompressed_size, GFP_KERNEL);
+	if (!decompressed_data){
+		LOG_ERR("Failed to alloc data for compression");
+		return -1;
+	}
+
+	err = crypto_comp_decompress(priv_data->compress,
+				     data, buffer_size,
+				     decompressed_data, &decompressed_size);
+
+	if (err){
+		LOG_ERR("Failed decompression!");
+		rkfree(decompressed_data);
+		return -1;
+	}
+
+	buffer_assign(buf, decompressed_data, decompressed_size);
+
+	return 0;
+}
+
 static int add_seq_num(struct sdup_crypto_ps_default_data * priv_data,
 		       struct pdu_ser * pdu)
 {
@@ -573,6 +682,11 @@ int default_sdup_apply_crypto(struct sdup_crypto_ps * ps,
 	int result = 0;
 	struct sdup_crypto_ps_default_data * priv_data = ps->priv;
 
+
+	result = compress(priv_data, pdu);
+	if (result)
+		return result;
+
 	result = add_seq_num(priv_data, pdu);
 	if (result)
 		return result;
@@ -585,7 +699,11 @@ int default_sdup_apply_crypto(struct sdup_crypto_ps * ps,
 	if (result)
 		return result;
 
-	return encrypt(priv_data, pdu);
+	result = encrypt(priv_data, pdu);
+	if (result)
+		return result;
+
+	return result;
 }
 EXPORT_SYMBOL(default_sdup_apply_crypto);
 
@@ -595,6 +713,7 @@ int default_sdup_remove_crypto(struct sdup_crypto_ps * ps,
 	int result = 0;
 	struct sdup_crypto_ps_default_data * priv_data = ps->priv;
 	struct sdup_port * port = ps->dm;
+	struct dt_cons * dt_cons = port->dt_cons;
 
 	result = decrypt(priv_data, pdu);
 	if (result)
@@ -609,6 +728,10 @@ int default_sdup_remove_crypto(struct sdup_crypto_ps * ps,
 		return result;
 
 	result = del_seq_num(priv_data, pdu);
+	if (result)
+		return result;
+
+	result = decompress(priv_data, dt_cons->max_pdu_size, pdu);
 	if (result)
 		return result;
 
@@ -808,6 +931,28 @@ struct ps_base * sdup_crypto_ps_default_create(struct rina_component * component
 		}
 
 		parameter = policy_param_find(conf->crypto_policy,
+					      "compressAlg");
+		if (!parameter) {
+			LOG_ERR("Could not find 'compressAlg' in crypto policy");
+			rkfree(ps);
+			priv_data_destroy(data);
+			return NULL;
+		}
+
+		aux = policy_param_value(parameter);
+		if (string_cmp(aux, "deflate") == 0) {
+			if (string_dup("deflate", &data->compress_alg)) {
+				LOG_ERR("Problems copying 'compressAlg' value");
+				rkfree(ps);
+				priv_data_destroy(data);
+				return NULL;
+			}
+			LOG_DBG("Compress algorighm is %s", data->compress_alg);
+		} else {
+			LOG_DBG("Unsupported compress algorithm %s", aux);
+		}
+
+		parameter = policy_param_find(conf->crypto_policy,
 					      "seq_win_size");
 		if (!parameter) {
 			data->seq_win_size = 0;
@@ -854,6 +999,8 @@ struct ps_base * sdup_crypto_ps_default_create(struct rina_component * component
 	data->tx_shash = crypto_alloc_shash(data->message_digest, 0,0);
 	data->rx_shash = crypto_alloc_shash(data->message_digest, 0,0);
 
+	data->compress = crypto_alloc_comp(data->compress_alg, 0,0);
+
 	if (IS_ERR(data->tx_blkcipher)) {
 		LOG_ERR("could not allocate tx blkcipher handle for %s\n",
 			data->encryption_cipher);
@@ -879,6 +1026,24 @@ struct ps_base * sdup_crypto_ps_default_create(struct rina_component * component
 	if (IS_ERR(data->rx_shash)) {
 		LOG_ERR("could not allocate rx shash handle for %s\n",
 			data->message_digest);
+		rkfree(ps);
+		priv_data_destroy(data);
+		return NULL;
+	}
+
+	if (IS_ERR(data->compress)) {
+		LOG_ERR("could not allocate compress handle for %s\n",
+			data->compress_alg);
+		rkfree(ps);
+		priv_data_destroy(data);
+		return NULL;
+	}
+
+	data->comp_scratch_size = sdup_port->dt_cons->max_pdu_size +
+		MAX_COMP_INFLATION;
+	data->comp_scratch = rkzalloc(data->comp_scratch_size, GFP_KERNEL);
+	if (!data->comp_scratch) {
+		LOG_ERR("could not allocate scratch space for compression");
 		rkfree(ps);
 		priv_data_destroy(data);
 		return NULL;
