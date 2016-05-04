@@ -243,9 +243,9 @@ void * buffer_data_rw(struct buffer * b)
 EXPORT_SYMBOL(buffer_data_rw);
 
 /* FIXME: To be heavily hammered, it is temporary (lastin' forever, sigh) */
-static void buffer_assign(struct buffer * buffer,
-                          char *          new_data,
-                          size_t          new_len)
+void buffer_assign(struct buffer * buffer,
+		   char *          new_data,
+		   size_t          new_len)
 {
         ASSERT(buffer);
         ASSERT(new_data);
@@ -257,6 +257,7 @@ static void buffer_assign(struct buffer * buffer,
         buffer->data = new_data;
         buffer->size = new_len;
 }
+EXPORT_SYMBOL(buffer_assign);
 
 /* FIXME: To be heavily hammered, it is temporary (lastin' forever, sigh) */
 int buffer_head_grow(gfp_t           flags,

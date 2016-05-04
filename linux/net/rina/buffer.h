@@ -44,6 +44,10 @@ int buffer_set_length(struct buffer * b, size_t len);
 const void *    buffer_data_ro(const struct buffer * b); /* Read only */
 void *          buffer_data_rw(struct buffer * b);       /* Read/Write */
 
+void buffer_assign(struct buffer * buffer,
+		   char *          new_data,
+		   size_t          new_len);
+
 struct buffer * buffer_dup(const struct buffer * b);
 struct buffer * buffer_dup_ni(const struct buffer * b);
 bool            buffer_is_ok(const struct buffer * b);
