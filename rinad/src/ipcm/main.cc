@@ -178,27 +178,32 @@ int main(int argc, char * argv[])
 
 	//Configure signal  traps
 	if (signal(SIGSEGV, handler) == SIG_ERR) {
-		LOG_WARN("Could not install SIGSEGV handler!");
+		LOG_ERR("Could not install SIGSEGV handler!");
+		return EXIT_FAILURE;
 	}
         LOG_DBG("SIGSEGV handler installed successfully");
 
 	if (signal(SIGINT, handler) == SIG_ERR) {
 		LOG_ERR("Could not install SIGINT handler!");
+		return EXIT_FAILURE;
 	}
         LOG_DBG("SIGINT handler installed successfully");
 
 	if (signal(SIGQUIT, handler) == SIG_ERR) {
 		LOG_ERR("Could not install SIGQUIT handler!");
+		return EXIT_FAILURE;
 	}
         LOG_DBG("SIGQUIT handler installed successfully");
 
 	if (signal(SIGTERM, handler) == SIG_ERR) {
 		LOG_ERR("Could not install SIGTERM handler!");
+		return EXIT_FAILURE;
 	}
         LOG_DBG("SIGTERM handler installed successfully");
 
 	if (signal(SIGHUP, handler) == SIG_ERR) {
 		LOG_ERR("Could not install SIGHUP handler!");
+		return EXIT_FAILURE;
 	}
         LOG_DBG("SIGHUP handler installed successfully");
 
@@ -210,6 +215,7 @@ int main(int argc, char * argv[])
 
 	if (signal(SIGCHLD, handler) == SIG_ERR) {
 		LOG_ERR("Could not install SIGCHLD handler!");
+		return EXIT_FAILURE;
 	}
         LOG_DBG("SIGCHLD handler installed successfully");
 
