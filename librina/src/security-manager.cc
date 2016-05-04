@@ -558,13 +558,21 @@ SSH2SecurityContext::~SSH2SecurityContext()
 }
 
 CryptoState SSH2SecurityContext::get_crypto_state(bool enable_crypto_tx,
-					 	  bool enable_crypto_rx)
+						  bool enable_crypto_rx,
+						  bool isserver)
 {
 	CryptoState result;
+
 	result.enable_crypto_tx = enable_crypto_tx;
 	result.enable_crypto_rx = enable_crypto_rx;
-	result.encrypt_key_tx = encrypt_key;
 	result.port_id = id;
+	if (isserver) {
+		result.encrypt_key_rx = encrypt_key_client;
+		result.encrypt_key_tx = encrypt_key_server;
+	} else {
+		result.encrypt_key_tx = encrypt_key_client;
+		result.encrypt_key_rx = encrypt_key_server;
+	}
 
 	return result;
 }
@@ -941,7 +949,7 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(const cdap
 
 	// Configure kernel SDU protection policy with shared secret and algorithms
 	// tell it to enable decryption
-	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(false, true),
+	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(false, true, true),
 						         this);
 	if (result == IAuthPolicySet::FAILED) {
 		delete sc;
@@ -971,20 +979,38 @@ int AuthSSH2PolicySet::edh_generate_shared_secret(SSH2SecurityContext * sc)
 		return -1;
 	}
 
-	if (sc->encrypt_alg == SSL_TXT_AES128) {
-		sc->encrypt_key.length = 16;
-		sc->encrypt_key.data = new unsigned char[16];
-		MD5(sc->shared_secret.data, sc->shared_secret.length, sc->encrypt_key.data);
+	std::string hash_base;
 
+	if (sc->encrypt_alg == SSL_TXT_AES128) {
+		sc->encrypt_key_client.length = 16;
+		sc->encrypt_key_client.data = new unsigned char[16];
+		sc->encrypt_key_server.length = 16;
+		sc->encrypt_key_server.data = new unsigned char[16];
+
+		hash_base = std::string((const char *)sc->shared_secret.data, sc->shared_secret.length) + "A";
+		MD5((const unsigned char*)hash_base.c_str(), hash_base.length(), sc->encrypt_key_client.data);
+
+		hash_base = std::string((const char *)sc->shared_secret.data, sc->shared_secret.length) + "B";
+		MD5((const unsigned char*)hash_base.c_str(), hash_base.length(), sc->encrypt_key_server.data);
 	} else if (sc->encrypt_alg == SSL_TXT_AES256) {
-		sc->encrypt_key.length = 32;
-		sc->encrypt_key.data = new unsigned char[32];
-		SHA256(sc->shared_secret.data, sc->shared_secret.length, sc->encrypt_key.data);
+		sc->encrypt_key_client.length = 32;
+		sc->encrypt_key_client.data = new unsigned char[32];
+		sc->encrypt_key_server.length = 32;
+		sc->encrypt_key_server.data = new unsigned char[32];
+
+		hash_base = std::string((const char *)sc->shared_secret.data, sc->shared_secret.length) + "A";
+		SHA256((const unsigned char*)hash_base.c_str(), hash_base.length(), sc->encrypt_key_client.data);
+
+		hash_base = std::string((const char *)sc->shared_secret.data, sc->shared_secret.length) + "B";
+		SHA256((const unsigned char*)hash_base.c_str(), hash_base.length(), sc->encrypt_key_server.data);
 	}
 
-	LOG_DBG("Generated encryption key of length %d bytes: %s",
-			sc->encrypt_key.length,
-			sc->encrypt_key.toString().c_str());
+	LOG_DBG("Generated client encryption key of length %d bytes: %s",
+			sc->encrypt_key_client.length,
+			sc->encrypt_key_client.toString().c_str());
+	LOG_DBG("Generated server encryption key of length %d bytes: %s",
+			sc->encrypt_key_server.length,
+			sc->encrypt_key_server.toString().c_str());
 
 	return 0;
 }
@@ -1067,7 +1093,7 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::decryption_enabled_server(SSH2Secu
 
 	// Configure kernel SDU protection policy with shared secret and algorithms
 	// tell it to enable encryption
-	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(true, false),
+	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(true, false, true),
 						         this);
 	if (result == IAuthPolicySet::FAILED) {
 		sec_man->destroy_security_context(sc->id);
@@ -1168,7 +1194,7 @@ int AuthSSH2PolicySet::process_edh_exchange_message(const cdap::CDAPMessage& mes
 
 	// Configure kernel SDU protection policy with shared secret and algorithms
 	// tell it to enable decryption and encryption
-	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(true, true),
+	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(true, true, false),
 						         this);
 	if (result == IAuthPolicySet::FAILED) {
 		sec_man->destroy_security_context(sc->id);

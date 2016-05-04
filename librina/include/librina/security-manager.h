@@ -227,7 +227,8 @@ public:
 			    SSH2AuthOptions * options);
 	~SSH2SecurityContext();
 	CryptoState get_crypto_state(bool enable_crypto_tx,
-				     bool enable_crypto_rx);
+				     bool enable_crypto_rx,
+				     bool isserver);
 
 	static const std::string KEY_EXCHANGE_ALGORITHM;
 	static const std::string ENCRYPTION_ALGORITHM;
@@ -272,8 +273,9 @@ public:
 	///The shared secret, used to generate the encryption key
 	UcharArray shared_secret;
 
-	///The encryption key
-	UcharArray encrypt_key;
+	///The encryption keys
+	UcharArray encrypt_key_client;
+	UcharArray encrypt_key_server;
 
 	/// RSA * key pair used for authentication
 	RSA * auth_keypair;
