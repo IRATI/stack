@@ -887,7 +887,7 @@ struct ps_base * sdup_crypto_ps_default_create(struct rina_component * component
 		aux = policy_param_value(parameter);
 		if (string_cmp(aux, "AES128") == 0 ||
 		    string_cmp(aux, "AES256") == 0) {
-			if (string_dup("ecb(aes)",
+			if (string_dup("cbc(aes)",
 				       &data->encryption_cipher)) {
 				LOG_ERR("Problems copying 'encryptAlg' value");
 				rkfree(ps);
