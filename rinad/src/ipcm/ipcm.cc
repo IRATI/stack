@@ -104,6 +104,12 @@ IPCManager_::~IPCManager_()
     }
     forwarded_calls.clear();
     delete forwarded_calls_lock;
+
+    for (std::map<int, TransactionState*>::iterator
+    		it = pend_transactions.begin(); it != pend_transactions.end(); ++it)
+    {
+    	delete it->second;
+    }
 }
 
 void IPCManager_::init(const std::string& loglevel, std::string& config_file)
@@ -1880,7 +1886,6 @@ void IPCManager_::run()
     Addon::destroy_all();
 
     //Join the I/O loop thread
-    keep_running = false;
     io_thread->join(&status);
 
     //I/O thread
@@ -1920,11 +1925,9 @@ void IPCManager_::io_loop()
 {
     rina::IPCEvent *event;
 
-    keep_running = true;
-
     LOG_DBG("Starting main I/O loop...");
 
-    while (keep_running)
+    while (!req_to_stop)
     {
         event = rina::ipcEventProducer->eventTimedWait(
         IPCM_EVENT_TIMEOUT_S,
@@ -1934,16 +1937,11 @@ void IPCManager_::io_loop()
             //Signal the main thread to start
             //the stop procedure
             stop_cond.signal();
+            break;
         }
 
         if (!event)
             continue;
-
-        if (!keep_running)
-        {
-            delete event;
-            break;
-        }
 
         LOG_DBG("Got event of type %s and sequence number %u",
                 rina::IPCEvent::eventTypeToString(event->eventType).c_str(),
