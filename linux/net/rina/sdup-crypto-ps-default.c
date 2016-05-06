@@ -991,53 +991,61 @@ struct ps_base * sdup_crypto_ps_default_create(struct rina_component * component
 	}
 
 	/* Instantiate block cipher */
-	data->tx_blkcipher = crypto_alloc_blkcipher(data->encryption_cipher,
-						    0,0);
-	data->rx_blkcipher = crypto_alloc_blkcipher(data->encryption_cipher,
-						    0,0);
+	if (data->encryption_cipher != NULL) {
+		data->tx_blkcipher = crypto_alloc_blkcipher(data->encryption_cipher,
+							    0,0);
+		data->rx_blkcipher = crypto_alloc_blkcipher(data->encryption_cipher,
+							    0,0);
+		if (IS_ERR(data->tx_blkcipher)) {
+			LOG_ERR("could not allocate tx blkcipher handle for %s\n",
+				data->encryption_cipher);
+			rkfree(ps);
+			priv_data_destroy(data);
+			return NULL;
+		}
 
-	data->tx_shash = crypto_alloc_shash(data->message_digest, 0,0);
-	data->rx_shash = crypto_alloc_shash(data->message_digest, 0,0);
-
-	data->compress = crypto_alloc_comp(data->compress_alg, 0,0);
-
-	if (IS_ERR(data->tx_blkcipher)) {
-		LOG_ERR("could not allocate tx blkcipher handle for %s\n",
-			data->encryption_cipher);
-		rkfree(ps);
-		priv_data_destroy(data);
-		return NULL;
-	}
-	if (IS_ERR(data->rx_blkcipher)) {
-		LOG_ERR("could not allocate rx blkcipher handle for %s\n",
-			data->encryption_cipher);
-		rkfree(ps);
-		priv_data_destroy(data);
-		return NULL;
+		if (IS_ERR(data->rx_blkcipher)) {
+			LOG_ERR("could not allocate rx blkcipher handle for %s\n",
+				data->encryption_cipher);
+			rkfree(ps);
+			priv_data_destroy(data);
+			return NULL;
+		}
 	}
 
-	if (IS_ERR(data->tx_shash)) {
-		LOG_ERR("could not allocate tx shash handle for %s\n",
-			data->message_digest);
-		rkfree(ps);
-		priv_data_destroy(data);
-		return NULL;
-	}
-	if (IS_ERR(data->rx_shash)) {
-		LOG_ERR("could not allocate rx shash handle for %s\n",
-			data->message_digest);
-		rkfree(ps);
-		priv_data_destroy(data);
-		return NULL;
+	if (data->message_digest != NULL) {
+		data->tx_shash = crypto_alloc_shash(data->message_digest, 0,0);
+		data->rx_shash = crypto_alloc_shash(data->message_digest, 0,0);
+
+		if (IS_ERR(data->tx_shash)) {
+			LOG_ERR("could not allocate tx shash handle for %s\n",
+				data->message_digest);
+			rkfree(ps);
+			priv_data_destroy(data);
+			return NULL;
+		}
+
+		if (IS_ERR(data->rx_shash)) {
+			LOG_ERR("could not allocate rx shash handle for %s\n",
+				data->message_digest);
+			rkfree(ps);
+			priv_data_destroy(data);
+			return NULL;
+		}
 	}
 
-	if (IS_ERR(data->compress)) {
-		LOG_ERR("could not allocate compress handle for %s\n",
-			data->compress_alg);
-		rkfree(ps);
-		priv_data_destroy(data);
-		return NULL;
+	if (data->compress_alg != NULL) {
+		data->compress = crypto_alloc_comp(data->compress_alg, 0,0);
+
+		if (IS_ERR(data->compress)) {
+			LOG_ERR("could not allocate compress handle for %s\n",
+				data->compress_alg);
+			rkfree(ps);
+			priv_data_destroy(data);
+			return NULL;
+		}
 	}
+
 
 	data->comp_scratch_size = sdup_port->dt_cons->max_pdu_size +
 		MAX_COMP_INFLATION;
