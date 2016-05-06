@@ -26,13 +26,16 @@
                  "version" : "1",
                  "parameters" : [ {
           	   		"name" : "encryptAlg",
-          	   		"value" : "AES128"
+          	   		"value" : "AES256"
           		 }, {
           	   		"name" : "macAlg",
-          	   		"value" : "SHA1"
+          	   		"value" : "SHA256"
+          		 }, {
+          	   		"name" : "seq_win_size",
+          	   		"value" : "30"
           		 }, {
           	   		"name" : "compressAlg",
-          	   		"value" : "default"
+          	   		"value" : "deflate"
                 } ]
               },
               "TTLPolicy" : {
