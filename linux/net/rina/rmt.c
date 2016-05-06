@@ -678,6 +678,8 @@ static int n1_port_write_sdu(struct rmt *rmt,
 	ret = n1_port->n1_ipcp->ops->sdu_write(n1_port->n1_ipcp->data,
 					       n1_port->port_id,
 					       sdu);
+	if (!ret)
+		return (int) bytes;
 
 	if (ret == -EAGAIN) {
 		n1_port_lock(n1_port, flags);
@@ -698,10 +700,8 @@ static int n1_port_write_sdu(struct rmt *rmt,
 			n1_port->state = N1_PORT_STATE_DISABLED;
 
 		n1_port_unlock(n1_port, flags);
-		return ret;
 	}
-
-	return (int) bytes;
+	return ret;
 }
 
 static struct sdu * generate_sdu_from_pdu(struct rmt * rmt,
