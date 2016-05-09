@@ -1574,7 +1574,11 @@ ipcm_res_t IPCManager_::delegate_ipcp_ribobj(rina::rib::DelegationObj* obj,
             LOG_ERR("Invalid IPCP id %hu", ipcp_id);
             return IPCM_FAILURE;
         }
-
+        if (ipcp->get_type() != rina::NORMAL_IPC_PROCESS)
+        {
+        	LOG_ERR("Trying to delegate to a shim IPCP, operation not allowed");
+        	return IPCM_FAILURE;
+        }
         //Auto release the read lock
         rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
