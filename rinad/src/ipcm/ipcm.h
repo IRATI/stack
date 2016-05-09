@@ -832,9 +832,6 @@ protected:
 	//Current logging level
 	std::string log_level_;
 
-	//Keep running flag
-	volatile bool keep_running;
-
 	//Flag to indicate we have been requested to stop
 	volatile bool req_to_stop;
 

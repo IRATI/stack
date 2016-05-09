@@ -2860,6 +2860,7 @@ CDAPProvider::CDAPProvider(cdap::CDAPCallbackInterface *callback,
 
 CDAPProvider::~CDAPProvider()
 {
+	delete io_handler_;
 }
 
 cdap_rib::con_handle_t
