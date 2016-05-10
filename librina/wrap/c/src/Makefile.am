@@ -8,11 +8,8 @@
 if BUILD_BINDINGS_C
 
 librina_c_la_SOURCES   = 	\
-	flow.cc			\
-	init.cc			\
-	ipcevent.cc		\
-	ipceventproducer.cc	\
-	ipcmanager.cc
+	librina-c.cc
+
 librina_c_la_LDFLAGS   =
 librina_c_la_LIBADD = 			\
 	$(top_builddir)/src/librina.la	\

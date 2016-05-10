@@ -201,7 +201,7 @@ class AppPolicyManager {
 public:
 	AppPolicyManager() { };
 	virtual ~AppPolicyManager();
-	virtual void clear();
+	virtual void clear_policies();
 	virtual std::vector<PsFactory>::iterator
                   psFactoryLookup(const PsInfo& ps_info);
 	virtual int psFactoryPublish(const PsFactory& factory,

@@ -28,6 +28,8 @@
 #include <librina/rib_v2.h>
 #include "rib-daemon.h"
 #include "ipc-process.h"
+#include "common/encoder.h"
+
 
 namespace rinad {
 
@@ -415,15 +417,42 @@ void IPCPCDAPIOHandler::invoke_callback(const rina::cdap_rib::con_handle_t& con_
 	}
 }
 
-//Class RIBDaemon
 ///Single instance of RIBDaemonProxy
 static rina::rib::RIBDaemonProxy* ribd = NULL;
 
+// CLASS RIBDaemonRO
+RIBDaemonRO::RIBDaemonRO(rina::rib::rib_handle_t rib_) :
+                rina::rib::RIBObj("RIBDaemon")
+{
+        rib = rib_;
+}
+
+void RIBDaemonRO::read(const rina::cdap_rib::con_handle_t &con,
+                       const std::string& fqn,
+                       const std::string& class_,
+                       const rina::cdap_rib::filt_info_t &filt,
+                       const int invoke_id,
+                       rina::cdap_rib::obj_info_t &obj_reply,
+                       rina::cdap_rib::res_info_t& res)
+{
+        std::list<rina::rib::RIBObjectData> result =
+                        ribd->get_rib_objects_data(rib);
+        encoders::RIBObjectDataListEncoder encoder;
+        encoder.encode(result, obj_reply.value_);
+        res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+}
+
+//Class IPCPRIBDaemonImpl
 IPCPRIBDaemonImpl::IPCPRIBDaemonImpl(rina::cacep::AppConHandlerInterface *app_con_callback)
 {
 	management_sdu_reader_ = 0;
 	n_minus_one_flow_manager_ = 0;
 	initialize_rib_daemon(app_con_callback);
+}
+
+IPCPRIBDaemonImpl::~IPCPRIBDaemonImpl()
+{
+	rina::rib::fini();
 }
 
 rina::rib::RIBDaemonProxy * IPCPRIBDaemonImpl::getProxy()
@@ -458,16 +487,16 @@ void IPCPRIBDaemonImpl::initialize_rib_daemon(rina::cacep::AppConHandlerInterfac
 	//TODO populate RIB with some objects
 	try {
 		robj = new rina::rib::RIBObj("DIFManagement");
-		ribd->addObjRIB(rib, "/difmanagement", &robj);
+		ribd->addObjRIB(rib, "/difManagement", &robj);
 
 		robj = new rina::rib::RIBObj("IPCManagement");
-		ribd->addObjRIB(rib, "/ipcmanagement", &robj);
+		ribd->addObjRIB(rib, "/ipcManagement", &robj);
 
-		robj = new rina::rib::RIBObj("RIBDaemon");
-		ribd->addObjRIB(rib, "/ribdaemon", &robj);
+		robj = new RIBDaemonRO(rib);
+		ribd->addObjRIB(rib, "/ribDaemon", &robj);
 
 		robj = new rina::rib::RIBObj("SDUDelimiting");
-		ribd->addObjRIB(rib, "/sdudel", &robj);
+		ribd->addObjRIB(rib, "/sduDel", &robj);
 	} catch (rina::Exception &e1) {
 		LOG_ERR("RIB basic objects were not created because %s",
 				e1.what());

@@ -66,6 +66,11 @@ void IPCPSecurityManager::set_dif_configuration(const rina::DIFConfiguration& di
         add_auth_policy_set(rina::IAuthPolicySet::AUTH_SSH2);
 }
 
+IPCPSecurityManager::~IPCPSecurityManager()
+{
+	delete ps;
+}
+
 rina::AuthSDUProtectionProfile IPCPSecurityManager::get_auth_sdup_profile(const std::string& under_dif_name)
 {
 	std::map<std::string, rina::AuthSDUProtectionProfile>::const_iterator it =

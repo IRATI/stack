@@ -458,6 +458,7 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 #include "librina/application.h"
 #include "librina/cdap_rib_structures.h"
 #include "librina/cdap_v2.h"
+#include "librina/rib_v2.h"
 #include "librina/ipc-api.h"
 #include "librina/configuration.h"
 %}
@@ -502,6 +503,29 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(differs) rina::QoSCube::operator!=(const QoSCube &other) const;
 %rename(assign) rina::EFCPConfiguration::operator=(const EFCPConfiguration &other);
 
+/* This is for separating rib::init and rib::fini from cdap::init and cdap::fini */
+%rename(cdap_init) rina::cdap::init(cdap::CDAPCallbackInterface *callback, cdap_rib::concrete_syntax_t& syntax, bool is_IPCP);
+%rename(cdap_fini) rina::cdap::fini(void);
+%rename(rib_init) rina::rib::init(cacep::AppConHandlerInterface *app_con_callback, cdap_rib::cdap_params params);
+%rename(rib_fini) rina::rib::fini(void);
+
+/* This is for avoiding a file name too long to be managed. */
+
+namespace rina {
+namespace rib{
+typedef void (*create_cb_t)(const rib_handle_t rib,
+const cdap_rib::con_handle_t &con,
+const std::string& fqn,
+const std::string& class_,
+const cdap_rib::filt_info_t &filt,
+const int invoke_id,
+const ser_obj_t &obj_req,
+ser_obj_t &obj_reply,
+cdap_rib::res_info_t& res);
+}}
+
+
+
 %include "librina/exceptions.h"
 %include "librina/patterns.h"
 %include "librina/concurrency.h"
@@ -518,10 +542,13 @@ class cdap_m_t;
 %template(TempStringEncoder) rina::Encoder<std::string>;
 %template(TempIntEncoder) rina::Encoder<int>;
 
+
 %include "librina/application.h"
 %include "librina/cdap_rib_structures.h"
 %include "librina/cdap_v2.h"
 %include "librina/ipc-api.h"
+%include "librina/rib_v2.h"
+
 
 /* Macro for defining collection iterators */
 %define MAKE_COLLECTION_ITERABLE( ITERATORNAME, JTYPE, CPPCOLLECTION, CPPTYPE )

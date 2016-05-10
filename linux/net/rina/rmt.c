@@ -114,6 +114,8 @@ static ssize_t rmt_n1_port_attr_show(struct robject *        robj,
 	struct rmt_n1_port * n1_port;
 	unsigned int stats_ret;
 	unsigned long flags;
+	bool wbusy;
+	enum flow_state state;
 
 	n1_port = container_of(robj, struct rmt_n1_port, robj);
 	if (!n1_port)
@@ -147,6 +149,18 @@ static ssize_t rmt_n1_port_attr_show(struct robject *        robj,
 		stats_get(rx_bytes, n1_port, stats_ret, flags);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
+	if (strcmp(robject_attr_name(attr), "wbusy") == 0) {
+		spin_lock_irqsave(&n1_port->lock, flags);
+		wbusy = n1_port->wbusy;
+		spin_unlock_irqrestore(&n1_port->lock, flags);
+		return sprintf(buf, "%s\n", wbusy?"true":"false");
+	}
+	if (strcmp(robject_attr_name(attr), "state") == 0) {
+		spin_lock_irqsave(&n1_port->lock, flags);
+		state = n1_port->state;
+		spin_unlock_irqrestore(&n1_port->lock, flags);
+		return sprintf(buf, "%d\n", (int) state);
+	}
 	return 0;
 }
 RINA_SYSFS_OPS(rmt);
@@ -154,7 +168,7 @@ RINA_ATTRS(rmt, ps_name);
 RINA_KTYPE(rmt);
 RINA_SYSFS_OPS(rmt_n1_port);
 RINA_ATTRS(rmt_n1_port, queued_pdus, drop_pdus, err_pdus, tx_pdus,
-	tx_bytes, rx_pdus, rx_bytes);
+	   tx_bytes, rx_pdus, rx_bytes, wbusy, state);
 RINA_KTYPE(rmt_n1_port);
 
 static struct rmt_n1_port *n1_port_create(port_id_t id,
@@ -664,6 +678,8 @@ static int n1_port_write_sdu(struct rmt *rmt,
 	ret = n1_port->n1_ipcp->ops->sdu_write(n1_port->n1_ipcp->data,
 					       n1_port->port_id,
 					       sdu);
+	if (!ret)
+		return (int) bytes;
 
 	if (ret == -EAGAIN) {
 		n1_port_lock(n1_port, flags);
@@ -684,10 +700,8 @@ static int n1_port_write_sdu(struct rmt *rmt,
 			n1_port->state = N1_PORT_STATE_DISABLED;
 
 		n1_port_unlock(n1_port, flags);
-		return ret;
 	}
-
-	return (int) bytes;
+	return ret;
 }
 
 static struct sdu * generate_sdu_from_pdu(struct rmt * rmt,
@@ -879,8 +893,9 @@ static void send_worker(unsigned long o)
 			stats_inc(tx, n1_port, ret);
 		}
 
-		if (n1_port->state == N1_PORT_STATE_ENABLED &&
-			n1_port->stats.plen)
+		if ((n1_port->state == N1_PORT_STATE_ENABLED ||
+		    n1_port->state == N1_PORT_STATE_DO_NOT_DISABLE) &&
+		    n1_port->stats.plen)
 			reschedule++;
 
 		rcu_read_unlock();
@@ -1095,11 +1110,12 @@ int rmt_enable_port_id(struct rmt *instance,
 	}
 
 	n1_port->state = N1_PORT_STATE_ENABLED;
+	LOG_DBG("Changed state to ENABLED");
+
+exit:
 	if (n1_port->stats.plen)
 		tasklet_hi_schedule(&instance->egress_tasklet);
 
-	LOG_DBG("Changed state to ENABLED");
-exit:
 	n1_port_unlock_release(n1_port, flags);
 
 	return ret;

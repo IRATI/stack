@@ -62,6 +62,11 @@ int LinkStateRoutingPs::set_policy_set_param(const std::string& name,
         return -1;
 }
 
+LinkStateRoutingPs::~LinkStateRoutingPs()
+{
+	delete lsr_policy;
+}
+
 extern "C" rina::IPolicySet *
 createRoutingComponentPs(rina::ApplicationEntity * ctx)
 {
@@ -1198,6 +1203,7 @@ void FlowStateObjects::incrementAge(unsigned int max_age, rina::Timer* timer)
 			it->second->has_beingerased(true);
 			KillFlowStateObjectTimerTask* ksttask =
 				new KillFlowStateObjectTimerTask(this, it->second->get_objectname());
+
 			timer->scheduleTask(ksttask, FlowStateManager::WAIT_UNTIL_REMOVE_OBJECT);
 		}
 	}
@@ -1459,7 +1465,8 @@ void ComputeRoutingTimerTask::run()
 	//Re-schedule
 	ComputeRoutingTimerTask * task = new ComputeRoutingTimerTask(
 			lsr_policy_, delay_);
-	lsr_policy_->timer_.scheduleTask(task, delay_);
+
+	lsr_policy_->timer_->scheduleTask(task, delay_);
 }
 
 KillFlowStateObjectTimerTask::KillFlowStateObjectTimerTask(FlowStateObjects *fsos, std::string fqn)
@@ -1487,7 +1494,7 @@ void PropagateFSODBTimerTask::run()
 	//Re-schedule
 	PropagateFSODBTimerTask * task = new PropagateFSODBTimerTask(
 			lsr_policy_, delay_);
-	lsr_policy_->timer_.scheduleTask(task, delay_);
+	lsr_policy_->timer_->scheduleTask(task, delay_);
 }
 
 UpdateAgeTimerTask::UpdateAgeTimerTask(
@@ -1504,7 +1511,7 @@ void UpdateAgeTimerTask::run()
 	//Re-schedule
 	UpdateAgeTimerTask * task = new UpdateAgeTimerTask(lsr_policy_,
 			delay_);
-	lsr_policy_->timer_.scheduleTask(task, delay_);
+	lsr_policy_->timer_->scheduleTask(task, delay_);
 }
 
 // CLASS LinkStateRoutingPolicy
@@ -1530,11 +1537,13 @@ LinkStateRoutingPolicy::LinkStateRoutingPolicy(IPCProcess * ipcp)
 	db_ = 0;
 
 	subscribeToEvents();
-	db_ = new FlowStateManager(&timer_, UINT_MAX);
+	timer_ = new rina::Timer();
+	db_ = new FlowStateManager(timer_, UINT_MAX);
 }
 
 LinkStateRoutingPolicy::~LinkStateRoutingPolicy()
 {
+	delete timer_;
 	delete routing_algorithm_;
 	delete resiliency_algorithm_;
 	delete db_;
@@ -1581,6 +1590,8 @@ void LinkStateRoutingPolicy::set_dif_configuration(
 #if 0
 	resiliency_algorithm_ = new LoopFreeAlternateAlgorithm(*routing_algorithm_);
 #endif
+
+
 	if (!test_) {
 		try {
 
@@ -1596,7 +1607,7 @@ void LinkStateRoutingPolicy::set_dif_configuration(
 			delay = WAIT_UNTIL_PDUFT_COMPUTATION_DEFAULT;
 		}
 		ComputeRoutingTimerTask * cttask = new ComputeRoutingTimerTask(this, delay);
-		timer_.scheduleTask(cttask, delay);
+		timer_->scheduleTask(cttask, delay);
 
 		// Task to increment age
 		try {
@@ -1605,7 +1616,7 @@ void LinkStateRoutingPolicy::set_dif_configuration(
 			delay = WAIT_UNTIL_AGE_INCREMENT_DEFAULT;
 		}
 		UpdateAgeTimerTask * uattask = new UpdateAgeTimerTask(this, delay);
-		timer_.scheduleTask(uattask, delay);
+		timer_->scheduleTask(uattask, delay);
 
 		// Task to propagate modified FSO
 		try {
@@ -1615,8 +1626,9 @@ void LinkStateRoutingPolicy::set_dif_configuration(
 		}
 		PropagateFSODBTimerTask * pfttask = new PropagateFSODBTimerTask(this,
 				delay);
-		timer_.scheduleTask(pfttask, delay);
+		timer_->scheduleTask(pfttask, delay);
 	}
+
 }
 
 const std::list<rina::FlowInformation>& LinkStateRoutingPolicy::get_allocated_flows() const

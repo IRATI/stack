@@ -82,7 +82,7 @@ void IPCResourceManager::populateRIB()
 
 	try {
 		tmp = new rina::rib::RIBObj("IPCResourceManager");
-		rib_daemon_->addObjRIB(rib, "/ipcmanagement/irm", &tmp);
+		rib_daemon_->addObjRIB(rib, "/ipcManagement/irm", &tmp);
 
 		tmp = new rina::rib::RIBObj(UnderlayingDIFRIBObj::parent_class_name);
 		rib_daemon_->addObjRIB(rib,
@@ -352,9 +352,9 @@ std::list<FlowInformation> IPCResourceManager::getAllNMinusOneFlowInformation() 
 
 //Class UnderlayingRegistrationRIBObjt
 const std::string UnderlayingRegistrationRIBObj::class_name = "UnderlayingRegistration";
-const std::string UnderlayingRegistrationRIBObj::object_name_prefix = "/ipcmanagement/irm/underregs/difName=";
+const std::string UnderlayingRegistrationRIBObj::object_name_prefix = "/ipcManagement/irm/underregs/difName=";
 const std::string UnderlayingRegistrationRIBObj::parent_class_name = "UnderlayingRegistrations";
-const std::string UnderlayingRegistrationRIBObj::parent_object_name = "/ipcmanagement/irm/underregs";
+const std::string UnderlayingRegistrationRIBObj::parent_object_name = "/ipcManagement/irm/underregs";
 
 UnderlayingRegistrationRIBObj::UnderlayingRegistrationRIBObj(const std::string& dif_name_) :
 			rib::RIBObj(class_name), dif_name(dif_name_)
@@ -385,9 +385,9 @@ void UnderlayingRegistrationRIBObj::read(const rina::cdap_rib::con_handle_t &con
 
 //Class UnderlayingFlowRIBObj
 const std::string UnderlayingFlowRIBObj::class_name = "UnderlayingFlow";
-const std::string UnderlayingFlowRIBObj::object_name_prefix = "/ipcmanagement/irm/underflows/portId=";
+const std::string UnderlayingFlowRIBObj::object_name_prefix = "/ipcManagement/irm/underflows/portId=";
 const std::string UnderlayingFlowRIBObj::parent_class_name = "UnderlayingFlows";
-const std::string UnderlayingFlowRIBObj::parent_object_name = "/ipcmanagement/irm/underflows";
+const std::string UnderlayingFlowRIBObj::parent_object_name = "/ipcManagement/irm/underflows";
 
 UnderlayingFlowRIBObj::UnderlayingFlowRIBObj(const rina::FlowInformation& flow_info)
 		: rib::RIBObj(class_name), flow_information(flow_info)
@@ -425,9 +425,9 @@ void UnderlayingFlowRIBObj::read(const rina::cdap_rib::con_handle_t &con,
 
 //Class UnderlayingDIFRIBObj
 const std::string UnderlayingDIFRIBObj::class_name = "UnderlayingDIF";
-const std::string UnderlayingDIFRIBObj::object_name_prefix = "/ipcmanagement/irm/underdifs/difName=";
+const std::string UnderlayingDIFRIBObj::object_name_prefix = "/ipcManagement/irm/underdifs/difName=";
 const std::string UnderlayingDIFRIBObj::parent_class_name = "UnderlayingDIFs";
-const std::string UnderlayingDIFRIBObj::parent_object_name = "/ipcmanagement/irm/underdifs";
+const std::string UnderlayingDIFRIBObj::parent_object_name = "/ipcManagement/irm/underdifs";
 UnderlayingDIFRIBObj::UnderlayingDIFRIBObj(const DIFProperties& dif_info)
 		: rib::RIBObj(class_name), dif_properties(dif_info)
 {

@@ -30,6 +30,7 @@
 #include <linux/list.h>
 #include <linux/workqueue.h>
 #include <linux/mutex.h>
+#include <linux/inet.h>
 #include <net/sock.h>
 
 #define SHIM_NAME     "shim-tcp-udp"
@@ -50,6 +51,7 @@
 
 #define CUBE_UNRELIABLE 0
 #define CUBE_RELIABLE   1
+#define SEND_WQ_MAX_SIZE 1000
 
 static struct workqueue_struct * rcv_wq;
 static struct workqueue_struct * snd_wq;
@@ -57,6 +59,7 @@ static struct work_struct        rcv_work;
 static struct work_struct        snd_work;
 static struct list_head          rcv_wq_data;
 static struct list_head          snd_wq_data;
+static int snd_wq_size;
 static DEFINE_SPINLOCK(rcv_wq_lock);
 static DEFINE_SPINLOCK(snd_wq_lock);
 
@@ -76,6 +79,21 @@ struct snd_data {
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
 
+union address {
+	sa_family_t                 family;
+	struct sockaddr             sa;
+	struct sockaddr_in          in;
+	struct sockaddr_in6         in6;
+};
+
+struct hostname {
+	sa_family_t family;
+	union {
+		struct in_addr      in;
+		struct in6_addr     in6;
+	};
+};
+
 /*
  * Mapping of ipcp_instance_data to host_name
  * Needed for handling incomming SDUs
@@ -84,7 +102,7 @@ struct host_ipcp_instance_mapping {
         struct list_head            list;
 
         struct ipcp_instance_data * data;
-        __be32                      host_name;
+        struct hostname             host_name;
 };
 
 static DEFINE_SPINLOCK(data_instances_lock);
@@ -118,7 +136,7 @@ struct shim_tcp_udp_flow {
         int                    fspec_id;
 
         struct socket *        sock;
-        struct sockaddr_in     addr;
+        union address          addr;
 
         struct rfifo *         sdu_queue;
 
@@ -137,7 +155,7 @@ struct ipcp_instance_data {
         struct name *       name;
         struct name *       dif_name;
 
-        __be32              host_name;
+        struct hostname     host_name;
 
         struct flow_spec ** qos;
 
@@ -161,8 +179,7 @@ struct dir_entry {
 
         struct name *    app_name;
 
-        int              ip_address;
-        int              port;
+	union address    addr;
 };
 
 /* Expected application registration */
@@ -172,6 +189,98 @@ struct exp_reg {
         struct name *    app_name;
         int              port;
 };
+
+static struct ipcp_factory_data {
+        spinlock_t lock;
+        struct list_head instances;
+} tcp_udp_data;
+
+
+static void hostname_init(struct hostname *     host_name,
+			  const union address * sa)
+{
+	host_name->family = sa->family;
+	switch (host_name->family) {
+	case AF_INET:
+		host_name->in = sa->in.sin_addr;
+		break;
+	case AF_INET6:
+		host_name->in6 = sa->in6.sin6_addr;
+		break;
+	default:
+		unreachable();
+	}
+}
+
+static bool hostname_is_equal(const struct hostname * a,
+			      const struct hostname * b)
+{
+	/*if (!a)
+		return !b;*/
+	if (a->family == b->family) {
+		switch (a->family) {
+		case AF_INET:
+			return a->in.s_addr == b->in.s_addr;
+		case AF_INET6:
+			return !memcmp(&a->in6, &b->in6, 16);
+		}
+		unreachable();
+	}
+	return false;
+}
+
+static bool sockaddr_is_equal(const union address * a,
+			      const union address * b)
+{
+	/*if (!a)
+		return !b;*/
+	if (a->family == b->family) {
+		switch (a->family) {
+		case AF_INET:
+			return a->in.sin_port == b->in.sin_port
+			    && a->in.sin_addr.s_addr == b->in.sin_addr.s_addr;
+		case AF_INET6:
+			return a->in6.sin6_port == b->in6.sin6_port
+			    && a->in6.sin6_flowinfo == b->in6.sin6_flowinfo
+			    && !memcmp(&a->in6.sin6_addr, &b->in6.sin6_addr, 16)
+			    && a->in6.sin6_scope_id == b->in6.sin6_scope_id;
+		}
+		unreachable();
+	}
+	return false;
+}
+
+static unsigned sockaddr_init(union address *         sa,
+			      const struct hostname * host_name,
+			      int                     port)
+{
+	sa->family = host_name->family;
+	switch (sa->family) {
+	case AF_INET:
+		sa->in.sin_port = htons(port);
+		sa->in.sin_addr = host_name->in;
+		return sizeof sa->in;
+	case AF_INET6:
+		sa->in6.sin6_port = htons(port);
+		sa->in6.sin6_addr = host_name->in6;
+		sa->in6.sin6_flowinfo = sa->in6.sin6_scope_id = 0;
+		return sizeof sa->in6;
+	}
+	unreachable();
+}
+
+static unsigned sockaddr_copy(union address * src, union address * dst)
+{
+	switch (src->family) {
+	case AF_INET:
+		dst->in = src->in;
+		return sizeof dst->in;
+	case AF_INET6:
+		dst->in6 = src->in6;
+		return sizeof dst->in6;
+	}
+	unreachable();
+}
 
 static ssize_t shim_tcp_udp_ipcp_attr_show(struct robject *        robj,
 					   struct robj_attribute * attr,
@@ -192,7 +301,17 @@ static ssize_t shim_tcp_udp_ipcp_attr_show(struct robject *        robj,
 	if (strcmp(robject_attr_name(attr), "type") == 0)
 		return sprintf(buf, "shim-tcp-udp\n");
 	if (strcmp(robject_attr_name(attr), "host_name") == 0)
-		return sprintf(buf, "%pI4\n", &instance->data->host_name);
+		switch(instance->data->host_name.family) {
+		case AF_INET:
+			return sprintf(buf, "%pI4\n",
+				&instance->data->host_name.in);
+		case AF_INET6:
+			return sprintf(buf, "%pI6c\n",
+				&instance->data->host_name.in6);
+		default:
+			unreachable();
+		case AF_UNSPEC:;
+		}
 
 	return 0;
 }
@@ -201,7 +320,7 @@ RINA_ATTRS(shim_tcp_udp_ipcp, name, type, dif, host_name);
 RINA_KTYPE(shim_tcp_udp_ipcp);
 
 static struct host_ipcp_instance_mapping *
-inst_data_mapping_get(__be32 host_name)
+inst_data_mapping_get(const struct hostname * host_name)
 {
         struct host_ipcp_instance_mapping * mapping;
 
@@ -210,7 +329,7 @@ inst_data_mapping_get(__be32 host_name)
         spin_lock(&data_instances_lock);
 
         list_for_each_entry(mapping, &data_instances_list, list) {
-                if (mapping->host_name == host_name) {
+                if (hostname_is_equal(host_name, &mapping->host_name)) {
                         spin_unlock(&data_instances_lock);
                         return mapping;
                 }
@@ -272,22 +391,23 @@ find_flow_by_port(struct ipcp_instance_data * data,
                   port_id_t                   id)
 {
         struct shim_tcp_udp_flow * flow;
+        unsigned long		   flags;
 
         LOG_HBEAT;
 
         ASSERT(data);
         ASSERT(is_port_id_ok(id));
 
-        spin_lock(&data->lock);
+        spin_lock_irqsave(&data->lock, flags);
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->port_id == id) {
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
                         return flow;
                 }
         }
 
-        spin_unlock(&data->lock);
+        spin_unlock_irqrestore(&data->lock, flags);
 
         return NULL;
 }
@@ -297,40 +417,30 @@ find_flow_by_socket(struct ipcp_instance_data * data,
                     const struct socket *       sock)
 {
         struct shim_tcp_udp_flow * flow;
+        unsigned long 		   flags;
 
         LOG_HBEAT;
 
         ASSERT(data);
 
-        spin_lock(&data->lock);
+        spin_lock_irqsave(&data->lock, flags);
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->sock == sock) {
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
                         return flow;
                 }
         }
 
-        spin_unlock(&data->lock);
+        spin_unlock_irqrestore(&data->lock, flags);
 
         return NULL;
-}
-
-static bool compare_sockaddr_in(const struct sockaddr_in * f,
-                                const struct sockaddr_in * s)
-{
-        ASSERT(f);
-        ASSERT(s);
-
-        return ((f->sin_family      == s->sin_family)      &&
-                (f->sin_port        == s->sin_port)        &&
-                (f->sin_addr.s_addr == s->sin_addr.s_addr));
 }
 
 /* No lock needed here, called only when already holding a lock */
 static struct shim_tcp_udp_flow *
 find_udp_flow(struct ipcp_instance_data * data,
-              const struct sockaddr_in *  addr,
+              const union address *       addr,
               const struct socket *       sock)
 {
         struct shim_tcp_udp_flow * flow;
@@ -343,7 +453,7 @@ find_udp_flow(struct ipcp_instance_data * data,
 
         list_for_each_entry(flow, &data->flows, list) {
                 if (flow->sock == sock &&
-                    compare_sockaddr_in(addr, &flow->addr)) {
+                    sockaddr_is_equal(addr, &flow->addr)) {
                         return flow;
                 }
         }
@@ -356,32 +466,33 @@ find_app_by_socket(struct ipcp_instance_data * data,
                    const struct socket *       sock)
 {
         struct reg_app_data * app;
+        unsigned long	      flags;
 
         LOG_HBEAT;
 
         ASSERT(data);
         ASSERT(sock);
 
-        spin_lock(&data->lock);
+        spin_lock_irqsave(&data->lock, flags);
 
         /* FIXME: Shrink this code */
         if (sock->type == SOCK_DGRAM) {
                 list_for_each_entry(app, &data->reg_apps, list) {
                         if (app->udpsock == sock) {
-                                spin_unlock(&data->lock);
+                                spin_unlock_irqrestore(&data->lock, flags);
                                 return app;
                         }
                 }
         } else {
                 list_for_each_entry(app, &data->reg_apps, list) {
                         if (app->tcpsock == sock) {
-                                spin_unlock(&data->lock);
+                                spin_unlock_irqrestore(&data->lock, flags);
                                 return app;
                         }
                 }
         }
 
-        spin_unlock(&data->lock);
+        spin_unlock_irqrestore(&data->lock, flags);
 
         return NULL;
 }
@@ -523,10 +634,11 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                               port_id_t                   id)
 {
         struct shim_tcp_udp_flow * flow;
-        struct sockaddr_in         sin;
+        union address              addr;
         struct dir_entry *         entry;
         int                        err;
         struct ipcp_instance *     ipcp;
+        unsigned                   len;
 
         LOG_HBEAT;
 
@@ -556,23 +668,23 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                 /* FIXME: This should be done with DNS or DHT */
                 entry = find_dir_entry(data, dest);
                 if (!entry) {
-                        LOG_ERR("Directory entry not found");
+                        LOG_ERR("Directory entry not found for <APN=%s AEN=%s>",
+                                dest->process_name, dest->entity_name);
                         list_del(&flow->list);
                         rkfree(flow);
                         return -1;
                 }
                 LOG_DBG("Directory entry found");
 
-                flow->addr.sin_addr.s_addr = htonl(entry->ip_address);
-                flow->addr.sin_family      = AF_INET;
-                flow->addr.sin_port        = htons(entry->port);
+                len = sockaddr_copy(&entry->addr, &flow->addr);
 
                 LOG_DBG("Max allowable gap is %d", fspec->max_allowable_gap);
                 if (fspec->max_allowable_gap != 0) {
                         LOG_DBG("Unreliable flow requested");
                         flow->fspec_id = 0;
 
-                        err = sock_create_kern(PF_INET, SOCK_DGRAM,
+                        len = sockaddr_init(&addr, &data->host_name, 0);
+                        err = sock_create_kern(addr.family, SOCK_DGRAM,
                                                IPPROTO_UDP, &flow->sock);
                         if (err < 0) {
                                 LOG_ERR("Could not create UDP socket");
@@ -580,12 +692,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                                 return -1;
                         }
 
-                        sin.sin_addr.s_addr = htonl(data->host_name);
-                        sin.sin_family      = AF_INET;
-                        sin.sin_port        = htons(0);
-
-                        err = kernel_bind(flow->sock, (struct sockaddr*) &sin,
-                                          sizeof(sin));
+                        err = kernel_bind(flow->sock, &addr.sa, len);
                         if (err < 0) {
                                 LOG_ERR("Could not bind UDP socket for alloc");
                                 sock_release(flow->sock);
@@ -603,7 +710,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                         LOG_DBG("Reliable flow requested");
                         flow->fspec_id = 1;
 
-                        err = sock_create_kern(PF_INET, SOCK_STREAM,
+                        err = sock_create_kern(flow->addr.family, SOCK_STREAM,
                                                IPPROTO_TCP, &flow->sock);
                         if (err < 0) {
                                 LOG_ERR("Could not create TCP socket");
@@ -611,9 +718,8 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                                 return -1;
                         }
 
-                        err = kernel_connect(flow->sock,
-                                             (struct sockaddr*)&flow->addr,
-                                             sizeof(struct sockaddr), 0);
+                        err = kernel_connect(flow->sock, &flow->addr.sa,
+                                             len, 0);
                         if (err < 0) {
                                 LOG_ERR("Could not connect TCP socket");
                                 sock_release(flow->sock);
@@ -864,7 +970,7 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
 }
 
 int recv_msg(struct socket *      sock,
-             struct sockaddr_in * other,
+             union address *     other,
              int                  lother,
              unsigned char *      buf,
              int                  len)
@@ -899,7 +1005,7 @@ int recv_msg(struct socket *      sock,
 }
 
 int send_msg(struct socket *      sock,
-             struct sockaddr_in * other,
+             union address *      other,
              int                  lother,
              char *               buf,
              int                  len)
@@ -930,7 +1036,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                            struct socket *             sock)
 {
         struct shim_tcp_udp_flow *  flow;
-        struct sockaddr_in          addr;
+        union address               addr;
         struct reg_app_data *       app;
         struct buffer *             sdubuf;
         struct name *               sname;
@@ -938,14 +1044,15 @@ static int udp_process_msg(struct ipcp_instance_data * data,
         char *                      buf;
         int                         size;
         struct ipcp_instance      * ipcp, * user_ipcp;
+        unsigned long		    flags;
+        char			    api_string[12];
 
         LOG_HBEAT;
 
-        buf = rkmalloc(CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE, GFP_KERNEL);
+        buf = rkmalloc(CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE, GFP_ATOMIC);
         if(!buf)
                 return -1;
 
-        memset(&addr, 0, sizeof(struct sockaddr_in));
         if ((size = recv_msg(sock, &addr, sizeof(addr),
                              buf, CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE)) < 0) {
                 if (size != -EAGAIN)
@@ -954,7 +1061,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        sdubuf = buffer_create_from(buf, size);
+        sdubuf = buffer_create_from_ni(buf, size);
         if (!sdubuf) {
                 LOG_ERR("Could not create buffer");
                 rkfree(buf);
@@ -963,17 +1070,17 @@ static int udp_process_msg(struct ipcp_instance_data * data,
 
         rkfree(buf);
 
-        du = sdu_create_buffer_with(sdubuf);
+        du = sdu_create_buffer_with_ni(sdubuf);
         if (!du) {
                 LOG_ERR("Couldn't create sdu");
                 buffer_destroy(sdubuf);
                 return -1;
         }
 
-        spin_lock(&data->lock);
+        spin_lock_irqsave(&data->lock, flags);
         flow = find_udp_flow(data, &addr, sock);
         if (!flow) {
-                spin_unlock(&data->lock);
+                spin_unlock_irqrestore(&data->lock, flags);
                 LOG_DBG("No flow found, creating it");
 
                 app = find_app_by_socket(data, sock);
@@ -1015,9 +1122,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 flow->sock          = sock;
                 flow->fspec_id      = 0;
 
-                flow->addr.sin_port        = addr.sin_port;
-                flow->addr.sin_family      = addr.sin_family;
-                flow->addr.sin_addr.s_addr = addr.sin_addr.s_addr;
+                sockaddr_copy(&addr, &flow->addr);
 
                 if (!is_port_id_ok(flow->port_id)) {
                         LOG_ERR("Port id is not ok");
@@ -1027,10 +1132,10 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                         return -1;
                 }
 
-                spin_lock(&data->lock);
+                spin_lock_irqsave(&data->lock, flags);
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
-                spin_unlock(&data->lock);
+                spin_unlock_irqrestore(&data->lock, flags);
                 LOG_DBG("Added UDP flow");
 
                 if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
@@ -1076,8 +1181,18 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 }
 
                 /* FIXME: This sets the name to the server? */
+                if (sprintf(&api_string[0], "%d", flow->port_id) < 0){
+                	kfa_port_id_release(data->kfa, flow->port_id);
+                	unbind_and_destroy_flow(data, flow);
+                        return -1;
+                }
+
                 sname = name_create_ni();
-                if (!name_init_from_ni(sname, "Unknown app", "", "", "")) {
+                if (!name_init_from_ni(sname,
+                		       "Unknown app",
+				       (const string_t*) &api_string[0],
+				       "",
+				       "")) {
                         name_destroy(sname);
                         kfa_port_id_release(data->kfa, flow->port_id);
                         unbind_and_destroy_flow(data, flow);
@@ -1102,7 +1217,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 LOG_DBG("Flow exists, handling SDU");
 
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
 
                         LOG_DBG("Port is ALLOCATED, "
                                 "queueing frame in user-IPCP");
@@ -1123,7 +1238,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                                 "queueing frame in SDU queue");
 
                         if (rfifo_push(flow->sdu_queue, du)) {
-                                spin_unlock(&data->lock);
+                                spin_unlock_irqrestore(&data->lock, flags);
 
                                 LOG_ERR("Failed to write %zd bytes"
                                         "into the fifo",
@@ -1133,16 +1248,16 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                                 return -1;
                         }
 
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
                 } else if (flow->port_id_state == PORT_STATE_NULL) {
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
 
                         LOG_DBG("Port is NULL, "
                                 "dropping SDU");
 
                         sdu_destroy(du);
                 } else {
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
                         LOG_ERR("Port state is unhandled");
                 }
         }
@@ -1160,6 +1275,7 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
         char            sbuf[2];
         int             size;
         __be16          nlen;
+        unsigned long   flags;
 
         LOG_HBEAT;
 
@@ -1189,7 +1305,7 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
         flow->bytes_left = (int) ntohs(nlen);
         LOG_DBG("Incoming message is %d bytes long", flow->bytes_left);
 
-        buf = rkmalloc(flow->bytes_left, GFP_KERNEL);
+        buf = rkmalloc(flow->bytes_left, GFP_ATOMIC);
         if(!buf)
                 return -1; /* FIXME: Check this return value */
 
@@ -1204,23 +1320,23 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
 
         if (size == flow->bytes_left) {
                 flow->bytes_left = 0;
-                sdubuf = buffer_create_with(buf, size);
+                sdubuf = buffer_create_with_ni(buf, size);
                 if (!sdubuf) {
                         LOG_ERR("Could not create buffer");
                         rkfree(buf);
                         return -1;
                 }
 
-                du = sdu_create_buffer_with(sdubuf);
+                du = sdu_create_buffer_with_ni(sdubuf);
                 if (!du) {
                         LOG_ERR("Couldn't create sdu");
                         buffer_destroy(sdubuf);
                         return -1;
                 }
 
-                spin_lock(&data->lock);
+                spin_lock_irqsave(&data->lock, flags);
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
 
                         ASSERT(flow->user_ipcp);
                         ASSERT(flow->user_ipcp->ops);
@@ -1238,7 +1354,7 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
                                 "queueing frame in SDU queue");
 
                         if (rfifo_push_ni(flow->sdu_queue, du)) {
-                                spin_unlock(&data->lock);
+                                spin_unlock_irqrestore(&data->lock, flags);
 
                                 LOG_ERR("Failed to write %zd bytes"
                                         "into the fifo",
@@ -1248,9 +1364,9 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
                                 return -1;
                         }
 
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
                 } else if (flow->port_id_state == PORT_STATE_NULL) {
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
                         sdu_destroy(du);
                 }
 
@@ -1273,6 +1389,7 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
         struct buffer * sdubuf;
         struct sdu *    du;
         int             start, size;
+        unsigned long   flags;
 
         LOG_HBEAT;
 
@@ -1287,23 +1404,23 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
 
         if (size == flow->bytes_left) {
                 flow->bytes_left = 0;
-                sdubuf = buffer_create_with(flow->buf, flow->lbuf);
+                sdubuf = buffer_create_with_ni(flow->buf, flow->lbuf);
                 if (!sdubuf) {
                         rkfree(flow->buf);
                         LOG_ERR("Could not create buffer");
                         return -1;
                 }
 
-                du = sdu_create_buffer_with(sdubuf);
+                du = sdu_create_buffer_with_ni(sdubuf);
                 if (!du) {
                         LOG_ERR("Couldn't create sdu");
                         buffer_destroy(sdubuf);
                         return -1;
                 }
 
-                spin_lock(&data->lock);
+                spin_lock_irqsave(&data->lock, flags);
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
 
                         ASSERT(flow->user_ipcp);
                         ASSERT(flow->user_ipcp->ops);
@@ -1321,7 +1438,7 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
                                 "queueing frame in SDU queue");
 
                         if (rfifo_push_ni(flow->sdu_queue, du)) {
-                                spin_unlock(&data->lock);
+                                spin_unlock_irqrestore(&data->lock, flags);
 
                                 LOG_ERR("Failed to write %zd bytes"
                                         "into the fifo",
@@ -1331,9 +1448,9 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
                                 return -1;
                         }
 
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
                 } else if (flow->port_id_state == PORT_STATE_NULL) {
-                        spin_unlock(&data->lock);
+                        spin_unlock_irqrestore(&data->lock, flags);
                         sdu_destroy(du);
                 }
 
@@ -1423,6 +1540,8 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
         struct name *              sname;
         int                        err;
         struct ipcp_instance     * ipcp, * user_ipcp;
+        unsigned long		   flags;
+        char	   		   api_string[12];
 
         LOG_HBEAT;
 
@@ -1472,13 +1591,11 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                 flow->port_id       = kfa_port_id_reserve(data->kfa, data->id);
                 flow->sock          = acsock;
 
-                spin_lock(&data->lock);
+                spin_lock_irqsave(&data->lock, flags);
                 INIT_LIST_HEAD(&flow->list);
                 list_add(&flow->list, &data->flows);
-                spin_unlock(&data->lock);
+                spin_unlock_irqrestore(&data->lock, flags);
                 LOG_DBG("TCP flow added");
-
-                memset(&flow->addr, 0, sizeof(struct sockaddr_in));
 
                 if (!is_port_id_ok(flow->port_id)) {
                         flow->port_id_state = PORT_STATE_NULL;
@@ -1514,8 +1631,18 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
 
                 LOG_DBG("Queue has been created");
 
+                if (sprintf(&api_string[0], "%d", flow->port_id) < 0){
+                	kfa_port_id_release(data->kfa, flow->port_id);
+                	unbind_and_destroy_flow(data, flow);
+                        return -1;
+                }
+
                 sname = name_create_ni();
-                if (!name_init_from_ni(sname, "Unknown app", "", "", "")) {
+                if (!name_init_from_ni(sname,
+                		       "Unknown app",
+				       (const string_t*) &api_string[0],
+				       "",
+				       "")) {
                         name_destroy(sname);
                         kfa_port_id_release(data->kfa, flow->port_id);
                         tcp_unbind_and_destroy_flow(data, flow);
@@ -1546,7 +1673,8 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
 static int tcp_udp_rcv_process_msg(struct sock * sk)
 {
         struct host_ipcp_instance_mapping * mapping;
-        struct sockaddr_in                  own;
+        struct hostname                     host_name;
+        union address                       own;
         struct socket *                     sock;
         int                                 res, len;
 
@@ -1557,14 +1685,24 @@ static int tcp_udp_rcv_process_msg(struct sock * sk)
         sock = sk->sk_socket;
         ASSERT(sock);
 
-        len = sizeof(struct sockaddr_in);
-        if (kernel_getsockname(sock, (struct sockaddr*) &own, &len)) {
+        len = sizeof own;
+        if (kernel_getsockname(sock, &own.sa, &len)) {
                 LOG_ERR("Couldn't retrieve hostname");
                 return -1;
         }
-        LOG_DBG("Found sockname (%d)", ntohl(own.sin_addr.s_addr));
+        switch (own.family) {
+        case AF_INET:
+                LOG_DBG("Found sockname (%pI4)", &own.in.sin_addr);
+                break;
+        case AF_INET6:
+                LOG_DBG("Found sockname (%pI6c)", &own.in6.sin6_addr);
+                break;
+        default:
+                unreachable();
+        }
 
-        mapping = inst_data_mapping_get(ntohl(own.sin_addr.s_addr));
+        hostname_init(&host_name, &own);
+        mapping = inst_data_mapping_get(&host_name);
         ASSERT(mapping);
 
         if (sk->sk_socket->type == SOCK_DGRAM) {
@@ -1610,7 +1748,8 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
                                         const struct name *         name)
 {
         struct reg_app_data * app;
-        struct sockaddr_in    sin;
+        union address         addr;
+        unsigned              sa_len;
         struct exp_reg *      exp_reg;
         int                   err;
 
@@ -1642,7 +1781,9 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
 
         exp_reg = find_exp_reg(data, name);
         if (!exp_reg) {
-                LOG_ERR("That application is not expected to register");
+                LOG_ERR("That application is not expected to register"
+                        " <APN=%s AEN=%s>",
+                        name->process_name, name->entity_name);
                 rkfree(app);
                 return -1;
         }
@@ -1650,7 +1791,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
 
         app->port = exp_reg->port;
 
-        err = sock_create_kern(PF_INET, SOCK_DGRAM, IPPROTO_UDP,
+        err = sock_create_kern(data->host_name.family, SOCK_DGRAM, IPPROTO_UDP,
                                &app->udpsock);
         if (err < 0) {
                 LOG_ERR("Could not create UDP socket for registration");
@@ -1659,11 +1800,8 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        sin.sin_addr.s_addr = htonl(data->host_name);
-        sin.sin_family      = AF_INET;
-        sin.sin_port        = htons(app->port);
-
-        err = kernel_bind(app->udpsock, (struct sockaddr*) &sin, sizeof(sin));
+        sa_len = sockaddr_init(&addr, &data->host_name, app->port);
+        err = kernel_bind(app->udpsock, &addr.sa, sa_len);
         if (err < 0) {
                 LOG_ERR("Could not bind UDP socket for registration");
                 sock_release(app->udpsock);
@@ -1679,7 +1817,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
 
         LOG_DBG("UDP socket ready");
 
-        err = sock_create_kern(PF_INET, SOCK_STREAM, IPPROTO_TCP,
+        err = sock_create_kern(data->host_name.family, SOCK_STREAM, IPPROTO_TCP,
                                &app->tcpsock);
         if (err < 0) {
                 LOG_ERR("could not create TCP socket for registration");
@@ -1689,7 +1827,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        err = kernel_bind(app->tcpsock, (struct sockaddr*) &sin, sizeof(sin));
+        err = kernel_bind(app->tcpsock, &addr.sa, sa_len);
         if (err < 0) {
                 LOG_ERR("Could not bind TCP socket for registration");
                 sock_release(app->tcpsock);
@@ -1850,30 +1988,6 @@ static int get_nxt_val(char ** dst,
         return 0;
 }
 
-/* Note: Assumes an IPv4 address */
-static int ip_string_to_int(char *   ip_s,
-                            __be32 * ip_a)
-{
-        char *       tmp;
-        unsigned int nr, i;
-
-        ASSERT(ip_s);
-        ASSERT(ip_a);
-
-        *ip_a = 0;
-        nr    = 0;
-        for (i = 0; i < 4; i++) {
-                tmp = strsep(&ip_s, ".");
-                if (kstrtouint(tmp, 10, &nr)) {
-                        LOG_ERR("Failed to convert int");
-                        return -1;
-                }
-                *ip_a |= nr << (8 * (3-i));
-        }
-
-        return 0;
-}
-
 static void clear_directory(struct ipcp_instance_data * data)
 {
         struct dir_entry * entry, * next;
@@ -1912,11 +2026,12 @@ static void undo_assignment(struct ipcp_instance_data * data)
 
 static int parse_dir_entry(struct ipcp_instance_data * data, char **blob)
 {
+        int                result = -1;
         unsigned int       len, port_nr;
-        __be32             ip_addr;
-        char               * ap, * ae, * ip, * port;
-        struct name *      app_name;
+        char               * pn = 0, * pi = 0, * en = 0, * ei = 0;
+        char               * ip = 0, * port = 0;
         struct dir_entry * dir_entry;
+        union address    * addr;
 
         LOG_HBEAT;
 
@@ -1927,95 +2042,73 @@ static int parse_dir_entry(struct ipcp_instance_data * data, char **blob)
                 return -1;
 
         /* len:aplen:aelen:iplen:port */
-        /* Get AP name */
-        len = 0;
-        ap  = 0;
-        if (get_nxt_val(&ap, blob, &len)) {
+        if (get_nxt_val(&pn, blob, &len)
+         || get_nxt_val(&en, blob, &len)
+         || get_nxt_val(&ip, blob, &len)
+         || get_nxt_val(&port, blob, &len)) {
                 LOG_ERR("Failed to get next value");
-                rkfree(dir_entry);
-                return -1;
-        }
-
-        /* Get AE name */
-        ae = 0;
-        if (get_nxt_val(&ae, blob, &len)) {
-                LOG_ERR("Failed to get next value");
-                rkfree(ap);
-                rkfree(dir_entry);
-                return -1;
-        }
-
-        /* Get IP address */
-        ip = 0;
-        if (get_nxt_val(&ip, blob, &len)) {
-                LOG_ERR("Failed to get next value");
-                rkfree(ae);
-                rkfree(ap);
-                rkfree(dir_entry);
-                return -1;
-        }
-
-        if (ip_string_to_int(ip, &ip_addr)) {
-                LOG_ERR("Failed to convert ip to int");
-                rkfree(ip);
-                rkfree(ae);
-                rkfree(ap);
-                rkfree(dir_entry);
-                return -1;
-        }
-        rkfree(ip);
-
-        /* Get port number */
-        port = 0;
-        if (get_nxt_val(&port, blob, &len)) {
-                LOG_ERR("Failed to get next value");
-                rkfree(ae);
-                rkfree(ap);
-                rkfree(dir_entry);
-                return -1;
+                goto out;
         }
 
         if (kstrtouint(port, 10, &port_nr)) {
                 LOG_ERR("Failed to convert int");
-                rkfree(port);
-                rkfree(ae);
-                rkfree(ap);
-                rkfree(dir_entry);
-                return -1;
+                goto out;
         }
-        rkfree(port);
 
-        app_name = name_create();
-        if (!name_init_with(app_name,
-                            ap, rkstrdup_ni(""),
-                            ae, rkstrdup_ni(""))) {
-                LOG_ERR("Failed to init name");
-                rkfree(ae);
-                rkfree(ap);
-                rkfree(dir_entry);
-                return -1;
+        addr = &dir_entry->addr;
+        if (in4_pton(ip, -1, (u8*)&addr->in.sin_addr, -1, 0)) {
+                addr->family = AF_INET;
+                addr->in.sin_port = htons(port_nr);
+        } else if (in6_pton(ip, -1, (u8*)&addr->in6.sin6_addr, -1, 0)) {
+                addr->family = AF_INET6;
+                addr->in6.sin6_port = htons(port_nr);
+        } else {
+                LOG_ERR("Failed to parse ip");
+                goto out;
+        }
+
+        if (!(pi = rkstrdup(""))
+         || !(ei = rkstrdup(""))
+         || !(dir_entry->app_name = name_create())) {
+                LOG_ERR("Failed to get memory");
+                goto out;
         }
 
         INIT_LIST_HEAD(&dir_entry->list);
-        dir_entry->app_name   = app_name;
-        dir_entry->ip_address = ip_addr;
-        dir_entry->port       = port_nr;
+        name_init_with(dir_entry->app_name, pn, pi, en, ei);
 
         spin_lock(&data->lock);
         list_add(&dir_entry->list, &data->directory);
         spin_unlock(&data->lock);
 
         LOG_DBG("Added a new dir entry");
+        result = 0;
 
-        return 0;
+out:
+        if (port)
+               rkfree(port);
+        if (ip)
+               rkfree(ip);
+        if (result) {
+                if (pn)
+                      rkfree(pn);
+                if (pi)
+                      rkfree(pi);
+                if (en)
+                      rkfree(en);
+                if (ei)
+                      rkfree(ei);
+                rkfree(dir_entry);
+        }
+        return result;
 }
 
 static int parse_exp_reg_entry(struct ipcp_instance_data * data, char ** blob)
 {
+        int              result = -1;
         struct exp_reg * exp_reg;
-        unsigned int     len, port_nr;
-        char           * ap, * ae, * port;
-        struct name *    app_name;
+        unsigned int     len;
+        char             * pn = 0, * pi = 0, * en = 0, * ei = 0, * port = 0;
 
         ASSERT(*blob);
 
@@ -2024,65 +2117,50 @@ static int parse_exp_reg_entry(struct ipcp_instance_data * data, char ** blob)
                 return -1;
 
         /* len:aplen:aelen:port */
-        /* Get AP name */
-        len = 0;
-        ap  = 0;
-        if (get_nxt_val(&ap, blob, &len)) {
+        if (get_nxt_val(&pn, blob, &len)
+         || get_nxt_val(&en, blob, &len)
+         || get_nxt_val(&port, blob, &len)) {
                 LOG_ERR("Failed to get next value");
-                rkfree(exp_reg);
-                return -1;
+                goto out;
         }
 
-        /* Get AE name */
-        ae = 0;
-        if (get_nxt_val(&ae, blob, &len)) {
-                LOG_ERR("Failed to get next value");
-                rkfree(ap);
-                rkfree(exp_reg);
-                return -1;
-        }
-
-        /* Get port number */
-        port = 0;
-        if (get_nxt_val(&port, blob, &len)) {
-                LOG_ERR("Failed to get next value");
-                rkfree(ae);
-                rkfree(ap);
-                rkfree(exp_reg);
-                return -1;
-        }
-
-        if (kstrtouint(port, 10, &port_nr)) {
+        if (kstrtouint(port, 10, &exp_reg->port)) {
                 LOG_ERR("Failed to convert int");
-                rkfree(port);
-                rkfree(ae);
-                rkfree(ap);
-                rkfree(exp_reg);
-                return -1;
+                goto out;
         }
-        rkfree(port);
+
+        if (!(pi = rkstrdup(""))
+         || !(ei = rkstrdup(""))
+         || !(exp_reg->app_name = name_create())) {
+                LOG_ERR("Failed to get memory");
+                goto out;
+        }
 
         INIT_LIST_HEAD(&exp_reg->list);
-        app_name = name_create();
-        if (!name_init_with(app_name,
-                            ap, rkstrdup_ni(""),
-                            ae, rkstrdup_ni(""))) {
-                LOG_ERR("Failed to init name");
-                rkfree(ae);
-                rkfree(ap);
-                rkfree(exp_reg);
-                return -1;
-        }
-        exp_reg->app_name = app_name;
-        exp_reg->port     = port_nr;
+        name_init_with(exp_reg->app_name, pn, pi, en, ei);
 
         spin_lock(&data->lock);
         list_add(&exp_reg->list, &data->exp_regs);
         spin_unlock(&data->lock);
 
         LOG_DBG("Added a new exp reg entry");
+        result = 0;
 
-        return 0;
+out:
+        if (port)
+               rkfree(port);
+        if (result) {
+                if (pn)
+                      rkfree(pn);
+                if (pi)
+                      rkfree(pi);
+                if (en)
+                      rkfree(en);
+                if (ei)
+                      rkfree(ei);
+                rkfree(exp_reg);
+        }
+        return result;
 }
 
 static int parse_assign_conf(struct ipcp_instance_data * data,
@@ -2102,36 +2180,30 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
                  *  Directory entries and exp registrations
                  */
                 if (!strcmp(entry->name, "hostname")) {
-                        char * copy;
-                        __be32 ip_addr;
+                        struct hostname * host_name = &data->host_name;
 
                         ASSERT(entry->value);
 
-                        copy = rkstrdup_ni(entry->value);
-                        if (!copy) {
-                                LOG_ERR("Failed to dup value");
+                        if (in4_pton(entry->value, -1,
+                                     (u8*)&host_name->in, -1, 0)) {
+                                host_name->family = AF_INET;
+                                LOG_DBG("Got hostname %pI4", &host_name->in);
+                        } else if (in6_pton(entry->value, -1,
+                                            (u8*)&host_name->in6, -1, 0)) {
+                                host_name->family = AF_INET6;
+                                LOG_DBG("Got hostname %pI6c", &host_name->in6);
+                        } else {
+                                LOG_ERR("Failed to parse hostname");
                                 return -1;
                         }
 
-                        ip_addr = 0;
-                        if (ip_string_to_int(copy, &ip_addr)) {
-                                LOG_ERR("Failed to convert ip to int");
-                                rkfree(copy);
-                                return -1;
-                        }
-
-                        data->host_name = ip_addr;
-
-                        rkfree(copy);
-
-                        LOG_DBG("Got hostname %u", data->host_name);
                 } else if (!strcmp(entry->name, "dirEntry")) {
                         int  count;
                         char * val, * copy;
 
                         ASSERT(entry->value);
 
-                        copy = rkstrdup_ni(entry->value);
+                        copy = rkstrdup(entry->value);
                         if (!copy) {
                                 LOG_ERR("Failed to dup value");
                                 return -1;
@@ -2158,7 +2230,7 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
 
                         ASSERT(entry->value);
 
-                        copy = rkstrdup_ni(entry->value);
+                        copy = rkstrdup(entry->value);
                         if (!copy) {
                                 LOG_ERR("Failed to dup value");
                                 return -1;
@@ -2213,20 +2285,19 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
         if (parse_assign_conf(data,
                               dif_information->configuration)) {
                 LOG_ERR("Failed to parse configuration");
-                name_destroy(data->dif_name);
-                data->dif_name = NULL;
-                undo_assignment(data);
-                return -1;
+                goto err;
+        }
+
+        if (inst_data_mapping_get(&data->host_name)) {
+                LOG_ERR("Error duplicating hostname, bailing out");
+                goto err;
         }
 
         mapping = rkmalloc(sizeof(struct host_ipcp_instance_mapping),
                            GFP_KERNEL);
         if (!mapping) {
                 LOG_ERR("Failed to allocate memory");
-                name_destroy(data->dif_name);
-                data->dif_name = NULL;
-                undo_assignment(data);
-                return -1;
+                goto err;
         }
 
         mapping->host_name = data->host_name;
@@ -2238,6 +2309,12 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
         spin_unlock(&data_instances_lock);
 
         return 0;
+
+err:
+        name_destroy(data->dif_name);
+        data->dif_name = NULL;
+        undo_assignment(data);
+        return -1;
 }
 
 static int tcp_udp_update_dif_config(struct ipcp_instance_data * data,
@@ -2258,7 +2335,7 @@ static int tcp_udp_update_dif_config(struct ipcp_instance_data * data,
 
         undo_assignment(data);
 
-        mapping = inst_data_mapping_get(data->host_name);
+        mapping = inst_data_mapping_get(&data->host_name);
         if (mapping) {
                 spin_lock(&data_instances_lock);
                 list_del(&mapping->list);
@@ -2321,6 +2398,7 @@ static int tcp_sdu_write(struct shim_tcp_udp_flow * flow,
                                 len + sizeof(__be16) - total);
                 if (size < 0) {
                         LOG_ERR("error during sdu write (tcp): %d", size);
+                        rkfree(buf);
                         return -1;
                 }
                 total += size;
@@ -2340,6 +2418,13 @@ static int tcp_udp_sdu_write(struct ipcp_instance_data * data,
 
         LOG_DBG("Callback on tcp_udp_sdu_write");
 
+        spin_lock_irqsave(&snd_wq_lock, flags);
+        if (snd_wq_size == SEND_WQ_MAX_SIZE) {
+        	spin_unlock_irqrestore(&snd_wq_lock, flags);
+        	LOG_DBG("Output SDU queue is full, try later");
+        	return -EAGAIN;
+        }
+
         snd_data = rkmalloc(sizeof(*snd_data), GFP_ATOMIC);
         if (!snd_data) {
                 LOG_ERR("Could not allocate snd_data");
@@ -2351,8 +2436,8 @@ static int tcp_udp_sdu_write(struct ipcp_instance_data * data,
         snd_data->sdu  = sdu;
         INIT_LIST_HEAD(&snd_data->list);
 
-        spin_lock_irqsave(&snd_wq_lock, flags);
         list_add_tail(&snd_data->list, &snd_wq_data);
+        snd_wq_size++;
         spin_unlock_irqrestore(&snd_wq_lock, flags);
 
         queue_work(snd_wq, &snd_work);
@@ -2365,6 +2450,7 @@ static int __tcp_udp_sdu_write(struct ipcp_instance_data * data,
 {
         struct shim_tcp_udp_flow * flow;
         int                        size;
+        unsigned long	   	   flags;
 
         ASSERT(data);
         ASSERT(sdu);
@@ -2379,16 +2465,16 @@ static int __tcp_udp_sdu_write(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        spin_lock(&data->lock);
+        spin_lock_irqsave(&data->lock, flags);
         if (flow->port_id_state != PORT_STATE_ALLOCATED) {
                 sdu_destroy(sdu);
-                spin_unlock(&data->lock);
+                spin_unlock_irqrestore(&data->lock, flags);
 
                 LOG_ERR("Flow is not in the right state to call this");
 
                 return -1;
         }
-        spin_unlock(&data->lock);
+        spin_unlock_irqrestore(&data->lock, flags);
 
         if (flow->fspec_id == 0) {
                 /* We are sending an UDP message */
@@ -2420,15 +2506,39 @@ static int __tcp_udp_sdu_write(struct ipcp_instance_data * data,
         return 0;
 }
 
+static void enable_all_flows(void)
+{
+	struct ipcp_instance_data * pos, *next;
+	struct shim_tcp_udp_flow  * flow, *nflow;
+	unsigned long               flags;
+
+	list_for_each_entry_safe(pos, next, &(tcp_udp_data.instances), list) {
+		spin_lock_irqsave(&pos->lock, flags);
+		list_for_each_entry_safe(flow, nflow, &pos->flows, list) {
+			if (flow->user_ipcp && flow->user_ipcp->ops)
+				flow->user_ipcp->ops->enable_write(flow->user_ipcp->data,
+								   flow->port_id);
+		}
+		spin_unlock_irqrestore(&pos->lock, flags);
+	}
+}
+
 static void tcp_udp_write_worker(struct work_struct * w)
 {
-        struct snd_data * snd_data, * next;
-        unsigned long     flags;
+        struct snd_data           * snd_data, * next;
+        unsigned long               flags;
 
         /* FIXME: more efficient locking and better cleanup */
         spin_lock_irqsave(&snd_wq_lock, flags);
+
         list_for_each_entry_safe(snd_data, next, &snd_wq_data, list) {
                 list_del(&snd_data->list);
+                snd_wq_size --;
+                if (snd_wq_size == SEND_WQ_MAX_SIZE - 1) {
+                	spin_unlock_irqrestore(&snd_wq_lock, flags);
+                	enable_all_flows();
+                	spin_lock_irqsave(&snd_wq_lock, flags);
+                }
                 spin_unlock_irqrestore(&snd_wq_lock, flags);
 
                 __tcp_udp_sdu_write(snd_data->data,
@@ -2520,11 +2630,6 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
         .dif_name		   = tcp_udp_dif_name
 };
 
-static struct ipcp_factory_data {
-        spinlock_t lock;
-        struct list_head instances;
-} tcp_udp_data;
-
 static int tcp_udp_init(struct ipcp_factory_data * data)
 {
         LOG_HBEAT;
@@ -2543,6 +2648,8 @@ static int tcp_udp_init(struct ipcp_factory_data * data)
 
         INIT_WORK(&rcv_work, tcp_udp_rcv_worker);
         INIT_WORK(&snd_work, tcp_udp_write_worker);
+
+        snd_wq_size = 0;
 
         LOG_INFO("%s initialized", SHIM_NAME);
 
@@ -2677,7 +2784,7 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
-        inst->data->host_name = INADDR_ANY;
+        inst->data->host_name.family = AF_UNSPEC;
 
         BUILD_BUG_ON(CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE < 2);
         BUILD_BUG_ON(CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE > 65535);
@@ -2784,7 +2891,7 @@ static int tcp_udp_destroy(struct ipcp_factory_data * data,
                         if (pos->dif_name)
                                 name_destroy(pos->dif_name);
 
-                        mapping = inst_data_mapping_get(pos->host_name);
+                        mapping = inst_data_mapping_get(&pos->host_name);
                         if (mapping) {
                                 LOG_DBG("Removing mapping from list");
                                 spin_lock(&data_instances_lock);

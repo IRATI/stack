@@ -29,7 +29,6 @@
 
 //Object definitions
 #include "ipcp_obj.h"
-#include "ribd_obj.h"
 
 namespace rinad {
 namespace mad {
@@ -180,9 +179,6 @@ void createIPCPObj(const rina::rib::rib_handle_t& rib, int ipcp_id){
 		tmp = new IPCPObj(ipcp_id);
 		ribd->addObjRIB(rib, ss.str(), &tmp);
 
-		ss << "/ribDaemon";
-		tmp = new RIBDaemonObj(ipcp_id);
-		ribd->addObjRIB(rib, ss.str(), &tmp);
 	} catch (...) {
 		LOG_ERR("Unable to create an IPCP object '%s'; out of memory?",
 			ss.str().c_str());

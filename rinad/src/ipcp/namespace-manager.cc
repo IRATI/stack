@@ -68,7 +68,7 @@ void WhateverCastNameRIBObj::read(const rina::cdap_rib::con_handle_t &con,
 
 // Class WhateverCastNamesRIBObj
 const std::string WhateverCastNamesRIBObj::class_name = "Neighbor";
-const std::string WhateverCastNamesRIBObj::object_name = "/difmanagement/nsm/whatnames";
+const std::string WhateverCastNamesRIBObj::object_name = "/difManagement/nsm/whatnames";
 
 WhateverCastNamesRIBObj::WhateverCastNamesRIBObj(IPCProcess * ipc_process) :
 	IPCPRIBObj(ipc_process, class_name)
@@ -104,7 +104,7 @@ void WhateverCastNamesRIBObj::create(const rina::cdap_rib::con_handle_t &con,
 
 // Class DFTEntryRIBObj
 const std::string DFTEntryRIBObj::class_name = "DirectoryForwardingTableEntry";
-const std::string DFTEntryRIBObj::object_name_prefix = "/difmanagement/nsm/dft/key=";
+const std::string DFTEntryRIBObj::object_name_prefix = "/difManagement/nsm/dft/key=";
 
 DFTEntryRIBObj::DFTEntryRIBObj(IPCProcess * ipcp,
 			       rina::DirectoryForwardingTableEntry* entry_) :
@@ -157,7 +157,7 @@ void DFTEntryRIBObj::read(const rina::cdap_rib::con_handle_t &con,
 
 // Class DirectoryForwardingTableEntry Set RIB Object
 const std::string DFTRIBObj::class_name = "DirectoryForwardingTable";
-const std::string DFTRIBObj::object_name = "/difmanagement/nsm/dft";
+const std::string DFTRIBObj::object_name = "/difManagement/nsm/dft";
 
 DFTRIBObj::DFTRIBObj(IPCProcess * ipc_process):
 		IPCPRIBObj(ipc_process, class_name)
@@ -241,6 +241,12 @@ NamespaceManager::NamespaceManager() : INamespaceManager()
 	rib_daemon_ = 0;
 }
 
+NamespaceManager::~NamespaceManager()
+{
+	delete ps;
+}
+
+
 void NamespaceManager::set_application_process(rina::ApplicationProcess * ap)
 {
 	if (!ap)
@@ -271,7 +277,7 @@ void NamespaceManager::populateRIB()
 
 	try {
 		tmp = new rina::rib::RIBObj("NamespaceManager");
-		rib_daemon_->addObjRIB("/difmanagement/nsm", &tmp);
+		rib_daemon_->addObjRIB("/difManagement/nsm", &tmp);
 
 		tmp = new WhateverCastNamesRIBObj(ipcp);
 		rib_daemon_->addObjRIB(WhateverCastNamesRIBObj::object_name, &tmp);

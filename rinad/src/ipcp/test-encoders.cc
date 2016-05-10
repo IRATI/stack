@@ -658,6 +658,60 @@ bool test_pduft_entry() {
     return true;
 }
 
+
+bool test_ribobjectdatalist() {
+    rinad::encoders::RIBObjectDataListEncoder encoder;
+    std::list<rina::rib::RIBObjectData> objts;
+    std::list<rina::rib::RIBObjectData> recovered_objts;
+    rina::ser_obj_t encoded_obj;
+
+    rina::rib::RIBObjectData obj1;
+    obj1.class_ = "object1_class";
+    obj1.name_ = "object1_name";
+    obj1.instance_ = 1;
+    obj1.displayable_value_ = obj1.name_ + " - " + obj1.class_;
+    objts.push_back(obj1);
+
+    rina::rib::RIBObjectData obj2;
+    obj2.class_ = "object2_class";
+    obj2.name_ = "object2_name";
+    obj2.instance_ = 2;
+    obj2.displayable_value_ = obj2.name_ + " - " + obj2.class_;
+    objts.push_back(obj2);
+
+    encoder.encode(objts, encoded_obj);
+    encoder.decode(encoded_obj, recovered_objts);
+
+    if (recovered_objts.front().class_ != obj1.class_)
+        return false;
+
+    if (recovered_objts.front().name_ != obj1.name_)
+        return false;
+
+    if (recovered_objts.front().instance_ != obj1.instance_)
+        return false;
+
+    if (recovered_objts.front().displayable_value_ != obj1.displayable_value_)
+        return false;
+
+    recovered_objts.pop_front();
+    if (recovered_objts.front().class_ != obj2.class_)
+        return false;
+
+    if (recovered_objts.front().name_ != obj2.name_)
+        return false;
+
+    if (recovered_objts.front().instance_ != obj2.instance_)
+        return false;
+
+    if (recovered_objts.front().displayable_value_ != obj2.displayable_value_)
+        return false;
+
+    LOG_IPCP_INFO("RIBDataObjectList Encoder tested successfully");
+    return true;
+}
+
+
 int main()
 {
 	bool result = test_data_transfer_constants();
@@ -744,5 +798,10 @@ int main()
 		return -1;
 	}
 
+        result = test_ribobjectdatalist();
+        if (!result) {
+                LOG_IPCP_ERR("Problems testing RIBObjectDataList Encoder");
+                return -1;
+        }
 	return 0;
 }

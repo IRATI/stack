@@ -133,9 +133,21 @@ PKG_CHECK_MODULES(LIBPROTOBUF, [protobuf >= $LIBPROTOBUF_MIN_VERSION],, [
 AC_PATH_PROG([PERL], [perl], [no])
 AM_CONDITIONAL([HAVE_PERL], [ test "$PERL" != "no" ])
 
-build_bindings=yes
-build_bindings_java=yes
-AS_IF([test "$build_bindings" = "yes"],[
+build_bindings=no
+build_bindings_swig=no
+build_bindings_java=no
+
+AX_SELECTOR_ENABLE([java-bindings],[
+    build_bindings_java=yes
+],[
+    build_bindings_java=no
+])
+AS_IF([test "$build_bindings_java" = "yes"],[
+    build_bindings=yes
+    build_bindings_swig=yes
+])
+
+AS_IF([test "$build_bindings_swig" = "yes"],[
     AX_PKG_SWIG([2.0],[
         #
         # SWIG version > 2.0.4 && < 2.0.8 have a bug preventing correct

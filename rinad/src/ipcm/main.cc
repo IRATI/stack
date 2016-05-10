@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <assert.h>
 #include <signal.h>
 
@@ -52,6 +53,8 @@ using namespace TCLAP;
 
 void handler(int signum)
 {
+	int pid;
+
 	switch(signum){
 		case SIGSEGV:
 			LOG_CRIT("Got signal SIGSEGV");
@@ -62,6 +65,16 @@ void handler(int signum)
 		case SIGTERM:
 		case SIGHUP:
 			rinad::IPCManager->stop();
+			break;
+		case SIGCHLD:
+			while (pid = waitpid(WAIT_ANY, NULL, WNOHANG), pid > 0) {
+				LOG_DBG("Child IPC Process Daemon %d died, removed from process table",
+					pid);
+			}
+
+			if (pid)
+				LOG_ERR("Waitpid returned error %d", pid);
+
 			break;
 		default:
 			LOG_CRIT("Got unknown signal %d", signum);
@@ -173,27 +186,32 @@ int main(int argc, char * argv[])
 
 	//Configure signal  traps
 	if (signal(SIGSEGV, handler) == SIG_ERR) {
-		LOG_WARN("Could not install SIGSEGV handler!");
+		LOG_ERR("Could not install SIGSEGV handler!");
+		return EXIT_FAILURE;
 	}
         LOG_DBG("SIGSEGV handler installed successfully");
 
 	if (signal(SIGINT, handler) == SIG_ERR) {
 		LOG_ERR("Could not install SIGINT handler!");
+		return EXIT_FAILURE;
 	}
         LOG_DBG("SIGINT handler installed successfully");
 
 	if (signal(SIGQUIT, handler) == SIG_ERR) {
 		LOG_ERR("Could not install SIGQUIT handler!");
+		return EXIT_FAILURE;
 	}
         LOG_DBG("SIGQUIT handler installed successfully");
 
 	if (signal(SIGTERM, handler) == SIG_ERR) {
 		LOG_ERR("Could not install SIGTERM handler!");
+		return EXIT_FAILURE;
 	}
         LOG_DBG("SIGTERM handler installed successfully");
 
 	if (signal(SIGHUP, handler) == SIG_ERR) {
 		LOG_ERR("Could not install SIGHUP handler!");
+		return EXIT_FAILURE;
 	}
         LOG_DBG("SIGHUP handler installed successfully");
 
@@ -202,6 +220,12 @@ int main(int argc, char * argv[])
                 return EXIT_FAILURE;
         }
         LOG_DBG("SIGPIPE handler installed successfully");
+
+	if (signal(SIGCHLD, handler) == SIG_ERR) {
+		LOG_ERR("Could not install SIGCHLD handler!");
+		return EXIT_FAILURE;
+	}
+        LOG_DBG("SIGCHLD handler installed successfully");
 
 	//Launch wrapped main
 	try {

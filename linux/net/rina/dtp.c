@@ -796,15 +796,18 @@ const struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                 if (time_before_eq(pos->time_stamp + msecs_to_jiffies(a),
                                    jiffies)) {
                         LOG_DBG("Processing A timer expired");
-                        if (dtcp && dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
+                        if (dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
                                 LOG_DBG("Retransmissions will be required");
-                                pci_ret = pci;
-                                goto finish;
+                                list_del(&pos->next);
+                                seq_queue_entry_destroy(pos);
+                                continue;
                         }
 
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
                                 LOG_ERR("Failed to set new "
                                         "left window edge");
+                                list_del(&pos->next);
+                                seq_queue_entry_destroy(pos);
                                 goto finish;
                         }
                         pos->pdu = NULL;
@@ -1585,6 +1588,26 @@ static bool is_fc_overrun(
         return to_ret;
 }
 
+static bool are_there_pdus(struct seq_queue * queue, seq_num_t LWE)
+{
+        struct seq_queue_entry * p;
+        seq_num_t sn;
+
+        if (list_empty(&queue->head)) {
+                LOG_DBG("Seq Queue is empty!");
+                return false;
+        }
+        p = list_first_entry(&queue->head, struct seq_queue_entry, next);
+        if (!p)
+                return false;
+
+        sn = pci_sequence_number_get(pdu_pci_get_ro(p->pdu));
+        if (sn == (LWE+1))
+                return true;
+
+        return false;
+}
+
 int dtp_receive(struct dtp * instance,
                 struct pdu * pdu)
 {
@@ -1603,8 +1626,6 @@ int dtp_receive(struct dtp * instance,
         unsigned long    flags;
         struct rqueue *  to_post;
 	int              sbytes;
-        /*struct rqueue *       to_post;*/
-
 	struct efcp *		efcp = 0;
 
         LOG_DBG("DTP receive started...");
@@ -1766,7 +1787,7 @@ int dtp_receive(struct dtp * instance,
                 }
 
                 set_lft_win_edge = !(dtcp_rtx_ctrl(dtcp_config_get(dtcp)) &&
-                                     ((seq_num -LWE) > max_sdu_gap));
+                                     ((seq_num -LWE) > (max_sdu_gap + 1)));
 
                 if (set_lft_win_edge) {
                         if (dt_sv_rcv_lft_win_set(dt, seq_num)) {
@@ -1807,27 +1828,29 @@ int dtp_receive(struct dtp * instance,
 
         LWE = dt_sv_rcv_lft_win(dt);
         LOG_DBG("DTP receive LWE: %u", LWE);
-        while (pdu && (seq_num == LWE + 1)) {
+        if (seq_num == LWE + 1) {
                 dt_sv_rcv_lft_win_set(dt, seq_num);
-
                 rqueue_tail_push_ni(to_post, pdu);
-
-                pdu = seq_queue_pop(instance->seqq->queue);
                 LWE = seq_num;
+        } else {
+                seq_queue_push_ni(instance->seqq->queue, pdu);
+        }
+        while (are_there_pdus(instance->seqq->queue, LWE)) {
+                pdu = seq_queue_pop(instance->seqq->queue);
                 if (!pdu)
                         break;
-                seq_num = pci_sequence_number_get(pdu_pci_get_rw(pdu));
+                pci     = pdu_pci_get_rw(pdu);
+                seq_num = pci_sequence_number_get(pci);
+                LWE     = seq_num;
+                dt_sv_rcv_lft_win_set(dt, seq_num);
+                rqueue_tail_push_ni(to_post, pdu);
         }
-        if (pdu)
-                seq_queue_push_ni(instance->seqq->queue, pdu);
         spin_unlock_irqrestore(&instance->seqq->lock, flags);
 
-        if (!pdu && a)
+        if (list_empty(&instance->seqq->queue->head))
                 rtimer_stop(instance->timers.a);
-        else if (pdu && a) {
-                LOG_DBG("Going to restart A timer with t = %d", a/AF);
-                rtimer_restart(instance->timers.a, a/AF);
-        }
+        else
+                rtimer_start(instance->timers.a, a/AF);
 
         if (dtcp) {
                 if (dtcp_sv_update(dtcp, pci)) {

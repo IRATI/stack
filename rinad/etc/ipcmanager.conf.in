@@ -4,7 +4,7 @@
     "installationPath" : "@prefix@/bin",
     "libraryPath" : "@libdir@",
     "logPath" : "@localstatedir@/log",
-    "consolePort" : 32766,
+    "consoleSocket" : "@runstatedir@/ipcm-console.sock",
     "pluginsPaths" : ["@libdir@/rinad/ipcp"]
   },
   "ipcProcessesToCreate" : [ {

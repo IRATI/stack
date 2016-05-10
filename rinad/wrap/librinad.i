@@ -38,6 +38,7 @@ import eu.irati.librina.DataTransferConstants;
 import eu.irati.librina.DTCPConfig;
 import eu.irati.librina.DIFInformation;
 import eu.irati.librina.QoSCube;
+import eu.irati.librina.RIBObjectData;
 %}
 
 /**
@@ -82,6 +83,7 @@ import eu.irati.librina.DataTransferConstants;
 import eu.irati.librina.DTCPConfig;
 import eu.irati.librina.DIFInformation;
 import eu.irati.librina.QoSCube;
+import eu.irati.librina.RIBObjectData;
 %}
 
 %{
@@ -114,6 +116,7 @@ namespace rina{
 %template(TempPDUFTEncoder) Encoder<rina::PDUForwardingTableEntry >;
 %template(TempDTPIEncoder) Encoder<rina::DTPInformation >;
 %template(TempDTCPCEncoder) Encoder<rina::DTCPConfig >;
+%template(TempRIBObjectDataListEncoder) rina::Encoder< std::list< rina::rib::RIBObjectData > >;
 }
 
 %include "encoder.h"
@@ -163,3 +166,4 @@ namespace rina{
 %enddef
 
 %template(StringList) std::list<std::string>;
+%template(RIBObjectDataList) std::list<rina::rib::RIBObjectData>;

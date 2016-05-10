@@ -392,6 +392,8 @@ public:
 				      const cdap_rib::flags_t &flags,
 				      const cdap_rib::res_info_t &res,
 				      int invoke_id) = 0;
+	/// Send a cdap message previously generated
+	virtual void send_cdap_result(const cdap_rib::con_handle_t &con, cdap::cdap_m_t *cdap_m) = 0;
 
 	///
 	/// Process an incoming CDAP message

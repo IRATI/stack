@@ -253,7 +253,7 @@ private:
 class FlowAllocator: public IFlowAllocator {
 public:
 	FlowAllocator();
-	~FlowAllocator() { };
+	~FlowAllocator();
 	IFlowAllocatorInstance * getFAI(int portId);
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);

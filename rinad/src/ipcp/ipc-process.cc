@@ -132,6 +132,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 }
 
 IPCProcessImpl::~IPCProcessImpl() {
+
 	if (lock_) {
 		delete lock_;
 	}
@@ -145,6 +146,13 @@ IPCProcessImpl::~IPCProcessImpl() {
 	if (delimiter_) {
 		delete delimiter_;
 	}
+	delete flow_allocator_;
+	delete security_manager_;
+	delete namespace_manager_;
+	delete routing_component_;
+	delete resource_allocator_;
+	delete rib_daemon_;
+	delete enrollment_task_;
 }
 
 unsigned short IPCProcessImpl::get_id() {
@@ -561,8 +569,8 @@ void IPCProcessImpl::processPluginLoadRequestEvent(
         return;
 }
 
-void IPCProcessImpl::processFwdCDAPMsgEvent(
-                        const rina::FwdCDAPMsgEvent& event)
+void IPCProcessImpl::processFwdCDAPMsgRequestEvent(
+                        const rina::FwdCDAPMsgRequestEvent& event)
 {
 	if (!event.sermsg.message_) {
 		LOG_IPCP_ERR("No CDAP message to be forwarded");
@@ -756,8 +764,8 @@ void IPCProcessImpl::event_loop(void){
 				break;
 			case rina::IPC_PROCESS_FWD_CDAP_MSG:
 				{
-				DOWNCAST_DECL(e, rina::FwdCDAPMsgEvent, event);
-				processFwdCDAPMsgEvent(*event);
+				DOWNCAST_DECL(e, rina::FwdCDAPMsgRequestEvent, event);
+				processFwdCDAPMsgRequestEvent(*event);
 				}
 				break;
 

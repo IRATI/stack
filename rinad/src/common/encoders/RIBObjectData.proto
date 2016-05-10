@@ -1,0 +1,14 @@
+package rina.messages;
+option optimize_for = LITE_RUNTIME;
+
+message RIBObjectData_t {							// value of a RIB object
+	optional string class = 1;
+	optional string name = 2;
+	optional int64 instance = 3;
+	optional string displayable_value = 4;
+}
+
+message RIBObjectDataList_t
+{
+	repeated RIBObjectData_t objects = 1;
+}

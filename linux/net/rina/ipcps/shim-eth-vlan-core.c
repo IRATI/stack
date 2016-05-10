@@ -386,7 +386,7 @@ static int flow_destroy(struct ipcp_instance_data * data,
         if (flow->dest_pa) gpa_destroy(flow->dest_pa);
         if (flow->dest_ha) gha_destroy(flow->dest_ha);
         if (flow->sdu_queue)
-                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
+                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) sdu_destroy);
         rkfree(flow);
 
         return 0;
@@ -514,7 +514,7 @@ static void rinarp_resolve_handler(void *             opaque,
                         }
                 }
 
-                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
+                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) sdu_destroy);
                 flow->sdu_queue = NULL;
 
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm,
@@ -699,7 +699,7 @@ eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                         }
                 }
 
-                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
+                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) sdu_destroy);
                 flow->sdu_queue = NULL;
         } else {
                 spin_lock(&data->lock);
@@ -713,7 +713,7 @@ eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                  *  the IPC manager deallocates the NULL state flow first.
                  */
                 ASSERT(flow->sdu_queue);
-                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) pdu_destroy);
+                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) sdu_destroy);
                 flow->sdu_queue = NULL;
         }
 
@@ -1281,7 +1281,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         gha_destroy(ghaddr);
                         rkfree (flow);
                         rfifo_destroy(flow->sdu_queue,
-                                      (void (*)(void *)) pdu_destroy);
+                                      (void (*)(void *)) sdu_destroy);
                         return -1;
                 }
 

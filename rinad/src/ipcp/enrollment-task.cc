@@ -41,7 +41,7 @@ namespace rinad {
 
 // Class Neighbor RIB object
 const std::string NeighborRIBObj::class_name = "Neighbor";
-const std::string NeighborRIBObj::object_name_prefix = "/difmanagement/enrollment/neighbors/processName=";
+const std::string NeighborRIBObj::object_name_prefix = "/difManagement/enrollment/neighbors/processName=";
 
 NeighborRIBObj::NeighborRIBObj(rina::Neighbor* neigh) :
 		rina::rib::RIBObj(class_name), neighbor(neigh)
@@ -80,7 +80,7 @@ void NeighborRIBObj::read(const rina::cdap_rib::con_handle_t &con,
 
 // Class Neighbor RIB object
 const std::string NeighborsRIBObj::class_name = "Neighbors";
-const std::string NeighborsRIBObj::object_name = "/difmanagement/enrollment/neighbors";
+const std::string NeighborsRIBObj::object_name = "/difManagement/enrollment/neighbors";
 
 NeighborsRIBObj::NeighborsRIBObj(IPCProcess * ipcp) :
 		IPCPRIBObj(ipcp, class_name)
@@ -164,7 +164,7 @@ void WatchdogTimerTask::run() {
 
 // CLASS WatchdogRIBObject
 const std::string WatchdogRIBObject::class_name = "watchdog_timer";
-const std::string WatchdogRIBObject::object_name = "/difmanagement/enrollment/watchdog";
+const std::string WatchdogRIBObject::object_name = "/difManagement/enrollment/watchdog";
 
 WatchdogRIBObject::WatchdogRIBObject(IPCProcess * ipc_process,
 				     int wdog_period_ms,
@@ -302,7 +302,7 @@ void WatchdogRIBObject::remoteReadResult(const rina::cdap_rib::con_handle_t &con
 
 //Class AddressRIBObject
 const std::string AddressRIBObject::class_name = "address";
-const std::string AddressRIBObject::object_name = "/difmanagement/naming/address";
+const std::string AddressRIBObject::object_name = "/difManagement/naming/address";
 
 AddressRIBObject::AddressRIBObject(IPCProcess * ipc_process):
 	IPCPRIBObj(ipc_process, class_name)
@@ -566,6 +566,7 @@ EnrollmentTask::EnrollmentTask() : IPCPEnrollmentTask()
 
 EnrollmentTask::~EnrollmentTask()
 {
+	delete ps;
 	if (neighbors_enroller_) {
 		delete neighbors_enroller_;
 	}
@@ -1162,7 +1163,7 @@ void EnrollmentTask::release(int invoke_id,
 
 // Class Operational Status RIB Object
 const std::string OperationalStatusRIBObject::class_name = "OperationalStatus";
-const std::string OperationalStatusRIBObject::object_name = "/difmanagement/opstatus";
+const std::string OperationalStatusRIBObject::object_name = "/difManagement/opstatus";
 
 OperationalStatusRIBObject::OperationalStatusRIBObject(IPCProcess * ipc_process) :
 		IPCPRIBObj(ipc_process, class_name)

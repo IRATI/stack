@@ -40,6 +40,7 @@
 #include <librina/cdap_v2.h>
 #include <librina/rib_v2.h>
 #include <librina/security-manager.h>
+#include "../../ipcm.h"
 
 namespace rinad {
 namespace mad {
@@ -392,9 +393,9 @@ void* ActiveWorker::run(void* param)
 	return NULL;
 }
 
-void FlowManager::process_fwd_cdap_msg_response(rina::FwdCDAPMsgEvent* fwdevent)
+void FlowManager::process_fwd_cdap_msg_response(rina::FwdCDAPMsgResponseEvent* fwdevent)
 {
-	rina::cdap::CDAPMessage rmsg;
+	rina::cdap::cdap_m_t *rmsg = new rina::cdap::cdap_m_t;
 
 	LOG_DBG("Received forwarded CDAP response, result %d",
 			fwdevent->result);
@@ -405,11 +406,12 @@ void FlowManager::process_fwd_cdap_msg_response(rina::FwdCDAPMsgEvent* fwdevent)
 	}
 
 	rina::cdap::getProvider()->get_session_manager()->decodeCDAPMessage(fwdevent->sermsg,
-									    rmsg);
-
+									    *rmsg);
+	rina::rib::DelegationObj* del_obj = rinad::IPCManager->get_forwarded_object(rmsg->invoke_id_);
 	LOG_DBG("Delegated CDAP response: %s, value %p",
-		rmsg.to_string().c_str(),
-		rmsg.obj_value_.message_);
+		rmsg->to_string().c_str(),
+		rmsg->obj_value_.message_);
+	del_obj->forwarded_object_response(rmsg);
 }
 
 //Process an event coming from librina
@@ -478,10 +480,10 @@ void FlowManager::process_librina_event(rina::IPCEvent** event_)
 			//joinWorker(port_id);
 			break;
 
-		case rina::IPC_PROCESS_FWD_CDAP_MSG:
+		case rina::IPC_PROCESS_FWD_CDAP_RESPONSE_MSG:
 		{
 			process_fwd_cdap_msg_response(
-				dynamic_cast<rina::FwdCDAPMsgEvent*>(event));
+				dynamic_cast<rina::FwdCDAPMsgResponseEvent*>(event));
 			break;
 		}
 

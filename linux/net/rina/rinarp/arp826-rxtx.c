@@ -446,7 +446,7 @@ static int process(const struct sk_buff * skb,
 
                 req_addr = tbl_find_by_gpa(tbl, tmp_tpa);
                 if (!req_addr) {
-                        LOG_ERR("Cannot find this TPA in my tables, "
+                        LOG_DBG("Cannot find this TPA in my tables, "
                                 "bailing out");
                         gpa_destroy(tmp_spa);
                         gpa_destroy(tmp_tpa);
@@ -595,7 +595,7 @@ int arp_receive(struct sk_buff *     skb,
         }
 
         if (process(skb, cl, dev)) {
-                LOG_ERR("Cannot process this ARP");
+                LOG_DBG("Cannot process this ARP");
                 kfree_skb(skb);
                 return 0;
         }

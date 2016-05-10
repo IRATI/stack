@@ -49,7 +49,7 @@ void Addon::factory(rinad::RINAConfiguration& conf, const std::string& name){
 		if(name == mad::ManagementAgent::NAME){
 			addon = new mad::ManagementAgent(conf);
 		}else if(name == IPCMConsole::NAME){
-			addon = new IPCMConsole(conf.local.consolePort);
+			addon = new IPCMConsole(conf.local.consoleSocket);
 		}else if(name == ScriptingEngine::NAME){
 			addon = new ScriptingEngine();
 		}else{

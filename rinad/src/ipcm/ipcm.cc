@@ -38,6 +38,7 @@
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
 #include <librina/plugin-info.h>
+#include <librina/concurrency.h>
 
 #define RINA_PREFIX "ipcm"
 #include <librina/logs.h>
@@ -87,7 +88,7 @@ IPCManager_::IPCManager_()
           dif_template_manager(NULL),
           dif_allocator(NULL)
 {
-
+        forwarded_calls_lock = new rina::Lockable();
 }
 
 IPCManager_::~IPCManager_()
@@ -100,6 +101,14 @@ IPCManager_::~IPCManager_()
     if (dif_allocator)
     {
         delete dif_allocator;
+    }
+    forwarded_calls.clear();
+    delete forwarded_calls_lock;
+
+    for (std::map<int, TransactionState*>::iterator
+    		it = pend_transactions.begin(); it != pend_transactions.end(); ++it)
+    {
+    	delete it->second;
     }
 }
 
@@ -1256,6 +1265,20 @@ ipcm_res_t IPCManager_::set_policy_set_param(Addon* callee, Promise* promise,
     return IPCM_PENDING;
 }
 
+int IPCManager_::reserve_invoke_id(rina::rib::DelegationObj* obj)
+{
+       int invoke_id = 0;
+       rina::ScopedLock(*forwarded_calls_lock);
+       do
+       {
+               invoke_id++;
+       }while(forwarded_calls.find(invoke_id) != forwarded_calls.end());
+       forwarded_calls[invoke_id] = obj;
+
+       return invoke_id;
+}
+
+
 static std::string extract_subcomponent_name(const std::string& cpath)
 {
     size_t l = cpath.rfind(".");
@@ -1407,12 +1430,18 @@ ipcm_res_t IPCManager_::plugin_load_kernel(const std::string& plugin_name,
     } else if (pid == 0)
     {
         // child
-        if (load)
-        {
+	int nfd;
+
+	// redirect stdout to /dev/null
+	nfd = open("/dev/null", O_WRONLY);
+	dup2(nfd, STDOUT_FILENO);
+	// redirect stderr to stdout
+	dup2(STDOUT_FILENO, STDERR_FILENO);
+
+        if (load) {
             execlp("modprobe", "modprobe", plugin_name.c_str(), NULL);
 
-        } else
-        {
+        } else {
             execlp("modprobe", "modprobe", "-r", plugin_name.c_str(), NULL);
         }
 
@@ -1525,14 +1554,15 @@ ipcm_res_t IPCManager_::update_catalog(Addon* callee)
     return IPCM_SUCCESS;
 }
 
-ipcm_res_t IPCManager_::read_ipcp_ribobj(Addon* callee, Promise* promise,
+ipcm_res_t IPCManager_::delegate_ipcp_ribobj(rina::rib::DelegationObj* obj,
+                                         Promise* promise,
                                          const unsigned short ipcp_id,
                                          const std::string& object_class,
                                          const std::string& object_name,
                                          int scope)
 {
     IPCMIPCProcess * ipcp;
-    TransactionState* trans;
+   // TransactionState* trans;
     std::ostringstream ss;
 
     try
@@ -1544,7 +1574,11 @@ ipcm_res_t IPCManager_::read_ipcp_ribobj(Addon* callee, Promise* promise,
             LOG_ERR("Invalid IPCP id %hu", ipcp_id);
             return IPCM_FAILURE;
         }
-
+        if (ipcp->get_type() != rina::NORMAL_IPC_PROCESS)
+        {
+        	LOG_ERR("Trying to delegate to a shim IPCP, operation not allowed");
+        	return IPCM_FAILURE;
+        }
         //Auto release the read lock
         rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
@@ -1552,10 +1586,10 @@ ipcm_res_t IPCManager_::read_ipcp_ribobj(Addon* callee, Promise* promise,
         msg.op_code_ = rina::cdap::cdap_m_t::M_READ;
         msg.obj_class_ = object_class;
         msg.obj_name_ = object_name;
-        msg.invoke_id_ = 15;
+        msg.invoke_id_ = reserve_invoke_id(obj);
         msg.scope_ = scope;
-
-        trans = new TransactionState(callee, promise);
+/*
+        trans = new TransactionState(NULL, promise);
         if (!trans)
         {
             ss
@@ -1571,8 +1605,8 @@ ipcm_res_t IPCManager_::read_ipcp_ribobj(Addon* callee, Promise* promise,
             FLUSH_LOG(ERR, ss);
             throw rina::Exception();
         }
-
-        ipcp->forwardCDAPMessage(msg, trans->tid);
+*/
+        ipcp->forwardCDAPMessage(msg, 0);
 
         ss << "Forwarded CDAPMessage to IPC process "
                 << ipcp->get_name().toString() << std::endl;
@@ -1856,7 +1890,6 @@ void IPCManager_::run()
     Addon::destroy_all();
 
     //Join the I/O loop thread
-    keep_running = false;
     io_thread->join(&status);
 
     //I/O thread
@@ -1867,6 +1900,22 @@ void IPCManager_::run()
 
     // Shutdown Protobuf Library
     google::protobuf::ShutdownProtobufLibrary();
+}
+
+rina::rib::DelegationObj* IPCManager_::get_forwarded_object(int invoke_id)
+{
+        rina::ScopedLock(*forwarded_calls_lock);
+        rina::rib::DelegationObj* obj;
+        std::map<int, rina::rib::DelegationObj*>::iterator it =
+                        forwarded_calls.find(invoke_id);
+        if (it == forwarded_calls.end())
+                return NULL;
+        else
+        {
+                obj = it->second;
+                forwarded_calls.erase(it);
+                return obj;
+        }
 }
 
 //static
@@ -1880,11 +1929,9 @@ void IPCManager_::io_loop()
 {
     rina::IPCEvent *event;
 
-    keep_running = true;
-
     LOG_DBG("Starting main I/O loop...");
 
-    while (keep_running)
+    while (!req_to_stop)
     {
         event = rina::ipcEventProducer->eventTimedWait(
         IPCM_EVENT_TIMEOUT_S,
@@ -1894,16 +1941,11 @@ void IPCManager_::io_loop()
             //Signal the main thread to start
             //the stop procedure
             stop_cond.signal();
+            break;
         }
 
         if (!event)
             continue;
-
-        if (!keep_running)
-        {
-            delete event;
-            break;
-        }
 
         LOG_DBG("Got event of type %s and sequence number %u",
                 rina::IPCEvent::eventTypeToString(event->eventType).c_str(),
