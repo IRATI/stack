@@ -985,7 +985,7 @@ void FlowEncoder::encode(const configs::Flow &obj, rina::ser_obj_t& serobj)
         gpb.set_allocated_dtpconfig(
                         cube_helpers::get_dtpConfig_t(
                                         obj.getActiveConnection()->getDTPConfig()));
-        //optional dtpConfig_t dtpConfig
+        //optional dtcpConfig_t dtpConfig
         gpb.set_allocated_dtcpconfig(
                         cube_helpers::get_dtcpConfig_t(
                                         obj.getActiveConnection()->getDTCPConfig()));

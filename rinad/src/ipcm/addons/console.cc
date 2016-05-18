@@ -932,13 +932,10 @@ int IPCMConsole::read_ipcp_ribobj(std::vector<std::string>& args)
 	// CAREFUL, DELEGATION OBJECT SET TO NULL, this function is only
 	// for testing, return result is not being processed.
 	if (IPCManager->delegate_ipcp_ribobj(NULL,
-					 &promise,
-					 ipcp_id,
-					 args[2],
-					 args[3],
-					 scope) == IPCM_FAILURE ||
-					 promise.wait() != IPCM_SUCCESS) {
-		outstream << "Error occured while forwarding CDAP message to IPCP" << endl;
+			ipcp_id, args[2], args[3], scope, 1, 0)
+			== IPCM_FAILURE || promise.wait() != IPCM_SUCCESS) {
+		outstream << "Error occured while forwarding CDAP message to IPCP"
+				<< endl;
 	} else {
 		outstream << "Successfully sent M_READ request "
 			  << "with object class = " << args[2]
