@@ -50,7 +50,7 @@ public:
 	TLSHandRandom random;
 
 	/// Supported cipher suites, sorted by order of preference
-	std::list<std::string> cipher_suites;
+	std::list<std::string> mac_algs;
 
 	/// Supported compression methods, sorted by order of preference
 	std::list<std::string> compress_methods;
@@ -72,18 +72,13 @@ public:
 	CryptoState get_crypto_state(bool enable_crypto_tx,
 				     bool enable_crypto_rx);
 
-	static const std::string CIPHER_SUITE;
 	static const std::string COMPRESSION_METHOD;
 	static const std::string KEYSTORE_PATH;
 	static const std::string KEYSTORE_PASSWORD;
-
-
-	static const std::string CERTIFICATE_PATH;
 	static const std::string MY_CERTIFICATE;
 	static const std::string PRIV_KEY_PATH;
-
 	static const std::string ENCRYPTION_ALGORITHM;
-
+	static const std::string MAC_ALGORITHM;
 
         enum State {
         	BEGIN,
@@ -106,18 +101,13 @@ public:
         std::string version;
 
 	/// Negotiated algorithms
-	std::string cipher_suite;
+	std::string mac_alg;
 	std::string compress_method;
-
 	std::string encrypt_alg;
 
 	/// Authentication Keystore path and password
 	std::string keystore_path;
 	std::string keystore_password;
-
-	//Authentication Certificate and path
-	std::string certificate_path;
-	std::string priv_key_path;
 
 	//Master secret
 	UcharArray master_secret;
@@ -141,7 +131,6 @@ public:
 	bool client_cert_verify_received;
 	bool client_cipher_received;
 
-
 	/// Encryption policy configuration
 	PolicyConfig encrypt_policy_config;
 
@@ -153,7 +142,8 @@ public:
 	CancelAuthTimerTask * timer_task;
 
 	X509 * cert;
-	X509 *other_cert;
+	X509 * other_cert;
+	RSA *  key;
 
 private:
 	//return -1 if options are valid, 0 otherwise
@@ -198,23 +188,23 @@ public:
 
 private:
 	AuthStatus process_server_hello_message(const cdap::CDAPMessage& message,
-					 int session_id);
+					 	int session_id);
 	AuthStatus process_server_certificate_message(const cdap::CDAPMessage& message,
-						 int session_id);
+						      int session_id);
 	AuthStatus process_client_certificate_message(const cdap::CDAPMessage& message,
-							 int session_id);
+						      int session_id);
 	AuthStatus process_client_key_exchange_message(const cdap::CDAPMessage& message,
-								 int session_id);
+						       int session_id);
 	AuthStatus process_client_certificate_verify_message(const cdap::CDAPMessage& message,
-									 int session_id);
+							     int session_id);
 	AuthStatus process_client_change_cipher_spec_message(const cdap::CDAPMessage& message,
-			int session_id);
+							     int session_id);
 	AuthStatus process_server_change_cipher_spec_message (const cdap::CDAPMessage& message,
-			int session_id);
+							      int session_id);
 	AuthStatus process_client_finish_message(const cdap::CDAPMessage& message,
-			int session_id);
+						 int session_id);
 	AuthStatus process_server_finish_message(const cdap::CDAPMessage& message,
-			int session_id);
+						 int session_id);
 	AuthStatus send_client_messages(TLSHandSecurityContext * sc);
 	AuthStatus send_client_certificate(TLSHandSecurityContext * sc);
 	AuthStatus send_client_key_exchange(TLSHandSecurityContext * sc);
@@ -223,11 +213,13 @@ private:
 	AuthStatus send_server_change_cipher_spec(TLSHandSecurityContext * sc);
 	AuthStatus send_client_finish(TLSHandSecurityContext * sc);
 
-	int load_credentials(TLSHandSecurityContext * sc);
-	int prf(UcharArray& generated_hash, UcharArray& secret, const std::string& slabel, UcharArray& pre_seed);
+	int prf(UcharArray& generated_hash,
+		UcharArray& secret,
+		const std::string& slabel,
+		UcharArray& pre_seed);
 
 	//Load the authentication certificate
-	int load_authentication_certificate(TLSHandSecurityContext * sc);
+	int load_credentials(TLSHandSecurityContext * sc);
 
 	//encryption/decryption
 	int generate_encryption_key(TLSHandSecurityContext * sc);

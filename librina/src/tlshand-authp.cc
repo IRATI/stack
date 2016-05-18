@@ -46,14 +46,14 @@ namespace rina {
 
 //TLSHandAuthOptions encoder and decoder operations
 void decode_tls_hand_auth_options(const ser_obj_t &message,
-		TLSHandAuthOptions &options)
+				  TLSHandAuthOptions &options)
 {
 	rina::auth::policies::googleprotobuf::authOptsTLSHandshake_t gpb_options;
 
 	gpb_options.ParseFromArray(message.message_, message.size_);
 
-	for(int i=0; i<gpb_options.cipher_suites_size(); i++) {
-		options.cipher_suites.push_back(gpb_options.cipher_suites(i));
+	for(int i=0; i<gpb_options.mac_algs_size(); i++) {
+		options.mac_algs.push_back(gpb_options.mac_algs(i));
 	}
 
 	for(int i=0; i<gpb_options.compress_methods_size(); i++) {
@@ -68,20 +68,20 @@ void decode_tls_hand_auth_options(const ser_obj_t &message,
 		options.random.random_bytes.data =
 				new unsigned char[gpb_options.random_bytes().size()];
 		memcpy(options.random.random_bytes.data,
-				gpb_options.random_bytes().data(),
-				gpb_options.random_bytes().size());
+		       gpb_options.random_bytes().data(),
+		       gpb_options.random_bytes().size());
 		options.random.random_bytes.length = gpb_options.random_bytes().size();
 	}
 }
 
 void encode_tls_hand_auth_options(const TLSHandAuthOptions& options,
-		ser_obj_t& result)
+				  ser_obj_t& result)
 {
 	rina::auth::policies::googleprotobuf::authOptsTLSHandshake_t gpb_options;
 
-	for(std::list<std::string>::const_iterator it = options.cipher_suites.begin();
-			it != options.cipher_suites.end(); ++it) {
-		gpb_options.add_cipher_suites(*it);
+	for(std::list<std::string>::const_iterator it = options.mac_algs.begin();
+			it != options.mac_algs.end(); ++it) {
+		gpb_options.add_mac_algs(*it);
 	}
 
 	for(std::list<std::string>::const_iterator it = options.compress_methods.begin();
@@ -97,7 +97,7 @@ void encode_tls_hand_auth_options(const TLSHandAuthOptions& options,
 
 	if (options.random.random_bytes.length > 0) {
 		gpb_options.set_random_bytes(options.random.random_bytes.data,
-				options.random.random_bytes.length);
+					     options.random.random_bytes.length);
 	}
 
 	int size = gpb_options.ByteSize();
@@ -107,18 +107,18 @@ void encode_tls_hand_auth_options(const TLSHandAuthOptions& options,
 }
 
 void encode_server_hello_tls_hand(const TLSHandRandom& random,
-		const std::string& cipher_suite,
-		const std::string& compress_method,
-		const std::string& version,
-		ser_obj_t& result)
+				  const std::string& mac_alg,
+				  const std::string& compress_method,
+				  const std::string& version,
+				  ser_obj_t& result)
 {
 	rina::auth::policies::googleprotobuf::serverHelloTLSHandshake_t gpb_hello;
 
 	gpb_hello.set_random_bytes(random.random_bytes.data,
-			random.random_bytes.length);
+				   random.random_bytes.length);
 	gpb_hello.set_utc_unix_time(random.utc_unix_time);
 	gpb_hello.set_version(version);
-	gpb_hello.set_cipher_suite(cipher_suite);
+	gpb_hello.set_mac_alg(mac_alg);
 	gpb_hello.set_compress_method(compress_method);
 
 	int size = gpb_hello.ByteSize();
@@ -127,33 +127,31 @@ void encode_server_hello_tls_hand(const TLSHandRandom& random,
 	gpb_hello.SerializeToArray(result.message_ , size);
 }
 
-
-
 void decode_server_hello_tls_hand(const ser_obj_t &message,
-		TLSHandRandom& random,
-		std::string& cipher_suite,
-		std::string& compress_method,
-		std::string& version)
+				  TLSHandRandom& random,
+				  std::string& mac_alg,
+				  std::string& compress_method,
+				  std::string& version)
 {
 	rina::auth::policies::googleprotobuf::serverHelloTLSHandshake_t gpb_hello;
 
-	gpb_hello.ParseFromArray(message.message_, message.size_);
+	gpb_hello.ParseFromArray(message.message_,
+				 message.size_);
 
 	if (gpb_hello.has_random_bytes()) {
 		random.random_bytes.data =
 				new unsigned char[gpb_hello.random_bytes().size()];
 		memcpy(random.random_bytes.data,
-				gpb_hello.random_bytes().data(),
-				gpb_hello.random_bytes().size());
+		       gpb_hello.random_bytes().data(),
+		       gpb_hello.random_bytes().size());
 		random.random_bytes.length = gpb_hello.random_bytes().size();
 	}
 
 	random.utc_unix_time = gpb_hello.utc_unix_time();
 	version = gpb_hello.version();
-	cipher_suite = gpb_hello.cipher_suite();
+	mac_alg = gpb_hello.mac_alg();
 	compress_method = gpb_hello.compress_method();
 }
-
 
 //Certificates
 void encode_certificate_tls_hand(const UcharArray& certificate_chain,
@@ -179,8 +177,8 @@ void decode_certificate_tls_hand(const ser_obj_t &message,
 	if (gpb_certificate.has_certificate_chain()) {
 		certificate_chain.data =  new unsigned char[gpb_certificate.certificate_chain().size()];
 		memcpy(certificate_chain.data,
-				gpb_certificate.certificate_chain().data(),
-				gpb_certificate.certificate_chain().size());
+		       gpb_certificate.certificate_chain().data(),
+		       gpb_certificate.certificate_chain().size());
 		certificate_chain.length = gpb_certificate.certificate_chain().size();
 	}
 }
@@ -209,8 +207,8 @@ void decode_client_key_exchange_tls_hand(const ser_obj_t &message,
 		if (gpb_key_exchange.has_enc_pmaster_secret()) {
 			enc_pmaster_secret.data =  new unsigned char[gpb_key_exchange.enc_pmaster_secret().size()];
 			memcpy(enc_pmaster_secret.data,
-					gpb_key_exchange.enc_pmaster_secret().data(),
-					gpb_key_exchange.enc_pmaster_secret().size());
+			       gpb_key_exchange.enc_pmaster_secret().data(),
+			       gpb_key_exchange.enc_pmaster_secret().size());
 			enc_pmaster_secret.length = gpb_key_exchange.enc_pmaster_secret().size();
 		}
 }
@@ -228,6 +226,7 @@ void encode_client_certificate_verify_tls_hand(const UcharArray& enc_verify_hash
 	result.size_ = size;
 	gpb_cert_verify.SerializeToArray(result.message_ , size);
 }
+
 void decode_client_certificate_verify_tls_hand(const ser_obj_t &message,
 		 UcharArray& enc_verify_hash)
 {
@@ -238,8 +237,8 @@ void decode_client_certificate_verify_tls_hand(const ser_obj_t &message,
 		if (gpb_cert_verify.has_enc_verify_hash()) {
 			enc_verify_hash.data =  new unsigned char[gpb_cert_verify.enc_verify_hash().size()];
 			memcpy(enc_verify_hash.data,
-					gpb_cert_verify.enc_verify_hash().data(),
-					gpb_cert_verify.enc_verify_hash().size());
+			       gpb_cert_verify.enc_verify_hash().data(),
+			       gpb_cert_verify.enc_verify_hash().size());
 			enc_verify_hash.length = gpb_cert_verify.enc_verify_hash().size();
 		}
 }
@@ -257,6 +256,7 @@ void encode_finish_message_tls_hand(const UcharArray& opaque_verify_data,
 	result.size_ = size;
 	gpb_finish.SerializeToArray(result.message_ , size);
 }
+
 void decode_finsih_message_tls_hand(const ser_obj_t &message,
 		UcharArray& opaque_verify_data)
 {
@@ -267,28 +267,36 @@ void decode_finsih_message_tls_hand(const ser_obj_t &message,
 	if (gpb_finish.has_opaque_verify_data()) {
 		opaque_verify_data.data =  new unsigned char[gpb_finish.opaque_verify_data().size()];
 		memcpy(opaque_verify_data.data,
-				gpb_finish.opaque_verify_data().data(),
-				gpb_finish.opaque_verify_data().size());
+		       gpb_finish.opaque_verify_data().data(),
+		       gpb_finish.opaque_verify_data().size());
 		opaque_verify_data.length = gpb_finish.opaque_verify_data().size();
 	}
 }
 
-
 // Class TLSHandSecurityContext
-const std::string TLSHandSecurityContext::CIPHER_SUITE = "cipherSuite";
 const std::string TLSHandSecurityContext::COMPRESSION_METHOD = "compressionMethod";
 const std::string TLSHandSecurityContext::KEYSTORE_PATH = "keystore";
 const std::string TLSHandSecurityContext::KEYSTORE_PASSWORD = "keystorePass";
-const std::string TLSHandSecurityContext::CERTIFICATE_PATH = "myCredentials";
-const std::string TLSHandSecurityContext::MY_CERTIFICATE = "certificate.pem";
-const std::string TLSHandSecurityContext::PRIV_KEY_PATH = "myPrivKey";
+const std::string TLSHandSecurityContext::MY_CERTIFICATE = "cert.pem";
+const std::string TLSHandSecurityContext::PRIV_KEY_PATH = "key";
 const std::string TLSHandSecurityContext::ENCRYPTION_ALGORITHM = "encryptAlg";
+const std::string TLSHandSecurityContext::MAC_ALGORITHM = "macAlg";
 
 TLSHandSecurityContext::~TLSHandSecurityContext()
 {
 	if (cert) {
 		X509_free(cert);
 		cert = NULL;
+	}
+
+	if (other_cert){
+		X509_free(other_cert);
+		other_cert = NULL;
+	}
+
+	if (key) {
+		RSA_free(key);
+		key = NULL;
 	}
 }
 
@@ -305,27 +313,24 @@ CryptoState TLSHandSecurityContext::get_crypto_state(bool enable_crypto_tx,
 	return result;
 }
 
-
 TLSHandSecurityContext::TLSHandSecurityContext(int session_id,
-		const AuthSDUProtectionProfile& profile)
-: ISecurityContext(session_id)
+					       const AuthSDUProtectionProfile& profile):
+							       ISecurityContext(session_id)
 {
-	cipher_suite = profile.authPolicy.get_param_value_as_string(CIPHER_SUITE);
-	compress_method = profile.authPolicy.get_param_value_as_string(COMPRESSION_METHOD);
 	keystore_path = profile.authPolicy.get_param_value_as_string(KEYSTORE_PATH);
 	if (keystore_path == std::string()) {
 		// set the configuration directory as the default keystore path
 	}
 	keystore_password = profile.authPolicy.get_param_value_as_string(KEYSTORE_PASSWORD);
+
 	crcPolicy = profile.crcPolicy;
 	ttlPolicy = profile.ttlPolicy;
 	encrypt_policy_config = profile.encryptPolicy;
 	con.port_id = session_id;
 
 	encrypt_alg = profile.encryptPolicy.get_param_value_as_string(ENCRYPTION_ALGORITHM);
-
-	certificate_path = profile.authPolicy.get_param_value_as_string(CERTIFICATE_PATH);
-	priv_key_path = profile.authPolicy.get_param_value_as_string(PRIV_KEY_PATH);
+	compress_method = profile.encryptPolicy.get_param_value_as_string(COMPRESSION_METHOD);
+	mac_alg = profile.encryptPolicy.get_param_value_as_string(MAC_ALGORITHM);
 
 	timer_task = NULL;
 	state = BEGIN;
@@ -345,21 +350,21 @@ TLSHandSecurityContext::TLSHandSecurityContext(int session_id,
 }
 
 TLSHandSecurityContext::TLSHandSecurityContext(int session_id,
-		const AuthSDUProtectionProfile& profile,
-		TLSHandAuthOptions * options)
-: ISecurityContext(session_id)
+					       const AuthSDUProtectionProfile& profile,
+					       TLSHandAuthOptions * options):
+				ISecurityContext(session_id)
 {
-	std::string option = options->cipher_suites.front();
-	if (option != "TODO") {
-		LOG_ERR("Unsupported cipher suite: %s",
+	std::string option = options->mac_algs.front();
+	if (option != SSL_TXT_MD5 && option != SSL_TXT_SHA256) {
+		LOG_ERR("Unsupported MAC algorithm: %s",
 				option.c_str());
 		throw Exception();
 	} else {
-		cipher_suite = option;
+		mac_alg = option;
 	}
 
 	option = options->compress_methods.front();
-	if (option != "TODO") {
+	if (option != "deflate") {
 		LOG_ERR("Unsupported compression method: %s",
 				option.c_str());
 		throw Exception();
@@ -379,9 +384,6 @@ TLSHandSecurityContext::TLSHandSecurityContext(int session_id,
 
 	client_random = options->random;
 
-	certificate_path = profile.authPolicy.get_param_value_as_string(CERTIFICATE_PATH);
-	priv_key_path = profile.authPolicy.get_param_value_as_string(PRIV_KEY_PATH);
-
 	keystore_path = profile.authPolicy.get_param_value_as_string(KEYSTORE_PATH);
 	if (keystore_path == std::string()) {
 		// set the configuration directory as the default keystore path
@@ -405,7 +407,6 @@ TLSHandSecurityContext::TLSHandSecurityContext(int session_id,
 	verify_data.length = 12;
 	verify_data.data = new unsigned char[12];
 
-
 	state = BEGIN;
 }
 
@@ -420,8 +421,6 @@ const std::string AuthTLSHandPolicySet::CLIENT_CHANGE_CIPHER_SPEC = "Client chan
 const std::string AuthTLSHandPolicySet::SERVER_CHANGE_CIPHER_SPEC = "Server change cipher spec";
 const std::string AuthTLSHandPolicySet::CLIENT_FINISH = "Client finish";
 const std::string AuthTLSHandPolicySet::SERVER_FINISH = "Server finish";
-
-
 
 AuthTLSHandPolicySet::AuthTLSHandPolicySet(rib::RIBDaemonProxy * ribd,
 		ISecurityManager * sm) :
@@ -476,7 +475,7 @@ cdap_rib::auth_policy_t AuthTLSHandPolicySet::get_auth_policy(int session_id,
 	}
 
 	TLSHandAuthOptions options;
-	options.cipher_suites.push_back(sc->cipher_suite);
+	options.mac_algs.push_back(sc->mac_alg);
 	options.compress_methods.push_back(sc->compress_method);
 	options.random = sc->client_random;
 	options.encrypt_algs.push_back(sc->encrypt_alg);
@@ -488,17 +487,20 @@ cdap_rib::auth_policy_t AuthTLSHandPolicySet::get_auth_policy(int session_id,
 	sec_man->add_security_context(sc);
 
 	//Initialized verify hash, used in certificate verify message
-	sc->verify_hash.data = new unsigned char[32*5];
-	sc->verify_hash.length = 32*5;
+	sc->verify_hash.length = 160;
+	sc->verify_hash.data = new unsigned char[160];
 	sc->master_secret.length = 48;
 	sc->master_secret.data = new unsigned char[48];
 
 	//Get auth policy options to obtain first hash message [0,--31]
 	unsigned char hash1[SHA256_DIGEST_LENGTH];
-	if(!SHA256(auth_policy.options.message_, auth_policy.options.size_, hash1)){
-		LOG_ERR("Could not has message");
+	if (!SHA256(auth_policy.options.message_,
+		    auth_policy.options.size_,
+		    hash1)){
+		LOG_ERR("Could not hash message");
 		throw Exception();
 	}
+
 	//prepare verify_hash vector for posterior signing
 	memcpy(sc->verify_hash.data, hash1, 32);
 
@@ -542,16 +544,20 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::initiate_authentication(const c
 	}
 
 	//Initialized verify hash, used in certificate verify message
-	sc->verify_hash.data = new unsigned char[32*5];
-	sc->verify_hash.length = 32*5;
+	sc->verify_hash.length = 160;
+	sc->verify_hash.data = new unsigned char[160];
 	sc->master_secret.length = 48;
 	sc->master_secret.data = new unsigned char[48];
+
 	//Get auth policy options to obtain first hash message [0,--31]
 	unsigned char hash1[SHA256_DIGEST_LENGTH];
-	if(!SHA256(auth_policy.options.message_, auth_policy.options.size_, hash1)){
+	if (!SHA256(auth_policy.options.message_,
+		    auth_policy.options.size_,
+		    hash1)){
 		LOG_ERR("Coul not hash message");
 		return IAuthPolicySet::FAILED;
 	}
+
 	//prepare verify_hash vector for posterior signing
 	memcpy(sc->verify_hash.data, hash1, 32);
 
@@ -579,13 +585,16 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::initiate_authentication(const c
 		obj_info.name_ = SERVER_HELLO;
 		obj_info.inst_ = 0;
 		encode_server_hello_tls_hand(sc->server_random,
-				sc->cipher_suite,
-				sc->compress_method,
-				RINA_DEFAULT_POLICY_VERSION,
-				obj_info.value_);
+					     sc->mac_alg,
+					     sc->compress_method,
+					     RINA_DEFAULT_POLICY_VERSION,
+					     obj_info.value_);
 
-		rib_daemon->remote_write(sc->con, obj_info, flags, filt, NULL);
-
+		rib_daemon->remote_write(sc->con,
+					 obj_info,
+					 flags,
+					 filt,
+					 NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s", e.what());
 		delete sc;
@@ -595,14 +604,16 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::initiate_authentication(const c
 
 	//Get onj.info_value to obtain second hash message [32,--64]
 	unsigned char hash2[SHA256_DIGEST_LENGTH];
-	if(!SHA256(obj_info.value_.message_, obj_info.value_.size_, hash2)){
+	if (!SHA256(obj_info.value_.message_,
+		    obj_info.value_.size_,
+		    hash2)){
 		LOG_ERR("Could not hash message");
 		return IAuthPolicySet::FAILED;
 	}
 	//prepare verify_hash vector for posterior signing
 	memcpy(sc->verify_hash.data+32, hash2, 32);
 
-	load_authentication_certificate(sc);
+	load_credentials(sc);
 	//convert x509
 	UcharArray encoded_cert;
 	encoded_cert.length = i2d_X509(sc->cert, &encoded_cert.data);
@@ -621,13 +632,13 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::initiate_authentication(const c
 		obj_info1.name_ = SERVER_CERTIFICATE;
 		obj_info1.inst_ = 0;
 		encode_certificate_tls_hand(encoded_cert,
-				obj_info1.value_);
+					    obj_info1.value_);
 
 		rib_daemon->remote_write(sc->con,
-				obj_info1,
-				flags,
-				filt,
-				NULL);
+					obj_info1,
+					flags,
+					filt,
+					NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s",
 				e.what());
@@ -641,10 +652,13 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::initiate_authentication(const c
 
 	//Get obj.info_value to obtain third hash message [64,--96]
 	unsigned char hash3[SHA256_DIGEST_LENGTH];
-	if(!SHA256(obj_info1.value_.message_, obj_info1.value_.size_, hash3)){
+	if (!SHA256(obj_info1.value_.message_,
+		    obj_info1.value_.size_,
+		    hash3)){
 		LOG_ERR("Could not hash message");
 		return IAuthPolicySet::FAILED;
 	}
+
 	//prepare verify_hash vector for posterior signing
 	memcpy(sc->verify_hash.data+64, hash3, 32);
 
@@ -662,27 +676,35 @@ int AuthTLSHandPolicySet::process_incoming_message(const cdap::CDAPMessage& mess
 	if (message.obj_class_ == SERVER_HELLO) {
 		return process_server_hello_message(message, session_id);
 	}
+
 	if (message.obj_class_ == SERVER_CERTIFICATE) {
 		return process_server_certificate_message(message, session_id);
 	}
+
 	if (message.obj_class_ == CLIENT_CERTIFICATE) {
 		return process_client_certificate_message(message, session_id);
 	}
+
 	if (message.obj_class_ == CLIENT_KEY_EXCHANGE) {
 		return process_client_key_exchange_message(message, session_id);
 	}
+
 	if (message.obj_class_ == CLIENT_CERTIFICATE_VERIFY) {
 		return process_client_certificate_verify_message(message, session_id);
 	}
+
 	if (message.obj_class_ == CLIENT_CHANGE_CIPHER_SPEC) {
 		return process_client_change_cipher_spec_message(message, session_id);
 	}
+
 	if (message.obj_class_ == SERVER_CHANGE_CIPHER_SPEC) {
 		return process_server_change_cipher_spec_message(message, session_id);
 	}
+
 	if (message.obj_class_ == CLIENT_FINISH) {
 		return process_client_finish_message(message, session_id);
 	}
+
 	if (message.obj_class_ == SERVER_FINISH) {
 		return process_server_finish_message(message, session_id);
 	}
@@ -690,35 +712,66 @@ int AuthTLSHandPolicySet::process_incoming_message(const cdap::CDAPMessage& mess
 	return rina::IAuthPolicySet::FAILED;
 }
 
-int AuthTLSHandPolicySet::load_authentication_certificate(TLSHandSecurityContext * sc)
+int AuthTLSHandPolicySet::load_credentials(TLSHandSecurityContext * sc)
 {
-	BIO * certstore;
+	BIO * store;
 	std::stringstream ss;
 
-	ss << sc->certificate_path.c_str() << "/" << TLSHandSecurityContext::MY_CERTIFICATE;
+	ss << sc->keystore_path.c_str() << "/"
+	   << TLSHandSecurityContext::MY_CERTIFICATE;
 
-	certstore =  BIO_new_file(ss.str().c_str(),  "r");
-	if (!certstore) {
-		LOG_ERR("Problems opening certificate file at: %s", ss.str().c_str());
+	store =  BIO_new_file(ss.str().c_str(),  "r");
+	if (!store) {
+		LOG_ERR("Problems opening certificate file at: %s",
+			ss.str().c_str());
 		return -1;
 	}
-	sc->cert = PEM_read_bio_X509(certstore, NULL, 0, NULL);
-	BIO_free(certstore);
+
+	sc->cert = PEM_read_bio_X509(store, NULL, 0, NULL);
+	ss.str(std::string());
+	ss.clear();
+	BIO_free(store);
 	if (!sc->cert) {
-		LOG_ERR("Problems reading certificate %s", ERR_error_string(ERR_get_error(), NULL));
+		LOG_ERR("Problems reading certificate %s",
+			ERR_error_string(ERR_get_error(), NULL));
 		return -1;
 
 	}
-	return rina::IAuthPolicySet::IN_PROGRESS;
+
+	ss << sc->keystore_path << "/" << TLSHandSecurityContext::PRIV_KEY_PATH;
+	store =  BIO_new_file(ss.str().c_str(), "r");
+	if (!store) {
+		LOG_ERR("Problems opening keystore file at: %s",
+			ss.str().c_str());
+		return -1;
+	}
+
+	//TODO fix problems with reading private keys from encrypted repos
+	//we should use sc->keystore_pass.c_str() as the last argument
+	sc->key = PEM_read_bio_RSAPrivateKey(store, NULL, 0, NULL);
+	BIO_free(store);
+
+	if (!sc->key) {
+		LOG_ERR("Problems reading RSA key pair from keystore: %s",
+				ERR_error_string(ERR_get_error(), NULL));
+		return -1;
+	}
+
+	return 0;
 }
 
-int AuthTLSHandPolicySet::prf(UcharArray& generated_hash, UcharArray& secret,  const std::string& slabel, UcharArray& pre_seed)
+int AuthTLSHandPolicySet::prf(UcharArray& generated_hash,
+			      UcharArray& secret,
+			      const std::string& slabel,
+			      UcharArray& pre_seed)
 {
 	//convert label to UcharArray
 	UcharArray label(slabel.length());
-	memcpy(label.data, slabel.c_str(), slabel.length());
+	memcpy(label.data,
+	       slabel.c_str(),
+	       slabel.length());
 
-	//compute how many times we need to hask a(i)
+	//compute how many times we need to hash a(i)
 	int it = (generated_hash.length/32);
 	if (generated_hash.length%32 != 0)  it+=1;
 
@@ -727,7 +780,7 @@ int AuthTLSHandPolicySet::prf(UcharArray& generated_hash, UcharArray& secret,  c
 
 	//calculate seed, v(0) = seed;
 	UcharArray seed(label, pre_seed);
-	vec[0].length=seed.length;
+	vec[0].length = seed.length;
 	vec[0].data = new unsigned char[seed.length];
 	memcpy(vec[0].data, seed.data, seed.length);
 
@@ -735,32 +788,58 @@ int AuthTLSHandPolicySet::prf(UcharArray& generated_hash, UcharArray& secret,  c
 	for(int i = 1; i <= it; ++i){
 		vec[i].length = 32;
 		vec[i].data = new unsigned char[32];
-		HMAC(EVP_sha256(),secret.data, secret.length, vec[i-1].data, vec[i-1].length, vec[i].data, (unsigned *)(&vec[i].length));
-		if(vec[i].data == NULL)LOG_ERR("Error calculating master secret");
+
+		HMAC(EVP_sha256(),
+		     secret.data,
+		     secret.length,
+		     vec[i-1].data,
+		     vec[i-1].length,
+		     vec[i].data,
+		     (unsigned *)(&vec[i].length));
+
+		if(!vec[i].data)
+			LOG_ERR("Error calculating master secret");
 
 		UcharArray X0(vec[i], vec[0]);
 		vres[i].length = 32;
 		vres[i].data = new unsigned char[32];
-		HMAC(EVP_sha256(),secret.data, secret.length, X0.data, X0.length, vres[i].data, (unsigned *)(&vres[i].length));
-		if(vres[i].data == NULL)LOG_ERR("Error calculating master secret");
+
+		HMAC(EVP_sha256(),
+		     secret.data,
+		     secret.length,
+		     X0.data,
+		     X0.length,
+		     vres[i].data,
+		     (unsigned *)(&vres[i].length));
+
+		if(!vres[i].data)
+			LOG_ERR("Error calculating master secret");
 	}
+
 	UcharArray con(it*32);
-	if(it == 1) memcpy(generated_hash.data, vres[1].data, generated_hash.length);
-	//Concatenate and get desired length
-	else {
+	if(it == 1) {
+		memcpy(generated_hash.data,
+		       vres[1].data,
+		       generated_hash.length);
+	} else {
+		//Concatenate and get desired length
 		for(int i = 1; i <= it-1; ++i){
 			UcharArray concatenate(vres[i], vres[i+1]);
-			memcpy(con.data+((i-1)*concatenate.length), concatenate.data, concatenate.length);
-
+			memcpy(con.data+((i-1)*concatenate.length),
+			       concatenate.data,
+			       concatenate.length);
 		}
-		memcpy(generated_hash.data, con.data, generated_hash.length);
-	}
-	return IAuthPolicySet::IN_PROGRESS;
 
+		memcpy(generated_hash.data,
+		       con.data,
+		       generated_hash.length);
+	}
+
+	return IAuthPolicySet::IN_PROGRESS;
 }
 
 IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_hello_message(const cdap::CDAPMessage& message,
-		int session_id)
+									      int session_id)
 {
 	TLSHandSecurityContext * sc;
 
@@ -786,34 +865,37 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_hello_message(co
 	sc->hello_received = true;
 
 	decode_server_hello_tls_hand(message.obj_value_,
-			sc->server_random,
-			sc->cipher_suite,
-			sc->compress_method,
-			sc->version);
+				     sc->server_random,
+				     sc->mac_alg,
+				     sc->compress_method,
+				     sc->version);
 
 	timer.cancelTask(sc->timer_task);
 
 	//Get obj.info_value options to obtain third hash message [0,--31]
 	unsigned char hash2[SHA256_DIGEST_LENGTH];
-	if(!SHA256(message.obj_value_.message_, message.obj_value_.size_, hash2)){
+	if (!SHA256(message.obj_value_.message_,
+		    message.obj_value_.size_,
+		    hash2)){
 		LOG_ERR("Could not hash message");
 		return IAuthPolicySet::FAILED;
 	}
+
 	//prepare verify_hash vector for posterior signing
 	memcpy(sc->verify_hash.data+32, hash2, 32);
 
-
 	//if certificate received change state
-	if(sc->cert_received) {
+	if (sc->cert_received) {
 		sc->state = TLSHandSecurityContext::CLIENT_SENDING_DATA;
 		return send_client_messages(sc);
 
 	}
+
 	return IAuthPolicySet::IN_PROGRESS;
 }
 
 IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_certificate_message(const cdap::CDAPMessage& message,
-		int session_id)
+										    int session_id)
 {
 	TLSHandSecurityContext * sc;
 
@@ -836,18 +918,23 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_certificate_mess
 		delete sc;
 		return IAuthPolicySet::FAILED;
 	}
+
 	sc->cert_received = true;
 
 	UcharArray certificate_chain;
-	decode_certificate_tls_hand(message.obj_value_,certificate_chain);
+	decode_certificate_tls_hand(message.obj_value_,
+				    certificate_chain);
 	timer.cancelTask(sc->timer_task);
 
 	//hash3 to concatenate for verify message
 	unsigned char hash3[SHA256_DIGEST_LENGTH];
-	if(!SHA256(message.obj_value_.message_, message.obj_value_.size_, hash3)){
+	if (!SHA256(message.obj_value_.message_,
+		    message.obj_value_.size_,
+		    hash3)){
 		LOG_ERR("Could not hash message");
 		return IAuthPolicySet::FAILED;
 	}
+
 	//prepare verify_hash vector for posterior signing
 	memcpy(sc->verify_hash.data+64, hash3, 32);
 
@@ -857,21 +944,23 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_certificate_mess
 	pointer = &aux;
 
 	//get certificate in x509 format
-	if(pointer ==NULL)
-		LOG_ERR("Bad pointer :(");
-	sc->other_cert = d2i_X509(NULL, pointer, certificate_chain.length);
-	if(sc->other_cert  == NULL)
+	sc->other_cert = d2i_X509(NULL,
+				  pointer,
+				  certificate_chain.length);
+
+	if (!sc->other_cert)
 		LOG_ERR("Bad conversion to x509 :(");
 
-	if(sc->hello_received) {
+	if (sc->hello_received) {
 		sc->state = TLSHandSecurityContext::CLIENT_SENDING_DATA;
 		return send_client_messages(sc);
 	}
+
 	return IAuthPolicySet::IN_PROGRESS;
 }
 
 IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_certificate_message(const cdap::CDAPMessage& message,
-		int session_id)
+										    int session_id)
 {
 	TLSHandSecurityContext * sc;
 
@@ -894,18 +983,23 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_certificate_mess
 		delete sc;
 		return IAuthPolicySet::FAILED;
 	}
+
 	UcharArray certificate_chain;
-	decode_certificate_tls_hand(message.obj_value_,certificate_chain);
+	decode_certificate_tls_hand(message.obj_value_,
+				    certificate_chain);
 	timer.cancelTask(sc->timer_task);
 
 	sc->client_cert_received = true;
 
 	//preparation for certificate verify message
 	unsigned char hash4[SHA256_DIGEST_LENGTH];
-	if(!SHA256(message.obj_value_.message_, message.obj_value_.size_, hash4)){
+	if (!SHA256(message.obj_value_.message_,
+		    message.obj_value_.size_,
+		    hash4)){
 		LOG_ERR("Could not hash message");
 		return IAuthPolicySet::FAILED;
 	}
+
 	//prepare verify_hash vector for posterior signing
 	memcpy(sc->verify_hash.data+96, hash4, 32);
 
@@ -915,21 +1009,25 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_certificate_mess
 	const unsigned char** pointer;
 	pointer = &aux;
 
-	if(pointer ==NULL)
-		LOG_ERR("Bad pointer :(");
-	sc->other_cert = d2i_X509(NULL, pointer, certificate_chain.length);
-	if(sc->other_cert  == NULL)
+	sc->other_cert = d2i_X509(NULL,
+				  pointer,
+				  certificate_chain.length);
+
+	if (sc->other_cert  == NULL)
 		LOG_ERR("Bad conversion to x509 :(");
 
-	if(sc->client_keys_received and sc->client_cert_verify_received and sc->client_cipher_received){
+	if (sc->client_keys_received &&
+			sc->client_cert_verify_received &&
+			sc->client_cipher_received) {
 		sc->state = TLSHandSecurityContext::SERVER_SENDING_CIPHER;
 		return send_server_change_cipher_spec(sc);
 	}
-	return IAuthPolicySet::IN_PROGRESS;
 
+	return IAuthPolicySet::IN_PROGRESS;
 }
+
 IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_key_exchange_message(const cdap::CDAPMessage& message,
-		int session_id)
+										     int session_id)
 {
 	TLSHandSecurityContext * sc;
 
@@ -954,78 +1052,61 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_key_exchange_mes
 	}
 
 	UcharArray enc_pre_master_secret;
-	decode_client_key_exchange_tls_hand(message.obj_value_, enc_pre_master_secret);
+	decode_client_key_exchange_tls_hand(message.obj_value_,
+					    enc_pre_master_secret);
 	sc->client_keys_received = true;
 	timer.cancelTask(sc->timer_task);
 
 	//preparation for certificate verify message
 	unsigned char hash5[SHA256_DIGEST_LENGTH];
-	if(!SHA256(message.obj_value_.message_, message.obj_value_.size_, hash5)){
+	if (!SHA256(message.obj_value_.message_,
+		    message.obj_value_.size_,
+		    hash5)) {
 		LOG_ERR("Could not hash message");
 		sec_man->remove_security_context(session_id);
 		delete sc;
 		return IAuthPolicySet::FAILED;
 	}
+
 	//prepare verify_hash vector for posterior signing
 	memcpy(sc->verify_hash.data+128, hash5, 32);
 
-	EVP_PKEY *privkey = NULL;
-	RSA *rsakey;
-	BIO *key;
+	UcharArray dec_pre_master_secret(256);
 
-	key =  BIO_new_file(sc->priv_key_path.c_str(), "r");
-	if (!key) {
-		LOG_ERR("Problems opening key file at: %s",sc->priv_key_path.c_str());
-		sec_man->remove_security_context(session_id);
-		delete sc;
-		return IAuthPolicySet::FAILED;
-	}
-
-	privkey = PEM_read_bio_PrivateKey(key, NULL, 0, NULL);
-	BIO_free(key);
-
-	if (!privkey) {
-		LOG_ERR("Problems reading  key",ERR_error_string(ERR_get_error(), NULL));
-		sec_man->remove_security_context(session_id);
-		delete sc;
-		return IAuthPolicySet::FAILED;
-	}
-
-	rsakey = EVP_PKEY_get1_RSA(privkey);
-	if(rsakey == NULL)
-		LOG_ERR("EVP_PKEY_get1_RSA: failed.");
-
-	UcharArray dec_pre_master_secret;
-	dec_pre_master_secret.data = new unsigned char[256];
-
-	if((dec_pre_master_secret.length =  RSA_private_decrypt(enc_pre_master_secret.length,
+	if ((dec_pre_master_secret.length = RSA_private_decrypt(enc_pre_master_secret.length,
 								enc_pre_master_secret.data,
 								dec_pre_master_secret.data,
-								rsakey,
-								RSA_PKCS1_OAEP_PADDING)) == -1){
+								sc->key,
+								RSA_PKCS1_OAEP_PADDING)) == -1) {
 		LOG_ERR("Error decrypting pre-master secret");
 		ERR_load_crypto_strings();
 		ERR_error_string(ERR_get_error(), NULL);
 	}
 
-	//EVP_PKEY_free(privkey); //do we need it?
-
 	//start computing MASTERSECRET
-	std::string slabel = "master secret";
-	UcharArray pre_seed(sc->client_random.random_bytes, sc->server_random.random_bytes);
-	//Generate master secret
-	prf(sc->master_secret,dec_pre_master_secret, slabel, pre_seed);
+	UcharArray pre_seed(sc->client_random.random_bytes,
+			    sc->server_random.random_bytes);
+
+	//Generate master secret and encryption keys
+	prf(sc->master_secret,
+	    dec_pre_master_secret,
+	    "master secret",
+	    pre_seed);
+
 	generate_encryption_key(sc);
 
-	if(sc->client_cert_received and sc->client_cert_verify_received and sc->client_cipher_received){
+	if (sc->client_cert_received &&
+			sc->client_cert_verify_received &&
+			sc->client_cipher_received) {
 		sc->state = TLSHandSecurityContext::SERVER_SENDING_CIPHER;
 		return send_server_change_cipher_spec(sc);
 	}
+
 	return IAuthPolicySet::IN_PROGRESS;
 }
 
 IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_certificate_verify_message(const cdap::CDAPMessage& message,
-		int session_id)
+											   int session_id)
 {
 	TLSHandSecurityContext * sc;
 
@@ -1050,7 +1131,8 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_certificate_veri
 	}
 
 	UcharArray enc_verify_hash;
-	decode_client_certificate_verify_tls_hand(message.obj_value_, enc_verify_hash);
+	decode_client_certificate_verify_tls_hand(message.obj_value_,
+						  enc_verify_hash);
 	sc->client_cert_verify_received = true;
 	timer.cancelTask(sc->timer_task);
 
@@ -1060,23 +1142,24 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_certificate_veri
 
 	if ((pubkey = X509_get_pubkey(sc->other_cert)) == NULL)
 		LOG_ERR("Error getting public key from certificate %s",
-				ERR_error_string(ERR_get_error(), NULL));
+			ERR_error_string(ERR_get_error(), NULL));
 
 	rsa_pubkey = EVP_PKEY_get1_RSA(pubkey);
 
-	if(rsa_pubkey == NULL)
+	if (rsa_pubkey == NULL)
 		LOG_ERR("EVP_PKEY_get1_RSA: failed. %s",
-				ERR_error_string(ERR_get_error(), NULL));
+			ERR_error_string(ERR_get_error(), NULL));
 
 	dec_verify_hash.data = new unsigned char[RSA_size(rsa_pubkey)];
 
-	if((dec_verify_hash.length = RSA_public_decrypt(enc_verify_hash.length,
-			enc_verify_hash.data,
-			dec_verify_hash.data,
-			rsa_pubkey,
-			RSA_PKCS1_PADDING)) == -1){
+	if ((dec_verify_hash.length = RSA_public_decrypt(enc_verify_hash.length,
+							enc_verify_hash.data,
+							dec_verify_hash.data,
+							rsa_pubkey,
+							RSA_PKCS1_PADDING)) == -1) {
 		LOG_ERR("Error decrypting certificate verify");
-		LOG_ERR("Error decrypting certificate verify with RSA public key: %s", ERR_error_string(ERR_get_error(), NULL));
+		LOG_ERR("Error decrypting certificate verify with RSA public key: %s",
+			ERR_error_string(ERR_get_error(), NULL));
 		sec_man->remove_security_context(session_id);
 		delete sc;
 		return IAuthPolicySet::FAILED;
@@ -1085,12 +1168,12 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_certificate_veri
 	//Compare calculated hash with received decrypted hash, should be the same if ok auth
 	if (dec_verify_hash != sc->verify_hash) {
 		LOG_ERR("Error authenticating server. Decrypted Hashed cv: %s, cv: %s",
-				dec_verify_hash.toString().c_str(),
-				sc->verify_hash.toString().c_str());
+			dec_verify_hash.toString().c_str(),
+			sc->verify_hash.toString().c_str());
 		return IAuthPolicySet::FAILED;
 	}
 
-	if(sc->client_keys_received and sc->client_cert_received and sc->client_cipher_received){
+	if (sc->client_keys_received and sc->client_cert_received and sc->client_cipher_received){
 		sc->state = TLSHandSecurityContext::SERVER_SENDING_CIPHER;
 		return send_server_change_cipher_spec(sc);
 	}
@@ -1099,13 +1182,14 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_certificate_veri
 }
 
 IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_change_cipher_spec_message(const cdap::CDAPMessage& message,
-		int session_id)
+											   int session_id)
 {
 	TLSHandSecurityContext * sc;
 	if (message.obj_value_.message_ == 0) {
 		LOG_ERR("Null object value");
 		return IAuthPolicySet::FAILED;
 	}
+
 	sc = dynamic_cast<TLSHandSecurityContext *>(sec_man->get_security_context(session_id));
 	if (!sc) {
 		LOG_ERR("Could not retrieve Security Context for session: %d", session_id);
@@ -1136,28 +1220,32 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_change_cipher_sp
 		delete sc;
 		return result;
 	}
+
 	sc->state = TLSHandSecurityContext::REQUESTED_ENABLE_DECRYPTION_SERVER;
 	if (result == IAuthPolicySet::SUCCESSFULL) {
 		result = decryption_enabled_server(sc);
 	}
+
 	return result;
 }
 
 IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_change_cipher_spec_message(const cdap::CDAPMessage& message,
-		int session_id)
+											   int session_id)
 {
 	TLSHandSecurityContext * sc;
 	if (message.obj_value_.message_ == 0) {
 		LOG_ERR("Null object value");
 		return IAuthPolicySet::FAILED;
 	}
+
 	sc = dynamic_cast<TLSHandSecurityContext *>(sec_man->get_security_context(session_id));
 	if (!sc) {
-		LOG_ERR("Could not retrieve Security Context for session: %d", session_id);
+		LOG_ERR("Could not retrieve Security Context for session: %d",
+			session_id);
 		return IAuthPolicySet::FAILED;
 	}
-	ScopedLock sc_lock(lock);
 
+	ScopedLock sc_lock(lock);
 
 	if (sc->state != TLSHandSecurityContext::WAIT_SERVER_CIPHER) {
 		LOG_ERR("Wrong session state: %d", sc->state);
@@ -1168,8 +1256,8 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_change_cipher_sp
 
 	timer.cancelTask(sc->timer_task);
 
-	/*// Configure kernel SDU protection policy with master secret and algorithms
-	// tell it to enable decryption and encryption*/
+	/* Configure kernel SDU protection policy with master secret and algorithms
+	tell it to enable decryption and encryption*/
 	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(true, true),this);
 	if (result == IAuthPolicySet::FAILED) {
 		sec_man->destroy_security_context(sc->id);
@@ -1181,11 +1269,10 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_change_cipher_sp
 		result = encryption_decryption_enabled_client(sc);
 	}
 	return result;
-
 }
 
 IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_finish_message(const cdap::CDAPMessage& message,
-		int session_id)
+									       int session_id)
 {
 	TLSHandSecurityContext * sc;
 	if (message.obj_value_.message_ == 0) {
@@ -1208,25 +1295,25 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_finish_message(c
 		return IAuthPolicySet::FAILED;
 	}
 
-
 	UcharArray dec_client_finish;
 	decode_finsih_message_tls_hand(message.obj_value_,dec_client_finish);
 
-
 	//Calculate my finish prf
-	std::string slabel ="finish label";
-	prf(sc->verify_data,sc->master_secret, slabel, sc->verify_hash);
+	prf(sc->verify_data,
+	    sc->master_secret,
+	    "finish label",
+	    sc->verify_hash);
 
 	if (dec_client_finish != sc->verify_data) {
 		LOG_ERR("Error authenticating server. Decrypted finish: %s, stored finish: %s",
-				dec_client_finish.toString().c_str(),
-				sc->verify_data.toString().c_str());
+			dec_client_finish.toString().c_str(),
+			sc->verify_data.toString().c_str());
 
 		return IAuthPolicySet::FAILED;
 	}
 
 	timer.cancelTask(sc->timer_task);
-	//SDU
+
 	// Configure kernel SDU protection policy with master secret and algorithms
 	// tell it to enable encryption
 	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(true, true),this);
@@ -1234,16 +1321,17 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_finish_message(c
 		delete sc;
 		return result;
 	}
+
 	sc->state = TLSHandSecurityContext::REQUESTED_ENABLE_ENCRYPTION_SERVER;
 	if (result == IAuthPolicySet::SUCCESSFULL) {
 		result = encryption_enabled_server(sc);
 	}
-	return result;
 
+	return result;
 }
 
 IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_finish_message(const cdap::CDAPMessage& message,
-		int session_id)
+									       int session_id)
 {
 	TLSHandSecurityContext * sc;
 
@@ -1267,24 +1355,27 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_finish_message(c
 		return IAuthPolicySet::FAILED;
 	}
 	UcharArray dec_server_finish;
-	decode_finsih_message_tls_hand(message.obj_value_, dec_server_finish);
+	decode_finsih_message_tls_hand(message.obj_value_,
+				       dec_server_finish);
 
 	if (dec_server_finish != sc->verify_data) {
 		LOG_ERR("Error authenticating server. Decrypted finish: %s, stored finish: %s",
-				dec_server_finish.toString().c_str(),
-				sc->verify_data.toString().c_str());
+			dec_server_finish.toString().c_str(),
+			sc->verify_data.toString().c_str());
 
 		return IAuthPolicySet::FAILED;
 	}
+
 	timer.cancelTask(sc->timer_task);
 	sc->state = TLSHandSecurityContext::DONE;
+
 	return IAuthPolicySet::SUCCESSFULL;
 }
 
-IAuthPolicySet::AuthStatus  AuthTLSHandPolicySet::send_client_certificate(TLSHandSecurityContext * sc)
+IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_client_certificate(TLSHandSecurityContext * sc)
 {
+	load_credentials(sc);
 
-	load_authentication_certificate(sc);
 	//convert x509
 	UcharArray encoded_cert;
 	encoded_cert.length = i2d_X509(sc->cert, &encoded_cert.data);
@@ -1303,13 +1394,13 @@ IAuthPolicySet::AuthStatus  AuthTLSHandPolicySet::send_client_certificate(TLSHan
 		obj_info.name_ = CLIENT_CERTIFICATE;
 		obj_info.inst_ = 0;
 		encode_certificate_tls_hand(encoded_cert,
-				obj_info.value_);
+					    obj_info.value_);
 
 		rib_daemon->remote_write(sc->con,
-				obj_info,
-				flags,
-				filt,
-				NULL);
+					obj_info,
+					flags,
+					filt,
+					NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s",
 				e.what());
@@ -1320,19 +1411,20 @@ IAuthPolicySet::AuthStatus  AuthTLSHandPolicySet::send_client_certificate(TLSHan
 
 	//compute hash for certificate verify message
 	unsigned char hash4[SHA256_DIGEST_LENGTH];
-	if(!SHA256(obj_info.value_.message_, obj_info.value_.size_, hash4)){
+	if (!SHA256(obj_info.value_.message_,
+		    obj_info.value_.size_,
+		    hash4)){
 		LOG_ERR("Could not hash message");
 		return IAuthPolicySet::FAILED;
 	}
-	//prepare verify_hash vector for posterior signing
-	memcpy(sc->verify_hash.data+96, hash4, 32);
-	return IAuthPolicySet::IN_PROGRESS;
 
+	//prepare verify_hash vector for posterior signing
+	memcpy(sc->verify_hash.data + 96, hash4, 32);
+	return IAuthPolicySet::IN_PROGRESS;
 }
 
-IAuthPolicySet::AuthStatus  AuthTLSHandPolicySet::send_client_key_exchange(TLSHandSecurityContext * sc)
+IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_client_key_exchange(TLSHandSecurityContext * sc)
 {
-
 	UcharArray pre_master_secret, enc_pre_master_secret;
 	pre_master_secret.data = new unsigned char[48];
 	pre_master_secret.length = 48;
@@ -1357,19 +1449,15 @@ IAuthPolicySet::AuthStatus  AuthTLSHandPolicySet::send_client_key_exchange(TLSHa
 	enc_pre_master_secret.data = new unsigned char[RSA_size(rsa_pubkey)];
 
 	if((enc_pre_master_secret.length = RSA_public_encrypt(pre_master_secret.length,
-								pre_master_secret.data,
-								enc_pre_master_secret.data,
-								rsa_pubkey,
-								RSA_PKCS1_OAEP_PADDING)) == -1){
+							      pre_master_secret.data,
+							      enc_pre_master_secret.data,
+							      rsa_pubkey,
+							      RSA_PKCS1_OAEP_PADDING)) == -1){
 		LOG_ERR("Error encrypting pre-master secret");
-		LOG_ERR("Error encrypting challenge with RSA public key: %s", ERR_error_string(ERR_get_error(), NULL));
+		LOG_ERR("Error encrypting challenge with RSA public key: %s",
+			ERR_error_string(ERR_get_error(), NULL));
 		return IAuthPolicySet::FAILED;
 	}
-
-
-	//es necessari??? free pkey
-	/*EVP_PKEY_free(pubkey);
-	RSA_free(rsa_pubkey);*/
 
 	//Send client key exchange
 	cdap_rib::obj_info_t obj_info;
@@ -1383,13 +1471,13 @@ IAuthPolicySet::AuthStatus  AuthTLSHandPolicySet::send_client_key_exchange(TLSHa
 		obj_info.name_ = CLIENT_KEY_EXCHANGE;
 		obj_info.inst_ = 0;
 		encode_client_key_exchange_tls_hand(enc_pre_master_secret,
-				obj_info.value_);
+						    obj_info.value_);
 
 		rib_daemon->remote_write(sc->con,
-				obj_info,
-				flags,
-				filt,
-				NULL);
+					 obj_info,
+					 flags,
+					 filt,
+					 NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s",e.what());
 		sec_man->destroy_security_context(sc->id);
@@ -1399,17 +1487,23 @@ IAuthPolicySet::AuthStatus  AuthTLSHandPolicySet::send_client_key_exchange(TLSHa
 
 	//preparation for certificate verify message
 	unsigned char hash5[SHA256_DIGEST_LENGTH];
-	if(!SHA256(obj_info.value_.message_, obj_info.value_.size_, hash5)){
+	if (!SHA256(obj_info.value_.message_,
+		   obj_info.value_.size_,
+		   hash5)){
 		LOG_ERR("Could not hash message");
 		return IAuthPolicySet::FAILED;
 	}
+
 	//prepare verify_hash vector for posterior signing
 	memcpy(sc->verify_hash.data+128, hash5, 32);
 
 	//calculate_master_secret
-	std::string slabel = "master secret";
-	UcharArray pre_seed(sc->client_random.random_bytes, sc->server_random.random_bytes);
-	prf(sc->master_secret,pre_master_secret, slabel, pre_seed);
+	UcharArray pre_seed(sc->client_random.random_bytes,
+			    sc->server_random.random_bytes);
+	prf(sc->master_secret,
+	    pre_master_secret,
+	    "master secret",
+	    pre_seed);
 
 	//calculate encryption key;
 	generate_encryption_key(sc);
@@ -1417,37 +1511,20 @@ IAuthPolicySet::AuthStatus  AuthTLSHandPolicySet::send_client_key_exchange(TLSHa
 	return IAuthPolicySet::IN_PROGRESS;
 }
 
-IAuthPolicySet::AuthStatus  AuthTLSHandPolicySet::send_client_certificate_verify(TLSHandSecurityContext * sc)
+IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_client_certificate_verify(TLSHandSecurityContext * sc)
 {
-
-	RSA *rsa_priv_key;
-	BIO *key;
-
-	key =  BIO_new_file(sc->priv_key_path.c_str(), "r");
-	if (!key) {
-		LOG_ERR("Problems opening key file at: %s",sc->priv_key_path.c_str());
-		return IAuthPolicySet::FAILED;
-	}
-	rsa_priv_key = PEM_read_bio_RSAPrivateKey(key, NULL, 0, NULL);
-	BIO_free(key);
-
-	if (!rsa_priv_key) {
-		LOG_ERR("Problems reading  key",ERR_error_string(ERR_get_error(), NULL));
-		return IAuthPolicySet::FAILED;
-	}
-
 	//encrypt the hash of all mesages with private rsa key of IPCP A
 	UcharArray enc_cert_verify(256);
 	if((enc_cert_verify.length = RSA_private_encrypt(sc->verify_hash.length,
-							sc->verify_hash.data,
-							enc_cert_verify.data,
-							rsa_priv_key,
-							RSA_PKCS1_PADDING)) == -1){
+							 sc->verify_hash.data,
+							 enc_cert_verify.data,
+							 sc->key,
+							 RSA_PKCS1_PADDING)) == -1){
 		LOG_ERR("Error encrypting certificate verify hash");
-		LOG_ERR("Error encrypting certificate verify hash with private key: %s", ERR_error_string(ERR_get_error(), NULL));
+		LOG_ERR("Error encrypting certificate verify hash with private key: %s",
+			ERR_error_string(ERR_get_error(), NULL));
 		return IAuthPolicySet::FAILED;
 	}
-
 
 	//Send client key exchange
 	try {
@@ -1460,13 +1537,13 @@ IAuthPolicySet::AuthStatus  AuthTLSHandPolicySet::send_client_certificate_verify
 		obj_info.name_ = CLIENT_CERTIFICATE_VERIFY;
 		obj_info.inst_ = 0;
 		encode_client_certificate_verify_tls_hand(enc_cert_verify,
-				obj_info.value_);
+							  obj_info.value_);
 
 		rib_daemon->remote_write(sc->con,
-				obj_info,
-				flags,
-				filt,
-				NULL);
+					 obj_info,
+					 flags,
+					 filt,
+					 NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s",e.what());
 		sec_man->destroy_security_context(sc->id);
@@ -1475,9 +1552,9 @@ IAuthPolicySet::AuthStatus  AuthTLSHandPolicySet::send_client_certificate_verify
 
 	timer.scheduleTask(sc->timer_task, timeout);
 	return IAuthPolicySet::IN_PROGRESS;
-
 }
-IAuthPolicySet::AuthStatus  AuthTLSHandPolicySet::send_client_change_cipher_spec(TLSHandSecurityContext * sc)
+
+IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_client_change_cipher_spec(TLSHandSecurityContext * sc)
 {
 	try {
 		cdap_rib::flags_t flags;
@@ -1492,16 +1569,17 @@ IAuthPolicySet::AuthStatus  AuthTLSHandPolicySet::send_client_change_cipher_spec
 		obj_info.value_.message_ = new unsigned char[1];
 
 		rib_daemon->remote_write(sc->con,
-				obj_info,
-				flags,
-				filt,
-				NULL);
+					obj_info,
+					flags,
+					filt,
+					NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s",e.what());
 		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 	timer.scheduleTask(sc->timer_task, timeout);
+
 	return IAuthPolicySet::IN_PROGRESS;
 }
 
@@ -1523,7 +1601,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_client_messages(TLSHandSec
 	return IAuthPolicySet::IN_PROGRESS;
 }
 
-IAuthPolicySet::AuthStatus  AuthTLSHandPolicySet::send_server_change_cipher_spec(TLSHandSecurityContext * sc)
+IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_server_change_cipher_spec(TLSHandSecurityContext * sc)
 {
 	if (sc->state != TLSHandSecurityContext::SERVER_SENDING_CIPHER) {
 		LOG_ERR("Wrong session state: %d", sc->state);
@@ -1545,20 +1623,21 @@ IAuthPolicySet::AuthStatus  AuthTLSHandPolicySet::send_server_change_cipher_spec
 		obj_info.value_.message_ = new unsigned char[1];
 
 		rib_daemon->remote_write(sc->con,
-				obj_info,
-				flags,
-				filt,
-				NULL);
+					 obj_info,
+					 flags,
+					 filt,
+					 NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s",e.what());
 		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 	timer.scheduleTask(sc->timer_task, timeout);
+
 	return IAuthPolicySet::IN_PROGRESS;
 }
 
-IAuthPolicySet::AuthStatus  AuthTLSHandPolicySet::send_client_finish(TLSHandSecurityContext * sc)
+IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_client_finish(TLSHandSecurityContext * sc)
 {
 	if (sc->state != TLSHandSecurityContext::WAIT_SERVER_FINISH) {
 		LOG_ERR("Wrong session state: %d", sc->state);
@@ -1580,13 +1659,13 @@ IAuthPolicySet::AuthStatus  AuthTLSHandPolicySet::send_client_finish(TLSHandSecu
 		obj_info.name_ = CLIENT_FINISH;
 		obj_info.inst_ = 0;
 		encode_finish_message_tls_hand(sc->verify_data,
-				obj_info.value_);
+					       obj_info.value_);
 
 		rib_daemon->remote_write(sc->con,
-				obj_info,
-				flags,
-				filt,
-				NULL);
+					obj_info,
+					flags,
+					filt,
+					NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s",e.what());
 		sec_man->destroy_security_context(sc->id);
@@ -1595,6 +1674,7 @@ IAuthPolicySet::AuthStatus  AuthTLSHandPolicySet::send_client_finish(TLSHandSecu
 
 	timer.scheduleTask(sc->timer_task, timeout);
 	sc->state = TLSHandSecurityContext::WAIT_SERVER_FINISH;
+
 	return IAuthPolicySet::IN_PROGRESS;
 }
 
@@ -1602,7 +1682,9 @@ int AuthTLSHandPolicySet::set_policy_set_param(const std::string& name,
 		const std::string& value)
 {
 	LOG_DBG("No policy-set-specific parameters to set (%s, %s)",
-			name.c_str(), value.c_str());
+		name.c_str(),
+		value.c_str());
+
 	return -1;
 }
 
@@ -1615,7 +1697,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::crypto_state_updated(int port_i
 	sc = dynamic_cast<TLSHandSecurityContext *>(sec_man->get_security_context(port_id));
 	if (!sc) {
 		LOG_ERR("Could not retrieve TLS Handshake security context for port-id: %d",
-				port_id);
+			port_id);
 		return IAuthPolicySet::FAILED;
 	}
 
@@ -1627,13 +1709,12 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::crypto_state_updated(int port_i
 	case TLSHandSecurityContext::REQUESTED_ENABLE_ENCRYPTION_DECRYPTION_CLIENT:
 		return encryption_decryption_enabled_client(sc);
 	default:
-		LOG_ERR("Wrong security context state: %d", sc->state);
+		LOG_ERR("Wrong security context state: %d",
+			sc->state);
 		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 }
-
-
 
 int AuthTLSHandPolicySet::generate_encryption_key(TLSHandSecurityContext * sc)
 {
@@ -1703,13 +1784,13 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::encryption_enabled_server(TLSHa
 		obj_info.name_ = SERVER_FINISH;
 		obj_info.inst_ = 0;
 		encode_finish_message_tls_hand(sc->verify_data,
-				obj_info.value_);
+					       obj_info.value_);
 
 		rib_daemon->remote_write(sc->con,
-				obj_info,
-				flags,
-				filt,
-				NULL);
+					obj_info,
+					flags,
+					filt,
+					NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s",e.what());
 		sec_man->destroy_security_context(sc->id);
@@ -1717,6 +1798,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::encryption_enabled_server(TLSHa
 	}
 	timer.cancelTask(sc->timer_task);
 	sc->state = TLSHandSecurityContext::DONE;
+
 	return IAuthPolicySet::SUCCESSFULL;
 }
 
