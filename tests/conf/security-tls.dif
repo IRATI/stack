@@ -11,16 +11,26 @@
               	"name" : "PSOC_authentication-tlshandshake",
           	"version" : "1",
           	"parameters" : [ {
-          	   "name" : "cipherSuite",
-          	   "value" : "suite_name"
+          	   "name" : "keystore",
+          	   "value" : "/usr/local/irati/etc/creds"
           	}, {
-                   "name" : "compressionMethod",
-                   "value" : "method1_name"
+                   "name" : "keystorePass",
+                   "value" : "none"
                 } ]
               },
               "encryptPolicy" : {
                  "name" : "PSOC_crypto-tlsrecord",
-                 "version" : "1"
+                 "version" : "1",
+                 "parameters" : [ {
+          	   "name" : "encryptAlg",
+          	   "value" : "AES256"
+          	}, {
+                   "name" : "macAlg",
+                   "value" : "SHA256"
+		}, {
+                   "name" : "compressAlg",
+                   "value" : "deflate"
+                } ]
               },
               "TTLPolicy" : {
                  "name" : "default",

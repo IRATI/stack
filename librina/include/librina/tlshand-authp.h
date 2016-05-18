@@ -117,8 +117,11 @@ public:
 	//Hash of TLS handshake messages (5mess*32length);
 	UcharArray verify_hash;
 
-	//Encryption keys for kernel
-	UcharArray encrypt_key;
+	//Encryption/MAC keys for SDU protection kernel
+	UcharArray encrypt_key_tx;
+	UcharArray encrypt_key_rx;
+	UcharArray mac_key_tx;
+	UcharArray mac_key_rx;
 
 	//Certificate presence
 	bool cert_received;
@@ -223,7 +226,7 @@ private:
 	int load_peer_pub_key(TLSHandSecurityContext * sc);
 
 	//encryption/decryption
-	int generate_encryption_key(TLSHandSecurityContext * sc);
+	int generate_encryption_keys(TLSHandSecurityContext * sc, bool client);
 	AuthStatus decryption_enabled_server(TLSHandSecurityContext * sc);
 	AuthStatus encryption_decryption_enabled_client(TLSHandSecurityContext * sc);
 	AuthStatus encryption_enabled_server (TLSHandSecurityContext * sc);

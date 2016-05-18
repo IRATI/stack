@@ -306,14 +306,22 @@ TLSHandSecurityContext::~TLSHandSecurityContext()
 }
 
 CryptoState TLSHandSecurityContext::get_crypto_state(bool enable_crypto_tx,
-		bool enable_crypto_rx)
+						     bool enable_crypto_rx)
 {
 	CryptoState result;
+
+	result.port_id = id;
+	result.encrypt_alg = encrypt_alg;
+	result.mac_alg = mac_alg;
+	result.compress_alg = compress_method;
 	result.enable_crypto_tx = enable_crypto_tx;
 	result.enable_crypto_rx = enable_crypto_rx;
-	//1key
-	result.encrypt_key_tx = encrypt_key;
-	result.port_id = id;
+
+	//keys
+	result.encrypt_key_tx = encrypt_key_tx;
+	result.encrypt_key_rx = encrypt_key_rx;
+	result.mac_key_tx = mac_key_tx;
+	result.mac_key_rx = mac_key_rx;
 
 	return result;
 }
@@ -1125,7 +1133,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_key_exchange_mes
 	    "master secret",
 	    pre_seed);
 
-	generate_encryption_key(sc);
+	generate_encryption_keys(sc, false);
 
 	if (sc->client_cert_received &&
 			sc->client_cert_verify_received &&
@@ -1542,8 +1550,8 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_client_key_exchange(TLSHan
 	    "master secret",
 	    pre_seed);
 
-	//calculate encryption key;
-	generate_encryption_key(sc);
+	//calculate encryption keys;
+	generate_encryption_keys(sc, true);
 
 	return IAuthPolicySet::IN_PROGRESS;
 }
@@ -1766,23 +1774,82 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::crypto_state_updated(int port_i
 	}
 }
 
-int AuthTLSHandPolicySet::generate_encryption_key(TLSHandSecurityContext * sc)
+int AuthTLSHandPolicySet::generate_encryption_keys(TLSHandSecurityContext * sc,
+						   bool client)
 {
+	UcharArray key_material;
+	UcharArray * tx, * rx;
+	int prefix = 0;
 
 	if (sc->encrypt_alg == SSL_TXT_AES128) {
-		sc->encrypt_key.length = 16;
-		sc->encrypt_key.data = new unsigned char[16];
-		MD5(sc->master_secret.data, sc->master_secret.length, sc->encrypt_key.data);
-
+		key_material.length = key_material.length + 32;
+		sc->encrypt_key_rx.length = 16;
+		sc->encrypt_key_tx.length = 16;
 	} else if (sc->encrypt_alg == SSL_TXT_AES256) {
-		sc->encrypt_key.length = 32;
-		sc->encrypt_key.data = new unsigned char[32];
-		SHA256(sc->master_secret.data, sc->master_secret.length, sc->encrypt_key.data);
+		key_material.length = key_material.length + 64;
+		sc->encrypt_key_rx.length = 32;
+		sc->encrypt_key_tx.length = 32;
+	}
+	sc->encrypt_key_rx.data = new unsigned char[sc->encrypt_key_rx.length];
+	sc->encrypt_key_tx.data = new unsigned char[sc->encrypt_key_tx.length];
+
+	if (sc->mac_alg == SSL_TXT_MD5) {
+		key_material.length = key_material.length + 32;
+		sc->mac_key_rx.length = 16;
+		sc->mac_key_tx.length = 16;
+	} else if (sc->mac_alg == SSL_TXT_SHA256) {
+		key_material.length = key_material.length + 64;
+		sc->mac_key_rx.length = 32;
+		sc->mac_key_tx.length = 32;
+	}
+	sc->mac_key_rx.data = new unsigned char[sc->mac_key_rx.length];
+	sc->mac_key_tx.data = new unsigned char[sc->mac_key_tx.length];
+
+	//start computing key material
+	key_material.data = new unsigned char[key_material.length];
+	UcharArray pre_seed(sc->client_random.random_bytes,
+			    sc->server_random.random_bytes);
+
+	//Generate master secret and encryption keys
+	prf(key_material,
+	    sc->master_secret,
+	    "key expansion",
+	    pre_seed);
+
+	if (client) {
+		tx = &(sc->encrypt_key_tx);
+		rx = &(sc->encrypt_key_rx);
+	} else {
+		tx = &(sc->encrypt_key_rx);
+		rx = &(sc->encrypt_key_tx);
 	}
 
-	LOG_DBG("Generated encryption key of length %d bytes: %s",
-			sc->encrypt_key.length,
-			sc->encrypt_key.toString().c_str());
+	memcpy(tx->data, key_material.data, tx->length);
+	prefix = prefix + tx->length;
+	memcpy(rx->data, key_material.data + prefix, rx->length);
+	prefix = prefix + rx->length;
+
+	if (client) {
+		tx = &(sc->mac_key_tx);
+		rx = &(sc->mac_key_rx);
+	} else {
+		tx = &(sc->mac_key_rx);
+		rx = &(sc->mac_key_tx);
+	}
+
+	memcpy(tx->data, key_material.data + prefix, tx->length);
+	prefix = prefix + tx->length;
+	memcpy(rx->data, key_material.data + prefix, rx->length);
+
+	LOG_DBG("Generated encryption keys of length %d bytes: %s %s",
+			sc->encrypt_key_tx.length,
+			sc->encrypt_key_tx.toString().c_str(),
+			sc->encrypt_key_rx.toString().c_str());
+
+	LOG_DBG("Generated MAC keys of length %d bytes: %s %s",
+			sc->mac_key_tx.length,
+			sc->mac_key_tx.toString().c_str(),
+			sc->mac_key_rx.toString().c_str());
 
 	return IAuthPolicySet::IN_PROGRESS;
 }

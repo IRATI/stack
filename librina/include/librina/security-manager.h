@@ -213,6 +213,9 @@ public:
 			enable_crypto_rx(false){ };
 
 	int port_id;
+	std::string mac_alg;
+	std::string encrypt_alg;
+	std::string compress_alg;
 	bool enable_crypto_tx;
 	bool enable_crypto_rx;
 	UcharArray encrypt_key_tx;
