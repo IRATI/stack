@@ -298,7 +298,7 @@ CryptoState TLSHandSecurityContext::get_crypto_state(bool enable_crypto_tx,
 	CryptoState result;
 	result.enable_crypto_tx = enable_crypto_tx;
 	result.enable_crypto_rx = enable_crypto_rx;
-	//TODO
+	//1key
 	result.encrypt_key_tx = encrypt_key;
 	result.port_id = id;
 
@@ -314,7 +314,7 @@ TLSHandSecurityContext::TLSHandSecurityContext(int session_id,
 	compress_method = profile.authPolicy.get_param_value_as_string(COMPRESSION_METHOD);
 	keystore_path = profile.authPolicy.get_param_value_as_string(KEYSTORE_PATH);
 	if (keystore_path == std::string()) {
-		//TODO set the configuration directory as the default keystore path
+		// set the configuration directory as the default keystore path
 	}
 	keystore_password = profile.authPolicy.get_param_value_as_string(KEYSTORE_PASSWORD);
 	crcPolicy = profile.crcPolicy;
@@ -384,7 +384,7 @@ TLSHandSecurityContext::TLSHandSecurityContext(int session_id,
 
 	keystore_path = profile.authPolicy.get_param_value_as_string(KEYSTORE_PATH);
 	if (keystore_path == std::string()) {
-		//TODO set the configuration directory as the default keystore path
+		// set the configuration directory as the default keystore path
 	}
 	keystore_password = profile.authPolicy.get_param_value_as_string(KEYSTORE_PASSWORD);
 	crcPolicy = profile.crcPolicy;
@@ -1129,8 +1129,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_change_cipher_sp
 		return IAuthPolicySet::FAILED;
 	}
 
-
-	//TODO
 	// Configure kernel SDU protection policy with master secret and algorithms
 	// tell it to enable decryption
 	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(false, true),this);
@@ -1143,7 +1141,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_change_cipher_sp
 		result = decryption_enabled_server(sc);
 	}
 	return result;
-	//fi SDU
 }
 
 IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_change_cipher_spec_message(const cdap::CDAPMessage& message,
@@ -1164,7 +1161,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_change_cipher_sp
 
 	if (sc->state != TLSHandSecurityContext::WAIT_SERVER_CIPHER) {
 		LOG_ERR("Wrong session state: %d", sc->state);
-		LOG_ERR("falla  a process server change");
 		sec_man->remove_security_context(session_id);
 		delete sc;
 		return IAuthPolicySet::FAILED;
@@ -1172,7 +1168,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_change_cipher_sp
 
 	timer.cancelTask(sc->timer_task);
 
-	//TODO
 	/*// Configure kernel SDU protection policy with master secret and algorithms
 	// tell it to enable decryption and encryption*/
 	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(true, true),this);
@@ -1193,7 +1188,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_finish_message(c
 		int session_id)
 {
 	TLSHandSecurityContext * sc;
-	LOG_DBG("entroooo process client finsih!!!!!!");
 	if (message.obj_value_.message_ == 0) {
 		LOG_ERR("Null object value");
 		return IAuthPolicySet::FAILED;
@@ -1231,10 +1225,8 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_finish_message(c
 		return IAuthPolicySet::FAILED;
 	}
 
-	LOG_DBG("before cryptoseeerver!!!!!!");
 	timer.cancelTask(sc->timer_task);
 	//SDU
-	//TODO
 	// Configure kernel SDU protection policy with master secret and algorithms
 	// tell it to enable encryption
 	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(true, true),this);
@@ -1270,7 +1262,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_finish_message(c
 
 	if (sc->state != TLSHandSecurityContext::WAIT_SERVER_FINISH) {
 		LOG_ERR("Wrong session state: %d", sc->state);
-		LOG_DBG("peta a process server_finish");
 		sec_man->remove_security_context(session_id);
 		delete sc;
 		return IAuthPolicySet::FAILED;
@@ -1529,8 +1520,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_client_messages(TLSHandSec
 	send_client_change_cipher_spec(sc);
 	sc->state = TLSHandSecurityContext::WAIT_SERVER_CIPHER;
 
-	LOG_DBG("fienvio 4 missatges cleint");
-
 	return IAuthPolicySet::IN_PROGRESS;
 }
 
@@ -1573,7 +1562,6 @@ IAuthPolicySet::AuthStatus  AuthTLSHandPolicySet::send_client_finish(TLSHandSecu
 {
 	if (sc->state != TLSHandSecurityContext::WAIT_SERVER_FINISH) {
 		LOG_ERR("Wrong session state: %d", sc->state);
-		LOG_DBG("falla a send client function");
 		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
@@ -1607,7 +1595,6 @@ IAuthPolicySet::AuthStatus  AuthTLSHandPolicySet::send_client_finish(TLSHandSecu
 
 	timer.scheduleTask(sc->timer_task, timeout);
 	sc->state = TLSHandSecurityContext::WAIT_SERVER_FINISH;
-	LOG_DBG("after sending client finish");
 	return IAuthPolicySet::IN_PROGRESS;
 }
 
@@ -1641,7 +1628,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::crypto_state_updated(int port_i
 		return encryption_decryption_enabled_client(sc);
 	default:
 		LOG_ERR("Wrong security context state: %d", sc->state);
-		LOG_ERR("es aqui oi??crypto state update");
 		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
@@ -1707,7 +1693,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::encryption_enabled_server(TLSHa
 
 	LOG_DBG("Encryption enabled for port-id: %d", sc->id);
 	//Send server finish message
-	LOG_DBG("sending server finish before");
 	try {
 		cdap_rib::flags_t flags;
 		cdap_rib::filt_info_t filt;
