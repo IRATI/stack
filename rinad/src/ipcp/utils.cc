@@ -95,7 +95,8 @@ int SysfsHelper::get_value_as_string(std::string& file_name, std::string & value
 		return -1;
 	}
 
-	if (std::getline(sysfs_file, value) < 0) {
+        std::getline(sysfs_file, value);
+	if (sysfs_file.fail()) {
 		LOG_IPCP_ERR("Problems reading file: %s", file_name.c_str());
 		return -1;
 	}
