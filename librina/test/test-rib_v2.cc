@@ -357,10 +357,11 @@ public:
 	virtual ~MyDelegationObj(){};
 
         void forward_object(const rina::cdap_rib::con_handle_t& con,
-                                    const rina::cdap_rib::obj_info_t &obj,
-                                    const rina::cdap_rib::flags_t &flags,
-                                    const rina::cdap_rib::filt_info_t &filt,
-                                    int invoke_id) {};
+                            const std::string obj_name,
+                            const std::string obj_class,
+                            const rina::cdap_rib::flags_t &flags,
+                            const rina::cdap_rib::filt_info_t &filt,
+                            int invoke_id) {};
         void forwarded_object_response(rina::cdap::cdap_m_t *msg){};
 
 	const std::string& get_class() const{
@@ -956,6 +957,7 @@ void ribBasicOps::testOperations(){
 
 	obj_info_t obj_info1;
 	cdap_rib::filt_info_t filter;
+	cdap_rib::flags_t flags;
 	char* message;
 	int invoke_id;
 
@@ -970,7 +972,7 @@ void ribBasicOps::testOperations(){
 	invoke_id = 1;
 	try{
 		(*message) = PREFIX_MESSAGE | invoke_id;
-		rib_provider->read_request(con_ko, obj_info1, filter, invoke_id);
+		rib_provider->read_request(con_ko, obj_info1, filter, flags, invoke_id);
 		CPPUNIT_ASSERT_MESSAGE("READ operation with an invalid connection name has succeeded", 0);
 	}catch(...){
 
@@ -1001,7 +1003,7 @@ void ribBasicOps::testOperations(){
 	obj_info1.name_ = name1;
 	try{
 		(*message) = PREFIX_MESSAGE | invoke_id;
-		rib_provider->read_request(con_ok, obj_info1, filter, invoke_id);
+		rib_provider->read_request(con_ok, obj_info1, filter, flags, invoke_id);
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during valid read_req", 0);
 	}
