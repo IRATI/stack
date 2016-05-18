@@ -274,7 +274,7 @@ void decode_finsih_message_tls_hand(const ser_obj_t &message,
 }
 
 // Class TLSHandSecurityContext
-const std::string TLSHandSecurityContext::COMPRESSION_METHOD = "compressionMethod";
+const std::string TLSHandSecurityContext::COMPRESSION_ALGORITHM = "compressAlg";
 const std::string TLSHandSecurityContext::KEYSTORE_PATH = "keystore";
 const std::string TLSHandSecurityContext::KEYSTORE_PASSWORD = "keystorePass";
 const std::string TLSHandSecurityContext::MY_CERTIFICATE = "cert.pem";
@@ -298,6 +298,11 @@ TLSHandSecurityContext::~TLSHandSecurityContext()
 		RSA_free(key);
 		key = NULL;
 	}
+
+	if (peer_pub_key) {
+		RSA_free(peer_pub_key);
+		peer_pub_key = NULL;
+	}
 }
 
 CryptoState TLSHandSecurityContext::get_crypto_state(bool enable_crypto_tx,
@@ -311,6 +316,29 @@ CryptoState TLSHandSecurityContext::get_crypto_state(bool enable_crypto_tx,
 	result.port_id = id;
 
 	return result;
+}
+
+TLSHandSecurityContext::TLSHandSecurityContext(int session_id):
+		ISecurityContext(session_id)
+{
+	con.port_id = 0;
+	timer_task = NULL;
+	state = BEGIN;
+
+	cert = NULL;
+	other_cert = NULL;
+	key = NULL;
+	peer_pub_key = NULL;
+	cert_received = false;
+	hello_received = false;
+	client_cert_received = false;
+	client_keys_received = false;
+	client_cert_verify_received = false;
+	client_cipher_received = false;
+	master_secret.length = 48;
+	master_secret.data = new unsigned char[48];
+	verify_data.length = 12;
+	verify_data.data = new unsigned char[12];
 }
 
 TLSHandSecurityContext::TLSHandSecurityContext(int session_id,
@@ -329,7 +357,7 @@ TLSHandSecurityContext::TLSHandSecurityContext(int session_id,
 	con.port_id = session_id;
 
 	encrypt_alg = profile.encryptPolicy.get_param_value_as_string(ENCRYPTION_ALGORITHM);
-	compress_method = profile.encryptPolicy.get_param_value_as_string(COMPRESSION_METHOD);
+	compress_method = profile.encryptPolicy.get_param_value_as_string(COMPRESSION_ALGORITHM);
 	mac_alg = profile.encryptPolicy.get_param_value_as_string(MAC_ALGORITHM);
 
 	timer_task = NULL;
@@ -337,6 +365,8 @@ TLSHandSecurityContext::TLSHandSecurityContext(int session_id,
 
 	cert = NULL;
 	other_cert = NULL;
+	key = NULL;
+	peer_pub_key = NULL;
 	cert_received = false;
 	hello_received = false;
 	client_cert_received = false;
@@ -396,6 +426,8 @@ TLSHandSecurityContext::TLSHandSecurityContext(int session_id,
 	timer_task = NULL;
 	cert = NULL;
 	other_cert = NULL;
+	key = NULL;
+	peer_pub_key = NULL;
 	cert_received = false;
 	hello_received = false;
 	client_cert_received = false;
@@ -498,6 +530,7 @@ cdap_rib::auth_policy_t AuthTLSHandPolicySet::get_auth_policy(int session_id,
 		    auth_policy.options.size_,
 		    hash1)){
 		LOG_ERR("Could not hash message");
+		sec_man->destroy_security_context(sc->id);
 		throw Exception();
 	}
 
@@ -555,6 +588,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::initiate_authentication(const c
 		    auth_policy.options.size_,
 		    hash1)){
 		LOG_ERR("Coul not hash message");
+		delete sc;
 		return IAuthPolicySet::FAILED;
 	}
 
@@ -608,17 +642,21 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::initiate_authentication(const c
 		    obj_info.value_.size_,
 		    hash2)){
 		LOG_ERR("Could not hash message");
+		delete sc;
 		return IAuthPolicySet::FAILED;
 	}
 	//prepare verify_hash vector for posterior signing
 	memcpy(sc->verify_hash.data+32, hash2, 32);
 
-	load_credentials(sc);
+	if (load_credentials(sc)) {
+		LOG_ERR("Error loading credentials");
+		delete sc;
+		return IAuthPolicySet::FAILED;
+	}
+
 	//convert x509
 	UcharArray encoded_cert;
 	encoded_cert.length = i2d_X509(sc->cert, &encoded_cert.data);
-	if (encoded_cert.length < 0)
-		LOG_ERR("Error converting certificate");
 
 	//Send server certificate
 	cdap_rib::obj_info_t obj_info1;
@@ -635,10 +673,10 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::initiate_authentication(const c
 					    obj_info1.value_);
 
 		rib_daemon->remote_write(sc->con,
-					obj_info1,
-					flags,
-					filt,
-					NULL);
+					 obj_info1,
+					 flags,
+					 filt,
+					 NULL);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message: %s",
 				e.what());
@@ -656,6 +694,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::initiate_authentication(const c
 		    obj_info1.value_.size_,
 		    hash3)){
 		LOG_ERR("Could not hash message");
+		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 
@@ -835,7 +874,7 @@ int AuthTLSHandPolicySet::prf(UcharArray& generated_hash,
 		       generated_hash.length);
 	}
 
-	return IAuthPolicySet::IN_PROGRESS;
+	return 0;
 }
 
 IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_hello_message(const cdap::CDAPMessage& message,
@@ -858,8 +897,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_hello_message(co
 
 	if (sc->state != TLSHandSecurityContext::WAIT_SERVER_HELLO_and_CERTIFICATE) {
 		LOG_ERR("Wrong session state: %d", sc->state);
-		sec_man->remove_security_context(session_id);
-		delete sc;
+		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 	sc->hello_received = true;
@@ -878,6 +916,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_hello_message(co
 		    message.obj_value_.size_,
 		    hash2)){
 		LOG_ERR("Could not hash message");
+		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 
@@ -914,8 +953,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_certificate_mess
 
 	if (sc->state != TLSHandSecurityContext::WAIT_SERVER_HELLO_and_CERTIFICATE) {
 		LOG_ERR("Wrong session state: %d", sc->state);
-		sec_man->remove_security_context(session_id);
-		delete sc;
+		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 
@@ -932,6 +970,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_certificate_mess
 		    message.obj_value_.size_,
 		    hash3)){
 		LOG_ERR("Could not hash message");
+		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 
@@ -947,9 +986,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_certificate_mess
 	sc->other_cert = d2i_X509(NULL,
 				  pointer,
 				  certificate_chain.length);
-
-	if (!sc->other_cert)
-		LOG_ERR("Bad conversion to x509 :(");
 
 	if (sc->hello_received) {
 		sc->state = TLSHandSecurityContext::CLIENT_SENDING_DATA;
@@ -979,8 +1015,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_certificate_mess
 
 	if (sc->state != TLSHandSecurityContext::WAIT_CLIENT_CERTIFICATE_and_KEYS) {
 		LOG_ERR("Wrong session state: %d", sc->state);
-		sec_man->remove_security_context(session_id);
-		delete sc;
+		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 
@@ -997,6 +1032,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_certificate_mess
 		    message.obj_value_.size_,
 		    hash4)){
 		LOG_ERR("Could not hash message");
+		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 
@@ -1012,9 +1048,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_certificate_mess
 	sc->other_cert = d2i_X509(NULL,
 				  pointer,
 				  certificate_chain.length);
-
-	if (sc->other_cert  == NULL)
-		LOG_ERR("Bad conversion to x509 :(");
 
 	if (sc->client_keys_received &&
 			sc->client_cert_verify_received &&
@@ -1046,8 +1079,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_key_exchange_mes
 
 	if (sc->state != TLSHandSecurityContext::WAIT_CLIENT_CERTIFICATE_and_KEYS) {
 		LOG_ERR("Wrong session state: %d", sc->state);
-		sec_man->remove_security_context(session_id);
-		delete sc;
+		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 
@@ -1063,8 +1095,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_key_exchange_mes
 		    message.obj_value_.size_,
 		    hash5)) {
 		LOG_ERR("Could not hash message");
-		sec_man->remove_security_context(session_id);
-		delete sc;
+		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 
@@ -1078,9 +1109,10 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_key_exchange_mes
 								dec_pre_master_secret.data,
 								sc->key,
 								RSA_PKCS1_OAEP_PADDING)) == -1) {
-		LOG_ERR("Error decrypting pre-master secret");
-		ERR_load_crypto_strings();
-		ERR_error_string(ERR_get_error(), NULL);
+		LOG_ERR("Error decrypting pre-master secret: %s",
+			ERR_error_string(ERR_get_error(), NULL));
+		sec_man->destroy_security_context(sc->id);
+		return IAuthPolicySet::FAILED;
 	}
 
 	//start computing MASTERSECRET
@@ -1105,10 +1137,34 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_key_exchange_mes
 	return IAuthPolicySet::IN_PROGRESS;
 }
 
+int AuthTLSHandPolicySet::load_peer_pub_key(TLSHandSecurityContext * sc)
+{
+	EVP_PKEY *pubkey = NULL;
+
+	if ((pubkey = X509_get_pubkey(sc->other_cert)) == NULL) {
+		LOG_ERR("Error getting public key from certificate %s",
+			ERR_error_string(ERR_get_error(), NULL));
+		return -1;
+	}
+
+	sc->peer_pub_key = EVP_PKEY_get1_RSA(pubkey);
+
+	if (!sc->peer_pub_key) {
+		LOG_ERR("EVP_PKEY_get1_RSA: failed. %s",
+			ERR_error_string(ERR_get_error(), NULL));
+		return -1;
+	}
+
+	EVP_PKEY_free(pubkey);
+
+	return 0;
+}
+
 IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_certificate_verify_message(const cdap::CDAPMessage& message,
 											   int session_id)
 {
 	TLSHandSecurityContext * sc;
+	UcharArray dec_verify_hash, enc_verify_hash;
 
 	if (message.obj_value_.message_ == 0) {
 		LOG_ERR("Null object value");
@@ -1125,43 +1181,31 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_certificate_veri
 
 	if (sc->state != TLSHandSecurityContext::WAIT_CLIENT_CERTIFICATE_and_KEYS) {
 		LOG_ERR("Wrong session state: %d", sc->state);
-		sec_man->remove_security_context(session_id);
-		delete sc;
+		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 
-	UcharArray enc_verify_hash;
 	decode_client_certificate_verify_tls_hand(message.obj_value_,
 						  enc_verify_hash);
 	sc->client_cert_verify_received = true;
 	timer.cancelTask(sc->timer_task);
 
-	UcharArray dec_verify_hash;
-	EVP_PKEY *pubkey = NULL;
-	RSA *rsa_pubkey = NULL;
+	if (load_peer_pub_key(sc)) {
+		LOG_ERR("Error extracting public key from peer's certificate");
+		sec_man->destroy_security_context(sc->id);
+		return IAuthPolicySet::FAILED;
+	}
 
-	if ((pubkey = X509_get_pubkey(sc->other_cert)) == NULL)
-		LOG_ERR("Error getting public key from certificate %s",
-			ERR_error_string(ERR_get_error(), NULL));
-
-	rsa_pubkey = EVP_PKEY_get1_RSA(pubkey);
-
-	if (rsa_pubkey == NULL)
-		LOG_ERR("EVP_PKEY_get1_RSA: failed. %s",
-			ERR_error_string(ERR_get_error(), NULL));
-
-	dec_verify_hash.data = new unsigned char[RSA_size(rsa_pubkey)];
+	dec_verify_hash.data = new unsigned char[RSA_size(sc->peer_pub_key)];
 
 	if ((dec_verify_hash.length = RSA_public_decrypt(enc_verify_hash.length,
 							enc_verify_hash.data,
 							dec_verify_hash.data,
-							rsa_pubkey,
+							sc->peer_pub_key,
 							RSA_PKCS1_PADDING)) == -1) {
-		LOG_ERR("Error decrypting certificate verify");
 		LOG_ERR("Error decrypting certificate verify with RSA public key: %s",
 			ERR_error_string(ERR_get_error(), NULL));
-		sec_man->remove_security_context(session_id);
-		delete sc;
+		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 
@@ -1170,6 +1214,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_certificate_veri
 		LOG_ERR("Error authenticating server. Decrypted Hashed cv: %s, cv: %s",
 			dec_verify_hash.toString().c_str(),
 			sc->verify_hash.toString().c_str());
+		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 
@@ -1200,16 +1245,14 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_change_cipher_sp
 
 	if (sc->state != TLSHandSecurityContext::WAIT_CLIENT_CERTIFICATE_and_KEYS) {
 		LOG_ERR("Wrong session state: %d", sc->state);
-		sec_man->remove_security_context(session_id);
-		delete sc;
+		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 	timer.cancelTask(sc->timer_task);
 
 	if(!sc->client_keys_received or !sc->client_cert_received or !sc->client_cert_verify_received){
 		LOG_ERR("Not enough messages received to proceed...");
-		sec_man->remove_security_context(session_id);
-		delete sc;
+		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 
@@ -1217,7 +1260,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_change_cipher_sp
 	// tell it to enable decryption
 	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(false, true),this);
 	if (result == IAuthPolicySet::FAILED) {
-		delete sc;
+		sec_man->destroy_security_context(sc->id);
 		return result;
 	}
 
@@ -1249,8 +1292,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_change_cipher_sp
 
 	if (sc->state != TLSHandSecurityContext::WAIT_SERVER_CIPHER) {
 		LOG_ERR("Wrong session state: %d", sc->state);
-		sec_man->remove_security_context(session_id);
-		delete sc;
+		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 
@@ -1290,8 +1332,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_finish_message(c
 
 	if (sc->state != TLSHandSecurityContext::SERVER_SENDING_CIPHER) {
 		LOG_ERR("Wrong session state: %d", sc->state);
-		sec_man->remove_security_context(session_id);
-		delete sc;
+		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 
@@ -1308,7 +1349,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_finish_message(c
 		LOG_ERR("Error authenticating server. Decrypted finish: %s, stored finish: %s",
 			dec_client_finish.toString().c_str(),
 			sc->verify_data.toString().c_str());
-
+		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 
@@ -1318,7 +1359,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_finish_message(c
 	// tell it to enable encryption
 	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(true, true),this);
 	if (result == IAuthPolicySet::FAILED) {
-		delete sc;
+		sec_man->destroy_security_context(sc->id);
 		return result;
 	}
 
@@ -1350,8 +1391,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_finish_message(c
 
 	if (sc->state != TLSHandSecurityContext::WAIT_SERVER_FINISH) {
 		LOG_ERR("Wrong session state: %d", sc->state);
-		sec_man->remove_security_context(session_id);
-		delete sc;
+		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 	UcharArray dec_server_finish;
@@ -1362,7 +1402,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_finish_message(c
 		LOG_ERR("Error authenticating server. Decrypted finish: %s, stored finish: %s",
 			dec_server_finish.toString().c_str(),
 			sc->verify_data.toString().c_str());
-
+		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 
@@ -1374,13 +1414,16 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_finish_message(c
 
 IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_client_certificate(TLSHandSecurityContext * sc)
 {
-	load_credentials(sc);
+	if (load_credentials(sc)) {
+		LOG_ERR("Error loading credentials");
+		sec_man->destroy_security_context(sc->id);
+		return IAuthPolicySet::FAILED;
+	}
 
 	//convert x509
 	UcharArray encoded_cert;
-	encoded_cert.length = i2d_X509(sc->cert, &encoded_cert.data);
-	if (encoded_cert.length < 0)
-		LOG_ERR("Error converting certificate");
+	encoded_cert.length = i2d_X509(sc->cert,
+				       &encoded_cert.data);
 
 	//Send client certificate
 	cdap_rib::obj_info_t obj_info;
@@ -1413,8 +1456,9 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_client_certificate(TLSHand
 	unsigned char hash4[SHA256_DIGEST_LENGTH];
 	if (!SHA256(obj_info.value_.message_,
 		    obj_info.value_.size_,
-		    hash4)){
+		    hash4)) {
 		LOG_ERR("Could not hash message");
+		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
 
@@ -1429,29 +1473,22 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_client_key_exchange(TLSHan
 	pre_master_secret.data = new unsigned char[48];
 	pre_master_secret.length = 48;
 
-	EVP_PKEY *pubkey = NULL;
-	RSA *rsa_pubkey = NULL;
-
 	if(RAND_bytes(pre_master_secret.data, pre_master_secret.length) != 1)
 		LOG_ERR("Problems generating random bytes");
 
 	//Exctract public key
-	if ((pubkey = X509_get_pubkey(sc->other_cert)) == NULL)
-		LOG_ERR("Error getting public key from certificate %s",
-				ERR_error_string(ERR_get_error(), NULL));
+	if (load_peer_pub_key(sc)) {
+		LOG_ERR("Error extracting public key from peer's certificate");
+		sec_man->destroy_security_context(sc->id);
+		return IAuthPolicySet::FAILED;
+	}
 
-	rsa_pubkey = EVP_PKEY_get1_RSA(pubkey);
-
-	if(rsa_pubkey == NULL)
-		LOG_ERR("EVP_PKEY_get1_RSA: failed. %s",
-				ERR_error_string(ERR_get_error(), NULL));
-
-	enc_pre_master_secret.data = new unsigned char[RSA_size(rsa_pubkey)];
+	enc_pre_master_secret.data = new unsigned char[RSA_size(sc->peer_pub_key)];
 
 	if((enc_pre_master_secret.length = RSA_public_encrypt(pre_master_secret.length,
 							      pre_master_secret.data,
 							      enc_pre_master_secret.data,
-							      rsa_pubkey,
+							      sc->peer_pub_key,
 							      RSA_PKCS1_OAEP_PADDING)) == -1){
 		LOG_ERR("Error encrypting pre-master secret");
 		LOG_ERR("Error encrypting challenge with RSA public key: %s",
@@ -1585,6 +1622,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_client_change_cipher_spec(
 
 IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_client_messages(TLSHandSecurityContext * sc)
 {
+	IAuthPolicySet::AuthStatus result;
 
 	if (sc->state != TLSHandSecurityContext::CLIENT_SENDING_DATA) {
 		LOG_ERR("Wrong session state: %d", sc->state);
@@ -1592,10 +1630,22 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_client_messages(TLSHandSec
 		return IAuthPolicySet::FAILED;
 	}
 
-	send_client_certificate(sc);
-	send_client_key_exchange(sc);
-	send_client_certificate_verify(sc);
-	send_client_change_cipher_spec(sc);
+	result = send_client_certificate(sc);
+	if (result != IAuthPolicySet::IN_PROGRESS)
+		return result;
+
+	result = send_client_key_exchange(sc);
+	if (result != IAuthPolicySet::IN_PROGRESS)
+		return result;
+
+	result = send_client_certificate_verify(sc);
+	if (result != IAuthPolicySet::IN_PROGRESS)
+		return result;
+
+	result = send_client_change_cipher_spec(sc);
+	if (result != IAuthPolicySet::IN_PROGRESS)
+		return result;
+
 	sc->state = TLSHandSecurityContext::WAIT_SERVER_CIPHER;
 
 	return IAuthPolicySet::IN_PROGRESS;

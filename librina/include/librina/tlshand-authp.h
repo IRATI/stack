@@ -62,8 +62,7 @@ public:
 ///Captures all data of the TLS HAndshake security context
 class TLSHandSecurityContext : public ISecurityContext {
 public:
-	TLSHandSecurityContext(int session_id) : ISecurityContext(session_id),
-			state(BEGIN), timer_task(NULL) { };
+	TLSHandSecurityContext(int session_id);
 	TLSHandSecurityContext(int session_id, const AuthSDUProtectionProfile& profile);
 	TLSHandSecurityContext(int session_id,
 			       const AuthSDUProtectionProfile& profile,
@@ -72,7 +71,7 @@ public:
 	CryptoState get_crypto_state(bool enable_crypto_tx,
 				     bool enable_crypto_rx);
 
-	static const std::string COMPRESSION_METHOD;
+	static const std::string COMPRESSION_ALGORITHM;
 	static const std::string KEYSTORE_PATH;
 	static const std::string KEYSTORE_PASSWORD;
 	static const std::string MY_CERTIFICATE;
@@ -144,6 +143,7 @@ public:
 	X509 * cert;
 	X509 * other_cert;
 	RSA *  key;
+	RSA *  peer_pub_key;
 
 private:
 	//return -1 if options are valid, 0 otherwise
@@ -218,8 +218,9 @@ private:
 		const std::string& slabel,
 		UcharArray& pre_seed);
 
-	//Load the authentication certificate
+	//Load the credentials
 	int load_credentials(TLSHandSecurityContext * sc);
+	int load_peer_pub_key(TLSHandSecurityContext * sc);
 
 	//encryption/decryption
 	int generate_encryption_key(TLSHandSecurityContext * sc);
