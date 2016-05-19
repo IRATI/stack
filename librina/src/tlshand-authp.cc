@@ -545,6 +545,9 @@ cdap_rib::auth_policy_t AuthTLSHandPolicySet::get_auth_policy(int session_id,
 	//prepare verify_hash vector for posterior signing
 	memcpy(sc->verify_hash.data, hash1, 32);
 
+	sc->timer_task = new CancelAuthTimerTask(sec_man, session_id);
+	timer.scheduleTask(sc->timer_task, timeout);
+
 	return auth_policy;
 }
 
@@ -642,7 +645,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::initiate_authentication(const c
 		delete sc;
 		return IAuthPolicySet::FAILED;
 	}
-	timer.scheduleTask(sc->timer_task, timeout);
 
 	//Get onj.info_value to obtain second hash message [32,--64]
 	unsigned char hash2[SHA256_DIGEST_LENGTH];
@@ -694,8 +696,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::initiate_authentication(const c
 	sc->state = TLSHandSecurityContext::WAIT_CLIENT_CERTIFICATE_and_KEYS;
 	sec_man->add_security_context(sc);
 
-	timer.scheduleTask(sc->timer_task, timeout);
-
 	//Get obj.info_value to obtain third hash message [64,--96]
 	unsigned char hash3[SHA256_DIGEST_LENGTH];
 	if (!SHA256(obj_info1.value_.message_,
@@ -709,11 +709,14 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::initiate_authentication(const c
 	//prepare verify_hash vector for posterior signing
 	memcpy(sc->verify_hash.data+64, hash3, 32);
 
+	sc->timer_task = new CancelAuthTimerTask(sec_man, session_id);
+	timer.scheduleTask(sc->timer_task, timeout);
+
 	return IAuthPolicySet::IN_PROGRESS;
 }
 
 int AuthTLSHandPolicySet::process_incoming_message(const cdap::CDAPMessage& message,
-		int session_id)
+						   int session_id)
 {
 	if (message.op_code_ != cdap::CDAPMessage::M_WRITE) {
 		LOG_ERR("Wrong operation type");
@@ -807,7 +810,8 @@ int AuthTLSHandPolicySet::load_credentials(TLSHandSecurityContext * sc)
 	return 0;
 }
 
-int AuthTLSHandPolicySet::prf(UcharArray& generated_hash,
+/// As defined in https://tools.ietf.org/html/rfc5246, section 5
+int AuthTLSHandPolicySet::prf(UcharArray& result,
 			      UcharArray& secret,
 			      const std::string& slabel,
 			      UcharArray& pre_seed)
@@ -818,68 +822,71 @@ int AuthTLSHandPolicySet::prf(UcharArray& generated_hash,
 	       slabel.c_str(),
 	       slabel.length());
 
-	//compute how many times we need to hash a(i)
-	int it = (generated_hash.length/32);
-	if (generated_hash.length%32 != 0)  it+=1;
+	//compute how many iterations we need (each iteration
+	//produces 32 bytes)
+	int it = (result.length/32);
+	if (result.length%32 != 0)
+		it+=1;
 
-	std::vector<UcharArray> vec(it+1);
-	std::vector<UcharArray> vres(it+1);
+	std::vector<UcharArray> a(it+1);
+	std::vector<UcharArray> vres(it);
 
-	//calculate seed, v(0) = seed;
+	//calculate seed, a(0) = seed;
 	UcharArray seed(label, pre_seed);
-	vec[0].length = seed.length;
-	vec[0].data = new unsigned char[seed.length];
-	memcpy(vec[0].data, seed.data, seed.length);
+	a[0].length = seed.length;
+	a[0].data = new unsigned char[seed.length];
+	memcpy(a[0].data, seed.data, seed.length);
 
 	//compute a[i], for determined length and second hmac call
 	for(int i = 1; i <= it; ++i){
-		vec[i].length = 32;
-		vec[i].data = new unsigned char[32];
+		a[i].length = 32;
+		a[i].data = new unsigned char[32];
 
 		HMAC(EVP_sha256(),
 		     secret.data,
 		     secret.length,
-		     vec[i-1].data,
-		     vec[i-1].length,
-		     vec[i].data,
-		     (unsigned *)(&vec[i].length));
+		     a[i-1].data,
+		     a[i-1].length,
+		     a[i].data,
+		     (unsigned *)(&a[i].length));
 
-		if(!vec[i].data)
-			LOG_ERR("Error calculating master secret");
+		if(!a[i].data) {
+			LOG_ERR("Error computing a[%d]", i);
+			return -1;
+		}
 
-		UcharArray X0(vec[i], vec[0]);
-		vres[i].length = 32;
-		vres[i].data = new unsigned char[32];
+		UcharArray X0(a[i], a[0]);
+		vres[i-1].length = 32;
+		vres[i-1].data = new unsigned char[32];
 
 		HMAC(EVP_sha256(),
 		     secret.data,
 		     secret.length,
 		     X0.data,
 		     X0.length,
-		     vres[i].data,
-		     (unsigned *)(&vres[i].length));
+		     vres[i-1].data,
+		     (unsigned *)(&vres[i-1].length));
 
-		if(!vres[i].data)
-			LOG_ERR("Error calculating master secret");
+		if(!vres[i-1].data) {
+			LOG_ERR("Error computing HMAC");
+			return -1;
+		}
 	}
 
-	UcharArray con(it*32);
-	if(it == 1) {
-		memcpy(generated_hash.data,
-		       vres[1].data,
-		       generated_hash.length);
-	} else {
-		//Concatenate and get desired length
-		for(int i = 1; i <= it-1; ++i){
-			UcharArray concatenate(vres[i], vres[i+1]);
-			memcpy(con.data+((i-1)*concatenate.length),
-			       concatenate.data,
-			       concatenate.length);
+	int length = 0;
+	int prefix = 0;
+	for(int i=0; i<it; i++) {
+		if (i == it-1) {
+			length = result.length - prefix;
+		} else {
+			length = vres[i].length;
 		}
 
-		memcpy(generated_hash.data,
-		       con.data,
-		       generated_hash.length);
+		memcpy(result.data + prefix,
+		       vres[i].data,
+		       length);
+
+		prefix = prefix + length;
 	}
 
 	return 0;
@@ -901,6 +908,8 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_hello_message(co
 		return IAuthPolicySet::FAILED;
 	}
 
+	timer.cancelTask(sc->timer_task);
+
 	ScopedLock sc_lock(lock);
 
 	if (sc->state != TLSHandSecurityContext::WAIT_SERVER_HELLO_and_CERTIFICATE) {
@@ -915,8 +924,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_hello_message(co
 				     sc->mac_alg,
 				     sc->compress_method,
 				     sc->version);
-
-	timer.cancelTask(sc->timer_task);
 
 	//Get obj.info_value options to obtain third hash message [0,--31]
 	unsigned char hash2[SHA256_DIGEST_LENGTH];
@@ -938,6 +945,9 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_hello_message(co
 
 	}
 
+	sc->timer_task = new CancelAuthTimerTask(sec_man, session_id);
+	timer.scheduleTask(sc->timer_task, timeout);
+
 	return IAuthPolicySet::IN_PROGRESS;
 }
 
@@ -957,6 +967,8 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_certificate_mess
 		return IAuthPolicySet::FAILED;
 	}
 
+	timer.cancelTask(sc->timer_task);
+
 	ScopedLock sc_lock(lock);
 
 	if (sc->state != TLSHandSecurityContext::WAIT_SERVER_HELLO_and_CERTIFICATE) {
@@ -970,7 +982,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_certificate_mess
 	UcharArray certificate_chain;
 	decode_certificate_tls_hand(message.obj_value_,
 				    certificate_chain);
-	timer.cancelTask(sc->timer_task);
 
 	//hash3 to concatenate for verify message
 	unsigned char hash3[SHA256_DIGEST_LENGTH];
@@ -1019,6 +1030,8 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_certificate_mess
 		return IAuthPolicySet::FAILED;
 	}
 
+	timer.cancelTask(sc->timer_task);
+
 	ScopedLock sc_lock(lock);
 
 	if (sc->state != TLSHandSecurityContext::WAIT_CLIENT_CERTIFICATE_and_KEYS) {
@@ -1030,7 +1043,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_certificate_mess
 	UcharArray certificate_chain;
 	decode_certificate_tls_hand(message.obj_value_,
 				    certificate_chain);
-	timer.cancelTask(sc->timer_task);
 
 	sc->client_cert_received = true;
 
@@ -1083,6 +1095,8 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_key_exchange_mes
 		return IAuthPolicySet::FAILED;
 	}
 
+	timer.cancelTask(sc->timer_task);
+
 	ScopedLock sc_lock(lock);
 
 	if (sc->state != TLSHandSecurityContext::WAIT_CLIENT_CERTIFICATE_and_KEYS) {
@@ -1095,7 +1109,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_key_exchange_mes
 	decode_client_key_exchange_tls_hand(message.obj_value_,
 					    enc_pre_master_secret);
 	sc->client_keys_received = true;
-	timer.cancelTask(sc->timer_task);
 
 	//preparation for certificate verify message
 	unsigned char hash5[SHA256_DIGEST_LENGTH];
@@ -1133,7 +1146,11 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_key_exchange_mes
 	    "master secret",
 	    pre_seed);
 
-	generate_encryption_keys(sc, false);
+	if (generate_encryption_keys(sc, false)) {
+		LOG_ERR("Error generating key material from master secret");
+		sec_man->destroy_security_context(sc->id);
+		return IAuthPolicySet::FAILED;
+	}
 
 	if (sc->client_cert_received &&
 			sc->client_cert_verify_received &&
@@ -1185,6 +1202,8 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_certificate_veri
 		return IAuthPolicySet::FAILED;
 	}
 
+	timer.cancelTask(sc->timer_task);
+
 	ScopedLock sc_lock(lock);
 
 	if (sc->state != TLSHandSecurityContext::WAIT_CLIENT_CERTIFICATE_and_KEYS) {
@@ -1196,7 +1215,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_certificate_veri
 	decode_client_certificate_verify_tls_hand(message.obj_value_,
 						  enc_verify_hash);
 	sc->client_cert_verify_received = true;
-	timer.cancelTask(sc->timer_task);
 
 	if (load_peer_pub_key(sc)) {
 		LOG_ERR("Error extracting public key from peer's certificate");
@@ -1238,6 +1256,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_change_cipher_sp
 											   int session_id)
 {
 	TLSHandSecurityContext * sc;
+
 	if (message.obj_value_.message_ == 0) {
 		LOG_ERR("Null object value");
 		return IAuthPolicySet::FAILED;
@@ -1249,6 +1268,8 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_change_cipher_sp
 		return IAuthPolicySet::FAILED;
 	}
 
+	timer.cancelTask(sc->timer_task);
+
 	ScopedLock sc_lock(lock);
 
 	if (sc->state != TLSHandSecurityContext::WAIT_CLIENT_CERTIFICATE_and_KEYS) {
@@ -1256,7 +1277,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_change_cipher_sp
 		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
-	timer.cancelTask(sc->timer_task);
 
 	if(!sc->client_keys_received or !sc->client_cert_received or !sc->client_cert_verify_received){
 		LOG_ERR("Not enough messages received to proceed...");
@@ -1284,6 +1304,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_change_cipher_sp
 											   int session_id)
 {
 	TLSHandSecurityContext * sc;
+
 	if (message.obj_value_.message_ == 0) {
 		LOG_ERR("Null object value");
 		return IAuthPolicySet::FAILED;
@@ -1296,6 +1317,8 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_change_cipher_sp
 		return IAuthPolicySet::FAILED;
 	}
 
+	timer.cancelTask(sc->timer_task);
+
 	ScopedLock sc_lock(lock);
 
 	if (sc->state != TLSHandSecurityContext::WAIT_SERVER_CIPHER) {
@@ -1303,8 +1326,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_change_cipher_sp
 		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
-
-	timer.cancelTask(sc->timer_task);
 
 	/* Configure kernel SDU protection policy with master secret and algorithms
 	tell it to enable decryption and encryption*/
@@ -1325,6 +1346,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_finish_message(c
 									       int session_id)
 {
 	TLSHandSecurityContext * sc;
+
 	if (message.obj_value_.message_ == 0) {
 		LOG_ERR("Null object value");
 		return IAuthPolicySet::FAILED;
@@ -1335,6 +1357,8 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_finish_message(c
 		LOG_ERR("Could not retrieve Security Context for session: %d", session_id);
 		return IAuthPolicySet::FAILED;
 	}
+
+	timer.cancelTask(sc->timer_task);
 
 	ScopedLock sc_lock(lock);
 
@@ -1360,8 +1384,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_finish_message(c
 		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
-
-	timer.cancelTask(sc->timer_task);
 
 	// Configure kernel SDU protection policy with master secret and algorithms
 	// tell it to enable encryption
@@ -1395,6 +1417,8 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_finish_message(c
 		return IAuthPolicySet::FAILED;
 	}
 
+	timer.cancelTask(sc->timer_task);
+
 	ScopedLock sc_lock(lock);
 
 	if (sc->state != TLSHandSecurityContext::WAIT_SERVER_FINISH) {
@@ -1414,7 +1438,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_server_finish_message(c
 		return IAuthPolicySet::FAILED;
 	}
 
-	timer.cancelTask(sc->timer_task);
 	sc->state = TLSHandSecurityContext::DONE;
 
 	return IAuthPolicySet::SUCCESSFULL;
@@ -1458,7 +1481,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_client_certificate(TLSHand
 		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
-	timer.scheduleTask(sc->timer_task, timeout);
 
 	//compute hash for certificate verify message
 	unsigned char hash4[SHA256_DIGEST_LENGTH];
@@ -1472,6 +1494,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_client_certificate(TLSHand
 
 	//prepare verify_hash vector for posterior signing
 	memcpy(sc->verify_hash.data + 96, hash4, 32);
+
 	return IAuthPolicySet::IN_PROGRESS;
 }
 
@@ -1528,7 +1551,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_client_key_exchange(TLSHan
 		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
-	timer.scheduleTask(sc->timer_task, timeout);
 
 	//preparation for certificate verify message
 	unsigned char hash5[SHA256_DIGEST_LENGTH];
@@ -1551,7 +1573,11 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_client_key_exchange(TLSHan
 	    pre_seed);
 
 	//calculate encryption keys;
-	generate_encryption_keys(sc, true);
+	if (generate_encryption_keys(sc, true)) {
+		LOG_ERR("Error generating key material from master secret");
+		sec_man->destroy_security_context(sc->id);
+		return IAuthPolicySet::FAILED;
+	}
 
 	return IAuthPolicySet::IN_PROGRESS;
 }
@@ -1595,7 +1621,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_client_certificate_verify(
 		return IAuthPolicySet::FAILED;
 	}
 
-	timer.scheduleTask(sc->timer_task, timeout);
 	return IAuthPolicySet::IN_PROGRESS;
 }
 
@@ -1623,7 +1648,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_client_change_cipher_spec(
 		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
-	timer.scheduleTask(sc->timer_task, timeout);
 
 	return IAuthPolicySet::IN_PROGRESS;
 }
@@ -1655,6 +1679,9 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_client_messages(TLSHandSec
 		return result;
 
 	sc->state = TLSHandSecurityContext::WAIT_SERVER_CIPHER;
+
+	sc->timer_task = new CancelAuthTimerTask(sec_man, sc->id);
+	timer.scheduleTask(sc->timer_task, timeout);
 
 	return IAuthPolicySet::IN_PROGRESS;
 }
@@ -1690,6 +1717,8 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_server_change_cipher_spec(
 		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
+
+	sc->timer_task = new CancelAuthTimerTask(sec_man, sc->id);
 	timer.scheduleTask(sc->timer_task, timeout);
 
 	return IAuthPolicySet::IN_PROGRESS;
@@ -1730,7 +1759,9 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::send_client_finish(TLSHandSecur
 		return IAuthPolicySet::FAILED;
 	}
 
+	sc->timer_task = new CancelAuthTimerTask(sec_man, sc->id);
 	timer.scheduleTask(sc->timer_task, timeout);
+
 	sc->state = TLSHandSecurityContext::WAIT_SERVER_FINISH;
 
 	return IAuthPolicySet::IN_PROGRESS;
@@ -1876,7 +1907,6 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::encryption_decryption_enabled_c
 	}
 	LOG_DBG("Encryption and decryption enabled for port-id: %d", sc->id);
 
-	timer.cancelTask(sc->timer_task);
 	sc->state = TLSHandSecurityContext::WAIT_SERVER_FINISH;
 	return send_client_finish(sc);
 }
@@ -1913,7 +1943,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::encryption_enabled_server(TLSHa
 		sec_man->destroy_security_context(sc->id);
 		return IAuthPolicySet::FAILED;
 	}
-	timer.cancelTask(sc->timer_task);
+
 	sc->state = TLSHandSecurityContext::DONE;
 
 	return IAuthPolicySet::SUCCESSFULL;
