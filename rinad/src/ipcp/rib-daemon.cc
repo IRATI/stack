@@ -334,6 +334,7 @@ void IPCPCDAPIOHandler::invoke_callback(const rina::cdap_rib::con_handle_t& con_
 			callback_->read_request(con_handle,
 						obj,
 						filt,
+						flags,
 						invoke_id);
 			break;
 		case rina::cdap::cdap_m_t::M_CANCELREAD:

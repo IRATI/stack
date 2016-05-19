@@ -393,9 +393,11 @@ void* ActiveWorker::run(void* param)
 	return NULL;
 }
 
-void FlowManager::process_fwd_cdap_msg_response(rina::FwdCDAPMsgResponseEvent* fwdevent)
+void FlowManager::process_fwd_cdap_msg_response(rina::FwdCDAPMsgResponseEvent*
+                                                fwdevent)
 {
 	rina::cdap::cdap_m_t *rmsg = new rina::cdap::cdap_m_t;
+	bool remove;
 
 	LOG_DBG("Received forwarded CDAP response, result %d",
 			fwdevent->result);
@@ -405,13 +407,30 @@ void FlowManager::process_fwd_cdap_msg_response(rina::FwdCDAPMsgResponseEvent* f
 		return;
 	}
 
-	rina::cdap::getProvider()->get_session_manager()->decodeCDAPMessage(fwdevent->sermsg,
-									    *rmsg);
-	rina::rib::DelegationObj* del_obj = rinad::IPCManager->get_forwarded_object(rmsg->invoke_id_);
-	LOG_DBG("Delegated CDAP response: %s, value %p",
-		rmsg->to_string().c_str(),
-		rmsg->obj_value_.message_);
-	del_obj->forwarded_object_response(rmsg);
+	rina::cdap::getProvider()->get_session_manager()->decodeCDAPMessage
+	                (fwdevent->sermsg, *rmsg);
+
+	if(rmsg->flags_ == rina::cdap_rib::flags::F_RD_INCOMPLETE)
+	        remove = false;
+	else
+	        remove = true;
+	delegated_stored_t* del_sto = rinad::IPCManager->
+	                get_forwarded_object(rmsg->invoke_id_, remove);
+	if (!del_sto)
+	{
+	        LOG_ERR("Delegated object not found");
+	}
+	else
+	{
+            LOG_DBG("Delegated CDAP response:\n%s, value %p",
+                    rmsg->to_string().c_str(),
+                    rmsg->obj_value_.message_);
+            LOG_DBG("Recovered delegated object: %s", del_sto->obj->fqn.c_str());
+            del_sto->obj->forwarded_object_response(del_sto->port,
+            		del_sto->invoke_id, rmsg);
+            if (remove)
+            	delete del_sto;
+	}
 }
 
 //Process an event coming from librina
