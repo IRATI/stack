@@ -750,21 +750,25 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 	std::list<DelegationObj*> delegated_objs;
 	unsigned int count = 0;
 	for (it = objects.begin(); it != objects.end(); ++it) {
-			rib_obj = it->second;
-			count++;
-			LOG_DBG("Processing read over object %s", rib_obj->fqn.c_str());
-			//Mutual exclusion
-			ReadScopedLock rlock(rib_obj->rwlock, false);
+		rib_obj = it->second;
+		count++;
+		LOG_DBG("Processing read over object %s", rib_obj->fqn.c_str());
+		//Mutual exclusion
+		ReadScopedLock rlock(rib_obj->rwlock, false);
 
-			rib_obj->read(con, obj.name_, obj.class_, filt, invoke_id,
-					obj_reply, res);
+		rib_obj->read(con,
+			      obj.name_,
+			      obj.class_,
+			      filt,
+			      invoke_id,
+			      obj_reply,
+			      res);
 
-			if (res.code_ == cdap_rib::CDAP_PENDING ||
-							invoke_id == 0)
-					continue;
+		if (res.code_ == cdap_rib::CDAP_PENDING || invoke_id == 0)
+			continue;
 
 		// If the object is delegated
-        int delegate = false;
+		int delegate = false;
 		if(rib_obj->delegates)
 		{
 		        int rem_scope = filt.scope_ - it->first;
@@ -793,60 +797,62 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 		                rina::cdap_rib::filt_info_t deleg_filt;
 		                deleg_filt.scope_ = rem_scope;
 		                deleg_filt.filter_ = filt.filter_;
-						DelegationObj *del_obj =
-										(DelegationObj*)rib_obj;
-						del_obj->forward_object(con, delegated_name,
-								rib_obj->class_name, flags, deleg_filt,
-								invoke_id);
+				DelegationObj *del_obj = (DelegationObj*)rib_obj;
+				del_obj->forward_object(con,
+							delegated_name,
+							rib_obj->class_name,
+							flags,
+							deleg_filt,
+							invoke_id);
 		        }
 		}
-        if(!delegate)
-        {
-				if (count == objects.size())
-				{
-						for(std::list<DelegationObj*>::iterator it =
-								delegated_objs.begin();
-								it!= delegated_objs.end(); ++it)
-						{
-								while((*it)->is_processing_delegation())
-								{
-									usleep(1000);
-								}
-						}
-						flags_r.flags_ = cdap_rib::flags_t::NONE_FLAGS;
-				}
-				else
-						flags_r.flags_ = cdap_rib::flags_t::F_RD_INCOMPLETE;
-				obj_reply.class_ = rib_obj->class_name;
-				obj_reply.name_ = rib_obj->fqn;
-				try {
-						LOG_DBG("Sending read result for object %s with "
-								"flags %d",	obj_reply.name_.c_str(),
-								flags_r.flags_);
-						cdap_provider->send_read_result(con, obj_reply,
-								flags_r, res, invoke_id);
-				} catch (Exception &e) {
-					LOG_ERR("Unable to send response for invoke id %d",
-							invoke_id);
-				}
-		}
-		else
+
+		if(!delegate)
 		{
-				// Control the last message to be sent to the manager
-				if (count == objects.size())
-				{
-						((DelegationObj*) rib_obj)->set_last(true);
+			if (count == objects.size())
+			{
+				for(std::list<DelegationObj*>::iterator it = delegated_objs.begin();
+						it!= delegated_objs.end(); ++it) {
+					while((*it)->is_processing_delegation()) {
+						usleep(1000);
+					}
 				}
-				else
-						delegated_objs.push_back((DelegationObj*) rib_obj);
+				flags_r.flags_ = cdap_rib::flags_t::NONE_FLAGS;
+			} else
+				flags_r.flags_ = cdap_rib::flags_t::F_RD_INCOMPLETE;
+
+			obj_reply.class_ = rib_obj->class_name;
+			obj_reply.name_ = rib_obj->fqn;
+			try {
+				LOG_DBG("Sending read result for object %s with "
+					"flags %d",
+					 obj_reply.name_.c_str(),
+					 flags_r.flags_);
+				cdap_provider->send_read_result(con,
+								obj_reply,
+								flags_r,
+								res,
+								invoke_id);
+			} catch (Exception &e) {
+				LOG_ERR("Unable to send response for invoke id %d",
+					invoke_id);
+			}
+		} else
+		{
+			// Control the last message to be sent to the manager
+			if (count == objects.size())
+			{
+				((DelegationObj*) rib_obj)->set_last(true);
+			} else
+				delegated_objs.push_back((DelegationObj*) rib_obj);
 		}
 	}
 }
 
-void RIB::cancel_read_request(
-		const cdap_rib::con_handle_t &con,
-		const cdap_rib::obj_info_t &obj,
-		const cdap_rib::filt_info_t &filt, const int invoke_id)
+void RIB::cancel_read_request(const cdap_rib::con_handle_t &con,
+			      const cdap_rib::obj_info_t &obj,
+			      const cdap_rib::filt_info_t &filt,
+			      const int invoke_id)
 {
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
