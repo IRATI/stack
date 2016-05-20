@@ -91,7 +91,7 @@ private:
 	int delay_;
 };
 
-class WatchdogRIBObject: public IPCPRIBObj, rina::rib::RIBOpsRespHandler {
+class WatchdogRIBObject: public IPCPRIBObj, public rina::rib::RIBOpsRespHandler {
 public:
 	WatchdogRIBObject(IPCProcess * ipc_process,
 			  int wdog_period_ms,
@@ -107,7 +107,7 @@ public:
 		  const std::string& class_,
 		  const rina::cdap_rib::filt_info_t &filt,
 		  const int invoke_id,
-		  rina::ser_obj_t &obj_reply,
+		  rina::cdap_rib::obj_info_t &obj_reply,
 		  rina::cdap_rib::res_info_t& res);
 
 	/// Send watchdog messages to the IPC processes that are our neighbors and we're enrolled to
