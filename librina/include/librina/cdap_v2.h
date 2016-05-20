@@ -222,6 +222,7 @@ class CDAPCallbackInterface
 	virtual void read_request(const cdap_rib::con_handle_t &con,
 				  const cdap_rib::obj_info_t &obj,
 				  const cdap_rib::filt_info_t &filt,
+				  const cdap_rib::flags_t &flags,
 				  const int invoke_id);
 	virtual void cancel_read_request(const cdap_rib::con_handle_t &con,
 					 const cdap_rib::obj_info_t &obj,

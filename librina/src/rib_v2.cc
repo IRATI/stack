@@ -24,6 +24,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <stdbool.h>
+#include <unistd.h>
 
 #include <algorithm>
 #include <map>
@@ -378,6 +379,7 @@ protected:
 	void read_request(const cdap_rib::con_handle_t &con,
 			  const cdap_rib::obj_info_t &obj,
 			  const cdap_rib::filt_info_t &filt,
+			  const cdap_rib::flags_t &flags,
 			  const int invoke_id);
 	void cancel_read_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
@@ -424,10 +426,25 @@ private:
 	//Number of objects that delegate
 	unsigned int num_of_deleg;
 
+        //CDAP Provider
+        cdap::CDAPProviderInterface *cdap_provider;
+
+        //rwlock
+        ReadWriteLockable rwlock;
+
+        //Cache rwlock
+        ReadWriteLockable cache_rwlock;
+
+
+        //RIB handle (id)
+        const rib_handle_t handle;
+
+
 	void get_objects_to_operate(const int64_t object_id,
 				    int scope,
 				    char* filter,
-				    std::list<RIBObj*>& objects);
+				    std::list<std::pair<int, RIBObj*> >
+	                            &objects);
 
 	//@internal only; must be called with the rwlock acquired
 	RIBObj* get_obj(int64_t inst_id);
@@ -451,19 +468,7 @@ private:
 	//must be called with the wlock acquired
 	int64_t get_new_inst_id(void);
 
-	//CDAP Provider
-	cdap::CDAPProviderInterface *cdap_provider;
-
-	//rwlock
-	ReadWriteLockable rwlock;
-
-	//Cache rwlock
-	ReadWriteLockable cache_rwlock;
-
-
-	//RIB handle (id)
-	const rib_handle_t handle;
-
+	int compareString(std::string a, std::string b);
 	//RIBDaemon to access operations callbacks
 	friend class RIBDaemon;
 };
@@ -677,15 +682,24 @@ void RIB::delete_request(const cdap_rib::con_handle_t &con,
 	}
 }
 
+int RIB::compareString(std::string a, std::string b)
+{
+        int r = a.compare(b);
+        if (r < 0)
+                return -1;
+        if (r > 0)
+                return 1;
+        return 0;
+}
+
 void RIB::read_request(const cdap_rib::con_handle_t &con,
 		       const cdap_rib::obj_info_t &obj,
 		       const cdap_rib::filt_info_t &filt,
+		       const cdap_rib::flags_t &flags,
 		       const int invoke_id)
 {
-	// FIXME add res and flags
-	cdap_rib::flags_t flags;
-	flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
-
+	cdap_rib::flags flags_r;
+	flags_r.flags_= cdap_rib::flags_t::NONE_FLAGS;
 	//Reply object set to empty
 	cdap_rib::obj_info_t obj_reply;
 	obj_reply.name_ = obj.name_;
@@ -695,24 +709,16 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 	obj_reply.value_.message_ = NULL;
 
 	cdap_rib::res_info_t res;
-	std::list<RIBObj*> objects;
+	std::list<std::pair <int, RIBObj*> > objects;
         RIBObj* rib_obj = NULL;
 
 	/* RAII scope for RIB scoped lock (read) */
 	{
 		//Mutual exclusion
 		ReadScopedLock rlock(rwlock);
-
 		int64_t id = get_obj_inst_id(obj.name_);
 		// Check if we have to delegate the call
 		rib_obj = get_obj(id);
-		if(id >0 && rib_obj->delegates &&
-		   obj.name_.compare(rib_obj->fqn) != 0)
-		{
-		        DelegationObj *del_obj = (DelegationObj*)rib_obj;
-		        del_obj->forward_object(con, obj, flags, filt, invoke_id);
-		        return;
-		}
 
 		//Get all objects affected by the operation
 		get_objects_to_operate(id,
@@ -728,7 +734,7 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 			try {
 				cdap_provider->send_read_result(con,
 								obj_reply,
-								flags,
+								flags_r,
 								res,
 								invoke_id);
 			} catch (Exception &e) {
@@ -740,12 +746,13 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 		return;
 	}
 
-	std::list<RIBObj*>::iterator it;
+	std::list<std::pair<int, RIBObj*> >::iterator it;
+	std::list<DelegationObj*> delegated_objs;
 	unsigned int count = 0;
 	for (it = objects.begin(); it != objects.end(); ++it) {
-		rib_obj = *it;
+		rib_obj = it->second;
 		count++;
-
+		LOG_DBG("Processing read over object %s", rib_obj->fqn.c_str());
 		//Mutual exclusion
 		ReadScopedLock rlock(rib_obj->rwlock, false);
 
@@ -757,33 +764,95 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 			      obj_reply,
 			      res);
 
-		if (res.code_ == cdap_rib::CDAP_PENDING ||
-				invoke_id == 0)
+		if (res.code_ == cdap_rib::CDAP_PENDING || invoke_id == 0)
 			continue;
 
-		try {
+		// If the object is delegated
+		int delegate = false;
+		if(rib_obj->delegates)
+		{
+		        int rem_scope = filt.scope_ - it->first;
+		        delegate = true;
+		        std::string delegated_name;
+		        //check if the request is for the delegated object or
+		        //for its childs
+		        switch(compareString(obj.name_,rib_obj->fqn))
+		        {
+		                // original name is equal to rib_obj name
+		                case 0:
+		                // original name is shorter to rib_obj name
+		                case -1: if (rem_scope == 0)
+                                        delegate = false;
+                                else
+                                        delegated_name = rib_obj->fqn + "/";
+                                break;
+		                        break;
+		                // original name is longer to rib_obj name
+		                case 1: delegated_name = obj.name_;
+		                        break;
+
+		        }
+		        if (delegate)
+		        {
+		                rina::cdap_rib::filt_info_t deleg_filt;
+		                deleg_filt.scope_ = rem_scope;
+		                deleg_filt.filter_ = filt.filter_;
+				DelegationObj *del_obj = (DelegationObj*)rib_obj;
+				del_obj->forward_object(con,
+							delegated_name,
+							rib_obj->class_name,
+							flags,
+							deleg_filt,
+							invoke_id);
+		        }
+		}
+
+		if(!delegate)
+		{
 			if (count == objects.size())
-				flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
-			else
-				flags.flags_ = cdap_rib::flags_t::F_RD_INCOMPLETE;
+			{
+				for(std::list<DelegationObj*>::iterator it = delegated_objs.begin();
+						it!= delegated_objs.end(); ++it) {
+					while((*it)->is_processing_delegation()) {
+						usleep(1000);
+					}
+				}
+				flags_r.flags_ = cdap_rib::flags_t::NONE_FLAGS;
+			} else
+				flags_r.flags_ = cdap_rib::flags_t::F_RD_INCOMPLETE;
+
 			obj_reply.class_ = rib_obj->class_name;
 			obj_reply.name_ = rib_obj->fqn;
-			cdap_provider->send_read_result(con,
-							obj_reply,
-							flags,
-							res,
-							invoke_id);
-		} catch (Exception &e) {
-			LOG_ERR("Unable to send response for invoke id %d",
+			try {
+				LOG_DBG("Sending read result for object %s with "
+					"flags %d",
+					 obj_reply.name_.c_str(),
+					 flags_r.flags_);
+				cdap_provider->send_read_result(con,
+								obj_reply,
+								flags_r,
+								res,
+								invoke_id);
+			} catch (Exception &e) {
+				LOG_ERR("Unable to send response for invoke id %d",
 					invoke_id);
+			}
+		} else
+		{
+			// Control the last message to be sent to the manager
+			if (count == objects.size())
+			{
+				((DelegationObj*) rib_obj)->set_last(true);
+			} else
+				delegated_objs.push_back((DelegationObj*) rib_obj);
 		}
 	}
 }
 
-void RIB::cancel_read_request(
-		const cdap_rib::con_handle_t &con,
-		const cdap_rib::obj_info_t &obj,
-		const cdap_rib::filt_info_t &filt, const int invoke_id)
+void RIB::cancel_read_request(const cdap_rib::con_handle_t &con,
+			      const cdap_rib::obj_info_t &obj,
+			      const cdap_rib::filt_info_t &filt,
+			      const int invoke_id)
 {
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
@@ -1018,10 +1087,11 @@ void RIB::stop_request(const cdap_rib::con_handle_t &con,
 void RIB::get_objects_to_operate(const int64_t object_id,
 			         int scope,
 			         char * filter,
-			         std::list<RIBObj*>& objects)
+			         std::list<std::pair<int, RIBObj*> >
+			         &objects)
 {
 	std::list<int64_t> *child_list = NULL;
-	RIBObj * rib_obj = NULL;
+	RIBObj *rib_obj = NULL;
 
 	rib_obj = get_obj(object_id);
 	if (!rib_obj)
@@ -1031,7 +1101,8 @@ void RIB::get_objects_to_operate(const int64_t object_id,
 	//Acquire the read lock over the object (make sure it is not
 	//deleted while we process the operation)
 	rib_obj->rwlock.readlock();
-	objects.push_back(rib_obj);
+	std::pair<int, RIBObj*> pair (scope, rib_obj);
+	objects.push_back(pair);
 
 	if (scope == 0)
 		return;
@@ -1683,6 +1754,7 @@ protected:
 	void read_request(const cdap_rib::con_handle_t &con,
 			  const cdap_rib::obj_info_t &obj,
 			  const cdap_rib::filt_info_t &filt,
+			  const cdap_rib::flags_t &flags,
 			  const int invoke_id);
 	void cancel_read_request(const cdap_rib::con_handle_t &con,
 				 const cdap_rib::obj_info_t &obj,
@@ -2686,6 +2758,7 @@ void RIBDaemon::delete_request(const cdap_rib::con_handle_t &con,
 void RIBDaemon::read_request(const cdap_rib::con_handle_t &con,
 			     const cdap_rib::obj_info_t &obj,
 			     const cdap_rib::filt_info_t &filt,
+			     const cdap_rib::flags_t &flags,
 			     const int invoke_id)
 {
 	//TODO this is not safe if RIB instances can be deleted
@@ -2708,7 +2781,7 @@ void RIBDaemon::read_request(const cdap_rib::con_handle_t &con,
 	}
 
 	//Invoke
-	rib->read_request(con, obj, filt, invoke_id);
+	rib->read_request(con, obj, filt, flags, invoke_id);
 }
 void RIBDaemon::cancel_read_request(const cdap_rib::con_handle_t &con,
 				    const cdap_rib::obj_info_t &obj,
@@ -2909,10 +2982,53 @@ void RIBObj::stop(const cdap_rib::con_handle_t &con,
 }
 
 void RIBObj::operation_not_supported(cdap_rib::res_info_t& res) {
+	LOG_INFO("Operation over a RIB object not supported");
 	res.code_ = cdap_rib::CDAP_OP_NOT_SUPPORTED;
 }
 
+// DelegationObj
 
+DelegationObj::DelegationObj(const std::string &class_name):
+		RIBObj(class_name) {
+	delegates = true;
+	processing_delegation = false;
+	last = false;
+}
+
+DelegationObj::~DelegationObj(void)
+{}
+
+void DelegationObj::forwarded_object_response(int port, int invoke_id,
+		rina::cdap::cdap_m_t *msg)
+{
+		rina::cdap_rib::con_handle_t con;
+		con.port_id = port;
+		msg->invoke_id_ = invoke_id;
+		if (msg->flags_ != rina::cdap_rib::flags_t::F_RD_INCOMPLETE &&
+				!last)
+		{
+			msg->flags_ = rina::cdap_rib::flags_t::F_RD_INCOMPLETE;
+			set_processing_delegation(false);
+		}
+		rina::cdap::getProvider()->send_cdap_result(con,  msg);
+}
+
+bool DelegationObj::is_processing_delegation()
+{
+    rina::ScopedLock scop(lock);
+    return processing_delegation;
+}
+
+void DelegationObj::set_processing_delegation(bool state)
+{
+    rina::ScopedLock scop(lock);
+    processing_delegation = state;
+}
+
+void DelegationObj::set_last(bool state)
+{
+    last = state;
+}
 //Single RIBDaemon instance
 static RIBDaemon* ribd = NULL;
 
