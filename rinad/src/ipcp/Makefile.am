@@ -24,7 +24,8 @@ COMMONLIBS =					\
 ipcp_CFLAGS   =
 ipcp_CPPFLAGS =					\
 	$(COMMONCPPFLAGS)			\
-	-DPLUGINSDIR=\"$(pkglibdir)/ipcp\"
+	-DPLUGINSDIR=\"../lib/rinad/ipcp\"
+	
 ipcp_LDADD    = $(COMMONLIBS)
 ipcp_LDFLAGS = -Wl,--export-dynamic
 ipcp_SOURCES  =						\
