@@ -774,6 +774,7 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 							res,
 							invoke_id);
 		} catch (Exception &e) {
+			LOG_ERR("exception was %s", e.what());
 			LOG_ERR("Unable to send response for invoke id %d",
 					invoke_id);
 		}

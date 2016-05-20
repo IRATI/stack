@@ -28,6 +28,7 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <iterator>
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -204,8 +205,12 @@ ipcm_res_t IPCManager_::create_ipcp(
         if (std::find(ipcp_types.begin(), ipcp_types.end(), type)
                 == ipcp_types.end())
         {
+            const char* const separator = ", ";
             ss << "IPCP type parameter " << name.toString()
-                    << " is wrong, options are: " << s;
+                    << " is wrong, options are: [" << s;
+            // actually list the optons
+            std::copy(ipcp_types.begin(), ipcp_types.end(), std::ostream_iterator<std::string>(ss, separator));
+            ss << "]";
             FLUSH_LOG(ERR, ss);
             throw rina::CreateIPCProcessException();
         }
