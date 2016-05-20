@@ -476,19 +476,29 @@ class DelegationObj : public RIBObj{
 
 public:
 	/// Constructor
-	DelegationObj(const std::string &class_name) : RIBObj(class_name) {
-		delegates = true;
-	};
+	DelegationObj(const std::string &class_name);
 
 	//Destructor
-	~DelegationObj(void){};
+	~DelegationObj(void);
 
 	virtual void forward_object(const rina::cdap_rib::con_handle_t& con,
-	                            const rina::cdap_rib::obj_info_t &obj,
+	                            const std::string obj_name,
+	                            const std::string obj_class,
 	                            const rina::cdap_rib::flags_t &flags,
 	                            const rina::cdap_rib::filt_info_t &filt,
 	                            int invoke_id) = 0;
-	virtual void forwarded_object_response(rina::cdap::cdap_m_t *msg) = 0;
+	void forwarded_object_response(int port, int invoke_id,
+			rina::cdap::cdap_m_t *msg);
+	bool is_processing_delegation();
+	void set_last(bool state);
+	rina::Lockable lock;
+protected:
+	void set_processing_delegation(bool state);
+private:
+	/// indicates if the delegated object is being operated remotely
+	bool processing_delegation;
+	/// indicates if the delegated object is the last object to be sent
+	bool last;
 };
 
 ///

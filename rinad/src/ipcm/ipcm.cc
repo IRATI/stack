@@ -88,9 +88,7 @@ IPCManager_::IPCManager_()
           io_thread(NULL),
           dif_template_manager(NULL),
           dif_allocator(NULL)
-{
-        forwarded_calls_lock = new rina::Lockable();
-}
+{}
 
 IPCManager_::~IPCManager_()
 {
@@ -104,7 +102,6 @@ IPCManager_::~IPCManager_()
         delete dif_allocator;
     }
     forwarded_calls.clear();
-    delete forwarded_calls_lock;
 
     for (std::map<int, TransactionState*>::iterator
     		it = pend_transactions.begin(); it != pend_transactions.end(); ++it)
@@ -1270,17 +1267,21 @@ ipcm_res_t IPCManager_::set_policy_set_param(Addon* callee, Promise* promise,
     return IPCM_PENDING;
 }
 
-int IPCManager_::reserve_invoke_id(rina::rib::DelegationObj* obj)
+int IPCManager_::store_delegated_obj(int port, int invoke_id,
+		rina::rib::DelegationObj* obj)
 {
-       int invoke_id = 0;
-       rina::ScopedLock(*forwarded_calls_lock);
+       rina::ScopedLock scope(forwarded_calls_lock);
+       int key = 0;
        do
        {
-               invoke_id++;
-       }while(forwarded_calls.find(invoke_id) != forwarded_calls.end());
-       forwarded_calls[invoke_id] = obj;
-
-       return invoke_id;
+               key++;
+       }while(forwarded_calls.find(key) != forwarded_calls.end());
+       delegated_stored_t *del_sto = new delegated_stored_t;
+       del_sto->obj = obj;
+       del_sto->invoke_id = invoke_id;
+       del_sto->port = port;
+       forwarded_calls[key] = del_sto;
+       return key;
 }
 
 
@@ -1560,11 +1561,10 @@ ipcm_res_t IPCManager_::update_catalog(Addon* callee)
 }
 
 ipcm_res_t IPCManager_::delegate_ipcp_ribobj(rina::rib::DelegationObj* obj,
-                                         Promise* promise,
                                          const unsigned short ipcp_id,
                                          const std::string& object_class,
                                          const std::string& object_name,
-                                         int scope)
+                                         int scope, int invoke_id, int port)
 {
     IPCMIPCProcess * ipcp;
    // TransactionState* trans;
@@ -1591,26 +1591,11 @@ ipcm_res_t IPCManager_::delegate_ipcp_ribobj(rina::rib::DelegationObj* obj,
         msg.op_code_ = rina::cdap::cdap_m_t::M_READ;
         msg.obj_class_ = object_class;
         msg.obj_name_ = object_name;
-        msg.invoke_id_ = reserve_invoke_id(obj);
         msg.scope_ = scope;
-/*
-        trans = new TransactionState(NULL, promise);
-        if (!trans)
-        {
-            ss
-                    << "Unable to allocate memory for the transaction object. Out of memory! ";
-            FLUSH_LOG(ERR, ss);
-            throw rina::Exception();
-        }
 
-        //Store transaction
-        if (add_transaction_state(trans) < 0)
-        {
-            ss << "Unable to add transaction; out of memory? ";
-            FLUSH_LOG(ERR, ss);
-            throw rina::Exception();
-        }
-*/
+        // Generate a unique id to recover the delegated object
+        msg.invoke_id_ = store_delegated_obj(port, invoke_id, obj);
+
         ipcp->forwardCDAPMessage(msg, 0);
 
         ss << "Forwarded CDAPMessage to IPC process "
@@ -1907,18 +1892,22 @@ void IPCManager_::run()
     google::protobuf::ShutdownProtobufLibrary();
 }
 
-rina::rib::DelegationObj* IPCManager_::get_forwarded_object(int invoke_id)
+delegated_stored_t* IPCManager_::get_forwarded_object(int invoke_id,
+                                                            bool remove)
 {
-        rina::ScopedLock(*forwarded_calls_lock);
-        rina::rib::DelegationObj* obj;
-        std::map<int, rina::rib::DelegationObj*>::iterator it =
+        rina::ScopedLock scope(forwarded_calls_lock);
+        delegated_stored_t* obj;
+        std::map<int, delegated_stored_t*>::iterator it =
                         forwarded_calls.find(invoke_id);
         if (it == forwarded_calls.end())
                 return NULL;
         else
         {
                 obj = it->second;
-                forwarded_calls.erase(it);
+                if (remove)
+                {
+                        forwarded_calls.erase(it);
+                }
                 return obj;
         }
 }
