@@ -443,7 +443,7 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 		sdu_destroy(sdu);
 		return -EINVAL;
 	}
-	if (!sdu_is_ok(sdu)) {
+	if (!is_sdu_ok(sdu)) {
 		LOG_ERR("Bogus sdu, bailing out");
 		sdu_destroy(sdu);
 		return -EINVAL;
@@ -686,7 +686,7 @@ int kfa_flow_sdu_read(struct kfa  *instance,
 		}
 
 		*sdu = rfifo_pop(flow->sdu_ready);
-		if (!sdu_is_ok(*sdu)) {
+		if (!is_sdu_ok(*sdu)) {
 			LOG_ERR("There is not a valid in port-id %d fifo", id);
 			retval = -EIO;
 		}
@@ -704,7 +704,7 @@ int kfa_flow_sdu_read(struct kfa  *instance,
 		}
 
 		*sdu = rfifo_pop(flow->sdu_ready);
-		if (!sdu_is_ok(*sdu)) {
+		if (!is_sdu_ok(*sdu)) {
 			LOG_ERR("There is not a valid in port-id %d fifo", id);
 			retval = -EIO;
 		}
@@ -751,7 +751,7 @@ static int kfa_sdu_post(struct ipcp_instance_data *data,
 		sdu_destroy(sdu);
 		return -1;
 	}
-	if (!sdu_is_ok(sdu)) {
+	if (!is_sdu_ok(sdu)) {
 		LOG_ERR("Bogus parameters passed, bailing out");
 		sdu_destroy(sdu);
 		return -1;

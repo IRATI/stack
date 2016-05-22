@@ -24,7 +24,7 @@
 #define RINA_KFA_H
 
 #include "common.h"
-#include "du.h"
+#include "sdu.h"
 #include "ipcp-factories.h"
 
 struct kfa;

@@ -22,7 +22,6 @@
 #define RINA_DTP_H
 
 #include "common.h"
-#include "du.h"
 #include "rmt.h"
 #include "kfa.h"
 #include "dt.h"

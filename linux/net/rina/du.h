@@ -1,7 +1,7 @@
 /*
  * Data Unit
  *
- *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,13 +21,24 @@
 #ifndef RINA_DU_H
 #define RINA_DU_H
 
-#include "buffer.h"
-#include "sdu.h"
-#include "pdu.h"
+#include <linux/skbuff.h>
 
-/*
- * FIXME: This is a backward compatibility file only. Do not rely on its
- *        presence, It will be removed soon
- */
+#define MAX_PCIS_LEN (40 * 5)
+#define MAX_TAIL_LEN 20
+
+/* NOTE: This is just to be included by [pdu,sdu,pci].[ch] */
+
+struct pci {
+	unsigned char *h; /* do not move from 1st position */
+	void *sdup_head; /* opaque used by SDU protection policy (TTL)*/
+	void *sdup_tail; /* opaque used by SDU protection policy (error check) */
+	size_t len;
+};
+
+struct du {
+	struct efcp_config *cfg;
+	struct pci pci;
+	struct sk_buff *skb;
+};
 
 #endif

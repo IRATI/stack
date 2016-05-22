@@ -3,6 +3,7 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,262 +29,202 @@
 #include "utils.h"
 #include "debug.h"
 #include "pdu.h"
-#include "pci.h"
+#include "sdu.h"
+#include "du.h"
 
-/* FIXME: These externs have to disappear from here */
-struct buffer * buffer_create_with_gfp(gfp_t  flags,
-                                       void * data,
-                                       size_t size);
-struct buffer * buffer_create_from_gfp(gfp_t        flags,
-                                       const void * data,
-                                       size_t       size);
-struct buffer * buffer_dup_gfp(gfp_t                 flags,
-                               const struct buffer * b);
-
-struct pci *    pci_dup_gfp(gfp_t              flags,
-                            const struct pci * pci);
-
-struct pci *    pci_create_from_gfp(gfp_t        flags,
-                                    const void * data);
+#define to_du(pdu) ((struct du *)(pdu))
 
 struct pdu {
-        struct pci *    pci;
-        struct buffer * buffer;
+	struct du pdu; /* do not move from 1st position */
 };
 
-bool pdu_is_ok(const struct pdu * p)
-{ return (p && pci_is_ok(p->pci) && buffer_is_ok(p->buffer)) ? true : false; }
-EXPORT_SYMBOL(pdu_is_ok);
-
-struct pdu * pdu_create_gfp(gfp_t flags)
+struct pdu *
+pdu_create_gfp(pdu_type_t type, struct efcp_config *cfg, gfp_t flags)
 {
-        struct pdu * tmp;
+	struct du *tmp;
+	ssize_t pci_len;
 
-        tmp = rkzalloc(sizeof(*tmp), flags);
-        if (!tmp)
-                return NULL;
+	ASSERT(cfg);
 
-        tmp->pci    = NULL;
-        tmp->buffer = NULL;
+	pci_len = pci_calculate_size(cfg, type);
+	ASSERT(pci_len > 0);
 
-        return tmp;
+	tmp = rkzalloc(sizeof(*tmp), flags);
+	if (unlikely(!tmp))
+		return NULL;
+
+	tmp->skb = alloc_skb(MAX_PCIS_LEN + MAX_TAIL_LEN, flags);
+	if (unlikely(!tmp->skb)) {
+		rkfree(tmp);
+		return NULL;
+	}
+	skb_reserve(tmp->skb, MAX_PCIS_LEN);
+	tmp->pci.h = skb_push(tmp->skb, pci_len);
+	tmp->pci.len = pci_len;
+	tmp->cfg = cfg;
+	return (struct pdu*)tmp;
 }
 
-struct pdu * pdu_create(void)
-{ return pdu_create_gfp(GFP_KERNEL); }
+struct pdu *pdu_create(pdu_type_t type, struct efcp_config *cfg)
+{ return pdu_create_gfp(type, cfg, GFP_KERNEL); }
 EXPORT_SYMBOL(pdu_create);
 
-struct pdu * pdu_create_ni(void)
-{ return pdu_create_gfp(GFP_ATOMIC); }
+struct pdu *pdu_create_ni(pdu_type_t type, struct efcp_config *cfg)
+{ return pdu_create_gfp(type, cfg, GFP_ATOMIC); }
 EXPORT_SYMBOL(pdu_create_ni);
 
-static struct pdu * pdu_create_from_gfp(gfp_t              flags,
-                                        const struct sdu * sdu)
+
+inline bool pdu_is_ok(const struct pdu *pdu)
 {
-        struct pdu *          tmp_pdu;
-        const struct buffer * tmp_buff;
-        const uint8_t *       ptr;
-        size_t                pci_size;
+	struct du *p;
 
-        /* FIXME: This implementation is pure crap, please fix it soon */
+	ASSERT(pdu);
+	p = to_du(pdu);
+	return ((p && p->skb) ? true : false);
+}
+EXPORT_SYMBOL(pdu_is_ok);
 
-        if (!sdu_is_ok(sdu))
-                return NULL;
+inline struct pdu *pdu_encap_sdu(pdu_type_t type, struct sdu *sdu)
+{
+	struct du *pdu;
+	ssize_t pci_len;
 
-        tmp_buff = sdu_buffer_ro(sdu);
-        ASSERT(tmp_buff);
+	ASSERT(is_sdu_ok(sdu));
 
-        if (buffer_length(tmp_buff) < pci_length_min())
-                return NULL;
+	pdu = (struct du *)sdu;
+	pci_len = pci_calculate_size(pdu->cfg, type);
+	if (pci_len > 0) {
+		pdu->pci.h = skb_push(pdu->skb, pci_len);
+		pdu->pci.len = pci_len;
+		return (struct pdu*)pdu;
+	}
+	return NULL;
+}
+EXPORT_SYMBOL(pdu_encap_sdu);
 
-        /* FIXME: We should compute the real PCI length */
-        pci_size = pci_length_min();
+inline struct pdu *pdu_decap_sdu(struct sdu *sdu)
+{
+	struct du *pdu;
+	pdu_type_t type;
+	ssize_t pci_len;
 
-        tmp_pdu = pdu_create_gfp(flags);
-        if (!tmp_pdu)
-                return NULL;
+	ASSERT(sdu);
 
-        ptr = (const uint8_t *) buffer_data_ro(tmp_buff);
-        ASSERT(ptr);
+	pdu = (struct du *)sdu;
+	pdu->pci.h = pdu->skb->data;
+	type = pci_type(&pdu->pci);
+	if (unlikely(!pdu_type_is_ok(type))) {
+		LOG_ERR("Could not decap SDU to PDU. Type is not ok");
+		return NULL;
+	}
 
-        tmp_pdu->pci    = pci_create_from_gfp(flags, ptr);
-        tmp_pdu->buffer = buffer_create_from_gfp(flags,
-                                                 ptr + pci_size,
-                                                 (buffer_length(sdu->buffer) -
-                                                  pci_size));
+	pci_len = pci_calculate_size(pdu->cfg, type);
+	if (pci_len > 0) {
+		skb_pull(pdu->skb, pci_len);
+		pdu->pci.len = pci_len;
+		return (struct pdu*)pdu;
+	}
+	LOG_ERR("Could not decap SDU to PDU. PCI len is < 0");
+	return NULL;
+}
+EXPORT_SYMBOL(pdu_decap_sdu);
 
-        ASSERT(pdu_is_ok(tmp_pdu));
+static struct pdu *pdu_dup_gfp(gfp_t flags,
+			       const struct pdu *pdu)
+{
+	struct du *tmp, *p;
 
-        return tmp_pdu;
+	ASSERT(pdu_is_ok(pdu));
+
+	p = to_du(pdu);
+	tmp = rkmalloc(sizeof(*tmp), flags);
+	if (!tmp)
+		return NULL;
+
+	tmp->skb = skb_clone(p->skb, flags);
+	if (!tmp->skb) {
+		rkfree(tmp);
+		return NULL;
+	}
+
+	tmp->pci.h = p->pci.h;
+	tmp->pci.len = p->pci.len;
+	tmp->cfg = p->cfg;
+	return (struct pdu *)tmp;
 }
 
-struct pdu * pdu_create_from(const struct sdu * sdu)
-{ return pdu_create_from_gfp(GFP_KERNEL, sdu); }
-EXPORT_SYMBOL(pdu_create_from);
-
-struct pdu * pdu_create_from_ni(const struct sdu * sdu)
-{ return pdu_create_from_gfp(GFP_ATOMIC, sdu); }
-EXPORT_SYMBOL(pdu_create_from_ni);
-
-/* FIXME: This code must be completely re-written */
-static struct pdu * pdu_create_with_gfp(gfp_t        flags,
-                                        struct sdu * sdu)
-{
-        struct pdu * tmp;
-
-        /* Just to prevent complaints from sdu_destroy */
-        if (!sdu_is_ok(sdu))
-                return NULL;
-
-        /*
-         * FIXME: We use pdu_create_from_gfp to mimic the intended behavior
-         *        of pdu_create_with_gfp. This implementation has to be fixed.
-         */
-
-        tmp = pdu_create_from_gfp(flags, sdu);
-
-        /*
-         * NOTE: We took ownership of the SDU and "theoretically" we built a
-         *       PDU from the SDU. Due to this crap implementation, we're
-         *       destroying the input SDU now ...
-         */
-        sdu_destroy(sdu);
-
-        return tmp;
-}
-
-struct pdu * pdu_create_with(struct sdu * sdu)
-{ return pdu_create_with_gfp(GFP_KERNEL, sdu); }
-EXPORT_SYMBOL(pdu_create_with);
-
-struct pdu * pdu_create_with_ni(struct sdu * sdu)
-{ return pdu_create_with_gfp(GFP_ATOMIC, sdu); }
-EXPORT_SYMBOL(pdu_create_with_ni);
-
-static struct pdu * pdu_dup_gfp(gfp_t              flags,
-                                const struct pdu * pdu)
-{
-        struct pdu * tmp;
-
-        if (!pdu_is_ok(pdu))
-                return NULL;
-
-        tmp = rkmalloc(sizeof(*tmp), flags);
-        if (!tmp)
-                return NULL;
-
-        tmp->pci    = pci_dup_gfp(flags, pdu->pci);
-        tmp->buffer = buffer_dup_gfp(flags, pdu->buffer);
-
-        if (!pdu_is_ok(tmp)) {
-                pdu_destroy(tmp);
-                return NULL;
-        }
-
-        return tmp;
-}
-
-struct pdu * pdu_dup(const struct pdu * pdu)
+struct pdu *pdu_dup(const struct pdu *pdu)
 { return pdu_dup_gfp(GFP_KERNEL, pdu); }
 EXPORT_SYMBOL(pdu_dup);
 
-struct pdu * pdu_dup_ni(const struct pdu * pdu)
+struct pdu *pdu_dup_ni(const struct pdu *pdu)
 { return pdu_dup_gfp(GFP_ATOMIC, pdu); }
 EXPORT_SYMBOL(pdu_dup_ni);
 
-const struct buffer * pdu_buffer_get_ro(const struct pdu * pdu)
+inline const struct pci *pdu_pci_get_ro(const struct pdu *pdu)
 {
-        if (!pdu_is_ok(pdu))
-                return NULL;
+	ASSERT(pdu_is_ok(pdu));
 
-        return pdu->buffer;
-}
-EXPORT_SYMBOL(pdu_buffer_get_ro);
-
-struct buffer * pdu_buffer_get_rw(struct pdu * pdu)
-{
-        if (!pdu_is_ok(pdu))
-                return NULL;
-
-        return pdu->buffer;
-}
-EXPORT_SYMBOL(pdu_buffer_get_rw);
-
-int pdu_buffer_disown(struct pdu * pdu)
-{
-        if (!pdu)
-                return -1;
-
-        pdu->buffer = NULL;
-        return 0;
-}
-EXPORT_SYMBOL(pdu_buffer_disown);
-
-int pdu_buffer_set(struct pdu * pdu, struct buffer * buffer)
-{
-        if (!pdu)
-                return -1;
-
-        if (pdu->buffer) {
-                buffer_destroy(pdu->buffer);
-        }
-        pdu->buffer = buffer;
-
-        return 0;
-}
-EXPORT_SYMBOL(pdu_buffer_set);
-
-const struct pci * pdu_pci_get_ro(const struct pdu * pdu)
-{
-        if (!pdu_is_ok(pdu))
-                return NULL;
-
-        return pdu->pci;
+	return (const struct pci *)&(pdu->pdu.pci);
 }
 EXPORT_SYMBOL(pdu_pci_get_ro);
 
-bool pdu_pci_present(const struct pdu * pdu)
+inline struct pci *pdu_pci_get_rw(struct pdu *pdu)
 {
-        if (!pdu_is_ok(pdu))
-                return false;
+	ASSERT(pdu_is_ok(pdu));
 
-        return pdu->pci ? true : false;
-}
-EXPORT_SYMBOL(pdu_pci_present);
-
-struct pci * pdu_pci_get_rw(struct pdu * pdu)
-{
-        if (!pdu_is_ok(pdu))
-                return NULL;
-
-        return pdu->pci;
+	return &(pdu->pdu.pci);
 }
 EXPORT_SYMBOL(pdu_pci_get_rw);
 
-int pdu_pci_set(struct pdu * pdu, struct pci * pci)
+inline ssize_t pdu_data_len(const struct pdu *pdu)
 {
-        if (!pdu)
-                return -1;
+	struct du *p;
+	ASSERT(pdu_is_ok(pdu));
 
-        if (!pci_is_ok(pci))
-                return -1;
+	p = to_du(pdu);
+	if (p->pci.h != p->skb->data) /* up direction */
+		return p->skb->len;
+	return (p->skb->len - p->pci.len); /* down direction */
+}
+EXPORT_SYMBOL(pdu_data_len);
 
-        pdu->pci = pci;
+inline struct efcp_config *pdu_efcp_config(const struct pdu *pdu)
+{
+	ASSERT(pdu_is_ok(pdu));
 
-        return 0;
+	return pdu->pdu.cfg;
+}
+EXPORT_SYMBOL(pdu_efcp_config);
+
+/*inline int pdu_pci_set(struct pdu *pdu, struct pci *pci)
+{
+	struct du *p;
+
+	ASSERT(pdu);
+	ASSERT(pci_is_ok(pci));
+
+	p = to_du(pdu);
+	p->pci.h = skb_put(p->skb, p->skb->data - pci->h);
+	if (unlikely(pci->h != p->pci.h)) {
+		LOG_ERR("Something went wrong setting a PCI");
+		return -1;
+	}
+	return 0;
 }
 EXPORT_SYMBOL(pdu_pci_set);
+*/
 
-int pdu_destroy(struct pdu * p)
+int pdu_destroy(struct pdu *pdu)
 {
-        if (!p)
-                return -1;
+	struct du *p;
 
-        if (p->pci)    pci_destroy(p->pci);
-        if (p->buffer) buffer_destroy(p->buffer);
+	ASSERT(pdu);
 
-        rkfree(p);
-
-        return 0;
+	p = to_du(pdu);
+	if (p->skb)
+		kfree_skb(p->skb); /* this destroys pci too */
+	rkfree(p);
+	return 0;
 }
 EXPORT_SYMBOL(pdu_destroy);
