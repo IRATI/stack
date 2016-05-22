@@ -211,7 +211,6 @@ default_rate_reduction(struct dtcp_ps * ps, const struct pci * pci) {
 	       return -1;
 	}
 
-
 	rt = pci_control_sndr_rate(pci);
 	tf = pci_control_time_frame(pci);
 

@@ -27,8 +27,7 @@
 #include <linux/types.h>
 
 #include "common.h"
-#include "buffer.h"
-#include "pdu.h"
+#include "ipcp-instances.h"
 
 #define PDU_FLAGS_EXPLICIT_CONGESTION 0x01
 #define PDU_FLAGS_DATA_RUN            0x80
@@ -55,110 +54,106 @@ typedef uint8_t pdu_flags_t;
 /* Management PDUs */
 #define PDU_TYPE_MGMT          0x40 /* Management */
 /* Number of different PDU types */
-#define PDU_TYPES              12 + 1 /* one slot for base PCI size */
+#define PDU_TYPES              12
 
 typedef uint8_t pdu_type_t;
 
 #define pdu_type_is_ok(X)                               \
-        ((X == PDU_TYPE_DT)         ? true :            \
-         ((X == PDU_TYPE_CACK)       ? true :           \
-          ((X == PDU_TYPE_SACK)       ? true :          \
-           ((X == PDU_TYPE_NACK)       ? true :         \
-            ((X == PDU_TYPE_FC)         ? true :        \
-             ((X == PDU_TYPE_ACK)        ? true :       \
-              ((X == PDU_TYPE_ACK_AND_FC) ? true :      \
-               ((X == PDU_TYPE_SACK_AND_FC) ? true :    \
-                ((X == PDU_TYPE_SNACK_AND_FC) ? true :  \
-                 ((X == PDU_TYPE_MGMT)         ? true : \
-                  false))))))))))
+	((X == PDU_TYPE_DT)         ? true :            \
+	 ((X == PDU_TYPE_CACK)       ? true :           \
+	  ((X == PDU_TYPE_SACK)       ? true :          \
+	   ((X == PDU_TYPE_NACK)       ? true :         \
+	    ((X == PDU_TYPE_FC)         ? true :        \
+	     ((X == PDU_TYPE_ACK)        ? true :       \
+	      ((X == PDU_TYPE_ACK_AND_FC) ? true :      \
+	       ((X == PDU_TYPE_SACK_AND_FC) ? true :    \
+		((X == PDU_TYPE_SNACK_AND_FC) ? true :  \
+		 ((X == PDU_TYPE_MGMT)         ? true : \
+		  false))))))))))
 
 #define pdu_type_is_control(X)                          \
-        ((X == PDU_TYPE_CACK)       ? true :            \
-         ((X == PDU_TYPE_SACK)       ? true :           \
-          ((X == PDU_TYPE_NACK)       ? true :          \
-           ((X == PDU_TYPE_FC)         ? true :         \
-            ((X == PDU_TYPE_ACK)        ? true :        \
-             ((X == PDU_TYPE_ACK_AND_FC) ? true :       \
-              ((X == PDU_TYPE_SACK_AND_FC) ? true :     \
-               ((X == PDU_TYPE_SNACK_AND_FC) ? true :   \
-                false))))))))
+	((X == PDU_TYPE_CACK)       ? true :            \
+	 ((X == PDU_TYPE_SACK)       ? true :           \
+	  ((X == PDU_TYPE_NACK)       ? true :          \
+	   ((X == PDU_TYPE_FC)         ? true :         \
+	    ((X == PDU_TYPE_ACK)        ? true :        \
+	     ((X == PDU_TYPE_ACK_AND_FC) ? true :       \
+	      ((X == PDU_TYPE_SACK_AND_FC) ? true :     \
+	       ((X == PDU_TYPE_SNACK_AND_FC) ? true :   \
+		false))))))))
 
-/* NOTE: The following function may return -1 */
-struct pci *          pci_create_from(const void * data);
-struct pci *          pci_create_from_ni(const void * data);
-struct pci *          pci_create(void);
-struct pci *          pci_create_ni(void);
-int                   pci_destroy(struct pci * pci);
-struct pci *          pci_dup(const struct pci * pci);
-struct pci *          pci_dup_ni(const struct pci * pci);
-bool                  pci_is_ok(const struct pci * pci);
+struct pci;
 
-/* FIXME: To be removed */
-size_t                pci_length_min(void);
+inline ssize_t		*pci_offset_table_create(struct dt_cons *dt_cons);
 
-ssize_t               pci_length(const struct pci * pci);
+inline bool		pci_is_ok(const struct pci *pci);
+inline ssize_t		pci_calculate_size(struct efcp_config *cfg,
+					   pdu_type_t type);
+inline int		pci_cep_source_set(struct pci *pci,
+					   cep_id_t src_cep_id);
+inline int		pci_cep_destination_set(struct pci *pci,
+						cep_id_t dst_cep_id);
+inline int		pci_destination_set(struct pci *pci,
+					    address_t dst_address);
+inline int		pci_source_set(struct pci *pci,
+				       address_t src_address);
+inline int		pci_sequence_number_set(struct pci *pci,
+						seq_num_t sequence_number);
 
-int                   pci_cep_source_set(struct pci * pci,
-                                         cep_id_t     src_cep_id);
-int                   pci_cep_destination_set(struct pci * pci,
-                                              cep_id_t     dst_cep_id);
-int                   pci_destination_set(struct pci * pci,
-                                          address_t    dst_address);
-int                   pci_source_set(struct pci * pci,
-                                     address_t    src_address);
-int                   pci_sequence_number_set(struct pci * pci,
-                                              seq_num_t    sequence_number);
-/* FIXME: if pci is NULL, it should return and error (-1) ... */
-seq_num_t             pci_sequence_number_get(const struct pci * pci);
+inline int		pci_qos_id_set(struct pci *pci,
+				       qos_id_t qos_id);
+inline int		pci_type_set(struct pci	*pci,
+				     pdu_type_t	type);
+inline int		pci_flags_set(struct pci *pci,
+				      pdu_flags_t flags);
+inline int		pci_ttl_set(struct pci *pci,
+				    size_t ttl);
+inline int		pci_format(struct pci *pci,
+				   cep_id_t src_cep_id,
+				   cep_id_t dst_cep_id,
+				   address_t src_address,
+				   address_t dst_address,
+				   seq_num_t sequence_number,
+				   qos_id_t qos_id,
+				   pdu_type_t type);
 
-int                   pci_qos_id_set(struct pci * pci,
-                                     qos_id_t     qos_id);
-int                   pci_type_set(struct pci * pci,
-                                   pdu_type_t   type);
-int                   pci_flags_set(struct pci * pci,
-                                    pdu_flags_t  flags);
-int                   pci_ttl_set(struct pci * pci,
-                                  size_t       ttl);
-int                   pci_format(struct pci * pci,
-                                 cep_id_t     src_cep_id,
-                                 cep_id_t     dst_cep_id,
-                                 address_t    src_address,
-                                 address_t    dst_address,
-                                 seq_num_t    sequence_number,
-                                 qos_id_t     qos_id,
-                                 pdu_type_t   type);
-
-pdu_type_t            pci_type(const struct pci * pci);
-address_t             pci_source(const struct pci * pci);
-address_t             pci_destination(const struct pci * pci);
-cep_id_t              pci_cep_source(const struct pci * pci);
-cep_id_t              pci_cep_destination(const struct pci * pci);
-qos_id_t              pci_qos_id(const struct pci * pci);
-pdu_flags_t           pci_flags_get(const struct pci * pci);
-ssize_t               pci_ttl(const struct pci * pci);
+/* FIXME: remove _get from the API name */
+inline seq_num_t	pci_sequence_number_get(const struct pci *pci);
+inline pdu_type_t	pci_type(const struct pci *pci);
+inline address_t	pci_source(const struct pci *pci);
+inline address_t	pci_destination(const struct pci *pci);
+inline cep_id_t		pci_cep_source(const struct pci *pci);
+inline cep_id_t		pci_cep_destination(const struct pci *pci);
+inline qos_id_t		pci_qos_id(const struct pci *pci);
+inline pdu_flags_t	pci_flags_get(const struct pci *pci);
+inline ssize_t		pci_ttl(const struct pci *pci);
 
 /* For Control PDUs */
-int                   pci_control_ack_seq_num_set(struct pci * pci,
-                                                  seq_num_t    seq);
-int                   pci_control_new_rt_wind_edge_set(struct pci * pci,
-                                                       seq_num_t    seq);
-int                   pci_control_my_rt_wind_edge_set(struct pci * pci,
-                                                      seq_num_t    seq);
-int                   pci_control_my_left_wind_edge_set(struct pci * pci,
-                                                        seq_num_t    seq);
-int                   pci_control_last_seq_num_rcvd_set(struct pci * pci,
-                                                        seq_num_t    seq);
-int                   pci_control_new_left_wind_edge_set(struct pci * pci,
-                                                         seq_num_t    seq);
-seq_num_t             pci_control_ack_seq_num(const struct pci * pci);
-seq_num_t             pci_control_new_rt_wind_edge(const struct pci * pci);
-seq_num_t             pci_control_new_left_wind_edge(const struct pci * pci);
-seq_num_t             pci_control_my_rt_wind_edge(const struct pci * pci);
-seq_num_t             pci_control_my_left_wind_edge(const struct pci * pci);
-seq_num_t             pci_control_last_seq_num_rcvd(const struct pci * pci);
-u_int32_t             pci_control_sndr_rate(const struct pci * pci);
-int                 pci_control_sndr_rate_set(struct pci * pci, u_int32_t rate);
-u_int32_t             pci_control_time_frame(const struct pci * pci);
-int               pci_control_time_frame_set(struct pci * pci, u_int32_t frame);
-
+inline int		pci_control_ack_seq_num_set(struct pci *pci,
+						    seq_num_t seq);
+inline int		pci_control_new_rt_wind_edge_set(struct pci *pci,
+							 seq_num_t    seq);
+inline int		pci_control_my_rt_wind_edge_set(struct pci *pci,
+							seq_num_t    seq);
+inline int		pci_control_my_left_wind_edge_set(struct pci *pci,
+							  seq_num_t    seq);
+inline int		pci_control_last_seq_num_rcvd_set(struct pci *pci,
+							  seq_num_t    seq);
+inline int		pci_control_new_left_wind_edge_set(struct pci *pci,
+							   seq_num_t seq);
+inline seq_num_t	pci_control_ack_seq_num(const struct pci *pci);
+inline seq_num_t	pci_control_new_rt_wind_edge(const struct pci *pci);
+inline seq_num_t	pci_control_new_left_wind_edge(const struct pci *pci);
+inline seq_num_t	pci_control_my_rt_wind_edge(const struct pci *pci);
+inline seq_num_t	pci_control_my_left_wind_edge(const struct pci *pci);
+inline seq_num_t	pci_control_last_seq_num_rcvd(const struct pci *pci);
+inline u_int32_t	pci_control_sndr_rate(const struct pci *pci);
+inline int		pci_control_sndr_rate_set(struct pci *pci,
+						  u_int32_t rate);
+inline u_int32_t	pci_control_time_frame(const struct pci *pci);
+inline int		pci_control_time_frame_set(struct pci *pci,
+						   u_int32_t frame);
+#if 0
+booli			pci_getset_test(void);
+#endif
 #endif
