@@ -197,7 +197,7 @@ void WatchdogRIBObject::read(const rina::cdap_rib::con_handle_t &con,
 			     const std::string& class_,
 			     const rina::cdap_rib::filt_info_t &filt,
 			     const int invoke_id,
-			     rina::ser_obj_t &obj_reply,
+			     rina::cdap_rib::obj_info_t &obj_reply,
 			     rina::cdap_rib::res_info_t& res)
 {
 	rina::ScopedLock g(*lock_);
@@ -217,7 +217,7 @@ void WatchdogRIBObject::read(const rina::cdap_rib::con_handle_t &con,
 
 	//2 Prepare response (RIBDaemon will send it)
 	rina::cdap::IntEncoder encoder;
-	encoder.encode(ipc_process_->get_address(), obj_reply);
+	encoder.encode(ipc_process_->get_address(), obj_reply.value_);
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
 

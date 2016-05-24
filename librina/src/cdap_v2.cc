@@ -177,8 +177,7 @@ std::string CDAPMessage::to_string() const
 	}
 	if (filter_ != 0)
 		ss << "Filter: " << filter_ << std::endl;
-	if (flags_ != cdap_rib::flags_t::NONE_FLAGS)
-		ss << "Flags: " << flags_ << std::endl;
+	ss << "Flags: " << flags_ << std::endl;
 	if (invoke_id_ != 0)
 		ss << "Invoke id: " << invoke_id_ << std::endl;
 	if (!obj_class_.empty())
@@ -1335,10 +1334,6 @@ void CDAPMessageValidator::validateInvokeID(const cdap_m_t &message)
 void CDAPMessageValidator::validateObjClass(const cdap_m_t &message)
 {
 	if (!message.obj_class_.empty()) {
-		if (message.obj_name_.empty()) {
-			throw CDAPException(
-					"If the objClass parameter is set, the objName parameter also has to be set");
-		}
 		if (message.op_code_ != cdap_m_t::M_CREATE
 				&& message.op_code_ != cdap_m_t::M_CREATE_R
 				&& message.op_code_ != cdap_m_t::M_DELETE
@@ -2032,7 +2027,7 @@ void CDAPSession::responseMessageSentOrReceived(const cdap_m_t &cdap_message,
 	else
 		pending_messages = &pending_messages_recv_;
 
-	if (op_code == cdap_m_t::M_READ_R) {
+	if (cdap_message.op_code_ == cdap_m_t::M_READ_R) {
 		if (cdap_message.flags_ == cdap_rib::flags_t::F_RD_INCOMPLETE) {
 			operation_complete = false;
 		}
@@ -2691,6 +2686,13 @@ void GPBSerializer::serializeMessage(const cdap_m_t &cdapMessage,
 	if (cdapMessage.filter_ != 0) {
 		gpfCDAPMessage.set_filter(cdapMessage.filter_);
 	}
+        // FLAGS
+        if (cdapMessage.flags_ != 0) {
+                int flag_value = cdapMessage.flags_;
+                rina::messages::flagValues_t flag =
+                    static_cast<rina::messages::flagValues_t>(flag_value);
+                gpfCDAPMessage.set_flags(flag);
+        }
 	// INVOKE_ID
 	gpfCDAPMessage.set_invokeid(cdapMessage.invoke_id_);
 	// OBJ_CLASS
@@ -3356,6 +3358,7 @@ void AppCDAPIOHandler::process_message(const ser_obj_t &message,
 			callback_->read_request(con,
 						obj,
 						filt,
+						flags,
 						invoke_id);
 			break;
 		case cdap_m_t::M_CANCELREAD:
@@ -3572,7 +3575,8 @@ void CDAPCallbackInterface::delete_request(
 void CDAPCallbackInterface::read_request(
 		const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
-		const cdap_rib::filt_info_t &filt, int invoke_id)
+		const cdap_rib::filt_info_t &filt,
+		const cdap_rib::flags_t &flags, int invoke_id)
 {
 	LOG_INFO("Callback read_request operation not implemented");
 }
