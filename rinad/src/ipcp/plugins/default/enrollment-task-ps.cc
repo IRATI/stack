@@ -750,6 +750,9 @@ void EnrolleeStateMachine::enrollmentCompleted()
 	}
 
 	LOG_IPCP_INFO("Remote IPC Process enrolled!");
+        rina::Time currentTime;
+        int t = currentTime.get_current_time_in_ms();
+        LOG_IPCP_INFO("Remote IPC Process enrolled at %d",t);
 }
 
 void EnrolleeStateMachine::remoteReadResult(const rina::cdap_rib::con_handle_t &con_handle,
@@ -1064,7 +1067,10 @@ void EnrollerStateMachine::authentication_successful()
 	rina::cdap_rib::auth_policy_t auth;
 
 	LOG_IPCP_DBG("Authentication successful, deciding if new member can join the DIF...");
-	if (smps->isAllowedToJoinDAF(con_handle_,
+	rina::Time currentTime;
+        int t0 = currentTime.get_current_time_in_ms();
+        LOG_IPCP_DBG("START ENROLLMENT %d ms", t0);
+        if (smps->isAllowedToJoinDAF(con_handle_,
 				     remote_peer_,
 				     auth) != 0) {
 		LOG_IPCP_WARN("Security Manager rejected enrollment attempt, aborting enrollment");
@@ -1074,7 +1080,7 @@ void EnrollerStateMachine::authentication_successful()
 				true);
 		return;
 	}
-
+        
 	//Send M_CONNECT_R
 	try{
 		rina::cdap_rib::res_info_t res;
@@ -1387,6 +1393,9 @@ void EnrollerStateMachine::enrollmentCompleted()
 	enrollment_task_->enrollmentCompleted(remote_peer_, false);
 
 	LOG_IPCP_INFO("Remote IPC Process enrolled!");
+        rina::Time currentTime;
+        int t = currentTime.get_current_time_in_ms();
+        LOG_IPCP_INFO("Remote IPC Process enrolled at %d", t);
 }
 
 //Class EnrollmentRIBObject
@@ -1668,7 +1677,11 @@ void EnrollmentTaskPs::authentication_completed(int port_id, bool success)
 void EnrollmentTaskPs::initiate_enrollment(const rina::NMinusOneFlowAllocatedEvent & event,
 					   const rina::EnrollmentRequest& request)
 {
-	rina::ScopedLock g(lock);
+	rina::Time currentTime;
+        int t = currentTime.get_current_time_in_ms();
+        LOG_IPCP_INFO("initiate_enrollment at %d", t);
+        
+        rina::ScopedLock g(lock);
 
 	EnrolleeStateMachine * enrollmentStateMachine = 0;
 

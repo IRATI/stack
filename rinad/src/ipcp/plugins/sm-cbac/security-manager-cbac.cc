@@ -7,7 +7,7 @@
 #include <sstream>
 #include <list>
 #include "ipcp/components.h"
-
+#include <sys/time.h>
 #include <librina/json/json.h>
 #include "security-manager-cbac.h"
 #include "sm-cbac.pb.h"
@@ -565,11 +565,22 @@ std::list<Capability_t> AccessControl::computeCapabilities(DIFProfile_t& difProf
     
 }
 
+int getTimeMs(){
+    timeval time_;
+    gettimeofday(&time_, 0);
+    int time_seconds = (int) time_.tv_sec;
+    return (int) time_seconds * 1000 + (int) (time_.tv_usec / 1000);   
+}
+
 void AccessControl::generateTokenSignature(Token_t &token, std::string encrypt_alg, 
                                    RSA * my_private_key,  rina::UcharArray &signature)
 {
          // variable fitting
+        //rina::Time currentTime;
         LOG_IPCP_DBG("Generating Token Signature..");
+        int t0 = getTimeMs();
+        LOG_IPCP_DBG("START GENERATE_TOKEN_SIGN [%d] ms", t0);
+       
         rina::ser_obj_t ser_token;
         serializeToken(token, ser_token);
         rina::UcharArray token_char(&ser_token);
@@ -582,12 +593,18 @@ void AccessControl::generateTokenSignature(Token_t &token, std::string encrypt_a
                                      my_private_key);
         LOG_IPCP_DBG("Signature ready:  %d bytes: [%s]", 
                      result.length, result.toString().c_str());
+        int t1 = getTimeMs();
+        LOG_IPCP_DBG("END GENERATE_TOKEN_SIGN [%d] ms", t1);
+        LOG_IPCP_DBG("TIME GENERATE_TOKEN_SIGN [%d] ms", t1-t0);
 }
 
 void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& difProfile,
                                   IPCPProfile_t& newMemberProfile, rina::cdap_rib::auth_policy_t & auth,
                                   rina::SSH2SecurityContext *sc, std::string encryptAlgo)
 {
+        //rina::Time currentTime;
+        int t0 = getTimeMs();
+        LOG_IPCP_DBG("START GENERATE_TOKEN [%d] ms", t0);
         std::list<Capability_t> result = computeCapabilities(difProfile, newMemberProfile); 
         
         TokenPlusSignature_t tokenSign;
@@ -598,8 +615,7 @@ void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& dif
         token.ipcp_issuer_id = issuerIpcpId;
         token.ipcp_holder_name = newMemberProfile.ipcp_name;
         token.audience.push_back("all");
-        rina::Time currentTime;
-        int t = currentTime.get_current_time_in_ms();
+        int t = getTimeMs();
         token.issued_time = t;
         token.token_nbf = t; //token valid immediately
         token.token_exp = VALIDITY_TIME_IN_HOURS; // after this time, the token will be invalid
@@ -620,6 +636,9 @@ void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& dif
         auth.versions.push_back(AC_CBAC_VERSION);
         auth.options = options;
         LOG_IPCP_DBG("Token generated: \n%s", tokenSign.toString().c_str());
+        int t1 = getTimeMs();
+        LOG_IPCP_DBG("END GENERATE_TOKEN [%d] ms", t1);
+        LOG_IPCP_DBG("TIME GENERATE_TOKEN [%d] ms", t1-t0);
 }
 //-----------------------------------
 /**
@@ -633,7 +652,9 @@ SecurityManagerCBACPs::SecurityManagerCBACPs(IPCPSecurityManager * dm_)
         access_control_ = new AccessControl();
         my_ipcp_id = dm->ipcp->get_id();
         my_ipcp_name = dm->ipcp->get_name();
-        trusted_ap_name.push_back("B.IRATI");
+        //trusted_ap_name.push_back("B.IRATI");
+        //trusted_ap_name.push_back("S0");
+        //trusted_ap_name.push_back("E0");
         LOG_IPCP_DBG("Creating SecurityManagerCBACPs: my_ipcp_id %d name %s", my_ipcp_id, 
                        my_ipcp_name.c_str());
 }
@@ -728,6 +749,10 @@ int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t
                                               const rina::Neighbor &newMember,
                                                rina::cdap_rib::auth_policy_t &auth)
 {
+        
+#if ACCESS_GRANTED
+        return 0;
+#endif
         my_dif_name = dm->ipcp->get_dif_information().dif_name_;
         
         LOG_IPCP_DBG("SecurityManagerCBACPs: isAllowedToJoinDAF my_dif_name %s", 
@@ -756,7 +781,10 @@ int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t
         
         IPCPProfile_t newMemberProfile;
         DIFProfile_t difProfile; 
-        loadProfilesByName(newMember.name_, newMemberProfile, my_dif_name, difProfile);
+        if (loadProfilesByName(newMember.name_, newMemberProfile, my_dif_name, difProfile) < 0){
+                LOG_IPCP_ERR("Error loading profiles ");
+                return -1;
+        }
         
 	// Enrollment AC algorithm
 	ac_res_info_t res;
@@ -805,8 +833,8 @@ RSA* SecurityManagerCBACPs::loadTokenGeneratorPublicKey()
         RSA* token_generator_pub_key = PEM_read_bio_RSA_PUBKEY(keystore, NULL, 0, NULL);
         BIO_free(keystore);
         if (!token_generator_pub_key) {
-                LOG_ERR("Problems reading RSA public key from keystore: %s",
-                        ERR_error_string(ERR_get_error(), NULL));
+                LOG_ERR("Problems reading RSA public key from keystore (%s): %s",
+                        ss.str().c_str(), ERR_error_string(ERR_get_error(), NULL));
                 return NULL;
         }
         return token_generator_pub_key;
@@ -859,7 +887,9 @@ int SecurityManagerCBACPs::checkTokenSignature(const Token_t &token, const rina:
 int SecurityManagerCBACPs::storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth,
                                                const rina::cdap_rib::con_handle_t & con)
 {
-        
+#if ACCESS_GRANTED
+        return 0;
+#else
         LOG_IPCP_DBG("Storing MY AC Credentials (token assigned from %s to %s)",
                      con.dest_.ap_name_.c_str(), con.src_.ap_name_.c_str());
 
@@ -896,6 +926,7 @@ int SecurityManagerCBACPs::storeAccessControlCreds(const rina::cdap_rib::auth_po
             LOG_IPCP_ERR("Nothing to store: Empty token field");
             return -1;
         }
+#endif
 }
 
 // this function returns 0 even if there is no token, to allow the operation to proceed.
@@ -1023,7 +1054,9 @@ void SecurityManagerCBACPs::checkRIBOperation(const rina::cdap_rib::auth_policy_
         } con_handle_t;
 
         */
-        
+#if ACCESS_GRANTED
+        res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+#else
         LOG_IPCP_DBG("checkRIBOperation: Context = %s", 
                      cbac_helpers::operationToString(con, opcode, obj_name).c_str());
         
@@ -1085,7 +1118,12 @@ void SecurityManagerCBACPs::checkRIBOperation(const rina::cdap_rib::auth_policy_
         DIFProfile_t peerDIFProfile;
         loadProfilesByName(tokenSign.token.ipcp_holder_name, peerProfile, my_dif_name, peerDIFProfile);
         
-        
+//#if 1 //hack_paper
+//        if (requestor == "E1"){
+                //res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+                //return;
+        //}
+//#endif
         stringstream ss;
         switch(opcode) {
                 case rina::cdap::cdap_m_t::M_START:
@@ -1153,6 +1191,7 @@ void SecurityManagerCBACPs::checkRIBOperation(const rina::cdap_rib::auth_policy_
         LOG_IPCP_DBG("Check RIB operation: OK");
         res.code_ = rina::cdap_rib::CDAP_SUCCESS;
         */
+#endif
 }
 
 
