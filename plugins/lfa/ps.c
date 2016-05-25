@@ -379,8 +379,6 @@ static int pft_port_up(struct pff_ps_priv *priv,
 		return 0;
 	}
 
-	LOG_DBG("Port-id %d went up, checking forwarding table", port_id);
-
 	ASSERT(is_port_id_ok(port_id));
 	ASSERT(priv);
 
@@ -396,13 +394,15 @@ static int pft_port_up(struct pff_ps_priv *priv,
 		/* Check if the primary port is being used */
 		if (pos->port == pos->nhop)
 			continue;
+		LOG_DBG("Recomputing nhop port-id for destination "
+				"address %u", pos->destination);
 		/* Primary is down, may be up again */
 		if (pos->port == port_id) {
-			LOG_DBG("Primary is available again");
+			LOG_DBG("Primary port-id %d is available again",
+				pos->port);
 			pos->nhop = pos->port;
 			continue;
 		} else {
-			LOG_DBG("Selecting a LFA");
 			/*
 			 * Alternate is needed, and now
 			 * one may be available
@@ -412,9 +412,10 @@ static int pft_port_up(struct pff_ps_priv *priv,
 				if (!pft_is_port_down(priv,
 						      pft_pe_port(pos2))) {
 					pos->nhop = pft_pe_port(pos2);
+					LOG_DBG("Found port-id %d", pos->nhop);
 					break;
 				}
-				LOG_DBG("Couldn't find a LFA");
+				LOG_DBG("No port-id is available");
 			}
 		}
 	}
@@ -433,8 +434,6 @@ static int pft_port_down(struct pff_ps_priv *priv,
 	ASSERT(is_port_id_ok(port_id));
 	ASSERT(priv);
 
-	LOG_DBG("Trying to find a LFA for port-id %d", port_id);
-
 	spin_lock(&priv->lock);
 
 	/* Add port_id to list of ports that are down */
@@ -443,15 +442,18 @@ static int pft_port_down(struct pff_ps_priv *priv,
 
 	list_for_each_entry(pos, &priv->entries, next)
 		if (pos->nhop == port_id) {
-			LOG_DBG("Found an entry that requires a LFA");
+			LOG_DBG("Looking for an alternate port-id for "
+				"destination address %u", pos->destination);
 			/* See if there is an alternate */
 			list_for_each_entry(pos2, &pos->alt_ports, next) {
 				if (!pft_is_port_down(priv,
 						      pft_pe_port(pos2))) {
 					pos->nhop = pft_pe_port(pos2);
+					LOG_DBG("Found alternate port-id %d",
+						pos->nhop);
 					break;
 				}
-				LOG_DBG("All LFAs are down");
+				LOG_DBG("No alternate port-id is available");
 			}
 		}
 
@@ -480,7 +482,7 @@ static int lfa_port_state_change(struct pff_ps *ps,
 	if (!priv_is_ok(priv))
 		return -1;
 
-	LOG_DBG("Port-id %d is %s", port_id, up ? "up" : "down");
+	LOG_DBG("Port-id %d goes %s", port_id, up ? "up" : "down");
 
 	if (up)
 		return pft_port_up(priv, port_id);
