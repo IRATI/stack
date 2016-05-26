@@ -566,10 +566,10 @@ std::list<Capability_t> AccessControl::computeCapabilities(DIFProfile_t& difProf
 }
 
 int getTimeMs(){
-    timeval time_;
-    gettimeofday(&time_, 0);
-    int time_seconds = (int) time_.tv_sec;
-    return (int) time_seconds * 1000 + (int) (time_.tv_usec / 1000);   
+        timeval time_;
+        gettimeofday(&time_, 0);
+        int time_seconds = (int) time_.tv_sec;
+        return (int) time_seconds * 1000 + (int) (time_.tv_usec / 1000);
 }
 
 void AccessControl::generateTokenSignature(Token_t &token, std::string encrypt_alg, 
@@ -617,12 +617,11 @@ void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& dif
         token.audience.push_back("all");
         int t = getTimeMs();
         token.issued_time = t;
-        token.token_nbf = t; //token valid immediately
+        token.token_nbf = t - 300; //token valid immediately, (-300 to avoid clock draft between peer ipcp)
         token.token_exp = VALIDITY_TIME_IN_HOURS; // after this time, the token will be invalid
         token.token_cap = result; 
         
         //fill signature
-        
         generateTokenSignature(token, encryptAlgo, 
             sc->auth_keypair, tokenSign.token_sign);
         tokenSign.token = token;
@@ -652,6 +651,8 @@ SecurityManagerCBACPs::SecurityManagerCBACPs(IPCPSecurityManager * dm_)
         access_control_ = new AccessControl();
         my_ipcp_id = dm->ipcp->get_id();
         my_ipcp_name = dm->ipcp->get_name();
+        my_dif_name = rina::ApplicationProcessNamingInformation(
+                        std::string(), string());
         //trusted_ap_name.push_back("B.IRATI");
         //trusted_ap_name.push_back("S0");
         //trusted_ap_name.push_back("E0");
@@ -724,16 +725,16 @@ int SecurityManagerCBACPs::loadProfilesByName(const rina::ApplicationProcessNami
                 return -1;
         }
 
-        LOG_IPCP_DBG("Parsing profile of %s...." ,
+        LOG_IPCP_DBG("Parsing profile of %s" ,
                        ipcpProfileHolder.processName.c_str());
         
         if (!profileParser.getIPCPProfileByName(ipcpProfileHolder, requestedIPCPProfile)){
-                LOG_IPCP_DBG("No Profile for this newMember %s; not allowing it to join DIF!" ,
+                LOG_IPCP_DBG("No Profile for this newMember [%s]!" ,
                             ipcpProfileHolder.processName.c_str());
                 return -1;
         }
         
-        LOG_IPCP_DBG("Parsing profile of DIF  %s...." ,
+        LOG_IPCP_DBG("Parsing profile of DIF  [%s]",
                        difProfileHolder.processName.c_str());
         
         if (!profileParser.getDIFProfileByName(difProfileHolder, requestedDIFProfile)){
@@ -753,7 +754,13 @@ int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t
 #if ACCESS_GRANTED
         return 0;
 #endif
-        my_dif_name = dm->ipcp->get_dif_information().dif_name_;
+        
+        if (my_dif_name.processName.c_str() == std::string()){
+                my_dif_name = dm->ipcp->get_dif_information().dif_name_;
+                LOG_IPCP_DBG("SecurityManagerCBACPs: isAllowedToJoinDAF my_dif_name %s", 
+                     my_dif_name.processName.c_str());
+        }
+        //my_dif_name = dm->ipcp->get_dif_information().dif_name_;
         
         LOG_IPCP_DBG("SecurityManagerCBACPs: isAllowedToJoinDAF my_dif_name %s", 
                      my_dif_name.processName.c_str());
@@ -892,10 +899,10 @@ int SecurityManagerCBACPs::storeAccessControlCreds(const rina::cdap_rib::auth_po
 #else
         LOG_IPCP_DBG("Storing MY AC Credentials (token assigned from %s to %s)",
                      con.dest_.ap_name_.c_str(), con.src_.ap_name_.c_str());
-
-        if (my_dif_name.toString() == std::string()){
+        
+        if (my_dif_name.processName.c_str() == std::string()){
                 my_dif_name = dm->ipcp->get_dif_information().dif_name_;
-                LOG_IPCP_DBG("SecurityManagerCBACPs: isAllowedToJoinDAF my_dif_name %s", 
+                LOG_IPCP_DBG("SecurityManagerCBACPs: storeAccessControlCreds my_dif_name %s", 
                      my_dif_name.processName.c_str());
         }
         
@@ -906,7 +913,6 @@ int SecurityManagerCBACPs::storeAccessControlCreds(const rina::cdap_rib::auth_po
                         return -1;
                 }
         }
-        
         
         /*assert(my_sc);
         if (checkTokenSignature(tokenSign.token, tokenSign.token_sign, 
@@ -929,15 +935,73 @@ int SecurityManagerCBACPs::storeAccessControlCreds(const rina::cdap_rib::auth_po
 #endif
 }
 
-// this function returns 0 even if there is no token, to allow the operation to proceed.
-// then, if the operation is not allowed without token, the access denial will be made after anyway
+int SecurityManagerCBACPs::generateTokenForTokenGenerator(rina::cdap_rib::auth_policy_t & auth, 
+                                                          const rina::cdap_rib::con_handle_t & con){
+    
+        std::string encryptAlgo = getStringParamFromConfig("EncryptAlgo", dm);
+        if (encryptAlgo == std::string()){
+                LOG_IPCP_ERR("Missing EncryptAlgo parameter configuration!");
+                return -1;
+        }
+        //LOG_IPCP_DBG("SecurityManagerCBACPs: before generateTokenForTokenGenerator my_dif_name [%s], [%s]", 
+        //             my_dif_name.processName.c_str(),
+        //             dm->ipcp->get_dif_information().dif_name_.processName.c_str());
+        if (my_dif_name.processName.c_str() == std::string()){
+                my_dif_name = dm->ipcp->get_dif_information().dif_name_;
+                LOG_IPCP_DBG("SecurityManagerCBACPs: generateTokenForTokenGenerator my_dif_name %s", 
+                     my_dif_name.processName.c_str());
+        }
+        IPCPProfile_t myIPCPProfile;
+        DIFProfile_t myDifProfile; 
+        if (loadProfilesByName(rina::ApplicationProcessNamingInformation(
+                        my_ipcp_name, string()), myIPCPProfile, my_dif_name, myDifProfile) < 0){
+                LOG_IPCP_ERR("Error loading profiles");
+                return -1;
+        }
+        
+        if (!my_sc) {
+                initialize_SC(con);
+        }
+        assert(my_sc);
+        access_control_->generateToken(my_ipcp_id, myDifProfile, myIPCPProfile, 
+                                       auth, my_sc, encryptAlgo);
+        return 0;
+                    
+}
+
+// called at the token generator, this function allows it to generate and store 
+// its own token, return -1 if failed
+// at any other node, if the token is not there, proceed (return 0) becasue
+// this can be invoked by authentication messages awhich are priori to token geenrator
+// so it is expected that the token is not there
 int SecurityManagerCBACPs::getAccessControlCreds(rina::cdap_rib::auth_policy_t & auth,
                                              const rina::cdap_rib::con_handle_t & con)
 {
-        //NOTE: con not used
         if (my_token.size_ <= 0){
                 LOG_IPCP_DBG("Asked to get MY AC Credentials BUT token is not there");
-                return 0;
+                std::string tokenGenIpcpName = getStringParamFromConfig("TokenGenIPCPName", dm);
+                if (tokenGenIpcpName == std::string()){
+                        LOG_IPCP_ERR("Missing tokenGenIpcpName parameter configuration!");
+                        return -1;
+                }
+                if (tokenGenIpcpName == my_ipcp_name){
+                        LOG_IPCP_DBG("I am the token generator, I have the priviledge to generate my own token!");
+                        //generate its own token using same algorithm
+                        if (generateTokenForTokenGenerator(auth, con) < 0){
+                                LOG_IPCP_ERR("Failed to generate token!");
+                                return -1;
+                        }
+                        //need to store token for future usage
+                        my_token = auth.options;
+                        TokenPlusSignature_t tokenSign;
+                        deserializeTokenPlusSign(auth.options, tokenSign);
+                        LOG_IPCP_DBG("Token stored: \n%s", tokenSign.toString().c_str());
+                        return 0;
+                    
+                }else{
+                        LOG_IPCP_DBG("And I am not the token generator, proceed anyway");
+                        return 0;
+                }
         }
         
         LOG_IPCP_DBG("Asked to get MY AC Credentials, token size: %d", 
@@ -985,7 +1049,7 @@ int SecurityManagerCBACPs::checkTokenValidity(const TokenPlusSignature_t &tokenS
                 LOG_IPCP_DBG("%s", ss.str().c_str());
                 ss.str(std::string());
         }else{
-                ss << "\n\t 3. Token cannot not be used yet, failed token validation" << endl;
+                ss << "\n\t 3. Token cannot not be used yet (now:" << now << ", nbf: "<< token.token_nbf << "), failed token validation" << endl;
                 LOG_IPCP_DBG("%s", ss.str().c_str());
                 return -1;
         }
@@ -1021,8 +1085,72 @@ int SecurityManagerCBACPs::checkTokenValidity(const TokenPlusSignature_t &tokenS
         
 }
 
-
 void SecurityManagerCBACPs::checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
+                                          const rina::cdap_rib::con_handle_t & con,
+                                          const rina::cdap::cdap_m_t::Opcode opcode,
+                                          const std::string obj_name,
+                                          rina::cdap_rib::res_info_t& res)
+{
+#if ACCESS_GRANTED
+        res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+        return;
+#endif
+        LOG_IPCP_DBG("checkRIBOperation: Context = %s", 
+                     cbac_helpers::operationToString(con, opcode, obj_name).c_str());
+        
+        std::string requestor = con.dest_.ap_name_;
+        if (requestor == std::string()){
+                LOG_IPCP_ERR("Empty requestor name field! hack this for the moment");
+                if (auth.options.size_ < 0){
+                        LOG_IPCP_ERR("neither con_handle information nor token, hack cannot work");
+                        res.code_ = rina::cdap_rib::CDAP_ERROR;
+                        return;
+                }
+                //get token
+                TokenPlusSignature_t tokenSign;
+                deserializeTokenPlusSign(auth.options, tokenSign);
+                requestor = tokenSign.token.ipcp_holder_name.processName; // FIXME: to remove after fixing con_handle empty fields bug
+                
+                // res.code_ = rina::cdap_rib::CDAP_ERROR;
+                //return; //FIXME: need to return, to fix after fixing con_handle empty fields bug
+        }
+        
+        if (std::find(trusted_ap_name.begin(), trusted_ap_name.end(), requestor) 
+                != trusted_ap_name.end()){
+                LOG_IPCP_DBG("Requestor is in Trusted list, grant access for any operation");
+                res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+                return;
+        }
+        
+        //FIXME: clean up with the previous hack
+        TokenPlusSignature_t tokenSign;
+        deserializeTokenPlusSign(auth.options, tokenSign);
+        if (checkTokenValidity(tokenSign, requestor) < 0){
+                LOG_IPCP_ERR("Invalid Token, NO access");
+                res.code_ = rina::cdap_rib::CDAP_ERROR;
+                return;   
+        }
+        
+        Token_t token = tokenSign.token;    
+        std::list<Capability_t> tokenCapList = token.token_cap;
+            
+        for(std::list<Capability_t>::iterator it = tokenCapList.begin();
+                it != tokenCapList.end(); ++it) {
+                if (it->compare(obj_name, cbac_helpers::opcodeToString(opcode)) ||
+                    it->compare("all", "all")){
+                        LOG_IPCP_DBG("Request is included in requestor capability; Grant access");
+                        res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+                        return;
+                }
+        }
+        
+        LOG_IPCP_DBG("Request in NOT in requestor capability; Deny request");
+        res.code_ = rina::cdap_rib::CDAP_ERROR;
+        return;   
+}
+
+#if 0
+void SecurityManagerCBACPs::checkRIBOperationOld(const rina::cdap_rib::auth_policy_t & auth,
                                           const rina::cdap_rib::con_handle_t & con,
                                           const rina::cdap::cdap_m_t::Opcode opcode,
                                           const std::string obj_name,
@@ -1193,6 +1321,7 @@ void SecurityManagerCBACPs::checkRIBOperation(const rina::cdap_rib::auth_policy_
         */
 #endif
 }
+#endif
 
 
 #if 0

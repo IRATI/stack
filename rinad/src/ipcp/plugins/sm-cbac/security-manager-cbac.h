@@ -207,7 +207,7 @@ public:
                                   const rina::UcharArray & signature, std::string encrypt_alg);
         RSA* loadTokenGeneratorPublicKey();
 //                                    RSA* token_generator_pub_key);
-
+        
         void checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
                               const rina::cdap_rib::con_handle_t & con,
                               const rina::cdap::cdap_m_t::Opcode opcode,
@@ -237,6 +237,8 @@ private:
         rina::ser_obj_t my_token;
         //std::map<rina::cdap_rib::con_handle_t, TokenPlusSignature_t*> token_sign_per_ipcp;
         rina::Lockable lock;
+        
+        int generateTokenForTokenGenerator(rina::cdap_rib::auth_policy_t &, const rina::cdap_rib::con_handle_t &);
 };
 
 
