@@ -28,7 +28,7 @@ typedef struct IPCPProfile {
         rina::ApplicationProcessNamingInformation ipcp_difName; //XXX check if used
         std::string ipcp_type;
         std::string ipcp_group;
-        RIBProfile_t ipcp_rib_profile;
+        std::list<RIBProfile_t> ipcp_rib_profiles;
         //DIFProfile ipcp_dif_profile;
 } IPCPProfile_t;
 
@@ -39,6 +39,23 @@ typedef struct DIFProfile {
         std::string dif_type; //FIXME: merge/replace (?) with dif_type_ in DIFInformation
         std::string dif_group;
 } DIFProfile_t;
+
+//----------------------------------
+
+/* One AC rule */
+  // {"ipcpType": "edge", "difType": "access", "memberIpcpType": "server", "memberDifType": "access"},
+typedef struct Rule {
+        std::string ipcp_type;
+        std::string dif_type;
+        std::string member_ipcp_type;
+        std::string member_dif_type;
+       
+} Rule_t;
+
+typedef struct Cap {
+        std::string ressource;
+        std::string op;
+} Cap_t;
 
 //----------------------------------
 
@@ -75,12 +92,20 @@ public:
         virtual ~ProfileParser() {};
         bool getDIFProfileByName(const rina::ApplicationProcessNamingInformation&, DIFProfile_t&);
         bool getIPCPProfileByName(const rina::ApplicationProcessNamingInformation&, IPCPProfile_t&);
+        bool compareRuleToProfile(Rule_t &, std::string, std::string, std::string);//, std::string);
+        bool getCapabilityByProfile(const std::string fileName, std::list<Cap_t> & capList, 
+                               std::string ipcp_type, std::string ipcp_group,
+                               std::string dif_type, std::string dif_group,
+                               std::string member_ipcp_type, std::string member_ipcp_group);
         string toString() const; 
 private:
   
         std::list<DIFProfile_t> difProfileList;
         std::list<IPCPProfile_t> ipcpProfileList;
         std::list<RIBProfile_t> ribProfileList;
+        std::list<Rule_t> ruleList;
+        //std::list<Capability> capList;
+        //std::map<rule,cap> second (first.begin(),first.end());
 };
 
 //-----------------------------------
@@ -172,11 +197,26 @@ typedef struct Config{
 } Config_t;
 */
 //--------------------------------
+class ACRulesManager{
+private:
+        ProfileParser parser_;
+        ACRulesManager();
+        void compareRules();
+};
+
+//--------------------------------
 class AccessControl{
 public:
         AccessControl();
-        bool checkJoinDIF(DIFProfile_t&, IPCPProfile_t&, ac_res_info_t&);
+        //bool checkJoinDIF(std::string, DIFProfile_t&, IPCPProfile_t&, ac_res_info_t&);
         std::list<Capability_t> computeCapabilities(DIFProfile_t&, IPCPProfile_t&);
+        
+        bool checkJoinDIF(std::string fileName, 
+                          const rina::ApplicationProcessNamingInformation& my_ipcp_name, 
+                          const rina::ApplicationProcessNamingInformation& my_dif_name, 
+                          const rina::ApplicationProcessNamingInformation& newMember_ipcp_name,  
+                          ac_res_info_t&);
+                                 
         void generateToken(unsigned short, DIFProfile_t&, IPCPProfile_t&, 
                            rina::cdap_rib::auth_policy_t &, rina::SSH2SecurityContext*, std::string);
         void generateTokenSignature(Token_t &token, std::string encrypt_alg, 
@@ -192,8 +232,11 @@ public:
 //         bool isAllowedToJoinDIF(const rina::Neighbor& newMember); 
                                 //const rina::ApplicationProcessNamingInformation, std::string);
         int initialize_SC(const rina::cdap_rib::con_handle_t&);
-        int loadProfilesByName(const rina::ApplicationProcessNamingInformation &ipcpProfileHolder, IPCPProfile_t &requestedIPCPProfile,
-                                             const rina::ApplicationProcessNamingInformation &difProfileHolder, DIFProfile_t &requestedDIFProfile);
+        int loadProfilesByName(
+                               const rina::ApplicationProcessNamingInformation &ipcpProfileHolder, 
+                               IPCPProfile_t &requestedIPCPProfile,
+                               const rina::ApplicationProcessNamingInformation &difProfileHolder, 
+                               DIFProfile_t &requestedDIFProfile);
         int isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t & con,
                                const rina::Neighbor& newMember,
                                rina::cdap_rib::auth_policy_t & auth);

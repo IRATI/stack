@@ -397,10 +397,18 @@ string ProfileParser::toString() const
                 ss << "\t\tGroup: " << nit->ipcp_group.c_str() << endl;
                 //FIXME: not set
                 //ss << "\t\tDIF: " << nit->ipcp_difName.name.c_str() << endl;
-                ss << "\t\tRIB type: " <<
-                        nit->ipcp_rib_profile.rib_type.c_str() << endl;
-                ss << "\t\tRIB group: " <<
-                        nit->ipcp_rib_profile.rib_group.c_str() << endl;
+                std::list<RIBProfile_t> ribProfileList = nit->ipcp_rib_profiles;
+                for (list<RIBProfile_t>::const_iterator it =
+                        ribProfileList.begin();
+                                it != ribProfileList.end(); it++) {
+                        ss << "\t\tRIB type: " <<
+                            it->rib_type.c_str() << endl;
+                        ss << "\t\tRIB group: " <<
+                            it->rib_group.c_str() << endl;   
+                                    
+                }
+            
+                
                 ss << "**" << endl;
         }
 
@@ -459,15 +467,24 @@ bool ProfileParser::parseProfile(const std::string fileName)
 		ipcp.ipcp_type = ipcp_profiles[i].get("ipcpType",    string()).asString();
 		ipcp.ipcp_group = ipcp_profiles[i].get("ipcpGroup",    string()).asString();
 		
-		Json::Value rib_profile = ipcp_profiles[i]["ipcpRibProfile"];
+		Json::Value rib_profiles = ipcp_profiles[i]["ipcpRibProfile"];
+                
+                for (unsigned int i = 0; i < rib_profiles.size(); i++) {
+                        RIBProfile_t ribProfile;
+                        ribProfile.rib_group = rib_profiles[i].get("ribGroup", string()).asString();
+                        ribProfile.rib_type = rib_profiles[i].get("ribType", string()).asString();
+                        ipcp.ipcp_rib_profiles.push_back(ribProfile);
+                        ribProfileList.push_back(ribProfile);
+                }
+                /*
 		if (rib_profile != 0){
 			//parse rib profile of current ipcp
 			RIBProfile_t ribProfile;
 			ribProfile.rib_group = rib_profile.get("ribGroup", string()).asString();
 			ribProfile.rib_type = rib_profile.get("ribType", string()).asString();
-			ipcp.ipcp_rib_profile = ribProfile;
+			ipcp.ipcp_rib_profile.push_back(ribProfile);
 			ribProfileList.push_back(ribProfile);
-		}
+		}*/
 		ipcpProfileList.push_back(ipcp);
 				
 	}
@@ -475,6 +492,86 @@ bool ProfileParser::parseProfile(const std::string fileName)
 	return true;
 	
 }
+
+bool ProfileParser::compareRuleToProfile(Rule_t & r, std::string ipcp_type, std::string dif_type,
+                        std::string member_ipcp_type)
+{
+        if (r.ipcp_type == ipcp_type &&
+            r.dif_type == dif_type &&
+            r.member_ipcp_type == member_ipcp_type)
+                 return true;
+        return false;
+}
+
+// FIXME: group not used
+bool ProfileParser::getCapabilityByProfile(const std::string fileName, std::list<Cap_t> & capList, 
+                               std::string ipcp_type, std::string ipcp_group,
+                               std::string dif_type, std::string dif_group, 
+                               std::string member_ipcp_type, std::string member_ipcp_group)
+{
+        
+        Json::Value  root;
+        Json::Reader reader;
+        ifstream     file;
+        
+        //std::map <Rule_t, std::list<Cap_t> > ruleMap;
+        LOG_IPCP_DBG("Parsing file %s", fileName.c_str());
+        
+        file.open(fileName.c_str(), std::ifstream::in);
+        if (file.fail()) {
+                LOG_ERR("Failed to open AC policy file");
+                return false;
+        }
+
+        if (!reader.parse(file, root, false)) {
+                LOG_ERR("Failed to parse configuration");
+                cout << "Failed to parse JSON" << endl
+                          << reader.getFormatedErrorMessages() << endl;
+
+                return false;
+        }
+
+        file.close();
+
+        
+        // really parse
+        
+        Json::Value info = root["enrollment"];
+        for (unsigned int i = 0; i < info.size(); i++) {
+                //std::list<Rule_t> ruleList;
+                Rule_t rule;
+                Json::Value ruleInfo = info[i]["rule"];
+                if (not ruleInfo.isNull()){
+                        
+                        rule.ipcp_type = ruleInfo.get("ipcpType", string()).asString();
+                        rule.dif_type = ruleInfo.get("difType", string()).asString();
+                        rule.member_ipcp_type = ruleInfo.get("memberIpcpType", string()).asString();
+                        rule.member_dif_type = ruleInfo.get("memberDIFType", string()).asString();
+                        //ruleList.push_back(rule);
+                }
+                if (not compareRuleToProfile(rule, ipcp_type,
+                        dif_type, member_ipcp_type)){
+                        LOG_IPCP_DBG("Not Found equal rule");
+                        break;
+                }
+                LOG_IPCP_DBG("rule found, copy capabilities");
+                Json::Value capInfo = info[i]["capability"];
+                
+                if (not capInfo.isNull()){
+                        Cap_t capability;
+                        capability.ressource = capInfo.get("ressource", string()).asString();
+                        capability.op = capInfo.get("op", string()).asString();
+                        capList.push_back(capability);
+                }
+                //std::pair<rule_t, std::list<Cap_t> > pair(rule, capList);
+                //ruleMap.insert(pair);
+                
+                //ruleMap[rule] = capList; 
+        }
+        
+        return true;
+}
+
 
 bool ProfileParser::getDIFProfileByName(const rina::ApplicationProcessNamingInformation& difName,
 					DIFProfile_t& result)
@@ -515,6 +612,76 @@ AccessControl::AccessControl()
 	LOG_IPCP_DBG("Creating AccessControl Class");
 }
 
+bool AccessControl::checkJoinDIF(std::string policyFile, 
+                                 const rina::ApplicationProcessNamingInformation & my_ipcp_name, 
+                                 const rina::ApplicationProcessNamingInformation & my_dif_name, 
+                                 const rina::ApplicationProcessNamingInformation & newMember_ipcp_name, 
+                                 ac_res_info_t& result)
+{
+        LOG_IPCP_DBG("AC: Check to join DIF in progress...");
+        
+        
+        ProfileParser parser;
+        
+        DIFProfile_t difProfile;
+        IPCPProfile_t newMemberProfile;
+        IPCPProfile_t myProfile;
+
+        if (parser.getIPCPProfileByName(my_ipcp_name, myProfile) < 0) {
+                LOG_IPCP_ERR("Error loading MY profile [%s]", 
+                             my_ipcp_name.processName.c_str());
+                result.code_ = AC_ENR_ERROR;
+                //result.reason_ = IPCP_DIF_FROM_DIFFERENT_GROUPS;
+                return false;
+            
+        };
+        
+        if (parser.getDIFProfileByName(my_dif_name, difProfile) < 0) {
+                LOG_IPCP_ERR("Error loading MY DIF profile [%s]", 
+                             my_dif_name.processName.c_str());
+                result.code_ = AC_ENR_ERROR;
+                //result.reason_ = IPCP_DIF_FROM_DIFFERENT_GROUPS;
+                return false;
+            
+        };
+        
+        if (parser.getIPCPProfileByName(newMember_ipcp_name, newMemberProfile) < 0) {
+                LOG_IPCP_ERR("Error loading New member profile [%s]", 
+                             newMember_ipcp_name.processName.c_str());
+                result.code_ = AC_ENR_ERROR;
+                //result.reason_ = IPCP_DIF_FROM_DIFFERENT_GROUPS;
+                return false;
+            
+        };
+        
+        
+        /*if (loadProfilesByName(my_ipcp_name, myProfile, newMember.name_, newMemberProfile, my_dif_name, difProfile) < 0){
+                LOG_IPCP_ERR("Error loading profiles ");
+                return -1;
+        }*/
+        
+        
+        // Enrollment AC algorithm
+        ac_res_info_t res;
+        
+        std::list<Cap_t> capList;
+        if (parser.getCapabilityByProfile(policyFile, capList, 
+                                  myProfile.ipcp_type, myProfile.ipcp_group,
+                                  difProfile.dif_type, difProfile.dif_group,
+                                  newMemberProfile.ipcp_type, newMemberProfile.ipcp_group) > 0 ){
+        
+                LOG_IPCP_DBG("Allow to access DIf and cap are:");
+                result.code_ = AC_ENR_SUCCESS;
+                return true;
+        }else{
+            result.code_ = AC_ENR_ERROR;
+            //result.reason_ = IPCP_DIF_FROM_DIFFERENT_GROUPS;
+            return false;
+        }
+        
+}
+        
+# if 0       
 /** an example of AC check at the enrollment phase **/
 bool AccessControl::checkJoinDIF(DIFProfile_t& difProfile, IPCPProfile_t& newMemberProfile, 
                                  ac_res_info_t& result)
@@ -534,6 +701,7 @@ bool AccessControl::checkJoinDIF(DIFProfile_t& difProfile, IPCPProfile_t& newMem
 	result.code_ = AC_ENR_SUCCESS;
 	return true;
 }
+#endif 
 
 std::list<Capability_t> AccessControl::computeCapabilities(DIFProfile_t& difProfile, 
                                                             IPCPProfile_t& newMemberProfile)
@@ -787,16 +955,22 @@ int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t
         
         LOG_IPCP_DBG("SecurityManagerCBACPs: Initialized Security Context");
         
-        IPCPProfile_t newMemberProfile;
-        DIFProfile_t difProfile; 
-        if (loadProfilesByName(newMember.name_, newMemberProfile, my_dif_name, difProfile) < 0){
-                LOG_IPCP_ERR("Error loading profiles ");
-                return -1;
-        }
+         IPCPProfile_t newMemberProfile;
+         DIFProfile_t difProfile; 
+         if (loadProfilesByName(newMember.name_, newMemberProfile, my_dif_name, difProfile) < 0){
+                 LOG_IPCP_ERR("Error loading profiles ");
+                 return -1;
+         }
         
 	// Enrollment AC algorithm
 	ac_res_info_t res;
-	access_control_->checkJoinDIF(difProfile, newMemberProfile, res);
+        const std::string policyFile = getStringParamFromConfig("ACPolicyfileStore", dm);
+	//access_control_->checkJoinDIF(policyFile, difProfile, newMemberProfile, res);
+        
+        access_control_->checkJoinDIF(policyFile, 
+                                      rina::ApplicationProcessNamingInformation(
+                                      my_ipcp_name, string()),
+                                      my_dif_name, newMember.name_, res);
 	if (res.code_ == 0){
                     LOG_IPCP_DBG("Allowing IPC Process %s to join the DIF. Going to generate token",
                         newMember.name_.processName.c_str());
