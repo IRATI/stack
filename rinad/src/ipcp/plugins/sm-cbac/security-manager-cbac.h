@@ -51,12 +51,12 @@ typedef struct Rule {
         std::string member_dif_type;
        
 } Rule_t;
-
+/*
 typedef struct Cap {
         std::string ressource;
         std::string op;
 } Cap_t;
-
+*/
 //----------------------------------
 
 typedef enum{
@@ -84,30 +84,6 @@ typedef struct ac_result_info {
 } ac_res_info_t;
 
 //----------------------------------
-
-class ProfileParser {
-public:
-        ProfileParser() {};
-        bool parseProfile(const std::string fileName);
-        virtual ~ProfileParser() {};
-        bool getDIFProfileByName(const rina::ApplicationProcessNamingInformation&, DIFProfile_t&);
-        bool getIPCPProfileByName(const rina::ApplicationProcessNamingInformation&, IPCPProfile_t&);
-        bool compareRuleToProfile(Rule_t &, std::string, std::string, std::string);//, std::string);
-        bool getCapabilityByProfile(const std::string fileName, std::list<Cap_t> & capList, 
-                               std::string ipcp_type, std::string ipcp_group,
-                               std::string dif_type, std::string dif_group,
-                               std::string member_ipcp_type, std::string member_ipcp_group);
-        string toString() const; 
-private:
-  
-        std::list<DIFProfile_t> difProfileList;
-        std::list<IPCPProfile_t> ipcpProfileList;
-        std::list<RIBProfile_t> ribProfileList;
-        std::list<Rule_t> ruleList;
-        //std::list<Capability> capList;
-        //std::map<rule,cap> second (first.begin(),first.end());
-};
-
 //-----------------------------------
 
 typedef struct Capability{
@@ -189,6 +165,33 @@ typedef struct TokenPlusSignature{
         }
 } TokenPlusSignature_t;
 
+//------------------------
+
+
+class ProfileParser {
+public:
+        ProfileParser() {};
+        bool parseProfile(const std::string fileName);
+        virtual ~ProfileParser() {};
+        bool getDIFProfileByName(const rina::ApplicationProcessNamingInformation&, DIFProfile_t&);
+        bool getIPCPProfileByName(const rina::ApplicationProcessNamingInformation&, IPCPProfile_t&);
+        bool compareRuleToProfile(Rule_t &, std::string, std::string, std::string);//, std::string);
+        bool getCapabilityByProfile(const std::string fileName, std::list<Capability_t> & capList, 
+                               std::string ipcp_type, std::string ipcp_group,
+                               std::string dif_type, std::string dif_group,
+                               std::string member_ipcp_type, std::string member_ipcp_group);
+        string toString() const; 
+private:
+  
+        std::list<DIFProfile_t> difProfileList;
+        std::list<IPCPProfile_t> ipcpProfileList;
+        std::list<RIBProfile_t> ribProfileList;
+        std::list<Rule_t> ruleList;
+        //std::list<Capability> capList;
+        //std::map<rule,cap> second (first.begin(),first.end());
+};
+
+
 /*
 typedef struct Config{
         std::string profileFile;
@@ -211,14 +214,16 @@ public:
         //bool checkJoinDIF(std::string, DIFProfile_t&, IPCPProfile_t&, ac_res_info_t&);
         std::list<Capability_t> computeCapabilities(DIFProfile_t&, IPCPProfile_t&);
         
-        bool checkJoinDIF(std::string fileName, 
+        bool checkJoinDIF(ProfileParser  *, 
+                          std::string fileName, 
                           const rina::ApplicationProcessNamingInformation& my_ipcp_name, 
                           const rina::ApplicationProcessNamingInformation& my_dif_name, 
                           const rina::ApplicationProcessNamingInformation& newMember_ipcp_name,  
-                          ac_res_info_t&);
+                          ac_res_info_t&, std::list<Capability_t>&);
                                  
         void generateToken(unsigned short, DIFProfile_t&, IPCPProfile_t&, 
-                           rina::cdap_rib::auth_policy_t &, rina::SSH2SecurityContext*, std::string);
+                           rina::cdap_rib::auth_policy_t &, rina::SSH2SecurityContext*,
+                           std::string, std::list<Capability_t>&);
         void generateTokenSignature(Token_t &token, std::string encrypt_alg, 
                                    RSA * my_private_key,  rina::UcharArray &signature);
         virtual ~AccessControl() {}
@@ -232,6 +237,7 @@ public:
 //         bool isAllowedToJoinDIF(const rina::Neighbor& newMember); 
                                 //const rina::ApplicationProcessNamingInformation, std::string);
         int initialize_SC(const rina::cdap_rib::con_handle_t&);
+        int loadProfiles();
         int loadProfilesByName(
                                const rina::ApplicationProcessNamingInformation &ipcpProfileHolder, 
                                IPCPProfile_t &requestedIPCPProfile,
@@ -271,6 +277,7 @@ private:
 //         Config_t my_config;
         int max_retries;
         AccessControl * access_control_;
+        ProfileParser * profile_parser_;
         unsigned short my_ipcp_id;
         std::string my_ipcp_name;
         rina::ApplicationProcessNamingInformation my_dif_name;
@@ -280,7 +287,6 @@ private:
         rina::ser_obj_t my_token;
         //std::map<rina::cdap_rib::con_handle_t, TokenPlusSignature_t*> token_sign_per_ipcp;
         rina::Lockable lock;
-        
         int generateTokenForTokenGenerator(rina::cdap_rib::auth_policy_t &, const rina::cdap_rib::con_handle_t &);
 };
 
