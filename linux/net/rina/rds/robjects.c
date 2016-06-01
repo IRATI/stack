@@ -96,7 +96,10 @@ EXPORT_SYMBOL(robject_init_and_add);
 
 
 void robject_del(struct robject *robj)
-{ kobject_del(to_kobj(robj)); }
+{
+	kobject_del(to_kobj(robj));
+	kobject_put(to_kobj(robj));
+}
 EXPORT_SYMBOL(robject_del);
 
 int
