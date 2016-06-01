@@ -77,8 +77,7 @@ int
 robject_add(struct robject *robj, struct robject *parent, const char *fmt, ...)
 {
 	__PREPARE_ROBJECT_WRAPPER
-	ret = kobject_add(to_kobj(robj), parent ? &parent->kobj : NULL,
-			   fmt, args);
+	ret = kobject_add(to_kobj(robj), parent ? &parent->kobj : NULL, s);
 	__CLEAN_ROBJECT_WRAPPER
 }
 EXPORT_SYMBOL(robject_add);
