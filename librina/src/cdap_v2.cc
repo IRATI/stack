@@ -3458,8 +3458,8 @@ void AppCDAPIOHandler::send(const cdap_m_t & m_sent,
 					   ser_sent_m.message_,
 					   ser_sent_m.size_);
 		manager_->messageSent(m_sent, con.port_id);
-	} catch (rina::Exception &e) {
-
+	} catch (rina::Exception &e)
+	{
 		if (m_sent.invoke_id_ != 0 && m_sent.is_request_message())
 			manager_->get_invoke_id_manager()->freeInvokeId(m_sent.invoke_id_,
 								       false);

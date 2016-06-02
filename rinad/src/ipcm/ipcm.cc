@@ -2067,7 +2067,8 @@ void IPCManager_::io_loop()
                     break;
 
                     //Addon specific events
-                default: {
+                default:
+                {
                     TransactionState* trans = get_transaction_state<
                             TransactionState>(event->sequenceNumber);
 
@@ -2087,7 +2088,8 @@ void IPCManager_::io_loop()
 
         } catch (rina::Exception &e)
         {
-            LOG_ERR("ERROR while processing event: %s", e.what());
+            LOG_ERR("ERROR while processing event %d: %s",event->eventType,
+            		e.what());
             //TODO: move locking to a smaller scope
         }
 
