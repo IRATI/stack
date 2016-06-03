@@ -25,11 +25,9 @@ typedef struct RIBProfile {
 typedef struct IPCPProfile {
 
         rina::ApplicationProcessNamingInformation ipcp_name;
-        rina::ApplicationProcessNamingInformation ipcp_difName; //XXX check if used
         std::string ipcp_type;
         std::string ipcp_group;
         std::list<RIBProfile_t> ipcp_rib_profiles;
-        //DIFProfile ipcp_dif_profile;
 } IPCPProfile_t;
 
 
@@ -212,7 +210,7 @@ class AccessControl{
 public:
         AccessControl();
         //bool checkJoinDIF(std::string, DIFProfile_t&, IPCPProfile_t&, ac_res_info_t&);
-        std::list<Capability_t> computeCapabilities(DIFProfile_t&, IPCPProfile_t&);
+        //std::list<Capability_t> computeCapabilities(DIFProfile_t&, IPCPProfile_t&);
         
         bool checkJoinDIF(ProfileParser  *, 
                           std::string fileName, 
