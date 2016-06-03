@@ -35,10 +35,15 @@
 
 #define __PREPARE_ROBJECT_WRAPPER					\
 	va_list args;							\
+	int ret;							\
 	char * s;							\
 	va_start(args, fmt);						\
 	s = kvasprintf(GFP_ATOMIC, fmt, args);				\
 	va_end(args);
+
+#define __CLEAN_ROBJECT_WRAPPER						\
+	kfree(s);							\
+	return ret;
 
 const char * robject_attr_name(struct robj_attribute * attr)
 { return attr->kattr.attr.name; }
@@ -72,8 +77,8 @@ int
 robject_add(struct robject *robj, struct robject *parent, const char *fmt, ...)
 {
 	__PREPARE_ROBJECT_WRAPPER
-	return kobject_add(to_kobj(robj), parent ? &parent->kobj : NULL,
-			   fmt, args);
+	ret = kobject_add(to_kobj(robj), parent ? &parent->kobj : NULL, s);
+	__CLEAN_ROBJECT_WRAPPER
 }
 EXPORT_SYMBOL(robject_add);
 
@@ -83,14 +88,18 @@ robject_init_and_add(struct robject *robj, struct robj_type *rtype,
 {
 	__PREPARE_ROBJECT_WRAPPER
 	memset(to_kobj(robj), 0x00, sizeof(robj->kobj));
-	return kobject_init_and_add(to_kobj(robj), to_ktype(rtype),
+	ret = kobject_init_and_add(to_kobj(robj), to_ktype(rtype),
 				    parent ? &parent->kobj : NULL, s);
+	__CLEAN_ROBJECT_WRAPPER
 }
 EXPORT_SYMBOL(robject_init_and_add);
 
 
 void robject_del(struct robject *robj)
-{ kobject_del(to_kobj(robj)); }
+{
+	kobject_del(to_kobj(robj));
+	kobject_put(to_kobj(robj));
+}
 EXPORT_SYMBOL(robject_del);
 
 int
@@ -101,7 +110,8 @@ robject_rset_add(struct robject *robj, struct rset *parentset,
 	__PREPARE_ROBJECT_WRAPPER
 	kobj = to_kobj(robj);
 	kobj->kset = to_kset(parentset);
-	return kobject_add(kobj, NULL, s);
+	ret = kobject_add(kobj, NULL, s);
+	__CLEAN_ROBJECT_WRAPPER
 }
 EXPORT_SYMBOL(robject_rset_add);
 
@@ -113,7 +123,8 @@ robject_rset_init_and_add(struct robject *robj, struct robj_type *rtype,
 	__PREPARE_ROBJECT_WRAPPER
 	kobj = to_kobj(robj);
 	kobj->kset = to_kset(parentset);
-	return kobject_init_and_add(kobj, to_ktype(rtype), NULL, s);
+	ret = kobject_init_and_add(kobj, to_ktype(rtype), NULL, s);
+	__CLEAN_ROBJECT_WRAPPER
 }
 EXPORT_SYMBOL(robject_rset_init_and_add);
 

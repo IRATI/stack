@@ -29,7 +29,7 @@ class IPCPObj : public rina::rib::DelegationObj{
 
 public:
 	IPCPObj(int ipcp_id);
-	virtual ~IPCPObj(){};
+	virtual ~IPCPObj() throw() {};
 
 	const std::string& get_class() const{
 		return class_name;
@@ -54,12 +54,12 @@ public:
 				rina::cdap_rib::res_info_t& res);
 
 	void forward_object(const rina::cdap_rib::con_handle_t& con,
-	                    const rina::cdap_rib::obj_info_t &obj,
-	                    const rina::cdap_rib::flags_t &flags,
-	                    const rina::cdap_rib::filt_info_t &filt,
-	                    int invoke_id);
+    			const std::string obj_name,
+				const std::string obj_class,
+				const rina::cdap_rib::flags_t &flags,
+				const rina::cdap_rib::filt_info_t &filt,
+				const int invoke_id);
 
-	void forwarded_object_response(rina::cdap::cdap_m_t *msg);
 	//Create callback
 	static void create_cb(const rina::rib::rib_handle_t rib,
 			const rina::cdap_rib::con_handle_t &con,
@@ -88,7 +88,6 @@ protected:
                 rina::cdap_rib::flags_t flags;
                 int invoke_id;
 	};
-	Params params;
 };
 
 }; //namespace rib_v1

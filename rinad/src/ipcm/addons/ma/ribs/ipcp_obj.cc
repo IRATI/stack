@@ -61,38 +61,34 @@ bool IPCPObj::delete_(const rina::cdap_rib::con_handle_t &con,
 }
 
 void IPCPObj::forward_object(const rina::cdap_rib::con_handle_t& con,
-                const rina::cdap_rib::obj_info_t &obj,
-                const rina::cdap_rib::flags_t &flags,
-                const rina::cdap_rib::filt_info_t &filt,
-                const int invoke_id)
+                        const std::string obj_name,
+                        const std::string obj_class,
+                        const rina::cdap_rib::flags_t &flags,
+                        const rina::cdap_rib::filt_info_t &filt,
+                        const int invoke_id)
 {
-       Promise promise;
-       params.con =  con;
-       params.flags = flags;
-       params.obj = obj;
-       params.invoke_id = invoke_id;
+       // TODO: This has to be stored in a list in case of more than
+       // one consecutive request
 
-       int pos = obj.name_.rfind("ipcProcessID");
-       std::string object_name = obj.name_.substr(pos);
-       pos = object_name.find("/");
-       object_name = object_name.substr(pos);
-
-       IPCManager->delegate_ipcp_ribobj(this, &promise, processID_ , obj.class_, object_name, filt.scope_);
-}
-
-void IPCPObj::forwarded_object_response(rina::cdap::cdap_m_t *msg)
-{
-        /*
-        void remote_read_result(const cdap_rib::con_handle_t& con,
-                               const cdap_rib::obj_info_t &obj,
-                               const cdap_rib::flags_t &flags,
-                               const cdap_rib::res_info_t &res,
-                               int invoke_id);
-        */
-
-		msg->flags_ = params.flags.flags_;
-		msg->invoke_id_ = params.invoke_id;
-		rina::cdap::getProvider()->send_cdap_result(params.con,  msg);
+       int pos = obj_name.rfind("ipcProcessID");
+       if (pos != std::string::npos)
+       {
+                std::string object_sub_name = obj_name.substr(pos);
+                pos = object_sub_name.find("/");
+                if (pos != std::string::npos)
+                {
+                   object_sub_name = object_sub_name.substr(pos);
+            	   // mark processing delegation
+            	   activate_delegation();
+                   ipcm_res_t res = IPCManager->delegate_ipcp_ribobj(this,
+                		   processID_, obj_class, object_sub_name, filt.scope_,
+                           invoke_id, con.port_id);
+                   if (res == IPCM_FAILURE)
+                	   signal_finished();
+                }
+       }
+       else
+    	   LOG_ERR("This object is not an IPC process");
 }
 
 void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
@@ -116,7 +112,8 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
 
         if (class_ != IPCPObj::class_name)
         {
-                LOG_ERR("Create operation failed: received an invalid class name '%s' during create operation in '%s'",
+                LOG_ERR("Create operation failed: received an invalid class "
+                		"name '%s' during create operation in '%s'",
                         class_.c_str(), fqn.c_str());
                 res.code_ = rina::cdap_rib::CDAP_INVALID_OBJ_CLASS;
                 return;
