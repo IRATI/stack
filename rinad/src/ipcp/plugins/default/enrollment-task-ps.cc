@@ -494,7 +494,6 @@ void EnrolleeStateMachine::connectResponse(int result,
 						      flags,
 						      filt,
 						      this);
-
 		LOG_IPCP_DBG("Sent a M_START Message to portid: %d",
 			     con.port_id);
 

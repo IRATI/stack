@@ -25,7 +25,7 @@ const std::string AC_CBAC_VERSION = "1";
 const std::string ABSENT_RPOFILE = "ABSENT_PROFILE";
 const std::string ENROLLMENT_NOT_ALLOWED = "ENROLLMENT_NOT_ALLOWED";
 const int VALIDITY_TIME_IN_HOURS = 2;
-int FIRST_TIME_RCV_TOKEN = 0; // firt time the token is received, used to validate times in the token
+int FIRST_TIME_RCV_TOKEN = 0; // first time the token is received, used to validate times in the token
 //----------------------------
 //FIXME: merge/use the helpers in rinad/src/common/encoder.cc
     
@@ -388,9 +388,7 @@ string ProfileParser::toString() const
                 ss << "\tName: " << it->dif_name.toString() << endl;
                 ss << "\tDIF Type: " << it->dif_type.c_str() << endl;
                 ss << "\tDIF Group: " << it->dif_group.c_str() << endl;
-                //ss << "**" << endl;
         } 
-        //ss << "********" << endl;
         for (list<IPCPProfile_t>::const_iterator nit =
                         ipcpProfileList.begin();
                                 nit != ipcpProfileList.end(); nit++) {
@@ -408,8 +406,6 @@ string ProfileParser::toString() const
                         ss << "\tRIB group: " <<
                             it->rib_group.c_str() << endl;   
                 }
-                
-                //ss << "**" << endl;
         }
 
         return ss.str();
@@ -435,7 +431,7 @@ bool ProfileParser::parseProfile(const std::string fileName)
 	}
 
 	if (!reader.parse(file, root, false)) {
-		LOG_ERR("Failed to parse configuration");
+		LOG_ERR("Failed to parse AC profile file");
 
 		cout << "Failed to parse JSON" << endl
 			  << reader.getFormatedErrorMessages() << endl;
@@ -548,9 +544,6 @@ bool ProfileParser::getCapabilityByProfile(const std::string fileName,
                                 rule.member_ipcp_type = ruleInfo[j].get("memberIpcpType", string()).asString();
                                 rule.member_dif_type = ruleInfo[j].get("memberDifType", string()).asString();
                         }
-                        //LOG_IPCP_DBG("going to compare with %s, %s, %s", 
-                        //                     ipcp_type.c_str(), dif_type.c_str(), 
-                        //             member_ipcp_type.c_str());
                         
                         if (compareRuleToProfile(rule, ipcp_type,
                                 dif_type, member_ipcp_type)){
@@ -600,8 +593,6 @@ bool ProfileParser::getIPCPProfileByName(const rina::ApplicationProcessNamingInf
         
 	for (list<IPCPProfile_t>::const_iterator it = ipcpProfileList.begin();
 					it != ipcpProfileList.end(); it++) {
-                //LOG_IPCP_DBG("Comparing [%s] and [%s]",
-                //    it->ipcp_name.toString().c_str(), ipcpName.processName.c_str());
 		if (it->ipcp_name.processName == ipcpName.processName) {
 			result = *it;
 			return true;
@@ -610,6 +601,60 @@ bool ProfileParser::getIPCPProfileByName(const rina::ApplicationProcessNamingInf
 
 	return false;
 }
+
+bool ProfileParser::getAuthPolicyName(std::string fileName, std::string& name)
+{
+        Json::Value  root;
+        Json::Reader reader;
+        ifstream     file;
+        
+        LOG_IPCP_DBG("Parsing file %s", fileName.c_str());
+        
+        file.open(fileName.c_str(), std::ifstream::in);
+        if (file.fail()) {
+                LOG_ERR("Failed to open file");
+                return false;
+        }
+
+        if (!reader.parse(file, root, false)) {
+                LOG_ERR("Failed to parse file");
+                cout << "Failed to parse JSON" << endl
+                          << reader.getFormatedErrorMessages() << endl;
+
+                return false;
+        }
+
+        file.close();
+        
+        // really parse
+        Json::Value secManConf = root["securityManagerConfiguration"];
+        if (secManConf != 0){
+                Json::Value profiles = secManConf["authSDUProtProfiles"];
+                
+                if (profiles != Json::nullValue) {
+                        Json::Value defaultProfile = profiles["default"];
+                        if (defaultProfile != Json::nullValue) {
+                                Json::Value authPolicy = defaultProfile["authPolicy"];
+                                if (authPolicy != Json::nullValue){
+                                        name = authPolicy.get("name", string()).asString();
+                                        return true;
+                                } else{
+                                        name = "PSOC_authentication-none";
+                                        return true;
+                                }
+                        }
+                        else {
+                                name = "PSOC_authentication-none";
+                                return true;
+                        }
+                } else {
+                        name = "PSOC_authentication-none";
+                        return true;
+                }
+        }
+        return false;
+}
+
 /*** 
  * clacc AccessControl: effective AC algorithm
  * **/
@@ -618,6 +663,7 @@ AccessControl::AccessControl()
 {
 	LOG_IPCP_DBG("Creating AccessControl Class");
 }
+
 
 bool AccessControl::checkJoinDIF(ProfileParser * parser,
                                  std::string policyFile, 
@@ -648,7 +694,7 @@ bool AccessControl::checkJoinDIF(ProfileParser * parser,
                              my_dif_name.processName.c_str());
                 result.code_ = AC_ENR_ERROR;
                 result.reason_ = ABSENT_RPOFILE;
-                return false;c
+                return false;
             
         };
         
@@ -717,7 +763,7 @@ void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& dif
         
         Token_t token;
         LOG_IPCP_DBG("Generating Token...");
-        token.token_id = issuerIpcpId; // TODO name or id?
+        token.token_id = issuerIpcpId;
         token.ipcp_issuer_id = issuerIpcpId;
         token.ipcp_holder_name = newMemberProfile.ipcp_name;
         token.audience.push_back("all");
@@ -765,10 +811,9 @@ SecurityManagerCBACPs::SecurityManagerCBACPs(IPCPSecurityManager * dm_)
 }
 
 
-int SecurityManagerCBACPs::initialize_SC(const rina::cdap_rib::con_handle_t &con){
+int SecurityManagerCBACPs::initialize_SC(const rina::cdap_rib::con_handle_t &con)
+{
         
-        
-        //rina::ScopedLock sc_lock(lock);
         my_sc = dynamic_cast<rina::SSH2SecurityContext *>(dm->get_security_context(con.port_id));
         if (!my_sc) {
                 LOG_IPCP_ERR("Could not find pending security context for session_id %d",
@@ -836,6 +881,17 @@ int SecurityManagerCBACPs::loadProfiles()
         return 0;
 }
 
+std::string SecurityManagerCBACPs::getAuthPolicyNameFromConfig(){
+        
+        std::string fileName =  cbac_helpers::getStringParamFromConfig("DIFConfigstore", dm);
+        std::string authPolicyName = std::string();
+        if (profile_parser_->getAuthPolicyName(fileName, authPolicyName) < 0){
+              LOG_IPCP_ERR("Error parsing DIF config file!");
+                return authPolicyName;
+        }
+        return authPolicyName;
+}
+
 int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t &con, 
                                               const rina::Neighbor &newMember,
                                                rina::cdap_rib::auth_policy_t &auth)
@@ -847,24 +903,20 @@ int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t
         
         if (my_dif_name.processName.c_str() == std::string()){
                 my_dif_name = dm->ipcp->get_dif_information().dif_name_;
-                LOG_IPCP_DBG("SecurityManagerCBACPs: isAllowedToJoinDAF my_dif_name %s", 
+                LOG_IPCP_INFO("SecurityManagerCBACPs: isAllowedToJoinDAF my_dif_name %s", 
                      my_dif_name.processName.c_str());
         }
         
-        //LOG_IPCP_DBG("SecurityManagerCBACPs: isAllowedToJoinDAF my_dif_name %s", 
-        //             my_dif_name.processName.c_str());
+        std::string authPolicyName = getAuthPolicyNameFromConfig();
+        LOG_IPCP_DBG("SecurityManagerCBACPs: Joint AuthPolicyName is %s",
+                authPolicyName.c_str());
         
-        
-        std::string authPolicyName = con.auth_.name;
         if (authPolicyName == rina::IAuthPolicySet::AUTH_NONE 
                 || authPolicyName == rina::IAuthPolicySet::AUTH_PASSWORD){
                 LOG_IPCP_DBG("SecurityManagerCBACPs: Auth policy is %s, then Positive AC",
                               authPolicyName.c_str());
-                // return 0;
+                return 0;
         }
-        
-        LOG_IPCP_DBG("SecurityManagerCBACPs: Joint AuthPloicyName is %s",
-                authPolicyName.c_str());
         
         //here authPolicyName should be either SSH2 (or TLS in the future)
         if (initialize_SC(con) != 0){
@@ -1010,14 +1062,23 @@ int SecurityManagerCBACPs::storeAccessControlCreds(const rina::cdap_rib::auth_po
 #if ACCESS_GRANTED
         return 0;
 #else
-        LOG_IPCP_DBG("Storing MY AC Credentials (token assigned from %s to %s)",
-                     con.dest_.ap_name_.c_str(), con.src_.ap_name_.c_str());
         
         if (my_dif_name.processName.c_str() == std::string()){
                 my_dif_name = dm->ipcp->get_dif_information().dif_name_;
-                LOG_IPCP_DBG("SecurityManagerCBACPs: storeAccessControlCreds my_dif_name %s", 
+                LOG_IPCP_INFO("SecurityManagerCBACPs: storeAccessControlCreds my_dif_name %s", 
                      my_dif_name.processName.c_str());
         }
+        
+        std::string authPolicyName = getAuthPolicyNameFromConfig();
+        if (authPolicyName == rina::IAuthPolicySet::AUTH_NONE 
+                || authPolicyName == rina::IAuthPolicySet::AUTH_PASSWORD){
+                LOG_IPCP_INFO("SecurityManagerCBACPs: Auth policy is %s, then no token to store",
+                              authPolicyName.c_str());
+                return 0;
+        }
+        
+        LOG_IPCP_DBG("Storing MY AC Credentials (token assigned from %s to %s)",
+                     con.dest_.ap_name_.c_str(), con.src_.ap_name_.c_str());
         
         if(!my_sc){
                 //here authPolicyName should be either SSH2, (or TLS in the future)
@@ -1028,14 +1089,14 @@ int SecurityManagerCBACPs::storeAccessControlCreds(const rina::cdap_rib::auth_po
         }
         
         if(auth.options.size_ > 0){
-            my_token = auth.options;
-            TokenPlusSignature_t tokenSign;
-            deserializeTokenPlusSign(auth.options, tokenSign);
-            LOG_IPCP_INFO("Token stored: \n%s", tokenSign.toString().c_str());
-            return 0;
+                my_token = auth.options;
+                TokenPlusSignature_t tokenSign;
+                deserializeTokenPlusSign(auth.options, tokenSign);
+                LOG_IPCP_INFO("Token stored: \n%s", tokenSign.toString().c_str());
+                return 0;
         } else{
-            LOG_IPCP_ERR("Nothing to store: Empty token field");
-            return -1;
+                LOG_IPCP_ERR("Nothing to store: Empty token field");
+                return -1;
         }
 #endif
 }
@@ -1085,6 +1146,19 @@ int SecurityManagerCBACPs::generateTokenForTokenGenerator(rina::cdap_rib::auth_p
 int SecurityManagerCBACPs::getAccessControlCreds(rina::cdap_rib::auth_policy_t & auth,
                                              const rina::cdap_rib::con_handle_t & con)
 {
+        
+        std::string authPolicyName = getAuthPolicyNameFromConfig();
+        
+        LOG_IPCP_DBG("getAccessControlCreds: Auth policy is %s",
+                              authPolicyName.c_str());
+        if (authPolicyName == rina::IAuthPolicySet::AUTH_NONE 
+                || authPolicyName == rina::IAuthPolicySet::AUTH_PASSWORD){
+                
+                LOG_IPCP_DBG("getAccessControlCreds: Auth policy is %s, then no token to return",
+                              authPolicyName.c_str());
+                return 0;
+        }
+        
         if (my_token.size_ <= 0){
                 LOG_IPCP_DBG("Asked to get MY AC Credentials BUT token is not there");
                 std::string tokenGenIpcpName = cbac_helpers::getStringParamFromConfig("TokenGenIPCPName", dm);
@@ -1146,12 +1220,11 @@ int SecurityManagerCBACPs::checkTokenValidity(const TokenPlusSignature_t &tokenS
         }else{
                 ss << "\n\t 2. Token holder is NOT the requestor, failed token validation" << endl;
                 LOG_IPCP_DBG("%s", ss.str().c_str());
-                //return -1; //FIXME: need to return
+                return -1; //FIXME: need to return
         }
         
         //3. check nbf
-        //rina::Time currentTime;
-        int now = cbac_helpers::getTimeMs();// currentTime.get_current_time_in_ms();
+        int now = cbac_helpers::getTimeMs();
         if (FIRST_TIME_RCV_TOKEN == 0)
                 FIRST_TIME_RCV_TOKEN = now;
         if (FIRST_TIME_RCV_TOKEN + token.token_nbf <= now){
@@ -1209,6 +1282,15 @@ void SecurityManagerCBACPs::checkRIBOperation(const rina::cdap_rib::auth_policy_
 #endif
         LOG_IPCP_INFO("checkRIBOperation: Context = %s", 
                      cbac_helpers::operationToString(con, opcode, obj_name).c_str());
+        
+        std::string authPolicyName = getAuthPolicyNameFromConfig();
+        if (authPolicyName == rina::IAuthPolicySet::AUTH_NONE 
+                || authPolicyName == rina::IAuthPolicySet::AUTH_PASSWORD){
+                LOG_IPCP_DBG("checkRIBOperation: Auth policy is %s, then operation granted",
+                              authPolicyName.c_str());
+                res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+                return;
+        }
         
         if (auth.options.size_ < 0){
                 LOG_IPCP_ERR("Empty token field");

@@ -178,6 +178,7 @@ public:
                                std::string ipcp_type, std::string ipcp_group,
                                std::string dif_type, std::string dif_group,
                                std::string member_ipcp_type, std::string member_ipcp_group);
+        bool getAuthPolicyName(std::string fileName, std::string& name);
         string toString() const; 
 private:
   
@@ -280,12 +281,13 @@ private:
         std::string my_ipcp_name;
         rina::ApplicationProcessNamingInformation my_dif_name;
         std::list<std::string> trusted_ap_name;
-        //std::map<std::string, TokenPlusSignature_t*> token_sign_per_ipcp;
+        std::map<int, std::string> authPolicyPerCon;
         //std::map<std::string, rina::ser_obj_t> token_sign_per_ipcp;
         rina::ser_obj_t my_token;
         //std::map<rina::cdap_rib::con_handle_t, TokenPlusSignature_t*> token_sign_per_ipcp;
         rina::Lockable lock;
         int generateTokenForTokenGenerator(rina::cdap_rib::auth_policy_t &, const rina::cdap_rib::con_handle_t &);
+        std::string getAuthPolicyNameFromConfig();
 };
 
 
