@@ -649,13 +649,15 @@ void EnrollmentTask::set_dif_configuration(const rina::DIFConfiguration& dif_con
 	}
 
 	//Start Neighbors Enroller thread
-	rina::ThreadAttributes * threadAttributes = new rina::ThreadAttributes();
-	threadAttributes->setJoinable();
-	neighbors_enroller_ = new rina::Thread(&doNeighborsEnrollerWork,
-					       (void *) ipcp,
-					       threadAttributes);
-	neighbors_enroller_->start();
-	LOG_IPCP_DBG("Started Neighbors enroller thread");
+	if (neigh_enroll_per_ms_ > 0) {
+		rina::ThreadAttributes * threadAttributes = new rina::ThreadAttributes();
+		threadAttributes->setJoinable();
+		neighbors_enroller_ = new rina::Thread(&doNeighborsEnrollerWork,
+						      (void *) ipcp,
+						      threadAttributes);
+		neighbors_enroller_->start();
+		LOG_IPCP_DBG("Started Neighbors enroller thread");
+	}
 
 	//Apply configuration to policy set
 	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);

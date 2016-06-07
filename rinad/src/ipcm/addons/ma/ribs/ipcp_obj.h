@@ -29,7 +29,7 @@ class IPCPObj : public rina::rib::DelegationObj{
 
 public:
 	IPCPObj(int ipcp_id);
-	virtual ~IPCPObj(){};
+	virtual ~IPCPObj() throw() {};
 
 	const std::string& get_class() const{
 		return class_name;

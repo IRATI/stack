@@ -798,12 +798,15 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 		                deleg_filt.scope_ = rem_scope;
 		                deleg_filt.filter_ = filt.filter_;
 				DelegationObj *del_obj = (DelegationObj*)rib_obj;
+                                if (count == objects.size())
+                                        del_obj->last = true;
 				del_obj->forward_object(con,
 							delegated_name,
 							rib_obj->class_name,
 							flags,
 							deleg_filt,
 							invoke_id);
+
 		        }
 		}
 
@@ -811,15 +814,15 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 		{
 			if (count == objects.size())
 			{
-				for(std::list<DelegationObj*>::iterator it = delegated_objs.begin();
-						it!= delegated_objs.end(); ++it) {
-					while((*it)->is_processing_delegation()) {
-						usleep(1000);
-					}
-				}
+				for(std::list<DelegationObj*>::iterator it =
+				                delegated_objs.begin();
+				                it!= delegated_objs.end();
+				                ++it)
+					(*it)->is_finished();
 				flags_r.flags_ = cdap_rib::flags_t::NONE_FLAGS;
 			} else
-				flags_r.flags_ = cdap_rib::flags_t::F_RD_INCOMPLETE;
+				flags_r.flags_ =
+				                cdap_rib::flags_t::F_RD_INCOMPLETE;
 
 			obj_reply.class_ = rib_obj->class_name;
 			obj_reply.name_ = rib_obj->fqn;
@@ -840,11 +843,6 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 			}
 		} else
 		{
-			// Control the last message to be sent to the manager
-			if (count == objects.size())
-			{
-				((DelegationObj*) rib_obj)->set_last(true);
-			} else
 				delegated_objs.push_back((DelegationObj*) rib_obj);
 		}
 	}
@@ -2992,44 +2990,53 @@ void RIBObj::operation_not_supported(cdap_rib::res_info_t& res) {
 DelegationObj::DelegationObj(const std::string &class_name):
 		RIBObj(class_name) {
 	delegates = true;
-	processing_delegation = false;
+	finished = true;
 	last = false;
 }
 
-DelegationObj::~DelegationObj(void)
+DelegationObj::~DelegationObj(void) throw ()
 {}
 
 void DelegationObj::forwarded_object_response(int port, int invoke_id,
 		rina::cdap::cdap_m_t *msg)
 {
-		rina::cdap_rib::con_handle_t con;
-		con.port_id = port;
-		msg->invoke_id_ = invoke_id;
-		if (msg->flags_ != rina::cdap_rib::flags_t::F_RD_INCOMPLETE &&
-				!last)
-		{
-			msg->flags_ = rina::cdap_rib::flags_t::F_RD_INCOMPLETE;
-			set_processing_delegation(false);
-		}
-		rina::cdap::getProvider()->send_cdap_result(con,  msg);
+        bool signal = false;
+        rina::cdap_rib::con_handle_t con;
+        con.port_id = port;
+        msg->invoke_id_ = invoke_id;
+        if (msg->flags_ != rina::cdap_rib::flags_t::F_RD_INCOMPLETE)
+        {
+                if (!last)
+                        msg->flags_=rina::cdap_rib::flags_t::F_RD_INCOMPLETE;
+                signal = true;
+        }
+        rina::cdap::getProvider()->send_cdap_result(con,  msg);
+        if (signal)
+                signal_finished();
 }
 
-bool DelegationObj::is_processing_delegation()
+void DelegationObj::is_finished()
 {
-    rina::ScopedLock scop(lock);
-    return processing_delegation;
+	lock();
+	if (!finished)
+		doWait();
+	unlock();
+}
+void DelegationObj::signal_finished()
+{
+	lock();
+	finished = true;
+	signal();
+	unlock();
 }
 
-void DelegationObj::set_processing_delegation(bool state)
+void DelegationObj::activate_delegation()
 {
-    rina::ScopedLock scop(lock);
-    processing_delegation = state;
+	lock();
+	finished = false;
+	unlock();
 }
 
-void DelegationObj::set_last(bool state)
-{
-    last = state;
-}
 //Single RIBDaemon instance
 static RIBDaemon* ribd = NULL;
 

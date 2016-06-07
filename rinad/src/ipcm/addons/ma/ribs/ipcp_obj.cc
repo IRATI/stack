@@ -78,11 +78,13 @@ void IPCPObj::forward_object(const rina::cdap_rib::con_handle_t& con,
                 if (pos != std::string::npos)
                 {
                    object_sub_name = object_sub_name.substr(pos);
+            	   // mark processing delegation
+            	   activate_delegation();
                    ipcm_res_t res = IPCManager->delegate_ipcp_ribobj(this,
                 		   processID_, obj_class, object_sub_name, filt.scope_,
                            invoke_id, con.port_id);
-                   if (res != IPCM_FAILURE)
-                	   set_processing_delegation(true);
+                   if (res == IPCM_FAILURE)
+                	   signal_finished();
                 }
        }
        else

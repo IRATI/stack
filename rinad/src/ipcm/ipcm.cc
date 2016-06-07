@@ -1579,13 +1579,13 @@ ipcm_res_t IPCManager_::delegate_ipcp_ribobj(rina::rib::DelegationObj* obj,
             LOG_ERR("Invalid IPCP id %hu", ipcp_id);
             return IPCM_FAILURE;
         }
+        //Auto release the read lock
+        rina::ReadScopedLock readlock(ipcp->rwlock, false);
         if (ipcp->get_type() != rina::NORMAL_IPC_PROCESS)
         {
         	LOG_ERR("Trying to delegate to a shim IPCP, operation not allowed");
         	return IPCM_FAILURE;
         }
-        //Auto release the read lock
-        rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
         rina::cdap::CDAPMessage msg;
         msg.op_code_ = rina::cdap::cdap_m_t::M_READ;
@@ -2072,7 +2072,8 @@ void IPCManager_::io_loop()
                     break;
 
                     //Addon specific events
-                default: {
+                default:
+                {
                     TransactionState* trans = get_transaction_state<
                             TransactionState>(event->sequenceNumber);
 
@@ -2092,7 +2093,8 @@ void IPCManager_::io_loop()
 
         } catch (rina::Exception &e)
         {
-            LOG_ERR("ERROR while processing event: %s", e.what());
+            LOG_ERR("ERROR while processing event %d: %s",event->eventType,
+            		e.what());
             //TODO: move locking to a smaller scope
         }
 
