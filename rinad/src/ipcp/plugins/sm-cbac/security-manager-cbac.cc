@@ -45,7 +45,7 @@ const std::string ABSENT_RPOFILE = "ABSENT_PROFILE";
 const std::string ENROLLMENT_NOT_ALLOWED = "ENROLLMENT_NOT_ALLOWED";
 const int VALIDITY_TIME_IN_HOURS = 2;
 int FIRST_TIME_RCV_TOKEN = 0; // first time the token is received, used to validate times in the token
-#define ACCESS_GRANTED          1
+#define ACCESS_GRANTED          0
 
 //----------------------------
     
@@ -1345,7 +1345,10 @@ void SecurityManagerCBACPs::checkRIBOperation(const rina::cdap_rib::auth_policy_
         for(std::list<Capability_t>::iterator it = tokenCapList.begin();
                 it != tokenCapList.end(); ++it) {
                 if (it->compare(obj_name, cbac_helpers::opcodeToString(opcode)) ||
-                    it->compare("all", "all")){
+                    it->compare("all", "all") ||
+                    (it->operation == cbac_helpers::opcodeToString(opcode) 
+                        //s1.find(s2) != std::string::npos
+                        and (obj_name.find(it->ressource) != std::string::npos))){
                         LOG_IPCP_INFO("Request is included in requestor capability; Grant access");
                         res.code_ = rina::cdap_rib::CDAP_SUCCESS;
                         return;
