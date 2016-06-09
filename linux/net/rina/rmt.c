@@ -669,6 +669,19 @@ static inline int n1_port_write(struct rmt *rmt,
 	ASSERT(n1_port);
 	ASSERT(rmt);
 
+	/* SDU Protection */
+	if (sdup_set_lifetime_limit(n1_port->sdup_port, pdu)){
+		LOG_ERR("Error adding a Lifetime limit to serialized PDU");
+		pdu_destroy(pdu);
+		return -1;
+	}
+
+	if (sdup_protect_pdu(n1_port->sdup_port, pdu)){
+		LOG_ERR("Error Protecting serialized PDU");
+		pdu_destroy(pdu);
+		return -1;
+	}
+
 	sdu = sdu_from_pdu(pdu);
 	if (!is_sdu_ok(sdu)) {
 		sdu_destroy(sdu);
@@ -1237,7 +1250,6 @@ int rmt_receive(struct rmt *rmt,
 	address_t dst_addr;
 	qos_id_t qos_id;
 	struct rmt_n1_port *n1_port;
-	size_t ttl;
 	ssize_t bytes;
 
 	if (!rmt) {
@@ -1253,12 +1265,7 @@ int rmt_receive(struct rmt *rmt,
 
 	bytes = sdu_len(sdu);
 	sdu_efcp_config_bind(sdu, efcp_container_config(rmt->efcpc));
-	pdu = pdu_decap_sdu(sdu);
-	if (!pdu_is_ok(pdu)) {
-		LOG_ERR("No PDU from SDU decap to work with");
-		pdu_destroy(pdu);
-		return -1;
-	}
+	pdu = pdu_from_sdu(sdu); /* protected PDU */
 
 	n1_port = n1pmap_find(rmt, from);
 	if (!n1_port) {
@@ -1275,7 +1282,8 @@ int rmt_receive(struct rmt *rmt,
                 return -1;
         }
 
-	if (sdup_get_lifetime_limit(n1_port->sdup_port, pdu, &ttl)) {
+	/* This one updates the pci->sdup_header and pdu->skb->data pointers */
+	if (sdup_get_lifetime_limit(n1_port->sdup_port, pdu)) {
                 LOG_DBG("Failed to unprotect PDU");
                 pdu_destroy(pdu);
                 return -1;
@@ -1284,16 +1292,18 @@ int rmt_receive(struct rmt *rmt,
 
 	n1pmap_release(rmt, n1_port);
 
+	if (unlikely(pdu_decap(pdu) || !pdu_is_ok(pdu))) { /*Decap PDU */
+		LOG_ERR("Could not decap PDU");
+		pdu_destroy(pdu);
+		return -1;
+	}
+
 	pci = pdu_pci_get_rw(pdu);
 	if (!pci_is_ok(pci)) {
 		LOG_ERR("No PCI to work with, dropping SDU!");
 		pdu_destroy(pdu);
 		return -1;
 	}
-
-	/*FIXME: need to be change accorging to new design */
-	/* store TTL value received from SDUP module */
-	//pci_ttl_set(pci, ttl);
 
 	pdu_type = pci_type(pci);
 	dst_addr = pci_destination(pci);
@@ -1320,8 +1330,7 @@ int rmt_receive(struct rmt *rmt,
 			/* Forward PDU */
 			/*NOTE: we could reuse the serialized pdu when
 			 * forwarding */
-			return rmt_send(rmt,
-					pdu);
+			return rmt_send(rmt, pdu);
 		}
 	} else {
 		/* pdu is for me */

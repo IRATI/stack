@@ -24,10 +24,10 @@
 #include "sdup-errc-ps.h"
 
 int default_sdup_add_error_check_policy(struct sdup_errc_ps * ps,
-					struct pdu_ser * pdu);
+					struct pdu * pdu);
 
 int default_sdup_check_error_check_policy(struct sdup_errc_ps * ps,
-					  struct pdu_ser * pdu);
+					  struct pdu * pdu);
 
 struct ps_base * sdup_errc_ps_default_create(struct rina_component * component);
 

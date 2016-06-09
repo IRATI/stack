@@ -31,16 +31,12 @@
 #include "policies.h"
 
 struct sdup_ttl_ps_default_data {
-	u_int32_t  	initial_ttl_value;
+	__u8  	initial_ttl_value;
 };
 
 int default_sdup_set_lifetime_limit_policy(struct sdup_ttl_ps * ps,
-					   struct pdu_ser * pdu,
-					   size_t pci_ttl)
+					   struct pdu * pdu)
 {
-	unsigned char * data;
-	size_t          len;
-	size_t		ttl;
 	struct sdup_ttl_ps_default_data * priv_data = ps->priv;
 
 	if (!ps || !pdu){
@@ -48,58 +44,40 @@ int default_sdup_set_lifetime_limit_policy(struct sdup_ttl_ps * ps,
 		return -1;
 	}
 
-	ttl = 0;
-
-	if (pci_ttl > 0)
-		ttl = pci_ttl;
-	else if (priv_data->initial_ttl_value > 0){
-		ttl = priv_data->initial_ttl_value;
-	}
-
-	if (priv_data->initial_ttl_value > 0){
-		if (pdu_ser_head_grow_gfp(GFP_ATOMIC, pdu, sizeof(ttl))) {
+	if (pdu_sdup_head(pdu) == NULL && priv_data->initial_ttl_value > 0){
+		if (pdu_head_grow(pdu, sizeof(priv_data->initial_ttl_value))) {
 			LOG_ERR("Failed to grow ser PDU");
 			return -1;
 		}
-
-		if (!pdu_ser_is_ok(pdu))
-			return -1;
-
-		if (pdu_ser_data_and_length(pdu, &data, &len))
-			return -1;
-
-		memcpy(data, &ttl, sizeof(ttl));
-		LOG_DBG("SETTTL! %d", (int)ttl);
+		pdu_sdup_head_set(pdu, pdu_buffer(pdu)); /*pointer to ttl*/
+		memcpy(pdu_buffer(pdu),
+			&priv_data->initial_ttl_value,
+			sizeof(priv_data->initial_ttl_value));
+		LOG_DBG("SETTTL! %d", (int)priv_data->initial_ttl_value);
 	}
-
 	return 0;
 }
 EXPORT_SYMBOL(default_sdup_set_lifetime_limit_policy);
 
 int default_sdup_get_lifetime_limit_policy(struct sdup_ttl_ps * ps,
-					   struct pdu_ser * pdu,
-					   size_t * ttl)
+					   struct pdu * pdu)
 {
-	unsigned char * data;
-	size_t          len;
 	struct sdup_ttl_ps_default_data * priv_data = ps->priv;
 
-	if (!ps || !pdu || !ttl){
+	if (!ps || !pdu){
 		LOG_ERR("Failed get_lifetime_limit");
 		return -1;
 	}
 
 	if (priv_data->initial_ttl_value > 0){
-		if (pdu_ser_data_and_length(pdu, &data, &len))
-			return -1;
-
-		memcpy(ttl, data, sizeof(*ttl));
-
-		if (pdu_ser_head_shrink_gfp(GFP_ATOMIC , pdu, sizeof(*ttl))) {
+		/* set pdu->sdup_head */
+		pdu_sdup_head_set(pdu, pdu_buffer(pdu));
+		/* update pdu->pci.h */
+		if (pdu_head_shrink(pdu, sizeof(priv_data->initial_ttl_value))) {
 			LOG_ERR("Failed to shrink ser PDU");
 			return -1;
 		}
-		LOG_DBG("GET_TTL! %d", (int)*ttl);
+		LOG_DBG("GET_TTL! %d", (int)*((__u8*)(pdu_sdup_head(pdu))));
 	}
 
 	return 0;
@@ -109,8 +87,7 @@ EXPORT_SYMBOL(default_sdup_get_lifetime_limit_policy);
 int default_sdup_dec_check_lifetime_limit_policy(struct sdup_ttl_ps * ps,
 						 struct pdu * pdu)
 {
-	struct pci * pci;
-	size_t ttl;
+	__u8 ttl;
 	struct sdup_ttl_ps_default_data * priv_data = ps->priv;
 
 	if (!ps || !pdu){
@@ -119,15 +96,15 @@ int default_sdup_dec_check_lifetime_limit_policy(struct sdup_ttl_ps * ps,
 	}
 
 	if (priv_data->initial_ttl_value > 0){
-		pci = pdu_pci_get_rw(pdu);
-		ttl = pci_ttl(pci);
-
+		ttl = *((__u8*)(pdu_sdup_head(pdu)));
 		ttl = ttl-1;
+
 		if (ttl == 0){
 			LOG_DBG("TTL dropped to 0, dropping pdu.");
 			return -1;
 		}
-		pci_ttl_set(pci, ttl);
+		memcpy(pdu_sdup_head(pdu), &ttl, sizeof(ttl));
+		pdu_head_grow(pdu, sizeof(ttl));
 		LOG_DBG("DEC_CHECK_TTL! new ttl: %d", (int)ttl);
 	}
 
@@ -181,7 +158,7 @@ struct ps_base * sdup_ttl_ps_default_create(struct rina_component * component)
 
 		if (kstrtouint(policy_param_value(parameter),
 			       10,
-			       &data->initial_ttl_value)) {
+			       (int*)&data->initial_ttl_value)) {
 			LOG_ERR("Failed to convert TTL string to int");
 			rkfree(ps);
 			rkfree(data);
