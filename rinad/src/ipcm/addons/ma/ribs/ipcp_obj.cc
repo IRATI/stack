@@ -166,10 +166,13 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
                 return;
         }
 
-        //Finally add it into the RIB
+        //Finally add it into the RIB with the proper IPCP id in the object name
         try
         {
-                RIBFactory::getProxy()->addObjRIB(rib, fqn, &ipcp);
+        	std::stringstream ss;
+        	std::string partial_name = fqn.substr(0, fqn.find_last_of("="));
+        	ss << partial_name << ipcp_id;
+                RIBFactory::getProxy()->addObjRIB(rib, ss.str(), &ipcp);
         } catch (...)
         {
                 LOG_ERR("Create operation failed: for ipcp id '%d' in path '%s'. Out of memory.",
