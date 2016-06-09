@@ -82,6 +82,7 @@ protected:
 	static int createIPCP(rinad::configs::ipcp_config_t &object);
 	static bool assignToDIF(rinad::configs::ipcp_config_t &object, int ipcp_id);
 	static bool registerAtDIFs(rinad::configs::ipcp_config_t &object, int ipcp_id);
+	static bool enrollToDIFs(rinad::configs::ipcp_config_t &object, int ipcp_id);
 	struct Params{
 	        rina::cdap_rib::con_handle_t con;
 	        rina::cdap_rib::obj_info_t obj;
