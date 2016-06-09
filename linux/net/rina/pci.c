@@ -584,19 +584,6 @@ inline u_int32_t pci_control_time_frame(const struct pci *pci)
 }
 EXPORT_SYMBOL(pci_control_time_frame);
 
-/* FIXME: ttl functions should be removed */
-int pci_ttl_set(struct pci *pci, size_t ttl)
-{
-	return 0;
-}
-EXPORT_SYMBOL(pci_ttl_set);
-
-ssize_t pci_ttl(const struct pci *pci)
-{
-	return -1;
-}
-EXPORT_SYMBOL(pci_ttl);
-
 /* Custom setters */
 inline int pci_control_ack_seq_num_set(struct pci *pci, seq_num_t seq)
 {
@@ -712,7 +699,6 @@ inline int pci_control_time_frame_set(struct pci *pci, u_int32_t frame)
 }
 EXPORT_SYMBOL(pci_control_time_frame_set);
 
-
 #if 0
 
 #include "ipcp-utils.h"
@@ -762,7 +748,8 @@ bool pci_getset_test(void)
 	}
 	sdu_efcp_config_bind(sdu, cfg);
 
-	pdu = pdu_encap_sdu(type, sdu);
+	pdu = pdu_from_sdu(sdu);
+	pdu_encap(sdu, type);
 	if (!pdu_is_ok(pdu)) {
 		LOG_ERR("Could not encap to PDU");
 		rkfree(cfg->pci_offset_table);

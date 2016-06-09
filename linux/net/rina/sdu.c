@@ -53,8 +53,13 @@ struct sdu *sdu_create_gfp(size_t data_len, gfp_t flags)
 		LOG_ERR("Could not allocate SDU...");
 		return NULL;
 	}
-	tmp->pci.h = 0;
+
+	/* init PCI */
+	memset(&tmp->pci, 0x00, sizeof(tmp->pci));
+
 	tmp->cfg = NULL;
+	tmp->sdup_head = NULL;
+	tmp->sdup_tail = NULL;
 	skb_reserve(tmp->skb, MAX_PCIS_LEN);
 	skb_put(tmp->skb, data_len);
 
@@ -84,8 +89,11 @@ struct sdu *sdu_from_buffer_ni(void *buffer)
 	/* FIXME: check if skb_get is needed */
 	//tmp->skb = skb_get((struct sk_buff *)buffer);
 	tmp->skb = (struct sk_buff *)buffer;
-	tmp->pci.h = 0;
 	tmp->cfg = NULL;
+	tmp->sdup_head = NULL;
+	tmp->sdup_tail = NULL;
+	/* init PCI */
+	memset(&tmp->pci, 0x00, sizeof(tmp->pci));
 
 	LOG_DBG("SDU allocated at %pk, with buffer %pk", tmp, tmp->skb);
 	return to_sdu(tmp);
@@ -166,8 +174,7 @@ inline struct sdu *sdu_from_pdu(struct pdu *pdu)
 	ASSERT(pdu);
 
 	du = to_du(pdu);
-	du->pci.h = 0;
-	du->pci.len = 0;
+	memset(&du->pci, 0x00, sizeof(du->pci));
 	return to_sdu(du);
 }
 EXPORT_SYMBOL(sdu_from_pdu);

@@ -106,8 +106,6 @@ inline int		pci_type_set(struct pci	*pci,
 				     pdu_type_t	type);
 inline int		pci_flags_set(struct pci *pci,
 				      pdu_flags_t flags);
-inline int		pci_ttl_set(struct pci *pci,
-				    size_t ttl);
 inline int		pci_format(struct pci *pci,
 				   cep_id_t src_cep_id,
 				   cep_id_t dst_cep_id,
@@ -126,7 +124,6 @@ inline cep_id_t		pci_cep_source(const struct pci *pci);
 inline cep_id_t		pci_cep_destination(const struct pci *pci);
 inline qos_id_t		pci_qos_id(const struct pci *pci);
 inline pdu_flags_t	pci_flags_get(const struct pci *pci);
-inline ssize_t		pci_ttl(const struct pci *pci);
 
 /* For Control PDUs */
 inline int		pci_control_ack_seq_num_set(struct pci *pci,

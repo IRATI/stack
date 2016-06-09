@@ -36,8 +36,9 @@ struct pdu *pdu_create(pdu_type_t type,
 struct pdu *pdu_create_ni(pdu_type_t type,
 			  struct efcp_config *cfg);
 
-struct pdu *pdu_encap_sdu(pdu_type_t type, struct sdu *sdu);
-struct pdu *pdu_decap_sdu(struct sdu *sdu);
+inline struct pdu *pdu_from_sdu(struct sdu *sdu);
+inline int pdu_encap(struct pdu *pdu, pdu_type_t type);
+inline int pdu_decap(struct pdu *pdu);
 
 struct pdu *pdu_dup(const struct pdu *pdu);
 struct pdu *pdu_dup_ni(const struct pdu *pdu);
@@ -50,4 +51,14 @@ inline ssize_t		 pdu_data_len(const struct pdu *pdu);
 
 int pdu_destroy(struct pdu *pdu);
 
+/* added for SDU protection */
+inline void *pdu_sdup_head(struct pdu *pdu);
+inline void *pdu_sdup_tail(struct pdu *pdu);
+inline int pdu_sdup_head_set(struct pdu *pdu, void *header);
+inline int pdu_sdup_tail_set(struct pdu *pdu, void *tail);
+inline unsigned char *pdu_buffer(const struct pdu *pdu);
+int pdu_tail_grow(struct pdu *pdu, size_t bytes);
+int pdu_tail_shrink(struct pdu *pdu, size_t bytes);
+int pdu_head_grow(struct pdu *pdu, size_t bytes);
+int pdu_head_shrink(struct pdu *pdu, size_t bytes);
 #endif
