@@ -32,7 +32,8 @@
 #include "sdu.h"
 #include "du.h"
 
-#define to_du(pdu) ((struct du *)(pdu))
+#define to_du(x) ((struct du *)(x))
+#define to_pdu(x) ((struct pdu *)(x))
 
 struct pdu {
 	struct du pdu; /* do not move from 1st position */
@@ -62,7 +63,7 @@ pdu_create_gfp(pdu_type_t type, struct efcp_config *cfg, gfp_t flags)
 	tmp->pci.h = skb_push(tmp->skb, pci_len);
 	tmp->pci.len = pci_len;
 	tmp->cfg = cfg;
-	return (struct pdu*)tmp;
+	return to_pdu(tmp);
 }
 
 struct pdu *pdu_create(pdu_type_t type, struct efcp_config *cfg)
@@ -76,27 +77,27 @@ EXPORT_SYMBOL(pdu_create_ni);
 
 inline bool pdu_is_ok(const struct pdu *pdu)
 {
-	struct du *p;
+	struct du *du;
 
 	ASSERT(pdu);
-	p = to_du(pdu);
-	return ((p && p->skb) ? true : false);
+	du = to_du(pdu);
+	return ((du && du->skb) ? true : false);
 }
 EXPORT_SYMBOL(pdu_is_ok);
 
 inline struct pdu *pdu_encap_sdu(pdu_type_t type, struct sdu *sdu)
 {
-	struct du *pdu;
+	struct du *du;
 	ssize_t pci_len;
 
 	ASSERT(is_sdu_ok(sdu));
 
-	pdu = (struct du *)sdu;
-	pci_len = pci_calculate_size(pdu->cfg, type);
+	du = to_du(sdu);
+	pci_len = pci_calculate_size(du->cfg, type);
 	if (pci_len > 0) {
-		pdu->pci.h = skb_push(pdu->skb, pci_len);
-		pdu->pci.len = pci_len;
-		return (struct pdu*)pdu;
+		du->pci.h = skb_push(du->skb, pci_len);
+		du->pci.len = pci_len;
+		return to_pdu(du);
 	}
 	return NULL;
 }
@@ -104,25 +105,25 @@ EXPORT_SYMBOL(pdu_encap_sdu);
 
 inline struct pdu *pdu_decap_sdu(struct sdu *sdu)
 {
-	struct du *pdu;
+	struct du *du;
 	pdu_type_t type;
 	ssize_t pci_len;
 
 	ASSERT(sdu);
 
-	pdu = (struct du *)sdu;
-	pdu->pci.h = pdu->skb->data;
-	type = pci_type(&pdu->pci);
+	du = to_du(sdu);
+	du->pci.h = du->skb->data;
+	type = pci_type(&du->pci);
 	if (unlikely(!pdu_type_is_ok(type))) {
 		LOG_ERR("Could not decap SDU to PDU. Type is not ok");
 		return NULL;
 	}
 
-	pci_len = pci_calculate_size(pdu->cfg, type);
+	pci_len = pci_calculate_size(du->cfg, type);
 	if (pci_len > 0) {
-		skb_pull(pdu->skb, pci_len);
-		pdu->pci.len = pci_len;
-		return (struct pdu*)pdu;
+		skb_pull(du->skb, pci_len);
+		du->pci.len = pci_len;
+		return to_pdu(du);
 	}
 	LOG_ERR("Could not decap SDU to PDU. PCI len is < 0");
 	return NULL;
@@ -132,25 +133,25 @@ EXPORT_SYMBOL(pdu_decap_sdu);
 static struct pdu *pdu_dup_gfp(gfp_t flags,
 			       const struct pdu *pdu)
 {
-	struct du *tmp, *p;
+	struct du *tmp, *du;
 
 	ASSERT(pdu_is_ok(pdu));
 
-	p = to_du(pdu);
+	du = to_du(pdu);
 	tmp = rkmalloc(sizeof(*tmp), flags);
 	if (!tmp)
 		return NULL;
 
-	tmp->skb = skb_clone(p->skb, flags);
+	tmp->skb = skb_clone(du->skb, flags);
 	if (!tmp->skb) {
 		rkfree(tmp);
 		return NULL;
 	}
 
-	tmp->pci.h = p->pci.h;
-	tmp->pci.len = p->pci.len;
-	tmp->cfg = p->cfg;
-	return (struct pdu *)tmp;
+	tmp->pci.h = du->pci.h;
+	tmp->pci.len = du->pci.len;
+	tmp->cfg = du->cfg;
+	return to_pdu(tmp);
 }
 
 struct pdu *pdu_dup(const struct pdu *pdu)
@@ -165,7 +166,7 @@ inline const struct pci *pdu_pci_get_ro(const struct pdu *pdu)
 {
 	ASSERT(pdu_is_ok(pdu));
 
-	return (const struct pci *)&(pdu->pdu.pci);
+	return (const struct pci *)&(to_du(pdu)->pci);
 }
 EXPORT_SYMBOL(pdu_pci_get_ro);
 
@@ -173,19 +174,19 @@ inline struct pci *pdu_pci_get_rw(struct pdu *pdu)
 {
 	ASSERT(pdu_is_ok(pdu));
 
-	return &(pdu->pdu.pci);
+	return &(to_du(pdu)->pci);
 }
 EXPORT_SYMBOL(pdu_pci_get_rw);
 
 inline ssize_t pdu_data_len(const struct pdu *pdu)
 {
-	struct du *p;
+	struct du *du;
 	ASSERT(pdu_is_ok(pdu));
 
-	p = to_du(pdu);
-	if (p->pci.h != p->skb->data) /* up direction */
-		return p->skb->len;
-	return (p->skb->len - p->pci.len); /* down direction */
+	du = to_du(pdu);
+	if (du->pci.h != du->skb->data) /* up direction */
+		return du->skb->len;
+	return (du->skb->len - du->pci.len); /* down direction */
 }
 EXPORT_SYMBOL(pdu_data_len);
 
@@ -193,38 +194,20 @@ inline struct efcp_config *pdu_efcp_config(const struct pdu *pdu)
 {
 	ASSERT(pdu_is_ok(pdu));
 
-	return pdu->pdu.cfg;
+	return to_du(pdu)->cfg;
 }
 EXPORT_SYMBOL(pdu_efcp_config);
 
-/*inline int pdu_pci_set(struct pdu *pdu, struct pci *pci)
-{
-	struct du *p;
-
-	ASSERT(pdu);
-	ASSERT(pci_is_ok(pci));
-
-	p = to_du(pdu);
-	p->pci.h = skb_put(p->skb, p->skb->data - pci->h);
-	if (unlikely(pci->h != p->pci.h)) {
-		LOG_ERR("Something went wrong setting a PCI");
-		return -1;
-	}
-	return 0;
-}
-EXPORT_SYMBOL(pdu_pci_set);
-*/
-
 int pdu_destroy(struct pdu *pdu)
 {
-	struct du *p;
+	struct du *du;
 
 	ASSERT(pdu);
 
-	p = to_du(pdu);
-	if (p->skb)
-		kfree_skb(p->skb); /* this destroys pci too */
-	rkfree(p);
+	du = to_du(pdu);
+	if (du->skb)
+		kfree_skb(du->skb); /* this destroys pci too */
+	rkfree(du);
 	return 0;
 }
 EXPORT_SYMBOL(pdu_destroy);

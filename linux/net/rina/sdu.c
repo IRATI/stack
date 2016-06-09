@@ -32,7 +32,8 @@
 #include "sdu.h"
 #include "du.h"
 
-#define to_du(sdu) ((struct du *)(sdu))
+#define to_du(x) ((struct du*)(x))
+#define to_sdu(x) ((struct sdu*)(x))
 
 struct sdu {
 	struct du sdu; /* do not move from 1st position */
@@ -58,7 +59,7 @@ struct sdu *sdu_create_gfp(size_t data_len, gfp_t flags)
 	skb_put(tmp->skb, data_len);
 
 	LOG_DBG("SDU allocated at %pk, with buffer %pk", tmp, tmp->skb);
-	return (struct sdu*)tmp;
+	return to_sdu(tmp);
 }
 
 struct sdu *sdu_create(size_t data_len)
@@ -87,62 +88,63 @@ struct sdu *sdu_from_buffer_ni(void *buffer)
 	tmp->cfg = NULL;
 
 	LOG_DBG("SDU allocated at %pk, with buffer %pk", tmp, tmp->skb);
-	return (struct sdu*)tmp;
+	return to_sdu(tmp);
 }
 EXPORT_SYMBOL(sdu_from_buffer_ni);
 
 inline bool is_sdu_ok(const struct sdu *sdu)
 {
-	struct du *s;
+	struct du *du;
 
-	s = to_du(sdu);
-	return (s && s->skb && !s->pci.h ? true : false);
+	du = to_du(sdu);
+	return (du && du->skb && !du->pci.h ? true : false);
 }
 EXPORT_SYMBOL(is_sdu_ok);
 
 inline int sdu_efcp_config_bind(struct sdu *sdu, struct efcp_config *cfg)
 {
-	struct du *s;
+	struct du *du;
 
 	ASSERT(is_sdu_ok(sdu));
-	ASSERT (cfg);
+	ASSERT(cfg);
 
-	s = to_du(sdu);
-	s->cfg = cfg;
+	du = to_du(sdu);
+	du->cfg = cfg;
 	return 0;
 }
 EXPORT_SYMBOL(sdu_efcp_config_bind);
 
 inline ssize_t sdu_len(const struct sdu *sdu)
 {
-	struct du *s;
+	struct du *du;
 
 	ASSERT(is_sdu_ok(sdu));
-	s = to_du(sdu);
-	return s->skb->len;
+	du = to_du(sdu);
+	return du->skb->len;
 }
 EXPORT_SYMBOL(sdu_len);
 
+/*XXX: This works well if buffer is linear */
 inline unsigned char *sdu_buffer(const struct sdu *sdu)
 {
-	struct du *s;
+	struct du *du;
 
 	ASSERT(is_sdu_ok(sdu));
-	s = to_du(sdu);
-	return s->skb->data;
+	du = to_du(sdu);
+	return du->skb->data;
 }
 EXPORT_SYMBOL(sdu_buffer);
 
 /* FIXME: this one should be removed to hide skb */
 inline struct sk_buff *sdu_detach_skb(const struct sdu *sdu)
 {
-	struct du *s;
+	struct du *du;
 	struct sk_buff *skb;
 
 	ASSERT(is_sdu_ok(sdu));
-	s = to_du(sdu);
-	skb = s->skb;
-	s->skb = NULL;
+	du = to_du(sdu);
+	skb = du->skb;
+	du->skb = NULL;
 	return skb;
 }
 EXPORT_SYMBOL(sdu_detach_skb);
@@ -159,27 +161,27 @@ EXPORT_SYMBOL(sdu_attach_skb);
 
 inline struct sdu *sdu_from_pdu(struct pdu *pdu)
 {
-	struct du *sdu;
+	struct du *du;
 
 	ASSERT(pdu);
 
-	sdu = (struct du *)pdu;
-	sdu->pci.h = 0;
-	sdu->pci.len = 0;
-	return (struct sdu *)sdu;
+	du = to_du(pdu);
+	du->pci.h = 0;
+	du->pci.len = 0;
+	return to_sdu(du);
 }
 EXPORT_SYMBOL(sdu_from_pdu);
 
 int sdu_destroy(struct sdu *sdu)
 {
-	struct du *s;
+	struct du *du;
 
 	ASSERT(sdu);
 
-	s = to_du(sdu);
-	if (s->skb)
-		kfree_skb((s->skb));
-	rkfree(s);
+	du = to_du(sdu);
+	if (du->skb)
+		kfree_skb((du->skb));
+	rkfree(du);
 	return 0;
 }
 EXPORT_SYMBOL(sdu_destroy);
