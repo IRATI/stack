@@ -62,6 +62,8 @@ pdu_create_gfp(pdu_type_t type, struct efcp_config *cfg, gfp_t flags)
 	skb_reserve(tmp->skb, MAX_PCIS_LEN);
 	tmp->pci.h = skb_push(tmp->skb, pci_len);
 	tmp->pci.len = pci_len;
+	tmp->sdup_head = NULL;
+	tmp->sdup_tail = NULL;
 	tmp->cfg = cfg;
 	return to_pdu(tmp);
 }
@@ -85,50 +87,57 @@ inline bool pdu_is_ok(const struct pdu *pdu)
 }
 EXPORT_SYMBOL(pdu_is_ok);
 
-inline struct pdu *pdu_encap_sdu(pdu_type_t type, struct sdu *sdu)
+inline struct pdu *pdu_from_sdu(struct sdu *sdu)
+{
+	ASSERT(sdu);
+	return to_pdu(sdu);
+}
+EXPORT_SYMBOL(pdu_from_sdu);
+
+inline int pdu_encap(struct pdu *pdu, pdu_type_t type)
 {
 	struct du *du;
 	ssize_t pci_len;
 
-	ASSERT(is_sdu_ok(sdu));
+	ASSERT(pdu);
 
-	du = to_du(sdu);
+	du = to_du(pdu);
 	pci_len = pci_calculate_size(du->cfg, type);
 	if (pci_len > 0) {
 		du->pci.h = skb_push(du->skb, pci_len);
 		du->pci.len = pci_len;
-		return to_pdu(du);
+		return 0;
 	}
-	return NULL;
+	return -1;
 }
-EXPORT_SYMBOL(pdu_encap_sdu);
+EXPORT_SYMBOL(pdu_encap);
 
-inline struct pdu *pdu_decap_sdu(struct sdu *sdu)
+inline int pdu_decap(struct pdu *pdu)
 {
 	struct du *du;
 	pdu_type_t type;
 	ssize_t pci_len;
 
-	ASSERT(sdu);
+	ASSERT(pdu);
 
-	du = to_du(sdu);
+	du = to_du(pdu);
 	du->pci.h = du->skb->data;
 	type = pci_type(&du->pci);
 	if (unlikely(!pdu_type_is_ok(type))) {
-		LOG_ERR("Could not decap SDU to PDU. Type is not ok");
-		return NULL;
+		LOG_ERR("Could not decap PDU. Type is not ok");
+		return -1;
 	}
 
 	pci_len = pci_calculate_size(du->cfg, type);
 	if (pci_len > 0) {
 		skb_pull(du->skb, pci_len);
 		du->pci.len = pci_len;
-		return to_pdu(du);
+		return 0;
 	}
-	LOG_ERR("Could not decap SDU to PDU. PCI len is < 0");
-	return NULL;
+	LOG_ERR("Could not decap PDU. PCI len is < 0");
+	return -1;
 }
-EXPORT_SYMBOL(pdu_decap_sdu);
+EXPORT_SYMBOL(pdu_decap);
 
 static struct pdu *pdu_dup_gfp(gfp_t flags,
 			       const struct pdu *pdu)
@@ -211,3 +220,118 @@ int pdu_destroy(struct pdu *pdu)
 	return 0;
 }
 EXPORT_SYMBOL(pdu_destroy);
+
+/* for SDU PROTECTION */
+inline void *pdu_sdup_head(struct pdu *pdu)
+{
+	if (unlikely(!pdu))
+		return NULL;
+	return to_du(pdu)->sdup_head;
+}
+EXPORT_SYMBOL(pdu_sdup_head);
+
+inline void *pdu_sdup_tail(struct pdu *pdu)
+{
+	if (unlikely(!pdu))
+		return NULL;
+	return to_du(pdu)->sdup_tail;
+}
+EXPORT_SYMBOL(pdu_sdup_tail);
+
+inline int pdu_sdup_head_set(struct pdu *pdu, void *header)
+{
+	if (unlikely(!pdu || !header))
+		return -1;
+	to_du(pdu)->sdup_head = header;
+	return 0;
+}
+EXPORT_SYMBOL(pdu_sdup_head_set);
+
+inline int pdu_sdup_tail_set(struct pdu *pdu, void *tail)
+{
+	if (unlikely(!pdu || !tail))
+		return -1;
+	to_du(pdu)->sdup_tail = tail;
+	return 0;
+}
+EXPORT_SYMBOL(pdu_sdup_tail_set);
+
+/*XXX: This works well if buffer is linear */
+inline unsigned char *pdu_buffer(const struct pdu *pdu)
+{
+	struct du *du;
+
+	ASSERT(pdu_is_ok(pdu));
+	du = to_du(pdu);
+	return du->skb->data;
+}
+EXPORT_SYMBOL(pdu_buffer);
+
+int pdu_tail_grow(struct pdu *pdu, size_t bytes)
+{
+	struct du *du;
+
+	if (unlikely(!pdu_is_ok(pdu)))
+		return -1;
+	if (unlikely(!bytes))
+		return 0; /* This is a NO-OP */
+
+	du = to_du(pdu);
+	if (unlikely(skb_tailroom(du->skb) < bytes)){
+		LOG_ERR("Could not grow PDU tail, no mem...");
+		return -1;
+	}
+	skb_put(du->skb, bytes);
+	return 0;
+}
+EXPORT_SYMBOL(pdu_tail_grow);
+
+int pdu_tail_shrink(struct pdu *pdu, size_t bytes)
+{
+	struct du *du;
+
+	if (unlikely(!pdu_is_ok(pdu)))
+		return -1;
+	if (unlikely(!bytes))
+		return 0; /* This is a NO-OP */
+
+	du = to_du(pdu);
+	skb_trim(du->skb, du->skb->len - bytes);
+	return 0;
+}
+EXPORT_SYMBOL(pdu_tail_shrink);
+
+int pdu_head_grow(struct pdu *pdu, size_t bytes)
+{
+	struct du *du;
+
+	if (unlikely(!pdu_is_ok(pdu)))
+		return -1;
+	if (unlikely(!bytes))
+		return 0; /* This is a NO-OP */
+
+	du = to_du(pdu);
+	if (unlikely(skb_headroom(du->skb) < bytes)){
+		LOG_ERR("Could not grow PDU head, no mem...");
+		return -1;
+	}
+	skb_push(du->skb, bytes); //skb->data = skb->data - bytes, pci.h remains
+	return 0;
+}
+EXPORT_SYMBOL(pdu_head_grow);
+
+int pdu_head_shrink(struct pdu *pdu, size_t bytes)
+{
+	struct du *du;
+
+	if (unlikely(!pdu_is_ok(pdu)))
+		return -1;
+	if (unlikely(!bytes))
+		return 0; /* This is a NO-OP */
+
+	du = to_du(pdu);
+	du->pci.h = skb_pull(du->skb, bytes);
+	return 0;
+}
+EXPORT_SYMBOL(pdu_head_shrink);
+
