@@ -825,10 +825,10 @@ static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
 		return -1;
 	}
 
-	pdu = pdu_encap_sdu(PDU_TYPE_MGMT, sdu);
-	if (!pdu) {
-		LOG_ERR("Could not encap Mgmt SDU");
-		sdu_destroy(sdu);
+	pdu = pdu_from_sdu(sdu);
+	if (pdu_encap(pdu, PDU_TYPE_MGMT)){
+		LOG_ERR("Could not encap Mgmt PDU");
+		pdu_destroy(pdu);
 		return -1;
 	}
 

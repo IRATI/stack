@@ -25,7 +25,6 @@
 
 #include "sdup.h"
 #include "pdu.h"
-#include "pdu-ser.h"
 #include "ps-factory.h"
 
 #define CRC32 "CRC32"
@@ -36,9 +35,9 @@ struct sdup_errc_ps {
 	/* Behavioural policies. */
 
 	int (* sdup_add_error_check_policy)(struct sdup_errc_ps *,
-					    struct pdu_ser *);
+					    struct pdu *);
 	int (* sdup_check_error_check_policy)(struct sdup_errc_ps *,
-					      struct pdu_ser *);
+					      struct pdu *);
 
 	/* Reference used to access the SDUP data model. */
 	struct sdup_port * dm;

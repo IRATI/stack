@@ -1413,10 +1413,10 @@ int dtp_write(struct dtp * instance,
 	sbytes = sdu_len(sdu);
 
 
-	pdu = pdu_encap_sdu(PDU_TYPE_DT, sdu);
-	if (!pdu_is_ok(pdu)) {
+	pdu = pdu_from_sdu(sdu);
+	if (pdu_encap(pdu, PDU_TYPE_DT)){
 		LOG_ERR("Could not cast SDU as PDU");
-		goto sdu_err_exit;
+		goto pdu_err_exit;
 	}
 
 	pci = pdu_pci_get_rw(pdu);
