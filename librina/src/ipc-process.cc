@@ -956,12 +956,13 @@ const std::string PDUForwardingTableEntry::toString() {
         ss<<"Address: "<<address<<" QoS-id: "<<qosId<< " Cost: "<<cost;
         ss<<"List of N-1 port-ids: ";
         for (std::list<PortIdAltlist>::iterator it = portIdAltlists.begin();
-                        it != portIdAltlists.end(); it++)
+                        it != portIdAltlists.end(); it++) {
 		for (std::list<unsigned int>::iterator jt = it->alts.begin();
 				jt != it->alts.end(); jt++) {
 			ss<< *jt << ",";
 		}
 		ss << ";";
+        }
         ss<<std::endl;
 
         return ss.str();

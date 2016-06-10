@@ -635,6 +635,8 @@ typedef struct ser_obj {
 struct UcharArray {
 	UcharArray();
 	UcharArray(int arrayLength);
+	UcharArray(const UcharArray &a, const UcharArray &b);
+	UcharArray(const UcharArray &a, const UcharArray &b, const UcharArray &c);
 	UcharArray(const ser_obj_t * sobj);
 	~UcharArray();
 	UcharArray& operator=(const UcharArray &other);

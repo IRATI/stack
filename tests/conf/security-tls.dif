@@ -1,0 +1,50 @@
+{
+    "difType" : "normal-ipc",
+    "securityManagerConfiguration" : {
+    	"policySet" : {
+          "name" : "default",
+          "version" : "1"
+        },
+        "authSDUProtProfiles" : {
+           "default" : {
+              "authPolicy" : {
+              	"name" : "PSOC_authentication-tlshandshake",
+          	"version" : "1",
+          	"parameters" : [ {
+          	   "name" : "keystore",
+          	   "value" : "/usr/local/irati/etc/creds"
+          	}, {
+                   "name" : "keystorePass",
+                   "value" : "none"
+                } ]
+              },
+              "encryptPolicy" : {
+                 "name" : "PSOC_crypto-tlsrecord",
+                 "version" : "1",
+                 "parameters" : [ {
+          	   "name" : "encryptAlg",
+          	   "value" : "AES256"
+          	}, {
+                   "name" : "macAlg",
+                   "value" : "SHA256"
+		}, {
+                   "name" : "compressAlg",
+                   "value" : "deflate"
+                } ]
+              },
+              "TTLPolicy" : {
+                 "name" : "default",
+                 "version" : "1",
+                 "parameters" : [ {
+                    "name" : "initialValue",
+                    "value" : "50"
+                  } ]
+                },
+                "ErrorCheckPolicy" : {
+                   "name" : "CRC32",
+                   "version" : "1"
+                }
+           }
+        }
+    }
+  }

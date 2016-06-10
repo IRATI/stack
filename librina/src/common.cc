@@ -803,6 +803,23 @@ UcharArray::UcharArray(int arrayLength)
 	data = new unsigned char[arrayLength];
 	length = arrayLength;
 }
+UcharArray::UcharArray(const UcharArray &a, const UcharArray &b)
+{
+	length = a.length + b.length;
+	data = new unsigned char[length];
+	memcpy(data, a.data, a.length);
+	memcpy(data+a.length, b.data, b.length);
+
+}
+UcharArray::UcharArray(const UcharArray &a, const UcharArray &b, const UcharArray &c)
+{
+	length = a.length + b.length + c.length;
+	data = new unsigned char[length];
+	memcpy(data, a.data, a.length);
+	memcpy(data+a.length, b.data, b.length);
+	memcpy(data+a.length+b.length, c.data, c.length);
+
+}
 
 UcharArray::UcharArray(const ser_obj_t * sobj)
 {

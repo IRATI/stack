@@ -216,6 +216,8 @@ int Catalog::load(Addon *addon, unsigned int ipcp_id,
 				     (*qit)->dtcp_config_.dtcp_policy_set_);
 	}
 
+	psinfo_from_psconfig(required_policy_sets, "security-manager",
+			t.sm_configuration_.default_auth_profile.authPolicy);
 	psinfo_from_psconfig(required_policy_sets, "crypto",
 			t.sm_configuration_.default_auth_profile.encryptPolicy);
 	psinfo_from_psconfig(required_policy_sets, "errc",
@@ -227,11 +229,13 @@ int Catalog::load(Addon *addon, unsigned int ipcp_id,
 			pit = t.sm_configuration_.specific_auth_profiles.begin();
 				pit !=t.sm_configuration_.specific_auth_profiles.end();
 					pit++) {
-	psinfo_from_psconfig(required_policy_sets, "crypto",
+		psinfo_from_psconfig(required_policy_sets, "security-manager",
+				 pit->second.authPolicy);
+		psinfo_from_psconfig(required_policy_sets, "crypto",
 				 pit->second.encryptPolicy);
-	psinfo_from_psconfig(required_policy_sets, "errc",
+		psinfo_from_psconfig(required_policy_sets, "errc",
 				 pit->second.crcPolicy);
-	psinfo_from_psconfig(required_policy_sets, "ttl",
+		psinfo_from_psconfig(required_policy_sets, "ttl",
 				 pit->second.ttlPolicy);
 	}
 
