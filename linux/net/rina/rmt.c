@@ -756,6 +756,8 @@ static void send_worker(unsigned long o)
 
 		while ((pdus_sent < MAX_PDUS_SENT_PER_CYCLE) &&
 			n1_port->stats.plen) {
+			pdu = NULL;
+			sdu = NULL;
 			if (n1_port->pending_sdu) {
 				sdu = n1_port->pending_sdu;
 				n1_port->pending_sdu = NULL;
@@ -769,15 +771,13 @@ static void send_worker(unsigned long o)
 					break;
 				}
 				n1_port->stats.plen--;
-				sdu = sdu_from_pdu(pdu);
-				if (!is_sdu_ok(sdu)) {
-					sdu_destroy(sdu);
-					continue;
-				}
 			}
 
 			spin_unlock(&n1_port->lock);
-			ret = n1_port_write_sdu(rmt, n1_port, sdu);
+			if (sdu)
+				ret = n1_port_write_sdu(rmt, n1_port, sdu);
+			else
+				ret = n1_port_write(rmt, n1_port, pdu);
 			spin_lock(&n1_port->lock);
 
 			if (ret < 0)
