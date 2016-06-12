@@ -199,6 +199,18 @@ inline ssize_t pdu_data_len(const struct pdu *pdu)
 }
 EXPORT_SYMBOL(pdu_data_len);
 
+inline ssize_t pdu_len(const struct pdu *pdu)
+{
+	struct du *du;
+	ASSERT(pdu_is_ok(pdu));
+
+	du = to_du(pdu);
+	if (du->pci.h < du->skb->data) /* up direction */
+		return du->skb->len + du->pci.len;
+	return du->skb->len; /* down direction */
+}
+EXPORT_SYMBOL(pdu_len);
+
 inline struct efcp_config *pdu_efcp_config(const struct pdu *pdu)
 {
 	ASSERT(pdu_is_ok(pdu));

@@ -48,6 +48,7 @@ inline bool pdu_is_ok(const struct pdu *pdu);
 inline const struct pci *pdu_pci_get_ro(const struct pdu *pdu);
 inline struct pci	 *pdu_pci_get_rw(struct pdu *pdu);
 inline ssize_t		 pdu_data_len(const struct pdu *pdu);
+inline ssize_t		 pdu_len(const struct pdu *pdu);
 
 int pdu_destroy(struct pdu *pdu);
 
