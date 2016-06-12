@@ -211,7 +211,7 @@ static int add_padding(struct sdup_crypto_ps_default_data * priv_data,
 	LOG_DBG("PADDING!");
 
 	blk_size = crypto_blkcipher_blocksize(state->blkcipher);
-	buffer_size = pdu_data_len(pdu);
+	buffer_size = pdu_len(pdu);
 	padded_size = (buffer_size/blk_size + 1) * blk_size;
 
 	if (pdu_tail_grow(pdu, padded_size - buffer_size)){
@@ -250,7 +250,7 @@ static int remove_padding(struct sdup_crypto_ps_default_data * priv_data,
 
 	LOG_DBG("UNPADDING!");
 	buf_data = pdu_buffer(pdu);
-	len = pdu_data_len(pdu);
+	len = pdu_len(pdu);
 	pad_len = buf_data[len-1];
 
 	//check padding
@@ -294,7 +294,7 @@ static int encrypt(struct sdup_crypto_ps_default_data * priv_data,
 
 	desc.flags = 0;
 	desc.tfm = state->blkcipher;
-	buffer_size = pdu_data_len(pdu);
+	buffer_size = pdu_len(pdu);
 	data = pdu_buffer(pdu);
 
 	iv = NULL;
@@ -344,7 +344,7 @@ static int decrypt(struct sdup_crypto_ps_default_data * priv_data,
 	if (state->blkcipher == NULL)
 		return 0;
 
-	buffer_size = pdu_data_len(pdu);
+	buffer_size = pdu_len(pdu);
 	data = pdu_buffer(pdu);
 
 	iv = NULL;
@@ -395,7 +395,7 @@ static int add_hmac(struct sdup_crypto_ps_default_data * priv_data,
 	if (state->shash == NULL)
 		return 0;
 
-	buffer_size = pdu_data_len(pdu);
+	buffer_size = pdu_len(pdu);
 	digest_size = crypto_shash_digestsize(state->shash);
 	data = pdu_buffer(pdu);
 
@@ -436,7 +436,7 @@ static int check_hmac(struct sdup_crypto_ps_default_data * priv_data,
 	if (state->shash == NULL)
 		return 0;
 
-	buffer_size = pdu_data_len(pdu);
+	buffer_size = pdu_len(pdu);
 	data = pdu_buffer(pdu);
 
 	digest_size = crypto_shash_digestsize(state->shash);
@@ -492,7 +492,7 @@ static int compress(struct sdup_crypto_ps_default_data * priv_data,
 	if (state->compress == NULL)
 		return 0;
 
-	buffer_size = pdu_data_len(pdu);
+	buffer_size = pdu_len(pdu);
 	data = pdu_buffer(pdu);
 
 	compressed_size = state->comp_scratch_size;
@@ -541,7 +541,7 @@ static int decompress(struct sdup_crypto_ps_default_data * priv_data,
 	if (state->compress == NULL)
 		return 0;
 
-	buffer_size = pdu_data_len(pdu);
+	buffer_size = pdu_len(pdu);
 	data = pdu_buffer(pdu);
 
 	decompressed_size = max_pdu_size;
