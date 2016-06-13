@@ -315,7 +315,8 @@ int pdu_head_grow(struct pdu *pdu, size_t bytes)
 		LOG_ERR("Could not grow PDU head, no mem...");
 		return -1;
 	}
-	skb_push(du->skb, bytes); //skb->data = skb->data - bytes, pci.h remains
+	/* pci.h remains the same, skb->data is pushed bytes over pci.h */
+	skb_push(du->skb, (du->skb->data - du->pci.h) + bytes);
 	return 0;
 }
 EXPORT_SYMBOL(pdu_head_grow);
