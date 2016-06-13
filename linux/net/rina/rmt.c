@@ -1322,14 +1322,16 @@ int rmt_receive(struct rmt *rmt,
 		if (!dst_addr)
 			return process_mgmt_pdu(rmt, from, pdu);
 		else {
+			/* We need to rencap the pdu again to get pci properly
+			 * in rmt_send */
+			if (unlikely(pdu_encap(pdu, pdu_type)))
+				return -1;
 			if (sdup_dec_check_lifetime_limit(n1_port->sdup_port, pdu)) {
 				LOG_ERR("Lifetime of PDU reached dropping PDU!");
 				pdu_destroy(pdu);
 				return -1;
 			}
 			/* Forward PDU */
-			/*NOTE: we could reuse the serialized pdu when
-			 * forwarding */
 			return rmt_send(rmt, pdu);
 		}
 	} else {
