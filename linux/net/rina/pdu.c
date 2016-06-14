@@ -89,8 +89,13 @@ EXPORT_SYMBOL(pdu_is_ok);
 
 inline struct pdu *pdu_from_sdu(struct sdu *sdu)
 {
+	struct du *du;
 	ASSERT(sdu);
-	return to_pdu(sdu);
+
+	du = to_du(sdu);
+	du->sdup_head = NULL;
+	du->sdup_tail = NULL;
+	return to_pdu(du);
 }
 EXPORT_SYMBOL(pdu_from_sdu);
 
