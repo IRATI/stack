@@ -155,6 +155,11 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
                 }
         }
 
+        if (!object.neighbors.empty())
+        {
+        	enrollToDIFs(object, ipcp_id);
+        }
+
         try
         {
                 ipcp = new IPCPObj(ipcp_id);
@@ -255,6 +260,43 @@ bool IPCPObj::registerAtDIFs(configs::ipcp_config_t &object, int ipcp_id)
         }
 
         return true;
+}
+
+bool IPCPObj::enrollToDIFs(rinad::configs::ipcp_config_t &object, int ipcp_id)
+{
+	for(std::list<configs::neighbor_config_t>::iterator it =
+			object.neighbors.begin();
+			it != object.neighbors.end(); ++it)
+	{
+		Promise promise;
+		rinad::NeighborData neighbor;
+		LOG_DBG("Enrolling to neighbor %s", it->neighbor_name.processName.c_str());
+
+                if (!IPCManager->ipcp_exists(ipcp_id))
+                {
+                        LOG_ERR("No such IPC process id");
+                        return false;
+                }
+
+                neighbor.apName.processName = it->neighbor_name.processName;
+                neighbor.apName.processInstance = "1";
+                neighbor.difName.processName = it->dif.processName;
+                neighbor.supportingDifName.processName = it->under_dif.processName;
+
+                if (IPCManager->enroll_to_dif(ManagementAgent::inst,
+                			      &promise, ipcp_id,
+					      neighbor) == IPCM_FAILURE
+                		|| promise.wait() != IPCM_SUCCESS)
+                {
+                	LOG_ERR("Enrollment failed");
+                	continue;
+                }
+
+                LOG_INFO("IPC Process enrollment to neighbor %s completed successfully",
+                	 it->neighbor_name.processName.c_str());
+	}
+
+	return true;
 }
 
 }
