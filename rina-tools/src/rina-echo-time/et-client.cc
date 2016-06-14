@@ -35,6 +35,7 @@
 #include <unistd.h>
 #include <limits.h>
 #include <iomanip>
+#include <errno.h>
 
 #define RINA_PREFIX     "rina-echo-time"
 #include <librina/ipc-api.h>
@@ -302,7 +303,7 @@ void Client::floodFlow(int port_id)
 		lock.lock();
 		mtp = maxtp;
 		lock.unlock();
-		if (bytes_read == 0) {
+		if (bytes_read <= 0) {
 			LOG_WARN("Returned 0 bytes, SDU considered lost");
 			double mtime = time_difference_in_ms(mtp, endtp);
 			lock.lock();
@@ -421,7 +422,7 @@ int Client::readSDU(int portId, void * sdu, int maxBytes, unsigned int timeout)
 	while (true) {
 		try {
 			bytes_read = ipcManager->readSDU(portId, sdu, maxBytes);
-			if (bytes_read == 0) {
+			if (bytes_read == -EAGAIN) {
 				get_current_time(endtp);
 				if ((unsigned int) time_difference_in_ms(begintp, endtp) > timeout) {
 					break;
@@ -466,7 +467,6 @@ void Client::set_sdus(unsigned long n)
 {
 	ScopedLock g(lock);
         nsdus = n;
-
 }
 
 void Client::set_maxTP(timespec tp)
