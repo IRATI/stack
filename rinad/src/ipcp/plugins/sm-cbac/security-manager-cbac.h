@@ -54,14 +54,13 @@ typedef struct IPCPProfile {
   /* The profile of a DIF */
 typedef struct DIFProfile {
         rina::ApplicationProcessNamingInformation dif_name;
-        std::string dif_type; //FIXME: merge/replace (?) with dif_type_ in DIFInformation
+        std::string dif_type; 
         std::string dif_group;
 } DIFProfile_t;
 
 //----------------------------------
 
 /* One AC rule */
-  // {"ipcpType": "edge", "difType": "access", "memberIpcpType": "server", "memberDifType": "access"},
 typedef struct Rule {
         std::string ipcp_type;
         std::string dif_type;
@@ -69,12 +68,7 @@ typedef struct Rule {
         std::string member_dif_type;
        
 } Rule_t;
-/*
-typedef struct Cap {
-        std::string ressource;
-        std::string op;
-} Cap_t;
-*/
+
 //----------------------------------
 
 typedef enum{
@@ -132,7 +126,8 @@ typedef struct Capability{
 typedef struct Token{
         unsigned short token_id;
         unsigned short ipcp_issuer_id;
-        rina::ApplicationProcessNamingInformation ipcp_holder_name; // TODO: may be replace by ipcp id?/*unsigned short*/ 
+        rina::ApplicationProcessNamingInformation ipcp_holder_name; 
+        rina::ApplicationProcessNamingInformation ipcp_issuer_name;
         std::list<std::string> audience;
         int issued_time;
         int token_nbf;
@@ -145,6 +140,7 @@ typedef struct Token{
                 
                 ss << "\nToken id:" << token_id << endl;
                 ss << "Token issuer_id:" << ipcp_issuer_id << endl;
+                ss << "Token ipcp_issuer_name:" << ipcp_issuer_name.toString() << endl;
                 ss << "Token ipcp_holder_name:" << ipcp_holder_name.toString() << endl;
                 ss << "Token audience:" << endl;
                 for (list<std::string>::const_iterator it =
@@ -164,7 +160,6 @@ typedef struct Token{
                         i ++;
                                     
                 }
-                //ss << "Token token_sign:" << token_sign << endl;                      
                 return ss.str();
         }
 } Token_t;
@@ -193,7 +188,7 @@ public:
         virtual ~ProfileParser() {};
         bool getDIFProfileByName(const rina::ApplicationProcessNamingInformation&, DIFProfile_t&);
         bool getIPCPProfileByName(const rina::ApplicationProcessNamingInformation&, IPCPProfile_t&);
-        bool compareRuleToProfile(Rule_t &, std::string, std::string, std::string);//, std::string);
+        bool compareRuleToProfile(Rule_t &, std::string, std::string, std::string);
         bool getCapabilityByProfile(const std::string fileName, std::list<Capability_t> & capList, 
                                std::string ipcp_type, std::string ipcp_group,
                                std::string dif_type, std::string dif_group,
@@ -206,18 +201,9 @@ private:
         std::list<IPCPProfile_t> ipcpProfileList;
         std::list<RIBProfile_t> ribProfileList;
         std::list<Rule_t> ruleList;
-        //std::list<Capability> capList;
-        //std::map<rule,cap> second (first.begin(),first.end());
 };
 
 
-/*
-typedef struct Config{
-        std::string profileFile;
-        std::string tokenGenIpcpName ;
-        std::string encryptAlgo;
-} Config_t;
-*/
 //--------------------------------
 class ACRulesManager{
 private:
@@ -230,9 +216,6 @@ private:
 class AccessControl{
 public:
         AccessControl();
-        //bool checkJoinDIF(std::string, DIFProfile_t&, IPCPProfile_t&, ac_res_info_t&);
-        //std::list<Capability_t> computeCapabilities(DIFProfile_t&, IPCPProfile_t&);
-        
         bool checkJoinDIF(ProfileParser  *, 
                           std::string fileName, 
                           const rina::ApplicationProcessNamingInformation& my_ipcp_name, 
@@ -240,7 +223,8 @@ public:
                           const rina::ApplicationProcessNamingInformation& newMember_ipcp_name,  
                           ac_res_info_t&, std::list<Capability_t>&);
                                  
-        void generateToken(unsigned short, DIFProfile_t&, IPCPProfile_t&, 
+        void generateToken(const rina::ApplicationProcessNamingInformation &,
+                           unsigned short, DIFProfile_t&, IPCPProfile_t&, 
                            rina::cdap_rib::auth_policy_t &, rina::SSH2SecurityContext*,
                            std::string, std::list<Capability_t>&);
         void generateTokenSignature(Token_t &token, std::string encrypt_alg, 
@@ -253,8 +237,6 @@ public:
 class SecurityManagerCBACPs: public IPCPSecurityManagerPs {
 public:
         SecurityManagerCBACPs(IPCPSecurityManager * dm);
-//         bool isAllowedToJoinDIF(const rina::Neighbor& newMember); 
-                                //const rina::ApplicationProcessNamingInformation, std::string);
         int initialize_SC(const rina::cdap_rib::con_handle_t&);
         int loadProfiles();
         int loadProfilesByName(
@@ -273,8 +255,7 @@ public:
                                                        std::string requestor);
         int checkTokenSignature(const Token_t &token, 
                                   const rina::UcharArray & signature, std::string encrypt_alg);
-        RSA* loadTokenGeneratorPublicKey();
-//                                    RSA* token_generator_pub_key);
+        RSA* loadTokenGeneratorPublicKey(std::string);
         
         void checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
                               const rina::cdap_rib::con_handle_t & con,
@@ -284,16 +265,12 @@ public:
         bool acceptFlow(const configs::Flow& newFlow);
         int set_policy_set_param(const std::string& name,
                         const std::string& value);
-        // bool generateToken(const rina::Neighbor&, Token_t &);
-        // bool getToken(const rina::Neighbor&, rina::ser_obj_t&);
         virtual ~SecurityManagerCBACPs() {}
         
 private:
         // Data model of the security manager component.
         IPCPSecurityManager * dm;
         rina::SSH2SecurityContext * my_sc;
-        //std::string token_gen_name;
-//         Config_t my_config;
         int max_retries;
         AccessControl * access_control_;
         ProfileParser * profile_parser_;

@@ -113,10 +113,19 @@ void toModelToken(const rina::messages::smCbacToken_t &gpb_token,
         
         
         rina::ApplicationProcessNamingInformation app_name;
+        
         cbac_helpers::get_NewApplicationProcessNamingInformation(gpb_token.ipcp_holder_name(),
                                                          app_name);
         
         des_token.ipcp_holder_name = app_name;
+        
+        rina::ApplicationProcessNamingInformation issuer_name;
+        cbac_helpers::get_NewApplicationProcessNamingInformation(gpb_token.ipcp_issuer_name(),
+                                                         issuer_name);
+        
+        des_token.ipcp_issuer_name = issuer_name;
+        
+        
         for (int i = 0; i < gpb_token.audience_size(); i++){
         
             des_token.audience.push_back(gpb_token.audience(i));
@@ -301,7 +310,9 @@ void serializeToken(const Token_t &token,
         
         gpbToken.set_allocated_ipcp_holder_name(cbac_helpers::get_NewApplicationProcessNamingInfo_t(
                                         token.ipcp_holder_name));
-        
+        gpbToken.set_allocated_ipcp_issuer_name(cbac_helpers::get_NewApplicationProcessNamingInfo_t(
+                                        token.ipcp_issuer_name));
+         
         for (std::list<std::string>::const_iterator it =
                         token.audience.begin();
                         it != token.audience.end(); ++it)
@@ -353,6 +364,8 @@ void serializeTokenPlusSignature(const TokenPlusSignature_t &tokenSign,
         
         gpbToken->set_allocated_ipcp_holder_name(cbac_helpers::get_NewApplicationProcessNamingInfo_t(
                                         token.ipcp_holder_name));
+        gpbToken->set_allocated_ipcp_issuer_name(cbac_helpers::get_NewApplicationProcessNamingInfo_t(
+                                        token.ipcp_issuer_name));
         
         std::list<std::string> tokenAudience = token.audience;
         for(std::list<std::string>::iterator it = tokenAudience.begin();
@@ -774,7 +787,8 @@ void AccessControl::generateTokenSignature(Token_t &token, std::string encrypt_a
         LOG_IPCP_DBG("TIME GENERATE_TOKEN_SIGN [%d] ms", t1-t0);
 }
 
-void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& difProfile,
+void AccessControl::generateToken(const rina::ApplicationProcessNamingInformation & ipcp_issuer_name, 
+                                  unsigned short issuerIpcpId, DIFProfile_t& difProfile,
                                   IPCPProfile_t& newMemberProfile, rina::cdap_rib::auth_policy_t & auth,
                                   rina::SSH2SecurityContext *sc, std::string encryptAlgo, std::list<Capability_t>& capList)
 {
@@ -788,6 +802,7 @@ void AccessControl::generateToken(unsigned short issuerIpcpId, DIFProfile_t& dif
         LOG_IPCP_INFO("Generating Token...");
         token.token_id = issuerIpcpId;
         token.ipcp_issuer_id = issuerIpcpId;
+        token.ipcp_issuer_name = ipcp_issuer_name;
         token.ipcp_holder_name = newMemberProfile.ipcp_name;
         token.audience.push_back("all");
         int t = cbac_helpers::getTimeMs();
@@ -984,7 +999,8 @@ int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t
                             return -1;
                     }
         
-                    access_control_->generateToken(my_ipcp_id, difProfile, newMemberProfile, 
+                    access_control_->generateToken(rina::ApplicationProcessNamingInformation(
+                                      my_ipcp_name, string()), my_ipcp_id, difProfile, newMemberProfile, 
                                             auth, my_sc, encryptAlgo, capList);
                     return 0;
 	}
@@ -998,16 +1014,16 @@ int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t
 
 // In addition to securityContext, any IPCP needs to load 
 // the public key of the token generator
-RSA* SecurityManagerCBACPs::loadTokenGeneratorPublicKey()
+RSA* SecurityManagerCBACPs::loadTokenGeneratorPublicKey(std::string tokenGenIpcpName)
 {
         BIO * keystore;
         std::stringstream ss;
         //Read peer public key from keystore
-        std::string tokenGenIpcpName = cbac_helpers::getStringParamFromConfig("TokenGenIPCPName", dm);
+        /*std::string tokenGenIpcpName = cbac_helpers::getStringParamFromConfig("TokenGenIPCPName", dm);
         if (tokenGenIpcpName == std::string()){
             LOG_IPCP_ERR("Missing tokenGenIpcpName parameter configuration!");
                 return NULL;
-        }
+        }*/
                     
         ss << my_sc->keystore_path << "/" << tokenGenIpcpName;
         keystore =  BIO_new_file(ss.str().c_str(), "r");
@@ -1041,7 +1057,9 @@ int SecurityManagerCBACPs::checkTokenSignature(const Token_t &token, const rina:
         // hash then encrypt token
         rina::UcharArray result;
         cbac_helpers::hashToken(token_char, result, encrypt_alg);
-        RSA* token_generator_pub_key = loadTokenGeneratorPublicKey();
+        std::string name = token.ipcp_issuer_name.toString();
+        std::string tokenGenIpcpName = name.substr(0, name.find(":"));
+        RSA* token_generator_pub_key = loadTokenGeneratorPublicKey(tokenGenIpcpName);
         if (token_generator_pub_key == NULL){
                 LOG_IPCP_ERR("Signature verification failed, because of absent token generator public key");
                 return -1;
@@ -1146,7 +1164,8 @@ int SecurityManagerCBACPs::generateTokenForTokenGenerator(rina::cdap_rib::auth_p
         
         std::list<Capability_t> capList;
         capList.push_back(Capability_t("all", "all"));
-        access_control_->generateToken(my_ipcp_id, myDifProfile, myIPCPProfile, 
+        access_control_->generateToken(rina::ApplicationProcessNamingInformation(
+                                      my_ipcp_name, string()), my_ipcp_id, myDifProfile, myIPCPProfile, 
                                        auth, my_sc, encryptAlgo, capList);
         return 0;
                     
