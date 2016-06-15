@@ -1277,14 +1277,14 @@ int rmt_receive(struct rmt *rmt,
 
 	/* SDU Protection */
 	if (sdup_unprotect_pdu(n1_port->sdup_port, pdu)) {
-                LOG_DBG("Failed to unprotect PDU");
+                LOG_ERR("Failed to unprotect PDU");
                 pdu_destroy(pdu);
                 return -1;
         }
 
 	/* This one updates the pci->sdup_header and pdu->skb->data pointers */
 	if (sdup_get_lifetime_limit(n1_port->sdup_port, pdu)) {
-                LOG_DBG("Failed to unprotect PDU");
+                LOG_ERR("Failed to get PDU's TTL");
                 pdu_destroy(pdu);
                 return -1;
         }
