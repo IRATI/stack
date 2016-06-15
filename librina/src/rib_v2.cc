@@ -3003,6 +3003,7 @@ void DelegationObj::forwarded_object_response(int port, int invoke_id,
         rina::cdap_rib::con_handle_t con;
         con.port_id = port;
         msg->invoke_id_ = invoke_id;
+        msg->obj_name_ = fqn  + msg->obj_name_;
         if (msg->flags_ != rina::cdap_rib::flags_t::F_RD_INCOMPLETE)
         {
                 if (!last)
