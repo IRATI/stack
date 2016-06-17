@@ -96,7 +96,8 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
                         const std::string& fqn, const std::string& class_,
                         const rina::cdap_rib::filt_info_t &filt,
                         const int invoke_id, const rina::ser_obj_t &obj_req,
-                        rina::ser_obj_t &obj_reply,
+                        // mcr #951 / rina::ser_obj_t => rina::cdap_rib::obj_info_t
+                        rina::cdap_rib::obj_info_t &obj_reply,
                         rina::cdap_rib::res_info_t& res)
 {
 
@@ -130,17 +131,24 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
         if (ipcp_id == -1)
         {
                 LOG_ERR("Create operation failed in '%s'. Unknown error.",
-                        fqn.c_str());
-
+                    fqn.c_str());
                 res.code_ = rina::cdap_rib::CDAP_ERROR;
+                // mcr #951 / give a reason on the reply,
+                std::stringstream ss;
+                ss << "Create operation failed in '" << fqn.c_str() << "': unable to create an IPCP.";
+                res.reason_ = ss.str();
                 return;
         }
 
         if (!assignToDIF(object, ipcp_id))
         {
-                LOG_ERR("Create operation failed: unable to assign IPCP with id '%d' to DIF in path '%s'. Unknown error.",
+                LOG_ERR("Create operation failed: unable to assign IPCP with id '%d' to DIF in path '%s'. unable to assign IPCP.",
                         ipcp_id, fqn.c_str());
                 res.code_ = rina::cdap_rib::CDAP_ERROR;
+                // mcr #951 / give a reason on the reply,
+                std::stringstream ss;
+                ss << "Create operation failed for IPCP with id '" << ipcp_id << "' in path '" << fqn.c_str() << "':unable to assign IPCP.";
+                res.reason_ = ss.str();
                 return;
         }
 
@@ -151,7 +159,12 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
                         LOG_ERR("Create operation failed: unable to register IPCP with id '%d' in path '%s'. Unknown error.",
                                 ipcp_id, fqn.c_str());
                         res.code_ = rina::cdap_rib::CDAP_ERROR;
-                        return;
+                        // mcr #951 / give a reason on the reply,
+                        std::stringstream ss;
+                        ss << "Unable to fully register IPCP with id '" << ipcp_id << "' in path '" << fqn.c_str() << "'.";  
+                        res.reason_ = ss.str();                          
+                        // mcr #951 / make it non fatal, so as the IPCP is still registered with RIB
+                        //return;
                 }
         }
 
@@ -165,9 +178,13 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
                 ipcp = new IPCPObj(ipcp_id);
         } catch (...)
         {
-                LOG_ERR("Create operation failed for ipcp id '%d' in path '%s': out of memory.",
+                LOG_ERR("Create operation failed for ipcp id '%d' in path '%s': creating RO - out of memory.",
                         ipcp_id, fqn.c_str());
                 res.code_ = rina::cdap_rib::CDAP_ERROR;
+                // mcr #951 / give a reason on the reply,
+                std::stringstream ss;
+                ss << "Create operation failed for IPCP with id '" << ipcp_id << "' in path '" << fqn.c_str() << "': creating RO - out of memory.";  
+                res.reason_ = ss.str();                          
                 return;
         }
 
@@ -176,13 +193,20 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
         {
         	std::stringstream ss;
         	std::string partial_name = fqn.substr(0, fqn.find_last_of("="));
-        	ss << partial_name << ipcp_id;
-                RIBFactory::getProxy()->addObjRIB(rib, ss.str(), &ipcp);
+          // mcr #951 / add "=" and set instance and name on reply
+          ss << partial_name << "=" << ipcp_id;
+          RIBFactory::getProxy()->addObjRIB(rib, ss.str(), &ipcp);
+          obj_reply.name_ = ss.str();
+          obj_reply.inst_ = ipcp_id;
         } catch (...)
         {
-                LOG_ERR("Create operation failed: for ipcp id '%d' in path '%s'. Out of memory.",
+                LOG_ERR("Create operation failed: for ipcp id '%d' in path '%s': registering RO.",
                         ipcp_id, fqn.c_str());
                 res.code_ = rina::cdap_rib::CDAP_ERROR;
+                // mcr #951 / give a reason on the reply,
+                std::stringstream ss;
+                ss << "Create operation failed for IPCP with id '" << ipcp_id << "' in path '" << fqn.c_str() << "': registering RO.";  
+                res.reason_ = ss.str();                          
                 return;
         }
         res.code_ = rina::cdap_rib::CDAP_SUCCESS;

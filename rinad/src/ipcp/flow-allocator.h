@@ -155,7 +155,8 @@ public:
 			      const rina::cdap_rib::filt_info_t &filt,
 			      const int invoke_id,
 			      const rina::ser_obj_t &obj_req,
-			      rina::ser_obj_t &obj_reply,
+						// mcr #951 / rina::ser_obj_t => rina::cdap_rib::obj_info_t
+						rina::cdap_rib::obj_info_t &obj_reply,
 			      rina::cdap_rib::res_info_t& res);
 
 	const static std::string class_name;
