@@ -1,8 +1,7 @@
 //
 // CBAC policy set for Security Manager
 //
-//    Ichrak Amdouni <ichrak.amdouni@gmail.com>
-//    Eduard Grasa <eduard.grasa@i2cat.net>
+//    Ichrak Amdouni <ichrak.amdouni@gmail.com> // IMT-TSP
 //
 // This library is free software; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public

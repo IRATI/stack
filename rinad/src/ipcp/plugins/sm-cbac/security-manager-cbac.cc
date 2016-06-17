@@ -597,10 +597,12 @@ bool ProfileParser::getCapabilityByProfile(const std::string fileName,
                                         capList.push_back(capability);
                                 }
                         }
-                        shouldCopy = false;
+                        //shouldCopy = false;
+                        return true;
                 }
         }
-        return true;
+        LOG_IPCP_INFO("No rule found for the current profiles, deny enrollment");
+        return false;
 }
 
 
@@ -621,8 +623,6 @@ bool ProfileParser::getDIFProfileByName(const rina::ApplicationProcessNamingInfo
 bool ProfileParser::getIPCPProfileByName(const rina::ApplicationProcessNamingInformation& ipcpName,
 					IPCPProfile_t&  result)
 {
-        //LOG_IPCP_DBG("getIPCPProfileByName %s from list of size %d", 
-        //             ipcpName.processName.c_str(), ipcpProfileList.size());
         
 	for (list<IPCPProfile_t>::const_iterator it = ipcpProfileList.begin();
 					it != ipcpProfileList.end(); it++) {
@@ -710,8 +710,6 @@ bool AccessControl::checkJoinDIF(ProfileParser * parser,
 {
         LOG_IPCP_INFO("AC: Procedure for join DIF check");
         
-        //ProfileParser parser;
-        
         DIFProfile_t difProfile;
         IPCPProfile_t newMemberProfile;
         IPCPProfile_t myProfile;
@@ -741,7 +739,7 @@ bool AccessControl::checkJoinDIF(ProfileParser * parser,
                 result.reason_ = ABSENT_RPOFILE;
                 return false;
             
-        };
+        }
         
         // Enrollment AC algorithm and capability generation
         ac_res_info_t res;
@@ -984,7 +982,7 @@ int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t
                                       my_ipcp_name, string()),
                                       my_dif_name, newMember.name_, res, capList);
 	if (res.code_ == AC_ENR_SUCCESS){
-                    LOG_IPCP_DBG("Allowing IPC Process %s to join the DIF. Going to generate token",
+                    LOG_IPCP_INFO("Allowing IPC Process %s to join the DIF. Going to generate token",
                         newMember.name_.processName.c_str());
                     std::string encryptAlgo = cbac_helpers::getStringParamFromConfig("EncryptAlgo", dm);
                     if (encryptAlgo == std::string()){
