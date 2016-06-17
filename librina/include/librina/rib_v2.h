@@ -535,7 +535,8 @@ typedef void (*create_cb_t)(const rib_handle_t rib,
 			    const cdap_rib::filt_info_t &filt,
 			    const int invoke_id,
 			    const ser_obj_t &obj_req,
-			    ser_obj_t &obj_reply,
+					// mcr #951 / ser_obj_t &obj_reply,
+					cdap_rib::obj_info_t &obj_reply,
 			    cdap_rib::res_info_t& res);
 #endif
 ///

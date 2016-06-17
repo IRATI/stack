@@ -593,7 +593,8 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 			(*f)(handle, con, obj.name_, obj.class_, filt,
 						invoke_id,
 						obj.value_,
-						obj_reply.value_,
+						// mcr #951 / obj_reply.value_ => obj_reply,
+						obj_reply,
 						res);
 		else
 			res.code_ = cdap_rib::CDAP_OP_NOT_SUPPORTED;

@@ -203,7 +203,7 @@ ipcm_res_t IPCManager_::create_ipcp(
                 == ipcp_types.end())
         {
             const char* const separator = ", ";
-            ss << "IPCP type parameter " << name.toString()
+            ss << "IPCP type parameter " << type.c_str()
                     << " is wrong, options are: [" << s;
             // actually list the optons
             std::copy(ipcp_types.begin(), ipcp_types.end(), std::ostream_iterator<std::string>(ss, separator));
