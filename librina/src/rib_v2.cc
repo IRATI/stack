@@ -593,7 +593,7 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 			(*f)(handle, con, obj.name_, obj.class_, filt,
 						invoke_id,
 						obj.value_,
-						obj_reply.value_,
+						obj_reply,
 						res);
 		else
 			res.code_ = cdap_rib::CDAP_OP_NOT_SUPPORTED;
@@ -837,8 +837,9 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 								res,
 								invoke_id);
 			} catch (Exception &e) {
-				LOG_ERR("Unable to send response for invoke id %d",
-					invoke_id);
+				LOG_ERR("Unable to send response for invoke id %d, problem was: %s",
+					invoke_id,
+					e.what());
 			}
 		} else
 		{
