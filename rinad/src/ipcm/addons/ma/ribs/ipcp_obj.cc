@@ -96,7 +96,7 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
                         const std::string& fqn, const std::string& class_,
                         const rina::cdap_rib::filt_info_t &filt,
                         const int invoke_id, const rina::ser_obj_t &obj_req,
-                        rina::ser_obj_t &obj_reply,
+                        rina::cdap_rib::obj_info_t &obj_reply,
                         rina::cdap_rib::res_info_t& res)
 {
 
@@ -129,18 +129,22 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
 
         if (ipcp_id == -1)
         {
-                LOG_ERR("Create operation failed in '%s'. Unknown error.",
-                        fqn.c_str());
-
+                std::stringstream ss;
+                ss << "Create operation failed in '" << fqn.c_str() << "': unable to create an IPCP.";
+                LOG_ERR("%s", ss.str().c_str());
                 res.code_ = rina::cdap_rib::CDAP_ERROR;
+                res.reason_ = ss.str();
                 return;
         }
 
         if (!assignToDIF(object, ipcp_id))
         {
-                LOG_ERR("Create operation failed: unable to assign IPCP with id '%d' to DIF in path '%s'. Unknown error.",
-                        ipcp_id, fqn.c_str());
+                std::stringstream ss;
+                ss << "Create operation failed for IPCP with id '" << ipcp_id
+                   << "' in path '" << fqn.c_str() << "':unable to assign IPCP.";
+                LOG_ERR("%s", ss.str().c_str());
                 res.code_ = rina::cdap_rib::CDAP_ERROR;
+                res.reason_ = ss.str();
                 return;
         }
 
@@ -148,10 +152,12 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
         {
                 if (!registerAtDIFs(object, ipcp_id))
                 {
-                        LOG_ERR("Create operation failed: unable to register IPCP with id '%d' in path '%s'. Unknown error.",
-                                ipcp_id, fqn.c_str());
+                	std::stringstream ss;
+                        ss << "Unable to fully register IPCP with id '" << ipcp_id
+                           << "' in path '" << fqn.c_str() << "'.";
+                        LOG_ERR("%s", ss.str().c_str());
                         res.code_ = rina::cdap_rib::CDAP_ERROR;
-                        return;
+                        res.reason_ = ss.str();                          
                 }
         }
 
@@ -165,9 +171,12 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
                 ipcp = new IPCPObj(ipcp_id);
         } catch (...)
         {
-                LOG_ERR("Create operation failed for ipcp id '%d' in path '%s': out of memory.",
-                        ipcp_id, fqn.c_str());
+                std::stringstream ss;
+                ss << "Create operation failed for IPCP with id '" << ipcp_id
+                   << "' in path '" << fqn.c_str() << "': creating RO - out of memory.";
+                LOG_ERR("%s", ss.str().c_str());
                 res.code_ = rina::cdap_rib::CDAP_ERROR;
+                res.reason_ = ss.str();                          
                 return;
         }
 
@@ -177,11 +186,16 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
         	std::stringstream ss;
         	ss << fqn << "=" << ipcp_id;
                 RIBFactory::getProxy()->addObjRIB(rib, ss.str(), &ipcp);
+          	obj_reply.name_ = ss.str();
+          	obj_reply.inst_ = ipcp_id;
         } catch (...)
         {
-                LOG_ERR("Create operation failed: for ipcp id '%d' in path '%s'. Out of memory.",
-                        ipcp_id, fqn.c_str());
+                std::stringstream ss;
+                ss << "Create operation failed for IPCP with id '" << ipcp_id
+                   << "' in path '" << fqn.c_str() << "': registering RO.";
+                LOG_ERR("%s", ss.str().c_str());
                 res.code_ = rina::cdap_rib::CDAP_ERROR;
+                res.reason_ = ss.str();                          
                 return;
         }
         res.code_ = rina::cdap_rib::CDAP_SUCCESS;
