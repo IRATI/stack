@@ -175,8 +175,7 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
         try
         {
         	std::stringstream ss;
-        	std::string partial_name = fqn.substr(0, fqn.find_last_of("="));
-        	ss << partial_name << ipcp_id;
+        	ss << fqn << "=" << ipcp_id;
                 RIBFactory::getProxy()->addObjRIB(rib, ss.str(), &ipcp);
         } catch (...)
         {
