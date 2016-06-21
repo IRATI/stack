@@ -12,7 +12,6 @@ obj-$(CONFIG_RINA) +=						\
 	core.o							\
 	rnl-utils.o rnl-workarounds.o rnl.o			\
 	buffer.o pci.o pdu.o sdu.o	        		\
-	pdu-ser.o						\
 	ipcp-utils.o						\
 	connection.o common.o policies.o			\
 	dtp-conf-utils.o dtcp-conf-utils.o      		\
