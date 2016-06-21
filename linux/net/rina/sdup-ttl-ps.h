@@ -25,7 +25,6 @@
 
 #include "sdup.h"
 #include "pdu.h"
-#include "pdu-ser.h"
 #include "ps-factory.h"
 
 struct sdup_ttl_ps {

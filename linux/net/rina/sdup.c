@@ -568,32 +568,6 @@ int sdup_set_policy_set_param(struct sdup_port * sdup_port,
 }
 EXPORT_SYMBOL(sdup_set_policy_set_param);
 
-/*bool pdu_ser_data_and_length(struct pdu_ser * pdu,
-		             unsigned char ** data,
-		             ssize_t *        len)
-{
-	struct buffer * buf;
-
-	buf = pdu_ser_buffer(pdu);
-	if (!buffer_is_ok(buf))
-		return -1;
-
-	ASSERT(data);
-	ASSERT(len);
-
-	*data = (unsigned char *) buffer_data_rw(buf);
-	if (!*data) {
-		LOG_ERR("Cannot get data from serialised PDU");
-		return -1;
-	}
-
-	*len = buffer_length(buf);
-
-	return 0;
-}
-EXPORT_SYMBOL(pdu_ser_data_and_length);
-*/
-
 int sdup_config_set(struct sdup *        instance,
 		    struct sdup_config * sdup_config)
 {

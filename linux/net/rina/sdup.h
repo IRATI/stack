@@ -25,7 +25,6 @@
 #include "ipcp-factories.h"
 #include "ipcp-instances.h"
 #include "ps-factory.h"
-#include "pdu-ser.h"
 #include "pci.h"
 
 /** An SDU Protection module sub-component */
@@ -107,10 +106,6 @@ int sdup_set_policy_set_param(struct sdup_port * sdup_port,
                               const char * path,
                               const char * name,
                               const char * value);
-
-bool pdu_ser_data_and_length(struct pdu * pdu,
-		             unsigned char ** data,
-		             ssize_t *        len);
 
 int sdup_config_set(struct sdup *        instance,
 		    struct sdup_config * sdup_config);
