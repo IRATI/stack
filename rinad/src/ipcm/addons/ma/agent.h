@@ -106,12 +106,6 @@ public:
 	}
 
 	/**
-	* Add an NMS DIF
-	*/
-	void addNMSDIF(std::string& difName);
-
-
-	/**
 	* Add a Manager connection
 	*
 	* TODO: improve this so that this method returns a handler, such that
@@ -150,24 +144,19 @@ protected:
 	friend class FlowManager;
 private:
 
-  //
-  // Internal methods
-  //
+	//
+	// Internal methods
+	//
 
-  /**
-  * Bootstrap necessary NMS DIFs and shim-DIFs
-  */
-  void bootstrapNMSDIFs(void);
+	/**
+  	 * Register agent AP into the IPCManager
+  	 */
+  	void reg(void);
 
-  /**
-  * Register agent AP into the IPCManager
-  */
-  void reg(void);
-
-  /**
-  * Connect to the Manager/s
-  */
-  void connect(void);
+        /**
+  	 * Connect to the Manager/s
+  	 */
+  	void connect(void);
 
 	//Submodules
 	ConfManager* conf_manager;
@@ -179,12 +168,6 @@ private:
 	* RINA AP information
 	*/
 	rina::ApplicationProcessNamingInformation info;
-
-	/**
-	* List of NMSDIFs
-	*/
-	std::list<std::string> nmsDIFs;
-
 
 	/**
 	* List of Manager connections
