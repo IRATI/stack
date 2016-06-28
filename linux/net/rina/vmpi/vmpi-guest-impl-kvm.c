@@ -127,11 +127,6 @@ vmpi_impl_get_written_buffer(struct vmpi_impl_info *vi)
 {
         unsigned int len;
         struct vmpi_buf *vb = virtqueue_get_buf(vi->sq->vq, &len);
-
-        if (vb) {
-                vmpi_buf_set_len(vb, len);
-        }
-
         return vb;
 }
 
