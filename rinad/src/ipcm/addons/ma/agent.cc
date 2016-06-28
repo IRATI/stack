@@ -161,6 +161,29 @@ void ManagementAgent::addManagerConnection(AppConnection& con){
 	connections.push_back(con);
 }
 
+std::string ManagementAgent::console_command(enum console_command command,
+			     	     	     std::list<std::string>& args)
+{
+	std::stringstream ss;
+
+	switch(command) {
+	case LIST_MAD_STATE:
+	        ss << "Management Agent name: " << info.getEncodedString() << std::endl;
+	        ss << "Management Agent active connections  ( Manager name | via DIF )" << std::endl;
+	        for (std::list<AppConnection>::iterator it = connections.begin();
+	        		it != connections.end(); ++it) {
+	        	ss << it->flow_info.remoteAppName.getEncodedString() << " | ";
+	        	ss << it->flow_info.difName.processName << std::endl;
+	        }
+	        ss << std::endl;
+	        return ss.str();
+	case QUERY_MAD_RIB:
+		return "";
+	default:
+		return "";
+	}
+}
+
 //Process event
 void ManagementAgent::process_librina_event(rina::IPCEvent** event){
 	flow_manager->process_librina_event(event);

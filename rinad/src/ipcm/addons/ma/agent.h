@@ -76,6 +76,11 @@ class FlowManager;
 class RIBFactory;
 class BGTaskManager;
 
+enum console_command {
+	LIST_MAD_STATE,
+	QUERY_MAD_RIB
+};
+
 /**
 * @brief Management Agent singleton class
 */
@@ -114,6 +119,12 @@ public:
 	* modified at runtime.
 	*/
 	void addManagerConnection(AppConnection& con);
+
+	/**
+	 * Execute a console command and provide feedback as a string
+	 */
+	std::string console_command(enum console_command command,
+				    std::list<std::string>& args);
 
 
 	/**

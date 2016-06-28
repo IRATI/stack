@@ -52,6 +52,7 @@
 //Addons
 #include "addons/console.h"
 #include "addons/scripting.h"
+#include "addons/ma/agent.h"
 //[+] Add more here...
 
 //IPCM IPCP
@@ -337,6 +338,14 @@ ipcm_res_t IPCManager_::destroy_ipcp(Addon* callee, unsigned short ipcp_id)
 
 void IPCManager_::list_ipcps(std::ostream& os)
 {
+    if (mad::ManagementAgent::inst != NULL) {
+	    std::list<std::string> args;
+	    os << mad::ManagementAgent::inst->console_command(mad::LIST_MAD_STATE, args);
+    } else {
+	    os << "Management Agent not started" << std::endl;
+	    os << std::endl;
+    }
+
     //Prevent any insertion/deletion to happen
     rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
 
