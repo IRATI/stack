@@ -142,11 +142,11 @@ void CDAPEchoWorker::serveEchoFlow(int port_id)
 
 const unsigned int CDAPEchoServer::max_sdu_size_in_bytes = 10000;
 
-CDAPEchoServer::CDAPEchoServer(const string& dif_name,
+CDAPEchoServer::CDAPEchoServer(const list<string>& dif_names,
 			       const string& app_name,
 			       const string& app_instance,
 			       const int dealloc_wait)
-			    : Server(dif_name, app_name, app_instance),
+			    : Server(dif_names, app_name, app_instance),
 			      dw(dealloc_wait)
 {
 }

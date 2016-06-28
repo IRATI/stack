@@ -37,7 +37,7 @@
 #include <iomanip>
 #include <errno.h>
 
-#define RINA_PREFIX     "rina-echo-time"
+#define RINA_PREFIX "rina-echo-time"
 #include <librina/ipc-api.h>
 #include <librina/logs.h>
 
@@ -62,12 +62,12 @@ double time_difference_in_ms(timespec start, timespec end) {
 }
 
 Client::Client(const string& t_type,
-               const string& dif_nm, const string& apn, const string& api,
+               const list<string>& dif_nms, const string& apn, const string& api,
                const string& server_apn, const string& server_api,
                bool q, unsigned long count,
                bool registration, unsigned int size,
                int w, int g, int dw, unsigned int lw, int rt) :
-        Application(dif_nm, apn, api), test_type(t_type), dif_name(dif_nm),
+        Application(dif_nms, apn, api), test_type(t_type), dif_name(dif_nms.front()),
         server_name(server_apn), server_instance(server_api),
         quiet(q), echo_times(count),
         client_app_reg(registration), data_size(size), wait(w), gap(g),
@@ -492,22 +492,6 @@ void Client::startCancelFloodFlowTask(int port_id)
 
 Client::~Client()
 {
-        unsigned long sdus_sent;
-
-        lock.lock();
-        sdus_sent = nsdus;
-        lock.unlock();
-
-        double variance = m2/((double)sdus_received -1);
-        double stdev = sqrt(variance);
-
-        unsigned long rt = 0;
-        if (sdus_sent > 0) rt = ((sdus_sent - sdus_received)*100/sdus_sent);
-        cout << "SDUs sent: "<< sdus_sent << "; SDUs received: " << sdus_received;
-        cout << "; " << rt << "% SDU loss" <<endl;
-        cout << "Minimum RTT: " << min_rtt << " ms; Maximum RTT: " << max_rtt
-             << " ms; Average RTT:" << average_rtt
-             << " ms; Standard deviation: " << stdev<<" ms"<<endl;
 }
 
 CFloodCancelFlowTimerTask::CFloodCancelFlowTimerTask(int pid, Client * cl)

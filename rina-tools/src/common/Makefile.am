@@ -17,4 +17,5 @@ librinaapp_la_LIBADD   =				\
 
 librinaapp_la_SOURCES  =					\
 	application.cc         application.h			\
-	server.cc	       server.h
+	server.cc	       server.h				\
+	utils.cc	       utils.h				

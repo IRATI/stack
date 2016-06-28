@@ -72,7 +72,7 @@ private:
 class Client: public Application {
 public:
         Client(const std::string& test_type,
-               const std::string& dif_name,
+               const std::list<std::string>& dif_name,
                const std::string& apn,
                const std::string& api,
                const std::string& server_apn,

@@ -63,7 +63,7 @@ class EchoTimeServer: public Server
 {
 public:
 	EchoTimeServer(const std::string& test_type,
-		       const std::string& dif_name,
+		       const std::list<std::string>& dif_names,
 		       const std::string& app_name,
 		       const std::string& app_instance,
 		       const int perf_interval,

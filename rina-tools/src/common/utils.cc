@@ -1,7 +1,7 @@
 /*
- * Echo Application
+ * Common utilities for all tools
  *
- * Addy Bombeke <addy.bombeke@ugent.be>
+ * Eduard Grasa <eduard.grasa@i2cat.net>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,29 +25,25 @@
  * SUCH DAMAGE.
  */
 
-#ifndef APPLICATION_HPP
-#define APPLICATION_HPP
+#define RINA_PREFIX "rina-tools-utils"
+#include <librina/logs.h>
 
-#include <string>
+#include "utils.h"
 
-class Application
+void parse_dif_names(std::list<std::string> & dif_names, const std::string& arg)
 {
-public:
-        Application(const std::list<std::string>& dif_names_,
-                    const std::string & app_name_,
-                    const std::string & app_instance_);
+	int i = 0;
+	int pos = arg.find(';');
+	if (pos == std::string::npos){
+		dif_names.push_back(arg);
+		return;
+	}
 
-        static const uint max_buffer_size;
-
-protected:
-
-        /// @param true if flows directed to this application will
-        /// have a blocking read/write behaviour, false otherwise
-        void applicationRegister();
-
-        std::list<std::string> dif_names;
-        std::string app_name;
-        std::string app_instance;
-
-};
-#endif
+	while (pos != std::string::npos) {
+		dif_names.push_back(arg.substr(i, pos-i));
+		i = ++pos;
+		pos = arg.find(';', pos);
+		if (pos == std::string::npos)
+			dif_names.push_back(arg.substr(i, arg.length()));
+	}
+}
