@@ -361,6 +361,21 @@ void IPCManager_::list_ipcps(std::ostream& os)
     }
 }
 
+std::string IPCManager_::query_ma_rib()
+{
+	std::stringstream ss;
+
+	if (mad::ManagementAgent::inst != NULL) {
+		std::list<std::string> args;
+		ss << mad::ManagementAgent::inst->console_command(mad::QUERY_MAD_RIB, args);
+	} else {
+		ss << "Management Agent not started" << std::endl;
+		ss << std::endl;
+	}
+
+	return ss.str();
+}
+
 //NOTE: this assumes an empty name is invalid as a return value for
 //could not complete the operation
 std::string IPCManager_::get_ipcp_name(int ipcp_id)

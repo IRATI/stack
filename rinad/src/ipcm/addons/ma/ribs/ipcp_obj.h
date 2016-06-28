@@ -35,6 +35,8 @@ public:
 		return class_name;
 	};
 
+	const std::string get_displayable_value() const;
+
 	//Read
 	void read(const rina::cdap_rib::con_handle_t &con,
 				const std::string& fqn,

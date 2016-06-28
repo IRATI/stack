@@ -165,6 +165,9 @@ std::string ManagementAgent::console_command(enum console_command command,
 			     	     	     std::list<std::string>& args)
 {
 	std::stringstream ss;
+	rina::rib::RIBDaemonProxy * ribd;
+	std::list<rina::rib::RIBObjectData> objects;
+	rina::rib::rib_handle_t rib_handle;
 
 	switch(command) {
 	case LIST_MAD_STATE:
@@ -172,13 +175,23 @@ std::string ManagementAgent::console_command(enum console_command command,
 	        ss << "Management Agent active connections  ( Manager name | via DIF )" << std::endl;
 	        for (std::list<AppConnection>::iterator it = connections.begin();
 	        		it != connections.end(); ++it) {
+	        	ss << "        ";
 	        	ss << it->flow_info.remoteAppName.getEncodedString() << " | ";
 	        	ss << it->flow_info.difName.processName << std::endl;
 	        }
 	        ss << std::endl;
 	        return ss.str();
 	case QUERY_MAD_RIB:
-		return "";
+		ribd = rib_factory->getProxy();
+		rib_handle = rib_factory->getRIBHandle(1, "v1");
+		objects = ribd->get_rib_objects_data(rib_handle);
+		for(std::list<rina::rib::RIBObjectData>::iterator it = objects.begin();
+				it != objects.end(); ++it) {
+			ss << "Name: " << it->name_ << "; Class: " << it->class_ << "; Instance "
+			   << it->instance_ << std::endl << "Value: " << it->displayable_value_ << std::endl;
+			ss << std::endl;
+		}
+		return ss.str();
 	default:
 		return "";
 	}

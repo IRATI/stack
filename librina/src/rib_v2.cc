@@ -1471,7 +1471,8 @@ std::list<RIBObjectData> RIB::get_all_rib_objects_data()
 	for (std::map<std::string, RIBObj*>::iterator it = obj_name_map.begin();
 			it != obj_name_map.end(); ++it) {
 		data = it->second->get_object_data();
-		data.instance_ = __get_obj_inst_id(data.name_);
+		if (it->first != "/")
+			data.instance_ = __get_obj_inst_id(data.name_);
 		result.push_back(data);
 	}
 

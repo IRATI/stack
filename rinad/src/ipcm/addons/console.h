@@ -98,6 +98,7 @@ class IPCMConsole : public Addon {
                 int read_ipcp_ribobj(std::vector<std::string>& args);
                 int show_catalog(std::vector<std::string>& args);
                 int update_catalog(std::vector<std::string>& args);
+                int query_ma_rib(std::vector<std::string>& args);
 
         public:
                 IPCMConsole(const std::string& socket_path);

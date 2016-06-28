@@ -281,6 +281,11 @@ public:
 	void list_ipcps(std::ostream& os);
 
 	//
+	// List the objects in the MA RIB
+	//
+	std::string query_ma_rib();
+
+	//
 	// Get the list of IPCPs in the system (IPCP id)
 	//
 	// @param list The list will be filled here
