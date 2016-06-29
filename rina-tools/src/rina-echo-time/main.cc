@@ -39,9 +39,9 @@
 #include "config.h"
 #include "et-client.h"
 #include "et-server.h"
+#include "utils.h"
 
 using namespace std;
-
 
 int wrapped_main(int argc, char** argv)
 {
@@ -61,7 +61,7 @@ int wrapped_main(int argc, char** argv)
         string server_api;
         string client_apn;
         string client_api;
-        string dif_name;
+        list<string> dif_names;
 
         try {
                 TCLAP::CmdLine cmd("rina-echo-time", ' ', PACKAGE_VERSION);
@@ -120,8 +120,8 @@ int wrapped_main(int argc, char** argv)
                                                        "1",
                                                        "string");
                 TCLAP::ValueArg<string> dif_arg("d",
-                                                "dif-to-register-at",
-                                                "The name of the DIF to register at (empty means 'any DIF')",
+                                                "difs-to-register-at",
+                                                "The names of the DIFs to register at, separated by ',' (empty means 'any DIF')",
                                                 false,
                                                 "",
                                                 "string");
@@ -192,7 +192,7 @@ int wrapped_main(int argc, char** argv)
                 server_api = server_api_arg.getValue();
                 client_apn = client_apn_arg.getValue();
                 client_api = client_api_arg.getValue();
-                dif_name = dif_arg.getValue();
+                parse_dif_names(dif_names, dif_arg.getValue());
                 test_type = test_type_arg.getValue();
                 gap = gap_arg.getValue();
                 perf_interval = perf_interval_arg.getValue();
@@ -216,13 +216,13 @@ int wrapped_main(int argc, char** argv)
 
         if (listen) {
                 // Server mode
-                EchoTimeServer s(test_type, dif_name, server_apn, server_api,
+                EchoTimeServer s(test_type, dif_names, server_apn, server_api,
                                  perf_interval, dw);
 
                 s.run(true);
         } else {
                 // Client mode
-                Client c(test_type, dif_name, client_apn, client_api,
+                Client c(test_type, dif_names, client_apn, client_api,
                          server_apn, server_api, quiet, count,
                          registration, size, wait, gap, dw, lost_wait, rate);
 

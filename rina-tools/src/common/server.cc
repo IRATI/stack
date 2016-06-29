@@ -105,10 +105,10 @@ int ServerWorkerCleaner::run()
 	return 0;
 }
 
-Server::Server(const string& dif_name,
+Server::Server(const std::list<std::string>& dif_names,
                const string& app_name,
                const string& app_instance) :
-        Application(dif_name, app_name, app_instance)
+        Application(dif_names, app_name, app_instance)
 {
 	ThreadAttributes threadAttrs;
 	threadAttrs.setJoinable();

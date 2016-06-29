@@ -242,12 +242,12 @@ void EchoTimeServerWorker::printPerfStats(unsigned long pkt,
 }
 
 EchoTimeServer::EchoTimeServer(const string& t_type,
-			       const string& dif_name,
+			       const std::list<std::string>& dif_names,
 			       const string& app_name,
 			       const string& app_instance,
 			       const int perf_interval,
 			       const int dealloc_wait) :
-        		Server(dif_name, app_name, app_instance),
+        		Server(dif_names, app_name, app_instance),
         test_type(t_type), interval(perf_interval), dw(dealloc_wait)
 {
 }

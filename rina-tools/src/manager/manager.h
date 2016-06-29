@@ -78,7 +78,7 @@ private:
 
 class Manager : public Server {
  public:
-	Manager(const std::string& dif_name,
+	Manager(const std::list<std::string>& dif_names,
 		const std::string& apn,
 		const std::string& api);
 	~Manager() { };
