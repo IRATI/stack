@@ -1105,7 +1105,7 @@ int dt_pdu_send(struct dt *   dt,
 	/* Local flow case */
 	dest_cep_id = pci_cep_destination(pci);
 	efcpc = efcp_container_get(dt_efcp(dt));
-	if (!efcpc) {
+	if (unlikely(!efcpc || pdu_decap(pdu) || !pdu_is_ok(pdu))) { /*Decap PDU */
 	        LOG_ERR("Could not retrieve the EFCP container in"
 	        "loopback operation");
 	        pdu_destroy(pdu);
