@@ -80,15 +80,15 @@ struct rmt {
 	struct robject robj;
 };
 
-#define stats_get(name, n1_port, retval, flags)					\
-        spin_lock_irqsave(&n1_port->lock, flags);				\
-        retval = n1_port->stats.name;						\
-        spin_unlock_irqrestore(&n1_port->lock, flags);
+#define stats_get(name, n1_port, retval)				\
+        spin_lock_bh(&n1_port->lock);					\
+        retval = n1_port->stats.name;					\
+        spin_unlock_bh(&n1_port->lock);
 
-#define stats_inc(name, n1_port, bytes)						\
-        n1_port->stats.name##_pdus++;						\
-	n1_port->stats.name##_bytes += (unsigned int) bytes;			\
-        LOG_DBG("PDUs __STRINGIFY(name) %u (%u)",				\
+#define stats_inc(name, n1_port, bytes)					\
+        n1_port->stats.name##_pdus++;					\
+	n1_port->stats.name##_bytes += (unsigned int) bytes;		\
+        LOG_DBG("PDUs __STRINGIFY(name) %u (%u)",			\
 		n1_port->stats.name##_pdus, n1_port->stats.name##_bytes);
 
 static ssize_t rmt_attr_show(struct robject *        robj,
@@ -113,7 +113,6 @@ static ssize_t rmt_n1_port_attr_show(struct robject *        robj,
 {
 	struct rmt_n1_port * n1_port;
 	unsigned int stats_ret;
-	unsigned long flags;
 	bool wbusy;
 	enum flow_state state;
 
@@ -122,43 +121,43 @@ static ssize_t rmt_n1_port_attr_show(struct robject *        robj,
 		return 0;
 
 	if (strcmp(robject_attr_name(attr), "queued_pdus") == 0) {
-		stats_get(plen, n1_port, stats_ret, flags);
+		stats_get(plen, n1_port, stats_ret);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
 	if (strcmp(robject_attr_name(attr), "drop_pdus") == 0) {
-		stats_get(drop_pdus, n1_port, stats_ret, flags);
+		stats_get(drop_pdus, n1_port, stats_ret);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
 	if (strcmp(robject_attr_name(attr), "err_pdus") == 0) {
-		stats_get(err_pdus, n1_port, stats_ret, flags);
+		stats_get(err_pdus, n1_port, stats_ret);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
 	if (strcmp(robject_attr_name(attr), "tx_pdus") == 0) {
-		stats_get(tx_pdus, n1_port, stats_ret, flags);
+		stats_get(tx_pdus, n1_port, stats_ret);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
 	if (strcmp(robject_attr_name(attr), "rx_pdus") == 0) {
-		stats_get(rx_pdus, n1_port, stats_ret, flags);
+		stats_get(rx_pdus, n1_port, stats_ret);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
 	if (strcmp(robject_attr_name(attr), "tx_bytes") == 0) {
-		stats_get(tx_bytes, n1_port, stats_ret, flags);
+		stats_get(tx_bytes, n1_port, stats_ret);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
 	if (strcmp(robject_attr_name(attr), "rx_bytes") == 0) {
-		stats_get(rx_bytes, n1_port, stats_ret, flags);
+		stats_get(rx_bytes, n1_port, stats_ret);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
 	if (strcmp(robject_attr_name(attr), "wbusy") == 0) {
-		spin_lock_irqsave(&n1_port->lock, flags);
+		spin_lock_bh(&n1_port->lock);
 		wbusy = n1_port->wbusy;
-		spin_unlock_irqrestore(&n1_port->lock, flags);
+		spin_unlock_bh(&n1_port->lock);
 		return sprintf(buf, "%s\n", wbusy?"true":"false");
 	}
 	if (strcmp(robject_attr_name(attr), "state") == 0) {
-		spin_lock_irqsave(&n1_port->lock, flags);
+		spin_lock_bh(&n1_port->lock);
 		state = n1_port->state;
-		spin_unlock_irqrestore(&n1_port->lock, flags);
+		spin_unlock_bh(&n1_port->lock);
 		return sprintf(buf, "%d\n", (int) state);
 	}
 	return 0;
@@ -275,7 +274,6 @@ static int n1pmap_destroy(struct rmt *instance)
 {
 	struct rmt_n1_port *entry;
 	struct hlist_node *tmp;
-	unsigned long flags;
 	int bucket;
 	struct n1pmap *m;
 
@@ -285,7 +283,7 @@ static int n1pmap_destroy(struct rmt *instance)
 	if (!m)
 		return 0;
 
-	spin_lock_irqsave(&m->lock, flags);
+	spin_lock_bh(&m->lock);
 	hash_for_each_safe(m->n1_ports, bucket, tmp, entry, hlist) {
 		ASSERT(entry);
 		if (n1_port_user_ipcp_unbind(entry))
@@ -294,7 +292,7 @@ static int n1pmap_destroy(struct rmt *instance)
 		if (n1_port_cleanup(instance, entry))
 			LOG_ERR("Could not destroy entry %pK", entry);
 	}
-	spin_unlock_irqrestore(&m->lock, flags);
+	spin_unlock_bh(&m->lock);
 
 	if (m->rset)
 		rset_unregister(m->rset);
@@ -326,21 +324,20 @@ static struct n1pmap *n1pmap_create(struct robject * parent)
 	return tmp;
 }
 
-#define n1_port_lock(port, flags)	\
-	spin_lock_irqsave(&port->lock, flags)
+#define n1_port_lock(port)	\
+	spin_lock_bh(&port->lock)
 
-#define n1_port_unlock(port, flags)	\
-	spin_unlock_irqrestore(&port->lock, flags)
+#define n1_port_unlock(port)	\
+	spin_unlock_bh(&port->lock)
 
-#define n1_port_unlock_release(port, flags)	\
+#define n1_port_unlock_release(port)	\
 	atomic_dec(&port->refs_c);		\
-	n1_port_unlock(port, flags)
+	n1_port_unlock(port)
 
 static void n1pmap_release(struct rmt *instance,
 			   struct rmt_n1_port *n1_port)
 {
 	struct n1pmap *m;
-	unsigned long flags;
 
 	ASSERT(instance);
 
@@ -348,16 +345,16 @@ static void n1pmap_release(struct rmt *instance,
 	if (!m)
 		return;
 
-	n1_port_lock(n1_port, flags);
+	n1_port_lock(n1_port);
 	if (atomic_dec_and_test(&n1_port->refs_c) &&
 	    n1_port->state == N1_PORT_STATE_DEALLOCATED) {
-		n1_port_unlock(n1_port, flags);
-		spin_lock_irqsave(&m->lock, flags);
+		n1_port_unlock(n1_port);
+		spin_lock_bh(&m->lock);
 		n1_port_cleanup(instance, n1_port);
-		spin_unlock_irqrestore(&m->lock, flags);
+		spin_unlock_bh(&m->lock);
 		return;
 	}
-	n1_port_unlock(n1_port, flags);
+	n1_port_unlock(n1_port);
 	return;
 }
 
@@ -367,7 +364,6 @@ static struct rmt_n1_port *n1pmap_find(struct rmt *instance,
 	struct rmt_n1_port *entry;
 	const struct hlist_head *head;
 	struct n1pmap *m;
-	unsigned long flags;
 
 	ASSERT(instance);
 
@@ -378,22 +374,22 @@ static struct rmt_n1_port *n1pmap_find(struct rmt *instance,
 	if (!m)
 		return NULL;
 
-	spin_lock_irqsave(&m->lock, flags);
+	spin_lock_bh(&m->lock);
 	head = &m->n1_ports[rmap_hash(m->n1_ports, id)];
 	hlist_for_each_entry(entry, head, hlist)
 		if (entry->port_id == id) {
 			spin_lock(&entry->lock);
 			if (entry->state == N1_PORT_STATE_DEALLOCATED) {
 				spin_unlock(&entry->lock);
-				spin_unlock_irqrestore(&m->lock, flags);
+				spin_unlock_bh(&m->lock);
 				return NULL;
 			}
 			atomic_inc(&entry->refs_c);
 			spin_unlock(&entry->lock);
-			spin_unlock_irqrestore(&m->lock, flags);
+			spin_unlock_bh(&m->lock);
 			return entry;
 		}
-	spin_unlock_irqrestore(&m->lock, flags);
+	spin_unlock_bh(&m->lock);
 
 	return NULL;
 }
@@ -672,7 +668,6 @@ static int n1_port_write_sdu(struct rmt *rmt,
 			     struct sdu *sdu)
 {
 	int ret;
-	unsigned long flags;
 	ssize_t bytes = buffer_length(sdu_buffer_ro(sdu));
 
 	LOG_DBG("Gonna send SDU to port-id %d", n1_port->port_id);
@@ -683,7 +678,7 @@ static int n1_port_write_sdu(struct rmt *rmt,
 		return (int) bytes;
 
 	if (ret == -EAGAIN) {
-		n1_port_lock(n1_port, flags);
+		n1_port_lock(n1_port);
 		if (n1_port->pending_sdu) {
 			LOG_ERR("Already a pending SDU present for port %d",
 					n1_port->port_id);
@@ -700,7 +695,7 @@ static int n1_port_write_sdu(struct rmt *rmt,
 		} else
 			n1_port->state = N1_PORT_STATE_DISABLED;
 
-		n1_port_unlock(n1_port, flags);
+		n1_port_unlock(n1_port);
 	}
 	return ret;
 }
@@ -928,7 +923,6 @@ int rmt_send_port_id(struct rmt *instance,
 {
 	struct rmt_n1_port *n1_port;
 	struct rmt_ps *ps;
-	unsigned long flags;
 	int ret;
 
 	if (!pdu_is_ok(pdu)) {
@@ -967,7 +961,7 @@ int rmt_send_port_id(struct rmt *instance,
 		return -1;
 	}
 
-	n1_port_lock(n1_port, flags);
+	n1_port_lock(n1_port);
 	if (n1_port->stats.plen 				||
 		n1_port->wbusy 					||
 		n1_port->state == N1_PORT_STATE_DISABLED) {
@@ -990,24 +984,24 @@ int rmt_send_port_id(struct rmt *instance,
 			LOG_ERR("rmt_enqueu_policy returned wrong value");
 			break;
 		}
-		n1_port_unlock(n1_port, flags);
+		n1_port_unlock(n1_port);
 		n1pmap_release(instance, n1_port);
 		return 0;
 	}
 	rcu_read_unlock();
 	n1_port->wbusy = true;
-	n1_port_unlock(n1_port, flags);
+	n1_port_unlock(n1_port);
 	LOG_DBG("PDU ready to be sent, no need to enqueue");
 	ret = n1_port_write(instance, n1_port, pdu);
 	/*FIXME LB: This is just horrible, needs to be rethinked */
-	n1_port_lock(n1_port, flags);
+	n1_port_lock(n1_port);
 	n1_port->wbusy = false;
 	if (ret >= 0) {
 		stats_inc(tx, n1_port, ret);
 		ret = 0;
 	} else if (ret == -EAGAIN)
 		ret = 0;
-	n1_port_unlock(n1_port, flags);
+	n1_port_unlock(n1_port);
 	n1pmap_release(instance, n1_port);
 	return ret;
 }
@@ -1078,7 +1072,6 @@ int rmt_enable_port_id(struct rmt *instance,
 		       port_id_t id)
 {
 	struct rmt_n1_port *n1_port;
-	unsigned long flags;
 	int ret = 0;
 
 	if (!instance) {
@@ -1104,7 +1097,7 @@ int rmt_enable_port_id(struct rmt *instance,
 		return -1;
 	}
 
-	n1_port_lock(n1_port, flags);
+	n1_port_lock(n1_port);
 	if (n1_port->state == N1_PORT_STATE_ENABLED) {
 		n1_port->state = N1_PORT_STATE_DO_NOT_DISABLE;
 		goto exit;
@@ -1117,7 +1110,7 @@ exit:
 	if (n1_port->stats.plen)
 		tasklet_hi_schedule(&instance->egress_tasklet);
 
-	n1_port_unlock_release(n1_port, flags);
+	n1_port_unlock_release(n1_port);
 
 	return ret;
 }
@@ -1127,7 +1120,6 @@ int rmt_disable_port_id(struct rmt *instance,
 			port_id_t id)
 {
 	struct rmt_n1_port *n1_port;
-	unsigned long flags;
 	int ret = 0;
 
 	if (!instance) {
@@ -1151,7 +1143,7 @@ int rmt_disable_port_id(struct rmt *instance,
 		return -1;
 	}
 
-	n1_port_lock(n1_port, flags);
+	n1_port_lock(n1_port);
 	if (n1_port->state == N1_PORT_STATE_DISABLED) {
 		LOG_DBG("Nothing to do for port-id %d", id);
 		goto exit;
@@ -1168,7 +1160,7 @@ int rmt_disable_port_id(struct rmt *instance,
 	LOG_DBG("Changed state to DISABLED");
 
 exit:
-	n1_port_unlock_release(n1_port, flags);
+	n1_port_unlock_release(n1_port);
 	return ret;
 }
 EXPORT_SYMBOL(rmt_disable_port_id);
@@ -1253,7 +1245,6 @@ int rmt_n1port_unbind(struct rmt *instance,
 		      port_id_t id)
 {
 	struct rmt_n1_port *n1_port;
-	unsigned long flags;
 
 	if (!instance) {
 		LOG_ERR("Bogus instance passed");
@@ -1276,9 +1267,9 @@ int rmt_n1port_unbind(struct rmt *instance,
 		return 0;
 	}
 
-	n1_port_lock(n1_port, flags);
+	n1_port_lock(n1_port);
 	n1_port->state = N1_PORT_STATE_DEALLOCATED;
-	n1_port_unlock(n1_port, flags);
+	n1_port_unlock(n1_port);
 	/* NOTE: Releasing the lock to be able to use n1pmap_release... it is
 	 * not wrong since once in N1_PORT_STATE_DEALLOCATED no other action
 	 * will be performed on the n1_port but this action should be atomic */

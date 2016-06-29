@@ -77,29 +77,28 @@ port_id_t kfa_port_id_reserve(struct kfa      *instance,
 			      ipc_process_id_t id)
 {
 	port_id_t     pid;
-	unsigned long flags;
 
 	if (!instance) {
 		LOG_ERR("Bogus instance passed, bailing out");
 		return port_id_bad();
 	}
 
-	spin_lock_irqsave(&instance->lock, flags);
+	spin_lock_bh(&instance->lock);
 
 	if (!instance->pidm) {
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		LOG_ERR("This KFA instance doesn't have a PIDM");
 		return port_id_bad();
 	}
 
 	pid = pidm_allocate(instance->pidm);
 	if (!is_port_id_ok(pid)) {
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		LOG_ERR("Cannot get a port-id");
 		return port_id_bad();
 	}
 
-	spin_unlock_irqrestore(&instance->lock, flags);
+	spin_unlock_bh(&instance->lock);
 
 	return pid;
 }
@@ -145,7 +144,6 @@ int  kfa_port_id_release(struct kfa *instance,
 			 port_id_t   port_id)
 {
 	struct ipcp_flow *flow;
-	unsigned long	  flags;
 
 	if (!instance) {
 		LOG_ERR("Bogus instance passed, bailing out");
@@ -157,7 +155,7 @@ int  kfa_port_id_release(struct kfa *instance,
 		return -1;
 	}
 
-	spin_lock_irqsave(&instance->lock, flags);
+	spin_lock_bh(&instance->lock);
 
 	/* To avoid releasing the port if it is used by a flow in the KFA
 	 * (to an app) which will be automatically destroyed when the flow is
@@ -167,23 +165,23 @@ int  kfa_port_id_release(struct kfa *instance,
 	 */
 	flow = kfa_pmap_find(instance->flows, port_id);
 	if (flow) {
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		return 0;
 	}
 
 	if (!instance->pidm) {
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		LOG_ERR("This KFA instance doesn't have a PIDM");
 		return -1;
 	}
 
 	if (pidm_release(instance->pidm, port_id)) {
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		LOG_ERR("Could not release pid %d from the map", port_id);
 		return -1;
 	}
 
-	spin_unlock_irqrestore(&instance->lock, flags);
+	spin_unlock_bh(&instance->lock);
 
 	return 0;
 }
@@ -200,7 +198,6 @@ static int kfa_flow_deallocate_worker(void *data)
 	struct kfa          *instance;
 	port_id_t	     id;
 	struct flowdel_data *wqdata;
-	unsigned long	     flags;
 
 	IRQ_BARRIER;
 
@@ -221,11 +218,11 @@ static int kfa_flow_deallocate_worker(void *data)
 		return -1;
 	}
 
-	spin_lock_irqsave(&instance->lock, flags);
+	spin_lock_bh(&instance->lock);
 
 	flow = kfa_pmap_find(instance->flows, id);
 	if (!flow) {
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		LOG_ERR("The flow with port-id %d was already destroyed", id);
 		return 0;
 	}
@@ -240,11 +237,11 @@ static int kfa_flow_deallocate_worker(void *data)
 	    (atomic_read(&flow->posters) == 0)) {
 		if (kfa_flow_destroy(instance, flow, id))
 			LOG_ERR("Could not destroy the flow correctly");
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		return 0;
 	}
 
-	spin_unlock_irqrestore(&instance->lock, flags);
+	spin_unlock_bh(&instance->lock);
 
 	LOG_DBG("Waking up all!");
 	wake_up_interruptible_all(&flow->read_wqueue);
@@ -260,7 +257,6 @@ static int kfa_flow_deallocate(struct ipcp_instance_data *data,
 	struct flowdel_data  *wqdata;
 	struct ipcp_flow     *flow;
 	struct kfa           *instance;
-	unsigned long	      flags;
 
 	if (!data) {
 		LOG_ERR("Bogus data passed, bailing out");
@@ -277,11 +273,11 @@ static int kfa_flow_deallocate(struct ipcp_instance_data *data,
 		return -1;
 	}
 
-	spin_lock_irqsave(&instance->lock, flags);
+	spin_lock_bh(&instance->lock);
 
 	flow = kfa_pmap_find(instance->flows, id);
 	if (!flow) {
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		LOG_ERR("There is no flow created with port-id %d", id);
 		return -1;
 	}
@@ -294,7 +290,7 @@ static int kfa_flow_deallocate(struct ipcp_instance_data *data,
 		LOG_DBG("Destroying kfa flow now...");
 		if (kfa_flow_destroy(instance, flow, id))
 			LOG_ERR("Could not destroy the flow correctly");
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		return 0;
 	}
 
@@ -309,7 +305,7 @@ static int kfa_flow_deallocate(struct ipcp_instance_data *data,
 	}
 
 	rwq_work_post(data->kfa->flowdelq, item);
-	spin_unlock_irqrestore(&instance->lock, flags);
+	spin_unlock_bh(&instance->lock);
 
 	return 0;
 }
@@ -329,7 +325,6 @@ static int disable_write(struct ipcp_instance_data *data, port_id_t id)
 {
 	struct ipcp_flow *flow;
 	struct kfa       *instance;
-	unsigned long	  flags;
 
 	if (!data) {
 		LOG_ERR("Bogus ipcp data instance passed, can't enable pid");
@@ -347,23 +342,23 @@ static int disable_write(struct ipcp_instance_data *data, port_id_t id)
 	}
 	LOG_DBG("DISABLED write op");
 
-	spin_lock_irqsave(&instance->lock, flags);
+	spin_lock_bh(&instance->lock);
 	flow = kfa_pmap_find(instance->flows, id);
 	if (!flow) {
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		LOG_ERR("There is no flow bound to port-id %d", id);
 		return -1;
 	}
 
 	if (flow->state == PORT_STATE_DEALLOCATED) {
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		LOG_DBG("Flow with port-id %d is already deallocated", id);
 		return 0;
 	}
 
 	flow->state = PORT_STATE_DISABLED;
 	LOG_DBG("Disabled write in port id %d", id);
-	spin_unlock_irqrestore(&instance->lock, flags);
+	spin_unlock_bh(&instance->lock);
 
 	LOG_DBG("IPCP notified CWQ exhausted");
 
@@ -375,7 +370,6 @@ static int enable_write(struct ipcp_instance_data *data, port_id_t id)
 	struct ipcp_flow  *flow;
 	struct kfa        *instance;
 	wait_queue_head_t *wq;
-	unsigned long	   flags;
 
 	if (!data) {
 		LOG_ERR("Bogus ipcp data instance passed, can't enable pid");
@@ -394,29 +388,29 @@ static int enable_write(struct ipcp_instance_data *data, port_id_t id)
 
 	LOG_DBG("ENABLED write op");
 
-	spin_lock_irqsave(&instance->lock, flags);
+	spin_lock_bh(&instance->lock);
 	flow = kfa_pmap_find(instance->flows, id);
 	if (!flow) {
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		LOG_ERR("There is no flow bound to port-id %d", id);
 		return -1;
 	}
 
 	if (flow->state == PORT_STATE_DEALLOCATED) {
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		LOG_DBG("Flow with port-id %d is already deallocated", id);
 		return 0;
 	}
 	if (flow->state == PORT_STATE_DISABLED) {
 		flow->state = PORT_STATE_ALLOCATED;
 		wq = &flow->write_wqueue;
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		LOG_DBG("IPCP notified CWQ is now enabled");
 		LOG_DBG("Enabled write in port id %d", id);
 		wake_up_interruptible(wq);
 		return 0;
 	}
-	spin_unlock_irqrestore(&instance->lock, flags);
+	spin_unlock_bh(&instance->lock);
 	LOG_DBG("IPCP notified CWQ already enabled");
 
 	return 0;
@@ -430,7 +424,6 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 	struct ipcp_instance *ipcp;
 	struct kfa           *instance;
 	int		      retval = 0;
-	unsigned long	      flags;
 
 	IRQ_BARRIER;
 
@@ -459,17 +452,17 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 
 	LOG_DBG("Trying to write SDU to port-id %d", id);
 
-	spin_lock_irqsave(&instance->lock, flags);
+	spin_lock_bh(&instance->lock);
 
 	flow = kfa_pmap_find(instance->flows, id);
 	if (!flow) {
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		LOG_ERR("There is no flow bound to port-id %d", id);
 		sdu_destroy(sdu);
 		return -EBADF;
 	}
 	if (flow->state == PORT_STATE_DEALLOCATED) {
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		LOG_ERR("Flow with port-id %d is already deallocated", id);
 		sdu_destroy(sdu);
 		return -ESHUTDOWN;
@@ -479,7 +472,7 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 
 	if (!(flow->options & FLOW_O_NONBLOCK)) { /* blocking I/O */
 		while (!ok_write(flow)) {
-			spin_unlock_irqrestore(&instance->lock, flags);
+			spin_unlock_bh(&instance->lock);
 
 			LOG_DBG("Going to sleep on wait queue %pK (writing)",
 					&flow->write_wqueue);
@@ -500,11 +493,11 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 				}
 			}
 
-			spin_lock_irqsave(&instance->lock, flags);
+			spin_lock_bh(&instance->lock);
 
 			flow = kfa_pmap_find(instance->flows, id);
 			if (!flow) {
-				spin_unlock_irqrestore(&instance->lock, flags);
+				spin_unlock_bh(&instance->lock);
 				sdu_destroy(sdu);
 
 				LOG_ERR("No more flow bound to port-id %d", id);
@@ -533,12 +526,12 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 		ASSERT(ipcp->ops);
 		ASSERT(ipcp->ops->sdu_write);
 
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
 			LOG_ERR("Couldn't write SDU on port-id %d", id);
 			retval = -EIO;
 		}
-		spin_lock_irqsave(&instance->lock, flags);
+		spin_lock_bh(&instance->lock);
 	} else { /* non-blocking I/O */
 		if (flow->state == PORT_STATE_PENDING
 		    || flow->state == PORT_STATE_DISABLED) {
@@ -563,12 +556,12 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 		ASSERT(ipcp->ops);
 		ASSERT(ipcp->ops->sdu_write);
 
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
 			LOG_ERR("Couldn't write SDU on port-id %d", id);
 			retval = -EIO;
 		}
-		spin_lock_irqsave(&instance->lock, flags);
+		spin_lock_bh(&instance->lock);
 	}
 
  finish:
@@ -581,7 +574,7 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 		if (kfa_flow_destroy(instance, flow, id))
 			LOG_ERR("Could not destroy the flow correctly");
 
-	spin_unlock_irqrestore(&instance->lock, flags);
+	spin_unlock_bh(&instance->lock);
 
 	return retval;
 }
@@ -615,7 +608,6 @@ int kfa_flow_sdu_read(struct kfa  *instance,
 {
 	struct ipcp_flow *flow;
 	int		  retval = 0;
-	unsigned long	  flags;
 
 	IRQ_BARRIER;
 
@@ -634,17 +626,17 @@ int kfa_flow_sdu_read(struct kfa  *instance,
 
 	LOG_DBG("Trying to read SDU from port-id %d", id);
 
-	spin_lock_irqsave(&instance->lock, flags);
+	spin_lock_bh(&instance->lock);
 
 	flow = kfa_pmap_find(instance->flows, id);
 	if (!flow) {
 		LOG_ERR("There is no flow bound to port-id %d", id);
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		return -EBADF;
 	}
 	if (flow->state == PORT_STATE_DEALLOCATED) {
 		LOG_ERR("Flow with port-id %d is already deallocated", id);
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		return -ESHUTDOWN;
 	}
 
@@ -653,7 +645,7 @@ int kfa_flow_sdu_read(struct kfa  *instance,
 	if (!(flow->options & FLOW_O_NONBLOCK)) { /* blocking I/O */
 		while (flow->state == PORT_STATE_PENDING ||
 				rfifo_is_empty(flow->sdu_ready)) {
-			spin_unlock_irqrestore(&instance->lock, flags);
+			spin_unlock_bh(&instance->lock);
 
 			LOG_DBG("Going to sleep on wait queue %pK (reading)",
 					&flow->read_wqueue);
@@ -673,10 +665,10 @@ int kfa_flow_sdu_read(struct kfa  *instance,
 				}
 			}
 
-			spin_lock_irqsave(&instance->lock, flags);
+			spin_lock_bh(&instance->lock);
 			flow = kfa_pmap_find(instance->flows, id);
 			if (!flow) {
-				spin_unlock_irqrestore(&instance->lock, flags);
+				spin_unlock_bh(&instance->lock);
 				LOG_ERR("No more flow bound to port-id %d", id);
 				return -EBADF;
 			}
@@ -733,7 +725,7 @@ int kfa_flow_sdu_read(struct kfa  *instance,
 		if (kfa_flow_destroy(instance, flow, id))
 			LOG_ERR("Could not destroy the flow correctly");
 
-	spin_unlock_irqrestore(&instance->lock, flags);
+	spin_unlock_bh(&instance->lock);
 
 	return retval;
 }
@@ -745,7 +737,6 @@ static int kfa_sdu_post(struct ipcp_instance_data *data,
 	struct ipcp_flow  *flow;
 	wait_queue_head_t *wq;
 	struct kfa        *instance;
-	unsigned long	   flags;
 	int		   retval = 0;
 
 	if (!data) {
@@ -773,17 +764,17 @@ static int kfa_sdu_post(struct ipcp_instance_data *data,
 
 	LOG_DBG("Posting SDU to port-id %d ", id);
 
-	spin_lock_irqsave(&instance->lock, flags);
+	spin_lock_bh(&instance->lock);
 	flow = kfa_pmap_find(instance->flows, id);
 	if (!flow) {
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		LOG_ERR("There is no flow bound to port-id %d", id);
 		sdu_destroy(sdu);
 		return -1;
 	}
 
 	if (flow->state == PORT_STATE_DEALLOCATED) {
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		LOG_ERR("Flow with port-id %d is already deallocated", id);
 		sdu_destroy(sdu);
 		return -1;
@@ -806,7 +797,7 @@ static int kfa_sdu_post(struct ipcp_instance_data *data,
 		flow = NULL;
 	}
 
-	spin_unlock_irqrestore(&instance->lock, flags);
+	spin_unlock_bh(&instance->lock);
 
 	if (flow && (retval == 0)) {
 		wq = &flow->read_wqueue;
@@ -842,7 +833,6 @@ int kfa_flow_create(struct kfa           *instance,
 		    struct ipcp_instance *ipcp)
 {
 	struct ipcp_flow *flow;
-	unsigned long	  flags;
 
 	IRQ_BARRIER;
 
@@ -877,17 +867,17 @@ int kfa_flow_create(struct kfa           *instance,
 	flow->state	  = PORT_STATE_PENDING;
 	LOG_DBG("Flow pre-bound to port-id %d", pid);
 
-	spin_lock_irqsave(&instance->lock, flags);
+	spin_lock_bh(&instance->lock);
 
 	if (kfa_pmap_add_ni(instance->flows, pid, flow)) {
 		rkfree(flow);
 
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		LOG_ERR("Could not map flow and port-id %d", pid);
 		return -1;
 	}
 
-	spin_unlock_irqrestore(&instance->lock, flags);
+	spin_unlock_bh(&instance->lock);
 
 	return 0;
 }
@@ -899,7 +889,6 @@ static int kfa_flow_ipcp_bind(struct ipcp_instance_data *data,
 {
 	struct ipcp_flow *flow;
 	struct kfa       *instance;
-	unsigned long	  flags;
 
 	IRQ_BARRIER;
 	LOG_DBG("Binding IPCP %pK to flow on port %d", ipcp, pid);
@@ -924,10 +913,10 @@ static int kfa_flow_ipcp_bind(struct ipcp_instance_data *data,
 		return -1;
 	}
 
-	spin_lock_irqsave(&instance->lock, flags);
+	spin_lock_bh(&instance->lock);
 	flow = kfa_pmap_find(instance->flows, pid);
 	if (!flow) {
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		LOG_ERR("Cannot bind IPCP %pK, missing flow on port %d",
 			ipcp,
 			pid);
@@ -940,11 +929,11 @@ static int kfa_flow_ipcp_bind(struct ipcp_instance_data *data,
 	if (!flow->sdu_ready) {
 		kfa_pmap_remove(instance->flows, pid);
 		rkfree(flow);
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		return -1;
 	}
 
-	spin_unlock_irqrestore(&instance->lock, flags);
+	spin_unlock_bh(&instance->lock);
 
 	LOG_DBG("Flow bound to port-id %d", pid);
 
@@ -1063,7 +1052,6 @@ int kfa_flow_opts_set(struct kfa *instance,
 		      flow_opts_t flow_opts)
 {
 	struct ipcp_flow *flow;
-	unsigned long	  flags;
 
 	IRQ_BARRIER;
 
@@ -1076,17 +1064,17 @@ int kfa_flow_opts_set(struct kfa *instance,
 		return -EINVAL;
 	}
 
-	spin_lock_irqsave(&instance->lock, flags);
+	spin_lock_bh(&instance->lock);
 
 	flow = kfa_pmap_find(instance->flows, pid);
 	if (!flow) {
-		spin_unlock_irqrestore(&instance->lock, flags);
+		spin_unlock_bh(&instance->lock);
 		LOG_ERR("Can't set options, missing flow on port_id %d", pid);
 		return -1;
 	}
 	flow->options = flow_opts;
 
-	spin_unlock_irqrestore(&instance->lock, flags);
+	spin_unlock_bh(&instance->lock);
 
 	LOG_DBG("Set options on port_id %d to %o", pid, flow_opts);
 

@@ -456,20 +456,19 @@ static struct tmap * tables = NULL;
 struct table * tbls_find(struct net_device * device, uint16_t ptype)
 {
         struct tmap_entry * e;
-        unsigned long       flags;
 
         if (!device)
                 return NULL;
 
-        spin_lock_irqsave(&tables_lock, flags);
+        spin_lock_bh(&tables_lock);
 
         e = tmap_entry_find(tables, device, ptype);
         if (!e) {
-                spin_unlock_irqrestore(&tables_lock, flags);
+                spin_unlock_bh(&tables_lock);
                 return NULL;
         }
 
-        spin_unlock_irqrestore(&tables_lock, flags);
+        spin_unlock_bh(&tables_lock);
 
         return tmap_entry_value(e);
 }
@@ -480,7 +479,6 @@ static struct table * tbls_create_gfp(gfp_t               flags,
                                       size_t              hwlen)
 {
         struct table * cl;
-        unsigned long  irqflags;
 
         LOG_DBG("Creating table for ptype = 0x%04X, hwlen = %zd",
                 ptype, hwlen);
@@ -500,15 +498,15 @@ static struct table * tbls_create_gfp(gfp_t               flags,
 
         LOG_DBG("Now adding the new table to the tables map");
 
-        spin_lock_irqsave(&tables_lock, irqflags);
+        spin_lock_bh(&tables_lock);
         if (tmap_entry_add_ni(tables, device, ptype, cl)) {
-                spin_unlock_irqrestore(&tables_lock, irqflags);
+                spin_unlock_bh(&tables_lock);
 
                 tbl_destroy(cl);
 
                 return NULL;
         }
-        spin_unlock_irqrestore(&tables_lock, irqflags);
+        spin_unlock_bh(&tables_lock);
 
         LOG_DBG("Table for created successfully "
                 "(device = %pK, ptype = 0x%04X, hwlen = %zd)",
