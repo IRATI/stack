@@ -198,27 +198,25 @@ inline int dtcp_pdu_send(struct dtcp * dtcp, struct pdu * pdu)
 EXPORT_SYMBOL(dtcp_pdu_send);
 
 #define dtcp_getter(type, attr)				\
-	unsigned long flags;				\
 	type ret;					\
 							\
 	ASSERT(dtcp);					\
 	ASSERT(dtcp->sv);				\
 							\
-	spin_lock_irqsave(&dtcp->sv->lock, flags);	\
+	spin_lock_bh(&dtcp->sv->lock);			\
 	ret = dtcp->sv->attr;				\
-	spin_unlock_irqrestore(&dtcp->sv->lock, flags);	\
+	spin_unlock_bh(&dtcp->sv->lock);		\
 							\
 	return ret
 
 #define dtcp_setter(attr, val)				\
-	unsigned long flags;				\
 							\
 	ASSERT(dtcp);					\
 	ASSERT(dtcp->sv);				\
 							\
-	spin_lock_irqsave(&dtcp->sv->lock, flags);	\
+	spin_lock_bh(&dtcp->sv->lock);			\
 	dtcp->sv->attr = val;				\
-	spin_unlock_irqrestore(&dtcp->sv->lock, flags);	\
+	spin_unlock_bh(&dtcp->sv->lock);		\
 							\
 	return 0
 
@@ -254,7 +252,6 @@ EXPORT_SYMBOL(dtcp_last_time);
 
 inline int dtcp_last_time_set(struct dtcp * dtcp, struct timespec * s)
 {
-
 	ASSERT(dtcp);
 	ASSERT(dtcp->sv);
 	ASSERT(s);
