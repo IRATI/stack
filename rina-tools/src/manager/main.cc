@@ -65,7 +65,7 @@ int wrapped_main(int argc, char** argv)
                                                        "string");
                 TCLAP::ValueArg<string> dif_arg("d",
                                 		"difs-to-register-at",
-						"The names of the DIFs to register at, separated by ';' (empty means 'any DIF')",
+						"The names of the DIFs to register at, separated by ',' (empty means 'any DIF')",
                                                 false,
                                                 "",
                                                 "string");
