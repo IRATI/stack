@@ -433,6 +433,7 @@ static int eth_vlan_unbind_user_ipcp(struct ipcp_instance_data * data,
 	spin_lock_irqsave(&data->lock, flags);
 	if (!flow) {
 		spin_unlock_irqrestore(&data->lock, flags);
+		LOG_WARN("Could not find flow %d", id);
                 return -1;
 	}
 
@@ -1305,6 +1306,13 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 gha_destroy(ghaddr);
                 LOG_DBG("Flow exists, queueing or delivering or dropping");
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
+                        if (!flow->user_ipcp) {
+                        	spin_unlock(&data->lock);
+                        	LOG_ERR("Flow is being deallocated, dropping PDU");
+                                sdu_destroy(du);
+                                return -1;
+                        }
+
                         spin_unlock(&data->lock);
 
                         ASSERT(flow->user_ipcp->ops);
@@ -1314,6 +1322,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                                         flow->port_id,
                                         du)) {
                                 LOG_ERR("Couldn't enqueue SDU to user IPCP");
+                                sdu_destroy(du);
                                 return -1;
                         }
 
