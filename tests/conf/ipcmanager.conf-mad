@@ -28,11 +28,6 @@
     "addons" : {
         "mad" : {
             "managerAppName" : "rina.apps.mad-1--",
-            "NMSDIFs" : [
-                {
-                    "DIF": "normal.DIF"
-                }
-            ],
             "managerConnections" : [
                 {
                     "managerAppName" : "rina.apps.manager-1--",

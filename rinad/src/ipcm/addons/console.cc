@@ -152,10 +152,12 @@ IPCMConsole::IPCMConsole(const std::string& socket_path_) :
 	commands_map["show-catalog"] =
 			ConsoleCmdInfo(&IPCMConsole::show_catalog,
 				"USAGE: show-catalog [<component-name>]");
-
 	commands_map["update-catalog"] =
 			ConsoleCmdInfo(&IPCMConsole::update_catalog,
 				"USAGE: update-catalog");
+	commands_map["query-ma-rib"] =
+			ConsoleCmdInfo(&IPCMConsole::query_ma_rib,
+				"USAGE: query_ma_rib");
 
 	keep_on_running = true;
 	rina::ThreadAttributes ta;
@@ -960,6 +962,18 @@ int IPCMConsole::show_catalog(std::vector<std::string>& args)
 		outstream << commands_map[args[0]].usage << endl;
 		break;
 	}
+
+	return CMDRETCONT;
+}
+
+int IPCMConsole::query_ma_rib(std::vector<std::string>& args)
+{
+	if (args.size() != 1) {
+		outstream << commands_map[args[0]].usage << endl;
+		return CMDRETCONT;
+	}
+
+	outstream << IPCManager->query_ma_rib();
 
 	return CMDRETCONT;
 }

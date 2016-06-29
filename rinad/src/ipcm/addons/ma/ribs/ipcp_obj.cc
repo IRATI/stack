@@ -201,6 +201,15 @@ void IPCPObj::create_cb(const rina::rib::rib_handle_t rib,
         res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
 
+const std::string IPCPObj::get_displayable_value() const
+{
+	std::stringstream ss;
+
+	ss << "IPC Process id: " << processID_;
+
+	return ss.str();
+}
+
 int IPCPObj::createIPCP(configs::ipcp_config_t &object)
 {
 
