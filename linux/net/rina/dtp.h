@@ -69,7 +69,7 @@ struct rtimer * dtp_sender_inactivity_timer(struct dtp * instance);
 
 /* FIXME: temporal addition so that DTCP's sending ack can call this function
  * that was originally static */
-const struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp);
+struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp);
 
 int                dtp_select_policy_set(struct dtp * dtp, const string_t *path,
                                          const string_t * name);
