@@ -75,7 +75,7 @@ private:
 class Server: public Application
 {
 public:
-        Server(const std::string& dif_name,
+        Server(const std::list<std::string>& dif_names,
                const std::string& app_name,
                const std::string& app_instance);
         virtual ~Server();

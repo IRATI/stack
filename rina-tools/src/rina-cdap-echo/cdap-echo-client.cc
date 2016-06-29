@@ -43,12 +43,11 @@
 using namespace std;
 using namespace rina;
 
-Client::Client(const string& dif_nm, const string& apn, const string& api,
+Client::Client(const std::list<std::string>& dif_nms, const string& apn, const string& api,
                const string& server_apn, const string& server_api, bool q,
                unsigned long count, bool registration, unsigned int w, int g,
                int dw)
-        : Application(dif_nm, apn, api),
-          dif_name(dif_nm),
+        : Application(dif_nms, apn, api),
           server_name(server_apn),
           server_instance(server_api),
           quiet(q),
@@ -93,21 +92,22 @@ void Client::createFlow()
     if (gap >= 0)
         qosspec.maxAllowableGap = gap;
 
-    if (dif_name != string())
+    if (dif_names.front() != string())
     {
-        seqnum = ipcManager->requestFlowAllocationInDIF(
-                ApplicationProcessNamingInformation(app_name, app_instance),
-                ApplicationProcessNamingInformation(server_name,
-                                                    server_instance),
-                ApplicationProcessNamingInformation(dif_name, string()),
-                qosspec);
+        seqnum = ipcManager->requestFlowAllocationInDIF(ApplicationProcessNamingInformation(app_name,
+        										    app_instance),
+        						ApplicationProcessNamingInformation(server_name,
+        										    server_instance),
+						        ApplicationProcessNamingInformation(dif_names.front(),
+						        				    string()),
+						        qosspec);
     } else
     {
-        seqnum = ipcManager->requestFlowAllocation(
-                ApplicationProcessNamingInformation(app_name, app_instance),
-                ApplicationProcessNamingInformation(server_name,
-                                                    server_instance),
-                qosspec);
+        seqnum = ipcManager->requestFlowAllocation(ApplicationProcessNamingInformation(app_name,
+        									       app_instance),
+        					   ApplicationProcessNamingInformation(server_name,
+        							   	   	       server_instance),
+						   qosspec);
     }
 
     for (;;)

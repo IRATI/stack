@@ -79,10 +79,10 @@ private:
 
 class CDAPEchoServer : public Server {
 public:
-	CDAPEchoServer(const std::string& dif_name,
-			const std::string& app_name,
-			const std::string& app_instance,
-			const int dealloc_wait);
+	CDAPEchoServer(const std::list<std::string>& dif_names,
+		       const std::string& app_name,
+		       const std::string& app_instance,
+		       const int dealloc_wait);
 
 protected:
 	ServerWorker * internal_start_worker(rina::FlowInformation flow);

@@ -518,9 +518,10 @@ bool ManagerWorker::createIPCP_1(int port_id)
  cdap_prov_->process_message(message, port_id);
  }
  */
-Manager::Manager(const std::string& dif_name, const std::string& apn,
+Manager::Manager(const std::list<std::string>& dif_names,
+		 const std::string& apn,
                  const std::string& api)
-        : Server(dif_name, apn, api)
+        : Server(dif_names, apn, api)
 {
     client_app_reg_ = false;
 }

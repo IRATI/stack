@@ -39,15 +39,15 @@
 
 #include "config.h"
 #include "manager.h"
+#include "utils.h"
 
 using namespace std;
-
 
 int wrapped_main(int argc, char** argv)
 {
         string manager_apn;
         string manager_api;
-        string dif_name;
+        list<string> dif_names;
 
         try {
                 TCLAP::CmdLine cmd("manager", ' ', PACKAGE_VERSION);
@@ -64,8 +64,8 @@ int wrapped_main(int argc, char** argv)
                                                        "1",
                                                        "string");
                 TCLAP::ValueArg<string> dif_arg("d",
-                                                "dif-to-register-at",
-                                                "The name of the DIF to register at (empty means 'any DIF')",
+                                		"difs-to-register-at",
+						"The names of the DIFs to register at, separated by ',' (empty means 'any DIF')",
                                                 false,
                                                 "",
                                                 "string");
@@ -75,7 +75,7 @@ int wrapped_main(int argc, char** argv)
 
                 manager_apn = manager_apn_arg.getValue();
                 manager_api = manager_api_arg.getValue();
-                dif_name = dif_arg.getValue();
+                parse_dif_names(dif_names, dif_arg.getValue());
 
         } catch (TCLAP::ArgException &e) {
                 LOG_ERR("Error: %s for arg %d",
@@ -85,7 +85,7 @@ int wrapped_main(int argc, char** argv)
         }
 
         rina::initialize("INFO", "");
-        Manager m(dif_name, manager_apn, manager_api);
+        Manager m(dif_names, manager_apn, manager_api);
         m.run();
 
         return EXIT_SUCCESS;
