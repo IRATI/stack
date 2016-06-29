@@ -1332,20 +1332,6 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
 
         if (size == flow->bytes_left) {
                 flow->bytes_left = 0;
-                sdubuf = buffer_create_with_ni(buf, size);
-                if (!sdubuf) {
-                        LOG_ERR("Could not create buffer");
-                        rkfree(buf);
-                        return -1;
-                }
-
-                du = sdu_create_buffer_with_ni(sdubuf);
-                if (!du) {
-                        LOG_ERR("Couldn't create sdu");
-                        buffer_destroy(sdubuf);
-                        return -1;
-                }
-
                 spin_lock_bh(&data->lock);
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
                         spin_unlock_bh(&data->lock);
@@ -1420,20 +1406,8 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
 
         if (size == flow->bytes_left) {
                 flow->bytes_left = 0;
-                sdubuf = buffer_create_with_ni(flow->buf, flow->lbuf);
-                if (!sdubuf) {
-                        rkfree(flow->buf);
-                        LOG_ERR("Could not create buffer");
-                        return -1;
-                }
-
-                du = sdu_create_buffer_with_ni(sdubuf);
-                if (!du) {
-                        LOG_ERR("Couldn't create sdu");
-                        buffer_destroy(sdubuf);
-                        return -1;
-                }
-
+		du = flow->sdu;
+		flow->sdu = NULL;
                 spin_lock_bh(&data->lock);
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
                         spin_unlock_bh(&data->lock);
@@ -2467,6 +2441,7 @@ static int __tcp_udp_sdu_write(struct ipcp_instance_data * data,
 {
         struct shim_tcp_udp_flow * flow;
         int                        size;
+	ssize_t                    slen;
 
         ASSERT(data);
         ASSERT(sdu);
