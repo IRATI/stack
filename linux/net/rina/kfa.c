@@ -199,8 +199,6 @@ static int kfa_flow_deallocate_worker(void *data)
 	port_id_t	     id;
 	struct flowdel_data *wqdata;
 
-	IRQ_BARRIER;
-
 	wqdata = (struct flowdel_data *) data;
 	if (!wqdata) {
 		LOG_ERR("Bogus ipcp data passed, bailing out");
@@ -425,8 +423,6 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 	struct kfa           *instance;
 	int		      retval = 0;
 
-	IRQ_BARRIER;
-
 	if (!data) {
 		LOG_ERR("Bogus ipcp data passed, bailing out");
 		sdu_destroy(sdu);
@@ -608,8 +604,6 @@ int kfa_flow_sdu_read(struct kfa  *instance,
 {
 	struct ipcp_flow *flow;
 	int		  retval = 0;
-
-	IRQ_BARRIER;
 
 	if (!instance) {
 		LOG_ERR("Bogus instance passed, bailing out");
@@ -834,8 +828,6 @@ int kfa_flow_create(struct kfa           *instance,
 {
 	struct ipcp_flow *flow;
 
-	IRQ_BARRIER;
-
 	if (!instance) {
 		LOG_ERR("Bogus kfa instance passed, bailing out");
 		return -1;
@@ -890,7 +882,6 @@ static int kfa_flow_ipcp_bind(struct ipcp_instance_data *data,
 	struct ipcp_flow *flow;
 	struct kfa       *instance;
 
-	IRQ_BARRIER;
 	LOG_DBG("Binding IPCP %pK to flow on port %d", ipcp, pid);
 
 	if (!ipcp) {
@@ -1053,8 +1044,6 @@ int kfa_flow_opts_set(struct kfa *instance,
 {
 	struct ipcp_flow *flow;
 
-	IRQ_BARRIER;
-
 	if (!instance) {
 		LOG_ERR("Bogus instance passed, bailing out");
 		return -EINVAL;
@@ -1086,8 +1075,6 @@ flow_opts_t kfa_flow_opts(struct kfa *instance,
 			  port_id_t   pid)
 {
 	struct ipcp_flow *flow;
-
-	IRQ_BARRIER;
 
 	if (!instance) {
 		LOG_ERR("Bogus instance passed, bailing out");
