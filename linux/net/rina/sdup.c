@@ -313,7 +313,7 @@ static void sdup_port_destroy(struct sdup_port * instance)
 };
 
 static struct sdup_port * sdup_port_create(port_id_t port_id,
-				    struct dup_config_entry * dup_conf)
+				    	   struct dup_config_entry * dup_conf)
 {
 	struct sdup_port * tmp;
 	const string_t * crypto_ps_name;
@@ -697,6 +697,7 @@ int sdup_destroy_port_config(struct sdup_port * instance)
 	}
 
 	port_id = instance->port_id;
+
 	sdup_port_destroy(instance);
 	LOG_DBG("Destroyed SDUP configuration for port %d",
 		 port_id);

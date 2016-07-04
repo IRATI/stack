@@ -886,6 +886,11 @@ shim_hv_recv_cb(void *opaque, unsigned int ch, struct vmpi_buf *vb)
         channel = priv->vmpi.channels[ch];
         port_id = channel.port_id;
 
+        if (!channel.user_ipcp){
+        	LOG_ERR("Flow is being deallocated, dropping SDU");
+        	return;
+        }
+
         ASSERT(channel.user_ipcp->ops);
         ASSERT(channel.user_ipcp->ops->sdu_enqueue);
         ret = channel.user_ipcp->ops->sdu_enqueue(channel.user_ipcp->data,

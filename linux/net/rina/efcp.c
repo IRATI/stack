@@ -989,6 +989,12 @@ int efcp_enqueue(struct efcp * efcp,
                 return -1;
         }
 
+        if (!efcp->user_ipcp) {
+        	LOG_ERR("Flow is being deallocated, dropping SDU");
+        	sdu_destroy(sdu);
+        	return -1;
+        }
+
         if (efcp->user_ipcp->ops->sdu_enqueue(efcp->user_ipcp->data,
                                               port,
                                               sdu)) {
