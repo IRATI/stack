@@ -118,8 +118,9 @@ default_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
 int
 default_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
 {
-        struct dtp *       dtp;
-        const struct pci * pci;
+        struct dtp * dtp;
+        struct pci * pci;
+        int ret;
 
         struct dtcp * dtcp = ps->dm;
 
@@ -140,7 +141,10 @@ default_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
         if (!pci)
                 return 0;
 
-        return dtcp_sv_update(ps->dm, pci);
+        ret = dtcp_sv_update(ps->dm, pci);
+        pci_destroy(pci);
+
+        return ret;
 }
 
 int

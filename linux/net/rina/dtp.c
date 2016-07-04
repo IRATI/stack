@@ -699,7 +699,7 @@ static void tf_receiver_inactivity(void * data)
  * function. This has to be refactored and evaluate how much code would be
  * repeated
  */
-const struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
+struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 {
         struct dt *              dt;
         struct dtp_sv *          sv;
@@ -717,7 +717,7 @@ const struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         struct dtcp_ps *         dtcp_ps;
         unsigned long            flags;
         struct rqueue *          to_post;
-        const struct pci *       pci, * pci_ret = NULL;
+        struct pci *             pci, * pci_ret = NULL;
 
         ASSERT(dtp);
 
@@ -768,7 +768,7 @@ const struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         return NULL;
                 }
 
-                pci     = pdu_pci_get_ro(pdu);
+                pci     = pdu_pci_get_rw(pdu);
                 seq_num = pci_sequence_number_get(pci);
                 LOG_DBG("Seq number: %u", seq_num);
 
@@ -829,6 +829,7 @@ const struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
         }
 finish:
+	pci_ret = pci_dup_ni(pci_ret);
         spin_unlock_irqrestore(&seqq->lock, flags);
 
         while (!rqueue_is_empty(to_post)) {
@@ -862,6 +863,7 @@ static void tf_a(void * o)
         struct dtp *  dtp;
         struct dtcp * dtcp;
         timeout_t     a;
+        struct pci * pci;
 
         LOG_DBG("A-timer handler started...");
 
@@ -882,7 +884,8 @@ static void tf_a(void * o)
                         return;
                 }
         } else {
-                process_A_expiration(dtp, dtcp);
+                pci = process_A_expiration(dtp, dtcp);
+                if (pci) pci_destroy(pci);
 #if DTP_INACTIVITY_TIMERS_ENABLE
                 if (rtimer_restart(dtp->timers.sender_inactivity,
                                    3 * (dt_sv_mpl(dt) +
@@ -1859,9 +1862,11 @@ int dtp_receive(struct dtp * instance,
         }
         while (!rqueue_is_empty(to_post)) {
                 pdu = (struct pdu *) rqueue_head_pop(to_post);
-                if (pdu)
+                if (pdu) {
+                	sbytes = buffer_length(pdu_buffer_get_ro(pdu));
                         pdu_post(instance, pdu);
 			stats_inc_bytes(rx, sv, sbytes, flags);
+                }
         }
         rqueue_destroy(to_post, (void (*)(void *)) pdu_destroy);
 
