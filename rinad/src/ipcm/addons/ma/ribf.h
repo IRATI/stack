@@ -78,16 +78,16 @@ public:
 	/**
 	* Get the handle of the specific RIB and AE name associated
 	*/
-	static rina::rib::rib_handle_t getRIBHandle(
-						const uint64_t& version,
-						const std::string& AEname);
+	static rina::rib::rib_handle_t getRIBHandle(const uint64_t& version,
+						    const std::string& AEname);
+
+	static rina::rib::rib_handle_t getDefaultRIBHandle();
 
 	//Process IPCP create event to all RIB versions
 	void createIPCPevent(int ipcp_id);
 
 	//Process IPCP create event to all RIB versions
 	void destroyIPCPevent(int ipcp_id);
-
 
 protected:
 	//Mutex

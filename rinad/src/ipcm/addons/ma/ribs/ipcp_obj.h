@@ -35,6 +35,8 @@ public:
 		return class_name;
 	};
 
+	const std::string get_displayable_value() const;
+
 	//Read
 	void read(const rina::cdap_rib::con_handle_t &con,
 				const std::string& fqn,
@@ -68,7 +70,7 @@ public:
 			const rina::cdap_rib::filt_info_t &filt,
 			const int invoke_id,
 			const rina::ser_obj_t &obj_req,
-			rina::ser_obj_t &obj_reply,
+			rina::cdap_rib::obj_info_t &obj_reply,
 			rina::cdap_rib::res_info_t& res);
 
 
@@ -82,6 +84,7 @@ protected:
 	static int createIPCP(rinad::configs::ipcp_config_t &object);
 	static bool assignToDIF(rinad::configs::ipcp_config_t &object, int ipcp_id);
 	static bool registerAtDIFs(rinad::configs::ipcp_config_t &object, int ipcp_id);
+	static bool enrollToDIFs(rinad::configs::ipcp_config_t &object, int ipcp_id);
 	struct Params{
 	        rina::cdap_rib::con_handle_t con;
 	        rina::cdap_rib::obj_info_t obj;

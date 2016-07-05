@@ -140,7 +140,7 @@ public:
 	* Factory
 	*/
 	static void factory(rinad::RINAConfiguration& conf,
-						const std::string& name);
+			    const std::string& name);
 
 	/**
 	* Destroy all

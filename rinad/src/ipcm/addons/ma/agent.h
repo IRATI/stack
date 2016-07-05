@@ -76,6 +76,11 @@ class FlowManager;
 class RIBFactory;
 class BGTaskManager;
 
+enum console_command {
+	LIST_MAD_STATE,
+	QUERY_MAD_RIB
+};
+
 /**
 * @brief Management Agent singleton class
 */
@@ -101,12 +106,6 @@ public:
 	}
 
 	/**
-	* Add an NMS DIF
-	*/
-	void addNMSDIF(std::string& difName);
-
-
-	/**
 	* Add a Manager connection
 	*
 	* TODO: improve this so that this method returns a handler, such that
@@ -114,6 +113,12 @@ public:
 	* modified at runtime.
 	*/
 	void addManagerConnection(AppConnection& con);
+
+	/**
+	 * Execute a console command and provide feedback as a string
+	 */
+	std::string console_command(enum console_command command,
+				    std::list<std::string>& args);
 
 
 	/**
@@ -139,24 +144,19 @@ protected:
 	friend class FlowManager;
 private:
 
-  //
-  // Internal methods
-  //
+	//
+	// Internal methods
+	//
 
-  /**
-  * Bootstrap necessary NMS DIFs and shim-DIFs
-  */
-  void bootstrapNMSDIFs(void);
+	/**
+  	 * Register agent AP into the IPCManager
+  	 */
+  	void reg(void);
 
-  /**
-  * Register agent AP into the IPCManager
-  */
-  void reg(void);
-
-  /**
-  * Connect to the Manager/s
-  */
-  void connect(void);
+        /**
+  	 * Connect to the Manager/s
+  	 */
+  	void connect(void);
 
 	//Submodules
 	ConfManager* conf_manager;
@@ -168,12 +168,6 @@ private:
 	* RINA AP information
 	*/
 	rina::ApplicationProcessNamingInformation info;
-
-	/**
-	* List of NMSDIFs
-	*/
-	std::list<std::string> nmsDIFs;
-
 
 	/**
 	* List of Manager connections

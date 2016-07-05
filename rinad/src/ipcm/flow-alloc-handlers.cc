@@ -144,12 +144,15 @@ void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
 	ostringstream ss;
 
 	// Find the name of the DIF that will provide the flow
-	dif_specified = lookup_dif_by_application(event->localApplicationName,
-								dif_name);
-	if (!dif_specified && event->DIFName !=
-				rina::ApplicationProcessNamingInformation()) {
+	if (event->DIFName != rina::ApplicationProcessNamingInformation()) {
+		// The requestor specified a DIF name
 		dif_name = event->DIFName;
 		dif_specified = true;
+	} else {
+		// Ask the DIF allocator
+		dif_specified = lookup_dif_by_application(
+					event->remoteApplicationName,
+					dif_name);
 	}
 
 	// Select an IPC process to serve the flow request

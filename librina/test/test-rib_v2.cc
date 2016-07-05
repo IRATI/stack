@@ -354,7 +354,7 @@ static int deleg_start_operations = 0;
 class MyDelegationObj : public DelegationObj{
 public:
 	MyDelegationObj(): DelegationObj(MyDelegationObj::class_){};
-	virtual ~MyDelegationObj(){};
+	virtual ~MyDelegationObj(void) throw() {};
 
         void forward_object(const rina::cdap_rib::con_handle_t& con,
                             const std::string obj_name,
@@ -407,7 +407,7 @@ void create_callback_1(const rib_handle_t rib,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
 				const ser_obj_t &obj_req,
-				ser_obj_t &obj_reply,
+				cdap_rib::obj_info_t &obj_reply,
 				cdap_rib::res_info_t& res){
 	CPPUNIT_ASSERT_MESSAGE("Invalid invoke id during create generic", invoke_id==7);
 	res.code_ = cdap_rib::CDAP_SUCCESS;
@@ -421,7 +421,7 @@ void create_callback_2(const rib_handle_t rib,
 				const cdap_rib::filt_info_t &filt,
 				const int invoke_id,
 				const ser_obj_t &obj_req,
-				ser_obj_t &obj_reply,
+				cdap_rib::obj_info_t &obj_reply,
 				cdap_rib::res_info_t& res){
 	CPPUNIT_ASSERT_MESSAGE("Invalid invoke id during create specific", invoke_id==6);
 	res.code_ = cdap_rib::CDAP_SUCCESS;
@@ -531,9 +531,9 @@ void ribBasicOps::testSchemaCreation(){
 		cdap_rib::vers_info_t wrong_version;
 		wrong_version.version_ = 0x2;
 		ribd->addCreateCallbackSchema(wrong_version,
-						MyObj::class_,
-						name1,
-						create_callback_1);
+					      MyObj::class_,
+					      name1,
+					      create_callback_1);
 		CPPUNIT_ASSERT_MESSAGE("Exception not thrown during registration of create callback with an invalid version", 0);
 	}catch(eSchemaNotFound& e){
 

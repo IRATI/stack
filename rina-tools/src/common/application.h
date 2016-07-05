@@ -33,7 +33,7 @@
 class Application
 {
 public:
-        Application(const std::string& dif_name_,
+        Application(const std::list<std::string>& dif_names_,
                     const std::string & app_name_,
                     const std::string & app_instance_);
 
@@ -45,7 +45,7 @@ protected:
         /// have a blocking read/write behaviour, false otherwise
         void applicationRegister();
 
-        std::string dif_name;
+        std::list<std::string> dif_names;
         std::string app_name;
         std::string app_instance;
 

@@ -89,7 +89,6 @@ RIBFactory::RIBFactory(RIBAEassoc ver_assoc){
 
 				//Store the version
 				ribs[rib_handle] = ver;
-
 				}
 				break;
 			default:

@@ -33,7 +33,7 @@ extern "C"
 
 // TODO: Add global lock
 struct flow {
-       int              port_id;
+        int              port_id;
         FlowRequestEvent fre;
         unsigned int     seq_num;
 };

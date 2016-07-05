@@ -161,9 +161,6 @@ void associateRIBtoAE(const rina::rib::rib_handle_t& rib,
 	ribd->associateRIBtoAE(rib, ae_name);
 }
 
-
-
-
 void createIPCPObj(const rina::rib::rib_handle_t& rib, int ipcp_id){
 
 	rina::rib::RIBDaemonProxy *const ribd = RIBFactory::getProxy();

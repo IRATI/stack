@@ -61,16 +61,6 @@ ConfManager::ConfManager(const rinad::RINAConfiguration& config){
                         app_name = rina::decode_apnameinfo(app_name_enc);
                 }
 
-                if (nms_difs_conf != 0) {
-                        for (unsigned i = 0; i < nms_difs_conf.size(); i++) {
-                                std::string dif;
-
-                                dif = nms_difs_conf[i]
-                                        .get("DIF", dif).asString();
-                                nms_difs.push_back(dif);
-                        }
-                }
-
                 if (mad_conns_conf != 0) {
                         for (unsigned i = 0; i< mad_conns_conf.size(); i++) {
                                 ManagerConnInfo mci;
@@ -119,12 +109,6 @@ void ConfManager::configure(ManagementAgent& agent){
 	//Configure the AP name and instance ID
 	rina::ApplicationProcessNamingInformation info("rina.apps.mad", "1");
 	agent.setAPInfo(app_name);
-
-	//NMS
-        for (std::list<std::string>::iterator it = nms_difs.begin();
-                                        it != nms_difs.end(); it++) {
-	        agent.addNMSDIF(*it);
-        }
 
 	//Configure Manager connections
         for (std::list<ManagerConnInfo>::iterator

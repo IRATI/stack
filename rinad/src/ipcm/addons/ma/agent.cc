@@ -48,84 +48,6 @@ const std::string ManagementAgent::NAME = "mad";
 //
 
 
-//Creates the NMS DIFs required by the MA
-void ManagementAgent::bootstrapNMSDIFs(){
-	//TODO FIXME XXX
-	std::list<std::string>::const_iterator it;
-
-	for(it=nmsDIFs.begin(); it!=nmsDIFs.end(); ++it) {
-		//Nice trace
-		LOG_INFO("Bootstraping DIF '%s'", it->c_str());
-
-		//TODO FIXME XXX: call ipcmanager bootstrapping of the DIFs
-	}
-
-}
-//Registers the application in the IPCManager
-void ManagementAgent::reg(){
-
-#if 0
-        unsigned int seqnum;
-	rina::ApplicationRegistrationInformation ari;
-	std::list<std::string>::const_iterator it;
-        rina::RegisterApplicationResponseEvent *resp;
-	rina::IPCEvent *event;
-
-	//Check if there are available DIFs
-	if(nmsDIFs.empty()){
-		LOG_ERR("No DIFs to register to. Aborting...");
-		throw eNoNMDIF("No DIFs to register to");
-	}
-
-	LOG_DBG("Will register as %s, to DIF: %s", info.processName.c_str(),
-						(*nmsDIFs.begin()).c_str());
-	//Register to DIF0 (FIXME)
-	ari.ipcProcessId = 0;  //TODO: remove!
-	ari.appName = info;
-	ari.applicationRegistrationType =
-	rina::APPLICATION_REGISTRATION_SINGLE_DIF;
-	ari.difName = rina::ApplicationProcessNamingInformation(
-							*nmsDIFs.begin(),
-							std::string());
-
-	// Request the registration
-	seqnum = rina::ipcManager->requestApplicationRegistration(ari);
-
-	// Wait for the response to come
-	while(1){
-		event = rina::ipcEventProducer->eventWait();
-		if (event && event->eventType ==
-			rina::REGISTER_APPLICATION_RESPONSE_EVENT &&
-			event->sequenceNumber == seqnum)
-			break;
-	}
-
-	resp = dynamic_cast<rina::RegisterApplicationResponseEvent*>(event);
-
-	// Update librina state
-	if (resp->result == 0){
-		rina::ipcManager->commitPendingRegistration(seqnum,
-								resp->DIFName);
-	}else{
-		rina::ipcManager->withdrawPendingRegistration(seqnum);
-		LOG_ERR("FATAL ERROR: unable to register to DIF '%s'",
-					ari.difName.processName.c_str());
-		throw rina::ApplicationRegistrationException("Failed to register application");
-	}
-
-	/*
-	//TODO: this is for when librina supports multiple SINGLE DIF regs
-	//and the config is properly read
-	for(it=nmsDIFs.begin(); it!=nmsDIFs.end(); ++it) {
-		//Nice trace
-		LOG_INFO("Registering agent at DIF '%s'", it->c_str());
-
-		//TODO FIXME XXX: call ipcmanager to register MA to this DIF
-	}
-	*/
-#endif
-}
-
 void ManagementAgent::connect(void){
 
 	unsigned int w_id;
@@ -151,14 +73,45 @@ void ManagementAgent::connect(void){
 // Public methods
 //
 
-//Add NMS DIF
-void ManagementAgent::addNMSDIF(std::string& difName){
-	nmsDIFs.push_back(difName);
-}
-
 //Add Manager connection
 void ManagementAgent::addManagerConnection(AppConnection& con){
 	connections.push_back(con);
+}
+
+std::string ManagementAgent::console_command(enum console_command command,
+			     	     	     std::list<std::string>& args)
+{
+	std::stringstream ss;
+	rina::rib::RIBDaemonProxy * ribd;
+	std::list<rina::rib::RIBObjectData> objects;
+	rina::rib::rib_handle_t rib_handle;
+
+	switch(command) {
+	case LIST_MAD_STATE:
+	        ss << "Management Agent name: " << info.getEncodedString() << std::endl;
+	        ss << "Management Agent active connections  ( Manager name | via DIF )" << std::endl;
+	        for (std::list<AppConnection>::iterator it = connections.begin();
+	        		it != connections.end(); ++it) {
+	        	ss << "        ";
+	        	ss << it->flow_info.remoteAppName.getEncodedString() << " | ";
+	        	ss << it->flow_info.difName.processName << std::endl;
+	        }
+	        ss << std::endl;
+	        return ss.str();
+	case QUERY_MAD_RIB:
+		ribd = rib_factory->getProxy();
+		rib_handle = rib_factory->getRIBHandle(1, "v1");
+		objects = ribd->get_rib_objects_data(rib_handle);
+		for(std::list<rina::rib::RIBObjectData>::iterator it = objects.begin();
+				it != objects.end(); ++it) {
+			ss << "Name: " << it->name_ << "; Class: " << it->class_ << "; Instance "
+			   << it->instance_ << std::endl << "Value: " << it->displayable_value_ << std::endl;
+			ss << std::endl;
+		}
+		return ss.str();
+	default:
+		return "";
+	}
 }
 
 //Process event
@@ -252,13 +205,7 @@ ManagementAgent::ManagementAgent(const rinad::RINAConfiguration& config) :
 	*/
 	conf_manager->configure(*this);
 
-	//Bootstrap necessary NMS DIFs and shim-DIFs
-	bootstrapNMSDIFs();
-
 	LOG_INFO("Components initialized");
-
-	//Register agent AP into the IPCManager
-	reg();
 
 	//Perform connection to the Manager(s)
 	connect();

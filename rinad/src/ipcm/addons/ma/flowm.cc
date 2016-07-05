@@ -47,13 +47,13 @@ namespace mad {
 
 //General events timeout
 #define FM_TIMEOUT_S 5
-#define FM_RETRY_NSEC 100000000 //100ms
+#define FM_RETRY_NSEC 100000000 //100 ms
 #define _FM_1_SEC_NSEC 1000000000
 
 //Flow allocation worker events
 #define FM_FALLOC_TIMEOUT_S 10
 #define FM_FALLOC_TIMEOUT_NS 0
-#define FM_FALLOC_ALLOC_RETRY_US 400000 //400ms
+#define FM_FALLOC_ALLOC_RETRY_US 5000000 //5 seconds
 const unsigned int max_sdu_size_in_bytes = 10000;
 
 /**
@@ -340,6 +340,13 @@ void* ActiveWorker::run(void* param)
 			}catch(rina::ReadSDUException &e){
 				LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
 				delete[] buffer;
+				buffer = NULL;
+				rina::ipcManager->requestFlowDeallocation(port_id);
+				continue;
+			}catch(rina::FlowNotAllocatedException &e) {
+				delete[] buffer;
+				buffer = NULL;
+				continue;
 			}
 
 			rina::ser_obj_t message;
@@ -352,21 +359,31 @@ void* ActiveWorker::run(void* param)
 				rina::cdap::getProvider()->process_message(message,
 							port_id);
 			}catch(rina::WriteSDUException &e){
-				LOG_ERR("Cannot write to flow with port id: %u anymore", port_id);
+				LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
+				delete[] buffer;
+				buffer = NULL;
+				rina::ipcManager->requestFlowDeallocation(port_id);
+				continue;
+			}catch(rina::FlowNotAllocatedException &e) {
+				delete[] buffer;
+				buffer = NULL;
+				continue;
 			}
 
-			LOG_DBG("Connection stablished between MAD and Manager (port id: %u)", port_id);
+			LOG_DBG("Connection established between MAD and Manager (port id: %u)", port_id);
 
 			//I/O loop
 			while(true) {
-				buffer = new unsigned char[max_sdu_size_in_bytes];
 				try{
 					bytes_read = rina::ipcManager->readSDU(port_id,
-									buffer,
-									max_sdu_size_in_bytes);
+									       buffer,
+									       max_sdu_size_in_bytes);
 				}catch(rina::ReadSDUException &e){
 					LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
-					delete[] buffer;
+					rina::ipcManager->requestFlowDeallocation(port_id);
+					break;
+				}catch(rina::FlowNotAllocatedException &e) {
+					break;
 				}
 
 				rina::ser_obj_t message;
@@ -379,14 +396,24 @@ void* ActiveWorker::run(void* param)
 									message,
 									port_id);
 				}catch(rina::WriteSDUException &e){
-					LOG_ERR("Cannot write to flow with port id: %u anymore", port_id);
+					LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
+					rina::ipcManager->requestFlowDeallocation(port_id);
+					break;
+				}catch(rina::FlowNotAllocatedException &e) {
+					break;
 				}catch(rina::cdap::CDAPException &e){
 					LOG_ERR("Error processing message: %s", e.what());
 				}
+
 			}
 		}
 		catch(...){
 			LOG_CRIT("Unknown error during operation with port id: %u. This is a bug, please report it", port_id);
+		}
+
+		if (buffer) {
+			delete[] buffer;
+			buffer = NULL;
 		}
 	}
 

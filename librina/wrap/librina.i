@@ -447,6 +447,7 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventWait);
 DOWNCAST_IPC_EVENT_CONSUMER(eventPoll);
 DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 
+// Allow the callbacks between C++ and java
 %module(directors="1") cdapcallbackjava
 
 %{
@@ -524,6 +525,24 @@ ser_obj_t &obj_reply,
 cdap_rib::res_info_t& res);
 }}
 
+// Define Exceptions being thrown
+%catches(rina::UnknownFlowException) rina::IPCManager::getFlowInformation(int portId);
+%catches(rina::UnknownFlowException) rina::IPCManager::getPortIdToRemoteApp(const ApplicationProcessNamingInformation& remoteAppName);
+%catches(rina::IPCException) rina::IPCManager::getRegistrationInfo(unsigned int seqNumber);
+%catches(rina::FlowAllocationException) rina::IPCManager::internalRequestFlowAllocation(const ApplicationProcessNamingInformation& localAppName, const ApplicationProcessNamingInformation& remoteAppName,       const FlowSpecification& flowSpec, unsigned short sourceIPCProcessId);
+%catches(rina::FlowAllocationException) rina::IPCManager::IPCManager::internalAllocateFlowResponse(const FlowRequestEvent& flowRequestEvent,int result,bool notifySource,unsigned short ipcProcessId,bool blocking);
+%catches(rina::GetDIFPropertiesException) rina::IPCManager::getDIFProperties(const ApplicationProcessNamingInformation& applicationName, const ApplicationProcessNamingInformation& DIFName);
+%catches(rina::ApplicationRegistrationException) rina::IPCManager::commitPendingRegistration(unsigned int seqNumber, const ApplicationProcessNamingInformation& DIFName);
+%catches(rina::ApplicationRegistrationException) rina::IPCManager::withdrawPendingRegistration(unsigned int seqNumber);
+%catches(rina::ApplicationUnregistrationException) rina::IPCManager::requestApplicationUnregistration(const ApplicationProcessNamingInformation& applicationName, const ApplicationProcessNamingInformation& DIFName);
+%catches(rina::ApplicationUnregistrationException) rina::IPCManager::appUnregistrationResult(unsigned int seqNumber, bool success);
+%catches(rina::FlowDeallocationException) rina::IPCManager::commitPendingFlow(unsigned int sequenceNumber, int portId, const ApplicationProcessNamingInformation& DIFName);
+%catches(rina::FlowDeallocationException) rina::IPCManager::withdrawPendingFlow(unsigned int sequenceNumber);
+%catches(rina::FlowDeallocationException) rina::IPCManager::requestFlowDeallocation(int portId);
+%catches(rina::FlowDeallocationException) rina::IPCManager::flowDeallocationResult(int portId, bool success);
+%catches(rina::FlowDeallocationException) rina::IPCManager::flowDeallocated(int portId);
+%catches(rina::FlowNotAllocatedException, rina::InvalidArgumentsException, rina::UnknownFlowException, rina::ReadSDUException, rina::IPCException) rina::IPCManager::readSDU(int portId, void * sdu, int maxBytes);
+%catches(rina::FlowNotAllocatedException, rina::InvalidArgumentsException, rina::UnknownFlowException, rina::WriteSDUException, rina::IPCException) rina::IPCManager::writeSDU(int portId, void * sdu, int size);
 
 
 %include "librina/exceptions.h"

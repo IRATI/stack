@@ -41,7 +41,7 @@ class Client : public Application, public rina::cdap::CDAPCallbackInterface
 {
 	friend class APPcallback;
  public:
-	Client(const std::string& dif_name, const std::string& apn,
+	Client(const std::list<std::string>& dif_names, const std::string& apn,
 	       const std::string& api, const std::string& server_apn,
 	       const std::string& server_api, bool quiet, unsigned long count,
 	       bool registration, unsigned int wait, int g, int dw);
@@ -62,7 +62,6 @@ class Client : public Application, public rina::cdap::CDAPCallbackInterface
 	void destroyFlow();
 
  private:
-	std::string dif_name;
 	std::string server_name;
 	std::string server_instance;
 	bool quiet;

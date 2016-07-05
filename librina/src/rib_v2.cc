@@ -593,7 +593,7 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 			(*f)(handle, con, obj.name_, obj.class_, filt,
 						invoke_id,
 						obj.value_,
-						obj_reply.value_,
+						obj_reply,
 						res);
 		else
 			res.code_ = cdap_rib::CDAP_OP_NOT_SUPPORTED;
@@ -837,8 +837,9 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 								res,
 								invoke_id);
 			} catch (Exception &e) {
-				LOG_ERR("Unable to send response for invoke id %d",
-					invoke_id);
+				LOG_ERR("Unable to send response for invoke id %d, problem was: %s",
+					invoke_id,
+					e.what());
 			}
 		} else
 		{
@@ -1470,7 +1471,8 @@ std::list<RIBObjectData> RIB::get_all_rib_objects_data()
 	for (std::map<std::string, RIBObj*>::iterator it = obj_name_map.begin();
 			it != obj_name_map.end(); ++it) {
 		data = it->second->get_object_data();
-		data.instance_ = __get_obj_inst_id(data.name_);
+		if (it->first != "/")
+			data.instance_ = __get_obj_inst_id(data.name_);
 		result.push_back(data);
 	}
 
@@ -3003,6 +3005,7 @@ void DelegationObj::forwarded_object_response(int port, int invoke_id,
         rina::cdap_rib::con_handle_t con;
         con.port_id = port;
         msg->invoke_id_ = invoke_id;
+        msg->obj_name_ = fqn  + msg->obj_name_;
         if (msg->flags_ != rina::cdap_rib::flags_t::F_RD_INCOMPLETE)
         {
                 if (!last)
