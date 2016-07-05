@@ -36,19 +36,26 @@
 #include "sdup-crypto-ps-default.h"
 #include "debug.h"
 
-struct sdup_crypto_ps_default_data {
-	struct crypto_blkcipher * tx_blkcipher;
-	struct crypto_blkcipher * rx_blkcipher;
 
-	struct crypto_shash * tx_shash;
-	struct crypto_shash * rx_shash;
+struct sdup_crypto_ps_default_crypto_state {
+	struct crypto_blkcipher * blkcipher;
+
+	struct crypto_shash * shash;
 
 	struct crypto_comp * compress;
 	unsigned int comp_scratch_size;
 	char * comp_scratch;
 
-	bool 		enable_encryption;
-	bool		enable_decryption;
+	string_t * 	enc_alg;
+	string_t * 	mac_alg;
+	string_t * 	compress_alg;
+};
+
+struct sdup_crypto_ps_default_data {
+	struct sdup_crypto_ps_default_crypto_state * current_rx_state;
+	struct sdup_crypto_ps_default_crypto_state * current_tx_state;
+	struct sdup_crypto_ps_default_crypto_state * next_rx_state;
+	struct sdup_crypto_ps_default_crypto_state * next_tx_state;
 
 	/*next seq num to be used on tx*/
 	unsigned int    tx_seq_num;
@@ -59,15 +66,61 @@ struct sdup_crypto_ps_default_data {
 	unsigned int seq_bmap_len;
 	unsigned int seq_win_size;
 
-	string_t *      enc_key_tx;
-	string_t *      enc_key_rx;
-	string_t *      mac_key_tx;
-	string_t *      mac_key_rx;
-
-	string_t * 	encryption_cipher;
-	string_t * 	message_digest;
-	string_t * 	compress_alg;
 };
+
+static struct sdup_crypto_ps_default_crypto_state * crypto_state_create(void)
+{
+	struct sdup_crypto_ps_default_crypto_state * state =
+		rkmalloc(sizeof(*state), GFP_KERNEL);
+
+	state->blkcipher = NULL;
+
+	state->shash = NULL;
+
+	state->compress = NULL;
+	state->comp_scratch = NULL;
+	state->comp_scratch_size = 0;
+
+	state->enc_alg = NULL;
+	state->mac_alg = NULL;
+	state->compress_alg = NULL;
+
+	return state;
+}
+
+static void crypto_state_destroy(struct sdup_crypto_ps_default_crypto_state * state)
+{
+	if (state->blkcipher)
+		crypto_free_blkcipher(state->blkcipher);
+
+	if (state->shash)
+		crypto_free_shash(state->shash);
+
+	if (state->compress)
+		crypto_free_comp(state->compress);
+	if (state->comp_scratch)
+		rkfree(state->comp_scratch);
+
+	if (state->compress_alg) {
+		rkfree(state->compress_alg);
+		state->compress_alg = NULL;
+	}
+
+	if (state->enc_alg) {
+		rkfree(state->enc_alg);
+		state->enc_alg = NULL;
+	}
+
+	if (state->mac_alg) {
+		rkfree(state->mac_alg);
+		state->mac_alg = NULL;
+	}
+
+	rkfree(state);
+}
+
+static struct sdup_crypto_ps_default_data * priv_data_create(void);
+static void priv_data_destroy(struct sdup_crypto_ps_default_data * data);
 
 static struct sdup_crypto_ps_default_data * priv_data_create(void)
 {
@@ -76,33 +129,36 @@ static struct sdup_crypto_ps_default_data * priv_data_create(void)
 	if (!data)
 		return NULL;
 
-	data->tx_blkcipher = NULL;
-	data->rx_blkcipher = NULL;
+	data->current_tx_state = crypto_state_create();
+	if (!data->current_tx_state){
+		priv_data_destroy(data);
+		return NULL;
+	}
 
-	data->tx_shash = NULL;
-	data->rx_shash = NULL;
+	data->current_rx_state = crypto_state_create();
+	if (!data->current_rx_state){
+		priv_data_destroy(data);
+		return NULL;
+	}
 
-	data->compress = NULL;
-	data->comp_scratch = NULL;
-	data->comp_scratch_size = 0;
+	data->next_tx_state = crypto_state_create();
+	if (!data->next_tx_state){
+		priv_data_destroy(data);
+		return NULL;
+	}
 
-	data->enable_decryption = false;
-	data->enable_encryption = false;
-
-	data->enc_key_tx = NULL;
-	data->enc_key_rx = NULL;
-	data->mac_key_tx = NULL;
-	data->mac_key_rx = NULL;
-
-	data->encryption_cipher = NULL;
-	data->message_digest = NULL;
-	data->compress_alg = NULL;
+	data->next_rx_state = crypto_state_create();
+	if (!data->next_rx_state){
+		priv_data_destroy(data);
+		return NULL;
+	}
 
 	data->tx_seq_num = 0;
 	data->rx_seq_num = 0;
 	data->seq_bmap = NULL;
 	data->seq_win_size = 0;
 	data->seq_bmap_len = 0;
+
 	return data;
 }
 
@@ -111,53 +167,17 @@ static void priv_data_destroy(struct sdup_crypto_ps_default_data * data)
 	if (!data)
 		return;
 
-	if (data->tx_blkcipher)
-		crypto_free_blkcipher(data->tx_blkcipher);
-	if (data->rx_blkcipher)
-		crypto_free_blkcipher(data->rx_blkcipher);
+	if (data->current_tx_state)
+		crypto_state_destroy(data->current_tx_state);
 
-	if (data->tx_shash)
-		crypto_free_shash(data->tx_shash);
-	if (data->rx_shash)
-		crypto_free_shash(data->rx_shash);
+	if (data->current_rx_state)
+		crypto_state_destroy(data->current_rx_state);
 
-	if (data->compress)
-		crypto_free_comp(data->compress);
-	if (data->comp_scratch)
-		rkfree(data->comp_scratch);
+	if (data->next_tx_state)
+		crypto_state_destroy(data->next_tx_state);
 
-	if (data->enc_key_tx) {
-		rkfree(data->enc_key_tx);
-		data->enc_key_tx = NULL;
-	}
-	if (data->enc_key_rx) {
-		rkfree(data->enc_key_rx);
-		data->enc_key_rx = NULL;
-	}
-
-	if (data->mac_key_tx) {
-		rkfree(data->mac_key_tx);
-		data->mac_key_tx = NULL;
-	}
-	if (data->mac_key_rx) {
-		rkfree(data->mac_key_rx);
-		data->mac_key_rx = NULL;
-	}
-
-	if (data->compress_alg) {
-		rkfree(data->compress_alg);
-		data->compress_alg = NULL;
-	}
-
-	if (data->encryption_cipher) {
-		rkfree(data->encryption_cipher);
-		data->encryption_cipher = NULL;
-	}
-
-	if (data->message_digest) {
-		rkfree(data->message_digest);
-		data->message_digest = NULL;
-	}
+	if (data->next_rx_state)
+		crypto_state_destroy(data->next_rx_state);
 
 	if (data->seq_bmap) {
 		rkfree(data->seq_bmap);
@@ -170,6 +190,7 @@ static void priv_data_destroy(struct sdup_crypto_ps_default_data * data)
 static int add_padding(struct sdup_crypto_ps_default_data * priv_data,
 		       struct pdu_ser * pdu)
 {
+	struct sdup_crypto_ps_default_crypto_state * state;
 	struct buffer * buf;
 	unsigned int	buffer_size;
 	unsigned int	padded_size;
@@ -177,17 +198,19 @@ static int add_padding(struct sdup_crypto_ps_default_data * priv_data,
 	char *		data;
 	int i;
 
-	if (!priv_data || !pdu){
+	if (!priv_data || !pdu || !priv_data->current_tx_state){
 		LOG_ERR("Encryption arguments not initialized!");
 		return -1;
 	}
 
+	state = priv_data->current_tx_state;
+
 	/* encryption and therefore padding is disabled */
-	if (!priv_data->enable_encryption)
+	if (!state->blkcipher)
 		return 0;
 
 	buf = pdu_ser_buffer(pdu);
-	blk_size = crypto_blkcipher_blocksize(priv_data->tx_blkcipher);
+	blk_size = crypto_blkcipher_blocksize(state->blkcipher);
 	buffer_size = buffer_length(buf);
 	padded_size = buffer_size + blk_size - (buffer_size % blk_size);
 
@@ -208,19 +231,22 @@ static int add_padding(struct sdup_crypto_ps_default_data * priv_data,
 static int remove_padding(struct sdup_crypto_ps_default_data * priv_data,
 			  struct pdu_ser * pdu)
 {
+	struct sdup_crypto_ps_default_crypto_state * state;
 	struct buffer *	buf;
 	const char *	data;
 	unsigned int	len;
 	unsigned int	pad_len;
 	int		i;
 
-	if (!priv_data || !pdu){
+	if (!priv_data || !pdu || !priv_data->current_rx_state){
 		LOG_ERR("Encryption arguments not initialized!");
 		return -1;
 	}
 
+	state = priv_data->current_rx_state;
+
 	/* decryption and therefore padding is disabled */
-	if (!priv_data->enable_decryption)
+	if (!state->blkcipher)
 		return 0;
 
 	buf = pdu_ser_buffer(pdu);
@@ -248,6 +274,7 @@ static int remove_padding(struct sdup_crypto_ps_default_data * priv_data,
 static int encrypt(struct sdup_crypto_ps_default_data * priv_data,
 		   struct pdu_ser * pdu)
 {
+	struct sdup_crypto_ps_default_crypto_state * state;
 	struct blkcipher_desc	desc;
 	struct scatterlist	sg;
 	struct buffer *		buf;
@@ -256,25 +283,26 @@ static int encrypt(struct sdup_crypto_ps_default_data * priv_data,
 	char *                  iv;
 	unsigned int		ivsize;
 
-	if (!priv_data || !pdu){
+	if (!priv_data || !pdu || !priv_data->current_tx_state){
 		LOG_ERR("Encryption arguments not initialized!");
 		return -1;
 	}
 
+	state = priv_data->current_tx_state;
+
 	/* encryption is disabled */
-	if (priv_data->tx_blkcipher == NULL ||
-	    !priv_data->enable_encryption)
+	if (state->blkcipher == NULL)
 		return 0;
 
 	desc.flags = 0;
-	desc.tfm = priv_data->tx_blkcipher;
+	desc.tfm = state->blkcipher;
 
 	buf = pdu_ser_buffer(pdu);
 	buffer_size = buffer_length(buf);
 	data = buffer_data_rw(buf);
 
 	iv = NULL;
-	ivsize = crypto_blkcipher_ivsize(priv_data->tx_blkcipher);
+	ivsize = crypto_blkcipher_ivsize(state->blkcipher);
 	if (ivsize) {
 		iv = rkzalloc(ivsize, GFP_KERNEL);
 		if (!iv){
@@ -286,7 +314,7 @@ static int encrypt(struct sdup_crypto_ps_default_data * priv_data,
 	sg_init_one(&sg, data, buffer_size);
 
 	if (iv)
-		crypto_blkcipher_set_iv(priv_data->tx_blkcipher, iv, ivsize);
+		crypto_blkcipher_set_iv(state->blkcipher, iv, ivsize);
 
 	if (crypto_blkcipher_encrypt(&desc, &sg, &sg, buffer_size)) {
 		LOG_ERR("Encryption failed!");
@@ -313,6 +341,7 @@ static int encrypt(struct sdup_crypto_ps_default_data * priv_data,
 static int decrypt(struct sdup_crypto_ps_default_data * priv_data,
 		   struct pdu_ser * pdu)
 {
+	struct sdup_crypto_ps_default_crypto_state * state;
 	struct blkcipher_desc	desc;
 	struct scatterlist	sg;
 	struct buffer *		buf;
@@ -321,21 +350,22 @@ static int decrypt(struct sdup_crypto_ps_default_data * priv_data,
 	char *                  iv;
 	unsigned int		ivsize;
 
-	if (!priv_data || !pdu){
+	if (!priv_data || !pdu || !priv_data->current_rx_state){
 		LOG_ERR("Failed decryption");
 		return -1;
 	}
 
+	state = priv_data->current_rx_state;
+
 	/* decryption is disabled */
-	if (priv_data->rx_blkcipher == NULL ||
-	    !priv_data->enable_decryption)
+	if (state->blkcipher == NULL)
 		return 0;
 
 	buf = pdu_ser_buffer(pdu);
 	data = buffer_data_rw(buf);
 
 	iv = NULL;
-	ivsize = crypto_blkcipher_ivsize(priv_data->rx_blkcipher);
+	ivsize = crypto_blkcipher_ivsize(state->blkcipher);
 	if (ivsize) {
 		iv = rkzalloc(ivsize, GFP_KERNEL);
 		if (!iv){
@@ -352,7 +382,7 @@ static int decrypt(struct sdup_crypto_ps_default_data * priv_data,
 	}
 
 	desc.flags = 0;
-	desc.tfm = priv_data->rx_blkcipher;
+	desc.tfm = state->blkcipher;
 	buf = pdu_ser_buffer(pdu);
 	buffer_size = buffer_length(buf);
 	data = buffer_data_rw(buf);
@@ -360,7 +390,7 @@ static int decrypt(struct sdup_crypto_ps_default_data * priv_data,
 	sg_init_one(&sg, data, buffer_size);
 
 	if (iv)
-		crypto_blkcipher_set_iv(priv_data->rx_blkcipher, iv, ivsize);
+		crypto_blkcipher_set_iv(state->blkcipher, iv, ivsize);
 
 	if (crypto_blkcipher_decrypt(&desc, &sg, &sg, buffer_size)) {
 		LOG_ERR("Decryption failed!");
@@ -377,25 +407,27 @@ static int decrypt(struct sdup_crypto_ps_default_data * priv_data,
 static int add_hmac(struct sdup_crypto_ps_default_data * priv_data,
 		    struct pdu_ser * pdu)
 {
+	struct sdup_crypto_ps_default_crypto_state * state;
 	struct buffer *		buf;
 	unsigned int		buffer_size;
 	void *			data;
 	unsigned int		digest_size;
-	SHASH_DESC_ON_STACK(shash, priv_data->tx_shash);
+	SHASH_DESC_ON_STACK(shash, priv_data->current_tx_state->shash);
 
 	if (!priv_data || !pdu){
 		LOG_ERR("HMAC arguments not initialized!");
 		return -1;
 	}
 
+	state = priv_data->current_tx_state;
+
 	/* encryption is disabled so hmac is disabled*/
-	if (priv_data->tx_shash == NULL ||
-	    !priv_data->enable_encryption)
+	if (state->shash == NULL)
 		return 0;
 
 	buf = pdu_ser_buffer(pdu);
 	buffer_size = buffer_length(buf);
-	digest_size = crypto_shash_digestsize(priv_data->tx_shash);
+	digest_size = crypto_shash_digestsize(state->shash);
 
 	if (pdu_ser_tail_grow_gfp(pdu, digest_size)){
 		LOG_ERR("Failed to grow ser PDU for HMAC");
@@ -405,7 +437,7 @@ static int add_hmac(struct sdup_crypto_ps_default_data * priv_data,
 	data = buffer_data_rw(buf);
 
 	shash->flags = 0;
-	shash->tfm = priv_data->tx_shash;
+	shash->tfm = state->shash;
 
 	if (crypto_shash_digest(shash, data, buffer_size, data+buffer_size)) {
 		LOG_ERR("HMAC calculation failed!");
@@ -418,28 +450,30 @@ static int add_hmac(struct sdup_crypto_ps_default_data * priv_data,
 static int check_hmac(struct sdup_crypto_ps_default_data * priv_data,
 		      struct pdu_ser * pdu)
 {
+	struct sdup_crypto_ps_default_crypto_state * state;
 	struct buffer *		buf;
 	unsigned int		buffer_size;
 	void *			data;
 	unsigned int		digest_size;
 	char *			verify_digest;
-	SHASH_DESC_ON_STACK(shash, priv_data->tx_shash);
+	SHASH_DESC_ON_STACK(shash, priv_data->current_rx_state->shash);
 
 	if (!priv_data || !pdu){
 		LOG_ERR("HMAC arguments not initialized!");
 		return -1;
 	}
 
+	state = priv_data->current_rx_state;
+
 	/* decryption is disabled so hmac is disabled*/
-	if (priv_data->rx_shash == NULL ||
-	    !priv_data->enable_decryption)
+	if (state->shash == NULL)
 		return 0;
 
 	buf = pdu_ser_buffer(pdu);
 	buffer_size = buffer_length(buf);
 	data = buffer_data_rw(buf);
 
-	digest_size = crypto_shash_digestsize(priv_data->tx_shash);
+	digest_size = crypto_shash_digestsize(state->shash);
 	verify_digest = rkzalloc(digest_size, GFP_KERNEL);
 	if(!verify_digest){
 		LOG_ERR("HMAC allocation failed!");
@@ -447,7 +481,7 @@ static int check_hmac(struct sdup_crypto_ps_default_data * priv_data,
 	}
 
 	shash->flags = 0;
-	shash->tfm = priv_data->rx_shash;
+	shash->tfm = state->shash;
 
 	if (crypto_shash_digest(shash, data, buffer_size-digest_size, verify_digest)) {
 		LOG_ERR("HMAC calculation failed!");
@@ -474,6 +508,7 @@ static int check_hmac(struct sdup_crypto_ps_default_data * priv_data,
 static int compress(struct sdup_crypto_ps_default_data * priv_data,
 		    struct pdu_ser * pdu)
 {
+	struct sdup_crypto_ps_default_crypto_state * state;
 	struct buffer *		buf;
 	unsigned int		buffer_size;
 	void *			data;
@@ -482,24 +517,25 @@ static int compress(struct sdup_crypto_ps_default_data * priv_data,
 	char *                  tmp;
 	int err;
 
-	if (!priv_data || !pdu){
+	if (!priv_data || !pdu || !priv_data->current_tx_state){
 		LOG_ERR("Compression arguments not initialized!");
 		return -1;
 	}
 
+	state = priv_data->current_tx_state;
+
 	/* encryption is disabled so compression is disabled*/
-	if (priv_data->compress == NULL ||
-	    !priv_data->enable_encryption)
+	if (state->compress == NULL)
 		return 0;
 
 	buf = pdu_ser_buffer(pdu);
 	buffer_size = buffer_length(buf);
 	data = buffer_data_rw(buf);
 
-	compressed_size = priv_data->comp_scratch_size;
-	compressed_data = priv_data->comp_scratch;
+	compressed_size = state->comp_scratch_size;
+	compressed_data = state->comp_scratch;
 
-	err = crypto_comp_compress(priv_data->compress,
+	err = crypto_comp_compress(state->compress,
 				   data, buffer_size,
 				   compressed_data, &compressed_size);
 
@@ -524,6 +560,7 @@ static int decompress(struct sdup_crypto_ps_default_data * priv_data,
 		      u_int32_t max_pdu_size,
 		      struct pdu_ser * pdu)
 {
+	struct sdup_crypto_ps_default_crypto_state * state;
 	struct buffer *		buf;
 	unsigned int		buffer_size;
 	void *			data;
@@ -531,14 +568,15 @@ static int decompress(struct sdup_crypto_ps_default_data * priv_data,
 	unsigned int		decompressed_size;
 	int err;
 
-	if (!priv_data || !pdu){
+	if (!priv_data || !pdu || !priv_data->current_rx_state){
 		LOG_ERR("Decompression arguments not initialized!");
 		return -1;
 	}
 
+	state = priv_data->current_rx_state;
+
 	/* decryption is disabled so decompression is disabled*/
-	if (priv_data->compress == NULL ||
-	    !priv_data->enable_decryption)
+	if (state->compress == NULL)
 		return 0;
 
 	buf = pdu_ser_buffer(pdu);
@@ -552,7 +590,7 @@ static int decompress(struct sdup_crypto_ps_default_data * priv_data,
 		return -1;
 	}
 
-	err = crypto_comp_decompress(priv_data->compress,
+	err = crypto_comp_decompress(state->compress,
 				     data, buffer_size,
 				     decompressed_data, &decompressed_size);
 
@@ -570,16 +608,19 @@ static int decompress(struct sdup_crypto_ps_default_data * priv_data,
 static int add_seq_num(struct sdup_crypto_ps_default_data * priv_data,
 		       struct pdu_ser * pdu)
 {
+	struct sdup_crypto_ps_default_crypto_state * state;
 	struct buffer * buf;
 	char *		data;
 
-	if (!priv_data || !pdu){
+	if (!priv_data || !pdu || !priv_data->current_tx_state){
 		LOG_ERR("Encryption arguments not initialized!");
 		return -1;
 	}
 
+	state = priv_data->current_tx_state;
+
 	/* encryption and therefore sequence numbers are disabled */
-	if (!priv_data->enable_encryption)
+	if (!state->blkcipher)
 		return 0;
 
 	buf = pdu_ser_buffer(pdu);
@@ -604,6 +645,7 @@ static int add_seq_num(struct sdup_crypto_ps_default_data * priv_data,
 static int del_seq_num(struct sdup_crypto_ps_default_data * priv_data,
 		       struct pdu_ser * pdu)
 {
+	struct sdup_crypto_ps_default_crypto_state * state;
 	struct buffer * buf;
 	char *		data;
 	unsigned int    seq_num;
@@ -612,19 +654,21 @@ static int del_seq_num(struct sdup_crypto_ps_default_data * priv_data,
 	unsigned char * bmap;
 	unsigned int	bit_pos, byte_pos;
 
-	if (!priv_data || !pdu){
+	if (!priv_data || !pdu || !priv_data->current_rx_state){
 		LOG_ERR("Encryption arguments not initialized!");
 		return -1;
 	}
 
+	state = priv_data->current_rx_state;
+
 	/* decryption and therefore sequence numbers are disabled */
-	if (!priv_data->enable_decryption)
+	if (!state->blkcipher)
 		return 0;
 
 	buf = pdu_ser_buffer(pdu);
 	data = buffer_data_rw(buf);
 
-	memcpy(&seq_num, data, sizeof(priv_data->tx_seq_num));
+	memcpy(&seq_num, data, sizeof(priv_data->rx_seq_num));
 
 	if (pdu_ser_head_shrink_gfp(GFP_ATOMIC,
 				    pdu,
@@ -682,7 +726,6 @@ int default_sdup_apply_crypto(struct sdup_crypto_ps * ps,
 	int result = 0;
 	struct sdup_crypto_ps_default_data * priv_data = ps->priv;
 
-
 	result = compress(priv_data, pdu);
 	if (result)
 		return result;
@@ -691,7 +734,8 @@ int default_sdup_apply_crypto(struct sdup_crypto_ps * ps,
 	if (result)
 		return result;
 
-	result = add_hmac(priv_data, pdu);
+	if (priv_data->current_tx_state->shash)
+		result = add_hmac(priv_data, pdu);
 	if (result)
 		return result;
 
@@ -723,7 +767,8 @@ int default_sdup_remove_crypto(struct sdup_crypto_ps * ps,
 	if (result)
 		return result;
 
-	result = check_hmac(priv_data, pdu);
+	if (priv_data->current_rx_state->shash)
+		result = check_hmac(priv_data, pdu);
 	if (result)
 		return result;
 
@@ -744,85 +789,120 @@ int default_sdup_update_crypto_state(struct sdup_crypto_ps * ps,
 				     struct sdup_crypto_state * state)
 {
 	struct sdup_crypto_ps_default_data * priv_data;
+	struct sdup_crypto_ps_default_crypto_state * next_tx_state;
+	struct sdup_crypto_ps_default_crypto_state * next_rx_state;
+	struct sdup_port * sdup_port;
 
 	if (!ps || !state) {
 		LOG_ERR("Bogus input parameters passed");
 		return -1;
 	}
 
-	if (!state->encrypt_key_tx) {
-		LOG_ERR("Bogus tx encryption key passed");
-		return -1;
-	}
-	if (!state->encrypt_key_rx) {
-		LOG_ERR("Bogus rx encryption key passed");
-		return -1;
-	}
-
-	if (!state->mac_key_tx) {
-		LOG_ERR("Bogus tx mac key passed");
-		return -1;
-	}
-	if (!state->mac_key_rx) {
-		LOG_ERR("Bogus rx mac key passed");
-		return -1;
-	}
-
+	sdup_port = ps->dm;
 	priv_data = ps->priv;
+	next_tx_state = priv_data->next_tx_state;
+	next_rx_state = priv_data->next_rx_state;
 
-	if (!priv_data->tx_blkcipher) {
-		LOG_ERR("TX Block cipher is not set for N-1 port %d",
-			ps->dm->port_id);
-		return -1;
-	}
-
-	if (!priv_data->rx_blkcipher) {
-		LOG_ERR("RX Block cipher is not set for N-1 port %d",
-			ps->dm->port_id);
-		return -1;
-	}
-
-	if (!priv_data->tx_shash) {
-		LOG_ERR("TX shash is not set for N-1 port %d",
-			ps->dm->port_id);
-		return -1;
-	}
-
-	if (!priv_data->rx_shash) {
-		LOG_ERR("RX shash is not set for N-1 port %d",
-			ps->dm->port_id);
-		return -1;
-	}
-
-	if (!priv_data->enable_decryption && state->enable_crypto_rx){
-		priv_data->enable_decryption = state->enable_crypto_rx;
-		if (crypto_blkcipher_setkey(priv_data->rx_blkcipher,
-					    buffer_data_ro(state->encrypt_key_rx),
-					    buffer_length(state->encrypt_key_rx))) {
-			LOG_ERR("Could not set decryption key for N-1 port %d",
-				ps->dm->port_id);
+	if (state->enc_alg && string_cmp(state->enc_alg, "") != 0) {
+		if (string_cmp(state->enc_alg, "AES128") == 0 ||
+		    string_cmp(state->enc_alg, "AES256") == 0) {
+			if (string_dup("cbc(aes)",
+				       &next_tx_state->enc_alg)) {
+				LOG_ERR("Problems copying 'enc_alg' value");
+				return -1;
+			}
+			if (string_dup("cbc(aes)",
+				       &next_rx_state->enc_alg)) {
+				LOG_ERR("Problems copying 'enc_alg' value");
+				return -1;
+			}
+			LOG_DBG("TX encryption cipher is %s", next_tx_state->enc_alg);
+			LOG_DBG("RX encryption cipher is %s", next_rx_state->enc_alg);
+		} else {
+			LOG_DBG("Unsupported encryption algorithm %s",
+				state->enc_alg);
 			return -1;
 		}
 
-		if (crypto_shash_setkey(priv_data->rx_shash,
-					buffer_data_ro(state->mac_key_rx),
-					buffer_length(state->mac_key_rx))) {
-			LOG_ERR("Could not set rx mac key for N-1 port %d",
-				ps->dm->port_id);
+		next_tx_state->blkcipher = crypto_alloc_blkcipher(next_tx_state->enc_alg,
+								  0,0);
+		next_rx_state->blkcipher = crypto_alloc_blkcipher(next_rx_state->enc_alg,
+								  0,0);
+		if (IS_ERR(next_tx_state->blkcipher)) {
+			LOG_ERR("could not allocate tx blkcipher handle for %s\n",
+				next_tx_state->enc_alg);
+			return -1;
+		}
+		if (IS_ERR(next_rx_state->blkcipher)) {
+			LOG_ERR("could not allocate rx blkcipher handle for %s\n",
+				next_rx_state->enc_alg);
 			return -1;
 		}
 	}
-	if (!priv_data->enable_encryption && state->enable_crypto_tx){
-		priv_data->enable_encryption = state->enable_crypto_tx;
-		if (crypto_blkcipher_setkey(priv_data->tx_blkcipher,
+
+	if (state->encrypt_key_tx) {
+		if (crypto_blkcipher_setkey(next_tx_state->blkcipher,
 					    buffer_data_ro(state->encrypt_key_tx),
 					    buffer_length(state->encrypt_key_tx))) {
-			LOG_ERR("Could not set encryption key for N-1 port %d",
+			LOG_ERR("Could not set tx encryption key for N-1 port %d",
 				ps->dm->port_id);
 			return -1;
 		}
+	}
+	if (state->encrypt_key_rx) {
+		if (crypto_blkcipher_setkey(next_rx_state->blkcipher,
+					    buffer_data_ro(state->encrypt_key_rx),
+					    buffer_length(state->encrypt_key_rx))) {
+			LOG_ERR("Could not set rx encryption key for N-1 port %d",
+				ps->dm->port_id);
+			return -1;
+		}
+	}
 
-		if (crypto_shash_setkey(priv_data->tx_shash,
+	if (state->mac_alg && string_cmp(state->mac_alg, "") != 0) {
+		if (string_cmp(state->mac_alg, "SHA256") == 0) {
+			if (string_dup("hmac(sha256)", &next_tx_state->mac_alg)) {
+				LOG_ERR("Problems copying 'mac_alg' value");
+				return -1;
+			}
+			if (string_dup("hmac(sha256)", &next_rx_state->mac_alg)) {
+				LOG_ERR("Problems copying 'mac_alg' value");
+				return -1;
+			}
+			LOG_DBG("TX message digest is %s", next_tx_state->mac_alg);
+			LOG_DBG("RX message digest is %s", next_rx_state->mac_alg);
+		} else if (string_cmp(state->mac_alg, "MD5") == 0) {
+			if (string_dup("hmac(md5)", &next_tx_state->mac_alg)) {
+				LOG_ERR("Problems copying 'mac_alg' value");
+				return -1;
+			}
+			if (string_dup("hmac(md5)", &next_rx_state->mac_alg)) {
+				LOG_ERR("Problems copying 'mac_alg' value");
+				return -1;
+			}
+			LOG_DBG("TX message digest is %s", next_tx_state->mac_alg);
+			LOG_DBG("RX message digest is %s", next_rx_state->mac_alg);
+		} else {
+			LOG_DBG("Unsupported mac_alg %s", state->mac_alg);
+			return -1;
+		}
+
+		next_tx_state->shash = crypto_alloc_shash(next_tx_state->mac_alg, 0,0);
+		next_rx_state->shash = crypto_alloc_shash(next_rx_state->mac_alg, 0,0);
+
+		if (IS_ERR(next_tx_state->shash)) {
+			LOG_ERR("Could not allocate tx shash handle for %s\n",
+				next_tx_state->mac_alg);
+			return -1;
+		}
+		if (IS_ERR(next_rx_state->shash)) {
+			LOG_ERR("Could not allocate rx shash handle for %s\n",
+				next_rx_state->mac_alg);
+			return -1;
+		}
+	}
+	if (state->mac_key_tx) {
+		if (crypto_shash_setkey(next_tx_state->shash,
 					buffer_data_ro(state->mac_key_tx),
 					buffer_length(state->mac_key_tx))) {
 			LOG_ERR("Could not set tx mac key for N-1 port %d",
@@ -830,10 +910,78 @@ int default_sdup_update_crypto_state(struct sdup_crypto_ps * ps,
 			return -1;
 		}
 	}
+	if (state->mac_key_rx) {
+		if (crypto_shash_setkey(next_rx_state->shash,
+					buffer_data_ro(state->mac_key_rx),
+					buffer_length(state->mac_key_rx))) {
+			LOG_ERR("Could not set rx mac key for N-1 port %d",
+				ps->dm->port_id);
+			return -1;
+		}
+	}
 
-	LOG_DBG("Crypto rx enabled state: %d", state->enable_crypto_rx);
-	LOG_DBG("Crypto tx enabled state: %d", state->enable_crypto_tx);
+	if (state->compress_alg && string_cmp(state->compress_alg, "") != 0) {
+		if (string_cmp(state->compress_alg, "deflate") == 0) {
+			if (string_dup("deflate", &next_tx_state->compress_alg)) {
+				LOG_ERR("Problems copying 'compress_alg' value");
+				return -1;
+			}
+			if (string_dup("deflate", &next_rx_state->compress_alg)) {
+				LOG_ERR("Problems copying 'compress_alg' value");
+				return -1;
+			}
+			LOG_DBG("TX compress algorithm is %s", next_tx_state->compress_alg);
+			LOG_DBG("RX compress algorithm is %s", next_rx_state->compress_alg);
+		} else {
+			LOG_DBG("Unsupported compress algorithm %s", state->compress_alg);
+			return -1;
+		}
 
+		next_tx_state->compress = crypto_alloc_comp(next_tx_state->compress_alg,
+							    0,0);
+		next_rx_state->compress = crypto_alloc_comp(next_tx_state->compress_alg,
+							    0,0);
+
+		if (IS_ERR(next_tx_state->compress)) {
+			LOG_ERR("Could not allocate tx compress handle for %s\n",
+				next_tx_state->compress_alg);
+			return -1;
+		}
+		if (IS_ERR(next_rx_state->compress)) {
+			LOG_ERR("Could not allocate rx compress handle for %s\n",
+				next_rx_state->compress_alg);
+			return -1;
+		}
+
+		next_tx_state->comp_scratch_size = sdup_port->dt_cons->max_pdu_size +
+			MAX_COMP_INFLATION;
+		next_tx_state->comp_scratch = rkzalloc(next_tx_state->comp_scratch_size,
+						       GFP_KERNEL);
+		if (!next_tx_state->comp_scratch) {
+			LOG_ERR("Could not allocate scratch space for tx compression");
+			return -1;
+		}
+
+		next_rx_state->comp_scratch_size = sdup_port->dt_cons->max_pdu_size +
+			MAX_COMP_INFLATION;
+		next_rx_state->comp_scratch = rkzalloc(next_rx_state->comp_scratch_size,
+						       GFP_KERNEL);
+		if (!next_rx_state->comp_scratch) {
+			LOG_ERR("Could not allocate scratch space for rx compression");
+			return -1;
+		}
+	}
+
+	if (state->enable_crypto_rx){
+		crypto_state_destroy(priv_data->current_rx_state);
+		priv_data->current_rx_state = next_rx_state;
+		priv_data->next_rx_state = crypto_state_create();
+	}
+	if (state->enable_crypto_tx){
+		crypto_state_destroy(priv_data->current_tx_state);
+		priv_data->current_tx_state = next_tx_state;
+		priv_data->next_tx_state = crypto_state_create();
+	}
 	return 0;
 }
 EXPORT_SYMBOL(default_sdup_update_crypto_state);
@@ -873,85 +1021,7 @@ struct ps_base * sdup_crypto_ps_default_create(struct rina_component * component
 	ps->dm          = sdup_port;
 	ps->priv        = data;
 
-	/* Parse policy parameters */
 	if (conf->crypto_policy) {
-		parameter = policy_param_find(conf->crypto_policy,
-					      "encryptAlg");
-		if (!parameter) {
-			LOG_ERR("Could not find 'encryptAlg' in crypto policy");
-			rkfree(ps);
-			priv_data_destroy(data);
-			return NULL;
-		}
-
-		aux = policy_param_value(parameter);
-		if (string_cmp(aux, "AES128") == 0 ||
-		    string_cmp(aux, "AES256") == 0) {
-			if (string_dup("cbc(aes)",
-				       &data->encryption_cipher)) {
-				LOG_ERR("Problems copying 'encryptAlg' value");
-				rkfree(ps);
-				priv_data_destroy(data);
-				return NULL;
-			}
-			LOG_DBG("Encryption cipher is %s",
-				data->encryption_cipher);
-		} else {
-			LOG_DBG("Unsupported encryption cipher %s", aux);
-		}
-
-		parameter = policy_param_find(conf->crypto_policy,
-					      "macAlg");
-		if (!parameter) {
-			LOG_ERR("Could not find 'macAlg' in crypto policy");
-			rkfree(ps);
-			priv_data_destroy(data);
-			return NULL;
-		}
-
-		aux = policy_param_value(parameter);
-		if (string_cmp(aux, "SHA256") == 0) {
-			if (string_dup("hmac(sha256)", &data->message_digest)) {
-				LOG_ERR("Problems copying 'digest' value");
-				rkfree(ps);
-				priv_data_destroy(data);
-				return NULL;
-			}
-			LOG_DBG("Message digest is %s", data->message_digest);
-		} else if (string_cmp(aux, "MD5") == 0) {
-			if (string_dup("hmac(md5)", &data->message_digest)) {
-				LOG_ERR("Problems copying 'digest' value)");
-				rkfree(ps);
-				priv_data_destroy(data);
-				return NULL;
-			}
-			LOG_DBG("Message digest is %s", data->message_digest);
-		} else {
-			LOG_DBG("Unsupported message digest %s", aux);
-		}
-
-		parameter = policy_param_find(conf->crypto_policy,
-					      "compressAlg");
-		if (!parameter) {
-			LOG_ERR("Could not find 'compressAlg' in crypto policy");
-			rkfree(ps);
-			priv_data_destroy(data);
-			return NULL;
-		}
-
-		aux = policy_param_value(parameter);
-		if (string_cmp(aux, "deflate") == 0) {
-			if (string_dup("deflate", &data->compress_alg)) {
-				LOG_ERR("Problems copying 'compressAlg' value");
-				rkfree(ps);
-				priv_data_destroy(data);
-				return NULL;
-			}
-			LOG_DBG("Compress algorighm is %s", data->compress_alg);
-		} else {
-			LOG_DBG("Unsupported compress algorithm %s", aux);
-		}
-
 		parameter = policy_param_find(conf->crypto_policy,
 					      "seq_win_size");
 		if (!parameter) {
@@ -982,76 +1052,8 @@ struct ps_base * sdup_crypto_ps_default_create(struct rina_component * component
 			LOG_DBG("Sequence number window size is %d",
 				data->seq_win_size);
 		}
-
 	} else {
 		LOG_ERR("Bogus configuration passed");
-		rkfree(ps);
-		priv_data_destroy(data);
-		return NULL;
-	}
-
-	/* Instantiate block cipher */
-	if (data->encryption_cipher != NULL) {
-		data->tx_blkcipher = crypto_alloc_blkcipher(data->encryption_cipher,
-							    0,0);
-		data->rx_blkcipher = crypto_alloc_blkcipher(data->encryption_cipher,
-							    0,0);
-		if (IS_ERR(data->tx_blkcipher)) {
-			LOG_ERR("could not allocate tx blkcipher handle for %s\n",
-				data->encryption_cipher);
-			rkfree(ps);
-			priv_data_destroy(data);
-			return NULL;
-		}
-
-		if (IS_ERR(data->rx_blkcipher)) {
-			LOG_ERR("could not allocate rx blkcipher handle for %s\n",
-				data->encryption_cipher);
-			rkfree(ps);
-			priv_data_destroy(data);
-			return NULL;
-		}
-	}
-
-	if (data->message_digest != NULL) {
-		data->tx_shash = crypto_alloc_shash(data->message_digest, 0,0);
-		data->rx_shash = crypto_alloc_shash(data->message_digest, 0,0);
-
-		if (IS_ERR(data->tx_shash)) {
-			LOG_ERR("could not allocate tx shash handle for %s\n",
-				data->message_digest);
-			rkfree(ps);
-			priv_data_destroy(data);
-			return NULL;
-		}
-
-		if (IS_ERR(data->rx_shash)) {
-			LOG_ERR("could not allocate rx shash handle for %s\n",
-				data->message_digest);
-			rkfree(ps);
-			priv_data_destroy(data);
-			return NULL;
-		}
-	}
-
-	if (data->compress_alg != NULL) {
-		data->compress = crypto_alloc_comp(data->compress_alg, 0,0);
-
-		if (IS_ERR(data->compress)) {
-			LOG_ERR("could not allocate compress handle for %s\n",
-				data->compress_alg);
-			rkfree(ps);
-			priv_data_destroy(data);
-			return NULL;
-		}
-	}
-
-
-	data->comp_scratch_size = sdup_port->dt_cons->max_pdu_size +
-		MAX_COMP_INFLATION;
-	data->comp_scratch = rkzalloc(data->comp_scratch_size, GFP_KERNEL);
-	if (!data->comp_scratch) {
-		LOG_ERR("could not allocate scratch space for compression");
 		rkfree(ps);
 		priv_data_destroy(data);
 		return NULL;
