@@ -743,6 +743,15 @@ static void sdup_crypto_state_destroy(struct sdup_crypto_state * state)
 	if (state->iv_rx)
 		buffer_destroy(state->iv_rx);
 
+	if (state->mac_alg)
+		rkfree(state->mac_alg);
+
+	if (state->enc_alg)
+		rkfree(state->enc_alg);
+
+	if (state->compress_alg)
+		rkfree(state->compress_alg);
+
 	rkfree(state);
 }
 
@@ -2716,6 +2725,12 @@ rnl_parse_crypto_state_info(
         attr_policy[ICSTATE_IV_TX].len = 0;
         attr_policy[ICSTATE_IV_RX].type = NLA_UNSPEC;
         attr_policy[ICSTATE_IV_RX].len = 0;
+        attr_policy[ICSTATE_MAC_ALG].type = NLA_STRING;
+        attr_policy[ICSTATE_MAC_ALG].len = 0;
+        attr_policy[ICSTATE_ENC_ALG].type = NLA_STRING;
+        attr_policy[ICSTATE_ENC_ALG].len = 0;
+        attr_policy[ICSTATE_COMPRESS_ALG].type = NLA_STRING;
+        attr_policy[ICSTATE_COMPRESS_ALG].len = 0;
 
         if (nla_parse_nested(attrs,
         		     ICSTATE_ATTR_MAX,
@@ -2750,6 +2765,15 @@ rnl_parse_crypto_state_info(
         	state->iv_rx = buffer_create_from(nla_data(attrs[ICSTATE_IV_RX]),
         					  nla_len(attrs[ICSTATE_IV_RX]));
 
+        if (attrs[ICSTATE_MAC_ALG])
+                state->mac_alg = nla_dup_string(attrs[ICSTATE_MAC_ALG], GFP_KERNEL);
+
+        if (attrs[ICSTATE_ENC_ALG])
+                state->enc_alg = nla_dup_string(attrs[ICSTATE_ENC_ALG], GFP_KERNEL);
+
+        if (attrs[ICSTATE_COMPRESS_ALG])
+                state->compress_alg = nla_dup_string(attrs[ICSTATE_COMPRESS_ALG], GFP_KERNEL);
+
         return 0;
 }
 
@@ -2764,12 +2788,15 @@ static struct sdup_crypto_state * sdup_crypto_state_create(void)
 
 	tmp->enable_crypto_tx = false;
 	tmp->enable_crypto_rx = false;
+	tmp->mac_alg = NULL;
 	tmp->mac_key_tx = NULL;
 	tmp->mac_key_rx = NULL;
+	tmp->enc_alg = NULL;
 	tmp->encrypt_key_tx = NULL;
 	tmp->encrypt_key_rx = NULL;
 	tmp->iv_tx = NULL;
 	tmp->iv_rx = NULL;
+	tmp->compress_alg = NULL;
 
 	return tmp;
 }

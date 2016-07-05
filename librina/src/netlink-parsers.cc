@@ -5387,6 +5387,18 @@ int putCryptoState(nl_msg* netlinkMessage,
 			object.iv_rx.length,
 			object.iv_rx.data);
 
+	if (object.mac_alg.length() != 0)
+		NLA_PUT_STRING(netlinkMessage, CRYPTS_ATTR_MAC_ALG,
+			       object.mac_alg.c_str());
+
+	if (object.encrypt_alg.length() != 0)
+		NLA_PUT_STRING(netlinkMessage, CRYPTS_ATTR_ENC_ALG,
+			       object.encrypt_alg.c_str());
+
+	if (object.compress_alg.length() != 0)
+		NLA_PUT_STRING(netlinkMessage, CRYPTS_ATTR_COMPRESS_ALG,
+			       object.compress_alg.c_str());
+
 	return 0;
 
 	nla_put_failure: LOG_ERR(
@@ -9259,12 +9271,18 @@ void parseCryptoState(nlattr *nested,
 	attr_policy[CRYPTS_ATTR_ENABLE_RX].type = NLA_FLAG;
 	attr_policy[CRYPTS_ATTR_ENABLE_RX].minlen = 0;
 	attr_policy[CRYPTS_ATTR_ENABLE_RX].maxlen = 0;
+	attr_policy[CRYPTS_ATTR_MAC_ALG].type = NLA_STRING;
+	attr_policy[CRYPTS_ATTR_MAC_ALG].minlen = 0;
+	attr_policy[CRYPTS_ATTR_MAC_ALG].maxlen = 65535;
 	attr_policy[CRYPTS_ATTR_MAC_KEY_TX].type = NLA_UNSPEC;
 	attr_policy[CRYPTS_ATTR_MAC_KEY_TX].minlen = 0;
 	attr_policy[CRYPTS_ATTR_MAC_KEY_TX].maxlen = 65535;
 	attr_policy[CRYPTS_ATTR_MAC_KEY_RX].type = NLA_UNSPEC;
 	attr_policy[CRYPTS_ATTR_MAC_KEY_RX].minlen = 0;
 	attr_policy[CRYPTS_ATTR_MAC_KEY_RX].maxlen = 65535;
+	attr_policy[CRYPTS_ATTR_ENC_ALG].type = NLA_STRING;
+	attr_policy[CRYPTS_ATTR_ENC_ALG].minlen = 0;
+	attr_policy[CRYPTS_ATTR_ENC_ALG].maxlen = 65535;
 	attr_policy[CRYPTS_ATTR_ENCRYPT_KEY_TX].type = NLA_UNSPEC;
 	attr_policy[CRYPTS_ATTR_ENCRYPT_KEY_TX].minlen = 0;
 	attr_policy[CRYPTS_ATTR_ENCRYPT_KEY_TX].maxlen = 65535;
@@ -9277,6 +9295,9 @@ void parseCryptoState(nlattr *nested,
 	attr_policy[CRYPTS_ATTR_IV_RX].type = NLA_UNSPEC;
 	attr_policy[CRYPTS_ATTR_IV_RX].minlen = 0;
 	attr_policy[CRYPTS_ATTR_IV_RX].maxlen = 65535;
+	attr_policy[CRYPTS_ATTR_COMPRESS_ALG].type = NLA_STRING;
+	attr_policy[CRYPTS_ATTR_COMPRESS_ALG].minlen = 0;
+	attr_policy[CRYPTS_ATTR_COMPRESS_ALG].maxlen = 65535;
 	struct nlattr *attrs[CRYPTS_ATTR_MAX + 1];
 
 	int err = nla_parse_nested(attrs, CRYPTS_ATTR_MAX, nested, attr_policy);
@@ -9331,6 +9352,18 @@ void parseCryptoState(nlattr *nested,
 		unsigned char * data = (unsigned char *) nla_data(attrs[CRYPTS_ATTR_IV_RX]);
 		memcpy(result->state.iv_rx.data, data, result->state.iv_rx.length);
 	}
+
+	if (attrs[CRYPTS_ATTR_MAC_ALG])
+		result->state.mac_alg = std::string(nla_get_string(attrs[CRYPTS_ATTR_MAC_ALG]),
+						    nla_len(attrs[CRYPTS_ATTR_MAC_ALG]));
+
+	if (attrs[CRYPTS_ATTR_ENC_ALG])
+		result->state.encrypt_alg = std::string(nla_get_string(attrs[CRYPTS_ATTR_ENC_ALG]),
+							nla_len(attrs[CRYPTS_ATTR_ENC_ALG]));
+
+	if (attrs[CRYPTS_ATTR_COMPRESS_ALG])
+		result->state.compress_alg = std::string(nla_get_string(attrs[CRYPTS_ATTR_COMPRESS_ALG]),
+							 nla_len(attrs[CRYPTS_ATTR_COMPRESS_ALG]));
 }
 
 IPCPUpdateCryptoStateRequestMessage * parseIPCPUpdateCryptoStateRequestMessage(
