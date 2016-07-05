@@ -227,12 +227,20 @@ EXPORT_SYMBOL(pdu_efcp_config);
 int pdu_destroy(struct pdu *pdu)
 {
 	struct du *du;
+	bool free_du = false;
 
 	ASSERT(pdu);
 
 	du = to_du(pdu);
-	if (du->skb)
+	if (du->skb) {
+		if (likely(atomic_read(&du->skb->users) == 1))
+			free_du = true;
 		kfree_skb(du->skb); /* this destroys pci too */
+		if (likely(free_du))
+			rkfree(du);
+		return 0;
+	}
+
 	rkfree(du);
 	return 0;
 }

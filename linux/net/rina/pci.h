@@ -150,6 +150,11 @@ inline int		pci_control_sndr_rate_set(struct pci *pci,
 inline u_int32_t	pci_control_time_frame(const struct pci *pci);
 inline int		pci_control_time_frame_set(struct pci *pci,
 						   u_int32_t frame);
+/* XXX:Needed only for process_A_expiration */
+int			pci_get(struct pci *pci);
+int			pci_release(struct pci *pci); /* This should be called only after process_A_expiration */
+
+
 #if 0
 booli			pci_getset_test(void);
 #endif

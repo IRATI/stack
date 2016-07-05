@@ -32,6 +32,7 @@
 #include "debug.h"
 #include "pci.h"
 #include "du.h"
+#include "pdu.h"
 
 #define VERSION_SIZE 1
 #define FLAGS_SIZE 1
@@ -698,6 +699,38 @@ inline int pci_control_time_frame_set(struct pci *pci, u_int32_t frame)
 	}
 }
 EXPORT_SYMBOL(pci_control_time_frame_set);
+
+/* Needed only for process_A_expiration */
+int pci_get(struct pci *pci)
+{
+	struct du *du;
+	ASSERT(pci_is_ok(pci));
+
+	du = container_of(pci, struct du, pci);
+	if (!du)
+		return -1;
+
+	skb_get(du->skb);
+	return 0;
+}
+EXPORT_SYMBOL(pci_get);
+
+int pci_release(struct pci *pci)
+{
+	struct du *du;
+	ASSERT(pci_is_ok(pci));
+
+	du = container_of(pci, struct du, pci);
+	if (!du)
+		return -1;
+
+	if (unlikely(atomic_read(&du->skb->users) == 1))
+		return pdu_destroy((struct pdu*)du);
+
+	kfree_skb(du->skb);
+	return 0;
+}
+EXPORT_SYMBOL(pci_release);
 
 #if 0
 
