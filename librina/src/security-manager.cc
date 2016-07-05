@@ -584,6 +584,10 @@ CryptoState SSH2SecurityContext::get_crypto_state(bool enable_crypto_tx,
 {
 	CryptoState result;
 
+	result.encrypt_alg = encrypt_alg;
+	result.mac_alg = mac_alg;
+	result.compress_alg = compress_alg;
+
 	result.enable_crypto_tx = enable_crypto_tx;
 	result.enable_crypto_rx = enable_crypto_rx;
 	result.port_id = id;
@@ -666,7 +670,14 @@ SSH2SecurityContext::SSH2SecurityContext(int session_id,
 		mac_alg = option;
 	}
 
-	//TODO check compression algorithm when we use them
+	option = options->compress_algs.front();
+	if (option != "deflate"){
+		LOG_ERR("Unsupported compression algorithm: %s",
+			option.c_str());
+		throw Exception();
+	} else {
+		compress_alg = option;
+	}
 
 	keystore_path = profile.authPolicy.get_param_value_as_string(KEYSTORE_PATH);
 	if (keystore_path == std::string()) {
