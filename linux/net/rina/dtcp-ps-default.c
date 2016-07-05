@@ -142,7 +142,7 @@ default_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
                 return 0;
 
         ret = dtcp_sv_update(ps->dm, pci);
-        pci_destroy(pci);
+        pci_release(pci);
 
         return ret;
 }

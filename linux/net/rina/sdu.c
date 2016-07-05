@@ -182,12 +182,20 @@ EXPORT_SYMBOL(sdu_from_pdu);
 int sdu_destroy(struct sdu *sdu)
 {
 	struct du *du;
+	bool free_du = false;
 
 	ASSERT(sdu);
 
 	du = to_du(sdu);
-	if (du->skb)
-		kfree_skb((du->skb));
+	if (du->skb) {
+		if (likely(atomic_read(&du->skb->users) == 1))
+			free_du = true;
+		kfree_skb(du->skb); /* this destroys pci too */
+		if (likely(free_du))
+			rkfree(du);
+		return 0;
+	}
+
 	rkfree(du);
 	return 0;
 }
