@@ -865,6 +865,12 @@ tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
                         LOG_DBG("Got a new element from the fifo, "
                                 "enqueuing into user-IPCP");
 
+                        if (!flow->user_ipcp) {
+                        	LOG_ERR("Flow is being deallocated, dropping PDU");
+                        	sdu_destroy(tmp);
+                        	return -1;
+                        }
+
                         ASSERT(flow->user_ipcp->ops);
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
                         if (flow->user_ipcp->ops->
@@ -1222,7 +1228,12 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                         LOG_DBG("Port is ALLOCATED, "
                                 "queueing frame in user-IPCP");
 
-                        ASSERT(flow->user_ipcp);
+                        if (!flow->user_ipcp) {
+                        	LOG_ERR("Flow is being deallocated, dropping PDU");
+                        	sdu_destroy(du);
+                        	return -1;
+                        }
+
                         ASSERT(flow->user_ipcp->ops);
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
 
@@ -1338,7 +1349,12 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
                         spin_unlock_irqrestore(&data->lock, flags);
 
-                        ASSERT(flow->user_ipcp);
+                        if (!flow->user_ipcp) {
+                        	LOG_ERR("Flow is being deallocated, dropping SDU");
+                        	sdu_destroy(du);
+                        	return -1;
+                        }
+
                         ASSERT(flow->user_ipcp->ops);
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
 
@@ -1422,7 +1438,12 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
                 if (flow->port_id_state == PORT_STATE_ALLOCATED) {
                         spin_unlock_irqrestore(&data->lock, flags);
 
-                        ASSERT(flow->user_ipcp);
+                        if (!flow->user_ipcp) {
+                        	LOG_ERR("Flow is being deallocated, dropping SDU");
+                        	sdu_destroy(du);
+                        	return -1;
+                        }
+
                         ASSERT(flow->user_ipcp->ops);
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
 

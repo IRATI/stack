@@ -718,6 +718,7 @@ int sdup_destroy_port_config(struct sdup_port * instance)
 	}
 
 	port_id = instance->port_id;
+
 	sdup_port_destroy(instance);
 	LOG_DBG("Destroyed SDUP configuration for port %d",
 		 port_id);

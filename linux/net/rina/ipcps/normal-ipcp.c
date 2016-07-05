@@ -1449,9 +1449,9 @@ static int normal_destroy(struct ipcp_factory_data * data,
 
         robject_del(&instance->robj);
 
-        sdup_destroy(tmp->sdup);
         efcp_container_destroy(tmp->efcpc);
         rmt_destroy(tmp->rmt);
+        sdup_destroy(tmp->sdup);
         mgmt_data_destroy(tmp->mgmt_data);
 
         rkfree(tmp);

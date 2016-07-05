@@ -198,6 +198,7 @@ static struct rmt_n1_port *n1_port_create(port_id_t id,
 	tmp->stats.tx_bytes = 0;
 	tmp->stats.rx_pdus = 0;
 	tmp->stats.rx_bytes = 0;
+	tmp->sdup_port = 0;
 	spin_lock_init(&tmp->lock);
 
 	LOG_DBG("N-1 port %pK created successfully (port-id = %d)", tmp, id);
