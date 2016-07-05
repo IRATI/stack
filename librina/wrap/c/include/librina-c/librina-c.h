@@ -25,7 +25,9 @@ extern "C"
 #endif
 
 #include <stdint.h>
+#include <unistd.h>
 
+#define FLOW_F_SETFL    00000002
 #define FLOW_O_NONBLOCK 00004000
 
 // TODO: Extend QoS spec
@@ -37,25 +39,26 @@ struct qos_spec {
         uint32_t jitter;
 };
 
-/* Returns identifier */
-int     ap_reg(char * ap_name, char ** difs, size_t difs_size);
-int     ap_unreg(char * ap_name, char ** difs, size_t difs_size);
+int     ap_init(char * ap_name);
+void    ap_fini(void);
+
+/* Returns file descriptor */
+int     ap_reg(char ** difs, size_t difs_size);
+int     ap_unreg(char ** difs, size_t difs_size);
 
 /* Returns file descriptor (> 0) and client name(s) */
-int     flow_accept(int fd, char * ap_name, char * ae_name);
+int     flow_accept(int fd, char ** ap_name, char ** ae_name);
 int     flow_alloc_resp(int fd, int result);
 
 /* Returns file descriptor */
-int     flow_alloc(char * dst_ap_name, char * src_ap_name,
-                   char * src_ae_name, struct qos_spec * qos,
-                   int oflags);
+int     flow_alloc(char * dst_name, char * src_ae_name, struct qos_spec * qos);
 
 /* If flow is accepted returns a value > 0 */
 int     flow_alloc_res(int fd);
 int     flow_dealloc(int fd);
 
 /* Wraps around fnctl */
-int     flow_cntl(int fd, int oflags);
+int     flow_cntl(int fd, int cmd, int oflags);
 ssize_t flow_write(int fd, void * buf, size_t count);
 ssize_t flow_read(int fd, void * buf, size_t count);
 

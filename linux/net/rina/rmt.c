@@ -1220,6 +1220,7 @@ int rmt_n1port_bind(struct rmt *instance,
 	if (!ps || !ps->rmt_q_create_policy) {
 		rcu_read_unlock();
 		LOG_ERR("No PS in the RMT, can't bind");
+		n1_port_destroy(tmp);
 		return -1;
 	}
 

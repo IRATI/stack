@@ -247,6 +247,13 @@ public:
 // @brief The IPCManager class is in charge of managing the IPC processes
 // life-cycle.
 //
+
+typedef struct DelegatedStored{
+	int invoke_id;
+	int port;
+	rina::rib::DelegationObj* obj;
+}delegated_stored_t;
+
 class IPCManager_ {
 
 public:
@@ -496,11 +503,10 @@ public:
         // @ret IPCM_PENDING if the NL message could be sent to the IPCP,
         // IPCM_FAILURE otherwise
 	ipcm_res_t delegate_ipcp_ribobj(rina::rib::DelegationObj* obj,
-				    Promise* promise,
 			      	    const unsigned short ipcp_id,
 			      	    const std::string& object_class,
 			      	    const std::string& object_name,
-			      	    int scope);
+			      	    int scope, int invoke_id, int port);
 
 	//
 	// Update policy-set catalog, with the plugins stored in
@@ -545,11 +551,12 @@ public:
 		req_to_stop = true;
 	}
 
-	/// returns the forwarded object sent with invoke_id and
-	/// removes it from the map
-	/// @param invoke_id
-	/// @return rina::rib::DelegationObj*
-        rina::rib::DelegationObj* get_forwarded_object(int invoke_id);
+		/// returns the forwarded object sent with invoke_id and
+		/// removes it from the map
+		/// @param invoke_id
+		/// @return rina::rib::DelegationObj*
+		delegated_stored_t* get_forwarded_object(int invoke_id,
+												 bool remove);
 
         //Generator of opaque identifiers
         rina::ConsecutiveUnsignedIntegerGenerator __tid_gen;
@@ -866,11 +873,12 @@ private:
 			const unsigned short ipcp_id, IPCMIPCProcess*& ipcp);
 	void assign_to_dif(Addon* callee, Promise *promise,
 			rina::DIFInformation dif_info, IPCMIPCProcess* ipcp);
-	// Obtain and reserva an invoke_id
-	int reserve_invoke_id(rina::rib::DelegationObj* obj);
+	// Store a delegated object waiting for the response
+	int store_delegated_obj(int port, int invoke_id,
+			rina::rib::DelegationObj* obj);
 
-	rina::Lockable* forwarded_calls_lock;
-	std::map<int, rina::rib::DelegationObj*> forwarded_calls;
+	rina::Lockable forwarded_calls_lock;
+	std::map<int, delegated_stored_t*> forwarded_calls;
 };
 
 

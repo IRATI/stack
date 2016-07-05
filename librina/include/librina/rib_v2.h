@@ -472,25 +472,32 @@ private:
 /// This class is used to capture operations on objects in a part of the tree
 /// without having to add explicitely the objects (catch all)
 ///
-class DelegationObj : public RIBObj{
+#ifndef SWIG
+class DelegationObj : public RIBObj, ConditionVariable{
 
 public:
 	/// Constructor
-	DelegationObj(const std::string &class_name) : RIBObj(class_name) {
-		delegates = true;
-	};
+	DelegationObj(const std::string &class_name);
 
 	//Destructor
-	~DelegationObj(void){};
+	~DelegationObj(void) throw();
 
 	virtual void forward_object(const rina::cdap_rib::con_handle_t& con,
-	                            const rina::cdap_rib::obj_info_t &obj,
+	                            const std::string obj_name,
+	                            const std::string obj_class,
 	                            const rina::cdap_rib::flags_t &flags,
 	                            const rina::cdap_rib::filt_info_t &filt,
 	                            int invoke_id) = 0;
-	virtual void forwarded_object_response(rina::cdap::cdap_m_t *msg) = 0;
+	void forwarded_object_response(int port, int invoke_id,
+			rina::cdap::cdap_m_t *msg);
+	void is_finished();
+	void signal_finished();
+	void activate_delegation();
+        bool last;
+protected:
+	bool finished;
 };
-
+#endif
 ///
 /// RIB library result codes
 ///

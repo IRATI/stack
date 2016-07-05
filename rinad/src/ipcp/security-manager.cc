@@ -62,10 +62,10 @@ void IPCPSecurityManager::set_dif_configuration(const rina::DIFConfiguration& di
 	}
 
 	//Add the auth policy sets supported by the DIF configuration
-        add_auth_policy_set(dif_configuration.sm_configuration_.default_auth_profile.authPolicy.name_);
+        add_auth_policy_set(config.default_auth_profile.authPolicy.name_);
         std::map<std::string, rina::AuthSDUProtectionProfile>::const_iterator iterator;
-        for (iterator = dif_configuration.sm_configuration_.specific_auth_profiles.begin();
-        		iterator != dif_configuration.sm_configuration_.specific_auth_profiles.end();
+        for (iterator = config.specific_auth_profiles.begin();
+        		iterator != config.specific_auth_profiles.end();
         		++iterator) {
         	add_auth_policy_set(iterator->second.authPolicy.name_);
         }
