@@ -1387,7 +1387,7 @@ IAuthPolicySet::AuthStatus AuthTLSHandPolicySet::process_client_finish_message(c
 
 	// Configure kernel SDU protection policy with master secret and algorithms
 	// tell it to enable encryption
-	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(true, true),this);
+	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(true, false),this);
 	if (result == IAuthPolicySet::FAILED) {
 		sec_man->destroy_security_context(sc->id);
 		return result;
