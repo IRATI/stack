@@ -62,16 +62,6 @@ static struct pft_port_entry * pft_pe_create_gfp(gfp_t     flags,
 static struct pft_port_entry * pft_pe_create_ni(port_id_t port_id)
 { return pft_pe_create_gfp(GFP_ATOMIC, port_id); }
 
-#if 0
-/* NOTE: Unused at the moment */
- ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
-        if (!ps) {
-                return NULL;
-        }
-static struct pft_port_entry * pft_pe_create(port_id_t port_id)
-{ return pft_pe_create_gfp(GFP_KERNEL, port_id); }
-#endif
-
 /* FIXME: This thing is bogus and has to be fixed properly */
 #ifdef CONFIG_RINA_ASSERTIONS
 static bool pft_pe_is_ok(struct pft_port_entry * pe)
@@ -122,13 +112,6 @@ static struct pft_entry * pfte_create_gfp(gfp_t     flags,
 static struct pft_entry * pfte_create_ni(address_t destination,
                                          qos_id_t  qos_id)
 { return pfte_create_gfp(GFP_ATOMIC, destination, qos_id); }
-
-#if 0
-/* NOTE: Unused at the moment */
-static struct pft_entry * pfte_create(address_t destination,
-                                      qos_id_t  qos_id)
-{ return pfte_create_gfp(GFP_KERNEL, destination, qos_id); }
-#endif
 
 /* FIXME: This thing is bogus and has to be fixed properly */
 #ifdef CONFIG_RINA_ASSERTIONS
@@ -250,9 +233,7 @@ static struct pft_entry * pft_find(struct pff_ps_priv * priv,
         list_for_each_entry(pos, &priv->entries, next) {
 		
 		if ((pos->destination == destination) &&
-                    (pos->qos_id == qos_id)) {
-
-			LOG_DBG("Match found!");
+		    ((pos->qos_id == 0) || (pos->qos_id == qos_id))) {
 			return pos;
                 }
         }
@@ -457,8 +438,6 @@ struct pft_port_entry * select_entry(struct pft_entry * entry,
         list_for_each_entry(pos, &entry->ports, next) {
                 num_entries++;
         }
-
-	LOG_DBG("Number of entries in select_entry%d", num_entries);
         
         hash_key = crc16(0, (const u8 *)&c_id, sizeof(c_id));
         
@@ -468,7 +447,6 @@ struct pft_port_entry * select_entry(struct pft_entry * entry,
         i = 0;
         list_for_each_entry(pos, &entry->ports, next) {
                 if (region == i++) {
-			LOG_DBG("Returning position %d from select_entry", i);
                         return pos;
                 }
         }
@@ -668,8 +646,6 @@ pff_ps_multipath_create(struct rina_component * component)
         ps->pff_flush = mp_flush;
         ps->pff_nhop = mp_next_hop;
         ps->pff_dump = mp_dump;
-
-	LOG_DBG("Multipath create called");
 
         return &ps->base;
 }
