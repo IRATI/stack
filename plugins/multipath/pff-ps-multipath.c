@@ -438,8 +438,6 @@ struct pft_port_entry * select_entry(struct pft_entry * entry,
         list_for_each_entry(pos, &entry->ports, next) {
                 num_entries++;
         }
-
-	LOG_DBG("Number of entries in select_entry%d", num_entries);
         
         hash_key = crc16(0, (const u8 *)&c_id, sizeof(c_id));
         
@@ -449,7 +447,6 @@ struct pft_port_entry * select_entry(struct pft_entry * entry,
         i = 0;
         list_for_each_entry(pos, &entry->ports, next) {
                 if (region == i++) {
-			LOG_DBG("Returning position %d from select_entry", i);
                         return pos;
                 }
         }
@@ -649,8 +646,6 @@ pff_ps_multipath_create(struct rina_component * component)
         ps->pff_flush = mp_flush;
         ps->pff_nhop = mp_next_hop;
         ps->pff_dump = mp_dump;
-
-	LOG_DBG("Multipath create called");
 
         return &ps->base;
 }
