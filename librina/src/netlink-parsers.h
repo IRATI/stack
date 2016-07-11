@@ -1484,6 +1484,9 @@ enum IPCPCryptoStateAttributes {
         CRYPTS_ATTR_ENCRYPT_KEY_RX,
         CRYPTS_ATTR_IV_TX,
         CRYPTS_ATTR_IV_RX,
+        CRYPTS_ATTR_MAC_ALG,
+        CRYPTS_ATTR_ENC_ALG,
+        CRYPTS_ATTR_COMPRESS_ALG,
         __CRYPTS_ATTR_MAX,
 };
 

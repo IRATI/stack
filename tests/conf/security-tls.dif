@@ -8,34 +8,28 @@
         "authSDUProtProfiles" : {
            "default" : {
               "authPolicy" : {
-              	"name" : "PSOC_authentication-ssh2",
+              	"name" : "PSOC_authentication-tlshandshake",
           	"version" : "1",
           	"parameters" : [ {
-          	   "name" : "keyExchangeAlg",
-          	   "value" : "EDH"
+          	   "name" : "keystore",
+          	   "value" : "/usr/local/irati/etc/creds"
           	}, {
-                   "name" : "keystore",
-                   "value" : "/usr/local/irati/etc/private_key.pem"
-                }, {
                    "name" : "keystorePass",
-                   "value" : "test"
+                   "value" : "none"
                 } ]
               },
               "encryptPolicy" : {
-                 "name" : "default",
+                 "name" : "PSOC_crypto-tlsrecord",
                  "version" : "1",
                  "parameters" : [ {
           	   "name" : "encryptAlg",
           	   "value" : "AES256"
           	}, {
-          	   "name" : "macAlg",
-          	   "value" : "SHA256"
-          	}, {
-          	   "name" : "seq_win_size",
-          	   "value" : "30"
-          	}, {
-          	   "name" : "compressAlg",
-          	   "value" : "deflate"
+                   "name" : "macAlg",
+                   "value" : "SHA256"
+		}, {
+                   "name" : "compressAlg",
+                   "value" : "deflate"
                 } ]
               },
               "TTLPolicy" : {

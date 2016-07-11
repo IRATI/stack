@@ -53,6 +53,9 @@ struct sdup_port {
 	/* Configuration of this instance */
 	struct dup_config_entry * conf;
 
+	/* Data transfer constants - needed to check max pdu size on RX */
+	struct dt_cons * dt_cons;
+
 	/* Link it to the main IPCP SDU Protection component */
 	struct list_head list;
 };
@@ -61,6 +64,9 @@ struct sdup_port {
 struct sdup {
 	/* The SDU Protection module configuration */
 	struct sdup_config * sdup_conf;
+
+	/* Data transfer constants - needed to check max pdu size on RX */
+	struct dt_cons * dt_cons;
 
 	/* The list of SDU Protection instances, one per N-1 port */
 	struct list_head instances;
@@ -107,6 +113,9 @@ bool pdu_ser_data_and_length(struct pdu_ser * pdu,
 
 int sdup_config_set(struct sdup *        instance,
 		    struct sdup_config * sdup_config);
+
+int sdup_dt_cons_set(struct sdup *        instance,
+		     struct dt_cons *     dt_cons);
 
 struct sdup * sdup_create(struct ipcp_instance *  parent);
 

@@ -697,7 +697,14 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 		sdup_config = sdup_config_create();
 		sdup_config->default_dup_conf = dup_config_entry_create();
 	}
-	sdup_config_set(data->sdup, sdup_config);
+	if (sdup_config_set(data->sdup, sdup_config)) {
+                LOG_ERR("Could not set SDUP conf");
+		return -1;
+	}
+	if (sdup_dt_cons_set(data->sdup, dt_cons_dup(efcp_config->dt_cons))) {
+                LOG_ERR("Could not set dt_cons in SDUP");
+		return -1;
+	}
 
         return 0;
 }

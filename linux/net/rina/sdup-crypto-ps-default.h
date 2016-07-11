@@ -24,6 +24,9 @@
 
 #include "sdup-crypto-ps.h"
 
+//based on TLS - can optionally be made a policy parameter
+#define MAX_COMP_INFLATION 1024
+
 int default_sdup_apply_crypto(struct sdup_crypto_ps * ps,
 			      struct pdu_ser * pdu);
 
