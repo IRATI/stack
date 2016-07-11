@@ -28,7 +28,7 @@
                         "Version" : "1"
                 },
                 {
-                        "Name": "default",
+                        "Name": "CRC32",
                         "Component": "errc",
                         "Version" : "1"
                 },

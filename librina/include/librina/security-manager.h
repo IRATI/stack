@@ -56,6 +56,7 @@ public:
 	static const std::string AUTH_NONE;
 	static const std::string AUTH_PASSWORD;
 	static const std::string AUTH_SSH2;
+	static const std::string AUTH_TLSHAND;
 
 	IAuthPolicySet(const std::string& type_);
 	virtual ~IAuthPolicySet() { };
@@ -212,6 +213,9 @@ public:
 			enable_crypto_rx(false){ };
 
 	int port_id;
+	std::string mac_alg;
+	std::string encrypt_alg;
+	std::string compress_alg;
 	bool enable_crypto_tx;
 	bool enable_crypto_rx;
 	UcharArray encrypt_key_tx;
@@ -238,7 +242,8 @@ public:
 			    SSH2AuthOptions * options);
 	~SSH2SecurityContext();
 	CryptoState get_crypto_state(bool enable_crypto_tx,
-				     bool enable_crypto_rx);
+				     bool enable_crypto_rx,
+				     bool isserver);
 
 	static const std::string KEY_EXCHANGE_ALGORITHM;
 	static const std::string ENCRYPTION_ALGORITHM;
@@ -286,8 +291,13 @@ public:
 	///The shared secret, used to generate the encryption key
 	UcharArray shared_secret;
 
-	///The encryption key
-	UcharArray encrypt_key;
+	///The encryption keys
+	UcharArray encrypt_key_client;
+	UcharArray encrypt_key_server;
+
+	///The hmac keys
+	UcharArray mac_key_client;
+	UcharArray mac_key_server;
 
 	/// My RSA * key pair (used for authentication)
 	RSA * auth_keypair;

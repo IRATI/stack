@@ -13,16 +13,6 @@
                         "Version" : "1"
                 },
                 {
-                        "Name": "PSOC_authentication-password",
-                        "Component": "security-manager",
-                        "Version" : "1"
-                },
-	        {
-                        "Name": "PSOC_authentication-ssh2",
-                        "Component": "security-manager",
-                        "Version" : "1"
-                },
-                {
                         "Name": "default",
                         "Component": "flow-allocator",
                         "Version" : "1"

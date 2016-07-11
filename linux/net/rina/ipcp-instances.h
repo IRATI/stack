@@ -191,11 +191,17 @@ struct sdup_crypto_state {
 	/** Enable or disable encryption crypto operations on read */
 	bool enable_crypto_rx;
 
+	/** Message Authentication algorithm name */
+        string_t * mac_alg;
+
 	/** Message Authentication Key to be used for write */
 	struct buffer * mac_key_tx;
 
 	/** Message Authentication key to be used for read */
 	struct buffer * mac_key_rx;
+
+	/** Encryption algorithm name */
+        string_t * enc_alg;
 
 	/** Encryption key to be used for write */
 	struct buffer * encrypt_key_tx;
@@ -208,6 +214,8 @@ struct sdup_crypto_state {
 
 	/** Initialization vector to be used for read*/
 	struct buffer * iv_rx;
+
+        string_t * compress_alg;
 };
 
 /* Pre-declared, the implementation should define it properly */

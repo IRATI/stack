@@ -40,6 +40,7 @@ namespace rina {
 const std::string IAuthPolicySet::AUTH_NONE = "PSOC_authentication-none";
 const std::string IAuthPolicySet::AUTH_PASSWORD = "PSOC_authentication-password";
 const std::string IAuthPolicySet::AUTH_SSH2 = "PSOC_authentication-ssh2";
+const std::string IAuthPolicySet::AUTH_TLSHAND = "PSOC_authentication-tlshandshake";
 
 IAuthPolicySet::IAuthPolicySet(const std::string& type_)
 {
@@ -578,13 +579,29 @@ SSH2SecurityContext::~SSH2SecurityContext()
 }
 
 CryptoState SSH2SecurityContext::get_crypto_state(bool enable_crypto_tx,
-					 	  bool enable_crypto_rx)
+						  bool enable_crypto_rx,
+						  bool isserver)
 {
 	CryptoState result;
+
+	result.encrypt_alg = encrypt_alg;
+	result.mac_alg = mac_alg;
+	result.compress_alg = compress_alg;
+
 	result.enable_crypto_tx = enable_crypto_tx;
 	result.enable_crypto_rx = enable_crypto_rx;
-	result.encrypt_key_tx = encrypt_key;
 	result.port_id = id;
+	if (isserver) {
+		result.encrypt_key_rx = encrypt_key_client;
+		result.encrypt_key_tx = encrypt_key_server;
+		result.mac_key_rx = mac_key_client;
+		result.mac_key_tx = mac_key_server;
+	} else {
+		result.encrypt_key_tx = encrypt_key_client;
+		result.encrypt_key_rx = encrypt_key_server;
+		result.mac_key_tx = mac_key_client;
+		result.mac_key_rx = mac_key_server;
+	}
 
 	return result;
 }
@@ -643,7 +660,9 @@ SSH2SecurityContext::SSH2SecurityContext(int session_id,
 	}
 
 	option = options->mac_algs.front();
-	if (option != SSL_TXT_MD5 && option != SSL_TXT_SHA1) {
+	if (option != SSL_TXT_MD5 &&
+	    option != SSL_TXT_SHA1 &&
+	    option != SSL_TXT_SHA256) {
 		LOG_ERR("Unsupported MAC algorithm: %s",
 			option.c_str());
 		throw Exception();
@@ -651,7 +670,14 @@ SSH2SecurityContext::SSH2SecurityContext(int session_id,
 		mac_alg = option;
 	}
 
-	//TODO check compression algorithm when we use them
+	option = options->compress_algs.front();
+	if (option != "deflate"){
+		LOG_ERR("Unsupported compression algorithm: %s",
+			option.c_str());
+		throw Exception();
+	} else {
+		compress_alg = option;
+	}
 
 	keystore_path = profile.authPolicy.get_param_value_as_string(KEYSTORE_PATH);
 	if (keystore_path == std::string()) {
@@ -998,7 +1024,7 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::initiate_authentication(const cdap
 
 	// Configure kernel SDU protection policy with shared secret and algorithms
 	// tell it to enable decryption
-	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(false, true),
+	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(false, true, true),
 						         this);
 	if (result == IAuthPolicySet::FAILED) {
 		delete sc;
@@ -1028,20 +1054,79 @@ int AuthSSH2PolicySet::edh_generate_shared_secret(SSH2SecurityContext * sc)
 		return -1;
 	}
 
-	if (sc->encrypt_alg == SSL_TXT_AES128) {
-		sc->encrypt_key.length = 16;
-		sc->encrypt_key.data = new unsigned char[16];
-		MD5(sc->shared_secret.data, sc->shared_secret.length, sc->encrypt_key.data);
+	std::string hash_base;
 
+	if (sc->encrypt_alg == SSL_TXT_AES128) {
+		sc->encrypt_key_client.length = 16;
+		sc->encrypt_key_client.data = new unsigned char[16];
+		sc->encrypt_key_server.length = 16;
+		sc->encrypt_key_server.data = new unsigned char[16];
+
+		hash_base = std::string((const char *)sc->shared_secret.data, sc->shared_secret.length) + "A";
+		MD5((const unsigned char*)hash_base.c_str(), hash_base.length(), sc->encrypt_key_client.data);
+
+		hash_base = std::string((const char *)sc->shared_secret.data, sc->shared_secret.length) + "B";
+		MD5((const unsigned char*)hash_base.c_str(), hash_base.length(), sc->encrypt_key_server.data);
 	} else if (sc->encrypt_alg == SSL_TXT_AES256) {
-		sc->encrypt_key.length = 32;
-		sc->encrypt_key.data = new unsigned char[32];
-		SHA256(sc->shared_secret.data, sc->shared_secret.length, sc->encrypt_key.data);
+		sc->encrypt_key_client.length = 32;
+		sc->encrypt_key_client.data = new unsigned char[32];
+		sc->encrypt_key_server.length = 32;
+		sc->encrypt_key_server.data = new unsigned char[32];
+
+		hash_base = std::string((const char *)sc->shared_secret.data, sc->shared_secret.length) + "A";
+		SHA256((const unsigned char*)hash_base.c_str(), hash_base.length(), sc->encrypt_key_client.data);
+
+		hash_base = std::string((const char *)sc->shared_secret.data, sc->shared_secret.length) + "B";
+		SHA256((const unsigned char*)hash_base.c_str(), hash_base.length(), sc->encrypt_key_server.data);
 	}
 
-	LOG_DBG("Generated encryption key of length %d bytes: %s",
-			sc->encrypt_key.length,
-			sc->encrypt_key.toString().c_str());
+	if (sc->mac_alg == SSL_TXT_MD5) {
+		sc->mac_key_client.length = 16;
+		sc->mac_key_client.data = new unsigned char[16];
+		sc->mac_key_server.length = 16;
+		sc->mac_key_server.data = new unsigned char[16];
+
+		hash_base = std::string((const char *)sc->shared_secret.data, sc->shared_secret.length) + "C";
+		MD5((const unsigned char*)hash_base.c_str(), hash_base.length(), sc->mac_key_client.data);
+
+		hash_base = std::string((const char *)sc->shared_secret.data, sc->shared_secret.length) + "D";
+		MD5((const unsigned char*)hash_base.c_str(), hash_base.length(), sc->mac_key_server.data);
+	} else if (sc->mac_alg == SSL_TXT_SHA1){
+		sc->mac_key_client.length = 20;
+		sc->mac_key_client.data = new unsigned char[20];
+		sc->mac_key_server.length = 20;
+		sc->mac_key_server.data = new unsigned char[20];
+
+		hash_base = std::string((const char *)sc->shared_secret.data, sc->shared_secret.length) + "C";
+		SHA1((const unsigned char*)hash_base.c_str(), hash_base.length(), sc->mac_key_client.data);
+
+		hash_base = std::string((const char *)sc->shared_secret.data, sc->shared_secret.length) + "D";
+		SHA1((const unsigned char*)hash_base.c_str(), hash_base.length(), sc->mac_key_server.data);
+	} else if (sc->mac_alg == SSL_TXT_SHA256){
+		sc->mac_key_client.length = 32;
+		sc->mac_key_client.data = new unsigned char[32];
+		sc->mac_key_server.length = 32;
+		sc->mac_key_server.data = new unsigned char[32];
+
+		hash_base = std::string((const char *)sc->shared_secret.data, sc->shared_secret.length) + "C";
+		SHA256((const unsigned char*)hash_base.c_str(), hash_base.length(), sc->mac_key_client.data);
+
+		hash_base = std::string((const char *)sc->shared_secret.data, sc->shared_secret.length) + "D";
+		SHA256((const unsigned char*)hash_base.c_str(), hash_base.length(), sc->mac_key_server.data);
+	}
+
+	LOG_DBG("Generated client encryption key of length %d bytes: %s",
+			sc->encrypt_key_client.length,
+			sc->encrypt_key_client.toString().c_str());
+	LOG_DBG("Generated server encryption key of length %d bytes: %s",
+			sc->encrypt_key_server.length,
+			sc->encrypt_key_server.toString().c_str());
+	LOG_DBG("Generated client mac key of length %d bytes: %s",
+			sc->mac_key_client.length,
+			sc->mac_key_client.toString().c_str());
+	LOG_DBG("Generated server mac key of length %d bytes: %s",
+			sc->mac_key_server.length,
+			sc->mac_key_server.toString().c_str());
 
 	return 0;
 }
@@ -1124,7 +1209,7 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::decryption_enabled_server(SSH2Secu
 
 	// Configure kernel SDU protection policy with shared secret and algorithms
 	// tell it to enable encryption
-	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(true, false),
+	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(true, false, true),
 						         this);
 	if (result == IAuthPolicySet::FAILED) {
 		sec_man->destroy_security_context(sc->id);
@@ -1225,7 +1310,7 @@ int AuthSSH2PolicySet::process_edh_exchange_message(const cdap::CDAPMessage& mes
 
 	// Configure kernel SDU protection policy with shared secret and algorithms
 	// tell it to enable decryption and encryption
-	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(true, true),
+	AuthStatus result = sec_man->update_crypto_state(sc->get_crypto_state(true, true, false),
 						         this);
 	if (result == IAuthPolicySet::FAILED) {
 		sec_man->destroy_security_context(sc->id);
