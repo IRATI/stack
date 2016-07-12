@@ -245,7 +245,10 @@ public:
 	/// Called by the EnrollmentTask when it got an M_CONNECT_R message
 	/// @param result
 	/// @param result_reason
-	void connectResponse(int result, const std::string& result_reason);
+	void connectResponse(int result,
+			     const std::string& result_reason,
+			     const rina::cdap_rib::con_handle_t & con,
+			     const rina::cdap_rib::auth_policy_t& auth);
 
 	void remoteStartResult(const rina::cdap_rib::con_handle_t &con,
 			       const rina::cdap_rib::obj_info_t &obj,
@@ -417,7 +420,9 @@ void EnrolleeStateMachine::authentication_completed(bool success)
 }
 
 void EnrolleeStateMachine::connectResponse(int result,
-					   const std::string& result_reason)
+					   const std::string& result_reason,
+					   const rina::cdap_rib::con_handle_t & con,
+					   const rina::cdap_rib::auth_policy_t& auth)
 {
 	rina::ScopedLock g(lock_);
 
@@ -436,6 +441,21 @@ void EnrolleeStateMachine::connectResponse(int result,
 						   con.port_id,
 						   result_reason,
 						   true);
+		return;
+	}
+
+	// If "auth" contents are not valid, it will return an error and
+	// enrollment should be aborted. Otherwise it should store the "token" or any other
+	// type of credential in "auth" - if any - and return 0.
+	rina::ISecurityManagerPs *smps = dynamic_cast<rina::ISecurityManagerPs *>(sec_man_->ps);
+	assert(smps);
+
+	if (smps->storeAccessControlCreds(auth, con) != 0){
+		state_ = STATE_NULL;
+		enrollment_task_->enrollmentFailed(remote_peer_.name_,
+				con.port_id,
+				"Failed to validate and store access control credentials",
+				true);
 		return;
 	}
 
@@ -474,7 +494,6 @@ void EnrolleeStateMachine::connectResponse(int result,
 						      flags,
 						      filt,
 						      this);
-
 		LOG_IPCP_DBG("Sent a M_START Message to portid: %d",
 			     con.port_id);
 
@@ -730,6 +749,9 @@ void EnrolleeStateMachine::enrollmentCompleted()
 	}
 
 	LOG_IPCP_INFO("Remote IPC Process enrolled!");
+        rina::Time currentTime;
+        int t = currentTime.get_current_time_in_ms();
+        LOG_IPCP_INFO("Remote IPC Process enrolled at %d",t);
 }
 
 void EnrolleeStateMachine::remoteReadResult(const rina::cdap_rib::con_handle_t &con_handle,
@@ -898,7 +920,6 @@ private:
 
         void enrollmentCompleted();
 
-	IPCPSecurityManager * security_manager_;
 	INamespaceManager * namespace_manager_;
 	int connect_message_invoke_id_;
 	rina::cdap_rib::con_handle_t con_handle_;
@@ -914,7 +935,6 @@ EnrollerStateMachine::EnrollerStateMachine(IPCProcess * ipc_process,
 					   timeout,
 					   supporting_dif_name)
 {
-	security_manager_ = ipc_process->security_manager_;
 	namespace_manager_ = ipc_process->namespace_manager_;
 	enroller_ = true;
 	connect_message_invoke_id_ = 0;
@@ -943,7 +963,7 @@ void EnrollerStateMachine::connect(const rina::cdap::CDAPMessage& message,
 	con.port_id = con_handle.port_id;
 	con_handle_ = con_handle;
 
-	auth_ps_ = security_manager_->get_auth_policy_set(message.auth_policy_.name);
+	auth_ps_ = sec_man_->get_auth_policy_set(message.auth_policy_.name);
 	if (!auth_ps_) {
 		lock_.unlock();
 		abortEnrollment(remote_peer_.name_,
@@ -1041,11 +1061,17 @@ void EnrollerStateMachine::authentication_successful()
 {
 	rina::ScopedLock scopedLock(lock_);
 
-	ISecurityManagerPs *smps = dynamic_cast<ISecurityManagerPs *>(security_manager_->ps);
+	rina::ISecurityManagerPs *smps = dynamic_cast<rina::ISecurityManagerPs *>(sec_man_->ps);
 	assert(smps);
+	rina::cdap_rib::auth_policy_t auth;
 
 	LOG_IPCP_DBG("Authentication successful, deciding if new member can join the DIF...");
-	if (!smps->isAllowedToJoinDIF(remote_peer_)) {
+	rina::Time currentTime;
+        int t0 = currentTime.get_current_time_in_ms();
+        LOG_IPCP_DBG("START ENROLLMENT %d ms", t0);
+        if (smps->isAllowedToJoinDAF(con_handle_,
+				     remote_peer_,
+				     auth) != 0) {
 		LOG_IPCP_WARN("Security Manager rejected enrollment attempt, aborting enrollment");
 		abortEnrollment(remote_peer_.name_,
 				con.port_id,
@@ -1053,13 +1079,14 @@ void EnrollerStateMachine::authentication_successful()
 				true);
 		return;
 	}
-
+        
 	//Send M_CONNECT_R
 	try{
 		rina::cdap_rib::res_info_t res;
 		res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 		rina::cdap::getProvider()->send_open_connection_result(con_handle_,
 								       res,
+								       auth,
 								       connect_message_invoke_id_);
 
 		//Set timer
@@ -1365,6 +1392,9 @@ void EnrollerStateMachine::enrollmentCompleted()
 	enrollment_task_->enrollmentCompleted(remote_peer_, false);
 
 	LOG_IPCP_INFO("Remote IPC Process enrolled!");
+        rina::Time currentTime;
+        int t = currentTime.get_current_time_in_ms();
+        LOG_IPCP_INFO("Remote IPC Process enrolled at %d", t);
 }
 
 //Class EnrollmentRIBObject
@@ -1470,7 +1500,8 @@ public:
         		     const rina::cdap_rib::con_handle_t &con);
         void connect_response_received(int result,
         			       const std::string& result_reason,
-        			       const rina::cdap_rib::con_handle_t &con);
+        			       const rina::cdap_rib::con_handle_t &con,
+				       const rina::cdap_rib::auth_policy_t& auth);
         void process_authentication_message(const rina::cdap::CDAPMessage& message,
         				    const rina::cdap_rib::con_handle_t &con);
 	void authentication_completed(int port_id, bool success);
@@ -1569,7 +1600,8 @@ void EnrollmentTaskPs::connect_received(const rina::cdap::CDAPMessage& cdapMessa
 
 void EnrollmentTaskPs::connect_response_received(int result,
 			     	     	         const std::string& result_reason,
-			     	     	         const rina::cdap_rib::con_handle_t &con_handle)
+			     	     	         const rina::cdap_rib::con_handle_t &con_handle,
+						 const rina::cdap_rib::auth_policy_t &auth)
 {
 	rina::ScopedLock g(lock);
 
@@ -1577,7 +1609,10 @@ void EnrollmentTaskPs::connect_response_received(int result,
 		EnrolleeStateMachine * stateMachine =
 			(EnrolleeStateMachine*) et->getEnrollmentStateMachine(con_handle.port_id,
 									      false);
-		stateMachine->connectResponse(result, result_reason);
+		stateMachine->connectResponse(result,
+					      result_reason,
+					      con_handle,
+					      auth);
 	}catch(rina::Exception &e){
 		//Error getting the enrollment state machine
 		LOG_IPCP_ERR("Problems getting enrollment state machine: %s",
@@ -1641,7 +1676,11 @@ void EnrollmentTaskPs::authentication_completed(int port_id, bool success)
 void EnrollmentTaskPs::initiate_enrollment(const rina::NMinusOneFlowAllocatedEvent & event,
 					   const rina::EnrollmentRequest& request)
 {
-	rina::ScopedLock g(lock);
+	rina::Time currentTime;
+        int t = currentTime.get_current_time_in_ms();
+        LOG_IPCP_INFO("initiate_enrollment at %d", t);
+        
+        rina::ScopedLock g(lock);
 
 	EnrolleeStateMachine * enrollmentStateMachine = 0;
 

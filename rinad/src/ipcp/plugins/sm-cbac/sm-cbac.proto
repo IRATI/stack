@@ -1,0 +1,25 @@
+package rina.messages;
+option optimize_for = LITE_RUNTIME;
+import "ApplicationProcessNamingInfoMessage.proto";
+
+message smCapability_t {
+        optional string ressource = 1;
+        optional string operation = 2;
+}
+
+message smCbacToken_t {
+        required uint32 token_id = 1; /*unsigned short*/
+        required uint32 ipcp_issuer_id = 2; /*unsigned short*/
+        required rina.messages.applicationProcessNamingInfo_t ipcp_issuer_name = 3;
+        required rina.messages.applicationProcessNamingInfo_t ipcp_holder_name = 4;
+        repeated string audience = 5;
+        required uint32 issued_time = 6; /*int*/
+        required uint32 token_nbf = 7;
+        required uint32 token_exp = 8;
+        repeated smCapability_t token_cap = 9;
+}
+
+message smCbacTokenPlusSign_t {
+        required smCbacToken_t token = 1;
+        required bytes token_sign = 2; 
+}

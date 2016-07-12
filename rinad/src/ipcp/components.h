@@ -120,7 +120,8 @@ public:
 			     	      const rina::cdap_rib::con_handle_t &con) = 0;
         virtual void connect_response_received(int result,
         				       const std::string& result_reason,
-        				       const rina::cdap_rib::con_handle_t &con) = 0;
+        				       const rina::cdap_rib::con_handle_t &con,
+					       const rina::cdap_rib::auth_policy_t& auth) = 0;
         virtual void process_authentication_message(const rina::cdap::CDAPMessage& message,
         					    const rina::cdap_rib::con_handle_t &con) = 0;
 	virtual void authentication_completed(int port_id, bool success) = 0;
@@ -374,28 +375,13 @@ public:
 	IPDUFTGeneratorPs * pduft_gen_ps;
 };
 
-/// Security Management � A DIF requires three security functions:
-///  1) Authentication to ensure that an IPC-Process wishing to join the DIF is who it
-///  says it is and is an allowable member of the DIF (Enrollment);
-///  2) Confidentiality and integrity of all PDUs; and
-///  3) Access control to determine whether application processes requesting an IPC flow
-///  with a remote application has the necessary permissions to establish
-///  communication.
-/// DAF Management performs authentication of new members, as well as key management
-/// and other security management functions required for the security measures. Access
-/// Control is performed by the Flow Allocator. The particular security procedures used for
-/// these security functions are a matter of policy. SDU Protection provides confidentiality
-/// and integrity
-class ISecurityManagerPs : public rina::IPolicySet {
+class IPCPSecurityManagerPs : public rina::ISecurityManagerPs {
 // This class is used by the IPCP to access the plugin functionalities
 public:
-	/// Decide if an IPC Process is allowed to join a DIF
-	virtual bool isAllowedToJoinDIF(const rina::Neighbor& newMember) = 0;
-
 	/// Decide if a new flow to the IPC process should be accepted
 	virtual bool acceptFlow(const configs::Flow& newFlow) = 0;
 
-        virtual ~ISecurityManagerPs() {}
+        virtual ~IPCPSecurityManagerPs() {}
 };
 
 class IPCPSecurityManager: public rina::ISecurityManager, public IPCProcessComponent {
