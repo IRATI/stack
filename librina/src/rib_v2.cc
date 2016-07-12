@@ -35,6 +35,7 @@
 
 #include "librina/rib_v2.h"
 #include "librina/cdap_v2.h"
+#include "librina/security-manager.h"
 
 namespace rina {
 namespace rib {
@@ -275,8 +276,10 @@ public:
 	/// @param schema Schema in which this RIB will be based
 	/// @param cdap_provider CDAP provider
 	///
-	RIB(const rib_handle_t& handle_, RIBSchema *const schema,
-				cdap::CDAPProviderInterface *cdap_provider);
+	RIB(const rib_handle_t& handle_,
+	    RIBSchema *const schema,
+	    cdap::CDAPProviderInterface *cdap_provider,
+	    ISecurityManager * sec_man);
 
 	/// Destroy RIB instance
 	~RIB();
@@ -364,6 +367,8 @@ public:
 
 	std::list<RIBObjectData> get_all_rib_objects_data();
 
+	void set_security_manager(ISecurityManager * sec_man);
+
 protected:
 	//
 	// Incoming requests to the local RIB
@@ -371,31 +376,38 @@ protected:
 	void create_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::filt_info_t &filt,
+			const cdap_rib::auth_policy_t& auth,
 			const int invoke_id);
 	void delete_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::filt_info_t &filt,
+			const cdap_rib::auth_policy_t& auth,
 			const int invoke_id);
 	void read_request(const cdap_rib::con_handle_t &con,
 			  const cdap_rib::obj_info_t &obj,
 			  const cdap_rib::filt_info_t &filt,
 			  const cdap_rib::flags_t &flags,
+			  const cdap_rib::auth_policy_t& auth,
 			  const int invoke_id);
 	void cancel_read_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::filt_info_t &filt,
+			const cdap_rib::auth_policy_t& auth,
 			const int invoke_id);
 	void write_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::filt_info_t &filt,
+			const cdap_rib::auth_policy_t& auth,
 			const int invoke_id);
 	void start_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::filt_info_t &filt,
+			const cdap_rib::auth_policy_t& auth,
 			const int invoke_id);
 	void stop_request(const cdap_rib::con_handle_t &con,
 			const cdap_rib::obj_info_t &obj,
 			const cdap_rib::filt_info_t &filt,
+			const cdap_rib::auth_policy_t& auth,
 			const int invoke_id);
 private:
 
@@ -435,16 +447,21 @@ private:
         //Cache rwlock
         ReadWriteLockable cache_rwlock;
 
-
         //RIB handle (id)
         const rib_handle_t handle;
-
 
 	void get_objects_to_operate(const int64_t object_id,
 				    int scope,
 				    char* filter,
 				    std::list<std::pair<int, RIBObj*> >
 	                            &objects);
+
+	//return 0 if operation is allowed, negative number otherwise
+	void check_operation_allowed(const cdap_rib::auth_policy_t & auth,
+				     const cdap_rib::con_handle_t & con,
+				     const cdap::cdap_m_t::Opcode opcode,
+				     const std::string obj_name,
+				     cdap_rib::res_info_t& res);
 
 	//@internal only; must be called with the rwlock acquired
 	RIBObj* get_obj(int64_t inst_id);
@@ -469,12 +486,18 @@ private:
 	int64_t get_new_inst_id(void);
 
 	int compareString(std::string a, std::string b);
+
 	//RIBDaemon to access operations callbacks
 	friend class RIBDaemon;
+
+	//Instance of the security manager
+	ISecurityManager * security_m;
 };
 
-RIB::RIB(const rib_handle_t& handle_, RIBSchema *const schema_,
-		cdap::CDAPProviderInterface *cdap_provider_) :
+RIB::RIB(const rib_handle_t& handle_,
+	 RIBSchema *const schema_,
+	 cdap::CDAPProviderInterface *cdap_provider_,
+	 ISecurityManager * sec_man) :
 						schema(schema_),
 						next_inst_id(1),
 						num_of_deleg(0),
@@ -496,6 +519,7 @@ RIB::RIB(const rib_handle_t& handle_, RIBSchema *const schema_,
 	name_inst_map[root_fqn.str()] = RIB_ROOT_INST_ID;
 	std::list<int64_t>* child_list = new std::list<int64_t>();
 	obj_inst_child_map[RIB_ROOT_INST_ID] = child_list;
+	security_m = sec_man;
 }
 
 RIB::~RIB() {
@@ -536,9 +560,29 @@ RIB::~RIB() {
 	//TODO: remove schema if allocated by us?
 }
 
+void RIB::check_operation_allowed(const cdap_rib::auth_policy_t & auth,
+			          const cdap_rib::con_handle_t & con,
+				  const cdap::cdap_m_t::Opcode opcode,
+				  const std::string obj_name,
+				  cdap_rib::res_info_t& res)
+{
+        if (!security_m) {
+                LOG_DBG("RIB:: no security manager, positive check");
+		res.code_ = cdap_rib::CDAP_SUCCESS;
+		return;
+	}
+
+	ISecurityManagerPs *smps = dynamic_cast<ISecurityManagerPs *>(security_m->ps);
+	assert(smps);
+	smps->checkRIBOperation(auth, con, opcode, obj_name, res);
+
+	return;
+}
+
 void RIB::create_request(const cdap_rib::con_handle_t &con,
 			 const cdap_rib::obj_info_t &obj,
 			 const cdap_rib::filt_info_t &filt,
+			 const cdap_rib::auth_policy_t &auth,
 			 const int invoke_id)
 {
 	// FIXME add res and flags
@@ -552,8 +596,29 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 	obj_reply.inst_ = obj.inst_;
 	obj_reply.value_.size_ = 0;
 	obj_reply.value_.message_ = NULL;
-
 	cdap_rib::res_info_t res;
+
+	check_operation_allowed(auth,
+			        con,
+				cdap::cdap_m_t::M_CREATE,
+				obj.name_,
+				res);
+
+	if (res.code_ != cdap_rib::CDAP_SUCCESS) {
+		try {
+			cdap_provider->send_create_result(con,
+							  obj_reply,
+							  flags,
+							  res,
+							  invoke_id);
+		} catch (...) {
+			LOG_ERR("Unable to send response for invoke id %d",
+					invoke_id);
+		}
+
+		return;
+	}
+
 	RIBObj* rib_obj = NULL;
 	/* RAII scope for RIB scoped lock (read) */
 	{
@@ -616,9 +681,10 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 }
 
 void RIB::delete_request(const cdap_rib::con_handle_t &con,
-		const cdap_rib::obj_info_t &obj,
-		const cdap_rib::filt_info_t &filt,
-		const int invoke_id)
+			const cdap_rib::obj_info_t &obj,
+			const cdap_rib::filt_info_t &filt,
+			const cdap_rib::auth_policy_t &auth,
+			const int invoke_id)
 {
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
@@ -626,6 +692,27 @@ void RIB::delete_request(const cdap_rib::con_handle_t &con,
 	RIBObj* rib_obj = NULL;
 	bool delete_flag = false;
 	int64_t id;
+
+	check_operation_allowed(auth,
+			        con,
+				cdap::cdap_m_t::M_DELETE,
+				obj.name_,
+				res);
+
+	if (res.code_ != cdap_rib::CDAP_SUCCESS) {
+		try {
+			cdap_provider->send_delete_result(con,
+							  obj,
+							  flags,
+							  res,
+							  invoke_id);
+		} catch (Exception &e) {
+			LOG_ERR("Unable to send response for invoke id %d",
+								invoke_id);
+		}
+
+		return;
+	}
 
 	/* RAII scope for RIB scoped lock (read) */
 	{
@@ -696,6 +783,7 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 		       const cdap_rib::obj_info_t &obj,
 		       const cdap_rib::filt_info_t &filt,
 		       const cdap_rib::flags_t &flags,
+		       const cdap_rib::auth_policy_t &auth,
 		       const int invoke_id)
 {
 	cdap_rib::flags flags_r;
@@ -711,6 +799,27 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 	cdap_rib::res_info_t res;
 	std::list<std::pair <int, RIBObj*> > objects;
         RIBObj* rib_obj = NULL;
+
+	check_operation_allowed(auth,
+			        con,
+				cdap::cdap_m_t::M_READ,
+				obj.name_,
+				res);
+
+	if (res.code_ != cdap_rib::CDAP_SUCCESS) {
+		try {
+			cdap_provider->send_read_result(con,
+							obj_reply,
+							flags,
+							res,
+							invoke_id);
+		} catch (Exception &e) {
+			LOG_ERR("Unable to send response for invoke id %d",
+					invoke_id);
+		}
+
+		return;
+	}
 
 	/* RAII scope for RIB scoped lock (read) */
 	{
@@ -851,12 +960,33 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 void RIB::cancel_read_request(const cdap_rib::con_handle_t &con,
 			      const cdap_rib::obj_info_t &obj,
 			      const cdap_rib::filt_info_t &filt,
+			      const cdap_rib::auth_policy &auth,
 			      const int invoke_id)
 {
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 	cdap_rib::res_info_t res;
 	RIBObj* rib_obj = NULL;
+
+	check_operation_allowed(auth,
+			        con,
+				cdap::cdap_m_t::M_CANCELREAD,
+				obj.name_,
+				res);
+
+	if (res.code_ != cdap_rib::CDAP_SUCCESS) {
+		try {
+			cdap_provider->send_cancel_read_result(con,
+							       flags,
+							       res,
+							       invoke_id);
+		} catch (Exception &e) {
+			LOG_ERR("Unable to send response for invoke id %d",
+								invoke_id);
+		}
+
+		return;
+	}
 
 	/* RAII scope for RIB scoped lock (read) */
 	{
@@ -900,6 +1030,7 @@ void RIB::cancel_read_request(const cdap_rib::con_handle_t &con,
 void RIB::write_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt,
+		const cdap_rib::auth_policy &auth,
 		const int invoke_id) {
 
 	// FIXME add res and flags
@@ -915,6 +1046,26 @@ void RIB::write_request(const cdap_rib::con_handle_t &con,
 
 	cdap_rib::res_info_t res;
 	RIBObj* rib_obj = NULL;
+
+	check_operation_allowed(auth,
+			        con,
+				cdap::cdap_m_t::M_WRITE,
+				obj.name_,
+				res);
+
+	if (res.code_ != cdap_rib::CDAP_SUCCESS) {
+		try {
+			cdap_provider->send_write_result(con,
+							flags,
+							res,
+							invoke_id);
+		} catch (Exception &e) {
+			LOG_ERR("Unable to send response for invoke id %d",
+								invoke_id);
+		}
+
+		return;
+	}
 
 	/* RAII scope for RIB scoped lock (read) */
 	{
@@ -961,6 +1112,7 @@ void RIB::write_request(const cdap_rib::con_handle_t &con,
 void RIB::start_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt,
+		const cdap_rib::auth_policy &auth,
 		const int invoke_id) {
 
 	// FIXME add res and flags
@@ -977,6 +1129,27 @@ void RIB::start_request(const cdap_rib::con_handle_t &con,
 
 	cdap_rib::res_info_t res;
 	RIBObj* rib_obj = NULL;
+
+	check_operation_allowed(auth,
+			        con,
+				cdap::cdap_m_t::M_START,
+				obj.name_,
+				res);
+
+	if (res.code_ != cdap_rib::CDAP_SUCCESS) {
+		try {
+			cdap_provider->send_start_result(con,
+							 obj,
+							 flags,
+							 res,
+							 invoke_id);
+		} catch (Exception &e) {
+			LOG_ERR("Unable to send response for invoke id %d",
+								invoke_id);
+		}
+
+		return;
+	}
 
 	/* RAII scope for RIB scoped lock (read) */
 	{
@@ -1024,8 +1197,9 @@ void RIB::start_request(const cdap_rib::con_handle_t &con,
 void RIB::stop_request(const cdap_rib::con_handle_t &con,
 		const cdap_rib::obj_info_t &obj,
 		const cdap_rib::filt_info_t &filt,
-		const int invoke_id) {
-
+		const cdap_rib::auth_policy &auth,
+		const int invoke_id)
+{
 	// FIXME add res and flags
 	cdap_rib::flags_t flags;
 
@@ -1039,6 +1213,26 @@ void RIB::stop_request(const cdap_rib::con_handle_t &con,
 
 	cdap_rib::res_info_t res;
 	RIBObj* rib_obj = NULL;
+
+	check_operation_allowed(auth,
+			        con,
+				cdap::cdap_m_t::M_STOP,
+				obj.name_,
+				res);
+
+	if (res.code_ != cdap_rib::CDAP_SUCCESS) {
+		try {
+			cdap_provider->send_stop_result(con,
+							flags,
+							res,
+							invoke_id);
+		} catch (Exception &e) {
+			LOG_ERR("Unable to send response for invoke id %d",
+								invoke_id);
+		}
+
+		return;
+	}
 
 	/* RAII scope for RIB scoped lock (read) */
 	{
@@ -1479,6 +1673,11 @@ std::list<RIBObjectData> RIB::get_all_rib_objects_data()
 	return result;
 }
 
+void RIB::set_security_manager(ISecurityManager * sec_man)
+{
+	security_m = sec_man;
+}
+
 ///
 /// RIBDaemon main class
 ///
@@ -1498,7 +1697,7 @@ public:
 	/// @throws eSchemaExists and Exception
 	///
 	void createSchema(const cdap_rib::vers_info_t& version,
-						const char separator = '/');
+			  const char separator = '/');
 	///
 	/// List registered RIB versions
 	///
@@ -1524,9 +1723,9 @@ public:
 	/// @throws eSchemaNotFound, eSchemaInvalidClass and eSchemaCBRegExists
 	///
 	void addCreateCallbackSchema(const cdap_rib::vers_info_t& version,
-						const std::string& class_,
-						const std::string& fqn_,
-						create_cb_t cb);
+				     const std::string& class_,
+				     const std::string& fqn_,
+				     create_cb_t cb);
 	///
 	/// Destroys a RIB schema
 	///
@@ -1566,7 +1765,7 @@ public:
 	/// @throws eRIBAlreadyAssociated or Exception on failure
 	///
 	void associateRIBtoAE(const rib_handle_t& handle,
-						const std::string& ae_name);
+			      const std::string& ae_name);
 
 	/// Deassociate RIB from an Application Entity
 	///
@@ -1576,7 +1775,7 @@ public:
 	/// @throws eRIBNotFound, eRIBNotAssociated and Exception
 	///
 	void deassociateRIBfromAE(const rib_handle_t& handle,
-						const std::string& ae_name);
+				  const std::string& ae_name);
 
 	///
 	/// Retrieve the handle to a RIB
@@ -1587,7 +1786,7 @@ public:
 	/// @ret A handle to a RIB
 	///
 	rib_handle_t get(const cdap_rib::vers_info_t& version,
-						const std::string& ae_name);
+			 const std::string& ae_name);
 	///
 	/// Add an object to a RIB
 	///
@@ -1685,6 +1884,8 @@ public:
 
 	std::list<RIBObjectData> get_rib_objects_data(const rib_handle_t& handle);
 
+	int set_security_manager(ApplicationEntity * sec_man);
+
 	///
 	/// Perform an operation on a remote object. If resp_handler
 	/// is not null, the response will be handled by him.
@@ -1703,7 +1904,8 @@ protected:
 
 	//Remote
 	void remote_open_connection_result(const cdap_rib::con_handle_t &con,
-					   const cdap_rib::result_info &res);
+					   const cdap_rib::result_info &res,
+					   const rina::cdap_rib::auth_policy_t &auth);
 	void remote_close_connection_result(const cdap_rib::con_handle_t &con,
 					    const cdap_rib::result_info &res);
 	void remote_create_result(const cdap_rib::con_handle_t &con,
@@ -1746,31 +1948,38 @@ protected:
 	void create_request(const cdap_rib::con_handle_t &con,
 			    const cdap_rib::obj_info_t &obj,
 			    const cdap_rib::filt_info_t &filt,
+			    const cdap_rib::auth_policy_t& auth,
 			    const int invoke_id);
 	void delete_request(const cdap_rib::con_handle_t &con,
 			    const cdap_rib::obj_info_t &obj,
 			    const cdap_rib::filt_info_t &filt,
+			    const cdap_rib::auth_policy_t& auth,
 			    const int invoke_id);
 	void read_request(const cdap_rib::con_handle_t &con,
 			  const cdap_rib::obj_info_t &obj,
 			  const cdap_rib::filt_info_t &filt,
 			  const cdap_rib::flags_t &flags,
+			  const cdap_rib::auth_policy_t& auth,
 			  const int invoke_id);
 	void cancel_read_request(const cdap_rib::con_handle_t &con,
 				 const cdap_rib::obj_info_t &obj,
 				 const cdap_rib::filt_info_t &filt,
+				 const cdap_rib::auth_policy_t& auth,
 				 const int invoke_id);
 	void write_request(const cdap_rib::con_handle_t &con,
 			   const cdap_rib::obj_info_t &obj,
 			   const cdap_rib::filt_info_t &filt,
+			   const cdap_rib::auth_policy_t& auth,
 			   const int invoke_id);
 	void start_request(const cdap_rib::con_handle_t &con,
 			   const cdap_rib::obj_info_t &obj,
 			   const cdap_rib::filt_info_t &filt,
+			   const cdap_rib::auth_policy_t& auth,
 			   const int invoke_id);
 	void stop_request(const cdap_rib::con_handle_t &con,
 			  const cdap_rib::obj_info_t &obj,
 			  const cdap_rib::filt_info_t &filt,
+			  const cdap_rib::auth_policy_t& auth,
 			  const int invoke_id);
 
 	//
@@ -1837,6 +2046,9 @@ private:
 	 * read/write lock
 	 */
 	ReadWriteLockable rwlock;
+
+	//Pointer to security manager of the Application Process
+	ISecurityManager * security_m;
 };
 
 //
@@ -1847,6 +2059,7 @@ RIBDaemon::RIBDaemon(cacep::AppConHandlerInterface *app_con_callback,
 		     cdap_rib::cdap_params params) : next_handle_id(1)
 {
 	app_con_callback_ = app_con_callback;
+	security_m = NULL;
 
 	//Initialize the parameters
 	//add cdap parameters
@@ -2014,7 +2227,7 @@ rib_handle_t RIBDaemon::createRIB(const cdap_rib::vers_info_t& version){
 	}
 
 	//Store&inc schema count ref
-	RIB* rib = new RIB(handle, it->second, cdap_provider);
+	RIB* rib = new RIB(handle, it->second, cdap_provider, security_m);
 	handle_rib_map[handle] = rib;
 	it->second->inc_ref_count();
 
@@ -2246,10 +2459,11 @@ void RIBDaemon::remove_connection(const cdap_rib::con_handle_t& con){
 //
 
 void RIBDaemon::remote_open_connection_result(const cdap_rib::con_handle_t &con,
-					      const cdap_rib::res_info_t &res)
+					      const cdap_rib::res_info_t &res,
+					      const rina::cdap_rib::auth_policy_t &auth)
 {
 	// FIXME remove invoke_id
-	app_con_callback_->connectResult(res, con);
+	app_con_callback_->connectResult(res, con, auth);
 
 	if (res.code_ == cdap_rib::CDAP_SUCCESS) {
 		try {
@@ -2467,6 +2681,27 @@ std::list<RIBObjectData> RIBDaemon::get_rib_objects_data(const rib_handle_t& han
 	return rib->get_all_rib_objects_data();
 }
 
+int RIBDaemon::set_security_manager(ApplicationEntity * sec_man)
+{
+	if (security_m) {
+		LOG_ERR("Security manager already set, cannot set it twice");
+		return -1;
+	}
+
+	security_m = dynamic_cast<ISecurityManager *>(sec_man);
+	if (!security_m) {
+		LOG_ERR("Passed pointer to wrong type of AE, it is not Security Manager");
+		return -1;
+	}
+
+	//Retrieve all the RIB instances and set the security manager
+	for(std::map<rib_handle_t, RIB*>::iterator rib_it = handle_rib_map.begin();
+			rib_it != handle_rib_map.end(); ++rib_it) {
+		rib_it->second->set_security_manager(security_m);
+	}
+	return 0;
+}
+
 int RIBDaemon::remote_operation(const cdap_rib::con_handle_t& con,
                                 cdap::CDAPMessage::Opcode opcode,
                                 const cdap_rib::obj_info_t &obj,
@@ -2474,13 +2709,26 @@ int RIBDaemon::remote_operation(const cdap_rib::con_handle_t& con,
                                 const cdap_rib::filt_info_t &filt,
                                 RIBOpsRespHandler * resp_handler)
 {
+	cdap_rib::auth_policy_t auth;
 	int result = 0;
 	int invoke_id = 0;
 
+	// If the operation expects a response, store response handler in table
 	if (resp_handler) {
 		invoke_id = cdap_provider->get_session_manager()->
 				get_invoke_id_manager()->newInvokeId(true);
 		response_handlers.put(invoke_id, resp_handler);
+	}
+
+	// If there is a security manager, get access control credential for
+	// this operation (if any)
+	if (security_m){
+		ISecurityManagerPs *smps = dynamic_cast<rina::ISecurityManagerPs *>(security_m->ps);
+		assert(smps);
+		if (smps->getAccessControlCreds(auth, con) != 0) {
+			LOG_ERR("Error retrieving access control credentials before invoking remote operation");
+			return -1;
+		}
 	}
 
 	try {
@@ -2490,6 +2738,7 @@ int RIBDaemon::remote_operation(const cdap_rib::con_handle_t& con,
 							       obj,
 							       flags,
 							       filt,
+							       auth,
 							       invoke_id);
 			break;
 		case cdap::CDAPMessage::M_DELETE:
@@ -2497,6 +2746,7 @@ int RIBDaemon::remote_operation(const cdap_rib::con_handle_t& con,
 							       obj,
 							       flags,
 							       filt,
+							       auth,
 							       invoke_id);
 			break;
 		case cdap::CDAPMessage::M_READ:
@@ -2504,6 +2754,7 @@ int RIBDaemon::remote_operation(const cdap_rib::con_handle_t& con,
 							     obj,
 							     flags,
 							     filt,
+							     auth,
 							     invoke_id);
 			break;
 		case cdap::CDAPMessage::M_WRITE:
@@ -2511,11 +2762,13 @@ int RIBDaemon::remote_operation(const cdap_rib::con_handle_t& con,
 							      obj,
 							      flags,
 							      filt,
+							      auth,
 							      invoke_id);
 			break;
 		case cdap::CDAPMessage::M_CANCELREAD:
 			result =  cdap_provider->remote_cancel_read(con,
 							       	    flags,
+								    auth,
 							            invoke_id);
 			break;
 		case cdap::CDAPMessage::M_START:
@@ -2523,6 +2776,7 @@ int RIBDaemon::remote_operation(const cdap_rib::con_handle_t& con,
 							      obj,
 							      flags,
 							      filt,
+							      auth,
 							      invoke_id);
 			break;
 		case cdap::CDAPMessage::M_STOP:
@@ -2530,6 +2784,7 @@ int RIBDaemon::remote_operation(const cdap_rib::con_handle_t& con,
 							     obj,
 							     flags,
 							     filt,
+							     auth,
 							     invoke_id);
 			break;
 		default:
@@ -2702,6 +2957,7 @@ void RIBDaemon::remote_stop_result(const cdap_rib::con_handle_t &con,
 void RIBDaemon::create_request(const cdap_rib::con_handle_t &con,
 			       const cdap_rib::obj_info_t &obj,
 			       const cdap_rib::filt_info_t &filt,
+			       const cdap_rib::auth_policy_t& auth,
 			       const int invoke_id)
 {
 	//TODO this is not safe if RIB instances can be deleted
@@ -2724,12 +2980,13 @@ void RIBDaemon::create_request(const cdap_rib::con_handle_t &con,
 	}
 
 	//Invoke
-	rib->create_request(con, obj, filt, invoke_id);
+	rib->create_request(con, obj, filt, auth, invoke_id);
 }
 
 void RIBDaemon::delete_request(const cdap_rib::con_handle_t &con,
 			       const cdap_rib::obj_info_t &obj,
 			       const cdap_rib::filt_info_t &filt,
+			       const cdap_rib::auth_policy_t& auth,
 			       const int invoke_id)
 {
 	//TODO this is not safe if RIB instances can be deleted
@@ -2752,13 +3009,14 @@ void RIBDaemon::delete_request(const cdap_rib::con_handle_t &con,
 	}
 
 	//Invoke
-	rib->delete_request(con, obj, filt, invoke_id);
+	rib->delete_request(con, obj, filt, auth, invoke_id);
 }
 
 void RIBDaemon::read_request(const cdap_rib::con_handle_t &con,
 			     const cdap_rib::obj_info_t &obj,
 			     const cdap_rib::filt_info_t &filt,
 			     const cdap_rib::flags_t &flags,
+			     const cdap_rib::auth_policy_t& auth,
 			     const int invoke_id)
 {
 	//TODO this is not safe if RIB instances can be deleted
@@ -2781,11 +3039,12 @@ void RIBDaemon::read_request(const cdap_rib::con_handle_t &con,
 	}
 
 	//Invoke
-	rib->read_request(con, obj, filt, flags, invoke_id);
+	rib->read_request(con, obj, filt, flags, auth, invoke_id);
 }
 void RIBDaemon::cancel_read_request(const cdap_rib::con_handle_t &con,
 				    const cdap_rib::obj_info_t &obj,
 				    const cdap_rib::filt_info_t &filt,
+				    const cdap_rib::auth_policy_t& auth,
 				    const int invoke_id)
 {
 	//TODO this is not safe if RIB instances can be deleted
@@ -2807,11 +3066,12 @@ void RIBDaemon::cancel_read_request(const cdap_rib::con_handle_t &con,
 	}
 
 	//Invoke
-	rib->cancel_read_request(con, obj, filt, invoke_id);
+	rib->cancel_read_request(con, obj, filt, auth, invoke_id);
 }
 void RIBDaemon::write_request(const cdap_rib::con_handle_t &con,
 			      const cdap_rib::obj_info_t &obj,
 			      const cdap_rib::filt_info_t &filt,
+			      const cdap_rib::auth_policy_t& auth,
 			      const int invoke_id)
 {
 	//TODO this is not safe if RIB instances can be deleted
@@ -2833,11 +3093,12 @@ void RIBDaemon::write_request(const cdap_rib::con_handle_t &con,
 	}
 
 	//Invoke
-	rib->write_request(con, obj, filt, invoke_id);
+	rib->write_request(con, obj, filt, auth, invoke_id);
 }
 void RIBDaemon::start_request(const cdap_rib::con_handle_t &con,
 			      const cdap_rib::obj_info_t &obj,
 			      const cdap_rib::filt_info_t &filt,
+			      const cdap_rib::auth_policy_t& auth,
 			      const int invoke_id)
 {
 	//TODO this is not safe if RIB instances can be deleted
@@ -2860,11 +3121,12 @@ void RIBDaemon::start_request(const cdap_rib::con_handle_t &con,
 	}
 
 	//Invoke
-	rib->start_request(con, obj, filt, invoke_id);
+	rib->start_request(con, obj, filt, auth, invoke_id);
 }
 void RIBDaemon::stop_request(const cdap_rib::con_handle_t &con,
 			     const cdap_rib::obj_info_t &obj,
 			     const cdap_rib::filt_info_t &filt,
+			     const cdap_rib::auth_policy_t& auth,
 			     const int invoke_id)
 {
 	//TODO this is not safe if RIB instances can be deleted
@@ -2886,7 +3148,7 @@ void RIBDaemon::stop_request(const cdap_rib::con_handle_t &con,
 	}
 
 	//Invoke
-	rib->stop_request(con, obj, filt, invoke_id);
+	rib->stop_request(con, obj, filt, auth, invoke_id);
 }
 
 //RIBObj/RIBObj_
@@ -3163,6 +3425,11 @@ std::list<RIBObjectData> RIBDaemonProxy::get_rib_objects_data(const rib_handle_t
 	return ribd->get_rib_objects_data(handle);
 }
 
+int RIBDaemonProxy::set_security_manager(ApplicationEntity * sec_man)
+{
+	return ribd->set_security_manager(sec_man);
+}
+
 //
 // Client
 //
@@ -3305,6 +3572,11 @@ int RIBDaemonProxy::remote_stop(const cdap_rib::con_handle_t& con,
 void RIBDaemonAE::set_application_process(ApplicationProcess * ap)
 {
 	(void) ap;
+}
+
+int RIBDaemonAE::set_security_manager(ApplicationEntity * sec_man)
+{
+	return getProxy()->set_security_manager(sec_man);
 }
 
 //

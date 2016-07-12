@@ -362,8 +362,9 @@ bool ManagerWorker::createIPCP_1(int port_id)
 
     rina::cdap_rib::con_handle_t con;
     con.port_id = port_id;
+    rina::cdap_rib::auth_policy_t auth;
 
-    cdap_prov_->remote_create(con, obj, flags, filt, 28);
+    cdap_prov_->remote_create(con, obj, flags, filt, auth, 28);
     std::cout << "create IPC request CDAP message sent to port " << port_id
               << std::endl;
 

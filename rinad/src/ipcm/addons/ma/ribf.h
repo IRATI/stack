@@ -106,7 +106,8 @@ public:
 	void connect(const rina::cdap::CDAPMessage& message,
 		     const rina::cdap_rib::con_handle_t &con);
 	void connectResult(const rina::cdap_rib::res_info_t &res,
-			   const rina::cdap_rib::con_handle_t &con);
+			   const rina::cdap_rib::con_handle_t &con,
+			   const rina::cdap_rib::auth_policy_t &auth);
 	void release(int message_id, const rina::cdap_rib::con_handle_t &con);
 	void releaseResult(const rina::cdap_rib::res_info_t &res,
 			  const rina::cdap_rib::con_handle_t &con);

@@ -229,6 +229,7 @@ void Client::sendReadRMessage()
         {
             // READ
             cdap_rib::obj_info_t obj;
+            cdap_rib::auth_policy_t auth;
             int bytes_read = 0;
             obj.name_ = "test name";
             obj.class_ = "test class";
@@ -238,7 +239,7 @@ void Client::sendReadRMessage()
             cdap_rib::filt_info_t filt;
             filt.filter_ = 0;
             filt.scope_ = 0;
-            cdap_prov_->remote_read(con_, obj, flags, filt, 35);
+            cdap_prov_->remote_read(con_, obj, flags, filt, auth, 35);
             std::cout << "read request CDAP message sent" << std::endl;
 
             while (true)

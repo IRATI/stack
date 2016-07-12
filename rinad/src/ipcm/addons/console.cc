@@ -20,7 +20,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA  02110-1301  USA
  */
-
+#include <sys/time.h>
 #include <cstdlib>
 #include <cstddef>
 #include <iostream>
@@ -704,10 +704,19 @@ IPCMConsole::update_dif_config(std::vector<std::string>& args)
 	return CMDRETCONT;
 }
 
+int getTimeMs(){
+    timeval time_;
+    gettimeofday(&time_, 0);
+    int time_seconds = (int) time_.tv_sec;
+    return (int) time_seconds * 1000 + (int) (time_.tv_usec / 1000);   
+}
+
 int
 IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
 {
-	NeighborData neighbor_data;
+	
+        int t0 = getTimeMs();
+        NeighborData neighbor_data;
 	int ipcp_id;
 	Promise promise;
 
@@ -738,8 +747,8 @@ IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
 		outstream << "Enrollment operation failed" << endl;
 		return CMDRETCONT;
 	}
-
-	outstream << "DIF enrollment succesfully completed" << endl;
+        int t1 = getTimeMs();
+	outstream << "DIF enrollment succesfully completed in " << t1 - t0 << " ms" << endl;
 
 	return CMDRETCONT;
 }
