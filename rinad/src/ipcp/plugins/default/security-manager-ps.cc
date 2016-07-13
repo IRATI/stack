@@ -30,10 +30,21 @@
 
 namespace rinad {
 
-class SecurityManagerPs: public ISecurityManagerPs {
+class SecurityManagerPs: public IPCPSecurityManagerPs {
 public:
 	SecurityManagerPs(IPCPSecurityManager * dm);
-	bool isAllowedToJoinDIF(const rina::Neighbor& newMember);
+	int isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t & con,
+			       const rina::Neighbor& newMember,
+			       rina::cdap_rib::auth_policy_t & auth);
+	int storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth,
+				    const rina::cdap_rib::con_handle_t & con);
+	int getAccessControlCreds(rina::cdap_rib::auth_policy_t & auth,
+			          const rina::cdap_rib::con_handle_t & con);
+	void checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
+			      const rina::cdap_rib::con_handle_t & con,
+			      const rina::cdap::cdap_m_t::Opcode opcode,
+			      const std::string obj_name,
+			      rina::cdap_rib::res_info_t& res);
 	bool acceptFlow(const configs::Flow& newFlow);
         int set_policy_set_param(const std::string& name,
                                  const std::string& value);
@@ -48,11 +59,47 @@ SecurityManagerPs::SecurityManagerPs(IPCPSecurityManager * dm_) : dm(dm_)
 {
 }
 
-
-bool SecurityManagerPs::isAllowedToJoinDIF(const rina::Neighbor& newMember)
+int SecurityManagerPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t & con,
+					  const rina::Neighbor& newMember,
+					  rina::cdap_rib::auth_policy_t & auth)
 {
-	LOG_IPCP_DBG("Allowing IPC Process %s to join the DIF", newMember.name_.processName.c_str());
-	return true;
+	(void) con;
+	(void) auth;
+	LOG_IPCP_DBG("Allowing IPC Process %s to join the DIF",
+		     newMember.name_.processName.c_str());
+	return 0;
+}
+
+int SecurityManagerPs::storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth,
+					       const rina::cdap_rib::con_handle_t & con)
+{
+	(void) auth;
+	(void) con;
+
+	return 0;
+}
+
+int SecurityManagerPs::getAccessControlCreds(rina::cdap_rib::auth_policy_t & auth,
+		          	  	     const rina::cdap_rib::con_handle_t & con)
+{
+	(void) auth;
+	(void) con;
+
+	return 0;
+}
+
+void SecurityManagerPs::checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
+		      	      	          const rina::cdap_rib::con_handle_t & con,
+					  const rina::cdap::cdap_m_t::Opcode opcode,
+					  const std::string obj_name,
+					  rina::cdap_rib::res_info_t& res)
+{
+	(void) auth;
+	(void) con;
+	(void) opcode;
+	(void) obj_name;
+
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
 
 bool SecurityManagerPs::acceptFlow(const configs::Flow& newFlow)

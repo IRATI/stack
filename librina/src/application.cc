@@ -101,7 +101,7 @@ int ApplicationEntity::select_policy_set(const std::string& path,
 int ApplicationEntity::set_policy_set_param(const std::string& path,
                                             const std::string& name,
                                             const std::string& value)
-{
+{    
         return set_policy_set_param_common(path, name, value);
 }
 
@@ -110,7 +110,7 @@ int ApplicationEntity::select_policy_set_common(const std::string& component,
                                                 const std::string& ps_name)
 {
         IPolicySet *candidate = NULL;
-
+        
         if (path != std::string())
         {
                 LOG_ERR("No subcomponents to address");
@@ -129,7 +129,7 @@ int ApplicationEntity::select_policy_set_common(const std::string& component,
                          ps_name.c_str(), component.c_str());
                 return 0;
         }
-
+        
         candidate = app->psCreate(component, ps_name, this);
         if (!candidate)
         {
