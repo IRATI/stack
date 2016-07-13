@@ -236,10 +236,8 @@ public:
 class SecurityManagerCBACPs: public IPCPSecurityManagerPs {
 public:
         SecurityManagerCBACPs(IPCPSecurityManager * dm);
-        int initialize_SC(const rina::cdap_rib::con_handle_t&);
         int loadProfiles();
-        int loadProfilesByName(
-                               const rina::ApplicationProcessNamingInformation &ipcpProfileHolder, 
+        int loadProfilesByName(const rina::ApplicationProcessNamingInformation &ipcpProfileHolder,
                                IPCPProfile_t &requestedIPCPProfile,
                                const rina::ApplicationProcessNamingInformation &difProfileHolder, 
                                DIFProfile_t &requestedDIFProfile);
@@ -250,12 +248,15 @@ public:
                                     const rina::cdap_rib::con_handle_t & con);
         int getAccessControlCreds(rina::cdap_rib::auth_policy_t & auth,
                                   const rina::cdap_rib::con_handle_t & con);
-        int checkTokenValidity(const TokenPlusSignature_t &tokenSign, // rina::cdap_rib::auth_policy_t & auth, 
-                                                       std::string requestor);
+        int checkTokenValidity(const TokenPlusSignature_t &tokenSign,
+        		       const std::string& requestor,
+			       const std::string& keyStorePath);
         int checkTokenSignature(const Token_t &token, 
-                                  const rina::UcharArray & signature, std::string encrypt_alg);
-        RSA* loadTokenGeneratorPublicKey(std::string);
-        
+        			const rina::UcharArray & signature,
+				const std::string& encrypt_alg,
+				const std::string& keystorePath);
+        RSA* loadTokenGeneratorPublicKey(const std::string& tokenGenIPCPName,
+        				 const std::string& keyStorePath);
         void checkRIBOperation(const rina::cdap_rib::auth_policy_t & auth,
                               const rina::cdap_rib::con_handle_t & con,
                               const rina::cdap::cdap_m_t::Opcode opcode,
@@ -263,13 +264,12 @@ public:
                               rina::cdap_rib::res_info_t& res);
         bool acceptFlow(const configs::Flow& newFlow);
         int set_policy_set_param(const std::string& name,
-                        const std::string& value);
+                        	 const std::string& value);
         virtual ~SecurityManagerCBACPs() {}
         
 private:
         // Data model of the security manager component.
         IPCPSecurityManager * dm;
-        rina::SSH2SecurityContext * my_sc;
         int max_retries;
         AccessControl * access_control_;
         ProfileParser * profile_parser_;
