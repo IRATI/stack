@@ -2720,9 +2720,10 @@ int RIBDaemon::remote_operation(const cdap_rib::con_handle_t& con,
 		response_handlers.put(invoke_id, resp_handler);
 	}
 
-	// If there is a security manager, get access control credential for
-	// this operation (if any)
-	if (security_m){
+	// If there is a security manager and application connection is in place,
+	// get access control credential for this operation (if any)
+	if (security_m &&
+			!cdap_provider->get_session_manager()->session_in_await_con_state(con.port_id)) {
 		ISecurityManagerPs *smps = dynamic_cast<rina::ISecurityManagerPs *>(security_m->ps);
 		assert(smps);
 		if (smps->getAccessControlCreds(auth, con) != 0) {
