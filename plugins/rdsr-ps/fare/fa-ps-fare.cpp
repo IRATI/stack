@@ -81,9 +81,6 @@ configs::Flow * FlowAllocatorPs::newFlowRequest(
 		throw e;
 	}
 
-	LOG_IPCP_DBG("FARE QoS selected during Allocation, cube %s",
-		qosCube->get_name().c_str());
-
 	connection = new rina::Connection();
 	connection->portId = event.portId;
 	connection->sourceAddress = ipc_process->get_address();
@@ -116,9 +113,6 @@ configs::Flow * FlowAllocatorPs::newFlowRequest(
 	// Configure what we consider the minimum granted bandwidth.
 	//
 	if(event.flowSpecification.averageBandwidth > 0) {
-		LOG_IPCP_INFO("Rate set to %u bytes",
-			event.flowSpecification.averageBandwidth);
-
 		connection->dtcpConfig.flow_control_config_.rate_based_config_.
 			sending_rate_ = event.flowSpecification.averageBandwidth;
 	}

@@ -1,0 +1,8 @@
+PDU Forwarding Flow Balancing policy for OpenIRATI.
+Author: Kewin Rausch <kewin.rausch@create-net.org>
+
+********************************************************************************
+RESUME
+********************************************************************************
+This policy allow to select at compile time or at runtime (alpha) the preferred
+forwarding strategy to apply to packets which are flowing through the stack.

@@ -17,6 +17,8 @@
 #include <linux/atomic.h>
 #include <linux/list.h>
 #include <linux/export.h>
+#include <linux/kernel.h>
+#include <linux/kobject.h>
 #include <linux/module.h>
 #include <linux/string.h>
 #include <linux/random.h>
@@ -33,467 +35,379 @@
 #include "rds/rmem.h"
 #include "dtcp-ps.h"
 #include "dtcp-conf-utils.h"
+#include "pdu.h"
+#include "serdes.h"
 
-/* Uncomment this to have the policy work without ECN.
- * #define CDRR_NO_ECN
+/* This identifies the link maximum capacity at 10msec, 1Gb/s
  */
+static unsigned int cdrr_link_rate = 95000;
 
-#define CDRR_VERBOSE_LOG
-#define CDRR_LOG(x, ARGS...) LOG_INFO(" CDRR "x, ##ARGS)
-
-#define CDRR_DEFAULT_RESET_RATE (1125000) /* ~9 Mb/s every time frame. */
-#define CDRR_DEFAULT_LINK_CAPACITY (1250000) /* 10 Mb/s every time frame. */
-#define CDRR_DEFAULT_TIME_FRAME	(100) /* Rate reset every 100 msec. */
-#define CDRR_DEFAULT_RESET_TIME (2000) /* MSec. */
-
-/******************************************************************************
- * Provides a mechanism to guess the possible incoming congestion and reacts to
- * it.
- ******************************************************************************/
-
-/*#define CDRR_NO_ECN */
-
-#ifdef CDRR_NO_ECN
-#define CDRR_MAX_FLOWS 32
-
-/* A single flow. */
-struct cdrr_sf {
-	/* Its source addr. */
-	unsigned int source;
-	/* Its port. */
-	cep_id_t port;
-};
-
-/* Active flows. */
-static struct cdrr_sf cdrr_flows[CDRR_MAX_FLOWS];
-
-/* Global flows last activity. */
-static struct timespec cdrr_fa[CDRR_MAX_FLOWS];
-
-/* Active flows mgb. */
-static unsigned int cdrr_mgb[CDRR_MAX_FLOWS];
-
-/* Global lock. */
-DEFINE_SPINLOCK(cdrr_lock);
-
-static inline unsigned long cdrr_ts_to_msec(struct timespec * t) {
-	return (t->tv_sec * 1000) + (t->tv_nsec / 1000000);
-}
-#endif
-
-/******************************************************************************/
-
-/* Rate that the flow will follow after the reset. Reset occurs when ECN are not
- * received for a certain time.
+/* This identifies profile of congestion reaction to use,
+ * 0 = harsh, 1 = soft, congestion based.
  */
-static unsigned int cdrr_reset_rate = CDRR_DEFAULT_RESET_RATE;
+static unsigned int cdrr_mode = 0;
 
-/* Time after that the flow attempt to go full rate.
- */
-static unsigned int cdrr_reset_time = CDRR_DEFAULT_RESET_TIME;
-
-#ifdef CDRR_NO_ECN
-/* The link capacity assumed. Bytes per seconds.
- */
- static unsigned int cdrr_link_capacity = CDRR_DEFAULT_LINK_CAPACITY;
-
-/* Time frame to assign to the efcp connections.
- */
-static unsigned int cdrr_time_frame = CDRR_DEFAULT_TIME_FRAME;
-#endif
-
-/* Size of elements currently active in the catalog.
- */
-static atomic_t cdrr_flows_no = {0};
-
-/* Count up the sum of the min. granted bw between all the flows.
- * NOTE: 64 bit could be better; we are bound to ~4kkk bytes per seconds.
- */
-static atomic_t cdrr_mgb_alloc = {0};
+/* Master kobject for CDRR. */
+static struct kobject cdrr_kobj;
 
 /* Rate info. */
 struct cdrr_rate_info {
+	/* Rate kernel object. */
+	struct kobject robj;
 	/* The DTCP bound to the rate. */
 	struct dtcp * dtcp;
+
+	/* 0 is direct mgb swap, 1 is "congestion load" based. */
+	int mode;
+
 	/* Frame of time, in msec, after that the credit will be renewed. */
 	unsigned int time_frame;
 	/* Minimum granted bandwidth. */
 	unsigned int mgb;
-	/* Rate which will be set when ECN condition elapses. */
+	/* Reset rate for this instance. */
 	unsigned int reset_rate;
-	/* Time in msec after that, if no ECN are detected, the rate is
-	 *  enlarged (if possible).
-	 */
-	unsigned int reset_time;
-	/* Last moment that an ECN has been received on this dtcp. */
-	struct timespec last_ecn;
+
+	/* When we check the last time? */
+	struct timespec last;
+
+	/* The volume of congested bytes/pdu received. */
+	unsigned int congested;
+	/* The volume of congested bytes/pdu received. */
+	unsigned int total;
+	/* Volume of the feedback bytes/pdu intentionally sent.*/
+	unsigned int feedback;
 };
 
-static inline void cdrr_add_rate(struct cdrr_rate_info * ri) {
-	atomic_inc(&cdrr_flows_no);
-	atomic_add(ri->mgb, &cdrr_mgb_alloc);
+/*
+ * Kobject defs (taken from linux/samples/kobject)
+ */
 
-	CDRR_LOG("Total min. granted BW is %u", atomic_read(&cdrr_mgb_alloc));
-}
+/* Kernel object for the policy. */
+struct kobject cdrr_obj;
 
-static inline void cdrr_rem_rate(struct cdrr_rate_info * ri) {
-	atomic_dec(&cdrr_flows_no);
-	atomic_sub(ri->mgb, &cdrr_mgb_alloc);
+/* Attribute used in CDRR policy. */
+struct cdrr_attribute {
+	struct attribute attr;
+	ssize_t (* show)(
+		struct kobject * kobj,
+		struct attribute * attr,
+		char * buf);
+	ssize_t (* store)(
+		struct kobject * foo,
+		struct attribute * attr,
+		const char * buf,
+		size_t count);
+};
 
-	CDRR_LOG("Total min. granted BW is %u", atomic_read(&cdrr_mgb_alloc));
-}
+/* Show procedure! */
+static ssize_t cdrr_attr_show(
+	struct kobject * kobj,
+	struct attribute * attr,
+	char * buf) {
 
-static int cdrr_lost_control_pdu(struct dtcp_ps * ps) {
+	struct cdrr_rate_info * ri = 0;
+
+	/*
+	 * CDRR global attribute.
+	 */
+
+	if(strcmp(attr->name, "link_limit") == 0) {
+		return snprintf(
+			buf, PAGE_SIZE, "%u\n", cdrr_link_rate);
+	}
+
+	if(strcmp(attr->name, "mode") == 0) {
+		return snprintf(
+			buf, PAGE_SIZE, "%u\n", cdrr_mode);
+	}
+
+	/*
+	 * Per-instance attribute.
+	 */
+
+	if(strcmp(attr->name, "mgb") == 0) {
+		ri = container_of(kobj, struct cdrr_rate_info, robj);
+		return snprintf(buf, PAGE_SIZE, "%u\n", ri->mgb);
+	}
+
+	if(strcmp(attr->name, "time_frame") == 0) {
+		ri = container_of(kobj, struct cdrr_rate_info, robj);
+		return snprintf(buf, PAGE_SIZE, "%u\n", ri->time_frame);
+	}
+
+	if(strcmp(attr->name, "reset_rate") == 0) {
+		ri = container_of(kobj, struct cdrr_rate_info, robj);
+		return snprintf(buf, PAGE_SIZE, "%u\n", ri->reset_rate);
+	}
+
+	if(strcmp(attr->name, "total") == 0) {
+		ri = container_of(kobj, struct cdrr_rate_info, robj);
+		return snprintf(buf, PAGE_SIZE, "%u\n", ri->total);
+	}
+
+	if(strcmp(attr->name, "feedback") == 0) {
+		ri = container_of(kobj, struct cdrr_rate_info, robj);
+		return snprintf(buf, PAGE_SIZE, "%u\n", ri->feedback);
+	}
+
+	if(strcmp(attr->name, "congested") == 0) {
+		ri = container_of(kobj, struct cdrr_rate_info, robj);
+		return snprintf(buf, PAGE_SIZE, "%u\n", ri->congested);
+	}
+
+	if(strcmp(attr->name, "current_rate") == 0) {
+		ri = container_of(kobj, struct cdrr_rate_info, robj);
+		return snprintf(
+			buf, PAGE_SIZE, "%u\n", dtcp_sndr_rate(ri->dtcp));
+	}
+
 	return 0;
 }
 
-#ifdef CONFIG_RINA_DTCP_RCVR_ACK
-static int cdrr_rcvr_ack(struct dtcp_ps * ps, const struct pci * pci) {
-	struct dtcp * dtcp = ps->dm;
-	seq_num_t     seq;
+/* Store procedure! */
+static ssize_t cdrr_attr_store(
+	struct kobject * kobj,
+	struct attribute * attr,
+	const char * buf,
+	size_t count) {
 
-	if (!pci) {
-		LOG_ERR("No PCI passed, cannot run policy");
-		return -1;
-	}
-	seq = pci_sequence_number_get(pci);
+	int op = 0;
+	int l = 0;
 
-	return dtcp_ack_flow_control_pdu_send(dtcp, seq);
-}
-#endif
+	struct cdrr_rate_info * ri = 0;
 
-#ifdef CONFIG_RINA_DTCP_RCVR_ACK_ATIMER
-static int cdrr_rcvr_ack_atimer(struct dtcp_ps * ps, const struct pci * pci) {
-	return 0;
-}
-#endif
+	if(strcmp(attr->name, "reset_rate") == 0) {
+		ri = container_of(kobj, struct cdrr_rate_info, robj);
+		op = kstrtoint(buf, 10, &l);
 
-
-static int cdrr_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num) {
-	struct dtcp * dtcp = ps->dm;
-
-	if (!dtcp) {
-		LOG_ERR("No instance passed, cannot run policy");
-		return -1;
-	}
-
-	if (ps->rtx_ctrl) {
-		struct rtxq * q;
-
-		q = dt_rtxq(dtcp_dt(dtcp));
-		if (!q) {
-			LOG_ERR("Couldn't find the Retransmission queue");
-			return -1;
+		if(op < 0) {
+			LOG_ERR("Failed to set the reset rate.");
+			return op;
 		}
-		rtxq_ack(q, seq_num, dt_sv_tr(dtcp_dt(dtcp)));
+
+		/* Single flow rate is now changed! */
+		ri->reset_rate = l;
+	}
+
+	/* The reaction mode of the policy. */
+	if(strcmp(attr->name, "mode") == 0) {
+		op = kstrtoint(buf, 10, &l);
+
+		if(op < 0) {
+			LOG_ERR("Failed to set the policy reaction mode.");
+			return op;
+		}
+
+		cdrr_mode = l;
+
+		LOG_INFO("Cdrr mode switched to %d", cdrr_mode);
+	}
+
+	if(strcmp(attr->name, "link_limit") == 0) {
+		op = kstrtoint(buf, 10, &l);
+
+		if(op < 0) {
+			LOG_ERR("Failed to set the link limit rate.");
+			return op;
+		}
+
+		/* Link rate is now changed! */
+		cdrr_link_rate = l;
+
+		LOG_INFO("Cdrr link limit set to %d", cdrr_link_rate);
+	}
+
+	return count;
+}
+
+/* Sysfs operations. */
+static const struct sysfs_ops cdrr_sysfs_ops = {
+	.show  = cdrr_attr_show,
+	.store = cdrr_attr_store,
+};
+
+/*
+ * Attributes visible in CDRR sysfs directory.
+ */
+
+static struct cdrr_attribute cdrr_ll_attr =
+	__ATTR(link_limit, 0664, cdrr_attr_show, cdrr_attr_store);
+
+static struct cdrr_attribute cdrr_m_attr =
+	__ATTR(mode, 0664, cdrr_attr_show, cdrr_attr_store);
+
+static struct attribute * cdrr_attrs[] = {
+	&cdrr_ll_attr.attr,
+	&cdrr_m_attr.attr,
+	NULL,
+};
+
+/*
+ * Attributes visible per DTCP instance.
+ */
+
+static struct cdrr_attribute cdrr_tf_attr =
+	__ATTR(time_frame, 0444, cdrr_attr_show, cdrr_attr_store);
+
+static struct cdrr_attribute cdrr_rr_attr =
+	__ATTR(reset_rate, 0664, cdrr_attr_show, cdrr_attr_store);
+
+static struct cdrr_attribute cdrr_mgb_attr =
+	__ATTR(mgb, 0444, cdrr_attr_show, cdrr_attr_store);
+
+static struct cdrr_attribute cdrr_tb_attr =
+	__ATTR(total, 0444, cdrr_attr_show, cdrr_attr_store);
+
+static struct cdrr_attribute cdrr_cb_attr =
+	__ATTR(congested, 0444, cdrr_attr_show, cdrr_attr_store);
+
+static struct cdrr_attribute cdrr_fb_attr =
+	__ATTR(feedback, 0444, cdrr_attr_show, cdrr_attr_store);
+
+static struct cdrr_attribute cdrr_cc_attr =
+	__ATTR(current_rate, 0444, cdrr_attr_show, cdrr_attr_store);
+
+static struct attribute * cdrr_dtcp_attrs[] = {
+	&cdrr_tf_attr.attr,
+	&cdrr_rr_attr.attr,
+	&cdrr_mgb_attr.attr,
+	&cdrr_tb_attr.attr,
+	&cdrr_cb_attr.attr,
+	&cdrr_fb_attr.attr,
+	&cdrr_cc_attr.attr,
+	NULL,
+};
+
+/* Operations associated with the release of the kobj. */
+static void cdrr_release(struct kobject *kobj) {
+	/* Nothing... */
+}
+
+/* Master CDRR ktype, different for the type of shown attributes. */
+static struct kobj_type cdrr_ktype = {
+	.sysfs_ops = &cdrr_sysfs_ops,
+	.release = cdrr_release,
+	.default_attrs = cdrr_attrs,
+};
+
+/* DTCP CDRR ktype, different for the type of shown attributes. */
+static struct kobj_type cdrr_dtcp_ktype = {
+	.sysfs_ops = &cdrr_sysfs_ops,
+	.release = cdrr_release,
+	.default_attrs = cdrr_dtcp_attrs,
+};
+
+/*
+ * Utilities:
+ */
+
+static inline unsigned long cdrr_to_ms(struct timespec * t) {
+	return (t->tv_sec * 1000) + (t->tv_nsec / 1000000);
+}
+
+static int cdrr_send_control(struct dtcp * dtcp) {
+	struct pdu * pdu = pdu_ctrl_generate(dtcp, PDU_TYPE_FC);
+
+	if (!pdu) {
+		return -1;
+	}
+
+	if (dtcp_pdu_send(dtcp, pdu)) {
+	       return -1;
 	}
 
 	return 0;
 }
 
-static int cdrr_sending_ack(struct dtcp_ps * ps, seq_num_t seq) {
-	struct dtp *       dtp;
-	const struct pci * pci;
-
-	struct dtcp * dtcp = ps->dm;
-
-	if (!dtcp) {
-		LOG_ERR("No instance passed, cannot run policy");
-		return -1;
-	}
-
-	dtp = dt_dtp(dtcp_dt(dtcp));
-	if (!dtp) {
-		LOG_ERR("No DTP from dtcp->parent");
-		return -1;
-	}
-
-	/* Invoke delimiting and update left window edge */
-
-	pci = process_A_expiration(dtp, dtcp);
-
-	return dtcp_sv_update(ps->dm, pci);
-}
-
-static int cdrr_receiving_flow_control(
-	struct dtcp_ps * ps, const struct pci * pci) {
-
-	struct dtcp * dtcp = ps->dm;
-	struct pdu * pdu;
-
-	if (!dtcp) {
-		LOG_ERR("No instance passed, cannot run policy");
-		return -1;
-	}
-	if (!pci) {
-		LOG_ERR("No PCI passed, cannot run policy");
-		return -1;
-	}
-	pdu = pdu_ctrl_generate(dtcp, PDU_TYPE_FC);
-	if (!pdu)
-		return -1;
-
-	LOG_DBG("DTCP Sending FC (CPU: %d)", smp_processor_id());
-	dump_we(dtcp, pdu_pci_get_rw(pdu));
-
-	if (dtcp_pdu_send(dtcp, pdu))
-		return -1;
-
-	return 0;
-}
-
-static int cdrr_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci) {
-        struct dtcp * dtcp = ps->dm;
-        seq_num_t LWE;
-
-        if (!dtcp) {
-                LOG_ERR("No instance passed, cannot run policy");
-                return -1;
-        }
-        if (!pci) {
-                LOG_ERR("No PCI passed, cannot run policy");
-                return -1;
-        }
-
-        LWE = dt_sv_rcv_lft_win(dtcp_dt(dtcp));
-        update_rt_wind_edge(dtcp);
-
-        LOG_DBG("DTCP: %pK", dtcp);
-        LOG_DBG("LWE: %u  RWE: %u", LWE, rcvr_rt_wind_edge(dtcp));
-
-        return 0;
-}
+/*
+ * Callbacks:
+ */
 
 static int cdrr_rate_reduction(struct dtcp_ps * ps, const struct pci * pci) {
 	struct cdrr_rate_info * ri = (struct cdrr_rate_info *)ps->priv;
 	struct dtcp * dtcp = ri->dtcp;
+	/* struct timespec ts = {0}; */
 
-	struct timespec ts = {0, 0};
+	/* Counts the PDUs. */
+	ssize_t size = 1;
 
-#ifdef CDRR_NO_ECN
-	int i;
-	int f = 0; // Found?
-	unsigned int dif = 0;
-	unsigned int pr = 0;
+	int c = 0;
+
+#if 0
+	int cong_step = 0;
+	int cong_class = 0;
+	int rate_step =  0;
+	int rate_add = 0;
 #endif
 
-	getnstimeofday(&ts);
-
-	// Do not proceed on non-data pdu.
+	/* Act only where you receive data. */
 	if(!(pci_type(pci) & PDU_TYPE_DT)) {
 		return 0;
 	}
 
-#ifdef CDRR_NO_ECN
-/* ---- LOCK ---------------------------------------------------------------- */
-	spin_lock(&cdrr_lock);
+	c = pci_flags_get(pci) & PDU_FLAGS_EXPLICIT_CONGESTION;
 
-	/* Update the last activity of this flow. */
-	for(i = 0; i < CDRR_MAX_FLOWS; i++) {
-		/* Not an empty seat. */
-		if(cdrr_flows[i].source != 0) {
-			/* We are already there. */
-			if(cdrr_flows[i].source == pci_source(pci) &&
-				cdrr_flows[i].port == pci_cep_source(pci)) {
-
-				/* Update our last activity. */
-				cdrr_fa[i].tv_sec  = ts.tv_sec;
-				cdrr_fa[i].tv_nsec = ts.tv_nsec;
-
-				f = 1;
-				break;
-			}
-			/* That is not us. Keep searching.... */
-			else {
-				continue;
-			}
-		}
-	}
-
-	/* Flow not yet handled? Insert! */
-	if(!f) {
-		for(i = 0; i < CDRR_MAX_FLOWS; i++) {
-			/* Take the first empty seat. */
-			if(cdrr_flows[i].source == 0) {
-				cdrr_flows[i].source = pci_source(pci);
-				cdrr_flows[i].port   = pci_cep_source(pci);
-
-				/* Set our first activity. */
-				cdrr_fa[i].tv_sec  = ts.tv_sec;
-				cdrr_fa[i].tv_nsec = ts.tv_nsec;
-
-				/* First packet incoming will save the mgb. */
-				cdrr_mgb[i] = ri->mgb;
-
-				CDRR_LOG("Guessing heuristic added flow, "
-					"source: %d, cep: %u, mgb: %u",
-					cdrr_flows[i].source,
-					cdrr_flows[i].port,
-					cdrr_mgb[i]);
-
-				break;
-			}
-		}
-	}
-
-	/* Build up the potential incoming rate.
-	 * If no messages are received from reset_time then we consider that
-	 * flow as no-emitting/dead.
+	/* Mode = 0
+	 * Adapt as fast as you can to the registered rates.
 	 */
-	for(i = 0; i < CDRR_MAX_FLOWS; i++) {
-		if(cdrr_flows[i].source != 0) {
-			dif = cdrr_ts_to_msec(&ts) -
-				cdrr_ts_to_msec(&cdrr_fa[i]);
-
-			if(dif <= cdrr_reset_time) {
-				/* More than one cause problems! */
-				pr += cdrr_reset_rate;
-			} else {
-				/* We consider them as dead. */
-				cdrr_flows[i].source = 0;
-				cdrr_flows[i].port   = 0;
+	if(ri->mode == 0) {
+		if(c) {
+			/* MGB not set yet? */
+			if(dtcp_sndr_rate(dtcp) != ri->mgb) {
+				dtcp_sndr_rate_set(dtcp, ri->mgb);
+				cdrr_send_control(dtcp);
+				ri->feedback++;
+			}
+		} else {
+			/* Reset rate not set yet? */
+			if(dtcp_sndr_rate(dtcp) != ri->reset_rate) {
+				dtcp_sndr_rate_set(dtcp, ri->reset_rate);
+				cdrr_send_control(dtcp);
+				ri->feedback++;
 			}
 		}
 	}
 
-	spin_unlock(&cdrr_lock);
-/* ---- UNLOCK -------------------------------------------------------------- */
+	/* getnstimeofday(&ts); */
 
-	if(pr > cdrr_link_capacity) {
-		dif = ri->mgb;
-
-		if(dtcp_sndr_rate(dtcp) != dif) {
-			CDRR_LOG("Congestion guessed! Adjusting 0x%pK to %u",
-				dtcp, dif);
-
-			dtcp_sndr_rate_set(dtcp, dif);
-			dtcp_time_frame_set(dtcp, cdrr_time_frame);
-		}
-	} else {
-		dif = cdrr_reset_rate;
-
-		if(dtcp_sndr_rate(dtcp) != dif) {
-			CDRR_LOG("No congestion! Adjusting 0x%pK to %u",
-				dtcp, dif);
-
-			dtcp_sndr_rate_set(dtcp, dif);
-			dtcp_time_frame_set(dtcp, cdrr_time_frame);
-		}
-	}
-#else
-	/*
-	 * Congestion detected!
+	/* Congestion detected!
+	 * Just count those bytes as the congested received one.
 	 */
-	if(pci_flags_get(pci) & PDU_FLAGS_EXPLICIT_CONGESTION) {
-		/* Update when the last ECN has been received. */
-		ri->last_ecn.tv_sec  = ts.tv_sec;
-		ri->last_ecn.tv_nsec = ts.tv_nsec;
-
-#ifdef CDRR_VERBOSE_LOG
-		if(dtcp_sndr_rate(dtcp) != ri->mgb) {
-			CDRR_LOG("Congestion detected! Switch to min. granted"
-				"bandwidth for 0x%pK", dtcp);
-		}
-#endif
-
-		/* Adapt to the min. granted bandwidth. */
-		dtcp_sndr_rate_set(dtcp, ri->mgb);
-		dtcp_time_frame_set(dtcp, CDRR_DEFAULT_TIME_FRAME);
+	if(c) {
+		ri->congested += size;
 	}
-	/*
-	 * No congestion case here!
+
+	ri->total += size;
+
+#if 0
+	/* Mode = 1
+	 * Rate set between link max rate and MGB.
 	 */
-	else {
-		/* Already set, stop. */
-		if(dtcp_sndr_rate(dtcp) == ri->reset_rate) {
-			return 0;
+	if (ri->mode == 1) {
+		cong_step = ri->total / 10;
+
+		if(cong_step <= 0) {
+			cong_class = 0;
+		} else {
+			cong_class = ri->congested / cong_step;
 		}
 
-		/* Insert here any(if necessary) time-based default adjustment.
+		rate_step =  (ri->reset_rate - ri->mgb) / 10;
+		rate_add = rate_step * (10 - cong_class);
+
+		/* Is the current rate in the same class of the estimated one?
 		 */
+		if(dtcp_sndr_rate(ri->dtcp) != ri->mgb + rate_add) {
+			dtcp_sndr_rate_set(dtcp, ri->mgb + rate_add);
 
-		CDRR_LOG("Reset rating! Switch to max for 0x%pK", dtcp);
-
-		/* Adapt to the min. granted bandwidth. */
-		dtcp_sndr_rate_set(dtcp, ri->reset_rate);
-		dtcp_time_frame_set(dtcp, CDRR_DEFAULT_TIME_FRAME);
+			/* Try to send a FC PDU in order to react to the
+			 * congestion.
+			 */
+			cdrr_send_control(dtcp);
+			ri->feedback++;
+		}
 	}
 #endif
-
-	return 0;
-}
-
-static int cdrr_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn) {
-	struct dtcp *       dtcp;
-	struct dt *         dt;
-	uint_t              rtt, new_rtt, srtt, rttvar, trmsecs;
-	timeout_t           start_time;
-	int                 abs;
-	struct rtxq_entry * entry;
-
-	if (!ps)
-		return -1;
-	dtcp = ps->dm;
-	if (!dtcp)
-		return -1;
-	dt = dtcp_dt(dtcp);
-	if (!dt)
-		return -1;
-
-	LOG_DBG("RTT Estimator...");
-
-	entry = rtxq_entry_peek(dt_rtxq(dt), sn);
-	if (!entry) {
-		LOG_ERR("Could not retrieve timestamp of Seq num: %u for RTT "
-			"estimation", sn);
-		return -1;
-	}
-
-	/* if it is a retransmission we do not consider it*/
-	if (rtxq_entry_retries(entry) != 0) {
-		LOG_DBG("RTTestimator PDU %u has been retransmitted %u",
-			sn, rtxq_entry_retries(entry));
-		rtxq_entry_destroy(entry);
-		return 0;
-	}
-
-	start_time = rtxq_entry_timestamp(entry);
-	new_rtt    = jiffies_to_msecs(jiffies - start_time);
-
-	/* NOTE: the acking process has alrady deleted old entries from rtxq
-	 * except for the one with the sn we need, here we have to detroy just
-	 * the one we use */
-	rtxq_entry_destroy(entry);
-
-	rtt        = dtcp_rtt(dtcp);
-	srtt       = dtcp_srtt(dtcp);
-	rttvar     = dtcp_rttvar(dtcp);
-
-	if (!rtt) {
-		rttvar = new_rtt >> 1;
-		srtt   = new_rtt;
-	} else {
-		abs = srtt - new_rtt;
-		abs = abs < 0 ? -abs : abs;
-		rttvar = ((3 * rttvar) >> 2) + (((uint_t)abs) >> 2);
-	}
-
-	/*FIXME: k, G, alpha and betha should be parameters passed to the policy
-	 * set. Probably moving them to ps->priv */
-
-	/* k * rttvar = 4 * rttvar */
-	trmsecs  = rttvar << 2;
-	/* G is 0.1s according to RFC6298, then 100ms */
-	trmsecs  = 100 > trmsecs ? 100 : trmsecs;
-	trmsecs += srtt + jiffies_to_msecs(dt_sv_a(dt));
-	/* RTO (tr) less than 1s? (not for the common policy) */
-	/*trmsecs  = trmsecs < 1000 ? 1000 : trmsecs;*/
-
-	dtcp_rtt_set(dtcp, new_rtt);
-	dtcp_rttvar_set(dtcp, rttvar);
-	dtcp_srtt_set(dtcp, srtt);
-	dt_sv_tr_set(dt, msecs_to_jiffies(trmsecs));
-	LOG_DBG("TR set to %u msecs", trmsecs);
 
 	return 0;
 }
@@ -521,9 +435,7 @@ static int cdrr_param(
 		}
 	}
 
-
 	return 0;
-	/*return dtcp_ps_common_set_policy_set_param(bps, name, value); */
 }
 
 /*
@@ -543,23 +455,23 @@ static struct ps_base * cdrr_create(struct rina_component * component) {
         ps->dm                          = dtcp;
 
         ps->flow_init                   = NULL;
-        ps->lost_control_pdu            = cdrr_lost_control_pdu;
-        ps->rtt_estimator               = cdrr_rtt_estimator;
+        ps->lost_control_pdu            = NULL;
+        ps->rtt_estimator               = NULL;
         ps->retransmission_timer_expiry = NULL;
         ps->received_retransmission     = NULL;
-        ps->sender_ack                  = cdrr_sender_ack;
-        ps->sending_ack                 = cdrr_sending_ack;
+        ps->sender_ack                  = NULL;
+        ps->sending_ack                 = NULL;
         ps->receiving_ack_list          = NULL;
         ps->initial_rate                = NULL;
-        ps->receiving_flow_control      = cdrr_receiving_flow_control;
+        ps->receiving_flow_control      = NULL;
         ps->update_credit               = NULL;
 #ifdef CONFIG_RINA_DTCP_RCVR_ACK
-        ps->rcvr_ack                    = cdrr_rcvr_ack,
+        ps->rcvr_ack                    = NULL,
 #endif
 #ifdef CONFIG_RINA_DTCP_RCVR_ACK_ATIMER
-        ps->rcvr_ack                    = cdrr_rcvr_ack_atimer,
+        ps->rcvr_ack                    = NULL,
 #endif
-        ps->rcvr_flow_control           = cdrr_rcvr_flow_control;
+        ps->rcvr_flow_control           = NULL;
         ps->rate_reduction              = cdrr_rate_reduction;
         ps->rcvr_control_ack            = NULL;
         ps->no_rate_slow_down           = NULL;
@@ -568,31 +480,43 @@ static struct ps_base * cdrr_create(struct rina_component * component) {
         ri = rkzalloc(sizeof(struct cdrr_rate_info), GFP_KERNEL);
 
         if(!ri) {
-        	CDRR_LOG("No more memory to create new rate info.");
+        	LOG_ERR("No more memory.");
+        	kfree(ps);
+
         	return 0;
         }
 
+        memset(ri, 0, sizeof(struct cdrr_rate_info));
+
         ps->priv = ri;
 
-        ri->reset_time = cdrr_reset_time;
-        ri->reset_rate = cdrr_reset_rate;
-        ri->dtcp = dtcp;
-        ri->mgb  = dtcp_sending_rate(dtcp_config_get(dtcp));
-        ri->time_frame = dtcp_time_period(dtcp_config_get(dtcp));
+        ri->mode 	= cdrr_mode;
+        ri->reset_rate 	= cdrr_link_rate;
+        ri->dtcp 	= dtcp;
+        ri->mgb  	= dtcp_sending_rate(dtcp_config_get(dtcp));
+        ri->time_frame	= dtcp_time_period(dtcp_config_get(dtcp));
 
-        cdrr_add_rate(ri);
+        getnstimeofday(&ri->last);
 
-        CDRR_LOG("Created a new DTCP instance, "
-		"dtcp: 0x%pK, "
+        if(kobject_init_and_add(
+		&ri->robj, &cdrr_dtcp_ktype, &cdrr_kobj, "%pK", dtcp)) {
+
+        	LOG_ERR("Failed to create sysfs for dtcp 0x%pK", dtcp);
+
+        	rkfree(ri);
+        	rkfree(ps);
+        	return NULL;
+        }
+
+        LOG_INFO("CDRRI > New DTCP, "
+		"dtcp: %pK, "
 		"mgb: %u, "
 		"time frame: %u msec, "
-		"reset rate: %u, "
-		"reset time: %u",
+		"reset rate: %u, ",
 		ri->dtcp,
 		ri->mgb,
 		ri->time_frame,
-		ri->reset_rate,
-		ri->reset_time);
+		ri->reset_rate);
 
         return &ps->base;
 }
@@ -600,13 +524,10 @@ static struct ps_base * cdrr_create(struct rina_component * component) {
 static void cdrr_destroy(struct ps_base * bps) {
         struct dtcp_ps *ps = container_of(bps, struct dtcp_ps, base);
         struct cdrr_rate_info * ri = (struct cdrr_rate_info *)ps->priv;
-        struct dtcp * dtcp = ri->dtcp;
 
         if(ri) {
-		cdrr_rem_rate(ri);
-		dtcp = ri->dtcp;
+		kobject_put(&ri->robj);
 
-		CDRR_LOG("Removing a rate info, dtcp: 0x%pK", ri->dtcp);
 		rkfree(ri);
 	}
 
@@ -630,20 +551,18 @@ struct ps_factory dtcp_factory = {
 static int __init mod_init(void) {
 	int ret = 0;
 
-#ifdef CDRR_NO_ECN
-	memset(cdrr_flows, 0, sizeof(struct cdrr_sf) * CDRR_MAX_FLOWS);
-	memset(cdrr_mgb, 0, sizeof(unsigned int) * CDRR_MAX_FLOWS);
-	memset(cdrr_fa, 0, sizeof(struct timespec) * CDRR_MAX_FLOWS);
-#endif
-
         strcpy(dtcp_factory.name, CDRR_NAME);
 
-        CDRR_LOG("CDRR policy set loaded successfully");
+        LOG_INFO("CDRR policy set loaded successfully");
 
         ret = dtcp_ps_publish(&dtcp_factory);
         if (ret) {
-        	CDRR_LOG("Failed to publish CDRR policy set factory");
+        	LOG_INFO("Failed to publish CDRR policy set factory");
                 return -1;
+        }
+
+        if(kobject_init_and_add(&cdrr_kobj, &cdrr_ktype, 0, "cdrr")) {
+        	LOG_ERR("Failed to create cdrr sysfs main entry.");
         }
 
         return 0;
@@ -652,10 +571,14 @@ static int __init mod_init(void) {
 static void __exit mod_exit(void) {
         int ret;
 
+        kobject_put(&cdrr_kobj);
+
         ret = dtcp_ps_unpublish(CDRR_NAME);
 
+        LOG_INFO("CDRR policy set successfully removed");
+
         if (ret) {
-        	CDRR_LOG("Failed to unpublish CDRR policy set factory");
+        	LOG_INFO("Failed to unpublish CDRR policy set factory");
                 return;
         }
 }

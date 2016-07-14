@@ -1,0 +1,11 @@
+{
+        "PluginName": "pffb",
+        "PluginVersion": "1",
+        "PolicySets" : [
+                {
+                        "Name": "pffb",
+                        "Component": "pff",
+                        "Version" : "1"
+                }
+        ]
+}
