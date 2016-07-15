@@ -1092,7 +1092,7 @@ int rmt_enable_port_id(struct rmt *instance,
 	/* incs refs_c */
 	n1_port = n1pmap_find(instance, id);
 	if (!n1_port) {
-		LOG_ERR("No queue for this port-id or already deallocated, %d",
+		LOG_WARN("No queue for N-1 port-id %d or already deallocated",
 			id);
 		return -1;
 	}
