@@ -56,6 +56,7 @@ int                  dtcp_ack_flow_control_pdu_send(struct dtcp * instance,
                                                     seq_num_t     seq);
 
 seq_num_t            dtcp_rcv_rt_win(struct dtcp * instance);
+seq_num_t            dtcp_rcv_lf_win(struct dtcp * instance);
 seq_num_t            dtcp_snd_rt_win(struct dtcp * instance);
 seq_num_t            dtcp_snd_lf_win(struct dtcp * instance);
 int                  dtcp_snd_lf_win_set(struct dtcp * instance,
@@ -85,6 +86,7 @@ pdu_type_t       pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq);
 struct pdu *     pdu_ctrl_create_ni(struct dtcp * dtcp, pdu_type_t type);
 seq_num_t        snd_lft_win(struct dtcp * dtcp);
 seq_num_t        snd_rt_wind_edge(struct dtcp * dtcp);
+seq_num_t        rcvr_lft_win(struct dtcp * dtcp);
 seq_num_t        rcvr_rt_wind_edge(struct dtcp * dtcp);
 void             dump_we(struct dtcp * dtcp, struct pci *  pci);
 int              dtcp_pdu_send(struct dtcp * dtcp, struct pdu * pdu);
