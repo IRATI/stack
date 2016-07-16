@@ -697,6 +697,26 @@ static void acks_inc(struct dtcp * dtcp)
         spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 }
 
+static int snd_rt_win_edge_and_size_set(struct dtcp * dtcp, seq_num_t new_rt_win)
+{
+        unsigned long flags;
+        seq_num_t     next_to_send;
+        ssize_t       cwq_length;
+
+        ASSERT(dtcp);
+        ASSERT(dtcp->sv);
+        ASSERT(dtcp->parent);
+
+        spin_lock_irqsave(&dtcp->sv->lock, flags);
+        dtcp->sv->snd_rt_wind_edge = new_rt_win;
+        next_to_send = dtp_sv_last_nxt_seq_nr(dt_dtp(dtcp->parent));
+        cwq_length = cwq_size(dt_cwq(dtcp->parent));
+        dtcp->sv->snd_window_size = new_rt_win + cwq_length - next_to_send;
+        spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+
+        return 0;
+}
+
 static int snd_rt_wind_edge_set(struct dtcp * dtcp, seq_num_t new_rt_win)
 {
         unsigned long flags;
@@ -741,8 +761,9 @@ EXPORT_SYMBOL(snd_rt_wind_edge);
 
 static seq_num_t tx_credit(struct dtcp * dtcp)
 {
-        seq_num_t     tmp1;
-        seq_num_t     tmp2;
+        seq_num_t     rt_win_edge;
+        seq_num_t     next_sq;
+        ssize_t       cwq_length;
         unsigned long flags;
 
         ASSERT(dtcp);
@@ -750,14 +771,15 @@ static seq_num_t tx_credit(struct dtcp * dtcp)
         ASSERT(dtcp->parent);
 
         spin_lock_irqsave(&dtcp->sv->lock, flags);
-        tmp1 = dtcp->sv->snd_rt_wind_edge;
-        tmp2 = dtp_sv_last_nxt_seq_nr(dt_dtp(dtcp->parent));
+        rt_win_edge = dtcp->sv->snd_rt_wind_edge;
+        cwq_length = cwq_size(dt_cwq(dtcp->parent));
+        next_sq = dtp_sv_last_nxt_seq_nr(dt_dtp(dtcp->parent));
         spin_unlock_irqrestore(&dtcp->sv->lock, flags);
 
-        if (tmp2 >= tmp1)
+        if (next_sq >= rt_win_edge + cwq_length)
         	return 0;
         else
-        	return tmp1 - tmp2;
+        	return rt_win_edge + cwq_length - next_sq;
 }
 
 seq_num_t snd_lft_win(struct dtcp * dtcp)
@@ -1203,7 +1225,7 @@ static int populate_ctrl_pci(struct pci *  pci,
                         pci_control_new_rt_wind_edge_set(pci,
 				rcvr_rt_wind_edge(dtcp));
 
-                        pci_control_my_left_wind_edge_set(pci, LWE);
+                        pci_control_my_left_wind_edge_set(pci, snd_lft);
                         pci_control_my_rt_wind_edge_set(pci, snd_rt);
                 }
 
@@ -1387,6 +1409,8 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
         struct pci * pci;
         uint_t 	     rt;
         uint_t       tf;
+        seq_num_t    old_rt_win_edge;
+        seq_num_t    next_seq_num;
 
         ASSERT(dtcp);
         ASSERT(pdu);
@@ -1398,10 +1422,8 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
         tf = pci_control_time_frame(pci);
 
         if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
-        	snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
-        	dtcp_snd_window_size_set(dtcp, pci_control_new_rt_wind_edge(pci) -
-        				       pci_control_my_left_wind_edge(pci));
-        	snd_lf_win_set(dtcp, pci_control_my_left_wind_edge(pci));
+        	snd_rt_win_edge_and_size_set(dtcp,
+        				     pci_control_new_rt_wind_edge(pci));
         }
 
         if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
@@ -1453,9 +1475,8 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         rcu_read_unlock();
 
 	if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
-		snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
-        	dtcp_snd_window_size_set(dtcp, pci_control_new_rt_wind_edge(pci) -
-        				       pci_control_my_left_wind_edge(pci));
+        	snd_rt_win_edge_and_size_set(dtcp,
+        				     pci_control_new_rt_wind_edge(pci));
 		LOG_DBG("Right Window Edge: %u", snd_rt_wind_edge(dtcp));
 	}
 
