@@ -772,9 +772,9 @@ static seq_num_t tx_credit(struct dtcp * dtcp)
 
         spin_lock_irqsave(&dtcp->sv->lock, flags);
         rt_win_edge = dtcp->sv->snd_rt_wind_edge;
-        cwq_length = cwq_size(dt_cwq(dtcp->parent));
         next_sq = dtp_sv_last_nxt_seq_nr(dt_dtp(dtcp->parent));
         spin_unlock_irqrestore(&dtcp->sv->lock, flags);
+        cwq_length = cwq_size(dt_cwq(dtcp->parent));
 
         if (next_sq >= rt_win_edge + cwq_length)
         	return 0;
