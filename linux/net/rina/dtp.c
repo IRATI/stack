@@ -110,29 +110,29 @@ static struct dtp_sv default_sv = {
         .rate_fulfiled                 = false,
 };
 
-#define stats_get(name, sv, retval, flags)			\
+#define stats_get(name, sv, retval)				\
         ASSERT(sv);						\
-        spin_lock_irqsave(&sv->lock, flags);			\
+        spin_lock_bh(&sv->lock);				\
         retval = sv->stats.name;				\
-        spin_unlock_irqrestore(&sv->lock, flags);
+        spin_unlock_bh(&sv->lock);
 
-#define stats_inc(name, sv, flags)				\
+#define stats_inc(name, sv)					\
         ASSERT(sv);						\
-        spin_lock_irqsave(&sv->lock, flags);			\
+        spin_lock_bh(&sv->lock);				\
         sv->stats.name##_pdus++;				\
         LOG_DBG("PDUs __STRINGIFY(name) %u",			\
 		sv->stats.name##_pdus);				\
-        spin_unlock_irqrestore(&sv->lock, flags);
+        spin_unlock_bh(&sv->lock);
 
-#define stats_inc_bytes(name, sv, bytes, flags)			\
+#define stats_inc_bytes(name, sv, bytes)			\
         ASSERT(sv);						\
-        spin_lock_irqsave(&sv->lock, flags);			\
+        spin_lock_bh(&sv->lock);				\
         sv->stats.name##_pdus++;				\
 	sv->stats.name##_bytes += (unsigned long) bytes;	\
         LOG_DBG("PDUs __STRINGIFY(name) %u (%u)",		\
 		sv->stats.name##_pdus,				\
 		sv->stats.name##_bytes);			\
-        spin_unlock_irqrestore(&sv->lock, flags);
+        spin_unlock_bh(&sv->lock);
 
 static ssize_t dtp_attr_show(struct robject *		     robj,
                          	     struct robj_attribute * attr,
@@ -140,7 +140,6 @@ static ssize_t dtp_attr_show(struct robject *		     robj,
 {
 	struct dtp * instance;
 	unsigned int stats_ret;
-	unsigned long flags;
 
 	instance = container_of(robj, struct dtp, robj);
 	if (!instance || !instance->cfg || !instance->sv)
@@ -171,27 +170,27 @@ static ssize_t dtp_attr_show(struct robject *		     robj,
 			dtp_conf_seq_num_ro_th(instance->cfg));
 	}
 	if (strcmp(robject_attr_name(attr), "drop_pdus") == 0) {
-		stats_get(drop_pdus, instance->sv, stats_ret, flags);
+		stats_get(drop_pdus, instance->sv, stats_ret);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
 	if (strcmp(robject_attr_name(attr), "err_pdus") == 0) {
-		stats_get(err_pdus, instance->sv, stats_ret, flags);
+		stats_get(err_pdus, instance->sv, stats_ret);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
 	if (strcmp(robject_attr_name(attr), "tx_pdus") == 0) {
-		stats_get(tx_pdus, instance->sv, stats_ret, flags);
+		stats_get(tx_pdus, instance->sv, stats_ret);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
 	if (strcmp(robject_attr_name(attr), "tx_bytes") == 0) {
-		stats_get(tx_bytes, instance->sv, stats_ret, flags);
+		stats_get(tx_bytes, instance->sv, stats_ret);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
 	if (strcmp(robject_attr_name(attr), "rx_pdus") == 0) {
-		stats_get(rx_pdus, instance->sv, stats_ret, flags);
+		stats_get(rx_pdus, instance->sv, stats_ret);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
 	if (strcmp(robject_attr_name(attr), "rx_bytes") == 0) {
-		stats_get(rx_bytes, instance->sv, stats_ret, flags);
+		stats_get(rx_bytes, instance->sv, stats_ret);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
 	if (strcmp(robject_attr_name(attr), "ps_name") == 0) {
@@ -228,14 +227,12 @@ struct dtp_config * dtp_config_get(struct dtp * dtp)
 
 int nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn)
 {
-        unsigned long flags;
-
         if (!sv)
                 return -1;
 
-        spin_lock_irqsave(&sv->lock, flags);
+        spin_lock_bh(&sv->lock);
         sv->seq_nr_to_send = sn;
-        spin_unlock_irqrestore(&sv->lock, flags);
+        spin_unlock_bh(&sv->lock);
 
         return 0;
 }
@@ -243,13 +240,12 @@ int nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn)
 static seq_num_t nxt_seq_get(struct dtp_sv * sv)
 {
         seq_num_t     tmp;
-        unsigned long flags;
 
         ASSERT(sv);
 
-        spin_lock_irqsave(&sv->lock, flags);
+        spin_lock_bh(&sv->lock);
         tmp = ++sv->seq_nr_to_send;
-        spin_unlock_irqrestore(&sv->lock, flags);
+        spin_unlock_bh(&sv->lock);
 
         return tmp;
 }
@@ -258,7 +254,6 @@ seq_num_t dtp_sv_last_nxt_seq_nr(struct dtp * instance)
 {
         seq_num_t       tmp;
         struct dtp_sv * sv;
-        unsigned long   flags;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed");
@@ -267,9 +262,9 @@ seq_num_t dtp_sv_last_nxt_seq_nr(struct dtp * instance)
         sv = instance->sv;
         ASSERT(sv);
 
-        spin_lock_irqsave(&sv->lock, flags);
+        spin_lock_bh(&sv->lock);
         tmp = sv->seq_nr_to_send;
-        spin_unlock_irqrestore(&sv->lock, flags);
+        spin_unlock_bh(&sv->lock);
 
         return tmp;
 }
@@ -277,7 +272,6 @@ seq_num_t dtp_sv_last_nxt_seq_nr(struct dtp * instance)
 seq_num_t dtp_sv_max_seq_nr_sent(struct dtp * instance)
 {
         seq_num_t       tmp;
-        unsigned long   flags;
         struct dtp_sv * sv;
 
         if (!instance) {
@@ -287,16 +281,15 @@ seq_num_t dtp_sv_max_seq_nr_sent(struct dtp * instance)
         sv = instance->sv;
         ASSERT(sv);
 
-        spin_lock_irqsave(&sv->lock, flags);
+        spin_lock_bh(&sv->lock);
         tmp = sv->max_seq_nr_sent;
-        spin_unlock_irqrestore(&sv->lock, flags);
+        spin_unlock_bh(&sv->lock);
 
         return tmp;
 }
 
 int dtp_sv_max_seq_nr_set(struct dtp * instance, seq_num_t num)
 {
-        unsigned long   flags;
         struct dtp_sv * sv;
 
         if (!instance) {
@@ -306,22 +299,21 @@ int dtp_sv_max_seq_nr_set(struct dtp * instance, seq_num_t num)
         sv = instance->sv;
         ASSERT(sv);
 
-        spin_lock_irqsave(&sv->lock, flags);
+        spin_lock_bh(&sv->lock);
         if (sv->max_seq_nr_sent < num)
                 sv->max_seq_nr_sent = num;
-        spin_unlock_irqrestore(&sv->lock, flags);
+        spin_unlock_bh(&sv->lock);
 
         return 0;
 }
 
 static bool sv_rate_fulfiled(struct dtp_sv * sv)
 {
-        unsigned long flags;
         bool          tmp;
 
-        spin_lock_irqsave(&sv->lock, flags);
+        spin_lock_bh(&sv->lock);
         tmp = sv->rate_fulfiled;
-        spin_unlock_irqrestore(&sv->lock, flags);
+        spin_unlock_bh(&sv->lock);
 
         return tmp;
 }
@@ -342,7 +334,6 @@ bool dtp_sv_rate_fulfiled(struct dtp * instance)
 
 int dtp_sv_rate_fulfiled_set(struct dtp * instance, bool fulfiled)
 {
-        unsigned long   flags;
         struct dtp_sv * sv;
 
         if (!instance) {
@@ -354,9 +345,9 @@ int dtp_sv_rate_fulfiled_set(struct dtp * instance, bool fulfiled)
 
         LOG_DBG("rbfc Rate set to %u (0=some more, 1=consumed)", fulfiled);
 
-        spin_lock_irqsave(&sv->lock, flags);
+        spin_lock_bh(&sv->lock);
         sv->rate_fulfiled = fulfiled;
-        spin_unlock_irqrestore(&sv->lock, flags);
+        spin_unlock_bh(&sv->lock);
 
         return 0;
 }
@@ -715,7 +706,6 @@ struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         struct seq_queue_entry * pos, * n;
         struct dtp_ps *          ps;
         struct dtcp_ps *         dtcp_ps;
-        unsigned long            flags;
         struct rqueue *          to_post;
         struct pci *             pci, * pci_ret = NULL;
 
@@ -754,7 +744,7 @@ struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                 return NULL;
         }
 
-        spin_lock_irqsave(&seqq->lock, flags);
+        spin_lock_bh(&seqq->lock);
         LWE = dt_sv_rcv_lft_win(dt);
         LOG_DBG("LWEU: Original LWE = %u", LWE);
         LOG_DBG("LWEU: MAX GAPS     = %u", max_sdu_gap);
@@ -762,7 +752,7 @@ struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         list_for_each_entry_safe(pos, n, &seqq->queue->head, next) {
                 pdu = pos->pdu;
                 if (!pdu_is_ok(pdu)) {
-                        spin_unlock_irqrestore(&seqq->lock, flags);
+                        spin_unlock_bh(&seqq->lock);
 
                         LOG_ERR("Bogus data, bailing out");
                         return NULL;
@@ -829,8 +819,8 @@ struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
         }
 finish:
-	pci_ret = pci_dup_ni(pci_ret);
-        spin_unlock_irqrestore(&seqq->lock, flags);
+        pci_ret = pci_dup_ni(pci_ret);
+        spin_unlock_bh(&seqq->lock);
 
         while (!rqueue_is_empty(to_post)) {
                 pdu = (struct pdu *) rqueue_head_pop(to_post);
@@ -1348,7 +1338,6 @@ int dtp_write(struct dtp * instance,
         struct dtp_ps *         ps;
         seq_num_t               sn, csn;
         struct efcp *           efcp;
-	unsigned long           flags;
         int			sbytes;
         uint_t                  sc;
 
@@ -1456,6 +1445,9 @@ int dtp_write(struct dtp * instance,
                 ps = container_of(rcu_dereference(instance->base.ps),
                                   struct dtp_ps, base);
                 if (sv->window_based || sv->rate_based) {
+                	if (sv->window_based && !sv->rexmsn_ctrl)
+                		dtcp_snd_lf_win_set(dtcp, csn);
+
 			/* NOTE: Might close window */
 			if (window_is_closed(instance,
 						dt,
@@ -1511,7 +1503,7 @@ int dtp_write(struct dtp * instance,
                 }
 
                 rcu_read_unlock();
-		stats_inc_bytes(tx, sv, sbytes, flags);
+		stats_inc_bytes(tx, sv, sbytes);
 #if DTP_INACTIVITY_TIMERS_ENABLE
                 /* Start SenderInactivityTimer */
                 if (rtimer_restart(instance->timers.sender_inactivity,
@@ -1530,7 +1522,7 @@ int dtp_write(struct dtp * instance,
                         instance->rmt,
                         pdu))
 		return -1;
-	stats_inc_bytes(tx, sv, sbytes, flags);
+	stats_inc_bytes(tx, sv, sbytes);
 	return 0;
 
 pci_err_exit:
@@ -1544,7 +1536,7 @@ pdu_err_exit:
 stats_err_exit:
         rcu_read_unlock();
 stats_nounlock_err_exit:
-	stats_inc(err, sv, flags);
+	stats_inc(err, sv);
 	return -1;
 }
 
@@ -1554,11 +1546,9 @@ void dtp_drf_required_set(struct dtp * dtp)
 /*
 static bool is_drf_required(struct dtp * dtp)
 {
-        unsigned long flags;
-
-        spin_lock_irqsave(&dtp->sv->lock, flags);
+        spin_lock_bh(&dtp->sv->lock);
         ret = dtp->sv->drf_required;
-        spin_unlock_irqrestore(&dtp->sv->lock, flags);
+        spin_unlock_bh(&dtp->sv->lock);
         return ret;
 }
 */
@@ -1626,7 +1616,6 @@ int dtp_receive(struct dtp * instance,
         bool             in_order;
         bool             rtx_ctrl = false;
         seq_num_t        max_sdu_gap;
-        unsigned long    flags;
         struct rqueue *  to_post;
 	int              sbytes;
 	struct efcp *		efcp = 0;
@@ -1704,10 +1693,10 @@ int dtp_receive(struct dtp * instance,
 #endif
                 if ((pci_flags_get(pci) & PDU_FLAGS_DATA_RUN)) {
                         instance->sv->drf_required = false;
-                        spin_lock_irqsave(&instance->seqq->lock, flags);
+                        spin_lock_bh(&instance->seqq->lock);
                         dtp_squeue_flush(instance);
                         dt_sv_rcv_lft_win_set(dt, seq_num);
-                        spin_unlock_irqrestore(&instance->seqq->lock, flags);
+                        spin_unlock_bh(&instance->seqq->lock);
                         if (dtcp) {
                                 if (dtcp_sv_update(dtcp, pci)) {
                                         LOG_ERR("Failed to update dtcp sv");
@@ -1715,13 +1704,13 @@ int dtp_receive(struct dtp * instance,
                                 }
                         }
                         pdu_post(instance, pdu);
-			stats_inc_bytes(rx, sv, sbytes, flags);
+			stats_inc_bytes(rx, sv, sbytes);
                         LOG_DBG("Data run flag DRF");
                         return 0;
                 }
                 LOG_ERR("Expecting DRF but not present, dropping PDU %d...",
                         seq_num);
-		stats_inc(drop, sv, flags);
+		stats_inc(drop, sv);
                 pdu_destroy(pdu);
                 return 0;
         }
@@ -1734,7 +1723,7 @@ int dtp_receive(struct dtp * instance,
         if ((seq_num <= LWE) || (is_fc_overrun(dt, dtcp, seq_num, sbytes)))
         {
                 pdu_destroy(pdu);
-                stats_inc(drop, sv, flags);
+                stats_inc(drop, sv);
 
                 /*FIXME: Rtimer should not be restarted here, to be deleted */
 #if DTP_INACTIVITY_TIMERS_ENABLE
@@ -1813,7 +1802,7 @@ int dtp_receive(struct dtp * instance,
                 if (pdu_post(instance, pdu))
                         return -1;
 
-		stats_inc_bytes(rx, sv, sbytes, flags);
+		stats_inc_bytes(rx, sv, sbytes);
                 return 0;
 
         fail:
@@ -1821,7 +1810,8 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 
-        spin_lock_irqsave(&instance->seqq->lock, flags);
+        spin_lock_bh(&instance->seqq->lock);
+	/* FIXME we must avoid allocating memory here */
         to_post = rqueue_create_ni();
         if (!to_post) {
                 LOG_ERR("Could not create to_post queue");
@@ -1848,7 +1838,7 @@ int dtp_receive(struct dtp * instance,
                 dt_sv_rcv_lft_win_set(dt, seq_num);
                 rqueue_tail_push_ni(to_post, pdu);
         }
-        spin_unlock_irqrestore(&instance->seqq->lock, flags);
+        spin_unlock_bh(&instance->seqq->lock);
 
         if (list_empty(&instance->seqq->queue->head))
                 rtimer_stop(instance->timers.a);
@@ -1865,8 +1855,8 @@ int dtp_receive(struct dtp * instance,
                 if (pdu) {
                 	sbytes = buffer_length(pdu_buffer_get_ro(pdu));
                         pdu_post(instance, pdu);
-			stats_inc_bytes(rx, sv, sbytes, flags);
-                }
+			stats_inc_bytes(rx, sv, sbytes);
+		}
         }
         rqueue_destroy(to_post, (void (*)(void *)) pdu_destroy);
 

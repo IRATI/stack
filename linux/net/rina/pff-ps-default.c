@@ -466,7 +466,6 @@ int default_nhop(struct pff_ps * ps,
         address_t            destination;
         qos_id_t             qos_id;
         struct pft_entry *   tmp;
-        unsigned long        flags;
 
         priv = (struct pff_ps_priv *) ps->priv;
         if (!priv_is_ok(priv)) {
@@ -494,22 +493,22 @@ int default_nhop(struct pff_ps * ps,
          * Taking the lock here since otherwise priv might be deleted when
          * copying the ports
          */
-        spin_lock_irqsave(&priv->lock, flags);
+        spin_lock_bh(&priv->lock);
 
         tmp = pft_find(priv, destination, qos_id);
         if (!tmp) {
                 LOG_ERR("Could not find any entry for dest address: %u and "
                         "qos_id %d", destination, qos_id);
-                spin_unlock_irqrestore(&priv->lock, flags);
+                spin_unlock_bh(&priv->lock);
                 return -1;
         }
 
         if (pfte_ports_copy(tmp, ports, count)) {
-                spin_unlock_irqrestore(&priv->lock, flags);
+                spin_unlock_bh(&priv->lock);
                 return -1;
         }
 
-        spin_unlock_irqrestore(&priv->lock, flags);
+        spin_unlock_bh(&priv->lock);
 
         return 0;
 }
