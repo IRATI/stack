@@ -347,6 +347,8 @@ static int decrypt(struct sdup_crypto_ps_default_data * priv_data,
 	buffer_size = pdu_len(pdu);
 	data = pdu_buffer(pdu);
 
+	LOG_WARN("DECRYPT original buffer_size %d", buffer_size);
+
 	iv = NULL;
 	ivsize = crypto_blkcipher_ivsize(state->blkcipher);
 	if (ivsize) {
@@ -356,7 +358,7 @@ static int decrypt(struct sdup_crypto_ps_default_data * priv_data,
 			return -1;
 		}
 		data = pdu_buffer(pdu);
-		buffer_size -= ivsize;
+		buffer_size = pdu_len(pdu);
 	}
 
 	desc.flags = 0;
@@ -507,10 +509,22 @@ static int compress(struct sdup_crypto_ps_default_data * priv_data,
 		return -1;
 	}
 
-	ASSERT(compressed_size <= buffer_size);
-	if (pdu_head_shrink(pdu, buffer_size -compressed_size)){
-		LOG_ERR("Failed to shrink PDU for compressed data!");
-		return -1;
+	LOG_ERR("DBG Compressed size (%d), uncompressed size (%d)",
+							compressed_size,
+							buffer_size);
+	if (buffer_size > compressed_size){
+		if (pdu_head_shrink(pdu, buffer_size -compressed_size)){
+			LOG_ERR("Failed to shrink PDU for compressed data!");
+			return -1;
+		}
+	}else{
+		LOG_WARN("Compressed size (%d) is > than uncompressed size (%d) after compression",
+							compressed_size,
+							buffer_size);
+		if (pdu_head_grow(pdu, compressed_size - buffer_size)){
+			LOG_ERR("Failed to groe PDU for compressed data!");
+			return -1;
+		}
 	}
 	data = pdu_buffer(pdu);
 
@@ -561,11 +575,25 @@ static int decompress(struct sdup_crypto_ps_default_data * priv_data,
 		return -1;
 	}
 
-	ASSERT(decompressed_size >= buffer_size);
-	if (pdu_head_grow(pdu, decompressed_size - buffer_size)){
-		LOG_ERR("Failed to grow PDU header for uncompressed data!");
-		rkfree(decompressed_data);
-		return -1;
+	LOG_ERR("DBG Compressed size (%d), decompressed size (%d)",
+							buffer_size,
+							decompressed_size);
+	if (buffer_size > decompressed_size){
+		LOG_WARN("Compressed size (%d) is > than decompressed size (%d) after decompression",
+							buffer_size,
+							decompressed_size);
+
+		if (pdu_head_shrink(pdu, buffer_size - decompressed_size)){
+			LOG_ERR("Failed to shrink PDU header for uncompressed data!");
+			rkfree(decompressed_data);
+			return -1;
+		}
+	}else{
+		if (pdu_head_grow(pdu, decompressed_size - buffer_size)){
+			LOG_ERR("Failed to grow PDU header for uncompressed data!");
+			rkfree(decompressed_data);
+			return -1;
+		}
 	}
 	data = pdu_buffer(pdu);
 

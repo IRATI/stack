@@ -93,6 +93,8 @@ inline struct pdu *pdu_from_sdu(struct sdu *sdu)
 	ASSERT(sdu);
 
 	du = to_du(sdu);
+	du->pci.h = NULL;
+	du->pci.len = 0;
 	du->sdup_head = NULL;
 	du->sdup_tail = NULL;
 	return to_pdu(du);
@@ -337,11 +339,24 @@ int pdu_head_grow(struct pdu *pdu, size_t bytes)
 
 	du = to_du(pdu);
 	if (unlikely(skb_headroom(du->skb) < bytes)){
-		LOG_ERR("Could not grow PDU head, no mem...");
-		return -1;
+		LOG_WARN("Could not grow PDU head, no mem... (%d < %zd)", skb_headroom(du->skb), bytes);
+		ASSERT(du->pci.h == NULL);
+		if (pskb_expand_head(du->skb, bytes, 0, GFP_ATOMIC)) {
+			LOG_ERR("Could not expand PDU...");
+			return -1;
+		}
+		LOG_DBG("PDU expanded %zu bytes, new len %d",
+			bytes,
+			du->skb->len);
 	}
-	/* pci.h remains the same, skb->data is pushed bytes over pci.h */
-	skb_push(du->skb, (du->skb->data - du->pci.h) + bytes);
+	if (du->pci.h == NULL || du->pci.h >= du->skb->data) {
+		/* not PCI in this PDU yet */
+		skb_push(du->skb, bytes);
+	} else {
+		/* PCI is part of this PDU and must be considered */
+		/* pci.h remains the same, skb->data is pushed bytes over pci.h. Used when relaying*/
+		skb_push(du->skb, (du->skb->data - du->pci.h) + bytes);
+	}
 	return 0;
 }
 EXPORT_SYMBOL(pdu_head_grow);
