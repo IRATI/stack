@@ -181,18 +181,17 @@ static int normal_sdu_write(struct ipcp_instance_data * data,
                             struct sdu *                sdu)
 {
         struct normal_flow * flow;
-        unsigned long        flags;
 
-        spin_lock_irqsave(&data->lock, flags);
+        spin_lock_bh(&data->lock);
         flow = find_flow(data, id);
         if (!flow || flow->state != PORT_STATE_ALLOCATED) {
-                spin_unlock_irqrestore(&data->lock, flags);
+                spin_unlock_bh(&data->lock);
                 LOG_ERR("Write: There is no flow bound to this port_id: %d",
                         id);
                 sdu_destroy(sdu);
                 return -1;
         }
-        spin_unlock_irqrestore(&data->lock, flags);
+        spin_unlock_bh(&data->lock);
 
         if (efcp_container_write(data->efcpc, flow->active, sdu)) {
                 LOG_ERR("Could not send sdu to EFCP Container");
@@ -224,7 +223,6 @@ static int normal_flow_prebind(struct ipcp_instance_data * data,
                                port_id_t                   port_id)
 {
         struct normal_flow * flow;
-        unsigned long        flags;
 
         if (!data || !is_port_id_ok(port_id)) {
                 LOG_ERR("Wrong input parameters...");
@@ -243,9 +241,9 @@ static int normal_flow_prebind(struct ipcp_instance_data * data,
         INIT_LIST_HEAD(&flow->list);
         INIT_LIST_HEAD(&flow->cep_ids_list);
         flow->state = PORT_STATE_PENDING;
-        spin_lock_irqsave(&data->lock, flags);
+        spin_lock_bh(&data->lock);
         list_add(&flow->list, &data->flows);
-        spin_unlock_irqrestore(&data->lock, flags);
+        spin_unlock_bh(&data->lock);
 
         return 0;
 }
@@ -262,7 +260,6 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
         cep_id_t               cep_id;
         struct normal_flow *   flow;
         struct cep_ids_entry * cep_entry;
-        unsigned long          flags;
 
         cep_id = efcp_connection_create(data->efcpc, NULL, source, dest,
                                         port_id, qos_id,
@@ -282,11 +279,11 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
         INIT_LIST_HEAD(&cep_entry->list);
         cep_entry->cep_id = cep_id;
 
-        spin_lock_irqsave(&data->lock, flags);
+        spin_lock_bh(&data->lock);
 
         flow = find_flow(data, port_id);
         if (!flow) {
-                spin_unlock_irqrestore(&data->lock, flags);
+                spin_unlock_bh(&data->lock);
                 LOG_ERR("Could not retrieve normal flow to create connection");
                 efcp_connection_destroy(data->efcpc, cep_id);
                 return cep_id_bad();
@@ -296,7 +293,7 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
         flow->active = cep_id;
         flow->state = PORT_STATE_PENDING;
 
-        spin_unlock_irqrestore(&data->lock, flags);
+        spin_unlock_bh(&data->lock);
 
         return cep_id;
 }
@@ -309,7 +306,6 @@ static int connection_update_request(struct ipcp_instance_data * data,
 {
         struct normal_flow *   flow;
         struct ipcp_instance * n1_ipcp;
-        unsigned long          flags;
 
         if (!user_ipcp)
                 return cep_id_bad();
@@ -329,25 +325,25 @@ static int connection_update_request(struct ipcp_instance_data * data,
         ASSERT(user_ipcp->ops);
         ASSERT(user_ipcp->ops->flow_binding_ipcp);
 
-        spin_lock_irqsave(&data->lock, flags);
+        spin_lock_bh(&data->lock);
 
         flow = find_flow(data, port_id);
         if (!flow) {
-                spin_unlock_irqrestore(&data->lock, flags);
+                spin_unlock_bh(&data->lock);
                 LOG_ERR("The flow with port-id %d is not pending, "
                         "cannot commit it", port_id);
                 efcp_connection_destroy(data->efcpc, src_cep_id);
                 return -1;
         }
         if (flow->state != PORT_STATE_PENDING) {
-                spin_unlock_irqrestore(&data->lock, flags);
+                spin_unlock_bh(&data->lock);
                 LOG_ERR("Flow on port-id %d already committed", port_id);
                 efcp_connection_destroy(data->efcpc, src_cep_id);
                 return -1;
         }
         flow->state = PORT_STATE_ALLOCATED;
 
-        spin_unlock_irqrestore(&data->lock, flags);
+        spin_unlock_bh(&data->lock);
 
         if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
                                               port_id,
@@ -407,14 +403,13 @@ static int normal_flow_unbinding_user_ipcp(struct ipcp_instance_data * data,
                                            port_id_t                   pid)
 {
         struct normal_flow * flow;
-        unsigned long        flags;
 
         ASSERT(data);
 
-        spin_lock_irqsave(&data->lock, flags);
+        spin_lock_bh(&data->lock);
         flow = find_flow(data, pid);
         if (!flow || !is_cep_id_ok(flow->active)) {
-                spin_unlock_irqrestore(&data->lock, flags);
+                spin_unlock_bh(&data->lock);
                 LOG_ERR("Could not find flow with port %d to unbind user IPCP",
                         pid);
                 return -1;
@@ -423,10 +418,10 @@ static int normal_flow_unbinding_user_ipcp(struct ipcp_instance_data * data,
         if (flow->user_ipcp) {
         	flow->user_ipcp = NULL;
         }
-        spin_unlock_irqrestore(&data->lock, flags);
+        spin_unlock_bh(&data->lock);
 
         if (efcp_container_unbind_user_ipcp(data->efcpc, flow->active)){
-                spin_unlock_irqrestore(&data->lock, flags);
+                spin_unlock_bh(&data->lock);
                 return -1;
         }
 
@@ -450,7 +445,6 @@ static int connection_destroy_request(struct ipcp_instance_data * data,
                                       cep_id_t                    src_cep_id)
 {
         struct normal_flow * flow;
-        unsigned long        flags;
 
         if (!data) {
                 LOG_ERR("Bogus instance passed");
@@ -459,15 +453,15 @@ static int connection_destroy_request(struct ipcp_instance_data * data,
         if (efcp_connection_destroy(data->efcpc, src_cep_id))
                 LOG_ERR("Could not destroy EFCP instance: %d", src_cep_id);
 
-        spin_lock_irqsave(&data->lock, flags);
+        spin_lock_bh(&data->lock);
         if (!(&data->flows)) {
-                spin_unlock_irqrestore(&data->lock, flags);
+                spin_unlock_bh(&data->lock);
                 LOG_ERR("Could not destroy EFCP instance: %d", src_cep_id);
                 return -1;
         }
         flow = find_flow_cepid(data, src_cep_id);
         if (!flow) {
-                spin_unlock_irqrestore(&data->lock, flags);
+                spin_unlock_bh(&data->lock);
                 LOG_ERR("Could not retrieve flow by cep_id :%d", src_cep_id);
                 return -1;
         }
@@ -478,7 +472,7 @@ static int connection_destroy_request(struct ipcp_instance_data * data,
                 list_del(&flow->list);
                 rkfree(flow);
         }
-        spin_unlock_irqrestore(&data->lock, flags);
+        spin_unlock_bh(&data->lock);
 
         return 0;
 }
@@ -498,7 +492,6 @@ connection_create_arrived(struct ipcp_instance_data * data,
         struct normal_flow *   flow;
         struct cep_ids_entry * cep_entry;
         struct ipcp_instance * ipcp;
-        unsigned long          flags;
 
         if (!user_ipcp)
                 return cep_id_bad();
@@ -532,10 +525,10 @@ connection_create_arrived(struct ipcp_instance_data * data,
 
         ASSERT(user_ipcp->ops);
         ASSERT(user_ipcp->ops->flow_binding_ipcp);
-        spin_lock_irqsave(&data->lock, flags);
+        spin_lock_bh(&data->lock);
         flow = find_flow(data, port_id);
         if (!flow) {
-                spin_unlock_irqrestore(&data->lock, flags);
+                spin_unlock_bh(&data->lock);
                 LOG_ERR("Could not create a flow in normal-ipcp");
                 efcp_connection_destroy(data->efcpc, cep_id);
                 return cep_id_bad();
@@ -543,7 +536,7 @@ connection_create_arrived(struct ipcp_instance_data * data,
         if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
                                               port_id,
                                               ipcp)) {
-                spin_unlock_irqrestore(&data->lock, flags);
+                spin_unlock_bh(&data->lock);
                 LOG_ERR("Could not bind flow with user_ipcp");
                 efcp_connection_destroy(data->efcpc, cep_id);
                 return cep_id_bad();
@@ -551,7 +544,7 @@ connection_create_arrived(struct ipcp_instance_data * data,
         list_add(&cep_entry->list, &flow->cep_ids_list);
         flow->active = cep_id;
         flow->state = PORT_STATE_ALLOCATED;
-        spin_unlock_irqrestore(&data->lock, flags);
+        spin_unlock_bh(&data->lock);
 
         return cep_id;
 }
@@ -579,7 +572,6 @@ static int normal_deallocate(struct ipcp_instance_data * data,
                              port_id_t                   port_id)
 {
         struct normal_flow *   flow;
-        unsigned long          flags;
         const struct name *    user_ipcp_name;
         enum normal_flow_state state;
 
@@ -588,10 +580,10 @@ static int normal_deallocate(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        spin_lock_irqsave(&data->lock, flags);
+        spin_lock_bh(&data->lock);
         flow = find_flow(data, port_id);
         if (!flow) {
-                spin_unlock_irqrestore(&data->lock, flags);
+                spin_unlock_bh(&data->lock);
                 LOG_ERR("Could not find flow %d to deallocate", port_id);
                 return -1;
         }
@@ -606,7 +598,7 @@ static int normal_deallocate(struct ipcp_instance_data * data,
         state          = flow->state;
         flow->state    = PORT_STATE_DEALLOCATED;
         list_del(&flow->list);
-        spin_unlock_irqrestore(&data->lock, flags);
+        spin_unlock_bh(&data->lock);
 
         if (state == PORT_STATE_PENDING && flow->user_ipcp) {
                 flow->user_ipcp->ops->flow_unbinding_ipcp(flow->user_ipcp->data,
@@ -738,7 +730,6 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
 {
         struct mgmt_data * mgmt_data;
         int                retval;
-        unsigned long      flags;
 
         if (!data) {
                 LOG_ERR("Bogus instance data");
@@ -755,17 +746,17 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        spin_lock_irqsave(&mgmt_data->lock, flags);
+        spin_lock_bh(&mgmt_data->lock);
         if (mgmt_data->state == MGMT_DATA_DESTROYED) {
                 LOG_DBG("IPCP %d is being destroyed", data->id);
-                spin_unlock_irqrestore(&mgmt_data->lock, flags);
+                spin_unlock_bh(&mgmt_data->lock);
                 return -1;
         }
 
         atomic_inc(&mgmt_data->readers);
 
         while (rfifo_is_empty(mgmt_data->sdu_ready)) {
-                spin_unlock_irqrestore(&mgmt_data->lock, flags);
+                spin_unlock_bh(&mgmt_data->lock);
 
                 LOG_DBG("Mgmt read going to sleep...");
                 retval = wait_event_interruptible(mgmt_data->wait_q,
@@ -777,7 +768,7 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
                         return -1;
                 }
 
-                spin_lock_irqsave(&mgmt_data->lock, flags);
+                spin_lock_bh(&mgmt_data->lock);
                 if (retval) {
                         LOG_DBG("Mgmt queue waken up by interruption, "
                                 "returned error %d", retval);
@@ -805,13 +796,13 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
  finish:
         if (atomic_dec_and_test(&mgmt_data->readers) &&
             (mgmt_data->state == MGMT_DATA_DESTROYED)) {
-                spin_unlock_irqrestore(&mgmt_data->lock, flags);
+                spin_unlock_bh(&mgmt_data->lock);
                 if (mgmt_remove(mgmt_data))
                         LOG_ERR("Could not destroy mgmt_data");
                 return retval;
         }
 
-        spin_unlock_irqrestore(&mgmt_data->lock, flags);
+        spin_unlock_bh(&mgmt_data->lock);
         return retval;
 }
 
@@ -897,7 +888,6 @@ static int normal_mgmt_sdu_post(struct ipcp_instance_data * data,
 {
         /* FIXME: We should get rid of sdu_wpi ASAP */
         struct sdu_wpi * tmp;
-        unsigned long    flags;
 
         if (!data) {
                 LOG_ERR("Bogus instance passed");
@@ -938,15 +928,15 @@ static int normal_mgmt_sdu_post(struct ipcp_instance_data * data,
 
         tmp->port_id = port_id;
         tmp->sdu     = sdu;
-        spin_lock_irqsave(&data->mgmt_data->lock, flags);
+        spin_lock_bh(&data->mgmt_data->lock);
         if (rfifo_push_ni(data->mgmt_data->sdu_ready,
                           tmp)) {
                 sdu_destroy(sdu);
                 rkfree(tmp);
-                spin_unlock_irqrestore(&data->mgmt_data->lock, flags);
+                spin_unlock_bh(&data->mgmt_data->lock);
                 return -1;
         }
-        spin_unlock_irqrestore(&data->mgmt_data->lock, flags);
+        spin_unlock_bh(&data->mgmt_data->lock);
 
         LOG_DBG("Gonna wake up waitqueue: %d", port_id);
         wake_up_interruptible(&data->mgmt_data->wait_q);
@@ -1273,19 +1263,17 @@ static struct mgmt_data * normal_mgmt_data_create(void)
 
 static int mgmt_data_destroy(struct mgmt_data * data)
 {
-        unsigned long flags;
-
         if (!data)
                 return -1;
 
-        spin_lock_irqsave(&data->lock, flags);
+        spin_lock_bh(&data->lock);
         data->state = MGMT_DATA_DESTROYED;
         if ((atomic_read(&data->readers) == 0)) {
-                spin_unlock_irqrestore(&data->lock, flags);
+                spin_unlock_bh(&data->lock);
                 mgmt_remove(data);
                 return 0;
         }
-        spin_unlock_irqrestore(&data->lock, flags);
+        spin_unlock_bh(&data->lock);
 
         wake_up_interruptible_all(&data->wait_q);
 
