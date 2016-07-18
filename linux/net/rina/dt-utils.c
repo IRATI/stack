@@ -223,7 +223,7 @@ static void enable_write(struct cwq * cwq,
                 return;
 
         max_len = dtcp_max_closed_winq_length(cfg);
-        if (cwq_size(cwq) < max_len)
+        if (rqueue_length(cwq->q) < max_len)
                 efcp_enable_write(dt_efcp(dt));
 
         return;
@@ -348,11 +348,7 @@ void cwq_deliver(struct cwq * queue,
 
                 dt_pdu_send(dt, rmt, pdu);
         }
-        spin_unlock(&queue->lock);
 
-        LOG_DBG("CWQ has delivered until %u", dtp_sv_max_seq_nr_sent(dtp));
-
-        // Cannot deliver means credit has already been consumed again.
         if (!can_deliver(dtp, dtcp)) {
         	if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
 			dt_sv_window_closed_set(dt, true);
@@ -368,6 +364,7 @@ void cwq_deliver(struct cwq * queue,
                 }
 
                 enable_write(queue, dt);
+                spin_unlock(&queue->lock);
                 return;
         }
 
@@ -381,6 +378,10 @@ void cwq_deliver(struct cwq * queue,
         }
 
         enable_write(queue, dt);
+
+        spin_unlock(&queue->lock);
+
+        LOG_DBG("CWQ has delivered until %u", dtp_sv_max_seq_nr_sent(dtp));
         return;
 }
 
