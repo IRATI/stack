@@ -36,6 +36,7 @@
 #include "common/encoders/EnrollmentInformationMessage.pb.h"
 #include "ipcp/enrollment-task.h"
 #include "common/encoder.h"
+#include "common/rina-configuration.h"
 
 namespace rinad {
 
@@ -75,6 +76,57 @@ void NeighborRIBObj::read(const rina::cdap_rib::con_handle_t &con,
 	}
 
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+}
+
+void NeighborRIBObj::create_cb(const rina::rib::rib_handle_t rib,
+	  const rina::cdap_rib::con_handle_t &con,
+	  const std::string& fqn, const std::string& class_,
+	  const rina::cdap_rib::filt_info_t &filt,
+	  const int invoke_id, const rina::ser_obj_t &obj_req,
+	  rina::cdap_rib::obj_info_t &obj_reply,
+	  rina::cdap_rib::res_info_t& res)
+{
+	NeighborRIBObj* neighbor;
+
+    (void) con;
+    (void) filt;
+    (void) invoke_id;
+    (void) obj_reply;
+
+    //Set return value
+    res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+
+    if (class_ != NeighborRIBObj::class_name)
+    {
+            LOG_ERR("Create operation failed: received an invalid class "
+            		"name '%s' during create operation in '%s'",
+                    class_.c_str(), fqn.c_str());
+            res.code_ = rina::cdap_rib::CDAP_INVALID_OBJ_CLASS;
+            return;
+    }
+    rina::Neighbor neigh;
+    // TODO do the decoders/encoders
+    encoders::NeighborEncoder encoder;
+    encoder.decode(obj_req, neigh);
+    createNeighbor(neigh);
+}
+
+bool NeighborRIBObj::createNeighbor(rina::Neighbor &object)
+{
+	LOG_DBG("Enrolling to neighbor %s", object.get_name().processName.c_str());
+
+	rina::EnrollToDAFRequestEvent* event;
+	event->neighborName = object.get_name();
+	event->dafName = rinad::IPCPFactory::getIPCP()->
+    		get_dif_information().dif_name_;
+	event->supportingDIFName = object.
+			get_supporting_dif_name();
+	rinad::IPCPFactory::getIPCP()->enrollment_task_->processEnrollmentRequestEvent(event);
+
+    LOG_INFO("IPC Process enrollment to neighbor %s completed successfully",
+    	 object.get_name().processName.c_str());
+
+	return true;
 }
 
 
