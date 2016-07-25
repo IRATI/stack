@@ -97,4 +97,11 @@ config RINA_RMEM_REGRESSION_TESTS
 	help
 	  No help for the time being
 
+config RINA_RINGQ_REGRESSION_TESTS
+	bool "RINGQ regression tests"
+	default n
+	depends on RINA_RDS_REGRESSION_TESTS
+	help
+	  No help for the time being
+
 endmenu
