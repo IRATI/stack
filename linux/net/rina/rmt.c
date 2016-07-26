@@ -894,8 +894,6 @@ static void send_worker(unsigned long o)
 		    n1_port->stats.plen)
 			reschedule++;
 
-		rcu_read_unlock();
-
 		n1_port->wbusy = false;
 		if (atomic_dec_and_test(&n1_port->refs_c) &&
 		    n1_port->state == N1_PORT_STATE_DEALLOCATED) {
@@ -910,6 +908,7 @@ static void send_worker(unsigned long o)
 
 	}
 	spin_unlock(&rmt->n1_ports->lock);
+	rcu_read_unlock();
 
 	if (reschedule) {
 		LOG_DBG("Sheduling policy will schedule again...");
