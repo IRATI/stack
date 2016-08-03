@@ -50,10 +50,6 @@
  */
 #define PFFB_RAND_DIST 		1
 
-/* One packet per port in round robing fashion.
- */
-#define PFFB_WATER_DIST 	2
-
 /*
  * Data structure:
  */
@@ -116,7 +112,6 @@ static struct timespec pffb_load = {0};
 
 #define PFFB_NOP 64
 
-static int pffb_cleanup = 0;
 static unsigned int pffb_flows[PFFB_NOP] = {0};
 static LIST_HEAD(pffb_flows_info);
 
@@ -262,38 +257,9 @@ static struct pft_port_entry * pffb_find_key(
 	struct flow_info * t = 0;
 	struct timespec now;
 
-	int i = 0;
 	port_id_t pid = -1;
 
 	switch(pffb_distr) {
-#if 0
-	/* Water, round-robin per packet distribution. */
-	case PFFB_WATER_DIST:
-		list_for_each_entry(p, &entry->ports, next) {
-			i++;
-		}
-
-		/* We are going to divide using this... */
-		if(i == 0) {
-			LOG_ERR("No alternatives for %x!", key);
-			break;
-		}
-
-		entry->nop = i;
-		/* Round-robin next one... */
-		entry->lpu = (entry->lpu + 1) % entry->nop;
-
-		i = 0;
-		list_for_each_entry(p, &entry->ports, next) {
-			if(i == entry->lpu) {
-				return p;
-			}
-
-			i++;
-		}
-
-		break;
-#endif
 	default:
 		getnstimeofday(&now); /* Only once! */
 
@@ -345,11 +311,6 @@ static struct pft_port_entry * pffb_add_key(
 	int t = INT_MAX;
 
 	switch(pffb_distr) {
-#if 0
-	/* Water, round-robin, per packet distribution. */
-	case PFFB_WATER_DIST:
-		return 0;
-#endif
 	/* "Pick a random port" distribution. */
 	case PFFB_RAND_DIST:
 		f = rkzalloc(sizeof(struct flow_info), GFP_KERNEL);
@@ -821,19 +782,6 @@ struct pft_port_entry * pffb_select_entry(
 	c_id.pci_destination = pci_destination(pci);
 	c_id.pci_cep_destination = pci_cep_destination(pci);
 	c_id.pci_qos_id = pci_qos_id(pci);
-
-#if 0
-	if(pffb_cleanup) {
-		list_for_each_entry_safe(fi, t, &pffb_flows_info, next) {
-			__pffb_rem_flow(fi);
-		}
-
-		fi = 0;
-		t = 0;
-
-		pffb_cleanup = 0; /* No more cleanups... */
-	}
-#endif
 
 #if 0
 	if(pci_type(pci) == PDU_TYPE_MGMT) {
