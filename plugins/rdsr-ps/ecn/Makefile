@@ -4,6 +4,8 @@
 # Author: Kewin Rausch <kewin.rausch@create-net.org>
 #
 
+KDIR=/pristine/linux
+
 ifneq ($(KERNELRELEASE),)
 
 ccflags-y = -Wtype-limits -Inet/rina
