@@ -1,5 +1,5 @@
 #
-# Makefile for IRATI Explicit Congestion Notification policy.
+# Makefile for IRATI PDU Forwarding Flow Balancing policy.
 #
 # Author: Kewin Rausch <kewin.rausch@create-net.org>
 #
@@ -10,8 +10,8 @@ ifneq ($(KERNELRELEASE),)
 
 ccflags-y = -Wtype-limits -Inet/rina
 
-obj-m	+= cdrr.o
-cdrr-y	:= dtcp-ps-cdrr.o
+obj-m	+= pffb.o
+pffb-y	:= pff-ps-pffb.o
 
 else
 
@@ -20,7 +20,7 @@ $(warning "KDIR will be set to the linux directory of the repository")
 KDIR=../../../linux
 endif
 
-ifndef
+ifndef KREL
 KREL=$(shell make -s -C $(KDIR) kernelrelease)
 endif
 
@@ -32,7 +32,7 @@ clean:
 
 install:
 	$(MAKE) -C $(KDIR) M=$$PWD modules_install
-	cp cdrr.manifest /lib/modules/$(KREL)/extra/
+	cp pffb.manifest /lib/modules/$(KREL)/extra/
 	depmod -a
 
 uninstall:

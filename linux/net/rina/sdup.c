@@ -944,6 +944,7 @@ int sdup_update_crypto_state(struct sdup * instance,
 			return -1;
 		}
 	}
+	rcu_read_unlock();
 
 	return 0;
 }

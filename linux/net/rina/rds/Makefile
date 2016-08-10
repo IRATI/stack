@@ -15,6 +15,7 @@ obj-$(CONFIG_RINA) +=				\
 	 rbmp.o					\
 	 rqueue.o				\
 	 rfifo.o				\
+	 ringq.o                                \
 	 rref.o					\
 	 rtimer.o				\
 	 robjects.o				\

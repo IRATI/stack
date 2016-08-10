@@ -105,8 +105,6 @@ int cwq_destroy(struct cwq * queue)
 int cwq_push(struct cwq * queue,
              struct pdu * pdu)
 {
-        unsigned long flags;
-
         if (!queue)
                 return -1;
 
@@ -117,14 +115,14 @@ int cwq_push(struct cwq * queue,
 
         LOG_DBG("Pushing in the Closed Window Queue");
 
-        spin_lock_irqsave(&queue->lock, flags);
+        spin_lock_bh(&queue->lock);
         if (rqueue_tail_push_ni(queue->q, pdu)) {
                 pdu_destroy(pdu);
-                spin_unlock_irqrestore(&queue->lock, flags);
+                spin_unlock_bh(&queue->lock);
                 LOG_ERR("Failed to add PDU");
                 return -1;
         }
-        spin_unlock_irqrestore(&queue->lock, flags);
+        spin_unlock_bh(&queue->lock);
 
         return 0;
 }
@@ -189,14 +187,13 @@ EXPORT_SYMBOL(cwq_flush);
 ssize_t cwq_size(struct cwq * queue)
 {
         ssize_t       tmp;
-        unsigned long flags;
 
         if (!queue)
                 return -1;
 
-        spin_lock_irqsave(&queue->lock, flags);
+        spin_lock_bh(&queue->lock);
         tmp = rqueue_length(queue->q);
-        spin_unlock_irqrestore(&queue->lock, flags);
+        spin_unlock_bh(&queue->lock);
 
         return tmp;
 }
@@ -226,7 +223,7 @@ static void enable_write(struct cwq * cwq,
                 return;
 
         max_len = dtcp_max_closed_winq_length(cfg);
-        if (cwq_size(cwq) < max_len)
+        if (rqueue_length(cwq->q) < max_len)
                 efcp_enable_write(dt_efcp(dt));
 
         return;
@@ -351,11 +348,7 @@ void cwq_deliver(struct cwq * queue,
 
                 dt_pdu_send(dt, rmt, pdu);
         }
-        spin_unlock(&queue->lock);
 
-        LOG_DBG("CWQ has delivered until %u", dtp_sv_max_seq_nr_sent(dtp));
-
-        // Cannot deliver means credit has already been consumed again.
         if (!can_deliver(dtp, dtcp)) {
         	if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
 			dt_sv_window_closed_set(dt, true);
@@ -371,6 +364,7 @@ void cwq_deliver(struct cwq * queue,
                 }
 
                 enable_write(queue, dt);
+                spin_unlock(&queue->lock);
                 return;
         }
 
@@ -384,6 +378,10 @@ void cwq_deliver(struct cwq * queue,
         }
 
         enable_write(queue, dt);
+
+        spin_unlock(&queue->lock);
+
+        LOG_DBG("CWQ has delivered until %u", dtp_sv_max_seq_nr_sent(dtp));
         return;
 }
 
@@ -393,34 +391,33 @@ seq_num_t cwq_peek(struct cwq * queue)
         seq_num_t          ret;
         struct pdu *       pdu;
         const struct pci * pci;
-        unsigned long      flags;
 
         if (!queue)
                 return -1;
 
-        spin_lock_irqsave(&queue->lock, flags);
+        spin_lock_bh(&queue->lock);
         if (rqueue_is_empty(queue->q)){
-                spin_unlock_irqrestore(&queue->lock, flags);
+                spin_unlock_bh(&queue->lock);
                 return 0;
         }
         pdu = (struct pdu *) rqueue_head_pop(queue->q);
         if (!pdu) {
-                spin_unlock_irqrestore(&queue->lock, flags);
+                spin_unlock_bh(&queue->lock);
                 return -1;
         }
         pci = pdu_pci_get_ro(pdu);
         if (!pci) {
-                spin_unlock_irqrestore(&queue->lock, flags);
+                spin_unlock_bh(&queue->lock);
                 pdu_destroy(pdu);
                 return -1;
         }
         ret = pci_sequence_number_get(pci);
         if (rqueue_head_push_ni(queue->q, pdu)) {
-                spin_unlock_irqrestore(&queue->lock, flags);
+                spin_unlock_bh(&queue->lock);
                 pdu_destroy(pdu);
                 return ret;
         }
-        spin_unlock_irqrestore(&queue->lock, flags);
+        spin_unlock_bh(&queue->lock);
 
         return ret;
 }
@@ -849,19 +846,17 @@ static void rtx_timer_func(void * data)
 
 int rtxq_destroy(struct rtxq * q)
 {
-        unsigned long flags;
-
         if (!q)
                 return -1;
 
-        spin_lock_irqsave(&q->lock, flags);
+        spin_lock_bh(&q->lock);
 #if RTIMER_ENABLED
         if (q->r_timer && rtimer_destroy(q->r_timer))
                 LOG_ERR("Problems destroying timer for RTXQ %pK", q->r_timer);
 #endif
         if (q->queue && rtxqueue_destroy(q->queue))
                 LOG_ERR("Problems destroying queue for RTXQ %pK", q->queue);
-        spin_unlock_irqrestore(&q->lock, flags);
+        spin_unlock_bh(&q->lock);
 
         rkfree(q);
 
@@ -942,41 +937,38 @@ struct rtxq * rtxq_create_ni(struct dt *  dt,
 
 int rtxq_size(struct rtxq * q)
 {
-        unsigned long       flags;
 	unsigned int ret;
         if (!q)
                 return -1;
 
-        spin_lock_irqsave(&q->lock, flags);
+        spin_lock_bh(&q->lock);
         ret = q->queue->len;
-        spin_unlock_irqrestore(&q->lock, flags);
+        spin_unlock_bh(&q->lock);
         return ret;
 }
 EXPORT_SYMBOL(rtxq_size);
 
 int rtxq_drop_pdus(struct rtxq * q)
 {
-        unsigned long       flags;
 	int ret;
         if (!q)
                 return -1;
 
-        spin_lock_irqsave(&q->lock, flags);
+        spin_lock_bh(&q->lock);
         ret = q->queue->drop_pdus;
-        spin_unlock_irqrestore(&q->lock, flags);
+        spin_unlock_bh(&q->lock);
         return ret;
 }
 
 struct rtxq_entry * rtxq_entry_peek(struct rtxq * q, seq_num_t sn)
 {
-        unsigned long       flags;
         struct rtxq_entry * entry;
         if (!q)
                 return NULL;
 
-        spin_lock_irqsave(&q->lock, flags);
+        spin_lock_bh(&q->lock);
         entry = rtxqueue_entry_peek(q->queue, sn);
-        spin_unlock_irqrestore(&q->lock, flags);
+        spin_unlock_bh(&q->lock);
         return entry;
 }
 EXPORT_SYMBOL(rtxq_entry_peek);
@@ -1000,18 +992,16 @@ EXPORT_SYMBOL(rtxq_entry_retries);
 int rtxq_push_ni(struct rtxq * q,
                  struct pdu *  pdu)
 {
-        unsigned long flags;
-
         if (!q || !pdu_is_ok(pdu))
                 return -1;
 
-        spin_lock_irqsave(&q->lock, flags);
+        spin_lock_bh(&q->lock);
 #if RTIMER_ENABLED
         /* is the first transmitted PDU */
         rtimer_start(q->r_timer, dt_sv_tr(q->parent));
 #endif
         rtxqueue_push_ni(q->queue, pdu);
-        spin_unlock_irqrestore(&q->lock, flags);
+        spin_unlock_bh(&q->lock);
         return 0;
 }
 
@@ -1035,17 +1025,15 @@ int rtxq_ack(struct rtxq * q,
              seq_num_t     seq_num,
              unsigned int  tr)
 {
-        unsigned long flags;
-
         if (!q)
                 return -1;
 
-        spin_lock_irqsave(&q->lock, flags);
+        spin_lock_bh(&q->lock);
         rtxqueue_entries_ack(q->queue, seq_num);
 #if RTIMER_ENABLED
         rtimer_restart(q->r_timer, tr);
 #endif
-        spin_unlock_irqrestore(&q->lock, flags);
+        spin_unlock_bh(&q->lock);
 
         return 0;
 }

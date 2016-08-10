@@ -19,6 +19,7 @@
  * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - *
  */
 
+#include <linux/kobject.h>
 #include <linux/hashtable.h>
 #include <linux/kernel.h>
 #include <linux/export.h>
@@ -40,39 +41,19 @@
 /* Policy name. */
 #define ECN_PS_NAME "ecn"
 
-/* Change this to give disable/change log levels.
- * Redefine to obtain a completely silent module, or to specialize more the
- * output of the log.
- */
-#define ECN_LOG(x, ARGS...)		LOG_INFO(" ECNL "x, ##ARGS)
-
-/* Use a timed log in order to avoid to flood the message mechanism.
- */
-#define ECN_TIMED_LOG
-
-#ifdef ECN_TIMED_LOG
-
-/* Ms to report. */
-#define ECN_TL_MS	1000
-
 /* Timespec to ms. */
 static inline unsigned long ecn_to_ms(struct timespec * t) {
 	return (t->tv_sec * 1000) + (t->tv_nsec / 1000000);
 }
 
-/* Last report time. */
-static struct timespec ecn_tl_last = {0, 0};
-/* Port creation time. */
-static struct timespec ecn_tl_start = {0, 0};
-/* Something has been dropped? */
-static int ecn_tl_drop = 0;
-
-#endif /* ECN_TIMED_LOG */
-
-#define ECN_THRE			5
+#define ECN_THRE			35
 
 /* Threshold assigned to the RMT queue. */
 static unsigned int ecn_thre = ECN_THRE;
+
+/*
+ * Other definitions.
+ */
 
 #define DEFAULT_Q_MAX 1000
 
@@ -80,23 +61,161 @@ static unsigned int ecn_thre = ECN_THRE;
 
 #define ECN_P_GRANULARITY 		10
 
-struct rmt_queue {
-	struct rfifo * queue;
-	port_id_t pid;
-	struct hlist_node hlist;
-};
-
 struct rmt_queue_set {
 	DECLARE_HASHTABLE(queues, RMT_PS_HASHSIZE);
 };
 
-struct rmt_ps_default_data {
+struct rmt_ps_data {
 	struct rmt_queue_set *outqs;
 	/* Max size for queues. */
 	unsigned int q_max;
 	/* Threshold after that we will begin to mark packets. */
 	int thre;
 };
+
+struct rmt_queue {
+	struct kobject qobj;
+	struct rfifo * queue;
+	struct rfifo * mgmt;
+	port_id_t pid;
+	struct hlist_node hlist;
+};
+
+/*
+ * Kobject defs (taken from linux/samples/kobject)
+ */
+
+/* Kernel object for the policy. */
+struct kobject ecn_obj;
+
+/* Attribute used in ECN policy. */
+struct ecn_attribute {
+	struct attribute attr;
+	ssize_t (* show)(
+		struct kobject * kobj,
+		struct attribute * attr,
+		char * buf);
+	ssize_t (* store)(
+		struct kobject * foo,
+		struct attribute * attr,
+		const char * buf,
+		size_t count);
+};
+
+/* Show procedure! */
+static ssize_t ecn_attr_show(
+	struct kobject * kobj,
+	struct attribute * attr,
+	char * buf) {
+
+	struct rmt_queue * rmtq = 0;
+
+	if(strcmp(attr->name, "queue_size") == 0) {
+		rmtq = container_of(kobj, struct rmt_queue, qobj);
+		return snprintf(
+			buf, PAGE_SIZE, "%zd\n", rfifo_length(rmtq->queue));
+	}
+
+	if(strcmp(attr->name, "mgmt_size") == 0) {
+		rmtq = container_of(kobj, struct rmt_queue, qobj);
+		return snprintf(
+			buf, PAGE_SIZE, "%zd\n", rfifo_length(rmtq->mgmt));
+	}
+
+	if(strcmp(attr->name, "threshold") == 0) {
+		rmtq = container_of(kobj, struct rmt_queue, qobj);
+		return snprintf(buf, PAGE_SIZE, "%u\n", ecn_thre);
+	}
+
+	if(strcmp(attr->name, "max_size") == 0) {
+		rmtq = container_of(kobj, struct rmt_queue, qobj);
+		return snprintf(buf, PAGE_SIZE, "%u\n", DEFAULT_Q_MAX);
+	}
+
+	return 0;
+}
+
+/* Store procedure! */
+static ssize_t ecn_attr_store(
+	struct kobject * kobj,
+	struct attribute * attr,
+	const char * buf,
+	size_t count) {
+
+	int ft = 0;
+	int op = 0;
+
+	if(strcmp(attr->name, "threshold") == 0) {
+		op = kstrtoint(buf, 10, &ft);
+
+		if(op < 0) {
+			LOG_ERR("Failed to set the reset rate.");
+			return op;
+		}
+
+		/* Single flow rate is now changed! */
+		ecn_thre = ft;
+	}
+
+	return count;
+}
+
+/* Sysfs operations. */
+static const struct sysfs_ops ecn_sysfs_ops = {
+	.show  = ecn_attr_show,
+	.store = ecn_attr_store,
+};
+
+/*
+ * Attributes visible in ECN sysfs directory.
+ */
+
+static struct ecn_attribute ecn_qs_attr =
+	__ATTR(queue_size, 0444, ecn_attr_show, ecn_attr_store);
+
+static struct ecn_attribute ecn_gs_attr =
+	__ATTR(mgmt_size, 0444, ecn_attr_show, ecn_attr_store);
+
+static struct ecn_attribute ecn_t_attr =
+	__ATTR(threshold, 0664, ecn_attr_show, ecn_attr_store);
+
+static struct ecn_attribute ecn_ms_attr =
+	__ATTR(max_size, 0444, ecn_attr_show, ecn_attr_store);
+
+static struct attribute * ecn_attrs[] = {
+	&ecn_t_attr.attr,
+	NULL,
+};
+
+static struct attribute * ecn_queue_attrs[] = {
+	&ecn_qs_attr.attr,
+	&ecn_gs_attr.attr,
+	&ecn_ms_attr.attr,
+	NULL,
+};
+
+/* Operations associated with the release of the kobj. */
+static void ecn_release(struct kobject *kobj) {
+	/* Nothing... */
+}
+
+/* Master ECN ktype, different for the type of shown attributes. */
+static struct kobj_type ecn_ktype = {
+	.sysfs_ops = &ecn_sysfs_ops,
+	.release = ecn_release,
+	.default_attrs = ecn_attrs,
+};
+
+/* Queues ECN ktype, different for the type of shown attributes. */
+static struct kobj_type ecn_queue_ktype = {
+	.sysfs_ops = &ecn_sysfs_ops,
+	.release = ecn_release,
+	.default_attrs = ecn_queue_attrs,
+};
+
+/*
+ * Procedures:
+ */
 
 static struct rmt_queue * ecn_queue_create(port_id_t port) {
 	struct rmt_queue *tmp;
@@ -114,8 +233,23 @@ static struct rmt_queue * ecn_queue_create(port_id_t port) {
 		return NULL;
 	}
 
+	tmp->mgmt = rfifo_create_ni();
+
+	if (!tmp->mgmt) {
+		rfifo_destroy(tmp->queue, (void (*)(void *)) pdu_destroy);
+		rkfree(tmp);
+		return NULL;
+	}
+
 	tmp->pid = port;
 	INIT_HLIST_NODE(&tmp->hlist);
+
+	/* Don't care of error code... */
+	if(kobject_init_and_add(
+		&tmp->qobj, &ecn_queue_ktype, &ecn_obj, "%d", port)) {
+
+		LOG_ERR("Cannot create ecn sysfs object for %d", port);
+	}
 
 	return tmp;
 }
@@ -126,62 +260,20 @@ static int ecn_queue_destroy(struct rmt_queue *q) {
 		return -1;
 	}
 
-	hash_del(&q->hlist);
+	/* Block any logging... */
+	flush_scheduled_work();
 
 	if (q->queue) {
 		rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
 	}
 
+	if (q->mgmt) {
+		rfifo_destroy(q->mgmt, (void (*)(void *)) pdu_destroy);
+	}
+
+	kobject_put(&q->qobj);
+
 	rkfree(q);
-
-	return 0;
-}
-
-static struct rmt_queue * ecn_queue_find(
-	struct rmt_queue_set *qs,
-	port_id_t port) {
-
-	struct rmt_queue *entry;
-	const struct hlist_head *head;
-
-	head = &qs->queues[rmap_hash(qs->queues, port)];
-
-	hlist_for_each_entry(entry, head, hlist) {
-		if (entry->pid == port) {
-			return entry;
-		}
-	}
-
-	return NULL;
-}
-
-static struct rmt_queue_set * ecn_queue_set_create(void) {
-	struct rmt_queue_set *tmp;
-
-	tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
-
-	if (!tmp) {
-		return NULL;
-	}
-
-	hash_init(tmp->queues);
-
-	return tmp;
-}
-
-static int ecn_queue_set_destroy(struct rmt_queue_set *qs) {
-	struct rmt_queue  *entry;
-	struct hlist_node *tmp;
-	int bucket;
-
-	hash_for_each_safe(qs->queues, bucket, tmp, entry, hlist) {
-		if (ecn_queue_destroy(entry)) {
-			LOG_ERR("Could not destroy entry %pK", entry);
-			return -1;
-		}
-	}
-
-	rkfree(qs);
 
 	return 0;
 }
@@ -191,7 +283,7 @@ static void * ecn_create_q(
 	struct rmt_n1_port * n1_port) {
 
 	struct rmt_queue *queue;
-	struct rmt_ps_default_data *data;
+	struct rmt_ps_data *data;
 
 	if (!ps || !n1_port || !ps->priv) {
 		LOG_ERR("Wrong input parameters");
@@ -208,8 +300,6 @@ static void * ecn_create_q(
 		return NULL;
 	}
 
-	hash_add(data->outqs->queues, &queue->hlist, n1_port->port_id);
-
 	LOG_DBG("Structures for scheduling policies created...");
 	return queue;
 }
@@ -219,7 +309,7 @@ static int ecn_destroy_q(
 	struct rmt_n1_port *n1_port) {
 
 	struct rmt_queue *queue;
-	struct rmt_ps_default_data *data;
+	struct rmt_ps_data *data;
 
 	if (!ps || !n1_port || !ps->priv) {
 		LOG_ERR("Wrong input parameters");
@@ -228,7 +318,7 @@ static int ecn_destroy_q(
 
 	data = ps->priv;
 
-	queue = ecn_queue_find(data->outqs, n1_port->port_id);
+	queue = n1_port->rmt_ps_queues;
 
 	if (!queue) {
 		LOG_ERR("Could not find queue for n1_port %u",
@@ -236,7 +326,6 @@ static int ecn_destroy_q(
 		return -1;
 	}
 
-	hash_del(&queue->hlist);
 	ecn_queue_destroy(queue);
 
 	return 0;
@@ -248,14 +337,17 @@ int ecn_enqueue(
 	struct pdu * pdu) {
 
 	struct rmt_queue *q;
-	struct rmt_ps_default_data *data = ps->priv;
+	struct pci * pci = 0;
+	struct rmt_ps_data * data = ps->priv;
+
+	ssize_t c = 0;
 
 	if (!ps || !n1_port || !pdu) {
 		LOG_ERR("Wrong input parameters");
 		return RMT_PS_ENQ_ERR;
 	}
 
-	q = ecn_queue_find(data->outqs, n1_port->port_id);
+	q = n1_port->rmt_ps_queues;
 
 	if (!q) {
 		LOG_ERR("Could not find queue for n1_port %u",
@@ -264,18 +356,33 @@ int ecn_enqueue(
 		return RMT_PS_ENQ_ERR;
 	}
 
-	if (rfifo_length(q->queue) >= data->q_max) {
-		if(pci_type(pdu_pci_get_ro(pdu)) != PDU_TYPE_MGMT) {
-#ifdef ECN_TIMED_LOG
-			/* Dropping detected! */
-			ecn_tl_drop = 1;
-#endif
-			pdu_destroy(pdu);
-			return RMT_PS_ENQ_DROP;
-		}
+	pci = pdu_pci_get_rw(pdu);
+	c = rfifo_length(q->queue);
+
+	/* NOTE: This is a workaround... */
+	if(pci_type(pci) == PDU_TYPE_MGMT) {
+		rfifo_push_ni(q->mgmt, pdu);
+
+		return RMT_PS_ENQ_SCHED;
+	}
+
+	if (c >= data->q_max) {
+		pdu_destroy(pdu);
+		return RMT_PS_ENQ_DROP;
+	}
+
+	/* Really simple behavior here: just mark a packet if the threshold is
+	 * overcame. Mark directly the pdu which was present during the
+	 * congestion.
+	 */
+	if(c > data->thre) {
+		pci_flags_set(
+			pci,
+			pci_flags_get(pci) | PDU_FLAGS_EXPLICIT_CONGESTION);
 	}
 
 	rfifo_push_ni(q->queue, pdu);
+
 	return RMT_PS_ENQ_SCHED;
 }
 
@@ -284,15 +391,7 @@ struct pdu * ecn_dequeue(
 	struct rmt_n1_port *n1_port) {
 
 	struct rmt_queue * q;
-	struct rmt_ps_default_data * data = ps->priv;
 	struct pdu * ret_pdu;
-	struct pci * pci;
-
-	ssize_t c;      /* Current level. */
-
-#ifdef ECN_TIMED_LOG
-	struct timespec now;
-#endif
 
 	if (!ps || !n1_port) {
 		LOG_ERR("Wrong input parameters");
@@ -300,7 +399,7 @@ struct pdu * ecn_dequeue(
 	}
 
 	/* NOTE: The policy is called with the n1_port lock taken */
-	q = ecn_queue_find(data->outqs, n1_port->port_id);
+	q = n1_port->rmt_ps_queues;
 
 	if (!q) {
 		LOG_ERR("Could not find queue for n1_port %u",
@@ -308,43 +407,17 @@ struct pdu * ecn_dequeue(
 		return NULL;
 	}
 
-	ret_pdu = rfifo_pop(q->queue);
+	/* Priority to the mgmt queue. */
+	if(rfifo_length(q->mgmt) > 0) {
+		ret_pdu = rfifo_pop(q->mgmt);
+	} else {
+		ret_pdu = rfifo_pop(q->queue);
+	}
 
 	if (!ret_pdu) {
 		LOG_ERR("Could not dequeue scheduled pdu");
 		return NULL;
 	}
-
-	c = rfifo_length(q->queue);
-
-	/* Really simple behavior here: just mark a packet if the threshold is
-	 * overcame.
-	 */
-	if(c > data->thre) {
-		pci = pdu_pci_get_rw(ret_pdu);
-		pci_flags_set(
-			pci, pci_flags_get(pci) |
-			PDU_FLAGS_EXPLICIT_CONGESTION);
-	}
-
-#ifdef ECN_TIMED_LOG
-	getnstimeofday(&now);
-
-	/* Time to log. */
-	if(ecn_to_ms(&now) - ecn_to_ms(&ecn_tl_last) > ECN_TL_MS){
-		printk("#>%u, %lu.%lu, %zd, %u, %d\n",
-			n1_port->port_id,
-			(ecn_to_ms(&now) - ecn_to_ms(&ecn_tl_start)) / 1000,
-			ecn_to_ms(&now) - ecn_to_ms(&ecn_tl_start),
-			c,
-			data->q_max,
-			ecn_tl_drop);
-
-		ecn_tl_last.tv_sec  = now.tv_sec;
-		ecn_tl_last.tv_nsec = now.tv_nsec;
-		ecn_tl_drop = 0;
-	}
-#endif
 
 	return ret_pdu;
 }
@@ -355,7 +428,7 @@ static int ecn_set_policy_set_param(
 	const char *value) {
 
 	struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
-	struct rmt_ps_default_data *data = ps->priv;
+	struct rmt_ps_data *data = ps->priv;
 	int ival;
 	int ret;
 
@@ -392,7 +465,7 @@ static int ecn_set_policy_set_param(
 static struct ps_base * ecn_create(struct rina_component * component) {
 	struct rmt *rmt;
 	struct rmt_ps *ps;
-	struct rmt_ps_default_data *data;
+	struct rmt_ps_data *data;
 	struct rmt_config *rmt_cfg;
 	struct policy_parm *parm = NULL;
 
@@ -407,15 +480,6 @@ static struct ps_base * ecn_create(struct rina_component * component) {
 	data = rkmalloc(sizeof(*data), GFP_KERNEL);
 	if (!data) {
 		rkfree(ps);
-		return NULL;
-	}
-
-	/* Allocate policy-set private data. */
-	data->outqs = ecn_queue_set_create();
-
-	if (!data->outqs) {
-		rkfree(ps);
-		rkfree(data);
 		return NULL;
 	}
 
@@ -447,28 +511,19 @@ static struct ps_base * ecn_create(struct rina_component * component) {
 	ps->rmt_q_create_policy = ecn_create_q;
 	ps->rmt_q_destroy_policy = ecn_destroy_q;
 
-#ifdef ECN_TIMED_LOG
-	getnstimeofday(&ecn_tl_start);
-	ecn_tl_last.tv_sec = ecn_tl_start.tv_sec;
-	ecn_tl_last.tv_nsec = ecn_tl_start.tv_nsec;
-#endif /* ECN_TIMED_LOG */
-
 	return &ps->base;
 }
 
 static void ecn_destroy(struct ps_base *bps)
 {
 	struct rmt_ps *ps;
-	struct rmt_ps_default_data *data;
+	struct rmt_ps_data *data;
 
 	ps = container_of(bps, struct rmt_ps, base);
 	data = ps->priv;
 
 	if (bps) {
 		if (data) {
-			if (data->outqs) {
-				ecn_queue_set_destroy(data->outqs);
-			}
 			rkfree(data);
 		}
 		rkfree(ps);
@@ -498,11 +553,16 @@ static int __init ecn_module_init(void) {
 
 	/* Check for errors. */
 	if (ret) {
-		ECN_LOG("Failed to publish the RDSR RMT policy.");
+		LOG_ERR("Failed to publish the RDSR RMT policy.");
 		return ret;
 	}
 
-	ECN_LOG("RMT policy successfully published.");
+	if(kobject_init_and_add(&ecn_obj, &ecn_ktype, 0, "ecn")) {
+		LOG_ERR("Sysfs failed!");
+		return 0;
+	}
+
+	LOG_INFO("RMT policy successfully published.");
 
 	return 0;
 }
@@ -514,13 +574,14 @@ static void __exit ecn_module_exit(void) {
 	int ret = rmt_ps_unpublish(ECN_PS_NAME);
 
 	if (ret) {
-		ECN_LOG("Failed to unpublish %s policy, error %d.", ECN_PS_NAME,
+		LOG_ERR("Failed to unpublish %s policy, error %d.", ECN_PS_NAME,
 		                ret);
 
 		return;
 	}
 
-	ECN_LOG("Policy %s successfully unpublished.", ECN_PS_NAME);
+	LOG_INFO("Policy %s successfully unpublished.", ECN_PS_NAME);
+	kobject_put(&ecn_obj);
 
 	return;
 }

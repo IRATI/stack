@@ -1,6 +1,8 @@
 # Set INSTALLDIR environment variable to the directory containing
 # the IRATI installation
 
+INSTALLDIR=/pristine/userspace
+
 ifndef INSTALLDIR
 $(error The INSTALLDIR environment variable is not set)
 endif
