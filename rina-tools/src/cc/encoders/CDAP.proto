@@ -1,0 +1,87 @@
+package rina.messages;
+//option optimize_for = LITE_RUNTIME;
+
+// Message types.
+enum opCode_t {
+	M_CONNECT = 0;
+	M_CONNECT_R = 1;
+	M_RELEASE = 2;
+	M_RELEASE_R = 3;
+	M_CREATE = 4;
+	M_CREATE_R = 5;
+	M_DELETE = 6;
+	M_DELETE_R = 7;
+	M_READ = 8;
+	M_READ_R = 9;
+	M_CANCELREAD = 10;
+	M_CANCELREAD_R = 11;
+	M_WRITE = 12;
+	M_WRITE_R = 13;
+	M_START = 14;
+	M_START_R = 15;
+	M_STOP = 16;
+	M_STOP_R = 17;
+}
+
+// Values for the flags field.
+enum flagValues_t {
+	F_NO_FLAGS = 0;							// The default value, no flags are set
+	F_SYNC = 1;								// set on READ/WRITE to request synchronous r/w
+	F_RD_INCOMPLETE = 2;					// set on all but final reply to an M_READ
+}
+
+message objVal_t {							// value of an object
+	optional int32	intval = 1;
+	optional sint32	sintval = 2;
+	optional int64	int64val = 3;
+	optional sint64	sint64val = 4;
+	optional string	strval = 5;
+	optional bytes	byteval = 6;			// arbitrary structure or message
+	optional fixed32 floatval = 7;
+	optional fixed64 doubleval = 8;
+	optional bool    boolval = 9;
+}
+
+message authPolicy_t {
+    	optional string name = 1;            // Policy name
+    	repeated string versions = 2;        // Supported versions
+    	optional bytes options = 3;          // Opaque policy-specific versions
+}
+
+// CDAP message field definition, can be used for all messages.
+// In this single-message-buffer-type form, if a field is optional in any
+// message, it must be "optional" here.  If required in all, it is "mandatory" here.
+// See the documentation for the complete field specification of each message type.
+//
+message CDAPMessage {
+	optional int32 absSyntax = 1;			// Abstract Syntax of messages, see text.
+	required opCode_t opCode = 2;			// op Code.
+	optional int32 invokeID = 3;			// Invoke ID, omitted if no reply desired.
+	optional flagValues_t flags = 4;		// misc. flags
+	optional string objClass = 5;			// Name of the object class of objName
+	optional string objName = 6;			// Object name, unique in its class
+	optional int64 objInst = 7;				// Unique object instance
+	optional objVal_t objValue = 8;			// value of object in read/write/etc.
+	optional int32 result = 9 [default = 0]; // result of operation, 0 == success
+	optional int32 scope = 10;				// scope of READ/WRITE operation
+	optional bytes filter = 11;				// filter script
+	optional authPolicy_t authPolicy = 18;		// Authentication policy information
+	optional string destAEInst = 19;		// Destination AE Instance name
+	optional string destAEName = 20;		// Destination AE name
+	optional string destApInst = 21;		// Destination Application Instance name
+	optional string destApName = 22;		// Destination Application name
+	optional string srcAEInst = 23;			// Source AE Instance name
+	optional string srcAEName = 24;			// Source AE name
+	optional string srcApInst = 25;			// Source Application Instance name
+	optional string srcApName = 26;			// Source Application name
+	optional string resultReason = 27;		// further explanation of result
+	optional int64 version = 28;			// For application use - RIB/class version.
+}
+
+message int_t {  //information to identify an int
+	required uint32 value = 1; 				//value of the integer
+}
+
+message string_t {  //information to identify an string
+	required string value = 1; 				//value of the string
+}
