@@ -7,19 +7,19 @@ SUBDIRS      = encoders
 EXTRA_DIST   =
 CLEANFILES   =
 
-bin_PROGRAMS = cc	unittests
+bin_PROGRAMS = cdapc	unittests
 
-cc_CPPFLAGS =					 \
+cdapc_CPPFLAGS =					 \
 	-std=c++11           \
 	$(CPPFLAGS_EXTRA)		 \
 	$(LIBRINA_CFLAGS)		 \
 	-I$(srcdir)/../common	
 	
-cc_LDADD    = 	$(LIBRINA_LIBS) -ldl -lrinad \
+cdapc_LDADD    = 	$(LIBRINA_LIBS) -ldl -lrinad \
 	-Lencoders -lfullencoders \
 	../common/librinaapp.la	
 	
-cc_SOURCES  =						\
+cdapc_SOURCES  =						\
 	main.cc	\
 	connector.cc			connector.h	\
 	easywsclient.cc	  easywsclient.h \
@@ -33,6 +33,8 @@ cc_SOURCES  =						\
 unittests_SOURCES  =				\
 	unittests.cc \
 	cdapserialisertest.cc  eventfilterstest.cc \
+	dmsworkertest.cc       dmsworker.cc \
+	easywsclient.cc	  		 easywsclient.h \
 	json_format.cc         json_format.h \
 	eventfilters.cc   		 eventfilters.h \
 	eventsystem.h					 catch.h

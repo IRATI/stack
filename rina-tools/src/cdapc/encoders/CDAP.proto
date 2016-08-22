@@ -40,6 +40,8 @@ message objVal_t {							// value of an object
 	optional fixed32 floatval = 7;
 	optional fixed64 doubleval = 8;
 	optional bool    boolval = 9;
+	optional string	jsonval = 10;			// arbitrary structure or message
+	optional string	typeval = 11;			// type associated with a byteval or jsonval
 }
 
 message authPolicy_t {

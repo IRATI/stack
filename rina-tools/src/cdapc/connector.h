@@ -30,9 +30,12 @@
 #define CONNECTOR_HPP
 
 #include <string>
+#include "librina/concurrency.h"
 #include <librina/application.h>
-#include <librina/cdap_v2.h>
-#include <librina/json/json.h> // JSON parsing
+#include <encoders/CDAP.pb.h>
+
+//#include <librina/cdap_v2.h>
+//#include <librina/json/json.h> // JSON parsing
 
 #include "server.h"
 #include "easywsclient.h"
@@ -41,13 +44,12 @@
 static const unsigned int max_sdu_size_in_bytes = 10000;
 
 
-class Connection {
+class ConnectionInfo {
 public:
   std::string id;
   rina::FlowInformation flow;
   long portId;
 };
-
 
 //
 // Class that deals with the DMS Manager.
@@ -61,15 +63,21 @@ public:
 	~DMSWorker() throw() { };
 	int internal_run();
 
+  // Process incoming Json message
   void process_message(const std::string & message);
+  
+  // Process the incoming Json object value (if any)
+  void process_value(rina::messages::CDAPMessage & cdap_message);
+
+  // Process outgoing message
+  void send_message(const std::string & message);
 
 protected:
-  // Parse the JSON message
-  void parse_header(const Json::Value &root, const std::string& name);
-  void parse_contents(const Json::Value &root, const std::string& name);
+  // Useful logging info
+  void log_short_message(const rina::messages::CDAPMessage& message, const char* direction) const;
 
 private:
-	unsigned int               max_sdu_size;
+  unsigned int               max_sdu_size;
   std::string                ws_address;
   easywsclient::WebSocket*   ws;
   ES_EventFilter*            shutdown_filter;
@@ -88,10 +96,19 @@ public:
 	~MAWorker() throw() { };
 	int internal_run();
 
+  // Process incoming message
+  void process_message(const void* message, int size);
+
+  // Process outgoing message
+  void send_message(const void* message, int size);
+
 private:
-        rina::FlowInformation flow_;
+  rina::FlowInformation flow_;
 	unsigned int max_sdu_size;
 	//rina::cdap::CDAPProviderInterface *cdap_prov_;
+
+	// Connected MAs
+	rina::ThreadSafeMapOfPointers<std::string,ConnectionInfo> mas;
 };
 
 
@@ -104,23 +121,29 @@ class Connector : public Server {
 	~Connector() { };
 
   // Help find the other worker
-  ServerWorker* find_worker(ServerWorker* whosAsking) const;
+  MAWorker* find_ma_worker() const {
+        return ma_worker_;
+  };
+  
+  // Help find dms worker
+  DMSWorker* find_dms_worker() const {
+        return dms_worker_;
+  };
 
   void ws_run();
   void rina_run();
-  
-
 	void run();
 
+
  private:
-	//static const std::string mad_name;
-	//static const std::string mad_instance;
 	std::string dif_name_;
 	bool client_app_reg_;
 
   std::string ws_address_;
 
-  //std::map<std:string,Connection> w
+  // Track these instances
+  MAWorker*   ma_worker_;
+  DMSWorker*  dms_worker_;
 
   ServerWorker * internal_start_worker(rina::FlowInformation flow);
   ServerWorker * internal_start_worker(const std::string& ws);

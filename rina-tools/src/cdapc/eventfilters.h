@@ -1,7 +1,7 @@
 //
 // CDAP Connector
 //
-// Micheal Crotty <mcrotty@tssg.org>
+// Micheal Crotty <mcrotty AT tssg DOT org>
 // Copyright (C) 2016, PRISTINE, Waterford Insitute of Technology
 //
 // Redistribution and use in source and binary forms, with or without

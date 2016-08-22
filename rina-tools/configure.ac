@@ -144,6 +144,18 @@ PKG_CHECK_MODULES([LIBRINA], [librina >= 0.2.0],, [
 # FIXME: A cleaner solution would be better
 AC_SUBST([LIBRINA_VERSION],`pkg-config --modversion librina`)
 
+AC_PATH_PROG([PROTOC], [protoc], [no])
+AS_IF([test "x$PROTOC" = "xno"],[
+    AC_MSG_ERROR([Your system lacks of protoc support])
+])
+
+LIBPROTOBUF_MIN_VERSION=2.6.1
+AC_SUBST(LIBPROTOBUF_MIN_VERSION, $LIBPROTOBUF_MIN_VERSION)
+
+PKG_CHECK_MODULES(LIBPROTOBUF, [protobuf >= $LIBPROTOBUF_MIN_VERSION],, [
+    AC_MSG_ERROR([Your system lacks of libprotobuf support (>= $LIBPROTOBUF_MIN_VERSION)])
+])
+
 AC_CONFIG_FILES([
     Makefile
 
@@ -152,7 +164,8 @@ AC_CONFIG_FILES([
     src/rina-echo-time/Makefile
     src/rina-cdap-echo/Makefile
     src/manager/Makefile
-    src/cc/Makefile
+    src/cdapc/Makefile
+    src/cdapc/encoders/Makefile
     src/common/tclap/Makefile
 
     doc/Makefile

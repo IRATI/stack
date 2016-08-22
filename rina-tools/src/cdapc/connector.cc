@@ -30,10 +30,10 @@
 #include <cassert>
 #define RINA_PREFIX     "cdap-connect"
 #include <librina/logs.h>
-#include <librina/cdap_v2.h>
+//#include <librina/cdap_v2.h>
 #include <librina/common.h>
 #include <rinad/common/configuration.h>
-#include <rinad/common/encoder.h>
+//#include <rinad/common/encoder.h>
 
 #include "connector.h"
 #include "workers.h"
@@ -192,6 +192,7 @@ ServerWorker * Connector::internal_start_worker(rina::FlowInformation flow)
                                                max_sdu_size_in_bytes, this);
     worker->start();
     worker->detach();
+    ma_worker_ = worker;
     return worker;
 }
 
@@ -203,5 +204,7 @@ ServerWorker * Connector::internal_start_worker(const std::string& ws_address)
                                                max_sdu_size_in_bytes, this);
     worker->start();
     worker->detach();
+    dms_worker_ = worker;
     return worker;
 }
+

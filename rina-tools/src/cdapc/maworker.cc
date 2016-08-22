@@ -2,7 +2,8 @@
 // CDAP connector worker classes
 //
 // Micheal Crotty <mcrotty@tssg.org>
-//
+
+// legal
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
 // are met:
