@@ -165,7 +165,7 @@ int ringq_destroy(struct ringq * q,
 
         q_destroy(q, dtor);
 
-        LOG_DBG("RING Queue %pK destroyed successfully", f);
+        LOG_DBG("RING Queue %pK destroyed successfully", q);
 
         return 0;
 }
