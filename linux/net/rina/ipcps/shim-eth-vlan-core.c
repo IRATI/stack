@@ -94,6 +94,8 @@ struct shim_eth_flow {
 
         struct gha *           dest_ha;
         struct gpa *           dest_pa;
+        __be16                 ethertype;
+        struct name *          app_name;
 
         /* Only used once for allocate_response */
         port_id_t              port_id;
@@ -102,6 +104,12 @@ struct shim_eth_flow {
         /* Used when flow is not allocated yet */
         struct rfifo *         sdu_queue;
         struct ipcp_instance * user_ipcp;
+};
+
+struct rinarp_list {
+        struct rinarp_handle * handle;
+        struct name * name;
+        struct list_head next;
 };
 
 /*
@@ -116,13 +124,10 @@ struct ipcp_instance_data {
         struct name *          name;
         struct name *          dif_name;
         struct eth_vlan_info * info;
-        struct packet_type *   eth_vlan_packet_type;
+        struct packet_type **  eth_vlan_packet_type;
         struct net_device *    dev;
         struct net_device *    phy_dev;
         struct flow_spec *     fspec;
-
-        /* The IPC Process using the shim-eth-vlan */
-        struct name *          app_name;
 
         /* Stores the state of flows indexed by port_id */
         spinlock_t             lock;
@@ -132,7 +137,7 @@ struct ipcp_instance_data {
         struct kfa *           kfa;
 
         /* RINARP related */
-        struct rinarp_handle * handle;
+        struct list_head       handles;
 
 	/* To handle device notifications. */
 	struct notifier_block ntfy;
@@ -273,8 +278,9 @@ static struct gpa * name_to_gpa(const struct name * name)
 }
 
 static struct shim_eth_flow *
-find_flow_by_gha(struct ipcp_instance_data * data,
-                 const struct gha *          addr)
+find_flow_by_gha_and_ethertype(struct ipcp_instance_data * data,
+                               const struct gha *          addr,
+                               __be16                      ethertype)
 {
         struct shim_eth_flow * flow;
 
@@ -282,7 +288,8 @@ find_flow_by_gha(struct ipcp_instance_data * data,
         ASSERT(gha_is_ok(addr));
 
         list_for_each_entry(flow, &data->flows, list) {
-                if (gha_is_equal(addr, flow->dest_ha)) {
+                if (gha_is_equal(addr, flow->dest_ha) &&
+                    flow->ethertype == ethertype) {
                         return flow;
                 }
         }
@@ -453,6 +460,8 @@ static void rinarp_resolve_handler(void *             opaque,
         struct ipcp_instance *      ipcp;
         struct shim_eth_flow *      flow;
         unsigned long 		    irqflags;
+        struct shim_eth_flow *      flow2;
+        __be16 ethertype = ETH_P_RINA;
 
         LOG_DBG("Entered the ARP resolve handler of the shim-eth");
 
@@ -473,6 +482,14 @@ static void rinarp_resolve_handler(void *             opaque,
                 spin_unlock_irqrestore(&data->lock, irqflags);
 
                 flow->dest_ha = gha_dup_ni(dest_ha);
+
+
+                list_for_each_entry(flow2, &data->flows, list)
+                        if (gha_is_equal(dest_ha, flow2->dest_ha))
+                                if (flow->ethertype >= ethertype)
+                                        ethertype++;
+
+                flow->ethertype = ethertype;
 
                 user_ipcp = flow->user_ipcp;
                 ASSERT(user_ipcp);
@@ -539,6 +556,7 @@ eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                                port_id_t                   id)
 {
         struct shim_eth_flow * flow;
+        struct rinarp_list * rinarp;
 
 	if (!data) {
 		LOG_ERR("Bogus data passed, bailing out");
@@ -560,12 +578,6 @@ eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
 		return -1;
 	}
 
-
-        if (!data->app_name || !name_is_equal(source, data->app_name)) {
-                LOG_ERR("Wrong request, app is not registered");
-                return -1;
-        }
-
         flow = find_flow(data, id);
         if (!flow) {
                 flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
@@ -576,6 +588,7 @@ eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                 flow->port_id_state = PORT_STATE_PENDING;
                 flow->user_ipcp     = user_ipcp;
                 flow->dest_pa       = name_to_gpa(dest);
+                flow->app_name      = name_dup(dest);
 
                 if (!gpa_is_ok(flow->dest_pa)) {
                         LOG_ERR("Destination protocol address is not ok");
@@ -595,7 +608,11 @@ eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                         return -1;
                 }
 
-                if (rinarp_resolve_gpa(data->handle,
+                rinarp = list_first_entry(&data->handles,
+                                          struct rinarp_list,
+                                          next);
+
+                if (rinarp_resolve_gpa(rinarp->handle,
                                        flow->dest_pa,
                                        rinarp_resolve_handler,
                                        data)) {
@@ -749,6 +766,7 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
 {
         struct gpa * pa;
         struct gha * ha;
+        struct rinarp_list * rinarp;
 
 	if (!data) {
 		LOG_ERR("Bogus data passed, bailing out");
@@ -760,43 +778,49 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
 		return -1;
 	}
 
-        if (data->app_name) {
-                char * tmp = name_tostring(data->app_name);
-                LOG_ERR("Application %s is already registered", tmp);
-                if (tmp) rkfree(tmp);
-                return -1;
-        }
-
-        data->app_name = name_dup(name);
-        if (!data->app_name) {
-                char * tmp = name_tostring(name);
-                LOG_ERR("Application %s registration has failed", tmp);
-                if (tmp) rkfree(tmp);
-                return -1;
-        }
-
         pa = name_to_gpa(name);
         if (!gpa_is_ok(pa)) {
                 LOG_ERR("Failed to create gpa");
-                name_destroy(data->app_name);
                 return -1;
         }
+
         ha = gha_create(MAC_ADDR_802_3, data->dev->dev_addr);
         if (!gha_is_ok(ha)) {
                 LOG_ERR("Failed to create gha");
-                name_destroy(data->app_name);
                 gpa_destroy(pa);
                 return -1;
         }
-        data->handle = rinarp_add(data->dev, pa, ha);
-        if (!data->handle) {
-                LOG_ERR("Failed to register application in ARP");
-                name_destroy(data->app_name);
+
+        rinarp = rkzalloc(sizeof(*rinarp), GFP_KERNEL);
+        if (!rinarp) {
+                LOG_ERR("Failed to create rinarp list");
                 gpa_destroy(pa);
                 gha_destroy(ha);
-
                 return -1;
         }
+
+        rinarp->handle = rinarp_add(data->dev, pa, ha);
+        if (!rinarp->handle) {
+                LOG_ERR("Failed to register application in ARP");
+                rkfree(rinarp);
+                gpa_destroy(pa);
+                gha_destroy(ha);
+                return -1;
+        }
+
+        rinarp->name = name_dup(name);
+        if (!rinarp->name) {
+                LOG_ERR("Failed to dup name");
+                rinarp_remove(rinarp->handle);
+                gpa_destroy(pa);
+                gha_destroy(ha);
+                rkfree(rinarp);
+                return -1;
+        }
+
+        INIT_LIST_HEAD(&rinarp->next);
+        list_add(&rinarp->next, &data->handles);
+
         gpa_destroy(pa);
         gha_destroy(ha);
 
@@ -806,6 +830,8 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
 static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
                                            const struct name *         name)
 {
+        struct rinarp_list * entry;
+
       	if (!data) {
 		LOG_ERR("Bogus data passed, bailing out");
 		return -1;
@@ -816,27 +842,16 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
 		return -1;
 	}
 
-        if (!data->app_name) {
-                LOG_ERR("Shim-eth-vlan has no application registered");
-                return -1;
-        }
-
-        if (!name_is_equal(data->app_name, name)) {
-                LOG_ERR("Application registered != application specified");
-                return -1;
-        }
-
         /* Remove from ARP cache */
-        if (data->handle) {
-                if (rinarp_remove(data->handle)) {
-                        LOG_ERR("Failed to remove the entry from the cache");
-                        return -1;
+        list_for_each_entry(entry, &data->handles, next) {
+                if (name_is_equal(entry->name, name)) {
+                        if (rinarp_remove(entry->handle)) {
+                                LOG_ERR("Failed to remove the entry from the cache");
+                                return -1;
+                        }
                 }
-                data->handle = NULL;
         }
 
-        name_destroy(data->app_name);
-        data->app_name = NULL;
         return 0;
 }
 
@@ -898,7 +913,8 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         int                      hlen, tlen, length;
         int                      retval;
         unsigned long            flags;
-
+        uint8_t * name_str;
+        uint8_t name_len;
 
         LOG_DBG("Entered the sdu-write");
 
@@ -967,6 +983,14 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 
         skb_reserve(skb, hlen);
         skb_reset_network_header(skb);
+
+        name_str = name_tostring_ni(flow->app_name);
+        name_len = (uint8_t) strlen(name_str);
+
+        sdu_ptr = (unsigned char *) skb_put(skb, name_len + 1);
+        memcpy(sdu_ptr, &name_len, 1);
+        memcpy(sdu_ptr + 1, name_str, name_len);
+
         sdu_ptr = (unsigned char *) skb_put(skb, buffer_length(sdu->buffer));
 
         if (!memcpy(sdu_ptr,
@@ -979,10 +1003,10 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         }
 
         skb->dev      = data->dev;
-        skb->protocol = htons(ETH_P_RINA);
+        skb->protocol = flow->ethertype;
 
         retval = dev_hard_header(skb, data->dev,
-                                 ETH_P_RINA, dest_hw, src_hw, skb->len);
+                                 flow->ethertype, dest_hw, src_hw, skb->len);
         if (retval < 0) {
                 LOG_ERR("Problems in dev_hard_header (%d)", retval);
                 kfree_skb(skb);
@@ -1019,6 +1043,7 @@ static int eth_vlan_rcv_worker(void * o)
         struct rcv_work_data *          wdata;
         struct sk_buff *                skb;
         struct net_device *             dev;
+        struct rinarp_list * rinarp;
 
         LOG_DBG("Worker waking up, going to create a flow");
 
@@ -1032,14 +1057,8 @@ static int eth_vlan_rcv_worker(void * o)
         data   = wdata->data;
         rkfree(wdata);
 
-        if (!data->app_name) {
-                LOG_ERR("No app registered yet! Someone is doing something bad on the network");
-                kfree_skb(skb);
-                return -1;
-        }
-
         user_ipcp = kipcm_find_ipcp_by_name(default_kipcm,
-                                                    data->app_name);
+                                            flow->app_name);
         if (!user_ipcp)
                 user_ipcp = kfa_ipcp_instance(data->kfa);
 
@@ -1077,8 +1096,14 @@ static int eth_vlan_rcv_worker(void * o)
         }
         LOG_DBG("Added flow to the list");
 
+
+        rinarp = list_first_entry(&data->handles,
+                                  struct rinarp_list,
+                                  next);
+
         sname  = NULL;
-        gpaddr = rinarp_find_gpa(data->handle, flow->dest_ha);
+        gpaddr = rinarp_find_gpa(rinarp->handle,
+                                 flow->dest_ha);
         if (gpaddr && gpa_is_ok(gpaddr)) {
                 flow->dest_pa = gpa_dup_gfp(GFP_KERNEL, gpaddr);
                 if (!flow->dest_pa) {
@@ -1124,7 +1149,7 @@ static int eth_vlan_rcv_worker(void * o)
                                flow->port_id,
                                data->dif_name,
                                sname,
-                               data->app_name,
+                               flow->app_name,
                                data->fspec)) {
                 LOG_ERR("Couldn't tell the KIPCM about the flow");
                 kfa_port_id_release(data->kfa, flow->port_id);
@@ -1150,9 +1175,14 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         struct sdu *                    du;
         struct buffer *                 buffer;
         char *                          sk_data;
+        __be16                          ethertype;
 
         struct rcv_work_data          * wdata;
         struct rwq_work_item          * item;
+
+        uint8_t name_len;
+        uint8_t * name;
+        struct name * app_name;
 
         /* C-c-c-checks */
 	if (!skb) {
@@ -1174,12 +1204,6 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
 
         data = mapping->data;
         if (!data) {
-                kfree_skb(skb);
-                return -1;
-        }
-
-        if (!data->app_name) {
-                LOG_ERR("No app registered yet! Someone is doing something bad on the network");
                 kfree_skb(skb);
                 return -1;
         }
@@ -1206,6 +1230,8 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         }
         ASSERT(gha_is_ok(ghaddr));
 
+        ethertype = mh->h_proto;
+
         /* Get the SDU out of the sk_buff */
         sk_data = rkmalloc(skb->len, GFP_ATOMIC);
         if (!sk_data) {
@@ -1230,7 +1256,13 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 return -1;
         }
 
-        buffer = buffer_create_with_ni(sk_data, skb->len);
+        name_len = (uint8_t) sk_data[0];
+        name = (uint8_t *) (sk_data + 1);
+
+        app_name = string_toname_ni(name);
+
+        buffer = buffer_create_with_ni(sk_data + name_len + 1,
+                                       skb->len - name_len - 1);
         if (!buffer) {
                 rkfree(sk_data);
                 gha_destroy(ghaddr);
@@ -1250,7 +1282,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         }
 
         spin_lock(&data->lock);
-        flow = find_flow_by_gha(data, ghaddr);
+        flow = find_flow_by_gha_and_ethertype(data, ghaddr, ethertype);
         if (!flow) {
                 spin_unlock(&data->lock);
                 /* Create flow and its queue to handle next packets */
@@ -1263,6 +1295,8 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
 
                 flow->port_id_state = PORT_STATE_PENDING;
                 flow->dest_ha       = ghaddr;
+                flow->ethertype     = ethertype;
+                flow->app_name      = app_name;
                 INIT_LIST_HEAD(&flow->list);
                 flow->sdu_queue = rfifo_create_ni();
                 if (!flow->sdu_queue) {
@@ -1372,6 +1406,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         struct interface_data_mapping * mapping;
         int                             result;
         unsigned int                    temp;
+        int                             i;
 
 	if (!data) {
 		LOG_ERR("Bogus data passed, bailing out");
@@ -1475,8 +1510,11 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        data->eth_vlan_packet_type->type = cpu_to_be16(ETH_P_RINA);
-        data->eth_vlan_packet_type->func = eth_vlan_rcv;
+        for (i = 0; i < 10; i++) {
+                data->eth_vlan_packet_type[i]->type =
+                        cpu_to_be16(ETH_P_RINA + i);
+                data->eth_vlan_packet_type[i]->func = eth_vlan_rcv;
+        }
 
         if (info->vlan_id != 0) {
                 complete_interface =
@@ -1550,145 +1588,11 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         list_add(&mapping->list, &data_instances_list);
         spin_unlock(&data_instances_lock);
 
-        data->eth_vlan_packet_type->dev = data->dev;
-        dev_add_pack(data->eth_vlan_packet_type);
-        rkfree(complete_interface);
-
-        LOG_DBG("Configured shim eth vlan IPC Process");
-
-        return 0;
-}
-
-static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
-                                      const struct dif_config *   new_config)
-{
-        struct eth_vlan_info *          info;
-        struct ipcp_config *            tmp;
-        string_t *                      old_interface_name;
-        string_t *                      complete_interface;
-        struct interface_data_mapping * mapping;
-        int				result;
-        unsigned int			temp;
-
-	if (!data) {
-		LOG_ERR("Bogus data passed, bailing out");
-		return -1;
-	}
-
-        if (!new_config) {
-		LOG_ERR("Bogus configuration passed, bailing out");
-		return -1;
-	}
-
-        /* Get configuration struct pertaining to this shim instance */
-        info               = data->info;
-        old_interface_name = info->interface_name;
-
-        /* Retrieve configuration of IPC process from params */
-        list_for_each_entry(tmp, &(new_config->ipcp_config_entries), next) {
-                const struct ipcp_config_entry * entry;
-
-                entry = tmp->entry;
-                if (!strcmp(entry->name, "interface-name")) {
-                	ASSERT(entry->value);
-
-                	info->interface_name = rkstrdup(entry->value);
-                	if (!info->interface_name) {
-                		LOG_ERR("Cannot copy interface name");
-                		return -1;
-                	}
-		} else if (!strcmp(entry->name, "qdisc-max-size")) {
- 			ASSERT(entry->value);
-
-			result = kstrtouint(entry->value, 10, &temp);
-			if (result) {
-				LOG_ERR("Can't convert qdisc-max-size to uint");
-				return -1;
-			}
-			info->qdisc_max_size = (uint16_t) temp;
-		} else if (!strcmp(entry->name, "qdisc-enable-size")) {
-			ASSERT(entry->value);
-
-			result = kstrtouint(entry->value, 10, &temp);
-			if (result) {
-				LOG_ERR("Can't convert qdisc-enable-size to uint");
-				return -1;
-			}
-			info->qdisc_enable_size = (uint16_t) temp;
-                } else
-                	LOG_WARN("Unknown config param for eth shim");
+        for (i = 0; i < 10; i++) {
+                data->eth_vlan_packet_type[i]->dev = data->dev;
+                dev_add_pack(data->eth_vlan_packet_type[i]);
         }
 
-        if (qdisc_should_be_restored(data->phy_dev))
-        	restore_qdisc(data->phy_dev);
-
-	dev_remove_pack(data->eth_vlan_packet_type);
-        /* Remove from list */
-        mapping = inst_data_mapping_get(data->dev);
-        if (mapping) {
-                spin_lock(&data_instances_lock);
-                list_del(&mapping->list);
-                spin_unlock(&data_instances_lock);
-                rkfree(mapping);
-        }
-
-        data->eth_vlan_packet_type->type = cpu_to_be16(ETH_P_RINA);
-        data->eth_vlan_packet_type->func = eth_vlan_rcv;
-
-        if (info->vlan_id != 0) {
-                complete_interface =
-                        create_vlan_interface_name(info->interface_name,
-                                                   info->vlan_id);
-        } else {
-                complete_interface = rkstrdup(info->interface_name);
-        }
-
-        if (!complete_interface)
-                return -1;
-
-        /* Add the handler */
-        read_lock(&dev_base_lock);
-        data->dev = __dev_get_by_name(&init_net, complete_interface);
-        if (info->vlan_id != 0) {
-        	data->phy_dev = __dev_get_by_name(&init_net,
-        					  info->interface_name);
-        } else {
-        	data->phy_dev = data->dev;
-        }
-	read_unlock(&dev_base_lock);
-        if (!data->dev) {
-                LOG_ERR("Invalid device to configure: %s", complete_interface);
-                return -1;
-        }
-
-	/* Modfy qdisc by our own */
-	if (update_qdisc(data->phy_dev,
-			 data->info->qdisc_max_size,
-			 data->info->qdisc_enable_size)) {
-		LOG_ERR("Problems creating queue discipline");
-		name_destroy(data->dif_name);
-		data->dif_name = NULL;
-		rkfree(info->interface_name);
-		info->interface_name = NULL;
-		rkfree(complete_interface);
-		return -1;
-	}
-
-        /* Store in list for retrieval later on */
-        mapping = rkmalloc(sizeof(*mapping), GFP_KERNEL);
-        if (!mapping)
-                return -1;
-
-        mapping->dev = data->dev;
-        mapping->data = data;
-        INIT_LIST_HEAD(&mapping->list);
-
-        spin_lock(&data_instances_lock);
-        list_add(&mapping->list, &data_instances_list);
-        spin_unlock(&data_instances_lock);
-
-        data->eth_vlan_packet_type->dev = data->dev;
-        dev_add_pack(data->eth_vlan_packet_type);
         rkfree(complete_interface);
 
         LOG_DBG("Configured shim eth vlan IPC Process");
@@ -1740,7 +1644,7 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .application_unregister    = eth_vlan_application_unregister,
 
         .assign_to_dif             = eth_vlan_assign_to_dif,
-        .update_dif_config         = eth_vlan_update_dif_config,
+        .update_dif_config         = NULL,
 
         .connection_create         = NULL,
         .connection_update         = NULL,
@@ -1863,6 +1767,7 @@ static int eth_vlan_fini(struct ipcp_factory_data * data)
 
 static void inst_cleanup(struct ipcp_instance * inst)
 {
+        int i;
         ASSERT(inst);
 
         if (inst->data) {
@@ -1872,9 +1777,12 @@ static void inst_cleanup(struct ipcp_instance * inst)
                         rkfree(inst->data->info);
                 if (inst->data->name)
                         name_destroy(inst->data->name);
-                if (inst->data->eth_vlan_packet_type)
+                if (inst->data->eth_vlan_packet_type) {
+                        for (i = 0; i < 10; i++)
+                                if (inst->data->eth_vlan_packet_type[i])
+                                        rkfree(inst->data->eth_vlan_packet_type[i]);
                         rkfree(inst->data->eth_vlan_packet_type);
-
+                }
                 rkfree(inst->data);
         }
 
@@ -1886,6 +1794,7 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
                                               ipc_process_id_t           id)
 {
         struct ipcp_instance * inst;
+        int i;
 
         ASSERT(data);
 	ASSERT(name);
@@ -1920,11 +1829,21 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
         }
 
         inst->data->eth_vlan_packet_type =
-                rkzalloc(sizeof(struct packet_type), GFP_KERNEL);
+                rkzalloc(sizeof(struct packet_type) * 10, GFP_KERNEL);
         if (!inst->data->eth_vlan_packet_type) {
                 LOG_ERR("Instance creation failed (#1)");
                 inst_cleanup(inst);
                 return NULL;
+        }
+
+        for (i = 0; i < 10; i++) {
+                inst->data->eth_vlan_packet_type[i] =
+                        rkzalloc(sizeof(struct packet_type), GFP_KERNEL);
+                if (!inst->data->eth_vlan_packet_type[i]) {
+                        LOG_ERR("Instance creation failed (#1.5)");
+                        inst_cleanup(inst);
+                        return NULL;
+                }
         }
 
         inst->data->id = id;
@@ -1974,6 +1893,7 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
         spin_lock_init(&inst->data->lock);
 
         INIT_LIST_HEAD(&(inst->data->flows));
+        INIT_LIST_HEAD(&(inst->data->handles));
 
         /*
          * Bind the shim-instance to the shims set, to keep all our data
@@ -1991,6 +1911,8 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
         struct interface_data_mapping * mapping;
         struct ipcp_instance_data * pos, * next;
         struct shim_eth_flow * flow, * nflow;
+        int i;
+        struct rinarp_list * rinarp, * nrinarp;
 
         ASSERT(data);
         ASSERT(instance);
@@ -2013,8 +1935,11 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                         }
 
                         /* Remove packet handler if there is one */
-                        if (pos->eth_vlan_packet_type->dev)
-                                __dev_remove_pack(pos->eth_vlan_packet_type);
+                        if (pos->eth_vlan_packet_type)
+                                for (i = 0; i < 10; i++)
+                                        if (pos->eth_vlan_packet_type[i])
+                                                if (pos->eth_vlan_packet_type[i]->dev)
+                                                        __dev_remove_pack(pos->eth_vlan_packet_type[i]);
 
                         /* Unbind from the instances set */
                         list_del(&pos->list);
@@ -2026,9 +1951,6 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                         if (pos->dif_name)
                                 name_destroy(pos->dif_name);
 
-                        if (pos->app_name)
-                                name_destroy(pos->app_name);
-
                         if (pos->info->interface_name)
                                 rkfree(pos->info->interface_name);
 
@@ -2038,12 +1960,11 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                         if (pos->fspec)
                                 rkfree(pos->fspec);
 
-                        if (pos->handle) {
-                                if (rinarp_remove(pos->handle)) {
-                                        LOG_ERR("Failed to remove "
-                                                "the entry from the cache");
-                                        return -1;
-                                }
+                        list_for_each_entry_safe(rinarp, nrinarp,
+                                                 &pos->handles, next) {
+                                rinarp_remove(rinarp->handle);
+                                name_destroy(rinarp->name);
+                                list_del(&rinarp->next);
                         }
 
                         mapping = inst_data_mapping_get(pos->dev);
@@ -2063,8 +1984,12 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                          * and must not be freed until after all
                          * the CPU's have gone through a quiescent state.
                          */
-                        if (pos->eth_vlan_packet_type)
+                        if (pos->eth_vlan_packet_type) {
+                                for (i = 0; i < 10; i++)
+                                        if (pos->eth_vlan_packet_type[i])
+                                                rkfree(pos->eth_vlan_packet_type[i]);
                                 rkfree(pos->eth_vlan_packet_type);
+                        }
 
                         rkfree(pos);
                         rkfree(instance);
