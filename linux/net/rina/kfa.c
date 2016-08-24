@@ -206,11 +206,13 @@ static int kfa_flow_deallocate_worker(void *data)
 	}
 
 	instance = wqdata->kfa;
+	id = wqdata->id;
+	rkfree(wqdata);
+
 	if (!instance) {
 		LOG_ERR("Bogus instance passed, bailing out");
 		return -1;
 	}
-	id = wqdata->id;
 	if (!is_port_id_ok(id)) {
 		LOG_ERR("Bogus flow-id, bailing out");
 		return -1;
