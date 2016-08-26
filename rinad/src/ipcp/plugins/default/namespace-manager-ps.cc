@@ -26,6 +26,7 @@
 #include <string>
 
 #include "ipcp/components.h"
+#include <rina-configuration.h>
 
 namespace rinad {
 
@@ -94,7 +95,8 @@ bool NamespaceManagerPs::isValidAddress(unsigned int address, const std::string&
 unsigned int NamespaceManagerPs::getValidAddress(const std::string& ipcp_name,
 		const std::string& ipcp_instance)
 {
-		rina::AddressingConfiguration configuration = nsm->ipcp->get_dif_information().
+		const rina::DIFInformation &dif_info = nsm->ipcp->get_dif_information();
+		rina::AddressingConfiguration configuration = dif_info.
 					dif_configuration_.nsm_configuration_.addressing_configuration_;
 		unsigned int candidateAddress = getIPCProcessAddress(ipcp_name,
 				ipcp_instance, configuration);
@@ -108,7 +110,7 @@ unsigned int NamespaceManagerPs::getValidAddress(const std::string& ipcp_name,
 			prefix = getAddressPrefix(ipcp_name, configuration);
 		} catch (rina::Exception &e) {
 			//We don't know the organization of the IPC Process
-			return 0;
+			goto resolve;
 		}
 
 		candidateAddress = prefix;
@@ -121,7 +123,9 @@ unsigned int NamespaceManagerPs::getValidAddress(const std::string& ipcp_name,
 			}
 		}
 
-		return 0;
+	resolve:
+		return KnownIPCProcessAddress::resolve(
+			dif_info.dif_name_, ipcp_name, ipcp_instance);
 }
 
 unsigned int NamespaceManagerPs::getIPCProcessAddress(const std::string& process_name,

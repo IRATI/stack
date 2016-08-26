@@ -80,6 +80,11 @@ struct KnownIPCProcessAddress {
         unsigned int address;
 
         KnownIPCProcessAddress() : address(0) { }
+
+        static unsigned int resolve(
+                const rina::ApplicationProcessNamingInformation &dif_name,
+                const std::string& process_name,
+                const std::string& process_instance);
 };
 
 /* The configuration required to create a DIF */

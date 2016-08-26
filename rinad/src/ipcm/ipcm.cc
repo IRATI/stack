@@ -621,9 +621,10 @@ ipcm_res_t IPCManager_::assign_to_dif(
             nsm_config.addressing_configuration_ = address_config;
             nsm_config.policy_set_ = dif_template->nsmConfiguration.policy_set_;
 
-            bool found = dif_template->lookup_ipcp_address(ipcp->get_name(),
-                                                           address);
-            if (!found)
+            rina::ApplicationProcessNamingInformation name = ipcp->get_name();
+            if (!dif_template->lookup_ipcp_address(name, address) &&
+                !(address = KnownIPCProcessAddress::resolve(dif_name,
+                    name.processName, name.processInstance)))
             {
                 ss << "No address for IPC process "
                         << ipcp->get_name().toString() << " in DIF "
