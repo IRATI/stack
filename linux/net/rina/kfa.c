@@ -228,6 +228,7 @@ static int kfa_flow_deallocate_worker(void *data)
 	}
 
 	if (flow->state != PORT_STATE_DEALLOCATED) {
+		spin_unlock_bh(&instance->lock);
 		LOG_ERR("Port %u should be deallocated but it is not...", id);
 		return 0;
 	}
