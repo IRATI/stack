@@ -63,6 +63,9 @@ static int snd_wq_size;
 static DEFINE_SPINLOCK(rcv_wq_lock);
 static DEFINE_SPINLOCK(snd_wq_lock);
 
+static int parse_assign_conf(struct ipcp_instance_data * data,
+                             const struct dif_config *   config);
+
 /* Structure for the workqueue */
 struct rcv_data {
         struct list_head list;
@@ -93,20 +96,6 @@ struct hostname {
 		struct in6_addr     in6;
 	};
 };
-
-/*
- * Mapping of ipcp_instance_data to host_name
- * Needed for handling incoming SDUs
- */
-struct host_ipcp_instance_mapping {
-        struct list_head            list;
-
-        struct ipcp_instance_data * data;
-        struct hostname             host_name;
-};
-
-static DEFINE_SPINLOCK(data_instances_lock);
-static struct list_head data_instances_list;
 
 enum port_id_state {
         PORT_STATE_NULL = 1,
@@ -282,10 +271,11 @@ static unsigned sockaddr_copy(union address * src, union address * dst)
 	unreachable();
 }
 
-static ssize_t shim_tcp_udp_ipcp_attr_show(struct robject *        robj,
-					   struct robj_attribute * attr,
-					   char *                  buf)
+static ssize_t shim_tcp_udp_ipcp_sysfs_show(struct kobject *   kobj,
+					    struct attribute * attr,
+					    char *             buf)
 {
+	struct robject * robj = container_of(kobj, struct robject, kobj);
 	struct ipcp_instance * instance;
 	char *tmp;
 	int size;
@@ -294,9 +284,9 @@ static ssize_t shim_tcp_udp_ipcp_attr_show(struct robject *        robj,
 	if (!instance || !instance->data)
 		return -EIO;
 
-	if (strcmp(robject_attr_name(attr), "type") == 0)
+	if (!strcmp(attr->name, "type"))
 		return sprintf(buf, "shim-tcp-udp\n");
-	if (strcmp(robject_attr_name(attr), "host_name") == 0)
+	if (!strcmp(attr->name, "host_name"))
 		switch(instance->data->host_name.family) {
 		case AF_INET:
 			return sprintf(buf, "%pI4\n",
@@ -309,9 +299,9 @@ static ssize_t shim_tcp_udp_ipcp_attr_show(struct robject *        robj,
 		case AF_UNSPEC:
 			return 0;
 		}
-	if (strcmp(robject_attr_name(attr), "name") == 0)
+	if (!strcmp(attr->name, "name"))
 		tmp = name_tostring(instance->data->name);
-	else if (strcmp(robject_attr_name(attr), "dif") == 0)
+	else if (!strcmp(attr->name, "dif"))
 		tmp = name_tostring(instance->data->dif_name);
 	else
 		BUG();
@@ -322,27 +312,86 @@ static ssize_t shim_tcp_udp_ipcp_attr_show(struct robject *        robj,
 	rkfree(tmp);
 	return size;
 }
-RINA_SYSFS_OPS(shim_tcp_udp_ipcp);
-RINA_ATTRS(shim_tcp_udp_ipcp, name, type, dif, host_name);
+
+static ssize_t shim_tcp_udp_ipcp_sysfs_store(struct kobject *   kobj,
+					     struct attribute * attr,
+					     const char *       buf,
+					     size_t             size)
+{
+	struct robject * robj = container_of(kobj, struct robject, kobj);
+	struct ipcp_instance * instance;
+
+	instance = container_of(robj, struct ipcp_instance, robj);
+	if (!instance || !instance->data)
+		return -EIO;
+
+	if (!strcmp(attr->name, "config")) {
+		struct ipcp_instance_data *data = instance->data;
+		struct ipcp_config_entry entry;
+		struct ipcp_config config;
+		struct dif_config dif_config;
+		const char *p = buf, *q = buf + size;
+		INIT_LIST_HEAD(&dif_config.ipcp_config_entries);
+		list_add(&config.next, &dif_config.ipcp_config_entries);
+		config.entry = &entry;
+		for (; p < q; p++) {
+			if (!strcmp(p, "hostname")
+			 && !list_empty(&data->reg_apps))
+				LOG_ERR("Applications are already registered");
+			else if (!(entry.name = (char *) p,
+				   p = memchr(p, '\0', q - p))
+			      || !(entry.value = (char *) ++p,
+				   p = memchr(p, '\0', q - p)))
+				LOG_ERR("Error parsing config update");
+			else if (!parse_assign_conf(data, &dif_config))
+				continue;
+			return -EINVAL;
+		}
+		return size;
+	}
+
+	BUG();
+}
+
+static const struct sysfs_ops shim_tcp_udp_ipcp_sysfs_ops = {
+	.show = shim_tcp_udp_ipcp_sysfs_show,
+	.store = shim_tcp_udp_ipcp_sysfs_store,
+};
+static struct attribute _shim_tcp_udp_ipcp_attrs[] = {
+	{"name",      S_IRUGO},
+	{"type",      S_IRUGO},
+	{"dif",       S_IRUGO},
+	{"host_name", S_IRUGO},
+	{"config",    S_IWUSR},
+};
+static struct attribute *shim_tcp_udp_ipcp_attrs[] = {
+	_shim_tcp_udp_ipcp_attrs+0,
+	_shim_tcp_udp_ipcp_attrs+1,
+	_shim_tcp_udp_ipcp_attrs+2,
+	_shim_tcp_udp_ipcp_attrs+3,
+	_shim_tcp_udp_ipcp_attrs+4,
+	NULL
+};
+
 RINA_KTYPE(shim_tcp_udp_ipcp);
 
-static struct host_ipcp_instance_mapping *
-inst_data_mapping_get(const struct hostname * host_name)
+static struct ipcp_instance_data *
+find_instance_by_hostname(const struct hostname * host_name)
 {
-        struct host_ipcp_instance_mapping * mapping;
+        struct ipcp_instance_data * data;
 
         ASSERT(host_name);
 
-        spin_lock(&data_instances_lock);
+        spin_lock(&tcp_udp_data.lock);
 
-        list_for_each_entry(mapping, &data_instances_list, list) {
-                if (hostname_is_equal(host_name, &mapping->host_name)) {
-                        spin_unlock(&data_instances_lock);
-                        return mapping;
+        list_for_each_entry(data, &tcp_udp_data.instances, list) {
+                if (hostname_is_equal(host_name, &data->host_name)) {
+                        spin_unlock(&tcp_udp_data.lock);
+                        return data;
                 }
         }
 
-        spin_unlock(&data_instances_lock);
+        spin_unlock(&tcp_udp_data.lock);
 
         return NULL;
 }
@@ -1691,7 +1740,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
 
 static int tcp_udp_rcv_process_msg(struct sock * sk)
 {
-        struct host_ipcp_instance_mapping * mapping;
+        struct ipcp_instance_data *         data;
         struct hostname                     host_name;
         union address                       own;
         struct socket *                     sock;
@@ -1702,7 +1751,10 @@ static int tcp_udp_rcv_process_msg(struct sock * sk)
         ASSERT(sk);
 
         sock = sk->sk_socket;
-        ASSERT(sock);
+        if (!sock) {
+                LOG_ERR("BUG: sk->sk_socket is NULL");
+                return -1;
+        }
 
         len = sizeof own;
         if (kernel_getsockname(sock, &own.sa, &len)) {
@@ -1721,16 +1773,18 @@ static int tcp_udp_rcv_process_msg(struct sock * sk)
         }
 
         hostname_init(&host_name, &own);
-        mapping = inst_data_mapping_get(&host_name);
-        ASSERT(mapping);
+        data = find_instance_by_hostname(&host_name);
+        if (!data) {
+                LOG_ERR("BUG: failed to map hostname");
+                return -1;
+        }
 
         if (sk->sk_socket->type == SOCK_DGRAM) {
-                res = udp_process_msg(mapping->data, sock);
-                while (res > 0)
-                        res = udp_process_msg(mapping->data, sock);
+                do res = udp_process_msg(data, sock);
+                while (res > 0);
                 return res;
         } else
-                return tcp_process(mapping->data, sock);
+                return tcp_process(data, sock);
 }
 
 static void tcp_udp_rcv_worker(struct work_struct * work)
@@ -2049,6 +2103,7 @@ static int parse_dir_entry(struct ipcp_instance_data * data, char **blob)
         char               * pn = 0, * pi = 0, * en = 0, * ei = 0;
         char               * ip = 0, * port = 0;
         struct dir_entry * dir_entry;
+        struct dir_entry * entry;
         union address    * addr;
 
         LOG_HBEAT;
@@ -2068,21 +2123,24 @@ static int parse_dir_entry(struct ipcp_instance_data * data, char **blob)
                 goto out;
         }
 
-        if (kstrtouint(port, 10, &port_nr)) {
-                LOG_ERR("Failed to convert int");
-                goto out;
-        }
-
-        addr = &dir_entry->addr;
-        if (in4_pton(ip, -1, (u8*)&addr->in.sin_addr, -1, 0)) {
-                addr->family = AF_INET;
-                addr->in.sin_port = htons(port_nr);
-        } else if (in6_pton(ip, -1, (u8*)&addr->in6.sin6_addr, -1, 0)) {
-                addr->family = AF_INET6;
-                addr->in6.sin6_port = htons(port_nr);
+        if (*ip) {
+                if (kstrtouint(port, 10, &port_nr)) {
+                        LOG_ERR("Failed to convert int");
+                        goto out;
+                }
+                addr = &dir_entry->addr;
+                if (in4_pton(ip, -1, (u8*)&addr->in.sin_addr, -1, 0)) {
+                        addr->family = AF_INET;
+                        addr->in.sin_port = htons(port_nr);
+                } else if (in6_pton(ip, -1, (u8*)&addr->in6.sin6_addr, -1, 0)) {
+                        addr->family = AF_INET6;
+                        addr->in6.sin6_port = htons(port_nr);
+                } else {
+                        LOG_ERR("Failed to parse ip");
+                        goto out;
+                }
         } else {
-                LOG_ERR("Failed to parse ip");
-                goto out;
+                addr = 0;
         }
 
         if (!(pi = rkstrdup(""))
@@ -2092,14 +2150,31 @@ static int parse_dir_entry(struct ipcp_instance_data * data, char **blob)
                 goto out;
         }
 
-        INIT_LIST_HEAD(&dir_entry->list);
         name_init_with(dir_entry->app_name, pn, pi, en, ei);
 
         spin_lock(&data->lock);
-        list_add(&dir_entry->list, &data->directory);
+        list_for_each_entry(entry, &data->directory, list)
+                if (name_cmp(NAME_CMP_APN | NAME_CMP_AEN,
+                             entry->app_name, dir_entry->app_name)) {
+                        if (addr) {
+                                memcpy(&entry->addr, addr, sizeof *addr);
+                                LOG_DBG("Updated an existing dir entry");
+                                addr = 0;
+                        } else {
+                                list_del(&entry->list);
+                                LOG_DBG("Removed a dir entry");
+                        }
+                        break;
+                }
+        if (addr) {
+                INIT_LIST_HEAD(&dir_entry->list);
+                list_add(&dir_entry->list, &data->directory);
+                LOG_DBG("Added a new dir entry");
+        } else {
+                name_destroy(dir_entry->app_name);
+                rkfree(dir_entry);
+        }
         spin_unlock(&data->lock);
-
-        LOG_DBG("Added a new dir entry");
         result = 0;
 
 out:
@@ -2198,20 +2273,29 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
                  *  Directory entries and exp registrations
                  */
                 if (!strcmp(entry->name, "hostname")) {
-                        struct hostname * host_name = &data->host_name;
+                        struct ipcp_instance_data * other;
+                        struct hostname host_name;
 
                         ASSERT(entry->value);
 
                         if (in4_pton(entry->value, -1,
-                                     (u8*)&host_name->in, -1, 0)) {
-                                host_name->family = AF_INET;
-                                LOG_DBG("Got hostname %pI4", &host_name->in);
+                                     (u8*)&host_name.in, -1, 0)) {
+                                host_name.family = AF_INET;
+                                LOG_DBG("Got hostname %pI4", &host_name.in);
                         } else if (in6_pton(entry->value, -1,
-                                            (u8*)&host_name->in6, -1, 0)) {
-                                host_name->family = AF_INET6;
-                                LOG_DBG("Got hostname %pI6c", &host_name->in6);
+                                            (u8*)&host_name.in6, -1, 0)) {
+                                host_name.family = AF_INET6;
+                                LOG_DBG("Got hostname %pI6c", &host_name.in6);
                         } else {
                                 LOG_ERR("Failed to parse hostname");
+                                return -1;
+                        }
+                        other = find_instance_by_hostname(&host_name);
+                        if (!other) {
+                                data->host_name = host_name;
+                        } else if (other != data) {
+                                LOG_ERR("Error duplicating hostname,"
+                                        " bailing out");
                                 return -1;
                         }
 
@@ -2279,8 +2363,6 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
 static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                                  const struct dif_info *     dif_information)
 {
-        struct host_ipcp_instance_mapping * mapping;
-
         LOG_HBEAT;
 
         ASSERT(data);
@@ -2306,26 +2388,6 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                 goto err;
         }
 
-        if (inst_data_mapping_get(&data->host_name)) {
-                LOG_ERR("Error duplicating hostname, bailing out");
-                goto err;
-        }
-
-        mapping = rkmalloc(sizeof(struct host_ipcp_instance_mapping),
-                           GFP_KERNEL);
-        if (!mapping) {
-                LOG_ERR("Failed to allocate memory");
-                goto err;
-        }
-
-        mapping->host_name = data->host_name;
-        mapping->data = data;
-        INIT_LIST_HEAD(&mapping->list);
-
-        spin_lock(&data_instances_lock);
-        list_add(&mapping->list, &data_instances_list);
-        spin_unlock(&data_instances_lock);
-
         return 0;
 
 err:
@@ -2338,8 +2400,6 @@ err:
 static int tcp_udp_update_dif_config(struct ipcp_instance_data * data,
                                      const struct dif_config *   new_config)
 {
-        struct host_ipcp_instance_mapping * mapping;
-
         LOG_HBEAT;
 
         ASSERT(data);
@@ -2353,36 +2413,12 @@ static int tcp_udp_update_dif_config(struct ipcp_instance_data * data,
 
         undo_assignment(data);
 
-        mapping = inst_data_mapping_get(&data->host_name);
-        if (mapping) {
-                spin_lock(&data_instances_lock);
-                list_del(&mapping->list);
-                spin_unlock(&data_instances_lock);
-                kfree(mapping);
-        }
-
         if (parse_assign_conf(data, new_config)) {
                 LOG_ERR("Failed to update configuration");
                 undo_assignment(data);
                 /* FIXME: If this fails, DIF is no longer functional */
                 return -1;
         }
-
-        mapping = rkmalloc(sizeof(struct host_ipcp_instance_mapping),
-                           GFP_KERNEL);
-        if (!mapping) {
-                LOG_ERR("Failed to allocate memory");
-                undo_assignment(data);
-                return -1;
-        }
-
-        mapping->host_name = data->host_name;
-        mapping->data = data;
-        INIT_LIST_HEAD(&mapping->list);
-
-        spin_lock(&data_instances_lock);
-        list_add(&mapping->list, &data_instances_list);
-        spin_unlock(&data_instances_lock);
 
         return 0;
 }
@@ -2656,8 +2692,6 @@ static int tcp_udp_init(struct ipcp_factory_data * data)
         INIT_LIST_HEAD(&rcv_wq_data);
         INIT_LIST_HEAD(&snd_wq_data);
 
-        INIT_LIST_HEAD(&data_instances_list);
-
         spin_lock_init(&data->lock);
 
         INIT_WORK(&rcv_work, tcp_udp_rcv_worker);
@@ -2859,7 +2893,6 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
 static int tcp_udp_destroy(struct ipcp_factory_data * data,
                            struct ipcp_instance *     instance)
 {
-        struct host_ipcp_instance_mapping * mapping;
         struct ipcp_instance_data         * pos, * next;
         struct shim_tcp_udp_flow 	  * flow, * nflow;
         struct reg_app_data	 	  * reg_app, *nreg_app;
@@ -2904,15 +2937,6 @@ static int tcp_udp_destroy(struct ipcp_factory_data * data,
                                 name_destroy(pos->name);
                         if (pos->dif_name)
                                 name_destroy(pos->dif_name);
-
-                        mapping = inst_data_mapping_get(&pos->host_name);
-                        if (mapping) {
-                                LOG_DBG("Removing mapping from list");
-                                spin_lock(&data_instances_lock);
-                                list_del(&mapping->list);
-                                spin_unlock(&data_instances_lock);
-                                kfree(mapping);
-                        }
 
                         robject_del(&instance->robj);
 
