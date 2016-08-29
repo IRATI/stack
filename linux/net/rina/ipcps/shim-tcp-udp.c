@@ -96,7 +96,7 @@ struct hostname {
 
 /*
  * Mapping of ipcp_instance_data to host_name
- * Needed for handling incomming SDUs
+ * Needed for handling incoming SDUs
  */
 struct host_ipcp_instance_mapping {
         struct list_head            list;
@@ -114,7 +114,7 @@ enum port_id_state {
         PORT_STATE_ALLOCATED
 };
 
-/* Data for registrated applications */
+/* Data for registered applications */
 struct reg_app_data {
         struct list_head list;
 
@@ -162,7 +162,7 @@ struct ipcp_instance_data {
         /* Stores the state of flows indexed by port_id */
         struct list_head    flows;
 
-        /* Holds reg_app_data, e.g. the registrated applications */
+        /* Holds reg_app_data, e.g. the registered applications */
         struct list_head    reg_apps;
 
         struct list_head    directory;
