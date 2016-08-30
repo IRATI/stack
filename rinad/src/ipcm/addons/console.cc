@@ -123,7 +123,8 @@ IPCMConsole::IPCMConsole(const std::string& socket_path_) :
 				"<neighbor-process-instance>");
 	commands_map["query-rib"] =
 			ConsoleCmdInfo(&IPCMConsole::query_rib,
-				"USAGE: query-rib <ipcp-id>");
+				"USAGE: query-rib <ipcp-id> "
+				"[(<object-class>|-) [<object-name>]]");
 	commands_map["select-policy-set"] =
 			ConsoleCmdInfo(&IPCMConsole::select_policy_set,
 				"USAGE: select-policy-set <ipcp-id> "
@@ -574,6 +575,7 @@ IPCMConsole::query_rib(std::vector<string>& args)
 {
 	int ipcp_id;
 	QueryRIBPromise promise;
+	string objectClass, objectName;
 
 	if (args.size() < 2) {
 		outstream << commands_map[args[0]].usage << endl;
@@ -590,7 +592,15 @@ IPCMConsole::query_rib(std::vector<string>& args)
 		return CMDRETCONT;
 	}
 
-	if (IPCManager->query_rib(this, &promise, ipcp_id) == IPCM_FAILURE ||
+	if (args.size() > 2) {
+		if (args[2] != "-")
+			objectClass = args[2];
+		if (args.size() > 3)
+			objectName = args[3];
+	}
+
+	if (IPCManager->query_rib(this, &promise, ipcp_id,
+				  objectClass, objectName) == IPCM_FAILURE ||
 			promise.wait() != IPCM_SUCCESS) {
 		outstream << "Query RIB operation failed" << endl;
 		return CMDRETCONT;
