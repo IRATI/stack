@@ -1195,7 +1195,7 @@ ipcm_res_t IPCManager_::query_rib(Addon* callee, QueryRIBPromise* promise,
 
         ss << "Requested query RIB of IPC process "
                 << ipcp->get_name().toString() << std::endl;
-        FLUSH_LOG(INFO, ss);
+        FLUSH_LOG(DBG, ss);
     } catch (rina::ConcurrentException& e)
     {
         ss << "Error while querying RIB of IPC Process "
