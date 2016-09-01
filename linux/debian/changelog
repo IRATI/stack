@@ -1,3 +1,18 @@
+linux (4.1.24+rina-1) UNRELEASED; urgency=medium
+
+  * New upstream stable update 4.1.24
+    - drop patches merged upstream
+    - drop aufs4 and hardening from grsecurity
+    - refresh drivers-media-dvb-usb-af9005-request_firmware.patch
+  * Add support for RINA: https://github.com/IRATI/stack
+    - drop installer support
+    - change ABI to rina.1
+    - relax versioning scheme
+    - add Provides: for possible build-dep on RINA syscalls
+    - disable debug logs
+
+ -- Julien Muchembled <jm@nexedi.com>  Thu, 01 Sep 2016 11:03:47 +0200
+
 linux (4.1.6-1~bpo8+1) jessie-backports; urgency=medium
 
   * Rebuild for jessie-backports.
