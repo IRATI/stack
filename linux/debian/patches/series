@@ -17,13 +17,6 @@ bugfix/all/firmware_class-log-every-success-and-failure.patch
 bugfix/all/firmware-remove-redundant-log-messages-from-drivers.patch
 bugfix/all/radeon-firmware-is-required-for-drm-and-kms-on-r600-onward.patch
 
-# Patches from aufs4 repository, imported with
-# debian/patches/features/all/aufs4/gen-patch.  These are only the
-# changes needed to allow aufs to be built out-of-tree.
-features/all/aufs4/aufs4-base.patch
-features/all/aufs4/aufs4-mmap.patch
-features/all/aufs4/aufs4-standalone.patch
-
 # Change some defaults for security reasons
 debian/af_802154-Disable-auto-loading-as-mitigation-against.patch
 debian/rds-Disable-auto-loading-as-mitigation-against-local.patch
@@ -80,12 +73,3 @@ bugfix/all/kernel-doc-set-man-page-date.patch
 features/all/efi-autoload-efi-pstore.patch
 features/all/cpufreq-dt-allow-driver-to-boot-automatically.patch
 features/all/regulator-axp20x-Add-module-alias.patch
-
-# Hardening from grsecurity
-features/all/grsecurity/grsecurity-kconfig.patch
-# Disabled until we add code into the grsecurity/ directory
-#features/all/grsecurity/grsecurity-kbuild.patch
-features/all/grsecurity/grkernsec_perf_harden.patch
-bugfix/all/virtio-net-drop-netif_f_fraglist.patch
-bugfix/all/perf-fix-aux-buffer-refcounting.patch
-bugfix/all/perf-fix-double-free-of-the-aux-buffer.patch

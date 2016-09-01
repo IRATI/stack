@@ -13,11 +13,7 @@ a version of the script which is directly derived from the driver.
 
 --- a/drivers/media/usb/dvb-usb/Kconfig
 +++ b/drivers/media/usb/dvb-usb/Kconfig
-@@ -227,10 +227,10 @@ config DVB_USB_OPERA1
- 
- config DVB_USB_AF9005
- 	tristate "Afatech AF9005 DVB-T USB1.1 support"
--	depends on BROKEN
+@@ -236,6 +236,7 @@ config DVB_USB_AF9005
  	depends on DVB_USB
  	select MEDIA_TUNER_MT2060 if MEDIA_SUBDRV_AUTOSELECT
  	select MEDIA_TUNER_QT1010 if MEDIA_SUBDRV_AUTOSELECT
