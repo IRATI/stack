@@ -116,21 +116,8 @@ class VersionLinux(Version):
     \d+\.\d+
 )
 (?P<update>
-    (?:\.\d+)?
-    (?:-[a-z]+\d+)?
+    (?:.+)?
 )
-(?:
-    ~
-    (?P<modifier>
-        .+?
-    )
-)?
-(?:
-    \.dfsg\.
-    (?P<dfsg>
-        \d+
-    )
-)?
 -
 \d+
 (\.\d+)?
@@ -160,15 +147,11 @@ $
         if match is None:
             raise RuntimeError(u"Invalid debian linux version")
         d = match.groupdict()
-        self.linux_modifier = d['modifier']
+        self.linux_modifier = None
         self.linux_version = d['version']
-        if d['modifier'] is not None:
-            assert not d['update']
-            self.linux_upstream = u'-'.join((d['version'], d['modifier']))
-        else:
-            self.linux_upstream = d['version']
+        self.linux_upstream = d['version']
         self.linux_upstream_full = self.linux_upstream + d['update']
-        self.linux_dfsg = d['dfsg']
+        self.linux_dfsg = None
         self.linux_revision_experimental = match.group('revision_experimental') and True
         self.linux_revision_security = match.group('revision_security') and True
         self.linux_revision_backports = match.group('revision_backports') and True
