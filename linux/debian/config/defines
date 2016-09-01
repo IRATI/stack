@@ -1,8 +1,5 @@
 [abi]
-abiname: 0.bpo.2
-ignore-changes:
- module:sound/firewire/snd-firewire-lib
- perf_*
+abiname: rina.1
 
 [base]
 arches:
