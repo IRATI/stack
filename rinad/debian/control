@@ -1,0 +1,28 @@
+Source: rinad
+Priority: optional
+Maintainer: Julien Muchembled <jm@nexedi.com>
+Build-Depends: debhelper (>=9), dh-autoreconf, libtool,
+  git, librina-dev, protobuf-compiler,
+Standards-Version: 3.9.8
+Section: net
+Homepage: https://github.com/IRATI/stack
+
+Package: rinad
+Architecture: any
+Depends: librinad (= ${binary:Version}),
+  ${perl:Depends}, ${shlibs:Depends}, ${misc:Depends}
+Description: RINA daemons
+
+Package: librinad-dev
+Section: libdevel
+Architecture: any
+Depends: librinad (= ${binary:Version}), librina-dev, ${misc:Depends}
+Description: development library for RINA daemons
+
+Package: librinad
+Section: libs
+Architecture: any
+Multi-Arch: same
+Pre-Depends: ${misc:Pre-Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: runtime library for RINA daemons

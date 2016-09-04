@@ -1,0 +1,7 @@
+usr/include/*
+usr/lib/*/*.a
+usr/lib/*/*.la
+usr/lib/*/*.so
+usr/lib/*/pkgconfig/*
+usr/lib/*/rinad/ipcp/*.a
+usr/lib/*/rinad/ipcp/*.la

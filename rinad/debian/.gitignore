@@ -1,0 +1,7 @@
+/autoreconf.*
+/changelog
+/files
+/*.substvars
+/*.debhelper*
+/*rinad*/
+/tmp/
