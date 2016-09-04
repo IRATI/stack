@@ -1,7 +1,7 @@
 Package: linux-libc-dev
 Section: devel
 Depends: ${misc:Depends}
-Provides: linux-kernel-headers
+Provides: linux-kernel-headers, linux-libc-rina-dev
 Replaces: linux-kernel-headers
 Conflicts: linux-kernel-headers
 Multi-Arch: same
