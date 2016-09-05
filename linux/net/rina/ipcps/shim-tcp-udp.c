@@ -96,7 +96,7 @@ struct hostname {
 
 /*
  * Mapping of ipcp_instance_data to host_name
- * Needed for handling incomming SDUs
+ * Needed for handling incoming SDUs
  */
 struct host_ipcp_instance_mapping {
         struct list_head            list;
@@ -114,7 +114,7 @@ enum port_id_state {
         PORT_STATE_ALLOCATED
 };
 
-/* Data for registrated applications */
+/* Data for registered applications */
 struct reg_app_data {
         struct list_head list;
 
@@ -162,7 +162,7 @@ struct ipcp_instance_data {
         /* Stores the state of flows indexed by port_id */
         struct list_head    flows;
 
-        /* Holds reg_app_data, e.g. the registrated applications */
+        /* Holds reg_app_data, e.g. the registered applications */
         struct list_head    reg_apps;
 
         struct list_head    directory;
@@ -287,17 +287,13 @@ static ssize_t shim_tcp_udp_ipcp_attr_show(struct robject *        robj,
 					   char *                  buf)
 {
 	struct ipcp_instance * instance;
+	char *tmp;
+	int size;
 
 	instance = container_of(robj, struct ipcp_instance, robj);
 	if (!instance || !instance->data)
-		return 0;
+		return -EIO;
 
-	if (strcmp(robject_attr_name(attr), "name") == 0)
-		return sprintf(buf, "%s\n",
-			name_tostring(instance->data->name));
-	if (strcmp(robject_attr_name(attr), "dif") == 0)
-		return sprintf(buf, "%s\n",
-			name_tostring(instance->data->dif_name));
 	if (strcmp(robject_attr_name(attr), "type") == 0)
 		return sprintf(buf, "shim-tcp-udp\n");
 	if (strcmp(robject_attr_name(attr), "host_name") == 0)
@@ -310,10 +306,21 @@ static ssize_t shim_tcp_udp_ipcp_attr_show(struct robject *        robj,
 				&instance->data->host_name.in6);
 		default:
 			unreachable();
-		case AF_UNSPEC:;
+		case AF_UNSPEC:
+			return 0;
 		}
+	if (strcmp(robject_attr_name(attr), "name") == 0)
+		tmp = name_tostring(instance->data->name);
+	else if (strcmp(robject_attr_name(attr), "dif") == 0)
+		tmp = name_tostring(instance->data->dif_name);
+	else
+		BUG();
 
-	return 0;
+	if (!tmp)
+		return -EIO;
+	size = sprintf(buf, "%s\n", tmp);
+	rkfree(tmp);
+	return size;
 }
 RINA_SYSFS_OPS(shim_tcp_udp_ipcp);
 RINA_ATTRS(shim_tcp_udp_ipcp, name, type, dif, host_name);

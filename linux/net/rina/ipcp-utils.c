@@ -249,9 +249,6 @@ bool name_cmp(uint8_t             flags,
         ASSERT(a != NULL);
         ASSERT(b != NULL);
 
-        if (flags & NAME_CMP_ALL)
-                LOG_DBG("No flags, name comparison will be meaningless ...");
-
         if (flags & NAME_CMP_APN)
                 if (NAME_CMP_FIELD(a, b, process_name))
                         return false;
@@ -267,6 +264,9 @@ bool name_cmp(uint8_t             flags,
         if (flags & NAME_CMP_AEI)
                 if (NAME_CMP_FIELD(a, b, entity_instance))
                         return false;
+
+        if (!(flags & NAME_CMP_ALL))
+                LOG_DBG("No flags, name comparison is meaningless");
 
         return true;
 }

@@ -671,6 +671,9 @@ int sdup_destroy(struct sdup * instance)
 	if (instance->sdup_conf)
 		sdup_config_destroy(instance->sdup_conf);
 
+	if (instance->dt_cons)
+		rkfree(instance->dt_cons);
+
 	rkfree(instance);
 
 	LOG_DBG("Instance %pK finalized successfully", instance);
