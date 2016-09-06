@@ -1,0 +1,6 @@
+/autoreconf.*
+/changelog
+/files
+/*.substvars
+/*.debhelper*
+/rina-tools/
