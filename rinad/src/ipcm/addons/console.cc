@@ -234,64 +234,85 @@ IPCMConsole::init()
 	return sfd;
 }
 
-int IPCMConsole::read_with_timeout(int cfd, void *buf, size_t count)
-{
-	const char *fname;
-	while(this->keep_on_running) {
-		struct timeval timeout = {2,0};
-		fd_set readset;
-		FD_ZERO(&readset);
-		FD_SET(cfd, &readset);
+struct IPCMConsole::Connection {
+	char *cmdbuf;
+	unsigned tail, size;
+	int fd;
 
-		int res = select(cfd+1, &readset, NULL, NULL, &timeout);
-		if (res > 0) {
-			res = read(cfd, buf, count);
-			if (res >= 0) {
-				return res;
-			}
-			fname = "read";
-		} else if (res) {
-			fname = "select";
-		} else {
-			continue;
-		}
-		LOG_ERR("Error [%i] calling %s()\n", errno, fname);
-		break;
+	Connection() : cmdbuf(0), tail(0), size(0), fd(-1) {}
+
+	~Connection() {
+		free(cmdbuf);
+		if (fd >= 0)
+			close(fd);
 	}
-	return -1;
-}
 
-
-int IPCMConsole::accept_with_timeout(int sfd, struct sockaddr *addr,
-				     socklen_t *addrlen)
-{
-	const char *fname;
-	while(this->keep_on_running) {
-		struct timeval timeout = {2,0};
-		fd_set readset;
-		FD_ZERO(&readset);
-		FD_SET(sfd, &readset);
-
-		int res = select(sfd+1, &readset, NULL, NULL, &timeout);
-		if (res > 0) {
-			res = accept(sfd, addr, addrlen);
-			if (res >= 0) {
-				return res;
-			}
-			fname = "read";
-		} else if (res) {
-			fname = "select";
-		} else {
-			continue;
+	bool write(const string &str) {
+		if (::write(fd, str.data(), str.size()) >= 0) {
+			return true;
 		}
-		LOG_ERR("Error [%i] calling %s()\n", errno, fname);
-		break;
+		if (errno == EPIPE) {
+			LOG_ERR("Console client disconnected\n");
+		} else {
+			LOG_ERR("Error [%i] calling write()\n", errno);
+		}
+		return false;
 	}
-	return -1;
-}
+
+	bool prompt() {
+		static const string s("IPCM >>> ");
+		return write(s);
+	}
+
+	bool accept(int sfd) {
+		fd = ::accept(sfd, NULL, NULL);
+		if (fd < 0) {
+			LOG_ERR("Error [%i] calling accept()\n", errno);
+			return false;
+		}
+		return prompt();
+	}
+
+	bool readable(IPCMConsole *console) {
+		char *p, *q;
+		int n = size - tail;
+		if (n < 128) {
+			size = tail + (n = 128);
+			p = (char*) realloc(cmdbuf, size);
+			if (!p) {
+				return false;
+			}
+			cmdbuf = p;
+		}
+		n = read(fd, p = cmdbuf + tail, n);
+		if (n <= 0) {
+			if (n < 0) {
+				LOG_ERR("Error [%i] calling read()\n", errno);
+			}
+			return false;
+		}
+		tail += n;
+		if (!(q = (char*) memchr(p, '\n', n))) {
+			return true;
+		}
+		p = cmdbuf;
+		do {
+			int cmdret = console->process_command(this, p, q - p);
+			if (cmdret == console->CMDRETSTOP) {
+				return false;
+			}
+			p = q + 1;
+			n = cmdbuf + tail - p;
+		} while ((q = (char*) memchr(p, '\n', n)));
+		memmove(cmdbuf, p, tail = n);
+		return prompt();
+	}
+};
 
 void IPCMConsole::body()
 {
+	list<Connection> conns;
+	list<Connection>::iterator it;
 	int sfd = init();
 
 	if (sfd < 0) {
@@ -301,60 +322,41 @@ void IPCMConsole::body()
 	LOG_DBG("Console starts [fd=%d]\n", sfd);
 
 	while (this->keep_on_running) {
-		int cfd;
-		char *cmdbuf, *p, *q;
-		unsigned tail, size;
-		int cmdret;
-		int n;
+		struct timeval timeout = {2,0};
+		fd_set readset;
+		int maxfd = sfd;
+		FD_ZERO(&readset);
+		FD_SET(sfd, &readset);
+		for (it = conns.begin(); it != conns.end(); it++) {
+			FD_SET(it->fd, &readset);
+			if (maxfd < it->fd) {
+				maxfd = it->fd;
+			}
+		}
 
-		cfd = accept_with_timeout(sfd, NULL, NULL);
-		if (cfd < 0) {
+		int res = select(maxfd+1, &readset, NULL, NULL, &timeout);
+		if (res <= 0) {
+			if (!res || errno == EINTR) {
+				continue;
+			}
+			LOG_ERR("Error [%i] calling select()\n", errno);
 			break;
 		}
 
-		cmdbuf = NULL;
-		tail = size = 0;
-		while (this->keep_on_running) {
-			outstream << "IPCM >>> ";
-			if (flush_output(cfd)) {
-				break;
+		for (it = conns.begin(); it != conns.end(); ) {
+			if (FD_ISSET(it->fd, &readset) && !it->readable(this)) {
+				it = conns.erase(it);
+			} else {
+				it++;
 			}
-
-			do {
-				n = size - tail;
-				if (n < 128) {
-					size = tail + (n = 128);
-					p = (char*) realloc(cmdbuf, size);
-					if (!p) {
-					      goto stop;
-					}
-					cmdbuf = p;
-				}
-
-				n = read_with_timeout(
-					cfd, p = cmdbuf + tail, n);
-				if (n <= 0) {
-					goto stop;
-				}
-				q = (char*) memchr(p, '\n', n);
-				tail += n;
-			} while (!q);
-
-			p = cmdbuf;
-			do {
-				cmdret = process_command(cfd, p, q - p);
-				if (cmdret == CMDRETSTOP) {
-					goto stop;
-				}
-				p = q + 1;
-				n = cmdbuf + tail - p;
-			} while ((q = (char*) memchr(p, '\n', n)));
-			memmove(cmdbuf, p, tail = n);
 		}
 
-	stop:
-		free(cmdbuf);
-		close(cfd);
+		if (FD_ISSET(sfd, &readset)) {
+			conns.push_back(Connection());
+			if (!conns.back().accept(sfd)) {
+				conns.pop_back();
+			}
+		}
 	}
 
 	close(sfd);
@@ -362,34 +364,7 @@ void IPCMConsole::body()
 }
 
 int
-IPCMConsole::flush_output(int cfd)
-{
-	int n;
-	const string& str = outstream.str();
-	ostringstream ss;
-
-	n = write(cfd, str.c_str(), str.size());
-	if (n < 0) {
-		if (errno != EPIPE) {
-		    ss  << " Error [" << errno <<
-			"] calling write()" << endl;
-		    FLUSH_LOG(ERR, ss);
-		    return -1;
-		} else {
-		    ss  << " Console client disconnected" << endl;
-		    FLUSH_LOG(INFO, ss);
-		    return -1;
-		}
-	}
-
-	// Make the stringstream empty
-	outstream.str(string());
-
-	return 0;
-}
-
-int
-IPCMConsole::process_command(int cfd, char *cmdbuf, int size)
+IPCMConsole::process_command(Connection *conn, char *cmdbuf, int size)
 {
 	map<string, ConsoleCmdInfo>::iterator mit;
 	istringstream iss(string(cmdbuf, size));
@@ -408,21 +383,20 @@ IPCMConsole::process_command(int cfd, char *cmdbuf, int size)
 
 	mit = commands_map.find(args[0]);
 	if (mit == commands_map.end()) {
-		outstream << "Unknown command '" << args[0] << "'" << endl;
-		if (flush_output(cfd)) {
-		    return CMDRETSTOP;
-		}
-		return 0;
+		outstream << "Unknown command '" << args[0] << "'";
+		ret = 0;
+	} else {
+		fun = mit->second.fun;
+		ret = (this->*fun)(args);
 	}
-
-	fun = mit->second.fun;
-	ret = (this->*fun)(args);
 
 	outstream << endl;
-	if (flush_output(cfd)) {
-	    return CMDRETSTOP;
+	if (!conn->write(outstream.str())) {
+		ret = CMDRETSTOP;
 	}
 
+	// Make the stringstream empty
+	outstream.str(string());
 	return ret;
 }
 
