@@ -646,6 +646,10 @@ void IPCProcessFactory::destroy(IPCProcessProxy* ipcp)
 
 	if (ipcp->getType().compare(NORMAL_IPC_PROCESS) == 0)
 	{
+		// BUG: Zombie processes are automatically reaped using a
+		//      SIGCHLD handler, so the following lines often result
+		//      in ESRCH (or worse if the IPCP pid was reallocated to
+		//      a new process).
 		resultUserSpace = kill(ipcp->getPid(), SIGINT);
 		// TODO: Change magic number
 		usleep(1000000);
@@ -663,7 +667,8 @@ void IPCProcessFactory::destroy(IPCProcessProxy* ipcp)
 	        error = error + "Result in user space:  " +
 	                        intToCharArray(resultUserSpace);
 	        LOG_ERR("%s", error.c_str());
-	        throw DestroyIPCProcessException(error);
+	        if (resultKernel) // ignore resultUserSpace due to above issue
+	                throw DestroyIPCProcessException(error);
 	}
 }
 
