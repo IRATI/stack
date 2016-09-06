@@ -325,7 +325,7 @@ void IPCProcessImpl::logPDUFTE(const rina::DumpFTResponseEvent& event) {
 		ss << std::endl;
 	}
 
-	LOG_IPCP_INFO("%s", ss.str().c_str());
+	LOG_IPCP_DBG("%s", ss.str().c_str());
 }
 
 static void parse_path(const std::string& path, std::string& component,

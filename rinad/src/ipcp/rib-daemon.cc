@@ -575,8 +575,10 @@ void IPCPRIBDaemonImpl::nMinusOneFlowAllocated(rina::NMinusOneFlowAllocatedEvent
 
 void IPCPRIBDaemonImpl::processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event)
 {
-	std::list<rina::rib::RIBObjectData> result =
-			ribd->get_rib_objects_data(rib);
+	std::list<rina::rib::RIBObjectData> result = ribd->get_rib_objects_data(
+		rib,
+		event.getObjectClass(),
+		event.getObjectName());
 
 	try {
 		rina::extendedIPCManager->queryRIBResponse(event,
