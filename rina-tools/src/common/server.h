@@ -80,7 +80,7 @@ public:
                const std::string& app_instance);
         virtual ~Server();
 
-        virtual void run(bool blocking);
+        void run(bool blocking);
 				void worker_completed(ServerWorker * worker);
 				void worker_started(ServerWorker * worker);
         void remove_completed_workers();

@@ -71,8 +71,8 @@ Client::Client(const string& t_type,
         server_name(server_apn), server_instance(server_api),
         quiet(q), echo_times(count),
         client_app_reg(registration), data_size(size), wait(w), gap(g),
-        dealloc_wait(dw), lost_wait(lw), nsdus(0), snd(0), m2(0),
-        sdus_received(0), min_rtt(LONG_MAX), max_rtt(0), average_rtt(0), rate(rt)
+        dealloc_wait(dw), lost_wait(lw), rate(rt),  snd(0), nsdus(0), m2(0),
+        sdus_received(0), min_rtt(LONG_MAX), max_rtt(0), average_rtt(0)		
 {
         std::map<unsigned long, timespec> * tmp = new std::map<unsigned long, timespec>();
         m = *tmp;
@@ -273,7 +273,7 @@ void Client::floodFlow(int port_id)
 {
 	unsigned long sdus_sent = 0;
 	double variance = 0, stdev = 0;
-	timespec endtp, begintp, mintp, mtp;
+	timespec endtp, begintp, mtp; //, mintp
 	unsigned long sn;
 	double delta = 0;
 	double current_rtt = 0;
@@ -561,11 +561,11 @@ int Sender::run(void)
 {
 	char buffer[data_size];
 	unsigned int sdus_sent = 0;
-	timespec begintp, endtp;
+	timespec begintp; //unused , endtp;
 	timespec mintp, maxtp;
-	unsigned char counter = 0;
+	// unused unsigned char counter = 0;
 	double interval_time = 0;
-	bool out = false;
+	// unused bool out = false;
 
 	if (rate) { /* wait in kB/s */
 		interval_time = ((double) data_size) / ((double) rate); /* ms */

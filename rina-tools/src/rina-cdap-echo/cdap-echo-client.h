@@ -52,8 +52,10 @@ class Client : public Application, public rina::cdap::CDAPCallbackInterface
 	void close_connection_result(const rina::cdap_rib::con_handle_t &con,
 			             const rina::cdap_rib::result_info &res);
 	void remote_read_result(const rina::cdap_rib::con_handle_t &con,
-			        const rina::cdap_rib::obj_info_t &onj,
-			        const rina::cdap_rib::res_info_t &res);
+                   const rina::cdap_rib::obj_info_t &obj,
+                   const rina::cdap_rib::res_info_t &res,
+                   const rina::cdap_rib::flags_t &flags,
+                   const int invoke_id);
  protected:
 	void createFlow();
 	void cacep();
