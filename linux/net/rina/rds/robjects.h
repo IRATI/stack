@@ -111,7 +111,7 @@ struct robj_attribute {
 		.show = _CAT(COMP_NAME, _attr_show),			\
 	};
 
-/* Declares a sysfs_ops object with is show function*/
+/* Declares a sysfs_ops object with its show function */
 #define RINA_SYSFS_OPS(COMP_NAME)					\
 static ssize_t COMP_NAME##_sysfs_show(struct kobject *   kobj,		\
 				      struct attribute * attr,		\

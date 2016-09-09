@@ -440,7 +440,9 @@ public:
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t query_rib(Addon* callee, QueryRIBPromise* promise,
-						const unsigned short ipcp_id);
+				const unsigned short ipcp_id,
+				const std::string& objectClass="",
+				const std::string& objectName="");
 
 	//
 	// Select a policy set

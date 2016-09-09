@@ -1152,7 +1152,9 @@ ipcm_res_t IPCManager_::update_dif_configuration(
 }
 
 ipcm_res_t IPCManager_::query_rib(Addon* callee, QueryRIBPromise* promise,
-                                  const unsigned short ipcp_id)
+                                  const unsigned short ipcp_id,
+                                  const std::string& objectClass,
+                                  const std::string& objectName)
 {
     std::ostringstream ss;
     IPCMIPCProcess *ipcp;
@@ -1189,11 +1191,11 @@ ipcm_res_t IPCManager_::query_rib(Addon* callee, QueryRIBPromise* promise,
             throw rina::Exception();
         }
 
-        ipcp->queryRIB("", "", 0, 0, "", trans->tid);
+        ipcp->queryRIB(objectClass, objectName, 0, 0, "", trans->tid);
 
         ss << "Requested query RIB of IPC process "
                 << ipcp->get_name().toString() << std::endl;
-        FLUSH_LOG(INFO, ss);
+        FLUSH_LOG(DBG, ss);
     } catch (rina::ConcurrentException& e)
     {
         ss << "Error while querying RIB of IPC Process "

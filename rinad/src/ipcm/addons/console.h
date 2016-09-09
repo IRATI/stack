@@ -46,6 +46,8 @@
 namespace rinad {
 
 class IPCMConsole : public Addon {
+                struct Connection;
+
                 static const unsigned int CMDBUFSIZE = 120;
                 static const int CMDRETCONT = 0;
                 static const int CMDRETSTOP = 1;
@@ -69,8 +71,7 @@ class IPCMConsole : public Addon {
                 std::string socket_path;
 
                 int init(void);
-                int process_command(int cfd, char *cmdbuf, int size);
-                int flush_output(int cfd);
+                int process_command(Connection *conn, char *cmdbuf, int size);
                 int plugin_load_unload(std::vector<std::string>& args,
                                        bool load);
                 bool cleanup_filesystem_socket();
@@ -103,9 +104,6 @@ class IPCMConsole : public Addon {
         public:
                 IPCMConsole(const std::string& socket_path);
                 void body();
-		int read_with_timeout(int cfd, void *buf, size_t count);
-		int accept_with_timeout(int sfd, struct sockaddr *addr,
-					socklen_t *addrlen);
                 virtual ~IPCMConsole() throw();
 		static const std::string NAME;
 		bool keep_on_running;

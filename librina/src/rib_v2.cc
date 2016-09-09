@@ -365,7 +365,9 @@ public:
 	///
 	const cdap_rib::vers_info_t& get_version() const;
 
-	std::list<RIBObjectData> get_all_rib_objects_data();
+	std::list<RIBObjectData> get_all_rib_objects_data(
+		const std::string& class_,
+		const std::string& name);
 
 	void set_security_manager(ISecurityManager * sec_man);
 
@@ -1657,14 +1659,22 @@ const cdap_rib::vers_info_t& RIB::get_version() const {
 	return schema->get_version();
 }
 
-std::list<RIBObjectData> RIB::get_all_rib_objects_data()
+std::list<RIBObjectData> RIB::get_all_rib_objects_data(
+		const std::string& class_,
+		const std::string& name)
 {
 	std::list<RIBObjectData> result;
 	RIBObjectData data;
+	unsigned n = name.size();
 
 	for (std::map<std::string, RIBObj*>::iterator it = obj_name_map.begin();
 			it != obj_name_map.end(); ++it) {
 		data = it->second->get_object_data();
+		if (class_.size() && class_ != data.class_)
+			continue;
+		if (n && (name[n-1] == '/' ? data.name_.compare(0, n, name)
+					   : data.name_ != name))
+			continue;
 		if (it->first != "/")
 			data.instance_ = __get_obj_inst_id(data.name_);
 		result.push_back(data);
@@ -1882,7 +1892,10 @@ public:
 		cdap_provider = p;
 	}
 
-	std::list<RIBObjectData> get_rib_objects_data(const rib_handle_t& handle);
+	std::list<RIBObjectData> get_rib_objects_data(
+		const rib_handle_t& handle,
+		const std::string& class_,
+		const std::string& name);
 
 	int set_security_manager(ApplicationEntity * sec_man);
 
@@ -2665,7 +2678,10 @@ void RIBDaemon::removeObjRIB(const rib_handle_t& handle,
 	rib->remove_obj(inst_id);
 }
 
-std::list<RIBObjectData> RIBDaemon::get_rib_objects_data(const rib_handle_t& handle)
+std::list<RIBObjectData> RIBDaemon::get_rib_objects_data(
+		const rib_handle_t& handle,
+		const std::string& class_,
+		const std::string& name)
 {
 	//Mutual exclusion
 	ReadScopedLock rlock(rwlock);
@@ -2678,7 +2694,7 @@ std::list<RIBObjectData> RIBDaemon::get_rib_objects_data(const rib_handle_t& han
 		throw eRIBNotFound();
 	}
 
-	return rib->get_all_rib_objects_data();
+	return rib->get_all_rib_objects_data(class_, name);
 }
 
 int RIBDaemon::set_security_manager(ApplicationEntity * sec_man)
@@ -3421,9 +3437,12 @@ bool RIBDaemonProxy::containsObj(const rib_handle_t& handle,
 	}
 }
 
-std::list<RIBObjectData> RIBDaemonProxy::get_rib_objects_data(const rib_handle_t& handle)
+std::list<RIBObjectData> RIBDaemonProxy::get_rib_objects_data(
+		const rib_handle_t& handle,
+		const std::string& class_,
+		const std::string& name)
 {
-	return ribd->get_rib_objects_data(handle);
+	return ribd->get_rib_objects_data(handle, class_, name);
 }
 
 int RIBDaemonProxy::set_security_manager(ApplicationEntity * sec_man)
