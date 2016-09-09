@@ -46,10 +46,11 @@ ConnectionCallback::ConnectionCallback(bool *keep_serving){
 
 void ConnectionCallback::open_connection(
 		const rina::cdap_rib::con_handle_t &con,
-		const rina::cdap_rib::flags_t &flags, int message_id)
+		const rina::cdap::CDAPMessage& m)
 {
 	cdap_rib::res_info_t res;
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+	int message_id = m.invoke_id_;
 	std::cout<<"open conection request CDAP message received"<<std::endl;
 	get_provider()->send_open_connection_result(con, res, message_id);
 	std::cout<<"open conection response CDAP message sent"<<std::endl;
