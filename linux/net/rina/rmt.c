@@ -1604,7 +1604,7 @@ int rmt_pff_flush(struct rmt *instance)
 { return is_rmt_pff_ok(instance) ? pff_flush(instance->pff) : -1; }
 EXPORT_SYMBOL(rmt_pff_flush);
 
-int rmt_pff_mnodify(struct rmt *instance,
+int rmt_pff_modify(struct rmt *instance,
 		    struct list_head *entries)
 { return is_rmt_pff_ok(instance) ? pff_modify(instance->pff, entries) : -1; }
 EXPORT_SYMBOL(rmt_pff_modify);
