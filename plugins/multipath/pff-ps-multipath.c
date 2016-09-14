@@ -252,7 +252,6 @@ static int __pff_add(struct pff_ps *        ps,
         if (!tmp) {
                 tmp = pfte_create_ni(entry->fwd_info, entry->qos_id);
                 if (!tmp) {
-                        spin_unlock_bh(&priv->lock);
                         return -1;
                 }
 
@@ -267,7 +266,6 @@ static int __pff_add(struct pff_ps *        ps,
 
                 if (pfte_port_add(tmp, alts->ports[0])) {
                         pfte_destroy(tmp);
-                        spin_unlock_bh(&priv->lock);
                         return -1;
                 }
 	}
@@ -279,6 +277,7 @@ static int mp_add(struct pff_ps *        ps,
                        struct mod_pff_entry * entry)
 {
         struct pff_ps_priv *     priv;
+        int result;
 
         priv = (struct pff_ps_priv *) ps->priv;
         if (!priv_is_ok(priv))
@@ -300,11 +299,11 @@ static int mp_add(struct pff_ps *        ps,
 
         spin_lock_bh(&priv->lock);
 
-        __pff_add(ps, priv, entry);
+        result = __pff_add(ps, priv, entry);
 
         spin_unlock_bh(&priv->lock);
 
-        return 0;
+        return result;
 }
 
 static int mp_remove(struct pff_ps *        ps,

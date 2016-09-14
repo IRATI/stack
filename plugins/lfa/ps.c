@@ -219,13 +219,53 @@ static struct pft_entry *pft_find(struct pff_ps_priv *priv,
 	return NULL;
 }
 
+static int __pff_add(struct pff_ps *ps,
+		     struct pff_ps_priv *priv,
+		     struct mod_pff_entry *entry)
+{
+	struct pft_entry *tmp;
+	struct port_id_altlist *alts;
+	int i;
+
+	tmp = pft_find(priv, entry->fwd_info, entry->qos_id);
+	if (!tmp) {
+		tmp = pfte_create_ni(entry->fwd_info, entry->qos_id);
+		if (!tmp) {
+			return -1;
+		}
+
+		list_add(&tmp->next, &priv->entries);
+	} else {
+		LOG_ERR("Entry already exists");
+		return -1;
+	}
+
+	alts = list_first_entry(&entry->port_id_altlists,
+				typeof(*alts),
+				next);
+
+	if (alts->num_ports < 1) {
+		LOG_INFO("Port id set is empty");
+		pfte_destroy(tmp);
+		return -1;
+	}
+
+	tmp->port = alts->ports[0];
+	tmp->nhop = tmp->port;
+
+	for (i = 1; i < alts->num_ports; i++) {
+		if (pfte_port_add(tmp, alts->ports[i])) {
+			pfte_destroy(tmp);
+			return -1;
+		}
+	}
+}
+
 static int lfa_add(struct pff_ps *ps,
 		   struct mod_pff_entry *entry)
 {
 	struct pff_ps_priv *priv;
-	struct pft_entry *tmp;
-	struct port_id_altlist *alts;
-	int i;
+	int result;
 
 	priv = (struct pff_ps_priv *) ps->priv;
 	if (!priv_is_ok(priv))
@@ -245,48 +285,13 @@ static int lfa_add(struct pff_ps *ps,
 		return -1;
 	}
 
-	spin_lock(&priv->lock);
+	spin_lock_bh(&priv->lock);
 
-	tmp = pft_find(priv, entry->fwd_info, entry->qos_id);
-	if (!tmp) {
-		tmp = pfte_create_ni(entry->fwd_info, entry->qos_id);
-		if (!tmp) {
-			spin_unlock(&priv->lock);
-			return -1;
-		}
+	result = __pff_add(ps, priv, entry);
 
-		list_add(&tmp->next, &priv->entries);
-	} else {
-		LOG_ERR("Entry already exists");
-		spin_unlock(&priv->lock);
-		return -1;
-	}
+	spin_unlock_bh(&priv->lock);
 
-	alts = list_first_entry(&entry->port_id_altlists,
-				typeof(*alts),
-				next);
-
-	if (alts->num_ports < 1) {
-		LOG_INFO("Port id set is empty");
-		pfte_destroy(tmp);
-		spin_unlock(&priv->lock);
-		return -1;
-	}
-
-	tmp->port = alts->ports[0];
-	tmp->nhop = tmp->port;
-
-	for (i = 1; i < alts->num_ports; i++) {
-		if (pfte_port_add(tmp, alts->ports[i])) {
-			pfte_destroy(tmp);
-			spin_unlock(&priv->lock);
-			return -1;
-		}
-	}
-
-	spin_unlock(&priv->lock);
-
-	return 0;
+	return result;
 }
 
 static int lfa_remove(struct pff_ps *ps,
@@ -314,11 +319,11 @@ static int lfa_remove(struct pff_ps *ps,
 		return -1;
 	}
 
-	spin_lock(&priv->lock);
+	spin_lock_bh(&priv->lock);
 
 	tmp = pft_find(priv, entry->fwd_info, entry->qos_id);
 	if (!tmp) {
-		spin_unlock(&priv->lock);
+		spin_unlock_bh(&priv->lock);
 		LOG_ERR("No such entry");
 		return -1;
 	}
@@ -328,14 +333,14 @@ static int lfa_remove(struct pff_ps *ps,
 			next);
 
 	if (!alt->ports || tmp->port != alt->ports[0]) {
-		spin_unlock(&priv->lock);
+		spin_unlock_bh(&priv->lock);
 		LOG_ERR("No or wrong port in mod_pff message");
 		return -1;
 	}
 
 	pfte_destroy(tmp);
 
-	spin_unlock(&priv->lock);
+	spin_unlock_bh(&priv->lock);
 
 	return 0;
 }
@@ -349,9 +354,9 @@ static bool lfa_is_empty(struct pff_ps *ps)
 	if (!priv_is_ok(priv))
 		return false;
 
-	spin_lock(&priv->lock);
+	spin_lock_bh(&priv->lock);
 	empty = list_empty(&priv->entries);
-	spin_unlock(&priv->lock);
+	spin_unlock_bh(&priv->lock);
 
 	return empty;
 }
@@ -382,7 +387,7 @@ static int pft_port_up(struct pff_ps_priv *priv,
 	ASSERT(is_port_id_ok(port_id));
 	ASSERT(priv);
 
-	spin_lock(&priv->lock);
+	spin_lock_bh(&priv->lock);
 
 	/* Remove port_id from list of ports that are down */
 	list_for_each_entry_safe(pos2, next,
@@ -420,7 +425,7 @@ static int pft_port_up(struct pff_ps_priv *priv,
 		}
 	}
 
-	spin_unlock(&priv->lock);
+	spin_unlock_bh(&priv->lock);
 	return 0;
 }
 
@@ -434,7 +439,7 @@ static int pft_port_down(struct pff_ps_priv *priv,
 	ASSERT(is_port_id_ok(port_id));
 	ASSERT(priv);
 
-	spin_lock(&priv->lock);
+	spin_lock_bh(&priv->lock);
 
 	/* Add port_id to list of ports that are down */
 	pe = pft_pe_create_ni(port_id);
@@ -457,7 +462,7 @@ static int pft_port_down(struct pff_ps_priv *priv,
 			}
 		}
 
-	spin_unlock(&priv->lock);
+	spin_unlock_bh(&priv->lock);
 	return 0;
 }
 
@@ -508,11 +513,11 @@ static int lfa_flush(struct pff_ps *ps)
 	if (!priv_is_ok(priv))
 		return -1;
 
-	spin_lock(&priv->lock);
+	spin_lock_bh(&priv->lock);
 
 	__pft_flush(priv);
 
-	spin_unlock(&priv->lock);
+	spin_unlock_bh(&priv->lock);
 
 	return 0;
 }
@@ -526,7 +531,6 @@ static int lfa_nhop(struct pff_ps *ps,
 	address_t destination;
 	qos_id_t qos_id;
 	struct pft_entry *tmp;
-	unsigned long flags;
 
 	if (!ps) {
 		LOG_ERR("PS is bogus");
@@ -563,21 +567,21 @@ static int lfa_nhop(struct pff_ps *ps,
 	 * Taking the lock here since otherwise priv might be deleted when
 	 * copying the ports
 	 */
-	spin_lock_irqsave(&priv->lock, flags);
+	spin_lock_bh(&priv->lock);
 
 	tmp = pft_find(priv, destination, qos_id);
 	if (!tmp) {
 		LOG_ERR("No entry for addr %u, qos_id %d", destination, qos_id);
-		spin_unlock_irqrestore(&priv->lock, flags);
+		spin_unlock_bh(&priv->lock);
 		return -1;
 	}
 
 	if (pfte_ports_copy(tmp, ports, count)) {
-		spin_unlock_irqrestore(&priv->lock, flags);
+		spin_unlock_bh(&priv->lock);
 		return -1;
 	}
 
-	spin_unlock_irqrestore(&priv->lock, flags);
+	spin_unlock_bh(&priv->lock);
 
 	return 0;
 }
@@ -621,6 +625,38 @@ static int pfte_port_id_altlists_copy(struct pft_entry *entry,
 	return 0;
 }
 
+static int lfa_modify(struct pff_ps *ps,
+		      struct list_head *entries)
+{
+	struct pff_ps_priv *priv;
+	struct mod_pff_entry * entry;
+
+	priv = (struct pff_ps_priv *) ps->priv;
+	if (!priv_is_ok(priv))
+		return -1;
+
+	spin_lock_bh(&priv->lock);
+
+	__pft_flush(priv);
+
+        list_for_each_entry(entry, entries, next) {
+        	if (!entry)
+        		continue;
+
+        	if (!is_address_ok(entry->fwd_info))
+        		continue;
+
+        	if (!is_qos_id_ok(entry->qos_id))
+        		continue;
+
+                __pff_add(ps, priv, entry);
+        }
+
+	spin_unlock_bh(&priv->lock);
+
+	return 0;
+}
+
 static int lfa_dump(struct pff_ps *ps,
 		    struct list_head *entries)
 {
@@ -632,11 +668,11 @@ static int lfa_dump(struct pff_ps *ps,
 	if (!priv_is_ok(priv))
 		return -1;
 
-	spin_lock(&priv->lock);
+	spin_lock_bh(&priv->lock);
 	list_for_each_entry(pos, &priv->entries, next) {
 		entry = rkmalloc(sizeof(*entry), GFP_ATOMIC);
 		if (!entry) {
-			spin_unlock(&priv->lock);
+			spin_unlock_bh(&priv->lock);
 			return -1;
 		}
 
@@ -645,13 +681,13 @@ static int lfa_dump(struct pff_ps *ps,
 		INIT_LIST_HEAD(&entry->port_id_altlists);
 		if (pfte_port_id_altlists_copy(pos, &entry->port_id_altlists)) {
 			rkfree(entry);
-			spin_unlock(&priv->lock);
+			spin_unlock_bh(&priv->lock);
 			return -1;
 		}
 
 		list_add(&entry->next, entries);
 	}
-	spin_unlock(&priv->lock);
+	spin_unlock_bh(&priv->lock);
 
 	return 0;
 }
@@ -689,6 +725,7 @@ pff_ps_lfa_create(struct rina_component *component)
 	ps->pff_flush = lfa_flush;
 	ps->pff_nhop = lfa_nhop;
 	ps->pff_dump = lfa_dump;
+	ps->pff_modify = lfa_modify;
 
 	return &ps->base;
 }
@@ -704,11 +741,11 @@ static void pff_ps_lfa_destroy(struct ps_base *bps)
 		if (!priv_is_ok(priv))
 			return;
 
-		spin_lock(&priv->lock);
+		spin_lock_bh(&priv->lock);
 
 		__pft_flush(priv);
 
-		spin_unlock(&priv->lock);
+		spin_unlock_bh(&priv->lock);
 
 		rkfree(priv);
 		rkfree(ps);
