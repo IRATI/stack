@@ -241,33 +241,13 @@ static struct pft_entry * pft_find(struct pff_ps_priv * priv,
         return NULL;
 }
 
-static int mp_add(struct pff_ps *        ps,
-                       struct mod_pff_entry * entry)
+static int __pff_add(struct pff_ps *        ps,
+		     struct pff_ps_priv * priv,
+		     struct mod_pff_entry * entry)
 {
-        struct pff_ps_priv *     priv;
         struct pft_entry *       tmp;
 	struct port_id_altlist * alts;
 
-        priv = (struct pff_ps_priv *) ps->priv;
-        if (!priv_is_ok(priv))
-                return -1;
-
-        if (!entry) {
-                LOG_ERR("Bogus output parameters, won't add");
-                return -1;
-        }
-
-        if (!is_address_ok(entry->fwd_info)) {
-                LOG_ERR("Bogus destination address passed, cannot add");
-                return -1;
-        }
-        if (!is_qos_id_ok(entry->qos_id)) {
-                LOG_ERR("Bogus qos-id passed, cannot add");
-                return -1;
-        }
-
-        spin_lock_bh(&priv->lock);
-	
         tmp = pft_find(priv, entry->fwd_info, entry->qos_id);
         if (!tmp) {
                 tmp = pfte_create_ni(entry->fwd_info, entry->qos_id);
@@ -291,6 +271,36 @@ static int mp_add(struct pff_ps *        ps,
                         return -1;
                 }
 	}
+
+	return 0;
+}
+
+static int mp_add(struct pff_ps *        ps,
+                       struct mod_pff_entry * entry)
+{
+        struct pff_ps_priv *     priv;
+
+        priv = (struct pff_ps_priv *) ps->priv;
+        if (!priv_is_ok(priv))
+                return -1;
+
+        if (!entry) {
+                LOG_ERR("Bogus output parameters, won't add");
+                return -1;
+        }
+
+        if (!is_address_ok(entry->fwd_info)) {
+                LOG_ERR("Bogus destination address passed, cannot add");
+                return -1;
+        }
+        if (!is_qos_id_ok(entry->qos_id)) {
+                LOG_ERR("Bogus qos-id passed, cannot add");
+                return -1;
+        }
+
+        spin_lock_bh(&priv->lock);
+
+        __pff_add(ps, priv, entry);
 
         spin_unlock_bh(&priv->lock);
 
@@ -589,6 +599,38 @@ static int mp_dump(struct pff_ps *    ps,
         return 0;
 }
 
+int mp_modify(struct pff_ps *    ps,
+              struct list_head * entries)
+{
+        struct pff_ps_priv *   priv;
+        struct mod_pff_entry * entry;
+
+        priv = (struct pff_ps_priv *) ps->priv;
+        if (!priv_is_ok(priv))
+                return -1;
+
+        spin_lock_bh(&priv->lock);
+
+        __pft_flush(priv);
+
+        list_for_each_entry(entry, entries, next) {
+        	if (!entry)
+        		continue;
+
+        	if (!is_address_ok(entry->fwd_info))
+        		continue;
+
+        	if (!is_qos_id_ok(entry->qos_id))
+        		continue;
+
+                __pff_add(ps, priv, entry);
+        }
+
+        spin_unlock_bh(&priv->lock);
+
+        return 0;
+}
+
 /* NOTE: This is skeleton code that was directly copy pasted */
 static int pff_ps_set_policy_set_param(struct ps_base * bps,
                                        const char *     name,
@@ -645,6 +687,7 @@ pff_ps_multipath_create(struct rina_component * component)
         ps->pff_flush = mp_flush;
         ps->pff_nhop = mp_next_hop;
         ps->pff_dump = mp_dump;
+        ps->pff_modify = mp_modify;
 
         return &ps->base;
 }

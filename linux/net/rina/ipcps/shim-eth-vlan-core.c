@@ -1762,6 +1762,7 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .pff_remove                = NULL,
         .pff_dump                  = NULL,
         .pff_flush                 = NULL,
+	.pff_modify		   = NULL,
 
         .query_rib		   = eth_vlan_query_rib,
 
