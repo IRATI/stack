@@ -80,7 +80,7 @@ bool ArePair(char opening,char closing)
 bool JsonBalanced(const string& exp)
 {
 	stack<char>  S;
-	for(int i =0;i<exp.length();i++)
+	for(unsigned int i =0;i<exp.length();i++)
 	{
 		if(/*exp[i] == '"' ||*/ exp[i] == '{' || exp[i] == '[')
 			S.push(exp[i]);

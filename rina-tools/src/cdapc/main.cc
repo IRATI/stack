@@ -48,7 +48,7 @@ int main(int argc, char** argv)
         list<string> dif_names;
 
         try {
-                TCLAP::CmdLine cmd("cc", ' ', PACKAGE_VERSION);
+                TCLAP::CmdLine cmd("cdapc", ' ', PACKAGE_VERSION);
                 TCLAP::ValueArg<string> manager_apn_arg("n",
                                                        "manager-apn",
                                                        "Application process name for the manager",
@@ -65,18 +65,30 @@ int main(int argc, char** argv)
                                 		"difs-to-register-at",
 						"The names of the DIFs to register at, separated by ',' (empty means 'any DIF')",
                                                 false,
-                                                "",
+                                                "NMS.DIF",
                                                 "string");
-                // Our command
+                // WS address
                 TCLAP::ValueArg<string> ws_arg("",
                   "manager-ws",
                   "The ws URL to register at (empty means 'no ws connection')",
                   false,
-                  "",
+                  "ws://localhost:8887",
                   "string");
 
+                TCLAP::SwitchArg nows_arg("",
+                  "no-ws",
+                  "No ws connection is attempted",
+                  false);
+                TCLAP::SwitchArg norina_arg("",
+                  "no-rina",
+                  "No rina connection is attempted",
+                  false);
+
+                cmd.add(manager_apn_arg);
                 cmd.add(dif_arg);
                 cmd.add(ws_arg);
+                cmd.add(nows_arg);
+                cmd.add(norina_arg);
 
                 cmd.parse(argc, argv);
 
@@ -84,6 +96,16 @@ int main(int argc, char** argv)
                 manager_api = manager_api_arg.getValue();
                 parse_dif_names(dif_names, dif_arg.getValue());
                 manager_ws  = ws_arg.getValue();
+                
+                // no args override other settings
+                if (nows_arg.getValue()) {
+                  manager_ws = string(); // empty it
+                }
+                if (norina_arg.getValue()) {
+                  manager_apn = string(); // empty it
+                }
+                
+                cout << "Register [" << manager_apn.c_str() << "," << manager_api.c_str() << "] at [" << dif_arg.getValue() << "]" << endl;
 
         } catch (TCLAP::ArgException &e) {
                 LOG_ERR("Error: %s for arg %d",
@@ -92,7 +114,6 @@ int main(int argc, char** argv)
                 return EXIT_FAILURE;
         }
 
-        // rina::initialize("INFO", "");
         Connector m(dif_names, manager_apn, manager_api, manager_ws);
         m.run();
 

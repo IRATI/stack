@@ -40,6 +40,7 @@
 class ES_EventFilter {
 
 public:
+  virtual ~ES_EventFilter() {} ;
   virtual bool match(const std::string& json) =0;
 
  // Get the naeme of the filter  
@@ -127,6 +128,7 @@ public:
  	 */
    ES_EventFilterBuilder& ofVersion(const char* version) {
      add (HeaderKeys::TAX_VERSION, version);
+     return *this;
    }
   
    /**

@@ -91,17 +91,17 @@ int DMSWorker::internal_run() {
   // Okay now start processing the messages
   std::cerr << "Info: Connection made to DMS@" << ws_address << std::endl;
   
-    // Complete handshake with server
-    ws->send("hello dms");
-    while (ws->getReadyState() != WebSocket::CLOSED) {
-      ws->poll();
-      auto myself = this;
-      ws->dispatch ( [myself](const std::string& m) { myself->process_message(m); });
-    }
-    delete ws;
-    ws = NULL;    
-    // Okay now start processing the messages
-    std::cerr << "Info: Disconnected from DMS@" << ws_address << std::endl;
+  // Complete handshake with server
+  ws->send("hello dms");
+  while (ws->getReadyState() != WebSocket::CLOSED) {
+    ws->poll();
+    auto myself = this;
+    ws->dispatch ( [myself](const std::string& m) { myself->process_message(m); });
+  }
+  delete ws;
+  ws = NULL;    
+  // Okay now start processing the messages
+  std::cerr << "Info: Disconnected from DMS@" << ws_address << std::endl;
   
   return 0;
 }
@@ -135,11 +135,37 @@ void DMSWorker::process_message(const std::string & message)
         log_short_message(cdap_message, CDAP_Sources::DMS_AGENT);
         // Convert object value
         process_value(cdap_message);
-        // Now dispatch to the MA
+        
+        
+        // Encode as a byte array
+        int size = cdap_message.ByteSize();
+        unsigned char* buf = new unsigned char[size];
+        if (cdap_message.SerializeToArray(buf, size)) {
+          // Extract destination
+          rina::ApplicationProcessNamingInformation dest;
+          if (cdap_message.has_destapname()) {
+              if (cdap_message.has_destapinst()) {
+                dest = rina::ApplicationProcessNamingInformation(
+                cdap_message.destapname(), cdap_message.destapinst());
+              }  else {
+                dest = rina::ApplicationProcessNamingInformation(
+                  cdap_message.destapname(), std::string()
+                );
+              }
+              cout << "Message is " << cdap_message.IsInitialized() 
+                << " for " << dest.getProcessNamePlusInstance().c_str() << endl;
+              // Now dispatch to the MA
+              send_message(buf, size, dest.getProcessNamePlusInstance());          
+          } else {
+            cout << "warning: missing destination on message! " << endl;
+          }
+        }
+      } else {
+        cout << "warning: failed to encode message! " << endl;
       }
     } else {
       // echo the message
-      std::cout << ">>> Not for us" << std::endl;      
+      //std::cout << ">>> Not for us" << std::endl;      
     }
     
 }
@@ -180,6 +206,47 @@ void DMSWorker::process_value(CDAPMessage & cdap_message) {
     }
   }
 }
+
+
+
+/*
+ * Handover interface
+ */
+ 
+
+// Send outgoing message to DMS
+void DMSWorker::send_message(const std::string & message) {
+  if (ws == nullptr) {
+    cout << "WARNING: No DMS found: " 
+      << " message has been discarded." << endl;
+    return;    
+  }
+
+  try {
+    // Write the next JSON message
+    ws->send(message);
+    cout << "Sent message to DMS"  << endl;
+  } catch (exception &e) {
+    cout << "WARNING: Cant send message to DMS: " 
+      << " message has been discarded." << endl;
+    cout << "Exception : " << e.what() << endl;
+  }  
+}
+
+// Send outgoing message to MA
+void DMSWorker::send_message(const void* message, int size, 
+    const std::string& destination) {
+  Connector* c = reinterpret_cast<Connector*>(server);
+  assert(c != nullptr);
+  Handover* ma = reinterpret_cast<Handover*>(c->find_ma_worker());
+  if (ma != nullptr) {
+    // Found MA instance so just send it
+    ma->send_message(message, size, destination);
+  } else {
+    cout << "INFO: No MA!" << endl;
+  }
+}
+
 
 
 //
@@ -236,7 +303,13 @@ void DMSWorker::log_short_message(const CDAPMessage& message, const char * direc
   }
   b.append("Sending to ");
   b.append(direction);
-  b.append(".");
+  b.append("[");
+  b.append(message.destapname());
+  if (message.has_destapinst()) {
+    b.append("-");
+    b.append(message.destapinst());  
+  }
+  b.append("].");
   //LOG_INFO(b.c_str());
   cout << "INFO:" << b << endl;
 }

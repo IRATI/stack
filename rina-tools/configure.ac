@@ -57,8 +57,8 @@ AC_PROG_CXX_C_O
 AM_PROG_AR
 LT_INIT
 
-CPPFLAGS_EXTRA=""
-CXXFLAGS_EXTRA=""
+CPPFLAGS_EXTRA="-Wno-unused-local-typedefs"
+CXXFLAGS_EXTRA="-Wno-unused-local-typedefs"
 
 #Set this for TCLAP... we don't support compilers with incomplete std C++ libs
 #so we don't even check it.
@@ -83,7 +83,7 @@ AX_CHECK_COMPILE_FLAG([ -Wfatal-errors ], [
     CXXFLAGS_EXTRA="$CXXFLAGS_EXTRA -Wfatal-errors"
 ])
 
-want_debug=no
+want_debug=yes
 AX_SELECTOR_ENABLE([debug],[
     want_debug=yes
 ],[
@@ -106,7 +106,7 @@ AS_IF([test "$want_debug" = "yes"],[
     ])
 ])
 
-AC_SUBST(CPPFLAGS_EXTRA, $CPPFLAGS_EXTRA)
+AC_SUBST(CPPFLAGS_EXTRA, $CXXFLAGS_EXTRA)
 AC_SUBST(CXXFLAGS_EXTRA, $CXXFLAGS_EXTRA)
 
 ax_cv_have_python=yes

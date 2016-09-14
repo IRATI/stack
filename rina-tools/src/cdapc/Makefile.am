@@ -34,9 +34,11 @@ unittests_SOURCES  =				\
 	unittests.cc \
 	cdapserialisertest.cc  eventfilterstest.cc \
 	dmsworkertest.cc       dmsworker.cc \
+	maworkertest.cc        maworker.cc \
 	easywsclient.cc	  		 easywsclient.h \
 	json_format.cc         json_format.h \
 	eventfilters.cc   		 eventfilters.h \
+	               utiltest.cc \
 	eventsystem.h					 catch.h
 	
 unittests_CPPFLAGS =		\

@@ -174,7 +174,7 @@ JsonFormat::ParseLocation JsonFormat::ParseInfoTree::GetLocation(
 
   const vector<JsonFormat::ParseLocation>* locations =
       FindOrNull(locations_, field);
-  if (locations == NULL || index >= locations->size()) {
+  if (locations == NULL || ((unsigned int)index) >= locations->size()) {
     return JsonFormat::ParseLocation();
   }
 
@@ -187,7 +187,7 @@ JsonFormat::ParseInfoTree* JsonFormat::ParseInfoTree::GetTreeForNested(
   if (index == -1) { index = 0; }
 
   const vector<JsonFormat::ParseInfoTree*>* trees = FindOrNull(nested_, field);
-  if (trees == NULL || index >= trees->size()) {
+  if (trees == NULL || ((unsigned int)index) >= trees->size()) {
     return NULL;
   }
 
@@ -1539,7 +1539,9 @@ bool JsonFormat::Printer::Print(const Message& message,
   TextGenerator generator(output, initial_indent_level_);
 
   generator.Print("{");
-  PrintHeader(message, dialect, generator);
+  if (!dialect.empty()) {
+    PrintHeader(message, dialect, generator);
+  }
   Print(message, generator);
   generator.Print("}");
 
@@ -1577,7 +1579,7 @@ void JsonFormat::Printer::Print(const Message& message,
   if (print_message_fields_in_index_order_) {
     sort(fields.begin(), fields.end(), FieldIndexSorter());
   }
-  for (int i = 0; i < fields.size(); i++) {
+  for (unsigned int i = 0; i < fields.size(); i++) {
     if (i > 0) {
       generator.Print(",");
     }

@@ -71,7 +71,7 @@ bool EventFilterImpl::match(const string& json) {
   for(vector<string>::iterator it = matches.begin(); it != matches.end(); ++it) {
     size_t found = json.find(*it);
     if (found == string::npos) {
-      cout << "Failed on:" << *it << ":" << endl;
+      //cout << "Failed on:" << *it << ":" << endl;
       //cout << "JSON:" << json << endl;
       return false;
     }

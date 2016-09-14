@@ -48,6 +48,8 @@ Connector::Connector(const std::list<std::string>& dif_names,
 {
     client_app_reg_ = false;
     ws_address_ = ws;
+    dms_worker_ = nullptr;
+    ma_worker_ = nullptr;
 }
 
 void Connector::run()
@@ -56,9 +58,11 @@ void Connector::run()
   ws_run();
   
   // Attempt to start the RINA server
-  for (;;) {
-    sleep(1);
-    //LOG_INFO("Doing RINA stuff");
+  rina_run();
+  
+  while (true) {
+    LOG_INFO("Doing RINA stuff");
+    sleep(100);
   }
 }
 
@@ -71,34 +75,67 @@ void Connector::ws_run() {
       worker_started(worker);
       LOG_INFO("New DMS worker allocated");
     }
+  } else {
+    LOG_INFO("No DMS worker started.");
   }
 }
 
 void Connector::rina_run() {
+
+    if (app_name.empty()) {
+      // No App name means skip this
+      LOG_INFO("No MA connection started.");
+      return;
+    }
+  
   
     rina::initialize("INFO", "");
-    
-    int order = 1;
-    std::map<int, rina::FlowInformation> waiting;
+
     rina::FlowInformation flow;
+    // Variables used for casting
+    rina::RegisterApplicationResponseEvent*   r = nullptr;
+    rina::UnregisterApplicationResponseEvent* ur = nullptr;
+    rina::DeallocateFlowResponseEvent*        dfr = nullptr;
+
+    ServerWorker * worker = internal_start_worker(flow);
+    if (worker != NULL) {
+      // register it with the base class
+      worker_started(worker);
+      LOG_INFO("New MA worker allocated");
+    } else {
+      LOG_INFO("No MA worker started.");
+    }
+
     applicationRegister();
 
     for (;;)
     {
-        rina::IPCEvent* event = rina::ipcEventProducer->eventWait();
+        rina::IPCEvent* event = rina::ipcEventProducer->eventTimedWait(1,0);
         int port_id = 0;
-        rina::DeallocateFlowResponseEvent *resp = NULL;
 
-        if (!event)
-            return;
+        if (event == nullptr) {
+          LOG_INFO("Processing events");          
+          continue;
+        }
 
         switch (event->eventType) {
 
             case rina::REGISTER_APPLICATION_RESPONSE_EVENT:
-                rina::ipcManager->commitPendingRegistration(
-                        event->sequenceNumber,
-                        dynamic_cast<rina::RegisterApplicationResponseEvent*>(event)
-                                ->DIFName);
+                r = dynamic_cast<rina::RegisterApplicationResponseEvent*>(event);
+                if (r->result == 0) {
+                  rina::ipcManager->commitPendingRegistration(
+                          event->sequenceNumber,
+                          r->DIFName);
+                  LOG_INFO("Application has been registered at DIF[%s]",
+                      r->DIFName.toString().c_str());
+        					// registered = true;
+        				} else {
+                  rina::ipcManager->withdrawPendingRegistration(
+                          event->sequenceNumber);
+                  LOG_WARN("Failed to register application [%s] at DIF[%s].",
+        							r->applicationName.toString().c_str(), r->DIFName.toString().c_str());
+                  // registered = false
+        				}
                 break;
 
             case rina::UNREGISTER_APPLICATION_RESPONSE_EVENT:
@@ -106,83 +143,101 @@ void Connector::rina_run() {
                         event->sequenceNumber,
                         dynamic_cast<rina::UnregisterApplicationResponseEvent*>(event)
                                 ->result == 0);
+                ur = dynamic_cast<rina::UnregisterApplicationResponseEvent*>(event);
+                if (ur->result == 0) {                        
+                  LOG_INFO("Application has been unregistered at DIF[%s]",
+                      ur->DIFName.toString().c_str());
+                } else {
+                  LOG_WARN("Failed to unregister application [%s] at DIF [%s].",
+        							ur->applicationName.toString().c_str(), ur->DIFName.toString().c_str());
+                }
                 break;
 
             case rina::FLOW_ALLOCATION_REQUESTED_EVENT:
                 flow = rina::ipcManager->allocateFlowResponse(
                         *dynamic_cast<rina::FlowRequestEvent*>(event), 0, true);
                 port_id = flow.portId;
+                // We want non-blocking operation
+                rina::ipcManager->setFlowOptsBlocking(port_id, false);
                 LOG_INFO("New flow allocated [port-id = %d]", port_id);
-
-                if (flow.remoteAppName.processName == "rina.apps.mad.1")
-                {
-                    if (waiting.find(1) == waiting.end())
-                    {
-                        waiting[1] = flow;
-                    } else
-                    {
-                        std::cout
-                                << "Error, flow with the same mad already exist: "
-                                << flow.remoteAppName.processName << std::endl;
-                        rina::ipcManager->requestFlowDeallocation(flow.portId);
-                    }
-                }
-                if (flow.remoteAppName.processName == "rina.apps.mad.2")
-                {
-                    if (waiting.find(2) == waiting.end())
-                    {
-                        waiting[2] = flow;
-                    } else
-                    {
-                        std::cout
-                                << "Error, flow with the same mad already exist: "
-                                << flow.remoteAppName.processName << std::endl;
-                        rina::ipcManager->requestFlowDeallocation(flow.portId);
-                    }
-                }
-                if (flow.remoteAppName.processName == "rina.apps.mad.3")
-                {
-                    if (waiting.find(3) == waiting.end())
-                    {
-                        waiting[3] = flow;
-                    } else
-                    {
-                        std::cout
-                                << "Error, flow with the same mad already exist: "
-                                << flow.remoteAppName.processName << std::endl;
-                        rina::ipcManager->requestFlowDeallocation(flow.portId);
-                    }
-                }
-                while (waiting.find(order) != waiting.end())
-                {
-                    startWorker(waiting[order]);
-                    order++;
+                // Notify worker
+                if (ma_worker_ != nullptr) {
+                  ma_worker_->newFlowRequest(flow);
+                } else {
+                  LOG_INFO("No MA worker available");
                 }
                 break;
 
             case rina::FLOW_DEALLOCATED_EVENT:
                 port_id = dynamic_cast<rina::FlowDeallocatedEvent*>(event)
                         ->portId;
+                flow = rina::ipcManager->getFlowInformation(port_id);
                 rina::ipcManager->flowDeallocated(port_id);
                 LOG_INFO("Flow torn down remotely [port-id = %d]", port_id);
+                // Notify worker
+                if (ma_worker_ != nullptr) {
+                  ma_worker_->closeFlowRequest(flow);
+                } else {
+                  LOG_INFO("No MA");
+                }                
                 break;
 
             case rina::DEALLOCATE_FLOW_RESPONSE_EVENT:
                 LOG_INFO("Destroying the flow after time-out");
-                resp = dynamic_cast<rina::DeallocateFlowResponseEvent*>(event);
-                port_id = resp->portId;
+                dfr = dynamic_cast<rina::DeallocateFlowResponseEvent*>(event);
+                port_id = dfr->portId;
+                flow = rina::ipcManager->getFlowInformation(port_id);
 
                 rina::ipcManager->flowDeallocationResult(port_id,
-                                                         resp->result == 0);
+                                                         dfr->result == 0);
+                if (ma_worker_ != nullptr) {
+                  ma_worker_->closeFlowRequest(flow);
+                } else {
+                  LOG_INFO("No MA");
+                }                
                 break;
-
             default:
-                LOG_INFO("Server got new event of type %d", event->eventType);
+                LOG_INFO("Server got event of type %d", event->eventType);
                 break;
         }
-        sleep(1);
     }
 }
+
+void Connector::applicationRegister() {
+        rina::ApplicationRegistrationInformation ari;
+        //rina::RegisterApplicationResponseEvent *resp;
+        //unsigned int seqnum;
+        // IPCEvent *event;
+        // int successful_regs = 0;
+
+        ari.ipcProcessId = 0;  // This is an application, not an IPC process
+        ari.appName = rina::ApplicationProcessNamingInformation(app_name,
+                                                          app_instance);
+
+        for (std::list<std::string>::iterator it = dif_names.begin();
+        		it != dif_names.end(); ++ it)
+        {
+        	if (it->compare("") == 0) {
+        		ari.applicationRegistrationType = rina::APPLICATION_REGISTRATION_ANY_DIF;
+        	} else {
+        		ari.applicationRegistrationType = rina::APPLICATION_REGISTRATION_SINGLE_DIF;
+        		ari.difName = rina::ApplicationProcessNamingInformation(*it, std::string());
+        	}
+
+          LOG_INFO("Registering [%s:%s] at [%s]", app_name.c_str(), app_instance.c_str(), it->c_str());
+        	// Request the registration
+          //rina::ipcManager->reque
+        	//seqnum = 
+          try {
+            rina::ipcManager->requestApplicationRegistration(ari);            
+          } catch (rina::IPCException ie) {
+            LOG_INFO("Failed registering [%s:%s] at [%s]", app_name.c_str(),             
+            app_instance.c_str(), it->c_str());
+            LOG_INFO("Exception:%s", ie.what());
+          }
+        }
+}
+
 
 // Create the appropriate MA worker
 ServerWorker * Connector::internal_start_worker(rina::FlowInformation flow)
@@ -207,4 +262,3 @@ ServerWorker * Connector::internal_start_worker(const std::string& ws_address)
     dms_worker_ = worker;
     return worker;
 }
-
