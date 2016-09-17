@@ -330,9 +330,10 @@ void rmt_ps_default_destroy(struct ps_base *bps)
 	data = ps->priv;
 
 	if (bps) {
-		if (data)
+		if (data) {
 			robject_del(&data->robj);
 			rkfree(data);
+                }
 		rkfree(ps);
 	}
 }
