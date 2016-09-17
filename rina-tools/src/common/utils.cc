@@ -33,7 +33,7 @@
 void parse_dif_names(std::list<std::string> & dif_names, const std::string& arg)
 {
 	int i = 0;
-	unsigned int pos = arg.find(',');
+	size_t pos = arg.find(',');
 	if (pos == std::string::npos){
 		dif_names.push_back(arg);
 		return;
