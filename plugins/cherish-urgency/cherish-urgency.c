@@ -517,7 +517,7 @@ int cu_rmt_enqueue_policy(struct rmt_ps	  *ps,
 
         q->handled++;
         if (q->abs_th < (occupation + 1)) {
-                LOG_DBG("Dropped PDU: abs_th exceeded %u", occupation);
+                LOG_DBG("Dropped PDU: abs_th exceeded %ld", occupation);
                 q->dropped++;
                 pdu_destroy(pdu);
                 return RMT_PS_ENQ_DROP;
@@ -525,7 +525,7 @@ int cu_rmt_enqueue_policy(struct rmt_ps	  *ps,
         get_random_bytes(&i, sizeof(i));
         i = i % NORM_PROB;
         if ((q->th < (occupation + 1)) && (q->drop_prob > i)) {
-        	LOG_DBG("Dropped PDU: th exceeded %u", occupation);
+        	LOG_DBG("Dropped PDU: th exceeded %ld", occupation);
                 q->dropped++;
                 pdu_destroy(pdu);
                 return RMT_PS_ENQ_DROP;
