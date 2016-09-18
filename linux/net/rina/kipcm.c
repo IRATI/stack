@@ -1124,6 +1124,7 @@ static int notify_ipcp_modify_pffe(void *             data,
         struct ipcp_instance *              ipc_process;
         ipc_process_id_t                    ipc_id;
         struct mod_pff_entry *              entry;
+        int				    result;
 
         int (* op)(struct ipcp_instance_data * data,
 		   struct mod_pff_entry      * entry);
@@ -1164,14 +1165,12 @@ static int notify_ipcp_modify_pffe(void *             data,
 
         switch(attrs->mode) {
         case 2:
-                if (ipc_process->ops->pff_flush(ipc_process->data)) {
-                        LOG_ERR("Problems flushing PFF");
-                        rnl_msg_destroy(msg);
-                        return -1;
-                }
+        	result = ipc_process->ops->pff_modify(ipc_process->data, &attrs->pff_entries);
+        	if (result)
+                        LOG_ERR("Problems modifying PFF");
 
-                op = ipc_process->ops->pff_add;
-                break;
+        	rnl_msg_destroy(msg);
+        	return result;
         case 1:
                 op = ipc_process->ops->pff_remove;
                 break;

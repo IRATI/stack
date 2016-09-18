@@ -52,6 +52,10 @@ struct pff_ps {
         int  (* pff_dump)(struct pff_ps *    ps,
                           struct list_head * entries);
 
+        /* Dump PFF contents and add entries in an atomic operation */
+        int  (* pff_modify)(struct pff_ps *    ps,
+                            struct list_head * entries);
+
         /* Reference used to access the PFF data model. */
         struct pff * dm;
 

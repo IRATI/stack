@@ -324,6 +324,9 @@ struct ipcp_instance_ops {
 
         int (* pff_flush)(struct ipcp_instance_data * data);
 
+        int (* pff_modify)(struct ipcp_instance_data * data,
+                           struct list_head * entries);
+
         int (* query_rib)(struct ipcp_instance_data * data,
                           struct list_head *          entries,
                           const string_t *            object_class,
