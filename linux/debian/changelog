@@ -1,3 +1,11 @@
+linux (4.1.33+rina-1) UNRELEASED; urgency=medium
+
+  * New upstream stable update 4.1.33
+    - drop patch merged upstream
+    - refresh debian/kernelvariables.patch
+
+ -- Julien Muchembled <jm@nexedi.com>  Mon, 19 Sep 2016 14:45:12 +0200
+
 linux (4.1.24+rina-1) UNRELEASED; urgency=medium
 
   * New upstream stable update 4.1.24
