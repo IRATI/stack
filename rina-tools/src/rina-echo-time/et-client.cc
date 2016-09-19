@@ -75,8 +75,6 @@ Client::Client(const string& t_type,
         dealloc_wait(dw), lost_wait(lw), rate(rt),  snd(0), nsdus(0), m2(0),
         sdus_received(0), min_rtt(LONG_MAX), max_rtt(0), average_rtt(0)		
 {
-        std::map<unsigned long, timespec> * tmp = new std::map<unsigned long, timespec>();
-        m = *tmp;
 }
 
 void Client::run()
