@@ -28,6 +28,7 @@
 
 #include <cstring>
 #include <cmath>
+#include <deque>
 #include <iostream>
 #include <sstream>
 #include <cassert>
@@ -71,8 +72,8 @@ Client::Client(const string& t_type,
         server_name(server_apn), server_instance(server_api),
         quiet(q), echo_times(count),
         client_app_reg(registration), data_size(size), wait(w), gap(g),
-        dealloc_wait(dw), lost_wait(lw), nsdus(0), snd(0), m2(0),
-        sdus_received(0), min_rtt(LONG_MAX), max_rtt(0), average_rtt(0), rate(rt)
+        dealloc_wait(dw), lost_wait(lw), rate(rt),  snd(0), nsdus(0), m2(0),
+        sdus_received(0), min_rtt(LONG_MAX), max_rtt(0), average_rtt(0)		
 {
         std::map<unsigned long, timespec> * tmp = new std::map<unsigned long, timespec>();
         m = *tmp;
@@ -165,13 +166,47 @@ int Client::createFlow()
         return flow.portId;
 }
 
+struct Ping {
+	timespec begintp;
+	unsigned long seq;
+	void fill(unsigned char *buffer, unsigned data_size) {
+		unsigned long n = seq;
+		unsigned i = 0;
+		do {
+			if (i == data_size)
+				return;
+			buffer[i++] = (unsigned char) n;
+		} while (n >>= 8);
+		unsigned char c = (unsigned char) seq;
+		while (i < data_size)
+			buffer[i++] = ++c;
+	}
+	bool test(unsigned char *buffer, unsigned data_size) {
+		unsigned long n = seq;
+		unsigned i = 0;
+		do {
+			if (i == data_size)
+				return true;
+			if (buffer[i++] != (unsigned char) n)
+				return false;
+		} while (n >>= 8);
+		unsigned char c = (unsigned char) seq;
+		while (i < data_size) {
+			if (buffer[i++] != ++c)
+				return false;
+		}
+		return true;
+	}
+};
+
 void Client::pingFlow(int port_id)
 {
+	Ping ping;
+	deque<Ping> sent;
         unsigned char *buffer = new unsigned char[data_size];
-        unsigned char *buffer2 = new unsigned char[data_size];
         unsigned int sdus_sent = 0;
         unsigned int sdus_received = 0;
-        timespec begintp, endtp;
+	timespec endtp;
         unsigned char counter = 0;
         double min_rtt = LONG_MAX;
         double max_rtt = 0;
@@ -184,18 +219,13 @@ void Client::pingFlow(int port_id)
 
 	ipcManager->setFlowOptsBlocking(port_id, false);
 
-        for (unsigned long n = 0; n < echo_times; n++) {
+	for (ping.seq = 0; ping.seq < echo_times; ping.seq++) {
+		bool bad_response;
         	int bytes_read = 0;
 
-        	for (uint i = 0; i < data_size; i++) {
-        		if (counter == 255) {
-        			counter = 0;
-        		}
-        		buffer[i] = counter;
-        		counter++;
-        	}
-
-        	get_current_time(begintp);
+		ping.fill(buffer, data_size);
+		get_current_time(ping.begintp);
+		sent.push_back(ping);
 
         	try {
         		ipcManager->writeSDU(port_id, buffer, data_size);
@@ -212,8 +242,11 @@ void Client::pingFlow(int port_id)
 
         	sdus_sent ++;
 
+		bool read_late = false;
+	read:
         	try {
-        		bytes_read = readSDU(port_id, buffer2, data_size, lost_wait);
+			bytes_read = readSDU(port_id, buffer, data_size,
+				read_late ? wait : lost_wait);
         	} catch (rina::FlowAllocationException &e) {
         		LOG_ERR("Flow has been deallocated");
         		break;
@@ -225,14 +258,30 @@ void Client::pingFlow(int port_id)
         		continue;
         	}
 
-        	if (bytes_read == 0) {
-        		LOG_WARN("Timeout waiting for reply, SDU considered lost");
+		if (bytes_read == -EAGAIN) {
+			if (!read_late) {
+				LOG_WARN("Timeout waiting for reply, SDU maybe lost");
+			}
         		continue;
         	}
 
         	sdus_received ++;
         	get_current_time(endtp);
-        	current_rtt = time_difference_in_ms(begintp, endtp);
+
+		/* In case that SDUs are late (i.e. not lost), we kept track
+		 * of all unanswered pings. This is important because the
+		 * payload depends on the sequence number, and if we don't
+		 * check for late pongs, we'd always get bad responses.
+		 * However, in order not to complicate things too much, we
+		 * assume replies are always ordered.
+		 */
+		while ((bad_response = !sent.front().test(buffer, data_size))
+		       && sent.size() > 1) {
+			sent.pop_front();
+		}
+		current_rtt = time_difference_in_ms(
+			sent.front().begintp, endtp);
+
         	if (current_rtt < min_rtt) {
         		min_rtt = current_rtt;
         	}
@@ -244,16 +293,28 @@ void Client::pingFlow(int port_id)
         	average_rtt = average_rtt + delta/(double)sdus_received;
         	m2 = m2 + delta*(current_rtt - average_rtt);
 
-        	cout << "SDU size = " << data_size << ", seq = " << n <<
-        			", RTT = " << current_rtt << " ms";
-        	if (!((data_size == (uint) bytes_read) &&
-        			(memcmp(buffer, buffer2, data_size) == 0)))
+		cout << "SDU size = " << data_size << ", seq = "
+		     << sent.front().seq << ", RTT = " << current_rtt << " ms";
+		if (bad_response)
         		cout << " [bad response]";
         	cout << endl;
 
-		if (n < echo_times - 1) {
-			sleep_wrapper.sleepForMili(wait);
+		if (ping.seq == echo_times - 1)
+			break;
+
+		sent.pop_front();
+		/* TODO: Always read SDUs while waiting before the next ping.
+		 *       Otherwise, any late and bad response would flush
+		 *       'sent' and we'd have no way anymore to check correctly
+		 *       the following responses.
+		 *       This is a rare scenario and for now, readSDU can't do
+		 *       that without using all CPU, which we want to avoid.
+		 */
+		if (!sent.empty()) {
+			read_late = true;
+			goto read;
 		}
+		sleep_wrapper.sleepForMili(wait);
         }
 
         variance = m2/((double)sdus_received -1);
@@ -266,14 +327,13 @@ void Client::pingFlow(int port_id)
              << " ms; Standard deviation: " << stdev<<" ms"<<endl;
 
         delete [] buffer;
-        delete [] buffer2;
 }
 
 void Client::floodFlow(int port_id)
 {
 	unsigned long sdus_sent = 0;
 	double variance = 0, stdev = 0;
-	timespec endtp, begintp, mintp, mtp;
+	timespec endtp, begintp, mtp; //, mintp
 	unsigned long sn;
 	double delta = 0;
 	double current_rtt = 0;
@@ -561,11 +621,11 @@ int Sender::run(void)
 {
 	char buffer[data_size];
 	unsigned int sdus_sent = 0;
-	timespec begintp, endtp;
+	timespec begintp; //unused , endtp;
 	timespec mintp, maxtp;
-	unsigned char counter = 0;
+	// unused unsigned char counter = 0;
 	double interval_time = 0;
-	bool out = false;
+	// unused bool out = false;
 
 	if (rate) { /* wait in kB/s */
 		interval_time = ((double) data_size) / ((double) rate); /* ms */

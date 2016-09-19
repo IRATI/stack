@@ -4,16 +4,35 @@
 #define IPCP_MODULE "security-manager-example-ps"
 #include "ipcp-logging.h"
 #include "components.h"
+#include "librina/security-manager.h"
 #include "common/configuration.h"
 
 
+using namespace rina;
+
 namespace rinad {
 
-class SecurityManagerExamplePs: public ISecurityManagerPs {
+class SecurityManagerExamplePs: public rina::ISecurityManagerPs {
 public:
 	SecurityManagerExamplePs(IPCPSecurityManager * dm);
-	bool isAllowedToJoinDIF(const rina::Neighbor& newMember);
-	bool acceptFlow(const configs::Flow& newFlow);
+
+
+	int isAllowedToJoinDAF(const cdap_rib::con_handle_t & con,
+				       const Neighbor& newMember,
+				       cdap_rib::auth_policy_t & auth);
+
+	int storeAccessControlCreds(const cdap_rib::auth_policy_t & auth,
+				    const cdap_rib::con_handle_t & con);
+
+	int getAccessControlCreds(cdap_rib::auth_policy_t & auth,
+				  const cdap_rib::con_handle_t & con);
+
+	void checkRIBOperation(const cdap_rib::auth_policy_t & auth,
+                               const cdap_rib::con_handle_t & con,
+                               const cdap::cdap_m_t::Opcode opcode,
+                               const std::string obj_name,
+                               cdap_rib::res_info_t& res);
+
 	int set_policy_set_param(const std::string& name,
 			const std::string& value);
 	virtual ~SecurityManagerExamplePs() {}
@@ -31,19 +50,51 @@ SecurityManagerExamplePs::SecurityManagerExamplePs(IPCPSecurityManager * dm_)
 }
 
 
-bool SecurityManagerExamplePs::isAllowedToJoinDIF(const rina::Neighbor&
-						 newMember)
+int SecurityManagerExamplePs::isAllowedToJoinDAF(
+                            const cdap_rib::con_handle_t & con,
+                            const Neighbor& newMember,
+                            cdap_rib::auth_policy_t & auth)
 {
+	(void) con;
+	(void) auth;
 	LOG_IPCP_DBG("Allowing IPC Process %s to join the DIF",
 		     newMember.name_.processName.c_str());
-	return true;
+	return 0;
 }
 
-bool SecurityManagerExamplePs::acceptFlow(const configs::Flow& newFlow)
+int SecurityManagerExamplePs::storeAccessControlCreds(
+                            const cdap_rib::auth_policy_t & auth,
+                            const cdap_rib::con_handle_t & con)
 {
-	LOG_IPCP_DBG("Accepting flow from remote application %s",
-			newFlow.source_naming_info.getEncodedString().c_str());
-	return true;
+	(void) auth;
+	(void) con;
+
+	return 0;
+}
+
+int SecurityManagerExamplePs::getAccessControlCreds(
+                                cdap_rib::auth_policy_t & auth,
+                                const cdap_rib::con_handle_t & con)
+{
+	(void) auth;
+	(void) con;
+
+	return 0;
+}
+
+void SecurityManagerExamplePs::checkRIBOperation(
+                            const cdap_rib::auth_policy_t & auth,
+                            const cdap_rib::con_handle_t & con,
+                            const cdap::cdap_m_t::Opcode opcode,
+                            const std::string obj_name,
+                            cdap_rib::res_info_t& res)
+{
+	(void) auth;
+	(void) con;
+	(void) opcode;
+	(void) obj_name;
+
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
 
 int SecurityManagerExamplePs::set_policy_set_param(const std::string& name,

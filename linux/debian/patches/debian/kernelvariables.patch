@@ -59,7 +59,7 @@ use of $(ARCH) needs to be moved after this.
  
 @@ -349,6 +313,44 @@ CFLAGS_KERNEL	=
  AFLAGS_KERNEL	=
- CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
+ CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage -fno-tree-loop-im
  
 +-include $(obj)/.kernelvariables
 +

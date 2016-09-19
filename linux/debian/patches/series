@@ -54,7 +54,6 @@ features/arm64/usb-make-xhci-platform-driver-use-64-bit-or-32-bit-dma.patch
 features/arm64/usb-add-support-for-acpi-identification-to-xhci-platform.patch
 
 # Miscellaneous bug fixes
-bugfix/all/misc-bmp085-Enable-building-as-a-module.patch
 bugfix/all/kbuild-use-nostdinc-in-compile-tests.patch
 bugfix/all/disable-some-marvell-phys.patch
 bugfix/all/aic94xx-remove-broken-fallback-for-missing-ctrl-a.patch

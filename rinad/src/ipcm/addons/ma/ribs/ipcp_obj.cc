@@ -70,7 +70,7 @@ void IPCPObj::forward_object(const rina::cdap_rib::con_handle_t& con,
        // TODO: This has to be stored in a list in case of more than
        // one consecutive request
 
-       int pos = obj_name.rfind("ipcProcessID");
+       std::size_t pos = obj_name.rfind("ipcProcessID");
        if (pos != std::string::npos)
        {
                 std::string object_sub_name = obj_name.substr(pos);

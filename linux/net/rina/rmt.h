@@ -117,6 +117,8 @@ int		   rmt_pff_port_state_change(struct rmt *rmt,
 int		   rmt_pff_dump(struct rmt *instance,
 				struct list_head *entries);
 int		   rmt_pff_flush(struct rmt *instance);
+int		   rmt_pff_modify(struct rmt *instance,
+				  struct list_head *entries);
 int		   rmt_send(struct rmt *instance,
 			    struct pdu *pdu);
 int		   rmt_send_port_id(struct rmt *instance,

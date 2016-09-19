@@ -1191,6 +1191,7 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .pff_remove                = NULL,
         .pff_dump                  = NULL,
         .pff_flush                 = NULL,
+	.pff_modify		   = NULL,
 
         .query_rib		   = shim_hv_query_rib,
 
