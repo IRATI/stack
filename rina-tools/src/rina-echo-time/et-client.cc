@@ -26,6 +26,7 @@
 // SUCH DAMAGE.
 //
 
+#include <csignal>
 #include <cstring>
 #include <cmath>
 #include <deque>
@@ -62,6 +63,52 @@ double time_difference_in_ms(timespec start, timespec end) {
 	 return mtime;
 }
 
+class Signal {
+	int signum;
+	struct sigaction oldact;
+public:
+	Signal(int signum, sighandler_t handler) : signum(signum) {
+		struct sigaction act;
+		act.sa_handler = handler;
+		sigemptyset(&act.sa_mask);
+		act.sa_flags = 0;
+		sigaction(signum, &act, &oldact);
+	}
+	~Signal() {
+		sigaction(signum, &oldact, NULL);
+	}
+	static void dummy_handler(int) {}
+};
+
+class ReadSDUWithTimeout {
+	int port_id;
+public:
+	ReadSDUWithTimeout(int port_id, unsigned timeout) {
+		if (timeout) {
+			this->port_id = -1;
+			/* Timer with an interval of 1ms after the timeout is
+			 * elapsed, in case that the first signal happens
+			 * outside the syscall. */
+			itimerval it = {
+				{0, 1000},
+				{timeout / 1000, timeout % 1000 * 1000}
+			};
+			setitimer(ITIMER_REAL, &it, NULL);
+		} else {
+			this->port_id = port_id;
+			ipcManager->setFlowOptsBlocking(port_id, false);
+		}
+	}
+	~ReadSDUWithTimeout() {
+		if (port_id < 0) {
+			itimerval it = { {0, 0}, {0, 0} };
+			setitimer(ITIMER_REAL, &it, NULL);
+		} else {
+			ipcManager->setFlowOptsBlocking(port_id, true);
+		}
+	}
+};
+
 Client::Client(const string& t_type,
                const list<string>& dif_nms, const string& apn, const string& api,
                const string& server_apn, const string& server_api,
@@ -91,6 +138,10 @@ void Client::run()
         	LOG_ERR("Problems creating flow, exiting");
         	return;
         }
+
+	Signal alarm(SIGALRM, Signal::dummy_handler);
+
+	ipcManager->setFlowOptsBlocking(port_id, true);
 
         if (test_type == "ping")
         	pingFlow(port_id);
@@ -215,8 +266,6 @@ void Client::pingFlow(int port_id)
         double stdev = 0;
         double current_rtt = 0;
 
-	ipcManager->setFlowOptsBlocking(port_id, false);
-
 	for (ping.seq = 0; ping.seq < echo_times; ping.seq++) {
 		bool bad_response;
         	int bytes_read = 0;
@@ -301,18 +350,8 @@ void Client::pingFlow(int port_id)
 			break;
 
 		sent.pop_front();
-		/* TODO: Always read SDUs while waiting before the next ping.
-		 *       Otherwise, any late and bad response would flush
-		 *       'sent' and we'd have no way anymore to check correctly
-		 *       the following responses.
-		 *       This is a rare scenario and for now, readSDU can't do
-		 *       that without using all CPU, which we want to avoid.
-		 */
-		if (!sent.empty()) {
-			read_late = true;
-			goto read;
-		}
-		sleep_wrapper.sleepForMili(wait);
+		read_late = true;
+		goto read;
         }
 
         variance = m2/((double)sdus_received -1);
@@ -337,7 +376,6 @@ void Client::floodFlow(int port_id)
 	double current_rtt = 0;
 	unsigned char *buffer2 = new unsigned char[data_size];
 
-	ipcManager->setFlowOptsBlocking(port_id, true);
 	snd = startSender(port_id);
 	cout << "Sender started" << endl;
 	while(true) {
@@ -475,25 +513,15 @@ int Client::readSDU(int portId, void * sdu, int maxBytes, unsigned int timeout)
 {
 	timespec begintp, endtp;
 	get_current_time(begintp);
-	int bytes_read;
+	ReadSDUWithTimeout _(portId, timeout);
+	do {
+		int bytes_read = ipcManager->readSDU(portId, sdu, maxBytes);
+		if (bytes_read != -EINTR)
+			return bytes_read;
+		get_current_time(endtp);
+	} while ((unsigned) time_difference_in_ms(begintp, endtp) < timeout);
 
-	while (true) {
-		try {
-			bytes_read = ipcManager->readSDU(portId, sdu, maxBytes);
-			if (bytes_read == -EAGAIN) {
-				get_current_time(endtp);
-				if ((unsigned int) time_difference_in_ms(begintp, endtp) > timeout) {
-					break;
-				}
-			} else {
-				break;
-			}
-		} catch (rina::Exception &e) {
-			throw e;
-		}
-	}
-
-	return bytes_read;
+	return -EAGAIN;
 }
 
 Sender * Client::startSender(int port_id)
