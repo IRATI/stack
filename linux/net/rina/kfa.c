@@ -481,7 +481,6 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 			LOG_DBG("Write woken up (%d)", retval);
 
 			if (retval < 0) {
-				LOG_DBG("Wait-event interrupted (%d)", retval);
 				if (signal_pending(current)) {
 					LOG_DBG("A signal is pending");
 #if 0
@@ -651,11 +650,10 @@ int kfa_flow_sdu_read(struct kfa  *instance,
 			LOG_DBG("Read woken up (%d)", retval);
 
 			if (retval < 0) {
-				LOG_ERR("Wait-event interrupted (%d)", retval);
 				if (signal_pending(current)) {
-					LOG_ERR("A signal is pending");
+					LOG_DBG("A signal is pending");
 #if 0
-					LOG_ERR("Pending signal (0x%08zx%08zx)",
+					LOG_DBG("Pending signal (0x%08zx%08zx)",
 						current->pending.signal.sig[0],
 						current->pending.signal.sig[1]);
 #endif
