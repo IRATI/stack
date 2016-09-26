@@ -28,6 +28,7 @@
 #include "common/concurrency.h"
 #include "ipcp/components.h"
 #include <librina/internal-events.h>
+#include "ipcp/ipc-process.h"
 
 namespace rinad {
 
@@ -47,12 +48,19 @@ public:
 		  rina::cdap_rib::obj_info_t &obj_reply,
 		  rina::cdap_rib::res_info_t& res);
 
+	static void create_cb(const rina::rib::rib_handle_t rib,
+		  const rina::cdap_rib::con_handle_t &con,
+		  const std::string& fqn, const std::string& class_,
+		  const rina::cdap_rib::filt_info_t &filt,
+		  const int invoke_id, const rina::ser_obj_t &obj_req,
+		  rina::cdap_rib::obj_info_t &obj_reply,
+		  rina::cdap_rib::res_info_t& res);
 	const static std::string class_name;
 	const static std::string object_name_prefix;
 
 private:
-
 	rina::Neighbor * neighbor;
+	static bool createNeighbor(rina::Neighbor &object);
 };
 
 class NeighborsRIBObj: public IPCPRIBObj {
