@@ -170,20 +170,20 @@ struct dtcp {
 	struct robject         robj;
 };
 
-inline struct dt * dtcp_dt(struct dtcp * dtcp)
+struct dt * dtcp_dt(struct dtcp * dtcp)
 {
         return dtcp->parent;
 }
 EXPORT_SYMBOL(dtcp_dt);
 
-inline struct dtcp_config * dtcp_config_get(struct dtcp * dtcp)
+struct dtcp_config * dtcp_config_get(struct dtcp * dtcp)
 {
         ASSERT(dtcp);
         return dtcp->cfg;
 }
 EXPORT_SYMBOL(dtcp_config_get);
 
-inline int dtcp_pdu_send(struct dtcp * dtcp, struct pdu * pdu)
+int dtcp_pdu_send(struct dtcp * dtcp, struct pdu * pdu)
 {
 	struct dtp * dtp;
 
@@ -220,22 +220,22 @@ EXPORT_SYMBOL(dtcp_pdu_send);
 							\
 	return 0
 
-inline static uint_t dtcp_pdus_per_time_unit(struct dtcp * dtcp)
+static uint_t dtcp_pdus_per_time_unit(struct dtcp * dtcp)
 { dtcp_getter(uint_t, pdus_per_time_unit); }
 
-inline static uint_t dtcp_time_unit(struct dtcp * dtcp)
+static uint_t dtcp_time_unit(struct dtcp * dtcp)
 { dtcp_getter(uint_t, time_unit); }
 
 /* FIXME: check this */
-inline uint_t dtcp_time_frame(struct dtcp * dtcp)
+uint_t dtcp_time_frame(struct dtcp * dtcp)
 { dtcp_getter(uint_t, time_unit); }
 EXPORT_SYMBOL(dtcp_time_frame);
 
-inline int dtcp_time_frame_set(struct dtcp * dtcp, uint_t sec)
+int dtcp_time_frame_set(struct dtcp * dtcp, uint_t sec)
 { dtcp_setter(time_unit, sec); }
 EXPORT_SYMBOL(dtcp_time_frame_set);
 
-inline int dtcp_last_time(struct dtcp * dtcp, struct timespec * s)
+int dtcp_last_time(struct dtcp * dtcp, struct timespec * s)
 {
 	ASSERT(dtcp);
 	ASSERT(dtcp->sv);
@@ -250,7 +250,7 @@ inline int dtcp_last_time(struct dtcp * dtcp, struct timespec * s)
 }
 EXPORT_SYMBOL(dtcp_last_time);
 
-inline int dtcp_last_time_set(struct dtcp * dtcp, struct timespec * s)
+int dtcp_last_time_set(struct dtcp * dtcp, struct timespec * s)
 {
 	ASSERT(dtcp);
 	ASSERT(dtcp->sv);
@@ -265,31 +265,31 @@ inline int dtcp_last_time_set(struct dtcp * dtcp, struct timespec * s)
 }
 EXPORT_SYMBOL(dtcp_last_time_set);
 
-inline uint_t dtcp_sndr_rate(struct dtcp * dtcp)
+uint_t dtcp_sndr_rate(struct dtcp * dtcp)
 { dtcp_getter(uint_t, sndr_rate); }
 EXPORT_SYMBOL(dtcp_sndr_rate);
 
-inline int dtcp_sndr_rate_set(struct dtcp * dtcp, uint_t rate)
+int dtcp_sndr_rate_set(struct dtcp * dtcp, uint_t rate)
 { dtcp_setter(sndr_rate, rate); }
 EXPORT_SYMBOL(dtcp_sndr_rate_set);
 
-inline uint_t dtcp_rcvr_rate(struct dtcp * dtcp)
+uint_t dtcp_rcvr_rate(struct dtcp * dtcp)
 { dtcp_getter(uint_t, rcvr_rate); }
 EXPORT_SYMBOL(dtcp_rcvr_rate);
 
-inline int dtcp_rcvr_rate_set(struct dtcp * dtcp, uint_t rate)
+int dtcp_rcvr_rate_set(struct dtcp * dtcp, uint_t rate)
 { dtcp_setter(rcvr_rate, rate); }
 EXPORT_SYMBOL(dtcp_rcvr_rate_set);
 
-inline uint_t dtcp_recv_itu(struct dtcp * dtcp)
+uint_t dtcp_recv_itu(struct dtcp * dtcp)
 { dtcp_getter(uint_t, pdus_rcvd_in_time_unit); }
 EXPORT_SYMBOL(dtcp_recv_itu);
 
-inline int dtcp_recv_itu_set(struct dtcp * dtcp, uint_t recv)
+int dtcp_recv_itu_set(struct dtcp * dtcp, uint_t recv)
 { dtcp_setter(pdus_rcvd_in_time_unit, recv); }
 EXPORT_SYMBOL(dtcp_recv_itu_set);
 
-inline int dtcp_recv_itu_inc(struct dtcp * dtcp, uint_t recv)
+int dtcp_recv_itu_inc(struct dtcp * dtcp, uint_t recv)
 {
 	ASSERT(dtcp);
 	ASSERT(dtcp->sv);
@@ -302,15 +302,15 @@ inline int dtcp_recv_itu_inc(struct dtcp * dtcp, uint_t recv)
 }
 EXPORT_SYMBOL(dtcp_recv_itu_inc);
 
-inline uint_t dtcp_sent_itu(struct dtcp * dtcp)
+uint_t dtcp_sent_itu(struct dtcp * dtcp)
 { dtcp_getter(uint_t, pdus_sent_in_time_unit); }
 EXPORT_SYMBOL(dtcp_sent_itu);
 
-inline int dtcp_sent_itu_set(struct dtcp * dtcp, uint_t sent)
+int dtcp_sent_itu_set(struct dtcp * dtcp, uint_t sent)
 { dtcp_setter(pdus_sent_in_time_unit, sent); }
 EXPORT_SYMBOL(dtcp_sent_itu_set);
 
-inline int dtcp_sent_itu_inc(struct dtcp * dtcp, uint_t sent)
+int dtcp_sent_itu_inc(struct dtcp * dtcp, uint_t sent)
 {
 	ASSERT(dtcp);
 	ASSERT(dtcp->sv);
@@ -340,39 +340,39 @@ int dtcp_rate_fc_reset(struct dtcp * dtcp, struct timespec * now)
 }
 EXPORT_SYMBOL(dtcp_rate_fc_reset);
 
-inline uint_t dtcp_rtt(struct dtcp * dtcp)
+uint_t dtcp_rtt(struct dtcp * dtcp)
 { dtcp_getter(uint_t, rtt); }
 EXPORT_SYMBOL(dtcp_rtt);
 
-inline int dtcp_rtt_set(struct dtcp * dtcp, uint_t rtt)
+int dtcp_rtt_set(struct dtcp * dtcp, uint_t rtt)
 { dtcp_setter(rtt, rtt); }
 EXPORT_SYMBOL(dtcp_rtt_set);
 
-inline uint_t dtcp_srtt(struct dtcp * dtcp)
+uint_t dtcp_srtt(struct dtcp * dtcp)
 { dtcp_getter(uint_t, srtt); }
 EXPORT_SYMBOL(dtcp_srtt);
 
-inline int dtcp_srtt_set(struct dtcp * dtcp, uint_t srtt)
+int dtcp_srtt_set(struct dtcp * dtcp, uint_t srtt)
 { dtcp_setter(srtt, srtt); }
 EXPORT_SYMBOL(dtcp_srtt_set);
 
-inline uint_t dtcp_rttvar(struct dtcp * dtcp)
+uint_t dtcp_rttvar(struct dtcp * dtcp)
 { dtcp_getter(uint_t, rttvar); }
 EXPORT_SYMBOL(dtcp_rttvar);
 
-inline int dtcp_rttvar_set(struct dtcp * dtcp, uint_t rttvar)
+int dtcp_rttvar_set(struct dtcp * dtcp, uint_t rttvar)
 { dtcp_setter(rttvar, rttvar); }
 EXPORT_SYMBOL(dtcp_rttvar_set);
 
-inline static int last_rcv_ctrl_seq_set(struct dtcp * dtcp,
+static int last_rcv_ctrl_seq_set(struct dtcp * dtcp,
                                         seq_num_t     last_rcv_ctrl_seq)
 { dtcp_setter(last_rcv_ctl_seq, last_rcv_ctrl_seq); }
 
-inline seq_num_t last_rcv_ctrl_seq(struct dtcp * dtcp)
+seq_num_t last_rcv_ctrl_seq(struct dtcp * dtcp)
 { dtcp_getter(seq_num_t, last_rcv_ctl_seq); }
 EXPORT_SYMBOL(last_rcv_ctrl_seq);
 
-inline static void flow_ctrl_inc(struct dtcp * dtcp)
+static void flow_ctrl_inc(struct dtcp * dtcp)
 {
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
@@ -382,7 +382,7 @@ inline static void flow_ctrl_inc(struct dtcp * dtcp)
         spin_unlock_bh(&dtcp->sv->lock);
 }
 
-inline static void acks_inc(struct dtcp * dtcp)
+static void acks_inc(struct dtcp * dtcp)
 {
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
@@ -392,30 +392,30 @@ inline static void acks_inc(struct dtcp * dtcp)
         spin_unlock_bh(&dtcp->sv->lock);
 }
 
-inline seq_num_t snd_rt_wind_edge(struct dtcp * dtcp)
+seq_num_t snd_rt_wind_edge(struct dtcp * dtcp)
 { dtcp_getter(seq_num_t, snd_rt_wind_edge); }
 EXPORT_SYMBOL(snd_rt_wind_edge);
 
-inline static int snd_rt_wind_edge_set(struct dtcp * dtcp, seq_num_t new_rt_win)
+static int snd_rt_wind_edge_set(struct dtcp * dtcp, seq_num_t new_rt_win)
 { dtcp_setter(snd_rt_wind_edge, new_rt_win); }
 
-inline seq_num_t snd_lft_win(struct dtcp * dtcp)
+seq_num_t snd_lft_win(struct dtcp * dtcp)
 { dtcp_getter(seq_num_t, snd_lft_win); }
 EXPORT_SYMBOL(snd_lft_win);
 
-inline seq_num_t rcvr_rt_wind_edge(struct dtcp * dtcp)
+seq_num_t rcvr_rt_wind_edge(struct dtcp * dtcp)
 { dtcp_getter(seq_num_t, rcvr_rt_wind_edge); }
 EXPORT_SYMBOL(rcvr_rt_wind_edge);
 
-inline int rcvr_rt_wind_edge_set(struct dtcp * dtcp, seq_num_t rt_win_edge)
+int rcvr_rt_wind_edge_set(struct dtcp * dtcp, seq_num_t rt_win_edge)
 { dtcp_setter(rcvr_rt_wind_edge, rt_win_edge); }
 EXPORT_SYMBOL(rcvr_rt_wind_edge_set);
 
-inline int pdus_sent_in_t_unit_set(struct dtcp * dtcp, uint_t s)
+int pdus_sent_in_t_unit_set(struct dtcp * dtcp, uint_t s)
 { dtcp_setter(pdus_sent_in_time_unit, s); }
 EXPORT_SYMBOL(pdus_sent_in_t_unit_set);
 
-inline static seq_num_t next_snd_ctl_seq(struct dtcp * dtcp)
+static seq_num_t next_snd_ctl_seq(struct dtcp * dtcp)
 {
         seq_num_t     tmp;
 
@@ -429,13 +429,13 @@ inline static seq_num_t next_snd_ctl_seq(struct dtcp * dtcp)
         return tmp;
 }
 
-inline static seq_num_t last_snd_data_ack(struct dtcp * dtcp)
+static seq_num_t last_snd_data_ack(struct dtcp * dtcp)
 { dtcp_getter(seq_num_t, last_snd_data_ack); }
 
-inline static seq_num_t last_rcv_data_ack(struct dtcp * dtcp)
+static seq_num_t last_rcv_data_ack(struct dtcp * dtcp)
 { dtcp_getter(seq_num_t, last_rcv_data_ack); }
 
-inline static void last_snd_data_ack_set(struct dtcp * dtcp, seq_num_t seq_num)
+static void last_snd_data_ack_set(struct dtcp * dtcp, seq_num_t seq_num)
 {
 	ASSERT(dtcp);
 	ASSERT(dtcp->sv);
@@ -445,14 +445,14 @@ inline static void last_snd_data_ack_set(struct dtcp * dtcp, seq_num_t seq_num)
 	spin_unlock_bh(&dtcp->sv->lock);
 }
 
-inline static uint_t dtcp_sndr_credit(struct dtcp * dtcp)
+static uint_t dtcp_sndr_credit(struct dtcp * dtcp)
 { dtcp_getter(uint_t, sndr_credit); }
 
-inline uint_t dtcp_rcvr_credit(struct dtcp * dtcp)
+uint_t dtcp_rcvr_credit(struct dtcp * dtcp)
 { dtcp_getter(uint_t, rcvr_credit); }
 EXPORT_SYMBOL(dtcp_rcvr_credit);
 
-inline void dtcp_rcvr_credit_set(struct dtcp * dtcp, uint_t credit)
+void dtcp_rcvr_credit_set(struct dtcp * dtcp, uint_t credit)
 {
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
@@ -463,7 +463,7 @@ inline void dtcp_rcvr_credit_set(struct dtcp * dtcp, uint_t credit)
 }
 EXPORT_SYMBOL(dtcp_rcvr_credit_set);
 
-inline void update_rt_wind_edge(struct dtcp * dtcp)
+void update_rt_wind_edge(struct dtcp * dtcp)
 {
         seq_num_t     seq;
 
@@ -478,7 +478,7 @@ inline void update_rt_wind_edge(struct dtcp * dtcp)
 }
 EXPORT_SYMBOL(update_rt_wind_edge);
 
-inline void update_credit_and_rt_wind_edge(struct dtcp * dtcp, uint_t credit)
+void update_credit_and_rt_wind_edge(struct dtcp * dtcp, uint_t credit)
 {
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
@@ -1655,23 +1655,23 @@ int dtcp_sv_update(struct dtcp * dtcp, const struct pci * pci)
 }
 EXPORT_SYMBOL(dtcp_sv_update);
 
-inline seq_num_t dtcp_rcv_rt_win(struct dtcp * dtcp)
+seq_num_t dtcp_rcv_rt_win(struct dtcp * dtcp)
 { return rcvr_rt_wind_edge(dtcp); }
 EXPORT_SYMBOL(dtcp_rcv_rt_win);
 
-inline int dtcp_rcv_rt_win_set(struct dtcp * dtcp, seq_num_t rt_win_edge)
+int dtcp_rcv_rt_win_set(struct dtcp * dtcp, seq_num_t rt_win_edge)
 { return rcvr_rt_wind_edge_set(dtcp, rt_win_edge); }
 EXPORT_SYMBOL(dtcp_rcv_rt_win_set);
 
-inline seq_num_t dtcp_snd_rt_win(struct dtcp * dtcp)
+seq_num_t dtcp_snd_rt_win(struct dtcp * dtcp)
 { return snd_rt_wind_edge(dtcp); }
 EXPORT_SYMBOL(dtcp_snd_rt_win);
 
-inline int dtcp_snd_rt_win_set(struct dtcp * dtcp, seq_num_t rt_win_edge)
+int dtcp_snd_rt_win_set(struct dtcp * dtcp, seq_num_t rt_win_edge)
 { return snd_rt_wind_edge_set(dtcp, rt_win_edge); }
 EXPORT_SYMBOL(dtcp_snd_rt_win_set);
 
-inline seq_num_t dtcp_snd_lf_win(struct dtcp * dtcp)
+seq_num_t dtcp_snd_lf_win(struct dtcp * dtcp)
 { return snd_lft_win(dtcp); }
 
 int dtcp_ps_publish(struct ps_factory * factory)

@@ -241,7 +241,7 @@ ssize_t *pci_offset_table_create(struct dt_cons *dt_cons)
 	return pci_offsets;
 }
 
-inline bool pci_is_ok(const struct pci *pci)
+bool pci_is_ok(const struct pci *pci)
 {
 	if (pci && pci->h && pci->len > 0 && pdu_type_is_ok(pci_type(pci)))
 		return true;
@@ -249,7 +249,7 @@ inline bool pci_is_ok(const struct pci *pci)
 }
 EXPORT_SYMBOL(pci_is_ok);
 
-static inline struct efcp_config *__pci_efcp_config_get(const struct pci *pci)
+static struct efcp_config *__pci_efcp_config_get(const struct pci *pci)
 {
 	struct du *pdu;
 
@@ -328,72 +328,72 @@ static inline struct efcp_config *__pci_efcp_config_get(const struct pci *pci)
 	return 0;}
 
 /* Base getters */
-inline cep_id_t pci_cep_source(const struct pci *pci)
+cep_id_t pci_cep_source(const struct pci *pci)
 { PCI_GETTER(pci, PCI_BASE_SRC_CEP, cep_id_length, cep_id_t); }
 EXPORT_SYMBOL(pci_cep_source);
 
-inline cep_id_t pci_cep_destination(const struct pci *pci)
+cep_id_t pci_cep_destination(const struct pci *pci)
 { PCI_GETTER(pci, PCI_BASE_DST_CEP, cep_id_length, cep_id_t); }
 EXPORT_SYMBOL(pci_cep_destination);
 
-inline address_t pci_destination(const struct pci *pci)
+address_t pci_destination(const struct pci *pci)
 { PCI_GETTER(pci, PCI_BASE_DST_ADD, address_length, address_t); }
 EXPORT_SYMBOL(pci_destination);
 
-inline address_t pci_source(const struct pci *pci)
+address_t pci_source(const struct pci *pci)
 { PCI_GETTER(pci, PCI_BASE_SRC_ADD, address_length, address_t); }
 EXPORT_SYMBOL(pci_source);
 
-inline qos_id_t pci_qos_id(const struct pci *pci)
+qos_id_t pci_qos_id(const struct pci *pci)
 { PCI_GETTER(pci, PCI_BASE_QOS_ID, qos_id_length, qos_id_t); }
 EXPORT_SYMBOL(pci_qos_id);
 
-inline pdu_type_t pci_type(const struct pci *pci)
+pdu_type_t pci_type(const struct pci *pci)
 { PCI_GETTER_NO_DTC(pci, PCI_BASE_TYPE, TYPE_SIZE, pdu_type_t); }
 EXPORT_SYMBOL(pci_type);
 
-inline pdu_flags_t pci_flags_get(const struct pci *pci)
+pdu_flags_t pci_flags_get(const struct pci *pci)
 { PCI_GETTER_NO_DTC(pci, PCI_BASE_FLAGS, FLAGS_SIZE, pdu_flags_t); }
 EXPORT_SYMBOL(pci_flags_get);
 
-inline ssize_t pci_len(const struct pci *pci)
+ssize_t pci_len(const struct pci *pci)
 { PCI_GETTER(pci, PCI_BASE_LEN, length_length, ssize_t); }
 EXPORT_SYMBOL(pci_len);
 
 /* Base setters */
-inline int pci_sequence_number_set(struct pci *pci, seq_num_t sn)
+int pci_sequence_number_set(struct pci *pci, seq_num_t sn)
 { PCI_SETTER(pci, PCI_DT_MGMT_SN, seq_num_length, sn); }
 EXPORT_SYMBOL(pci_sequence_number_set);
 
-inline int pci_cep_source_set(struct pci *pci, cep_id_t src_cep_id)
+int pci_cep_source_set(struct pci *pci, cep_id_t src_cep_id)
 { PCI_SETTER(pci, PCI_BASE_SRC_CEP, cep_id_length, src_cep_id); }
 EXPORT_SYMBOL(pci_cep_source_set);
 
-inline int pci_cep_destination_set(struct pci *pci, cep_id_t dst_cep_id)
+int pci_cep_destination_set(struct pci *pci, cep_id_t dst_cep_id)
 { PCI_SETTER(pci, PCI_BASE_DST_CEP, cep_id_length, dst_cep_id); }
 EXPORT_SYMBOL(pci_cep_destination_set);
 
-inline int pci_destination_set(struct pci *pci, address_t dst_address)
+int pci_destination_set(struct pci *pci, address_t dst_address)
 { PCI_SETTER(pci, PCI_BASE_DST_ADD, address_length, dst_address); }
 EXPORT_SYMBOL(pci_destination_set);
 
-inline int pci_source_set(struct pci *pci, address_t src_address)
+int pci_source_set(struct pci *pci, address_t src_address)
 { PCI_SETTER(pci, PCI_BASE_SRC_ADD, address_length, src_address); }
 EXPORT_SYMBOL(pci_source_set);
 
-inline int pci_qos_id_set(struct pci *pci, qos_id_t qos_id)
+int pci_qos_id_set(struct pci *pci, qos_id_t qos_id)
 { PCI_SETTER(pci, PCI_BASE_QOS_ID, qos_id_length, qos_id); }
 EXPORT_SYMBOL(pci_qos_id_set);
 
-inline int pci_type_set(struct pci *pci, pdu_type_t type)
+int pci_type_set(struct pci *pci, pdu_type_t type)
 { PCI_SETTER_NO_DTC(pci, PCI_BASE_TYPE, TYPE_SIZE, type); }
 EXPORT_SYMBOL(pci_type_set);
 
-inline int pci_flags_set(struct pci *pci, pdu_flags_t flags)
+int pci_flags_set(struct pci *pci, pdu_flags_t flags)
 { PCI_SETTER_NO_DTC(pci, PCI_BASE_FLAGS, FLAGS_SIZE, flags); }
 EXPORT_SYMBOL(pci_flags_set);
 
-inline int pci_len_set(struct pci *pci, ssize_t len)
+int pci_len_set(struct pci *pci, ssize_t len)
 { PCI_SETTER(pci, PCI_BASE_LEN, length_length, len); }
 EXPORT_SYMBOL(pci_len_set);
 
@@ -419,7 +419,7 @@ int pci_format(struct pci *pci,
 }
 EXPORT_SYMBOL(pci_format);
 
-static inline int check_pdu_type(struct pci *pci, int ret_val, int n_types, ...)
+/*static int check_pdu_type(struct pci *pci, int ret_val, int n_types, ...)
 {
 	va_list args;
 	int i;
@@ -433,9 +433,9 @@ static inline int check_pdu_type(struct pci *pci, int ret_val, int n_types, ...)
 	}
 	va_end(args);
 	return -ret_val;
-}
+}*/
 
-inline ssize_t pci_calculate_size(struct efcp_config *cfg, pdu_type_t type)
+ssize_t pci_calculate_size(struct efcp_config *cfg, pdu_type_t type)
 {
 	switch (type) {
 		case PDU_TYPE_DT:
@@ -456,7 +456,7 @@ inline ssize_t pci_calculate_size(struct efcp_config *cfg, pdu_type_t type)
 EXPORT_SYMBOL(pci_calculate_size);
 
 /* Custom getters */
-inline seq_num_t pci_sequence_number_get(const struct pci *pci)
+seq_num_t pci_sequence_number_get(const struct pci *pci)
 {
 	switch (pci_type(pci)) {
 	case PDU_TYPE_DT:
@@ -471,7 +471,7 @@ inline seq_num_t pci_sequence_number_get(const struct pci *pci)
 }
 EXPORT_SYMBOL(pci_sequence_number_get);
 
-inline seq_num_t pci_control_ack_seq_num(const struct pci *pci)
+seq_num_t pci_control_ack_seq_num(const struct pci *pci)
 {
 	switch (pci_type(pci)) {
 	case PDU_TYPE_ACK:
@@ -484,7 +484,7 @@ inline seq_num_t pci_control_ack_seq_num(const struct pci *pci)
 }
 EXPORT_SYMBOL(pci_control_ack_seq_num);
 
-inline seq_num_t pci_control_new_rt_wind_edge(const struct pci *pci)
+seq_num_t pci_control_new_rt_wind_edge(const struct pci *pci)
 {
 	switch (pci_type(pci)) {
 	case PDU_TYPE_FC:
@@ -499,7 +499,7 @@ inline seq_num_t pci_control_new_rt_wind_edge(const struct pci *pci)
 }
 EXPORT_SYMBOL(pci_control_new_rt_wind_edge);
 
-inline seq_num_t pci_control_new_left_wind_edge(const struct pci *pci)
+seq_num_t pci_control_new_left_wind_edge(const struct pci *pci)
 {
 	switch (pci_type(pci)) {
 	case PDU_TYPE_CACK:
@@ -512,7 +512,7 @@ inline seq_num_t pci_control_new_left_wind_edge(const struct pci *pci)
 }
 EXPORT_SYMBOL(pci_control_new_left_wind_edge);
 
-inline seq_num_t pci_control_my_rt_wind_edge(const struct pci *pci)
+seq_num_t pci_control_my_rt_wind_edge(const struct pci *pci)
 {
 	switch (pci_type(pci)) {
 	case PDU_TYPE_FC:
@@ -527,7 +527,7 @@ inline seq_num_t pci_control_my_rt_wind_edge(const struct pci *pci)
 }
 EXPORT_SYMBOL(pci_control_my_rt_wind_edge);
 
-inline seq_num_t pci_control_my_left_wind_edge(const struct pci *pci)
+seq_num_t pci_control_my_left_wind_edge(const struct pci *pci)
 {
 	switch (pci_type(pci)) {
 	case PDU_TYPE_FC:
@@ -542,7 +542,7 @@ inline seq_num_t pci_control_my_left_wind_edge(const struct pci *pci)
 }
 EXPORT_SYMBOL(pci_control_my_left_wind_edge);
 
-inline seq_num_t pci_control_last_seq_num_rcvd(const struct pci *pci)
+seq_num_t pci_control_last_seq_num_rcvd(const struct pci *pci)
 {
 	switch (pci_type(pci)) {
 	case PDU_TYPE_CACK:
@@ -555,7 +555,7 @@ inline seq_num_t pci_control_last_seq_num_rcvd(const struct pci *pci)
 }
 EXPORT_SYMBOL(pci_control_last_seq_num_rcvd);
 
-inline u_int32_t pci_control_sndr_rate(const struct pci *pci)
+u_int32_t pci_control_sndr_rate(const struct pci *pci)
 {
 	switch (pci_type(pci)) {
 	case PDU_TYPE_FC:
@@ -570,7 +570,7 @@ inline u_int32_t pci_control_sndr_rate(const struct pci *pci)
 }
 EXPORT_SYMBOL(pci_control_sndr_rate);
 
-inline u_int32_t pci_control_time_frame(const struct pci *pci)
+u_int32_t pci_control_time_frame(const struct pci *pci)
 {
 	switch (pci_type(pci)) {
 	case PDU_TYPE_FC:
@@ -586,7 +586,7 @@ inline u_int32_t pci_control_time_frame(const struct pci *pci)
 EXPORT_SYMBOL(pci_control_time_frame);
 
 /* Custom setters */
-inline int pci_control_ack_seq_num_set(struct pci *pci, seq_num_t seq)
+int pci_control_ack_seq_num_set(struct pci *pci, seq_num_t seq)
 {
 	switch (pci_type(pci)) {
 	case PDU_TYPE_ACK:
@@ -599,7 +599,7 @@ inline int pci_control_ack_seq_num_set(struct pci *pci, seq_num_t seq)
 }
 EXPORT_SYMBOL(pci_control_ack_seq_num_set);
 
-inline int pci_control_new_rt_wind_edge_set(struct pci *pci, seq_num_t seq)
+int pci_control_new_rt_wind_edge_set(struct pci *pci, seq_num_t seq)
 {
 	switch (pci_type(pci)) {
 	case PDU_TYPE_FC:
@@ -614,7 +614,7 @@ inline int pci_control_new_rt_wind_edge_set(struct pci *pci, seq_num_t seq)
 }
 EXPORT_SYMBOL(pci_control_new_rt_wind_edge_set);
 
-inline int pci_control_new_left_wind_edge_set(struct pci *pci, seq_num_t seq)
+int pci_control_new_left_wind_edge_set(struct pci *pci, seq_num_t seq)
 {
 	switch (pci_type(pci)) {
 	case PDU_TYPE_CACK:
@@ -627,7 +627,7 @@ inline int pci_control_new_left_wind_edge_set(struct pci *pci, seq_num_t seq)
 }
 EXPORT_SYMBOL(pci_control_new_left_wind_edge_set);
 
-inline int pci_control_my_rt_wind_edge_set(struct pci *pci, seq_num_t seq)
+int pci_control_my_rt_wind_edge_set(struct pci *pci, seq_num_t seq)
 {
 	switch (pci_type(pci)) {
 	case PDU_TYPE_FC:
@@ -642,7 +642,7 @@ inline int pci_control_my_rt_wind_edge_set(struct pci *pci, seq_num_t seq)
 }
 EXPORT_SYMBOL(pci_control_my_rt_wind_edge_set);
 
-inline int pci_control_my_left_wind_edge_set(struct pci *pci, seq_num_t seq)
+int pci_control_my_left_wind_edge_set(struct pci *pci, seq_num_t seq)
 {
 	switch (pci_type(pci)) {
 	case PDU_TYPE_FC:
@@ -657,7 +657,7 @@ inline int pci_control_my_left_wind_edge_set(struct pci *pci, seq_num_t seq)
 }
 EXPORT_SYMBOL(pci_control_my_left_wind_edge_set);
 
-inline int pci_control_last_seq_num_rcvd_set(struct pci *pci, seq_num_t seq)
+int pci_control_last_seq_num_rcvd_set(struct pci *pci, seq_num_t seq)
 {
 	switch (pci_type(pci)) {
 	case PDU_TYPE_CACK:
@@ -670,7 +670,7 @@ inline int pci_control_last_seq_num_rcvd_set(struct pci *pci, seq_num_t seq)
 }
 EXPORT_SYMBOL(pci_control_last_seq_num_rcvd_set);
 
-inline int pci_control_sndr_rate_set(struct pci *pci, u_int32_t rate)
+int pci_control_sndr_rate_set(struct pci *pci, u_int32_t rate)
 {
 	switch (pci_type(pci)) {
 	case PDU_TYPE_FC:
@@ -685,7 +685,7 @@ inline int pci_control_sndr_rate_set(struct pci *pci, u_int32_t rate)
 }
 EXPORT_SYMBOL(pci_control_sndr_rate_set);
 
-inline int pci_control_time_frame_set(struct pci *pci, u_int32_t frame)
+int pci_control_time_frame_set(struct pci *pci, u_int32_t frame)
 {
 	switch (pci_type(pci)) {
 	case PDU_TYPE_FC:
