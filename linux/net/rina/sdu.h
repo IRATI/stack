@@ -46,22 +46,22 @@ struct sdu		*sdu_create_ni(size_t data_len);
 struct sdu		*sdu_from_buffer_ni(void *buffer);
 
 int			sdu_destroy(struct sdu * sdu);
-inline bool		is_sdu_ok(const struct sdu *sdu);
-inline ssize_t		sdu_len(const struct sdu *sdu);
-inline unsigned char	*sdu_buffer(const struct sdu *sdu);
+bool		is_sdu_ok(const struct sdu *sdu);
+ssize_t		sdu_len(const struct sdu *sdu);
+unsigned char	*sdu_buffer(const struct sdu *sdu);
 
 /* FIXME: these two have to be removed */
-inline struct sk_buff	*sdu_detach_skb(const struct sdu *sdu);
-inline void		sdu_attach_skb(struct sdu *sdu, struct sk_buff *skb);
+struct sk_buff	*sdu_detach_skb(const struct sdu *sdu);
+void		sdu_attach_skb(struct sdu *sdu, struct sk_buff *skb);
 
-inline int		sdu_efcp_config_bind(struct sdu *sdu,
+int		sdu_efcp_config_bind(struct sdu *sdu,
 					     struct efcp_config *cfg);
-inline struct sdu	*sdu_from_pdu(struct pdu *pdu);
+struct sdu	*sdu_from_pdu(struct pdu *pdu);
 
 struct sdu_wpi		*sdu_wpi_create(size_t data_len);
 struct sdu_wpi		*sdu_wpi_create_ni(size_t data_len);
 int			sdu_wpi_destroy(struct sdu_wpi *s);
-inline bool		sdu_wpi_is_ok(const struct sdu_wpi *s);
-inline int		sdu_wpi_detach(struct sdu_wpi *s);
+bool		sdu_wpi_is_ok(const struct sdu_wpi *s);
+int		sdu_wpi_detach(struct sdu_wpi *s);
 
 #endif

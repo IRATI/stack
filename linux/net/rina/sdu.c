@@ -100,7 +100,7 @@ struct sdu *sdu_from_buffer_ni(void *buffer)
 }
 EXPORT_SYMBOL(sdu_from_buffer_ni);
 
-inline bool is_sdu_ok(const struct sdu *sdu)
+bool is_sdu_ok(const struct sdu *sdu)
 {
 	struct du *du;
 
@@ -109,7 +109,7 @@ inline bool is_sdu_ok(const struct sdu *sdu)
 }
 EXPORT_SYMBOL(is_sdu_ok);
 
-inline int sdu_efcp_config_bind(struct sdu *sdu, struct efcp_config *cfg)
+int sdu_efcp_config_bind(struct sdu *sdu, struct efcp_config *cfg)
 {
 	struct du *du;
 
@@ -122,7 +122,7 @@ inline int sdu_efcp_config_bind(struct sdu *sdu, struct efcp_config *cfg)
 }
 EXPORT_SYMBOL(sdu_efcp_config_bind);
 
-inline ssize_t sdu_len(const struct sdu *sdu)
+ssize_t sdu_len(const struct sdu *sdu)
 {
 	struct du *du;
 
@@ -133,7 +133,7 @@ inline ssize_t sdu_len(const struct sdu *sdu)
 EXPORT_SYMBOL(sdu_len);
 
 /*XXX: This works well if buffer is linear */
-inline unsigned char *sdu_buffer(const struct sdu *sdu)
+unsigned char *sdu_buffer(const struct sdu *sdu)
 {
 	struct du *du;
 
@@ -144,7 +144,7 @@ inline unsigned char *sdu_buffer(const struct sdu *sdu)
 EXPORT_SYMBOL(sdu_buffer);
 
 /* FIXME: this one should be removed to hide skb */
-inline struct sk_buff *sdu_detach_skb(const struct sdu *sdu)
+struct sk_buff *sdu_detach_skb(const struct sdu *sdu)
 {
 	struct du *du;
 	struct sk_buff *skb;
@@ -158,7 +158,7 @@ inline struct sk_buff *sdu_detach_skb(const struct sdu *sdu)
 EXPORT_SYMBOL(sdu_detach_skb);
 
 /* FIXME: this one should be removed to hide skb */
-inline void sdu_attach_skb(struct sdu *sdu, struct sk_buff *skb)
+void sdu_attach_skb(struct sdu *sdu, struct sk_buff *skb)
 {
 	ASSERT(sdu);
 	ASSERT(skb);
@@ -167,7 +167,7 @@ inline void sdu_attach_skb(struct sdu *sdu, struct sk_buff *skb)
 }
 EXPORT_SYMBOL(sdu_attach_skb);
 
-inline struct sdu *sdu_from_pdu(struct pdu *pdu)
+struct sdu *sdu_from_pdu(struct pdu *pdu)
 {
 	struct du *du;
 
@@ -241,7 +241,7 @@ bool sdu_wpi_is_ok(const struct sdu_wpi * s)
 { return (s && is_sdu_ok(s->sdu)) ? true : false; }
 EXPORT_SYMBOL(sdu_wpi_is_ok);
 
-inline int sdu_wpi_detach(struct sdu_wpi *s)
+int sdu_wpi_detach(struct sdu_wpi *s)
 {
 	if (s->sdu)
 		s->sdu = NULL;

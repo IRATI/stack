@@ -77,7 +77,7 @@ struct pdu *pdu_create_ni(pdu_type_t type, struct efcp_config *cfg)
 EXPORT_SYMBOL(pdu_create_ni);
 
 
-inline bool pdu_is_ok(const struct pdu *pdu)
+bool pdu_is_ok(const struct pdu *pdu)
 {
 	struct du *du;
 
@@ -87,7 +87,7 @@ inline bool pdu_is_ok(const struct pdu *pdu)
 }
 EXPORT_SYMBOL(pdu_is_ok);
 
-inline struct pdu *pdu_from_sdu(struct sdu *sdu)
+struct pdu *pdu_from_sdu(struct sdu *sdu)
 {
 	struct du *du;
 	ASSERT(sdu);
@@ -101,7 +101,7 @@ inline struct pdu *pdu_from_sdu(struct sdu *sdu)
 }
 EXPORT_SYMBOL(pdu_from_sdu);
 
-inline int pdu_encap(struct pdu *pdu, pdu_type_t type)
+int pdu_encap(struct pdu *pdu, pdu_type_t type)
 {
 	struct du *du;
 	ssize_t pci_len;
@@ -119,7 +119,7 @@ inline int pdu_encap(struct pdu *pdu, pdu_type_t type)
 }
 EXPORT_SYMBOL(pdu_encap);
 
-inline int pdu_decap(struct pdu *pdu)
+int pdu_decap(struct pdu *pdu)
 {
 	struct du *du;
 	pdu_type_t type;
@@ -178,7 +178,7 @@ struct pdu *pdu_dup_ni(const struct pdu *pdu)
 { return pdu_dup_gfp(GFP_ATOMIC, pdu); }
 EXPORT_SYMBOL(pdu_dup_ni);
 
-inline const struct pci *pdu_pci_get_ro(const struct pdu *pdu)
+const struct pci *pdu_pci_get_ro(const struct pdu *pdu)
 {
 	ASSERT(pdu_is_ok(pdu));
 
@@ -186,7 +186,7 @@ inline const struct pci *pdu_pci_get_ro(const struct pdu *pdu)
 }
 EXPORT_SYMBOL(pdu_pci_get_ro);
 
-inline struct pci *pdu_pci_get_rw(struct pdu *pdu)
+struct pci *pdu_pci_get_rw(struct pdu *pdu)
 {
 	ASSERT(pdu_is_ok(pdu));
 
@@ -194,7 +194,7 @@ inline struct pci *pdu_pci_get_rw(struct pdu *pdu)
 }
 EXPORT_SYMBOL(pdu_pci_get_rw);
 
-inline ssize_t pdu_data_len(const struct pdu *pdu)
+ssize_t pdu_data_len(const struct pdu *pdu)
 {
 	struct du *du;
 	ASSERT(pdu_is_ok(pdu));
@@ -206,7 +206,7 @@ inline ssize_t pdu_data_len(const struct pdu *pdu)
 }
 EXPORT_SYMBOL(pdu_data_len);
 
-inline ssize_t pdu_len(const struct pdu *pdu)
+ssize_t pdu_len(const struct pdu *pdu)
 {
 	struct du *du;
 	ASSERT(pdu_is_ok(pdu));
@@ -218,7 +218,7 @@ inline ssize_t pdu_len(const struct pdu *pdu)
 }
 EXPORT_SYMBOL(pdu_len);
 
-inline struct efcp_config *pdu_efcp_config(const struct pdu *pdu)
+struct efcp_config *pdu_efcp_config(const struct pdu *pdu)
 {
 	ASSERT(pdu_is_ok(pdu));
 
@@ -249,7 +249,7 @@ int pdu_destroy(struct pdu *pdu)
 EXPORT_SYMBOL(pdu_destroy);
 
 /* for SDU PROTECTION */
-inline void *pdu_sdup_head(struct pdu *pdu)
+void *pdu_sdup_head(struct pdu *pdu)
 {
 	if (unlikely(!pdu))
 		return NULL;
@@ -257,7 +257,7 @@ inline void *pdu_sdup_head(struct pdu *pdu)
 }
 EXPORT_SYMBOL(pdu_sdup_head);
 
-inline void *pdu_sdup_tail(struct pdu *pdu)
+void *pdu_sdup_tail(struct pdu *pdu)
 {
 	if (unlikely(!pdu))
 		return NULL;
@@ -265,7 +265,7 @@ inline void *pdu_sdup_tail(struct pdu *pdu)
 }
 EXPORT_SYMBOL(pdu_sdup_tail);
 
-inline int pdu_sdup_head_set(struct pdu *pdu, void *header)
+int pdu_sdup_head_set(struct pdu *pdu, void *header)
 {
 	if (unlikely(!pdu || !header))
 		return -1;
@@ -274,7 +274,7 @@ inline int pdu_sdup_head_set(struct pdu *pdu, void *header)
 }
 EXPORT_SYMBOL(pdu_sdup_head_set);
 
-inline int pdu_sdup_tail_set(struct pdu *pdu, void *tail)
+int pdu_sdup_tail_set(struct pdu *pdu, void *tail)
 {
 	if (unlikely(!pdu || !tail))
 		return -1;
@@ -284,7 +284,7 @@ inline int pdu_sdup_tail_set(struct pdu *pdu, void *tail)
 EXPORT_SYMBOL(pdu_sdup_tail_set);
 
 /*XXX: This works well if buffer is linear */
-inline unsigned char *pdu_buffer(const struct pdu *pdu)
+unsigned char *pdu_buffer(const struct pdu *pdu)
 {
 	struct du *du;
 
