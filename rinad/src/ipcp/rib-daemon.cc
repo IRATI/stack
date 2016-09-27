@@ -29,6 +29,7 @@
 #include "rib-daemon.h"
 #include "ipc-process.h"
 #include "common/encoder.h"
+#include "enrollment-task.h"
 
 
 namespace rinad {
@@ -487,7 +488,6 @@ void IPCPRIBDaemonImpl::initialize_rib_daemon(rina::cacep::AppConHandlerInterfac
 	//Create schema
 	vers.version_ = 0x1ULL;
 	ribd->createSchema(vers);
-	//TODO create callbacks
 
 	//Create RIB
 	rib = ribd->createRIB(vers);

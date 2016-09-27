@@ -56,11 +56,13 @@ public:
 				rina::cdap_rib::res_info_t& res);
 
 	void forward_object(const rina::cdap_rib::con_handle_t& con,
-    			const std::string obj_name,
-				const std::string obj_class,
-				const rina::cdap_rib::flags_t &flags,
-				const rina::cdap_rib::filt_info_t &filt,
-				const int invoke_id);
+			    rina::cdap::cdap_m_t::Opcode op_code,
+			    const std::string obj_name,
+			    const std::string obj_class,
+			    const rina::ser_obj_t &obj_value,
+			    const rina::cdap_rib::flags_t &flags,
+			    const rina::cdap_rib::filt_info_t &filt,
+			    const int invoke_id);
 
 	//Create callback
 	static void create_cb(const rina::rib::rib_handle_t rib,
