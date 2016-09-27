@@ -3355,6 +3355,10 @@ void AppCDAPIOHandler::process_message(const ser_obj_t &message,
 	}
 	atomic_send_lock_.unlock();
 
+	LOG_DBG("Received CDAP message from port %d\n %s",
+		port,
+		m_rcv.to_string().c_str());
+
 	// Fill structures
 	cdap_rib::con_handle_t con = manager_->get_con_handle(port);
 	// Flags

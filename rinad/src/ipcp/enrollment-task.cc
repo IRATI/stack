@@ -113,7 +113,7 @@ void NeighborRIBObj::create_cb(const rina::rib::rib_handle_t rib,
 
 bool NeighborRIBObj::createNeighbor(rina::Neighbor &object)
 {
-	LOG_DBG("Enrolling to neighbor %s", object.get_name().processName.c_str());
+	LOG_IPCP_DBG("Enrolling to neighbor %s", object.get_name().processName.c_str());
 
 	rina::EnrollToDAFRequestEvent* event;
 	event->neighborName = object.get_name();
@@ -614,6 +614,7 @@ EnrollmentTask::EnrollmentTask() : IPCPEnrollmentTask()
 	watchdog_per_ms_ = 0;
 	declared_dead_int_ms_ = 0;
 	neigh_enroll_per_ms_ = 0;
+	ipcp_ps = 0;
 }
 
 EnrollmentTask::~EnrollmentTask()
