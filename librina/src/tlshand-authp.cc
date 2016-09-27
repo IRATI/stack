@@ -327,9 +327,9 @@ CryptoState TLSHandSecurityContext::get_crypto_state(bool enable_crypto_tx,
 }
 
 TLSHandSecurityContext::TLSHandSecurityContext(int session_id):
-		ISecurityContext(session_id)
+		ISecurityContext(session_id, IAuthPolicySet::AUTH_TLSHAND)
 {
-	con.port_id = 0;
+	con.port_id = session_id;
 	timer_task = NULL;
 	state = BEGIN;
 
@@ -351,7 +351,7 @@ TLSHandSecurityContext::TLSHandSecurityContext(int session_id):
 
 TLSHandSecurityContext::TLSHandSecurityContext(int session_id,
 					       const AuthSDUProtectionProfile& profile):
-							       ISecurityContext(session_id)
+		ISecurityContext(session_id, IAuthPolicySet::AUTH_TLSHAND)
 {
 	keystore_path = profile.authPolicy.get_param_value_as_string(KEYSTORE_PATH);
 	if (keystore_path == std::string()) {
@@ -390,7 +390,7 @@ TLSHandSecurityContext::TLSHandSecurityContext(int session_id,
 TLSHandSecurityContext::TLSHandSecurityContext(int session_id,
 					       const AuthSDUProtectionProfile& profile,
 					       TLSHandAuthOptions * options):
-				ISecurityContext(session_id)
+				ISecurityContext(session_id, IAuthPolicySet::AUTH_TLSHAND)
 {
 	std::string option = options->mac_algs.front();
 	if (option != SSL_TXT_MD5 && option != SSL_TXT_SHA256) {
