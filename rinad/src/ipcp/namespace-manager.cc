@@ -174,12 +174,31 @@ void DFTRIBObj::eventHappened(rina::InternalEvent * event)
 
 	rina::ConnectiviyToNeighborLostEvent * conEvent =
 		(rina::ConnectiviyToNeighborLostEvent *) event;
+
+	CheckDFTEntriesToRemoveTimerTask * task = new CheckDFTEntriesToRemoveTimerTask(this,
+										       conEvent->neighbor_.address_);
+	timer.scheduleTask(task, 5000);
+}
+
+void DFTRIBObj::checkDFTEntriesToRemove(unsigned int address)
+{
+	rina::ScopedLock g(lock);
+	std::list<rina::RoutingTableEntry> nextHops;
 	std::list<std::string> entriesToDelete;
 
+	//1 Check if we still have connectivity to neighbor
+	nextHops = namespace_manager_->ipcp->resource_allocator_->get_rt_entries();
+	for (std::list<rina::RoutingTableEntry>::iterator it = nextHops.begin();
+			it != nextHops.end(); ++it) {
+		if (it->address == address)
+			return;
+	}
+
+	//2 If not, remove entries
 	std::list<rina::DirectoryForwardingTableEntry> entries = namespace_manager_->getDFTEntries();
 	std::list<rina::DirectoryForwardingTableEntry>::const_iterator iterator;
 	for (iterator = entries.begin(); iterator != entries.end(); ++iterator) {
-		if (iterator->get_address() == conEvent->neighbor_.get_address())
+		if (iterator->get_address() == address)
 			entriesToDelete.push_back(iterator->getKey());
 	}
 
@@ -190,10 +209,11 @@ void DFTRIBObj::eventHappened(rina::InternalEvent * event)
 	std::list<std::string>::const_iterator it;
 	for (it = entriesToDelete.begin(); it != entriesToDelete.end(); ++it) {
 		namespace_manager_->removeDFTEntry(*it,
-						   true,
-						   true,
-						   exc_neighs);
+				true,
+				true,
+				exc_neighs);
 	}
+
 }
 
 void DFTRIBObj::create(const rina::cdap_rib::con_handle_t &con_handle,
@@ -205,6 +225,8 @@ void DFTRIBObj::create(const rina::cdap_rib::con_handle_t &con_handle,
 		       rina::ser_obj_t &obj_reply,
 		       rina::cdap_rib::res_info_t& res)
 {
+	rina::ScopedLock g(lock);
+
 	std::list<rina::DirectoryForwardingTableEntry> entriesToCreateOrUpdate;
 	std::list<rina::DirectoryForwardingTableEntry> entriesToCreate;
 	rina::DirectoryForwardingTableEntry * entry;
@@ -641,6 +663,20 @@ unsigned int NamespaceManager::getAdressByname(const rina::ApplicationProcessNam
 	}
 
 	throw rina::Exception("Unknown neighbor");
+}
+
+
+//Class checkDFTEntriesToRemoveTimerTask
+CheckDFTEntriesToRemoveTimerTask::CheckDFTEntriesToRemoveTimerTask(DFTRIBObj * dft_,
+				 	 	   	   	   unsigned int address_)
+{
+	dft = dft_;
+	address = address_;
+}
+
+void CheckDFTEntriesToRemoveTimerTask::run()
+{
+	dft->checkDFTEntriesToRemove(address);
 }
 
 } //namespace rinad
