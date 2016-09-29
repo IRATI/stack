@@ -1,0 +1,11 @@
+{
+        "PluginName": "qta-mux-plugin",
+        "PluginVersion": "1",
+        "PolicySets" : [
+                {
+                        "Name": "qta-mux-ps",
+                        "Component": "rmt",
+                        "Version" : "1"
+                }
+        ]
+}
