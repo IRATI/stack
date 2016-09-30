@@ -514,7 +514,12 @@ void IEnrollmentStateMachine::abortEnrollment(const rina::ApplicationProcessNami
 			int portId, const std::string& reason, bool sendReleaseMessage)
 {
 	state_ = STATE_NULL;
-	enrollment_task_->enrollmentFailed(remotePeerNamingInfo, portId, reason, sendReleaseMessage);
+	AbortEnrollmentTimerTask * task = new AbortEnrollmentTimerTask(enrollment_task_,
+								       remotePeerNamingInfo,
+								       portId,
+								       reason,
+								       sendReleaseMessage);
+	timer_.scheduleTask(task, 10);
 }
 
 void IEnrollmentStateMachine::createOrUpdateNeighborInformation(bool enrolled)
@@ -592,6 +597,25 @@ void EnrollmentFailedTimerTask::run() {
 	} catch(rina::Exception &e) {
 		LOG_ERR("Problems aborting enrollment: %s", e.what());
 	}
+}
+
+//Class AbortEnrollmentTimerTask
+AbortEnrollmentTimerTask::AbortEnrollmentTimerTask(rina::IEnrollmentTask * enr_task,
+						   const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
+			 	 	 	   int portId,
+						   const std::string& reason_,
+						   bool sendReleaseMessage)
+{
+	etask = enr_task;
+	peer_name = remotePeerNamingInfo;
+	port_id = portId;
+	reason = reason_;
+	send_message = sendReleaseMessage;
+}
+
+void AbortEnrollmentTimerTask::run()
+{
+	etask->enrollmentFailed(peer_name, port_id, reason, send_message);
 }
 
 //Class Enrollment Task

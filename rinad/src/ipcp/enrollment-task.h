@@ -237,6 +237,24 @@ public:
 	std::string reason_;
 };
 
+class AbortEnrollmentTimerTask: public rina::TimerTask {
+public:
+	AbortEnrollmentTimerTask(rina::IEnrollmentTask * enr_task,
+				 const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
+				 int portId,
+				 const std::string& reason,
+				 bool sendReleaseMessage);
+	~AbortEnrollmentTimerTask() throw() {};
+	void run();
+
+private:
+	rina::IEnrollmentTask * etask;
+	rina::ApplicationProcessNamingInformation peer_name;
+	int port_id;
+	std::string reason;
+	bool send_message;
+};
+
 class EnrollmentTask: public IPCPEnrollmentTask, public rina::InternalEventListener {
 public:
 	static const std::string ENROLL_TIMEOUT_IN_MS;
