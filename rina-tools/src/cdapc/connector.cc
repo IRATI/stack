@@ -74,6 +74,10 @@ void Connector::ws_run() {
       // register it with the base class
       worker_started(worker);
       LOG_INFO("New DMS worker allocated");
+      
+      // Prod the DMS thread so a connection is made.
+      DMSWorker* dms = find_dms_worker();
+      dms->send_message(std::string("Establishing connnection."));  
     }
   } else {
     LOG_INFO("No DMS worker started.");
@@ -247,6 +251,10 @@ ServerWorker * Connector::internal_start_worker(rina::FlowInformation flow)
                                                max_sdu_size_in_bytes, this);
     worker->start();
     worker->detach();
+    
+    pthread_t tid = (reinterpret_cast<rina::Thread*>(worker))->getThreadType();
+    pthread_setname_np(tid, "maworker");
+    
     ma_worker_ = worker;
     return worker;
 }
@@ -259,6 +267,8 @@ ServerWorker * Connector::internal_start_worker(const std::string& ws_address)
                                                max_sdu_size_in_bytes, this);
     worker->start();
     worker->detach();
+    pthread_t tid = (reinterpret_cast<rina::Thread*>(worker))->getThreadType();
+    pthread_setname_np(tid, "dmsworker");
     dms_worker_ = worker;
     return worker;
 }

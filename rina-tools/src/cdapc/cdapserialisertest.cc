@@ -512,6 +512,32 @@ TEST_CASE( "JSON stop reply message", "[J_M_STOP_R]") {
 }
 
 
+TEST_CASE( "JSON malformed neighbor message", "[J_M_CREATE]") {
+  
+  // Encode it
+  string encMessage;
+  encMessage = "{\"TAX_VERSION\":\"1.0.0\",\"TAX_LANGUAGE\":\"CDAP\",\"TAX_DIALECT\":\"CDAP_REQ\",\"TAX_TIME\":1474570428082,\"TAX_TYPE\":\"ES_CDAP\",\"TAX_SOURCE\":\"DMS_MANAGER\",\"TAX_ID\":\"rina3@1289@ES_Event#66\",\"TAX_ID_HASH\":1947264915,\"TAX_TIME_STRING\":\"2016-09-22 19:53:48.082\",\"flag\":\"F_NO_FLAGS\",\"objClass\":\"Neighbor\",\"destAEInst\":\"\",\"objValue\":{\"typeval\":\"rina.messages.applicationProcessNamingInfo_t\",\"jsonval\":\"{\"applicationProcessInstance\":\"1\",\"supportingDifs\":\"[110]\",\"applicationProcessName\":\"n1\"}\"},\"objName\":\"/computingSystemID=1/processingSystemID=1/kernelApplicationProcess/osApplicationProcess/ipcProcesses/ipcProcessID=3/difManagement/enrollment/neighbors/neighbor=0\",\"version\":1,\"filter\":\"\",\"destApInst\":\"1\",\"scope\":0,\"destAEName\":\"\",\"destApName\":\"rina.apps.mad.1\",\"opCode\":\"M_CREATE\",\"objInst\":0}";
+  
+  
+  SECTION( "Encoded correctly") {
+    //REQUIRE(builder.IsInitialized());
+    REQUIRE(!encMessage.empty());
+    REQUIRE(JsonBalanced(encMessage));
+  }
+  
+  SECTION( "Non zero length") {
+   REQUIRE(encMessage.length() > 0);
+  }
+  
+  SECTION("Decodes to a similar object") {
+   // Decode it to check
+   CDAPMessage decoded;
+   JsonFormat::ParseFromString(encMessage, ((Message*)&decoded));
+   REQUIRE(decoded.IsInitialized() == false);
+   //REQUIRE(builder == decoded);
+  }
+}
+
 
 /*
 TEST_CASE( "JSON create message", "[J_M_CREATE]") {

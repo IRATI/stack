@@ -29,6 +29,7 @@
 
 #include <unistd.h>
 #include <iostream>
+#include <exception>
 #include <encoders/CDAP.pb.h> // For CDAPMessage
 
 #include "connector.h"
@@ -72,7 +73,7 @@ DMSWorker::DMSWorker(rina::ThreadAttributes * threadAttributes,
 // Do the internal work necessary
 int DMSWorker::internal_run() {
   int retries = 30;
-  unsigned int nap_time = 1000; // in millisecs
+  unsigned int nap_time = 200; // in millisecs
   
   // Loop attempting to make a connection
   while (ws == NULL) {
@@ -94,7 +95,7 @@ int DMSWorker::internal_run() {
   // Complete handshake with server
   ws->send("hello dms");
   while (ws->getReadyState() != WebSocket::CLOSED) {
-    ws->poll();
+    ws->poll(2000);
     auto myself = this;
     ws->dispatch ( [myself](const std::string& m) { myself->process_message(m); });
   }
@@ -240,8 +241,15 @@ void DMSWorker::send_message(const void* message, int size,
   assert(c != nullptr);
   Handover* ma = reinterpret_cast<Handover*>(c->find_ma_worker());
   if (ma != nullptr) {
-    // Found MA instance so just send it
-    ma->send_message(message, size, destination);
+    try {
+      cout << "INFO: Calling ma::send_message" << endl;
+      // Found MA instance so just send it
+      ma->send_message(message, size, destination);
+    } catch (std::exception& e) {
+      cout << "ERROR: Exception:" << e.what() << endl;
+    } catch (...) {
+      cout << "ERROR: Exception : Unknown" << endl;      
+    }
   } else {
     cout << "INFO: No MA!" << endl;
   }

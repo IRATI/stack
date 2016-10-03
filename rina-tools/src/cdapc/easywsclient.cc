@@ -1,3 +1,37 @@
+//
+// WS connector
+//
+// This code comes from:
+// https://github.com/dhbaird/easywsclient
+//
+// To get the latest version:
+// wget https://raw.github.com/dhbaird/easywsclient/master/easywsclient.hpp
+// wget https://raw.github.com/dhbaird/easywsclient/master/easywsclient.cpp
+//
+// Modified by Micheal Crotty <mcrotty@tssg.org>
+// Copyright (C) 2016, PRISTINE, Waterford Insitute of Technology
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions
+// are met:
+//   1. Redistributions of source code must retain the above copyright
+//      notice, this list of conditions and the following disclaimer.
+//   2. Redistributions in binary form must reproduce the above copyright
+//      notice, this list of conditions and the following disclaimer in the
+//      documentation and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS AND
+// ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+// OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+// SUCH DAMAGE.
+//
 
 #ifdef _WIN32
     #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
@@ -71,13 +105,18 @@
 
 #include <vector>
 #include <string>
+#include <atomic>
+#include <iostream>
+#include <assert.h>
 
 #include "easywsclient.h"
+#include <librina/concurrency.h>
+
 
 using easywsclient::Callback_Imp;
 using easywsclient::BytesCallback_Imp;
 
-namespace { // private module-only namespace
+namespace easywsclient { 
 
 socket_t hostname_connect(const std::string& hostname, int port) {
     struct addrinfo hints;
@@ -166,14 +205,18 @@ class _RealWebSocket : public easywsclient::WebSocket
     };
 
     std::vector<uint8_t> rxbuf;
-    std::vector<uint8_t> txbuf;
+    //std::vector<uint8_t> txbuf;
+    rina::BlockingFIFOQueue<std::vector<uint8_t>> txQ;
+    
     std::vector<uint8_t> receivedData;
 
     socket_t sockfd;
-    readyStateValues readyState;
+    std::atomic<readyStateValues> readyState;
     bool useMask;
 
     _RealWebSocket(socket_t sockfd, bool useMask) : sockfd(sockfd), readyState(OPEN), useMask(useMask) {
+      rxbuf.reserve(1500);
+      rxbuf.clear();
     }
 
     readyStateValues getReadyState() const {
@@ -188,55 +231,70 @@ class _RealWebSocket : public easywsclient::WebSocket
             }
             return;
         }
-        if (timeout != 0) {
+        std::vector<uint8_t>* txbuf = txQ.peek();
+        
+        // if (timeout != 0) {
             fd_set rfds;
             fd_set wfds;
             timeval tv = { timeout/1000, (timeout%1000) * 1000 };
             FD_ZERO(&rfds);
             FD_ZERO(&wfds);
             FD_SET(sockfd, &rfds);
-            if (txbuf.size()) { FD_SET(sockfd, &wfds); }
+            if (txbuf != nullptr) { FD_SET(sockfd, &wfds); }
             select(sockfd + 1, &rfds, &wfds, 0, timeout > 0 ? &tv : 0);
-        }
-        while (true) {
+        // }
+        //while (true) {
+        if (FD_ISSET(sockfd, &rfds)) {
             // FD_ISSET(0, &rfds) will be true
             int N = rxbuf.size();
             ssize_t ret;
             rxbuf.resize(N + 1500);
-            ret = recv(sockfd, (char*)&rxbuf[0] + N, 1500, 0);
-            if (false) { }
-            else if (ret < 0 && (socketerrno == SOCKET_EWOULDBLOCK || socketerrno == SOCKET_EAGAIN_EINPROGRESS)) {
+            ret = recv(sockfd, (char*)&rxbuf[0] + N, 1500, MSG_DONTWAIT);
+            if (ret < 0 && (socketerrno == SOCKET_EWOULDBLOCK || socketerrno == SOCKET_EAGAIN_EINPROGRESS)) {
                 rxbuf.resize(N);
-                break;
+                //break;
             }
             else if (ret <= 0) {
                 rxbuf.resize(N);
                 closesocket(sockfd);
                 readyState = CLOSED;
                 fputs(ret < 0 ? "Connection error!\n" : "Connection closed!\n", stderr);
-                break;
+                //break;
             }
             else {
+              if ((N == 0) && (ret == 1500)) {
+                // Its some form of flush packet
+                ret = 0; // discard it
+              }
                 rxbuf.resize(N + ret);
+                //   std::cout << "N=" << N << ",ret=" << ret << std::endl;
+                // }
+                //break;
             }
         }
-        while (txbuf.size()) {
-            int ret = ::send(sockfd, (char*)&txbuf[0], txbuf.size(), 0);
-            if (false) { } // ??
-            else if (ret < 0 && (socketerrno == SOCKET_EWOULDBLOCK || socketerrno == SOCKET_EAGAIN_EINPROGRESS)) {
+        // Is there something to transmit
+        while ((txbuf != nullptr) && FD_ISSET(sockfd, &wfds)) {
+            int ret = ::send(sockfd, (char*)&(*txbuf)[0], txbuf->size(), 0);
+            if (ret < 0 && (socketerrno == SOCKET_EWOULDBLOCK || socketerrno == SOCKET_EAGAIN_EINPROGRESS)) {
                 break;
-            }
-            else if (ret <= 0) {
+            } else if (ret <= 0) {
                 closesocket(sockfd);
                 readyState = CLOSED;
                 fputs(ret < 0 ? "Connection error!\n" : "Connection closed!\n", stderr);
                 break;
-            }
-            else {
-                txbuf.erase(txbuf.begin(), txbuf.begin() + ret);
+            } else if (((std::vector<uint8_t>::size_type)ret) == txbuf->size()) {
+              txQ.take();
+              delete txbuf;
+              txbuf = nullptr; //txQ.peek();
+            } else {
+              //std::cout << "Fragmented JSON" << std::endl;
+              txbuf->erase(txbuf->begin(), txbuf->begin() + ret);
             }
         }
-        if (!txbuf.size() && readyState == CLOSING) {
+        
+        // Check to see if we should be closing the websocket.
+        readyStateValues st = readyState;        
+        if (st == CLOSING) {
             closesocket(sockfd);
             readyState = CLOSED;
         }
@@ -259,7 +317,9 @@ class _RealWebSocket : public easywsclient::WebSocket
             }
         };
         CallbackAdapter bytesCallback(callable);
+        std::cout<<"Before dispatch" << endl;
         _dispatchBinary(bytesCallback);
+        std::cout<<"After dispatch" << endl;
     }
 
     virtual void _dispatchBinary(BytesCallback_Imp & callable) {
@@ -309,33 +369,97 @@ class _RealWebSocket : public easywsclient::WebSocket
                 ws.masking_key[2] = 0;
                 ws.masking_key[3] = 0;
             }
-            if (rxbuf.size() < ws.header_size+ws.N) { return; /* Need: ws.header_size+ws.N - rxbuf.size() */ }
+            if (rxbuf.size() < (ws.header_size+ws.N)) { return; /* Need: ws.header_size+ws.N - rxbuf.size() */ }
+            
+            // if ((rxbuf.size() > 0) && (ws.N == 0)) {
+            //     std::cout << "Buffer incomplete at:" << std::endl;
+            //     std::cout << "ws header size  =" << ws.header_size << std::endl;
+            //     std::cout << "ws data size    =" << ws.N << std::endl;
+            //     std::cout << "ws buf complete =" << ws.fin << std::endl;
+            //     std::cout << "buffer size     =" << rxbuf.size() << std::endl;
+            //     std::cout << "----" << std::endl;
+            //     std::cout << "B:";
+            //     std::vector<uint8_t>::size_type limit = std::max(((std::vector<uint8_t>::size_type)20), rxbuf.size());
+            //     for (std::vector<uint8_t>::size_type q=0;q < limit;q++) {
+            //       std::cout << " " << std::hex << rxbuf[q];
+            //     } //<<std::hex<< std::string(begin(rxbuf), end(rxbuf)) << std::endl;              
+            //     std::cout << "." << std::endl << "----" << std::endl;              
+            // }
 
             // We got a whole message, now do something with it:
-            if (false) { }
-            else if (
-                   ws.opcode == wsheader_type::TEXT_FRAME 
-                || ws.opcode == wsheader_type::BINARY_FRAME
-                || ws.opcode == wsheader_type::CONTINUATION
-            ) {
-                if (ws.mask) { for (size_t i = 0; i != ws.N; ++i) { rxbuf[i+ws.header_size] ^= ws.masking_key[i&0x3]; } }
-                receivedData.insert(receivedData.end(), rxbuf.begin()+ws.header_size, rxbuf.begin()+ws.header_size+(size_t)ws.N);// just feed
-                if (ws.fin) {
-                    callable((const std::vector<uint8_t>) receivedData);
-                    receivedData.erase(receivedData.begin(), receivedData.end());
-                    std::vector<uint8_t> ().swap(receivedData);// free memory
-                }
-            }
-            else if (ws.opcode == wsheader_type::PING) {
+            if (ws.opcode == wsheader_type::CLOSE) { 
+              close(); 
+            } else if (ws.opcode == wsheader_type::PING) {
                 if (ws.mask) { for (size_t i = 0; i != ws.N; ++i) { rxbuf[i+ws.header_size] ^= ws.masking_key[i&0x3]; } }
                 std::string data(rxbuf.begin()+ws.header_size, rxbuf.begin()+ws.header_size+(size_t)ws.N);
                 sendData(wsheader_type::PONG, data.size(), data.begin(), data.end());
+            } else if (ws.opcode == wsheader_type::PONG) { 
+              // Do nothing
+            } else if ( !ws.fin || ws.opcode == wsheader_type::CONTINUATION) {
+                if (ws.mask) { 
+                  for (size_t i = 0; i != ws.N; ++i) { 
+                    rxbuf[i+ws.header_size] ^= ws.masking_key[i&0x3]; 
+                  } 
+                }
+                // Add to the buffer
+                if (ws.N > 0) {
+                  receivedData.insert(receivedData.end(), rxbuf.begin()+ws.header_size, rxbuf.begin()+ws.header_size+(size_t)ws.N);// just feed
+                }
+                std::cout << "Continuation" << std::endl;
+                std::cout << "Dispatching buffer size=" << ws.header_size+(size_t)ws.N << std::endl;
+                std::cout << "Dispatching data size  =" << receivedData.size() << std::endl;
+                std::cout << "Dispatching data       =" << std::string(begin(receivedData),end(receivedData)) << std::endl;
+                
+                callable((const std::vector<uint8_t>) receivedData);
+                //receivedData.erase(receivedData.begin(), receivedData.end());
+                receivedData.clear();
+              } else if ( ws.opcode == wsheader_type::TEXT_FRAME 
+                 || ws.opcode == wsheader_type::BINARY_FRAME) {
+                // We know this is finalised now
+                assert(ws.fin);
+                if (ws.mask) { 
+                  for (size_t i = 0; i != ws.N; ++i) { 
+                    rxbuf[i+ws.header_size] ^= ws.masking_key[i&0x3]; 
+                  } 
+                }
+                // Add to the buffer
+                if (ws.N > 0) {
+                  receivedData.insert(receivedData.end(), rxbuf.begin()+ws.header_size, rxbuf.begin()+ws.header_size+(size_t)ws.N);// just feed
+                }
+                
+                
+                //if (ws.fin) {
+                std::cout << "Frame[" << ws.opcode << "," << ws.fin << "]" << std::endl;
+                    std::cout << "Dispatching buffer size=" << ws.header_size+(size_t)ws.N << std::endl;
+                    std::cout << "Dispatching data size  =" << receivedData.size() << std::endl;
+                    std::cout << "Dispatching data       =" << std::string(begin(receivedData),end(receivedData)) << std::endl;
+                    
+                    callable((const std::vector<uint8_t>) receivedData);
+                    //receivedData.erase(receivedData.begin(), receivedData.end());
+                    receivedData.clear();
+                    //std::vector<uint8_t> ().swap(receivedData);// free memory
+                // }
+            } else { 
+              fprintf(stderr, "ERROR: Got unexpected WebSocket message.\n"); close();
             }
-            else if (ws.opcode == wsheader_type::PONG) { }
-            else if (ws.opcode == wsheader_type::CLOSE) { close(); }
-            else { fprintf(stderr, "ERROR: Got unexpected WebSocket message.\n"); close(); }
-
-            rxbuf.erase(rxbuf.begin(), rxbuf.begin() + ws.header_size+(size_t)ws.N);
+            
+            // check for an overrun
+            if (rxbuf.size() >= (ws.header_size+(size_t)ws.N)) {
+              rxbuf.erase(rxbuf.begin(), rxbuf.begin() + ws.header_size+(size_t)ws.N);
+            } else {
+              std::cout << "Buffer incomplete at:" << std::endl;
+              std::cout << "ws header size  =" << ws.header_size << std::endl;
+              std::cout << "ws data size    =" << ws.N << std::endl;
+              std::cout << "ws buf complete =" << ws.fin << std::endl;
+              std::cout << "buffer size     =" << rxbuf.size() << std::endl;
+              std::cout << "----" << std::endl;
+              std::cout << "B:";
+              std::vector<uint8_t>::size_type limit = std::max(((std::vector<uint8_t>::size_type)20), rxbuf.size());
+              for (std::vector<uint8_t>::size_type q=0;q < limit;q++) {
+                std::cout << " " << std::hex << rxbuf[q];
+              }             
+              std::cout << "." << std::endl << "----" << std::endl;
+            }
         }
     }
 
@@ -364,7 +488,8 @@ class _RealWebSocket : public easywsclient::WebSocket
         // middleware:
         const uint8_t masking_key[4] = { 0x12, 0x34, 0x56, 0x78 };
         // TODO: consider acquiring a lock on txbuf...
-        if (readyState == CLOSING || readyState == CLOSED) { return; }
+        readyStateValues st = readyState;
+        if (st == CLOSING || st == CLOSED) { return; }
         std::vector<uint8_t> header;
         header.assign(2 + (message_size >= 126 ? 2 : 0) + (message_size >= 65536 ? 6 : 0) + (useMask ? 4 : 0), 0);
         header[0] = 0x80 | type;
@@ -406,20 +531,29 @@ class _RealWebSocket : public easywsclient::WebSocket
                 header[13] = masking_key[3];
             }
         }
+        std::vector<uint8_t>* txbuf = new std::vector<uint8_t>();
         // N.B. - txbuf will keep growing until it can be transmitted over the socket:
-        txbuf.insert(txbuf.end(), header.begin(), header.end());
-        txbuf.insert(txbuf.end(), message_begin, message_end);
+        txbuf->insert(txbuf->end(), header.begin(), header.end());
+        txbuf->insert(txbuf->end(), message_begin, message_end);
         if (useMask) {
-            for (size_t i = 0; i != message_size; ++i) { *(txbuf.end() - message_size + i) ^= masking_key[i&0x3]; }
+            for (size_t i = 0; i != message_size; ++i) { 
+              *(txbuf->end() - message_size + i) ^= masking_key[i&0x3];
+            }
         }
+        // Pop onto queue
+        txQ.put(txbuf);
     }
 
     void close() {
-        if(readyState == CLOSING || readyState == CLOSED) { return; }
-        readyState = CLOSING;
-        uint8_t closeFrame[6] = {0x88, 0x80, 0x00, 0x00, 0x00, 0x00}; // last 4 bytes are a masking key
-        std::vector<uint8_t> header(closeFrame, closeFrame+6);
-        txbuf.insert(txbuf.end(), header.begin(), header.end());
+      readyStateValues st = readyState;
+      if (st == CLOSING || st == CLOSED) { return; }
+      readyState = CLOSING;
+      uint8_t closeFrame[6] = {0x88, 0x80, 0x00, 0x00, 0x00, 0x00}; // last 4 bytes are a masking key
+      std::vector<uint8_t> header(closeFrame, closeFrame+6);
+      std::vector<uint8_t>* txbuf = new std::vector<uint8_t>();
+      txbuf->insert(txbuf->end(), header.begin(), header.end());
+      // Pop onto queue
+      txQ.put(txbuf);
     }
 
 };
@@ -515,11 +649,11 @@ WebSocket::pointer WebSocket::create_dummy() {
 
 
 WebSocket::pointer WebSocket::from_url(const std::string& url, const std::string& origin) {
-    return ::from_url(url, true, origin);
+    return easywsclient::from_url(url, true, origin);
 }
 
 WebSocket::pointer WebSocket::from_url_no_mask(const std::string& url, const std::string& origin) {
-    return ::from_url(url, false, origin);
+    return easywsclient::from_url(url, false, origin);
 }
 
 

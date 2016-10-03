@@ -32,8 +32,11 @@
 //  Based on original Protocol Buffers design by
 //  Sanjay Ghemawat, Jeff Dean, and others.
 //
+// Modified by Micheal Crotty <mcrotty AT tssg DOT org>
+//
+//
 // Utilities for printing and parsing protocol messages in a human-readable,
-// text-based format.
+// json-based format.
 
 #ifndef GOOGLE_PROTOBUF_JSON_FORMAT_H__
 #define GOOGLE_PROTOBUF_JSON_FORMAT_H__

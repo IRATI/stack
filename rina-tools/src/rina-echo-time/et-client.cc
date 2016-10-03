@@ -207,7 +207,7 @@ void Client::pingFlow(int port_id)
         unsigned int sdus_sent = 0;
         unsigned int sdus_received = 0;
 	timespec endtp;
-        unsigned char counter = 0;
+        //unsigned char counter = 0;
         double min_rtt = LONG_MAX;
         double max_rtt = 0;
         double average_rtt = 0;
