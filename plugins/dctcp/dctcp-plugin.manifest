@@ -1,0 +1,16 @@
+{
+        "PluginName": "dctcp-plugin",
+        "PluginVersion": "1",
+        "PolicySets" : [
+                {
+                        "Name": "dctcp-ps",
+                        "Component": "rmt",
+                        "Version" : "1"
+                },
+                {
+                        "Name": "dctcp-ps",
+                        "Component": "dtcp",
+                        "Version" : "1"
+                }
+        ]
+}
