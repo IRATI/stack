@@ -1,5 +1,11 @@
 {
   "applicationToDIFMappings" : [ {
+    "encodedAppName" : "rina.apps.manager-1--",
+    "difName" : "NMS.DIF"
+  }, {
+    "encodedAppName" : "rina.apps.mad.1-1--",
+    "difName" : "NMS.DIF"
+  }, {
     "encodedAppName" : "traffic.generator.server-1--",
     "difName" : "normal.DIF"
   }, {

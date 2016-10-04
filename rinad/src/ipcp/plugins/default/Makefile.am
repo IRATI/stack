@@ -56,7 +56,7 @@ test_routing_SOURCES  =					    \
 	../../security-manager.cc \
 	routing-ps.cc 	     routing-ps.h
 test_routing_CPPFLAGS = $(testsCPPFLAGS) \
-			-DPLUGINSDIR=\"$(pkglibdir)/ipcp\"
+			-DPLUGINSDIR=\"../lib/rinad/ipcp\"
 test_routing_LDADD    = $(testsLIBS)
 
 test_encoders_SOURCES  =			\
@@ -73,7 +73,7 @@ test_encoders_SOURCES  =			\
 	../../security-manager.cc \
 	routing-ps.cc 	     routing-ps.h
 test_encoders_CPPFLAGS = $(testsCPPFLAGS) \
-			-DPLUGINSDIR=\"$(pkglibdir)/ipcp\"
+			-DPLUGINSDIR=\"../lib/rinad/ipcp\"
 test_encoders_LDADD    = $(testsLIBS)
 
 check_PROGRAMS =				\
