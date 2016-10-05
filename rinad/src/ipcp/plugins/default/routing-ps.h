@@ -379,6 +379,7 @@ public:
 	void updateObject(const std::string& fqn, 
 			  unsigned int avoid_port);
 	void encodeAllFSOs(rina::ser_obj_t& obj);
+	void getAllFSOsForPropagation(std::list< std::list<FlowStateObject> >& fsos);
 	bool is_modified() const;
 	void has_modified(bool modified);
 private:
@@ -451,16 +452,16 @@ public:
 	void deprecateObject(std::string fqn);
 	void deprecateObjectsNeighbor(unsigned int neigh_address,
 	                              unsigned int address);
-	std::map <int, std::list<FlowStateObject*> > prepareForPropagation
-	        (const std::list<rina::FlowInformation>& flows);
+	std::map <int, std::list<FlowStateObject*> > prepareForPropagation(const std::list<rina::FlowInformation>& flows);
 	void incrementAge();
 	void updateObjects(const std::list<FlowStateObject>& newObjects,
 			   unsigned int avoidPort,
 			   unsigned int address);
-	void prepareForPropagation(std::map<int, std::list<FlowStateObject> >& to_propagate) const;
+	void prepareForPropagation(std::map<int, std::list< std::list<FlowStateObject> > >& to_propagate) const;
 	void encodeAllFSOs(rina::ser_obj_t& obj) const;
 	void getAllFSOs(std::list<FlowStateObject>& list) const;
 	bool tableUpdate() const;
+	void getAllFSOsForPropagation(std::list< std::list<FlowStateObject> >& fsos);
 
 	// accessors
 	void set_maximum_age(unsigned int max_age);
