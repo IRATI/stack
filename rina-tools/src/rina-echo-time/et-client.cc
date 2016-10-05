@@ -85,13 +85,14 @@ class ReadSDUWithTimeout {
 public:
 	ReadSDUWithTimeout(int port_id, unsigned timeout) {
 		if (timeout) {
+			long timeout2 = timeout;
 			this->port_id = -1;
 			/* Timer with an interval of 1ms after the timeout is
 			 * elapsed, in case that the first signal happens
 			 * outside the syscall. */
 			itimerval it = {
 				{0, 1000},
-				{timeout / 1000, timeout % 1000 * 1000}
+				{timeout2 / 1000, timeout2 % 1000 * 1000}
 			};
 			setitimer(ITIMER_REAL, &it, NULL);
 		} else {
