@@ -277,8 +277,6 @@ void ActiveWorker::allocateFlow()
 // Flow active worker
 void* ActiveWorker::run(void* param)
 {
-
-	unsigned char *buffer;
 	rina::cdap_rib::ep_info_t src;
 	rina::cdap_rib::ep_info_t dest;
 	int bytes_read = 0;
@@ -333,26 +331,19 @@ void* ActiveWorker::run(void* param)
 
 			//Recover the response
 			//TODO: add support for other
-			buffer = new unsigned char[max_sdu_size_in_bytes];
+			rina::ser_obj_t message;
+			message.message_ = new unsigned char[max_sdu_size_in_bytes];
 			try{
-				bytes_read = rina::ipcManager->readSDU(port_id, buffer,
+				bytes_read = rina::ipcManager->readSDU(port_id, message.message_,
 							max_sdu_size_in_bytes);
+				message.size_ = bytes_read;
 			}catch(rina::ReadSDUException &e){
 				LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
-				delete[] buffer;
-				buffer = NULL;
 				rina::ipcManager->requestFlowDeallocation(port_id);
 				continue;
 			}catch(rina::FlowNotAllocatedException &e) {
-				delete[] buffer;
-				buffer = NULL;
 				continue;
 			}
-
-			rina::ser_obj_t message;
-
-			message.message_ = buffer;
-			message.size_ = bytes_read;
 
 			//Instruct CDAP provider to process the CACEP message
 			try{
@@ -360,13 +351,9 @@ void* ActiveWorker::run(void* param)
 							port_id);
 			}catch(rina::WriteSDUException &e){
 				LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
-				delete[] buffer;
-				buffer = NULL;
 				rina::ipcManager->requestFlowDeallocation(port_id);
 				continue;
 			}catch(rina::FlowNotAllocatedException &e) {
-				delete[] buffer;
-				buffer = NULL;
 				continue;
 			}
 
@@ -376,8 +363,9 @@ void* ActiveWorker::run(void* param)
 			while(true) {
 				try{
 					bytes_read = rina::ipcManager->readSDU(port_id,
-									       buffer,
+										   message.message_,
 									       max_sdu_size_in_bytes);
+					message.size_ = bytes_read;
 				}catch(rina::ReadSDUException &e){
 					LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
 					rina::ipcManager->requestFlowDeallocation(port_id);
@@ -385,10 +373,6 @@ void* ActiveWorker::run(void* param)
 				}catch(rina::FlowNotAllocatedException &e) {
 					break;
 				}
-
-				rina::ser_obj_t message;
-				message.message_ = buffer;
-				message.size_ = bytes_read;
 
 				//Instruct CDAP provider to process the RIB operation message
 				try{
@@ -409,11 +393,6 @@ void* ActiveWorker::run(void* param)
 		}
 		catch(...){
 			LOG_CRIT("Unknown error during operation with port id: %u. This is a bug, please report it", port_id);
-		}
-
-		if (buffer) {
-			delete[] buffer;
-			buffer = NULL;
 		}
 	}
 

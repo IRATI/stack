@@ -55,6 +55,9 @@ int             pff_nhop(struct pff * instance,
 int             pff_dump(struct pff *       instance,
                          struct list_head * entries);
 
+int             pff_modify(struct pff *       instance,
+                           struct list_head * entries);
+
 int             pff_select_policy_set(struct pff * pff,
                                       const char * path,
                                       const char * name);

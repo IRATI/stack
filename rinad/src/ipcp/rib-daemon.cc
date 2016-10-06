@@ -488,6 +488,7 @@ void IPCPRIBDaemonImpl::initialize_rib_daemon(rina::cacep::AppConHandlerInterfac
 	//Create schema
 	vers.version_ = 0x1ULL;
 	ribd->createSchema(vers);
+
 	//TODO create callbacks
 	ribd->addCreateCallbackSchema(vers, "Neighbor", configs::NEIGH_CONT_NAME,
 			NeighborRIBObj::create_cb);

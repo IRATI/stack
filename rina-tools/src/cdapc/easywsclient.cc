@@ -540,6 +540,7 @@ class _RealWebSocket : public easywsclient::WebSocket
               *(txbuf->end() - message_size + i) ^= masking_key[i&0x3];
             }
         }
+
         // Pop onto queue
         txQ.put(txbuf);
     }

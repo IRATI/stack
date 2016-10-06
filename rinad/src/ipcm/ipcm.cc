@@ -1589,10 +1589,14 @@ ipcm_res_t IPCManager_::update_catalog(Addon* callee)
 }
 
 ipcm_res_t IPCManager_::delegate_ipcp_ribobj(rina::rib::DelegationObj* obj,
-                                         const unsigned short ipcp_id,
-                                         const std::string& object_class,
-                                         const std::string& object_name,
-                                         int scope, int invoke_id, int port)
+                                             const unsigned short ipcp_id,
+					     rina::cdap::cdap_m_t::Opcode op_code,
+					     const std::string& object_class,
+					     const std::string& object_name,
+					     const rina::ser_obj_t &object_value,
+					     int scope,
+					     int invoke_id,
+					     int port)
 {
     IPCMIPCProcess * ipcp;
    // TransactionState* trans;
@@ -1616,9 +1620,10 @@ ipcm_res_t IPCManager_::delegate_ipcp_ribobj(rina::rib::DelegationObj* obj,
         }
 
         rina::cdap::CDAPMessage msg;
-        msg.op_code_ = rina::cdap::cdap_m_t::M_READ;
+        msg.op_code_ = op_code;
         msg.obj_class_ = object_class;
         msg.obj_name_ = object_name;
+        msg.obj_value_ = object_value;
         msg.scope_ = scope;
 
         // Generate a unique id to recover the delegated object

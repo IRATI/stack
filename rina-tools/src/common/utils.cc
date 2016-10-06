@@ -32,16 +32,16 @@
 
 void parse_dif_names(std::list<std::string> & dif_names, const std::string& arg)
 {
-  const char c = ',';
-  std::string::size_type s = 0;
-  std::string::size_type e = arg.find(c);
+	const char c = ',';
+	std::string::size_type s = 0;
+	std::string::size_type e = arg.find(c);
 
-  while (e != std::string::npos) {
-     dif_names.push_back(arg.substr(s, e-s));
-     s = ++e;
-     e = arg.find(c, e);
-  }
-  // Grab the remaining
-  if (e == std::string::npos)
-    dif_names.push_back(arg.substr(s, arg.length()));
+	while (e != std::string::npos) {
+		dif_names.push_back(arg.substr(s, e-s));
+		s = ++e;
+		e = arg.find(c, e);
+	}
+	// Grab the remaining
+	if (e == std::string::npos)
+		dif_names.push_back(arg.substr(s, arg.length()));
 }

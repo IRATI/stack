@@ -61,16 +61,18 @@ bool IPCPObj::delete_(const rina::cdap_rib::con_handle_t &con,
 }
 
 void IPCPObj::forward_object(const rina::cdap_rib::con_handle_t& con,
-                        const std::string obj_name,
-                        const std::string obj_class,
-                        const rina::cdap_rib::flags_t &flags,
-                        const rina::cdap_rib::filt_info_t &filt,
-                        const int invoke_id)
+			     rina::cdap::cdap_m_t::Opcode op_code,
+			     const std::string obj_name,
+			     const std::string obj_class,
+			     const rina::ser_obj_t &obj_value,
+			     const rina::cdap_rib::flags_t &flags,
+			     const rina::cdap_rib::filt_info_t &filt,
+			     const int invoke_id)
 {
        // TODO: This has to be stored in a list in case of more than
        // one consecutive request
 
-       int pos = obj_name.rfind("ipcProcessID");
+       std::size_t pos = obj_name.rfind("ipcProcessID");
        if (pos != std::string::npos)
        {
                 std::string object_sub_name = obj_name.substr(pos);
@@ -81,8 +83,14 @@ void IPCPObj::forward_object(const rina::cdap_rib::con_handle_t& con,
             	   // mark processing delegation
             	   activate_delegation();
                    ipcm_res_t res = IPCManager->delegate_ipcp_ribobj(this,
-                		   processID_, obj_class, object_sub_name, filt.scope_,
-                           invoke_id, con.port_id);
+                		   	   	   	   	     processID_,
+								     op_code,
+								     obj_class,
+								     object_sub_name,
+								     obj_value,
+								     filt.scope_,
+								     invoke_id,
+								     con.port_id);
                    if (res == IPCM_FAILURE)
                 	   signal_finished();
                 }

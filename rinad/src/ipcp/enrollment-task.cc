@@ -123,7 +123,7 @@ bool NeighborRIBObj::createNeighbor(rina::Neighbor &object)
 			get_supporting_dif_name();
 	rinad::IPCPFactory::getIPCP()->enrollment_task_->processEnrollmentRequestEvent(event);
 
-    LOG_INFO("IPC Process enrollment to neighbor %s completed successfully",
+	LOG_INFO("IPC Process enrollment to neighbor %s completed successfully",
     	 object.get_name().processName.c_str());
 
 	return true;
@@ -614,6 +614,7 @@ EnrollmentTask::EnrollmentTask() : IPCPEnrollmentTask()
 	watchdog_per_ms_ = 0;
 	declared_dead_int_ms_ = 0;
 	neigh_enroll_per_ms_ = 0;
+	ipcp_ps = 0;
 }
 
 EnrollmentTask::~EnrollmentTask()

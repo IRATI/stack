@@ -2632,6 +2632,7 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
         .pff_remove                = NULL,
         .pff_dump                  = NULL,
         .pff_flush                 = NULL,
+	.pff_modify		   = NULL,
 
         .query_rib	           = tcp_udp_query_rib,
 
