@@ -166,6 +166,7 @@ class IEnrollmentStateMachine : public rina::rib::RIBOpsRespHandler {
 public:
 	static const std::string STATE_NULL;
 	static const std::string STATE_ENROLLED;
+	static const std::string STATE_TERMINATED;
 
 	IEnrollmentStateMachine(IPCProcess * ipcp,
 			const rina::ApplicationProcessNamingInformation& remote_naming_info,
@@ -195,9 +196,10 @@ public:
 	/// @param cdapSessionDescriptor
 	void flowDeallocated(int portId);
 
+	std::string get_state();
+
 	rina::Neighbor remote_peer_;
 	bool enroller_;
-	std::string state_;
 
 protected:
 	bool isValidPortId(int portId);
@@ -224,6 +226,7 @@ protected:
 	rina::Lockable lock_;
 	rina::cdap_rib::con_handle_t con;
 	rina::TimerTask * last_scheduled_task_;
+	std::string state_;
 };
 
 class EnrollmentFailedTimerTask: public rina::TimerTask {

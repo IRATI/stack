@@ -426,6 +426,7 @@ void * doNeighborsEnrollerWork(void * arg)
 //Class IEnrollmentStateMachine
 const std::string IEnrollmentStateMachine::STATE_NULL = "NULL";
 const std::string IEnrollmentStateMachine::STATE_ENROLLED = "ENROLLED";
+const std::string IEnrollmentStateMachine::STATE_TERMINATED = "TERMINATED";
 
 IEnrollmentStateMachine::IEnrollmentStateMachine(IPCProcess * ipcp,
 						 const rina::ApplicationProcessNamingInformation& remote_naming_info,
@@ -498,6 +499,12 @@ void IEnrollmentStateMachine::flowDeallocated(int portId)
 	state_ = STATE_NULL;
 }
 
+std::string IEnrollmentStateMachine::get_state()
+{
+	rina::ScopedLock g(lock_);
+	return state_;
+}
+
 bool IEnrollmentStateMachine::isValidPortId(int portId)
 {
 	if (portId != con.port_id) {
@@ -513,13 +520,13 @@ bool IEnrollmentStateMachine::isValidPortId(int portId)
 void IEnrollmentStateMachine::abortEnrollment(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
 			int portId, const std::string& reason, bool sendReleaseMessage)
 {
-	state_ = STATE_NULL;
 	AbortEnrollmentTimerTask * task = new AbortEnrollmentTimerTask(enrollment_task_,
 								       remotePeerNamingInfo,
 								       portId,
 								       reason,
 								       sendReleaseMessage);
-	timer_.scheduleTask(task, 10);
+	timer_.scheduleTask(task, 0);
+	state_ = STATE_TERMINATED;
 }
 
 void IEnrollmentStateMachine::createOrUpdateNeighborInformation(bool enrolled)
@@ -1036,7 +1043,7 @@ bool EnrollmentTask::isEnrolledTo(const std::string& processName)
 	std::list<IEnrollmentStateMachine *>::const_iterator it;
 	for (it = machines.begin(); it != machines.end(); ++it) {
 		if ((*it)->remote_peer_.name_.processName.compare(processName) == 0 &&
-				(*it)->state_ != IEnrollmentStateMachine::STATE_NULL) {
+				(*it)->get_state() != IEnrollmentStateMachine::STATE_NULL) {
 			return true;
 		}
 	}
@@ -1173,6 +1180,11 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
 	assert(ipcp_ps);
 	ipcp_ps->inform_ipcm_about_failure(stateMachine);
+
+	rina::Sleep sleep;
+	while(stateMachine->get_state() != IEnrollmentStateMachine::STATE_TERMINATED) {
+		sleep.sleepForMili(1);
+	};
 
 	delete stateMachine;
 	stateMachine = 0;
