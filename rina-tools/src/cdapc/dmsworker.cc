@@ -69,6 +69,15 @@ DMSWorker::DMSWorker(rina::ThreadAttributes * threadAttributes,
     .inLanguage(EDSL_Language::CDAP);
   cdap_filter = builder.build();  
 }
+
+// Wait                
+void DMSWorker::connect_blocking() {
+  connectLatch.lock();
+  if (ws == nullptr) {
+    connectLatch.doWait();    
+  }
+  connectLatch.unlock();
+}
                 
 // Do the internal work necessary
 int DMSWorker::internal_run() {
@@ -78,19 +87,27 @@ int DMSWorker::internal_run() {
   // Loop attempting to make a connection
   while (ws == NULL) {
     ws = WebSocket::from_url(ws_address);
-    usleep(nap_time * 1000);
-    if (retries > 0) {
-      cerr << "Error: No connection made to DMS@" << ws_address 
+    if (ws == NULL) {
+      usleep(nap_time * 1000);
+      if (retries > 0) {
+        cerr << "Error: No connection made to DMS@" << ws_address 
         << ", retrying ..." << endl;
-      retries--;
-    } else {
-      // bail out 
-      return 0;
+        retries--;
+      } else {
+        // bail out 
+        return 0;
+      }      
     }
   }
 
   // Okay now start processing the messages
-  std::cerr << "Info: Connection made to DMS@" << ws_address << std::endl;
+  std::cerr << "Info: Connection made to DMS@" << ws_address 
+    << ":" << Thread::self()->getThreadType() << std::endl;
+  {
+    connectLatch.lock();
+    connectLatch.signal();
+    connectLatch.unlock();    
+  }
   
   // Complete handshake with server
   ws->send("hello dms");
@@ -136,7 +153,6 @@ void DMSWorker::process_message(const std::string & message)
         log_short_message(cdap_message, CDAP_Sources::DMS_AGENT);
         // Convert object value
         process_value(cdap_message);
-        
         
         // Encode as a byte array
         int size = cdap_message.ByteSize();

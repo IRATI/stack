@@ -317,9 +317,9 @@ class _RealWebSocket : public easywsclient::WebSocket
             }
         };
         CallbackAdapter bytesCallback(callable);
-        std::cout<<"Before dispatch" << endl;
+        std::cout<<"Before dispatch" << std::endl;
         _dispatchBinary(bytesCallback);
-        std::cout<<"After dispatch" << endl;
+        std::cout<<"After dispatch" << std::endl;
     }
 
     virtual void _dispatchBinary(BytesCallback_Imp & callable) {

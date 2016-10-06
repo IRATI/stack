@@ -77,7 +77,8 @@ void Connector::ws_run() {
       
       // Prod the DMS thread so a connection is made.
       DMSWorker* dms = find_dms_worker();
-      dms->send_message(std::string("Establishing connnection."));  
+      dms->connect_blocking();
+      dms->send_message(std::string("Establishing connnection."));
     }
   } else {
     LOG_INFO("No DMS worker started.");
