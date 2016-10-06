@@ -369,8 +369,10 @@ public:
 	virtual ~MyDelegationObj(void) throw() {};
 
         void forward_object(const rina::cdap_rib::con_handle_t& con,
+                            rina::cdap::cdap_m_t::Opcode op_code,
                             const std::string obj_name,
                             const std::string obj_class,
+                            const ser_obj_t &obj_value,
                             const rina::cdap_rib::flags_t &flags,
                             const rina::cdap_rib::filt_info_t &filt,
                             int invoke_id) {};
