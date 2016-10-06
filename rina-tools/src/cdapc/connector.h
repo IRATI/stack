@@ -98,6 +98,9 @@ public:
 
   // Find the MA worker
   //Handover* find_ma() const;
+  // Connect to WS and wait
+  void connect_blocking();
+  
 
 protected:
   // Useful logging info
@@ -108,13 +111,14 @@ private:
   std::string                ws_address;
   easywsclient::WebSocket*   ws;
   ES_EventFilter*            shutdown_filter;
-  ES_EventFilter*            cdap_filter;  
+  ES_EventFilter*            cdap_filter; 
+  rina::ConditionVariable    connectLatch; 
 };
 
 // 
 // Class that deals with the MAs
 //
-class MAWorker : public ServerWorker {
+class MAWorker : public ServerWorker, Handover {
 public:
 	MAWorker(rina::ThreadAttributes * threadAttributes,
 	              rina::FlowInformation flow,
@@ -130,10 +134,10 @@ public:
   void process_value(rina::messages::CDAPMessage & cdap_message);
   
   // Send message to DMS
-  virtual void send_message(const std::string & message);
+  void send_message(const std::string & message);
   
   // send message to MA on
-  virtual void send_message(const void* message, int size, const std::string& destination);
+  void send_message(const void* message, int size, const std::string& destination);
   
   // Behaviur when a new flow is requested
   void newFlowRequest(rina::FlowInformation& flow);

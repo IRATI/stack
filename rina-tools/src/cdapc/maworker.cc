@@ -276,6 +276,8 @@ void MAWorker::send_message(const string& message) {
     } else {
       cout << "No DMS yet!" << endl;
     }    
+  } else {
+    cout << "No Connector yet!" << endl;
   }
 }
 
