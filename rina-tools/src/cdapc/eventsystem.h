@@ -37,44 +37,44 @@
 
 /*
  * Class containing the ES header fields
-*/
+ */
 class HeaderKeys {
 public:
-  /** Key for the event identifier. */
-  static constexpr const char* TAX_ID ="TAX_ID";
-  /** Key for the event identifier hash. */
-  static constexpr const char* TAX_ID_HASH = "TAX_ID_HASH";
-  /** Key for the event source. */
-  static constexpr const char* TAX_SOURCE = "TAX_SOURCE";
-  /** Key for the event language. */
-  static constexpr const char* TAX_LANGUAGE = "TAX_LANGUAGE";
-  /** Key for the event language version. */
-  static constexpr const char* TAX_VERSION ="TAX_VERSION";
-  /** Key for the event language. */
-  static constexpr const char* TAX_DIALECT = "TAX_DIALECT";
-  /** Key for the event type. */
-  static constexpr const char* TAX_TYPE = "TAX_TYPE";
-  /** Key for the event creation time. */
-  static constexpr const char* TAX_TIME = "TAX_TIME";
-  /** Key for the event creation time as string. */
-  static constexpr const char* TAX_TIME_STRING = "TAX_TIME_STRING";
-  
-  // Known header fields
-  static std::vector<std::string>& getValues() {
-      static std::vector<std::string> gValues;
-      if (gValues.empty()) {
-          gValues.push_back(TAX_ID);
-          gValues.push_back(TAX_ID_HASH);
-          gValues.push_back(TAX_SOURCE);
-          gValues.push_back(TAX_LANGUAGE);
-          gValues.push_back(TAX_VERSION);
-          gValues.push_back(TAX_DIALECT);
-          gValues.push_back(TAX_TYPE);
-          gValues.push_back(TAX_TIME);
-          gValues.push_back(TAX_TIME_STRING);
-      }
-      return gValues;
-  }  
+	/** Key for the event identifier. */
+	static constexpr const char* TAX_ID ="TAX_ID";
+	/** Key for the event identifier hash. */
+	static constexpr const char* TAX_ID_HASH = "TAX_ID_HASH";
+	/** Key for the event source. */
+	static constexpr const char* TAX_SOURCE = "TAX_SOURCE";
+	/** Key for the event language. */
+	static constexpr const char* TAX_LANGUAGE = "TAX_LANGUAGE";
+	/** Key for the event language version. */
+	static constexpr const char* TAX_VERSION ="TAX_VERSION";
+	/** Key for the event language. */
+	static constexpr const char* TAX_DIALECT = "TAX_DIALECT";
+	/** Key for the event type. */
+	static constexpr const char* TAX_TYPE = "TAX_TYPE";
+	/** Key for the event creation time. */
+	static constexpr const char* TAX_TIME = "TAX_TIME";
+	/** Key for the event creation time as string. */
+	static constexpr const char* TAX_TIME_STRING = "TAX_TIME_STRING";
+
+	// Known header fields
+	static std::vector<std::string>& getValues() {
+		static std::vector<std::string> gValues;
+		if (gValues.empty()) {
+			gValues.push_back(TAX_ID);
+			gValues.push_back(TAX_ID_HASH);
+			gValues.push_back(TAX_SOURCE);
+			gValues.push_back(TAX_LANGUAGE);
+			gValues.push_back(TAX_VERSION);
+			gValues.push_back(TAX_DIALECT);
+			gValues.push_back(TAX_TYPE);
+			gValues.push_back(TAX_TIME);
+			gValues.push_back(TAX_TIME_STRING);
+		}
+		return gValues;
+	}
 };
 
 /*
@@ -105,13 +105,13 @@ public:
 
 class ESD_Dialects {
 public:
-  // All base event system messages are of this type
-  static constexpr const char * ES_EVENTS = "ES_EVENTS";  
+	// All base event system messages are of this type
+	static constexpr const char * ES_EVENTS = "ES_EVENTS";
 };
 
 class ESD_Sources {
 public:
-  /** A generic source. */
+	/** A generic source. */
 	static constexpr const char * GENERIC = "GENERIC";
 	/** Events send from the ES system. */
 	static constexpr const char * SYSTEM = "SYSTEM";
@@ -119,24 +119,24 @@ public:
 
 class CDAP_Sources {
 public:
-  /** Events send by a DMS Manager application. */
-  static constexpr const char * DMS_MANAGER = "DMS_MANAGER";
-  /** Events send by a DMS Agent application. */
-  static constexpr const char * DMS_AGENT = "DMS_AGENT";   
+	/** Events send by a DMS Manager application. */
+	static constexpr const char * DMS_MANAGER = "DMS_MANAGER";
+	/** Events send by a DMS Agent application. */
+	static constexpr const char * DMS_AGENT = "DMS_AGENT";
 };
 
 class CDAP_Dialects {
 public:
-  /** Events send by a DMS Manager application. */
-  static constexpr const char * CDAP_REQ = "CDAP_REQ";
-  /** Events send by a DMS Agent application. */
-  static constexpr const char * CDAP_RES = "CDAP_RES";   
+	/** Events send by a DMS Manager application. */
+	static constexpr const char * CDAP_REQ = "CDAP_REQ";
+	/** Events send by a DMS Agent application. */
+	static constexpr const char * CDAP_RES = "CDAP_RES";
 };
 
 class CDAP_Types {
 public:
-  /** A CDAP message. */
-  static constexpr const char * ES_CDAP = "ES_CDAP";
+	/** A CDAP message. */
+	static constexpr const char * ES_CDAP = "ES_CDAP";
 };
 
 
@@ -144,15 +144,15 @@ public:
 // Its a short cut
 class EDSL_Language {
 public:
-  // Base Event DSL
-  static constexpr const char * ESEVENT = "EDSL_ESEvent";
-  static constexpr const char * ESEVENT_VER = "1.0.0";
-  // DIF language
-  static constexpr const char * DIF = "DIF";
-  static constexpr const char * DIF_VER = "1.0.0";
-  // Add CDAP
-  static constexpr const char * CDAP = "CDAP";
-  static constexpr const char * CDAP_VER = "1.0.0";  
+	// Base Event DSL
+	static constexpr const char * ESEVENT = "EDSL_ESEvent";
+	static constexpr const char * ESEVENT_VER = "1.0.0";
+	// DIF language
+	static constexpr const char * DIF = "DIF";
+	static constexpr const char * DIF_VER = "1.0.0";
+	// Add CDAP
+	static constexpr const char * CDAP = "CDAP";
+	static constexpr const char * CDAP_VER = "1.0.0";
 };
 
 
@@ -173,10 +173,10 @@ public:
     sys_id.append(std::to_string(id));
     id++;
   }
-  
+
 private:
   static  std::string system;
   static long long             id;
 };
-*/
+ */
 #endif // EVENTSYSTEM_HPP

@@ -47,29 +47,29 @@ static const unsigned int max_sdu_size_in_bytes = 10000;
 // One instance per MA
 class ConnectionInfo {
 public:
-  std::string id;
-  rina::FlowInformation flow;
-  int retries = 3;
-  
-  // Allow construction
-  ConnectionInfo(rina::FlowInformation& flow_info);
-  // Accessors
-  const std::string& get_id() { return id; };
-  const long get_port() { return flow.portId; };
-  // Monitor retries
-  void ok() {retries = 3; };
-  bool failed() { return (--retries) == 0;};
-  bool has_failed() const { return (retries <= 0); };
+	std::string id;
+	rina::FlowInformation flow;
+	int retries = 3;
+
+	// Allow construction
+	ConnectionInfo(rina::FlowInformation& flow_info);
+	// Accessors
+	const std::string& get_id() { return id; };
+	const long get_port() { return flow.portId; };
+	// Monitor retries
+	void ok() {retries = 3; };
+	bool failed() { return (--retries) == 0;};
+	bool has_failed() const { return (retries <= 0); };
 };
 
 // A class representing the cross-over functions
 class Handover {
 public:
-  virtual ~Handover() {};
-  // Send outgoing message to DMS
-  virtual void send_message(const std::string & message) = 0;
-  // Send outgoing message to MA
-  virtual void send_message(const void* message, int size, const std::string& destination) = 0;
+	virtual ~Handover() {};
+	// Send outgoing message to DMS
+	virtual void send_message(const std::string & message) = 0;
+	// Send outgoing message to MA
+	virtual void send_message(const void* message, int size, const std::string& destination) = 0;
 };
 
 //
@@ -78,41 +78,41 @@ public:
 class DMSWorker : public ServerWorker, Handover {
 public:
 	DMSWorker(rina::ThreadAttributes * threadAttributes,
-	              const std::string& flow,
-		      unsigned int max_sdu_size,
-	              Server * serv);
+			const std::string& flow,
+			unsigned int max_sdu_size,
+			Server * serv);
 	~DMSWorker() throw() { };
 	int internal_run();
 
-  // Process incoming Json message
-  void process_message(const std::string & message);
-  
-  // Process the incoming Json object value (if any)
-  void process_value(rina::messages::CDAPMessage & cdap_message);
+	// Process incoming Json message
+	void process_message(const std::string & message);
 
-  // Send message to DMS
-  void send_message(const std::string & message);
+	// Process the incoming Json object value (if any)
+	void process_value(rina::messages::CDAPMessage & cdap_message);
 
-  // send message to MA
-  void send_message(const void* message, int size, const std::string & destination);
+	// Send message to DMS
+	void send_message(const std::string & message);
 
-  // Find the MA worker
-  //Handover* find_ma() const;
-  // Connect to WS and wait
-  void connect_blocking();
-  
+	// send message to MA
+	void send_message(const void* message, int size, const std::string & destination);
+
+	// Find the MA worker
+	//Handover* find_ma() const;
+	// Connect to WS and wait
+	void connect_blocking();
+
 
 protected:
-  // Useful logging info
-  void log_short_message(const rina::messages::CDAPMessage& message, const char* direction) const;
+	// Useful logging info
+	void log_short_message(const rina::messages::CDAPMessage& message, const char* direction) const;
 
 private:
-  unsigned int               max_sdu_size;
-  std::string                ws_address;
-  easywsclient::WebSocket*   ws;
-  ES_EventFilter*            shutdown_filter;
-  ES_EventFilter*            cdap_filter; 
-  rina::ConditionVariable    connectLatch; 
+	unsigned int               max_sdu_size;
+	std::string                ws_address;
+	easywsclient::WebSocket*   ws;
+	ES_EventFilter*            shutdown_filter;
+	ES_EventFilter*            cdap_filter;
+	rina::ConditionVariable    connectLatch;
 };
 
 // 
@@ -121,98 +121,98 @@ private:
 class MAWorker : public ServerWorker, Handover {
 public:
 	MAWorker(rina::ThreadAttributes * threadAttributes,
-	              rina::FlowInformation flow,
-		      unsigned int max_sdu_size,
-	              Server * serv);
+			rina::FlowInformation flow,
+			unsigned int max_sdu_size,
+			Server * serv);
 	~MAWorker() throw() { };
 	int internal_run();
 
-  // Process incoming message
-  void process_message(const void* message, int size);
-  
-  // Process incomoing message value
-  void process_value(rina::messages::CDAPMessage & cdap_message);
-  
-  // Send message to DMS
-  void send_message(const std::string & message);
-  
-  // send message to MA on
-  void send_message(const void* message, int size, const std::string& destination);
-  
-  // Behaviur when a new flow is requested
-  void newFlowRequest(rina::FlowInformation& flow);
-  
-  // Behaviour whne a flow is deallocated
-  void closeFlowRequest(rina::FlowInformation& flow);
-  
-  // Behavour when a flow fails
-  void notify_connection_gone(ConnectionInfo* connection);
-  
-  // Clean up connection info
-  void connection_gone(ConnectionInfo* connection);
+	// Process incoming message
+	void process_message(const void* message, int size);
 
-  // Figure out the message dialect
-  const std::string& get_dialect(const rina::messages::CDAPMessage& m) const;
+	// Process incomoing message value
+	void process_value(rina::messages::CDAPMessage & cdap_message);
 
-  // Allow some testing
-  int count_flows();
-  bool check_flow(std::string ma);
-  void open_connection(rina::messages::CDAPMessage& message);
-  
+	// Send message to DMS
+	void send_message(const std::string & message);
+
+	// send message to MA on
+	void send_message(const void* message, int size, const std::string& destination);
+
+	// Behaviur when a new flow is requested
+	void newFlowRequest(rina::FlowInformation& flow);
+
+	// Behaviour whne a flow is deallocated
+	void closeFlowRequest(rina::FlowInformation& flow);
+
+	// Behavour when a flow fails
+	void notify_connection_gone(ConnectionInfo* connection);
+
+	// Clean up connection info
+	void connection_gone(ConnectionInfo* connection);
+
+	// Figure out the message dialect
+	const std::string& get_dialect(const rina::messages::CDAPMessage& m) const;
+
+	// Allow some testing
+	int count_flows();
+	bool check_flow(std::string ma);
+	void open_connection(rina::messages::CDAPMessage& message);
+
 protected:
-  // Useful logging info
-  void log_short_message(const rina::messages::CDAPMessage& message, const char* direction) const;
-  
+	// Useful logging info
+	void log_short_message(const rina::messages::CDAPMessage& message, const char* direction) const;
 
 private:
-  rina::FlowInformation flow_;
+	rina::FlowInformation flow_;
 	unsigned int max_sdu_size;
-  bool update=false;
+	bool update=false;
+	rina::Lockable lock;
 	//rina::cdap::CDAPProviderInterface *cdap_prov_;
 
 	// Connected MAs
-  rina::ThreadSafeMapOfPointers<std::string,ConnectionInfo> connections;
+	rina::ThreadSafeMapOfPointers<std::string,ConnectionInfo> connections;
 };
 
 
 class Connector : public Server {
- public:
+public:
 	Connector(const std::list<std::string>& dif_names,
-		const std::string& apn,
-		const std::string& api,
-    const std::string& ws);
+			const std::string& apn,
+			const std::string& api,
+			const std::string& ws);
 	~Connector() { };
 
-  // Help find the other worker
-  MAWorker* find_ma_worker() const {
-        return ma_worker_;
-  };
-  
-  // Help find dms worker
-  DMSWorker* find_dms_worker() const {
-        return dms_worker_;
-  };
+	// Help find the other worker
+	MAWorker* find_ma_worker() const {
+		return ma_worker_;
+	};
 
-  void ws_run();
-  void rina_run();
+	// Help find dms worker
+	DMSWorker* find_dms_worker() const {
+		return dms_worker_;
+	};
+
+	void ws_run();
+	void rina_run();
 	void run();
 
-  // Fix application registration
-  void applicationRegister();
- 
+	// Fix application registration
+	void applicationRegister();
 
- private:
+
+private:
 	std::string dif_name_;
 	bool client_app_reg_;
 
-  std::string ws_address_;
+	std::string ws_address_;
 
-  // Track these instances
-  MAWorker*   ma_worker_;
-  DMSWorker*  dms_worker_;
+	// Track these instances
+	MAWorker*   ma_worker_;
+	DMSWorker*  dms_worker_;
 
-  ServerWorker * internal_start_worker(rina::FlowInformation flow);
-  ServerWorker * internal_start_worker(const std::string& ws);
+	ServerWorker * internal_start_worker(rina::FlowInformation flow);
+	ServerWorker * internal_start_worker(const std::string& ws);
 };
 
 #endif //MANAGER_HPP
