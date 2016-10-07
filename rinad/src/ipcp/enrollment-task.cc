@@ -469,7 +469,7 @@ void IEnrollmentStateMachine::release(int invoke_id,
 
 	createOrUpdateNeighborInformation(false);
 
-	state_ = STATE_NULL;
+	state_ = STATE_TERMINATED;
 }
 
 void IEnrollmentStateMachine::releaseResult(const rina::cdap_rib::res_info_t &res,
@@ -480,8 +480,7 @@ void IEnrollmentStateMachine::releaseResult(const rina::cdap_rib::res_info_t &re
 	if (!isValidPortId(con_handle.port_id))
 		return;
 
-	if (state_ != STATE_NULL)
-		state_ = STATE_NULL;
+	state_ = STATE_TERMINATED;
 }
 
 void IEnrollmentStateMachine::flowDeallocated(int portId)
@@ -496,7 +495,7 @@ void IEnrollmentStateMachine::flowDeallocated(int portId)
 
 	createOrUpdateNeighborInformation(false);
 
-	state_ = STATE_NULL;
+	state_ = STATE_TERMINATED;
 }
 
 std::string IEnrollmentStateMachine::get_state()
@@ -1220,6 +1219,12 @@ void EnrollmentTask::release(int invoke_id,
 	try{
 		stateMachine = getEnrollmentStateMachine(con_handle.port_id,
 							 true);
+		if (!stateMachine) {
+			LOG_IPCP_DBG("State machine associated to portId %d already removed",
+				      con_handle.port_id);
+			return;
+		}
+
 		stateMachine->release(invoke_id,
 				      con_handle);
 	}catch(rina::Exception &e){
