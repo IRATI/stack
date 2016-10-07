@@ -291,12 +291,12 @@ class JsonFormat::Parser::ParserImpl {
     had_errors_ = true;
     if (error_collector_ == NULL) {
       if (line >= 0) {
-        GOOGLE_LOG(ERROR) << "Error parsing text-format "
+        GOOGLE_LOG(ERROR) << "Error parsing json-format "
                    << root_message_type_->full_name()
                    << ": " << (line + 1) << ":"
                    << (col + 1) << ": " << message;
       } else {
-        GOOGLE_LOG(ERROR) << "Error parsing text-format "
+        GOOGLE_LOG(ERROR) << "Error parsing json-format "
                    << root_message_type_->full_name()
                    << ": " << message;
       }
@@ -308,12 +308,12 @@ class JsonFormat::Parser::ParserImpl {
   void ReportWarning(int line, int col, const string& message) {
     if (error_collector_ == NULL) {
       if (line >= 0) {
-        GOOGLE_LOG(WARNING) << "Warning parsing text-format "
+        GOOGLE_LOG(WARNING) << "Warning parsing json-format "
                      << root_message_type_->full_name()
                      << ": " << (line + 1) << ":"
                      << (col + 1) << ": " << message;
       } else {
-        GOOGLE_LOG(WARNING) << "Warning parsing text-format "
+        GOOGLE_LOG(WARNING) << "Warning parsing json-format "
                      << root_message_type_->full_name()
                      << ": " << message;
       }
@@ -1527,9 +1527,14 @@ void JsonFormat::Printer::PrintHeader(const Message& message,
   std::size_t hash = std::hash<std::string>()(id);
   ss << HeaderKeys::TAX_ID_HASH << "\":" << to_string(hash);
   
+  // Extra stuff
+  ss << ",\"name\":\"tagent\",\"reason\":\"" << dialect;
+  ss << "\",\"info\":\"CDAP\"";
+
   // Finish header
   ss << ",";
   
+
   generator.Print(ss.str());
 }
 
@@ -1638,6 +1643,7 @@ void JsonFormat::Printer::PrintField(const Message& message,
               field->is_repeated()
               ? reflection->GetRepeatedMessage(message, field, j)
               : reflection->GetMessage(message, field);
+      generator.Print(":");
       generator.Print(
           printer->PrintMessageStart(
               sub_message, field_index, count, single_line_mode_));
