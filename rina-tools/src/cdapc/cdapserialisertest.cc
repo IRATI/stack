@@ -538,6 +538,57 @@ TEST_CASE( "JSON malformed neighbor message", "[J_M_CREATE]") {
   }
 }
 
+TEST_CASE( "JSON M_CONNECT message", "[J_M_CONNECT]") {
+    CDAPMessage builder = construct_message(M_CONNECT_R, 8000);
+	// builder.set_abssyntax(9);
+	// builder.set_version(4);
+	// Set opcode
+	// Source bits
+	// builder.set_srcapname("S_Apname";
+	// builder.set_srcapinst("2");
+	// if (message.has_destaename()) {
+	// 	builder->set_srcaename(message.destaename());
+	// 	builder->set_srcaeinst(message.destaeinst());
+	// }
+	// Destination bits
+	// builder.set_destapname("D_Apname");
+	// builder.set_destapinst("3");
+	// if (message.has_srcaename()) {
+	// 	builder->set_destaename(message.srcaename());
+	// 	builder->set_destaeinst(message.srcaeinst());
+	// }
+	// Reply bits
+	builder.set_result(0);
+	builder.set_resultreason(string("OK"));
+  
+  authPolicy_t* auth = authPolicy_t::default_instance().New();
+  auth->set_name("PSOC_auth");
+  builder.set_allocated_authpolicy(auth);
+
+    // Encode it
+		string dialect = getDialect(builder);
+    string encMessage;
+		JsonFormat::PrintToString((Message&)builder, dialect, &encMessage);
+    
+		SECTION( "Encoded correctly") {
+      REQUIRE(builder.IsInitialized());
+      REQUIRE(!encMessage.empty());
+      REQUIRE(JsonBalanced(encMessage));
+      cout << "JSON:" << encMessage << endl;
+    }
+		
+    SECTION( "Non zero length") {
+     REQUIRE(encMessage.length() > 0);
+    }
+		
+    SECTION("Decodes to a similar object") {
+     // Decode it to check
+     CDAPMessage decoded;
+     JsonFormat::ParseFromString(encMessage, ((Message*)&decoded));
+     REQUIRE(builder == decoded);
+    }
+}
+
 
 /*
 TEST_CASE( "JSON create message", "[J_M_CREATE]") {
