@@ -52,7 +52,7 @@ static struct dctcp_rmt_queue* dctcp_queue_create(port_id_t port_id)
     if (!tmp) {
         return NULL;
     }
-        
+
     tmp->queue = rfifo_create_ni();
     if (!tmp->queue) {
         rkfree(tmp);
@@ -70,9 +70,9 @@ static int dctcp_rmt_queue_destroy(struct dctcp_rmt_queue *q)
         return -1;
     }
     if (q->queue) rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
- 
+
     rkfree(q);
- 
+
     return 0;
 }
 
@@ -137,12 +137,12 @@ static int dctcp_rmt_enqueue_policy(struct rmt_ps *ps, struct rmt_n1_port *port,
     if(qlen >= data->q_max) {
         if(pci_type(pdu_pci_get_ro(pdu)) != PDU_TYPE_MGMT) {
             pdu_destroy(pdu);
-            LOG_INFO("DCTCP RMT: PDU dropped, q_max reached...");
+            LOG_DBG("DCTCP RMT: PDU dropped, q_max reached...");
             return RMT_PS_ENQ_DROP;
         }
     }
 
-    LOG_INFO("DCTCP RMT: PDU enqued...");
+    LOG_DBG("DCTCP RMT: PDU enqued...");
     rfifo_push_ni(q->queue, pdu);
     return RMT_PS_ENQ_SCHED;
 }
@@ -176,7 +176,7 @@ static struct pdu * dctcp_rmt_dequeue_policy(struct rmt_ps *ps, struct rmt_n1_po
     }
 
     if (qlen >= data->q_threshold) {
-        LOG_INFO("DCTCP RMT: Marking");
+        LOG_DBG("DCTCP RMT: Marking");
         /* mark ECN bit */
         pci = pdu_pci_get_rw(ret_pdu);
         pci_flags = pci_flags_get(pci);
@@ -262,13 +262,13 @@ static struct ps_base * rmt_ps_dctcp_create(struct rina_component *component)
     ps->priv = data;
 
     // set defaults
-    data->q_max = DEFAULT_Q_MAX;    
-    data->q_threshold = DEFAULT_Q_THRESHOLD;    
+    data->q_max = DEFAULT_Q_MAX;
+    data->q_threshold = DEFAULT_Q_THRESHOLD;
 
     //load configuration if available
     rmt_ps_load_param(ps, "q_threshold");
     rmt_ps_load_param(ps, "q_max");
-    
+
     ps->rmt_q_create_policy = dctcp_rmt_q_create_policy;
     ps->rmt_q_destroy_policy = dctcp_rmt_q_destroy_policy;
     ps->rmt_enqueue_policy = dctcp_rmt_enqueue_policy;

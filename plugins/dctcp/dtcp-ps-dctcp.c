@@ -52,8 +52,8 @@ static int dctcp_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
     struct dtcp * dtcp = ps->dm;
     struct dctcp_dtcp_ps_data * data = ps->priv;
     seq_num_t new_credit;
-    uint_t alpha_old = 0; 
-    
+    uint_t alpha_old = 0;
+
     new_credit = dtcp_rcvr_credit(dtcp);
     if (data->state == SLOW_START) {
         new_credit++;
@@ -72,11 +72,11 @@ static int dctcp_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
     if ((pci_flags_get(pci) & PDU_FLAGS_EXPLICIT_CONGESTION)) {
         data->ecn_total++;
         /* alpha = (1-g) * alpha + g * F according DCTCP kernel patch */
-        data->dctcp_alpha = alpha_old - (alpha_old >> data->shift_g) + (data->ecn_total << (10 - data->shift_g)) / data->sent_total;  
+        data->dctcp_alpha = alpha_old - (alpha_old >> data->shift_g) + (data->ecn_total << (10 - data->shift_g)) / data->sent_total;
         new_credit = max(new_credit - ((new_credit * data->dctcp_alpha) >> 11U), 2U);
         data->sshtresh = new_credit;
         data->state = CONG_AVOID;
-        LOG_INFO("DCTCP DTCP: dctcp_alpha: %d, new_credit %d", data->dctcp_alpha, new_credit);
+        LOG_DBG("DCTCP DTCP: dctcp_alpha: %d, new_credit %d", data->dctcp_alpha, new_credit);
     }
 
     /* set the new credit */
@@ -122,7 +122,7 @@ static struct ps_base * dtcp_ps_dctcp_create(struct rina_component * component)
     if (!ps || !data || !dtcp) {
         return NULL;
     }
-        
+
     data->state = SLOW_START;
     data->init_credit = 3;
     data->dec_credit = 0;
