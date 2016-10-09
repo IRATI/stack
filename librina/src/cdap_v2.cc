@@ -2213,15 +2213,19 @@ void CDAPSessionManager::decodeCDAPMessage(const ser_obj_t &cdap_message,
 
 void CDAPSessionManager::removeCDAPSession(int port_id)
 {
-	ScopedLock g(lock);
+	lock.lock();
 
 	std::map<int, CDAPSession*>::iterator itr = cdap_sessions_.find(
 		port_id);
 	if (itr != cdap_sessions_.end()){
+		cdap_sessions_.erase(itr);
+		lock.unlock();
 		delete itr->second;
 		itr->second = 0;
-		cdap_sessions_.erase(itr);
+		return;
 	}
+
+	lock.unlock();
 }
 
 bool CDAPSessionManager::session_in_await_con_state(int portId)
