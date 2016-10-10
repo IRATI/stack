@@ -569,6 +569,7 @@ class CDAPSessionManager : public CDAPSessionManagerInterface
 	long timeout_;
 	CDAPInvokeIdManagerImpl *invoke_id_manager_;
 	CDAPSession* internal_get_cdap_session(int port_id);
+	CDAPSession* internal_createCDAPSession(int port_id);
 };
 
 class AppCDAPIOHandler : public CDAPIOHandler
@@ -2145,10 +2146,8 @@ CDAPSessionManager::CDAPSessionManager(cdap_rib::concrete_syntax_t& syntax,
 	invoke_id_manager_ = new CDAPInvokeIdManagerImpl();
 }
 
-CDAPSession* CDAPSessionManager::createCDAPSession(int port_id)
+CDAPSession* CDAPSessionManager::internal_createCDAPSession(int port_id)
 {
-	ScopedLock g(lock);
-
 	if (cdap_sessions_.find(port_id) != cdap_sessions_.end()) {
 		return cdap_sessions_.find(port_id)->second;
 	} else {
@@ -2161,6 +2160,12 @@ CDAPSession* CDAPSessionManager::createCDAPSession(int port_id)
 							     cdap_session));
 		return cdap_session;
 	}
+}
+
+CDAPSession* CDAPSessionManager::createCDAPSession(int port_id)
+{
+	ScopedLock g(lock);
+	return internal_createCDAPSession(port_id);
 }
 CDAPSessionManager::~CDAPSessionManager() throw ()
 {
@@ -2255,7 +2260,7 @@ void CDAPSessionManager::encodeNextMessageToBeSent(const CDAPMessage &cdap_messa
 
 	if (it == cdap_sessions_.end()) {
 		if (cdap_message.op_code_ == CDAPMessage::M_CONNECT) {
-			cdap_session = createCDAPSession(port_id);
+			cdap_session = internal_createCDAPSession(port_id);
 		} else {
 			std::stringstream ss;
 			ss << "There are no open CDAP sessions associated to the flow identified by "
@@ -2280,7 +2285,7 @@ void CDAPSessionManager::messageReceived(const ser_obj_t &encoded_cdap_message,
 	switch (result.op_code_) {
 		case CDAPMessage::M_CONNECT:
 			if (cdap_session == 0) {
-				cdap_session = createCDAPSession(port_id);
+				cdap_session = internal_createCDAPSession(port_id);
 				cdap_session->messageReceived(result);
 				LOG_DBG("Created a new CDAP session for port %d",
 					port_id);
@@ -2313,7 +2318,7 @@ void CDAPSessionManager::messageSent(const CDAPMessage &cdap_message,
 	CDAPSession *cdap_session = internal_get_cdap_session(port_id);
 	if (cdap_session == 0
 			&& cdap_message.op_code_ == CDAPMessage::M_CONNECT) {
-		cdap_session = createCDAPSession(port_id);
+		cdap_session = internal_createCDAPSession(port_id);
 	} else if (cdap_session == 0
 			&& cdap_message.op_code_ != CDAPMessage::M_CONNECT) {
 		std::stringstream ss;
@@ -2350,7 +2355,7 @@ void CDAPSessionManager::getOpenConnectionRequestMessage(cdap_m_t & msg,
 
 	CDAPSession *cdap_session = internal_get_cdap_session(con.port_id);
 	if (cdap_session == 0) {
-		cdap_session = createCDAPSession(con.port_id);
+		cdap_session = internal_createCDAPSession(con.port_id);
 	}
 
 	CDAPMessageFactory::getOpenConnectionRequestMessage(msg,
