@@ -381,10 +381,9 @@ void EnrolleeStateMachine::initiateEnrollment(const rina::EnrollmentRequest& enr
 void EnrolleeStateMachine::process_authentication_message(const rina::cdap::CDAPMessage& message,
 			   	    	    	    	  const rina::cdap_rib::con_handle_t &con_handle)
 {
-	lock_.lock();
+	rina::ScopedLock g(lock_);
 
 	if (!auth_ps_ || state_ != STATE_WAIT_CONNECT_RESPONSE) {
-		lock_.unlock();
 		abortEnrollment(remote_peer_.name_,
 				con.port_id,
 				"Authentication policy is null or wrong state",
@@ -394,8 +393,6 @@ void EnrolleeStateMachine::process_authentication_message(const rina::cdap::CDAP
 
 	int result = auth_ps_->process_incoming_message(message,
 							con_handle.port_id);
-
-	lock_.unlock();
 
 	if (result == rina::IAuthPolicySet::FAILED) {
 		abortEnrollment(remote_peer_.name_,
@@ -409,6 +406,8 @@ void EnrolleeStateMachine::process_authentication_message(const rina::cdap::CDAP
 
 void EnrolleeStateMachine::authentication_completed(bool success)
 {
+	rina::ScopedLock g(lock_);
+
 	if (!success) {
 		abortEnrollment(remote_peer_.name_,
 				con.port_id,
@@ -436,11 +435,10 @@ void EnrolleeStateMachine::connectResponse(int result,
 
 	timer_.cancelTask(last_scheduled_task_);
 	if (result != 0) {
-		state_ = STATE_NULL;
-		enrollment_task_->enrollmentFailed(remote_peer_.name_,
-						   con.port_id,
-						   result_reason,
-						   true);
+		abortEnrollment(remote_peer_.name_,
+				con.port_id,
+				result_reason,
+				true);
 		return;
 	}
 
@@ -451,8 +449,7 @@ void EnrolleeStateMachine::connectResponse(int result,
 	assert(smps);
 
 	if (smps->storeAccessControlCreds(auth, con) != 0){
-		state_ = STATE_NULL;
-		enrollment_task_->enrollmentFailed(remote_peer_.name_,
+		abortEnrollment(remote_peer_.name_,
 				con.port_id,
 				"Failed to validate and store access control credentials",
 				true);
@@ -529,11 +526,10 @@ void EnrolleeStateMachine::remoteStartResult(const rina::cdap_rib::con_handle_t 
 
 	timer_.cancelTask(last_scheduled_task_);
 	if (res.code_ != rina::cdap_rib::CDAP_SUCCESS) {
-		state_ = STATE_NULL;
-		enrollment_task_->enrollmentFailed(remote_peer_.name_,
-						   con.port_id,
-						   res.reason_,
-						   true);
+		abortEnrollment(remote_peer_.name_,
+				con.port_id,
+				res.reason_,
+				true);
 		return;
 	}
 
@@ -943,10 +939,9 @@ EnrollerStateMachine::EnrollerStateMachine(IPCProcess * ipc_process,
 void EnrollerStateMachine::connect(const rina::cdap::CDAPMessage& message,
 				   const rina::cdap_rib::con_handle_t &con_handle)
 {
-	lock_.lock();
+	rina::ScopedLock g(lock_);
 
 	if (state_ != STATE_NULL) {
-		lock_.unlock();
 		abortEnrollment(remote_peer_.name_,
 				con_handle.port_id,
 				CONNECT_IN_NOT_NULL,
@@ -965,7 +960,6 @@ void EnrollerStateMachine::connect(const rina::cdap::CDAPMessage& message,
 
 	auth_ps_ = sec_man_->get_auth_policy_set(message.auth_policy_.name);
 	if (!auth_ps_) {
-		lock_.unlock();
 		abortEnrollment(remote_peer_.name_,
 				con.port_id,
 				std::string("Could not find auth policy set"),
@@ -982,7 +976,6 @@ void EnrollerStateMachine::connect(const rina::cdap::CDAPMessage& message,
 							  con_handle.dest_,
 							  con.port_id);
 	if (auth_status == rina::IAuthPolicySet::FAILED) {
-		lock_.unlock();
 		abortEnrollment(remote_peer_.name_,
 				con.port_id,
 				std::string("Authentication failed"),
@@ -994,21 +987,18 @@ void EnrollerStateMachine::connect(const rina::cdap::CDAPMessage& message,
 								     AUTHENTICATION_TIMEOUT);
 		LOG_IPCP_DBG("Authentication in progress");
 		timer_.scheduleTask(last_scheduled_task_, timeout_);
-		lock_.unlock();
 		return;
 	}
 
-	lock_.unlock();
 	authentication_successful();
 }
 
 void EnrollerStateMachine::process_authentication_message(const rina::cdap::CDAPMessage& message,
 					    	          const rina::cdap_rib::con_handle_t &con_handle)
 {
-	lock_.lock();
+	rina::ScopedLock g(lock_);
 
 	if (!auth_ps_ || state_ != STATE_AUTHENTICATING) {
-		lock_.unlock();
 		abortEnrollment(remote_peer_.name_,
 				con.port_id,
 				"Authentication policy is null or wrong state",
@@ -1021,13 +1011,10 @@ void EnrollerStateMachine::process_authentication_message(const rina::cdap::CDAP
 
 	if (result == rina::IAuthPolicySet::IN_PROGRESS) {
 		LOG_IPCP_DBG("Authentication still in progress");
-		lock_.unlock();
 		return;
 	}
 
 	timer_.cancelTask(last_scheduled_task_);
-
-	lock_.unlock();
 
 	if (result == rina::IAuthPolicySet::FAILED) {
 		abortEnrollment(remote_peer_.name_,
@@ -1042,6 +1029,8 @@ void EnrollerStateMachine::process_authentication_message(const rina::cdap::CDAP
 
 void EnrollerStateMachine::authentication_completed(bool success)
 {
+	rina::ScopedLock g(lock_);
+
 	if (last_scheduled_task_) {
 		timer_.cancelTask(last_scheduled_task_);
 		last_scheduled_task_ = 0;
@@ -1059,8 +1048,6 @@ void EnrollerStateMachine::authentication_completed(bool success)
 
 void EnrollerStateMachine::authentication_successful()
 {
-	rina::ScopedLock scopedLock(lock_);
-
 	rina::ISecurityManagerPs *smps = dynamic_cast<rina::ISecurityManagerPs *>(sec_man_->ps);
 	assert(smps);
 	rina::cdap_rib::auth_policy_t auth;
@@ -1356,11 +1343,10 @@ void EnrollerStateMachine::remoteStopResult(const rina::cdap_rib::con_handle_t &
 
 	timer_.cancelTask(last_scheduled_task_);
 	if (res.code_ != rina::cdap_rib::CDAP_SUCCESS){
-		state_ = STATE_NULL;
-		enrollment_task_->enrollmentFailed(remote_peer_.name_,
-						   con_handle.port_id,
-						   res.reason_,
-						   true);
+		abortEnrollment(remote_peer_.name_,
+				con_handle_.port_id,
+				res.reason_,
+				true);
 		return;
 	}
 

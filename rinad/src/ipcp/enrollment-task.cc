@@ -426,6 +426,7 @@ void * doNeighborsEnrollerWork(void * arg)
 //Class IEnrollmentStateMachine
 const std::string IEnrollmentStateMachine::STATE_NULL = "NULL";
 const std::string IEnrollmentStateMachine::STATE_ENROLLED = "ENROLLED";
+const std::string IEnrollmentStateMachine::STATE_TERMINATED = "TERMINATED";
 
 IEnrollmentStateMachine::IEnrollmentStateMachine(IPCProcess * ipcp,
 						 const rina::ApplicationProcessNamingInformation& remote_naming_info,
@@ -468,7 +469,7 @@ void IEnrollmentStateMachine::release(int invoke_id,
 
 	createOrUpdateNeighborInformation(false);
 
-	state_ = STATE_NULL;
+	state_ = STATE_TERMINATED;
 }
 
 void IEnrollmentStateMachine::releaseResult(const rina::cdap_rib::res_info_t &res,
@@ -479,8 +480,7 @@ void IEnrollmentStateMachine::releaseResult(const rina::cdap_rib::res_info_t &re
 	if (!isValidPortId(con_handle.port_id))
 		return;
 
-	if (state_ != STATE_NULL)
-		state_ = STATE_NULL;
+	state_ = STATE_TERMINATED;
 }
 
 void IEnrollmentStateMachine::flowDeallocated(int portId)
@@ -495,7 +495,13 @@ void IEnrollmentStateMachine::flowDeallocated(int portId)
 
 	createOrUpdateNeighborInformation(false);
 
-	state_ = STATE_NULL;
+	state_ = STATE_TERMINATED;
+}
+
+std::string IEnrollmentStateMachine::get_state()
+{
+	rina::ScopedLock g(lock_);
+	return state_;
 }
 
 bool IEnrollmentStateMachine::isValidPortId(int portId)
@@ -513,13 +519,14 @@ bool IEnrollmentStateMachine::isValidPortId(int portId)
 void IEnrollmentStateMachine::abortEnrollment(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
 			int portId, const std::string& reason, bool sendReleaseMessage)
 {
-	state_ = STATE_NULL;
+	assert(!lock_.trylock());
 	AbortEnrollmentTimerTask * task = new AbortEnrollmentTimerTask(enrollment_task_,
 								       remotePeerNamingInfo,
 								       portId,
 								       reason,
 								       sendReleaseMessage);
-	timer_.scheduleTask(task, 10);
+	timer_.scheduleTask(task, 0);
+	state_ = STATE_TERMINATED;
 }
 
 void IEnrollmentStateMachine::createOrUpdateNeighborInformation(bool enrolled)
@@ -591,6 +598,7 @@ EnrollmentFailedTimerTask::EnrollmentFailedTimerTask(IEnrollmentStateMachine * s
 
 void EnrollmentFailedTimerTask::run() {
 	try {
+		rina::ScopedLock g(state_machine_->lock_);
 		state_machine_->abortEnrollment(state_machine_->remote_peer_.name_,
 						state_machine_->con.port_id,
 						reason_, true);
@@ -1036,7 +1044,7 @@ bool EnrollmentTask::isEnrolledTo(const std::string& processName)
 	std::list<IEnrollmentStateMachine *>::const_iterator it;
 	for (it = machines.begin(); it != machines.end(); ++it) {
 		if ((*it)->remote_peer_.name_.processName.compare(processName) == 0 &&
-				(*it)->state_ != IEnrollmentStateMachine::STATE_NULL) {
+				(*it)->get_state() != IEnrollmentStateMachine::STATE_NULL) {
 			return true;
 		}
 	}
@@ -1174,6 +1182,11 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 	assert(ipcp_ps);
 	ipcp_ps->inform_ipcm_about_failure(stateMachine);
 
+	rina::Sleep sleep;
+	while(stateMachine->get_state() != IEnrollmentStateMachine::STATE_TERMINATED) {
+		sleep.sleepForMili(1);
+	};
+
 	delete stateMachine;
 	stateMachine = 0;
 
@@ -1208,6 +1221,12 @@ void EnrollmentTask::release(int invoke_id,
 	try{
 		stateMachine = getEnrollmentStateMachine(con_handle.port_id,
 							 true);
+		if (!stateMachine) {
+			LOG_IPCP_DBG("State machine associated to portId %d already removed",
+				      con_handle.port_id);
+			return;
+		}
+
 		stateMachine->release(invoke_id,
 				      con_handle);
 	}catch(rina::Exception &e){
