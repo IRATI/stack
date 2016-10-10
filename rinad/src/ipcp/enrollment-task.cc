@@ -519,6 +519,7 @@ bool IEnrollmentStateMachine::isValidPortId(int portId)
 void IEnrollmentStateMachine::abortEnrollment(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
 			int portId, const std::string& reason, bool sendReleaseMessage)
 {
+	assert(!lock_.trylock());
 	AbortEnrollmentTimerTask * task = new AbortEnrollmentTimerTask(enrollment_task_,
 								       remotePeerNamingInfo,
 								       portId,
@@ -597,6 +598,7 @@ EnrollmentFailedTimerTask::EnrollmentFailedTimerTask(IEnrollmentStateMachine * s
 
 void EnrollmentFailedTimerTask::run() {
 	try {
+		rina::ScopedLock g(state_machine_->lock_);
 		state_machine_->abortEnrollment(state_machine_->remote_peer_.name_,
 						state_machine_->con.port_id,
 						reason_, true);
