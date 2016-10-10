@@ -568,6 +568,7 @@ class CDAPSessionManager : public CDAPSessionManagerInterface
 	CDAPMessageEncoder * encoder;
 	long timeout_;
 	CDAPInvokeIdManagerImpl *invoke_id_manager_;
+	CDAPSession* internal_get_cdap_session(int port_id);
 };
 
 class AppCDAPIOHandler : public CDAPIOHandler
@@ -2190,7 +2191,11 @@ void CDAPSessionManager::getAllCDAPSessionIds(std::vector<int> &vector)
 CDAPSession* CDAPSessionManager::get_cdap_session(int port_id)
 {
 	ScopedLock g(lock);
+	return internal_get_cdap_session(port_id);
+}
 
+CDAPSession* CDAPSessionManager::internal_get_cdap_session(int port_id)
+{
 	std::map<int, CDAPSession*>::iterator itr = cdap_sessions_.find(
 			port_id);
 	if (itr != cdap_sessions_.end())
@@ -2232,7 +2237,7 @@ bool CDAPSessionManager::session_in_await_con_state(int portId)
 {
 	ScopedLock g(lock);
 
-	CDAPSession * cdap_session = get_cdap_session(portId);
+	CDAPSession * cdap_session = internal_get_cdap_session(portId);
 	if (!cdap_session)
 		return false;
 
@@ -2271,7 +2276,7 @@ void CDAPSessionManager::messageReceived(const ser_obj_t &encoded_cdap_message,
 	ScopedLock g(lock);
 
 	decodeCDAPMessage(encoded_cdap_message, result);
-	CDAPSession *cdap_session = get_cdap_session(port_id);
+	CDAPSession *cdap_session = internal_get_cdap_session(port_id);
 	switch (result.op_code_) {
 		case CDAPMessage::M_CONNECT:
 			if (cdap_session == 0) {
@@ -2305,7 +2310,7 @@ void CDAPSessionManager::messageSent(const CDAPMessage &cdap_message,
 {
 	ScopedLock g(lock);
 
-	CDAPSession *cdap_session = get_cdap_session(port_id);
+	CDAPSession *cdap_session = internal_get_cdap_session(port_id);
 	if (cdap_session == 0
 			&& cdap_message.op_code_ == CDAPMessage::M_CONNECT) {
 		cdap_session = createCDAPSession(port_id);
@@ -2343,7 +2348,7 @@ void CDAPSessionManager::getOpenConnectionRequestMessage(cdap_m_t & msg,
 {
 	ScopedLock g(lock);
 
-	CDAPSession *cdap_session = get_cdap_session(con.port_id);
+	CDAPSession *cdap_session = internal_get_cdap_session(con.port_id);
 	if (cdap_session == 0) {
 		cdap_session = createCDAPSession(con.port_id);
 	}
@@ -2584,7 +2589,7 @@ const cdap_rib::con_handle_t& CDAPSessionManager::get_con_handle(int port_id)
 {
 	ScopedLock g(lock);
 
-	CDAPSession *cdap_session = get_cdap_session(port_id);
+	CDAPSession *cdap_session = internal_get_cdap_session(port_id);
 	if (!cdap_session) {
 		throw Exception("Could not find CDAP session associated to port-id");
 	}
