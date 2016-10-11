@@ -80,7 +80,6 @@ struct pshaper {
 	struct config_pshaper config;
 	uint_t length;
 	uint_t backlog;
-	struct robject robj;
 };
 
 struct q_qos {
@@ -94,7 +93,7 @@ struct q_qos {
         uint_t           key;
         uint_t           skip_prob;
         struct qta_queue * qta_q;
-        struct pshaper * ps;
+        struct pshaper   ps;
 	struct robject robj;
 };
 
@@ -144,7 +143,10 @@ static ssize_t qos_queue_attr_show(struct robject * robj,
 		return sprintf(buf, "%u\n", q->skip_prob);
 	}
 	if (strcmp(robject_attr_name(attr), "queued_pdus") == 0) {
-		return sprintf(buf, "%u\n", q->ps->length);
+		return sprintf(buf, "%u\n", q->ps.length);
+	}
+	if (strcmp(robject_attr_name(attr), "backlog") == 0) {
+		return sprintf(buf, "%u\n", q->ps.backlog);
 	}
 	if (strcmp(robject_attr_name(attr), "drop_pdus") == 0) {
 		return sprintf(buf, "%u\n", q->dropped);
@@ -185,6 +187,7 @@ static struct qta_queue * qta_queue_create(uint_t key)
 		LOG_ERR("Could not allocate memory for QTA queue");
 		return NULL;
 	}
+	tmp->key = key;
 	INIT_LIST_HEAD(&tmp->list_q_entry);
 	INIT_LIST_HEAD(&tmp->list_q_qos);
 	INIT_LIST_HEAD(&tmp->list);
@@ -247,10 +250,12 @@ static struct q_qos * q_qos_create(qos_id_t id,
         tmp->handled   = 0;
         tmp->key       = key;
         tmp->skip_prob = skip_prob;
-        tmp->ps->config.abs_max_length = abs_max_length;
-        tmp->ps->config.prb_max_length = prb_max_length;
-        tmp->ps->config.max_backlog    = max_backlog;
-        tmp->ps->config.rate           = rate;
+        tmp->ps.config.abs_max_length = abs_max_length;
+        tmp->ps.config.prb_max_length = prb_max_length;
+        tmp->ps.config.max_backlog    = max_backlog;
+        tmp->ps.config.rate           = rate;
+        tmp->ps.backlog               = 0;
+        tmp->ps.length                = 0;
         tmp->qta_q     = qta_q;
         INIT_LIST_HEAD(&tmp->list);
 
@@ -466,8 +471,8 @@ static struct pdu * dequeue_entry(struct q_entry * entry,
 	list_del(&entry->next);
 	rkfree(entry);
 	qset->occupation--;
-	qqos->ps->length--;
-	qqos->ps->backlog -= entry->w;
+	qqos->ps.length--;
+	qqos->ps.backlog -= entry->w;
 
 	return ret_pdu;
 
@@ -561,25 +566,25 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
                 return RMT_PS_ENQ_ERR;
         }
 
-        mlength  = q->ps->config.abs_max_length;
-        mbacklog = q->ps->config.max_backlog * q->ps->config.rate;
-        q->ps->length++;
+        mlength  = q->ps.config.abs_max_length;
+        mbacklog = q->ps.config.max_backlog * q->ps.config.rate;
+        q->ps.length++;
 
-        if (q->ps->length > mlength) {
+        if (q->ps.length > mlength) {
         	LOG_INFO("Length exceeded for QoS id %u, dropping PDU", qos_id);
                 pdu_destroy(pdu);
-                q->ps->length--;
+                q->ps.length--;
                 q->dropped++;
                 return RMT_PS_ENQ_DROP;
         }
 
         w = (int) buffer_length(pdu_buffer_get_ro(pdu)) + (int) pci_length(pci);
-        q->ps->backlog += w;
-        if (q->ps->backlog > mbacklog) {
+        q->ps.backlog += w;
+        if (q->ps.backlog > mbacklog) {
         	LOG_INFO("Backlog exceeded for QoS id %u, dropping PDU", qos_id);
                 q->dropped++;
-                q->ps->length--;
-                q->ps->backlog -= w;
+                q->ps.length--;
+                q->ps.backlog -= w;
                 pdu_destroy(pdu);
                 return RMT_PS_ENQ_DROP;
         }
@@ -588,8 +593,8 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
         if (q->abs_th < (qset->occupation + 1)) {
                 LOG_DBG("Dropped PDU: abs_th exceeded %u", occupation);
                 q->dropped++;
-                q->ps->length--;
-                q->ps->backlog -= w;
+                q->ps.length--;
+                q->ps.backlog -= w;
                 pdu_destroy(pdu);
                 return RMT_PS_ENQ_DROP;
         }
@@ -598,8 +603,8 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
         if ((q->th < (qset->occupation + 1)) && (q->drop_prob > i)) {
         	LOG_DBG("Dropped PDU: th exceeded %u", occupation);
                 q->dropped++;
-                q->ps->length--;
-                q->ps->backlog -= w;
+                q->ps.length--;
+                q->ps.backlog -= w;
                 pdu_destroy(pdu);
                 return RMT_PS_ENQ_DROP;
         }
@@ -608,8 +613,8 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
         if (!entry) {
                 LOG_ERR("Failed to enqueue");
                 q->dropped++;
-                q->ps->length--;
-                q->ps->backlog -= w;
+                q->ps.length--;
+                q->ps.backlog -= w;
                 pdu_destroy(pdu);
                 return RMT_PS_ENQ_ERR;
         }
@@ -636,12 +641,25 @@ static void qset_add_qta_queue(struct qta_queue *     queue,
                 return;
         }
 
+        /* Debug only */
+        list_for_each_entry(pos, &qset->queues, list) {
+                struct q_qos * qqos;
+
+                LOG_INFO("Urgency class: %u", pos->key);
+                list_for_each_entry(qqos, &pos->list_q_qos, list) {
+                        LOG_INFO("Qos id: %u, Drop prob: %u",
+                                 qqos->qos_id,
+                                 qqos->drop_prob);
+                }
+        }
+
         list_for_each_entry(pos, &qset->queues, list) {
                 if (pos->key > queue->key) {
                         list_add_tail(&queue->list, &pos->list);
-                        break;
+                        return;
                 }
         }
+	list_add(&queue->list, &pos->list);
 }
 
 void * qta_rmt_q_create_policy(struct rmt_ps      *ps,
@@ -765,7 +783,7 @@ static int qta_mux_ps_set_policy_set_param_priv(struct qta_mux_data * data,
                         return -1;
 
                 list_add(&conf_qos->list, &data->config->list_queues);
-                LOG_DBG("Created queue for QoS id %u", qos_id);
+                LOG_INFO("Created queue for QoS id %u", qos_id);
         }
 
         if (strcmp(name + offset, "urgency-class") == 0) {
@@ -933,6 +951,8 @@ rmt_ps_qta_create(struct rina_component * component)
         ps->rmt_enqueue_policy = qta_rmt_enqueue_policy;
         ps->rmt_q_create_policy = qta_rmt_q_create_policy;
         ps->rmt_q_destroy_policy = qta_rmt_q_destroy_policy;
+
+        LOG_INFO("Loaded QTA MUX policy set and its configuration");
 
         return &ps->base;
 }
