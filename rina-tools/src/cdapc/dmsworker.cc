@@ -222,8 +222,13 @@ void DMSWorker::process_value(CDAPMessage & cdap_message) {
 						}
 					}
 				}
-			}
-		}
+			} else {
+        cout << "Warning: No descriptor for " << type << endl;
+      }
+		} else {
+      cout << "Warning: Missing type info [json=" << value.has_jsonval() 
+        << ",type=" << value.has_typeval() <<"]"<< endl;    
+    }
 	}
 }
 

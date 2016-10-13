@@ -35,6 +35,7 @@
 #include <encoders/CDAP.pb.h>
 #include <encoders/auth-policies.pb.h>
 #include <encoders/irm.pb.h>
+#include <encoders/MA-IPCP.pb.h>
 
 #include "json_format.h"
 
@@ -587,6 +588,84 @@ TEST_CASE( "JSON M_CONNECT message", "[J_M_CONNECT]") {
      JsonFormat::ParseFromString(encMessage, ((Message*)&decoded));
      REQUIRE(builder == decoded);
     }
+}
+
+
+TEST_CASE( "JSON M_CREATE IPCP_S", "[J_M_CREATE]") {
+  
+  // Encode it
+  string encMessage;
+  encMessage = 
+    "{\"dif_to_assign\":{\"dif_name\":{\"applicationProcessName\":\"normal.DIF\"},\"dif_config\":{\"address\":17,\"efcp_config\":{\"data_transfer_constants\":{\"maxPDUSize\":10000,\"addressLength\":2,\"portIdLength\":2,\"cepIdLength\":2,\"qosidLength\":2,\"sequenceNumberLength\":4,\"lengthLength\":2,\"maxPDULifetime\":60000,\"rateLength\":4,\"frameLength\":4,\"ctrlSequenceNumberLength\":4},\"qos_cubes\":[{\"qosId\":1,\"name\":\"unreliablewithflowcontrol\",\"partialDelivery\":false,\"order\":true,\"dtpConfiguration\":{\"dtcpPresent\":true,\"initialATimer\":300,\"dtppolicyset\":{\"policyName\":\"default\",\"version\":\"0\"}},\"dtcpConfiguration\":{\"flowControl\":true,\"flowControlConfig\":{\"windowBased\":true,\"windowBasedConfig\":{\"maxclosedwindowqueuelength\":50,\"initialcredit\":50},\"rateBased\":false},\"rtxControl\":false,\"dtcppolicyset\":{\"policyName\":\"default\",\"version\":\"0\"}}},{\"qosId\":2,\"name\":\"reliablewithflowcontrol\",\"partialDelivery\":false,\"order\":true,\"maxAllowableGapSdu\":0,\"dtpConfiguration\":{\"dtcpPresent\":true,\"initialATimer\":300,\"dtppolicyset\":{\"policyName\":\"default\",\"version\":\"0\"}},\"dtcpConfiguration\":{\"flowControl\":true,\"flowControlConfig\":{\"windowBased\":true,\"windowBasedConfig\":{\"maxclosedwindowqueuelength\":50,\"initialcredit\":50},\"rateBased\":false},\"rtxControl\":false,\"rtxControlConfig\":{\"datarxmsnmax\":5,\"initialRtxTime\":1000},\"dtcppolicyset\":{\"policyName\":\"default\",\"version\":\"0\"}}}]},\"rmt_config\":{\"policy_set\":{\"policyName\":\"default\",\"version\":\"1\"},\"pft_conf\":{\"policyName\":\"default\",\"version\":\"0\"}},\"fa_config\":{\"policy_set\":{\"policyName\":\"default\",\"version\":\"1\"}},\"et_config\":{\"policyName\":\"default\",\"version\":\"1\",\"policyParameters\":[{\"name\":\"enrollTimeoutInMs\",\"value\":\"10000\"},{\"name\":\"watchdogPeriodInMs\",\"value\":\"30000\"},{\"name\":\"declaredDeadIntervalInMs\",\"value\":\"120000\"},{\"name\":\"neighborsEnrollerPeriodInMs\",\"value\":\"30000\"},{\"name\":\"maxEnrollmentRetries\",\"value\":\"3\"}]},\"nsm_config\":{\"addressing_config\":{\"address\":[{\"ap_name\":\"test1.IRATI\",\"ap_instance\":\"1\",\"address\":16},{\"ap_name\":\"test2.IRATI\",\"ap_instance\":\"1\",\"address\":17}],\"prefixes\":[{\"address_prefix\":0,\"organization\":\"N.Bourbaki\"},{\"address_prefix\":16,\"organization\":\"IRATI\"}]},\"policy_set\":{\"policyName\":\"default\",\"version\":\"1\"}},\"routing_config\":{\"policyName\":\"link-state\",\"version\":\"1\",\"policyParameters\":[{\"name\":\"objectMaximumAge\",\"value\":\"10000\"},{\"name\":\"waitUntilReadCDAP\",\"value\":\"5001\"},{\"name\":\"waitUntilError\",\"value\":\"5001\"},{\"name\":\"waitUntilPFUFTComputation\",\"value\":\"103\"},{\"name\":\"waitUntilFSODBPropagation\",\"value\":\"101\"},{\"name\":\"waitUntilAgeIncement\",\"value\":\"997\"}]},\"ra_config\":{\"policyName\":\"default\",\"version\":\"0\"},\"sm_config\":{\"policy_set\":{\"policyName\":\"default\",\"version\":\"1\"}}},\"dif_type\":\"normal-ipc\"},\"process_name\":{\"applicationProcessInstance\":\"1\",\"applicationProcessName\":\"micheal\"}}";
+
+  
+  SECTION( "Encoded correctly") {
+    //REQUIRE(builder.IsInitialized());
+    REQUIRE(!encMessage.empty());
+    REQUIRE(JsonBalanced(encMessage));
+  }
+  
+  SECTION( "Non zero length") {
+   REQUIRE(encMessage.length() > 0);
+  }
+  
+  SECTION("Decodes to a similar object") {
+    // Decode it to check
+    ipcp_config_t decoded;
+    JsonFormat::ParseFromString(encMessage, ((Message*)&decoded));
+    REQUIRE(decoded.IsInitialized() == true);
+    REQUIRE(decoded.descriptor()->full_name() == "rina.messages.ipcp_config_t");
+
+    // Check the values
+    SECTION("Has the correct process name") {
+      // Process name
+      applicationProcessNamingInfo_t* expected_name = applicationProcessNamingInfo_t::default_instance().New();
+      expected_name->set_applicationprocessname("micheal");
+      expected_name->set_applicationprocessinstance("1"); 
+      REQUIRE(decoded.process_name() == *expected_name );  
+    }
+
+    SECTION("Has no difs to register at") {
+      // Dif to register at
+      REQUIRE(decoded.difs_to_register_size() == 0);
+    }
+
+    SECTION("Has the correct dif name") {
+      // Dif to assign
+      REQUIRE(decoded.has_dif_to_assign());
+      dif_info_t dif_info = decoded.dif_to_assign();
+
+      REQUIRE(dif_info.has_dif_name());
+      applicationProcessNamingInfo_t* expected_name = applicationProcessNamingInfo_t::default_instance().New();
+      expected_name->set_applicationprocessname("normal.DIF");
+      expected_name->clear_applicationprocessinstance(); 
+      REQUIRE(dif_info.dif_name() == *expected_name );  
+    }
+
+    SECTION("Has the correct dif type") {
+      // Dif to assign
+      REQUIRE(decoded.has_dif_to_assign());
+      dif_info_t dif_info = decoded.dif_to_assign();
+
+      // Dif type
+      REQUIRE(dif_info.has_dif_type());
+      REQUIRE(dif_info.dif_type() == "normal-ipc");  
+    }
+
+    SECTION("Has the correct dif config") {
+      // Dif to assign
+      dif_info_t dif_info = decoded.dif_to_assign();
+      REQUIRE(dif_info.has_dif_config());
+      
+      // dif config
+      dif_config_t dif_conf = dif_info.dif_config();
+      REQUIRE(dif_conf.address() == 17 );  
+      REQUIRE(dif_conf.has_efcp_config());
+    
+      // Embedded decoding seems to work
+    }
+    
+  }
 }
 
 

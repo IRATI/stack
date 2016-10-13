@@ -262,10 +262,10 @@ class _RealWebSocket : public easywsclient::WebSocket
                 //break;
             }
             else {
-              if ((N == 0) && (ret == 1500)) {
-                // Its some form of flush packet
-                ret = 0; // discard it
-              }
+            //   if ((N == 0) && (ret == 1500)) {
+            //     // Its some form of flush packet
+            //     ret = 0; // discard it
+            //   }
                 rxbuf.resize(N + ret);
                 //   std::cout << "N=" << N << ",ret=" << ret << std::endl;
                 // }
@@ -390,75 +390,116 @@ class _RealWebSocket : public easywsclient::WebSocket
             if (ws.opcode == wsheader_type::CLOSE) { 
               close(); 
             } else if (ws.opcode == wsheader_type::PING) {
-                if (ws.mask) { for (size_t i = 0; i != ws.N; ++i) { rxbuf[i+ws.header_size] ^= ws.masking_key[i&0x3]; } }
+                if (ws.mask) {
+                    std::cout << "Demasking" << std::endl; 
+                    for (size_t i = 0; i != ws.N; ++i) { 
+                        rxbuf[i+ws.header_size] ^= ws.masking_key[i&0x3]; 
+                    }
+                }
+                std::cout << "Frame[PING," << ws.fin << ",len=" << ws.N << "]" << std::endl;
+              std::cout << "Frame data       =" << std::endl;
+              std::vector<uint8_t>::size_type limit = std::max(((std::vector<uint8_t>::size_type)20), rxbuf.size());
+              for (std::vector<uint8_t>::size_type q=0;q < limit;q++) {
+                std::cout << std::hex << rxbuf[q];
+              }             
+              std::cout << "." << std::dec << std::endl << "----" << std::endl;
                 std::string data(rxbuf.begin()+ws.header_size, rxbuf.begin()+ws.header_size+(size_t)ws.N);
                 sendData(wsheader_type::PONG, data.size(), data.begin(), data.end());
             } else if (ws.opcode == wsheader_type::PONG) { 
               // Do nothing
-            } else if ( !ws.fin || ws.opcode == wsheader_type::CONTINUATION) {
+                std::cout << "Frame[PONG," << ws.fin << ",len=" << ws.N << "]" << std::endl;
+              
+              std::cout << "Frame data       =" << std::endl;
+              std::vector<uint8_t>::size_type limit = std::max(((std::vector<uint8_t>::size_type)20), rxbuf.size());
+              for (std::vector<uint8_t>::size_type q=0;q < limit;q++) {
+                std::cout << std::hex << rxbuf[q];
+              }             
+              std::cout << "." << std::dec  << std::endl << "----" << std::endl;
+            // } else if ( !ws.fin || ws.opcode == wsheader_type::CONTINUATION) {
+            //     if (ws.mask) { 
+            //       for (size_t i = 0; i != ws.N; ++i) { 
+            //         rxbuf[i+ws.header_size] ^= ws.masking_key[i&0x3]; 
+            //       } 
+            //     }
+            //     // Add to the buffer
+            //     if (ws.N > 0) {
+            //       receivedData.insert(receivedData.end(), rxbuf.begin()+ws.header_size, rxbuf.begin()+ws.header_size+(size_t)ws.N);// just feed
+            //     }
+            //     std::cout << "Cont[" << ws.opcode << "," << ws.fin << "]" << std::endl;
+            //     std::cout << "Dispatching buffer size=" << ws.header_size+(size_t)ws.N << std::endl;
+            //     std::cout << "Dispatching data size  =" << receivedData.size() << std::endl;
+            //     std::cout << "Dispatching data       =" << std::string(begin(receivedData),end(receivedData)) << std::endl;
+                
+            //     // Do nothing here a let the buffer increase
+            //     //
+            //     if (ws.fin) {
+            //         callable((const std::vector<uint8_t>) receivedData);
+            //         receivedData.erase(receivedData.begin(), receivedData.end());
+            //         receivedData.clear();
+            //     }
+              } else if ( ws.opcode == wsheader_type::BINARY_FRAME ) {
+                  // ignore it
+                  std::cout << "Frame[BINARY," << ws.fin << ",len=" << ws.N << "]" << std::endl;
+              
+              } else if ( ws.opcode == wsheader_type::CONTINUATION 
+                 || ws.opcode == wsheader_type::TEXT_FRAME 
+                 /*|| ws.opcode == wsheader_type::BINARY_FRAME*/) {
+                // De mask
                 if (ws.mask) { 
                   for (size_t i = 0; i != ws.N; ++i) { 
                     rxbuf[i+ws.header_size] ^= ws.masking_key[i&0x3]; 
                   } 
                 }
+
+                std::cout << "Frame[" << ws.opcode << "," << ws.fin << ",len=" << ws.N << "]" << std::endl;
+
                 // Add to the buffer
                 if (ws.N > 0) {
                   receivedData.insert(receivedData.end(), rxbuf.begin()+ws.header_size, rxbuf.begin()+ws.header_size+(size_t)ws.N);// just feed
+                  //  std::cout << "Dispatching buffer size=" << ws.header_size+(size_t)ws.N << std::endl;
                 }
-                std::cout << "Continuation" << std::endl;
-                std::cout << "Dispatching buffer size=" << ws.header_size+(size_t)ws.N << std::endl;
-                std::cout << "Dispatching data size  =" << receivedData.size() << std::endl;
-                std::cout << "Dispatching data       =" << std::string(begin(receivedData),end(receivedData)) << std::endl;
-                
-                callable((const std::vector<uint8_t>) receivedData);
-                //receivedData.erase(receivedData.begin(), receivedData.end());
-                receivedData.clear();
-              } else if ( ws.opcode == wsheader_type::TEXT_FRAME 
-                 || ws.opcode == wsheader_type::BINARY_FRAME) {
-                // We know this is finalised now
-                assert(ws.fin);
-                if (ws.mask) { 
-                  for (size_t i = 0; i != ws.N; ++i) { 
-                    rxbuf[i+ws.header_size] ^= ws.masking_key[i&0x3]; 
-                  } 
-                }
-                // Add to the buffer
-                if (ws.N > 0) {
-                  receivedData.insert(receivedData.end(), rxbuf.begin()+ws.header_size, rxbuf.begin()+ws.header_size+(size_t)ws.N);// just feed
-                }
-                
-                
-                //if (ws.fin) {
-                std::cout << "Frame[" << ws.opcode << "," << ws.fin << "]" << std::endl;
-                    std::cout << "Dispatching buffer size=" << ws.header_size+(size_t)ws.N << std::endl;
+                                    
+                if (ws.fin) {
                     std::cout << "Dispatching data size  =" << receivedData.size() << std::endl;
                     std::cout << "Dispatching data       =" << std::string(begin(receivedData),end(receivedData)) << std::endl;
-                    
                     callable((const std::vector<uint8_t>) receivedData);
                     //receivedData.erase(receivedData.begin(), receivedData.end());
                     receivedData.clear();
                     //std::vector<uint8_t> ().swap(receivedData);// free memory
-                // }
+                }
             } else { 
-              fprintf(stderr, "ERROR: Got unexpected WebSocket message.\n"); close();
-            }
-            
-            // check for an overrun
-            if (rxbuf.size() >= (ws.header_size+(size_t)ws.N)) {
-              rxbuf.erase(rxbuf.begin(), rxbuf.begin() + ws.header_size+(size_t)ws.N);
-            } else {
-              std::cout << "Buffer incomplete at:" << std::endl;
-              std::cout << "ws header size  =" << ws.header_size << std::endl;
-              std::cout << "ws data size    =" << ws.N << std::endl;
-              std::cout << "ws buf complete =" << ws.fin << std::endl;
-              std::cout << "buffer size     =" << rxbuf.size() << std::endl;
-              std::cout << "----" << std::endl;
-              std::cout << "B:";
+              std::cerr << "Warn: Got unexpected WebSocket message." << std::endl;
+              std::cerr << "Discarding " << rxbuf.size() << " of buffer." << std::endl;
+              std::cerr << "Discarding data       =" << std::endl;
               std::vector<uint8_t>::size_type limit = std::max(((std::vector<uint8_t>::size_type)20), rxbuf.size());
               for (std::vector<uint8_t>::size_type q=0;q < limit;q++) {
                 std::cout << " " << std::hex << rxbuf[q];
               }             
-              std::cout << "." << std::endl << "----" << std::endl;
+              std::cout << "." << std::dec << std::endl << "----" << std::endl;
+              // flush the buffer
+              ws.N = 100;
+              rxbuf.clear();
+              //close();
+            }
+            
+
+            // check for an overrun
+            if (rxbuf.size() >= (ws.header_size+(size_t)ws.N)) {
+              rxbuf.erase(rxbuf.begin(), rxbuf.begin() + ws.header_size+(size_t)ws.N);
+              std::cout << "buffer size     =" << rxbuf.size() << std::endl;
+            } else {
+            //   std::cout << "Buffer incomplete at:" << std::endl;
+            //   std::cout << "ws header size  =" << ws.header_size << std::endl;
+            //   std::cout << "ws data size    =" << ws.N << std::endl;
+            //   std::cout << "ws buf complete =" << ws.fin << std::endl;
+            //   std::cout << "buffer size     =" << rxbuf.size() << std::endl;
+            //   std::cout << "----" << std::endl;
+            //   std::cout << "B:";
+            //   std::vector<uint8_t>::size_type limit = std::max(((std::vector<uint8_t>::size_type)20), rxbuf.size());
+            //   for (std::vector<uint8_t>::size_type q=0;q < limit;q++) {
+            //     std::cout << " " << std::hex << rxbuf[q];
+            //   }             
+            //   std::cout << "." << std::endl << "----" << std::endl;
             }
         }
     }

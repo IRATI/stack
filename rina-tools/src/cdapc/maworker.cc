@@ -190,7 +190,7 @@ void MAWorker::newFlowRequest(rina::FlowInformation& flow) {
 
 // A flow has been deallocated. 
 void MAWorker::closeFlowRequest(rina::FlowInformation& flow) {
-	// No lock
+	// No lock needed
 	//
 	// At this point we are unsure as to whether the CDAP Release has been sent.
 	ConnectionInfo ci(flow);
@@ -200,9 +200,6 @@ void MAWorker::closeFlowRequest(rina::FlowInformation& flow) {
 
 // Notify the manager the connection is no longer present
 void MAWorker::notify_connection_gone(ConnectionInfo* connection) {
-	rina::ScopedLock g(lock);
-
-	update = true;
 	static long notify_ids = 8000;
 
 	// When a connection is terminated notify manager
@@ -244,6 +241,8 @@ void MAWorker::notify_connection_gone(ConnectionInfo* connection) {
 
 // clean up failed connection
 void MAWorker::connection_gone(ConnectionInfo* connection) {
+	rina::ScopedLock g(lock);
+
 	//std::unique_ptr<ConnectionInfo> connection(con);
 	try {
 		// Log the action
@@ -261,6 +260,7 @@ void MAWorker::connection_gone(ConnectionInfo* connection) {
 	// Remove from active connections
 	ConnectionInfo* p =connections.erase(connection->get_id());
 	delete p;
+	update = true;
 }
 
 
