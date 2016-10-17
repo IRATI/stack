@@ -31,6 +31,9 @@
 #include <iostream>
 #include <exception>
 #include <encoders/CDAP.pb.h> // For CDAPMessage
+#include <encoders/ApplicationProcessNamingInfoMessage.pb.h>
+#include <encoders/MA-IPCP.pb.h>
+#include <encoders/NeighborMessage.pb.h>
 
 #include "connector.h"
 #include "eventsystem.h"  // Various constants used
@@ -201,8 +204,9 @@ void DMSWorker::process_value(CDAPMessage & cdap_message) {
 		if (value.has_jsonval() && value.has_typeval()) {
 			// We might have something to do
 			string type = value.typeval();
-			const DescriptorPool* dp = DescriptorPool::generated_pool();
-			const Descriptor* d  = dp->FindMessageTypeByName(type);
+      //cout << "Type is:[" << type << "]" << endl;
+			//const DescriptorPool* dp = DescriptorPool::generated_pool();
+			const Descriptor* d  = ipcp_config_t::descriptor(); // dp->FindMessageTypeByName(type);
 			if (d != nullptr) {
 				MessageFactory* mf = MessageFactory::generated_factory();
 				const Message* prototype = mf->GetPrototype(d);

@@ -255,3 +255,36 @@ TEST_CASE( "JSON create message with ipcp config value", "[M_CREATE]") {
   filt.scope_ = 0;
   */
 }
+
+TEST_CASE("descriptors", "[descriptors]") {
+  std::string type = "rina.messages.ipcp_config_t";
+  
+  ipcp_config_t c;
+  cout << "Name: " << c.descriptor()->full_name() << endl;  
+
+    // Test 1
+  const DescriptorPool* dp = DescriptorPool::generated_pool();
+  const Descriptor* d  = dp->FindMessageTypeByName(type);
+  REQUIRE(d != nullptr);  
+  MessageFactory* mf = MessageFactory::generated_factory();
+  const Message* prototype = mf->GetPrototype(d);
+  REQUIRE (prototype != nullptr);
+  Message* m = prototype->New();
+  REQUIRE (m != nullptr);
+  
+  // Test 2
+  //type = "rina.messages.ipcp_config_t";
+  
+  
+  // Attempt type conversion
+  // JsonFormat::ParseFromString(value.jsonval(), m);
+  // int size = m->ByteSize();
+  // auto buf = new unsigned char[size];
+  // if(m->SerializeToArray(buf, size)) {
+  //   // Update the value
+  //   objVal_t* newvalue = new objVal_t();
+  //   newvalue->set_byteval(buf, size);
+  //   newvalue->set_typeval(type); // Pass along the type
+  //   cdap_message.set_allocated_objvalue(newvalue);
+  // }
+}

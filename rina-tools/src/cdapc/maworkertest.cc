@@ -227,6 +227,4 @@ TEST_CASE("Flow management", "[Flow]") {
     REQUIRE(w.check_flow(flow2.remoteAppName.getProcessNamePlusInstance()));
   }
   
-
-  
 }
