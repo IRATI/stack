@@ -113,7 +113,7 @@ void NeighborRIBObj::create_cb(const rina::rib::rib_handle_t rib,
 
 bool NeighborRIBObj::createNeighbor(rina::Neighbor &object)
 {
-	LOG_IPCP_DBG("Enrolling to neighbor %s", object.get_name().processName.c_str());
+	LOG_DBG("Enrolling to neighbor %s", object.get_name().processName.c_str());
 
 	rina::EnrollToDAFRequestEvent* event;
 	event->neighborName = object.get_name();
@@ -123,7 +123,7 @@ bool NeighborRIBObj::createNeighbor(rina::Neighbor &object)
 			get_supporting_dif_name();
 	rinad::IPCPFactory::getIPCP()->enrollment_task_->processEnrollmentRequestEvent(event);
 
-    LOG_INFO("IPC Process enrollment to neighbor %s completed successfully",
+	LOG_INFO("IPC Process enrollment to neighbor %s completed successfully",
     	 object.get_name().processName.c_str());
 
 	return true;

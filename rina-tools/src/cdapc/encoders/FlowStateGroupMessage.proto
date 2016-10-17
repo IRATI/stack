@@ -1,0 +1,7 @@
+package rina.messages;
+//option optimize_for = LITE_RUNTIME;
+import "FlowStateMessage.proto";
+
+message flowStateObjectGroup_t{  //Contains the information of a flow service
+	repeated flowStateObject_t flow_state_objects = 1; 		// A group of flow state objects 
+}
