@@ -107,6 +107,8 @@ ThreadAttributes::ThreadAttributes() {
 		throw ConcurrentException(
 				ConcurrentException::error_initialize_thread_attributes);
 	}
+
+	name_ = "";
 }
 
 ThreadAttributes::~ThreadAttributes() throw () {
@@ -282,6 +284,16 @@ void ThreadAttributes::setOtherSchedulingPolicy() {
 	this->setSchedulingPolicy(SCHED_OTHER);
 }
 
+void ThreadAttributes::setName(const std::string& name)
+{
+	name_ = name;
+}
+
+std::string ThreadAttributes::getName(void)
+{
+	return name_;
+}
+
 /* CLASS THREAD */
 Thread::Thread(void *(*startFunction)(void *), void * arg,
 	       ThreadAttributes * threadAttributes)
@@ -310,6 +322,9 @@ void Thread::start()
 		LOG_CRIT("%s", ConcurrentException::error_create_thread.c_str());
 		throw ConcurrentException(ConcurrentException::error_create_thread);
 	}
+
+	if (thread_attrs->getName() != "")
+		pthread_setname_np(thread_id_, thread_attrs->getName().c_str());
 }
 
 pthread_t Thread::getThreadType() const{

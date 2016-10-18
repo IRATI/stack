@@ -104,8 +104,11 @@ public:
         void setRRSchedulingPolicy();
         bool isOtherSchedulingPolicy();
         void setOtherSchedulingPolicy();
+        void setName(const std::string& name);
+        std::string getName(void);
 private:
         pthread_attr_t thread_attr_;
+        std::string name_;
         void setDetachState(int detachState);
         void setScope(int scope);
         void setInheritedScheduling(int inheritedScheduling);
