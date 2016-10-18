@@ -248,13 +248,11 @@ void Connector::applicationRegister() {
 ServerWorker * Connector::internal_start_worker(rina::FlowInformation flow)
 {
 	rina::ThreadAttributes threadAttributes;
+	threadAttributes.setName("maworker");
 	MAWorker * worker = new MAWorker(&threadAttributes, flow,
 			max_sdu_size_in_bytes, this);
 	worker->start();
 	worker->detach();
-
-	pthread_t tid = (reinterpret_cast<rina::Thread*>(worker))->getThreadType();
-	pthread_setname_np(tid, "maworker");
 
 	ma_worker_ = worker;
 	return worker;
@@ -264,12 +262,12 @@ ServerWorker * Connector::internal_start_worker(rina::FlowInformation flow)
 ServerWorker * Connector::internal_start_worker(const std::string& ws_address)
 {
 	rina::ThreadAttributes threadAttributes;
+	threadAttributes.setName("dmsworker");
 	DMSWorker * worker = new DMSWorker(&threadAttributes, ws_address,
 			max_sdu_size_in_bytes, this);
 	worker->start();
 	worker->detach();
-	pthread_t tid = (reinterpret_cast<rina::Thread*>(worker))->getThreadType();
-	pthread_setname_np(tid, "dmsworker");
+
 	dms_worker_ = worker;
 	return worker;
 }
