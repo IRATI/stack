@@ -110,6 +110,8 @@
 #include <assert.h>
 
 #include "easywsclient.h"
+#define RINA_PREFIX     "ws-client"
+#include <librina/logs.h>
 #include <librina/concurrency.h>
 
 
@@ -131,7 +133,7 @@ socket_t hostname_connect(const std::string& hostname, int port) {
     snprintf(sport, 16, "%d", port);
     if ((ret = getaddrinfo(hostname.c_str(), sport, &hints, &result)) != 0)
     {
-      fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(ret));
+      LOG_ERR("getaddrinfo: %s", gai_strerror(ret));
       return 1;
     }
     for(p = result; p != NULL; p = p->ai_next)
@@ -317,9 +319,7 @@ class _RealWebSocket : public easywsclient::WebSocket
             }
         };
         CallbackAdapter bytesCallback(callable);
-        std::cout<<"Before dispatch" << std::endl;
         _dispatchBinary(bytesCallback);
-        std::cout<<"After dispatch" << std::endl;
     }
 
     virtual void _dispatchBinary(BytesCallback_Imp & callable) {
@@ -391,12 +391,12 @@ class _RealWebSocket : public easywsclient::WebSocket
               close(); 
             } else if (ws.opcode == wsheader_type::PING) {
                 if (ws.mask) {
-                    std::cout << "Demasking" << std::endl; 
+                    LOG_DBG("Demasking");
                     for (size_t i = 0; i != ws.N; ++i) { 
                         rxbuf[i+ws.header_size] ^= ws.masking_key[i&0x3]; 
                     }
                 }
-                std::cout << "Frame[PING," << ws.fin << ",len=" << ws.N << "]" << std::endl;
+              std::cout << "Frame[PING," << ws.fin << ",len=" << ws.N << "]" << std::endl;
               std::cout << "Frame data       =" << std::endl;
               std::vector<uint8_t>::size_type limit = std::max(((std::vector<uint8_t>::size_type)20), rxbuf.size());
               for (std::vector<uint8_t>::size_type q=0;q < limit;q++) {

@@ -30,6 +30,8 @@
 #include <unistd.h>
 #include <iostream>
 #include <exception>
+#define RINA_PREFIX     "dms-worker"
+#include <librina/logs.h>
 #include <encoders/CDAP.pb.h> // For CDAPMessage
 #include <encoders/ApplicationProcessNamingInfoMessage.pb.h>
 #include <encoders/MA-IPCP.pb.h>
@@ -53,8 +55,6 @@ DMSWorker::DMSWorker(rina::ThreadAttributes * threadAttributes,
 		Server * serv)
 : ServerWorker(threadAttributes, serv)
 {
-	cout << "New dms worker created: " << this << endl;
-
 	max_sdu_size = max_size;
 	ws_address = address;
 	ws = NULL;
@@ -73,6 +73,8 @@ DMSWorker::DMSWorker(rina::ThreadAttributes * threadAttributes,
 		    .fromSource(CDAP_Sources::DMS_MANAGER)
 		    .inLanguage(EDSL_Language::CDAP);
 	cdap_filter = builder.build();
+
+	LOG_DBG("New DMS Worker created");
 }
 
 // Wait                
@@ -86,7 +88,6 @@ void DMSWorker::connect_blocking() {
 
 // Do the internal work necessary
 int DMSWorker::internal_run() {
-	cout << "New dms worker running: " << this << endl;
 	int retries = 30;
 	unsigned int nap_time = 200; // in millisecs
 
@@ -96,8 +97,8 @@ int DMSWorker::internal_run() {
 		if (ws == NULL) {
 			usleep(nap_time * 1000);
 			if (retries > 0) {
-				cerr << "Error: No connection made to DMS@" << ws_address
-						<< ", retrying ..." << endl;
+				LOG_ERR("Error: No connection made to DMS@%s, retrying ...",
+					ws_address.c_str());
 				retries--;
 			} else {
 				// bail out
@@ -107,8 +108,9 @@ int DMSWorker::internal_run() {
 	}
 
 	// Okay now start processing the messages
-	std::cerr << "Info: Connection made to DMS@" << ws_address
-			<< ":" << Thread::self()->getThreadType() << std::endl;
+	LOG_INFO("Connection made to DMS@%s: %d",
+			ws_address.c_str(),
+			Thread::self()->getThreadType() );
 	{
 		connectLatch.lock();
 		connectLatch.signal();
@@ -125,7 +127,8 @@ int DMSWorker::internal_run() {
 	delete ws;
 	ws = NULL;
 	// Okay now start processing the messages
-	std::cerr << "Info: Disconnected from DMS@" << ws_address << std::endl;
+	LOG_INFO("Disconnected from DMS@%s",
+		  ws_address.c_str());
 
 	return 0;
 }
@@ -141,17 +144,17 @@ void DMSWorker::process_message(const std::string & message)
 			size_t pend = message.find("\",", pstart+10);
 			if (pend != string::npos) {
 				size_t len = pend - pstart - 10;
-				std::cout << "ESD >>> " << message.substr(pstart+10,len).c_str() << std::endl;
+				LOG_DBG("ESD >>> %s", message.substr(pstart+10,len).c_str());
 			} else {
-				std::cout << "ESD >>> Disconnect received" << std::endl;
+				LOG_DBG("ESD >>> Disconnect received");
 			}
 		} else {
-			std::cout << "ESD >>> Disconnect received" << std::endl;
+			LOG_DBG("ESD >>> Disconnect received");
 		}
 		ws->close();
 		// Is it CDAP
 	} else if (cdap_filter->match(message)) {
-		std::cout << "CDAP >>> " << message.c_str() << std::endl;
+		LOG_DBG("CDAP >>> %s", message.c_str());
 		// Attempt some parsing
 		rina::messages::CDAPMessage cdap_message;
 		if (JsonFormat::ParseFromString(message, &cdap_message)) {
@@ -175,16 +178,17 @@ void DMSWorker::process_message(const std::string & message)
 								cdap_message.destapname(), std::string()
 						);
 					}
-					cout << "Message is " << cdap_message.IsInitialized()
-                		<< " for " << dest.getProcessNamePlusInstance().c_str() << endl;
+					LOG_DBG("Message is %d for %s",
+						cdap_message.IsInitialized(),
+						dest.getProcessNamePlusInstance().c_str());
 					// Now dispatch to the MA
 					send_message(buf, size, dest.getProcessNamePlusInstance());
 				} else {
-					cout << "warning: missing destination on message! " << endl;
+					LOG_WARN("missing destination on message! ");
 				}
 			}
 		} else {
-			cout << "warning: failed to encode message! " << endl;
+			LOG_WARN("failed to encode message!");
 		}
 	} else {
 		// echo the message
@@ -204,7 +208,7 @@ void DMSWorker::process_value(CDAPMessage & cdap_message) {
 		if (value.has_jsonval() && value.has_typeval()) {
 			// We might have something to do
 			string type = value.typeval();
-      //cout << "Type is:[" << type << "]" << endl;
+			LOG_DBG("Type is:[%s]", type.c_str());
 			//const DescriptorPool* dp = DescriptorPool::generated_pool();
 			const Descriptor* d  = ipcp_config_t::descriptor(); // dp->FindMessageTypeByName(type);
 			if (d != nullptr) {
@@ -227,39 +231,33 @@ void DMSWorker::process_value(CDAPMessage & cdap_message) {
 					}
 				}
 			} else {
-        cout << "Warning: No descriptor for " << type << endl;
-      }
+				LOG_WARN("No descriptor for %s", type.c_str());
+			}
 		} else {
-      cout << "Warning: Missing type info [json=" << value.has_jsonval() 
-        << ",type=" << value.has_typeval() <<"]"<< endl;    
-    }
+			LOG_WARN("Missing type info [json=%s ,type=]",
+				  value.has_jsonval(),
+				  value.has_typeval());
+		}
 	}
 }
-
-
 
 /*
  * Handover interface
  */
 
-
 // Send outgoing message to DMS
 void DMSWorker::send_message(const std::string & message) {
 	if (ws == nullptr) {
-		cout << "WARNING: No DMS found: "
-				<< " message has been discarded." << endl;
+		LOG_WARN("No DMS found: message has been discarded.");
 		return;
 	}
 
 	try {
 		// Write the next JSON message
-		cout <<"About to call WS send mesg" << endl;
 		ws->send(message);
-		cout << "Sent message to DMS"  << endl;
 	} catch (exception &e) {
-		cout << "WARNING: Cant send message to DMS: "
-				<< " message has been discarded." << endl;
-		cout << "Exception : " << e.what() << endl;
+		LOG_WARN("Cant send message to DMS: message has been discarded. Exception : %s",
+				e.what());
 	}
 }
 
@@ -271,20 +269,17 @@ void DMSWorker::send_message(const void* message, int size,
 	MAWorker* ma = c->find_ma_worker();
 	if (ma != nullptr) {
 		try {
-			cout << "INFO: Calling ma::send_message" << endl;
 			// Found MA instance so just send it
 			ma->send_message(message, size, destination);
 		} catch (std::exception& e) {
-			cout << "ERROR: Exception:" << e.what() << endl;
+			LOG_ERR("ERROR: Exception: %s", e.what());
 		} catch (...) {
-			cout << "ERROR: Exception : Unknown" << endl;
+			LOG_ERR("ERROR: Exception : Unknown");
 		}
 	} else {
-		cout << "INFO: No MA!" << endl;
+		LOG_ERR("INFO: No MA!");
 	}
 }
-
-
 
 //
 // Log a short, but informative message
@@ -347,6 +342,5 @@ void DMSWorker::log_short_message(const CDAPMessage& message, const char * direc
 		b.append(message.destapinst());
 	}
 	b.append("].");
-	//LOG_INFO(b.c_str());
-	cout << "INFO:" << b << endl;
+	LOG_INFO("%s",b.c_str());
 }
