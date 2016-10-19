@@ -211,11 +211,15 @@ void DMSWorker::process_value(CDAPMessage & cdap_message)
 		if (value.has_jsonval() && value.has_typeval()) {
 			// We might have something to do
 			string type = value.typeval();
-			LOG_DBG("Type is:[%s]", type.c_str());
+			LOG_INFO("Type is:[%s]", type.c_str());
 			//const DescriptorPool* dp = DescriptorPool::generated_pool();
 
-			if (type == "rina.messages.MAIPCP.ipcp_config_t") {
+			if (type == "rina.messages.ipcp_config_t") {
 				d = ipcp_config_t::descriptor(); // dp->FindMessageTypeByName(type);
+			} else if (type == "rina.messages.applicationProcessNamingInfo_t") {
+				d = applicationProcessNamingInfo_t::descriptor();
+			} else if (type =="rina.messages.neighbor_t") {
+				d = neighbor_t::descriptor();
 			}
 
 			if (d != nullptr) {

@@ -115,7 +115,6 @@ void Connector::rina_run() {
 		int port_id = 0;
 
 		if (event == nullptr) {
-			LOG_INFO("Processing events");
 			continue;
 		}
 
