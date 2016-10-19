@@ -201,7 +201,10 @@ void DMSWorker::process_message(const std::string & message)
 //
 // Process the object value if present
 //
-void DMSWorker::process_value(CDAPMessage & cdap_message) {
+void DMSWorker::process_value(CDAPMessage & cdap_message)
+{
+	const Descriptor* d = nullptr;
+
 	// Figure out if we need to do anything
 	if (cdap_message.has_objvalue()) {
 		objVal_t value = cdap_message.objvalue();
@@ -210,7 +213,11 @@ void DMSWorker::process_value(CDAPMessage & cdap_message) {
 			string type = value.typeval();
 			LOG_DBG("Type is:[%s]", type.c_str());
 			//const DescriptorPool* dp = DescriptorPool::generated_pool();
-			const Descriptor* d  = ipcp_config_t::descriptor(); // dp->FindMessageTypeByName(type);
+
+			if (type == "rina.messages.MAIPCP.ipcp_config_t") {
+				d = ipcp_config_t::descriptor(); // dp->FindMessageTypeByName(type);
+			}
+
 			if (d != nullptr) {
 				MessageFactory* mf = MessageFactory::generated_factory();
 				const Message* prototype = mf->GetPrototype(d);
