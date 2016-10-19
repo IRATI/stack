@@ -28,17 +28,13 @@
 #include <iostream>
 
 #include <cassert>
-#define RINA_PREFIX     "cdap-connect"
+#define RINA_PREFIX     "connector"
 #include <librina/logs.h>
-//#include <librina/cdap_v2.h>
 #include <librina/common.h>
 #include <rinad/common/configuration.h>
-//#include <rinad/common/encoder.h>
 
 #include "connector.h"
 #include "workers.h"
-
-
 
 Connector::Connector(const std::list<std::string>& dif_names,
 		const std::string& apn,
@@ -119,7 +115,6 @@ void Connector::rina_run() {
 		int port_id = 0;
 
 		if (event == nullptr) {
-			LOG_INFO("Processing events");
 			continue;
 		}
 

@@ -110,6 +110,8 @@
 #include <assert.h>
 
 #include "easywsclient.h"
+#define RINA_PREFIX     "ws-client"
+#include <librina/logs.h>
 #include <librina/concurrency.h>
 
 
@@ -131,7 +133,7 @@ socket_t hostname_connect(const std::string& hostname, int port) {
     snprintf(sport, 16, "%d", port);
     if ((ret = getaddrinfo(hostname.c_str(), sport, &hints, &result)) != 0)
     {
-      fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(ret));
+      LOG_ERR("getaddrinfo: %s", gai_strerror(ret));
       return 1;
     }
     for(p = result; p != NULL; p = p->ai_next)
@@ -317,9 +319,7 @@ class _RealWebSocket : public easywsclient::WebSocket
             }
         };
         CallbackAdapter bytesCallback(callable);
-        std::cout<<"Before dispatch" << std::endl;
         _dispatchBinary(bytesCallback);
-        std::cout<<"After dispatch" << std::endl;
     }
 
     virtual void _dispatchBinary(BytesCallback_Imp & callable) {
@@ -391,12 +391,11 @@ class _RealWebSocket : public easywsclient::WebSocket
               close(); 
             } else if (ws.opcode == wsheader_type::PING) {
                 if (ws.mask) {
-                    std::cout << "Demasking" << std::endl; 
                     for (size_t i = 0; i != ws.N; ++i) { 
                         rxbuf[i+ws.header_size] ^= ws.masking_key[i&0x3]; 
                     }
                 }
-                std::cout << "Frame[PING," << ws.fin << ",len=" << ws.N << "]" << std::endl;
+              std::cout << "Frame[PING," << ws.fin << ",len=" << ws.N << "]" << std::endl;
               std::cout << "Frame data       =" << std::endl;
               std::vector<uint8_t>::size_type limit = std::max(((std::vector<uint8_t>::size_type)20), rxbuf.size());
               for (std::vector<uint8_t>::size_type q=0;q < limit;q++) {
@@ -451,7 +450,7 @@ class _RealWebSocket : public easywsclient::WebSocket
                   } 
                 }
 
-                std::cout << "Frame[" << ws.opcode << "," << ws.fin << ",len=" << ws.N << "]" << std::endl;
+                LOG_DBG("Frame[%d, %d, len=%d]", ws.opcode, ws.fin,  ws.N);
 
                 // Add to the buffer
                 if (ws.N > 0) {
@@ -460,16 +459,17 @@ class _RealWebSocket : public easywsclient::WebSocket
                 }
                                     
                 if (ws.fin) {
-                    std::cout << "Dispatching data size  =" << receivedData.size() << std::endl;
-                    std::cout << "Dispatching data       =" << std::string(begin(receivedData),end(receivedData)) << std::endl;
+                    LOG_INFO("Dispatching data size  = %d", receivedData.size());
+                    LOG_INFO("Dispatching data       = %s",
+                	     std::string(begin(receivedData),end(receivedData)).c_str());
                     callable((const std::vector<uint8_t>) receivedData);
                     //receivedData.erase(receivedData.begin(), receivedData.end());
                     receivedData.clear();
                     //std::vector<uint8_t> ().swap(receivedData);// free memory
                 }
             } else { 
-              std::cerr << "Warn: Got unexpected WebSocket message." << std::endl;
-              std::cerr << "Discarding " << rxbuf.size() << " of buffer." << std::endl;
+              LOG_WARN("Got unexpected WebSocket message.");
+              LOG_WARN("Discarding %d of buffer", rxbuf.size());
               std::cerr << "Discarding data       =" << std::endl;
               std::vector<uint8_t>::size_type limit = std::max(((std::vector<uint8_t>::size_type)20), rxbuf.size());
               for (std::vector<uint8_t>::size_type q=0;q < limit;q++) {
@@ -486,7 +486,7 @@ class _RealWebSocket : public easywsclient::WebSocket
             // check for an overrun
             if (rxbuf.size() >= (ws.header_size+(size_t)ws.N)) {
               rxbuf.erase(rxbuf.begin(), rxbuf.begin() + ws.header_size+(size_t)ws.N);
-              std::cout << "buffer size     =" << rxbuf.size() << std::endl;
+              LOG_DBG("buffer size     = %d", rxbuf.size());
             } else {
             //   std::cout << "Buffer incomplete at:" << std::endl;
             //   std::cout << "ws header size  =" << ws.header_size << std::endl;

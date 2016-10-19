@@ -28,7 +28,7 @@
 
 #include <iostream>
 #include <encoders/CDAP.pb.h> // For CDAPMessage
-#define RINA_PREFIX     "cdap-connect"
+#define RINA_PREFIX     "ma-worker"
 #include <librina/logs.h>
 
 #include "connector.h"
@@ -84,7 +84,7 @@ int MAWorker::internal_run()
 				// message.message_ = buffer;
 				// message.size_ = bytes_read;
 				if (bytes_read > 0) {
-					std::cout << "Read " << bytes_read << " bytes into the sdu buffer" << std::endl;
+					LOG_DBG("Read %d bytes into the sdu buffer", bytes_read);
 					(*p)->ok();
 					process_message(buffer, bytes_read);
 				}
@@ -263,7 +263,6 @@ void MAWorker::connection_gone(ConnectionInfo* connection) {
 	update = true;
 }
 
-
 // Get the dialect from the message
 const string& MAWorker::get_dialect(const rina::messages::CDAPMessage& m) const {
 	static const string REQ(CDAP_Dialects::CDAP_REQ);
@@ -271,12 +270,6 @@ const string& MAWorker::get_dialect(const rina::messages::CDAPMessage& m) const 
 
 	return ((m.opcode() & 0x0001) == 0) ? REQ : RES;
 }
-
-
-
-/*
- * Handover interface
- */
 
 // Process outgoing message to DMS
 void MAWorker::send_message(const string& message) {
@@ -287,10 +280,10 @@ void MAWorker::send_message(const string& message) {
 			// Found DMS instance so just send it
 			dms->send_message(message);
 		} else {
-			cout << "No DMS yet!" << endl;
+			LOG_ERR("No DMS yet!");
 		}
 	} else {
-		cout << "No Connector yet!" << endl;
+		LOG_ERR("No Connector yet!");
 	}
 }
 
@@ -301,7 +294,7 @@ void MAWorker::send_message(const void* message, int size, const std::string & d
 	// Find appropriate connection information
 	ConnectionInfo* c = connections.find(destination);
 	if (c == nullptr) {
-		LOG_INFO("WARNING: No MA[%s] found: message has been discarded.",
+		LOG_ERR("WARNING: No MA[%s] found: message has been discarded.",
 				destination.c_str());
 		return;
 	}
@@ -312,8 +305,9 @@ void MAWorker::send_message(const void* message, int size, const std::string & d
 		// non const ie. void * only.
 		int bytes_written = rina::ipcManager->writeSDU(c->get_port(),
 				const_cast<void*>(message), size);
-		cout << "Sent message to MA[" << c->get_id() << "]: "
-				<< bytes_written << " bytes sent." << endl;
+		LOG_DBG("Sent message to MA[%s]: %d bytes sent.",
+			 c->get_id().c_str(),
+			 bytes_written);
 		c->ok();
 	} catch (rina::WriteSDUException &e) {
 		if (c->failed()) {
