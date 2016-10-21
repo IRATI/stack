@@ -162,6 +162,7 @@ IPCMConsole::IPCMConsole(const std::string& socket_path_) :
 
 	keep_on_running = true;
 	rina::ThreadAttributes ta;
+	ta.setName("mgmt-console");
 	worker = new rina::Thread(console_function, this, &ta);
 	worker->start();
 }
