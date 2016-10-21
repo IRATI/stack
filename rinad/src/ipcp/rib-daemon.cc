@@ -533,6 +533,7 @@ void IPCPRIBDaemonImpl::set_application_process(rina::ApplicationProcess * ap)
 
         rina::ThreadAttributes * threadAttributes = new rina::ThreadAttributes();
         threadAttributes->setJoinable();
+        threadAttributes->setName("mgmt-sdu-reader");
         ManagementSDUReaderData * data = new ManagementSDUReaderData(max_sdu_size_in_bytes);
         management_sdu_reader_ = new rina::Thread(&doManagementSDUReaderWork,
         					  (void *) data,

@@ -737,6 +737,7 @@ void EnrollmentTask::set_dif_configuration(const rina::DIFConfiguration& dif_con
 	if (neigh_enroll_per_ms_ > 0) {
 		rina::ThreadAttributes * threadAttributes = new rina::ThreadAttributes();
 		threadAttributes->setJoinable();
+		threadAttributes->setName("neighbor-enroller");
 		neighbors_enroller_ = new rina::Thread(&doNeighborsEnrollerWork,
 						      (void *) ipcp,
 						      threadAttributes);

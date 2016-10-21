@@ -281,6 +281,7 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 
 	rina::ThreadAttributes threadAttributes;
 	threadAttributes.setJoinable();
+	threadAttributes.setName("sysfs-sync");
 	kernel_sync = new KernelSyncTrigger(&threadAttributes, this, 4000);
 	kernel_sync->start();
 

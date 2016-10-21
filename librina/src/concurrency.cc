@@ -21,6 +21,7 @@
 //
 
 #include <cerrno>
+#include <pthread.h>
 #include <unistd.h>
 
 #define RINA_PREFIX "librina.concurrency"
