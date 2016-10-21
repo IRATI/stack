@@ -108,6 +108,7 @@ void TaskScheduler::runTasks() {
 			try {
 				ThreadAttributes threadAttributes;
 				threadAttributes.setDettached();
+				threadAttributes.setName("timer_task");
 				Thread *t = new Thread(&doWorkTask,
 						       (void *) (*iter_list),
 						       &threadAttributes);
