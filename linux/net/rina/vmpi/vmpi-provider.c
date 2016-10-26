@@ -39,6 +39,7 @@ struct vmpi_provider {
 static LIST_HEAD(providers);
 static struct mutex lock;
 
+/* To be called under lock. */
 static struct vmpi_provider*
 vmpi_search_instance_by_id(struct list_head *head, unsigned int provider,
                      unsigned int id)
@@ -53,6 +54,26 @@ vmpi_search_instance_by_id(struct list_head *head, unsigned int provider,
         }
 
         return NULL;
+}
+
+/* To be called under lock.
+ * This function looks for the lowest unused id. In future we could use a
+ * bitmap, but for now we stick to a simpler approach. */
+static unsigned int
+vmpi_alloc_id(void)
+{
+	struct vmpi_provider *elem;
+	unsigned int vid = 0;
+
+retry:
+	list_for_each_entry(elem, &providers, node) {
+		if (elem->id == vid) {
+			vid ++;
+			goto retry;
+		}
+	}
+
+	return vid;
 }
 
 int vmpi_provider_find_instance(unsigned int provider, int id,
@@ -80,8 +101,8 @@ int vmpi_provider_find_instance(unsigned int provider, int id,
 }
 EXPORT_SYMBOL_GPL(vmpi_provider_find_instance);
 
-int vmpi_provider_register(unsigned int provider, unsigned int id,
-                           const struct vmpi_ops *ops)
+int vmpi_provider_register(unsigned int provider, const struct vmpi_ops *ops,
+                           unsigned int *vid)
 {
         struct vmpi_provider *elem;
 
@@ -98,15 +119,15 @@ int vmpi_provider_register(unsigned int provider, unsigned int id,
 
         memset(elem, 0, sizeof(*elem));
         elem->provider = provider;
-        elem->id = id;
         elem->ops = *ops;
 
         mutex_lock(&lock);
+        *vid = elem->id = vmpi_alloc_id();
         list_add_tail(&elem->node, &providers);
         mutex_unlock(&lock);
 
         printk("%s: Provider %s:%u registered\n", __func__,
-               (provider == VMPI_PROVIDER_HOST) ? "HOST" : "GUEST", id);
+               (provider == VMPI_PROVIDER_HOST) ? "HOST" : "GUEST", *vid);
 
         return 0;
 }

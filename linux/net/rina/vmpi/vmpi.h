@@ -54,8 +54,8 @@ unsigned int vmpi_get_max_payload_size(void);
 int vmpi_provider_find_instance(unsigned int provider, int id,
                                 struct vmpi_ops *ops);
 
-int vmpi_provider_register(unsigned int provider, unsigned int id,
-                           const struct vmpi_ops *ops);
+int vmpi_provider_register(unsigned int provider, const struct vmpi_ops *ops,
+                           unsigned int *vid);
 
 int vmpi_provider_unregister(unsigned int provider, unsigned int id);
 
