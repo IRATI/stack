@@ -93,6 +93,7 @@ iodev_release(struct inode *inode, struct file *f)
 {
         struct iodev_priv *priv = f->private_data;
 
+        /* TODO possibly deallocate the flow */
         rkfree(priv);
 
         return 0;
@@ -102,6 +103,7 @@ static long
 iodev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 {
         struct kfa *kfa = kipcm_kfa(default_kipcm);
+        struct iodev_priv *priv = f->private_data;
         void __user *p = (void __user *)arg;
         struct irati_iodev_ctldata data;
 
@@ -118,6 +120,15 @@ iodev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
                 LOG_ERR("Cannot find flow for port id %d", data.port_id);
                 return -ENXIO;
         }
+
+        if (is_port_id_ok(priv->port_id)) {
+                LOG_ERR("Cannot bind to port %d, "
+                        "already bound to port id %d",
+                        data.port_id, priv->port_id);
+                return -EBUSY;
+        }
+
+        priv->port_id = data.port_id;
 
         LOG_DBG("Going to bind to port id %d", data.port_id);
 
