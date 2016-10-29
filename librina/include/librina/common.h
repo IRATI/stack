@@ -195,6 +195,9 @@ public:
 	/** The portId of the flow */
 	int portId;
 
+	/** File descriptor to access this flow */
+	int fd;
+
 	/** The name of the DIF where the flow has been allocated */
 	ApplicationProcessNamingInformation difName;
 
