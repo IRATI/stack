@@ -54,9 +54,42 @@ struct irati_iodev_ctldata {
 };
 
 static ssize_t
-iodev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
+iodev_write(struct file *f, const char __user *buffer, size_t size,
+            loff_t *ppos)
 {
-        return -ENXIO;
+        struct iodev_priv *priv = f->private_data;
+        ssize_t retval;
+        struct sdu *sdu;
+
+        LOG_DBG("Syscall write SDU (size = %zd, port-id = %d)",
+                        size, priv->port_id);
+
+        if (!buffer || !size) {
+                return -EINVAL;
+        }
+
+        /* NOTE: sdu_create takes the ownership of the buffer */
+        sdu = sdu_create(size);
+        if (!sdu) {
+                return -ENOMEM;
+        }
+        ASSERT(is_sdu_ok(sdu));
+
+        /* NOTE: We don't handle partial copies */
+        if (copy_from_user(sdu_buffer(sdu), buffer, size)) {
+                sdu_destroy(sdu);
+                return -EIO;
+        }
+
+        /* Passing ownership to the internal layers */
+        ASSERT(default_kipcm);
+        retval = kipcm_sdu_write(default_kipcm, priv->port_id, sdu);
+        if (retval < 0) {
+                /* NOTE: Do not destroy SDU, ownership isn't our anymore */
+                return retval;
+        }
+
+        return size;
 }
 
 static ssize_t
