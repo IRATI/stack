@@ -93,9 +93,50 @@ iodev_write(struct file *f, const char __user *buffer, size_t size,
 }
 
 static ssize_t
-iodev_read(struct file *f, char __user *buf, size_t len, loff_t *ppos)
+iodev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
 {
-        return -ENXIO;
+        struct iodev_priv *priv = f->private_data;
+        ssize_t retval;
+        struct sdu *tmp;
+        size_t retsize;
+
+        LOG_DBG("Syscall read SDU (size = %zd, port-id = %d)",
+                size, priv->port_id);
+
+        tmp = NULL;
+
+        ASSERT(default_kipcm);
+        retval = kipcm_sdu_read(default_kipcm, priv->port_id, &tmp);
+        /* Taking ownership from the internal layers */
+
+        LOG_DBG("SDU read returned %zd", retval);
+
+        if (retval < 0) {
+                return retval;
+        }
+
+        if (!is_sdu_ok(tmp)) {
+                return -EIO;
+        }
+
+        /* NOTE: We don't handle partial copies */
+        if (sdu_len(tmp) > size) {
+                LOG_ERR("Unhandled partial copy, SDU / Buffer size: %zd / %zd",
+                                sdu_len(tmp), size);
+                sdu_destroy(tmp);
+                return -EIO;
+        }
+
+        if (copy_to_user(buffer, sdu_buffer(tmp), sdu_len(tmp))) {
+                LOG_ERR("Error copying data to user-space");
+                sdu_destroy(tmp);
+                return -EIO;
+        }
+
+        retsize = sdu_len(tmp);
+        sdu_destroy(tmp);
+
+        return retsize;
 }
 
 static unsigned int
