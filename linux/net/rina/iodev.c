@@ -139,10 +139,25 @@ iodev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
         return retsize;
 }
 
+/* Conservative implementation: we always pretend to be ready.
+ * This needs to be implemented properly once it is possible to
+ * ask lower layers for the status of receive/send queues. */
 static unsigned int
 iodev_poll(struct file *f, poll_table *wait)
 {
+        struct iodev_priv *priv = f->private_data;
         unsigned int mask = 0;
+
+        if (!is_port_id_ok(priv->port_id)) {
+                return -ENXIO;
+        }
+
+        /* TODO check that receive queue is not empty */
+        mask |= POLLIN | POLLRDNORM;
+
+        /* TODO check that the IPCP can handle the SDU write */
+        mask |= POLLOUT | POLLWRNORM;
+
         return mask;
 }
 
