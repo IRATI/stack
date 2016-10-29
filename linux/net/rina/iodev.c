@@ -43,6 +43,11 @@ struct iodev_priv {
         port_id_t       port_id;
 };
 
+/* Data structure passed along with ioctl */
+struct irati_iodev_ctldata {
+        port_id_t       port_id;
+};
+
 static ssize_t
 iodev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
 {
@@ -89,9 +94,24 @@ iodev_release(struct inode *inode, struct file *f)
 }
 
 static long
-iodev_ioctl(struct file *f, unsigned int cmd, unsigned long flags)
+iodev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 {
-        return -EINVAL;
+        void __user *p = (void __user *)arg;
+        struct irati_iodev_ctldata data;
+
+        if (copy_from_user(&data, p, sizeof(data))) {
+                return -EFAULT;
+        }
+
+        if (!is_port_id_ok(data.port_id)) {
+                LOG_ERR("Bad port id %d", data.port_id);
+                return -EINVAL;
+        }
+
+        LOG_DBG("Going to bind to port id %d", data.port_id);
+        (void) data;
+
+        return 0;
 }
 
 static const struct file_operations irati_fops = {
