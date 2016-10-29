@@ -36,7 +36,12 @@
 #include "logs.h"
 #include "debug.h"
 #include "utils.h"
+#include "common.h"
 
+/* Private data to an iodev file instance. */
+struct iodev_priv {
+        port_id_t       port_id;
+};
 
 static ssize_t
 iodev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
@@ -60,12 +65,26 @@ iodev_poll(struct file *f, poll_table *wait)
 static int
 iodev_open(struct inode *inode, struct file *f)
 {
-        return -EBUSY;
+        struct iodev_priv *priv;
+
+        priv = rkzalloc(sizeof(*priv), GFP_KERNEL);
+        if (!priv) {
+                return -ENOMEM;
+        }
+
+        priv->port_id = port_id_bad();
+        f->private_data = priv;
+
+        return 0;
 }
 
 static int
 iodev_release(struct inode *inode, struct file *f)
 {
+        struct iodev_priv *priv = f->private_data;
+
+        rkfree(priv);
+
         return 0;
 }
 
