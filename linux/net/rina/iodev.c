@@ -37,6 +37,11 @@
 #include "debug.h"
 #include "utils.h"
 #include "common.h"
+#include "kipcm.h"
+#include "kfa.h"
+#include "kfa-utils.h"
+
+extern struct kipcm *default_kipcm;
 
 /* Private data to an iodev file instance. */
 struct iodev_priv {
@@ -96,6 +101,7 @@ iodev_release(struct inode *inode, struct file *f)
 static long
 iodev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 {
+        struct kfa *kfa = kipcm_kfa(default_kipcm);
         void __user *p = (void __user *)arg;
         struct irati_iodev_ctldata data;
 
@@ -108,8 +114,12 @@ iodev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
                 return -EINVAL;
         }
 
+        if (!kfa_flow_exists(kfa, data.port_id)) {
+                LOG_ERR("Cannot find flow for port id %d", data.port_id);
+                return -ENXIO;
+        }
+
         LOG_DBG("Going to bind to port id %d", data.port_id);
-        (void) data;
 
         return 0;
 }

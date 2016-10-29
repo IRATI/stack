@@ -1094,3 +1094,16 @@ flow_opts_t kfa_flow_opts(struct kfa *instance,
 	return flow->options;
 }
 EXPORT_SYMBOL(kfa_flow_opts);
+
+bool kfa_flow_exists(struct kfa *kfa, port_id_t port_id)
+{
+        struct ipcp_flow *flow;
+
+        spin_lock_bh(&kfa->lock);
+        flow = kfa_pmap_find(kfa->flows, port_id);
+        /* XXX check flow->state ? */
+        spin_unlock_bh(&kfa->lock);
+
+        return flow != NULL;
+}
+EXPORT_SYMBOL(kfa_flow_exists);

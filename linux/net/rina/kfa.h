@@ -72,4 +72,6 @@ flow_opts_t kfa_flow_opts(struct kfa *instance,
 			  port_id_t   pid);
 
 struct ipcp_instance *kfa_ipcp_instance(struct kfa *instance);
+
+bool kfa_flow_exists(struct kfa *kfa, port_id_t port_id);
 #endif /* RINA_KFA_H */
