@@ -30,6 +30,7 @@
 #include "kipcm.h"
 #include "utils.h"
 #include "rds/robjects.h"
+#include "iodev.h"
 
 #define MK_RINA_VERSION(MAJOR, MINOR, MICRO)                            \
         (((MAJOR & 0xFF) << 24) | ((MINOR & 0xFF) << 16) | (MICRO & 0xFFFF))
@@ -77,10 +78,19 @@ static int __init rina_core_init(void)
                 return -1;
         }
 
-	LOG_DBG("Initializing KIPCM");
-        if (kipcm_init(&core_object)) {
+        LOG_DBG("Initializing IODEV");
+        if (iodev_init()) {
                 rnl_exit();
-		robject_del(&core_object);
+                robject_del(&core_object);
+                rina_debug_exit();
+                return -1;
+        }
+
+        LOG_DBG("Initializing KIPCM");
+        if (kipcm_init(&core_object)) {
+                iodev_fini();
+                rnl_exit();
+                robject_del(&core_object);
                 rina_debug_exit();
                 return -1;
         }

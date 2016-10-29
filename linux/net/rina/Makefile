@@ -10,6 +10,7 @@ obj-$(CONFIG_RINA) +=						\
 	utils.o debug.o						\
 	rds/							\
 	core.o							\
+	iodev.o							\
 	rnl-utils.o rnl-workarounds.o rnl.o			\
 	buffer.o pci.o pdu.o sdu.o	        		\
 	ipcp-utils.o						\
