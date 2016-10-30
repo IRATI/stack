@@ -550,9 +550,19 @@ int Client::readSDU(void * sdu, int maxBytes, unsigned int timeout)
                         LOG_ERR("%s", oss.str().c_str());
                         return bytes_read;
                 }
+                /* XXX The ping application relies on the kernel returning EINTR,
+                 * and changes the EINTR in EAGAIN (see below). I cannot understand
+                 * what is the point of this. XXX THIS MUST CHANGE XXX. Why should
+                 * the kernel return EINTR if there is no packet to read ???
+                 * Apparently, for each write(), the ping application does a first
+                 * read() that reads the response, and then another read() that
+                 * returns EINTR, which is the used as an "indication" to proceed
+                 * with the next write(). XXX XXX XXX
+                 */
 		get_current_time(endtp);
 	} while ((unsigned) time_difference_in_ms(begintp, endtp) < timeout);
 
+	errno = EAGAIN;
 	return -1;
 }
 
