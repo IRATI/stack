@@ -81,12 +81,12 @@ public:
 };
 
 class ReadSDUWithTimeout {
-	int port_id;
+	int fd;
 public:
-	ReadSDUWithTimeout(int port_id, unsigned timeout) {
+	ReadSDUWithTimeout(int fd, unsigned timeout) {
 		if (timeout) {
 			long timeout2 = timeout;
-			this->port_id = -1;
+			this->fd = -1;
 			/* Timer with an interval of 1ms after the timeout is
 			 * elapsed, in case that the first signal happens
 			 * outside the syscall. */
@@ -96,16 +96,24 @@ public:
 			};
 			setitimer(ITIMER_REAL, &it, NULL);
 		} else {
-			this->port_id = port_id;
-			ipcManager->setFlowOptsBlocking(port_id, false);
+                        int ret;
+			this->fd = fd;
+                        ret = fcntl(fd, F_SETFL, O_NONBLOCK);
+                        if (ret) {
+                                LOG_ERR("Failed to set O_NONBLOCK flag");
+                        }
 		}
 	}
 	~ReadSDUWithTimeout() {
-		if (port_id < 0) {
+		if (fd < 0) {
 			itimerval it = { {0, 0}, {0, 0} };
 			setitimer(ITIMER_REAL, &it, NULL);
 		} else {
-			ipcManager->setFlowOptsBlocking(port_id, true);
+                        int ret;
+                        ret = fcntl(fd, F_SETFL, 0);
+                        if (ret) {
+                                LOG_ERR("Failed to clear O_NONBLOCK flag");
+                        }
 		}
 	}
 };
@@ -121,42 +129,45 @@ Client::Client(const string& t_type,
         quiet(q), echo_times(count),
         client_app_reg(registration), data_size(size), wait(w), gap(g),
         dealloc_wait(dw), lost_wait(lw), rate(rt),  snd(0), nsdus(0), m2(0),
-        sdus_received(0), min_rtt(LONG_MAX), max_rtt(0), average_rtt(0)		
+        sdus_received(0), min_rtt(LONG_MAX), max_rtt(0), average_rtt(0),
+        port_id(-1), fd(-1)
 {
 }
 
 void Client::run()
 {
-	int port_id = 0;
+        int ret;
 
 	cout << setprecision(5);
 
         if (client_app_reg) {
                 applicationRegister();
         }
-        port_id = createFlow();
-        if (port_id < 0) {
+        if (createFlow()) {
         	LOG_ERR("Problems creating flow, exiting");
         	return;
         }
 
 	Signal alarm(SIGALRM, Signal::dummy_handler);
 
-	ipcManager->setFlowOptsBlocking(port_id, true);
+        ret = fcntl(fd, F_SETFL, 0);
+        if (ret) {
+                LOG_ERR("Failed to clear O_NONBLOCK flag");
+        }
 
         if (test_type == "ping")
-        	pingFlow(port_id);
+        	pingFlow();
         else if (test_type == "perf")
-        	perfFlow(port_id);
+        	perfFlow();
         else if (test_type == "flood")
-                floodFlow(port_id);
+                floodFlow();
         else
         	LOG_ERR("Unknown test type '%s'", test_type.c_str());
 
         if (dealloc_wait > 0) {
         	sleep(dealloc_wait);
         }
-        destroyFlow(port_id);
+        destroyFlow();
 }
 
 int Client::createFlow()
@@ -201,7 +212,7 @@ int Client::createFlow()
                                               	      	           afrrevent->difName);
         if (flow.portId < 0) {
                 LOG_ERR("Failed to allocate a flow");
-                return flow.portId;
+                return -1;
         } else {
                 LOG_DBG("[DEBUG] Port id = %d", flow.portId);
         }
@@ -213,7 +224,10 @@ int Client::createFlow()
                      << time_difference_in_ms(begintp, endtp) << " ms" << endl;
         }
 
-        return flow.portId;
+        fd = flow.fd;
+        port_id = flow.portId;
+
+        return 0;
 }
 
 struct Ping {
@@ -249,7 +263,7 @@ struct Ping {
 	}
 };
 
-void Client::pingFlow(int port_id)
+void Client::pingFlow()
 {
 	Ping ping;
 	deque<Ping> sent;
@@ -270,43 +284,38 @@ void Client::pingFlow(int port_id)
 	for (ping.seq = 0; ping.seq < echo_times; ping.seq++) {
 		bool bad_response;
         	int bytes_read = 0;
+                int ret;
 
 		ping.fill(buffer, data_size);
 		get_current_time(ping.begintp);
 		sent.push_back(ping);
 
-        	try {
-        		ipcManager->writeSDU(port_id, buffer, data_size);
-        	} catch (rina::FlowNotAllocatedException &e) {
-        		LOG_ERR("Flow has been deallocated");
-        		break;
-        	} catch (rina::UnknownFlowException &e) {
-        		LOG_ERR("Flow does not exist");
-        		break;
-        	} catch (rina::Exception &e) {
-        		LOG_ERR("Problems writing SDU to flow, continuing");
-        		continue;
-        	}
+        	ret = write(fd, buffer, data_size);
+                if (ret != (int)data_size) {
+                        if (errno == EAGAIN) {
+                                continue;
+                        }
+                        ostringstream oss;
+
+                        oss << "write() error: ";
+                        if (ret < 0) {
+                                oss << strerror(errno);
+                        } else {
+                                oss << "partial write " << ret <<
+                                        "/" << data_size;
+                        }
+                        LOG_ERR("%s", oss.str().c_str());
+                        break;
+                }
 
         	sdus_sent ++;
 
 		bool read_late = false;
 	read:
-        	try {
-			bytes_read = readSDU(port_id, buffer, data_size,
-				read_late ? wait : lost_wait);
-        	} catch (rina::FlowAllocationException &e) {
-        		LOG_ERR("Flow has been deallocated");
-        		break;
-        	} catch (rina::UnknownFlowException &e) {
-        		LOG_ERR("Flow does not exist");
-        		break;
-        	} catch (rina::Exception &e) {
-        		LOG_ERR("Problems reading SDU from flow, continuing");
-        		continue;
-        	}
+                bytes_read = readSDU(buffer, data_size,
+                        read_late ? wait : lost_wait);
 
-		if (bytes_read == -EAGAIN) {
+		if (bytes_read < 0 && errno == EAGAIN) {
 			if (!read_late) {
 				LOG_WARN("Timeout waiting for reply, SDU maybe lost");
 			}
@@ -367,7 +376,7 @@ void Client::pingFlow(int port_id)
         delete [] buffer;
 }
 
-void Client::floodFlow(int port_id)
+void Client::floodFlow()
 {
 	unsigned long sdus_sent = 0;
 	double variance = 0, stdev = 0;
@@ -377,23 +386,22 @@ void Client::floodFlow(int port_id)
 	double current_rtt = 0;
 	unsigned char *buffer2 = new unsigned char[data_size];
 
-	snd = startSender(port_id);
+	snd = startSender();
 	cout << "Sender started" << endl;
 	while(true) {
 		int bytes_read = 0;
 
-		try {
-			bytes_read = ipcManager->readSDU(port_id, buffer2, data_size);
-		} catch (rina::FlowAllocationException &e) {
-			LOG_ERR("Flow has been deallocated");
-			break;
-		} catch (rina::UnknownFlowException &e) {
-			LOG_ERR("Flow does not exist");
-			break;
-		} catch (rina::Exception &e) {
-			LOG_ERR("Problems reading SDU from flow, continuing");
-			continue;
-		}
+		bytes_read = read(fd, buffer2, data_size);
+                if (bytes_read < 0) {
+                        if (errno == EAGAIN) {
+                                continue;
+                        }
+                        ostringstream oss;
+
+                        oss << "read() error: " << strerror(errno);
+                        LOG_ERR("%s", oss.str().c_str());
+                        break;
+                }
 
 		get_current_time(endtp);
 
@@ -463,7 +471,7 @@ void Client::floodFlow(int port_id)
 	delete [] buffer2;
 }
 
-void Client::perfFlow(int port_id)
+void Client::perfFlow()
 {
         char *buffer;
         unsigned long n = 0;
@@ -480,14 +488,29 @@ void Client::perfFlow(int port_id)
         }
 
         while (n < echo_times) {
-                ipcManager->writeSDU(port_id, buffer, data_size);
+        	int ret = write(fd, buffer, data_size);
+                if (ret != (int)data_size) {
+                        if (errno == EAGAIN) {
+                                continue;
+                        }
+                        ostringstream oss;
+
+                        oss << "write() error: ";
+                        if (ret < 0) {
+                                oss << strerror(errno);
+                        } else {
+                                oss << "partial write " << ret <<
+                                        "/" << data_size;
+                        }
+                        LOG_ERR("%s", oss.str().c_str());
+                }
                 n++;
         }
 
         delete [] buffer;
 }
 
-void Client::destroyFlow(int port_id)
+void Client::destroyFlow()
 {
         DeallocateFlowResponseEvent *resp = NULL;
         unsigned int seqnum;
@@ -510,22 +533,30 @@ void Client::destroyFlow(int port_id)
         if (snd) delete snd;
 }
 
-int Client::readSDU(int portId, void * sdu, int maxBytes, unsigned int timeout)
+int Client::readSDU(void * sdu, int maxBytes, unsigned int timeout)
 {
 	timespec begintp, endtp;
 	get_current_time(begintp);
-	ReadSDUWithTimeout _(portId, timeout);
+	ReadSDUWithTimeout _(fd, timeout);
 	do {
-		int bytes_read = ipcManager->readSDU(portId, sdu, maxBytes);
-		if (bytes_read != -EINTR)
-			return bytes_read;
+		int bytes_read = read(fd, sdu, maxBytes);
+                if (bytes_read >= 0 || errno == EAGAIN) {
+                        return bytes_read;
+                }
+                if (errno != EINTR) {
+                        ostringstream oss;
+
+                        oss << "read() error: " << strerror(errno);
+                        LOG_ERR("%s", oss.str().c_str());
+                        return bytes_read;
+                }
 		get_current_time(endtp);
 	} while ((unsigned) time_difference_in_ms(begintp, endtp) < timeout);
 
-	return -EAGAIN;
+	return -1;
 }
 
-Sender * Client::startSender(int port_id)
+Sender * Client::startSender()
 {
         rina::ThreadAttributes threadAttributes;
         Sender * sender = new Sender(&threadAttributes,
@@ -535,6 +566,7 @@ Sender * Client::startSender(int port_id)
                                      lost_wait,
                                      rate,
                                      port_id,
+                                     fd,
                                      this);
 
         sender->start();
@@ -562,7 +594,7 @@ void Client::set_maxTP(timespec tp)
         maxtp = tp;
 }
 
-void Client::cancelFloodFlow(int port_id)
+void Client::cancelFloodFlow()
 {
         try {
         	ipcManager->requestFlowDeallocation(port_id);
@@ -571,7 +603,7 @@ void Client::cancelFloodFlow(int port_id)
         }
 }
 
-void Client::startCancelFloodFlowTask(int port_id)
+void Client::startCancelFloodFlowTask()
 {
 	cflood_task = new CFloodCancelFlowTimerTask(port_id, this);
 	timer.scheduleTask(cflood_task, lost_wait);
@@ -589,7 +621,7 @@ CFloodCancelFlowTimerTask::CFloodCancelFlowTimerTask(int pid, Client * cl)
 
 void CFloodCancelFlowTimerTask::run()
 {
-	client->cancelFloodFlow(port_id);
+	client->cancelFloodFlow();
 }
 
 Sender::Sender(rina::ThreadAttributes * threadAttributes,
@@ -597,12 +629,12 @@ Sender::Sender(rina::ThreadAttributes * threadAttributes,
                    unsigned int data_size,
                    int dealloc_wait,
                    unsigned int lost_wait,
-                   int rt,
-                   int port_id,
+                   int rt, int port_id,
+                   int fd,
                    Client * client) : SimpleThread(threadAttributes),
            echo_times(echo_times), data_size(data_size),
            dealloc_wait(dealloc_wait), lost_wait(lost_wait), rate(rt),
-           port_id(port_id), client(client)
+           port_id(port_id), fd(fd), client(client)
 {
 }
 
@@ -665,21 +697,27 @@ int Sender::run(void)
 	get_current_time(mintp);
 	timespec next = mintp;
 	for (unsigned long n = 0; n < echo_times; n++) {
+                int ret;
 		memcpy(buffer, &n, sizeof(n));
 
 		get_current_time(begintp);
-		try {
-			ipcManager->writeSDU(port_id, buffer, data_size);
-		} catch (rina::FlowNotAllocatedException &e) {
-			LOG_ERR("Flow has been deallocated");
-			break;
-		} catch (rina::UnknownFlowException &e) {
-			LOG_ERR("Flow does not exist");
-			break;
-		} catch (rina::Exception &e) {
-			LOG_ERR("Problems writing SDU to flow, continuing");
-			continue;
-		}
+		ret = write(fd, buffer, data_size);
+                if (ret != (int)data_size) {
+                        if (errno == EAGAIN) {
+                                continue;
+                        }
+                        ostringstream oss;
+
+                        oss << "write() error: ";
+                        if (ret < 0) {
+                                oss << strerror(errno);
+                        } else {
+                                oss << "partial write " << ret <<
+                                        "/" << data_size;
+                        }
+                        LOG_ERR("%s", oss.str().c_str());
+                        break;
+                }
 
 		client->map_push(n, begintp);
 		sdus_sent++;
@@ -696,7 +734,7 @@ int Sender::run(void)
 	cout << "ENDED sending. SDUs sent: "<< sdus_sent << "; in TIME: " <<
 			time_difference_in_ms(mintp, maxtp) << " ms" <<endl;
 
-	client->startCancelFloodFlowTask(port_id);
+	client->startCancelFloodFlowTask();
 
 	return 0;
 }

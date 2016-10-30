@@ -56,6 +56,7 @@ public:
                  unsigned int lost_wait,
                  int rate,
                  int port_id,
+                 int fd,
                  Client * client);
         ~Sender() throw() {};
         int run();
@@ -66,6 +67,7 @@ private:
         unsigned int lost_wait;
         int rate;
         int port_id;
+        int fd;
         Client * client;
 };
 
@@ -87,19 +89,19 @@ public:
                unsigned int lw,
                int rt);
        void run();
-       int readSDU(int portId, void * sdu, int maxBytes, unsigned int timout);
+       int readSDU(void * sdu, int maxBytes, unsigned int timout);
        void map_push(unsigned long sn, timespec tp);
        void set_sdus(unsigned long n);
        void set_maxTP(timespec tp);
-       void cancelFloodFlow(int port_id);
-       void startCancelFloodFlowTask(int port_id);
+       void cancelFloodFlow();
+       void startCancelFloodFlowTask();
        ~Client();
 protected:
         int createFlow();
-        void pingFlow(int port_id);
-        void perfFlow(int port_id);
-        void floodFlow(int port_id);
-        void destroyFlow(int port_id);
+        void pingFlow();
+        void perfFlow();
+        void floodFlow();
+        void destroyFlow();
 
 private:
         std::string test_type;
@@ -116,7 +118,7 @@ private:
         unsigned int lost_wait;
         int rate;
         rina::Sleep sleep_wrapper;
-        Sender * startSender(int port_id);
+        Sender * startSender();
         rina::Lockable lock;
         std::map<unsigned long, timespec> m;
         Sender * snd;
@@ -129,5 +131,7 @@ private:
         timespec maxtp;
         rina::Timer timer;
         CFloodCancelFlowTimerTask * cflood_task;
+        int port_id;
+        int fd;
 };
 #endif//ET_CLIENT_HPP
