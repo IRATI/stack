@@ -205,7 +205,7 @@ iodev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
                 return -EINVAL;
         }
 
-        if (!kfa_flow_exists(kfa, data.port_id)) {
+        if (0 /* TODO */ && !kfa_flow_exists(kfa, data.port_id)) {
                 LOG_ERR("Cannot find flow for port id %d", data.port_id);
                 return -ENXIO;
         }
