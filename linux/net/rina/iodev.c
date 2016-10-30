@@ -58,6 +58,7 @@ iodev_write(struct file *f, const char __user *buffer, size_t size,
             loff_t *ppos)
 {
         struct iodev_priv *priv = f->private_data;
+        bool blocking = !(f->f_flags & O_NONBLOCK);
         ssize_t retval;
         struct sdu *sdu;
 
@@ -83,7 +84,9 @@ iodev_write(struct file *f, const char __user *buffer, size_t size,
 
         /* Passing ownership to the internal layers */
         ASSERT(default_kipcm);
+        (void)blocking;
         retval = kipcm_sdu_write(default_kipcm, priv->port_id, sdu);
+        LOG_DBG("SDU write returned %zd", retval);
         if (retval < 0) {
                 /* NOTE: Do not destroy SDU, ownership isn't our anymore */
                 return retval;
@@ -96,6 +99,7 @@ static ssize_t
 iodev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
 {
         struct iodev_priv *priv = f->private_data;
+        bool blocking = !(f->f_flags & O_NONBLOCK);
         ssize_t retval;
         struct sdu *tmp;
         size_t retsize;
@@ -106,6 +110,7 @@ iodev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
         tmp = NULL;
 
         ASSERT(default_kipcm);
+        (void)blocking;
         retval = kipcm_sdu_read(default_kipcm, priv->port_id, &tmp);
         /* Taking ownership from the internal layers */
 
