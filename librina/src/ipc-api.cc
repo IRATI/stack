@@ -709,6 +709,7 @@ void IPCManager::flowDeallocationResult(int portId, bool success)
         }
 
         if (success) {
+                close(flow->fd);
                 allocatedFlows.erase(portId);
                 delete flow;
         } else {
@@ -727,6 +728,7 @@ void IPCManager::flowDeallocated(int portId)
 		throw FlowDeallocationException("Unknown flow");
 	}
 
+        close(flow->fd);
 	allocatedFlows.erase(portId);
 	delete flow;
 }
