@@ -219,7 +219,7 @@ iodev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 
         priv->port_id = data.port_id;
 
-        LOG_DBG("Going to bind to port id %d", data.port_id);
+        LOG_DBG("Bound to port id %d", data.port_id);
 
         return 0;
 }
