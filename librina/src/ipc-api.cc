@@ -24,6 +24,8 @@
 #include <cstring>
 #include <errno.h>
 #include <stdexcept>
+#include <fcntl.h>
+#include <stropts.h>
 
 #define RINA_PREFIX "librina.ipc-api"
 
@@ -298,6 +300,7 @@ FlowInformation IPCManager::internalAllocateFlowResponse(
         flow->difName = flowRequestEvent.DIFName;
         flow->portId = flowRequestEvent.portId;
 
+        initIodev(flow, flowRequestEvent.portId);
 	setFlowOptsBlocking(flow->portId, blocking);
         allocatedFlows[flowRequestEvent.portId] = flow;
 
@@ -517,18 +520,39 @@ unsigned int IPCManager::requestFlowAllocationInDIF(
                         remoteAppName, difName, 0, flowSpec);
 }
 
+void IPCManager::initIodev(FlowInformation *flow, int portId)
+{
+        struct irati_iodev_ctldata iodata;
+
+        flow->fd = open("/dev/irati", O_RDWR);
+        if (flow->fd < 0) {
+                std::ostringstream oss;
+                oss << "Cannot open /dev/irati [" << strerror(errno) << "]";
+                throw FlowAllocationException(oss.str());
+        }
+
+        iodata.port_id = (uint32_t)portId;
+        if (ioctl(flow->fd, 0 /* TODO */, &iodata)) {
+                std::ostringstream oss;
+                oss << "Cannot bind port id " << iodata.port_id <<
+                        " on /dev/irati [" << strerror(errno) << "]";
+                throw FlowAllocationException(oss.str());
+        }
+}
+
 FlowInformation IPCManager::commitPendingFlow(unsigned int sequenceNumber,
 				   	      int portId,
 				              const ApplicationProcessNamingInformation& DIFName)
 {
         FlowInformation * flow;
-
         WriteScopedLock writeLock(flows_rw_lock);
 
         flow = getPendingFlow(sequenceNumber);
         if (flow == 0) {
-                throw FlowDeallocationException(IPCManager::unknown_flow_error);
+                throw FlowAllocationException(IPCManager::unknown_flow_error);
         }
+
+        initIodev(flow, portId);
 
         pendingFlows.erase(sequenceNumber);
 

@@ -760,6 +760,13 @@ public:
 };
 
 /**
+ * Data structure passed along with ioctl on /dev/irati.
+ */
+struct irati_iodev_ctldata {
+        uint32_t port_id;
+};
+
+/**
  * Initialize librina providing the local Netlink port-id where this librina
  * instantiation will be bound
  * @param localPort NL port used by this instantiation of librina

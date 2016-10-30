@@ -265,6 +265,12 @@ protected:
 						     unsigned short ipcProcessId,
 						     bool blocking = true);
 
+        /**
+         * Open IRATI io device and bind it to the port id provided
+         * as an argument.
+         */
+        void initIodev(FlowInformation *flow, int portId);
+
 public:
 	IPCManager();
 	virtual ~IPCManager() throw();

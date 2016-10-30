@@ -50,7 +50,7 @@ struct iodev_priv {
 
 /* Data structure passed along with ioctl */
 struct irati_iodev_ctldata {
-        port_id_t       port_id;
+        uint32_t port_id;
 };
 
 static ssize_t
