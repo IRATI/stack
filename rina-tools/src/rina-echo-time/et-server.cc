@@ -29,6 +29,9 @@
 #include <time.h>
 #include <signal.h>
 #include <time.h>
+#include <sstream>
+#include <cstring>
+#include <errno.h>
 
 #define RINA_PREFIX     "rina-echo-app"
 #include <librina/logs.h>
@@ -40,29 +43,26 @@ using namespace std;
 using namespace rina;
 
 EchoTimeServerWorker::EchoTimeServerWorker(ThreadAttributes * threadAttributes,
-					   const std::string& type,
-			   	   	   int port,
+					   const std::string& test_type,
+			   	   	   int port_id, int fd,
 			   	   	   int deallocate_wait,
-			   	   	   int inter,
-			   	   	   unsigned int max_buf_size,
-			   	   	   Server * serv) : ServerWorker(threadAttributes, serv)
+			   	   	   int interval,
+			   	   	   unsigned int max_buffer_size,
+			   	   	   Server * serv) : ServerWorker(threadAttributes, serv),
+                                                test_type(test_type), port_id(port_id), fd(fd),
+                                                dw(deallocate_wait), interval(interval),
+                                                max_buffer_size(max_buffer_size), last_task(0)
 {
-	test_type = type;
-	port_id = port;
-	dw = deallocate_wait;
-	interval = inter;
-	max_buffer_size = max_buf_size;
-	last_task = 0;
 }
 
 int EchoTimeServerWorker::internal_run()
 {
         if (test_type == "ping")
-                servePingFlow(port_id);
+                servePingFlow();
         else if (test_type == "perf")
-                servePerfFlow(port_id);
+                servePerfFlow();
         else if (test_type == "flood")
-                serveFloodFlow(port_id);
+                serveFloodFlow();
         else {
                 /* This should not happen. The error condition
                  * must be catched before this point. */
@@ -74,7 +74,7 @@ int EchoTimeServerWorker::internal_run()
         return 0;
 }
 
-void EchoTimeServerWorker::servePingFlow(int port_id)
+void EchoTimeServerWorker::servePingFlow()
 {
         char *buffer = new char[max_buffer_size];
 
@@ -84,21 +84,27 @@ void EchoTimeServerWorker::servePingFlow(int port_id)
         	timer.scheduleTask(last_task, dw);
         }
 
-        try {
-                for(;;) {
-                        int bytes_read = ipcManager->readSDU(port_id,
-                        				     buffer,
-                                                             max_buffer_size);
-                        ipcManager->writeSDU(port_id, buffer, bytes_read);
-                        if (dw > 0 && last_task) {
-                                timer.cancelTask(last_task);
-                        	last_task = new CancelFlowTimerTask(port_id, this);
-                        	timer.scheduleTask(last_task, dw);
-                        }
+        for(;;) {
+                int bytes_read = read(fd, buffer, max_buffer_size);
+                int ret;
+                if (bytes_read < 0) {
+                        ostringstream oss;
+                        oss << "read() error: " << strerror(errno);
+                        LOG_ERR("%s", oss.str().c_str());
+                        break;
                 }
-        } catch(rina::IPCException &e) {
-                // This thread was blocked in the readSDU() function
-                // when the flow gets deallocated
+                ret = write(fd, buffer, bytes_read);
+                if (ret != bytes_read) {
+                        ostringstream oss;
+                        oss << "write() error: " << strerror(errno);
+                        LOG_ERR("%s", oss.str().c_str());
+                        break;
+                }
+                if (dw > 0 && last_task) {
+                        timer.cancelTask(last_task);
+                        last_task = new CancelFlowTimerTask(port_id, this);
+                        timer.scheduleTask(last_task, dw);
+                }
         }
 
         if  (dw > 0 && last_task) {
@@ -108,7 +114,7 @@ void EchoTimeServerWorker::servePingFlow(int port_id)
         delete [] buffer;
 }
 
-void EchoTimeServerWorker::serveFloodFlow(int port_id)
+void EchoTimeServerWorker::serveFloodFlow()
 {
         char *buffer = new char[max_buffer_size];
 
@@ -118,22 +124,27 @@ void EchoTimeServerWorker::serveFloodFlow(int port_id)
                 timer.scheduleTask(last_task, dw);
         }
 
-        try {
-                for(;;) {
-                        int bytes_read = ipcManager->readSDU(port_id,
-                                                             buffer,
-                                                             max_buffer_size);
-
-                        ipcManager->writeSDU(port_id, buffer, bytes_read);
-                        if (dw > 0 && last_task) {
-                                timer.cancelTask(last_task);
-                                last_task = new CancelFlowTimerTask(port_id, this);
-                                timer.scheduleTask(last_task, dw);
-                        }
+        for(;;) {
+                int bytes_read = read(fd, buffer, max_buffer_size);
+                int ret;
+                if (bytes_read < 0) {
+                        ostringstream oss;
+                        oss << "read() error: " << strerror(errno);
+                        LOG_ERR("%s", oss.str().c_str());
+                        break;
                 }
-        } catch(rina::IPCException &e) {
-                // This thread was blocked in the readSDU() function
-                // when the flow gets deallocated
+                ret = write(fd, buffer, bytes_read);
+                if (ret != bytes_read) {
+                        ostringstream oss;
+                        oss << "write() error: " << strerror(errno);
+                        LOG_ERR("%s", oss.str().c_str());
+                        break;
+                }
+                if (dw > 0 && last_task) {
+                        timer.cancelTask(last_task);
+                        last_task = new CancelFlowTimerTask(port_id, this);
+                        timer.scheduleTask(last_task, dw);
+                }
         }
 
         if  (dw > 0 && last_task) {
@@ -150,7 +161,7 @@ timespec_diff_us(const struct timespec& before, const struct timespec& later)
                         (later.tv_nsec - before.tv_nsec))/1000;
 }
 
-void EchoTimeServerWorker::servePerfFlow(int port_id)
+void EchoTimeServerWorker::servePerfFlow()
 {
         unsigned long int us;
         unsigned long tot_us = 0;
@@ -173,7 +184,7 @@ void EchoTimeServerWorker::servePerfFlow(int port_id)
         try {
                 clock_gettime(CLOCK_REALTIME, &last_timestamp);
                 for(;;) {
-                        sdu_size = ipcManager->readSDU(port_id, buffer, max_buffer_size);
+                        sdu_size = read(fd, buffer, max_buffer_size);
                         if (sdu_size <= 0) {
                                 break;
                         }
@@ -258,6 +269,7 @@ ServerWorker * EchoTimeServer::internal_start_worker(rina::FlowInformation flow)
         EchoTimeServerWorker * worker = new EchoTimeServerWorker(&threadAttributes,
         		    	    	         	 	 test_type,
         		    	    	         	 	 flow.portId,
+                                                                 flow.fd,
         		    	    	         	 	 dw,
         		    	    	         	 	 interval,
         		    	    	         	 	 max_buffer_size,

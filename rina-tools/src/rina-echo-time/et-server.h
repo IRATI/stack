@@ -34,7 +34,7 @@ class EchoTimeServerWorker : public ServerWorker {
 public:
 	EchoTimeServerWorker(rina::ThreadAttributes * threadAttributes,
 			     const std::string& test_type,
-			     int port_id,
+			     int port_id, int fd,
 			     int deallocate_wait,
 			     int inter,
 			     unsigned int max_buffer_size,
@@ -43,15 +43,16 @@ public:
 	int internal_run();
 
 private:
-        void servePingFlow(int port_id);
-        void servePerfFlow(int port_id);
-        void serveFloodFlow(int port_id);
+        void servePingFlow();
+        void servePerfFlow();
+        void serveFloodFlow();
         void printPerfStats(unsigned long pkt,
         		    unsigned long bytes,
         		    unsigned long us);
 
         std::string test_type;
         int port_id;
+        int fd;
         int dw;
         int interval;
         unsigned int max_buffer_size;
