@@ -2135,7 +2135,8 @@ EXPORT_SYMBOL(kipcm_find_ipcp);
 /* ONLY USED BY APPS */
 int kipcm_sdu_write(struct kipcm * kipcm,
                     port_id_t      port_id,
-                    struct sdu *   sdu)
+                    struct sdu *   sdu,
+                    bool blocking)
 {
         struct ipcp_instance * kfa_ipcp;
 
@@ -2164,7 +2165,7 @@ int kipcm_sdu_write(struct kipcm * kipcm,
         /* The SDU is ours */
         return kfa_ipcp->ops->sdu_write(kfa_ipcp->data,
         				port_id,
-        				sdu);
+        				sdu, blocking);
 }
 
 int kipcm_sdu_read(struct kipcm * kipcm,

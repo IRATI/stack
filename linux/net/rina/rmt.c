@@ -633,7 +633,7 @@ static int n1_port_write_sdu(struct rmt *rmt,
 	LOG_DBG("Gonna send SDU to port-id %d", n1_port->port_id);
 	ret = n1_port->n1_ipcp->ops->sdu_write(n1_port->n1_ipcp->data,
 					       n1_port->port_id,
-					       sdu);
+					       sdu, true);
 	if (!ret)
 		return (int) bytes;
 

@@ -256,7 +256,7 @@ SYSCALL_DEFINE3(sdu_write,
 	}
 
 	/* Passing ownership to the internal layers */
-	CALL_KIPCM(retval, sdu_write, id, sdu);
+	CALL_KIPCM(retval, sdu_write, id, sdu, true);
 	if (retval < 0) {
 		SYSCALL_DUMP_EXIT;
 		/* NOTE: Do not destroy SDU, ownership isn't our anymore */

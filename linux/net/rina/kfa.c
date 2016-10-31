@@ -419,7 +419,8 @@ static int enable_write(struct ipcp_instance_data *data, port_id_t id)
 
 int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 		       port_id_t		  id,
-		       struct sdu                *sdu)
+		       struct sdu                *sdu,
+                       bool                      blocking)
 {
 	struct ipcp_flow     *flow;
 	struct ipcp_instance *ipcp;
@@ -469,7 +470,7 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 
 	atomic_inc(&flow->writers);
 
-	if (!(flow->options & FLOW_O_NONBLOCK)) { /* blocking I/O */
+	if (blocking) { /* blocking I/O */
 		while (!ok_write(flow)) {
 			spin_unlock_bh(&instance->lock);
 
@@ -525,7 +526,7 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 		ASSERT(ipcp->ops->sdu_write);
 
 		spin_unlock_bh(&instance->lock);
-		if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
+		if (ipcp->ops->sdu_write(ipcp->data, id, sdu, blocking)) {
 			LOG_ERR("Couldn't write SDU on port-id %d", id);
 			retval = -EIO;
 		}
@@ -555,7 +556,7 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 		ASSERT(ipcp->ops->sdu_write);
 
 		spin_unlock_bh(&instance->lock);
-		if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
+		if (ipcp->ops->sdu_write(ipcp->data, id, sdu, blocking)) {
 			LOG_ERR("Couldn't write SDU on port-id %d", id);
 			retval = -EIO;
 		}

@@ -1096,7 +1096,8 @@ shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
 static int
 shim_hv_sdu_write(struct ipcp_instance_data *   priv,
 		  port_id_t 		        port_id,
-                  struct vmpi_buf *	       	vb)
+                  struct vmpi_buf *	        vb,
+                  bool                          blocking)
 {
         unsigned int ch = port_id_to_channel(priv, port_id);
         int ret;

@@ -84,8 +84,7 @@ iodev_write(struct file *f, const char __user *buffer, size_t size,
 
         /* Passing ownership to the internal layers */
         ASSERT(default_kipcm);
-        (void)blocking;
-        retval = kipcm_sdu_write(default_kipcm, priv->port_id, sdu);
+        retval = kipcm_sdu_write(default_kipcm, priv->port_id, sdu, blocking);
         LOG_DBG("SDU write returned %zd", retval);
         if (retval < 0) {
                 /* NOTE: Do not destroy SDU, ownership isn't our anymore */

@@ -54,7 +54,8 @@ int            kipcm_ipc_destroy(struct kipcm *   kipcm,
 /* If successful: takes the ownership of the SDU */
 int            kipcm_sdu_write(struct kipcm * kipcm,
                                port_id_t      id,
-                               struct sdu *   sdu);
+                               struct sdu *   sdu,
+                               bool blocking);
 /* If successful: passes the ownership of the SDU */
 int            kipcm_sdu_read(struct kipcm * kipcm,
                               port_id_t      id,
