@@ -173,7 +173,7 @@ SYSCALL_DEFINE3(sdu_read,
 
 	tmp = NULL;
 
-	CALL_KIPCM(retval, sdu_read, id, &tmp);
+	CALL_KIPCM(retval, sdu_read, id, &tmp, true);
 	/* Taking ownership from the internal layers */
 
 	LOG_DBG("Personality returned value %zd", retval);

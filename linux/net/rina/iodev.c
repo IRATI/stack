@@ -109,8 +109,7 @@ iodev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
         tmp = NULL;
 
         ASSERT(default_kipcm);
-        (void)blocking;
-        retval = kipcm_sdu_read(default_kipcm, priv->port_id, &tmp);
+        retval = kipcm_sdu_read(default_kipcm, priv->port_id, &tmp, blocking);
         /* Taking ownership from the internal layers */
 
         LOG_DBG("SDU read returned %zd", retval);

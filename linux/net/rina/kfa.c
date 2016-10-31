@@ -603,7 +603,8 @@ static bool queue_ready(struct ipcp_flow *flow)
 
 int kfa_flow_sdu_read(struct kfa  *instance,
 		      port_id_t	   id,
-		      struct sdu **sdu)
+		      struct sdu **sdu,
+                      bool blocking)
 {
 	struct ipcp_flow *flow;
 	int		  retval = 0;
@@ -639,7 +640,7 @@ int kfa_flow_sdu_read(struct kfa  *instance,
 
 	atomic_inc(&flow->readers);
 
-	if (!(flow->options & FLOW_O_NONBLOCK)) { /* blocking I/O */
+	if (blocking) { /* blocking I/O */
 		while (flow->state == PORT_STATE_PENDING ||
 				rfifo_is_empty(flow->sdu_ready)) {
 			spin_unlock_bh(&instance->lock);
