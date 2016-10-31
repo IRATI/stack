@@ -25,7 +25,7 @@
 #include "ipcp-factories.h"
 #include "ipcp-instances.h"
 #include "ps-factory.h"
-#include "pdu-ser.h"
+#include "pci.h"
 
 /** An SDU Protection module sub-component */
 struct sdup_comp {
@@ -107,10 +107,6 @@ int sdup_set_policy_set_param(struct sdup_port * sdup_port,
                               const char * name,
                               const char * value);
 
-bool pdu_ser_data_and_length(struct pdu_ser * pdu,
-		             unsigned char ** data,
-		             ssize_t *        len);
-
 int sdup_config_set(struct sdup *        instance,
 		    struct sdup_config * sdup_config);
 
@@ -128,18 +124,16 @@ struct sdup_port * sdup_init_port_config(struct sdup * instance,
 int sdup_destroy_port_config(struct sdup_port * instance);
 
 int sdup_protect_pdu(struct sdup_port * instance,
-		     struct pdu_ser * pdu);
+		     struct pdu * pdu);
 
 int sdup_unprotect_pdu(struct sdup_port * instance,
-		       struct pdu_ser * pdu);
+		       struct pdu * pdu);
 
 int sdup_set_lifetime_limit(struct sdup_port * instance,
-			    struct pdu_ser * pdu,
-			    struct pci * pci);
+			    struct pdu * pdu);
 
 int sdup_get_lifetime_limit(struct sdup_port * instance,
-			    struct pdu_ser * pdu,
-			    size_t * ttl);
+			    struct pdu * pdu);
 
 int sdup_dec_check_lifetime_limit(struct sdup_port * instance,
 				  struct pdu * pdu);

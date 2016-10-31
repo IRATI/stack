@@ -325,16 +325,16 @@ struct efcp_config * efcp_container_config(struct efcp_container * container)
 }
 EXPORT_SYMBOL(efcp_container_config);
 
-int efcp_container_config_set(struct efcp_config *    efcp_config,
-                              struct efcp_container * container)
+int efcp_container_config_set(struct efcp_container * container,
+			      struct efcp_config *    efcp_cfg)
 {
-        if (!efcp_config || !container) {
+        if (!efcp_cfg || !efcp_cfg->dt_cons || !container) {
                 LOG_ERR("Bogus input parameters, bailing out");
                 return -1;
         }
 
-        container->config = efcp_config;
-
+	efcp_cfg->pci_offset_table = pci_offset_table_create(efcp_cfg->dt_cons);
+        container->config = efcp_cfg;
         LOG_DBG("Succesfully set EFCP config to EFCP container");
 
         return 0;
@@ -399,7 +399,7 @@ int efcp_container_write(struct efcp_container * container,
         struct efcp * tmp;
         int           ret;
 
-        if (!container || !sdu_is_ok(sdu)) {
+        if (!container || !is_sdu_ok(sdu)) {
                 LOG_ERR("Bogus input parameters, cannot write into container");
                 sdu_destroy(sdu);
                 return -1;
@@ -409,6 +409,12 @@ int efcp_container_write(struct efcp_container * container,
                 sdu_destroy(sdu);
                 return -1;
         }
+
+	if (sdu_efcp_config_bind(sdu, container->config)) {
+		LOG_ERR("Could not bind EFCP config to incoming SDU");
+		sdu_destroy(sdu);
+		return -1;
+	}
 
         spin_lock_bh(&container->lock);
         tmp = efcp_imap_find(container->instances, cep_id);
@@ -972,15 +978,8 @@ int efcp_enqueue(struct efcp * efcp,
                  port_id_t     port,
                  struct sdu *  sdu)
 {
-        if (!sdu_is_ok(sdu)) {
-                LOG_ERR("Bad sdu, cannot enqueue it");
-                return -1;
-        }
-        if (!efcp) {
-                LOG_ERR("Bogus efcp passed, bailing out");
-                sdu_destroy(sdu);
-                return -1;
-        }
+        ASSERT(is_sdu_ok(sdu));
+	ASSERT(efcp);
 
         if (!efcp->user_ipcp) {
         	LOG_ERR("Flow is being deallocated, dropping SDU");

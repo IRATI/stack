@@ -3,6 +3,7 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,244 +22,232 @@
 
 #include <linux/export.h>
 #include <linux/types.h>
+#include <linux/skbuff.h>
 
 #define RINA_PREFIX "sdu"
 
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
+#include "sdu.h"
 #include "du.h"
 
-/* FIXME: These externs have to disappear from here */
-struct buffer * buffer_create_with_gfp(gfp_t  flags,
-                                       void * data,
-                                       size_t size);
-struct buffer * buffer_create_from_gfp(gfp_t        flags,
-                                       const void * data,
-                                       size_t       size);
-struct buffer * buffer_dup_gfp(gfp_t                 flags,
-                               const struct buffer * b);
+#define to_du(x) ((struct du*)(x))
+#define to_sdu(x) ((struct sdu*)(x))
 
-static struct sdu * sdu_create_buffer_with_gfp(gfp_t           flags,
-                                               struct buffer * buffer)
+struct sdu {
+	struct du sdu; /* do not move from 1st position */
+};
+
+struct sdu *sdu_create_gfp(size_t data_len, gfp_t flags)
 {
-        struct sdu * tmp;
+	struct du *tmp;
 
-        if (!buffer_is_ok(buffer))
-                return NULL;
+	tmp = rkzalloc(sizeof(*tmp), flags);
+	if (unlikely(!tmp))
+		return NULL;
 
-        tmp = rkzalloc(sizeof(*tmp), flags);
-        if (!tmp)
-                return NULL;
+	tmp->skb = alloc_skb(MAX_PCIS_LEN + data_len + MAX_TAIL_LEN, flags);
+	if (unlikely(!tmp->skb)) {
+		rkfree(tmp);
+		LOG_ERR("Could not allocate SDU...");
+		return NULL;
+	}
 
-        tmp->buffer = buffer;
+	/* init PCI */
+	memset(&tmp->pci, 0x00, sizeof(tmp->pci));
 
-        return tmp;
+	tmp->cfg = NULL;
+	tmp->sdup_head = NULL;
+	tmp->sdup_tail = NULL;
+	skb_reserve(tmp->skb, MAX_PCIS_LEN);
+	skb_put(tmp->skb, data_len);
+
+	LOG_DBG("SDU allocated at %pk, with buffer %pk", tmp, tmp->skb);
+	return to_sdu(tmp);
 }
 
-struct sdu * sdu_create_buffer_with(struct buffer * buffer)
-{ return sdu_create_buffer_with_gfp(GFP_KERNEL, buffer); }
-EXPORT_SYMBOL(sdu_create_buffer_with);
+struct sdu *sdu_create(size_t data_len)
+{ return sdu_create_gfp(data_len, GFP_KERNEL); }
+EXPORT_SYMBOL(sdu_create);
 
-struct sdu * sdu_create_buffer_with_ni(struct buffer * buffer)
-{ return sdu_create_buffer_with_gfp(GFP_ATOMIC, buffer); }
-EXPORT_SYMBOL(sdu_create_buffer_with_ni);
+struct sdu *sdu_create_ni(size_t data_len)
+{ return sdu_create_gfp(data_len, GFP_ATOMIC); }
+EXPORT_SYMBOL(sdu_create_ni);
 
-static struct sdu * sdu_create_pdu_with_gfp(gfp_t        flags,
-                                            struct pdu * pdu)
+struct sdu *sdu_from_buffer_ni(void *buffer)
 {
-        struct sdu *          sdu;
-        const struct buffer * buffer;
-        const struct pci *    pci;
-        const void *          buffer_data;
-        size_t                size;
-        ssize_t               buffer_size;
-        ssize_t               pci_size;
-        struct buffer *       tmp_buff;
-        char *                data;
+	struct du *tmp;
 
-        if (!pdu)
-                return NULL;
+	if (!unlikely(buffer))
+		return NULL;
 
-        buffer = pdu_buffer_get_ro(pdu);
-        if (!buffer) {
-                pdu_destroy(pdu);
-                return NULL;
-        }
+	tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
+	if (!unlikely(tmp))
+		return NULL;
 
-        buffer_data = buffer_data_ro(buffer);
-        if (!buffer_data) {
-                pdu_destroy(pdu);
-                return NULL;
-        }
+	/* FIXME: check if skb_get is needed */
+	//tmp->skb = skb_get((struct sk_buff *)buffer);
+	tmp->skb = (struct sk_buff *)buffer;
+	tmp->cfg = NULL;
+	tmp->sdup_head = NULL;
+	tmp->sdup_tail = NULL;
+	/* init PCI */
+	memset(&tmp->pci, 0x00, sizeof(tmp->pci));
 
-        pci = pdu_pci_get_ro(pdu);
-        if (!pci) {
-                pdu_destroy(pdu);
-                return NULL;
-        }
-
-        buffer_size = buffer_length(buffer);
-        if (buffer_size <= 0) {
-                pdu_destroy(pdu);
-                return NULL;
-        }
-
-        pci_size = pci_length(pci);
-        if (pci_size <= 0) {
-                pdu_destroy(pdu);
-                return NULL;
-        }
-
-        size = pci_size + buffer_size;
-        data = rkmalloc(size, flags);
-        if (!data) {
-                pdu_destroy(pdu);
-                return NULL;
-        }
-
-        /* FIXME: Useless check */
-        if (!memcpy(data, pci, pci_size)) {
-                rkfree(data);
-                pdu_destroy(pdu);
-                return NULL;
-        }
-
-        /* FIXME: Useless check */
-        if (!memcpy(data + pci_size, buffer_data, buffer_size)) {
-                rkfree(data);
-                pdu_destroy(pdu);
-                return NULL;
-        }
-
-        tmp_buff = buffer_create_with_gfp(flags, data, size);
-        if (!tmp_buff) {
-                rkfree(data);
-                pdu_destroy(pdu);
-                return NULL;
-        }
-
-        sdu = sdu_create_buffer_with(tmp_buff);
-        if (!sdu) {
-                pdu_destroy(pdu);
-                buffer_destroy(tmp_buff);
-                return NULL;
-        }
-
-        pdu_destroy(pdu);
-
-        return sdu;
+	LOG_DBG("SDU allocated at %pk, with buffer %pk", tmp, tmp->skb);
+	return to_sdu(tmp);
 }
+EXPORT_SYMBOL(sdu_from_buffer_ni);
 
-struct sdu * sdu_create_pdu_with(struct pdu * pdu)
-{ return sdu_create_pdu_with_gfp(GFP_KERNEL, pdu); }
-EXPORT_SYMBOL(sdu_create_pdu_with);
-
-struct sdu * sdu_create_pdu_with_ni(struct pdu * pdu)
-{ return sdu_create_pdu_with_gfp(GFP_ATOMIC, pdu); }
-EXPORT_SYMBOL(sdu_create_pdu_with_ni);
-
-int sdu_destroy(struct sdu * s)
+bool is_sdu_ok(const struct sdu *sdu)
 {
-        if (!s) return -1;
+	struct du *du;
 
-        if (s->buffer)
-                buffer_destroy(s->buffer);
+	du = to_du(sdu);
+	return (du && du->skb && !du->pci.h ? true : false);
+}
+EXPORT_SYMBOL(is_sdu_ok);
 
-        rkfree(s);
+int sdu_efcp_config_bind(struct sdu *sdu, struct efcp_config *cfg)
+{
+	struct du *du;
 
-        return 0;
+	ASSERT(is_sdu_ok(sdu));
+	ASSERT(cfg);
+
+	du = to_du(sdu);
+	du->cfg = cfg;
+	return 0;
+}
+EXPORT_SYMBOL(sdu_efcp_config_bind);
+
+ssize_t sdu_len(const struct sdu *sdu)
+{
+	struct du *du;
+
+	ASSERT(is_sdu_ok(sdu));
+	du = to_du(sdu);
+	return du->skb->len;
+}
+EXPORT_SYMBOL(sdu_len);
+
+/*XXX: This works well if buffer is linear */
+unsigned char *sdu_buffer(const struct sdu *sdu)
+{
+	struct du *du;
+
+	ASSERT(is_sdu_ok(sdu));
+	du = to_du(sdu);
+	return du->skb->data;
+}
+EXPORT_SYMBOL(sdu_buffer);
+
+/* FIXME: this one should be removed to hide skb */
+struct sk_buff *sdu_detach_skb(const struct sdu *sdu)
+{
+	struct du *du;
+	struct sk_buff *skb;
+
+	ASSERT(is_sdu_ok(sdu));
+	du = to_du(sdu);
+	skb = du->skb;
+	du->skb = NULL;
+	return skb;
+}
+EXPORT_SYMBOL(sdu_detach_skb);
+
+/* FIXME: this one should be removed to hide skb */
+void sdu_attach_skb(struct sdu *sdu, struct sk_buff *skb)
+{
+	ASSERT(sdu);
+	ASSERT(skb);
+	to_du(sdu)->skb = skb;
+	return;
+}
+EXPORT_SYMBOL(sdu_attach_skb);
+
+struct sdu *sdu_from_pdu(struct pdu *pdu)
+{
+	struct du *du;
+
+	ASSERT(pdu);
+
+	du = to_du(pdu);
+	memset(&du->pci, 0x00, sizeof(du->pci));
+	return to_sdu(du);
+}
+EXPORT_SYMBOL(sdu_from_pdu);
+
+int sdu_destroy(struct sdu *sdu)
+{
+	struct du *du;
+	bool free_du = false;
+
+	ASSERT(sdu);
+
+	du = to_du(sdu);
+	if (du->skb) {
+		if (likely(atomic_read(&du->skb->users) == 1))
+			free_du = true;
+		kfree_skb(du->skb); /* this destroys pci too */
+		if (likely(free_du))
+			rkfree(du);
+		return 0;
+	}
+
+	rkfree(du);
+	return 0;
 }
 EXPORT_SYMBOL(sdu_destroy);
 
-const struct buffer * sdu_buffer_ro(const struct sdu * s)
+/* For shim TCP/UDP */
+int sdu_shrink(struct sdu *sdu, size_t bytes)
 {
-        if (!sdu_is_ok(s))
-                return NULL;
+	struct du *du;
 
-        return s->buffer;
+	if (unlikely(!is_sdu_ok(sdu)))
+		return -1;
+	if (unlikely(bytes <= 0))
+		return 0; /* This is a NO-OP */
+
+	du = to_du(sdu);
+	skb_trim(du->skb, du->skb->len - bytes);
+	return 0;
 }
-EXPORT_SYMBOL(sdu_buffer_ro);
+EXPORT_SYMBOL(sdu_shrink);
 
-struct buffer * sdu_buffer_rw(struct sdu * s)
+/* SDU_WPI */
+struct sdu_wpi *sdu_wpi_create_gfp(size_t data_len, gfp_t flags)
 {
-        if (!sdu_is_ok(s))
-                return NULL;
+	struct sdu_wpi *tmp;
 
-        return s->buffer;
-}
-EXPORT_SYMBOL(sdu_buffer_rw);
+	tmp = rkzalloc(sizeof(*tmp), flags);
+	if (unlikely(!tmp))
+		return NULL;
 
-static struct sdu * sdu_dup_gfp(gfp_t              flags,
-                                const struct sdu * sdu)
-{
-        struct sdu * tmp;
-
-        if (!sdu_is_ok(sdu))
-                return NULL;
-
-        tmp = rkzalloc(sizeof(*tmp), flags);
-        if (!tmp)
-                return NULL;
-
-        tmp->buffer = buffer_dup_gfp(flags, sdu->buffer);
-
-        return tmp;
+	tmp->sdu = sdu_create_gfp(data_len, flags);
+	if (unlikely(!is_sdu_ok(tmp->sdu))) {
+		rkfree(tmp);
+		return NULL;
+	}
+	return tmp;
 }
 
-struct sdu * sdu_dup(const struct sdu * sdu)
-{ return sdu_dup_gfp(GFP_KERNEL, sdu); }
-EXPORT_SYMBOL(sdu_dup);
+struct sdu_wpi * sdu_wpi_create(size_t data_len)
+{ return sdu_wpi_create_gfp(data_len, GFP_KERNEL); }
+EXPORT_SYMBOL(sdu_wpi_create);
 
-struct sdu * sdu_dup_ni(const struct sdu * sdu)
-{ return sdu_dup_gfp(GFP_ATOMIC, sdu); }
-EXPORT_SYMBOL(sdu_dup_ni);
-
-bool sdu_is_ok(const struct sdu * s)
-{ return (s && buffer_is_ok(s->buffer)) ? true : false; }
-EXPORT_SYMBOL(sdu_is_ok);
-
-int sdu_buffer_disown(struct sdu * sdu)
-{
-        if (!sdu)
-                return -1;
-
-        sdu->buffer = NULL;
-        return 0;
-}
-EXPORT_SYMBOL(sdu_buffer_disown);
-
-static struct sdu_wpi * sdu_wpi_create_with_gfp(gfp_t           flags,
-                                                struct buffer * buffer)
-{
-        struct sdu_wpi * tmp;
-
-        tmp = rkzalloc(sizeof(*tmp), flags);
-        if (!tmp)
-                return NULL;
-
-        tmp->sdu = sdu_create_buffer_with_gfp(flags, buffer);
-        if (!tmp->sdu) {
-                rkfree(tmp);
-                return NULL;
-        }
-
-        return tmp;
-}
-
-struct sdu_wpi * sdu_wpi_create_with(struct buffer * buffer)
-{ return sdu_wpi_create_with_gfp(GFP_KERNEL, buffer); }
-EXPORT_SYMBOL(sdu_wpi_create_with);
-
-struct sdu_wpi * sdu_wpi_create_with_ni(struct buffer * buffer)
-{ return sdu_wpi_create_with_gfp(GFP_ATOMIC, buffer); }
-EXPORT_SYMBOL(sdu_wpi_create_with_ni);
+struct sdu_wpi * sdu_wpi_create_ni(size_t data_len)
+{ return sdu_wpi_create_gfp(data_len, GFP_ATOMIC); }
+EXPORT_SYMBOL(sdu_wpi_create_ni);
 
 int sdu_wpi_destroy(struct sdu_wpi * s)
 {
-        if (!s) return -1;
+        ASSERT(s);
 
-        sdu_destroy(s->sdu);
+	if (s->sdu)
+        	sdu_destroy(s->sdu);
         rkfree(s);
 
         return 0;
@@ -266,5 +255,13 @@ int sdu_wpi_destroy(struct sdu_wpi * s)
 EXPORT_SYMBOL(sdu_wpi_destroy);
 
 bool sdu_wpi_is_ok(const struct sdu_wpi * s)
-{ return (s && sdu_is_ok(s->sdu)) ? true : false; }
+{ return (s && is_sdu_ok(s->sdu)) ? true : false; }
 EXPORT_SYMBOL(sdu_wpi_is_ok);
+
+int sdu_wpi_detach(struct sdu_wpi *s)
+{
+	if (s->sdu)
+		s->sdu = NULL;
+	return 0;
+}
+EXPORT_SYMBOL(sdu_wpi_detach);

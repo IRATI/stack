@@ -25,27 +25,16 @@
 struct vmpi_buf *
 vmpi_buf_alloc(size_t size, size_t unused, gfp_t gfp)
 {
-        struct buffer *buf;
         struct sdu *sdu;
 
         if (gfp == GFP_ATOMIC) {
-                buf = buffer_create_ni(size);
-                if (!buf) {
-                        return NULL;
-                }
-                sdu = sdu_create_buffer_with_ni(buf);
-
+                sdu = sdu_create_ni(size);
         } else {
-                buf = buffer_create(size);
-                if (!buf) {
-                        return NULL;
-                }
-
-                sdu = sdu_create_buffer_with(buf);
+                sdu = sdu_create(size);
         }
 
         if (!sdu) {
-                buffer_destroy(buf);
+                return NULL;
         }
 
         return sdu;
@@ -62,37 +51,23 @@ EXPORT_SYMBOL_GPL(vmpi_buf_free);
 uint8_t *
 vmpi_buf_data(struct vmpi_buf *vb)
 {
-        return buffer_data_rw(sdu_buffer_rw(vb));
+        return sdu_buffer(vb);
 }
 EXPORT_SYMBOL_GPL(vmpi_buf_data);
 
 size_t
 vmpi_buf_size(struct vmpi_buf *vb)
-{
-        const struct buffer *buf;
-
-        buf = sdu_buffer_ro(vb);
-        BUG_ON(!buf);
-
-        return (size_t)buffer_length(buf);
-}
+{ return (size_t)sdu_len(vb); }
 EXPORT_SYMBOL_GPL(vmpi_buf_size);
 
 size_t
 vmpi_buf_len(struct vmpi_buf *vb)
-{
-        const struct buffer *buf;
-
-        buf = sdu_buffer_ro(vb);
-        BUG_ON(!buf);
-
-        return (size_t)buffer_length(buf);
-}
+{ return (size_t)sdu_len(vb); }
 EXPORT_SYMBOL_GPL(vmpi_buf_len);
 
-void
-vmpi_buf_set_len(struct vmpi_buf *vb, size_t len)
-{
-        buffer_set_length(sdu_buffer_rw(vb), len);
-}
-EXPORT_SYMBOL_GPL(vmpi_buf_set_len);
+//void
+//vmpi_buf_set_len(struct vmpi_buf *vb, size_t len)
+//{
+//        buffer_set_length(sdu_buffer_rw(vb), len);
+//}
+//EXPORT_SYMBOL_GPL(vmpi_buf_set_len);

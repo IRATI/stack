@@ -36,6 +36,4 @@ size_t vmpi_buf_size(struct vmpi_buf *vb);
 
 size_t vmpi_buf_len(struct vmpi_buf *vb);
 
-void vmpi_buf_set_len(struct vmpi_buf *vb, size_t len);
-
 #endif /* __VMPI_BUFS_H__ */

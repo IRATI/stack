@@ -28,10 +28,10 @@
 #define MAX_COMP_INFLATION 1024
 
 int default_sdup_apply_crypto(struct sdup_crypto_ps * ps,
-			      struct pdu_ser * pdu);
+			      struct pdu * pdu);
 
 int default_sdup_remove_crypto(struct sdup_crypto_ps * ps,
-			       struct pdu_ser * pdu);
+			       struct pdu * pdu);
 
 int default_sdup_update_crypto_state(struct sdup_crypto_ps * ps,
 				     struct sdup_crypto_state * state);

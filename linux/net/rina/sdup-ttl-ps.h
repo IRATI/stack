@@ -25,7 +25,6 @@
 
 #include "sdup.h"
 #include "pdu.h"
-#include "pdu-ser.h"
 #include "ps-factory.h"
 
 struct sdup_ttl_ps {
@@ -34,11 +33,9 @@ struct sdup_ttl_ps {
 	/* Behavioural policies. */
 
 	int (* sdup_set_lifetime_limit_policy)(struct sdup_ttl_ps *,
-					       struct pdu_ser *,
-					       size_t);
+					       struct pdu *);
 	int (* sdup_get_lifetime_limit_policy)(struct sdup_ttl_ps *,
-					       struct pdu_ser *,
-					       size_t *);
+					       struct pdu *);
 	int (* sdup_dec_check_lifetime_limit_policy)(struct sdup_ttl_ps *,
 						     struct pdu *);
 

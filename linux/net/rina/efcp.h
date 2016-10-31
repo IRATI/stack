@@ -22,7 +22,8 @@
 #define RINA_EFCP_H
 
 #include "common.h"
-#include "du.h"
+#include "pdu.h"
+#include "sdu.h"
 #include "ipcp-instances.h"
 #include "kfa.h"
 #include "connection.h"
@@ -36,8 +37,8 @@ struct efcp_container;
 struct efcp_container * efcp_container_create(struct kfa * kfa,
 					      struct robject * parent);
 int                     efcp_container_destroy(struct efcp_container * c);
-int                     efcp_container_config_set(struct efcp_config *   efcpc,
-                                                  struct efcp_container * c);
+int                     efcp_container_config_set(struct efcp_container * c,
+                                                  struct efcp_config *    cfg);
 int                     efcp_container_write(struct efcp_container * container,
                                              cep_id_t                cep_id,
                                              struct sdu *            sdu);

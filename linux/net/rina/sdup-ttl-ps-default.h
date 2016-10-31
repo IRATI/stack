@@ -24,12 +24,10 @@
 #include "sdup-ttl-ps.h"
 
 int default_sdup_set_lifetime_limit_policy(struct sdup_ttl_ps * ps,
-					   struct pdu_ser * pdu,
-					   size_t pci_ttl);
+					   struct pdu * pdu);
 
 int default_sdup_get_lifetime_limit_policy(struct sdup_ttl_ps * ps,
-					   struct pdu_ser * pdu,
-					   size_t * ttl);
+					   struct pdu * pdu);
 
 int default_sdup_dec_check_lifetime_limit_policy(struct sdup_ttl_ps * ps,
 						 struct pdu * pdu);

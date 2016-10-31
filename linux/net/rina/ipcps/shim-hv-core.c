@@ -36,7 +36,7 @@
 #include "kipcm.h"
 #include "debug.h"
 #include "utils.h"
-#include "du.h"
+#include "sdu.h"
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
 #include "vmpi.h"
