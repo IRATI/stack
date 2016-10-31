@@ -76,35 +76,24 @@ int MAWorker::internal_run()
 		lock.unlock();
 
 		for (auto p=list.begin();p != list.end();p++) {
-			try {
-				// Read the next SDU
-				int bytes_read = rina::ipcManager->readSDU((*p)->get_port(), buffer,
-						max_sdu_size_in_bytes);
-				// rina::ser_obj_t message;
-				// message.message_ = buffer;
-				// message.size_ = bytes_read;
-				if (bytes_read > 0) {
-					LOG_DBG("Read %d bytes into the sdu buffer", bytes_read);
-					(*p)->ok();
-					process_message(buffer, bytes_read);
-				}
-			} catch (rina::ReadSDUException &e)
-			{
-				if ((*p)->failed()) {
-					// notify manager of failed connection
-					LOG_WARN("Three failed attempts made to read an SDU, closing flow");
-					notify_connection_gone(*p);
-				}
-				LOG_WARN("ReadSDUException in readSDU: %s", e.what());
-			} catch (rina::Exception &e)
-			{
-				// These exceptions are assumed fatal
-				LOG_WARN("Exception in readSDU: %s, closing flow", e.what());
-				// notify manager of failed connection
-				notify_connection_gone(*p);
-			}catch (...) {
-				LOG_WARN("Unexpected exception");
-			}
+                        // Read the next SDU
+                        int bytes_read = read((*p)->get_fd(), buffer,
+                                              max_sdu_size_in_bytes);
+                        // rina::ser_obj_t message;
+                        // message.message_ = buffer;
+                        // message.size_ = bytes_read;
+                        if (bytes_read > 0) {
+                                LOG_DBG("Read %d bytes into the sdu buffer", bytes_read);
+                                (*p)->ok();
+                                process_message(buffer, bytes_read);
+                        } else if ((*p)->failed()) {
+                                // notify manager of failed connection
+                                LOG_WARN("Three failed attempts [%s] to read an SDU, closing flow",
+                                         strerror(errno));
+                                notify_connection_gone(*p);
+                        } else {
+                                LOG_WARN("Failed to read SDU [%s], retrying", strerror(errno));
+                        }
 		}
 	}
 	return 0;
@@ -299,31 +288,26 @@ void MAWorker::send_message(const void* message, int size, const std::string & d
 		return;
 	}
 
-	try {
-		// Write the next SDU
-		// the const_cast is necessary as the RINA IPC API is defined as a
-		// non const ie. void * only.
-		int bytes_written = rina::ipcManager->writeSDU(c->get_port(),
-				const_cast<void*>(message), size);
-		LOG_DBG("Sent message to MA[%s]: %d bytes sent.",
-			 c->get_id().c_str(),
-			 bytes_written);
-		c->ok();
-	} catch (rina::WriteSDUException &e) {
-		if (c->failed()) {
-			// notify manager of failed connection
-			LOG_WARN("Three failed attempts made to write an SDU, closing flow[%d].",
-					c->get_port());
-			notify_connection_gone(c);
-		}
-		LOG_WARN("WriteSDUException in writeSDU: %s", e.what());
-	} catch (rina::Exception &e) {
-		// These exceptions are assumed fatal
-		LOG_WARN("Exception in writeSDU: %s, closing flow[%d]", e.what(),
-				c->get_port());
-		// notify manager of failed connection
-		notify_connection_gone(c);
-	}
+        // Write the next SDU
+        // the const_cast is necessary as the RINA IPC API is defined as a
+        // non const ie. void * only.
+        int bytes_written = write(c->get_fd(),
+                        const_cast<void*>(message), size);
+        if (bytes_written == size) {
+                LOG_DBG("Sent message to MA[%s]: %d bytes sent.",
+                                c->get_id().c_str(),
+                                bytes_written);
+                c->ok();
+        } else if (c->failed()) {
+                // These errors are assumed fatal
+                LOG_WARN("Error writing SDU: %s, closing flow[%d]",
+                                strerror(errno), c->get_port());
+                // notify manager of failed connection
+                notify_connection_gone(c);
+        } else {
+                LOG_WARN("Error writing SDU: %s, retrying for flow[%d]",
+                                strerror(errno), c->get_port());
+        }
 }
 
 // Allow testing of the connenction management functionality

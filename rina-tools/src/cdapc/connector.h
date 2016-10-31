@@ -56,6 +56,7 @@ public:
 	// Accessors
 	const std::string& get_id() { return id; };
 	const long get_port() { return flow.portId; };
+        const int get_fd() { return flow.fd; }
 	// Monitor retries
 	void ok() {retries = 3; };
 	bool failed() { return (--retries) == 0;};
