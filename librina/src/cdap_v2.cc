@@ -581,12 +581,14 @@ class AppCDAPIOHandler : public CDAPIOHandler
 	void process_message(const ser_obj_t &message,
 			     unsigned int handle,
 			     cdap_rib::cdap_dest_t cdap_dest);
+        void set_fd(int _fd) { fd = _fd; }
 
  private:
         // Lock to control that when sending a message requiring
 	// a reply the CDAP Session manager has been updated before
 	// receiving the response message
         rina::Lockable atomic_send_lock_;
+        int fd;
 };
 
 /// Google Protocol Buffers Wire Message Provider
@@ -3555,6 +3557,7 @@ void AppCDAPIOHandler::send(const cdap_m_t & m_sent,
 			    const cdap_rib::con_handle_t &con)
 {
 	ser_obj_t ser_sent_m;
+        int ret;
 
 	manager_->encodeNextMessageToBeSent(m_sent,
 					    ser_sent_m,
@@ -3562,23 +3565,20 @@ void AppCDAPIOHandler::send(const cdap_m_t & m_sent,
 
 	rina::ScopedLock slock(atomic_send_lock_);
 
-	try{
-		rina::ipcManager->writeSDU(con.port_id,
-					   ser_sent_m.message_,
-					   ser_sent_m.size_);
-		manager_->messageSent(m_sent, con.port_id);
-	} catch (rina::Exception &e)
-	{
-		if (m_sent.invoke_id_ != 0 && m_sent.is_request_message())
-			manager_->get_invoke_id_manager()->freeInvokeId(m_sent.invoke_id_,
-								       false);
+        ret = write(fd, ser_sent_m.message_, ser_sent_m.size_);
+        if (ret != ser_sent_m.size_) {
+                if (m_sent.invoke_id_ != 0 && m_sent.is_request_message())
+                        manager_->get_invoke_id_manager()->freeInvokeId(m_sent.invoke_id_,
+                                        false);
 
-		std::string reason = std::string(e.what());
-		if (reason.compare("Flow closed") == 0)
-			manager_->removeCDAPSession(con.port_id);
+                if (errno != EAGAIN && errno != EINTR) {
+                        manager_->removeCDAPSession(con.port_id);
+                }
 
-		throw e;
-	}
+                LOG_ERR("write() failed --> %d [%s]", ret, strerror(errno));
+                throw rina::Exception("write() failed");
+        }
+        manager_->messageSent(m_sent, con.port_id);
 }
 
 //
@@ -3774,7 +3774,8 @@ CDAPProviderInterface* getProvider(){
 
 void init(cdap::CDAPCallbackInterface *callback,
 	  cdap_rib::concrete_syntax_t &syntax,
-	  bool is_IPCP)
+	  int fd /* -1 when called by IPCP, a flow file descriptor
+                    when called by applications */)
 {
 	//First check the flag
 	if(inited){
@@ -3787,8 +3788,11 @@ void init(cdap::CDAPCallbackInterface *callback,
 	manager = new CDAPSessionManager(syntax);
 	iface = new CDAPProvider(callback, manager);
 
-	if (!is_IPCP)
-		iface->set_cdap_io_handler(new AppCDAPIOHandler());
+	if (fd > 0) {
+                AppCDAPIOHandler *aioh = new AppCDAPIOHandler();
+                aioh->set_fd(fd);
+		iface->set_cdap_io_handler(aioh);
+        }
 }
 
 void set_cdap_io_handler(cdap::CDAPIOHandler *handler)

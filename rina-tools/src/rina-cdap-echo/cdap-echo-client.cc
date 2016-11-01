@@ -142,7 +142,7 @@ void Client::cacep()
 {
     unsigned char buffer[max_buffer_size];
     rina::cdap_rib::concrete_syntax_t syntax;
-    cdap::init(this, syntax, false);
+    cdap::init(this, syntax, flow_.fd);
     cdap_prov_ = cdap::getProvider();
     cdap_rib::vers_info_t ver;
     ver.version_ = 1;
@@ -171,9 +171,14 @@ void Client::cacep()
                 sleep_wrapper.sleepForMili(50);
             } else if (bytes_read < 0) {
                 LOG_ERR("Problems while reading: %s", strerror(errno));
+                break;
             } else {
                 break;
             }
+    }
+
+    if (bytes_read < 0) {
+        return;
     }
 
     ser_obj_t message;
@@ -245,16 +250,20 @@ void Client::sendReadRMessage()
                         sleep_wrapper.sleepForMili(50);
                     } else if (bytes_read < 0) {
                         LOG_ERR("Problems while reading: %s", strerror(errno));
+                        break;
                     } else {
                         break;
                     }
             }
-            ser_obj_t message;
-            message.message_ = buffer;
-            message.size_ = bytes_read;
-            cdap_prov_->process_message(message, flow_.portId);
-            count_++;
-            std::cout << "count: " << count_ << std::endl;
+
+            if (bytes_read > 0) {
+                    ser_obj_t message;
+                    message.message_ = buffer;
+                    message.size_ = bytes_read;
+                    cdap_prov_->process_message(message, flow_.portId);
+                    count_++;
+                    std::cout << "count: " << count_ << std::endl;
+            }
         }
     }
     release();
@@ -275,9 +284,14 @@ void Client::release()
                 sleep_wrapper.sleepForMili(50);
             } else if (bytes_read < 0) {
                 LOG_ERR("Problems while reading: %s", strerror(errno));
+                break;
             } else {
                 break;
             }
+    }
+
+    if (bytes_read < 0) {
+        return;
     }
 
     ser_obj_t message;

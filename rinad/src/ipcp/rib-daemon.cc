@@ -170,7 +170,7 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
 		}
 
 		std::string reason = std::string(e.what());
-		if (reason.compare("Flow closed") == 0) {
+		if (reason.compare("Flow closed") == 0) { /* XXX this will never happen */
 			manager_->removeCDAPSession(con_handle.port_id);
 		}
 
@@ -480,7 +480,7 @@ void IPCPRIBDaemonImpl::initialize_rib_daemon(rina::cacep::AppConHandlerInterfac
 	rina::rib::RIBObj* robj;
 
 	//Initialize the RIB library and cdap
-	params.is_IPCP_ = true;
+	params.fd = -1;
 	rina::rib::init(app_con_callback, params);
 	rina::cdap::set_cdap_io_handler(new IPCPCDAPIOHandler());
 	ribd = rina::rib::RIBDaemonProxyFactory();

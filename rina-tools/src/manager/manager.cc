@@ -106,7 +106,7 @@ void ManagerWorker::operate(rina::FlowInformation flow)
     ConnectionCallback callback;
     std::cout << "cdap_prov created" << std::endl;
     rina::cdap_rib::concrete_syntax_t syntax;
-    rina::cdap::init(&callback, syntax, false);
+    rina::cdap::init(&callback, syntax, flow.fd);
     cdap_prov_ = rina::cdap::getProvider();
     // CACEP
     cacep(flow.portId);

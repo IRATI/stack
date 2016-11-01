@@ -2092,7 +2092,7 @@ RIBDaemon::RIBDaemon(cacep::AppConHandlerInterface *app_con_callback,
 
 	//Initialize the parameters
 	//add cdap parameters
-	cdap::init(this, params.syntax, params.is_IPCP_);
+	cdap::init(this, params.syntax, params.fd);
 	cdap_provider = cdap::getProvider();
 }
 

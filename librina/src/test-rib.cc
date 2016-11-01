@@ -249,7 +249,7 @@ class CheckRIB
     enc_ = new rib::IntEncoder();
     rib::RIBDFactory daemon_factory;
     cdap_rib::cdap_params_t *params = new cdap_rib::cdap_params_t;
-    params->is_IPCP_ = false;
+    params->fd = 1; /* Use stdout */
     params->timeout_ = 2000;
     cdap_rib::version_info *version = new cdap_rib::version_info;
     rib_daemon_ = daemon_factory.create(new ConHandler(), new RespHandler(),

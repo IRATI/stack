@@ -505,7 +505,7 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(assign) rina::EFCPConfiguration::operator=(const EFCPConfiguration &other);
 
 /* This is for separating rib::init and rib::fini from cdap::init and cdap::fini */
-%rename(cdap_init) rina::cdap::init(cdap::CDAPCallbackInterface *callback, cdap_rib::concrete_syntax_t& syntax, bool is_IPCP);
+%rename(cdap_init) rina::cdap::init(cdap::CDAPCallbackInterface *callback, cdap_rib::concrete_syntax_t& syntax, int fd);
 %rename(cdap_fini) rina::cdap::fini(void);
 %rename(rib_init) rina::rib::init(cacep::AppConHandlerInterface *app_con_callback, cdap_rib::cdap_params params);
 %rename(rib_fini) rina::rib::fini(void);
