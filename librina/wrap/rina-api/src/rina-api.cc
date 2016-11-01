@@ -21,6 +21,7 @@
 
 #include <string>
 #include <stdlib.h>
+#include <unistd.h>
 #include <librina/librina.h>
 #include <rina-api/api.h>
 
@@ -51,13 +52,56 @@ int
 rina_open(void)
 {
         librina_init();
-        return -1;
+        return dup(ipcManager->getControlFd());
 }
 
 int
 rina_register(int fd, const char *dif_name, const char *local_appl)
 {
-        return -1;
+        ApplicationRegistrationInformation ari;
+        RegisterApplicationResponseEvent *resp;
+        unsigned int seqnum;
+        IPCEvent *event;
+
+        (void)fd; /* The netlink socket file descriptor is used internally */
+
+        ari.ipcProcessId = 0;  // This is an application, not an IPC process
+        ari.appName = ApplicationProcessNamingInformation(string(local_appl),
+                                                          string());
+
+        if (dif_name) {
+                ari.applicationRegistrationType = APPLICATION_REGISTRATION_SINGLE_DIF;
+                ari.difName = ApplicationProcessNamingInformation(
+                                                string(dif_name), string());
+        } else {
+                ari.applicationRegistrationType = APPLICATION_REGISTRATION_ANY_DIF;
+        }
+
+        // Request the registration
+        seqnum = ipcManager->requestApplicationRegistration(ari);
+
+        // Wait for the response to come
+        for (;;) {
+                event = ipcEventProducer->eventWait();
+                if (event && event->eventType ==
+                                REGISTER_APPLICATION_RESPONSE_EVENT &&
+                                event->sequenceNumber == seqnum) {
+                        break;
+                }
+        }
+
+        resp = dynamic_cast<RegisterApplicationResponseEvent*>(event);
+
+        // Update librina state
+        if (resp->result) {
+                errno = EPERM;
+                ipcManager->withdrawPendingRegistration(seqnum);
+                return -1;
+        }
+
+        ipcManager->commitPendingRegistration(seqnum, resp->DIFName);
+
+        return 0;
 }
 
 int
