@@ -312,7 +312,7 @@ void Client::pingFlow()
 
 		bool read_late = false;
 	read:
-                bytes_read = readSDU(buffer, data_size,
+                bytes_read = readTimeout(buffer, data_size,
                         read_late ? wait : lost_wait);
 
 		if (bytes_read < 0 && errno == EAGAIN) {
@@ -533,7 +533,7 @@ void Client::destroyFlow()
         if (snd) delete snd;
 }
 
-int Client::readSDU(void * sdu, int maxBytes, unsigned int timeout)
+int Client::readTimeout(void * sdu, int maxBytes, unsigned int timeout)
 {
 	timespec begintp, endtp;
 	get_current_time(begintp);

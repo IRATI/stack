@@ -179,6 +179,9 @@ class Worker {
 
 	//Port-id of the flow in use
 	int port_id;
+
+	//fd of the flow in use
+	int fd;
 };
 
 /**
@@ -302,6 +305,7 @@ void* ActiveWorker::run(void* param)
 			//Set port id so that we can print traces even if the
 			//flow is gone
 			port_id = flow_.portId;
+                        fd = flow_.fd;
 
 			//Fill source parameters
 			src.ap_name_ = flow_.localAppName.processName;
@@ -333,17 +337,15 @@ void* ActiveWorker::run(void* param)
 			//TODO: add support for other
 			rina::ser_obj_t message;
 			message.message_ = new unsigned char[max_sdu_size_in_bytes];
-			try{
-				bytes_read = rina::ipcManager->readSDU(port_id, message.message_,
-							max_sdu_size_in_bytes);
-				message.size_ = bytes_read;
-			}catch(rina::ReadSDUException &e){
-				LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
+                        bytes_read = read(fd, message.message_,
+                                          max_sdu_size_in_bytes);
+                        if (bytes_read < 0) {
+				LOG_ERR("read() error on port id %u [%s]",
+                                        port_id, strerror(errno));
 				rina::ipcManager->requestFlowDeallocation(port_id);
 				continue;
-			}catch(rina::FlowNotAllocatedException &e) {
-				continue;
-			}
+                        }
+                        message.size_ = bytes_read;
 
 			//Instruct CDAP provider to process the CACEP message
 			try{
@@ -361,18 +363,15 @@ void* ActiveWorker::run(void* param)
 
 			//I/O loop
 			while(true) {
-				try{
-					bytes_read = rina::ipcManager->readSDU(port_id,
-										   message.message_,
-									       max_sdu_size_in_bytes);
-					message.size_ = bytes_read;
-				}catch(rina::ReadSDUException &e){
-					LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
+                                bytes_read = read(fd, message.message_,
+                                                max_sdu_size_in_bytes);
+                                if (bytes_read < 0) {
+                                        LOG_ERR("read() error on port id %u [%s]",
+                                                port_id, strerror(errno));
 					rina::ipcManager->requestFlowDeallocation(port_id);
-					break;
-				}catch(rina::FlowNotAllocatedException &e) {
-					break;
-				}
+                                        break;
+                                }
+                                message.size_ = bytes_read;
 
 				//Instruct CDAP provider to process the RIB operation message
 				try{

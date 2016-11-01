@@ -181,41 +181,36 @@ void EchoTimeServerWorker::servePerfFlow()
         	timer.scheduleTask(last_task, dw);
         }
 
-        try {
-                clock_gettime(CLOCK_REALTIME, &last_timestamp);
-                for(;;) {
-                        sdu_size = read(fd, buffer, max_buffer_size);
-                        if (sdu_size <= 0) {
-                                break;
-                        }
-                        pkt_cnt++;
-                        bytes_cnt += sdu_size;
-
-                        // Report periodic stats if needed
-                        if (interval != -1 && --interval_cnt == 0) {
-                                clock_gettime(CLOCK_REALTIME, &now);
-                                us = timespec_diff_us(last_timestamp, now);
-                                printPerfStats(pkt_cnt, bytes_cnt, us);
-
-                                tot_pkt += pkt_cnt;
-                                tot_bytes += bytes_cnt;
-                                tot_us += us;
-
-                                pkt_cnt = 0;
-                                bytes_cnt = 0;
-
-                                if (dw > 0 && last_task) {
-                                        timer.cancelTask(last_task);
-                                	last_task = new CancelFlowTimerTask(port_id, this);
-                                	timer.scheduleTask(last_task, dw);
-                                }
-                                clock_gettime(CLOCK_REALTIME, &last_timestamp);
-                                interval_cnt = interval;
-                        }
+        clock_gettime(CLOCK_REALTIME, &last_timestamp);
+        for(;;) {
+                sdu_size = read(fd, buffer, max_buffer_size);
+                if (sdu_size <= 0) {
+                        break;
                 }
-        } catch(rina::IPCException &e) {
-                // This thread was blocked in the readSDU() function
-                // when the flow gets deallocated
+                pkt_cnt++;
+                bytes_cnt += sdu_size;
+
+                // Report periodic stats if needed
+                if (interval != -1 && --interval_cnt == 0) {
+                        clock_gettime(CLOCK_REALTIME, &now);
+                        us = timespec_diff_us(last_timestamp, now);
+                        printPerfStats(pkt_cnt, bytes_cnt, us);
+
+                        tot_pkt += pkt_cnt;
+                        tot_bytes += bytes_cnt;
+                        tot_us += us;
+
+                        pkt_cnt = 0;
+                        bytes_cnt = 0;
+
+                        if (dw > 0 && last_task) {
+                                timer.cancelTask(last_task);
+                                last_task = new CancelFlowTimerTask(port_id, this);
+                                timer.scheduleTask(last_task, dw);
+                        }
+                        clock_gettime(CLOCK_REALTIME, &last_timestamp);
+                        interval_cnt = interval;
+                }
         }
 
         if  (dw > 0 && last_task) {

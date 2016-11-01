@@ -89,7 +89,7 @@ public:
                unsigned int lw,
                int rt);
        void run();
-       int readSDU(void * sdu, int maxBytes, unsigned int timout);
+       int readTimeout(void * sdu, int maxBytes, unsigned int timout);
        void map_push(unsigned long sn, timespec tp);
        void set_sdus(unsigned long n);
        void set_maxTP(timespec tp);
