@@ -712,6 +712,11 @@ std::vector<ApplicationRegistration *> IPCManager::getRegisteredApplications()
 	return response;
 }
 
+int IPCManager::getControlFd()
+{
+        return rinaManager->getNetlinkManager()->getSocketFd();
+}
+
 Singleton<IPCManager> ipcManager;
 
 /* CLASS APPLICATION UNREGISTERED EVENT */

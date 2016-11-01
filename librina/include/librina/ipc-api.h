@@ -468,6 +468,17 @@ public:
 	 * @return the registered applications
 	 */
 	std::vector<ApplicationRegistration *> getRegisteredApplications();
+
+        /**
+         * Returns the file descriptor used for internal control operations
+         * (application registration, flow allocation, etc.), so that it
+         * can be used with select(),poll(), etc.
+         * In the current implementation, the file descriptor is associated
+         * to a netlink socket.
+         *
+         * @return the regis
+         */
+        int getControlFd();
 };
 
 /**
