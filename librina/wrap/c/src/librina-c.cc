@@ -28,6 +28,9 @@
 using namespace rina;
 using namespace std;
 
+/* TODO With the POSIX api, this one should rethought. File descriptors
+ * must be allocated by librina, not by this module. */
+
 extern "C"
 {
 
@@ -179,7 +182,6 @@ int ap_unreg(char ** difs, size_t difs_size)
 
 int flow_accept(int fd, char ** name, char ** ae_name)
 {
-        FlowInformation            flow;
         IPCEvent *                 event = NULL;
         FlowRequestEvent *         fre = NULL;
         map<int, string>::iterator it;

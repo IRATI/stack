@@ -62,17 +62,6 @@ int	    kfa_flow_create(struct kfa           *instance,
 			    port_id_t		  pid,
 			    struct ipcp_instance *ipcp);
 
-/* set options associated with a flow e.g
- * int kfa_flow_opts_set(i, pid, FLOW_O_NONBLOCK)
- */
-int	    kfa_flow_opts_set(struct kfa *instance,
-			      port_id_t   pid,
-			      flow_opts_t flow_opts);
-
-/* returns the current options for a flow */
-flow_opts_t kfa_flow_opts(struct kfa *instance,
-			  port_id_t   pid);
-
 struct ipcp_instance *kfa_ipcp_instance(struct kfa *instance);
 
 bool kfa_flow_exists(struct kfa *kfa, port_id_t port_id);

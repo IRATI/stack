@@ -262,8 +262,6 @@ AX_HAVE_SYSCALL([management_sdu_read],[],[
     AC_MSG_ERROR([Your system lacks of a necessary syscall])])
 AX_HAVE_SYSCALL([management_sdu_write],[],[
     AC_MSG_ERROR([Your system lacks of a necessary syscall])])
-AX_HAVE_SYSCALL([flow_io_ctl],[],[
-    AC_MSG_ERROR([Your system lacks of a necessary syscall])])
 
 CFLAGS="$oldcflags"
 AC_LANG_POP([C])

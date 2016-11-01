@@ -301,7 +301,9 @@ FlowInformation IPCManager::internalAllocateFlowResponse(
         flow->portId = flowRequestEvent.portId;
 
         initIodev(flow, flowRequestEvent.portId);
-	setFlowOptsBlocking(flow->portId, blocking);
+        if (fcntl(flow->fd, F_SETFL, blocking ? 0 : O_NONBLOCK)) {
+                LOG_WARN("Failed to set blocking mode on fd %d", flow->fd);
+        }
         allocatedFlows[flowRequestEvent.portId] = flow;
 
         return *flow;
@@ -584,12 +586,11 @@ FlowInformation IPCManager::withdrawPendingFlow(unsigned int sequenceNumber)
         return result;
 }
 
-/* FIXME: bool blocking should be replaced by flow_opts_t */
 FlowInformation IPCManager::allocateFlowResponse(
 	const FlowRequestEvent& flowRequestEvent,
 	int result,
 	bool notifySource,
-	bool blocking /* = true */)
+	bool blocking)
 {
         return internalAllocateFlowResponse(
                         flowRequestEvent,
@@ -597,58 +598,6 @@ FlowInformation IPCManager::allocateFlowResponse(
 			notifySource,
 			0,
 			blocking);
-}
-
-/* returns 0 if nonblocking, > 0 if blocking, < 0 on error */
-int IPCManager::flowOptsBlocking(int portId)
-{
-#if STUB_API
-	return 0;
-#else
-
-	FlowInformation *flow;
-	uint             flags;
-
-	flow = getAllocatedFlow(portId);
-	if (flow == 0) {
-		return -1;
-        }
-
-        if (flow->state != FlowInformation::FLOW_ALLOCATED) {
-                return -1;
-	}
-
-        flags = syscallFlowIOCtl(portId, F_GETFL, 0 /* ignored */);
-	return !(flags & O_NONBLOCK);
-#endif
-}
-
-int IPCManager::setFlowOptsBlocking(int portId, bool blocking)
-{
-#if STUB_API
-        return 0;
-#else
-
-	FlowInformation * flow;
-	uint              flags;
-
-	flow = getAllocatedFlow(portId);
-	if (flow == 0) {
-		return -1;
-        }
-
-        if (flow->state != FlowInformation::FLOW_ALLOCATED) {
-                return -1;
-	}
-
-	/* this mimics the fcntl approach to setting flags */
-	flags = syscallFlowIOCtl(portId, F_GETFL,0);
-	if (!blocking)
-		flags |= O_NONBLOCK; /* set nonblocking */
-	else flags &= ~O_NONBLOCK; /* clear nonblocking */
-
-	return syscallFlowIOCtl(portId, F_SETFL,flags);
-#endif
 }
 
 unsigned int IPCManager::requestFlowDeallocation(int portId)

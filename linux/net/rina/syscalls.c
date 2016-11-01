@@ -333,53 +333,6 @@ SYSCALL_DEFINE2(deallocate_port,
 #endif
 }
 
-/* NOTE: this syscall to be removed when we have file descriptors */
-SYSCALL_DEFINE3(flow_io_ctl,
-		port_id_t,     pid,
-		int,	       cmd,
-		unsigned long, arg)
-{
-#ifndef CONFIG_RINA
-	(void) pid;
-	(void) cmd;
-	(void) arg;
-
-	return -ENOSYS;
-#else
-	ssize_t retval;
-
-	SYSCALL_DUMP_ENTER;
-
-	switch (cmd) {
-	case FLOW_F_GETFL: /* GET FLOW FLAGS */
-		CALL_KIPCM(retval, flow_opts, pid);
-		LOG_DBG("Got I/O options for port-id = %d: %o",
-			pid, (uint) retval);
-
-		SYSCALL_DUMP_EXIT;
-
-		return retval;
-	case FLOW_F_SETFL: /* SET FLOW FLAGS */
-		CALL_KIPCM(retval,
-					 flow_opts_set,
-					 pid,
-					 (flow_opts_t) arg);
-		LOG_DBG("Set I/O options for port-id %d to %lo",
-			pid, arg);
-
-		SYSCALL_DUMP_EXIT;
-
-		return retval;
-	default:
-		LOG_ERR("Received unknown command");
-
-		SYSCALL_DUMP_EXIT;
-
-		return -EINVAL; /* unknown command */
-	}
-#endif /* !CONFIG_RINA */
-}
-
 SYSCALL_DEFINE4(management_sdu_read,
 		ipc_process_id_t,   ipcp_id,
 		void __user *,	    buffer,

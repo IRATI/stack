@@ -2377,36 +2377,6 @@ int kipcm_flow_destroy(struct kipcm *   kipcm,
 }
 EXPORT_SYMBOL(kipcm_flow_destroy);
 
-int kipcm_flow_opts_set(struct kipcm *kipcm,
-			port_id_t     pid,
-			flow_opts_t   flow_opts)
-{
-        IRQ_BARRIER;
-
-        if (!kipcm) {
-                LOG_ERR("Bogus kipcm instance passed, bailing out");
-		return -EINVAL;
-        }
-
-	return kfa_flow_opts_set(kipcm->kfa, pid, flow_opts);
-}
-EXPORT_SYMBOL(kipcm_flow_opts_set);
-
-flow_opts_t kipcm_flow_opts(struct kipcm *kipcm,
-			    port_id_t     pid)
-{
-        IRQ_BARRIER;
-
-        if (!kipcm) {
-                LOG_ERR("Bogus kipcm instance passed, bailing out");
-		return -EINVAL;
-        }
-
-	return kfa_flow_opts(kipcm->kfa, pid);
-}
-EXPORT_SYMBOL(kipcm_flow_opts);
-
-
 int kipcm_notify_flow_alloc_req_result(struct kipcm    *kipcm,
                                        ipc_process_id_t ipc_id,
                                        port_id_t        pid,

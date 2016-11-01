@@ -131,7 +131,9 @@ void Client::createFlow()
         LOG_ERR("Failed to allocate a flow");
     } else
     {
-        ipcManager->setFlowOptsBlocking(flow_.portId, false);
+        if (fcntl(flow_.fd, F_SETFL, O_NONBLOCK)) {
+                LOG_ERR("Failed to set O_NONBLOCK for port id = %d", flow_.portId);
+        }
         LOG_DBG("[DEBUG] Port id = %d", flow_.portId);
     }
 }
@@ -164,22 +166,14 @@ void Client::cacep()
                                               flow_.portId);
     while (true)
     {
-        try
-        {
-            bytes_read = ipcManager->readSDU(flow_.portId, buffer,
-                                             max_buffer_size);
-            if (bytes_read == 0)
-            {
+            bytes_read = read(flow_.fd, buffer, max_buffer_size);
+            if (bytes_read == 0) {
                 sleep_wrapper.sleepForMili(50);
-            } else
-            {
+            } else if (bytes_read < 0) {
+                LOG_ERR("Problems while reading: %s", strerror(errno));
+            } else {
                 break;
             }
-        } catch (Exception &e)
-        {
-            LOG_ERR("Exception while reading: %s", e.what());
-            break;
-        }
     }
 
     ser_obj_t message;
@@ -246,22 +240,14 @@ void Client::sendReadRMessage()
 
             while (true)
             {
-                try
-                {
-                    bytes_read = ipcManager->readSDU(flow_.portId, buffer,
-                                                     max_buffer_size);
-                    if (bytes_read == 0)
-                    {
+                    bytes_read = read(flow_.fd, buffer, max_buffer_size);
+                    if (bytes_read == 0) {
                         sleep_wrapper.sleepForMili(50);
-                    } else
-                    {
+                    } else if (bytes_read < 0) {
+                        LOG_ERR("Problems while reading: %s", strerror(errno));
+                    } else {
                         break;
                     }
-                } catch (Exception & e)
-                {
-                    LOG_ERR("Exception while reading: %s", e.what());
-                    break;
-                }
             }
             ser_obj_t message;
             message.message_ = buffer;
@@ -284,22 +270,14 @@ void Client::release()
 
     while (true)
     {
-        try
-        {
-            bytes_read = ipcManager->readSDU(flow_.portId, buffer,
-                                             max_buffer_size);
-            if (bytes_read == 0)
-            {
+            bytes_read = read(flow_.fd, buffer, max_buffer_size);
+            if (bytes_read == 0) {
                 sleep_wrapper.sleepForMili(50);
-            } else
-            {
+            } else if (bytes_read < 0) {
+                LOG_ERR("Problems while reading: %s", strerror(errno));
+            } else {
                 break;
             }
-        } catch (Exception &e)
-        {
-            LOG_ERR("Exception while reading: %s", e.what());
-            break;
-        }
     }
 
     ser_obj_t message;

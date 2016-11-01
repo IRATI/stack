@@ -49,7 +49,7 @@ echo "$ME: Starting librina phase"
     echo "$ME: Cannot bootstrap"
     exit 1
 }
-(mkdir -p $BUILDDIR/librina && cd $BUILDDIR/librina && $SRCDIR/librina/configure --disable-java-bindings $FLAGS --with-sysheaders=$SRCDIR/linux/usr/include --prefix=$PREFIX && make $MAKEFLAGS clean install installcheck) || {
+(mkdir -p $BUILDDIR/librina && cd $BUILDDIR/librina && $SRCDIR/librina/configure --disable-c-bindings --disable-java-bindings $FLAGS --with-sysheaders=$SRCDIR/linux/usr/include --prefix=$PREFIX && make $MAKEFLAGS clean install installcheck) || {
     echo "$ME: Cannot complete librina phase"
     exit 1
 }

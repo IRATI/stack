@@ -337,7 +337,6 @@
 328	common	deallocate_port	        sys_deallocate_port
 329     common  management_sdu_read     sys_management_sdu_read
 330     common  management_sdu_write    sys_management_sdu_write
-331     common  flow_io_ctl             sys_flow_io_ctl
 
 #
 # x32-specific system call numbers start at 512 to avoid cache impact

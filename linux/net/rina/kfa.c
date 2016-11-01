@@ -58,7 +58,6 @@ enum flow_state {
 
 struct ipcp_flow {
 	port_id_t	      port_id;
-	flow_opts_t	      options;
 	enum flow_state	      state;
 	struct ipcp_instance *ipc_process;
 	struct rfifo         *sdu_ready;
@@ -857,7 +856,6 @@ int kfa_flow_create(struct kfa           *instance,
 	init_waitqueue_head(&flow->write_wqueue);
 
 	flow->ipc_process = ipcp;
-	flow->options	  = FLOW_O_DEFAULT;
 
 	flow->state	  = PORT_STATE_PENDING;
 	LOG_DBG("Flow pre-bound to port-id %d", pid);
@@ -1040,62 +1038,6 @@ int kfa_destroy(struct kfa *instance)
 
 	return 0;
 }
-
-int kfa_flow_opts_set(struct kfa *instance,
-		      port_id_t	  pid,
-		      flow_opts_t flow_opts)
-{
-	struct ipcp_flow *flow;
-
-	if (!instance) {
-		LOG_ERR("Bogus instance passed, bailing out");
-		return -EINVAL;
-	}
-	if (!is_port_id_ok(pid)) {
-		LOG_ERR("Bogus port-id, bailing out");
-		return -EINVAL;
-	}
-
-	spin_lock_bh(&instance->lock);
-
-	flow = kfa_pmap_find(instance->flows, pid);
-	if (!flow) {
-		spin_unlock_bh(&instance->lock);
-		LOG_ERR("Can't set options, missing flow on port_id %d", pid);
-		return -1;
-	}
-	flow->options = flow_opts;
-
-	spin_unlock_bh(&instance->lock);
-
-	LOG_DBG("Set options on port_id %d to %o", pid, flow_opts);
-
-	return 0; /* all is well */
-}
-EXPORT_SYMBOL(kfa_flow_opts_set);
-
-flow_opts_t kfa_flow_opts(struct kfa *instance,
-			  port_id_t   pid)
-{
-	struct ipcp_flow *flow;
-
-	if (!instance) {
-		LOG_ERR("Bogus instance passed, bailing out");
-		return -EINVAL;
-	}
-	if (!is_port_id_ok(pid)) {
-		LOG_ERR("Bogus port-id, bailing out");
-		return -EINVAL;
-	}
-
-	flow = kfa_pmap_find(instance->flows, pid);
-	if (!flow) {
-		LOG_ERR("Can't get options, missing flow on port_id %d", pid);
-		return -1;
-	}
-	return flow->options;
-}
-EXPORT_SYMBOL(kfa_flow_opts);
 
 bool kfa_flow_exists(struct kfa *kfa, port_id_t port_id)
 {
