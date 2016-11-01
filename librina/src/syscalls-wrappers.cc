@@ -26,8 +26,6 @@
 
 #define SYS_createIPCProcess   __NR_ipc_create
 #define SYS_destroyIPCProcess  __NR_ipc_destroy
-#define SYS_readSDU            __NR_sdu_read
-#define SYS_writeSDU           __NR_sdu_write
 #define SYS_allocatePortId     __NR_allocate_port
 #define SYS_deallocatePortId   __NR_deallocate_port
 #define SYS_readManagementSDU  __NR_management_sdu_read
@@ -39,12 +37,6 @@
 #endif
 #if !defined(__NR_ipc_destroy)
 #error No ipc_create syscall defined
-#endif
-#if !defined(__NR_sdu_read)
-#error No sdu_read syscall defined
-#endif
-#if !defined(__NR_sdu_write)
-#error No sdu_write syscall defined
 #endif
 #if !defined(__NR_allocate_port)
 #error No allocate_port syscall defined
@@ -74,36 +66,6 @@
 #endif
 
 namespace rina {
-
-int syscallWriteSDU(int portId, void * sdu, int size)
-{
-        int result;
-
-        DUMP_SYSCALL("SYS_writeSDU", SYS_writeSDU);
-
-        result = syscall(SYS_writeSDU, portId, sdu, size);
-        if (result < 0) {
-		LOG_DBG("Syscall write SDU failed: %d", errno);
-                result = -errno;
-        }
-
-        return result;
-}
-
-int syscallReadSDU(int portId, void * sdu, int maxBytes)
-{
-        int result;
-
-        DUMP_SYSCALL("SYS_readSDU", SYS_readSDU);
-
-        result = syscall(SYS_readSDU, portId, sdu, maxBytes);
-        if (result < 0) {
-                LOG_DBG("Syscall read SDU failed: %d", errno);
-                result = -errno;
-        }
-
-        return result;
-}
 
 int syscallWriteManagementSDU(unsigned short ipcProcessId,
                               void *         sdu,

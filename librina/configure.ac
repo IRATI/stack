@@ -250,10 +250,6 @@ AX_HAVE_SYSCALL([ipc_create],[],[
     AC_MSG_ERROR([Your system lacks of a necessary syscall])])
 AX_HAVE_SYSCALL([ipc_destroy],[],[
     AC_MSG_ERROR([Your system lacks of a necessary syscall])])
-AX_HAVE_SYSCALL([sdu_read],[],[
-    AC_MSG_ERROR([Your system lacks of a necessary syscall])])
-AX_HAVE_SYSCALL([sdu_write],[],[
-    AC_MSG_ERROR([Your system lacks of a necessary syscall])])
 AX_HAVE_SYSCALL([allocate_port],[],[
     AC_MSG_ERROR([Your system lacks of a necessary syscall])])
 AX_HAVE_SYSCALL([deallocate_port],[],[

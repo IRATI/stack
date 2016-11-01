@@ -541,8 +541,6 @@ cdap_rib::res_info_t& res);
 %catches(rina::FlowDeallocationException) rina::IPCManager::requestFlowDeallocation(int portId);
 %catches(rina::FlowDeallocationException) rina::IPCManager::flowDeallocationResult(int portId, bool success);
 %catches(rina::FlowDeallocationException) rina::IPCManager::flowDeallocated(int portId);
-%catches(rina::FlowNotAllocatedException, rina::InvalidArgumentsException, rina::UnknownFlowException, rina::ReadSDUException, rina::IPCException) rina::IPCManager::readSDU(int portId, void * sdu, int maxBytes);
-%catches(rina::FlowNotAllocatedException, rina::InvalidArgumentsException, rina::UnknownFlowException, rina::WriteSDUException, rina::IPCException) rina::IPCManager::writeSDU(int portId, void * sdu, int size);
 
 
 %include "librina/exceptions.h"
