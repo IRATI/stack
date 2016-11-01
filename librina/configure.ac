@@ -300,6 +300,10 @@ AC_CONFIG_FILES([
     wrap/c/src/Makefile
     wrap/c/include/Makefile
     wrap/c/include/librina-c/Makefile
+    wrap/rina-api/Makefile
+    wrap/rina-api/src/Makefile
+    wrap/rina-api/include/Makefile
+    wrap/rina-api/include/rina-api/Makefile
 
     test/Makefile
 

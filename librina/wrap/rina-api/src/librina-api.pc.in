@@ -1,0 +1,11 @@
+prefix=@prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: RINA-API
+Description: RINA API wrapper for IRATI librina
+Version: @PACKAGE_VERSION@
+URL: @PACKAGE_URL@
+Requires: librina
+Libs: -L${libdir} -lrina-api
+Cflags: -I${includedir}
