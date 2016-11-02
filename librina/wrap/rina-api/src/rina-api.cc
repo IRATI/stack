@@ -65,7 +65,9 @@ rina_register(int fd, const char *dif_name, const char *local_appl)
 
         (void)fd; /* The netlink socket file descriptor is used internally */
 
-        ari.ipcProcessId = 0;  // This is an application, not an IPC process
+        librina_init();
+
+        ari.ipcProcessId = 0;  /* This is an application, not an IPC process */
         ari.appName = ApplicationProcessNamingInformation(string(local_appl),
                                                           string());
 
@@ -77,29 +79,36 @@ rina_register(int fd, const char *dif_name, const char *local_appl)
                 ari.applicationRegistrationType = APPLICATION_REGISTRATION_ANY_DIF;
         }
 
-        // Request the registration
-        seqnum = ipcManager->requestApplicationRegistration(ari);
-
-        // Wait for the response to come
-        for (;;) {
-                event = ipcEventProducer->eventWait();
-                if (event && event->eventType ==
+        try {
+                /* Issue a registration request. */
+                seqnum = ipcManager->requestApplicationRegistration(ari);
+                /* Wait for the response to come, forever. In the future we
+                 * could use select to add a timeout mechanism, and return
+                 * ETIMEDOUT in errno. */
+                for (;;) {
+                        event = ipcEventProducer->eventWait();
+                        if (event && event->eventType ==
                                 REGISTER_APPLICATION_RESPONSE_EVENT &&
-                                event->sequenceNumber == seqnum) {
-                        break;
+                                        event->sequenceNumber == seqnum) {
+                                break;
+                        }
                 }
-        }
 
-        resp = dynamic_cast<RegisterApplicationResponseEvent*>(event);
+                resp = dynamic_cast<RegisterApplicationResponseEvent*>(event);
 
-        // Update librina state
-        if (resp->result) {
-                errno = EPERM;
-                ipcManager->withdrawPendingRegistration(seqnum);
+                /* Update librina state */
+                if (resp->result) {
+                        errno = EPERM;
+                        ipcManager->withdrawPendingRegistration(seqnum);
+                        return -1;
+                }
+
+                ipcManager->commitPendingRegistration(seqnum, resp->DIFName);
+        } catch (...) {
+                /* Operations can fail because of allocation failures. */
+                errno = ENOMEM;
                 return -1;
         }
-
-        ipcManager->commitPendingRegistration(seqnum, resp->DIFName);
 
         return 0;
 }
@@ -107,7 +116,41 @@ rina_register(int fd, const char *dif_name, const char *local_appl)
 int
 rina_unregister(int fd, const char *dif_name, const char *local_appl)
 {
-        return -1;
+        UnregisterApplicationResponseEvent *resp;
+        ApplicationProcessNamingInformation appi;
+        ApplicationProcessNamingInformation difi;
+        unsigned int seqnum;
+        IPCEvent *event;
+
+        (void)fd; /* The netlink socket file descriptor is used internally */
+
+        librina_init();
+
+        difi = ApplicationProcessNamingInformation(string(dif_name), string());
+        appi = ApplicationProcessNamingInformation(string(local_appl),
+                                                   string());
+
+        try {
+                seqnum = ipcManager->requestApplicationUnregistration(appi,
+                                difi);
+
+                event = ipcEventProducer->eventWait();
+                while (event == NULL ||
+                        event->eventType != UNREGISTER_APPLICATION_RESPONSE_EVENT
+                                || event->sequenceNumber != seqnum) {
+                        event = ipcEventProducer->eventWait();
+                }
+
+                resp = dynamic_cast<UnregisterApplicationResponseEvent*>(event);
+
+                ipcManager->appUnregistrationResult(seqnum, resp->result == 0);
+        } catch (...) {
+                /* Operations can fail because of allocation failures. */
+                errno = ENOMEM;
+                return -1;
+        }
+
+        return 0;
 }
 
 int
