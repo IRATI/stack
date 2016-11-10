@@ -347,7 +347,7 @@ static int decrypt(struct sdup_crypto_ps_default_data * priv_data,
 	buffer_size = pdu_len(pdu);
 	data = pdu_buffer(pdu);
 
-	LOG_WARN("DECRYPT original buffer_size %d", buffer_size);
+	LOG_DBG("DECRYPT original buffer_size %d", buffer_size);
 
 	iv = NULL;
 	ivsize = crypto_blkcipher_ivsize(state->blkcipher);
@@ -509,7 +509,7 @@ static int compress(struct sdup_crypto_ps_default_data * priv_data,
 		return -1;
 	}
 
-	LOG_ERR("DBG Compressed size (%d), uncompressed size (%d)",
+	LOG_DBG("DBG Compressed size (%d), uncompressed size (%d)",
 							compressed_size,
 							buffer_size);
 	if (buffer_size > compressed_size){
@@ -518,7 +518,7 @@ static int compress(struct sdup_crypto_ps_default_data * priv_data,
 			return -1;
 		}
 	}else{
-		LOG_WARN("Compressed size (%d) is > than uncompressed size (%d) after compression",
+		LOG_DBG("Compressed size (%d) is > than uncompressed size (%d) after compression",
 							compressed_size,
 							buffer_size);
 		if (pdu_head_grow(pdu, compressed_size - buffer_size)){
@@ -575,11 +575,11 @@ static int decompress(struct sdup_crypto_ps_default_data * priv_data,
 		return -1;
 	}
 
-	LOG_ERR("DBG Compressed size (%d), decompressed size (%d)",
+	LOG_DBG("Compressed size (%d), decompressed size (%d)",
 							buffer_size,
 							decompressed_size);
 	if (buffer_size > decompressed_size){
-		LOG_WARN("Compressed size (%d) is > than decompressed size (%d) after decompression",
+		LOG_DBG("Compressed size (%d) is > than decompressed size (%d) after decompression",
 							buffer_size,
 							decompressed_size);
 
