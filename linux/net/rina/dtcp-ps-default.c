@@ -142,7 +142,7 @@ default_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
                 return 0;
 
         ret = dtcp_sv_update(ps->dm, pci);
-        pci_destroy(pci);
+        pci_release(pci);
 
         return ret;
 }
@@ -210,7 +210,6 @@ default_rate_reduction(struct dtcp_ps * ps, const struct pci * pci) {
 	       LOG_ERR("No instance passed, cannot run policy");
 	       return -1;
 	}
-
 
 	rt = pci_control_sndr_rate(pci);
 	tf = pci_control_time_frame(pci);

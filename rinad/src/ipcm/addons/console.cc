@@ -162,6 +162,7 @@ IPCMConsole::IPCMConsole(const std::string& socket_path_) :
 
 	keep_on_running = true;
 	rina::ThreadAttributes ta;
+	ta.setName("mgmt-console");
 	worker = new rina::Thread(console_function, this, &ta);
 	worker->start();
 }
@@ -926,8 +927,9 @@ int IPCMConsole::read_ipcp_ribobj(std::vector<std::string>& args)
 
 	// CAREFUL, DELEGATION OBJECT SET TO NULL, this function is only
 	// for testing, return result is not being processed.
+	rina::ser_obj_t obj_value;
 	if (IPCManager->delegate_ipcp_ribobj(NULL,
-			ipcp_id, args[2], args[3], scope, 1, 0)
+			ipcp_id, rina::cdap::cdap_m_t::M_READ, args[2], args[3], obj_value, scope, 1, 0)
 			== IPCM_FAILURE || promise.wait() != IPCM_SUCCESS) {
 		outstream << "Error occured while forwarding CDAP message to IPCP"
 				<< endl;

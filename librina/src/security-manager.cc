@@ -59,7 +59,8 @@ cdap_rib::auth_policy_t AuthNonePolicySet::get_auth_policy(int session_id,
 		throw Exception();
 	}
 
-	ISecurityContext * sc = new ISecurityContext(session_id);
+	ISecurityContext * sc = new ISecurityContext(session_id,
+						     IAuthPolicySet::AUTH_NONE);
 	sc->crcPolicy = profile.crcPolicy;
 	sc->ttlPolicy = profile.ttlPolicy;
 	sc->con.port_id = session_id;
@@ -89,7 +90,8 @@ rina::IAuthPolicySet::AuthStatus AuthNonePolicySet::initiate_authentication(cons
 		return rina::IAuthPolicySet::FAILED;
 	}
 
-	ISecurityContext * sc = new ISecurityContext(session_id);
+	ISecurityContext * sc = new ISecurityContext(session_id,
+						     IAuthPolicySet::AUTH_NONE);
 	sc->crcPolicy = profile.crcPolicy;
 	sc->ttlPolicy = profile.ttlPolicy;
 	sc->con.port_id = session_id;
@@ -132,7 +134,7 @@ void CancelAuthTimerTask::run()
 
 // Class AuthPasswordSecurityContext
 AuthPasswordSecurityContext::AuthPasswordSecurityContext(int session_id) :
-		ISecurityContext(session_id)
+		ISecurityContext(session_id, IAuthPolicySet::AUTH_PASSWORD)
 {
 	challenge = 0;
 	timer_task = 0;
@@ -179,6 +181,7 @@ cdap_rib::auth_policy_t AuthPasswordPolicySet::get_auth_policy(int session_id,
 	sc->crcPolicy = profile.crcPolicy;
 	sc->ttlPolicy = profile.ttlPolicy;
 	sc->con.port_id = session_id;
+	sc->auth_policy_name = IAuthPolicySet::AUTH_PASSWORD;
 	sec_man->add_security_context(sc);
 
 	cdap_rib::auth_policy_t result;
@@ -263,6 +266,7 @@ rina::IAuthPolicySet::AuthStatus AuthPasswordPolicySet::initiate_authentication(
 	sc->crcPolicy = profile.crcPolicy;
 	sc->ttlPolicy = profile.ttlPolicy;
 	sc->con.port_id = session_id;
+	sc->auth_policy_name = IAuthPolicySet::AUTH_PASSWORD;
 	sec_man->add_security_context(sc);
 
 	ScopedLock scopedLock(lock);
@@ -609,7 +613,7 @@ CryptoState SSH2SecurityContext::get_crypto_state(bool enable_crypto_tx,
 SSH2SecurityContext::SSH2SecurityContext(int session_id,
 		 	   	         const std::string & peer_app_name,
 				   	 const AuthSDUProtectionProfile& profile)
-		: ISecurityContext(session_id)
+		: ISecurityContext(session_id, IAuthPolicySet::AUTH_SSH2)
 {
 	key_exch_alg = profile.authPolicy.get_param_value_as_string(KEY_EXCHANGE_ALGORITHM);
 	encrypt_alg = profile.encryptPolicy.get_param_value_as_string(ENCRYPTION_ALGORITHM);
@@ -639,7 +643,7 @@ SSH2SecurityContext::SSH2SecurityContext(int session_id,
 					 const std::string& peer_app_name,
 					 const AuthSDUProtectionProfile& profile,
 					 SSH2AuthOptions * options)
-		: ISecurityContext(session_id)
+		: ISecurityContext(session_id, IAuthPolicySet::AUTH_SSH2)
 {
 	std::string option = options->key_exch_algs.front();
 	if (option != SSL_TXT_EDH) {

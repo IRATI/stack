@@ -3,6 +3,7 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,16 +27,12 @@
 #include <linux/list.h>
 
 #include "common.h"
-#include "buffer.h"
 
-/*
- * FIXME: This structure will be hidden soon. Do not access its field(s)
- *        directly, prefer the access functions below.
- */
-struct sdu {
-        struct buffer * buffer;
-        struct list_head node;
-};
+#define MAX_PCIS_LEN (40 * 5)
+#define MAX_TAIL_LEN 20
+
+struct efcp_config;
+struct pdu;
 
 /*
  * Represents and SDU with the port-id the SDU is to be written to
@@ -47,27 +44,34 @@ struct sdu_wpi {
         port_id_t    port_id;
 };
 
-struct pdu;
+struct sdu		*sdu_create(size_t data_len);
+struct sdu		*sdu_create_ni(size_t data_len);
+struct sdu		*sdu_from_buffer_ni(void *buffer);
 
-/* NOTE: The following functions take the ownership of the buffer passed */
-struct sdu *          sdu_create_buffer_with(struct buffer * buffer);
-struct sdu *          sdu_create_buffer_with_ni(struct buffer * buffer);
+int			sdu_destroy(struct sdu * sdu);
+bool		is_sdu_ok(const struct sdu *sdu);
+ssize_t		sdu_len(const struct sdu *sdu);
+unsigned char	*sdu_buffer(const struct sdu *sdu);
 
-/* FIXME: To be removed after ser/des */
-struct sdu *          sdu_create_pdu_with(struct pdu * pdu);
-struct sdu *          sdu_create_pdu_with_ni(struct pdu * pdu);
+/* FIXME: these two have to be removed */
+struct sk_buff	*sdu_detach_skb(const struct sdu *sdu);
+void		sdu_attach_skb(struct sdu *sdu, struct sk_buff *skb);
 
-int                   sdu_destroy(struct sdu * s);
-const struct buffer * sdu_buffer_ro(const struct sdu * s);
-struct buffer *       sdu_buffer_rw(struct sdu * s);
-struct sdu *          sdu_dup(const struct sdu * sdu);
-struct sdu *          sdu_dup_ni(const struct sdu * sdu);
-bool                  sdu_is_ok(const struct sdu * sdu);
-int                   sdu_buffer_disown(struct sdu * sdu);
+int		sdu_efcp_config_bind(struct sdu *sdu,
+					     struct efcp_config *cfg);
+struct sdu	*sdu_from_pdu(struct pdu *pdu);
 
-struct sdu_wpi *      sdu_wpi_create_with(struct buffer * buffer);
-struct sdu_wpi *      sdu_wpi_create_with_ni(struct buffer * buffer);
-int                   sdu_wpi_destroy(struct sdu_wpi * s);
-bool                  sdu_wpi_is_ok(const struct sdu_wpi * s);
+/* For shim TCP/UDP */
+int			sdu_shrink(struct sdu *sdu, size_t bytes);
+/* For shim HV */
+int			sdu_pop(struct sdu *sdu, size_t bytes);
+int			sdu_push(struct sdu *sdu, size_t bytes);
+
+/* For SDU_WPI */
+struct sdu_wpi		*sdu_wpi_create(size_t data_len);
+struct sdu_wpi		*sdu_wpi_create_ni(size_t data_len);
+int			sdu_wpi_destroy(struct sdu_wpi *s);
+bool		sdu_wpi_is_ok(const struct sdu_wpi *s);
+int		sdu_wpi_detach(struct sdu_wpi *s);
 
 #endif

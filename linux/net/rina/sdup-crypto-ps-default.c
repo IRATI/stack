@@ -188,14 +188,13 @@ static void priv_data_destroy(struct sdup_crypto_ps_default_data * data)
 }
 
 static int add_padding(struct sdup_crypto_ps_default_data * priv_data,
-		       struct pdu_ser * pdu)
+		       struct pdu * pdu)
 {
 	struct sdup_crypto_ps_default_crypto_state * state;
-	struct buffer * buf;
 	unsigned int	buffer_size;
 	unsigned int	padded_size;
 	unsigned int	blk_size;
-	char *		data;
+	char *		buf_data;
 	int i;
 
 	if (!priv_data || !pdu || !priv_data->current_tx_state){
@@ -209,33 +208,33 @@ static int add_padding(struct sdup_crypto_ps_default_data * priv_data,
 	if (!state->blkcipher)
 		return 0;
 
-	buf = pdu_ser_buffer(pdu);
-	blk_size = crypto_blkcipher_blocksize(state->blkcipher);
-	buffer_size = buffer_length(buf);
-	padded_size = buffer_size + blk_size - (buffer_size % blk_size);
+	LOG_DBG("PADDING!");
 
-	if (pdu_ser_tail_grow_gfp(pdu, padded_size - buffer_size)){
+	blk_size = crypto_blkcipher_blocksize(state->blkcipher);
+	buffer_size = pdu_len(pdu);
+	padded_size = (buffer_size/blk_size + 1) * blk_size;
+
+	if (pdu_tail_grow(pdu, padded_size - buffer_size)){
 		LOG_ERR("Failed to grow ser PDU");
 		return -1;
 	}
 
 	/* PADDING */
-	data = buffer_data_rw(buf);
+	buf_data = pdu_buffer(pdu);
 	for (i=padded_size-1; i>=buffer_size; i--){
-		data[i] = padded_size - buffer_size;
+		buf_data[i] = padded_size - buffer_size;
 	}
 
 	return 0;
 }
 
 static int remove_padding(struct sdup_crypto_ps_default_data * priv_data,
-			  struct pdu_ser * pdu)
+			  struct pdu * pdu)
 {
 	struct sdup_crypto_ps_default_crypto_state * state;
-	struct buffer *	buf;
-	const char *	data;
-	unsigned int	len;
-	unsigned int	pad_len;
+	const char *	buf_data;
+	ssize_t		len;
+	ssize_t		pad_len;
 	int		i;
 
 	if (!priv_data || !pdu || !priv_data->current_rx_state){
@@ -249,21 +248,21 @@ static int remove_padding(struct sdup_crypto_ps_default_data * priv_data,
 	if (!state->blkcipher)
 		return 0;
 
-	buf = pdu_ser_buffer(pdu);
-	data = buffer_data_ro(buf);
-	len = buffer_length(buf);
-	pad_len = data[len-1];
+	LOG_DBG("UNPADDING!");
+	buf_data = pdu_buffer(pdu);
+	len = pdu_len(pdu);
+	pad_len = buf_data[len-1];
 
 	//check padding
 	for (i=len-1; i >= len-pad_len; --i){
-		if (data[i] != pad_len){
+		if (buf_data[i] != pad_len){
 			LOG_ERR("Padding check failed!");
 			return -1;
 		}
 	}
 
 	//remove padding
-	if (pdu_ser_tail_shrink_gfp(pdu, pad_len)){
+	if (pdu_tail_shrink(pdu, pad_len)){
 		LOG_ERR("Failed to shrink serialized PDU");
 		return -1;
 	}
@@ -272,13 +271,12 @@ static int remove_padding(struct sdup_crypto_ps_default_data * priv_data,
 }
 
 static int encrypt(struct sdup_crypto_ps_default_data * priv_data,
-		   struct pdu_ser * pdu)
+		   struct pdu * pdu)
 {
 	struct sdup_crypto_ps_default_crypto_state * state;
 	struct blkcipher_desc	desc;
 	struct scatterlist	sg;
-	struct buffer *		buf;
-	unsigned int		buffer_size;
+	ssize_t			buffer_size;
 	void *			data;
 	char *                  iv;
 	unsigned int		ivsize;
@@ -296,18 +294,16 @@ static int encrypt(struct sdup_crypto_ps_default_data * priv_data,
 
 	desc.flags = 0;
 	desc.tfm = state->blkcipher;
-
-	buf = pdu_ser_buffer(pdu);
-	buffer_size = buffer_length(buf);
-	data = buffer_data_rw(buf);
+	buffer_size = pdu_len(pdu);
+	data = pdu_buffer(pdu);
 
 	iv = NULL;
 	ivsize = crypto_blkcipher_ivsize(state->blkcipher);
 	if (ivsize) {
-		iv = rkzalloc(ivsize, GFP_KERNEL);
-		if (!iv){
+		if(pdu_head_grow(pdu, ivsize)){
 			LOG_ERR("IV allocation failed!");
 		}
+		iv = pdu_buffer(pdu);
 		get_random_bytes(iv, ivsize);
 	}
 
@@ -319,32 +315,19 @@ static int encrypt(struct sdup_crypto_ps_default_data * priv_data,
 	if (crypto_blkcipher_encrypt(&desc, &sg, &sg, buffer_size)) {
 		LOG_ERR("Encryption failed!");
 		if (iv)
-			rkfree(iv);
+			pdu_head_shrink(pdu, ivsize);
 		return -1;
 	}
 
-	if (pdu_ser_head_grow_gfp(GFP_ATOMIC, pdu, ivsize)){
-		LOG_ERR("Failed to grow ser PDU for IV");
-		if (iv)
-			rkfree(iv);
-		return -1;
-	}
-
-	data = buffer_data_rw(buf);
-	memcpy(data, iv, ivsize);
-
-	if (iv)
-		rkfree(iv);
 	return 0;
 }
 
 static int decrypt(struct sdup_crypto_ps_default_data * priv_data,
-		   struct pdu_ser * pdu)
+		   struct pdu * pdu)
 {
 	struct sdup_crypto_ps_default_crypto_state * state;
 	struct blkcipher_desc	desc;
 	struct scatterlist	sg;
-	struct buffer *		buf;
 	unsigned int		buffer_size;
 	void *			data;
 	char *                  iv;
@@ -361,31 +344,25 @@ static int decrypt(struct sdup_crypto_ps_default_data * priv_data,
 	if (state->blkcipher == NULL)
 		return 0;
 
-	buf = pdu_ser_buffer(pdu);
-	data = buffer_data_rw(buf);
+	buffer_size = pdu_len(pdu);
+	data = pdu_buffer(pdu);
+
+	LOG_DBG("DECRYPT original buffer_size %d", buffer_size);
 
 	iv = NULL;
 	ivsize = crypto_blkcipher_ivsize(state->blkcipher);
 	if (ivsize) {
-		iv = rkzalloc(ivsize, GFP_KERNEL);
-		if (!iv){
-			LOG_ERR("IV allocation failed!");
-		}
-		memcpy(iv, data, ivsize);
-
-		if (pdu_ser_head_shrink_gfp(GFP_ATOMIC, pdu, ivsize)){
+		iv = data;
+		if(pdu_head_shrink(pdu, ivsize)){
 			LOG_ERR("Failed to shrink ser PDU by IV");
-			if (iv)
-				rkfree(iv);
 			return -1;
 		}
+		data = pdu_buffer(pdu);
+		buffer_size = pdu_len(pdu);
 	}
 
 	desc.flags = 0;
 	desc.tfm = state->blkcipher;
-	buf = pdu_ser_buffer(pdu);
-	buffer_size = buffer_length(buf);
-	data = buffer_data_rw(buf);
 
 	sg_init_one(&sg, data, buffer_size);
 
@@ -394,21 +371,16 @@ static int decrypt(struct sdup_crypto_ps_default_data * priv_data,
 
 	if (crypto_blkcipher_decrypt(&desc, &sg, &sg, buffer_size)) {
 		LOG_ERR("Decryption failed!");
-		if (iv)
-			rkfree(iv);
 		return -1;
 	}
 
-	if (iv)
-		rkfree(iv);
 	return 0;
 }
 
 static int add_hmac(struct sdup_crypto_ps_default_data * priv_data,
-		    struct pdu_ser * pdu)
+		    struct pdu * pdu)
 {
 	struct sdup_crypto_ps_default_crypto_state * state;
-	struct buffer *		buf;
 	unsigned int		buffer_size;
 	void *			data;
 	unsigned int		digest_size;
@@ -425,16 +397,14 @@ static int add_hmac(struct sdup_crypto_ps_default_data * priv_data,
 	if (state->shash == NULL)
 		return 0;
 
-	buf = pdu_ser_buffer(pdu);
-	buffer_size = buffer_length(buf);
+	buffer_size = pdu_len(pdu);
 	digest_size = crypto_shash_digestsize(state->shash);
+	data = pdu_buffer(pdu);
 
-	if (pdu_ser_tail_grow_gfp(pdu, digest_size)){
+	if (pdu_tail_grow(pdu, digest_size)){
 		LOG_ERR("Failed to grow ser PDU for HMAC");
 		return -1;
 	}
-
-	data = buffer_data_rw(buf);
 
 	shash->flags = 0;
 	shash->tfm = state->shash;
@@ -448,10 +418,9 @@ static int add_hmac(struct sdup_crypto_ps_default_data * priv_data,
 }
 
 static int check_hmac(struct sdup_crypto_ps_default_data * priv_data,
-		      struct pdu_ser * pdu)
+		      struct pdu * pdu)
 {
 	struct sdup_crypto_ps_default_crypto_state * state;
-	struct buffer *		buf;
 	unsigned int		buffer_size;
 	void *			data;
 	unsigned int		digest_size;
@@ -469,9 +438,8 @@ static int check_hmac(struct sdup_crypto_ps_default_data * priv_data,
 	if (state->shash == NULL)
 		return 0;
 
-	buf = pdu_ser_buffer(pdu);
-	buffer_size = buffer_length(buf);
-	data = buffer_data_rw(buf);
+	buffer_size = pdu_len(pdu);
+	data = pdu_buffer(pdu);
 
 	digest_size = crypto_shash_digestsize(state->shash);
 	verify_digest = rkzalloc(digest_size, GFP_KERNEL);
@@ -495,7 +463,7 @@ static int check_hmac(struct sdup_crypto_ps_default_data * priv_data,
 		return -1;
 	}
 
-	if (pdu_ser_tail_shrink_gfp(pdu, digest_size)){
+	if (pdu_tail_shrink(pdu, digest_size)){
 		LOG_ERR("Failed to shrink serialized PDU");
 		rkfree(verify_digest);
 		return -1;
@@ -506,15 +474,13 @@ static int check_hmac(struct sdup_crypto_ps_default_data * priv_data,
 }
 
 static int compress(struct sdup_crypto_ps_default_data * priv_data,
-		    struct pdu_ser * pdu)
+		    struct pdu* pdu)
 {
 	struct sdup_crypto_ps_default_crypto_state * state;
-	struct buffer *		buf;
 	unsigned int		buffer_size;
 	void *			data;
 	unsigned int		compressed_size;
 	char *                  compressed_data;
-	char *                  tmp;
 	int err;
 
 	if (!priv_data || !pdu || !priv_data->current_tx_state){
@@ -528,9 +494,8 @@ static int compress(struct sdup_crypto_ps_default_data * priv_data,
 	if (state->compress == NULL)
 		return 0;
 
-	buf = pdu_ser_buffer(pdu);
-	buffer_size = buffer_length(buf);
-	data = buffer_data_rw(buf);
+	buffer_size = pdu_len(pdu);
+	data = pdu_buffer(pdu);
 
 	compressed_size = state->comp_scratch_size;
 	compressed_data = state->comp_scratch;
@@ -544,24 +509,35 @@ static int compress(struct sdup_crypto_ps_default_data * priv_data,
 		return -1;
 	}
 
-	tmp = rkzalloc(compressed_size, GFP_KERNEL);
-	if (!tmp){
-		LOG_ERR("Failed allocation of new buffer!");
-		return -1;
+	LOG_DBG("DBG Compressed size (%d), uncompressed size (%d)",
+							compressed_size,
+							buffer_size);
+	if (buffer_size > compressed_size){
+		if (pdu_head_shrink(pdu, buffer_size -compressed_size)){
+			LOG_ERR("Failed to shrink PDU for compressed data!");
+			return -1;
+		}
+	}else{
+		LOG_DBG("Compressed size (%d) is > than uncompressed size (%d) after compression",
+							compressed_size,
+							buffer_size);
+		if (pdu_head_grow(pdu, compressed_size - buffer_size)){
+			LOG_ERR("Failed to groe PDU for compressed data!");
+			return -1;
+		}
 	}
-	memcpy(tmp, compressed_data, compressed_size);
+	data = pdu_buffer(pdu);
 
-	buffer_assign(buf, tmp, compressed_size);
+	memcpy(data, compressed_data, compressed_size);
 
 	return 0;
 }
 
 static int decompress(struct sdup_crypto_ps_default_data * priv_data,
 		      u_int32_t max_pdu_size,
-		      struct pdu_ser * pdu)
+		      struct pdu * pdu)
 {
 	struct sdup_crypto_ps_default_crypto_state * state;
-	struct buffer *		buf;
 	unsigned int		buffer_size;
 	void *			data;
 	void *			decompressed_data;
@@ -579,9 +555,8 @@ static int decompress(struct sdup_crypto_ps_default_data * priv_data,
 	if (state->compress == NULL)
 		return 0;
 
-	buf = pdu_ser_buffer(pdu);
-	buffer_size = buffer_length(buf);
-	data = buffer_data_rw(buf);
+	buffer_size = pdu_len(pdu);
+	data = pdu_buffer(pdu);
 
 	decompressed_size = max_pdu_size;
 	decompressed_data = rkzalloc(decompressed_size, GFP_KERNEL);
@@ -600,16 +575,38 @@ static int decompress(struct sdup_crypto_ps_default_data * priv_data,
 		return -1;
 	}
 
-	buffer_assign(buf, decompressed_data, decompressed_size);
+	LOG_DBG("Compressed size (%d), decompressed size (%d)",
+							buffer_size,
+							decompressed_size);
+	if (buffer_size > decompressed_size){
+		LOG_DBG("Compressed size (%d) is > than decompressed size (%d) after decompression",
+							buffer_size,
+							decompressed_size);
+
+		if (pdu_head_shrink(pdu, buffer_size - decompressed_size)){
+			LOG_ERR("Failed to shrink PDU header for uncompressed data!");
+			rkfree(decompressed_data);
+			return -1;
+		}
+	}else{
+		if (pdu_head_grow(pdu, decompressed_size - buffer_size)){
+			LOG_ERR("Failed to grow PDU header for uncompressed data!");
+			rkfree(decompressed_data);
+			return -1;
+		}
+	}
+	data = pdu_buffer(pdu);
+
+	memcpy(data, decompressed_data, decompressed_size);
+	rkfree(decompressed_data);
 
 	return 0;
 }
 
 static int add_seq_num(struct sdup_crypto_ps_default_data * priv_data,
-		       struct pdu_ser * pdu)
+		       struct pdu * pdu)
 {
 	struct sdup_crypto_ps_default_crypto_state * state;
-	struct buffer * buf;
 	char *		data;
 
 	if (!priv_data || !pdu || !priv_data->current_tx_state){
@@ -623,16 +620,12 @@ static int add_seq_num(struct sdup_crypto_ps_default_data * priv_data,
 	if (!state->blkcipher)
 		return 0;
 
-	buf = pdu_ser_buffer(pdu);
-
-	if (pdu_ser_head_grow_gfp(GFP_ATOMIC,
-				  pdu,
-				  sizeof(priv_data->tx_seq_num))){
+	if (pdu_head_grow(pdu, sizeof(priv_data->tx_seq_num))){
 		LOG_ERR("Failed to grow ser PDU");
 		return -1;
 	}
 
-	data = buffer_data_rw(buf);
+	data = pdu_buffer(pdu);
 	memcpy(data, &priv_data->tx_seq_num, sizeof(priv_data->tx_seq_num));
 
 	LOG_DBG("Added sequence number %u", priv_data->tx_seq_num);
@@ -643,10 +636,9 @@ static int add_seq_num(struct sdup_crypto_ps_default_data * priv_data,
 }
 
 static int del_seq_num(struct sdup_crypto_ps_default_data * priv_data,
-		       struct pdu_ser * pdu)
+		       struct pdu * pdu)
 {
 	struct sdup_crypto_ps_default_crypto_state * state;
-	struct buffer * buf;
 	char *		data;
 	unsigned int    seq_num;
 	long int	min_seq_num;
@@ -665,14 +657,11 @@ static int del_seq_num(struct sdup_crypto_ps_default_data * priv_data,
 	if (!state->blkcipher)
 		return 0;
 
-	buf = pdu_ser_buffer(pdu);
-	data = buffer_data_rw(buf);
+	data = pdu_buffer(pdu);
 
 	memcpy(&seq_num, data, sizeof(priv_data->rx_seq_num));
 
-	if (pdu_ser_head_shrink_gfp(GFP_ATOMIC,
-				    pdu,
-				    sizeof(priv_data->tx_seq_num))){
+	if (pdu_head_shrink(pdu, sizeof(priv_data->tx_seq_num))){
 		LOG_ERR("Failed to grow ser PDU");
 		return -1;
 	}
@@ -721,7 +710,7 @@ static int del_seq_num(struct sdup_crypto_ps_default_data * priv_data,
 }
 
 int default_sdup_apply_crypto(struct sdup_crypto_ps * ps,
-			      struct pdu_ser * pdu)
+			      struct pdu * pdu)
 {
 	int result = 0;
 	struct sdup_crypto_ps_default_data * priv_data = ps->priv;
@@ -752,7 +741,7 @@ int default_sdup_apply_crypto(struct sdup_crypto_ps * ps,
 EXPORT_SYMBOL(default_sdup_apply_crypto);
 
 int default_sdup_remove_crypto(struct sdup_crypto_ps * ps,
-			       struct pdu_ser * pdu)
+			       struct pdu * pdu)
 {
 	int result = 0;
 	struct sdup_crypto_ps_default_data * priv_data = ps->priv;

@@ -1,0 +1,9 @@
+package rina.messages;
+//option optimize_for = LITE_RUNTIME;
+import "ApplicationProcessNamingInfoMessage.proto";
+
+message directoryForwardingTableEntry_t{ 			//information about a directoryforwardingtable entry
+    required applicationProcessNamingInfo_t applicationName = 1;
+    required uint64 ipcProcessSynonym = 2;
+    optional uint64 timestamp  = 3;
+}

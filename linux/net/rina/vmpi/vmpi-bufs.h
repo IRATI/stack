@@ -23,19 +23,28 @@
 
 #include "../sdu.h"
 
+#define vmpi_buf sdu
 
-#define vmpi_buf                sdu
+struct vmpi_buf_node {
+	struct vmpi_buf *vb;
+	struct list_head node;
+};
 
 struct vmpi_buf * vmpi_buf_alloc(size_t size, size_t unused, gfp_t gfp);
 
 void vmpi_buf_free(struct vmpi_buf *vb);
 
-uint8_t * vmpi_buf_data(struct vmpi_buf *vb);
+struct vmpi_buf_node * vmpi_buf_node_alloc(struct vmpi_buf *vb, gfp_t gfp);
 
-size_t vmpi_buf_size(struct vmpi_buf *vb);
+void vmpi_buf_node_free(struct vmpi_buf_node *vbn);
+
+uint8_t * vmpi_buf_data(struct vmpi_buf *vb);
 
 size_t vmpi_buf_len(struct vmpi_buf *vb);
 
 void vmpi_buf_set_len(struct vmpi_buf *vb, size_t len);
 
+void vmpi_buf_pop(struct vmpi_buf *vb, size_t len);
+
+void vmpi_buf_push(struct vmpi_buf *vb, size_t len);
 #endif /* __VMPI_BUFS_H__ */

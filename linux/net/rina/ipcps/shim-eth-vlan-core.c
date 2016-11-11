@@ -45,7 +45,8 @@
 #include "kipcm.h"
 #include "debug.h"
 #include "utils.h"
-#include "du.h"
+#include "sdu.h"
+#include "pdu.h"
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
 #include "rinarp/rinarp.h"
@@ -60,7 +61,6 @@
 static struct workqueue_struct * rcv_wq;
 
 struct rcv_work_data {
-        struct sk_buff *            skb;
         struct net_device *         dev;
         struct shim_eth_flow *      flow;
         struct ipcp_instance_data * data;
@@ -891,7 +891,6 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         struct sk_buff *         skb;
         const unsigned char *    src_hw;
         const unsigned char *    dest_hw;
-        unsigned char *          sdu_ptr;
         int                      hlen, tlen, length;
         int                      retval;
 
@@ -908,21 +907,21 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 		return -1;
 	}
 
-        if (unlikely(!sdu_is_ok(sdu))) {
+        if (unlikely(!is_sdu_ok(sdu))) {
         	LOG_ERR("Bogus SDU passed, bailing out");
         	sdu_destroy(sdu);
         	return -1;
         }
 
-        length = buffer_length(sdu->buffer);
-        if (length > data->dev->mtu) {
+        hlen   = sizeof(struct ethhdr);
+        tlen   = data->dev->needed_tailroom;
+        length = sdu_len(sdu);
+
+        if (unlikely(length > (data->dev->mtu - hlen))) {
         	LOG_ERR("SDU too large (%d), dropping", length);
         	sdu_destroy(sdu);
         	return -1;
         }
-
-        hlen   = LL_RESERVED_SPACE(data->dev);
-        tlen   = data->dev->needed_tailroom;
 
         flow = find_flow(data, id);
         if (!flow) {
@@ -954,26 +953,16 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        skb = alloc_skb(length + hlen + tlen, GFP_ATOMIC);
-        if (skb == NULL) {
-                LOG_ERR("Cannot allocate a skb");
-                sdu_destroy(sdu);
-                return -1;
-        }
-
-        skb_reserve(skb, hlen);
-        skb_reset_network_header(skb);
-        sdu_ptr = (unsigned char *) skb_put(skb, buffer_length(sdu->buffer));
-
-        if (!memcpy(sdu_ptr,
-        	    buffer_data_ro(sdu->buffer),
-                    buffer_length(sdu->buffer))) {
-                LOG_ERR("Memcpy failed");
+	/* FIXME: sdu_detach_skb() has to be removed */
+	/* skb_get is used to increase reference counter for the EAGAIN case */
+        skb = skb_get(sdu_detach_skb(sdu));
+        if (unlikely(skb_tailroom(skb) < tlen)) {
+		LOG_ERR("Missing tail room in SKB, bailing out...");
                 kfree_skb(skb);
-                sdu_destroy(sdu);
-                return -1;
+        	sdu_destroy(sdu);
+        	return -1;
         }
-
+        skb_reset_network_header(skb);
         skb->dev      = data->dev;
         skb->protocol = htons(ETH_P_RINA);
 
@@ -987,19 +976,24 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         }
 
         retval = dev_queue_xmit(skb);
+
         if (retval == -ENETDOWN) {
         	LOG_ERR("dev_q_xmit returned device down");
+		/* FIXME: this may produce a bad deallocation bug */
+                kfree_skb(skb);
         	sdu_destroy(sdu);
         	return -1;
         }
         if (retval != NET_XMIT_SUCCESS) {
+		skb_pull(skb, hlen); /* remove mac header */
+		sdu_attach_skb(sdu, skb);
         	LOG_DBG("qdisc cannot enqueue now (%d), try later", retval);
         	return -EAGAIN;
         }
 
-        sdu_destroy(sdu);
+        kfree_skb(skb);
+       	sdu_destroy(sdu);
         LOG_DBG("Packet sent");
-
         return 0;
 }
 
@@ -1013,7 +1007,6 @@ static int eth_vlan_rcv_worker(void * o)
 
         struct shim_eth_flow *          flow;
         struct rcv_work_data *          wdata;
-        struct sk_buff *                skb;
         struct net_device *             dev;
 
         LOG_DBG("Worker waking up, going to create a flow");
@@ -1022,7 +1015,6 @@ static int eth_vlan_rcv_worker(void * o)
 
         wdata = (struct rcv_work_data *) o;
 
-        skb    = wdata->skb;
         dev    = wdata->dev;
         flow   = wdata->flow;
         data   = wdata->data;
@@ -1030,7 +1022,6 @@ static int eth_vlan_rcv_worker(void * o)
 
         if (!data->app_name) {
                 LOG_ERR("No app registered yet! Someone is doing something bad on the network");
-                kfree_skb(skb);
                 return -1;
         }
 
@@ -1144,8 +1135,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         struct shim_eth_flow *          flow;
         struct gha *                    ghaddr;
         struct sdu *                    du;
-        struct buffer *                 buffer;
-        char *                          sk_data;
+	struct sk_buff *                linear_skb;
 
         struct rcv_work_data          * wdata;
         struct rwq_work_item          * item;
@@ -1202,46 +1192,24 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         }
         ASSERT(gha_is_ok(ghaddr));
 
-        /* Get the SDU out of the sk_buff */
-        sk_data = rkmalloc(skb->len, GFP_ATOMIC);
-        if (!sk_data) {
-                gha_destroy(ghaddr);
-                kfree_skb(skb);
-                return -1;
-        }
+	/* FIXME: If skb is not linear we need to make a copy... */
+	linear_skb = skb;
+	if (skb_is_nonlinear(skb)) {
+		LOG_DBG("SKB is fragmented, creating linear SKB");
+		linear_skb = skb_copy(skb, GFP_ATOMIC);
+		if (!linear_skb) {
+			LOG_ERR("Could not linearize received SKB");
+			kfree_skb(skb);
+			return -1;
+		}
+		LOG_DBG("Linear SKB fragmens: %d", skb_shinfo(linear_skb)->nr_frags);
+		kfree_skb(skb);
+	}
 
-        /*
-         * FIXME: We should avoid this extra copy, but then we cannot free the
-         *        skb at the end of the eth_vlan_rcv function. To do so we
-         *        have to either find a way to free all the data of the skb
-         *        except for the SDU, or delay freeing the skb until it is
-         *        safe to do so.
-         */
-
-        if (skb_copy_bits(skb, 0, sk_data, skb->len)) {
-                LOG_ERR("Failed to copy data from sk_buff");
-                rkfree(sk_data);
-                gha_destroy(ghaddr);
-                kfree_skb(skb);
-                return -1;
-        }
-
-        buffer = buffer_create_with_ni(sk_data, skb->len);
-        if (!buffer) {
-                rkfree(sk_data);
-                gha_destroy(ghaddr);
-                kfree_skb(skb);
-                return -1;
-        }
-
-        /* We're done with the skb from this point on so ... let's get rid */
-        kfree_skb(skb);
-
-        du = sdu_create_buffer_with_ni(buffer);
-        if (!du) {
-                LOG_ERR("Couldn't create data unit");
-                buffer_destroy(buffer);
-                gha_destroy(ghaddr);
+	du = sdu_from_buffer_ni(linear_skb);
+	if (!du) {
+		LOG_ERR("Could not create SDU from buffer");
+                kfree_skb(linear_skb);
                 return -1;
         }
 
@@ -1288,7 +1256,6 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 /*FIXME: add checks */
 
                 wdata = rkzalloc(sizeof(* wdata), GFP_ATOMIC);
-                wdata->skb  = skb;
                 wdata->dev  = dev;
                 wdata->flow = flow;
                 wdata->data = data;

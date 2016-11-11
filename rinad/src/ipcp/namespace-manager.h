@@ -137,10 +137,14 @@ public:
 		return class_name;
 	};
 
+	void checkDFTEntriesToRemove(unsigned int address);
+
 	const static std::string class_name;
 	const static std::string object_name;
 
 private:
+	rina::Lockable lock;
+	rina::Timer timer;
 	INamespaceManager * namespace_manager_;
 };
 
@@ -194,6 +198,18 @@ private:
 			int result);
 
 	bool contains_entry(int candidate, const std::list<int>& elements);
+};
+
+class CheckDFTEntriesToRemoveTimerTask : public rina::TimerTask {
+public:
+	CheckDFTEntriesToRemoveTimerTask(DFTRIBObj * dft_,
+					 unsigned int address_);
+	~CheckDFTEntriesToRemoveTimerTask() throw(){};
+	void run();
+
+private:
+	unsigned int address;
+	DFTRIBObj* dft;
 };
 
 } //namespace rinad

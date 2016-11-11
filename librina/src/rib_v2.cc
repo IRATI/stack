@@ -195,8 +195,9 @@ const cdap_rib::vers_info_t& RIBSchema::get_version() const {
 }
 
 void RIBSchema::add_create_callback(const std::string& class_,
-						const std::string& fqn_,
-						create_cb_t cb){
+				    const std::string& fqn_,
+				    create_cb_t cb)
+{
 	cn_fqn_pair_t key;
 
 	if(class_ == "")
@@ -641,13 +642,26 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 		//Mutual exclusion
 		ReadScopedLock rlock(rib_obj->rwlock, false);
 
-		//If the object exists invoke the callback over the
-		//object
-		rib_obj->create(con, obj.name_, obj.class_, filt,
-						invoke_id,
+		if (!rib_obj->delegates) {
+			//If the object exists invoke the callback over the
+			//object
+			rib_obj->create(con, obj.name_, obj.class_, filt,
+					invoke_id,
+					obj.value_,
+					obj_reply.value_,
+					res);
+		} else {
+			cdap_rib::filt_info_t deleg_filt;
+			DelegationObj *del_obj = (DelegationObj*) rib_obj;
+			del_obj->forward_object(con,
+						rina::cdap::cdap_m_t::M_CREATE,
+						obj.name_,
+						obj.class_,
 						obj.value_,
-						obj_reply.value_,
-						res);
+						flags,
+						deleg_filt,
+						invoke_id);
+		}
 	} else {
 		//Otherwise check the schema for a factory function
 		std::string parent_name = get_parent_fqn(obj.name_);
@@ -912,8 +926,10 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
                                 if (count == objects.size())
                                         del_obj->last = true;
 				del_obj->forward_object(con,
+							rina::cdap::cdap_m_t::M_READ,
 							delegated_name,
 							rib_obj->class_name,
+							obj.value_,
 							flags,
 							deleg_filt,
 							invoke_id);
@@ -2183,12 +2199,11 @@ void RIBDaemon::createSchema(const cdap_rib::vers_info_t& version,
 	ver_schema_map[ver] = schema;
 }
 
-void RIBDaemon::addCreateCallbackSchema(
-					const cdap_rib::vers_info_t& version,
+void RIBDaemon::addCreateCallbackSchema(const cdap_rib::vers_info_t& version,
 					const std::string& class_,
 					const std::string& fqn_,
-					create_cb_t cb){
-
+					create_cb_t cb)
+{
 	uint64_t ver = version.version_;
 	std::map<uint64_t, RIBSchema*>::iterator it;
 

@@ -26,7 +26,7 @@
 #include "common.h"
 #include "ipcp-instances.h"
 #include "ipcp-factories.h"
-#include "du.h"
+#include "sdu.h"
 #include "rnl.h"
 #include "kfa.h"
 #include "rds/robjects.h"

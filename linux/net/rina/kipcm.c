@@ -35,7 +35,6 @@
 #include "ipcp-utils.h"
 #include "kipcm-utils.h"
 #include "common.h"
-#include "du.h"
 #include "rnl.h"
 #include "rnl-utils.h"
 #include "kfa.h"
@@ -2148,7 +2147,7 @@ int kipcm_sdu_write(struct kipcm * kipcm,
                 return -EINVAL;
         }
 
-        if (!sdu_is_ok(sdu)) {
+        if (!is_sdu_ok(sdu)) {
                 LOG_ERR("Bogus SDU received, bailing out");
                 sdu_destroy(sdu);
                 return -EINVAL;
@@ -2232,17 +2231,12 @@ int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
                                       sdu_wpi->dst_addr,
                                       sdu_wpi->port_id,
                                       sdu_wpi->sdu)) {
-                sdu_buffer_disown(sdu_wpi->sdu);
+                sdu_wpi_detach(sdu_wpi);
                 sdu_wpi_destroy(sdu_wpi);
                 return -1;
         }
 
-        /*
-         * NOTE: sdu_wpi can't be destroyed because the buffer of
-         * the sdu inside sdu_wpi is used to build the pdu and it is
-         * destroyed at sdu_create_pdu_with, called by send_worker
-         */
-        sdu_buffer_disown(sdu_wpi->sdu);
+        sdu_wpi_detach(sdu_wpi);
         sdu_wpi_destroy(sdu_wpi);
         return 0;
 }

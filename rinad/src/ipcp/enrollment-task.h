@@ -28,6 +28,7 @@
 #include "common/concurrency.h"
 #include "ipcp/components.h"
 #include <librina/internal-events.h>
+#include "ipcp/ipc-process.h"
 
 namespace rinad {
 
@@ -47,12 +48,19 @@ public:
 		  rina::cdap_rib::obj_info_t &obj_reply,
 		  rina::cdap_rib::res_info_t& res);
 
+	static void create_cb(const rina::rib::rib_handle_t rib,
+		  const rina::cdap_rib::con_handle_t &con,
+		  const std::string& fqn, const std::string& class_,
+		  const rina::cdap_rib::filt_info_t &filt,
+		  const int invoke_id, const rina::ser_obj_t &obj_req,
+		  rina::cdap_rib::obj_info_t &obj_reply,
+		  rina::cdap_rib::res_info_t& res);
 	const static std::string class_name;
 	const static std::string object_name_prefix;
 
 private:
-
 	rina::Neighbor * neighbor;
+	static bool createNeighbor(rina::Neighbor &object);
 };
 
 class NeighborsRIBObj: public IPCPRIBObj {
@@ -158,6 +166,7 @@ class IEnrollmentStateMachine : public rina::rib::RIBOpsRespHandler {
 public:
 	static const std::string STATE_NULL;
 	static const std::string STATE_ENROLLED;
+	static const std::string STATE_TERMINATED;
 
 	IEnrollmentStateMachine(IPCProcess * ipcp,
 			const rina::ApplicationProcessNamingInformation& remote_naming_info,
@@ -187,9 +196,10 @@ public:
 	/// @param cdapSessionDescriptor
 	void flowDeallocated(int portId);
 
+	std::string get_state();
+
 	rina::Neighbor remote_peer_;
 	bool enroller_;
-	std::string state_;
 
 protected:
 	bool isValidPortId(int portId);
@@ -216,6 +226,7 @@ protected:
 	rina::Lockable lock_;
 	rina::cdap_rib::con_handle_t con;
 	rina::TimerTask * last_scheduled_task_;
+	std::string state_;
 };
 
 class EnrollmentFailedTimerTask: public rina::TimerTask {
@@ -227,6 +238,24 @@ public:
 
 	IEnrollmentStateMachine * state_machine_;
 	std::string reason_;
+};
+
+class AbortEnrollmentTimerTask: public rina::TimerTask {
+public:
+	AbortEnrollmentTimerTask(rina::IEnrollmentTask * enr_task,
+				 const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
+				 int portId,
+				 const std::string& reason,
+				 bool sendReleaseMessage);
+	~AbortEnrollmentTimerTask() throw() {};
+	void run();
+
+private:
+	rina::IEnrollmentTask * etask;
+	rina::ApplicationProcessNamingInformation peer_name;
+	int port_id;
+	std::string reason;
+	bool send_message;
 };
 
 class EnrollmentTask: public IPCPEnrollmentTask, public rina::InternalEventListener {

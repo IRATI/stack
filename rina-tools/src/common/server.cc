@@ -192,6 +192,15 @@ void Server::startWorker(rina::FlowInformation flow)
         lock.unlock();
 }
 
+// Preform housekeeping on the worker
+void Server::worker_started(ServerWorker * worker)
+{
+  lock.lock();
+  active_workers.push_back(worker);
+  lock.unlock();
+}
+
+
 void Server::worker_completed(ServerWorker * worker)
 {
 	ScopedLock g(lock);

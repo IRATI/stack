@@ -31,7 +31,7 @@
 #include "kipcm.h"
 #include "debug.h"
 #include "ipcp-utils.h"
-#include "du.h"
+#include "sdu.h"
 
 #define CALL_KIPCM(RETVAL, HOOK, ARGS...)			\
 	do {							\
@@ -183,24 +183,24 @@ SYSCALL_DEFINE3(sdu_read,
 		return retval;
 	}
 
-	if (!sdu_is_ok(tmp)) {
+	if (!is_sdu_ok(tmp)) {
 		SYSCALL_DUMP_EXIT;
 		return -EIO;
 	}
 
 	/* NOTE: We don't handle partial copies */
-	if (buffer_length(tmp->buffer) > size) {
+	if (sdu_len(tmp) > size) {
 		SYSCALL_DUMP_EXIT;
 
 		LOG_ERR("Unhandled partial copy, SDU / Buffer size: %zd / %zd",
-			buffer_length(tmp->buffer), size);
+			sdu_len(tmp), size);
 		sdu_destroy(tmp);
 		return -EIO;
 	}
 
 	if (copy_to_user(buffer,
-			 buffer_data_ro(tmp->buffer),
-			 buffer_length(tmp->buffer))) {
+			 sdu_buffer(tmp),
+			 sdu_len(tmp))) {
 		SYSCALL_DUMP_EXIT;
 
 		LOG_ERR("Error copying data to user-space");
@@ -208,7 +208,7 @@ SYSCALL_DEFINE3(sdu_read,
 		return -EIO;
 	}
 
-	retsize = buffer_length(tmp->buffer);
+	retsize = sdu_len(tmp);
 	sdu_destroy(tmp);
 
 	SYSCALL_DUMP_EXIT;
@@ -230,7 +230,6 @@ SYSCALL_DEFINE3(sdu_write,
 #else
 	ssize_t	       retval;
 	struct sdu    *sdu;
-	struct buffer *tmp_buffer;
 
 	SYSCALL_DUMP_ENTER;
 
@@ -241,30 +240,20 @@ SYSCALL_DEFINE3(sdu_write,
 		return -EINVAL;
 	}
 
-	tmp_buffer = buffer_create(size);
-	if (!tmp_buffer) {
-		SYSCALL_DUMP_EXIT;
-		return -ENOMEM;
-	}
-
-	ASSERT(buffer_is_ok(tmp_buffer));
-	ASSERT(buffer_data_rw(tmp_buffer));
-
-	/* NOTE: We don't handle partial copies */
-	if (copy_from_user(buffer_data_rw(tmp_buffer), buffer, size)) {
-		SYSCALL_DUMP_EXIT;
-		buffer_destroy(tmp_buffer);
-		return -EIO;
-	}
-
 	/* NOTE: sdu_create takes the ownership of the buffer */
-	sdu = sdu_create_buffer_with(tmp_buffer);
+	sdu = sdu_create(size);
 	if (!sdu) {
 		SYSCALL_DUMP_EXIT;
-		buffer_destroy(tmp_buffer);
 		return -ENOMEM;
 	}
-	ASSERT(sdu_is_ok(sdu));
+	ASSERT(is_sdu_ok(sdu));
+
+	/* NOTE: We don't handle partial copies */
+	if (copy_from_user(sdu_buffer(sdu), buffer, size)) {
+		SYSCALL_DUMP_EXIT;
+		sdu_destroy(sdu);
+		return -EIO;
+	}
 
 	/* Passing ownership to the internal layers */
 	CALL_KIPCM(retval, sdu_write, id, sdu);
@@ -429,18 +418,18 @@ SYSCALL_DEFINE4(management_sdu_read,
 	}
 
 	/* NOTE: We don't handle partial copies */
-	if (buffer_length(tmp->sdu->buffer) > size) {
+	if (sdu_len(tmp->sdu) > size) {
 		SYSCALL_DUMP_EXIT;
 
 		LOG_ERR("Unhandled partial copy, SDU / Buffer size: %zd / %zd",
-			buffer_length(tmp->sdu->buffer), size);
+			sdu_len(tmp->sdu), size);
 		sdu_wpi_destroy(tmp);
 		return -EFAULT;
 	}
 
 	if (copy_to_user(buffer,
-			 buffer_data_ro(tmp->sdu->buffer),
-			 buffer_length(tmp->sdu->buffer))) {
+			 sdu_buffer(tmp->sdu),
+			 sdu_len(tmp->sdu))) {
 		SYSCALL_DUMP_EXIT;
 
 		LOG_ERR("Error copying buffer data to user-space");
@@ -458,7 +447,7 @@ SYSCALL_DEFINE4(management_sdu_read,
 		return -EFAULT;
 	}
 
-	retsize = buffer_length(tmp->sdu->buffer);
+	retsize = sdu_len(tmp->sdu);
 	sdu_wpi_destroy(tmp);
 
 	SYSCALL_DUMP_EXIT;
@@ -482,13 +471,15 @@ SYSCALL_DEFINE5(management_sdu_write,
 
 	return -ENOSYS;
 #else
-	ssize_t		retval;
+	ssize_t	retval;
 	struct sdu_wpi *sdu_wpi;
-	struct buffer  *tmp_buffer;
 
 	SYSCALL_DUMP_ENTER;
 
-	if (!buffer || !size) {
+	ASSERT(is_address_ok(dst_addr));
+	ASSERT(is_port_id_ok(port_id));
+
+	if (unlikely(!buffer || !size)) {
 		SYSCALL_DUMP_EXIT;
 		return -EFAULT;
 	}
@@ -496,33 +487,21 @@ SYSCALL_DEFINE5(management_sdu_write,
 	LOG_DBG("Syscall write mgt SDU (size: %zd, ipcp-id: %d, port-id: %d)",
 		size, ipcp_id, port_id);
 
-	tmp_buffer = buffer_create(size);
-	if (!tmp_buffer) {
+	sdu_wpi = sdu_wpi_create(size);
+	if (unlikely(!sdu_wpi)) {
 		SYSCALL_DUMP_EXIT;
-		return -EFAULT;
-	}
-
-	ASSERT(buffer_is_ok(tmp_buffer));
-	ASSERT(buffer_data_rw(tmp_buffer));
-
-	/* NOTE: We don't handle partial copies */
-	if (copy_from_user(buffer_data_rw(tmp_buffer), buffer, size)) {
-		SYSCALL_DUMP_EXIT;
-		buffer_destroy(tmp_buffer);
-		return -EFAULT;
-	}
-
-	/* NOTE: sdu_create takes the ownership of the buffer */
-	sdu_wpi = sdu_wpi_create_with(tmp_buffer);
-	if (!sdu_wpi) {
-		SYSCALL_DUMP_EXIT;
-		buffer_destroy(tmp_buffer);
+		sdu_wpi_destroy(sdu_wpi);
 		return -EFAULT;
 	}
 	sdu_wpi->dst_addr = dst_addr;
-	sdu_wpi->port_id  = port_id;
-	ASSERT(sdu_wpi_is_ok(sdu_wpi));
+	sdu_wpi->port_id = port_id;
 
+	/* NOTE: We don't handle partial copies */
+	if (copy_from_user(sdu_buffer(sdu_wpi->sdu), buffer, size)) {
+		SYSCALL_DUMP_EXIT;
+		sdu_wpi_destroy(sdu_wpi);
+		return -EFAULT;
+	}
 	/* Passing ownership to the internal layers */
 	CALL_KIPCM(retval, mgmt_sdu_write, ipcp_id, sdu_wpi);
 	if (retval) {

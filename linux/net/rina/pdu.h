@@ -3,6 +3,7 @@
  *
  *    Francesco Salvestrini <f.salvestrini@nextworks.it>
  *    Miquel Tarzan         <miquel.tarzan@i2cat.net>
+ *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,41 +26,40 @@
 #include <linux/types.h>
 
 #include "common.h"
-#include "buffer.h"
-#include "sdu.h"
 #include "pci.h"
 
+struct sdu;
 struct pdu;
 
-struct pdu *          pdu_create(void);
-struct pdu *          pdu_create_ni(void);
-struct pdu *          pdu_create_with(struct sdu * sdu);
-struct pdu *          pdu_create_with_ni(struct sdu * sdu);
-/* FIXME: To be removed after ser/des */
-struct pdu *          pdu_create_from(const struct sdu * sdu);
-struct pdu *          pdu_create_from_ni(const struct sdu * sdu);
+struct pdu *pdu_create(pdu_type_t type,
+		       struct efcp_config *cfg);
+struct pdu *pdu_create_ni(pdu_type_t type,
+			  struct efcp_config *cfg);
 
-struct pdu *          pdu_dup(const struct pdu * pdu);
-struct pdu *          pdu_dup_ni(const struct pdu * pdu);
+struct pdu *pdu_from_sdu(struct sdu *sdu);
+int pdu_encap(struct pdu *pdu, pdu_type_t type);
+int pdu_decap(struct pdu *pdu);
 
-/* NOTE: PCI is ok and has a buffer */
-bool                  pdu_is_ok(const struct pdu * pdu);
-const struct buffer * pdu_buffer_get_ro(const struct pdu * pdu);
-struct buffer *       pdu_buffer_get_rw(struct pdu * pdu);
+struct pdu *pdu_dup(const struct pdu *pdu);
+struct pdu *pdu_dup_ni(const struct pdu *pdu);
 
-/* NOTE: Takes ownership of the buffer passed */
-int                   pdu_buffer_set(struct pdu *    pdu,
-                                     struct buffer * buffer);
+bool pdu_is_ok(const struct pdu *pdu);
 
-/* NOTE: Please use this "method" instead of pdu_pci_get_*(), for checks */
-bool                  pdu_pci_present(const struct pdu * pdu);
+const struct pci *pdu_pci_get_ro(const struct pdu *pdu);
+struct pci	 *pdu_pci_get_rw(struct pdu *pdu);
+ssize_t		 pdu_data_len(const struct pdu *pdu);
+ssize_t		 pdu_len(const struct pdu *pdu);
 
-const struct pci *    pdu_pci_get_ro(const struct pdu * pdu);
-struct pci *          pdu_pci_get_rw(struct pdu * pdu);
-/* NOTE: Takes ownership of the PCI passed */
-int                   pdu_buffer_disown(struct pdu * pdu);
-int                   pdu_pci_set(struct pdu * pdu, struct pci * pci);
+int pdu_destroy(struct pdu *pdu);
 
-int                   pdu_destroy(struct pdu * pdu);
-
+/* added for SDU protection */
+void *pdu_sdup_head(struct pdu *pdu);
+void *pdu_sdup_tail(struct pdu *pdu);
+int pdu_sdup_head_set(struct pdu *pdu, void *header);
+int pdu_sdup_tail_set(struct pdu *pdu, void *tail);
+unsigned char *pdu_buffer(const struct pdu *pdu);
+int pdu_tail_grow(struct pdu *pdu, size_t bytes);
+int pdu_tail_shrink(struct pdu *pdu, size_t bytes);
+int pdu_head_grow(struct pdu *pdu, size_t bytes);
+int pdu_head_shrink(struct pdu *pdu, size_t bytes);
 #endif
