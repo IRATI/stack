@@ -32,6 +32,9 @@
 #include "sdu.h"
 #include "du.h"
 
+/* If this is defined PCI is considered when growing/shrinking PDUs in SDUP */
+#define PDU_HEAD_GROW_WITH_PCI
+
 #define to_du(x) ((struct du *)(x))
 #define to_pdu(x) ((struct pdu *)(x))
 
@@ -308,6 +311,7 @@ int pdu_tail_grow(struct pdu *pdu, size_t bytes)
 		LOG_ERR("Could not grow PDU tail, no mem...");
 		return -1;
 	}
+
 	skb_put(du->skb, bytes);
 	return 0;
 }
@@ -338,17 +342,16 @@ int pdu_head_grow(struct pdu *pdu, size_t bytes)
 		return 0; /* This is a NO-OP */
 
 	du = to_du(pdu);
+
 	if (unlikely(skb_headroom(du->skb) < bytes)){
-		LOG_WARN("Could not grow PDU head, no mem... (%d < %zd)", skb_headroom(du->skb), bytes);
-		ASSERT(du->pci.h == NULL);
+		LOG_DBG("Can not grow PDU head, no mem... (%d < %zd)", skb_headroom(du->skb), bytes);
 		if (pskb_expand_head(du->skb, bytes, 0, GFP_ATOMIC)) {
 			LOG_ERR("Could not expand PDU...");
 			return -1;
 		}
-		LOG_DBG("PDU expanded %zu bytes, new len %d",
-			bytes,
-			du->skb->len);
 	}
+
+#ifdef PDU_HEAD_GROW_WITH_PCI
 	if (du->pci.h == NULL || du->pci.h >= du->skb->data) {
 		/* not PCI in this PDU yet */
 		skb_push(du->skb, bytes);
@@ -357,6 +360,9 @@ int pdu_head_grow(struct pdu *pdu, size_t bytes)
 		/* pci.h remains the same, skb->data is pushed bytes over pci.h. Used when relaying*/
 		skb_push(du->skb, (du->skb->data - du->pci.h) + bytes);
 	}
+#else
+	skb_push(du->skb, bytes);
+#endif
 	return 0;
 }
 EXPORT_SYMBOL(pdu_head_grow);
@@ -364,6 +370,9 @@ EXPORT_SYMBOL(pdu_head_grow);
 int pdu_head_shrink(struct pdu *pdu, size_t bytes)
 {
 	struct du *du;
+#ifdef PDU_HEAD_GROW_WITH_PCI
+	void * pci_h;
+#endif
 
 	if (unlikely(!pdu_is_ok(pdu)))
 		return -1;
@@ -371,8 +380,13 @@ int pdu_head_shrink(struct pdu *pdu, size_t bytes)
 		return 0; /* This is a NO-OP */
 
 	du = to_du(pdu);
-	du->pci.h = skb_pull(du->skb, bytes);
+#ifdef PDU_HEAD_GROW_WITH_PCI
+	pci_h = skb_pull(du->skb, bytes);
+	if (du->pci.h != NULL)
+		du->pci.h = pci_h;
+#else
+	skb_pull(du->skb, bytes);
+#endif
 	return 0;
 }
 EXPORT_SYMBOL(pdu_head_shrink);
-
