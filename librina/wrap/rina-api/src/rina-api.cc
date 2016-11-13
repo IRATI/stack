@@ -33,6 +33,13 @@ using namespace std;
 extern "C"
 {
 
+/*
+ * Global variable, not protected by lock. Its purpose is to avoid calling
+ * rina::initialize() for every API call. Actually, without a lock there is
+ * is race condition and the function may be called twice. However,
+ * if this really happens, rina::initialize() - which is internally protected
+ * by a lock - will raise and exception that we can catch. The race is
+ * therefore harmless. */
 static int initialized = 0;
 
 static int
@@ -46,13 +53,14 @@ librina_init(void)
         initialized = 1;
         try {
                 rina::initialize("INFO", "/dev/null");
-                return 0;
         } catch (...) {
-                /* The operation can fail because librina is already
-                 * initialized. */
-                errno = EBUSY;
-                return -1;
+                /*
+                 * We got an exception because librina is already
+                 * initialized. The race happened, but it was harmless
+                 * and there is nothing that we need to do.
+                 */
         }
+        return 0;
 }
 
 int
