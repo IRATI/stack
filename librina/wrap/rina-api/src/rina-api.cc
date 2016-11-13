@@ -20,8 +20,10 @@
  */
 
 #include <string>
+#include <cassert>
 #include <stdlib.h>
 #include <unistd.h>
+#include <errno.h>
 #include <librina/librina.h>
 #include <rina-api/api.h>
 
@@ -43,7 +45,10 @@ librina_init(void)
         try {
                 rina::initialize("INFO", "/dev/null");
                 return 0;
-        } catch (Exception) {
+        } catch (...) {
+                /* The operation can fail because librina is already
+                 * initialized. */
+                errno = EBUSY;
                 return -1;
         }
 }
@@ -51,8 +56,76 @@ librina_init(void)
 int
 rina_open(void)
 {
-        librina_init();
+        if (librina_init()) {
+                return -1;
+        }
+
+        /* The control file descriptor is process-wise, so we duplicate
+         * it to provide a consistent API. However, a process should
+         * not call rina_open() more than once, otherwise there would
+         * be a race on reading the control messages. */
         return dup(ipcManager->getControlFd());
+}
+
+static IPCEvent *
+wait_for_event(IPCEventType wtype, unsigned int wseqnum)
+{
+        for (;;) {
+                IPCEvent* event = ipcEventProducer->eventWait();
+                DeallocateFlowResponseEvent *resp = NULL;
+
+                if (!event) {
+                        errno = ENXIO;
+                        return NULL;
+                }
+
+                switch (event->eventType) {
+
+                /* Process here the events for which we only need some
+                 * bookkeeping. */
+                case REGISTER_APPLICATION_RESPONSE_EVENT:
+                        ipcManager->commitPendingRegistration(event->sequenceNumber,
+                                dynamic_cast<RegisterApplicationResponseEvent*>(event)->DIFName);
+                        // TODO delete event;
+                        event = NULL;
+                        break;
+
+                case UNREGISTER_APPLICATION_RESPONSE_EVENT:
+                        ipcManager->appUnregistrationResult(event->sequenceNumber,
+                                dynamic_cast<UnregisterApplicationResponseEvent*>(event)->result == 0);
+                        // TODO delete event;
+                        event = NULL;
+                        break;
+
+                case FLOW_DEALLOCATED_EVENT:
+                        ipcManager->flowDeallocated(dynamic_cast<FlowDeallocatedEvent*>(event)->portId);
+                        // TODO delete event;
+                        event = NULL;
+                        break;
+
+                case DEALLOCATE_FLOW_RESPONSE_EVENT:
+                        resp = dynamic_cast<DeallocateFlowResponseEvent*>(event);
+                        ipcManager->flowDeallocationResult(resp->portId, resp->result == 0);
+                        // TODO delete event;
+                        event = NULL;
+                        break;
+
+                /* Other events are returned to the caller, if they match. */
+                case FLOW_ALLOCATION_REQUESTED_EVENT:
+                        break;
+                default:
+                        break;
+                }
+
+                /* Exit the loop if the event matches what we asked for, or
+                 * if we were not asked for anything in particular. */
+                if ((wtype == NO_EVENT || event->eventType == wtype) &&
+                        (wseqnum == ~0U || event->sequenceNumber == wseqnum)) {
+                        return event;
+                }
+        }
+
+        return NULL;
 }
 
 int
@@ -64,8 +137,9 @@ rina_register(int fd, const char *dif_name, const char *local_appl)
         IPCEvent *event;
 
         (void)fd; /* The netlink socket file descriptor is used internally */
-
-        librina_init();
+        if (librina_init()) {
+                return -1;
+        }
 
         ari.ipcProcessId = 0;  /* This is an application, not an IPC process */
         ari.appName = ApplicationProcessNamingInformation(string(local_appl),
@@ -82,6 +156,7 @@ rina_register(int fd, const char *dif_name, const char *local_appl)
         try {
                 /* Issue a registration request. */
                 seqnum = ipcManager->requestApplicationRegistration(ari);
+                //TODO use wait_for_event
                 /* Wait for the response to come, forever. In the future we
                  * could use select to add a timeout mechanism, and return
                  * ETIMEDOUT in errno. */
@@ -123,8 +198,9 @@ rina_unregister(int fd, const char *dif_name, const char *local_appl)
         IPCEvent *event;
 
         (void)fd; /* The netlink socket file descriptor is used internally */
-
-        librina_init();
+        if (librina_init()) {
+                return -1;
+        }
 
         difi = ApplicationProcessNamingInformation(string(dif_name), string());
         appi = ApplicationProcessNamingInformation(string(local_appl),
@@ -134,6 +210,7 @@ rina_unregister(int fd, const char *dif_name, const char *local_appl)
                 seqnum = ipcManager->requestApplicationUnregistration(appi,
                                 difi);
 
+                //TODO use wait_for_event
                 event = ipcEventProducer->eventWait();
                 while (event == NULL ||
                         event->eventType != UNREGISTER_APPLICATION_RESPONSE_EVENT
@@ -156,7 +233,37 @@ rina_unregister(int fd, const char *dif_name, const char *local_appl)
 int
 rina_flow_accept(int fd, const char **remote_appl)
 {
-        return -1;
+        FlowInformation flow;
+
+        (void)fd; /* The netlink socket file descriptor is used internally */
+        if (librina_init()) {
+                return -1;
+        }
+
+        try {
+                FlowRequestEvent *fre;
+                IPCEvent *event;
+
+                event = wait_for_event(FLOW_ALLOCATION_REQUESTED_EVENT, ~0U);
+                if (event == NULL) {
+                        /* This is an error, errno already set internally. */
+                        return -1;
+                }
+
+                fre = dynamic_cast<FlowRequestEvent*>(event);
+                assert(fre);
+
+                flow = ipcManager->allocateFlowResponse(*fre,
+                                                /* result */ 0,
+                                                /* notifySource */ true,
+                                                /* blocking */ true);
+        } catch (...) {
+                errno = ENOMEM;
+                flow.fd = -1;
+        }
+        //TODO delete event;
+
+        return flow.fd;
 }
 
 int
