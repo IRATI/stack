@@ -93,11 +93,17 @@ wait_for_event(IPCEventType wtype, unsigned int wseqnum)
          * errno = ETIMEDOUT in case of timeout. */
         for (;;) {
                 IPCEvent* event = ipcEventProducer->eventWait();
+                bool match;
 
                 if (!event) {
                         errno = ENXIO;
                         return NULL;
                 }
+
+                /* Exit the loop if the event matches what we asked for, or
+                 * if we were not asked for anything in particular. */
+                match = ((wtype == NO_EVENT || event->eventType == wtype) &&
+                        (wseqnum == ~0U || event->sequenceNumber == wseqnum));
 
                 switch (event->eventType) {
 
@@ -159,10 +165,7 @@ wait_for_event(IPCEventType wtype, unsigned int wseqnum)
                         break;
                 }
 
-                /* Exit the loop if the event matches what we asked for, or
-                 * if we were not asked for anything in particular. */
-                if ((wtype == NO_EVENT || event->eventType == wtype) &&
-                        (wseqnum == ~0U || event->sequenceNumber == wseqnum)) {
+                if (match) {
                         return event;
                 }
         }
