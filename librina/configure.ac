@@ -80,7 +80,7 @@ AX_CHECK_COMPILE_FLAG([ -Wfatal-errors ], [
     CXXFLAGS_EXTRA="$CXXFLAGS_EXTRA -Wfatal-errors"
 ])
 
-want_debug=no
+want_debug=yes
 AX_SELECTOR_ENABLE([debug],[
     want_debug=yes
 ],[
@@ -273,7 +273,7 @@ AS_IF([test "x$PROTOC" = "xno"],[
 	AC_MSG_ERROR([Your system lacks of protoc support])
 ])
 
-LIBPROTOBUF_MIN_VERSION=2.5.0
+LIBPROTOBUF_MIN_VERSION=2.6.1
 AC_SUBST(LIBPROTOBUF_MIN_VERSION, $LIBPROTOBUF_MIN_VERSION)
 
 PKG_CHECK_MODULES(LIBPROTOBUF, [protobuf >= $LIBPROTOBUF_MIN_VERSION],, [

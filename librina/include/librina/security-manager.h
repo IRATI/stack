@@ -38,13 +38,15 @@ namespace rina {
 //Contains data related to a particular security context
 class ISecurityContext {
 public:
-	ISecurityContext(int id_) : id(id_) { };
+	ISecurityContext(int id_, const std::string& name_)
+		: id(id_), auth_policy_name(name_) { };
 	virtual ~ISecurityContext() { };
 
 	PolicyConfig crcPolicy;
 	PolicyConfig ttlPolicy;
 	cdap_rib::con_handle_t con;
 	int id;
+	std::string auth_policy_name;
 };
 
 class IAuthPolicySet : public IPolicySet {
@@ -256,7 +258,7 @@ public:
 ///Captures all data of the SSHRSA security context
 class SSH2SecurityContext : public ISecurityContext {
 public:
-	SSH2SecurityContext(int session_id) : ISecurityContext(session_id),
+	SSH2SecurityContext(int session_id) : ISecurityContext(session_id, IAuthPolicySet::AUTH_SSH2),
 			state(BEGIN), dh_state(NULL), dh_peer_pub_key(NULL),
 			auth_keypair(NULL), auth_peer_pub_key(NULL),
 			timer_task(NULL) { };

@@ -1,0 +1,23 @@
+package rina.messages;
+//option optimize_for = LITE_RUNTIME;
+
+message uint_list_t {
+	repeated uint32 member = 1;  		//Members
+}
+
+//Contains the information of a routing table entry
+message rt_entry_t{
+	optional uint32 address = 1;		//Destination address
+	optional uint32 qos_id = 2;		//The qos-id
+	optional uint32 cost = 3;		//A metric representing the cost to the next hop
+	repeated uint_list_t next_hops = 4;  	//Next hop(s) addresses and its alternatives
+}
+
+//Contains the information of a PDU forwarding table entry
+message pduft_entry_t{
+	optional uint32 address = 1;		//Destination address
+	optional uint32 qos_id = 2;		//The qos-id
+	optional uint32 cost = 3;		//A metric representing the cost to the next hop
+	repeated uint_list_t port_ids = 4;  	//N-1 port-id(s) and its alternates
+}
+

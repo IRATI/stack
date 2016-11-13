@@ -131,6 +131,8 @@ void ManagerWorker::operate(rina::FlowInformation flow)
      queryRIB(flow.portId, IPCP_3 + "/ribDaemon");
      }
      */
+     std::cout << "result:" << create_result << std::endl;
+     
 }
 
 void ManagerWorker::cacep(int port_id)

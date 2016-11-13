@@ -762,6 +762,7 @@ int IPCManager::readSDU(int portId, void * sdu, int maxBytes)
 		throw ReadSDUException();
 		break;
 	case -EAGAIN:
+	case -EINTR:
 		break;
 	default:
 		throw IPCException("Unknown error");
@@ -798,6 +799,8 @@ int IPCManager::writeSDU(int portId, void * sdu, int size)
 		break;
 	case -EAGAIN:
 		return 0;
+	case -EINTR:
+		break;
 	default:
 		throw IPCException("Unknown error");
 	}

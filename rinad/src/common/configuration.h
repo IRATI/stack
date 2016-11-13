@@ -29,6 +29,7 @@
 
 namespace rinad {
 namespace configs {
+static const std::string NEIGH_CONT_NAME = "/difManagement/enrollment/neighbors";
 /// The object that contains all the information
 /// that is required to initiate an enrollment
 /// request (send as the objectvalue of a CDAP M_START
