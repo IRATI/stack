@@ -208,6 +208,8 @@ rina_register(int fd, const char *dif_name, const char *local_appl)
 #ifdef APIDBG
                 cout << __func__ << ": " << e.what() << endl;
 #endif /* APIDBG */
+                errno = ENXIO; /* IPC Manager Daemon is not running */
+                return -1;
         } catch (...) {
                 /* Operations can fail because of allocation failures. */
                 errno = ENOMEM;
@@ -249,6 +251,8 @@ rina_unregister(int fd, const char *dif_name, const char *local_appl)
 #ifdef APIDBG
                 cout << __func__ << ": " << e.what() << endl;
 #endif /* APIDBG */
+                errno = ENXIO; /* IPC Manager Daemon is not running */
+                return -1;
         } catch (...) {
                 /* Operations can fail because of allocation failures. */
                 errno = ENOMEM;
@@ -295,6 +299,8 @@ rina_flow_accept(int fd, const char **remote_appl)
 #ifdef APIDBG
                 cout << __func__ << ": " << e.what() << endl;
 #endif /* APIDBG */
+                errno = ENXIO; /* IPC Manager Daemon is not running */
+                flow.fd = -1;
         } catch (...) {
                 errno = ENOMEM;
                 flow.fd = -1;
@@ -376,6 +382,8 @@ rina_flow_alloc(const char *dif_name, const char *local_appl,
 #ifdef APIDBG
                 cout << __func__ << ": " << e.what() << endl;
 #endif /* APIDBG */
+                errno = ENXIO; /* IPC Manager Daemon is not running */
+                flow.fd = -1;
         } catch (...) {
                 errno = ENOMEM;
                 flow.fd = -1;
