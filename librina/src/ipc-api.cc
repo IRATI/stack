@@ -526,6 +526,14 @@ void IPCManager::initIodev(FlowInformation *flow, int portId)
 {
         struct irati_iodev_ctldata iodata;
 
+        if (portId < 0) {
+                /* This happens in case of flow allocation failure. Don't
+                 * open the I/O device, just set the file descriptor to an
+                 * invalid value. */
+                flow->fd = -1;
+                return;
+        }
+
         flow->fd = open("/dev/irati", O_RDWR);
         if (flow->fd < 0) {
                 std::ostringstream oss;

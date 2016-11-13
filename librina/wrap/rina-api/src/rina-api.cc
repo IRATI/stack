@@ -137,6 +137,7 @@ wait_for_event(IPCEventType wtype, unsigned int wseqnum)
 
                 /* Other events are returned to the caller, if they match. */
                 case FLOW_ALLOCATION_REQUESTED_EVENT:
+                case ALLOCATE_FLOW_REQUEST_RESULT_EVENT:
                         break;
                 default:
                         break;
@@ -237,6 +238,13 @@ int
 rina_flow_accept(int fd, const char **remote_appl)
 {
         FlowInformation flow;
+        IPCEvent *event = NULL;
+
+        if (*remote_appl) {
+                /* This should be filled with the name
+                 * of the requesting application. */
+                *remote_appl = NULL;
+        }
 
         (void)fd; /* The netlink socket file descriptor is used internally */
         if (librina_init()) {
@@ -245,7 +253,6 @@ rina_flow_accept(int fd, const char **remote_appl)
 
         try {
                 FlowRequestEvent *fre;
-                IPCEvent *event;
 
                 event = wait_for_event(FLOW_ALLOCATION_REQUESTED_EVENT, ~0U);
                 if (event == NULL) {
@@ -271,14 +278,86 @@ rina_flow_accept(int fd, const char **remote_appl)
 
 int
 rina_flow_alloc(const char *dif_name, const char *local_appl,
-              const char *remote_appl, const struct rina_flow_spec *flowspec)
+                const char *remote_appl, const struct rina_flow_spec *flowspec)
 {
-        return -1;
+        ApplicationProcessNamingInformation local_apni, remote_apni, dif_apni;
+        FlowSpecification flowspec_i;
+        struct rina_flow_spec spec;
+        FlowInformation flow;
+        unsigned int seqnum;
+        IPCEvent *event = NULL;
+
+        if (librina_init()) {
+                return -1;
+        }
+
+        if (local_appl == NULL || remote_appl == NULL) {
+                errno = EINVAL;
+                return -1;
+        }
+
+        if (flowspec == NULL) {
+                rina_flow_spec_default(&spec);
+                flowspec = &spec;
+        }
+
+        //TODO convert flowspec --> flowspec_i
+        (void)flowspec;
+
+        local_apni.processName = string(local_appl);
+        remote_apni.processName = string(remote_appl);
+
+        try {
+                AllocateFlowRequestResultEvent *resp;
+
+                if (dif_name == NULL) {
+                        seqnum = ipcManager->requestFlowAllocation(local_apni,
+                                                                   remote_apni,
+                                                                   flowspec_i);
+                } else {
+                        dif_apni.processName = string(dif_name);
+                        seqnum = ipcManager->requestFlowAllocationInDIF(
+                                                                local_apni,
+                                                                remote_apni,
+                                                                dif_apni,
+                                                                flowspec_i);
+                }
+
+                event = wait_for_event(ALLOCATE_FLOW_REQUEST_RESULT_EVENT,
+                                       seqnum);
+
+                /*
+                 * Note that it may be resp->portId < 0, which means the
+                 * flow allocation request was denied. In this case the
+                 * commitPendingFlow() function will set flow.fd to -1,
+                 * and the same invalid fd is returned to the application,
+                 * which is what we want.
+                 */
+                resp = dynamic_cast<AllocateFlowRequestResultEvent *>(event);
+                flow = ipcManager->commitPendingFlow(resp->sequenceNumber,
+                                                     resp->portId,
+                                                     resp->difName);
+                if (flow.fd < 0) {
+                        errno = EPERM;
+                }
+        } catch (...) {
+                errno = ENOMEM;
+                flow.fd = -1;
+        }
+        //TODO delete event
+
+        return flow.fd;
 }
 
 void
 rina_flow_spec_default(struct rina_flow_spec *spec)
 {
+        memset(spec, 0, sizeof(*spec));
+        spec->max_sdu_gap = -1;
+        spec->avg_bandwidth = 0;
+        spec->max_delay = 0;
+        spec->max_jitter = 0;
+        spec->in_order_delivery = 0;
 }
 
 }
