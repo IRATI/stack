@@ -264,7 +264,7 @@ rina_flow_accept(int fd, const char **remote_appl)
         FlowInformation flow;
         IPCEvent *event = NULL;
 
-        if (*remote_appl) {
+        if (remote_appl) {
                 /* This should be filled with the name
                  * of the requesting application. */
                 *remote_appl = NULL;
