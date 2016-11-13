@@ -2,7 +2,7 @@ Source: rina-tools
 Priority: optional
 Maintainer: Julien Muchembled <jm@nexedi.com>
 Build-Depends: debhelper (>=9), dh-autoreconf,
-  git, librinad-dev, python-matplotlib
+  git, librinad-dev, protobuf-compiler, python-matplotlib
 Standards-Version: 3.9.8
 Section: net
 Homepage: https://github.com/IRATI/stack
