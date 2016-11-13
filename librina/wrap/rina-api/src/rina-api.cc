@@ -124,7 +124,7 @@ wait_for_event(IPCEventType wtype, unsigned int wseqnum)
                                                         event->sequenceNumber,
                                                         resp->DIFName);
                         }
-                        // TODO delete event;
+                        delete event;
                         event = NULL;
                         break;
                 }
@@ -136,14 +136,14 @@ wait_for_event(IPCEventType wtype, unsigned int wseqnum)
                         ipcManager->appUnregistrationResult(
                                                 event->sequenceNumber,
                                                 resp->result == 0);
-                        // TODO delete event;
+                        delete event;
                         event = NULL;
                         break;
                 }
 
                 case FLOW_DEALLOCATED_EVENT:
                         ipcManager->flowDeallocated(dynamic_cast<FlowDeallocatedEvent*>(event)->portId);
-                        // TODO delete event;
+                        delete event;
                         event = NULL;
                         break;
 
@@ -152,7 +152,7 @@ wait_for_event(IPCEventType wtype, unsigned int wseqnum)
 
                         resp = dynamic_cast<DeallocateFlowResponseEvent*>(event);
                         ipcManager->flowDeallocationResult(resp->portId, resp->result == 0);
-                        // TODO delete event;
+                        delete event;
                         event = NULL;
                         break;
                 }
@@ -308,7 +308,7 @@ rina_flow_accept(int fd, const char **remote_appl)
                 errno = ENOMEM;
                 flow.fd = -1;
         }
-        //TODO delete event;
+        delete event;
 
         return flow.fd;
 }
@@ -391,7 +391,7 @@ rina_flow_alloc(const char *dif_name, const char *local_appl,
                 errno = ENOMEM;
                 flow.fd = -1;
         }
-        //TODO delete event
+        delete event;
 
         return flow.fd;
 }
