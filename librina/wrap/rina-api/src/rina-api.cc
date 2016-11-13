@@ -107,12 +107,17 @@ wait_for_event(IPCEventType wtype, unsigned int wseqnum)
                         break;
                 }
 
-                case UNREGISTER_APPLICATION_RESPONSE_EVENT:
-                        ipcManager->appUnregistrationResult(event->sequenceNumber,
-                                dynamic_cast<UnregisterApplicationResponseEvent*>(event)->result == 0);
+                case UNREGISTER_APPLICATION_RESPONSE_EVENT: {
+                        UnregisterApplicationResponseEvent *resp;
+
+                        resp = dynamic_cast<UnregisterApplicationResponseEvent*>(event);
+                        ipcManager->appUnregistrationResult(
+                                                event->sequenceNumber,
+                                                resp->result == 0);
                         // TODO delete event;
                         event = NULL;
                         break;
+                }
 
                 case FLOW_DEALLOCATED_EVENT:
                         ipcManager->flowDeallocated(dynamic_cast<FlowDeallocatedEvent*>(event)->portId);
@@ -153,7 +158,6 @@ rina_register(int fd, const char *dif_name, const char *local_appl)
 {
         ApplicationRegistrationInformation ari;
         unsigned int seqnum;
-        IPCEvent *event;
 
         (void)fd; /* The netlink socket file descriptor is used internally */
         if (librina_init()) {
@@ -173,6 +177,8 @@ rina_register(int fd, const char *dif_name, const char *local_appl)
         }
 
         try {
+                IPCEvent *event;
+
                 /* Issue a registration request. */
                 seqnum = ipcManager->requestApplicationRegistration(ari);
                 event = wait_for_event(REGISTER_APPLICATION_RESPONSE_EVENT,
@@ -193,11 +199,9 @@ rina_register(int fd, const char *dif_name, const char *local_appl)
 int
 rina_unregister(int fd, const char *dif_name, const char *local_appl)
 {
-        UnregisterApplicationResponseEvent *resp;
         ApplicationProcessNamingInformation appi;
         ApplicationProcessNamingInformation difi;
         unsigned int seqnum;
-        IPCEvent *event;
 
         (void)fd; /* The netlink socket file descriptor is used internally */
         if (librina_init()) {
@@ -209,20 +213,17 @@ rina_unregister(int fd, const char *dif_name, const char *local_appl)
                                                    string());
 
         try {
+                IPCEvent *event;
+
                 seqnum = ipcManager->requestApplicationUnregistration(appi,
                                 difi);
 
-                //TODO use wait_for_event
-                event = ipcEventProducer->eventWait();
-                while (event == NULL ||
-                        event->eventType != UNREGISTER_APPLICATION_RESPONSE_EVENT
-                                || event->sequenceNumber != seqnum) {
-                        event = ipcEventProducer->eventWait();
+                event = wait_for_event(UNREGISTER_APPLICATION_RESPONSE_EVENT,
+                                       seqnum);
+                assert(event == NULL);
+                if (errno != 0) {
+                        return -1;
                 }
-
-                resp = dynamic_cast<UnregisterApplicationResponseEvent*>(event);
-
-                ipcManager->appUnregistrationResult(seqnum, resp->result == 0);
         } catch (...) {
                 /* Operations can fail because of allocation failures. */
                 errno = ENOMEM;
