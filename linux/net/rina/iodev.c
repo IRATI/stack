@@ -251,7 +251,7 @@ iodev_init(void)
 
         ret = misc_register(&irati_misc);
         if (ret) {
-                LOG_ERR("Failed to register rlite-io misc device");
+                LOG_ERR("Failed to register i/o misc device");
                 return ret;
         }
 
