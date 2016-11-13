@@ -19,6 +19,7 @@
  *
  */
 
+#include <iostream>
 #include <string>
 #include <cassert>
 #include <stdlib.h>
@@ -32,6 +33,9 @@ using namespace std;
 
 extern "C"
 {
+
+#define APIDBG
+#undef APIDBG
 
 /*
  * Global variable, not protected by lock. Its purpose is to avoid calling
@@ -53,6 +57,10 @@ librina_init(void)
         initialized = 1;
         try {
                 rina::initialize("INFO", "/dev/null");
+        } catch (rina::Exception &e) {
+#ifdef APIDBG
+                cout << __func__ << ": " << e.what() << endl;
+#endif /* APIDBG */
         } catch (...) {
                 /*
                  * We got an exception because librina is already
@@ -196,6 +204,10 @@ rina_register(int fd, const char *dif_name, const char *local_appl)
                 if (errno != 0) {
                         return -1;
                 }
+        } catch (rina::Exception &e) {
+#ifdef APIDBG
+                cout << __func__ << ": " << e.what() << endl;
+#endif /* APIDBG */
         } catch (...) {
                 /* Operations can fail because of allocation failures. */
                 errno = ENOMEM;
@@ -233,6 +245,10 @@ rina_unregister(int fd, const char *dif_name, const char *local_appl)
                 if (errno != 0) {
                         return -1;
                 }
+        } catch (rina::Exception &e) {
+#ifdef APIDBG
+                cout << __func__ << ": " << e.what() << endl;
+#endif /* APIDBG */
         } catch (...) {
                 /* Operations can fail because of allocation failures. */
                 errno = ENOMEM;
@@ -275,6 +291,10 @@ rina_flow_accept(int fd, const char **remote_appl)
                                                 /* result */ 0,
                                                 /* notifySource */ true,
                                                 /* blocking */ true);
+        } catch (rina::Exception &e) {
+#ifdef APIDBG
+                cout << __func__ << ": " << e.what() << endl;
+#endif /* APIDBG */
         } catch (...) {
                 errno = ENOMEM;
                 flow.fd = -1;
@@ -352,6 +372,10 @@ rina_flow_alloc(const char *dif_name, const char *local_appl,
                 if (flow.fd < 0) {
                         errno = EPERM;
                 }
+        } catch (rina::Exception &e) {
+#ifdef APIDBG
+                cout << __func__ << ": " << e.what() << endl;
+#endif /* APIDBG */
         } catch (...) {
                 errno = ENOMEM;
                 flow.fd = -1;
