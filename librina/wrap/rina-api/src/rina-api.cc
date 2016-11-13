@@ -38,6 +38,8 @@ static int initialized = 0;
 static int
 librina_init(void)
 {
+        errno = 0; /* reset at the beginning of each API call */
+
         if (initialized) {
                 return 0;
         }
@@ -70,9 +72,11 @@ rina_open(void)
 static IPCEvent *
 wait_for_event(IPCEventType wtype, unsigned int wseqnum)
 {
+        /* Wait for events to come, forever. In the future we
+         * could use select to add a timeout mechanism, and return
+         * errno = ETIMEDOUT in case of timeout. */
         for (;;) {
                 IPCEvent* event = ipcEventProducer->eventWait();
-                DeallocateFlowResponseEvent *resp = NULL;
 
                 if (!event) {
                         errno = ENXIO;
@@ -83,12 +87,25 @@ wait_for_event(IPCEventType wtype, unsigned int wseqnum)
 
                 /* Process here the events for which we only need some
                  * bookkeeping. */
-                case REGISTER_APPLICATION_RESPONSE_EVENT:
-                        ipcManager->commitPendingRegistration(event->sequenceNumber,
-                                dynamic_cast<RegisterApplicationResponseEvent*>(event)->DIFName);
+                case REGISTER_APPLICATION_RESPONSE_EVENT: {
+                        RegisterApplicationResponseEvent *resp;
+
+                        resp = dynamic_cast<RegisterApplicationResponseEvent*>(event);
+
+                        /* Update librina state */
+                        if (resp->result) {
+                                errno = EPERM;
+                                ipcManager->withdrawPendingRegistration(
+                                                        event->sequenceNumber);
+                        } else {
+                                ipcManager->commitPendingRegistration(
+                                                        event->sequenceNumber,
+                                                        resp->DIFName);
+                        }
                         // TODO delete event;
                         event = NULL;
                         break;
+                }
 
                 case UNREGISTER_APPLICATION_RESPONSE_EVENT:
                         ipcManager->appUnregistrationResult(event->sequenceNumber,
@@ -103,12 +120,15 @@ wait_for_event(IPCEventType wtype, unsigned int wseqnum)
                         event = NULL;
                         break;
 
-                case DEALLOCATE_FLOW_RESPONSE_EVENT:
+                case DEALLOCATE_FLOW_RESPONSE_EVENT: {
+                        DeallocateFlowResponseEvent *resp;
+
                         resp = dynamic_cast<DeallocateFlowResponseEvent*>(event);
                         ipcManager->flowDeallocationResult(resp->portId, resp->result == 0);
                         // TODO delete event;
                         event = NULL;
                         break;
+                }
 
                 /* Other events are returned to the caller, if they match. */
                 case FLOW_ALLOCATION_REQUESTED_EVENT:
@@ -132,7 +152,6 @@ int
 rina_register(int fd, const char *dif_name, const char *local_appl)
 {
         ApplicationRegistrationInformation ari;
-        RegisterApplicationResponseEvent *resp;
         unsigned int seqnum;
         IPCEvent *event;
 
@@ -156,29 +175,12 @@ rina_register(int fd, const char *dif_name, const char *local_appl)
         try {
                 /* Issue a registration request. */
                 seqnum = ipcManager->requestApplicationRegistration(ari);
-                //TODO use wait_for_event
-                /* Wait for the response to come, forever. In the future we
-                 * could use select to add a timeout mechanism, and return
-                 * ETIMEDOUT in errno. */
-                for (;;) {
-                        event = ipcEventProducer->eventWait();
-                        if (event && event->eventType ==
-                                REGISTER_APPLICATION_RESPONSE_EVENT &&
-                                        event->sequenceNumber == seqnum) {
-                                break;
-                        }
-                }
-
-                resp = dynamic_cast<RegisterApplicationResponseEvent*>(event);
-
-                /* Update librina state */
-                if (resp->result) {
-                        errno = EPERM;
-                        ipcManager->withdrawPendingRegistration(seqnum);
+                event = wait_for_event(REGISTER_APPLICATION_RESPONSE_EVENT,
+                                       seqnum);
+                assert(event == NULL);
+                if (errno != 0) {
                         return -1;
                 }
-
-                ipcManager->commitPendingRegistration(seqnum, resp->DIFName);
         } catch (...) {
                 /* Operations can fail because of allocation failures. */
                 errno = ENOMEM;
