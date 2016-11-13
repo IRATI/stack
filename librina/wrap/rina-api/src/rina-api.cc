@@ -301,8 +301,12 @@ rina_flow_alloc(const char *dif_name, const char *local_appl,
                 flowspec = &spec;
         }
 
-        //TODO convert flowspec --> flowspec_i
-        (void)flowspec;
+        /* Convert flowspec --> flowspec_i */
+        flowspec_i.maxAllowableGap = flowspec->max_sdu_gap;
+        flowspec_i.averageBandwidth = flowspec->avg_bandwidth;
+        flowspec_i.delay = flowspec->max_delay;
+        flowspec_i.jitter = flowspec->max_jitter;
+        flowspec_i.orderedDelivery = flowspec->in_order_delivery;
 
         local_apni.processName = string(local_appl);
         remote_apni.processName = string(remote_appl);
