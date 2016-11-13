@@ -173,6 +173,17 @@ wait_for_event(IPCEventType wtype, unsigned int wseqnum)
         return NULL;
 }
 
+static void
+str2apninfo(const string& str, ApplicationProcessNamingInformation &apni)
+{
+        std::string *vps[] = { &apni.processName, &apni.processInstance,
+                               &apni.entityName, &apni.entityInstance };
+        std::stringstream ss(str);
+
+        for (int i = 0; i < 4 && getline(ss, *(vps[i]), '|'); i++) {
+        }
+}
+
 int
 rina_register(int fd, const char *dif_name, const char *local_appl)
 {
@@ -185,8 +196,7 @@ rina_register(int fd, const char *dif_name, const char *local_appl)
         }
 
         ari.ipcProcessId = 0;  /* This is an application, not an IPC process */
-        ari.appName = ApplicationProcessNamingInformation(string(local_appl),
-                                                          string());
+        str2apninfo(string(local_appl), ari.appName);
 
         if (dif_name) {
                 ari.applicationRegistrationType = APPLICATION_REGISTRATION_SINGLE_DIF;
@@ -235,8 +245,7 @@ rina_unregister(int fd, const char *dif_name, const char *local_appl)
         }
 
         difi = ApplicationProcessNamingInformation(string(dif_name), string());
-        appi = ApplicationProcessNamingInformation(string(local_appl),
-                                                   string());
+        str2apninfo(string(local_appl), appi);
 
         try {
                 IPCEvent *event;
@@ -345,8 +354,8 @@ rina_flow_alloc(const char *dif_name, const char *local_appl,
         flowspec_i.jitter = flowspec->max_jitter;
         flowspec_i.orderedDelivery = flowspec->in_order_delivery;
 
-        local_apni.processName = string(local_appl);
-        remote_apni.processName = string(remote_appl);
+        str2apninfo(string(local_appl), local_apni);
+        str2apninfo(string(remote_appl), remote_apni);
 
         try {
                 AllocateFlowRequestResultEvent *resp;
@@ -356,7 +365,7 @@ rina_flow_alloc(const char *dif_name, const char *local_appl,
                                                                    remote_apni,
                                                                    flowspec_i);
                 } else {
-                        dif_apni.processName = string(dif_name);
+                        str2apninfo(string(dif_name), dif_apni);
                         seqnum = ipcManager->requestFlowAllocationInDIF(
                                                                 local_apni,
                                                                 remote_apni,
