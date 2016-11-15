@@ -98,7 +98,7 @@ void NeighborRIBObj::create_cb(const rina::rib::rib_handle_t rib,
 
     if (class_ != NeighborRIBObj::class_name)
     {
-            LOG_ERR("Create operation failed: received an invalid class "
+            LOG_IPCP_ERR("Create operation failed: received an invalid class "
             		"name '%s' during create operation in '%s'",
                     class_.c_str(), fqn.c_str());
             res.code_ = rina::cdap_rib::CDAP_INVALID_OBJ_CLASS;
@@ -113,17 +113,23 @@ void NeighborRIBObj::create_cb(const rina::rib::rib_handle_t rib,
 
 bool NeighborRIBObj::createNeighbor(rina::Neighbor &object)
 {
-	LOG_DBG("Enrolling to neighbor %s", object.get_name().processName.c_str());
+	LOG_IPCP_DBG("Enrolling to neighbor %s",
+		 object.get_name().processName.c_str());
 
-	rina::EnrollToDAFRequestEvent* event;
+	std::list<rina::ApplicationProcessNamingInformation>::const_iterator it;
+
+	rina::EnrollToDAFRequestEvent* event = new rina::EnrollToDAFRequestEvent();
 	event->neighborName = object.get_name();
 	event->dafName = rinad::IPCPFactory::getIPCP()->
     		get_dif_information().dif_name_;
-	event->supportingDIFName = object.
-			get_supporting_dif_name();
+	for (it = object.supporting_difs_.begin();
+			it != object.supporting_difs_.end(); ++it) {
+		LOG_IPCP_DBG("Supporting DIF name %s", it->processName.c_str());
+		event->supportingDIFName.processName = it->processName;
+	}
 	rinad::IPCPFactory::getIPCP()->enrollment_task_->processEnrollmentRequestEvent(event);
 
-	LOG_INFO("IPC Process enrollment to neighbor %s completed successfully",
+	LOG_IPCP_INFO("IPC Process enrollment to neighbor %s in process",
     	 object.get_name().processName.c_str());
 
 	return true;
@@ -188,7 +194,7 @@ void NeighborsRIBObj::create(const rina::cdap_rib::con_handle_t &con,
 		}
 
 		if (!supportingDifInCommon) {
-			LOG_INFO("Ignoring neighbor %s because we don't have an N-1 DIF in common",
+			LOG_IPCP_INFO("Ignoring neighbor %s because we don't have an N-1 DIF in common",
 					iterator->name_.processName.c_str());
 			continue;
 		}
