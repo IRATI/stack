@@ -23,7 +23,7 @@
 #include <sstream>
 #include <iostream>
 
-#define IPCP_MODULE "core"
+#define IPCP_MODULE "normal-ipcp"
 #include "ipcp-logging.h"
 
 #include "ipcp/enrollment-task.h"
@@ -36,16 +36,6 @@
 #include "ipcp/utils.h"
 
 namespace rinad {
-
-#define IPCP_LOG_IPCP_FILE_PREFIX "/tmp/ipcp-log-file"
-
-/* Macro useful to perform downcasts in declarations. */
-#define DOWNCAST_DECL(_var,_class,_name)        \
-        _class *_name = dynamic_cast<_class*>(_var);
-
-//Timeouts for timed wait
-#define IPCP_EVENT_TIMEOUT_S 0
-#define IPCP_EVENT_TIMEOUT_NS 1000000000 //1 sec
 
 //Class KernelSyncTrigger
 KernelSyncTrigger::KernelSyncTrigger(rina::ThreadAttributes * threadAttributes,
@@ -73,27 +63,27 @@ void KernelSyncTrigger::finish()
 	end = true;
 }
 
+static void parse_path(const std::string& path, std::string& component,
+                       std::string& remainder)
+{
+        size_t dotpos = path.find_first_of('.');
+
+        component = path.substr(0, dotpos);
+        if (dotpos == std::string::npos || dotpos + 1 == path.size()) {
+                remainder = std::string();
+        } else {
+                remainder = path.substr(dotpos + 1);
+        }
+}
+
 //Class IPCProcessImpl
 IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& nm,
-		unsigned short id, unsigned int ipc_manager_port,
-		std::string log_level, std::string log_file) : IPCProcess(nm.processName, nm.processInstance)
+			       unsigned short id,
+			       unsigned int ipc_manager_port,
+			       std::string log_level,
+			       std::string log_file) : IPCProcess(nm.processName, nm.processInstance),
+					       	       LazyIPCProcessImpl(nm, id, ipc_manager_port, log_level, log_file)
 {
-        try {
-                std::stringstream ss;
-                ss << IPCP_LOG_IPCP_FILE_PREFIX << "-" << id;
-                rina::initialize(log_level, log_file);
-                LOG_DBG("IPCProcessImpl");
-                rina::extendedIPCManager->ipcManagerPort = ipc_manager_port;
-                rina::extendedIPCManager->ipcProcessId = id;
-                rina::kernelIPCProcess->ipcProcessId = id;
-                LOG_IPCP_INFO("Librina initialized");
-        } catch (rina::Exception &e) {
-                std::cerr << "Cannot initialize librina" << std::endl;
-                exit(EXIT_FAILURE);
-        }
-
-        state = NOT_INITIALIZED;
-        lock_ = new rina::Lockable();
         kernel_sync = NULL;
 
         // Initialize application entities
@@ -131,12 +121,8 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         		name_.c_str(), instance_.c_str(), id);
 }
 
-IPCProcessImpl::~IPCProcessImpl() {
-
-	if (lock_) {
-		delete lock_;
-	}
-
+IPCProcessImpl::~IPCProcessImpl()
+{
 	if (kernel_sync) {
 		kernel_sync->finish();
 		kernel_sync->join(NULL);
@@ -159,10 +145,6 @@ unsigned short IPCProcessImpl::get_id() {
 	return rina::extendedIPCManager->ipcProcessId;
 }
 
-const std::list<rina::Neighbor> IPCProcessImpl::get_neighbors() const {
-	return enrollment_task_->get_neighbors();
-}
-
 const IPCProcessOperationalState& IPCProcessImpl::get_operational_state() const {
 	rina::ScopedLock g(*lock_);
 	return state;
@@ -183,6 +165,10 @@ void IPCProcessImpl::set_dif_information(const rina::DIFInformation& dif_informa
 	dif_information_ = dif_information;
 }
 
+const std::list<rina::Neighbor> IPCProcessImpl::get_neighbors() const {
+	return enrollment_task_->get_neighbors();
+}
+
 unsigned int IPCProcessImpl::get_address() const {
 	rina::ScopedLock g(*lock_);
 	if (state != ASSIGNED_TO_DIF) {
@@ -197,7 +183,68 @@ void IPCProcessImpl::set_address(unsigned int address) {
 	dif_information_.dif_configuration_.address_ = address;
 }
 
-void IPCProcessImpl::processAssignToDIFRequestEvent(const rina::AssignToDIFRequestEvent& event) {
+void IPCProcessImpl::requestPDUFTEDump() {
+	try{
+		rina::kernelIPCProcess->dumptPDUFT();
+	} catch (rina::Exception &e) {
+		LOG_IPCP_WARN("Error requesting IPC Process to Dump PDU Forwarding Table: %s", e.what());
+	}
+}
+
+void IPCProcessImpl::sync_with_kernel()
+{
+	flow_allocator_->sync_with_kernel();
+	resource_allocator_->sync_with_kernel();
+}
+
+int IPCProcessImpl::dispatchSelectPolicySet(const std::string& path,
+                                            const std::string& name,
+                                            bool& got_in_userspace)
+{
+        std::string component, remainder;
+        int result = 0;
+
+        got_in_userspace = true;
+
+        parse_path(path, component, remainder);
+
+        // First check if the request should be served by this daemon
+        // or should be forwarded to kernelspace
+        if (component == "security-manager") {
+                result = security_manager_->select_policy_set(remainder,
+                                                              name);
+        } else if (component == "enrollment") {
+                result = enrollment_task_->select_policy_set(remainder,
+                                                             name);
+        } else if (component == "flow-allocator") {
+                result = flow_allocator_->select_policy_set(remainder,
+                                                            name);
+        } else if (component == "namespace-manager") {
+                result = namespace_manager_->select_policy_set(remainder,
+                                                               name);
+        } else if (component == "resource-allocator") {
+                result = resource_allocator_->select_policy_set(remainder,
+                                                                name);
+        } else if (component == "rib-daemon") {
+                result = rib_daemon_->select_policy_set(remainder,
+                                                        name);
+        } else if (component == "routing") {
+                result = routing_component_->select_policy_set(remainder,
+                                                               name);
+        } else {
+                got_in_userspace = false;
+        }
+
+        return result;
+}
+
+void IPCProcessImpl::dif_registration_notification_handler(const rina::IPCProcessDIFRegistrationEvent& event)
+{
+	resource_allocator_->get_n_minus_one_flow_manager()->processRegistrationNotification(event);
+}
+
+void IPCProcessImpl::assign_to_dif_request_handler(const rina::AssignToDIFRequestEvent& event)
+{
 	rina::ScopedLock g(*lock_);
 
 	if (state != INITIALIZED) {
@@ -219,7 +266,8 @@ void IPCProcessImpl::processAssignToDIFRequestEvent(const rina::AssignToDIFReque
 	}
 }
 
-void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResponseEvent& event) {
+void IPCProcessImpl::assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event)
+{
 	rina::ScopedLock g(*lock_);
 
 	if (state == ASSIGNED_TO_DIF ) {
@@ -294,15 +342,87 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 	}
 }
 
-void IPCProcessImpl::requestPDUFTEDump() {
-	try{
-		rina::kernelIPCProcess->dumptPDUFT();
-	} catch (rina::Exception &e) {
-		LOG_IPCP_WARN("Error requesting IPC Process to Dump PDU Forwarding Table: %s", e.what());
+void IPCProcessImpl::allocate_flow_request_result_handler(const rina::AllocateFlowRequestResultEvent& event)
+{
+	resource_allocator_->get_n_minus_one_flow_manager()->allocateRequestResult(event);
+}
+
+void IPCProcessImpl::flow_allocation_requested_handler(const rina::FlowRequestEvent& event)
+{
+	if (event.localRequest)
+		//A local application is requesting this IPC Process to allocate a flow
+		flow_allocator_->submitAllocateRequest(event);
+	else
+		//A remote IPC process is requesting a flow to this IPC Process
+		resource_allocator_->get_n_minus_one_flow_manager()->flowAllocationRequested(event);
+}
+
+void IPCProcessImpl::deallocate_flow_response_handler(const rina::DeallocateFlowResponseEvent& event)
+{
+	resource_allocator_->get_n_minus_one_flow_manager()->deallocateFlowResponse(event);
+}
+
+void IPCProcessImpl::flow_deallocated_handler(const rina::FlowDeallocatedEvent& event)
+{
+	resource_allocator_->get_n_minus_one_flow_manager()->flowDeallocatedRemotely(event);
+}
+
+void IPCProcessImpl::flow_deallocation_requested_handler(const rina::FlowDeallocateRequestEvent& event)
+{
+	flow_allocator_->submitDeallocate(event);
+}
+
+void IPCProcessImpl::allocate_flow_response_handler(const rina::AllocateFlowResponseEvent& event)
+{
+	flow_allocator_->submitAllocateResponse(event);
+}
+
+void IPCProcessImpl::application_registration_request_handler(const rina::ApplicationRegistrationRequestEvent& event)
+{
+	namespace_manager_->processApplicationRegistrationRequestEvent(event);
+}
+
+void IPCProcessImpl::application_unregistration_handler(const rina::ApplicationUnregistrationRequestEvent& event)
+{
+	namespace_manager_->processApplicationUnregistrationRequestEvent(event);
+}
+
+void IPCProcessImpl::enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event)
+{
+	enrollment_task_->processEnrollmentRequestEvent(event);
+}
+
+void IPCProcessImpl::query_rib_handler(const rina::QueryRIBRequestEvent& event)
+{
+	rib_daemon_->processQueryRIBRequestEvent(event);
+	requestPDUFTEDump();
+}
+
+void IPCProcessImpl::create_efcp_connection_response_handler(const rina::CreateConnectionResponseEvent& event)
+{
+	flow_allocator_->processCreateConnectionResponseEvent(event);
+}
+
+void IPCProcessImpl::create_efcp_connection_result_handler(const rina::CreateConnectionResultEvent& event)
+{
+	flow_allocator_->processCreateConnectionResultEvent(event);
+}
+
+void IPCProcessImpl::update_efcp_connection_response_handler(const rina::UpdateConnectionResponseEvent& event)
+{
+	flow_allocator_->processUpdateConnectionResponseEvent(event);
+}
+
+void IPCProcessImpl::destroy_efcp_connection_result_handler(const rina::DestroyConnectionResultEvent& event)
+{
+	if (event.result != 0) {
+		LOG_IPCP_WARN("Problems destroying connection with associated to port-id %d",
+			      event.portId);
 	}
 }
 
-void IPCProcessImpl::logPDUFTE(const rina::DumpFTResponseEvent& event) {
+void IPCProcessImpl::dump_ft_response_handler(const rina::DumpFTResponseEvent& event)
+{
 	if (event.result != 0) {
 		LOG_IPCP_WARN("Dump PDU FT operation returned error, error code: %d",
 				event.getResult());
@@ -329,21 +449,8 @@ void IPCProcessImpl::logPDUFTE(const rina::DumpFTResponseEvent& event) {
 	LOG_IPCP_DBG("%s", ss.str().c_str());
 }
 
-static void parse_path(const std::string& path, std::string& component,
-                       std::string& remainder)
+void IPCProcessImpl::set_policy_set_param_handler(const rina::SetPolicySetParamRequestEvent& event)
 {
-        size_t dotpos = path.find_first_of('.');
-
-        component = path.substr(0, dotpos);
-        if (dotpos == std::string::npos || dotpos + 1 == path.size()) {
-                remainder = std::string();
-        } else {
-                remainder = path.substr(dotpos + 1);
-        }
-}
-
-void IPCProcessImpl::processSetPolicySetParamRequestEvent(
-                        const rina::SetPolicySetParamRequestEvent& event) {
 	rina::ScopedLock g(*lock_);
         std::string component, remainder;
         bool got_in_userspace = true;
@@ -407,8 +514,8 @@ void IPCProcessImpl::processSetPolicySetParamRequestEvent(
 	}
 }
 
-void IPCProcessImpl::processSetPolicySetParamResponseEvent(
-                        const rina::SetPolicySetParamResponseEvent& event) {
+void IPCProcessImpl::set_policy_set_param_response_handler(const rina::SetPolicySetParamResponseEvent& event)
+{
 	rina::ScopedLock g(*lock_);
 	std::map<unsigned int,
                  rina::SetPolicySetParamRequestEvent>::iterator it;
@@ -446,49 +553,8 @@ void IPCProcessImpl::processSetPolicySetParamResponseEvent(
 	}
 }
 
-int IPCProcessImpl::dispatchSelectPolicySet(const std::string& path,
-                                            const std::string& name,
-                                            bool& got_in_userspace)
+void IPCProcessImpl::select_policy_set_handler(const rina::SelectPolicySetRequestEvent& event)
 {
-        std::string component, remainder;
-        int result = 0;
-
-        got_in_userspace = true;
-
-        parse_path(path, component, remainder);
-
-        // First check if the request should be served by this daemon
-        // or should be forwarded to kernelspace
-        if (component == "security-manager") {
-                result = security_manager_->select_policy_set(remainder,
-                                                              name);
-        } else if (component == "enrollment") {
-                result = enrollment_task_->select_policy_set(remainder,
-                                                             name);
-        } else if (component == "flow-allocator") {
-                result = flow_allocator_->select_policy_set(remainder,
-                                                            name);
-        } else if (component == "namespace-manager") {
-                result = namespace_manager_->select_policy_set(remainder,
-                                                               name);
-        } else if (component == "resource-allocator") {
-                result = resource_allocator_->select_policy_set(remainder,
-                                                                name);
-        } else if (component == "rib-daemon") {
-                result = rib_daemon_->select_policy_set(remainder,
-                                                        name);
-        } else if (component == "routing") {
-                result = routing_component_->select_policy_set(remainder,
-                                                               name);
-        } else {
-                got_in_userspace = false;
-        }
-
-        return result;
-}
-
-void IPCProcessImpl::processSelectPolicySetRequestEvent(
-                        const rina::SelectPolicySetRequestEvent& event) {
 	rina::ScopedLock g(*lock_);
         bool got_in_userspace;
         int result = dispatchSelectPolicySet(event.path, event.name, got_in_userspace);
@@ -516,8 +582,8 @@ void IPCProcessImpl::processSelectPolicySetRequestEvent(
 	}
 }
 
-void IPCProcessImpl::processSelectPolicySetResponseEvent(
-                        const rina::SelectPolicySetResponseEvent& event) {
+void IPCProcessImpl::select_policy_set_response_handler(const rina::SelectPolicySetResponseEvent& event)
+{
 	rina::ScopedLock g(*lock_);
 	std::map<unsigned int,
                  rina::SelectPolicySetRequestEvent>::iterator it;
@@ -555,8 +621,8 @@ void IPCProcessImpl::processSelectPolicySetResponseEvent(
 	}
 }
 
-void IPCProcessImpl::processPluginLoadRequestEvent(
-                        const rina::PluginLoadRequestEvent& event) {
+void IPCProcessImpl::plugin_load_handler(const rina::PluginLoadRequestEvent& event)
+{
 	rina::ScopedLock g(*lock_);
         int result;
 
@@ -570,8 +636,12 @@ void IPCProcessImpl::processPluginLoadRequestEvent(
         return;
 }
 
-void IPCProcessImpl::processFwdCDAPMsgRequestEvent(
-                        const rina::FwdCDAPMsgRequestEvent& event)
+void IPCProcessImpl::update_crypto_state_response_handler(const rina::UpdateCryptoStateResponseEvent& event)
+{
+	security_manager_->process_update_crypto_state_response(event);
+}
+
+void IPCProcessImpl::fwd_cdap_msg_handler(const rina::FwdCDAPMsgRequestEvent& event)
 {
 	if (!event.sermsg.message_) {
 		LOG_IPCP_ERR("No CDAP message to be forwarded");
@@ -585,249 +655,5 @@ void IPCProcessImpl::processFwdCDAPMsgRequestEvent(
         return;
 }
 
-//Event loop handlers
-void IPCProcessImpl::event_loop(void){
-
-	rina::IPCEvent *e;
-
-	keep_running = true;
-
-	LOG_DBG("Starting main I/O loop...");
-
-	while(keep_running) {
-		e = rina::ipcEventProducer->eventTimedWait(
-						IPCP_EVENT_TIMEOUT_S,
-						IPCP_EVENT_TIMEOUT_NS);
-		if(!e)
-			continue;
-
-		if(!keep_running){
-			delete e;
-			break;
-		}
-
-		LOG_IPCP_DBG("Got event of type %s and sequence number %u",
-							rina::IPCEvent::eventTypeToString(e->eventType).c_str(),
-							e->sequenceNumber);
-
-		switch(e->eventType){
-			case rina::IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION:
-				{
-				DOWNCAST_DECL(e, rina::IPCProcessDIFRegistrationEvent, event);
-				resource_allocator_->get_n_minus_one_flow_manager()->processRegistrationNotification(*event);
-				}
-				break;
-			case rina::ASSIGN_TO_DIF_REQUEST_EVENT:
-				{
-				DOWNCAST_DECL(e, rina::AssignToDIFRequestEvent, event);
-				processAssignToDIFRequestEvent(*event);
-				}
-				break;
-			case rina::ASSIGN_TO_DIF_RESPONSE_EVENT:
-				{
-				DOWNCAST_DECL(e, rina::AssignToDIFResponseEvent, event);
-				processAssignToDIFResponseEvent(*event);
-				}
-				break;
-			case rina::ALLOCATE_FLOW_REQUEST_RESULT_EVENT:
-				{
-				DOWNCAST_DECL(e, rina::AllocateFlowRequestResultEvent, event);
-				resource_allocator_->get_n_minus_one_flow_manager()->allocateRequestResult(*event);
-				}
-				break;
-			case rina::FLOW_ALLOCATION_REQUESTED_EVENT:
-				{
-				DOWNCAST_DECL(e, rina::FlowRequestEvent, event);
-				if (event->localRequest)
-					//A local application is requesting this IPC Process to allocate a flow
-					flow_allocator_->submitAllocateRequest(*event);
-				else
-					//A remote IPC process is requesting a flow to this IPC Process
-					resource_allocator_->get_n_minus_one_flow_manager()->flowAllocationRequested(*event);
-				}
-				break;
-			case rina::DEALLOCATE_FLOW_RESPONSE_EVENT:
-				{
-				DOWNCAST_DECL(e, rina::DeallocateFlowResponseEvent, event);
-				resource_allocator_->get_n_minus_one_flow_manager()->deallocateFlowResponse(*event);
-				}
-				break;
-			case rina::FLOW_DEALLOCATED_EVENT:
-				{
-				DOWNCAST_DECL(e, rina::FlowDeallocatedEvent, event);
-				resource_allocator_->get_n_minus_one_flow_manager()->flowDeallocatedRemotely(*event);
-				}
-				break;
-			case rina::FLOW_DEALLOCATION_REQUESTED_EVENT:
-				{
-				DOWNCAST_DECL(e, rina::FlowDeallocateRequestEvent, event);
-				flow_allocator_->submitDeallocate(*event);
-				}
-				break;
-			case rina::ALLOCATE_FLOW_RESPONSE_EVENT:
-				{
-				DOWNCAST_DECL(e, rina::AllocateFlowResponseEvent, event);
-				flow_allocator_->submitAllocateResponse(*event);
-				}
-				break;
-			case rina::APPLICATION_REGISTRATION_REQUEST_EVENT:
-				{
-				DOWNCAST_DECL(e, rina::ApplicationRegistrationRequestEvent, event);
-				namespace_manager_->processApplicationRegistrationRequestEvent(*event);
-				}
-				break;
-			case rina::APPLICATION_UNREGISTRATION_REQUEST_EVENT:
-				{
-				DOWNCAST_DECL(e, rina::ApplicationUnregistrationRequestEvent, event);
-				namespace_manager_->processApplicationUnregistrationRequestEvent(*event);
-				}
-				break;
-			case rina::ENROLL_TO_DIF_REQUEST_EVENT:
-				{
-				DOWNCAST_DECL(e, rina::EnrollToDAFRequestEvent, event);
-				enrollment_task_->processEnrollmentRequestEvent(event);
-				}
-				break;
-			case rina::IPC_PROCESS_QUERY_RIB:
-				{
-				DOWNCAST_DECL(e, rina::QueryRIBRequestEvent, event);
-				rib_daemon_->processQueryRIBRequestEvent(*event);
-				requestPDUFTEDump();
-				}
-				break;
-			case rina::IPC_PROCESS_CREATE_CONNECTION_RESPONSE:
-				{
-				DOWNCAST_DECL(e, rina::CreateConnectionResponseEvent, event);
-				flow_allocator_->processCreateConnectionResponseEvent(*event);
-				}
-				break;
-			case rina::IPC_PROCESS_CREATE_CONNECTION_RESULT:
-				{
-				DOWNCAST_DECL(e, rina::CreateConnectionResultEvent, event);
-				flow_allocator_->processCreateConnectionResultEvent(*event);
-				}
-				break;
-			case rina::IPC_PROCESS_UPDATE_CONNECTION_RESPONSE:
-				{
-				DOWNCAST_DECL(e, rina::UpdateConnectionResponseEvent, event);
-				flow_allocator_->processUpdateConnectionResponseEvent(*event);
-				}
-				break;
-			case rina::IPC_PROCESS_DESTROY_CONNECTION_RESULT:
-				{
-				DOWNCAST_DECL(e, rina::DestroyConnectionResultEvent, event);
-				if (event->result != 0)
-					LOG_IPCP_WARN("Problems destroying connection with associated to port-id %d",
-						event->portId);
-				}
-				break;
-			case rina::IPC_PROCESS_DUMP_FT_RESPONSE:
-				{
-				DOWNCAST_DECL(e, rina::DumpFTResponseEvent, event);
-				logPDUFTE(*event);
-				}
-				break;
-			case rina::IPC_PROCESS_SET_POLICY_SET_PARAM:
-				{
-				DOWNCAST_DECL(e, rina::SetPolicySetParamRequestEvent, event);
-				processSetPolicySetParamRequestEvent(*event);
-				}
-				break;
-			case rina::IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE:
-				{
-				DOWNCAST_DECL(e, rina::SetPolicySetParamResponseEvent, event);
-				processSetPolicySetParamResponseEvent(*event);
-				}
-				break;
-			case rina::IPC_PROCESS_SELECT_POLICY_SET:
-				{
-				DOWNCAST_DECL(e, rina::SelectPolicySetRequestEvent, event);
-				processSelectPolicySetRequestEvent(*event);
-				}
-				break;
-			case rina::IPC_PROCESS_SELECT_POLICY_SET_RESPONSE:
-				{
-				DOWNCAST_DECL(e, rina::SelectPolicySetResponseEvent, event);
-				processSelectPolicySetResponseEvent(*event);
-				}
-				break;
-			case rina::IPC_PROCESS_PLUGIN_LOAD:
-				{
-				DOWNCAST_DECL(e, rina::PluginLoadRequestEvent, event);
-				processPluginLoadRequestEvent(*event);
-				}
-				break;
-			case rina::IPC_PROCESS_UPDATE_CRYPTO_STATE_RESPONSE:
-				{
-				DOWNCAST_DECL(e, rina::UpdateCryptoStateResponseEvent, event);
-				security_manager_->process_update_crypto_state_response(*event);
-				}
-				break;
-			case rina::IPC_PROCESS_FWD_CDAP_MSG:
-				{
-				DOWNCAST_DECL(e, rina::FwdCDAPMsgRequestEvent, event);
-				processFwdCDAPMsgRequestEvent(*event);
-				}
-				break;
-
-			//Unsupported events
-			case rina::APPLICATION_UNREGISTERED_EVENT:
-			case rina::REGISTER_APPLICATION_RESPONSE_EVENT:
-			case rina::UNREGISTER_APPLICATION_RESPONSE_EVENT:
-			case rina::APPLICATION_REGISTRATION_CANCELED_EVENT:
-			case rina::UPDATE_DIF_CONFIG_REQUEST_EVENT:
-			case rina::UPDATE_DIF_CONFIG_RESPONSE_EVENT:
-			case rina::ENROLL_TO_DIF_RESPONSE_EVENT:
-			case rina::GET_DIF_PROPERTIES:
-			case rina::GET_DIF_PROPERTIES_RESPONSE_EVENT:
-			case rina::OS_PROCESS_FINALIZED:
-			case rina::IPCM_REGISTER_APP_RESPONSE_EVENT:
-			case rina::IPCM_UNREGISTER_APP_RESPONSE_EVENT:
-			case rina::IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT:
-			case rina::IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
-			case rina::QUERY_RIB_RESPONSE_EVENT:
-			case rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT:
-			case rina::TIMER_EXPIRED_EVENT:
-			case rina::IPC_PROCESS_PLUGIN_LOAD_RESPONSE:
-			default:
-				break;
-		}
-		delete e;
-	}
-}
-
-void IPCProcessImpl::sync_with_kernel()
-{
-	flow_allocator_->sync_with_kernel();
-	resource_allocator_->sync_with_kernel();
-}
-
-//Class IPCPFactory
-static IPCProcessImpl * ipcp = NULL;
-
-IPCProcessImpl* IPCPFactory::createIPCP(const rina::ApplicationProcessNamingInformation& name,
-				  	unsigned short id,
-				  	unsigned int ipc_manager_port,
-				  	std::string log_level,
-				  	std::string log_file)
-{
-	if(!ipcp) {
-		ipcp = new IPCProcessImpl(name,
-					  ipcp_id,
-					  ipc_manager_port,
-					  log_level,
-					  log_file);
-		return ipcp;
-	} else
-		return 0;
-}
-
-IPCProcessImpl* IPCPFactory::getIPCP()
-{
-	if (ipcp)
-		return ipcp;
-
-	return NULL;
-}
 
 } //namespace rinad

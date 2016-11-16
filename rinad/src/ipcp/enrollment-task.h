@@ -278,7 +278,7 @@ public:
 	void remove_neighbor(const std::string& neighbor_key);
 	bool isEnrolledTo(const std::string& applicationProcessName);
 	const std::list<std::string> get_enrolled_app_names() const;
-	void processEnrollmentRequestEvent(rina::EnrollToDAFRequestEvent * event);
+	void processEnrollmentRequestEvent(const rina::EnrollToDAFRequestEvent& event);
 	void initiateEnrollment(const rina::EnrollmentRequest& request);
 	void connect(const rina::cdap::CDAPMessage& message,
 	             const rina::cdap_rib::con_handle_t &con);
