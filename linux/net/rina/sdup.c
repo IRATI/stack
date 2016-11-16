@@ -568,31 +568,6 @@ int sdup_set_policy_set_param(struct sdup_port * sdup_port,
 }
 EXPORT_SYMBOL(sdup_set_policy_set_param);
 
-bool pdu_ser_data_and_length(struct pdu_ser * pdu,
-		             unsigned char ** data,
-		             ssize_t *        len)
-{
-	struct buffer * buf;
-
-	buf = pdu_ser_buffer(pdu);
-	if (!buffer_is_ok(buf))
-		return -1;
-
-	ASSERT(data);
-	ASSERT(len);
-
-	*data = (unsigned char *) buffer_data_rw(buf);
-	if (!*data) {
-		LOG_ERR("Cannot get data from serialised PDU");
-		return -1;
-	}
-
-	*len = buffer_length(buf);
-
-	return 0;
-}
-EXPORT_SYMBOL(pdu_ser_data_and_length);
-
 int sdup_config_set(struct sdup *        instance,
 		    struct sdup_config * sdup_config)
 {
@@ -731,7 +706,7 @@ int sdup_destroy_port_config(struct sdup_port * instance)
 EXPORT_SYMBOL(sdup_destroy_port_config);
 
 int sdup_protect_pdu(struct sdup_port * instance,
-		     struct pdu_ser * pdu)
+		     struct pdu * pdu)
 {
 	struct sdup_crypto_ps * crypto_ps = NULL;
 	struct sdup_errc_ps * errc_ps = NULL;
@@ -773,7 +748,7 @@ int sdup_protect_pdu(struct sdup_port * instance,
 EXPORT_SYMBOL(sdup_protect_pdu);
 
 int sdup_unprotect_pdu(struct sdup_port * instance,
-		       struct pdu_ser * pdu)
+		       struct pdu * pdu)
 {
 	struct sdup_crypto_ps * crypto_ps = NULL;
 	struct sdup_errc_ps * errc_ps = NULL;
@@ -815,11 +790,9 @@ int sdup_unprotect_pdu(struct sdup_port * instance,
 EXPORT_SYMBOL(sdup_unprotect_pdu);
 
 int sdup_set_lifetime_limit(struct sdup_port * instance,
-			    struct pdu_ser * pdu,
-			    struct pci * pci)
+			    struct pdu * pdu)
 {
 	struct sdup_ttl_ps * ttl_ps;
-	ssize_t ttl;
 
 	if (!instance) {
 		LOG_ERR("Bogus instance passed");
@@ -833,9 +806,7 @@ int sdup_set_lifetime_limit(struct sdup_port * instance,
 				      struct sdup_ttl_ps,
 				      base);
 
-		ttl = pci_ttl(pci);
-
-		if (ttl_ps->sdup_set_lifetime_limit_policy(ttl_ps, pdu, ttl)) {
+		if (ttl_ps->sdup_set_lifetime_limit_policy(ttl_ps, pdu)) {
 			rcu_read_unlock();
 			return -1;
 		}
@@ -848,8 +819,7 @@ int sdup_set_lifetime_limit(struct sdup_port * instance,
 EXPORT_SYMBOL(sdup_set_lifetime_limit);
 
 int sdup_get_lifetime_limit(struct sdup_port * instance,
-			    struct pdu_ser * pdu,
-			    size_t * ttl)
+			    struct pdu * pdu)
 {
 	struct sdup_ttl_ps * ttl_ps;
 
@@ -864,7 +834,7 @@ int sdup_get_lifetime_limit(struct sdup_port * instance,
 				      struct sdup_ttl_ps,
 				      base);
 
-		if (ttl_ps->sdup_get_lifetime_limit_policy(ttl_ps, pdu, ttl)) {
+		if (ttl_ps->sdup_get_lifetime_limit_policy(ttl_ps, pdu)) {
 			rcu_read_unlock();
 			return -1;
 		}

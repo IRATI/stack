@@ -207,6 +207,7 @@ DIFTemplateManager::DIFTemplateManager(const std::string& folder,
 	//Create a thread that monitors the DIF template folder when required
 	rina::ThreadAttributes thread_attrs;
 	thread_attrs.setJoinable();
+	thread_attrs.setName("dif-config-folder-monitor");
 	monitor = new DIFConfigFolderMonitor(&thread_attrs,
 					     folder_name,
 					     this,

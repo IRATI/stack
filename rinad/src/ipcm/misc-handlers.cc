@@ -81,7 +81,7 @@ void IPCManager_::query_rib_response_event_handler(rina::QueryRIBResponseEvent *
 
 	ss << "Query RIB operation completed for IPC "
 		<< "process " << ipcp->get_name().toString() << endl;
-	FLUSH_LOG(INFO, ss);
+	FLUSH_LOG(DBG, ss);
 
 	for (lit = e->ribObjects.begin(); lit != e->ribObjects.end();
 			++lit) {

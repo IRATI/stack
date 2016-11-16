@@ -906,21 +906,11 @@ int SecurityManagerCBACPs::loadProfiles()
         return 0;
 }
 
-std::string SecurityManagerCBACPs::getAuthPolicyNameFromConfig(){
-        
-        std::string fileName =  cbac_helpers::getStringParamFromConfig("DIFConfigstore", dm);
-        std::string authPolicyName = std::string();
-        if (profile_parser_->getAuthPolicyName(fileName, authPolicyName) < 0){
-              LOG_IPCP_ERR("Error parsing DIF config file!");
-                return authPolicyName;
-        }
-        return authPolicyName;
-}
-
 int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t &con, 
                                               const rina::Neighbor &newMember,
                                               rina::cdap_rib::auth_policy_t &auth)
 {
+	rina::ISecurityContext * sc;
 	rina::SSH2SecurityContext * my_sc;
 
 #if ACCESS_GRANTED
@@ -933,10 +923,15 @@ int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t
                 LOG_IPCP_INFO("SecurityManagerCBACPs: isAllowedToJoinDAF my_dif_name %s", 
                      my_dif_name.processName.c_str());
         }
-        // CBAC needs to know which auth policy is used in the DIF, 
-        // this inforamtion is not always filled in the con object, 
-        // so get from DIF configuration
-        std::string authPolicyName = getAuthPolicyNameFromConfig();
+
+        sc = dm->get_security_context(con.port_id);
+        if (!sc) {
+                LOG_IPCP_ERR("Could not find security context for session_id %d",
+                	     con.port_id);
+                return -1;
+        }
+        std::string authPolicyName = sc->auth_policy_name;
+
         LOG_IPCP_DBG("SecurityManagerCBACPs: Joint AuthPolicyName is %s",
                 authPolicyName.c_str());
         
@@ -952,7 +947,7 @@ int SecurityManagerCBACPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t
                 return -1;
         }
         
-        my_sc = dynamic_cast<rina::SSH2SecurityContext *>(dm->get_security_context(con.port_id));
+        my_sc = dynamic_cast<rina::SSH2SecurityContext *>(sc);
         if (!my_sc) {
                 LOG_IPCP_ERR("Could not find security context for session_id %d",
                 	     con.port_id);
@@ -1085,6 +1080,8 @@ int SecurityManagerCBACPs::checkTokenSignature(const Token_t &token,
 int SecurityManagerCBACPs::storeAccessControlCreds(const rina::cdap_rib::auth_policy_t & auth,
                                                    const rina::cdap_rib::con_handle_t & con)
 {
+	rina::ISecurityContext * sc;
+
 #if ACCESS_GRANTED
         LOG_IPCP_INFO("storeAccessControlCreds: ACCESS_GRANTED option set");
         return 0;
@@ -1096,7 +1093,14 @@ int SecurityManagerCBACPs::storeAccessControlCreds(const rina::cdap_rib::auth_po
                      my_dif_name.processName.c_str());
         }
         
-        std::string authPolicyName = getAuthPolicyNameFromConfig();
+        sc = dm->get_security_context(con.port_id);
+        if (!sc) {
+                LOG_IPCP_ERR("Could not find security context for session_id %d",
+                	     con.port_id);
+                return -1;
+        }
+        std::string authPolicyName = sc->auth_policy_name;
+
         if (authPolicyName == rina::IAuthPolicySet::AUTH_NONE 
                 || authPolicyName == rina::IAuthPolicySet::AUTH_PASSWORD){
                 LOG_IPCP_INFO("SecurityManagerCBACPs: Auth policy is %s, then no token to store",
@@ -1177,12 +1181,21 @@ int SecurityManagerCBACPs::generateTokenForTokenGenerator(rina::cdap_rib::auth_p
 int SecurityManagerCBACPs::getAccessControlCreds(rina::cdap_rib::auth_policy_t & auth,
                                                  const rina::cdap_rib::con_handle_t & con)
 {
+	rina::ISecurityContext * sc;
+
 #if ACCESS_GRANTED
         LOG_IPCP_INFO("getAccessControlCreds: ACCESS_GRANTED option set");
         return 0;
 #endif 
-        std::string authPolicyName = getAuthPolicyNameFromConfig();
         
+        sc = dm->get_security_context(con.port_id);
+        if (!sc) {
+                LOG_IPCP_ERR("Could not find security context for session_id %d",
+                	     con.port_id);
+                return -1;
+        }
+        std::string authPolicyName = sc->auth_policy_name;
+
         LOG_IPCP_DBG("getAccessControlCreds: Auth policy is %s",
         	     authPolicyName.c_str());
         if (authPolicyName == rina::IAuthPolicySet::AUTH_NONE 
@@ -1311,6 +1324,7 @@ void SecurityManagerCBACPs::checkRIBOperation(const rina::cdap_rib::auth_policy_
                                           const std::string obj_name,
                                           rina::cdap_rib::res_info_t& res)
 {
+	rina::ISecurityContext * sc;
 	rina::SSH2SecurityContext * my_sc;
 
 #if ACCESS_GRANTED
@@ -1321,7 +1335,15 @@ void SecurityManagerCBACPs::checkRIBOperation(const rina::cdap_rib::auth_policy_
         LOG_IPCP_INFO("checkRIBOperation: Context = %s", 
                      cbac_helpers::operationToString(con, opcode, obj_name).c_str());
         
-        std::string authPolicyName = getAuthPolicyNameFromConfig();
+        sc = dm->get_security_context(con.port_id);
+        if (!sc) {
+                LOG_IPCP_ERR("Could not find security context for session_id %d",
+                	     con.port_id);
+                res.code_ = rina::cdap_rib::CDAP_ERROR;
+                return;
+        }
+        std::string authPolicyName = sc->auth_policy_name;
+
         if (authPolicyName == rina::IAuthPolicySet::AUTH_NONE 
                 || authPolicyName == rina::IAuthPolicySet::AUTH_PASSWORD){
                 LOG_IPCP_DBG("checkRIBOperation: Auth policy is %s, then operation granted",
@@ -1342,7 +1364,7 @@ void SecurityManagerCBACPs::checkRIBOperation(const rina::cdap_rib::auth_policy_
                 LOG_IPCP_DBG("Empty requestor name from con_handle, try to retrieve it from token as a hack");
         }
         
-        my_sc = dynamic_cast<rina::SSH2SecurityContext *>(dm->get_security_context(con.port_id));
+        my_sc = dynamic_cast<rina::SSH2SecurityContext *>(sc);
         if (!my_sc) {
                 LOG_IPCP_ERR("Could not find security context for session_id %d",
                 	     con.port_id);

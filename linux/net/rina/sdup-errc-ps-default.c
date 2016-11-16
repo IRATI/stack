@@ -30,29 +30,8 @@
 #include "sdup-errc-ps-default.h"
 #include "debug.h"
 
-static bool pdu_ser_crc32(struct pdu_ser * pdu,
-			  u32 *            crc)
-{
-	ssize_t         len;
-	unsigned char * data;
-
-	ASSERT(pdu_ser_is_ok(pdu));
-	ASSERT(crc);
-
-	data = 0;
-	len  = 0;
-
-	if (pdu_ser_data_and_length(pdu, &data, &len))
-		return -1;
-
-	*crc = crc32_le(0, data, len - sizeof(*crc));
-	LOG_DBG("CRC32(%p, %zd) = %X", data, len, *crc);
-
-	return 0;
-}
-
 int default_sdup_add_error_check_policy(struct sdup_errc_ps * ps,
-					struct pdu_ser * pdu)
+					struct pdu * pdu)
 {
 	u32             crc;
 	unsigned char * data;
@@ -63,59 +42,55 @@ int default_sdup_add_error_check_policy(struct sdup_errc_ps * ps,
 		return -1;
 	}
 
-	if (pdu_ser_tail_grow_gfp(pdu, sizeof(u32))) {
-		LOG_ERR("Failed to grow ser PDU");
-		return -1;
-	}
-
 	crc  = 0;
 	data = 0;
 	len  = 0;
 
-	if (!pdu_ser_is_ok(pdu))
+	if (!pdu_is_ok(pdu))
 		return -1;
 
-	if (pdu_ser_crc32(pdu, &crc))
-		return -1;
+	data = pdu_buffer(pdu);
+	len = pdu_len(pdu);
+	crc = crc32_le(0, data, len);
 
-	if (pdu_ser_data_and_length(pdu, &data, &len))
+	if (pdu_tail_grow(pdu, sizeof(crc))) {
+		LOG_ERR("Failed to grow ser PDU");
 		return -1;
+	}
 
-	memcpy(data+len-sizeof(crc), &crc, sizeof(crc));
+	memcpy(data+len, &crc, sizeof(crc));
 
 	return 0;
 }
 EXPORT_SYMBOL(default_sdup_add_error_check_policy);
 
 int default_sdup_check_error_check_policy(struct sdup_errc_ps * ps,
-					  struct pdu_ser * pdu)
+					  struct pdu * pdu)
 {
 	u32             crc;
 	unsigned char * data;
 	ssize_t         len;
 
-	if (!ps || !pdu ){
+	if (!ps || !pdu){
 		LOG_ERR("Error check arguments not initialized!");
 		return -1;
 	}
 
-	if (!pdu_ser_is_ok(pdu))
+	if (!pdu_is_ok(pdu))
 		return -1;
 
 	data = 0;
 	crc  = 0;
 	len  = 0;
 
-	if (pdu_ser_crc32(pdu, &crc))
-		return -1;
-
-	if (pdu_ser_data_and_length(pdu, &data, &len))
-		return -1;
+	data = pdu_buffer(pdu);
+	len = pdu_len(pdu);
+	crc = crc32_le(0, data, len - sizeof(crc));
 
 	if (memcmp(&crc, data+len-sizeof(crc), sizeof(crc)))
 		return -1;
 
-	if (pdu_ser_tail_shrink_gfp(pdu, sizeof(u32))) {
+	if (pdu_tail_shrink(pdu, sizeof(crc))) {
 		LOG_ERR("Failed to shrink ser PDU");
 		return -1;
 	}

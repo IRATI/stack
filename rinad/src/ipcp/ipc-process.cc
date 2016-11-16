@@ -281,6 +281,7 @@ void IPCProcessImpl::processAssignToDIFResponseEvent(const rina::AssignToDIFResp
 
 	rina::ThreadAttributes threadAttributes;
 	threadAttributes.setJoinable();
+	threadAttributes.setName("sysfs-sync");
 	kernel_sync = new KernelSyncTrigger(&threadAttributes, this, 4000);
 	kernel_sync->start();
 
@@ -325,7 +326,7 @@ void IPCProcessImpl::logPDUFTE(const rina::DumpFTResponseEvent& event) {
 		ss << std::endl;
 	}
 
-	LOG_IPCP_INFO("%s", ss.str().c_str());
+	LOG_IPCP_DBG("%s", ss.str().c_str());
 }
 
 static void parse_path(const std::string& path, std::string& component,

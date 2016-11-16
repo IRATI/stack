@@ -128,10 +128,6 @@ vmpi_impl_get_written_buffer(struct vmpi_impl_info *vi)
         unsigned int len;
         struct vmpi_buf *vb = virtqueue_get_buf(vi->sq->vq, &len);
 
-        if (vb) {
-                vmpi_buf_set_len(vb, len);
-        }
-
         return vb;
 }
 
@@ -149,12 +145,12 @@ add_rx_buf(struct vmpi_impl_queue *q)
         }
 
 #ifdef VMPI_BUF_CAN_PUSH
-        sg_init_one(q->sg, vmpi_buf_data(nvb), vmpi_buf_size(nvb));
+        sg_init_one(q->sg, vmpi_buf_data(nvb), vmpi_buf_len(nvb));
         err = virtqueue_add_inbuf(q->vq, q->sg, 1, nvb, GFP_ATOMIC);
 #else
         sg_init_table(q->sg, 2);
         sg_set_buf(q->sg, q->hdrs + q->hdr_tail, sizeof(struct vmpi_hdr));
-        sg_set_buf(q->sg + 1, vmpi_buf_data(nvb), vmpi_buf_size(nvb));
+        sg_set_buf(q->sg + 1, vmpi_buf_data(nvb), vmpi_buf_len(nvb));
         err = virtqueue_add_inbuf(q->vq, q->sg, 2, nvb, GFP_ATOMIC);
 #endif
         if (unlikely(err)) {
@@ -182,15 +178,14 @@ vmpi_impl_read_buffer(struct vmpi_impl_info *vi, unsigned *channel)
         if (!vb) {
                 return NULL;
         }
-
 #ifdef VMPI_BUF_CAN_PUSH
-        vmpi_buf_set_len(vb, len);
-        hdr = vmpi_buf_data(vb);
-        vmpi_buf_pop(vb, sizeof(struct vmpi_hdr));
+	vmpi_buf_set_len(vb, len);
+	hdr = (struct vmpi_hdr *) vmpi_buf_data(vb);
+	vmpi_buf_pop(vb, sizeof(struct vmpi_hdr));
 #else
-        vmpi_buf_set_len(vb, len - sizeof(struct vmpi_hdr));
-        hdr = q->hdrs + q->hdr_head;
-        q->hdr_head = (q->hdr_head + 1) & VMPI_RING_SIZE_MASK;
+	vmpi_buf_set_len(vb, len - sizeof(struct vmpi_hdr));
+	hdr = q->hdrs + q->hdr_head;
+	q->hdr_head = (q->hdr_head + 1) & VMPI_RING_SIZE_MASK;
 #endif
         *channel = hdr->channel;
 

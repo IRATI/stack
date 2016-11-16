@@ -37,17 +37,15 @@
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
-#include "du.h"
 #include "rmt.h"
 #include "pff.h"
 #include "efcp-utils.h"
-#include "serdes.h"
-#include "pdu-ser.h"
 #include "rmt-ps.h"
 #include "policies.h"
 #include "rds/rstr.h"
 #include "ipcp-instances.h"
 #include "ipcp-utils.h"
+#include "sdu.h"
 #include "rmt-ps-default.h"
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
@@ -71,7 +69,6 @@ struct rmt {
 	struct pff *pff;
 	struct kfa *kfa;
 	struct efcp_container *efcpc;
-	struct serdes *serdes;
 	struct tasklet_struct egress_tasklet;
 	struct n1pmap *n1_ports;
 	struct pff_cache cache;
@@ -88,8 +85,6 @@ struct rmt {
 #define stats_inc(name, n1_port, bytes)					\
         n1_port->stats.name##_pdus++;					\
 	n1_port->stats.name##_bytes += (unsigned int) bytes;		\
-        LOG_DBG("PDUs __STRINGIFY(name) %u (%u)",			\
-		n1_port->stats.name##_pdus, n1_port->stats.name##_bytes);
 
 static ssize_t rmt_attr_show(struct robject *        robj,
                              struct robj_attribute * attr,
@@ -266,7 +261,7 @@ static int n1_port_cleanup(struct rmt *instance,
 
 struct n1pmap {
 	spinlock_t lock;
-	struct rset * rset;
+	struct rset *rset;
 	DECLARE_HASHTABLE(n1_ports, 7);
 };
 
@@ -301,7 +296,7 @@ static int n1pmap_destroy(struct rmt *instance)
 	return 0;
 }
 
-static struct n1pmap *n1pmap_create(struct robject * parent)
+static struct n1pmap *n1pmap_create(struct robject *parent)
 {
 	struct n1pmap *tmp;
 
@@ -537,8 +532,6 @@ int rmt_destroy(struct rmt *instance)
 
 	if (instance->pff)
 		pff_destroy(instance->pff);
-	if (instance->serdes)
-		serdes_destroy(instance->serdes);
 	if (instance->rmt_cfg)
 		rmt_config_destroy(instance->rmt_cfg);
 
@@ -573,39 +566,6 @@ int rmt_address_set(struct rmt *instance,
 }
 EXPORT_SYMBOL(rmt_address_set);
 
-int rmt_dt_cons_set(struct rmt *instance,
-		    struct dt_cons *dt_cons)
-{
-	if (!instance) {
-		LOG_ERR("Bogus instance passed");
-		return -1;
-	}
-
-	if (!dt_cons) {
-		LOG_ERR("Bogus dt_cons passed");
-		return -1;
-	}
-
-	instance->serdes = serdes_create(dt_cons);
-	if (!instance->serdes) {
-		LOG_ERR("Serdes creation failed");
-		return -1;
-	}
-
-	return 0;
-}
-EXPORT_SYMBOL(rmt_dt_cons_set);
-
-struct serdes * rmt_serdes(struct rmt * instance)
-{
-	if (!instance || !instance->serdes) {
-		LOG_ERR("Bogus instance passed");
-		return NULL;
-	}
-
-	return instance->serdes;
-}
-
 struct robject * rmt_robject(struct rmt * instance)
 {
 	if (!instance) {
@@ -627,8 +587,8 @@ struct rmt_config *rmt_config_get(struct rmt *instance)
 }
 EXPORT_SYMBOL(rmt_config_get);
 
-int rmt_config_set(struct rmt *        instance,
-		   struct rmt_config * rmt_config)
+int rmt_config_set(struct rmt *instance,
+		   struct rmt_config *rmt_config)
 {
 	const string_t *rmt_ps_name;
 	const string_t *pff_ps_name;
@@ -668,7 +628,7 @@ static int n1_port_write_sdu(struct rmt *rmt,
 			     struct sdu *sdu)
 {
 	int ret;
-	ssize_t bytes = buffer_length(sdu_buffer_ro(sdu));
+	ssize_t bytes = sdu_len(sdu);
 
 	LOG_DBG("Gonna send SDU to port-id %d", n1_port->port_id);
 	ret = n1_port->n1_ipcp->ops->sdu_write(n1_port->n1_ipcp->data,
@@ -700,95 +660,33 @@ static int n1_port_write_sdu(struct rmt *rmt,
 	return ret;
 }
 
-static struct sdu * generate_sdu_from_pdu(struct rmt * rmt,
-				     	  struct rmt_n1_port *n1_port,
-				     	  struct pdu *pdu)
+static inline int n1_port_write(struct rmt *rmt,
+				struct rmt_n1_port *n1_port,
+				struct pdu *pdu)
 {
 	struct sdu *sdu;
-	struct pdu_ser *pdu_ser;
-	port_id_t port_id;
-	struct buffer *buffer;
-	struct ipcp_instance *n1_ipcp;
-	struct pci *pci;
 
 	ASSERT(n1_port);
 	ASSERT(rmt);
-	ASSERT(rmt->serdes);
-
-	if (!pdu) {
-		LOG_DBG("No PDU to work in this queue ...");
-		return NULL;
-	}
-
-	port_id = n1_port->port_id;
-	n1_ipcp = n1_port->n1_ipcp;
-
-	pci = pdu_pci_get_rw(pdu);
-	if (!pci) {
-		LOG_ERR("Cannot get PCI");
-		return NULL;
-	}
-
-	pdu_ser = pdu_serialize_ni(rmt->serdes, pdu);
-	if (!pdu_ser) {
-		LOG_ERR("Error creating serialized PDU");
-		return NULL;
-	}
 
 	/* SDU Protection */
-	if (sdup_set_lifetime_limit(n1_port->sdup_port, pdu_ser, pci)){
+	if (sdup_set_lifetime_limit(n1_port->sdup_port, pdu)){
 		LOG_ERR("Error adding a Lifetime limit to serialized PDU");
-		pdu_ser_destroy(pdu_ser);
-		return NULL;
-	}
-
-	if (sdup_protect_pdu(n1_port->sdup_port, pdu_ser)){
-		LOG_ERR("Error Protecting serialized PDU");
-		pdu_ser_destroy(pdu_ser);
-		return NULL;
-	}
-	/* end SDU Protection */
-
-	buffer = pdu_ser_buffer(pdu_ser);
-	if (!buffer_is_ok(buffer)) {
-		LOG_ERR("Buffer is not okay");
-		pdu_ser_destroy(pdu_ser);
-		return NULL;
-	}
-
-	if (pdu_ser_buffer_disown(pdu_ser)) {
-		LOG_ERR("Could not disown buffer");
-		pdu_ser_destroy(pdu_ser);
-		buffer_destroy(buffer);
-		return NULL;
-	}
-
-	pdu_ser_destroy(pdu_ser);
-
-	sdu = sdu_create_buffer_with_ni(buffer);
-	if (!sdu) {
-		LOG_ERR("Error creating SDU from serialized PDU");
-		buffer_destroy(buffer);
-		return NULL;
-	}
-
-	return sdu;
-}
-
-static int n1_port_write(struct rmt *rmt,
-			 struct rmt_n1_port *n1_port,
-			 struct pdu *pdu)
-{
-	struct sdu *sdu;
-
-	ASSERT(n1_port);
-	ASSERT(rmt);
-	ASSERT(rmt->serdes);
-
-	sdu = generate_sdu_from_pdu(rmt, n1_port, pdu);
-	pdu_destroy(pdu);
-	if (!sdu)
+		pdu_destroy(pdu);
 		return -1;
+	}
+
+	if (sdup_protect_pdu(n1_port->sdup_port, pdu)){
+		LOG_ERR("Error Protecting serialized PDU");
+		pdu_destroy(pdu);
+		return -1;
+	}
+
+	sdu = sdu_from_pdu(pdu);
+	if (!is_sdu_ok(sdu)) {
+		sdu_destroy(sdu);
+		return -1;
+	}
 
 	return n1_port_write_sdu(rmt, n1_port, sdu);
 }
@@ -858,6 +756,8 @@ static void send_worker(unsigned long o)
 
 		while ((pdus_sent < MAX_PDUS_SENT_PER_CYCLE) &&
 			n1_port->stats.plen) {
+			pdu = NULL;
+			sdu = NULL;
 			if (n1_port->pending_sdu) {
 				sdu = n1_port->pending_sdu;
 				n1_port->pending_sdu = NULL;
@@ -870,16 +770,14 @@ static void send_worker(unsigned long o)
 								n1_port->stats.plen);
 					break;
 				}
-
 				n1_port->stats.plen--;
-				sdu = generate_sdu_from_pdu(rmt, n1_port, pdu);
-				pdu_destroy(pdu);
-				if (!sdu)
-					continue;
 			}
 
 			spin_unlock(&n1_port->lock);
-			ret =  n1_port_write_sdu(rmt, n1_port, sdu);
+			if (sdu)
+				ret = n1_port_write_sdu(rmt, n1_port, sdu);
+			else
+				ret = n1_port_write(rmt, n1_port, pdu);
 			spin_lock(&n1_port->lock);
 
 			if (ret < 0)
@@ -1014,16 +912,19 @@ int rmt_send(struct rmt *instance,
 
 	if (!instance) {
 		LOG_ERR("Bogus RMT passed");
+		pdu_destroy(pdu);
 		return -1;
 	}
 	if (!pdu) {
 		LOG_ERR("Bogus PDU passed");
+		pdu_destroy(pdu);
 		return -1;
 	}
 
 	pci = pdu_pci_get_rw(pdu);
 	if (!pci_is_ok(pci)) {
 		LOG_ERR("PCI is not ok");
+		pdu_destroy(pdu);
 		return -1;
 	}
 
@@ -1041,12 +942,6 @@ int rmt_send(struct rmt *instance,
 		pdu_destroy(pdu);
 		return 0;
 	}
-
-	/*
-	 * FIXME:
-	 *   pdu -> pci-> qos-id | cep_id_t -> connection -> qos-id (former)
-	 *   address + qos-id (pdu-fwd-t) -> port-id
-	 */
 
 	for (i = 0; i < instance->cache.count; i++) {
 		port_id_t   pid;
@@ -1277,32 +1172,21 @@ int rmt_n1port_unbind(struct rmt *instance,
 }
 EXPORT_SYMBOL(rmt_n1port_unbind);
 
-static int process_mgmt_pdu_ni(struct rmt *rmt,
-			       port_id_t port_id,
-			       struct pdu *pdu)
+static inline int process_mgmt_pdu(struct rmt *rmt,
+				   port_id_t port_id,
+				   struct pdu *pdu)
 {
-	struct buffer *buffer;
 	struct sdu *sdu;
 
 	ASSERT(rmt);
 	ASSERT(is_port_id_ok(port_id));
-	ASSERT(pdu_is_ok(pdu));
 
-	buffer = pdu_buffer_get_rw(pdu);
-	if (!buffer_is_ok(buffer)) {
-		LOG_ERR("PDU has no buffer ???");
-		return -1;
-	}
-
-	sdu = sdu_create_buffer_with_ni(buffer);
-	if (!sdu_is_ok(sdu)) {
+	sdu = sdu_from_pdu(pdu);
+	if (!is_sdu_ok(sdu)) {
 		LOG_ERR("Cannot create SDU");
 		pdu_destroy(pdu);
 		return -1;
 	}
-
-	pdu_buffer_disown(pdu);
-	pdu_destroy(pdu);
 
 	ASSERT(rmt->parent);
 	ASSERT(rmt->parent->ops);
@@ -1324,8 +1208,6 @@ static int process_dt_pdu(struct rmt *rmt,
 	ASSERT(rmt);
 	ASSERT(is_port_id_ok(port_id));
 	ASSERT(pdu_is_ok(pdu));
-
-	/* (FUTURE) Address and qos-id are the same, do a single match only */
 
 	dst_addr = pci_destination(pdu_pci_get_ro(pdu));
 	if (!is_address_ok(dst_addr)) {
@@ -1364,20 +1246,12 @@ int rmt_receive(struct rmt *rmt,
 {
 	pdu_type_t pdu_type;
 	struct pci *pci;
-	struct pdu_ser *pdu_ser;
 	struct pdu *pdu;
 	address_t dst_addr;
 	qos_id_t qos_id;
-	struct serdes *serdes;
-	struct buffer *buf;
 	struct rmt_n1_port *n1_port;
-	size_t ttl;
 	ssize_t bytes;
 
-	if (!sdu_is_ok(sdu)) {
-		LOG_ERR("Bogus SDU passed");
-		return -1;
-	}
 	if (!rmt) {
 		LOG_ERR("No RMT passed");
 		sdu_destroy(sdu);
@@ -1389,74 +1263,47 @@ int rmt_receive(struct rmt *rmt,
 		return -1;
 	}
 
-	buf = sdu_buffer_rw(sdu);
-	if (!buf) {
-		LOG_DBG("No buffer present");
-		sdu_destroy(sdu);
-		return -1;
-	}
-
-	if (sdu_buffer_disown(sdu)) {
-		LOG_DBG("Could not disown SDU");
-		sdu_destroy(sdu);
-		return -1;
-	}
-
-	sdu_destroy(sdu);
-	bytes = buffer_length(buf);
-
-	pdu_ser = pdu_ser_create_buffer_with_ni(buf);
-	if (!pdu_ser) {
-		LOG_DBG("No ser PDU to work with");
-		buffer_destroy(buf);
-		return -1;
-	}
+	bytes = sdu_len(sdu);
+	sdu_efcp_config_bind(sdu, efcp_container_config(rmt->efcpc));
+	pdu = pdu_from_sdu(sdu); /* protected PDU */
 
 	n1_port = n1pmap_find(rmt, from);
 	if (!n1_port) {
 		LOG_ERR("Could not retrieve N-1 port for the received PDU...");
-                pdu_ser_destroy(pdu_ser);
+                pdu_destroy(pdu);
 		return -1;
 	}
 	stats_inc(rx, n1_port, bytes);
 
 	/* SDU Protection */
-	if (sdup_unprotect_pdu(n1_port->sdup_port, pdu_ser)) {
-                LOG_DBG("Failed to unprotect PDU");
-                pdu_ser_destroy(pdu_ser);
+	if (sdup_unprotect_pdu(n1_port->sdup_port, pdu)) {
+                LOG_ERR("Failed to unprotect PDU");
+                pdu_destroy(pdu);
                 return -1;
         }
 
-	if (sdup_get_lifetime_limit(n1_port->sdup_port, pdu_ser, &ttl)) {
-                LOG_DBG("Failed to unprotect PDU");
-                pdu_ser_destroy(pdu_ser);
+	/* This one updates the pci->sdup_header and pdu->skb->data pointers */
+	if (sdup_get_lifetime_limit(n1_port->sdup_port, pdu)) {
+                LOG_ERR("Failed to get PDU's TTL");
+                pdu_destroy(pdu);
                 return -1;
         }
 	/* end SDU Protection */
 
 	n1pmap_release(rmt, n1_port);
 
-        serdes = rmt->serdes;
-        ASSERT(serdes);
-
-        pdu = pdu_deserialize_ni(serdes, pdu_ser);
-	if (!pdu) {
-		LOG_ERR("Failed to deserialize PDU!");
-		pdu_ser_destroy(pdu_ser);
-		return -1;
-	}
-
-	pci = pdu_pci_get_rw(pdu);
-	if (!pci) {
-		LOG_ERR("No PCI to work with, dropping SDU!");
+	if (unlikely(pdu_decap(pdu) || !pdu_is_ok(pdu))) { /*Decap PDU */
+		LOG_ERR("Could not decap PDU");
 		pdu_destroy(pdu);
 		return -1;
 	}
 
-	/* store TTL value received from SDUP module */
-	pci_ttl_set(pci, ttl);
-
-	ASSERT(pdu_is_ok(pdu));
+	pci = pdu_pci_get_rw(pdu);
+	if (!pci_is_ok(pci)) {
+		LOG_ERR("No PCI to work with, dropping SDU!");
+		pdu_destroy(pdu);
+		return -1;
+	}
 
 	pdu_type = pci_type(pci);
 	dst_addr = pci_destination(pci);
@@ -1473,24 +1320,25 @@ int rmt_receive(struct rmt *rmt,
 	/* pdu is not for me */
 	if (rmt->address != dst_addr) {
 		if (!dst_addr)
-			return process_mgmt_pdu_ni(rmt, from, pdu);
+			return process_mgmt_pdu(rmt, from, pdu);
 		else {
+			/* We need to rencap the pdu again to get pci properly
+			 * in rmt_send */
+			if (unlikely(pdu_encap(pdu, pdu_type)))
+				return -1;
 			if (sdup_dec_check_lifetime_limit(n1_port->sdup_port, pdu)) {
 				LOG_ERR("Lifetime of PDU reached dropping PDU!");
 				pdu_destroy(pdu);
 				return -1;
 			}
 			/* Forward PDU */
-			/*NOTE: we could reuse the serialized pdu when
-			 * forwarding */
-			return rmt_send(rmt,
-					pdu);
+			return rmt_send(rmt, pdu);
 		}
 	} else {
 		/* pdu is for me */
 		switch (pdu_type) {
 		case PDU_TYPE_MGMT:
-			return process_mgmt_pdu_ni(rmt, from, pdu);
+			return process_mgmt_pdu(rmt, from, pdu);
 
 		case PDU_TYPE_CACK:
 		case PDU_TYPE_SACK:
@@ -1603,6 +1451,11 @@ EXPORT_SYMBOL(rmt_pff_dump);
 int rmt_pff_flush(struct rmt *instance)
 { return is_rmt_pff_ok(instance) ? pff_flush(instance->pff) : -1; }
 EXPORT_SYMBOL(rmt_pff_flush);
+
+int rmt_pff_modify(struct rmt *instance,
+		    struct list_head *entries)
+{ return is_rmt_pff_ok(instance) ? pff_modify(instance->pff, entries) : -1; }
+EXPORT_SYMBOL(rmt_pff_modify);
 
 int rmt_ps_publish(struct ps_factory *factory)
 {

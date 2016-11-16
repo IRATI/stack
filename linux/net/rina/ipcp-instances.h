@@ -24,7 +24,7 @@
 #include <linux/list.h>
 
 #include "rds/robjects.h"
-#include "du.h"
+#include "sdu.h"
 #include "buffer.h"
 
 struct dtp_config;
@@ -106,7 +106,9 @@ struct efcp_config {
         /* The data transfer constants */
         struct dt_cons * dt_cons;
 
-        /* Left here for phase 2 */
+	ssize_t *pci_offset_table;
+
+        /* FIXME: Left here for phase 2 */
         struct policy * unknown_flow;
 };
 
@@ -323,6 +325,9 @@ struct ipcp_instance_ops {
                          struct list_head *          entries);
 
         int (* pff_flush)(struct ipcp_instance_data * data);
+
+        int (* pff_modify)(struct ipcp_instance_data * data,
+                           struct list_head * entries);
 
         int (* query_rib)(struct ipcp_instance_data * data,
                           struct list_head *          entries,

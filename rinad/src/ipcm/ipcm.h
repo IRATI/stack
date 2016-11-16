@@ -440,7 +440,9 @@ public:
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t query_rib(Addon* callee, QueryRIBPromise* promise,
-						const unsigned short ipcp_id);
+				const unsigned short ipcp_id,
+				const std::string& objectClass="",
+				const std::string& objectName="");
 
 	//
 	// Select a policy set
@@ -508,10 +510,14 @@ public:
         // @ret IPCM_PENDING if the NL message could be sent to the IPCP,
         // IPCM_FAILURE otherwise
 	ipcm_res_t delegate_ipcp_ribobj(rina::rib::DelegationObj* obj,
-			      	    const unsigned short ipcp_id,
-			      	    const std::string& object_class,
-			      	    const std::string& object_name,
-			      	    int scope, int invoke_id, int port);
+			      	        const unsigned short ipcp_id,
+					rina::cdap::cdap_m_t::Opcode op_code,
+					const std::string& object_class,
+					const std::string& object_name,
+					const rina::ser_obj_t &obj_value,
+					int scope,
+					int invoke_id,
+					int port);
 
 	//
 	// Update policy-set catalog, with the plugins stored in

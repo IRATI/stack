@@ -122,6 +122,7 @@ test_read_callback(void *opaque, unsigned int channel,
 {
         struct vmpi_test *vt = opaque;
         struct test_queue *queue;
+	struct vmpi_buf_node *vbn;
 
         if (unlikely(channel >= VMPI_MAX_CHANNELS)) {
                 printk("WARNING: bogus channel index %u\n", channel);
@@ -131,7 +132,13 @@ test_read_callback(void *opaque, unsigned int channel,
         queue = &vt->readqueues[channel];
         spin_lock(&queue->lock);
         if (likely(queue->len < 512)) {
-                list_add_tail(&vb->node, &queue->entries);
+		vbn = vmpi_buf_node_alloc(vb, GFP_ATOMIC);
+		if (!vbn) {
+			spin_unlock(&queue->lock);
+			printk("ERROR: unable to allocate vmpi_buf_node\n");
+			return;
+		}
+                list_add_tail(&vbn->node, &queue->entries);
                 queue->len++;
         } else {
                 vmpi_buf_free(vb);
@@ -165,6 +172,7 @@ vmpi_test_read_iter(struct kiocb *iocb,
         while (size) {
                 ssize_t copylen;
                 struct vmpi_buf *vb;
+                struct vmpi_buf_node *vbn;
 
                 current->state = TASK_INTERRUPTIBLE;
 
@@ -181,10 +189,12 @@ vmpi_test_read_iter(struct kiocb *iocb,
                         continue;
                 }
 
-                vb = list_first_entry(&queue->entries,
+                vbn = list_first_entry(&queue->entries,
                                       struct vmpi_buf, node);
-                list_del(&vb->node);
+                list_del(&vbn->node);
                 queue->len--;
+		vb = vbn->vb;
+		vmpi_buf_node_free(vbn);
                 spin_unlock(&queue->lock);
 
                 copylen = vmpi_buf_len(vb);

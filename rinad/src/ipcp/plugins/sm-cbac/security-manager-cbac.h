@@ -283,7 +283,6 @@ private:
         //std::map<rina::cdap_rib::con_handle_t, TokenPlusSignature_t*> token_sign_per_ipcp;
         rina::Lockable lock;
         int generateTokenForTokenGenerator(rina::cdap_rib::auth_policy_t &, const rina::cdap_rib::con_handle_t &);
-        std::string getAuthPolicyNameFromConfig();
 };
 
 

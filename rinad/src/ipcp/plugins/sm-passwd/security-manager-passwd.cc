@@ -39,6 +39,7 @@ private:
 SecurityManagerPasswdPs::SecurityManagerPasswdPs(IPCPSecurityManager * dm_)
 						: dm(dm_)
 {
+	max_retries = 0;
 }
 
 int SecurityManagerPasswdPs::isAllowedToJoinDAF(const rina::cdap_rib::con_handle_t & con,

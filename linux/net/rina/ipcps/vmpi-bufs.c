@@ -19,33 +19,23 @@
  */
 
 #include <linux/gfp.h>
+#include <linux/slab.h>
 #include "vmpi-bufs.h"
-
+#include "../sdu.h"
 
 struct vmpi_buf *
 vmpi_buf_alloc(size_t size, size_t unused, gfp_t gfp)
 {
-        struct buffer *buf;
         struct sdu *sdu;
 
         if (gfp == GFP_ATOMIC) {
-                buf = buffer_create_ni(size);
-                if (!buf) {
-                        return NULL;
-                }
-                sdu = sdu_create_buffer_with_ni(buf);
-
+                sdu = sdu_create_ni(size);
         } else {
-                buf = buffer_create(size);
-                if (!buf) {
-                        return NULL;
-                }
-
-                sdu = sdu_create_buffer_with(buf);
+                sdu = sdu_create(size);
         }
 
         if (!sdu) {
-                buffer_destroy(buf);
+                return NULL;
         }
 
         return sdu;
@@ -59,40 +49,56 @@ vmpi_buf_free(struct vmpi_buf *vb)
 }
 EXPORT_SYMBOL_GPL(vmpi_buf_free);
 
+struct vmpi_buf_node *
+vmpi_buf_node_alloc(struct vmpi_buf * vb, gfp_t gfp)
+{
+	struct vmpi_buf_node *vbn;
+
+	vbn = kzalloc(sizeof(*vbn), gfp);
+	if (!vbn)
+		return NULL;
+
+	vbn->vb = vb;
+	INIT_LIST_HEAD(&vbn->node);
+
+        return vbn;
+}
+EXPORT_SYMBOL_GPL(vmpi_buf_node_alloc);
+
+void
+vmpi_buf_node_free(struct vmpi_buf_node *vbn)
+{
+        kfree(vbn);
+}
+EXPORT_SYMBOL_GPL(vmpi_buf_node_free);
+
 uint8_t *
 vmpi_buf_data(struct vmpi_buf *vb)
 {
-        return buffer_data_rw(sdu_buffer_rw(vb));
+        return sdu_buffer(vb);
 }
 EXPORT_SYMBOL_GPL(vmpi_buf_data);
 
 size_t
-vmpi_buf_size(struct vmpi_buf *vb)
-{
-        const struct buffer *buf;
-
-        buf = sdu_buffer_ro(vb);
-        BUG_ON(!buf);
-
-        return (size_t)buffer_length(buf);
-}
-EXPORT_SYMBOL_GPL(vmpi_buf_size);
-
-size_t
 vmpi_buf_len(struct vmpi_buf *vb)
-{
-        const struct buffer *buf;
-
-        buf = sdu_buffer_ro(vb);
-        BUG_ON(!buf);
-
-        return (size_t)buffer_length(buf);
-}
+{ return (size_t)sdu_len(vb); }
 EXPORT_SYMBOL_GPL(vmpi_buf_len);
 
 void
 vmpi_buf_set_len(struct vmpi_buf *vb, size_t len)
 {
-        buffer_set_length(sdu_buffer_rw(vb), len);
+	BUG_ON(len > sdu_len(vb));
+	sdu_shrink(vb, sdu_len(vb) - len);
+	return;
 }
 EXPORT_SYMBOL_GPL(vmpi_buf_set_len);
+
+void
+vmpi_buf_pop(struct vmpi_buf *vb, size_t len)
+{ sdu_pop(vb, len); }
+EXPORT_SYMBOL_GPL(vmpi_buf_pop);
+
+void
+vmpi_buf_push(struct vmpi_buf *vb, size_t len)
+{ sdu_push(vb, len); }
+EXPORT_SYMBOL_GPL(vmpi_buf_push);

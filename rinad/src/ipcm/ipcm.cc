@@ -1152,7 +1152,9 @@ ipcm_res_t IPCManager_::update_dif_configuration(
 }
 
 ipcm_res_t IPCManager_::query_rib(Addon* callee, QueryRIBPromise* promise,
-                                  const unsigned short ipcp_id)
+                                  const unsigned short ipcp_id,
+                                  const std::string& objectClass,
+                                  const std::string& objectName)
 {
     std::ostringstream ss;
     IPCMIPCProcess *ipcp;
@@ -1189,11 +1191,11 @@ ipcm_res_t IPCManager_::query_rib(Addon* callee, QueryRIBPromise* promise,
             throw rina::Exception();
         }
 
-        ipcp->queryRIB("", "", 0, 0, "", trans->tid);
+        ipcp->queryRIB(objectClass, objectName, 0, 0, "", trans->tid);
 
         ss << "Requested query RIB of IPC process "
                 << ipcp->get_name().toString() << std::endl;
-        FLUSH_LOG(INFO, ss);
+        FLUSH_LOG(DBG, ss);
     } catch (rina::ConcurrentException& e)
     {
         ss << "Error while querying RIB of IPC Process "
@@ -1587,10 +1589,14 @@ ipcm_res_t IPCManager_::update_catalog(Addon* callee)
 }
 
 ipcm_res_t IPCManager_::delegate_ipcp_ribobj(rina::rib::DelegationObj* obj,
-                                         const unsigned short ipcp_id,
-                                         const std::string& object_class,
-                                         const std::string& object_name,
-                                         int scope, int invoke_id, int port)
+                                             const unsigned short ipcp_id,
+					     rina::cdap::cdap_m_t::Opcode op_code,
+					     const std::string& object_class,
+					     const std::string& object_name,
+					     const rina::ser_obj_t &object_value,
+					     int scope,
+					     int invoke_id,
+					     int port)
 {
     IPCMIPCProcess * ipcp;
    // TransactionState* trans;
@@ -1614,9 +1620,10 @@ ipcm_res_t IPCManager_::delegate_ipcp_ribobj(rina::rib::DelegationObj* obj,
         }
 
         rina::cdap::CDAPMessage msg;
-        msg.op_code_ = rina::cdap::cdap_m_t::M_READ;
+        msg.op_code_ = op_code;
         msg.obj_class_ = object_class;
         msg.obj_name_ = object_name;
+        msg.obj_value_ = object_value;
         msg.scope_ = scope;
 
         // Generate a unique id to recover the delegated object

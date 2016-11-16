@@ -35,12 +35,13 @@
 #include "kipcm.h"
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
-#include "du.h"
 #include "kfa.h"
 #include "efcp.h"
 #include "dtp.h"
 #include "dtcp.h"
 #include "rmt.h"
+#include "pdu.h"
+#include "sdu.h"
 #include "sdup.h"
 #include "efcp-utils.h"
 
@@ -660,7 +661,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        efcp_container_config_set(efcp_config, data->efcpc);
+        efcp_container_config_set(data->efcpc, efcp_config);
 
         rmt_config = dif_information->configuration->rmt_config;
         if (!rmt_config) {
@@ -672,11 +673,6 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 		LOG_ERR("Could not set local Address to RMT");
                 return -1;
 	}
-
-        if (rmt_dt_cons_set(data->rmt, dt_cons_dup(efcp_config->dt_cons))) {
-                LOG_ERR("Could not set dt_cons in RMT");
-                return -1;
-        }
 
         if (rmt_config_set(data-> rmt, rmt_config)) {
                 LOG_ERR("Could not set RMT conf");
@@ -789,6 +785,7 @@ static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
 
         *sdu_wpi = rfifo_pop(mgmt_data->sdu_ready);
         if (!sdu_wpi_is_ok(*sdu_wpi)) {
+		/* FIXME shouldn't we destroy sdu_wip here? */
                 LOG_ERR("There is not enough data in the management queue");
                 retval = -1;
         }
@@ -811,8 +808,8 @@ static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
                                  port_id_t                   port_id,
                                  struct sdu *                sdu)
 {
-        struct pci *  pci;
-        struct pdu *  pdu;
+        struct pci *pci;
+        struct pdu *pdu;
 
         LOG_DBG("Passing SDU to be written to N-1 port %d "
                 "from IPC Process %d", port_id, data->id);
@@ -822,9 +819,24 @@ static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        pci = pci_create();
-        if (!pci)
+	if (sdu_efcp_config_bind(sdu, efcp_container_config(data->efcpc))) {
+		LOG_ERR("Could not bind EFCP config to incoming SDU");
+		sdu_destroy(sdu);
+		return -1;
+	}
+
+	pdu = pdu_from_sdu(sdu);
+	if (pdu_encap(pdu, PDU_TYPE_MGMT)){
+		LOG_ERR("Could not encap Mgmt PDU");
+		pdu_destroy(pdu);
+		return -1;
+	}
+
+        pci = pdu_pci_get_rw(pdu);
+        if (!pci) {
+		pdu_destroy(pdu);
                 return -1;
+	}
 
         /* FIXME: qos_id is set to 1 since 0 is QOS_ID_WRONG */
         if (pci_format(pci,
@@ -835,23 +847,7 @@ static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
                        0,
                        1,
                        PDU_TYPE_MGMT)) {
-                pci_destroy(pci);
-                return -1;
-        }
-
-        pdu = pdu_create();
-        if (!pdu) {
-                pci_destroy(pci);
-                return -1;
-        }
-
-        if (pdu_buffer_set(pdu, sdu_buffer_rw(sdu))) {
-                pci_destroy(pci);
-                return -1;
-        }
-
-        if (pdu_pci_set(pdu, pci)) {
-                pci_destroy(pci);
+                pdu_destroy(pdu);
                 return -1;
         }
 
@@ -900,7 +896,7 @@ static int normal_mgmt_sdu_post(struct ipcp_instance_data * data,
                 sdu_destroy(sdu);
                 return -1;
         }
-        if (!sdu_is_ok(sdu)) {
+        if (!is_sdu_ok(sdu)) {
                 LOG_ERR("Bogus management SDU");
                 sdu_destroy(sdu);
                 return -1;
@@ -975,6 +971,15 @@ static int normal_pff_flush(struct ipcp_instance_data * data)
         ASSERT(data);
 
         return rmt_pff_flush(data->rmt);
+}
+
+static int normal_pff_modify(struct ipcp_instance_data * data,
+                   	     struct list_head * entries)
+{
+	ASSERT(data);
+
+	return rmt_pff_modify(data->rmt,
+			      entries);
 }
 
 static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
@@ -1222,6 +1227,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .pff_remove                = normal_pff_remove,
         .pff_dump                  = normal_pff_dump,
         .pff_flush                 = normal_pff_flush,
+	.pff_modify		   = normal_pff_modify,
 
         .query_rib		   = NULL,
 

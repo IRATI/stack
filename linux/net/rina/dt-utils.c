@@ -326,7 +326,7 @@ void cwq_deliver(struct cwq * queue,
                         rtxq_push_ni(rtxq, tmp);
                 }
                 if(rate_ctrl) {
-                	sz = buffer_length(pdu_buffer_get_ro(pdu));
+                	sz = pdu_data_len(pdu);
 			sc = dtcp_sent_itu(dtcp);
 
 			if(sz >= 0) {
@@ -587,7 +587,7 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
 				dtcp &&
 				dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
 
-				sz = buffer_length(pdu_buffer_get_ro(cur->pdu));
+				sz = pdu_data_len(cur->pdu);
 				sc = dtcp_sent_itu(dtcp);
 
 				if(sz >= 0) {
@@ -647,7 +647,7 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
                 return -1;
 
         pci  = pdu_pci_get_ro(pdu);
-        csn  = pci_sequence_number_get((struct pci *) pci);
+        csn  = pci_sequence_number_get(pci);
 
         tmp = rtxq_entry_create_ni(pdu);
         if (!tmp)
@@ -665,7 +665,7 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
         if (!last)
                 return -1;
 
-        psn = pci_sequence_number_get(pdu_pci_get_rw((last->pdu)));
+        psn = pci_sequence_number_get(pdu_pci_get_ro(last->pdu));
         if (csn == psn) {
                 LOG_ERR("Another PDU with the same seq_num %u, is in "
                         "the rtx queue!", csn);
@@ -680,7 +680,7 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
         }
 
         list_for_each_entry(cur, &q->head, next) {
-                psn = pci_sequence_number_get(pdu_pci_get_rw((cur->pdu)));
+                psn = pci_sequence_number_get(pdu_pci_get_ro(cur->pdu));
                 if (csn == psn) {
                         LOG_ERR("Another PDU with the same seq_num is in "
                                 "the rtx queue!");
@@ -746,7 +746,7 @@ static int rtxqueue_rtx(struct rtxqueue * q,
 				dtcp &&
 				dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
 
-                        	sz = buffer_length(pdu_buffer_get_ro(cur->pdu));
+                        	sz = pdu_data_len(cur->pdu);
 				sc = dtcp_sent_itu(dtcp);
 
 				if(sz >= 0) {
@@ -1105,7 +1105,7 @@ int dt_pdu_send(struct dt *   dt,
 	/* Local flow case */
 	dest_cep_id = pci_cep_destination(pci);
 	efcpc = efcp_container_get(dt_efcp(dt));
-	if (!efcpc) {
+	if (unlikely(!efcpc || pdu_decap(pdu) || !pdu_is_ok(pdu))) { /*Decap PDU */
 	        LOG_ERR("Could not retrieve the EFCP container in"
 	        "loopback operation");
 	        pdu_destroy(pdu);

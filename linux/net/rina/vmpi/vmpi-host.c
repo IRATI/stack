@@ -73,7 +73,6 @@ vmpi_host_write(struct vmpi_ops *ops, unsigned int channel,
 
         return ret;
 }
-static unsigned int vmpi_id_counter = 0;
 
 struct vmpi_info *
 vmpi_init(struct vmpi_impl_info *vi, int *err)
@@ -90,13 +89,11 @@ vmpi_init(struct vmpi_impl_info *vi, int *err)
 
         mpi->vi = vi;
 
-        mpi->id = vmpi_id_counter++;
-
         ops.priv = mpi;
         ops.write = vmpi_host_write;
         ops.register_cbs = vmpi_host_register_cbs;
         ops.unregister_cbs = vmpi_host_unregister_cbs;
-        vmpi_provider_register(VMPI_PROVIDER_HOST, mpi->id, &ops);
+        vmpi_provider_register(VMPI_PROVIDER_HOST, &ops, &mpi->id);
 
         return mpi;
 }

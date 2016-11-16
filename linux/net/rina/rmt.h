@@ -26,7 +26,8 @@
 #include <linux/hashtable.h>
 
 #include "common.h"
-#include "du.h"
+#include "sdu.h"
+#include "pdu.h"
 #include "efcp.h"
 #include "ipcp-factories.h"
 #include "ipcp-instances.h"
@@ -96,8 +97,6 @@ struct rmt	  *rmt_create(struct kfa *kfa,
 int		   rmt_destroy(struct rmt *instance);
 int		   rmt_address_set(struct rmt *instance,
 				   address_t address);
-int		   rmt_dt_cons_set(struct rmt *instance,
-				   struct dt_cons *dt_cons);
 struct serdes *    rmt_serdes(struct rmt * instance);
 int		   rmt_config_set(struct rmt *instance,
 				  struct rmt_config *rmt_config);
@@ -117,6 +116,8 @@ int		   rmt_pff_port_state_change(struct rmt *rmt,
 int		   rmt_pff_dump(struct rmt *instance,
 				struct list_head *entries);
 int		   rmt_pff_flush(struct rmt *instance);
+int		   rmt_pff_modify(struct rmt *instance,
+				  struct list_head *entries);
 int		   rmt_send(struct rmt *instance,
 			    struct pdu *pdu);
 int		   rmt_send_port_id(struct rmt *instance,

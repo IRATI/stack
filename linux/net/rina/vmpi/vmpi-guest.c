@@ -216,8 +216,6 @@ recv_callback(vmpi_impl_info_t *vi)
         schedule_work(&mpi->recv_worker);
 }
 
-static unsigned int vmpi_id_counter = 0;
-
 struct vmpi_info *
 vmpi_init(vmpi_impl_info_t *vi, int *ret)
 {
@@ -249,13 +247,11 @@ vmpi_init(vmpi_impl_info_t *vi, int *ret)
 
         vmpi_impl_callbacks_register(mpi->vi, xmit_callback, recv_callback);
 
-        mpi->id = vmpi_id_counter++;
-
         ops.priv = mpi;
         ops.write = vmpi_guest_write;
         ops.register_cbs = vmpi_guest_register_cbs;
         ops.unregister_cbs = vmpi_guest_unregister_cbs;
-        vmpi_provider_register(VMPI_PROVIDER_GUEST, mpi->id, &ops);
+        vmpi_provider_register(VMPI_PROVIDER_GUEST, &ops, &mpi->id);
 
         printk("vmpi_init completed\n");
 

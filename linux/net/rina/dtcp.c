@@ -178,8 +178,7 @@ EXPORT_SYMBOL(dtcp_dt);
 
 struct dtcp_config * dtcp_config_get(struct dtcp * dtcp)
 {
-        if (!dtcp)
-                return NULL;
+        ASSERT(dtcp);
         return dtcp->cfg;
 }
 EXPORT_SYMBOL(dtcp_config_get);
@@ -198,78 +197,49 @@ int dtcp_pdu_send(struct dtcp * dtcp, struct pdu * pdu)
 }
 EXPORT_SYMBOL(dtcp_pdu_send);
 
+#define dtcp_getter(type, attr)				\
+	type ret;					\
+							\
+	ASSERT(dtcp);					\
+	ASSERT(dtcp->sv);				\
+							\
+	spin_lock_bh(&dtcp->sv->lock);			\
+	ret = dtcp->sv->attr;				\
+	spin_unlock_bh(&dtcp->sv->lock);		\
+							\
+	return ret
+
+#define dtcp_setter(attr, val)				\
+							\
+	ASSERT(dtcp);					\
+	ASSERT(dtcp->sv);				\
+							\
+	spin_lock_bh(&dtcp->sv->lock);			\
+	dtcp->sv->attr = val;				\
+	spin_unlock_bh(&dtcp->sv->lock);		\
+							\
+	return 0
+
 static uint_t dtcp_pdus_per_time_unit(struct dtcp * dtcp)
-{
-	uint_t ret = 0;
-
-	spin_lock_bh(&dtcp->sv->lock);
-	ret = dtcp->sv->pdus_per_time_unit;
-	spin_unlock_bh(&dtcp->sv->lock);
-
-	return ret;
-}
+{ dtcp_getter(uint_t, pdus_per_time_unit); }
 
 static uint_t dtcp_time_unit(struct dtcp * dtcp)
-{
-	uint_t ret = 0;
+{ dtcp_getter(uint_t, time_unit); }
 
-	spin_lock_bh(&dtcp->sv->lock);
-	ret = dtcp->sv->time_unit;
-	spin_unlock_bh(&dtcp->sv->lock);
-
-	return ret;
-}
-
+/* FIXME: check this */
 uint_t dtcp_time_frame(struct dtcp * dtcp)
-{
-	uint_t ret = 0;
-
-	if (!dtcp || !dtcp->sv)
-	{
-		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
-			__FUNCTION__,
-			dtcp);
-
-		return 0;
-	}
-
-	spin_lock_bh(&dtcp->sv->lock);
-	ret = dtcp->sv->time_unit;
-	spin_unlock_bh(&dtcp->sv->lock);
-
-	return ret;
-}
+{ dtcp_getter(uint_t, time_unit); }
 EXPORT_SYMBOL(dtcp_time_frame);
 
 int dtcp_time_frame_set(struct dtcp * dtcp, uint_t sec)
-{
-	if (!dtcp || !dtcp->sv)
-	{
-		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
-			__FUNCTION__,
-			dtcp);
-
-		return -1;
-	}
-
-	spin_lock_bh(&dtcp->sv->lock);
-	dtcp->sv->time_unit = sec;
-	spin_unlock_bh(&dtcp->sv->lock);
-
-	return 0;
-}
+{ dtcp_setter(time_unit, sec); }
 EXPORT_SYMBOL(dtcp_time_frame_set);
 
 int dtcp_last_time(struct dtcp * dtcp, struct timespec * s)
 {
-	if (!dtcp || !dtcp->sv)
-	{
-		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
-			__FUNCTION__,
-			dtcp);
-
-		return -1;
-	}
+	ASSERT(dtcp);
+	ASSERT(dtcp->sv);
+	ASSERT(s);
 
 	spin_lock_bh(&dtcp->sv->lock);
 	s->tv_sec = dtcp->sv->last_time.tv_sec;
@@ -282,14 +252,9 @@ EXPORT_SYMBOL(dtcp_last_time);
 
 int dtcp_last_time_set(struct dtcp * dtcp, struct timespec * s)
 {
-	if (!dtcp || !dtcp->sv)
-	{
-		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
-			__FUNCTION__,
-			dtcp);
-
-		return -1;
-	}
+	ASSERT(dtcp);
+	ASSERT(dtcp->sv);
+	ASSERT(s);
 
 	spin_lock_bh(&dtcp->sv->lock);
 	dtcp->sv->last_time.tv_sec = s->tv_sec;
@@ -301,136 +266,33 @@ int dtcp_last_time_set(struct dtcp * dtcp, struct timespec * s)
 EXPORT_SYMBOL(dtcp_last_time_set);
 
 uint_t dtcp_sndr_rate(struct dtcp * dtcp)
-{
-	uint_t ret;
-
-	if (!dtcp || !dtcp->sv)
-	{
-		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
-			__FUNCTION__,
-			dtcp);
-
-		return 0;
-	}
-
-	spin_lock_bh(&dtcp->sv->lock);
-	ret = dtcp->sv->sndr_rate;
-	spin_unlock_bh(&dtcp->sv->lock);
-
-	return ret;
-}
+{ dtcp_getter(uint_t, sndr_rate); }
 EXPORT_SYMBOL(dtcp_sndr_rate);
 
 int dtcp_sndr_rate_set(struct dtcp * dtcp, uint_t rate)
-{
-
-	if (!dtcp || !dtcp->sv)
-	{
-		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
-			__FUNCTION__,
-			dtcp);
-
-		return -1;
-	}
-
-	spin_lock_bh(&dtcp->sv->lock);
-	dtcp->sv->sndr_rate = rate;
-	spin_unlock_bh(&dtcp->sv->lock);
-
-	return 0;
-}
+{ dtcp_setter(sndr_rate, rate); }
 EXPORT_SYMBOL(dtcp_sndr_rate_set);
 
 uint_t dtcp_rcvr_rate(struct dtcp * dtcp)
-{
-	uint_t ret;
-
-	if (!dtcp || !dtcp->sv)
-	{
-		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
-			__FUNCTION__,
-			dtcp);
-
-		return 0;
-	}
-
-	spin_lock_bh(&dtcp->sv->lock);
-	ret = dtcp->sv->rcvr_rate;
-	spin_unlock_bh(&dtcp->sv->lock);
-
-	return ret;
-}
+{ dtcp_getter(uint_t, rcvr_rate); }
 EXPORT_SYMBOL(dtcp_rcvr_rate);
 
 int dtcp_rcvr_rate_set(struct dtcp * dtcp, uint_t rate)
-{
-	if (!dtcp || !dtcp->sv)
-	{
-		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
-			__FUNCTION__,
-			dtcp);
-
-		return -1;
-	}
-
-	spin_lock_bh(&dtcp->sv->lock);
-	dtcp->sv->rcvr_rate = rate;
-	spin_unlock_bh(&dtcp->sv->lock);
-
-	return 0;
-}
+{ dtcp_setter(rcvr_rate, rate); }
 EXPORT_SYMBOL(dtcp_rcvr_rate_set);
 
 uint_t dtcp_recv_itu(struct dtcp * dtcp)
-{
-	uint_t ret = 0;
-
-	if (!dtcp || !dtcp->sv)
-	{
-		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
-			__FUNCTION__,
-			dtcp);
-
-		return 0;
-	}
-
-	spin_lock_bh(&dtcp->sv->lock);
-	ret = dtcp->sv->pdus_rcvd_in_time_unit;
-	spin_unlock_bh(&dtcp->sv->lock);
-
-	return ret;
-}
+{ dtcp_getter(uint_t, pdus_rcvd_in_time_unit); }
 EXPORT_SYMBOL(dtcp_recv_itu);
 
 int dtcp_recv_itu_set(struct dtcp * dtcp, uint_t recv)
-{
-	if (!dtcp || !dtcp->sv)
-	{
-		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
-			__FUNCTION__,
-			dtcp);
-
-		return -1;
-	}
-
-	spin_lock_bh(&dtcp->sv->lock);
-	dtcp->sv->pdus_rcvd_in_time_unit = recv;
-	spin_unlock_bh(&dtcp->sv->lock);
-
-	return 0;
-}
+{ dtcp_setter(pdus_rcvd_in_time_unit, recv); }
 EXPORT_SYMBOL(dtcp_recv_itu_set);
 
 int dtcp_recv_itu_inc(struct dtcp * dtcp, uint_t recv)
 {
-	if (!dtcp || !dtcp->sv)
-	{
-		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
-			__FUNCTION__,
-			dtcp);
-
-		return -1;
-	}
+	ASSERT(dtcp);
+	ASSERT(dtcp->sv);
 
 	spin_lock_bh(&dtcp->sv->lock);
 	dtcp->sv->pdus_rcvd_in_time_unit += recv;
@@ -441,55 +303,17 @@ int dtcp_recv_itu_inc(struct dtcp * dtcp, uint_t recv)
 EXPORT_SYMBOL(dtcp_recv_itu_inc);
 
 uint_t dtcp_sent_itu(struct dtcp * dtcp)
-{
-	uint_t ret = 0;
-
-	if (!dtcp || !dtcp->sv)
-	{
-		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
-			__FUNCTION__,
-			dtcp);
-
-		return 0;
-	}
-
-	spin_lock_bh(&dtcp->sv->lock);
-	ret = dtcp->sv->pdus_sent_in_time_unit;
-	spin_unlock_bh(&dtcp->sv->lock);
-
-	return ret;
-}
+{ dtcp_getter(uint_t, pdus_sent_in_time_unit); }
 EXPORT_SYMBOL(dtcp_sent_itu);
 
 int dtcp_sent_itu_set(struct dtcp * dtcp, uint_t sent)
-{
-	if (!dtcp || !dtcp->sv)
-	{
-		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
-			__FUNCTION__,
-			dtcp);
-
-		return -1;
-	}
-
-	spin_lock_bh(&dtcp->sv->lock);
-	dtcp->sv->pdus_sent_in_time_unit = sent;
-	spin_unlock_bh(&dtcp->sv->lock);
-
-	return 0;
-}
+{ dtcp_setter(pdus_sent_in_time_unit, sent); }
 EXPORT_SYMBOL(dtcp_sent_itu_set);
 
 int dtcp_sent_itu_inc(struct dtcp * dtcp, uint_t sent)
 {
-	if (!dtcp || !dtcp->sv)
-	{
-		LOG_DBG("%s, Wrong arguments; dtcp: %pK.",
-			__FUNCTION__,
-			dtcp);
-
-		return -1;
-	}
+	ASSERT(dtcp);
+	ASSERT(dtcp->sv);
 
 	spin_lock_bh(&dtcp->sv->lock);
 	dtcp->sv->pdus_sent_in_time_unit += sent;
@@ -501,15 +325,9 @@ EXPORT_SYMBOL(dtcp_sent_itu_inc);
 
 int dtcp_rate_fc_reset(struct dtcp * dtcp, struct timespec * now)
 {
-	if (!dtcp || !dtcp->sv || !now)
-	{
-		LOG_DBG("%s, Wrong arguments; dtcp: %pK, now: %pK.",
-			__FUNCTION__,
-			dtcp,
-			now);
-
-		return -1;
-	}
+	ASSERT(dtcp);
+	ASSERT(dtcp->sv);
+	ASSERT(now);
 
 	spin_lock_bh(&dtcp->sv->lock);
 	dtcp->sv->pdus_sent_in_time_unit = 0;
@@ -523,115 +341,35 @@ int dtcp_rate_fc_reset(struct dtcp * dtcp, struct timespec * now)
 EXPORT_SYMBOL(dtcp_rate_fc_reset);
 
 uint_t dtcp_rtt(struct dtcp * dtcp)
-{
-        uint_t        tmp;
-
-        if (!dtcp || !dtcp->sv)
-                return 0;
-
-        spin_lock_bh(&dtcp->sv->lock);
-        tmp = dtcp->sv->rtt;
-        spin_unlock_bh(&dtcp->sv->lock);
-
-        return tmp;
-}
+{ dtcp_getter(uint_t, rtt); }
 EXPORT_SYMBOL(dtcp_rtt);
 
 int dtcp_rtt_set(struct dtcp * dtcp, uint_t rtt)
-{
-        if (!dtcp || !dtcp->sv)
-                return -1;
-
-        spin_lock_bh(&dtcp->sv->lock);
-        dtcp->sv->rtt = rtt;
-        spin_unlock_bh(&dtcp->sv->lock);
-
-        return 0;
-}
+{ dtcp_setter(rtt, rtt); }
 EXPORT_SYMBOL(dtcp_rtt_set);
 
 uint_t dtcp_srtt(struct dtcp * dtcp)
-{
-        uint_t        tmp;
-
-        if (!dtcp || !dtcp->sv)
-                return 0;
-
-        spin_lock_bh(&dtcp->sv->lock);
-        tmp = dtcp->sv->srtt;
-        spin_unlock_bh(&dtcp->sv->lock);
-
-        return tmp;
-}
+{ dtcp_getter(uint_t, srtt); }
 EXPORT_SYMBOL(dtcp_srtt);
 
 int dtcp_srtt_set(struct dtcp * dtcp, uint_t srtt)
-{
-        if (!dtcp || !dtcp->sv)
-                return -1;
-
-        spin_lock_bh(&dtcp->sv->lock);
-        dtcp->sv->srtt = srtt;
-        spin_unlock_bh(&dtcp->sv->lock);
-
-        return 0;
-}
+{ dtcp_setter(srtt, srtt); }
 EXPORT_SYMBOL(dtcp_srtt_set);
 
 uint_t dtcp_rttvar(struct dtcp * dtcp)
-{
-        uint_t        tmp;
-
-        if (!dtcp || !dtcp->sv)
-                return 0;
-
-        spin_lock_bh(&dtcp->sv->lock);
-        tmp = dtcp->sv->rttvar;
-        spin_unlock_bh(&dtcp->sv->lock);
-
-        return tmp;
-}
+{ dtcp_getter(uint_t, rttvar); }
 EXPORT_SYMBOL(dtcp_rttvar);
 
 int dtcp_rttvar_set(struct dtcp * dtcp, uint_t rttvar)
-{
-        if (!dtcp || !dtcp->sv)
-                return -1;
-
-        spin_lock_bh(&dtcp->sv->lock);
-        dtcp->sv->rtt = rttvar;
-        spin_unlock_bh(&dtcp->sv->lock);
-
-        return 0;
-}
+{ dtcp_setter(rttvar, rttvar); }
 EXPORT_SYMBOL(dtcp_rttvar_set);
 
 static int last_rcv_ctrl_seq_set(struct dtcp * dtcp,
-                                 seq_num_t     last_rcv_ctrl_seq)
-{
-        ASSERT(dtcp);
-        ASSERT(dtcp->sv);
-
-        spin_lock_bh(&dtcp->sv->lock);
-        dtcp->sv->last_rcv_ctl_seq = last_rcv_ctrl_seq;
-        spin_unlock_bh(&dtcp->sv->lock);
-
-        return 0;
-}
+                                        seq_num_t     last_rcv_ctrl_seq)
+{ dtcp_setter(last_rcv_ctl_seq, last_rcv_ctrl_seq); }
 
 seq_num_t last_rcv_ctrl_seq(struct dtcp * dtcp)
-{
-        seq_num_t     tmp;
-
-        ASSERT(dtcp);
-        ASSERT(dtcp->sv);
-
-        spin_lock_bh(&dtcp->sv->lock);
-        tmp = dtcp->sv->last_rcv_ctl_seq;
-        spin_unlock_bh(&dtcp->sv->lock);
-
-        return tmp;
-}
+{ dtcp_getter(seq_num_t, last_rcv_ctl_seq); }
 EXPORT_SYMBOL(last_rcv_ctrl_seq);
 
 static void flow_ctrl_inc(struct dtcp * dtcp)
@@ -654,76 +392,27 @@ static void acks_inc(struct dtcp * dtcp)
         spin_unlock_bh(&dtcp->sv->lock);
 }
 
-static int snd_rt_wind_edge_set(struct dtcp * dtcp, seq_num_t new_rt_win)
-{
-        ASSERT(dtcp);
-        ASSERT(dtcp->sv);
-
-        spin_lock_bh(&dtcp->sv->lock);
-        dtcp->sv->snd_rt_wind_edge = new_rt_win;
-        spin_unlock_bh(&dtcp->sv->lock);
-
-        return 0;
-}
-
 seq_num_t snd_rt_wind_edge(struct dtcp * dtcp)
-{
-        seq_num_t     tmp;
-
-        ASSERT(dtcp);
-        ASSERT(dtcp->sv);
-
-        spin_lock_bh(&dtcp->sv->lock);
-        tmp = dtcp->sv->snd_rt_wind_edge;
-        spin_unlock_bh(&dtcp->sv->lock);
-
-        return tmp;
-}
+{ dtcp_getter(seq_num_t, snd_rt_wind_edge); }
 EXPORT_SYMBOL(snd_rt_wind_edge);
 
+static int snd_rt_wind_edge_set(struct dtcp * dtcp, seq_num_t new_rt_win)
+{ dtcp_setter(snd_rt_wind_edge, new_rt_win); }
+
 seq_num_t snd_lft_win(struct dtcp * dtcp)
-{
-        seq_num_t     tmp;
-
-        ASSERT(dtcp);
-        ASSERT(dtcp->sv);
-
-        spin_lock_bh(&dtcp->sv->lock);
-        tmp = dtcp->sv->snd_lft_win;
-        spin_unlock_bh(&dtcp->sv->lock);
-
-        return tmp;
-}
+{ dtcp_getter(seq_num_t, snd_lft_win); }
 EXPORT_SYMBOL(snd_lft_win);
 
 seq_num_t rcvr_rt_wind_edge(struct dtcp * dtcp)
-{
-        seq_num_t     tmp;
-
-        ASSERT(dtcp);
-        ASSERT(dtcp->sv);
-
-        spin_lock_bh(&dtcp->sv->lock);
-        tmp = dtcp->sv->rcvr_rt_wind_edge;
-        spin_unlock_bh(&dtcp->sv->lock);
-
-        return tmp;
-}
+{ dtcp_getter(seq_num_t, rcvr_rt_wind_edge); }
 EXPORT_SYMBOL(rcvr_rt_wind_edge);
 
+int rcvr_rt_wind_edge_set(struct dtcp * dtcp, seq_num_t rt_win_edge)
+{ dtcp_setter(rcvr_rt_wind_edge, rt_win_edge); }
+EXPORT_SYMBOL(rcvr_rt_wind_edge_set);
+
 int pdus_sent_in_t_unit_set(struct dtcp * dtcp, uint_t s)
-{
-        if (!dtcp || !dtcp->sv) {
-                LOG_ERR("Bogus DTCP instance");
-                return -1;
-        }
-
-        spin_lock_bh(&dtcp->sv->lock);
-        dtcp->sv->pdus_sent_in_time_unit = s;
-        spin_unlock_bh(&dtcp->sv->lock);
-
-        return 0;
-}
+{ dtcp_setter(pdus_sent_in_time_unit, s); }
 EXPORT_SYMBOL(pdus_sent_in_t_unit_set);
 
 static seq_num_t next_snd_ctl_seq(struct dtcp * dtcp)
@@ -741,64 +430,26 @@ static seq_num_t next_snd_ctl_seq(struct dtcp * dtcp)
 }
 
 static seq_num_t last_snd_data_ack(struct dtcp * dtcp)
-{
-        seq_num_t     tmp;
-
-        ASSERT(dtcp);
-        ASSERT(dtcp->sv);
-
-        spin_lock_bh(&dtcp->sv->lock);
-        tmp = dtcp->sv->last_snd_data_ack;
-        spin_unlock_bh(&dtcp->sv->lock);
-
-        return tmp;
-}
+{ dtcp_getter(seq_num_t, last_snd_data_ack); }
 
 static seq_num_t last_rcv_data_ack(struct dtcp * dtcp)
-{
-        seq_num_t     tmp;
-
-        ASSERT(dtcp);
-        ASSERT(dtcp->sv);
-
-        spin_lock_bh(&dtcp->sv->lock);
-        tmp = dtcp->sv->last_rcv_data_ack;
-        spin_unlock_bh(&dtcp->sv->lock);
-
-        return tmp;
-}
+{ dtcp_getter(seq_num_t, last_rcv_data_ack); }
 
 static void last_snd_data_ack_set(struct dtcp * dtcp, seq_num_t seq_num)
 {
-        ASSERT(dtcp);
-        ASSERT(dtcp->sv);
+	ASSERT(dtcp);
+	ASSERT(dtcp->sv);
 
-        spin_lock_bh(&dtcp->sv->lock);
-        dtcp->sv->last_snd_data_ack = seq_num;
-        spin_unlock_bh(&dtcp->sv->lock);
+	spin_lock_bh(&dtcp->sv->lock);
+	dtcp->sv->last_snd_data_ack = seq_num;
+	spin_unlock_bh(&dtcp->sv->lock);
 }
 
-static uint_t dtcp_sndr_credit(struct dtcp * dtcp) {
-        seq_num_t credit;
+static uint_t dtcp_sndr_credit(struct dtcp * dtcp)
+{ dtcp_getter(uint_t, sndr_credit); }
 
-        ASSERT(dtcp);
-        ASSERT(dtcp->sv);
-        spin_lock_bh(&dtcp->sv->lock);
-        credit = dtcp->sv->sndr_credit;
-        spin_unlock_bh(&dtcp->sv->lock);
-        return credit;
-}
-
-uint_t dtcp_rcvr_credit(struct dtcp * dtcp) {
-        seq_num_t credit;
-
-        ASSERT(dtcp);
-        ASSERT(dtcp->sv);
-        spin_lock_bh(&dtcp->sv->lock);
-        credit = dtcp->sv->rcvr_credit;
-        spin_unlock_bh(&dtcp->sv->lock);
-        return credit;
-}
+uint_t dtcp_rcvr_credit(struct dtcp * dtcp)
+{ dtcp_getter(uint_t, rcvr_credit); }
 EXPORT_SYMBOL(dtcp_rcvr_credit);
 
 void dtcp_rcvr_credit_set(struct dtcp * dtcp, uint_t credit)
@@ -951,74 +602,6 @@ static int push_pdus_rmt(struct dtcp * dtcp)
         return 0;
 }
 
-struct pdu * pdu_ctrl_create_ni(struct dtcp * dtcp, pdu_type_t type)
-{
-        struct pdu *    pdu;
-        struct pci *    pci;
-        struct buffer * buffer;
-        seq_num_t       seq;
-        struct efcp *   efcp;
-
-        if (!pdu_type_is_control(type))
-                return NULL;
-
-        efcp = dt_efcp(dtcp->parent);
-        if (!efcp) {
-                LOG_ERR("Passed instance has no EFCP, bailing out");
-                return NULL;
-        }
-
-        buffer = buffer_create_ni(1);
-        if (!buffer)
-                return NULL;
-
-        pdu = pdu_create_ni();
-        if (!pdu) {
-                buffer_destroy(buffer);
-                return NULL;
-        }
-
-        pci = pci_create_ni();
-        if (!pci) {
-                pdu_destroy(pdu);
-                return NULL;
-        }
-
-        seq = next_snd_ctl_seq(dtcp);
-        if (pci_format(pci,
-                       efcp_src_cep_id(efcp),
-                       efcp_dst_cep_id(efcp),
-                       efcp_src_addr(efcp),
-                       efcp_dst_addr(efcp),
-                       seq,
-                       efcp_qos_id(efcp),
-                       type)) {
-                pdu_destroy(pdu);
-                pci_destroy(pci);
-                return NULL;
-        }
-
-        if (pci_control_last_seq_num_rcvd_set(pci,last_rcv_ctrl_seq(dtcp))) {
-                pci_destroy(pci);
-                pdu_destroy(pdu);
-                return NULL;
-        }
-
-        if (pdu_pci_set(pdu, pci)) {
-                pdu_destroy(pdu);
-                pci_destroy(pci);
-                return NULL;
-        }
-
-        if (pdu_buffer_set(pdu, buffer)) {
-                pdu_destroy(pdu);
-                return NULL;
-        }
-
-        return pdu;
-}
-EXPORT_SYMBOL(pdu_ctrl_create_ni);
-
 static int populate_ctrl_pci(struct pci *  pci,
                              struct dtcp * dtcp)
 {
@@ -1069,12 +652,21 @@ static int populate_ctrl_pci(struct pci *  pci,
 
         switch (pci_type(pci)) {
         case PDU_TYPE_ACK_AND_FC:
+                if (pci_control_ack_seq_num_set(pci, LWE)) {
+                        LOG_ERR("Could not set sn to ACK");
+                        return -1;
+                }
+        	if (pci_control_last_seq_num_rcvd_set(pci,last_rcv_ctrl_seq(dtcp))) {
+			LOG_ERR("Could not set last ctrl sn rcvd");
+                	return -1;
+        	}
+                return 0;
         case PDU_TYPE_ACK:
                 if (pci_control_ack_seq_num_set(pci, LWE)) {
                         LOG_ERR("Could not set sn to ACK");
                         return -1;
                 }
-                return 0;
+		return 0;
         case PDU_TYPE_NACK_AND_FC:
         case PDU_TYPE_NACK:
                 if (pci_control_ack_seq_num_set(pci, LWE + 1)) {
@@ -1082,6 +674,12 @@ static int populate_ctrl_pci(struct pci *  pci,
                         return -1;
                 }
                 return 0;
+        case PDU_TYPE_CACK:
+        	if (pci_control_last_seq_num_rcvd_set(pci,last_rcv_ctrl_seq(dtcp))) {
+			LOG_ERR("Could not set last ctrl sn rcvd");
+                	return -1;
+        	}
+		return 0;
         default:
                 break;
         }
@@ -1091,20 +689,48 @@ static int populate_ctrl_pci(struct pci *  pci,
 
 struct pdu * pdu_ctrl_generate(struct dtcp * dtcp, pdu_type_t type)
 {
-        struct pdu * pdu;
-        struct pci * pci;
+        struct pdu *    pdu;
+        struct pci *    pci;
+        seq_num_t       seq;
+        struct efcp *   efcp;
 
-        if (!dtcp || !type) {
-                LOG_ERR("wrong parameters, can't generate ctrl PDU...");
+	ASSERT(dtcp);
+        ASSERT(pdu_type_is_control(type));
+
+        efcp = dt_efcp(dtcp->parent);
+        if (!efcp) {
+                LOG_ERR("Passed instance has no EFCP, bailing out");
                 return NULL;
         }
-        pdu  = pdu_ctrl_create_ni(dtcp, type);
+
+        pdu = pdu_create_ni(type,
+			    efcp_container_config(efcp_container_get(efcp)));
         if (!pdu) {
-                LOG_ERR("No Ctrl PDU created...");
+		LOG_ERR("Could not create PDU of type %x", type);
                 return NULL;
-        }
+	}
 
         pci = pdu_pci_get_rw(pdu);
+        if (!pci) {
+		LOG_ERR("Could not get recently created PCI");
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
+        seq = next_snd_ctl_seq(dtcp);
+        if (pci_format(pci,
+                       efcp_src_cep_id(efcp),
+                       efcp_dst_cep_id(efcp),
+                       efcp_src_addr(efcp),
+                       efcp_dst_addr(efcp),
+                       seq,
+                       efcp_qos_id(efcp),
+                       type)) {
+		LOG_ERR("Could not format recently created PCI");
+                pdu_destroy(pdu);
+                return NULL;
+        }
+
         if (populate_ctrl_pci(pci, dtcp)) {
                 LOG_ERR("Could not populate ctrl PCI");
                 pdu_destroy(pdu);
@@ -1336,17 +962,8 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         LOG_DBG("dtcp_common_rcv_control called");
 
-        if (!pdu_is_ok(pdu)) {
-                LOG_ERR("PDU is not ok");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        if (!dtcp) {
-                LOG_ERR("DTCP instance bogus");
-                pdu_destroy(pdu);
-                return -1;
-        }
+        ASSERT(pdu_is_ok(pdu));
+        ASSERT(dtcp);
 
         atomic_inc(&dtcp->cpdus_in_transit);
 
@@ -1359,7 +976,6 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         }
 
         type = pci_type(pci);
-
         if (!pdu_type_is_control(type)) {
                 LOG_ERR("CommonRCVControl policy received a non-control PDU");
                 atomic_dec(&dtcp->cpdus_in_transit);
@@ -1586,15 +1202,8 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
         struct dtcp_config * cfg;
         struct dtcp_ps * ps;
 
-        if (!instance) {
-                LOG_ERR("Bogus instance passed");
-                return -1;
-        }
-
-        if (!instance->sv) {
-                LOG_ERR("Bogus sv passed");
-                return -1;
-        }
+        ASSERT(instance);
+        ASSERT(instance->sv);
 
         cfg = dtcp_config_get(instance);
         if (!cfg)
@@ -2047,65 +1656,23 @@ int dtcp_sv_update(struct dtcp * dtcp, const struct pci * pci)
 EXPORT_SYMBOL(dtcp_sv_update);
 
 seq_num_t dtcp_rcv_rt_win(struct dtcp * dtcp)
-{
-        if (!dtcp || !dtcp->sv)
-                return -1;
-
-        return rcvr_rt_wind_edge(dtcp);
-}
+{ return rcvr_rt_wind_edge(dtcp); }
 EXPORT_SYMBOL(dtcp_rcv_rt_win);
 
-seq_num_t dtcp_snd_rt_win(struct dtcp * dtcp)
-{
-        if (!dtcp || !dtcp->sv)
-                return -1;
+int dtcp_rcv_rt_win_set(struct dtcp * dtcp, seq_num_t rt_win_edge)
+{ return rcvr_rt_wind_edge_set(dtcp, rt_win_edge); }
+EXPORT_SYMBOL(dtcp_rcv_rt_win_set);
 
-        return snd_rt_wind_edge(dtcp);
-}
+seq_num_t dtcp_snd_rt_win(struct dtcp * dtcp)
+{ return snd_rt_wind_edge(dtcp); }
 EXPORT_SYMBOL(dtcp_snd_rt_win);
 
 int dtcp_snd_rt_win_set(struct dtcp * dtcp, seq_num_t rt_win_edge)
-{
-        if (!dtcp || !dtcp->sv)
-                return -1;
-
-        return snd_rt_wind_edge_set(dtcp, rt_win_edge);
-}
+{ return snd_rt_wind_edge_set(dtcp, rt_win_edge); }
 EXPORT_SYMBOL(dtcp_snd_rt_win_set);
 
 seq_num_t dtcp_snd_lf_win(struct dtcp * dtcp)
-{
-        if (!dtcp || !dtcp->sv)
-                return -1;
-
-        return snd_lft_win(dtcp);
-}
-
-int dtcp_snd_lf_win_set(struct dtcp * instance, seq_num_t seq_num)
-{
-        if (!instance || !instance->sv)
-                return -1;
-
-        spin_lock_bh(&instance->sv->lock);
-        instance->sv->snd_lft_win = seq_num;
-        spin_unlock_bh(&instance->sv->lock);
-
-        return 0;
-}
-EXPORT_SYMBOL(dtcp_snd_lf_win_set);
-
-int dtcp_rcv_rt_win_set(struct dtcp * instance, seq_num_t seq_num)
-{
-        if (!instance || !instance->sv)
-                return -1;
-
-        spin_lock_bh(&instance->sv->lock);
-        instance->sv->rcvr_rt_wind_edge = seq_num;
-        spin_unlock_bh(&instance->sv->lock);
-
-        return 0;
-}
-EXPORT_SYMBOL(dtcp_rcv_rt_win_set);
+{ return snd_lft_win(dtcp); }
 
 int dtcp_ps_publish(struct ps_factory * factory)
 {

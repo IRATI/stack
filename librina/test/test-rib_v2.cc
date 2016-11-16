@@ -149,7 +149,8 @@ public:
 		     const cdap_rib::con_handle_t &con){ (void)con; (void)message;};
 	/// A remote Connect response has been received.
 	void connectResult(const cdap_rib::res_info_t &res,
-			const cdap_rib::con_handle_t &con){ (void)con; (void)res; };
+			   const cdap_rib::con_handle_t &con,
+                           const cdap_rib::auth_policy_t &auth){ (void)con; (void)res; (void)auth;};
 	/// A remote Release request has been received.
 	void release(int invoke_id, const cdap_rib::con_handle_t &con){ (void)con; (void)invoke_id; };
 	/// A remote Release response has been received.
@@ -182,40 +183,51 @@ public:
 				  const cdap_rib::obj_info_t &obj,
 				  const cdap_rib::flags_t &flags,
 				  const cdap_rib::filt_info_t &filt,
+                                  const rina::cdap_rib::auth_policy &auth,
 				  const int invoke_id) {return 0;};
 	virtual int remote_delete(const cdap_rib::con_handle_t& con,
 				  const cdap_rib::obj_info_t &obj,
 				  const cdap_rib::flags_t &flags,
 				  const cdap_rib::filt_info_t &filt,
+				  const rina::cdap_rib::auth_policy &auth,
 				  const int invoke_id) {return 0;};
 	virtual int remote_read(const cdap_rib::con_handle_t& con,
 				const cdap_rib::obj_info_t &obj,
 				const cdap_rib::flags_t &flags,
 				const cdap_rib::filt_info_t &filt,
+				const rina::cdap_rib::auth_policy &auth,
 				const int invoke_id) {return 0;};
 	virtual int remote_cancel_read(const cdap_rib::con_handle_t& con,
 				       const cdap_rib::flags_t &flags,
+				       const rina::cdap_rib::auth_policy &auth,
 				       const int invoke_id) {return 0;};
 	virtual int remote_write(const cdap_rib::con_handle_t& con,
 				 const cdap_rib::obj_info_t &obj,
 				 const cdap_rib::flags_t &flags,
 				 const cdap_rib::filt_info_t &filt,
+				 const rina::cdap_rib::auth_policy &auth,
 				 const int invoke_id) {return 0;};
 	virtual int remote_start(const cdap_rib::con_handle_t& con,
 				 const cdap_rib::obj_info_t &obj,
 				 const cdap_rib::flags_t &flags,
 				 const cdap_rib::filt_info_t &filt,
+				 const rina::cdap_rib::auth_policy &auth,
 				 const int invoke_id) {return 0;};
 	virtual int remote_stop(const cdap_rib::con_handle_t& con,
 				const cdap_rib::obj_info_t &obj,
 				const cdap_rib::flags_t &flags,
 				const cdap_rib::filt_info_t &filt,
+				const rina::cdap_rib::auth_policy &auth,
 				const int invoke_id) {return 0;};
 
 	//local
 	virtual void send_open_connection_result(const cdap_rib::con_handle_t &con,
 					         const cdap_rib::res_info_t &res,
+						 const cdap_rib::auth_policy_t &auth,
 					         int invoke_id){};
+	virtual void send_open_connection_result(const cdap_rib::con_handle_t &con,
+						 const cdap_rib::res_info_t &res,
+						 int invoke_id){};
 	virtual void send_close_connection_result(unsigned int port,
 					          const cdap_rib::flags_t &flags,
 					          const cdap_rib::res_info_t &res,
@@ -357,8 +369,10 @@ public:
 	virtual ~MyDelegationObj(void) throw() {};
 
         void forward_object(const rina::cdap_rib::con_handle_t& con,
+                            rina::cdap::cdap_m_t::Opcode op_code,
                             const std::string obj_name,
                             const std::string obj_class,
+                            const ser_obj_t &obj_value,
                             const rina::cdap_rib::flags_t &flags,
                             const rina::cdap_rib::filt_info_t &filt,
                             int invoke_id) {};
@@ -958,6 +972,7 @@ void ribBasicOps::testOperations(){
 	obj_info_t obj_info1;
 	cdap_rib::filt_info_t filter;
 	cdap_rib::flags_t flags;
+	cdap_rib::auth_policy_t auth;
 	char* message;
 	int invoke_id;
 
@@ -972,7 +987,7 @@ void ribBasicOps::testOperations(){
 	invoke_id = 1;
 	try{
 		(*message) = PREFIX_MESSAGE | invoke_id;
-		rib_provider->read_request(con_ko, obj_info1, filter, flags, invoke_id);
+		rib_provider->read_request(con_ko, obj_info1, filter, flags, auth, invoke_id);
 		CPPUNIT_ASSERT_MESSAGE("READ operation with an invalid connection name has succeeded", 0);
 	}catch(...){
 
@@ -983,7 +998,7 @@ void ribBasicOps::testOperations(){
 	obj_info1.name_ = name1;
 	try{
 		(*message) = PREFIX_MESSAGE | invoke_id;
-		rib_provider->write_request(con_ok, obj_info1, filter, invoke_id);
+		rib_provider->write_request(con_ok, obj_info1, filter, auth, invoke_id);
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during read_req", 0);
 	}
@@ -993,7 +1008,7 @@ void ribBasicOps::testOperations(){
 	obj_info1.name_ = name1;
 	try{
 		(*message) = PREFIX_MESSAGE | invoke_id;
-		rib_provider->write_request(con_ok, obj_info1, filter, invoke_id);
+		rib_provider->write_request(con_ok, obj_info1, filter, auth, invoke_id);
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during read_req", 0);
 	}
@@ -1003,7 +1018,7 @@ void ribBasicOps::testOperations(){
 	obj_info1.name_ = name1;
 	try{
 		(*message) = PREFIX_MESSAGE | invoke_id;
-		rib_provider->read_request(con_ok, obj_info1, filter, flags, invoke_id);
+		rib_provider->read_request(con_ok, obj_info1, filter, flags, auth, invoke_id);
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during valid read_req", 0);
 	}
@@ -1014,7 +1029,7 @@ void ribBasicOps::testOperations(){
 	obj_info1.class_ = OtherObj::class_;
 	try{
 		(*message) = PREFIX_MESSAGE | invoke_id;
-		rib_provider->create_request(con_ok, obj_info1, filter, invoke_id);
+		rib_provider->create_request(con_ok, obj_info1, filter, auth, invoke_id);
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during \"valid\" create_req", 0);
 	}
@@ -1025,7 +1040,7 @@ void ribBasicOps::testOperations(){
 	obj_info1.class_ = MyObj::class_;
 	try{
 		(*message) = PREFIX_MESSAGE | invoke_id;
-		rib_provider->create_request(con_ok, obj_info1, filter, invoke_id);
+		rib_provider->create_request(con_ok, obj_info1, filter, auth, invoke_id);
 		CPPUNIT_ASSERT_MESSAGE("Specific create callback not called", callback_2_called == true);
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during valid create_req", 0);
@@ -1037,7 +1052,7 @@ void ribBasicOps::testOperations(){
 	obj_info1.class_ = MyObj::class_;
 	try{
 		(*message) = PREFIX_MESSAGE | invoke_id;
-		rib_provider->create_request(con_ok, obj_info1, filter, invoke_id);
+		rib_provider->create_request(con_ok, obj_info1, filter, auth, invoke_id);
 		CPPUNIT_ASSERT_MESSAGE("Generic create callback not called", callback_1_called == true);
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during valid create_req", 0);
@@ -1050,7 +1065,7 @@ void ribBasicOps::testOperations(){
 	obj_info1.class_ = MyObj::class_;
 	try{
 		(*message) = PREFIX_MESSAGE | invoke_id;
-		rib_provider->start_request(con_ok, obj_info1, filter, invoke_id);
+		rib_provider->start_request(con_ok, obj_info1, filter, auth, invoke_id);
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during valid start_req", 0);
 	}
@@ -1061,7 +1076,7 @@ void ribBasicOps::testOperations(){
 	obj_info1.class_ = MyObj::class_;
 	try{
 		(*message) = PREFIX_MESSAGE | invoke_id;
-		rib_provider->start_request(con_ok, obj_info1, filter, invoke_id);
+		rib_provider->start_request(con_ok, obj_info1, filter, auth, invoke_id);
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during valid start_req", 0);
 	}
@@ -1075,7 +1090,7 @@ void ribBasicOps::testOperations(){
 		ss << obj_info1.name_ << "/gg/tt";
 		obj_info1.name_ = ss.str();
 		(*message) = PREFIX_MESSAGE | invoke_id;
-		rib_provider->start_request(con_ok, obj_info1, filter, invoke_id);
+		rib_provider->start_request(con_ok, obj_info1, filter, auth, invoke_id);
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during valid start_req", 0);
 	}
@@ -1090,7 +1105,7 @@ void ribBasicOps::testOperations(){
 		ss << obj_info1.name_ << "/gg/tt";
 		obj_info1.name_ = ss.str();
 		(*message) = PREFIX_MESSAGE | invoke_id;
-		rib_provider->start_request(con_ok, obj_info1, filter, invoke_id);
+		rib_provider->start_request(con_ok, obj_info1, filter, auth, invoke_id);
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during valid start_req", 0);
 	}
@@ -1103,7 +1118,7 @@ void ribBasicOps::testOperations(){
 	obj_info1.class_ = "";
 	try{
 		(*message) = PREFIX_MESSAGE | invoke_id;
-		rib_provider->delete_request(con_ok, obj_info1, filter, invoke_id);
+		rib_provider->delete_request(con_ok, obj_info1, filter, auth, invoke_id);
 	}catch(...){
 		CPPUNIT_ASSERT_MESSAGE("Exception thrown during valid delete_req", 0);
 	}

@@ -29,6 +29,7 @@
 #include "rib-daemon.h"
 #include "ipc-process.h"
 #include "common/encoder.h"
+#include "enrollment-task.h"
 
 
 namespace rinad {
@@ -487,7 +488,10 @@ void IPCPRIBDaemonImpl::initialize_rib_daemon(rina::cacep::AppConHandlerInterfac
 	//Create schema
 	vers.version_ = 0x1ULL;
 	ribd->createSchema(vers);
+
 	//TODO create callbacks
+	ribd->addCreateCallbackSchema(vers, "Neighbor", configs::NEIGH_CONT_NAME,
+			NeighborRIBObj::create_cb);
 
 	//Create RIB
 	rib = ribd->createRIB(vers);
@@ -529,6 +533,7 @@ void IPCPRIBDaemonImpl::set_application_process(rina::ApplicationProcess * ap)
 
         rina::ThreadAttributes * threadAttributes = new rina::ThreadAttributes();
         threadAttributes->setJoinable();
+        threadAttributes->setName("mgmt-sdu-reader");
         ManagementSDUReaderData * data = new ManagementSDUReaderData(max_sdu_size_in_bytes);
         management_sdu_reader_ = new rina::Thread(&doManagementSDUReaderWork,
         					  (void *) data,
@@ -575,8 +580,10 @@ void IPCPRIBDaemonImpl::nMinusOneFlowAllocated(rina::NMinusOneFlowAllocatedEvent
 
 void IPCPRIBDaemonImpl::processQueryRIBRequestEvent(const rina::QueryRIBRequestEvent& event)
 {
-	std::list<rina::rib::RIBObjectData> result =
-			ribd->get_rib_objects_data(rib);
+	std::list<rina::rib::RIBObjectData> result = ribd->get_rib_objects_data(
+		rib,
+		event.getObjectClass(),
+		event.getObjectName());
 
 	try {
 		rina::extendedIPCManager->queryRIBResponse(event,

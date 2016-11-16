@@ -379,6 +379,8 @@ public:
 	void updateObject(const std::string& fqn, 
 			  unsigned int avoid_port);
 	void encodeAllFSOs(rina::ser_obj_t& obj);
+	void getAllFSOsForPropagation(std::list< std::list<FlowStateObject> >& fsos,
+				      unsigned int max_objects);
 	bool is_modified() const;
 	void has_modified(bool modified);
 private:
@@ -451,16 +453,18 @@ public:
 	void deprecateObject(std::string fqn);
 	void deprecateObjectsNeighbor(unsigned int neigh_address,
 	                              unsigned int address);
-	std::map <int, std::list<FlowStateObject*> > prepareForPropagation
-	        (const std::list<rina::FlowInformation>& flows);
+	std::map <int, std::list<FlowStateObject*> > prepareForPropagation(const std::list<rina::FlowInformation>& flows);
 	void incrementAge();
 	void updateObjects(const std::list<FlowStateObject>& newObjects,
 			   unsigned int avoidPort,
 			   unsigned int address);
-	void prepareForPropagation(std::map<int, std::list<FlowStateObject> >& to_propagate) const;
+	void prepareForPropagation(std::map<int, std::list< std::list<FlowStateObject> > >& to_propagate,
+				   unsigned int max_objects) const;
 	void encodeAllFSOs(rina::ser_obj_t& obj) const;
 	void getAllFSOs(std::list<FlowStateObject>& list) const;
 	bool tableUpdate() const;
+	void getAllFSOsForPropagation(std::list< std::list<FlowStateObject> >& fsos,
+				      unsigned int max_objects);
 
 	// accessors
 	void set_maximum_age(unsigned int max_age);
@@ -533,6 +537,7 @@ public:
 	static const std::string WAIT_UNTIL_FSODB_PROPAGATION;
 	static const std::string WAIT_UNTIL_AGE_INCREMENT;
 	static const std::string ROUTING_ALGORITHM;
+	static const std::string MAXIMUM_OBJECTS_PER_ROUTING_UPDATE;
 
         static const int PULSES_UNTIL_FSO_EXPIRATION_DEFAULT = 100000;
         static const int WAIT_UNTIL_READ_CDAP_DEFAULT = 5001;
@@ -540,6 +545,7 @@ public:
         static const int WAIT_UNTIL_PDUFT_COMPUTATION_DEFAULT = 103;
         static const int WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT = 101;
         static const int WAIT_UNTIL_AGE_INCREMENT_DEFAULT = 997;
+        static const unsigned int MAX_OBJECTS_PER_ROUTING_UPDATE_DEFAULT = 15;
         static const std::string DIJKSTRA_ALG;
         static const std::string ECMP_DIJKSTRA_ALG;
 
@@ -587,6 +593,7 @@ private:
 	IResiliencyAlgorithm * resiliency_algorithm_;
 	unsigned int source_vertex_;
 	unsigned int maximum_age_;
+	unsigned int max_objects_per_rupdate_;
 	bool test_;
 	FlowStateManager *db_;
 	rina::Lockable lock_;

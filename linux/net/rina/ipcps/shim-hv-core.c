@@ -36,7 +36,7 @@
 #include "kipcm.h"
 #include "debug.h"
 #include "utils.h"
-#include "du.h"
+#include "sdu.h"
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
 #include "vmpi.h"
@@ -1096,7 +1096,7 @@ shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
 static int
 shim_hv_sdu_write(struct ipcp_instance_data *   priv,
 		  port_id_t 		        port_id,
-                  struct vmpi_buf *	        vb)
+                  struct vmpi_buf *	       	vb)
 {
         unsigned int ch = port_id_to_channel(priv, port_id);
         int ret;
@@ -1191,6 +1191,7 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .pff_remove                = NULL,
         .pff_dump                  = NULL,
         .pff_flush                 = NULL,
+	.pff_modify		   = NULL,
 
         .query_rib		   = shim_hv_query_rib,
 
