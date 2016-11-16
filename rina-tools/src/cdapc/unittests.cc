@@ -26,7 +26,22 @@
 // SUCH DAMAGE.
 //
 
-#define CATCH_CONFIG_MAIN
+#define CATCH_CONFIG_RUNNER
 #include "catch.h"
 
+
+/* Define our own main to ignore --version argument passed by make-check and
+ * make it pass when install-user-from-scratch script calls it */
+int
+main(int argc, char** argv)
+{
+	Catch::Session session;
+	if(strcmp (argv[1], "--version") == 0){
+		Catch::Version libraryVersion( 1, 5, 6, "", 0 );
+		Catch::cout() << "\nCatch v" << libraryVersion << "\n";
+		return 0;
+	}
+	session.applyCommandLine(argc, argv);
+	return session.run();
+}
 // more to add later.

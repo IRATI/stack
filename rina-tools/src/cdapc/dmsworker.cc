@@ -212,6 +212,7 @@ void DMSWorker::process_value(CDAPMessage & cdap_message)
 			// We might have something to do
 			string type = value.typeval();
 			LOG_INFO("Type is:[%s]", type.c_str());
+			LOG_INFO("Value is:[%s]", value.jsonval().c_str());
 			//const DescriptorPool* dp = DescriptorPool::generated_pool();
 
 			if (type == "rina.messages.ipcp_config_t") {
