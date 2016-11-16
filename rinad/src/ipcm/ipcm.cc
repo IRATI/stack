@@ -946,11 +946,15 @@ ipcm_res_t IPCManager_::enroll_to_dif(Addon* callee, Promise* promise,
     return IPCM_PENDING;
 }
 
-bool IPCManager_::lookup_dif_by_application(
-        const rina::ApplicationProcessNamingInformation& apName,
-        rina::ApplicationProcessNamingInformation& difName)
+bool IPCManager_::lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& apName,
+					    rina::ApplicationProcessNamingInformation& difName)
 {
-    return dif_allocator->lookup_dif_by_application(apName, difName);
+	std::list<std::string> dif_names;
+
+	ipcp_factory_.get_local_dif_names(dif_names);
+	return dif_allocator->lookup_dif_by_application(apName,
+							difName,
+							dif_names);
 }
 
 ipcm_res_t IPCManager_::apply_configuration()

@@ -525,6 +525,9 @@ public:
      */
     IPCMIPCProcess * getIPCProcess(unsigned short ipcProcessId);
 
+    /// Returns the names of the DIFs local IPCPs are assigned to
+    void get_local_dif_names(std::list<std::string>& result);
+
 private:
 	//The underlying IPC Process Factory
 	rina::IPCProcessFactory proxy_factory_;

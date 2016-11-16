@@ -567,5 +567,17 @@ IPCMIPCProcess * IPCMIPCProcessFactory::getIPCProcess(unsigned short ipcProcessI
         return iterator->second;
 }
 
+void IPCMIPCProcessFactory::get_local_dif_names(std::list<std::string>& result)
+{
+	std::map<unsigned short, IPCMIPCProcess*>::iterator it;
+	rina::ReadScopedLock readlock(rwlock);
+
+	for (it = ipcProcesses.begin();
+			it != ipcProcesses.end(); ++it){
+		result.push_back(it->second->dif_name_.processName);
+	}
+
+}
+
 
 } //namespace rinad

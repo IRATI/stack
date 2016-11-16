@@ -861,31 +861,30 @@ DIFTemplate * parse_dif_template(const std::string& file_name,
 }
 
 void parse_app_to_dif(const Json::Value & root,
-		      std::map<std::string, rina::ApplicationProcessNamingInformation>& mappings)
+		      std::list< std::pair<std::string, std::string> >& mappings)
 {
+	string encodedAppName;
+	string difName;
+
         Json::Value appToDIF = root["applicationToDIFMappings"];
         if (appToDIF != 0) {
                 for (unsigned int i = 0; i < appToDIF.size(); i++) {
-                        string encodedAppName = appToDIF[i]
-                                .get("encodedAppName", string())
-                                .asString();
+                        encodedAppName = appToDIF[i].get("encodedAppName", string())
+                                	            .asString();
+                        difName = appToDIF[i].get("difName", string())
+                        		     .asString();
+                        std::pair<std::string, std::string> mapping(encodedAppName, difName);
+                        mappings.push_back(mapping);
 
-                        rina::ApplicationProcessNamingInformation difName =
-                                rina::ApplicationProcessNamingInformation
-                                (appToDIF[i]
-                                 .get("difName", string())
-                                 .asString(), string());
-
-                        mappings[encodedAppName] = difName;
                         LOG_DBG("Added mapping of app %s to DIF %s",
                         	encodedAppName.c_str(),
-                        	difName.processName.c_str());
+                        	difName.c_str());
                 }
         }
 }
 
 bool parse_app_to_dif_mappings(const std::string& file_name,
-			       std::map<std::string, rina::ApplicationProcessNamingInformation>& mappings)
+			       std::list< std::pair<std::string, std::string> >& mappings)
 {
         // Parse config file with jsoncpp
         Json::Value  root;
