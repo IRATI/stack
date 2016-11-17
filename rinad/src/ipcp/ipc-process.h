@@ -31,6 +31,112 @@ namespace rinad {
 class IPCPFactory;
 class IPCProcessImpl;
 
+/// Base class for the implementation of the user-space components
+/// of an IPC Process. Contains the getters/setters for generic fields as
+/// well as code to deal with the events coming from the IPC Manager
+/// Daemon or the kernel. Specific implementations have to inherit from this class
+class AbstractIPCProcessImpl {
+public:
+        AbstractIPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
+        		       unsigned short id,
+			       unsigned int ipc_manager_port,
+			       std::string log_level,
+			       std::string log_file);
+        virtual ~AbstractIPCProcessImpl();
+        const std::string get_type() const;
+
+	//Event loop (run)
+	void event_loop(void);
+	bool keep_running;
+
+	//Event handlers to be implemented by each particular IPCP
+        virtual void dif_registration_notification_handler(const rina::IPCProcessDIFRegistrationEvent& event) = 0;
+        virtual void assign_to_dif_request_handler(const rina::AssignToDIFRequestEvent& event) = 0;
+        virtual void assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event) = 0;
+        virtual void allocate_flow_request_result_handler(const rina::AllocateFlowRequestResultEvent& event) = 0;
+        virtual void flow_allocation_requested_handler(const rina::FlowRequestEvent& event) = 0;
+        virtual void deallocate_flow_response_handler(const rina::DeallocateFlowResponseEvent& event) = 0;
+        virtual void flow_deallocated_handler(const rina::FlowDeallocatedEvent& event) = 0;
+        virtual void flow_deallocation_requested_handler(const rina::FlowDeallocateRequestEvent& event) = 0;
+        virtual void allocate_flow_response_handler(const rina::AllocateFlowResponseEvent& event) = 0;
+        virtual void application_registration_request_handler(const rina::ApplicationRegistrationRequestEvent& event) = 0;
+        virtual void application_unregistration_handler(const rina::ApplicationUnregistrationRequestEvent& event) = 0;
+        virtual void enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event) = 0;
+        virtual void query_rib_handler(const rina::QueryRIBRequestEvent& event) = 0;
+        virtual void create_efcp_connection_response_handler(const rina::CreateConnectionResponseEvent& event) = 0;
+        virtual void create_efcp_connection_result_handler(const rina::CreateConnectionResultEvent& event) = 0;
+        virtual void update_efcp_connection_response_handler(const rina::UpdateConnectionResponseEvent& event) = 0;
+        virtual void destroy_efcp_connection_result_handler(const rina::DestroyConnectionResultEvent& event) = 0;
+        virtual void dump_ft_response_handler(const rina::DumpFTResponseEvent& event) = 0;
+        virtual void set_policy_set_param_handler(const rina::SetPolicySetParamRequestEvent& event) = 0;
+        virtual void set_policy_set_param_response_handler(const rina::SetPolicySetParamResponseEvent& event) = 0;
+        virtual void select_policy_set_handler(const rina::SelectPolicySetRequestEvent& event) = 0;
+        virtual void select_policy_set_response_handler(const rina::SelectPolicySetResponseEvent& event) = 0;
+        virtual void plugin_load_handler(const rina::PluginLoadRequestEvent& event) = 0;
+        virtual void update_crypto_state_response_handler(const rina::UpdateCryptoStateResponseEvent& event) = 0;
+        virtual void fwd_cdap_msg_handler(const rina::FwdCDAPMsgRequestEvent& event) = 0;
+        virtual void application_unregistered_handler(const rina::ApplicationUnregisteredEvent& event) = 0;
+        virtual void register_application_response_handler(const rina::RegisterApplicationResponseEvent& event) = 0;
+        virtual void unregister_application_response_handler(const rina::UnregisterApplicationResponseEvent& event) = 0;
+        virtual void update_dif_config_handler(const rina::UpdateDIFConfigurationRequestEvent& event) = 0;
+
+protected:
+        IPCProcessOperationalState state;
+		std::map<unsigned int, rina::AssignToDIFRequestEvent> pending_events_;
+        std::map<unsigned int, rina::SetPolicySetParamRequestEvent>
+                pending_set_policy_set_param_events;
+        std::map<unsigned int, rina::SelectPolicySetRequestEvent>
+                pending_select_policy_set_events;
+        rina::Lockable * lock_;
+	rina::DIFInformation dif_information_;
+	std::string type;
+};
+
+/// An IPC Process that does nothing regardless of the event that
+/// has happened. Convenience class to avoid repeating code for
+/// IPCP implementations that do nothing on certain events, they
+/// can just subclass this one
+class LazyIPCProcessImpl: public AbstractIPCProcessImpl {
+public:
+	LazyIPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
+                       unsigned short id,
+		       unsigned int ipc_manager_port,
+		       std::string log_level,
+		       std::string log_file);
+        virtual ~LazyIPCProcessImpl() {};
+
+        //Event loop handlers
+        virtual void dif_registration_notification_handler(const rina::IPCProcessDIFRegistrationEvent& event);
+        virtual void assign_to_dif_request_handler(const rina::AssignToDIFRequestEvent& event);
+        virtual void assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event);
+        virtual void allocate_flow_request_result_handler(const rina::AllocateFlowRequestResultEvent& event);
+        virtual void flow_allocation_requested_handler(const rina::FlowRequestEvent& event);
+        virtual void deallocate_flow_response_handler(const rina::DeallocateFlowResponseEvent& event);
+        virtual void flow_deallocated_handler(const rina::FlowDeallocatedEvent& event);
+        virtual void flow_deallocation_requested_handler(const rina::FlowDeallocateRequestEvent& event);
+        virtual void allocate_flow_response_handler(const rina::AllocateFlowResponseEvent& event);
+        virtual void application_registration_request_handler(const rina::ApplicationRegistrationRequestEvent& event);
+        virtual void application_unregistration_handler(const rina::ApplicationUnregistrationRequestEvent& event);
+        virtual void enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event);
+        virtual void query_rib_handler(const rina::QueryRIBRequestEvent& event);
+        virtual void create_efcp_connection_response_handler(const rina::CreateConnectionResponseEvent& event);
+        virtual void create_efcp_connection_result_handler(const rina::CreateConnectionResultEvent& event);
+        virtual void update_efcp_connection_response_handler(const rina::UpdateConnectionResponseEvent& event);
+        virtual void destroy_efcp_connection_result_handler(const rina::DestroyConnectionResultEvent& event);
+        virtual void dump_ft_response_handler(const rina::DumpFTResponseEvent& event);
+        virtual void set_policy_set_param_handler(const rina::SetPolicySetParamRequestEvent& event);
+        virtual void set_policy_set_param_response_handler(const rina::SetPolicySetParamResponseEvent& event);
+        virtual void select_policy_set_handler(const rina::SelectPolicySetRequestEvent& event);
+        virtual void select_policy_set_response_handler(const rina::SelectPolicySetResponseEvent& event);
+        virtual void plugin_load_handler(const rina::PluginLoadRequestEvent& event);
+        virtual void update_crypto_state_response_handler(const rina::UpdateCryptoStateResponseEvent& event);
+        virtual void fwd_cdap_msg_handler(const rina::FwdCDAPMsgRequestEvent& event);
+        virtual void application_unregistered_handler(const rina::ApplicationUnregisteredEvent& event);
+        virtual void register_application_response_handler(const rina::RegisterApplicationResponseEvent& event);
+        virtual void unregister_application_response_handler(const rina::UnregisterApplicationResponseEvent& event);
+        virtual void update_dif_config_handler(const rina::UpdateDIFConfigurationRequestEvent& event);
+};
+
 /// Periodically causes the IPCP Daemon to synchronize
 /// with the kernel
 class KernelSyncTrigger : public rina::SimpleThread {
@@ -50,62 +156,60 @@ private:
 	rina::Sleep sleep;
 };
 
-class IPCProcessImpl: public IPCProcess {
-	friend class IPCPFactory;
+/// Implementation of the normal IPC Process Daemon
+class IPCProcessImpl: public IPCProcess, public LazyIPCProcessImpl {
 public:
+        IPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
+                       unsigned short id,
+		       unsigned int ipc_manager_port,
+		       std::string log_level,
+		       std::string log_file);
         ~IPCProcessImpl();
         unsigned short get_id();
-        const std::list<rina::Neighbor> get_neighbors() const;
         const IPCProcessOperationalState& get_operational_state() const;
         void set_operational_state(const IPCProcessOperationalState& operational_state);
         rina::DIFInformation& get_dif_information();
         void set_dif_information(const rina::DIFInformation& dif_information);
+        const std::list<rina::Neighbor> get_neighbors() const;
         unsigned int get_address() const;
         void set_address(unsigned int address);
-        unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name);
-        void processAssignToDIFRequestEvent(const rina::AssignToDIFRequestEvent& event);
-        void processAssignToDIFResponseEvent(const rina::AssignToDIFResponseEvent& event);
         void requestPDUFTEDump();
-        void logPDUFTE(const rina::DumpFTResponseEvent& event);
-
-	// Policy Management
         int dispatchSelectPolicySet(const std::string& path,
                                     const std::string& name,
                                     bool& got_in_userspace);
-        void processSetPolicySetParamRequestEvent(
-                const rina::SetPolicySetParamRequestEvent& event);
-        void processSetPolicySetParamResponseEvent(
-                const rina::SetPolicySetParamResponseEvent& event);
-        void processSelectPolicySetRequestEvent(
-                const rina::SelectPolicySetRequestEvent& event);
-        void processSelectPolicySetResponseEvent(
-                const rina::SelectPolicySetResponseEvent& event);
-        void processPluginLoadRequestEvent(
-                const rina::PluginLoadRequestEvent& event);
-        void processFwdCDAPMsgRequestEvent(
-                const rina::FwdCDAPMsgRequestEvent& event);
-
-	//Event loop (run)
-	void event_loop(void);
 
         // Cause relevant IPCP components to sync with information
         // exported by the kernel via sysfs
         void sync_with_kernel();
-	bool keep_running;
+
+        //Event loop handlers
+        void dif_registration_notification_handler(const rina::IPCProcessDIFRegistrationEvent& event);
+        void assign_to_dif_request_handler(const rina::AssignToDIFRequestEvent& event);
+        void assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event);
+        void allocate_flow_request_result_handler(const rina::AllocateFlowRequestResultEvent& event);
+        void flow_allocation_requested_handler(const rina::FlowRequestEvent& event);
+        void deallocate_flow_response_handler(const rina::DeallocateFlowResponseEvent& event);
+        void flow_deallocated_handler(const rina::FlowDeallocatedEvent& event);
+        void flow_deallocation_requested_handler(const rina::FlowDeallocateRequestEvent& event);
+        void allocate_flow_response_handler(const rina::AllocateFlowResponseEvent& event);
+        void application_registration_request_handler(const rina::ApplicationRegistrationRequestEvent& event);
+        void application_unregistration_handler(const rina::ApplicationUnregistrationRequestEvent& event);
+        void enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event);
+        void query_rib_handler(const rina::QueryRIBRequestEvent& event);
+        void create_efcp_connection_response_handler(const rina::CreateConnectionResponseEvent& event);
+        void create_efcp_connection_result_handler(const rina::CreateConnectionResultEvent& event);
+        void update_efcp_connection_response_handler(const rina::UpdateConnectionResponseEvent& event);
+        void destroy_efcp_connection_result_handler(const rina::DestroyConnectionResultEvent& event);
+        void dump_ft_response_handler(const rina::DumpFTResponseEvent& event);
+        void set_policy_set_param_handler(const rina::SetPolicySetParamRequestEvent& event);
+        void set_policy_set_param_response_handler(const rina::SetPolicySetParamResponseEvent& event);
+        void select_policy_set_handler(const rina::SelectPolicySetRequestEvent& event);
+        void select_policy_set_response_handler(const rina::SelectPolicySetResponseEvent& event);
+        void plugin_load_handler(const rina::PluginLoadRequestEvent& event);
+        void update_crypto_state_response_handler(const rina::UpdateCryptoStateResponseEvent& event);
+        void fwd_cdap_msg_handler(const rina::FwdCDAPMsgRequestEvent& event);
 
 private:
-        IPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
-                        unsigned short id, unsigned int ipc_manager_port,
-                        std::string log_level, std::string log_file);
-
-        IPCProcessOperationalState state;
-		std::map<unsigned int, rina::AssignToDIFRequestEvent> pending_events_;
-        std::map<unsigned int, rina::SetPolicySetParamRequestEvent>
-                pending_set_policy_set_param_events;
-        std::map<unsigned int, rina::SelectPolicySetRequestEvent>
-                pending_select_policy_set_events;
-        rina::Lockable * lock_;
-	rina::DIFInformation dif_information_;
 	KernelSyncTrigger * kernel_sync;
 };
 
@@ -115,11 +219,12 @@ public:
 	/**
 	* Create IPCP
 	*/
-	static IPCProcessImpl* createIPCP(const rina::ApplicationProcessNamingInformation& name,
-					  unsigned short id,
-					  unsigned int ipc_manager_port,
-					  std::string log_level,
-					  std::string log_file);
+	static AbstractIPCProcessImpl* createIPCP(const std::string& type,
+						  const rina::ApplicationProcessNamingInformation& name,
+					  	  unsigned short id,
+						  unsigned int ipc_manager_port,
+						  std::string log_level,
+						  std::string log_file);
 
 	static IPCProcessImpl* getIPCP();
 };

@@ -118,19 +118,19 @@ bool NeighborRIBObj::createNeighbor(rina::Neighbor &object)
 
 	std::list<rina::ApplicationProcessNamingInformation>::const_iterator it;
 
-	rina::EnrollToDAFRequestEvent* event = new rina::EnrollToDAFRequestEvent();
-	event->neighborName = object.get_name();
-	event->dafName = rinad::IPCPFactory::getIPCP()->
+	rina::EnrollToDAFRequestEvent event;
+	event.neighborName = object.get_name();
+	event.dafName = rinad::IPCPFactory::getIPCP()->
     		get_dif_information().dif_name_;
 	for (it = object.supporting_difs_.begin();
 			it != object.supporting_difs_.end(); ++it) {
 		LOG_IPCP_DBG("Supporting DIF name %s", it->processName.c_str());
-		event->supportingDIFName.processName = it->processName;
+		event.supportingDIFName.processName = it->processName;
 	}
 	rinad::IPCPFactory::getIPCP()->enrollment_task_->processEnrollmentRequestEvent(event);
 
 	LOG_IPCP_INFO("IPC Process enrollment to neighbor %s in process",
-    	 object.get_name().processName.c_str());
+    	object.get_name().processName.c_str());
 
 	return true;
 }
@@ -757,13 +757,13 @@ void EnrollmentTask::set_dif_configuration(const rina::DIFConfiguration& dif_con
 	ipcp_ps->set_dif_configuration(dif_configuration);
 }
 
-void EnrollmentTask::processEnrollmentRequestEvent(rina::EnrollToDAFRequestEvent* event)
+void EnrollmentTask::processEnrollmentRequestEvent(const rina::EnrollToDAFRequestEvent& event)
 {
 	//Can only accept enrollment requests if assigned to a DIF
 	if (ipcp->get_operational_state() != ASSIGNED_TO_DIF) {
 		LOG_IPCP_ERR("Rejected enrollment request since IPC Process is not ASSIGNED to a DIF");
 		try {
-			rina::extendedIPCManager->enrollToDIFResponse(*event, -1,
+			rina::extendedIPCManager->enrollToDIFResponse(event, -1,
 					std::list<rina::Neighbor>(), ipcp->get_dif_information());
 		}catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems sending message to IPC Manager: %s", e.what());
@@ -774,13 +774,13 @@ void EnrollmentTask::processEnrollmentRequestEvent(rina::EnrollToDAFRequestEvent
 
 	//Check that the neighbor belongs to the same DIF as this IPC Process
 	if (ipcp->get_dif_information().get_dif_name().processName.
-			compare(event->dafName.processName) != 0) {
+			compare(event.dafName.processName) != 0) {
 		LOG_IPCP_ERR("Was requested to enroll to a neighbor who is member of DIF %s, but I'm member of DIF %s",
 				ipcp->get_dif_information().get_dif_name().processName.c_str(),
-				event->dafName.processName.c_str());
+				event.dafName.processName.c_str());
 
 		try {
-			rina::extendedIPCManager->enrollToDIFResponse(*event, -1,
+			rina::extendedIPCManager->enrollToDIFResponse(event, -1,
 					std::list<rina::Neighbor>(), ipcp->get_dif_information());
 		}catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems sending message to IPC Manager: %s", e.what());
@@ -793,15 +793,15 @@ void EnrollmentTask::processEnrollmentRequestEvent(rina::EnrollToDAFRequestEvent
 	assert(nsmps);
 
 	rina::Neighbor neighbor;
-	neighbor.name_ = event->neighborName;
-	neighbor.supporting_dif_name_ = event->supportingDIFName;
+	neighbor.name_ = event.neighborName;
+	neighbor.supporting_dif_name_ = event.supportingDIFName;
 	unsigned int address = nsmps->getValidAddress(neighbor.name_.processName,
 			neighbor.name_.processInstance);
 	if (address != 0) {
 		neighbor.address_ = address;
 	}
 
-	rina::EnrollmentRequest request(neighbor, *event);
+	rina::EnrollmentRequest request(neighbor, event);
 	initiateEnrollment(request);
 }
 

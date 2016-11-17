@@ -38,7 +38,8 @@ ipcp_SOURCES  =						\
 	flow-allocator.cc       flow-allocator.h   	\
 	security-manager.cc				\
 	routing.cc                      \
-	ipc-process.cc          ipc-process.h
+	ipc-process.cc          ipc-process.h \
+	normal-ipc-process.cc
 
 ipcpheadersdir = $(includedir)/rinad/ipcp
 ipcpheaders_HEADERS = components.h		\

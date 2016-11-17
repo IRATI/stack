@@ -105,7 +105,7 @@ public:
 
 	/// Process a request to initiate enrollment with a new Neighbor, triggered by the IPC Manager
 	/// @param event
-	virtual void processEnrollmentRequestEvent(EnrollToDAFRequestEvent * event) = 0;
+	virtual void processEnrollmentRequestEvent(const EnrollToDAFRequestEvent& event) = 0;
 
 	/// Starts the enrollment program
 	/// @param cdapMessage
