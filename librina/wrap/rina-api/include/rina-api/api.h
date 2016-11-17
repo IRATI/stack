@@ -36,7 +36,7 @@ int rina_register(int fd, const char *dif_name, const char *local_appl);
 
 int rina_unregister(int fd, const char *dif_name, const char *local_appl);
 
-int rina_flow_accept(int fd, const char **remote_appl);
+int rina_flow_accept(int fd, char **remote_appl);
 
 int rina_flow_alloc(const char *dif_name, const char *local_appl,
               const char *remote_appl, const struct rina_flow_spec *flowspec);

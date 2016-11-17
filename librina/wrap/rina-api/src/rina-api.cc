@@ -275,7 +275,7 @@ rina_unregister(int fd, const char *dif_name, const char *local_appl)
 }
 
 int
-rina_flow_accept(int fd, const char **remote_appl)
+rina_flow_accept(int fd, char **remote_appl)
 {
         FlowInformation flow;
         IPCEvent *event = NULL;
