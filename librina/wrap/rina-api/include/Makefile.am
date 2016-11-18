@@ -1,3 +1,3 @@
 
 SUBDIRS = 			\
-	rina-api
+	rina

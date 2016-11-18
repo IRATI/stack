@@ -303,7 +303,7 @@ AC_CONFIG_FILES([
     wrap/rina-api/Makefile
     wrap/rina-api/src/Makefile
     wrap/rina-api/include/Makefile
-    wrap/rina-api/include/rina-api/Makefile
+    wrap/rina-api/include/rina/Makefile
 
     test/Makefile
 

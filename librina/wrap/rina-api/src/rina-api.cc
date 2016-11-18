@@ -26,7 +26,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <librina/librina.h>
-#include <rina-api/api.h>
+#include <rina/api.h>
 
 using namespace rina;
 using namespace std;
