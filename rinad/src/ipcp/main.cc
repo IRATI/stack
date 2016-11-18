@@ -40,15 +40,16 @@ int ipcp_id;
 class Main{
 public:
         int wrapped_main(int argc, char * argv[]);
-        static rinad::IPCProcessImpl* ipcp;
+        static rinad::AbstractIPCProcessImpl* ipcp;
 };
 
-rinad::IPCProcessImpl* Main::ipcp;
+rinad::AbstractIPCProcessImpl* Main::ipcp;
 
 int Main::wrapped_main(int argc, char * argv[])
 {
 	std::string log_level = argv[5];
 	std::string log_file = argv[6];
+	std::string ipcp_type = argv[7];
 
 	rina::ApplicationProcessNamingInformation name(argv[1], argv[2]);
 
@@ -60,13 +61,18 @@ int Main::wrapped_main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 
-	ipcp = rinad::IPCPFactory::createIPCP(name, ipcp_id, ipcm_port,
+	ipcp = rinad::IPCPFactory::createIPCP(ipcp_type, name, ipcp_id, ipcm_port,
 	                                      log_level, log_file);
+	if (!ipcp) {
+		LOG_IPCP_ERR("Problems creating IPCP");
+		return EXIT_FAILURE;
+	}
 
 	LOG_IPCP_INFO("IPC Process name:     %s", argv[1]);
 	LOG_IPCP_INFO("IPC Process instance: %s", argv[2]);
 	LOG_IPCP_INFO("IPC Process id:       %u", ipcp_id);
 	LOG_IPCP_INFO("IPC Manager port:     %u", ipcm_port);
+	LOG_IPCP_INFO("IPC Process type:     %s", ipcp_type.c_str());
 
 	LOG_IPCP_INFO("IPC Process initialized, executing event loop...");
 
@@ -118,8 +124,8 @@ int main(int argc, char * argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	if (argc != 7) {
-		LOG_IPCP_ERR("Wrong number of arguments: expected 7, got %d", argc);
+	if (argc != 8) {
+		LOG_IPCP_ERR("Wrong number of arguments: expected 8, got %d", argc);
 		return EXIT_FAILURE;
 	}
 

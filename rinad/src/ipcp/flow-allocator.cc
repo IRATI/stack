@@ -339,7 +339,7 @@ void FlowAllocator::replyToIPCManager(const rina::FlowRequestEvent& event,
 	}
 }
 
-void FlowAllocator::submitAllocateRequest(rina::FlowRequestEvent& event)
+void FlowAllocator::submitAllocateRequest(const rina::FlowRequestEvent& event)
 {
 	int portId = 0;
 	IFlowAllocatorInstance * fai;
@@ -353,7 +353,6 @@ void FlowAllocator::submitAllocateRequest(rina::FlowRequestEvent& event)
 		replyToIPCManager(event, -1);
 	}
 
-	event.portId = portId;
 	std::stringstream ss;
 	ss << portId;
 	fai = new FlowAllocatorInstance(ipcp,
@@ -609,6 +608,7 @@ void FlowAllocatorInstance::submitAllocateRequest(const rina::FlowRequestEvent& 
 	rina::ScopedLock g(lock_);
 
 	flow_request_event_ = event;
+	flow_request_event_.portId = port_id_;
 	flow_ = faps->newFlowRequest(ipc_process_, flow_request_event_);
 
 	//1 Check directory to see to what IPC process the CDAP M_CREATE request has to be delivered

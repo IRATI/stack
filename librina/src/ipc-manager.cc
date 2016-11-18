@@ -597,6 +597,7 @@ IPCProcessProxy * IPCProcessFactory::create(
 				stringToCharArray(_log_level),
 				stringToCharArray(_log_path + "/" + ipcProcessName.processName
 						+ "-" + ipcProcessName.processInstance + ".log"),
+				stringToCharArray(NORMAL_IPC_PROCESS),
 				0
 			};
 			char * envp[] =

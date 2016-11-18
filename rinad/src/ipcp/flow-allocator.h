@@ -260,7 +260,7 @@ public:
 	void createFlowRequestMessageReceived(configs::Flow * flow,
 					      const std::string& object_name,
 					      int invoke_id);
-	void submitAllocateRequest(rina::FlowRequestEvent& flowRequestEvent);
+	void submitAllocateRequest(const rina::FlowRequestEvent& flowRequestEvent);
 	void processCreateConnectionResponseEvent(
 			const rina::CreateConnectionResponseEvent& event);
 	void submitAllocateResponse(const rina::AllocateFlowResponseEvent& event);
