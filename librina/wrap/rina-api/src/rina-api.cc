@@ -293,8 +293,6 @@ rina_flow_accept(int fd, char **remote_appl)
         IPCEvent *event = NULL;
 
         if (remote_appl) {
-                /* This should be filled with the name
-                 * of the requesting application. */
                 *remote_appl = NULL;
         }
 
@@ -314,6 +312,18 @@ rina_flow_accept(int fd, char **remote_appl)
 
                 fre = dynamic_cast<FlowRequestEvent*>(event);
                 assert(fre);
+
+                if (remote_appl) {
+                        *remote_appl = strdup(fre->remoteApplicationName
+                                                .toString().c_str());
+                        if (*remote_appl == NULL) {
+                                throw std::bad_alloc();
+                                flow = ipcManager->allocateFlowResponse(*fre,
+                                                /* result */ -1,
+                                                /* notifySource */ true,
+                                                /* blocking */ true);
+                        }
+                }
 
                 flow = ipcManager->allocateFlowResponse(*fre,
                                                 /* result */ 0,
