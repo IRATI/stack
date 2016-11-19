@@ -275,6 +275,18 @@ rina_unregister(int fd, const char *dif_name, const char *local_appl)
 }
 
 int
+rina_flow_wait(int fd, char **remote_appl)
+{
+        return -1;
+}
+
+int
+rina_flow_respond(int fd, int handle, int response)
+{
+        return -1;
+}
+
+int
 rina_flow_accept(int fd, char **remote_appl)
 {
         FlowInformation flow;
