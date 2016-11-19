@@ -274,16 +274,115 @@ rina_unregister(int fd, const char *dif_name, const char *local_appl)
         return 0;
 }
 
+/* Data structures used to implement the splitted call
+ * rina_flow_wait()/rina_flow_respond(): a table for pending requests,
+ * a counter for handles and a lock. */
+static map<int, FlowRequestEvent *> pending_fre;
+static int handle_next = 0;
+rina::Lockable handle_lock;
+
 int
 rina_flow_wait(int fd, char **remote_appl)
 {
-        return -1;
+        IPCEvent *event = NULL;
+        int handle = -1;
+
+        if (remote_appl) {
+                *remote_appl = NULL;
+        }
+
+        (void)fd; /* The netlink socket file descriptor is used internally */
+        if (librina_init()) {
+                return -1;
+        }
+
+        try {
+                FlowRequestEvent *fre;
+
+                event = wait_for_event(FLOW_ALLOCATION_REQUESTED_EVENT, ~0U);
+                if (event == NULL) {
+                        /* This is an error, errno already set internally. */
+                        return -1;
+                }
+
+                fre = dynamic_cast<FlowRequestEvent*>(event);
+                assert(fre);
+
+                if (remote_appl) {
+                        *remote_appl = strdup(fre->remoteApplicationName
+                                                .toString().c_str());
+                        if (*remote_appl == NULL) {
+                                throw std::bad_alloc();
+                                ipcManager->allocateFlowResponse(*fre,
+                                                /* result */ -1,
+                                                /* notifySource */ true,
+                                                /* blocking */ true);
+                        }
+                }
+
+                /* Store the event in the pending table. */
+                handle_lock.lock();
+                handle = handle_next ++;
+                if (handle_next < 0) { /* Overflow */
+                        handle_next = 0;
+                }
+                pending_fre[handle] = fre;
+                handle_lock.unlock();
+
+        } catch (rina::Exception &e) {
+#ifdef APIDBG
+                cout << __func__ << ": " << e.what() << endl;
+#endif /* APIDBG */
+                errno = ENXIO; /* IPC Manager Daemon is not running */
+        } catch (...) {
+                errno = ENOMEM;
+        }
+
+        return handle;
 }
 
 int
 rina_flow_respond(int fd, int handle, int response)
 {
-        return -1;
+        map<int, FlowRequestEvent *>::iterator mit;
+        FlowRequestEvent *fre;
+        FlowInformation flow;
+
+        (void)fd; /* The netlink socket file descriptor is used internally */
+        if (librina_init()) {
+                return -1;
+        }
+
+        handle_lock.lock();
+        mit = pending_fre.find(handle);
+        if (mit == pending_fre.end()) {
+                handle_lock.unlock();
+                errno = EINVAL;
+                return -1;
+        }
+        fre = mit->second;
+        mit->second = NULL;
+        pending_fre.erase(mit);
+        handle_lock.unlock();
+
+        try {
+                flow = ipcManager->allocateFlowResponse(*fre,
+                                                /* result */ response,
+                                                /* notifySource */ true,
+                                                /* blocking */ true);
+        } catch (rina::Exception &e) {
+#ifdef APIDBG
+                cout << __func__ << ": " << e.what() << endl;
+#endif /* APIDBG */
+                errno = ENXIO; /* IPC Manager Daemon is not running */
+                flow.fd = -1;
+        } catch (...) {
+                errno = ENOMEM;
+                flow.fd = -1;
+        }
+        delete fre;
+
+        return flow.fd;
 }
 
 int
