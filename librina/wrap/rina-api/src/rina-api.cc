@@ -274,6 +274,23 @@ rina_unregister(int fd, const char *dif_name, const char *local_appl)
         return 0;
 }
 
+static void
+remote_appl_fill(FlowRequestEvent *fre, char **remote_appl)
+{
+        if (remote_appl == NULL) {
+                return;
+        }
+
+        *remote_appl = strdup(fre->remoteApplicationName.toString().c_str());
+        if (*remote_appl == NULL) {
+                throw std::bad_alloc();
+                ipcManager->allocateFlowResponse(*fre,
+                                /* result */ -1,
+                                /* notifySource */ true,
+                                /* blocking */ true);
+        }
+}
+
 /* Data structures used to implement the splitted call
  * rina_flow_wait()/rina_flow_respond(): a table for pending requests,
  * a counter for handles and a lock. */
@@ -308,17 +325,7 @@ rina_flow_wait(int fd, char **remote_appl)
                 fre = dynamic_cast<FlowRequestEvent*>(event);
                 assert(fre);
 
-                if (remote_appl) {
-                        *remote_appl = strdup(fre->remoteApplicationName
-                                                .toString().c_str());
-                        if (*remote_appl == NULL) {
-                                throw std::bad_alloc();
-                                ipcManager->allocateFlowResponse(*fre,
-                                                /* result */ -1,
-                                                /* notifySource */ true,
-                                                /* blocking */ true);
-                        }
-                }
+                remote_appl_fill(fre, remote_appl);
 
                 /* Store the event in the pending table. */
                 handle_lock.lock();
@@ -353,6 +360,7 @@ rina_flow_respond(int fd, int handle, int response)
                 return -1;
         }
 
+        /* Look up the event in the pending table. */
         handle_lock.lock();
         mit = pending_fre.find(handle);
         if (mit == pending_fre.end()) {
@@ -412,17 +420,7 @@ rina_flow_accept(int fd, char **remote_appl)
                 fre = dynamic_cast<FlowRequestEvent*>(event);
                 assert(fre);
 
-                if (remote_appl) {
-                        *remote_appl = strdup(fre->remoteApplicationName
-                                                .toString().c_str());
-                        if (*remote_appl == NULL) {
-                                throw std::bad_alloc();
-                                flow = ipcManager->allocateFlowResponse(*fre,
-                                                /* result */ -1,
-                                                /* notifySource */ true,
-                                                /* blocking */ true);
-                        }
-                }
+                remote_appl_fill(fre, remote_appl);
 
                 flow = ipcManager->allocateFlowResponse(*fre,
                                                 /* result */ 0,
