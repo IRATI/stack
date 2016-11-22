@@ -29,7 +29,11 @@
 #ifndef CKM_H_
 #define CKM_H_
 
+#include <librina/application.h>
+#include <librina/rib_v2.h>
+#include <librina/security-manager.h>
 #include "server.h"
+#include "km-common.h"
 
 class CKMWorker : public ServerWorker {
 public:
@@ -45,14 +49,86 @@ private:
         CancelFlowTimerTask * last_task;
 };
 
-class CentralKeyManager: public Server
+struct KMAData
+{
+	rina::ApplicationProcessNamingInformation name;
+	std::string system_id;
+	std::string supporting_dif;
+	rina::cdap_rib::con_handle_t con;
+};
+
+class CentralKeyManager;
+
+class CKMEnrollmentTask: public rina::cacep::AppConHandlerInterface, public rina::ApplicationEntity
+{
+public:
+	CKMEnrollmentTask();
+	~CKMEnrollmentTask(){};
+
+	void set_application_process(rina::ApplicationProcess * ap);
+	void connect(const rina::cdap::CDAPMessage& message,
+		     const rina::cdap_rib::con_handle_t &con);
+	void connectResult(const rina::cdap_rib::res_info_t &res,
+			   const rina::cdap_rib::con_handle_t &con,
+			   const rina::cdap_rib::auth_policy_t& auth);
+	void release(int invoke_id,
+		     const rina::cdap_rib::con_handle_t &con);
+	void releaseResult(const rina::cdap_rib::res_info_t &res,
+			   const rina::cdap_rib::con_handle_t &con);
+	void process_authentication_message(const rina::cdap::CDAPMessage& message,
+				            const rina::cdap_rib::con_handle_t &con);
+
+private:
+	rina::Lockable lock;
+	std::map<std::string, KMAData> enrolled_kmas;
+	CentralKeyManager * ckm;
+};
+
+class CKMRIBDaemon : public rina::rib::RIBDaemonAE
+{
+public:
+	CKMRIBDaemon(rina::cacep::AppConHandlerInterface *app_con_callback);
+	~CKMRIBDaemon(){};
+
+	rina::rib::RIBDaemonProxy * getProxy();
+        const rina::rib::rib_handle_t & get_rib_handle();
+        int64_t addObjRIB(const std::string& fqn, rina::rib::RIBObj** obj);
+        void removeObjRIB(const std::string& fqn);
+
+private:
+	//Handle to the RIB
+	rina::rib::rib_handle_t rib;
+	rina::rib::RIBDaemonProxy* ribd;
+};
+
+class CKMSecurityManager: public rina::ISecurityManager
+{
+public:
+	CKMSecurityManager(const std::string& creds_location);
+	~CKMSecurityManager();
+
+	void set_application_process(rina::ApplicationProcess * ap);
+        rina::IAuthPolicySet::AuthStatus update_crypto_state(const rina::CryptoState& state,
+        						     rina::IAuthPolicySet * caller);
+private:
+        rina::AuthSDUProtectionProfile sec_profile;
+        rina::AuthSSH2PolicySet * auth_ps;
+        CentralKeyManager * ckm;
+};
+
+class CentralKeyManager: public Server, public rina::ApplicationProcess
 {
 public:
 	CentralKeyManager(const std::list<std::string>& dif_names,
 			  const std::string& app_name,
 			  const std::string& app_instance,
 			  const std::string& creds_folder);
-        ~CentralKeyManager() { };
+        ~CentralKeyManager();
+        unsigned int get_address() const;
+
+        CKMEnrollmentTask * etask;
+        CKMRIBDaemon * ribd;
+        CKMSecurityManager * secman;
 
 protected:
         ServerWorker * internal_start_worker(rina::FlowInformation flow);

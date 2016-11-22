@@ -8,6 +8,7 @@ bin_PROGRAMS                       =
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT =
 
 key_managers_SOURCES  =				\
+    km-common.h         km-common.cc    \
 	ckm.cc              ckm.h			\
 	kma.cc              kma.h			\
 	main.cc
