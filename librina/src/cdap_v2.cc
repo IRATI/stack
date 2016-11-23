@@ -559,7 +559,7 @@ class CDAPSessionManager : public CDAPSessionManagerInterface
 					  const cdap_rib::res_info_t &res,
 					  int invoke_id);
 	CDAPInvokeIdManager * get_invoke_id_manager();
-	const cdap_rib::con_handle_t get_con_handle(int port_id);
+	const cdap_rib::con_handle_t & get_con_handle(int port_id);
 
  private:
 	Lockable lock;
@@ -583,6 +583,10 @@ class AppCDAPIOHandler : public CDAPIOHandler
 			     cdap_rib::cdap_dest_t cdap_dest);
 
  private:
+	void invoke_callback(const cdap_rib::con_handle_t& con_handle,
+			     const cdap::cdap_m_t& m_rcv,
+			     bool is_auth_message);
+
         // Lock to control that when sending a message requiring
 	// a reply the CDAP Session manager has been updated before
 	// receiving the response message
@@ -2590,7 +2594,7 @@ CDAPInvokeIdManager * CDAPSessionManager::get_invoke_id_manager()
 	return invoke_id_manager_;
 }
 
-const cdap_rib::con_handle_t CDAPSessionManager::get_con_handle(int port_id)
+const cdap_rib::con_handle_t & CDAPSessionManager::get_con_handle(int port_id)
 {
 	ScopedLock g(lock);
 
@@ -3410,8 +3414,15 @@ void AppCDAPIOHandler::process_message(const ser_obj_t &message,
 			m_rcv.op_code_ != rina::cdap::cdap_m_t::M_CONNECT)
 		is_auth_message = true;
 
-	// Fill structures
-	cdap_rib::con_handle_t con = manager_->get_con_handle(port);
+	invoke_callback(manager_->get_con_handle(port),
+			m_rcv,
+			is_auth_message);
+}
+
+void AppCDAPIOHandler::invoke_callback(const rina::cdap_rib::con_handle_t& con,
+				       const rina::cdap::cdap_m_t& m_rcv,
+				       bool is_auth_message)
+{
 	// Flags
 	cdap_rib::flags_t flags;
 	flags.flags_ = m_rcv.flags_;

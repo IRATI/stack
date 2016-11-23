@@ -158,7 +158,7 @@ void CKMEnrollmentTask::process_authentication_message(const rina::cdap::CDAPMes
 		return;
 	}
 
-	LOG_INFO("Authentication was successful of KMA %s successfull",
+	LOG_INFO("Authentication of KMA %s successful",
 		 kma_data->con.dest_.ap_name_.c_str());
 
 
