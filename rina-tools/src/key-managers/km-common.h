@@ -29,8 +29,30 @@
 #define KM_COMMON_HPP
 
 #include <string>
+#include <librina/concurrency.h>
+#include <librina/irm.h>
+#include <librina/rib_v2.h>
 #include <librina/security-manager.h>
-#include <librina/timer.h>
+
+class AppEventLoop
+{
+public:
+	AppEventLoop();
+	virtual ~AppEventLoop() {};
+
+	void stop(void);
+	void event_loop(void);
+	virtual void register_application_response_handler(const rina::RegisterApplicationResponseEvent& event) = 0;
+	virtual void unregister_application_response_handler(const rina::UnregisterApplicationResponseEvent& event) = 0;
+	virtual void allocate_flow_request_result_handler(const rina::AllocateFlowRequestResultEvent& event) = 0;
+	virtual void flow_allocation_requested_handler(const rina::FlowRequestEvent& event) = 0;
+	virtual void deallocate_flow_response_handler(const rina::DeallocateFlowResponseEvent& event) = 0;
+	virtual void flow_deallocated_event_handler(const rina::FlowDeallocatedEvent& event) = 0;
+
+protected:
+	bool keep_running;
+	rina::Lockable lock;
+};
 
 class DummySecurityManagerPs : public rina::ISecurityManagerPs
 {
@@ -52,6 +74,72 @@ public:
 			       rina::cdap_rib::res_info_t& res);
 	int set_policy_set_param(const std::string& name,
 				 const std::string& value);
+};
+
+class KMRIBDaemon : public rina::rib::RIBDaemonAE
+{
+public:
+	KMRIBDaemon(rina::cacep::AppConHandlerInterface *app_con_callback);
+	~KMRIBDaemon(){};
+
+	rina::rib::RIBDaemonProxy * getProxy();
+        const rina::rib::rib_handle_t & get_rib_handle();
+        int64_t addObjRIB(const std::string& fqn, rina::rib::RIBObj** obj);
+        void removeObjRIB(const std::string& fqn);
+
+private:
+	//Handle to the RIB
+	rina::rib::rib_handle_t rib;
+	rina::rib::RIBDaemonProxy* ribd;
+};
+
+class KMSecurityManager: public rina::ISecurityManager
+{
+public:
+	KMSecurityManager(const std::string& creds_location);
+	~KMSecurityManager();
+
+	void set_application_process(rina::ApplicationProcess * ap);
+        rina::IAuthPolicySet::AuthStatus update_crypto_state(const rina::CryptoState& state,
+        						     rina::IAuthPolicySet * caller);
+private:
+        rina::AuthSDUProtectionProfile sec_profile;
+        rina::AuthSSH2PolicySet * auth_ps;
+};
+
+class KMIPCResourceManager: public rina::IPCResourceManager
+{
+public:
+	KMIPCResourceManager() {};
+	~KMIPCResourceManager() {};
+
+	void set_application_process(rina::ApplicationProcess * ap);
+	void register_application_response(const rina::RegisterApplicationResponseEvent& event);
+	void unregister_application_response(const rina::UnregisterApplicationResponseEvent& event);
+	void applicationRegister(const std::list<std::string>& dif_names,
+				 const std::string& app_name,
+				 const std::string& app_instance);
+	void allocate_flow(const rina::ApplicationProcessNamingInformation & local_app_name,
+			  const rina::ApplicationProcessNamingInformation & remote_app_name);
+	void deallocate_flow(int port_id);
+};
+
+class KMEventLoop : public AppEventLoop
+{
+public:
+	KMEventLoop() { kirm = 0; };
+	~KMEventLoop() {};
+
+	void set_km_irm(KMIPCResourceManager * irm);
+	void register_application_response_handler(const rina::RegisterApplicationResponseEvent& event);
+	void unregister_application_response_handler(const rina::UnregisterApplicationResponseEvent& event);
+	void allocate_flow_request_result_handler(const rina::AllocateFlowRequestResultEvent& event);
+	void flow_allocation_requested_handler(const rina::FlowRequestEvent& event);
+	void deallocate_flow_response_handler(const rina::DeallocateFlowResponseEvent& event);
+	void flow_deallocated_event_handler(const rina::FlowDeallocatedEvent& event);
+
+private:
+	KMIPCResourceManager * kirm;
 };
 
 #endif//KM_COMMON_HPP

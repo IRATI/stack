@@ -127,7 +127,7 @@ int wrapped_main(int argc, char** argv)
                 return EXIT_FAILURE;
         }
 
-        rina::initialize("INFO", "");
+        rina::initialize("DEBUG", "");
 
         if (central) {
                 // Central Key Manager
@@ -136,7 +136,16 @@ int wrapped_main(int argc, char** argv)
 				      central_api,
 				      creds_folder);
 
-                ckm.run(true);
+        	try {
+        		ckm.event_loop();
+        	} catch (rina::Exception &e) {
+        		LOG_ERR("Problems running event loop: %s", e.what());
+        	} catch (std::exception &e1) {
+        		LOG_ERR("Problems running event loop: %s", e1.what());
+        	} catch (...) {
+        		LOG_ERR("Unhandled exception!!!");
+        	}
+
         } else {
                 // Key Management Agent
         	KeyManagementAgent kma(creds_folder,
@@ -146,10 +155,19 @@ int wrapped_main(int argc, char** argv)
 				       central_apn,
 				       central_api,
 				       quiet);
-                kma.run();
+        	try {
+        		kma.event_loop();
+        	} catch (rina::Exception &e) {
+        		LOG_ERR("Problems running event loop: %s", e.what());
+        	} catch (std::exception &e1) {
+        		LOG_ERR("Problems running event loop: %s", e1.what());
+        	} catch (...) {
+        		LOG_ERR("Unhandled exception!!!");
+        	}
         }
 
-        return EXIT_SUCCESS;
+	LOG_INFO("Exited event loop");
+	return EXIT_SUCCESS;
 }
 
 int main(int argc, char * argv[])

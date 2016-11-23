@@ -39,98 +39,101 @@
 using namespace std;
 using namespace rina;
 
+// Class Key Management Agent Enrollment Task
+KMAEnrollmentTask::KMAEnrollmentTask() : ApplicationEntity(ApplicationEntity::ENROLLMENT_TASK_AE_NAME)
+{
+	kma = 0;
+}
+
+void KMAEnrollmentTask::set_application_process(rina::ApplicationProcess * ap)
+{
+	kma = static_cast<KeyManagementAgent *>(ap);
+}
+
+void KMAEnrollmentTask::connect(const rina::cdap::CDAPMessage& message,
+				const rina::cdap_rib::con_handle_t &con)
+{
+}
+
+void KMAEnrollmentTask::connectResult(const rina::cdap_rib::res_info_t &res,
+		   	   	      const rina::cdap_rib::con_handle_t &con,
+				      const rina::cdap_rib::auth_policy_t& auth)
+{
+}
+
+void KMAEnrollmentTask::release(int invoke_id,
+		     	     	const rina::cdap_rib::con_handle_t &con)
+{
+}
+
+void KMAEnrollmentTask::releaseResult(const rina::cdap_rib::res_info_t &res,
+		   	   	      const rina::cdap_rib::con_handle_t &con)
+{
+}
+
+void KMAEnrollmentTask::process_authentication_message(const rina::cdap::CDAPMessage& message,
+			            	    	       const rina::cdap_rib::con_handle_t &con)
+{
+}
+
+// Class Key Management Agent
 KeyManagementAgent::KeyManagementAgent(const std::string& creds_folder,
 		   const std::list<std::string>& dif_names,
 		   const std::string& apn,
 		   const std::string& api,
 		   const std::string& ckm_apn,
 		   const std::string& ckm_api,
-		   bool  q) :
-        		Application(dif_names, apn, api)
+		   bool  q) : ApplicationProcess(apn, api)
 {
 	creds_location = creds_folder;
 	dif_name = dif_names.front();
 	ckm_name = ckm_apn;
 	ckm_instance = ckm_api;
 	quiet = q;
+
+	creds_location = creds_folder;
+	etask = new KMAEnrollmentTask();
+	ribd = new KMRIBDaemon(etask);
+	secman = new KMSecurityManager(creds_folder);
+	eventm = new SimpleInternalEventManager();
+	irm = new KMIPCResourceManager();
+
+	add_entity(eventm);
+	add_entity(ribd);
+	add_entity(irm);
+	add_entity(secman);
+	add_entity(etask);
+
+	populate_rib();
+
+	set_km_irm(irm);
+
+	irm->allocate_flow(ApplicationProcessNamingInformation(apn, api),
+			   ApplicationProcessNamingInformation(ckm_name, ckm_instance));
 }
 
-void KeyManagementAgent::run()
+KeyManagementAgent::~KeyManagementAgent()
 {
-	int port_id = 0;
-
-	cout << setprecision(5);
-
-        port_id = createFlow();
-        if (port_id < 0) {
-        	LOG_ERR("Problems creating flow, exiting");
-        	return;
-        }
-
-        destroyFlow(port_id);
+	delete ribd;
+	delete etask;
+	delete secman;
+	delete eventm;
+	delete irm;
 }
 
-int KeyManagementAgent::createFlow()
+unsigned int KeyManagementAgent::get_address() const
 {
-        AllocateFlowRequestResultEvent* afrrevent;
-        FlowSpecification qosspec;
-        IPCEvent* event;
-        uint seqnum;
-
-        if (dif_name != string()) {
-                seqnum = ipcManager->requestFlowAllocationInDIF(
-                        ApplicationProcessNamingInformation(app_name, app_instance),
-                        ApplicationProcessNamingInformation(ckm_name, ckm_instance),
-                        ApplicationProcessNamingInformation(dif_name, string()),
-                        qosspec);
-        } else {
-                seqnum = ipcManager->requestFlowAllocation(
-                        ApplicationProcessNamingInformation(app_name, app_instance),
-                        ApplicationProcessNamingInformation(ckm_name, ckm_instance),
-                        qosspec);
-        }
-
-        for (;;) {
-                event = ipcEventProducer->eventWait();
-                if (event && event->eventType == ALLOCATE_FLOW_REQUEST_RESULT_EVENT
-                                && event->sequenceNumber == seqnum) {
-                        break;
-                }
-                LOG_DBG("Client got new event %d", event->eventType);
-        }
-
-        afrrevent = dynamic_cast<AllocateFlowRequestResultEvent*>(event);
-
-        rina::FlowInformation flow = ipcManager->commitPendingFlow(afrrevent->sequenceNumber,
-                                              	      	           afrrevent->portId,
-                                              	      	           afrrevent->difName);
-        if (flow.portId < 0) {
-                LOG_ERR("Failed to allocate a flow");
-                return flow.portId;
-        } else {
-                LOG_DBG("[DEBUG] Port id = %d", flow.portId);
-        }
-
-        return flow.portId;
+	return 0;
 }
 
-void KeyManagementAgent::destroyFlow(int port_id)
+void KeyManagementAgent::populate_rib()
 {
-        DeallocateFlowResponseEvent *resp = NULL;
-        unsigned int seqnum;
-        IPCEvent* event;
+	rib::RIBObj * ribo;
 
-        seqnum = ipcManager->requestFlowDeallocation(port_id);
-
-        for (;;) {
-                event = ipcEventProducer->eventWait();
-                if (event && event->eventType == DEALLOCATE_FLOW_RESPONSE_EVENT
-                                && event->sequenceNumber == seqnum) {
-                        break;
-                }
-                LOG_DBG("Client got new event %d", event->eventType);
-        }
-        resp = dynamic_cast<DeallocateFlowResponseEvent*>(event);
-
-        ipcManager->flowDeallocationResult(port_id, resp->result == 0);
+	try{
+		ribo = new rib::RIBObj("keyContainers");
+		ribd->addObjRIB("/keyContainers", &ribo);
+	} catch (rina::Exception & e){
+		LOG_ERR("Problems adding object to RIB");
+	}
 }

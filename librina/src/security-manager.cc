@@ -1718,11 +1718,17 @@ int ISecurityManager::add_auth_policy_set(const std::string& auth_type)
         }
 
         // Install the new one.
-        auth_policy_sets.put(auth_type, candidate);
-        LOG_INFO("Authentication policy-set %s added to the security-manager",
-                        auth_type.c_str());
+        add_auth_policy_set(auth_type, candidate);
 
         return 0;
+}
+
+void ISecurityManager::add_auth_policy_set(const std::string& auth_type,
+					   IAuthPolicySet * ps)
+{
+        auth_policy_sets.put(auth_type, ps);
+        LOG_INFO("Authentication policy-set %s added to the security-manager",
+                        auth_type.c_str());
 }
 
 int ISecurityManager::set_policy_set_param(const std::string& path,

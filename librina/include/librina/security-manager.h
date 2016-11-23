@@ -476,6 +476,8 @@ public:
 	ISecurityManager() : rina::ApplicationEntity(SECURITY_MANAGER_AE_NAME) { };
         virtual ~ISecurityManager();
         int add_auth_policy_set(const std::string& auth_type);
+        void add_auth_policy_set(const std::string& auth_type,
+        			 IAuthPolicySet * ps);
         int set_policy_set_param(const std::string& path,
                                  const std::string& name,
                                  const std::string& value);

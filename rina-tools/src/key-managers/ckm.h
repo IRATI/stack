@@ -30,24 +30,9 @@
 #define CKM_H_
 
 #include <librina/application.h>
-#include <librina/rib_v2.h>
-#include <librina/security-manager.h>
-#include "server.h"
+#include <librina/internal-events.h>
+
 #include "km-common.h"
-
-class CKMWorker : public ServerWorker {
-public:
-	CKMWorker(rina::ThreadAttributes * threadAttributes,
-		  const std::string& creds_folder,
-	          Server * serv);
-	~CKMWorker() throw() { };
-	int internal_run();
-
-private:
-        std::string creds_location;
-        rina::Timer timer;
-        CancelFlowTimerTask * last_task;
-};
 
 struct KMAData
 {
@@ -84,39 +69,7 @@ private:
 	CentralKeyManager * ckm;
 };
 
-class CKMRIBDaemon : public rina::rib::RIBDaemonAE
-{
-public:
-	CKMRIBDaemon(rina::cacep::AppConHandlerInterface *app_con_callback);
-	~CKMRIBDaemon(){};
-
-	rina::rib::RIBDaemonProxy * getProxy();
-        const rina::rib::rib_handle_t & get_rib_handle();
-        int64_t addObjRIB(const std::string& fqn, rina::rib::RIBObj** obj);
-        void removeObjRIB(const std::string& fqn);
-
-private:
-	//Handle to the RIB
-	rina::rib::rib_handle_t rib;
-	rina::rib::RIBDaemonProxy* ribd;
-};
-
-class CKMSecurityManager: public rina::ISecurityManager
-{
-public:
-	CKMSecurityManager(const std::string& creds_location);
-	~CKMSecurityManager();
-
-	void set_application_process(rina::ApplicationProcess * ap);
-        rina::IAuthPolicySet::AuthStatus update_crypto_state(const rina::CryptoState& state,
-        						     rina::IAuthPolicySet * caller);
-private:
-        rina::AuthSDUProtectionProfile sec_profile;
-        rina::AuthSSH2PolicySet * auth_ps;
-        CentralKeyManager * ckm;
-};
-
-class CentralKeyManager: public Server, public rina::ApplicationProcess
+class CentralKeyManager: public rina::ApplicationProcess, public KMEventLoop
 {
 public:
 	CentralKeyManager(const std::list<std::string>& dif_names,
@@ -127,13 +80,13 @@ public:
         unsigned int get_address() const;
 
         CKMEnrollmentTask * etask;
-        CKMRIBDaemon * ribd;
-        CKMSecurityManager * secman;
-
-protected:
-        ServerWorker * internal_start_worker(rina::FlowInformation flow);
+        KMRIBDaemon * ribd;
+        KMSecurityManager * secman;
+        KMIPCResourceManager * irm;
+        rina::SimpleInternalEventManager * eventm;
 
 private:
+        void populate_rib();
         std::string creds_location;
 };
 

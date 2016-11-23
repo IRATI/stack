@@ -29,13 +29,39 @@
 #define KMA_HPP
 
 #include <string>
+
+#include <librina/application.h>
 #include <librina/concurrency.h>
 #include <librina/timer.h>
 
-#include "application.h"
+#include "km-common.h"
 
+class KeyManagementAgent;
 
-class KeyManagementAgent: public Application {
+class KMAEnrollmentTask: public rina::cacep::AppConHandlerInterface, public rina::ApplicationEntity
+{
+public:
+	KMAEnrollmentTask();
+	~KMAEnrollmentTask(){};
+
+	void set_application_process(rina::ApplicationProcess * ap);
+	void connect(const rina::cdap::CDAPMessage& message,
+		     const rina::cdap_rib::con_handle_t &con);
+	void connectResult(const rina::cdap_rib::res_info_t &res,
+			   const rina::cdap_rib::con_handle_t &con,
+			   const rina::cdap_rib::auth_policy_t& auth);
+	void release(int invoke_id,
+		     const rina::cdap_rib::con_handle_t &con);
+	void releaseResult(const rina::cdap_rib::res_info_t &res,
+			   const rina::cdap_rib::con_handle_t &con);
+	void process_authentication_message(const rina::cdap::CDAPMessage& message,
+				            const rina::cdap_rib::con_handle_t &con);
+
+private:
+	KeyManagementAgent * kma;
+};
+
+class KeyManagementAgent: public rina::ApplicationProcess, public KMEventLoop {
 public:
 	KeyManagementAgent(const std::string& creds_folder,
 			   const std::list<std::string>& dif_name,
@@ -44,15 +70,18 @@ public:
 			   const std::string& ckm_apn,
 			   const std::string& ckm_api,
 			   bool  quiet);
-       void run();
-       int readSDU(int portId, void * sdu, int maxBytes, unsigned int timout);
-       void startCancelFloodFlowTask(int port_id);
-       ~KeyManagementAgent() {};
-protected:
-        int createFlow();
-        void destroyFlow(int port_id);
+	~KeyManagementAgent();
+        unsigned int get_address() const;
+
+        KMRIBDaemon * ribd;
+        KMAEnrollmentTask * etask;
+        KMSecurityManager * secman;
+        KMIPCResourceManager * irm;
+        rina::SimpleInternalEventManager * eventm;
 
 private:
+        void populate_rib();
+
         std::string creds_location;
         std::string dif_name;
         std::string ckm_name;
