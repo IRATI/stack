@@ -195,8 +195,9 @@ const cdap_rib::vers_info_t& RIBSchema::get_version() const {
 }
 
 void RIBSchema::add_create_callback(const std::string& class_,
-						const std::string& fqn_,
-						create_cb_t cb){
+				    const std::string& fqn_,
+				    create_cb_t cb)
+{
 	cn_fqn_pair_t key;
 
 	if(class_ == "")
@@ -365,7 +366,9 @@ public:
 	///
 	const cdap_rib::vers_info_t& get_version() const;
 
-	std::list<RIBObjectData> get_all_rib_objects_data();
+	std::list<RIBObjectData> get_all_rib_objects_data(
+		const std::string& class_,
+		const std::string& name);
 
 	void set_security_manager(ISecurityManager * sec_man);
 
@@ -639,13 +642,26 @@ void RIB::create_request(const cdap_rib::con_handle_t &con,
 		//Mutual exclusion
 		ReadScopedLock rlock(rib_obj->rwlock, false);
 
-		//If the object exists invoke the callback over the
-		//object
-		rib_obj->create(con, obj.name_, obj.class_, filt,
-						invoke_id,
+		if (!rib_obj->delegates) {
+			//If the object exists invoke the callback over the
+			//object
+			rib_obj->create(con, obj.name_, obj.class_, filt,
+					invoke_id,
+					obj.value_,
+					obj_reply.value_,
+					res);
+		} else {
+			cdap_rib::filt_info_t deleg_filt;
+			DelegationObj *del_obj = (DelegationObj*) rib_obj;
+			del_obj->forward_object(con,
+						rina::cdap::cdap_m_t::M_CREATE,
+						obj.name_,
+						obj.class_,
 						obj.value_,
-						obj_reply.value_,
-						res);
+						flags,
+						deleg_filt,
+						invoke_id);
+		}
 	} else {
 		//Otherwise check the schema for a factory function
 		std::string parent_name = get_parent_fqn(obj.name_);
@@ -910,8 +926,10 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
                                 if (count == objects.size())
                                         del_obj->last = true;
 				del_obj->forward_object(con,
+							rina::cdap::cdap_m_t::M_READ,
 							delegated_name,
 							rib_obj->class_name,
+							obj.value_,
 							flags,
 							deleg_filt,
 							invoke_id);
@@ -1657,14 +1675,22 @@ const cdap_rib::vers_info_t& RIB::get_version() const {
 	return schema->get_version();
 }
 
-std::list<RIBObjectData> RIB::get_all_rib_objects_data()
+std::list<RIBObjectData> RIB::get_all_rib_objects_data(
+		const std::string& class_,
+		const std::string& name)
 {
 	std::list<RIBObjectData> result;
 	RIBObjectData data;
+	unsigned n = name.size();
 
 	for (std::map<std::string, RIBObj*>::iterator it = obj_name_map.begin();
 			it != obj_name_map.end(); ++it) {
 		data = it->second->get_object_data();
+		if (class_.size() && class_ != data.class_)
+			continue;
+		if (n && (name[n-1] == '/' ? data.name_.compare(0, n, name)
+					   : data.name_ != name))
+			continue;
 		if (it->first != "/")
 			data.instance_ = __get_obj_inst_id(data.name_);
 		result.push_back(data);
@@ -1882,7 +1908,10 @@ public:
 		cdap_provider = p;
 	}
 
-	std::list<RIBObjectData> get_rib_objects_data(const rib_handle_t& handle);
+	std::list<RIBObjectData> get_rib_objects_data(
+		const rib_handle_t& handle,
+		const std::string& class_,
+		const std::string& name);
 
 	int set_security_manager(ApplicationEntity * sec_man);
 
@@ -2170,12 +2199,11 @@ void RIBDaemon::createSchema(const cdap_rib::vers_info_t& version,
 	ver_schema_map[ver] = schema;
 }
 
-void RIBDaemon::addCreateCallbackSchema(
-					const cdap_rib::vers_info_t& version,
+void RIBDaemon::addCreateCallbackSchema(const cdap_rib::vers_info_t& version,
 					const std::string& class_,
 					const std::string& fqn_,
-					create_cb_t cb){
-
+					create_cb_t cb)
+{
 	uint64_t ver = version.version_;
 	std::map<uint64_t, RIBSchema*>::iterator it;
 
@@ -2665,7 +2693,10 @@ void RIBDaemon::removeObjRIB(const rib_handle_t& handle,
 	rib->remove_obj(inst_id);
 }
 
-std::list<RIBObjectData> RIBDaemon::get_rib_objects_data(const rib_handle_t& handle)
+std::list<RIBObjectData> RIBDaemon::get_rib_objects_data(
+		const rib_handle_t& handle,
+		const std::string& class_,
+		const std::string& name)
 {
 	//Mutual exclusion
 	ReadScopedLock rlock(rwlock);
@@ -2678,7 +2709,7 @@ std::list<RIBObjectData> RIBDaemon::get_rib_objects_data(const rib_handle_t& han
 		throw eRIBNotFound();
 	}
 
-	return rib->get_all_rib_objects_data();
+	return rib->get_all_rib_objects_data(class_, name);
 }
 
 int RIBDaemon::set_security_manager(ApplicationEntity * sec_man)
@@ -3421,9 +3452,12 @@ bool RIBDaemonProxy::containsObj(const rib_handle_t& handle,
 	}
 }
 
-std::list<RIBObjectData> RIBDaemonProxy::get_rib_objects_data(const rib_handle_t& handle)
+std::list<RIBObjectData> RIBDaemonProxy::get_rib_objects_data(
+		const rib_handle_t& handle,
+		const std::string& class_,
+		const std::string& name)
 {
-	return ribd->get_rib_objects_data(handle);
+	return ribd->get_rib_objects_data(handle, class_, name);
 }
 
 int RIBDaemonProxy::set_security_manager(ApplicationEntity * sec_man)

@@ -362,6 +362,25 @@ BlockingFIFOQueue():ConditionVariable() { };
                 return result;
         }
 
+        /**
+         * Get the element at the begining of the queue. It will not remove
+         * the item from the queue. If the queue is
+         * empty it will return a NULL pointer.
+         */
+        T * peek() {
+                T * result;
+
+                lock();
+                if (queue.size() == 0) {
+                        result = 0;
+                } else {
+                        result = queue.front();
+                }
+                unlock();
+
+                return result;
+        }
+
 private:
         std::list<T*> queue;
 };

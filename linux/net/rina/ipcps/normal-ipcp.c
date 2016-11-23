@@ -977,6 +977,15 @@ static int normal_pff_flush(struct ipcp_instance_data * data)
         return rmt_pff_flush(data->rmt);
 }
 
+static int normal_pff_modify(struct ipcp_instance_data * data,
+                   	     struct list_head * entries)
+{
+	ASSERT(data);
+
+	return rmt_pff_modify(data->rmt,
+			      entries);
+}
+
 static const struct name * normal_ipcp_name(struct ipcp_instance_data * data)
 {
         ASSERT(data);
@@ -1222,6 +1231,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .pff_remove                = normal_pff_remove,
         .pff_dump                  = normal_pff_dump,
         .pff_flush                 = normal_pff_flush,
+	.pff_modify		   = normal_pff_modify,
 
         .query_rib		   = NULL,
 

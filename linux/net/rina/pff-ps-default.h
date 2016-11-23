@@ -38,6 +38,8 @@ int              default_nhop(struct pff_ps * ps,
                               size_t *        count);
 int              default_dump(struct pff_ps *    ps,
                               struct list_head * entries);
+int              default_modify(struct pff_ps *    ps,
+                                struct list_head * entries);
 struct ps_base * pff_ps_default_create(struct rina_component * component);
 void             pff_ps_default_destroy(struct ps_base * bps);
 

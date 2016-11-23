@@ -484,8 +484,10 @@ public:
 	~DelegationObj(void) throw();
 
 	virtual void forward_object(const rina::cdap_rib::con_handle_t& con,
+				    rina::cdap::cdap_m_t::Opcode op_code,
 	                            const std::string obj_name,
 	                            const std::string obj_class,
+				    const ser_obj_t &obj_value,
 	                            const rina::cdap_rib::flags_t &flags,
 	                            const rina::cdap_rib::filt_info_t &filt,
 	                            int invoke_id) = 0;
@@ -790,13 +792,21 @@ public:
                          const std::string fqdn);
 
         ///
-        /// Get the list of all the objects in the RIB
+        /// Get the list of all the objects in the RIB, filtered by class/name.
         ///
         /// @param handle The handle of the RIB
+        /// @param class_ Optional parameter. When defined (!=""), only objects
+        /// of this class_ are returned.
+        /// @param name Optional parameter. When defined (!=""), only objects
+        /// of this name are returned, including child object if the parameter
+        /// ends with '/'.
         ///
         /// @throws eRIBNotFound, eObjDoesNotExist
         ///
-        std::list<RIBObjectData> get_rib_objects_data(const rib_handle_t& handle);
+        std::list<RIBObjectData> get_rib_objects_data(
+                const rib_handle_t& handle,
+                const std::string& class_="",
+                const std::string& name="");
 
         int set_security_manager(ApplicationEntity * sec_man);
 

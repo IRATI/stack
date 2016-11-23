@@ -241,12 +241,43 @@ static struct pft_entry * pft_find(struct pff_ps_priv * priv,
         return NULL;
 }
 
+static int __pff_add(struct pff_ps *        ps,
+		     struct pff_ps_priv * priv,
+		     struct mod_pff_entry * entry)
+{
+        struct pft_entry *       tmp;
+	struct port_id_altlist * alts;
+
+        tmp = pft_find(priv, entry->fwd_info, entry->qos_id);
+        if (!tmp) {
+                tmp = pfte_create_ni(entry->fwd_info, entry->qos_id);
+                if (!tmp) {
+                        return -1;
+                }
+
+                list_add(&tmp->next, &priv->entries);
+        }
+
+	list_for_each_entry(alts, &entry->port_id_altlists, next) {
+		if (alts->num_ports < 1) {
+			LOG_INFO("Port id alternative set is empty");
+			continue;
+		}
+
+                if (pfte_port_add(tmp, alts->ports[0])) {
+                        pfte_destroy(tmp);
+                        return -1;
+                }
+	}
+
+	return 0;
+}
+
 static int mp_add(struct pff_ps *        ps,
                        struct mod_pff_entry * entry)
 {
         struct pff_ps_priv *     priv;
-        struct pft_entry *       tmp;
-	struct port_id_altlist * alts;
+        int result;
 
         priv = (struct pff_ps_priv *) ps->priv;
         if (!priv_is_ok(priv))
@@ -266,35 +297,13 @@ static int mp_add(struct pff_ps *        ps,
                 return -1;
         }
 
-        spin_lock(&priv->lock);
-	
-        tmp = pft_find(priv, entry->fwd_info, entry->qos_id);
-        if (!tmp) {
-                tmp = pfte_create_ni(entry->fwd_info, entry->qos_id);
-                if (!tmp) {
-                        spin_unlock(&priv->lock);
-                        return -1;
-                }
+        spin_lock_bh(&priv->lock);
 
-                list_add(&tmp->next, &priv->entries);
-        }
+        result = __pff_add(ps, priv, entry);
 
-	list_for_each_entry(alts, &entry->port_id_altlists, next) {
-		if (alts->num_ports < 1) {
-			LOG_INFO("Port id alternative set is empty");
-			continue;
-		}
+        spin_unlock_bh(&priv->lock);
 
-                if (pfte_port_add(tmp, alts->ports[0])) {
-                        pfte_destroy(tmp);
-                        spin_unlock(&priv->lock);
-                        return -1;
-                }
-	}
-
-        spin_unlock(&priv->lock);
-
-        return 0;
+        return result;
 }
 
 static int mp_remove(struct pff_ps *        ps,
@@ -323,11 +332,11 @@ static int mp_remove(struct pff_ps *        ps,
                 return -1;
         }
 
-        spin_lock(&priv->lock);
+        spin_lock_bh(&priv->lock);
 
         tmp = pft_find(priv, entry->fwd_info, entry->qos_id);
         if (!tmp) {
-                spin_unlock(&priv->lock);
+                spin_unlock_bh(&priv->lock);
                 return -1;
         }
 
@@ -348,7 +357,7 @@ static int mp_remove(struct pff_ps *        ps,
         }
 	
 
-        spin_unlock(&priv->lock);
+        spin_unlock_bh(&priv->lock);
 
         return 0;
 }
@@ -362,9 +371,9 @@ static bool mp_is_empty(struct pff_ps * ps)
         if (!priv_is_ok(priv))
                 return false;
 
-        spin_lock(&priv->lock);
+        spin_lock_bh(&priv->lock);
         empty = list_empty(&priv->entries);
-        spin_unlock(&priv->lock);
+        spin_unlock_bh(&priv->lock);
 
         return empty;
 }
@@ -388,11 +397,11 @@ static int mp_flush(struct pff_ps * ps)
         if (!priv_is_ok(priv))
                 return -1;
 
-        spin_lock(&priv->lock);
+        spin_lock_bh(&priv->lock);
 
         __pft_flush(priv);
 
-        spin_unlock(&priv->lock);
+        spin_unlock_bh(&priv->lock);
 
         return 0;
 }
@@ -463,7 +472,6 @@ static int mp_next_hop(struct pff_ps * ps,
         address_t               destination;
         qos_id_t                qos_id;
         struct pft_entry *      tmp;
-        unsigned long           flags;
 	struct pft_port_entry * port;
 
         priv = (struct pff_ps_priv *) ps->priv;
@@ -492,13 +500,13 @@ static int mp_next_hop(struct pff_ps * ps,
          * Taking the lock here since otherwise priv might be deleted when
          * copying the ports
          */
-        spin_lock_irqsave(&priv->lock, flags);
+        spin_lock_bh(&priv->lock);
 
         tmp = pft_find(priv, destination, qos_id);
         if (!tmp) {
                 LOG_ERR("Could not find any entry for dest address: %u and "
                         "qos_id %d", destination, qos_id);
-                spin_unlock_irqrestore(&priv->lock, flags);
+                spin_unlock_bh(&priv->lock);
                 return -1;
         }
 
@@ -510,16 +518,16 @@ static int mp_next_hop(struct pff_ps * ps,
 	if (!port) {
                 LOG_ERR("Could not select destination port for dest "
                          "address %u and qos_id %d", destination, qos_id);
-                spin_unlock_irqrestore(&priv->lock, flags);
+                spin_unlock_bh(&priv->lock);
                 return -1;
          }
 
         if (pfte_ports_copy(port, ports, count)) {
-                spin_unlock_irqrestore(&priv->lock, flags);
+                spin_unlock_bh(&priv->lock);
                 return -1;
         }
 
-        spin_unlock_irqrestore(&priv->lock, flags);  
+        spin_unlock_bh(&priv->lock);
 	
 	return 0;
 }
@@ -566,11 +574,11 @@ static int mp_dump(struct pff_ps *    ps,
         if (!priv_is_ok(priv))
                 return -1;
 
-        spin_lock(&priv->lock);
+        spin_lock_bh(&priv->lock);
         list_for_each_entry(pos, &priv->entries, next) {
                 entry = rkmalloc(sizeof(*entry), GFP_ATOMIC);
                 if (!entry) {
-                        spin_unlock(&priv->lock);
+                        spin_unlock_bh(&priv->lock);
                         return -1;
                 }
 
@@ -579,13 +587,45 @@ static int mp_dump(struct pff_ps *    ps,
 		INIT_LIST_HEAD(&entry->port_id_altlists);
                 if (pfte_port_id_altlists_copy(pos, &entry->port_id_altlists)) {
                         rkfree(entry);
-                        spin_unlock(&priv->lock);
+                        spin_unlock_bh(&priv->lock);
                         return -1;
                 }
 
                 list_add(&entry->next, entries);
         }
-        spin_unlock(&priv->lock);
+        spin_unlock_bh(&priv->lock);
+
+        return 0;
+}
+
+int mp_modify(struct pff_ps *    ps,
+              struct list_head * entries)
+{
+        struct pff_ps_priv *   priv;
+        struct mod_pff_entry * entry;
+
+        priv = (struct pff_ps_priv *) ps->priv;
+        if (!priv_is_ok(priv))
+                return -1;
+
+        spin_lock_bh(&priv->lock);
+
+        __pft_flush(priv);
+
+        list_for_each_entry(entry, entries, next) {
+        	if (!entry)
+        		continue;
+
+        	if (!is_address_ok(entry->fwd_info))
+        		continue;
+
+        	if (!is_qos_id_ok(entry->qos_id))
+        		continue;
+
+                __pff_add(ps, priv, entry);
+        }
+
+        spin_unlock_bh(&priv->lock);
 
         return 0;
 }
@@ -646,6 +686,7 @@ pff_ps_multipath_create(struct rina_component * component)
         ps->pff_flush = mp_flush;
         ps->pff_nhop = mp_next_hop;
         ps->pff_dump = mp_dump;
+        ps->pff_modify = mp_modify;
 
         return &ps->base;
 }
@@ -662,11 +703,11 @@ static void pff_ps_multipath_destroy(struct ps_base * bps)
                         return;
                 }
 
-                spin_lock(&priv->lock);
+                spin_lock_bh(&priv->lock);
 
                 __pft_flush(priv);
 
-                spin_unlock(&priv->lock);
+                spin_unlock_bh(&priv->lock);
 
                 rkfree(priv);
                 rkfree(ps);

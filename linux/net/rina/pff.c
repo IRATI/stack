@@ -314,6 +314,30 @@ int pff_dump(struct pff *       instance,
         return 0;
 }
 
+int pff_modify(struct pff *       instance,
+               struct list_head * entries)
+{
+        struct pff_ps * ps;
+
+        if (!__pff_is_ok(instance))
+                return -1;
+
+        rcu_read_lock();
+
+        ps = container_of(rcu_dereference(instance->base.ps),
+                          struct pff_ps, base);
+
+        ASSERT(ps->pff_modify);
+        if (ps->pff_modify(ps, entries)) {
+                rcu_read_unlock();
+                return -1;
+        }
+
+        rcu_read_unlock();
+
+        return 0;
+}
+
 int pff_select_policy_set(struct pff *     pff,
                           const string_t * path,
                           const string_t * name)

@@ -1539,6 +1539,8 @@ EnrollmentTaskPs::EnrollmentTaskPs(IPCProcess * ipcp_) :
 void EnrollmentTaskPs::populate_rib()
 {
 	rina::rib::RIBObj* tmp;
+	rina::cdap_rib::vers_info_t vers;
+	vers.version_ = 0x1ULL;
 
 	try {
 		tmp = new EnrollmentRIBObject(ipcp);
@@ -1546,6 +1548,10 @@ void EnrollmentTaskPs::populate_rib()
 
 		tmp = new NeighborsRIBObj(ipcp);
 		rib_daemon->addObjRIB(NeighborsRIBObj::object_name, &tmp);
+		rib_daemon->getProxy()->addCreateCallbackSchema(vers,
+								NeighborRIBObj::class_name,
+								NeighborsRIBObj::object_name,
+								NeighborRIBObj::create_cb);
 
 		tmp = new OperationalStatusRIBObject(ipcp);
 		rib_daemon->addObjRIB(OperationalStatusRIBObject::object_name, &tmp);
