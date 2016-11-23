@@ -36,10 +36,11 @@
 
 struct KMAData
 {
-	rina::ApplicationProcessNamingInformation name;
 	std::string system_id;
 	std::string supporting_dif;
 	rina::cdap_rib::con_handle_t con;
+	rina::IAuthPolicySet * auth_ps_;
+	int invoke_id;
 };
 
 class CentralKeyManager;
@@ -64,8 +65,10 @@ public:
 				            const rina::cdap_rib::con_handle_t &con);
 
 private:
+	KMAData * get_kma_data(unsigned int port_id);
+
 	rina::Lockable lock;
-	std::map<std::string, KMAData> enrolled_kmas;
+	std::map<std::string, KMAData *> enrolled_kmas;
 	CentralKeyManager * ckm;
 };
 
@@ -78,6 +81,8 @@ public:
 			  const std::string& creds_folder);
         ~CentralKeyManager();
         unsigned int get_address() const;
+        std::string get_name();
+        std::string get_instance();
 
         CKMEnrollmentTask * etask;
         KMRIBDaemon * ribd;

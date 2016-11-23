@@ -36,15 +36,25 @@
 
 #include "km-common.h"
 
+struct CKMEnrollmentState
+{
+	bool enrolled;
+	rina::IAuthPolicySet * auth_ps_;
+	rina::cdap_rib::con_handle_t con;
+};
+
 class KeyManagementAgent;
 
-class KMAEnrollmentTask: public rina::cacep::AppConHandlerInterface, public rina::ApplicationEntity
+class KMAEnrollmentTask: public rina::cacep::AppConHandlerInterface,
+			 public rina::ApplicationEntity,
+			 public rina::InternalEventListener
 {
 public:
 	KMAEnrollmentTask();
 	~KMAEnrollmentTask(){};
 
 	void set_application_process(rina::ApplicationProcess * ap);
+	void eventHappened(rina::InternalEvent * event);
 	void connect(const rina::cdap::CDAPMessage& message,
 		     const rina::cdap_rib::con_handle_t &con);
 	void connectResult(const rina::cdap_rib::res_info_t &res,
@@ -58,7 +68,11 @@ public:
 				            const rina::cdap_rib::con_handle_t &con);
 
 private:
+	void initiateEnrollmentWithCKM(const rina::NMinusOneFlowAllocatedEvent& event);
+
+	rina::Lockable lock;
 	KeyManagementAgent * kma;
+	CKMEnrollmentState ckm_state;
 };
 
 class KeyManagementAgent: public rina::ApplicationProcess, public KMEventLoop {

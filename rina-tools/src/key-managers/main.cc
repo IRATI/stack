@@ -97,7 +97,7 @@ int wrapped_main(int argc, char** argv)
                                                          "creds_folder",
                                                          "Folder where the credentials are stored",
                                                          false,
-                                                         "/user/local/irati/key-manager/creds",
+                                                         "/usr/local/irati/key-manager/creds",
                                                          "string");
 
                 cmd.add(central_arg);

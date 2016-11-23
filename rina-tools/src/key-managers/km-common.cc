@@ -317,9 +317,25 @@ rina::IAuthPolicySet::AuthStatus KMSecurityManager::update_crypto_state(const ri
 }
 
 //Class KMIPCResourceManager
+KMIPCResourceManager::~KMIPCResourceManager()
+{
+	map<int, SDUReader *>::iterator it;
+	void * status;
+
+	rina::ScopedLock g(lock);
+
+	for (it = sdu_readers.begin(); it != sdu_readers.end(); ++it) {
+		it->second->join(&status);
+		delete it->second;
+	}
+
+	sdu_readers.clear();
+}
+
 void KMIPCResourceManager::set_application_process(rina::ApplicationProcess * ap)
 {
 	KMRIBDaemon * ribd;
+
 	if (!ap) {
 		LOG_ERR("Bogus instance of APP passed, return");
 		return;
@@ -340,8 +356,26 @@ void KMIPCResourceManager::set_application_process(rina::ApplicationProcess * ap
 		LOG_ERR("App has no Internal Event Manager AE, return");
 		return;
 	}
+	event_manager_->subscribeToEvent(InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED,
+						 this);
+	event_manager_->subscribeToEvent(InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED,
+					 this);
 
 	populateRIB();
+}
+
+void KMIPCResourceManager::eventHappened(InternalEvent * event)
+{
+	NMinusOneFlowDeallocatedEvent * fd_event = 0;
+	NMinusOneFlowAllocatedEvent * fa_event = 0;
+
+	if (event->type == InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED) {
+		fd_event = static_cast<NMinusOneFlowDeallocatedEvent *>(event);
+		stop_flow_reader(fd_event->port_id_);
+	} else if (event->type == InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED) {
+		fa_event = static_cast<NMinusOneFlowAllocatedEvent *>(event);
+		start_flow_reader(fa_event->flow_information_.portId);
+	}
 }
 
 void KMIPCResourceManager::register_application_response(const rina::RegisterApplicationResponseEvent& event)
@@ -430,6 +464,37 @@ void KMIPCResourceManager::deallocate_flow(int port_id)
 	ipcManager->requestFlowDeallocation(port_id);
 }
 
+void KMIPCResourceManager::start_flow_reader(int port_id)
+{
+	ThreadAttributes thread_attrs;
+	std::stringstream ss;
+	SDUReader * reader = 0;
+
+	rina::ScopedLock g(lock);
+
+	thread_attrs.setJoinable();
+	ss << "SDU Reader of port-id " << port_id;
+	thread_attrs.setName(ss.str());
+	reader = new SDUReader(&thread_attrs, port_id);
+	reader->start();
+
+	sdu_readers[port_id] = reader;
+}
+
+void KMIPCResourceManager::stop_flow_reader(int port_id)
+{
+	map<int, SDUReader *>::iterator it;
+	void * status;
+
+	ScopedLock g(lock);
+	it = sdu_readers.find(port_id);
+	if (it != sdu_readers.end()) {
+		sdu_readers.erase(it);
+		it->second->join(&status);
+		delete it->second;
+	}
+}
+
 //Class KMEventLoop
 void KMEventLoop::set_km_irm(KMIPCResourceManager * irm)
 {
@@ -464,4 +529,50 @@ void KMEventLoop::deallocate_flow_response_handler(const rina::DeallocateFlowRes
 void KMEventLoop::flow_deallocated_event_handler(const rina::FlowDeallocatedEvent& event)
 {
 	kirm->flowDeallocatedRemotely(event);
+}
+
+// Class SDUReader
+SDUReader::SDUReader(rina::ThreadAttributes * threadAttributes, int port_id)
+				: SimpleThread(threadAttributes)
+{
+	portid = port_id;
+}
+
+int SDUReader::run()
+{
+	rina::ser_obj_t message;
+	message.message_ = new unsigned char[5000];
+	int bytes_read = 0;
+	bool keep_going = true;
+
+	LOG_DBG("SDU reader of port-id %d starting", portid);
+
+	while(keep_going) {
+		try {
+			bytes_read = ipcManager->readSDU(portid, message.message_, 5000);
+			message.size_ = bytes_read;
+		} catch (rina::FlowAllocationException &e) {
+			LOG_ERR("Flow has been deallocated");
+			break;
+		} catch (rina::UnknownFlowException &e) {
+			LOG_ERR("Flow does not exist");
+			break;
+		} catch (rina::Exception &e) {
+			LOG_ERR("Problems reading SDU from flow, exiting");
+			break;
+		}
+
+		//Instruct CDAP provider to process the CACEP message
+		try{
+			rina::cdap::getProvider()->process_message(message,
+								   portid);
+		} catch(rina::Exception &e){
+			LOG_ERR("Problems processing message from port-id %d",
+				portid);
+		}
+	}
+
+	LOG_DBG("SDU Reader of port-id %d terminating", portid);
+
+	return 0;
 }

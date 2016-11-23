@@ -559,7 +559,7 @@ class CDAPSessionManager : public CDAPSessionManagerInterface
 					  const cdap_rib::res_info_t &res,
 					  int invoke_id);
 	CDAPInvokeIdManager * get_invoke_id_manager();
-	const cdap_rib::con_handle_t& get_con_handle(int port_id);
+	const cdap_rib::con_handle_t get_con_handle(int port_id);
 
  private:
 	Lockable lock;
@@ -2590,7 +2590,7 @@ CDAPInvokeIdManager * CDAPSessionManager::get_invoke_id_manager()
 	return invoke_id_manager_;
 }
 
-const cdap_rib::con_handle_t& CDAPSessionManager::get_con_handle(int port_id)
+const cdap_rib::con_handle_t CDAPSessionManager::get_con_handle(int port_id)
 {
 	ScopedLock g(lock);
 
@@ -3391,6 +3391,7 @@ void AppCDAPIOHandler::process_message(const ser_obj_t &message,
 {
 	(void) cdap_dest;
 	cdap_m_t m_rcv;
+	bool is_auth_message = false;
 
 	atomic_send_lock_.lock();
 	try {
@@ -3404,6 +3405,10 @@ void AppCDAPIOHandler::process_message(const ser_obj_t &message,
 	LOG_DBG("Received CDAP message from port %d\n %s",
 		port,
 		m_rcv.to_string().c_str());
+
+	if (manager_->session_in_await_con_state(port) &&
+			m_rcv.op_code_ != rina::cdap::cdap_m_t::M_CONNECT)
+		is_auth_message = true;
 
 	// Fill structures
 	cdap_rib::con_handle_t con = manager_->get_con_handle(port);
@@ -3430,6 +3435,13 @@ void AppCDAPIOHandler::process_message(const ser_obj_t &message,
 	//FIXME: do not typecast when the codes are an enum in the GPB
 	res.code_ = static_cast<cdap_rib::res_code_t>(m_rcv.result_);
 	res.reason_ = m_rcv.result_reason_;
+
+	// If authentication-related message, process here
+	if (is_auth_message) {
+		callback_->process_authentication_message(m_rcv,
+							  con);
+		return;
+	}
 
 	switch (m_rcv.op_code_) {
 

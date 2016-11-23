@@ -52,6 +52,7 @@ public:
 protected:
 	bool keep_running;
 	rina::Lockable lock;
+
 };
 
 class DummySecurityManagerPs : public rina::ISecurityManagerPs
@@ -102,18 +103,32 @@ public:
 	void set_application_process(rina::ApplicationProcess * ap);
         rina::IAuthPolicySet::AuthStatus update_crypto_state(const rina::CryptoState& state,
         						     rina::IAuthPolicySet * caller);
-private:
+
         rina::AuthSDUProtectionProfile sec_profile;
+private:
         rina::AuthSSH2PolicySet * auth_ps;
 };
 
-class KMIPCResourceManager: public rina::IPCResourceManager
+class SDUReader : public rina::SimpleThread
+{
+public:
+	SDUReader(rina::ThreadAttributes * threadAttributes, int port_id);
+	~SDUReader() throw() {};
+	int run();
+
+private:
+	int portid;
+};
+
+class KMIPCResourceManager: public rina::IPCResourceManager,
+			    public rina::InternalEventListener
 {
 public:
 	KMIPCResourceManager() {};
-	~KMIPCResourceManager() {};
+	~KMIPCResourceManager();
 
 	void set_application_process(rina::ApplicationProcess * ap);
+	void eventHappened(rina::InternalEvent * event);
 	void register_application_response(const rina::RegisterApplicationResponseEvent& event);
 	void unregister_application_response(const rina::UnregisterApplicationResponseEvent& event);
 	void applicationRegister(const std::list<std::string>& dif_names,
@@ -122,6 +137,13 @@ public:
 	void allocate_flow(const rina::ApplicationProcessNamingInformation & local_app_name,
 			  const rina::ApplicationProcessNamingInformation & remote_app_name);
 	void deallocate_flow(int port_id);
+
+private:
+	void start_flow_reader(int port_id);
+	void stop_flow_reader(int port_id);
+
+	rina::Lockable lock;
+	std::map<int, SDUReader *> sdu_readers;
 };
 
 class KMEventLoop : public AppEventLoop

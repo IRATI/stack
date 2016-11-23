@@ -54,6 +54,60 @@ void CKMEnrollmentTask::set_application_process(rina::ApplicationProcess * ap)
 void CKMEnrollmentTask::connect(const rina::cdap::CDAPMessage& message,
 				const rina::cdap_rib::con_handle_t &con)
 {
+	std::map<std::string, KMAData *>::iterator it;
+	KMAData * data = 0;
+
+	//1 Find out if the sender is really connecting to us
+	if(con.src_.ap_name_.compare(ckm->get_name())!= 0){
+		LOG_ERR("an M_CONNECT message whose destination was not this IPC Process, ignoring it");
+		ckm->irm->deallocate_flow(con.port_id);
+		return;
+	}
+
+	rina::ScopedLock g(lock);
+
+	//2 Check we are not enrolled yet
+	it = enrolled_kmas.find(con.dest_.ap_name_);
+	if (it != enrolled_kmas.end()) {
+		LOG_ERR("I am already enrolled to Key Management Agent %s",
+			con.src_.ap_name_.c_str());
+		ckm->irm->deallocate_flow(con.port_id);
+		return;
+	}
+
+	//3 Send connectResult
+	data = new KMAData();
+	data->con = con;
+	data->invoke_id = message.invoke_id_;
+
+	data->auth_ps_ = ckm->secman->get_auth_policy_set(message.auth_policy_.name);
+	if (!data->auth_ps_) {
+		LOG_ERR("Could not find authentication policy %s",
+			message.auth_policy_.name.c_str());
+		ckm->irm->deallocate_flow(con.port_id);
+		delete data;
+		return;
+	}
+
+	LOG_INFO("Authenticating Key Management Agent %s-%s ...",
+		  con.dest_.ap_name_.c_str(),
+		  con.dest_.ap_inst_.c_str());
+
+	rina::IAuthPolicySet::AuthStatus auth_status =
+			data->auth_ps_->initiate_authentication(message.auth_policy_,
+							  	ckm->secman->sec_profile,
+								con.dest_,
+								con.port_id);
+	if (auth_status == rina::IAuthPolicySet::FAILED) {
+		LOG_ERR("Authentication failed");
+		ckm->irm->deallocate_flow(con.port_id);
+		delete data;
+		return;
+	} else if (auth_status == rina::IAuthPolicySet::IN_PROGRESS) {
+		LOG_DBG("Authentication in progress");
+	}
+
+	enrolled_kmas[con.dest_.ap_name_] = data;
 }
 
 void CKMEnrollmentTask::connectResult(const rina::cdap_rib::res_info_t &res,
@@ -75,6 +129,63 @@ void CKMEnrollmentTask::releaseResult(const rina::cdap_rib::res_info_t &res,
 void CKMEnrollmentTask::process_authentication_message(const rina::cdap::CDAPMessage& message,
 			            	    	       const rina::cdap_rib::con_handle_t &con)
 {
+	int result = 0;
+	KMAData * kma_data = 0;
+	cdap_rib::res_info_t res;
+
+	ScopedLock g(lock);
+
+	kma_data = get_kma_data(con.port_id);
+
+	if (!kma_data) {
+		LOG_ERR("Could not find KMA data associated to port-id %d",
+			con.port_id);
+		ckm->irm->deallocate_flow(con.port_id);
+		return;
+	}
+
+	result = kma_data->auth_ps_->process_incoming_message(message,
+							      con.port_id);
+
+	if (result == rina::IAuthPolicySet::IN_PROGRESS) {
+		LOG_INFO("Authentication still in progress");
+		return;
+	}
+
+	if (result == rina::IAuthPolicySet::FAILED) {
+		LOG_ERR("Authentication failed");
+		ckm->irm->deallocate_flow(con.port_id);
+		return;
+	}
+
+	LOG_INFO("Authentication was successful of KMA %s successfull",
+		 kma_data->con.dest_.ap_name_.c_str());
+
+
+	//Send M_CONNECT_R
+	try{
+		res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+		rina::cdap::getProvider()->send_open_connection_result(kma_data->con,
+								       res,
+								       kma_data->con.auth_,
+								       kma_data->invoke_id);
+	}catch(rina::Exception &e){
+		LOG_ERR("Problems sending CDAP message: %s", e.what());
+		ckm->irm->deallocate_flow(con.port_id);
+		return;
+	}
+}
+
+KMAData * CKMEnrollmentTask::get_kma_data(unsigned int port_id)
+{
+	std::map<std::string, KMAData *>::iterator it;
+
+	for (it = enrolled_kmas.begin(); it != enrolled_kmas.end(); ++it) {
+		if (it->second->con.port_id == port_id)
+			return it->second;
+	}
+
+	return 0;
 }
 
 // Class Central Key Manager
@@ -115,6 +226,16 @@ CentralKeyManager::~CentralKeyManager()
 unsigned int CentralKeyManager::get_address() const
 {
 	return 0;
+}
+
+std::string CentralKeyManager::get_name()
+{
+	return name_;
+}
+
+std::string CentralKeyManager::get_instance()
+{
+	return instance_;
 }
 
 void CentralKeyManager::populate_rib()
