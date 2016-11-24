@@ -30,6 +30,10 @@
 #include <sstream>
 #include <time.h>
 
+#include <openssl/conf.h>
+#include <openssl/evp.h>
+#include <openssl/err.h>
+
 #define RINA_PREFIX "key-management-common"
 #include <librina/logs.h>
 
@@ -248,10 +252,161 @@ void KMRIBDaemon::removeObjRIB(const std::string& fqn)
 	ribd->removeObjRIB(rib, fqn);
 }
 
+// Class Key Manager SDU Protection Handler
+KMSDUProtectionHandler::KMSDUProtectionHandler()
+{
+	secman = 0;
+
+	/* Initialise OpenSSL library */
+	ERR_load_crypto_strings();
+	OpenSSL_add_all_algorithms();
+	OPENSSL_config(NULL);
+}
+
+void KMSDUProtectionHandler::set_security_manager(rina::ISecurityManager * sec_man)
+{
+	secman = sec_man;
+}
+
+/// Right now only supports AES256 encryption in CBC mode. Assumes authentication
+/// policy is SSH2
+void KMSDUProtectionHandler::protect_sdu(rina::ser_obj_t& sdu, int port_id)
+{
+	SSH2SecurityContext * sc = 0;
+	unsigned char * ciphertext = 0;
+	int len = 0;
+	int ciphertext_len = 0;
+	EVP_CIPHER_CTX *ctx = 0;
+
+	sc = static_cast<SSH2SecurityContext *> (secman->get_security_context(port_id));
+	if (!sc || !sc->crypto_tx_enabled)
+		return;
+
+	/* Create and initialise the context */
+	if(!(ctx = EVP_CIPHER_CTX_new())) {
+		LOG_ERR("Problems initialising context");
+		return;
+	}
+
+	/* Initialise the encryption operation. IMPORTANT - ensure you use a key
+	 * and IV size appropriate for your cipher
+	 * In this example we are using 256 bit AES (i.e. a 256 bit key). The
+	 * IV size for *most* modes is the same as the block size. For AES this
+	 * is 128 bits */
+	if(1 != EVP_EncryptInit_ex(ctx,
+				   EVP_aes_256_cbc(),
+				   NULL,
+				   sc->encrypt_key_client.data,
+				   sc->mac_key_client.data)) {
+		LOG_ERR("Problems initialising AES 256 CBC context");
+		return;
+	}
+
+	ciphertext = new unsigned char[1500];
+	/* Provide the message to be encrypted, and obtain the encrypted output.
+	 * EVP_EncryptUpdate can be called multiple times if necessary
+	 */
+	if(1 != EVP_EncryptUpdate(ctx,
+				  ciphertext,
+				  &len,
+				  sdu.message_,
+				  sdu.size_)) {
+		LOG_ERR("Problems encrypting SDU");
+		delete[] ciphertext;
+		return;
+	}
+	ciphertext_len = len;
+
+	/* Finalise the encryption. Further ciphertext bytes may be written at
+	 * this stage.
+	 */
+	if(1 != EVP_EncryptFinal_ex(ctx, ciphertext + len, &len)) {
+		LOG_ERR("Problems finalising encryption");
+		delete[] ciphertext;
+		return;
+	}
+	ciphertext_len += len;
+
+	/* Clean up */
+	EVP_CIPHER_CTX_free(ctx);
+
+	delete[] sdu.message_;
+	sdu.message_ = ciphertext;
+	sdu.size_ = ciphertext_len;
+}
+
+/// Right now only supports AES256 encryption in CBC mode. Assumes authentication
+/// policy is SSH2
+void KMSDUProtectionHandler::unprotect_sdu(rina::ser_obj_t& sdu, int port_id)
+{
+	SSH2SecurityContext * sc = 0;
+	EVP_CIPHER_CTX *ctx = 0;
+	unsigned char * plaintext = 0;
+	int len = 0;
+	int plaintext_len = 0;
+
+	sc = static_cast<SSH2SecurityContext *> (secman->get_security_context(port_id));
+	if (!sc || !sc->crypto_rx_enabled)
+		return;
+
+	/* Create and initialise the context */
+	if(!(ctx = EVP_CIPHER_CTX_new())) {
+		LOG_ERR("Problems initialising context");
+		return;
+	}
+
+	/* Initialise the decryption operation. IMPORTANT - ensure you use a key
+	 * and IV size appropriate for your cipher
+	 * In this example we are using 256 bit AES (i.e. a 256 bit key). The
+	 * IV size for *most* modes is the same as the block size. For AES this
+	 * is 128 bits */
+	if(1 != EVP_DecryptInit_ex(ctx,
+				   EVP_aes_256_cbc(),
+				   NULL,
+				   sc->encrypt_key_client.data,
+				   sc->mac_key_client.data)) {
+		LOG_ERR("Problems initialising AES 256 CBC context");
+		return;
+	}
+
+	plaintext = new unsigned char[1500];
+	/* Provide the message to be decrypted, and obtain the plaintext output.
+	 * EVP_DecryptUpdate can be called multiple times if necessary
+	 */
+	if(1 != EVP_DecryptUpdate(ctx,
+				  plaintext,
+				  &len,
+				  sdu.message_,
+				  sdu.size_)) {
+		LOG_ERR("Problems decrypting sdu");
+		delete[] plaintext;
+		return;
+	}
+	plaintext_len = len;
+
+	/* Finalise the decryption. Further plaintext bytes may be written at
+	 * this stage.
+	 */
+	if(1 != EVP_DecryptFinal_ex(ctx, plaintext + len, &len)) {
+		LOG_ERR("Problems finalising decryption");
+		delete[] plaintext;
+		return;
+	}
+	plaintext_len += len;
+
+	/* Clean up */
+	EVP_CIPHER_CTX_free(ctx);
+
+	delete[] sdu.message_;
+	sdu.message_ = plaintext;
+	sdu.size_ = plaintext_len;
+}
+
 // Class Key Manager Security Manager
 KMSecurityManager::KMSecurityManager(const std::string& creds_location)
 {
 	auth_ps = 0;
+	sdup = 0;
 
 	PolicyParameter parameter;
 	sec_profile.authPolicy.name_ = IAuthPolicySet::AUTH_SSH2;
@@ -285,6 +440,9 @@ KMSecurityManager::~KMSecurityManager()
 
 	if (auth_ps)
 		delete auth_ps;
+
+	if (sdup)
+		delete sdup;
 }
 
 void KMSecurityManager::set_application_process(rina::ApplicationProcess * ap)
@@ -302,6 +460,10 @@ void KMSecurityManager::set_application_process(rina::ApplicationProcess * ap)
 	}
 
 	ribd->set_security_manager(this);
+
+	sdup = new KMSDUProtectionHandler();
+	sdup->set_security_manager(this);
+	rina::cdap::set_sdu_protection_handler(sdup);
 
 	ps = new DummySecurityManagerPs();
 	auth_ps = new AuthSSH2PolicySet(ribd->getProxy(), this);

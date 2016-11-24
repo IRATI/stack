@@ -29,6 +29,7 @@
 #define KM_COMMON_HPP
 
 #include <string>
+#include <librina/cdap_v2.h>
 #include <librina/concurrency.h>
 #include <librina/irm.h>
 #include <librina/rib_v2.h>
@@ -94,6 +95,20 @@ private:
 	rina::rib::RIBDaemonProxy* ribd;
 };
 
+class KMSDUProtectionHandler : public rina::cdap::SDUProtectionHandler
+{
+public:
+	KMSDUProtectionHandler();
+	~KMSDUProtectionHandler() {};
+
+	void set_security_manager(rina::ISecurityManager * sec_man);
+	void protect_sdu(rina::ser_obj_t& sdu, int port_id);
+	void unprotect_sdu(rina::ser_obj_t& sdu, int port_id);
+
+private:
+	rina::ISecurityManager * secman;
+};
+
 class KMSecurityManager: public rina::ISecurityManager
 {
 public:
@@ -107,6 +122,7 @@ public:
         rina::AuthSDUProtectionProfile sec_profile;
 private:
         rina::AuthSSH2PolicySet * auth_ps;
+        KMSDUProtectionHandler * sdup;
 };
 
 class SDUReader : public rina::SimpleThread
