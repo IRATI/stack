@@ -629,6 +629,8 @@ SSH2SecurityContext::SSH2SecurityContext(int session_id,
 	encrypt_policy_config = profile.encryptPolicy;
 	con.port_id = session_id;
 	peer_ap_name = peer_app_name;
+	crypto_rx_enabled = false;
+	crypto_tx_enabled = false;
 
 	dh_peer_pub_key = NULL;
 	dh_state = NULL;
@@ -693,6 +695,8 @@ SSH2SecurityContext::SSH2SecurityContext(int session_id,
 	encrypt_policy_config = profile.encryptPolicy;
 	con.port_id = session_id;
 	peer_ap_name = peer_app_name;
+	crypto_rx_enabled = false;
+	crypto_tx_enabled = false;
 
 	dh_peer_pub_key = NULL;
 	dh_state = NULL;
@@ -1170,6 +1174,7 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::decryption_enabled_server(SSH2Secu
 	}
 
 	LOG_DBG("Decryption enabled for port-id: %d", sc->id);
+	sc->crypto_rx_enabled = true;
 
 	// Prepare message for the peer, send selected algorithms and public key
 	SSH2AuthOptions auth_options;
@@ -1236,6 +1241,7 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::encryption_enabled_server(SSH2Secu
 	}
 
 	LOG_DBG("Encryption enabled for port-id: %d", sc->id);
+	sc->crypto_tx_enabled = true;
 	sc->state = SSH2SecurityContext::WAIT_CLIENT_CHALLENGE;
 
 	encryption_ready_condition.enable_condition();
@@ -1337,6 +1343,8 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::encryption_decryption_enabled_clie
 	}
 
 	LOG_DBG("Encryption and decryption enabled for port-id: %d", sc->id);
+	sc->crypto_rx_enabled = true;
+	sc->crypto_tx_enabled = true;
 
 	//Client authenticates server: generate random challenge, encrypt
 	//with public key and authenticate server

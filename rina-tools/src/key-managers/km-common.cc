@@ -268,7 +268,7 @@ KMSecurityManager::KMSecurityManager(const std::string& creds_location)
 	sec_profile.encryptPolicy.name_ = "default";
 	sec_profile.encryptPolicy.version_ = "1";
 	parameter.name_ = "encryptAlg";
-	parameter.value_ = "AES128";
+	parameter.value_ = "AES256";
 	sec_profile.encryptPolicy.parameters_.push_back(parameter);
 	parameter.name_ = "macAlg";
 	parameter.value_ = "SHA256";
@@ -454,6 +454,11 @@ void KMIPCResourceManager::allocate_flow(const ApplicationProcessNamingInformati
 				         const ApplicationProcessNamingInformation & remote_app_name)
 {
         FlowSpecification qosspec;
+
+        //Request a reliable flow
+        qosspec.maxAllowableGap = 0;
+        qosspec.orderedDelivery = true;
+
         ipcManager->requestFlowAllocation(local_app_name,
         				  remote_app_name,
 					  qosspec);

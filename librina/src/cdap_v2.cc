@@ -575,10 +575,10 @@ class CDAPSessionManager : public CDAPSessionManagerInterface
 class AppCDAPIOHandler : public CDAPIOHandler
 {
  public:
-	AppCDAPIOHandler(){};
+	AppCDAPIOHandler();
 	void send(const cdap_m_t & m_sent,
 		  const cdap_rib::con_handle_t &con);
-	void process_message(const ser_obj_t &message,
+	void process_message(ser_obj_t &message,
 			     unsigned int handle,
 			     cdap_rib::cdap_dest_t cdap_dest);
 
@@ -2902,11 +2902,12 @@ class CDAPProvider : public CDAPProviderInterface
 	void send_cdap_result(const cdap_rib::con_handle_t &con, cdap::cdap_m_t *cdap_m);
 
 	// Process and incoming CDAP message
-	void process_message(const ser_obj_t &message,
+	void process_message(ser_obj_t &message,
 			     unsigned int port,
 			     cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
 
 	void set_cdap_io_handler(CDAPIOHandler * handler);
+	CDAPIOHandler * get_cdap_io_handler();
 
 	CDAPSessionManagerInterface * get_session_manager();
 
@@ -3355,7 +3356,7 @@ void CDAPProvider::send_cdap_result(const cdap_rib::con_handle_t &con,
 	delete cdap_m;
 }
 
-void CDAPProvider::process_message(const ser_obj_t &message,
+void CDAPProvider::process_message(ser_obj_t &message,
 				   unsigned int port,
 				   cdap_rib::cdap_dest_t cdap_dest)
 {
@@ -3384,12 +3385,45 @@ void CDAPProvider::set_cdap_io_handler(CDAPIOHandler * handler)
 	io_handler_->manager_ = manager_;
 }
 
+CDAPIOHandler * CDAPProvider::get_cdap_io_handler()
+{
+	return io_handler_;
+}
+
 CDAPSessionManagerInterface * CDAPProvider::get_session_manager()
 {
 	return manager_;
 }
 
-void AppCDAPIOHandler::process_message(const ser_obj_t &message,
+CDAPIOHandler::CDAPIOHandler()
+{
+	manager_ = 0;
+	callback_ = 0;
+	sdup_ = 0;
+}
+
+CDAPIOHandler::~CDAPIOHandler()
+{
+	if (sdup_) {
+		delete sdup_;
+		sdup_ = 0;
+	}
+}
+
+void CDAPIOHandler::set_sdu_protection_handler(SDUProtectionHandler * handler)
+{
+	if (!handler)
+		return;
+
+	if (sdup_) {
+		delete sdup_;
+		sdup_ = 0;
+	}
+
+	sdup_ = handler;
+}
+
+void AppCDAPIOHandler::process_message(ser_obj_t &message,
 				       unsigned int port,
 				       cdap_rib::cdap_dest_t cdap_dest)
 {
@@ -3399,6 +3433,7 @@ void AppCDAPIOHandler::process_message(const ser_obj_t &message,
 
 	atomic_send_lock_.lock();
 	try {
+		sdup_->unprotect_sdu(message, port);
 		manager_->messageReceived(message, m_rcv, port);
 	} catch (rina::Exception &e) {
 		atomic_send_lock_.unlock();
@@ -3574,6 +3609,11 @@ void AppCDAPIOHandler::invoke_callback(const rina::cdap_rib::con_handle_t& con,
 	}
 }
 
+AppCDAPIOHandler::AppCDAPIOHandler()
+{
+	set_sdu_protection_handler(new SDUProtectionHandler());
+}
+
 void AppCDAPIOHandler::send(const cdap_m_t & m_sent,
 			    const cdap_rib::con_handle_t &con)
 {
@@ -3586,6 +3626,7 @@ void AppCDAPIOHandler::send(const cdap_m_t & m_sent,
 	rina::ScopedLock slock(atomic_send_lock_);
 
 	try{
+		sdup_->protect_sdu(ser_sent_m, con.port_id);
 		rina::ipcManager->writeSDU(con.port_id,
 					   ser_sent_m.message_,
 					   ser_sent_m.size_);
@@ -3823,6 +3864,21 @@ void set_cdap_io_handler(cdap::CDAPIOHandler *handler)
 	}
 
 	iface->set_cdap_io_handler(handler);
+}
+
+void set_sdu_protection_handler(SDUProtectionHandler * handler)
+{
+	if (!inited) {
+		LOG_ERR("CDAP has not been initialized yet");
+		throw Exception("CDAP has not been initialized yet");
+
+	}
+
+	CDAPIOHandler * io_handler = iface->get_cdap_io_handler();
+	if (!io_handler)
+		return;
+
+	io_handler->set_sdu_protection_handler(handler);
 }
 
 void destroy(int port){
