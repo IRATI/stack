@@ -37,9 +37,11 @@ ipcp_SOURCES  =						\
 	resource-allocator.cc	resource-allocator.h	\
 	flow-allocator.cc       flow-allocator.h   	\
 	security-manager.cc				\
-	routing.cc                      \
-	ipc-process.cc          ipc-process.h \
-	normal-ipc-process.cc
+	routing.cc					\
+	ipc-process.cc		ipc-process.h		\
+	normal-ipc-process.cc				\
+	shim-wifi/shim-wifi-ipc-process.cc		\
+	shim-wifi/shim-wifi-ipc-process.h		
 
 ipcpheadersdir = $(includedir)/rinad/ipcp
 ipcpheaders_HEADERS = components.h		\
