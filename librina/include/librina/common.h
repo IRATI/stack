@@ -54,7 +54,7 @@
 namespace rina {
 
 static std::string NORMAL_IPC_PROCESS= "normal-ipc";
-static std::string SHIM_WIFI_IPC_PROCESS_CLIENT= "shim-wifi-client-ipc";
+static std::string SHIM_WIFI_IPC_PROCESS_STA= "shim-wifi-sta-ipc";
 static std::string SHIM_WIFI_IPC_PROCESS_AP= "shim-wifi-ap-ipc";
 
 /**

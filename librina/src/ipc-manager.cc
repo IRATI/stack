@@ -592,7 +592,9 @@ IPCProcessProxy * IPCProcessFactory::create(
 	        throw CreateIPCProcessException();
 	}
 
-	if (difType.compare(NORMAL_IPC_PROCESS) == 0) {
+	if (difType.compare(NORMAL_IPC_PROCESS) == 0 ||
+		difType.compare(SHIM_WIFI_IPC_PROCESS_STA) == 0 ||
+		difType.compare(SHIM_WIFI_IPC_PROCESS_AP) == 0)	{
 		pid = fork();
 		if (pid == 0) {
 			//This is the OS process that has to execute the IPC Process
@@ -610,7 +612,7 @@ IPCProcessProxy * IPCProcessFactory::create(
 				stringToCharArray(_log_level),
 				stringToCharArray(_log_path + "/" + ipcProcessName.processName
 						+ "-" + ipcProcessName.processInstance + ".log"),
-				stringToCharArray(NORMAL_IPC_PROCESS),
+				stringToCharArray(difType),
 				0
 			};
 			char * envp[] =

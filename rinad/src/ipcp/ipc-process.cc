@@ -500,7 +500,7 @@ AbstractIPCProcessImpl* IPCPFactory::createIPCP(const std::string& type,
 						log_level,
 						log_file);
 		return ipcp;
-	} else if(type == rina::SHIM_WIFI_IPC_PROCESS_CLIENT ||
+	} else if(type == rina::SHIM_WIFI_IPC_PROCESS_STA ||
 				type == rina::SHIM_WIFI_IPC_PROCESS_AP) {
 		ipcp = new ShimWifiIPCProcessImpl(type,
 							name,
