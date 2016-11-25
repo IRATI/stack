@@ -79,6 +79,10 @@ public:
         virtual void register_application_response_handler(const rina::RegisterApplicationResponseEvent& event) = 0;
         virtual void unregister_application_response_handler(const rina::UnregisterApplicationResponseEvent& event) = 0;
         virtual void update_dif_config_handler(const rina::UpdateDIFConfigurationRequestEvent& event) = 0;
+        // Cause relevant IPCP components to sync with information
+        // exported by the kernel via sysfs
+        virtual void sync_with_kernel() = 0;
+
 
 protected:
         IPCProcessOperationalState state;
@@ -135,6 +139,7 @@ public:
         virtual void register_application_response_handler(const rina::RegisterApplicationResponseEvent& event);
         virtual void unregister_application_response_handler(const rina::UnregisterApplicationResponseEvent& event);
         virtual void update_dif_config_handler(const rina::UpdateDIFConfigurationRequestEvent& event);
+	virtual void sync_with_kernel(void);
 };
 
 /// Periodically causes the IPCP Daemon to synchronize
@@ -142,7 +147,7 @@ public:
 class KernelSyncTrigger : public rina::SimpleThread {
 public:
 	KernelSyncTrigger(rina::ThreadAttributes * threadAttributes,
-			  IPCProcessImpl * ipcp,
+			  AbstractIPCProcessImpl * ipcp,
 			  unsigned int sync_period);
 	~KernelSyncTrigger() throw() {};
 
@@ -151,7 +156,7 @@ public:
 
 private:
 	bool end;
-	IPCProcessImpl * ipcp;
+	AbstractIPCProcessImpl * ipcp;
 	unsigned int period_in_ms;
 	rina::Sleep sleep;
 };
@@ -177,10 +182,6 @@ public:
         int dispatchSelectPolicySet(const std::string& path,
                                     const std::string& name,
                                     bool& got_in_userspace);
-
-        // Cause relevant IPCP components to sync with information
-        // exported by the kernel via sysfs
-        void sync_with_kernel();
 
         //Event loop handlers
         void dif_registration_notification_handler(const rina::IPCProcessDIFRegistrationEvent& event);
@@ -208,6 +209,7 @@ public:
         void plugin_load_handler(const rina::PluginLoadRequestEvent& event);
         void update_crypto_state_response_handler(const rina::UpdateCryptoStateResponseEvent& event);
         void fwd_cdap_msg_handler(const rina::FwdCDAPMsgRequestEvent& event);
+        void sync_with_kernel(void);
 
 private:
 	KernelSyncTrigger * kernel_sync;
