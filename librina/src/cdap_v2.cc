@@ -3643,6 +3643,10 @@ void AppCDAPIOHandler::send(const cdap_m_t & m_sent,
 
 		throw e;
 	}
+
+	LOG_DBG("Sent CDAP message through port %d\n %s",
+		con.port_id,
+		m_sent.to_string().c_str());
 }
 
 //

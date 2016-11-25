@@ -189,7 +189,7 @@ KeyManagementAgent::KeyManagementAgent(const std::string& creds_folder,
 		   const std::string& api,
 		   const std::string& ckm_apn,
 		   const std::string& ckm_api,
-		   bool  q) : ApplicationProcess(apn, api)
+		   bool  q) : AbstractKM(apn, api)
 {
 	creds_location = creds_folder;
 	dif_name = dif_names.front();
@@ -203,16 +203,16 @@ KeyManagementAgent::KeyManagementAgent(const std::string& creds_folder,
 	secman = new KMSecurityManager(creds_folder);
 	eventm = new SimpleInternalEventManager();
 	irm = new KMIPCResourceManager();
+	kcm = new KeyContainerManager();
 
 	add_entity(eventm);
 	add_entity(ribd);
 	add_entity(irm);
 	add_entity(secman);
 	add_entity(etask);
+	add_entity(kcm);
 
 	populate_rib();
-
-	set_km_irm(irm);
 
 	irm->allocate_flow(ApplicationProcessNamingInformation(apn, api),
 			   ApplicationProcessNamingInformation(ckm_name, ckm_instance));
@@ -220,16 +220,10 @@ KeyManagementAgent::KeyManagementAgent(const std::string& creds_folder,
 
 KeyManagementAgent::~KeyManagementAgent()
 {
-	delete ribd;
-	delete etask;
-	delete secman;
-	delete eventm;
-	delete irm;
-}
-
-unsigned int KeyManagementAgent::get_address() const
-{
-	return 0;
+	if (etask) {
+		delete etask;
+		etask = 0;
+	}
 }
 
 void KeyManagementAgent::populate_rib()
@@ -237,8 +231,8 @@ void KeyManagementAgent::populate_rib()
 	rib::RIBObj * ribo;
 
 	try{
-		ribo = new rib::RIBObj("keyContainers");
-		ribd->addObjRIB("/keyContainers", &ribo);
+		ribo = new KeyContainersRIBObject();
+		ribd->addObjRIB(KeyContainersRIBObject::object_name, &ribo);
 	} catch (rina::Exception & e){
 		LOG_ERR("Problems adding object to RIB");
 	}

@@ -75,7 +75,7 @@ private:
 	CKMEnrollmentState ckm_state;
 };
 
-class KeyManagementAgent: public rina::ApplicationProcess, public KMEventLoop {
+class KeyManagementAgent: public AbstractKM {
 public:
 	KeyManagementAgent(const std::string& creds_folder,
 			   const std::list<std::string>& dif_name,
@@ -85,13 +85,8 @@ public:
 			   const std::string& ckm_api,
 			   bool  quiet);
 	~KeyManagementAgent();
-        unsigned int get_address() const;
 
-        KMRIBDaemon * ribd;
         KMAEnrollmentTask * etask;
-        KMSecurityManager * secman;
-        KMIPCResourceManager * irm;
-        rina::SimpleInternalEventManager * eventm;
 
 private:
         void populate_rib();

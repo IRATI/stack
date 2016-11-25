@@ -162,13 +162,43 @@ private:
 	std::map<int, SDUReader *> sdu_readers;
 };
 
-class KMEventLoop : public AppEventLoop
+struct key_container
+{
+	rina::ser_obj_t private_key;
+	rina::ser_obj_t public_key;
+	std::string key_id;
+	std::string state;
+};
+
+class KeyContainerManager : public rina::ApplicationEntity
 {
 public:
-	KMEventLoop() { kirm = 0; };
-	~KMEventLoop() {};
+	KeyContainerManager();
+	~KeyContainerManager();
 
-	void set_km_irm(KMIPCResourceManager * irm);
+	void set_application_process(rina::ApplicationProcess * ap);
+	int generate_rsa_key_pair(struct key_container * kc);
+	void add_key_container(struct key_container * kc);
+	struct key_container* find_key_container(const std::string& kc);
+	struct key_container* remove_key_container(const std::string& kc);
+	static void encode_key_container_message(const struct key_container& kc,
+				          	 rina::ser_obj_t& result);
+	static void decode_key_container_message(const rina::ser_obj_t &message,
+						 struct key_container& kc);
+
+private:
+	rina::Lockable lock;
+	std::map<std::string, struct key_container *> key_containers;
+};
+
+class AbstractKM : public AppEventLoop, public rina::ApplicationProcess
+{
+public:
+	AbstractKM(const std::string& ap_name,
+		   const std::string& ap_instance);
+	~AbstractKM();
+
+	unsigned int get_address() const;
 	void register_application_response_handler(const rina::RegisterApplicationResponseEvent& event);
 	void unregister_application_response_handler(const rina::UnregisterApplicationResponseEvent& event);
 	void allocate_flow_request_result_handler(const rina::AllocateFlowRequestResultEvent& event);
@@ -176,8 +206,81 @@ public:
 	void deallocate_flow_response_handler(const rina::DeallocateFlowResponseEvent& event);
 	void flow_deallocated_event_handler(const rina::FlowDeallocatedEvent& event);
 
+        KMRIBDaemon * ribd;
+        KMSecurityManager * secman;
+        KMIPCResourceManager * irm;
+        rina::SimpleInternalEventManager * eventm;
+        KeyContainerManager * kcm;
+};
+
+class KMFactory{
+
+public:
+	/**
+	* Create CKM
+	*/
+	static AbstractKM * create_central_key_manager(const std::list<std::string>& dif_names,
+			  	  	  	       const std::string& app_name,
+						       const std::string& app_instance,
+						       const std::string& creds_folder);
+	/**
+	* Create KMA
+	*/
+	static AbstractKM * create_key_management_agent(const std::string& creds_folder,
+			   	   	   	   	const std::list<std::string>& dif_names,
+							const std::string& apn,
+							const std::string& api,
+							const std::string& ckm_apn,
+							const std::string& ckm_api,
+							bool  q);
+	static AbstractKM * get_instance();
+};
+
+
+class KeyContainersRIBObject: public rina::rib::RIBObj {
+public:
+	KeyContainersRIBObject();
+	const std::string& get_class() const {
+		return class_name;
+	};
+
+	const static std::string class_name;
+	const static std::string object_name;
+};
+
+class KeyContainerRIBObject: public rina::rib::RIBObj {
+public:
+	KeyContainerRIBObject(KeyContainerManager * kcm,
+			      const std::string& id);
+	const std::string get_displayable_value() const;
+
+	const std::string& get_class() const {
+		return class_name;
+	};
+
+	bool delete_(const rina::cdap_rib::con_handle_t &con,
+		     const std::string& fqn,
+		     const std::string& class_,
+		     const rina::cdap_rib::filt_info_t &filt,
+		     const int invoke_id,
+		     rina::cdap_rib::res_info_t& res);
+
+	static void create_cb(const rina::rib::rib_handle_t rib,
+			      const rina::cdap_rib::con_handle_t &con,
+			      const std::string& fqn,
+			      const std::string& class_,
+			      const rina::cdap_rib::filt_info_t &filt,
+			      const int invoke_id,
+			      const rina::ser_obj_t &obj_req,
+			      rina::cdap_rib::obj_info_t &obj_reply,
+			      rina::cdap_rib::res_info_t& res);
+
+	const static std::string class_name;
+	const static std::string object_name_prefix;
+
 private:
-	KMIPCResourceManager * kirm;
+	KeyContainerManager * kcm;
+	std::string kc_id;
 };
 
 #endif//KM_COMMON_HPP

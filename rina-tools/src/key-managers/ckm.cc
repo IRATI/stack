@@ -174,6 +174,10 @@ void CKMEnrollmentTask::process_authentication_message(const rina::cdap::CDAPMes
 		ckm->irm->deallocate_flow(con.port_id);
 		return;
 	}
+
+	//Initialise credentials for KMA
+	ckm->initialise_creds_for_kma(kma_data->con.dest_.ap_name_,
+				      kma_data->con);
 }
 
 KMAData * CKMEnrollmentTask::get_kma_data(unsigned int port_id)
@@ -193,7 +197,7 @@ CentralKeyManager::CentralKeyManager(const std::list<std::string>& dif_names,
 		  	  	     const std::string& app_name,
 				     const std::string& app_instance,
 				     const std::string& creds_folder)
-						: ApplicationProcess(app_name, app_instance)
+						: AbstractKM(app_name, app_instance)
 {
 	creds_location = creds_folder;
 	etask = new CKMEnrollmentTask();
@@ -201,31 +205,26 @@ CentralKeyManager::CentralKeyManager(const std::list<std::string>& dif_names,
 	secman = new KMSecurityManager(creds_folder);
 	eventm = new SimpleInternalEventManager();
 	irm = new KMIPCResourceManager();
+	kcm = new KeyContainerManager();
 
 	add_entity(eventm);
 	add_entity(ribd);
 	add_entity(irm);
 	add_entity(secman);
 	add_entity(etask);
+	add_entity(kcm);
 
 	populate_rib();
 
-	set_km_irm(irm);
 	irm->applicationRegister(dif_names, app_name, app_instance);
 }
 
 CentralKeyManager::~CentralKeyManager()
 {
-	delete ribd;
-	delete etask;
-	delete secman;
-	delete eventm;
-	delete irm;
-}
-
-unsigned int CentralKeyManager::get_address() const
-{
-	return 0;
+	if (etask) {
+		delete etask;
+		etask = 0;
+	}
 }
 
 std::string CentralKeyManager::get_name()
@@ -243,9 +242,74 @@ void CentralKeyManager::populate_rib()
 	rib::RIBObj * ribo;
 
 	try{
-		ribo = new rib::RIBObj("keyContainers");
-		ribd->addObjRIB("/keyContainers", &ribo);
+		ribo = new KeyContainersRIBObject();
+		ribd->addObjRIB(KeyContainersRIBObject::object_name, &ribo);
 	} catch (rina::Exception & e){
 		LOG_ERR("Problems adding object to RIB");
 	}
+}
+
+///
+/// Hardcoded to only generate credentials for 3 values of KMA name
+/// It will generate a credential for 1 IPCP for each system
+///
+void CentralKeyManager::initialise_creds_for_kma(const std::string& kma_name,
+						 const cdap_rib::con_handle_t& con)
+{
+	struct key_container * kc = new key_container();
+	rib::RIBObj * kc_ribo = 0;
+	std::stringstream ss;
+
+	if (kma_name == "pristine.local.key.ma")
+		kc->key_id = "A.kmdemo";
+	else if (kma_name == "pristine.local.key.ma2")
+		kc->key_id = "B.kmdemo";
+	else if (kma_name == "pristine.local.key.ma3" )
+		kc->key_id = "C.kmdemo";
+	else {
+		LOG_ERR("Unrecognised KMA, not creating credentials for its IPCPs");
+		return;
+	}
+
+	kcm->generate_rsa_key_pair(kc);
+	kc->state = "Active";
+	kcm->add_key_container(kc);
+
+	//Add new object to the RIB
+	try {
+		kc_ribo = new KeyContainerRIBObject(kcm,
+						    kc->key_id);
+		ss << KeyContainerRIBObject::object_name_prefix << kc->key_id;
+		ribd->addObjRIB(ss.str(), &kc_ribo);
+	} catch (rina::Exception &e) {
+		LOG_ERR("Problems adding object %s to RIB: %s",
+				ss.str().c_str(), e.what());
+	}
+
+	//Create object on KMA
+	try {
+		cdap_rib::flags_t flags;
+		cdap_rib::filt_info_t filt;
+		cdap_rib::obj_info_t obj_info;
+		cdap::StringEncoder encoder;
+
+		obj_info.class_ = KeyContainerRIBObject::class_name;
+		obj_info.name_ = ss.str();
+		obj_info.inst_ = 0;
+		KeyContainerManager::encode_key_container_message(*kc,
+								  obj_info.value_);
+
+		ribd->getProxy()->remote_create(con,
+				    	        obj_info,
+						flags,
+						filt,
+						NULL);
+	} catch (Exception &e) {
+		LOG_ERR("Problems encoding and sending CDAP message to KMA %s: %s",
+			kma_name.c_str(),
+			e.what());
+	}
+
+	LOG_INFO("Generated Key Container with ID %s for Key Management Agent %s",
+		  kc->key_id.c_str(), kma_name.c_str());
 }

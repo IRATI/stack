@@ -36,8 +36,7 @@
 #include "tclap/CmdLine.h"
 
 #include "config.h"
-#include "ckm.h"
-#include "kma.h"
+#include "km-common.h"
 #include "utils.h"
 
 using namespace std;
@@ -52,6 +51,7 @@ int wrapped_main(int argc, char** argv)
         string kma_apn;
         string kma_api;
         list<string> dif_names;
+        AbstractKM * km_instance = 0;
 
         try {
                 TCLAP::CmdLine cmd("key-manager", ' ', PACKAGE_VERSION);
@@ -131,40 +131,37 @@ int wrapped_main(int argc, char** argv)
 
         if (central) {
                 // Central Key Manager
-        	CentralKeyManager ckm(dif_names,
-        			      central_apn,
-				      central_api,
-				      creds_folder);
-
-        	try {
-        		ckm.event_loop();
-        	} catch (rina::Exception &e) {
-        		LOG_ERR("Problems running event loop: %s", e.what());
-        	} catch (std::exception &e1) {
-        		LOG_ERR("Problems running event loop: %s", e1.what());
-        	} catch (...) {
-        		LOG_ERR("Unhandled exception!!!");
-        	}
-
+        	km_instance = KMFactory::create_central_key_manager(dif_names,
+        							    central_apn,
+								    central_api,
+								    creds_folder);
         } else {
                 // Key Management Agent
-        	KeyManagementAgent kma(creds_folder,
-        			       dif_names,
-				       kma_apn,
-				       kma_api,
-				       central_apn,
-				       central_api,
-				       quiet);
-        	try {
-        		kma.event_loop();
-        	} catch (rina::Exception &e) {
-        		LOG_ERR("Problems running event loop: %s", e.what());
-        	} catch (std::exception &e1) {
-        		LOG_ERR("Problems running event loop: %s", e1.what());
-        	} catch (...) {
-        		LOG_ERR("Unhandled exception!!!");
-        	}
+        	km_instance = KMFactory::create_key_management_agent(creds_folder,
+        			       	       	       	       	     dif_names,
+								     kma_apn,
+								     kma_api,
+								     central_apn,
+								     central_api,
+								     quiet);
         }
+
+        if (!km_instance) {
+        	LOG_ERR("Problems creating KM instance, exiting...");
+        	return EXIT_SUCCESS;
+        }
+
+	try {
+		km_instance->event_loop();
+	} catch (rina::Exception &e) {
+		LOG_ERR("Problems running event loop: %s", e.what());
+	} catch (std::exception &e1) {
+		LOG_ERR("Problems running event loop: %s", e1.what());
+	} catch (...) {
+		LOG_ERR("Unhandled exception!!!");
+	}
+
+	delete km_instance;
 
 	LOG_INFO("Exited event loop");
 	return EXIT_SUCCESS;

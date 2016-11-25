@@ -72,7 +72,7 @@ private:
 	CentralKeyManager * ckm;
 };
 
-class CentralKeyManager: public rina::ApplicationProcess, public KMEventLoop
+class CentralKeyManager: public AbstractKM
 {
 public:
 	CentralKeyManager(const std::list<std::string>& dif_names,
@@ -80,15 +80,13 @@ public:
 			  const std::string& app_instance,
 			  const std::string& creds_folder);
         ~CentralKeyManager();
-        unsigned int get_address() const;
         std::string get_name();
         std::string get_instance();
 
+        void initialise_creds_for_kma(const std::string& kma_name,
+        			      const rina::cdap_rib::con_handle_t& con);
+
         CKMEnrollmentTask * etask;
-        KMRIBDaemon * ribd;
-        KMSecurityManager * secman;
-        KMIPCResourceManager * irm;
-        rina::SimpleInternalEventManager * eventm;
 
 private:
         void populate_rib();
