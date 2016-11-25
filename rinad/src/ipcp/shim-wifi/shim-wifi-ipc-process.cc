@@ -165,8 +165,6 @@ void ShimWifiIPCProcessImpl::requestPDUFTEDump() {
 
 void ShimWifiIPCProcessImpl::sync_with_kernel()
 {
-	flow_allocator_->sync_with_kernel();
-	resource_allocator_->sync_with_kernel();
 }
 
 int ShimWifiIPCProcessImpl::dispatchSelectPolicySet(const std::string& path,
@@ -210,6 +208,7 @@ int ShimWifiIPCProcessImpl::dispatchSelectPolicySet(const std::string& path,
         return result;
 }
 
+#if 0
 void ShimWifiIPCProcessImpl::dif_registration_notification_handler(const rina::IPCProcessDIFRegistrationEvent& event)
 {
 	resource_allocator_->get_n_minus_one_flow_manager()->processRegistrationNotification(event);
@@ -430,7 +429,6 @@ void ShimWifiIPCProcessImpl::set_policy_set_param_handler(const rina::SetPolicyS
 
         parse_path(event.path, component, remainder);
 
-#if 0
         // First check if the request should be served by this daemon
         // or should be forwarded to kernelspace
         if (component == "security-manager") {
@@ -485,7 +483,6 @@ void ShimWifiIPCProcessImpl::set_policy_set_param_handler(const rina::SetPolicyS
                         "to the kernel: %s", e.what());
 		rina::extendedIPCManager->setPolicySetParamResponse(event, -1);
 	}
-#endif
 }
 
 void ShimWifiIPCProcessImpl::set_policy_set_param_response_handler(const rina::SetPolicySetParamResponseEvent& event)
@@ -628,6 +625,6 @@ void ShimWifiIPCProcessImpl::fwd_cdap_msg_handler(const rina::FwdCDAPMsgRequestE
 
         return;
 }
-
+#endif
 
 } //namespace rinad

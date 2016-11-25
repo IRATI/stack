@@ -52,11 +52,11 @@ public:
         int dispatchSelectPolicySet(const std::string& path,
                                     const std::string& name,
                                     bool& got_in_userspace);
-
         // Cause relevant IPCP components to sync with information
         // exported by the kernel via sysfs
         void sync_with_kernel();
 
+#if 0
         //Event loop handlers
         void dif_registration_notification_handler(const rina::IPCProcessDIFRegistrationEvent& event);
         void assign_to_dif_request_handler(const rina::AssignToDIFRequestEvent& event);
@@ -83,6 +83,7 @@ public:
         void plugin_load_handler(const rina::PluginLoadRequestEvent& event);
         void update_crypto_state_response_handler(const rina::UpdateCryptoStateResponseEvent& event);
         void fwd_cdap_msg_handler(const rina::FwdCDAPMsgRequestEvent& event);
+#endif
 
 private:
 	KernelSyncTrigger * kernel_sync;
