@@ -418,11 +418,13 @@ public:
 	///
 	/// Process an incoming CDAP message
 	///
-	virtual void process_message(const ser_obj_t &message,
+	virtual void process_message(ser_obj_t &message,
 				     unsigned int port,
 				     cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT) = 0;
 
 	virtual void set_cdap_io_handler(CDAPIOHandler * handler) = 0;
+
+	virtual CDAPIOHandler * get_cdap_io_handler() = 0;
 
 	virtual CDAPSessionManagerInterface * get_session_manager() = 0;
 
@@ -552,22 +554,34 @@ class CDAPSessionManagerInterface
 						  const cdap_rib::res_info_t &res,
 						  int invoke_id) = 0;
 	virtual CDAPInvokeIdManager * get_invoke_id_manager() = 0;
-	virtual const cdap_rib::con_handle_t& get_con_handle(int port_id) = 0;
+	virtual const cdap_rib::con_handle_t & get_con_handle(int port_id) = 0;
+};
+
+//Applies SDU Protection
+class SDUProtectionHandler {
+public:
+	SDUProtectionHandler(){};
+	virtual ~SDUProtectionHandler(){};
+
+	virtual void protect_sdu(ser_obj_t& sdu, int port_id) {};
+	virtual void unprotect_sdu(ser_obj_t& sdu, int port_id) {};
 };
 
 ///Implements handling of CDAP send and receive message operations
 class CDAPIOHandler {
 public:
-	CDAPIOHandler() : manager_(0), callback_(0) {};
-	virtual ~CDAPIOHandler(){};
-	virtual void process_message(const ser_obj_t &message,
+	CDAPIOHandler();
+	virtual ~CDAPIOHandler();
+	virtual void process_message(ser_obj_t &message,
 				     unsigned int port,
 				     cdap_rib::cdap_dest_t cdap_dest) = 0;
 	virtual void send(const cdap_m_t & m_sent,
 			  const cdap_rib::con_handle_t &con) = 0;
+	virtual void set_sdu_protection_handler(SDUProtectionHandler * handler);
 
 	CDAPSessionManagerInterface * manager_;
 	CDAPCallbackInterface * callback_;
+	SDUProtectionHandler * sdup_;
 };
 
 class CDAPMessage {
@@ -744,6 +758,9 @@ extern void init(cdap::CDAPCallbackInterface *callback,
 
 /// Override the CDAP IO handler (required for IPCP)
 extern void set_cdap_io_handler(cdap::CDAPIOHandler *handler);
+
+/// Override the default SDU Protection Handler (which does nothing)
+extern void set_sdu_protection_handler(SDUProtectionHandler * handler);
 
 ///
 /// Get the CDAProvider interface object
