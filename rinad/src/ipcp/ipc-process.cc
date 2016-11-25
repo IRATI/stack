@@ -462,6 +462,11 @@ void LazyIPCProcessImpl::update_dif_config_handler(const rina::UpdateDIFConfigur
 	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
 }
 
+void LazyIPCProcessImpl::sync_with_kernel(void)
+{
+	LOG_IPCP_WARN("Ignoring call to sync_with_kernel");
+}
+
 //Class IPCPFactory
 static AbstractIPCProcessImpl * ipcp = NULL;
 
@@ -498,6 +503,32 @@ IPCProcessImpl* IPCPFactory::getIPCP()
 	}
 
 	return NULL;
+}
+
+//Class KernelSyncTrigger
+KernelSyncTrigger::KernelSyncTrigger(rina::ThreadAttributes * threadAttributes,
+		  	  	     AbstractIPCProcessImpl * ipc_process,
+		  	  	     unsigned int sync_period)
+	: rina::SimpleThread(threadAttributes)
+{
+	end = false;
+	ipcp = ipc_process;
+	period_in_ms = sync_period;
+}
+
+int KernelSyncTrigger::run()
+{
+	while(!end) {
+		sleep.sleepForMili(period_in_ms);
+		ipcp->sync_with_kernel();
+	}
+
+	return 0;
+}
+
+void KernelSyncTrigger::finish()
+{
+	end = true;
 }
 
 } //namespace rinad

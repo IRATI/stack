@@ -37,32 +37,6 @@
 
 namespace rinad {
 
-//Class KernelSyncTrigger
-KernelSyncTrigger::KernelSyncTrigger(rina::ThreadAttributes * threadAttributes,
-		  	  	     IPCProcessImpl * ipc_process,
-		  	  	     unsigned int sync_period)
-	: rina::SimpleThread(threadAttributes)
-{
-	end = false;
-	ipcp = ipc_process;
-	period_in_ms = sync_period;
-}
-
-int KernelSyncTrigger::run()
-{
-	while(!end) {
-		sleep.sleepForMili(period_in_ms);
-		ipcp->sync_with_kernel();
-	}
-
-	return 0;
-}
-
-void KernelSyncTrigger::finish()
-{
-	end = true;
-}
-
 static void parse_path(const std::string& path, std::string& component,
                        std::string& remainder)
 {
