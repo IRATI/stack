@@ -5,7 +5,6 @@
 #
 
 SUBDIRS = 			\
-	c			\
 	java			\
 	rina-api
 
