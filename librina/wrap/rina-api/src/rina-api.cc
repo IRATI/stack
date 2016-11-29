@@ -292,61 +292,12 @@ remote_appl_fill(FlowRequestEvent *fre, char **remote_appl)
 }
 
 /* Data structures used to implement the splitted call
- * rina_flow_wait()/rina_flow_respond(): a table for pending requests,
- * a counter for handles and a lock. */
+ * rina_flow_accept(RINA_F_NORESP)/rina_flow_respond(): a table for
+ * pending requests, a counter for handles and a lock. */
 static map<int, FlowRequestEvent *> pending_fre;
 static int handle_next = 0;
+static map<int, unsigned int> pending_fa;
 rina::Lockable handle_lock;
-
-int
-rina_flow_wait(int fd, char **remote_appl)
-{
-        IPCEvent *event = NULL;
-        int handle = -1;
-
-        if (remote_appl) {
-                *remote_appl = NULL;
-        }
-
-        (void)fd; /* The netlink socket file descriptor is used internally */
-        if (librina_init()) {
-                return -1;
-        }
-
-        try {
-                FlowRequestEvent *fre;
-
-                event = wait_for_event(FLOW_ALLOCATION_REQUESTED_EVENT, ~0U);
-                if (event == NULL) {
-                        /* This is an error, errno already set internally. */
-                        return -1;
-                }
-
-                fre = dynamic_cast<FlowRequestEvent*>(event);
-                assert(fre);
-
-                remote_appl_fill(fre, remote_appl);
-
-                /* Store the event in the pending table. */
-                handle_lock.lock();
-                handle = handle_next ++;
-                if (handle_next < 0) { /* Overflow */
-                        handle_next = 0;
-                }
-                pending_fre[handle] = fre;
-                handle_lock.unlock();
-
-        } catch (rina::Exception &e) {
-#ifdef APIDBG
-                cout << __func__ << ": " << e.what() << endl;
-#endif /* APIDBG */
-                errno = ENXIO; /* IPC Manager Daemon is not running */
-        } catch (...) {
-                errno = ENOMEM;
-        }
-
-        return handle;
-}
 
 int
 rina_flow_respond(int fd, int handle, int response)
@@ -394,13 +345,24 @@ rina_flow_respond(int fd, int handle, int response)
 }
 
 int
-rina_flow_accept(int fd, char **remote_appl)
+rina_flow_accept(int fd, char **remote_appl, struct rina_flow_spec *spec,
+                 unsigned int flags)
 {
         FlowInformation flow;
         IPCEvent *event = NULL;
+        int retfd = -1;
+
+        if (flags & ~RINA_F_NORESP) {
+                errno = EINVAL;
+                return -1;
+        }
 
         if (remote_appl) {
                 *remote_appl = NULL;
+        }
+
+        if (spec) {
+                memset(spec, 0, sizeof(*spec));
         }
 
         (void)fd; /* The netlink socket file descriptor is used internally */
@@ -422,37 +384,92 @@ rina_flow_accept(int fd, char **remote_appl)
 
                 remote_appl_fill(fre, remote_appl);
 
+                if (flags & RINA_F_NORESP) {
+                        int handle;
+
+                        /* Store the event in the pending table. */
+                        handle_lock.lock();
+                        handle = handle_next ++;
+                        if (handle_next < 0) { /* Overflow */
+                                handle_next = 0;
+                        }
+                        pending_fre[handle] = fre;
+                        handle_lock.unlock();
+
+                        return handle;
+                }
+
                 flow = ipcManager->allocateFlowResponse(*fre,
                                                 /* result */ 0,
                                                 /* notifySource */ true,
                                                 /* blocking */ true);
+                retfd = flow.fd;
         } catch (rina::Exception &e) {
 #ifdef APIDBG
                 cout << __func__ << ": " << e.what() << endl;
 #endif /* APIDBG */
                 errno = ENXIO; /* IPC Manager Daemon is not running */
-                flow.fd = -1;
         } catch (...) {
                 errno = ENOMEM;
-                flow.fd = -1;
         }
         delete event;
 
-        return flow.fd;
+        return retfd;
+}
+
+static FlowInformation
+flow_alloc_complete(unsigned int seqnum)
+{
+        AllocateFlowRequestResultEvent *resp;
+        FlowInformation flow;
+        IPCEvent *event;
+
+        event = wait_for_event(ALLOCATE_FLOW_REQUEST_RESULT_EVENT,
+                                         seqnum);
+
+        /*
+         * Note that it may be resp->portId < 0, which means the
+         * flow allocation request was denied. In this case the
+         * commitPendingFlow() function will set flow.fd to -1,
+         * and the same invalid fd is returned to the application,
+         * which is what we want.
+         */
+        resp = dynamic_cast<AllocateFlowRequestResultEvent *>(event);
+
+        try {
+                flow = ipcManager->commitPendingFlow(resp->sequenceNumber,
+                                                     resp->portId,
+                                                     resp->difName);
+                if (flow.fd < 0) {
+                        errno = EPERM;
+                }
+        } catch (...) {
+                delete event;
+                throw;
+        }
+
+        delete event;
+
+        return flow;
 }
 
 int
 rina_flow_alloc(const char *dif_name, const char *local_appl,
-                const char *remote_appl, const struct rina_flow_spec *flowspec)
+                const char *remote_appl, const struct rina_flow_spec *flowspec,
+                unsigned int flags)
 {
         ApplicationProcessNamingInformation local_apni, remote_apni, dif_apni;
         FlowSpecification flowspec_i;
         struct rina_flow_spec spec;
         FlowInformation flow;
         unsigned int seqnum;
-        IPCEvent *event = NULL;
 
         if (librina_init()) {
+                return -1;
+        }
+
+        if (flags & ~RINA_F_NOWAIT) {
+                errno = EINVAL;
                 return -1;
         }
 
@@ -477,8 +494,6 @@ rina_flow_alloc(const char *dif_name, const char *local_appl,
         str2apninfo(string(remote_appl), remote_apni);
 
         try {
-                AllocateFlowRequestResultEvent *resp;
-
                 if (dif_name == NULL) {
                         seqnum = ipcManager->requestFlowAllocation(local_apni,
                                                                    remote_apni,
@@ -492,23 +507,20 @@ rina_flow_alloc(const char *dif_name, const char *local_appl,
                                                                 flowspec_i);
                 }
 
-                event = wait_for_event(ALLOCATE_FLOW_REQUEST_RESULT_EVENT,
-                                       seqnum);
+                if (flags & RINA_F_NOWAIT) {
+                        int wfd = rina_open();
 
-                /*
-                 * Note that it may be resp->portId < 0, which means the
-                 * flow allocation request was denied. In this case the
-                 * commitPendingFlow() function will set flow.fd to -1,
-                 * and the same invalid fd is returned to the application,
-                 * which is what we want.
-                 */
-                resp = dynamic_cast<AllocateFlowRequestResultEvent *>(event);
-                flow = ipcManager->commitPendingFlow(resp->sequenceNumber,
-                                                     resp->portId,
-                                                     resp->difName);
-                if (flow.fd < 0) {
-                        errno = EPERM;
+                        /* Store the seqnum in the pending flow allocation
+                         * table, mapped from a duplicate of the control
+                         * file descriptor. */
+                        handle_lock.lock();
+                        pending_fa[wfd] = seqnum;
+                        handle_lock.unlock();
+
+                        return wfd;
                 }
+
+                flow = flow_alloc_complete(seqnum);
         } catch (rina::Exception &e) {
 #ifdef APIDBG
                 cout << __func__ << ": " << e.what() << endl;
@@ -519,7 +531,40 @@ rina_flow_alloc(const char *dif_name, const char *local_appl,
                 errno = ENOMEM;
                 flow.fd = -1;
         }
-        delete event;
+
+        return flow.fd;
+}
+
+int
+rina_flow_alloc_wait(int wfd)
+{
+        map<int, unsigned int>::iterator mit;
+        FlowInformation flow;
+        unsigned int seqnum;
+
+        handle_lock.lock();
+        mit = pending_fa.find(wfd);
+        if (mit == pending_fa.end()) {
+                handle_lock.unlock();
+                errno = EINVAL;
+                return -1;
+        }
+        seqnum = mit->second;
+        pending_fa.erase(mit);
+        handle_lock.unlock();
+
+        try {
+                flow = flow_alloc_complete(seqnum);
+        } catch (rina::Exception &e) {
+#ifdef APIDBG
+                cout << __func__ << ": " << e.what() << endl;
+#endif /* APIDBG */
+                errno = ENXIO; /* IPC Manager Daemon is not running */
+                flow.fd = -1;
+        } catch (...) {
+                errno = ENOMEM;
+                flow.fd = -1;
+        }
 
         return flow.fd;
 }

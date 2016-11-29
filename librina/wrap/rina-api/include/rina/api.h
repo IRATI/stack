@@ -37,18 +37,22 @@ struct rina_flow_spec {
     uint64_t max_sdu_gap;       /* in SDUs */
     uint64_t avg_bandwidth;     /* in bits per second */
     uint32_t max_delay;         /* in microseconds */
+    uint16_t max_loss;          /* percentage */
     uint32_t max_jitter;        /* in microseconds */
     uint8_t in_order_delivery;  /* boolean */
 
-    uint8_t reserved[39];       /* for future use */
+    uint8_t reserved[37];       /* for future use */
 };
+
+#define RINA_F_NOWAIT       (1 << 0)
+#define RINA_F_NORESP       (1 << 1)
 
 /*
  * Open a file descriptor that can be used to register/unregister names,
  * and to manage incoming flow allocation requests. On success, it
  * returns a file descriptor that can be later provided to rina_register(),
- * rina_unregister(), rina_flow_accept(), rina_flow_wait() and
- * rina_flow_respond(). On error -1 is returned.
+ * rina_unregister(), rina_flow_accept(), and rina_flow_respond().
+ * On error -1 is returned.
  * This function is typically used on the "server side" of applications.
  */
 int rina_open(void);
@@ -75,39 +79,39 @@ int rina_register(int fd, const char *dif_name, const char *local_appl);
 int rina_unregister(int fd, const char *dif_name, const char *local_appl);
 
 /*
- * Accept a flow request arrived on @fd, sending a positive response to
- * the requesting application. On success, the char* pointed by remote_appl,
- * if not NULL, is assigned the name of the requesting application. The
- * memory for the requestor name is allocated by the calle and must be
- * freed by the caller.
+ * Accept an incoming flow request arrived on @fd. If @flags does not contain
+ * RINA_F_NORESP, it also sends a positive response to the requesting
+ * application; otherwise, the response (positive or negative) can be sent by
+ * a subsequent call to the rina_flow_respond().
+ * On success, the char* pointed by remote_appl, if not NULL, is assigned the
+ * name of the requesting application. The memory for the requestor name is
+ * allocated by the callee and must be freed by the caller. Moreover, if
+ * @spec is not NULL, the referenced data structure is filled with the QoS
+ * specification specified by the requesting application.
  *
- * A call to rina_flow_accept(fd, &x) is functionally equivalent to:
- *     h = rina_flow_wait(sfd, &x);
+ * If @flags does not contain RINA_F_NORESP, on success it returns a file
+ * descriptor that can be subsequently used with standard I/O system calls
+ * (write(), read(), select(), ...) to exchange SDUs on the flow and
+ * synchronize.
+ *
+ * If @flags does contain RINA_F_NORESP, on success a positive number is
+ * returned as an handle to be passed to subsequent call to
+ * rina_flow_respond().
+ *
+ * A call to rina_flow_accept(fd, &x, flags & ~RINA_F_NORESP) is functionally
+ * equivalent to:
+ *     h = rina_flow_accept(sfd, &x, flags | RINA_F_NORESP);
  *     cfd = rina_flow_respond(sfd, h, 0);
  *
- * On success, it returns a file descriptor that can be subsequently used
- * with standard I/O system calls (write(), read(), select(), ...) to
- * exchange SDUs on the flow and synchronize. On error -1 is returned,
- * with the errno code properly set.
- *
+ * On error -1 is returned, with the errno code properly set.
  */
-int rina_flow_accept(int fd, char **remote_appl);
-
-/*
- * Receive a flow allocation request arrived on @fd, without accepting it
- * or issuing a negative verdict. On success, the char* pointed by remote_appl,
- * if not NULL, is assigned the name of the requesting application. The
- * memory for the requestor name is allocated by the calle and must be
- * freed by the caller.
- *
- * On error, -1 is returned. On success, a positive number is returned as
- * an handle to be passed to subsequent call to rina_flow_respond().
- */
-int rina_flow_wait(int fd, char **remote_appl);
+int rina_flow_accept(int fd, char **remote_appl, struct rina_flow_spec *spec,
+                     unsigned int flags);
 
 /*
  * Emit a verdict on the flow allocation request identified by @handle,
- * that was previously received on @fd. A zero @response indicates a positive
+ * that was previously received on @fd by calling rina_flow_accept() with
+ * the RINA_F_NORESP flag set. A zero @response indicates a positive
  * response, which completes the flow allocation procedure. A non-zero
  * @response indicates that the flow allocation request is denied. In both
  * cases @response is sent to the requesting application to inform it
@@ -120,23 +124,47 @@ int rina_flow_wait(int fd, char **remote_appl);
 int rina_flow_respond(int fd, int handle, int response);
 
 /*
- * Allocate a flow towards the destination application called @remote_appl,
- * using @local_appl as a source application name. If @flowspec is not NULL,
- * it specifies the QoS parameters to be used for the flow, if the flow
- * allocation request is successful. If @flowspec is NULL, an
+ * Issue a flow allocation reuqest towards the destination application called
+ * @remote_appl, using @local_appl as a source application name. If @flowspec
+ * is not NULL, it specifies the QoS parameters to be used for the flow, if the
+ * flow allocation request is successful. If @flowspec is NULL, an
  * implementation-specific default QoS will be assumed (which typically
  * corresponds to a best-effort QoS).
  * If @dif_name is not NULL the system may look for @remote_appl in a DIF
  * called @dif_name. However, the @dif_name argument is only advisory and
  * the system is free to ignore it and take an autonomous decision.
  *
- * On success, it returns a file descriptor that can be subsequently used
- * with standard I/O system calls (write(), read(), select(), ...) to
- * exchange SDUs on the flow and synchronize. On error -1 is returned,
- * with the errno code properly set.
+ * If @flags specifies RINA_F_NOWAIT, a call to this function does not wait
+ * until the completion of the flow allocation procedure; on success, it just
+ * returns a "control" file descriptor that can be subsequently fed to
+ * rina_flow_alloc_wait() to wait for completion and obtain the flow I/O file
+ * descriptor. Moreover, the control file descriptor can be used with poll(),
+ * select() and similar.
+ *
+ * If @ flags does not specify RINA_F_NOWAIT, a call to this function waits
+ * until the flow allocation procedure is complete. On success, it returns
+ * a file descriptor that can be subsequently used with standard I/O system
+ * calls (write(), read(), select(), ...) to exchange SDUs on the flow and
+ * synchronize.
+ *
+ * On error -1 is returned, with the errno code properly set.
  */
 int rina_flow_alloc(const char *dif_name, const char *local_appl,
-              const char *remote_appl, const struct rina_flow_spec *flowspec);
+                    const char *remote_appl,
+                    const struct rina_flow_spec *flowspec, unsigned int flags);
+
+/*
+ * Wait for the completion of a flow allocation procedure previosuly initiated
+ * with a call to rina_flow_alloc() with the RINA_F_NOWAIT flag set. The @wfd
+ * file descriptor must match the one returned by rina_flow_alloc().
+ *
+ * On success, it returns a file descriptor that can be subsequently used with
+ * standard I/O system calls (write(), read(), select(), ...) to exchange SDUs
+ * on the flow and synchronize.
+ *
+ * On error -1 is returned, with the errno code properly set.
+ */
+int rina_flow_alloc_wait(int wfd);
 
 /*
  * Fills in the provided @spec with an implementation-specific default QoS,
