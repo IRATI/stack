@@ -297,7 +297,7 @@ remote_appl_fill(FlowRequestEvent *fre, char **remote_appl)
 static map<int, FlowRequestEvent *> pending_fre;
 static int handle_next = 0;
 static map<int, unsigned int> pending_fa;
-rina::Lockable handle_lock;
+rina::Lockable split_lock;
 
 int
 rina_flow_respond(int fd, int handle, int response)
@@ -312,17 +312,17 @@ rina_flow_respond(int fd, int handle, int response)
         }
 
         /* Look up the event in the pending table. */
-        handle_lock.lock();
+        split_lock.lock();
         mit = pending_fre.find(handle);
         if (mit == pending_fre.end()) {
-                handle_lock.unlock();
+                split_lock.unlock();
                 errno = EINVAL;
                 return -1;
         }
         fre = mit->second;
         mit->second = NULL;
         pending_fre.erase(mit);
-        handle_lock.unlock();
+        split_lock.unlock();
 
         try {
                 flow = ipcManager->allocateFlowResponse(*fre,
@@ -362,7 +362,7 @@ rina_flow_accept(int fd, char **remote_appl, struct rina_flow_spec *spec,
         }
 
         if (spec) {
-                memset(spec, 0, sizeof(*spec));
+                rina_flow_spec_default(spec);
         }
 
         (void)fd; /* The netlink socket file descriptor is used internally */
@@ -384,17 +384,27 @@ rina_flow_accept(int fd, char **remote_appl, struct rina_flow_spec *spec,
 
                 remote_appl_fill(fre, remote_appl);
 
+                if (spec) {
+                        /* Convert fre->flowSpecification (FlowSpecification)
+                         *           --> spec (struct rina_flow_spec) */
+                        spec->max_sdu_gap = fre->flowSpecification.maxAllowableGap;
+                        spec->avg_bandwidth = fre->flowSpecification.averageBandwidth;
+                        spec->max_delay = fre->flowSpecification.delay;
+                        spec->max_jitter = fre->flowSpecification.jitter;
+                        spec->in_order_delivery = fre->flowSpecification.orderedDelivery;
+                }
+
                 if (flags & RINA_F_NORESP) {
                         int handle;
 
                         /* Store the event in the pending table. */
-                        handle_lock.lock();
+                        split_lock.lock();
                         handle = handle_next ++;
                         if (handle_next < 0) { /* Overflow */
                                 handle_next = 0;
                         }
                         pending_fre[handle] = fre;
-                        handle_lock.unlock();
+                        split_lock.unlock();
 
                         return handle;
                 }
@@ -483,7 +493,8 @@ rina_flow_alloc(const char *dif_name, const char *local_appl,
                 flowspec = &spec;
         }
 
-        /* Convert flowspec --> flowspec_i */
+        /* Convert flowspec (struct rina_flow_spec) -->
+         *         flowspec_i (FlowSpecification) */
         flowspec_i.maxAllowableGap = flowspec->max_sdu_gap;
         flowspec_i.averageBandwidth = flowspec->avg_bandwidth;
         flowspec_i.delay = flowspec->max_delay;
@@ -513,9 +524,9 @@ rina_flow_alloc(const char *dif_name, const char *local_appl,
                         /* Store the seqnum in the pending flow allocation
                          * table, mapped from a duplicate of the control
                          * file descriptor. */
-                        handle_lock.lock();
+                        split_lock.lock();
                         pending_fa[wfd] = seqnum;
-                        handle_lock.unlock();
+                        split_lock.unlock();
 
                         return wfd;
                 }
@@ -542,16 +553,16 @@ rina_flow_alloc_wait(int wfd)
         FlowInformation flow;
         unsigned int seqnum;
 
-        handle_lock.lock();
+        split_lock.lock();
         mit = pending_fa.find(wfd);
         if (mit == pending_fa.end()) {
-                handle_lock.unlock();
+                split_lock.unlock();
                 errno = EINVAL;
                 return -1;
         }
         seqnum = mit->second;
         pending_fa.erase(mit);
-        handle_lock.unlock();
+        split_lock.unlock();
 
         try {
                 flow = flow_alloc_complete(seqnum);
