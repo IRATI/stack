@@ -31,6 +31,7 @@
 #include <time.h>
 #include <signal.h>
 #include <time.h>
+#include <cerrno>
 
 #define RINA_PREFIX     "rina-cdap-echo-server"
 #include <librina/logs.h>

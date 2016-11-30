@@ -32,6 +32,7 @@
 #include <sstream>
 #include <cassert>
 #include <unistd.h>
+#include <cerrno>
 
 #define RINA_PREFIX     "cdap-echo-client"
 #include <librina/logs.h>

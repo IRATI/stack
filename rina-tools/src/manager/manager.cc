@@ -29,6 +29,7 @@
 #include <iostream>
 
 #include <cassert>
+#include <cerrno>
 #define RINA_PREFIX     "manager"
 #include <librina/logs.h>
 #include <librina/cdap_v2.h>

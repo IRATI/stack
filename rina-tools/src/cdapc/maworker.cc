@@ -27,6 +27,7 @@
 //
 
 #include <iostream>
+#include <cerrno>
 #include <encoders/CDAP.pb.h> // For CDAPMessage
 #define RINA_PREFIX     "ma-worker"
 #include <librina/logs.h>

@@ -31,7 +31,7 @@
 #include <time.h>
 #include <sstream>
 #include <cstring>
-#include <errno.h>
+#include <cerrno>
 
 #define RINA_PREFIX     "rina-echo-app"
 #include <librina/logs.h>

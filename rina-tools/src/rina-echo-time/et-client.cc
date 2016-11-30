@@ -37,7 +37,7 @@
 #include <unistd.h>
 #include <limits.h>
 #include <iomanip>
-#include <errno.h>
+#include <cerrno>
 
 #define RINA_PREFIX "rina-echo-time"
 #include <librina/ipc-api.h>
