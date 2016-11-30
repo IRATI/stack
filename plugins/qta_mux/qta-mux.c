@@ -49,6 +49,7 @@ struct qta_queue {
 	struct list_head list_q_entry;
 	struct list_head list_q_qos;
 	uint_t key;
+	struct rfifo * queue;
 };
 
 struct config_pshaper {
@@ -63,7 +64,6 @@ struct config_q_qos {
         uint_t           th;
         uint_t           drop_prob;
         qos_id_t         qos_id;
-        uint_t           skip_prob;
         uint_t           key;
 	uint_t           rate;
 	uint_t           prb_max_length;
@@ -91,7 +91,6 @@ struct q_qos {
         uint_t           dropped;
         uint_t           handled;
         uint_t           key;
-        uint_t           skip_prob;
         struct qta_queue * qta_q;
         struct pshaper   ps;
 	struct robject robj;
@@ -101,7 +100,7 @@ struct qta_queue_set {
         struct list_head queues;
         struct list_head list;
         port_id_t        port_id;
-        ssize_t          occupation;
+        unsigned int     occupation;
 	struct robject robj;
 };
 
@@ -139,9 +138,6 @@ static ssize_t qos_queue_attr_show(struct robject * robj,
 	if (strcmp(robject_attr_name(attr), "urgency") == 0) {
 		return sprintf(buf, "%u\n", q->key);
 	}
-	if (strcmp(robject_attr_name(attr), "skip_probability") == 0) {
-		return sprintf(buf, "%u\n", q->skip_prob);
-	}
 	if (strcmp(robject_attr_name(attr), "queued_pdus") == 0) {
 		return sprintf(buf, "%u\n", q->ps.length);
 	}
@@ -175,7 +171,7 @@ RINA_ATTRS(qta_qset, port_id, occupation);
 RINA_KTYPE(qta_qset);
 RINA_SYSFS_OPS(qos_queue);
 RINA_ATTRS(qos_queue, queued_pdus, drop_pdus, total_pdus, urgency,
-		skip_probability, threshold, absolute_threshold,
+		threshold, absolute_threshold,
 		drop_probability, qos_id);
 RINA_KTYPE(qos_queue);
 
@@ -187,7 +183,8 @@ static struct qta_queue * qta_queue_create(uint_t key)
 		LOG_ERR("Could not allocate memory for QTA queue");
 		return NULL;
 	}
-	tmp->key = key;
+	tmp->key   = key;
+        tmp->queue = rfifo_create();
 	INIT_LIST_HEAD(&tmp->list_q_entry);
 	INIT_LIST_HEAD(&tmp->list_q_qos);
 	INIT_LIST_HEAD(&tmp->list);
@@ -200,6 +197,7 @@ static void qta_queue_destroy(struct qta_queue * queue)
 	struct q_entry *pos, *next;
 
 	list_del(&queue->list);
+	rfifo_destroy(queue->queue, (void (*)(void *)) pdu_destroy);
 	list_for_each_entry_safe(pos, next, &queue->list_q_entry, next) {
 		pdu_destroy(pos->data);
 		list_del(&pos->next);
@@ -225,7 +223,6 @@ static struct q_qos * q_qos_create(qos_id_t id,
                                    uint_t th,
                                    uint_t drop_prob,
                                    uint_t key,
-                                   uint_t skip_prob,
                                    uint_t abs_max_length,
                                    uint_t prb_max_length,
                                    uint_t max_backlog,
@@ -249,7 +246,6 @@ static struct q_qos * q_qos_create(qos_id_t id,
         tmp->dropped   = 0;
         tmp->handled   = 0;
         tmp->key       = key;
-        tmp->skip_prob = skip_prob;
         tmp->ps.config.abs_max_length = abs_max_length;
         tmp->ps.config.prb_max_length = prb_max_length;
         tmp->ps.config.max_backlog    = max_backlog;
@@ -277,7 +273,11 @@ static struct config_q_qos * config_q_qos_create(qos_id_t id)
                 return NULL;
         }
 
-        tmp->qos_id    = id;
+        tmp->qos_id         = id;
+        tmp->rate           = 0;
+        tmp->abs_max_length = 0;
+        tmp->prb_max_length = 0;
+        tmp->max_backlog    = 0;
         INIT_LIST_HEAD(&tmp->list);
 
         return tmp;
@@ -494,7 +494,7 @@ struct pdu * qta_rmt_dequeue_policy(struct rmt_ps	  *ps,
         struct qta_queue *     entry;
         struct pdu *           ret_pdu;
         struct qta_queue_set * qset;
-        struct q_entry *pos, *tmp=NULL;
+        struct q_entry *pos;
 
         if (!ps || !n1_port || !n1_port->rmt_ps_queues) {
                 LOG_ERR("Wrong input parameters for "
@@ -514,20 +514,11 @@ struct pdu * qta_rmt_dequeue_policy(struct rmt_ps	  *ps,
                         i = i % NORM_PROB;
                         pos = dequeue_qta_q_entry(entry);
                         qqos = pos->qqos;
-                        if (qqos->skip_prob <= i) {
-                        	ret_pdu = dequeue_entry(pos, qset);
+                	ret_pdu = dequeue_entry(pos, qset);
 
-                        	return ret_pdu;
-                        }
-        		tmp = pos;
+                	return ret_pdu;
         	}
 	}
-
-        if (tmp) {
-        	ret_pdu = dequeue_entry(tmp, qset);
-
-                return ret_pdu;
-        }
 
         return NULL;
 }
@@ -540,7 +531,6 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
         struct q_qos *         q;
         int                    i;
         qos_id_t               qos_id;
-        struct qta_queue * qta_q;
         const struct pci * pci;
         struct q_entry * entry;
         uint_t mlength;
@@ -570,7 +560,7 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
         mbacklog = q->ps.config.max_backlog * q->ps.config.rate;
         q->ps.length++;
 
-        if (q->ps.length > mlength) {
+        if (mlength && q->ps.length > mlength) {
         	LOG_INFO("Length exceeded for QoS id %u, dropping PDU", qos_id);
                 pdu_destroy(pdu);
                 q->ps.length--;
@@ -580,7 +570,7 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 
         w = (int) buffer_length(pdu_buffer_get_ro(pdu)) + (int) pci_length(pci);
         q->ps.backlog += w;
-        if (q->ps.backlog > mbacklog) {
+        if (mbacklog && q->ps.backlog > mbacklog) {
         	LOG_INFO("Backlog exceeded for QoS id %u, dropping PDU", qos_id);
                 q->dropped++;
                 q->ps.length--;
@@ -622,8 +612,7 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
         entry->qqos = q;
         entry->w    = w;
         INIT_LIST_HEAD(&entry->next);
-        qta_q = q->qta_q;
-        list_add(&entry->next, &qta_q->list_q_entry);
+        list_add(&entry->next, &q->qta_q->list_q_entry);
 
         qset->occupation++;
 
@@ -705,7 +694,6 @@ void * qta_rmt_q_create_policy(struct rmt_ps      *ps,
                                      pos->th,
                                      pos->drop_prob,
                                      pos->key,
-                                     pos->skip_prob,
                                      pos->abs_max_length,
                                      pos->prb_max_length,
                                      pos->max_backlog,
@@ -794,17 +782,6 @@ static int qta_mux_ps_set_policy_set_param_priv(struct qta_mux_data * data,
                         return 0;
                 }
                 LOG_ERR("Could not parse urgency class for QoS %u", qos_id);
-                return -1;
-        }
-
-        if (strcmp(name + offset, "skip-prob") == 0) {
-                ret = kstrtoint(value, 10, &int_value);
-                if (!ret) {
-                	LOG_DBG("Skip probability %u", int_value);
-                        conf_qos->skip_prob = int_value;
-                        return 0;
-                }
-                LOG_ERR("Could not parse skip probability for QoS %u", qos_id);
                 return -1;
         }
 
