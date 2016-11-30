@@ -292,60 +292,66 @@ const std::string BaseNetlinkMessage::operationCodeToString(RINANetlinkOperation
 	case RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE:
 		result = "42_UPDATE_CRYPTO_STATE_RESP";
 		break;
+	case RINA_C_IPCP_ADDRESS_CHANGE_REQUEST:
+		result = "43_ADDRESS_CHANGE_REQ";
+		break;
 	case RINA_C_IPCM_IPC_PROCESS_INITIALIZED:
-		result = "43_IPCP_INIT";
+		result = "44_IPCP_INIT";
 		break;
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST:
-		result = "44_APP_ALLOC_FLOW_REQ";
+		result = "45_APP_ALLOC_FLOW_REQ";
 		break;
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT:
-		result = "45_APP_ALLOC_FLOW_REQ_RES";
+		result = "46_APP_ALLOC_FLOW_REQ_RES";
 		break;
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED:
-		result = "46_APP_ALLOC_FLOW_REQ_ARR";
+		result = "47_APP_ALLOC_FLOW_REQ_ARR";
 		break;
 	case RINA_C_APP_ALLOCATE_FLOW_RESPONSE:
-		result = "47_APP_ALLOC_FLOW_RESP";
+		result = "48_APP_ALLOC_FLOW_RESP";
 		break;
 	case RINA_C_APP_DEALLOCATE_FLOW_REQUEST:
-		result = "48_APP_DEALLOC_FLOW_REQ";
+		result = "49_APP_DEALLOC_FLOW_REQ";
 		break;
 	case RINA_C_APP_DEALLOCATE_FLOW_RESPONSE:
-		result = "49_APP_DEALLOC_FLOW_RESP";
+		result = "50_APP_DEALLOC_FLOW_RESP";
 		break;
 	case RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION:
-		result = "50_APP_FLOW_DEALLOC_NOT";
+		result = "51_APP_FLOW_DEALLOC_NOT";
 		break;
 	case RINA_C_APP_REGISTER_APPLICATION_REQUEST:
-		result = "51_APP_REG_REQ";
+		result = "52_APP_REG_REQ";
 		break;
 	case RINA_C_APP_REGISTER_APPLICATION_RESPONSE:
-		result = "52_APP_REG_RESP";
+		result = "53_APP_REG_RESP";
 		break;
 	case RINA_C_APP_UNREGISTER_APPLICATION_REQUEST:
-		result = "53_APP_UNREG_REQ";
+		result = "54_APP_UNREG_REQ";
 		break;
 	case RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE:
-		result = "54_APP_UNREG_RESP";
+		result = "55_APP_UNREG_RESP";
 		break;
 	case RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION:
-		result = "55_APP_REG_CANC_NOT";
+		result = "56_APP_REG_CANC_NOT";
 		break;
 	case RINA_C_APP_GET_DIF_PROPERTIES_REQUEST:
-		result = "56_GET_DIF_PROPS_REQ";
+		result = "57_GET_DIF_PROPS_REQ";
 		break;
 	case RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE:
-		result = "57_GET_DIF_PROPS_RESP";
+		result = "58_GET_DIF_PROPS_RESP";
 		break;
 	case RINA_C_IPCM_PLUGIN_LOAD_REQUEST:
-		result = "58_PLUGIN_LOAD_REQ";
+		result = "59_PLUGIN_LOAD_REQ";
 		break;
 	case RINA_C_IPCM_PLUGIN_LOAD_RESPONSE:
-		result = "59_PLUGIN_LOAD_RESP";
+		result = "60_PLUGIN_LOAD_RESP";
 		break;
 	case RINA_C_IPCM_FWD_CDAP_MSG_REQUEST:
-		result = "60_FWD_CDAP_MSG_REQ";
+		result = "61_FWD_CDAP_MSG_REQ";
 		break;
+	case RINA_C_IPCM_FWD_CDAP_MSG_RESPONSE:
+		result = "62_FWD_CDAP_MSG_RESP";
+	 	break;
 	default:
 		result = "Unknown operation";
 	}
@@ -2023,6 +2029,20 @@ IPCEvent* IPCPUpdateCryptoStateResponseMessage::toIPCEvent()
                         				      port_id,
                         				      getSequenceNumber());
         return event;
+}
+
+/// CLASS IPCPAddressChangeRequestMessage
+IPCPAddressChangeRequestMessage::IPCPAddressChangeRequestMessage()
+	: BaseNetlinkMessage(RINA_C_IPCP_ADDRESS_CHANGE_REQUEST)
+{
+	new_address = 0;
+	old_address = 0;
+	use_new_timeout = 0;
+	deprecate_old_timeout = 0;
+}
+
+IPCEvent* IPCPAddressChangeRequestMessage::toIPCEvent() {
+        return 0;
 }
 
 }

@@ -48,48 +48,54 @@ void DefaultPDUFTGeneratorPs::routingTableUpdated(const std::list<rina::RoutingT
 	LOG_IPCP_DBG("Got %d entries in the routing table", rt.size());
 	//Compute PDU Forwarding Table
 	std::list<rina::PDUForwardingTableEntry *> pduft;
+	std::list<rina::PDUForwardingTableEntry *>::iterator pfit;
+	std::list<rina::PDUForwardingTableEntry *>::iterator pfjt;
 	std::list<rina::RoutingTableEntry *>::const_iterator it;
 	std::list<rina::NHopAltList>::const_iterator jt;
-	std::list<unsigned int>::const_iterator kt;
+	std::list<rina::IPCPNameAddresses>::const_iterator kt;
+	std::list<unsigned int>::iterator at;
 	rina::PDUForwardingTableEntry * entry;
+	rina::PDUForwardingTableEntry * candidate;
+	bool increment = true;
 	INMinusOneFlowManager * n1fm;
 	int port_id = 0;
 
 	n1fm = res_alloc->get_n_minus_one_flow_manager();
 
 	for (it = rt.begin(); it!= rt.end(); it++) {
-		entry = new rina::PDUForwardingTableEntry();
-		entry->address = (*it)->address;
-		entry->qosId = (*it)->qosId;
+		for (at = (*it)->destination.addresses.begin(); at != (*it)->destination.addresses.end(); ++at) {
+			entry = new rina::PDUForwardingTableEntry();
+			entry->address = *at;
+			entry->qosId = (*it)->qosId;
 
-		LOG_IPCP_DBG("Processing entry for destination %u",
-			     (*it)->address);
+			LOG_IPCP_DBG("Processing entry for destination %u", *at);
 
-		for (jt = (*it)->nextHopAddresses.begin();
-				jt != (*it)->nextHopAddresses.end(); jt++) {
-			rina::PortIdAltlist portid_altlist;
+			for (jt = (*it)->nextHopNames.begin();
+					jt != (*it)->nextHopNames.end(); jt++) {
+				rina::PortIdAltlist portid_altlist;
 
-			for (kt = jt->alts.begin();
-					kt != jt->alts.end(); kt++) {
-				port_id = n1fm->
-					  getManagementFlowToNeighbour(*kt);
-				if (port_id == -1)
-					continue;
+				for (kt = jt->alts.begin();
+						kt != jt->alts.end(); kt++) {
+					port_id = n1fm->
+							getManagementFlowToNeighbour(kt->name);
+					if (port_id == -1)
+						continue;
 
-				LOG_IPCP_DBG("NHOP %u --> N-1 port-id: %u",
-					     *kt, port_id);
-				portid_altlist.add_alt(port_id);
+					LOG_IPCP_DBG("NHOP %s --> N-1 port-id: %u",
+							kt->name.c_str(), port_id);
+					portid_altlist.add_alt(port_id);
+				}
+
+				if (portid_altlist.alts.size()) {
+					entry->portIdAltlists.push_back(portid_altlist);
+				}
 			}
 
-			if (portid_altlist.alts.size()) {
-				entry->portIdAltlists.push_back(portid_altlist);
+			if (entry->portIdAltlists.size()) {
+				pduft.push_back(entry);
+			} else {
+				delete entry;
 			}
-		}
-
-		if (entry->portIdAltlists.size()) {
-			pduft.push_back(entry);
-		} else {
-			delete entry;
 		}
 	}
 

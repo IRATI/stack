@@ -245,7 +245,7 @@ bool test_directory_forwarding_table_entry() {
 	rina::DirectoryForwardingTableEntry recovered_obj;
 
 	dfte.address_ = 232;
-	dfte.timestamp_ = 5265235;
+	dfte.seqnum_ = 5265235;
 	dfte.ap_naming_info_.processName = "test";
 	dfte.ap_naming_info_.processInstance = "1";
 	dfte.ap_naming_info_.entityName = "ae";
@@ -258,7 +258,7 @@ bool test_directory_forwarding_table_entry() {
 		return false;
 	}
 
-	if (dfte.timestamp_ != recovered_obj.timestamp_) {
+	if (dfte.seqnum_ != recovered_obj.seqnum_) {
 		return false;
 	}
 
@@ -295,14 +295,14 @@ bool test_directory_forwarding_table_entry_list() {
 	std::list<rina::DirectoryForwardingTableEntry> recovered_obj;
 
 	dfte1.address_ = 232;
-	dfte1.timestamp_ = 5265235;
+	dfte1.seqnum_ = 5265235;
 	dfte1.ap_naming_info_.processName = "test";
 	dfte1.ap_naming_info_.processInstance = "1";
 	dfte1.ap_naming_info_.entityName = "ae";
 	dfte1.ap_naming_info_.entityInstance = "1";
 	dfte_list.push_back(dfte1);
 	dfte2.address_ = 2312;
-	dfte2.timestamp_ = 52265235;
+	dfte2.seqnum_ = 52265235;
 	dfte2.ap_naming_info_.processName = "atest";
 	dfte2.ap_naming_info_.processInstance = "2";
 	dfte2.ap_naming_info_.entityName = "adfs";
@@ -587,24 +587,34 @@ bool test_nhopt_entry() {
     rina::RoutingTableEntry entry;
     rina::RoutingTableEntry recovered_obj;
     rina::ser_obj_t encoded_obj;
+    rina::IPCPNameAddresses ipcpna;
 
-    entry.address = 25;
+    entry.destination.addresses.push_back(25);
     entry.qosId = 3;
     entry.cost = 10;
     rina::NHopAltList list1;
-    list1.alts.push_back(12);
-    list1.alts.push_back(43);
-    entry.nextHopAddresses.push_back(list1);
+    ipcpna.addresses.push_back(12);
+    list1.alts.push_back(ipcpna);
+    ipcpna.addresses.clear();
+    ipcpna.addresses.push_back(43);
+    list1.alts.push_back(ipcpna);
+    ipcpna.addresses.clear();
+    entry.nextHopNames.push_back(list1);
     rina::NHopAltList list2;
-    list2.alts.push_back(42);
-    list2.alts.push_back(124);
-    list2.alts.push_back(982);
-    entry.nextHopAddresses.push_back(list2);
+    ipcpna.addresses.push_back(42);
+    list2.alts.push_back(ipcpna);
+    ipcpna.addresses.clear();
+    ipcpna.addresses.push_back(124);
+    list2.alts.push_back(ipcpna);
+    ipcpna.addresses.clear();
+    ipcpna.addresses.push_back(982);
+    list2.alts.push_back(ipcpna);
+    entry.nextHopNames.push_back(list2);
 
     encoder.encode(entry, encoded_obj);
     encoder.decode(encoded_obj, recovered_obj);
 
-    if (entry.address != recovered_obj.address)
+    if (entry.destination.addresses.front() != recovered_obj.destination.addresses.front())
         return false;
 
     if (entry.qosId != recovered_obj.qosId)
@@ -613,7 +623,7 @@ bool test_nhopt_entry() {
     if (entry.cost != recovered_obj.cost)
         return false;
 
-    if (entry.nextHopAddresses.size() != recovered_obj.nextHopAddresses.size())
+    if (entry.nextHopNames.size() != recovered_obj.nextHopNames.size())
         return false;
 
     LOG_IPCP_INFO("Routing Table Entry Encoder tested successfully");

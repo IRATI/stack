@@ -2619,6 +2619,7 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
         .set_policy_set_param      = NULL,
         .select_policy_set         = NULL,
         .update_crypto_state	   = NULL,
+	.address_change            = NULL,
         .dif_name		   = tcp_udp_dif_name
 };
 

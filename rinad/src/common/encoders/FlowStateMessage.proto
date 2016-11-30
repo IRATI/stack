@@ -1,11 +1,13 @@
 package rina.messages;
 option optimize_for = LITE_RUNTIME;
 
-message flowStateObject_t{  			// Contains the information of a flow state object
-	optional uint64 address = 1;			// The address of the IPC Process
-	optional uint64 neighbor_address = 2;  	// The address of the neighbor IPC Process
-    optional uint32 cost = 3;	            // The cost associated to the N-1 flow
-	optional uint32 sequence_number = 4; 	// A sequence number to be able to discard old information
-	optional bool state = 5;                //Tells if the N-1 flow is up or down
-	optional uint32 age = 6; 				// Age of this FSO (in seconds)
+message flowStateObject_t {  			    // Contains the information of a flow state object
+	optional string name = 1;				// The name of the IPC Process
+	repeated uint64 addresses = 2;		    // The active addresses of the IPC Process
+	optional string neighbor_name = 3;  	// The name of the neighbor IPC Process
+	repeated uint64 neighbor_addresses = 4; // The neighbor IPC Process active addresses
+    optional uint32 cost = 5;	            // The cost associated to the N-1 flow
+	optional uint32 sequence_number = 6; 	// A sequence number to be able to discard old information
+	optional bool state = 7;                // Tells if the N-1 flow is up or down
+	optional uint32 age = 8; 				// Age of this FSO (in seconds)
 }

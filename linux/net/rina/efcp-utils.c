@@ -119,6 +119,24 @@ struct efcp * efcp_imap_find(struct efcp_imap * map,
 }
 EXPORT_SYMBOL(efcp_imap_find);
 
+int efcp_imap_address_change(struct efcp_imap *  map,
+			     address_t address)
+{
+        struct efcp_imap_entry * entry;
+        struct hlist_node *      tmp;
+        int                      bucket;
+
+        ASSERT(map);
+
+        hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
+        	efcp_src_addr_set(entry->value, address);
+        }
+
+        return 0;
+
+}
+EXPORT_SYMBOL(efcp_imap_address_change);
+
 int efcp_imap_update(struct efcp_imap * map,
                      cep_id_t           key,
                      struct efcp *      value)

@@ -751,6 +751,7 @@ static int notify_ipcp_conn_create_req(void *             data,
         }
 
         kipcm = (struct kipcm *) data;
+
         msg   = rnl_msg_create(RNL_MSG_ATTRS_CONN_CREATE_REQUEST);
         if (!msg)
                 goto fail;
@@ -858,6 +859,7 @@ static int notify_ipcp_conn_create_arrived(void *             data,
         }
 
         kipcm = (struct kipcm *) data;
+
         msg = rnl_msg_create(RNL_MSG_ATTRS_CONN_CREATE_ARRIVED);
         if (!msg)
                 goto fail;
@@ -1571,6 +1573,78 @@ out:
         return 0;
 }
 
+static int notify_ipcp_address_change(void *             data,
+                                      struct sk_buff *   buff,
+                                      struct genl_info * info)
+{
+        struct kipcm * kipcm = default_kipcm;
+        struct rnl_ipcp_address_change_req_msg_attrs * attrs;
+        struct rnl_msg * msg;
+        struct ipcp_instance * ipc_process;
+        ipc_process_id_t ipc_id = 0;
+        int retval = 0;
+
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
+
+        LOG_INFO("Address change pointers: KIPCM %pK, default KIPCM %pK",
+        	 data, kipcm);
+
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
+
+        msg = rnl_msg_create(RNL_MSG_ATTRS_ADDRESS_CHANGE_REQUEST);
+        if (!msg) {
+                retval = -1;
+                goto out;
+        }
+
+        attrs = msg->attrs;
+
+        if (rnl_parse_msg(info, msg)) {
+                retval = -1;
+                goto out;
+        }
+
+        ipc_id      = msg->header.dst_ipc_id;
+        ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
+        if (!ipc_process) {
+                LOG_ERR("IPC process %d not found", ipc_id);
+                retval = -1;
+                goto out;
+        }
+        LOG_DBG("Found IPC Process with id %d", ipc_id);
+
+        ASSERT(ipc_process->ops);
+        if (ipc_process->ops->address_change) {
+                retval = ipc_process->ops->address_change(ipc_process->data,
+                                			  attrs->new_address,
+                                			  attrs->old_address,
+							  attrs->use_new_timeout,
+							  attrs->deprecate_old_timeout);
+                if (retval) {
+                        LOG_ERR("Address change operation failed");
+                }
+        } else {
+                retval = -1;
+                LOG_ERR("IPC process %d does not support changing addresses",
+                	ipc_id);
+        }
+
+        LOG_DBG("Address change request served");
+out:
+        rnl_msg_destroy(msg);
+
+        if (retval)
+        	LOG_ERR("Error processing address change request");
+
+        return 0;
+}
+
 static int netlink_handlers_unregister(struct rnl_set * rnls)
 {
         int retval = 0;
@@ -1628,8 +1702,10 @@ static int netlink_handlers_register(struct kipcm * kipcm)
                 notify_ipcp_select_policy_set;
         kipcm_handlers[RINA_C_IPCP_SELECT_POLICY_SET_REQUEST]      =
                 notify_ipcp_select_policy_set;
-        kipcm_handlers[RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST]      =
+        kipcm_handlers[RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST]    =
                 notify_ipcp_update_crypto_state;
+        kipcm_handlers[RINA_C_IPCP_ADDRESS_CHANGE_REQUEST]    	   =
+                notify_ipcp_address_change;
 
         for (i = 1; i < RINA_C_MAX; i++) {
                 if (kipcm_handlers[i] != NULL) {

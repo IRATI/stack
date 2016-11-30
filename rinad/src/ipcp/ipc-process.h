@@ -162,7 +162,7 @@ private:
 };
 
 /// Implementation of the normal IPC Process Daemon
-class IPCProcessImpl: public IPCProcess, public LazyIPCProcessImpl {
+class IPCProcessImpl: public IPCProcess, public LazyIPCProcessImpl, public rina::InternalEventListener  {
 public:
         IPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
                        unsigned short id,
@@ -179,6 +179,13 @@ public:
         unsigned int get_address() const;
         void set_address(unsigned int address);
         void requestPDUFTEDump();
+        void expire_old_address(void);
+        unsigned int get_old_address();
+        unsigned int get_active_address();
+        void activate_new_address(void);
+        bool check_address_is_mine(unsigned int address);
+        void eventHappened(rina::InternalEvent * event);
+        unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name);
         int dispatchSelectPolicySet(const std::string& path,
                                     const std::string& name,
                                     bool& got_in_userspace);
@@ -212,7 +219,13 @@ public:
         void sync_with_kernel(void);
 
 private:
-	KernelSyncTrigger * kernel_sync;
+        void subscribeToEvents();
+        void addressChange(rina::AddressChangeEvent * event);
+        KernelSyncTrigger * kernel_sync;
+        unsigned int old_address;
+        bool address_change_period;
+        bool use_new_address;
+        rina::Timer timer;
 };
 
 class IPCPFactory{

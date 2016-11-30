@@ -77,7 +77,7 @@ public:
 	bool operator<(const ApplicationProcessNamingInformation &other) const;
 	bool operator>=(const ApplicationProcessNamingInformation &other) const;
 
-	std::string getProcessNamePlusInstance();
+	const std::string getProcessNamePlusInstance() const;
 	const std::string getEncodedString() const;
 	const std::string toString() const;
 
@@ -679,6 +679,8 @@ public:
         void add_supporting_dif(const ApplicationProcessNamingInformation& supporting_dif);
         unsigned int get_address() const;
         void set_address(unsigned int address);
+        unsigned int get_old_address() const;
+        void set_old_address(unsigned int address);
         unsigned int get_average_rtt_in_ms() const;
         void set_average_rtt_in_ms(unsigned int average_rtt_in_ms);
         bool is_enrolled() const;
@@ -702,8 +704,11 @@ public:
         /// The names of all the supporting DIFs of this neighbor
         std::list<ApplicationProcessNamingInformation> supporting_difs_;
 
-        /// The address
+        /// The current address
         unsigned int address_;
+
+        /// The old address, after an address change if any
+         unsigned int old_address_;
 
         /// Tells if it is enrolled or not
         bool enrolled_;

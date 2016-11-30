@@ -343,6 +343,23 @@ rnl_ipcp_update_crypto_state_req_msg_attrs_create(void)
         return tmp;
 }
 
+static struct rnl_ipcp_address_change_req_msg_attrs *
+rnl_ipcp_address_change_req_msg_attrs_create(void)
+{
+        struct rnl_ipcp_address_change_req_msg_attrs * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if  (!tmp)
+                return NULL;
+
+        tmp->new_address = 0;
+        tmp->old_address = 0;
+        tmp->use_new_timeout = 0;
+        tmp->deprecate_old_timeout = 0;
+
+        return tmp;
+}
+
 struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type)
 {
         struct rnl_msg * tmp;
@@ -477,6 +494,14 @@ struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type)
                         return NULL;
                 }
                 break;
+        case RNL_MSG_ATTRS_ADDRESS_CHANGE_REQUEST:
+        	tmp->attrs =
+        		rnl_ipcp_address_change_req_msg_attrs_create();
+        	if (!tmp->attrs) {
+        		rkfree(tmp);
+        		return NULL;
+        	}
+        	break;
         default:
                 LOG_ERR("Unknown attributes type %d", tmp->attr_type);
                 rkfree(tmp);
@@ -772,6 +797,20 @@ rnl_ipcp_update_crypto_state_msg_attrs_destroy(
         return 0;
 }
 
+static int
+rnl_ipcp_address_change_msg_attrs_destroy(
+		struct rnl_ipcp_address_change_req_msg_attrs * attrs)
+{
+        if (!attrs)
+                return -1;
+
+        rkfree(attrs);
+
+        LOG_DBG("rnl_ipcp_address_change_req_msg_attrs destroyed correctly");
+
+        return 0;
+}
+
 int rnl_msg_destroy(struct rnl_msg * msg)
 {
         if (!msg)
@@ -822,7 +861,10 @@ int rnl_msg_destroy(struct rnl_msg * msg)
                 break;
         case RNL_MSG_ATTRS_UPDATE_CRYPTO_STATE_REQUEST:
         	rnl_ipcp_update_crypto_state_msg_attrs_destroy(msg->attrs);
-                break;
+        	break;
+        case RNL_MSG_ATTRS_ADDRESS_CHANGE_REQUEST:
+        	rnl_ipcp_address_change_msg_attrs_destroy(msg->attrs);
+        	break;
         default:
                 break;
         }
@@ -2822,6 +2864,30 @@ rnl_parse_ipcp_update_crypto_state_req_msg(
         return 0;
 }
 
+static int
+rnl_parse_ipcp_address_change_req_msg(
+                struct genl_info * info,
+                struct rnl_ipcp_address_change_req_msg_attrs * msg_attrs)
+{
+        if (info->attrs[IACR_ATTR_NEW_ADDRESS])
+                msg_attrs->new_address =
+                        nla_get_u32(info->attrs[IACR_ATTR_NEW_ADDRESS]);
+
+        if (info->attrs[IACR_ATTR_OLD_ADDRESS])
+                msg_attrs->old_address =
+                        nla_get_u32(info->attrs[IACR_ATTR_OLD_ADDRESS]);
+
+        if (info->attrs[IACR_ATTR_USE_NEW_TIMEOUT])
+                msg_attrs->use_new_timeout =
+                        nla_get_u32(info->attrs[IACR_ATTR_USE_NEW_TIMEOUT]);
+
+        if (info->attrs[IACR_ATTR_DEPRECATE_OLD_TIMEOUT])
+                msg_attrs->deprecate_old_timeout =
+                        nla_get_u32(info->attrs[IACR_ATTR_DEPRECATE_OLD_TIMEOUT]);
+
+        return 0;
+}
+
 int rnl_parse_msg(struct genl_info * info,
                   struct rnl_msg *   msg)
 {
@@ -2957,6 +3023,11 @@ int rnl_parse_msg(struct genl_info * info,
                                                                msg->attrs) < 0)
                         goto fail;
                 break;
+        case RINA_C_IPCP_ADDRESS_CHANGE_REQUEST:
+        	if (rnl_parse_ipcp_address_change_req_msg(info,
+        			msg->attrs) < 0)
+        		goto fail;
+        	break;
         default:
                 goto fail;
                 break;

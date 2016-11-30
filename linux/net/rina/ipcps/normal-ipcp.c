@@ -44,6 +44,7 @@
 #include "sdu.h"
 #include "sdup.h"
 #include "efcp-utils.h"
+#include "rds/rtimer.h"
 
 /*  FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
@@ -74,9 +75,15 @@ struct ipcp_instance_data {
         struct rmt *            rmt;
         struct sdup *           sdup;
         address_t               address;
+        address_t		old_address;
         struct mgmt_data *      mgmt_data;
         spinlock_t              lock;
         struct list_head        list;
+        /* Timers required for the address change procedure */
+        struct {
+        	struct rtimer * use_naddress;
+                struct rtimer * kill_oaddress;
+        } timers;
 };
 
 enum normal_flow_state {
@@ -669,7 +676,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         	return -1;
         }
 
-        if (rmt_address_set(data->rmt, data->address)) {
+        if (rmt_address_add(data->rmt, data->address)) {
 		LOG_ERR("Could not set local Address to RMT");
                 return -1;
 	}
@@ -1195,6 +1202,63 @@ int normal_update_crypto_state(struct ipcp_instance_data * data,
 				        port_id);
 }
 
+int normal_address_change(struct ipcp_instance_data * data,
+			  address_t new_address,
+			  address_t old_address,
+			  timeout_t use_new_address_t,
+			  timeout_t deprecate_old_address_t)
+{
+	LOG_INFO("Need to change address from %u to %u",
+		 old_address, new_address);
+
+	if (!data) {
+		LOG_ERR("Bogus data passed");
+		return -1;
+	}
+
+	data->old_address = old_address;
+	data->address = new_address;
+	rmt_address_add(data->rmt, new_address);
+
+	/* Set timer to start advertising new address in EFCP connections
+	and MGMT PDUs (give time to routing updates to converge) */;
+	rtimer_restart(data->timers.use_naddress, use_new_address_t);
+	/* Set timer to stop accepting old address in RMT */
+	rtimer_restart(data->timers.kill_oaddress, deprecate_old_address_t);
+
+	return 0;
+}
+
+/* Runs the New Address Timer function */
+static void tf_use_naddress(void * data)
+{
+        struct ipcp_instance_data * inst_data;
+
+        LOG_INFO("Running Use New Address Timer...");
+        inst_data = (struct ipcp_instance_data *) data;
+        if (!inst_data) {
+                LOG_ERR("No IPCP instance data to work with");
+                return;
+        }
+
+        efcp_address_change(inst_data->efcpc, inst_data->address);
+}
+
+/* Runs the Kill old address Timer function */
+static void tf_kill_oaddress(void * data)
+{
+        struct ipcp_instance_data * inst_data;
+
+        LOG_INFO("Running Kill Old Address Timer...");
+        inst_data = (struct ipcp_instance_data *) data;
+        if (!inst_data) {
+                LOG_ERR("No IPCP instance data to work with");
+                return;
+        }
+
+        rmt_address_remove(inst_data->rmt, inst_data->old_address);
+}
+
 static struct ipcp_instance_ops normal_instance_ops = {
         .flow_allocate_request     = NULL,
         .flow_allocate_response    = NULL,
@@ -1240,6 +1304,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .enable_write              = enable_write,
         .disable_write             = disable_write,
         .update_crypto_state       = normal_update_crypto_state,
+	.address_change            = normal_address_change,
         .dif_name		   = normal_dif_name
 };
 
@@ -1393,6 +1458,11 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
+        instance->data->timers.use_naddress = rtimer_create(tf_use_naddress,
+                               				    instance->data);
+        instance->data->timers.kill_oaddress = rtimer_create(tf_kill_oaddress,
+        						     instance->data);
+
         INIT_LIST_HEAD(&instance->data->flows);
         INIT_LIST_HEAD(&instance->data->list);
         spin_lock_init(&instance->data->lock);
@@ -1449,6 +1519,11 @@ static int normal_destroy(struct ipcp_factory_data * data,
         mgmt_data_destroy(tmp->mgmt_data);
         name_fini(&tmp->name);
         name_fini(&tmp->dif_name);
+
+        if (tmp->timers.use_naddress)
+                rtimer_destroy(tmp->timers.use_naddress);
+        if (tmp->timers.kill_oaddress)
+                rtimer_destroy(tmp->timers.kill_oaddress);
 
         rkfree(tmp);
         rkfree(instance);

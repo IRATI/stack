@@ -832,20 +832,30 @@ struct DTPInformation {
 	const std::string toString() const;
 };
 
+struct IPCPNameAddresses {
+	/* The name of the IPCP */
+	std::string name;
+
+	/* The active addresses of the IPCP */
+	std::list<unsigned int> addresses;
+
+	std::string get_addresses_as_string() const;
+};
+
 struct NHopAltList {
 	/** Next hop and its alternates */
-	std::list<unsigned int> alts;
+	std::list<IPCPNameAddresses> alts;
 
 	NHopAltList() { }
-	NHopAltList(unsigned int x) { alts.push_back(x); }
-	void add_alt(unsigned int x) { alts.push_back(x); }
+	NHopAltList(const IPCPNameAddresses& x) { alts.push_back(x); }
+	void add_alt(const IPCPNameAddresses& x) { alts.push_back(x); }
 };
 
 /// Models an entry of the routing table
 class RoutingTableEntry {
 public:
-	/** The destination address */
-	unsigned int address;
+	/** The destination IPCP name and addresses */
+	IPCPNameAddresses destination;
 
 	/** The qos-id */
 	unsigned int qosId;
@@ -853,8 +863,8 @@ public:
 	/** The cost */
 	unsigned int cost;
 
-	/** The next hop addresses */
-	std::list<NHopAltList> nextHopAddresses;
+	/** The next hop names and addresses */
+	std::list<NHopAltList> nextHopNames;
 
 	RoutingTableEntry();
 	const std::string getKey() const;
@@ -1048,6 +1058,15 @@ public:
         /// Request the kernel to update the state of cryptographic protection policies
         unsigned int updateCryptoState(const CryptoState& state);
 
+        /// Inform the kernel that the IPCP address has changed and trigger
+        /// the address change procedure: i) Accept PDUs with new address,
+        /// ii) start using it after a timeout and iii) deprecate old address
+        /// after another timeout
+        unsigned int changeAddress(unsigned int new_address,
+                		   unsigned int old_address,
+        			   unsigned int use_new_t,
+        			   unsigned int deprecate_old_t);
+
         /**
          * Request the Kernel IPC Process to modify a policy-set-related
          * parameter.
@@ -1125,8 +1144,8 @@ public:
 	void set_ap_naming_info(const ApplicationProcessNamingInformation& ap_naming_info);
 	unsigned int get_address() const;
 	void set_address(unsigned int address);
-	long get_timestamp() const;
-	void set_timestamp(long timestamp);
+	long get_seqnum() const;
+	void set_seqnum(unsigned int seqnum);
 #endif
 
 	/**
@@ -1142,8 +1161,8 @@ public:
 	/// The address of the IPC process it is currently attached to
 	unsigned int address_;
 
-	/// A timestamp for this entry
-	long timestamp_;
+	/// A sequence number for this entry
+	unsigned int seqnum_;
 };
 
 /// Defines a whatevercast name (or a name of a set of names).

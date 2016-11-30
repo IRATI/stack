@@ -272,6 +272,13 @@ static struct nla_policy iucsr_policy[IUCSR_ATTR_MAX + 1] = {
         [IUCSR_ATTR_CRYPT_STATE] 	   = NLA_INIT_NESTED,
 };
 
+static struct nla_policy iacr_policy[IACR_ATTR_MAX + 1] = {
+	[IACR_ATTR_NEW_ADDRESS] 	   = NLA_INIT_U32,
+        [IACR_ATTR_OLD_ADDRESS] 	   = NLA_INIT_U32,
+	[IACR_ATTR_USE_NEW_TIMEOUT] 	   = NLA_INIT_U32,
+	[IACR_ATTR_DEPRECATE_OLD_TIMEOUT]  = NLA_INIT_U32,
+};
+
 #define DECL_NL_OP(COMMAND, POLICY) {           \
                 .cmd    = COMMAND,              \
                         .flags  = 0,            \
@@ -324,7 +331,8 @@ static struct genl_ops nl_ops[] = {
         DECL_NL_OP(RINA_C_IPCP_SELECT_POLICY_SET_REQUEST, isps_policy),
         DECL_NL_OP(RINA_C_IPCP_SELECT_POLICY_SET_RESPONSE, NULL),
         DECL_NL_OP(RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST, iucsr_policy),
-        DECL_NL_OP(RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE, NULL)
+        DECL_NL_OP(RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE, NULL),
+	DECL_NL_OP(RINA_C_IPCP_ADDRESS_CHANGE_REQUEST, iacr_policy)
 };
 
 int rnl_handler_register(struct rnl_set *   set,

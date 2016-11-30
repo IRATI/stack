@@ -164,14 +164,16 @@ NextHopTEntryRIBObj::NextHopTEntryRIBObj(rina::RoutingTableEntry* entry)
 const std::string NextHopTEntryRIBObj::get_displayable_value() const
 {
 	std::stringstream ss;
-	ss << "Destination address: " << rt_entry->address
+	ss << "Destination name: " << rt_entry->destination.name
+	   << "; Addresses: " << rt_entry->destination.get_addresses_as_string()
 	   << "; QoS-id: " << rt_entry->qosId
 	   << "; Cost: " << rt_entry->cost
 	   << "; Next hop addresses: ";
 	std::list<rina::NHopAltList>::iterator it;
-	for (it = rt_entry->nextHopAddresses.begin(); it !=
-			rt_entry->nextHopAddresses.end(); ++it) {
-		ss << it->alts.front() << "/ ";
+	for (it = rt_entry->nextHopNames.begin(); it !=
+			rt_entry->nextHopNames.end(); ++it) {
+		ss << it->alts.front().name << " "
+		   << it->alts.front().get_addresses_as_string() << "/ ";
 	}
 	return ss.str();
 }
@@ -325,12 +327,12 @@ std::list<int> NMinusOneFlowManager::getNMinusOneFlowsToNeighbour(unsigned int a
 	return result;
 }
 
-int NMinusOneFlowManager::getManagementFlowToNeighbour(unsigned int address) {
+int NMinusOneFlowManager::getManagementFlowToNeighbour(const std::string& name) {
 	const std::list<rina::Neighbor*> neighbors =
 			ipc_process_->enrollment_task_->get_neighbor_pointers();
 	for (std::list<rina::Neighbor*>::const_iterator it = neighbors.begin();
 			it != neighbors.end(); ++it) {
-		if ((*it)->address_ == address) {
+		if ((*it)->name_.processName == name) {
 			return (*it)->underlying_port_id_;
 		}
 	}
@@ -632,7 +634,7 @@ void ResourceAllocator::set_pduft_entries(const std::list<rina::PDUForwardingTab
 			ribObj = new PDUFTEntryRIBObj(*it2);
 			rib_daemon_->addObjRIB(obj_name, &ribObj);
 		} catch (rina::Exception &e) {
-			LOG_WARN("Problems adding RIB obj: %s", e.what());
+			//LOG_WARN("Problems adding RIB obj: %s", e.what());
 			continue;
 		}
 
