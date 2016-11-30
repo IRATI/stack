@@ -44,6 +44,7 @@
 #include <iomanip>
 #include <cstring>
 #include <fcntl.h>
+#include <stdint.h>
 
 #include "librina/concurrency.h"
 #include "librina/exceptions.h"
