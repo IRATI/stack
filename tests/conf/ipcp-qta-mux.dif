@@ -16,6 +16,7 @@
     "qosCubes" : [ {
 	 "name" : "unreliablewithflowcontrol",
          "id" : 1,
+	 "delay" : 1,
          "partialDelivery" : false,
          "orderedDelivery" : true,
          "efcpPolicies" : {
@@ -45,6 +46,7 @@
        }, {
 	 "name" : "unreliablewithflowcontrol-2",
          "id" : 2,
+	 "delay" : 2,
          "partialDelivery" : false,
          "orderedDelivery" : true,
          "efcpPolicies" : {
@@ -74,6 +76,7 @@
        }, {
 	 "name" : "unreliablewithflowcontrol-3",
          "id" : 3,
+	 "delay" : 3,
          "partialDelivery" : false,
          "orderedDelivery" : true,
          "efcpPolicies" : {
@@ -103,6 +106,7 @@
        }, {
 	 "name" : "unreliablewithflowcontrol-4",
          "id" : 4,
+	 "delay" : 4,
          "partialDelivery" : false,
          "orderedDelivery" : true,
          "efcpPolicies" : {
