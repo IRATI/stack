@@ -542,7 +542,7 @@ void IPCManager::initIodev(FlowInformation *flow, int portId)
         }
 
         iodata.port_id = (uint32_t)portId;
-        if (ioctl(flow->fd, 0 /* TODO */, &iodata)) {
+        if (ioctl(flow->fd, 1 /* TODO */, &iodata)) {
                 std::ostringstream oss;
                 oss << "Cannot bind port id " << iodata.port_id <<
                         " on /dev/irati [" << strerror(errno) << "]";
