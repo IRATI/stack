@@ -48,11 +48,6 @@ struct iodev_priv {
         port_id_t       port_id;
 };
 
-/* Data structure passed along with ioctl */
-struct irati_iodev_ctldata {
-        uint32_t port_id;
-};
-
 static ssize_t
 iodev_write(struct file *f, const char __user *buffer, size_t size,
             loff_t *ppos)
@@ -191,6 +186,13 @@ iodev_release(struct inode *inode, struct file *f)
         return 0;
 }
 
+/* Data structure passed along with ioctl */
+struct irati_iodev_ctldata {
+        uint32_t port_id;
+};
+
+#define IRATI_FLOW_BIND _IOW(0xAF, 0x00, struct irati_iodev_ctldata)
+
 static long
 iodev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 {
@@ -198,6 +200,11 @@ iodev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
         struct iodev_priv *priv = f->private_data;
         void __user *p = (void __user *)arg;
         struct irati_iodev_ctldata data;
+
+        if (cmd != IRATI_FLOW_BIND) {
+                LOG_ERR("Invalid cmd %u", cmd);
+                return -EINVAL;
+        }
 
         if (copy_from_user(&data, p, sizeof(data))) {
                 return -EFAULT;
@@ -227,6 +234,14 @@ iodev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
         return 0;
 }
 
+#ifdef CONFIG_COMPAT
+static long
+iodev_compat_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
+{
+	return iodev_ioctl(f, cmd, (unsigned long)compat_ptr(arg));
+}
+#endif
+
 static const struct file_operations irati_fops = {
         .owner          = THIS_MODULE,
         .release        = iodev_release,
@@ -235,6 +250,9 @@ static const struct file_operations irati_fops = {
         .read           = iodev_read,
         .poll           = iodev_poll,
         .unlocked_ioctl = iodev_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl   = iodev_compat_ioctl,
+#endif
         .llseek         = noop_llseek,
 };
 

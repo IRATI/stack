@@ -45,6 +45,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include <stdint.h>
+#include <asm/ioctl.h>
 
 #include "librina/concurrency.h"
 #include "librina/exceptions.h"
@@ -766,6 +767,7 @@ public:
 struct irati_iodev_ctldata {
         uint32_t port_id;
 };
+#define IRATI_FLOW_BIND _IOW(0xAF, 0x00, struct irati_iodev_ctldata)
 
 /**
  * Initialize librina providing the local Netlink port-id where this librina
