@@ -9,9 +9,9 @@ rinaperf_SOURCES = rinaperf.c
 rinaperf_LDADD = $(LIBRINA_API_LIBS)
 rinaperf_CPPFLAGS = $(LIBRINA_API_CFLAGS)
 
-rina_rr_tool_SOURCES = rina-rr-tool.c
-rina_rr_tool_LDADD = $(LIBRINA_API_LIBS)
-rina_rr_tool_CPPFLAGS = $(LIBRINA_API_CFLAGS)
+rina_echo_SOURCES = rina-echo.c
+rina_echo_LDADD = $(LIBRINA_API_LIBS)
+rina_echo_CPPFLAGS = $(LIBRINA_API_CFLAGS)
 
-bin_PROGRAMS += rinaperf rina-rr-tool
-AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += rinaperf rina-rr-tool
+bin_PROGRAMS += rinaperf rina-echo
+AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += rinaperf rina-echo
