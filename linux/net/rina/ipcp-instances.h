@@ -251,7 +251,8 @@ struct ipcp_instance_ops {
         /* Takes the ownership of the passed SDU */
         int  (* sdu_write)(struct ipcp_instance_data * data,
                            port_id_t                   id,
-                           struct sdu *                sdu);
+                           struct sdu *                sdu,
+                           bool                        blocking);
 
         cep_id_t (* connection_create)(struct ipcp_instance_data * data,
                                        port_id_t                   port_id,

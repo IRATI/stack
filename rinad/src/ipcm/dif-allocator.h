@@ -37,15 +37,18 @@ public:
 	DIFAllocator(const std::string& folder);
 	virtual ~DIFAllocator(void);
         bool lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
-        			       rina::ApplicationProcessNamingInformation& result);
+        			       rina::ApplicationProcessNamingInformation& result,
+				       const std::list<std::string>& supported_difs);
         void update_directory_contents();
 
 private:
+        void print_directory_contents();
+
         std::string folder_name;
         std::string fq_file_name;
 
 	//The current DIF Directory
-	std::map<std::string, rina::ApplicationProcessNamingInformation> dif_directory;
+	std::list< std::pair<std::string, std::string> > dif_directory;
 
 	rina::ReadWriteLockable directory_lock;
 };

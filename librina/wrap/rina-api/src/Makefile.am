@@ -1,31 +1,25 @@
 #
 # Makefile.am
-#
-# Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
-#	      Dimitri Staessens     <dimitri DOT staessens AT ugent DOT be>
-#
 
-if BUILD_BINDINGS_C
+librina_api_la_SOURCES   = 	\
+	rina-api.cc
 
-librina_c_la_SOURCES   = 	\
-	librina-c.cc
-
-librina_c_la_LDFLAGS   =
-librina_c_la_LIBADD = 			\
+librina_api_la_LDFLAGS   =
+librina_api_la_LIBADD = 			\
 	$(top_builddir)/src/librina.la	\
 	-ldl
-librina_c_la_CPPFLAGS =			\
+librina_api_la_CPPFLAGS =			\
 	$(CXX_SYSINCLUDES)		\
 	-I$(top_srcdir)/include		\
 	-I$(srcdir)/../include		\
 	$(CPPFLAGS_EXTRA)
-librina_c_la_CXXFLAGS =		\
+librina_api_la_CXXFLAGS =		\
 	$(CXXFLAGS_EXTRA)
 
-lib_LTLIBRARIES = librina-c.la
+lib_LTLIBRARIES = librina-api.la
 
 EXTRA_DIST =					\
-	librina-c.pc.in
+	librina-api.pc.in
 
 edit = $(SED)								\
         -e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'			\
@@ -35,7 +29,7 @@ edit = $(SED)								\
         -e 's|@libdir[@]|$(libdir)|g'
 
 
-librina-c.pc: Makefile librina-c.pc.in
+librina-api.pc: Makefile librina-api.pc.in
 	rm -f $@ $@.tmp
 	srcdir=''; \
 	  test -f ./$@.in || srcdir=$(srcdir)/; \
@@ -43,9 +37,8 @@ librina-c.pc: Makefile librina-c.pc.in
 	chmod a-w $@.tmp
 	mv $@.tmp $@
 
-CLEANFILES = librina-c.pc
+CLEANFILES = librina-api.pc
 
 pkgconfigdir   = $(libdir)/pkgconfig
-pkgconfig_DATA = librina-c.pc
+pkgconfig_DATA = librina-api.pc
 
-endif

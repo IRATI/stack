@@ -885,7 +885,8 @@ static bool qdisc_should_be_restored(struct net_device * dev)
 
 static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
                               port_id_t                   id,
-                              struct sdu *                sdu)
+                              struct sdu *                sdu,
+                              bool                        blocking)
 {
         struct shim_eth_flow *   flow;
         struct sk_buff *         skb;

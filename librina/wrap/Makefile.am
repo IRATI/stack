@@ -5,8 +5,8 @@
 #
 
 SUBDIRS = 			\
-	c			\
-	java	
+	java			\
+	rina-api
 
 EXTRA_DIST =			\
 	librina.i		\

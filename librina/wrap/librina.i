@@ -505,7 +505,7 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(assign) rina::EFCPConfiguration::operator=(const EFCPConfiguration &other);
 
 /* This is for separating rib::init and rib::fini from cdap::init and cdap::fini */
-%rename(cdap_init) rina::cdap::init(cdap::CDAPCallbackInterface *callback, cdap_rib::concrete_syntax_t& syntax, bool is_IPCP);
+%rename(cdap_init) rina::cdap::init(cdap::CDAPCallbackInterface *callback, cdap_rib::concrete_syntax_t& syntax, int fd);
 %rename(cdap_fini) rina::cdap::fini(void);
 %rename(rib_init) rina::rib::init(cacep::AppConHandlerInterface *app_con_callback, cdap_rib::cdap_params params);
 %rename(rib_fini) rina::rib::fini(void);
@@ -541,8 +541,6 @@ cdap_rib::res_info_t& res);
 %catches(rina::FlowDeallocationException) rina::IPCManager::requestFlowDeallocation(int portId);
 %catches(rina::FlowDeallocationException) rina::IPCManager::flowDeallocationResult(int portId, bool success);
 %catches(rina::FlowDeallocationException) rina::IPCManager::flowDeallocated(int portId);
-%catches(rina::FlowNotAllocatedException, rina::InvalidArgumentsException, rina::UnknownFlowException, rina::ReadSDUException, rina::IPCException) rina::IPCManager::readSDU(int portId, void * sdu, int maxBytes);
-%catches(rina::FlowNotAllocatedException, rina::InvalidArgumentsException, rina::UnknownFlowException, rina::WriteSDUException, rina::IPCException) rina::IPCManager::writeSDU(int portId, void * sdu, int size);
 
 
 %include "librina/exceptions.h"

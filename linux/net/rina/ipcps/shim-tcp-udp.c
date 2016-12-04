@@ -2404,7 +2404,8 @@ static int tcp_sdu_write(struct shim_tcp_udp_flow * flow,
 
 static int tcp_udp_sdu_write(struct ipcp_instance_data * data,
                              port_id_t                   id,
-                             struct sdu *                sdu)
+                             struct sdu *                sdu,
+                             bool                        blocking)
 {
         struct snd_data * snd_data;
 

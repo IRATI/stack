@@ -24,6 +24,8 @@
 #include <cstring>
 #include <errno.h>
 #include <stdexcept>
+#include <fcntl.h>
+#include <stropts.h>
 
 #define RINA_PREFIX "librina.ipc-api"
 
@@ -298,7 +300,10 @@ FlowInformation IPCManager::internalAllocateFlowResponse(
         flow->difName = flowRequestEvent.DIFName;
         flow->portId = flowRequestEvent.portId;
 
-	setFlowOptsBlocking(flow->portId, blocking);
+        initIodev(flow, flowRequestEvent.portId);
+        if (fcntl(flow->fd, F_SETFL, blocking ? 0 : O_NONBLOCK)) {
+                LOG_WARN("Failed to set blocking mode on fd %d", flow->fd);
+        }
         allocatedFlows[flowRequestEvent.portId] = flow;
 
         return *flow;
@@ -517,18 +522,47 @@ unsigned int IPCManager::requestFlowAllocationInDIF(
                         remoteAppName, difName, 0, flowSpec);
 }
 
+void IPCManager::initIodev(FlowInformation *flow, int portId)
+{
+        struct irati_iodev_ctldata iodata;
+
+        if (portId < 0) {
+                /* This happens in case of flow allocation failure. Don't
+                 * open the I/O device, just set the file descriptor to an
+                 * invalid value. */
+                flow->fd = -1;
+                return;
+        }
+
+        flow->fd = open("/dev/irati", O_RDWR);
+        if (flow->fd < 0) {
+                std::ostringstream oss;
+                oss << "Cannot open /dev/irati [" << strerror(errno) << "]";
+                throw FlowAllocationException(oss.str());
+        }
+
+        iodata.port_id = (uint32_t)portId;
+        if (ioctl(flow->fd, IRATI_FLOW_BIND, &iodata)) {
+                std::ostringstream oss;
+                oss << "Cannot bind port id " << iodata.port_id <<
+                        " on /dev/irati [" << strerror(errno) << "]";
+                throw FlowAllocationException(oss.str());
+        }
+}
+
 FlowInformation IPCManager::commitPendingFlow(unsigned int sequenceNumber,
 				   	      int portId,
 				              const ApplicationProcessNamingInformation& DIFName)
 {
         FlowInformation * flow;
-
         WriteScopedLock writeLock(flows_rw_lock);
 
         flow = getPendingFlow(sequenceNumber);
         if (flow == 0) {
-                throw FlowDeallocationException(IPCManager::unknown_flow_error);
+                throw FlowAllocationException(IPCManager::unknown_flow_error);
         }
+
+        initIodev(flow, portId);
 
         pendingFlows.erase(sequenceNumber);
 
@@ -560,12 +594,11 @@ FlowInformation IPCManager::withdrawPendingFlow(unsigned int sequenceNumber)
         return result;
 }
 
-/* FIXME: bool blocking should be replaced by flow_opts_t */
 FlowInformation IPCManager::allocateFlowResponse(
 	const FlowRequestEvent& flowRequestEvent,
 	int result,
 	bool notifySource,
-	bool blocking /* = true */)
+	bool blocking)
 {
         return internalAllocateFlowResponse(
                         flowRequestEvent,
@@ -573,58 +606,6 @@ FlowInformation IPCManager::allocateFlowResponse(
 			notifySource,
 			0,
 			blocking);
-}
-
-/* returns 0 if nonblocking, > 0 if blocking, < 0 on error */
-int IPCManager::flowOptsBlocking(int portId)
-{
-#if STUB_API
-	return 0;
-#else
-
-	FlowInformation *flow;
-	uint             flags;
-
-	flow = getAllocatedFlow(portId);
-	if (flow == 0) {
-		return -1;
-        }
-
-        if (flow->state != FlowInformation::FLOW_ALLOCATED) {
-                return -1;
-	}
-
-        flags = syscallFlowIOCtl(portId, F_GETFL, 0 /* ignored */);
-	return !(flags & O_NONBLOCK);
-#endif
-}
-
-int IPCManager::setFlowOptsBlocking(int portId, bool blocking)
-{
-#if STUB_API
-        return 0;
-#else
-
-	FlowInformation * flow;
-	uint              flags;
-
-	flow = getAllocatedFlow(portId);
-	if (flow == 0) {
-		return -1;
-        }
-
-        if (flow->state != FlowInformation::FLOW_ALLOCATED) {
-                return -1;
-	}
-
-	/* this mimics the fcntl approach to setting flags */
-	flags = syscallFlowIOCtl(portId, F_GETFL,0);
-	if (!blocking)
-		flags |= O_NONBLOCK; /* set nonblocking */
-	else flags &= ~O_NONBLOCK; /* clear nonblocking */
-
-	return syscallFlowIOCtl(portId, F_SETFL,flags);
-#endif
 }
 
 unsigned int IPCManager::requestFlowDeallocation(int portId)
@@ -685,6 +666,7 @@ void IPCManager::flowDeallocationResult(int portId, bool success)
         }
 
         if (success) {
+                close(flow->fd);
                 allocatedFlows.erase(portId);
                 delete flow;
         } else {
@@ -703,6 +685,7 @@ void IPCManager::flowDeallocated(int portId)
 		throw FlowDeallocationException("Unknown flow");
 	}
 
+        close(flow->fd);
 	allocatedFlows.erase(portId);
 	delete flow;
 }
@@ -737,76 +720,9 @@ std::vector<ApplicationRegistration *> IPCManager::getRegisteredApplications()
 	return response;
 }
 
-int IPCManager::readSDU(int portId, void * sdu, int maxBytes)
+int IPCManager::getControlFd()
 {
-#if STUB_API
-        memset(sdu, 'v', maxBytes);
-	return maxBytes;
-#else
-	int result = syscallReadSDU(portId, sdu, maxBytes);
-
-	if (result >=0)
-		return result;
-
-	switch(result) {
-	case -EINVAL:
-		throw InvalidArgumentsException();
-		break;
-	case -EBADF:
-		throw UnknownFlowException();
-		break;
-	case -ESHUTDOWN:
-		throw FlowNotAllocatedException();
-		break;
-	case -EIO:
-		throw ReadSDUException();
-		break;
-	case -EAGAIN:
-	case -EINTR:
-		break;
-	default:
-		throw IPCException("Unknown error");
-	}
-
-	return result;
-#endif
-}
-
-int IPCManager::writeSDU(int portId, void * sdu, int size)
-{
-#if STUB_API
-	/* Do nothing. */
-
-        return size;
-#else
-	int result = syscallWriteSDU(portId, sdu, size);
-
-	if (result >= 0)
-		return result;
-
-	switch(result) {
-	case -EINVAL:
-		throw InvalidArgumentsException();
-		break;
-	case -EBADF:
-		throw UnknownFlowException();
-		break;
-	case -ESHUTDOWN:
-		throw FlowNotAllocatedException();
-		break;
-	case -EIO:
-		throw WriteSDUException();
-		break;
-	case -EAGAIN:
-		return 0;
-	case -EINTR:
-		break;
-	default:
-		throw IPCException("Unknown error");
-	}
-
-	return result;
-#endif
+        return rinaManager->getNetlinkManager()->getSocketFd();
 }
 
 Singleton<IPCManager> ipcManager;

@@ -1,7 +1,7 @@
 /*
- * RINA
+ * IRATI I/O device
  *
- *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,9 +18,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_H
-#define RINA_H
+#ifndef IRATI_IODEV_H
+#define IRATI_IODEV_H
 
-uint32_t rina_version(void);
+int iodev_init(void);
+void iodev_fini(void);
 
 #endif

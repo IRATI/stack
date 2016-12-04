@@ -2135,7 +2135,8 @@ EXPORT_SYMBOL(kipcm_find_ipcp);
 /* ONLY USED BY APPS */
 int kipcm_sdu_write(struct kipcm * kipcm,
                     port_id_t      port_id,
-                    struct sdu *   sdu)
+                    struct sdu *   sdu,
+                    bool blocking)
 {
         struct ipcp_instance * kfa_ipcp;
 
@@ -2164,12 +2165,13 @@ int kipcm_sdu_write(struct kipcm * kipcm,
         /* The SDU is ours */
         return kfa_ipcp->ops->sdu_write(kfa_ipcp->data,
         				port_id,
-        				sdu);
+        				sdu, blocking);
 }
 
 int kipcm_sdu_read(struct kipcm * kipcm,
                    port_id_t      port_id,
-                   struct sdu **  sdu)
+                   struct sdu **  sdu,
+                   bool blocking)
 {
         IRQ_BARRIER;
 
@@ -2179,7 +2181,7 @@ int kipcm_sdu_read(struct kipcm * kipcm,
         }
 
         /* The SDU is theirs now */
-        return kfa_flow_sdu_read(kipcm->kfa, port_id, sdu);
+        return kfa_flow_sdu_read(kipcm->kfa, port_id, sdu, blocking);
 }
 
 int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
@@ -2374,36 +2376,6 @@ int kipcm_flow_destroy(struct kipcm *   kipcm,
         return 0;
 }
 EXPORT_SYMBOL(kipcm_flow_destroy);
-
-int kipcm_flow_opts_set(struct kipcm *kipcm,
-			port_id_t     pid,
-			flow_opts_t   flow_opts)
-{
-        IRQ_BARRIER;
-
-        if (!kipcm) {
-                LOG_ERR("Bogus kipcm instance passed, bailing out");
-		return -EINVAL;
-        }
-
-	return kfa_flow_opts_set(kipcm->kfa, pid, flow_opts);
-}
-EXPORT_SYMBOL(kipcm_flow_opts_set);
-
-flow_opts_t kipcm_flow_opts(struct kipcm *kipcm,
-			    port_id_t     pid)
-{
-        IRQ_BARRIER;
-
-        if (!kipcm) {
-                LOG_ERR("Bogus kipcm instance passed, bailing out");
-		return -EINVAL;
-        }
-
-	return kfa_flow_opts(kipcm->kfa, pid);
-}
-EXPORT_SYMBOL(kipcm_flow_opts);
-
 
 int kipcm_notify_flow_alloc_req_result(struct kipcm    *kipcm,
                                        ipc_process_id_t ipc_id,

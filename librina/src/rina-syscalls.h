@@ -31,31 +31,6 @@
 namespace rina {
 
         /**
-         * Wrapper of the writeSDU system call
-         * @param portId the portId where the data has to be written
-         * @param sdu the data to be written
-         * @param size the size of the data to be written
-         * @return 0 if everything was ok, negative number indicating error
-         *         otherwise
-         */
-        int syscallWriteSDU(int portId,
-        		    void * sdu,
-        		    int size);
-
-        /**
-         * Wrapper of the readSDU system call
-         * @param portId the portId where the data has to be written
-         * @param sdu pointer to the memory address of the first byte of the
-         *        SDU
-         * @param maxBytes Maximum amount of bytes to read
-         * @return number of bytes read if successful, a negative number
-         *         indicating an error otherwise
-         */
-        int syscallReadSDU(int portId,
-        		   void * sdu,
-        		   int maxBytes);
-
-        /**
          * Wrapper of the managementSDUWrite system call
          * @param ipcProcessId the ipcProcess that has to write the SDU
          * @param address the address of the IPC Process where this SDU
@@ -124,16 +99,6 @@ namespace rina {
          *         otherwise
          */
         int syscallDeallocatePortId(unsigned short ipcProcessId, int portId);
-
-	/**
-         * Wrapper of the flow_io_ctl system call
-         * @param portId the port-id to control
-         * @param cmd, the command, only F_GETFL and F_SETFL are supported
-         * @param arg, the flags to be set, only O_NONBLOCK is supported
-         * @return 0 if everything was ok, negative number indicating error
-         *         otherwise
-         */
-        int syscallFlowIOCtl(int portId, int cmd, unsigned long arg);
 }
 
 #endif

@@ -54,11 +54,13 @@ int            kipcm_ipc_destroy(struct kipcm *   kipcm,
 /* If successful: takes the ownership of the SDU */
 int            kipcm_sdu_write(struct kipcm * kipcm,
                                port_id_t      id,
-                               struct sdu *   sdu);
+                               struct sdu *   sdu,
+                               bool blocking);
 /* If successful: passes the ownership of the SDU */
 int            kipcm_sdu_read(struct kipcm * kipcm,
                               port_id_t      id,
-                              struct sdu **  sdu);
+                              struct sdu **  sdu,
+                              bool           blocking);
 
 /* If successful: takes the ownership of the SDU */
 int            kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
@@ -76,14 +78,6 @@ int            kipcm_flow_destroy(struct kipcm *   kipcm,
 				  ipc_process_id_t ipc_id,
 				  port_id_t        port_id);
 
-
-/* control behavior of flows after creation */
-/* return 0 succes < 0 upon failure */
-int            kipcm_flow_opts_set(struct kipcm     *kipcm,
-				   port_id_t         pid,
-				   flow_opts_t       flow_opts);
-flow_opts_t    kipcm_flow_opts(struct kipcm     *kipcm,
-			       port_id_t         pid);
 
 /*
  * The following functions represent the KIPCM southbound interface

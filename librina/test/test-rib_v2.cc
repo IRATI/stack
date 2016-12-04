@@ -469,7 +469,7 @@ void ribBasicOps::tearDown(){
 void ribBasicOps::testInit(){
 	rina::rib::RIBDaemonProxy* ribd_;
 	cdap_rib::cdap_params params;
-	params.is_IPCP_ = false;
+	params.fd = 1; /* Use stdout */
 	ribd = NULL;
 
 	//Before init getting a proxy should throw an exception

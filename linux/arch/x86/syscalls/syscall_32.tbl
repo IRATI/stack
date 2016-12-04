@@ -367,10 +367,7 @@
 358	i386	execveat		sys_execveat			stub32_execveat
 359	i386	ipc_create		sys_ipc_create
 360	i386	ipc_destroy		sys_ipc_destroy
-361	i386	sdu_read		sys_sdu_read
-362	i386	sdu_write		sys_sdu_write
 363	i386	allocate_port           sys_allocate_port
 364	i386	deallocate_port         sys_deallocate_port
 365     i386    management_sdu_read     sys_management_sdu_read
 366     i386    management_sdu_write    sys_management_sdu_write
-367     i386    flow_io_ctl             sys_flow_io_ctl
