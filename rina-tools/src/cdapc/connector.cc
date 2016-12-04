@@ -158,7 +158,10 @@ void Connector::rina_run() {
 					*dynamic_cast<rina::FlowRequestEvent*>(event), 0, true);
 			port_id = flow.portId;
 			// We want non-blocking operation
-			rina::ipcManager->setFlowOptsBlocking(port_id, false);
+                        if (fcntl(flow.fd, F_SETFL, O_NONBLOCK)) {
+                                LOG_WARN("Failed to set nonblocking operation for port-id %d",
+                                         flow.portId);
+                        }
 			LOG_INFO("New flow allocated [port-id = %d]", port_id);
 			// Notify worker
 			if (ma_worker_ != nullptr) {

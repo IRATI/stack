@@ -58,7 +58,6 @@ enum flow_state {
 
 struct ipcp_flow {
 	port_id_t	      port_id;
-	flow_opts_t	      options;
 	enum flow_state	      state;
 	struct ipcp_instance *ipc_process;
 	struct rfifo         *sdu_ready;
@@ -419,7 +418,8 @@ static int enable_write(struct ipcp_instance_data *data, port_id_t id)
 
 int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 		       port_id_t		  id,
-		       struct sdu                *sdu)
+		       struct sdu                *sdu,
+                       bool                      blocking)
 {
 	struct ipcp_flow     *flow;
 	struct ipcp_instance *ipcp;
@@ -469,7 +469,7 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 
 	atomic_inc(&flow->writers);
 
-	if (!(flow->options & FLOW_O_NONBLOCK)) { /* blocking I/O */
+	if (blocking) { /* blocking I/O */
 		while (!ok_write(flow)) {
 			spin_unlock_bh(&instance->lock);
 
@@ -525,7 +525,7 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 		ASSERT(ipcp->ops->sdu_write);
 
 		spin_unlock_bh(&instance->lock);
-		if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
+		if (ipcp->ops->sdu_write(ipcp->data, id, sdu, blocking)) {
 			LOG_ERR("Couldn't write SDU on port-id %d", id);
 			retval = -EIO;
 		}
@@ -555,7 +555,7 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 		ASSERT(ipcp->ops->sdu_write);
 
 		spin_unlock_bh(&instance->lock);
-		if (ipcp->ops->sdu_write(ipcp->data, id, sdu)) {
+		if (ipcp->ops->sdu_write(ipcp->data, id, sdu, blocking)) {
 			LOG_ERR("Couldn't write SDU on port-id %d", id);
 			retval = -EIO;
 		}
@@ -602,7 +602,8 @@ static bool queue_ready(struct ipcp_flow *flow)
 
 int kfa_flow_sdu_read(struct kfa  *instance,
 		      port_id_t	   id,
-		      struct sdu **sdu)
+		      struct sdu **sdu,
+                      bool blocking)
 {
 	struct ipcp_flow *flow;
 	int		  retval = 0;
@@ -638,7 +639,7 @@ int kfa_flow_sdu_read(struct kfa  *instance,
 
 	atomic_inc(&flow->readers);
 
-	if (!(flow->options & FLOW_O_NONBLOCK)) { /* blocking I/O */
+	if (blocking) { /* blocking I/O */
 		while (flow->state == PORT_STATE_PENDING ||
 				rfifo_is_empty(flow->sdu_ready)) {
 			spin_unlock_bh(&instance->lock);
@@ -855,7 +856,6 @@ int kfa_flow_create(struct kfa           *instance,
 	init_waitqueue_head(&flow->write_wqueue);
 
 	flow->ipc_process = ipcp;
-	flow->options	  = FLOW_O_DEFAULT;
 
 	flow->state	  = PORT_STATE_PENDING;
 	LOG_DBG("Flow pre-bound to port-id %d", pid);
@@ -1039,58 +1039,15 @@ int kfa_destroy(struct kfa *instance)
 	return 0;
 }
 
-int kfa_flow_opts_set(struct kfa *instance,
-		      port_id_t	  pid,
-		      flow_opts_t flow_opts)
+bool kfa_flow_exists(struct kfa *kfa, port_id_t port_id)
 {
-	struct ipcp_flow *flow;
+        struct ipcp_flow *flow;
 
-	if (!instance) {
-		LOG_ERR("Bogus instance passed, bailing out");
-		return -EINVAL;
-	}
-	if (!is_port_id_ok(pid)) {
-		LOG_ERR("Bogus port-id, bailing out");
-		return -EINVAL;
-	}
+        spin_lock_bh(&kfa->lock);
+        flow = kfa_pmap_find(kfa->flows, port_id);
+        /* XXX check flow->state ? */
+        spin_unlock_bh(&kfa->lock);
 
-	spin_lock_bh(&instance->lock);
-
-	flow = kfa_pmap_find(instance->flows, pid);
-	if (!flow) {
-		spin_unlock_bh(&instance->lock);
-		LOG_ERR("Can't set options, missing flow on port_id %d", pid);
-		return -1;
-	}
-	flow->options = flow_opts;
-
-	spin_unlock_bh(&instance->lock);
-
-	LOG_DBG("Set options on port_id %d to %o", pid, flow_opts);
-
-	return 0; /* all is well */
+        return flow != NULL;
 }
-EXPORT_SYMBOL(kfa_flow_opts_set);
-
-flow_opts_t kfa_flow_opts(struct kfa *instance,
-			  port_id_t   pid)
-{
-	struct ipcp_flow *flow;
-
-	if (!instance) {
-		LOG_ERR("Bogus instance passed, bailing out");
-		return -EINVAL;
-	}
-	if (!is_port_id_ok(pid)) {
-		LOG_ERR("Bogus port-id, bailing out");
-		return -EINVAL;
-	}
-
-	flow = kfa_pmap_find(instance->flows, pid);
-	if (!flow) {
-		LOG_ERR("Can't get options, missing flow on port_id %d", pid);
-		return -1;
-	}
-	return flow->options;
-}
-EXPORT_SYMBOL(kfa_flow_opts);
+EXPORT_SYMBOL(kfa_flow_exists);

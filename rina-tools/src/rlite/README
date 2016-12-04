@@ -1,0 +1,13 @@
+====== Example applications using the RINA API  ======
+
+This directory contains example programs written using the RINA POSIX-like
+API (available in the following file of the IRATI repository:
+librina/wrap/rina-api/include/rina/api.h).
+People willing to write native RINA applications or to port existing socket
+application to RINA can take these programs as reference examples for the
+API usage.
+
+The source files contained here are a copy of the original ones available
+in the rlite project repository (https://github.com/vmaffione/rlite), and
+they are stored in this directory only to ease the build process.
+Future updates to the original sources could (and should) be reflected here.

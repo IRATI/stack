@@ -133,7 +133,6 @@ PKG_CHECK_MODULES(OPENSSL, [openssl >= $OPENSSL_MIN_VERSION],, [
 build_bindings=no
 build_bindings_swig=no
 build_bindings_java=no
-build_bindings_c=yes
 
 AX_SELECTOR_ENABLE([java-bindings],[
     build_bindings_java=yes
@@ -144,15 +143,6 @@ AS_IF([test "$build_bindings_java" = "yes"],[
     build_bindings=yes
     build_bindings_swig=yes
 ])
-AX_SELECTOR_DISABLE([c-bindings],[
-    build_bindings_c=yes
-],[
-    build_bindings_c=no
-])
-AS_IF([test "$build_bindings_c" = "yes"],[
-    build_bindings=yes
-])
-AM_CONDITIONAL(BUILD_BINDINGS_C, [test $build_bindings_c = yes])
 
 AS_IF([test "$build_bindings_swig" = "yes"],[
     AX_PKG_SWIG([2.0],[
@@ -250,10 +240,6 @@ AX_HAVE_SYSCALL([ipc_create],[],[
     AC_MSG_ERROR([Your system lacks of a necessary syscall])])
 AX_HAVE_SYSCALL([ipc_destroy],[],[
     AC_MSG_ERROR([Your system lacks of a necessary syscall])])
-AX_HAVE_SYSCALL([sdu_read],[],[
-    AC_MSG_ERROR([Your system lacks of a necessary syscall])])
-AX_HAVE_SYSCALL([sdu_write],[],[
-    AC_MSG_ERROR([Your system lacks of a necessary syscall])])
 AX_HAVE_SYSCALL([allocate_port],[],[
     AC_MSG_ERROR([Your system lacks of a necessary syscall])])
 AX_HAVE_SYSCALL([deallocate_port],[],[
@@ -261,8 +247,6 @@ AX_HAVE_SYSCALL([deallocate_port],[],[
 AX_HAVE_SYSCALL([management_sdu_read],[],[
     AC_MSG_ERROR([Your system lacks of a necessary syscall])])
 AX_HAVE_SYSCALL([management_sdu_write],[],[
-    AC_MSG_ERROR([Your system lacks of a necessary syscall])])
-AX_HAVE_SYSCALL([flow_io_ctl],[],[
     AC_MSG_ERROR([Your system lacks of a necessary syscall])])
 
 CFLAGS="$oldcflags"
@@ -302,10 +286,10 @@ AC_CONFIG_FILES([
 
     wrap/Makefile
     wrap/java/Makefile
-    wrap/c/Makefile
-    wrap/c/src/Makefile
-    wrap/c/include/Makefile
-    wrap/c/include/librina-c/Makefile
+    wrap/rina-api/Makefile
+    wrap/rina-api/src/Makefile
+    wrap/rina-api/include/Makefile
+    wrap/rina-api/include/rina/Makefile
 
     test/Makefile
 

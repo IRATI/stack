@@ -44,6 +44,8 @@
 #include <iomanip>
 #include <cstring>
 #include <fcntl.h>
+#include <stdint.h>
+#include <asm/ioctl.h>
 
 #include "librina/concurrency.h"
 #include "librina/exceptions.h"
@@ -194,6 +196,9 @@ public:
 
 	/** The portId of the flow */
 	int portId;
+
+	/** File descriptor to access this flow */
+	int fd;
 
 	/** The name of the DIF where the flow has been allocated */
 	ApplicationProcessNamingInformation difName;
@@ -760,6 +765,14 @@ public:
 	/// @return
 	virtual void decode(const ser_obj_t &serobj,T &des_obj) = 0;
 };
+
+/**
+ * Data structure passed along with ioctl on /dev/irati.
+ */
+struct irati_iodev_ctldata {
+        uint32_t port_id;
+};
+#define IRATI_FLOW_BIND _IOW(0xAF, 0x00, struct irati_iodev_ctldata)
 
 /**
  * Initialize librina providing the local Netlink port-id where this librina

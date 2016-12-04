@@ -113,6 +113,8 @@ public:
 	void sendMessageOfMaxSize(BaseNetlinkMessage * message, size_t maxSize);
 
 	BaseNetlinkMessage *  getMessage();
+
+        int getSocketFd() const;
 };
 
 }

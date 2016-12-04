@@ -22,7 +22,6 @@
 #include <dirent.h>
 #include <errno.h>
 #include <poll.h>
-#include <sys/inotify.h>
 
 #define RINA_PREFIX     "ipcm.dif-allocator"
 #include <librina/logs.h>
@@ -57,6 +56,8 @@ DIFAllocator::DIFAllocator(const std::string& folder)
 	//load current mappings
 	if (!parse_app_to_dif_mappings(fq_file_name, dif_directory)) {
 		LOG_ERR("Problems loading initial directory");
+	} else {
+		print_directory_contents();
 	}
 }
 
@@ -65,16 +66,23 @@ DIFAllocator::~DIFAllocator()
 }
 
 bool DIFAllocator::lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
-                			     rina::ApplicationProcessNamingInformation& result)
+                			     rina::ApplicationProcessNamingInformation& result,
+					     const std::list<std::string>& supported_difs)
 {
 	rina::ReadScopedLock g(directory_lock);
         string encoded_name = app_name.getEncodedString();
+        std::list< std::pair<std::string, std::string> >::iterator it;
+        std::list<std::string>::const_iterator jt;
 
-        map<string, rina::ApplicationProcessNamingInformation>::iterator it = dif_directory.find(encoded_name);
-
-        if (it != dif_directory.end()) {
-                result = it->second;
-                return true;
+        for (it = dif_directory.begin(); it != dif_directory.end(); ++it) {
+        	if (it->first == encoded_name) {
+        		for (jt = supported_difs.begin(); jt != supported_difs.end(); ++jt) {
+        			if (it->second == *jt) {
+        				result.processName = it->second;
+        				return true;
+        			}
+        		}
+        	}
         }
 
         return false;
@@ -88,7 +96,22 @@ void DIFAllocator::update_directory_contents()
 	    LOG_ERR("Problems while updating DIF Allocator Directory!");
         } else {
 	    LOG_DBG("DIF Allocator Directory updated!");
+	    print_directory_contents();
         }
+}
+
+void DIFAllocator::print_directory_contents()
+{
+	std::list< std::pair<std::string, std::string> >::iterator it;
+	std::stringstream ss;
+
+	ss << "Application to DIF mappings" << std::endl;
+	for (it = dif_directory.begin(); it != dif_directory.end(); ++it) {
+		ss << "Application name: " << it->first
+		   << "; DIF name: " << it->second << std::endl;
+	}
+
+	LOG_DBG("%s", ss.str().c_str());
 }
 
 } //namespace rinad

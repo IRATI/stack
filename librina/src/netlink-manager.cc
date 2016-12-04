@@ -312,5 +312,10 @@ BaseNetlinkMessage * NetlinkManager::getMessage() {
 	return result;
 }
 
+
+int NetlinkManager::getSocketFd() const {
+        return nl_socket_get_fd(socket);
+}
+
 }
 

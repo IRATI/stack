@@ -31,6 +31,7 @@
 #include <time.h>
 #include <signal.h>
 #include <time.h>
+#include <cerrno>
 
 #define RINA_PREFIX     "rina-cdap-echo-server"
 #include <librina/logs.h>
@@ -82,21 +83,20 @@ void ConnectionCallback::close_connection(const rina::cdap_rib::con_handle_t &co
 }
 
 CDAPEchoWorker::CDAPEchoWorker(rina::ThreadAttributes * threadAttributes,
-		     	       int port,
-		     	       unsigned int max_size,
-		     	       Server * serv) : ServerWorker(threadAttributes, serv)
+		     	       int port_id, int fd,
+		     	       unsigned int max_sdu_size,
+		     	       Server * serv) : ServerWorker(threadAttributes, serv),
+                                port_id(port_id), fd(fd), max_sdu_size(max_sdu_size)
 {
-	port_id = port;
-	max_sdu_size = max_size;
 }
 
 int CDAPEchoWorker::internal_run()
 {
-	serveEchoFlow(port_id);
+	serveEchoFlow();
 	return 0;
 }
 
-void CDAPEchoWorker::serveEchoFlow(int port_id)
+void CDAPEchoWorker::serveEchoFlow()
 {
 	bool keep_serving = true;
 	unsigned char buffer[max_sdu_size];
@@ -105,32 +105,27 @@ void CDAPEchoWorker::serveEchoFlow(int port_id)
 	int bytes_read = 0;
 
 	ConnectionCallback callback(&keep_serving);
-	cdap::init(&callback, syntax, false);
+	cdap::init(&callback, syntax, fd);
 
 	cdap_prov = cdap::getProvider();
 
 	while (keep_serving) {
-		try {
-			while (true) {
-				bytes_read = ipcManager->readSDU(port_id,
-						buffer,
-						max_sdu_size);
-				if (bytes_read == 0) {
-					sleep_wrapper.sleepForMili(50);
-				} else {
-					break;
-				}
-			}
-		} catch(rina::UnknownFlowException &e) {
-			LOG_ERR("Unknown flow descriptor");
-			break;
-		} catch(rina::FlowNotAllocatedException &e) {
-			LOG_ERR("Flow has been deallocated");
-			break;
-		} catch (rina::Exception &e){
-			LOG_ERR("Got unkown exception while reading %s", e.what());
-			break;
-		}
+                while (true) {
+                        bytes_read = read(fd, buffer, max_sdu_size);
+                        if (bytes_read == 0) {
+                                sleep_wrapper.sleepForMili(50);
+                        } else {
+                                if (bytes_read < 0) {
+                                        LOG_ERR("Error while reading from flow %d [%s]",
+                                                        port_id, strerror(errno));
+                                }
+                                break;
+                        }
+                }
+
+                if (bytes_read < 0) {
+                        break;
+                }
 
 		ser_obj_t message;
 		message.message_ = buffer;
@@ -156,7 +151,7 @@ ServerWorker * CDAPEchoServer::internal_start_worker(rina::FlowInformation flow)
 {
 	ThreadAttributes threadAttributes;
 	CDAPEchoWorker * worker = new CDAPEchoWorker(&threadAttributes,
-						     flow.portId,
+						     flow.portId, flow.fd,
 						     max_sdu_size_in_bytes,
 						     this);
 	worker->start();

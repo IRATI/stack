@@ -29,6 +29,7 @@
 #include <iostream>
 
 #include <cassert>
+#include <cerrno>
 #define RINA_PREFIX     "manager"
 #include <librina/logs.h>
 #include <librina/cdap_v2.h>
@@ -106,14 +107,14 @@ void ManagerWorker::operate(rina::FlowInformation flow)
     ConnectionCallback callback;
     std::cout << "cdap_prov created" << std::endl;
     rina::cdap_rib::concrete_syntax_t syntax;
-    rina::cdap::init(&callback, syntax, false);
+    rina::cdap::init(&callback, syntax, flow.fd);
     cdap_prov_ = rina::cdap::getProvider();
     // CACEP
-    cacep(flow.portId);
+    cacep(flow.portId, flow.fd);
 
     if (flow.remoteAppName.processName == "rina.apps.mad.1")
     {
-        create_result = createIPCP_1(flow.portId);
+        create_result = createIPCP_1(flow.portId, flow.fd);
         // QUERY RIB
         /*        	if (create_result)
          queryRIB(flow.portId, IPCP_1 + "/ribDaemon");
@@ -135,18 +136,23 @@ void ManagerWorker::operate(rina::FlowInformation flow)
      
 }
 
-void ManagerWorker::cacep(int port_id)
+void ManagerWorker::cacep(int port_id, int fd)
 {
     unsigned char *buffer = new unsigned char[max_sdu_size_in_bytes];
-    int bytes_read = rina::ipcManager->readSDU(port_id, buffer,
-                                               max_sdu_size_in_bytes);
+    int bytes_read = read(fd, buffer, max_sdu_size_in_bytes);
+
+    if (bytes_read < 0) {
+        LOG_ERR("read() error: %s", strerror(errno));
+        return;
+    }
+
     rina::ser_obj_t message;
     message.message_ = buffer;
     message.size_ = bytes_read;
     rina::cdap::getProvider()->process_message(message, port_id);
 }
 
-bool ManagerWorker::createIPCP_1(int port_id)
+bool ManagerWorker::createIPCP_1(int port_id, int fd)
 {
     unsigned char *buffer = new unsigned char[max_sdu_size_in_bytes];
 
@@ -370,20 +376,18 @@ bool ManagerWorker::createIPCP_1(int port_id)
     std::cout << "create IPC request CDAP message sent to port " << port_id
               << std::endl;
 
-    try
-    {
-        int bytes_read = rina::ipcManager->readSDU(port_id, buffer,
-                                                   max_sdu_size_in_bytes);
+        int bytes_read = read(fd, buffer, max_sdu_size_in_bytes);
+
+        if (bytes_read < 0) {
+                LOG_ERR("read() error: %s", strerror(errno));
+                return false;
+        }
+
         rina::ser_obj_t message;
         message.message_ = buffer;
         message.size_ = bytes_read;
         cdap_prov_->process_message(message, port_id);
-    } catch (rina::Exception &e)
-    {
-        std::cout << "ReadSDUException in createIPCP_1: " << e.what()
-                  << std::endl;
-        return false;
-    }
+
     return true;
 }
 /*
@@ -424,19 +428,19 @@ bool ManagerWorker::createIPCP_1(int port_id)
  std::cout << "create IPC request CDAP message sent to port "
  << port_id << std::endl;
 
- try {
- int bytes_read = ipcManager->readSDU(port_id, buffer,
- max_sdu_size_in_bytes);
- ser_obj_t message;
- message.message_ = buffer;
- message.size_ = bytes_read;
- cdap_prov_->process_message(message, port_id);
- } catch (Exception &e) {
- std::cout << "ReadSDUException in createIPCP_2: " << e.what()
- << std::endl;
- return false;
- }
- return true;
+  int bytes_read = read(fd, buffer, max_sdu_size_in_bytes);
+
+  if (bytes_read < 0) {
+        LOG_ERR("read() error: %s", strerror(errno));
+        return false;
+  }
+
+  rina::ser_obj_t message;
+  message.message_ = buffer;
+  message.size_ = bytes_read;
+  cdap_prov_->process_message(message, port_id);
+
+  return true;
  }
 
  bool ManagerWorker::createIPCP_3(int port_id) {
@@ -475,19 +479,19 @@ bool ManagerWorker::createIPCP_1(int port_id)
  std::cout << "create IPC request CDAP message sent to port "
  << port_id << std::endl;
 
- try {
- int bytes_read = ipcManager->readSDU(port_id, buffer,
- max_sdu_size_in_bytes);
- ser_obj_t message;
- message.message_ = buffer;
- message.size_ = bytes_read;
- cdap_prov_->process_message(message, port_id);
- } catch (Exception &e) {
- std::cout << "ReadSDUException in createIPCP 3: " << e.what()
- << std::endl;
- return false;
- }
- return true;
+  int bytes_read = read(fd, buffer, max_sdu_size_in_bytes);
+
+  if (bytes_read < 0) {
+        LOG_ERR("read() error: %s", strerror(errno));
+        return false;
+  }
+
+  rina::ser_obj_t message;
+  message.message_ = buffer;
+  message.size_ = bytes_read;
+  cdap_prov_->process_message(message, port_id);
+
+  return true;
  }
 
  void ManagerWorker::queryRIB(int port_id, std::string name)
@@ -512,13 +516,17 @@ bool ManagerWorker::createIPCP_1(int port_id)
  cdap_prov_->remote_read(con, obj, flags, filt, 89);
  std::cout << "Read RIBDaemon request CDAP message sent" << std::endl;
 
- int bytes_read = ipcManager->readSDU(port_id,
- buffer,
- max_sdu_size_in_bytes);
- ser_obj_t message;
- message.message_ = buffer;
- message.size_ = bytes_read;
- cdap_prov_->process_message(message, port_id);
+  int bytes_read = read(fd, buffer, max_sdu_size_in_bytes);
+
+  if (bytes_read < 0) {
+        LOG_ERR("read() error: %s", strerror(errno));
+        return;
+  }
+
+  rina::ser_obj_t message;
+  message.message_ = buffer;
+  message.size_ = bytes_read;
+  cdap_prov_->process_message(message, port_id);
  }
  */
 Manager::Manager(const std::list<std::string>& dif_names,

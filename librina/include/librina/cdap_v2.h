@@ -735,11 +735,14 @@ public:
 ///
 /// Should be only called once.
 ///
+/// @fd: When called by an IPCP, this parameter must be set to -1.
+///      When called by an application, @fd must be the file descriptor
+///      associated to an allocated flow (rina::FlowInformation.fd).
 /// @warning This function is NOT thread safe
 ///
 extern void init(cdap::CDAPCallbackInterface *callback,
 		 cdap_rib::concrete_syntax_t& syntax,
-		 bool is_IPCP);
+		 int fd);
 
 
 /// Override the CDAP IO handler (required for IPCP)

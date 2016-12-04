@@ -186,7 +186,8 @@ static int normal_sdu_enqueue(struct ipcp_instance_data * data,
 
 static int normal_sdu_write(struct ipcp_instance_data * data,
                             port_id_t                   id,
-                            struct sdu *                sdu)
+                            struct sdu *                sdu,
+                            bool                        blocking)
 {
         struct normal_flow * flow;
 
