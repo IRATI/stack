@@ -91,13 +91,13 @@ int SysfsHelper::get_value_as_string(std::string& file_name, std::string & value
 {
 	std::ifstream sysfs_file(file_name.c_str());
 	if (!sysfs_file.is_open()) {
-		LOG_IPCP_ERR("Problems opening file: %s", file_name.c_str());
+		LOG_IPCP_DBG("Problems opening file: %s", file_name.c_str());
 		return -1;
 	}
 
         std::getline(sysfs_file, value);
 	if (sysfs_file.fail()) {
-		LOG_IPCP_ERR("Problems reading file: %s", file_name.c_str());
+		LOG_IPCP_DBG("Problems opening file: %s", file_name.c_str());
 		return -1;
 	}
 	sysfs_file.close();

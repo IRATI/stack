@@ -351,8 +351,16 @@ address_t efcp_src_addr(struct efcp * efcp)
 { return connection_src_addr(efcp->connection); }
 EXPORT_SYMBOL(efcp_src_addr);
 
+void efcp_src_addr_set(struct efcp  * efcp, address_t src_addr)
+{ connection_src_addr_set(efcp->connection, src_addr); }
+EXPORT_SYMBOL(efcp_src_addr_set);
+
 address_t efcp_dst_addr(struct efcp * efcp)
 { return connection_dst_addr(efcp->connection); }
+
+void efcp_dst_addr_set(struct efcp * efcp, address_t dst_addr)
+{ connection_dst_addr_set(efcp->connection, dst_addr); }
+EXPORT_SYMBOL(efcp_dst_addr_set);
 
 qos_id_t efcp_qos_id(struct efcp * efcp)
 { return connection_qos_id(efcp->connection); }
@@ -1009,3 +1017,19 @@ efcp_container_get_instances(struct efcp_container *efcpc)
 	return efcpc->instances;
 }
 EXPORT_SYMBOL(efcp_container_get_instances);
+
+int efcp_address_change(struct efcp_container * efcpc,
+			address_t new_address)
+{
+        if (!efcpc) {
+                LOG_ERR("Bogus efcp passed, bailing out");
+                return -1;
+        }
+
+        spin_lock_bh(&efcpc->lock);
+        efcp_imap_address_change(efcpc->instances, new_address);
+        spin_unlock_bh(&efcpc->lock);
+
+	return 0;
+}
+EXPORT_SYMBOL(efcp_address_change);

@@ -1740,6 +1740,7 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .set_policy_set_param      = NULL,
         .select_policy_set         = NULL,
         .update_crypto_state	   = NULL,
+	.address_change            = NULL,
         .dif_name		   = eth_vlan_dif_name
 };
 

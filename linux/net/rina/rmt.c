@@ -62,9 +62,15 @@ struct pff_cache {
 	size_t count;
 };
 
+struct rmt_address {
+        address_t	 address;
+        struct list_head list;
+};
+
 struct rmt {
 	struct rina_component base;
-	address_t address;
+	spinlock_t	      lock;
+	struct list_head      addresses;
 	struct ipcp_instance *parent;
 	struct pff *pff;
 	struct kfa *kfa;
@@ -518,8 +524,63 @@ int rmt_set_policy_set_param(struct rmt *rmt,
 }
 EXPORT_SYMBOL(rmt_set_policy_set_param);
 
+int rmt_address_add(struct rmt *instance,
+		    address_t address)
+{
+	struct rmt_address * rmt_addr;
+
+	if (!instance) {
+		LOG_ERR("Bogus instance passed");
+		return -1;
+	}
+
+	rmt_addr = rkzalloc(sizeof(*rmt_addr), GFP_KERNEL);
+	if (!rmt_addr)
+		return -1;
+	rmt_addr->address = address;
+
+	INIT_LIST_HEAD(&rmt_addr->list);
+	spin_lock_bh(&instance->lock);
+	list_add(&rmt_addr->list, &instance->addresses);
+	spin_unlock_bh(&instance->lock);
+
+	return 0;
+}
+EXPORT_SYMBOL(rmt_address_add);
+
+int rmt_address_remove(struct rmt *instance,
+		       address_t address)
+{
+	struct rmt_address * rmt_addr;
+
+	if (!instance) {
+		LOG_ERR("Bogus instance passed");
+		return -1;
+	}
+
+        spin_lock_bh(&instance->lock);
+
+        list_for_each_entry(rmt_addr, &instance->addresses, list) {
+                if (rmt_addr->address == address) {
+                        if (!list_empty(&rmt_addr->list)) {
+                                list_del(&rmt_addr->list);
+                        }
+                        spin_unlock_bh(&instance->lock);
+                        rkfree(rmt_addr);
+                        return 0;
+                }
+        }
+
+        spin_unlock_bh(&instance->lock);
+        LOG_ERR("Could not find address to be removed: %u", address);
+        return -1;
+}
+EXPORT_SYMBOL(rmt_address_remove);
+
 int rmt_destroy(struct rmt *instance)
 {
+	struct rmt_address * addr, * naddr;
+
 	if (!instance) {
 		LOG_ERR("Bogus instance passed, bailing out");
 		return -1;
@@ -537,6 +598,14 @@ int rmt_destroy(struct rmt *instance)
 
 	robject_del(&instance->robj);
 
+	list_for_each_entry_safe(addr, naddr, &instance->addresses, list) {
+		if (!list_empty(&addr->list)) {
+			list_del(&addr->list);
+		}
+
+	        rkfree(addr);
+	}
+
 	rina_component_fini(&instance->base);
 
 	rkfree(instance);
@@ -546,25 +615,6 @@ int rmt_destroy(struct rmt *instance)
 	return 0;
 }
 EXPORT_SYMBOL(rmt_destroy);
-
-int rmt_address_set(struct rmt *instance,
-		    address_t address)
-{
-	if (!instance) {
-		LOG_ERR("Bogus instance passed");
-		return -1;
-	}
-
-	if (is_address_ok(instance->address)) {
-		LOG_ERR("The RMT is already configured");
-		return -1;
-	}
-
-	instance->address = address;
-
-	return 0;
-}
-EXPORT_SYMBOL(rmt_address_set);
 
 struct robject * rmt_robject(struct rmt * instance)
 {
@@ -1240,6 +1290,22 @@ static int process_dt_pdu(struct rmt *rmt,
 	return 0;
 }
 
+int pdu_is_addressed_to_me(struct rmt * rmt, address_t address)
+{
+	struct rmt_address * addr;
+
+	spin_lock_bh(&rmt->lock);
+	list_for_each_entry(addr, &rmt->addresses, list) {
+                if (addr->address == address) {
+                	spin_unlock_bh(&rmt->lock);
+                	return 1;
+                }
+	}
+
+	spin_unlock_bh(&rmt->lock);
+	return 0;
+}
+
 int rmt_receive(struct rmt *rmt,
 		struct sdu *sdu,
 		port_id_t from)
@@ -1318,7 +1384,7 @@ int rmt_receive(struct rmt *rmt,
 	}
 
 	/* pdu is not for me */
-	if (rmt->address != dst_addr) {
+	if (pdu_is_addressed_to_me(rmt, dst_addr)) {
 		if (!dst_addr)
 			return process_mgmt_pdu(rmt, from, pdu);
 		else {
@@ -1380,7 +1446,7 @@ struct rmt *rmt_create(struct kfa *kfa,
 	if (!tmp)
 		return NULL;
 
-	tmp->address = address_bad();
+	INIT_LIST_HEAD(&tmp->addresses);
 	tmp->parent = container_of(parent, struct ipcp_instance, robj);
 	tmp->kfa = kfa;
 	tmp->efcpc = efcpc;

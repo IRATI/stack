@@ -74,7 +74,7 @@ configs::Flow * FlowAllocatorPs::newFlowRequest(IPCProcess * ipc_process,
 
 	rina::Connection * connection = new rina::Connection();
 	connection->portId = event.portId;
-	connection->sourceAddress = ipc_process->get_address();
+	connection->sourceAddress = ipc_process->get_active_address();
 	connection->setQosId(qosCube->id_);
 	connection->setFlowUserIpcProcessId(event.flowRequestorIpcProcessId);
         rina::DTPConfig dtpConfig = rina::DTPConfig(
@@ -202,7 +202,7 @@ configs::Flow * FlowAllocatorRoundRobinPs::newFlowRequest(IPCProcess * ipc_proce
 
 	rina::Connection * connection = new rina::Connection();
 	connection->portId = event.portId;
-	connection->sourceAddress = ipc_process->get_address();
+	connection->sourceAddress = ipc_process->get_active_address();
 	connection->setQosId(qosCube->id_);
 	connection->setFlowUserIpcProcessId(event.flowRequestorIpcProcessId);
         rina::DTPConfig dtpConfig = rina::DTPConfig(

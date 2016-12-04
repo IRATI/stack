@@ -870,9 +870,21 @@ const std::string DTPInformation::toString() const
 	return ss.str();
 }
 
+
+std::string IPCPNameAddresses::get_addresses_as_string() const
+{
+	std::stringstream ss;
+
+	for (std::list<unsigned int>::const_iterator it = addresses.begin();
+			it != addresses.end(); ++it) {
+		ss << *it << "; ";
+	}
+
+	return ss.str();
+}
+
 /* CLASS ROUTING TABLE ENTRE */
 RoutingTableEntry::RoutingTableEntry(){
-	address = 0;
 	cost = 1;
 	qosId = 0;
 }
@@ -880,7 +892,7 @@ RoutingTableEntry::RoutingTableEntry(){
 const std::string RoutingTableEntry::getKey() const
 {
 	std::stringstream ss;
-	ss << address << "-" << qosId;
+	ss << destination.name << "-" << qosId << "-" << nextHopNames.front().alts.front().name;
 
 	return ss.str();
 }
@@ -971,7 +983,7 @@ const std::string PDUForwardingTableEntry::toString() {
 const std::string PDUForwardingTableEntry::getKey() const
 {
 	std::stringstream ss;
-	ss << address << "-" << qosId;
+	ss << address << "-" << qosId << "-" << portIdAltlists.front().alts.front();
 
 	return ss.str();
 }
@@ -1240,6 +1252,38 @@ unsigned int KernelIPCProcess::updateCryptoState(const CryptoState& state)
         return seqNum;
 }
 
+unsigned int KernelIPCProcess::changeAddress(unsigned int new_address,
+					     unsigned int old_address,
+				             unsigned int use_new_t,
+				             unsigned int deprecate_old_t)
+{
+	unsigned int seqNum=0;
+
+#if STUB_API
+	//Do nothing
+#else
+	IPCPAddressChangeRequestMessage message;
+	message.setSourceIpcProcessId(ipcProcessId);
+	message.setDestIpcProcessId(ipcProcessId);
+	message.new_address = new_address;
+	message.old_address = old_address;
+	message.use_new_timeout = use_new_t;
+	message.deprecate_old_timeout = deprecate_old_t;
+	message.setDestPortId(0);
+	message.setRequestMessage(true);
+
+	try {
+		rinaManager->sendMessage(&message, true);
+	} catch (NetlinkException &e) {
+		throw Exception(e.what());
+	}
+
+	seqNum = message.getSequenceNumber();
+#endif
+
+	return seqNum;
+}
+
 unsigned int KernelIPCProcess::setPolicySetParam(
                                 const std::string& path,
                                 const std::string& name,
@@ -1364,7 +1408,7 @@ ReadManagementSDUResult KernelIPCProcess::readManagementSDU(void * sdu,
 // CLASS DirectoryForwardingTableEntry
 DirectoryForwardingTableEntry::DirectoryForwardingTableEntry() {
 	address_ = 0;
-	timestamp_ = 0;
+	seqnum_ = 0;
 }
 
 ApplicationProcessNamingInformation DirectoryForwardingTableEntry::get_ap_naming_info() const {
@@ -1384,12 +1428,12 @@ void DirectoryForwardingTableEntry::set_address(unsigned int address) {
 	address_ = address;
 }
 
-long DirectoryForwardingTableEntry::get_timestamp() const {
-	return timestamp_;
+long DirectoryForwardingTableEntry::get_seqnum() const {
+	return seqnum_;
 }
 
-void DirectoryForwardingTableEntry::set_timestamp(long timestamp) {
-	timestamp_ = timestamp;
+void DirectoryForwardingTableEntry::set_seqnum(unsigned int seqnum) {
+	seqnum_ = seqnum;
 }
 
 const std::string DirectoryForwardingTableEntry::getKey() const{
@@ -1411,7 +1455,7 @@ std::string DirectoryForwardingTableEntry::toString() {
     std::stringstream ss;
     ss << this->get_ap_naming_info().toString() << std::endl;
 	ss << "IPC Process address: " << address_ << std::endl;
-	ss << "Timestamp: " << timestamp_ << std::endl;
+	ss << "Sequence number: " << seqnum_ << std::endl;
 
 	return ss.str();
 }

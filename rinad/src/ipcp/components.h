@@ -110,6 +110,7 @@ public:
 	virtual IEnrollmentStateMachine * getEnrollmentStateMachine(int portId, bool remove) = 0;
 	virtual void deallocateFlow(int portId) = 0;
 	virtual void add_enrollment_state_machine(int portId, IEnrollmentStateMachine * stateMachine) = 0;
+	virtual void update_neighbor_address(const rina::Neighbor& neighbor) = 0;
 };
 
 /// Policy set of the IPCP enrollment task
@@ -237,6 +238,8 @@ public:
 	virtual unsigned int getValidAddress(const std::string& ipcp_name,
 				const std::string& ipcp_instance) = 0;
 
+	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
+
 	virtual ~INamespaceManagerPs() {}
 };
 
@@ -298,6 +301,12 @@ public:
 	virtual void add_whatevercast_name(rina::WhatevercastName * name) = 0;
 
 	virtual void remove_whatevercast_name(const std::string& name_key) = 0;
+
+	virtual void addressChangeUpdateDFT(unsigned int new_address,
+				    	    unsigned int old_address) = 0;
+
+	virtual void notify_neighbors_add(const std::list<rina::DirectoryForwardingTableEntry>& entries,
+			          std::list<int>& neighs_to_exclude) = 0;
 };
 
 ///N-1 Flow Manager interface
@@ -317,7 +326,7 @@ public:
 
 	virtual std::list<int> getNMinusOneFlowsToNeighbour(unsigned int address) = 0;
 
-	virtual int getManagementFlowToNeighbour(unsigned int address) = 0;
+	virtual int getManagementFlowToNeighbour(const std::string& name) = 0;
 
 	virtual unsigned int numberOfFlowsToNeighbour(const std::string& apn,
 			const std::string& api) = 0;
@@ -458,6 +467,9 @@ public:
 	virtual rina::DIFInformation& get_dif_information() = 0;
 	virtual void set_dif_information(const rina::DIFInformation& dif_information) = 0;
 	virtual const std::list<rina::Neighbor> get_neighbors() const = 0;
+	virtual unsigned int get_old_address() = 0;
+	virtual unsigned int get_active_address() = 0;
+	virtual bool check_address_is_mine(unsigned int address) = 0;
 };
 
 } //namespace rinad
