@@ -162,7 +162,14 @@ void EchoTimeServerWorker::servePerfFlow(int port_id)
         unsigned long interval_cnt = interval;  // counting down
         int sdu_size;
         struct timespec last_timestamp;
+        struct timespec init_ts;
+        struct timespec fini_ts;
+        struct timespec aux;
+        unsigned long dt_sq;
+        unsigned long sum_dt_sq = 0;
         struct timespec now;
+        int delay = 0;
+        unsigned long dt;
 
         // Setup a timer if dealloc_wait option is set */
         if (dw > 0) {
@@ -177,12 +184,22 @@ void EchoTimeServerWorker::servePerfFlow(int port_id)
                         if (sdu_size <= 0) {
                                 break;
                         }
+                        if (pkt_cnt == 0) {
+                        	clock_gettime(CLOCK_REALTIME, &init_ts);
+                                clock_gettime(CLOCK_REALTIME, &fini_ts);
+                        }
                         pkt_cnt++;
                         bytes_cnt += sdu_size;
+                        aux = fini_ts;
+                        clock_gettime(CLOCK_REALTIME, &fini_ts);
+                        dt_sq = timespec_diff_us(aux, fini_ts);
+                        dt_sq = dt_sq*dt_sq;
+                        sum_dt_sq += dt_sq;
+                        memcpy(&delay, buffer, sizeof(delay));
 
                         // Report periodic stats if needed
                         if (interval != -1 && --interval_cnt == 0) {
-                                clock_gettime(CLOCK_REALTIME, &now);
+                        	clock_gettime(CLOCK_REALTIME, &now);
                                 us = timespec_diff_us(last_timestamp, now);
                                 printPerfStats(pkt_cnt, bytes_cnt, us);
 
@@ -224,11 +241,12 @@ void EchoTimeServerWorker::servePerfFlow(int port_id)
                 LOG_INFO("Discarded %lu SDUs", pkt_cnt);
         }
 
-        LOG_INFO("Received %lu SDUs and %lu bytes in %lu us",
-                        tot_pkt, tot_bytes, tot_us);
-        LOG_INFO("Goodput: %.4f Kpps, %.4f Mbps",
-                        static_cast<float>((tot_pkt * 1000.0)/tot_us),
-                        static_cast<float>((tot_bytes * 8.0)/tot_us));
+        dt = timespec_diff_us(init_ts, fini_ts);
+
+        cout << "MAX Delay: " << delay << " Received " << tot_pkt << " SDUs and " << tot_bytes << " bytes in " << tot_us << " us"
+        	<< " Goodput: " << static_cast<float>((tot_pkt * 1000.0)/tot_us) << " Kpps, " <<
+        	static_cast<float>((tot_bytes * 8.0)/tot_us) << " Mbps, Delay: " <<  static_cast<float>(dt/tot_pkt) <<
+        	" us, Jitter: " << static_cast<float>((sum_dt_sq/tot_pkt)) << "us2" << endl;
 
         delete [] buffer;
 }

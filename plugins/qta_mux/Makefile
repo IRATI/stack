@@ -6,9 +6,9 @@ ifneq ($(KERNELRELEASE),)
 
 ccflags-y = -Wtype-limits -Inet/rina
 
-obj-m := cherish-urgency-plugin.o
+obj-m := qta-mux-plugin.o
 
-cherish-urgency-plugin-y := cherish-urgency.o
+qta-mux-plugin-y := qta-mux.o
 
 else
 
@@ -29,7 +29,7 @@ clean:
 
 install:
 	$(MAKE) -C $(KDIR) M=$$PWD modules_install
-	cp cherish-urgency-plugin.manifest /lib/modules/$(KREL)/extra/
+	cp qta-mux-plugin.manifest /lib/modules/$(KREL)/extra/
 	depmod -a
 
 uninstall:
