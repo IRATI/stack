@@ -570,8 +570,7 @@ void IPCProcessImpl::processPluginLoadRequestEvent(
         return;
 }
 
-void IPCProcessImpl::processFwdCDAPMsgRequestEvent(
-                        const rina::FwdCDAPMsgRequestEvent& event)
+void IPCProcessImpl::processFwdCDAPMsgRequestEvent(rina::FwdCDAPMsgRequestEvent& event)
 {
 	if (!event.sermsg.message_) {
 		LOG_IPCP_ERR("No CDAP message to be forwarded");

@@ -261,6 +261,7 @@ public:
 	SSH2SecurityContext(int session_id) : ISecurityContext(session_id, IAuthPolicySet::AUTH_SSH2),
 			state(BEGIN), dh_state(NULL), dh_peer_pub_key(NULL),
 			auth_keypair(NULL), auth_peer_pub_key(NULL),
+			crypto_tx_enabled(false), crypto_rx_enabled (false),
 			timer_task(NULL) { };
 	SSH2SecurityContext(int session_id,
 			    const std::string& peer_ap_name,
@@ -333,6 +334,9 @@ public:
 
 	/// Public key of the IPCP I'm authenticating against
 	RSA * auth_peer_pub_key;
+
+	bool crypto_tx_enabled;
+	bool crypto_rx_enabled;
 
 	/// Application process name of the IPCP I'm authenticating against
 	std::string peer_ap_name;
@@ -476,6 +480,8 @@ public:
 	ISecurityManager() : rina::ApplicationEntity(SECURITY_MANAGER_AE_NAME) { };
         virtual ~ISecurityManager();
         int add_auth_policy_set(const std::string& auth_type);
+        void add_auth_policy_set(const std::string& auth_type,
+        			 IAuthPolicySet * ps);
         int set_policy_set_param(const std::string& path,
                                  const std::string& name,
                                  const std::string& value);

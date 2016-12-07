@@ -167,6 +167,7 @@ AC_CONFIG_FILES([
     src/cdapc/Makefile
     src/cdapc/encoders/Makefile
     src/common/tclap/Makefile
+    src/key-managers/Makefile
 
     doc/Makefile
 ])
