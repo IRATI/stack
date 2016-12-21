@@ -4,6 +4,7 @@
 #define RINA_PREFIX "ipcm.mad.conf"
 #include <librina/logs.h>
 #include <librina/common.h>
+#include <librina/security-manager.h>
 #include <debug.h>
 
 #include <librina/json/json.h>
@@ -53,7 +54,10 @@ ConfManager::ConfManager(const rinad::RINAConfiguration& config){
         if (mad_conf != 0) {
                 Json::Value nms_difs_conf = mad_conf["NMSDIFs"];
                 Json::Value mad_conns_conf = mad_conf["managerConnections"];
+                Json::Value key_mgr_conf = mad_conf["keyMgrConnection"];
                 std::string app_name_enc;
+                std::string dif;
+                std::string auth_pol_name;
 
                 app_name_enc = mad_conf.get("managerAppName",
                                         app_name_enc).asString();
@@ -64,20 +68,37 @@ ConfManager::ConfManager(const rinad::RINAConfiguration& config){
                 if (mad_conns_conf != 0) {
                         for (unsigned i = 0; i< mad_conns_conf.size(); i++) {
                                 ManagerConnInfo mci;
-                                std::string app_name_enc;
-                                std::string dif;
 
                                 app_name_enc = mad_conns_conf[i]
                                                .get("managerAppName",
                                                app_name_enc).asString();
                                 dif = mad_conns_conf[i].get("DIF", dif)
                                                        .asString();
+                                auth_pol_name = mad_conns_conf[i].get("authPolicy", auth_pol_name)
+                                                                 .asString();
+                                if (auth_pol_name == std::string())
+                                	auth_pol_name = rina::IAuthPolicySet::AUTH_NONE;
 
                                 mci.manager_name =
                                         rina::decode_apnameinfo(app_name_enc);
                                 mci.manager_dif = dif;
+                                mci.auth_policy_name = auth_pol_name;
                                 manager_connections.push_back(mci);
                         }
+                }
+
+                if (key_mgr_conf != 0) {
+                	app_name_enc = key_mgr_conf.get("managerAppName",
+                			       	        app_name_enc).asString();
+                	dif = key_mgr_conf.get("DIF", dif).asString();
+                        auth_pol_name = key_mgr_conf.get("authPolicy", auth_pol_name)
+                                                         .asString();
+                        if (auth_pol_name == std::string())
+                        	auth_pol_name = rina::IAuthPolicySet::AUTH_NONE;
+
+                        key_manager_connection.manager_name = rina::decode_apnameinfo(app_name_enc);
+                        key_manager_connection.manager_dif = dif;
+                        key_manager_connection.auth_policy_name = auth_pol_name;
                 }
         }
 
@@ -104,27 +125,34 @@ ConfManager::~ConfManager(){
 }
 
 //Module configuration routine
-void ConfManager::configure(ManagementAgent& agent){
+void ConfManager::configure(ManagementAgent& agent)
+{
+	AppConnection ap_con;
 
 	//Configure the AP name and instance ID
-	rina::ApplicationProcessNamingInformation info("rina.apps.mad", "1");
 	agent.setAPInfo(app_name);
 
 	//Configure Manager connections
         for (std::list<ManagerConnInfo>::iterator
                         it = manager_connections.begin();
                                 it != manager_connections.end(); it++) {
-                AppConnection ap_con;
 
                 ap_con.flow_info.remoteAppName = it->manager_name;
                 ap_con.flow_info.difName =
                         rina::ApplicationProcessNamingInformation(
                                         it->manager_dif, std::string());
-
+                ap_con.auth_policy_name = it->auth_policy_name;
 	        agent.addManagerConnection(ap_con);
         }
 
-	//TODO
+        if (key_manager_connection.manager_name.processName == std::string())
+        	return;
+
+        ap_con.flow_info.remoteAppName = key_manager_connection.manager_name;
+        ap_con.flow_info.difName = rina::ApplicationProcessNamingInformation(key_manager_connection.manager_dif,
+        								     std::string());
+        ap_con.auth_policy_name = key_manager_connection.auth_policy_name;
+	agent.setKeyManagerConnection(ap_con);
 }
 
 }; //namespace mad

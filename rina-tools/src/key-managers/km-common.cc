@@ -1034,6 +1034,28 @@ bool KeyContainerRIBObject::delete_(const rina::cdap_rib::con_handle_t &con,
 	return true;
 }
 
+void KeyContainerRIBObject::read(const rina::cdap_rib::con_handle_t &con,
+				 const std::string& fqn,
+				 const std::string& class_,
+				 const rina::cdap_rib::filt_info_t &filt,
+				 const int invoke_id,
+				 rina::cdap_rib::obj_info_t &obj_reply,
+				 rina::cdap_rib::res_info_t& res)
+{
+	struct key_container * kc = kcm->find_key_container(kc_id);
+
+	if (!kc) {
+		res.code_ = rina::cdap_rib::CDAP_ERROR;
+		res.reason_ = "Could not find associated key container";
+		return;
+	}
+
+	KeyContainerManager::encode_key_container_message(*kc, obj_reply.value_);
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+
+	LOG_INFO("Value of key container %s read", fqn.c_str());
+}
+
 void KeyContainerRIBObject::create_cb(const rina::rib::rib_handle_t rib,
 			      	      const rina::cdap_rib::con_handle_t &con,
 				      const std::string& fqn,

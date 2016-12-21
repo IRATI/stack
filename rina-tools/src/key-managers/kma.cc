@@ -40,12 +40,33 @@ using namespace std;
 using namespace rina;
 
 // Class Key Management Agent Enrollment Task
-KMAEnrollmentTask::KMAEnrollmentTask() : ApplicationEntity(ApplicationEntity::ENROLLMENT_TASK_AE_NAME)
+KMAEnrollmentTask::KMAEnrollmentTask(const std::string& ckm_name) :
+		ApplicationEntity(ApplicationEntity::ENROLLMENT_TASK_AE_NAME)
 {
+	ckm_ap_name = ckm_name;
 	kma = 0;
+	ma_invoke_id = 0;
+
 	ckm_state.auth_ps_ = 0;
 	ckm_state.enrolled = false;
 	ckm_state.con.port_id = 0;
+
+	ma_state.auth_ps_ = 0;
+	ma_state.enrolled = false;
+	ma_state.con.port_id = 0;
+}
+
+KMAEnrollmentTask::~KMAEnrollmentTask()
+{
+	if (ckm_state.auth_ps_ != 0) {
+		delete ckm_state.auth_ps_;
+		ckm_state.auth_ps_ = 0;
+	}
+
+	if (ma_state.auth_ps_ != 0) {
+		delete ma_state.auth_ps_;
+		ma_state.auth_ps_ = 0;
+	}
 }
 
 void KMAEnrollmentTask::set_application_process(rina::ApplicationProcess * ap)
@@ -84,6 +105,9 @@ void KMAEnrollmentTask::eventHappened(rina::InternalEvent * event)
 
 void KMAEnrollmentTask::initiateEnrollmentWithCKM(const rina::NMinusOneFlowAllocatedEvent& event)
 {
+	if (event.flow_information_.remoteAppName.processName != ckm_ap_name)
+		return;
+
 	LOG_INFO("Starting enrollment with %s over port-id %d",
 		  event.flow_information_.remoteAppName.getEncodedString().c_str(),
 		  event.flow_information_.portId);
@@ -128,6 +152,41 @@ void KMAEnrollmentTask::initiateEnrollmentWithCKM(const rina::NMinusOneFlowAlloc
 void KMAEnrollmentTask::connect(const rina::cdap::CDAPMessage& message,
 				const rina::cdap_rib::con_handle_t &con)
 {
+	rina::ScopedLock g(lock);
+	if (ma_state.enrolled || ma_state.auth_ps_){
+		LOG_ERR("I'm already enrolled or enrolling to the Management Agent");
+		return;
+	}
+
+	ma_state.auth_ps_ = kma->secman->get_auth_policy_set(message.auth_policy_.name);
+	if (!ma_state.auth_ps_) {
+		LOG_ERR("Could not find authentication policy %s",
+			message.auth_policy_.name.c_str());
+		kma->irm->deallocate_flow(con.port_id);
+		return;
+	}
+
+	LOG_INFO("Authenticating Management Agent %s-%s ...",
+		  con.dest_.ap_name_.c_str(),
+		  con.dest_.ap_inst_.c_str());
+
+	rina::IAuthPolicySet::AuthStatus auth_status =
+			ma_state.auth_ps_->initiate_authentication(message.auth_policy_,
+							  	   kma->secman->sec_profile,
+								   con.dest_,
+								   con.port_id);
+	if (auth_status == rina::IAuthPolicySet::FAILED) {
+		LOG_ERR("Authentication failed");
+		kma->irm->deallocate_flow(con.port_id);
+		delete ma_state.auth_ps_;
+		ma_state.auth_ps_ = 0;
+		return;
+	} else if (auth_status == rina::IAuthPolicySet::IN_PROGRESS) {
+		LOG_DBG("Authentication in progress");
+	}
+
+	ma_state.con = con;
+	ma_invoke_id = message.invoke_id_;
 }
 
 void KMAEnrollmentTask::connectResult(const rina::cdap_rib::res_info_t &res,
@@ -150,16 +209,18 @@ void KMAEnrollmentTask::process_authentication_message(const rina::cdap::CDAPMes
 			            	    	       const rina::cdap_rib::con_handle_t &con)
 {
 	int result = 0;
+	cdap_rib::res_info_t res;
 
 	ScopedLock g(lock);
 
-	if (con.port_id != ckm_state.con.port_id) {
+	if (con.port_id != ckm_state.con.port_id &&
+			con.port_id != ma_state.con.port_id) {
 		LOG_ERR("Received authentication message through wrong port-id, aborting");
 		kma->irm->deallocate_flow(con.port_id);
 		return;
 	}
 
-	if (ckm_state.enrolled) {
+	if (ckm_state.enrolled && ma_state.enrolled) {
 		LOG_ERR("Received an authentication message and I'm already enrolled");
 		kma->irm->deallocate_flow(con.port_id);
 		return;
@@ -179,7 +240,25 @@ void KMAEnrollmentTask::process_authentication_message(const rina::cdap::CDAPMes
 		return;
 	}
 
-	LOG_INFO("Authentication was successful, waiting for M_CONNECT_R");
+	if (con.port_id == ckm_state.con.port_id) {
+		LOG_INFO("Authentication was successful, waiting for M_CONNECT_R");
+		return;
+	}
+
+	LOG_INFO("Authentication was successful, sending M_CONNECT_R");
+
+	//Send M_CONNECT_R
+	try{
+		res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+		rina::cdap::getProvider()->send_open_connection_result(ma_state.con,
+								       res,
+								       ma_state.con.auth_,
+								       ma_invoke_id);
+	}catch(rina::Exception &e){
+		LOG_ERR("Problems sending CDAP message: %s", e.what());
+		kma->irm->deallocate_flow(con.port_id);
+		return;
+	}
 }
 
 // Class Key Management Agent
@@ -198,7 +277,7 @@ KeyManagementAgent::KeyManagementAgent(const std::string& creds_folder,
 	quiet = q;
 
 	creds_location = creds_folder;
-	etask = new KMAEnrollmentTask();
+	etask = new KMAEnrollmentTask(ckm_apn);
 	ribd = new KMRIBDaemon(etask);
 	secman = new KMSecurityManager(creds_folder);
 	eventm = new SimpleInternalEventManager();
@@ -214,6 +293,10 @@ KeyManagementAgent::KeyManagementAgent(const std::string& creds_folder,
 
 	populate_rib();
 
+	//Register so that the local Management Agent can connect to me
+	irm->applicationRegister(dif_names, apn, api);
+
+	//Allocate a flow to the Central Key Manager
 	irm->allocate_flow(ApplicationProcessNamingInformation(apn, api),
 			   ApplicationProcessNamingInformation(ckm_name, ckm_instance));
 }
