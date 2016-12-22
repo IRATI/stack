@@ -50,8 +50,8 @@ class KMAEnrollmentTask: public rina::cacep::AppConHandlerInterface,
 			 public rina::InternalEventListener
 {
 public:
-	KMAEnrollmentTask();
-	~KMAEnrollmentTask(){};
+	KMAEnrollmentTask(const std::string& ckm_name);
+	~KMAEnrollmentTask();
 
 	void set_application_process(rina::ApplicationProcess * ap);
 	void eventHappened(rina::InternalEvent * event);
@@ -71,8 +71,11 @@ private:
 	void initiateEnrollmentWithCKM(const rina::NMinusOneFlowAllocatedEvent& event);
 
 	rina::Lockable lock;
+	std::string ckm_ap_name;
 	KeyManagementAgent * kma;
 	CKMEnrollmentState ckm_state;
+	CKMEnrollmentState ma_state;
+	int ma_invoke_id;
 };
 
 class KeyManagementAgent: public AbstractKM {
