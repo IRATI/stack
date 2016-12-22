@@ -327,13 +327,13 @@ void* ActiveWorker::run(void* param)
 			auth_ps_ = rib_factory_->getSecurityManager()->get_auth_policy_set(con.auth_policy_name);
 			if (!auth_ps_) {
 				LOG_ERR("Could not %s authentication policy set, aborting",
-					rib_factory_->getSecurityManager()->sec_profile.authPolicy.name_.c_str());
+					rib_factory_->getSecurityManager()->get_sec_profile(con.auth_policy_name).authPolicy.name_.c_str());
 				return NULL;
 			}
 
 			auth = auth_ps_->get_auth_policy(port_id,
 	  	  	  	  	  	 	 dest,
-							 rib_factory_->getSecurityManager()->sec_profile);
+							 rib_factory_->getSecurityManager()->get_sec_profile(con.auth_policy_name));
 
 			//Version
 			rina::cdap_rib::vers_info_t vers;

@@ -58,7 +58,8 @@ typedef std::map<uint64_t, std::list<std::string> > RIBAEassoc;
 
 class MASecurityManager;
 
-class RIBConHandler : public rina::cacep::AppConHandlerInterface
+class RIBConHandler : public rina::cacep::AppConHandlerInterface,
+		      public rina::rib::RIBOpsRespHandler
 {
 public:
 	RIBConHandler();
@@ -76,6 +77,10 @@ public:
 			  const rina::cdap_rib::con_handle_t &con);
 	void process_authentication_message(const rina::cdap::CDAPMessage& message,
 					    const rina::cdap_rib::con_handle_t &con);
+
+	void remoteReadResult(const rina::cdap_rib::con_handle_t &con,
+			      const rina::cdap_rib::obj_info_t &obj,
+			      const rina::cdap_rib::res_info_t &res);
 
 private:
 	MASecurityManager * sec_man;
@@ -178,11 +183,12 @@ public:
 	void set_rib_daemon(rina::rib::RIBDaemonProxy * ribd);
         rina::IAuthPolicySet::AuthStatus update_crypto_state(const rina::CryptoState& state,
         						     rina::IAuthPolicySet * caller);
-
-        rina::AuthSDUProtectionProfile sec_profile;
+        rina::AuthSDUProtectionProfile get_sec_profile(const std::string& auth_policy_name);
 private:
         rina::AuthSSH2PolicySet * ssh2_auth_ps;
         rina::AuthNonePolicySet* none_auth_ps;
+        rina::AuthSDUProtectionProfile auth_ssh2_sec_profile;
+        rina::AuthSDUProtectionProfile auth_none_sec_profile;
         MASDUProtectionHandler * sdup;
 };
 

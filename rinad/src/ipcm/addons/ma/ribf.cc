@@ -357,33 +357,37 @@ void MASDUProtectionHandler::unprotect_sdu(rina::ser_obj_t& sdu, int port_id)
 // Class Key Manager Security Manager
 MASecurityManager::MASecurityManager(const std::string& creds_location)
 {
+	PolicyParameter parameter;
+
 	ssh2_auth_ps = 0;
 	none_auth_ps = 0;
 	sdup = 0;
 
-	PolicyParameter parameter;
-	sec_profile.authPolicy.name_ = IAuthPolicySet::AUTH_SSH2;
-	sec_profile.authPolicy.version_ = "1";
+	auth_none_sec_profile.authPolicy.name_ = IAuthPolicySet::AUTH_NONE;
+	auth_none_sec_profile.authPolicy.version_ = "1";
+
+	auth_ssh2_sec_profile.authPolicy.name_ = IAuthPolicySet::AUTH_SSH2;
+	auth_ssh2_sec_profile.authPolicy.version_ = "1";
 	parameter.name_ = "keyExchangeAlg";
 	parameter.value_ = "EDH";
-	sec_profile.authPolicy.parameters_.push_back(parameter);
+	auth_ssh2_sec_profile.authPolicy.parameters_.push_back(parameter);
 	parameter.name_ = "keystore";
 	parameter.value_ = creds_location;
-	sec_profile.authPolicy.parameters_.push_back(parameter);
+	auth_ssh2_sec_profile.authPolicy.parameters_.push_back(parameter);
 	parameter.name_ = "keystorePass";
 	parameter.value_ = "test";
-	sec_profile.authPolicy.parameters_.push_back(parameter);
-	sec_profile.encryptPolicy.name_ = "default";
-	sec_profile.encryptPolicy.version_ = "1";
+	auth_ssh2_sec_profile.authPolicy.parameters_.push_back(parameter);
+	auth_ssh2_sec_profile.encryptPolicy.name_ = "default";
+	auth_ssh2_sec_profile.encryptPolicy.version_ = "1";
 	parameter.name_ = "encryptAlg";
 	parameter.value_ = "AES256";
-	sec_profile.encryptPolicy.parameters_.push_back(parameter);
+	auth_ssh2_sec_profile.encryptPolicy.parameters_.push_back(parameter);
 	parameter.name_ = "macAlg";
 	parameter.value_ = "SHA256";
-	sec_profile.encryptPolicy.parameters_.push_back(parameter);
+	auth_ssh2_sec_profile.encryptPolicy.parameters_.push_back(parameter);
 	parameter.name_ = "compressAlg";
 	parameter.value_ = "deflate";
-	sec_profile.encryptPolicy.parameters_.push_back(parameter);
+	auth_ssh2_sec_profile.encryptPolicy.parameters_.push_back(parameter);
 }
 
 MASecurityManager::~MASecurityManager()
@@ -399,6 +403,14 @@ MASecurityManager::~MASecurityManager()
 
 	if (sdup)
 		delete sdup;
+}
+
+rina::AuthSDUProtectionProfile MASecurityManager::get_sec_profile(const std::string& auth_policy_name)
+{
+	if (auth_policy_name == IAuthPolicySet::AUTH_SSH2)
+		return auth_ssh2_sec_profile;
+	else
+		return auth_none_sec_profile;
 }
 
 void MASecurityManager::set_application_process(rina::ApplicationProcess * ap)
@@ -450,10 +462,14 @@ void RIBConHandler::connectResult(
 {
 	std::string object_name;
 
-	if (con.dest_.ap_name_ == "pristine.local.key.ma")
+	if (con.dest_.ap_name_ == "pristine.local.key.ma") {
 		object_name = "/keyContainers/id=A.kmdemo";
-	else
+	} else if (con.dest_.ap_name_ == "pristine.local.key.ma2") {
 		object_name = "/keyContainers/id=B.kmdemo";
+	} else {
+		LOG_INFO("Connected to the Manager");
+		return;
+	}
 
 	LOG_INFO("Connected to Local Key Management Agent, subscribing to key container %s...",
 		 object_name.c_str());
@@ -472,7 +488,7 @@ void RIBConHandler::connectResult(
 						    obj_info,
 						    flags,
 						    filt,
-						    NULL);
+						    this);
 	} catch (Exception &e) {
 		LOG_ERR("Problems encoding and sending CDAP message to KMA %s: %s",
 				con.dest_.ap_name_.c_str(),
@@ -496,7 +512,7 @@ void RIBConHandler::process_authentication_message(const rina::cdap::CDAPMessage
 	int result = 0;
 	rina::IAuthPolicySet * ps = 0;
 
-	ps = sec_man->get_auth_policy_set(sec_man->sec_profile.authPolicy.name_);
+	ps = sec_man->get_auth_policy_set(con.auth_.name);
 	result = ps->process_incoming_message(message,
 					      con.port_id);
 
@@ -511,6 +527,13 @@ void RIBConHandler::process_authentication_message(const rina::cdap::CDAPMessage
 	}
 
 	LOG_INFO("Authentication was successful, waiting for M_CONNECT_R");
+}
+
+void RIBConHandler::remoteReadResult(const rina::cdap_rib::con_handle_t &con,
+		      	      	     const rina::cdap_rib::obj_info_t &obj,
+				     const rina::cdap_rib::res_info_t &res)
+{
+	LOG_INFO("Got read result for object name %s", obj.name_.c_str());
 }
 
 };//namespace mad

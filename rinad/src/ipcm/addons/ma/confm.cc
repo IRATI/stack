@@ -68,10 +68,11 @@ ConfManager::ConfManager(const rinad::RINAConfiguration& config){
                 if (mad_conns_conf != 0) {
                         for (unsigned i = 0; i< mad_conns_conf.size(); i++) {
                                 ManagerConnInfo mci;
+                                std::string ma_name;
 
-                                app_name_enc = mad_conns_conf[i]
-                                               .get("managerAppName",
-                                               app_name_enc).asString();
+                                ma_name = mad_conns_conf[i]
+					  .get("managerAppName",
+                                               ma_name).asString();
                                 dif = mad_conns_conf[i].get("DIF", dif)
                                                        .asString();
                                 auth_pol_name = mad_conns_conf[i].get("authPolicy", auth_pol_name)
@@ -79,8 +80,7 @@ ConfManager::ConfManager(const rinad::RINAConfiguration& config){
                                 if (auth_pol_name == std::string())
                                 	auth_pol_name = rina::IAuthPolicySet::AUTH_NONE;
 
-                                mci.manager_name =
-                                        rina::decode_apnameinfo(app_name_enc);
+                                mci.manager_name = rina::decode_apnameinfo(ma_name);
                                 mci.manager_dif = dif;
                                 mci.auth_policy_name = auth_pol_name;
                                 manager_connections.push_back(mci);
@@ -88,15 +88,16 @@ ConfManager::ConfManager(const rinad::RINAConfiguration& config){
                 }
 
                 if (key_mgr_conf != 0) {
-                	app_name_enc = key_mgr_conf.get("managerAppName",
-                			       	        app_name_enc).asString();
+                	std::string kma_name;
+                	kma_name = key_mgr_conf.get("kmaAppName",
+                				    kma_name).asString();
                 	dif = key_mgr_conf.get("DIF", dif).asString();
                         auth_pol_name = key_mgr_conf.get("authPolicy", auth_pol_name)
                                                          .asString();
                         if (auth_pol_name == std::string())
                         	auth_pol_name = rina::IAuthPolicySet::AUTH_NONE;
 
-                        key_manager_connection.manager_name = rina::decode_apnameinfo(app_name_enc);
+                        key_manager_connection.manager_name = rina::decode_apnameinfo(kma_name);
                         key_manager_connection.manager_dif = dif;
                         key_manager_connection.auth_policy_name = auth_pol_name;
                 }
@@ -113,9 +114,17 @@ ConfManager::ConfManager(const rinad::RINAConfiguration& config){
         for (std::list<ManagerConnInfo>::iterator
                         it = manager_connections.begin();
                                 it != manager_connections.end(); it++) {
-                LOG_INFO("MAD Manager connection Name=%s DIF=%s",
-                                it->manager_name.toString().c_str(),
-                                it->manager_dif.c_str());
+                LOG_INFO("MAD Manager connection Name=%s DIF=%s authPolicy=%s",
+                          it->manager_name.toString().c_str(),
+                          it->manager_dif.c_str(),
+			  it->auth_policy_name.c_str());
+        }
+
+        if (key_manager_connection.manager_name.processName != std::string()) {
+        	LOG_INFO("MAD Local Key Management Agent connection Name=%s DIF=%s authPolicy=%s",
+        		 key_manager_connection.manager_name.processName.c_str(),
+			 key_manager_connection.manager_dif.c_str(),
+			 key_manager_connection.auth_policy_name.c_str());
         }
 
 	LOG_DBG("Initialized");
