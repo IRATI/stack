@@ -26,6 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -38,14 +39,21 @@
 #include <signal.h>
 #include <poll.h>
 #include <time.h>
+#include <pthread.h>
 
 #include <rina/api.h>
 
 
-#define SDU_SIZE_MAX    65535
+#define SDU_SIZE_MAX            65535
+#define RINAPERF_MAX_WORKERS    1023
 
 static int stop = 0; /* Used to stop client on SIGINT. */
 static int cli_flow_allocated = 0; /* Avoid to get stuck in rina_flow_alloc(). */
+
+struct rinaperf;
+struct worker;
+
+typedef int (*perf_function_t)(struct worker *);
 
 struct rinaperf_test_config {
     uint32_t ty;
@@ -53,32 +61,43 @@ struct rinaperf_test_config {
     uint32_t cnt;
 };
 
-struct rinaperf {
-    int cfd;
-    const char *cli_appl_name;
-    const char *srv_appl_name;
-    int dfd;
-
+struct worker {
+    pthread_t th;
+    struct rinaperf *rp;    /* backpointer */
+    struct worker *next;    /* next worker */
+    struct rinaperf_test_config test_config;
     unsigned int interval;
     unsigned int burst;
+    perf_function_t fn;
     int ping;
-
-    struct rinaperf_test_config test_config;
+    int fd;
 };
 
-typedef int (*perf_function_t)(struct rinaperf *);
+struct rinaperf {
+    struct rina_flow_spec flowspec;
+    const char *cli_appl_name;
+    const char *srv_appl_name;
+    const char *dif_name;
+    int cfd; /* Control file descriptor */
+    int parallel;
+
+    /* List of workers. */
+    struct worker *workers_head;
+    struct worker *workers_tail;
+    unsigned int workers_num;
+};
 
 static int
-client_test_config(struct rinaperf *rp)
+client_test_config(struct worker *w)
 {
-    struct rinaperf_test_config cfg = rp->test_config;
+    struct rinaperf_test_config cfg = w->test_config;
     int ret;
 
     cfg.ty = htole32(cfg.ty);
     cfg.cnt = htole32(cfg.cnt);
     cfg.size = htole32(cfg.size);
 
-    ret = write(rp->dfd, &cfg, sizeof(cfg));
+    ret = write(w->fd, &cfg, sizeof(cfg));
     if (ret != sizeof(cfg)) {
         if (ret < 0) {
             perror("write(buf)");
@@ -93,7 +112,7 @@ client_test_config(struct rinaperf *rp)
 }
 
 static int
-server_test_config(struct rinaperf *rp)
+server_test_config(struct worker *w)
 {
     struct rinaperf_test_config cfg;
     struct timeval to;
@@ -101,11 +120,11 @@ server_test_config(struct rinaperf *rp)
     int ret;
 
     FD_ZERO(&rfds);
-    FD_SET(rp->dfd, &rfds);
+    FD_SET(w->fd, &rfds);
     to.tv_sec = 3;
     to.tv_usec = 0;
 
-    ret = select(rp->dfd + 1, &rfds, NULL, NULL, &to);
+    ret = select(w->fd + 1, &rfds, NULL, NULL, &to);
     switch (ret) {
         case -1:
             perror("select()");
@@ -119,7 +138,7 @@ server_test_config(struct rinaperf *rp)
             break;
     }
 
-    ret = read(rp->dfd, &cfg, sizeof(cfg));
+    ret = read(w->fd, &cfg, sizeof(cfg));
     if (ret != sizeof(cfg)) {
         if (ret < 0) {
             perror("read(buf");
@@ -142,22 +161,23 @@ server_test_config(struct rinaperf *rp)
     printf("Configuring test type %u, SDU count %u, SDU size %u\n",
            cfg.ty, cfg.cnt, cfg.size);
 
-    rp->test_config = cfg;
+    w->test_config = cfg;
 
     return 0;
 }
 
 /* Used for both ping and rr tests. */
 static int
-ping_client(struct rinaperf *rp)
+ping_client(struct worker *w)
 {
-    unsigned int limit = rp->test_config.cnt;
+    unsigned int limit = w->test_config.cnt;
     struct timeval t_start, t_end, t1, t2;
-    unsigned int interval = rp->interval;
-    int size = rp->test_config.size;
+    unsigned int interval = w->interval;
+    int size = w->test_config.size;
     char buf[SDU_SIZE_MAX];
     volatile uint16_t *seqnum = (uint16_t *)buf;
-    int verb = rp->ping;
+    unsigned int timeouts = 0;
+    int verb = w->ping;
     unsigned int i = 0;
     unsigned long us;
     struct pollfd pfd;
@@ -178,7 +198,7 @@ ping_client(struct rinaperf *rp)
         }
     }
 
-    pfd.fd = rp->dfd;
+    pfd.fd = w->fd;
     pfd.events = POLLIN;
 
     memset(buf, 'x', size);
@@ -192,7 +212,7 @@ ping_client(struct rinaperf *rp)
 
         *seqnum = (uint16_t)i;
 
-        ret = write(rp->dfd, buf, size);
+        ret = write(w->fd, buf, size);
         if (ret != size) {
             if (ret < 0) {
                 perror("write(buf)");
@@ -209,9 +229,14 @@ repoll:
 
         if (ret == 0) {
             printf("Timeout: %d bytes lost\n", size);
+            if (++ timeouts > 8) {
+                printf("Stopping after %u consecutive timeouts\n", timeouts);
+                stop = 1;
+            }
         } else {
             /* Ready to read. */
-            ret = read(rp->dfd, buf, sizeof(buf));
+            timeouts = 0;
+            ret = read(w->fd, buf, sizeof(buf));
             if (ret <= 0) {
                 if (ret) {
                     perror("read(buf");
@@ -249,22 +274,22 @@ repoll:
                 (us/i) - interval);
     }
 
-    close(rp->dfd);
+    close(w->fd);
 
     return 0;
 }
 
 /* Used for both ping and rr tests. */
 static int
-ping_server(struct rinaperf *rp)
+ping_server(struct worker *w)
 {
-    unsigned int limit = rp->test_config.cnt;
+    unsigned int limit = w->test_config.cnt;
     char buf[SDU_SIZE_MAX];
     struct pollfd pfd;
     unsigned int i;
     int n, ret;
 
-    pfd.fd = rp->dfd;
+    pfd.fd = w->fd;
     pfd.events = POLLIN;
 
     for (i = 0; !limit || i < limit; i++) {
@@ -273,12 +298,12 @@ ping_server(struct rinaperf *rp)
             perror("poll(flow)");
         } else if (n == 0) {
             /* Timeout */
-            printf("timeout occurred\n");
+            printf("Timeout occurred\n");
             break;
         }
 
         /* File descriptor is ready for reading. */
-        n = read(rp->dfd, buf, sizeof(buf));
+        n = read(w->fd, buf, sizeof(buf));
         if (n < 0) {
             perror("read(flow)");
             return -1;
@@ -287,7 +312,7 @@ ping_server(struct rinaperf *rp)
             break;
         }
 
-        ret = write(rp->dfd, buf, n);
+        ret = write(w->fd, buf, n);
         if (ret != n) {
             if (ret < 0) {
                 perror("write(flow)");
@@ -304,12 +329,12 @@ ping_server(struct rinaperf *rp)
 }
 
 static int
-perf_client(struct rinaperf *rp)
+perf_client(struct worker *w)
 {
-    unsigned limit = rp->test_config.cnt;
-    int size = rp->test_config.size;
-    unsigned int interval = rp->interval;
-    unsigned int burst = rp->burst;
+    unsigned limit = w->test_config.cnt;
+    int size = w->test_config.size;
+    unsigned int interval = w->interval;
+    unsigned int burst = w->burst;
     unsigned int cdown = burst;
     struct timeval t_start, t_end;
     struct timeval w1, w2;
@@ -336,7 +361,7 @@ perf_client(struct rinaperf *rp)
     gettimeofday(&t_start, NULL);
 
     for (i = 0; !stop && (!limit || i < limit); i++) {
-        ret = write(rp->dfd, buf, size);
+        ret = write(w->fd, buf, size);
         if (ret != size) {
             if (ret < 0) {
                 perror("write(buf)");
@@ -374,7 +399,7 @@ perf_client(struct rinaperf *rp)
                 ((float)size) * 8 * i / us);
     }
 
-    close(rp->dfd);
+    close(w->fd);
 
     return 0;
 }
@@ -415,9 +440,9 @@ rate_print(unsigned long long *bytes, unsigned long long *cnt,
 }
 
 static int
-perf_server(struct rinaperf *rp)
+perf_server(struct worker *w)
 {
-    unsigned limit = rp->test_config.cnt;
+    unsigned limit = w->test_config.cnt;
     unsigned long long rate_cnt = 0;
     unsigned long long rate_bytes_limit = 1000;
     unsigned long long rate_bytes = 0;
@@ -427,7 +452,7 @@ perf_server(struct rinaperf *rp)
     unsigned int i;
     int n;
 
-    pfd.fd = rp->dfd;
+    pfd.fd = w->fd;
     pfd.events = POLLIN;
 
     clock_gettime(CLOCK_MONOTONIC, &rate_ts);
@@ -444,7 +469,7 @@ perf_server(struct rinaperf *rp)
         }
 
         /* Ready to read. */
-        n = read(rp->dfd, buf, sizeof(buf));
+        n = read(w->fd, buf, sizeof(buf));
         if (n < 0) {
             perror("read(flow)");
             return -1;
@@ -490,33 +515,161 @@ static struct perf_function_desc descs[] = {
     },
 };
 
+#define CLI_FA_TIMEOUT_SEC     5
+
+static void *
+client_worker_function(void *opaque)
+{
+    struct worker *w = opaque;
+    struct pollfd pfd;
+    int ret;
+
+    /* We're the client: allocate a flow and run the perf function. */
+    pfd.fd = rina_flow_alloc(w->rp->dif_name, w->rp->cli_appl_name,
+                             w->rp->srv_appl_name, &w->rp->flowspec,
+                             RINA_F_NOWAIT);
+    pfd.events = POLLIN;
+    ret = poll(&pfd, 1, CLI_FA_TIMEOUT_SEC * 1000);
+    if (ret <= 0) {
+        if (ret < 0) {
+            perror("poll()");
+        } else {
+            printf("Flow allocation timed out\n");
+        }
+        close(pfd.fd);
+        return NULL;
+    }
+    w->fd = rina_flow_alloc_wait(pfd.fd);
+    cli_flow_allocated = 1;
+    if (w->fd < 0) {
+        perror("rina_flow_alloc()");
+        return NULL;
+    }
+
+    ret = client_test_config(w);
+    if (ret) {
+        return NULL;
+    }
+
+    w->fn(w);
+
+    return NULL;
+}
+
+static void *
+server_worker_function(void *opaque)
+{
+    struct worker *w = opaque;
+    int ret;
+
+    ret = server_test_config(w);
+    if (ret) {
+        goto out;
+    }
+
+    w->fn = descs[w->test_config.ty].server_function;
+    assert(w->fn);
+
+    if (w->test_config.ty >= sizeof(descs)) {
+        goto out;
+    }
+
+    w->fn(w);
+out:
+    close(w->fd);
+    w->fd = -1;
+
+    return NULL;
+}
+
 static int
 server(struct rinaperf *rp)
 {
+    struct worker *w = NULL;
+    int ret;
+
+    /* Server-side initializations. */
+    ret = rina_register(rp->cfd, rp->dif_name, rp->srv_appl_name);
+    if (ret) {
+        perror("rina_register()");
+        return ret;
+    }
+
     for (;;) {
-        perf_function_t perf_function = NULL;
+        struct worker *p;
         int ret;
 
-        rp->dfd = rina_flow_accept(rp->cfd, NULL, NULL, 0);
-        if (rp->dfd < 0) {
+        for (;;) {
+            /* Try to join terminated threads. */
+            for (p = NULL, w = rp->workers_head; w; ) {
+                ret = pthread_tryjoin_np(w->th, NULL);
+                if (ret == 0) {
+                    if (w == rp->workers_head) {
+                        rp->workers_head = w->next;
+                    }
+                    if (p) {
+                        p->next = w->next;
+                    }
+                    if (w == rp->workers_tail) {
+                        rp->workers_tail = p;
+                    }
+                    {
+                        struct worker *tmp;
+                        tmp = w;
+                        w = w->next;
+                        free(tmp);
+                    }
+                    rp->workers_num --;
+
+                } else {
+                    if (ret != EBUSY) {
+                        printf("Failed to tryjoin() pthread: %s\n", strerror(ret));
+                    }
+                    p = w;
+                    w = w->next;
+                }
+            }
+
+            if (rp->workers_num < RINAPERF_MAX_WORKERS) {
+                break;
+            }
+            usleep(10000);
+        }
+
+        /* Allocate new worker and accept a new flow. */
+        w = malloc(sizeof(*w));
+        if (!w) {
+            printf("Out of memory\n");
+            return -1;
+        }
+        memset(w, 0, sizeof(*w));
+        w->rp = rp;
+
+        w->fd = rina_flow_accept(rp->cfd, NULL, NULL, 0);
+        if (w->fd < 0) {
             perror("rina_flow_accept()");
             break;
         }
 
-        ret = server_test_config(rp);
+        ret = pthread_create(&w->th, NULL, server_worker_function, w);
         if (ret) {
-            goto clos;
+            printf("pthread_create() failed: %s\n", strerror(ret));
+            break;
         }
 
-        if (rp->test_config.ty >= sizeof(descs)) {
-            continue;
+        /* List tail insertion */
+        if (rp->workers_tail == NULL) {
+            rp->workers_head = rp->workers_tail = w;
+        } else {
+            rp->workers_tail->next = w;
+            rp->workers_tail = w;
         }
-        perf_function = descs[rp->test_config.ty].server_function;
-        assert(perf_function);
+        rp->workers_num ++;
+        printf("Active workers %u\n", rp->workers_num);
+    }
 
-        perf_function(rp);
-clos:
-        close(rp->dfd);
+    if (w) {
+        free(w);
     }
 
     return 0;
@@ -589,6 +742,7 @@ usage(void)
                 "specified by -i option (default b=1)\n"
         "   -a APNAME : application process name and instance of the rinaperf client\n"
         "   -z APNAME : application process name and instance of the rinaperf server\n"
+        "   -p NUM : clients run NUM parallel instances, using NUM threads\n"
         "   -x : use a separate control connection\n"
           );
 }
@@ -599,9 +753,6 @@ main(int argc, char **argv)
     struct sigaction sa;
     struct rinaperf rp;
     const char *type = "ping";
-    const char *dif_name = NULL;
-    perf_function_t perf_function = NULL;
-    struct rina_flow_spec flowspec;
     int interval_specified = 0;
     int listen = 0;
     int cnt = 0;
@@ -609,17 +760,24 @@ main(int argc, char **argv)
     int interval = 0;
     int burst = 1;
     int have_ctrl = 0;
+    struct worker wt; /* template */
     int ret;
     int opt;
     int i;
 
+    memset(&rp, 0, sizeof(rp));
+    memset(&wt, 0, sizeof(wt));
+    wt.rp = &rp;
+    wt.fd = -1;
+
     rp.cli_appl_name = "rinaperf-data:client";
     rp.srv_appl_name = "rinaperf-data:server";
+    rp.parallel = 1;
 
     /* Start with a default flow configuration (unreliable flow). */
-    rina_flow_spec_default(&flowspec);
+    rina_flow_spec_default(&rp.flowspec);
 
-    while ((opt = getopt(argc, argv, "hlt:d:c:s:i:B:g:fb:a:z:x")) != -1) {
+    while ((opt = getopt(argc, argv, "hlt:d:c:s:i:B:g:fb:a:z:xp:")) != -1) {
         switch (opt) {
             case 'h':
                 usage();
@@ -634,7 +792,7 @@ main(int argc, char **argv)
                 break;
 
             case 'd':
-                dif_name = optarg;
+                rp.dif_name = optarg;
                 break;
 
             case 'c':
@@ -663,14 +821,15 @@ main(int argc, char **argv)
                 break;
 
             case 'g': /* Set max_sdu_gap flow specification parameter. */
-                flowspec.max_sdu_gap = atoll(optarg);
+                rp.flowspec.max_sdu_gap = atoll(optarg);
                 break;
 
             case 'B': /* Set the average bandwidth parameter. */
-                parse_bandwidth(&flowspec, optarg);
+                parse_bandwidth(&rp.flowspec, optarg);
                 break;
 
             case 'f': /* Enable flow control. */
+                rp.flowspec.spare3 = 1;
                 break;
 
             case 'b':
@@ -694,12 +853,22 @@ main(int argc, char **argv)
                 printf("Warning: Control connection support is incomplete\n");
                 break;
 
+            case 'p':
+                rp.parallel = atoi(optarg);
+                if (rp.parallel <= 0) {
+                    printf("    Invalid 'parallel' %d\n", rp.parallel);
+                    return -1;
+                }
+                break;
+
             default:
                 printf("    Unrecognized option %c\n", opt);
                 usage();
                 return -1;
         }
     }
+
+    (void)have_ctrl;
 
     /*
      * Fixups:
@@ -712,33 +881,33 @@ main(int argc, char **argv)
         if (!interval_specified) {
             interval = 1000000;
         }
-        rp.ping = 1;
+        wt.ping = 1;
 
     } else if (strcmp(type, "rr") == 0) {
-        rp.ping = 0;
+        wt.ping = 0;
     }
 
     /* Set defaults. */
-    rp.interval = interval;
-    rp.burst = burst;
+    wt.interval = interval;
+    wt.burst = burst;
 
     /* Function selection. */
     if (!listen) {
         for (i = 0; i < sizeof(descs)/sizeof(descs[0]); i++) {
             if (strcmp(descs[i].name, type) == 0) {
-                perf_function = descs[i].client_function;
+                wt.fn = descs[i].client_function;
                 break;
             }
         }
 
-        if (perf_function == NULL) {
+        if (wt.fn == NULL) {
             printf("    Unknown test type '%s'\n", type);
             usage();
             return -1;
         }
-        rp.test_config.ty = i;
-        rp.test_config.cnt = cnt;
-        rp.test_config.size = size;
+        wt.test_config.ty = i;
+        wt.test_config.cnt = cnt;
+        wt.test_config.size = size;
     }
 
     /* Set some signal handler */
@@ -764,41 +933,33 @@ main(int argc, char **argv)
     }
 
     if (listen) {
-        /* Server-side initializations. */
+        server(&rp);
+    } else if (rp.parallel == 1) {
+        client_worker_function(&wt);
+    } else {
+        struct worker *workers = calloc(rp.parallel, sizeof(*workers));
 
-        /* In listen mode also register the application names. */
-        if (have_ctrl) {
-            ret = rina_register(rp.cfd, dif_name, "rinaperf-ctrl:server");
+        if (workers == NULL) {
+            printf("Failed to allocate client workers\n");
+            return -1;
+        }
+
+        for (i = 0; i < rp.parallel; i++) {
+            memcpy(workers + i, &wt, sizeof(wt));
+            ret = pthread_create(&workers[i].th, NULL, client_worker_function,
+                                 workers + i);
             if (ret) {
-                perror("rina_register()");
-                return ret;
+                printf("pthread_create(#%d) failed: %s\n", i, strerror(ret));
+                break;
             }
         }
 
-        ret = rina_register(rp.cfd, dif_name, rp.srv_appl_name);
-        if (ret) {
-            perror("rina_register()");
-            return ret;
+        for (i = 0; i < rp.parallel; i++) {
+            ret = pthread_join(workers[i].th, NULL);
+            if (ret) {
+                printf("pthread_join(#%d) failed: %s\n", i, strerror(ret));
+            }
         }
-
-        server(&rp);
-
-    } else {
-        /* We're the client: allocate a flow and run the perf function. */
-        rp.dfd = rina_flow_alloc(dif_name, rp.cli_appl_name,
-                               rp.srv_appl_name, &flowspec, 0);
-        cli_flow_allocated = 1;
-        if (rp.dfd < 0) {
-            perror("rina_flow_alloc()");
-            return rp.dfd;
-        }
-
-        ret = client_test_config(&rp);
-        if (ret) {
-            return ret;
-        }
-
-        perf_function(&rp);
     }
 
     return close(rp.cfd);
