@@ -40,8 +40,12 @@ struct rina_flow_spec {
     uint16_t max_loss;          /* percentage */
     uint32_t max_jitter;        /* in microseconds */
     uint8_t in_order_delivery;  /* boolean */
+    uint8_t msg_boundaries;     /* boolean */
 
-    uint8_t reserved[37];       /* for future use */
+    /* for future use */
+    uint32_t spare1;
+    uint32_t spare2;
+    uint32_t spare3;
 };
 
 #define RINA_F_NOWAIT       (1 << 0)

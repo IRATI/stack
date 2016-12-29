@@ -392,6 +392,7 @@ rina_flow_accept(int fd, char **remote_appl, struct rina_flow_spec *spec,
                         spec->max_delay = fre->flowSpecification.delay;
                         spec->max_jitter = fre->flowSpecification.jitter;
                         spec->in_order_delivery = fre->flowSpecification.orderedDelivery;
+                        spec->msg_boundaries = fre->flowSpecification.partialDelivery;
                 }
 
                 if (flags & RINA_F_NORESP) {
@@ -500,6 +501,7 @@ rina_flow_alloc(const char *dif_name, const char *local_appl,
         flowspec_i.delay = flowspec->max_delay;
         flowspec_i.jitter = flowspec->max_jitter;
         flowspec_i.orderedDelivery = flowspec->in_order_delivery;
+        flowspec_i.partialDelivery = flowspec->msg_boundaries;
 
         str2apninfo(string(local_appl), local_apni);
         str2apninfo(string(remote_appl), remote_apni);
@@ -589,6 +591,7 @@ rina_flow_spec_default(struct rina_flow_spec *spec)
         spec->max_delay = 0;
         spec->max_jitter = 0;
         spec->in_order_delivery = 0;
+        spec->msg_boundaries = 1;
 }
 
 }
