@@ -199,7 +199,7 @@ void toGPB(const rina::DirectoryForwardingTableEntry &obj,
                         helpers::get_applicationProcessNamingInfo_t(
                                         obj.ap_naming_info_));
         gpb.set_ipcprocesssynonym(obj.address_);
-        gpb.set_timestamp(obj.timestamp_);
+        gpb.set_seqnum(obj.seqnum_);
 }
 
 void toModel(const rina::messages::directoryForwardingTableEntry_t &gpb,
@@ -210,7 +210,7 @@ void toModel(const rina::messages::directoryForwardingTableEntry_t &gpb,
                                                          app_name);
         des_obj.ap_naming_info_ = app_name;
         des_obj.address_ = gpb.ipcprocesssynonym();
-        des_obj.timestamp_ = gpb.timestamp();
+        des_obj.seqnum_ = gpb.seqnum();
 }
 }  // namespace dft_helpers
 
@@ -1059,19 +1059,19 @@ void RoutingTableEntryEncoder::encode(const rina::RoutingTableEntry &obj,
 {
         rina::messages::rt_entry_t gpb;
 
-        gpb.set_address(obj.address);
+        gpb.set_address(obj.destination.addresses.front());
         gpb.set_qos_id(obj.qosId);
         gpb.set_cost(obj.cost);
 
         std::list<rina::NHopAltList>::const_iterator it;
-        std::list<unsigned int>::const_iterator it2;
-        for (it = obj.nextHopAddresses.begin();
-                        it != obj.nextHopAddresses.end(); ++it)
+        std::list<rina::IPCPNameAddresses>::const_iterator it2;
+        for (it = obj.nextHopNames.begin();
+        		it != obj.nextHopNames.end(); ++it)
         {
                 rina::messages::uint_list_t *gpf_list = gpb.add_next_hops();
                 for (it2 = it->alts.begin(); it2 != it->alts.end(); ++it2)
                 {
-                        gpf_list->add_member(*it2);
+                	gpf_list->add_member(it2->addresses.front());
                 }
         }
 
@@ -1087,7 +1087,7 @@ void RoutingTableEntryEncoder::decode(const rina::ser_obj_t &serobj,
 
         gpb.ParseFromArray(serobj.message_, serobj.size_);
 
-        des_obj.address = gpb.address();
+        des_obj.destination.addresses.push_back(gpb.address());
         des_obj.qosId = gpb.qos_id();
         des_obj.cost = gpb.cost();
 
@@ -1097,10 +1097,12 @@ void RoutingTableEntryEncoder::decode(const rina::ser_obj_t &serobj,
                 rina::messages::uint_list_t gpb_list = gpb.next_hops(i);
                 for (int j = 0; j < gpb_list.member_size(); j++)
                 {
-                        list.alts.push_back(gpb_list.member(j));
+                	rina::IPCPNameAddresses ipcpna;
+                	ipcpna.addresses.push_back(gpb_list.member(j));
+                	list.alts.push_back(ipcpna);
                 }
 
-                des_obj.nextHopAddresses.push_back(list);
+                des_obj.nextHopNames.push_back(list);
         }
 }
 

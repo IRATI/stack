@@ -52,7 +52,7 @@ NeighborRIBObj::NeighborRIBObj(rina::Neighbor* neigh) :
 const std::string NeighborRIBObj::get_displayable_value() const
 {
     std::stringstream ss;
-    ss << "Name: " << neighbor->name_.getEncodedString();
+    ss << "Name: " << neighbor->name_.getProcessNamePlusInstance();
     ss << "; Address: " << neighbor->address_;
     ss << "; Enrolled: " << neighbor->enrolled_ << std::endl;
     ss << "; Supporting DIF Name: " << neighbor->supporting_dif_name_.processName;
@@ -154,7 +154,6 @@ void NeighborsRIBObj::create(const rina::cdap_rib::con_handle_t &con,
 			     rina::ser_obj_t &obj_reply,
 			     rina::cdap_rib::res_info_t& res)
 {
-	rina::Lockable lock;
 	rina::ScopedLock g(lock);
 	encoders::NeighborListEncoder encoder;
 	std::list<rina::Neighbor> neighbors;
@@ -201,6 +200,31 @@ void NeighborsRIBObj::create(const rina::cdap_rib::con_handle_t &con,
 
 		//5 Add the neighbor
 		ipc_process_->enrollment_task_->add_neighbor(*iterator);
+	}
+}
+
+void NeighborsRIBObj::write(const rina::cdap_rib::con_handle_t &con,
+			    const std::string& fqn,
+			    const std::string& class_,
+			    const rina::cdap_rib::filt_info_t &filt,
+			    const int invoke_id,
+			    const rina::ser_obj_t &obj_req,
+			    rina::ser_obj_t &obj_reply,
+			    rina::cdap_rib::res_info_t& res)
+{
+	rina::ScopedLock g(lock);
+	encoders::NeighborListEncoder encoder;
+	std::list<rina::Neighbor> neighbors;
+	std::stringstream ss;
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+
+	//1 decode neighbor list from ser_obj_t
+	encoder.decode(obj_req, neighbors);
+
+	std::list<rina::Neighbor>::iterator iterator;
+	for(iterator = neighbors.begin(); iterator != neighbors.end(); ++iterator) {
+		//Modify the neighbor's address
+		ipc_process_->enrollment_task_->update_neighbor_address(*iterator);
 	}
 }
 
@@ -419,7 +443,7 @@ void * doNeighborsEnrollerWork(void * arg)
 				rina::EnrollmentRequest request(**it);
 				enrollmentTask->initiateEnrollment(request);
 			} else {
-				enrollmentTask->remove_neighbor((*it)->name_.getEncodedString());
+				enrollmentTask->remove_neighbor((*it)->name_.getProcessNamePlusInstance());
 			}
 
 		}
@@ -691,6 +715,8 @@ void EnrollmentTask::subscribeToEvents()
 					 this);
 	event_manager_->subscribeToEvent(rina::InternalEvent::APP_NEIGHBOR_DECLARED_DEAD,
 					 this);
+	event_manager_->subscribeToEvent(rina::InternalEvent::ADDRESS_CHANGE,
+					 this);
 }
 
 void EnrollmentTask::eventHappened(rina::InternalEvent * event)
@@ -711,6 +737,72 @@ void EnrollmentTask::eventHappened(rina::InternalEvent * event)
 		rina::NeighborDeclaredDeadEvent * deadEvent =
 				(rina::NeighborDeclaredDeadEvent *) event;
 		neighborDeclaredDead(deadEvent);
+	}else if (event->type == rina::InternalEvent::ADDRESS_CHANGE) {
+		rina::AddressChangeEvent * addrEvent =
+				(rina::AddressChangeEvent *) event;
+		addressChange(addrEvent);
+	}
+}
+
+void EnrollmentTask::addressChange(rina::AddressChangeEvent * event)
+{
+	rina::ScopedLock g(lock_);
+	encoders::NeighborListEncoder encoder;
+	std::list<rina::Neighbor> neighbors;
+	rina::Neighbor myself;
+	rina::cdap_rib::flags_t flags;
+	rina::cdap_rib::filt_info_t filt;
+	rina::cdap_rib::obj_info_t obj_info;
+	rina::cdap_rib::con_handle_t con;
+
+	myself.address_ = event->new_address;
+	myself.name_.processName = ipcp->get_name();
+	myself.name_.processInstance = ipcp->get_instance();
+	neighbors.push_back(myself);
+	encoder.encode(neighbors, obj_info.value_);
+	obj_info.class_ = NeighborsRIBObj::class_name;
+	obj_info.name_ = NeighborsRIBObj::object_name;
+	obj_info.inst_ = 0;
+
+	std::list<IEnrollmentStateMachine *> machines = state_machines_.getEntries();
+	std::list<IEnrollmentStateMachine *>::iterator it;
+	for (it = machines.begin(); it != machines.end(); ++it) {
+		con.port_id = (*it)->remote_peer_.underlying_port_id_;
+		try {
+			rib_daemon_->getProxy()->remote_write(con,
+					obj_info,
+					flags,
+					filt,
+					NULL);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems encoding and sending CDAP message: %s",
+					e.what());
+		}
+	}
+}
+
+void EnrollmentTask::update_neighbor_address(const rina::Neighbor& neighbor)
+{
+	rina::Neighbor * neigh = 0;
+	rina::NeighborAddressChangeEvent * event = 0;
+
+	rina::ScopedLock g(lock_);
+
+	neigh = neighbors.find(neighbor.name_.getProcessNamePlusInstance());
+	if (neigh) {
+		neigh->old_address_ = neigh->address_;
+		neigh->address_ = neighbor.address_;
+		event = new rina::NeighborAddressChangeEvent(neigh->name_.processName,
+							     neigh->address_,
+							     neigh->old_address_);
+		LOG_IPCP_INFO("Neighbor %s address changed from %d to %d",
+			       neighbor.name_.getProcessNamePlusInstance().c_str(),
+			       neigh->old_address_,
+			       neigh->address_);
+		ipcp->internal_event_manager_->deliverEvent(event);
+	} else {
+		LOG_IPCP_WARN("Could not change address of neighbor with name: %s",
+			      neighbor.name_.getProcessNamePlusInstance().c_str());
 	}
 }
 
@@ -973,9 +1065,9 @@ void EnrollmentTask::add_neighbor(const rina::Neighbor& neighbor)
 {
 	rina::ScopedLock g(lock_);
 
-	if (neighbors.find(neighbor.name_.getEncodedString()) != 0) {
+	if (neighbors.find(neighbor.name_.getProcessNamePlusInstance()) != 0) {
 		LOG_IPCP_WARN("Tried to add an already existing neighbor: %s",
-			      neighbor.name_.getEncodedString().c_str());
+			      neighbor.name_.getProcessNamePlusInstance().c_str());
 		return;
 	}
 
@@ -988,7 +1080,7 @@ void EnrollmentTask::add_or_update_neighbor(const rina::Neighbor& neighbor)
 
 	rina::ScopedLock g(lock_);
 
-	neigh = neighbors.find(neighbor.name_.getEncodedString());
+	neigh = neighbors.find(neighbor.name_.getProcessNamePlusInstance());
 	if (neigh) {
 		neigh->enrolled_ = neighbor.enrolled_;
 		neigh->underlying_port_id_ = neighbor.underlying_port_id_;
@@ -1014,7 +1106,7 @@ void EnrollmentTask::_add_neighbor(const rina::Neighbor& neighbor)
 				e.what());
 	}
 
-	neighbors.put(neigh->name_.getEncodedString(), neigh);
+	neighbors.put(neigh->name_.getProcessNamePlusInstance(), neigh);
 }
 
 void EnrollmentTask::remove_neighbor(const std::string& neighbor_key)

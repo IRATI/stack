@@ -41,6 +41,8 @@ public:
 	static const std::string APP_N_MINUS_1_FLOW_DEALLOCATED;
 	static const std::string APP_NEIGHBOR_DECLARED_DEAD;
 	static const std::string APP_NEIGHBOR_ADDED;
+	static const std::string ADDRESS_CHANGE;
+	static const std::string NEIGHBOR_ADDRESS_CHANGE;
 
 	std::string type;
 };
@@ -172,6 +174,34 @@ public:
 	const std::string toString();
 
 	Neighbor neighbor_;
+};
+
+/// The address of the IPCP has changed
+class AddressChangeEvent: public InternalEvent {
+public:
+	AddressChangeEvent(unsigned int new_address,
+			   unsigned int old_address,
+			   unsigned int use_new_timeout,
+			   unsigned int deprecate_old_timeout);
+	const std::string toString();
+
+	unsigned int new_address;
+	unsigned int old_address;
+	unsigned int use_new_timeout;
+	unsigned int deprecate_old_timeout;
+};
+
+/// The address of a neighbor IPCP has changed
+class NeighborAddressChangeEvent: public InternalEvent {
+public:
+	NeighborAddressChangeEvent(const std::string& neigh_name_,
+				   unsigned int new_address,
+			   	   unsigned int old_address);
+	const std::string toString();
+
+	std::string neigh_name;
+	unsigned int new_address;
+	unsigned int old_address;
 };
 
 }
