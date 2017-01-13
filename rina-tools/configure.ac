@@ -173,6 +173,7 @@ AC_CONFIG_FILES([
     src/cdapc/Makefile
     src/cdapc/encoders/Makefile
     src/common/tclap/Makefile
+    src/mac2ifname/Makefile
     src/rlite/Makefile
 
     doc/Makefile
