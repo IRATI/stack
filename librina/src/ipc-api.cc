@@ -25,7 +25,7 @@
 #include <errno.h>
 #include <stdexcept>
 #include <fcntl.h>
-#include <stropts.h>
+#include <sys/ioctl.h>
 
 #define RINA_PREFIX "librina.ipc-api"
 
