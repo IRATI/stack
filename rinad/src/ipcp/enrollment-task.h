@@ -80,8 +80,21 @@ public:
 		    rina::ser_obj_t &obj_reply,
 		    rina::cdap_rib::res_info_t& res);
 
+	//Allow a neighbor to update its address
+	void write(const rina::cdap_rib::con_handle_t &con,
+		   const std::string& fqn,
+		   const std::string& class_,
+		   const rina::cdap_rib::filt_info_t &filt,
+		   const int invoke_id,
+		   const rina::ser_obj_t &obj_req,
+		   rina::ser_obj_t &obj_reply,
+		   rina::cdap_rib::res_info_t& res);
+
 	const static std::string class_name;
 	const static std::string object_name;
+
+private:
+	rina::Lockable lock;
 };
 
 class WatchdogRIBObject;
@@ -298,6 +311,7 @@ public:
 	IEnrollmentStateMachine * getEnrollmentStateMachine(int portId, bool remove);
 	void deallocateFlow(int portId);
 	void add_enrollment_state_machine(int portId, IEnrollmentStateMachine * stateMachine);
+	void update_neighbor_address(const rina::Neighbor& neighbor);
 
 	/// The maximum time to wait between steps of the enrollment sequence (in ms)
 	int timeout_;
@@ -338,6 +352,8 @@ private:
 	/// @param resultReason
 	void nMinusOneFlowAllocationFailed(rina::NMinusOneFlowAllocationFailedEvent * event);
 
+	void addressChange(rina::AddressChangeEvent * event);
+
 	IPCPRIBDaemon * rib_daemon_;
 	rina::InternalEventManager * event_manager_;
 	rina::IPCResourceManager * irm_;
@@ -345,6 +361,7 @@ private:
 	rina::Thread * neighbors_enroller_;
 
 	rina::Lockable lock_;
+	rina::Timer timer;
 
 	/// Stores the enrollment state machines, one per remote IPC process that this IPC
 	/// process is enrolled to.

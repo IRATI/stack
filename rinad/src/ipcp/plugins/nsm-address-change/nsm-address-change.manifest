@@ -1,0 +1,11 @@
+{
+        "PluginName": "nsm-address-change",
+        "PluginVersion": "1",
+        "PolicySets" : [
+                {
+                        "Name": "address-change",
+                        "Component": "namespace-manager",
+                        "Version" : "1"
+                }
+        ]
+}

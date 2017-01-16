@@ -39,6 +39,7 @@ public:
 				     const std::string& ipcp_instance);
 	int set_policy_set_param(const std::string& name,
 				 const std::string& value);
+	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	virtual ~NamespaceManagerPs() {}
 
 private:
@@ -55,73 +56,76 @@ private:
 NamespaceManagerPs::NamespaceManagerPs(INamespaceManager * nsm_) : nsm(nsm_)
 { }
 
+void NamespaceManagerPs::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
+{ }
 
-bool NamespaceManagerPs::isValidAddress(unsigned int address, const std::string& ipcp_name,
-		const std::string& ipcp_instance)
+bool NamespaceManagerPs::isValidAddress(unsigned int address,
+					const std::string& ipcp_name,
+					const std::string& ipcp_instance)
 {
-		if (address == 0) {
+	if (address == 0) {
+		return false;
+	}
+
+	//Check if we know the remote IPC Process address
+	rina::AddressingConfiguration configuration = nsm->ipcp->get_dif_information().
+			dif_configuration_.nsm_configuration_.addressing_configuration_;
+	unsigned int knownAddress = getIPCProcessAddress(ipcp_name, ipcp_instance, configuration);
+	if (knownAddress != 0) {
+		if (address == knownAddress) {
+			return true;
+		} else {
 			return false;
 		}
+	}
 
-		//Check if we know the remote IPC Process address
-		rina::AddressingConfiguration configuration = nsm->ipcp->get_dif_information().
-				dif_configuration_.nsm_configuration_.addressing_configuration_;
-		unsigned int knownAddress = getIPCProcessAddress(ipcp_name, ipcp_instance, configuration);
-		if (knownAddress != 0) {
-			if (address == knownAddress) {
-				return true;
-			} else {
-				return false;
-			}
-		}
+	//Check the prefix information
+	try {
+		unsigned int prefix = getAddressPrefix(ipcp_name, configuration);
 
-		//Check the prefix information
-		try {
-			unsigned int prefix = getAddressPrefix(ipcp_name, configuration);
-
-			//Check if the address is within the range of the prefix
-			if (address < prefix || address >= prefix + rina::AddressPrefixConfiguration::MAX_ADDRESSES_PER_PREFIX){
-				return false;
-			}
-		} catch (rina::Exception &e) {
-			//We don't know the organization of the IPC Process
+		//Check if the address is within the range of the prefix
+		if (address < prefix || address >= prefix + rina::AddressPrefixConfiguration::MAX_ADDRESSES_PER_PREFIX){
 			return false;
 		}
+	} catch (rina::Exception &e) {
+		//We don't know the organization of the IPC Process
+		return false;
+	}
 
-		return !isAddressInUse(address, ipcp_name);
+	return !isAddressInUse(address, ipcp_name);
 }
 
 unsigned int NamespaceManagerPs::getValidAddress(const std::string& ipcp_name,
-		const std::string& ipcp_instance)
+						 const std::string& ipcp_instance)
 {
-		rina::AddressingConfiguration configuration = nsm->ipcp->get_dif_information().
-					dif_configuration_.nsm_configuration_.addressing_configuration_;
-		unsigned int candidateAddress = getIPCProcessAddress(ipcp_name,
-				ipcp_instance, configuration);
-		if (candidateAddress != 0) {
+	rina::AddressingConfiguration configuration = nsm->ipcp->get_dif_information().
+			dif_configuration_.nsm_configuration_.addressing_configuration_;
+	unsigned int candidateAddress = getIPCProcessAddress(ipcp_name,
+			ipcp_instance, configuration);
+	if (candidateAddress != 0) {
+		return candidateAddress;
+	}
+
+	unsigned int prefix = 0;
+
+	try {
+		prefix = getAddressPrefix(ipcp_name, configuration);
+	} catch (rina::Exception &e) {
+		//We don't know the organization of the IPC Process
+		return 0;
+	}
+
+	candidateAddress = prefix;
+	while (candidateAddress < prefix +
+			rina::AddressPrefixConfiguration::MAX_ADDRESSES_PER_PREFIX) {
+		if (isAddressInUse(candidateAddress, ipcp_name)) {
+			candidateAddress++;
+		} else {
 			return candidateAddress;
 		}
+	}
 
-		unsigned int prefix = 0;
-
-		try {
-			prefix = getAddressPrefix(ipcp_name, configuration);
-		} catch (rina::Exception &e) {
-			//We don't know the organization of the IPC Process
-			return 0;
-		}
-
-		candidateAddress = prefix;
-		while (candidateAddress < prefix +
-				rina::AddressPrefixConfiguration::MAX_ADDRESSES_PER_PREFIX) {
-			if (isAddressInUse(candidateAddress, ipcp_name)) {
-				candidateAddress++;
-			} else {
-				return candidateAddress;
-			}
-		}
-
-		return 0;
+	return 0;
 }
 
 unsigned int NamespaceManagerPs::getIPCProcessAddress(const std::string& process_name,
