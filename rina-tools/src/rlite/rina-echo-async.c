@@ -37,6 +37,7 @@
 #include <endian.h>
 #include <signal.h>
 #include <poll.h>
+#include <time.h>
 #include <sys/select.h>
 
 #include <rina/api.h>
@@ -44,6 +45,10 @@
 
 #define SDU_SIZE_MAX    64
 #define MAX_CLIENTS     128
+#define TIMEOUT_SECS    2
+#if TIMEOUT_SECS < 2
+#error "TIMEOUT_SECS must be >= 2"
+#endif
 
 struct echo_async {
     int cfd;
@@ -66,6 +71,7 @@ struct fdfsm {
 #define SELFD_S_ACCEPT  5
     int state;
     int fd;
+    time_t last_activity;
 };
 
 static void
@@ -80,6 +86,7 @@ static int
 client(struct echo_async *rea)
 {
     const char *msg = "Hello guys, this is a test message!";
+    struct timeval to;
     struct fdfsm *fsms;
     fd_set rdfs, wrfs;
     int maxfd;
@@ -100,6 +107,7 @@ client(struct echo_async *rea)
         fsms[i].fd = rina_flow_alloc(rea->dif_name, rea->cli_appl_name,
                                      rea->srv_appl_name, &rea->flowspec,
                                      RINA_F_NOWAIT);
+        fsms[i].last_activity = time(NULL);
         if (fsms[i].fd < 0) {
             perror("rina_flow_alloc()");
             return fsms[i].fd;
@@ -133,20 +141,22 @@ client(struct echo_async *rea)
             break;
         }
 
-        ret = select(maxfd + 1, &rdfs, &wrfs, NULL, NULL);
+        to.tv_sec = TIMEOUT_SECS - 1;
+        to.tv_usec = 0;
+
+        ret = select(maxfd + 1, &rdfs, &wrfs, NULL, &to);
         if (ret < 0) {
             perror("select()\n");
             return ret;
         } else if (ret == 0) {
             /* Timeout */
-            printf("Timeout occurred\n");
-            break;
         }
 
         for (i = 0; i < rea->p; i++) {
             switch (fsms[i].state) {
             case SELFD_S_ALLOC:
                 if (FD_ISSET(fsms[i].fd, &rdfs)) {
+                    fsms[i].last_activity = time(NULL);
                     /* Complete flow allocation, replacing the fd. */
                     fsms[i].fd = rina_flow_alloc_wait(fsms[i].fd);
                     if (fsms[i].fd < 0) {
@@ -161,6 +171,7 @@ client(struct echo_async *rea)
 
             case SELFD_S_WRITE:
                 if (FD_ISSET(fsms[i].fd, &wrfs)) {
+                    fsms[i].last_activity = time(NULL);
                     strncpy(fsms[i].buf, msg, sizeof(fsms[i].buf));
                     size = strlen(fsms[i].buf) + 1;
 
@@ -175,6 +186,7 @@ client(struct echo_async *rea)
 
             case SELFD_S_READ:
                 if (FD_ISSET(fsms[i].fd, &rdfs)) {
+                    fsms[i].last_activity = time(NULL);
                     /* Ready to read. */
                     ret = read(fsms[i].fd, fsms[i].buf, sizeof(fsms[i].buf));
                     if (ret > 0) {
@@ -185,6 +197,11 @@ client(struct echo_async *rea)
                     shutdown_flow(fsms + i);
                 }
                 break;
+            }
+
+            if (time(NULL) - fsms[i].last_activity >= TIMEOUT_SECS) {
+                printf("Flow %d timed out\n", i);
+                shutdown_flow(fsms + i);
             }
         }
     }
@@ -197,14 +214,24 @@ server(struct echo_async *rea)
 {
     struct fdfsm fsms[MAX_CLIENTS + 1];
     fd_set rdfs, wrfs;
+    struct timeval to;
     int maxfd;
     int ret;
+    int wfd;
     int i;
 
-    /* In listen mode also register the application names. */
-    ret = rina_register(rea->cfd, rea->dif_name, rea->srv_appl_name);
-    if (ret) {
+    /* In listen mode also register the application names. Here we use
+     * two-steps registration (RINA_F_NOWAIT) just for fun. */
+    wfd = rina_register(rea->cfd, rea->dif_name, rea->srv_appl_name,
+                        RINA_F_NOWAIT);
+    if (wfd < 0) {
         perror("rina_register()");
+        return wfd;
+    }
+
+    ret = rina_register_wait(rea->cfd, wfd);
+    if (ret < 0) {
+        perror("rina_register_wait()");
         return ret;
     }
 
@@ -240,14 +267,15 @@ server(struct echo_async *rea)
 
         assert(maxfd >= 0);
 
-        ret = select(maxfd + 1, &rdfs, &wrfs, NULL, NULL);
+        to.tv_sec = TIMEOUT_SECS - 1;
+        to.tv_usec = 0;
+
+        ret = select(maxfd + 1, &rdfs, &wrfs, NULL, &to);
         if (ret < 0) {
             perror("select()\n");
             return ret;
         } else if (ret == 0) {
             /* Timeout */
-            printf("Timeout occurred\n");
-            break;
         }
 
         for (i = 0; i <= MAX_CLIENTS; i++) {
@@ -276,6 +304,7 @@ server(struct echo_async *rea)
                     /* Respond positively if we have found a slot. */
                     fsms[j].fd = rina_flow_respond(fsms[i].fd, handle,
                                                    j > MAX_CLIENTS ? -1 : 0);
+                    fsms[j].last_activity = time(NULL);
                     if (fsms[j].fd < 0) {
                         perror("rina_flow_respond()");
                         return fsms[j].fd;
@@ -290,6 +319,7 @@ server(struct echo_async *rea)
 
             case SELFD_S_READ:
                 if (FD_ISSET(fsms[i].fd, &rdfs)) {
+                    fsms[i].last_activity = time(NULL);
                     /* File descriptor is ready for reading. */
                     fsms[i].buflen = read(fsms[i].fd, fsms[i].buf,
                                           sizeof(fsms[i].buf));
@@ -306,6 +336,7 @@ server(struct echo_async *rea)
 
             case SELFD_S_WRITE:
                 if (FD_ISSET(fsms[i].fd, &wrfs)) {
+                    fsms[i].last_activity = time(NULL);
                     ret = write(fsms[i].fd, fsms[i].buf, fsms[i].buflen);
                     if (ret == fsms[i].buflen) {
                         printf("Response sent back\n");
@@ -315,6 +346,13 @@ server(struct echo_async *rea)
                     }
                     shutdown_flow(fsms + i);
                 }
+            }
+
+            if (fsms[i].state != SELFD_S_ACCEPT &&
+                    fsms[i].state != SELFD_S_NONE &&
+                        (time(NULL) - fsms[i].last_activity) >= TIMEOUT_SECS) {
+                printf("Client %d timed out\n", i);
+                shutdown_flow(fsms + i);
             }
         }
     }

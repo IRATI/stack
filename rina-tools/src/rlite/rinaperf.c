@@ -589,7 +589,7 @@ server(struct rinaperf *rp)
     int ret;
 
     /* Server-side initializations. */
-    ret = rina_register(rp->cfd, rp->dif_name, rp->srv_appl_name);
+    ret = rina_register(rp->cfd, rp->dif_name, rp->srv_appl_name, 0);
     if (ret) {
         perror("rina_register()");
         return ret;
