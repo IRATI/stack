@@ -164,6 +164,8 @@ public:
 
 	BlockingFIFOQueue<IPCEvent>* getEventQueue();
 	NetlinkManager* getNetlinkManager();
+	void eventQueuePushed();
+	void eventQueuePopped();
 	bool keep_on_reading;
 };
 

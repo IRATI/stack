@@ -556,7 +556,7 @@ void RINAManager::initialize()
   eventQueue = new BlockingFIFOQueue<IPCEvent>();
   LOG_DBG("Initialized event queue");
 
-  eventQueueReady = eventfd(0 , 0);
+  eventQueueReady = eventfd(0 , EFD_SEMAPHORE | EFD_NONBLOCK);
   if (eventQueueReady < 0) {
     throw Exception("Failed to create eventfd");
   }
@@ -658,6 +658,32 @@ BlockingFIFOQueue<IPCEvent>* RINAManager::getEventQueue()
 NetlinkManager* RINAManager::getNetlinkManager()
 {
   return netlinkManager;
+}
+
+void RINAManager::eventQueuePushed()
+{
+  uint64_t x = 1;
+  int n;
+
+  n = write(eventQueueReady, &x, sizeof(x));
+  if (n != sizeof(x)) {
+    throw Exception("Failed to write to to eventQueueReady eventfd");
+  }
+}
+
+void RINAManager::eventQueuePopped()
+{
+  uint64_t x;
+  int n;
+
+  n = read(eventQueueReady, &x, sizeof(x));
+  if (n != sizeof(x)) {
+    throw Exception("Failed to read from eventQueueReady eventfd");
+  }
+
+  if (x != 1) {
+    throw Exception("Unexpected value read from eventQueueReady eventfd");
+  }
 }
 
 Singleton<RINAManager> rinaManager;
