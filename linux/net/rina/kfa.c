@@ -634,7 +634,7 @@ void kfa_flow_readable(struct kfa       *instance,
         /* We set a POLLIN event if there is something in the receive queue
          * or if the flow has been deallocated, which is our EOF condition. */
         if (queue_ready(flow)) {
-                *mask |= POLLIN;
+                *mask |= POLLIN | POLLRDNORM;
         }
 
 	spin_unlock_bh(&instance->lock);
