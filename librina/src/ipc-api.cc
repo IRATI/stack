@@ -722,7 +722,7 @@ std::vector<ApplicationRegistration *> IPCManager::getRegisteredApplications()
 
 int IPCManager::getControlFd()
 {
-        return rinaManager->getNetlinkManager()->getSocketFd();
+        return rinaManager->getEventFd();
 }
 
 Singleton<IPCManager> ipcManager;
