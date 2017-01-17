@@ -24,6 +24,7 @@
 #define RINA_COMMON_H
 
 #include <linux/types.h>
+#include <linux/poll.h>
 
 #include "rds/rstr.h"
 

@@ -605,7 +605,9 @@ static bool queue_ready(struct ipcp_flow *flow)
 
 void kfa_flow_readable(struct kfa       *instance,
                        port_id_t        id,
-                       unsigned int     *mask)
+                       unsigned int     *mask,
+                       struct file      *f,
+                       poll_table       *wait)
 {
         struct ipcp_flow *flow;
 
@@ -630,6 +632,8 @@ void kfa_flow_readable(struct kfa       *instance,
                 *mask |= POLLERR;
 		return;
 	}
+
+        poll_wait(f, &flow->read_wqueue, wait);
 
         /* We set a POLLIN event if there is something in the receive queue
          * or if the flow has been deallocated, which is our EOF condition. */

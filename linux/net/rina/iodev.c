@@ -152,8 +152,9 @@ iodev_poll(struct file *f, poll_table *wait)
         }
 
         /* Set POLLIN if the receive queue is not empty or
-         * the flow has been deallocated. */
-        kfa_flow_readable(kfa, priv->port_id, &mask);
+         * the flow has been deallocated. Also call poll_wait(),
+         * as required by the caller. */
+        kfa_flow_readable(kfa, priv->port_id, &mask, f, wait);
 
         /* TODO check that the IPCP can handle the SDU write */
         mask |= POLLOUT | POLLWRNORM;
