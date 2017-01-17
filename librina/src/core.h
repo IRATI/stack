@@ -122,6 +122,10 @@ class RINAManager {
 	/** The events queue */
 	BlockingFIFOQueue<IPCEvent> * eventQueue;
 
+	/** eventfd to notify applications about events arriving in
+	 *  eventQueue. */
+	int eventQueueReady;
+
 	/** The thread that is continuously reading incoming Netlink messages */
 	Thread * netlinkMessageReader;
 

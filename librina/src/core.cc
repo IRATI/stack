@@ -22,6 +22,7 @@
 
 #include <sstream>
 #include <unistd.h>
+#include <sys/eventfd.h>
 
 #define RINA_PREFIX "librina.core"
 
@@ -551,9 +552,14 @@ RINAManager::RINAManager(unsigned int netlinkPort)
 
 void RINAManager::initialize()
 {
-  //2 Initialie events Queue
+  //2 Initialize eventsQueue and the associated eventfd
   eventQueue = new BlockingFIFOQueue<IPCEvent>();
   LOG_DBG("Initialized event queue");
+
+  eventQueueReady = eventfd(0 , 0);
+  if (eventQueueReady < 0) {
+    throw Exception("Failed to create eventfd");
+  }
 
   keep_on_reading = true;
 
@@ -571,6 +577,10 @@ void RINAManager::initialize()
 RINAManager::~RINAManager()
 {
   void* status;
+
+  if (eventQueueReady >= 0) {
+    close(eventQueueReady);
+  }
   keep_on_reading = false;
   netlinkMessageReader->join(&status);
   delete netlinkManager;
