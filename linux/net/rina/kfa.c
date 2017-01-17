@@ -840,7 +840,8 @@ static int kfa_sdu_post(struct ipcp_instance_data *data,
 		ASSERT(wq);
 
 		/* set_tsk_need_resched(current); */
-		wake_up_interruptible(wq);
+		wake_up_interruptible_poll(wq, POLLIN | POLLRDNORM
+                                                | POLLRDBAND);
 		LOG_DBG("SDU posted");
 	}
 
