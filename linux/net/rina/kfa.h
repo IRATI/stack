@@ -50,6 +50,9 @@ int	    kfa_flow_sdu_read(struct kfa  *instance,
 			      struct sdu **sdu,
                               bool blocking);
 
+void    kfa_flow_readable(struct kfa       *instance,
+                          port_id_t        id,
+                          unsigned int     *mask);
 #if 0
 struct ipcp_flow *kfa_flow_find_by_pid(struct kfa *instance,
 				       port_id_t   pid);
