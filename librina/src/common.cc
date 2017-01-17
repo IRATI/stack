@@ -738,7 +738,13 @@ IPCEvent * IPCEventProducer::eventPoll()
 #if STUB_API
 	return getIPCEvent();
 #else
-	return rinaManager->getEventQueue()->poll();
+	IPCEvent * event = rinaManager->getEventQueue()->poll();
+
+	if (event) {
+		rinaManager->eventQueuePopped();
+	}
+
+	return event;
 #endif
 }
 
@@ -747,7 +753,13 @@ IPCEvent * IPCEventProducer::eventWait()
 #if STUB_API
 	return getIPCEvent();
 #else
-	return rinaManager->getEventQueue()->take();
+	IPCEvent *event = rinaManager->getEventQueue()->take();
+
+	if (event) {
+		rinaManager->eventQueuePopped();
+	}
+
+	return event;
 #endif
 }
 
@@ -757,7 +769,13 @@ IPCEvent * IPCEventProducer::eventTimedWait(int seconds,
 #if STUB_API
 	return getIPCEvent();
 #else
-	return rinaManager->getEventQueue()->timedtake(seconds, nanoseconds);
+	IPCEvent * event = rinaManager->getEventQueue()->timedtake(seconds,
+								nanoseconds);
+	if (event) {
+		rinaManager->eventQueuePopped();
+	}
+
+	return event;
 #endif
 }
 
