@@ -51,7 +51,7 @@
 
 #ifdef CONFIG_RINA_DEBUG
 #ifdef CONFIG_RINA_SUPPRESS_DEBUG_LOGS
-#warning Debugging logs WILL BE suppressed
+//#warning Debugging logs WILL BE suppressed
 #define LOG_DBG(FMT,   ARGS...) do { } while (0)
 #else
 #define LOG_DBG(FMT,   ARGS...) __LOG(RINA_PREFIX, KERN_DEBUG,      \
