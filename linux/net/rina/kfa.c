@@ -30,6 +30,9 @@
 #include <linux/sched.h>
 #include <linux/wait.h>
 
+/* For POLLIN etc. */
+#include <linux/poll.h>
+
 #define RINA_PREFIX "kfa"
 
 #include "logs.h"
@@ -600,6 +603,47 @@ static bool queue_ready(struct ipcp_flow *flow)
 	return false;
 }
 
+void kfa_flow_readable(struct kfa       *instance,
+                       port_id_t        id,
+                       unsigned int     *mask,
+                       struct file      *f,
+                       poll_table       *wait)
+{
+        struct ipcp_flow *flow;
+
+	if (!instance) {
+		LOG_ERR("Bogus instance passed, bailing out");
+                *mask |= POLLERR;
+                return;
+	}
+
+	if (!is_port_id_ok(id)) {
+		LOG_ERR("Bogus port-id, bailing out");
+                *mask |= POLLERR;
+		return;
+	}
+
+	spin_lock_bh(&instance->lock);
+
+	flow = kfa_pmap_find(instance->flows, id);
+	if (!flow) {
+		spin_unlock_bh(&instance->lock);
+		LOG_ERR("There is no flow bound to port-id %d", id);
+                *mask |= POLLERR;
+		return;
+	}
+
+        poll_wait(f, &flow->read_wqueue, wait);
+
+        /* We set a POLLIN event if there is something in the receive queue
+         * or if the flow has been deallocated, which is our EOF condition. */
+        if (queue_ready(flow)) {
+                *mask |= POLLIN | POLLRDNORM;
+        }
+
+	spin_unlock_bh(&instance->lock);
+}
+
 int kfa_flow_sdu_read(struct kfa  *instance,
 		      port_id_t	   id,
 		      struct sdu **sdu,
@@ -800,7 +844,8 @@ static int kfa_sdu_post(struct ipcp_instance_data *data,
 		ASSERT(wq);
 
 		/* set_tsk_need_resched(current); */
-		wake_up_interruptible(wq);
+		wake_up_interruptible_poll(wq, POLLIN | POLLRDNORM
+                                                | POLLRDBAND);
 		LOG_DBG("SDU posted");
 	}
 

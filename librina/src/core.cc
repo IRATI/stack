@@ -22,6 +22,7 @@
 
 #include <sstream>
 #include <unistd.h>
+#include <sys/eventfd.h>
 
 #define RINA_PREFIX "librina.core"
 
@@ -494,6 +495,7 @@ void * doNetlinkMessageReaderWork(void * arg)
       event = myRINAManager->osProcessFinalized(message->getPortId());
       if (event) {
         eventsQueue->put(event);
+        myRINAManager->eventQueuePushed();
         LOG_DBG(
             "Added event of type %s and sequence number %u to events queue",
             IPCEvent::eventTypeToString(event->eventType).c_str(), event->sequenceNumber);
@@ -508,6 +510,7 @@ void * doNetlinkMessageReaderWork(void * arg)
             "Added event of type %s and sequence number %u to events queue",
             IPCEvent::eventTypeToString(event->eventType).c_str(), event->sequenceNumber);
         eventsQueue->put(event);
+        myRINAManager->eventQueuePushed();
       } else
         LOG_WARN("Event is null for message type %d",
                  incomingMessage->getOperationCode());
@@ -551,9 +554,14 @@ RINAManager::RINAManager(unsigned int netlinkPort)
 
 void RINAManager::initialize()
 {
-  //2 Initialie events Queue
+  //2 Initialize eventsQueue and the associated eventfd
   eventQueue = new BlockingFIFOQueue<IPCEvent>();
   LOG_DBG("Initialized event queue");
+
+  eventQueueReady = eventfd(0 , EFD_SEMAPHORE | EFD_NONBLOCK);
+  if (eventQueueReady < 0) {
+    throw Exception("Failed to create eventfd");
+  }
 
   keep_on_reading = true;
 
@@ -571,6 +579,10 @@ void RINAManager::initialize()
 RINAManager::~RINAManager()
 {
   void* status;
+
+  if (eventQueueReady >= 0) {
+    close(eventQueueReady);
+  }
   keep_on_reading = false;
   netlinkMessageReader->join(&status);
   delete netlinkManager;
@@ -648,6 +660,32 @@ BlockingFIFOQueue<IPCEvent>* RINAManager::getEventQueue()
 NetlinkManager* RINAManager::getNetlinkManager()
 {
   return netlinkManager;
+}
+
+void RINAManager::eventQueuePushed()
+{
+  uint64_t x = 1;
+  int n;
+
+  n = write(eventQueueReady, &x, sizeof(x));
+  if (n != sizeof(x)) {
+    throw Exception("Failed to write to to eventQueueReady eventfd");
+  }
+}
+
+void RINAManager::eventQueuePopped()
+{
+  uint64_t x;
+  int n;
+
+  n = read(eventQueueReady, &x, sizeof(x));
+  if (n != sizeof(x)) {
+    throw Exception("Failed to read from eventQueueReady eventfd");
+  }
+
+  if (x != 1) {
+    throw Exception("Unexpected value read from eventQueueReady eventfd");
+  }
 }
 
 Singleton<RINAManager> rinaManager;
