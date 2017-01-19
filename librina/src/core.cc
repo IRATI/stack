@@ -494,8 +494,8 @@ void * doNetlinkMessageReaderWork(void * arg)
 
       event = myRINAManager->osProcessFinalized(message->getPortId());
       if (event) {
-        eventsQueue->put(event);
         myRINAManager->eventQueuePushed();
+        eventsQueue->put(event);
         LOG_DBG(
             "Added event of type %s and sequence number %u to events queue",
             IPCEvent::eventTypeToString(event->eventType).c_str(), event->sequenceNumber);
@@ -509,8 +509,8 @@ void * doNetlinkMessageReaderWork(void * arg)
         LOG_DBG(
             "Added event of type %s and sequence number %u to events queue",
             IPCEvent::eventTypeToString(event->eventType).c_str(), event->sequenceNumber);
-        eventsQueue->put(event);
         myRINAManager->eventQueuePushed();
+        eventsQueue->put(event);
       } else
         LOG_WARN("Event is null for message type %d",
                  incomingMessage->getOperationCode());
