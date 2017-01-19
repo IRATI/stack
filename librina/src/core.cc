@@ -494,8 +494,8 @@ void * doNetlinkMessageReaderWork(void * arg)
 
       event = myRINAManager->osProcessFinalized(message->getPortId());
       if (event) {
-        myRINAManager->eventQueuePushed();
         eventsQueue->put(event);
+        myRINAManager->eventQueuePushed();
         LOG_DBG(
             "Added event of type %s and sequence number %u to events queue",
             IPCEvent::eventTypeToString(event->eventType).c_str(), event->sequenceNumber);
@@ -509,8 +509,8 @@ void * doNetlinkMessageReaderWork(void * arg)
         LOG_DBG(
             "Added event of type %s and sequence number %u to events queue",
             IPCEvent::eventTypeToString(event->eventType).c_str(), event->sequenceNumber);
-        myRINAManager->eventQueuePushed();
         eventsQueue->put(event);
+        myRINAManager->eventQueuePushed();
       } else
         LOG_WARN("Event is null for message type %d",
                  incomingMessage->getOperationCode());
@@ -558,7 +558,8 @@ void RINAManager::initialize()
   eventQueue = new BlockingFIFOQueue<IPCEvent>();
   LOG_DBG("Initialized event queue");
 
-  eventQueueReady = eventfd(0 , EFD_SEMAPHORE | EFD_NONBLOCK);
+  /* This must be opened in blocking mode, see eventQueuePopped. */
+  eventQueueReady = eventfd(0 , EFD_SEMAPHORE);
   if (eventQueueReady < 0) {
     throw Exception("Failed to create eventfd");
   }
@@ -673,6 +674,13 @@ void RINAManager::eventQueuePushed()
   }
 }
 
+/* It may be that the netlink reader has put() an event in the queue,
+ * but has not called yet eventQueuePushed() when this function is
+ * called by the event consumer, who has already seen the new event.
+ * In case this happens, it is not a problem, because the eventfd is
+ * open in blocking mode: the read() blocks, and returns as soon as
+ * the netlink reader has the chance to call eventQueuePushed().
+ */
 void RINAManager::eventQueuePopped()
 {
   uint64_t x;
