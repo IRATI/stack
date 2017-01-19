@@ -175,6 +175,7 @@ AC_CONFIG_FILES([
     src/common/tclap/Makefile
     src/mac2ifname/Makefile
     src/rlite/Makefile
+    src/key-managers/Makefile
 
     doc/Makefile
 ])

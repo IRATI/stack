@@ -75,12 +75,13 @@ public:
 	* temporally stablished (will keep retrying).
 	*
 	* @param con Connection parameters
+	* @param keyManager true if it connects to a local KeyManager, false
+	* if it connects to the Manager
 	* @ret The connection worker handle; this handler is NOT the flow
 	* port-id neither any CDAP connection parameter. This identifies
 	* univocally the connection worker in the context of the FlowManager.
 	*/
-	unsigned int connectTo(const AppConnection& con);
-
+	unsigned int connectTo(const AppConnection& con, bool keyManager = false);
 
 	/**
 	* @brief Disconnects (if connected), and joins working thread

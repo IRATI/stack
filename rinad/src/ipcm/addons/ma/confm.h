@@ -71,6 +71,7 @@ private:
         struct ManagerConnInfo {
                 rina::ApplicationProcessNamingInformation manager_name;
                 std::string manager_dif;
+                std::string auth_policy_name;
         };
 
         /**
@@ -79,6 +80,7 @@ private:
         rina::ApplicationProcessNamingInformation app_name;
         std::list<std::string> nms_difs;
         std::list<ManagerConnInfo> manager_connections;
+        ManagerConnInfo key_manager_connection;
 };
 
 

@@ -47,10 +47,10 @@ typedef struct concrete_syntax {
 
 typedef struct cdap_params {
 	long timeout_;
-        int fd;
+        bool ipcp;
 	concrete_syntax_t syntax;
 
-	cdap_params() : timeout_(0), fd(-1) {};
+	cdap_params() : timeout_(0), ipcp(true) {};
 } cdap_params_t;
 
 /// Authentication information

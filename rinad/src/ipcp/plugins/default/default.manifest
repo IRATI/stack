@@ -18,6 +18,11 @@
                         "Version" : "1"
                 },
 		{
+			"Name": "DelayBased",
+                        "Component": "flow-allocator",
+                        "Version" : "1"
+                },
+		{
                         "Name": "RoundRobin",
                         "Component": "flow-allocator",
                         "Version" : "1"
