@@ -55,6 +55,7 @@ int wrapped_main(int argc, char** argv)
         int perf_interval;
         int dw;
         int rate;
+        int delay;
         unsigned int lost_wait;
         string test_type;
         string server_apn;
@@ -161,6 +162,12 @@ int wrapped_main(int argc, char** argv)
                                              false,
                                              1000,
                                              "integer");
+                TCLAP::ValueArg<int> delay_arg("",
+                                             "delay",
+                                             "It should be a value greater than zero",
+                                             false,
+                                             1,
+                                             "integer");
 
                 cmd.add(listen_arg);
                 cmd.add(count_arg);
@@ -179,6 +186,7 @@ int wrapped_main(int argc, char** argv)
                 cmd.add(dealloc_wait_arg);
                 cmd.add(lost_wait_arg);
                 cmd.add(rate_arg);
+                cmd.add(delay_arg);
 
                 cmd.parse(argc, argv);
 
@@ -199,6 +207,7 @@ int wrapped_main(int argc, char** argv)
                 dw = dealloc_wait_arg.getValue();
                 lost_wait = lost_wait_arg.getValue();
                 rate = rate_arg.getValue();
+                delay = delay_arg.getValue();
 
                 if (size > Application::max_buffer_size) {
                         size = Application::max_buffer_size;
@@ -224,7 +233,7 @@ int wrapped_main(int argc, char** argv)
                 // Client mode
                 Client c(test_type, dif_names, client_apn, client_api,
                          server_apn, server_api, quiet, count,
-                         registration, size, wait, gap, dw, lost_wait, rate);
+                         registration, size, wait, gap, dw, lost_wait, rate, delay);
 
                 c.run();
         }

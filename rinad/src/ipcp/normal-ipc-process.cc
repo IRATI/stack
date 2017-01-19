@@ -756,7 +756,7 @@ void IPCProcessImpl::update_crypto_state_response_handler(const rina::UpdateCryp
 	security_manager_->process_update_crypto_state_response(event);
 }
 
-void IPCProcessImpl::fwd_cdap_msg_handler(const rina::FwdCDAPMsgRequestEvent& event)
+void IPCProcessImpl::fwd_cdap_msg_handler(rina::FwdCDAPMsgRequestEvent& event)
 {
 	if (!event.sermsg.message_) {
 		LOG_IPCP_ERR("No CDAP message to be forwarded");

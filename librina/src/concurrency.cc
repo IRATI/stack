@@ -324,8 +324,8 @@ void Thread::start()
 		throw ConcurrentException(ConcurrentException::error_create_thread);
 	}
 
-	if (thread_attrs->getName() != "")
-		pthread_setname_np(thread_id_, thread_attrs->getName().c_str());
+	if (thread_attrs->getName() != "") { }
+		//pthread_setname_np(thread_id_, thread_attrs->getName().c_str());
 }
 
 pthread_t Thread::getThreadType() const{

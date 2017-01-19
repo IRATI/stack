@@ -74,7 +74,7 @@ public:
         virtual void select_policy_set_response_handler(const rina::SelectPolicySetResponseEvent& event) = 0;
         virtual void plugin_load_handler(const rina::PluginLoadRequestEvent& event) = 0;
         virtual void update_crypto_state_response_handler(const rina::UpdateCryptoStateResponseEvent& event) = 0;
-        virtual void fwd_cdap_msg_handler(const rina::FwdCDAPMsgRequestEvent& event) = 0;
+        virtual void fwd_cdap_msg_handler(rina::FwdCDAPMsgRequestEvent& event) = 0;
         virtual void application_unregistered_handler(const rina::ApplicationUnregisteredEvent& event) = 0;
         virtual void register_application_response_handler(const rina::RegisterApplicationResponseEvent& event) = 0;
         virtual void unregister_application_response_handler(const rina::UnregisterApplicationResponseEvent& event) = 0;
@@ -134,7 +134,7 @@ public:
         virtual void select_policy_set_response_handler(const rina::SelectPolicySetResponseEvent& event);
         virtual void plugin_load_handler(const rina::PluginLoadRequestEvent& event);
         virtual void update_crypto_state_response_handler(const rina::UpdateCryptoStateResponseEvent& event);
-        virtual void fwd_cdap_msg_handler(const rina::FwdCDAPMsgRequestEvent& event);
+        virtual void fwd_cdap_msg_handler(rina::FwdCDAPMsgRequestEvent& event);
         virtual void application_unregistered_handler(const rina::ApplicationUnregisteredEvent& event);
         virtual void register_application_response_handler(const rina::RegisterApplicationResponseEvent& event);
         virtual void unregister_application_response_handler(const rina::UnregisterApplicationResponseEvent& event);
@@ -215,7 +215,7 @@ public:
         void select_policy_set_response_handler(const rina::SelectPolicySetResponseEvent& event);
         void plugin_load_handler(const rina::PluginLoadRequestEvent& event);
         void update_crypto_state_response_handler(const rina::UpdateCryptoStateResponseEvent& event);
-        void fwd_cdap_msg_handler(const rina::FwdCDAPMsgRequestEvent& event);
+        void fwd_cdap_msg_handler(rina::FwdCDAPMsgRequestEvent& event);
         void sync_with_kernel(void);
 
 private:

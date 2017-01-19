@@ -67,7 +67,7 @@ class AppConnection{
 
 public:
 	rina::FlowInformation flow_info;
-	/* TODO: add CACEP auth details*/
+	std::string auth_policy_name;
 };
 
 //Submodule classes fwd decl
@@ -113,6 +113,8 @@ public:
 	* modified at runtime.
 	*/
 	void addManagerConnection(AppConnection& con);
+
+	void setKeyManagerConnection(AppConnection& con);
 
 	/**
 	 * Execute a console command and provide feedback as a string
@@ -164,6 +166,8 @@ private:
 	RIBFactory* rib_factory;
 	BGTaskManager* bg_task_manager;
 
+	std::list<unsigned int> worker_handles;
+
 	/**
 	* RINA AP information
 	*/
@@ -174,6 +178,8 @@ private:
 	*/
 	std::list<AppConnection> connections;
 
+	/** Connection to the local Key Management Agent */
+	AppConnection key_manager_connection;
 };
 
 }; //namespace mad

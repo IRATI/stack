@@ -560,7 +560,7 @@ class CDAPSessionManager : public CDAPSessionManagerInterface
 					  const cdap_rib::res_info_t &res,
 					  int invoke_id);
 	CDAPInvokeIdManager * get_invoke_id_manager();
-	const cdap_rib::con_handle_t& get_con_handle(int port_id);
+	const cdap_rib::con_handle_t & get_con_handle(int port_id);
 
  private:
 	Lockable lock;
@@ -576,20 +576,28 @@ class CDAPSessionManager : public CDAPSessionManagerInterface
 class AppCDAPIOHandler : public CDAPIOHandler
 {
  public:
-	AppCDAPIOHandler(){};
+	AppCDAPIOHandler();
 	void send(const cdap_m_t & m_sent,
 		  const cdap_rib::con_handle_t &con);
-	void process_message(const ser_obj_t &message,
+	void process_message(ser_obj_t &message,
 			     unsigned int handle,
 			     cdap_rib::cdap_dest_t cdap_dest);
-        void set_fd(int _fd) { fd = _fd; }
+	void add_fd_to_port_id_mapping(int fd, unsigned int port_id);
+	void remove_fd_to_port_id_mapping(unsigned int port_id);
 
  private:
+	void invoke_callback(const cdap_rib::con_handle_t& con_handle,
+			     const cdap::cdap_m_t& m_rcv,
+			     bool is_auth_message);
+
+	int get_fd_associated_to_port_id(unsigned int port_id);
+
         // Lock to control that when sending a message requiring
 	// a reply the CDAP Session manager has been updated before
 	// receiving the response message
         rina::Lockable atomic_send_lock_;
-        int fd;
+        rina::Lockable fds_map_lock;
+        std::map<unsigned int, int> fds_map;
 };
 
 /// Google Protocol Buffers Wire Message Provider
@@ -2593,7 +2601,7 @@ CDAPInvokeIdManager * CDAPSessionManager::get_invoke_id_manager()
 	return invoke_id_manager_;
 }
 
-const cdap_rib::con_handle_t& CDAPSessionManager::get_con_handle(int port_id)
+const cdap_rib::con_handle_t & CDAPSessionManager::get_con_handle(int port_id)
 {
 	ScopedLock g(lock);
 
@@ -2901,11 +2909,12 @@ class CDAPProvider : public CDAPProviderInterface
 	void send_cdap_result(const cdap_rib::con_handle_t &con, cdap::cdap_m_t *cdap_m);
 
 	// Process and incoming CDAP message
-	void process_message(const ser_obj_t &message,
+	void process_message(ser_obj_t &message,
 			     unsigned int port,
 			     cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT);
 
 	void set_cdap_io_handler(CDAPIOHandler * handler);
+	CDAPIOHandler * get_cdap_io_handler();
 
 	CDAPSessionManagerInterface * get_session_manager();
 
@@ -3354,7 +3363,7 @@ void CDAPProvider::send_cdap_result(const cdap_rib::con_handle_t &con,
 	delete cdap_m;
 }
 
-void CDAPProvider::process_message(const ser_obj_t &message,
+void CDAPProvider::process_message(ser_obj_t &message,
 				   unsigned int port,
 				   cdap_rib::cdap_dest_t cdap_dest)
 {
@@ -3383,20 +3392,66 @@ void CDAPProvider::set_cdap_io_handler(CDAPIOHandler * handler)
 	io_handler_->manager_ = manager_;
 }
 
+CDAPIOHandler * CDAPProvider::get_cdap_io_handler()
+{
+	return io_handler_;
+}
+
 CDAPSessionManagerInterface * CDAPProvider::get_session_manager()
 {
 	return manager_;
 }
 
-void AppCDAPIOHandler::process_message(const ser_obj_t &message,
+CDAPIOHandler::CDAPIOHandler()
+{
+	manager_ = 0;
+	callback_ = 0;
+	sdup_ = 0;
+}
+
+CDAPIOHandler::~CDAPIOHandler()
+{
+	if (sdup_) {
+		delete sdup_;
+		sdup_ = 0;
+	}
+}
+
+void CDAPIOHandler::set_sdu_protection_handler(SDUProtectionHandler * handler)
+{
+	if (!handler)
+		return;
+
+	if (sdup_) {
+		delete sdup_;
+		sdup_ = 0;
+	}
+
+	sdup_ = handler;
+}
+
+void CDAPIOHandler::add_fd_to_port_id_mapping(int fd, unsigned int port_id)
+{
+	(void) fd;
+	(void) port_id;
+}
+
+void CDAPIOHandler::remove_fd_to_port_id_mapping(unsigned int port_id)
+{
+	(void) port_id;
+}
+
+void AppCDAPIOHandler::process_message(ser_obj_t &message,
 				       unsigned int port,
 				       cdap_rib::cdap_dest_t cdap_dest)
 {
 	(void) cdap_dest;
 	cdap_m_t m_rcv;
+	bool is_auth_message = false;
 
 	atomic_send_lock_.lock();
 	try {
+		sdup_->unprotect_sdu(message, port);
 		manager_->messageReceived(message, m_rcv, port);
 	} catch (rina::Exception &e) {
 		atomic_send_lock_.unlock();
@@ -3408,8 +3463,19 @@ void AppCDAPIOHandler::process_message(const ser_obj_t &message,
 		port,
 		m_rcv.to_string().c_str());
 
-	// Fill structures
-	cdap_rib::con_handle_t con = manager_->get_con_handle(port);
+	if (manager_->session_in_await_con_state(port) &&
+			m_rcv.op_code_ != rina::cdap::cdap_m_t::M_CONNECT)
+		is_auth_message = true;
+
+	invoke_callback(manager_->get_con_handle(port),
+			m_rcv,
+			is_auth_message);
+}
+
+void AppCDAPIOHandler::invoke_callback(const rina::cdap_rib::con_handle_t& con,
+				       const rina::cdap::cdap_m_t& m_rcv,
+				       bool is_auth_message)
+{
 	// Flags
 	cdap_rib::flags_t flags;
 	flags.flags_ = m_rcv.flags_;
@@ -3433,6 +3499,13 @@ void AppCDAPIOHandler::process_message(const ser_obj_t &message,
 	//FIXME: do not typecast when the codes are an enum in the GPB
 	res.code_ = static_cast<cdap_rib::res_code_t>(m_rcv.result_);
 	res.reason_ = m_rcv.result_reason_;
+
+	// If authentication-related message, process here
+	if (is_auth_message) {
+		callback_->process_authentication_message(m_rcv,
+							  con);
+		return;
+	}
 
 	switch (m_rcv.op_code_) {
 
@@ -3554,32 +3627,74 @@ void AppCDAPIOHandler::process_message(const ser_obj_t &message,
 	}
 }
 
+void AppCDAPIOHandler::add_fd_to_port_id_mapping(int fd, unsigned int port_id)
+{
+	rina::ScopedLock g(fds_map_lock);
+	fds_map[port_id] = fd;
+}
+
+void AppCDAPIOHandler::remove_fd_to_port_id_mapping(unsigned int port_id)
+{
+	rina::ScopedLock g(fds_map_lock);
+	fds_map.erase(port_id);
+}
+
+int AppCDAPIOHandler::get_fd_associated_to_port_id(unsigned int port_id)
+{
+	std::map<unsigned int, int>::iterator it;
+	rina::ScopedLock g(fds_map_lock);
+
+	it = fds_map.find(port_id);
+	if (it == fds_map.end()) {
+		return -1;
+	}
+
+	return it->second;
+}
+
+AppCDAPIOHandler::AppCDAPIOHandler()
+{
+	set_sdu_protection_handler(new SDUProtectionHandler());
+}
+
 void AppCDAPIOHandler::send(const cdap_m_t & m_sent,
 			    const cdap_rib::con_handle_t &con)
 {
 	ser_obj_t ser_sent_m;
-        int ret;
+	int fd = 0;
 
 	manager_->encodeNextMessageToBeSent(m_sent,
 					    ser_sent_m,
 					    con.port_id);
 
-	rina::ScopedLock slock(atomic_send_lock_);
+	fd = get_fd_associated_to_port_id(con.port_id);
+	if (fd < 0) {
+		throw IPCException("Could not find File descriptor associated to port-id");
+	}
 
-        ret = write(fd, ser_sent_m.message_, ser_sent_m.size_);
-        if (ret != ser_sent_m.size_) {
-                if (m_sent.invoke_id_ != 0 && m_sent.is_request_message())
-                        manager_->get_invoke_id_manager()->freeInvokeId(m_sent.invoke_id_,
-                                        false);
+	rina::ScopedLock slock(atomic_send_lock_);
+	try{
+		sdup_->protect_sdu(ser_sent_m, con.port_id);
+		write(fd,
+		      ser_sent_m.message_,
+		      ser_sent_m.size_);
+		manager_->messageSent(m_sent, con.port_id);
+	} catch (rina::Exception &e)
+	{
+		if (m_sent.invoke_id_ != 0 && m_sent.is_request_message())
+			manager_->get_invoke_id_manager()->freeInvokeId(m_sent.invoke_id_,
+								       false);
 
                 if (errno != EAGAIN && errno != EINTR) {
                         manager_->removeCDAPSession(con.port_id);
                 }
 
-                LOG_ERR("write() failed --> %d [%s]", ret, strerror(errno));
-                throw rina::Exception("write() failed");
-        }
-        manager_->messageSent(m_sent, con.port_id);
+		throw e;
+	}
+
+	LOG_DBG("Sent CDAP message through port %d\n %s",
+		con.port_id,
+		m_sent.to_string().c_str());
 }
 
 //
@@ -3775,8 +3890,7 @@ CDAPProviderInterface* getProvider(){
 
 void init(cdap::CDAPCallbackInterface *callback,
 	  cdap_rib::concrete_syntax_t &syntax,
-	  int fd /* -1 when called by IPCP, a flow file descriptor
-                    when called by applications */)
+	  bool ipcp)
 {
 	//First check the flag
 	if(inited){
@@ -3789,9 +3903,8 @@ void init(cdap::CDAPCallbackInterface *callback,
 	manager = new CDAPSessionManager(syntax);
 	iface = new CDAPProvider(callback, manager);
 
-	if (fd > 0) {
+	if (!ipcp) {
                 AppCDAPIOHandler *aioh = new AppCDAPIOHandler();
-                aioh->set_fd(fd);
 		iface->set_cdap_io_handler(aioh);
         }
 }
@@ -3805,6 +3918,49 @@ void set_cdap_io_handler(cdap::CDAPIOHandler *handler)
 	}
 
 	iface->set_cdap_io_handler(handler);
+}
+
+void set_sdu_protection_handler(SDUProtectionHandler * handler)
+{
+	if (!inited) {
+		LOG_ERR("CDAP has not been initialized yet");
+		throw Exception("CDAP has not been initialized yet");
+
+	}
+
+	CDAPIOHandler * io_handler = iface->get_cdap_io_handler();
+	if (!io_handler)
+		return;
+
+	io_handler->set_sdu_protection_handler(handler);
+}
+
+void add_fd_to_port_id_mapping(int fd, unsigned int port_id)
+{
+	if (!inited) {
+		LOG_ERR("CDAP has not been initialized yet");
+		throw Exception("CDAP has not been initialized yet");
+	}
+
+	CDAPIOHandler * io_handler = iface->get_cdap_io_handler();
+	if (!io_handler)
+		return;
+
+	io_handler->add_fd_to_port_id_mapping(fd, port_id);
+}
+
+void remove_fd_to_port_id_mapping(unsigned int port_id)
+{
+	if (!inited) {
+		LOG_ERR("CDAP has not been initialized yet");
+		throw Exception("CDAP has not been initialized yet");
+	}
+
+	CDAPIOHandler * io_handler = iface->get_cdap_io_handler();
+	if (!io_handler)
+		return;
+
+	io_handler->remove_fd_to_port_id_mapping(port_id);
 }
 
 void destroy(int port){

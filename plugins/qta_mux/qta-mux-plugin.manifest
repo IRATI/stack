@@ -1,9 +1,9 @@
 {
-        "PluginName": "cherish-urgency-plugin",
+        "PluginName": "qta-mux-plugin",
         "PluginVersion": "1",
         "PolicySets" : [
                 {
-                        "Name": "cher-urg-ps",
+                        "Name": "qta-mux-ps",
                         "Component": "rmt",
                         "Version" : "1"
                 }

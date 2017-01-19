@@ -66,7 +66,8 @@ class Worker {
 	/**
 	 * Constructor
 	 */
-	Worker(FlowManager* fm, RIBFactory *rib_factory)
+	Worker(FlowManager* fm,
+	       RIBFactory *rib_factory)
 			: flow_manager(fm),
 			  rib_factory_(rib_factory)
 	{
@@ -193,11 +194,15 @@ class ActiveWorker : public Worker {
 	/**
 	 * Constructor
 	 */
-	ActiveWorker(FlowManager* fm, RIBFactory* rib_factory,
-		     const AppConnection& _con)
+	ActiveWorker(FlowManager* fm,
+		     RIBFactory* rib_factory,
+		     const AppConnection& _con,
+		     bool key_manager)
 			: Worker(fm, rib_factory)
 	{
 		con = _con;
+		auth_ps_ = 0;
+		key_manager_ = key_manager;
 	}
 
 	/**
@@ -216,6 +221,9 @@ class ActiveWorker : public Worker {
 	 * Allocate a flow and return the Flow object or NULL
 	 */
 	void allocateFlow();
+
+	rina::IAuthPolicySet * auth_ps_;
+	bool key_manager_;
 };
 
 //Allocate a flow
@@ -270,6 +278,7 @@ void ActiveWorker::allocateFlow()
 		flow_ = rina::ipcManager->commitPendingFlow(rrevent->sequenceNumber,
 							   rrevent->portId,
 							   rrevent->difName);
+		rina::cdap::add_fd_to_port_id_mapping(flow_.fd, flow_.portId);
 		LOG_INFO("[w:%u] Flow allocated, port id = %d", id, flow_.portId);
 	}
 
@@ -319,7 +328,17 @@ void* ActiveWorker::run(void* param)
 			dest.ap_inst_ = flow_.remoteAppName.processInstance;
 			dest.ae_inst_ = flow_.remoteAppName.entityInstance;
 			rina::cdap_rib::auth_policy_t auth;
-			auth.name = rina::IAuthPolicySet::AUTH_NONE;
+
+			auth_ps_ = rib_factory_->getSecurityManager()->get_auth_policy_set(con.auth_policy_name);
+			if (!auth_ps_) {
+				LOG_ERR("Could not %s authentication policy set, aborting",
+					rib_factory_->getSecurityManager()->get_sec_profile(con.auth_policy_name).authPolicy.name_.c_str());
+				return NULL;
+			}
+
+			auth = auth_ps_->get_auth_policy(port_id,
+	  	  	  	  	  	 	 dest,
+							 rib_factory_->getSecurityManager()->get_sec_profile(con.auth_policy_name));
 
 			//Version
 			rina::cdap_rib::vers_info_t vers;
@@ -335,31 +354,9 @@ void* ActiveWorker::run(void* param)
 
 			//Recover the response
 			//TODO: add support for other
+			bool authentication_ongoing = true;
 			rina::ser_obj_t message;
 			message.message_ = new unsigned char[max_sdu_size_in_bytes];
-                        bytes_read = read(fd, message.message_,
-                                          max_sdu_size_in_bytes);
-                        if (bytes_read < 0) {
-				LOG_ERR("read() error on port id %u [%s]",
-                                        port_id, strerror(errno));
-				rina::ipcManager->requestFlowDeallocation(port_id);
-				continue;
-                        }
-                        message.size_ = bytes_read;
-
-			//Instruct CDAP provider to process the CACEP message
-			try{
-				rina::cdap::getProvider()->process_message(message,
-							port_id);
-			}catch(rina::WriteSDUException &e){
-				LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
-				rina::ipcManager->requestFlowDeallocation(port_id);
-				continue;
-			}catch(rina::FlowNotAllocatedException &e) {
-				continue;
-			}
-
-			LOG_DBG("Connection established between MAD and Manager (port id: %u)", port_id);
 
 			//I/O loop
 			while(true) {
@@ -562,9 +559,12 @@ FlowManager::~FlowManager()
 }
 
 //Connect manager
-unsigned int FlowManager::connectTo(const AppConnection& con)
+unsigned int FlowManager::connectTo(const AppConnection& con, bool keyManager)
 {
-	Worker* w = new ActiveWorker(this, agent_->get_ribf(), con);
+	Worker* w = new ActiveWorker(this,
+				     agent_->get_ribf(),
+				     con,
+				     keyManager);
 
 	//Launch worker and return handler
 	return spawnWorker(&w);

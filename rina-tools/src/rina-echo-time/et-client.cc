@@ -123,7 +123,7 @@ Client::Client(const string& t_type,
                const string& server_apn, const string& server_api,
                bool q, unsigned long count,
                bool registration, unsigned int size,
-               int w, int g, int dw, unsigned int lw, int rt) :
+               int w, int g, int dw, unsigned int lw, int rt, int delay) :
         Application(dif_nms, apn, api), test_type(t_type), dif_name(dif_nms.front()),
         server_name(server_apn), server_instance(server_api),
         quiet(q), echo_times(count),
@@ -180,6 +180,8 @@ int Client::createFlow()
 
         if (gap >= 0)
                 qosspec.maxAllowableGap = gap;
+
+        qosspec.delay = delay;
 
         get_current_time(begintp);
 
@@ -367,9 +369,9 @@ void Client::pingFlow()
         variance = m2/((double)sdus_received -1);
         stdev = sqrt(variance);
 
-        cout << "SDUs sent: "<< sdus_sent << "; SDUs received: " << sdus_received;
-        cout << "; " << ((sdus_sent - sdus_received)*100/sdus_sent) << "% SDU loss" <<endl;
-        cout << "Minimum RTT: " << min_rtt << " ms; Maximum RTT: " << max_rtt
+        cout << "SDUs sent: "<< sdus_sent << "; SDUs received: " << sdus_received
+             << "; " << ((sdus_sent - sdus_received)*100/sdus_sent) << "% SDU loss"
+             << "; Minimum RTT: " << min_rtt << " ms; Maximum RTT: " << max_rtt
              << " ms; Average RTT:" << average_rtt
              << " ms; Standard deviation: " << stdev<<" ms"<<endl;
 
@@ -462,9 +464,9 @@ void Client::floodFlow()
 
 	unsigned long rt = 0;
 	if (sdus_sent > 0) rt = ((sdus_sent - sdus_received)*100/sdus_sent);
-	cout << "SDUs sent: "<< sdus_sent << "; SDUs received: " << sdus_received;
-	cout << "; " << rt << "% SDU loss" <<endl;
-	cout << "Minimum RTT: " << min_rtt << " ms; Maximum RTT: " << max_rtt
+	cout << "MAX delay: "<< delay << " ;SDUs sent: "<< sdus_sent << "; SDUs received: " << sdus_received
+	     << "; " << rt << "% SDU loss"
+	     << "Minimum RTT: " << min_rtt << " ms; Maximum RTT: " << max_rtt
 			<< " ms; Average RTT:" << average_rtt
 			<< " ms; Standard deviation: " << stdev<<" ms"<<endl;
 
@@ -486,6 +488,7 @@ void Client::perfFlow()
         for (unsigned int i = 0; i < data_size; i++) {
                 buffer[i] = static_cast<char>(i * i);
         }
+        memcpy(buffer, &delay, sizeof(delay));
 
         while (n < echo_times) {
         	int ret = write(fd, buffer, data_size);
