@@ -568,7 +568,7 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 		return RMT_PS_ENQ_DROP;
 	}
 
-	w = (int) buffer_length(pdu_buffer_get_ro(pdu)) + (int) pci_length(pci);
+	w = (int) pdu_len(pdu);
 	q->ps.backlog += w;
 	if (mbacklog && q->ps.backlog > mbacklog) {
 		LOG_INFO("Backlog exceeded for QoS id %u, dropping PDU", qos_id);
