@@ -56,11 +56,11 @@ public:
         // exported by the kernel via sysfs
         void sync_with_kernel();
 
+        void assign_to_dif_request_handler(const rina::AssignToDIFRequestEvent& event);
+        void assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event);
 #if 0
         //Event loop handlers
         void dif_registration_notification_handler(const rina::IPCProcessDIFRegistrationEvent& event);
-        void assign_to_dif_request_handler(const rina::AssignToDIFRequestEvent& event);
-        void assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event);
         void allocate_flow_request_result_handler(const rina::AllocateFlowRequestResultEvent& event);
         void flow_allocation_requested_handler(const rina::FlowRequestEvent& event);
         void deallocate_flow_response_handler(const rina::DeallocateFlowResponseEvent& event);

@@ -44,6 +44,9 @@ static void parse_path(const std::string& path, std::string& component,
         }
 }
 
+pid_t hostapd_pid = 0;
+pid_t wpas_pid = 0;
+
 //Class ShimWifiIPCProcessImpl
 ShimWifiIPCProcessImpl::ShimWifiIPCProcessImpl(const std::string& type,
 				const rina::ApplicationProcessNamingInformation& nm,
@@ -53,7 +56,18 @@ ShimWifiIPCProcessImpl::ShimWifiIPCProcessImpl(const std::string& type,
 				std::string log_file) : IPCProcess(nm.processName, nm.processInstance),
 					       	       LazyIPCProcessImpl(nm, id, ipc_manager_port, log_level, log_file)
 {
+	pid_t wpid;
+
         kernel_sync = NULL;
+
+	if (type == SHIM_WIFI_IPC_PROCESS_AP) {
+		wpid = hostadp_pid;
+	} else if (type == SHIM_WIFI_IPC_PROCESS_STA) {
+		wpid = wpas_pid;
+	} else {
+		LOG_IPCP_ERR("Could not create Shim WiFi IPCP, type %s not recognized",
+								type.c_str());
+	}
 
 # if 0
         // Initialize application entities
@@ -208,12 +222,6 @@ int ShimWifiIPCProcessImpl::dispatchSelectPolicySet(const std::string& path,
         return result;
 }
 
-#if 0
-void ShimWifiIPCProcessImpl::dif_registration_notification_handler(const rina::IPCProcessDIFRegistrationEvent& event)
-{
-	resource_allocator_->get_n_minus_one_flow_manager()->processRegistrationNotification(event);
-}
-
 void ShimWifiIPCProcessImpl::assign_to_dif_request_handler(const rina::AssignToDIFRequestEvent& event)
 {
 	rina::ScopedLock g(*lock_);
@@ -285,12 +293,14 @@ void ShimWifiIPCProcessImpl::assign_to_dif_response_handler(const rina::AssignTo
 
 	try{
 		rib_daemon_->set_dif_configuration(dif_information_.dif_configuration_);
+		/*
 		resource_allocator_->set_dif_configuration(dif_information_.dif_configuration_);
 		routing_component_->set_dif_configuration(dif_information_.dif_configuration_);
 		namespace_manager_->set_dif_configuration(dif_information_.dif_configuration_);
 		security_manager_->set_dif_configuration(dif_information_.dif_configuration_);
 		flow_allocator_->set_dif_configuration(dif_information_.dif_configuration_);
 		enrollment_task_->set_dif_configuration(dif_information_.dif_configuration_);
+		*/
 	}
 	catch(rina::Exception &e){
 		state = INITIALIZED;
@@ -312,6 +322,13 @@ void ShimWifiIPCProcessImpl::assign_to_dif_response_handler(const rina::AssignTo
 		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
 	}
 }
+
+#if 0
+void ShimWifiIPCProcessImpl::dif_registration_notification_handler(const rina::IPCProcessDIFRegistrationEvent& event)
+{
+	resource_allocator_->get_n_minus_one_flow_manager()->processRegistrationNotification(event);
+}
+
 
 void ShimWifiIPCProcessImpl::allocate_flow_request_result_handler(const rina::AllocateFlowRequestResultEvent& event)
 {
