@@ -6,6 +6,9 @@
 * 2. Software requirements
 * 3. Build instructions
 * 4. Running and configuring IRATI
+    * 4.1 Loading the kernel modules
+    * 4.2 The configuration files
+    * 4.3 Running the IPC Manager Daemon
 * 5. Tutorials
 * 6. Overview of the software components
     * 6.1. Kernel modules
@@ -301,4 +304,32 @@ explanation we direct the reader to FP7-IRATI's at http://irati.eu:
 The software architecture of IRATI is shown in Figure 1. 
 
 ![Figure 1. Main software components of the RINA implementation by the FP7-IRATI project](https://github.com/IRATI/stack/wiki/images/irati-softarch.png)
-_Figure 1. Source: [S. Vrijders et al; "Prototyping the recursive internet architecture: the IRATI project approach ", IEEE Network Vol 28 (2), pp. 20-25, March 2014](http://ieeexplore.ieee.org/xpl/articleDetails.jsp?arnumber=6786609)_
+_Figure 1. Source: [S. Vrijders et al; "Prototyping the recursive internet architecture: the IRATI project approach ", IEEE Network Vol 28 (2), pp. 20-25, March 2014](http://ieeexplore.ieee.org/xpl/articleDetails.jsp?arnumber=6786609)_ 
+
+The main components of IRATI have been divided into four packages:
+
+1. **Daemons** ([rinad](https://github.com/IRATI/stack/tree/master/rinad)). This package contains two types 
+of daemons (OS Processes that run in the background), implemented in C++.
+   * **IPC Manager Daemon** ([rinad/src/ipcm](https://github.com/IRATI/stack/tree/master/rinad/src/ipcm)). The 
+IPC Manager Daemon is the core of IPC Management in the system, acting both as the manager of IPC Processes and 
+a broker between applications and IPC Processes (enforcing access rights, mapping flow allocation or application 
+registration requests to the right IPC Processes, etc.)
+   * **IPC Process Daemon**  ([rinad/src/ipcp](https://github.com/IRATI/stack/tree/master/rinad/src/ipcp)). The 
+IPC Process Daemons (one per running IPC Process in the system) implement the layer management components of an 
+IPC Process (enrollment, flow allocation, PDU Forwarding table generation or distributed resource allocation functions).
+
+2. **Librina** ([librina](https://github.com/IRATI/stack/tree/master/librina)). The librina package contains all 
+IRATI libraries that have been introduced to abstract from the user all the kernel interactions (such as syscalls 
+and Netlink details). Librina provides its functionalities to user-space RINA programs via scripting language 
+extensions or statically/dynamically linkable libraries (i.e. for C/C++ programs).
+
+3. **Kernel components** ([linux/net/rina](https://github.com/IRATI/stack/tree/master/linux/net/rina)). The kernel 
+contains the implementation of the data transfer / data transfer control components of normal IPC Processes as well 
+as the implementation of shim DIFs - which usually need to access functionality only available at the kernel. The 
+Kernel IPC Manager (KIPCM) manages the lifetime (creation, destruction, monitoring) of the other component instances 
+in the kernel, as well as its configuration. It also provides coordination at the boundary between the different IPC processes.
+
+4. **Test applications and tools** ([rina-tools](https://github.com/IRATI/stack/tree/master/rina-tools)). This package 
+contains test applications and tools to test and debug the RINA Prototype.
+
+
