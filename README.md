@@ -11,11 +11,6 @@
     * 4.3 Running the IPC Manager Daemon
 * 5. Tutorials
 * 6. Overview of the software components
-    * 6.1. Kernel modules
-    * 6.2. Userspace IPCP daemons
-    * 6.3. Libraries
-    * 6.4. IPC Manager Daemon
-    * 6.5. Other tools
 
 #############################################################################
 ## 1. Introduction                                                          #
@@ -300,6 +295,13 @@ explanation we direct the reader to FP7-IRATI's at http://irati.eu:
 * D3.1: http://irati.eu/wp-content/uploads/2012/07/IRATI-D3.1-v1.0.pdf 
 * D3.2: http://irati.eu/wp-content/uploads/2012/07/IRATI-D3.2-v1.0.pdf 
 * D3.3: http://irati.eu/wp-content/uploads/2012/07/IRATI-D3.3-bundle.zip 
+
+The FP7 PRISTINE (http://ict-pristine.eu) project enhanced the base IRATI implementation with a Software Development Kit to allow 
+for programmbility of policies for the different components, and the ability to dynamically load the plugins 
+containing such policies at runtime. Documentation about the SDK is available at the following URLs:
+
+* D2.3: http://ict-pristine.eu/wp-content/uploads/2013/12/pristine-d23-sdk-v1_0.pdf
+* D2.5: http://ict-pristine.eu/wp-content/uploads/2013/12/pristine-d25-draft.pdf
 
 The software architecture of IRATI is shown in Figure 1. 
 
