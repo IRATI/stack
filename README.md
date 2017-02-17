@@ -143,7 +143,90 @@ The IPCM needs some configuration information.
 #############################################################################
 
 #### 4.2.1 Main configuration file
+The main configuration file is located in your `INSTALLATION_PATH/etc/ipcmanager.conf`. It contains 
+instructions to optionally instantiate and configure a number of IPC Processes when the IPC Manager 
+Daemon starts its execution.
 
+**Local configuration**. The first part of the configuration file contains the settings for IRATI, 
+such as the paths to the  UNIX socket for the local console or the paths where to search for 
+user-space or kernel plugins.
+
+      "configFileVersion" : "1.4.1",
+      "localConfiguration" : {
+        "installationPath" : "/usr/bin",
+        "libraryPath" : "/usr/lib",
+        "logPath" : "/var/log",
+        "consoleSocket" : "/var/run/ipcm-console.sock",
+        "pluginsPaths" : ["/usr/lib/rinad/ipcp"]
+      },
+
+**IPC Processes to create**. The next section specifies which IPC processes should be created. 
+It requires for each IPC process the type, which can be either a normal IPC process, or a certain 
+shim IPC process. The names of the IPC process and the DIF then have to be specified. The name of 
+the DIF the IPC process should register with is also supplied. Enrollment however, will have to be 
+done manually from the local management console.
+
+    "ipcProcessesToCreate" : [ {
+      "type" : "shim-eth-vlan",
+      "apName" : "test-eth-vlan",
+      "apInstance" : "1",
+      "difName" : "110"
+     }, {
+      "type" : "normal-ipc",
+      "apName" : "test1.IRATI",
+      "apInstance" : "1",
+      "difName" : "normal.DIF",
+      "difsToRegisterAt" : ["110"]
+     } ],
+
+**DIF Configurations**. This only specifies what DIFs to create, but it does not yet explain how 
+the DIFs should be configured. Thats why there is a section called difConfigurations, which specifies 
+what is the DIF template file for each of the DIF names in the main configuration file (the same 
+template file can be used for multiple DIFs). DIF template files contain the actual configuration 
+of the DIF, including its policies.
+
+    "difConfigurations" : [ {
+        "name" : "110",
+        "template" : "shim-eth-vlan.dif"
+    }, {
+        "name" : "normal.DIF",
+        "template" : "default.dif"
+    } ]
+
+#### 4.2.2 DIF Template configuration files
+DIF template files contain the configuration of the components of a DIF. There is a mandatory DIF 
+template called "default.dif" (which gets installed during the IRATI installation procedure), all 
+other DIF templates extend from it (in the sense that they only need to define the JSON sections 
+that are different from the default.dif file). All DIF templates have to be located in the same 
+folder as the main configuration files (.conf) that use the templates.
+
+For exmples of different JSON configuration files, you can take a look at 
+https://github.com/IRATI/stack/tree/master/tests/conf.
+
+#### 4.2.3 Application to DIF mappings
+The da.map file contains the preferences for which DIFs should be used to register and to allocate 
+flows to/from specific applications. If no mapping is provided by a certain application, it will try 
+to randomly select a _normal DIF_ first; if there is non available a _shim DIF_ and if there is none 
+it will fail. The contents of the da.map file can be modified while the IPC Manager Daemon is running.
+
+    "applicationToDIFMappings": [
+        {
+            "encodedAppName": "rina.apps.echotime.server-1--",
+            "difName": "dcfabric.DIF"
+        },
+        {
+            "encodedAppName": "rina.apps.echotime.client-1--",
+            "difName": "dcfabric.DIF"
+        },
+        {
+            "encodedAppName": "rina.apps.echotime-2--",
+            "difName": "vpn1.DIF"
+        },
+        {
+            "encodedAppName": "rina.apps.echotime.client-2--",
+            "difName": "vpn1.DIF"
+        }
+    ],
 
 ### 4.3 Running the IPC Manager Daemon
 #############################################################################
@@ -200,3 +283,22 @@ Example of IPCM console output:
 Now applications can be run that use the IPC API. Look at the Tutorials section for some step-by-step 
 examples on how to use the rina-echo-time test application to experiment with IRATI.
 
+#############################################################################
+## 5. Tutorials                                                             #
+#############################################################################
+Several tutorials are available at https://github.com/IRATI/stack/wiki/Tutorials
+
+#############################################################################
+## 6. Overview of the software components                                   #
+#############################################################################
+This section provides an overview of the software architecture and components of IRATI. For a more detailed 
+explanation we direct the reader to FP7-IRATI's at http://irati.eu:
+ 
+* D3.1: http://irati.eu/wp-content/uploads/2012/07/IRATI-D3.1-v1.0.pdf 
+* D3.2: http://irati.eu/wp-content/uploads/2012/07/IRATI-D3.2-v1.0.pdf 
+* D3.3: http://irati.eu/wp-content/uploads/2012/07/IRATI-D3.3-bundle.zip 
+
+The software architecture of IRATI is shown in Figure 1. 
+
+![Figure 1. Main software components of the RINA implementation by the FP7-IRATI project](https://github.com/IRATI/stack/wiki/images/irati-softarch.png)
+_Figure 1. Source: [S. Vrijders et al; "Prototyping the recursive internet architecture: the IRATI project approach ", IEEE Network Vol 28 (2), pp. 20-25, March 2014](http://ieeexplore.ieee.org/xpl/articleDetails.jsp?arnumber=6786609)_
