@@ -40,8 +40,12 @@ struct rina_flow_spec {
     uint16_t max_loss;          /* percentage */
     uint32_t max_jitter;        /* in microseconds */
     uint8_t in_order_delivery;  /* boolean */
+    uint8_t msg_boundaries;     /* boolean */
 
-    uint8_t reserved[37];       /* for future use */
+    /* for future use */
+    uint32_t spare1;
+    uint32_t spare2;
+    uint32_t spare3;
 };
 
 #define RINA_F_NOWAIT       (1 << 0)
@@ -59,24 +63,47 @@ int rina_open(void);
 
 /*
  * Register the application name @local_appl to a DIF in the system.
- * After a successful invocation, flow allocation requests can be received
+ * After a successful registration, flow allocation requests can be received
  * on @fd. If @dif_name is not NULL, the system may register the
  * application to @dif_name. However, the @dif_name argument is only
  * advisory and the implementation is free to ignore it. If DIF is
  * NULL, the system autonomously decide to which DIF @local_appl will
  * be registered to.
- * Returns 0 on success, -1 on error, with the errno code properly set.
+ *
+ * If RINA_F_NOWAIT is not specified in @flags, this function will block
+ * the caller until the operation is complete, and 0 is returned on success.
+ *
+ * If RINA_F_NOWAIT is specified in @flags, the function returns a
+ * file descriptor (different from @fd) which can be used to wait
+ * for the operation to complete (e.g. using POLLIN with poll() or
+ * select()). In this case the operation can be completed by a subsequent
+ * call to rina_register_wait().
+ *
+ * On error -1 is returned, with the errno code properly set.
  */
-int rina_register(int fd, const char *dif_name, const char *local_appl);
+int rina_register(int fd, const char *dif_name, const char *local_appl,
+                  int flags);
 
 /*
  * Unregister the application name @local_appl from the DIF where it
  * was registered. The @dif_name argument must match the one passed
- * to rina_register(). After a successful invocation, flow allocation
+ * to rina_register(). After a successful unregistration, flow allocation
  * requests can no longer be received on @fd.
+ * The meaning of the RINA_F_NOWAIT flag is the same as in rina_register().
+ *
  * Returns 0 on success, -1 on error, with the errno code properly set.
  */
-int rina_unregister(int fd, const char *dif_name, const char *local_appl);
+int rina_unregister(int fd, const char *dif_name, const char *local_appl,
+                    int flags);
+
+/*
+ * Wait for the completion of a (un)registration procedure previosuly initiated
+ * with a call to rina_[un]register() with the RINA_F_NOWAIT flag set. The @wfd
+ * file descriptor must match the one returned by rina_[un]register().
+ *
+ * On success it returns 0, on error -1, with the errno code properly set.
+ */
+int rina_register_wait(int fd, int wfd);
 
 /*
  * Accept an incoming flow request arrived on @fd. If @flags does not contain

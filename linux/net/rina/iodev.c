@@ -143,6 +143,7 @@ iodev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
 static unsigned int
 iodev_poll(struct file *f, poll_table *wait)
 {
+        struct kfa *kfa = kipcm_kfa(default_kipcm);
         struct iodev_priv *priv = f->private_data;
         unsigned int mask = 0;
 
@@ -150,8 +151,10 @@ iodev_poll(struct file *f, poll_table *wait)
                 return -ENXIO;
         }
 
-        /* TODO check that receive queue is not empty */
-        mask |= POLLIN | POLLRDNORM;
+        /* Set POLLIN if the receive queue is not empty or
+         * the flow has been deallocated. Also call poll_wait(),
+         * as required by the caller. */
+        kfa_flow_readable(kfa, priv->port_id, &mask, f, wait);
 
         /* TODO check that the IPCP can handle the SDU write */
         mask |= POLLOUT | POLLWRNORM;

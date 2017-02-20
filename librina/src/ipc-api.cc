@@ -25,7 +25,7 @@
 #include <errno.h>
 #include <stdexcept>
 #include <fcntl.h>
-#include <stropts.h>
+#include <sys/ioctl.h>
 
 #define RINA_PREFIX "librina.ipc-api"
 
@@ -722,7 +722,7 @@ std::vector<ApplicationRegistration *> IPCManager::getRegisteredApplications()
 
 int IPCManager::getControlFd()
 {
-        return rinaManager->getNetlinkManager()->getSocketFd();
+        return rinaManager->getEventFd();
 }
 
 Singleton<IPCManager> ipcManager;

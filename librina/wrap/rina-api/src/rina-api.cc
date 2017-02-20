@@ -173,6 +173,77 @@ wait_for_event(IPCEventType wtype, unsigned int wseqnum)
         return NULL;
 }
 
+/* Data structures used to implement:
+ *    - the splitted call rina_flow_accept(RINA_F_NORESP)/rina_flow_respond():
+ *              - a table for pending requests
+ *              - a counter for handles.
+ *    - the rina_flow_alloc() with RINA_F_NOWAIT
+ *              - a table for pending requests
+ *    - the rina_register() and rina_unregister() with RINA_F_NOWAIT
+ *              - a table for pending requests
+ */
+
+struct RegPendingEvent {
+        unsigned seqnum;
+        rina::IPCEventType evtype;
+};
+
+static map<int, FlowRequestEvent *> pending_fre;
+static int handle_next = 0;
+static map<int, unsigned int> pending_fa;
+static map<int, RegPendingEvent> pending_reg;
+rina::Lockable split_lock;
+
+static int
+registration_complete(const RegPendingEvent &rpe)
+{
+        IPCEvent *event = wait_for_event(rpe.evtype, rpe.seqnum);
+
+        assert(event == NULL);
+        if (errno != 0) {
+                return -1;
+        }
+
+        return 0;
+}
+
+int
+rina_register_wait(int fd, int wfd)
+{
+        map<int, RegPendingEvent>::iterator mit;
+        RegPendingEvent rpe;
+        int ret = -1;
+
+        (void)fd; /* The netlink socket file descriptor is used internally */
+        if (librina_init()) {
+                return -1;
+        }
+
+        split_lock.lock();
+        mit = pending_reg.find(wfd);
+        if (mit == pending_reg.end()) {
+                split_lock.unlock();
+                errno = EINVAL;
+                return -1;
+        }
+        rpe = mit->second;
+        pending_reg.erase(mit);
+        split_lock.unlock();
+
+        try {
+                ret = registration_complete(rpe);
+        } catch (rina::Exception &e) {
+#ifdef APIDBG
+                cout << __func__ << ": " << e.what() << endl;
+#endif /* APIDBG */
+                errno = ENXIO; /* IPC Manager Daemon is not running */
+        } catch (...) {
+                errno = ENOMEM;
+        }
+
+        return ret;
+}
+
 static void
 str2apninfo(const string& str, ApplicationProcessNamingInformation &apni)
 {
@@ -185,13 +256,18 @@ str2apninfo(const string& str, ApplicationProcessNamingInformation &apni)
 }
 
 int
-rina_register(int fd, const char *dif_name, const char *local_appl)
+rina_register(int fd, const char *dif_name, const char *local_appl, int flags)
 {
         ApplicationRegistrationInformation ari;
-        unsigned int seqnum;
+        RegPendingEvent rpe;
 
         (void)fd; /* The netlink socket file descriptor is used internally */
         if (librina_init()) {
+                return -1;
+        }
+
+        if (flags & ~RINA_F_NOWAIT) {
+                errno = EINVAL;
                 return -1;
         }
 
@@ -207,16 +283,25 @@ rina_register(int fd, const char *dif_name, const char *local_appl)
         }
 
         try {
-                IPCEvent *event;
-
                 /* Issue a registration request. */
-                seqnum = ipcManager->requestApplicationRegistration(ari);
-                event = wait_for_event(REGISTER_APPLICATION_RESPONSE_EVENT,
-                                       seqnum);
-                assert(event == NULL);
-                if (errno != 0) {
-                        return -1;
+                rpe.seqnum = ipcManager->requestApplicationRegistration(ari);
+                rpe.evtype = REGISTER_APPLICATION_RESPONSE_EVENT;
+
+                if (flags & RINA_F_NOWAIT) {
+                        int wfd = rina_open();
+
+                        /* Store the seqnum in the pending registration
+                         * mapped from a duplicate of the control
+                         * file descriptor. */
+                        split_lock.lock();
+                        pending_reg[wfd] = rpe;
+                        split_lock.unlock();
+
+                        return wfd;
                 }
+
+                return registration_complete(rpe);
+
         } catch (rina::Exception &e) {
 #ifdef APIDBG
                 cout << __func__ << ": " << e.what() << endl;
@@ -233,14 +318,19 @@ rina_register(int fd, const char *dif_name, const char *local_appl)
 }
 
 int
-rina_unregister(int fd, const char *dif_name, const char *local_appl)
+rina_unregister(int fd, const char *dif_name, const char *local_appl, int flags)
 {
         ApplicationProcessNamingInformation appi;
         ApplicationProcessNamingInformation difi;
-        unsigned int seqnum;
+        RegPendingEvent rpe;
 
         (void)fd; /* The netlink socket file descriptor is used internally */
         if (librina_init()) {
+                return -1;
+        }
+
+        if (flags & ~RINA_F_NOWAIT) {
+                errno = EINVAL;
                 return -1;
         }
 
@@ -248,17 +338,26 @@ rina_unregister(int fd, const char *dif_name, const char *local_appl)
         str2apninfo(string(local_appl), appi);
 
         try {
-                IPCEvent *event;
-
-                seqnum = ipcManager->requestApplicationUnregistration(appi,
+                /* Issue unregistration request. */
+                rpe.seqnum = ipcManager->requestApplicationUnregistration(appi,
                                 difi);
+                rpe.evtype = UNREGISTER_APPLICATION_RESPONSE_EVENT;
 
-                event = wait_for_event(UNREGISTER_APPLICATION_RESPONSE_EVENT,
-                                       seqnum);
-                assert(event == NULL);
-                if (errno != 0) {
-                        return -1;
+                if (flags & RINA_F_NOWAIT) {
+                        int wfd = rina_open();
+
+                        /* Store the seqnum in the pending registration
+                         * mapped from a duplicate of the control
+                         * file descriptor. */
+                        split_lock.lock();
+                        pending_reg[wfd] = rpe;
+                        split_lock.unlock();
+
+                        return wfd;
                 }
+
+                return registration_complete(rpe);
+
         } catch (rina::Exception &e) {
 #ifdef APIDBG
                 cout << __func__ << ": " << e.what() << endl;
@@ -290,14 +389,6 @@ remote_appl_fill(FlowRequestEvent *fre, char **remote_appl)
                                 /* blocking */ true);
         }
 }
-
-/* Data structures used to implement the splitted call
- * rina_flow_accept(RINA_F_NORESP)/rina_flow_respond(): a table for
- * pending requests, a counter for handles and a lock. */
-static map<int, FlowRequestEvent *> pending_fre;
-static int handle_next = 0;
-static map<int, unsigned int> pending_fa;
-rina::Lockable split_lock;
 
 int
 rina_flow_respond(int fd, int handle, int response)
@@ -392,6 +483,7 @@ rina_flow_accept(int fd, char **remote_appl, struct rina_flow_spec *spec,
                         spec->max_delay = fre->flowSpecification.delay;
                         spec->max_jitter = fre->flowSpecification.jitter;
                         spec->in_order_delivery = fre->flowSpecification.orderedDelivery;
+                        spec->msg_boundaries = fre->flowSpecification.partialDelivery;
                 }
 
                 if (flags & RINA_F_NORESP) {
@@ -500,6 +592,7 @@ rina_flow_alloc(const char *dif_name, const char *local_appl,
         flowspec_i.delay = flowspec->max_delay;
         flowspec_i.jitter = flowspec->max_jitter;
         flowspec_i.orderedDelivery = flowspec->in_order_delivery;
+        flowspec_i.partialDelivery = flowspec->msg_boundaries;
 
         str2apninfo(string(local_appl), local_apni);
         str2apninfo(string(remote_appl), remote_apni);
@@ -589,6 +682,7 @@ rina_flow_spec_default(struct rina_flow_spec *spec)
         spec->max_delay = 0;
         spec->max_jitter = 0;
         spec->in_order_delivery = 0;
+        spec->msg_boundaries = 1;
 }
 
 }

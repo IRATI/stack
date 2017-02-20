@@ -77,16 +77,6 @@ int main() {
 	std::cout<<"Called IPC Process destroy system call with result "
 			<<result<<std::endl;
 
-	//Write SDU (will fail)
-	result = syscallWriteSDU(25, sdu, 50);
-	std::cout<<"Called write SDU system call with result "
-				<<result<<std::endl;
-
-	//Read SDU (will fail)
-	result = syscallReadSDU(25, sdu, 50);
-	std::cout<<"Called read SDU system call with result "
-			<<result<<std::endl;
-
 	//Write management sdu (will fail)
 	result = syscallWriteManagementSDU(1, sdu, 12, 0, 50);
 	std::cout<<"Called write management SDU system call with result "

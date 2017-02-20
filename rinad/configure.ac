@@ -199,6 +199,7 @@ AC_CONFIG_FILES([
     src/ipcp/plugins/sm-auth-psoc/Makefile
     src/ipcp/plugins/sm-passwd/Makefile
     src/ipcp/plugins/sm-cbac/Makefile
+    src/ipcp/plugins/nsm-address-change/Makefile
     src/ipcm/Makefile
     src/ipcm/addons/Makefile
     src/ipcm/addons/ma/Makefile

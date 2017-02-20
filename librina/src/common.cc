@@ -169,22 +169,24 @@ bool ApplicationProcessNamingInformation::operator<(
 	}
 }
 
-bool ApplicationProcessNamingInformation::operator>=(
-		const ApplicationProcessNamingInformation &other) const {
+bool ApplicationProcessNamingInformation::operator>=(const ApplicationProcessNamingInformation &other) const
+{
 	return !(*this < other);
 }
 
-std::string ApplicationProcessNamingInformation::
-getProcessNamePlusInstance(){
+const std::string ApplicationProcessNamingInformation::getProcessNamePlusInstance() const
+{
 	return processName + "-" + processInstance;
 }
 
-const std::string ApplicationProcessNamingInformation::getEncodedString() const {
+const std::string ApplicationProcessNamingInformation::getEncodedString() const
+{
         return processName + "-" + processInstance +
                         "-" + entityName + "-" + entityInstance;
 }
 
-const std::string ApplicationProcessNamingInformation::toString() const{
+const std::string ApplicationProcessNamingInformation::toString() const
+{
         std::stringstream ss;
 
         ss << processName << ":" << processInstance << ":"
@@ -736,7 +738,13 @@ IPCEvent * IPCEventProducer::eventPoll()
 #if STUB_API
 	return getIPCEvent();
 #else
-	return rinaManager->getEventQueue()->poll();
+	IPCEvent * event = rinaManager->getEventQueue()->poll();
+
+	if (event) {
+		rinaManager->eventQueuePopped();
+	}
+
+	return event;
 #endif
 }
 
@@ -745,7 +753,13 @@ IPCEvent * IPCEventProducer::eventWait()
 #if STUB_API
 	return getIPCEvent();
 #else
-	return rinaManager->getEventQueue()->take();
+	IPCEvent *event = rinaManager->getEventQueue()->take();
+
+	if (event) {
+		rinaManager->eventQueuePopped();
+	}
+
+	return event;
 #endif
 }
 
@@ -755,7 +769,13 @@ IPCEvent * IPCEventProducer::eventTimedWait(int seconds,
 #if STUB_API
 	return getIPCEvent();
 #else
-	return rinaManager->getEventQueue()->timedtake(seconds, nanoseconds);
+	IPCEvent * event = rinaManager->getEventQueue()->timedtake(seconds,
+								nanoseconds);
+	if (event) {
+		rinaManager->eventQueuePopped();
+	}
+
+	return event;
 #endif
 }
 
@@ -904,8 +924,10 @@ unsigned int ConsecutiveUnsignedIntegerGenerator::next(){
 }
 
 /* CLASS NEIGHBOR */
-Neighbor::Neighbor() {
-	address_ = false;
+Neighbor::Neighbor()
+{
+	address_ = 0;
+	old_address_ = 0;
 	average_rtt_in_ms_ = 0;
 	last_heard_from_time_in_ms_ = 0;
 	enrolled_ = false;
@@ -916,6 +938,7 @@ Neighbor::Neighbor() {
 Neighbor::Neighbor(const Neighbor &other)
 {
 	address_ = other.address_;
+	old_address_ = other.old_address_;
 	average_rtt_in_ms_ = other.average_rtt_in_ms_;
 	last_heard_from_time_in_ms_ = other.last_heard_from_time_in_ms_;
 	enrolled_ = other.enrolled_;
@@ -989,6 +1012,16 @@ unsigned int Neighbor::get_address() const {
 
 void Neighbor::set_address(unsigned int address) {
 	address_ = address;
+}
+
+unsigned int Neighbor::get_old_address() const
+{
+	return old_address_;
+}
+
+void Neighbor::set_old_address(unsigned int address)
+{
+	old_address_ = address;
 }
 
 unsigned int Neighbor::get_average_rtt_in_ms() const {

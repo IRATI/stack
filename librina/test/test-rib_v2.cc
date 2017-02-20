@@ -291,13 +291,15 @@ public:
 				      int invoke_id) {};
 	virtual void send_cdap_result(const cdap_rib::con_handle_t &con,
 			cdap::cdap_m_t *cdap_m)	{};
-	virtual void process_message(const ser_obj_t &message,
+	virtual void process_message(ser_obj_t &message,
 				     unsigned int port,
 				     cdap_rib::cdap_dest_t cdap_dest = cdap_rib::CDAP_DEST_PORT) {};
 
 	virtual void destroy_session(int port){ (void)port; /*FIXME*/ };
 
 	virtual void set_cdap_io_handler(CDAPIOHandler * handler) {};
+
+	virtual CDAPIOHandler * get_cdap_io_handler() { return 0;};
 
 	virtual cdap::CDAPSessionManagerInterface * get_session_manager() {return 0;};
 };
@@ -469,7 +471,7 @@ void ribBasicOps::tearDown(){
 void ribBasicOps::testInit(){
 	rina::rib::RIBDaemonProxy* ribd_;
 	cdap_rib::cdap_params params;
-	params.fd = 1; /* Use stdout */
+	params.ipcp = false;
 	ribd = NULL;
 
 	//Before init getting a proxy should throw an exception

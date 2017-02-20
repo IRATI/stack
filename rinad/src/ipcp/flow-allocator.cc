@@ -279,14 +279,13 @@ void FlowAllocator::createFlowRequestMessageReceived(
 	int portId = 0;
 
 	unsigned int address = namespace_manager_->getDFTNextHop(flow->destination_naming_info);
-	myAddress = ipcp->get_address();
 	if (address == 0) {
 		LOG_IPCP_ERR("The directory forwarding table returned no entries when looking up %s",
 			     flow->destination_naming_info.toString().c_str());
 		return;
 	}
 
-	if (address == myAddress) {
+	if (ipcp->check_address_is_mine(address)) {
 		//There is an entry and the address is this IPC Process, create a FAI, extract
 		//the Flow object from the CDAP message and call the FAI
 		try {
@@ -625,7 +624,7 @@ void FlowAllocatorInstance::submitAllocateRequest(const rina::FlowRequestEvent& 
 		throw rina::Exception(ss.str().c_str());
 	}
 
-	unsigned int sourceAddress = ipc_process_->get_address();
+	unsigned int sourceAddress = ipc_process_->get_active_address();
 	flow_->source_address = sourceAddress;
 	flow_->source_port_id = port_id_;
 	std::stringstream ss;
@@ -742,7 +741,7 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(configs::Flow * flo
 			flow->toString().c_str());
 	flow_ = flow;
 	if (flow_->destination_address == 0) {
-		flow_->destination_address = ipc_process_->get_address();
+		flow_->destination_address = ipc_process_->get_active_address();
 	}
 	invoke_id_ = invoke_id;
 	object_name_ = object_name;
@@ -1097,6 +1096,9 @@ void FlowAllocatorInstance::submitDeallocate(
 		//2 Send M_DELETE
 		if (flow_->source_address != flow_->destination_address) {
 			try {
+				//Get destination address again in case it has changed
+				con.port_id = namespace_manager_->getDFTNextHop(flow_->destination_naming_info);
+
 				rina::cdap_rib::flags_t flags;
 				rina::cdap_rib::filt_info_t filt;
 				rina::cdap_rib::obj_info_t obj;

@@ -1,5 +1,3 @@
-
-
 /*
  * Link-state routing policy
  *
@@ -35,25 +33,25 @@
 namespace rinad {
 
 struct TreeNode {
-    unsigned int addr;
+    std::string name;
     int metric;
     std::set<TreeNode*> chldel;
     std::set<TreeNode*> chl;
     TreeNode(){
-            addr = 0;
+            name = std::string();
             metric = UINT16_MAX;
     }
-    TreeNode(const unsigned int &_addr, const int &_metric){
-        addr = _addr;
+    TreeNode(const std::string &_name, const int &_metric){
+        name = _name;
         metric = _metric;
     }
     bool operator == (const TreeNode &b) const
     {
-        return addr == b.addr;
+        return name == b.name;
     }
     bool operator < (const TreeNode &b) const
     {
-        return addr < b.addr;
+        return name < b.name;
     }
 
     ~TreeNode(){
@@ -84,16 +82,18 @@ private:
 
 class Edge {
 public:
-	Edge(unsigned int address1, unsigned int address2, int weight);
-	bool isVertexIn(unsigned int address) const;
-	unsigned int getOtherEndpoint(unsigned int address);
-	std::list<unsigned int> getEndpoints();
+	Edge(const std::string& name1,
+	     const std::string& name2,
+	     int weight);
+	bool isVertexIn(const std::string& name) const;
+	std::string getOtherEndpoint(const std::string& name);
+	std::list<std::string> getEndpoints();
 	bool operator==(const Edge & other) const;
 	bool operator!=(const Edge & other) const;
 	const std::string toString() const;
 
-	unsigned int address1_;
-	unsigned int address2_;
+	std::string name1_;
+	std::string name2_;
 	int weight_;
 };
 
@@ -101,31 +101,34 @@ class FlowStateObject;
 class Graph {
 public:
 	Graph(const std::list<FlowStateObject>& flow_state_objects);
+	Graph();
 	~Graph();
 
 	std::list<Edge *> edges_;
-	std::list<unsigned int> vertices_;
+	std::list<std::string> vertices_;
 
-	bool contains_vertex(unsigned int address) const;
-	bool contains_edge(unsigned int address1, unsigned int address2) const;
+	void set_flow_state_objects(const std::list<FlowStateObject>& flow_state_objects);
+	bool contains_vertex(const std::string& name) const;
+	bool contains_edge(const std::string& name1,
+			   const std::string& name2) const;
 
 	void print() const;
 
 private:
 	struct CheckedVertex {
-		unsigned int address_;
+		std::string name_;
 		int port_id_;
-		std::list<unsigned int> connections;
+		std::list<std::string> connections;
 
-		CheckedVertex(unsigned int address) {
-			address_ = address;
+		CheckedVertex(const std::string& name) {
+			name_ = name;
 			port_id_ = 0;
 		}
 
-		bool connection_contains_address(unsigned int address) {
-			std::list<unsigned int>::iterator it;
+		bool connection_contains_name(const std::string& name) {
+			std::list<std::string>::iterator it;
 			for(it = connections.begin(); it != connections.end(); ++it) {
-				if ((*it) == address) {
+				if ((*it) == name) {
 					return true;
 				}
 			}
@@ -138,7 +141,7 @@ private:
 	std::list<CheckedVertex *> checked_vertices_;
 
 	void init_vertices();
-	CheckedVertex * get_checked_vertex(unsigned int address) const;
+	CheckedVertex * get_checked_vertex(const std::string& name) const;
 	void init_edges();
 };
 
@@ -148,23 +151,24 @@ public:
 
 	//Compute the next hop for the node identified by source_address
 	//towards all the other nodes
-	virtual std::list<rina::RoutingTableEntry *> computeRoutingTable(const Graph& graph,
-									 const std::list<FlowStateObject>& fsoList,
-									 unsigned int source_address) = 0;
+	virtual void computeRoutingTable(const Graph& graph,
+	 	 	    	 	 const std::list<FlowStateObject>& fsoList,
+					 const std::string& source_name,
+					 std::list<rina::RoutingTableEntry *>& rt) = 0;
 
 	//Compute the distance of the shortest path between the node identified
 	//by source_address and all the other nodes
 	virtual void computeShortestDistances(const Graph& graph,
-				unsigned int source_address,
-				std::map<unsigned int, int>& distances) = 0;
+					      const std::string& source_name,
+				              std::map<std::string, int>& distances) = 0;
 };
 
 /// Contains the information of a predecessor, needed by the Dijkstra Algorithm
 class PredecessorInfo {
 public:
-	PredecessorInfo(unsigned int nPredecessor);
+	PredecessorInfo(const std::string& nPredecessor);
 
-	unsigned int predecessor_;
+	std::string predecessor_;
 };
 
 /// The routing algorithm used to compute the PDU forwarding table is a Shortest
@@ -174,25 +178,26 @@ public:
 class DijkstraAlgorithm : public IRoutingAlgorithm {
 public:
 	DijkstraAlgorithm();
-	std::list<rina::RoutingTableEntry *> computeRoutingTable(const Graph& graph,
-								 const std::list<FlowStateObject>& fsoList,
-								 unsigned int source_address);
+	void computeRoutingTable(const Graph& graph,
+	 	 	    	 const std::list<FlowStateObject>& fsoList,
+				 const std::string& source_name,
+				 std::list<rina::RoutingTableEntry *>& rt);
 	void computeShortestDistances(const Graph& graph,
-				      unsigned int source_address,
-				      std::map<unsigned int, int>& distances);
+				      const std::string& source_name,
+				      std::map<std::string, int>& distances);
 private:
-	std::set<unsigned int> settled_nodes_;
-	std::set<unsigned int> unsettled_nodes_;
-	std::map<unsigned int, PredecessorInfo *> predecessors_;
-	std::map<unsigned int, int> distances_;
+	std::set<std::string> settled_nodes_;
+	std::set<std::string> unsettled_nodes_;
+	std::map<std::string, PredecessorInfo *> predecessors_;
+	std::map<std::string, int> distances_;
 
-	void execute(const Graph& graph, unsigned int source);
-	unsigned int getMinimum() const;
-	void findMinimalDistances (const Graph& graph, unsigned int node);
-	int getShortestDistance(unsigned int destination) const;
-	bool isNeighbor(Edge * edge, unsigned int node) const;
-	bool isSettled(unsigned int node) const;
-	unsigned int getNextHop(unsigned int address, unsigned int sourceAddress);
+	void execute(const Graph& graph, const std::string& source);
+	std::string getMinimum() const;
+	void findMinimalDistances (const Graph& graph, const std::string& node);
+	int getShortestDistance(const std::string& destination) const;
+	bool isNeighbor(Edge * edge, const std::string& node) const;
+	bool isSettled(const std::string& node) const;
+	std::string getNextHop(const std::string& name, const std::string& sourceName);
 	void clear();
 };
 
@@ -203,33 +208,34 @@ private:
 class ECMPDijkstraAlgorithm : public IRoutingAlgorithm {
 public:
 	ECMPDijkstraAlgorithm();
-	std::list<rina::RoutingTableEntry *> computeRoutingTable(const Graph& graph,
-		    	    	    	    	    	     	 const std::list<FlowStateObject>& fsoList,
-		    	    	    	    	    	     	 unsigned int source_address);
+	void computeRoutingTable(const Graph& graph,
+	 	 	    	 const std::list<FlowStateObject>& fsoList,
+				 const std::string& source_name,
+				 std::list<rina::RoutingTableEntry *>& rt);
 	void computeShortestDistances(const Graph& graph,
-				      unsigned int source_address,
-				      std::map<unsigned int, int>& distances);
+				      const std::string& source_name,
+				      std::map<std::string, int>& distances);
 
 private:
-	std::set<unsigned int> settled_nodes_;
-	std::set<unsigned int> unsettled_nodes_;
-	std::set<unsigned int> minimum_nodes_;
-	std::map<unsigned int, std::list<TreeNode *> > predecessors_;
-	std::map<unsigned int, int> distances_;
+	std::set<std::string> settled_nodes_;
+	std::set<std::string> unsettled_nodes_;
+	std::set<std::string> minimum_nodes_;
+	std::map<std::string, std::list<TreeNode *> > predecessors_;
+	std::map<std::string, int> distances_;
 	TreeNode* t;
 	void execute(const Graph& graph,
-		     unsigned int source);
+		     const std::string& source);
 	void addRecursive(std::list<rina::RoutingTableEntry *> &table,
 			  int qos,
-			  unsigned int next,
+			  const std::string& next,
 			  TreeNode * node);
 	std::list<rina::RoutingTableEntry *>::iterator findEntry(std::list<rina::RoutingTableEntry *> &table,
-							    	 unsigned int addr);
+							    	 const std::string& name);
 	void getMinimum();
 	void findMinimalDistances (const Graph& graph, TreeNode * pred);
-	int getShortestDistance(unsigned int destination) const;
-	bool isNeighbor(Edge * edge, unsigned int node) const;
-	bool isSettled(unsigned int node) const;
+	int getShortestDistance(const std::string& destination) const;
+	bool isNeighbor(Edge * edge, const std::string& node) const;
+	bool isSettled(const std::string& node) const;
 	void clear();
 };
 
@@ -241,7 +247,8 @@ public:
 	// Starting from the routing table computed by the routing algorithm,
 	// try to add (for each target nod) different next hops in addition to the
 	// existing ones, in order to improve resilency of the source node
-	virtual void fortifyRoutingTable(const Graph& graph, unsigned int source_address,
+	virtual void fortifyRoutingTable(const Graph& graph,
+					 const std::string& source_name,
 					 std::list<rina::RoutingTableEntry *>& rt) = 0;
 
 protected:
@@ -251,11 +258,13 @@ protected:
 class LoopFreeAlternateAlgorithm : public IResiliencyAlgorithm {
 public:
 	LoopFreeAlternateAlgorithm(IRoutingAlgorithm& ra);
-	void fortifyRoutingTable(const Graph& graph, unsigned int source_address,
-					 std::list<rina::RoutingTableEntry *>& rt);
+	void fortifyRoutingTable(const Graph& graph,
+				 const std::string& source_name,
+				 std::list<rina::RoutingTableEntry *>& rt);
 private:
 	void extendRoutingTableEntry(std::list<rina::RoutingTableEntry *>& rt,
-				     unsigned int target_address, unsigned int nexthop);
+				     const std::string& target_name,
+				     const std::string& nexthop);
 };
 
 /// The object exchanged between IPC Processes to disseminate the state of
@@ -266,19 +275,22 @@ private:
 class FlowStateObject {
 public:
 	FlowStateObject();
-	FlowStateObject(unsigned int address,
-			unsigned int neighbor_address,
+	FlowStateObject(const std::string& name,
+			const std::string& neighbor_name,
 			unsigned int cost,
 			bool state,
 			int sequence_number,
 			unsigned int age);
 	~FlowStateObject();
-	const std::string toString();
-	FlowStateObject& operator=(const FlowStateObject& other);
+	const std::string toString() const;
 	void deprecateObject(unsigned int max_age);
 	//accessors
-	unsigned int get_address() const;
-	unsigned int get_neighboraddress() const;
+	std::string get_name() const;
+	void set_name(const std::string& name);
+	std::string get_neighborname() const;
+	void set_neighborname(const std::string & neighbor_name);
+	std::list<unsigned int> get_addresses() const;
+	std::list<unsigned int> get_neighboraddresses() const;
 	unsigned int get_cost() const;
 	bool is_state() const;
 	unsigned int get_sequencenumber() const;
@@ -287,8 +299,14 @@ public:
 	unsigned int get_avoidport() const;
 	bool is_beingerased() const;
 	std::string get_objectname() const;
-	void set_address(unsigned int address);
-	void set_neighboraddress(unsigned int neighbor_address);
+	void add_address(unsigned int address);
+	void remove_address(unsigned int address);
+	bool contains_address(unsigned int address) const;
+	void set_addresses(const std::list<unsigned int>& addresses);
+	void add_neighboraddress(unsigned int neighbor_address);
+	void remove_neighboraddress(unsigned int neighbor_address);
+	bool contains_neighboraddress(unsigned int address) const;
+	void set_neighboraddresses(const std::list<unsigned int>& addresses);
 	void set_cost(unsigned int cost);
 	void has_state(bool state);
 	void set_sequencenumber(unsigned int sequence_number);
@@ -299,24 +317,39 @@ public:
 	void has_beingerased(bool being_erased);
 	const std::string getKey() const;
 private:
-	// The address of the IPC Process
-	unsigned int address_;
+	// The name of the IPCP (encoded in a string)
+	std::string name;
+
+	// The addresses of the IPC Process
+	std::list<unsigned int> addresses;
+
+	// The name of the neighbor
+	std::string neighbor_name;
+
 	// The address of the neighbor IPC Process
-	unsigned int neighbor_address_;
+	std::list<unsigned int> neighbor_addresses;
+
 	// The port_id assigned by the neighbor IPC Process to the N-1 flow
 	unsigned int cost_;
+
 	// Flow up (true) or down (false)
 	bool state_;
+
 	// A sequence number to be able to discard old information
 	unsigned int sequence_number_;
+
 	// Age of this FSO (in seconds)
 	unsigned int age_;
+
 	// The object has been marked for propagation
 	bool modified_;
+
 	// Avoid port in the next propagation
 	int avoid_port_;
+
 	// The object is being erased
 	bool being_erased_;
+
 	// The name of the object in the RIB
 	std::string object_name_;
 };
@@ -325,52 +358,52 @@ class FlowStateManager;
 /// A single flow state object
 class FlowStateRIBObject: public rina::rib::RIBObj {
 public:
-	FlowStateRIBObject(FlowStateObject* new_obj, FlowStateManager *manager);
+	FlowStateRIBObject(FlowStateObject* new_obj);
 	void read(const rina::cdap_rib::con_handle_t &con, const std::string& fqn,
 		const std::string& clas, const rina::cdap_rib::filt_info_t &filt,
 		const int invoke_id, rina::ser_obj_t &obj_reply, 
 		rina::cdap_rib::res_info_t& res);
-	void write(const rina::cdap_rib::con_handle_t &con, const std::string& fqn,
-		const std::string& clas, const rina::cdap_rib::filt_info_t &filt,
-		const int invoke_id, const rina::ser_obj_t &obj_req, 
-		rina::ser_obj_t &obj_reply,	rina::cdap_rib::res_info_t& res);
-	bool delete_(const rina::cdap_rib::con_handle_t &con, 
-		const std::string& fqn,	const std::string& clas, 
-		const rina::cdap_rib::filt_info_t &filt,
-		const int invoke_id, rina::cdap_rib::res_info_t& res);
 	const std::string get_displayable_value() const;
 
 	FlowStateObject* obj;
 
 	const static std::string clazz_name;
 	const static std::string object_name_prefix;
-private:
-	FlowStateManager *manager;
 };
 
 class FlowStateObjects;
 class KillFlowStateObjectTimerTask : public rina::TimerTask {
 public:
-	KillFlowStateObjectTimerTask(FlowStateObjects *fsos, std::string fqn);
+	KillFlowStateObjectTimerTask(LinkStateRoutingPolicy *ps, std::string fqn);
 	~KillFlowStateObjectTimerTask() throw(){};
 	void run();
 
 private:
 	std::string fqn_;
-	FlowStateObjects* fsos_;
+	LinkStateRoutingPolicy* ps_;
 };
 
 class FlowStateRIBObjects;
 class FlowStateObjects
 {
 public:
-	FlowStateObjects(FlowStateManager* manager);
+	FlowStateObjects(LinkStateRoutingPolicy * ps);
 	~FlowStateObjects();
+	void addAddressToFSOs(const std::string& name,
+			      unsigned int address,
+			      bool neighbor);
+	void removeAddressFromFSOs(const std::string& name,
+				   unsigned int address,
+				   bool neighbor);
 	bool addObject(const FlowStateObject& object);
 	void deprecateObject(const std::string& fqn, 
 			     unsigned int max_age);
-	void deprecateObjects(unsigned int neigh_address, unsigned int address,
+	void deprecateObjects(const std::string& neigh_name,
+			      const std::string& name,
 			      unsigned int max_age);
+	void deprecateObjectsWithName(const std::string& name,
+				      unsigned int max_age,
+				      bool neighbor);
 	FlowStateObject * getObject(const std::string& fqn);
 	void getModifiedFSOs(std::list<FlowStateObject *>& result);
 	void getAllFSOs(std::list<FlowStateObject>& result);
@@ -383,15 +416,17 @@ public:
 				      unsigned int max_objects);
 	bool is_modified() const;
 	void has_modified(bool modified);
-private:
+	void set_wait_until_remove_object(unsigned int wait_object);
 	void removeObject(const std::string& fqn);
-	bool addCheckedObject(const FlowStateObject& object);
+
+private:
+	void addCheckedObject(const FlowStateObject& object);
 	std::map<std::string,FlowStateObject*> objects;
 	//Signals a modification in the FlowStateDB
 	bool modified_;
-	FlowStateManager* manager_;
+	LinkStateRoutingPolicy * ps_;
+	unsigned int wait_until_remove_object;
 	rina::Lockable lock;
-	friend class KillFlowStateObjectTimerTask;
 };
 
 /// A container of flow state objects. This is the RIB target object
@@ -401,7 +436,7 @@ private:
 class FlowStateRIBObjects: public rina::rib::RIBObj {
 public:
 	FlowStateRIBObjects(FlowStateObjects* new_objs,
-			    FlowStateManager *manager);
+			    LinkStateRoutingPolicy * ps);
 	const std::string toString();
 	void read(const rina::cdap_rib::con_handle_t &con,
 		  const std::string& fqn,
@@ -423,7 +458,7 @@ public:
 	const static std::string object_name;
 private:
 	FlowStateObjects *objs;
-	FlowStateManager *manager;
+	LinkStateRoutingPolicy * ps_;
 };
 
 /// The subset of the RIB that contains all the Flow State objects known by the IPC Process.
@@ -441,33 +476,44 @@ public:
 	static const int NO_AVOID_PORT;
 	static const long WAIT_UNTIL_REMOVE_OBJECT;
 	FlowStateManager(rina::Timer* new_timer,
-			unsigned int max_age);
+			unsigned int max_age,
+			LinkStateRoutingPolicy * ps);
 	~FlowStateManager();
 	//void setAvoidPort(int avoidPort);
 	/// add a FlowStateObject
-	bool addNewFSO(unsigned int address,
-		       unsigned int neighborAddress,
+	void addAddressToFSOs(const std::string& name,
+			      unsigned int address,
+			      bool neighbor);
+	bool addNewFSO(const std::string& name,
+		       std::list<unsigned int>& addresses,
+		       const std::string& neighbor_name,
+		       std::list<unsigned int>& neighbor_addresses,
 		       unsigned int cost,
 		       int avoid_port);
 	/// Set a FSO ready for removal
 	void deprecateObject(std::string fqn);
-	void deprecateObjectsNeighbor(unsigned int neigh_address,
-	                              unsigned int address);
-	std::map <int, std::list<FlowStateObject*> > prepareForPropagation(const std::list<rina::FlowInformation>& flows);
+	void removeAddressFromFSOs(const std::string& name,
+				   unsigned int address,
+				   bool neighbor);
+	void deprecateObjectsNeighbor(const std::string& neigh_name,
+	                              const std::string& name);
+	std::map <int, std::list<FlowStateObject*> > prepareForPropagation
+	        (const std::list<rina::FlowInformation>& flows);
 	void incrementAge();
 	void updateObjects(const std::list<FlowStateObject>& newObjects,
-			   unsigned int avoidPort,
-			   unsigned int address);
+			   unsigned int avoidPort);
 	void prepareForPropagation(std::map<int, std::list< std::list<FlowStateObject> > >& to_propagate,
 				   unsigned int max_objects) const;
 	void encodeAllFSOs(rina::ser_obj_t& obj) const;
 	void getAllFSOs(std::list<FlowStateObject>& list) const;
 	bool tableUpdate() const;
+	void removeObject(const std::string& fqn);
 	void getAllFSOsForPropagation(std::list< std::list<FlowStateObject> >& fsos,
 				      unsigned int max_objects);
 
 	// accessors
 	void set_maximum_age(unsigned int max_age);
+	void set_wait_until_remove_object(unsigned int wait_object);
 private:
 	FlowStateObjects* fsos;
 	unsigned int maximum_age;
@@ -510,6 +556,22 @@ private:
     long delay_;
 };
 
+class ExpireOldAddressTimerTask : public rina::TimerTask {
+public:
+	ExpireOldAddressTimerTask(LinkStateRoutingPolicy * lsr_policy,
+				  const std::string& name,
+				  unsigned int address,
+				  bool neighbor);
+	~ExpireOldAddressTimerTask() throw(){};
+	void run();
+
+private:
+	LinkStateRoutingPolicy * lsr_policy_;
+	unsigned int address;
+	std::string name;
+	bool neighbor;
+};
+
 /// This routing policy uses a Flow State Database
 /// (FSDB) populated with Flow State Objects (FSOs) to compute the PDU
 /// forwarding table. This database is updated based on local events notified
@@ -536,6 +598,8 @@ public:
 	static const std::string WAIT_UNTIL_PDUFT_COMPUTATION;
 	static const std::string WAIT_UNTIL_FSODB_PROPAGATION;
 	static const std::string WAIT_UNTIL_AGE_INCREMENT;
+	static const std::string WAIT_UNTIL_REMOVE_OBJECT;
+	static const std::string WAIT_UNTIL_DEPRECATE_OLD_ADDRESS;
 	static const std::string ROUTING_ALGORITHM;
 	static const std::string MAXIMUM_OBJECTS_PER_ROUTING_UPDATE;
 
@@ -545,6 +609,8 @@ public:
         static const int WAIT_UNTIL_PDUFT_COMPUTATION_DEFAULT = 103;
         static const int WAIT_UNTIL_FSODB_PROPAGATION_DEFAULT = 101;
         static const int WAIT_UNTIL_AGE_INCREMENT_DEFAULT = 997;
+        static const long WAIT_UNTIL_REMOVE_OBJECT_DEFAULT = 2300;
+        static const long WAIT_UNTIL_DEPRECATE_OLD_ADDRESS_DEFAULT = 10000;
         static const unsigned int MAX_OBJECTS_PER_ROUTING_UPDATE_DEFAULT = 15;
         static const std::string DIJKSTRA_ALG;
         static const std::string ECMP_DIJKSTRA_ALG;
@@ -584,6 +650,17 @@ public:
 	/// the Òalgorithm to compute the forwarding tableÓ section. If the FSDB is not marked as
 	/// ÒmodifiedÓ nothing happens.
 	void routingTableUpdate();
+
+	/// Deprecate all LSOs containing the address passed to the method
+	void expireOldAddress(const std::string& name,
+			      unsigned int address,
+			      bool neighbor);
+
+	void updateObjects(const std::list<FlowStateObject>& newObjects,
+			   unsigned int avoidPort);
+
+	void removeFlowStateObject(const std::string& fqn);
+
 	rina::Timer *timer_;
 private:
 	static const int MAXIMUM_BUFFER_SIZE;
@@ -591,7 +668,7 @@ private:
 	IPCPRIBDaemon * rib_daemon_;
 	IRoutingAlgorithm * routing_algorithm_;
 	IResiliencyAlgorithm * resiliency_algorithm_;
-	unsigned int source_vertex_;
+	unsigned int wait_until_deprecate_address_;
 	unsigned int maximum_age_;
 	unsigned int max_objects_per_rupdate_;
 	bool test_;
@@ -638,6 +715,15 @@ private:
 	void processNeighborAddedEvent(rina::NeighborAddedEvent * event);
 
 	void processNeighborLostEvent(rina::ConnectiviyToNeighborLostEvent * event);
+
+	void processAddressChangeEvent(rina::AddressChangeEvent * event);
+
+	void processNeighborAddressChangeEvent(rina::NeighborAddressChangeEvent * event);
+
+	void printNhopTable(std::list<rina::RoutingTableEntry *>& rt);
+
+	void populateAddresses(std::list<rina::RoutingTableEntry *>& rt,
+			       const std::list<FlowStateObject>& fsos);
 };
 
 /// Encoder of Flow State object
@@ -659,5 +745,3 @@ public:
 }
 
 #endif
-
-

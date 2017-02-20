@@ -42,4 +42,6 @@ int                efcp_imap_update(struct efcp_imap * map,
 int                efcp_imap_remove(struct efcp_imap * map,
                                     cep_id_t           key);
 
+int		   efcp_imap_address_change(struct efcp_imap *  map,
+					    address_t address);
 #endif

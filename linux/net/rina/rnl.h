@@ -166,7 +166,10 @@ typedef enum {
         /* 42 KIPCM -> IPC Process (user space) */
         RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE,
 
-        /* 43 */
+	/* 43 IPC Process (user space) -> KIPCM */
+	RINA_C_IPCP_ADDRESS_CHANGE_REQUEST,
+
+	/* 44 */
         RINA_C_MAX,
 } msg_type_t;
 

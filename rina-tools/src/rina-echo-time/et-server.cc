@@ -173,7 +173,12 @@ void EchoTimeServerWorker::servePerfFlow()
         unsigned long interval_cnt = interval;  // counting down
         int sdu_size;
         struct timespec last_timestamp;
+        struct timespec init_ts;
+        struct timespec fini_ts;
+        unsigned long sum_dt_sq = 0;
         struct timespec now;
+        int delay = 0;
+        unsigned long dt;
 
         // Setup a timer if dealloc_wait option is set */
         if (dw > 0) {
@@ -230,11 +235,12 @@ void EchoTimeServerWorker::servePerfFlow()
                 LOG_INFO("Discarded %lu SDUs", pkt_cnt);
         }
 
-        LOG_INFO("Received %lu SDUs and %lu bytes in %lu us",
-                        tot_pkt, tot_bytes, tot_us);
-        LOG_INFO("Goodput: %.4f Kpps, %.4f Mbps",
-                        static_cast<float>((tot_pkt * 1000.0)/tot_us),
-                        static_cast<float>((tot_bytes * 8.0)/tot_us));
+        dt = timespec_diff_us(init_ts, fini_ts);
+
+        cout << "MAX Delay: " << delay << " Received " << tot_pkt << " SDUs and " << tot_bytes << " bytes in " << tot_us << " us"
+        	<< " Goodput: " << static_cast<float>((tot_pkt * 1000.0)/tot_us) << " Kpps, " <<
+        	static_cast<float>((tot_bytes * 8.0)/tot_us) << " Mbps, Delay: " <<  static_cast<float>(dt/tot_pkt) <<
+        	" us, Jitter: " << static_cast<float>((sum_dt_sq/tot_pkt)) << "us2" << endl;
 
         delete [] buffer;
 }

@@ -85,11 +85,16 @@ int                     efcp_disable_write(struct efcp * efcp);
 cep_id_t                efcp_src_cep_id(struct efcp * efcp);
 cep_id_t                efcp_dst_cep_id(struct efcp * efcp);
 address_t               efcp_src_addr(struct efcp * efcp);
+void                    efcp_src_addr_set(struct efcp  * efcp, address_t src_addr);
 address_t               efcp_dst_addr(struct efcp * efcp);
+void                    efcp_dst_addr_set(struct efcp  * efcp, address_t dst_addr);
 qos_id_t                efcp_qos_id(struct efcp * efcp);
 port_id_t               efcp_port_id(struct efcp * efcp);
 
 struct dt *             efcp_dt(struct efcp * efcp);
+
+int                     efcp_address_change(struct efcp_container * c,
+					    address_t new_address);
 
 struct efcp_imap * efcp_container_get_instances(struct efcp_container *efcpc);
 

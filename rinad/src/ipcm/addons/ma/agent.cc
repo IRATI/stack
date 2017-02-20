@@ -46,8 +46,6 @@ const std::string ManagementAgent::NAME = "mad";
 //
 // Private methods
 //
-
-
 void ManagementAgent::connect(void){
 
 	unsigned int w_id;
@@ -64,8 +62,13 @@ void ManagementAgent::connect(void){
 		//Instruct flow manager to bootstrap an active connection
 		//worker
 		w_id = flow_manager->connectTo(*it);
+		worker_handles.push_back(w_id);
+		usleep(100000);
+	}
 
-		//TODO: store this
+	if (key_manager_connection.flow_info.remoteAppName.processName != std::string()) {
+		w_id = flow_manager->connectTo(key_manager_connection, true);
+		worker_handles.push_back(w_id);
 	}
 }
 
@@ -76,6 +79,11 @@ void ManagementAgent::connect(void){
 //Add Manager connection
 void ManagementAgent::addManagerConnection(AppConnection& con){
 	connections.push_back(con);
+}
+
+void ManagementAgent::setKeyManagerConnection(AppConnection& con)
+{
+	key_manager_connection = con;
 }
 
 std::string ManagementAgent::console_command(enum console_command command,
@@ -207,7 +215,8 @@ ManagementAgent::ManagementAgent(const rinad::RINAConfiguration& config) :
 
 	LOG_INFO("Components initialized");
 
-	//Perform connection to the Manager(s)
+	//Perform connection to the Manager(s) and local
+	//key Management Agent
 	connect();
 }
 

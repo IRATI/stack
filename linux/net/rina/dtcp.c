@@ -983,6 +983,9 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                 return -1;
         }
 
+        /* In case EFCP address of peer has changed */
+        efcp_dst_addr_set(dt_efcp(dtcp_dt(dtcp)), pci_source(pci));
+
         sn = pci_sequence_number_get(pci);
         last_ctrl = last_rcv_ctrl_seq(dtcp);
 

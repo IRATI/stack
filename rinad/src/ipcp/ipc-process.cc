@@ -437,7 +437,7 @@ void LazyIPCProcessImpl::update_crypto_state_response_handler(const rina::Update
 	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
 }
 
-void LazyIPCProcessImpl::fwd_cdap_msg_handler(const rina::FwdCDAPMsgRequestEvent& event)
+void LazyIPCProcessImpl::fwd_cdap_msg_handler(rina::FwdCDAPMsgRequestEvent& event)
 {
 	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
 }

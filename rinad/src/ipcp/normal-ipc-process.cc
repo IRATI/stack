@@ -50,6 +50,50 @@ static void parse_path(const std::string& path, std::string& component,
         }
 }
 
+//Class ExpireOldIPCPAddressTimerTask
+class ExpireOldIPCPAddressTimerTask: public rina::TimerTask {
+public:
+	ExpireOldIPCPAddressTimerTask(IPCProcessImpl * ipcp);
+	~ExpireOldIPCPAddressTimerTask() throw() {};
+	void run();
+
+private:
+	IPCProcessImpl * ipcp;
+};
+
+ExpireOldIPCPAddressTimerTask::ExpireOldIPCPAddressTimerTask(IPCProcessImpl * ipc_process)
+{
+	ipcp = ipc_process;
+}
+
+void ExpireOldIPCPAddressTimerTask::run()
+{
+	ipcp->expire_old_address();
+}
+
+//Class UseNewIPCPAddressTimerTask
+class UseNewIPCPAddressTimerTask: public rina::TimerTask {
+public:
+	UseNewIPCPAddressTimerTask(IPCProcessImpl * ipcp);
+	~UseNewIPCPAddressTimerTask() throw() {};
+	void run();
+
+private:
+	IPCProcessImpl * ipcp;
+};
+
+UseNewIPCPAddressTimerTask::UseNewIPCPAddressTimerTask(IPCProcessImpl * ipc_process)
+{
+	ipcp = ipc_process;
+}
+
+void UseNewIPCPAddressTimerTask::run()
+{
+	ipcp->activate_new_address();
+}
+
+
+
 //Class IPCProcessImpl
 IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& nm,
 			       unsigned short id,
@@ -58,7 +102,10 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 			       std::string log_file) : IPCProcess(nm.processName, nm.processInstance),
 					       	       LazyIPCProcessImpl(nm, id, ipc_manager_port, log_level, log_file)
 {
-        kernel_sync = NULL;
+	old_address = 0;
+	address_change_period = false;
+	use_new_address = false;
+	kernel_sync = NULL;
 
         // Initialize application entities
         delimiter_ = 0; //TODO initialize Delimiter once it is implemented
@@ -80,6 +127,8 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
         add_entity(namespace_manager_);
         add_entity(flow_allocator_);
         add_entity(security_manager_);
+
+        subscribeToEvents();
 
         try {
                 rina::ApplicationProcessNamingInformation naming_info(name_, instance_);
@@ -115,35 +164,79 @@ IPCProcessImpl::~IPCProcessImpl()
 	delete enrollment_task_;
 }
 
-unsigned short IPCProcessImpl::get_id() {
+void IPCProcessImpl::subscribeToEvents()
+{
+	internal_event_manager_->subscribeToEvent(rina::InternalEvent::ADDRESS_CHANGE,
+					 	  this);
+}
+
+void IPCProcessImpl::eventHappened(rina::InternalEvent * event)
+{
+	if (event->type == rina::InternalEvent::ADDRESS_CHANGE){
+		rina::AddressChangeEvent * addrEvent =
+				(rina::AddressChangeEvent *) event;
+		addressChange(addrEvent);
+	}
+}
+
+void IPCProcessImpl::addressChange(rina::AddressChangeEvent * event)
+{
+	rina::TimerTask * task = 0;
+
+	rina::ScopedLock g(*lock_);
+	old_address = event->old_address;
+	dif_information_.dif_configuration_.address_ = event->new_address;
+	address_change_period = true;
+	use_new_address = false;
+
+	task = new UseNewIPCPAddressTimerTask(this);
+	timer.scheduleTask(task, event->use_new_timeout);
+
+	task = new ExpireOldIPCPAddressTimerTask(this);
+	timer.scheduleTask(task, event->deprecate_old_timeout);
+
+	rina::kernelIPCProcess->changeAddress(event->new_address,
+					      event->old_address,
+					      event->use_new_timeout,
+					      event->deprecate_old_timeout);
+}
+
+unsigned short IPCProcessImpl::get_id()
+{
 	return rina::extendedIPCManager->ipcProcessId;
 }
 
-const IPCProcessOperationalState& IPCProcessImpl::get_operational_state() const {
+const IPCProcessOperationalState& IPCProcessImpl::get_operational_state() const
+{
 	rina::ScopedLock g(*lock_);
 	return state;
 }
 
-void IPCProcessImpl::set_operational_state(const IPCProcessOperationalState& operational_state) {
+void IPCProcessImpl::set_operational_state(const IPCProcessOperationalState& operational_state)
+{
 	rina::ScopedLock g(*lock_);
 	state = operational_state;
 }
 
-rina::DIFInformation& IPCProcessImpl::get_dif_information() {
+rina::DIFInformation& IPCProcessImpl::get_dif_information()
+{
 	rina::ScopedLock g(*lock_);
 	return dif_information_;
 }
 
-void IPCProcessImpl::set_dif_information(const rina::DIFInformation& dif_information) {
+void IPCProcessImpl::set_dif_information(const rina::DIFInformation& dif_information)
+{
 	rina::ScopedLock g(*lock_);
 	dif_information_ = dif_information;
 }
 
-const std::list<rina::Neighbor> IPCProcessImpl::get_neighbors() const {
+const std::list<rina::Neighbor> IPCProcessImpl::get_neighbors() const
+{
 	return enrollment_task_->get_neighbors();
 }
 
-unsigned int IPCProcessImpl::get_address() const {
+unsigned int IPCProcessImpl::get_address() const
+{
 	rina::ScopedLock g(*lock_);
 	if (state != ASSIGNED_TO_DIF) {
 		return 0;
@@ -152,12 +245,60 @@ unsigned int IPCProcessImpl::get_address() const {
 	return dif_information_.dif_configuration_.address_;
 }
 
-void IPCProcessImpl::set_address(unsigned int address) {
+unsigned int IPCProcessImpl::get_active_address()
+{
+	rina::ScopedLock g(*lock_);
+	if (state != ASSIGNED_TO_DIF) {
+		return 0;
+	}
+
+	if (address_change_period && !use_new_address)
+		return old_address;
+
+	return dif_information_.dif_configuration_.address_;
+}
+
+void IPCProcessImpl::set_address(unsigned int address)
+{
 	rina::ScopedLock g(*lock_);
 	dif_information_.dif_configuration_.address_ = address;
 }
 
-void IPCProcessImpl::requestPDUFTEDump() {
+void IPCProcessImpl::expire_old_address()
+{
+	rina::ScopedLock g(*lock_);
+	address_change_period = false;
+	use_new_address = false;
+	old_address = 0;
+}
+
+void IPCProcessImpl::activate_new_address(void)
+{
+	rina::ScopedLock g(*lock_);
+	use_new_address = true;
+}
+
+bool IPCProcessImpl::check_address_is_mine(unsigned int address)
+{
+	rina::ScopedLock g(*lock_);
+	if (address == 0)
+		return false;
+
+	if (address == old_address ||
+			address == dif_information_.dif_configuration_.address_)
+		return true;
+
+	return false;
+}
+
+unsigned int IPCProcessImpl::get_old_address()
+{
+	rina::ScopedLock g(*lock_);
+	return old_address;
+}
+
+void IPCProcessImpl::requestPDUFTEDump()
+{
 	try{
 		rina::kernelIPCProcess->dumptPDUFT();
 	} catch (rina::Exception &e) {
@@ -615,7 +756,7 @@ void IPCProcessImpl::update_crypto_state_response_handler(const rina::UpdateCryp
 	security_manager_->process_update_crypto_state_response(event);
 }
 
-void IPCProcessImpl::fwd_cdap_msg_handler(const rina::FwdCDAPMsgRequestEvent& event)
+void IPCProcessImpl::fwd_cdap_msg_handler(rina::FwdCDAPMsgRequestEvent& event)
 {
 	if (!event.sermsg.message_) {
 		LOG_IPCP_ERR("No CDAP message to be forwarded");

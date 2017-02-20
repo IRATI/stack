@@ -34,26 +34,52 @@ int ipcp_id = 1;
 
 bool test_flow_state_object()
 {
-	rinad::FlowStateObject fso(23, 84, 2, true, 123, 450);
+	rinad::FlowStateObject fso("test1.IRATI", "test2.IRATI", 2, true, 123, 450);
+	fso.add_address(23);
+	fso.add_address(2300);
+	fso.add_neighboraddress(18);
+	fso.add_neighboraddress(1800);
+
+	LOG_IPCP_INFO("%s", fso.toString().c_str());
+
 	rinad::FlowStateObject recovered_obj;
 	rinad::FlowStateObjectEncoder encoder;
 
 	rina::ser_obj_t encoded_obj;
-
 	encoder.encode(fso, encoded_obj);
 	encoder.decode(encoded_obj, recovered_obj);
 
-	if (fso.get_address() != recovered_obj.get_address()) {
-		LOG_IPCP_ERR("Addresses are different; original: %u, recovered: %u",
-			     fso.get_address(),
-			     recovered_obj.get_address());
+	if (fso.get_name() != recovered_obj.get_name()) {
+		LOG_IPCP_ERR("Names are different; original: %s, recovered: %s",
+			     fso.get_name().c_str(),
+			     recovered_obj.get_name().c_str());
 		return false;
 	}
 
-	if (fso.get_neighboraddress() != recovered_obj.get_neighboraddress()) {
-		LOG_IPCP_ERR("Neighbor addresses are different; original: %u, recovered: %u",
-			     fso.get_neighboraddress(),
-			     recovered_obj.get_neighboraddress());
+	if (fso.get_neighborname() != recovered_obj.get_neighborname()) {
+		LOG_IPCP_ERR("Neighbor names are different; original: %s, recovered: %s",
+			     fso.get_neighborname().c_str(),
+			     recovered_obj.get_neighborname().c_str());
+		return false;
+	}
+
+	if (fso.get_addresses().size() != recovered_obj.get_addresses().size()) {
+		LOG_IPCP_ERR("Address sizes are different");
+		return false;
+	}
+
+	if (!fso.contains_address(23) || !fso.contains_address(2300)) {
+		LOG_IPCP_ERR("Recovered object doesn't contain the right addresses");
+		return false;
+	}
+
+	if (fso.get_neighboraddresses().size() != recovered_obj.get_neighboraddresses().size()) {
+		LOG_IPCP_ERR("Neighbor address sizes are different");
+		return false;
+	}
+
+	if (!fso.contains_neighboraddress(18) || !fso.contains_neighboraddress(1800)) {
+		LOG_IPCP_ERR("Recovered object doesn't contain the right neighbor addresses");
 		return false;
 	}
 
@@ -92,8 +118,16 @@ bool test_flow_state_object()
 bool test_flow_state_object_list()
 {
 	std::list<rinad::FlowStateObject> fso_list;
-	rinad::FlowStateObject fso1(23, 1, 2, true, 123, 434);
-	rinad::FlowStateObject fso2(34, 2, 1, true, 223, 434);
+	rinad::FlowStateObject fso1("aa", "bb", 2, true, 123, 434);
+	fso1.add_address(17);
+	fso1.add_address(1700);
+	fso1.add_neighboraddress(23);
+	fso1.add_neighboraddress(2300);
+	rinad::FlowStateObject fso2("cc", "dd", 1, true, 223, 434);
+	fso2.add_address(19);
+	fso2.add_address(1900);
+	fso2.add_neighboraddress(25);
+	fso2.add_neighboraddress(2500);
 	std::list<rinad::FlowStateObject> recovered_obj;
 	rinad::FlowStateObjectListEncoder encoder;
 	rina::ser_obj_t encoded_obj;

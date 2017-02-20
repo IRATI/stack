@@ -537,6 +537,15 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
                 }
                 return 0;
         }
+        case RINA_C_IPCP_ADDRESS_CHANGE_REQUEST: {
+        	IPCPAddressChangeRequestMessage * requestObject =
+                                dynamic_cast<IPCPAddressChangeRequestMessage *>(message);
+                if (putIPCPAddressChangeRequestMessage(netlinkMessage,
+                                        	       *requestObject) < 0) {
+                        return -1;
+                }
+                return 0;
+        }
 	default: {
 		return -1;
 	}
@@ -772,6 +781,9 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
         case RINA_C_IPCM_FWD_CDAP_MSG_RESPONSE: {
                 return parseIpcmFwdCDAPResponseMessage(
                                 netlinkMessageHeader);
+        }
+        case RINA_C_IPCP_ADDRESS_CHANGE_REQUEST: {
+        	return parseIPCPAddressChangeRequestMessage(netlinkMessageHeader);
         }
 	default: {
 		LOG_ERR("Generic Netlink message contains unrecognized command code: %d",
@@ -5446,6 +5458,30 @@ int putIPCPUpdateCryptoStateResponseMessage(nl_msg* netlinkMessage,
         return -1;
 }
 
+int putIPCPAddressChangeRequestMessage(nl_msg* netlinkMessage,
+				       const IPCPAddressChangeRequestMessage& object)
+{
+	NLA_PUT_U32(netlinkMessage,
+		    ACRM_ATTR_NEW_ADDRESS,
+		    object.new_address);
+	NLA_PUT_U32(netlinkMessage,
+		    ACRM_ATTR_OLD_ADDRESS,
+		    object.old_address);
+	NLA_PUT_U32(netlinkMessage,
+		    ACRM_ATTR_USE_NEW_TIMEOUT,
+		    object.use_new_timeout);
+	NLA_PUT_U32(netlinkMessage,
+		    ACRM_ATTR_DEPRECATE_OLD_TIMEOUT,
+		    object.deprecate_old_timeout);
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IPCPAddressChangeRequestMessage"
+                        "Netlink object");
+        return -1;
+}
+
 int putIpcmFwdCDAPRequestMessageObject(nl_msg* netlinkMessage,
 		const IpcmFwdCDAPRequestMessage& object){
 	NLA_PUT(netlinkMessage, IFCM_ATTR_CDAP_MSG, object.sermsg.size_,
@@ -9396,6 +9432,58 @@ IPCPUpdateCryptoStateRequestMessage * parseIPCPUpdateCryptoStateRequestMessage(
 	if (attrs[UCSR_ATTR_N_1_PORT]) {
 		result->state.port_id =
 				nla_get_u32(attrs[UCSR_ATTR_N_1_PORT]);
+	}
+
+	return result;
+}
+
+IPCPAddressChangeRequestMessage * parseIPCPAddressChangeRequestMessage(
+		nlmsghdr *hdr)
+{
+	struct nla_policy attr_policy[ACRM_ATTR_MAX + 1];
+	attr_policy[ACRM_ATTR_NEW_ADDRESS].type = NLA_U32;
+	attr_policy[ACRM_ATTR_NEW_ADDRESS].minlen = 4;
+	attr_policy[ACRM_ATTR_NEW_ADDRESS].maxlen = 4;
+        attr_policy[ACRM_ATTR_OLD_ADDRESS].type = NLA_U32;
+        attr_policy[ACRM_ATTR_OLD_ADDRESS].minlen = 4;
+        attr_policy[ACRM_ATTR_OLD_ADDRESS].maxlen = 4;
+        attr_policy[ACRM_ATTR_USE_NEW_TIMEOUT].type = NLA_U32;
+        attr_policy[ACRM_ATTR_USE_NEW_TIMEOUT].minlen = 4;
+        attr_policy[ACRM_ATTR_USE_NEW_TIMEOUT].maxlen = 4;
+        attr_policy[ACRM_ATTR_DEPRECATE_OLD_TIMEOUT].type = NLA_U32;
+        attr_policy[ACRM_ATTR_DEPRECATE_OLD_TIMEOUT].minlen = 4;
+        attr_policy[ACRM_ATTR_DEPRECATE_OLD_TIMEOUT].maxlen = 4;
+	struct nlattr *attrs[ACRM_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			ACRM_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing IPCPAddressChangeRequestMessage "
+				"information from Netlink message: %d", err);
+		return 0;
+	}
+
+	IPCPAddressChangeRequestMessage * result =
+			new IPCPAddressChangeRequestMessage();
+
+	if (attrs[ACRM_ATTR_NEW_ADDRESS]) {
+		result->new_address =
+				nla_get_u32(attrs[ACRM_ATTR_NEW_ADDRESS]);
+	}
+
+	if (attrs[ACRM_ATTR_OLD_ADDRESS]) {
+		result->old_address =
+				nla_get_u32(attrs[ACRM_ATTR_OLD_ADDRESS]);
+	}
+
+	if (attrs[ACRM_ATTR_USE_NEW_TIMEOUT]) {
+		result->use_new_timeout =
+				nla_get_u32(attrs[ACRM_ATTR_USE_NEW_TIMEOUT]);
+	}
+
+	if (attrs[ACRM_ATTR_DEPRECATE_OLD_TIMEOUT]) {
+		result->deprecate_old_timeout =
+				nla_get_u32(attrs[ACRM_ATTR_DEPRECATE_OLD_TIMEOUT]);
 	}
 
 	return result;

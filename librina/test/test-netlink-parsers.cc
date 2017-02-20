@@ -3354,6 +3354,63 @@ int testUpdateCryptoStateRequestMessage() {
         return returnValue;
 }
 
+int testAddressChangeRequestMessage() {
+        std::cout << "TESTING ADDRESS CHANGE REQUEST MESSAGE\n";
+        int returnValue = 0;
+
+        IPCPAddressChangeRequestMessage message;
+        message.new_address = 25;
+        message.old_address = 16;
+        message.use_new_timeout = 3500;
+        message.deprecate_old_timeout = 10200;
+
+        struct nl_msg* netlinkMessage = nlmsg_alloc();
+        if (!netlinkMessage) {
+                std::cout << "Error allocating Netlink message\n";
+        }
+        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+        int result = putBaseNetlinkMessage(netlinkMessage, &message);
+        if (result < 0) {
+                std::cout << "Error constructing IPCPAddressChangeRequestMessage "
+                                << "message \n";
+                nlmsg_free(netlinkMessage);
+                return result;
+        }
+
+        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+        IPCPAddressChangeRequestMessage * recoveredMessage =
+                        dynamic_cast<IPCPAddressChangeRequestMessage *>(
+                                        parseBaseNetlinkMessage(netlinkMessageHeader));
+
+        if (recoveredMessage == 0) {
+                std::cout << "Error parsing IPCPAddressChangeRequestMessage message "
+                                << "\n";
+                returnValue = -1;
+        } else if (message.new_address!= recoveredMessage->new_address) {
+        	std::cout << "Error with new_address" << std::endl;
+        	returnValue = -1;
+        } else if (message.old_address != recoveredMessage->old_address) {
+        	std::cout << "Error with old_address"<< std::endl;
+        	returnValue = -1;
+        } else if (message.use_new_timeout!= recoveredMessage->use_new_timeout) {
+        	std::cout << "Error with use_new_timeout" << std::endl;
+        	returnValue = -1;
+        } else if (message.deprecate_old_timeout != recoveredMessage->deprecate_old_timeout) {
+        	std::cout << "Error with deprecate_old_timeout"<< std::endl;
+        	returnValue = -1;
+        }
+
+        if (returnValue == 0) {
+                std::cout << "IPCPAddressChangeRequestMessage test ok\n";
+        }
+        nlmsg_free(netlinkMessage);
+        delete recoveredMessage;
+
+        return returnValue;
+}
+
 int main() {
 	std::cout << "TESTING LIBRINA-NETLINK-PARSERS\n";
 
@@ -3575,6 +3632,11 @@ int main() {
 	}
 
 	result = testUpdateCryptoStateRequestMessage();
+	if (result < 0) {
+		return result;
+	}
+
+	result = testAddressChangeRequestMessage();
 	if (result < 0) {
 		return result;
 	}

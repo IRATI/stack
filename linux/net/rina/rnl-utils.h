@@ -593,6 +593,15 @@ enum ipcp_update_crypto_state_req_attrs_list {
 };
 #define IUCSR_ATTR_MAX (__IUCSR_ATTR_MAX -1)
 
+enum ipcp_address_change_req_attrs_list {
+	IACR_ATTR_NEW_ADDRESS = 1,
+	IACR_ATTR_OLD_ADDRESS,
+	IACR_ATTR_USE_NEW_TIMEOUT,
+	IACR_ATTR_DEPRECATE_OLD_TIMEOUT,
+        __IACR_ATTR_MAX,
+};
+#define IACR_ATTR_MAX (__IACR_ATTR_MAX -1)
+
 enum ipcp_crypto_state_attrs_list {
 	ICSTATE_ENABLE_CRYPTO_TX = 1,
 	ICSTATE_ENABLE_CRYPTO_RX,
@@ -638,7 +647,8 @@ enum rnl_msg_attr_type {
         RNL_MSG_ATTRS_QUERY_RIB_REQUEST,
         RNL_MSG_ATTRS_SET_POLICY_SET_PARAM_REQUEST,
         RNL_MSG_ATTRS_SELECT_POLICY_SET_REQUEST,
-        RNL_MSG_ATTRS_UPDATE_CRYPTO_STATE_REQUEST
+        RNL_MSG_ATTRS_UPDATE_CRYPTO_STATE_REQUEST,
+	RNL_MSG_ATTRS_ADDRESS_CHANGE_REQUEST
 };
 
 struct rnl_msg {
@@ -862,6 +872,13 @@ struct rnl_ipcp_select_policy_set_req_msg_attrs {
 struct rnl_ipcp_update_crypto_state_req_msg_attrs {
 	struct sdup_crypto_state * state;
 	port_id_t 	port_id;
+};
+
+struct rnl_ipcp_address_change_req_msg_attrs {
+	address_t new_address;
+	address_t old_address;
+	timeout_t use_new_timeout;
+	timeout_t deprecate_old_timeout;
 };
 
 int rnl_parse_msg(struct genl_info * info,

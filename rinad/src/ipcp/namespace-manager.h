@@ -137,7 +137,8 @@ public:
 		return class_name;
 	};
 
-	void checkDFTEntriesToRemove(unsigned int address);
+	void checkDFTEntriesToRemove(unsigned int address,
+				     const std::string& name);
 
 	const static std::string class_name;
 	const static std::string object_name;
@@ -148,10 +149,24 @@ private:
 	INamespaceManager * namespace_manager_;
 };
 
-class NamespaceManager: public INamespaceManager {
+class AddressChangeTimerTask: public rina::TimerTask {
+public:
+	AddressChangeTimerTask(INamespaceManager * nsm,
+			       unsigned int naddr,
+			       unsigned int oaddr);
+	~AddressChangeTimerTask() throw() {};
+	void run();
+
+	INamespaceManager * namespace_manager;
+	unsigned int new_address;
+	unsigned int old_address;
+};
+
+class NamespaceManager: public INamespaceManager, public rina::InternalEventListener {
 public:
 	NamespaceManager();
 	~NamespaceManager();
+	void eventHappened(rina::InternalEvent * event);
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	unsigned int getDFTNextHop(const rina::ApplicationProcessNamingInformation& apNamingInfo);
@@ -176,6 +191,10 @@ public:
 	std::list<rina::WhatevercastName> get_whatevercast_names();
 	void add_whatevercast_name(rina::WhatevercastName * name);
 	void remove_whatevercast_name(const std::string& name_key);
+	void addressChangeUpdateDFT(unsigned int new_address,
+				    unsigned int old_address);
+	void notify_neighbors_add(const std::list<rina::DirectoryForwardingTableEntry>& entries,
+			          std::list<int>& neighs_to_exclude);
 
 private:
 	rina::Lockable lock;
@@ -190,8 +209,12 @@ private:
 	rina::ThreadSafeMapOfPointers<std::string, rina::WhatevercastName> what_names;
 
 	IPCPRIBDaemon * rib_daemon_;
+	rina::InternalEventManager * event_manager_;
+	rina::Timer timer;
 
 	void populateRIB();
+	void subscribeToEvents();
+	void addressChange(rina::AddressChangeEvent * event);
 	int replyToIPCManagerRegister(const rina::ApplicationRegistrationRequestEvent& event,
 			int result);
 	int replyToIPCManagerUnregister(const rina::ApplicationUnregistrationRequestEvent& event,
@@ -203,13 +226,15 @@ private:
 class CheckDFTEntriesToRemoveTimerTask : public rina::TimerTask {
 public:
 	CheckDFTEntriesToRemoveTimerTask(DFTRIBObj * dft_,
-					 unsigned int address_);
+					 unsigned int address_,
+					 const std::string name);
 	~CheckDFTEntriesToRemoveTimerTask() throw(){};
 	void run();
 
 private:
 	unsigned int address;
 	DFTRIBObj* dft;
+	std::string name;
 };
 
 } //namespace rinad

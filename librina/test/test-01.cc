@@ -96,20 +96,6 @@ int main() {
 			<< "; DIF name is: " << flow.difName.processName
 			<< "; state is: "<<flow.state << "\n";
 
-	/* TEST WRITE SDU */
-        unsigned char sdu[] = { 45, 34, 2, 36, 8 };
-        int ret;
-        ret = write(flow.fd, sdu, sizeof(sdu));
-        if (ret != sizeof(sdu)) {
-                std::ostringstream oss;
-                if (ret < 0) {
-                        oss << "Error on write(): %s" << strerror(errno);
-                } else {
-                        oss << "Error on write(): partial write "
-                                << ret << "/" << sizeof(sdu);
-                }
-                throw IPCException(oss.str());
-        }
 
 	/* TEST ALLOCATE RESPONSE */
 	FlowRequestEvent flowRequestEvent = FlowRequestEvent(25, flowSpecification,
@@ -118,19 +104,6 @@ int main() {
 	std::cout << "Accepted flow allocation, portId is " << flow2.portId
 			<< "; DIF name is: " << flow2.difName.processName
 			<< "; state is: " << flow2.state << "\n";
-
-	/* TEST READ SDU */
-        int bytesRead = read(flow2.fd, (void *)sdu, sizeof(sdu));
-        if (bytesRead < 0) {
-                std::ostringstream oss;
-                oss << "Error on read(): %s" << strerror(errno);
-                throw IPCException(oss.str());
-        }
-
-	std::cout << "Read an SDU of " << bytesRead << " bytes. Contents: \n";
-	for (int i = 0; i < bytesRead; i++) {
-		std::cout << "SDU[" << i << "]: " << sdu[i] << "\n";
-	}
 
 	/* TEST GET ALLOCATED FLOWS */
 	if (!checkAllocatedFlows(2)) {
