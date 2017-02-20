@@ -52,6 +52,7 @@ test_encoders_SOURCES  =			\
 	test-encoders.cc			\
 	components.cc	   components.h \
 	ipc-process.cc	   ipc-process.h \
+    normal-ipc-process.cc \
 	utils.cc		utils.h			\
 	namespace-manager.cc namespace-manager.h \
 	flow-allocator.cc    flow-allocator.h \

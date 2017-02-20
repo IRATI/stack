@@ -47,6 +47,7 @@ test_routing_SOURCES  =					    \
 	../../components.cc	   ../../components.h \
 	../../utils.cc	   ../../utils.h \
 	../../ipc-process.cc	   ../../ipc-process.h \
+	../../normal-ipc-process.cc \
 	../../namespace-manager.cc ../../namespace-manager.h \
 	../../flow-allocator.cc    ../../flow-allocator.h \
 	../../enrollment-task.cc    ../../enrollment-task.h \
@@ -64,6 +65,7 @@ test_encoders_SOURCES  =			\
 	../../components.cc	   ../../components.h \
 	../../utils.cc	   ../../utils.h \
 	../../ipc-process.cc	   ../../ipc-process.h \
+    ../../normal-ipc-process.cc \
 	../../namespace-manager.cc ../../namespace-manager.h \
 	../../flow-allocator.cc    ../../flow-allocator.h \
 	../../enrollment-task.cc    ../../enrollment-task.h \
