@@ -121,7 +121,7 @@ IPCMConsole::IPCMConsole(const std::string& socket_path_) :
 				"USAGE: enroll-to-dif <ipcp-id> <dif-name> "
 				"<supporting-dif-name> <neighbor-process-name>"
 				"<neighbor-process-instance>");
-	commands_map["disc-nei"] =
+	commands_map["disc-neigh"] =
 			ConsoleCmdInfo(&IPCMConsole::disconnect_neighbor,
 				"USAGE: disc-nei <ipcp-id> "
 				"<neighbor-process-name> "
