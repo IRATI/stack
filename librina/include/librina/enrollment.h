@@ -60,6 +60,18 @@ public:
                 	neighborName(neighbor) { };
 };
 
+class DisconnectNeighborRequestEvent: public IPCEvent {
+public:
+        /** The neighbor to contact */
+        ApplicationProcessNamingInformation neighborName;
+
+        DisconnectNeighborRequestEvent() { };
+        DisconnectNeighborRequestEvent(
+                const ApplicationProcessNamingInformation& neighbor,
+                unsigned int sequenceNumber) : IPCEvent(DISCONNECT_NEIGHBOR_REQUEST_EVENT, sequenceNumber),
+                	neighborName(neighbor) { };
+};
+
 /// Contains the information of an enrollment request
 class EnrollmentRequest
 {

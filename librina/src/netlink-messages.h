@@ -763,6 +763,34 @@ public:
 };
 
 /**
+ * Instruct a normal IPC Process to cancel the application connection
+ * and all N-1 flows from a neighbor
+ */
+class IpcmDisconnectNeighborRequestMessage: public BaseNetlinkMessage {
+
+        /** The neighbor to disconnect from */
+        ApplicationProcessNamingInformation neighborName;
+
+public:
+        IpcmDisconnectNeighborRequestMessage();
+        const ApplicationProcessNamingInformation& getNeighborName() const;
+        void setNeighborName(
+                const ApplicationProcessNamingInformation& neighborName);
+        IPCEvent* toIPCEvent();
+};
+
+/**
+ * Reports the IPC Manager about the result of an DisconnectNeighbor operation
+ * IPC Process -> IPC Manager
+ */
+class IpcmDisconnectNeighborResponseMessage:
+                public BaseNetlinkResponseMessage {
+public:
+	IpcmDisconnectNeighborResponseMessage();
+        IPCEvent* toIPCEvent();
+};
+
+/**
  * Used by the IPC Manager to request a flow allocation to an IPC Process
  */
 class IpcmAllocateFlowRequestMessage: public BaseNetlinkMessage {

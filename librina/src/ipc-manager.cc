@@ -254,13 +254,25 @@ void IPCProcessProxy::enroll(
 #endif
 }
 
-void IPCProcessProxy::disconnectFromNeighbor(
-		const ApplicationProcessNamingInformation& neighbor)
+void IPCProcessProxy::disconnectFromNeighbor(const ApplicationProcessNamingInformation& neighbor,
+					     unsigned int opaque)
 {
-	LOG_DBG("IPCProcess::disconnect from neighbour called");
-	/* TODO: IMPLEMENT FUNCTIONALITY */
-	ApplicationProcessNamingInformation a = neighbor;
-	throw IPCException(IPCException::operation_not_implemented_error);
+#if STUB_API
+        //Do nothing
+#else
+	IpcmDisconnectNeighborRequestMessage message;
+        message.setNeighborName(neighbor);
+        message.setDestIpcProcessId(id);
+        message.setDestPortId(portId);
+        message.setRequestMessage(true);
+        message.setSequenceNumber(opaque);
+
+        try {
+                rinaManager->sendMessage(&message, false);
+        } catch(NetlinkException &e) {
+                throw IPCException(e.what());
+        }
+#endif
 }
 
 void IPCProcessProxy::registerApplication(
