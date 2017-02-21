@@ -924,7 +924,7 @@ void EnrollmentTask::processDisconnectNeighborRequestEvent(const rina::Disconnec
 
 	// Close the application connection by sending M_RELEASE
 	try {
-		rib_daemon_->getProxy()->remote_close_connection(esm->con.port_id);
+		rib_daemon_->getProxy()->remote_close_connection(esm->con.port_id, false);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems closing application connection: %s",
 			      e.what());

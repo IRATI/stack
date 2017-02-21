@@ -183,6 +183,12 @@ void AbstractIPCProcessImpl::event_loop(void)
 			enroll_to_dif_handler(*event);
 		}
 		break;
+		case rina::DISCONNECT_NEIGHBOR_REQUEST_EVENT:
+		{
+			DOWNCAST_DECL(e, rina::DisconnectNeighborRequestEvent, event);
+			disconnet_neighbor_handler(*event);
+		}
+		break;
 		case rina::IPC_PROCESS_QUERY_RIB:
 		{
 			DOWNCAST_DECL(e, rina::QueryRIBRequestEvent, event);

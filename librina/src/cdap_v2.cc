@@ -2819,7 +2819,8 @@ class CDAPProvider : public CDAPProviderInterface
 						      const cdap_rib::ep_info_t &dest,
 						      const cdap_rib::auth_policy_t &auth,
 						      int port);
-	int remote_close_connection(unsigned int port);
+	int remote_close_connection(unsigned int port,
+				    bool need_reply);
 	int remote_create(const cdap_rib::con_handle_t &con,
 			  const cdap_rib::obj_info_t &obj,
 			  const cdap_rib::flags_t &flags,
@@ -2964,7 +2965,8 @@ cdap_rib::con_handle_t
 	return con;
 }
 
-int CDAPProvider::remote_close_connection(unsigned int port)
+int CDAPProvider::remote_close_connection(unsigned int port,
+					  bool need_reply)
 {
 	int invoke_id;
 	cdap_m_t m_sent;
@@ -2975,7 +2977,7 @@ int CDAPProvider::remote_close_connection(unsigned int port)
 	flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
 	manager_->getReleaseConnectionRequestMessage(m_sent,
 						     flags,
-						     true);
+						     need_reply);
 	invoke_id = m_sent.invoke_id_;
 	con.port_id = port;
 	con.cdap_dest = cdap_rib::CDAP_DEST_PORT;
