@@ -340,10 +340,12 @@ class ResetStablishmentTimerTask : public rina::TimerTask
 class ReleaseConnectionTimerTask : public rina::TimerTask
 {
  public:
-	ReleaseConnectionTimerTask(ConnectionStateMachine *con_state_machine);
+	ReleaseConnectionTimerTask(ConnectionStateMachine *con_state_machine,
+				   bool force);
 	void run();
  private:
 	ConnectionStateMachine *con_state_machine_;
+	bool force_;
 };
 
 /// Validates that a CDAP message is well formed
@@ -1142,19 +1144,25 @@ void ConnectionStateMachine::connectResponseReceived()
 }
 void ConnectionStateMachine::release(const cdap_m_t &cdap_message)
 {
+	bool force = false;
+
 	checkRelease();
 	my_lock.lock();
 	connection_state_ = AWAITCLOSE;
 	my_lock.unlock();
 
 	if (cdap_message.invoke_id_ != 0) {
-		last_timer_task = new ReleaseConnectionTimerTask(this);
 		LOG_DBG("Waiting timeout %d to receive a release response",
 			timeout_);
-		timer.scheduleTask(last_timer_task, timeout_);
+	} else {
+		timeout_ = 0;
+		force = true;
 	}
 
+	last_timer_task = new ReleaseConnectionTimerTask(this, force);
+	timer.scheduleTask(last_timer_task, timeout_);
 }
+
 void ConnectionStateMachine::releaseReceived(const cdap_m_t &message)
 {
 	ScopedLock g(my_lock);
@@ -1165,11 +1173,11 @@ void ConnectionStateMachine::releaseReceived(const cdap_m_t &message)
 		   << connection_state_ << " state";
 		throw CDAPException(ss.str());
 	}
-	if (message.invoke_id_ != 0 && connection_state_ != AWAITCLOSE) {
+	if (message.invoke_id_ != 0) {
 		connection_state_ = AWAITCLOSE;
 	} else {
-		connection_state_ = NONE;
-		cdap_session_->stopConnection();
+		last_timer_task = new ReleaseConnectionTimerTask(this, true);
+		timer.scheduleTask(last_timer_task, 0);
 	}
 }
 void ConnectionStateMachine::releaseResponse()
@@ -1211,15 +1219,17 @@ void ResetStablishmentTimerTask::run()
 }
 
 // CLASS ReleaseConnectionTimerTask
-ReleaseConnectionTimerTask::ReleaseConnectionTimerTask(
-		ConnectionStateMachine *con_state_machine)
+ReleaseConnectionTimerTask::ReleaseConnectionTimerTask(ConnectionStateMachine *con_state_machine,
+						       bool force)
 {
 	con_state_machine_ = con_state_machine;
+	force_ = force;
 }
 void ReleaseConnectionTimerTask::run()
 {
-	if (con_state_machine_->get_connection_state()
-			== ConnectionStateMachine::AWAITCLOSE) {
+	if (force_) {
+		con_state_machine_->resetConnection();
+	} else if (con_state_machine_->get_connection_state() == ConnectionStateMachine::AWAITCLOSE) {
 		LOG_ERR( "M_RELEASE_R message not received within %d ms. Reseting the connection",
 			con_state_machine_->get_timeout());
 		con_state_machine_->resetConnection();

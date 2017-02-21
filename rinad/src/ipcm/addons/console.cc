@@ -746,8 +746,6 @@ IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
 int
 IPCMConsole::disconnect_neighbor(std::vector<std::string>& args)
 {
-
-        int t0 = getTimeMs();
         rina::ApplicationProcessNamingInformation neighbor;
 	int ipcp_id;
 	Promise promise;
@@ -772,11 +770,10 @@ IPCMConsole::disconnect_neighbor(std::vector<std::string>& args)
 
 	if(IPCManager->disconnect_neighbor(this, &promise, ipcp_id, neighbor) == IPCM_FAILURE ||
 			promise.wait() != IPCM_SUCCESS) {
-		outstream << "Enrollment operation failed" << endl;
+		outstream << "Disconnect neighbor operation failed" << endl;
 		return CMDRETCONT;
 	}
-        int t1 = getTimeMs();
-	outstream << "DIF enrollment succesfully completed in " << t1 - t0 << " ms" << endl;
+	outstream << "Neighbor disconnection operation completed" << endl;
 
 	return CMDRETCONT;
 }
