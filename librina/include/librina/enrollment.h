@@ -119,6 +119,10 @@ public:
 	/// @param event
 	virtual void processEnrollmentRequestEvent(const EnrollToDAFRequestEvent& event) = 0;
 
+	/// Process a request to disconnect from a Neighbor, triggered by the IPC Manager
+	/// @param event
+	virtual void processDisconnectNeighborRequestEvent(const DisconnectNeighborRequestEvent& event) = 0;
+
 	/// Starts the enrollment program
 	/// @param cdapMessage
 	/// @param cdapSessionDescriptor

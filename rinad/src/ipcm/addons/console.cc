@@ -121,6 +121,11 @@ IPCMConsole::IPCMConsole(const std::string& socket_path_) :
 				"USAGE: enroll-to-dif <ipcp-id> <dif-name> "
 				"<supporting-dif-name> <neighbor-process-name>"
 				"<neighbor-process-instance>");
+	commands_map["disc-nei"] =
+			ConsoleCmdInfo(&IPCMConsole::disconnect_neighbor,
+				"USAGE: disc-nei <ipcp-id> "
+				"<neighbor-process-name> "
+				"<neighbor-process-instance>");
 	commands_map["query-rib"] =
 			ConsoleCmdInfo(&IPCMConsole::query_rib,
 				"USAGE: query-rib <ipcp-id> "
@@ -728,6 +733,44 @@ IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
 	}
 
 	if(IPCManager->enroll_to_dif(this, &promise, ipcp_id, neighbor_data) == IPCM_FAILURE ||
+			promise.wait() != IPCM_SUCCESS) {
+		outstream << "Enrollment operation failed" << endl;
+		return CMDRETCONT;
+	}
+        int t1 = getTimeMs();
+	outstream << "DIF enrollment succesfully completed in " << t1 - t0 << " ms" << endl;
+
+	return CMDRETCONT;
+}
+
+int
+IPCMConsole::disconnect_neighbor(std::vector<std::string>& args)
+{
+
+        int t0 = getTimeMs();
+        rina::ApplicationProcessNamingInformation neighbor;
+	int ipcp_id;
+	Promise promise;
+
+	if (args.size() < 4) {
+		outstream << commands_map[args[0]].usage << endl;
+		return CMDRETCONT;
+	}
+
+	if(string2int(args[1], ipcp_id)){
+		outstream << "Invalid IPC process id" << endl;
+		return CMDRETCONT;
+	}
+
+	neighbor =
+		rina::ApplicationProcessNamingInformation(args[2], args[3]);
+
+	if (!IPCManager->ipcp_exists(ipcp_id)) {
+		outstream << "No such IPC process id" << endl;
+		return CMDRETCONT;
+	}
+
+	if(IPCManager->disconnect_neighbor(this, &promise, ipcp_id, neighbor) == IPCM_FAILURE ||
 			promise.wait() != IPCM_SUCCESS) {
 		outstream << "Enrollment operation failed" << endl;
 		return CMDRETCONT;

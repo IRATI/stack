@@ -62,6 +62,7 @@ public:
         virtual void application_registration_request_handler(const rina::ApplicationRegistrationRequestEvent& event) = 0;
         virtual void application_unregistration_handler(const rina::ApplicationUnregistrationRequestEvent& event) = 0;
         virtual void enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event) = 0;
+        virtual void disconnet_neighbor_handler(const rina::DisconnectNeighborRequestEvent& event) = 0;
         virtual void query_rib_handler(const rina::QueryRIBRequestEvent& event) = 0;
         virtual void create_efcp_connection_response_handler(const rina::CreateConnectionResponseEvent& event) = 0;
         virtual void create_efcp_connection_result_handler(const rina::CreateConnectionResultEvent& event) = 0;
@@ -122,6 +123,7 @@ public:
         virtual void application_registration_request_handler(const rina::ApplicationRegistrationRequestEvent& event);
         virtual void application_unregistration_handler(const rina::ApplicationUnregistrationRequestEvent& event);
         virtual void enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event);
+        virtual void disconnet_neighbor_handler(const rina::DisconnectNeighborRequestEvent& event);
         virtual void query_rib_handler(const rina::QueryRIBRequestEvent& event);
         virtual void create_efcp_connection_response_handler(const rina::CreateConnectionResponseEvent& event);
         virtual void create_efcp_connection_result_handler(const rina::CreateConnectionResultEvent& event);
@@ -203,6 +205,7 @@ public:
         void application_registration_request_handler(const rina::ApplicationRegistrationRequestEvent& event);
         void application_unregistration_handler(const rina::ApplicationUnregistrationRequestEvent& event);
         void enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event);
+        void disconnet_neighbor_handler(const rina::DisconnectNeighborRequestEvent& event);
         void query_rib_handler(const rina::QueryRIBRequestEvent& event);
         void create_efcp_connection_response_handler(const rina::CreateConnectionResponseEvent& event);
         void create_efcp_connection_result_handler(const rina::CreateConnectionResultEvent& event);

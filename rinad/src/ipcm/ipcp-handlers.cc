@@ -356,4 +356,48 @@ IPCManager_::enroll_to_dif_response_event_handler(rina::EnrollToDIFResponseEvent
 	remove_transaction_state(trans->tid);
 }
 
+void
+IPCManager_::disconnect_neighbor_response_event_handler(rina::DisconnectNeighborResponseEvent *event)
+{
+	ostringstream ss;
+	IPCMIPCProcess *ipcp;
+	bool success = (event->result == 0);
+	ipcm_res_t ret = IPCM_FAILURE;
+
+	IPCPTransState* trans = get_transaction_state<IPCPTransState>(event->sequenceNumber);
+
+	if(!trans){
+		ss << ": Warning: unknown enrollment to DIF response received: "<<event->sequenceNumber<<endl;
+		FLUSH_LOG(WARN, ss);
+		return;
+	}
+
+	ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+	if(!ipcp){
+		ss << ": Warning: Could not complete disconnect neighbor action: "<<event->sequenceNumber<<
+		"IPCP with id: "<<trans->ipcp_id<<" does not exist! Perhaps deleted?" << endl;
+		FLUSH_LOG(WARN, ss);
+	}else{
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
+
+		if (success) {
+			ss << "Disconnect from neighbor operation completed for IPC "
+				<< "process " << ipcp->get_name().toString() << endl;
+			FLUSH_LOG(INFO, ss);
+
+			ret = IPCM_SUCCESS;
+		} else {
+			ss  << ": Error: Disconnect from neighbor operation completed for IPC "
+				"process " << ipcp->get_name().toString() << " failed"
+				<< endl;
+			FLUSH_LOG(ERR, ss);
+		}
+	}
+
+	//Mark as completed
+	trans->completed(ret);
+	remove_transaction_state(trans->tid);
+}
+
 } //namespace rinad

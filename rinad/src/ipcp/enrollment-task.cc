@@ -897,6 +897,55 @@ void EnrollmentTask::processEnrollmentRequestEvent(const rina::EnrollToDAFReques
 	initiateEnrollment(request);
 }
 
+void EnrollmentTask::processDisconnectNeighborRequestEvent(const rina::DisconnectNeighborRequestEvent& event)
+{
+	rina::ScopedLock g(lock_);
+	IEnrollmentStateMachine * esm = 0;
+
+	std::list<IEnrollmentStateMachine *> machines = state_machines_.getEntries();
+	std::list<IEnrollmentStateMachine *>::const_iterator it;
+	for (it = machines.begin(); it != machines.end(); ++it) {
+		if ((*it)->remote_peer_.name_.processName.compare(event.neighborName.processName) == 0 &&
+				(*it)->get_state() != IEnrollmentStateMachine::STATE_NULL) {
+			esm = *it;
+		}
+	}
+
+	if (!esm) {
+		LOG_IPCP_ERR("Not enrolled to IPC Process %s",
+			     event.neighborName.processName.c_str());
+		try {
+			rina::extendedIPCManager->disconnectNeighborResponse(event, -1);
+		}catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems sending message to IPC Manager: %s", e.what());
+		}
+		return;
+	}
+
+	// Close the application connection by sending M_RELEASE
+	try {
+		rib_daemon_->getProxy()->remote_close_connection(esm->con.port_id);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems closing application connection: %s",
+			      e.what());
+	}
+
+	// Wait a few ms and request deallocation of all N-1 flows to neighbor
+	deallocateFlow(esm->con.port_id);
+
+	// Update
+	state_machines_.erase(esm->con.port_id);
+	delete esm;
+	esm = 0;
+
+	// Reply to IPC Manager
+	try {
+		rina::extendedIPCManager->disconnectNeighborResponse(event, 0);
+	}catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems sending message to IPC Manager: %s", e.what());
+	}
+}
+
 void EnrollmentTask::initiateEnrollment(const rina::EnrollmentRequest& request)
 {
 	if (isEnrolledTo(request.neighbor_.name_.processName)) {

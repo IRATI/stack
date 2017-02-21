@@ -377,6 +377,11 @@ void LazyIPCProcessImpl::enroll_to_dif_handler(const rina::EnrollToDAFRequestEve
 	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
 }
 
+void LazyIPCProcessImpl::disconnet_neighbor_handler(const rina::DisconnectNeighborRequestEvent& event)
+{
+	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
+}
+
 void LazyIPCProcessImpl::query_rib_handler(const rina::QueryRIBRequestEvent& event)
 {
 	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
