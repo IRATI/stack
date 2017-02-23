@@ -226,6 +226,7 @@ void IPCMIPCProcess::disconnectFromNeighbor(
 
 void IPCMIPCProcess::registerApplication(
 		const rina::ApplicationProcessNamingInformation& applicationName,
+		const rina::ApplicationProcessNamingInformation& dafName,
 		unsigned short regIpcProcessId,
 		unsigned int opaque)
 {
@@ -234,8 +235,11 @@ void IPCMIPCProcess::registerApplication(
 				rina::IPCProcessProxy::error_not_a_dif_member);
 
 	try {
-		proxy_->registerApplication(applicationName, regIpcProcessId,
-				dif_name_, opaque);
+		proxy_->registerApplication(applicationName,
+					    dafName,
+					    regIpcProcessId,
+					    dif_name_,
+					    opaque);
 	}catch (rina::Exception &e) {
 		throw e;
 	}

@@ -587,6 +587,9 @@ ApplicationRegistrationInformation::ApplicationRegistrationInformation(
 const std::string ApplicationRegistrationInformation::toString(){
         std::stringstream ss;
 
+        if (dafName.processName != "") {
+        	ss << "DAF name: " << dafName.toString() << "; ";
+        }
         ss<<"Application name: "<<appName.toString()<<std::endl;
         ss<<"DIF name: "<<difName.processName;
         ss<<"; IPC Process id: "<<ipcProcessId;

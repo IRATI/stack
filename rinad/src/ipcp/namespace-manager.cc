@@ -421,8 +421,28 @@ void NamespaceManager::addressChangeUpdateDFT(unsigned int new_address,
 
 unsigned int NamespaceManager::getDFTNextHop(const rina::ApplicationProcessNamingInformation& apNamingInfo)
 {
-	rina::DirectoryForwardingTableEntry * nextHop;
+	rina::DirectoryForwardingTableEntry * nextHop = 0;
+	std::list<rina::DirectoryForwardingTableEntry *> entries;
+	std::list<rina::DirectoryForwardingTableEntry *>::iterator it;
+	unsigned int my_address = 0;
 
+	rina::ScopedLock g(lock);
+
+	if (apNamingInfo.processInstance == "") {
+		//Searching for a DAF name
+		my_address = ipcp->get_active_address();
+		entries = dft_.getEntries();
+		for (it = entries.begin(); it != entries.end(); ++it) {
+			if ((*it)->ap_naming_info_.processName == apNamingInfo.processName &&
+					(*it)->address_ != my_address) {
+				return (*it)->address_;
+			}
+		}
+
+		return 0;
+	}
+
+	// Searching for a DAP name (specific DAF member)
 	nextHop = dft_.find(apNamingInfo.getEncodedString());
 	if (nextHop) {
 		return nextHop->get_address();
@@ -601,10 +621,14 @@ int NamespaceManager::replyToIPCManagerRegister(const rina::ApplicationRegistrat
 void NamespaceManager::processApplicationRegistrationRequestEvent(
 		const rina::ApplicationRegistrationRequestEvent& event)
 {
+	rina::ApplicationRegistrationInformation * registration = 0;
+	std::list<rina::DirectoryForwardingTableEntry> entriesToCreate;
+	rina::ApplicationProcessNamingInformation appToRegister;
+	rina::DirectoryForwardingTableEntry entry;
+	std::list<int> exc_neighs;
 	int result = 0;
 
-	rina::ApplicationProcessNamingInformation appToRegister =
-			event.applicationRegistrationInformation.appName;
+	appToRegister = event.applicationRegistrationInformation.appName;
 	if (registrations_.find(appToRegister.getEncodedString())) {
 		LOG_IPCP_ERR("Application % is already registered in this IPC Process",
 				appToRegister.getEncodedString().c_str());
@@ -613,11 +637,11 @@ void NamespaceManager::processApplicationRegistrationRequestEvent(
 		return;
 	}
 
-	rina::ApplicationRegistrationInformation * registration = new
-			rina::ApplicationRegistrationInformation(
-					event.applicationRegistrationInformation.applicationRegistrationType);
+	registration = new rina::ApplicationRegistrationInformation(
+			event.applicationRegistrationInformation.applicationRegistrationType);
 	registration->appName = event.applicationRegistrationInformation.appName;
 	registration->difName = event.applicationRegistrationInformation.difName;
+	registration->dafName = event.applicationRegistrationInformation.dafName;
 	registration->ipcProcessId = event.applicationRegistrationInformation.ipcProcessId;
 	registrations_.put(appToRegister.getEncodedString(), registration);
 	LOG_IPCP_INFO("Successfully registered application %s with IPC Process id %us",
@@ -630,12 +654,19 @@ void NamespaceManager::processApplicationRegistrationRequestEvent(
 		return;
 	}
 
-	std::list<rina::DirectoryForwardingTableEntry> entriesToCreate;
-	rina::DirectoryForwardingTableEntry entry;
 	entry.address_ = ipcp->get_address();
 	entry.ap_naming_info_ = appToRegister;
 	entriesToCreate.push_back(entry);
-	std::list<int> exc_neighs;
+
+	appToRegister = event.applicationRegistrationInformation.dafName;
+	if (appToRegister.processName != "") {
+		//Register the DAF name to allow enrollment to a DAF just using its name
+		//Use the particular DAP process name as the DAF process instance, to
+		//be able to differentiate multiple DAF registrations
+		appToRegister.processInstance = event.applicationRegistrationInformation.appName.processName;
+		entry.ap_naming_info_ = appToRegister;
+		entriesToCreate.push_back(entry);
+	}
 
 	addDFTEntries(entriesToCreate, true, exc_neighs);
 }
@@ -735,10 +766,12 @@ void NamespaceManager::remove_whatevercast_name(const std::string& name_key)
 void NamespaceManager::processApplicationUnregistrationRequestEvent(
 		const rina::ApplicationUnregistrationRequestEvent& event)
 {
+	rina::ApplicationRegistrationInformation * unregisteredApp = 0;
+	rina::ApplicationProcessNamingInformation dafToUnregister;
+	std::list<int> exc_neighs;
 	int result = 0;
 
-	rina::ApplicationRegistrationInformation * unregisteredApp =
-			registrations_.erase(event.applicationName.getEncodedString());
+	unregisteredApp = registrations_.erase(event.applicationName.getEncodedString());
 
 	if (!unregisteredApp) {
 		LOG_IPCP_ERR("Application %s is not registered in this IPC Process",
@@ -756,11 +789,20 @@ void NamespaceManager::processApplicationUnregistrationRequestEvent(
 		return;
 	}
 
-	std::list<int> exc_neighs;
 	removeDFTEntry(unregisteredApp->appName.getEncodedString(),
 		       true,
 		       true,
 		       exc_neighs);
+
+	if (unregisteredApp->dafName.processName != "") {
+		//Remove DFT entry corresponding to DAF name
+		dafToUnregister.processName = unregisteredApp->dafName.processName;
+		dafToUnregister.processInstance = unregisteredApp->appName.processName;
+		removeDFTEntry(dafToUnregister.getEncodedString(),
+			       true,
+			       true,
+			       exc_neighs);
+	}
 
 	delete unregisteredApp;
 }

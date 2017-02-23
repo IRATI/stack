@@ -582,6 +582,9 @@ public:
 	/** The name of the application to be registered */
 	ApplicationProcessNamingInformation applicationName;
 
+	/** The name of the DAF of the application to be registered */
+	ApplicationProcessNamingInformation dafName;
+
 	/** The id of the IPC Process being registered (0 if it is an app) */
 	unsigned short regIpcProcessId;
 

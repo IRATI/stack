@@ -55,6 +55,8 @@ int main() {
 					"1");
 	ApplicationProcessNamingInformation * difName =
 			new ApplicationProcessNamingInformation("/difs/Test.DIF", "");
+	ApplicationProcessNamingInformation * dafName =
+			new ApplicationProcessNamingInformation("/dafs/Test.DAF", "");
 
 	IPCProcessProxy * ipcProcess1 = factory.create(*ipcProcessName1,
 			"normal", 12);
@@ -69,7 +71,7 @@ int main() {
 	ipcProcess1->assignToDIF(*difInformation, 35);
 
 	/* TEST REGISTER APPLICATION */
-	ipcProcess1->registerApplication(*sourceName, 1, *difName, 45);
+	ipcProcess1->registerApplication(*sourceName, *dafName, 1, *difName, 45);
 
 	/* TEST UNREGISTER APPLICATION */
 	ipcProcess1->unregisterApplication(*sourceName, *difName, 34);
@@ -110,6 +112,7 @@ int main() {
 	delete sourceName;
 	delete destinationName;
 	delete difName;
+	delete dafName;
 	delete difInformation;
 	delete flowSpec;
 	delete flowRequest;

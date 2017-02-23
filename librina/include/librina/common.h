@@ -413,6 +413,9 @@ public:
         /** The name of the application being registered */
         ApplicationProcessNamingInformation appName;
 
+        /** The name of the DAF of the application being registered */
+        ApplicationProcessNamingInformation dafName;
+
         /**
          * The id of the IPC process being registered (0 if it is
          * an application
@@ -428,7 +431,7 @@ public:
 	ApplicationRegistrationInformation();
 	ApplicationRegistrationInformation(
 		ApplicationRegistrationType applicationRegistrationType);
-    const std::string toString();
+	const std::string toString();
 };
 
 /**

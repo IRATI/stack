@@ -885,12 +885,17 @@ void EnrollmentTask::processEnrollmentRequestEvent(const rina::EnrollToDAFReques
 	assert(nsmps);
 
 	rina::Neighbor neighbor;
-	neighbor.name_ = event.neighborName;
 	neighbor.supporting_dif_name_ = event.supportingDIFName;
-	unsigned int address = nsmps->getValidAddress(neighbor.name_.processName,
-			neighbor.name_.processInstance);
-	if (address != 0) {
-		neighbor.address_ = address;
+	if (event.neighborName.processName == "") {
+		//Enrolling using the DIF name, not a specific DAP
+		neighbor.name_ = event.dafName;
+	} else {
+		neighbor.name_ = event.neighborName;
+		unsigned int address = nsmps->getValidAddress(neighbor.name_.processName,
+				neighbor.name_.processInstance);
+		if (address != 0) {
+			neighbor.address_ = address;
+		}
 	}
 
 	rina::EnrollmentRequest request(neighbor, event);

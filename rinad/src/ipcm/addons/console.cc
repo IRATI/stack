@@ -120,7 +120,9 @@ IPCMConsole::IPCMConsole(const std::string& socket_path_) :
 			ConsoleCmdInfo(&IPCMConsole::enroll_to_dif,
 				"USAGE: enroll-to-dif <ipcp-id> <dif-name> "
 				"<supporting-dif-name> <neighbor-process-name>"
-				"<neighbor-process-instance>");
+				"<neighbor-process-instance>  or  "
+				"enroll-to-dif <ipcp-id> <dif-name> "
+				"<supporting-dif-name>");
 	commands_map["query-rib"] =
 			ConsoleCmdInfo(&IPCMConsole::query_rib,
 				"USAGE: query-rib <ipcp-id> "
@@ -699,13 +701,12 @@ int getTimeMs(){
 int
 IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
 {
-	
         int t0 = getTimeMs();
         NeighborData neighbor_data;
 	int ipcp_id;
 	Promise promise;
 
-	if (args.size() < 6) {
+	if (args.size() < 6 && args.size() < 4) {
 		outstream << commands_map[args[0]].usage << endl;
 		return CMDRETCONT;
 	}
@@ -719,8 +720,11 @@ IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
 				args[2], string());
 	neighbor_data.supportingDifName =
 		rina::ApplicationProcessNamingInformation(args[3], string());
-	neighbor_data.apName =
-		rina::ApplicationProcessNamingInformation(args[4], args[5]);
+
+	if (args.size() == 6) {
+		neighbor_data.apName =
+				rina::ApplicationProcessNamingInformation(args[4], args[5]);
+	}
 
 	if (!IPCManager->ipcp_exists(ipcp_id)) {
 		outstream << "No such IPC process id" << endl;
