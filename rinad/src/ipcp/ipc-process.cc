@@ -183,6 +183,12 @@ void AbstractIPCProcessImpl::event_loop(void)
 			enroll_to_dif_handler(*event);
 		}
 		break;
+		case rina::DISCONNECT_NEIGHBOR_REQUEST_EVENT:
+		{
+			DOWNCAST_DECL(e, rina::DisconnectNeighborRequestEvent, event);
+			disconnet_neighbor_handler(*event);
+		}
+		break;
 		case rina::IPC_PROCESS_QUERY_RIB:
 		{
 			DOWNCAST_DECL(e, rina::QueryRIBRequestEvent, event);
@@ -373,6 +379,11 @@ void LazyIPCProcessImpl::application_unregistration_handler(const rina::Applicat
 }
 
 void LazyIPCProcessImpl::enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event)
+{
+	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
+}
+
+void LazyIPCProcessImpl::disconnet_neighbor_handler(const rina::DisconnectNeighborRequestEvent& event)
 {
 	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
 }

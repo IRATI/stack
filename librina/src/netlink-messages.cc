@@ -1197,6 +1197,46 @@ IPCEvent* IpcmEnrollToDIFResponseMessage::toIPCEvent(){
         return event;
 }
 
+/* CLASS IPCM DISCONNECT NEIGHBOR REQUEST MESSAGE */
+IpcmDisconnectNeighborRequestMessage:: IpcmDisconnectNeighborRequestMessage():
+        BaseNetlinkMessage(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST)
+{
+}
+
+const ApplicationProcessNamingInformation&
+IpcmDisconnectNeighborRequestMessage::getNeighborName() const
+{
+        return neighborName;
+}
+
+void IpcmDisconnectNeighborRequestMessage::setNeighborName(
+                const ApplicationProcessNamingInformation& neighborName)
+{
+        this->neighborName = neighborName;
+}
+
+IPCEvent* IpcmDisconnectNeighborRequestMessage::toIPCEvent()
+{
+	DisconnectNeighborRequestEvent * event =
+                        new DisconnectNeighborRequestEvent(neighborName,
+                        				   getSequenceNumber());
+        return event;
+}
+
+/* CLASS DISCONNECT NEIGHBOR RESPONSE MESSAGE */
+IpcmDisconnectNeighborResponseMessage::IpcmDisconnectNeighborResponseMessage():
+        BaseNetlinkResponseMessage(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE)
+{
+}
+
+IPCEvent* IpcmDisconnectNeighborResponseMessage::toIPCEvent()
+{
+	DisconnectNeighborResponseEvent * event =
+                        new DisconnectNeighborResponseEvent(getResult(),
+                        			            getSequenceNumber());
+        return event;
+}
+
 /* CLASS IPCM ALLOCATE FLOW REQUEST MESSAGE */
 IpcmAllocateFlowRequestMessage::IpcmAllocateFlowRequestMessage():
                 BaseNetlinkMessage(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST) {

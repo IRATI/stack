@@ -836,7 +836,8 @@ public:
         ///
         /// @ret success/failure
         ///
-        int remote_close_connection(unsigned int port);
+        int remote_close_connection(unsigned int port,
+        			    bool need_reply = true);
 
         ///
         /// Perform a create operation over an object of the remote RIB

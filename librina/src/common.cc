@@ -481,8 +481,14 @@ const std::string IPCEvent::eventTypeToString(IPCEventType eventType) {
 	case IPC_PROCESS_FWD_CDAP_MSG:
 		result = "42_IPC_PROCESS_FWD_CDAP_MSG";
 		break;
+	case DISCONNECT_NEIGHBOR_REQUEST_EVENT:
+		result = "43_DISCONNECT_NEIGHBOR_REQUEST_EVENT";
+		break;
+	case DISCONNECT_NEIGHBOR_RESPONSE_EVENT:
+		result = "44_DISCONNECT_NEIGHBOR_RESPONSE_EVENT";
+		break;
 	case NO_EVENT:
-		result = "42_NO_EVENT";
+		result = "45_NO_EVENT";
 		break;
 	default:
 		result = "Unknown event";

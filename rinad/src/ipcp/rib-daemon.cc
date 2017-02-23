@@ -65,8 +65,9 @@ void * doManagementSDUReaderWork(void* arg)
 		}
 
 		message.size_ = result.bytesRead;
+		LOG_IPCP_DBG("Got message of %d bytes, handling to CDAP Provider", message.size_);
 
-		//Instruct CDAP provider to process the CACEP message
+		//Instruct CDAP provider to process the messages
 		try{
 			rina::cdap::getProvider()->process_message(message,
 								   result.portId);

@@ -540,6 +540,17 @@ public:
 				 const DIFInformation& difInformation);
 
 	/**
+	 * Reply to the IPC Manager, informing it about the result of a "disconnect
+	 * neighbor" operation
+	 * @param event the event that trigerred the operation
+	 * @param result the result of the operation (0 successful)
+	 * @throws IPCException if there are problems communicating with the
+	 * IPC Manager
+	 */
+	void disconnectNeighborResponse(const DisconnectNeighborRequestEvent& event,
+				        int result);
+
+	/**
 	 * Reply to the IPC Manager, informing it about the result of a "register
 	 * application request" operation
 	 * @param event
