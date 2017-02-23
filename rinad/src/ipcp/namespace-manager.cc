@@ -419,7 +419,7 @@ void NamespaceManager::addressChangeUpdateDFT(unsigned int new_address,
 	}
 }
 
-unsigned int NamespaceManager::getDFTNextHop(const rina::ApplicationProcessNamingInformation& apNamingInfo)
+unsigned int NamespaceManager::getDFTNextHop(rina::ApplicationProcessNamingInformation& apNamingInfo)
 {
 	rina::DirectoryForwardingTableEntry * nextHop = 0;
 	std::list<rina::DirectoryForwardingTableEntry *> entries;
@@ -435,6 +435,7 @@ unsigned int NamespaceManager::getDFTNextHop(const rina::ApplicationProcessNamin
 		for (it = entries.begin(); it != entries.end(); ++it) {
 			if ((*it)->ap_naming_info_.processName == apNamingInfo.processName &&
 					(*it)->address_ != my_address) {
+				apNamingInfo.processInstance = (*it)->ap_naming_info_.processInstance;
 				return (*it)->address_;
 			}
 		}

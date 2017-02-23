@@ -253,7 +253,7 @@ public:
 	/// null otherwise
 	/// @param apNamingInfo
 	/// @return
-	virtual unsigned int getDFTNextHop(const rina::ApplicationProcessNamingInformation& apNamingInfo) = 0;
+	virtual unsigned int getDFTNextHop(rina::ApplicationProcessNamingInformation& apNamingInfo) = 0;
 
 	/// Returns the IPC Process id (0 if not an IPC Process) of the registered
 	/// application, or -1 if the app is not registered
