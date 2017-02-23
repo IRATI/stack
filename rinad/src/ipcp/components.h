@@ -259,7 +259,7 @@ public:
 	/// application, or -1 if the app is not registered
 	/// @param apNamingInfo
 	/// @return
-	virtual unsigned short getRegIPCProcessId(const rina::ApplicationProcessNamingInformation& apNamingInfo) = 0;
+	virtual unsigned short getRegIPCProcessId(rina::ApplicationProcessNamingInformation& apNamingInfo) = 0;
 
 	/// Add an entry to the directory forwarding table
 	/// @param entry

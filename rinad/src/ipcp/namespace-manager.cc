@@ -592,18 +592,34 @@ void NamespaceManager::removeDFTEntry(const std::string& key,
 	delete entry;
 }
 
-unsigned short NamespaceManager::getRegIPCProcessId(const rina::ApplicationProcessNamingInformation& apNamingInfo)
+unsigned short NamespaceManager::getRegIPCProcessId(rina::ApplicationProcessNamingInformation& apNamingInfo)
 {
 	rina::ApplicationRegistrationInformation * regInfo;
+	std::list<rina::ApplicationRegistrationInformation *> entries;
+	std::list<rina::ApplicationRegistrationInformation *>:: iterator it;
+
+	rina::ScopedLock g(lock);
 
 	regInfo = registrations_.find(apNamingInfo.getEncodedString());
-	if (!regInfo) {
-		LOG_IPCP_DBG("Could not find a registered application with code : %s"
-				, apNamingInfo.getEncodedString().c_str());
-		return 0;
+	if (regInfo) {
+		return regInfo->ipcProcessId;
 	}
 
-	return regInfo->ipcProcessId;
+	//Could not find a match for a specific DAP, try to look for DAF name
+	entries = registrations_.getEntries();
+	for (it = entries.begin(); it != entries.end(); ++it) {
+		if ((*it)->dafName.processName == apNamingInfo.processName) {
+			//Use the specific DAP name instead of the DAF name in the flow destination naming info
+			apNamingInfo.processName = (*it)->appName.processName;
+			apNamingInfo.processInstance = (*it)->appName.processInstance;
+
+			return (*it)->ipcProcessId;
+		}
+	}
+
+	LOG_IPCP_DBG("Could not find a registered application with code : %s",
+		     apNamingInfo.getEncodedString().c_str());
+	return 0;
 }
 
 int NamespaceManager::replyToIPCManagerRegister(const rina::ApplicationRegistrationRequestEvent& event,

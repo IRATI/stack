@@ -179,7 +179,7 @@ public:
 			    bool notify_neighs,
 			    bool remove_from_rib,
 			    std::list<int>& neighs_to_exclude);
-	unsigned short getRegIPCProcessId(const rina::ApplicationProcessNamingInformation& apNamingInfo);
+	unsigned short getRegIPCProcessId(rina::ApplicationProcessNamingInformation& apNamingInfo);
 	void processApplicationRegistrationRequestEvent(
 				const rina::ApplicationRegistrationRequestEvent& event);
 	void processApplicationUnregistrationRequestEvent(
