@@ -327,6 +327,7 @@ enum ipcm_conn_destroy_result_attrs_list {
 
 enum ipcm_reg_app_req_attrs_list {
         IRAR_ATTR_APP_NAME = 1,
+	IRAR_ATTR_DAF_NAME,
         IRAR_ATTR_DIF_NAME,
         IRAR_ATTR_REG_IPCP_ID,
         __IRAR_ATTR_MAX,
@@ -824,6 +825,7 @@ struct rnl_ipcp_conn_destroy_result_msg_attrs {
 
 struct rnl_ipcm_reg_app_req_msg_attrs {
         struct name * app_name;
+        struct name * daf_name;
         struct name * dif_name;
 };
 

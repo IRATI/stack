@@ -1731,7 +1731,8 @@ static void tcp_udp_rcv_worker(struct work_struct * work)
 }
 
 static int tcp_udp_application_register(struct ipcp_instance_data * data,
-                                        const struct name *         name)
+                                        const struct name *         name,
+					const struct name *         daf_name)
 {
         struct reg_app_data * app;
         union address         addr;

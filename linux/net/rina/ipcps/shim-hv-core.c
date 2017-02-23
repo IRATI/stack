@@ -911,7 +911,8 @@ shim_hv_write_restart_cb(void *opaque)
 /* Register an application to this IPC process. */
 static int
 shim_hv_application_register(struct ipcp_instance_data * priv,
-                             const struct name         * application_name)
+                             const struct name         * application_name,
+			     const struct name         * daf_name)
 {
         struct name_list_element *cur;
         char *tmpstr = name_tostring(application_name);

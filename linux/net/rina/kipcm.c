@@ -620,7 +620,8 @@ static int notify_ipcp_register_app_request(void *             data,
         ASSERT(ipc_process->ops->application_register);
 
         if (ipc_process->ops->application_register(ipc_process->data,
-                                                   attrs->app_name))
+                                                   attrs->app_name,
+						   attrs->daf_name))
                 goto fail;
 
         return reg_unreg_resp_free_and_reply(msg,
