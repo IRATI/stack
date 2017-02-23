@@ -150,7 +150,7 @@ void KMAEnrollmentTask::initiateEnrollmentWithCKM(const rina::NMinusOneFlowAlloc
 }
 
 void KMAEnrollmentTask::connect(const rina::cdap::CDAPMessage& message,
-				const rina::cdap_rib::con_handle_t &con)
+				rina::cdap_rib::con_handle_t &con)
 {
 	rina::ScopedLock g(lock);
 	if (ma_state.enrolled || ma_state.auth_ps_){
@@ -189,9 +189,8 @@ void KMAEnrollmentTask::connect(const rina::cdap::CDAPMessage& message,
 	ma_invoke_id = message.invoke_id_;
 }
 
-void KMAEnrollmentTask::connectResult(const rina::cdap_rib::res_info_t &res,
-		   	   	      const rina::cdap_rib::con_handle_t &con,
-				      const rina::cdap_rib::auth_policy_t& auth)
+void KMAEnrollmentTask::connectResult(const rina::cdap::CDAPMessage& message,
+		   	   	      rina::cdap_rib::con_handle_t &con)
 {
 }
 

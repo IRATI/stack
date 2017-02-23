@@ -40,14 +40,14 @@ class ConnectionCallback : public rina::cdap::CDAPCallbackInterface {
 
 public:
 	ConnectionCallback(bool *keep_serving);
-	void open_connection(const rina::cdap_rib::con_handle_t &con,
-		  const rina::cdap::CDAPMessage& m);
+	void open_connection(rina::cdap_rib::con_handle_t &con,
+			     const rina::cdap::CDAPMessage& m);
 	void remote_read_request(const rina::cdap_rib::con_handle_t &con,
 			const rina::cdap_rib::obj_info_t &obj,
 			const rina::cdap_rib::filt_info_t &filt,
 			int message_id);
 	void close_connection(const rina::cdap_rib::con_handle_t &con,
-			const rina::cdap_rib::flags_t &flags, int message_id);
+			      const rina::cdap_rib::flags_t &flags, int message_id);
 
 	rina::cdap::CDAPProviderInterface* get_provider(){
 		if(!prov_)

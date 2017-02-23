@@ -995,13 +995,19 @@ void EnrollmentTask::initiateEnrollment(const rina::EnrollmentRequest& request)
 }
 
 void EnrollmentTask::connect(const rina::cdap::CDAPMessage& cdap_m,
-		     	     const rina::cdap_rib::con_handle_t &con_handle)
+		     	     rina::cdap_rib::con_handle_t &con_handle)
 {
 	LOG_IPCP_DBG("M_CONNECT CDAP message from port-id %u",
 		     con_handle.port_id);
 
+	//0 Check if the request is to the DAF name, if so change to IPCP name
+	if (con_handle.src_.ap_name_ == ipcp->get_dif_information().dif_name_.processName) {
+		con_handle.src_.ap_name_ = ipcp->get_name();
+		con_handle.src_.ap_inst_ = ipcp->get_instance();
+	}
+
 	//1 Find out if the sender is really connecting to us
-	if(con_handle.src_.ap_name_.compare(ipcp->get_name())!= 0){
+	if(con_handle.src_.ap_name_ != ipcp->get_name()){
 		LOG_IPCP_WARN("an M_CONNECT message whose destination was not this IPC Process, ignoring it");
 		return;
 	}
@@ -1034,19 +1040,23 @@ void EnrollmentTask::connect(const rina::cdap::CDAPMessage& cdap_m,
 	ipcp_ps->connect_received(cdap_m, con_handle);
 }
 
-void EnrollmentTask::connectResult(const rina::cdap_rib::res_info_t &res,
-				   const rina::cdap_rib::con_handle_t &con_handle,
-				   const rina::cdap_rib::auth_policy_t& auth)
+void EnrollmentTask::connectResult(const rina::cdap::CDAPMessage &msg,
+				   rina::cdap_rib::con_handle_t &con_handle)
 {
 	LOG_IPCP_DBG("M_CONNECT_R cdapMessage from portId %u",
 		     con_handle.port_id);
 
+	//In case the application connection was to the DAF name, now
+	//update it to use the specific DAP name and instance
+	con_handle.dest_.ap_name_ = msg.src_ap_name_;
+	con_handle.dest_.ap_inst_ = msg.src_ap_inst_;
+
 	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
 	assert(ipcp_ps);
-	ipcp_ps->connect_response_received(res.code_,
-					   res.reason_,
+	ipcp_ps->connect_response_received(static_cast<rina::cdap_rib::res_code_t>(msg.result_),
+					   msg.result_reason_,
 					   con_handle,
-					   auth);
+					   msg.auth_policy_);
 }
 
 void EnrollmentTask::releaseResult(const rina::cdap_rib::res_info_t &res,
