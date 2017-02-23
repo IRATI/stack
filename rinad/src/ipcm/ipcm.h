@@ -392,6 +392,21 @@ public:
 			const rinad::NeighborData& neighbor);
 
 	//
+	// Ask the IPC Process to cancel the application connection and all N-1 flows
+	// from a neighbor
+	//
+	// @param promise Promise object containing the future result of the
+	// operation. The promise shall always be accessible until the
+	// operation has been finished, so promise->ret value is different than
+	// IPCM_PENDING.
+	//
+	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
+	ipcm_res_t disconnect_neighbor(Addon* callee,
+				       Promise* promise,
+				       const unsigned short ipcp_id,
+				       const rina::ApplicationProcessNamingInformation& neighbor);
+
+	//
 	// Unregister app from an ipcp
 	//
 	// @param promise Promise object containing the future result of the
@@ -707,6 +722,9 @@ protected:
 
 	//Enrollment mgmt
 	void enroll_to_dif_response_event_handler(rina::EnrollToDIFResponseEvent *e);
+
+	//Disconnect Neighbor Response
+	void disconnect_neighbor_response_event_handler(rina::DisconnectNeighborResponseEvent *e);
 
 	//RIB queries
 	void query_rib_response_event_handler(rina::QueryRIBResponseEvent *e);

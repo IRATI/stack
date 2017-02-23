@@ -178,7 +178,7 @@ public:
 	};
 
 	//remote
-	virtual int remote_close_connection(unsigned int port){ return 0;};
+	virtual int remote_close_connection(unsigned int port, bool needs_reply){ return 0;};
 	virtual int remote_create(const cdap_rib::con_handle_t& con,
 				  const cdap_rib::obj_info_t &obj,
 				  const cdap_rib::flags_t &flags,

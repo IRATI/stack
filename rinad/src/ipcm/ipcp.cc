@@ -218,10 +218,10 @@ void IPCMIPCProcess::enroll(
 	proxy_->enroll(difName, supportingDifName, neighborName, opaque);
 }
 
-void IPCMIPCProcess::disconnectFromNeighbor(
-		const rina::ApplicationProcessNamingInformation& neighbor)
+void IPCMIPCProcess::disconnectFromNeighbor(const rina::ApplicationProcessNamingInformation& neighbor,
+					    unsigned int opaque)
 {
-	proxy_->disconnectFromNeighbor(neighbor);
+	proxy_->disconnectFromNeighbor(neighbor, opaque);
 }
 
 void IPCMIPCProcess::registerApplication(

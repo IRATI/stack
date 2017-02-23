@@ -814,6 +814,34 @@ int putIpcmEnrollToDIFResponseMessageObject(nl_msg* netlinkMessage,
 IpcmEnrollToDIFResponseMessage *
         parseIpcmEnrollToDIFResponseMessage(nlmsghdr *hdr);
 
+/* IpcmDisconnectNeighborRequestMessage CLASS*/
+enum IpcmDisconnectNeighborRequestMessageAttributes {
+	IDNR_ATTR_NEIGH = 1,
+        __IDNR_ATTR_MAX,
+};
+
+#define IDNR_ATTR_MAX (__IDNR_ATTR_MAX -1)
+
+int putIpcmDisconnectNeighborRequestMessageObject(nl_msg* netlinkMessage,
+                const IpcmDisconnectNeighborRequestMessage& object);
+
+IpcmDisconnectNeighborRequestMessage *
+        parseIpcmDisconnectNeighborRequestMessage(nlmsghdr *hdr);
+
+/* IpcmDisconnectNeighborResponseMessage CLASS*/
+enum IpcmDisconnectNeighborResponseMessageAttributes {
+        IDNRE_ATTR_RESULT = 1,
+        __IDNRE_ATTR_MAX,
+};
+
+#define IDNRE_ATTR_MAX (__IDNRE_ATTR_MAX -1)
+
+int putIpcmDisconnectNeighborResponseMessageObject(nl_msg* netlinkMessage,
+                const IpcmDisconnectNeighborResponseMessage& object);
+
+IpcmDisconnectNeighborResponseMessage *
+        parseIpcmDisconnectNeighborResponseMessage(nlmsghdr *hdr);
+
 /* IpcmAllocateFlowRequestMessage CLASS*/
 enum IpcmAllocateFlowRequestMessageAttributes {
 	IAFRM_ATTR_SOURCE_APP_NAME = 1,

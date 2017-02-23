@@ -251,6 +251,22 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 	        }
 	        return 0;
 	}
+	case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST: {
+	        IpcmDisconnectNeighborRequestMessage * request =
+	                        dynamic_cast<IpcmDisconnectNeighborRequestMessage *>(message);
+	        if (putIpcmDisconnectNeighborRequestMessageObject(netlinkMessage, *request) < 0) {
+	                return -1;
+	        }
+	        return 0;
+	}
+	case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE: {
+		IpcmDisconnectNeighborResponseMessage * request =
+	                        dynamic_cast<IpcmDisconnectNeighborResponseMessage *>(message);
+	        if (putIpcmDisconnectNeighborResponseMessageObject(netlinkMessage, *request) < 0) {
+	                return -1;
+	        }
+	        return 0;
+	}
 	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST: {
 		IpcmAllocateFlowRequestMessage * allocateFlowRequestObject =
 				dynamic_cast<IpcmAllocateFlowRequestMessage *>(message);
@@ -636,6 +652,14 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	}
 	case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE: {
 		return parseIpcmAssignToDIFResponseMessage(
+		                netlinkMessageHeader);
+	}
+	case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST: {
+		return parseIpcmDisconnectNeighborRequestMessage(
+		                netlinkMessageHeader);
+	}
+	case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE: {
+		return parseIpcmDisconnectNeighborResponseMessage(
 		                netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST: {
@@ -4604,6 +4628,28 @@ int putIpcmEnrollToDIFRequestMessageObject(nl_msg* netlinkMessage,
         return -1;
 }
 
+int putIpcmDisconnectNeighborRequestMessageObject(nl_msg* netlinkMessage,
+                				  const IpcmDisconnectNeighborRequestMessage& object)
+{
+        struct nlattr *neighbourName;
+
+        if (!(neighbourName = nla_nest_start(
+                        netlinkMessage, IDNR_ATTR_NEIGH))){
+                goto nla_put_failure;
+        }
+        if (putApplicationProcessNamingInformationObject(netlinkMessage,
+                        object.getNeighborName()) < 0) {
+                goto nla_put_failure;
+        }
+        nla_nest_end(netlinkMessage, neighbourName);
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+                "Error building IpcmDisconnectNeighborRequestMessage Netlink object");
+        return -1;
+}
+
 int putIpcmIPCProcessInitializedMessageObject(nl_msg* netlinkMessage,
                 const IpcmIPCProcessInitializedMessage& object) {
         struct nlattr *name;
@@ -4653,6 +4699,18 @@ int putIpcmEnrollToDIFResponseMessageObject(nl_msg* netlinkMessage,
 
         nla_put_failure: LOG_ERR(
                 "Error building IpcmEnrollToDIFResponseMessage Netlink object");
+        return -1;
+}
+
+int putIpcmDisconnectNeighborResponseMessageObject(nl_msg* netlinkMessage,
+                const IpcmDisconnectNeighborResponseMessage& object)
+{
+        NLA_PUT_U32(netlinkMessage, IDNRE_ATTR_RESULT, object.getResult());
+
+        return 0;
+
+        nla_put_failure: LOG_ERR(
+                "Error building IpcmDisconnectNeighborResponseMessage Netlink object");
         return -1;
 }
 
@@ -7783,6 +7841,33 @@ parseIpcmEnrollToDIFResponseMessage(nlmsghdr *hdr){
         return result;
 }
 
+IpcmDisconnectNeighborResponseMessage *
+parseIpcmDisconnectNeighborResponseMessage(nlmsghdr *hdr){
+        struct nla_policy attr_policy[IDNRE_ATTR_MAX + 1];
+        attr_policy[IDNRE_ATTR_RESULT].type = NLA_U32;
+        attr_policy[IDNRE_ATTR_RESULT].minlen = 4;
+        attr_policy[IDNRE_ATTR_RESULT].maxlen = 4;
+        struct nlattr *attrs[IDNRE_ATTR_MAX + 1];
+
+        int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+        		IDNRE_ATTR_MAX, attr_policy);
+        if (err < 0) {
+                LOG_ERR(
+                        "Error parsing IpcmDisconnectNeighborResponseMessage information from Netlink message: %d",
+                        err);
+                return 0;
+        }
+
+        IpcmDisconnectNeighborResponseMessage * result =
+                        new IpcmDisconnectNeighborResponseMessage();
+
+        if (attrs[IDNRE_ATTR_RESULT]) {
+                result->setResult(nla_get_u32(attrs[IDNRE_ATTR_RESULT]));
+        }
+
+        return result;
+}
+
 IpcmEnrollToDIFRequestMessage *
 parseIpcmEnrollToDIFRequestMessage(nlmsghdr *hdr) {
         struct nla_policy attr_policy[IETDR_ATTR_MAX + 1];
@@ -7839,6 +7924,42 @@ parseIpcmEnrollToDIFRequestMessage(nlmsghdr *hdr) {
         if (attrs[IETDR_ATTR_NEIGH]) {
                 neighbour = parseApplicationProcessNamingInformationObject(
                                 attrs[IETDR_ATTR_NEIGH]);
+                if (neighbour == 0) {
+                        delete result;
+                        return 0;
+                } else {
+                        result->setNeighborName(*neighbour);
+                        delete neighbour;
+                }
+        }
+
+        return result;
+}
+
+IpcmDisconnectNeighborRequestMessage *
+parseIpcmDisconnectNeighborRequestMessage(nlmsghdr *hdr) {
+        struct nla_policy attr_policy[IDNR_ATTR_MAX + 1];
+        attr_policy[IDNR_ATTR_NEIGH].type = NLA_NESTED;
+        attr_policy[IDNR_ATTR_NEIGH].minlen = 0;
+        attr_policy[IDNR_ATTR_NEIGH].maxlen = 0;
+        struct nlattr *attrs[IDNR_ATTR_MAX + 1];
+
+        int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+        		IDNR_ATTR_MAX, attr_policy);
+        if (err < 0) {
+                LOG_ERR(
+                        "Error parsing IpcmEnrollToDIFRequestMessage information from Netlink message: %d",
+                         err);
+                return 0;
+        }
+
+        IpcmDisconnectNeighborRequestMessage * result =
+                        new IpcmDisconnectNeighborRequestMessage();
+        ApplicationProcessNamingInformation * neighbour;
+
+        if (attrs[IDNR_ATTR_NEIGH]) {
+                neighbour = parseApplicationProcessNamingInformationObject(
+                                attrs[IDNR_ATTR_NEIGH]);
                 if (neighbour == 0) {
                         delete result;
                         return 0;

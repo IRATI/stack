@@ -283,7 +283,8 @@ public:
 	///
 	/// @ret success/failure
 	///
-	virtual int remote_close_connection(unsigned int port) = 0;
+	virtual int remote_close_connection(unsigned int port,
+					    bool need_reply) = 0;
 
 	///
 	/// Perform a create operation over an object of the remote RIB

@@ -3487,9 +3487,11 @@ cdap_rib::con_handle_t RIBDaemonProxy::remote_open_connection(const cdap_rib::ve
 }
 
 // Close a CDAP connection to a remote RIB
-int RIBDaemonProxy::remote_close_connection(unsigned int port)
+int RIBDaemonProxy::remote_close_connection(unsigned int port,
+					    bool need_reply)
 {
-	int res = ribd->cdap_provider->remote_close_connection(port);
+	int res = ribd->cdap_provider->remote_close_connection(port,
+							       need_reply);
 
 	//TODO remove from storage?
 

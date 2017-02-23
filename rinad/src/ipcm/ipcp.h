@@ -185,8 +185,8 @@ public:
 	 * @param neighbor The neighbor to disconnect from
 	 * @throws DisconnectFromNeighborException if an error occurs
 	 */
-	void disconnectFromNeighbor(
-			const rina::ApplicationProcessNamingInformation& neighbor);
+	void disconnectFromNeighbor(const rina::ApplicationProcessNamingInformation& neighbor,
+				    unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to register an application in a DIF through

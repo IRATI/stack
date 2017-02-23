@@ -425,10 +425,11 @@ public:
 	 * IPC Process has successfully completed or an error is returned.
 	 *
 	 * @param neighbor The neighbor to disconnect from
+	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws DisconnectFromNeighborException if an error occurs
 	 */
-	void disconnectFromNeighbor(
-			const ApplicationProcessNamingInformation& neighbor);
+	void disconnectFromNeighbor(const ApplicationProcessNamingInformation& neighbor,
+			            unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to register an application in a DIF through
@@ -822,6 +823,15 @@ public:
         const std::list<Neighbor>& getNeighbors() const;
         const DIFInformation& getDIFInformation() const;
 #endif
+};
+
+class DisconnectNeighborResponseEvent: public BaseResponseEvent {
+public:
+	DisconnectNeighborResponseEvent(int result,
+					unsigned int sequenceNumber)
+			: BaseResponseEvent(result,
+                                            DISCONNECT_NEIGHBOR_RESPONSE_EVENT,
+					    sequenceNumber) {}
 };
 
 /**
