@@ -386,14 +386,14 @@ void Client::floodFlow()
 	unsigned long sn;
 	double delta = 0;
 	double current_rtt = 0;
-	unsigned char *buffer2 = new unsigned char[data_size];
+	unsigned char *buffer2 = new unsigned char[max_buffer_size];
 
 	snd = startSender();
 	cout << "Sender started" << endl;
 	while(true) {
 		int bytes_read = 0;
 
-		bytes_read = read(fd, buffer2, data_size);
+		bytes_read = read(fd, buffer2, max_buffer_size);
                 if (bytes_read < 0) {
                         if (errno == EAGAIN) {
                                 continue;
