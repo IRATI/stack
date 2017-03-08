@@ -98,4 +98,4 @@ void Application::applicationRegister()
         	throw ApplicationRegistrationException("Could not register application to any DIF");
 }
 
-const uint Application::max_buffer_size = 1 << 18;
+const uint Application::max_buffer_size = 1 << 16;
