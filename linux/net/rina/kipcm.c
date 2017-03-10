@@ -2247,6 +2247,7 @@ int kipcm_sdu_write(struct kipcm * kipcm,
 int kipcm_sdu_read(struct kipcm * kipcm,
                    port_id_t      port_id,
                    struct sdu **  sdu,
+		   size_t         size,
                    bool blocking)
 {
         IRQ_BARRIER;
@@ -2257,7 +2258,11 @@ int kipcm_sdu_read(struct kipcm * kipcm,
         }
 
         /* The SDU is theirs now */
-        return kfa_flow_sdu_read(kipcm->kfa, port_id, sdu, blocking);
+        return kfa_flow_sdu_read(kipcm->kfa,
+        			 port_id,
+				 sdu,
+				 size,
+				 blocking);
 }
 
 int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,

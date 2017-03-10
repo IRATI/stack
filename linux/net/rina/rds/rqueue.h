@@ -48,6 +48,8 @@ int             rqueue_head_push_ni(struct rqueue * queue,
                                     void *          data);
 void *          rqueue_head_pop(struct rqueue * queue);
 
+void *          rqueue_head_peek(struct rqueue * queue);
+
 bool            rqueue_is_empty(struct rqueue * queue);
 
 #endif

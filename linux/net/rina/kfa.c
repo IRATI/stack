@@ -644,9 +644,22 @@ void kfa_flow_readable(struct kfa       *instance,
 	spin_unlock_bh(&instance->lock);
 }
 
+struct sdu * get_sdu_to_read(struct ipcp_flow * flow, size_t size)
+{
+	struct sdu * sdu;
+
+	sdu = rfifo_peek(flow->sdu_ready);
+	if (size >= sdu_len(sdu)) {
+		sdu = rfifo_pop(flow->sdu_ready);
+	}
+
+	return sdu;
+}
+
 int kfa_flow_sdu_read(struct kfa  *instance,
 		      port_id_t	   id,
 		      struct sdu **sdu,
+		      size_t       size,
                       bool blocking)
 {
 	struct ipcp_flow *flow;
@@ -730,7 +743,7 @@ int kfa_flow_sdu_read(struct kfa  *instance,
 			goto finish;
 		}
 
-		*sdu = rfifo_pop(flow->sdu_ready);
+		*sdu = get_sdu_to_read(flow, size);
 		if (!is_sdu_ok(*sdu)) {
 			LOG_ERR("There is not a valid in port-id %d fifo", id);
 			retval = -EIO;
@@ -748,7 +761,7 @@ int kfa_flow_sdu_read(struct kfa  *instance,
 			goto finish;
 		}
 
-		*sdu = rfifo_pop(flow->sdu_ready);
+		*sdu = get_sdu_to_read(flow, size);
 		if (!is_sdu_ok(*sdu)) {
 			LOG_ERR("There is not a valid in port-id %d fifo", id);
 			retval = -EIO;

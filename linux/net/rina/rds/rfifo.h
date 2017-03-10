@@ -38,6 +38,7 @@ int            rfifo_push(struct rfifo * f, void * e);
 int            rfifo_push_ni(struct rfifo * f, void * e);
 int            rfifo_head_push_ni(struct rfifo * f, void * e);
 void *         rfifo_pop(struct rfifo * f);
+void *         rfifo_peek(struct rfifo * f);
 bool           rfifo_is_empty(struct rfifo * f);
 ssize_t        rfifo_length(struct rfifo * f);
 

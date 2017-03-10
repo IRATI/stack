@@ -144,6 +144,21 @@ unsigned char *sdu_buffer(const struct sdu *sdu)
 }
 EXPORT_SYMBOL(sdu_buffer);
 
+unsigned char * sdu_partial_read(struct sdu* sdu, size_t size)
+{
+	unsigned char * to_read;
+	struct du *du;
+
+	ASSERT(is_sdu_ok(sdu));
+	du = to_du(sdu);
+	to_read = du->skb->data;
+	du->skb->data = du->skb->data + size;
+	du->skb->len = du->skb->len - size;
+
+	return to_read;
+}
+EXPORT_SYMBOL(sdu_partial_read);
+
 /* FIXME: this one should be removed to hide skb */
 struct sk_buff *sdu_detach_skb(const struct sdu *sdu)
 {

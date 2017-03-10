@@ -60,6 +60,7 @@ int            kipcm_sdu_write(struct kipcm * kipcm,
 int            kipcm_sdu_read(struct kipcm * kipcm,
                               port_id_t      id,
                               struct sdu **  sdu,
+			      size_t         size,
                               bool           blocking);
 
 /* If successful: takes the ownership of the SDU */
