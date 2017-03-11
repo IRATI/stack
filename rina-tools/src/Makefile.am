@@ -64,3 +64,6 @@ bin_SCRIPTS    += rina-bug-report
 DISTCLEANFILES += rina-bug-report
 EXTRA_DIST     += rina-bug-report.in
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += rina-bug-report
+
+bin_SCRIPTS    += irati-ctl
+EXTRA_DIST     += irati-ctl
