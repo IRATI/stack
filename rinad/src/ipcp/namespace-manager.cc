@@ -428,7 +428,15 @@ unsigned int NamespaceManager::getDFTNextHop(rina::ApplicationProcessNamingInfor
 
 	rina::ScopedLock g(lock);
 
-	if (apNamingInfo.processInstance == "") {
+	// Searching for a DAP name (specific DAF member)
+	nextHop = dft_.find(apNamingInfo.getEncodedString());
+	if (nextHop) {
+		return nextHop->get_address();
+	}
+
+	if (apNamingInfo.processInstance == "" &&
+			apNamingInfo.entityName == "" &&
+			apNamingInfo.entityInstance == "") {
 		//Searching for a DAF name
 		my_address = ipcp->get_active_address();
 		entries = dft_.getEntries();
@@ -441,12 +449,6 @@ unsigned int NamespaceManager::getDFTNextHop(rina::ApplicationProcessNamingInfor
 		}
 
 		return 0;
-	}
-
-	// Searching for a DAP name (specific DAF member)
-	nextHop = dft_.find(apNamingInfo.getEncodedString());
-	if (nextHop) {
-		return nextHop->get_address();
 	}
 
 	return 0;
