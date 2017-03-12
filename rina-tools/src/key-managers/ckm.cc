@@ -52,7 +52,7 @@ void CKMEnrollmentTask::set_application_process(rina::ApplicationProcess * ap)
 }
 
 void CKMEnrollmentTask::connect(const rina::cdap::CDAPMessage& message,
-				const rina::cdap_rib::con_handle_t &con)
+				rina::cdap_rib::con_handle_t &con)
 {
 	std::map<std::string, KMAData *>::iterator it;
 	KMAData * data = 0;
@@ -110,9 +110,8 @@ void CKMEnrollmentTask::connect(const rina::cdap::CDAPMessage& message,
 	enrolled_kmas[con.dest_.ap_name_] = data;
 }
 
-void CKMEnrollmentTask::connectResult(const rina::cdap_rib::res_info_t &res,
-		   	   	      const rina::cdap_rib::con_handle_t &con,
-				      const rina::cdap_rib::auth_policy_t& auth)
+void CKMEnrollmentTask::connectResult(const rina::cdap::CDAPMessage& message,
+		   	   	      rina::cdap_rib::con_handle_t &con)
 {
 }
 

@@ -402,7 +402,7 @@ class CDAPSession
 	CDAPInvokeIdManagerImpl* get_invoke_id_manager() const;
 	void stopConnection();
 	bool is_in_await_con_state();
-	const cdap_rib::con_handle_t& get_con_handle();
+	cdap_rib::con_handle_t& get_con_handle();
 	void set_port_id(int port_id);
 	void check_can_send_or_receive_messages() const;
  private:
@@ -562,7 +562,7 @@ class CDAPSessionManager : public CDAPSessionManagerInterface
 					  const cdap_rib::res_info_t &res,
 					  int invoke_id);
 	CDAPInvokeIdManager * get_invoke_id_manager();
-	const cdap_rib::con_handle_t & get_con_handle(int port_id);
+	cdap_rib::con_handle_t & get_con_handle(int port_id);
 
  private:
 	Lockable lock;
@@ -588,7 +588,7 @@ class AppCDAPIOHandler : public CDAPIOHandler
 	void remove_fd_to_port_id_mapping(unsigned int port_id);
 
  private:
-	void invoke_callback(const cdap_rib::con_handle_t& con_handle,
+	void invoke_callback(cdap_rib::con_handle_t& con_handle,
 			     const cdap::cdap_m_t& m_rcv,
 			     bool is_auth_message);
 
@@ -1710,7 +1710,7 @@ bool CDAPSession::is_in_await_con_state()
 	return connection_state_machine_->is_await_conn();
 }
 
-const cdap_rib::con_handle_t& CDAPSession::get_con_handle()
+cdap_rib::con_handle_t& CDAPSession::get_con_handle()
 {
 	return con_handle;
 }
@@ -2611,7 +2611,7 @@ CDAPInvokeIdManager * CDAPSessionManager::get_invoke_id_manager()
 	return invoke_id_manager_;
 }
 
-const cdap_rib::con_handle_t & CDAPSessionManager::get_con_handle(int port_id)
+cdap_rib::con_handle_t & CDAPSessionManager::get_con_handle(int port_id)
 {
 	ScopedLock g(lock);
 
@@ -3484,7 +3484,7 @@ void AppCDAPIOHandler::process_message(ser_obj_t &message,
 			is_auth_message);
 }
 
-void AppCDAPIOHandler::invoke_callback(const rina::cdap_rib::con_handle_t& con,
+void AppCDAPIOHandler::invoke_callback(rina::cdap_rib::con_handle_t& con,
 				       const rina::cdap::cdap_m_t& m_rcv,
 				       bool is_auth_message)
 {
@@ -3585,8 +3585,7 @@ void AppCDAPIOHandler::invoke_callback(const rina::cdap_rib::con_handle_t& con,
 		//Remote
 		case cdap_m_t::M_CONNECT_R:
 			callback_->remote_open_connection_result(con,
-								 res,
-								 m_rcv.auth_policy_);
+								 m_rcv);
 			break;
 		case cdap_m_t::M_RELEASE_R:
 			callback_->remote_close_connection_result(con,
@@ -3715,13 +3714,12 @@ void AppCDAPIOHandler::send(const cdap_m_t & m_sent,
 CDAPCallbackInterface::~CDAPCallbackInterface()
 {
 }
-void CDAPCallbackInterface::remote_open_connection_result(const cdap_rib::con_handle_t &con,
-							  const cdap_rib::result_info &res,
-							  const rina::cdap_rib::auth_policy_t &auth)
+void CDAPCallbackInterface::remote_open_connection_result(cdap_rib::con_handle_t &con,
+							  const cdap::CDAPMessage &msg)
 {
 	LOG_INFO("Callback open_connection_result operation not implemented");
 }
-void CDAPCallbackInterface::open_connection(const cdap_rib::con_handle_t &con,
+void CDAPCallbackInterface::open_connection(cdap_rib::con_handle_t &con,
 					    const cdap::CDAPMessage& message)
 {
 	LOG_INFO("Callback open_connection operation not implemented");

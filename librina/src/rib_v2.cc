@@ -1932,9 +1932,8 @@ protected:
 	//
 
 	//Remote
-	void remote_open_connection_result(const cdap_rib::con_handle_t &con,
-					   const cdap_rib::result_info &res,
-					   const rina::cdap_rib::auth_policy_t &auth);
+	void remote_open_connection_result(cdap_rib::con_handle_t &con,
+					   const cdap::CDAPMessage& message);
 	void remote_close_connection_result(const cdap_rib::con_handle_t &con,
 					    const cdap_rib::result_info &res);
 	void remote_create_result(const cdap_rib::con_handle_t &con,
@@ -1967,7 +1966,7 @@ protected:
 
 
 	//Local
-	void open_connection(const cdap_rib::con_handle_t &con,
+	void open_connection(cdap_rib::con_handle_t &con,
 			     const cdap::CDAPMessage& message);
 	void close_connection(const cdap_rib::con_handle_t &con,
 			      const cdap_rib::flags_t &flags,
@@ -2486,14 +2485,13 @@ void RIBDaemon::remove_connection(const cdap_rib::con_handle_t& con){
 // Connection callbacks
 //
 
-void RIBDaemon::remote_open_connection_result(const cdap_rib::con_handle_t &con,
-					      const cdap_rib::res_info_t &res,
-					      const rina::cdap_rib::auth_policy_t &auth)
+void RIBDaemon::remote_open_connection_result(cdap_rib::con_handle_t &con,
+					      const cdap::CDAPMessage& message)
 {
 	// FIXME remove invoke_id
-	app_con_callback_->connectResult(res, con, auth);
+	app_con_callback_->connectResult(message, con);
 
-	if (res.code_ == cdap_rib::CDAP_SUCCESS) {
+	if (message.result_ == 0) {
 		try {
 			store_connection(con);
 		} catch (Exception &e) {
@@ -2503,7 +2501,7 @@ void RIBDaemon::remote_open_connection_result(const cdap_rib::con_handle_t &con,
 	}
 }
 
-void RIBDaemon::open_connection(const cdap_rib::con_handle_t &con,
+void RIBDaemon::open_connection(cdap_rib::con_handle_t &con,
 				const cdap::CDAPMessage& message)
 {
 	// FIXME add result

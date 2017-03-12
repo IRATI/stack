@@ -116,7 +116,7 @@ std::string Flow::toString()
         ss << "* Source address: " << source_address << std::endl;
         ss << "* Source port id: " << source_port_id << std::endl;
         ss << "* Destination AP Naming Info: "
-           << destination_naming_info.toString();
+           << destination_naming_info.toString() << std::endl;
         ss << "* Destination addres: " << destination_address << std::endl;
         ss << "* Destination port id: " << destination_port_id << std::endl;
         if (connections.size() > 0)

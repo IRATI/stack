@@ -169,7 +169,7 @@ public:
 	void eventHappened(rina::InternalEvent * event);
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
-	unsigned int getDFTNextHop(const rina::ApplicationProcessNamingInformation& apNamingInfo);
+	unsigned int getDFTNextHop(rina::ApplicationProcessNamingInformation& apNamingInfo);
 	void addDFTEntries(const std::list<rina::DirectoryForwardingTableEntry>& entries,
 			   bool notify_neighs,
 			   std::list<int>& neighs_to_exclude);
@@ -179,7 +179,7 @@ public:
 			    bool notify_neighs,
 			    bool remove_from_rib,
 			    std::list<int>& neighs_to_exclude);
-	unsigned short getRegIPCProcessId(const rina::ApplicationProcessNamingInformation& apNamingInfo);
+	unsigned short getRegIPCProcessId(rina::ApplicationProcessNamingInformation& apNamingInfo);
 	void processApplicationRegistrationRequestEvent(
 				const rina::ApplicationRegistrationRequestEvent& event);
 	void processApplicationUnregistrationRequestEvent(

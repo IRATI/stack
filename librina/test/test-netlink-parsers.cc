@@ -1016,22 +1016,24 @@ int testIpcmRegisterApplicationRequestMessage() {
 	std::cout << "TESTING IPCM REGISTER APPLICATION REQUEST MESSAGE\n";
 	int returnValue = 0;
 
-	ApplicationProcessNamingInformation * applicationName =
-			new ApplicationProcessNamingInformation();
-	applicationName->processName = "/apps/source";
-	applicationName->processInstance = "15";
-	applicationName->entityName = "database";
-	applicationName->entityInstance = "13";
+	ApplicationProcessNamingInformation applicationName;
+	applicationName.processName = "/apps/source";
+	applicationName.processInstance = "15";
+	applicationName.entityName = "database";
+	applicationName.entityInstance = "13";
 
-	ApplicationProcessNamingInformation * difName =
-			new ApplicationProcessNamingInformation();
-	difName->processName = "/difs/Test2.DIF";
+	ApplicationProcessNamingInformation dafName;
+	dafName.processName = "/dafs/Test12.DAF";
+
+	ApplicationProcessNamingInformation difName;
+	difName.processName = "/difs/Test2.DIF";
 
 	IpcmRegisterApplicationRequestMessage * message =
 			new IpcmRegisterApplicationRequestMessage();
 
-	message->setDifName(*difName);
-	message->setApplicationName(*applicationName);
+	message->setDifName(difName);
+	message->setApplicationName(applicationName);
+	message->dafName = dafName;
 	message->setRegIpcProcessId(123);
 
 	struct nl_msg* netlinkMessage;
@@ -1047,8 +1049,6 @@ int testIpcmRegisterApplicationRequestMessage() {
 		std::cout << "Error constructing Ipcm Register Application Request "
 				<< "Message \n";
 		nlmsg_free(netlinkMessage);
-		delete difName;
-		delete applicationName;
 		delete message;
 		return result;
 	}
@@ -1066,6 +1066,11 @@ int testIpcmRegisterApplicationRequestMessage() {
 		std::cout << "Application name on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
+	} else if (message->dafName
+			!= recoveredMessage->dafName) {
+		std::cout << "DAF name on original and recovered messages"
+				<< " are different\n";
+		returnValue = -1;
 	} else if (message->getDifName() != recoveredMessage->getDifName()) {
 		std::cout << "DIF name on original and recovered "
 				<< "messages are different\n";
@@ -1081,8 +1086,6 @@ int testIpcmRegisterApplicationRequestMessage() {
 		std::cout << "IpcmRegisterApplicationRequest test ok\n";
 	}
 	nlmsg_free(netlinkMessage);
-	delete difName;
-	delete applicationName;
 	delete message;
 	delete recoveredMessage;
 

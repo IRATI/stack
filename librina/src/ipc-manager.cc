@@ -275,17 +275,18 @@ void IPCProcessProxy::disconnectFromNeighbor(const ApplicationProcessNamingInfor
 #endif
 }
 
-void IPCProcessProxy::registerApplication(
-		const ApplicationProcessNamingInformation& applicationName,
-		unsigned short regIpcProcessId,
-		const ApplicationProcessNamingInformation& dif_name,
-		unsigned int opaque)
+void IPCProcessProxy::registerApplication(const ApplicationProcessNamingInformation& applicationName,
+					  const ApplicationProcessNamingInformation& dafName,
+					  unsigned short regIpcProcessId,
+					  const ApplicationProcessNamingInformation& dif_name,
+					  unsigned int opaque)
 {
 #if STUB_API
 	//Do nothing
 #else
 	IpcmRegisterApplicationRequestMessage message;
 	message.setApplicationName(applicationName);
+	message.dafName = dafName;
 	message.setDifName(dif_name);
 	message.setRegIpcProcessId(regIpcProcessId);
 	message.setDestIpcProcessId(id);

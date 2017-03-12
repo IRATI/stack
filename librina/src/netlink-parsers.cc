@@ -3805,7 +3805,7 @@ int putIpcmRegisterApplicationRequestMessageObject(
 	nl_msg* netlinkMessage,
 	const IpcmRegisterApplicationRequestMessage& object)
 {
-	struct nlattr *difName, *applicationName;
+	struct nlattr *difName, *applicationName, *dafName;
 
 	if (!(applicationName = nla_nest_start(netlinkMessage, IRAR_ATTR_APP_NAME))) {
 		goto nla_put_failure;
@@ -3815,6 +3815,15 @@ int putIpcmRegisterApplicationRequestMessageObject(
 		goto nla_put_failure;
 	}
 	nla_nest_end(netlinkMessage, applicationName);
+
+	if (!(dafName = nla_nest_start(netlinkMessage, IRAR_ATTR_DAF_NAME))) {
+		goto nla_put_failure;
+	}
+	if (putApplicationProcessNamingInformationObject(netlinkMessage,
+			object.dafName) < 0) {
+		goto nla_put_failure;
+	}
+	nla_nest_end(netlinkMessage, dafName);
 
 	if (!(difName = nla_nest_start(netlinkMessage, IRAR_ATTR_DIF_NAME))) {
 		goto nla_put_failure;
@@ -6468,6 +6477,9 @@ parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {
 	attr_policy[IRAR_ATTR_APP_NAME].type = NLA_NESTED;
 	attr_policy[IRAR_ATTR_APP_NAME].minlen = 0;
 	attr_policy[IRAR_ATTR_APP_NAME].maxlen = 0;
+	attr_policy[IRAR_ATTR_DAF_NAME].type = NLA_NESTED;
+	attr_policy[IRAR_ATTR_DAF_NAME].minlen = 0;
+	attr_policy[IRAR_ATTR_DAF_NAME].maxlen = 0;
 	attr_policy[IRAR_ATTR_DIF_NAME].type = NLA_NESTED;
 	attr_policy[IRAR_ATTR_DIF_NAME].minlen = 0;
 	attr_policy[IRAR_ATTR_DIF_NAME].maxlen = 0;
@@ -6494,6 +6506,7 @@ parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {
 			new IpcmRegisterApplicationRequestMessage();
 
 	ApplicationProcessNamingInformation * applicationName;
+	ApplicationProcessNamingInformation * dafName;
 	ApplicationProcessNamingInformation * difName;
 
 	if (attrs[IRAR_ATTR_APP_NAME]) {
@@ -6505,6 +6518,18 @@ parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {
 		} else {
 			result->setApplicationName(*applicationName);
 			delete applicationName;
+		}
+	}
+
+	if (attrs[IRAR_ATTR_DAF_NAME]) {
+		dafName = parseApplicationProcessNamingInformationObject(
+				attrs[IRAR_ATTR_DAF_NAME]);
+		if (dafName == 0) {
+			delete result;
+			return 0;
+		} else {
+			result->dafName = *dafName;
+			delete dafName;
 		}
 	}
 

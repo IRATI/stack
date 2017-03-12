@@ -395,6 +395,7 @@ AppGetDIFPropertiesResponseMessage * parseAppGetDIFPropertiesResponseMessage(
 /* IpcmRegisterApplicationRequestMessage CLASS*/
 enum IpcmRegisterApplicationRequestMessageAttributes {
 	IRAR_ATTR_APP_NAME = 1,
+	IRAR_ATTR_DAF_NAME,
 	IRAR_ATTR_DIF_NAME,
 	IRAR_ATTR_REG_IPC_ID,
 	__IRAR_ATTR_MAX,

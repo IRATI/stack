@@ -235,7 +235,9 @@ static struct nla_policy icdr_policy[ICDR_ATTR_MAX + 1] = {
 
 static struct nla_policy irar_policy[IRAR_ATTR_MAX + 1] = {
         [IRAR_ATTR_APP_NAME] = NLA_INIT_NESTED,
+	[IRAR_ATTR_DAF_NAME] = NLA_INIT_NESTED,
         [IRAR_ATTR_DIF_NAME] = NLA_INIT_NESTED,
+	[IRAR_ATTR_REG_IPCP_ID] = NLA_INIT_U16,
 };
 
 static struct nla_policy iuar_policy[IUAR_ATTR_MAX + 1] = {

@@ -611,8 +611,7 @@ void FlowAllocatorInstance::submitAllocateRequest(const rina::FlowRequestEvent& 
 	flow_ = faps->newFlowRequest(ipc_process_, flow_request_event_);
 
 	//1 Check directory to see to what IPC process the CDAP M_CREATE request has to be delivered
-	unsigned int destinationAddress = namespace_manager_->getDFTNextHop(
-			flow_request_event_.remoteApplicationName);
+	unsigned int destinationAddress = namespace_manager_->getDFTNextHop(flow_->destination_naming_info);
 	LOG_IPCP_DBG("The directory forwarding table returned address %u",
 			destinationAddress);
 	flow_->destination_address = destinationAddress;

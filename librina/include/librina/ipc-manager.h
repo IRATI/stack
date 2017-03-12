@@ -436,16 +436,17 @@ public:
 	 * an IPC Process.
 	 *
 	 * @param applicationName The name of the application to be registered
+	 * @param dafName The name of the DAF of the application to be registered (optional)
 	 * @param regIpcProcessId The id of the registered IPC process (0 if it
 	 * is an application)
 	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws IpcmRegisterApplicationException if an error occurs
 	 */
-	void registerApplication(
-			const ApplicationProcessNamingInformation& applicationName,
-			unsigned short regIpcProcessId,
-			const ApplicationProcessNamingInformation& dif_name,
-			unsigned int opaque);
+	void registerApplication(const ApplicationProcessNamingInformation& applicationName,
+				 const ApplicationProcessNamingInformation& dafName,
+				 unsigned short regIpcProcessId,
+				 const ApplicationProcessNamingInformation& dif_name,
+				 unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to unregister an application in a DIF through

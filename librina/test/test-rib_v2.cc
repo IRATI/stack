@@ -146,11 +146,10 @@ public:
 
 	/// A remote Connect request has been received.
 	void connect(const rina::cdap::CDAPMessage& message,
-		     const cdap_rib::con_handle_t &con){ (void)con; (void)message;};
+		     cdap_rib::con_handle_t &con){ (void)con; (void)message;};
 	/// A remote Connect response has been received.
-	void connectResult(const cdap_rib::res_info_t &res,
-			   const cdap_rib::con_handle_t &con,
-                           const cdap_rib::auth_policy_t &auth){ (void)con; (void)res; (void)auth;};
+	void connectResult(const rina::cdap::CDAPMessage& message,
+			   cdap_rib::con_handle_t &con){ (void)con; (void)message;};
 	/// A remote Release request has been received.
 	void release(int invoke_id, const cdap_rib::con_handle_t &con){ (void)con; (void)invoke_id; };
 	/// A remote Release response has been received.
