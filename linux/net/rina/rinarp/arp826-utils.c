@@ -140,6 +140,30 @@ const uint8_t * gpa_address_value(const struct gpa * gpa)
 }
 EXPORT_SYMBOL(gpa_address_value);
 
+string_t * gpa_address_to_string_gfp(gfp_t              flags,
+				     const struct gpa * gpa)
+{
+	string_t * tmp;
+	string_t * p;
+
+        if (!gpa_is_ok(gpa)) {
+                LOG_ERR("Bad input parameter, "
+                        "cannot get a meaningful address from GPA");
+                return NULL;
+        }
+
+        tmp = rkmalloc(gpa->length + 1, flags);
+        if (!tmp)
+        	return NULL;
+
+        memcpy(tmp, gpa->address, gpa->length);
+        p = tmp + gpa->length;
+        *(p + 1) = '\0';
+
+        return tmp;
+}
+EXPORT_SYMBOL(gpa_address_to_string_gfp);
+
 size_t gpa_address_length(const struct gpa * gpa)
 {
         if (!gpa_is_ok(gpa)) {
@@ -155,8 +179,8 @@ EXPORT_SYMBOL(gpa_address_length);
 /* FIXME: Crappy ... we should avoid rkmalloc and rkfree as much as possible */
 void gpa_dump(const struct gpa * gpa)
 {
-        uint8_t * tmp;
-        uint8_t * p;
+        string_t * tmp;
+        string_t * p;
         size_t    i;
 
         if (!gpa) {
@@ -176,9 +200,11 @@ void gpa_dump(const struct gpa * gpa)
 
         p = tmp;
         for (i = 0; i < gpa->length; i++) {
-                p += sprintf(p, "%02X", gpa->address[i]);
+        	/* TODO next line results in an improper
+        	 * memory access, has to be fixed
+                p += sprintf(p, "%02X", gpa->address[i]); */
         }
-        *(p + 1) = 0x00;
+        *(p + 1) = '\0';
 
         LOG_DBG("GPA %pK (%zd): 0x%s", gpa, gpa->length, tmp);
 

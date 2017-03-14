@@ -45,6 +45,8 @@ struct gpa *    gpa_dup_gfp(gfp_t              flags,
 bool            gpa_is_equal(const struct gpa * a,
                              const struct gpa * b);
 const uint8_t * gpa_address_value(const struct gpa * gpa);
+string_t * 	gpa_address_to_string_gfp(gfp_t              flags,
+				          const struct gpa * gpa);
 size_t          gpa_address_length(const struct gpa * gpa);
 
 /* Grows a GPA adding the filler symbols up to length (if needed) */
