@@ -37,7 +37,9 @@
 #include <net/pkt_sched.h>
 #include <net/sch_generic.h>
 
-#define SHIM_NAME   "shim-eth-vlan"
+#define SHIM_NAME   	    "shim-eth-vlan"
+#define SHIM_WIFI_STA_NAME  "shim-wifi-sta"
+#define SHIM_WIFI_AP_NAME   "shim-wifi-ap"
 
 #define RINA_PREFIX SHIM_NAME
 
@@ -2130,7 +2132,9 @@ static struct ipcp_factory_ops eth_vlan_ops = {
         .destroy   = eth_vlan_destroy,
 };
 
-static struct ipcp_factory * shim = NULL;
+static struct ipcp_factory * shim_eth_vlan = NULL;
+static struct ipcp_factory * shim_wifi_sta = NULL;
+static struct ipcp_factory * shim_wifi_ap = NULL;
 
 #ifdef CONFIG_RINA_SHIM_ETH_VLAN_REGRESSION_TESTS
 static bool regression_test_create_vlan_interface_name(void)
@@ -2247,12 +2251,31 @@ static int __init mod_init(void)
                 return -1;
         }
 
-        shim = kipcm_ipcp_factory_register(default_kipcm,
-                                           SHIM_NAME,
-                                           &eth_vlan_data,
-                                           &eth_vlan_ops);
-        if (!shim)
+        shim_eth_vlan = kipcm_ipcp_factory_register(default_kipcm,
+                                           	    SHIM_NAME,
+                                          	    &eth_vlan_data,
+						    &eth_vlan_ops);
+        if (!shim_eth_vlan)
                 return -1;
+
+        shim_wifi_ap = kipcm_ipcp_factory_register(default_kipcm,
+                                           	   SHIM_WIFI_AP_NAME,
+                                          	   &eth_vlan_data,
+						   &eth_vlan_ops);
+        if (!shim_wifi_ap) {
+        	kipcm_ipcp_factory_unregister(default_kipcm, shim_eth_vlan);
+                return -1;
+        }
+
+        shim_wifi_sta = kipcm_ipcp_factory_register(default_kipcm,
+                                           	    SHIM_WIFI_STA_NAME,
+                                          	    &eth_vlan_data,
+						    &eth_vlan_ops);
+        if (!shim_wifi_sta) {
+        	kipcm_ipcp_factory_unregister(default_kipcm, shim_wifi_ap);
+        	kipcm_ipcp_factory_unregister(default_kipcm, shim_eth_vlan);
+                return -1;
+        }
 
         spin_lock_init(&data_instances_lock);
 
@@ -2266,7 +2289,9 @@ static void __exit mod_exit(void)
         flush_workqueue(rcv_wq);
         destroy_workqueue(rcv_wq);
 
-        kipcm_ipcp_factory_unregister(default_kipcm, shim);
+        kipcm_ipcp_factory_unregister(default_kipcm, shim_eth_vlan);
+        kipcm_ipcp_factory_unregister(default_kipcm, shim_wifi_ap);
+        kipcm_ipcp_factory_unregister(default_kipcm, shim_wifi_sta);
 }
 
 module_init(mod_init);

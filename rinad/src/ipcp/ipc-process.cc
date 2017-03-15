@@ -495,19 +495,19 @@ AbstractIPCProcessImpl* IPCPFactory::createIPCP(const std::string& type,
 
 	if(type == rina::NORMAL_IPC_PROCESS) {
 		ipcp = new IPCProcessImpl(name,
-						ipcp_id,
-						ipc_manager_port,
-						log_level,
-						log_file);
+					  ipcp_id,
+					  ipc_manager_port,
+					  log_level,
+					  log_file);
 		return ipcp;
 	} else if(type == rina::SHIM_WIFI_IPC_PROCESS_STA ||
 				type == rina::SHIM_WIFI_IPC_PROCESS_AP) {
 		ipcp = new ShimWifiIPCProcessImpl(type,
-							name,
-							ipcp_id,
-							ipc_manager_port,
-							log_level,
-							log_file);
+						  name,
+						  ipcp_id,
+						  ipc_manager_port,
+						  log_level,
+						  log_file);
 		return ipcp;
 	} else {
 		LOG_IPCP_WARN("Unsupported IPCP type: %s", type.c_str());

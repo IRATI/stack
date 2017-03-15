@@ -587,7 +587,7 @@ IPCProcessProxy * IPCProcessFactory::create(
 #else
 	int result = syscallCreateIPCProcess(ipcProcessName,
                                              ipcProcessId,
-                                             difType);
+					     difType);
 	if (result != 0) {
 	        throw CreateIPCProcessException();
 	}
