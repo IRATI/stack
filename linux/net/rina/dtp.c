@@ -1466,6 +1466,9 @@ int dtp_write(struct dtp * instance,
                 ps = container_of(rcu_dereference(instance->base.ps),
                                   struct dtp_ps, base);
                 if (sv->window_based || sv->rate_based) {
+                	if (sv->window_based && !sv->rexmsn_ctrl)
+                		dtcp_snd_lf_win_set(dtcp, csn);
+
 			/* NOTE: Might close window */
 			if (window_is_closed(instance,
 						dt,

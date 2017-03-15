@@ -105,6 +105,9 @@ struct dtcp_sv {
         /* snd_rt_wind_edge = LastSendDataAck + PDU(credit) */
         seq_num_t    snd_rt_wind_edge;
 
+        /* the current size of the sender window (not the same as credit) */
+        uint_t       snd_window_size;
+
         /* PDUs per TimeUnit */
         uint_t       sndr_rate;
 
@@ -654,6 +657,19 @@ static void acks_inc(struct dtcp * dtcp)
         spin_unlock_bh(&dtcp->sv->lock);
 }
 
+static int snd_rt_win_edge_and_size_set(struct dtcp * dtcp, seq_num_t new_rt_win)
+{
+        ASSERT(dtcp);
+        ASSERT(dtcp->sv);
+
+        spin_lock_bh(&dtcp->sv->lock);
+        dtcp->sv->snd_rt_wind_edge = new_rt_win;
+        dtcp->sv->snd_window_size = new_rt_win - dtcp->sv->snd_lft_win;
+        spin_unlock_bh(&dtcp->sv->lock);
+
+        return 0;
+}
+
 static int snd_rt_wind_edge_set(struct dtcp * dtcp, seq_num_t new_rt_win)
 {
         ASSERT(dtcp);
@@ -661,6 +677,18 @@ static int snd_rt_wind_edge_set(struct dtcp * dtcp, seq_num_t new_rt_win)
 
         spin_lock_bh(&dtcp->sv->lock);
         dtcp->sv->snd_rt_wind_edge = new_rt_win;
+        spin_unlock_bh(&dtcp->sv->lock);
+
+        return 0;
+}
+
+static int snd_lf_win_set(struct dtcp * dtcp, seq_num_t new_lf_win)
+{
+        ASSERT(dtcp);
+        ASSERT(dtcp->sv);
+
+        spin_lock_bh(&dtcp->sv->lock);
+        dtcp->sv->snd_lft_win = new_lf_win;
         spin_unlock_bh(&dtcp->sv->lock);
 
         return 0;
@@ -681,6 +709,20 @@ seq_num_t snd_rt_wind_edge(struct dtcp * dtcp)
 }
 EXPORT_SYMBOL(snd_rt_wind_edge);
 
+static seq_num_t tx_credit(struct dtcp * dtcp)
+{
+        seq_num_t     result;
+
+        ASSERT(dtcp);
+        ASSERT(dtcp->sv);
+
+        spin_lock_bh(&dtcp->sv->lock);
+        result = dtcp->sv->snd_rt_wind_edge - dtcp->sv->snd_lft_win;
+        spin_unlock_bh(&dtcp->sv->lock);
+
+        return result;
+}
+
 seq_num_t snd_lft_win(struct dtcp * dtcp)
 {
         seq_num_t     tmp;
@@ -695,6 +737,36 @@ seq_num_t snd_lft_win(struct dtcp * dtcp)
         return tmp;
 }
 EXPORT_SYMBOL(snd_lft_win);
+
+static seq_num_t rx_credit(struct dtcp * dtcp)
+{
+        seq_num_t     tmp;
+
+        ASSERT(dtcp);
+        ASSERT(dtcp->sv);
+        ASSERT(dtcp->parent);
+
+        spin_lock_bh(&dtcp->sv->lock);
+        tmp = dtcp->sv->rcvr_rt_wind_edge - dt_sv_rcv_lft_win(dtcp->parent);
+        spin_unlock_bh(&dtcp->sv->lock);
+
+        return tmp;
+}
+
+seq_num_t rcvr_lft_win(struct dtcp * dtcp)
+{
+        seq_num_t     tmp;
+
+        ASSERT(dtcp);
+        ASSERT(dtcp->parent);
+
+        spin_lock_bh(&dtcp->sv->lock);
+        tmp = dt_sv_rcv_lft_win(dtcp->parent);
+        spin_unlock_bh(&dtcp->sv->lock);
+
+        return tmp;
+}
+EXPORT_SYMBOL(rcvr_lft_win);
 
 seq_num_t rcvr_rt_wind_edge(struct dtcp * dtcp)
 {
@@ -778,17 +850,6 @@ static void last_snd_data_ack_set(struct dtcp * dtcp, seq_num_t seq_num)
         spin_unlock_bh(&dtcp->sv->lock);
 }
 
-static uint_t dtcp_sndr_credit(struct dtcp * dtcp) {
-        seq_num_t credit;
-
-        ASSERT(dtcp);
-        ASSERT(dtcp->sv);
-        spin_lock_bh(&dtcp->sv->lock);
-        credit = dtcp->sv->sndr_credit;
-        spin_unlock_bh(&dtcp->sv->lock);
-        return credit;
-}
-
 uint_t dtcp_rcvr_credit(struct dtcp * dtcp) {
         seq_num_t credit;
 
@@ -841,6 +902,20 @@ void update_credit_and_rt_wind_edge(struct dtcp * dtcp, uint_t credit)
 }
 EXPORT_SYMBOL(update_credit_and_rt_wind_edge);
 
+static uint_t dtcp_snd_window_size(struct dtcp * dtcp)
+{
+	uint_t tmp;
+
+        if (!dtcp || !dtcp->sv)
+                return -1;
+
+        spin_lock_bh(&dtcp->sv->lock);
+        tmp = dtcp->sv->snd_window_size;
+        spin_unlock_bh(&dtcp->sv->lock);
+
+        return tmp;
+}
+
 static ssize_t dtcp_attr_show(struct robject *		     robj,
                          	     struct robj_attribute * attr,
                                      char *		     buf)
@@ -869,17 +944,26 @@ static ssize_t dtcp_attr_show(struct robject *		     robj,
 			dtcp_max_closed_winq_length(instance->cfg));
 	}
 	/* Win based */
-	if (strcmp(robject_attr_name(attr), "sndr_credit") == 0) {
-		return sprintf(buf, "%u\n", dtcp_sndr_credit(instance));
+	if (strcmp(robject_attr_name(attr), "tx_credit") == 0) {
+		return sprintf(buf, "%u\n", tx_credit(instance));
 	}
-	if (strcmp(robject_attr_name(attr), "rcvr_credit") == 0) {
-		return sprintf(buf, "%u\n", dtcp_rcvr_credit(instance));
+	if (strcmp(robject_attr_name(attr), "rx_credit") == 0) {
+		return sprintf(buf, "%u\n", rx_credit(instance));
 	}
 	if (strcmp(robject_attr_name(attr), "snd_rt_win_edge") == 0) {
 		return sprintf(buf, "%u\n", dtcp_snd_rt_win(instance));
 	}
+	if (strcmp(robject_attr_name(attr), "snd_lf_win_edge") == 0) {
+		return sprintf(buf, "%u\n", dtcp_snd_lf_win(instance));
+	}
 	if (strcmp(robject_attr_name(attr), "rcv_rt_win_edge") == 0) {
 		return sprintf(buf, "%u\n", dtcp_rcv_rt_win(instance));
+	}
+	if (strcmp(robject_attr_name(attr), "rcv_lf_win_edge") == 0) {
+		return sprintf(buf, "%u\n", dtcp_rcv_lf_win(instance));
+	}
+	if (strcmp(robject_attr_name(attr), "snd_window_size") == 0) {
+		return sprintf(buf, "%u\n", dtcp_snd_window_size(instance));
 	}
 	/* Rate based */
 	if (strcmp(robject_attr_name(attr), "pdus_per_time_unit") == 0) {
@@ -1046,7 +1130,6 @@ static int populate_ctrl_pci(struct pci *  pci,
                         snd_lft = snd_lft_win(dtcp);
                         snd_rt  = snd_rt_wind_edge(dtcp);
 
-                        pci_control_new_left_wind_edge_set(pci, LWE);
                         pci_control_new_rt_wind_edge_set(pci,
 				rcvr_rt_wind_edge(dtcp));
 
@@ -1245,7 +1328,8 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
         tf = pci_control_time_frame(pci);
 
         if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
-        	snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
+        	snd_rt_win_edge_and_size_set(dtcp,
+        				     pci_control_new_rt_wind_edge(pci));
         }
 
         if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
@@ -1297,7 +1381,8 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         rcu_read_unlock();
 
 	if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
-		snd_rt_wind_edge_set(dtcp, pci_control_new_rt_wind_edge(pci));
+        	snd_rt_win_edge_and_size_set(dtcp,
+        				     pci_control_new_rt_wind_edge(pci));
 		LOG_DBG("Right Window Edge: %u", snd_rt_wind_edge(dtcp));
 	}
 
@@ -1621,6 +1706,8 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
                                 ps->flowctrl.window.initial_credit;
                         instance->sv->rcvr_rt_wind_edge =
                                 ps->flowctrl.window.initial_credit;
+                        instance->sv->snd_window_size =
+                                ps->flowctrl.window.initial_credit;
                 }
                 if (ps->flowctrl.rate_based) {
                         instance->sv->sndr_rate =
@@ -1930,8 +2017,8 @@ struct dtcp * dtcp_create(struct dt *          dt,
         if (dtcp_flow_ctrl(dtcp_cfg)) {
 		RINA_DECLARE_AND_ADD_ATTRS(&tmp->robj, dtcp, closed_win_q_length, closed_win_q_size);
                 if (dtcp_window_based_fctrl(dtcp_cfg)) {
-			RINA_DECLARE_AND_ADD_ATTRS(&tmp->robj, dtcp, sndr_credit, rcvr_credit,
-				snd_rt_win_edge, rcv_rt_win_edge);
+			RINA_DECLARE_AND_ADD_ATTRS(&tmp->robj, dtcp, tx_credit, rx_credit, snd_window_size,
+				snd_rt_win_edge, rcv_rt_win_edge, snd_lf_win_edge, rcv_lf_win_edge);
 		}
                 if (dtcp_rate_based_fctrl(dtcp_cfg)) {
 			RINA_DECLARE_AND_ADD_ATTRS(&tmp->robj, dtcp, pdu_per_time_unit, time_unit,
@@ -2073,6 +2160,15 @@ int dtcp_snd_rt_win_set(struct dtcp * dtcp, seq_num_t rt_win_edge)
 }
 EXPORT_SYMBOL(dtcp_snd_rt_win_set);
 
+seq_num_t dtcp_rcv_lf_win(struct dtcp * dtcp)
+{
+        if (!dtcp || !dtcp->sv)
+                return -1;
+
+        return rcvr_lft_win(dtcp);
+}
+EXPORT_SYMBOL(dtcp_rcv_lf_win);
+
 seq_num_t dtcp_snd_lf_win(struct dtcp * dtcp)
 {
         if (!dtcp || !dtcp->sv)
@@ -2080,6 +2176,7 @@ seq_num_t dtcp_snd_lf_win(struct dtcp * dtcp)
 
         return snd_lft_win(dtcp);
 }
+EXPORT_SYMBOL(dtcp_snd_lf_win);
 
 int dtcp_snd_lf_win_set(struct dtcp * instance, seq_num_t seq_num)
 {
