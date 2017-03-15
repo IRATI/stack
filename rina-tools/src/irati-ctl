@@ -9,6 +9,8 @@ import socket
 import time
 import re
 
+VERSION="1.0.0"
+
 def printalo(byt):
     print(repr(byt).replace('\\n', '\n'))
 
@@ -28,6 +30,10 @@ def issue_command(s, cmd):
     s.sendall(bytes(cmd, 'ascii'))
     return get_response(s)
 
+class version_action(argparse.Action):
+    def __call__(self, parser, args, values, option_string=None):
+        print('rina-ctl {}'.format(VERSION))
+        setattr(args, self.dest, values)
 
 description = "Python tool to control the IRATI stack"
 epilog = "2016 Vincenzo Maffione <v.maffione@nextworks.it>"
@@ -38,11 +44,17 @@ argparser.add_argument('--unix-socket', help = "Path to IPCM unix socket",
                        type = str, default = "/var/run/ipcm-console.sock")
 argparser.add_argument('commands', metavar='CMD', type=str, nargs='*',
                        help='a positional argument for the IPCM console (e.g. "help")')
+argparser.add_argument('--version', action=version_action, nargs='*')
 args = argparser.parse_args()
 
 if len(args.commands) == 0:
     # assume help
     args.commands = ['help']
+    exit(0)
+
+if 'version' in args:
+    # show version and exit 
+    args.commands = ['version']
 
 s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 
