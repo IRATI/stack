@@ -30,6 +30,7 @@
 #include "rds/rmem.h"
 #include "rmt-ps.h"
 #include "pci.h"
+#include "policies.h"
 
 #define  N1_CYCLE_DURATION 100
 
@@ -334,18 +335,29 @@ rmt_ps_cas_create(struct rina_component * component)
         struct rmt * rmt = rmt_from_component(component);
         struct rmt_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
         struct cas_rmt_ps_data * data = rkzalloc(sizeof(*data), GFP_KERNEL);
+	struct rmt_config * rmt_cfg;
+	struct policy_parm * ps_param = NULL;
 
         if (!ps || !data) {
                 return NULL;
         }
 
-	/* FIXME: to be configured using rmt_config */
-	data->q_max = 200;
-
         ps->base.set_policy_set_param = rmt_cas_set_policy_set_param;
         ps->dm = rmt;
 
         ps->priv = data;
+
+	rmt_cfg = rmt_config_get(rmt);
+
+	if (rmt_cfg)
+		ps_param = policy_param_find(rmt_cfg->policy_set, "q_max");
+
+	if (!ps_param)
+		data->q_max = 200;
+	else
+		rmt_cas_set_policy_set_param(&ps->base,
+						policy_param_name(ps_param),
+						policy_param_value(ps_param));
 
         ps->rmt_q_create_policy = cas_rmt_q_create_policy;
         ps->rmt_q_destroy_policy = cas_rmt_q_destroy_policy;
@@ -377,7 +389,7 @@ static void rmt_ps_cas_destroy(struct ps_base * bps)
 }
 
 struct ps_factory rmt_factory = {
-        .owner          = THIS_MODULE,
+        .owner   = THIS_MODULE,
         .create  = rmt_ps_cas_create,
         .destroy = rmt_ps_cas_destroy,
 };
