@@ -1870,10 +1870,10 @@ static int eth_vlan_init(struct ipcp_factory_data * data)
 {
 	ASSERT(data == &eth_vlan_data);
 
-        bzero(data, sizeof(*data));
-        INIT_LIST_HEAD(&(data->instances));
+	bzero(data, sizeof(*data));
+	INIT_LIST_HEAD(&(data->instances));
 
-        INIT_LIST_HEAD(&data_instances_list);
+	INIT_LIST_HEAD(&data_instances_list);
 
 	memset(&data->ntfy, 0, sizeof(data->ntfy));
 	data->ntfy.notifier_call = eth_vlan_netdev_notify;
@@ -1884,15 +1884,31 @@ static int eth_vlan_init(struct ipcp_factory_data * data)
         return 0;
 }
 
+static int eth_vlan_init2(struct ipcp_factory_data * data)
+{
+	ASSERT(data == &eth_vlan_data);
+
+        LOG_INFO("Shim Wifi AP/STA initialized");
+
+        return 0;
+}
+
 static int eth_vlan_fini(struct ipcp_factory_data * data)
 {
 
-        ASSERT(data == &eth_vlan_data);
+	ASSERT(data == &eth_vlan_data);
 
-        ASSERT(list_empty(&(data->instances)));
+	ASSERT(list_empty(&(data->instances)));
 	unregister_netdevice_notifier(&data->ntfy);
 
-        return 0;
+	return 0;
+}
+
+static int eth_vlan_fini2(struct ipcp_factory_data * data)
+{
+
+	ASSERT(data == &eth_vlan_data);
+	return 0;
 }
 
 static void inst_cleanup(struct ipcp_instance * inst)
@@ -2132,6 +2148,13 @@ static struct ipcp_factory_ops eth_vlan_ops = {
         .destroy   = eth_vlan_destroy,
 };
 
+static struct ipcp_factory_ops eth_vlan_ops2 = {
+        .init      = eth_vlan_init2,
+        .fini      = eth_vlan_fini2,
+        .create    = eth_vlan_create,
+        .destroy   = eth_vlan_destroy,
+};
+
 static struct ipcp_factory * shim_eth_vlan = NULL;
 static struct ipcp_factory * shim_wifi_sta = NULL;
 static struct ipcp_factory * shim_wifi_ap = NULL;
@@ -2261,7 +2284,7 @@ static int __init mod_init(void)
         shim_wifi_ap = kipcm_ipcp_factory_register(default_kipcm,
                                            	   SHIM_WIFI_AP_NAME,
                                           	   &eth_vlan_data,
-						   &eth_vlan_ops);
+						   &eth_vlan_ops2);
         if (!shim_wifi_ap) {
         	kipcm_ipcp_factory_unregister(default_kipcm, shim_eth_vlan);
                 return -1;
@@ -2270,7 +2293,7 @@ static int __init mod_init(void)
         shim_wifi_sta = kipcm_ipcp_factory_register(default_kipcm,
                                            	    SHIM_WIFI_STA_NAME,
                                           	    &eth_vlan_data,
-						    &eth_vlan_ops);
+						    &eth_vlan_ops2);
         if (!shim_wifi_sta) {
         	kipcm_ipcp_factory_unregister(default_kipcm, shim_wifi_ap);
         	kipcm_ipcp_factory_unregister(default_kipcm, shim_eth_vlan);
