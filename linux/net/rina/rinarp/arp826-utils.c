@@ -180,8 +180,6 @@ EXPORT_SYMBOL(gpa_address_length);
 void gpa_dump(const struct gpa * gpa)
 {
         string_t * tmp;
-        string_t * p;
-        size_t    i;
 
         if (!gpa) {
                 LOG_DBG("GPA %pK: <null>", gpa);
@@ -192,19 +190,9 @@ void gpa_dump(const struct gpa * gpa)
                 return;
         }
 
-        tmp = rkmalloc(gpa->length * 2 + 1, GFP_ATOMIC);
-        if (!tmp) {
-                LOG_DBG("GPA %pK: <ouch!>", gpa);
-                return;
-        }
-
-        p = tmp;
-        for (i = 0; i < gpa->length; i++) {
-        	/* TODO next line results in an improper
-        	 * memory access, has to be fixed
-                p += sprintf(p, "%02X", gpa->address[i]); */
-        }
-        *(p + 1) = '\0';
+        tmp = gpa_address_to_string_gfp(GFP_ATOMIC, gpa);
+        if (!tmp)
+        	return;
 
         LOG_DBG("GPA %pK (%zd): 0x%s", gpa, gpa->length, tmp);
 
