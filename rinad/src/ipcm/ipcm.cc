@@ -227,7 +227,9 @@ ipcm_res_t IPCManager_::create_ipcp(
 
         //TODO: this should be moved to the factory
         //Moreover the API should be homgenized such that the
-        if (type != rina::NORMAL_IPC_PROCESS)
+        if (type != rina::NORMAL_IPC_PROCESS &&
+        		type != rina::SHIM_WIFI_IPC_PROCESS_AP &&
+			type != rina::SHIM_WIFI_IPC_PROCESS_STA)
         {
             // Shim IPC processes are set as initialized
             // immediately.

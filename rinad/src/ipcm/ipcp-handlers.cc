@@ -86,7 +86,9 @@ void IPCManager_::ipc_process_daemon_initialized_event_handler(
 		//Auto release the read lock
 		rina::WriteScopedLock writelock(ipcp->rwlock, false);
 
-		assert(ipcp->get_type() == rina::NORMAL_IPC_PROCESS);
+		assert(ipcp->get_type() == rina::NORMAL_IPC_PROCESS ||
+				ipcp->get_type() == rina::SHIM_WIFI_IPC_PROCESS_AP ||
+				ipcp->get_type() == rina::SHIM_WIFI_IPC_PROCESS_STA);
 
 		//Initialize
 		ipcp->setInitialized();

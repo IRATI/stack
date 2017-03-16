@@ -67,9 +67,20 @@ public:
         int dispatchSelectPolicySet(const std::string& path,
                                     const std::string& name,
                                     bool& got_in_userspace);
-private:
 
+        void assign_to_dif_request_handler(const rina::AssignToDIFRequestEvent& event);
+        void assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event);
+        void application_registration_request_handler(const rina::ApplicationRegistrationRequestEvent& event);
+        void app_reg_response_handler(const rina::IpcmRegisterApplicationResponseEvent& event);
+        void application_unregistration_handler(const rina::ApplicationUnregistrationRequestEvent& event);
+        void unreg_app_response_handler(const rina::IpcmUnregisterApplicationResponseEvent& event);
+
+private:
         ShimWifiIPCPProxy * ipcp_proxy;
+        std::map<unsigned int, rina::ApplicationRegistrationRequestEvent>
+                pending_app_registration_events;
+        std::map<unsigned int, rina::ApplicationUnregistrationRequestEvent>
+                pending_app_unregistration_events;
 };
 
 } //namespace rinad

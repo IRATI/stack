@@ -31,19 +31,6 @@
 
 namespace rinad {
 
-static void parse_path(const std::string& path, std::string& component,
-                       std::string& remainder)
-{
-        size_t dotpos = path.find_first_of('.');
-
-        component = path.substr(0, dotpos);
-        if (dotpos == std::string::npos || dotpos + 1 == path.size()) {
-                remainder = std::string();
-        } else {
-                remainder = path.substr(dotpos + 1);
-        }
-}
-
 pid_t hostapd_pid = 0;
 pid_t wpas_pid = 0;
 
@@ -126,7 +113,8 @@ void ShimWifiIPCProcessImpl::set_dif_information(const rina::DIFInformation& dif
 }
 
 const std::list<rina::Neighbor> ShimWifiIPCProcessImpl::get_neighbors() const {
-	return enrollment_task_->get_neighbors();
+	std::list<rina::Neighbor> neighbors;
+	return neighbors;
 }
 
 unsigned int ShimWifiIPCProcessImpl::get_address() const {
@@ -138,8 +126,7 @@ unsigned int ShimWifiIPCProcessImpl::get_address() const {
 	return dif_information_.dif_configuration_.address_;
 }
 
-unsigned int ShimWifiIPCProcessImpl::get_active_address()
-{
+unsigned int ShimWifiIPCProcessImpl::get_active_address() {
 	return 0;
 }
 
@@ -147,24 +134,241 @@ unsigned int ShimWifiIPCProcessImpl::get_old_address() {
 	return 0;
 }
 
-bool ShimWifiIPCProcessImpl::check_address_is_mine(unsigned int address)
-{
+bool ShimWifiIPCProcessImpl::check_address_is_mine(unsigned int address) {
 	return false;
 }
 
-void ShimWifiIPCProcessImpl::set_address(unsigned int address)
-{
+void ShimWifiIPCProcessImpl::set_address(unsigned int address) {
 }
 
-void ShimWifiIPCProcessImpl::requestPDUFTEDump()
-{
+void ShimWifiIPCProcessImpl::requestPDUFTEDump() {
 }
 
 int ShimWifiIPCProcessImpl::dispatchSelectPolicySet(const std::string& path,
                                             	    const std::string& name,
-						    bool& got_in_userspace)
-{
+						    bool& got_in_userspace) {
+	return 0;
 }
 
+void ShimWifiIPCProcessImpl::assign_to_dif_request_handler(const rina::AssignToDIFRequestEvent& event)
+{
+	rina::ScopedLock g(*lock_);
+
+	if (state != INITIALIZED) {
+		//The IPC Process can only be assigned to a DIF once, reply with error message
+		LOG_IPCP_ERR("Got a DIF assignment request while not in INITIALIZED state. Current state is: %d",
+				state);
+		rina::extendedIPCManager->assignToDIFResponse(event, -1);
+		return;
+	}
+
+	try {
+		//Do not register to VLAN in the interfaces, this is a shim Wifi
+		dif_information_ = event.difInformation;
+		dif_information_.dif_name_.processName = "0";
+		dif_information_.dif_type_ = rina::SHIM_ETH_VLAN_IPC_PROCESS;
+		ipcp_proxy->assignToDIF(dif_information_, event.sequenceNumber);
+		pending_events_.insert(std::pair<unsigned int,
+						 rina::AssignToDIFRequestEvent>(event.sequenceNumber, event));
+		state = ASSIGN_TO_DIF_IN_PROCESS;
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems sending DIF Assignment request to the kernel: %s", e.what());
+		rina::extendedIPCManager->assignToDIFResponse(event, -1);
+	}
+}
+
+void ShimWifiIPCProcessImpl::assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event)
+{
+	rina::ScopedLock g(*lock_);
+
+	if (state == ASSIGNED_TO_DIF ) {
+		LOG_IPCP_INFO("Got reply from the Kernel components regarding DIF assignment: %d",
+				event.result);
+		return;
+	}
+
+	if (state != ASSIGN_TO_DIF_IN_PROCESS) {
+		LOG_IPCP_ERR("Got a DIF assignment response while not in ASSIGN_TO_DIF_IN_PROCESS state. State is %d ",
+				state);
+		return;
+	}
+
+	std::map<unsigned int, rina::AssignToDIFRequestEvent>::iterator it;
+	it = pending_events_.find(event.sequenceNumber);
+	if (it == pending_events_.end()) {
+		LOG_IPCP_ERR("Couldn't find an Assign to DIF request event associated to the handle %u",
+				event.sequenceNumber);
+		return;
+	}
+
+	rina::AssignToDIFRequestEvent requestEvent = it->second;
+	pending_events_.erase(it);
+	if (event.result != 0) {
+		LOG_IPCP_ERR("The kernel couldn't successfully process the Assign to DIF Request: %d",
+				event.result);
+		LOG_IPCP_ERR("Could not assign IPC Process to DIF %s",
+				it->second.difInformation.dif_name_.processName.c_str());
+		state = INITIALIZED;
+
+		try {
+			rina::extendedIPCManager->assignToDIFResponse(requestEvent, -1);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		}
+
+		return;
+	}
+
+	LOG_IPCP_DBG("The kernel processed successfully the Assign to DIF request");
+	dif_information_ = requestEvent.difInformation;
+	state = ASSIGNED_TO_DIF;
+
+	try {
+		rina::extendedIPCManager->assignToDIFResponse(requestEvent, 0);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+	}
+}
+
+void ShimWifiIPCProcessImpl::application_registration_request_handler(const rina::ApplicationRegistrationRequestEvent& event)
+{
+	rina::ScopedLock g(*lock_);
+
+	if (state != INITIALIZED && state != ASSIGNED_TO_DIF) {
+		//Applications cannot be registeered until the IPC Process is initialised
+		LOG_IPCP_ERR("Got an application registration request while not in "
+				"INITIALIZED or ASSIGNED_TO_DIF state. Current state is: %d",
+				state);
+		rina::extendedIPCManager->registerApplicationResponse(event, -1);
+		return;
+	}
+
+	try {
+		ipcp_proxy->registerApplication(event.applicationRegistrationInformation.appName,
+						event.applicationRegistrationInformation.dafName,
+						event.applicationRegistrationInformation.ipcProcessId,
+						event.applicationRegistrationInformation.difName,
+						event.sequenceNumber);
+		pending_app_registration_events.insert(std::pair<unsigned int,
+				rina::ApplicationRegistrationRequestEvent>(event.sequenceNumber, event));
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems sending application registration request to the kernel: %s", e.what());
+		rina::extendedIPCManager->registerApplicationResponse(event, -1);
+	}
+}
+
+void ShimWifiIPCProcessImpl::app_reg_response_handler(const rina::IpcmRegisterApplicationResponseEvent& event)
+{
+	rina::ScopedLock g(*lock_);
+
+	if (state != INITIALIZED && state != ASSIGNED_TO_DIF) {
+		LOG_IPCP_ERR("Got a DIF assignment response while not in INITIALIZED "
+				"or ASSIGNED_TO_DIF state. State is %d ",
+				state);
+		return;
+	}
+
+	std::map<unsigned int, rina::ApplicationRegistrationRequestEvent>::iterator it;
+	it = pending_app_registration_events.find(event.sequenceNumber);
+	if (it == pending_app_registration_events.end()) {
+		LOG_IPCP_ERR("Couldn't find an Application Registration request event associated to the handle %u",
+				event.sequenceNumber);
+		return;
+	}
+
+	rina::ApplicationRegistrationRequestEvent requestEvent = it->second;
+	pending_app_registration_events.erase(it);
+	if (event.result != 0) {
+		LOG_IPCP_ERR("The kernel couldn't successfully process the Application Registration request: %d",
+				event.result);
+		LOG_IPCP_ERR("Could not register application to DIF %s",
+				it->second.applicationRegistrationInformation.toString().c_str());
+
+		try {
+			rina::extendedIPCManager->registerApplicationResponse(requestEvent, -1);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		}
+
+		return;
+	}
+
+	LOG_IPCP_DBG("The kernel processed successfully the register application request");
+	try {
+		rina::extendedIPCManager->registerApplicationResponse(requestEvent, 0);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+	}
+}
+
+void ShimWifiIPCProcessImpl::application_unregistration_handler(const rina::ApplicationUnregistrationRequestEvent& event)
+{
+	rina::ScopedLock g(*lock_);
+
+	if (state != INITIALIZED && state != ASSIGNED_TO_DIF) {
+		//Applications cannot be registered until the IPC Process is initialised
+		LOG_IPCP_ERR("Got an application unregistration request while not in "
+				"INITIALIZED or ASSIGNED_TO_DIF state. Current state is: %d",
+				state);
+		rina::extendedIPCManager->unregisterApplicationResponse(event, -1);
+		return;
+	}
+
+	try {
+		ipcp_proxy->unregisterApplication(event.applicationName,
+						  event.DIFName,
+						  event.sequenceNumber);
+		pending_app_unregistration_events.insert(std::pair<unsigned int,
+				rina::ApplicationUnregistrationRequestEvent>(event.sequenceNumber, event));
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems sending application unregistration request to the kernel: %s", e.what());
+		rina::extendedIPCManager->unregisterApplicationResponse(event, -1);
+	}
+}
+
+void ShimWifiIPCProcessImpl::unreg_app_response_handler(const rina::IpcmUnregisterApplicationResponseEvent& event)
+{
+	rina::ScopedLock g(*lock_);
+
+	if (state != INITIALIZED && state != ASSIGNED_TO_DIF) {
+		LOG_IPCP_ERR("Got a DIF assignment response while not in INITIALIZED "
+				"or ASSIGNED_TO_DIF state. State is %d ",
+				state);
+		return;
+	}
+
+	std::map<unsigned int, rina::ApplicationUnregistrationRequestEvent>::iterator it;
+	it = pending_app_unregistration_events.find(event.sequenceNumber);
+	if (it == pending_app_unregistration_events.end()) {
+		LOG_IPCP_ERR("Couldn't find an Application Unregistration request event associated to the handle %u",
+				event.sequenceNumber);
+		return;
+	}
+
+	rina::ApplicationUnregistrationRequestEvent requestEvent = it->second;
+	pending_app_unregistration_events.erase(it);
+	if (event.result != 0) {
+		LOG_IPCP_ERR("The kernel couldn't successfully process the Application Unregistration request: %d",
+				event.result);
+		LOG_IPCP_ERR("Could not unregister application %s from DIF %s",
+				it->second.applicationName.getEncodedString().c_str(),
+				it->second.DIFName.processName.c_str());
+
+		try {
+			rina::extendedIPCManager->unregisterApplicationResponse(requestEvent, -1);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		}
+
+		return;
+	}
+
+	LOG_IPCP_DBG("The kernel processed successfully the unregister application request");
+	try {
+		rina::extendedIPCManager->unregisterApplicationResponse(requestEvent, 0);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+	}
+}
 
 } //namespace rinad
