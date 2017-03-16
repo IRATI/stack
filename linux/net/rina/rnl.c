@@ -35,7 +35,7 @@
 #define RNL_WQ_NAME  "rnl-wq"
 
 #define NETLINK_RINA_C_MIN (RINA_C_MIN + 1)
-#define NETLINK_RINA_C_MAX (RINA_C_MAX - 1)
+#define NETLINK_RINA_C_MAX (RINA_C_MAX)
 
 /* FIXME: This should be done more "dynamically" */
 #define NETLINK_RINA_A_MAX ICCA_ATTR_MAX

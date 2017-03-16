@@ -1069,6 +1069,7 @@ static int eth_vlan_rcv_worker(void * o)
         struct shim_eth_flow *          flow;
         struct rcv_work_data *          wdata;
         struct net_device *             dev;
+        string_t * 			gpastr;
 
         LOG_DBG("Worker waking up, going to create a flow");
 
@@ -1136,13 +1137,22 @@ static int eth_vlan_rcv_worker(void * o)
                         return -1;
                 }
 
-                sname = string_toname_ni(gpa_address_value(gpaddr));
-                if (!sname) {
-                        LOG_ERR("Failed to convert name to string");
+                gpastr = gpa_address_to_string_gfp(GFP_KERNEL, gpaddr);
+                if (!gpastr) {
+                	LOG_ERR("Failed to convert GPA address to string");
                         kfa_port_id_release(data->kfa, flow->port_id);
                         unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
+                sname = string_toname_ni(gpastr);
+                if (!sname) {
+                        LOG_ERR("Failed to convert name to string");
+                        kfree(gpastr);
+                        kfa_port_id_release(data->kfa, flow->port_id);
+                        unbind_and_destroy_flow(data, flow);
+                        return -1;
+                }
+                kfree(gpastr);
 
                 LOG_DBG("Got the address from ARP");
         } else {

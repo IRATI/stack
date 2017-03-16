@@ -1578,7 +1578,7 @@ static int notify_ipcp_address_change(void *             data,
                                       struct sk_buff *   buff,
                                       struct genl_info * info)
 {
-        struct kipcm * kipcm = default_kipcm;
+        struct kipcm * kipcm = data;
         struct rnl_ipcp_address_change_req_msg_attrs * attrs;
         struct rnl_msg * msg;
         struct ipcp_instance * ipc_process;
@@ -1589,9 +1589,6 @@ static int notify_ipcp_address_change(void *             data,
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
                 return -1;
         }
-
-        LOG_INFO("Address change pointers: KIPCM %pK, default KIPCM %pK",
-        	 data, kipcm);
 
         if (!info) {
                 LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
