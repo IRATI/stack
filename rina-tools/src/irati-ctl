@@ -38,7 +38,13 @@ argparser.add_argument('--unix-socket', help = "Path to IPCM unix socket",
                        type = str, default = "/var/run/ipcm-console.sock")
 argparser.add_argument('commands', metavar='CMD', type=str, nargs='*',
                        help='a positional argument for the IPCM console (e.g. "help")')
+argparser.add_argument('--version', help = "Show the version and exit",
+                       action = 'store_true')
 args = argparser.parse_args()
+
+if args.version:
+    print('irati-ctl 1.0.0')
+    quit(0)
 
 if len(args.commands) == 0:
     # assume help
