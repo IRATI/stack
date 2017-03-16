@@ -83,6 +83,8 @@ public:
         virtual void update_dif_config_handler(const rina::UpdateDIFConfigurationRequestEvent& event) = 0;
         virtual void app_reg_response_handler(const rina::IpcmRegisterApplicationResponseEvent& event) = 0;
         virtual void unreg_app_response_handler(const rina::IpcmUnregisterApplicationResponseEvent& event) = 0;
+        virtual void ipcm_allocate_flow_request_result_handler(const rina::IpcmAllocateFlowRequestResultEvent& event) = 0;
+        virtual void ipcm_deallocate_flow_response_event_handler(const rina::IpcmDeallocateFlowResponseEvent& event) = 0;
         // Cause relevant IPCP components to sync with information
         // exported by the kernel via sysfs
         virtual void sync_with_kernel() = 0;
@@ -146,6 +148,8 @@ public:
         virtual void update_dif_config_handler(const rina::UpdateDIFConfigurationRequestEvent& event);
         virtual void app_reg_response_handler(const rina::IpcmRegisterApplicationResponseEvent& event);
         virtual void unreg_app_response_handler(const rina::IpcmUnregisterApplicationResponseEvent& event);
+        virtual void ipcm_allocate_flow_request_result_handler(const rina::IpcmAllocateFlowRequestResultEvent& event);
+        virtual void ipcm_deallocate_flow_response_event_handler(const rina::IpcmDeallocateFlowResponseEvent& event);
 	virtual void sync_with_kernel(void);
 };
 

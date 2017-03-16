@@ -74,6 +74,11 @@ public:
         void app_reg_response_handler(const rina::IpcmRegisterApplicationResponseEvent& event);
         void application_unregistration_handler(const rina::ApplicationUnregistrationRequestEvent& event);
         void unreg_app_response_handler(const rina::IpcmUnregisterApplicationResponseEvent& event);
+        void flow_allocation_requested_handler(const rina::FlowRequestEvent& event);
+        void ipcm_allocate_flow_request_result_handler(const rina::IpcmAllocateFlowRequestResultEvent& event);
+        void allocate_flow_response_handler(const rina::AllocateFlowResponseEvent& event);
+        void flow_deallocation_requested_handler(const rina::FlowDeallocateRequestEvent& event);
+        void ipcm_deallocate_flow_response_event_handler(const rina::IpcmDeallocateFlowResponseEvent& event);
 
 private:
         ShimWifiIPCPProxy * ipcp_proxy;
@@ -81,6 +86,10 @@ private:
                 pending_app_registration_events;
         std::map<unsigned int, rina::ApplicationUnregistrationRequestEvent>
                 pending_app_unregistration_events;
+        std::map<unsigned int, rina::FlowRequestEvent>
+                pending_flow_allocation_events;
+        std::map<unsigned int, rina::FlowDeallocateRequestEvent>
+                pending_flow_deallocation_events;
 };
 
 } //namespace rinad

@@ -305,6 +305,18 @@ void AbstractIPCProcessImpl::event_loop(void)
 			unreg_app_response_handler(*event);
 		}
 		break;
+		case rina::IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
+		{
+			DOWNCAST_DECL(e, rina::IpcmAllocateFlowRequestResultEvent, event);
+			ipcm_allocate_flow_request_result_handler(*event);
+		}
+		break;
+		case rina::IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT:
+		{
+			DOWNCAST_DECL(e, rina::IpcmDeallocateFlowResponseEvent, event);
+			ipcm_deallocate_flow_response_event_handler(*event);
+		}
+		break;
 
 		//Unsupported events (they belong to the IPC Manager)
 		case rina::APPLICATION_REGISTRATION_CANCELED_EVENT:
@@ -313,8 +325,6 @@ void AbstractIPCProcessImpl::event_loop(void)
 		case rina::GET_DIF_PROPERTIES:
 		case rina::GET_DIF_PROPERTIES_RESPONSE_EVENT:
 		case rina::OS_PROCESS_FINALIZED:
-		case rina::IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT:
-		case rina::IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
 		case rina::QUERY_RIB_RESPONSE_EVENT:
 		case rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT:
 		case rina::TIMER_EXPIRED_EVENT:
@@ -491,6 +501,16 @@ void LazyIPCProcessImpl::app_reg_response_handler(const rina::IpcmRegisterApplic
 }
 
 void LazyIPCProcessImpl::unreg_app_response_handler(const rina::IpcmUnregisterApplicationResponseEvent& event)
+{
+	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
+}
+
+void LazyIPCProcessImpl::ipcm_allocate_flow_request_result_handler(const rina::IpcmAllocateFlowRequestResultEvent& event)
+{
+	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
+}
+
+void LazyIPCProcessImpl::ipcm_deallocate_flow_response_event_handler(const rina::IpcmDeallocateFlowResponseEvent& event)
 {
 	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
 }

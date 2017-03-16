@@ -155,7 +155,6 @@ void ShimWifiIPCProcessImpl::assign_to_dif_request_handler(const rina::AssignToD
 	rina::ScopedLock g(*lock_);
 
 	if (state != INITIALIZED) {
-		//The IPC Process can only be assigned to a DIF once, reply with error message
 		LOG_IPCP_ERR("Got a DIF assignment request while not in INITIALIZED state. Current state is: %d",
 				state);
 		rina::extendedIPCManager->assignToDIFResponse(event, -1);
@@ -235,7 +234,6 @@ void ShimWifiIPCProcessImpl::application_registration_request_handler(const rina
 	rina::ScopedLock g(*lock_);
 
 	if (state != INITIALIZED && state != ASSIGNED_TO_DIF) {
-		//Applications cannot be registeered until the IPC Process is initialised
 		LOG_IPCP_ERR("Got an application registration request while not in "
 				"INITIALIZED or ASSIGNED_TO_DIF state. Current state is: %d",
 				state);
@@ -306,7 +304,6 @@ void ShimWifiIPCProcessImpl::application_unregistration_handler(const rina::Appl
 	rina::ScopedLock g(*lock_);
 
 	if (state != INITIALIZED && state != ASSIGNED_TO_DIF) {
-		//Applications cannot be registered until the IPC Process is initialised
 		LOG_IPCP_ERR("Got an application unregistration request while not in "
 				"INITIALIZED or ASSIGNED_TO_DIF state. Current state is: %d",
 				state);
@@ -366,6 +363,162 @@ void ShimWifiIPCProcessImpl::unreg_app_response_handler(const rina::IpcmUnregist
 	LOG_IPCP_DBG("The kernel processed successfully the unregister application request");
 	try {
 		rina::extendedIPCManager->unregisterApplicationResponse(requestEvent, 0);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+	}
+}
+
+void ShimWifiIPCProcessImpl::flow_allocation_requested_handler(const rina::FlowRequestEvent& event)
+{
+	rina::ScopedLock g(*lock_);
+
+	if (state != ASSIGNED_TO_DIF) {
+		LOG_IPCP_ERR("Got a flow allocation request while not in "
+				"ASSIGNED_TO_DIF state. Current state is: %d",
+				state);
+		rina::extendedIPCManager->allocateFlowRequestResult(event, -1);
+		return;
+	}
+
+	try {
+		ipcp_proxy->allocateFlow(event,
+					 event.sequenceNumber);
+		pending_flow_allocation_events.insert(std::pair<unsigned int,
+				rina::FlowRequestEvent>(event.sequenceNumber, event));
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems sending flow allocation request to the kernel: %s", e.what());
+		rina::extendedIPCManager->allocateFlowRequestResult(event, -1);
+	}
+}
+
+void ShimWifiIPCProcessImpl::ipcm_allocate_flow_request_result_handler(const rina::IpcmAllocateFlowRequestResultEvent& event)
+{
+	rina::ScopedLock g(*lock_);
+
+	if (state != ASSIGNED_TO_DIF) {
+		LOG_IPCP_ERR("Got a flow allocation response while not in  "
+				"ASSIGNED_TO_DIF state. State is %d ",
+				state);
+		return;
+	}
+
+	std::map<unsigned int, rina::FlowRequestEvent>::iterator it;
+	it = pending_flow_allocation_events.find(event.sequenceNumber);
+	if (it == pending_flow_allocation_events.end()) {
+		LOG_IPCP_ERR("Couldn't find a flow allocation request event associated to the handle %u",
+				event.sequenceNumber);
+		return;
+	}
+
+	rina::FlowRequestEvent requestEvent = it->second;
+	pending_flow_allocation_events.erase(it);
+	if (event.result != 0) {
+		LOG_IPCP_ERR("The kernel couldn't successfully process the Flow allocation request: %d",
+				event.result);
+		LOG_IPCP_ERR("Could not allocate flow to %s",
+				it->second.remoteApplicationName.getEncodedString().c_str());
+
+		try {
+			rina::extendedIPCManager->allocateFlowRequestResult(requestEvent, -1);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		}
+
+		return;
+	}
+
+	LOG_IPCP_DBG("The kernel processed successfully the flow allocation request");
+	try {
+		rina::extendedIPCManager->allocateFlowRequestResult(requestEvent, 0);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+	}
+}
+
+void ShimWifiIPCProcessImpl::allocate_flow_response_handler(const rina::AllocateFlowResponseEvent& event)
+{
+	rina::ScopedLock g(*lock_);
+
+	if (state != ASSIGNED_TO_DIF) {
+		LOG_IPCP_ERR("Got a flow allocation request while not in "
+				"ASSIGNED_TO_DIF state. Current state is: %d",
+				state);
+		return;
+	}
+
+	try {
+		rina::FlowRequestEvent fre;
+		fre.sequenceNumber = event.sequenceNumber;
+		ipcp_proxy->allocateFlowResponse(fre,
+						 event.result,
+						 event.notifySource,
+						 event.flowAcceptorIpcProcessId);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems sending flow allocation response to the kernel: %s", e.what());
+	}
+}
+
+void ShimWifiIPCProcessImpl::flow_deallocation_requested_handler(const rina::FlowDeallocateRequestEvent& event)
+{
+	rina::ScopedLock g(*lock_);
+
+	if (state != ASSIGNED_TO_DIF) {
+		LOG_IPCP_ERR("Got a flow deallocation request while not in "
+				"ASSIGNED_TO_DIF state. Current state is: %d",
+				state);
+		rina::extendedIPCManager->flowDeallocationResult(event.portId, -1);
+		return;
+	}
+
+	try {
+		ipcp_proxy->deallocateFlow(event.portId, event.sequenceNumber);
+		pending_flow_deallocation_events.insert(std::pair<unsigned int,
+				rina::FlowDeallocateRequestEvent>(event.sequenceNumber, event));
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems sending flow deallocation request to the kernel: %s", e.what());
+		rina::extendedIPCManager->flowDeallocationResult(event.portId, -1);
+	}
+}
+
+void ShimWifiIPCProcessImpl::ipcm_deallocate_flow_response_event_handler(const rina::IpcmDeallocateFlowResponseEvent& event)
+{
+	rina::ScopedLock g(*lock_);
+
+	if (state != ASSIGNED_TO_DIF) {
+		LOG_IPCP_ERR("Got a flow deallocation response while not in  "
+				"ASSIGNED_TO_DIF state. State is %d ",
+				state);
+		return;
+	}
+
+	std::map<unsigned int, rina::FlowDeallocateRequestEvent>::iterator it;
+	it = pending_flow_deallocation_events.find(event.sequenceNumber);
+	if (it == pending_flow_deallocation_events.end()) {
+		LOG_IPCP_ERR("Couldn't find a flow deallocation request event associated to the handle %u",
+				event.sequenceNumber);
+		return;
+	}
+
+	rina::FlowDeallocateRequestEvent requestEvent = it->second;
+	pending_flow_deallocation_events.erase(it);
+	if (event.result != 0) {
+		LOG_IPCP_ERR("The kernel couldn't successfully process the Flow deallocation request: %d",
+				event.result);
+		LOG_IPCP_ERR("Could not deallocate flow at port-id %d",
+				it->second.portId);
+
+		try {
+			rina::extendedIPCManager->flowDeallocationResult(requestEvent.portId, -1);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		}
+
+		return;
+	}
+
+	LOG_IPCP_DBG("The kernel processed successfully the flow deallocation request");
+	try {
+		rina::extendedIPCManager->flowDeallocationResult(requestEvent.portId, 0);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
 	}
