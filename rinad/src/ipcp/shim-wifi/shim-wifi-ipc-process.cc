@@ -22,6 +22,7 @@
 #include <cstdlib>
 #include <sstream>
 #include <iostream>
+#include <signal.h>
 
 #define IPCP_MODULE "shim-wifi-ipcp"
 #include "ipcp-logging.h"
@@ -30,9 +31,6 @@
 #include "ipcp/ipc-process.h"
 
 namespace rinad {
-
-pid_t hostapd_pid = 0;
-pid_t wpas_pid = 0;
 
 //Class ShimWifiIPCPProxy
 ShimWifiIPCPProxy::ShimWifiIPCPProxy(unsigned short id,
@@ -51,12 +49,11 @@ ShimWifiIPCProcessImpl::ShimWifiIPCProcessImpl(const std::string& type,
 				std::string log_file) : IPCProcess(nm.processName, nm.processInstance),
 					       	       LazyIPCProcessImpl(nm, id, ipc_manager_port, log_level, log_file)
 {
-	pid_t wpid;
 	if (type == rina::SHIM_WIFI_IPC_PROCESS_AP) {
-		wpid = hostapd_pid;
-	} else if (type == rina::SHIM_WIFI_IPC_PROCESS_STA) {
-		wpid = wpas_pid;
-	} else {
+		LOG_IPCP_ERR("Shim WiFi IPCP, type %s not supported yet...",
+								type.c_str());
+		exit(EXIT_FAILURE);
+	} else if (type != rina::SHIM_WIFI_IPC_PROCESS_STA) {
 		LOG_IPCP_ERR("Could not create Shim WiFi IPCP, type %s not recognized",
 								type.c_str());
 	}
@@ -220,6 +217,65 @@ void ShimWifiIPCProcessImpl::assign_to_dif_response_handler(const rina::AssignTo
 
 	LOG_IPCP_DBG("The kernel processed successfully the Assign to DIF request");
 	dif_information_ = requestEvent.difInformation;
+
+	std::string if_name;
+	std::string prog;
+	std::string ctrl_if_path;
+	std::list<rina::PolicyParameter>::iterator itt;
+	for (itt = dif_information_.dif_configuration_.parameters_.begin();
+		itt != dif_information_.dif_configuration_.parameters_.end();
+		++itt) {
+			if (itt->name_ == "interface-name") {
+				if_name = itt->value_;
+				break;
+			}
+	}
+
+	cpid = fork();
+	if (cpid < 0) {
+		LOG_IPCP_ERR("Problems forking %s", prog.c_str());
+		exit(EXIT_FAILURE);
+	} else if (cpid == 0) {
+		//child
+
+		int dnfd;
+
+		dnfd = open("/dev/null", O_WRONLY);
+		dup2(dnfd, STDOUT_FILENO);
+		dup2(STDOUT_FILENO, STDERR_FILENO);
+
+
+		if (type == rina::SHIM_WIFI_IPC_PROCESS_STA) {
+			prog = "wpa_supplicant";
+			ctrl_if_path = "/var/run/wpa_supplicant/";
+			ctrl_if_path.append(if_name);
+			execlp("wpa_supplicant", "wpa_supplicant", "-Dnl80211",
+						"-i",
+						if_name.c_str(),
+						"-c/etc/wpa_supplicant.conf",
+						"-B",
+						NULL);
+		} else if (type == rina::SHIM_WIFI_IPC_PROCESS_AP) {
+			prog = "hostapd";
+			ctrl_if_path = "/var/run/hostapd/";
+			ctrl_if_path.append(if_name);
+			execlp("hostapd", "hostapd", NULL);
+		}
+
+		LOG_IPCP_ERR("Problems launching %s", prog.c_str());
+		exit(EXIT_FAILURE);
+	}
+
+	//parent
+	sleep(5); //This is ugly but we need to wait for hostapd/wpa_supplicant to be initialized
+
+	ctrl_if.wpa_ctrl = wpa_ctrl_open(ctrl_if_path.c_str());
+	if(ctrl_if.wpa_ctrl = NULL) {
+		LOG_IPCP_ERR("Problems connecting to %s ctrl iface", prog.c_str());
+		kill(cpid, SIGKILL);
+		exit(EXIT_FAILURE);
+	}
+
 	state = ASSIGNED_TO_DIF;
 
 	try {
