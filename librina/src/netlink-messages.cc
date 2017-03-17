@@ -352,6 +352,9 @@ const std::string BaseNetlinkMessage::operationCodeToString(RINANetlinkOperation
 	case RINA_C_IPCM_FWD_CDAP_MSG_RESPONSE:
 		result = "62_FWD_CDAP_MSG_RESP";
 	 	break;
+	case RINA_C_IPCM_MEDIA_REPORT:
+		result = "63_MEDIA_REPORT";
+	 	break;
 	default:
 		result = "Unknown operation";
 	}
@@ -2084,6 +2087,19 @@ IPCPAddressChangeRequestMessage::IPCPAddressChangeRequestMessage()
 
 IPCEvent* IPCPAddressChangeRequestMessage::toIPCEvent() {
         return 0;
+}
+
+/// CLASS IpcmMediaReportMessage
+IpcmMediaReportMessage::IpcmMediaReportMessage()
+	: BaseNetlinkMessage(RINA_C_IPCM_MEDIA_REPORT)
+{
+}
+
+IPCEvent* IpcmMediaReportMessage::toIPCEvent()
+{
+        IPCEvent * event = new MediaReportEvent(report,
+        					getSequenceNumber());
+        return event;
 }
 
 }

@@ -758,6 +758,25 @@ void ExtendedIPCManager::forwardCDAPResponse(unsigned int sequenceNumber,
 #endif
 }
 
+void ExtendedIPCManager::sendMediaReport(const MediaReport& report)
+{
+#if STUB_API
+	//Do nothing
+#else
+	IpcmMediaReportMessage message;
+
+	message.report = report;
+	message.setSourceIpcProcessId(ipcProcessId);
+	message.setDestPortId(ipcManagerPort);
+	message.setNotificationMessage(true);
+	try {
+		rinaManager->sendMessage(&message, false);
+	} catch (NetlinkException &e) {
+		throw IPCException(e.what());
+	}
+#endif
+}
+
 Singleton<ExtendedIPCManager> extendedIPCManager;
 
 /* CLASS CONNECTION */

@@ -971,4 +971,12 @@ TimerExpiredEvent::TimerExpiredEvent(unsigned int sequenceNumber) :
                 IPCEvent(TIMER_EXPIRED_EVENT, sequenceNumber)
 { }
 
+/* Class Media Report Event */
+MediaReportEvent::MediaReportEvent(const MediaReport& report,
+		 	 	   unsigned int sequenceNumber) :
+			 IPCEvent(IPCM_MEDIA_REPORT_EVENT, sequenceNumber)
+{
+	media_report = report;
+}
+
 }

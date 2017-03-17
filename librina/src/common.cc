@@ -487,8 +487,10 @@ const std::string IPCEvent::eventTypeToString(IPCEventType eventType) {
 	case DISCONNECT_NEIGHBOR_RESPONSE_EVENT:
 		result = "44_DISCONNECT_NEIGHBOR_RESPONSE_EVENT";
 		break;
+	case IPCM_MEDIA_REPORT_EVENT:
+		result = "45_MEDIA_REPORT_EVENT";
 	case NO_EVENT:
-		result = "45_NO_EVENT";
+		result = "46_NO_EVENT";
 		break;
 	default:
 		result = "Unknown event";

@@ -562,6 +562,15 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
                 }
                 return 0;
         }
+        case RINA_C_IPCM_MEDIA_REPORT: {
+        	IpcmMediaReportMessage * requestObject =
+                                dynamic_cast<IpcmMediaReportMessage *>(message);
+                if (putIpcmMediaReportMessageObject(netlinkMessage,
+                                        	    *requestObject) < 0) {
+                        return -1;
+                }
+                return 0;
+        }
 	default: {
 		return -1;
 	}
@@ -808,6 +817,9 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
         }
         case RINA_C_IPCP_ADDRESS_CHANGE_REQUEST: {
         	return parseIPCPAddressChangeRequestMessage(netlinkMessageHeader);
+        }
+        case RINA_C_IPCM_MEDIA_REPORT: {
+        	return parseIpcmMediaReportMessage(netlinkMessageHeader);
         }
 	default: {
 		LOG_ERR("Generic Netlink message contains unrecognized command code: %d",
@@ -5577,6 +5589,159 @@ int putIpcmFwdCDAPResponseMessageObject(nl_msg* netlinkMessage,
         return -1;
 }
 
+int putBaseStationInfo(nl_msg* netlinkMessage,
+		       const BaseStationInfo& object)
+{
+	NLA_PUT_STRING(netlinkMessage, BSINFO_ATTR_IPCP_ADDRESS,
+			object.ipcp_address.c_str());
+	NLA_PUT_U32(netlinkMessage, BSINFO_ATTR_SIGNAL_STRENGTH,
+			object.signal_strength);
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building BaseStationInfo "
+                        "Netlink object");
+        return -1;
+}
+
+int putListOfBaseStationInfo(nl_msg* netlinkMessage,
+			     const std::list<BaseStationInfo>& bs_list_info)
+{
+	std::list<BaseStationInfo>::const_iterator iterator;
+	struct nlattr *bs_info;
+	int i = 0;
+
+	for (iterator = bs_list_info.begin();
+			iterator != bs_list_info.end();
+			++iterator) {
+		if (!(bs_info = nla_nest_start(netlinkMessage, i))){
+			goto nla_put_failure;
+		}
+		if (putBaseStationInfo(netlinkMessage, *iterator) < 0) {
+			goto nla_put_failure;
+		}
+		nla_nest_end(netlinkMessage, bs_info);
+		i++;
+	}
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building list of BaseStationInfo Netlink object");
+	return -1;
+}
+
+int putMediaDIFInfo(nl_msg* netlinkMessage,
+		    const MediaDIFInfo& object)
+{
+	struct nlattr *bs_ipcps;
+
+	NLA_PUT_STRING(netlinkMessage, MEDINFO_ATTR_DIF_NAME,
+			object.dif_name.c_str());
+	NLA_PUT_STRING(netlinkMessage, MEDINFO_ATTR_SEC_POLICIES,
+			object.security_policies.c_str());
+
+        if (!(bs_ipcps = nla_nest_start(netlinkMessage, MEDINFO_ATTR_BS_IPCPS))) {
+                goto nla_put_failure;
+        }
+
+        if (putListOfBaseStationInfo(netlinkMessage,
+                           	     object.available_bs_ipcps) < 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, bs_ipcps);
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building MediaDIFInfo "
+                        "Netlink object");
+        return -1;
+}
+
+int putListOfMediaDIFInfo(nl_msg* netlinkMessage,
+			  const std::list<MediaDIFInfo>& dif_info)
+{
+	std::list<MediaDIFInfo>::const_iterator iterator;
+	struct nlattr *media_dif_info;
+	int i = 0;
+
+	for (iterator = dif_info.begin();
+			iterator != dif_info.end();
+			++iterator) {
+		if (!(media_dif_info = nla_nest_start(netlinkMessage, i))){
+			goto nla_put_failure;
+		}
+		if (putMediaDIFInfo(netlinkMessage, *iterator) < 0) {
+			goto nla_put_failure;
+		}
+		nla_nest_end(netlinkMessage, media_dif_info);
+		i++;
+	}
+
+	return 0;
+
+	nla_put_failure: LOG_ERR(
+			"Error building list of MediaDIFInfo Netlink object");
+	return -1;
+}
+
+int putMediaReport(nl_msg* netlinkMessage,
+                   const MediaReport& object)
+{
+	struct nlattr *available_difs;
+
+	NLA_PUT_U16(netlinkMessage, MEREP_ATTR_IPCP_ID, object.ipcp_id);
+	NLA_PUT_STRING(netlinkMessage, MEREP_ATTR_CDIF_NAME,
+			object.current_dif_name.c_str());
+	NLA_PUT_STRING(netlinkMessage, MEREP_ATTR_BS_IPCP_ADDR,
+			object.bs_ipcp_address.c_str());
+
+        if (!(available_difs = nla_nest_start(netlinkMessage, MEREP_ATTR_AVAILABLE_DIFS))) {
+                goto nla_put_failure;
+        }
+
+        if (putListOfMediaDIFInfo(netlinkMessage,
+                           	  object.available_difs) < 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, available_difs);
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building MediaReport "
+                        "Netlink object");
+        return -1;
+}
+
+int putIpcmMediaReportMessageObject(nl_msg* netlinkMessage,
+				    const IpcmMediaReportMessage& object)
+{
+	struct nlattr *report;
+
+        if (!(report = nla_nest_start(netlinkMessage, IMERE_ATTR_REPORT))) {
+                goto nla_put_failure;
+        }
+
+        if (putMediaReport(netlinkMessage,
+                           object.report) < 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, report);
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IpcmMediaReportMessage "
+                        "Netlink object");
+        return -1;
+}
+
 AppAllocateFlowRequestMessage * parseAppAllocateFlowRequestMessage(
 		nlmsghdr *hdr) {
 	struct nla_policy attr_policy[AAFR_ATTR_MAX + 1];
@@ -9663,6 +9828,186 @@ IPCPUpdateCryptoStateResponseMessage * parseIPCPUpdateCryptoStateResponseMessage
 
 	if (attrs[UCSREM_ATTR_N_1_PORT]) {
 		result->port_id = nla_get_u32(attrs[UCSREM_ATTR_N_1_PORT]);
+	}
+
+	return result;
+}
+
+void parseBaseStationInfo(nlattr *nested, std::list<BaseStationInfo>& stations)
+{
+	struct nla_policy attr_policy[BSINFO_ATTR_MAX + 1];
+	attr_policy[BSINFO_ATTR_IPCP_ADDRESS].type = NLA_STRING;
+	attr_policy[BSINFO_ATTR_IPCP_ADDRESS].minlen = 0;
+	attr_policy[BSINFO_ATTR_IPCP_ADDRESS].maxlen = 65535;
+	attr_policy[BSINFO_ATTR_SIGNAL_STRENGTH].type = NLA_U32;
+	attr_policy[BSINFO_ATTR_SIGNAL_STRENGTH].minlen = 4;
+	attr_policy[BSINFO_ATTR_SIGNAL_STRENGTH].maxlen = 4;
+	struct nlattr *attrs[BSINFO_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, BSINFO_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing Base Station information from Netlink message: %d",
+				err);
+		return;
+	}
+
+	BaseStationInfo bs_info;
+
+	if (attrs[BSINFO_ATTR_IPCP_ADDRESS]) {
+		bs_info.ipcp_address = std::string(nla_get_string(attrs[BSINFO_ATTR_IPCP_ADDRESS]),
+					           nla_len(attrs[BSINFO_ATTR_IPCP_ADDRESS]) -1);
+	}
+
+	if (attrs[BSINFO_ATTR_SIGNAL_STRENGTH]) {
+		bs_info.signal_strength = nla_get_u32(attrs[BSINFO_ATTR_SIGNAL_STRENGTH]);
+	}
+
+	stations.push_back(bs_info);
+}
+
+int parseListOfBaseStationInfo(nlattr *nested, MediaDIFInfo & mediadif)
+{
+        nlattr * nla;
+        int rem;
+
+        for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
+                     nla_ok(nla, rem);
+                     nla = nla_next(nla, &(rem))){
+                /* validate & parse attribute */
+        	parseBaseStationInfo(nla, mediadif.available_bs_ipcps);
+        }
+
+        if (rem > 0){
+                LOG_WARN("Missing bits to parse");
+        }
+
+        return 0;
+}
+
+void parseMediaDIFInfo(nlattr *nested, std::list<MediaDIFInfo>& difs)
+{
+	struct nla_policy attr_policy[MEDINFO_ATTR_MAX + 1];
+	attr_policy[MEDINFO_ATTR_DIF_NAME].type = NLA_STRING;
+	attr_policy[MEDINFO_ATTR_DIF_NAME].minlen = 0;
+	attr_policy[MEDINFO_ATTR_DIF_NAME].maxlen = 65535;
+	attr_policy[MEDINFO_ATTR_SEC_POLICIES].type = NLA_STRING;
+	attr_policy[MEDINFO_ATTR_SEC_POLICIES].minlen = 0;
+	attr_policy[MEDINFO_ATTR_SEC_POLICIES].maxlen = 65535;
+	attr_policy[MEDINFO_ATTR_BS_IPCPS].type = NLA_NESTED;
+	attr_policy[MEDINFO_ATTR_BS_IPCPS].minlen = 0;
+	attr_policy[MEDINFO_ATTR_BS_IPCPS].maxlen = 0;
+	struct nlattr *attrs[MEDINFO_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, MEDINFO_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing Media DIF information from Netlink message: %d",
+				err);
+		return;
+	}
+
+	MediaDIFInfo dif_info;
+
+	if (attrs[MEDINFO_ATTR_DIF_NAME]) {
+		dif_info.dif_name = std::string(nla_get_string(attrs[MEDINFO_ATTR_DIF_NAME]),
+					        nla_len(attrs[MEDINFO_ATTR_DIF_NAME]) -1);
+	}
+
+	if (attrs[MEDINFO_ATTR_SEC_POLICIES]) {
+		dif_info.security_policies = std::string(nla_get_string(attrs[MEDINFO_ATTR_SEC_POLICIES]),
+						    	 nla_len(attrs[MEDINFO_ATTR_SEC_POLICIES]) -1);
+	}
+
+	if (attrs[MEDINFO_ATTR_BS_IPCPS]) {
+		parseListOfBaseStationInfo(attrs[MEDINFO_ATTR_BS_IPCPS], dif_info);
+	}
+
+	difs.push_back(dif_info);
+}
+
+int parseListOfMediaDIFInfo(nlattr *nested, MediaReport & report)
+{
+        nlattr * nla;
+        int rem;
+
+        for (nla = (nlattr*) nla_data(nested), rem = nla_len(nested);
+                     nla_ok(nla, rem);
+                     nla = nla_next(nla, &(rem))){
+                /* validate & parse attribute */
+        	parseMediaDIFInfo(nla, report.available_difs);
+        }
+
+        if (rem > 0){
+                LOG_WARN("Missing bits to parse");
+        }
+
+        return 0;
+}
+
+void parseMediaReport(nlattr *nested,
+		      IpcmMediaReportMessage * result)
+{
+	struct nla_policy attr_policy[MEREP_ATTR_MAX + 1];
+	attr_policy[MEREP_ATTR_IPCP_ID].type = NLA_U16;
+	attr_policy[MEREP_ATTR_IPCP_ID].minlen = 2;
+	attr_policy[MEREP_ATTR_IPCP_ID].maxlen = 2;
+	attr_policy[MEREP_ATTR_CDIF_NAME].type = NLA_STRING;
+	attr_policy[MEREP_ATTR_CDIF_NAME].minlen = 0;
+	attr_policy[MEREP_ATTR_CDIF_NAME].maxlen = 65535;
+	attr_policy[MEREP_ATTR_BS_IPCP_ADDR].type = NLA_STRING;
+	attr_policy[MEREP_ATTR_BS_IPCP_ADDR].minlen = 0;
+	attr_policy[MEREP_ATTR_BS_IPCP_ADDR].maxlen = 65535;
+	attr_policy[MEREP_ATTR_AVAILABLE_DIFS].type = NLA_NESTED;
+	attr_policy[MEREP_ATTR_AVAILABLE_DIFS].minlen = 0;
+	attr_policy[MEREP_ATTR_AVAILABLE_DIFS].maxlen = 0;
+	struct nlattr *attrs[MEREP_ATTR_MAX + 1];
+
+	int err = nla_parse_nested(attrs, MEREP_ATTR_MAX, nested, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing MediaReport information from Netlink message: %d",
+				err);
+		return;
+	}
+
+	if (attrs[MEREP_ATTR_IPCP_ID]) {
+		result->report.ipcp_id = nla_get_u16(attrs[MEREP_ATTR_IPCP_ID]);
+	}
+
+	if (attrs[MEREP_ATTR_CDIF_NAME]) {
+		result->report.current_dif_name = std::string(nla_get_string(attrs[MEREP_ATTR_CDIF_NAME]),
+						    	      nla_len(attrs[MEREP_ATTR_CDIF_NAME]) -1);
+	}
+
+	if (attrs[MEREP_ATTR_BS_IPCP_ADDR]) {
+		result->report.bs_ipcp_address = std::string(nla_get_string(attrs[MEREP_ATTR_BS_IPCP_ADDR]),
+						    	     nla_len(attrs[MEREP_ATTR_BS_IPCP_ADDR]) -1);
+	}
+
+	if (attrs[MEREP_ATTR_AVAILABLE_DIFS]) {
+		parseListOfMediaDIFInfo(attrs[MEREP_ATTR_AVAILABLE_DIFS], result->report);
+	}
+}
+
+IpcmMediaReportMessage * parseIpcmMediaReportMessage(nlmsghdr *hdr)
+{
+	struct nla_policy attr_policy[IMERE_ATTR_MAX + 1];
+        attr_policy[IMERE_ATTR_REPORT].type = NLA_NESTED;
+        attr_policy[IMERE_ATTR_REPORT].minlen = 0;
+        attr_policy[IMERE_ATTR_REPORT].maxlen = 0;
+	struct nlattr *attrs[IMERE_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			IMERE_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing IpcmMediaReportMessage "
+                        "information from Netlink message: %d", err);
+		return 0;
+	}
+
+	IpcmMediaReportMessage * result =
+			new IpcmMediaReportMessage();
+
+	if (attrs[IMERE_ATTR_REPORT]) {
+		parseMediaReport(attrs[IMERE_ATTR_REPORT], result);
 	}
 
 	return result;
