@@ -67,6 +67,7 @@ ShimWifiIPCProcessImpl::ShimWifiIPCProcessImpl(const std::string& type,
         }
 
         ipcp_proxy = new ShimWifiIPCPProxy(id, type, nm);
+        wpa_conn = new WpaConnection(type);
 
         state = INITIALIZED;
 
@@ -231,50 +232,10 @@ void ShimWifiIPCProcessImpl::assign_to_dif_response_handler(const rina::AssignTo
 			}
 	}
 
-	cpid = fork();
-	if (cpid < 0) {
-		LOG_IPCP_ERR("Problems forking %s", prog.c_str());
-		exit(EXIT_FAILURE);
-	} else if (cpid == 0) {
-		//child
+	wpa_conn->launch_wpa(if_name);
+	sleep(5); //This is ugly but we need to wait for hostapd/wpa-supplicant to be initialized
 
-		int dnfd;
-
-		dnfd = open("/dev/null", O_WRONLY);
-		dup2(dnfd, STDOUT_FILENO);
-		dup2(STDOUT_FILENO, STDERR_FILENO);
-
-
-		if (type == rina::SHIM_WIFI_IPC_PROCESS_STA) {
-			prog = "wpa_supplicant";
-			ctrl_if_path = "/var/run/wpa_supplicant/";
-			ctrl_if_path.append(if_name);
-			execlp("wpa_supplicant", "wpa_supplicant", "-Dnl80211",
-						"-i",
-						if_name.c_str(),
-						"-c/etc/wpa_supplicant.conf",
-						"-B",
-						NULL);
-		} else if (type == rina::SHIM_WIFI_IPC_PROCESS_AP) {
-			prog = "hostapd";
-			ctrl_if_path = "/var/run/hostapd/";
-			ctrl_if_path.append(if_name);
-			execlp("hostapd", "hostapd", NULL);
-		}
-
-		LOG_IPCP_ERR("Problems launching %s", prog.c_str());
-		exit(EXIT_FAILURE);
-	}
-
-	//parent
-	sleep(5); //This is ugly but we need to wait for hostapd/wpa_supplicant to be initialized
-
-	ctrl_if.wpa_ctrl = wpa_ctrl_open(ctrl_if_path.c_str());
-	if(ctrl_if.wpa_ctrl = NULL) {
-		LOG_IPCP_ERR("Problems connecting to %s ctrl iface", prog.c_str());
-		kill(cpid, SIGKILL);
-		exit(EXIT_FAILURE);
-	}
+	wpa_conn->create_ctrl_connection(if_name);
 
 	state = ASSIGNED_TO_DIF;
 

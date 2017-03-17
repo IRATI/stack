@@ -17,7 +17,8 @@ shimwifi_CPPFLAGS = -I$(srcdir)/ipcp/shim-wifi/wpa_supplicant
 shimwifi_CFLAGS = -DCONFIG_CTRL_IFACE		\
 		-DCONFIG_CTRL_IFACE_UNIX
 
-shimwifi_SOURCES = shim-wifi/wpa_supplicant/wpa_ctrl.c	\
+shimwifi_SOURCES = 				\
+	shim-wifi/wpa_supplicant/wpa_ctrl.c	\
 	shim-wifi/wpa_supplicant/os_unix.c		
 
 
@@ -54,6 +55,8 @@ ipcp_SOURCES  =						\
 	normal-ipc-process.cc				\
 	shim-wifi/shim-wifi-ipc-process.cc		\
 	shim-wifi/shim-wifi-ipc-process.h		\
+	shim-wifi/wpa_connection.h			\
+	shim-wifi/wpa_connection.cc			\
 	$(shimwifi_SOURCES)
 
 ipcpheadersdir = $(includedir)/rinad/ipcp

@@ -26,10 +26,7 @@
 
 #include "ipcp/components.h"
 #include "ipcp/ipc-process.h"
-
-extern "C"{
-	#include "wpa_supplicant/wpa_ctrl.h"
-}
+#include "ipcp/shim-wifi/wpa_connection.h"
 
 namespace rinad {
 
@@ -95,12 +92,7 @@ private:
                 pending_flow_allocation_events;
         std::map<unsigned int, rina::FlowDeallocateRequestEvent>
                 pending_flow_deallocation_events;
-	//hostapd or wpa_supplicant process' pid
-	pid_t cpid;
-	union{
-		struct wpa_ctrl * wpa_ctrl;
-		//struct hostapd_ctrl * wpa_ctrl;
-	} ctrl_if;
+	WpaConnection * wpa_conn;
 };
 
 } //namespace rinad
