@@ -52,7 +52,7 @@ int			sdu_destroy(struct sdu * sdu);
 bool		is_sdu_ok(const struct sdu *sdu);
 ssize_t		sdu_len(const struct sdu *sdu);
 unsigned char	*sdu_buffer(const struct sdu *sdu);
-unsigned char   *sdu_partial_read(struct sdu* sdu, size_t size);
+void 		sdu_consume_data(struct sdu* sdu, size_t size);
 
 /* FIXME: these two have to be removed */
 struct sk_buff	*sdu_detach_skb(const struct sdu *sdu);

@@ -125,11 +125,9 @@ iodev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
 
         retsize = sdu_len(tmp);
         partial_read = retsize > size;
+        data = sdu_buffer(tmp);
         if (partial_read) {
-        	data = sdu_partial_read(tmp, size);
         	retsize = size;
-        } else {
-        	data = sdu_buffer(tmp);
         }
 
         if (copy_to_user(buffer, data, retsize)) {
@@ -138,7 +136,9 @@ iodev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
                 return -EIO;
         }
 
-        if (!partial_read) {
+        if (partial_read) {
+        	sdu_consume_data(tmp, size);
+        }else{
         	sdu_destroy(tmp);
         }
 
