@@ -35,6 +35,8 @@ namespace rinad {
 
 WpaConnection::WpaConnection(const std::string& type_) {
 	type = type_;
+	ctrl_conn = NULL;
+	mon_conn = NULL;
 
 	if (type == rina::SHIM_WIFI_IPC_PROCESS_AP)
 		prog_name = "hostapd";
@@ -46,7 +48,7 @@ WpaConnection::WpaConnection(const std::string& type_) {
 	state = WPA_CREATED;
 }
 
-void WpaConnection::launch_wpa(const std::string& wif_name){
+int WpaConnection::launch_wpa(const std::string& wif_name){
 	cpid = fork();
 	if (cpid < 0) {
 		LOG_IPCP_ERR("Problems forking %s", prog_name.c_str());
@@ -77,17 +79,18 @@ void WpaConnection::launch_wpa(const std::string& wif_name){
 		LOG_IPCP_DBG("%s launched with PID %d", prog_name.c_str(),
 									cpid);
 		state = WPA_LAUNCHED;
+		return 0;
 	}
 }
 
-void WpaConnection::create_ctrl_connection(const std::string& if_name) {
+int WpaConnection::create_ctrl_connection(const std::string& if_name) {
 	ctrl_conn = wpa_ctrl_open(if_name.c_str());
 	if (ctrl_conn = NULL) {
 		LOG_IPCP_ERR("Problems connecting to %s ctrl iface",
 							prog_name.c_str());
 		kill(cpid, SIGKILL);
 		state = WPA_KILLED;
-		throw rina::Exception();
+		return -1;
 	}
 	state = WPA_CONNECTED;
 
@@ -98,9 +101,39 @@ void WpaConnection::create_ctrl_connection(const std::string& if_name) {
 		wpa_ctrl_close(ctrl_conn);
 		kill(cpid, SIGKILL);
 		state = WPA_KILLED;
-		throw rina::Exception();
+		return -1;
 	}
 	state = WPA_ATTACHED;
+	return 0;
+}
+
+int WpaConnection::send_command(const std::string& cmd, bool print) {
+
+	char buf[4096];
+	size_t len;
+	int ret;
+
+	if (ctrl_conn == NULL) {
+		LOG_IPCP_ERR("Could not send command %s, not connected to %s ctrl iface",
+							cmd.c_str(),
+							prog_name.c_str());
+		return -1;
+	}
+
+	ret = wpa_ctrl_request(ctrl_conn, cmd.c_str(), cmd.length(), buf, &len,
+									NULL);
+	if (ret == -2) {
+		LOG_IPCP_ERR("'%s' command timed out.\n", cmd.c_str());
+		return -2;
+	} else if (ret < 0) {
+		printf("'%s' command failed.\n", cmd.c_str());
+		return -1;
+	}
+	if (print) {
+		buf[len] = '\0';
+		LOG_IPCP_DBG("%s", buf);
+	}
+	return 0;
 }
 
 

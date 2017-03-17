@@ -35,8 +35,9 @@ class WpaConnection {
 public:
 	WpaConnection(const std::string& type);
 	~WpaConnection();
-	void launch_wpa(const std::string& wif_name);
-	void create_ctrl_connection(const std::string& if_name);
+	int launch_wpa(const std::string& wif_name);
+	int create_ctrl_connection(const std::string& if_name);
+	int send_command(const std::string& cmd, bool print);
 
 private:
 	std::string prog_name;

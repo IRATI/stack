@@ -23,6 +23,7 @@
 #include <sstream>
 #include <iostream>
 #include <signal.h>
+#include <assert.h>
 
 #define IPCP_MODULE "shim-wifi-ipcp"
 #include "ipcp-logging.h"
@@ -152,6 +153,7 @@ void ShimWifiIPCProcessImpl::assign_to_dif_request_handler(const rina::AssignToD
 {
 	rina::ScopedLock g(*lock_);
 
+
 	if (state != INITIALIZED) {
 		LOG_IPCP_ERR("Got a DIF assignment request while not in INITIALIZED state. Current state is: %d",
 				state);
@@ -176,6 +178,7 @@ void ShimWifiIPCProcessImpl::assign_to_dif_request_handler(const rina::AssignToD
 
 void ShimWifiIPCProcessImpl::assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event)
 {
+	int rv;
 	rina::ScopedLock g(*lock_);
 
 	if (state == ASSIGNED_TO_DIF ) {
@@ -232,10 +235,12 @@ void ShimWifiIPCProcessImpl::assign_to_dif_response_handler(const rina::AssignTo
 			}
 	}
 
-	wpa_conn->launch_wpa(if_name);
+	rv = wpa_conn->launch_wpa(if_name);
+	assert(rv == 0);
 	sleep(5); //This is ugly but we need to wait for hostapd/wpa-supplicant to be initialized
 
-	wpa_conn->create_ctrl_connection(if_name);
+	rv == wpa_conn->create_ctrl_connection(if_name);
+	assert(rv == 0);
 
 	state = ASSIGNED_TO_DIF;
 
