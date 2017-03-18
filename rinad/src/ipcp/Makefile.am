@@ -55,8 +55,8 @@ ipcp_SOURCES  =						\
 	normal-ipc-process.cc				\
 	shim-wifi/shim-wifi-ipc-process.cc		\
 	shim-wifi/shim-wifi-ipc-process.h		\
-	shim-wifi/wpa_connection.h			\
-	shim-wifi/wpa_connection.cc			\
+	shim-wifi/wpa_controller.h			\
+	shim-wifi/wpa_controller.cc			\
 	$(shimwifi_SOURCES)
 
 ipcpheadersdir = $(includedir)/rinad/ipcp

@@ -1,6 +1,6 @@
 //
-// Implementation of the shim WiFi IPC Process connection to the
-// hostapd/wpa-supplicant control interface
+// Implementation of the shim WiFi IPC Process' WPA controller to manage
+// hostapd/wpa-supplicant process and its control interface
 //
 //    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
 //
@@ -20,8 +20,8 @@
 // MA  02110-1301  USA
 //
 
-#ifndef WPA_CONNECTION_HH
-#define WPA_CONNECTION_HH
+#ifndef WPA_CONTROLLER_HH
+#define WPA_CONTROLLER_HH
 
 #include <string>
 
@@ -31,10 +31,10 @@ extern "C"{
 
 namespace rinad {
 
-class WpaConnection {
+class WpaController {
 public:
-	WpaConnection(const std::string& type);
-	~WpaConnection();
+	WpaController(const std::string& type);
+	~WpaController();
 	int launch_wpa(const std::string& wif_name);
 	int create_ctrl_connection(const std::string& if_name);
 	int send_command(const std::string& cmd, bool print);

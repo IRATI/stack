@@ -1,6 +1,6 @@
 //
-// Implementation of the shim WiFi IPC Process connection to the
-// hostapd/wpa-supplicant control interface
+// Implementation of the shim WiFi IPC Process' WPA controller to manage
+// hostapd/wpa-supplicant process and its control interface
 //
 //    Leonardo Bergesio <leonardo.bergesio@i2cat.net>
 //
@@ -23,7 +23,7 @@
 #define IPCP_MODULE "shim-wifi-ipcp"
 #include "ipcp-logging.h"
 #include "ipcp/ipc-process.h"
-#include "ipcp/shim-wifi/wpa_connection.h"
+#include "ipcp/shim-wifi/wpa_controller.h"
 #include <librina/common.h>
 #include <assert.h>
 #include <signal.h>
@@ -33,7 +33,7 @@ std::string WPA_CTRL_DIR = "/usr/local/irati/var/";
 
 namespace rinad {
 
-WpaConnection::WpaConnection(const std::string& type_) {
+WpaController::WpaController(const std::string& type_) {
 	type = type_;
 	ctrl_conn = NULL;
 	mon_conn = NULL;
@@ -48,7 +48,7 @@ WpaConnection::WpaConnection(const std::string& type_) {
 	state = WPA_CREATED;
 }
 
-int WpaConnection::launch_wpa(const std::string& wif_name){
+int WpaController::launch_wpa(const std::string& wif_name){
 	cpid = fork();
 	if (cpid < 0) {
 		LOG_IPCP_ERR("Problems forking %s", prog_name.c_str());
@@ -83,7 +83,7 @@ int WpaConnection::launch_wpa(const std::string& wif_name){
 	}
 }
 
-int WpaConnection::create_ctrl_connection(const std::string& if_name) {
+int WpaController::create_ctrl_connection(const std::string& if_name) {
 	ctrl_conn = wpa_ctrl_open(if_name.c_str());
 	if (ctrl_conn = NULL) {
 		LOG_IPCP_ERR("Problems connecting to %s ctrl iface",
@@ -107,7 +107,7 @@ int WpaConnection::create_ctrl_connection(const std::string& if_name) {
 	return 0;
 }
 
-int WpaConnection::send_command(const std::string& cmd, bool print) {
+int WpaController::send_command(const std::string& cmd, bool print) {
 
 	char buf[4096];
 	size_t len;

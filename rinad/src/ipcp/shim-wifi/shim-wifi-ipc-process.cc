@@ -68,7 +68,7 @@ ShimWifiIPCProcessImpl::ShimWifiIPCProcessImpl(const std::string& type,
         }
 
         ipcp_proxy = new ShimWifiIPCPProxy(id, type, nm);
-        wpa_conn = new WpaConnection(type);
+        wpa_conn = new WpaController(type);
 
         state = INITIALIZED;
 
