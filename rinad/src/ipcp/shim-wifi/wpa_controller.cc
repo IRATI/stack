@@ -62,12 +62,15 @@ int WpaController::launch_wpa(const std::string& wif_name){
 		dup2(dnfd, STDOUT_FILENO);
 		dup2(STDOUT_FILENO, STDERR_FILENO);
 
+		std::stringstream ss;
+		ss << base_dir << "/etc/" << wif_name << ".conf";
+
 		if (type == rina::SHIM_WIFI_IPC_PROCESS_STA) {
 			execlp(prog_name.c_str(), prog_name.c_str(),
 						"-Dnl80211",
 						"-i",
 						wif_name.c_str(),
-						WPA_CONF_FILE.c_str(),
+						ss.str().c_str(),
 						"-B",
 						NULL);
 		} else if (type == rina::SHIM_WIFI_IPC_PROCESS_AP) {
