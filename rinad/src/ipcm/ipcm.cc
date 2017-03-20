@@ -48,6 +48,7 @@
 #include "rina-configuration.h"
 #include "ipcm.h"
 #include "dif-validator.h"
+#include "mobility-manager.h"
 
 //Addons
 #include "addons/console.h"
@@ -88,7 +89,8 @@ IPCManager_::IPCManager_()
         : req_to_stop(false),
           io_thread(NULL),
           dif_template_manager(NULL),
-          dif_allocator(NULL)
+          dif_allocator(NULL),
+	  mobility_manager(NULL)
 {}
 
 IPCManager_::~IPCManager_()
@@ -102,6 +104,12 @@ IPCManager_::~IPCManager_()
     {
         delete dif_allocator;
     }
+
+    if (mobility_manager)
+    {
+        delete mobility_manager;
+    }
+
     forwarded_calls.clear();
 
     for (std::map<int, TransactionState*>::iterator
@@ -139,6 +147,7 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
         dif_allocator = new DIFAllocator(config_file);
         dif_template_manager = new DIFTemplateManager(config_file,
                                                       dif_allocator);
+        mobility_manager = new MobilityManager(&ipcp_factory_);
     } catch (rina::InitializationException& e)
     {
         LOG_ERR("Error while initializing librina-ipc-manager");
@@ -2193,6 +2202,11 @@ void IPCManager_::io_loop()
                 case rina::IPC_PROCESS_PLUGIN_LOAD_RESPONSE: {
                     DOWNCAST_DECL(event, rina::PluginLoadResponseEvent, e);
                     ipc_process_plugin_load_response_handler(e);
+                }
+                    break;
+                case rina::IPCM_MEDIA_REPORT_EVENT: {
+                    DOWNCAST_DECL(event, rina::MediaReportEvent, e);
+                    mobility_manager->media_reports_handler(e);
                 }
                     break;
 

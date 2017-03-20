@@ -39,6 +39,7 @@
 #include "dif-template-manager.h"
 #include "dif-allocator.h"
 #include "catalog.h"
+#include "mobility-manager.h"
 
 //Addons
 #include "addon.h"
@@ -578,12 +579,12 @@ public:
 		req_to_stop = true;
 	}
 
-		/// returns the forwarded object sent with invoke_id and
-		/// removes it from the map
-		/// @param invoke_id
-		/// @return rina::rib::DelegationObj*
-		delegated_stored_t* get_forwarded_object(int invoke_id,
-												 bool remove);
+	/// returns the forwarded object sent with invoke_id and
+	/// removes it from the map
+	/// @param invoke_id
+	/// @return rina::rib::DelegationObj*
+	delegated_stored_t* get_forwarded_object(int invoke_id,
+						 bool remove);
 
         //Generator of opaque identifiers
         rina::ConsecutiveUnsignedIntegerGenerator __tid_gen;
@@ -594,9 +595,11 @@ public:
         //The DIF Allocator
         DIFAllocator * dif_allocator;
 
+        //The Mobility Manager
+        MobilityManager * mobility_manager;
+
         //Catalog of policies
         Catalog catalog;
-
 
 protected:
 

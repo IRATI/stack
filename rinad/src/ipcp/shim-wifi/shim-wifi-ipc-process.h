@@ -79,6 +79,7 @@ public:
         void allocate_flow_response_handler(const rina::AllocateFlowResponseEvent& event);
         void flow_deallocation_requested_handler(const rina::FlowDeallocateRequestEvent& event);
         void ipcm_deallocate_flow_response_event_handler(const rina::IpcmDeallocateFlowResponseEvent& event);
+        void enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event);
 
 private:
         ShimWifiIPCPProxy * ipcp_proxy;

@@ -524,4 +524,51 @@ void ShimWifiIPCProcessImpl::ipcm_deallocate_flow_response_event_handler(const r
 	}
 }
 
+// This function will attach to the SSID and BSSID specified by the enrollment request event,
+// triggering a handover if needed
+void ShimWifiIPCProcessImpl::enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event)
+{
+	std::list<rina::Neighbor> neighbors;
+	rina::Neighbor ap;
+	rina::ScopedLock g(*lock_);
+
+	if (state != ASSIGNED_TO_DIF) {
+		LOG_IPCP_ERR("Got a enroll to DIF request while not in  "
+				"ASSIGNED_TO_DIF state. State is %d ",
+				state);
+		try {
+			rina::extendedIPCManager->enrollToDIFResponse(event,
+								      -1,
+								      neighbors,
+								      dif_information_);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		}
+
+		return;
+	}
+
+	LOG_IPCP_DBG("Attaching to SSID %s and BSSID %s",
+		     event.dafName.processName.c_str(),
+		     event.neighborName.processName.c_str());
+
+	//TODO carry out attachment/re-attachment
+
+	LOG_IPCP_DBG("Attachment successful!");
+	ap.name_ = event.neighborName;
+	ap.enrolled_ = true;
+	neighbors.push_back(ap);
+
+	try {
+		rina::extendedIPCManager->enrollToDIFResponse(event,
+							      0,
+							      neighbors,
+							      dif_information_);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+	}
+
+	return;
+}
+
 } //namespace rinad
