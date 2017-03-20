@@ -31,6 +31,7 @@
 namespace rinad {
 
 class ShimWifiIPCProcessImpl;
+class ShimWifiScanTask;
 
 /// Proxy to interact with the Shim Wifi IPC Process components
 /// in the kernel and those implemented by WPASupplicant or
@@ -84,6 +85,7 @@ public:
         void enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event);
 
 private:
+	friend class rinad::ShimWifiScanTask;
         ShimWifiIPCPProxy * ipcp_proxy;
         std::map<unsigned int, rina::ApplicationRegistrationRequestEvent>
                 pending_app_registration_events;
@@ -94,6 +96,10 @@ private:
         std::map<unsigned int, rina::FlowDeallocateRequestEvent>
                 pending_flow_deallocation_events;
 	WpaController* wpa_conn;
+	rina::Timer scanner;
+
+	void __scan_media(void);
+
 };
 
 } //namespace rinad

@@ -28,9 +28,6 @@
 #include <assert.h>
 #include <signal.h>
 
-std::string WPA_CONF_FILE = "/etc/wpa_supplicant/wpa_supplicant.conf";
-std::string WPA_CTRL_DIR = "/usr/local/irati/var/";
-
 namespace rinad {
 
 WpaController::WpaController(const std::string& type_,
@@ -112,7 +109,8 @@ int WpaController::create_ctrl_connection(const std::string& if_name) {
 	return 0;
 }
 
-int WpaController::send_command(const std::string& cmd, bool print) {
+int WpaController::send_command(const std::string& cmd, bool print,
+							std::string& output) {
 
 	char buf[4096];
 	size_t len;
@@ -138,8 +136,8 @@ int WpaController::send_command(const std::string& cmd, bool print) {
 		buf[len] = '\0';
 		LOG_IPCP_DBG("%s", buf);
 	}
+	output = buf;
 	return 0;
 }
-
 
 } //namespace rinad

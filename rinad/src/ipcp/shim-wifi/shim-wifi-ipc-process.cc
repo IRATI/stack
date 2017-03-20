@@ -25,13 +25,29 @@
 #include <signal.h>
 #include <assert.h>
 
-#define IPCP_MODULE "shim-wifi-ipcp"
-#include "ipcp-logging.h"
-
 #include "ipcp/shim-wifi/shim-wifi-ipc-process.h"
+#include "librina/configuration.h"
 #include "ipcp/ipc-process.h"
 
+#define IPCP_MODULE "shim-wifi-ipcp"
+#include "ipcp-logging.h"
+#define SCAN_INTERVAL 10
+
 namespace rinad {
+
+class ShimWifiScanTask: public rina::TimerTask {
+public:
+	ShimWifiScanTask(ShimWifiIPCProcessImpl * ipcp_): ipcp(ipcp_) {};
+	~ShimWifiScanTask() throw() {};
+	void run();
+
+private:
+	ShimWifiIPCProcessImpl * ipcp;
+};
+
+void ShimWifiScanTask::run() {
+	ipcp->__scan_media();
+}
 
 //Class ShimWifiIPCPProxy
 ShimWifiIPCPProxy::ShimWifiIPCPProxy(unsigned short id,
@@ -185,6 +201,54 @@ void ShimWifiIPCProcessImpl::assign_to_dif_request_handler(const rina::AssignToD
 	}
 }
 
+void ShimWifiIPCProcessImpl::__scan_media(void){
+	int rv;
+	std::string output;
+	rina::MediaReport report;
+
+	rv = wpa_conn->send_command("SCAN", 1, output);
+	assert(rv == 0);
+
+	rv = wpa_conn->send_command("SCAN_RESULT", 1, output);
+	assert(rv == 0);
+
+	report.ipcp_id = this->get_id();
+	report.current_dif_name = this->dif_information_.dif_name_.toString();
+	//FIXME: add proper values here
+	report.bs_ipcp_address ="0";
+
+	std::istringstream ss(output);
+	std::string line;
+	int i = 0;
+	while (std::getline(ss, line)) {
+		if (i=0) continue;
+		++i;
+		std::vector<std::string> v;
+		//line: bssid/frequency/signal/flags/ssid
+		std::string value;
+		std::istringstream ss(line);
+		while(getline(ss, value, '\t')){
+			v.push_back(value);
+		}
+		rina::BaseStationInfo bs_info;
+		bs_info.ipcp_address = v[0];
+		bs_info.signal_strength = atoi(v[2].c_str());
+		std::map<std::string, rina::MediaDIFInfo>::iterator it =
+					report.available_difs.find(v[4]);
+		if(it == report.available_difs.end()){
+			rina::MediaDIFInfo m_info;
+			m_info.dif_name = v[4];
+			m_info.security_policies = v[3];
+			m_info.available_bs_ipcps.push_back(bs_info);
+			report.available_difs[v[4]] = m_info;
+		} else {
+			it->second.available_bs_ipcps.push_back(bs_info);
+		}
+	}
+
+	rina::extendedIPCManager->sendMediaReport(report);
+}
+
 void ShimWifiIPCProcessImpl::assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event)
 {
 	int rv;
@@ -247,9 +311,11 @@ void ShimWifiIPCProcessImpl::assign_to_dif_response_handler(const rina::AssignTo
 	rv = wpa_conn->launch_wpa(if_name);
 	assert(rv == 0);
 	sleep(5); //This is ugly but we need to wait for hostapd/wpa-supplicant to be initialized
-
 	rv == wpa_conn->create_ctrl_connection(if_name);
 	assert(rv == 0);
+
+	ShimWifiScanTask * task = new ShimWifiScanTask(this);
+	scanner.scheduleTask(task, SCAN_INTERVAL);
 
 	state = ASSIGNED_TO_DIF;
 
