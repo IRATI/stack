@@ -33,7 +33,7 @@ namespace rinad {
 
 class WpaController {
 public:
-	WpaController(const std::string& type);
+	WpaController(const std::string& type, const std::string& folder);
 	~WpaController();
 	int launch_wpa(const std::string& wif_name);
 	int create_ctrl_connection(const std::string& if_name);
@@ -42,6 +42,7 @@ public:
 private:
 	std::string prog_name;
 	std::string type;
+	std::string base_dir;
 	pid_t cpid;
 	struct wpa_ctrl * ctrl_conn;
 	struct wpa_ctrl * mon_conn;

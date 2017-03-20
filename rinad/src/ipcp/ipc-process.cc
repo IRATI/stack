@@ -528,7 +528,8 @@ AbstractIPCProcessImpl* IPCPFactory::createIPCP(const std::string& type,
 				  		unsigned short id,
 						unsigned int ipc_manager_port,
 						std::string log_level,
-						std::string log_file)
+						std::string log_file,
+						std::string install_dir)
 {
 	if (ipcp)
 		return ipcp;
@@ -547,7 +548,8 @@ AbstractIPCProcessImpl* IPCPFactory::createIPCP(const std::string& type,
 						  ipcp_id,
 						  ipc_manager_port,
 						  log_level,
-						  log_file);
+						  log_file,
+						  install_dir);
 		return ipcp;
 	} else {
 		LOG_IPCP_WARN("Unsupported IPCP type: %s", type.c_str());

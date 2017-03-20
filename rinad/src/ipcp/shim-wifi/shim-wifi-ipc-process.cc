@@ -47,7 +47,8 @@ ShimWifiIPCProcessImpl::ShimWifiIPCProcessImpl(const std::string& type,
 				unsigned short id,
 				unsigned int ipc_manager_port,
 				std::string log_level,
-				std::string log_file) : IPCProcess(nm.processName, nm.processInstance),
+				std::string log_file,
+				std::string& folder) : IPCProcess(nm.processName, nm.processInstance),
 					       	       LazyIPCProcessImpl(nm, id, ipc_manager_port, log_level, log_file)
 {
 	if (type == rina::SHIM_WIFI_IPC_PROCESS_AP) {
@@ -67,8 +68,16 @@ ShimWifiIPCProcessImpl::ShimWifiIPCProcessImpl(const std::string& type,
         		exit(EXIT_FAILURE);
         }
 
+	std::string folder_name;
+	std::string::size_type pos = folder.rfind("/bin");
+	if (pos == std::string::npos) {
+		folder_name = ".";
+	} else {
+		folder_name = folder.substr(0, pos);
+	}
+
         ipcp_proxy = new ShimWifiIPCPProxy(id, type, nm);
-        wpa_conn = new WpaController(type);
+        wpa_conn = new WpaController(type, folder_name);
 
         state = INITIALIZED;
 

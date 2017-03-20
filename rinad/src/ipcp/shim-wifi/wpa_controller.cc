@@ -33,8 +33,10 @@ std::string WPA_CTRL_DIR = "/usr/local/irati/var/";
 
 namespace rinad {
 
-WpaController::WpaController(const std::string& type_) {
+WpaController::WpaController(const std::string& type_,
+						const std::string& folder_) {
 	type = type_;
+	base_dir = folder_;
 	ctrl_conn = NULL;
 	mon_conn = NULL;
 

@@ -51,7 +51,8 @@ public:
 			unsigned short id,
 			unsigned int ipc_manager_port,
 			std::string log_level,
-			std::string log_file);
+			std::string log_file,
+			std::string& folder);
         ~ShimWifiIPCProcessImpl();
         unsigned short get_id();
         const IPCProcessOperationalState& get_operational_state() const;

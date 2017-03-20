@@ -251,7 +251,8 @@ public:
 					  	  unsigned short id,
 						  unsigned int ipc_manager_port,
 						  std::string log_level,
-						  std::string log_file);
+						  std::string log_file,
+						  std::string install_dir);
 
 	static IPCProcessImpl* getIPCP();
 };
