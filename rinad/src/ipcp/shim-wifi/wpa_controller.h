@@ -37,8 +37,9 @@ public:
 	~WpaController();
 	int launch_wpa(const std::string& wif_name);
 	int create_ctrl_connection(const std::string& if_name);
-	int send_command(const std::string& cmd, bool print,
-							std::string& output);
+	int scan(std::string& output);
+	int scan_results(std::string& output);
+	int enable_network(const std::string& network, std::string& output);
 
 private:
 	std::string prog_name;
@@ -54,6 +55,8 @@ private:
 		WPA_ATTACHED,
 		WPA_KILLED,
 	} state;
+
+	int __send_command(const std::string& cmd, std::string& output);
 };
 
 } //namespace rinad

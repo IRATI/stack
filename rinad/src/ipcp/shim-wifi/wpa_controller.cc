@@ -109,8 +109,7 @@ int WpaController::create_ctrl_connection(const std::string& if_name) {
 	return 0;
 }
 
-int WpaController::send_command(const std::string& cmd, bool print,
-							std::string& output) {
+int WpaController::__send_command(const std::string& cmd, std::string& output){
 
 	char buf[4096];
 	size_t len;
@@ -132,12 +131,27 @@ int WpaController::send_command(const std::string& cmd, bool print,
 		printf("'%s' command failed.\n", cmd.c_str());
 		return -1;
 	}
-	if (print) {
-		buf[len] = '\0';
-		LOG_IPCP_DBG("%s", buf);
-	}
+
+	buf[len] = '\0';
+	LOG_IPCP_DBG("%s", buf);
 	output = buf;
 	return 0;
 }
+
+int WpaController::scan(std::string& output){
+	return __send_command("SCAN", output);
+}
+
+int WpaController::scan_results(std::string& output){
+	return __send_command("SCAN_RESULTS", output);
+}
+
+int WpaController::enable_network(const std::string& network,
+							std::string& output){
+	std::stringstream ss;
+	ss << "ENABLE_NETWORK " << network;
+	return __send_command(ss.str().c_str(), output);
+}
+
 
 } //namespace rinad

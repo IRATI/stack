@@ -206,10 +206,10 @@ void ShimWifiIPCProcessImpl::__scan_media(void){
 	std::string output;
 	rina::MediaReport report;
 
-	rv = wpa_conn->send_command("SCAN", 1, output);
+	rv = wpa_conn->scan(output);
 	assert(rv == 0);
 
-	rv = wpa_conn->send_command("SCAN_RESULT", 1, output);
+	rv = wpa_conn->scan_results(output);
 	assert(rv == 0);
 
 	report.ipcp_id = this->get_id();
@@ -252,6 +252,7 @@ void ShimWifiIPCProcessImpl::__scan_media(void){
 void ShimWifiIPCProcessImpl::assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event)
 {
 	int rv;
+	std::string output;
 	rina::ScopedLock g(*lock_);
 
 	if (state == ASSIGNED_TO_DIF ) {
@@ -308,12 +309,21 @@ void ShimWifiIPCProcessImpl::assign_to_dif_response_handler(const rina::AssignTo
 			}
 	}
 
+	//Launch wpa_supplicant process
 	rv = wpa_conn->launch_wpa(if_name);
 	assert(rv == 0);
+
 	sleep(5); //This is ugly but we need to wait for hostapd/wpa-supplicant to be initialized
+
+	//Connect to control interface and monitoring interface
 	rv == wpa_conn->create_ctrl_connection(if_name);
 	assert(rv == 0);
 
+	//Enable networks specified in configuration file
+	rv == wpa_conn->enable_network("all", output);
+	assert(rv == 0);
+
+	//Create scan timer
 	ShimWifiScanTask * task = new ShimWifiScanTask(this);
 	scanner.scheduleTask(task, SCAN_INTERVAL);
 
@@ -628,6 +638,7 @@ void ShimWifiIPCProcessImpl::enroll_to_dif_handler(const rina::EnrollToDAFReques
 	std::list<rina::Neighbor> neighbors;
 	rina::Neighbor ap;
 	rina::ScopedLock g(*lock_);
+	int rv;
 
 	if (state != ASSIGNED_TO_DIF) {
 		LOG_IPCP_ERR("Got a enroll to DIF request while not in  "
