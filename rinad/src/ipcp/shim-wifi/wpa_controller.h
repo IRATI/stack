@@ -40,6 +40,7 @@ public:
 	int scan(std::string& output);
 	int scan_results(std::string& output);
 	int enable_network(const std::string& network, std::string& output);
+	int disable_network(const std::string& network, std::string& output);
 
 private:
 	std::string prog_name;

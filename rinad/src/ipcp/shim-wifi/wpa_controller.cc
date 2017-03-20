@@ -153,5 +153,12 @@ int WpaController::enable_network(const std::string& network,
 	return __send_command(ss.str().c_str(), output);
 }
 
+int WpaController::disable_network(const std::string& network,
+							std::string& output){
+	std::stringstream ss;
+	ss << "DISABLE_NETWORK " << network;
+	return __send_command(ss.str().c_str(), output);
+}
+
 
 } //namespace rinad
