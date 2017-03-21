@@ -28,6 +28,7 @@
 #include <librina/common.h>
 #include <assert.h>
 #include <signal.h>
+#include <fstream>
 
 namespace rinad {
 
@@ -61,6 +62,9 @@ int WpaController::launch_wpa(const std::string& wif_name){
 		return -1;
 	}
 
+	std::stringstream ss;
+	ss << base_dir << "/etc/" << wif_name << ".conf";
+
 	cpid = fork();
 	if (cpid < 0) {
 		LOG_IPCP_ERR("Problems forking %s", prog_name.c_str());
@@ -71,9 +75,6 @@ int WpaController::launch_wpa(const std::string& wif_name){
 		dnfd = open("/dev/null", O_WRONLY);
 		dup2(dnfd, STDOUT_FILENO);
 		dup2(STDOUT_FILENO, STDERR_FILENO);
-
-		std::stringstream ss;
-		ss << base_dir << "/etc/" << wif_name << ".conf";
 
 		if (type == rina::SHIM_WIFI_IPC_PROCESS_STA) {
 			execlp(prog_name.c_str(), prog_name.c_str(),
@@ -90,6 +91,37 @@ int WpaController::launch_wpa(const std::string& wif_name){
 		LOG_IPCP_ERR("Problems launching %s", prog_name.c_str());
 		exit(EXIT_FAILURE);
 	} else{
+
+		std::ifstream file(ss.str().c_str());
+		std::string line;
+		bool in_network = false;
+		std::string ssid, bssid;
+		int start, end;
+		unsigned int id = 0;
+		while (std::getline(file, line)){
+			if(in_network){
+				if (start = line.find("ssid=\"")
+							!= std::string::npos){
+					ssid = line.substr(start,
+						line.length() - start -1);
+				}else if(start = line.find("bssid=")
+							!= std::string::npos){
+					bssid = line.substr(start,
+						line.length() - start -1);
+				}
+			}else if(in_network && line.find("}")){
+				in_network = false;
+				network_key_t key =
+						{.ssid = ssid, .bssid = bssid};
+				network_map[key] = id++;
+				LOG_IPCP_DBG("Added Network %d with SSID %s and BSSUD %s",
+								id,
+								ssid.c_str(),
+								bssid.c_str());
+			}else if (line.find("network")){
+				in_network = true;
+			}
+		}
 
 		LOG_IPCP_DBG("%s launched with PID %d", prog_name.c_str(),
 									cpid);

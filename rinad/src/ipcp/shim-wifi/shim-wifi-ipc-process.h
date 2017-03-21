@@ -99,7 +99,7 @@ private:
 	WpaController* wpa_conn;
 	rina::Timer scanner;
 
-	void push_scan_results(std::string& msg);
+	void push_scan_results(std::string& output);
 
 };
 
