@@ -508,7 +508,7 @@ void ShimWifiIPCProcessImpl::ipcm_deallocate_flow_response_event_handler(const r
 				it->second.portId);
 
 		try {
-			rina::extendedIPCManager->flowDeallocationResult(requestEvent.portId, -1);
+			rina::extendedIPCManager->notifyflowDeallocated(requestEvent, -1);
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
 		}
@@ -518,7 +518,7 @@ void ShimWifiIPCProcessImpl::ipcm_deallocate_flow_response_event_handler(const r
 
 	LOG_IPCP_DBG("The kernel processed successfully the flow deallocation request");
 	try {
-		rina::extendedIPCManager->flowDeallocationResult(requestEvent.portId, 0);
+		rina::extendedIPCManager->notifyflowDeallocated(requestEvent, 0);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
 	}

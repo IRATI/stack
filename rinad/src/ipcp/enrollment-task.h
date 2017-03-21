@@ -290,7 +290,7 @@ public:
 	void add_or_update_neighbor(const rina::Neighbor& neighbor);
 	void remove_neighbor(const std::string& neighbor_key);
 	bool isEnrolledTo(const std::string& applicationProcessName);
-	const std::list<std::string> get_enrolled_app_names() const;
+	std::list<std::string> get_enrolled_app_names();
 	void processEnrollmentRequestEvent(const rina::EnrollToDAFRequestEvent& event);
 	void processDisconnectNeighborRequestEvent(const rina::DisconnectNeighborRequestEvent& event);
 	void initiateEnrollment(const rina::EnrollmentRequest& request);
@@ -365,7 +365,8 @@ private:
 
 	/// Stores the enrollment state machines, one per remote IPC process that this IPC
 	/// process is enrolled to.
-	rina::ThreadSafeMapOfPointers<int, IEnrollmentStateMachine> state_machines_;
+	std::map<int, IEnrollmentStateMachine*> state_machines_;
+	rina::ReadWriteLockable sm_lock;
 
 	rina::ThreadSafeMapOfPointers<unsigned int, rina::EnrollmentRequest> port_ids_pending_to_be_allocated_;
 

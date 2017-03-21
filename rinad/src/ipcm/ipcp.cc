@@ -314,6 +314,28 @@ void IPCMIPCProcess::disconnectFromNeighborResult(unsigned int sequenceNumber,
 	}
 }
 
+void IPCMIPCProcess::add_neighbors(const std::list<rina::Neighbor> & new_neighs)
+{
+	std::list<rina::Neighbor>::const_iterator it;
+	std::list<rina::Neighbor>::iterator jt;
+	bool add = true;
+
+	for (it = new_neighs.begin(); it != new_neighs.end(); ++it) {
+		add = true;
+		for (jt = neighbors.begin(); jt != neighbors.end(); ++jt) {
+			if (it->name_.processName == jt->name_.processName) {
+				add = false;
+				break;
+			}
+		}
+
+		if (add) {
+			LOG_DBG("Adding neighbor %s", it->name_.processName.c_str());
+			neighbors.push_back(*it);
+		}
+	}
+}
+
 void IPCMIPCProcess::unregisterApplication(
 		const rina::ApplicationProcessNamingInformation& applicationName,
 		unsigned int opaque) {

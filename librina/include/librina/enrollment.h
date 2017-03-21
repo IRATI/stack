@@ -113,7 +113,7 @@ public:
 	virtual void add_neighbor(const Neighbor& neighbor) = 0;
 	virtual void add_or_update_neighbor(const Neighbor& neighbor) = 0;
 	virtual void remove_neighbor(const std::string& neighbor_key) = 0;
-	virtual const std::list<std::string> get_enrolled_app_names() const = 0;
+	virtual std::list<std::string> get_enrolled_app_names() = 0;
 
 	/// Process a request to initiate enrollment with a new Neighbor, triggered by the IPC Manager
 	/// @param event

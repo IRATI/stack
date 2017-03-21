@@ -233,6 +233,8 @@ public:
 
 	void disconnectFromNeighborResult(unsigned int sequenceNumber, bool success);
 
+	void add_neighbors(const std::list<rina::Neighbor> & neighbors);
+
 	/**
 	 * Invoked by the IPC Manager to unregister an application in a DIF through
 	 * an IPC Process.
