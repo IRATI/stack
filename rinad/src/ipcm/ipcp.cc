@@ -88,8 +88,37 @@ rina::FlowInformation IPCMIPCProcess::getPendingFlowOperation(unsigned int seqNu
 	return iterator->second;
 }
 
+rina::ApplicationProcessNamingInformation
+IPCMIPCProcess::getPendingDisconnection(unsigned int seqNumber)
+{
+        std::map<unsigned int,
+                 rina::ApplicationProcessNamingInformation>::iterator iterator;
+
+        iterator = pendingDisconnections.find(seqNumber);
+        if (iterator == pendingDisconnections.end()) {
+                throw rina::IPCException("Could not find pending disconnection");
+        }
+
+        return iterator->second;
+}
+
 const rina::ApplicationProcessNamingInformation& IPCMIPCProcess::getDIFName() const
 { return dif_name_; }
+
+std::list<rina::ApplicationProcessNamingInformation> IPCMIPCProcess::get_neighbors_with_n1dif(const rina::ApplicationProcessNamingInformation& dif_name)
+{
+	std::list<rina::Neighbor>::iterator it;
+	std::list<rina::ApplicationProcessNamingInformation> result;
+
+	rina::ReadScopedLock readlock(rwlock);
+
+	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
+		if (it->supporting_dif_name_.processName == dif_name.processName)
+			result.push_back(it->name_);
+	}
+
+	return result;
+}
 
 void IPCMIPCProcess::get_description(std::ostream& os) {
 	os << "    " << get_id() << " | " <<
@@ -222,6 +251,7 @@ void IPCMIPCProcess::disconnectFromNeighbor(const rina::ApplicationProcessNaming
 					    unsigned int opaque)
 {
 	proxy_->disconnectFromNeighbor(neighbor, opaque);
+	pendingDisconnections[opaque] = neighbor;
 }
 
 void IPCMIPCProcess::registerApplication(
@@ -261,6 +291,27 @@ void IPCMIPCProcess::registerApplicationResult(unsigned int sequenceNumber,
 	pendingRegistrations.erase(sequenceNumber);
 	if (success)
 		registeredApplications.push_back(appName);
+}
+
+void IPCMIPCProcess::disconnectFromNeighborResult(unsigned int sequenceNumber,
+					          bool success)
+{
+	rina::ApplicationProcessNamingInformation neigh_name;
+	std::list<rina::Neighbor>::iterator it;
+
+	neigh_name = getPendingDisconnection(sequenceNumber);
+
+	pendingDisconnections.erase(sequenceNumber);
+	if (success) {
+		for (it = neighbors.begin(); it != neighbors.end(); ++it) {
+			LOG_DBG("Neighbor name: %s", it->name_.processName.c_str());
+			if (it->name_.processName == neigh_name.processName) {
+				neighbors.erase(it);
+				return;
+			}
+		}
+
+	}
 }
 
 void IPCMIPCProcess::unregisterApplication(
@@ -569,6 +620,22 @@ IPCMIPCProcess * IPCMIPCProcessFactory::getIPCProcess(unsigned short ipcProcessI
                 return NULL;
 
         return iterator->second;
+}
+
+IPCMIPCProcess * IPCMIPCProcessFactory::getIPCProcessByName(const rina::ApplicationProcessNamingInformation& ipcp_name)
+{
+	std::map<unsigned short, IPCMIPCProcess*>::iterator iterator;
+
+	rina::ReadScopedLock readlock(rwlock);
+
+	for (iterator = ipcProcesses.begin();
+			iterator != ipcProcesses.end(); ++iterator) {
+		if (iterator->second->get_name().processName == ipcp_name.processName) {
+			return iterator->second;
+		}
+	}
+
+	return NULL;
 }
 
 void IPCMIPCProcessFactory::get_local_dif_names(std::list<std::string>& result)

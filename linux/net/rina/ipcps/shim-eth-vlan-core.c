@@ -2317,7 +2317,9 @@ static int __init mod_init(void)
 
 static void __exit mod_exit(void)
 {
-        ASSERT(shim);
+        ASSERT(shim_eth_vlan);
+        ASSERT(shim_wifi_ap);
+        ASSERT(shim_wifi_sta);
 
         flush_workqueue(rcv_wq);
         destroy_workqueue(rcv_wq);

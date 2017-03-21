@@ -321,6 +321,8 @@ IPCManager_::enroll_to_dif_response_event_handler(rina::EnrollToDIFResponseEvent
 	IPCMIPCProcess *ipcp;
 	bool success = (event->result == 0);
 	ipcm_res_t ret = IPCM_FAILURE;
+	std::list<rina::Neighbor>::iterator it;
+	std::list<rina::Neighbor> neighbors;
 
 	IPCPTransState* trans = get_transaction_state<IPCPTransState>(event->sequenceNumber);
 
@@ -332,7 +334,7 @@ IPCManager_::enroll_to_dif_response_event_handler(rina::EnrollToDIFResponseEvent
 
 	ipcp = lookup_ipcp_by_id(trans->ipcp_id);
 	if(!ipcp){
-		ss << ": Warning: Could not complete enroll to dif action: "<<event->sequenceNumber<<
+		ss << ": Warning: Could not complete enroll to DIF action: "<<event->sequenceNumber<<
 		"IPCP with id: "<<trans->ipcp_id<<" does not exist! Perhaps deleted?" << endl;
 		FLUSH_LOG(WARN, ss);
 	}else{
@@ -345,6 +347,12 @@ IPCManager_::enroll_to_dif_response_event_handler(rina::EnrollToDIFResponseEvent
 			FLUSH_LOG(INFO, ss);
 
 			ret = IPCM_SUCCESS;
+
+			neighbors = event->neighbors;
+			for(it = neighbors.begin(); it != neighbors.end(); ++it) {
+				LOG_DBG("Adding neighbor %s", it->name_.processName.c_str());
+				ipcp->neighbors.push_back(*it);
+			}
 		} else {
 			ss  << ": Error: Enrollment operation of "
 				"process " << ipcp->get_name().toString() << " failed"
@@ -365,6 +373,7 @@ IPCManager_::disconnect_neighbor_response_event_handler(rina::DisconnectNeighbor
 	IPCMIPCProcess *ipcp;
 	bool success = (event->result == 0);
 	ipcm_res_t ret = IPCM_FAILURE;
+	std::list<rina::Neighbor>::iterator it;
 
 	IPCPTransState* trans = get_transaction_state<IPCPTransState>(event->sequenceNumber);
 
@@ -382,6 +391,8 @@ IPCManager_::disconnect_neighbor_response_event_handler(rina::DisconnectNeighbor
 	}else{
 		//Auto release the read lock
 		rina::ReadScopedLock readlock(ipcp->rwlock, false);
+
+		ipcp->disconnectFromNeighborResult(event->sequenceNumber, success);
 
 		if (success) {
 			ss << "Disconnect from neighbor operation completed for IPC "

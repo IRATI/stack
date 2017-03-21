@@ -24,6 +24,9 @@
 
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
+#include <librina/timer.h>
+
+#include "addon.h"
 #include "ipcp.h"
 
 namespace rinad{
@@ -33,16 +36,34 @@ namespace rinad{
 // change attachment to Base Stations, etc.)
 //
 //
-class MobilityManager {
+class MobilityManager: public Addon {
 public:
+	static const std::string NAME;
+
 	MobilityManager(IPCMIPCProcessFactory * ipcp_factory);
 	virtual ~MobilityManager(void) {};
 
 	//Called when a media report by an IPC Process has been delivered
 	void media_reports_handler(rina::MediaReportEvent *event);
 
+	int execute_handover(unsigned short ipcp_id,
+			     const rina::ApplicationProcessNamingInformation& dif_name,
+			     const rina::ApplicationProcessNamingInformation& neigh_name);
+
 private:
 	IPCMIPCProcessFactory * factory;
+	rina::Timer timer;
+};
+
+class TriggerHandoverTimerTask: public rina::TimerTask {
+public:
+	TriggerHandoverTimerTask(MobilityManager * mobility_manager,
+				 rina::Timer * timer);
+	~TriggerHandoverTimerTask() throw() {};
+	void run();
+
+	MobilityManager * mobility_manager;
+	rina::Timer * timer;
 };
 
 
