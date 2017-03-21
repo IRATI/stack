@@ -31,18 +31,33 @@ extern "C"{
 
 namespace rinad {
 
+class ShimWifiIPCProcessImpl;
+
 class WpaController {
 public:
-	WpaController(const std::string& type, const std::string& folder);
+	WpaController(ShimWifiIPCProcessImpl * ipcp,
+						const std::string& type,
+						const std::string& folder);
 	~WpaController();
 	int launch_wpa(const std::string& wif_name);
 	int create_ctrl_connection(const std::string& if_name);
-	int scan(std::string& output);
+	int scan(void);
 	int scan_results(std::string& output);
 	int enable_network(const std::string& network, std::string& output);
 	int disable_network(const std::string& network, std::string& output);
+	int select_network(const std::string& network, std::string& output);
 
 private:
+	rina::Lockable * lock;
+
+	//Owner Shim WiFi IPCP
+	ShimWifiIPCProcessImpl * ipcp;
+
+	//Monitoring thread
+	rina::Thread * mon_thread;
+	rina::ThreadAttributes mon_thread_attrs;
+	bool mon_keep_running;
+
 	std::string prog_name;
 	std::string type;
 	std::string base_dir;
@@ -52,11 +67,15 @@ private:
 	enum {
 		WPA_CREATED,
 		WPA_LAUNCHED,
-		WPA_CONNECTED,
-		WPA_ATTACHED,
+		WPA_CTRL_CONNECTED,
+		WPA_ASSOCIATING,
+		WPA_ASSOCIATED,
 		WPA_KILLED,
 	} state;
 
+	static void * __mon_trampoline(void * opaque);
+	void __mon_loop(void);
+	void __process_msg(std::string msg);
 	int __send_command(const std::string& cmd, std::string& output);
 };
 

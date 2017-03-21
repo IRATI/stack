@@ -86,6 +86,7 @@ public:
 
 private:
 	friend class rinad::ShimWifiScanTask;
+	friend class rinad::WpaController;
         ShimWifiIPCPProxy * ipcp_proxy;
         std::map<unsigned int, rina::ApplicationRegistrationRequestEvent>
                 pending_app_registration_events;
@@ -98,7 +99,7 @@ private:
 	WpaController* wpa_conn;
 	rina::Timer scanner;
 
-	void __scan_media(void);
+	void push_scan_results(std::string& msg);
 
 };
 

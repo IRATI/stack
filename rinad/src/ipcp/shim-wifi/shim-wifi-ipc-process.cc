@@ -46,7 +46,7 @@ private:
 };
 
 void ShimWifiScanTask::run() {
-	ipcp->__scan_media();
+	ipcp->wpa_conn->scan();
 }
 
 //Class ShimWifiIPCPProxy
@@ -93,7 +93,7 @@ ShimWifiIPCProcessImpl::ShimWifiIPCProcessImpl(const std::string& type,
 	}
 
         ipcp_proxy = new ShimWifiIPCPProxy(id, type, nm);
-        wpa_conn = new WpaController(type, folder_name);
+        wpa_conn = new WpaController(this, type, folder_name);
 
         state = INITIALIZED;
 
@@ -201,16 +201,9 @@ void ShimWifiIPCProcessImpl::assign_to_dif_request_handler(const rina::AssignToD
 	}
 }
 
-void ShimWifiIPCProcessImpl::__scan_media(void){
+void ShimWifiIPCProcessImpl::push_scan_results(std::string& output){
 	int rv;
-	std::string output;
 	rina::MediaReport report;
-
-	rv = wpa_conn->scan(output);
-	assert(rv == 0);
-
-	rv = wpa_conn->scan_results(output);
-	assert(rv == 0);
 
 	report.ipcp_id = this->get_id();
 	report.current_dif_name = this->dif_information_.dif_name_.toString();
