@@ -41,7 +41,8 @@ public:
 	static const std::string NAME;
 
 	MobilityManager(IPCMIPCProcessFactory * ipcp_factory);
-	virtual ~MobilityManager(void) {};
+	virtual ~MobilityManager(void) {
+	};
 
 	//Called when a media report by an IPC Process has been delivered
 	void media_reports_handler(rina::MediaReportEvent *event);

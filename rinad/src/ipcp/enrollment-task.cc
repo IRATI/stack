@@ -784,22 +784,22 @@ void EnrollmentTask::addressChange(rina::AddressChangeEvent * event)
 
 void EnrollmentTask::update_neighbor_address(const rina::Neighbor& neighbor)
 {
-	rina::Neighbor * neigh = 0;
+	std::map<std::string, rina::Neighbor *>::iterator it;
 	rina::NeighborAddressChangeEvent * event = 0;
 
-	rina::ScopedLock g(lock_);
+	rina::ReadScopedLock readLock(neigh_lock);
 
-	neigh = neighbors.find(neighbor.name_.getProcessNamePlusInstance());
-	if (neigh) {
-		neigh->old_address_ = neigh->address_;
-		neigh->address_ = neighbor.address_;
-		event = new rina::NeighborAddressChangeEvent(neigh->name_.processName,
-							     neigh->address_,
-							     neigh->old_address_);
+	it = neighbors.find(neighbor.name_.getProcessNamePlusInstance());
+	if (it != neighbors.end()) {
+		it->second->old_address_ = it->second->address_;
+		it->second->address_ = neighbor.address_;
+		event = new rina::NeighborAddressChangeEvent(it->second->name_.processName,
+							     it->second->address_,
+							     it->second->old_address_);
 		LOG_IPCP_INFO("Neighbor %s address changed from %d to %d",
 			       neighbor.name_.getProcessNamePlusInstance().c_str(),
-			       neigh->old_address_,
-			       neigh->address_);
+			       it->second->old_address_,
+			       it->second->address_);
 		ipcp->internal_event_manager_->deliverEvent(event);
 	} else {
 		LOG_IPCP_WARN("Could not change address of neighbor with name: %s",
@@ -1133,21 +1133,39 @@ IEnrollmentStateMachine * EnrollmentTask::getEnrollmentStateMachine(int portId, 
 	return it->second;
 }
 
-const std::list<rina::Neighbor> EnrollmentTask::get_neighbors() const
+std::list<rina::Neighbor> EnrollmentTask::get_neighbors()
 {
-	return neighbors.getCopyofentries();
+	std::list<rina::Neighbor> result;
+	std::map<std::string, rina::Neighbor *>::iterator it;
+
+	rina::ReadScopedLock readLock(neigh_lock);
+
+	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
+		result.push_back(*(it->second));
+	}
+
+	return result;
 }
 
 std::list<rina::Neighbor*> EnrollmentTask::get_neighbor_pointers()
 {
-	return neighbors.getEntries();
+	std::list<rina::Neighbor*> result;
+	std::map<std::string, rina::Neighbor *>::iterator it;
+
+	rina::ReadScopedLock readLock(neigh_lock);
+
+	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
+		result.push_back(it->second);
+	}
+
+	return result;
 }
 
 void EnrollmentTask::add_neighbor(const rina::Neighbor& neighbor)
 {
-	rina::ScopedLock g(lock_);
+	rina::WriteScopedLock writeLock(neigh_lock);
 
-	if (neighbors.find(neighbor.name_.getProcessNamePlusInstance()) != 0) {
+	if (neighbors.find(neighbor.name_.getProcessNamePlusInstance()) != neighbors.end()) {
 		LOG_IPCP_WARN("Tried to add an already existing neighbor: %s",
 			      neighbor.name_.getProcessNamePlusInstance().c_str());
 		return;
@@ -1158,15 +1176,15 @@ void EnrollmentTask::add_neighbor(const rina::Neighbor& neighbor)
 
 void EnrollmentTask::add_or_update_neighbor(const rina::Neighbor& neighbor)
 {
-	rina::Neighbor * neigh = 0;
+	std::map<std::string, rina::Neighbor *>::iterator it;
 
-	rina::ScopedLock g(lock_);
+	rina::WriteScopedLock writeLock(neigh_lock);
 
-	neigh = neighbors.find(neighbor.name_.getProcessNamePlusInstance());
-	if (neigh) {
-		neigh->enrolled_ = neighbor.enrolled_;
-		neigh->underlying_port_id_ = neighbor.underlying_port_id_;
-		neigh->last_heard_from_time_in_ms_ = neighbor.last_heard_from_time_in_ms_;
+	it = neighbors.find(neighbor.name_.getProcessNamePlusInstance());
+	if (it != neighbors.end()) {
+		it->second->enrolled_ = neighbor.enrolled_;
+		it->second->underlying_port_id_ = neighbor.underlying_port_id_;
+		it->second->last_heard_from_time_in_ms_ = neighbor.last_heard_from_time_in_ms_;
 	} else
 		_add_neighbor(neighbor);
 }
@@ -1188,33 +1206,34 @@ void EnrollmentTask::_add_neighbor(const rina::Neighbor& neighbor)
 				e.what());
 	}
 
-	neighbors.put(neigh->name_.getProcessNamePlusInstance(), neigh);
+	neighbors[neigh->name_.getProcessNamePlusInstance()] = neigh;
 }
 
 void EnrollmentTask::remove_neighbor(const std::string& neighbor_key)
 {
-	rina::Neighbor * neighbor;
+	std::map<std::string, rina::Neighbor *>::iterator it;
 
-	rina::ScopedLock g(lock_);
+	rina::WriteScopedLock writeLock(neigh_lock);
 
-	neighbor = neighbors.erase(neighbor_key);
-	if (neighbor == 0) {
+	it = neighbors.find(neighbor_key);
+	if (it == neighbors.end()) {
 		LOG_IPCP_WARN("Could not find neighbor for key: %s",
 			      neighbor_key.c_str());
 		return;
 	}
 
+	neighbors.erase(it);
 	try {
 		std::stringstream ss;
 		ss << NeighborRIBObj::object_name_prefix
-	           << neighbor->name_.processName;
+	           << it->second->name_.processName;
 		rib_daemon_->removeObjRIB(ss.str());
 	} catch (rina::Exception &e){
 		LOG_IPCP_ERR("Error removing object from RIB %s",
 			     e.what());
 	}
 
-	delete neighbor;
+	delete it->second;
 }
 
 bool EnrollmentTask::isEnrolledTo(const std::string& processName)

@@ -284,7 +284,7 @@ public:
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	void eventHappened(rina::InternalEvent * event);
-	const std::list<rina::Neighbor> get_neighbors() const;
+	std::list<rina::Neighbor> get_neighbors();
 	std::list<rina::Neighbor*> get_neighbor_pointers();
 	void add_neighbor(const rina::Neighbor& neighbor);
 	void add_or_update_neighbor(const rina::Neighbor& neighbor);
@@ -370,7 +370,9 @@ private:
 
 	rina::ThreadSafeMapOfPointers<unsigned int, rina::EnrollmentRequest> port_ids_pending_to_be_allocated_;
 
-	rina::ThreadSafeMapOfPointers<std::string, rina::Neighbor> neighbors;
+	std::map<std::string, rina::Neighbor *> neighbors;
+	rina::ReadWriteLockable neigh_lock;
+
 	IPCPEnrollmentTaskPS * ipcp_ps;
 };
 

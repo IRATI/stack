@@ -108,7 +108,7 @@ class IEnrollmentTask : public rina::ApplicationEntity,
 public:
 	IEnrollmentTask() : rina::ApplicationEntity(ApplicationEntity::ENROLLMENT_TASK_AE_NAME) { };
 	virtual ~IEnrollmentTask() { };
-	virtual const std::list<Neighbor> get_neighbors() const = 0;
+	virtual std::list<Neighbor> get_neighbors() = 0;
 	virtual std::list<rina::Neighbor*> get_neighbor_pointers() = 0;
 	virtual void add_neighbor(const Neighbor& neighbor) = 0;
 	virtual void add_or_update_neighbor(const Neighbor& neighbor) = 0;
