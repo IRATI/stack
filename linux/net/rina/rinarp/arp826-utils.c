@@ -158,7 +158,7 @@ string_t * gpa_address_to_string_gfp(gfp_t              flags,
 
         memcpy(tmp, gpa->address, gpa->length);
         p = tmp + gpa->length;
-        *(p + 1) = '\0';
+        *(p) = '\0';
 
         return tmp;
 }
