@@ -1629,7 +1629,8 @@ int putMediaDIFInfo(nl_msg* netlinkMessage, const MediaDIFInfo& object);
 
 int parseListOfMediaDIFInfo(nlattr *nested, MediaReport & report);
 
-void parseMediaDIFInfo(nlattr *nested, std::list<MediaDIFInfo>& difs);
+void parseMediaDIFInfo(nlattr *nested,
+			std::map<std::string, std::list<MediaDIFInfo> >& difs);
 
 /* MediaReport CLASS */
 enum IPCPMediaReportAttributes {

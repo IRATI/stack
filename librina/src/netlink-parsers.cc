@@ -5662,9 +5662,9 @@ int putMediaDIFInfo(nl_msg* netlinkMessage,
 }
 
 int putListOfMediaDIFInfo(nl_msg* netlinkMessage,
-			  const std::list<MediaDIFInfo>& dif_info)
+			  const std::map<std::string, MediaDIFInfo>& dif_info)
 {
-	std::list<MediaDIFInfo>::const_iterator iterator;
+	std::map<std::string, MediaDIFInfo>::const_iterator iterator;
 	struct nlattr *media_dif_info;
 	int i = 0;
 
@@ -5674,7 +5674,7 @@ int putListOfMediaDIFInfo(nl_msg* netlinkMessage,
 		if (!(media_dif_info = nla_nest_start(netlinkMessage, i))){
 			goto nla_put_failure;
 		}
-		if (putMediaDIFInfo(netlinkMessage, *iterator) < 0) {
+		if (putMediaDIFInfo(netlinkMessage, iterator->second) < 0) {
 			goto nla_put_failure;
 		}
 		nla_nest_end(netlinkMessage, media_dif_info);
@@ -5703,10 +5703,9 @@ int putMediaReport(nl_msg* netlinkMessage,
                 goto nla_put_failure;
         }
 
-        if (putListOfMediaDIFInfo(netlinkMessage,
-                           	  object.available_difs) < 0) {
-                goto nla_put_failure;
-        }
+       	if (putListOfMediaDIFInfo(netlinkMessage, object.available_difs) < 0) {
+       	        goto nla_put_failure;
+       	}
 
         nla_nest_end(netlinkMessage, available_difs);
 
@@ -9884,7 +9883,8 @@ int parseListOfBaseStationInfo(nlattr *nested, MediaDIFInfo & mediadif)
         return 0;
 }
 
-void parseMediaDIFInfo(nlattr *nested, std::list<MediaDIFInfo>& difs)
+void parseMediaDIFInfo(nlattr *nested,
+			std::map<std::string, MediaDIFInfo>& difs)
 {
 	struct nla_policy attr_policy[MEDINFO_ATTR_MAX + 1];
 	attr_policy[MEDINFO_ATTR_DIF_NAME].type = NLA_STRING;
@@ -9921,7 +9921,7 @@ void parseMediaDIFInfo(nlattr *nested, std::list<MediaDIFInfo>& difs)
 		parseListOfBaseStationInfo(attrs[MEDINFO_ATTR_BS_IPCPS], dif_info);
 	}
 
-	difs.push_back(dif_info);
+	difs[dif_info.dif_name] = dif_info;
 }
 
 int parseListOfMediaDIFInfo(nlattr *nested, MediaReport & report)

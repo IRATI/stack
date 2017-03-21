@@ -274,7 +274,7 @@ public:
 	std::string bs_ipcp_address;
 
 	/** Information on the DIFs available through the media */
-	std::list<MediaDIFInfo> available_difs;
+	std::map<std::string, MediaDIFInfo> available_difs;
 
 	std::string toString() const;
 };
