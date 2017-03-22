@@ -42,15 +42,39 @@ WpaController::WpaController(ShimWifiIPCProcessImpl * ipcp_,
 	ctrl_conn = NULL;
 	mon_conn = NULL;
 	mon_keep_running = false;
+	cpid = -1;
 
 	if (type == rina::SHIM_WIFI_IPC_PROCESS_AP)
 		prog_name = "hostapd";
 	else if (type == rina::SHIM_WIFI_IPC_PROCESS_STA)
-		prog_name = "wpa-supplicant";
+		prog_name = "wpa_supplicant";
 	else
 		assert(0);
 
 	state = WPA_CREATED;
+}
+
+WpaController::~WpaController(){
+
+	void* status;
+	
+	mon_keep_running = false;
+
+	if(ctrl_conn){
+		LOG_IPCP_DBG("Closing ctrl connection...");
+		wpa_ctrl_close(ctrl_conn);
+	}
+	if(mon_conn){
+		LOG_IPCP_DBG("Closing monitoring connection...");
+		wpa_ctrl_detach(mon_conn);
+		wpa_ctrl_close(mon_conn);
+	}
+
+	if(mon_thread){
+		LOG_IPCP_DBG("Joining monitoring thread...");
+		mon_thread->join(&status);
+		delete mon_thread;
+	}
 }
 
 int WpaController::launch_wpa(const std::string& wif_name){
@@ -75,14 +99,21 @@ int WpaController::launch_wpa(const std::string& wif_name){
 		dnfd = open("/dev/null", O_WRONLY);
 		dup2(dnfd, STDOUT_FILENO);
 		dup2(STDOUT_FILENO, STDERR_FILENO);
-
+		
 		if (type == rina::SHIM_WIFI_IPC_PROCESS_STA) {
+			LOG_IPCP_DBG("Going to execute: %s %s %s %s %s %s",
+						prog_name.c_str(),
+						"-Dnl80211",
+						"-i",
+						wif_name.c_str(),
+						"-c",
+						ss.str().c_str());
 			execlp(prog_name.c_str(), prog_name.c_str(),
 						"-Dnl80211",
 						"-i",
 						wif_name.c_str(),
+						"-c",
 						ss.str().c_str(),
-						"-B",
 						NULL);
 		} else if (type == rina::SHIM_WIFI_IPC_PROCESS_AP) {
 			execlp(prog_name.c_str(), prog_name.c_str(), NULL);
@@ -99,26 +130,30 @@ int WpaController::launch_wpa(const std::string& wif_name){
 		int start, end;
 		unsigned int id = 0;
 		while (std::getline(file, line)){
-			if(in_network){
-				if (start = line.find("ssid=\"")
+			if(line.find("#") == 0)
+				continue;
+			if(in_network && (line.find("}") == std::string::npos)){
+				if(start = line.find("bssid=")
 							!= std::string::npos){
+					start+=6;
+					bssid = line.substr(start,
+						line.length() - start);
+				}else if(start = line.find("ssid=\"")
+							!= std::string::npos){
+					start+=6;
 					ssid = line.substr(start,
 						line.length() - start -1);
-				}else if(start = line.find("bssid=")
-							!= std::string::npos){
-					bssid = line.substr(start,
-						line.length() - start -1);
 				}
-			}else if(in_network && line.find("}")){
+			}else if(in_network && (line.find("}") != std::string::npos)){
 				in_network = false;
 				network_key_t key =
 						{.ssid = ssid, .bssid = bssid};
 				network_map[key] = id++;
-				LOG_IPCP_DBG("Added Network %d with SSID %s and BSSUD %s",
-								id,
+				LOG_IPCP_DBG("Added Network %d with SSID %s and BSSID %s",
+								network_map[key],
 								ssid.c_str(),
 								bssid.c_str());
-			}else if (line.find("network")){
+			}else if(line.find("network") != std::string::npos){
 				in_network = true;
 			}
 		}
@@ -175,8 +210,14 @@ void WpaController::__mon_loop() {
 int WpaController::create_ctrl_connection(const std::string& if_name) {
 
 	rina::ScopedLock g(*lock);
-	ctrl_conn = wpa_ctrl_open(if_name.c_str());
-	if (ctrl_conn = NULL) {
+
+	std::stringstream ss;
+	ss << base_dir << "/var/run/" << if_name;
+
+	LOG_IPCP_DBG("Connecting to control interface %s",
+						ss.str().c_str());
+	ctrl_conn = wpa_ctrl_open(ss.str().c_str());
+	if (!ctrl_conn) {
 		LOG_IPCP_ERR("Problems connecting to %s ctrl iface",
 							prog_name.c_str());
 		kill(cpid, SIGKILL);
@@ -184,8 +225,8 @@ int WpaController::create_ctrl_connection(const std::string& if_name) {
 		return -1;
 	}
 
-	mon_conn = wpa_ctrl_open(if_name.c_str());
-	if (mon_conn = NULL) {
+	mon_conn = wpa_ctrl_open(ss.str().c_str());
+	if (!mon_conn) {
 		LOG_IPCP_ERR("Problems connecting to %s monitor iface",
 							prog_name.c_str());
 		wpa_ctrl_close(ctrl_conn);
@@ -204,6 +245,9 @@ int WpaController::create_ctrl_connection(const std::string& if_name) {
 		state = WPA_KILLED;
 		return -1;
 	}
+
+	LOG_IPCP_DBG("Connected to %s Ctrl and Monitoring interfaces",
+							prog_name.c_str());
 
 	//Launch monitoring thread to receive unsolicited events
 	mon_thread_attrs.setJoinable();
@@ -272,8 +316,7 @@ int WpaController::select_network(const std::string& network,
 	int rv;
 	std::stringstream ss;
 	ss << "SELECT_NETWORK " << network;
-	rv = __send_command(ss.str().c_str(), output);
-	assert(!rv);
+	return __send_command(ss.str().c_str(), output);
 
 }
 

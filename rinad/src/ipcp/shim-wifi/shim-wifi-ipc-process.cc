@@ -106,6 +106,10 @@ ShimWifiIPCProcessImpl::ShimWifiIPCProcessImpl(const std::string& type,
 
 ShimWifiIPCProcessImpl::~ShimWifiIPCProcessImpl()
 {
+	if(wpa_conn){
+		delete wpa_conn;
+	}
+
 	if (ipcp_proxy) {
 		delete ipcp_proxy;
 		ipcp_proxy = 0;
@@ -287,6 +291,7 @@ void ShimWifiIPCProcessImpl::assign_to_dif_response_handler(const rina::AssignTo
 	}
 
 	LOG_IPCP_DBG("The kernel processed successfully the Assign to DIF request");
+	
 	dif_information_ = requestEvent.difInformation;
 
 	std::string if_name;
