@@ -283,19 +283,10 @@ void WatchdogRIBObject::read(const rina::cdap_rib::con_handle_t &con,
 			     rina::cdap_rib::res_info_t& res)
 {
 	rina::ScopedLock g(*lock_);
+	EnrollmentTask * eTask = (EnrollmentTask *) ipc_process_->enrollment_task_;
 
 	//1 Update last heard from attribute of the relevant neighbor
-	std::list<rina::Neighbor*> neighbors =
-			ipc_process_->enrollment_task_->get_neighbor_pointers();
-	std::list<rina::Neighbor*>::const_iterator it;
-	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
-		if ((*it)->name_.processName.compare(con.dest_.ap_name_) == 0) {
-			rina::Time currentTime;
-			(*it)->last_heard_from_time_in_ms_ =
-					currentTime.get_current_time_in_ms();
-			break;
-		}
-	}
+	eTask->watchdog_read(con.dest_.ap_name_);
 
 	//2 Prepare response (RIBDaemon will send it)
 	rina::cdap::IntEncoder encoder;
@@ -310,26 +301,26 @@ void WatchdogRIBObject::sendMessages() {
 	rina::Time currentTime;
 	rina::cdap_rib::con_handle_t con;
 	int currentTimeInMs = currentTime.get_current_time_in_ms();
-	std::list<rina::Neighbor*> neighbors =
-			ipc_process_->enrollment_task_->get_neighbor_pointers();
-	std::list<rina::Neighbor*>::const_iterator it;
+	std::list<rina::Neighbor> neighbors =
+			ipc_process_->enrollment_task_->get_neighbors();
+	std::list<rina::Neighbor>::const_iterator it;
 	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
 		//Skip non enrolled neighbors
-		if (!(*it)->enrolled_) {
+		if (it->enrolled_) {
 			continue;
 		}
 
 		//Skip neighbors that have sent M_READ messages during the last period
-		if ((*it)->last_heard_from_time_in_ms_ + wathchdog_period_ > currentTimeInMs) {
+		if (it->last_heard_from_time_in_ms_ + wathchdog_period_ > currentTimeInMs) {
 			continue;
 		}
 
 		//If we have not heard from the neighbor during long enough, declare the neighbor
 		//dead and fire a NEIGHBOR_DECLARED_DEAD event
-		if ((*it)->last_heard_from_time_in_ms_ != 0 &&
-				(*it)->last_heard_from_time_in_ms_ + declared_dead_interval_ < currentTimeInMs) {
+		if (it->last_heard_from_time_in_ms_ != 0 &&
+				it->last_heard_from_time_in_ms_ + declared_dead_interval_ < currentTimeInMs) {
 			rina::NeighborDeclaredDeadEvent * event =
-					new rina::NeighborDeclaredDeadEvent(*(*it));
+					new rina::NeighborDeclaredDeadEvent(*it);
 			ipc_process_->internal_event_manager_->deliverEvent(event);
 			continue;
 		}
@@ -340,7 +331,7 @@ void WatchdogRIBObject::sendMessages() {
 			rina::cdap_rib::filt_info_t filt;
 			obj.class_ = class_name;
 			obj.name_ = object_name;
-			con.port_id = (*it)->underlying_port_id_;
+			con.port_id = it->underlying_port_id_;
 
 			rib_daemon_->getProxy()->remote_read(con,
 							     obj,
@@ -348,7 +339,7 @@ void WatchdogRIBObject::sendMessages() {
 							     filt,
 							     this);
 
-			neighbor_statistics_[(*it)->name_.processName] = currentTimeInMs;
+			neighbor_statistics_[it->name_.processName] = currentTimeInMs;
 		}catch(rina::Exception &e){
 			LOG_IPCP_ERR("Problems generating or sending CDAP message: %s", e.what());
 		}
@@ -360,6 +351,7 @@ void WatchdogRIBObject::remoteReadResult(const rina::cdap_rib::con_handle_t &con
 		      	      	         const rina::cdap_rib::res_info_t &res)
 {
 	rina::ScopedLock g(*lock_);
+	EnrollmentTask * eTask = (EnrollmentTask *) ipc_process_->enrollment_task_;
 
 	std::map<std::string, int>::iterator it =
 			neighbor_statistics_.find(con.dest_.ap_name_);
@@ -368,18 +360,7 @@ void WatchdogRIBObject::remoteReadResult(const rina::cdap_rib::con_handle_t &con
 
 	int storedTime = it->second;
 	neighbor_statistics_.erase(it);
-	rina::Time currentTime;
-	int currentTimeInMs = currentTime.get_current_time_in_ms();
-	std::list<rina::Neighbor*> neighbors =
-			ipc_process_->enrollment_task_->get_neighbor_pointers();
-	std::list<rina::Neighbor*>::const_iterator it2;
-	for (it2 = neighbors.begin(); it2 != neighbors.end(); ++it2) {
-		if ((*it2)->name_.processName.compare(con.dest_.ap_name_) == 0) {
-			(*it2)->average_rtt_in_ms_ = currentTimeInMs - storedTime;
-			(*it2)->last_heard_from_time_in_ms_ = currentTimeInMs;
-			break;
-		}
-	}
+	eTask->watchdog_read_result(con.dest_.ap_name_, storedTime);
 }
 
 //Class AddressRIBObject
@@ -425,25 +406,25 @@ void * doNeighborsEnrollerWork(void * arg)
 		LOG_IPCP_ERR("Error casting IEnrollmentTask to EnrollmentTask");
 		return (void *) -1;
 	}
-	std::list<rina::Neighbor*> neighbors;
-	std::list<rina::Neighbor*>::const_iterator it;
+	std::list<rina::Neighbor> neighbors;
+	std::list<rina::Neighbor>::const_iterator it;
 	rina::Sleep sleepObject;
 
 	while(true){
-		neighbors = enrollmentTask->get_neighbor_pointers();
+		neighbors = enrollmentTask->get_neighbors();
 		for(it = neighbors.begin(); it != neighbors.end(); ++it) {
-			if (enrollmentTask->isEnrolledTo((*it)->name_.processName)) {
+			if (enrollmentTask->isEnrolledTo(it->name_.processName)) {
 				//We're already enrolled to this guy, continue
 				continue;
 			}
 
-			if ((*it)->number_of_enrollment_attempts_ <
+			if (it->number_of_enrollment_attempts_ <
 					enrollmentTask->max_num_enroll_attempts_) {
-				(*it)->number_of_enrollment_attempts_++;
-				rina::EnrollmentRequest request(**it);
+				enrollmentTask->incr_neigh_enroll_attempts(*it);
+				rina::EnrollmentRequest request(*it);
 				enrollmentTask->initiateEnrollment(request);
 			} else {
-				enrollmentTask->remove_neighbor((*it)->name_.getProcessNamePlusInstance());
+				enrollmentTask->remove_neighbor(it->name_.getProcessNamePlusInstance());
 			}
 
 		}
@@ -483,6 +464,8 @@ IEnrollmentStateMachine::IEnrollmentStateMachine(IPCProcess * ipcp,
 }
 
 IEnrollmentStateMachine::~IEnrollmentStateMachine() {
+	LOG_IPCP_DBG("Destructor of state machine of port-id %u",
+		     con.port_id);
 }
 
 void IEnrollmentStateMachine::release(int invoke_id,
@@ -804,6 +787,51 @@ void EnrollmentTask::update_neighbor_address(const rina::Neighbor& neighbor)
 	} else {
 		LOG_IPCP_WARN("Could not change address of neighbor with name: %s",
 			      neighbor.name_.getProcessNamePlusInstance().c_str());
+	}
+}
+
+void EnrollmentTask::incr_neigh_enroll_attempts(const rina::Neighbor& neighbor)
+{
+	std::map<std::string, rina::Neighbor *>::iterator it;
+
+	rina::ReadScopedLock readLock(neigh_lock);
+	it = neighbors.find(neighbor.name_.getProcessNamePlusInstance());
+	if (it != neighbors.end()) {
+		it->second->number_of_enrollment_attempts_++;
+	}
+}
+
+void EnrollmentTask::watchdog_read(const std::string& remote_app_name)
+{
+	std::map<std::string, rina::Neighbor *>::iterator it;
+
+	rina::ReadScopedLock readLock(neigh_lock);
+
+	rina::Time currentTime;
+	int current_time_ms = currentTime.get_current_time_in_ms();
+	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
+		if (it->second->name_.processName == remote_app_name) {
+			it->second->last_heard_from_time_in_ms_ = current_time_ms;
+			break;
+		}
+	}
+}
+
+void EnrollmentTask::watchdog_read_result(const std::string& remote_app_name,
+			  	  	  int stored_time)
+{
+	std::map<std::string, rina::Neighbor *>::iterator it;
+
+	rina::ReadScopedLock readLock(neigh_lock);
+
+	rina::Time currentTime;
+	int current_time_ms = currentTime.get_current_time_in_ms();
+	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
+		if (it->second->name_.processName == remote_app_name) {
+			it->second->average_rtt_in_ms_ = current_time_ms - stored_time;
+			it->second->last_heard_from_time_in_ms_ = current_time_ms;
+			break;
+		}
 	}
 }
 
@@ -1142,20 +1170,6 @@ std::list<rina::Neighbor> EnrollmentTask::get_neighbors()
 
 	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
 		result.push_back(*(it->second));
-	}
-
-	return result;
-}
-
-std::list<rina::Neighbor*> EnrollmentTask::get_neighbor_pointers()
-{
-	std::list<rina::Neighbor*> result;
-	std::map<std::string, rina::Neighbor *>::iterator it;
-
-	rina::ReadScopedLock readLock(neigh_lock);
-
-	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
-		result.push_back(it->second);
 	}
 
 	return result;

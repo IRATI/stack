@@ -285,7 +285,6 @@ public:
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	void eventHappened(rina::InternalEvent * event);
 	std::list<rina::Neighbor> get_neighbors();
-	std::list<rina::Neighbor*> get_neighbor_pointers();
 	void add_neighbor(const rina::Neighbor& neighbor);
 	void add_or_update_neighbor(const rina::Neighbor& neighbor);
 	void remove_neighbor(const std::string& neighbor_key);
@@ -312,6 +311,11 @@ public:
 	void deallocateFlow(int portId);
 	void add_enrollment_state_machine(int portId, IEnrollmentStateMachine * stateMachine);
 	void update_neighbor_address(const rina::Neighbor& neighbor);
+	void incr_neigh_enroll_attempts(const rina::Neighbor& neighbor);
+	void watchdog_read(const std::string& remote_app_name);
+	void watchdog_read_result(const std::string& remote_app_name,
+				  int stored_time);
+
 
 	/// The maximum time to wait between steps of the enrollment sequence (in ms)
 	int timeout_;

@@ -109,7 +109,6 @@ public:
 	IEnrollmentTask() : rina::ApplicationEntity(ApplicationEntity::ENROLLMENT_TASK_AE_NAME) { };
 	virtual ~IEnrollmentTask() { };
 	virtual std::list<Neighbor> get_neighbors() = 0;
-	virtual std::list<rina::Neighbor*> get_neighbor_pointers() = 0;
 	virtual void add_neighbor(const Neighbor& neighbor) = 0;
 	virtual void add_or_update_neighbor(const Neighbor& neighbor) = 0;
 	virtual void remove_neighbor(const std::string& neighbor_key) = 0;

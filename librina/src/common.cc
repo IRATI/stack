@@ -982,7 +982,7 @@ bool Neighbor::operator!=(const Neighbor &other) const{
 	return !(*this == other);
 }
 
-const ApplicationProcessNamingInformation&
+const ApplicationProcessNamingInformation
 Neighbor::get_name() const {
 	return name_;
 }
@@ -1002,7 +1002,7 @@ void Neighbor::set_supporting_dif_name(
 	supporting_dif_name_ = supporting_dif_name;
 }
 
-const std::list<ApplicationProcessNamingInformation>&
+const std::list<ApplicationProcessNamingInformation>
 Neighbor::get_supporting_difs() {
 	return supporting_difs_;
 }

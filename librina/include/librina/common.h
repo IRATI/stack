@@ -682,13 +682,13 @@ public:
         bool operator==(const Neighbor &other) const;
         bool operator!=(const Neighbor &other) const;
 #ifndef SWIG
-        const ApplicationProcessNamingInformation& get_name() const;
+        const ApplicationProcessNamingInformation get_name() const;
         void set_name(const ApplicationProcessNamingInformation& name);
         const ApplicationProcessNamingInformation&
                 get_supporting_dif_name() const;
         void set_supporting_dif_name(
                 const ApplicationProcessNamingInformation& supporting_dif_name);
-        const std::list<ApplicationProcessNamingInformation>& get_supporting_difs();
+        const std::list<ApplicationProcessNamingInformation> get_supporting_difs();
         void set_supporting_difs(
                         const std::list<ApplicationProcessNamingInformation>& supporting_difs);
         void add_supporting_dif(const ApplicationProcessNamingInformation& supporting_dif);
