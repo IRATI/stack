@@ -57,7 +57,7 @@ WpaController::WpaController(ShimWifiIPCProcessImpl * ipcp_,
 WpaController::~WpaController(){
 
 	void* status;
-	
+
 	mon_keep_running = false;
 
 	if(ctrl_conn){
@@ -99,7 +99,7 @@ int WpaController::launch_wpa(const std::string& wif_name){
 		dnfd = open("/dev/null", O_WRONLY);
 		dup2(dnfd, STDOUT_FILENO);
 		dup2(STDOUT_FILENO, STDERR_FILENO);
-		
+
 		if (type == rina::SHIM_WIFI_IPC_PROCESS_STA) {
 			LOG_IPCP_DBG("Going to execute: %s %s %s %s %s %s",
 						prog_name.c_str(),
@@ -174,7 +174,7 @@ void WpaController::__process_msg(std::string msg){
 	} else if (msg.find("CTRL-EVENT-TERMINATING")) {
 		LOG_IPCP_DBG("CTRL-EVENT-TERMINATING event received");
 	} else if (msg.find("CTRL-EVENT-SCAN-RESULTS")) {
-		LOG_IPCP_DBG("CTRL-EVENT-SCAN-RESLTS event received");
+		LOG_IPCP_DBG("CTRL-EVENT-SCAN-RESULTS event received");
 		return ipcp->push_scan_results(msg);
 	}
 }
@@ -283,41 +283,60 @@ int WpaController::__send_command(const std::string& cmd, std::string& output){
 	}
 
 	buf[len] = '\0';
-	LOG_IPCP_DBG("%s", buf);
 	output = buf;
 	return 0;
 }
 
 int WpaController::scan(){
 	std::string output;
-	return __send_command("SCAN", output);
+	std::string cmd = "SCAN";
+	int rv = __send_command(cmd.c_str(), output);
+	assert(rv == 0);
+	LOG_IPCP_DBG("Scan results:");
+	LOG_IPCP_DBG("%s", output.c_str());
+	ipcp->push_scan_results(output);
 }
 
 int WpaController::scan_results(std::string& output){
-	return __send_command("SCAN_RESULTS", output);
+	std::string cmd = "SCAN_RESULTS";
+	int rv = __send_command(cmd.c_str(), output);
+	assert(rv == 0);
+	LOG_IPCP_DBG("Scan results results:");
+	LOG_IPCP_DBG("%s", output.c_str());
+	ipcp->push_scan_results(output);
 }
 
-int WpaController::enable_network(const std::string& network,
-							std::string& output){
-	std::stringstream ss;
-	ss << "ENABLE_NETWORK " << network;
-	return __send_command(ss.str().c_str(), output);
-}
-
-int WpaController::disable_network(const std::string& network,
-							std::string& output){
-	std::stringstream ss;
-	ss << "DISABLE_NETWORK " << network;
-	return __send_command(ss.str().c_str(), output);
-}
-
-int WpaController::select_network(const std::string& network,
-							std::string& output){
+int WpaController::enable_network(const std::string& ssid,
+						const std::string& bssid){
 	int rv;
 	std::stringstream ss;
-	ss << "SELECT_NETWORK " << network;
-	return __send_command(ss.str().c_str(), output);
+	std::string output;
+	network_key_t key = {.ssid = ssid, .bssid = bssid};
 
+	ss << "ENABLE_NETWORK " << network_map[key];
+	return __send_command(ss.str().c_str(), output);
+}
+
+int WpaController::disable_network(const std::string& ssid,
+						const std::string& bssid){
+	int rv;
+	std::stringstream ss;
+	std::string output;
+	network_key_t key = {.ssid = ssid, .bssid = bssid};
+
+	ss << "DISABLE_NETWORK " << network_map[key];
+	return __send_command(ss.str().c_str(), output);
+}
+
+int WpaController::select_network(const std::string& ssid,
+						const std::string& bssid){
+	int rv;
+	std::stringstream ss;
+	std::string output;
+	network_key_t key = {.ssid = ssid, .bssid = bssid};
+
+	ss << "SELECT_NETWORK " << network_map[key];
+	return __send_command(ss.str().c_str(), output);
 }
 
 } //namespace rinad

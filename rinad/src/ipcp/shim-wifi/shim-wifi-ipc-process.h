@@ -83,6 +83,7 @@ public:
         void flow_deallocation_requested_handler(const rina::FlowDeallocateRequestEvent& event);
         void ipcm_deallocate_flow_response_event_handler(const rina::IpcmDeallocateFlowResponseEvent& event);
         void enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event);
+	void dissconnect_neighbour_handler(const rina::DisconnectNeighborRequestEvent& event);
 
 private:
 	friend class rinad::ShimWifiScanTask;

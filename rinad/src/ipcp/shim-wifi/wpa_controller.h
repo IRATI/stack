@@ -53,9 +53,9 @@ public:
 	int create_ctrl_connection(const std::string& if_name);
 	int scan(void);
 	int scan_results(std::string& output);
-	int enable_network(const std::string& network, std::string& output);
-	int disable_network(const std::string& network, std::string& output);
-	int select_network(const std::string& network, std::string& output);
+	int enable_network(const std::string& ssid, const std::string& bssid);
+	int disable_network(const std::string& ssid, const std::string& bssid);
+	int select_network(const std::string& ssid, const std::string& bssid);
 
 private:
 	rina::Lockable * lock;
