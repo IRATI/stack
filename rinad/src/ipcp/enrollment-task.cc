@@ -44,22 +44,32 @@ namespace rinad {
 const std::string NeighborRIBObj::class_name = "Neighbor";
 const std::string NeighborRIBObj::object_name_prefix = "/difManagement/enrollment/neighbors/processName=";
 
-NeighborRIBObj::NeighborRIBObj(rina::Neighbor* neigh) :
-		rina::rib::RIBObj(class_name), neighbor(neigh)
+NeighborRIBObj::NeighborRIBObj(const std::string& neigh_key) :
+		rina::rib::RIBObj(class_name), neighbor_key(neigh_key)
 {
 }
 
 const std::string NeighborRIBObj::get_displayable_value() const
 {
-    std::stringstream ss;
-    ss << "Name: " << neighbor->name_.getProcessNamePlusInstance();
-    ss << "; Address: " << neighbor->address_;
-    ss << "; Enrolled: " << neighbor->enrolled_ << std::endl;
-    ss << "; Supporting DIF Name: " << neighbor->supporting_dif_name_.processName;
-    ss << "; Underlying port-id: " << neighbor->underlying_port_id_;
-    ss << "; Number of enroll. attempts: " << neighbor->number_of_enrollment_attempts_;
+	std::stringstream ss;
+	rina::Neighbor neighbor;
+	EnrollmentTask * et = (EnrollmentTask*) rinad::IPCPFactory::getIPCP()->enrollment_task_;
 
-    return ss.str();
+	try {
+		neighbor = et->get_neighbor(neighbor_key);
+	} catch (rina::Exception &e) {
+		ss << "Could not find neighbor with key " << neighbor_key << std::endl;
+		return ss.str();
+	}
+
+	ss << "Name: " << neighbor.name_.getProcessNamePlusInstance();
+	ss << "; Address: " << neighbor.address_;
+	ss << "; Enrolled: " << neighbor.enrolled_ << std::endl;
+	ss << "; Supporting DIF Name: " << neighbor.supporting_dif_name_.processName;
+	ss << "; Underlying port-id: " << neighbor.underlying_port_id_;
+	ss << "; Number of enroll. attempts: " << neighbor.number_of_enrollment_attempts_;
+
+	return ss.str();
 }
 
 void NeighborRIBObj::read(const rina::cdap_rib::con_handle_t &con,
@@ -70,10 +80,18 @@ void NeighborRIBObj::read(const rina::cdap_rib::con_handle_t &con,
 			  rina::cdap_rib::obj_info_t &obj_reply,
 			  rina::cdap_rib::res_info_t& res)
 {
-	if (neighbor) {
-		encoders::NeighborEncoder encoder;
-		encoder.encode(*neighbor, obj_reply.value_);
+	rina::Neighbor neighbor;
+	EnrollmentTask * et = (EnrollmentTask*) rinad::IPCPFactory::getIPCP()->enrollment_task_;
+
+	try {
+		neighbor = et->get_neighbor(neighbor_key);
+	} catch (rina::Exception &e) {
+		res.code_ == rina::cdap_rib::CDAP_ERROR;
+		return;
 	}
+
+	encoders::NeighborEncoder encoder;
+	encoder.encode(neighbor, obj_reply.value_);
 
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
@@ -1213,7 +1231,7 @@ void EnrollmentTask::_add_neighbor(const rina::Neighbor& neighbor)
 				<< neighbor.name_.processName;
 
 		neigh = new rina::Neighbor(neighbor);
-		rina::rib::RIBObj * nrobj = new NeighborRIBObj(neigh);
+		rina::rib::RIBObj * nrobj = new NeighborRIBObj(neigh->name_.getProcessNamePlusInstance());
 		rib_daemon_->addObjRIB(ss.str(), &nrobj);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems creating RIB object: %s",
@@ -1221,6 +1239,22 @@ void EnrollmentTask::_add_neighbor(const rina::Neighbor& neighbor)
 	}
 
 	neighbors[neigh->name_.getProcessNamePlusInstance()] = neigh;
+}
+
+rina::Neighbor EnrollmentTask::get_neighbor(const std::string& neighbor_key)
+{
+	std::map<std::string, rina::Neighbor *>::iterator it;
+
+	rina::ReadScopedLock readLock(neigh_lock);
+
+	it = neighbors.find(neighbor_key);
+	if (it == neighbors.end()) {
+		LOG_IPCP_WARN("Could not find neighbor for key: %s",
+			      neighbor_key.c_str());
+		throw rina::IPCException("Neighbor not found");
+	}
+
+	return *(it->second);
 }
 
 void EnrollmentTask::remove_neighbor(const std::string& neighbor_key)

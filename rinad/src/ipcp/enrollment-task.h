@@ -34,7 +34,7 @@ namespace rinad {
 
 class NeighborRIBObj: public rina::rib::RIBObj {
 public:
-	NeighborRIBObj(rina::Neighbor* neigh);
+	NeighborRIBObj(const std::string& neigh_key);
 	const std::string get_displayable_value() const;
 	const std::string& get_class() const {
 		return class_name;
@@ -59,7 +59,7 @@ public:
 	const static std::string object_name_prefix;
 
 private:
-	rina::Neighbor * neighbor;
+	std::string neighbor_key;
 	static bool createNeighbor(rina::Neighbor &object);
 };
 
@@ -287,6 +287,7 @@ public:
 	std::list<rina::Neighbor> get_neighbors();
 	void add_neighbor(const rina::Neighbor& neighbor);
 	void add_or_update_neighbor(const rina::Neighbor& neighbor);
+	rina::Neighbor get_neighbor(const std::string& neighbor_key);
 	void remove_neighbor(const std::string& neighbor_key);
 	bool isEnrolledTo(const std::string& applicationProcessName);
 	std::list<std::string> get_enrolled_app_names();

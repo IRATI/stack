@@ -89,19 +89,6 @@ bool ApplicationProcessNamingInformation::operator!=(
 	return !(*this == other);
 }
 
-ApplicationProcessNamingInformation &
-ApplicationProcessNamingInformation::operator=(
-		const ApplicationProcessNamingInformation & other){
-	if (this != &other){
-		processName = other.processName;
-		processInstance = other.processInstance;
-		entityName = other.entityName;
-		entityInstance = other.entityInstance;
-	}
-
-	return *this;
-}
-
 bool ApplicationProcessNamingInformation::operator>(
 		const ApplicationProcessNamingInformation &other) const {
 	int aux = processName.compare(other.processName);
@@ -946,34 +933,6 @@ Neighbor::Neighbor()
 	number_of_enrollment_attempts_ = 0;
 }
 
-Neighbor::Neighbor(const Neighbor &other)
-{
-	address_ = other.address_;
-	old_address_ = other.old_address_;
-	average_rtt_in_ms_ = other.average_rtt_in_ms_;
-	last_heard_from_time_in_ms_ = other.last_heard_from_time_in_ms_;
-	enrolled_ = other.enrolled_;
-	underlying_port_id_ = other.underlying_port_id_;
-	number_of_enrollment_attempts_ = other.number_of_enrollment_attempts_;
-	name_ = other.name_;
-	supporting_dif_name_ = other.supporting_dif_name_;
-	supporting_difs_ = other.supporting_difs_;
-}
-
-Neighbor& Neighbor::operator=(const Neighbor &other)
-{
-	address_ = other.address_;
-	average_rtt_in_ms_ = other.average_rtt_in_ms_;
-	last_heard_from_time_in_ms_ = other.last_heard_from_time_in_ms_;
-	enrolled_ = other.enrolled_;
-	underlying_port_id_ = other.underlying_port_id_;
-	number_of_enrollment_attempts_ = other.number_of_enrollment_attempts_;
-	name_ = other.name_;
-	supporting_dif_name_ = other.supporting_dif_name_;
-	supporting_difs_ = other.supporting_difs_;
-	return *this;
-}
-
 bool Neighbor::operator==(const Neighbor &other) const{
 	return name_ == other.get_name();
 }
@@ -992,7 +951,7 @@ void Neighbor::set_name(
 	name_ = name;
 }
 
-const ApplicationProcessNamingInformation&
+const ApplicationProcessNamingInformation
 Neighbor::get_supporting_dif_name() const {
 	return supporting_dif_name_;
 }

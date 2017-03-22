@@ -305,6 +305,7 @@ find_flow_by_gpa(struct ipcp_instance_data * data,
         spin_lock(&data->lock);
 
         list_for_each_entry(flow, &data->flows, list) {
+        	ASSERT(flow);
                 if (gpa_is_equal(addr, flow->dest_pa)) {
                         spin_unlock(&data->lock);
                         return flow;
@@ -382,6 +383,7 @@ static int flow_destroy(struct ipcp_instance_data * data,
 
         spin_lock(&data->lock);
         if (!list_empty(&flow->list)) {
+        	LOG_INFO("Deleting flow %d from list and destroying it", flow->port_id);
                 list_del(&flow->list);
         }
         spin_unlock(&data->lock);

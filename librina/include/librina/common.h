@@ -73,9 +73,7 @@ class ApplicationProcessNamingInformation {
 public:
 	ApplicationProcessNamingInformation();
 	ApplicationProcessNamingInformation(const std::string& processName,
-			const std::string& processInstance);
-	ApplicationProcessNamingInformation & operator=(
-			const ApplicationProcessNamingInformation & other);
+					    const std::string& processInstance);
 	bool operator==(const ApplicationProcessNamingInformation &other) const;
 	bool operator!=(const ApplicationProcessNamingInformation &other) const;
 	bool operator>(const ApplicationProcessNamingInformation &other) const;
@@ -677,14 +675,12 @@ class Neighbor {
 
 public:
         Neighbor();
-        Neighbor(const Neighbor &other);
-        Neighbor& operator=(const Neighbor &other);
         bool operator==(const Neighbor &other) const;
         bool operator!=(const Neighbor &other) const;
 #ifndef SWIG
         const ApplicationProcessNamingInformation get_name() const;
         void set_name(const ApplicationProcessNamingInformation& name);
-        const ApplicationProcessNamingInformation&
+        const ApplicationProcessNamingInformation
                 get_supporting_dif_name() const;
         void set_supporting_dif_name(
                 const ApplicationProcessNamingInformation& supporting_dif_name);
