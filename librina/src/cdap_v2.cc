@@ -1120,9 +1120,10 @@ long ConnectionStateMachine::get_timeout()
 
 void ConnectionStateMachine::resetConnection()
 {
-	ScopedLock g(my_lock);
-
+	my_lock.lock();
 	connection_state_ = NONE;
+	my_lock.unlock();
+
 	cdap_session_->stopConnection();
 }
 
