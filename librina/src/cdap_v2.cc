@@ -1196,11 +1196,10 @@ void ConnectionStateMachine::connectResponseReceived()
 
 void ConnectionStateMachine::release(const cdap_m_t &cdap_message)
 {
-	bool force = false;
-
-	ScopedLock g(my_lock);
+	my_lock.lock();
 
 	if (connection_state_ != CONNECTED) {
+		my_lock.unlock();
 		std::stringstream ss;
 		ss << "Cannot close a connection because "
 		   << "this CDAP session is " << "currently in "
@@ -1213,20 +1212,23 @@ void ConnectionStateMachine::release(const cdap_m_t &cdap_message)
 	if (cdap_message.invoke_id_ != 0) {
 		LOG_DBG("Waiting timeout %d to receive a release response",
 			timeout_);
-	} else {
-		timeout_ = 0;
-		force = true;
+		last_timer_task = new ReleaseConnectionTimerTask(this, false);
+		timer.scheduleTask(last_timer_task, timeout_);
+		my_lock.unlock();
+
+		return;
 	}
 
-	last_timer_task = new ReleaseConnectionTimerTask(this, force);
-	timer.scheduleTask(last_timer_task, timeout_);
+	my_lock.unlock();
+	resetConnection();
 }
 
 void ConnectionStateMachine::releaseReceived(const cdap_m_t &message)
 {
-	ScopedLock g(my_lock);
+	my_lock.lock();
 
 	if (connection_state_ != CONNECTED && connection_state_ != AWAITCLOSE) {
+		my_lock.unlock();
 		std::stringstream ss;
 		ss << "Cannot close the connection because this CDAP session is currently in "
 		   << connection_state_ << " state";
@@ -1235,10 +1237,13 @@ void ConnectionStateMachine::releaseReceived(const cdap_m_t &message)
 
 	if (message.invoke_id_ != 0) {
 		connection_state_ = AWAITCLOSE;
-	} else {
-		last_timer_task = new ReleaseConnectionTimerTask(this, true);
-		timer.scheduleTask(last_timer_task, 0);
+		my_lock.unlock();
+
+		return;
 	}
+
+	my_lock.unlock();
+	resetConnection();
 }
 
 void ConnectionStateMachine::releaseResponse()
@@ -2303,12 +2308,18 @@ CDAPSession* CDAPSessionManager::get_cdap_session(int port_id)
 
 CDAPSession* CDAPSessionManager::internal_get_cdap_session(int port_id)
 {
-	std::map<int, CDAPSession*>::iterator itr = cdap_sessions_.find(
-			port_id);
-	if (itr != cdap_sessions_.end())
-		return cdap_sessions_.find(port_id)->second;
-	else
-		return 0;
+	std::map<int, CDAPSession*>::iterator itr;
+	CDAPSession * result = 0;
+
+	itr = cdap_sessions_.find(port_id);
+	if (itr != cdap_sessions_.end()) {
+		result = itr->second;
+		if (itr->second == 0) {
+			cdap_sessions_.erase(itr);
+		}
+	}
+
+	return result;
 }
 
 void CDAPSessionManager::encodeCDAPMessage(const cdap_m_t& cdap_message,
