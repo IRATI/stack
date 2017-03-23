@@ -1706,6 +1706,11 @@ void FlowStateManager::deprecateObjectsNeighbor(const std::string& neigh_name,
 			       maximum_age);
 }
 
+void FlowStateManager::force_table_update()
+{
+	fsos->has_modified(true);
+}
+
 bool FlowStateManager::tableUpdate() const
 {
 	bool result = fsos->is_modified();
@@ -2131,6 +2136,9 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(
 			LOG_IPCP_ERR("Problems encoding and sending CDAP message: %s", e.what());
 		}
 	}
+
+	//Force a routing table update
+	db_->force_table_update();
 }
 
 void LinkStateRoutingPolicy::propagateFSDB()

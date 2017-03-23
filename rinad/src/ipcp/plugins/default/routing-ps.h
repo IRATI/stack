@@ -511,6 +511,9 @@ public:
 	void getAllFSOsForPropagation(std::list< std::list<FlowStateObject> >& fsos,
 				      unsigned int max_objects);
 
+	//Force a routing table update;
+	void force_table_update();
+
 	// accessors
 	void set_maximum_age(unsigned int max_age);
 	void set_wait_until_remove_object(unsigned int wait_object);
