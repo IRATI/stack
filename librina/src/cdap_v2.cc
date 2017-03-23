@@ -1196,10 +1196,11 @@ void ConnectionStateMachine::connectResponseReceived()
 
 void ConnectionStateMachine::release(const cdap_m_t &cdap_message)
 {
-	my_lock.lock();
+	bool force = false;
+
+	ScopedLock g(my_lock);
 
 	if (connection_state_ != CONNECTED) {
-		my_lock.unlock();
 		std::stringstream ss;
 		ss << "Cannot close a connection because "
 		   << "this CDAP session is " << "currently in "
@@ -1212,23 +1213,20 @@ void ConnectionStateMachine::release(const cdap_m_t &cdap_message)
 	if (cdap_message.invoke_id_ != 0) {
 		LOG_DBG("Waiting timeout %d to receive a release response",
 			timeout_);
-		last_timer_task = new ReleaseConnectionTimerTask(this, false);
-		timer.scheduleTask(last_timer_task, timeout_);
-		my_lock.unlock();
-
-		return;
+	} else {
+		timeout_ = 0;
+		force = true;
 	}
 
-	my_lock.unlock();
-	resetConnection();
+	last_timer_task = new ReleaseConnectionTimerTask(this, force);
+	timer.scheduleTask(last_timer_task, timeout_);
 }
 
 void ConnectionStateMachine::releaseReceived(const cdap_m_t &message)
 {
-	my_lock.lock();
+	ScopedLock g(my_lock);
 
 	if (connection_state_ != CONNECTED && connection_state_ != AWAITCLOSE) {
-		my_lock.unlock();
 		std::stringstream ss;
 		ss << "Cannot close the connection because this CDAP session is currently in "
 		   << connection_state_ << " state";
@@ -1237,13 +1235,10 @@ void ConnectionStateMachine::releaseReceived(const cdap_m_t &message)
 
 	if (message.invoke_id_ != 0) {
 		connection_state_ = AWAITCLOSE;
-		my_lock.unlock();
-
-		return;
+	} else {
+		last_timer_task = new ReleaseConnectionTimerTask(this, true);
+		timer.scheduleTask(last_timer_task, 0);
 	}
-
-	my_lock.unlock();
-	resetConnection();
 }
 
 void ConnectionStateMachine::releaseResponse()
