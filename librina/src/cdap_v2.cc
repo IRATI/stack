@@ -2244,18 +2244,24 @@ CDAPSessionManager::CDAPSessionManager(cdap_rib::concrete_syntax_t& syntax,
 
 CDAPSession* CDAPSessionManager::internal_createCDAPSession(int port_id)
 {
-	if (cdap_sessions_.find(port_id) != cdap_sessions_.end()) {
-		return cdap_sessions_.find(port_id)->second;
-	} else {
-		CDAPSession *cdap_session = new CDAPSession(this, timeout_,
-							    encoder,
-							    invoke_id_manager_);
-		cdap_session->set_port_id(port_id);
-		cdap_sessions_.insert(
-				std::pair<int, CDAPSession*>(port_id,
-							     cdap_session));
-		return cdap_session;
+	std::map<int, CDAPSession *>::iterator it;
+
+	it = cdap_sessions_.find(port_id);
+	if (it != cdap_sessions_.end()) {
+		if (it->second)
+			return it->second;
+		else
+			cdap_sessions_.erase(it);
 	}
+
+	CDAPSession *cdap_session = new CDAPSession(this, timeout_,
+			encoder,
+			invoke_id_manager_);
+	cdap_session->set_port_id(port_id);
+	cdap_sessions_.insert(
+			std::pair<int, CDAPSession*>(port_id,
+					cdap_session));
+	return cdap_session;
 }
 
 CDAPSession* CDAPSessionManager::createCDAPSession(int port_id)
@@ -2319,19 +2325,17 @@ void CDAPSessionManager::decodeCDAPMessage(const ser_obj_t &cdap_message,
 
 void CDAPSessionManager::removeCDAPSession(int port_id)
 {
-	lock.lock();
+	ScopedLock g(lock);
 
 	std::map<int, CDAPSession*>::iterator itr = cdap_sessions_.find(
 		port_id);
+
 	if (itr != cdap_sessions_.end()){
-		cdap_sessions_.erase(itr);
-		lock.unlock();
 		delete itr->second;
 		itr->second = 0;
+		cdap_sessions_.erase(itr);
 		return;
 	}
-
-	lock.unlock();
 }
 
 bool CDAPSessionManager::session_in_await_con_state(int portId)
