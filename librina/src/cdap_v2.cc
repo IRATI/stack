@@ -2334,8 +2334,10 @@ void CDAPSessionManager::removeCDAPSession(int port_id)
 		delete itr->second;
 		itr->second = 0;
 		cdap_sessions_.erase(itr);
-		return;
+		LOG_DBG("Removed CDAP session associated to port-id %d", port_id);
 	}
+
+	return;
 }
 
 bool CDAPSessionManager::session_in_await_con_state(int portId)
