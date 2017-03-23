@@ -231,7 +231,7 @@ class ConnectionStateMachine
 		AWAITCLOSE
 	};
 
-	ConnectionStateMachine();
+	ConnectionStateMachine(CDAPSessionManagerInterface * sm_);
 	~ConnectionStateMachine() throw ();
 	void set_timeout(long timeout);
 	void set_cdap_session(CDAPSession * cdap_session);
@@ -260,6 +260,7 @@ class ConnectionStateMachine
 	void resetConnection(void);
 
  private:
+	CDAPSessionManagerInterface * sm;
 	rina::Lockable my_lock;
 	void noConnectionResponse();
 	/// The AE has sent an M_CONNECT message
@@ -342,12 +343,12 @@ class ResetStablishmentTimerTask : public rina::TimerTask
 class ReleaseConnectionTimerTask : public rina::TimerTask
 {
  public:
-	ReleaseConnectionTimerTask(ConnectionStateMachine *con_state_machine,
-				   bool force);
+	ReleaseConnectionTimerTask(int port_id,
+				   CDAPSessionManagerInterface * sm);
 	void run();
  private:
-	ConnectionStateMachine *con_state_machine_;
-	bool force_;
+	int pid;
+	CDAPSessionManagerInterface * sm;
 };
 
 /// Validates that a CDAP message is well formed
@@ -959,12 +960,13 @@ bool CDAPOperationState::is_sender() const
 }
 
 // CLASS ConnectionStateMachine
-ConnectionStateMachine::ConnectionStateMachine()
+ConnectionStateMachine::ConnectionStateMachine(CDAPSessionManagerInterface * sm_)
 {
 	last_timer_task = 0;
 	connection_state_ = NONE;
 	timeout_ = 0;
 	cdap_session_ = 0;
+	sm = sm_;
 }
 
 void ConnectionStateMachine::set_timeout(long timeout) {
@@ -1196,8 +1198,6 @@ void ConnectionStateMachine::connectResponseReceived()
 
 void ConnectionStateMachine::release(const cdap_m_t &cdap_message)
 {
-	bool force = false;
-
 	ScopedLock g(my_lock);
 
 	if (connection_state_ != CONNECTED) {
@@ -1215,10 +1215,9 @@ void ConnectionStateMachine::release(const cdap_m_t &cdap_message)
 			timeout_);
 	} else {
 		timeout_ = 0;
-		force = true;
 	}
 
-	last_timer_task = new ReleaseConnectionTimerTask(this, force);
+	last_timer_task = new ReleaseConnectionTimerTask(cdap_session_->get_port_id(), sm);
 	timer.scheduleTask(last_timer_task, timeout_);
 }
 
@@ -1236,7 +1235,7 @@ void ConnectionStateMachine::releaseReceived(const cdap_m_t &message)
 	if (message.invoke_id_ != 0) {
 		connection_state_ = AWAITCLOSE;
 	} else {
-		last_timer_task = new ReleaseConnectionTimerTask(this, true);
+		last_timer_task = new ReleaseConnectionTimerTask(cdap_session_->get_port_id(), sm);
 		timer.scheduleTask(last_timer_task, 0);
 	}
 }
@@ -1289,21 +1288,15 @@ void ResetStablishmentTimerTask::run()
 }
 
 // CLASS ReleaseConnectionTimerTask
-ReleaseConnectionTimerTask::ReleaseConnectionTimerTask(ConnectionStateMachine *con_state_machine,
-						       bool force)
+ReleaseConnectionTimerTask::ReleaseConnectionTimerTask(int port_id,
+						       CDAPSessionManagerInterface * sm_)
 {
-	con_state_machine_ = con_state_machine;
-	force_ = force;
+	pid = port_id;
+	sm = sm_;
 }
 void ReleaseConnectionTimerTask::run()
 {
-	if (force_) {
-		con_state_machine_->resetConnection();
-	} else if (con_state_machine_->get_connection_state() == ConnectionStateMachine::AWAITCLOSE) {
-		LOG_ERR( "M_RELEASE_R message not received within %d ms. Reseting the connection",
-			con_state_machine_->get_timeout());
-		con_state_machine_->resetConnection();
-	}
+	sm->removeCDAPSession(pid);
 }
 
 /* CLASS CDAPMessageValidator */
@@ -1642,7 +1635,7 @@ CDAPSession::CDAPSession(CDAPSessionManager *cdap_session_manager,
 			 CDAPInvokeIdManagerImpl *invoke_id_manager)
 {
 	cdap_session_manager_ = cdap_session_manager;
-	connection_state_machine_ = new ConnectionStateMachine();
+	connection_state_machine_ = new ConnectionStateMachine(cdap_session_manager_);
 	connection_state_machine_->set_timeout(timeout);
 	connection_state_machine_->set_cdap_session(this);
 	encoder = enc;
