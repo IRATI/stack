@@ -2303,18 +2303,17 @@ CDAPSession* CDAPSessionManager::get_cdap_session(int port_id)
 
 CDAPSession* CDAPSessionManager::internal_get_cdap_session(int port_id)
 {
-	std::map<int, CDAPSession*>::iterator itr;
-	CDAPSession * result = 0;
+	std::map<int, CDAPSession *>::iterator it;
 
-	itr = cdap_sessions_.find(port_id);
-	if (itr != cdap_sessions_.end()) {
-		result = itr->second;
-		if (itr->second == 0) {
-			cdap_sessions_.erase(itr);
-		}
+	it = cdap_sessions_.find(port_id);
+	if (it != cdap_sessions_.end()) {
+		if (it->second)
+			return it->second;
+		else
+			cdap_sessions_.erase(it);
 	}
 
-	return result;
+	return 0;
 }
 
 void CDAPSessionManager::encodeCDAPMessage(const cdap_m_t& cdap_message,
