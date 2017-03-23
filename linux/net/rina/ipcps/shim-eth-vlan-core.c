@@ -303,9 +303,12 @@ find_flow_by_gpa(struct ipcp_instance_data * data,
 	ASSERT(gpa_is_ok(addr));
 
         spin_lock(&data->lock);
+        LOG_INFO("About to check flows");
 
         list_for_each_entry(flow, &data->flows, list) {
+        	LOG_INFO("Flow pointer: %pK", flow);
         	ASSERT(flow);
+        	LOG_INFO("Dest pa pointer: %pK", flow->dest_pa);
                 if (gpa_is_equal(addr, flow->dest_pa)) {
                         spin_unlock(&data->lock);
                         return flow;

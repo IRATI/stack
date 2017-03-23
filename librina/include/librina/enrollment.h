@@ -83,14 +83,6 @@ public:
                           const EnrollToDAFRequestEvent & event) : neighbor_(neighbor),
                  event_(event), ipcm_initiated_(true) { };
 
-	EnrollmentRequest& operator=(const EnrollmentRequest &other)
-	{
-		neighbor_ = other.neighbor_;
-		event_ = other.event_;
-		ipcm_initiated_ = other.ipcm_initiated_;
-		return *this;
-	}
-
 	/// The neighbor to enroll to
 	Neighbor neighbor_;
 

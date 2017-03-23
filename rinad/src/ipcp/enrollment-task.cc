@@ -460,7 +460,7 @@ const std::string IEnrollmentStateMachine::STATE_TERMINATED = "TERMINATED";
 IEnrollmentStateMachine::IEnrollmentStateMachine(IPCProcess * ipcp,
 						 const rina::ApplicationProcessNamingInformation& remote_naming_info,
 						 int timeout,
-						 rina::ApplicationProcessNamingInformation * supporting_dif_name)
+						 const rina::ApplicationProcessNamingInformation& supporting_dif_name)
 {
 	if (!ipcp) {
 		throw rina::Exception("Bogus Application Process instance passed");
@@ -471,10 +471,7 @@ IEnrollmentStateMachine::IEnrollmentStateMachine(IPCProcess * ipcp,
 	enrollment_task_ = ipcp_->enrollment_task_;
 	timeout_ = timeout;
 	remote_peer_.name_ = remote_naming_info;
-	if (supporting_dif_name) {
-		remote_peer_.supporting_dif_name_ = *supporting_dif_name;
-		delete supporting_dif_name;
-	}
+	remote_peer_.supporting_dif_name_ = supporting_dif_name;
 	last_scheduled_task_ = 0;
 	state_ = STATE_NULL;
 	auth_ps_ = 0;

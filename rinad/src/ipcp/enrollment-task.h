@@ -182,8 +182,9 @@ public:
 	static const std::string STATE_TERMINATED;
 
 	IEnrollmentStateMachine(IPCProcess * ipcp,
-			const rina::ApplicationProcessNamingInformation& remote_naming_info,
-			int timeout, rina::ApplicationProcessNamingInformation * supporting_dif_name);
+				const rina::ApplicationProcessNamingInformation& remote_naming_info,
+				int timeout,
+				const rina::ApplicationProcessNamingInformation& supporting_dif_name);
 	virtual ~IEnrollmentStateMachine();
 
 	/// Called by the EnrollmentTask when it got an M_RELEASE message
