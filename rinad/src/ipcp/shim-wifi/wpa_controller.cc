@@ -167,15 +167,18 @@ int WpaController::launch_wpa(const std::string& wif_name){
 
 void WpaController::__process_msg(std::string msg){
 
-	if (msg.find("CTRL-EVENT-CONNECTED")) {
+	if (msg.find("CTRL-EVENT-CONNECTED") != std::string::npos) {
 		LOG_IPCP_DBG("CTRL-EVENT-CONNECTED event received");
-	} else if (msg.find("CTRL-EVENT-DISCONNECTED")) {
+	} else if (msg.find("CTRL-EVENT-DISCONNECTED") != std::string::npos) {
 		LOG_IPCP_DBG("CTRL-EVENT-DISCONNECTED event received");
-	} else if (msg.find("CTRL-EVENT-TERMINATING")) {
+	} else if (msg.find("CTRL-EVENT-TERMINATING") != std::string::npos) {
 		LOG_IPCP_DBG("CTRL-EVENT-TERMINATING event received");
-	} else if (msg.find("CTRL-EVENT-SCAN-RESULTS")) {
+	} else if (msg.find("CTRL-EVENT-SCAN-STARTED") != std::string::npos) {
+		LOG_IPCP_DBG("CTRL-EVENT-SCAN-STARTED event received");
+	} else if (msg.find("CTRL-EVENT-SCAN-RESULTS") != std::string::npos) {
 		LOG_IPCP_DBG("CTRL-EVENT-SCAN-RESULTS event received");
-		return ipcp->push_scan_results(msg);
+	}else{
+		LOG_IPCP_DBG("Received not expected message %s", msg.c_str());
 	}
 }
 
@@ -259,10 +262,11 @@ int WpaController::create_ctrl_connection(const std::string& if_name) {
 	return 0;
 }
 
-int WpaController::__send_command(const std::string& cmd){
+int WpaController::__send_command(const std::string& cmd,
+						std::string * out = NULL){
 
 	char buf[4096];
-	size_t len;
+	size_t len = sizeof(buf);
 	int ret;
 
 	if (ctrl_conn == NULL) {
@@ -283,19 +287,23 @@ int WpaController::__send_command(const std::string& cmd){
 	}
 
 	buf[len] = '\0';
-	return 0;
+	if(out){
+		*out = buf;
+		return 0;
+	}else{
+		return (strncmp(buf, "OK", 2)) ? -1 : 0;
+	}
 }
 
 int WpaController::scan(){
-	std::string output;
 	std::string cmd = "SCAN";
 	int rv = __send_command(cmd.c_str());
 	assert(rv == 0);
 }
 
-int WpaController::scan_results(){
+int WpaController::scan_results(std::string& out){
 	std::string cmd = "SCAN_RESULTS";
-	int rv = __send_command(cmd.c_str());
+	int rv = __send_command(cmd.c_str(), &out);
 	assert(rv == 0);
 }
 

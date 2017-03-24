@@ -31,7 +31,7 @@
 
 #define IPCP_MODULE "shim-wifi-ipcp"
 #include "ipcp-logging.h"
-#define SCAN_INTERVAL 10
+#define SCAN_INTERVAL 10000 // at least 3000
 
 namespace rinad {
 
@@ -46,8 +46,16 @@ private:
 };
 
 void ShimWifiScanTask::run() {
+	std::string out;
 	LOG_IPCP_DBG("Scanner task trigerred...");
 	ipcp->wpa_conn->scan();
+	sleep(1);
+	ipcp->wpa_conn->scan_results(out);
+	ipcp->push_scan_results(out);
+
+	//Reschedule
+	ShimWifiScanTask * task = new ShimWifiScanTask(ipcp);
+	ipcp->scanner.scheduleTask(task, SCAN_INTERVAL);
 }
 
 //Class ShimWifiIPCPProxy
