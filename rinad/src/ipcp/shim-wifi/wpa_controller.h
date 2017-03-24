@@ -52,7 +52,7 @@ public:
 	int launch_wpa(const std::string& wif_name);
 	int create_ctrl_connection(const std::string& if_name);
 	int scan(void);
-	int scan_results(std::string& output);
+	int scan_results(void);
 	int enable_network(const std::string& ssid, const std::string& bssid);
 	int disable_network(const std::string& ssid, const std::string& bssid);
 	int select_network(const std::string& ssid, const std::string& bssid);
@@ -89,7 +89,7 @@ private:
 	static void * __mon_trampoline(void * opaque);
 	void __mon_loop(void);
 	void __process_msg(std::string msg);
-	int __send_command(const std::string& cmd, std::string& output);
+	int __send_command(const std::string& cmd);
 };
 
 } //namespace rinad

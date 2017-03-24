@@ -259,7 +259,7 @@ int WpaController::create_ctrl_connection(const std::string& if_name) {
 	return 0;
 }
 
-int WpaController::__send_command(const std::string& cmd, std::string& output){
+int WpaController::__send_command(const std::string& cmd){
 
 	char buf[4096];
 	size_t len;
@@ -283,60 +283,58 @@ int WpaController::__send_command(const std::string& cmd, std::string& output){
 	}
 
 	buf[len] = '\0';
-	output = buf;
 	return 0;
 }
 
 int WpaController::scan(){
 	std::string output;
 	std::string cmd = "SCAN";
-	int rv = __send_command(cmd.c_str(), output);
+	int rv = __send_command(cmd.c_str());
 	assert(rv == 0);
-	LOG_IPCP_DBG("Scan results:");
-	LOG_IPCP_DBG("%s", output.c_str());
-	ipcp->push_scan_results(output);
 }
 
-int WpaController::scan_results(std::string& output){
+int WpaController::scan_results(){
 	std::string cmd = "SCAN_RESULTS";
-	int rv = __send_command(cmd.c_str(), output);
+	int rv = __send_command(cmd.c_str());
 	assert(rv == 0);
-	LOG_IPCP_DBG("Scan results results:");
-	LOG_IPCP_DBG("%s", output.c_str());
-	ipcp->push_scan_results(output);
 }
 
 int WpaController::enable_network(const std::string& ssid,
 						const std::string& bssid){
 	int rv;
 	std::stringstream ss;
-	std::string output;
-	network_key_t key = {.ssid = ssid, .bssid = bssid};
 
-	ss << "ENABLE_NETWORK " << network_map[key];
-	return __send_command(ss.str().c_str(), output);
+	if(ssid == "all")
+		ss << "ENABLE_NETWORK all";
+	else{
+		network_key_t key = {.ssid = ssid, .bssid = bssid};
+		ss << "ENABLE_NETWORK " << network_map[key];
+	}
+	return __send_command(ss.str().c_str());
 }
 
 int WpaController::disable_network(const std::string& ssid,
 						const std::string& bssid){
 	int rv;
 	std::stringstream ss;
-	std::string output;
-	network_key_t key = {.ssid = ssid, .bssid = bssid};
 
-	ss << "DISABLE_NETWORK " << network_map[key];
-	return __send_command(ss.str().c_str(), output);
+	if(ssid == "all")
+		ss << "DISABLE_NETWORK all";
+	else{
+		network_key_t key = {.ssid = ssid, .bssid = bssid};
+		ss << "DISABLE_NETWORK " << network_map[key];
+	}
+	return __send_command(ss.str().c_str());
 }
 
 int WpaController::select_network(const std::string& ssid,
 						const std::string& bssid){
 	int rv;
 	std::stringstream ss;
-	std::string output;
 	network_key_t key = {.ssid = ssid, .bssid = bssid};
 
 	ss << "SELECT_NETWORK " << network_map[key];
-	return __send_command(ss.str().c_str(), output);
+	return __send_command(ss.str().c_str());
 }
 
 } //namespace rinad

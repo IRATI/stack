@@ -319,7 +319,7 @@ void ShimWifiIPCProcessImpl::assign_to_dif_response_handler(const rina::AssignTo
 	assert(rv == 0);
 
 	//Disable networks specified in configuration file to avoid connecting
-	rv == wpa_conn->disable_network("all", output);
+	rv == wpa_conn->disable_network("all", "all");
 	assert(rv == 0);
 
 	//Create scan timer
