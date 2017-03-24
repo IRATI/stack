@@ -59,7 +59,7 @@ ShimWifiIPCPProxy::ShimWifiIPCPProxy(unsigned short id,
 }
 
 //Class ShimWifiIPCProcessImpl
-ShimWifiIPCProcessImpl::ShimWifiIPCProcessImpl(const std::string& type,
+ShimWifiIPCProcessImpl::ShimWifiIPCProcessImpl(const std::string& type_,
 				const rina::ApplicationProcessNamingInformation& nm,
 				unsigned short id,
 				unsigned int ipc_manager_port,
@@ -68,6 +68,8 @@ ShimWifiIPCProcessImpl::ShimWifiIPCProcessImpl(const std::string& type,
 				std::string& folder) : IPCProcess(nm.processName, nm.processInstance),
 					       	       LazyIPCProcessImpl(nm, id, ipc_manager_port, log_level, log_file)
 {
+	type = type_;
+
 	if (type != rina::SHIM_WIFI_IPC_PROCESS_AP &&
 			type != rina::SHIM_WIFI_IPC_PROCESS_STA) {
 		LOG_IPCP_ERR("Could not create Shim WiFi IPCP, type %s not recognized",
