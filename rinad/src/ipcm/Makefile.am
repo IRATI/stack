@@ -48,7 +48,6 @@ ipcm_SOURCES  =								\
 	policies-handlers.cc						\
 	dif-allocator.cc		dif-allocator.h			\
 	dif-template-manager.cc		dif-template-manager.h		\
-	mobility-manager.cc		mobility-manager.h		\
 	catalog.cc			catalog.h
 
 test_empty_SOURCES  =				\

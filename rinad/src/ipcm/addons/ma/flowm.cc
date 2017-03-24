@@ -509,8 +509,7 @@ void FlowManager::process_librina_event(rina::IPCEvent** event_)
 		}
 
 		default:
-			assert(0);
-			LOG_ERR("Got unknown event %d", event->eventType);
+			//Ignore, I'm not interested in this event
 			break;
 	}
 

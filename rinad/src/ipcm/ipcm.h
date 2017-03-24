@@ -39,7 +39,6 @@
 #include "dif-template-manager.h"
 #include "dif-allocator.h"
 #include "catalog.h"
-#include "mobility-manager.h"
 
 //Addons
 #include "addon.h"
@@ -548,6 +547,8 @@ public:
 	//
 	std::string get_log_level() const;
 
+	IPCMIPCProcessFactory * get_ipcp_factory();
+
 	//
 	// Set the config
 	//
@@ -594,9 +595,6 @@ public:
 
         //The DIF Allocator
         DIFAllocator * dif_allocator;
-
-        //The Mobility Manager
-        MobilityManager * mobility_manager;
 
         //Catalog of policies
         Catalog catalog;

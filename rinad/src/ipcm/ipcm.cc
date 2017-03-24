@@ -48,7 +48,6 @@
 #include "rina-configuration.h"
 #include "ipcm.h"
 #include "dif-validator.h"
-#include "mobility-manager.h"
 
 //Addons
 #include "addons/console.h"
@@ -89,8 +88,7 @@ IPCManager_::IPCManager_()
         : req_to_stop(false),
           io_thread(NULL),
           dif_template_manager(NULL),
-          dif_allocator(NULL),
-	  mobility_manager(NULL)
+          dif_allocator(NULL)
 {}
 
 IPCManager_::~IPCManager_()
@@ -103,11 +101,6 @@ IPCManager_::~IPCManager_()
     if (dif_allocator)
     {
         delete dif_allocator;
-    }
-
-    if (mobility_manager)
-    {
-        delete mobility_manager;
     }
 
     forwarded_calls.clear();
@@ -147,7 +140,6 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
         dif_allocator = new DIFAllocator(config_file);
         dif_template_manager = new DIFTemplateManager(config_file,
                                                       dif_allocator);
-        mobility_manager = new MobilityManager(&ipcp_factory_);
     } catch (rina::InitializationException& e)
     {
         LOG_ERR("Error while initializing librina-ipc-manager");
@@ -1318,6 +1310,11 @@ std::string IPCManager_::get_log_level() const
     return log_level_;
 }
 
+IPCMIPCProcessFactory * IPCManager_::get_ipcp_factory()
+{
+	return &ipcp_factory_;
+}
+
 ipcm_res_t IPCManager_::set_policy_set_param(Addon* callee, Promise* promise,
                                              const unsigned short ipcp_id,
                                              const std::string& component_path,
@@ -2202,11 +2199,6 @@ void IPCManager_::io_loop()
                 case rina::IPC_PROCESS_PLUGIN_LOAD_RESPONSE: {
                     DOWNCAST_DECL(event, rina::PluginLoadResponseEvent, e);
                     ipc_process_plugin_load_response_handler(e);
-                }
-                    break;
-                case rina::IPCM_MEDIA_REPORT_EVENT: {
-                    DOWNCAST_DECL(event, rina::MediaReportEvent, e);
-                    mobility_manager->media_reports_handler(e);
                 }
                     break;
 
