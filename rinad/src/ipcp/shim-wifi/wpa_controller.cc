@@ -32,6 +32,12 @@
 
 namespace rinad {
 
+WpaNetwork::WpaNetwork(){}
+
+WpaNetwork::WpaNetwork(unsigned int id, std::string ssid, std::string bssid,
+		std::string psk): id(id), ssid(ssid), bssid(bssid), psk(psk){
+}
+
 WpaController::WpaController(ShimWifiIPCProcessImpl * ipcp_,
 						const std::string& type_,
 						const std::string& folder_) {
@@ -126,7 +132,7 @@ int WpaController::launch_wpa(const std::string& wif_name){
 		std::ifstream file(ss.str().c_str());
 		std::string line;
 		bool in_network = false;
-		std::string ssid, bssid;
+		std::string ssid, bssid, psk;
 		int start, end;
 		unsigned int id = 0;
 		while (std::getline(file, line)){
@@ -143,16 +149,22 @@ int WpaController::launch_wpa(const std::string& wif_name){
 					start+=6;
 					ssid = line.substr(start,
 						line.length() - start -1);
+				}else if(start = line.find("psk=")
+							!= std::string::npos){
+					start+=4;
+					psk = line.substr(start,
+						line.length() - start);
 				}
 			}else if(in_network && (line.find("}") != std::string::npos)){
 				in_network = false;
-				network_key_t key =
-						{.ssid = ssid, .bssid = bssid};
-				network_map[key] = id++;
-				LOG_IPCP_DBG("Added Network %d with SSID %s and BSSID %s",
-								network_map[key],
-								ssid.c_str(),
-								bssid.c_str());
+				rinad::WpaNetwork nw(id, ssid, bssid, psk);
+				network_map[ssid] = nw;
+				id++;
+				LOG_IPCP_DBG("Added Network %d with SSID %s, BSSID %s and PSK %s",
+							nw.id,
+							nw.ssid.c_str(),
+							nw.bssid.c_str(),
+							nw.psk.c_str());
 			}else if(line.find("network") != std::string::npos){
 				in_network = true;
 			}
@@ -307,42 +319,92 @@ int WpaController::scan_results(std::string& out){
 	assert(rv == 0);
 }
 
-int WpaController::enable_network(const std::string& ssid,
+int WpaController::__get_network_id_and_set_bssid(const std::string& ssid,
+						const std::string& bssid,
+						unsigned int& id){
+
+	if(network_map.find(ssid) == network_map.end())
+		return -1;
+
+	network_map[ssid].bssid = bssid;
+
+	id = network_map[ssid].id;
+	return 0;
+}
+
+int WpaController::__get_network_id(const std::string& ssid,
+						const std::string& bssid,
+						unsigned int& id){
+
+	if(network_map.find(ssid) == network_map.end())
+		return -1;
+
+	if(network_map[ssid].bssid != bssid)
+		return -1;
+
+	id = network_map[ssid].id;
+	return 0;
+}
+
+int WpaController::__common_enable_network(const std::string cmd,
+						const std::string& ssid,
 						const std::string& bssid){
 	int rv;
+	unsigned int id;
 	std::stringstream ss;
 
-	if(ssid == "all")
-		ss << "ENABLE_NETWORK all";
-	else{
-		network_key_t key = {.ssid = ssid, .bssid = bssid};
-		ss << "ENABLE_NETWORK " << network_map[key];
+	rina::ScopedLock g(*lock);
+
+	if(ssid == "all"){
+		ss << cmd << " all";
+		return __send_command(ss.str().c_str());
 	}
+
+	if(__get_network_id_and_set_bssid(ssid, bssid, id) < 0)
+		return -1;
+
+	ss << "BSSID " << id << " " << bssid;
+	rv = __send_command(ss.str().c_str());
+	assert(!rv);
+
+	/*FIXME: check if we need to do select if it was alrady attached to that
+	 * ssid. To do that we need to know if were attached to the ssid, so
+	 * probably we need a flag in the WpaNetork
+	 */
+	ss << cmd << " " << id;
 	return __send_command(ss.str().c_str());
 }
 
 int WpaController::disable_network(const std::string& ssid,
 						const std::string& bssid){
 	int rv;
+	unsigned int id;
 	std::stringstream ss;
 
-	if(ssid == "all")
+	rina::ScopedLock g(*lock);
+
+	if(ssid == "all"){
 		ss << "DISABLE_NETWORK all";
-	else{
-		network_key_t key = {.ssid = ssid, .bssid = bssid};
-		ss << "DISABLE_NETWORK " << network_map[key];
+		return __send_command(ss.str().c_str());
 	}
+
+	if(__get_network_id(ssid, bssid, id) < 0)
+		return -1;
+
+	ss << "DISABLE_NETWORK " << id;
 	return __send_command(ss.str().c_str());
+}
+
+int WpaController::enable_network(const std::string& ssid,
+						const std::string& bssid){
+	return __common_enable_network(std::string("ENABLE_NETWORK"), ssid,
+									bssid);
 }
 
 int WpaController::select_network(const std::string& ssid,
 						const std::string& bssid){
-	int rv;
-	std::stringstream ss;
-	network_key_t key = {.ssid = ssid, .bssid = bssid};
-
-	ss << "SELECT_NETWORK " << network_map[key];
-	return __send_command(ss.str().c_str());
+	return __common_enable_network(std::string("SELECT_NETWORK"), ssid,
+									bssid);
 }
 
 } //namespace rinad

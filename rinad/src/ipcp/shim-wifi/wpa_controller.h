@@ -33,14 +33,15 @@ namespace rinad {
 
 class ShimWifiIPCProcessImpl;
 
-typedef struct network_key_s {
+class WpaNetwork {
+public:
+	WpaNetwork();
+	WpaNetwork(unsigned int id, std::string ssid, std::string bssid,
+							std::string psk);
+	unsigned int id;
 	std::string ssid;
 	std::string bssid;
-} network_key_t;
-
-inline bool operator<(const network_key_t& k1, const network_key_t& k2){
-	return memcmp((const void*)&k1, (const void*)&k2,
-						sizeof(network_key_t)) < 0;
+	std::string psk;
 };
 
 class WpaController {
@@ -84,12 +85,20 @@ private:
 	} state;
 
 	//Map to retrieve internal Network id from SSID&BSSID
-	std::map<network_key_t, unsigned int> network_map;
+	std::map<std::string, WpaNetwork> network_map;
 
 	static void * __mon_trampoline(void * opaque);
 	void __mon_loop(void);
 	void __process_msg(std::string msg);
 	int __send_command(const std::string& cmd, std::string * out);
+	int __get_network_id_and_set_bssid(const std::string& ssid,
+						const std::string& bssid,
+						unsigned int& id);
+	int __get_network_id(const std::string& ssid, const std::string& bssid,
+							unsigned int& id);
+	int __common_enable_network(const std::string cmd,
+						const std::string& ssid,
+						const std::string& bssid);
 };
 
 } //namespace rinad
