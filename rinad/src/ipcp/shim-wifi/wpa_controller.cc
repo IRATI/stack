@@ -301,6 +301,9 @@ int WpaController::__send_command(const std::string& cmd,
 	}
 
 	buf[len] = '\0';
+
+	LOG_IPCP_DBG("Got reply from WPA supplicant: %s", buf);
+
 	if(out){
 		*out = buf;
 		return 0;
