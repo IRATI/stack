@@ -1512,9 +1512,6 @@ void EnrollmentTask::release(int invoke_id,
 	assert(ipcp_ps);
 	ipcp_ps->inform_ipcm_about_failure(stateMachine);
 
-	delete stateMachine;
-	stateMachine = 0;
-
 	if (invoke_id != 0) {
 		try {
 			rina::cdap_rib::flags_t flags;
@@ -1531,6 +1528,10 @@ void EnrollmentTask::release(int invoke_id,
 	}
 
 	deallocateFlow(con_handle.port_id);
+
+	//Schedule destruction of enrollment state machine in a separate thread, since it may take time
+	DestroyESMTimerTask * timer_task = new DestroyESMTimerTask(stateMachine);
+	timer.scheduleTask(timer_task, 0);
 }
 
 // Class Operational Status RIB Object
