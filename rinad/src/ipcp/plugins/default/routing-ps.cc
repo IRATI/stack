@@ -1731,6 +1731,10 @@ void ComputeRoutingTimerTask::run()
 {
 	lsr_policy_->routingTableUpdate();
 
+	if (delay_ < 0) {
+		return;
+	}
+
 	//Re-schedule
 	ComputeRoutingTimerTask * task = new ComputeRoutingTimerTask(
 			lsr_policy_, delay_);
@@ -2139,6 +2143,8 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(
 
 	//Force a routing table update
 	db_->force_table_update();
+	ComputeRoutingTimerTask * task = new ComputeRoutingTimerTask(this, -1);
+	timer_->scheduleTask(task, 0);
 }
 
 void LinkStateRoutingPolicy::propagateFSDB()

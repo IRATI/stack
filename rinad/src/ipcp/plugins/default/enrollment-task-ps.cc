@@ -295,7 +295,6 @@ private:
 	bool was_dif_member_before_enrollment_;
 	bool allowed_to_start_early_;
 	int stop_request_invoke_id_;
-	int enrollment_start_time;
 };
 
 // Class EnrolleeStateMachine
@@ -311,7 +310,6 @@ EnrolleeStateMachine::EnrolleeStateMachine(IPCProcess * ipc_process,
 	last_scheduled_task_ = 0;
 	allowed_to_start_early_ = false;
 	stop_request_invoke_id_ = 0;
-	enrollment_start_time = rina::Time::get_time_in_ms();
 }
 
 void EnrolleeStateMachine::initiateEnrollment(const rina::EnrollmentRequest& enrollmentRequest,
@@ -380,9 +378,6 @@ void EnrolleeStateMachine::initiateEnrollment(const rina::EnrollmentRequest& enr
 				std::string(e.what()),
 				true);
 	}
-
-        LOG_IPCP_INFO("Time ellapsed since start of enrollment: %d ms",
-        		rina::Time::get_time_in_ms() - enrollment_start_time);
 }
 
 void EnrolleeStateMachine::process_authentication_message(const rina::cdap::CDAPMessage& message,
@@ -423,9 +418,6 @@ void EnrolleeStateMachine::authentication_completed(bool success)
 	} else {
 		LOG_IPCP_INFO("Authentication was successful, waiting for M_CONNECT_R");
 	}
-
-        LOG_IPCP_INFO("Time ellapsed since start of enrollment: %d ms",
-        		rina::Time::get_time_in_ms() - enrollment_start_time);
 }
 
 void EnrolleeStateMachine::connectResponse(int result,
@@ -433,9 +425,6 @@ void EnrolleeStateMachine::connectResponse(int result,
 					   const rina::cdap_rib::con_handle_t & con,
 					   const rina::cdap_rib::auth_policy_t& auth)
 {
-        LOG_IPCP_INFO("Time ellapsed since start of enrollment: %d ms",
-        		rina::Time::get_time_in_ms() - enrollment_start_time);
-
 	rina::ScopedLock g(lock_);
 
 	if (state_ != STATE_WAIT_CONNECT_RESPONSE) {
@@ -529,9 +518,6 @@ void EnrolleeStateMachine::connectResponse(int result,
 		LOG_IPCP_ERR("Problems sending M_START request message: %s", e.what());
 		//TODO what to do?
 	}
-
-        LOG_IPCP_INFO("Time ellapsed since start of enrollment: %d ms",
-        		rina::Time::get_time_in_ms() - enrollment_start_time);
 }
 
 void EnrolleeStateMachine::remoteStartResult(const rina::cdap_rib::con_handle_t &con_handle,
@@ -575,9 +561,6 @@ void EnrolleeStateMachine::remoteStartResult(const rina::cdap_rib::con_handle_t 
 
 	//Update state
 	state_ = STATE_WAIT_STOP_ENROLLMENT_RESPONSE;
-
-        LOG_IPCP_INFO("Time ellapsed since start of enrollment: %d ms",
-        		rina::Time::get_time_in_ms() - enrollment_start_time);
 }
 
 void EnrolleeStateMachine::stop(const configs::EnrollmentInformationRequest& eiRequest,
@@ -622,9 +605,6 @@ void EnrolleeStateMachine::stop(const configs::EnrollmentInformationRequest& eiR
 				std::string(e.what()),
 				true);
 	}
-
-        LOG_IPCP_INFO("Time ellapsed since start of enrollment: %d ms",
-        		rina::Time::get_time_in_ms() - enrollment_start_time);
 }
 
 void EnrolleeStateMachine::requestMoreInformationOrStart()
@@ -777,9 +757,6 @@ void EnrolleeStateMachine::enrollmentCompleted()
 			LOG_IPCP_ERR("Problems sending message to IPC Manager: %s", e.what());
 		}
 	}
-
-        LOG_IPCP_INFO("Remote IPC Process enrolled with %d ms",
-        		rina::Time::get_time_in_ms() - enrollment_start_time);
 }
 
 void EnrolleeStateMachine::remoteReadResult(const rina::cdap_rib::con_handle_t &con_handle,
@@ -952,7 +929,6 @@ private:
 	INamespaceManager * namespace_manager_;
 	int connect_message_invoke_id_;
 	rina::cdap_rib::con_handle_t con_handle_;
-	int enrollment_start_time;
 };
 
 //Class EnrollerStateMachine
@@ -968,14 +944,11 @@ EnrollerStateMachine::EnrollerStateMachine(IPCProcess * ipc_process,
 	namespace_manager_ = ipc_process->namespace_manager_;
 	enroller_ = true;
 	connect_message_invoke_id_ = 0;
-	enrollment_start_time = rina::Time::get_time_in_ms();
 }
 
 void EnrollerStateMachine::connect(const rina::cdap::CDAPMessage& message,
 				   const rina::cdap_rib::con_handle_t &con_handle)
 {
-        LOG_IPCP_INFO("Time ellapsed since start of enrollment: %d ms",
-        		rina::Time::get_time_in_ms() - enrollment_start_time);
 	rina::ScopedLock g(lock_);
 
 	if (state_ != STATE_NULL) {
@@ -1028,8 +1001,6 @@ void EnrollerStateMachine::connect(const rina::cdap::CDAPMessage& message,
 	}
 
 	authentication_successful();
-        LOG_IPCP_INFO("Time ellapsed since start of enrollment: %d ms",
-        		rina::Time::get_time_in_ms() - enrollment_start_time);
 }
 
 void EnrollerStateMachine::process_authentication_message(const rina::cdap::CDAPMessage& message,
@@ -1233,8 +1204,6 @@ void EnrollerStateMachine::start(configs::EnrollmentInformationRequest& eiReques
 				 int invoke_id,
 				 const rina::cdap_rib::con_handle_t &con_handle)
 {
-        LOG_IPCP_INFO("Time ellapsed since start of enrollment: %d ms",
-        		rina::Time::get_time_in_ms() - enrollment_start_time);
 	rina::ScopedLock g(lock_);
 
 	INamespaceManagerPs *nsmps = dynamic_cast<INamespaceManagerPs *>(namespace_manager_->ps);
@@ -1362,17 +1331,12 @@ void EnrollerStateMachine::start(configs::EnrollmentInformationRequest& eiReques
 
 	LOG_IPCP_DBG("Waiting for stop enrollment response message");
 	state_ = STATE_WAIT_STOP_ENROLLMENT_RESPONSE;
-
-        LOG_IPCP_INFO("Time ellapsed since start of enrollment: %d ms",
-        		rina::Time::get_time_in_ms() - enrollment_start_time);
 }
 
 void EnrollerStateMachine::remoteStopResult(const rina::cdap_rib::con_handle_t &con_handle,
 			      	      	    const rina::cdap_rib::obj_info_t &obj,
 			      	      	    const rina::cdap_rib::res_info_t &res)
 {
-        LOG_IPCP_INFO("Time ellapsed since start of enrollment: %d ms",
-        		rina::Time::get_time_in_ms() - enrollment_start_time);
 	rina::ScopedLock g(lock_);
 
 	if (!isValidPortId(con_handle.port_id)){
@@ -1422,9 +1386,6 @@ void EnrollerStateMachine::enrollmentCompleted()
 	createOrUpdateNeighborInformation(true);
 
 	enrollment_task_->enrollmentCompleted(remote_peer_, false);
-
-        LOG_IPCP_INFO("Remote IPC Process enrolled in %d",
-        		rina::Time::get_time_in_ms() - enrollment_start_time);
 }
 
 //Class EnrollmentRIBObject
