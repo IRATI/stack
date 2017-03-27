@@ -272,6 +272,16 @@ private:
 	bool send_message;
 };
 
+class DestroyESMTimerTask : public rina::TimerTask {
+public:
+	DestroyESMTimerTask(IEnrollmentStateMachine * sm);
+	~DestroyESMTimerTask() throw() {};
+	void run();
+
+private:
+	IEnrollmentStateMachine * state_machine;
+};
+
 class EnrollmentTask: public IPCPEnrollmentTask, public rina::InternalEventListener {
 public:
 	static const std::string ENROLL_TIMEOUT_IN_MS;

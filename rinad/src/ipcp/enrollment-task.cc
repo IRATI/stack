@@ -31,6 +31,7 @@
 
 #define IPCP_MODULE "enrollment-task"
 #include "ipcp-logging.h"
+#include <librina/timer.h>
 
 #include "common/concurrency.h"
 #include "common/encoders/EnrollmentInformationMessage.pb.h"
@@ -654,6 +655,18 @@ void AbortEnrollmentTimerTask::run()
 	etask->enrollmentFailed(peer_name, port_id, reason, send_message);
 }
 
+//Class DestroyESMTimerTask
+DestroyESMTimerTask::DestroyESMTimerTask(IEnrollmentStateMachine * sm)
+{
+	state_machine = sm;
+}
+
+void DestroyESMTimerTask::run()
+{
+	delete state_machine;
+	state_machine = 0;
+}
+
 //Class Enrollment Task
 const std::string EnrollmentTask::ENROLL_TIMEOUT_IN_MS = "enrollTimeoutInMs";
 const std::string EnrollmentTask::WATCHDOG_PERIOD_IN_MS = "watchdogPeriodInMs";
@@ -979,13 +992,13 @@ void EnrollmentTask::processDisconnectNeighborRequestEvent(const rina::Disconnec
 			      e.what());
 	}
 
-	// Wait a few ms and request deallocation of all N-1 flows to neighbor
+	// Request deallocation of all N-1 flows to neighbor
 	deallocateFlow(esm->con.port_id);
 
-	// Update
+	// Update and defer deletion of state machine to a timer task (takes long)
 	state_machines_.erase(esm->con.port_id);
-	delete esm;
-	esm = 0;
+	DestroyESMTimerTask * dsm_task = new DestroyESMTimerTask(esm);
+	timer.scheduleTask(dsm_task, 0);
 
 	// Reply to IPC Manager
 	try {

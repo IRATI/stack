@@ -55,6 +55,14 @@ void Time::set_timeval(timeval t) {
 	time_ = t;
 }
 
+int Time::get_time_in_ms()
+{
+	timeval time_;
+	gettimeofday(&time_, 0);
+	int time_seconds = (int) time_.tv_sec;
+	return (int) time_seconds * 1000 + (int) (time_.tv_usec / 1000);
+}
+
 // CLASS LockableMap
 void* doWorkTask(void *arg) {
 	TimerTask *timer_task = (TimerTask*) arg;

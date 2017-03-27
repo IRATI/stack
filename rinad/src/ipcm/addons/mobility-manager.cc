@@ -26,6 +26,7 @@
 #define RINA_PREFIX     "ipcm.mobility-manager"
 #include <librina/logs.h>
 #include <librina/json/json.h>
+#include <librina/timer.h>
 #include <debug.h>
 
 #include "mobility-manager.h"
@@ -37,13 +38,6 @@ namespace rinad {
 
 //Class Mobility Manager
 const std::string MobilityManager::NAME = "mobman";
-
-int getTimeInMs(){
-    timeval time_;
-    gettimeofday(&time_, 0);
-    int time_seconds = (int) time_.tv_sec;
-    return (int) time_seconds * 1000 + (int) (time_.tv_usec / 1000);
-}
 
 void MobilityManager::parse_configuration(const rinad::RINAConfiguration& config)
 {
@@ -188,7 +182,7 @@ int MobilityManager::execute_handover(unsigned short ipcp_id,
 		return -1;
 	}
 
-	t0 = getTimeInMs();
+	t0 = rina::Time::get_time_in_ms();
 
 	// Get IPCPs that are registered at the shim, disconnect them from the neighbors
 	for (it = ipcp->registeredApplications.begin();
@@ -212,7 +206,7 @@ int MobilityManager::execute_handover(unsigned short ipcp_id,
 		affected_ipcps.push_back(reg_ipcp);
 	}
 
-	t1 = getTimeInMs();
+	t1 = rina::Time::get_time_in_ms();
 
 	//Enroll the shim to the new DIF/AP (handover)
 	neigh_data.apName = neigh_name;
@@ -226,7 +220,7 @@ int MobilityManager::execute_handover(unsigned short ipcp_id,
 		return -1;
 	}
 
-	t2 = getTimeInMs();
+	t2 = rina::Time::get_time_in_ms();
 
 	//Get IPCPs that are registered to the shim, enroll again
 	for(ipcp_it = affected_ipcps.begin();
@@ -244,9 +238,9 @@ int MobilityManager::execute_handover(unsigned short ipcp_id,
 		}
 	}
 
-	t3 = getTimeInMs();
+	t3 = rina::Time::get_time_in_ms();
 	LOG_WARN("Handover completed in %d ms", (t3-t0));
-	LOG_WARN("Partial times: %d, %d, %d", (t1-t0), (t2-t0), (t3-t0));
+	LOG_WARN("Partial times: %d, %d, %d", (t1-t0), (t2-t1), (t3-t2));
 
 	return 0;
 }
