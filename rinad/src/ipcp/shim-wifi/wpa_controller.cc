@@ -315,13 +315,11 @@ int WpaController::__send_command(const std::string& cmd,
 int WpaController::scan(){
 	std::string cmd = "SCAN";
 	int rv = __send_command(cmd.c_str());
-	assert(rv == 0);
 }
 
 int WpaController::scan_results(std::string& out){
 	std::string cmd = "SCAN_RESULTS";
 	int rv = __send_command(cmd.c_str(), &out);
-	assert(rv == 0);
 }
 
 int WpaController::__get_network_id_and_set_bssid(const std::string& ssid,
