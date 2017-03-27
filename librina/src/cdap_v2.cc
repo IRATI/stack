@@ -476,6 +476,7 @@ class CDAPSessionManager : public CDAPSessionManagerInterface
 	CDAPSession* createCDAPSession(int port_id);
 	void getAllCDAPSessionIds(std::vector<int> &vector);
 	CDAPSession* get_cdap_session(int port_id);
+	cdap_rib::connection_handler get_con_handler(int port_id);
 	void encodeCDAPMessage(const cdap_m_t &cdap_message,
 			       ser_obj_t& result);
 	void decodeCDAPMessage(const ser_obj_t &cdap_message,
@@ -577,7 +578,6 @@ class CDAPSessionManager : public CDAPSessionManagerInterface
 	cdap_rib::con_handle_t & get_con_handle(int port_id);
 
  private:
-	void _removeCDAPSession(int portId);
 
 	Lockable lock;
 	std::map<int, CDAPSession*> cdap_sessions_;
@@ -2310,6 +2310,19 @@ CDAPSession* CDAPSessionManager::get_cdap_session(int port_id)
 	return internal_get_cdap_session(port_id);
 }
 
+cdap_rib::connection_handler CDAPSessionManager::get_con_handler(int port_id)
+{
+	CDAPSession * session;
+	ScopedLock g(lock);
+
+	session = internal_get_cdap_session(port_id);
+	if (!session) {
+		return cdap_rib::connection_handler();
+	} else {
+		return session->get_con_handle();
+	}
+}
+
 CDAPSession* CDAPSessionManager::internal_get_cdap_session(int port_id)
 {
 	std::map<int, CDAPSession *>::iterator it;
@@ -2340,11 +2353,7 @@ void CDAPSessionManager::decodeCDAPMessage(const ser_obj_t &cdap_message,
 void CDAPSessionManager::removeCDAPSession(int portId)
 {
 	ScopedLock g(lock);
-	_removeCDAPSession(portId);
-}
 
-void CDAPSessionManager::_removeCDAPSession(int portId)
-{
 	std::map<int, CDAPSession*>::iterator itr = cdap_sessions_.find(portId);
 
 	if (itr != cdap_sessions_.end()){
@@ -2415,36 +2424,6 @@ void CDAPSessionManager::messageReceived(const ser_obj_t &encoded_cdap_message,
 				throw CDAPException(ss.str());
 			}
 			break;
-		case CDAPMessage::M_RELEASE:
-			if (cdap_session == 0) {
-				std::stringstream ss;
-				ss << "Receive a "
-				   << result.op_code_
-				   << " CDAP message on a CDAP session that is not open, over flow "
-				   << port_id;
-				throw CDAPException(ss.str());
-			}
-
-			cdap_session->messageReceived(result);
-			if (result.invoke_id_ == 0) {
-				_removeCDAPSession(port_id);
-			}
-			break;
-		case CDAPMessage::M_RELEASE_R:
-			if (cdap_session == 0) {
-				std::stringstream ss;
-				ss << "Receive a "
-				   << result.op_code_
-				   << " CDAP message on a CDAP session that is not open, over flow "
-				   << port_id;
-				throw CDAPException(ss.str());
-			}
-
-			cdap_session->messageReceived(result);
-			if (result.invoke_id_ == 0) {
-				_removeCDAPSession(port_id);
-			}
-			break;
 		default:
 			if (cdap_session != 0) {
 				cdap_session->messageReceived(result);
@@ -2477,11 +2456,6 @@ void CDAPSessionManager::messageSent(const CDAPMessage &cdap_message,
 	}
 
 	cdap_session->messageSent(cdap_message);
-
-	if (cdap_message.op_code_ == CDAPMessage::M_RELEASE
-			&& cdap_message.invoke_id_ == 0) {
-		_removeCDAPSession(port_id);
-	}
 }
 int CDAPSessionManager::get_port_id(
 		std::string destination_application_process_name)

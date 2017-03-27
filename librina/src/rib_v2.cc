@@ -1926,6 +1926,8 @@ public:
 			     const cdap_rib::filt_info_t &filt,
 			     RIBOpsRespHandler * resp_handler);
 
+	void destroy_cdap_connection(int port_id);
+
 protected:
 	//
 	// CDAP provider callbacks
@@ -2524,6 +2526,7 @@ void RIBDaemon::remote_close_connection_result(const cdap_rib::con_handle_t &con
 
 	try {
 		remove_connection(con);
+		cdap_provider->get_session_manager()->removeCDAPSession(con.port_id);
 	} catch (Exception & e) {
 		LOG_WARN("Problems removing connection: %s",
 			 e.what());
@@ -2536,6 +2539,16 @@ void RIBDaemon::close_connection(const cdap_rib::con_handle_t &con,
 {
 	cdap_rib::result_info res;
 	app_con_callback_->release(invoke_id, con);
+
+	if (invoke_id == 0) {
+		try {
+			remove_connection(con);
+			cdap_provider->get_session_manager()->removeCDAPSession(con.port_id);
+		} catch (Exception & e) {
+			LOG_WARN("Problems removing connection: %s",
+				 e.what());
+		}
+	}
 }
 
 void RIBDaemon::process_authentication_message(const cdap::CDAPMessage& message,
@@ -2827,6 +2840,17 @@ int RIBDaemon::remote_operation(const cdap_rib::con_handle_t& con,
 	}
 
 	return result;
+}
+
+void RIBDaemon::destroy_cdap_connection(int port_id)
+{
+	try {
+		remove_connection(cdap_provider->get_session_manager()->get_con_handle(port_id));
+		cdap_provider->get_session_manager()->removeCDAPSession(port_id);
+	} catch (Exception & e) {
+		LOG_WARN("Problems destroying CDAP session: %s",
+			 e.what());
+	}
 }
 
 //
@@ -3491,7 +3515,9 @@ int RIBDaemonProxy::remote_close_connection(unsigned int port,
 	int res = ribd->cdap_provider->remote_close_connection(port,
 							       need_reply);
 
-	//TODO remove from storage?
+	if (!need_reply) {
+		ribd->destroy_cdap_connection(port);
+	}
 
 	return res;
 }
