@@ -351,6 +351,15 @@ class ReleaseConnectionTimerTask : public rina::TimerTask
 	CDAPSessionManagerInterface * sm;
 };
 
+class CDAPSessionDestroyerTimerTask : public rina::TimerTask
+{
+ public:
+	CDAPSessionDestroyerTimerTask(CDAPSession * cdaps);
+	void run();
+ private:
+	CDAPSession * cdap_session;
+};
+
 /// Validates that a CDAP message is well formed
 class CDAPMessageValidator
 {
@@ -576,6 +585,7 @@ class CDAPSessionManager : public CDAPSessionManagerInterface
 	CDAPInvokeIdManagerImpl *invoke_id_manager_;
 	CDAPSession* internal_get_cdap_session(int port_id);
 	CDAPSession* internal_createCDAPSession(int port_id);
+	Timer timer;
 };
 
 class AppCDAPIOHandler : public CDAPIOHandler
@@ -1297,6 +1307,18 @@ ReleaseConnectionTimerTask::ReleaseConnectionTimerTask(int port_id,
 void ReleaseConnectionTimerTask::run()
 {
 	sm->removeCDAPSession(pid);
+}
+
+// CLASS CDAPSessionDestroyerTimerTask
+CDAPSessionDestroyerTimerTask::CDAPSessionDestroyerTimerTask(CDAPSession * cdaps)
+{
+	cdap_session = cdaps;
+}
+
+void CDAPSessionDestroyerTimerTask::run()
+{
+	delete cdap_session;
+	cdap_session = 0;
 }
 
 /* CLASS CDAPMessageValidator */
@@ -2329,9 +2351,9 @@ void CDAPSessionManager::removeCDAPSession(int port_id)
 		port_id);
 
 	if (itr != cdap_sessions_.end()){
-		delete itr->second;
-		itr->second = 0;
+		CDAPSessionDestroyerTimerTask * timer_task = new CDAPSessionDestroyerTimerTask(itr->second);
 		cdap_sessions_.erase(itr);
+		timer.scheduleTask(timer_task, 0);
 		LOG_DBG("Removed CDAP session associated to port-id %d", port_id);
 	}
 

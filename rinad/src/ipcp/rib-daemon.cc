@@ -180,6 +180,7 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
 		throw e;
 	}
 
+	LOG_IPCP_INFO("Send message at %d", rina::Time::get_time_in_ms());
 	atomic_send_lock_.unlock();
 }
 
@@ -188,6 +189,8 @@ void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
 		     	     	        rina::cdap_rib::cdap_dest_t cdap_dest)
 {
 	rina::cdap::cdap_m_t m_rcv;
+
+	LOG_IPCP_INFO("Received message at %d", rina::Time::get_time_in_ms());
 
 	if (cdap_dest == rina::cdap_rib::CDAP_DEST_IPCM) {
 		try {
