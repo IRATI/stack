@@ -2143,8 +2143,9 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(
 
 	//Force a routing table update
 	db_->force_table_update();
-	ComputeRoutingTimerTask * task = new ComputeRoutingTimerTask(this, -1);
-	timer_->scheduleTask(task, 0);
+	_routingTableUpdate();
+	//ComputeRoutingTimerTask * task = new ComputeRoutingTimerTask(this, -1);
+	//timer_->scheduleTask(task, 0);
 }
 
 void LinkStateRoutingPolicy::propagateFSDB()
@@ -2306,6 +2307,11 @@ void LinkStateRoutingPolicy::populateAddresses(std::list<rina::RoutingTableEntry
 void LinkStateRoutingPolicy::routingTableUpdate()
 {
 	rina::ScopedLock g(lock_);
+	_routingTableUpdate();
+}
+
+void LinkStateRoutingPolicy::_routingTableUpdate()
+{
 	std::list<rina::RoutingTableEntry *> rt;
 	std::string my_name = ipc_process_->get_name();
 	std::list<FlowStateObject> flow_state_objects;

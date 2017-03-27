@@ -727,6 +727,8 @@ private:
 
 	void populateAddresses(std::list<rina::RoutingTableEntry *>& rt,
 			       const std::list<FlowStateObject>& fsos);
+
+	void _routingTableUpdate();
 };
 
 /// Encoder of Flow State object
