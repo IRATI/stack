@@ -290,6 +290,8 @@ int WpaController::__send_command(const std::string& cmd,
 
 	ret = wpa_ctrl_request(ctrl_conn, cmd.c_str(), cmd.length(), buf, &len,
 									NULL);
+	LOG_IPCP_DBG("Sent command to WPA supplicant: %s", cmd.c_str());
+
 	if (ret == -2) {
 		LOG_IPCP_ERR("'%s' command timed out.\n", cmd.c_str());
 		return -2;
@@ -366,6 +368,7 @@ int WpaController::__common_enable_network(const std::string cmd,
 	ss << "BSSID " << id << " " << bssid;
 	rv = __send_command(ss.str().c_str());
 	assert(!rv);
+	ss.str(std::string());
 
 	/*FIXME: check if we need to do select if it was alrady attached to that
 	 * ssid. To do that we need to know if were attached to the ssid, so
