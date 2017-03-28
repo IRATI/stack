@@ -164,7 +164,7 @@ void* doWorkTimer(void *arg) {
 	Timer *timer = (Timer*) arg;
 	Sleep sleep;
 	while (timer->execute_tasks()) {
-                sleep.sleepForMili(500);
+                sleep.sleepForMili(100);
 	}
 	return (void *) 0;
 }

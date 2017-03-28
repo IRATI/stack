@@ -302,20 +302,11 @@ find_flow_by_gpa(struct ipcp_instance_data * data,
         ASSERT(data);
 	ASSERT(gpa_is_ok(addr));
 
-        spin_lock(&data->lock);
-        LOG_INFO("About to check flows");
-
         list_for_each_entry(flow, &data->flows, list) {
-        	LOG_INFO("Flow pointer: %pK", flow);
-        	ASSERT(flow);
-        	LOG_INFO("Dest pa pointer: %pK", flow->dest_pa);
                 if (gpa_is_equal(addr, flow->dest_pa)) {
-                        spin_unlock(&data->lock);
                         return flow;
                 }
         }
-
-        spin_unlock(&data->lock);
 
         return NULL;
 }
@@ -386,7 +377,7 @@ static int flow_destroy(struct ipcp_instance_data * data,
 
         spin_lock(&data->lock);
         if (!list_empty(&flow->list)) {
-        	LOG_INFO("Deleting flow %d from list and destroying it", flow->port_id);
+        	LOG_DBG("Deleting flow %d from list and destroying it", flow->port_id);
                 list_del(&flow->list);
         }
         spin_unlock(&data->lock);
@@ -468,13 +459,15 @@ static void rinarp_resolve_handler(void *             opaque,
 	ASSERT(dest_ha);
 
         data = (struct ipcp_instance_data *) opaque;
+
+        spin_lock_bh(&data->lock);
         flow = find_flow_by_gpa(data, dest_pa);
         if (!flow) {
+                spin_unlock_bh(&data->lock);
                 LOG_ERR("No flow found for this dest_pa");
                 return;
         }
 
-        spin_lock_bh(&data->lock);
         if (flow->port_id_state == PORT_STATE_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
                 spin_unlock_bh(&data->lock);

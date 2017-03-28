@@ -2144,8 +2144,6 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(
 	//Force a routing table update
 	db_->force_table_update();
 	_routingTableUpdate();
-	//ComputeRoutingTimerTask * task = new ComputeRoutingTimerTask(this, -1);
-	//timer_->scheduleTask(task, 0);
 }
 
 void LinkStateRoutingPolicy::propagateFSDB()
