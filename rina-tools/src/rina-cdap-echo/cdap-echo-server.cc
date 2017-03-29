@@ -45,9 +45,8 @@ ConnectionCallback::ConnectionCallback(bool *keep_serving){
 	keep_serving_ = keep_serving;
 }
 
-void ConnectionCallback::open_connection(
-		const rina::cdap_rib::con_handle_t &con,
-		const rina::cdap::CDAPMessage& m)
+void ConnectionCallback::open_connection(rina::cdap_rib::con_handle_t &con,
+					 const rina::cdap::CDAPMessage& m)
 {
 	cdap_rib::res_info_t res;
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;

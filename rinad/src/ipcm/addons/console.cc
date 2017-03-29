@@ -120,6 +120,13 @@ IPCMConsole::IPCMConsole(const std::string& socket_path_) :
 			ConsoleCmdInfo(&IPCMConsole::enroll_to_dif,
 				"USAGE: enroll-to-dif <ipcp-id> <dif-name> "
 				"<supporting-dif-name> <neighbor-process-name>"
+				"<neighbor-process-instance>  or  "
+				"enroll-to-dif <ipcp-id> <dif-name> "
+				"<supporting-dif-name>");
+	commands_map["disc-neigh"] =
+			ConsoleCmdInfo(&IPCMConsole::disconnect_neighbor,
+				"USAGE: disc-nei <ipcp-id> "
+				"<neighbor-process-name> "
 				"<neighbor-process-instance>");
 	commands_map["query-rib"] =
 			ConsoleCmdInfo(&IPCMConsole::query_rib,
@@ -699,13 +706,12 @@ int getTimeMs(){
 int
 IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
 {
-	
         int t0 = getTimeMs();
         NeighborData neighbor_data;
 	int ipcp_id;
 	Promise promise;
 
-	if (args.size() < 6) {
+	if (args.size() < 6 && args.size() < 4) {
 		outstream << commands_map[args[0]].usage << endl;
 		return CMDRETCONT;
 	}
@@ -719,8 +725,11 @@ IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
 				args[2], string());
 	neighbor_data.supportingDifName =
 		rina::ApplicationProcessNamingInformation(args[3], string());
-	neighbor_data.apName =
-		rina::ApplicationProcessNamingInformation(args[4], args[5]);
+
+	if (args.size() == 6) {
+		neighbor_data.apName =
+				rina::ApplicationProcessNamingInformation(args[4], args[5]);
+	}
 
 	if (!IPCManager->ipcp_exists(ipcp_id)) {
 		outstream << "No such IPC process id" << endl;
@@ -734,6 +743,41 @@ IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
 	}
         int t1 = getTimeMs();
 	outstream << "DIF enrollment succesfully completed in " << t1 - t0 << " ms" << endl;
+
+	return CMDRETCONT;
+}
+
+int
+IPCMConsole::disconnect_neighbor(std::vector<std::string>& args)
+{
+        rina::ApplicationProcessNamingInformation neighbor;
+	int ipcp_id;
+	Promise promise;
+
+	if (args.size() < 4) {
+		outstream << commands_map[args[0]].usage << endl;
+		return CMDRETCONT;
+	}
+
+	if(string2int(args[1], ipcp_id)){
+		outstream << "Invalid IPC process id" << endl;
+		return CMDRETCONT;
+	}
+
+	neighbor =
+		rina::ApplicationProcessNamingInformation(args[2], args[3]);
+
+	if (!IPCManager->ipcp_exists(ipcp_id)) {
+		outstream << "No such IPC process id" << endl;
+		return CMDRETCONT;
+	}
+
+	if(IPCManager->disconnect_neighbor(this, &promise, ipcp_id, neighbor) == IPCM_FAILURE ||
+			promise.wait() != IPCM_SUCCESS) {
+		outstream << "Disconnect neighbor operation failed" << endl;
+		return CMDRETCONT;
+	}
+	outstream << "Neighbor disconnection operation completed" << endl;
 
 	return CMDRETCONT;
 }

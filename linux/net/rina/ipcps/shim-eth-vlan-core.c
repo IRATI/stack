@@ -123,6 +123,7 @@ struct ipcp_instance_data {
 
         /* The IPC Process using the shim-eth-vlan */
         struct name *          app_name;
+        struct name *          daf_name;
 
         /* Stores the state of flows indexed by port_id */
         spinlock_t             lock;
@@ -132,7 +133,8 @@ struct ipcp_instance_data {
         struct kfa *           kfa;
 
         /* RINARP related */
-        struct rinarp_handle * handle;
+        struct rinarp_handle * app_handle;
+        struct rinarp_handle * daf_handle;
 
 	/* To handle device notifications. */
 	struct notifier_block ntfy;
@@ -593,10 +595,14 @@ eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                         return -1;
                 }
 
-                if (rinarp_resolve_gpa(data->handle,
+                if (rinarp_resolve_gpa(data->app_handle,
                                        flow->dest_pa,
                                        rinarp_resolve_handler,
-                                       data)) {
+                                       data) &&
+                    rinarp_resolve_gpa(data->daf_handle,
+                		       flow->dest_pa,
+				       rinarp_resolve_handler,
+				       data)	) {
                         LOG_ERR("Failed to lookup ARP entry");
                         unbind_and_destroy_flow(data, flow);
                         return -1;
@@ -743,7 +749,8 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
 }
 
 static int eth_vlan_application_register(struct ipcp_instance_data * data,
-                                         const struct name *         name)
+                                         const struct name *         name,
+					 const struct name *         daf_name)
 {
         struct gpa * pa;
         struct gha * ha;
@@ -786,8 +793,8 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
                 gpa_destroy(pa);
                 return -1;
         }
-        data->handle = rinarp_add(data->dev, pa, ha);
-        if (!data->handle) {
+        data->app_handle = rinarp_add(data->dev, pa, ha);
+        if (!data->app_handle) {
                 LOG_ERR("Failed to register application in ARP");
                 name_destroy(data->app_name);
                 gpa_destroy(pa);
@@ -796,6 +803,47 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
                 return -1;
         }
         gpa_destroy(pa);
+
+        if (daf_name) {
+        	data->daf_name = name_dup(daf_name);
+        	if (!data->daf_name) {
+                        char * tmp = name_tostring(daf_name);
+                        LOG_ERR("DAF %s registration has failed", tmp);
+                        if (tmp) rkfree(tmp);
+                        rinarp_remove(data->app_handle);
+                        data->app_handle = NULL;
+                        name_destroy(data->app_name);
+                        gha_destroy(ha);
+                        return -1;
+        	}
+
+        	pa = name_to_gpa(daf_name);
+        	if (!gpa_is_ok(pa)) {
+        		LOG_ERR("Failed to create gpa");
+        		rinarp_remove(data->app_handle);
+        		data->app_handle = NULL;
+        		name_destroy(data->daf_name);
+                        name_destroy(data->app_name);
+                        gha_destroy(ha);
+        		return -1;
+        	}
+
+                data->daf_handle = rinarp_add(data->dev, pa, ha);
+                if (!data->daf_handle) {
+                        LOG_ERR("Failed to register DAF in ARP");
+                        rinarp_remove(data->app_handle);
+                        data->app_handle = NULL;
+                        name_destroy(data->app_name);
+                        name_destroy(data->daf_name);
+                        gpa_destroy(pa);
+                        gha_destroy(ha);
+
+                        return -1;
+                }
+
+                gpa_destroy(pa);
+        }
+
         gha_destroy(ha);
 
         return 0;
@@ -825,16 +873,26 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
         }
 
         /* Remove from ARP cache */
-        if (data->handle) {
-                if (rinarp_remove(data->handle)) {
+        if (data->app_handle) {
+                if (rinarp_remove(data->app_handle)) {
                         LOG_ERR("Failed to remove the entry from the cache");
                         return -1;
                 }
-                data->handle = NULL;
+                data->app_handle = NULL;
+        }
+
+        if (data->daf_handle) {
+                if (rinarp_remove(data->daf_handle)) {
+                        LOG_ERR("Failed to remove the entry from the cache");
+                        return -1;
+                }
+                data->daf_handle = NULL;
         }
 
         name_destroy(data->app_name);
         data->app_name = NULL;
+        name_destroy(data->daf_name);
+        data->daf_name = NULL;
         return 0;
 }
 
@@ -1009,6 +1067,7 @@ static int eth_vlan_rcv_worker(void * o)
         struct shim_eth_flow *          flow;
         struct rcv_work_data *          wdata;
         struct net_device *             dev;
+        string_t * 			gpastr;
 
         LOG_DBG("Worker waking up, going to create a flow");
 
@@ -1066,7 +1125,7 @@ static int eth_vlan_rcv_worker(void * o)
         LOG_DBG("Added flow to the list");
 
         sname  = NULL;
-        gpaddr = rinarp_find_gpa(data->handle, flow->dest_ha);
+        gpaddr = rinarp_find_gpa(data->app_handle, flow->dest_ha);
         if (gpaddr && gpa_is_ok(gpaddr)) {
                 flow->dest_pa = gpa_dup_gfp(GFP_KERNEL, gpaddr);
                 if (!flow->dest_pa) {
@@ -1076,13 +1135,22 @@ static int eth_vlan_rcv_worker(void * o)
                         return -1;
                 }
 
-                sname = string_toname_ni(gpa_address_value(gpaddr));
-                if (!sname) {
-                        LOG_ERR("Failed to convert name to string");
+                gpastr = gpa_address_to_string_gfp(GFP_KERNEL, gpaddr);
+                if (!gpastr) {
+                	LOG_ERR("Failed to convert GPA address to string");
                         kfa_port_id_release(data->kfa, flow->port_id);
                         unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
+                sname = string_toname_ni(gpastr);
+                if (!sname) {
+                        LOG_ERR("Failed to convert name to string");
+                        kfree(gpastr);
+                        kfa_port_id_release(data->kfa, flow->port_id);
+                        unbind_and_destroy_flow(data, flow);
+                        return -1;
+                }
+                kfree(gpastr);
 
                 LOG_DBG("Got the address from ARP");
         } else {
@@ -2003,6 +2071,9 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                         if (pos->app_name)
                                 name_destroy(pos->app_name);
 
+                        if (pos->daf_name)
+                                name_destroy(pos->daf_name);
+
                         if (pos->info->interface_name)
                                 rkfree(pos->info->interface_name);
 
@@ -2012,8 +2083,16 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                         if (pos->fspec)
                                 rkfree(pos->fspec);
 
-                        if (pos->handle) {
-                                if (rinarp_remove(pos->handle)) {
+                        if (pos->app_handle) {
+                                if (rinarp_remove(pos->app_handle)) {
+                                        LOG_ERR("Failed to remove "
+                                                "the entry from the cache");
+                                        return -1;
+                                }
+                        }
+
+                        if (pos->daf_handle) {
+                                if (rinarp_remove(pos->daf_handle)) {
                                         LOG_ERR("Failed to remove "
                                                 "the entry from the cache");
                                         return -1;

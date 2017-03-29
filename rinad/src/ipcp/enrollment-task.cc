@@ -885,16 +885,70 @@ void EnrollmentTask::processEnrollmentRequestEvent(const rina::EnrollToDAFReques
 	assert(nsmps);
 
 	rina::Neighbor neighbor;
-	neighbor.name_ = event.neighborName;
 	neighbor.supporting_dif_name_ = event.supportingDIFName;
-	unsigned int address = nsmps->getValidAddress(neighbor.name_.processName,
-			neighbor.name_.processInstance);
-	if (address != 0) {
-		neighbor.address_ = address;
+	if (event.neighborName.processName == "") {
+		//Enrolling using the DIF name, not a specific DAP
+		neighbor.name_ = event.dafName;
+	} else {
+		neighbor.name_ = event.neighborName;
+		unsigned int address = nsmps->getValidAddress(neighbor.name_.processName,
+				neighbor.name_.processInstance);
+		if (address != 0) {
+			neighbor.address_ = address;
+		}
 	}
 
 	rina::EnrollmentRequest request(neighbor, event);
 	initiateEnrollment(request);
+}
+
+void EnrollmentTask::processDisconnectNeighborRequestEvent(const rina::DisconnectNeighborRequestEvent& event)
+{
+	rina::ScopedLock g(lock_);
+	IEnrollmentStateMachine * esm = 0;
+
+	std::list<IEnrollmentStateMachine *> machines = state_machines_.getEntries();
+	std::list<IEnrollmentStateMachine *>::const_iterator it;
+	for (it = machines.begin(); it != machines.end(); ++it) {
+		if ((*it)->remote_peer_.name_.processName.compare(event.neighborName.processName) == 0 &&
+				(*it)->get_state() != IEnrollmentStateMachine::STATE_NULL) {
+			esm = *it;
+		}
+	}
+
+	if (!esm) {
+		LOG_IPCP_ERR("Not enrolled to IPC Process %s",
+			     event.neighborName.processName.c_str());
+		try {
+			rina::extendedIPCManager->disconnectNeighborResponse(event, -1);
+		}catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems sending message to IPC Manager: %s", e.what());
+		}
+		return;
+	}
+
+	// Close the application connection by sending M_RELEASE
+	try {
+		rib_daemon_->getProxy()->remote_close_connection(esm->con.port_id, false);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems closing application connection: %s",
+			      e.what());
+	}
+
+	// Wait a few ms and request deallocation of all N-1 flows to neighbor
+	deallocateFlow(esm->con.port_id);
+
+	// Update
+	state_machines_.erase(esm->con.port_id);
+	delete esm;
+	esm = 0;
+
+	// Reply to IPC Manager
+	try {
+		rina::extendedIPCManager->disconnectNeighborResponse(event, 0);
+	}catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems sending message to IPC Manager: %s", e.what());
+	}
 }
 
 void EnrollmentTask::initiateEnrollment(const rina::EnrollmentRequest& request)
@@ -941,13 +995,19 @@ void EnrollmentTask::initiateEnrollment(const rina::EnrollmentRequest& request)
 }
 
 void EnrollmentTask::connect(const rina::cdap::CDAPMessage& cdap_m,
-		     	     const rina::cdap_rib::con_handle_t &con_handle)
+		     	     rina::cdap_rib::con_handle_t &con_handle)
 {
 	LOG_IPCP_DBG("M_CONNECT CDAP message from port-id %u",
 		     con_handle.port_id);
 
+	//0 Check if the request is to the DAF name, if so change to IPCP name
+	if (con_handle.src_.ap_name_ == ipcp->get_dif_information().dif_name_.processName) {
+		con_handle.src_.ap_name_ = ipcp->get_name();
+		con_handle.src_.ap_inst_ = ipcp->get_instance();
+	}
+
 	//1 Find out if the sender is really connecting to us
-	if(con_handle.src_.ap_name_.compare(ipcp->get_name())!= 0){
+	if(con_handle.src_.ap_name_ != ipcp->get_name()){
 		LOG_IPCP_WARN("an M_CONNECT message whose destination was not this IPC Process, ignoring it");
 		return;
 	}
@@ -980,19 +1040,23 @@ void EnrollmentTask::connect(const rina::cdap::CDAPMessage& cdap_m,
 	ipcp_ps->connect_received(cdap_m, con_handle);
 }
 
-void EnrollmentTask::connectResult(const rina::cdap_rib::res_info_t &res,
-				   const rina::cdap_rib::con_handle_t &con_handle,
-				   const rina::cdap_rib::auth_policy_t& auth)
+void EnrollmentTask::connectResult(const rina::cdap::CDAPMessage &msg,
+				   rina::cdap_rib::con_handle_t &con_handle)
 {
 	LOG_IPCP_DBG("M_CONNECT_R cdapMessage from portId %u",
 		     con_handle.port_id);
 
+	//In case the application connection was to the DAF name, now
+	//update it to use the specific DAP name and instance
+	con_handle.dest_.ap_name_ = msg.src_ap_name_;
+	con_handle.dest_.ap_inst_ = msg.src_ap_inst_;
+
 	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
 	assert(ipcp_ps);
-	ipcp_ps->connect_response_received(res.code_,
-					   res.reason_,
+	ipcp_ps->connect_response_received(static_cast<rina::cdap_rib::res_code_t>(msg.result_),
+					   msg.result_reason_,
 					   con_handle,
-					   auth);
+					   msg.auth_policy_);
 }
 
 void EnrollmentTask::releaseResult(const rina::cdap_rib::res_info_t &res,

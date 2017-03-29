@@ -60,6 +60,18 @@ public:
                 	neighborName(neighbor) { };
 };
 
+class DisconnectNeighborRequestEvent: public IPCEvent {
+public:
+        /** The neighbor to contact */
+        ApplicationProcessNamingInformation neighborName;
+
+        DisconnectNeighborRequestEvent() { };
+        DisconnectNeighborRequestEvent(
+                const ApplicationProcessNamingInformation& neighbor,
+                unsigned int sequenceNumber) : IPCEvent(DISCONNECT_NEIGHBOR_REQUEST_EVENT, sequenceNumber),
+                	neighborName(neighbor) { };
+};
+
 /// Contains the information of an enrollment request
 class EnrollmentRequest
 {
@@ -106,6 +118,10 @@ public:
 	/// Process a request to initiate enrollment with a new Neighbor, triggered by the IPC Manager
 	/// @param event
 	virtual void processEnrollmentRequestEvent(const EnrollToDAFRequestEvent& event) = 0;
+
+	/// Process a request to disconnect from a Neighbor, triggered by the IPC Manager
+	/// @param event
+	virtual void processDisconnectNeighborRequestEvent(const DisconnectNeighborRequestEvent& event) = 0;
 
 	/// Starts the enrollment program
 	/// @param cdapMessage

@@ -396,8 +396,6 @@ int tbl_add(struct table *       instance,
 
                 /* FIXME: What about the other conditions ??? */
                 if (gha_is_equal(tble_ha(pos), tble_ha(entry))) {
-                        LOG_WARN("We already have the same GHA in the cache");
-
                         /* FIXME: What should we do here? */
 
                         /* Remember to: spin_unlock(&instance->lock); */

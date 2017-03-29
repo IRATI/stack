@@ -442,6 +442,18 @@ void EnrolleeStateMachine::connectResponse(int result,
 		return;
 	}
 
+	if (remote_peer_.name_.processName != con.dest_.ap_name_) {
+		//Application connection was to the DAF in general, now update
+		//it with the specific DAP name
+		remote_peer_.name_.processName = con.dest_.ap_name_;
+		remote_peer_.name_.processInstance = con.dest_.ap_inst_;
+
+		INamespaceManagerPs *nsmps = dynamic_cast<INamespaceManagerPs *>(ipc_process_->namespace_manager_->ps);
+		assert(nsmps);
+		remote_peer_.address_ = nsmps->getValidAddress(remote_peer_.name_.processName,
+							       remote_peer_.name_.processInstance);
+	}
+
 	// If "auth" contents are not valid, it will return an error and
 	// enrollment should be aborted. Otherwise it should store the "token" or any other
 	// type of credential in "auth" - if any - and return 0.

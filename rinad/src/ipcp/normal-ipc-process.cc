@@ -507,6 +507,11 @@ void IPCProcessImpl::enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& 
 	enrollment_task_->processEnrollmentRequestEvent(event);
 }
 
+void IPCProcessImpl::disconnet_neighbor_handler(const rina::DisconnectNeighborRequestEvent& event)
+{
+	enrollment_task_->processDisconnectNeighborRequestEvent(event);
+}
+
 void IPCProcessImpl::query_rib_handler(const rina::QueryRIBRequestEvent& event)
 {
 	rib_daemon_->processQueryRIBRequestEvent(event);

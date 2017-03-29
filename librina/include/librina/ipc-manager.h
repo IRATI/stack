@@ -425,26 +425,28 @@ public:
 	 * IPC Process has successfully completed or an error is returned.
 	 *
 	 * @param neighbor The neighbor to disconnect from
+	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws DisconnectFromNeighborException if an error occurs
 	 */
-	void disconnectFromNeighbor(
-			const ApplicationProcessNamingInformation& neighbor);
+	void disconnectFromNeighbor(const ApplicationProcessNamingInformation& neighbor,
+			            unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to register an application in a DIF through
 	 * an IPC Process.
 	 *
 	 * @param applicationName The name of the application to be registered
+	 * @param dafName The name of the DAF of the application to be registered (optional)
 	 * @param regIpcProcessId The id of the registered IPC process (0 if it
 	 * is an application)
 	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws IpcmRegisterApplicationException if an error occurs
 	 */
-	void registerApplication(
-			const ApplicationProcessNamingInformation& applicationName,
-			unsigned short regIpcProcessId,
-			const ApplicationProcessNamingInformation& dif_name,
-			unsigned int opaque);
+	void registerApplication(const ApplicationProcessNamingInformation& applicationName,
+				 const ApplicationProcessNamingInformation& dafName,
+				 unsigned short regIpcProcessId,
+				 const ApplicationProcessNamingInformation& dif_name,
+				 unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to unregister an application in a DIF through
@@ -821,6 +823,15 @@ public:
         const std::list<Neighbor>& getNeighbors() const;
         const DIFInformation& getDIFInformation() const;
 #endif
+};
+
+class DisconnectNeighborResponseEvent: public BaseResponseEvent {
+public:
+	DisconnectNeighborResponseEvent(int result,
+					unsigned int sequenceNumber)
+			: BaseResponseEvent(result,
+                                            DISCONNECT_NEIGHBOR_RESPONSE_EVENT,
+					    sequenceNumber) {}
 };
 
 /**

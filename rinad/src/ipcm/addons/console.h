@@ -90,6 +90,7 @@ class IPCMConsole : public Addon {
                 int unregister_from_dif(std::vector<std::string>& args);
                 int update_dif_config(std::vector<std::string>& args);
                 int enroll_to_dif(std::vector<std::string>& args);
+                int disconnect_neighbor(std::vector<std::string>& args);
                 int select_policy_set(std::vector<std::string>& args);
                 int set_policy_set_param(std::vector<std::string>& args);
                 int plugin_load(std::vector<std::string>& args);

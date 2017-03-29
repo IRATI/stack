@@ -420,6 +420,27 @@ void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDAFRequestEvent& even
 #endif
 }
 
+void ExtendedIPCManager::disconnectNeighborResponse(const DisconnectNeighborRequestEvent& event,
+			        		    int result)
+{
+#if STUB_API
+        // Do nothing
+#else
+        IpcmDisconnectNeighborResponseMessage responseMessage;
+        responseMessage.setResult(result);
+        responseMessage.setSourceIpcProcessId(ipcProcessId);
+        responseMessage.setDestPortId(ipcManagerPort);
+        responseMessage.setSequenceNumber(event.sequenceNumber);
+        responseMessage.setResponseMessage(true);
+        try {
+        	//FIXME, compute maximum message size dynamically
+        	rinaManager->sendMessage(&responseMessage, false);
+        } catch (NetlinkException &e) {
+                throw IPCException(e.what());
+        }
+#endif
+}
+
 void ExtendedIPCManager::registerApplicationResponse(
 		const ApplicationRegistrationRequestEvent& event, int result) {
 #if STUB_API

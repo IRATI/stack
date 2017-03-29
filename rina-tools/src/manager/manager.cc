@@ -49,7 +49,7 @@ const std::string ManagerWorker::IPCP_3 =
         "/computingSystemID=1/processingSystemID=1/kernelApplicationProcess/osApplicationProcess/ipcProcesses/ipcProcessID=4";
 
 void ConnectionCallback::open_connection(
-        const rina::cdap_rib::con_handle_t &con,
+        rina::cdap_rib::con_handle_t &con,
         const rina::cdap::CDAPMessage& message)
 {
     rina::cdap_rib::res_info_t res;

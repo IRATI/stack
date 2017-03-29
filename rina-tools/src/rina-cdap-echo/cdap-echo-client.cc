@@ -275,7 +275,7 @@ void Client::release()
     unsigned char buffer[max_buffer_size];
     std::cout << "release request CDAP message sent" << std::endl;
     int bytes_read = 0;
-    cdap_prov_->remote_close_connection(con_.port_id);
+    cdap_prov_->remote_close_connection(con_.port_id, false);
     std::cout << "Waiting for release response" << std::endl;
 
     while (true)

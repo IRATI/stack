@@ -340,10 +340,12 @@ class ResetStablishmentTimerTask : public rina::TimerTask
 class ReleaseConnectionTimerTask : public rina::TimerTask
 {
  public:
-	ReleaseConnectionTimerTask(ConnectionStateMachine *con_state_machine);
+	ReleaseConnectionTimerTask(ConnectionStateMachine *con_state_machine,
+				   bool force);
 	void run();
  private:
 	ConnectionStateMachine *con_state_machine_;
+	bool force_;
 };
 
 /// Validates that a CDAP message is well formed
@@ -400,7 +402,7 @@ class CDAPSession
 	CDAPInvokeIdManagerImpl* get_invoke_id_manager() const;
 	void stopConnection();
 	bool is_in_await_con_state();
-	const cdap_rib::con_handle_t& get_con_handle();
+	cdap_rib::con_handle_t& get_con_handle();
 	void set_port_id(int port_id);
 	void check_can_send_or_receive_messages() const;
  private:
@@ -560,7 +562,7 @@ class CDAPSessionManager : public CDAPSessionManagerInterface
 					  const cdap_rib::res_info_t &res,
 					  int invoke_id);
 	CDAPInvokeIdManager * get_invoke_id_manager();
-	const cdap_rib::con_handle_t & get_con_handle(int port_id);
+	cdap_rib::con_handle_t & get_con_handle(int port_id);
 
  private:
 	Lockable lock;
@@ -586,7 +588,7 @@ class AppCDAPIOHandler : public CDAPIOHandler
 	void remove_fd_to_port_id_mapping(unsigned int port_id);
 
  private:
-	void invoke_callback(const cdap_rib::con_handle_t& con_handle,
+	void invoke_callback(cdap_rib::con_handle_t& con_handle,
 			     const cdap::cdap_m_t& m_rcv,
 			     bool is_auth_message);
 
@@ -1142,19 +1144,25 @@ void ConnectionStateMachine::connectResponseReceived()
 }
 void ConnectionStateMachine::release(const cdap_m_t &cdap_message)
 {
+	bool force = false;
+
 	checkRelease();
 	my_lock.lock();
 	connection_state_ = AWAITCLOSE;
 	my_lock.unlock();
 
 	if (cdap_message.invoke_id_ != 0) {
-		last_timer_task = new ReleaseConnectionTimerTask(this);
 		LOG_DBG("Waiting timeout %d to receive a release response",
 			timeout_);
-		timer.scheduleTask(last_timer_task, timeout_);
+	} else {
+		timeout_ = 0;
+		force = true;
 	}
 
+	last_timer_task = new ReleaseConnectionTimerTask(this, force);
+	timer.scheduleTask(last_timer_task, timeout_);
 }
+
 void ConnectionStateMachine::releaseReceived(const cdap_m_t &message)
 {
 	ScopedLock g(my_lock);
@@ -1165,11 +1173,11 @@ void ConnectionStateMachine::releaseReceived(const cdap_m_t &message)
 		   << connection_state_ << " state";
 		throw CDAPException(ss.str());
 	}
-	if (message.invoke_id_ != 0 && connection_state_ != AWAITCLOSE) {
+	if (message.invoke_id_ != 0) {
 		connection_state_ = AWAITCLOSE;
 	} else {
-		connection_state_ = NONE;
-		cdap_session_->stopConnection();
+		last_timer_task = new ReleaseConnectionTimerTask(this, true);
+		timer.scheduleTask(last_timer_task, 0);
 	}
 }
 void ConnectionStateMachine::releaseResponse()
@@ -1211,15 +1219,17 @@ void ResetStablishmentTimerTask::run()
 }
 
 // CLASS ReleaseConnectionTimerTask
-ReleaseConnectionTimerTask::ReleaseConnectionTimerTask(
-		ConnectionStateMachine *con_state_machine)
+ReleaseConnectionTimerTask::ReleaseConnectionTimerTask(ConnectionStateMachine *con_state_machine,
+						       bool force)
 {
 	con_state_machine_ = con_state_machine;
+	force_ = force;
 }
 void ReleaseConnectionTimerTask::run()
 {
-	if (con_state_machine_->get_connection_state()
-			== ConnectionStateMachine::AWAITCLOSE) {
+	if (force_) {
+		con_state_machine_->resetConnection();
+	} else if (con_state_machine_->get_connection_state() == ConnectionStateMachine::AWAITCLOSE) {
 		LOG_ERR( "M_RELEASE_R message not received within %d ms. Reseting the connection",
 			con_state_machine_->get_timeout());
 		con_state_machine_->resetConnection();
@@ -1700,7 +1710,7 @@ bool CDAPSession::is_in_await_con_state()
 	return connection_state_machine_->is_await_conn();
 }
 
-const cdap_rib::con_handle_t& CDAPSession::get_con_handle()
+cdap_rib::con_handle_t& CDAPSession::get_con_handle()
 {
 	return con_handle;
 }
@@ -2601,7 +2611,7 @@ CDAPInvokeIdManager * CDAPSessionManager::get_invoke_id_manager()
 	return invoke_id_manager_;
 }
 
-const cdap_rib::con_handle_t & CDAPSessionManager::get_con_handle(int port_id)
+cdap_rib::con_handle_t & CDAPSessionManager::get_con_handle(int port_id)
 {
 	ScopedLock g(lock);
 
@@ -2819,7 +2829,8 @@ class CDAPProvider : public CDAPProviderInterface
 						      const cdap_rib::ep_info_t &dest,
 						      const cdap_rib::auth_policy_t &auth,
 						      int port);
-	int remote_close_connection(unsigned int port);
+	int remote_close_connection(unsigned int port,
+				    bool need_reply);
 	int remote_create(const cdap_rib::con_handle_t &con,
 			  const cdap_rib::obj_info_t &obj,
 			  const cdap_rib::flags_t &flags,
@@ -2964,7 +2975,8 @@ cdap_rib::con_handle_t
 	return con;
 }
 
-int CDAPProvider::remote_close_connection(unsigned int port)
+int CDAPProvider::remote_close_connection(unsigned int port,
+					  bool need_reply)
 {
 	int invoke_id;
 	cdap_m_t m_sent;
@@ -2975,7 +2987,7 @@ int CDAPProvider::remote_close_connection(unsigned int port)
 	flags.flags_ = cdap_rib::flags_t::NONE_FLAGS;
 	manager_->getReleaseConnectionRequestMessage(m_sent,
 						     flags,
-						     true);
+						     need_reply);
 	invoke_id = m_sent.invoke_id_;
 	con.port_id = port;
 	con.cdap_dest = cdap_rib::CDAP_DEST_PORT;
@@ -3472,7 +3484,7 @@ void AppCDAPIOHandler::process_message(ser_obj_t &message,
 			is_auth_message);
 }
 
-void AppCDAPIOHandler::invoke_callback(const rina::cdap_rib::con_handle_t& con,
+void AppCDAPIOHandler::invoke_callback(rina::cdap_rib::con_handle_t& con,
 				       const rina::cdap::cdap_m_t& m_rcv,
 				       bool is_auth_message)
 {
@@ -3573,8 +3585,7 @@ void AppCDAPIOHandler::invoke_callback(const rina::cdap_rib::con_handle_t& con,
 		//Remote
 		case cdap_m_t::M_CONNECT_R:
 			callback_->remote_open_connection_result(con,
-								 res,
-								 m_rcv.auth_policy_);
+								 m_rcv);
 			break;
 		case cdap_m_t::M_RELEASE_R:
 			callback_->remote_close_connection_result(con,
@@ -3703,13 +3714,12 @@ void AppCDAPIOHandler::send(const cdap_m_t & m_sent,
 CDAPCallbackInterface::~CDAPCallbackInterface()
 {
 }
-void CDAPCallbackInterface::remote_open_connection_result(const cdap_rib::con_handle_t &con,
-							  const cdap_rib::result_info &res,
-							  const rina::cdap_rib::auth_policy_t &auth)
+void CDAPCallbackInterface::remote_open_connection_result(cdap_rib::con_handle_t &con,
+							  const cdap::CDAPMessage &msg)
 {
 	LOG_INFO("Callback open_connection_result operation not implemented");
 }
-void CDAPCallbackInterface::open_connection(const cdap_rib::con_handle_t &con,
+void CDAPCallbackInterface::open_connection(cdap_rib::con_handle_t &con,
 					    const cdap::CDAPMessage& message)
 {
 	LOG_INFO("Callback open_connection operation not implemented");

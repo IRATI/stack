@@ -967,6 +967,7 @@ IPCEvent* IpcmRegisterApplicationRequestMessage::toIPCEvent(){
 		ApplicationRegistrationInformation(APPLICATION_REGISTRATION_SINGLE_DIF);
 	information.difName = difName;
 	information.appName = applicationName;
+	information.dafName = dafName;
 	information.ipcProcessId = regIpcProcessId;
 	ApplicationRegistrationRequestEvent * event =
 			new ApplicationRegistrationRequestEvent(
@@ -1194,6 +1195,46 @@ IPCEvent* IpcmEnrollToDIFResponseMessage::toIPCEvent(){
         EnrollToDIFResponseEvent * event =
                         new EnrollToDIFResponseEvent(neighbors, difInformation,
                                         getResult(), getSequenceNumber());
+        return event;
+}
+
+/* CLASS IPCM DISCONNECT NEIGHBOR REQUEST MESSAGE */
+IpcmDisconnectNeighborRequestMessage:: IpcmDisconnectNeighborRequestMessage():
+        BaseNetlinkMessage(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST)
+{
+}
+
+const ApplicationProcessNamingInformation&
+IpcmDisconnectNeighborRequestMessage::getNeighborName() const
+{
+        return neighborName;
+}
+
+void IpcmDisconnectNeighborRequestMessage::setNeighborName(
+                const ApplicationProcessNamingInformation& neighborName)
+{
+        this->neighborName = neighborName;
+}
+
+IPCEvent* IpcmDisconnectNeighborRequestMessage::toIPCEvent()
+{
+	DisconnectNeighborRequestEvent * event =
+                        new DisconnectNeighborRequestEvent(neighborName,
+                        				   getSequenceNumber());
+        return event;
+}
+
+/* CLASS DISCONNECT NEIGHBOR RESPONSE MESSAGE */
+IpcmDisconnectNeighborResponseMessage::IpcmDisconnectNeighborResponseMessage():
+        BaseNetlinkResponseMessage(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE)
+{
+}
+
+IPCEvent* IpcmDisconnectNeighborResponseMessage::toIPCEvent()
+{
+	DisconnectNeighborResponseEvent * event =
+                        new DisconnectNeighborResponseEvent(getResult(),
+                        			            getSequenceNumber());
         return event;
 }
 

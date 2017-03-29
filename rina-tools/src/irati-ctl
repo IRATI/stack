@@ -1,0 +1,73 @@
+#!/usr/bin/env python
+
+#
+# Author: Vincenzo Maffione <v.maffione@nextworks.it>
+#
+
+import argparse
+import socket
+import time
+import re
+
+def printalo(byt):
+    print(repr(byt).replace('\\n', '\n'))
+
+
+def get_response(s):
+    data = bytes()
+    while 1:
+        data += s.recv(4096)
+        lines = str(data, 'ascii').replace('\\n', '\n').split('\n')
+        #print(lines)
+        if lines[-1].find("IPCM") != -1:
+            return lines[:len(lines)-1]
+
+
+def issue_command(s, cmd):
+    cmd += '\n'
+    s.sendall(bytes(cmd, 'ascii'))
+    return get_response(s)
+
+
+description = "Python tool to control the IRATI stack"
+epilog = "2016 Vincenzo Maffione <v.maffione@nextworks.it>"
+
+argparser = argparse.ArgumentParser(description = description,
+                                    epilog = epilog)
+argparser.add_argument('--unix-socket', help = "Path to IPCM unix socket",
+                       type = str, default = "/var/run/ipcm-console.sock")
+argparser.add_argument('commands', metavar='CMD', type=str, nargs='*',
+                       help='a positional argument for the IPCM console (e.g. "help")')
+argparser.add_argument('--version', help = "Show the version and exit",
+                       action = 'store_true')
+args = argparser.parse_args()
+
+if args.version:
+    print('irati-ctl 1.0.0')
+    quit(0)
+
+if len(args.commands) == 0:
+    # assume help
+    args.commands = ['help']
+
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+
+try:
+    s.connect(args.unix_socket)
+except Exception as e:
+    print('Failed to connect to %s: %s' % (args.unix_socket, e))
+    quit(1)
+
+try:
+    # Receive the banner
+    get_response(s)
+
+    # Send the command and get the response
+    lines = issue_command(s, ' '.join(args.commands));
+
+    for l in lines:
+        print(l)
+except:
+    pass
+
+s.close()

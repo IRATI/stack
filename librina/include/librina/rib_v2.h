@@ -45,11 +45,10 @@ public:
 
 	/// A remote Connect request has been received.
 	virtual void connect(const rina::cdap::CDAPMessage& message,
-			     const cdap_rib::con_handle_t &con) = 0;
+			     cdap_rib::con_handle_t &con) = 0;
 	/// A remote Connect response has been received.
-	virtual void connectResult(const cdap_rib::res_info_t &res,
-				   const cdap_rib::con_handle_t &con,
-				   const rina::cdap_rib::auth_policy_t& auth) = 0;
+	virtual void connectResult(const rina::cdap::CDAPMessage& message,
+				   cdap_rib::con_handle_t &con) = 0;
 	/// A remote Release request has been received.
 	virtual void release(int invoke_id,
 			     const cdap_rib::con_handle_t &con) = 0;
@@ -836,7 +835,8 @@ public:
         ///
         /// @ret success/failure
         ///
-        int remote_close_connection(unsigned int port);
+        int remote_close_connection(unsigned int port,
+        			    bool need_reply = true);
 
         ///
         /// Perform a create operation over an object of the remote RIB

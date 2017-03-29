@@ -65,8 +65,9 @@ void * doManagementSDUReaderWork(void* arg)
 		}
 
 		message.size_ = result.bytesRead;
+		LOG_IPCP_DBG("Got message of %d bytes, handling to CDAP Provider", message.size_);
 
-		//Instruct CDAP provider to process the CACEP message
+		//Instruct CDAP provider to process the messages
 		try{
 			rina::cdap::getProvider()->process_message(message,
 								   result.portId);
@@ -91,7 +92,7 @@ class IPCPCDAPIOHandler : public rina::cdap::CDAPIOHandler
 			     rina::cdap_rib::cdap_dest_t cdap_dest);
 
  private:
-	void invoke_callback(const rina::cdap_rib::con_handle_t& con_handle,
+	void invoke_callback(rina::cdap_rib::con_handle_t& con_handle,
 			     const rina::cdap::cdap_m_t& m_rcv,
 			     bool is_auth_message);
 
@@ -270,7 +271,7 @@ void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
 			is_auth_message);
 }
 
-void IPCPCDAPIOHandler::invoke_callback(const rina::cdap_rib::con_handle_t& con_handle,
+void IPCPCDAPIOHandler::invoke_callback(rina::cdap_rib::con_handle_t& con_handle,
 					const rina::cdap::cdap_m_t& m_rcv,
 					bool is_auth_message)
 {
@@ -373,8 +374,7 @@ void IPCPCDAPIOHandler::invoke_callback(const rina::cdap_rib::con_handle_t& con_
 		//Remote
 		case rina::cdap::cdap_m_t::M_CONNECT_R:
 			callback_->remote_open_connection_result(con_handle,
-								 res,
-								 m_rcv.auth_policy_);
+								 m_rcv);
 			break;
 		case rina::cdap::cdap_m_t::M_RELEASE_R:
 			callback_->remote_close_connection_result(con_handle,
@@ -488,10 +488,6 @@ void IPCPRIBDaemonImpl::initialize_rib_daemon(rina::cacep::AppConHandlerInterfac
 	//Create schema
 	vers.version_ = 0x1ULL;
 	ribd->createSchema(vers);
-
-	//TODO create callbacks
-	ribd->addCreateCallbackSchema(vers, "Neighbor", configs::NEIGH_CONT_NAME,
-			NeighborRIBObj::create_cb);
 
 	//Create RIB
 	rib = ribd->createRIB(vers);

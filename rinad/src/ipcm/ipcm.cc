@@ -700,9 +700,10 @@ ipcm_res_t IPCManager_::assign_to_dif(
     return IPCM_PENDING;
 }
 
-ipcm_res_t IPCManager_::register_at_dif(
-        Addon* callee, Promise* promise, const unsigned short ipcp_id,
-        const rina::ApplicationProcessNamingInformation& dif_name)
+ipcm_res_t IPCManager_::register_at_dif(Addon* callee,
+					Promise* promise,
+					const unsigned short ipcp_id,
+					const rina::ApplicationProcessNamingInformation& dif_name)
 {
     // Select a slave (N-1) IPC process.
     IPCMIPCProcess *ipcp, *slave_ipcp;
@@ -756,7 +757,9 @@ ipcm_res_t IPCManager_::register_at_dif(
         }
 
         //Register
-        slave_ipcp->registerApplication(ipcp->get_name(), ipcp->get_id(),
+        slave_ipcp->registerApplication(ipcp->get_name(),
+        				ipcp->dif_name_,
+        				ipcp->get_id(),
                                         trans->tid);
 
         ss << "Requested DIF registration of IPC process "
@@ -946,6 +949,80 @@ ipcm_res_t IPCManager_::enroll_to_dif(Addon* callee, Promise* promise,
     return IPCM_PENDING;
 }
 
+ipcm_res_t IPCManager_::disconnect_neighbor(Addon* callee,
+			       	            Promise* promise,
+					    const unsigned short ipcp_id,
+					    const rina::ApplicationProcessNamingInformation& neighbor)
+{
+	std::ostringstream ss;
+	IPCMIPCProcess *ipcp;
+	IPCPTransState* trans;
+
+	try
+	{
+		ipcp = lookup_ipcp_by_id(ipcp_id);
+
+		if (!ipcp)
+		{
+			ss << "Invalid IPCP id " << ipcp_id;
+			FLUSH_LOG(ERR, ss);
+			throw rina::Exception();
+		}
+
+		//Auto release the write lock
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
+
+		//Create a transaction
+		trans = new IPCPTransState(callee, promise, ipcp->get_id());
+
+		if (!trans)
+		{
+			ss
+			<< "Unable to allocate memory for the transaction object. Out of memory! "
+			<< neighbor.toString();
+			FLUSH_LOG(ERR, ss);
+			throw rina::Exception();
+		}
+
+		//Store transaction
+		if (add_transaction_state(trans) < 0)
+		{
+			ss << "Unable to add transaction; out of memory? "
+					<< neighbor.toString();
+			FLUSH_LOG(ERR, ss);
+			throw rina::Exception();
+		}
+
+		ipcp->disconnectFromNeighbor(neighbor, trans->tid);
+
+		ss << "Requested IPC Process "
+				<< ipcp->get_name().toString() << " to disconnect from neighbor "
+				<< neighbor.toString()
+				<< std::endl;
+		FLUSH_LOG(INFO, ss);
+	} catch (rina::ConcurrentException& e)
+	{
+		ss << ": Error while disconnecting " << "from neighbor "
+				<< neighbor.toString() << ". Operation timedout"
+				<< std::endl;
+		FLUSH_LOG(ERR, ss);
+		return IPCM_FAILURE;
+	} catch (rina::EnrollException& e)
+	{
+		ss << ": Error while disconnecting " << "from neighbor "
+				<< neighbor.toString() << std::endl;
+		FLUSH_LOG(ERR, ss);
+		return IPCM_FAILURE;
+	} catch (rina::Exception& e)
+	{
+		ss << ": Unknown error while disconnecting from neighbor" << std::endl;
+		FLUSH_LOG(ERR, ss);
+		return IPCM_FAILURE;
+	}
+
+	return IPCM_PENDING;
+}
+
 bool IPCManager_::lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& apName,
 					    rina::ApplicationProcessNamingInformation& difName)
 {
@@ -1029,7 +1106,10 @@ ipcm_res_t IPCManager_::apply_configuration()
                         cit->difsToRegisterAt.begin();
                         nit != cit->difsToRegisterAt.end(); nit++)
                 {
-                    if (register_at_dif(NULL, &promise, c_promise.ipcp_id, *nit)
+                    if (register_at_dif(NULL,
+                		    	&promise,
+					c_promise.ipcp_id,
+					*nit)
                             == IPCM_FAILURE || promise.wait() != IPCM_SUCCESS)
                     {
                         ss << "Problems registering IPCP " << c_promise.ipcp_id
@@ -2039,6 +2119,12 @@ void IPCManager_::io_loop()
                 case rina::ENROLL_TO_DIF_RESPONSE_EVENT: {
                     DOWNCAST_DECL(event, rina::EnrollToDIFResponseEvent, e);
                     enroll_to_dif_response_event_handler(e);
+                }
+                    break;
+
+                case rina::DISCONNECT_NEIGHBOR_RESPONSE_EVENT: {
+                    DOWNCAST_DECL(event, rina::DisconnectNeighborResponseEvent, e);
+                    disconnect_neighbor_response_event_handler(e);
                 }
                     break;
 

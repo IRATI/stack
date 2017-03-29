@@ -35,7 +35,7 @@
 #define RNL_WQ_NAME  "rnl-wq"
 
 #define NETLINK_RINA_C_MIN (RINA_C_MIN + 1)
-#define NETLINK_RINA_C_MAX (RINA_C_MAX - 1)
+#define NETLINK_RINA_C_MAX (RINA_C_MAX)
 
 /* FIXME: This should be done more "dynamically" */
 #define NETLINK_RINA_A_MAX ICCA_ATTR_MAX
@@ -235,7 +235,9 @@ static struct nla_policy icdr_policy[ICDR_ATTR_MAX + 1] = {
 
 static struct nla_policy irar_policy[IRAR_ATTR_MAX + 1] = {
         [IRAR_ATTR_APP_NAME] = NLA_INIT_NESTED,
+	[IRAR_ATTR_DAF_NAME] = NLA_INIT_NESTED,
         [IRAR_ATTR_DIF_NAME] = NLA_INIT_NESTED,
+	[IRAR_ATTR_REG_IPCP_ID] = NLA_INIT_U16,
 };
 
 static struct nla_policy iuar_policy[IUAR_ATTR_MAX + 1] = {

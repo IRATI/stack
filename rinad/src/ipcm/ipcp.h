@@ -185,8 +185,8 @@ public:
 	 * @param neighbor The neighbor to disconnect from
 	 * @throws DisconnectFromNeighborException if an error occurs
 	 */
-	void disconnectFromNeighbor(
-			const rina::ApplicationProcessNamingInformation& neighbor);
+	void disconnectFromNeighbor(const rina::ApplicationProcessNamingInformation& neighbor,
+				    unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to register an application in a DIF through
@@ -195,15 +195,16 @@ public:
 	 * acquired
 	 *
 	 * @param applicationName The name of the application to be registered
+	 * @param dafName The name of the DAF of the application to be registered (optional)
 	 * @param regIpcProcessId The id of the registered IPC process (0 if it
 	 * is an application)
 	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws IpcmRegisterApplicationException if an error occurs
 	 */
-	void registerApplication(
-			const rina::ApplicationProcessNamingInformation& applicationName,
-			unsigned short regIpcProcessId,
-			unsigned int opaque);
+	void registerApplication(const rina::ApplicationProcessNamingInformation& applicationName,
+				 const rina::ApplicationProcessNamingInformation& dafName,
+				 unsigned short regIpcProcessId,
+				 unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to inform about the result of a registration

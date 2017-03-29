@@ -41,8 +41,8 @@ enum RINANetlinkOperationCode{
 	RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION, /* 6 IPC Manager -> IPC Process */
 	RINA_C_IPCM_ENROLL_TO_DIF_REQUEST, /* 7 IPC Manager -> IPC Process */
 	RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE, /* 8 IPC Process -> IPC Manager */
-	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST, /* TODO 9 IPC Manager -> IPC Process */
-	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE, /* TODO 10 IPC Process -> IPC Manager */
+	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST, /* 9 IPC Manager -> IPC Process */
+	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE, /* 10 IPC Process -> IPC Manager */
 	RINA_C_IPCM_ALLOCATE_FLOW_REQUEST, /* 11 IPC Manager -> IPC Process */
 	RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED, /* 12 Allocate flow request from a remote application, IPC Process -> IPC Manager */
 	RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT, /* 13 IPC Process -> IPC Manager */
@@ -582,6 +582,9 @@ public:
 	/** The name of the application to be registered */
 	ApplicationProcessNamingInformation applicationName;
 
+	/** The name of the DAF of the application to be registered */
+	ApplicationProcessNamingInformation dafName;
+
 	/** The id of the IPC Process being registered (0 if it is an app) */
 	unsigned short regIpcProcessId;
 
@@ -759,6 +762,34 @@ public:
         void addNeighbor(const Neighbor& qosCube);
         void setDIFInformation(const DIFInformation& difInformation);
         const DIFInformation& getDIFInformation() const;
+        IPCEvent* toIPCEvent();
+};
+
+/**
+ * Instruct a normal IPC Process to cancel the application connection
+ * and all N-1 flows from a neighbor
+ */
+class IpcmDisconnectNeighborRequestMessage: public BaseNetlinkMessage {
+
+        /** The neighbor to disconnect from */
+        ApplicationProcessNamingInformation neighborName;
+
+public:
+        IpcmDisconnectNeighborRequestMessage();
+        const ApplicationProcessNamingInformation& getNeighborName() const;
+        void setNeighborName(
+                const ApplicationProcessNamingInformation& neighborName);
+        IPCEvent* toIPCEvent();
+};
+
+/**
+ * Reports the IPC Manager about the result of an DisconnectNeighbor operation
+ * IPC Process -> IPC Manager
+ */
+class IpcmDisconnectNeighborResponseMessage:
+                public BaseNetlinkResponseMessage {
+public:
+	IpcmDisconnectNeighborResponseMessage();
         IPCEvent* toIPCEvent();
 };
 

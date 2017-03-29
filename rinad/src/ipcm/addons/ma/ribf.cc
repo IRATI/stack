@@ -451,15 +451,13 @@ void RIBConHandler::setSecurityManager(MASecurityManager * sec_man_)
 }
 
 void RIBConHandler::connect(const rina::cdap::CDAPMessage& message,
-			    const rina::cdap_rib::con_handle_t &con) {
+			    rina::cdap_rib::con_handle_t &con) {
 	(void) message;
 	(void) con;
 }
 
-void RIBConHandler::connectResult(
-		const rina::cdap_rib::res_info_t &res,
-		const rina::cdap_rib::con_handle_t &con,
-		const rina::cdap_rib::auth_policy_t &auth)
+void RIBConHandler::connectResult(const rina::cdap::CDAPMessage& message,
+				  rina::cdap_rib::con_handle_t &con)
 {
 	std::string object_name;
 

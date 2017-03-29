@@ -194,6 +194,12 @@ rnl_ipcm_reg_app_req_msg_attrs_create(void)
                 return NULL;
         }
 
+        tmp->daf_name = name_create();
+        if (!tmp->daf_name) {
+                rkfree(tmp);
+                return NULL;
+        }
+
         tmp->dif_name = name_create();
         if (!tmp->dif_name) {
                 name_destroy(tmp->app_name);
@@ -580,6 +586,7 @@ rnl_ipcm_reg_app_req_msg_attrs_destroy(struct rnl_ipcm_reg_app_req_msg_attrs * a
                 return -1;
 
         if (attrs->app_name) name_destroy(attrs->app_name);
+        if (attrs->daf_name) name_destroy(attrs->daf_name);
         if (attrs->dif_name) name_destroy(attrs->dif_name);
 
         rkfree(attrs);
@@ -2578,6 +2585,8 @@ rnl_parse_ipcm_reg_app_req_msg(struct genl_info * info,
 {
         if (parse_app_name_info(info->attrs[IRAR_ATTR_APP_NAME],
                                 msg_attrs->app_name)             ||
+            parse_app_name_info(info->attrs[IRAR_ATTR_DAF_NAME],
+        		        msg_attrs->daf_name)             ||
             parse_app_name_info(info->attrs[IRAR_ATTR_DIF_NAME],
                                 msg_attrs->dif_name)) {
                 LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCM_REGISTER_"
