@@ -112,15 +112,19 @@ int WpaController::launch_wpa(const std::string& wif_name,
 		exit(EXIT_FAILURE);
 	} else if (cpid == 0) {
 		//child
+		int dnfd;
+		dnfd = open("/dev/null", O_WRONLY);
+		dup2(dnfd, STDOUT_FILENO);
+		dup2(STDOUT_FILENO, STDERR_FILENO);
+
 		if (type == rina::SHIM_WIFI_IPC_PROCESS_STA) {
-			LOG_IPCP_DBG("Going to execute: %s %s %s %s %s %s %s %s %s",
+			LOG_IPCP_DBG("Going to execute: %s %s %s %s %s %s %s %s",
 						prog_name.c_str(),
 						driver_opts.c_str(),
 						"-i",
 						wif_name.c_str(),
 						"-c",
 						conf_file.c_str(),
-						"-d",
 						"-f",
 						log_file.c_str());
 			execlp(prog_name.c_str(), prog_name.c_str(),
@@ -129,7 +133,6 @@ int WpaController::launch_wpa(const std::string& wif_name,
 						wif_name.c_str(),
 						"-c",
 						conf_file.c_str(),
-						"-d",
 						"-f",
 						log_file.c_str(),
 						NULL);
