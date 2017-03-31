@@ -340,8 +340,8 @@ void ShimWifiIPCProcessImpl::assign_to_dif_response_handler(const rina::AssignTo
 		assert(rv == 0);
 
 		//Create scan timer
-		ShimWifiScanTask * task = new ShimWifiScanTask(this);
-		scanner.scheduleTask(task, SCAN_INTERVAL);
+		//ShimWifiScanTask * task = new ShimWifiScanTask(this);
+		//scanner.scheduleTask(task, SCAN_INTERVAL);
 	}
 
 	state = ASSIGNED_TO_DIF;
