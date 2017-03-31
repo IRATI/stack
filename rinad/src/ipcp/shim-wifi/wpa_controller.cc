@@ -374,7 +374,11 @@ int WpaController::__common_enable_network(const std::string cmd,
 
 	ss << "BSSID " << id << " " << bssid;
 	rv = __send_command(ss.str().c_str());
-	assert(!rv);
+	if (rv != 0) {
+		LOG_WARN("Command %s returned error", ss.str().c_str());
+		return rv;
+	}
+
 	ss.str(std::string());
 
 	/*FIXME: check if we need to do select if it was alrady attached to that
