@@ -85,8 +85,8 @@ WpaController::~WpaController(){
 
 int WpaController::launch_wpa(const std::string& wif_name,
 			      const std::string& driver){
-
 	std::stringstream ss;
+	std::string driver_opts;
 
 	rina::ScopedLock g(*lock);
 
@@ -95,6 +95,9 @@ int WpaController::launch_wpa(const std::string& wif_name,
 		return -1;
 	}
 
+	ss << "-D" << driver;
+	driver_opts = ss.str();
+	ss.str(std::string());
 	ss << base_dir << "/etc/" << wif_name << ".conf";
 
 	cpid = fork();
@@ -109,16 +112,15 @@ int WpaController::launch_wpa(const std::string& wif_name,
 		dup2(STDOUT_FILENO, STDERR_FILENO);
 
 		if (type == rina::SHIM_WIFI_IPC_PROCESS_STA) {
-			LOG_IPCP_DBG("Going to execute: %s %s%s %s %s %s %s",
+			LOG_IPCP_DBG("Going to execute: %s %s %s %s %s %s",
 						prog_name.c_str(),
-						"-D",
-						driver.c_str(),
+						driver_opts.c_str(),
 						"-i",
 						wif_name.c_str(),
 						"-c",
 						ss.str().c_str());
 			execlp(prog_name.c_str(), prog_name.c_str(),
-						"-Dnl80211",
+						driver_opts.c_str(),
 						"-i",
 						wif_name.c_str(),
 						"-c",
