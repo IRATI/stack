@@ -50,7 +50,7 @@ public:
 						const std::string& type,
 						const std::string& folder);
 	~WpaController();
-	int launch_wpa(const std::string& wif_name);
+	int launch_wpa(const std::string& wif_name, const std::string& driver);
 	int create_ctrl_connection(const std::string& if_name);
 	int scan(void);
 	int scan_results(std::string& out);

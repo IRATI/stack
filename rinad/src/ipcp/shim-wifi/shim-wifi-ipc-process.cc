@@ -311,6 +311,7 @@ void ShimWifiIPCProcessImpl::assign_to_dif_response_handler(const rina::AssignTo
 	//If type is station, initialize WPA supplicant
 	if (type == rina::SHIM_WIFI_IPC_PROCESS_STA) {
 		std::string if_name;
+		std::string driver = "nl80211";
 		std::string prog;
 		std::string ctrl_if_path;
 		std::list<rina::PolicyParameter>::iterator itt;
@@ -319,12 +320,13 @@ void ShimWifiIPCProcessImpl::assign_to_dif_response_handler(const rina::AssignTo
 				++itt) {
 			if (itt->name_ == "interface-name") {
 				if_name = itt->value_;
-				break;
+			} else if (itt->name_ == "wpas-driver") {
+				driver = itt->value_;
 			}
 		}
 
 		//Launch wpa_supplicant process
-		rv = wpa_conn->launch_wpa(if_name);
+		rv = wpa_conn->launch_wpa(if_name, driver);
 		assert(rv == 0);
 
 		sleep(5); //This is ugly but we need to wait for hostapd/wpa-supplicant to be initialized

@@ -83,7 +83,10 @@ WpaController::~WpaController(){
 	}
 }
 
-int WpaController::launch_wpa(const std::string& wif_name){
+int WpaController::launch_wpa(const std::string& wif_name,
+			      const std::string& driver){
+
+	std::stringstream ss;
 
 	rina::ScopedLock g(*lock);
 
@@ -92,7 +95,6 @@ int WpaController::launch_wpa(const std::string& wif_name){
 		return -1;
 	}
 
-	std::stringstream ss;
 	ss << base_dir << "/etc/" << wif_name << ".conf";
 
 	cpid = fork();
@@ -107,9 +109,10 @@ int WpaController::launch_wpa(const std::string& wif_name){
 		dup2(STDOUT_FILENO, STDERR_FILENO);
 
 		if (type == rina::SHIM_WIFI_IPC_PROCESS_STA) {
-			LOG_IPCP_DBG("Going to execute: %s %s %s %s %s %s",
+			LOG_IPCP_DBG("Going to execute: %s %s%s %s %s %s %s",
 						prog_name.c_str(),
-						"-Dnl80211",
+						"-D",
+						driver.c_str(),
 						"-i",
 						wif_name.c_str(),
 						"-c",
@@ -290,15 +293,16 @@ int WpaController::__send_command(const std::string& cmd,
 
 	ret = wpa_ctrl_request(ctrl_conn, cmd.c_str(), cmd.length(), buf, &len,
 									NULL);
-	LOG_IPCP_DBG("Sent command to WPA supplicant: %s", cmd.c_str());
 
 	if (ret == -2) {
 		LOG_IPCP_ERR("'%s' command timed out.\n", cmd.c_str());
 		return -2;
 	} else if (ret < 0) {
-		printf("'%s' command failed.\n", cmd.c_str());
+		LOG_IPCP_ERR("'%s' command failed.\n", cmd.c_str());
 		return -1;
 	}
+
+	LOG_IPCP_DBG("Sent command to WPA supplicant: %s", cmd.c_str());
 
 	buf[len] = '\0';
 
