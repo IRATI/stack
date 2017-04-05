@@ -477,11 +477,7 @@ int WpaController::__common_enable_network(const std::string cmd,
 	 * probably we need a flag in the WpaNetork
 	 */
 	ss << cmd << " " << id;
-	rv = __send_command(ss.str().c_str());
-	if (rv != 0) {
-		LOG_WARN("Command %s returned error", ss.str().c_str());
-		return rv;
-	}
+	return __send_command(ss.str().c_str());
 }
 
 int WpaController::disable_network(const std::string& ssid,
