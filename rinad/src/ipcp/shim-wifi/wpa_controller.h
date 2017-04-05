@@ -31,7 +31,7 @@ extern "C"{
 
 namespace rinad {
 
-class ShimWifiIPCProcessImpl;
+class ShimWifiStaIPCProcessImpl;
 
 class WpaNetwork {
 public:
@@ -46,9 +46,9 @@ public:
 
 class WpaController {
 public:
-	WpaController(ShimWifiIPCProcessImpl * ipcp,
-						const std::string& type,
-						const std::string& folder);
+	WpaController(ShimWifiStaIPCProcessImpl * ipcp,
+		      const std::string& type,
+		      const std::string& folder);
 	~WpaController();
 	int launch_wpa(const std::string& wif_name, const std::string& driver);
 	int create_ctrl_connection(const std::string& if_name);
@@ -59,10 +59,10 @@ public:
 	int select_network(const std::string& ssid, const std::string& bssid);
 
 private:
-	rina::Lockable * lock;
+	rina::Lockable lock;
 
 	//Owner Shim WiFi IPCP
-	ShimWifiIPCProcessImpl * ipcp;
+	ShimWifiStaIPCProcessImpl * ipcp;
 
 	//Monitoring thread
 	rina::Thread * mon_thread;
@@ -89,7 +89,12 @@ private:
 
 	static void * __mon_trampoline(void * opaque);
 	void __mon_loop(void);
-	void __process_msg(std::string msg);
+	void __process_msg(const std::string& msg);
+	void __process_try_association_message(const std::string& msg);
+	void __process_association_message(const std::string& msg);
+	void __process_key_negotiation_message(const std::string& msg);
+	void __process_connected_message(const std::string& msg);
+	void __process_disconnected_message(const std::string& msg);
 	int __send_command(const std::string& cmd, std::string * out);
 	int __get_network_id_and_set_bssid(const std::string& ssid,
 						const std::string& bssid,

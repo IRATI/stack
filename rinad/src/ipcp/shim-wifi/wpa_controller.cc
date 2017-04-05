@@ -32,22 +32,27 @@
 
 namespace rinad {
 
-WpaNetwork::WpaNetwork(){}
+WpaNetwork::WpaNetwork()
+{
+	id = 0;
+}
 
 WpaNetwork::WpaNetwork(unsigned int id, std::string ssid, std::string bssid,
 		std::string psk): id(id), ssid(ssid), bssid(bssid), psk(psk){
 }
 
-WpaController::WpaController(ShimWifiIPCProcessImpl * ipcp_,
-						const std::string& type_,
-						const std::string& folder_) {
-	lock = new rina::Lockable();
+WpaController::WpaController(ShimWifiStaIPCProcessImpl * ipcp_,
+			     const std::string& type_,
+			     const std::string& folder_)
+{
 	ipcp = ipcp_;
 	type = type_;
 	base_dir = folder_;
 	ctrl_conn = NULL;
 	mon_conn = NULL;
 	mon_keep_running = false;
+	mon_thread = NULL;
+
 	cpid = -1;
 
 	if (type == rina::SHIM_WIFI_IPC_PROCESS_AP)
@@ -90,7 +95,7 @@ int WpaController::launch_wpa(const std::string& wif_name,
 	std::string log_file;
 	std::string conf_file;
 
-	rina::ScopedLock g(*lock);
+	rina::ScopedLock g(lock);
 
 	if(state != WPA_CREATED){
 		LOG_IPCP_ERR("%s is already running!", prog_name.c_str());
@@ -192,12 +197,22 @@ int WpaController::launch_wpa(const std::string& wif_name,
 	}
 }
 
-void WpaController::__process_msg(std::string msg){
+void WpaController::__process_msg(const std::string& msg)
+{
+	LOG_IPCP_DBG("Received message from WPA Supplicant: %s", msg.c_str());
 
-	if (msg.find("CTRL-EVENT-CONNECTED") != std::string::npos) {
-		LOG_IPCP_DBG("CTRL-EVENT-CONNECTED event received");
+	if (msg.find("Trying to associate with") != std::string::npos) {
+		__process_try_association_message(msg);
+	} else if (msg.find("Associated with") != std::string::npos) {
+		__process_association_message(msg);
+	} else if (msg.find("Associated with") != std::string::npos) {
+		__process_association_message(msg);
+	} else if (msg.find("Key negotiation completed with") != std::string::npos) {
+		__process_key_negotiation_message(msg);
+	} else if (msg.find("CTRL-EVENT-CONNECTED") != std::string::npos) {
+		__process_connected_message(msg);
 	} else if (msg.find("CTRL-EVENT-DISCONNECTED") != std::string::npos) {
-		LOG_IPCP_DBG("CTRL-EVENT-DISCONNECTED event received");
+		__process_disconnected_message(msg);
 	} else if (msg.find("CTRL-EVENT-TERMINATING") != std::string::npos) {
 		LOG_IPCP_DBG("CTRL-EVENT-TERMINATING event received");
 	} else if (msg.find("CTRL-EVENT-SCAN-STARTED") != std::string::npos) {
@@ -205,8 +220,66 @@ void WpaController::__process_msg(std::string msg){
 	} else if (msg.find("CTRL-EVENT-SCAN-RESULTS") != std::string::npos) {
 		LOG_IPCP_DBG("CTRL-EVENT-SCAN-RESULTS event received");
 	}else{
-		LOG_IPCP_DBG("Received not expected message %s", msg.c_str());
+		LOG_IPCP_DBG("Ignoring message");
 	}
+}
+
+void WpaController::__process_try_association_message(const std::string& msg)
+{
+	std::string delimiter1 = "Trying to associate with ";
+	std::string delimiter2 = "SSID='";
+	std::string neigh_name;
+	std::string dif_name;
+
+	std::string token1 = msg.substr(msg.find(delimiter1) + delimiter1.length(),
+				        msg.length() - 1);
+	neigh_name = token1.substr(0, token1.find(""));
+
+	std::string token2 = msg.substr(msg.find(delimiter2) + delimiter2.length(),
+				        msg.length() - 1);
+	dif_name = token2.substr(0, token2.find("'"));
+
+	LOG_IPCP_DBG("DIF name: %s, neighbor name: %s",
+		     dif_name.c_str(),
+		     neigh_name.c_str());
+
+	ipcp->notify_trying_to_associate(dif_name, neigh_name);
+}
+
+void WpaController::__process_association_message(const std::string& msg)
+{
+	std::string delimiter = "Associated with ";
+	std::string neigh_name;
+
+	neigh_name = msg.substr(msg.find(delimiter) + delimiter.length(),
+			        msg.length() - 1);
+	LOG_IPCP_DBG("Neighbor name: %s", neigh_name.c_str());
+
+	ipcp->notify_associated(neigh_name);
+}
+
+void WpaController::__process_key_negotiation_message(const std::string& msg)
+{
+	std::string delimiter = "WPA: Key negotiation completed with ";
+	std::string neigh_name;
+
+	std::string token = msg.substr(msg.find(delimiter) + delimiter.length(),
+				        msg.length() - 1);
+	neigh_name = token.substr(0, token.find("'"));
+
+	LOG_IPCP_DBG("Neighbor name: %s", neigh_name.c_str());
+
+	ipcp->notify_associated(neigh_name);
+}
+
+void WpaController::__process_connected_message(const std::string& msg)
+{
+	ipcp->notify_connected();
+}
+
+void WpaController::__process_disconnected_message(const std::string& msg)
+{
+	ipcp->notify_disconnected();
 }
 
 void * WpaController::__mon_trampoline(void * opaque){
@@ -239,7 +312,7 @@ void WpaController::__mon_loop() {
 
 int WpaController::create_ctrl_connection(const std::string& if_name) {
 
-	rina::ScopedLock g(*lock);
+	rina::ScopedLock g(lock);
 
 	std::stringstream ss;
 	ss << base_dir << "/var/run/" << if_name;
@@ -372,7 +445,7 @@ int WpaController::__common_enable_network(const std::string cmd,
 	unsigned int id;
 	std::stringstream ss;
 
-	rina::ScopedLock g(*lock);
+	rina::ScopedLock g(lock);
 
 	if(ssid == "all"){
 		ss << cmd << " all";
@@ -405,7 +478,7 @@ int WpaController::disable_network(const std::string& ssid,
 	unsigned int id;
 	std::stringstream ss;
 
-	rina::ScopedLock g(*lock);
+	rina::ScopedLock g(lock);
 
 	if(ssid == "all"){
 		ss << "DISABLE_NETWORK all";

@@ -32,6 +32,7 @@ namespace rinad {
 
 class ShimWifiIPCProcessImpl;
 class ShimWifiScanTask;
+class CancelEnrollmentTimerTask;
 
 /// Proxy to interact with the Shim Wifi IPC Process components
 /// in the kernel and those implemented by WPASupplicant or
@@ -48,13 +49,13 @@ class ShimWifiIPCProcessImpl: public IPCProcess,
 					public LazyIPCProcessImpl {
 public:
         ShimWifiIPCProcessImpl(const std::string& type,
-			const rina::ApplicationProcessNamingInformation& name,
-			unsigned short id,
-			unsigned int ipc_manager_port,
-			std::string log_level,
-			std::string log_file,
-			std::string& folder);
-        ~ShimWifiIPCProcessImpl();
+			       const rina::ApplicationProcessNamingInformation& name,
+			       unsigned short id,
+			       unsigned int ipc_manager_port,
+			       std::string log_level,
+			       std::string log_file,
+			       std::string& folder);
+        virtual ~ShimWifiIPCProcessImpl();
         unsigned short get_id();
         const IPCProcessOperationalState& get_operational_state() const;
         void set_operational_state(const IPCProcessOperationalState& operational_state);
@@ -71,20 +72,20 @@ public:
                                     const std::string& name,
                                     bool& got_in_userspace);
 
-        void assign_to_dif_request_handler(const rina::AssignToDIFRequestEvent& event);
-        void assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event);
-        void application_registration_request_handler(const rina::ApplicationRegistrationRequestEvent& event);
-        void app_reg_response_handler(const rina::IpcmRegisterApplicationResponseEvent& event);
-        void application_unregistration_handler(const rina::ApplicationUnregistrationRequestEvent& event);
-        void unreg_app_response_handler(const rina::IpcmUnregisterApplicationResponseEvent& event);
-        void flow_allocation_requested_handler(const rina::FlowRequestEvent& event);
-        void ipcm_allocate_flow_request_result_handler(const rina::IpcmAllocateFlowRequestResultEvent& event);
-        void allocate_flow_response_handler(const rina::AllocateFlowResponseEvent& event);
-        void flow_deallocation_requested_handler(const rina::FlowDeallocateRequestEvent& event);
-        void ipcm_deallocate_flow_response_event_handler(const rina::IpcmDeallocateFlowResponseEvent& event);
-        void enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event);
+        virtual void assign_to_dif_request_handler(const rina::AssignToDIFRequestEvent& event);
+        virtual void assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event);
+        virtual void application_registration_request_handler(const rina::ApplicationRegistrationRequestEvent& event);
+        virtual void app_reg_response_handler(const rina::IpcmRegisterApplicationResponseEvent& event);
+        virtual void application_unregistration_handler(const rina::ApplicationUnregistrationRequestEvent& event);
+        virtual void unreg_app_response_handler(const rina::IpcmUnregisterApplicationResponseEvent& event);
+        virtual void flow_allocation_requested_handler(const rina::FlowRequestEvent& event);
+        virtual void ipcm_allocate_flow_request_result_handler(const rina::IpcmAllocateFlowRequestResultEvent& event);
+        virtual void allocate_flow_response_handler(const rina::AllocateFlowResponseEvent& event);
+        virtual void flow_deallocation_requested_handler(const rina::FlowDeallocateRequestEvent& event);
+        virtual void ipcm_deallocate_flow_response_event_handler(const rina::IpcmDeallocateFlowResponseEvent& event);
+        virtual void enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event);
 
-private:
+protected:
 	friend class rinad::ShimWifiScanTask;
 	friend class rinad::WpaController;
         ShimWifiIPCPProxy * ipcp_proxy;
@@ -96,11 +97,81 @@ private:
                 pending_flow_allocation_events;
         std::map<unsigned int, rina::FlowDeallocateRequestEvent>
                 pending_flow_deallocation_events;
+};
+
+/// Class that captures the state of an enrollment operation
+class StaEnrollmentSM {
+public:
+	enum StaEnrollmentState {
+		DISCONNECTED,
+		ENROLLMENT_STARTED,
+		TRYING_TO_ASSOCIATE,
+		ASSOCIATED,
+		KEY_NEGOTIATION_COMPLETED,
+		ENROLLED
+	};
+
+	StaEnrollmentSM();
+	StaEnrollmentSM(const std::string& dif_name,
+			const std::string neighbor);
+	~StaEnrollmentSM(){};
+
+	void restart(const std::string& dif_name,
+		     const std::string neighbor);
+	std::string state_to_string();
+	std::string to_string();
+
+	rina::EnrollToDAFRequestEvent enroll_event;
+	StaEnrollmentState state;
+	std::string dif_name;
+	std::string neighbor;
+	int enrollment_start_time_ms;
+	int enrollment_end_time_ms;
+};
+
+class ShimWifiStaIPCProcessImpl: public ShimWifiIPCProcessImpl {
+public:
+	ShimWifiStaIPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
+			          unsigned short id,
+			          unsigned int ipc_manager_port,
+			          std::string log_level,
+			          std::string log_file,
+			          std::string& folder);
+	~ShimWifiStaIPCProcessImpl();
+
+	void assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event);
+	void enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event);
+
+private:
+	friend class rinad::ShimWifiScanTask;
+	friend class rinad::CancelEnrollmentTimerTask;
+	friend class rinad::WpaController;
+
 	WpaController* wpa_conn;
-	rina::Timer scanner;
+	rina::Timer timer;
+	StaEnrollmentSM sta_enr_sm;
+	CancelEnrollmentTimerTask * timer_task;
 
+	void abort_enrollment();
+	void notify_cancel_enrollment();
+	void notify_trying_to_associate(const std::string& dif_name,
+					const std::string& neigh_name);
+	void notify_associated(const std::string& neigh_name);
+	void notify_key_negotiated(const std::string& neigh_name);
+	void notify_connected(void);
+	void notify_disconnected(void);
 	void push_scan_results(std::string& output);
+};
 
+class ShimWifiAPIPCProcessImpl: public ShimWifiIPCProcessImpl {
+public:
+	ShimWifiAPIPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
+			          unsigned short id,
+			          unsigned int ipc_manager_port,
+			          std::string log_level,
+			          std::string log_file,
+			          std::string& folder);
+	~ShimWifiAPIPCProcessImpl();
 };
 
 } //namespace rinad

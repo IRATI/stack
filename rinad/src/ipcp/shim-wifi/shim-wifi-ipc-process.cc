@@ -37,12 +37,12 @@ namespace rinad {
 
 class ShimWifiScanTask: public rina::TimerTask {
 public:
-	ShimWifiScanTask(ShimWifiIPCProcessImpl * ipcp_): ipcp(ipcp_) {};
+	ShimWifiScanTask(ShimWifiStaIPCProcessImpl * ipcp_): ipcp(ipcp_) {};
 	~ShimWifiScanTask() throw() {};
 	void run();
 
 private:
-	ShimWifiIPCProcessImpl * ipcp;
+	ShimWifiStaIPCProcessImpl * ipcp;
 };
 
 void ShimWifiScanTask::run() {
@@ -55,7 +55,7 @@ void ShimWifiScanTask::run() {
 
 	//Reschedule
 	ShimWifiScanTask * task = new ShimWifiScanTask(ipcp);
-	ipcp->scanner.scheduleTask(task, SCAN_INTERVAL);
+	ipcp->timer.scheduleTask(task, SCAN_INTERVAL);
 }
 
 //Class ShimWifiIPCPProxy
@@ -93,20 +93,7 @@ ShimWifiIPCProcessImpl::ShimWifiIPCProcessImpl(const std::string& type_,
         		exit(EXIT_FAILURE);
         }
 
-	std::string folder_name;
-	std::string::size_type pos = folder.rfind("/bin");
-	if (pos == std::string::npos) {
-		folder_name = ".";
-	} else {
-		folder_name = folder.substr(0, pos);
-	}
-
         ipcp_proxy = new ShimWifiIPCPProxy(id, type, nm);
-        if (type == rina::SHIM_WIFI_IPC_PROCESS_STA) {
-        	wpa_conn = new WpaController(this, type, folder_name);
-        } else {
-        	wpa_conn = 0;
-        }
 
         state = INITIALIZED;
 
@@ -119,11 +106,6 @@ ShimWifiIPCProcessImpl::ShimWifiIPCProcessImpl(const std::string& type_,
 
 ShimWifiIPCProcessImpl::~ShimWifiIPCProcessImpl()
 {
-	if(wpa_conn){
-		delete wpa_conn;
-		wpa_conn = 0;
-	}
-
 	if (ipcp_proxy) {
 		delete ipcp_proxy;
 		ipcp_proxy = 0;
@@ -219,47 +201,6 @@ void ShimWifiIPCProcessImpl::assign_to_dif_request_handler(const rina::AssignToD
 	}
 }
 
-void ShimWifiIPCProcessImpl::push_scan_results(std::string& output){
-	int rv;
-	rina::MediaReport report;
-
-	report.ipcp_id = get_id();
-	report.current_dif_name = dif_information_.dif_name_.toString();
-	//FIXME: add proper values here
-	report.bs_ipcp_address ="0";
-
-	std::istringstream ss(output);
-	std::string line;
-	int i = 0;
-	while (std::getline(ss, line)) {
-		if (i==0) continue;
-		++i;
-		std::vector<std::string> v;
-		//line: bssid/frequency/signal/flags/ssid
-		std::string value;
-		std::istringstream ss(line);
-		while(getline(ss, value, '\t')){
-			v.push_back(value);
-		}
-		rina::BaseStationInfo bs_info;
-		bs_info.ipcp_address = v[0];
-		bs_info.signal_strength = atoi(v[2].c_str());
-		std::map<std::string, rina::MediaDIFInfo>::iterator it =
-					report.available_difs.find(v[4]);
-		if(it == report.available_difs.end()){
-			rina::MediaDIFInfo m_info;
-			m_info.dif_name = v[4];
-			m_info.security_policies = v[3];
-			m_info.available_bs_ipcps.push_back(bs_info);
-			report.available_difs[v[4]] = m_info;
-		} else {
-			it->second.available_bs_ipcps.push_back(bs_info);
-		}
-	}
-
-	rina::extendedIPCManager->sendMediaReport(report);
-}
-
 void ShimWifiIPCProcessImpl::assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event)
 {
 	int rv;
@@ -307,42 +248,6 @@ void ShimWifiIPCProcessImpl::assign_to_dif_response_handler(const rina::AssignTo
 	LOG_IPCP_DBG("The kernel processed successfully the Assign to DIF request");
 
 	dif_information_ = requestEvent.difInformation;
-
-	//If type is station, initialize WPA supplicant
-	if (type == rina::SHIM_WIFI_IPC_PROCESS_STA) {
-		std::string if_name;
-		std::string driver = "nl80211";
-		std::string prog;
-		std::string ctrl_if_path;
-		std::list<rina::PolicyParameter>::iterator itt;
-		for (itt = dif_information_.dif_configuration_.parameters_.begin();
-				itt != dif_information_.dif_configuration_.parameters_.end();
-				++itt) {
-			if (itt->name_ == "interface-name") {
-				if_name = itt->value_;
-			} else if (itt->name_ == "wpas-driver") {
-				driver = itt->value_;
-			}
-		}
-
-		//Launch wpa_supplicant process
-		rv = wpa_conn->launch_wpa(if_name, driver);
-		assert(rv == 0);
-
-		sleep(5); //This is ugly but we need to wait for hostapd/wpa-supplicant to be initialized
-
-		//Connect to control interface and monitoring interface
-		rv == wpa_conn->create_ctrl_connection(if_name);
-		assert(rv == 0);
-
-		//Disable networks specified in configuration file to avoid connecting
-		rv == wpa_conn->disable_network("all", "all");
-		assert(rv == 0);
-
-		//Create scan timer
-		//ShimWifiScanTask * task = new ShimWifiScanTask(this);
-		//scanner.scheduleTask(task, SCAN_INTERVAL);
-	}
 
 	state = ASSIGNED_TO_DIF;
 
@@ -673,31 +578,9 @@ void ShimWifiIPCProcessImpl::enroll_to_dif_handler(const rina::EnrollToDAFReques
 		return;
 	}
 
-	LOG_IPCP_DBG("Attaching to SSID %s and BSSID %s",
+	LOG_IPCP_DBG("Trying to enroll to SSID %s and BSSID %s",
 		     event.dafName.processName.c_str(),
 		     event.neighborName.processName.c_str());
-
-	//Carry out attachment/re-attachment
-	if (type == rina::SHIM_WIFI_IPC_PROCESS_STA) {
-		rv = wpa_conn->select_network(event.dafName.processName,
-					      event.neighborName.processName);
-		if(rv != 0){
-			LOG_IPCP_ERR("Could not enroll to DIF %s (BSSID %s)",
-					event.dafName.processName.c_str(),
-					event.neighborName.processName.c_str());
-			try {
-				rina::extendedIPCManager->enrollToDIFResponse(event,
-									      -1,
-									      neighbors,
-									      dif_information_);
-			} catch (rina::Exception &e) {
-				LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s",
-						e.what());
-			}
-
-			return;
-		}
-	}
 
 	LOG_IPCP_DBG("Attachment successful!");
 	ap.name_ = event.neighborName;
@@ -714,6 +597,512 @@ void ShimWifiIPCProcessImpl::enroll_to_dif_handler(const rina::EnrollToDAFReques
 	}
 
 	return;
+}
+
+//Class StaEnrollmentSM
+StaEnrollmentSM::StaEnrollmentSM(const std::string& dif_name,
+				 const std::string neighbor)
+{
+	restart(dif_name, neighbor);
+}
+
+StaEnrollmentSM::StaEnrollmentSM()
+{
+	restart("", "");
+}
+
+void StaEnrollmentSM::restart(const std::string& dif,
+			      const std::string neigh)
+{
+	dif_name = dif;
+	neighbor = neigh;
+	state = StaEnrollmentSM::DISCONNECTED;
+	enrollment_start_time_ms = rina::Time::get_time_in_ms();
+	enrollment_end_time_ms = 0;
+}
+
+std::string StaEnrollmentSM::state_to_string()
+{
+	switch(state) {
+	case DISCONNECTED:
+		return "DISCONNECTED";
+	case ENROLLMENT_STARTED:
+		return "ENROLLMENT STARTED";
+	case TRYING_TO_ASSOCIATE:
+		return "TRYING TO ASSOCIATE";
+	case ASSOCIATED:
+		return "ASSOCIATED";
+	case KEY_NEGOTIATION_COMPLETED:
+		return "KEY NEGOTIATION COMPLETED";
+	case ENROLLED:
+		return "ENROLLED";
+	default:
+		return "Unknown state";
+	}
+}
+
+std::string StaEnrollmentSM::to_string()
+{
+	std::stringstream ss;
+
+	ss << "DIF name: " << dif_name
+	   << "; Neighbor name: " << neighbor
+	   << "; State: " << state_to_string()
+	   << "; Enrollment time (ms): "
+	   << (enrollment_end_time_ms - enrollment_start_time_ms)
+	   << std::endl;
+
+	return ss.str();
+}
+
+//Class CancelEnrollmentTimerTask
+class CancelEnrollmentTimerTask: public rina::TimerTask {
+public:
+	CancelEnrollmentTimerTask(ShimWifiStaIPCProcessImpl * ipcp_): ipcp(ipcp_) {};
+	~CancelEnrollmentTimerTask() throw() {};
+	void run();
+
+private:
+	ShimWifiStaIPCProcessImpl * ipcp;
+};
+
+void CancelEnrollmentTimerTask::run()
+{
+	ipcp->notify_cancel_enrollment();
+}
+
+//Class ShimWifiStaIPCProcessImpl
+ShimWifiStaIPCProcessImpl::ShimWifiStaIPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
+		          	  	  	     unsigned short id,
+						     unsigned int ipc_manager_port,
+						     std::string log_level,
+						     std::string log_file,
+						     std::string& folder) :
+		ShimWifiIPCProcessImpl(rina::SHIM_WIFI_IPC_PROCESS_STA,
+				       name, id, ipc_manager_port,
+				       log_level, log_file, folder)
+{
+	std::string folder_name;
+	std::string::size_type pos = folder.rfind("/bin");
+	if (pos == std::string::npos) {
+		folder_name = ".";
+	} else {
+		folder_name = folder.substr(0, pos);
+	}
+
+	wpa_conn = new WpaController(this, type, folder_name);
+	timer_task = 0;
+}
+
+ShimWifiStaIPCProcessImpl::~ShimWifiStaIPCProcessImpl()
+{
+	if(wpa_conn){
+		delete wpa_conn;
+		wpa_conn = 0;
+	}
+}
+
+void ShimWifiStaIPCProcessImpl::assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event)
+{
+	int rv;
+	std::string output;
+	rina::ScopedLock g(*lock_);
+
+	if (state == ASSIGNED_TO_DIF ) {
+		LOG_IPCP_INFO("Got reply from the Kernel components regarding DIF assignment: %d",
+				event.result);
+		return;
+	}
+
+	if (state != ASSIGN_TO_DIF_IN_PROCESS) {
+		LOG_IPCP_ERR("Got a DIF assignment response while not in ASSIGN_TO_DIF_IN_PROCESS state. State is %d ",
+				state);
+		return;
+	}
+
+	std::map<unsigned int, rina::AssignToDIFRequestEvent>::iterator it;
+	it = pending_events_.find(event.sequenceNumber);
+	if (it == pending_events_.end()) {
+		LOG_IPCP_ERR("Couldn't find an Assign to DIF request event associated to the handle %u",
+				event.sequenceNumber);
+		return;
+	}
+
+	rina::AssignToDIFRequestEvent requestEvent = it->second;
+	pending_events_.erase(it);
+	if (event.result != 0) {
+		LOG_IPCP_ERR("The kernel couldn't successfully process the Assign to DIF Request: %d",
+				event.result);
+		LOG_IPCP_ERR("Could not assign IPC Process to DIF %s",
+				it->second.difInformation.dif_name_.processName.c_str());
+		state = INITIALIZED;
+
+		try {
+			rina::extendedIPCManager->assignToDIFResponse(requestEvent, -1);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		}
+
+		return;
+	}
+
+	LOG_IPCP_DBG("The kernel processed successfully the Assign to DIF request");
+
+	dif_information_ = requestEvent.difInformation;
+
+	std::string if_name;
+	std::string driver = "nl80211";
+	std::string prog;
+	std::string ctrl_if_path;
+	std::list<rina::PolicyParameter>::iterator itt;
+	for (itt = dif_information_.dif_configuration_.parameters_.begin();
+			itt != dif_information_.dif_configuration_.parameters_.end();
+			++itt) {
+		if (itt->name_ == "interface-name") {
+			if_name = itt->value_;
+		} else if (itt->name_ == "wpas-driver") {
+			driver = itt->value_;
+		}
+	}
+
+	//Launch wpa_supplicant process
+	rv = wpa_conn->launch_wpa(if_name, driver);
+	if (rv != 0) {
+		LOG_IPCP_ERR("Problems launching WPA Supplicant");
+		state = INITIALIZED;
+
+		try {
+			rina::extendedIPCManager->assignToDIFResponse(requestEvent, -1);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		}
+
+		return;
+	}
+
+	sleep(5); //This is ugly but we need to wait for hostapd/wpa-supplicant to be initialized
+
+	//Connect to control interface and monitoring interface
+	rv = wpa_conn->create_ctrl_connection(if_name);
+	if (rv != 0) {
+		LOG_IPCP_ERR("Problems connecting to WPA Supplicant control interface");
+		state = INITIALIZED;
+
+		try {
+			rina::extendedIPCManager->assignToDIFResponse(requestEvent, -1);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		}
+
+		return;
+	}
+
+	//Disable networks specified in configuration file to avoid connecting
+	rv = wpa_conn->disable_network("all", "all");
+	if (rv != 0) {
+		LOG_IPCP_ERR("Problems disabling all networks");
+		state = INITIALIZED;
+
+		try {
+			rina::extendedIPCManager->assignToDIFResponse(requestEvent, -1);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		}
+
+		return;
+	}
+
+	//Create scan timer
+	//ShimWifiScanTask * task = new ShimWifiScanTask(this);
+	//scanner.scheduleTask(task, SCAN_INTERVAL);
+
+	state = ASSIGNED_TO_DIF;
+
+	try {
+		rina::extendedIPCManager->assignToDIFResponse(requestEvent, 0);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+	}
+}
+
+// This function will attach to the SSID and BSSID specified by the enrollment request event,
+// triggering a handover if needed
+void ShimWifiStaIPCProcessImpl::enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event)
+{
+	std::list<rina::Neighbor> neighbors;
+	rina::ScopedLock g(*lock_);
+	int rv;
+
+	if (state != ASSIGNED_TO_DIF) {
+		LOG_IPCP_ERR("Got a enroll to DIF request while not in  "
+				"ASSIGNED_TO_DIF state. State is %d ",
+				state);
+		try {
+			rina::extendedIPCManager->enrollToDIFResponse(event,
+								      -1,
+								      neighbors,
+								      dif_information_);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		}
+
+		return;
+	}
+
+	if (sta_enr_sm.state != StaEnrollmentSM::DISCONNECTED &&
+			sta_enr_sm.state != StaEnrollmentSM::ENROLLED) {
+		LOG_IPCP_ERR("Another enrollment operation is already in progress \n %s",
+			     sta_enr_sm.to_string().c_str());
+		try {
+			rina::extendedIPCManager->enrollToDIFResponse(event,
+								      -1,
+								      neighbors,
+								      dif_information_);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		}
+
+		return;
+	}
+
+	LOG_IPCP_DBG("Trying to enroll to SSID %s and BSSID %s",
+		     event.dafName.processName.c_str(),
+		     event.neighborName.processName.c_str());
+
+	//Carry out attachment/re-attachment
+	sta_enr_sm.restart(event.dafName.processName,
+			   event.neighborName.processName);
+
+	rv = wpa_conn->select_network(sta_enr_sm.dif_name,
+				      sta_enr_sm.neighbor);
+	if(rv != 0){
+		LOG_IPCP_ERR("Could not enroll to DIF %s (BSSID %s)",
+				sta_enr_sm.dif_name.c_str(),
+				sta_enr_sm.neighbor.c_str());
+		try {
+			rina::extendedIPCManager->enrollToDIFResponse(event,
+					-1,
+					neighbors,
+					dif_information_);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s",
+					e.what());
+		}
+
+		return;
+	}
+
+	LOG_IPCP_DBG("Enrollment in process!");
+	sta_enr_sm.state = StaEnrollmentSM::ENROLLMENT_STARTED;
+	sta_enr_sm.enroll_event = event;
+	timer_task = new CancelEnrollmentTimerTask(this);
+	timer.scheduleTask(timer_task, 3000);
+
+}
+
+void ShimWifiStaIPCProcessImpl::abort_enrollment()
+{
+	std::list<rina::Neighbor> neighbors;
+
+	LOG_IPCP_ERR("Aborting enrollment. %s", sta_enr_sm.to_string().c_str());
+	sta_enr_sm.restart("", "");
+
+	try {
+		rina::extendedIPCManager->enrollToDIFResponse(sta_enr_sm.enroll_event,
+				-1,
+				neighbors,
+				dif_information_);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+	}
+}
+
+void ShimWifiStaIPCProcessImpl::notify_cancel_enrollment()
+{
+	rina::ScopedLock g(*lock_);
+
+	if (sta_enr_sm.state == StaEnrollmentSM::DISCONNECTED ||
+			sta_enr_sm.state == StaEnrollmentSM::ENROLLED)
+		return;
+
+	abort_enrollment();
+}
+
+void ShimWifiStaIPCProcessImpl::notify_trying_to_associate(const std::string& dif_name,
+							   const std::string& neigh_name)
+{
+	rina::ScopedLock g(*lock_);
+
+	timer.cancelTask(timer_task);
+	if (sta_enr_sm.state != StaEnrollmentSM::ENROLLMENT_STARTED) {
+		LOG_IPCP_WARN("Received trying to associate message in wrong state: %s",
+			      sta_enr_sm.state_to_string().c_str());
+
+		//TODO abort enrollment?
+	}
+
+	if (sta_enr_sm.dif_name != dif_name || sta_enr_sm.neighbor != neigh_name) {
+		LOG_IPCP_ERR("WPA Supplicant is trying to associate to the wrong SSID (%s) or BSSID (%s)",
+			      dif_name.c_str(),
+			      neigh_name.c_str());
+		abort_enrollment();
+	}
+
+	sta_enr_sm.state = StaEnrollmentSM::TRYING_TO_ASSOCIATE;
+	LOG_IPCP_DBG("Enrollment state machine transitioned to the state %s after %d ms",
+		     sta_enr_sm.state_to_string().c_str(),
+		     rina::Time::get_time_in_ms() - sta_enr_sm.enrollment_start_time_ms);
+	timer_task = new CancelEnrollmentTimerTask(this);
+	timer.scheduleTask(timer_task, 3000);
+}
+
+void ShimWifiStaIPCProcessImpl::notify_associated(const std::string& neigh_name)
+{
+	rina::ScopedLock g(*lock_);
+
+	timer.cancelTask(timer_task);
+	if (sta_enr_sm.state != StaEnrollmentSM::TRYING_TO_ASSOCIATE) {
+		LOG_IPCP_WARN("Received associated message in wrong state: %s",
+			      sta_enr_sm.state_to_string().c_str());
+		//TODO abort enrollment?
+	}
+
+	if (sta_enr_sm.neighbor != neigh_name) {
+		LOG_IPCP_ERR("WPA Supplicant associated to the wrong BSSID (%s)",
+			      neigh_name.c_str());
+		abort_enrollment();
+	}
+
+	sta_enr_sm.state = StaEnrollmentSM::ASSOCIATED;
+	LOG_IPCP_DBG("Enrollment state machine transitioned to the state %s after %d ms",
+		     sta_enr_sm.state_to_string().c_str(),
+		     rina::Time::get_time_in_ms() - sta_enr_sm.enrollment_start_time_ms);
+	timer_task = new CancelEnrollmentTimerTask(this);
+	timer.scheduleTask(timer_task, 3000);
+}
+
+void ShimWifiStaIPCProcessImpl::notify_key_negotiated(const std::string& neigh_name)
+{
+	rina::ScopedLock g(*lock_);
+
+	timer.cancelTask(timer_task);
+	if (sta_enr_sm.state != StaEnrollmentSM::ASSOCIATED) {
+		LOG_IPCP_WARN("Received key negotiated message in wrong state: %s",
+			      sta_enr_sm.state_to_string().c_str());
+		//TODO abort enrollment?
+	}
+
+	if (sta_enr_sm.neighbor != neigh_name) {
+		LOG_IPCP_ERR("WPA Supplicant negotiated key with the wrong BSSID (%s)",
+			      neigh_name.c_str());
+		abort_enrollment();
+	}
+
+	sta_enr_sm.state = StaEnrollmentSM::KEY_NEGOTIATION_COMPLETED;
+	LOG_IPCP_DBG("Enrollment state machine transitioned to the state %s after %d ms",
+		     sta_enr_sm.state_to_string().c_str(),
+		     rina::Time::get_time_in_ms() - sta_enr_sm.enrollment_start_time_ms);
+	timer_task = new CancelEnrollmentTimerTask(this);
+	timer.scheduleTask(timer_task, 3000);
+}
+
+void ShimWifiStaIPCProcessImpl::notify_connected()
+{
+	rina::Neighbor ap;
+	std::list<rina::Neighbor> neighbors;
+
+	rina::ScopedLock g(*lock_);
+
+	timer.cancelTask(timer_task);
+	if (sta_enr_sm.state != StaEnrollmentSM::KEY_NEGOTIATION_COMPLETED) {
+		LOG_IPCP_WARN("Received key negotiated message in wrong state: %s",
+			      sta_enr_sm.state_to_string().c_str());
+
+		return;
+	}
+
+	sta_enr_sm.state = StaEnrollmentSM::ENROLLED;
+	sta_enr_sm.enrollment_end_time_ms = rina::Time::get_time_in_ms();
+	LOG_IPCP_DBG("Enrollment completed after %d ms",
+		     sta_enr_sm.enrollment_end_time_ms - sta_enr_sm.enrollment_start_time_ms);
+
+	ap.name_ = sta_enr_sm.enroll_event.neighborName;
+	ap.enrolled_ = true;
+	neighbors.push_back(ap);
+
+	try {
+		rina::extendedIPCManager->enrollToDIFResponse(sta_enr_sm.enroll_event,
+							      0,
+							      neighbors,
+							      dif_information_);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+	}
+}
+
+void ShimWifiStaIPCProcessImpl::notify_disconnected()
+{
+	rina::ScopedLock g(*lock_);
+	sta_enr_sm.restart("", "");
+}
+
+void ShimWifiStaIPCProcessImpl::push_scan_results(std::string& output)
+{
+	int rv;
+	rina::MediaReport report;
+
+	report.ipcp_id = get_id();
+	report.current_dif_name = dif_information_.dif_name_.toString();
+	//FIXME: add proper values here
+	report.bs_ipcp_address ="0";
+
+	std::istringstream ss(output);
+	std::string line;
+	int i = 0;
+	while (std::getline(ss, line)) {
+		if (i==0) continue;
+		++i;
+		std::vector<std::string> v;
+		//line: bssid/frequency/signal/flags/ssid
+		std::string value;
+		std::istringstream ss(line);
+		while(getline(ss, value, '\t')){
+			v.push_back(value);
+		}
+		rina::BaseStationInfo bs_info;
+		bs_info.ipcp_address = v[0];
+		bs_info.signal_strength = atoi(v[2].c_str());
+		std::map<std::string, rina::MediaDIFInfo>::iterator it =
+					report.available_difs.find(v[4]);
+		if(it == report.available_difs.end()){
+			rina::MediaDIFInfo m_info;
+			m_info.dif_name = v[4];
+			m_info.security_policies = v[3];
+			m_info.available_bs_ipcps.push_back(bs_info);
+			report.available_difs[v[4]] = m_info;
+		} else {
+			it->second.available_bs_ipcps.push_back(bs_info);
+		}
+	}
+
+	rina::extendedIPCManager->sendMediaReport(report);
+}
+
+//Class ShimWifiAPIPCProcessImpl
+ShimWifiAPIPCProcessImpl::ShimWifiAPIPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
+		          	  	  	   unsigned short id,
+						   unsigned int ipc_manager_port,
+						   std::string log_level,
+						   std::string log_file,
+						   std::string& folder) :
+		ShimWifiIPCProcessImpl(rina::SHIM_WIFI_IPC_PROCESS_AP,
+				       name, id, ipc_manager_port,
+				       log_level, log_file, folder)
+{
+}
+
+ShimWifiAPIPCProcessImpl::~ShimWifiAPIPCProcessImpl()
+{
 }
 
 } //namespace rinad

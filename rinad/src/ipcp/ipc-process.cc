@@ -541,15 +541,21 @@ AbstractIPCProcessImpl* IPCPFactory::createIPCP(const std::string& type,
 					  log_level,
 					  log_file);
 		return ipcp;
-	} else if(type == rina::SHIM_WIFI_IPC_PROCESS_STA ||
-				type == rina::SHIM_WIFI_IPC_PROCESS_AP) {
-		ipcp = new ShimWifiIPCProcessImpl(type,
-						  name,
-						  ipcp_id,
-						  ipc_manager_port,
-						  log_level,
-						  log_file,
-						  install_dir);
+	} else if(type == rina::SHIM_WIFI_IPC_PROCESS_STA) {
+		ipcp = new ShimWifiStaIPCProcessImpl(name,
+						     ipcp_id,
+						     ipc_manager_port,
+						     log_level,
+						     log_file,
+						     install_dir);
+		return ipcp;
+	} else if (type == rina::SHIM_WIFI_IPC_PROCESS_AP) {
+		ipcp = new ShimWifiAPIPCProcessImpl(name,
+						    ipcp_id,
+						    ipc_manager_port,
+						    log_level,
+						    log_file,
+						    install_dir);
 		return ipcp;
 	} else {
 		LOG_IPCP_WARN("Unsupported IPCP type: %s", type.c_str());
