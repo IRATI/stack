@@ -831,7 +831,6 @@ void ShimWifiStaIPCProcessImpl::assign_to_dif_response_handler(const rina::Assig
 void ShimWifiStaIPCProcessImpl::enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event)
 {
 	std::list<rina::Neighbor> neighbors;
-	std::string current_dif_name;
 	int rv;
 
 	rina::ScopedLock g(*lock_);
@@ -886,27 +885,23 @@ void ShimWifiStaIPCProcessImpl::enroll_to_dif_handler(const rina::EnrollToDAFReq
 	LOG_IPCP_DBG("Trying to enroll to SSID %s and BSSID %s",
 		     event.dafName.processName.c_str(),
 		     event.neighborName.processName.c_str());
-	current_dif_name = sta_enr_sm.dif_name;
 
 	//Carry out attachment/re-attachment
-	sta_enr_sm.restart(event.dafName.processName,
-			   event.neighborName.processName);
-
-	if (sta_enr_sm.state == StaEnrollmentSM::ENROLLED &&
-			sta_enr_sm.dif_name == current_dif_name) {
+	if (event.dafName.processName == sta_enr_sm.dif_name &&
+			sta_enr_sm.state == StaEnrollmentSM::ENROLLED) {
 		//Attaching to another BSSID within the same SSID
-		rv = wpa_conn->bssid_reassociate(sta_enr_sm.dif_name,
-					         sta_enr_sm.neighbor);
+		rv = wpa_conn->bssid_reassociate(event.dafName.processName,
+						 event.neighborName.processName);
 	} else {
 		//Joining BSSID for the first time
-		rv = wpa_conn->select_network(sta_enr_sm.dif_name,
-					      sta_enr_sm.neighbor);
+		rv = wpa_conn->select_network(event.dafName.processName,
+					      event.neighborName.processName);
 	}
 
 	if (rv != 0){
 		LOG_IPCP_ERR("Could not enroll to DIF %s (BSSID %s)",
-				sta_enr_sm.dif_name.c_str(),
-				sta_enr_sm.neighbor.c_str());
+				event.dafName.processName.c_str(),
+				event.neighborName.processName.c_str());
 		try {
 			rina::extendedIPCManager->enrollToDIFResponse(event,
 					-1,
@@ -921,6 +916,8 @@ void ShimWifiStaIPCProcessImpl::enroll_to_dif_handler(const rina::EnrollToDAFReq
 	}
 
 	LOG_IPCP_DBG("Enrollment in process!");
+	sta_enr_sm.restart(event.dafName.processName,
+			   event.neighborName.processName);
 	sta_enr_sm.state = StaEnrollmentSM::ENROLLMENT_STARTED;
 	sta_enr_sm.enroll_event = event;
 	timer_task = new CancelEnrollmentTimerTask(this);
