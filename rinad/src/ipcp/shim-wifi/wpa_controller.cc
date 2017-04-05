@@ -205,8 +205,6 @@ void WpaController::__process_msg(const std::string& msg)
 		__process_try_association_message(msg);
 	} else if (msg.find("Associated with") != std::string::npos) {
 		__process_association_message(msg);
-	} else if (msg.find("Associated with") != std::string::npos) {
-		__process_association_message(msg);
 	} else if (msg.find("Key negotiation completed with") != std::string::npos) {
 		__process_key_negotiation_message(msg);
 	} else if (msg.find("CTRL-EVENT-CONNECTED") != std::string::npos) {
@@ -449,7 +447,8 @@ int WpaController::__get_network_id(const std::string& ssid,
 
 int WpaController::__common_enable_network(const std::string cmd,
 						const std::string& ssid,
-						const std::string& bssid){
+						const std::string& bssid)
+{
 	int rv;
 	unsigned int id;
 	std::stringstream ss;
@@ -473,7 +472,7 @@ int WpaController::__common_enable_network(const std::string cmd,
 
 	ss.str(std::string());
 
-	/*FIXME: check if we need to do select if it was alrady attached to that
+	/*FIXME: check if we need to do select if it was already attached to that
 	 * ssid. To do that we need to know if were attached to the ssid, so
 	 * probably we need a flag in the WpaNetork
 	 */
@@ -483,11 +482,6 @@ int WpaController::__common_enable_network(const std::string cmd,
 		LOG_WARN("Command %s returned error", ss.str().c_str());
 		return rv;
 	}
-
-	ss.str(std::string());
-
-	ss << "REASSOCIATE";
-	return __send_command(ss.str().c_str());
 }
 
 int WpaController::disable_network(const std::string& ssid,
@@ -520,6 +514,30 @@ int WpaController::select_network(const std::string& ssid,
 						const std::string& bssid){
 	return __common_enable_network(std::string("SELECT_NETWORK"), ssid,
 									bssid);
+}
+
+int WpaController::bssid_reassociate(const std::string& ssid, const std::string& bssid)
+{
+	int rv;
+	unsigned int id;
+	std::stringstream ss;
+
+	rina::ScopedLock g(lock);
+
+	if(__get_network_id_and_set_bssid(ssid, bssid, id) < 0)
+		return -1;
+
+	ss << "BSSID " << id << " " << bssid;
+	rv = __send_command(ss.str().c_str());
+	if (rv != 0) {
+		LOG_WARN("Command %s returned error", ss.str().c_str());
+		return rv;
+	}
+
+	ss.str(std::string());
+
+	ss << "REASSOCIATE";
+	return __send_command(ss.str().c_str());
 }
 
 } //namespace rinad

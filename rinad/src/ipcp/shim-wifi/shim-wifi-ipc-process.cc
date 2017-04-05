@@ -831,8 +831,10 @@ void ShimWifiStaIPCProcessImpl::assign_to_dif_response_handler(const rina::Assig
 void ShimWifiStaIPCProcessImpl::enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event)
 {
 	std::list<rina::Neighbor> neighbors;
-	rina::ScopedLock g(*lock_);
+	std::string current_dif_name;
 	int rv;
+
+	rina::ScopedLock g(*lock_);
 
 	if (state != ASSIGNED_TO_DIF) {
 		LOG_IPCP_ERR("Got a enroll to DIF request while not in  "
@@ -866,17 +868,42 @@ void ShimWifiStaIPCProcessImpl::enroll_to_dif_handler(const rina::EnrollToDAFReq
 		return;
 	}
 
+	if (sta_enr_sm.state == StaEnrollmentSM::ENROLLED &&
+			sta_enr_sm.neighbor == event.neighborName.processName) {
+		LOG_IPCP_WARN("Already enrolled to BSSID %s", sta_enr_sm.neighbor.c_str());
+		try {
+			rina::extendedIPCManager->enrollToDIFResponse(event,
+								      -1,
+								      neighbors,
+								      dif_information_);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		}
+
+		return;
+	}
+
 	LOG_IPCP_DBG("Trying to enroll to SSID %s and BSSID %s",
 		     event.dafName.processName.c_str(),
 		     event.neighborName.processName.c_str());
+	current_dif_name = sta_enr_sm.dif_name;
 
 	//Carry out attachment/re-attachment
 	sta_enr_sm.restart(event.dafName.processName,
 			   event.neighborName.processName);
 
-	rv = wpa_conn->select_network(sta_enr_sm.dif_name,
-				      sta_enr_sm.neighbor);
-	if(rv != 0){
+	if (sta_enr_sm.state == StaEnrollmentSM::ENROLLED &&
+			sta_enr_sm.dif_name == current_dif_name) {
+		//Attaching to another BSSID within the same SSID
+		rv = wpa_conn->bssid_reassociate(sta_enr_sm.dif_name,
+					         sta_enr_sm.neighbor);
+	} else {
+		//Joining BSSID for the first time
+		rv = wpa_conn->select_network(sta_enr_sm.dif_name,
+					      sta_enr_sm.neighbor);
+	}
+
+	if (rv != 0){
 		LOG_IPCP_ERR("Could not enroll to DIF %s (BSSID %s)",
 				sta_enr_sm.dif_name.c_str(),
 				sta_enr_sm.neighbor.c_str());
@@ -898,7 +925,6 @@ void ShimWifiStaIPCProcessImpl::enroll_to_dif_handler(const rina::EnrollToDAFReq
 	sta_enr_sm.enroll_event = event;
 	timer_task = new CancelEnrollmentTimerTask(this);
 	timer.scheduleTask(timer_task, enrollment_timeout);
-
 }
 
 void ShimWifiStaIPCProcessImpl::abort_enrollment()
@@ -1049,8 +1075,24 @@ void ShimWifiStaIPCProcessImpl::notify_connected(const std::string& neigh_name)
 
 void ShimWifiStaIPCProcessImpl::notify_disconnected()
 {
+	std::list<rina::Neighbor> neighbors;
+
 	rina::ScopedLock g(*lock_);
+
 	sta_enr_sm.restart("", "");
+	if (sta_enr_sm.state != StaEnrollmentSM::DISCONNECTED &&
+			sta_enr_sm.state != StaEnrollmentSM::ENROLLED) {
+		timer.cancelTask(timer_task);
+
+		try {
+			rina::extendedIPCManager->enrollToDIFResponse(sta_enr_sm.enroll_event,
+								      -1,
+								      neighbors,
+								      dif_information_);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		}
+	}
 }
 
 void ShimWifiStaIPCProcessImpl::push_scan_results(std::string& output)
