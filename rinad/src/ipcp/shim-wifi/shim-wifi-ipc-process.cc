@@ -49,9 +49,6 @@ void ShimWifiScanTask::run() {
 	std::string out;
 	LOG_IPCP_DBG("Scanner task trigerred...");
 	ipcp->wpa_conn->scan();
-	sleep(1);
-	ipcp->wpa_conn->scan_results(out);
-	ipcp->push_scan_results(out);
 
 	//Reschedule
 	ShimWifiScanTask * task = new ShimWifiScanTask(ipcp);
@@ -1093,9 +1090,8 @@ void ShimWifiStaIPCProcessImpl::notify_disconnected()
 	}
 }
 
-void ShimWifiStaIPCProcessImpl::push_scan_results(std::string& output)
+void ShimWifiStaIPCProcessImpl::notify_scan_results(const std::string& output)
 {
-	int rv;
 	rina::MediaReport report;
 
 	report.ipcp_id = get_id();

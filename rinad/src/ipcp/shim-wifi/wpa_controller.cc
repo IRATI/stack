@@ -210,13 +210,13 @@ void WpaController::__process_msg(const std::string& msg)
 	} else if (msg.find("CTRL-EVENT-CONNECTED") != std::string::npos) {
 		__process_connected_message(msg);
 	} else if (msg.find("CTRL-EVENT-DISCONNECTED") != std::string::npos) {
-		__process_disconnected_message(msg);
+		__process_disconnected_message();
 	} else if (msg.find("CTRL-EVENT-TERMINATING") != std::string::npos) {
 		LOG_IPCP_DBG("CTRL-EVENT-TERMINATING event received");
 	} else if (msg.find("CTRL-EVENT-SCAN-STARTED") != std::string::npos) {
 		LOG_IPCP_DBG("CTRL-EVENT-SCAN-STARTED event received");
 	} else if (msg.find("CTRL-EVENT-SCAN-RESULTS") != std::string::npos) {
-		LOG_IPCP_DBG("CTRL-EVENT-SCAN-RESULTS event received");
+		__process_scan_results_message();
 	}else{
 		LOG_IPCP_DBG("Ignoring message");
 	}
@@ -284,9 +284,24 @@ void WpaController::__process_connected_message(const std::string& msg)
 	ipcp->notify_connected(neigh_name);
 }
 
-void WpaController::__process_disconnected_message(const std::string& msg)
+void WpaController::__process_disconnected_message()
 {
 	ipcp->notify_disconnected();
+}
+
+void WpaController::__process_scan_results_message()
+{
+	std::string out;
+	std::string cmd = "SCAN_RESULTS";
+	int rv;
+
+	rv = __send_command(cmd.c_str(), &out);
+	if (rv != 0) {
+		LOG_IPCP_WARN("Problems processing scan results");
+		return;
+	}
+
+	ipcp->notify_scan_results(out);
 }
 
 void * WpaController::__mon_trampoline(void * opaque){
@@ -408,20 +423,16 @@ int WpaController::__send_command(const std::string& cmd,
 	}
 }
 
-int WpaController::scan(){
+int WpaController::scan()
+{
 	std::string cmd = "SCAN";
-	int rv = __send_command(cmd.c_str());
-}
-
-int WpaController::scan_results(std::string& out){
-	std::string cmd = "SCAN_RESULTS";
-	int rv = __send_command(cmd.c_str(), &out);
+	return __send_command(cmd.c_str());
 }
 
 int WpaController::__get_network_id_and_set_bssid(const std::string& ssid,
 						const std::string& bssid,
-						unsigned int& id){
-
+						unsigned int& id)
+{
 	if(network_map.find(ssid) == network_map.end())
 		return -1;
 
@@ -433,8 +444,8 @@ int WpaController::__get_network_id_and_set_bssid(const std::string& ssid,
 
 int WpaController::__get_network_id(const std::string& ssid,
 						const std::string& bssid,
-						unsigned int& id){
-
+						unsigned int& id)
+{
 	if(network_map.find(ssid) == network_map.end())
 		return -1;
 

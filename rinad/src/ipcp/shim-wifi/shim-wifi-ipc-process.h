@@ -161,7 +161,7 @@ private:
 	void notify_key_negotiated(const std::string& neigh_name);
 	void notify_connected(const std::string& neigh_name);
 	void notify_disconnected(void);
-	void push_scan_results(std::string& output);
+	void notify_scan_results(const std::string& output);
 };
 
 class ShimWifiAPIPCProcessImpl: public ShimWifiIPCProcessImpl {
