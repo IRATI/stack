@@ -1007,7 +1007,7 @@ void ShimWifiStaIPCProcessImpl::notify_key_negotiated(const std::string& neigh_n
 	timer.scheduleTask(timer_task, enrollment_timeout);
 }
 
-void ShimWifiStaIPCProcessImpl::notify_connected()
+void ShimWifiStaIPCProcessImpl::notify_connected(const std::string& neigh_name)
 {
 	rina::Neighbor ap;
 	std::list<rina::Neighbor> neighbors;
@@ -1020,6 +1020,12 @@ void ShimWifiStaIPCProcessImpl::notify_connected()
 			      sta_enr_sm.state_to_string().c_str());
 
 		return;
+	}
+
+	if (sta_enr_sm.neighbor != neigh_name) {
+		LOG_IPCP_ERR("WPA Supplicant connected to the wrong BSSID (%s)",
+			      neigh_name.c_str());
+		abort_enrollment();
 	}
 
 	sta_enr_sm.state = StaEnrollmentSM::ENROLLED;

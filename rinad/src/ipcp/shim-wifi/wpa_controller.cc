@@ -269,12 +269,21 @@ void WpaController::__process_key_negotiation_message(const std::string& msg)
 
 	LOG_IPCP_DBG("Neighbor name: %s", neigh_name.c_str());
 
-	ipcp->notify_associated(neigh_name);
+	ipcp->notify_key_negotiated(neigh_name);
 }
 
 void WpaController::__process_connected_message(const std::string& msg)
 {
-	ipcp->notify_connected();
+	std::string delimiter = "Connection to ";
+	std::string neigh_name;
+
+	std::string token = msg.substr(msg.find(delimiter) + delimiter.length(),
+				        msg.length() - 1);
+	neigh_name = token.substr(0, token.find(" "));
+
+	LOG_IPCP_DBG("Neighbor name: %s", neigh_name.c_str());
+
+	ipcp->notify_connected(neigh_name);
 }
 
 void WpaController::__process_disconnected_message(const std::string& msg)

@@ -159,7 +159,7 @@ private:
 					const std::string& neigh_name);
 	void notify_associated(const std::string& neigh_name);
 	void notify_key_negotiated(const std::string& neigh_name);
-	void notify_connected(void);
+	void notify_connected(const std::string& neigh_name);
 	void notify_disconnected(void);
 	void push_scan_results(std::string& output);
 };
