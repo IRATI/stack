@@ -692,6 +692,7 @@ ShimWifiStaIPCProcessImpl::ShimWifiStaIPCProcessImpl(const rina::ApplicationProc
 
 	wpa_conn = new WpaController(this, type, folder_name);
 	timer_task = 0;
+	enrollment_timeout = 10000;
 }
 
 ShimWifiStaIPCProcessImpl::~ShimWifiStaIPCProcessImpl()
@@ -896,7 +897,7 @@ void ShimWifiStaIPCProcessImpl::enroll_to_dif_handler(const rina::EnrollToDAFReq
 	sta_enr_sm.state = StaEnrollmentSM::ENROLLMENT_STARTED;
 	sta_enr_sm.enroll_event = event;
 	timer_task = new CancelEnrollmentTimerTask(this);
-	timer.scheduleTask(timer_task, 3000);
+	timer.scheduleTask(timer_task, enrollment_timeout);
 
 }
 
@@ -953,7 +954,7 @@ void ShimWifiStaIPCProcessImpl::notify_trying_to_associate(const std::string& di
 		     sta_enr_sm.state_to_string().c_str(),
 		     rina::Time::get_time_in_ms() - sta_enr_sm.enrollment_start_time_ms);
 	timer_task = new CancelEnrollmentTimerTask(this);
-	timer.scheduleTask(timer_task, 3000);
+	timer.scheduleTask(timer_task, enrollment_timeout);
 }
 
 void ShimWifiStaIPCProcessImpl::notify_associated(const std::string& neigh_name)
@@ -978,7 +979,7 @@ void ShimWifiStaIPCProcessImpl::notify_associated(const std::string& neigh_name)
 		     sta_enr_sm.state_to_string().c_str(),
 		     rina::Time::get_time_in_ms() - sta_enr_sm.enrollment_start_time_ms);
 	timer_task = new CancelEnrollmentTimerTask(this);
-	timer.scheduleTask(timer_task, 3000);
+	timer.scheduleTask(timer_task, enrollment_timeout);
 }
 
 void ShimWifiStaIPCProcessImpl::notify_key_negotiated(const std::string& neigh_name)
@@ -1003,7 +1004,7 @@ void ShimWifiStaIPCProcessImpl::notify_key_negotiated(const std::string& neigh_n
 		     sta_enr_sm.state_to_string().c_str(),
 		     rina::Time::get_time_in_ms() - sta_enr_sm.enrollment_start_time_ms);
 	timer_task = new CancelEnrollmentTimerTask(this);
-	timer.scheduleTask(timer_task, 3000);
+	timer.scheduleTask(timer_task, enrollment_timeout);
 }
 
 void ShimWifiStaIPCProcessImpl::notify_connected()

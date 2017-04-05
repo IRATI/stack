@@ -233,7 +233,7 @@ void WpaController::__process_try_association_message(const std::string& msg)
 
 	std::string token1 = msg.substr(msg.find(delimiter1) + delimiter1.length(),
 				        msg.length() - 1);
-	neigh_name = token1.substr(0, token1.find(""));
+	neigh_name = token1.substr(0, token1.find(" "));
 
 	std::string token2 = msg.substr(msg.find(delimiter2) + delimiter2.length(),
 				        msg.length() - 1);
@@ -265,7 +265,7 @@ void WpaController::__process_key_negotiation_message(const std::string& msg)
 
 	std::string token = msg.substr(msg.find(delimiter) + delimiter.length(),
 				        msg.length() - 1);
-	neigh_name = token.substr(0, token.find("'"));
+	neigh_name = token.substr(0, token.find(" "));
 
 	LOG_IPCP_DBG("Neighbor name: %s", neigh_name.c_str());
 
@@ -469,6 +469,15 @@ int WpaController::__common_enable_network(const std::string cmd,
 	 * probably we need a flag in the WpaNetork
 	 */
 	ss << cmd << " " << id;
+	rv = __send_command(ss.str().c_str());
+	if (rv != 0) {
+		LOG_WARN("Command %s returned error", ss.str().c_str());
+		return rv;
+	}
+
+	ss.str(std::string());
+
+	ss << "REASSOCIATE";
 	return __send_command(ss.str().c_str());
 }
 

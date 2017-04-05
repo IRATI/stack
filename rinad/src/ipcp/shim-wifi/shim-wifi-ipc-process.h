@@ -151,6 +151,7 @@ private:
 	rina::Timer timer;
 	StaEnrollmentSM sta_enr_sm;
 	CancelEnrollmentTimerTask * timer_task;
+	long enrollment_timeout;
 
 	void abort_enrollment();
 	void notify_cancel_enrollment();
