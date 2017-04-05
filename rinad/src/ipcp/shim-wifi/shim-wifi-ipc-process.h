@@ -153,6 +153,7 @@ private:
 	CancelEnrollmentTimerTask * timer_task;
 	long enrollment_timeout;
 
+	void trigger_scan();
 	void abort_enrollment();
 	void notify_cancel_enrollment();
 	void notify_trying_to_associate(const std::string& dif_name,
@@ -161,7 +162,7 @@ private:
 	void notify_key_negotiated(const std::string& neigh_name);
 	void notify_connected(const std::string& neigh_name);
 	void notify_disconnected(void);
-	void notify_scan_results(const std::string& output);
+	void notify_scan_results(void);
 };
 
 class ShimWifiAPIPCProcessImpl: public ShimWifiIPCProcessImpl {

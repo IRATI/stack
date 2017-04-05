@@ -47,8 +47,8 @@ private:
 
 void ShimWifiScanTask::run() {
 	std::string out;
-	LOG_IPCP_DBG("Scanner task trigerred...");
-	ipcp->wpa_conn->scan();
+	LOG_IPCP_DBG("Scanner task triggered...");
+	ipcp->trigger_scan();
 
 	//Reschedule
 	ShimWifiScanTask * task = new ShimWifiScanTask(ipcp);
@@ -921,6 +921,25 @@ void ShimWifiStaIPCProcessImpl::enroll_to_dif_handler(const rina::EnrollToDAFReq
 	timer.scheduleTask(timer_task, enrollment_timeout);
 }
 
+void ShimWifiStaIPCProcessImpl::trigger_scan()
+{
+	int rv;
+
+	rina::ScopedLock g(*lock_);
+
+	if (sta_enr_sm.state != StaEnrollmentSM::DISCONNECTED &&
+			sta_enr_sm.state != StaEnrollmentSM::ENROLLED) {
+		//Enrollment is taking place, do not trigger scan to avoid
+		//making the procedure longer
+		return;
+	}
+
+	rv = wpa_conn->scan();
+	if (rv != 0) {
+		LOG_IPCP_WARN("Problems triggering scan");
+	}
+}
+
 void ShimWifiStaIPCProcessImpl::abort_enrollment()
 {
 	std::list<rina::Neighbor> neighbors;
@@ -1090,9 +1109,26 @@ void ShimWifiStaIPCProcessImpl::notify_disconnected()
 	}
 }
 
-void ShimWifiStaIPCProcessImpl::notify_scan_results(const std::string& output)
+void ShimWifiStaIPCProcessImpl::notify_scan_results()
 {
 	rina::MediaReport report;
+	std::string output;
+	int rv;
+
+	rina::ScopedLock g(*lock_);
+
+	if (sta_enr_sm.state != StaEnrollmentSM::DISCONNECTED &&
+			sta_enr_sm.state != StaEnrollmentSM::ENROLLED) {
+		//Enrollment is taking place, do not read scan results to avoid
+		//making the procedure longer
+		return;
+	}
+
+	rv = wpa_conn->scan_results(output);
+	if (rv != 0) {
+		LOG_IPCP_WARN("Problems obtaining scan results");
+		return;
+	}
 
 	report.ipcp_id = get_id();
 	report.current_dif_name = dif_information_.dif_name_.toString();

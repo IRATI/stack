@@ -291,17 +291,7 @@ void WpaController::__process_disconnected_message()
 
 void WpaController::__process_scan_results_message()
 {
-	std::string out;
-	std::string cmd = "SCAN_RESULTS";
-	int rv;
-
-	rv = __send_command(cmd.c_str(), &out);
-	if (rv != 0) {
-		LOG_IPCP_WARN("Problems processing scan results");
-		return;
-	}
-
-	ipcp->notify_scan_results(out);
+	ipcp->notify_scan_results();
 }
 
 void * WpaController::__mon_trampoline(void * opaque){
@@ -427,6 +417,12 @@ int WpaController::scan()
 {
 	std::string cmd = "SCAN";
 	return __send_command(cmd.c_str());
+}
+
+int WpaController::scan_results(std::string& out)
+{
+	std::string cmd = "SCAN_RESULTS";
+	return __send_command(cmd.c_str(), &out);
 }
 
 int WpaController::__get_network_id_and_set_bssid(const std::string& ssid,
