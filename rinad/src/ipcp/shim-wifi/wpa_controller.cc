@@ -472,10 +472,6 @@ int WpaController::__common_enable_network(const std::string cmd,
 
 	ss.str(std::string());
 
-	/*FIXME: check if we need to do select if it was already attached to that
-	 * ssid. To do that we need to know if were attached to the ssid, so
-	 * probably we need a flag in the WpaNetork
-	 */
 	ss << cmd << " " << id;
 	return __send_command(ss.str().c_str());
 }

@@ -31,7 +31,7 @@
 
 #define IPCP_MODULE "shim-wifi-ipcp"
 #include "ipcp-logging.h"
-#define SCAN_INTERVAL 10000 // at least 3000
+#define SCAN_INTERVAL 30000 // at least 3000
 
 namespace rinad {
 
@@ -814,8 +814,8 @@ void ShimWifiStaIPCProcessImpl::assign_to_dif_response_handler(const rina::Assig
 	}
 
 	//Create scan timer
-	//ShimWifiScanTask * task = new ShimWifiScanTask(this);
-	//scanner.scheduleTask(task, SCAN_INTERVAL);
+	ShimWifiScanTask * task = new ShimWifiScanTask(this);
+	timer.scheduleTask(task, SCAN_INTERVAL);
 
 	state = ASSIGNED_TO_DIF;
 
@@ -872,7 +872,7 @@ void ShimWifiStaIPCProcessImpl::enroll_to_dif_handler(const rina::EnrollToDAFReq
 		LOG_IPCP_WARN("Already enrolled to BSSID %s", sta_enr_sm.neighbor.c_str());
 		try {
 			rina::extendedIPCManager->enrollToDIFResponse(event,
-								      -1,
+								      0,
 								      neighbors,
 								      dif_information_);
 		} catch (rina::Exception &e) {
@@ -958,7 +958,8 @@ void ShimWifiStaIPCProcessImpl::notify_trying_to_associate(const std::string& di
 	rina::ScopedLock g(*lock_);
 
 	timer.cancelTask(timer_task);
-	if (sta_enr_sm.state != StaEnrollmentSM::ENROLLMENT_STARTED) {
+	if (sta_enr_sm.state != StaEnrollmentSM::ENROLLMENT_STARTED &&
+			sta_enr_sm.state != StaEnrollmentSM::TRYING_TO_ASSOCIATE) {
 		LOG_IPCP_WARN("Received trying to associate message in wrong state: %s",
 			      sta_enr_sm.state_to_string().c_str());
 
