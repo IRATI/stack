@@ -154,6 +154,7 @@ private:
 	CancelEnrollmentTimerTask * timer_task;
 	long enrollment_timeout;
 
+	long get_scan_period(void);
 	void trigger_scan();
 	void abort_enrollment();
 	void notify_cancel_enrollment();

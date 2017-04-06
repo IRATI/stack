@@ -164,9 +164,6 @@ void MobilityManager::execute_handover(const rina::MediaReport& report)
 	rina::Sleep sleep;
 	rina::ApplicationProcessNamingInformation neighbor;
 
-	// Prevent any insertion or deletion of IPC Processes to happen
-	rina::ReadScopedLock readlock(factory->rwlock);
-
 	// 1. Get all IPCPS
 	wifi1_ipcp = factory->getIPCProcess(1);
 	if (wifi1_ipcp == NULL) {

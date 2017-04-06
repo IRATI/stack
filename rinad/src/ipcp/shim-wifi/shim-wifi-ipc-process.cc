@@ -31,7 +31,7 @@
 
 #define IPCP_MODULE "shim-wifi-ipcp"
 #include "ipcp-logging.h"
-#define SCAN_INTERVAL 60000
+#define DEFAULT_SCAN_INTERVAL 60000
 
 namespace rinad {
 
@@ -52,7 +52,7 @@ void ShimWifiScanTask::run() {
 
 	//Reschedule
 	ShimWifiScanTask * task = new ShimWifiScanTask(ipcp);
-	ipcp->timer.scheduleTask(task, SCAN_INTERVAL);
+	ipcp->timer.scheduleTask(task, ipcp->get_scan_period());
 }
 
 //Class ShimWifiIPCPProxy
@@ -812,7 +812,7 @@ void ShimWifiStaIPCProcessImpl::assign_to_dif_response_handler(const rina::Assig
 
 	//Create scan timer
 	ShimWifiScanTask * task = new ShimWifiScanTask(this);
-	timer.scheduleTask(task, SCAN_INTERVAL);
+	timer.scheduleTask(task, get_scan_period());
 
 	state = ASSIGNED_TO_DIF;
 
@@ -966,6 +966,29 @@ void ShimWifiStaIPCProcessImpl::disconnet_neighbor_handler(const rina::Disconnec
 	}
 
 	return;
+}
+
+long ShimWifiStaIPCProcessImpl::get_scan_period()
+{
+	std::list<rina::PolicyParameter> params;
+	std::list<rina::PolicyParameter>::iterator it;
+	std::string value;
+	long result;
+	char *dummy;
+
+	params = dif_information_.dif_configuration_.get_parameters();
+	for (it = params.begin(); it != params.end(); ++it) {
+		if (it->name_ == "scanPeriod") {
+			result = strtol(it->value_.c_str(), &dummy, 10);
+			if (!it->value_.size() || *dummy != '\0') {
+				return DEFAULT_SCAN_INTERVAL;
+			}
+
+			return result;
+		}
+	}
+
+	return DEFAULT_SCAN_INTERVAL;
 }
 
 void ShimWifiStaIPCProcessImpl::trigger_scan()
