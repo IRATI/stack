@@ -150,7 +150,9 @@ void MobilityManager::media_reports_handler(rina::MediaReportEvent * event)
 	}
 
 	hand_state.do_it_now = false;
-	execute_handover(event->media_report);
+
+	HandoverTimerTask * task = new HandoverTimerTask(this, event->media_report);
+	timer.scheduleTask(task, 0);
 }
 
 void MobilityManager::execute_handover(const rina::MediaReport& report)
@@ -163,6 +165,9 @@ void MobilityManager::execute_handover(const rina::MediaReport& report)
 	std::string next_dif;
 	rina::Sleep sleep;
 	rina::ApplicationProcessNamingInformation neighbor;
+
+	// Prevent any insertion or deletion of IPC Processes to happen
+	rina::ReadScopedLock readlock(factory->rwlock);
 
 	// 1. Get all IPCPS
 	wifi1_ipcp = factory->getIPCProcess(1);
@@ -307,6 +312,11 @@ void MobilityManager::execute_handover(const rina::MediaReport& report)
 	}
 
 	LOG_DBG("Handover done!");
+}
+
+void HandoverTimerTask::run()
+{
+	mobman->execute_handover(report);
 }
 
 } //namespace rinad

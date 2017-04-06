@@ -77,6 +77,18 @@ private:
 	void media_reports_handler(rina::MediaReportEvent *event);
 };
 
+class HandoverTimerTask: public rina::TimerTask {
+public:
+	HandoverTimerTask(MobilityManager * mm,
+			  const rina::MediaReport& mr): mobman(mm), report(mr) {};
+	~HandoverTimerTask() throw() {};
+	void run();
+
+private:
+	MobilityManager * mobman;
+	rina::MediaReport report;
+};
+
 }//rinad namespace
 
 #endif  /* __MOBILITY_MANAGER_H__ */
