@@ -1125,6 +1125,7 @@ void ShimWifiStaIPCProcessImpl::notify_scan_results()
 	}
 
 	output = wpa_conn->scan_results();
+	LOG_IPCP_DBG("Output: %s", output.c_str());
 
 	report.ipcp_id = get_id();
 	report.current_dif_name = dif_information_.dif_name_.toString();
