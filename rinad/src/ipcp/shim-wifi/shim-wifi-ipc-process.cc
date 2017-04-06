@@ -31,7 +31,7 @@
 
 #define IPCP_MODULE "shim-wifi-ipcp"
 #include "ipcp-logging.h"
-#define SCAN_INTERVAL 30000 // at least 3000
+#define SCAN_INTERVAL 120000
 
 namespace rinad {
 

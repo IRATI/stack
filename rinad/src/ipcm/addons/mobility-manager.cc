@@ -108,10 +108,10 @@ MobilityManager::MobilityManager(const rinad::RINAConfiguration& config) :
 
 	LOG_INFO("Mobility Manager initialized");
 
-	TriggerHandoverTimerTask * task = new TriggerHandoverTimerTask(this,
-								       &timer,
-								       wireless_dif_info.front());
-	timer.scheduleTask(task, 10000);
+	//TriggerHandoverTimerTask * task = new TriggerHandoverTimerTask(this,
+	//							       &timer,
+	//							       wireless_dif_info.front());
+	//timer.scheduleTask(task, 10000);
 }
 
 void MobilityManager::process_librina_event(rina::IPCEvent** event_)
