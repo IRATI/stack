@@ -1114,6 +1114,12 @@ void ShimWifiStaIPCProcessImpl::notify_scan_results()
 	rina::MediaReport report;
 	std::map<std::string, rina::MediaDIFInfo>::iterator difs_it;
 	std::string output;
+	std::stringstream line_ss;
+	std::stringstream value_ss;
+	std::string line;
+	std::string value;
+	std::vector<std::string> v;
+	int i = 0;
 
 	rina::ScopedLock g(*lock_);
 
@@ -1125,25 +1131,21 @@ void ShimWifiStaIPCProcessImpl::notify_scan_results()
 	}
 
 	output = wpa_conn->scan_results();
-	LOG_IPCP_DBG("Output: %s", output.c_str());
 
 	report.ipcp_id = get_id();
 	report.current_dif_name = dif_information_.dif_name_.toString();
 	//FIXME: add proper values here
 	report.bs_ipcp_address ="0";
 
-	std::istringstream ss(output);
-	std::string line;
-	int i = 0;
-	while (std::getline(ss, line)) {
+	line_ss.str(output);
+	while (std::getline(line_ss, line)) {
 		if (i==0) continue;
 		++i;
 		LOG_IPCP_DBG("Line: '%s'", line.c_str());
-		std::vector<std::string> v;
+		v.clear();
+		value_ss.str(line);
 		//line: bssid/frequency/signal/flags/ssid
-		std::string value;
-		std::istringstream ss(line);
-		while(getline(ss, value, '\t')){
+		while(getline(value_ss, value, '\t')){
 			v.push_back(value);
 			LOG_IPCP_DBG("Value: '%s'", value.c_str());
 		}

@@ -411,7 +411,6 @@ std::string WpaController::__send_command_with_results(const std::string& cmd)
 {
 	char buf[4096];
 	size_t len = sizeof(buf);
-	std::string result;
 	int ret;
 
 	if (ctrl_conn == NULL) {
@@ -438,8 +437,6 @@ std::string WpaController::__send_command_with_results(const std::string& cmd)
 
 	LOG_IPCP_DBG("Got reply from WPA supplicant: %s", buf);
 
-	result = std::string(buf);
-	LOG_IPCP_DBG("Result: %s", result.c_str());
 	return std::string(buf);
 }
 
