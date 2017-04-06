@@ -31,7 +31,7 @@
 
 #define IPCP_MODULE "shim-wifi-ipcp"
 #include "ipcp-logging.h"
-#define SCAN_INTERVAL 120000
+#define SCAN_INTERVAL 12000
 
 namespace rinad {
 
@@ -1112,6 +1112,7 @@ void ShimWifiStaIPCProcessImpl::notify_disconnected()
 void ShimWifiStaIPCProcessImpl::notify_scan_results()
 {
 	rina::MediaReport report;
+	std::map<std::string, rina::MediaDIFInfo>::iterator difs_it;
 	std::string output;
 	int rv;
 
@@ -1141,26 +1142,27 @@ void ShimWifiStaIPCProcessImpl::notify_scan_results()
 	while (std::getline(ss, line)) {
 		if (i==0) continue;
 		++i;
+		LOG_IPCP_DBG("Line: '%s'", line.c_str());
 		std::vector<std::string> v;
 		//line: bssid/frequency/signal/flags/ssid
 		std::string value;
 		std::istringstream ss(line);
 		while(getline(ss, value, '\t')){
 			v.push_back(value);
+			LOG_IPCP_DBG("Value: '%s'", value.c_str());
 		}
 		rina::BaseStationInfo bs_info;
 		bs_info.ipcp_address = v[0];
 		bs_info.signal_strength = atoi(v[2].c_str());
-		std::map<std::string, rina::MediaDIFInfo>::iterator it =
-					report.available_difs.find(v[4]);
-		if(it == report.available_difs.end()){
+		difs_it = report.available_difs.find(v[4]);
+		if(difs_it == report.available_difs.end()){
 			rina::MediaDIFInfo m_info;
 			m_info.dif_name = v[4];
 			m_info.security_policies = v[3];
 			m_info.available_bs_ipcps.push_back(bs_info);
 			report.available_difs[v[4]] = m_info;
 		} else {
-			it->second.available_bs_ipcps.push_back(bs_info);
+			difs_it->second.available_bs_ipcps.push_back(bs_info);
 		}
 	}
 
