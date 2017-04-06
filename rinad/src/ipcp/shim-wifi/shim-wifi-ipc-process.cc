@@ -1143,7 +1143,7 @@ void ShimWifiStaIPCProcessImpl::notify_scan_results()
 			continue;
 		}
 		LOG_IPCP_DBG("Line: '%s'", line.c_str());
-		std::stringstream value_ss;
+		std::stringstream value_ss(line);
 		std::vector<std::string> v;
 		//line: bssid/frequency/signal/flags/ssid
 		while(getline(value_ss, value, '\t')){
