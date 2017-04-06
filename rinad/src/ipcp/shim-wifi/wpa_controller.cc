@@ -375,7 +375,7 @@ int WpaController::create_ctrl_connection(const std::string& if_name) {
 }
 
 int WpaController::__send_command(const std::string& cmd,
-						std::string * out = NULL){
+			          std::string * out = NULL){
 
 	char buf[4096];
 	size_t len = sizeof(buf);
@@ -419,10 +419,10 @@ int WpaController::scan()
 	return __send_command(cmd.c_str());
 }
 
-int WpaController::scan_results(std::string& out)
+int WpaController::scan_results(std::string * out)
 {
 	std::string cmd = "SCAN_RESULTS";
-	return __send_command(cmd.c_str(), &out);
+	return __send_command(cmd.c_str(), out);
 }
 
 int WpaController::__get_network_id_and_set_bssid(const std::string& ssid,

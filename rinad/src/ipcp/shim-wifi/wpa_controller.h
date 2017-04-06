@@ -53,7 +53,7 @@ public:
 	int launch_wpa(const std::string& wif_name, const std::string& driver);
 	int create_ctrl_connection(const std::string& if_name);
 	int scan(void);
-	int scan_results(std::string& out);
+	int scan_results(std::string * out);
 	int enable_network(const std::string& ssid, const std::string& bssid);
 	int disable_network(const std::string& ssid, const std::string& bssid);
 	int select_network(const std::string& ssid, const std::string& bssid);

@@ -1125,7 +1125,7 @@ void ShimWifiStaIPCProcessImpl::notify_scan_results()
 		return;
 	}
 
-	rv = wpa_conn->scan_results(output);
+	rv = wpa_conn->scan_results(&output);
 	if (rv != 0) {
 		LOG_IPCP_WARN("Problems obtaining scan results");
 		return;
