@@ -37,6 +37,11 @@ struct WirelessDIFInfo {
 	std::string dif_name;
 };
 
+struct HandoverState {
+	std::string current_dif;
+	bool do_it_now;
+};
+
 //
 // @brief Handles the mobility of the system locally (decides when to
 // change attachment to Base Stations, etc.)
@@ -50,9 +55,7 @@ public:
 	virtual ~MobilityManager(void) {
 	};
 
-	int execute_handover(unsigned short ipcp_id,
-			     const rina::ApplicationProcessNamingInformation& dif_name,
-			     const rina::ApplicationProcessNamingInformation& neigh_name);
+	void execute_handover(const rina::MediaReport& report);
 
 protected:
 	//Process flow event
@@ -65,24 +68,13 @@ private:
 	IPCMIPCProcessFactory * factory;
 	rina::Timer timer;
 	std::list<WirelessDIFInfo> wireless_dif_info;
+	HandoverState hand_state;
+	rina::Lockable lock;
 
 	void parse_configuration(const rinad::RINAConfiguration& config);
 
 	//Called when a media report by an IPC Process has been delivered
 	void media_reports_handler(rina::MediaReportEvent *event);
-};
-
-class TriggerHandoverTimerTask: public rina::TimerTask {
-public:
-	TriggerHandoverTimerTask(MobilityManager * mobility_manager,
-				 rina::Timer * timer,
-				 const WirelessDIFInfo& info);
-	~TriggerHandoverTimerTask() throw() {};
-	void run();
-
-	MobilityManager * mobility_manager;
-	rina::Timer * timer;
-	WirelessDIFInfo dif_info;
 };
 
 }//rinad namespace

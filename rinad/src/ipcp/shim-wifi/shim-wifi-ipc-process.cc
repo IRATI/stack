@@ -31,7 +31,7 @@
 
 #define IPCP_MODULE "shim-wifi-ipcp"
 #include "ipcp-logging.h"
-#define SCAN_INTERVAL 12000
+#define SCAN_INTERVAL 60000
 
 namespace rinad {
 
@@ -1142,13 +1142,11 @@ void ShimWifiStaIPCProcessImpl::notify_scan_results()
 			++i;
 			continue;
 		}
-		LOG_IPCP_DBG("Line: '%s'", line.c_str());
 		std::stringstream value_ss(line);
 		std::vector<std::string> v;
 		//line: bssid/frequency/signal/flags/ssid
 		while(getline(value_ss, value, '\t')){
 			v.push_back(value);
-			LOG_IPCP_DBG("Value: '%s'", value.c_str());
 		}
 		rina::BaseStationInfo bs_info;
 		bs_info.ipcp_address = v[0];
