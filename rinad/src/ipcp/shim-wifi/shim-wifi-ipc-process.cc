@@ -1139,8 +1139,10 @@ void ShimWifiStaIPCProcessImpl::notify_scan_results()
 
 	line_ss.str(output);
 	while (std::getline(line_ss, line)) {
-		if (i==0) continue;
-		++i;
+		if (i==0) {
+			++i;
+			continue;
+		}
 		LOG_IPCP_DBG("Line: '%s'", line.c_str());
 		v.clear();
 		value_ss.str(line);
