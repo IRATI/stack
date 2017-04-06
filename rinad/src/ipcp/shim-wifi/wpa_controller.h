@@ -58,6 +58,7 @@ public:
 	int disable_network(const std::string& ssid, const std::string& bssid);
 	int select_network(const std::string& ssid, const std::string& bssid);
 	int bssid_reassociate(const std::string& ssid, const std::string& bssid);
+	int disconnect(void);
 
 private:
 	rina::Lockable lock;

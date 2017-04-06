@@ -196,7 +196,7 @@ void MobilityManager::execute_handover(const rina::MediaReport& report)
 		return;
 	}
 
-	if (normal_ipcp->get_type() != rina::SHIM_WIFI_IPC_PROCESS_STA) {
+	if (normal_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
 		LOG_ERR("Wrong IPCP type: %s", normal_ipcp->get_type().c_str());
 		return;
 	}
@@ -293,6 +293,8 @@ void MobilityManager::execute_handover(const rina::MediaReport& report)
 	//4 Now it is multihomed, wait 5 seconds and break connectivity through former N-1 DIF
 	sleep.sleepForMili(5000);
 
+	hand_state.current_dif = next_dif;
+
 	if(IPCManager->disconnect_neighbor(this, &promise, normal_ipcp->get_id(), neighbor) == IPCM_FAILURE ||
 			promise.wait() != IPCM_SUCCESS) {
 		LOG_WARN("Problems invoking disconnect from neighbor on IPCP %u",
@@ -300,7 +302,12 @@ void MobilityManager::execute_handover(const rina::MediaReport& report)
 		return;
 	}
 
-	hand_state.current_dif = next_dif;
+	if(IPCManager->disconnect_neighbor(this, &promise, current_ipcp->get_id(), neighbor) == IPCM_FAILURE ||
+			promise.wait() != IPCM_SUCCESS) {
+		LOG_WARN("Problems invoking disconnect from neighbor on IPCP %u",
+				current_ipcp->get_id());
+		return;
+	}
 
 	LOG_DBG("Handover done!");
 }

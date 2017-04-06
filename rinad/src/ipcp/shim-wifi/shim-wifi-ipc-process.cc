@@ -921,6 +921,53 @@ void ShimWifiStaIPCProcessImpl::enroll_to_dif_handler(const rina::EnrollToDAFReq
 	timer.scheduleTask(timer_task, enrollment_timeout);
 }
 
+void ShimWifiStaIPCProcessImpl::disconnet_neighbor_handler(const rina::DisconnectNeighborRequestEvent& event)
+{
+	int rv;
+
+	rina::ScopedLock g(*lock_);
+
+	if (sta_enr_sm.state != StaEnrollmentSM::ENROLLED) {
+		LOG_IPCP_ERR("Cannot disconnect from neighbor because I'm not connected to it");
+
+		try {
+			rina::extendedIPCManager->disconnectNeighborResponse(event, -1);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s",
+					e.what());
+		}
+
+		return;
+	}
+
+	rv = wpa_conn->disconnect();
+	if (rv != 0) {
+		LOG_IPCP_ERR("Could not disconnect from SDID %s (BSSID %s)",
+				sta_enr_sm.dif_name.c_str(),
+				sta_enr_sm.neighbor.c_str());
+
+		try {
+			rina::extendedIPCManager->disconnectNeighborResponse(event, -1);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s",
+					e.what());
+		}
+
+		return;
+	}
+
+	sta_enr_sm.restart("", "");
+
+	try {
+		rina::extendedIPCManager->disconnectNeighborResponse(event, 0);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s",
+				e.what());
+	}
+
+	return;
+}
+
 void ShimWifiStaIPCProcessImpl::trigger_scan()
 {
 	int rv;
@@ -1090,12 +1137,14 @@ void ShimWifiStaIPCProcessImpl::notify_connected(const std::string& neigh_name)
 void ShimWifiStaIPCProcessImpl::notify_disconnected()
 {
 	std::list<rina::Neighbor> neighbors;
+	StaEnrollmentSM::StaEnrollmentState current_state;
 
 	rina::ScopedLock g(*lock_);
 
+	current_state = sta_enr_sm.state;
 	sta_enr_sm.restart("", "");
-	if (sta_enr_sm.state != StaEnrollmentSM::DISCONNECTED &&
-			sta_enr_sm.state != StaEnrollmentSM::ENROLLED) {
+	if (current_state != StaEnrollmentSM::DISCONNECTED &&
+			current_state != StaEnrollmentSM::ENROLLED) {
 		timer.cancelTask(timer_task);
 
 		try {

@@ -566,4 +566,10 @@ int WpaController::bssid_reassociate(const std::string& ssid, const std::string&
 	return __send_command(ss.str().c_str());
 }
 
+int WpaController::disconnect()
+{
+	std::string cmd = "DISCONNECT";
+	return __send_command(cmd.c_str());
+}
+
 } //namespace rinad

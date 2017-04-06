@@ -141,6 +141,7 @@ public:
 
 	void assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event);
 	void enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event);
+	void disconnet_neighbor_handler(const rina::DisconnectNeighborRequestEvent& event);
 
 private:
 	friend class rinad::ShimWifiScanTask;
