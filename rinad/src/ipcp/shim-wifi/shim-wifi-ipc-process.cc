@@ -1115,7 +1115,6 @@ void ShimWifiStaIPCProcessImpl::notify_scan_results()
 	std::map<std::string, rina::MediaDIFInfo>::iterator difs_it;
 	std::string output;
 	std::stringstream line_ss;
-	std::stringstream value_ss;
 	std::string line;
 	std::string value;
 	std::vector<std::string> v;
@@ -1144,8 +1143,8 @@ void ShimWifiStaIPCProcessImpl::notify_scan_results()
 			continue;
 		}
 		LOG_IPCP_DBG("Line: '%s'", line.c_str());
-		v.clear();
-		value_ss.str(line);
+		std::stringstream value_ss;
+		std::vector<std::string> v;
 		//line: bssid/frequency/signal/flags/ssid
 		while(getline(value_ss, value, '\t')){
 			v.push_back(value);
