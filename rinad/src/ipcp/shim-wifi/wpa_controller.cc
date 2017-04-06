@@ -374,9 +374,8 @@ int WpaController::create_ctrl_connection(const std::string& if_name) {
 	return 0;
 }
 
-int WpaController::__send_command(const std::string& cmd,
-			          std::string * out = NULL){
-
+int WpaController::__send_command(const std::string& cmd)
+{
 	char buf[4096];
 	size_t len = sizeof(buf);
 	int ret;
@@ -405,12 +404,40 @@ int WpaController::__send_command(const std::string& cmd,
 
 	LOG_IPCP_DBG("Got reply from WPA supplicant: %s", buf);
 
-	if(out){
-		*out = buf;
-		return 0;
-	}else{
-		return (strncmp(buf, "OK", 2)) ? -1 : 0;
+	return (strncmp(buf, "OK", 2)) ? -1 : 0;
+}
+
+std::string WpaController::__send_command_with_results(const std::string& cmd)
+{
+	char buf[4096];
+	size_t len = sizeof(buf);
+	int ret;
+
+	if (ctrl_conn == NULL) {
+		LOG_IPCP_ERR("Could not send command %s, not connected to %s ctrl iface",
+							cmd.c_str(),
+							prog_name.c_str());
+		return "";
 	}
+
+	ret = wpa_ctrl_request(ctrl_conn, cmd.c_str(), cmd.length(), buf, &len,
+									NULL);
+
+	if (ret == -2) {
+		LOG_IPCP_ERR("'%s' command timed out.\n", cmd.c_str());
+		return "";
+	} else if (ret < 0) {
+		LOG_IPCP_ERR("'%s' command failed.\n", cmd.c_str());
+		return "";
+	}
+
+	LOG_IPCP_DBG("Sent command to WPA supplicant: %s", cmd.c_str());
+
+	buf[len] = '\0';
+
+	LOG_IPCP_DBG("Got reply from WPA supplicant: %s", buf);
+
+	return std::string(buf);
 }
 
 int WpaController::scan()
@@ -419,10 +446,10 @@ int WpaController::scan()
 	return __send_command(cmd.c_str());
 }
 
-int WpaController::scan_results(std::string * out)
+std::string WpaController::scan_results()
 {
 	std::string cmd = "SCAN_RESULTS";
-	return __send_command(cmd.c_str(), out);
+	return __send_command_with_results(cmd.c_str());
 }
 
 int WpaController::__get_network_id_and_set_bssid(const std::string& ssid,

@@ -53,7 +53,7 @@ public:
 	int launch_wpa(const std::string& wif_name, const std::string& driver);
 	int create_ctrl_connection(const std::string& if_name);
 	int scan(void);
-	int scan_results(std::string * out);
+	std::string scan_results(void);
 	int enable_network(const std::string& ssid, const std::string& bssid);
 	int disable_network(const std::string& ssid, const std::string& bssid);
 	int select_network(const std::string& ssid, const std::string& bssid);
@@ -97,7 +97,8 @@ private:
 	void __process_connected_message(const std::string& msg);
 	void __process_disconnected_message(void);
 	void __process_scan_results_message(void);
-	int __send_command(const std::string& cmd, std::string * out);
+	int __send_command(const std::string& cmd);
+	std::string __send_command_with_results(const std::string& cmd);
 	int __get_network_id_and_set_bssid(const std::string& ssid,
 						const std::string& bssid,
 						unsigned int& id);

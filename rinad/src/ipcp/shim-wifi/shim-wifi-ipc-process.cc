@@ -1114,7 +1114,6 @@ void ShimWifiStaIPCProcessImpl::notify_scan_results()
 	rina::MediaReport report;
 	std::map<std::string, rina::MediaDIFInfo>::iterator difs_it;
 	std::string output;
-	int rv;
 
 	rina::ScopedLock g(*lock_);
 
@@ -1125,11 +1124,7 @@ void ShimWifiStaIPCProcessImpl::notify_scan_results()
 		return;
 	}
 
-	rv = wpa_conn->scan_results(&output);
-	if (rv != 0) {
-		LOG_IPCP_WARN("Problems obtaining scan results");
-		return;
-	}
+	output = wpa_conn->scan_results();
 
 	report.ipcp_id = get_id();
 	report.current_dif_name = dif_information_.dif_name_.toString();
