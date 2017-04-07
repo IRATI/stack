@@ -358,7 +358,7 @@ public:
 	//
 	ipcm_res_t assign_to_dif(Addon* callee, Promise* promise,
 			const unsigned short ipcp_id,
-			rinad::DIFTemplate * dif_template,
+			rinad::DIFTemplate& dif_template,
 			const rina::ApplicationProcessNamingInformation&
 				difName);
 	ipcm_res_t assign_to_dif(Addon* callee, Promise* promise,

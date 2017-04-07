@@ -517,7 +517,8 @@ IPCMConsole::assign_to_dif(std::vector<string>& args)
 {
 	int ipcp_id;
 	Promise promise;
-	rinad::DIFTemplate * dif_template;
+	rinad::DIFTemplate dif_template;
+	int rv;
 
 	if (args.size() < 4) {
 		outstream << commands_map[args[0]].usage << endl;
@@ -536,8 +537,8 @@ IPCMConsole::assign_to_dif(std::vector<string>& args)
 		return CMDRETCONT;
 	}
 
-	dif_template = IPCManager->dif_template_manager->get_dif_template(args[3]);
-	if (!dif_template) {
+	rv = IPCManager->dif_template_manager->get_dif_template(args[3], dif_template);
+	if (rv != 0) {
 		outstream << "Cannot find DIF template called " << args[3] << endl;
 		return CMDRETCONT;
 	}
@@ -922,19 +923,20 @@ IPCMConsole::plugin_get_info(std::vector<std::string>& args)
 
 int IPCMConsole::show_dif_templates(std::vector<std::string>& args)
 {
+	std::list<DIFTemplate> dif_templates;
+
 	if (args.size() != 1) {
 		outstream << commands_map[args[0]].usage << endl;
 		return CMDRETCONT;
 	}
 
-	std::list<DIFTemplate*> dif_templates =
-			IPCManager->dif_template_manager->get_all_dif_templates();
+	IPCManager->dif_template_manager->get_all_dif_templates(dif_templates);
 
 	outstream<< "CURRENT DIF TEMPLATES:" << endl;
 
-	std::list<DIFTemplate*>::iterator it;
+	std::list<DIFTemplate>::iterator it;
 	for (it = dif_templates.begin(); it != dif_templates.end(); ++it) {
-		outstream << (*it)->toString() << endl;
+		outstream << it->toString() << endl;
 	}
 
 	return CMDRETCONT;

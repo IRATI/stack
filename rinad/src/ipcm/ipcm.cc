@@ -559,148 +559,148 @@ ipcm_res_t IPCManager_::assign_to_dif(
     return IPCM_PENDING;
 }
 
-ipcm_res_t IPCManager_::assign_to_dif(
-        Addon* callee, Promise* promise, const unsigned short ipcp_id,
-        DIFTemplate* dif_template,
-        const rina::ApplicationProcessNamingInformation& dif_name)
+ipcm_res_t IPCManager_::assign_to_dif(Addon* callee,
+				      Promise* promise,
+				      const unsigned short ipcp_id,
+				      DIFTemplate& dif_template,
+				      const rina::ApplicationProcessNamingInformation& dif_name)
 {
-    rina::DIFInformation dif_info;
-    rina::DIFConfiguration dif_config;
-    std::ostringstream ss;
-    IPCMIPCProcess* ipcp = NULL;
+	rina::DIFInformation dif_info;
+	rina::DIFConfiguration dif_config;
+	std::ostringstream ss;
+	IPCMIPCProcess* ipcp = NULL;
 
-    try
-    {
-	pre_assign_to_dif(callee, dif_name, ipcp_id, ipcp);
+	try
+	{
+		pre_assign_to_dif(callee, dif_name, ipcp_id, ipcp);
 
-        // Fill in the DIFConfiguration object.
-        if (ipcp->get_type() == rina::NORMAL_IPC_PROCESS)
-        {
-            rina::EFCPConfiguration efcp_config;
-            rina::NamespaceManagerConfiguration nsm_config;
-            rina::AddressingConfiguration address_config;
-            unsigned int address;
+		// Fill in the DIFConfiguration object.
+		if (ipcp->get_type() == rina::NORMAL_IPC_PROCESS)
+		{
+			rina::EFCPConfiguration efcp_config;
+			rina::NamespaceManagerConfiguration nsm_config;
+			rina::AddressingConfiguration address_config;
+			unsigned int address;
 
-            //catalog.load_by_template(callee, ipcp_id, dif_template);
-            // FIll in the EFCPConfiguration object.
-            efcp_config.set_data_transfer_constants(
-                    dif_template->dataTransferConstants);
-            rina::QoSCube * qosCube = 0;
-            for (std::list<rina::QoSCube>::iterator qit = dif_template->qosCubes
-                    .begin(); qit != dif_template->qosCubes.end(); qit++)
-            {
-                qosCube = new rina::QoSCube(*qit);
-                if (!qosCube)
-                {
-                    ss
-                            << "Unable to allocate memory for the QoSCube object. Out of memory! "
-                            << dif_name.toString();
-                    FLUSH_LOG(ERR, ss);
-                    throw rina::Exception();
-                }
-                efcp_config.add_qos_cube(qosCube);
-            }
+			//catalog.load_by_template(callee, ipcp_id, dif_template);
+			// FIll in the EFCPConfiguration object.
+			efcp_config.set_data_transfer_constants(
+					dif_template.dataTransferConstants);
+			rina::QoSCube * qosCube = 0;
+			for (std::list<rina::QoSCube>::iterator qit = dif_template.qosCubes
+					.begin(); qit != dif_template.qosCubes.end(); qit++)
+			{
+				qosCube = new rina::QoSCube(*qit);
+				if (!qosCube)
+				{
+					ss
+					<< "Unable to allocate memory for the QoSCube object. Out of memory! "
+					<< dif_name.toString();
+					FLUSH_LOG(ERR, ss);
+					throw rina::Exception();
+				}
+				efcp_config.add_qos_cube(qosCube);
+			}
 
-            for (std::list<AddressPrefixConfiguration>::iterator ait =
-                    dif_template->addressPrefixes.begin();
-                    ait != dif_template->addressPrefixes.end(); ait++)
-            {
-                rina::AddressPrefixConfiguration prefix;
-                prefix.address_prefix_ = ait->addressPrefix;
-                prefix.organization_ = ait->organization;
-                address_config.address_prefixes_.push_back(prefix);
-            }
+			for (std::list<AddressPrefixConfiguration>::iterator ait =
+					dif_template.addressPrefixes.begin();
+					ait != dif_template.addressPrefixes.end(); ait++)
+			{
+				rina::AddressPrefixConfiguration prefix;
+				prefix.address_prefix_ = ait->addressPrefix;
+				prefix.organization_ = ait->organization;
+				address_config.address_prefixes_.push_back(prefix);
+			}
 
-            for (std::list<rinad::KnownIPCProcessAddress>::iterator kit =
-                    dif_template->knownIPCProcessAddresses.begin();
-                    kit != dif_template->knownIPCProcessAddresses.end(); kit++)
-            {
-                rina::StaticIPCProcessAddress static_address;
-                static_address.ap_name_ = kit->name.processName;
-                static_address.ap_instance_ = kit->name.processInstance;
-                static_address.address_ = kit->address;
-                address_config.static_address_.push_back(static_address);
-            }
-            nsm_config.addressing_configuration_ = address_config;
-            nsm_config.policy_set_ = dif_template->nsmConfiguration.policy_set_;
+			for (std::list<rinad::KnownIPCProcessAddress>::iterator kit =
+					dif_template.knownIPCProcessAddresses.begin();
+					kit != dif_template.knownIPCProcessAddresses.end(); kit++)
+			{
+				rina::StaticIPCProcessAddress static_address;
+				static_address.ap_name_ = kit->name.processName;
+				static_address.ap_instance_ = kit->name.processInstance;
+				static_address.address_ = kit->address;
+				address_config.static_address_.push_back(static_address);
+			}
+			nsm_config.addressing_configuration_ = address_config;
+			nsm_config.policy_set_ = dif_template.nsmConfiguration.policy_set_;
 
-            bool found = dif_template->lookup_ipcp_address(ipcp->get_name(),
-                                                           address);
-            if (!found)
-            {
-                ss << "No address for IPC process "
-                        << ipcp->get_name().toString() << " in DIF "
-                        << dif_name.toString() << std::endl;
-                FLUSH_LOG(ERR, ss);
-                throw rina::Exception();
-            }
-            dif_config.efcp_configuration_ = efcp_config;
-            dif_config.nsm_configuration_ = nsm_config;
-            dif_config.rmt_configuration_ = dif_template->rmtConfiguration;
-            dif_config.fa_configuration_ = dif_template->faConfiguration;
-            dif_config.ra_configuration_ = dif_template->raConfiguration;
-            dif_config.routing_configuration_ = dif_template
-                    ->routingConfiguration;
-            dif_config.sm_configuration_ = dif_template->secManConfiguration;
-            dif_config.et_configuration_ = dif_template->etConfiguration;
-            dif_config.set_address(address);
+			bool found = dif_template.lookup_ipcp_address(ipcp->get_name(),
+					address);
+			if (!found)
+			{
+				ss << "No address for IPC process "
+						<< ipcp->get_name().toString() << " in DIF "
+						<< dif_name.toString() << std::endl;
+				FLUSH_LOG(ERR, ss);
+				throw rina::Exception();
+			}
+			dif_config.efcp_configuration_ = efcp_config;
+			dif_config.nsm_configuration_ = nsm_config;
+			dif_config.rmt_configuration_ = dif_template.rmtConfiguration;
+			dif_config.fa_configuration_ = dif_template.faConfiguration;
+			dif_config.ra_configuration_ = dif_template.raConfiguration;
+			dif_config.routing_configuration_ = dif_template.routingConfiguration;
+			dif_config.sm_configuration_ = dif_template.secManConfiguration;
+			dif_config.et_configuration_ = dif_template.etConfiguration;
+			dif_config.set_address(address);
 
-            dif_config.sm_configuration_ = dif_template->secManConfiguration;
+			dif_config.sm_configuration_ = dif_template.secManConfiguration;
 
-            // Load plugin catalog
-            catalog.load(callee, ipcp_id, dif_config);
-        }
+			// Load plugin catalog
+			catalog.load(callee, ipcp_id, dif_config);
+		}
 
-        for (std::map<std::string, std::string>::const_iterator pit =
-                dif_template->configParameters.begin();
-                pit != dif_template->configParameters.end(); pit++)
-        {
-            dif_config.add_parameter(
-                    rina::PolicyParameter(pit->first, pit->second));
-        }
+		for (std::map<std::string, std::string>::const_iterator pit =
+				dif_template.configParameters.begin();
+				pit != dif_template.configParameters.end(); pit++)
+		{
+			dif_config.add_parameter(
+					rina::PolicyParameter(pit->first, pit->second));
+		}
 
-        // Fill in the DIFInformation object.
-        dif_info.set_dif_name(dif_name);
-        dif_info.set_dif_type(ipcp->get_type());
-        dif_info.set_dif_configuration(dif_config);
+		// Fill in the DIFInformation object.
+		dif_info.set_dif_name(dif_name);
+		dif_info.set_dif_type(ipcp->get_type());
+		dif_info.set_dif_configuration(dif_config);
 
-        // assign to diff
-        assign_to_dif(callee, promise, dif_info, ipcp);
+		// assign to diff
+		assign_to_dif(callee, promise, dif_info, ipcp);
 
-    } catch (rina::ConcurrentException& e)
-    {
-        if (ipcp){
-		ss << "Error while assigning " << ipcp->get_name().toString()
-			<< " to DIF " << dif_name.toString()
-			<< ". Operation timedout" << std::endl;
+	} catch (rina::ConcurrentException& e)
+	{
+		if (ipcp){
+			ss << "Error while assigning " << ipcp->get_name().toString()
+					<< " to DIF " << dif_name.toString()
+					<< ". Operation timedout" << std::endl;
+		}
+		else {
+			ss << "Error while assigning ipcp to DIF" << std::endl;
+		}
+		FLUSH_LOG(ERR, ss);
+		return IPCM_FAILURE;
+	} catch (rina::AssignToDIFException& e)
+	{
+		if (ipcp){
+			ss << "Error while assigning " << ipcp->get_name().toString()
+					<< " to DIF " << dif_name.toString() << std::endl;
+		} else {
+			ss << "Error while assigning ipcp to DIF" << std::endl;
+		}
+		FLUSH_LOG(ERR, ss);
+		return IPCM_FAILURE;
+	} catch (rina::BadConfigurationException& e)
+	{
+		LOG_ERR("Asssign IPCP %d to dif %s failed. Bad configuration.", ipcp_id,
+				dif_name.toString().c_str());
+		return IPCM_FAILURE;
+	} catch (rina::Exception &e)
+	{
+		LOG_ERR("Asssign IPCP %d to dif %s failed. Unknown error catched: %s:%d",
+				ipcp_id, dif_name.toString().c_str(), __FILE__, __LINE__);
+		return IPCM_FAILURE;
 	}
-	else {
-		ss << "Error while assigning ipcp to DIF" << std::endl;
-	}
-        FLUSH_LOG(ERR, ss);
-        return IPCM_FAILURE;
-    } catch (rina::AssignToDIFException& e)
-    {
-	if (ipcp){
-	        ss << "Error while assigning " << ipcp->get_name().toString()
-			<< " to DIF " << dif_name.toString() << std::endl;
-	} else {
-		ss << "Error while assigning ipcp to DIF" << std::endl;
-	}
-        FLUSH_LOG(ERR, ss);
-        return IPCM_FAILURE;
-    } catch (rina::BadConfigurationException& e)
-    {
-        LOG_ERR("Asssign IPCP %d to dif %s failed. Bad configuration.", ipcp_id,
-                dif_name.toString().c_str());
-        return IPCM_FAILURE;
-    } catch (rina::Exception &e)
-    {
-        LOG_ERR("Asssign IPCP %d to dif %s failed. Unknown error catched: %s:%d",
-                ipcp_id, dif_name.toString().c_str(), __FILE__, __LINE__);
-        return IPCM_FAILURE;
-    }
-    return IPCM_PENDING;
+	return IPCM_PENDING;
 }
 
 ipcm_res_t IPCManager_::register_at_dif(Addon* callee,
@@ -1058,8 +1058,9 @@ ipcm_res_t IPCManager_::apply_configuration()
         CreateIPCPPromise c_promise;
         Promise promise;
         bool found;
+        int rv;
         rinad::DIFTemplateMapping template_mapping;
-        rinad::DIFTemplate * dif_template;
+        rinad::DIFTemplate dif_template;
         for (cit = config.ipcProcessesToCreate.begin();
                 cit != config.ipcProcessesToCreate.end(); cit++)
         {
@@ -1075,9 +1076,9 @@ ipcm_res_t IPCManager_::apply_configuration()
                 continue;
             }
 
-            dif_template = dif_template_manager->get_dif_template(
-                    template_mapping.template_name);
-            if (!dif_template)
+            rv = dif_template_manager->get_dif_template(template_mapping.template_name,
+        		    	    	    	        dif_template);
+            if (rv != 0)
             {
                 ss << "Cannot find template called "
                         << template_mapping.template_name;
@@ -1088,7 +1089,7 @@ ipcm_res_t IPCManager_::apply_configuration()
             try
             {
                 if (create_ipcp(NULL, &c_promise, cit->name,
-                                dif_template->difType) == IPCM_FAILURE
+                                dif_template.difType) == IPCM_FAILURE
                         || c_promise.wait() != IPCM_SUCCESS)
                 {
                     continue;
