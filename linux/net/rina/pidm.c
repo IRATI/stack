@@ -17,8 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-
-#include <linux/bitmap.h>
+#include <linux/list.h>
 
 #define RINA_PREFIX "pidm"
 
@@ -28,10 +27,16 @@
 #include "pidm.h"
 #include "common.h"
 
-#define BITS_IN_BITMAP ((2 << BITS_PER_BYTE) * sizeof(port_id_t))
+#define MAX_PORT_ID (((2 << BITS_PER_BYTE) * sizeof(port_id_t)) - 1)
 
 struct pidm {
-        DECLARE_BITMAP(bitmap, BITS_IN_BITMAP);
+	struct list_head allocated_ports;
+	port_id_t last_allocated;
+};
+
+struct alloc_pid {
+        struct list_head       list;
+        port_id_t pid;
 };
 
 struct pidm * pidm_create(void)
@@ -42,19 +47,26 @@ struct pidm * pidm_create(void)
         if (!instance)
                 return NULL;
 
-        bitmap_zero(instance->bitmap, BITS_IN_BITMAP);
+        INIT_LIST_HEAD(&(instance->allocated_ports));
+        instance->last_allocated = 0;
 
-        LOG_DBG("Instance initialized successfully (%zd bits)",
-                BITS_IN_BITMAP);
+        LOG_INFO("Instance initialized successfully (%zd port-ids)",
+        	MAX_PORT_ID);
 
         return instance;
 }
 
 int pidm_destroy(struct pidm * instance)
 {
+	struct alloc_pid * pos, * next;
+
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
+        }
+
+        list_for_each_entry_safe(pos, next, &instance->allocated_ports, list) {
+                rkfree(pos);
         }
 
         rkfree(instance);
@@ -62,37 +74,68 @@ int pidm_destroy(struct pidm * instance)
         return 0;
 }
 
+int pidm_allocated(struct pidm * instance, port_id_t port_id)
+{
+	struct alloc_pid * pos, * next;
+
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return -1;
+        }
+
+        list_for_each_entry_safe(pos, next, &instance->allocated_ports, list) {
+                if (pos->pid == port_id) {
+                	return 1;
+                }
+        }
+
+        return 0;
+}
+
 port_id_t pidm_allocate(struct pidm * instance)
 {
-        port_id_t id;
+	struct alloc_pid * new_port_id;
+        port_id_t pid;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return port_id_bad();
         }
 
-        id = (port_id_t) bitmap_find_next_zero_area(instance->bitmap,
-                                                    BITS_IN_BITMAP,
-                                                    0, 1, 0);
-        LOG_DBG("The pidm bitmap find returned id %d (bad = %d)",
-                id, port_id_bad());
-
-        if (!is_port_id_ok(id)) {
-                LOG_WARN("Got an out-of-range flow-id (%d) from "
-                         "the bitmap allocator, the bitmap is full ...", id);
-                return port_id_bad();
+        if (instance->last_allocated == MAX_PORT_ID) {
+        	pid = 1;
+        } else {
+        	pid = instance->last_allocated + 1;
         }
 
-        bitmap_set(instance->bitmap, id, 1);
+        while (pidm_allocated(instance, pid)) {
+        	if (pid == MAX_PORT_ID) {
+        		pid = 1;
+        	} else {
+        		pid ++;
+        	}
+        }
 
-        LOG_DBG("Bitmap allocation completed successfully (id = %d)", id);
+        new_port_id = rkmalloc(sizeof(*new_port_id), GFP_KERNEL);
+        if (!new_port_id)
+        	return port_id_bad();
 
-        return (id + 1);
+        INIT_LIST_HEAD(&(new_port_id->list));
+        new_port_id->pid = pid;
+        list_add(&(new_port_id->list), &(instance->allocated_ports));
+
+        instance->last_allocated = pid;
+
+        LOG_DBG("Port-id allocation completed successfully (id = %d)", pid);
+
+        return pid;
 }
 
 int pidm_release(struct pidm * instance,
                  port_id_t     id)
 {
+	 struct alloc_pid * pos, * next;
+
         if (!is_port_id_ok(id)) {
                 LOG_ERR("Bad flow-id passed, bailing out");
                 return -1;
@@ -102,9 +145,17 @@ int pidm_release(struct pidm * instance,
                 return -1;
         }
 
-        bitmap_clear(instance->bitmap, (id - 1), 1);
+        list_for_each_entry_safe(pos, next, &instance->allocated_ports, list) {
+                if (pos->pid == id) {
+                	list_del(&pos->list);
+                	rkfree(pos);
+                	LOG_DBG("Port-id release completed successfully (port_id: %d)", id);
 
-        LOG_DBG("Bitmap release completed successfully (port_id: %d)", id);
+                	return 0;
+                }
+        }
+
+        LOG_ERR("Didn't find port-id %d, returning error", id);
 
         return 0;
 }

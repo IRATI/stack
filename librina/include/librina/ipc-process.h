@@ -442,7 +442,6 @@ public:
         }
 };
 
-
 /**
  * Class used by the IPC Processes to interact with the IPC Manager. Extends
  * the basic IPC Manager in librina-application with IPC Process specific
@@ -746,6 +745,13 @@ public:
 	void forwardCDAPResponse(unsigned sequenceNumber,
 				 const ser_obj_t& sermsg,
 				 int result);
+
+	/**
+	 * Send the IPCM a report from a scan of the media (radio, etc), informing
+	 * it what radio DIFs are available via what access point IPCPs (addresses)
+	 * and what signal power levels
+	 */
+	void sendMediaReport(const MediaReport& report);
 };
 
 /**

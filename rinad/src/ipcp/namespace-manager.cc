@@ -828,12 +828,12 @@ void NamespaceManager::processApplicationUnregistrationRequestEvent(
 
 unsigned int NamespaceManager::getAdressByname(const rina::ApplicationProcessNamingInformation& name)
 {
-	std::list<rina::Neighbor *> neighbors =
-			ipcp->enrollment_task_->get_neighbor_pointers();
-	std::list<rina::Neighbor *>::const_iterator it;
+	std::list<rina::Neighbor> neighbors =
+			ipcp->enrollment_task_->get_neighbors();
+	std::list<rina::Neighbor>::const_iterator it;
 	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
-		if ((*it)->name_.processName.compare(name.processName) == 0) {
-			return (*it)->address_;
+		if (it->name_.processName.compare(name.processName) == 0) {
+			return it->address_;
 		}
 	}
 

@@ -220,6 +220,65 @@ public:
                         unsigned int sequenceNumber);
 };
 
+/**
+ * Provides information on a base station IPCP
+ */
+class BaseStationInfo {
+public:
+	/* Address of the IPCP at the base station */
+	std::string ipcp_address;
+
+	/*
+	 * The power level received from the IPCP, the higher
+	 * the greater is the power level
+	 */
+	int signal_strength;
+
+	std::string toString() const;
+};
+
+/**
+ * Provides information on a DIF that manages a physical media,
+ * resulting from a media scan
+ */
+class MediaDIFInfo {
+public:
+	/* Name of the DIF */
+	std::string dif_name;
+
+	/* Name of security policies */
+	std::string security_policies;
+
+	/* Information available of IPCPs in Base Stations / Access Points */
+	std::list<BaseStationInfo> available_bs_ipcps;
+
+	std::string toString() const;
+};
+
+/**
+ * Captures the information resulting from a scan of the physical
+ * media (WiFi, etc.)
+ */
+class MediaReport {
+public:
+	/** The id of the IPC Process that scanned the media */
+	unsigned short ipcp_id;
+
+	/** The DIF the IPCP id is currently a member of (if any) */
+	std::string current_dif_name;
+
+	/**
+	 * The address of the access point / base station the IPCP is
+	 * currently attached to (if any)
+	 */
+	std::string bs_ipcp_address;
+
+	/** Information on the DIFs available through the media */
+	std::map<std::string, MediaDIFInfo> available_difs;
+
+	std::string toString() const;
+};
+
 }
 
 #endif

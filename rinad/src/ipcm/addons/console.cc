@@ -39,6 +39,7 @@
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
 #include <librina/logs.h>
+#include <librina/timer.h>
 #include <debug.h>
 
 #include "rina-configuration.h"
@@ -516,7 +517,8 @@ IPCMConsole::assign_to_dif(std::vector<string>& args)
 {
 	int ipcp_id;
 	Promise promise;
-	rinad::DIFTemplate * dif_template;
+	rinad::DIFTemplate dif_template;
+	int rv;
 
 	if (args.size() < 4) {
 		outstream << commands_map[args[0]].usage << endl;
@@ -535,8 +537,8 @@ IPCMConsole::assign_to_dif(std::vector<string>& args)
 		return CMDRETCONT;
 	}
 
-	dif_template = IPCManager->dif_template_manager->get_dif_template(args[3]);
-	if (!dif_template) {
+	rv = IPCManager->dif_template_manager->get_dif_template(args[3], dif_template);
+	if (rv != 0) {
 		outstream << "Cannot find DIF template called " << args[3] << endl;
 		return CMDRETCONT;
 	}
@@ -696,17 +698,10 @@ IPCMConsole::update_dif_config(std::vector<std::string>& args)
 	return CMDRETCONT;
 }
 
-int getTimeMs(){
-    timeval time_;
-    gettimeofday(&time_, 0);
-    int time_seconds = (int) time_.tv_sec;
-    return (int) time_seconds * 1000 + (int) (time_.tv_usec / 1000);   
-}
-
 int
 IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
 {
-        int t0 = getTimeMs();
+        int t0 = rina::Time::get_time_in_ms();
         NeighborData neighbor_data;
 	int ipcp_id;
 	Promise promise;
@@ -741,7 +736,7 @@ IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
 		outstream << "Enrollment operation failed" << endl;
 		return CMDRETCONT;
 	}
-        int t1 = getTimeMs();
+        int t1 = rina::Time::get_time_in_ms();
 	outstream << "DIF enrollment succesfully completed in " << t1 - t0 << " ms" << endl;
 
 	return CMDRETCONT;
@@ -750,6 +745,7 @@ IPCMConsole::enroll_to_dif(std::vector<std::string>& args)
 int
 IPCMConsole::disconnect_neighbor(std::vector<std::string>& args)
 {
+	int t0 = rina::Time::get_time_in_ms();
         rina::ApplicationProcessNamingInformation neighbor;
 	int ipcp_id;
 	Promise promise;
@@ -777,7 +773,9 @@ IPCMConsole::disconnect_neighbor(std::vector<std::string>& args)
 		outstream << "Disconnect neighbor operation failed" << endl;
 		return CMDRETCONT;
 	}
-	outstream << "Neighbor disconnection operation completed" << endl;
+
+	int t1 = rina::Time::get_time_in_ms();
+	outstream << "Neighbor disconnection operation completed in " << t1 - t0 << " ms" << endl;
 
 	return CMDRETCONT;
 }
@@ -925,19 +923,20 @@ IPCMConsole::plugin_get_info(std::vector<std::string>& args)
 
 int IPCMConsole::show_dif_templates(std::vector<std::string>& args)
 {
+	std::list<DIFTemplate> dif_templates;
+
 	if (args.size() != 1) {
 		outstream << commands_map[args[0]].usage << endl;
 		return CMDRETCONT;
 	}
 
-	std::list<DIFTemplate*> dif_templates =
-			IPCManager->dif_template_manager->get_all_dif_templates();
+	IPCManager->dif_template_manager->get_all_dif_templates(dif_templates);
 
 	outstream<< "CURRENT DIF TEMPLATES:" << endl;
 
-	std::list<DIFTemplate*>::iterator it;
+	std::list<DIFTemplate>::iterator it;
 	for (it = dif_templates.begin(); it != dif_templates.end(); ++it) {
-		outstream << (*it)->toString() << endl;
+		outstream << it->toString() << endl;
 	}
 
 	return CMDRETCONT;

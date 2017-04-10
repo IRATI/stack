@@ -15,7 +15,8 @@ SUBDIRS= ma
 noinst_LTLIBRARIES = libaddons.la
 libaddons_la_SOURCES  =				\
 	console.cc				\
-	scripting.cc
+	scripting.cc			\
+	mobility-manager.cc
 
 libaddons_la_CPPFLAGS =				\
 	$(CPPFLAGS_EXTRA)			\

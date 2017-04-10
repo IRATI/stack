@@ -63,10 +63,10 @@ public:
 	DIFTemplateManager(const std::string& folder,
 			   DIFAllocator * dif_allocator);
 	virtual ~DIFTemplateManager(void);
-	rinad::DIFTemplate * get_dif_template(const std::string& name);
+	int get_dif_template(const std::string& name, rinad::DIFTemplate& dif_template);
 	void add_dif_template(const std::string& name, rinad::DIFTemplate * dif_template);
 	void remove_dif_template(const std::string& name);
-	std::list<rinad::DIFTemplate *> get_all_dif_templates();
+	void get_all_dif_templates(std::list<rinad::DIFTemplate>& dif_templates);
 
 private:
 	int load_initial_dif_templates();

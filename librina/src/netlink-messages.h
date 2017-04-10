@@ -98,6 +98,7 @@ enum RINANetlinkOperationCode{
 	RINA_C_IPCM_PLUGIN_LOAD_RESPONSE, /* 60, IPC Process -> IPC Manager */
 	RINA_C_IPCM_FWD_CDAP_MSG_REQUEST, /* 61, IPC Manager <-> IPC Process */
 	RINA_C_IPCM_FWD_CDAP_MSG_RESPONSE, /* 62, IPC Manager <-> IPC Process */
+	RINA_C_IPCM_MEDIA_REPORT, /* 63, IPC Process -> IPC Manager */
 	__RINA_C_MAX,
  };
 
@@ -1468,6 +1469,14 @@ public:
 	unsigned int old_address;
 	unsigned int use_new_timeout;
 	unsigned int deprecate_old_timeout;
+};
+
+class IpcmMediaReportMessage : public BaseNetlinkMessage {
+public:
+	IpcmMediaReportMessage();
+	IPCEvent* toIPCEvent();
+
+	MediaReport report;
 };
 
 }

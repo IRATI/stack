@@ -70,8 +70,9 @@ public:
 
 protected:
 	BaseEnrollmentStateMachine(IPCProcess * ipc_process,
-			const rina::ApplicationProcessNamingInformation& remote_naming_info,
-			int timeout, rina::ApplicationProcessNamingInformation * supporting_dif_name);
+				   const rina::ApplicationProcessNamingInformation& remote_naming_info,
+				   int timeout,
+				   const rina::ApplicationProcessNamingInformation& supporting_dif_name);
 
 	/// Sends all the DIF dynamic information
 	void sendDIFDynamicInformation();
@@ -137,8 +138,9 @@ const std::string BaseEnrollmentStateMachine::STATE_WAIT_STOP_ENROLLMENT_RESPONS
 		"WAIT_STOP_ENROLLMENT_RESPONSE";
 
 BaseEnrollmentStateMachine::BaseEnrollmentStateMachine(IPCProcess * ipc_process,
-			const rina::ApplicationProcessNamingInformation& remote_naming_info,
-			int timeout, rina::ApplicationProcessNamingInformation * supporting_dif_name) :
+						       const rina::ApplicationProcessNamingInformation& remote_naming_info,
+						       int timeout,
+						       const rina::ApplicationProcessNamingInformation& supporting_dif_name) :
 				IEnrollmentStateMachine(ipc_process, remote_naming_info,
 						timeout, supporting_dif_name)
 {
@@ -302,7 +304,7 @@ EnrolleeStateMachine::EnrolleeStateMachine(IPCProcess * ipc_process,
 		BaseEnrollmentStateMachine(ipc_process,
 					   remote_naming_info,
 					   timeout,
-					   0)
+					   rina::ApplicationProcessNamingInformation())
 {
 	was_dif_member_before_enrollment_ = false;
 	last_scheduled_task_ = 0;
@@ -725,7 +727,7 @@ void EnrolleeStateMachine::enrollmentCompleted()
 	state_ = STATE_ENROLLED;
 
 	//Create or update the neighbor information in the RIB
-	createOrUpdateNeighborInformation(true);
+	createOrUpdateNeighborInformation(true);;
 
 	//Send DirectoryForwardingTableEntries
 	sendDFTEntries();
@@ -755,11 +757,6 @@ void EnrolleeStateMachine::enrollmentCompleted()
 			LOG_IPCP_ERR("Problems sending message to IPC Manager: %s", e.what());
 		}
 	}
-
-	LOG_IPCP_INFO("Remote IPC Process enrolled!");
-        rina::Time currentTime;
-        int t = currentTime.get_current_time_in_ms();
-        LOG_IPCP_INFO("Remote IPC Process enrolled at %d",t);
 }
 
 void EnrolleeStateMachine::remoteReadResult(const rina::cdap_rib::con_handle_t &con_handle,
@@ -870,8 +867,9 @@ void EnrolleeStateMachine::start(int result,
 class EnrollerStateMachine: public BaseEnrollmentStateMachine {
 public:
 	EnrollerStateMachine(IPCProcess * ipc_process,
-		const rina::ApplicationProcessNamingInformation& remote_naming_info, int timeout,
-		rina::ApplicationProcessNamingInformation * supporting_dif_name);
+			     const rina::ApplicationProcessNamingInformation& remote_naming_info,
+			     int timeout,
+			     const rina::ApplicationProcessNamingInformation& supporting_dif_name);
 	~EnrollerStateMachine() { };
 
 	/// An M_CONNECT message has been received.  Handle the transition from the
@@ -937,7 +935,7 @@ private:
 EnrollerStateMachine::EnrollerStateMachine(IPCProcess * ipc_process,
 					   const rina::ApplicationProcessNamingInformation& remote_naming_info,
 					   int timeout,
-					   rina::ApplicationProcessNamingInformation * supporting_dif_name):
+					   const rina::ApplicationProcessNamingInformation& supporting_dif_name):
 		BaseEnrollmentStateMachine(ipc_process,
 					   remote_naming_info,
 					   timeout,
@@ -1388,11 +1386,6 @@ void EnrollerStateMachine::enrollmentCompleted()
 	createOrUpdateNeighborInformation(true);
 
 	enrollment_task_->enrollmentCompleted(remote_peer_, false);
-
-	LOG_IPCP_INFO("Remote IPC Process enrolled!");
-        rina::Time currentTime;
-        int t = currentTime.get_current_time_in_ms();
-        LOG_IPCP_INFO("Remote IPC Process enrolled at %d", t);
 }
 
 //Class EnrollmentRIBObject
@@ -1414,16 +1407,9 @@ void EnrollmentRIBObject::start(const rina::cdap_rib::con_handle_t &con_handle,
 				rina::ser_obj_t &obj_reply,
 				rina::cdap_rib::res_info_t& res)
 {
-	EnrollerStateMachine * stateMachine = 0;
-
-	try {
-		stateMachine = (EnrollerStateMachine *) enrollment_task_->getEnrollmentStateMachine(con_handle.port_id,
-												    false);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems retrieving state machine: %s", e.what());
-		sendErrorMessage(con_handle.port_id);
-		return;
-	}
+	EnrollerStateMachine * stateMachine;
+	stateMachine = (EnrollerStateMachine *) enrollment_task_->getEnrollmentStateMachine(con_handle.port_id,
+											    false);
 
 	if (!stateMachine) {
 		LOG_IPCP_ERR("Got a CDAP message that is not for me ");
@@ -1452,16 +1438,9 @@ void EnrollmentRIBObject::stop(const rina::cdap_rib::con_handle_t &con_handle,
 			       rina::ser_obj_t &obj_reply,
 			       rina::cdap_rib::res_info_t& res)
 {
-	EnrolleeStateMachine * stateMachine = 0;
-
-	try {
-		stateMachine = (EnrolleeStateMachine *) enrollment_task_->getEnrollmentStateMachine(
-				con_handle.port_id, false);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems retrieving state machine: %s", e.what());
-		sendErrorMessage(con_handle.port_id);
-		return;
-	}
+	EnrolleeStateMachine * stateMachine;
+	stateMachine = (EnrolleeStateMachine *) enrollment_task_->getEnrollmentStateMachine(con_handle.port_id,
+											    false);
 
 	if (!stateMachine) {
 		LOG_IPCP_ERR("Got a CDAP message that is not for me");
@@ -1609,18 +1588,11 @@ void EnrollmentTaskPs::connect_response_received(int result,
 {
 	rina::ScopedLock g(lock);
 
-	try{
-		EnrolleeStateMachine * stateMachine =
+	EnrolleeStateMachine * stateMachine =
 			(EnrolleeStateMachine*) et->getEnrollmentStateMachine(con_handle.port_id,
 									      false);
-		stateMachine->connectResponse(result,
-					      result_reason,
-					      con_handle,
-					      auth);
-	}catch(rina::Exception &e){
+	if (!stateMachine) {
 		//Error getting the enrollment state machine
-		LOG_IPCP_ERR("Problems getting enrollment state machine: %s",
-				e.what());
 		try {
 			rib_daemon->getProxy()->remote_close_connection(con_handle.port_id);
 		} catch (rina::Exception &e) {
@@ -1629,7 +1601,13 @@ void EnrollmentTaskPs::connect_response_received(int result,
 		}
 
 		et->deallocateFlow(con_handle.port_id);
+		return;
 	}
+
+	stateMachine->connectResponse(result,
+				      result_reason,
+				      con_handle,
+				      auth);
 }
 
 void EnrollmentTaskPs::process_authentication_message(const rina::cdap::CDAPMessage& message,
@@ -1637,15 +1615,10 @@ void EnrollmentTaskPs::process_authentication_message(const rina::cdap::CDAPMess
 {
 	rina::ScopedLock g(lock);
 
-	try {
-		IEnrollmentStateMachine * stateMachine =
-			et->getEnrollmentStateMachine(con_handle.port_id,
-						      false);
-		stateMachine->process_authentication_message(message,
-							     con_handle);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems getting enrollment state machine: %s",
-			     e.what());
+	IEnrollmentStateMachine * stateMachine =
+		et->getEnrollmentStateMachine(con_handle.port_id,
+					      false);
+	if (!stateMachine) {
 		try {
 			rib_daemon->getProxy()->remote_close_connection(con_handle.port_id);
 		} catch (rina::Exception &e) {
@@ -1653,20 +1626,21 @@ void EnrollmentTaskPs::process_authentication_message(const rina::cdap::CDAPMess
 				     e.what());
 		}
 		et->deallocateFlow(con_handle.port_id);
+		return;
 	}
+
+	stateMachine->process_authentication_message(message,
+						     con_handle);
 }
 
 void EnrollmentTaskPs::authentication_completed(int port_id, bool success)
 {
 	rina::ScopedLock g(lock);
 
-	try {
-		IEnrollmentStateMachine * stateMachine =
-				et->getEnrollmentStateMachine(port_id, false);
-		stateMachine->authentication_completed(success);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems getting enrollment state machine: %s",
-				e.what());
+	IEnrollmentStateMachine * stateMachine =
+					et->getEnrollmentStateMachine(port_id, false);
+
+	if (!stateMachine) {
 		try {
 			rib_daemon->getProxy()->remote_close_connection(port_id);
 		} catch (rina::Exception &e) {
@@ -1674,7 +1648,10 @@ void EnrollmentTaskPs::authentication_completed(int port_id, bool success)
 					e.what());
 		}
 		et->deallocateFlow(port_id);
+		return;
 	}
+
+	stateMachine->authentication_completed(success);
 }
 
 void EnrollmentTaskPs::initiate_enrollment(const rina::NMinusOneFlowAllocatedEvent & event,
@@ -1735,17 +1712,17 @@ IEnrollmentStateMachine * EnrollmentTaskPs::createEnrollmentStateMachine(const r
 {
 	IEnrollmentStateMachine * stateMachine = 0;
 
-	if (apNamingInfo.entityName.compare("") == 0 ||
-			apNamingInfo.entityName.compare(IPCProcess::MANAGEMENT_AE) == 0) {
+	if (apNamingInfo.entityName == "" ||
+			apNamingInfo.entityName == IPCProcess::MANAGEMENT_AE) {
 		if (enrollee){
 			stateMachine = new EnrolleeStateMachine(ipcp,
-					apNamingInfo, timeout);
+								apNamingInfo,
+								timeout);
 		}else{
-			rina::ApplicationProcessNamingInformation * sdname =
-					new rina::ApplicationProcessNamingInformation(supportingDifName.processName,
-							supportingDifName.processInstance);
 			stateMachine = new EnrollerStateMachine(ipcp,
-					apNamingInfo, timeout, sdname);
+								apNamingInfo,
+								timeout,
+								supportingDifName);
 		}
 
 		et->add_enrollment_state_machine(portId, stateMachine);

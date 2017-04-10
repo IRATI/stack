@@ -3509,6 +3509,94 @@ int testAddressChangeRequestMessage() {
         return returnValue;
 }
 
+int testIpcmMediaReportMessage() {
+        std::cout << "TESTING MEDIA REPORT MESSAGE\n";
+        int returnValue = 0;
+
+        IpcmMediaReportMessage message;
+        MediaDIFInfo dif_info;
+        BaseStationInfo bs_info;
+
+        message.report.ipcp_id = 12;
+        message.report.current_dif_name = "wi2cat";
+        message.report.bs_ipcp_address = "50:60:28:2f:76:51";
+
+        dif_info.dif_name = "wi2cat";
+        dif_info.security_policies = "WPA(PSK/AES,TKIP/TKIP) WPA2(PSK/AES,TKIP/TKIP)";
+
+        bs_info.ipcp_address = "50:60:28:2f:76:51";
+        bs_info.signal_strength = -54;
+        dif_info.available_bs_ipcps.push_back(bs_info);
+
+        bs_info.ipcp_address = "50:60:28:30:31:71";
+        bs_info.signal_strength = -58;
+        dif_info.available_bs_ipcps.push_back(bs_info);
+        message.report.available_difs.push_back(dif_info);
+
+        dif_info.dif_name = "wi2guest";
+        dif_info.security_policies = "WPA(PSK/AES/AES) WPA2(PSK/AES/AES) ";
+
+        bs_info.ipcp_address = "50:60:28:2f:76:52";
+        bs_info.signal_strength = -36;
+        dif_info.available_bs_ipcps.push_back(bs_info);
+
+        bs_info.ipcp_address = "50:60:28:30:31:70";
+        bs_info.signal_strength = -49;
+        dif_info.available_bs_ipcps.push_back(bs_info);
+        message.report.available_difs.push_back(dif_info);
+
+        struct nl_msg* netlinkMessage = nlmsg_alloc();
+        if (!netlinkMessage) {
+                std::cout << "Error allocating Netlink message\n";
+        }
+        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+        int result = putBaseNetlinkMessage(netlinkMessage, &message);
+        if (result < 0) {
+                std::cout << "Error constructing IpcmMediaReportMessage "
+                                << "message \n";
+                nlmsg_free(netlinkMessage);
+                return result;
+        }
+
+        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+        IpcmMediaReportMessage * recoveredMessage =
+                        dynamic_cast<IpcmMediaReportMessage *>(
+                                        parseBaseNetlinkMessage(netlinkMessageHeader));
+
+        if (recoveredMessage == 0) {
+                std::cout << "Error parsing IpcmMediaReportMessage message "
+                                << "\n";
+                returnValue = -1;
+        } else if (message.report.ipcp_id != recoveredMessage->report.ipcp_id) {
+        	std::cout << "Error with ipcp_id" << std::endl;
+        	returnValue = -1;
+        } else if (message.report.available_difs.size() != recoveredMessage->report.available_difs.size()) {
+        	std::cout << "Error with available DIFs size"<< std::endl;
+        	returnValue = -1;
+        } else if (message.report.current_dif_name.compare(recoveredMessage->report.current_dif_name) != 0) {
+        	std::cout << "Error with current dif name *"
+        		  << message.report.current_dif_name << "* *"
+			  << recoveredMessage->report.current_dif_name << "*" << std::endl;
+        	returnValue = -1;
+        } else if (message.report.bs_ipcp_address!= recoveredMessage->report.bs_ipcp_address) {
+        	std::cout << "Error with bs IPCP address" << std::endl;
+        	returnValue = -1;
+        } else if (message.report.toString()!= recoveredMessage->report.toString()) {
+        	std::cout << "Error comparing reports" << std::endl;
+        	returnValue = -1;
+        }
+
+        if (returnValue == 0) {
+                std::cout << "IpcmMediaReportMessage test ok\n";
+        }
+        nlmsg_free(netlinkMessage);
+        delete recoveredMessage;
+
+        return returnValue;
+}
+
 int main() {
 	std::cout << "TESTING LIBRINA-NETLINK-PARSERS\n";
 
@@ -3745,6 +3833,11 @@ int main() {
 	}
 
 	result = testAddressChangeRequestMessage();
+	if (result < 0) {
+		return result;
+	}
+
+	result = testIpcmMediaReportMessage();
 	if (result < 0) {
 		return result;
 	}

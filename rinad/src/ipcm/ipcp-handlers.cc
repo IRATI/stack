@@ -86,7 +86,9 @@ void IPCManager_::ipc_process_daemon_initialized_event_handler(
 		//Auto release the read lock
 		rina::WriteScopedLock writelock(ipcp->rwlock, false);
 
-		assert(ipcp->get_type() == rina::NORMAL_IPC_PROCESS);
+		assert(ipcp->get_type() == rina::NORMAL_IPC_PROCESS ||
+				ipcp->get_type() == rina::SHIM_WIFI_IPC_PROCESS_AP ||
+				ipcp->get_type() == rina::SHIM_WIFI_IPC_PROCESS_STA);
 
 		//Initialize
 		ipcp->setInitialized();
@@ -319,6 +321,8 @@ IPCManager_::enroll_to_dif_response_event_handler(rina::EnrollToDIFResponseEvent
 	IPCMIPCProcess *ipcp;
 	bool success = (event->result == 0);
 	ipcm_res_t ret = IPCM_FAILURE;
+	std::list<rina::Neighbor>::iterator it;
+	std::list<rina::Neighbor> neighbors;
 
 	IPCPTransState* trans = get_transaction_state<IPCPTransState>(event->sequenceNumber);
 
@@ -328,14 +332,14 @@ IPCManager_::enroll_to_dif_response_event_handler(rina::EnrollToDIFResponseEvent
 		return;
 	}
 
-	ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+	ipcp = lookup_ipcp_by_id(trans->ipcp_id, true);
 	if(!ipcp){
-		ss << ": Warning: Could not complete enroll to dif action: "<<event->sequenceNumber<<
+		ss << ": Warning: Could not complete enroll to DIF action: "<<event->sequenceNumber<<
 		"IPCP with id: "<<trans->ipcp_id<<" does not exist! Perhaps deleted?" << endl;
 		FLUSH_LOG(WARN, ss);
 	}else{
-		//Auto release the read lock
-		rina::ReadScopedLock readlock(ipcp->rwlock, false);
+		//Auto release the write lock
+		rina::WriteScopedLock writelock(ipcp->rwlock, false);
 
 		if (success) {
 			ss << "Enrollment operation completed for IPC "
@@ -343,6 +347,8 @@ IPCManager_::enroll_to_dif_response_event_handler(rina::EnrollToDIFResponseEvent
 			FLUSH_LOG(INFO, ss);
 
 			ret = IPCM_SUCCESS;
+
+			ipcp->add_neighbors(event->neighbors);
 		} else {
 			ss  << ": Error: Enrollment operation of "
 				"process " << ipcp->get_name().toString() << " failed"
@@ -363,6 +369,7 @@ IPCManager_::disconnect_neighbor_response_event_handler(rina::DisconnectNeighbor
 	IPCMIPCProcess *ipcp;
 	bool success = (event->result == 0);
 	ipcm_res_t ret = IPCM_FAILURE;
+	std::list<rina::Neighbor>::iterator it;
 
 	IPCPTransState* trans = get_transaction_state<IPCPTransState>(event->sequenceNumber);
 
@@ -372,14 +379,16 @@ IPCManager_::disconnect_neighbor_response_event_handler(rina::DisconnectNeighbor
 		return;
 	}
 
-	ipcp = lookup_ipcp_by_id(trans->ipcp_id);
+	ipcp = lookup_ipcp_by_id(trans->ipcp_id, true);
 	if(!ipcp){
 		ss << ": Warning: Could not complete disconnect neighbor action: "<<event->sequenceNumber<<
 		"IPCP with id: "<<trans->ipcp_id<<" does not exist! Perhaps deleted?" << endl;
 		FLUSH_LOG(WARN, ss);
 	}else{
 		//Auto release the read lock
-		rina::ReadScopedLock readlock(ipcp->rwlock, false);
+		rina::WriteScopedLock writelock(ipcp->rwlock, false);
+
+		ipcp->disconnectFromNeighborResult(event->sequenceNumber, success);
 
 		if (success) {
 			ss << "Disconnect from neighbor operation completed for IPC "

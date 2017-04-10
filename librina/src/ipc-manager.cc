@@ -587,12 +587,14 @@ IPCProcessProxy * IPCProcessFactory::create(
 #else
 	int result = syscallCreateIPCProcess(ipcProcessName,
                                              ipcProcessId,
-                                             difType);
+					     difType);
 	if (result != 0) {
 	        throw CreateIPCProcessException();
 	}
 
-	if (difType.compare(NORMAL_IPC_PROCESS) == 0) {
+	if (difType == NORMAL_IPC_PROCESS ||
+		difType == SHIM_WIFI_IPC_PROCESS_STA ||
+		difType == SHIM_WIFI_IPC_PROCESS_AP)	{
 		pid = fork();
 		if (pid == 0) {
 			//This is the OS process that has to execute the IPC Process
@@ -610,7 +612,7 @@ IPCProcessProxy * IPCProcessFactory::create(
 				stringToCharArray(_log_level),
 				stringToCharArray(_log_path + "/" + ipcProcessName.processName
 						+ "-" + ipcProcessName.processInstance + ".log"),
-				stringToCharArray(NORMAL_IPC_PROCESS),
+				stringToCharArray(difType),
 				0
 			};
 			char * envp[] =
@@ -658,7 +660,9 @@ void IPCProcessFactory::destroy(IPCProcessProxy* ipcp)
 #else
 	resultKernel = syscallDestroyIPCProcess(ipcp->id);
 
-	if (ipcp->getType().compare(NORMAL_IPC_PROCESS) == 0)
+	if (ipcp->getType() == NORMAL_IPC_PROCESS ||
+			ipcp->getType() == SHIM_WIFI_IPC_PROCESS_AP ||
+			ipcp->getType() == SHIM_WIFI_IPC_PROCESS_STA)
 	{
 		// BUG: Zombie processes are automatically reaped using a
 		//      SIGCHLD handler, so the following lines often result
@@ -966,5 +970,13 @@ IPCProcessDaemonInitializedEvent::getName() const
 TimerExpiredEvent::TimerExpiredEvent(unsigned int sequenceNumber) :
                 IPCEvent(TIMER_EXPIRED_EVENT, sequenceNumber)
 { }
+
+/* Class Media Report Event */
+MediaReportEvent::MediaReportEvent(const MediaReport& report,
+		 	 	   unsigned int sequenceNumber) :
+			 IPCEvent(IPCM_MEDIA_REPORT_EVENT, sequenceNumber)
+{
+	media_report = report;
+}
 
 }

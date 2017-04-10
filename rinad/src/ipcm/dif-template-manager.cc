@@ -286,15 +286,17 @@ int DIFTemplateManager::load_initial_dif_templates()
 	return 0;
 }
 
-rinad::DIFTemplate * DIFTemplateManager::get_dif_template(const std::string& name)
+int DIFTemplateManager::get_dif_template(const std::string& name, rinad::DIFTemplate& dif_template)
 {
 	rina::ReadScopedLock g(templates_lock);
 
 	std::map<std::string, rinad::DIFTemplate*>::iterator it = dif_templates.find(name);
 	if (it == dif_templates.end()) {
-		return 0;
+		LOG_ERR("Could not find DIF template with name %s", name.c_str());
+		return -1;
 	} else {
-		return it->second;
+		dif_template = *(it->second);
+		return 0;
 	}
 }
 
@@ -419,17 +421,14 @@ void DIFTemplateManager::internal_remove_dif_template(const std::string& name)
 	}
 }
 
-std::list<rinad::DIFTemplate *> DIFTemplateManager::get_all_dif_templates()
+void DIFTemplateManager::get_all_dif_templates(std::list<rinad::DIFTemplate>& out_templates)
 {
 	std::map<std::string, rinad::DIFTemplate*>::iterator it;
-	std::list<rinad::DIFTemplate *> result;
 	rina::ReadScopedLock g(templates_lock);
 
 	for (it = dif_templates.begin(); it != dif_templates.end(); ++it) {
-		result.push_back(it->second);
+		out_templates.push_back(*(it->second));
 	}
-
-	return result;
 }
 
 } //namespace rinad

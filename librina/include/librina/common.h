@@ -54,6 +54,10 @@
 namespace rina {
 
 static std::string NORMAL_IPC_PROCESS= "normal-ipc";
+static std::string SHIM_WIFI_IPC_PROCESS_STA= "shim-wifi-sta";
+static std::string SHIM_WIFI_IPC_PROCESS_AP= "shim-wifi-ap";
+static std::string SHIM_ETH_VLAN_IPC_PROCESS = "shim-eth-vlan";
+static std::string SHIM_TCP_UDP_IPC_PROCESS = "shim-tcp-udp";
 
 /**
  * Returns the version number of librina
@@ -69,9 +73,7 @@ class ApplicationProcessNamingInformation {
 public:
 	ApplicationProcessNamingInformation();
 	ApplicationProcessNamingInformation(const std::string& processName,
-			const std::string& processInstance);
-	ApplicationProcessNamingInformation & operator=(
-			const ApplicationProcessNamingInformation & other);
+					    const std::string& processInstance);
 	bool operator==(const ApplicationProcessNamingInformation &other) const;
 	bool operator!=(const ApplicationProcessNamingInformation &other) const;
 	bool operator>(const ApplicationProcessNamingInformation &other) const;
@@ -280,6 +282,7 @@ enum IPCEventType {
         IPC_PROCESS_FWD_CDAP_RESPONSE_MSG,
         DISCONNECT_NEIGHBOR_REQUEST_EVENT,
         DISCONNECT_NEIGHBOR_RESPONSE_EVENT,
+	IPCM_MEDIA_REPORT_EVENT,
         NO_EVENT
 };
 
@@ -672,18 +675,16 @@ class Neighbor {
 
 public:
         Neighbor();
-        Neighbor(const Neighbor &other);
-        Neighbor& operator=(const Neighbor &other);
         bool operator==(const Neighbor &other) const;
         bool operator!=(const Neighbor &other) const;
 #ifndef SWIG
-        const ApplicationProcessNamingInformation& get_name() const;
+        const ApplicationProcessNamingInformation get_name() const;
         void set_name(const ApplicationProcessNamingInformation& name);
-        const ApplicationProcessNamingInformation&
+        const ApplicationProcessNamingInformation
                 get_supporting_dif_name() const;
         void set_supporting_dif_name(
                 const ApplicationProcessNamingInformation& supporting_dif_name);
-        const std::list<ApplicationProcessNamingInformation>& get_supporting_difs();
+        const std::list<ApplicationProcessNamingInformation> get_supporting_difs();
         void set_supporting_difs(
                         const std::list<ApplicationProcessNamingInformation>& supporting_difs);
         void add_supporting_dif(const ApplicationProcessNamingInformation& supporting_dif);
