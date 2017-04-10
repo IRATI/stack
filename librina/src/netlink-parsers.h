@@ -1594,6 +1594,74 @@ int putIpcmFwdCDAPResponseMessageObject(nl_msg* netlinkMessage,
 IpcmFwdCDAPResponseMessage * parseIpcmFwdCDAPResponseMessage(
                 nlmsghdr *hdr);
 
+/* BaseStationInfo CLASS */
+enum BaseStationInfoAttributes {
+	BSINFO_ATTR_IPCP_ADDRESS = 1,
+	BSINFO_ATTR_SIGNAL_STRENGTH,
+	__BSINFO_ATTR_MAX,
+};
+
+#define BSINFO_ATTR_MAX (__BSINFO_ATTR_MAX -1)
+
+int putListOfBaseStationInfo(nl_msg* netlinkMessage,
+			     const std::list<BaseStationInfo>& dif_info);
+
+int putBaseStationInfo(nl_msg* netlinkMessage, const BaseStationInfo& object);
+
+int parseListOfBaseStationInfo(nlattr *nested, MediaDIFInfo & mediadif);
+
+void parseBaseStationInfo(nlattr *nested, std::list<BaseStationInfo>& stations);
+
+/* MediaDIFInfo CLASS */
+enum MediaDIFInfoAttributes {
+	MEDINFO_ATTR_DIF_NAME = 1,
+	MEDINFO_ATTR_SEC_POLICIES,
+	MEDINFO_ATTR_BS_IPCPS,
+	__MEDINFO_ATTR_MAX,
+};
+
+#define MEDINFO_ATTR_MAX (__MEDINFO_ATTR_MAX -1)
+
+int putListOfMediaDIFInfo(nl_msg* netlinkMessage,
+			  const std::list<MediaDIFInfo>& dif_info);
+
+int putMediaDIFInfo(nl_msg* netlinkMessage, const MediaDIFInfo& object);
+
+int parseListOfMediaDIFInfo(nlattr *nested, MediaReport & report);
+
+void parseMediaDIFInfo(nlattr *nested,
+			std::map<std::string, std::list<MediaDIFInfo> >& difs);
+
+/* MediaReport CLASS */
+enum IPCPMediaReportAttributes {
+        MEREP_ATTR_IPCP_ID = 1,
+        MEREP_ATTR_CDIF_NAME,
+	MEREP_ATTR_BS_IPCP_ADDR,
+	MEREP_ATTR_AVAILABLE_DIFS,
+        __MEREP_ATTR_MAX,
+};
+
+#define MEREP_ATTR_MAX (__MEREP_ATTR_MAX -1)
+
+int putMediaReport(nl_msg* netlinkMessage,
+                   const MediaReport& object);
+
+void parseMediaReport(nlattr *nested,
+		      IpcmMediaReportMessage * result);
+
+/* IpcmMediaReportMessage CLASS */
+enum IpcmMediaReportMessageAttributes {
+	IMERE_ATTR_REPORT = 1,
+	__IMERE_ATTR_MAX,
+};
+
+#define IMERE_ATTR_MAX (__IMERE_ATTR_MAX -1)
+
+int putIpcmMediaReportMessageObject(nl_msg* netlinkMessage,
+				    const IpcmMediaReportMessage& object);
+
+IpcmMediaReportMessage * parseIpcmMediaReportMessage(nlmsghdr *hdr);
+
 }
 
 #endif

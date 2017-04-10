@@ -35,6 +35,8 @@
 #include "ipcp/components.h"
 #include "ipcp/utils.h"
 
+#include "ipcp/shim-wifi/shim-wifi-ipc-process.h"
+
 namespace rinad {
 
 #define IPCP_LOG_IPCP_FILE_PREFIX "/tmp/ipcp-log-file"
@@ -291,6 +293,30 @@ void AbstractIPCProcessImpl::event_loop(void)
 			update_dif_config_handler(*event);
 		}
 		break;
+		case rina::IPCM_REGISTER_APP_RESPONSE_EVENT:
+		{
+			DOWNCAST_DECL(e, rina::IpcmRegisterApplicationResponseEvent, event);
+			app_reg_response_handler(*event);
+		}
+		break;
+		case rina::IPCM_UNREGISTER_APP_RESPONSE_EVENT:
+		{
+			DOWNCAST_DECL(e, rina::IpcmUnregisterApplicationResponseEvent, event);
+			unreg_app_response_handler(*event);
+		}
+		break;
+		case rina::IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
+		{
+			DOWNCAST_DECL(e, rina::IpcmAllocateFlowRequestResultEvent, event);
+			ipcm_allocate_flow_request_result_handler(*event);
+		}
+		break;
+		case rina::IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT:
+		{
+			DOWNCAST_DECL(e, rina::IpcmDeallocateFlowResponseEvent, event);
+			ipcm_deallocate_flow_response_event_handler(*event);
+		}
+		break;
 
 		//Unsupported events (they belong to the IPC Manager)
 		case rina::APPLICATION_REGISTRATION_CANCELED_EVENT:
@@ -299,10 +325,6 @@ void AbstractIPCProcessImpl::event_loop(void)
 		case rina::GET_DIF_PROPERTIES:
 		case rina::GET_DIF_PROPERTIES_RESPONSE_EVENT:
 		case rina::OS_PROCESS_FINALIZED:
-		case rina::IPCM_REGISTER_APP_RESPONSE_EVENT:
-		case rina::IPCM_UNREGISTER_APP_RESPONSE_EVENT:
-		case rina::IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT:
-		case rina::IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
 		case rina::QUERY_RIB_RESPONSE_EVENT:
 		case rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT:
 		case rina::TIMER_EXPIRED_EVENT:
@@ -473,6 +495,26 @@ void LazyIPCProcessImpl::update_dif_config_handler(const rina::UpdateDIFConfigur
 	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
 }
 
+void LazyIPCProcessImpl::app_reg_response_handler(const rina::IpcmRegisterApplicationResponseEvent& event)
+{
+	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
+}
+
+void LazyIPCProcessImpl::unreg_app_response_handler(const rina::IpcmUnregisterApplicationResponseEvent& event)
+{
+	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
+}
+
+void LazyIPCProcessImpl::ipcm_allocate_flow_request_result_handler(const rina::IpcmAllocateFlowRequestResultEvent& event)
+{
+	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
+}
+
+void LazyIPCProcessImpl::ipcm_deallocate_flow_response_event_handler(const rina::IpcmDeallocateFlowResponseEvent& event)
+{
+	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
+}
+
 void LazyIPCProcessImpl::sync_with_kernel(void)
 {
 	LOG_IPCP_WARN("Ignoring call to sync_with_kernel");
@@ -486,7 +528,8 @@ AbstractIPCProcessImpl* IPCPFactory::createIPCP(const std::string& type,
 				  		unsigned short id,
 						unsigned int ipc_manager_port,
 						std::string log_level,
-						std::string log_file)
+						std::string log_file,
+						std::string install_dir)
 {
 	if (ipcp)
 		return ipcp;
@@ -497,6 +540,22 @@ AbstractIPCProcessImpl* IPCPFactory::createIPCP(const std::string& type,
 					  ipc_manager_port,
 					  log_level,
 					  log_file);
+		return ipcp;
+	} else if(type == rina::SHIM_WIFI_IPC_PROCESS_STA) {
+		ipcp = new ShimWifiStaIPCProcessImpl(name,
+						     ipcp_id,
+						     ipc_manager_port,
+						     log_level,
+						     log_file,
+						     install_dir);
+		return ipcp;
+	} else if (type == rina::SHIM_WIFI_IPC_PROCESS_AP) {
+		ipcp = new ShimWifiAPIPCProcessImpl(name,
+						    ipcp_id,
+						    ipc_manager_port,
+						    log_level,
+						    log_file,
+						    install_dir);
 		return ipcp;
 	} else {
 		LOG_IPCP_WARN("Unsupported IPCP type: %s", type.c_str());

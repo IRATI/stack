@@ -50,8 +50,7 @@ public:
 					TransactionState(callee, promise),
 					slave_ipcp_id(_slave_ipcp_id),
 					req_event(_req_e),
-					try_only_a_dif(once)
-					{}
+					try_only_a_dif(once){ }
 	virtual ~FlowAllocTransState(){};
 
         int slave_ipcp_id;

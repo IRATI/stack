@@ -328,12 +328,12 @@ std::list<int> NMinusOneFlowManager::getNMinusOneFlowsToNeighbour(unsigned int a
 }
 
 int NMinusOneFlowManager::getManagementFlowToNeighbour(const std::string& name) {
-	const std::list<rina::Neighbor*> neighbors =
-			ipc_process_->enrollment_task_->get_neighbor_pointers();
-	for (std::list<rina::Neighbor*>::const_iterator it = neighbors.begin();
+	const std::list<rina::Neighbor> neighbors =
+			ipc_process_->enrollment_task_->get_neighbors();
+	for (std::list<rina::Neighbor>::const_iterator it = neighbors.begin();
 			it != neighbors.end(); ++it) {
-		if ((*it)->name_.processName == name) {
-			return (*it)->underlying_port_id_;
+		if (it->name_.processName == name) {
+			return it->underlying_port_id_;
 		}
 	}
 

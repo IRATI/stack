@@ -860,6 +860,18 @@ public:
         TimerExpiredEvent(unsigned int sequenceNumber);
 };
 
+/**
+ * Event informing about a new media report available
+ */
+class MediaReportEvent: public IPCEvent {
+public:
+	MediaReportEvent(const MediaReport& report,
+			 unsigned int sequenceNumber);
+
+        // The media report resulting from a scan
+        MediaReport media_report;
+};
+
 }
 
 #endif

@@ -1706,6 +1706,11 @@ void FlowStateManager::deprecateObjectsNeighbor(const std::string& neigh_name,
 			       maximum_age);
 }
 
+void FlowStateManager::force_table_update()
+{
+	fsos->has_modified(true);
+}
+
 bool FlowStateManager::tableUpdate() const
 {
 	bool result = fsos->is_modified();
@@ -1725,6 +1730,10 @@ ComputeRoutingTimerTask::ComputeRoutingTimerTask(
 void ComputeRoutingTimerTask::run()
 {
 	lsr_policy_->routingTableUpdate();
+
+	if (delay_ < 0) {
+		return;
+	}
 
 	//Re-schedule
 	ComputeRoutingTimerTask * task = new ComputeRoutingTimerTask(
@@ -2131,6 +2140,10 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(
 			LOG_IPCP_ERR("Problems encoding and sending CDAP message: %s", e.what());
 		}
 	}
+
+	//Force a routing table update
+	db_->force_table_update();
+	_routingTableUpdate();
 }
 
 void LinkStateRoutingPolicy::propagateFSDB()
@@ -2292,6 +2305,11 @@ void LinkStateRoutingPolicy::populateAddresses(std::list<rina::RoutingTableEntry
 void LinkStateRoutingPolicy::routingTableUpdate()
 {
 	rina::ScopedLock g(lock_);
+	_routingTableUpdate();
+}
+
+void LinkStateRoutingPolicy::_routingTableUpdate()
+{
 	std::list<rina::RoutingTableEntry *> rt;
 	std::string my_name = ipc_process_->get_name();
 	std::list<FlowStateObject> flow_state_objects;

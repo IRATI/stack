@@ -37,7 +37,9 @@
 #include <net/pkt_sched.h>
 #include <net/sch_generic.h>
 
-#define SHIM_NAME   "shim-eth-vlan"
+#define SHIM_NAME   	    "shim-eth-vlan"
+#define SHIM_WIFI_STA_NAME  "shim-wifi-sta"
+#define SHIM_WIFI_AP_NAME   "shim-wifi-ap"
 
 #define RINA_PREFIX SHIM_NAME
 
@@ -300,16 +302,11 @@ find_flow_by_gpa(struct ipcp_instance_data * data,
         ASSERT(data);
 	ASSERT(gpa_is_ok(addr));
 
-        spin_lock(&data->lock);
-
         list_for_each_entry(flow, &data->flows, list) {
                 if (gpa_is_equal(addr, flow->dest_pa)) {
-                        spin_unlock(&data->lock);
                         return flow;
                 }
         }
-
-        spin_unlock(&data->lock);
 
         return NULL;
 }
@@ -380,6 +377,7 @@ static int flow_destroy(struct ipcp_instance_data * data,
 
         spin_lock(&data->lock);
         if (!list_empty(&flow->list)) {
+        	LOG_DBG("Deleting flow %d from list and destroying it", flow->port_id);
                 list_del(&flow->list);
         }
         spin_unlock(&data->lock);
@@ -461,13 +459,15 @@ static void rinarp_resolve_handler(void *             opaque,
 	ASSERT(dest_ha);
 
         data = (struct ipcp_instance_data *) opaque;
+
+        spin_lock_bh(&data->lock);
         flow = find_flow_by_gpa(data, dest_pa);
         if (!flow) {
+                spin_unlock_bh(&data->lock);
                 LOG_ERR("No flow found for this dest_pa");
                 return;
         }
 
-        spin_lock_bh(&data->lock);
         if (flow->port_id_state == PORT_STATE_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
                 spin_unlock_bh(&data->lock);
@@ -1878,10 +1878,10 @@ static int eth_vlan_init(struct ipcp_factory_data * data)
 {
 	ASSERT(data == &eth_vlan_data);
 
-        bzero(data, sizeof(*data));
-        INIT_LIST_HEAD(&(data->instances));
+	bzero(data, sizeof(*data));
+	INIT_LIST_HEAD(&(data->instances));
 
-        INIT_LIST_HEAD(&data_instances_list);
+	INIT_LIST_HEAD(&data_instances_list);
 
 	memset(&data->ntfy, 0, sizeof(data->ntfy));
 	data->ntfy.notifier_call = eth_vlan_netdev_notify;
@@ -1892,15 +1892,31 @@ static int eth_vlan_init(struct ipcp_factory_data * data)
         return 0;
 }
 
+static int eth_vlan_init2(struct ipcp_factory_data * data)
+{
+	ASSERT(data == &eth_vlan_data);
+
+        LOG_INFO("Shim Wifi AP/STA initialized");
+
+        return 0;
+}
+
 static int eth_vlan_fini(struct ipcp_factory_data * data)
 {
 
-        ASSERT(data == &eth_vlan_data);
+	ASSERT(data == &eth_vlan_data);
 
-        ASSERT(list_empty(&(data->instances)));
+	ASSERT(list_empty(&(data->instances)));
 	unregister_netdevice_notifier(&data->ntfy);
 
-        return 0;
+	return 0;
+}
+
+static int eth_vlan_fini2(struct ipcp_factory_data * data)
+{
+
+	ASSERT(data == &eth_vlan_data);
+	return 0;
 }
 
 static void inst_cleanup(struct ipcp_instance * inst)
@@ -2140,7 +2156,16 @@ static struct ipcp_factory_ops eth_vlan_ops = {
         .destroy   = eth_vlan_destroy,
 };
 
-static struct ipcp_factory * shim = NULL;
+static struct ipcp_factory_ops eth_vlan_ops2 = {
+        .init      = eth_vlan_init2,
+        .fini      = eth_vlan_fini2,
+        .create    = eth_vlan_create,
+        .destroy   = eth_vlan_destroy,
+};
+
+static struct ipcp_factory * shim_eth_vlan = NULL;
+static struct ipcp_factory * shim_wifi_sta = NULL;
+static struct ipcp_factory * shim_wifi_ap = NULL;
 
 #ifdef CONFIG_RINA_SHIM_ETH_VLAN_REGRESSION_TESTS
 static bool regression_test_create_vlan_interface_name(void)
@@ -2257,12 +2282,31 @@ static int __init mod_init(void)
                 return -1;
         }
 
-        shim = kipcm_ipcp_factory_register(default_kipcm,
-                                           SHIM_NAME,
-                                           &eth_vlan_data,
-                                           &eth_vlan_ops);
-        if (!shim)
+        shim_eth_vlan = kipcm_ipcp_factory_register(default_kipcm,
+                                           	    SHIM_NAME,
+                                          	    &eth_vlan_data,
+						    &eth_vlan_ops);
+        if (!shim_eth_vlan)
                 return -1;
+
+        shim_wifi_ap = kipcm_ipcp_factory_register(default_kipcm,
+                                           	   SHIM_WIFI_AP_NAME,
+                                          	   &eth_vlan_data,
+						   &eth_vlan_ops2);
+        if (!shim_wifi_ap) {
+        	kipcm_ipcp_factory_unregister(default_kipcm, shim_eth_vlan);
+                return -1;
+        }
+
+        shim_wifi_sta = kipcm_ipcp_factory_register(default_kipcm,
+                                           	    SHIM_WIFI_STA_NAME,
+                                          	    &eth_vlan_data,
+						    &eth_vlan_ops2);
+        if (!shim_wifi_sta) {
+        	kipcm_ipcp_factory_unregister(default_kipcm, shim_wifi_ap);
+        	kipcm_ipcp_factory_unregister(default_kipcm, shim_eth_vlan);
+                return -1;
+        }
 
         spin_lock_init(&data_instances_lock);
 
@@ -2271,12 +2315,16 @@ static int __init mod_init(void)
 
 static void __exit mod_exit(void)
 {
-        ASSERT(shim);
+        ASSERT(shim_eth_vlan);
+        ASSERT(shim_wifi_ap);
+        ASSERT(shim_wifi_sta);
 
         flush_workqueue(rcv_wq);
         destroy_workqueue(rcv_wq);
 
-        kipcm_ipcp_factory_unregister(default_kipcm, shim);
+        kipcm_ipcp_factory_unregister(default_kipcm, shim_eth_vlan);
+        kipcm_ipcp_factory_unregister(default_kipcm, shim_wifi_ap);
+        kipcm_ipcp_factory_unregister(default_kipcm, shim_wifi_sta);
 }
 
 module_init(mod_init);

@@ -7,12 +7,12 @@
 // modify it under the terms of the GNU Lesser General Public
 // License as published by the Free Software Foundation; either
 // version 2.1 of the License, or (at your option) any later version.
-// 
+//
 // This library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 // Lesser General Public License for more details.
-// 
+//
 // You should have received a copy of the GNU Lesser General Public
 // License along with this library; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -75,6 +75,49 @@ FwdCDAPMsgResponseEvent::FwdCDAPMsgResponseEvent(const ser_obj_t& sm,
 {
         this->sermsg = sm;
         this->result = result;
+}
+
+std::string BaseStationInfo::toString() const
+{
+	std::stringstream ss;
+
+	ss << "IPCP address: " << ipcp_address << std::endl;
+	ss << "Signal strength: " << signal_strength << std::endl;
+
+	return ss.str();
+}
+
+std::string MediaDIFInfo::toString() const
+{
+	std::stringstream ss;
+	std::list<BaseStationInfo>::const_iterator it;
+
+	ss << "DIF Name: " << dif_name << std::endl;
+	ss << "Security policies: " << security_policies << std::endl;
+	ss << "Available BS IPCPS: " << std::endl;
+	for (it = available_bs_ipcps.begin();
+			it != available_bs_ipcps.end(); ++it) {
+		ss << it->toString();
+	}
+
+	return ss.str();
+}
+
+std::string MediaReport::toString() const
+{
+	std::stringstream ss;
+	std::map<std::string, MediaDIFInfo>::const_iterator it;
+
+	ss << "IPCP id" << ipcp_id << std::endl;
+	ss << "DIF Name: " << current_dif_name << std::endl;
+	ss << "BS IPCP address: " << bs_ipcp_address << std::endl;
+	ss << "Available Media DIFs: " << std::endl;
+	for (it = available_difs.begin();
+			it != available_difs.end(); ++it) {
+		ss << it->second.toString();
+	}
+
+	return ss.str();
 }
 
 }

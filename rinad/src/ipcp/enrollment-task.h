@@ -34,7 +34,7 @@ namespace rinad {
 
 class NeighborRIBObj: public rina::rib::RIBObj {
 public:
-	NeighborRIBObj(rina::Neighbor* neigh);
+	NeighborRIBObj(const std::string& neigh_key);
 	const std::string get_displayable_value() const;
 	const std::string& get_class() const {
 		return class_name;
@@ -59,7 +59,7 @@ public:
 	const static std::string object_name_prefix;
 
 private:
-	rina::Neighbor * neighbor;
+	std::string neighbor_key;
 	static bool createNeighbor(rina::Neighbor &object);
 };
 
@@ -182,8 +182,9 @@ public:
 	static const std::string STATE_TERMINATED;
 
 	IEnrollmentStateMachine(IPCProcess * ipcp,
-			const rina::ApplicationProcessNamingInformation& remote_naming_info,
-			int timeout, rina::ApplicationProcessNamingInformation * supporting_dif_name);
+				const rina::ApplicationProcessNamingInformation& remote_naming_info,
+				int timeout,
+				const rina::ApplicationProcessNamingInformation& supporting_dif_name);
 	virtual ~IEnrollmentStateMachine();
 
 	/// Called by the EnrollmentTask when it got an M_RELEASE message
@@ -271,6 +272,16 @@ private:
 	bool send_message;
 };
 
+class DestroyESMTimerTask : public rina::TimerTask {
+public:
+	DestroyESMTimerTask(IEnrollmentStateMachine * sm);
+	~DestroyESMTimerTask() throw() {};
+	void run();
+
+private:
+	IEnrollmentStateMachine * state_machine;
+};
+
 class EnrollmentTask: public IPCPEnrollmentTask, public rina::InternalEventListener {
 public:
 	static const std::string ENROLL_TIMEOUT_IN_MS;
@@ -284,13 +295,13 @@ public:
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	void eventHappened(rina::InternalEvent * event);
-	const std::list<rina::Neighbor> get_neighbors() const;
-	std::list<rina::Neighbor*> get_neighbor_pointers();
+	std::list<rina::Neighbor> get_neighbors();
 	void add_neighbor(const rina::Neighbor& neighbor);
 	void add_or_update_neighbor(const rina::Neighbor& neighbor);
+	rina::Neighbor get_neighbor(const std::string& neighbor_key);
 	void remove_neighbor(const std::string& neighbor_key);
 	bool isEnrolledTo(const std::string& applicationProcessName);
-	const std::list<std::string> get_enrolled_app_names() const;
+	std::list<std::string> get_enrolled_app_names();
 	void processEnrollmentRequestEvent(const rina::EnrollToDAFRequestEvent& event);
 	void processDisconnectNeighborRequestEvent(const rina::DisconnectNeighborRequestEvent& event);
 	void initiateEnrollment(const rina::EnrollmentRequest& request);
@@ -312,6 +323,11 @@ public:
 	void deallocateFlow(int portId);
 	void add_enrollment_state_machine(int portId, IEnrollmentStateMachine * stateMachine);
 	void update_neighbor_address(const rina::Neighbor& neighbor);
+	void incr_neigh_enroll_attempts(const rina::Neighbor& neighbor);
+	void watchdog_read(const std::string& remote_app_name);
+	void watchdog_read_result(const std::string& remote_app_name,
+				  int stored_time);
+
 
 	/// The maximum time to wait between steps of the enrollment sequence (in ms)
 	int timeout_;
@@ -365,11 +381,14 @@ private:
 
 	/// Stores the enrollment state machines, one per remote IPC process that this IPC
 	/// process is enrolled to.
-	rina::ThreadSafeMapOfPointers<int, IEnrollmentStateMachine> state_machines_;
+	std::map<int, IEnrollmentStateMachine*> state_machines_;
+	rina::ReadWriteLockable sm_lock;
 
 	rina::ThreadSafeMapOfPointers<unsigned int, rina::EnrollmentRequest> port_ids_pending_to_be_allocated_;
 
-	rina::ThreadSafeMapOfPointers<std::string, rina::Neighbor> neighbors;
+	std::map<std::string, rina::Neighbor *> neighbors;
+	rina::ReadWriteLockable neigh_lock;
+
 	IPCPEnrollmentTaskPS * ipcp_ps;
 };
 

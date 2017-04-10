@@ -83,14 +83,6 @@ public:
                           const EnrollToDAFRequestEvent & event) : neighbor_(neighbor),
                  event_(event), ipcm_initiated_(true) { };
 
-	EnrollmentRequest& operator=(const EnrollmentRequest &other)
-	{
-		neighbor_ = other.neighbor_;
-		event_ = other.event_;
-		ipcm_initiated_ = other.ipcm_initiated_;
-		return *this;
-	}
-
 	/// The neighbor to enroll to
 	Neighbor neighbor_;
 
@@ -108,12 +100,11 @@ class IEnrollmentTask : public rina::ApplicationEntity,
 public:
 	IEnrollmentTask() : rina::ApplicationEntity(ApplicationEntity::ENROLLMENT_TASK_AE_NAME) { };
 	virtual ~IEnrollmentTask() { };
-	virtual const std::list<Neighbor> get_neighbors() const = 0;
-	virtual std::list<rina::Neighbor*> get_neighbor_pointers() = 0;
+	virtual std::list<Neighbor> get_neighbors() = 0;
 	virtual void add_neighbor(const Neighbor& neighbor) = 0;
 	virtual void add_or_update_neighbor(const Neighbor& neighbor) = 0;
 	virtual void remove_neighbor(const std::string& neighbor_key) = 0;
-	virtual const std::list<std::string> get_enrolled_app_names() const = 0;
+	virtual std::list<std::string> get_enrolled_app_names() = 0;
 
 	/// Process a request to initiate enrollment with a new Neighbor, triggered by the IPC Manager
 	/// @param event

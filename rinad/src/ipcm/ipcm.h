@@ -358,7 +358,7 @@ public:
 	//
 	ipcm_res_t assign_to_dif(Addon* callee, Promise* promise,
 			const unsigned short ipcp_id,
-			rinad::DIFTemplate * dif_template,
+			rinad::DIFTemplate& dif_template,
 			const rina::ApplicationProcessNamingInformation&
 				difName);
 	ipcm_res_t assign_to_dif(Addon* callee, Promise* promise,
@@ -547,6 +547,8 @@ public:
 	//
 	std::string get_log_level() const;
 
+	IPCMIPCProcessFactory * get_ipcp_factory();
+
 	//
 	// Set the config
 	//
@@ -578,12 +580,12 @@ public:
 		req_to_stop = true;
 	}
 
-		/// returns the forwarded object sent with invoke_id and
-		/// removes it from the map
-		/// @param invoke_id
-		/// @return rina::rib::DelegationObj*
-		delegated_stored_t* get_forwarded_object(int invoke_id,
-												 bool remove);
+	/// returns the forwarded object sent with invoke_id and
+	/// removes it from the map
+	/// @param invoke_id
+	/// @return rina::rib::DelegationObj*
+	delegated_stored_t* get_forwarded_object(int invoke_id,
+						 bool remove);
 
         //Generator of opaque identifiers
         rina::ConsecutiveUnsignedIntegerGenerator __tid_gen;
@@ -596,7 +598,6 @@ public:
 
         //Catalog of policies
         Catalog catalog;
-
 
 protected:
 
