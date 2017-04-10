@@ -200,6 +200,7 @@ public:
         int dispatchSelectPolicySet(const std::string& path,
                                     const std::string& name,
                                     bool& got_in_userspace);
+        void sync_with_kernel(void);
 
         //Event loop handlers
         void dif_registration_notification_handler(const rina::IPCProcessDIFRegistrationEvent& event);
@@ -228,11 +229,11 @@ public:
         void plugin_load_handler(const rina::PluginLoadRequestEvent& event);
         void update_crypto_state_response_handler(const rina::UpdateCryptoStateResponseEvent& event);
         void fwd_cdap_msg_handler(rina::FwdCDAPMsgRequestEvent& event);
-        void sync_with_kernel(void);
 
 private:
         void subscribeToEvents();
         void addressChange(rina::AddressChangeEvent * event);
+
         KernelSyncTrigger * kernel_sync;
         unsigned int old_address;
         bool address_change_period;

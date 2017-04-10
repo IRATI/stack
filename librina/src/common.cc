@@ -502,6 +502,7 @@ FlowRequestEvent::FlowRequestEvent(){
 	portId = 0;
 	ipcProcessId = 0;
 	flowRequestorIpcProcessId = 0;
+	internal = false;
 }
 
 FlowRequestEvent::FlowRequestEvent(
@@ -520,6 +521,7 @@ FlowRequestEvent::FlowRequestEvent(
 	this->flowRequestorIpcProcessId = flowRequestorIpcProcessId;
 	this->portId = 0;
 	this->ipcProcessId = 0;
+	this->internal = false;
 }
 
 FlowRequestEvent::FlowRequestEvent(int portId,
@@ -540,6 +542,7 @@ FlowRequestEvent::FlowRequestEvent(int portId,
 	this->flowRequestorIpcProcessId = ipcProcessId;
 	this->portId = portId;
 	this->ipcProcessId = ipcProcessId;
+	this->internal = false;
 }
 
 /* CLASS FLOW DEALLOCATE REQUEST EVENT */
@@ -550,6 +553,7 @@ FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
 								sequenceNumber){
 	this->portId = portId;
 	this->applicationName = appName;
+	this->internal = false;
 }
 
 FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
@@ -557,6 +561,7 @@ FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
 			IPCEvent(FLOW_DEALLOCATION_REQUESTED_EVENT,
 					sequenceNumber){
 	this->portId = portId;
+	this->internal = false;
 }
 
 /* CLASS FLOW DEALLOCATED EVENT */

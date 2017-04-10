@@ -34,6 +34,9 @@ const std::string InternalEvent::APP_NEIGHBOR_DECLARED_DEAD = "NEIGHBOR_DECLARED
 const std::string InternalEvent::APP_NEIGHBOR_ADDED = "NEIGHBOR_ADDED";
 const std::string InternalEvent::ADDRESS_CHANGE = "ADDRESS_CHANGE";
 const std::string InternalEvent::NEIGHBOR_ADDRESS_CHANGE = "NEIGHBOR_ADDRESS_CHANGE";
+const std::string InternalEvent::IPCP_INTERNAL_FLOW_ALLOCATED = "IPCP_INTERNAL_FLOW_ALLOCATED";
+const std::string InternalEvent::IPCP_INTERNAL_FLOW_ALLOCATION_FAILED = "IPCP_INTERNAL_FLOW_ALLOCATION_FAILED";
+const std::string InternalEvent::IPCP_INTERNAL_FLOW_DEALLOCATED = "IPCP_INTERNAL_FLOW_DEALLOCATED";
 
 // Class SimpleInternalEventManager
 void SimpleInternalEventManager::set_application_process(ApplicationProcess * ap)
@@ -257,6 +260,57 @@ const std::string NeighborAddressChangeEvent::toString()
 	std::stringstream ss;
 	ss<<"Event id: "<<type<<"; Name: "<<neigh_name<<"; New address: "<< new_address
 			<<"; Old address: " << old_address << std::endl;
+	return ss.str();
+}
+
+/// An IPCP internal flow was allocated
+IPCPInternalFlowAllocatedEvent::IPCPInternalFlowAllocatedEvent(unsigned int port,
+							       const FlowInformation& flow_information):
+		InternalEvent(InternalEvent::IPCP_INTERNAL_FLOW_ALLOCATED)
+{
+	port_id = port;
+	flow_info = flow_information;
+}
+
+const std::string IPCPInternalFlowAllocatedEvent::toString()
+{
+	std::stringstream ss;
+	ss<<"Event id: "<<type<<"; Port id: "<<port_id<<std::endl;
+	ss<<"Flow description: "<<flow_info.toString();
+	return ss.str();
+}
+
+// An IPCP internal flow allocation failed
+IPCPInternalFlowAllocationFailedEvent::IPCPInternalFlowAllocationFailedEvent(unsigned int errc,
+			         	 	 	 	  	     const FlowInformation& flow_information,
+									     const std::string& result_reason):
+		InternalEvent(InternalEvent::IPCP_INTERNAL_FLOW_ALLOCATION_FAILED)
+{
+	error_code = errc;
+	reason = result_reason;
+	flow_info = flow_information;
+}
+
+const std::string IPCPInternalFlowAllocationFailedEvent::toString()
+{
+	std::stringstream ss;
+	ss<<"Event id: "<<type<<"; Error code: "<<error_code;
+	ss<<"; Result reason: "<<reason<<std::endl;
+	ss<<"Flow description: "<<flow_info.toString();
+	return ss.str();
+}
+
+// An IPCP internal flow has been deallocated
+IPCPInternalFlowDeallocatedEvent::IPCPInternalFlowDeallocatedEvent(int port):
+		InternalEvent(InternalEvent::IPCP_INTERNAL_FLOW_DEALLOCATED)
+{
+	port_id = port;
+}
+
+const std::string IPCPInternalFlowDeallocatedEvent::toString()
+{
+	std::stringstream ss;
+	ss<<"Event id: "<<type<<"; Port-id: "<<port_id;
 	return ss.str();
 }
 

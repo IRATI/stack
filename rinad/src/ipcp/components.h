@@ -162,8 +162,11 @@ public:
 	/// with a status of pending, or whether a response is withheld until an Allocate_Response can be delivered
 	/// with a status of success or failure.
 	/// @param allocateRequest the characteristics of the flow to be allocated.
+	/// @param address if the task that requests the flow already knows the address where to forward the
+	/// flow request, then the DFT lookup is ommitted
 	/// to honour the request
-	virtual void submitAllocateRequest(const rina::FlowRequestEvent& flowRequestEvent) = 0;
+	virtual void submitAllocateRequest(const rina::FlowRequestEvent& flowRequestEvent,
+					   unsigned int address = 0) = 0;
 
 	virtual void processCreateConnectionResponseEvent(const rina::CreateConnectionResponseEvent& event) = 0;
 

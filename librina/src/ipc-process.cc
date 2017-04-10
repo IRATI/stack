@@ -777,6 +777,41 @@ void ExtendedIPCManager::sendMediaReport(const MediaReport& report)
 #endif
 }
 
+void ExtendedIPCManager::internal_flow_allocated(const rina::FlowInformation& flow_info)
+{
+	FlowInformation * flow;
+	WriteScopedLock writeLock(flows_rw_lock);
+
+	flow = new FlowInformation();
+	flow->portId = flow_info.portId;
+	flow->difName = flow_info.difName;
+	flow->flowSpecification = flow_info.flowSpecification;
+	flow->localAppName = flow_info.localAppName;
+	flow->remoteAppName = flow_info.remoteAppName;
+	flow->state = FlowInformation::FLOW_ALLOCATED;
+
+	initIodev(flow, flow->portId);
+
+	allocatedFlows[flow->portId] = flow;
+}
+
+void ExtendedIPCManager::internal_flow_deallocated(int port_id)
+{
+        FlowInformation * flow;
+
+        WriteScopedLock writeLock(flows_rw_lock);
+
+        flow = getAllocatedFlow(port_id);
+        if (flow == 0) {
+                throw FlowDeallocationException(
+                                IPCManager::unknown_flow_error);
+        }
+
+        close(flow->fd);
+        allocatedFlows.erase(port_id);
+        delete flow;
+}
+
 Singleton<ExtendedIPCManager> extendedIPCManager;
 
 /* CLASS CONNECTION */

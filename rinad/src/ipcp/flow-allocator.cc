@@ -269,23 +269,36 @@ void FlowAllocator::populateRIB()
 	}
 }
 
-void FlowAllocator::createFlowRequestMessageReceived(
-		configs::Flow * flow,
-		const std::string& object_name,
-		int invoke_id)
+void FlowAllocator::createFlowRequestMessageReceived(configs::Flow * flow,
+						     const std::string& object_name,
+						     int invoke_id)
 {
 	IFlowAllocatorInstance * fai = 0;
-	unsigned int myAddress = 0;
+	unsigned int address = 0;
 	int portId = 0;
+	bool process_flow_request = false;
 
-	unsigned int address = namespace_manager_->getDFTNextHop(flow->destination_naming_info);
-	if (address == 0) {
-		LOG_IPCP_ERR("The directory forwarding table returned no entries when looking up %s",
-			     flow->destination_naming_info.toString().c_str());
-		return;
+	//Check if the flow is to the layer management tasks of this IPCP
+	if (flow->destination_naming_info.processName == ipcp->get_name() &&
+			flow->destination_naming_info.processInstance == ipcp->get_instance() &&
+			flow->destination_naming_info.entityName == IPCProcess::MANAGEMENT_AE) {
+		process_flow_request = true;
+		flow->internal = true;
+	} else {
+		address = namespace_manager_->getDFTNextHop(flow->destination_naming_info);
+		if (address == 0) {
+			LOG_IPCP_ERR("The directory forwarding table returned no entries when looking up %s",
+					flow->destination_naming_info.toString().c_str());
+			return;
+		}
+
+		if (ipcp->check_address_is_mine(address)) {
+			process_flow_request = true;
+			flow->internal = false;
+		}
 	}
 
-	if (ipcp->check_address_is_mine(address)) {
+	if (process_flow_request) {
 		//There is an entry and the address is this IPC Process, create a FAI, extract
 		//the Flow object from the CDAP message and call the FAI
 		try {
@@ -338,7 +351,8 @@ void FlowAllocator::replyToIPCManager(const rina::FlowRequestEvent& event,
 	}
 }
 
-void FlowAllocator::submitAllocateRequest(const rina::FlowRequestEvent& event)
+void FlowAllocator::submitAllocateRequest(const rina::FlowRequestEvent& event,
+					  unsigned int address)
 {
 	int portId = 0;
 	IFlowAllocatorInstance * fai;
@@ -349,7 +363,9 @@ void FlowAllocator::submitAllocateRequest(const rina::FlowRequestEvent& event)
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems requesting an available port-id to the Kernel IPC Manager: %s",
 				e.what());
-		replyToIPCManager(event, -1);
+		if (!event.internal) {
+			replyToIPCManager(event, -1);
+		}
 	}
 
 	std::stringstream ss;
@@ -361,7 +377,7 @@ void FlowAllocator::submitAllocateRequest(const rina::FlowRequestEvent& event)
 	add_instance(fai);
 
 	try {
-		fai->submitAllocateRequest(event);
+		fai->submitAllocateRequest(event, address);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems allocating flow: %s",
 			     e.what());
@@ -375,7 +391,10 @@ void FlowAllocator::submitAllocateRequest(const rina::FlowRequestEvent& event)
 				     portId,
 				     e.what());
 		}
-		replyToIPCManager(event, -1);
+
+		if (!event.internal) {
+			replyToIPCManager(event, -1);
+		}
 	}
 }
 
@@ -594,10 +613,14 @@ void FlowAllocatorInstance::set_allocate_response_message_handle(
 		allocate_response_message_handle;
 }
 
-void FlowAllocatorInstance::submitAllocateRequest(const rina::FlowRequestEvent& event)
+void FlowAllocatorInstance::submitAllocateRequest(const rina::FlowRequestEvent& event,
+						  unsigned int address)
 {
-	IFlowAllocatorPs * faps =
-		dynamic_cast<IFlowAllocatorPs *>(flow_allocator_->ps);
+	unsigned int destinationAddress;
+	unsigned int sourceAddress;
+	IFlowAllocatorPs * faps;
+
+	faps = dynamic_cast<IFlowAllocatorPs *>(flow_allocator_->ps);
 	if (!faps) {
 		std::stringstream ss;
 		ss << "Flow allocator policy is NULL ";
@@ -609,11 +632,18 @@ void FlowAllocatorInstance::submitAllocateRequest(const rina::FlowRequestEvent& 
 	flow_request_event_ = event;
 	flow_request_event_.portId = port_id_;
 	flow_ = faps->newFlowRequest(ipc_process_, flow_request_event_);
+	flow_->internal = event.internal;
 
 	//1 Check directory to see to what IPC process the CDAP M_CREATE request has to be delivered
-	unsigned int destinationAddress = namespace_manager_->getDFTNextHop(flow_->destination_naming_info);
+	if (address == 0) {
+		destinationAddress = namespace_manager_->getDFTNextHop(flow_->destination_naming_info);
+	} else {
+		destinationAddress = address;
+	}
+
 	LOG_IPCP_DBG("The directory forwarding table returned address %u",
 			destinationAddress);
+
 	flow_->destination_address = destinationAddress;
 	flow_->getActiveConnection()->destAddress = destinationAddress;
 	if (destinationAddress == 0) {
@@ -623,7 +653,7 @@ void FlowAllocatorInstance::submitAllocateRequest(const rina::FlowRequestEvent& 
 		throw rina::Exception(ss.str().c_str());
 	}
 
-	unsigned int sourceAddress = ipc_process_->get_active_address();
+	sourceAddress = ipc_process_->get_active_address();
 	flow_->source_address = sourceAddress;
 	flow_->source_port_id = port_id_;
 	std::stringstream ss;
@@ -640,12 +670,36 @@ void FlowAllocatorInstance::submitAllocateRequest(const rina::FlowRequestEvent& 
 		     port_id_);
 }
 
-void FlowAllocatorInstance::replyToIPCManager(
-		rina::FlowRequestEvent & event, int result)
+void FlowAllocatorInstance::replyToIPCManager(int result)
 {
+	rina::InternalEvent * event = 0;
+	std::string dif_name;
+
+	if (flow_->internal) {
+		dif_name = ipc_process_->get_dif_information().dif_name_.processName;
+
+		if (result == 0)  {
+			try {
+				rina::extendedIPCManager->internal_flow_allocated(flow_->to_flow_information(dif_name));
+			} catch (rina::Exception &e) {
+				LOG_ERR("Problems opening file descriptor associated to flow: %s", e.what());
+			}
+
+			event  = new rina::IPCPInternalFlowAllocatedEvent(flow_->source_port_id,
+									  flow_->to_flow_information(dif_name));
+		} else {
+			event = new rina::IPCPInternalFlowAllocationFailedEvent(result,
+									        flow_->to_flow_information(dif_name),
+										"");
+		}
+
+		ipc_process_->internal_event_manager_->deliverEvent(event);
+		return;
+	}
+
 	try {
-		rina::extendedIPCManager->allocateFlowRequestResult(event,
-				result);
+		rina::extendedIPCManager->allocateFlowRequestResult(flow_request_event_,
+								    result);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems communicating with the IPC Manager Daemon: %s",
 				e.what());
@@ -682,7 +736,7 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::Cre
 	if (event.getCepId() < 0) {
 		LOG_IPCP_ERR("The EFCP component of the IPC Process could not create a connection instance: %d",
 			     event.getCepId());
-		replyToIPCManager(flow_request_event_, -1);
+		replyToIPCManager(-1);
 		lock_.unlock();
 		return;
 	}
@@ -707,10 +761,9 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::Cre
 							       filt,
 							       this);
 		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR(
-					"Problems sending M_CREATE <Flow> CDAP message to neighbor: %s",
+			LOG_IPCP_ERR("Problems sending M_CREATE <Flow> CDAP message to neighbor: %s",
 					e.what());
-			replyToIPCManager(flow_request_event_, -1);
+			replyToIPCManager(-1);
 			releaseUnlockRemove();
 			return;
 		}
@@ -817,9 +870,11 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(configs::Flow * flo
 	lock_.unlock();
 }
 
-void FlowAllocatorInstance::processCreateConnectionResultEvent(
-		const rina::CreateConnectionResultEvent& event)
+void FlowAllocatorInstance::processCreateConnectionResultEvent(const rina::CreateConnectionResultEvent& event)
 {
+	rina::InternalEvent * int_event = 0;
+	std::string dif_name;
+
 	lock_.lock();
 
 	if (state != CONNECTION_CREATE_REQUESTED) {
@@ -836,20 +891,36 @@ void FlowAllocatorInstance::processCreateConnectionResultEvent(
 		return;
 	}
 
+	flow_->getActiveConnection()->sourceCepId = event.sourceCepId;
+	state = APP_NOTIFIED_OF_INCOMING_FLOW;
+
+	if (flow_->internal) {
+		complete_flow_allocation(true);
+		dif_name = ipc_process_->get_dif_information().dif_name_.processName;
+
+		try {
+			rina::extendedIPCManager->internal_flow_allocated(flow_->to_flow_information(dif_name));
+		} catch (rina::Exception &e) {
+			LOG_ERR("Problems opening file descriptor associated to flow: %s", e.what());
+		}
+
+		int_event = new rina::IPCPInternalFlowAllocatedEvent(flow_->source_port_id,
+								     flow_->to_flow_information(dif_name));
+		ipc_process_->internal_event_manager_->deliverEvent(int_event);
+
+		return;
+	}
+
 	try {
-		flow_->getActiveConnection()->sourceCepId = event.sourceCepId;
-		state = APP_NOTIFIED_OF_INCOMING_FLOW;
-		allocate_response_message_handle_ = rina::extendedIPCManager
-			->allocateFlowRequestArrived(flow_->destination_naming_info,
-					flow_->source_naming_info,
-					flow_->flow_specification,
-					port_id_);
-		LOG_IPCP_DBG(
-				"Informed IPC Manager about incoming flow allocation request, got handle: %ud",
+		allocate_response_message_handle_ =
+				rina::extendedIPCManager->allocateFlowRequestArrived(flow_->destination_naming_info,
+						flow_->source_naming_info,
+						flow_->flow_specification,
+						port_id_);
+		LOG_IPCP_DBG("Informed IPC Manager about incoming flow allocation request, got handle: %ud",
 				allocate_response_message_handle_);
 	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR(
-				"Problems informing the IPC Manager about an incoming flow allocation request: %s",
+		LOG_IPCP_ERR("Problems informing the IPC Manager about an incoming flow allocation request: %s",
 				e.what());
 		releaseUnlockRemove();
 		return;
@@ -869,7 +940,12 @@ void FlowAllocatorInstance::submitAllocateResponse(const rina::AllocateFlowRespo
 		return;
 	}
 
-	if (event.result == 0) {
+	complete_flow_allocation(event.result == 0);
+}
+
+void FlowAllocatorInstance::complete_flow_allocation(bool success)
+{
+	if (success) {
 		//Flow has been accepted
 		if (flow_->source_address != flow_->destination_address) {
 			try {
@@ -1027,16 +1103,8 @@ void FlowAllocatorInstance::processUpdateConnectionResponseEvent(
 	if (event.getResult() != 0) {
 		LOG_IPCP_ERR("The kernel denied the update of a connection: %d",
 				event.getResult());
-
-		try {
-			flow_request_event_.portId = -1;
-			rina::extendedIPCManager->allocateFlowRequestResult(
-					flow_request_event_, event.getResult());
-		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s",
-					e.what());
-		}
-
+		flow_request_event_.portId = -1;
+		replyToIPCManager(event.getResult());
 		releaseUnlockRemove();
 		return;
 	}
@@ -1063,21 +1131,13 @@ void FlowAllocatorInstance::processUpdateConnectionResponseEvent(
 	}
 
 	state = FLOW_ALLOCATED;
-
-	try {
-		flow_request_event_.portId = port_id_;
-		rina::extendedIPCManager->allocateFlowRequestResult(flow_request_event_,
-								    0);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s",
-				e.what());
-	}
+	flow_request_event_.portId = port_id_;
+	replyToIPCManager(0);
 
 	lock_.unlock();
 }
 
-void FlowAllocatorInstance::submitDeallocate(
-		const rina::FlowDeallocateRequestEvent& event)
+void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEvent& event)
 {
 	rina::ScopedLock g(lock_);
 
@@ -1134,6 +1194,8 @@ void FlowAllocatorInstance::submitDeallocate(
 
 void FlowAllocatorInstance::deleteFlowRequestMessageReceived()
 {
+	rina::InternalEvent * event = 0;
+
 	rina::ScopedLock g(lock_);
 
 	if (state != FLOW_ALLOCATED) {
@@ -1153,12 +1215,17 @@ void FlowAllocatorInstance::deleteFlowRequestMessageReceived()
 
 	timer.scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
 
-	//4 Inform IPC Manager
-	try {
-		rina::extendedIPCManager->flowDeallocatedRemotely(port_id_,
-								  0);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Error communicating with the IPC Manager: %s", e.what());
+	if (flow_->internal) {
+		event = new rina::IPCPInternalFlowDeallocatedEvent(flow_->source_port_id);
+		ipc_process_->internal_event_manager_->deliverEvent(event);
+	} else {
+		//4 Inform IPC Manager
+		try {
+			rina::extendedIPCManager->flowDeallocatedRemotely(port_id_,
+									  0);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Error communicating with the IPC Manager: %s", e.what());
+		}
 	}
 }
 
@@ -1190,6 +1257,14 @@ void FlowAllocatorInstance::destroyFlowAllocatorInstance(
 		LOG_IPCP_ERR("Problems deleting object from RIB: %s", e.what());
 	}
 
+	if (flow_->internal) {
+		try {
+			rina::extendedIPCManager->internal_flow_deallocated(port_id_);
+		} catch (rina::Exception &e) {
+			LOG_ERR("Problems clearing internal flow state: %s", e.what());
+		}
+	}
+
 	releaseUnlockRemove();
 }
 
@@ -1213,15 +1288,8 @@ void FlowAllocatorInstance::remoteCreateResult(const rina::cdap_rib::con_handle_
 				object_name_.c_str());
 
 		//Answer IPC Manager
-		try {
-			flow_request_event_.portId = -1;
-			rina::extendedIPCManager->allocateFlowRequestResult(flow_request_event_,
-									    res.code_);
-		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s",
-					e.what());
-		}
-
+		flow_request_event_.portId = -1;
+		replyToIPCManager(res.code_);
 		releaseUnlockRemove();
 
 		return;
@@ -1247,16 +1315,10 @@ void FlowAllocatorInstance::remoteCreateResult(const rina::cdap_rib::con_handle_
 				e.what());
 
 		//Answer IPC Manager
-		try {
-			flow_request_event_.portId = -1;
-			rina::extendedIPCManager->allocateFlowRequestResult(flow_request_event_,
-									    res.code_);
-		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s",
-					e.what());
-		}
-
+		flow_request_event_.portId = -1;
+		replyToIPCManager(res.code_);
 		releaseUnlockRemove();
+
 		return;
 	}
 }

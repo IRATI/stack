@@ -346,6 +346,12 @@ public:
 	/** the ID of the IPC Process that will provide the flow*/
 	unsigned short ipcProcessId;
 
+	/**
+	 * True if the flow will be used by internal IPCP tasks (e.g. layer management),
+	 * false otherwise (used by an external app)
+	 */
+	bool internal;
+
 	FlowRequestEvent();
 	FlowRequestEvent(const FlowSpecification& flowSpecification,
 			bool localRequest,
@@ -372,10 +378,16 @@ public:
 	/** The port-id that locally identifies the flow */
 	int portId;
 
+	/**
+	 * True if the flow will be used by internal IPCP tasks (e.g. layer management),
+	 * false otherwise (used by an external app)
+	 */
+	bool internal;
+
 	/** The application that requested the flow deallocation*/
 	ApplicationProcessNamingInformation applicationName;
 
-        FlowDeallocateRequestEvent() : portId(-1) { }
+        FlowDeallocateRequestEvent() : portId(-1), internal(false) { }
 	FlowDeallocateRequestEvent(int portId,
 			const ApplicationProcessNamingInformation& appName,
 			unsigned int sequenceNumber);
