@@ -582,14 +582,6 @@ void EnrolleeStateMachine::stop(const configs::EnrollmentInformationRequest& eiR
 	}
 
 	timer_.cancelTask(last_scheduled_task_);
-	//Check if I'm allowed to start early
-	if (!eiRequest.allowed_to_start_early_){
-		abortEnrollment(remote_peer_.name_,
-				con.port_id,
-				STOP_WITH_NO_OBJECT_VALUE,
-				true);
-		return;
-	}
 
 	allowed_to_start_early_ = eiRequest.allowed_to_start_early_;
 	stop_request_invoke_id_ = invoke_id;
@@ -1307,6 +1299,7 @@ void EnrollerStateMachine::start(configs::EnrollmentInformationRequest& eiReques
 		obj.class_ = EnrollmentRIBObject::class_name;
 		obj.name_ = EnrollmentRIBObject::object_name;
 		encoders::EnrollmentInformationRequestEncoder encoder;
+		eiRequest.allowed_to_start_early_ = false;
 		encoder.encode(eiRequest, obj.value_);
 		rina::cdap_rib::flags_t flags;
 		rina::cdap_rib::filt_info_t filt;
