@@ -210,11 +210,15 @@ public:
 class IPCPInternalFlowAllocatedEvent: public InternalEvent {
 public:
 	IPCPInternalFlowAllocatedEvent(unsigned int port,
-				  const FlowInformation& flow_information);
+				       int fd,
+				       const FlowInformation& flow_information);
 	const std::string toString();
 
 	/// The portId of the flow
 	unsigned int port_id;
+
+	/// The file descriptor to read the flow
+	int fd;
 
 	/// The FlowService object describing the flow
 	FlowInformation flow_info;

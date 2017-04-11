@@ -756,8 +756,11 @@ public:
 	/**
 	 * Tell librina that an internal flow has been allocated, so that it creates
 	 * the flow structure and opens an I/O dev file descriptor associated to it
+	 *
+	 * @param information about the flow that has been allocated
+	 * @return the file descriptor
 	 */
-	void internal_flow_allocated(const rina::FlowInformation& flow_info);
+	int internal_flow_allocated(const rina::FlowInformation& flow_info);
 
 	/**
 	 * Tell librina that an internal flow has been deallocated, so that it deletes

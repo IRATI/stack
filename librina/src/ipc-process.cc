@@ -777,7 +777,7 @@ void ExtendedIPCManager::sendMediaReport(const MediaReport& report)
 #endif
 }
 
-void ExtendedIPCManager::internal_flow_allocated(const rina::FlowInformation& flow_info)
+int ExtendedIPCManager::internal_flow_allocated(const rina::FlowInformation& flow_info)
 {
 	FlowInformation * flow;
 	WriteScopedLock writeLock(flows_rw_lock);
@@ -793,6 +793,8 @@ void ExtendedIPCManager::internal_flow_allocated(const rina::FlowInformation& fl
 	initIodev(flow, flow->portId);
 
 	allocatedFlows[flow->portId] = flow;
+
+	return flow->fd;
 }
 
 void ExtendedIPCManager::internal_flow_deallocated(int port_id)

@@ -206,6 +206,7 @@ enum cdap_dest_t { CDAP_DEST_PORT,
 
 typedef struct connection_handler {
 	unsigned int port_id;
+	bool use_internal_flow;
 	cdap_dest_t cdap_dest;
 	int abs_syntax;
 	ep_info_t src_;
@@ -222,6 +223,7 @@ typedef struct connection_handler {
 		abs_syntax = 0;
 		port_id = 0;
 		fwd_mgs_seqn = 0;
+		use_internal_flow = false;
 	};
 } con_handle_t;
 

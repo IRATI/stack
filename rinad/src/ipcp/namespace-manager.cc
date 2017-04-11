@@ -404,6 +404,7 @@ void NamespaceManager::addressChangeUpdateDFT(unsigned int new_address,
 	rina::cdap_rib::flags_t flags;
 	rina::cdap_rib::filt_info_t filt;
 	rina::cdap_rib::con_handle_t con;
+	con.use_internal_flow = true;
 	for (int i = 0; i < session_ids.size(); i++) {
 		try {
 			con.port_id = session_ids[i];
@@ -504,6 +505,7 @@ void NamespaceManager::notify_neighbors_add(const std::list<rina::DirectoryForwa
 	rina::cdap_rib::flags_t flags;
 	rina::cdap_rib::filt_info_t filt;
 	rina::cdap_rib::con_handle_t con;
+	con.use_internal_flow = true;
 	for (int i = 0; i < session_ids.size(); i++) {
 		if (contains_entry(session_ids[i],
 				neighs_to_exclude))
@@ -573,6 +575,7 @@ void NamespaceManager::removeDFTEntry(const std::string& key,
 	rina::cdap_rib::flags_t flags;
 	rina::cdap_rib::filt_info_t filt;
 	rina::cdap_rib::con_handle_t con;
+	con.use_internal_flow = true;
 	for (int i = 0; i < session_ids.size(); i++) {
 		if (contains_entry(session_ids[i],
 				   neighs_to_exclude))

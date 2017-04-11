@@ -5,4 +5,5 @@ message enrollmentInformation_t {	 // carries information about a member that re
 	optional uint64	address = 1;
 	repeated string supportingDifs = 2;
 	optional bool startEarly = 3;
+	optional string token = 4; // A value that carries a hash
 }

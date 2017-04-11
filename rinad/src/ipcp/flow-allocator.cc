@@ -673,6 +673,7 @@ void FlowAllocatorInstance::submitAllocateRequest(const rina::FlowRequestEvent& 
 void FlowAllocatorInstance::replyToIPCManager(int result)
 {
 	rina::InternalEvent * event = 0;
+	int fd = 0;
 	std::string dif_name;
 
 	if (flow_->internal) {
@@ -680,12 +681,13 @@ void FlowAllocatorInstance::replyToIPCManager(int result)
 
 		if (result == 0)  {
 			try {
-				rina::extendedIPCManager->internal_flow_allocated(flow_->to_flow_information(dif_name));
+				fd = rina::extendedIPCManager->internal_flow_allocated(flow_->to_flow_information(dif_name));
 			} catch (rina::Exception &e) {
 				LOG_ERR("Problems opening file descriptor associated to flow: %s", e.what());
 			}
 
 			event  = new rina::IPCPInternalFlowAllocatedEvent(flow_->source_port_id,
+									  fd,
 									  flow_->to_flow_information(dif_name));
 		} else {
 			event = new rina::IPCPInternalFlowAllocationFailedEvent(result,
@@ -873,6 +875,7 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(configs::Flow * flo
 void FlowAllocatorInstance::processCreateConnectionResultEvent(const rina::CreateConnectionResultEvent& event)
 {
 	rina::InternalEvent * int_event = 0;
+	int fd = 0;
 	std::string dif_name;
 
 	lock_.lock();
@@ -899,12 +902,13 @@ void FlowAllocatorInstance::processCreateConnectionResultEvent(const rina::Creat
 		dif_name = ipc_process_->get_dif_information().dif_name_.processName;
 
 		try {
-			rina::extendedIPCManager->internal_flow_allocated(flow_->to_flow_information(dif_name));
+			fd = rina::extendedIPCManager->internal_flow_allocated(flow_->to_flow_information(dif_name));
 		} catch (rina::Exception &e) {
 			LOG_ERR("Problems opening file descriptor associated to flow: %s", e.what());
 		}
 
 		int_event = new rina::IPCPInternalFlowAllocatedEvent(flow_->source_port_id,
+								     fd,
 								     flow_->to_flow_information(dif_name));
 		ipc_process_->internal_event_manager_->deliverEvent(int_event);
 

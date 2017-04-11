@@ -265,17 +265,20 @@ const std::string NeighborAddressChangeEvent::toString()
 
 /// An IPCP internal flow was allocated
 IPCPInternalFlowAllocatedEvent::IPCPInternalFlowAllocatedEvent(unsigned int port,
+							       int file_desc,
 							       const FlowInformation& flow_information):
 		InternalEvent(InternalEvent::IPCP_INTERNAL_FLOW_ALLOCATED)
 {
 	port_id = port;
+	fd = file_desc;
 	flow_info = flow_information;
 }
 
 const std::string IPCPInternalFlowAllocatedEvent::toString()
 {
 	std::stringstream ss;
-	ss<<"Event id: "<<type<<"; Port id: "<<port_id<<std::endl;
+	ss<<"Event id: "<<type<<"; Port id: "<<port_id
+	   <<"; File descriptor: " << fd << std::endl;
 	ss<<"Flow description: "<<flow_info.toString();
 	return ss.str();
 }

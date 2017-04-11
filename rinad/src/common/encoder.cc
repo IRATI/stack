@@ -859,6 +859,7 @@ void EnrollmentInformationRequestEncoder::encode(
 
         gpb.set_address(obj.address_);
         gpb.set_startearly(obj.allowed_to_start_early_);
+        gpb.set_token(obj.token);
 
         for (std::list<rina::ApplicationProcessNamingInformation>::const_iterator it =
                         obj.supporting_difs_.begin();
@@ -880,8 +881,8 @@ void EnrollmentInformationRequestEncoder::decode(
         gpb.ParseFromArray(serobj.message_, serobj.size_);
 
         des_obj.address_ = gpb.address();
-        //FIXME that should read gpb_eir.startearly() but always returns false
-        des_obj.allowed_to_start_early_ = true;
+        des_obj.allowed_to_start_early_ = gpb.startearly();
+        des_obj.token = gpb.token();
 
         for (int i = 0; i < gpb.supportingdifs_size(); ++i)
         {

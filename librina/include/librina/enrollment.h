@@ -136,6 +136,7 @@ public:
 	/// @param reason
 	virtual void enrollmentFailed(const ApplicationProcessNamingInformation& remotePeerNamingInfo,
                                       int portId,
+				      int internal_portId,
                                       const std::string& reason,
                                       bool sendReleaseMessage) = 0;
 

@@ -38,6 +38,7 @@
 #include "ipcp/enrollment-task.h"
 #include "common/encoder.h"
 #include "common/rina-configuration.h"
+#include "rib-daemon.h"
 
 namespace rinad {
 
@@ -351,6 +352,7 @@ void WatchdogRIBObject::sendMessages() {
 			obj.class_ = class_name;
 			obj.name_ = object_name;
 			con.port_id = it->underlying_port_id_;
+			con.use_internal_flow = true;
 
 			rib_daemon_->getProxy()->remote_read(con,
 							     obj,
@@ -477,6 +479,7 @@ IEnrollmentStateMachine::IEnrollmentStateMachine(IPCProcess * ipcp,
 	state_ = STATE_NULL;
 	auth_ps_ = 0;
 	enroller_ = false;
+	internal_flow_fd = 0;
 }
 
 IEnrollmentStateMachine::~IEnrollmentStateMachine() {
@@ -545,13 +548,14 @@ bool IEnrollmentStateMachine::isValidPortId(int portId)
 	return true;
 }
 
-void IEnrollmentStateMachine::abortEnrollment(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
-			int portId, const std::string& reason, bool sendReleaseMessage)
+void IEnrollmentStateMachine::abortEnrollment(const std::string& reason,
+					      bool sendReleaseMessage)
 {
 	assert(!lock_.trylock());
 	AbortEnrollmentTimerTask * task = new AbortEnrollmentTimerTask(enrollment_task_,
-								       remotePeerNamingInfo,
-								       portId,
+								       remote_peer_.name_,
+								       con.port_id,
+								       remote_peer_.internal_port_id,
 								       reason,
 								       sendReleaseMessage);
 	timer_.scheduleTask(task, 0);
@@ -568,6 +572,7 @@ void IEnrollmentStateMachine::createOrUpdateNeighborInformation(bool enrolled)
 		remote_peer_.underlying_port_id_ = con.port_id;
 	} else {
 		remote_peer_.underlying_port_id_ = 0;
+		remote_peer_.internal_port_id = 0;
 	}
 
 	enrollment_task_->add_or_update_neighbor(remote_peer_);
@@ -620,17 +625,17 @@ void IEnrollmentStateMachine::sendNeighbors()
 
 //Class EnrollmentFailedTimerTask
 EnrollmentFailedTimerTask::EnrollmentFailedTimerTask(IEnrollmentStateMachine * state_machine,
-		const std::string& reason) {
+						     const std::string& reason)
+{
 	state_machine_ = state_machine;
 	reason_ = reason;
 }
 
-void EnrollmentFailedTimerTask::run() {
+void EnrollmentFailedTimerTask::run()
+{
 	try {
 		rina::ScopedLock g(state_machine_->lock_);
-		state_machine_->abortEnrollment(state_machine_->remote_peer_.name_,
-						state_machine_->con.port_id,
-						reason_, true);
+		state_machine_->abortEnrollment(reason_, true);
 	} catch(rina::Exception &e) {
 		LOG_ERR("Problems aborting enrollment: %s", e.what());
 	}
@@ -640,19 +645,21 @@ void EnrollmentFailedTimerTask::run() {
 AbortEnrollmentTimerTask::AbortEnrollmentTimerTask(rina::IEnrollmentTask * enr_task,
 						   const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
 			 	 	 	   int portId,
+						   int int_portId,
 						   const std::string& reason_,
 						   bool sendReleaseMessage)
 {
 	etask = enr_task;
 	peer_name = remotePeerNamingInfo;
 	port_id = portId;
+	internal_portId = int_portId;
 	reason = reason_;
 	send_message = sendReleaseMessage;
 }
 
 void AbortEnrollmentTimerTask::run()
 {
-	etask->enrollmentFailed(peer_name, port_id, reason, send_message);
+	etask->enrollmentFailed(peer_name, port_id, internal_portId, reason, send_message);
 }
 
 //Class DestroyESMTimerTask
@@ -665,6 +672,29 @@ void DestroyESMTimerTask::run()
 {
 	delete state_machine;
 	state_machine = 0;
+}
+
+//Class DeallocateFlowTimerTask
+DeallocateFlowTimerTask::DeallocateFlowTimerTask(IPCProcess * ipc_process,
+						 int pid,
+						 bool intern)
+{
+	ipcp = ipc_process;
+	port_id = pid;
+	internal = intern;
+}
+
+void DeallocateFlowTimerTask::run()
+{
+	rina::FlowDeallocateRequestEvent event;
+
+	if (internal) {
+		event.internal = true;
+		event.portId = port_id;
+		ipcp->flow_allocator_->submitDeallocate(event);
+	} else {
+		ipcp->resource_allocator_->get_n_minus_one_flow_manager()->deallocateNMinus1Flow(port_id);
+	}
 }
 
 //Class Enrollment Task
@@ -728,6 +758,12 @@ void EnrollmentTask::subscribeToEvents()
 					 this);
 	event_manager_->subscribeToEvent(rina::InternalEvent::ADDRESS_CHANGE,
 					 this);
+	event_manager_->subscribeToEvent(rina::InternalEvent::IPCP_INTERNAL_FLOW_ALLOCATED,
+					 this);
+	event_manager_->subscribeToEvent(rina::InternalEvent::IPCP_INTERNAL_FLOW_DEALLOCATED,
+					 this);
+	event_manager_->subscribeToEvent(rina::InternalEvent::IPCP_INTERNAL_FLOW_ALLOCATION_FAILED,
+					 this);
 }
 
 void EnrollmentTask::eventHappened(rina::InternalEvent * event)
@@ -736,22 +772,146 @@ void EnrollmentTask::eventHappened(rina::InternalEvent * event)
 		rina::NMinusOneFlowDeallocatedEvent * flowEvent =
 				(rina::NMinusOneFlowDeallocatedEvent *) event;
 		nMinusOneFlowDeallocated(flowEvent);
-	}else if (event->type == rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED){
+	} else if (event->type == rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED){
 		rina::NMinusOneFlowAllocatedEvent * flowEvent =
 				(rina::NMinusOneFlowAllocatedEvent *) event;
 		nMinusOneFlowAllocated(flowEvent);
-	}else if (event->type == rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATION_FAILED){
+	} else if (event->type == rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATION_FAILED){
 		rina::NMinusOneFlowAllocationFailedEvent * flowEvent =
 				(rina::NMinusOneFlowAllocationFailedEvent *) event;
 		nMinusOneFlowAllocationFailed(flowEvent);
-	}else if (event->type == rina::InternalEvent::APP_NEIGHBOR_DECLARED_DEAD) {
+	} else if (event->type == rina::InternalEvent::APP_NEIGHBOR_DECLARED_DEAD) {
 		rina::NeighborDeclaredDeadEvent * deadEvent =
 				(rina::NeighborDeclaredDeadEvent *) event;
 		neighborDeclaredDead(deadEvent);
-	}else if (event->type == rina::InternalEvent::ADDRESS_CHANGE) {
+	} else if (event->type == rina::InternalEvent::ADDRESS_CHANGE) {
 		rina::AddressChangeEvent * addrEvent =
 				(rina::AddressChangeEvent *) event;
 		addressChange(addrEvent);
+	} else if (event->type == rina::InternalEvent::IPCP_INTERNAL_FLOW_ALLOCATED) {
+		rina::IPCPInternalFlowAllocatedEvent * inEvent =
+				(rina::IPCPInternalFlowAllocatedEvent *) event;
+		internal_flow_allocated(inEvent);
+	} else if (event->type == rina::InternalEvent::IPCP_INTERNAL_FLOW_ALLOCATION_FAILED) {
+		rina::IPCPInternalFlowAllocationFailedEvent * inEvent =
+				(rina::IPCPInternalFlowAllocationFailedEvent *) event;
+		internal_flow_allocation_failed(inEvent);
+	} else if (event->type == rina::InternalEvent::IPCP_INTERNAL_FLOW_DEALLOCATED) {
+		rina::IPCPInternalFlowDeallocatedEvent * inEvent =
+				(rina::IPCPInternalFlowDeallocatedEvent *) event;
+		internal_flow_deallocated(inEvent);
+	}
+}
+
+void EnrollmentTask::internal_flow_allocated(rina::IPCPInternalFlowAllocatedEvent * event)
+{
+	std::map<int, IEnrollmentStateMachine*>::iterator it;
+	IPCPRIBDaemonImpl * ribd = dynamic_cast<IPCPRIBDaemonImpl *>(ipcp->rib_daemon_);
+
+	rina::ReadScopedLock readLock(sm_lock);
+
+	// Notify state machine
+	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
+		if (it->second->remote_peer_.name_.processName
+				== event->flow_info.remoteAppName.processName) {
+			ribd->start_internal_flow_sdu_reader(event->port_id,
+							     event->fd,
+							     it->second->remote_peer_.underlying_port_id_);
+
+			it->second->internal_flow_allocate_result(event->port_id,
+								  event->fd,
+								  "");
+			return;
+		}
+	}
+}
+
+void EnrollmentTask::internal_flow_allocation_failed(rina::IPCPInternalFlowAllocationFailedEvent * event)
+{
+	std::map<int, IEnrollmentStateMachine*>::iterator it;
+
+	rina::ReadScopedLock readLock(sm_lock);
+
+	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
+		if (it->second->remote_peer_.name_.processName
+				== event->flow_info.remoteAppName.processName) {
+			it->second->internal_flow_allocate_result(0 - event->error_code,
+								  0,
+								  event->reason);
+			return;
+		}
+	}
+}
+
+void EnrollmentTask::internal_flow_deallocated(rina::IPCPInternalFlowDeallocatedEvent * event)
+{
+	std::map<int, IEnrollmentStateMachine*>::iterator it;
+	IPCPRIBDaemonImpl * ribd = dynamic_cast<IPCPRIBDaemonImpl*>(ipcp->rib_daemon_);
+	IEnrollmentStateMachine * esm = 0;
+	rina::ConnectiviyToNeighborLostEvent * event2 = 0;
+	DeallocateFlowTimerTask * timer_task = 0;
+
+	rina::ScopedLock g(lock_);
+	rina::ReadScopedLock writeLock(sm_lock);
+
+	//1 Stop the internal flow SDU reader
+	ribd->stop_internal_flow_sdu_reader(event->port_id);
+
+	//2 Remove the enrollment state machine from the map
+	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
+		if (it->second->remote_peer_.internal_port_id == event->port_id) {
+			esm = it->second;
+			state_machines_.erase(it);
+			break;
+		}
+	}
+
+	if (!esm){
+		//Do nothing, we had already cleaned up
+		return;
+	}
+
+	esm->flowDeallocated(esm->remote_peer_.underlying_port_id_);
+
+	// Request deallocation of N-1 flow
+	timer_task = new DeallocateFlowTimerTask(ipcp,
+						 esm->remote_peer_.underlying_port_id_,
+						 false);
+	timer.scheduleTask(timer_task, 0);
+
+	event2 = new rina::ConnectiviyToNeighborLostEvent(esm->remote_peer_);
+	delete esm;
+	esm = 0;
+	event_manager_->deliverEvent(event2);
+}
+
+int EnrollmentTask::get_fd_associated_to_n1flow(int port_id)
+{
+	std::map<int, IEnrollmentStateMachine*>::iterator it;
+
+	rina::ReadScopedLock readLock(sm_lock);
+
+	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
+		if (it->second->remote_peer_.underlying_port_id_ == port_id) {
+			return it->second->internal_flow_fd;
+		}
+	}
+
+	return -1;
+}
+
+void EnrollmentTask::operational_status_start(int port_id,
+			      	      	      int invoke_id,
+					      const rina::ser_obj_t &obj_req)
+{
+	std::map<int, IEnrollmentStateMachine*>::iterator it;
+
+	rina::ReadScopedLock readLock(sm_lock);
+
+	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
+		if (it->second->remote_peer_.underlying_port_id_ == port_id) {
+			it->second->operational_status_start(invoke_id, obj_req);
+		}
 	}
 }
 
@@ -964,6 +1124,7 @@ void EnrollmentTask::processDisconnectNeighborRequestEvent(const rina::Disconnec
 	rina::ScopedLock g(lock_);
 	IEnrollmentStateMachine * esm = 0;
 	std::map<int, IEnrollmentStateMachine *>::iterator it;
+	DeallocateFlowTimerTask * df_ttask = 0;
 
 	rina::WriteScopedLock writeLock(sm_lock);
 	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
@@ -994,6 +1155,13 @@ void EnrollmentTask::processDisconnectNeighborRequestEvent(const rina::Disconnec
 
 	// Request deallocation of all N-1 flows to neighbor
 	deallocateFlow(esm->con.port_id);
+
+	// Request deallocation of reliable N flow to a timer task
+	if (esm->remote_peer_.internal_port_id != 0) {
+		df_ttask = new DeallocateFlowTimerTask(ipcp,
+						       esm->remote_peer_.internal_port_id,
+						       true);
+	}
 
 	// Update and defer deletion of state machine to a timer task (takes long)
 	state_machines_.erase(esm->con.port_id);
@@ -1359,11 +1527,14 @@ void EnrollmentTask::neighborDeclaredDead(rina::NeighborDeclaredDeadEvent * dead
 
 void EnrollmentTask::nMinusOneFlowDeallocated(rina::NMinusOneFlowDeallocatedEvent * event)
 {
+	IEnrollmentStateMachine * enrollmentStateMachine = 0;
+	rina::ConnectiviyToNeighborLostEvent * event2 = 0;
+	DeallocateFlowTimerTask * timer_task = 0;
+
 	rina::ScopedLock g(lock_);
 
 	//1 Remove the enrollment state machine from the list
-	IEnrollmentStateMachine * enrollmentStateMachine =
-			getEnrollmentStateMachine(event->port_id_, true);
+	enrollmentStateMachine = getEnrollmentStateMachine(event->port_id_, true);
 	if (!enrollmentStateMachine){
 		//Do nothing, we had already cleaned up
 		return;
@@ -1371,8 +1542,15 @@ void EnrollmentTask::nMinusOneFlowDeallocated(rina::NMinusOneFlowDeallocatedEven
 
 	enrollmentStateMachine->flowDeallocated(event->port_id_);
 
-	rina::ConnectiviyToNeighborLostEvent * event2 =
-			new rina::ConnectiviyToNeighborLostEvent(enrollmentStateMachine->remote_peer_);
+	// Request deallocation of internal flow
+	if (enrollmentStateMachine->remote_peer_.internal_port_id != 0) {
+		timer_task = new DeallocateFlowTimerTask(ipcp,
+							 enrollmentStateMachine->remote_peer_.internal_port_id,
+							 true);
+		timer.scheduleTask(timer_task, 0);
+	}
+
+	event2 = new rina::ConnectiviyToNeighborLostEvent(enrollmentStateMachine->remote_peer_);
 	delete enrollmentStateMachine;
 	enrollmentStateMachine = 0;
 	event_manager_->deliverEvent(event2);
@@ -1427,18 +1605,23 @@ void EnrollmentTask::nMinusOneFlowAllocationFailed(rina::NMinusOneFlowAllocation
 
 void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
 				      int portId,
+				      int internal_portId,
 				      const std::string& reason,
 				      bool sendReleaseMessage)
 {
+	rina::FlowDeallocateRequestEvent fd_event;
+	rina::Sleep sleep;
+	IEnrollmentStateMachine * stateMachine = 0;
+	IPCPEnrollmentTaskPS * ipcp_ps = 0;
+
+	rina::ScopedLock g(lock_);
+
 	LOG_IPCP_ERR("An error happened during enrollment of remote IPC Process %s because of %s",
 		      remotePeerNamingInfo.getEncodedString().c_str(),
 		      reason.c_str());
 
-	rina::ScopedLock g(lock_);
-
 	//1 Remove enrollment state machine from the store
-	IEnrollmentStateMachine * stateMachine =
-			getEnrollmentStateMachine(portId, true);
+	stateMachine = getEnrollmentStateMachine(portId, true);
 	if (!stateMachine) {
 		LOG_IPCP_ERR("Could not find the enrollment state machine associated to neighbor %s and portId %d",
 			     remotePeerNamingInfo.processName.c_str(),
@@ -1447,11 +1630,10 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 	}
 
 	//2 In the case of the enrollee state machine, reply to the IPC Manager
-	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
+	ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
 	assert(ipcp_ps);
 	ipcp_ps->inform_ipcm_about_failure(stateMachine);
 
-	rina::Sleep sleep;
 	while(stateMachine->get_state() != IEnrollmentStateMachine::STATE_TERMINATED) {
 		sleep.sleepForMili(1);
 	};
@@ -1469,6 +1651,24 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 		}
 	}
 
+	//4 Deallocate internal reliable flow if required
+	if (internal_portId > 0) {
+		try {
+			fd_event.internal = true;
+			fd_event.portId = internal_portId;
+			fd_event.applicationName.processName = ipcp->get_name();
+			fd_event.applicationName.processInstance = ipcp->get_instance();
+			fd_event.applicationName.entityName = IPCProcess::MANAGEMENT_AE;
+			ipcp->flow_allocator_->submitDeallocate(fd_event);
+
+			//Sleep for a little bit so that we give time to deallocate the flow
+			sleep.sleepForMili(5);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems deallocating internal flow: %s", e.what());
+		}
+	}
+
+	//5 Deallocate N-1 flow
 	deallocateFlow(portId);
 }
 
@@ -1554,16 +1754,16 @@ void OperationalStatusRIBObject::start(const rina::cdap_rib::con_handle_t &con_h
 				       rina::cdap_rib::res_info_t& res)
 {
 	try {
-		if (!enrollment_task_->getEnrollmentStateMachine(con_handle.port_id,
-								 false)) {
-			LOG_IPCP_ERR("Got a CDAP message that is not for me: %s");
-			return;
-		}
+		enrollment_task_->operational_status_start(con_handle.port_id,
+							   invoke_id,
+							   obj_req);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems retrieving state machine: %s", e.what());
 		sendErrorMessage(con_handle);
 		return;
 	}
+
+	res.code_ = rina::cdap_rib::CDAP_PENDING;
 
 	if (ipc_process_->get_operational_state() != ASSIGNED_TO_DIF) {
 		ipc_process_->set_operational_state(ASSIGNED_TO_DIF);

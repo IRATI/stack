@@ -48,6 +48,7 @@ class EnrollmentInformationRequest {
         unsigned int address_;
         std::list<rina::ApplicationProcessNamingInformation> supporting_difs_;
         bool allowed_to_start_early_;
+        std::string token;
 };
 
 /// Encapsulates all the information required to manage a Flow

@@ -207,22 +207,28 @@ public:
 
 	/// Called by the EnrollmentTask when the flow supporting the CDAP session with the remote peer
 	/// has been deallocated
-	/// @param cdapSessionDescriptor
+	/// @param portid
 	void flowDeallocated(int portId);
 
+	/// Called by the Enrollment Task when the supporting internal flow allocation result is available
+	virtual void internal_flow_allocate_result(int portId,
+						   int fd,
+					   	   const std::string& result_reason) = 0;
+
+	virtual void operational_status_start(int invoke_id,
+					      const rina::ser_obj_t &obj_req) = 0;
 	std::string get_state();
 
 	rina::Neighbor remote_peer_;
 	bool enroller_;
 	rina::cdap_rib::con_handle_t con;
+	int internal_flow_fd;
 
 protected:
 	bool isValidPortId(int portId);
 
 	/// Called by the enrollment state machine when the enrollment sequence fails
-	void abortEnrollment(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
-			     int portId,
-			     const std::string& reason,
+	void abortEnrollment(const std::string& reason,
 			     bool sendReleaseMessage);
 
 	/// Create or update the neighbor information in the RIB
@@ -259,6 +265,7 @@ public:
 	AbortEnrollmentTimerTask(rina::IEnrollmentTask * enr_task,
 				 const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
 				 int portId,
+				 int internal_portId,
 				 const std::string& reason,
 				 bool sendReleaseMessage);
 	~AbortEnrollmentTimerTask() throw() {};
@@ -268,6 +275,7 @@ private:
 	rina::IEnrollmentTask * etask;
 	rina::ApplicationProcessNamingInformation peer_name;
 	int port_id;
+	int internal_portId;
 	std::string reason;
 	bool send_message;
 };
@@ -280,6 +288,20 @@ public:
 
 private:
 	IEnrollmentStateMachine * state_machine;
+};
+
+class DeallocateFlowTimerTask : public rina::TimerTask {
+public:
+	DeallocateFlowTimerTask(IPCProcess * ipcp,
+				int port_id,
+				bool internal);
+	~DeallocateFlowTimerTask() throw() {};
+	void run();
+
+private:
+	IPCProcess * ipcp;
+	int port_id;
+	bool internal;
 };
 
 class EnrollmentTask: public IPCPEnrollmentTask, public rina::InternalEventListener {
@@ -317,7 +339,10 @@ public:
 					    const rina::cdap_rib::con_handle_t &con);
 	void authentication_completed(int port_id, bool success);
 	void enrollmentFailed(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
-			int portId, const std::string& reason, bool sendReleaseMessage);
+			      int portId,
+			      int internal_portId,
+			      const std::string& reason,
+			      bool sendReleaseMessage);
 	void enrollmentCompleted(const rina::Neighbor& neighbor, bool enrollee);
 	IEnrollmentStateMachine * getEnrollmentStateMachine(int portId, bool remove);
 	void deallocateFlow(int portId);
@@ -327,6 +352,10 @@ public:
 	void watchdog_read(const std::string& remote_app_name);
 	void watchdog_read_result(const std::string& remote_app_name,
 				  int stored_time);
+	int get_fd_associated_to_n1flow(int port_id);
+	void operational_status_start(int port_id,
+				      int invoke_id,
+			       	      const rina::ser_obj_t &obj_req);
 
 
 	/// The maximum time to wait between steps of the enrollment sequence (in ms)
@@ -369,6 +398,10 @@ private:
 	void nMinusOneFlowAllocationFailed(rina::NMinusOneFlowAllocationFailedEvent * event);
 
 	void addressChange(rina::AddressChangeEvent * event);
+
+	void internal_flow_allocated(rina::IPCPInternalFlowAllocatedEvent * event);
+	void internal_flow_deallocated(rina::IPCPInternalFlowDeallocatedEvent * event);
+	void internal_flow_allocation_failed(rina::IPCPInternalFlowAllocationFailedEvent * event);
 
 	IPCPRIBDaemon * rib_daemon_;
 	rina::InternalEventManager * event_manager_;
