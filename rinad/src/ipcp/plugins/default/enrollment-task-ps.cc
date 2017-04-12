@@ -992,9 +992,9 @@ public:
 
 	// The response of the start operation has been received, check that the
 	// token is the same as the one generated and consider the process enrolled
-	void remoteSartResult(const rina::cdap_rib::con_handle_t &con_handle,
-			      const rina::cdap_rib::obj_info_t &obj,
-			      const rina::cdap_rib::res_info_t &res);
+	void remoteStartResult(const rina::cdap_rib::con_handle_t &con,
+			       const rina::cdap_rib::obj_info_t &obj,
+			       const rina::cdap_rib::res_info_t &res);
 
 	void internal_flow_allocate_result(int portId,
 					   int fd,
@@ -1510,9 +1510,9 @@ void EnrollerStateMachine::internal_flow_allocate_result(int portId,
 	state_ = STATE_WAIT_START_RESPONSE;
 }
 
-void EnrollerStateMachine::remoteSartResult(const rina::cdap_rib::con_handle_t &con_handle,
-			      	      	    const rina::cdap_rib::obj_info_t &obj,
-			      	      	    const rina::cdap_rib::res_info_t &res)
+void EnrollerStateMachine::remoteStartResult(const rina::cdap_rib::con_handle_t &con_handle,
+			      	      	     const rina::cdap_rib::obj_info_t &obj,
+			      	      	     const rina::cdap_rib::res_info_t &res)
 {
 	rina::FlowRequestEvent event;
 
