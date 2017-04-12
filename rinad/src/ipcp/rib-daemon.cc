@@ -306,8 +306,9 @@ void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
 				}
 			}
 
-			LOG_IPCP_DBG("Received A-Data CDAP message from address %u through port \n%s",
-				     a_data_obj.source_address_, handle,
+			LOG_IPCP_DBG("Received A-Data CDAP message from address %u through port %u \n%s",
+				     a_data_obj.source_address_,
+				     handle,
 				     inner_m.to_string().c_str());
 
 			invoke_callback(manager_->get_con_handle(handle), inner_m, false);
@@ -537,27 +538,19 @@ int InternalFlowSDUReader::run()
 	LOG_DBG("Internal flow SDU reader of port-id %d starting", portid);
 
 	while(keep_going) {
-		try {
-			LOG_INFO("Going to read from file descriptor %d", fd);
-			bytes_read = read(fd, message.message_, 5000);
-			LOG_IPCP_DBG("Got message %d bytes of port-id %d, "
-					"handling to CDAP Provider",
-				      bytes_read,
-				      portid);
-			message.size_ = bytes_read;
-		} catch (rina::FlowAllocationException &e) {
-			LOG_ERR("Flow has been deallocated");
-			break;
-		} catch (rina::UnknownFlowException &e) {
-			LOG_ERR("Flow does not exist");
-			break;
-		} catch (rina::Exception &e) {
-			LOG_ERR("Problems reading SDU from flow, exiting");
+		bytes_read = read(fd, message.message_, 5000);
+		LOG_IPCP_DBG("Got message %d bytes of port-id %d, "
+				"handling to CDAP Provider",
+				bytes_read,
+				portid);
+
+		if (bytes_read < 0) {
 			break;
 		}
 
 		//Instruct CDAP provider to process the CACEP message
 		try{
+			message.size_ = bytes_read;
 			rina::cdap::getProvider()->process_message(message,
 								   cdap_session);
 		} catch(rina::Exception &e){

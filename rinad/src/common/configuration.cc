@@ -146,7 +146,8 @@ const std::string Flow::getKey() const
         return ss.str();
 }
 
-rina::FlowInformation Flow::to_flow_information(const std::string dif_name)
+rina::FlowInformation Flow::to_flow_information(const std::string dif_name,
+					        int port_id)
 {
 	rina::FlowInformation flow_info;
 
@@ -154,7 +155,7 @@ rina::FlowInformation Flow::to_flow_information(const std::string dif_name)
 	flow_info.flowSpecification = flow_specification;
 	flow_info.localAppName = source_naming_info;
 	flow_info.remoteAppName = destination_naming_info;
-	flow_info.portId = source_port_id;
+	flow_info.portId = port_id;
 
 	return flow_info;
 }

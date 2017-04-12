@@ -277,6 +277,7 @@ void FlowAllocator::createFlowRequestMessageReceived(configs::Flow * flow,
 	unsigned int address = 0;
 	int portId = 0;
 	bool process_flow_request = false;
+	rina::ApplicationProcessNamingInformation dest_info;
 
 	//Check if the flow is to the layer management tasks of this IPCP
 	if (flow->destination_naming_info.processName == ipcp->get_name() &&
@@ -291,6 +292,7 @@ void FlowAllocator::createFlowRequestMessageReceived(configs::Flow * flow,
 					flow->destination_naming_info.toString().c_str());
 			return;
 		}
+		dest_info = flow->destination_naming_info;
 
 		if (ipcp->check_address_is_mine(address)) {
 			process_flow_request = true;
@@ -302,8 +304,7 @@ void FlowAllocator::createFlowRequestMessageReceived(configs::Flow * flow,
 		//There is an entry and the address is this IPC Process, create a FAI, extract
 		//the Flow object from the CDAP message and call the FAI
 		try {
-			portId = rina::extendedIPCManager->allocatePortId(
-					flow->destination_naming_info);
+			portId = rina::extendedIPCManager->allocatePortId(dest_info);
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems requesting a port-id: %s. Ignoring the Flow allocation request",
 				     e.what());
@@ -680,17 +681,17 @@ void FlowAllocatorInstance::replyToIPCManager(int result)
 
 		if (result == 0)  {
 			try {
-				fd = rina::extendedIPCManager->internal_flow_allocated(flow_->to_flow_information(dif_name));
+				fd = rina::extendedIPCManager->internal_flow_allocated(flow_->to_flow_information(dif_name, port_id_));
 			} catch (rina::Exception &e) {
 				LOG_ERR("Problems opening file descriptor associated to flow: %s", e.what());
 			}
 
-			event  = new rina::IPCPInternalFlowAllocatedEvent(flow_->source_port_id,
+			event  = new rina::IPCPInternalFlowAllocatedEvent(port_id_,
 									  fd,
-									  flow_->to_flow_information(dif_name));
+									  flow_->to_flow_information(dif_name, port_id_));
 		} else {
 			event = new rina::IPCPInternalFlowAllocationFailedEvent(result,
-									        flow_->to_flow_information(dif_name),
+									        flow_->to_flow_information(dif_name, port_id_),
 										"");
 		}
 
@@ -820,9 +821,12 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(configs::Flow * flo
 	connection->setSourceAddress(connection->getDestAddress());
 	connection->setDestAddress(aux);
 	connection->setDestCepId(connection->getSourceCepId());
-	connection->setFlowUserIpcProcessId(
-			namespace_manager_->getRegIPCProcessId(
-				flow_->destination_naming_info));
+	if (flow->internal) {
+		connection->setFlowUserIpcProcessId(0);
+	} else {
+		connection->setFlowUserIpcProcessId(
+				namespace_manager_->getRegIPCProcessId(flow_->destination_naming_info));
+	}
 	LOG_IPCP_DBG("Target application IPC Process id is %d",
 			connection->getFlowUserIpcProcessId());
 
@@ -922,14 +926,14 @@ void FlowAllocatorInstance::processCreateConnectionResultEvent(const rina::Creat
 		dif_name = ipc_process_->get_dif_information().dif_name_.processName;
 
 		try {
-			fd = rina::extendedIPCManager->internal_flow_allocated(flow_->to_flow_information(dif_name));
+			fd = rina::extendedIPCManager->internal_flow_allocated(flow_->to_flow_information(dif_name, port_id_));
 		} catch (rina::Exception &e) {
 			LOG_ERR("Problems opening file descriptor associated to flow: %s", e.what());
 		}
 
-		int_event = new rina::IPCPInternalFlowAllocatedEvent(flow_->source_port_id,
+		int_event = new rina::IPCPInternalFlowAllocatedEvent(port_id_,
 								     fd,
-								     flow_->to_flow_information(dif_name));
+								     flow_->to_flow_information(dif_name, port_id_));
 		ipc_process_->internal_event_manager_->deliverEvent(int_event);
 
 		return;

@@ -68,7 +68,8 @@ class Flow {
         rina::Connection* getActiveConnection() const;
         std::string toString();
         const std::string getKey() const;
-        rina::FlowInformation to_flow_information(const std::string dif_name);
+        rina::FlowInformation to_flow_information(const std::string dif_name,
+        					  int port_id);
 
         /// The application that requested the flow
         rina::ApplicationProcessNamingInformation source_naming_info;

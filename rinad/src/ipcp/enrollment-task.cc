@@ -798,7 +798,7 @@ void EnrollmentTask::internal_flow_allocated(rina::IPCPInternalFlowAllocatedEven
 	// Notify state machine
 	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
 		if (it->second->remote_peer_.name_.processName
-				== event->flow_info.remoteAppName.processName) {
+				== event->flow_info.localAppName.processName) {
 			ribd->start_internal_flow_sdu_reader(event->port_id,
 							     event->fd,
 							     it->second->remote_peer_.underlying_port_id_);
@@ -819,7 +819,7 @@ void EnrollmentTask::internal_flow_allocation_failed(rina::IPCPInternalFlowAlloc
 
 	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
 		if (it->second->remote_peer_.name_.processName
-				== event->flow_info.remoteAppName.processName) {
+				== event->flow_info.localAppName.processName) {
 			it->second->internal_flow_allocate_result(event->error_code,
 								  0,
 								  event->reason);
