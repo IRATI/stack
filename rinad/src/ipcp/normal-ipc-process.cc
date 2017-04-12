@@ -92,8 +92,6 @@ void UseNewIPCPAddressTimerTask::run()
 	ipcp->activate_new_address();
 }
 
-
-
 //Class IPCProcessImpl
 IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& nm,
 			       unsigned short id,

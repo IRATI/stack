@@ -112,6 +112,8 @@ public:
 	virtual void add_enrollment_state_machine(int portId, IEnrollmentStateMachine * stateMachine) = 0;
 	virtual void update_neighbor_address(const rina::Neighbor& neighbor) = 0;
 	virtual int get_fd_associated_to_n1flow(int port_id) = 0;
+	// Return the con_handle to the next hop to reach the address
+	virtual rina::cdap_rib::con_handle_t get_con_handle_to_address(unsigned int address) = 0;
 };
 
 /// Policy set of the IPCP enrollment task
@@ -384,6 +386,8 @@ public:
 	virtual std::list<rina::RoutingTableEntry> get_rt_entries() = 0;
 	/// This operation takes ownership of the entries
 	virtual void set_rt_entries(const std::list<rina::RoutingTableEntry*>& rt) = 0;
+	// Returns the next hop address towards the destination
+	virtual unsigned int get_next_hop_address(unsigned int dest_address) = 0;
 
 	IPDUFTGeneratorPs * pduft_gen_ps;
 };

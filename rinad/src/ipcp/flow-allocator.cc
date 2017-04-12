@@ -644,14 +644,15 @@ void FlowAllocatorInstance::submitAllocateRequest(const rina::FlowRequestEvent& 
 	LOG_IPCP_DBG("The directory forwarding table returned address %u",
 			destinationAddress);
 
-	flow_->destination_address = destinationAddress;
-	flow_->getActiveConnection()->destAddress = destinationAddress;
 	if (destinationAddress == 0) {
 		std::stringstream ss;
 		ss << "Could not find entry in DFT for application ";
 		ss << event.remoteApplicationName.toString();
 		throw rina::Exception(ss.str().c_str());
 	}
+
+	flow_->destination_address = destinationAddress;
+	flow_->getActiveConnection()->destAddress = destinationAddress;
 
 	sourceAddress = ipc_process_->get_active_address();
 	flow_->source_address = sourceAddress;
@@ -662,8 +663,6 @@ void FlowAllocatorInstance::submitAllocateRequest(const rina::FlowRequestEvent& 
 	object_name_ = ss.str();
 
 	//3 Request the creation of the connection(s) in the Kernel
-	con.port_id = destinationAddress;
-	con.cdap_dest = rina::cdap_rib::CDAP_DEST_ADDRESS;
 	state = CONNECTION_CREATE_REQUESTED;
 	rina::kernelIPCProcess->createConnection(*(flow_->getActiveConnection()));
 	LOG_IPCP_DBG("Requested the creation of a connection to the kernel, for flow with port-id %d",
@@ -726,6 +725,8 @@ void FlowAllocatorInstance::releaseUnlockRemove()
 
 void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::CreateConnectionResponseEvent& event)
 {
+	rina::cdap_rib::con_handle_t con_handle;
+
 	lock_.lock();
 
 	if (state != CONNECTION_CREATE_REQUESTED) {
@@ -747,6 +748,16 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::Cre
 	flow_->getActiveConnection()->setSourceCepId(event.getCepId());
 
 	if (flow_->destination_address != flow_->source_address) {
+		con_handle = ipc_process_->enrollment_task_->get_con_handle_to_address(flow_->destination_address);
+		if (con_handle.port_id == 0) {
+			LOG_IPCP_ERR("Could not find con_handle to next hop for destination address %u",
+				     flow_->destination_address);
+			replyToIPCManager(-1);
+			lock_.unlock();
+		}
+		con_handle.address = flow_->destination_address;
+		con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_ADATA;
+
 		try {
 			//5 Send to destination address
 			rina::cdap_rib::flags_t flags;
@@ -757,7 +768,7 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::Cre
 			obj.name_ = object_name_;
 			encoder.encode(*flow_, obj.value_);
 
-			rib_daemon_->getProxy()->remote_create(con,
+			rib_daemon_->getProxy()->remote_create(con_handle,
 							       obj,
 							       flags,
 							       filt,
@@ -784,6 +795,7 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(configs::Flow * flo
 							     const std::string& object_name,
 							     int invoke_id)
 {
+	rina::cdap_rib::con_handle_t con_handle;
 	IPCPSecurityManagerPs *smps =
 		dynamic_cast<IPCPSecurityManagerPs *>(security_manager_->ps);
 
@@ -816,14 +828,22 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(configs::Flow * flo
 
 	//2 Check if the source application process has access to the destination application process.
 	// If not send negative M_CREATE_R back to the sender IPC process, and do housekeeping.
-	con.port_id = flow->source_address;
-	con.cdap_dest = rina::cdap_rib::CDAP_DEST_ADDRESS;
 	if (!smps->acceptFlow(*flow_)) {
 		LOG_IPCP_WARN(
 				"Security Manager denied incoming flow request from application %s",
 				flow_->source_naming_info.getEncodedString().c_str());
 
 		if (flow_->source_address != flow_->destination_address) {
+			con_handle = ipc_process_->enrollment_task_->get_con_handle_to_address(flow_->source_address);
+			if (con_handle.port_id == 0) {
+				LOG_IPCP_ERR("Could not find con_handle to next hop for destination address %u",
+					     flow_->destination_address);
+				releaseUnlockRemove();
+				return;
+			}
+			con_handle.address = flow_->source_address;
+			con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_ADATA;
+
 			try {
 				rina::cdap_rib::flags_t flags;
 				rina::cdap_rib::filt_info_t filt;
@@ -835,7 +855,7 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(configs::Flow * flo
 				rina::cdap_rib::res_info_t res;
 				res.code_ = rina::cdap_rib::CDAP_ERROR;
 
-				rina::cdap::getProvider()->send_create_result(con,
+				rina::cdap::getProvider()->send_create_result(con_handle,
 									      obj,
 									      flags,
 									      res,
@@ -949,9 +969,28 @@ void FlowAllocatorInstance::submitAllocateResponse(const rina::AllocateFlowRespo
 
 void FlowAllocatorInstance::complete_flow_allocation(bool success)
 {
+	rina::cdap_rib::con_handle_t con_handle;
+
 	if (success) {
 		//Flow has been accepted
 		if (flow_->source_address != flow_->destination_address) {
+			con_handle = ipc_process_->enrollment_task_->get_con_handle_to_address(flow_->source_address);
+			if (con_handle.port_id == 0) {
+				LOG_IPCP_ERR("Could not find con_handle to next hop for destination address %u",
+					     flow_->destination_address);
+
+				try {
+					rina::extendedIPCManager->flowDeallocated(port_id_);
+				} catch (rina::Exception &e) {
+					LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s",
+							e.what());
+				}
+				releaseUnlockRemove();
+				return;
+			}
+			con_handle.address = flow_->source_address;
+			con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_ADATA;
+
 			try {
 				rina::cdap_rib::flags_t flags;
 				rina::cdap_rib::filt_info_t filt;
@@ -963,7 +1002,7 @@ void FlowAllocatorInstance::complete_flow_allocation(bool success)
 				rina::cdap_rib::res_info_t res;
 				res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 
-				rina::cdap::getProvider()->send_create_result(con,
+				rina::cdap::getProvider()->send_create_result(con_handle,
 									      obj,
 									      flags,
 									      res,
@@ -1038,6 +1077,16 @@ void FlowAllocatorInstance::complete_flow_allocation(bool success)
 
 	//Flow has been rejected
 	if (flow_->source_address != flow_->destination_address) {
+		con_handle = ipc_process_->enrollment_task_->get_con_handle_to_address(flow_->source_address);
+		if (con_handle.port_id == 0) {
+			LOG_IPCP_ERR("Could not find con_handle to next hop for destination address %u",
+				     flow_->destination_address);
+			releaseUnlockRemove();
+			return;
+		}
+		con_handle.address = flow_->source_address;
+		con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_ADATA;
+
 		try {
 			rina::cdap_rib::flags_t flags;
 			rina::cdap_rib::filt_info_t filt;
@@ -1050,7 +1099,7 @@ void FlowAllocatorInstance::complete_flow_allocation(bool success)
 			res.code_ = rina::cdap_rib::CDAP_ERROR;
 			res.reason_ = "Application has rejected the flow";
 
-			rina::cdap::getProvider()->send_create_result(con,
+			rina::cdap::getProvider()->send_create_result(con_handle,
 								      obj,
 								      flags,
 								      res,
@@ -1143,6 +1192,10 @@ void FlowAllocatorInstance::processUpdateConnectionResponseEvent(
 
 void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEvent& event)
 {
+	rina::cdap_rib::con_handle_t con_handle;
+	unsigned int dest_address;
+	unsigned int dest_addresss;
+
 	rina::ScopedLock g(lock_);
 
 	if (state != FLOW_ALLOCATED) {
@@ -1160,14 +1213,17 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 		if (flow_->source_address != flow_->destination_address) {
 			try {
 				//Get destination address again in case it has changed
-				con.port_id = namespace_manager_->getDFTNextHop(flow_->destination_naming_info);
+				dest_address = namespace_manager_->getDFTNextHop(flow_->destination_naming_info);
+				con_handle = ipc_process_->enrollment_task_->get_con_handle_to_address(dest_address);
+				con_handle.address = dest_address;
+				con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_ADATA;
 
 				rina::cdap_rib::flags_t flags;
 				rina::cdap_rib::filt_info_t filt;
 				rina::cdap_rib::obj_info_t obj;
 				obj.class_ = FlowRIBObject::class_name;
 				obj.name_ = object_name_;
-				rib_daemon_->getProxy()->remote_delete(con,
+				rib_daemon_->getProxy()->remote_delete(con_handle,
 								       obj,
 								       flags,
 								       filt,

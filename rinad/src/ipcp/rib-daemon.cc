@@ -97,6 +97,12 @@ class IPCPCDAPIOHandler : public rina::cdap::CDAPIOHandler
 			     const rina::cdap::cdap_m_t& m_rcv,
 			     bool is_auth_message);
 
+	void __send_message(const rina::cdap_rib::con_handle_t& con_handle,
+			    const rina::ser_obj_t& sdu);
+
+	void forward_adata_msg(const rina::ser_obj_t &message,
+			       unsigned int address);
+
         // Lock to control that when sending a message requiring
 	// a reply the CDAP Session manager has been updated before
 	// receiving the response message
@@ -109,6 +115,47 @@ void IPCPCDAPIOHandler::set_enrollment_task(IPCPEnrollmentTask * task)
 	etask = task;
 }
 
+void IPCPCDAPIOHandler::__send_message(const rina::cdap_rib::con_handle_t & con_handle,
+				       const rina::ser_obj_t& sdu)
+{
+	int fd = 0;
+
+	if (con_handle.use_internal_flow) {
+		//Write to internal reliable N-flow
+		fd = etask->get_fd_associated_to_n1flow(con_handle.port_id);
+		if (fd < 0) {
+			LOG_IPCP_ERR("Could not find fd associated to port-id %d",
+				     con_handle.port_id);
+			throw rina::IPCException("Could not find fd associated to port-id");
+		}
+
+		write(fd, sdu.message_, sdu.size_);
+	} else {
+		//Write to N-1 flow
+		rina::kernelIPCProcess->writeMgmgtSDUToPortId(sdu.message_,
+							      sdu.size_,
+							      con_handle.port_id);
+	}
+}
+
+void IPCPCDAPIOHandler::forward_adata_msg(const rina::ser_obj_t &message,
+		       	       	          unsigned int address)
+{
+	rina::cdap_rib::con_handle_t con;
+
+	con = IPCPFactory::getIPCP()->enrollment_task_->get_con_handle_to_address(address);
+	if (con.port_id == 0) {
+		LOG_IPCP_ERR("Could not find next hop for destination address %d, "
+				"dropping A-DATA CDAP PDU", address);
+		return;
+	}
+
+	__send_message(con, message);
+
+	LOG_IPCP_DBG("Forwarded A-DATA message to IPCP address %u through port-id %u",
+		     address, con.port_id);
+}
+
 void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
 			     const rina::cdap_rib::con_handle_t& con_handle)
 {
@@ -118,15 +165,15 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
 
 	atomic_send_lock_.lock();
 	try {
-		if (con_handle.cdap_dest == rina::cdap_rib::CDAP_DEST_ADDRESS) {
+		if (con_handle.cdap_dest == rina::cdap_rib::CDAP_DEST_ADATA) {
 			rina::cdap::ADataObject adata;
 			encoders::ADataObjectEncoder encoder;
 			rina::cdap_rib::flags_t flags;
 			rina::cdap_rib::filt_info_t filt;
 			rina::cdap_rib::obj_info_t obj;
 
-			adata.source_address_ = IPCPFactory::getIPCP()->get_address();
-			adata.dest_address_ = con_handle.port_id;
+			adata.source_address_ = IPCPFactory::getIPCP()->get_active_address();
+			adata.dest_address_ = con_handle.address;
 			manager_->encodeCDAPMessage(m_sent,
 						    adata.encoded_cdap_message_);
 			obj.class_ = rina::cdap::ADataObject::A_DATA_OBJECT_CLASS;
@@ -140,10 +187,11 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
 							       0);
 
 			manager_->encodeCDAPMessage(a_data_m, sdu);
-			rina::kernelIPCProcess->sendMgmgtSDUToAddress(sdu.message_,
-								      sdu.size_,
-								      con_handle.port_id);
-			LOG_IPCP_DBG("Sent A-Data CDAP message to address %u: \n%s",
+
+			__send_message(con_handle, sdu);
+
+			LOG_IPCP_DBG("Sent A-Data CDAP message to address %u via port-id %u: \n%s",
+				     con_handle.address,
 				     con_handle.port_id,
 				     m_sent.to_string().c_str());
 			if (m_sent.invoke_id_ != 0 && !m_sent.is_request_message()) {
@@ -155,22 +203,7 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
 							    sdu,
 							    con_handle.port_id);
 
-			if (con_handle.use_internal_flow) {
-				//Write to internal reliable N-flow
-				fd = etask->get_fd_associated_to_n1flow(con_handle.port_id);
-				if (fd < 0) {
-					LOG_IPCP_ERR("Could not find fd associated to port-id %d",
-						     con_handle.port_id);
-					throw rina::IPCException("Could not find fd associated to port-id");
-				}
-
-				write(fd, sdu.message_, sdu.size_);
-			} else {
-				//Write to N-1 flow
-				rina::kernelIPCProcess->writeMgmgtSDUToPortId(sdu.message_,
-									      sdu.size_,
-									      con_handle.port_id);
-			}
+			__send_message(con_handle, sdu);
 
 			LOG_IPCP_DBG("Sent CDAP message of size %d through port-id %u: \n%s" ,
 				      sdu.size_,
@@ -244,8 +277,16 @@ void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
 	}
 	atomic_send_lock_.unlock();
 
-	//2 If it is an A-Data PDU extract the real message
+	//2 If it is an A-Data PDU extract the real message and either forward or process it
 	if (m_rcv.obj_name_ == rina::cdap::ADataObject::A_DATA_OBJECT_NAME) {
+		rina::cdap::ADataObject adata;
+		encoders::ADataObjectEncoder encoder;
+		encoder.decode(m_rcv.obj_value_, adata);
+		if (adata.dest_address_ != IPCPFactory::getIPCP()->get_active_address()) {
+			forward_adata_msg(message, adata.dest_address_);
+			return;
+		}
+
 		try {
 			encoders::ADataObjectEncoder encoder;
 			rina::cdap::ADataObject a_data_obj;
@@ -265,15 +306,11 @@ void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
 				}
 			}
 
-			rina::cdap_rib::con_handle_t con_handle;
-			con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_ADDRESS;
-			con_handle.port_id = handle;
-
-			LOG_IPCP_DBG("Received A-Data CDAP message from address %u \n%s",
-				     a_data_obj.source_address_,
+			LOG_IPCP_DBG("Received A-Data CDAP message from address %u through port \n%s",
+				     a_data_obj.source_address_, handle,
 				     inner_m.to_string().c_str());
 
-			invoke_callback(con_handle, inner_m, false);
+			invoke_callback(manager_->get_con_handle(handle), inner_m, false);
 			return;
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Error processing A-data message: %s", e.what());

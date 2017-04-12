@@ -213,6 +213,7 @@ public:
 	std::list<rina::RoutingTableEntry> get_rt_entries();
 	/// This operation takes ownership of the entries
 	void set_rt_entries(const std::list<rina::RoutingTableEntry*>& rt);
+	unsigned int get_next_hop_address(unsigned int dest_address);
 
 	void eventHappened(rina::InternalEvent * event);
 
@@ -235,8 +236,12 @@ private:
 	INMinusOneFlowManager * n_minus_one_flow_manager_;
 	IPCPRIBDaemon * rib_daemon_;
 	rina::Lockable lock;
-	rina::ThreadSafeMapOfPointers<std::string, rina::PDUForwardingTableEntry> pduft;
-	rina::ThreadSafeMapOfPointers<std::string, rina::RoutingTableEntry> rt;
+
+	std::map<std::string, rina::PDUForwardingTableEntry *> pduft;
+	rina::ReadWriteLockable pduft_lock;
+
+	std::map<std::string, rina::RoutingTableEntry *> rt;
+	rina::ReadWriteLockable rt_lock;
 
 	std::map<int, RMTN1Flow *> n1_flows;
 	rina::Lockable n1_flows_lock;

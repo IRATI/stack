@@ -593,35 +593,46 @@ void ResourceAllocator::addQoSCube(const rina::QoSCube& cube)
 
 std::list<rina::PDUForwardingTableEntry> ResourceAllocator::get_pduft_entries()
 {
-	return pduft.getCopyofentries();
+	std::list<rina::PDUForwardingTableEntry> result;
+	std::map<std::string, rina::PDUForwardingTableEntry *>::iterator it;
+
+	rina::ReadScopedLock g(pduft_lock);
+
+	for (it = pduft.begin(); it != pduft.end(); ++it) {
+		result.push_back(*(it->second));
+	}
+
+	return result;
 }
 
 /// This operation takes ownership of the entries
 void ResourceAllocator::set_pduft_entries(const std::list<rina::PDUForwardingTableEntry*>& pduft_entries)
 {
-	rina::ScopedLock g(lock);
 	rina::PDUForwardingTableEntry * pdufte;
+	std::map<std::string, rina::PDUForwardingTableEntry *>::iterator it;
+	std::list<rina::PDUForwardingTableEntry*>::const_iterator it2;
 	rina::rib::RIBObj * ribObj;
 	std::string obj_name;
 	std::stringstream ss;
 
+	rina::WriteScopedLock g(pduft_lock);
+
 	//1 Scrap the old entries
-	std::list<std::string> obj_names = pduft.getKeys();
-	std::list<std::string>::iterator it;
-	for (it = obj_names.begin(); it != obj_names.end(); ++it) {
+	for (it = pduft.begin(); it != pduft.end(); ++it) {
 		try {
-			rib_daemon_->removeObjRIB(*it);
+			rib_daemon_->removeObjRIB(it->first);
 		} catch (rina::Exception &e) {
 			LOG_WARN("Problems removing RIB obj: %s", e.what());
 		}
 
-		pdufte = pduft.erase(*it);
-		if (pdufte)
-			delete pdufte;
+		pdufte = it->second;
+		delete pdufte;
+		pdufte = 0;
 	}
 
+	pduft.clear();
+
 	//2 Add the new entries
-	std::list<rina::PDUForwardingTableEntry*>::const_iterator it2;
 	for (it2 = pduft_entries.begin();
 			it2 != pduft_entries.end(); ++it2) {
 		ss << PDUFTEntryRIBObj::object_name_prefix;
@@ -638,40 +649,51 @@ void ResourceAllocator::set_pduft_entries(const std::list<rina::PDUForwardingTab
 			continue;
 		}
 
-		pduft.put(obj_name, *it2);
+		pduft[obj_name] = *it2;
 	}
 }
 
 std::list<rina::RoutingTableEntry> ResourceAllocator::get_rt_entries()
 {
-	return rt.getCopyofentries();
+	std::list<rina::RoutingTableEntry> result;
+	std::map<std::string, rina::RoutingTableEntry *>::iterator it;
+
+	rina::ReadScopedLock g(rt_lock);
+
+	for (it = rt.begin(); it != rt.end(); ++it) {
+		result.push_back(*(it->second));
+	}
+
+	return result;
 }
 
 void ResourceAllocator::set_rt_entries(const std::list<rina::RoutingTableEntry*>& rt_entries)
 {
-	rina::ScopedLock g(lock);
 	rina::RoutingTableEntry * rte;
+	std::map<std::string, rina::RoutingTableEntry *>::iterator it;
+	std::list<rina::RoutingTableEntry*>::const_iterator it2;
 	rina::rib::RIBObj * ribObj;
 	std::string obj_name;
 	std::stringstream ss;
 
+	rina::WriteScopedLock g(rt_lock);
+
 	//1 Scrap the old entries
-	std::list<std::string> obj_names = rt.getKeys();
-	std::list<std::string>::iterator it;
-	for (it = obj_names.begin(); it != obj_names.end(); ++it) {
+	for (it = rt.begin(); it != rt.end(); ++it) {
 		try {
-			rib_daemon_->removeObjRIB(*it);
+			rib_daemon_->removeObjRIB(it->first);
 		} catch (rina::Exception &e) {
 			LOG_WARN("Problems removing RIB obj: %s", e.what());
 		}
 
-		rte = rt.erase(*it);
-		if (rte)
-			delete rte;
+		rte = it->second;
+		delete rte;
+		rte = 0;
 	}
 
+	rt.clear();
+
 	//2 Add the new entries
-	std::list<rina::RoutingTableEntry*>::const_iterator it2;
 	for (it2 = rt_entries.begin();
 			it2 != rt_entries.end(); ++it2) {
 		ss << NextHopTEntryRIBObj::object_name_prefix;
@@ -688,8 +710,27 @@ void ResourceAllocator::set_rt_entries(const std::list<rina::RoutingTableEntry*>
 			continue;
 		}
 
-		rt.put(obj_name, *it2);
+		rt[obj_name] = *it2;
 	}
+}
+
+unsigned int ResourceAllocator::get_next_hop_address(unsigned int dest_address)
+{
+	std::map<std::string, rina::RoutingTableEntry *>::iterator it;
+	std::list<unsigned int>::iterator it2;
+
+	rina::ReadScopedLock g(rt_lock);
+
+	for (it = rt.begin(); it != rt.end(); ++it) {
+		for (it2 = it->second->destination.addresses.begin();
+				it2 != it->second->destination.addresses.end(); ++it2) {
+			if (dest_address == *it2) {
+				return it->second->nextHopNames.front().alts.front().addresses.front();
+			}
+		}
+	}
+
+	return 0;
 }
 
 } //namespace rinad
