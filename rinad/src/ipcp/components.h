@@ -389,6 +389,11 @@ public:
 	// Returns the next hop address towards the destination
 	virtual unsigned int get_next_hop_address(unsigned int dest_address) = 0;
 
+	/// Add a temporary entry to the PDU FTE, until the routing policy
+	/// provides it when it modifies the forwarding table.
+	/// Takes ownership of the entry.
+	virtual void add_temp_pduft_entry(unsigned int dest_address, int port_id) = 0;
+
 	IPDUFTGeneratorPs * pduft_gen_ps;
 };
 

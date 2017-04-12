@@ -215,6 +215,11 @@ public:
 	void set_rt_entries(const std::list<rina::RoutingTableEntry*>& rt);
 	unsigned int get_next_hop_address(unsigned int dest_address);
 
+	/// Add a temporary entry to the PDU FTE, until the routing policy
+	/// provides it when it modifies the forwarding table.
+	/// Takes ownership of the entry.
+	void add_temp_pduft_entry(unsigned int dest_address, int port_id);
+
 	void eventHappened(rina::InternalEvent * event);
 
 	void sync_with_kernel();
@@ -233,10 +238,15 @@ private:
 	// @param portId
 	void nMinusOneFlowAllocated(rina::NMinusOneFlowAllocatedEvent * flowEvent);
 
+	bool contains_temp_entry(unsigned int dest_address);
+	bool entry_is_in_pduft(unsigned int dest_address);
+	void update_temp_entries(void);
+
 	INMinusOneFlowManager * n_minus_one_flow_manager_;
 	IPCPRIBDaemon * rib_daemon_;
 	rina::Lockable lock;
 
+	std::list<rina::PDUForwardingTableEntry*> temp_entries;
 	std::map<std::string, rina::PDUForwardingTableEntry *> pduft;
 	rina::ReadWriteLockable pduft_lock;
 

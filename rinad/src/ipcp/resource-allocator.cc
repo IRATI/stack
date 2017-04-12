@@ -651,6 +651,38 @@ void ResourceAllocator::set_pduft_entries(const std::list<rina::PDUForwardingTab
 
 		pduft[obj_name] = *it2;
 	}
+
+	//3 Update temp entries
+	update_temp_entries();
+}
+
+void ResourceAllocator::update_temp_entries()
+{
+	std::list<rina::PDUForwardingTableEntry*>::iterator it;
+	rina::PDUForwardingTableEntry * entry;
+
+	it = temp_entries.begin();
+	while (it != temp_entries.end()) {
+	    entry = *it;
+	    if (entry_is_in_pduft(entry->address)) {
+		    it = temp_entries.erase(it);
+		    delete entry;
+		    entry = 0;
+	    } else {
+	        ++it;
+	    }
+	}
+
+	if (temp_entries.size() == 0) {
+		return;
+	}
+
+	try {
+		rina::kernelIPCProcess->modifyPDUForwardingTableEntries(temp_entries, 0);
+	} catch (rina::Exception & e) {
+		LOG_IPCP_ERR("Error adding entries to PDU Forwarding Table in the kernel: %s",
+				e.what());
+	}
 }
 
 std::list<rina::RoutingTableEntry> ResourceAllocator::get_rt_entries()
@@ -731,6 +763,61 @@ unsigned int ResourceAllocator::get_next_hop_address(unsigned int dest_address)
 	}
 
 	return 0;
+}
+
+bool ResourceAllocator::contains_temp_entry(unsigned int dest_address)
+{
+	std::list<rina::PDUForwardingTableEntry*>::iterator it;
+
+	for (it = temp_entries.begin(); it != temp_entries.end(); ++it) {
+		if ((*it)->address == dest_address) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool ResourceAllocator::entry_is_in_pduft(unsigned int dest_address)
+{
+	std::map<std::string, rina::PDUForwardingTableEntry*>::iterator it;
+
+	for (it = pduft.begin(); it != pduft.end(); ++it) {
+		if (it->second->address == dest_address) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void ResourceAllocator::add_temp_pduft_entry(unsigned int dest_address, int port_id)
+{
+	std::list<unsigned int>::iterator it2;
+	rina::PortIdAltlist pid_list;
+	rina::PDUForwardingTableEntry* entry;
+	std::list<rina::PDUForwardingTableEntry*> to_add;
+
+	rina::WriteScopedLock g(pduft_lock);
+
+	if (contains_temp_entry(dest_address) ||
+			entry_is_in_pduft(dest_address)) {
+		return;
+	}
+
+	entry = new rina::PDUForwardingTableEntry();
+	entry->address = dest_address;
+	pid_list.add_alt(port_id);
+	entry->portIdAltlists.push_back(pid_list);
+	to_add.push_back(entry);
+	temp_entries.push_back(entry);
+
+	try {
+		rina::kernelIPCProcess->modifyPDUForwardingTableEntries(to_add, 0);
+	} catch (rina::Exception & e) {
+		LOG_IPCP_ERR("Error adding entry to PDU Forwarding Table in the kernel: %s",
+				e.what());
+	}
 }
 
 } //namespace rinad

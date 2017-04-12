@@ -357,15 +357,22 @@ void FlowAllocator::submitAllocateRequest(const rina::FlowRequestEvent& event,
 {
 	int portId = 0;
 	IFlowAllocatorInstance * fai;
+	rina::ApplicationProcessNamingInformation app_info;
+
+	if (!event.internal) {
+		app_info = event.localApplicationName;
+	}
 
 	try {
-		portId = rina::extendedIPCManager->allocatePortId(event.localApplicationName);
+		portId = rina::extendedIPCManager->allocatePortId(app_info);
 		LOG_IPCP_DBG("Got assigned port-id %d", portId);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems requesting an available port-id to the Kernel IPC Manager: %s",
 				e.what());
 		if (!event.internal) {
 			replyToIPCManager(event, -1);
+		} else {
+			throw e;
 		}
 	}
 
@@ -395,6 +402,8 @@ void FlowAllocator::submitAllocateRequest(const rina::FlowRequestEvent& event,
 
 		if (!event.internal) {
 			replyToIPCManager(event, -1);
+		} else {
+			throw e;
 		}
 	}
 }

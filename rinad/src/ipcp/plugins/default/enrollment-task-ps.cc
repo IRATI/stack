@@ -842,6 +842,10 @@ void EnrolleeStateMachine::operational_status_start(int invoke_id,
 	timer_.cancelTask(last_scheduled_task_);
 	start_request_invoke_id = invoke_id;
 
+	//Add temp entry to the PDU forwarding table, to be able to forward PDUs to neighbor
+	ipcp_->resource_allocator_->add_temp_pduft_entry(remote_peer_.address_,
+							 remote_peer_.underlying_port_id_);
+
 	// Allocate internal reliable flow to layer management tasks of remote peer
 	try {
 		event.DIFName.processName = enrollment_request_.event_.dafName.processName;
@@ -1432,6 +1436,10 @@ void EnrollerStateMachine::remoteStopResult(const rina::cdap_rib::con_handle_t &
 		abortEnrollment(res.reason_, true);
 		return;
 	}
+
+	//Add temp entry to the PDU forwarding table, to be able to forward PDUs to neighbor
+	ipcp_->resource_allocator_->add_temp_pduft_entry(remote_peer_.address_,
+							 remote_peer_.underlying_port_id_);
 
 	try{
 		rina::cdap_rib::obj_info_t obj;

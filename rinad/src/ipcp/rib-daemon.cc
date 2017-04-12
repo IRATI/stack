@@ -535,7 +535,9 @@ int InternalFlowSDUReader::run()
 	int bytes_read = 0;
 	bool keep_going = true;
 
-	LOG_DBG("Internal flow SDU reader of port-id %d starting", portid);
+	LOG_DBG("Internal flow SDU reader of port-id %d starting. "
+			"Attached to CDAP session %d",
+			portid, cdap_session);
 
 	while(keep_going) {
 		bytes_read = read(fd, message.message_, 5000);
