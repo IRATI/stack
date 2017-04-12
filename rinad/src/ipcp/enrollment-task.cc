@@ -1424,6 +1424,7 @@ rina::Neighbor EnrollmentTask::get_neighbor(const std::string& neighbor_key)
 void EnrollmentTask::remove_neighbor(const std::string& neighbor_key)
 {
 	std::map<std::string, rina::Neighbor *>::iterator it;
+	rina::Neighbor * neigh;
 
 	rina::WriteScopedLock writeLock(neigh_lock);
 
@@ -1434,18 +1435,20 @@ void EnrollmentTask::remove_neighbor(const std::string& neighbor_key)
 		return;
 	}
 
+	neigh = it->second;
 	neighbors.erase(it);
 	try {
 		std::stringstream ss;
 		ss << NeighborRIBObj::object_name_prefix
-	           << it->second->name_.processName;
+	           << neigh->name_.processName;
 		rib_daemon_->removeObjRIB(ss.str());
 	} catch (rina::Exception &e){
 		LOG_IPCP_ERR("Error removing object from RIB %s",
 			     e.what());
 	}
 
-	delete it->second;
+	delete neigh;
+	neigh = 0;
 }
 
 bool EnrollmentTask::isEnrolledTo(const std::string& processName)
@@ -1599,6 +1602,7 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 	rina::Sleep sleep;
 	IEnrollmentStateMachine * stateMachine = 0;
 	IPCPEnrollmentTaskPS * ipcp_ps = 0;
+	DestroyESMTimerTask * timer_task = 0;
 
 	rina::ScopedLock g(lock_);
 
@@ -1618,11 +1622,6 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 	ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
 	assert(ipcp_ps);
 	ipcp_ps->inform_ipcm_about_failure(stateMachine);
-
-	//3 Terminate and delete stateMachine
-	stateMachine->reset_state();
-	delete stateMachine;
-	stateMachine = 0;
 
 	//3 Send message and deallocate flow if required
 	if(sendReleaseMessage){
@@ -1653,6 +1652,11 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 
 	//5 Deallocate N-1 flow
 	deallocateFlow(portId);
+
+	//6 Terminate and delete stateMachine (via timer)
+	stateMachine->reset_state();
+	timer_task = new DestroyESMTimerTask(stateMachine);
+	timer.scheduleTask(timer_task, 0);
 }
 
 void EnrollmentTask::enrollmentCompleted(const rina::Neighbor& neighbor,
