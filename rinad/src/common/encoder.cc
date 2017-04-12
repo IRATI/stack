@@ -745,8 +745,10 @@ namespace neighbor_helpers {
 void toGPB(const rina::Neighbor &obj, rina::messages::neighbor_t &gpb)
 {
         gpb.set_address(obj.address_);
-        gpb.set_applicationprocessname(obj.name_.processName);
-        gpb.set_applicationprocessinstance(obj.name_.processInstance);
+        gpb.set_apname(obj.name_.processName);
+        gpb.set_apinstance(obj.name_.processInstance);
+        gpb.set_aename(obj.name_.entityName);
+        gpb.set_aeinstance(obj.name_.entityInstance);
         for (std::list<rina::ApplicationProcessNamingInformation>::const_iterator it =
                         obj.supporting_difs_.begin();
                         it != obj.supporting_difs_.end(); ++it)
@@ -757,8 +759,10 @@ void toGPB(const rina::Neighbor &obj, rina::messages::neighbor_t &gpb)
 void toModel(const rina::messages::neighbor_t &gpb, rina::Neighbor &des_obj)
 {
         des_obj.address_ = gpb.address();
-        des_obj.name_.processName = gpb.applicationprocessname();
-        des_obj.name_.processInstance = gpb.applicationprocessinstance();
+        des_obj.name_.processName = gpb.apname();
+        des_obj.name_.processInstance = gpb.apinstance();
+        des_obj.name_.entityName = gpb.aename();
+        des_obj.name_.entityInstance = gpb.aeinstance();
         for (int i = 0; i < gpb.supportingdifs_size(); i++)
         {
                 des_obj.supporting_difs_.push_back(
