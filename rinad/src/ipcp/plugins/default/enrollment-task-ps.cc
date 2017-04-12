@@ -1020,7 +1020,6 @@ private:
 
 	INamespaceManager * namespace_manager_;
 	int connect_message_invoke_id_;
-	rina::cdap_rib::con_handle_t con_handle_;
 };
 
 //Class EnrollerStateMachine
@@ -1054,8 +1053,8 @@ void EnrollerStateMachine::connect(const rina::cdap::CDAPMessage& message,
 	remote_peer_.name_.processName = con_handle.dest_.ap_name_;
 	remote_peer_.name_.processInstance = con_handle.dest_.ap_inst_;
 	connect_message_invoke_id_ = message.invoke_id_;
-	con.port_id = con_handle.port_id;
-	con_handle_ = con_handle;
+	con = con_handle;
+	remote_peer_.underlying_port_id_ = con.port_id;
 
 	auth_ps_ = sec_man_->get_auth_policy_set(message.auth_policy_.name);
 	if (!auth_ps_) {
@@ -1144,7 +1143,7 @@ void EnrollerStateMachine::authentication_successful()
 	rina::Time currentTime;
         int t0 = currentTime.get_current_time_in_ms();
         LOG_IPCP_DBG("START ENROLLMENT %d ms", t0);
-        if (smps->isAllowedToJoinDAF(con_handle_,
+        if (smps->isAllowedToJoinDAF(con,
 				     remote_peer_,
 				     auth) != 0) {
 		LOG_IPCP_WARN("Security Manager rejected enrollment attempt, aborting enrollment");
@@ -1156,7 +1155,7 @@ void EnrollerStateMachine::authentication_successful()
 	try{
 		rina::cdap_rib::res_info_t res;
 		res.code_ = rina::cdap_rib::CDAP_SUCCESS;
-		rina::cdap::getProvider()->send_open_connection_result(con_handle_,
+		rina::cdap::getProvider()->send_open_connection_result(con,
 								       res,
 								       auth,
 								       connect_message_invoke_id_);
