@@ -496,12 +496,7 @@ void IEnrollmentStateMachine::release(int invoke_id,
 	if (!isValidPortId(con_handle.port_id))
 		return;
 
-	if (last_scheduled_task_)
-		timer_.cancelTask(last_scheduled_task_);
-
-	createOrUpdateNeighborInformation(false);
-
-	state_ = STATE_TERMINATED;
+	reset_state();
 }
 
 void IEnrollmentStateMachine::releaseResult(const rina::cdap_rib::res_info_t &res,
@@ -512,7 +507,7 @@ void IEnrollmentStateMachine::releaseResult(const rina::cdap_rib::res_info_t &re
 	if (!isValidPortId(con_handle.port_id))
 		return;
 
-	state_ = STATE_TERMINATED;
+	reset_state();
 }
 
 void IEnrollmentStateMachine::flowDeallocated(int portId)
@@ -525,15 +520,22 @@ void IEnrollmentStateMachine::flowDeallocated(int portId)
 		return;
 	}
 
-	createOrUpdateNeighborInformation(false);
-
-	state_ = STATE_TERMINATED;
+	reset_state();
 }
 
 std::string IEnrollmentStateMachine::get_state()
 {
 	rina::ScopedLock g(lock_);
 	return state_;
+}
+
+void IEnrollmentStateMachine::reset_state()
+{
+	if (last_scheduled_task_)
+		timer_.cancelTask(last_scheduled_task_);
+
+	createOrUpdateNeighborInformation(false);
+	state_ = STATE_TERMINATED;
 }
 
 bool IEnrollmentStateMachine::isValidPortId(int portId)
@@ -552,6 +554,8 @@ void IEnrollmentStateMachine::abortEnrollment(const std::string& reason,
 					      bool sendReleaseMessage)
 {
 	assert(!lock_.trylock());
+
+	reset_state();
 	AbortEnrollmentTimerTask * task = new AbortEnrollmentTimerTask(enrollment_task_,
 								       remote_peer_.name_,
 								       con.port_id,
@@ -559,7 +563,6 @@ void IEnrollmentStateMachine::abortEnrollment(const std::string& reason,
 								       reason,
 								       sendReleaseMessage);
 	timer_.scheduleTask(task, 0);
-	state_ = STATE_TERMINATED;
 }
 
 void IEnrollmentStateMachine::createOrUpdateNeighborInformation(bool enrolled)
@@ -620,24 +623,6 @@ void IEnrollmentStateMachine::sendNeighbors()
 						       NULL);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems sending neighbors: %s", e.what());
-	}
-}
-
-//Class EnrollmentFailedTimerTask
-EnrollmentFailedTimerTask::EnrollmentFailedTimerTask(IEnrollmentStateMachine * state_machine,
-						     const std::string& reason)
-{
-	state_machine_ = state_machine;
-	reason_ = reason;
-}
-
-void EnrollmentFailedTimerTask::run()
-{
-	try {
-		rina::ScopedLock g(state_machine_->lock_);
-		state_machine_->abortEnrollment(reason_, true);
-	} catch(rina::Exception &e) {
-		LOG_ERR("Problems aborting enrollment: %s", e.what());
 	}
 }
 
@@ -835,7 +820,7 @@ void EnrollmentTask::internal_flow_allocation_failed(rina::IPCPInternalFlowAlloc
 	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
 		if (it->second->remote_peer_.name_.processName
 				== event->flow_info.remoteAppName.processName) {
-			it->second->internal_flow_allocate_result(0 - event->error_code,
+			it->second->internal_flow_allocate_result(event->error_code,
 								  0,
 								  event->reason);
 			return;
@@ -1165,6 +1150,7 @@ void EnrollmentTask::processDisconnectNeighborRequestEvent(const rina::Disconnec
 
 	// Update and defer deletion of state machine to a timer task (takes long)
 	state_machines_.erase(esm->con.port_id);
+	esm->reset_state();
 	DestroyESMTimerTask * dsm_task = new DestroyESMTimerTask(esm);
 	timer.scheduleTask(dsm_task, 0);
 
@@ -1623,9 +1609,8 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 	//1 Remove enrollment state machine from the store
 	stateMachine = getEnrollmentStateMachine(portId, true);
 	if (!stateMachine) {
-		LOG_IPCP_ERR("Could not find the enrollment state machine associated to neighbor %s and portId %d",
-			     remotePeerNamingInfo.processName.c_str(),
-			     portId);
+		LOG_IPCP_DBG("State machine associated to portId %d already removed",
+			      portId);
 		return;
 	}
 
@@ -1634,17 +1619,15 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 	assert(ipcp_ps);
 	ipcp_ps->inform_ipcm_about_failure(stateMachine);
 
-	while(stateMachine->get_state() != IEnrollmentStateMachine::STATE_TERMINATED) {
-		sleep.sleepForMili(1);
-	};
-
+	//3 Terminate and delete stateMachine
+	stateMachine->reset_state();
 	delete stateMachine;
 	stateMachine = 0;
 
 	//3 Send message and deallocate flow if required
 	if(sendReleaseMessage){
 		try {
-			rib_daemon_->getProxy()->remote_close_connection(portId);
+			rib_daemon_->getProxy()->remote_close_connection(portId, false);
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems closing application connection: %s",
 				      e.what());
@@ -1684,6 +1667,8 @@ void EnrollmentTask::release(int invoke_id,
 		     	     const rina::cdap_rib::con_handle_t &con_handle)
 {
 	IEnrollmentStateMachine * stateMachine;
+	rina::FlowDeallocateRequestEvent fd_event;
+	rina::Sleep sleep;
 
 	LOG_DBG("M_RELEASE cdapMessage from portId %u",
 		con_handle.port_id);
@@ -1724,6 +1709,23 @@ void EnrollmentTask::release(int invoke_id,
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems generating or sending CDAP Message: %s",
 				     e.what());
+		}
+	}
+
+	//4 Deallocate internal reliable flow if required
+	if (stateMachine->remote_peer_.internal_port_id > 0) {
+		try {
+			fd_event.internal = true;
+			fd_event.portId = stateMachine->remote_peer_.internal_port_id;
+			fd_event.applicationName.processName = ipcp->get_name();
+			fd_event.applicationName.processInstance = ipcp->get_instance();
+			fd_event.applicationName.entityName = IPCProcess::MANAGEMENT_AE;
+			ipcp->flow_allocator_->submitDeallocate(fd_event);
+
+			//Sleep for a little bit so that we give time to deallocate the flow
+			sleep.sleepForMili(5);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems deallocating internal flow: %s", e.what());
 		}
 	}
 

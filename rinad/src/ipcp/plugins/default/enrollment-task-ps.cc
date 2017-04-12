@@ -391,7 +391,12 @@ void EnrolleeStateMachine::initiateEnrollment(const rina::EnrollmentRequest& enr
 		con.port_id = portId;
 
 		//Set timer
-		last_scheduled_task_ = new EnrollmentFailedTimerTask(this, CONNECT_RESPONSE_TIMEOUT);
+		last_scheduled_task_ = new AbortEnrollmentTimerTask(enrollment_task_,
+				       	       	       	       	    remote_peer_.name_,
+								    con.port_id,
+								    remote_peer_.internal_port_id,
+								    CONNECT_RESPONSE_TIMEOUT,
+								    true);
 		timer_.scheduleTask(last_scheduled_task_, timeout_);
 
 		//Update state
@@ -514,7 +519,12 @@ void EnrolleeStateMachine::connectResponse(int result,
 			     con.port_id);
 
 		//Set timer
-		last_scheduled_task_ = new EnrollmentFailedTimerTask(this, START_RESPONSE_TIMEOUT);
+		last_scheduled_task_ = new AbortEnrollmentTimerTask(enrollment_task_,
+   	       	       	       	    	    	    	    	    remote_peer_.name_,
+								    con.port_id,
+								    remote_peer_.internal_port_id,
+								    START_RESPONSE_TIMEOUT,
+								    true);
 		timer_.scheduleTask(last_scheduled_task_, timeout_);
 
 		//Update state
@@ -555,7 +565,12 @@ void EnrolleeStateMachine::remoteStartResult(const rina::cdap_rib::con_handle_t 
 	}
 
 	//Set timer
-	last_scheduled_task_ = new EnrollmentFailedTimerTask(this, STOP_ENROLLMENT_TIMEOUT);
+	last_scheduled_task_ = new AbortEnrollmentTimerTask(enrollment_task_,
+    	    	    	    	    	    	    	    remote_peer_.name_,
+							    con.port_id,
+							    remote_peer_.internal_port_id,
+							    STOP_ENROLLMENT_TIMEOUT,
+							    true);
 	timer_.scheduleTask(last_scheduled_task_, timeout_);
 
 	//Update state
@@ -601,8 +616,12 @@ void EnrolleeStateMachine::requestMoreInformationOrStart()
 {
 	if (sendNextObjectRequired()){
 		//Set timer
-		last_scheduled_task_ = new EnrollmentFailedTimerTask(this,
-							 	     READ_RESPONSE_TIMEOUT);
+		last_scheduled_task_ = new AbortEnrollmentTimerTask(enrollment_task_,
+	    	    	    	    	    	    	    	    remote_peer_.name_,
+								    con.port_id,
+								    remote_peer_.internal_port_id,
+								    READ_RESPONSE_TIMEOUT,
+								    true);
 		timer_.scheduleTask(last_scheduled_task_, timeout_);
 
 		//Update state
@@ -662,7 +681,12 @@ void EnrolleeStateMachine::requestMoreInformationOrStart()
 		LOG_IPCP_ERR("Problems sending CDAP message: %s", e.what());
 	}
 
-	last_scheduled_task_ = new EnrollmentFailedTimerTask(this, START_TIMEOUT);
+	last_scheduled_task_ = new AbortEnrollmentTimerTask(enrollment_task_,
+    	    	    	    	    	    	    	    remote_peer_.name_,
+							    con.port_id,
+							    remote_peer_.internal_port_id,
+							    START_TIMEOUT,
+							    true);
 	timer_.scheduleTask(last_scheduled_task_, timeout_);
 	state_ = STATE_WAIT_START;
 }
@@ -840,7 +864,12 @@ void EnrolleeStateMachine::operational_status_start(int invoke_id,
 		return;
 	}
 
-	last_scheduled_task_ = new EnrollmentFailedTimerTask(this, INTERNAL_FLOW_ALLOCATION_TIMEOUT);
+	last_scheduled_task_ = new AbortEnrollmentTimerTask(enrollment_task_,
+    	    	    	    	    	    	    	    remote_peer_.name_,
+							    con.port_id,
+							    remote_peer_.internal_port_id,
+							    INTERNAL_FLOW_ALLOCATION_TIMEOUT,
+							    true);
 	timer_.scheduleTask(last_scheduled_task_, timeout_);
 	state_ = STATE_WAIT_INTERNAL_FLOW_ALLOCATION;
 }
@@ -1043,8 +1072,12 @@ void EnrollerStateMachine::connect(const rina::cdap::CDAPMessage& message,
 		return;
 	} else if (auth_status == rina::IAuthPolicySet::IN_PROGRESS) {
 		state_ = STATE_AUTHENTICATING;
-		last_scheduled_task_ = new EnrollmentFailedTimerTask(this,
-								     AUTHENTICATION_TIMEOUT);
+		last_scheduled_task_ = new AbortEnrollmentTimerTask(enrollment_task_,
+	    	    	    	    	    	    	    	    remote_peer_.name_,
+								    con.port_id,
+								    remote_peer_.internal_port_id,
+								    AUTHENTICATION_TIMEOUT,
+								    true);
 		LOG_IPCP_DBG("Authentication in progress");
 		timer_.scheduleTask(last_scheduled_task_, timeout_);
 		return;
@@ -1125,7 +1158,12 @@ void EnrollerStateMachine::authentication_successful()
 								       connect_message_invoke_id_);
 
 		//Set timer
-		last_scheduled_task_ = new EnrollmentFailedTimerTask(this, START_ENROLLMENT_TIMEOUT);
+		last_scheduled_task_ = new AbortEnrollmentTimerTask(enrollment_task_,
+	    	    	    	    	    	    	    	    remote_peer_.name_,
+								    con.port_id,
+								    remote_peer_.internal_port_id,
+								    START_ENROLLMENT_TIMEOUT,
+								    true);
 		timer_.scheduleTask(last_scheduled_task_, timeout_);
 		LOG_IPCP_DBG("M_CONNECT_R sent to portID %d. Waiting for start enrollment request message",
 			     con.port_id);
@@ -1362,8 +1400,12 @@ void EnrollerStateMachine::start(configs::EnrollmentInformationRequest& eiReques
 	}
 
 	//Set timer
-	last_scheduled_task_ = new EnrollmentFailedTimerTask(this,
-						   	     STOP_ENROLLMENT_RESPONSE_TIMEOUT);
+	last_scheduled_task_ = new AbortEnrollmentTimerTask(enrollment_task_,
+    	    	    	    	    	    	    	    remote_peer_.name_,
+							    con.port_id,
+							    remote_peer_.internal_port_id,
+							    STOP_ENROLLMENT_RESPONSE_TIMEOUT,
+							    true);
 	timer_.scheduleTask(last_scheduled_task_, timeout_);
 
 	LOG_IPCP_DBG("Waiting for stop enrollment response message");
@@ -1410,8 +1452,12 @@ void EnrollerStateMachine::remoteStopResult(const rina::cdap_rib::con_handle_t &
 	}
 
 	//Set timer
-	last_scheduled_task_ = new EnrollmentFailedTimerTask(this,
-						   	     INTERNAL_FLOW_ALLOCATION_TIMEOUT);
+	last_scheduled_task_ = new AbortEnrollmentTimerTask(enrollment_task_,
+    	    	    	    	    	    	    	    remote_peer_.name_,
+							    con.port_id,
+							    remote_peer_.internal_port_id,
+							    INTERNAL_FLOW_ALLOCATION_TIMEOUT,
+							    true);
 	timer_.scheduleTask(last_scheduled_task_, timeout_);
 
 	LOG_IPCP_DBG("Waiting for internal flow allocation");
@@ -1445,8 +1491,12 @@ void EnrollerStateMachine::internal_flow_allocate_result(int portId,
 	con.use_internal_flow = true;
 
 	//Set timer
-	last_scheduled_task_ = new EnrollmentFailedTimerTask(this,
-						   	     START_RESPONSE_TIMEOUT);
+	last_scheduled_task_ = new AbortEnrollmentTimerTask(enrollment_task_,
+    	    	    	    	    	    	    	    remote_peer_.name_,
+							    con.port_id,
+							    remote_peer_.internal_port_id,
+							    START_RESPONSE_TIMEOUT,
+							    true);
 	timer_.scheduleTask(last_scheduled_task_, timeout_);
 
 	LOG_IPCP_DBG("Waiting for start response message");

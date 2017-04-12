@@ -217,6 +217,8 @@ public:
 
 	virtual void operational_status_start(int invoke_id,
 					      const rina::ser_obj_t &obj_req) = 0;
+
+	void reset_state(void);
 	std::string get_state();
 
 	rina::Neighbor remote_peer_;
@@ -247,17 +249,6 @@ protected:
 	rina::Lockable lock_;
 	rina::TimerTask * last_scheduled_task_;
 	std::string state_;
-};
-
-class EnrollmentFailedTimerTask: public rina::TimerTask {
-public:
-	EnrollmentFailedTimerTask(IEnrollmentStateMachine * state_machine,
-			const std::string& reason);
-	~EnrollmentFailedTimerTask() throw() {};
-	void run();
-
-	IEnrollmentStateMachine * state_machine_;
-	std::string reason_;
 };
 
 class AbortEnrollmentTimerTask: public rina::TimerTask {
