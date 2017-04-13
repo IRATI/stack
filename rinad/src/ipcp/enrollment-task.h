@@ -347,7 +347,8 @@ public:
 	void operational_status_start(int port_id,
 				      int invoke_id,
 			       	      const rina::ser_obj_t &obj_req);
-	rina::cdap_rib::con_handle_t get_con_handle_to_address(unsigned int address);
+	int get_con_handle_to_address(unsigned int address,
+				      rina::cdap_rib::con_handle_t& con);
 
 
 	/// The maximum time to wait between steps of the enrollment sequence (in ms)

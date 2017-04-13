@@ -337,13 +337,20 @@ bool IPCResourceManager::isSupportingDIF(const ApplicationProcessNamingInformati
 std::list<FlowInformation> IPCResourceManager::getAllNMinusOneFlowInformation() const
 {
 	std::vector<FlowInformation> flows;
+	std::list<FlowInformation> result;
+
 	if (ipcp) {
 		flows = extendedIPCManager->getAllocatedFlows();
 	} else {
 		flows = ipcManager->getAllocatedFlows();
 	}
-	std::list<FlowInformation> result;
+
 	for (unsigned int i=0; i<flows.size(); i++) {
+		//Don't report internal flows in case of an IPCP
+		if (ipcp && flows[i].fd != 0) {
+			continue;
+		}
+
 		result.push_back(flows[i]);
 	}
 

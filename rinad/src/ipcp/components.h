@@ -113,7 +113,8 @@ public:
 	virtual void update_neighbor_address(const rina::Neighbor& neighbor) = 0;
 	virtual int get_fd_associated_to_n1flow(int port_id) = 0;
 	// Return the con_handle to the next hop to reach the address
-	virtual rina::cdap_rib::con_handle_t get_con_handle_to_address(unsigned int address) = 0;
+	virtual int get_con_handle_to_address(unsigned int address,
+					      rina::cdap_rib::con_handle_t& con) = 0;
 };
 
 /// Policy set of the IPCP enrollment task

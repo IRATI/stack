@@ -736,6 +736,7 @@ void FlowAllocatorInstance::releaseUnlockRemove()
 void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::CreateConnectionResponseEvent& event)
 {
 	rina::cdap_rib::con_handle_t con_handle;
+	int rv;
 
 	lock_.lock();
 
@@ -758,8 +759,9 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::Cre
 	flow_->getActiveConnection()->setSourceCepId(event.getCepId());
 
 	if (flow_->destination_address != flow_->source_address) {
-		con_handle = ipc_process_->enrollment_task_->get_con_handle_to_address(flow_->destination_address);
-		if (con_handle.port_id == 0) {
+		rv = ipc_process_->enrollment_task_->get_con_handle_to_address(flow_->destination_address,
+									       con_handle);
+		if (rv != 0) {
 			LOG_IPCP_ERR("Could not find con_handle to next hop for destination address %u",
 				     flow_->destination_address);
 			replyToIPCManager(-1);
@@ -806,9 +808,10 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(configs::Flow * flo
 							     int invoke_id)
 {
 	rina::cdap_rib::con_handle_t con_handle;
-	IPCPSecurityManagerPs *smps =
-		dynamic_cast<IPCPSecurityManagerPs *>(security_manager_->ps);
+	IPCPSecurityManagerPs *smps = 0;
+	int rv;
 
+	smps = dynamic_cast<IPCPSecurityManagerPs *>(security_manager_->ps);
 	assert(smps);
 
 	lock_.lock();
@@ -847,8 +850,9 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(configs::Flow * flo
 				flow_->source_naming_info.getEncodedString().c_str());
 
 		if (flow_->source_address != flow_->destination_address) {
-			con_handle = ipc_process_->enrollment_task_->get_con_handle_to_address(flow_->source_address);
-			if (con_handle.port_id == 0) {
+			rv = ipc_process_->enrollment_task_->get_con_handle_to_address(flow_->source_address,
+										       con_handle);
+			if (rv != 0) {
 				LOG_IPCP_ERR("Could not find con_handle to next hop for destination address %u",
 					     flow_->destination_address);
 				releaseUnlockRemove();
@@ -983,27 +987,35 @@ void FlowAllocatorInstance::submitAllocateResponse(const rina::AllocateFlowRespo
 void FlowAllocatorInstance::complete_flow_allocation(bool success)
 {
 	rina::cdap_rib::con_handle_t con_handle;
+	int rv;
 
-	if (success) {
-		//Flow has been accepted
-		if (flow_->source_address != flow_->destination_address) {
-			con_handle = ipc_process_->enrollment_task_->get_con_handle_to_address(flow_->source_address);
-			if (con_handle.port_id == 0) {
-				LOG_IPCP_ERR("Could not find con_handle to next hop for destination address %u",
-					     flow_->destination_address);
+	if (flow_->source_address != flow_->destination_address) {
+		//Obtain con_handle to next hop, to be able to send A-data
+		con_handle.address = flow_->source_address;
+		con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_ADATA;
+		rv = ipc_process_->enrollment_task_->get_con_handle_to_address(flow_->source_address,
+									       con_handle);
+		if (rv != 0) {
+			LOG_IPCP_ERR("Could not find con_handle to next hop for destination address %u",
+				     flow_->destination_address);
 
+			if (success) {
 				try {
 					rina::extendedIPCManager->flowDeallocated(port_id_);
 				} catch (rina::Exception &e) {
 					LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s",
 							e.what());
 				}
-				releaseUnlockRemove();
-				return;
 			}
-			con_handle.address = flow_->source_address;
-			con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_ADATA;
 
+			releaseUnlockRemove();
+			return;
+		}
+	}
+
+	if (success) {
+		//Flow has been accepted
+		if (flow_->source_address != flow_->destination_address) {
 			try {
 				rina::cdap_rib::flags_t flags;
 				rina::cdap_rib::filt_info_t filt;
@@ -1090,16 +1102,6 @@ void FlowAllocatorInstance::complete_flow_allocation(bool success)
 
 	//Flow has been rejected
 	if (flow_->source_address != flow_->destination_address) {
-		con_handle = ipc_process_->enrollment_task_->get_con_handle_to_address(flow_->source_address);
-		if (con_handle.port_id == 0) {
-			LOG_IPCP_ERR("Could not find con_handle to next hop for destination address %u",
-				     flow_->destination_address);
-			releaseUnlockRemove();
-			return;
-		}
-		con_handle.address = flow_->source_address;
-		con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_ADATA;
-
 		try {
 			rina::cdap_rib::flags_t flags;
 			rina::cdap_rib::filt_info_t filt;
@@ -1208,26 +1210,30 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 	rina::cdap_rib::con_handle_t con_handle;
 	unsigned int dest_address;
 	unsigned int dest_addresss;
+	IFlowAllocatorInstance * fai = 0;
+	int rv;
 
 	rina::ScopedLock g(lock_);
 
 	if (state != FLOW_ALLOCATED) {
-		LOG_IPCP_ERR("Received deallocate request while not in FLOW_ALLOCATED state. Current state is: %d",
+		LOG_IPCP_ERR("Received deallocate request while not in FLOW_ALLOCATED state. "
+			     "Current state is: %d",
 			     state);
 		return;
 	}
 
-	try {
-		//1 Update flow state
-		flow_->state = configs::Flow::WAITING_2_MPL_BEFORE_TEARING_DOWN;
-		state = WAITING_2_MPL_BEFORE_TEARING_DOWN;
+	//1 Update flow state
+	flow_->state = configs::Flow::WAITING_2_MPL_BEFORE_TEARING_DOWN;
+	state = WAITING_2_MPL_BEFORE_TEARING_DOWN;
 
-		//2 Send M_DELETE
-		if (flow_->source_address != flow_->destination_address) {
-			try {
-				//Get destination address again in case it has changed
-				dest_address = namespace_manager_->getDFTNextHop(flow_->destination_naming_info);
-				con_handle = ipc_process_->enrollment_task_->get_con_handle_to_address(dest_address);
+	//2 Send M_DELETE
+	if (flow_->source_address != flow_->destination_address) {
+		try {
+			//Get destination address again in case it has changed
+			dest_address = namespace_manager_->getDFTNextHop(flow_->destination_naming_info);
+			rv = ipc_process_->enrollment_task_->get_con_handle_to_address(dest_address,
+					con_handle);
+			if (rv == 0) {
 				con_handle.address = dest_address;
 				con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_ADATA;
 
@@ -1237,32 +1243,32 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 				obj.class_ = FlowRIBObject::class_name;
 				obj.name_ = object_name_;
 				rib_daemon_->getProxy()->remote_delete(con_handle,
-								       obj,
-								       flags,
-								       filt,
-								       NULL);
-			} catch (rina::Exception &e) {
-				LOG_IPCP_ERR("Problems sending M_DELETE flow request: %s",
-					     e.what());
+						obj,
+						flags,
+						filt,
+						NULL);
+			} else {
+				LOG_IPCP_ERR("Could not find CDAP session for reaching next hop to %d",
+						dest_address);
 			}
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems sending M_DELETE flow request: %s",
+					e.what());
+		}
+	} else {
+		fai = flow_allocator_->getFAI(flow_->destination_port_id);
+		if (!fai){
+			LOG_IPCP_ERR("Problems locating destination Flow Allocator instance");
 		} else {
-			IFlowAllocatorInstance * fai = flow_allocator_->getFAI(flow_->destination_port_id);
-			if (!fai){
-				LOG_IPCP_ERR("Problems locating destination Flow Allocator instance");
-			}
-
 			fai->deleteFlowRequestMessageReceived();
 		}
-
-		//3 Wait 2*MPL before tearing down the flow
-		TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(
-				this, object_name_, true);
-
-		timer.scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems processing flow deallocation request: %s",
-				+e.what());
 	}
+
+	//3 Wait 2*MPL before tearing down the flow
+	TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(
+			this, object_name_, true);
+
+	timer.scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
 }
 
 void FlowAllocatorInstance::deleteFlowRequestMessageReceived()

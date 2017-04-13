@@ -187,6 +187,8 @@ public:
 		FLOW_DEALLOCATED
 	};
 
+	FlowInformation();
+
 	/** The local application name */
 	ApplicationProcessNamingInformation localAppName;
 

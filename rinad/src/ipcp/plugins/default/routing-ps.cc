@@ -2082,8 +2082,7 @@ void LinkStateRoutingPolicy::processFlowAllocatedEvent(
 	}
 }
 
-void LinkStateRoutingPolicy::processNeighborAddedEvent(
-		rina::NeighborAddedEvent * event)
+void LinkStateRoutingPolicy::processNeighborAddedEvent(rina::NeighborAddedEvent * event)
 {
 	int portId = event->neighbor_.get_underlying_port_id();
 	std::list<unsigned int> addresses;
@@ -2151,10 +2150,10 @@ void LinkStateRoutingPolicy::propagateFSDB()
 {
 	rina::ScopedLock g(lock_);
 
-	//1 Get the active flows
+	//1 Get the active N-1 flows
 	std::list<rina::FlowInformation> nMinusOneFlows =
 			ipc_process_->resource_allocator_->get_n_minus_one_flow_manager()->getAllNMinusOneFlowInformation();
-	//2 Initilize the map
+	//2 Initialize the map
 	std::map <int, std::list< std::list<FlowStateObject> > > objectsToSend;
 	for(std::list<rina::FlowInformation>::iterator it = nMinusOneFlows.begin();
 		it != nMinusOneFlows.end(); ++it) 
