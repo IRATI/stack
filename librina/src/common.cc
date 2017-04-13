@@ -293,9 +293,10 @@ bool FlowSpecification::operator!=(const FlowSpecification &other) const {
 /* CLASS FLOW INFORMATION */
 FlowInformation::FlowInformation()
 {
-	fd = 0;
+	fd = -1;
 	portId = 0;
 	state = FLOW_DEALLOCATED;
+	user_ipcp_id = 0;
 }
 
 bool FlowInformation::operator==(

@@ -396,6 +396,10 @@ private:
 	void internal_flow_deallocated(rina::IPCPInternalFlowDeallocatedEvent * event);
 	void internal_flow_allocation_failed(rina::IPCPInternalFlowAllocationFailedEvent * event);
 
+	void deallocate_flows_and_destroy_esm(IEnrollmentStateMachine * esm,
+					      unsigned int port_id,
+					      bool call_ps = true);
+
 	IPCPRIBDaemon * rib_daemon_;
 	rina::InternalEventManager * event_manager_;
 	rina::IPCResourceManager * irm_;

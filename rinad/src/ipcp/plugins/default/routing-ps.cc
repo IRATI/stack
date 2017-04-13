@@ -1704,6 +1704,9 @@ void FlowStateManager::deprecateObjectsNeighbor(const std::string& neigh_name,
 	fsos->deprecateObjects(neigh_name,
 			       name,
 			       maximum_age);
+	fsos->deprecateObjects(name,
+			       neigh_name,
+			       maximum_age);
 }
 
 void FlowStateManager::force_table_update()

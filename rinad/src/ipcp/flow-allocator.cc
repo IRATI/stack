@@ -512,6 +512,10 @@ void FlowAllocator::submitDeallocate(
 		}
 	} else {
 		fai->submitDeallocate(event);
+		if (event.internal) {
+			return;
+		}
+
 		try {
 			rina::extendedIPCManager->notifyflowDeallocated(event, 0);
 		} catch (rina::Exception &e) {
@@ -1252,8 +1256,10 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 						dest_address);
 			}
 		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Problems sending M_DELETE flow request: %s",
-					e.what());
+			if (!event.internal) {
+				LOG_IPCP_ERR("Problems sending M_DELETE flow request: %s",
+					     e.what());
+			}
 		}
 	} else {
 		fai = flow_allocator_->getFAI(flow_->destination_port_id);
@@ -1265,9 +1271,9 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 	}
 
 	//3 Wait 2*MPL before tearing down the flow
-	TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(
-			this, object_name_, true);
-
+	TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(this,
+								      object_name_,
+								      true);
 	timer.scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
 }
 

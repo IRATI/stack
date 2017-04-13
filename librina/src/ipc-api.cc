@@ -255,18 +255,18 @@ unsigned int IPCManager::internalRequestFlowAllocationInDIF(
         flow->remoteAppName = remoteAppName;
         flow->flowSpecification = flowSpec;
         flow->state = FlowInformation::FLOW_ALLOCATION_REQUESTED;
+        flow->user_ipcp_id = sourceIPCProcessId;
 
         pendingFlows[result] = flow;
 
         return result;
 }
 
-FlowInformation IPCManager::internalAllocateFlowResponse(
-                const FlowRequestEvent& flowRequestEvent,
-                int result,
-		bool notifySource,
-		unsigned short ipcProcessId,
-		bool blocking)
+FlowInformation IPCManager::internalAllocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
+                					 int result,
+							 bool notifySource,
+							 unsigned short ipcProcessId,
+							 bool blocking)
 {
 	FlowInformation * flow = 0;
 
@@ -299,11 +299,17 @@ FlowInformation IPCManager::internalAllocateFlowResponse(
         flow->state = FlowInformation::FLOW_ALLOCATED;
         flow->difName = flowRequestEvent.DIFName;
         flow->portId = flowRequestEvent.portId;
+        flow->user_ipcp_id = ipcProcessId;
 
-        initIodev(flow, flowRequestEvent.portId);
-        if (fcntl(flow->fd, F_SETFL, blocking ? 0 : O_NONBLOCK)) {
-                LOG_WARN("Failed to set blocking mode on fd %d", flow->fd);
+        // If the user of the flow is an application, init the I/O dev so that
+        // data can be read and written to the flow via read/write calls
+        if (ipcProcessId == 0) {
+        	initIodev(flow, flowRequestEvent.portId);
+        	if (fcntl(flow->fd, F_SETFL, blocking ? 0 : O_NONBLOCK)) {
+        		LOG_WARN("Failed to set blocking mode on fd %d", flow->fd);
+        	}
         }
+
         allocatedFlows[flowRequestEvent.portId] = flow;
 
         return *flow;
@@ -562,7 +568,9 @@ FlowInformation IPCManager::commitPendingFlow(unsigned int sequenceNumber,
                 throw FlowAllocationException(IPCManager::unknown_flow_error);
         }
 
-        initIodev(flow, portId);
+        if (flow->user_ipcp_id == 0) {
+        	initIodev(flow, portId);
+        }
 
         pendingFlows.erase(sequenceNumber);
 
@@ -666,7 +674,9 @@ void IPCManager::flowDeallocationResult(int portId, bool success)
         }
 
         if (success) {
-                close(flow->fd);
+        	if (flow->fd > 0) {
+        		close(flow->fd);
+        	}
                 allocatedFlows.erase(portId);
                 delete flow;
         } else {
@@ -685,7 +695,9 @@ void IPCManager::flowDeallocated(int portId)
 		throw FlowDeallocationException("Unknown flow");
 	}
 
-        close(flow->fd);
+	if (flow->fd > 0) {
+		close(flow->fd);
+	}
 	allocatedFlows.erase(portId);
 	delete flow;
 }

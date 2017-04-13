@@ -204,6 +204,9 @@ public:
 	/** File descriptor to access this flow */
 	int fd;
 
+	/** 0 if the user of this flow is an app, the IPCP id otherwise */
+	unsigned short user_ipcp_id;
+
 	/** The name of the DIF where the flow has been allocated */
 	ApplicationProcessNamingInformation difName;
 

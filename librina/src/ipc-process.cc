@@ -548,10 +548,9 @@ unsigned int ExtendedIPCManager::requestFlowAllocationInDIF(
                         remoteAppName, difName, ipcProcessId, flowSpec);
 }
 
-FlowInformation ExtendedIPCManager::allocateFlowResponse(
-                const FlowRequestEvent& flowRequestEvent,
-		int result,
-                bool notifySource)
+FlowInformation ExtendedIPCManager::allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
+							 int result,
+							 bool notifySource)
 {
         return internalAllocateFlowResponse(flowRequestEvent,
                                             result,

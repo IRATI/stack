@@ -753,14 +753,16 @@ void IPCPRIBDaemonImpl::__stop_internal_flow_sdu_reader(int port_id)
 {
 	std::map<int, InternalFlowSDUReader *>::iterator it;
 	void * status;
+	InternalFlowSDUReader * reader;
 
 	rina::ScopedLock g(iflow_readers_lock);
 
 	it = iflow_sdu_readers.find(port_id);
 	if (it != iflow_sdu_readers.end()) {
+		reader = it->second;
 		iflow_sdu_readers.erase(it);
-		it->second->join(&status);
-		delete it->second;
+		reader->join(&status);
+		delete reader;
 	}
 }
 
