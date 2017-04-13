@@ -326,7 +326,7 @@ void WatchdogRIBObject::sendMessages() {
 	std::list<rina::Neighbor>::const_iterator it;
 	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
 		//Skip non enrolled neighbors
-		if (it->enrolled_) {
+		if (!it->enrolled_) {
 			continue;
 		}
 
