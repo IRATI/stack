@@ -666,6 +666,7 @@ void ResourceAllocator::update_temp_entries()
 	    entry = *it;
 	    if (entry_is_in_pduft(entry->address)) {
 		    it = temp_entries.erase(it);
+		    LOG_IPCP_DBG("Deleting temp entry %s", entry->toString().c_str());
 		    delete entry;
 		    entry = 0;
 	    } else {

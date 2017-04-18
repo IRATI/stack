@@ -300,8 +300,6 @@ public:
 					   int fd,
 					   const std::string& result_reason);
 
-	rina::EnrollmentRequest enrollment_request_;
-
 private:
 	/// See if more information is required for enrollment, or if we can
 	/// start or if we have to wait for the start message
@@ -344,12 +342,12 @@ void EnrolleeStateMachine::initiateEnrollment(const rina::EnrollmentRequest& enr
 {
 	rina::ScopedLock g(lock_);
 
-	enrollment_request_ = enrollmentRequest;
-	remote_peer_.address_ = enrollment_request_.neighbor_.address_;
-	remote_peer_.name_ = enrollment_request_.neighbor_.name_;
-	remote_peer_.supporting_dif_name_ = enrollment_request_.neighbor_.supporting_dif_name_;
+	enr_request = enrollmentRequest;
+	remote_peer_.address_ = enr_request.neighbor_.address_;
+	remote_peer_.name_ = enr_request.neighbor_.name_;
+	remote_peer_.supporting_dif_name_ = enr_request.neighbor_.supporting_dif_name_;
 	remote_peer_.underlying_port_id_ = portId;
-	remote_peer_.supporting_difs_ = enrollment_request_.neighbor_.supporting_difs_;
+	remote_peer_.supporting_difs_ = enr_request.neighbor_.supporting_difs_;
 
 	if (state_ != STATE_NULL) {
 		throw rina::Exception("Enrollee state machine not in NULL state");
@@ -498,7 +496,7 @@ void EnrolleeStateMachine::connectResponse(int result,
 			eiRequest.address_ = ipc_process_->get_address();
 		} else {
 			rina::DIFInformation difInformation;
-			difInformation.dif_name_ = enrollment_request_.event_.dafName;
+			difInformation.dif_name_ = enr_request.event_.dafName;
 			ipc_process_->set_dif_information(difInformation);
 		}
 
@@ -756,11 +754,11 @@ void EnrolleeStateMachine::enrollmentCompleted()
 	}
 
 	//Notify the IPC Manager
-	if (enrollment_request_.ipcm_initiated_){
+	if (enr_request.ipcm_initiated_){
 		try {
 			std::list<rina::Neighbor> neighbors;
 			neighbors.push_back(remote_peer_);
-			rina::extendedIPCManager->enrollToDIFResponse(enrollment_request_.event_,
+			rina::extendedIPCManager->enrollToDIFResponse(enr_request.event_,
 								      0,
 								      neighbors,
 								      ipc_process_->get_dif_information());
@@ -848,7 +846,7 @@ void EnrolleeStateMachine::operational_status_start(int invoke_id,
 
 	// Allocate internal reliable flow to layer management tasks of remote peer
 	try {
-		event.DIFName.processName = enrollment_request_.event_.dafName.processName;
+		event.DIFName.processName = enr_request.event_.dafName.processName;
 		event.localApplicationName.processName = ipcp_->get_name();
 		event.localApplicationName.processInstance = ipcp_->get_instance();
 		event.localApplicationName.entityName = IPCProcess::MANAGEMENT_AE;
@@ -1858,9 +1856,9 @@ void EnrollmentTaskPs::inform_ipcm_about_failure(IEnrollmentStateMachine * state
 {
 	EnrolleeStateMachine * sm = dynamic_cast<EnrolleeStateMachine *>(state_machine);
 	if (sm) {
-		if (sm->enrollment_request_.ipcm_initiated_) {
+		if (sm->enr_request.ipcm_initiated_) {
 			try {
-				rina::extendedIPCManager->enrollToDIFResponse(sm->enrollment_request_.event_,
+				rina::extendedIPCManager->enrollToDIFResponse(sm->enr_request.event_,
 									      -1,
 									      std::list<rina::Neighbor>(),
 									      ipcp->get_dif_information());

@@ -417,44 +417,6 @@ void AddressRIBObject::read(const rina::cdap_rib::con_handle_t &con,
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
 
-//Main function of the Neighbor Enroller thread
-void * doNeighborsEnrollerWork(void * arg)
-{
-	IPCProcess * ipcProcess = (IPCProcess *) arg;
-	IPCPRIBDaemon * ribd = ipcProcess->rib_daemon_;
-	EnrollmentTask * enrollmentTask = dynamic_cast<EnrollmentTask *>(ipcProcess->enrollment_task_);
-	if (!enrollmentTask) {
-		LOG_IPCP_ERR("Error casting IEnrollmentTask to EnrollmentTask");
-		return (void *) -1;
-	}
-	std::list<rina::Neighbor> neighbors;
-	std::list<rina::Neighbor>::const_iterator it;
-	rina::Sleep sleepObject;
-
-	while(true){
-		neighbors = enrollmentTask->get_neighbors();
-		for(it = neighbors.begin(); it != neighbors.end(); ++it) {
-			if (enrollmentTask->isEnrolledTo(it->name_.processName)) {
-				//We're already enrolled to this guy, continue
-				continue;
-			}
-
-			if (it->number_of_enrollment_attempts_ <
-					enrollmentTask->max_num_enroll_attempts_) {
-				enrollmentTask->incr_neigh_enroll_attempts(*it);
-				rina::EnrollmentRequest request(*it);
-				enrollmentTask->initiateEnrollment(request);
-			} else {
-				enrollmentTask->remove_neighbor(it->name_.getProcessNamePlusInstance());
-			}
-
-		}
-		sleepObject.sleepForMili(enrollmentTask->neigh_enroll_per_ms_);
-	}
-
-	return (void *) 0;
-}
-
 //Class IEnrollmentStateMachine
 const std::string IEnrollmentStateMachine::STATE_NULL = "NULL";
 const std::string IEnrollmentStateMachine::STATE_ENROLLED = "ENROLLED";
@@ -682,6 +644,19 @@ void DeallocateFlowTimerTask::run()
 	}
 }
 
+//Class RetryEnrollmentTimerTask
+RetryEnrollmentTimerTask::RetryEnrollmentTimerTask(rina::IEnrollmentTask * enr_task,
+			 	 	 	   const rina::EnrollmentRequest& request)
+{
+	etask = enr_task;
+	erequest = request;
+}
+
+void RetryEnrollmentTimerTask::run()
+{
+	etask->initiateEnrollment(erequest);
+}
+
 //Class Enrollment Task
 const std::string EnrollmentTask::ENROLL_TIMEOUT_IN_MS = "enrollTimeoutInMs";
 const std::string EnrollmentTask::WATCHDOG_PERIOD_IN_MS = "watchdogPeriodInMs";
@@ -692,7 +667,6 @@ const std::string EnrollmentTask::MAX_ENROLLMENT_RETRIES = "maxEnrollmentRetries
 EnrollmentTask::EnrollmentTask() : IPCPEnrollmentTask()
 {
 	namespace_manager_ = 0;
-	neighbors_enroller_ = 0;
 	rib_daemon_ = 0;
 	irm_ = 0;
 	event_manager_ = 0;
@@ -708,9 +682,6 @@ EnrollmentTask::EnrollmentTask() : IPCPEnrollmentTask()
 EnrollmentTask::~EnrollmentTask()
 {
 	delete ps;
-	if (neighbors_enroller_) {
-		delete neighbors_enroller_;
-	}
 }
 
 void EnrollmentTask::set_application_process(rina::ApplicationProcess * ap)
@@ -1070,18 +1041,6 @@ void EnrollmentTask::set_dif_configuration(const rina::DIFConfiguration& dif_con
 		LOG_IPCP_ERR("Problems adding object to RIB Daemon: %s", e.what());
 	}
 
-	//Start Neighbors Enroller thread
-	if (neigh_enroll_per_ms_ > 0) {
-		rina::ThreadAttributes * threadAttributes = new rina::ThreadAttributes();
-		threadAttributes->setJoinable();
-		threadAttributes->setName("neighbor-enroller");
-		neighbors_enroller_ = new rina::Thread(&doNeighborsEnrollerWork,
-						      (void *) ipcp,
-						      threadAttributes);
-		neighbors_enroller_->start();
-		LOG_IPCP_DBG("Started Neighbors enroller thread");
-	}
-
 	//Apply configuration to policy set
 	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
 	assert(ipcp_ps);
@@ -1138,6 +1097,7 @@ void EnrollmentTask::processEnrollmentRequestEvent(const rina::EnrollToDAFReques
 	}
 
 	rina::EnrollmentRequest request(neighbor, event);
+	request.enrollment_attempts = 0;
 	initiateEnrollment(request);
 }
 
@@ -1227,6 +1187,7 @@ void EnrollmentTask::initiateEnrollment(const rina::EnrollmentRequest& request)
 	rina::EnrollmentRequest * to_store = new rina::EnrollmentRequest(request.neighbor_,
 								         request.event_);
 	to_store->ipcm_initiated_ = request.ipcm_initiated_;
+	to_store->enrollment_attempts = request.enrollment_attempts + 1;
 	port_ids_pending_to_be_allocated_.put(handle, to_store);
 }
 
@@ -1632,6 +1593,8 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 				      bool sendReleaseMessage)
 {
 	IEnrollmentStateMachine * stateMachine = 0;
+	RetryEnrollmentTimerTask * timer_task = 0;
+	rina::EnrollmentRequest enr_request;
 
 	rina::ScopedLock g(lock_);
 
@@ -1656,7 +1619,14 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 		}
 	}
 
+	enr_request = stateMachine->enr_request;
 	deallocate_flows_and_destroy_esm(stateMachine, portId);
+
+	//3 If needed, retry enrollment
+	if (enr_request.enrollment_attempts < max_num_enroll_attempts_) {
+		timer_task = new RetryEnrollmentTimerTask(this, enr_request);
+		timer.scheduleTask(timer_task, 10);
+	}
 }
 
 void EnrollmentTask::enrollmentCompleted(const rina::Neighbor& neighbor,

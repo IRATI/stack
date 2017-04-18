@@ -27,6 +27,8 @@
 
 #ifdef __cplusplus
 
+#include <limits>
+
 #include "irm.h"
 #include "timer.h"
 #include "security-manager.h"
@@ -78,12 +80,15 @@ public:
 class EnrollmentRequest
 {
 public:
-	EnrollmentRequest() : ipcm_initiated_(false) {};
+	EnrollmentRequest() : ipcm_initiated_(false),
+	                      enrollment_attempts(std::numeric_limits<unsigned int>::max()) {};
 	EnrollmentRequest(const rina::Neighbor& neighbor) : neighbor_(neighbor),
-		ipcm_initiated_(false) { };
+		ipcm_initiated_(false),
+		enrollment_attempts(std::numeric_limits<unsigned int>::max()) { };
 	EnrollmentRequest(const rina::Neighbor& neighbor,
                           const EnrollToDAFRequestEvent & event) : neighbor_(neighbor),
-                 event_(event), ipcm_initiated_(true) { };
+                 event_(event), ipcm_initiated_(true),
+		 enrollment_attempts(std::numeric_limits<unsigned int>::max()) { };
 
 	/// The neighbor to enroll to
 	Neighbor neighbor_;
@@ -93,6 +98,9 @@ public:
 
 	/// True if the enrollment request came via the IPC Manager
 	bool ipcm_initiated_;
+
+	/// Current number of enrollment attempts
+	unsigned int enrollment_attempts;
 };
 
 /// Interface that must be implementing by classes that provide

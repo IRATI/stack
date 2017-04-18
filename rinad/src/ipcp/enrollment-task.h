@@ -226,6 +226,9 @@ public:
 	rina::cdap_rib::con_handle_t con;
 	int internal_flow_fd;
 
+	/// The enrollment request, store it to be able to retry enrollment afterwards
+	rina::EnrollmentRequest enr_request;
+
 protected:
 	bool isValidPortId(int portId);
 
@@ -293,6 +296,18 @@ private:
 	IPCProcess * ipcp;
 	int port_id;
 	bool internal;
+};
+
+class RetryEnrollmentTimerTask: public rina::TimerTask {
+public:
+	RetryEnrollmentTimerTask(rina::IEnrollmentTask * enr_task,
+				 const rina::EnrollmentRequest& request);
+	~RetryEnrollmentTimerTask() throw() {};
+	void run();
+
+private:
+	rina::IEnrollmentTask * etask;
+	rina::EnrollmentRequest erequest;
 };
 
 class EnrollmentTask: public IPCPEnrollmentTask, public rina::InternalEventListener {
@@ -404,7 +419,6 @@ private:
 	rina::InternalEventManager * event_manager_;
 	rina::IPCResourceManager * irm_;
 	INamespaceManager * namespace_manager_;
-	rina::Thread * neighbors_enroller_;
 
 	rina::Lockable lock_;
 	rina::Timer timer;
