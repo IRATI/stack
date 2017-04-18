@@ -50,14 +50,16 @@ public:
         /** The neighbor to contact */
         ApplicationProcessNamingInformation neighborName;
 
-        EnrollToDAFRequestEvent() { };
+        int current_enroll_attempts;
+
+        EnrollToDAFRequestEvent() : current_enroll_attempts(0) { };
         EnrollToDAFRequestEvent(
                 const ApplicationProcessNamingInformation& daf,
                 const ApplicationProcessNamingInformation& supportingDIF,
                 const ApplicationProcessNamingInformation& neighbor,
                 unsigned int sequenceNumber) : IPCEvent(ENROLL_TO_DIF_REQUEST_EVENT, sequenceNumber),
                 	dafName(daf), supportingDIFName(supportingDIF),
-                	neighborName(neighbor) { };
+                	neighborName(neighbor), current_enroll_attempts(0) { };
 };
 
 class DisconnectNeighborRequestEvent: public IPCEvent {
