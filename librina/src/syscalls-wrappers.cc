@@ -26,8 +26,6 @@
 
 #define SYS_createIPCProcess   __NR_ipc_create
 #define SYS_destroyIPCProcess  __NR_ipc_destroy
-#define SYS_allocatePortId     __NR_allocate_port
-#define SYS_deallocatePortId   __NR_deallocate_port
 #define SYS_readManagementSDU  __NR_management_sdu_read
 #define SYS_writeManagementSDU __NR_management_sdu_write
 
@@ -37,12 +35,6 @@
 #endif
 #if !defined(__NR_ipc_destroy)
 #error No ipc_create syscall defined
-#endif
-#if !defined(__NR_allocate_port)
-#error No allocate_port syscall defined
-#endif
-#if !defined(__NR_deallocate_port)
-#error No deallocate_port syscall defined
 #endif
 #if !defined(__NR_management_sdu_read)
 #error No managment_sdu_read syscall defined
@@ -141,42 +133,6 @@ int syscallCreateIPCProcess(const ApplicationProcessNamingInformation & ipcProce
                          difType.c_str());
         if (result < 0) {
         	LOG_DBG("Syscall create IPC Process failed: %d", errno);
-                result = -errno;
-        }
-
-        return result;
-}
-
-int syscallAllocatePortId(unsigned short ipcProcessId,
-                          const ApplicationProcessNamingInformation & applicationName)
-{
-        int result;
-
-        DUMP_SYSCALL("SYS_allocatePortId", SYS_allocatePortId);
-
-        result = syscall(SYS_allocatePortId,
-                         ipcProcessId,
-                         applicationName.processName.c_str(),
-                         applicationName.processInstance.c_str());
-
-        if (result < 0) {
-        	LOG_DBG("Syscall allocate port id failed: %d", errno);
-                result = -errno;
-        }
-
-        return result;
-}
-
-int syscallDeallocatePortId(unsigned short ipcProcessId, int portId)
-{
-        int result;
-
-        DUMP_SYSCALL("SYS_deallocatePortId", SYS_deallocatePortId);
-
-        result = syscall(SYS_deallocatePortId, ipcProcessId, portId);
-
-        if (result < 0) {
-        	LOG_DBG("Syscall deallocate port id failed: %d", result);
                 result = -errno;
         }
 

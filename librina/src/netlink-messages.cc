@@ -295,65 +295,98 @@ const std::string BaseNetlinkMessage::operationCodeToString(RINANetlinkOperation
 	case RINA_C_IPCP_ADDRESS_CHANGE_REQUEST:
 		result = "43_ADDRESS_CHANGE_REQ";
 		break;
+	case RINA_C_IPCP_ALLOCATE_PORT_REQUEST:
+		result = "44_ALLOCATE_PORT_REQUEST";
+		break;
+	case RINA_C_IPCP_ALLOCATE_PORT_RESPONSE:
+		result = "45_ALLOCATE_PORT_RESPONSE";
+		break;
+	case RINA_C_IPCP_DEALLOCATE_PORT_REQUEST:
+		result = "46_DEALLOCATE_PORT_REQUEST";
+		break;
+	case RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE:
+		result = "47_DEALLOCATE_PORT_RESPONSE";
+		break;
+	case RINA_C_IPCP_MANAGEMENT_SDU_WRITE_REQUEST:
+		result = "48_MANAGEMENT_SDU_WRITE_REQUEST";
+		break;
+	case RINA_C_IPCP_MANAGEMENT_SDU_WRITE_RESPONSE:
+		result = "49_MANAGEMENT_SDU_WRITE_RESPONSE";
+		break;
+	case RINA_C_IPCP_MANAGEMENT_SDU_READ_NOTIF:
+		result = "50_MANAGEMENT_SDU_READ_NOTIF";
+		break;
+	case RINA_C_IPCM_CREATE_IPCP_REQUEST:
+		result = "51_CREATE_IPCP_REQUEST";
+		break;
+	case RINA_C_IPCM_CREATE_IPCP_RESPONSE:
+		result = "52_CREATE_IPCP_RESPONSE";
+		break;
+	case RINA_C_IPCM_DESTROY_IPCP_REQUEST:
+		result = "53_DESTROY_IPCP_REQUEST";
+		break;
+	case RINA_C_IPCM_DESTROY_IPCP_RESPONSE:
+		result = "54_DESTROY_IPCP_RESPONSE";
+		break;
 	case RINA_C_IPCM_IPC_PROCESS_INITIALIZED:
-		result = "44_IPCP_INIT";
+		result = "55_IPC_PROCESS_INITIALIZED";
 		break;
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST:
-		result = "45_APP_ALLOC_FLOW_REQ";
+		result = "56_APP_ALLOC_FLOW_REQ";
 		break;
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT:
-		result = "46_APP_ALLOC_FLOW_REQ_RES";
+		result = "57_APP_ALLOC_FLOW_REQ_RES";
 		break;
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED:
-		result = "47_APP_ALLOC_FLOW_REQ_ARR";
+		result = "58_APP_ALLOC_FLOW_REQ_ARR";
 		break;
 	case RINA_C_APP_ALLOCATE_FLOW_RESPONSE:
-		result = "48_APP_ALLOC_FLOW_RESP";
+		result = "59_APP_ALLOC_FLOW_RESP";
 		break;
 	case RINA_C_APP_DEALLOCATE_FLOW_REQUEST:
-		result = "49_APP_DEALLOC_FLOW_REQ";
+		result = "60_APP_DEALLOC_FLOW_REQ";
 		break;
 	case RINA_C_APP_DEALLOCATE_FLOW_RESPONSE:
-		result = "50_APP_DEALLOC_FLOW_RESP";
+		result = "61_APP_DEALLOC_FLOW_RESP";
 		break;
 	case RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION:
-		result = "51_APP_FLOW_DEALLOC_NOT";
+		result = "62_APP_FLOW_DEALLOC_NOT";
 		break;
 	case RINA_C_APP_REGISTER_APPLICATION_REQUEST:
-		result = "52_APP_REG_REQ";
+		result = "63_APP_REG_REQ";
 		break;
 	case RINA_C_APP_REGISTER_APPLICATION_RESPONSE:
-		result = "53_APP_REG_RESP";
+		result = "64_APP_REG_RESP";
 		break;
 	case RINA_C_APP_UNREGISTER_APPLICATION_REQUEST:
-		result = "54_APP_UNREG_REQ";
+		result = "65_APP_UNREG_REQ";
 		break;
 	case RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE:
-		result = "55_APP_UNREG_RESP";
+		result = "66_APP_UNREG_RESP";
 		break;
 	case RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION:
-		result = "56_APP_REG_CANC_NOT";
+		result = "67_APP_REG_CANC_NOT";
 		break;
 	case RINA_C_APP_GET_DIF_PROPERTIES_REQUEST:
-		result = "57_GET_DIF_PROPS_REQ";
+		result = "68_GET_DIF_PROPS_REQ";
 		break;
 	case RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE:
-		result = "58_GET_DIF_PROPS_RESP";
+		result = "69_GET_DIF_PROPS_RESP";
 		break;
 	case RINA_C_IPCM_PLUGIN_LOAD_REQUEST:
-		result = "59_PLUGIN_LOAD_REQ";
+		result = "70_PLUGIN_LOAD_REQ";
 		break;
 	case RINA_C_IPCM_PLUGIN_LOAD_RESPONSE:
-		result = "60_PLUGIN_LOAD_RESP";
+		result = "71_PLUGIN_LOAD_RESP";
 		break;
 	case RINA_C_IPCM_FWD_CDAP_MSG_REQUEST:
-		result = "61_FWD_CDAP_MSG_REQ";
+		result = "72_FWD_CDAP_MSG_REQ";
 		break;
 	case RINA_C_IPCM_FWD_CDAP_MSG_RESPONSE:
-		result = "62_FWD_CDAP_MSG_RESP";
+		result = "73_FWD_CDAP_MSG_RESP";
 	 	break;
 	case RINA_C_IPCM_MEDIA_REPORT:
-		result = "63_MEDIA_REPORT";
+		result = "74_MEDIA_REPORT";
 	 	break;
 	default:
 		result = "Unknown operation";
@@ -2099,6 +2132,57 @@ IPCEvent* IpcmMediaReportMessage::toIPCEvent()
 {
         IPCEvent * event = new MediaReportEvent(report,
         					getSequenceNumber());
+        return event;
+}
+
+/// CLASS IPCPAllocatePortRequestMessage
+IPCPAllocatePortRequestMessage::IPCPAllocatePortRequestMessage()
+	: BaseNetlinkMessage(RINA_C_IPCP_ALLOCATE_PORT_REQUEST)
+{
+}
+
+IPCEvent* IPCPAllocatePortRequestMessage::toIPCEvent() {
+        return 0;
+}
+
+/// CLASS IPCPAllocatePortResponseMessage
+IPCPAllocatePortResponseMessage::IPCPAllocatePortResponseMessage()
+	: BaseNetlinkResponseMessage(RINA_C_IPCP_ALLOCATE_PORT_RESPONSE)
+{
+	port_id = 0;
+}
+
+IPCEvent* IPCPAllocatePortResponseMessage::toIPCEvent()
+{
+        IPCEvent * event = new AllocatePortResponseEvent(result,
+        						 port_id,
+							 getSequenceNumber());
+        return event;
+}
+
+/// CLASS IPCPDeallocatePortRequestMessage
+IPCPDeallocatePortRequestMessage::IPCPDeallocatePortRequestMessage()
+	: BaseNetlinkMessage(RINA_C_IPCP_DEALLOCATE_PORT_REQUEST)
+{
+	port_id = 0;
+}
+
+IPCEvent* IPCPDeallocatePortRequestMessage::toIPCEvent() {
+        return 0;
+}
+
+/// CLASS IPCPDeallocatePortRequestMessage
+IPCPDeallocatePortResponseMessage::IPCPDeallocatePortResponseMessage()
+	: BaseNetlinkResponseMessage(RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE)
+{
+	port_id = 0;
+}
+
+IPCEvent* IPCPDeallocatePortResponseMessage::toIPCEvent()
+{
+        IPCEvent * event = new DeallocatePortResponseEvent(result,
+        						   port_id,
+							   getSequenceNumber());
         return event;
 }
 

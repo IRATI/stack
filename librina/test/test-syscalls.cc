@@ -54,7 +54,6 @@ int main() {
 	std::cout << "TESTING RINA SYSCALLS\n";
 	int result = 0;
 	int portId1 = 0;
-	int portId2 = 0;
 	char * sdu = new char[50];
 
 	//Create an IPC Process
@@ -86,20 +85,6 @@ int main() {
 	result = syscallReadManagementSDU(1, sdu, &portId1, 50);
 	std::cout<<"Called read management SDU system call with result "
 	                        <<result<<std::endl;
-
-        //Allocate port-id
-	portId1 = syscallAllocatePortId(5, *ipcProcessName);
-	std::cout<<"Allocated port id: "<<portId1<<std::endl;
-	portId2 = syscallAllocatePortId(1, *ipcProcessName);
-	std::cout<<"Allocated port id: "<<portId2<<std::endl;
-
-	//Deallocate port-id
-	result = syscallDeallocatePortId(1, portId1);
-	std::cout<<"Deallocate port id result: "<<result<<std::endl;
-	result = syscallDeallocatePortId(1,portId2);
-	std::cout<<"Deallocate port id result: "<<result<<std::endl;
-	result = syscallDeallocatePortId(1,34);
-	std::cout<<"Deallocate port id result: "<<result<<std::endl;
 
 	delete sdu;
         delete ipcProcessName;

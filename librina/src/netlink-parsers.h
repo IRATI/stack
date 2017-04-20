@@ -1662,6 +1662,60 @@ int putIpcmMediaReportMessageObject(nl_msg* netlinkMessage,
 
 IpcmMediaReportMessage * parseIpcmMediaReportMessage(nlmsghdr *hdr);
 
+/* IPCPAllocatePortRequestMessage CLASS */
+enum IPCPIPCPAllocatePortRequestMessageAttributes {
+        IAPRM_ATTR_APP_NAME = 1,
+        __IAPRM_ATTR_MAX,
+};
+
+#define IAPRM_ATTR_MAX (__IAPRM_ATTR_MAX -1)
+
+int putIPCPAllocatePortRequestMessage(nl_msg* netlinkMessage,
+                		      const IPCPAllocatePortRequestMessage& object);
+
+IPCPAllocatePortRequestMessage * parseIPCPAllocatePortRequestMessage(nlmsghdr *hdr);
+
+/* IPCPAllocatePortResponseMessage CLASS */
+enum IPCPIPCPAllocatePortResponseMessageAttributes {
+	IAPREM_ATTR_RESULT = 1,
+	IAPREM_ATTR_N_1_PORT,
+        __IAPREM_ATTR_MAX,
+};
+
+#define IAPREM_ATTR_MAX (__IAPREM_ATTR_MAX -1)
+
+int putIPCPAllocatePortResponseMessage(nl_msg* netlinkMessage,
+                		      const IPCPAllocatePortResponseMessage& object);
+
+IPCPAllocatePortResponseMessage * parseIPCPAllocatePortResponseMessage(nlmsghdr *hdr);
+
+/* IPCPDeallocatePortRequestMessage CLASS */
+enum IPCPIPCPDeallocatePortRequestMessageAttributes {
+        IDAPRM_ATTR_PORT_ID = 1,
+        __IDAPRM_ATTR_MAX,
+};
+
+#define IDAPRM_ATTR_MAX (__IDAPRM_ATTR_MAX -1)
+
+int putIPCPDeallocatePortRequestMessage(nl_msg* netlinkMessage,
+                		       const IPCPDeallocatePortRequestMessage& object);
+
+IPCPDeallocatePortRequestMessage * parseIPCPDeallocatePortRequestMessage(nlmsghdr *hdr);
+
+/* IPCPAllocatePortResponseMessage CLASS */
+enum IPCPIPCPDeallocatePortResponseMessageAttributes {
+	IDAPREM_ATTR_RESULT = 1,
+	IDAPREM_ATTR_N_1_PORT,
+        __IDAPREM_ATTR_MAX,
+};
+
+#define IDAPREM_ATTR_MAX (__IDAPREM_ATTR_MAX -1)
+
+int putIPCPDeallocatePortResponseMessage(nl_msg* netlinkMessage,
+                		         const IPCPDeallocatePortResponseMessage& object);
+
+IPCPDeallocatePortResponseMessage * parseIPCPDeallocatePortResponseMessage(nlmsghdr *hdr);
+
 }
 
 #endif

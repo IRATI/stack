@@ -571,6 +571,42 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
                 }
                 return 0;
         }
+	case RINA_C_IPCP_ALLOCATE_PORT_REQUEST: {
+		IPCPAllocatePortRequestMessage * requestObject =
+			dynamic_cast<IPCPAllocatePortRequestMessage *>(message);
+		if (putIPCPAllocatePortRequestMessage(netlinkMessage,
+				*requestObject) < 0) {
+			return -1;
+		}
+		return 0;
+	}
+        case RINA_C_IPCP_ALLOCATE_PORT_RESPONSE: {
+        	IPCPAllocatePortResponseMessage * responseObject =
+                        dynamic_cast<IPCPAllocatePortResponseMessage *>(message);
+                if (putIPCPAllocatePortResponseMessage(netlinkMessage,
+                                *responseObject) < 0) {
+                        return -1;
+                }
+                return 0;
+        }
+	case RINA_C_IPCP_DEALLOCATE_PORT_REQUEST: {
+		IPCPDeallocatePortRequestMessage * requestObject =
+			dynamic_cast<IPCPDeallocatePortRequestMessage *>(message);
+		if (putIPCPDeallocatePortRequestMessage(netlinkMessage,
+				*requestObject) < 0) {
+			return -1;
+		}
+		return 0;
+	}
+        case RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE: {
+        	IPCPDeallocatePortResponseMessage * responseObject =
+                        dynamic_cast<IPCPDeallocatePortResponseMessage *>(message);
+                if (putIPCPDeallocatePortResponseMessage(netlinkMessage,
+                                *responseObject) < 0) {
+                        return -1;
+                }
+                return 0;
+        }
 	default: {
 		return -1;
 	}
@@ -820,6 +856,22 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
         }
         case RINA_C_IPCM_MEDIA_REPORT: {
         	return parseIpcmMediaReportMessage(netlinkMessageHeader);
+        }
+	case RINA_C_IPCP_ALLOCATE_PORT_REQUEST: {
+		return parseIPCPAllocatePortRequestMessage(
+		                netlinkMessageHeader);
+	}
+        case RINA_C_IPCP_ALLOCATE_PORT_RESPONSE: {
+                return parseIPCPAllocatePortResponseMessage(
+                                netlinkMessageHeader);
+        }
+	case RINA_C_IPCP_DEALLOCATE_PORT_REQUEST: {
+		return parseIPCPDeallocatePortRequestMessage(
+		                netlinkMessageHeader);
+	}
+        case RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE: {
+                return parseIPCPDeallocatePortResponseMessage(
+                                netlinkMessageHeader);
         }
 	default: {
 		LOG_ERR("Generic Netlink message contains unrecognized command code: %d",
@@ -5537,6 +5589,71 @@ int putIPCPUpdateCryptoStateResponseMessage(nl_msg* netlinkMessage,
         return -1;
 }
 
+int putIPCPAllocatePortRequestMessage(nl_msg* netlinkMessage,
+                		      const IPCPAllocatePortRequestMessage& object)
+{
+	struct nlattr *app_name;
+
+        if (!(app_name = nla_nest_start(netlinkMessage, IAPRM_ATTR_APP_NAME))) {
+                goto nla_put_failure;
+        }
+
+        if (putApplicationProcessNamingInformationObject(netlinkMessage,
+                           	   	   	   	 object.app_name) < 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, app_name);
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IPCPAllocatePortRequestMessage "
+                        "Netlink object");
+        return -1;
+}
+
+int putIPCPDeallocatePortRequestMessage(nl_msg* netlinkMessage,
+                		       const IPCPDeallocatePortRequestMessage& object)
+{
+	NLA_PUT_U32(netlinkMessage, IDAPRM_ATTR_PORT_ID, object.port_id);
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IPCPDeallocatePortRequestMessage "
+                        "Netlink object");
+        return -1;
+}
+
+int putIPCPAllocatePortResponseMessage(nl_msg* netlinkMessage,
+                		      const IPCPAllocatePortResponseMessage& object)
+{
+	NLA_PUT_U32(netlinkMessage, IAPREM_ATTR_RESULT, object.result);
+	NLA_PUT_U32(netlinkMessage, IAPREM_ATTR_N_1_PORT, object.port_id);
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IPCPAllocatePortResponseMessage"
+                        "Netlink object");
+        return -1;
+}
+
+int putIPCPDeallocatePortResponseMessage(nl_msg* netlinkMessage,
+                		         const IPCPDeallocatePortResponseMessage& object)
+{
+	NLA_PUT_U32(netlinkMessage, IDAPREM_ATTR_RESULT, object.result);
+	NLA_PUT_U32(netlinkMessage, IDAPREM_ATTR_N_1_PORT, object.port_id);
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IPCPDeallocatePortResponseMessage"
+                        "Netlink object");
+        return -1;
+}
+
 int putIPCPAddressChangeRequestMessage(nl_msg* netlinkMessage,
 				       const IPCPAddressChangeRequestMessage& object)
 {
@@ -9799,6 +9916,63 @@ IPCPAddressChangeRequestMessage * parseIPCPAddressChangeRequestMessage(
 	return result;
 }
 
+IPCPAllocatePortRequestMessage * parseIPCPAllocatePortRequestMessage(nlmsghdr *hdr)
+{
+	struct nla_policy attr_policy[IAPRM_ATTR_MAX + 1];
+	attr_policy[IAPRM_ATTR_APP_NAME].type = NLA_NESTED;
+	attr_policy[IAPRM_ATTR_APP_NAME].minlen = 0;
+	attr_policy[IAPRM_ATTR_APP_NAME].maxlen = 0;
+	struct nlattr *attrs[IAPRM_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			IAPRM_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing IPCPAllocatePortRequestMessage "
+				"information from Netlink message: %d", err);
+		return 0;
+	}
+
+	IPCPAllocatePortRequestMessage * result =
+			new IPCPAllocatePortRequestMessage();
+	ApplicationProcessNamingInformation * app_name;
+
+	if (attrs[IAPRM_ATTR_APP_NAME]) {
+		app_name = parseApplicationProcessNamingInformationObject(attrs[IAPRM_ATTR_APP_NAME]);
+		if (app_name) {
+			result->app_name = *app_name;
+			delete app_name;
+		}
+	}
+
+	return result;
+}
+
+IPCPDeallocatePortRequestMessage * parseIPCPDeallocatePortRequestMessage(nlmsghdr *hdr)
+{
+	struct nla_policy attr_policy[IDAPRM_ATTR_MAX + 1];
+	attr_policy[IDAPRM_ATTR_PORT_ID].type = NLA_U32;
+	attr_policy[IDAPRM_ATTR_PORT_ID].minlen = 4;
+	attr_policy[IDAPRM_ATTR_PORT_ID].maxlen = 4;
+	struct nlattr *attrs[IDAPRM_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			IDAPRM_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing IPCPDeallocatePortRequestMessage "
+				"information from Netlink message: %d", err);
+		return 0;
+	}
+
+	IPCPDeallocatePortRequestMessage * result =
+			new IPCPDeallocatePortRequestMessage();
+
+	if (attrs[IDAPRM_ATTR_PORT_ID]) {
+		result->port_id = nla_get_u32(attrs[IDAPRM_ATTR_PORT_ID]);
+	}
+
+	return result;
+}
+
 IPCPUpdateCryptoStateResponseMessage * parseIPCPUpdateCryptoStateResponseMessage(nlmsghdr *hdr)
 {
 	struct nla_policy attr_policy[UCSREM_ATTR_MAX + 1];
@@ -9827,6 +10001,72 @@ IPCPUpdateCryptoStateResponseMessage * parseIPCPUpdateCryptoStateResponseMessage
 
 	if (attrs[UCSREM_ATTR_N_1_PORT]) {
 		result->port_id = nla_get_u32(attrs[UCSREM_ATTR_N_1_PORT]);
+	}
+
+	return result;
+}
+
+IPCPAllocatePortResponseMessage * parseIPCPAllocatePortResponseMessage(nlmsghdr *hdr)
+{
+	struct nla_policy attr_policy[IAPREM_ATTR_MAX + 1];
+        attr_policy[IAPREM_ATTR_RESULT].type = NLA_U32;
+        attr_policy[IAPREM_ATTR_RESULT].minlen = 4;
+        attr_policy[IAPREM_ATTR_RESULT].maxlen = 4;
+        attr_policy[IAPREM_ATTR_N_1_PORT].type = NLA_U32;
+        attr_policy[IAPREM_ATTR_N_1_PORT].minlen = 4;
+        attr_policy[IAPREM_ATTR_N_1_PORT].maxlen = 4;
+	struct nlattr *attrs[IAPREM_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			IAPREM_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing IPCPEnableEncryptionResponseMessage "
+                        "information from Netlink message: %d", err);
+		return 0;
+	}
+
+	IPCPAllocatePortResponseMessage * result =
+			new IPCPAllocatePortResponseMessage();
+
+	if (attrs[IAPREM_ATTR_RESULT]) {
+		result->result = nla_get_u32(attrs[IAPREM_ATTR_RESULT]);
+	}
+
+	if (attrs[IAPREM_ATTR_N_1_PORT]) {
+		result->port_id = nla_get_u32(attrs[IAPREM_ATTR_N_1_PORT]);
+	}
+
+	return result;
+}
+
+IPCPDeallocatePortResponseMessage * parseIPCPDeallocatePortResponseMessage(nlmsghdr *hdr)
+{
+	struct nla_policy attr_policy[IDAPREM_ATTR_MAX + 1];
+        attr_policy[IDAPREM_ATTR_RESULT].type = NLA_U32;
+        attr_policy[IDAPREM_ATTR_RESULT].minlen = 4;
+        attr_policy[IDAPREM_ATTR_RESULT].maxlen = 4;
+        attr_policy[IDAPREM_ATTR_N_1_PORT].type = NLA_U32;
+        attr_policy[IDAPREM_ATTR_N_1_PORT].minlen = 4;
+        attr_policy[IDAPREM_ATTR_N_1_PORT].maxlen = 4;
+	struct nlattr *attrs[IDAPREM_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			IDAPREM_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing IPCPDeallocatePortResponseMessage "
+                        "information from Netlink message: %d", err);
+		return 0;
+	}
+
+	IPCPDeallocatePortResponseMessage * result =
+			new IPCPDeallocatePortResponseMessage();
+
+	if (attrs[IDAPREM_ATTR_RESULT]) {
+		result->result = nla_get_u32(attrs[IDAPREM_ATTR_RESULT]);
+	}
+
+	if (attrs[IDAPREM_ATTR_N_1_PORT]) {
+		result->port_id = nla_get_u32(attrs[IDAPREM_ATTR_N_1_PORT]);
 	}
 
 	return result;

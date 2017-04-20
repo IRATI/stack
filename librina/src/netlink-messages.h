@@ -76,29 +76,40 @@ enum RINANetlinkOperationCode{
         RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST, /* 41, IPC Process (user space) -> IPC Process (kernel) */
         RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE, /* 42, IPC Process (kernel) -> IPC Process (user space) */
 	RINA_C_IPCP_ADDRESS_CHANGE_REQUEST, /* 43, IPC Process (user space) -> IPC Process (kernel) */
+	RINA_C_IPCP_ALLOCATE_PORT_REQUEST, /* 44, IPC Process (user space) -> K IPCM (kernel) */
+	RINA_C_IPCP_ALLOCATE_PORT_RESPONSE, /* 45, K IPCM (kernel) -> IPC Process (user space) */
+	RINA_C_IPCP_DEALLOCATE_PORT_REQUEST, /* 46, IPC Process (user space) -> K IPCM (kernel) */
+	RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE, /* 47, K IPCM (kernel) -> IPC Process (user space) */
+	RINA_C_IPCP_MANAGEMENT_SDU_WRITE_REQUEST, /* 48, IPC Process (user space) -> K IPCM (kernel) */
+	RINA_C_IPCP_MANAGEMENT_SDU_WRITE_RESPONSE, /* 49, K IPCM (kernel) -> IPC Process (user space) */
+	RINA_C_IPCP_MANAGEMENT_SDU_READ_NOTIF, /* 50, K IPCM (kernel) -> IPC Process (user space) */
+	RINA_C_IPCM_CREATE_IPCP_REQUEST, /* 51, IPC Process (user space) -> K IPCM (kernel) */
+	RINA_C_IPCM_CREATE_IPCP_RESPONSE, /* 52, K IPCM (kernel) -> IPC Process (user space) */
+	RINA_C_IPCM_DESTROY_IPCP_REQUEST, /* 53, IPC Process (user space) -> K IPCM (kernel) */
+	RINA_C_IPCM_DESTROY_IPCP_RESPONSE, /* 54, K IPCM (kernel) -> IPC Process (user space) */
 
         /* Userspace only messages MUST be after all the messages that are also
          * handled by the kernel. */
-	RINA_C_IPCM_IPC_PROCESS_INITIALIZED, /* 44 IPC Process -> IPC Manager */
-	RINA_C_APP_ALLOCATE_FLOW_REQUEST, /* 45 Allocate flow request, Application -> IPC Manager */
-	RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT, /* 46 Response to an application allocate flow request, IPC Manager -> Application */
-	RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED, /* 47 Allocate flow request from a remote application, IPC Manager -> Application */
-	RINA_C_APP_ALLOCATE_FLOW_RESPONSE, /* 48 Allocate flow response to an allocate request arrived operation, Application -> IPC Manager */
-	RINA_C_APP_DEALLOCATE_FLOW_REQUEST, /* 49 Application -> IPC Manager */
-	RINA_C_APP_DEALLOCATE_FLOW_RESPONSE, /* 50 IPC Manager -> Application */
-	RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION, /* 51 IPC Manager -> Application, flow deallocated without the application having requested it */
-	RINA_C_APP_REGISTER_APPLICATION_REQUEST, /* 52 Application -> IPC Manager */
-	RINA_C_APP_REGISTER_APPLICATION_RESPONSE, /* 53 IPC Manager -> Application */
-	RINA_C_APP_UNREGISTER_APPLICATION_REQUEST, /* 54 Application -> IPC Manager */
-	RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE, /* 55 IPC Manager -> Application */
-	RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION, /* 56 IPC Manager -> Application, application unregistered without the application having requested it */
-	RINA_C_APP_GET_DIF_PROPERTIES_REQUEST, /* 57 Application -> IPC Manager */
-	RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE, /* 58 IPC Manager -> Application */
-	RINA_C_IPCM_PLUGIN_LOAD_REQUEST, /* 59, IPC Manager -> IPC Process */
-	RINA_C_IPCM_PLUGIN_LOAD_RESPONSE, /* 60, IPC Process -> IPC Manager */
-	RINA_C_IPCM_FWD_CDAP_MSG_REQUEST, /* 61, IPC Manager <-> IPC Process */
-	RINA_C_IPCM_FWD_CDAP_MSG_RESPONSE, /* 62, IPC Manager <-> IPC Process */
-	RINA_C_IPCM_MEDIA_REPORT, /* 63, IPC Process -> IPC Manager */
+	RINA_C_IPCM_IPC_PROCESS_INITIALIZED, /* 55 IPC Process -> IPC Manager */
+	RINA_C_APP_ALLOCATE_FLOW_REQUEST, /* 56 Allocate flow request, Application -> IPC Manager */
+	RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT, /* 57 Response to an application allocate flow request, IPC Manager -> Application */
+	RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED, /* 58 Allocate flow request from a remote application, IPC Manager -> Application */
+	RINA_C_APP_ALLOCATE_FLOW_RESPONSE, /* 59 Allocate flow response to an allocate request arrived operation, Application -> IPC Manager */
+	RINA_C_APP_DEALLOCATE_FLOW_REQUEST, /* 60 Application -> IPC Manager */
+	RINA_C_APP_DEALLOCATE_FLOW_RESPONSE, /* 61 IPC Manager -> Application */
+	RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION, /* 62 IPC Manager -> Application, flow deallocated without the application having requested it */
+	RINA_C_APP_REGISTER_APPLICATION_REQUEST, /* 63 Application -> IPC Manager */
+	RINA_C_APP_REGISTER_APPLICATION_RESPONSE, /* 64 IPC Manager -> Application */
+	RINA_C_APP_UNREGISTER_APPLICATION_REQUEST, /* 65 Application -> IPC Manager */
+	RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE, /* 66 IPC Manager -> Application */
+	RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION, /* 67 IPC Manager -> Application, application unregistered without the application having requested it */
+	RINA_C_APP_GET_DIF_PROPERTIES_REQUEST, /* 68 Application -> IPC Manager */
+	RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE, /* 69 IPC Manager -> Application */
+	RINA_C_IPCM_PLUGIN_LOAD_REQUEST, /* 70, IPC Manager -> IPC Process */
+	RINA_C_IPCM_PLUGIN_LOAD_RESPONSE, /* 71, IPC Process -> IPC Manager */
+	RINA_C_IPCM_FWD_CDAP_MSG_REQUEST, /* 72, IPC Manager <-> IPC Process */
+	RINA_C_IPCM_FWD_CDAP_MSG_RESPONSE, /* 73, IPC Manager <-> IPC Process */
+	RINA_C_IPCM_MEDIA_REPORT, /* 74, IPC Process -> IPC Manager */
 	__RINA_C_MAX,
  };
 
@@ -1477,6 +1488,38 @@ public:
 	IPCEvent* toIPCEvent();
 
 	MediaReport report;
+};
+
+class IPCPAllocatePortRequestMessage : public BaseNetlinkMessage {
+public:
+	IPCPAllocatePortRequestMessage();
+	IPCEvent* toIPCEvent();
+
+	ApplicationProcessNamingInformation app_name;
+};
+
+class IPCPAllocatePortResponseMessage: public BaseNetlinkResponseMessage {
+public:
+	IPCPAllocatePortResponseMessage();
+	IPCEvent* toIPCEvent();
+
+	int port_id;
+};
+
+class IPCPDeallocatePortRequestMessage : public BaseNetlinkMessage {
+public:
+	IPCPDeallocatePortRequestMessage();
+	IPCEvent* toIPCEvent();
+
+	int port_id;
+};
+
+class IPCPDeallocatePortResponseMessage: public BaseNetlinkResponseMessage {
+public:
+	IPCPDeallocatePortResponseMessage();
+	IPCEvent* toIPCEvent();
+
+	int port_id;
 };
 
 }

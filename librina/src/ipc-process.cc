@@ -259,6 +259,26 @@ UpdateCryptoStateResponseEvent::UpdateCryptoStateResponseEvent(int res,
 	result = res;
 }
 
+AllocatePortResponseEvent::AllocatePortResponseEvent(int res,
+						     int port,
+						     unsigned int sequenceNumber):
+		IPCEvent(IPC_PROCESS_ALLOCATE_PORT_RESPONSE,
+			 sequenceNumber)
+{
+	port_id = port;
+	result = res;
+}
+
+DeallocatePortResponseEvent::DeallocatePortResponseEvent(int res,
+						         int port,
+							 unsigned int sequenceNumber):
+		IPCEvent(IPC_PROCESS_DEALLOCATE_PORT_RESPONSE,
+			 sequenceNumber)
+{
+	port_id = port;
+	result = res;
+}
+
 /* CLASS EXTENDED IPC MANAGER */
 const std::string ExtendedIPCManager::error_allocate_flow =
 		"Error allocating flow";
@@ -623,30 +643,54 @@ void ExtendedIPCManager::queryRIBResponse(
 #endif
 }
 
-int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingInformation& appName)
+unsigned int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingInformation& appName)
 {
+	unsigned int result = 0;
+
 #if STUB_API
-        // Do nothing
-        return 1;
 #else
-        int result = syscallAllocatePortId(ipcProcessId, appName);
-        if (result < 0) {
-                throw PortAllocationException();
+        IPCPAllocatePortRequestMessage message;
+        message.app_name = appName;
+        message.setSourceIpcProcessId(ipcProcessId);
+        message.setDestIpcProcessId(ipcProcessId);
+        message.setDestPortId(0);
+        message.setRequestMessage(true);
+
+        try{
+                rinaManager->sendMessage(&message, true);
+        }catch(NetlinkException &e){
+                throw IPCException(e.what());
         }
+
+        result = message.getSequenceNumber();
+#endif
 
         return result;
-#endif
 }
 
-void ExtendedIPCManager::deallocatePortId(int portId) {
+unsigned int ExtendedIPCManager::deallocatePortId(int portId)
+{
+	unsigned int result = 0;
+
 #if STUB_API
-        // Do nothing
 #else
-        int result = syscallDeallocatePortId(ipcProcessId, portId);
-        if (result < 0) {
-                throw PortAllocationException();
+        IPCPDeallocatePortRequestMessage message;
+        message.port_id = portId;
+        message.setSourceIpcProcessId(ipcProcessId);
+        message.setDestIpcProcessId(ipcProcessId);
+        message.setDestPortId(0);
+        message.setRequestMessage(true);
+
+        try{
+                rinaManager->sendMessage(&message, true);
+        }catch(NetlinkException &e){
+                throw IPCException(e.what());
         }
+
+        result = message.getSequenceNumber();
 #endif
+
+        return result;
 }
 
 void ExtendedIPCManager::setPolicySetParamResponse(

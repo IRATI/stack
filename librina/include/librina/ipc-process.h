@@ -684,17 +684,18 @@ public:
 	 * associated to the port-id requested (0 if is an application)
 	 * @param appName The name of the application that requested
 	 * the flow (could be an IPC Process or a regular application)
-	 * @return the port-id
+	 * @return the handle to the response message
 	 * @throws PortAllocationException if something goes wrong
 	 */
-	int allocatePortId(const ApplicationProcessNamingInformation& appName);
+	unsigned int allocatePortId(const ApplicationProcessNamingInformation& appName);
 
 	/**
 	 * Request the kernel to free a used port-id
 	 * @param portId the port-id to be freed
+	 * @return the handle to the request message
 	 * @throws PortAllocationException if something goes wrong
 	 */
-	void deallocatePortId(int portId);
+	unsigned int deallocatePortId(int portId);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of a
@@ -955,6 +956,32 @@ public:
                         	       unsigned int sequenceNumber);
 
         // The N-1 port-id where crypto state was updated
+        int port_id;
+
+        // Result of the operation, 0 success
+        int result;
+};
+
+class AllocatePortResponseEvent: public IPCEvent {
+public:
+	AllocatePortResponseEvent(int res,
+                        	  int port_id,
+                        	  unsigned int sequenceNumber);
+
+        // The N-1 port-id allocated
+        int port_id;
+
+        // Result of the operation, 0 success
+        int result;
+};
+
+class DeallocatePortResponseEvent: public IPCEvent {
+public:
+	DeallocatePortResponseEvent(int res,
+                        	    int port_id,
+				    unsigned int sequenceNumber);
+
+        // The N-1 port-id deallocated
         int port_id;
 
         // Result of the operation, 0 success
