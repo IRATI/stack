@@ -26,8 +26,6 @@
 
 #define SYS_createIPCProcess   __NR_ipc_create
 #define SYS_destroyIPCProcess  __NR_ipc_destroy
-#define SYS_readManagementSDU  __NR_management_sdu_read
-#define SYS_writeManagementSDU __NR_management_sdu_write
 
 // These should be removed (should be checked at configuration time)
 #if !defined(__NR_ipc_create)
@@ -35,12 +33,6 @@
 #endif
 #if !defined(__NR_ipc_destroy)
 #error No ipc_create syscall defined
-#endif
-#if !defined(__NR_management_sdu_read)
-#error No managment_sdu_read syscall defined
-#endif
-#if !defined(__NR_management_sdu_write)
-#error No management_sdu_write syscall defined
 #endif
 
 #define RINA_PREFIX "librina.syscalls"
@@ -58,48 +50,6 @@
 #endif
 
 namespace rina {
-
-int syscallWriteManagementSDU(unsigned short ipcProcessId,
-                              void *         sdu,
-                              unsigned int   address,
-                              unsigned int   portId,
-                              int            size)
-{
-        int result;
-
-        DUMP_SYSCALL("SYS_writeManagementSDU", SYS_writeManagementSDU);
-
-        result = syscall(SYS_writeManagementSDU, ipcProcessId, address,
-                         portId,sdu, size);
-        if (result < 0) {
-        	LOG_DBG("Syscall write mgt SDU failed: %d", errno);
-                result = -errno;
-        }
-
-        return result;
-}
-
-int syscallReadManagementSDU(int    ipcProcessId,
-                             void * sdu,
-                             int *  portId,
-                             int    maxBytes)
-{
-        int result;
-
-        DUMP_SYSCALL("SYS_readManagementSDU", SYS_readManagementSDU);
-
-        result = syscall(SYS_readManagementSDU,
-                         ipcProcessId,
-                         sdu,
-                         portId,
-                         maxBytes);
-        if (result < 0) {
-        	LOG_DBG("Syscall read SDU failed: %d", errno);
-                result = -errno;
-        }
-
-        return result;
-}
 
 int syscallDestroyIPCProcess(unsigned short ipcProcessId)
 {

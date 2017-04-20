@@ -53,8 +53,6 @@ char * intToCharArray(int i){
 int main() {
 	std::cout << "TESTING RINA SYSCALLS\n";
 	int result = 0;
-	int portId1 = 0;
-	char * sdu = new char[50];
 
 	//Create an IPC Process
 	ApplicationProcessNamingInformation * ipcProcessName =
@@ -66,26 +64,10 @@ int main() {
 	std::cout<<"Called IPC Process create system call with result "
 			<<result<<std::endl;
 
-	//Write management sdu
-	result = syscallWriteManagementSDU(1, sdu, 0, 12, 50);
-	std::cout<<"Called write management SDU system call with result "
-	                <<result<<std::endl;
-
 	//Destroy an IPC Process
 	result = syscallDestroyIPCProcess(1);
 	std::cout<<"Called IPC Process destroy system call with result "
 			<<result<<std::endl;
 
-	//Write management sdu (will fail)
-	result = syscallWriteManagementSDU(1, sdu, 12, 0, 50);
-	std::cout<<"Called write management SDU system call with result "
-	                <<result<<std::endl;
-
-	//Read management sdu (will fail)
-	result = syscallReadManagementSDU(1, sdu, &portId1, 50);
-	std::cout<<"Called read management SDU system call with result "
-	                        <<result<<std::endl;
-
-	delete sdu;
         delete ipcProcessName;
 }

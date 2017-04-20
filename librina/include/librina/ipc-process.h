@@ -988,6 +988,30 @@ public:
         int result;
 };
 
+class WriteMgmtSDUResponseEvent: public IPCEvent {
+public:
+	WriteMgmtSDUResponseEvent(int res,
+				  unsigned int sequenceNumber);
+
+        // Result of the operation, 0 success
+        int result;
+};
+
+class ReadMgmtSDUResponseEvent: public IPCEvent {
+public:
+	ReadMgmtSDUResponseEvent(int res,
+				 void * sdu,
+				 int size,
+				 unsigned int port_id,
+				 unsigned int sequenceNumber);
+
+        // Result of the operation, 0 success
+        int result;
+        void * sdu;
+        int size;
+        unsigned int port_id;
+};
+
 /**
  * FIXME: Quick hack to get multiple parameters back
  */
@@ -1146,7 +1170,7 @@ public:
          * @param portId The N-1 portId where the data has to be written to
          * @throws WriteSDUException
          */
-        void writeMgmgtSDUToPortId(void * sdu, int size, unsigned int portId);
+        unsigned int writeMgmgtSDUToPortId(void * sdu, int size, unsigned int portId);
 
         /**
          * Requests the kernel to send a management SDU to the IPC Process
@@ -1158,19 +1182,7 @@ public:
          * destination of the SDU
          * @throws WriteSDUException
          */
-        void sendMgmgtSDUToAddress(void * sdu, int size, unsigned int address);
-
-        /**
-         * Requests the kernel to get a management SDU from a peer
-         * IPC Process. This operation will block until there is an SDU available
-         *
-         * @param sdu A buffer to store the SDU data
-         * @param maxBytes The maximum number of bytes to read
-         * @return int The number of bytes read and the portId where they have
-         * been read from
-         * @throws ReadSDUException
-         */
-        ReadManagementSDUResult readManagementSDU(void * sdu, int maxBytes);
+        unsigned int sendMgmgtSDUToAddress(void * sdu, int size, unsigned int address);
 };
 
 /**

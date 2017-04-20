@@ -2167,7 +2167,8 @@ IPCPDeallocatePortRequestMessage::IPCPDeallocatePortRequestMessage()
 	port_id = 0;
 }
 
-IPCEvent* IPCPDeallocatePortRequestMessage::toIPCEvent() {
+IPCEvent* IPCPDeallocatePortRequestMessage::toIPCEvent()
+{
         return 0;
 }
 
@@ -2183,6 +2184,53 @@ IPCEvent* IPCPDeallocatePortResponseMessage::toIPCEvent()
         IPCEvent * event = new DeallocatePortResponseEvent(result,
         						   port_id,
 							   getSequenceNumber());
+        return event;
+}
+
+/// Class IPCPWriteMgmtSDURequestMessage
+IPCPWriteMgmtSDURequestMessage::IPCPWriteMgmtSDURequestMessage()
+	: BaseNetlinkMessage(RINA_C_IPCP_MANAGEMENT_SDU_WRITE_REQUEST)
+{
+	sdu = 0;
+	size = 0;
+	port_id = 0;
+	address = 0;
+}
+
+IPCEvent* IPCPWriteMgmtSDURequestMessage::toIPCEvent()
+{
+	return 0;
+}
+
+/// Class IPCPWriteMgmtSDUResponseMessage
+IPCPWriteMgmtSDUResponseMessage::IPCPWriteMgmtSDUResponseMessage()
+	: BaseNetlinkResponseMessage(RINA_C_IPCP_MANAGEMENT_SDU_WRITE_RESPONSE)
+{
+}
+
+IPCEvent* IPCPWriteMgmtSDUResponseMessage::toIPCEvent()
+{
+        IPCEvent * event = new WriteMgmtSDUResponseEvent(result,
+							 getSequenceNumber());
+        return event;
+}
+
+///IPCPReadMgmtSDUNotificationMessage
+IPCPReadMgmtSDUNotificationMessage::IPCPReadMgmtSDUNotificationMessage()
+	: BaseNetlinkResponseMessage(RINA_C_IPCP_MANAGEMENT_SDU_READ_NOTIF)
+{
+	sdu = 0;
+	size = 0;
+	port_id = 0;
+}
+
+IPCEvent* IPCPReadMgmtSDUNotificationMessage::toIPCEvent()
+{
+        IPCEvent * event = new ReadMgmtSDUResponseEvent(result,
+        						sdu,
+							size,
+							port_id,
+							getSequenceNumber());
         return event;
 }
 

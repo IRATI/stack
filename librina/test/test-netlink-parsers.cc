@@ -3794,6 +3794,158 @@ int testIPCPDeallocatePortRequestMessage() {
         return returnValue;
 }
 
+int testIPCPWriteManagementSDURequestMessage()
+{
+        std::cout << "TESTING IPCP WRITE MANAGEMENT SDU REQUEST MESSAGE\n";
+        int returnValue = 0;
+
+        IPCPWriteMgmtSDURequestMessage message;
+        message.sdu = new unsigned char[20];
+        message.size = 20;
+        message.port_id = 30;
+        message.address = 54;
+        struct nl_msg* netlinkMessage = nlmsg_alloc();
+        if (!netlinkMessage) {
+                std::cout << "Error allocating Netlink message\n";
+        }
+        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+        int result = putBaseNetlinkMessage(netlinkMessage, &message);
+        if (result < 0) {
+                std::cout << "Error constructing IPCPWriteMgmtSDURequestMessage "
+                                << "message \n";
+                nlmsg_free(netlinkMessage);
+                return result;
+        }
+
+        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+        IPCPWriteMgmtSDURequestMessage * recoveredMessage =
+                        dynamic_cast<IPCPWriteMgmtSDURequestMessage *>(
+                                        parseBaseNetlinkMessage(netlinkMessageHeader));
+
+        if (recoveredMessage == 0) {
+                std::cout << "Error parsing IPCPWriteMgmtSDURequestMessage message "
+                                << "\n";
+                returnValue = -1;
+        } else if (message.port_id != recoveredMessage->port_id) {
+        	std::cout << "Error with port_id"<< std::endl;
+        	returnValue = -1;
+        } else if (message.address != recoveredMessage->address) {
+        	std::cout << "Error with address"<< std::endl;
+        	returnValue = -1;
+        } else if (message.size != recoveredMessage->size) {
+        	std::cout << "Error with size"<< std::endl;
+        	returnValue = -1;
+        }
+
+        if (returnValue == 0) {
+                std::cout << "IPCPWriteMgmtSDURequestMessage test ok\n";
+        }
+        nlmsg_free(netlinkMessage);
+        delete (unsigned char*) message.sdu;
+        delete (unsigned char*) recoveredMessage->sdu;
+        delete recoveredMessage;
+
+        return returnValue;
+}
+
+int testIPCPWriteManagementSDUResponseMessage() {
+        std::cout << "TESTING IPCP WRITE MANAGEMENT SDU RESPONSE MESSAGE\n";
+        int returnValue = 0;
+
+        IPCPWriteMgmtSDUResponseMessage message;
+        message.result = 2323;
+        struct nl_msg* netlinkMessage = nlmsg_alloc();
+        if (!netlinkMessage) {
+                std::cout << "Error allocating Netlink message\n";
+        }
+        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+        int result = putBaseNetlinkMessage(netlinkMessage, &message);
+        if (result < 0) {
+                std::cout << "Error constructing IPCPWriteMgmtSDUResponseMessage "
+                                << "message \n";
+                nlmsg_free(netlinkMessage);
+                return result;
+        }
+
+        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+        IPCPWriteMgmtSDUResponseMessage * recoveredMessage =
+                        dynamic_cast<IPCPWriteMgmtSDUResponseMessage *>(
+                                        parseBaseNetlinkMessage(netlinkMessageHeader));
+
+        if (recoveredMessage == 0) {
+                std::cout << "Error parsing IPCPWriteMgmtSDUResponseMessage message "
+                                << "\n";
+                returnValue = -1;
+        } else if (message.result != recoveredMessage->result) {
+        	std::cout << "Error with port_id"<< std::endl;
+        	returnValue = -1;
+        }
+
+        if (returnValue == 0) {
+                std::cout << "IPCPWriteMgmtSDUResponseMessage test ok\n";
+        }
+        nlmsg_free(netlinkMessage);
+        delete recoveredMessage;
+
+        return returnValue;
+}
+
+int testIPCPReadManagementSDUNotificationMessage()
+{
+        std::cout << "TESTING IPCP READ MANAGEMENT SDU NOTIFICATION MESSAGE\n";
+        int returnValue = 0;
+
+        IPCPReadMgmtSDUNotificationMessage message;
+        message.sdu = new unsigned char[20];
+        message.size = 20;
+        message.port_id = 30;
+        struct nl_msg* netlinkMessage = nlmsg_alloc();
+        if (!netlinkMessage) {
+                std::cout << "Error allocating Netlink message\n";
+        }
+        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+        int result = putBaseNetlinkMessage(netlinkMessage, &message);
+        if (result < 0) {
+                std::cout << "Error constructing IPCPReadMgmtSDUNotificationMessage "
+                                << "message \n";
+                nlmsg_free(netlinkMessage);
+                return result;
+        }
+
+        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+        IPCPReadMgmtSDUNotificationMessage * recoveredMessage =
+                        dynamic_cast<IPCPReadMgmtSDUNotificationMessage *>(
+                                        parseBaseNetlinkMessage(netlinkMessageHeader));
+
+        if (recoveredMessage == 0) {
+                std::cout << "Error parsing IPCPReadMgmtSDUNotificationMessage message "
+                                << "\n";
+                returnValue = -1;
+        } else if (message.port_id != recoveredMessage->port_id) {
+        	std::cout << "Error with port_id"<< std::endl;
+        	returnValue = -1;
+        } else if (message.size != recoveredMessage->size) {
+        	std::cout << "Error with size"<< std::endl;
+        	returnValue = -1;
+        }
+
+        if (returnValue == 0) {
+                std::cout << "IPCPReadMgmtSDUNotificationMessage test ok\n";
+        }
+        nlmsg_free(netlinkMessage);
+        delete (unsigned char*) message.sdu;
+        delete (unsigned char*) recoveredMessage->sdu;
+        delete recoveredMessage;
+
+        return returnValue;
+}
+
 int main() {
 	std::cout << "TESTING LIBRINA-NETLINK-PARSERS\n";
 
@@ -4059,5 +4211,19 @@ int main() {
 		return result;
 	}
 
+	result = testIPCPWriteManagementSDURequestMessage();
+	if (result < 0) {
+		return result;
+	}
+
+	result = testIPCPWriteManagementSDUResponseMessage();
+	if (result < 0) {
+		return result;
+	}
+
+	result = testIPCPReadManagementSDUNotificationMessage();
+	if (result < 0) {
+		return result;
+	}
 	return 0;
 }

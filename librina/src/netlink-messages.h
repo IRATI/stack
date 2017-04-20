@@ -1522,6 +1522,34 @@ public:
 	int port_id;
 };
 
+class IPCPWriteMgmtSDURequestMessage : public BaseNetlinkMessage {
+public:
+	IPCPWriteMgmtSDURequestMessage();
+	IPCEvent* toIPCEvent();
+
+	void * sdu;
+	int size;
+	unsigned int port_id;
+	unsigned int address;
+};
+
+class IPCPWriteMgmtSDUResponseMessage: public BaseNetlinkResponseMessage {
+public:
+	IPCPWriteMgmtSDUResponseMessage();
+	IPCEvent* toIPCEvent();
+};
+
+class IPCPReadMgmtSDUNotificationMessage: public BaseNetlinkResponseMessage {
+public:
+	IPCPReadMgmtSDUNotificationMessage();
+	IPCEvent* toIPCEvent();
+
+	void * sdu;
+	int size;
+	unsigned int port_id;
+};
+
+
 }
 
 #endif

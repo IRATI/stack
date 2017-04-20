@@ -1716,6 +1716,48 @@ int putIPCPDeallocatePortResponseMessage(nl_msg* netlinkMessage,
 
 IPCPDeallocatePortResponseMessage * parseIPCPDeallocatePortResponseMessage(nlmsghdr *hdr);
 
+/* IPCPWriteMgmtSDURequestMessage CLASS */
+enum IPCPWriteMgmtSDURequestMessageAttributes {
+        IWMSRM_ATTR_SDU = 1,
+	IWMSRM_ATTR_PORT_ID,
+	IWMSRM_ATTR_ADDRESS,
+        __IWMSRM_ATTR_MAX,
+};
+
+#define IWMSRM_ATTR_MAX (__IWMSRM_ATTR_MAX -1)
+
+int putIPCPWriteMgmtSDURequestMessage(nl_msg* netlinkMessage,
+                		       const IPCPWriteMgmtSDURequestMessage& object);
+
+IPCPWriteMgmtSDURequestMessage * parseIPCPWriteMgmtSDURequestMessage(nlmsghdr *hdr);
+
+/* IPCPWriteMgmtSDUResponseMessage CLASS */
+enum IPCPWriteMgmtSDUResponseMessageAttributes {
+	IWMSREM_ATTR_RESULT = 1,
+	__IWMSREM_ATTR_MAX
+};
+
+#define IWMSREM_ATTR_MAX (__IWMSREM_ATTR_MAX -1)
+
+int putIPCPWriteMgmtSDUResponseMessage(nl_msg* netlinkMessage,
+                		       const IPCPWriteMgmtSDUResponseMessage& object);
+
+IPCPWriteMgmtSDUResponseMessage * parseIPCPWriteMgmtSDUResponseMessage(nlmsghdr *hdr);
+
+/* IPCPReadMgmtSDUNotificationMessage CLASS */
+enum IPCPReadMgmtSDUNotificationMessageAttributes {
+	IRMSREM_ATTR_SDU = 1,
+	IRMSREM_ATTR_PORT_ID,
+	__IRMSREM_ATTR_MAX
+};
+
+#define IRMSREM_ATTR_MAX (__IRMSREM_ATTR_MAX -1)
+
+int putIPCPReadMgmtSDUNotificationMessage(nl_msg* netlinkMessage,
+                		         const IPCPReadMgmtSDUNotificationMessage& object);
+
+IPCPReadMgmtSDUNotificationMessage * parseIPCPReadMgmtSDUNotificationMessage(nlmsghdr *hdr);
+
 }
 
 #endif

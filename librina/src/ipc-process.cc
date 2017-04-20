@@ -279,6 +279,28 @@ DeallocatePortResponseEvent::DeallocatePortResponseEvent(int res,
 	result = res;
 }
 
+WriteMgmtSDUResponseEvent::WriteMgmtSDUResponseEvent(int res,
+			  	  	  	     unsigned int sequenceNumber):
+		IPCEvent(IPC_PROCESS_WRITE_MGMT_SDU_RESPONSE,
+			 sequenceNumber)
+{
+	result = res;
+}
+
+ReadMgmtSDUResponseEvent::ReadMgmtSDUResponseEvent(int res,
+			 	 	 	   void * data,
+						   int s,
+						   unsigned int pid,
+						   unsigned int sequenceNumber):
+		IPCEvent(IPC_PROCESS_READ_MGMT_SDU_NOTIF,
+			 sequenceNumber)
+{
+	result = res;
+	sdu = data;
+	size = s;
+	port_id = pid;
+}
+
 /* CLASS EXTENDED IPC MANAGER */
 const std::string ExtendedIPCManager::error_allocate_flow =
 		"Error allocating flow";
@@ -1428,66 +1450,66 @@ unsigned int KernelIPCProcess::selectPolicySet(
         return seqNum;
 }
 
-void KernelIPCProcess::writeMgmgtSDUToPortId(void * sdu, int size,
-                unsigned int portId) {
+unsigned int KernelIPCProcess::writeMgmgtSDUToPortId(void * sdu,
+						     int size,
+						     unsigned int portId)
+{
+	unsigned int seqNum=0;
+
 #if STUB_API
-        // Do nothing
+	//Do nothing
 #else
-        int result = syscallWriteManagementSDU(ipcProcessId, sdu, 0, portId,
-                        size);
-        if (result < 0){
-                throw WriteSDUException();
-        }
+	IPCPWriteMgmtSDURequestMessage message;
+	message.setSourceIpcProcessId(ipcProcessId);
+	message.setDestIpcProcessId(ipcProcessId);
+	message.sdu = sdu;
+	message.size = size;
+	message.port_id = portId;
+	message.setDestPortId(0);
+	message.setRequestMessage(true);
+
+	try {
+		rinaManager->sendMessage(&message, true);
+	} catch (NetlinkException &e) {
+		throw Exception(e.what());
+	}
+
+	seqNum = message.getSequenceNumber();
 #endif
+
+	return seqNum;
 }
 
-void KernelIPCProcess::sendMgmgtSDUToAddress(void * sdu, int size,
-                unsigned int address) {
+unsigned int KernelIPCProcess::sendMgmgtSDUToAddress(void * sdu,
+						     int size,
+						     unsigned int address)
+{
+	unsigned int seqNum=0;
+
 #if STUB_API
-        // Do nothing
+	//Do nothing
 #else
-        int result = syscallWriteManagementSDU(ipcProcessId, sdu, address, 0,
-                        size);
-        if (result < 0) {
-                throw WriteSDUException();
-        }
+	IPCPWriteMgmtSDURequestMessage message;
+	message.setSourceIpcProcessId(ipcProcessId);
+	message.setDestIpcProcessId(ipcProcessId);
+	message.sdu = sdu;
+	message.size = size;
+	message.address = address;
+	message.setDestPortId(0);
+	message.setRequestMessage(true);
+
+	try {
+		rinaManager->sendMessage(&message, true);
+	} catch (NetlinkException &e) {
+		throw Exception(e.what());
+	}
+
+	seqNum = message.getSequenceNumber();
 #endif
+
+	return seqNum;
 }
 Singleton<KernelIPCProcess> kernelIPCProcess;
-
-ReadManagementSDUResult KernelIPCProcess::readManagementSDU(void * sdu,
-		int    maxBytes){
-        ReadManagementSDUResult readResult;
-
-#if STUB_API
-        unsigned char buffer[] = { 0, 23, 43, 32, 45, 23, 78 };
-
-        sdu = buffer;
-        readResult.setPortId(14);
-        readResult.setBytesRead(7);
-
-        return readResult;
-#else
-        int portId = 0;
-        int result = syscallReadManagementSDU(ipcProcessId, sdu, &portId,
-                        maxBytes);
-
-        if (result < 0)
-        {
-                switch(result) {
-                case -ESRCH:
-                        throw IPCException("the IPCP or the needed parts of the ipcp do not exist");
-                        break;
-                default:
-                        throw ReadSDUException("Unknown error");
-                }
-        }
-
-        readResult.setPortId(portId);
-        readResult.setBytesRead(result);
-        return readResult;
-#endif
-}
 
 // CLASS DirectoryForwardingTableEntry
 DirectoryForwardingTableEntry::DirectoryForwardingTableEntry() {
