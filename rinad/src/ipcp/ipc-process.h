@@ -85,6 +85,8 @@ public:
         virtual void unreg_app_response_handler(const rina::IpcmUnregisterApplicationResponseEvent& event) = 0;
         virtual void ipcm_allocate_flow_request_result_handler(const rina::IpcmAllocateFlowRequestResultEvent& event) = 0;
         virtual void ipcm_deallocate_flow_response_event_handler(const rina::IpcmDeallocateFlowResponseEvent& event) = 0;
+        virtual void ipcp_allocate_port_response_event_handler(const rina::AllocatePortResponseEvent& event) = 0;
+        virtual void ipcp_deallocate_port_response_event_handler(const rina::DeallocatePortResponseEvent& event) = 0;
         // Cause relevant IPCP components to sync with information
         // exported by the kernel via sysfs
         virtual void sync_with_kernel() = 0;
@@ -150,6 +152,8 @@ public:
         virtual void unreg_app_response_handler(const rina::IpcmUnregisterApplicationResponseEvent& event);
         virtual void ipcm_allocate_flow_request_result_handler(const rina::IpcmAllocateFlowRequestResultEvent& event);
         virtual void ipcm_deallocate_flow_response_event_handler(const rina::IpcmDeallocateFlowResponseEvent& event);
+        virtual void ipcp_allocate_port_response_event_handler(const rina::AllocatePortResponseEvent& event);
+        virtual void ipcp_deallocate_port_response_event_handler(const rina::DeallocatePortResponseEvent& event);
 	virtual void sync_with_kernel(void);
 };
 
@@ -228,6 +232,8 @@ public:
         void plugin_load_handler(const rina::PluginLoadRequestEvent& event);
         void update_crypto_state_response_handler(const rina::UpdateCryptoStateResponseEvent& event);
         void fwd_cdap_msg_handler(rina::FwdCDAPMsgRequestEvent& event);
+        void ipcp_allocate_port_response_event_handler(const rina::AllocatePortResponseEvent& event);
+        void ipcp_deallocate_port_response_event_handler(const rina::DeallocatePortResponseEvent& event);
         void sync_with_kernel(void);
 
 private:

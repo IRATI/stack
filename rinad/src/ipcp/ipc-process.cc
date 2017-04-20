@@ -317,6 +317,18 @@ void AbstractIPCProcessImpl::event_loop(void)
 			ipcm_deallocate_flow_response_event_handler(*event);
 		}
 		break;
+		case rina::IPC_PROCESS_ALLOCATE_PORT_RESPONSE:
+		{
+			DOWNCAST_DECL(e, rina::AllocatePortResponseEvent, event);
+			ipcp_allocate_port_response_event_handler(*event);
+		}
+		break;
+		case rina::IPC_PROCESS_DEALLOCATE_PORT_RESPONSE:
+		{
+			DOWNCAST_DECL(e, rina::DeallocatePortResponseEvent, event);
+			ipcp_deallocate_port_response_event_handler(*event);
+		}
+		break;
 
 		//Unsupported events (they belong to the IPC Manager)
 		case rina::APPLICATION_REGISTRATION_CANCELED_EVENT:
@@ -511,6 +523,16 @@ void LazyIPCProcessImpl::ipcm_allocate_flow_request_result_handler(const rina::I
 }
 
 void LazyIPCProcessImpl::ipcm_deallocate_flow_response_event_handler(const rina::IpcmDeallocateFlowResponseEvent& event)
+{
+	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
+}
+
+void LazyIPCProcessImpl::ipcp_allocate_port_response_event_handler(const rina::AllocatePortResponseEvent& event)
+{
+	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
+}
+
+void LazyIPCProcessImpl::ipcp_deallocate_port_response_event_handler(const rina::DeallocatePortResponseEvent& event)
 {
 	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
 }

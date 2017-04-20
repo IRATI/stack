@@ -775,5 +775,15 @@ void IPCProcessImpl::fwd_cdap_msg_handler(rina::FwdCDAPMsgRequestEvent& event)
         return;
 }
 
+void IPCProcessImpl::ipcp_allocate_port_response_event_handler(const rina::AllocatePortResponseEvent& event)
+{
+	flow_allocator_->processAllocatePortResponse(event);
+}
+
+void IPCProcessImpl::ipcp_deallocate_port_response_event_handler(const rina::DeallocatePortResponseEvent& event)
+{
+	flow_allocator_->processDeallocatePortResponse(event);
+}
+
 
 } //namespace rinad

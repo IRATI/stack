@@ -196,6 +196,9 @@ public:
 	/// @param portId
 	virtual void removeFlowAllocatorInstance(int portId) = 0;
 
+	virtual void processAllocatePortResponse(const rina::AllocatePortResponseEvent& event) = 0;
+	virtual void processDeallocatePortResponse(const rina::DeallocatePortResponseEvent& event) = 0;
+
         // Plugin support
 	virtual configs::Flow* createFlow() = 0;
 	virtual void destroyFlow(configs::Flow *) = 0;

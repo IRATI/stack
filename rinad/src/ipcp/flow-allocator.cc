@@ -269,14 +269,13 @@ void FlowAllocator::populateRIB()
 	}
 }
 
-void FlowAllocator::createFlowRequestMessageReceived(
-		configs::Flow * flow,
-		const std::string& object_name,
-		int invoke_id)
+void FlowAllocator::createFlowRequestMessageReceived(configs::Flow * flow,
+					             const std::string& object_name,
+						     int invoke_id)
 {
-	IFlowAllocatorInstance * fai = 0;
 	unsigned int myAddress = 0;
-	int portId = 0;
+	unsigned int seq_num = 0;
+	OngoingFlowAllocState flow_state;
 
 	unsigned int address = namespace_manager_->getDFTNextHop(flow->destination_naming_info);
 	if (address == 0) {
@@ -286,31 +285,24 @@ void FlowAllocator::createFlowRequestMessageReceived(
 	}
 
 	if (ipcp->check_address_is_mine(address)) {
-		//There is an entry and the address is this IPC Process, create a FAI, extract
-		//the Flow object from the CDAP message and call the FAI
+		rina::ScopedLock g(port_alloc_lock);
+
+		LOG_IPCP_DBG("The destination AP is reachable through me");
+
 		try {
-			portId = rina::extendedIPCManager->allocatePortId(
-					flow->destination_naming_info);
+			seq_num = rina::extendedIPCManager->allocatePortId(flow->destination_naming_info);
 		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Problems requesting a port-id: %s. Ignoring the Flow allocation request",
-				     e.what());
+			LOG_IPCP_ERR("Problems requesting an available port-id to the Kernel IPC Manager: %s",
+					e.what());
 			return;
 		}
 
-		LOG_IPCP_DBG("The destination AP is reachable through me. Assigning port-id %d",
-			     portId);
-		std::stringstream ss;
-		ss << portId;
-		fai = new FlowAllocatorInstance(ipcp,
-						this,
-						portId,
-						ss.str());
-		add_instance(fai);
+		flow_state.local_request = false;
+		flow_state.flow = flow;
+		flow_state.object_name = object_name;
+		flow_state.invoke_id = invoke_id;
 
-		//TODO check if this operation throws an exception an react accordingly
-		fai->createFlowRequestMessageReceived(flow,
-						      object_name,
-						      invoke_id);
+		pending_port_allocs[seq_num] = flow_state;
 		return;
 	}
 
@@ -324,6 +316,27 @@ void FlowAllocator::createFlowRequestMessageReceived(
 	}
 
 	LOG_IPCP_ERR("Missing code");
+}
+
+void FlowAllocator::__createFlowRequestMessageReceived(configs::Flow * flow,
+	             	     	     		       const std::string& object_name,
+						       int invoke_id,
+						       int port_id)
+{
+	IFlowAllocatorInstance * fai;
+	std::stringstream ss;
+
+	ss << port_id;
+	fai = new FlowAllocatorInstance(ipcp,
+					this,
+					port_id,
+					ss.str());
+	add_instance(fai);
+
+	fai->createFlowRequestMessageReceived(flow,
+					      object_name,
+					      invoke_id);
+	return;
 }
 
 void FlowAllocator::replyToIPCManager(const rina::FlowRequestEvent& event,
@@ -340,23 +353,75 @@ void FlowAllocator::replyToIPCManager(const rina::FlowRequestEvent& event,
 
 void FlowAllocator::submitAllocateRequest(const rina::FlowRequestEvent& event)
 {
-	int portId = 0;
-	IFlowAllocatorInstance * fai;
+	unsigned int seq_num = 0;
+	OngoingFlowAllocState flow_state;
+
+	rina::ScopedLock g(port_alloc_lock);
 
 	try {
-		portId = rina::extendedIPCManager->allocatePortId(event.localApplicationName);
-		LOG_IPCP_DBG("Got assigned port-id %d", portId);
+		seq_num = rina::extendedIPCManager->allocatePortId(event.localApplicationName);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems requesting an available port-id to the Kernel IPC Manager: %s",
 				e.what());
 		replyToIPCManager(event, -1);
+		return;
 	}
 
+	flow_state.local_request = true;
+	flow_state.flow_event = event;
+	pending_port_allocs[seq_num] = flow_state;
+}
+
+void FlowAllocator::processAllocatePortResponse(const rina::AllocatePortResponseEvent& event)
+{
+	int portId = 0;
+	OngoingFlowAllocState flow_state;
+	IFlowAllocatorInstance * fai;
+	std::map<unsigned int, OngoingFlowAllocState>::iterator it;
+
+	rina::ScopedLock g(port_alloc_lock);
+
+	it = pending_port_allocs.find(event.sequenceNumber);
+	if (it == pending_port_allocs.end()) {
+		LOG_IPCP_WARN("Got an allocate port response event with seqnum %d, "
+				"but found not associated Flow requests",
+				event.sequenceNumber);
+		return;
+	}
+
+	flow_state = it->second;
+	pending_port_allocs.erase(it);
+
+	if (event.result != 0) {
+		LOG_IPCP_ERR("Port-id allocation failed: %d", event.result);
+		if (flow_state.local_request) {
+			replyToIPCManager(flow_state.flow_event, -1);
+		}
+		return;
+	}
+
+	LOG_IPCP_DBG("Got assigned port_id %d", event.port_id);
+	if (flow_state.local_request) {
+		__submitAllocateRequest(flow_state.flow_event,
+					event.port_id);
+	} else {
+		__createFlowRequestMessageReceived(flow_state.flow,
+						   flow_state.object_name,
+						   flow_state.invoke_id,
+						   event.port_id);
+	}
+}
+
+void FlowAllocator::__submitAllocateRequest(const rina::FlowRequestEvent& event,
+					    int port_id)
+{
+	IFlowAllocatorInstance * fai;
 	std::stringstream ss;
-	ss << portId;
+
+	ss << port_id;
 	fai = new FlowAllocatorInstance(ipcp,
 					this,
-					portId,
+					port_id,
 					ss.str());
 	add_instance(fai);
 
@@ -364,18 +429,28 @@ void FlowAllocator::submitAllocateRequest(const rina::FlowRequestEvent& event)
 		fai->submitAllocateRequest(event);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems allocating flow: %s",
-			     e.what());
+				e.what());
 		remove_instance(ss.str());
 		delete fai;
 
 		try {
-			rina::extendedIPCManager->deallocatePortId(portId);
+			rina::extendedIPCManager->deallocatePortId(port_id);
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems releasing port-id %d: %s",
-				     portId,
-				     e.what());
+					port_id,
+					e.what());
 		}
 		replyToIPCManager(event, -1);
+	}
+}
+
+void FlowAllocator::processDeallocatePortResponse(const rina::DeallocatePortResponseEvent& event)
+{
+	if (event.result == 0) {
+		LOG_IPCP_DBG("Port id %d successfully deallocated", event.port_id);
+	} else {
+		LOG_IPCP_ERR("Problems deallocating port-id %d: %d",
+			      event.port_id, event.result);
 	}
 }
 
