@@ -169,7 +169,40 @@ typedef enum {
 	/* 43 IPC Process (user space) -> KIPCM */
 	RINA_C_IPCP_ADDRESS_CHANGE_REQUEST,
 
-	/* 44 */
+	/* 44, IPC Process (user space) -> K IPCM (kernel) */
+	RINA_C_IPCP_ALLOCATE_PORT_REQUEST,
+
+	/* 45, K IPCM (kernel) -> IPC Process (user space) */
+	RINA_C_IPCP_ALLOCATE_PORT_RESPONSE,
+
+	/* 46, IPC Process (user space) -> K IPCM (kernel) */
+	RINA_C_IPCP_DEALLOCATE_PORT_REQUEST,
+
+	/* 47, K IPCM (kernel) -> IPC Process (user space) */
+	RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE,
+
+	/* 48, IPC Process (user space) -> K IPCM (kernel) */
+	RINA_C_IPCP_MANAGEMENT_SDU_WRITE_REQUEST,
+
+	/* 49, K IPCM (kernel) -> IPC Process (user space) */
+	RINA_C_IPCP_MANAGEMENT_SDU_WRITE_RESPONSE,
+
+	/* 50, K IPCM (kernel) -> IPC Process (user space) */
+	RINA_C_IPCP_MANAGEMENT_SDU_READ_NOTIF,
+
+	/* 51, IPC Process (user space) -> K IPCM (kernel) */
+	RINA_C_IPCM_CREATE_IPCP_REQUEST,
+
+	/* 52, K IPCM (kernel) -> IPC Process (user space) */
+	RINA_C_IPCM_CREATE_IPCP_RESPONSE,
+
+	/* 53, IPC Process (user space) -> K IPCM (kernel) */
+	RINA_C_IPCM_DESTROY_IPCP_REQUEST,
+
+	/* 54, K IPCM (kernel) -> IPC Process (user space) */
+	RINA_C_IPCM_DESTROY_IPCP_RESPONSE,
+
+	/* 55 */
         RINA_C_MAX,
 } msg_type_t;
 

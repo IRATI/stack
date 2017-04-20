@@ -366,6 +366,36 @@ rnl_ipcp_address_change_req_msg_attrs_create(void)
         return tmp;
 }
 
+static struct rnl_ipcp_allocate_port_req_msg_attrs *
+rnl_ipcp_allocate_port_req_msg_attrs_create(void)
+{
+        struct rnl_ipcp_allocate_port_req_msg_attrs * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if  (!tmp)
+                return NULL;
+
+        tmp->app_name = name_create();
+        if (!tmp->app_name) {
+                rkfree(tmp);
+                return NULL;
+        }
+
+        return tmp;
+}
+
+static struct rnl_ipcp_deallocate_port_req_msg_attrs *
+rnl_ipcp_deallocate_port_req_msg_attrs_create(void)
+{
+        struct rnl_ipcp_deallocate_port_req_msg_attrs * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if  (!tmp)
+                return NULL;
+
+        return tmp;
+}
+
 struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type)
 {
         struct rnl_msg * tmp;
@@ -503,6 +533,22 @@ struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type)
         case RNL_MSG_ATTRS_ADDRESS_CHANGE_REQUEST:
         	tmp->attrs =
         		rnl_ipcp_address_change_req_msg_attrs_create();
+        	if (!tmp->attrs) {
+        		rkfree(tmp);
+        		return NULL;
+        	}
+        	break;
+        case RNL_MSG_ATTRS_ALLOCATE_PORT_REQUEST:
+        	tmp->attrs =
+        		rnl_ipcp_allocate_port_req_msg_attrs_create();
+        	if (!tmp->attrs) {
+        		rkfree(tmp);
+        		return NULL;
+        	}
+        	break;
+        case RNL_MSG_ATTRS_DEALLOCATE_PORT_REQUEST:
+        	tmp->attrs =
+        		rnl_ipcp_deallocate_port_req_msg_attrs_create();
         	if (!tmp->attrs) {
         		rkfree(tmp);
         		return NULL;
@@ -818,6 +864,36 @@ rnl_ipcp_address_change_msg_attrs_destroy(
         return 0;
 }
 
+static int
+rnl_ipcp_deallocate_port_req_msg_attrs_destroy(
+		struct rnl_ipcp_deallocate_port_req_msg_attrs * attrs)
+{
+        if (!attrs)
+                return -1;
+
+        rkfree(attrs);
+
+        LOG_DBG("rnl_ipcp_deallocate_port_req_msg_attrs destroyed correctly");
+
+        return 0;
+}
+
+static int
+rnl_ipcp_allocate_port_req_msg_attrs_destroy(
+		struct rnl_ipcp_allocate_port_req_msg_attrs * attrs)
+{
+        if (!attrs)
+                return -1;
+
+        if (attrs->app_name)   name_destroy(attrs->app_name);
+
+        rkfree(attrs);
+
+        LOG_DBG("rnl_ipcp_allocate_port_req_msg_attrs_destroy destroyed correctly");
+
+        return 0;
+}
+
 int rnl_msg_destroy(struct rnl_msg * msg)
 {
         if (!msg)
@@ -871,6 +947,12 @@ int rnl_msg_destroy(struct rnl_msg * msg)
         	break;
         case RNL_MSG_ATTRS_ADDRESS_CHANGE_REQUEST:
         	rnl_ipcp_address_change_msg_attrs_destroy(msg->attrs);
+        	break;
+        case RNL_MSG_ATTRS_ALLOCATE_PORT_REQUEST:
+        	rnl_ipcp_allocate_port_req_msg_attrs_destroy(msg->attrs);
+        	break;
+        case RNL_MSG_ATTRS_DEALLOCATE_PORT_REQUEST:
+        	rnl_ipcp_deallocate_port_req_msg_attrs_destroy(msg->attrs);
         	break;
         default:
                 break;
@@ -2897,6 +2979,31 @@ rnl_parse_ipcp_address_change_req_msg(
         return 0;
 }
 
+static int
+rnl_parse_ipcp_allocate_port_req_msg(struct genl_info * info,
+                		     struct rnl_ipcp_allocate_port_req_msg_attrs * msg_attrs)
+{
+        if (parse_app_name_info(info->attrs[IAPRM_ATTR_APP_NAME],
+                                msg_attrs->app_name)) {
+                LOG_ERR(BUILD_STRERROR_BY_MTYPE("RINA_C_IPCP_ALLOCATE_PORT"
+                                                "_REQUEST"));
+                return -1;
+        }
+
+        return 0;
+}
+
+static int
+rnl_parse_ipcp_deallocate_port_req_msg(struct genl_info * info,
+                		       struct rnl_ipcp_deallocate_port_req_msg_attrs * msg_attrs)
+{
+        if (info->attrs[IDAPRM_ATTR_PORT_ID])
+                msg_attrs->port_id =
+                        nla_get_u32(info->attrs[IDAPRM_ATTR_PORT_ID]);
+
+        return 0;
+}
+
 int rnl_parse_msg(struct genl_info * info,
                   struct rnl_msg *   msg)
 {
@@ -3034,7 +3141,17 @@ int rnl_parse_msg(struct genl_info * info,
                 break;
         case RINA_C_IPCP_ADDRESS_CHANGE_REQUEST:
         	if (rnl_parse_ipcp_address_change_req_msg(info,
-        			msg->attrs) < 0)
+        						  msg->attrs) < 0)
+        		goto fail;
+        	break;
+        case RINA_C_IPCP_ALLOCATE_PORT_REQUEST:
+        	if (rnl_parse_ipcp_allocate_port_req_msg(info,
+        						 msg->attrs) < 0)
+        		goto fail;
+        	break;
+        case RINA_C_IPCP_DEALLOCATE_PORT_REQUEST:
+        	if (rnl_parse_ipcp_deallocate_port_req_msg(info,
+        						   msg->attrs) < 0)
         		goto fail;
         	break;
         default:
@@ -3709,6 +3826,43 @@ static int rnl_format_ipcp_update_crypto_state_resp_msg(uint_t           result,
 
         return 0;
 }
+
+static int rnl_format_ipcp_allocate_port_resp_msg(uint_t           result,
+						  port_id_t 	 port_id,
+						  struct sk_buff * skb_out)
+{
+	if (!skb_out) {
+		LOG_ERR("Bogus input parameter(s), bailing out");
+		return -1;
+	}
+
+	if (nla_put_u32(skb_out, IAPREM_ATTR_RESULT, result) < 0)
+		return format_fail("rnl_format_ipcp_allocate_port_resp_msg");
+
+	if (nla_put_u32(skb_out, IAPREM_ATTR_N_1_PORT, port_id) < 0)
+		return format_fail("rnl_format_ipcp_allocate_port_resp_msg");
+
+        return 0;
+}
+
+static int rnl_format_ipcp_deallocate_port_resp_msg(uint_t           result,
+						  port_id_t 	 port_id,
+						  struct sk_buff * skb_out)
+{
+	if (!skb_out) {
+		LOG_ERR("Bogus input parameter(s), bailing out");
+		return -1;
+	}
+
+	if (nla_put_u32(skb_out, IDAPREM_ATTR_RESULT, result) < 0)
+		return format_fail("rnl_format_ipcp_deallocate_port_resp_msg");
+
+	if (nla_put_u32(skb_out, IDAPREM_ATTR_N_1_PORT, port_id) < 0)
+		return format_fail("rnl_format_ipcp_deallocate_port_resp_msg");
+
+        return 0;
+}
+
 
 int rnl_assign_dif_response(ipc_process_id_t id,
                             uint_t           res,
@@ -4515,3 +4669,99 @@ int rnl_update_crypto_state_response(ipc_process_id_t id,
                                    seq_num);
 }
 EXPORT_SYMBOL(rnl_update_crypto_state_response);
+
+int rnl_allocate_port_response(ipc_process_id_t id,
+			       uint_t           res,
+			       rnl_sn_t         seq_num,
+			       port_id_t	port,
+			       u32              nl_port_id)
+{
+        struct sk_buff *      out_msg;
+        struct rina_msg_hdr * out_hdr;
+
+        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
+        if (!out_msg) {
+                LOG_ERR("Could not allocate memory for message");
+                return -1;
+        }
+
+        out_hdr = (struct rina_msg_hdr *)
+                genlmsg_put(out_msg,
+                            0,
+                            seq_num,
+                            &rnl_nl_family,
+                            0,
+                            RINA_C_IPCP_ALLOCATE_PORT_RESPONSE);
+        if (!out_hdr) {
+                LOG_ERR("Could not use genlmsg_put");
+                nlmsg_free(out_msg);
+                return -1;
+        }
+
+        out_hdr->src_ipc_id = id;
+        out_hdr->dst_ipc_id = 0;
+
+        if (rnl_format_ipcp_allocate_port_resp_msg(res, port, out_msg)) {
+                LOG_ERR("Could not format message ...");
+                nlmsg_free(out_msg);
+                return -1;
+        }
+
+        genlmsg_end(out_msg, out_hdr);
+
+        return send_nl_unicast_msg(&init_net,
+                                   out_msg,
+                                   nl_port_id,
+				   RINA_C_IPCP_ALLOCATE_PORT_RESPONSE,
+                                   seq_num);
+}
+EXPORT_SYMBOL(rnl_allocate_port_response);
+
+int rnl_deallocate_port_response(ipc_process_id_t id,
+			         uint_t           res,
+				 rnl_sn_t         seq_num,
+				 port_id_t	port,
+				 u32              nl_port_id)
+{
+        struct sk_buff *      out_msg;
+        struct rina_msg_hdr * out_hdr;
+
+        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
+        if (!out_msg) {
+                LOG_ERR("Could not allocate memory for message");
+                return -1;
+        }
+
+        out_hdr = (struct rina_msg_hdr *)
+                genlmsg_put(out_msg,
+                            0,
+                            seq_num,
+                            &rnl_nl_family,
+                            0,
+                            RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE);
+        if (!out_hdr) {
+                LOG_ERR("Could not use genlmsg_put");
+                nlmsg_free(out_msg);
+                return -1;
+        }
+
+        out_hdr->src_ipc_id = id;
+        out_hdr->dst_ipc_id = 0;
+
+        if (rnl_format_ipcp_deallocate_port_resp_msg(res, port, out_msg)) {
+                LOG_ERR("Could not format message ...");
+                nlmsg_free(out_msg);
+                return -1;
+        }
+
+        genlmsg_end(out_msg, out_hdr);
+
+        return send_nl_unicast_msg(&init_net,
+                                   out_msg,
+                                   nl_port_id,
+				   RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE,
+                                   seq_num);
+}
+EXPORT_SYMBOL(rnl_deallocate_port_response);
+
+

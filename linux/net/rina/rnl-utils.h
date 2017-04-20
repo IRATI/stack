@@ -626,6 +626,32 @@ enum ipcp_update_crypto_state_resp_attrs_list {
 };
 #define IUCSRE_ATTR_MAX (__IUCSRE_ATTR_MAX -1)
 
+enum ipcp_allocate_port_req_attrs_list {
+        IAPRM_ATTR_APP_NAME = 1,
+        __IAPRM_ATTR_MAX,
+};
+#define IAPRM_ATTR_MAX (__IAPRM_ATTR_MAX -1)
+
+enum ipcp_allocate_port_resp_attrs_list {
+	IAPREM_ATTR_RESULT = 1,
+	IAPREM_ATTR_N_1_PORT,
+        __IAPREM_ATTR_MAX,
+};
+#define IAPREM_ATTR_MAX (__IAPREM_ATTR_MAX -1)
+
+enum ipcp_deallocate_port_req_attrs_list {
+        IDAPRM_ATTR_PORT_ID = 1,
+        __IDAPRM_ATTR_MAX,
+};
+#define IDAPRM_ATTR_MAX (__IDAPRM_ATTR_MAX -1)
+
+enum ipcp_deallocate_port_resp_attrs_list {
+	IDAPREM_ATTR_RESULT = 1,
+	IDAPREM_ATTR_N_1_PORT,
+        __IDAPREM_ATTR_MAX,
+};
+#define IDAPREM_ATTR_MAX (__IDAPREM_ATTR_MAX -1)
+
 /* FIXME: Should be hidden by the API !!! */
 struct rina_msg_hdr {
         unsigned short src_ipc_id;
@@ -649,7 +675,9 @@ enum rnl_msg_attr_type {
         RNL_MSG_ATTRS_SET_POLICY_SET_PARAM_REQUEST,
         RNL_MSG_ATTRS_SELECT_POLICY_SET_REQUEST,
         RNL_MSG_ATTRS_UPDATE_CRYPTO_STATE_REQUEST,
-	RNL_MSG_ATTRS_ADDRESS_CHANGE_REQUEST
+	RNL_MSG_ATTRS_ADDRESS_CHANGE_REQUEST,
+	RNL_MSG_ATTRS_ALLOCATE_PORT_REQUEST,
+	RNL_MSG_ATTRS_DEALLOCATE_PORT_REQUEST
 };
 
 struct rnl_msg {
@@ -883,6 +911,14 @@ struct rnl_ipcp_address_change_req_msg_attrs {
 	timeout_t deprecate_old_timeout;
 };
 
+struct rnl_ipcp_allocate_port_req_msg_attrs {
+        struct name * app_name;
+};
+
+struct rnl_ipcp_deallocate_port_req_msg_attrs {
+	port_id_t port_id;
+};
+
 int rnl_parse_msg(struct genl_info * info,
                   struct rnl_msg *   msg);
 
@@ -984,4 +1020,16 @@ int rnl_update_crypto_state_response(ipc_process_id_t id,
                                      rnl_sn_t         seq_num,
                                      port_id_t	     n_1_port,
                                      u32              nl_port_id);
+
+int rnl_allocate_port_response(ipc_process_id_t id,
+			       uint_t           res,
+			       rnl_sn_t         seq_num,
+			       port_id_t	port,
+			       u32              nl_port_id);
+
+int rnl_deallocate_port_response(ipc_process_id_t id,
+			         uint_t           res,
+				 rnl_sn_t         seq_num,
+				 port_id_t	port,
+				 u32              nl_port_id);
 #endif
