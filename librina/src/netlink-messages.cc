@@ -2234,4 +2234,55 @@ IPCEvent* IPCPReadMgmtSDUNotificationMessage::toIPCEvent()
         return event;
 }
 
+///IpcmCreateIPCPRequestMessage
+IpcmCreateIPCPRequestMessage::IpcmCreateIPCPRequestMessage()
+	: BaseNetlinkMessage(RINA_C_IPCM_CREATE_IPCP_REQUEST)
+{
+	ipcp_id = 0;
+	nl_port_id = 0;
+}
+
+IPCEvent* IpcmCreateIPCPRequestMessage::toIPCEvent()
+{
+	return 0;
+}
+
+/// IpcmCreateIPCPResponseMessage
+IpcmCreateIPCPResponseMessage::IpcmCreateIPCPResponseMessage()
+	: BaseNetlinkResponseMessage(RINA_C_IPCM_CREATE_IPCP_RESPONSE)
+{
+}
+
+IPCEvent* IpcmCreateIPCPResponseMessage::toIPCEvent()
+{
+        IPCEvent * event = new CreateIPCPResponseEvent(result,
+						       getSequenceNumber());
+        return event;
+}
+
+///IpcmDestroyIPCPRequestMessage
+IpcmDestroyIPCPRequestMessage::IpcmDestroyIPCPRequestMessage()
+	: BaseNetlinkMessage(RINA_C_IPCM_DESTROY_IPCP_REQUEST)
+{
+	ipcp_id = 0;
+}
+
+IPCEvent* IpcmDestroyIPCPRequestMessage::toIPCEvent()
+{
+	return 0;
+}
+
+//IpcmDestroyIPCPResponseMessage
+IpcmDestroyIPCPResponseMessage::IpcmDestroyIPCPResponseMessage()
+	: BaseNetlinkResponseMessage(RINA_C_IPCM_DESTROY_IPCP_RESPONSE)
+{
+}
+
+IPCEvent* IpcmDestroyIPCPResponseMessage::toIPCEvent()
+{
+        IPCEvent * event = new DestroyIPCPResponseEvent(result,
+						        getSequenceNumber());
+        return event;
+}
+
 }

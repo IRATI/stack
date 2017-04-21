@@ -1758,6 +1758,61 @@ int putIPCPReadMgmtSDUNotificationMessage(nl_msg* netlinkMessage,
 
 IPCPReadMgmtSDUNotificationMessage * parseIPCPReadMgmtSDUNotificationMessage(nlmsghdr *hdr);
 
+/* IpcmCreateIPCPRequestMessage CLASS */
+enum IPCMCreateIPCPRequestMessageAttributes {
+        ICIRM_ATTR_IPCP_NAME = 1,
+	ICIRM_ATTR_DIF_TYPE,
+	ICIRM_ATTR_IPCP_ID,
+	ICIRM_ATTR_NL_PORT_ID,
+        __ICIRM_ATTR_MAX,
+};
+
+#define ICIRM_ATTR_MAX (__ICIRM_ATTR_MAX -1)
+
+int putIpcmCreateIPCPRequestMessage(nl_msg* netlinkMessage,
+                		      const IpcmCreateIPCPRequestMessage& object);
+
+IpcmCreateIPCPRequestMessage * parseIpcmCreateIPCPRequestMessage(nlmsghdr *hdr);
+
+/* IpcmCreateIPCPResponseMessage CLASS */
+enum IpcmCreateIPCPResponseMessageAttributes {
+	ICIRME_ATTR_RESULT = 1,
+	__ICIRME_ATTR_MAX
+};
+
+#define ICIRME_ATTR_MAX (__ICIRME_ATTR_MAX -1)
+
+int putIpcmCreateIPCPResponseMessage(nl_msg* netlinkMessage,
+                		     const IpcmCreateIPCPResponseMessage& object);
+
+IpcmCreateIPCPResponseMessage * parseIpcmCreateIPCPResponseMessage(nlmsghdr *hdr);
+
+/* IpcmDestroyIPCPRequestMessage CLASS */
+enum IPCMDestroyIPCPRequestMessageAttributes {
+        IDIRM_ATTR_IPCP_ID = 1,
+        __IDIRM_ATTR_MAX,
+};
+
+#define IDIRM_ATTR_MAX (__IDIRM_ATTR_MAX -1)
+
+int putIpcmDestroyIPCPRequestMessage(nl_msg* netlinkMessage,
+                		     const IpcmDestroyIPCPRequestMessage& object);
+
+IpcmDestroyIPCPRequestMessage * parseIpcmDestroyIPCPRequestMessage(nlmsghdr *hdr);
+
+/* IpcmDestroyIPCPResponseMessage CLASS */
+enum IpcmDestroyIPCPResponseMessageAttributes {
+	IDIRME_ATTR_RESULT = 1,
+	__IDIRME_ATTR_MAX
+};
+
+#define IDIRME_ATTR_MAX (__IDIRME_ATTR_MAX -1)
+
+int putIpcmDestroyIPCPResponseMessage(nl_msg* netlinkMessage,
+                		      const IpcmDestroyIPCPResponseMessage& object);
+
+IpcmDestroyIPCPResponseMessage * parseIpcmDestroyIPCPResponseMessage(nlmsghdr *hdr);
+
 }
 
 #endif

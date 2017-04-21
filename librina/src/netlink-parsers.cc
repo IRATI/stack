@@ -634,6 +634,42 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
                 }
                 return 0;
         }
+        case RINA_C_IPCM_CREATE_IPCP_REQUEST: {
+        	IpcmCreateIPCPRequestMessage * responseObject =
+                        dynamic_cast<IpcmCreateIPCPRequestMessage *>(message);
+                if (putIpcmCreateIPCPRequestMessage(netlinkMessage,
+                                *responseObject) < 0) {
+                        return -1;
+                }
+                return 0;
+        }
+        case RINA_C_IPCM_CREATE_IPCP_RESPONSE: {
+        	IpcmCreateIPCPResponseMessage * responseObject =
+                        dynamic_cast<IpcmCreateIPCPResponseMessage *>(message);
+                if (putIpcmCreateIPCPResponseMessage(netlinkMessage,
+                                *responseObject) < 0) {
+                        return -1;
+                }
+                return 0;
+        }
+        case RINA_C_IPCM_DESTROY_IPCP_REQUEST: {
+        	IpcmDestroyIPCPRequestMessage * responseObject =
+                        dynamic_cast<IpcmDestroyIPCPRequestMessage *>(message);
+                if (putIpcmDestroyIPCPRequestMessage(netlinkMessage,
+                                *responseObject) < 0) {
+                        return -1;
+                }
+                return 0;
+        }
+        case RINA_C_IPCM_DESTROY_IPCP_RESPONSE: {
+        	IpcmDestroyIPCPResponseMessage * responseObject =
+                        dynamic_cast<IpcmDestroyIPCPResponseMessage *>(message);
+                if (putIpcmDestroyIPCPResponseMessage(netlinkMessage,
+                                *responseObject) < 0) {
+                        return -1;
+                }
+                return 0;
+        }
 	default: {
 		return -1;
 	}
@@ -910,6 +946,22 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
         }
         case RINA_C_IPCP_MANAGEMENT_SDU_READ_NOTIF: {
                 return parseIPCPReadMgmtSDUNotificationMessage(
+                                netlinkMessageHeader);
+        }
+        case RINA_C_IPCM_CREATE_IPCP_REQUEST: {
+                return parseIpcmCreateIPCPRequestMessage(
+                                netlinkMessageHeader);
+        }
+        case RINA_C_IPCM_CREATE_IPCP_RESPONSE: {
+                return parseIpcmCreateIPCPResponseMessage(
+                                netlinkMessageHeader);
+        }
+        case RINA_C_IPCM_DESTROY_IPCP_REQUEST: {
+                return parseIpcmDestroyIPCPRequestMessage(
+                                netlinkMessageHeader);
+        }
+        case RINA_C_IPCM_DESTROY_IPCP_RESPONSE: {
+                return parseIpcmDestroyIPCPResponseMessage(
                                 netlinkMessageHeader);
         }
 	default: {
@@ -5745,6 +5797,76 @@ int putIPCPReadMgmtSDUNotificationMessage(nl_msg* netlinkMessage,
         return -1;
 }
 
+int putIpcmCreateIPCPRequestMessage(nl_msg* netlinkMessage,
+                		    const IpcmCreateIPCPRequestMessage& object)
+{
+	struct nlattr *ipcp_name;
+
+        if (!(ipcp_name = nla_nest_start(netlinkMessage, ICIRM_ATTR_IPCP_NAME))) {
+                goto nla_put_failure;
+        }
+
+        if (putApplicationProcessNamingInformationObject(netlinkMessage,
+                           	   	   	   	 object.ipcp_name) < 0) {
+                goto nla_put_failure;
+        }
+
+        nla_nest_end(netlinkMessage, ipcp_name);
+
+	if (object.dif_type.length() != 0)
+		NLA_PUT_STRING(netlinkMessage, ICIRM_ATTR_DIF_TYPE,
+			       object.dif_type.c_str());
+
+	NLA_PUT_U16(netlinkMessage, ICIRM_ATTR_IPCP_ID, object.ipcp_id);
+	NLA_PUT_U32(netlinkMessage, ICIRM_ATTR_NL_PORT_ID, object.nl_port_id);
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IpcmCreateIPCPRequestMessage"
+                        "Netlink object");
+        return -1;
+}
+
+int putIpcmCreateIPCPResponseMessage(nl_msg* netlinkMessage,
+                		     const IpcmCreateIPCPResponseMessage& object)
+{
+	NLA_PUT_U32(netlinkMessage, ICIRME_ATTR_RESULT, object.result);
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IpcmCreateIPCPResponseMessage"
+                        "Netlink object");
+        return -1;
+}
+
+int putIpcmDestroyIPCPRequestMessage(nl_msg* netlinkMessage,
+                		     const IpcmDestroyIPCPRequestMessage& object)
+{
+	NLA_PUT_U16(netlinkMessage, IDIRM_ATTR_IPCP_ID, object.ipcp_id);
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IpcmDestroyIPCPRequestMessage"
+                        "Netlink object");
+        return -1;
+}
+
+int putIpcmDestroyIPCPResponseMessage(nl_msg* netlinkMessage,
+                		      const IpcmDestroyIPCPResponseMessage& object)
+{
+	NLA_PUT_U32(netlinkMessage, IDIRME_ATTR_RESULT, object.result);
+
+	return 0;
+
+        nla_put_failure: LOG_ERR(
+                        "Error building IpcmDestroyIPCPResponseMessage"
+                        "Netlink object");
+        return -1;
+}
+
 int putIPCPAddressChangeRequestMessage(nl_msg* netlinkMessage,
 				       const IPCPAddressChangeRequestMessage& object)
 {
@@ -10263,6 +10385,136 @@ IPCPReadMgmtSDUNotificationMessage * parseIPCPReadMgmtSDUNotificationMessage(nlm
 
 	if (attrs[IRMSREM_ATTR_PORT_ID]) {
 		result->port_id = nla_get_u32(attrs[IRMSREM_ATTR_PORT_ID]);
+	}
+
+	return result;
+}
+
+IpcmCreateIPCPRequestMessage * parseIpcmCreateIPCPRequestMessage(nlmsghdr *hdr)
+{
+	struct nla_policy attr_policy[ICIRM_ATTR_MAX + 1];
+        attr_policy[ICIRM_ATTR_IPCP_NAME].type = NLA_NESTED;
+        attr_policy[ICIRM_ATTR_IPCP_NAME].minlen = 0;
+        attr_policy[ICIRM_ATTR_IPCP_NAME].maxlen = 0;
+        attr_policy[ICIRM_ATTR_DIF_TYPE].type = NLA_STRING;
+        attr_policy[ICIRM_ATTR_DIF_TYPE].minlen = 0;
+        attr_policy[ICIRM_ATTR_DIF_TYPE].maxlen = 65535;
+        attr_policy[ICIRM_ATTR_IPCP_ID].type = NLA_U16;
+        attr_policy[ICIRM_ATTR_IPCP_ID].minlen = 2;
+        attr_policy[ICIRM_ATTR_IPCP_ID].maxlen = 2;
+        attr_policy[ICIRM_ATTR_NL_PORT_ID].type = NLA_U32;
+        attr_policy[ICIRM_ATTR_NL_PORT_ID].minlen = 4;
+        attr_policy[ICIRM_ATTR_NL_PORT_ID].maxlen = 4;
+	struct nlattr *attrs[ICIRM_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			ICIRM_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing IpcmCreateIPCPRequestMessage "
+                        "information from Netlink message: %d", err);
+		return 0;
+	}
+
+	IpcmCreateIPCPRequestMessage * result =
+			new IpcmCreateIPCPRequestMessage();
+	ApplicationProcessNamingInformation * ipcp_name;
+
+	if (attrs[ICIRM_ATTR_IPCP_NAME]) {
+		ipcp_name = parseApplicationProcessNamingInformationObject(attrs[ICIRM_ATTR_IPCP_NAME]);
+		if (ipcp_name) {
+			result->ipcp_name = *ipcp_name;
+			delete ipcp_name;
+		}
+	}
+
+	if (attrs[ICIRM_ATTR_DIF_TYPE])
+		result->dif_type = std::string(nla_get_string(attrs[ICIRM_ATTR_DIF_TYPE]),
+							      nla_len(attrs[ICIRM_ATTR_DIF_TYPE])-1);
+
+	if (attrs[ICIRM_ATTR_IPCP_ID]) {
+		result->ipcp_id = nla_get_u16(attrs[ICIRM_ATTR_IPCP_ID]);
+	}
+
+	if (attrs[ICIRM_ATTR_NL_PORT_ID]) {
+		result->nl_port_id = nla_get_u32(attrs[ICIRM_ATTR_NL_PORT_ID]);
+	}
+
+	return result;
+}
+
+IpcmCreateIPCPResponseMessage * parseIpcmCreateIPCPResponseMessage(nlmsghdr *hdr)
+{
+	struct nla_policy attr_policy[ICIRME_ATTR_MAX + 1];
+        attr_policy[ICIRME_ATTR_RESULT].type = NLA_U32;
+        attr_policy[ICIRME_ATTR_RESULT].minlen = 4;
+        attr_policy[ICIRME_ATTR_RESULT].maxlen = 4;
+	struct nlattr *attrs[ICIRME_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			ICIRME_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing IpcmCreateIPCPResponseMessage "
+                        "information from Netlink message: %d", err);
+		return 0;
+	}
+
+	IpcmCreateIPCPResponseMessage * result =
+			new IpcmCreateIPCPResponseMessage();
+
+	if (attrs[ICIRME_ATTR_RESULT]) {
+		result->result = nla_get_u32(attrs[ICIRME_ATTR_RESULT]);
+	}
+
+	return result;
+}
+
+IpcmDestroyIPCPRequestMessage * parseIpcmDestroyIPCPRequestMessage(nlmsghdr *hdr)
+{
+	struct nla_policy attr_policy[IDIRM_ATTR_MAX + 1];
+        attr_policy[IDIRM_ATTR_IPCP_ID].type = NLA_U16;
+        attr_policy[IDIRM_ATTR_IPCP_ID].minlen = 2;
+        attr_policy[IDIRM_ATTR_IPCP_ID].maxlen = 2;
+	struct nlattr *attrs[IDIRM_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			IDIRM_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing IpcmDestroyIPCPRequestMessage "
+                        "information from Netlink message: %d", err);
+		return 0;
+	}
+
+	IpcmDestroyIPCPRequestMessage * result =
+			new IpcmDestroyIPCPRequestMessage();
+
+	if (attrs[IDIRM_ATTR_IPCP_ID]) {
+		result->ipcp_id = nla_get_u16(attrs[IDIRM_ATTR_IPCP_ID]);
+	}
+
+	return result;
+}
+
+IpcmDestroyIPCPResponseMessage * parseIpcmDestroyIPCPResponseMessage(nlmsghdr *hdr)
+{
+	struct nla_policy attr_policy[IDIRM_ATTR_MAX + 1];
+        attr_policy[IDIRME_ATTR_RESULT].type = NLA_U32;
+        attr_policy[IDIRME_ATTR_RESULT].minlen = 4;
+        attr_policy[IDIRME_ATTR_RESULT].maxlen = 4;
+	struct nlattr *attrs[IDIRM_ATTR_MAX + 1];
+
+	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
+			IDIRM_ATTR_MAX, attr_policy);
+	if (err < 0) {
+		LOG_ERR("Error parsing IpcmDestroyIPCPResponseMessage "
+                        "information from Netlink message: %d", err);
+		return 0;
+	}
+
+	IpcmDestroyIPCPResponseMessage * result =
+			new IpcmDestroyIPCPResponseMessage();
+
+	if (attrs[IDIRME_ATTR_RESULT]) {
+		result->result = nla_get_u32(attrs[IDIRME_ATTR_RESULT]);
 	}
 
 	return result;

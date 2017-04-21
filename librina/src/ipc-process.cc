@@ -30,7 +30,6 @@
 #include "librina/logs.h"
 #include "core.h"
 #include "utils.h"
-#include "rina-syscalls.h"
 
 namespace rina {
 
@@ -299,6 +298,22 @@ ReadMgmtSDUResponseEvent::ReadMgmtSDUResponseEvent(int res,
 	sdu = data;
 	size = s;
 	port_id = pid;
+}
+
+CreateIPCPResponseEvent::CreateIPCPResponseEvent(int res,
+						 unsigned int sequenceNumber):
+		IPCEvent(IPCM_CREATE_IPCP_RESPONSE,
+			 sequenceNumber)
+{
+	result = res;
+}
+
+DestroyIPCPResponseEvent::DestroyIPCPResponseEvent(int res,
+						   unsigned int sequenceNumber):
+		IPCEvent(IPCM_DESTROY_IPCP_RESPONSE,
+			 sequenceNumber)
+{
+	result = res;
 }
 
 /* CLASS EXTENDED IPC MANAGER */

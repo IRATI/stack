@@ -36,7 +36,6 @@
 
 #include "librina/ipc-manager.h"
 #include "librina/concurrency.h"
-#include "rina-syscalls.h"
 
 #include "utils.h"
 #include "core.h"
@@ -101,6 +100,7 @@ IPCProcessProxy::IPCProcessProxy() {
 	id = 0;
 	portId = 0;
 	pid = 0;
+	seq_num = 0;
 }
 
 IPCProcessProxy::IPCProcessProxy(unsigned short id, unsigned int portId,
@@ -112,6 +112,7 @@ IPCProcessProxy::IPCProcessProxy(unsigned short id, unsigned int portId,
 	this->pid = pid;
 	this->type = type;
 	this->name = name;
+	seq_num = 0;
 }
 
 unsigned short IPCProcessProxy::getId() const
@@ -580,18 +581,12 @@ IPCProcessProxy * IPCProcessFactory::create(
 		unsigned short ipcProcessId)
 {
 	unsigned int portId = 0;
+	unsigned int seq_num = 0;
 	pid_t pid=0;
 
 #if STUB_API
 	//Do nothing
 #else
-	int result = syscallCreateIPCProcess(ipcProcessName,
-                                             ipcProcessId,
-					     difType);
-	if (result != 0) {
-	        throw CreateIPCProcessException();
-	}
-
 	if (difType == NORMAL_IPC_PROCESS ||
 		difType == SHIM_WIFI_IPC_PROCESS_STA ||
 		difType == SHIM_WIFI_IPC_PROCESS_AP)	{
@@ -628,14 +623,8 @@ IPCProcessProxy * IPCProcessFactory::create(
 
 			LOG_ERR("Problems loading IPC Process program, finalizing OS Process with error %s", strerror(errno));
 
-			//Destroy the IPC Process in the kernel
-			syscallDestroyIPCProcess(ipcProcessId);
-
 			exit(-1);
 		}else if (pid < 0) {
-			//This is the IPC Manager, and fork failed
-		        //Try to destroy the IPC Process in the kernel and return error
-		        syscallDestroyIPCProcess(ipcProcessId);
 			throw CreateIPCProcessException();
 		}else{
 			//This is the IPC Manager, and fork was successful
@@ -643,22 +632,56 @@ IPCProcessProxy * IPCProcessFactory::create(
 			LOG_DBG("Craeted a new IPC Process with pid = %d", pid);
 		}
 	}
+
+	//Ask the kernel to create the IPCP
+	IpcmCreateIPCPRequestMessage message;
+        message.dif_type = difType;
+        message.ipcp_name = ipcProcessName;
+        message.ipcp_id = ipcProcessId;
+        message.nl_port_id = portId;
+	message.setSourceIpcProcessId(0);
+	message.setDestIpcProcessId(0);
+	message.setDestPortId(0);
+	message.setRequestMessage(true);
+
+	try {
+	        rinaManager->sendMessage(&message, false);
+	} catch (NetlinkException &e) {
+	        throw CreateIPCProcessException(e.what());
+	}
+
+	seq_num = message.getSequenceNumber();
 #endif
 
 	IPCProcessProxy * ipcProcess = new IPCProcessProxy(ipcProcessId, portId, pid, difType,
 			ipcProcessName);
+	ipcProcess->seq_num = seq_num;
 	return ipcProcess;
 }
 
-void IPCProcessFactory::destroy(IPCProcessProxy* ipcp)
+unsigned int IPCProcessFactory::destroy(IPCProcessProxy* ipcp)
 {
 	int resultUserSpace = 0;
-	int resultKernel = 0;
+	unsigned int seq_num = 0;
 
 #if STUB_API
 	//Do nothing
 #else
-	resultKernel = syscallDestroyIPCProcess(ipcp->id);
+	//Ask the kernel to destroy the IPCP
+	IpcmDestroyIPCPRequestMessage message;
+        message.ipcp_id = ipcp->id;
+	message.setSourceIpcProcessId(0);
+	message.setDestIpcProcessId(0);
+	message.setDestPortId(0);
+	message.setRequestMessage(true);
+
+	try {
+	        rinaManager->sendMessage(&message, false);
+	} catch (NetlinkException &e) {
+	        throw DestroyIPCProcessException(e.what());
+	}
+
+	seq_num = message.getSequenceNumber();
 
 	if (ipcp->getType() == NORMAL_IPC_PROCESS ||
 			ipcp->getType() == SHIM_WIFI_IPC_PROCESS_AP ||
@@ -677,17 +700,15 @@ void IPCProcessFactory::destroy(IPCProcessProxy* ipcp)
 
 	delete ipcp;
 
-	if (resultKernel || resultUserSpace)
+	if (resultUserSpace)
 	{
 	        std::string error = "Problems destroying IPCP.";
-	        error = error + "Result in the kernel: " +
-	                        intToCharArray(resultKernel);
 	        error = error + "Result in user space:  " +
 	                        intToCharArray(resultUserSpace);
 	        LOG_ERR("%s", error.c_str());
-	        if (resultKernel) // ignore resultUserSpace due to above issue
-	                throw DestroyIPCProcessException(error);
 	}
+
+	return seq_num;
 }
 
 /** CLASS APPLICATION MANAGER */

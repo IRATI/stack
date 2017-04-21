@@ -1549,6 +1549,37 @@ public:
 	unsigned int port_id;
 };
 
+class IpcmCreateIPCPRequestMessage : public BaseNetlinkMessage {
+public:
+	IpcmCreateIPCPRequestMessage();
+	IPCEvent* toIPCEvent();
+
+	ApplicationProcessNamingInformation ipcp_name;
+	std::string dif_type;
+	unsigned short ipcp_id;
+	unsigned int nl_port_id;
+};
+
+class IpcmCreateIPCPResponseMessage: public BaseNetlinkResponseMessage {
+public:
+	IpcmCreateIPCPResponseMessage();
+	IPCEvent* toIPCEvent();
+};
+
+class IpcmDestroyIPCPRequestMessage : public BaseNetlinkMessage {
+public:
+	IpcmDestroyIPCPRequestMessage();
+	IPCEvent* toIPCEvent();
+
+	unsigned short ipcp_id;
+};
+
+class IpcmDestroyIPCPResponseMessage: public BaseNetlinkResponseMessage {
+public:
+	IpcmDestroyIPCPResponseMessage();
+	IPCEvent* toIPCEvent();
+};
+
 
 }
 

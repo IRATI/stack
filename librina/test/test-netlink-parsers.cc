@@ -3946,6 +3946,202 @@ int testIPCPReadManagementSDUNotificationMessage()
         return returnValue;
 }
 
+int testIpcmCreateIPCProcessRequestMessage()
+{
+        std::cout << "TESTING IPCM CREATE IPCP REQUEST MESSAGE\n";
+        int returnValue = 0;
+
+        IpcmCreateIPCPRequestMessage message;
+        message.dif_type = "normal-ipcp";
+        message.ipcp_id = 234;
+        message.nl_port_id = 8987;
+        message.ipcp_name.processName = "test1.IRATI";
+        message.ipcp_name.processInstance = "1";
+        struct nl_msg* netlinkMessage = nlmsg_alloc();
+        if (!netlinkMessage) {
+                std::cout << "Error allocating Netlink message\n";
+        }
+        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+        int result = putBaseNetlinkMessage(netlinkMessage, &message);
+        if (result < 0) {
+                std::cout << "Error constructing IpcmCreateIPCPRequestMessage "
+                                << "message \n";
+                nlmsg_free(netlinkMessage);
+                return result;
+        }
+
+        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+        IpcmCreateIPCPRequestMessage * recoveredMessage =
+                        dynamic_cast<IpcmCreateIPCPRequestMessage *>(
+                                        parseBaseNetlinkMessage(netlinkMessageHeader));
+
+        if (recoveredMessage == 0) {
+                std::cout << "Error parsing IpcmCreateIPCPRequestMessage message "
+                                << "\n";
+                returnValue = -1;
+        } else if (message.ipcp_id != recoveredMessage->ipcp_id) {
+        	std::cout << "Error with ipcp_id"<< std::endl;
+        	returnValue = -1;
+        } else if (message.nl_port_id != recoveredMessage->nl_port_id) {
+        	std::cout << "Error with nl_port_id"<< std::endl;
+        	returnValue = -1;
+        } else if (message.dif_type != recoveredMessage->dif_type) {
+        	std::cout << "Error with dif_type"<< std::endl;
+        	returnValue = -1;
+        } else if (message.ipcp_name.processName != recoveredMessage->ipcp_name.processName) {
+        	std::cout << "Error with processName"<< std::endl;
+        	returnValue = -1;
+        } else if (message.ipcp_name.processInstance != recoveredMessage->ipcp_name.processInstance) {
+        	std::cout << "Error with processInstance"<< std::endl;
+        	returnValue = -1;
+        }
+
+        if (returnValue == 0) {
+                std::cout << "IpcmCreateIPCPRequestMessage test ok\n";
+        }
+        nlmsg_free(netlinkMessage);
+        delete recoveredMessage;
+
+        return returnValue;
+}
+
+int testIpcmCreateIPCProcessResponseMessage()
+{
+        std::cout << "TESTING IPCM CREATE IPCP RESPONSE MESSAGE\n";
+        int returnValue = 0;
+
+        IpcmCreateIPCPResponseMessage message;
+        message.result = 234;
+        struct nl_msg* netlinkMessage = nlmsg_alloc();
+        if (!netlinkMessage) {
+                std::cout << "Error allocating Netlink message\n";
+        }
+        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+        int result = putBaseNetlinkMessage(netlinkMessage, &message);
+        if (result < 0) {
+                std::cout << "Error constructing IpcmCreateIPCPResponseMessage "
+                                << "message \n";
+                nlmsg_free(netlinkMessage);
+                return result;
+        }
+
+        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+        IpcmCreateIPCPResponseMessage * recoveredMessage =
+                        dynamic_cast<IpcmCreateIPCPResponseMessage *>(
+                                        parseBaseNetlinkMessage(netlinkMessageHeader));
+
+        if (recoveredMessage == 0) {
+                std::cout << "Error parsing IpcmCreateIPCPResponseMessage message "
+                                << "\n";
+                returnValue = -1;
+        } else if (message.result != recoveredMessage->result) {
+        	std::cout << "Error with result"<< std::endl;
+        	returnValue = -1;
+        }
+
+        if (returnValue == 0) {
+                std::cout << "IpcmCreateIPCPResponseMessage test ok\n";
+        }
+        nlmsg_free(netlinkMessage);
+        delete recoveredMessage;
+
+        return returnValue;
+}
+
+int testIpcmDestroyIPCProcessRequestMessage()
+{
+        std::cout << "TESTING IPCM DESTROY IPCP REQUEST MESSAGE\n";
+        int returnValue = 0;
+
+        IpcmDestroyIPCPRequestMessage message;
+        message.ipcp_id = 234;
+        struct nl_msg* netlinkMessage = nlmsg_alloc();
+        if (!netlinkMessage) {
+                std::cout << "Error allocating Netlink message\n";
+        }
+        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+        int result = putBaseNetlinkMessage(netlinkMessage, &message);
+        if (result < 0) {
+                std::cout << "Error constructing IpcmDestroyIPCPRequestMessage "
+                                << "message \n";
+                nlmsg_free(netlinkMessage);
+                return result;
+        }
+
+        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+        IpcmDestroyIPCPRequestMessage * recoveredMessage =
+                        dynamic_cast<IpcmDestroyIPCPRequestMessage *>(
+                                        parseBaseNetlinkMessage(netlinkMessageHeader));
+
+        if (recoveredMessage == 0) {
+                std::cout << "Error parsing IpcmDestroyIPCPRequestMessage message "
+                                << "\n";
+                returnValue = -1;
+        } else if (message.ipcp_id != recoveredMessage->ipcp_id) {
+        	std::cout << "Error with ipcp_id"<< std::endl;
+        	returnValue = -1;
+        }
+
+        if (returnValue == 0) {
+                std::cout << "IpcmDestroyIPCPRequestMessage test ok\n";
+        }
+        nlmsg_free(netlinkMessage);
+        delete recoveredMessage;
+
+        return returnValue;
+}
+
+int testIpcmDestroyIPCProcessResponseMessage()
+{
+        std::cout << "TESTING IPCM DESTROY IPCP RESPONSE MESSAGE\n";
+        int returnValue = 0;
+
+        IpcmDestroyIPCPResponseMessage message;
+        message.result = 234;
+        struct nl_msg* netlinkMessage = nlmsg_alloc();
+        if (!netlinkMessage) {
+                std::cout << "Error allocating Netlink message\n";
+        }
+        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
+
+        int result = putBaseNetlinkMessage(netlinkMessage, &message);
+        if (result < 0) {
+                std::cout << "Error constructing IpcmDestroyIPCPResponseMessage "
+                                << "message \n";
+                nlmsg_free(netlinkMessage);
+                return result;
+        }
+
+        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
+        IpcmDestroyIPCPResponseMessage * recoveredMessage =
+                        dynamic_cast<IpcmDestroyIPCPResponseMessage *>(
+                                        parseBaseNetlinkMessage(netlinkMessageHeader));
+
+        if (recoveredMessage == 0) {
+                std::cout << "Error parsing IpcmDestroyIPCPResponseMessage message "
+                                << "\n";
+                returnValue = -1;
+        } else if (message.result != recoveredMessage->result) {
+        	std::cout << "Error with result"<< std::endl;
+        	returnValue = -1;
+        }
+
+        if (returnValue == 0) {
+                std::cout << "IpcmDestroyIPCPResponseMessage test ok\n";
+        }
+        nlmsg_free(netlinkMessage);
+        delete recoveredMessage;
+
+        return returnValue;
+}
+
 int main() {
 	std::cout << "TESTING LIBRINA-NETLINK-PARSERS\n";
 
@@ -4225,5 +4421,26 @@ int main() {
 	if (result < 0) {
 		return result;
 	}
+
+	result = testIpcmCreateIPCProcessRequestMessage();
+	if (result < 0) {
+		return result;
+	}
+
+	result = testIpcmCreateIPCProcessResponseMessage();
+	if (result < 0) {
+		return result;
+	}
+
+	result = testIpcmDestroyIPCProcessRequestMessage();
+	if (result < 0) {
+		return result;
+	}
+
+	result = testIpcmDestroyIPCProcessResponseMessage();
+	if (result < 0) {
+		return result;
+	}
+
 	return 0;
 }
