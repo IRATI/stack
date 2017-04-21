@@ -63,9 +63,9 @@ void * doManagementSDUReaderWork(void* data);
 ///Full implementation of the RIB Daemon
 class IPCPRIBDaemonImpl : public IPCPRIBDaemon, public rina::InternalEventListener {
 public:
-		IPCPRIBDaemonImpl(rina::cacep::AppConHandlerInterface *app_con_callback);
-		~IPCPRIBDaemonImpl();
-		rina::rib::RIBDaemonProxy * getProxy();
+	IPCPRIBDaemonImpl(rina::cacep::AppConHandlerInterface *app_con_callback);
+	~IPCPRIBDaemonImpl();
+	rina::rib::RIBDaemonProxy * getProxy();
         void set_application_process(rina::ApplicationProcess * ap);
         void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
         void eventHappened(rina::InternalEvent * event);
@@ -73,6 +73,7 @@ public:
         const rina::rib::rib_handle_t & get_rib_handle();
         int64_t addObjRIB(const std::string& fqn, rina::rib::RIBObj** obj);
         void removeObjRIB(const std::string& fqn);
+        void processReadManagementSDUEvent(const rina::ReadMgmtSDUResponseEvent& event);
 
 private:
 	void initialize_rib_daemon(rina::cacep::AppConHandlerInterface *app_con_callback);
@@ -81,7 +82,6 @@ private:
 	rina::rib::rib_handle_t rib;
 
         INMinusOneFlowManager * n_minus_one_flow_manager_;
-        rina::Thread * management_sdu_reader_;
 
         /// Lock to control that when sending a message requiring a reply the
         /// CDAP Session manager has been updated before receiving the response message

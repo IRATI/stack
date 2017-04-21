@@ -2330,7 +2330,8 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
 }
 
 static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
-                                 const struct dif_info *     dif_information)
+                                 const struct dif_info *     dif_information,
+				 u32 			    ipcp_nl_port)
 {
         LOG_HBEAT;
 

@@ -40,46 +40,6 @@ ManagementSDUReaderData::ManagementSDUReaderData(unsigned int max_sdu_size)
 	max_sdu_size_ = max_sdu_size;
 }
 
-void * doManagementSDUReaderWork(void* arg)
-{
-	ManagementSDUReaderData * data = (ManagementSDUReaderData *) arg;
-	rina::ser_obj_t message;
-	message.message_ = new unsigned char[data->max_sdu_size_];
-
-	rina::ReadManagementSDUResult result;
-	LOG_IPCP_INFO("Starting Management SDU reader ...");
-	while (true) {
-		try {
-			result = rina::kernelIPCProcess->readManagementSDU(message.message_,
-									   data->max_sdu_size_);
-		}
-		catch (rina::ReadSDUException  &e)
-		{
-		        LOG_IPCP_ERR("Problems reading management SDU: %s", e.what());
-		        continue;
-		}
-		catch(rina::IPCException &e)
-		{
-	                LOG_IPCP_ERR("Problems reading management SDU: %s", e.what());
-	                break;
-		}
-
-		message.size_ = result.bytesRead;
-		LOG_IPCP_DBG("Got message of %d bytes, handling to CDAP Provider", message.size_);
-
-		//Instruct CDAP provider to process the messages
-		try{
-			rina::cdap::getProvider()->process_message(message,
-								   result.portId);
-		}catch(rina::WriteSDUException &e){
-			LOG_ERR("Cannot write to flow with port id: %u anymore",
-				result.portId);
-		}
-	}
-
-	return 0;
-}
-
 class IPCPCDAPIOHandler : public rina::cdap::CDAPIOHandler
 {
  public:
@@ -458,7 +418,6 @@ void RIBDaemonRO::read(const rina::cdap_rib::con_handle_t &con,
 //Class IPCPRIBDaemonImpl
 IPCPRIBDaemonImpl::IPCPRIBDaemonImpl(rina::cacep::AppConHandlerInterface *app_con_callback)
 {
-	management_sdu_reader_ = 0;
 	n_minus_one_flow_manager_ = 0;
 	initialize_rib_daemon(app_con_callback);
 }
@@ -529,15 +488,6 @@ void IPCPRIBDaemonImpl::set_application_process(rina::ApplicationProcess * ap)
         n_minus_one_flow_manager_ = ipcp->resource_allocator_->get_n_minus_one_flow_manager();
 
         subscribeToEvents();
-
-        rina::ThreadAttributes * threadAttributes = new rina::ThreadAttributes();
-        threadAttributes->setJoinable();
-        threadAttributes->setName("mgmt-sdu-reader");
-        ManagementSDUReaderData * data = new ManagementSDUReaderData(max_sdu_size_in_bytes);
-        management_sdu_reader_ = new rina::Thread(&doManagementSDUReaderWork,
-        					  (void *) data,
-        					  threadAttributes);
-        management_sdu_reader_->start();
 }
 
 void IPCPRIBDaemonImpl::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
@@ -608,6 +558,24 @@ int64_t IPCPRIBDaemonImpl::addObjRIB(const std::string& fqn,
 void IPCPRIBDaemonImpl::removeObjRIB(const std::string& fqn)
 {
 	ribd->removeObjRIB(rib, fqn);
+}
+
+void IPCPRIBDaemonImpl::processReadManagementSDUEvent(const rina::ReadMgmtSDUResponseEvent& event)
+{
+	rina::ser_obj_t rcv_message;
+	rcv_message.size_ = event.size;
+	rcv_message.message_ = (unsigned char*) event.sdu;
+
+	LOG_IPCP_DBG("Got message of %d bytes, handling to CDAP Provider", rcv_message.size_);
+
+	//Instruct CDAP provider to process the messages
+	try{
+		rina::cdap::getProvider()->process_message(rcv_message,
+							   event.port_id);
+	}catch(rina::WriteSDUException &e){
+		LOG_ERR("Cannot write to flow with port id: %u anymore",
+				event.port_id);
+	}
 }
 
 } //namespace rinad

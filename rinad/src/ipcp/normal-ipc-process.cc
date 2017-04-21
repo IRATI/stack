@@ -785,5 +785,16 @@ void IPCProcessImpl::ipcp_deallocate_port_response_event_handler(const rina::Dea
 	flow_allocator_->processDeallocatePortResponse(event);
 }
 
+void IPCProcessImpl::ipcp_write_mgmt_sdu_response_event_handler(const rina::WriteMgmtSDUResponseEvent& event)
+{
+	//Ignore for now, assuming all works well
+	//TODO add error handler in the RIB Daemon
+}
+
+void IPCProcessImpl::ipcp_read_mgmt_sdu_notif_event_handler(const rina::ReadMgmtSDUResponseEvent& event)
+{
+	rib_daemon_->processReadManagementSDUEvent(event);
+}
+
 
 } //namespace rinad

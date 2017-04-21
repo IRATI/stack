@@ -329,6 +329,18 @@ void AbstractIPCProcessImpl::event_loop(void)
 			ipcp_deallocate_port_response_event_handler(*event);
 		}
 		break;
+		case rina::IPC_PROCESS_WRITE_MGMT_SDU_RESPONSE:
+		{
+			DOWNCAST_DECL(e, rina::WriteMgmtSDUResponseEvent, event);
+			ipcp_write_mgmt_sdu_response_event_handler(*event);
+		}
+		break;
+		case rina::IPC_PROCESS_READ_MGMT_SDU_NOTIF:
+		{
+			DOWNCAST_DECL(e, rina::ReadMgmtSDUResponseEvent, event);
+			ipcp_read_mgmt_sdu_notif_event_handler(*event);
+		}
+		break;
 
 		//Unsupported events (they belong to the IPC Manager)
 		case rina::APPLICATION_REGISTRATION_CANCELED_EVENT:
@@ -341,6 +353,8 @@ void AbstractIPCProcessImpl::event_loop(void)
 		case rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT:
 		case rina::TIMER_EXPIRED_EVENT:
 		case rina::IPC_PROCESS_PLUGIN_LOAD_RESPONSE:
+		case rina::IPCM_CREATE_IPCP_RESPONSE:
+		case rina::IPCM_DESTROY_IPCP_RESPONSE:
 		default:
 			break;
 		}
@@ -533,6 +547,16 @@ void LazyIPCProcessImpl::ipcp_allocate_port_response_event_handler(const rina::A
 }
 
 void LazyIPCProcessImpl::ipcp_deallocate_port_response_event_handler(const rina::DeallocatePortResponseEvent& event)
+{
+	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
+}
+
+void LazyIPCProcessImpl::ipcp_write_mgmt_sdu_response_event_handler(const rina::WriteMgmtSDUResponseEvent& event)
+{
+	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
+}
+
+void LazyIPCProcessImpl::ipcp_read_mgmt_sdu_notif_event_handler(const rina::ReadMgmtSDUResponseEvent& event)
 {
 	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
 }

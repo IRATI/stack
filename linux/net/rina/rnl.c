@@ -290,6 +290,12 @@ static struct nla_policy idaprm_policy[IDAPRM_ATTR_MAX + 1] = {
 
 };
 
+static struct nla_policy iwmsrm_policy[IWMSRM_ATTR_MAX + 1] = {
+	[IWMSRM_ATTR_SDU] = NLA_INIT_UNSPEC,
+	[IWMSRM_ATTR_PORT_ID] = NLA_INIT_U32,
+	[IWMSRM_ATTR_ADDRESS] = NLA_INIT_U32,
+};
+
 #define DECL_NL_OP(COMMAND, POLICY) {           \
                 .cmd    = COMMAND,              \
                         .flags  = 0,            \
@@ -345,7 +351,8 @@ static struct genl_ops nl_ops[] = {
         DECL_NL_OP(RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE, NULL),
 	DECL_NL_OP(RINA_C_IPCP_ADDRESS_CHANGE_REQUEST, iacr_policy),
 	DECL_NL_OP(RINA_C_IPCP_ALLOCATE_PORT_REQUEST, iaprm_policy),
-	DECL_NL_OP(RINA_C_IPCP_DEALLOCATE_PORT_REQUEST, idaprm_policy)
+	DECL_NL_OP(RINA_C_IPCP_DEALLOCATE_PORT_REQUEST, idaprm_policy),
+	DECL_NL_OP(RINA_C_IPCP_MANAGEMENT_SDU_WRITE_REQUEST, iwmsrm_policy)
 };
 
 int rnl_handler_register(struct rnl_set *   set,

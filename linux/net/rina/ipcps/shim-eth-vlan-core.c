@@ -1404,7 +1404,8 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 };
 
 static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
-                                  const struct dif_info *     dif_information)
+                                  const struct dif_info *     dif_information,
+				  u32 			    ipcp_nl_port)
 {
         struct eth_vlan_info *          info;
         struct ipcp_config *            tmp;

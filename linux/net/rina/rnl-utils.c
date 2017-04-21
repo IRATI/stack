@@ -396,6 +396,18 @@ rnl_ipcp_deallocate_port_req_msg_attrs_create(void)
         return tmp;
 }
 
+static struct rnl_ipcp_write_mgmt_sdu_req_msg_attrs *
+rnl_ipcp_write_mgmt_sdu_req_msg_attrs_create(void)
+{
+        struct rnl_ipcp_write_mgmt_sdu_req_msg_attrs * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+        if  (!tmp)
+                return NULL;
+
+        return tmp;
+}
+
 struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type)
 {
         struct rnl_msg * tmp;
@@ -549,6 +561,14 @@ struct rnl_msg * rnl_msg_create(enum rnl_msg_attr_type type)
         case RNL_MSG_ATTRS_DEALLOCATE_PORT_REQUEST:
         	tmp->attrs =
         		rnl_ipcp_deallocate_port_req_msg_attrs_create();
+        	if (!tmp->attrs) {
+        		rkfree(tmp);
+        		return NULL;
+        	}
+        	break;
+        case RNL_MSG_ATTRS_WRITE_MGMT_SDU_REQUEST:
+        	tmp->attrs =
+        		rnl_ipcp_write_mgmt_sdu_req_msg_attrs_create();
         	if (!tmp->attrs) {
         		rkfree(tmp);
         		return NULL;
@@ -879,6 +899,22 @@ rnl_ipcp_deallocate_port_req_msg_attrs_destroy(
 }
 
 static int
+rnl_ipcp_write_mgmt_sdu_req_msg_attrs_destroy(
+		struct rnl_ipcp_write_mgmt_sdu_req_msg_attrs * attrs)
+{
+        if (!attrs)
+                return -1;
+
+        if (attrs->sdu_wpi) sdu_wpi_destroy(attrs->sdu_wpi);
+
+        rkfree(attrs);
+
+        LOG_DBG("rnl_ipcp_write_mgmt_sdu_req_msg_attrs destroyed correctly");
+
+        return 0;
+}
+
+static int
 rnl_ipcp_allocate_port_req_msg_attrs_destroy(
 		struct rnl_ipcp_allocate_port_req_msg_attrs * attrs)
 {
@@ -953,6 +989,9 @@ int rnl_msg_destroy(struct rnl_msg * msg)
         	break;
         case RNL_MSG_ATTRS_DEALLOCATE_PORT_REQUEST:
         	rnl_ipcp_deallocate_port_req_msg_attrs_destroy(msg->attrs);
+        	break;
+        case RNL_MSG_ATTRS_WRITE_MGMT_SDU_REQUEST:
+        	rnl_ipcp_write_mgmt_sdu_req_msg_attrs_destroy(msg->attrs);
         	break;
         default:
                 break;
@@ -3004,6 +3043,33 @@ rnl_parse_ipcp_deallocate_port_req_msg(struct genl_info * info,
         return 0;
 }
 
+static int
+rnl_parse_ipcp_write_mgmt_sdu_req_msg(struct genl_info * info,
+                		      struct rnl_ipcp_write_mgmt_sdu_req_msg_attrs * msg_attrs)
+{
+        if (info->attrs[IWMSRM_ATTR_SDU]) {
+        	msg_attrs->sdu_wpi = sdu_wpi_create(nla_len(info->attrs[IWMSRM_ATTR_SDU]));
+        	if (!msg_attrs->sdu_wpi)
+        		return -1;
+
+        	memcpy(sdu_buffer(msg_attrs->sdu_wpi->sdu),
+        	       nla_data(info->attrs[IWMSRM_ATTR_SDU]),
+		       nla_len(info->attrs[IWMSRM_ATTR_SDU]));
+        } else {
+        	return -1;
+        }
+
+        if (info->attrs[IWMSRM_ATTR_PORT_ID])
+                msg_attrs->sdu_wpi->port_id =
+                        nla_get_u32(info->attrs[IWMSRM_ATTR_PORT_ID]);
+
+        if (info->attrs[IWMSRM_ATTR_ADDRESS])
+                msg_attrs->sdu_wpi->dst_addr =
+                        nla_get_u32(info->attrs[IWMSRM_ATTR_ADDRESS]);
+
+        return 0;
+}
+
 int rnl_parse_msg(struct genl_info * info,
                   struct rnl_msg *   msg)
 {
@@ -3152,6 +3218,11 @@ int rnl_parse_msg(struct genl_info * info,
         case RINA_C_IPCP_DEALLOCATE_PORT_REQUEST:
         	if (rnl_parse_ipcp_deallocate_port_req_msg(info,
         						   msg->attrs) < 0)
+        		goto fail;
+        	break;
+        case RINA_C_IPCP_MANAGEMENT_SDU_WRITE_REQUEST:
+        	if (rnl_parse_ipcp_write_mgmt_sdu_req_msg(info,
+        						  msg->attrs) < 0)
         		goto fail;
         	break;
         default:
@@ -3846,8 +3917,8 @@ static int rnl_format_ipcp_allocate_port_resp_msg(uint_t           result,
 }
 
 static int rnl_format_ipcp_deallocate_port_resp_msg(uint_t           result,
-						  port_id_t 	 port_id,
-						  struct sk_buff * skb_out)
+						    port_id_t 	 port_id,
+						    struct sk_buff * skb_out)
 {
 	if (!skb_out) {
 		LOG_ERR("Bogus input parameter(s), bailing out");
@@ -3863,6 +3934,38 @@ static int rnl_format_ipcp_deallocate_port_resp_msg(uint_t           result,
         return 0;
 }
 
+static int rnl_format_ipcp_write_mgmt_sdu_resp_msg(uint_t           result,
+						   struct sk_buff * skb_out)
+{
+	if (!skb_out) {
+		LOG_ERR("Bogus input parameter(s), bailing out");
+		return -1;
+	}
+
+	if (nla_put_u32(skb_out, IWMSREM_ATTR_RESULT, result) < 0)
+		return format_fail("rnl_format_ipcp_write_mgmt_sdu_resp_msg");
+
+        return 0;
+}
+
+static int rnl_format_ipcp_read_mgmt_sdu_notif_msg(uint_t           result,
+						   port_id_t	    port_id,
+						   struct sdu *     sdu,
+						   struct sk_buff * skb_out)
+{
+	if (!skb_out) {
+		LOG_ERR("Bogus input parameter(s), bailing out");
+		return -1;
+	}
+
+	if (nla_put_u32(skb_out, IRMSREM_ATTR_PORT_ID, port_id) < 0)
+		return format_fail("rnl_format_ipcp_read_mgmt_sdu_notif_msg");
+
+	if (nla_put(skb_out, IRMSREM_ATTR_SDU, sdu_len(sdu), sdu_buffer(sdu)) < 0)
+		return format_fail("rnl_format_ipcp_read_mgmt_sdu_notif_msg");
+
+        return 0;
+}
 
 int rnl_assign_dif_response(ipc_process_id_t id,
                             uint_t           res,
@@ -4764,4 +4867,96 @@ int rnl_deallocate_port_response(ipc_process_id_t id,
 }
 EXPORT_SYMBOL(rnl_deallocate_port_response);
 
+int rnl_ipcp_write_mgmt_sdu_response(ipc_process_id_t id,
+			             uint_t           res,
+				     rnl_sn_t         seq_num,
+				     u32              nl_port_id)
+{
+        struct sk_buff *      out_msg;
+        struct rina_msg_hdr * out_hdr;
 
+        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
+        if (!out_msg) {
+                LOG_ERR("Could not allocate memory for message");
+                return -1;
+        }
+
+        out_hdr = (struct rina_msg_hdr *)
+                genlmsg_put(out_msg,
+                            0,
+                            seq_num,
+                            &rnl_nl_family,
+                            0,
+                            RINA_C_IPCP_MANAGEMENT_SDU_WRITE_RESPONSE);
+        if (!out_hdr) {
+                LOG_ERR("Could not use genlmsg_put");
+                nlmsg_free(out_msg);
+                return -1;
+        }
+
+        out_hdr->src_ipc_id = id;
+        out_hdr->dst_ipc_id = 0;
+
+        if (rnl_format_ipcp_write_mgmt_sdu_resp_msg(res, out_msg)) {
+                LOG_ERR("Could not format message ...");
+                nlmsg_free(out_msg);
+                return -1;
+        }
+
+        genlmsg_end(out_msg, out_hdr);
+
+        return send_nl_unicast_msg(&init_net,
+                                   out_msg,
+                                   nl_port_id,
+				   RINA_C_IPCP_MANAGEMENT_SDU_WRITE_RESPONSE,
+                                   seq_num);
+}
+EXPORT_SYMBOL(rnl_ipcp_write_mgmt_sdu_response);
+
+int rnl_ipcp_read_mgmt_sdu_notif(ipc_process_id_t id,
+			         uint_t           res,
+				 rnl_sn_t         seq_num,
+				 port_id_t	  port_id,
+				 struct sdu *     sdu,
+				 u32              nl_port_id)
+{
+        struct sk_buff *      out_msg;
+        struct rina_msg_hdr * out_hdr;
+
+        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
+        if (!out_msg) {
+                LOG_ERR("Could not allocate memory for message");
+                return -1;
+        }
+
+        out_hdr = (struct rina_msg_hdr *)
+                genlmsg_put(out_msg,
+                            0,
+                            seq_num,
+                            &rnl_nl_family,
+                            0,
+                            RINA_C_IPCP_MANAGEMENT_SDU_READ_NOTIF);
+        if (!out_hdr) {
+                LOG_ERR("Could not use genlmsg_put");
+                nlmsg_free(out_msg);
+                return -1;
+        }
+
+        out_hdr->src_ipc_id = id;
+        out_hdr->dst_ipc_id = 0;
+
+        if (rnl_format_ipcp_read_mgmt_sdu_notif_msg(res, port_id, sdu, out_msg)) {
+                LOG_ERR("Could not format message ...");
+                nlmsg_free(out_msg);
+                return -1;
+        }
+
+        genlmsg_end(out_msg, out_hdr);
+
+        return send_nl_unicast_msg(&init_net,
+                                   out_msg,
+                                   nl_port_id,
+				   RINA_C_IPCP_MANAGEMENT_SDU_READ_NOTIF,
+                                   seq_num);
+}
+EXPORT_SYMBOL(rnl_ipcp_read_mgmt_sdu_notif);

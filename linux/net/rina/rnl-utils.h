@@ -652,6 +652,27 @@ enum ipcp_deallocate_port_resp_attrs_list {
 };
 #define IDAPREM_ATTR_MAX (__IDAPREM_ATTR_MAX -1)
 
+enum ipcp_write_mgmt_sdu_req_attrs_list {
+        IWMSRM_ATTR_SDU = 1,
+	IWMSRM_ATTR_PORT_ID,
+	IWMSRM_ATTR_ADDRESS,
+        __IWMSRM_ATTR_MAX,
+};
+#define IWMSRM_ATTR_MAX (__IWMSRM_ATTR_MAX -1)
+
+enum ipcp_write_mgmt_sdu_resp_attrs_list {
+	IWMSREM_ATTR_RESULT = 1,
+	__IWMSREM_ATTR_MAX,
+};
+#define IWMSREM_ATTR_MAX (__IWMSREM_ATTR_MAX -1)
+
+enum ipcp_read_mgmt_sdu_notif_attrs_list {
+	IRMSREM_ATTR_SDU = 1,
+	IRMSREM_ATTR_PORT_ID,
+	__IRMSREM_ATTR_MAX
+};
+#define IRMSREM_ATTR_MAX (__IRMSREM_ATTR_MAX -1)
+
 /* FIXME: Should be hidden by the API !!! */
 struct rina_msg_hdr {
         unsigned short src_ipc_id;
@@ -677,7 +698,8 @@ enum rnl_msg_attr_type {
         RNL_MSG_ATTRS_UPDATE_CRYPTO_STATE_REQUEST,
 	RNL_MSG_ATTRS_ADDRESS_CHANGE_REQUEST,
 	RNL_MSG_ATTRS_ALLOCATE_PORT_REQUEST,
-	RNL_MSG_ATTRS_DEALLOCATE_PORT_REQUEST
+	RNL_MSG_ATTRS_DEALLOCATE_PORT_REQUEST,
+	RNL_MSG_ATTRS_WRITE_MGMT_SDU_REQUEST
 };
 
 struct rnl_msg {
@@ -919,6 +941,10 @@ struct rnl_ipcp_deallocate_port_req_msg_attrs {
 	port_id_t port_id;
 };
 
+struct rnl_ipcp_write_mgmt_sdu_req_msg_attrs {
+	struct sdu_wpi * sdu_wpi;
+};
+
 int rnl_parse_msg(struct genl_info * info,
                   struct rnl_msg *   msg);
 
@@ -1031,5 +1057,17 @@ int rnl_deallocate_port_response(ipc_process_id_t id,
 			         uint_t           res,
 				 rnl_sn_t         seq_num,
 				 port_id_t	port,
+				 u32              nl_port_id);
+
+int rnl_ipcp_write_mgmt_sdu_response(ipc_process_id_t id,
+			             uint_t           res,
+				     rnl_sn_t         seq_num,
+				     u32              nl_port_id);
+
+int rnl_ipcp_read_mgmt_sdu_notif(ipc_process_id_t id,
+			         uint_t           res,
+				 rnl_sn_t         seq_num,
+				 port_id_t	  port_id,
+				 struct sdu *     sdu,
 				 u32              nl_port_id);
 #endif

@@ -244,7 +244,8 @@ struct ipcp_instance_ops {
                                         const struct name *         source);
 
         int  (* assign_to_dif)(struct ipcp_instance_data * data,
-                               const struct dif_info *     information);
+                               const struct dif_info *     information,
+			       u32 			   ipcp_nl_port);
 
         int  (* update_dif_config)(struct ipcp_instance_data * data,
                                    const struct dif_config *   configuration);

@@ -45,6 +45,7 @@
 #include "sdup.h"
 #include "efcp-utils.h"
 #include "rds/rtimer.h"
+#include "rnl-utils.h"
 
 /*  FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
@@ -643,11 +644,14 @@ static int disable_write(struct ipcp_instance_data * data,
 }
 
 static int normal_assign_to_dif(struct ipcp_instance_data * data,
-                                const struct dif_info *     dif_information)
+                                const struct dif_info *     dif_information,
+				u32 			    ipcp_nl_port)
 {
         struct efcp_config * efcp_config;
         struct sdup_config * sdup_config;
         struct rmt_config *  rmt_config;
+
+        data->nl_port = ipcp_nl_port;
 
         if (name_cpy(dif_information->dif_name, &data->dif_name)) {
                 LOG_ERR("%s: name_cpy() failed", __func__);
@@ -842,6 +846,7 @@ static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
 
         pci = pdu_pci_get_rw(pdu);
         if (!pci) {
+        	LOG_ERR("No PCI, bailing out");
 		pdu_destroy(pdu);
                 return -1;
 	}
@@ -855,6 +860,7 @@ static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
                        0,
                        1,
                        PDU_TYPE_MGMT)) {
+        	LOG_ERR("Problems formatting PCI");
                 pdu_destroy(pdu);
                 return -1;
         }
@@ -890,60 +896,35 @@ static int normal_mgmt_sdu_post(struct ipcp_instance_data * data,
                                 port_id_t                   port_id,
                                 struct sdu *                sdu)
 {
-        /* FIXME: We should get rid of sdu_wpi ASAP */
-        struct sdu_wpi * tmp;
+	if (!data) {
+		LOG_ERR("Bogus instance passed");
+		sdu_destroy(sdu);
+		return -1;
+	}
 
-        if (!data) {
-                LOG_ERR("Bogus instance passed");
-                sdu_destroy(sdu);
-                return -1;
-        }
+	if (!is_port_id_ok(port_id)) {
+		LOG_ERR("Wrong port id");
+		sdu_destroy(sdu);
+		return -1;
+	}
+	if (!is_sdu_ok(sdu)) {
+		LOG_ERR("Bogus management SDU");
+		sdu_destroy(sdu);
+		return -1;
+	}
 
-        if (!is_port_id_ok(port_id)) {
-                LOG_ERR("Wrong port id");
-                sdu_destroy(sdu);
-                return -1;
-        }
-        if (!is_sdu_ok(sdu)) {
-                LOG_ERR("Bogus management SDU");
-                sdu_destroy(sdu);
-                return -1;
-        }
+	if (rnl_ipcp_read_mgmt_sdu_notif(data->id,
+					 0,
+					 0,
+					 port_id,
+					 sdu,
+					 data->nl_port)) {
+		LOG_ERR("Problems sending NL message");
+		sdu_destroy(sdu);
+		return -1;
+	}
 
-        tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
-        if (!tmp) {
-                sdu_destroy(sdu);
-                return -1;
-        }
-
-        if (!data->mgmt_data) {
-                LOG_ERR("No mgmt data for IPCP %d", data->id);
-                sdu_destroy(sdu);
-                rkfree(tmp);
-                return -1;
-        }
-
-        if (data->mgmt_data->state == MGMT_DATA_DESTROYED) {
-                LOG_ERR("IPCP %d is being destroyed", data->id);
-                sdu_destroy(sdu);
-                rkfree(tmp);
-                return -1;
-        }
-
-        tmp->port_id = port_id;
-        tmp->sdu     = sdu;
-        spin_lock_bh(&data->mgmt_data->lock);
-        if (rfifo_push_ni(data->mgmt_data->sdu_ready,
-                          tmp)) {
-                sdu_destroy(sdu);
-                rkfree(tmp);
-                spin_unlock_bh(&data->mgmt_data->lock);
-                return -1;
-        }
-        spin_unlock_bh(&data->mgmt_data->lock);
-
-        LOG_DBG("Gonna wake up waitqueue: %d", port_id);
-        wake_up_interruptible(&data->mgmt_data->wait_q);
+	sdu_destroy(sdu);
 
         return 0;
 }

@@ -456,7 +456,8 @@ static int notify_ipcp_assign_dif_request(void *             data,
         ASSERT(ipc_process->ops->assign_to_dif);
 
         if (ipc_process->ops->assign_to_dif(ipc_process->data,
-                                            attrs->dif_info)) {
+                                            attrs->dif_info,
+					    info->snd_portid)) {
                 char * tmp = name_tostring(attrs->dif_info->dif_name);
                 LOG_ERR("Assign to dif %s operation failed for IPC process %d",
                         tmp, ipc_id);
@@ -1747,6 +1748,57 @@ out:
         return 0;
 }
 
+static int notify_ipcp_write_mgmt_sdu(void *             data,
+				      struct sk_buff *   buff,
+				      struct genl_info * info)
+{
+        struct kipcm * kipcm = data;
+        struct rnl_ipcp_write_mgmt_sdu_req_msg_attrs * attrs;
+        struct rnl_msg * msg;
+        int retval = 0;
+        ipc_process_id_t ipcp_id = 0;
+
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
+
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
+
+        msg = rnl_msg_create(RNL_MSG_ATTRS_WRITE_MGMT_SDU_REQUEST);
+        if (!msg) {
+                retval = -1;
+                LOG_ERR("Problems creating msg attributes");
+                goto out;
+        }
+
+        attrs = msg->attrs;
+
+        if (rnl_parse_msg(info, msg)) {
+                retval = -1;
+                LOG_ERR("Problems parsing NL message");
+                goto out;
+        }
+
+        ipcp_id = msg->header.src_ipc_id;
+        retval = kipcm_mgmt_sdu_write(kipcm,
+        			      ipcp_id,
+				      attrs->sdu_wpi);
+out:
+        rnl_msg_destroy(msg);
+
+        if (rnl_ipcp_write_mgmt_sdu_response(ipcp_id,
+        			             retval,
+					     info->snd_seq,
+					     info->snd_portid))
+                return -1;
+
+        return 0;
+}
+
 static int netlink_handlers_unregister(struct rnl_set * rnls)
 {
         int retval = 0;
@@ -1812,6 +1864,8 @@ static int netlink_handlers_register(struct kipcm * kipcm)
                 notify_allocate_port;
         kipcm_handlers[RINA_C_IPCP_DEALLOCATE_PORT_REQUEST]    	   =
                 notify_deallocate_port;
+        kipcm_handlers[RINA_C_IPCP_MANAGEMENT_SDU_WRITE_REQUEST]   =
+                notify_ipcp_write_mgmt_sdu;
 
         for (i = 1; i < RINA_C_MAX; i++) {
                 if (kipcm_handlers[i] != NULL) {
@@ -2376,13 +2430,11 @@ int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
-                sdu_wpi_destroy(sdu_wpi);
                 return -1;
         }
 
         if (!sdu_wpi_is_ok(sdu_wpi)) {
                 LOG_ERR("Bogus SDU with port-id received, bailing out");
-                sdu_wpi_destroy(sdu_wpi);
                 return -1;
         }
 
@@ -2390,14 +2442,12 @@ int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
         ipcp = ipcp_imap_find(kipcm->instances, id);
         if (!ipcp) {
                 LOG_ERR("Could not find IPC Process with id %d", id);
-                sdu_wpi_destroy(sdu_wpi);
                 KIPCM_UNLOCK(kipcm);
                 return -1;
         }
 
         if (!ipcp->ops) {
                 LOG_ERR("Bogus IPCP ops, bailing out");
-                sdu_wpi_destroy(sdu_wpi);
                 KIPCM_UNLOCK(kipcm);
                 return -1;
         }
@@ -2405,7 +2455,6 @@ int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
         if (!ipcp->ops->mgmt_sdu_write) {
                 LOG_ERR("The IPC Process %d doesn't support this operation",
                         id);
-                sdu_wpi_destroy(sdu_wpi);
                 KIPCM_UNLOCK(kipcm);
                 return -1;
         }
@@ -2415,13 +2464,12 @@ int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
                                       sdu_wpi->dst_addr,
                                       sdu_wpi->port_id,
                                       sdu_wpi->sdu)) {
-                sdu_wpi_detach(sdu_wpi);
-                sdu_wpi_destroy(sdu_wpi);
+        	sdu_wpi_detach(sdu_wpi);
                 return -1;
         }
 
         sdu_wpi_detach(sdu_wpi);
-        sdu_wpi_destroy(sdu_wpi);
+
         return 0;
 }
 
