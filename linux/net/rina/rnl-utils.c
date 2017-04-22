@@ -3163,7 +3163,7 @@ rnl_parse_ipcm_create_ipcp_req_msg(struct genl_info * info,
                 return -1;
         }
 
-        msg_attrs->dif_type = nla_dup_string(attrs[ICIRM_ATTR_DIF_TYPE], GFP_KERNEL);
+        msg_attrs->dif_type = nla_dup_string(info->attrs[ICIRM_ATTR_DIF_TYPE], GFP_KERNEL);
 
         if (info->attrs[ICIRM_ATTR_IPCP_ID])
                 msg_attrs->ipcp_id =

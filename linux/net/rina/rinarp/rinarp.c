@@ -25,6 +25,7 @@
 
 #define RINA_PREFIX "rinarp"
 
+#include "common.h"
 #include "logs.h"
 #include "debug.h"
 #include "utils.h"

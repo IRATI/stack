@@ -700,30 +700,6 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         return 0;
 }
 
-static bool queue_ready(struct mgmt_data * mgmt_data)
-{
-        if (!mgmt_data                                ||
-            (mgmt_data->state == MGMT_DATA_DESTROYED) ||
-            !mgmt_data->sdu_ready                     ||
-            !rfifo_is_empty(mgmt_data->sdu_ready))
-                return true;
-        return false;
-}
-
-static int mgmt_remove(struct mgmt_data * data)
-{
-        if (!data)
-                return -1;
-
-        if (data->sdu_ready)
-                rfifo_destroy(data->sdu_ready,
-                              (void (*)(void *)) sdu_wpi_destroy);
-
-        rkfree(data);
-
-        return 0;
-}
-
 static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
                                  address_t                   dst_addr,
                                  port_id_t                   port_id,

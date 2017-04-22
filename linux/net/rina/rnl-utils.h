@@ -23,6 +23,8 @@
 #define RINA_RNL_UTILS_H
 
 #include "connection.h"
+#include "sdu.h"
+
 
 /*
  * FIXME:

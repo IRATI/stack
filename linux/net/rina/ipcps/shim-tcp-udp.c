@@ -2640,7 +2640,6 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
         .sdu_enqueue               = NULL,
         .sdu_write                 = tcp_udp_sdu_write,
 
-        .mgmt_sdu_read             = NULL,
         .mgmt_sdu_write            = NULL,
         .mgmt_sdu_post             = NULL,
 

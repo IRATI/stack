@@ -1185,7 +1185,6 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .sdu_enqueue               = NULL,
         .sdu_write                 = shim_hv_sdu_write,
 
-        .mgmt_sdu_read             = NULL,
         .mgmt_sdu_write            = NULL,
         .mgmt_sdu_post             = NULL,
 
