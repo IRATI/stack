@@ -66,10 +66,6 @@ int            kipcm_sdu_read(struct kipcm * kipcm,
 int            kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
                                     ipc_process_id_t id,
                                     struct sdu_wpi * sdu_wpi);
-/* If successful: passes the ownership of the SDU */
-int            kipcm_mgmt_sdu_read(struct kipcm *    kipcm,
-                                   ipc_process_id_t  id,
-                                   struct sdu_wpi ** sdu_wpi);
 port_id_t      kipcm_flow_create(struct kipcm *   kipcm,
 				 ipc_process_id_t ipc_id,
 				 struct name *    process_name);

@@ -55,14 +55,6 @@ enum mgmt_state {
         MGMT_DATA_DESTROYED
 };
 
-struct mgmt_data {
-        struct rfifo *    sdu_ready;
-        wait_queue_head_t wait_q;
-        spinlock_t        lock;
-        atomic_t          readers;
-        enum mgmt_state   state;
-};
-
 struct ipcp_instance_data {
         /* FIXME: add missing needed attributes */
         ipc_process_id_t        id;
@@ -77,7 +69,6 @@ struct ipcp_instance_data {
         struct sdup *           sdup;
         address_t               address;
         address_t		old_address;
-        struct mgmt_data *      mgmt_data;
         spinlock_t              lock;
         struct list_head        list;
         /* Timers required for the address change procedure */
@@ -733,88 +724,6 @@ static int mgmt_remove(struct mgmt_data * data)
         return 0;
 }
 
-static int normal_mgmt_sdu_read(struct ipcp_instance_data * data,
-                                struct sdu_wpi **           sdu_wpi)
-{
-        struct mgmt_data * mgmt_data;
-        int                retval;
-
-        if (!data) {
-                LOG_ERR("Bogus instance data");
-                return -1;
-        }
-
-        LOG_DBG("Trying to read mgmt SDU from IPC Process %d", data->id);
-
-        IRQ_BARRIER;
-
-        mgmt_data = data->mgmt_data;
-        if (!mgmt_data) {
-                LOG_ERR("No normal_mgmt data in IPC Process %d", data->id);
-                return -1;
-        }
-
-        spin_lock_bh(&mgmt_data->lock);
-        if (mgmt_data->state == MGMT_DATA_DESTROYED) {
-                LOG_DBG("IPCP %d is being destroyed", data->id);
-                spin_unlock_bh(&mgmt_data->lock);
-                return -1;
-        }
-
-        atomic_inc(&mgmt_data->readers);
-
-        while (rfifo_is_empty(mgmt_data->sdu_ready)) {
-                spin_unlock_bh(&mgmt_data->lock);
-
-                LOG_DBG("Mgmt read going to sleep...");
-                retval = wait_event_interruptible(mgmt_data->wait_q,
-                                                  queue_ready(mgmt_data));
-
-                if (!mgmt_data  || !mgmt_data->sdu_ready) {
-                        LOG_ERR("No mgmt data anymore, waitqueue "
-                                "return code was %d", retval);
-                        return -1;
-                }
-
-                spin_lock_bh(&mgmt_data->lock);
-                if (retval) {
-                        LOG_DBG("Mgmt queue waken up by interruption, "
-                                "returned error %d", retval);
-                        goto finish;
-                }
-
-                if (mgmt_data->state == MGMT_DATA_DESTROYED) {
-                        LOG_DBG("Mgmt data destroyed, waitqueue "
-                                "return code %d", retval);
-                        break;
-                }
-        }
-
-        if (rfifo_is_empty(mgmt_data->sdu_ready)) {
-                retval = -1;
-                goto finish;
-        }
-
-        *sdu_wpi = rfifo_pop(mgmt_data->sdu_ready);
-        if (!sdu_wpi_is_ok(*sdu_wpi)) {
-		/* FIXME shouldn't we destroy sdu_wip here? */
-                LOG_ERR("There is not enough data in the management queue");
-                retval = -1;
-        }
-
- finish:
-        if (atomic_dec_and_test(&mgmt_data->readers) &&
-            (mgmt_data->state == MGMT_DATA_DESTROYED)) {
-                spin_unlock_bh(&mgmt_data->lock);
-                if (mgmt_remove(mgmt_data))
-                        LOG_ERR("Could not destroy mgmt_data");
-                return retval;
-        }
-
-        spin_unlock_bh(&mgmt_data->lock);
-        return retval;
-}
-
 static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
                                  address_t                   dst_addr,
                                  port_id_t                   port_id,
@@ -1265,7 +1174,6 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .sdu_enqueue               = normal_sdu_enqueue,
         .sdu_write                 = normal_sdu_write,
 
-        .mgmt_sdu_read             = normal_mgmt_sdu_read,
         .mgmt_sdu_write            = normal_mgmt_sdu_write,
         .mgmt_sdu_post             = normal_mgmt_sdu_post,
 
@@ -1289,49 +1197,6 @@ static struct ipcp_instance_ops normal_instance_ops = {
 	.address_change            = normal_address_change,
         .dif_name		   = normal_dif_name
 };
-
-static struct mgmt_data * normal_mgmt_data_create(void)
-{
-        struct mgmt_data * data;
-
-        data = rkzalloc(sizeof(*data), GFP_KERNEL);
-        if (!data) {
-                LOG_ERR("Could not allocate memory for RMT mgmt struct");
-                return NULL;
-        }
-
-        data->state     = MGMT_DATA_READY;
-        data->sdu_ready = rfifo_create();
-        if (!data->sdu_ready) {
-                LOG_ERR("Could not create MGMT SDUs queue");
-                rkfree(data);
-                return NULL;
-        }
-
-        init_waitqueue_head(&data->wait_q);
-        spin_lock_init(&data->lock);
-
-        return data;
-}
-
-static int mgmt_data_destroy(struct mgmt_data * data)
-{
-        if (!data)
-                return -1;
-
-        spin_lock_bh(&data->lock);
-        data->state = MGMT_DATA_DESTROYED;
-        if ((atomic_read(&data->readers) == 0)) {
-                spin_unlock_bh(&data->lock);
-                mgmt_remove(data);
-                return 0;
-        }
-        spin_unlock_bh(&data->lock);
-
-        wake_up_interruptible_all(&data->wait_q);
-
-        return 0;
-}
 
 static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                                             const struct name *        name,
@@ -1429,17 +1294,6 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
-        instance->data->mgmt_data = normal_mgmt_data_create();
-        if (!instance->data->mgmt_data) {
-                LOG_ERR("Failed creation of management data");
-                rmt_destroy(instance->data->rmt);
-		sdup_destroy(instance->data->sdup);
-                efcp_container_destroy(instance->data->efcpc);
-                rkfree(instance->data);
-                rkfree(instance);
-                return NULL;
-        }
-
         instance->data->timers.use_naddress = rtimer_create(tf_use_naddress,
                                				    instance->data);
         instance->data->timers.kill_oaddress = rtimer_create(tf_kill_oaddress,
@@ -1498,7 +1352,6 @@ static int normal_destroy(struct ipcp_factory_data * data,
         efcp_container_destroy(tmp->efcpc);
         rmt_destroy(tmp->rmt);
         sdup_destroy(tmp->sdup);
-        mgmt_data_destroy(tmp->mgmt_data);
         name_fini(&tmp->name);
         name_fini(&tmp->dif_name);
 

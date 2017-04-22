@@ -1799,6 +1799,98 @@ out:
         return 0;
 }
 
+static int notify_create_ipcp(void *             data,
+			      struct sk_buff *   buff,
+			      struct genl_info * info)
+{
+        struct kipcm * kipcm = data;
+        struct rnl_create_ipcp_req_msg_attrs * attrs;
+        struct rnl_msg * msg;
+        int retval = 0;
+
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
+
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
+
+        msg = rnl_msg_create(RNL_MSG_ATTRS_CREATE_IPCP_REQUEST);
+        if (!msg) {
+                retval = -1;
+                goto out;
+        }
+
+        attrs = msg->attrs;
+
+        if (rnl_parse_msg(info, msg)) {
+                retval = -1;
+                goto out;
+        }
+
+        retval = kipcm_ipc_create(kipcm,
+        			  attrs->ipcp_name,
+				  attrs->ipcp_id,
+				  attrs->dif_type);
+out:
+        rnl_msg_destroy(msg);
+
+        if (rnl_create_ipcp_response(retval,
+				     info->snd_seq,
+				     info->snd_portid))
+                return -1;
+
+        return 0;
+}
+
+static int notify_destroy_ipcp(void *             data,
+			       struct sk_buff *   buff,
+			       struct genl_info * info)
+{
+        struct kipcm * kipcm = data;
+        struct rnl_destroy_ipcp_req_msg_attrs * attrs;
+        struct rnl_msg * msg;
+        int retval = 0;
+
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
+
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
+
+        msg = rnl_msg_create(RNL_MSG_ATTRS_DESTROY_IPCP_REQUEST);
+        if (!msg) {
+                retval = -1;
+                goto out;
+        }
+
+        attrs = msg->attrs;
+
+        if (rnl_parse_msg(info, msg)) {
+                retval = -1;
+                goto out;
+        }
+
+        retval = kipcm_ipc_destroy(kipcm,
+				   attrs->ipcp_id);
+out:
+        rnl_msg_destroy(msg);
+
+        if (rnl_destroy_ipcp_response(retval,
+				      info->snd_seq,
+				      info->snd_portid))
+                return -1;
+
+        return 0;
+}
+
 static int netlink_handlers_unregister(struct rnl_set * rnls)
 {
         int retval = 0;
@@ -1866,6 +1958,10 @@ static int netlink_handlers_register(struct kipcm * kipcm)
                 notify_deallocate_port;
         kipcm_handlers[RINA_C_IPCP_MANAGEMENT_SDU_WRITE_REQUEST]   =
                 notify_ipcp_write_mgmt_sdu;
+        kipcm_handlers[RINA_C_IPCM_CREATE_IPCP_REQUEST]   	   =
+                notify_create_ipcp;
+        kipcm_handlers[RINA_C_IPCM_DESTROY_IPCP_REQUEST]   	   =
+                notify_destroy_ipcp;
 
         for (i = 1; i < RINA_C_MAX; i++) {
                 if (kipcm_handlers[i] != NULL) {
@@ -2472,45 +2568,6 @@ int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
 
         return 0;
 }
-
-int kipcm_mgmt_sdu_read(struct kipcm *    kipcm,
-                        ipc_process_id_t  id,
-                        struct sdu_wpi ** sdu_wpi)
-{
-        struct ipcp_instance * ipcp;
-
-        IRQ_BARRIER;
-
-        if (!kipcm) {
-                LOG_ERR("Bogus kipcm instance passed, bailing out");
-                return -ESRCH;
-        }
-
-        KIPCM_LOCK(kipcm);
-        ipcp = ipcp_imap_find(kipcm->instances, id);
-        if (!ipcp) {
-                LOG_ERR("Could not find IPC Process with id %d", id);
-                KIPCM_UNLOCK(kipcm);
-                return -ESRCH;
-        }
-
-        if (!ipcp->ops) {
-                LOG_ERR("Bogus IPCP ops, bailing out");
-                KIPCM_UNLOCK(kipcm);
-                return -ESRCH;
-        }
-
-        if (!ipcp->ops->mgmt_sdu_read) {
-                LOG_ERR("The IPC Process %d doesn't support this operation",
-                        id);
-                KIPCM_UNLOCK(kipcm);
-                return -ESRCH;
-        }
-        KIPCM_UNLOCK(kipcm);
-
-        return ipcp->ops->mgmt_sdu_read(ipcp->data, sdu_wpi);
-}
-
 
 /* Only called by the allocate_port syscall used only by the normal IPCP */
 port_id_t kipcm_flow_create(struct kipcm     *kipcm,

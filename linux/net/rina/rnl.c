@@ -296,6 +296,17 @@ static struct nla_policy iwmsrm_policy[IWMSRM_ATTR_MAX + 1] = {
 	[IWMSRM_ATTR_ADDRESS] = NLA_INIT_U32,
 };
 
+static struct nla_policy icirm_policy[ICIRM_ATTR_MAX + 1] = {
+	[ICIRM_ATTR_IPCP_NAME] = NLA_INIT_NESTED,
+	[ICIRM_ATTR_DIF_TYPE] = NLA_INIT_STRING,
+	[ICIRM_ATTR_IPCP_ID] = NLA_INIT_U16,
+	[ICIRM_ATTR_NL_PORT_ID] = NLA_INIT_U32,
+};
+
+static struct nla_policy idirm_policy[IDIRM_ATTR_MAX + 1] = {
+	[IDIRM_ATTR_IPCP_ID] = NLA_INIT_U16,
+};
+
 #define DECL_NL_OP(COMMAND, POLICY) {           \
                 .cmd    = COMMAND,              \
                         .flags  = 0,            \
@@ -352,7 +363,9 @@ static struct genl_ops nl_ops[] = {
 	DECL_NL_OP(RINA_C_IPCP_ADDRESS_CHANGE_REQUEST, iacr_policy),
 	DECL_NL_OP(RINA_C_IPCP_ALLOCATE_PORT_REQUEST, iaprm_policy),
 	DECL_NL_OP(RINA_C_IPCP_DEALLOCATE_PORT_REQUEST, idaprm_policy),
-	DECL_NL_OP(RINA_C_IPCP_MANAGEMENT_SDU_WRITE_REQUEST, iwmsrm_policy)
+	DECL_NL_OP(RINA_C_IPCP_MANAGEMENT_SDU_WRITE_REQUEST, iwmsrm_policy),
+	DECL_NL_OP(RINA_C_IPCM_CREATE_IPCP_REQUEST, icirm_policy),
+	DECL_NL_OP(RINA_C_IPCM_DESTROY_IPCP_REQUEST, idirm_policy)
 };
 
 int rnl_handler_register(struct rnl_set *   set,

@@ -365,9 +365,3 @@
 356	i386	memfd_create		sys_memfd_create
 357	i386	bpf			sys_bpf
 358	i386	execveat		sys_execveat			stub32_execveat
-359	i386	ipc_create		sys_ipc_create
-360	i386	ipc_destroy		sys_ipc_destroy
-363	i386	allocate_port           sys_allocate_port
-364	i386	deallocate_port         sys_deallocate_port
-365     i386    management_sdu_read     sys_management_sdu_read
-366     i386    management_sdu_write    sys_management_sdu_write

@@ -24,6 +24,8 @@
 #include <linux/netdevice.h>
 #include <linux/types.h>
 
+#define ETH_P_RINA      0xD1F0          /* Recursive Internet Architecture [ NOT AN OFFICIALLY REGISTERED ID ] */
+
 /* Enables all N-flows whose shim-eth-vlan IPCP is associated to the device */
 void enable_write_all(struct net_device * dev);
 

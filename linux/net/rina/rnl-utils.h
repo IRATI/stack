@@ -666,6 +666,33 @@ enum ipcp_write_mgmt_sdu_resp_attrs_list {
 };
 #define IWMSREM_ATTR_MAX (__IWMSREM_ATTR_MAX -1)
 
+enum ipcm_create_ipcp_req_attrs_list {
+        ICIRM_ATTR_IPCP_NAME = 1,
+	ICIRM_ATTR_DIF_TYPE,
+	ICIRM_ATTR_IPCP_ID,
+	ICIRM_ATTR_NL_PORT_ID,
+        __ICIRM_ATTR_MAX,
+};
+#define ICIRM_ATTR_MAX (__ICIRM_ATTR_MAX -1)
+
+enum ipcm_create_ipcp_resp_attrs_list {
+	ICIRME_ATTR_RESULT = 1,
+	__ICIRME_ATTR_MAX
+};
+#define ICIRME_ATTR_MAX (__ICIRME_ATTR_MAX -1)
+
+enum ipcm_destroy_ipcp_req_attrs_list {
+        IDIRM_ATTR_IPCP_ID = 1,
+        __IDIRM_ATTR_MAX,
+};
+#define IDIRM_ATTR_MAX (__IDIRM_ATTR_MAX -1)
+
+enum ipcm_destroy_ipcp_resp_attrs_list {
+	IDIRME_ATTR_RESULT = 1,
+	__IDIRME_ATTR_MAX
+};
+#define IDIRME_ATTR_MAX (__IDIRME_ATTR_MAX -1)
+
 enum ipcp_read_mgmt_sdu_notif_attrs_list {
 	IRMSREM_ATTR_SDU = 1,
 	IRMSREM_ATTR_PORT_ID,
@@ -699,7 +726,9 @@ enum rnl_msg_attr_type {
 	RNL_MSG_ATTRS_ADDRESS_CHANGE_REQUEST,
 	RNL_MSG_ATTRS_ALLOCATE_PORT_REQUEST,
 	RNL_MSG_ATTRS_DEALLOCATE_PORT_REQUEST,
-	RNL_MSG_ATTRS_WRITE_MGMT_SDU_REQUEST
+	RNL_MSG_ATTRS_WRITE_MGMT_SDU_REQUEST,
+	RNL_MSG_ATTRS_CREATE_IPCP_REQUEST,
+	RNL_MSG_ATTRS_DESTROY_IPCP_REQUEST
 };
 
 struct rnl_msg {
@@ -945,6 +974,17 @@ struct rnl_ipcp_write_mgmt_sdu_req_msg_attrs {
 	struct sdu_wpi * sdu_wpi;
 };
 
+struct rnl_create_ipcp_req_msg_attrs {
+	struct name * ipcp_name;
+	string_t * dif_type;
+	uint_t ipcp_id;
+	uint_t nl_port_id;
+};
+
+struct rnl_destroy_ipcp_req_msg_attrs {
+	uint_t ipcp_id;
+};
+
 int rnl_parse_msg(struct genl_info * info,
                   struct rnl_msg *   msg);
 
@@ -1070,4 +1110,13 @@ int rnl_ipcp_read_mgmt_sdu_notif(ipc_process_id_t id,
 				 port_id_t	  port_id,
 				 struct sdu *     sdu,
 				 u32              nl_port_id);
+
+int rnl_create_ipcp_response(uint_t           res,
+			     rnl_sn_t         seq_num,
+			     u32              nl_port_id);
+
+int rnl_destroy_ipcp_response(uint_t           res,
+			      rnl_sn_t         seq_num,
+			      u32              nl_port_id);
+
 #endif
