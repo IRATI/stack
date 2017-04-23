@@ -732,8 +732,9 @@ protected:
 
 	//Misc
 	void os_process_finalized_handler(rina::OSProcessFinalizedEvent *event);
-	void ipc_process_daemon_initialized_event_handler(
-				rina::IPCProcessDaemonInitializedEvent *e);
+	void ipc_process_daemon_initialized_event_handler(rina::IPCProcessDaemonInitializedEvent *e);
+	void ipc_process_create_response_event_handler(rina::CreateIPCPResponseEvent *e);
+	void ipc_process_destroy_response_event_handler(rina::DestroyIPCPResponseEvent *e);
 	bool ipcm_register_response_common(
 		rina::IpcmRegisterApplicationResponseEvent *event,
 		const rina::ApplicationProcessNamingInformation& app_name,
@@ -883,6 +884,10 @@ private:
 	//Singleton
 	IPCManager_();
 	virtual ~IPCManager_();
+
+	rina::Lockable req_lock;
+	std::map<unsigned int, unsigned short> pending_cipcp_req;
+	std::map<unsigned int, unsigned short> pending_dipcp_req;
 
 	//I/O loop main thread
 	rina::Thread* io_thread;

@@ -1233,7 +1233,8 @@ static int shim_hv_factory_fini(struct ipcp_factory_data * data)
 static struct ipcp_instance *
 shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
                             const struct name *        name,
-                            ipc_process_id_t           id)
+                            ipc_process_id_t           id,
+			    uint_t		       us_nl_port)
 {
         struct ipcp_instance *      ipcp;
         struct ipcp_instance_data * priv;

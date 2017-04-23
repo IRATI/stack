@@ -635,14 +635,11 @@ static int disable_write(struct ipcp_instance_data * data,
 }
 
 static int normal_assign_to_dif(struct ipcp_instance_data * data,
-                                const struct dif_info *     dif_information,
-				u32 			    ipcp_nl_port)
+                                const struct dif_info *     dif_information)
 {
         struct efcp_config * efcp_config;
         struct sdup_config * sdup_config;
         struct rmt_config *  rmt_config;
-
-        data->nl_port = ipcp_nl_port;
 
         if (name_cpy(dif_information->dif_name, &data->dif_name)) {
                 LOG_ERR("%s: name_cpy() failed", __func__);
@@ -1176,7 +1173,8 @@ static struct ipcp_instance_ops normal_instance_ops = {
 
 static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                                             const struct name *        name,
-                                            ipc_process_id_t           id)
+                                            ipc_process_id_t           id,
+					    uint_t		       us_nl_port)
 {
         struct ipcp_instance * instance;
 
@@ -1218,7 +1216,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         }
 
         instance->data->id      = id;
-        instance->data->nl_port = data->nl_port;
+        instance->data->nl_port = us_nl_port;
 
         if (name_cpy(name, &instance->data->name)) {
                 LOG_ERR("Failed creation of ipc name");

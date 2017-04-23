@@ -1000,4 +1000,20 @@ MediaReportEvent::MediaReportEvent(const MediaReport& report,
 	media_report = report;
 }
 
+CreateIPCPResponseEvent::CreateIPCPResponseEvent(int res,
+						 unsigned int sequenceNumber):
+		IPCEvent(IPCM_CREATE_IPCP_RESPONSE,
+			 sequenceNumber)
+{
+	result = res;
+}
+
+DestroyIPCPResponseEvent::DestroyIPCPResponseEvent(int res,
+						   unsigned int sequenceNumber):
+		IPCEvent(IPCM_DESTROY_IPCP_RESPONSE,
+			 sequenceNumber)
+{
+	result = res;
+}
+
 }

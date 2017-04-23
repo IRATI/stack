@@ -47,6 +47,7 @@ int kipcm_fini(struct kipcm * kipcm);
 int            kipcm_ipc_create(struct kipcm *      kipcm,
                                 const struct name * name,
                                 ipc_process_id_t    id,
+				uint_t		    us_nl_port,
                                 const char *        factory_name);
 int            kipcm_ipc_destroy(struct kipcm *   kipcm,
                                  ipc_process_id_t id);

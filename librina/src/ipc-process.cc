@@ -300,22 +300,6 @@ ReadMgmtSDUResponseEvent::ReadMgmtSDUResponseEvent(int res,
 	port_id = pid;
 }
 
-CreateIPCPResponseEvent::CreateIPCPResponseEvent(int res,
-						 unsigned int sequenceNumber):
-		IPCEvent(IPCM_CREATE_IPCP_RESPONSE,
-			 sequenceNumber)
-{
-	result = res;
-}
-
-DestroyIPCPResponseEvent::DestroyIPCPResponseEvent(int res,
-						   unsigned int sequenceNumber):
-		IPCEvent(IPCM_DESTROY_IPCP_RESPONSE,
-			 sequenceNumber)
-{
-	result = res;
-}
-
 /* CLASS EXTENDED IPC MANAGER */
 const std::string ExtendedIPCManager::error_allocate_flow =
 		"Error allocating flow";

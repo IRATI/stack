@@ -2330,8 +2330,7 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
 }
 
 static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
-                                 const struct dif_info *     dif_information,
-				 u32 			    ipcp_nl_port)
+                                 const struct dif_info *     dif_information)
 {
         LOG_HBEAT;
 
@@ -2741,7 +2740,8 @@ static void inst_cleanup(struct ipcp_instance * inst)
 
 static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
                                              const struct name *        name,
-                                             ipc_process_id_t           id)
+                                             ipc_process_id_t           id,
+					     uint_t			us_nl_port)
 {
         struct ipcp_instance * inst;
 

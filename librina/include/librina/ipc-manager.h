@@ -875,6 +875,24 @@ public:
         MediaReport media_report;
 };
 
+class CreateIPCPResponseEvent: public IPCEvent {
+public:
+	CreateIPCPResponseEvent(int res,
+				unsigned int sequenceNumber);
+
+        // Result of the operation, 0 success
+        int result;
+};
+
+class DestroyIPCPResponseEvent: public IPCEvent {
+public:
+	DestroyIPCPResponseEvent(int res,
+				 unsigned int sequenceNumber);
+
+        // Result of the operation, 0 success
+        int result;
+};
+
 }
 
 #endif

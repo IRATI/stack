@@ -456,8 +456,7 @@ static int notify_ipcp_assign_dif_request(void *             data,
         ASSERT(ipc_process->ops->assign_to_dif);
 
         if (ipc_process->ops->assign_to_dif(ipc_process->data,
-                                            attrs->dif_info,
-					    info->snd_portid)) {
+                                            attrs->dif_info)) {
                 char * tmp = name_tostring(attrs->dif_info->dif_name);
                 LOG_ERR("Assign to dif %s operation failed for IPC process %d",
                         tmp, ipc_id);
@@ -1834,6 +1833,7 @@ static int notify_create_ipcp(void *             data,
         retval = kipcm_ipc_create(kipcm,
         			  attrs->ipcp_name,
 				  attrs->ipcp_id,
+				  attrs->nl_port_id,
 				  attrs->dif_type);
 out:
         rnl_msg_destroy(msg);
@@ -2293,6 +2293,7 @@ EXPORT_SYMBOL(kipcm_ipcp_factory_unregister);
 int kipcm_ipc_create(struct kipcm *      kipcm,
                      const struct name * ipcp_name,
                      ipc_process_id_t    id,
+		     uint_t		 us_nl_port,
                      const char *        factory_name)
 {
         char *                 name;
@@ -2323,9 +2324,10 @@ int kipcm_ipc_create(struct kipcm *      kipcm,
         ASSERT(factory_name);
 
         LOG_DBG("Creating IPC process:");
-        LOG_DBG("  name:      %s", name);
-        LOG_DBG("  id:        %d", id);
-        LOG_DBG("  factory:   %s", factory_name);
+        LOG_DBG("  name:       %s", name);
+        LOG_DBG("  id:         %d", id);
+        LOG_DBG("  us nl port; %d", us_nl_port);
+        LOG_DBG("  factory:    %s", factory_name);
         rkfree(name);
 
         KIPCM_LOCK(kipcm);
@@ -2342,7 +2344,8 @@ int kipcm_ipc_create(struct kipcm *      kipcm,
                 return -1;
         }
 
-        instance = factory->ops->create(factory->data, ipcp_name, id);
+        instance = factory->ops->create(factory->data, ipcp_name,
+        				id, us_nl_port);
         if (!instance) {
                 KIPCM_UNLOCK(kipcm);
                 return -1;

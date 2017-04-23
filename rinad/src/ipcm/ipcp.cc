@@ -49,6 +49,7 @@ namespace rinad {
 IPCMIPCProcess::IPCMIPCProcess() {
 	proxy_ = NULL;
 	state_ = IPCM_IPCP_CREATED;
+	kernel_ready = false;
 }
 
 IPCMIPCProcess::~IPCMIPCProcess() throw(){
@@ -59,6 +60,7 @@ IPCMIPCProcess::IPCMIPCProcess(rina::IPCProcessProxy* ipcp_proxy)
 {
 	state_ = IPCM_IPCP_CREATED;
 	proxy_ = ipcp_proxy;
+	kernel_ready = false;
 }
 
 /** Return the information of a registration request */
@@ -580,11 +582,12 @@ IPCMIPCProcess * IPCMIPCProcessFactory::create(
 	return ipcp;
 }
 
-void IPCMIPCProcessFactory::destroy(unsigned short ipcProcessId) {
+unsigned int IPCMIPCProcessFactory::destroy(unsigned short ipcProcessId) {
 
 	std::map<unsigned short, IPCMIPCProcess*>::iterator iterator;
 	IPCMIPCProcess * ipcp;
 	rina::IPCProcessProxy * ipcp_proxy;
+	unsigned int result = 0;
 
 	rina::WriteScopedLock writelock(rwlock);
 
@@ -600,12 +603,14 @@ void IPCMIPCProcessFactory::destroy(unsigned short ipcProcessId) {
 
 	try {
 		if(ipcp->proxy_)
-			proxy_factory_.destroy(ipcp->proxy_);
+			result = proxy_factory_.destroy(ipcp->proxy_);
 	}catch (rina::Exception &e) {
 		assert(0);
 	}
 	delete ipcp;
 	ipcProcesses.erase(ipcProcessId);
+
+	return result;
 }
 
 bool IPCMIPCProcessFactory::exists(const unsigned short id)
