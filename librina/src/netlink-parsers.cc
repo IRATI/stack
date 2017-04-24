@@ -169,32 +169,12 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
-	case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE: {
-		IpcmRegisterApplicationResponseMessage *
-			registerApplicationResponseObject =
-			dynamic_cast<IpcmRegisterApplicationResponseMessage *>(message);
-		if (putIpcmRegisterApplicationResponseMessageObject(netlinkMessage,
-				*registerApplicationResponseObject) < 0) {
-			return -1;
-		}
-		return 0;
-	}
 	case RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST: {
 		IpcmUnregisterApplicationRequestMessage *
 			unregisterApplicationRequestObject =
 			dynamic_cast<IpcmUnregisterApplicationRequestMessage *>(message);
 		if (putIpcmUnregisterApplicationRequestMessageObject(netlinkMessage,
 				*unregisterApplicationRequestObject) < 0) {
-			return -1;
-		}
-		return 0;
-	}
-	case RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE: {
-		IpcmUnregisterApplicationResponseMessage *
-		unregisterApplicationResponseObject =
-				dynamic_cast<IpcmUnregisterApplicationResponseMessage *>(message);
-		if (putIpcmUnregisterApplicationResponseMessageObject(netlinkMessage,
-				*unregisterApplicationResponseObject) < 0) {
 			return -1;
 		}
 		return 0;
@@ -208,15 +188,6 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
-	case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE: {
-		IpcmAssignToDIFResponseMessage * assignToDIFResponseObject =
-				dynamic_cast<IpcmAssignToDIFResponseMessage *>(message);
-		if (putIpcmAssignToDIFResponseMessageObject(netlinkMessage,
-				*assignToDIFResponseObject) < 0) {
-			return -1;
-		}
-		return 0;
-	}
 	case RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST: {
                 IpcmUpdateDIFConfigurationRequestMessage * updateDIFConfigurationRequest =
                                 dynamic_cast<IpcmUpdateDIFConfigurationRequestMessage *>(message);
@@ -225,15 +196,6 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
                         return -1;
                 }
                 return 0;
-	}
-	case RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE: {
-	        IpcmUpdateDIFConfigurationResponseMessage * updateDIFConfigurationResponse =
-	                        dynamic_cast<IpcmUpdateDIFConfigurationResponseMessage *>(message);
-	        if (putIpcmUpdateDIFConfigurationResponseMessageObject(netlinkMessage,
-	                        *updateDIFConfigurationResponse) < 0) {
-	                return -1;
-	        }
-	        return 0;
 	}
 	case RINA_C_IPCM_ENROLL_TO_DIF_REQUEST: {
 	        IpcmEnrollToDIFRequestMessage * request =
@@ -255,14 +217,6 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 	        IpcmDisconnectNeighborRequestMessage * request =
 	                        dynamic_cast<IpcmDisconnectNeighborRequestMessage *>(message);
 	        if (putIpcmDisconnectNeighborRequestMessageObject(netlinkMessage, *request) < 0) {
-	                return -1;
-	        }
-	        return 0;
-	}
-	case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE: {
-		IpcmDisconnectNeighborResponseMessage * request =
-	                        dynamic_cast<IpcmDisconnectNeighborResponseMessage *>(message);
-	        if (putIpcmDisconnectNeighborResponseMessageObject(netlinkMessage, *request) < 0) {
 	                return -1;
 	        }
 	        return 0;
@@ -472,29 +426,11 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
-	case RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE: {
-		IpcmSetPolicySetParamResponseMessage * responseObject =
-				dynamic_cast<IpcmSetPolicySetParamResponseMessage *>(message);
-		if (putIpcmSetPolicySetParamResponseMessageObject(netlinkMessage,
-				*responseObject) < 0) {
-			return -1;
-		}
-		return 0;
-	}
 	case RINA_C_IPCM_SELECT_POLICY_SET_REQUEST: {
 		IpcmSelectPolicySetRequestMessage * requestObject =
 				dynamic_cast<IpcmSelectPolicySetRequestMessage *>(message);
 		if (putIpcmSelectPolicySetRequestMessageObject(netlinkMessage,
 				*requestObject) < 0) {
-			return -1;
-		}
-		return 0;
-	}
-	case RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE: {
-		IpcmSelectPolicySetResponseMessage * responseObject =
-				dynamic_cast<IpcmSelectPolicySetResponseMessage *>(message);
-		if (putIpcmSelectPolicySetResponseMessageObject(netlinkMessage,
-				*responseObject) < 0) {
 			return -1;
 		}
 		return 0;
@@ -616,15 +552,6 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
                 }
                 return 0;
         }
-        case RINA_C_IPCP_MANAGEMENT_SDU_WRITE_RESPONSE: {
-        	IPCPWriteMgmtSDUResponseMessage * responseObject =
-                        dynamic_cast<IPCPWriteMgmtSDUResponseMessage *>(message);
-                if (putIPCPWriteMgmtSDUResponseMessage(netlinkMessage,
-                                *responseObject) < 0) {
-                        return -1;
-                }
-                return 0;
-        }
         case RINA_C_IPCP_MANAGEMENT_SDU_READ_NOTIF: {
         	IPCPReadMgmtSDUNotificationMessage * responseObject =
                         dynamic_cast<IPCPReadMgmtSDUNotificationMessage *>(message);
@@ -643,15 +570,6 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
                 }
                 return 0;
         }
-        case RINA_C_IPCM_CREATE_IPCP_RESPONSE: {
-        	IpcmCreateIPCPResponseMessage * responseObject =
-                        dynamic_cast<IpcmCreateIPCPResponseMessage *>(message);
-                if (putIpcmCreateIPCPResponseMessage(netlinkMessage,
-                                *responseObject) < 0) {
-                        return -1;
-                }
-                return 0;
-        }
         case RINA_C_IPCM_DESTROY_IPCP_REQUEST: {
         	IpcmDestroyIPCPRequestMessage * responseObject =
                         dynamic_cast<IpcmDestroyIPCPRequestMessage *>(message);
@@ -661,11 +579,20 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
                 }
                 return 0;
         }
+	case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE:
+	case RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE:
+	case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE:
+	case RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE:
+	case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE:
+	case RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE:
+	case RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE:
+        case RINA_C_IPCP_MANAGEMENT_SDU_WRITE_RESPONSE:
+        case RINA_C_IPCM_CREATE_IPCP_RESPONSE:
         case RINA_C_IPCM_DESTROY_IPCP_RESPONSE: {
-        	IpcmDestroyIPCPResponseMessage * responseObject =
-                        dynamic_cast<IpcmDestroyIPCPResponseMessage *>(message);
-                if (putIpcmDestroyIPCPResponseMessage(netlinkMessage,
-                                *responseObject) < 0) {
+        	BaseNetlinkResponseMessage * responseObject =
+                        dynamic_cast<BaseNetlinkResponseMessage *>(message);
+                if (putBaseNetlinkResponseMessageObject(netlinkMessage,
+                                			*responseObject) < 0) {
                         return -1;
                 }
                 return 0;
@@ -738,16 +665,8 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 		return parseIpcmRegisterApplicationRequestMessage(
 				netlinkMessageHeader);
 	}
-	case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE: {
-		return parseIpcmRegisterApplicationResponseMessage(
-				netlinkMessageHeader);
-	}
 	case RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST: {
 			return parseIpcmUnregisterApplicationRequestMessage(
-					netlinkMessageHeader);
-	}
-	case RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE: {
-			return parseIpcmUnregisterApplicationResponseMessage(
 					netlinkMessageHeader);
 	}
 	case RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION: {
@@ -758,24 +677,12 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 		return parseIpcmAssignToDIFRequestMessage(
 		                netlinkMessageHeader);
 	}
-	case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE: {
-		return parseIpcmAssignToDIFResponseMessage(
-		                netlinkMessageHeader);
-	}
 	case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST: {
 		return parseIpcmDisconnectNeighborRequestMessage(
 		                netlinkMessageHeader);
 	}
-	case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE: {
-		return parseIpcmDisconnectNeighborResponseMessage(
-		                netlinkMessageHeader);
-	}
 	case RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST: {
 	        return parseIpcmUpdateDIFConfigurationRequestMessage(
-	                        netlinkMessageHeader);
-	}
-	case RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE: {
-	        return parseIpcmUpdateDIFConfigurationResponseMessage(
 	                        netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_ENROLL_TO_DIF_REQUEST: {
@@ -878,16 +785,8 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 		return parseIpcmSetPolicySetParamRequestMessage(
 		                netlinkMessageHeader);
 	}
-	case RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE: {
-		return parseIpcmSetPolicySetParamResponseMessage(
-		                netlinkMessageHeader);
-	}
 	case RINA_C_IPCM_SELECT_POLICY_SET_REQUEST: {
 		return parseIpcmSelectPolicySetRequestMessage(
-		                netlinkMessageHeader);
-	}
-	case RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE: {
-		return parseIpcmSelectPolicySetResponseMessage(
 		                netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_PLUGIN_LOAD_REQUEST: {
@@ -940,10 +839,6 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
                 return parseIPCPWriteMgmtSDURequestMessage(
                                 netlinkMessageHeader);
         }
-        case RINA_C_IPCP_MANAGEMENT_SDU_WRITE_RESPONSE: {
-                return parseIPCPWriteMgmtSDUResponseMessage(
-                                netlinkMessageHeader);
-        }
         case RINA_C_IPCP_MANAGEMENT_SDU_READ_NOTIF: {
                 return parseIPCPReadMgmtSDUNotificationMessage(
                                 netlinkMessageHeader);
@@ -952,17 +847,22 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
                 return parseIpcmCreateIPCPRequestMessage(
                                 netlinkMessageHeader);
         }
-        case RINA_C_IPCM_CREATE_IPCP_RESPONSE: {
-                return parseIpcmCreateIPCPResponseMessage(
-                                netlinkMessageHeader);
-        }
         case RINA_C_IPCM_DESTROY_IPCP_REQUEST: {
                 return parseIpcmDestroyIPCPRequestMessage(
                                 netlinkMessageHeader);
         }
+	case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE:
+	case RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE:
+	case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE:
+	case RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE:
+	case RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE:
+	case RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE:
+	case RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE:
+        case RINA_C_IPCP_MANAGEMENT_SDU_WRITE_RESPONSE:
+        case RINA_C_IPCM_CREATE_IPCP_RESPONSE:
         case RINA_C_IPCM_DESTROY_IPCP_RESPONSE: {
-                return parseIpcmDestroyIPCPResponseMessage(
-                                netlinkMessageHeader);
+                return parseBaseNetlinkResponseMessage(netlinkMessageHeader,
+                				       (rina::RINANetlinkOperationCode) nlhdr->cmd);
         }
 	default: {
 		LOG_ERR("Generic Netlink message contains unrecognized command code: %d",
@@ -4001,16 +3901,15 @@ int putIpcmRegisterApplicationRequestMessageObject(
 	return -1;
 }
 
-int putIpcmRegisterApplicationResponseMessageObject(
-	nl_msg* netlinkMessage,
-	const IpcmRegisterApplicationResponseMessage& object)
+int putBaseNetlinkResponseMessageObject(nl_msg* netlinkMessage,
+					const BaseNetlinkResponseMessage& object)
 {
 	NLA_PUT_U32(netlinkMessage, IRARE_ATTR_RESULT, object.getResult());
 
 	return 0;
 
 	nla_put_failure: LOG_ERR(
-			"Error building IpcmRegisterApplicationResponseMessage Netlink object");
+			"Error building BaseNetlinkResponseMessage Netlink object");
 	return -1;
 }
 
@@ -4042,17 +3941,6 @@ int putIpcmUnregisterApplicationRequestMessageObject(
 
 	nla_put_failure: LOG_ERR(
 			"Error building IpcmUnregisterApplicationRequestMessage Netlink object");
-	return -1;
-}
-
-int putIpcmUnregisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
-		const IpcmUnregisterApplicationResponseMessage& object) {
-	NLA_PUT_U32(netlinkMessage, IUARE_ATTR_RESULT, object.getResult());
-
-	return 0;
-
-	nla_put_failure: LOG_ERR(
-			"Error building IpcmUnregisterApplicationResponseMessage Netlink object");
 	return -1;
 }
 
@@ -4695,18 +4583,6 @@ int putIpcmAssignToDIFRequestMessageObject(nl_msg* netlinkMessage,
 	return -1;
 }
 
-int putIpcmAssignToDIFResponseMessageObject(nl_msg* netlinkMessage,
-		const IpcmAssignToDIFResponseMessage& object){
-
-	NLA_PUT_U32(netlinkMessage, IATDRE_ATTR_RESULT, object.getResult());
-
-	return 0;
-
-	nla_put_failure: LOG_ERR(
-			"Error building IpcmAssignToDIFResponseMessage Netlink object");
-	return -1;
-}
-
 int putIpcmUpdateDIFConfigurationRequestMessageObject(nl_msg* netlinkMessage,
                 const IpcmUpdateDIFConfigurationRequestMessage& object){
         struct nlattr *difConfiguration;
@@ -4728,18 +4604,6 @@ int putIpcmUpdateDIFConfigurationRequestMessageObject(nl_msg* netlinkMessage,
 
         nla_put_failure: LOG_ERR(
                         "Error building IpcmUpdateDIFConfigurationRequestMessage Netlink object");
-        return -1;
-}
-
-int putIpcmUpdateDIFConfigurationResponseMessageObject(nl_msg* netlinkMessage,
-                const IpcmUpdateDIFConfigurationResponseMessage& object){
-
-        NLA_PUT_U32(netlinkMessage, IUDCRE_ATTR_RESULT, object.getResult());
-
-        return 0;
-
-        nla_put_failure: LOG_ERR(
-                        "Error building IpcmUpdateDIFConfigurationResponseMessage Netlink object");
         return -1;
 }
 
@@ -4854,18 +4718,6 @@ int putIpcmEnrollToDIFResponseMessageObject(nl_msg* netlinkMessage,
 
         nla_put_failure: LOG_ERR(
                 "Error building IpcmEnrollToDIFResponseMessage Netlink object");
-        return -1;
-}
-
-int putIpcmDisconnectNeighborResponseMessageObject(nl_msg* netlinkMessage,
-                const IpcmDisconnectNeighborResponseMessage& object)
-{
-        NLA_PUT_U32(netlinkMessage, IDNRE_ATTR_RESULT, object.getResult());
-
-        return 0;
-
-        nla_put_failure: LOG_ERR(
-                "Error building IpcmDisconnectNeighborResponseMessage Netlink object");
         return -1;
 }
 
@@ -5507,19 +5359,6 @@ int putIpcmSetPolicySetParamRequestMessageObject(nl_msg* netlinkMessage,
         return -1;
 }
 
-int putIpcmSetPolicySetParamResponseMessageObject(nl_msg* netlinkMessage,
-		const IpcmSetPolicySetParamResponseMessage& object){
-
-	NLA_PUT_U32(netlinkMessage, ISPSPRE_ATTR_RESULT, object.result);
-
-	return 0;
-
-        nla_put_failure: LOG_ERR(
-                        "Error building IpcmSetPolicySetParamResponseMessage "
-                        "Netlink object");
-        return -1;
-}
-
 int putIpcmSelectPolicySetRequestMessageObject(nl_msg* netlinkMessage,
 		const IpcmSelectPolicySetRequestMessage& object){
 	NLA_PUT_STRING(netlinkMessage, ISPSR_ATTR_PATH,
@@ -5531,19 +5370,6 @@ int putIpcmSelectPolicySetRequestMessageObject(nl_msg* netlinkMessage,
 
         nla_put_failure: LOG_ERR(
                         "Error building IpcmSelectPolicySetRequestMessage "
-                        "Netlink object");
-        return -1;
-}
-
-int putIpcmSelectPolicySetResponseMessageObject(nl_msg* netlinkMessage,
-		const IpcmSelectPolicySetResponseMessage& object){
-
-	NLA_PUT_U32(netlinkMessage, ISPSRE_ATTR_RESULT, object.result);
-
-	return 0;
-
-        nla_put_failure: LOG_ERR(
-                        "Error building IpcmSelectPolicySetResponseMessage "
                         "Netlink object");
         return -1;
 }
@@ -5765,19 +5591,6 @@ int putIPCPWriteMgmtSDURequestMessage(nl_msg* netlinkMessage,
         return -1;
 }
 
-int putIPCPWriteMgmtSDUResponseMessage(nl_msg* netlinkMessage,
-                		       const IPCPWriteMgmtSDUResponseMessage& object)
-{
-	NLA_PUT_U32(netlinkMessage, IWMSREM_ATTR_RESULT, object.result);
-
-	return 0;
-
-        nla_put_failure: LOG_ERR(
-                        "Error building IPCPWriteMgmtSDUResponseMessage"
-                        "Netlink object");
-        return -1;
-}
-
 int putIPCPReadMgmtSDUNotificationMessage(nl_msg* netlinkMessage,
                 		         const IPCPReadMgmtSDUNotificationMessage& object)
 {
@@ -5828,19 +5641,6 @@ int putIpcmCreateIPCPRequestMessage(nl_msg* netlinkMessage,
         return -1;
 }
 
-int putIpcmCreateIPCPResponseMessage(nl_msg* netlinkMessage,
-                		     const IpcmCreateIPCPResponseMessage& object)
-{
-	NLA_PUT_U32(netlinkMessage, ICIRME_ATTR_RESULT, object.result);
-
-	return 0;
-
-        nla_put_failure: LOG_ERR(
-                        "Error building IpcmCreateIPCPResponseMessage"
-                        "Netlink object");
-        return -1;
-}
-
 int putIpcmDestroyIPCPRequestMessage(nl_msg* netlinkMessage,
                 		     const IpcmDestroyIPCPRequestMessage& object)
 {
@@ -5850,19 +5650,6 @@ int putIpcmDestroyIPCPRequestMessage(nl_msg* netlinkMessage,
 
         nla_put_failure: LOG_ERR(
                         "Error building IpcmDestroyIPCPRequestMessage"
-                        "Netlink object");
-        return -1;
-}
-
-int putIpcmDestroyIPCPResponseMessage(nl_msg* netlinkMessage,
-                		      const IpcmDestroyIPCPResponseMessage& object)
-{
-	NLA_PUT_U32(netlinkMessage, IDIRME_ATTR_RESULT, object.result);
-
-	return 0;
-
-        nla_put_failure: LOG_ERR(
-                        "Error building IpcmDestroyIPCPResponseMessage"
                         "Netlink object");
         return -1;
 }
@@ -7047,8 +6834,8 @@ parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr) {
 	return result;
 }
 
-IpcmRegisterApplicationResponseMessage *
-parseIpcmRegisterApplicationResponseMessage(nlmsghdr *hdr) {
+BaseNetlinkResponseMessage * parseBaseNetlinkResponseMessage(nlmsghdr *hdr,
+							     RINANetlinkOperationCode op_code) {
 	struct nla_policy attr_policy[IRARE_ATTR_MAX + 1];
 	attr_policy[IRARE_ATTR_RESULT].type = NLA_U32;
 	attr_policy[IRARE_ATTR_RESULT].minlen = 4;
@@ -7064,17 +6851,15 @@ parseIpcmRegisterApplicationResponseMessage(nlmsghdr *hdr) {
 	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
 			IRARE_ATTR_MAX, attr_policy);
 	if (err < 0) {
-		LOG_ERR(
-				"Error parsing IpcmRegisterApplicationResponseMessage information from Netlink message: %d",
-				err);
+		LOG_ERR("Error parsing BaseNetlinkResponseMessage information from Netlink message: %d",
+			err);
 		return 0;
 	}
 
-	IpcmRegisterApplicationResponseMessage * result =
-			new IpcmRegisterApplicationResponseMessage();
+	BaseNetlinkResponseMessage * result = new BaseNetlinkResponseMessage(op_code);
 
 	if (attrs[IRARE_ATTR_RESULT]) {
-		result->setResult(nla_get_u32(attrs[IRARE_ATTR_RESULT]));
+		result->result = nla_get_u32(attrs[IRARE_ATTR_RESULT]);
 	}
 
 	return result;
@@ -7134,33 +6919,6 @@ parseIpcmUnregisterApplicationRequestMessage(nlmsghdr *hdr) {
 			result->setDifName(*difName);
 			delete difName;
 		}
-	}
-
-	return result;
-}
-
-IpcmUnregisterApplicationResponseMessage *
-parseIpcmUnregisterApplicationResponseMessage(nlmsghdr *hdr) {
-	struct nla_policy attr_policy[IUARE_ATTR_MAX + 1];
-	attr_policy[IUARE_ATTR_RESULT].type = NLA_U32;
-	attr_policy[IUARE_ATTR_RESULT].minlen = 4;
-	attr_policy[IUARE_ATTR_RESULT].maxlen = 4;
-	struct nlattr *attrs[IUARE_ATTR_MAX + 1];
-
-	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
-			IUARE_ATTR_MAX, attr_policy);
-	if (err < 0) {
-		LOG_ERR(
-				"Error parsing IpcmUnregisterApplicationResponseMessage information from Netlink message: %d",
-				err);
-		return 0;
-	}
-
-	IpcmUnregisterApplicationResponseMessage * result =
-			new IpcmUnregisterApplicationResponseMessage();
-
-	if (attrs[IUARE_ATTR_RESULT]) {
-		result->setResult(nla_get_u32(attrs[IUARE_ATTR_RESULT]));
 	}
 
 	return result;
@@ -8188,33 +7946,6 @@ parseIpcmAssignToDIFRequestMessage(nlmsghdr *hdr){
 	return result;
 }
 
-IpcmAssignToDIFResponseMessage *
-parseIpcmAssignToDIFResponseMessage(nlmsghdr *hdr){
-	struct nla_policy attr_policy[IATDRE_ATTR_MAX + 1];
-	attr_policy[IATDRE_ATTR_RESULT].type = NLA_U32;
-	attr_policy[IATDRE_ATTR_RESULT].minlen = 4;
-	attr_policy[IATDRE_ATTR_RESULT].maxlen = 4;
-	struct nlattr *attrs[IATDRE_ATTR_MAX + 1];
-
-	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
-			IATDRE_ATTR_MAX, attr_policy);
-	if (err < 0) {
-		LOG_ERR(
-				"Error parsing IpcmAssignToDIFResponseMessage information from Netlink message: %d",
-				err);
-		return 0;
-	}
-
-	IpcmAssignToDIFResponseMessage * result =
-			new IpcmAssignToDIFResponseMessage();
-
-	if (attrs[IATDRE_ATTR_RESULT]) {
-		result->setResult(nla_get_u32(attrs[IATDRE_ATTR_RESULT]));
-	}
-
-	return result;
-}
-
 IpcmUpdateDIFConfigurationRequestMessage *
 parseIpcmUpdateDIFConfigurationRequestMessage(nlmsghdr *hdr){
         struct nla_policy attr_policy[IUDCR_ATTR_MAX + 1];
@@ -8246,33 +7977,6 @@ parseIpcmUpdateDIFConfigurationRequestMessage(nlmsghdr *hdr){
                         result->setDIFConfiguration(*difConfiguration);
                         delete difConfiguration;
                 }
-        }
-
-        return result;
-}
-
-IpcmUpdateDIFConfigurationResponseMessage *
-parseIpcmUpdateDIFConfigurationResponseMessage(nlmsghdr *hdr){
-        struct nla_policy attr_policy[IUDCRE_ATTR_MAX + 1];
-        attr_policy[IUDCRE_ATTR_RESULT].type = NLA_U32;
-        attr_policy[IUDCRE_ATTR_RESULT].minlen = 4;
-        attr_policy[IUDCRE_ATTR_RESULT].maxlen = 4;
-        struct nlattr *attrs[IUDCRE_ATTR_MAX + 1];
-
-        int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
-                        IUDCRE_ATTR_MAX, attr_policy);
-        if (err < 0) {
-                LOG_ERR(
-                        "Error parsing IpcmAssignToDIFResponseMessage information from Netlink message: %d",
-                        err);
-                return 0;
-        }
-
-        IpcmUpdateDIFConfigurationResponseMessage * result =
-                        new IpcmUpdateDIFConfigurationResponseMessage();
-
-        if (attrs[IUDCRE_ATTR_RESULT]) {
-                result->setResult(nla_get_u32(attrs[IUDCRE_ATTR_RESULT]));
         }
 
         return result;
@@ -8330,33 +8034,6 @@ parseIpcmEnrollToDIFResponseMessage(nlmsghdr *hdr){
                         result->setDIFInformation(*difInformation);
                         delete difInformation;
                 }
-        }
-
-        return result;
-}
-
-IpcmDisconnectNeighborResponseMessage *
-parseIpcmDisconnectNeighborResponseMessage(nlmsghdr *hdr){
-        struct nla_policy attr_policy[IDNRE_ATTR_MAX + 1];
-        attr_policy[IDNRE_ATTR_RESULT].type = NLA_U32;
-        attr_policy[IDNRE_ATTR_RESULT].minlen = 4;
-        attr_policy[IDNRE_ATTR_RESULT].maxlen = 4;
-        struct nlattr *attrs[IDNRE_ATTR_MAX + 1];
-
-        int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
-        		IDNRE_ATTR_MAX, attr_policy);
-        if (err < 0) {
-                LOG_ERR(
-                        "Error parsing IpcmDisconnectNeighborResponseMessage information from Netlink message: %d",
-                        err);
-                return 0;
-        }
-
-        IpcmDisconnectNeighborResponseMessage * result =
-                        new IpcmDisconnectNeighborResponseMessage();
-
-        if (attrs[IDNRE_ATTR_RESULT]) {
-                result->setResult(nla_get_u32(attrs[IDNRE_ATTR_RESULT]));
         }
 
         return result;
@@ -9793,32 +9470,6 @@ parseIpcmSetPolicySetParamRequestMessage(nlmsghdr *hdr){
 	return result;
 }
 
-IpcmSetPolicySetParamResponseMessage *
-parseIpcmSetPolicySetParamResponseMessage(nlmsghdr *hdr){
-	struct nla_policy attr_policy[ISPSPRE_ATTR_MAX + 1];
-        attr_policy[ISPSPRE_ATTR_RESULT].type = NLA_U32;
-        attr_policy[ISPSPRE_ATTR_RESULT].minlen = 4;
-        attr_policy[ISPSPRE_ATTR_RESULT].maxlen = 4;
-	struct nlattr *attrs[ISPSPRE_ATTR_MAX + 1];
-
-	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
-			ISPSPRE_ATTR_MAX, attr_policy);
-	if (err < 0) {
-		LOG_ERR("Error parsing IpcmSetPolicySetParamResponseMessage "
-                        "information from Netlink message: %d", err);
-		return 0;
-	}
-
-	IpcmSetPolicySetParamResponseMessage * result =
-			new IpcmSetPolicySetParamResponseMessage();
-
-	if (attrs[ISPSPRE_ATTR_RESULT]) {
-		result->result = nla_get_u32(attrs[ISPSPRE_ATTR_RESULT]);
-	}
-
-	return result;
-}
-
 IpcmSelectPolicySetRequestMessage *
 parseIpcmSelectPolicySetRequestMessage(nlmsghdr *hdr){
 	struct nla_policy attr_policy[ISPSR_ATTR_MAX + 1];
@@ -9848,32 +9499,6 @@ parseIpcmSelectPolicySetRequestMessage(nlmsghdr *hdr){
 	if (attrs[ISPSR_ATTR_NAME])
 		result->name = nla_get_string(
                                 attrs[ISPSR_ATTR_NAME]);
-
-	return result;
-}
-
-IpcmSelectPolicySetResponseMessage *
-parseIpcmSelectPolicySetResponseMessage(nlmsghdr *hdr){
-	struct nla_policy attr_policy[ISPSRE_ATTR_MAX + 1];
-        attr_policy[ISPSRE_ATTR_RESULT].type = NLA_U32;
-        attr_policy[ISPSRE_ATTR_RESULT].minlen = 4;
-        attr_policy[ISPSRE_ATTR_RESULT].maxlen = 4;
-	struct nlattr *attrs[ISPSRE_ATTR_MAX + 1];
-
-	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
-			ISPSRE_ATTR_MAX, attr_policy);
-	if (err < 0) {
-		LOG_ERR("Error parsing IpcmSelectPolicySetResponseMessage "
-                        "information from Netlink message: %d", err);
-		return 0;
-	}
-
-	IpcmSelectPolicySetResponseMessage * result =
-			new IpcmSelectPolicySetResponseMessage();
-
-	if (attrs[ISPSRE_ATTR_RESULT]) {
-		result->result = nla_get_u32(attrs[ISPSRE_ATTR_RESULT]);
-	}
 
 	return result;
 }
@@ -10328,32 +9953,6 @@ IPCPWriteMgmtSDURequestMessage * parseIPCPWriteMgmtSDURequestMessage(nlmsghdr *h
 	return result;
 }
 
-IPCPWriteMgmtSDUResponseMessage * parseIPCPWriteMgmtSDUResponseMessage(nlmsghdr *hdr)
-{
-	struct nla_policy attr_policy[IWMSREM_ATTR_MAX + 1];
-	attr_policy[IWMSREM_ATTR_RESULT].type = NLA_U32;
-	attr_policy[IWMSREM_ATTR_RESULT].minlen = 4;
-	attr_policy[IWMSREM_ATTR_RESULT].maxlen = 4;
-	struct nlattr *attrs[IWMSREM_ATTR_MAX + 1];
-
-	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
-			IWMSREM_ATTR_MAX, attr_policy);
-	if (err < 0) {
-		LOG_ERR("Error parsing IPCPWriteMgmtSDUResponseMessage "
-				"information from Netlink message: %d", err);
-		return 0;
-	}
-
-	IPCPWriteMgmtSDUResponseMessage * result =
-			new IPCPWriteMgmtSDUResponseMessage();
-
-	if (attrs[IWMSREM_ATTR_RESULT]) {
-		result->result = nla_get_u32(attrs[IWMSREM_ATTR_RESULT]);
-	}
-
-	return result;
-}
-
 IPCPReadMgmtSDUNotificationMessage * parseIPCPReadMgmtSDUNotificationMessage(nlmsghdr *hdr)
 {
 	struct nla_policy attr_policy[IRMSREM_ATTR_MAX + 1];
@@ -10442,32 +10041,6 @@ IpcmCreateIPCPRequestMessage * parseIpcmCreateIPCPRequestMessage(nlmsghdr *hdr)
 	return result;
 }
 
-IpcmCreateIPCPResponseMessage * parseIpcmCreateIPCPResponseMessage(nlmsghdr *hdr)
-{
-	struct nla_policy attr_policy[ICIRME_ATTR_MAX + 1];
-        attr_policy[ICIRME_ATTR_RESULT].type = NLA_U32;
-        attr_policy[ICIRME_ATTR_RESULT].minlen = 4;
-        attr_policy[ICIRME_ATTR_RESULT].maxlen = 4;
-	struct nlattr *attrs[ICIRME_ATTR_MAX + 1];
-
-	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
-			ICIRME_ATTR_MAX, attr_policy);
-	if (err < 0) {
-		LOG_ERR("Error parsing IpcmCreateIPCPResponseMessage "
-                        "information from Netlink message: %d", err);
-		return 0;
-	}
-
-	IpcmCreateIPCPResponseMessage * result =
-			new IpcmCreateIPCPResponseMessage();
-
-	if (attrs[ICIRME_ATTR_RESULT]) {
-		result->result = nla_get_u32(attrs[ICIRME_ATTR_RESULT]);
-	}
-
-	return result;
-}
-
 IpcmDestroyIPCPRequestMessage * parseIpcmDestroyIPCPRequestMessage(nlmsghdr *hdr)
 {
 	struct nla_policy attr_policy[IDIRM_ATTR_MAX + 1];
@@ -10489,32 +10062,6 @@ IpcmDestroyIPCPRequestMessage * parseIpcmDestroyIPCPRequestMessage(nlmsghdr *hdr
 
 	if (attrs[IDIRM_ATTR_IPCP_ID]) {
 		result->ipcp_id = nla_get_u16(attrs[IDIRM_ATTR_IPCP_ID]);
-	}
-
-	return result;
-}
-
-IpcmDestroyIPCPResponseMessage * parseIpcmDestroyIPCPResponseMessage(nlmsghdr *hdr)
-{
-	struct nla_policy attr_policy[IDIRM_ATTR_MAX + 1];
-        attr_policy[IDIRME_ATTR_RESULT].type = NLA_U32;
-        attr_policy[IDIRME_ATTR_RESULT].minlen = 4;
-        attr_policy[IDIRME_ATTR_RESULT].maxlen = 4;
-	struct nlattr *attrs[IDIRM_ATTR_MAX + 1];
-
-	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
-			IDIRM_ATTR_MAX, attr_policy);
-	if (err < 0) {
-		LOG_ERR("Error parsing IpcmDestroyIPCPResponseMessage "
-                        "information from Netlink message: %d", err);
-		return 0;
-	}
-
-	IpcmDestroyIPCPResponseMessage * result =
-			new IpcmDestroyIPCPResponseMessage();
-
-	if (attrs[IDIRME_ATTR_RESULT]) {
-		result->result = nla_get_u32(attrs[IDIRME_ATTR_RESULT]);
 	}
 
 	return result;

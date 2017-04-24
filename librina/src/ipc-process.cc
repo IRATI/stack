@@ -422,7 +422,7 @@ void ExtendedIPCManager::assignToDIFResponse(
 #if STUB_API
 	//Do nothing
 #else
-	IpcmAssignToDIFResponseMessage responseMessage;
+	BaseNetlinkResponseMessage responseMessage(RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE);
 	responseMessage.setResult(result);
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
@@ -467,7 +467,7 @@ void ExtendedIPCManager::disconnectNeighborResponse(const DisconnectNeighborRequ
 #if STUB_API
         // Do nothing
 #else
-        IpcmDisconnectNeighborResponseMessage responseMessage;
+	BaseNetlinkResponseMessage responseMessage(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE);
         responseMessage.setResult(result);
         responseMessage.setSourceIpcProcessId(ipcProcessId);
         responseMessage.setDestPortId(ipcManagerPort);
@@ -487,7 +487,7 @@ void ExtendedIPCManager::registerApplicationResponse(
 #if STUB_API
 	//Do nothing
 #else
-	IpcmRegisterApplicationResponseMessage responseMessage;
+	BaseNetlinkResponseMessage responseMessage(RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE);
 	responseMessage.setResult(result);
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
@@ -506,7 +506,7 @@ void ExtendedIPCManager::unregisterApplicationResponse(
 #if STUB_API
 	// Do nothing
 #else
-	IpcmUnregisterApplicationResponseMessage responseMessage;
+	BaseNetlinkResponseMessage responseMessage(RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE);
 	responseMessage.setResult(result);
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
@@ -719,7 +719,7 @@ void ExtendedIPCManager::setPolicySetParamResponse(
 #if STUB_API
 	//Do nothing
 #else
-	IpcmSetPolicySetParamResponseMessage responseMessage;
+	BaseNetlinkResponseMessage responseMessage(RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE);
 	responseMessage.result = result;
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
@@ -738,7 +738,7 @@ void ExtendedIPCManager::selectPolicySetResponse(
 #if STUB_API
 	//Do nothing
 #else
-	IpcmSelectPolicySetResponseMessage responseMessage;
+	BaseNetlinkResponseMessage responseMessage(RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE);
 	responseMessage.result = result;
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);

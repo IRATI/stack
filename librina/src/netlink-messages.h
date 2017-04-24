@@ -122,6 +122,7 @@ struct rinaHeader{
  * Base class for Netlink messages to be sent or received
  */
 class BaseNetlinkMessage {
+public:
 	/**
 	 * The identity of the Generic RINA Netlink family - dynamically allocated
 	 * by the Netlink controller
@@ -163,7 +164,6 @@ class BaseNetlinkMessage {
 	/** True if this is a notification message */
 	bool notificationMessage;
 
-public:
 	BaseNetlinkMessage(RINANetlinkOperationCode operationCode);
 	virtual ~BaseNetlinkMessage();
 	virtual IPCEvent* toIPCEvent() = 0;
@@ -202,8 +202,10 @@ public:
 	int result;
 
 	BaseNetlinkResponseMessage(RINANetlinkOperationCode operationCode);
+	virtual ~BaseNetlinkResponseMessage(){};
 	int getResult() const;
 	void setResult(int result);
+	virtual IPCEvent* toIPCEvent();
 };
 
 /**
@@ -615,18 +617,6 @@ public:
 };
 
 /**
- * Response of the IPC Process to an application registration request.
- * IPC Process -> IPC Manager
- */
-class IpcmRegisterApplicationResponseMessage: public BaseNetlinkResponseMessage {
-
-public:
-	IpcmRegisterApplicationResponseMessage();
-	IPCEvent* toIPCEvent();
-};
-
-
-/**
  * Invoked by the IPC Manager when it wants to unregister an application.
  * IPC Manager -> IPC Process
  */
@@ -648,20 +638,6 @@ public:
 	IPCEvent* toIPCEvent();
 };
 
-
-/**
- * Response of the IPC Process to an application unregistration request.
- * IPC Process -> IPC Manager
- */
-class IpcmUnregisterApplicationResponseMessage: public BaseNetlinkResponseMessage {
-
-public:
-	IpcmUnregisterApplicationResponseMessage();
-	IPCEvent* toIPCEvent();
-};
-
-
-
 /**
  * Makes an IPC Process a member of a DIF.
  * IPC Manager -> IPC Process
@@ -675,18 +651,6 @@ public:
 	IpcmAssignToDIFRequestMessage();
 	const DIFInformation& getDIFInformation() const;
 	void setDIFInformation(const DIFInformation& difInformation);
-	IPCEvent* toIPCEvent();
-};
-
-/**
- * Reports the IPC Manager about the result of an Assign to DIF request
- * IPC Process -> IPC Manager
- */
-
-class IpcmAssignToDIFResponseMessage: public BaseNetlinkResponseMessage {
-
-public:
-	IpcmAssignToDIFResponseMessage();
 	IPCEvent* toIPCEvent();
 };
 
@@ -706,19 +670,6 @@ public:
         void setDIFConfiguration(const DIFConfiguration& difConfiguration);
         IPCEvent* toIPCEvent();
 };
-
-/**
- * Reports the IPC Manager about the result of an Update DIF Config operation
- * IPC Process -> IPC Manager
- */
-class IpcmUpdateDIFConfigurationResponseMessage:
-                public BaseNetlinkResponseMessage {
-
-public:
-        IpcmUpdateDIFConfigurationResponseMessage();
-        IPCEvent* toIPCEvent();
-};
-
 
 /**
  * Instruct a normal IPC Process to enroll in a given DIF, using the
@@ -791,17 +742,6 @@ public:
         const ApplicationProcessNamingInformation& getNeighborName() const;
         void setNeighborName(
                 const ApplicationProcessNamingInformation& neighborName);
-        IPCEvent* toIPCEvent();
-};
-
-/**
- * Reports the IPC Manager about the result of an DisconnectNeighbor operation
- * IPC Process -> IPC Manager
- */
-class IpcmDisconnectNeighborResponseMessage:
-                public BaseNetlinkResponseMessage {
-public:
-	IpcmDisconnectNeighborResponseMessage();
         IPCEvent* toIPCEvent();
 };
 
@@ -1069,18 +1009,6 @@ public:
 };
 
 /**
- * Reports the IPC Manager about the result of a set-policy-set-param
- * request operation
- * IPC Process -> IPC Manager
- */
-class IpcmSetPolicySetParamResponseMessage:
-                public BaseNetlinkResponseMessage {
-public:
-        IpcmSetPolicySetParamResponseMessage();
-        IPCEvent* toIPCEvent();
-};
-
-/**
  * Used by the IPC Manager to ask an IPC process to select a
  * policy-set for a component
  * IPC Manager -> IPC Process
@@ -1096,18 +1024,6 @@ public:
 
 	IpcmSelectPolicySetRequestMessage();
 	IPCEvent* toIPCEvent();
-};
-
-/**
- * Reports the IPC Manager about the result of a select-policy-set
- * request operation
- * IPC Process -> IPC Manager
- */
-class IpcmSelectPolicySetResponseMessage:
-                public BaseNetlinkResponseMessage {
-public:
-        IpcmSelectPolicySetResponseMessage();
-        IPCEvent* toIPCEvent();
 };
 
 /**
@@ -1533,12 +1449,6 @@ public:
 	unsigned int address;
 };
 
-class IPCPWriteMgmtSDUResponseMessage: public BaseNetlinkResponseMessage {
-public:
-	IPCPWriteMgmtSDUResponseMessage();
-	IPCEvent* toIPCEvent();
-};
-
 class IPCPReadMgmtSDUNotificationMessage: public BaseNetlinkResponseMessage {
 public:
 	IPCPReadMgmtSDUNotificationMessage();
@@ -1560,12 +1470,6 @@ public:
 	unsigned int nl_port_id;
 };
 
-class IpcmCreateIPCPResponseMessage: public BaseNetlinkResponseMessage {
-public:
-	IpcmCreateIPCPResponseMessage();
-	IPCEvent* toIPCEvent();
-};
-
 class IpcmDestroyIPCPRequestMessage : public BaseNetlinkMessage {
 public:
 	IpcmDestroyIPCPRequestMessage();
@@ -1573,13 +1477,6 @@ public:
 
 	unsigned short ipcp_id;
 };
-
-class IpcmDestroyIPCPResponseMessage: public BaseNetlinkResponseMessage {
-public:
-	IpcmDestroyIPCPResponseMessage();
-	IPCEvent* toIPCEvent();
-};
-
 
 }
 

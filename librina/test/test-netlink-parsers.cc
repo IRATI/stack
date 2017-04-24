@@ -1092,66 +1092,47 @@ int testIpcmRegisterApplicationRequestMessage() {
 	return returnValue;
 }
 
-int testIpcmRegisterApplicationResponseMessage() {
-	std::cout << "TESTING IPCM REGISTER APPLICATION RESPONSE MESSAGE\n";
+int testBaseNetlinkResponseMessage() {
+	std::cout << "TESTING BASE NETLINK RESPONSE MESSAGE\n";
 	int returnValue = 0;
 
-	ApplicationProcessNamingInformation * applicationName =
-			new ApplicationProcessNamingInformation();
-	applicationName->processName = "/apps/source";
-	applicationName->processInstance = "15";
-	applicationName->entityName = "database";
-	applicationName->entityInstance = "13";
-
-	ApplicationProcessNamingInformation * difName =
-			new ApplicationProcessNamingInformation();
-	difName->processName = "/difs/Test.DIF";
-
-	IpcmRegisterApplicationResponseMessage * message =
-			new IpcmRegisterApplicationResponseMessage();
-
-	message->setResult(1);
+	BaseNetlinkResponseMessage message(RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE);
+	message.result = 23;
 
 	struct nl_msg* netlinkMessage;
 	netlinkMessage = nlmsg_alloc();
 	if (!netlinkMessage) {
 		std::cout << "Error allocating Netlink message\n";
 	}
-	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
-			sizeof(struct rinaHeader), 0, message->getOperationCode(), 0);
+	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
+			sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
 
-	int result = putBaseNetlinkMessage(netlinkMessage, message);
+	int result = putBaseNetlinkMessage(netlinkMessage, &message);
 	if (result < 0) {
-		std::cout << "Error constructing Ipcm Register Application Response "
+		std::cout << "Error constructing Base Netlink Response "
 				<< "Message \n";
 		nlmsg_free(netlinkMessage);
-		delete difName;
-		delete applicationName;
-		delete message;
 		return result;
 	}
 
 	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
-	IpcmRegisterApplicationResponseMessage * recoveredMessage =
-			dynamic_cast<IpcmRegisterApplicationResponseMessage *>(parseBaseNetlinkMessage(
+	BaseNetlinkResponseMessage * recoveredMessage =
+			dynamic_cast<BaseNetlinkResponseMessage *>(parseBaseNetlinkMessage(
 					netlinkMessageHeader));
-	if (message == NULL) {
-		std::cout << "Error parsing Ipcm Register Application Response Message "
+	if (recoveredMessage == NULL) {
+		std::cout << "Error parsing Base Netlink Response Message "
 				<< "\n";
 		returnValue = -1;
-	} else if (message->getResult() != recoveredMessage->getResult()) {
+	} else if (message.result != recoveredMessage->result) {
 		std::cout << "Result on original and recovered messages"
 				<< " are different\n";
 		returnValue = -1;
 	}
 
 	if (returnValue == 0) {
-		std::cout << "IpcmRegisterApplicationResponse test ok\n";
+		std::cout << "BaseNetlinkResponseMessage test ok\n";
 	}
 	nlmsg_free(netlinkMessage);
-	delete difName;
-	delete applicationName;
-	delete message;
 	delete recoveredMessage;
 
 	return returnValue;
@@ -1211,53 +1192,6 @@ int testIpcmUnregisterApplicationRequestMessage() {
 
 	if (returnValue == 0) {
 		std::cout << "IpcmUnregisterApplicationRequest test ok\n";
-	}
-	nlmsg_free(netlinkMessage);
-	delete recoveredMessage;
-
-	return returnValue;
-}
-
-int testIpcmUnregisterApplicationResponseMessage() {
-	std::cout << "TESTING IPCM UNREGISTER APPLICATION RESPONSE MESSAGE\n";
-	int returnValue = 0;
-
-	IpcmUnregisterApplicationResponseMessage message;
-
-	message.setResult(1);
-
-	struct nl_msg* netlinkMessage;
-	netlinkMessage = nlmsg_alloc();
-	if (!netlinkMessage) {
-		std::cout << "Error allocating Netlink message\n";
-	}
-	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
-			sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
-
-	int result = putBaseNetlinkMessage(netlinkMessage, &message);
-	if (result < 0) {
-		std::cout << "Error constructing Ipcm Unregister Application Response "
-				<< "Message \n";
-		nlmsg_free(netlinkMessage);
-		return result;
-	}
-
-	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
-	IpcmUnregisterApplicationResponseMessage * recoveredMessage =
-			dynamic_cast<IpcmUnregisterApplicationResponseMessage *>(parseBaseNetlinkMessage(
-					netlinkMessageHeader));
-	if (recoveredMessage == 0) {
-		std::cout << "Error parsing Ipcm Unregister Application Response Message "
-				<< "\n";
-		returnValue = -1;
-	} else if (message.getResult() != recoveredMessage->getResult()) {
-		std::cout << "Result on original and recovered messages"
-				<< " are different\n";
-		returnValue = -1;
-	}
-
-	if (returnValue == 0) {
-		std::cout << "IpcmUnregisterApplicationResponse test ok\n";
 	}
 	nlmsg_free(netlinkMessage);
 	delete recoveredMessage;
@@ -1506,55 +1440,6 @@ int testIpcmAssignToDIFRequestMessage() {
 	return returnValue;
 }
 
-int testIpcmAssignToDIFResponseMessage() {
-	std::cout << "TESTING IPCM ASSIGN TO DIF RESPONSE MESSAGE\n";
-	int returnValue = 0;
-
-	IpcmAssignToDIFResponseMessage * message =
-			new IpcmAssignToDIFResponseMessage();
-	message->setResult(-25);
-
-	struct nl_msg* netlinkMessage;
-	netlinkMessage = nlmsg_alloc();
-	if (!netlinkMessage) {
-		std::cout << "Error allocating Netlink message\n";
-	}
-	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
-			sizeof(struct rinaHeader), 0, message->getOperationCode(), 0);
-
-	int result = putBaseNetlinkMessage(netlinkMessage, message);
-	if (result < 0) {
-		std::cout << "Error constructing Ipcm Assign To DIF Response "
-				<< "Message \n";
-		nlmsg_free(netlinkMessage);
-		delete message;
-		return result;
-	}
-
-	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
-	IpcmAssignToDIFResponseMessage * recoveredMessage =
-			dynamic_cast<IpcmAssignToDIFResponseMessage *>(
-					parseBaseNetlinkMessage(netlinkMessageHeader));
-	if (message == 0) {
-		std::cout << "Error parsing Ipcm Assign To DIF Response Message "
-				<< "\n";
-		returnValue = -1;
-	} else if (message->getResult() != recoveredMessage->getResult()) {
-		std::cout << "Result on original and recovered messages"
-				<< " are different\n";
-		returnValue = -1;
-	}
-
-	if (returnValue == 0) {
-		std::cout << "IpcmAssignToDIFResponse test ok\n";
-	}
-	nlmsg_free(netlinkMessage);
-	delete message;
-	delete recoveredMessage;
-
-	return returnValue;
-}
-
 int testIpcmUpdateDIFConfigurationRequestMessage() {
         std::cout << "TESTING IPCM UPDATE DIF CONFIGURATION REQUEST MESSAGE\n";
         int returnValue = 0;
@@ -1604,55 +1489,6 @@ int testIpcmUpdateDIFConfigurationRequestMessage() {
                 std::cout << "IpcmUpdateDIFConfigurationRequest test ok\n";
         }
         nlmsg_free(netlinkMessage);
-        delete recoveredMessage;
-
-        return returnValue;
-}
-
-int testIpcmUpdateDIFConfigurationResponseMessage() {
-        std::cout << "TESTING IPCM UPDATE DIF CONFIGURATION RESPONSE MESSAGE\n";
-        int returnValue = 0;
-
-        IpcmUpdateDIFConfigurationResponseMessage * message =
-                        new IpcmUpdateDIFConfigurationResponseMessage();
-        message->setResult(-25);
-
-        struct nl_msg* netlinkMessage;
-        netlinkMessage = nlmsg_alloc();
-        if (!netlinkMessage) {
-                std::cout << "Error allocating Netlink message\n";
-        }
-        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message->getSequenceNumber(), 21,
-                        sizeof(struct rinaHeader), 0, message->getOperationCode(), 0);
-
-        int result = putBaseNetlinkMessage(netlinkMessage, message);
-        if (result < 0) {
-                std::cout << "Error constructing Ipcm Update DIF Configuration Response "
-                                << "Message \n";
-                nlmsg_free(netlinkMessage);
-                delete message;
-                return result;
-        }
-
-        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
-        IpcmUpdateDIFConfigurationResponseMessage * recoveredMessage =
-                        dynamic_cast<IpcmUpdateDIFConfigurationResponseMessage *>(
-                                        parseBaseNetlinkMessage(netlinkMessageHeader));
-        if (message == 0) {
-                std::cout << "Error parsing Ipcm Update DIF Configuration Response Message "
-                                << "\n";
-                returnValue = -1;
-        } else if (message->getResult() != recoveredMessage->getResult()) {
-                std::cout << "Result on original and recovered messages"
-                                << " are different\n";
-                returnValue = -1;
-        }
-
-        if (returnValue == 0) {
-                std::cout << "IpcmUpdateDIFConfigurationResponse test ok\n";
-        }
-        nlmsg_free(netlinkMessage);
-        delete message;
         delete recoveredMessage;
 
         return returnValue;
@@ -1823,52 +1659,6 @@ int testIpcmDisconnectNeighborRequestMessage() {
 
         if (returnValue == 0) {
                 std::cout << "IpcmDisconnectNeighborRequestMessage test ok\n";
-        }
-        nlmsg_free(netlinkMessage);
-        delete recoveredMessage;
-
-        return returnValue;
-}
-
-int testIpcmDisconnectNeighborResponseMessage() {
-        std::cout << "TESTING IPCM DISCONNECT NEIGHBOR RESPONSE MESSAGE\n";
-        int returnValue = 0;
-
-        IpcmDisconnectNeighborResponseMessage message;
-        message.setResult(-25);
-
-        struct nl_msg* netlinkMessage;
-        netlinkMessage = nlmsg_alloc();
-        if (!netlinkMessage) {
-                std::cout << "Error allocating Netlink message\n";
-        }
-        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
-                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
-
-        int result = putBaseNetlinkMessage(netlinkMessage, &message);
-        if (result < 0) {
-                std::cout << "Error constructing Ipcm Disconnect Neighbor Response "
-                                << "Message \n";
-                nlmsg_free(netlinkMessage);
-                return result;
-        }
-
-        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
-        IpcmDisconnectNeighborResponseMessage * recoveredMessage =
-                        dynamic_cast<IpcmDisconnectNeighborResponseMessage *>(
-                                        parseBaseNetlinkMessage(netlinkMessageHeader));
-        if (recoveredMessage == 0) {
-                std::cout << "Error parsing Ipcm Enroll to DIF Response Message "
-                                << "\n";
-                returnValue = -1;
-        } else if (message.getResult() != recoveredMessage->getResult()) {
-                std::cout << "Result on original and recovered messages"
-                                << " are different\n";
-                returnValue = -1;
-        }
-
-        if (returnValue == 0) {
-                std::cout << "IpcmDisconnectNeighborResponseMessage test ok\n";
         }
         nlmsg_free(netlinkMessage);
         delete recoveredMessage;
@@ -3850,50 +3640,6 @@ int testIPCPWriteManagementSDURequestMessage()
         return returnValue;
 }
 
-int testIPCPWriteManagementSDUResponseMessage() {
-        std::cout << "TESTING IPCP WRITE MANAGEMENT SDU RESPONSE MESSAGE\n";
-        int returnValue = 0;
-
-        IPCPWriteMgmtSDUResponseMessage message;
-        message.result = 2323;
-        struct nl_msg* netlinkMessage = nlmsg_alloc();
-        if (!netlinkMessage) {
-                std::cout << "Error allocating Netlink message\n";
-        }
-        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
-                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
-
-        int result = putBaseNetlinkMessage(netlinkMessage, &message);
-        if (result < 0) {
-                std::cout << "Error constructing IPCPWriteMgmtSDUResponseMessage "
-                                << "message \n";
-                nlmsg_free(netlinkMessage);
-                return result;
-        }
-
-        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
-        IPCPWriteMgmtSDUResponseMessage * recoveredMessage =
-                        dynamic_cast<IPCPWriteMgmtSDUResponseMessage *>(
-                                        parseBaseNetlinkMessage(netlinkMessageHeader));
-
-        if (recoveredMessage == 0) {
-                std::cout << "Error parsing IPCPWriteMgmtSDUResponseMessage message "
-                                << "\n";
-                returnValue = -1;
-        } else if (message.result != recoveredMessage->result) {
-        	std::cout << "Error with port_id"<< std::endl;
-        	returnValue = -1;
-        }
-
-        if (returnValue == 0) {
-                std::cout << "IPCPWriteMgmtSDUResponseMessage test ok\n";
-        }
-        nlmsg_free(netlinkMessage);
-        delete recoveredMessage;
-
-        return returnValue;
-}
-
 int testIPCPReadManagementSDUNotificationMessage()
 {
         std::cout << "TESTING IPCP READ MANAGEMENT SDU NOTIFICATION MESSAGE\n";
@@ -4007,51 +3753,6 @@ int testIpcmCreateIPCProcessRequestMessage()
         return returnValue;
 }
 
-int testIpcmCreateIPCProcessResponseMessage()
-{
-        std::cout << "TESTING IPCM CREATE IPCP RESPONSE MESSAGE\n";
-        int returnValue = 0;
-
-        IpcmCreateIPCPResponseMessage message;
-        message.result = 234;
-        struct nl_msg* netlinkMessage = nlmsg_alloc();
-        if (!netlinkMessage) {
-                std::cout << "Error allocating Netlink message\n";
-        }
-        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
-                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
-
-        int result = putBaseNetlinkMessage(netlinkMessage, &message);
-        if (result < 0) {
-                std::cout << "Error constructing IpcmCreateIPCPResponseMessage "
-                                << "message \n";
-                nlmsg_free(netlinkMessage);
-                return result;
-        }
-
-        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
-        IpcmCreateIPCPResponseMessage * recoveredMessage =
-                        dynamic_cast<IpcmCreateIPCPResponseMessage *>(
-                                        parseBaseNetlinkMessage(netlinkMessageHeader));
-
-        if (recoveredMessage == 0) {
-                std::cout << "Error parsing IpcmCreateIPCPResponseMessage message "
-                                << "\n";
-                returnValue = -1;
-        } else if (message.result != recoveredMessage->result) {
-        	std::cout << "Error with result"<< std::endl;
-        	returnValue = -1;
-        }
-
-        if (returnValue == 0) {
-                std::cout << "IpcmCreateIPCPResponseMessage test ok\n";
-        }
-        nlmsg_free(netlinkMessage);
-        delete recoveredMessage;
-
-        return returnValue;
-}
-
 int testIpcmDestroyIPCProcessRequestMessage()
 {
         std::cout << "TESTING IPCM DESTROY IPCP REQUEST MESSAGE\n";
@@ -4090,51 +3791,6 @@ int testIpcmDestroyIPCProcessRequestMessage()
 
         if (returnValue == 0) {
                 std::cout << "IpcmDestroyIPCPRequestMessage test ok\n";
-        }
-        nlmsg_free(netlinkMessage);
-        delete recoveredMessage;
-
-        return returnValue;
-}
-
-int testIpcmDestroyIPCProcessResponseMessage()
-{
-        std::cout << "TESTING IPCM DESTROY IPCP RESPONSE MESSAGE\n";
-        int returnValue = 0;
-
-        IpcmDestroyIPCPResponseMessage message;
-        message.result = 234;
-        struct nl_msg* netlinkMessage = nlmsg_alloc();
-        if (!netlinkMessage) {
-                std::cout << "Error allocating Netlink message\n";
-        }
-        genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
-                        sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
-
-        int result = putBaseNetlinkMessage(netlinkMessage, &message);
-        if (result < 0) {
-                std::cout << "Error constructing IpcmDestroyIPCPResponseMessage "
-                                << "message \n";
-                nlmsg_free(netlinkMessage);
-                return result;
-        }
-
-        nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
-        IpcmDestroyIPCPResponseMessage * recoveredMessage =
-                        dynamic_cast<IpcmDestroyIPCPResponseMessage *>(
-                                        parseBaseNetlinkMessage(netlinkMessageHeader));
-
-        if (recoveredMessage == 0) {
-                std::cout << "Error parsing IpcmDestroyIPCPResponseMessage message "
-                                << "\n";
-                returnValue = -1;
-        } else if (message.result != recoveredMessage->result) {
-        	std::cout << "Error with result"<< std::endl;
-        	returnValue = -1;
-        }
-
-        if (returnValue == 0) {
-                std::cout << "IpcmDestroyIPCPResponseMessage test ok\n";
         }
         nlmsg_free(netlinkMessage);
         delete recoveredMessage;
@@ -4217,7 +3873,7 @@ int main() {
 		return result;
 	}
 
-	result = testIpcmRegisterApplicationResponseMessage();
+	result = testBaseNetlinkResponseMessage();
 	if (result < 0) {
 		return result;
 	}
@@ -4227,27 +3883,12 @@ int main() {
 		return result;
 	}
 
-	result = testIpcmUnregisterApplicationResponseMessage();
-	if (result < 0) {
-		return result;
-	}
-
 	result = testIpcmAssignToDIFRequestMessage();
 	if (result < 0) {
 		return result;
 	}
 
-	result = testIpcmAssignToDIFResponseMessage();
-	if (result < 0) {
-		return result;
-	}
-
 	result = testIpcmUpdateDIFConfigurationRequestMessage();
-	if (result < 0) {
-	        return result;
-	}
-
-	result = testIpcmUpdateDIFConfigurationResponseMessage();
 	if (result < 0) {
 	        return result;
 	}
@@ -4263,11 +3904,6 @@ int main() {
 	}
 
 	result = testIpcmDisconnectNeighborRequestMessage();
-	if (result < 0) {
-	        return result;
-	}
-
-	result = testIpcmDisconnectNeighborResponseMessage();
 	if (result < 0) {
 	        return result;
 	}
@@ -4412,11 +4048,6 @@ int main() {
 		return result;
 	}
 
-	result = testIPCPWriteManagementSDUResponseMessage();
-	if (result < 0) {
-		return result;
-	}
-
 	result = testIPCPReadManagementSDUNotificationMessage();
 	if (result < 0) {
 		return result;
@@ -4427,17 +4058,7 @@ int main() {
 		return result;
 	}
 
-	result = testIpcmCreateIPCProcessResponseMessage();
-	if (result < 0) {
-		return result;
-	}
-
 	result = testIpcmDestroyIPCProcessRequestMessage();
-	if (result < 0) {
-		return result;
-	}
-
-	result = testIpcmDestroyIPCProcessResponseMessage();
 	if (result < 0) {
 		return result;
 	}
