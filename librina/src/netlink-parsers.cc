@@ -230,15 +230,6 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
-	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT: {
-		IpcmAllocateFlowRequestResultMessage * allocateFlowResponseObject =
-				dynamic_cast<IpcmAllocateFlowRequestResultMessage *>(message);
-		if (putIpcmAllocateFlowRequestResultMessageObject(netlinkMessage,
-				*allocateFlowResponseObject) < 0) {
-			return -1;
-		}
-		return 0;
-	}
 	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED: {
 		IpcmAllocateFlowRequestArrivedMessage *
 			allocateFlowRequestArrivedObject =
@@ -263,15 +254,6 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 				dynamic_cast<IpcmDeallocateFlowRequestMessage *>(message);
 		if (putIpcmDeallocateFlowRequestMessageObject(netlinkMessage,
 				*deallocateFlowRequestObject) < 0) {
-			return -1;
-		}
-		return 0;
-	}
-	case RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE: {
-		IpcmDeallocateFlowResponseMessage * deallocateFlowResponseObject =
-				dynamic_cast<IpcmDeallocateFlowResponseMessage *>(message);
-		if (putIpcmDeallocateFlowResponseMessageObject(netlinkMessage,
-				*deallocateFlowResponseObject) < 0) {
 			return -1;
 		}
 		return 0;
@@ -351,15 +333,6 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 	        }
 	        return 0;
 	}
-	case RINA_C_IPCP_CONN_UPDATE_RESULT: {
-	        IpcpConnectionUpdateResultMessage * connUpdateMessage =
-	                        dynamic_cast<IpcpConnectionUpdateResultMessage *>(message);
-	        if (putIpcpConnectionUpdateResultMessageObject(netlinkMessage,
-	                        *connUpdateMessage) < 0) {
-	                return -1;
-	        }
-	        return 0;
-	}
 	case RINA_C_IPCP_CONN_CREATE_ARRIVED: {
 	        IpcpConnectionCreateArrivedMessage * connArrivedMessage =
 	                        dynamic_cast<IpcpConnectionCreateArrivedMessage *>(message);
@@ -382,15 +355,6 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 	        IpcpConnectionDestroyRequestMessage * connDestroyMessage =
 	                        dynamic_cast<IpcpConnectionDestroyRequestMessage *>(message);
 	        if (putIpcpConnectionDestroyRequestMessageObject(netlinkMessage,
-	                        *connDestroyMessage) < 0) {
-	                return -1;
-	        }
-	        return 0;
-	}
-	case RINA_C_IPCP_CONN_DESTROY_RESULT: {
-	        IpcpConnectionDestroyResultMessage * connDestroyMessage =
-	                        dynamic_cast<IpcpConnectionDestroyResultMessage *>(message);
-	        if (putIpcpConnectionDestroyResultMessageObject(netlinkMessage,
 	                        *connDestroyMessage) < 0) {
 	                return -1;
 	        }
@@ -462,15 +426,6 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
-	case RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE: {
-		IPCPUpdateCryptoStateResponseMessage * responseObject =
-			dynamic_cast<IPCPUpdateCryptoStateResponseMessage *>(message);
-		if (putIPCPUpdateCryptoStateResponseMessage(netlinkMessage,
-				*responseObject) < 0) {
-			return -1;
-		}
-		return 0;
-	}
 	case RINA_C_IPCM_FWD_CDAP_MSG_REQUEST: {
 		IpcmFwdCDAPRequestMessage * requestObject =
 			dynamic_cast<IpcmFwdCDAPRequestMessage *>(message);
@@ -516,15 +471,6 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
-        case RINA_C_IPCP_ALLOCATE_PORT_RESPONSE: {
-        	IPCPAllocatePortResponseMessage * responseObject =
-                        dynamic_cast<IPCPAllocatePortResponseMessage *>(message);
-                if (putIPCPAllocatePortResponseMessage(netlinkMessage,
-                                *responseObject) < 0) {
-                        return -1;
-                }
-                return 0;
-        }
 	case RINA_C_IPCP_DEALLOCATE_PORT_REQUEST: {
 		IPCPDeallocatePortRequestMessage * requestObject =
 			dynamic_cast<IPCPDeallocatePortRequestMessage *>(message);
@@ -534,10 +480,15 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
 		}
 		return 0;
 	}
+	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
+	case RINA_C_IPCP_CONN_UPDATE_RESULT:
+	case RINA_C_IPCP_CONN_DESTROY_RESULT:
+	case RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE:
+        case RINA_C_IPCP_ALLOCATE_PORT_RESPONSE:
         case RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE: {
-        	IPCPDeallocatePortResponseMessage * responseObject =
-                        dynamic_cast<IPCPDeallocatePortResponseMessage *>(message);
-                if (putIPCPDeallocatePortResponseMessage(netlinkMessage,
+        	BaseNetlinkResponseMessageWPortId * responseObject =
+                        dynamic_cast<BaseNetlinkResponseMessageWPortId *>(message);
+                if (putBaseNetlinkResponseMessageWPortId(netlinkMessage,
                                 *responseObject) < 0) {
                         return -1;
                 }
@@ -579,6 +530,7 @@ int putBaseNetlinkMessage(nl_msg* netlinkMessage,
                 }
                 return 0;
         }
+        case RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE:
 	case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE:
 	case RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE:
 	case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE:
@@ -697,10 +649,6 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 		return parseIpcmAllocateFlowRequestMessage(
 		                netlinkMessageHeader);
 	}
-	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT: {
-		return parseIpcmAllocateFlowRequestResultMessage(
-		                netlinkMessageHeader);
-	}
 	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED: {
 		return parseIpcmAllocateFlowRequestArrivedMessage(
 		                netlinkMessageHeader);
@@ -711,10 +659,6 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	}
 	case RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST: {
 		return parseIpcmDeallocateFlowRequestMessage(
-		                netlinkMessageHeader);
-	}
-	case RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE: {
-		return parseIpcmDeallocateFlowResponseMessage(
 		                netlinkMessageHeader);
 	}
 	case RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION: {
@@ -733,10 +677,6 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 		return parseIpcmDIFQueryRIBResponseMessage(
 		                netlinkMessageHeader);
 	}
-	case RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION: {
-		return parseIpcmNLSocketClosedNotificationMessage(
-				netlinkMessageHeader);
-	}
 	case RINA_C_IPCM_IPC_PROCESS_INITIALIZED: {
 	        return parseIpcmIPCProcessInitializedMessage(
 	                        netlinkMessageHeader);
@@ -753,10 +693,6 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	        return parseIpcpConnectionUpdateRequestMessage(
 	                        netlinkMessageHeader);
 	}
-	case RINA_C_IPCP_CONN_UPDATE_RESULT: {
-	        return parseIpcpConnectionUpdateResultMessage(
-	                        netlinkMessageHeader);
-	}
 	case RINA_C_IPCP_CONN_CREATE_ARRIVED: {
 	        return parseIpcpConnectionCreateArrivedMessage(
 	                        netlinkMessageHeader);
@@ -767,10 +703,6 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 	}
 	case RINA_C_IPCP_CONN_DESTROY_REQUEST: {
 	        return parseIpcpConnectionDestroyRequestMessage(
-	                        netlinkMessageHeader);
-	}
-	case RINA_C_IPCP_CONN_DESTROY_RESULT: {
-	        return parseIpcpConnectionDestroyResultMessage(
 	                        netlinkMessageHeader);
 	}
 	case RINA_C_RMT_MODIFY_FTE_REQUEST: {
@@ -801,10 +733,6 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 		return parseIPCPUpdateCryptoStateRequestMessage(
 		                netlinkMessageHeader);
 	}
-	case RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE: {
-		return parseIPCPUpdateCryptoStateResponseMessage(
-				netlinkMessageHeader);
-	}
 	case RINA_C_IPCM_FWD_CDAP_MSG_REQUEST: {
 		return parseIpcmFwdCDAPRequestMessage(
 		                netlinkMessageHeader);
@@ -823,17 +751,19 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
 		return parseIPCPAllocatePortRequestMessage(
 		                netlinkMessageHeader);
 	}
-        case RINA_C_IPCP_ALLOCATE_PORT_RESPONSE: {
-                return parseIPCPAllocatePortResponseMessage(
-                                netlinkMessageHeader);
-        }
 	case RINA_C_IPCP_DEALLOCATE_PORT_REQUEST: {
 		return parseIPCPDeallocatePortRequestMessage(
 		                netlinkMessageHeader);
 	}
+	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
+	case RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION:
+	case RINA_C_IPCP_CONN_UPDATE_RESULT:
+	case RINA_C_IPCP_CONN_DESTROY_RESULT:
+	case RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE:
+        case RINA_C_IPCP_ALLOCATE_PORT_RESPONSE:
         case RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE: {
-                return parseIPCPDeallocatePortResponseMessage(
-                                netlinkMessageHeader);
+                return parseBaseNetlinkResponseMessageWPortId(netlinkMessageHeader,
+                					      (rina::RINANetlinkOperationCode) nlhdr->cmd);
         }
         case RINA_C_IPCP_MANAGEMENT_SDU_WRITE_REQUEST: {
                 return parseIPCPWriteMgmtSDURequestMessage(
@@ -851,6 +781,7 @@ BaseNetlinkMessage * parseBaseNetlinkMessage(nlmsghdr* netlinkMessageHeader) {
                 return parseIpcmDestroyIPCPRequestMessage(
                                 netlinkMessageHeader);
         }
+        case RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE:
 	case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE:
 	case RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE:
 	case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE:
@@ -4767,19 +4698,6 @@ int putIpcmAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 	return -1;
 }
 
-int putIpcmAllocateFlowRequestResultMessageObject(nl_msg* netlinkMessage,
-		const IpcmAllocateFlowRequestResultMessage& object){
-
-	NLA_PUT_U32(netlinkMessage, IAFRRM_ATTR_RESULT, object.getResult());
-	NLA_PUT_U32(netlinkMessage, IAFRRM_ATTR_PORT_ID, object.getPortId());
-
-	return 0;
-
-	nla_put_failure: LOG_ERR(
-			"Error building IpcmAllocateFlowRequestResultMessage Netlink object");
-	return -1;
-}
-
 int putIpcmAllocateFlowRequestArrivedMessageObject(nl_msg* netlinkMessage,
 		const IpcmAllocateFlowRequestArrivedMessage& object) {
 	struct nlattr *sourceAppName, *destinationAppName, *flowSpec, *difName;
@@ -4855,18 +4773,6 @@ int putIpcmDeallocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 
 	nla_put_failure: LOG_ERR(
 			"Error building IpcmDeallocateFlowRequestMessage Netlink object");
-	return -1;
-}
-
-int putIpcmDeallocateFlowResponseMessageObject(nl_msg* netlinkMessage,
-		const IpcmDeallocateFlowResponseMessage& object) {
-
-	NLA_PUT_U32(netlinkMessage, IDFRE_ATTR_RESULT, object.getResult());
-
-	return 0;
-
-	nla_put_failure: LOG_ERR(
-			"Error building IpcmDeallocateFlowResponseMessage Netlink object");
 	return -1;
 }
 
@@ -5079,10 +4985,10 @@ int putIpcpConnectionUpdateRequestMessageObject(nl_msg* netlinkMessage,
         return -1;
 }
 
-int putIpcpConnectionUpdateResultMessageObject(nl_msg* netlinkMessage,
-                const IpcpConnectionUpdateResultMessage& object) {
-        NLA_PUT_U32(netlinkMessage, ICUREM_ATTR_PORT_ID, object.getPortId());
-        NLA_PUT_U32(netlinkMessage, ICUREM_ATTR_RESULT, object.getResult());
+int putBaseNetlinkResponseMessageWPortId(nl_msg* netlinkMessage,
+                const BaseNetlinkResponseMessageWPortId& object) {
+        NLA_PUT_U32(netlinkMessage, ICUREM_ATTR_PORT_ID, object.port_id);
+        NLA_PUT_U32(netlinkMessage, ICUREM_ATTR_RESULT, object.result);
 
         return 0;
 
@@ -5161,17 +5067,6 @@ int putIpcpConnectionDestroyRequestMessageObject(nl_msg* netlinkMessage,
 
         nla_put_failure: LOG_ERR(
             "Error building IpcpConnectionDestroyRequestMessage Netlink object");
-        return -1;
-}
-
-int putIpcpConnectionDestroyResultMessageObject(nl_msg* netlinkMessage,
-                const IpcpConnectionDestroyResultMessage& object) {
-        NLA_PUT_U32(netlinkMessage, ICDREM_ATTR_PORT_ID, object.getPortId());
-        NLA_PUT_U32(netlinkMessage, ICDREM_ATTR_RESULT, object.getResult());
-        return 0;
-
-        nla_put_failure: LOG_ERR(
-            "Error building IpcpConnectionDestroyResultMessage Netlink object");
         return -1;
 }
 
@@ -5492,20 +5387,6 @@ int putIPCPUpdateCryptoStateRequestMessage(nl_msg* netlinkMessage,
         return -1;
 }
 
-int putIPCPUpdateCryptoStateResponseMessage(nl_msg* netlinkMessage,
-		const IPCPUpdateCryptoStateResponseMessage& object)
-{
-	NLA_PUT_U32(netlinkMessage, UCSREM_ATTR_RESULT, object.result);
-	NLA_PUT_U32(netlinkMessage, UCSREM_ATTR_N_1_PORT, object.port_id);
-
-	return 0;
-
-        nla_put_failure: LOG_ERR(
-                        "Error building IPCPUpdateCryptoStateResponseMessage"
-                        "Netlink object");
-        return -1;
-}
-
 int putIPCPAllocatePortRequestMessage(nl_msg* netlinkMessage,
                 		      const IPCPAllocatePortRequestMessage& object)
 {
@@ -5539,34 +5420,6 @@ int putIPCPDeallocatePortRequestMessage(nl_msg* netlinkMessage,
 
         nla_put_failure: LOG_ERR(
                         "Error building IPCPDeallocatePortRequestMessage "
-                        "Netlink object");
-        return -1;
-}
-
-int putIPCPAllocatePortResponseMessage(nl_msg* netlinkMessage,
-                		      const IPCPAllocatePortResponseMessage& object)
-{
-	NLA_PUT_U32(netlinkMessage, IAPREM_ATTR_RESULT, object.result);
-	NLA_PUT_U32(netlinkMessage, IAPREM_ATTR_N_1_PORT, object.port_id);
-
-	return 0;
-
-        nla_put_failure: LOG_ERR(
-                        "Error building IPCPAllocatePortResponseMessage"
-                        "Netlink object");
-        return -1;
-}
-
-int putIPCPDeallocatePortResponseMessage(nl_msg* netlinkMessage,
-                		         const IPCPDeallocatePortResponseMessage& object)
-{
-	NLA_PUT_U32(netlinkMessage, IDAPREM_ATTR_RESULT, object.result);
-	NLA_PUT_U32(netlinkMessage, IDAPREM_ATTR_N_1_PORT, object.port_id);
-
-	return 0;
-
-        nla_put_failure: LOG_ERR(
-                        "Error building IPCPDeallocatePortResponseMessage"
                         "Netlink object");
         return -1;
 }
@@ -8226,40 +8079,6 @@ IpcmAllocateFlowRequestMessage *
 	return result;
 }
 
-IpcmAllocateFlowRequestResultMessage *
-	parseIpcmAllocateFlowRequestResultMessage(nlmsghdr *hdr){
-	struct nla_policy attr_policy[IAFRRM_ATTR_MAX + 1];
-	attr_policy[IAFRRM_ATTR_RESULT].type = NLA_U32;
-	attr_policy[IAFRRM_ATTR_RESULT].minlen = 4;
-	attr_policy[IAFRRM_ATTR_RESULT].maxlen = 4;
-	attr_policy[IAFRRM_ATTR_PORT_ID].type = NLA_U32;
-	attr_policy[IAFRRM_ATTR_PORT_ID].minlen = 4;
-	attr_policy[IAFRRM_ATTR_PORT_ID].maxlen = 4;
-	struct nlattr *attrs[IAFRRM_ATTR_MAX + 1];
-
-	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
-			IAFRRM_ATTR_MAX, attr_policy);
-	if (err < 0) {
-		LOG_ERR(
-		        "Error parsing IpcmAllocateFlowRequestResultMessage information from Netlink message: %d",
-		         err);
-		return 0;
-	}
-
-	IpcmAllocateFlowRequestResultMessage * result =
-				new IpcmAllocateFlowRequestResultMessage();
-
-	if (attrs[IAFRRM_ATTR_RESULT]) {
-		result->setResult(nla_get_u32(attrs[IAFRRM_ATTR_RESULT]));
-	}
-
-	if (attrs[IAFRRM_ATTR_PORT_ID]) {
-	        result->setPortId(nla_get_u32(attrs[IAFRRM_ATTR_PORT_ID]));
-	}
-
-	return result;
-}
-
 IpcmAllocateFlowRequestArrivedMessage * parseIpcmAllocateFlowRequestArrivedMessage(
 		nlmsghdr *hdr) {
 	struct nla_policy attr_policy[IAFRA_ATTR_MAX + 1];
@@ -8425,39 +8244,6 @@ IpcmDeallocateFlowRequestMessage * parseIpcmDeallocateFlowRequestMessage(
 
 	if (attrs[IDFRT_ATTR_PORT_ID]) {
 		result->setPortId(nla_get_u32(attrs[IDFRT_ATTR_PORT_ID]));
-	}
-
-	return result;
-}
-
-IpcmDeallocateFlowResponseMessage * parseIpcmDeallocateFlowResponseMessage(
-		nlmsghdr *hdr) {
-	struct nla_policy attr_policy[IDFRE_ATTR_MAX + 1];
-	attr_policy[IDFRE_ATTR_RESULT].type = NLA_U32;
-	attr_policy[IDFRE_ATTR_RESULT].minlen = 4;
-	attr_policy[IDFRE_ATTR_RESULT].maxlen = 4;
-	struct nlattr *attrs[IDFRE_ATTR_MAX + 1];
-
-	/*
-	 * The nlmsg_parse() function will make sure that the message contains
-	 * enough payload to hold the header (struct my_hdr), validates any
-	 * attributes attached to the messages and stores a pointer to each
-	 * attribute in the attrs[] array accessable by attribute type.
-	 */
-	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
-			IDFRE_ATTR_MAX, attr_policy);
-	if (err < 0) {
-		LOG_ERR(
-				"Error parsing IpcmDeallocateFlowResponseMessage information from Netlink message: %d",
-				err);
-		return 0;
-	}
-
-	IpcmDeallocateFlowResponseMessage * result =
-			new IpcmDeallocateFlowResponseMessage();
-
-	if (attrs[IDFRE_ATTR_RESULT]) {
-		result->setResult(nla_get_u32(attrs[IDFRE_ATTR_RESULT]));
 	}
 
 	return result;
@@ -8737,34 +8523,6 @@ IpcmDIFQueryRIBResponseMessage *
 	return result;
 }
 
-IpcmNLSocketClosedNotificationMessage *
-	parseIpcmNLSocketClosedNotificationMessage(nlmsghdr *hdr)
-{
-	struct nla_policy attr_policy[INSCN_ATTR_MAX + 1];
-	attr_policy[INSCN_ATTR_PORT].type = NLA_U32;
-	attr_policy[INSCN_ATTR_PORT].minlen = 4;
-	attr_policy[INSCN_ATTR_PORT].maxlen = 4;
-	struct nlattr *attrs[INSCN_ATTR_MAX + 1];
-
-	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
-			INSCN_ATTR_MAX, attr_policy);
-	if (err < 0) {
-		LOG_ERR(
-				"Error parsing IpcmNLSocketClosedNotificationMessage information from Netlink message: %d",
-				err);
-		return 0;
-	}
-
-	IpcmNLSocketClosedNotificationMessage * result =
-					new IpcmNLSocketClosedNotificationMessage ();
-
-	if (attrs[INSCN_ATTR_PORT]){
-		result->setPortId(nla_get_u32(attrs[INSCN_ATTR_PORT]));
-	}
-
-	return result;
-}
-
 IpcmIPCProcessInitializedMessage * parseIpcmIPCProcessInitializedMessage(
                 nlmsghdr *hdr) {
         struct nla_policy attr_policy[IIPM_ATTR_MAX + 1];
@@ -8968,8 +8726,8 @@ IpcpConnectionUpdateRequestMessage * parseIpcpConnectionUpdateRequestMessage(
         return result;
 }
 
-IpcpConnectionUpdateResultMessage * parseIpcpConnectionUpdateResultMessage(
-                nlmsghdr *hdr) {
+BaseNetlinkResponseMessageWPortId * parseBaseNetlinkResponseMessageWPortId(nlmsghdr *hdr,
+									   RINANetlinkOperationCode op_code) {
         struct nla_policy attr_policy[ICUREM_ATTR_MAX + 1];
         attr_policy[ICUREM_ATTR_PORT_ID].type = NLA_U32;
         attr_policy[ICUREM_ATTR_PORT_ID].minlen = 4;
@@ -8982,21 +8740,20 @@ IpcpConnectionUpdateResultMessage * parseIpcpConnectionUpdateResultMessage(
         int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
                         ICUREM_ATTR_MAX, attr_policy);
         if (err < 0) {
-                LOG_ERR("Error parsing IpcpConnectionUpdateResultMessage information from Netlink message: %d",
+                LOG_ERR("Error parsing BaseNetlinkResponseMessageWPortId information from Netlink message: %d",
                          err);
                 return 0;
         }
 
-        IpcpConnectionUpdateResultMessage * result =
-                        new IpcpConnectionUpdateResultMessage();
+        BaseNetlinkResponseMessageWPortId * result =
+                        new BaseNetlinkResponseMessageWPortId(op_code);
 
         if (attrs[ICUREM_ATTR_PORT_ID]){
-                result->setPortId(nla_get_u32(attrs[ICUREM_ATTR_PORT_ID]));
+                result->port_id = nla_get_u32(attrs[ICUREM_ATTR_PORT_ID]);
         }
 
         if (attrs[ICUREM_ATTR_RESULT]){
-                result->setResult(
-                                nla_get_u32(attrs[ICUREM_ATTR_RESULT]));
+                result->result = nla_get_u32(attrs[ICUREM_ATTR_RESULT]);
         }
 
         return result;
@@ -9170,39 +8927,6 @@ IpcpConnectionDestroyRequestMessage * parseIpcpConnectionDestroyRequestMessage(
 
         if (attrs[ICDRM_ATTR_CEP_ID]){
                 result->setCepId(nla_get_u32(attrs[ICDRM_ATTR_CEP_ID]));
-        }
-
-        return result;
-}
-
-IpcpConnectionDestroyResultMessage * parseIpcpConnectionDestroyResultMessage(
-                nlmsghdr *hdr) {
-        struct nla_policy attr_policy[ICDREM_ATTR_MAX + 1];
-        attr_policy[ICDREM_ATTR_PORT_ID].type = NLA_U32;
-        attr_policy[ICDREM_ATTR_PORT_ID].minlen = 4;
-        attr_policy[ICDREM_ATTR_PORT_ID].maxlen = 4;
-        attr_policy[ICDREM_ATTR_RESULT].type = NLA_U32;
-        attr_policy[ICDREM_ATTR_RESULT].minlen = 4;
-        attr_policy[ICDREM_ATTR_RESULT].maxlen = 4;
-        struct nlattr *attrs[ICDREM_ATTR_MAX + 1];
-
-        int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
-                        ICDREM_ATTR_MAX, attr_policy);
-        if (err < 0) {
-                LOG_ERR("Error parsing IpcpConnectionDestroyResultMessage information from Netlink message: %d",
-                         err);
-                return 0;
-        }
-
-        IpcpConnectionDestroyResultMessage * result =
-                        new IpcpConnectionDestroyResultMessage();
-
-        if (attrs[ICDREM_ATTR_PORT_ID]){
-                result->setPortId(nla_get_u32(attrs[ICDREM_ATTR_PORT_ID]));
-        }
-
-        if (attrs[ICDREM_ATTR_RESULT]){
-                result->setResult(nla_get_u32(attrs[ICDREM_ATTR_RESULT]));
         }
 
         return result;
@@ -9806,105 +9530,6 @@ IPCPDeallocatePortRequestMessage * parseIPCPDeallocatePortRequestMessage(nlmsghd
 
 	if (attrs[IDAPRM_ATTR_PORT_ID]) {
 		result->port_id = nla_get_u32(attrs[IDAPRM_ATTR_PORT_ID]);
-	}
-
-	return result;
-}
-
-IPCPUpdateCryptoStateResponseMessage * parseIPCPUpdateCryptoStateResponseMessage(nlmsghdr *hdr)
-{
-	struct nla_policy attr_policy[UCSREM_ATTR_MAX + 1];
-        attr_policy[UCSREM_ATTR_RESULT].type = NLA_U32;
-        attr_policy[UCSREM_ATTR_RESULT].minlen = 4;
-        attr_policy[UCSREM_ATTR_RESULT].maxlen = 4;
-        attr_policy[UCSREM_ATTR_N_1_PORT].type = NLA_U32;
-        attr_policy[UCSREM_ATTR_N_1_PORT].minlen = 4;
-        attr_policy[UCSREM_ATTR_N_1_PORT].maxlen = 4;
-	struct nlattr *attrs[UCSREM_ATTR_MAX + 1];
-
-	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
-			UCSREM_ATTR_MAX, attr_policy);
-	if (err < 0) {
-		LOG_ERR("Error parsing IPCPEnableEncryptionResponseMessage "
-                        "information from Netlink message: %d", err);
-		return 0;
-	}
-
-	IPCPUpdateCryptoStateResponseMessage * result =
-			new IPCPUpdateCryptoStateResponseMessage();
-
-	if (attrs[UCSREM_ATTR_RESULT]) {
-		result->result = nla_get_u32(attrs[UCSREM_ATTR_RESULT]);
-	}
-
-	if (attrs[UCSREM_ATTR_N_1_PORT]) {
-		result->port_id = nla_get_u32(attrs[UCSREM_ATTR_N_1_PORT]);
-	}
-
-	return result;
-}
-
-IPCPAllocatePortResponseMessage * parseIPCPAllocatePortResponseMessage(nlmsghdr *hdr)
-{
-	struct nla_policy attr_policy[IAPREM_ATTR_MAX + 1];
-        attr_policy[IAPREM_ATTR_RESULT].type = NLA_U32;
-        attr_policy[IAPREM_ATTR_RESULT].minlen = 4;
-        attr_policy[IAPREM_ATTR_RESULT].maxlen = 4;
-        attr_policy[IAPREM_ATTR_N_1_PORT].type = NLA_U32;
-        attr_policy[IAPREM_ATTR_N_1_PORT].minlen = 4;
-        attr_policy[IAPREM_ATTR_N_1_PORT].maxlen = 4;
-	struct nlattr *attrs[IAPREM_ATTR_MAX + 1];
-
-	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
-			IAPREM_ATTR_MAX, attr_policy);
-	if (err < 0) {
-		LOG_ERR("Error parsing IPCPEnableEncryptionResponseMessage "
-                        "information from Netlink message: %d", err);
-		return 0;
-	}
-
-	IPCPAllocatePortResponseMessage * result =
-			new IPCPAllocatePortResponseMessage();
-
-	if (attrs[IAPREM_ATTR_RESULT]) {
-		result->result = nla_get_u32(attrs[IAPREM_ATTR_RESULT]);
-	}
-
-	if (attrs[IAPREM_ATTR_N_1_PORT]) {
-		result->port_id = nla_get_u32(attrs[IAPREM_ATTR_N_1_PORT]);
-	}
-
-	return result;
-}
-
-IPCPDeallocatePortResponseMessage * parseIPCPDeallocatePortResponseMessage(nlmsghdr *hdr)
-{
-	struct nla_policy attr_policy[IDAPREM_ATTR_MAX + 1];
-        attr_policy[IDAPREM_ATTR_RESULT].type = NLA_U32;
-        attr_policy[IDAPREM_ATTR_RESULT].minlen = 4;
-        attr_policy[IDAPREM_ATTR_RESULT].maxlen = 4;
-        attr_policy[IDAPREM_ATTR_N_1_PORT].type = NLA_U32;
-        attr_policy[IDAPREM_ATTR_N_1_PORT].minlen = 4;
-        attr_policy[IDAPREM_ATTR_N_1_PORT].maxlen = 4;
-	struct nlattr *attrs[IDAPREM_ATTR_MAX + 1];
-
-	int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
-			IDAPREM_ATTR_MAX, attr_policy);
-	if (err < 0) {
-		LOG_ERR("Error parsing IPCPDeallocatePortResponseMessage "
-                        "information from Netlink message: %d", err);
-		return 0;
-	}
-
-	IPCPDeallocatePortResponseMessage * result =
-			new IPCPDeallocatePortResponseMessage();
-
-	if (attrs[IDAPREM_ATTR_RESULT]) {
-		result->result = nla_get_u32(attrs[IDAPREM_ATTR_RESULT]);
-	}
-
-	if (attrs[IDAPREM_ATTR_N_1_PORT]) {
-		result->port_id = nla_get_u32(attrs[IDAPREM_ATTR_N_1_PORT]);
 	}
 
 	return result;

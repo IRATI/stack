@@ -525,10 +525,9 @@ void ExtendedIPCManager::allocateFlowRequestResult(
 #if STUB_API
 	// Do nothing
 #else
-	IpcmAllocateFlowRequestResultMessage responseMessage;
-
+	BaseNetlinkResponseMessageWPortId responseMessage(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT);
 	responseMessage.setResult(result);
-	responseMessage.setPortId(event.portId);
+	responseMessage.port_id = event.portId;
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
 	responseMessage.setDestPortId(ipcManagerPort);
@@ -607,7 +606,7 @@ void ExtendedIPCManager::notifyflowDeallocated(
 #if STUB_API
 	// Do nothing
 #else
-	IpcmDeallocateFlowResponseMessage responseMessage;
+	BaseNetlinkResponseMessage responseMessage(RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE);
 	responseMessage.setResult(result);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
 	responseMessage.setSequenceNumber(flowDeallocateEvent.sequenceNumber);

@@ -208,6 +208,15 @@ public:
 	virtual IPCEvent* toIPCEvent();
 };
 
+class BaseNetlinkResponseMessageWPortId : public BaseNetlinkResponseMessage {
+public:
+	int port_id;
+
+	BaseNetlinkResponseMessageWPortId(RINANetlinkOperationCode operationCode);
+	virtual ~BaseNetlinkResponseMessageWPortId(){};
+	virtual IPCEvent* toIPCEvent();
+};
+
 /**
  * An allocate flow request message, exchanged between an Application Process
  * and the IPC Manager.
@@ -776,21 +785,6 @@ public:
 };
 
 /**
- * Sent by the IPC Process to inform about the result of the flow allocation
- * request operation. IPC Process -> IPC Manager
- */
-class IpcmAllocateFlowRequestResultMessage: public BaseNetlinkResponseMessage {
-
-        /** The port id allocated to the flow */
-        int portId;
-public:
-	IpcmAllocateFlowRequestResultMessage();
-	int getPortId() const;
-	void setPortId(int portId);
-	IPCEvent* toIPCEvent();
-};
-
-/**
  * Allocate flow request from a remote application, IPC Process -> IPC Manager
  */
 class IpcmAllocateFlowRequestArrivedMessage:
@@ -863,16 +857,6 @@ public:
 	IpcmDeallocateFlowRequestMessage();
 	int getPortId() const;
 	void setPortId(int portId);
-	IPCEvent* toIPCEvent();
-};
-
-/**
- * Response by the IPC Process to the flow deallocation request
- */
-class IpcmDeallocateFlowResponseMessage: public BaseNetlinkResponseMessage {
-
-public:
-	IpcmDeallocateFlowResponseMessage();
 	IPCEvent* toIPCEvent();
 };
 
@@ -1093,24 +1077,6 @@ public:
 };
 
 /**
- * NL layer (kernel) -> IPC Manager. Received when a user-space NL socket has been
- * closed, which means the user process associated to that socket will be no longer
- * reachable.
- */
-class IpcmNLSocketClosedNotificationMessage:
-		public BaseNetlinkResponseMessage {
-
-	/** The portId of the NL socket that has been closed*/
-	int portId;
-
-public:
-	IpcmNLSocketClosedNotificationMessage();
-	int getPortId() const;
-	void setPortId(int portId);
-	IPCEvent* toIPCEvent();
-};
-
-/**
  * IPC Manager -> Kernel (NL layer). Sent when the IPC Manager starts up, to
  * signal the kernel that the IPC Manager is ready and make its NL port-id known.
  */
@@ -1214,23 +1180,6 @@ public:
 };
 
 /**
- * Kernel IPC Process -> IPC Process Daemon. Report about the result of a
- * connection update operation
- */
-class IpcpConnectionUpdateResultMessage:
-                public BaseNetlinkResponseMessage {
-
-        /** The port-id of the flow associated to this connection */
-        int portId;
-
-public:
-        IpcpConnectionUpdateResultMessage();
-        int getPortId() const;
-        void setPortId(int portId);
-        IPCEvent* toIPCEvent();
-};
-
-/**
  * IPC Process Daemon -> Kernel IPC Process. Request the creation of a
  * connection to the EFCP module in the kernel (receiving side of the
  * flow allocation process)
@@ -1301,29 +1250,6 @@ public:
 };
 
 /**
- * Kernel IPC PRocess -> IPC Process Daemon. Report about the result of
- * a connection destroy request operation
- */
-class IpcpConnectionDestroyResultMessage: public BaseNetlinkMessage {
-
-        /** The port-id where the connection will be bound to */
-        int portId;
-
-        /**
-         * The result of the operaiton
-         */
-        int result;
-
-public:
-        IpcpConnectionDestroyResultMessage();
-        int getResult() const;
-        void setResult(int result);
-        int getPortId() const;
-        void setPortId(int portId);
-        IPCEvent* toIPCEvent();
-};
-
-/**
  * IPC Process -> Kernel IPC Process. Add the following entries to the
  * PDU Forwarding Table.
  */
@@ -1379,14 +1305,6 @@ public:
 	CryptoState state;
 };
 
-class IPCPUpdateCryptoStateResponseMessage: public BaseNetlinkResponseMessage {
-public:
-	IPCPUpdateCryptoStateResponseMessage();
-	IPCEvent* toIPCEvent();
-
-	int port_id;
-};
-
 class IPCPAddressChangeRequestMessage : public BaseNetlinkMessage {
 public:
 	IPCPAddressChangeRequestMessage();
@@ -1414,25 +1332,9 @@ public:
 	ApplicationProcessNamingInformation app_name;
 };
 
-class IPCPAllocatePortResponseMessage: public BaseNetlinkResponseMessage {
-public:
-	IPCPAllocatePortResponseMessage();
-	IPCEvent* toIPCEvent();
-
-	int port_id;
-};
-
 class IPCPDeallocatePortRequestMessage : public BaseNetlinkMessage {
 public:
 	IPCPDeallocatePortRequestMessage();
-	IPCEvent* toIPCEvent();
-
-	int port_id;
-};
-
-class IPCPDeallocatePortResponseMessage: public BaseNetlinkResponseMessage {
-public:
-	IPCPDeallocatePortResponseMessage();
 	IPCEvent* toIPCEvent();
 
 	int port_id;

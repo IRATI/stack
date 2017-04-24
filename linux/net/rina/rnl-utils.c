@@ -3499,7 +3499,6 @@ static int format_flow_spec(const struct flow_spec * fspec,
 
 static int rnl_format_generic_u32_param_msg(u32              param_var,
                                             uint_t           param_name,
-                                            string_t *       msg_name,
                                             struct sk_buff * skb_out)
 {
         if (!skb_out) {
@@ -3508,31 +3507,41 @@ static int rnl_format_generic_u32_param_msg(u32              param_var,
         }
 
         if (nla_put_u32(skb_out, param_name, param_var) < 0) {
-                LOG_ERR("Could not format %s message correctly", msg_name);
+                LOG_ERR("Could not format message correctly");
                 return -1;
         }
 
         return 0;
 }
 
-static int rnl_format_ipcm_assign_to_dif_resp_msg(uint_t           result,
-                                                  struct sk_buff * skb_out)
+static int rnl_format_base_resp_msg(uint_t           result,
+				    struct sk_buff * skb_out)
 {
         return rnl_format_generic_u32_param_msg(result,
-                                                IAFRRM_ATTR_RESULT,
-                                                "rnl_ipcm_assign_"
-                                                "to_dif_resp_msg",
+        					IBRESPM_ATTR_RESULT,
                                                 skb_out);
 }
 
-static int rnl_format_ipcm_update_dif_config_resp_msg(uint_t           result,
-                                                      struct sk_buff * skb_out)
+static int rnl_format_base_resp_wport_msg(uint_t           result,
+				          port_id_t	   port_id,
+				          struct sk_buff * skb_out)
 {
-        return rnl_format_generic_u32_param_msg(result,
-                                                IAFRRM_ATTR_RESULT,
-                                                "rnl_ipcm_update_dif_"
-                                                "config_resp_msg",
-                                                skb_out);
+        if (!skb_out) {
+                LOG_ERR("Bogus input parameter(s), bailing out");
+                return -1;
+        }
+
+        if (nla_put_u32(skb_out, IBRESPPM_ATTR_PORT_ID, port_id) < 0) {
+                LOG_ERR("Could not format message correctly");
+                return -1;
+        }
+
+        if (nla_put_u32(skb_out, IBRESPPM_ATTR_RESULT, result) < 0) {
+                LOG_ERR("Could not format message correctly");
+                return -1;
+        }
+
+        return 0;
 }
 
 static int
@@ -3606,34 +3615,6 @@ rnl_format_ipcm_alloc_flow_req_arrived_msg(const struct name *      source,
         return 0;
 }
 
-static int rnl_format_ipcm_alloc_flow_req_result_msg(uint_t           result,
-                                                     port_id_t        pid,
-                                                     struct sk_buff * skb_out)
-{
-        if (!skb_out) {
-                LOG_ERR("Bogus input parameter(s), bailing out");
-                return -1;
-        }
-
-        if (nla_put_u32(skb_out, IAFRRM_ATTR_PORT_ID, pid))
-                return format_fail("rnl_format_ipcm_alloc_req_result_msg");
-
-        if (nla_put_u32(skb_out, IAFRRM_ATTR_RESULT, result))
-                return format_fail("rnl_format_ipcm_alloc_req_result_msg");
-
-        return 0;
-}
-
-static int rnl_format_ipcm_dealloc_flow_resp_msg(uint_t           result,
-                                                 struct sk_buff * skb_out)
-{
-        return rnl_format_generic_u32_param_msg(result,
-                                                IDFRE_ATTR_RESULT,
-                                                "rnl_ipcm_dealloc_"
-                                                "flow_resp_msg",
-                                                skb_out);
-}
-
 static int rnl_format_ipcm_flow_dealloc_noti_msg(port_id_t        id,
                                                  uint_t           code,
                                                  struct sk_buff * skb_out)
@@ -3692,63 +3673,11 @@ static int rnl_format_ipcm_conn_create_result_msg(port_id_t        id,
         return 0;
 }
 
-static int rnl_format_ipcm_conn_update_result_msg(port_id_t        id,
-                                                  uint_t           result,
-                                                  struct sk_buff * skb_out)
-{
-        if (!skb_out) {
-                LOG_ERR("Bogus input parameter(s), bailing out");
-                return -1;
-        }
-
-        if (nla_put_u32(skb_out, ICURS_ATTR_PORT_ID, id))
-                return format_fail("rnl_format_ipcm_conn_update_result_msg");
-
-        if (nla_put_u32(skb_out, ICURS_ATTR_RESULT, result))
-                return format_fail("rnl_format_ipcm_conn_update_result_msg");
-
-        return 0;
-}
-
-static int rnl_format_ipcm_conn_destroy_result_msg(port_id_t        id,
-                                                   uint_t           result,
-                                                   struct sk_buff * skb_out)
-{
-        if (!skb_out) {
-                LOG_ERR("Bogus input parameter(s), bailing out");
-                return -1;
-        }
-
-        if (nla_put_u32(skb_out, ICDRS_ATTR_PORT_ID, id))
-                return format_fail("rnl_format_ipcm_conn_destroy_result_msg");
-
-        if (nla_put_u32(skb_out, ICDRS_ATTR_RESULT, result))
-                return format_fail("rnl_format_ipcm_conn_destroy_result_msg");
-
-        return 0;
-}
-
-static int rnl_format_ipcm_reg_app_resp_msg(uint_t           result,
-                                            struct sk_buff * skb_out)
-{
-        if (!skb_out) {
-                LOG_ERR("Bogus input parameter(s), bailing out");
-                return -1;
-        }
-
-        if (nla_put_u32(skb_out, IRARE_ATTR_RESULT, result))
-                return format_fail("rnl_ipcm_reg_app_resp_msg");
-
-        return 0;
-}
-
 static int rnl_format_socket_closed_notification_msg(u32              nl_port,
                                                      struct sk_buff * skb_out)
 {
         return rnl_format_generic_u32_param_msg(nl_port,
                                                 ISCN_ATTR_PORT,
-                                                "rnl_format_socket_closed_"
-                                                "notification_msg",
                                                 skb_out);
 }
 
@@ -3986,96 +3915,6 @@ static int rnl_format_ipcm_query_rib_resp_msg(int                result,
         return 0;
 }
 
-static int rnl_format_ipcp_set_policy_set_param_resp_msg(
-                                                uint_t           result,
-                                                struct sk_buff * skb_out)
-{
-        return rnl_format_generic_u32_param_msg(result,
-                                                ISPSPR_ATTR_RESULT,
-                                                "rnl_ipcp_set_policy_set"
-                                                "_param_resp_msg",
-                                                skb_out);
-}
-
-static int rnl_format_ipcp_select_policy_set_resp_msg(
-                                                uint_t           result,
-                                                struct sk_buff * skb_out)
-{
-        return rnl_format_generic_u32_param_msg(result,
-                                                ISPSR_ATTR_RESULT,
-                                                "rnl_ipcp_select_policy"
-                                                "_set_resp_msg",
-                                                skb_out);
-}
-
-static int rnl_format_ipcp_update_crypto_state_resp_msg(uint_t           result,
-                                                	port_id_t 	 port_id,
-                                                	struct sk_buff * skb_out)
-{
-	if (!skb_out) {
-		LOG_ERR("Bogus input parameter(s), bailing out");
-		return -1;
-	}
-
-	if (nla_put_u32(skb_out, IUCSRE_ATTR_RESULT, result) < 0)
-		return format_fail("rnl_format_ipcp_update_crypto_state_resp_msg");
-
-	if (nla_put_u32(skb_out, IUCSRE_ATTR_N_1_PORT, port_id) < 0)
-		return format_fail("rnl_format_ipcp_update_crypto_state_resp_msg");
-
-        return 0;
-}
-
-static int rnl_format_ipcp_allocate_port_resp_msg(uint_t           result,
-						  port_id_t 	 port_id,
-						  struct sk_buff * skb_out)
-{
-	if (!skb_out) {
-		LOG_ERR("Bogus input parameter(s), bailing out");
-		return -1;
-	}
-
-	if (nla_put_u32(skb_out, IAPREM_ATTR_RESULT, result) < 0)
-		return format_fail("rnl_format_ipcp_allocate_port_resp_msg");
-
-	if (nla_put_u32(skb_out, IAPREM_ATTR_N_1_PORT, port_id) < 0)
-		return format_fail("rnl_format_ipcp_allocate_port_resp_msg");
-
-        return 0;
-}
-
-static int rnl_format_ipcp_deallocate_port_resp_msg(uint_t           result,
-						    port_id_t 	 port_id,
-						    struct sk_buff * skb_out)
-{
-	if (!skb_out) {
-		LOG_ERR("Bogus input parameter(s), bailing out");
-		return -1;
-	}
-
-	if (nla_put_u32(skb_out, IDAPREM_ATTR_RESULT, result) < 0)
-		return format_fail("rnl_format_ipcp_deallocate_port_resp_msg");
-
-	if (nla_put_u32(skb_out, IDAPREM_ATTR_N_1_PORT, port_id) < 0)
-		return format_fail("rnl_format_ipcp_deallocate_port_resp_msg");
-
-        return 0;
-}
-
-static int rnl_format_ipcp_write_mgmt_sdu_resp_msg(uint_t           result,
-						   struct sk_buff * skb_out)
-{
-	if (!skb_out) {
-		LOG_ERR("Bogus input parameter(s), bailing out");
-		return -1;
-	}
-
-	if (nla_put_u32(skb_out, IWMSREM_ATTR_RESULT, result) < 0)
-		return format_fail("rnl_format_ipcp_write_mgmt_sdu_resp_msg");
-
-        return 0;
-}
-
 static int rnl_format_ipcp_read_mgmt_sdu_notif_msg(uint_t           result,
 						   port_id_t	    port_id,
 						   struct sdu *     sdu,
@@ -4095,37 +3934,59 @@ static int rnl_format_ipcp_read_mgmt_sdu_notif_msg(uint_t           result,
         return 0;
 }
 
-static int rnl_format_ipcp_create_ipcp_resp_msg(uint_t           result,
-						struct sk_buff * skb_out)
+int rnl_base_response(ipc_process_id_t id,
+                      uint_t           res,
+                      rnl_sn_t         seq_num,
+		      msg_type_t       msg_type,
+                      u32              nl_port_id)
 {
-	if (!skb_out) {
-		LOG_ERR("Bogus input parameter(s), bailing out");
-		return -1;
-	}
+        struct sk_buff *      out_msg;
+        struct rina_msg_hdr * out_hdr;
 
-	if (nla_put_u32(skb_out, ICIRME_ATTR_RESULT, result) < 0)
-		return format_fail("rnl_format_ipcp_create_ipcp_resp_msg");
+        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
+        if (!out_msg) {
+                LOG_ERR("Could not allocate memory for message");
+                return -1;
+        }
 
-        return 0;
+        out_hdr = (struct rina_msg_hdr *)
+                genlmsg_put(out_msg,
+                            0,
+                            seq_num,
+                            &rnl_nl_family,
+                            0,
+			    msg_type);
+        if (!out_hdr) {
+                LOG_ERR("Could not use genlmsg_put");
+                nlmsg_free(out_msg);
+                return -1;
+        }
+
+        out_hdr->src_ipc_id = id;
+        out_hdr->dst_ipc_id = 0;
+
+        if (rnl_format_base_resp_msg(res, out_msg)) {
+                LOG_ERR("Could not format message ...");
+                nlmsg_free(out_msg);
+                return -1;
+        }
+
+        genlmsg_end(out_msg, out_hdr);
+
+        return send_nl_unicast_msg(&init_net,
+                                   out_msg,
+                                   nl_port_id,
+				   msg_type,
+                                   seq_num);
+
 }
+EXPORT_SYMBOL(rnl_base_response);
 
-static int rnl_format_ipcp_destroy_ipcp_resp_msg(uint_t           result,
-						 struct sk_buff * skb_out)
-{
-	if (!skb_out) {
-		LOG_ERR("Bogus input parameter(s), bailing out");
-		return -1;
-	}
-
-	if (nla_put_u32(skb_out, IDIRME_ATTR_RESULT, result) < 0)
-		return format_fail("rnl_format_ipcp_destroy_ipcp_resp_msg");
-
-        return 0;
-}
-
-int rnl_assign_dif_response(ipc_process_id_t id,
+int rnl_base_response_wport(ipc_process_id_t id,
                             uint_t           res,
+			    port_id_t        port_id,
                             rnl_sn_t         seq_num,
+		            msg_type_t       msg_type,
                             u32              nl_port_id)
 {
         struct sk_buff *      out_msg;
@@ -4143,7 +4004,7 @@ int rnl_assign_dif_response(ipc_process_id_t id,
                             seq_num,
                             &rnl_nl_family,
                             0,
-                            RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE);
+			    msg_type);
         if (!out_hdr) {
                 LOG_ERR("Could not use genlmsg_put");
                 nlmsg_free(out_msg);
@@ -4153,7 +4014,7 @@ int rnl_assign_dif_response(ipc_process_id_t id,
         out_hdr->src_ipc_id = id;
         out_hdr->dst_ipc_id = 0;
 
-        if (rnl_format_ipcm_assign_to_dif_resp_msg(res, out_msg)) {
+        if (rnl_format_base_resp_wport_msg(res, port_id, out_msg)) {
                 LOG_ERR("Could not format message ...");
                 nlmsg_free(out_msg);
                 return -1;
@@ -4164,108 +4025,11 @@ int rnl_assign_dif_response(ipc_process_id_t id,
         return send_nl_unicast_msg(&init_net,
                                    out_msg,
                                    nl_port_id,
-                                   RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE,
+				   msg_type,
                                    seq_num);
 
 }
-EXPORT_SYMBOL(rnl_assign_dif_response);
-
-int rnl_update_dif_config_response(ipc_process_id_t id,
-                                   uint_t           res,
-                                   rnl_sn_t         seq_num,
-                                   u32              nl_port_id)
-{
-        struct sk_buff *      out_msg;
-        struct rina_msg_hdr * out_hdr;
-
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
-        if (!out_msg) {
-                LOG_ERR("Could not allocate memory for message");
-                return -1;
-        }
-
-        out_hdr = (struct rina_msg_hdr *)
-                genlmsg_put(out_msg,
-                            0,
-                            seq_num,
-                            &rnl_nl_family,
-                            0,
-                            RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE);
-        if (!out_hdr) {
-                LOG_ERR("Could not use genlmsg_put");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        out_hdr->src_ipc_id = id;
-        out_hdr->dst_ipc_id = 0;
-
-        if (rnl_format_ipcm_update_dif_config_resp_msg(res, out_msg)) {
-                LOG_ERR("Could not format message ...");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        genlmsg_end(out_msg, out_hdr);
-
-        return send_nl_unicast_msg(&init_net,
-                                   out_msg,
-                                   nl_port_id,
-                                   RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE,
-                                   seq_num);
-}
-EXPORT_SYMBOL(rnl_update_dif_config_response);
-
-int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
-                                             uint_t           res,
-                                             rnl_sn_t         seq_num,
-                                             u32              nl_port_id,
-                                             bool             isRegister)
-{
-        struct sk_buff *      out_msg;
-        struct rina_msg_hdr * out_hdr;
-        uint_t                command;
-
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
-        if (!out_msg) {
-                LOG_ERR("Could not allocate memory for message");
-                return -1;
-        }
-
-        command = isRegister                               ?
-                RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE  :
-                RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE;
-
-        out_hdr = (struct rina_msg_hdr *) genlmsg_put(out_msg,
-                                                      0,
-                                                      seq_num,
-                                                      &rnl_nl_family,
-                                                      0,
-                                                      command);
-        if (!out_hdr) {
-                LOG_ERR("Could not use genlmsg_put");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        out_hdr->src_ipc_id = ipc_id;
-        out_hdr->dst_ipc_id = 0;
-
-        if (rnl_format_ipcm_reg_app_resp_msg(res, out_msg)) {
-                LOG_ERR("Could not format message ...");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        genlmsg_end(out_msg, out_hdr);
-
-        return send_nl_unicast_msg(&init_net,
-                                   out_msg,
-                                   nl_port_id,
-                                   command,
-                                   seq_num);
-}
-EXPORT_SYMBOL(rnl_app_register_unregister_response_msg);
+EXPORT_SYMBOL(rnl_base_response_wport);
 
 int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t         ipc_id,
                                        const struct name *      dif_name,
@@ -4319,97 +4083,6 @@ int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t         ipc_id,
                                    seq_num);
 }
 EXPORT_SYMBOL(rnl_app_alloc_flow_req_arrived_msg);
-
-int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
-                                  uint_t           res,
-                                  port_id_t        pid,
-                                  rnl_sn_t         seq_num,
-                                  u32              nl_port_id)
-{
-        struct sk_buff * out_msg;
-        struct rina_msg_hdr * out_hdr;
-
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
-        if (!out_msg) {
-                LOG_ERR("Could not allocate memory for message");
-                return -1;
-        }
-
-        out_hdr = (struct rina_msg_hdr *)
-                genlmsg_put(out_msg,
-                            0,
-                            seq_num,
-                            &rnl_nl_family,
-                            0,
-                            RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT);
-        if (!out_hdr) {
-                LOG_ERR("Could not use genlmsg_put");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        out_hdr->src_ipc_id = ipc_id; /* This IPC process */
-        out_hdr->dst_ipc_id = 0;
-
-        if (rnl_format_ipcm_alloc_flow_req_result_msg(res, pid, out_msg)) {
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        genlmsg_end(out_msg, out_hdr);
-
-        return send_nl_unicast_msg(&init_net,
-                                   out_msg,
-                                   nl_port_id,
-                                   RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
-                                   seq_num);
-}
-EXPORT_SYMBOL(rnl_app_alloc_flow_result_msg);
-
-int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
-                                  uint_t           res,
-                                  rnl_sn_t         seq_num,
-                                  u32              nl_port_id)
-{
-        struct sk_buff *      out_msg;
-        struct rina_msg_hdr * out_hdr;
-
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
-        if (!out_msg) {
-                LOG_ERR("Could not allocate memory for message");
-                return -1;
-        }
-
-        out_hdr = (struct rina_msg_hdr *)
-                genlmsg_put(out_msg,
-                            0,
-                            seq_num,
-                            &rnl_nl_family,
-                            0,
-                            RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE);
-        if (!out_hdr) {
-                LOG_ERR("Could not use genlmsg_put");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        out_hdr->src_ipc_id = ipc_id; /* This IPC process */
-        out_hdr->dst_ipc_id = 0;
-
-        if (rnl_format_ipcm_dealloc_flow_resp_msg(res, out_msg)) {
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        genlmsg_end(out_msg, out_hdr);
-
-        return send_nl_unicast_msg(&init_net,
-                                   out_msg,
-                                   nl_port_id,
-                                   RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE,
-                                   seq_num);
-}
-EXPORT_SYMBOL(rnl_app_dealloc_flow_resp_msg);
 
 int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
                              uint_t           code,
@@ -4555,101 +4228,6 @@ int rnl_ipcp_conn_create_result_msg(ipc_process_id_t ipc_id,
 }
 EXPORT_SYMBOL(rnl_ipcp_conn_create_result_msg);
 
-int rnl_ipcp_conn_update_result_msg(ipc_process_id_t ipc_id,
-                                    port_id_t        pid,
-                                    uint_t           res,
-                                    rnl_sn_t         seq_num,
-                                    u32              nl_port_id)
-{
-        struct sk_buff * out_msg;
-        struct rina_msg_hdr * out_hdr;
-
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
-        if (!out_msg) {
-                LOG_ERR("Could not allocate memory for message");
-                return -1;
-        }
-
-        out_hdr = (struct rina_msg_hdr *)
-                genlmsg_put(out_msg,
-                            0,
-                            seq_num,
-                            &rnl_nl_family,
-                            0,
-                            RINA_C_IPCP_CONN_UPDATE_RESULT);
-        if (!out_hdr) {
-                LOG_ERR("Could not use genlmsg_put");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        out_hdr->src_ipc_id = ipc_id; /* This IPC process */
-        out_hdr->dst_ipc_id = 0;
-
-        if (rnl_format_ipcm_conn_update_result_msg(pid, res, out_msg)) {
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        genlmsg_end(out_msg, out_hdr);
-
-        return send_nl_unicast_msg(&init_net,
-                                   out_msg,
-                                   nl_port_id,
-                                   RINA_C_IPCP_CONN_UPDATE_RESULT,
-                                   seq_num);
-}
-EXPORT_SYMBOL(rnl_ipcp_conn_update_result_msg);
-
-int rnl_ipcp_conn_destroy_result_msg(ipc_process_id_t ipc_id,
-                                     port_id_t        pid,
-                                     uint_t           res,
-                                     rnl_sn_t         seq_num,
-                                     u32              nl_port_id)
-{
-        struct sk_buff * out_msg;
-        struct rina_msg_hdr * out_hdr;
-        int    result;
-
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
-        if (!out_msg) {
-                LOG_ERR("Could not allocate memory for message");
-                return -1;
-        }
-
-        out_hdr = (struct rina_msg_hdr *)
-                genlmsg_put(out_msg,
-                            0,
-                            seq_num,
-                            &rnl_nl_family,
-                            0,
-                            RINA_C_IPCP_CONN_DESTROY_RESULT);
-        if (!out_hdr) {
-                LOG_ERR("Could not use genlmsg_put");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        out_hdr->src_ipc_id = ipc_id; /* This IPC process */
-        out_hdr->dst_ipc_id = 0;
-
-        if (rnl_format_ipcm_conn_destroy_result_msg(pid, res, out_msg)) {
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        genlmsg_end(out_msg, out_hdr);
-
-        result = genlmsg_unicast(&init_net, out_msg, nl_port_id);
-        if (result) {
-                LOG_ERR("Could not send unicast msg: %d", result);
-                return -1;
-        }
-
-        return 0;
-}
-EXPORT_SYMBOL(rnl_ipcp_conn_destroy_result_msg);
-
 int rnl_ipcm_sock_closed_notif_msg(u32 closed_port, u32 dest_port)
 {
         struct sk_buff *      out_msg;
@@ -4787,377 +4365,6 @@ int rnl_ipcm_query_rib_resp_msg(ipc_process_id_t   ipc_id,
         return 0;
 }
 EXPORT_SYMBOL(rnl_ipcm_query_rib_resp_msg);
-
-int rnl_set_policy_set_param_response(ipc_process_id_t id,
-                                      uint_t           res,
-                                      rnl_sn_t         seq_num,
-                                      u32              nl_port_id)
-{
-        struct sk_buff *      out_msg;
-        struct rina_msg_hdr * out_hdr;
-
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
-        if (!out_msg) {
-                LOG_ERR("Could not allocate memory for message");
-                return -1;
-        }
-
-        out_hdr = (struct rina_msg_hdr *)
-                genlmsg_put(out_msg,
-                            0,
-                            seq_num,
-                            &rnl_nl_family,
-                            0,
-                            RINA_C_IPCP_SET_POLICY_SET_PARAM_RESPONSE);
-        if (!out_hdr) {
-                LOG_ERR("Could not use genlmsg_put");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        out_hdr->src_ipc_id = id;
-        out_hdr->dst_ipc_id = 0;
-
-        if (rnl_format_ipcp_set_policy_set_param_resp_msg(res, out_msg)) {
-                LOG_ERR("Could not format message ...");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        genlmsg_end(out_msg, out_hdr);
-
-        return send_nl_unicast_msg(&init_net,
-                                   out_msg,
-                                   nl_port_id,
-                                   RINA_C_IPCP_SET_POLICY_SET_PARAM_RESPONSE,
-                                   seq_num);
-
-}
-EXPORT_SYMBOL(rnl_set_policy_set_param_response);
-
-int rnl_select_policy_set_response(ipc_process_id_t id,
-                                   uint_t           res,
-                                   rnl_sn_t         seq_num,
-                                   u32              nl_port_id)
-{
-        struct sk_buff *      out_msg;
-        struct rina_msg_hdr * out_hdr;
-
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
-        if (!out_msg) {
-                LOG_ERR("Could not allocate memory for message");
-                return -1;
-        }
-
-        out_hdr = (struct rina_msg_hdr *)
-                genlmsg_put(out_msg,
-                            0,
-                            seq_num,
-                            &rnl_nl_family,
-                            0,
-                            RINA_C_IPCP_SELECT_POLICY_SET_RESPONSE);
-        if (!out_hdr) {
-                LOG_ERR("Could not use genlmsg_put");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        out_hdr->src_ipc_id = id;
-        out_hdr->dst_ipc_id = 0;
-
-        if (rnl_format_ipcp_select_policy_set_resp_msg(res, out_msg)) {
-                LOG_ERR("Could not format message ...");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        genlmsg_end(out_msg, out_hdr);
-
-        return send_nl_unicast_msg(&init_net,
-                                   out_msg,
-                                   nl_port_id,
-                                   RINA_C_IPCP_SELECT_POLICY_SET_RESPONSE,
-                                   seq_num);
-
-}
-EXPORT_SYMBOL(rnl_select_policy_set_response);
-
-int rnl_update_crypto_state_response(ipc_process_id_t id,
-                                     uint_t           res,
-                                     rnl_sn_t         seq_num,
-                                     port_id_t	    n_1_port,
-                                     u32              nl_port_id)
-{
-        struct sk_buff *      out_msg;
-        struct rina_msg_hdr * out_hdr;
-
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
-        if (!out_msg) {
-                LOG_ERR("Could not allocate memory for message");
-                return -1;
-        }
-
-        out_hdr = (struct rina_msg_hdr *)
-                genlmsg_put(out_msg,
-                            0,
-                            seq_num,
-                            &rnl_nl_family,
-                            0,
-                            RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE);
-        if (!out_hdr) {
-                LOG_ERR("Could not use genlmsg_put");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        out_hdr->src_ipc_id = id;
-        out_hdr->dst_ipc_id = 0;
-
-        if (rnl_format_ipcp_update_crypto_state_resp_msg(res, n_1_port, out_msg)) {
-                LOG_ERR("Could not format message ...");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        genlmsg_end(out_msg, out_hdr);
-
-        return send_nl_unicast_msg(&init_net,
-                                   out_msg,
-                                   nl_port_id,
-                                   RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE,
-                                   seq_num);
-}
-EXPORT_SYMBOL(rnl_update_crypto_state_response);
-
-int rnl_allocate_port_response(ipc_process_id_t id,
-			       uint_t           res,
-			       rnl_sn_t         seq_num,
-			       port_id_t	port,
-			       u32              nl_port_id)
-{
-        struct sk_buff *      out_msg;
-        struct rina_msg_hdr * out_hdr;
-
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
-        if (!out_msg) {
-                LOG_ERR("Could not allocate memory for message");
-                return -1;
-        }
-
-        out_hdr = (struct rina_msg_hdr *)
-                genlmsg_put(out_msg,
-                            0,
-                            seq_num,
-                            &rnl_nl_family,
-                            0,
-                            RINA_C_IPCP_ALLOCATE_PORT_RESPONSE);
-        if (!out_hdr) {
-                LOG_ERR("Could not use genlmsg_put");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        out_hdr->src_ipc_id = id;
-        out_hdr->dst_ipc_id = 0;
-
-        if (rnl_format_ipcp_allocate_port_resp_msg(res, port, out_msg)) {
-                LOG_ERR("Could not format message ...");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        genlmsg_end(out_msg, out_hdr);
-
-        return send_nl_unicast_msg(&init_net,
-                                   out_msg,
-                                   nl_port_id,
-				   RINA_C_IPCP_ALLOCATE_PORT_RESPONSE,
-                                   seq_num);
-}
-EXPORT_SYMBOL(rnl_allocate_port_response);
-
-int rnl_create_ipcp_response(uint_t           res,
-			     rnl_sn_t         seq_num,
-			     u32              nl_port_id)
-{
-        struct sk_buff *      out_msg;
-        struct rina_msg_hdr * out_hdr;
-
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
-        if (!out_msg) {
-                LOG_ERR("Could not allocate memory for message");
-                return -1;
-        }
-
-        out_hdr = (struct rina_msg_hdr *)
-                genlmsg_put(out_msg,
-                            0,
-                            seq_num,
-                            &rnl_nl_family,
-                            0,
-                            RINA_C_IPCM_CREATE_IPCP_RESPONSE);
-        if (!out_hdr) {
-                LOG_ERR("Could not use genlmsg_put");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        out_hdr->src_ipc_id = 0;
-        out_hdr->dst_ipc_id = 0;
-
-        if (rnl_format_ipcp_create_ipcp_resp_msg(res, out_msg)) {
-                LOG_ERR("Could not format message ...");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        genlmsg_end(out_msg, out_hdr);
-
-        return send_nl_unicast_msg(&init_net,
-                                   out_msg,
-                                   nl_port_id,
-				   RINA_C_IPCM_CREATE_IPCP_RESPONSE,
-                                   seq_num);
-}
-EXPORT_SYMBOL(rnl_create_ipcp_response);
-
-int rnl_destroy_ipcp_response(uint_t           res,
-			      rnl_sn_t         seq_num,
-			      u32              nl_port_id)
-{
-        struct sk_buff *      out_msg;
-        struct rina_msg_hdr * out_hdr;
-
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
-        if (!out_msg) {
-                LOG_ERR("Could not allocate memory for message");
-                return -1;
-        }
-
-        out_hdr = (struct rina_msg_hdr *)
-                genlmsg_put(out_msg,
-                            0,
-                            seq_num,
-                            &rnl_nl_family,
-                            0,
-                            RINA_C_IPCM_DESTROY_IPCP_RESPONSE);
-        if (!out_hdr) {
-                LOG_ERR("Could not use genlmsg_put");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        out_hdr->src_ipc_id = 0;
-        out_hdr->dst_ipc_id = 0;
-
-        if (rnl_format_ipcp_destroy_ipcp_resp_msg(res, out_msg)) {
-                LOG_ERR("Could not format message ...");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        genlmsg_end(out_msg, out_hdr);
-
-        return send_nl_unicast_msg(&init_net,
-                                   out_msg,
-                                   nl_port_id,
-				   RINA_C_IPCM_DESTROY_IPCP_RESPONSE,
-                                   seq_num);
-}
-EXPORT_SYMBOL(rnl_destroy_ipcp_response);
-
-int rnl_deallocate_port_response(ipc_process_id_t id,
-			         uint_t           res,
-				 rnl_sn_t         seq_num,
-				 port_id_t	port,
-				 u32              nl_port_id)
-{
-        struct sk_buff *      out_msg;
-        struct rina_msg_hdr * out_hdr;
-
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
-        if (!out_msg) {
-                LOG_ERR("Could not allocate memory for message");
-                return -1;
-        }
-
-        out_hdr = (struct rina_msg_hdr *)
-                genlmsg_put(out_msg,
-                            0,
-                            seq_num,
-                            &rnl_nl_family,
-                            0,
-                            RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE);
-        if (!out_hdr) {
-                LOG_ERR("Could not use genlmsg_put");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        out_hdr->src_ipc_id = id;
-        out_hdr->dst_ipc_id = 0;
-
-        if (rnl_format_ipcp_deallocate_port_resp_msg(res, port, out_msg)) {
-                LOG_ERR("Could not format message ...");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        genlmsg_end(out_msg, out_hdr);
-
-        return send_nl_unicast_msg(&init_net,
-                                   out_msg,
-                                   nl_port_id,
-				   RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE,
-                                   seq_num);
-}
-EXPORT_SYMBOL(rnl_deallocate_port_response);
-
-int rnl_ipcp_write_mgmt_sdu_response(ipc_process_id_t id,
-			             uint_t           res,
-				     rnl_sn_t         seq_num,
-				     u32              nl_port_id)
-{
-        struct sk_buff *      out_msg;
-        struct rina_msg_hdr * out_hdr;
-
-        out_msg = genlmsg_new(NLMSG_DEFAULT_SIZE,GFP_ATOMIC);
-        if (!out_msg) {
-                LOG_ERR("Could not allocate memory for message");
-                return -1;
-        }
-
-        out_hdr = (struct rina_msg_hdr *)
-                genlmsg_put(out_msg,
-                            0,
-                            seq_num,
-                            &rnl_nl_family,
-                            0,
-                            RINA_C_IPCP_MANAGEMENT_SDU_WRITE_RESPONSE);
-        if (!out_hdr) {
-                LOG_ERR("Could not use genlmsg_put");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        out_hdr->src_ipc_id = id;
-        out_hdr->dst_ipc_id = 0;
-
-        if (rnl_format_ipcp_write_mgmt_sdu_resp_msg(res, out_msg)) {
-                LOG_ERR("Could not format message ...");
-                nlmsg_free(out_msg);
-                return -1;
-        }
-
-        genlmsg_end(out_msg, out_hdr);
-
-        return send_nl_unicast_msg(&init_net,
-                                   out_msg,
-                                   nl_port_id,
-				   RINA_C_IPCP_MANAGEMENT_SDU_WRITE_RESPONSE,
-                                   seq_num);
-}
-EXPORT_SYMBOL(rnl_ipcp_write_mgmt_sdu_response);
 
 int rnl_ipcp_read_mgmt_sdu_notif(ipc_process_id_t id,
 			         uint_t           res,

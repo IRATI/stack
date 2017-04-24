@@ -220,12 +220,18 @@ enum ipcm_alloc_flow_resp_attrs_list {
  */
 #define ALLOC_RESP_DENY_REASON_1 "FAILED"
 
-enum ipcm_alloc_flow_req_result_attrs_list {
-        IAFRRM_ATTR_RESULT = 1,
-        IAFRRM_ATTR_PORT_ID,
-        __IAFRRM_ATTR_MAX,
+enum ipcm_base_resp_attrs_list {
+        IBRESPM_ATTR_RESULT = 1,
+        __IBRESPM_ATTR_MAX,
 };
-#define IAFRRM_ATTR_MAX (__IAFRRM_ATTR_MAX -1)
+#define IBRESPM_ATTR_MAX (__IBRESPM_ATTR_MAX -1)
+
+enum ipcm_base_resp_wpid_attrs_list {
+        IBRESPPM_ATTR_PORT_ID = 1,
+	IBRESPPM_ATTR_RESULT,
+        __IBRESPPM_ATTR_MAX,
+};
+#define IBRESPPM_ATTR_MAX (__IBRESPPM_ATTR_MAX -1)
 
 /*
  * FIXME: Need to specify the possible values of result to map with error
@@ -238,12 +244,6 @@ enum ipcm_dealloc_flow_req_attrs_list {
         __IDFRT_ATTR_MAX,
 };
 #define IDFRT_ATTR_MAX (__IDFRT_ATTR_MAX -1)
-
-enum ipcm_dealloc_flow_resp_attrs_list {
-        IDFRE_ATTR_RESULT = 1,
-        __IDFRE_ATTR_MAX,
-};
-#define IDFRE_ATTR_MAX (__IDFRE_ATTR_MAX -1)
 
 /*
  * FIXME: Need to specify the possible values of result to map with error
@@ -306,26 +306,12 @@ enum ipcm_conn_update_req_attrs_list {
 };
 #define ICURQ_ATTR_MAX (__ICURQ_ATTR_MAX - 1)
 
-enum ipcm_conn_update_result_attrs_list {
-        ICURS_ATTR_PORT_ID = 1,
-        ICURS_ATTR_RESULT,
-        __ICURS_ATTR_MAX,
-};
-#define ICURS_ATTR_MAX (__ICURS_ATTR_MAX - 1)
-
 enum ipcm_conn_destroy_req_attrs_list {
         ICDR_ATTR_PORT_ID = 1,
         ICDR_ATTR_SOURCE_CEP_ID,
         __ICDR_ATTR_MAX,
 };
 #define ICDR_ATTR_MAX (__ICDR_ATTR_MAX - 1)
-
-enum ipcm_conn_destroy_result_attrs_list {
-        ICDRS_ATTR_PORT_ID = 1,
-        ICDRS_ATTR_RESULT,
-        __ICDRS_ATTR_MAX,
-};
-#define ICDRS_ATTR_MAX (__ICDRS_ATTR_MAX - 1)
 
 enum ipcm_reg_app_req_attrs_list {
         IRAR_ATTR_APP_NAME = 1,
@@ -335,12 +321,6 @@ enum ipcm_reg_app_req_attrs_list {
         __IRAR_ATTR_MAX,
 };
 #define IRAR_ATTR_MAX (__IRAR_ATTR_MAX -1)
-
-enum ipcm_reg_app_resp_attrs_list {
-        IRARE_ATTR_RESULT=1,
-        __IRARE_ATTR_MAX,
-};
-#define IRARE_ATTR_MAX (__IRARE_ATTR_MAX -1)
 
 /*
  * FIXME: Need to specify the possible values of result to map with error
@@ -354,12 +334,6 @@ enum ipcm_unreg_app_req_attrs_list {
         __IUAR_ATTR_MAX,
 };
 #define IUAR_ATTR_MAX (__IUAR_ATTR_MAX -1)
-
-enum ipcm_unreg_app_resp_attrs_list {
-        IUARE_ATTR_RESULT = 1,
-        __IUARE_ATTR_MAX,
-};
-#define IUARE_ATTR_MAX (__IUARE_ATTR_MAX -1)
 
 /*
  * FIXME: Need to specify the possible values of result to map with error
@@ -577,18 +551,6 @@ enum ipcp_select_policy_set_req_attrs_list {
 };
 #define ISPS_ATTR_MAX (__ISPS_ATTR_MAX -1)
 
-enum ipcm_set_policy_set_param_req_result_attrs_list {
-        ISPSPR_ATTR_RESULT = 1,
-        __ISPSPR_ATTR_MAX,
-};
-#define ISPSPR_ATTR_MAX (__ISPSPR_ATTR_MAX -1)
-
-enum ipcm_select_policy_set_req_result_attrs_list {
-        ISPSR_ATTR_RESULT = 1,
-        __ISPSR_ATTR_MAX,
-};
-#define ISPSR_ATTR_MAX (__ISPSR_ATTR_MAX -1)
-
 enum ipcp_update_crypto_state_req_attrs_list {
 	IUCSR_ATTR_N_1_PORT = 1,
 	IUCSR_ATTR_CRYPT_STATE,
@@ -621,38 +583,17 @@ enum ipcp_crypto_state_attrs_list {
 };
 #define ICSTATE_ATTR_MAX (__ICSTATE_ATTR_MAX -1)
 
-enum ipcp_update_crypto_state_resp_attrs_list {
-        IUCSRE_ATTR_RESULT = 1,
-        IUCSRE_ATTR_N_1_PORT,
-        __IUCSRE_ATTR_MAX,
-};
-#define IUCSRE_ATTR_MAX (__IUCSRE_ATTR_MAX -1)
-
 enum ipcp_allocate_port_req_attrs_list {
         IAPRM_ATTR_APP_NAME = 1,
         __IAPRM_ATTR_MAX,
 };
 #define IAPRM_ATTR_MAX (__IAPRM_ATTR_MAX -1)
 
-enum ipcp_allocate_port_resp_attrs_list {
-	IAPREM_ATTR_RESULT = 1,
-	IAPREM_ATTR_N_1_PORT,
-        __IAPREM_ATTR_MAX,
-};
-#define IAPREM_ATTR_MAX (__IAPREM_ATTR_MAX -1)
-
 enum ipcp_deallocate_port_req_attrs_list {
         IDAPRM_ATTR_PORT_ID = 1,
         __IDAPRM_ATTR_MAX,
 };
 #define IDAPRM_ATTR_MAX (__IDAPRM_ATTR_MAX -1)
-
-enum ipcp_deallocate_port_resp_attrs_list {
-	IDAPREM_ATTR_RESULT = 1,
-	IDAPREM_ATTR_N_1_PORT,
-        __IDAPREM_ATTR_MAX,
-};
-#define IDAPREM_ATTR_MAX (__IDAPREM_ATTR_MAX -1)
 
 enum ipcp_write_mgmt_sdu_req_attrs_list {
         IWMSRM_ATTR_SDU = 1,
@@ -661,12 +602,6 @@ enum ipcp_write_mgmt_sdu_req_attrs_list {
         __IWMSRM_ATTR_MAX,
 };
 #define IWMSRM_ATTR_MAX (__IWMSRM_ATTR_MAX -1)
-
-enum ipcp_write_mgmt_sdu_resp_attrs_list {
-	IWMSREM_ATTR_RESULT = 1,
-	__IWMSREM_ATTR_MAX,
-};
-#define IWMSREM_ATTR_MAX (__IWMSREM_ATTR_MAX -1)
 
 enum ipcm_create_ipcp_req_attrs_list {
         ICIRM_ATTR_IPCP_NAME = 1,
@@ -677,23 +612,11 @@ enum ipcm_create_ipcp_req_attrs_list {
 };
 #define ICIRM_ATTR_MAX (__ICIRM_ATTR_MAX -1)
 
-enum ipcm_create_ipcp_resp_attrs_list {
-	ICIRME_ATTR_RESULT = 1,
-	__ICIRME_ATTR_MAX
-};
-#define ICIRME_ATTR_MAX (__ICIRME_ATTR_MAX -1)
-
 enum ipcm_destroy_ipcp_req_attrs_list {
         IDIRM_ATTR_IPCP_ID = 1,
         __IDIRM_ATTR_MAX,
 };
 #define IDIRM_ATTR_MAX (__IDIRM_ATTR_MAX -1)
-
-enum ipcm_destroy_ipcp_resp_attrs_list {
-	IDIRME_ATTR_RESULT = 1,
-	__IDIRME_ATTR_MAX
-};
-#define IDIRME_ATTR_MAX (__IDIRME_ATTR_MAX -1)
 
 enum ipcp_read_mgmt_sdu_notif_attrs_list {
 	IRMSREM_ATTR_SDU = 1,
@@ -990,15 +913,18 @@ struct rnl_destroy_ipcp_req_msg_attrs {
 int rnl_parse_msg(struct genl_info * info,
                   struct rnl_msg *   msg);
 
-int rnl_assign_dif_response(ipc_process_id_t id,
-                            uint_t           res,
-                            rnl_sn_t         seq_num,
-                            u32              nl_port_id);
+int rnl_base_response(ipc_process_id_t id,
+                      uint_t           res,
+                      rnl_sn_t         seq_num,
+		      msg_type_t       msg_type,
+                      u32              nl_port_id);
 
-int rnl_update_dif_config_response(ipc_process_id_t id,
-                                   uint_t           res,
-                                   rnl_sn_t         seq_num,
-                                   u32              nl_port_id);
+int rnl_base_response_wport(ipc_process_id_t id,
+                            uint_t           res,
+			    port_id_t        port_id,
+                            rnl_sn_t         seq_num,
+		            msg_type_t       msg_type,
+                            u32              nl_port_id);
 
 int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t         ipc_id,
                                        const struct name *      dif_name,
@@ -1008,26 +934,6 @@ int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t         ipc_id,
                                        rnl_sn_t                 seq_num,
                                        u32                      nl_port_id,
                                        port_id_t                pid);
-
-int rnl_app_alloc_flow_result_msg(ipc_process_id_t ipc_id,
-                                  uint_t           res,
-                                  port_id_t        pid,
-                                  rnl_sn_t         seq_num,
-                                  u32              nl_port_id);
-
-
-int rnl_app_register_unregister_response_msg(ipc_process_id_t ipc_id,
-                                             uint_t           res,
-                                             rnl_sn_t         seq_num,
-                                             u32              nl_port_id,
-                                             bool             isRegister);
-
-
-int rnl_app_dealloc_flow_resp_msg(ipc_process_id_t ipc_id,
-                                  uint_t           res,
-                                  rnl_sn_t         seq_num,
-                                  u32              nl_port_id);
-
 
 int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
                              uint_t           code,
@@ -1047,18 +953,6 @@ int rnl_ipcp_conn_create_result_msg(ipc_process_id_t ipc_id,
                                     rnl_sn_t         seq_num,
                                     u32              nl_port_id);
 
-int rnl_ipcp_conn_update_result_msg(ipc_process_id_t ipc_id,
-                                    port_id_t        pid,
-                                    uint_t           result,
-                                    rnl_sn_t         seq_num,
-                                    u32              nl_port_id);
-
-int rnl_ipcp_conn_destroy_result_msg(ipc_process_id_t ipc_id,
-                                     port_id_t        pid,
-                                     uint_t           result,
-                                     rnl_sn_t         seq_num,
-                                     u32              nl_port_id);
-
 int rnl_ipcm_sock_closed_notif_msg(u32 closed_port, u32 dest_port);
 
 int rnl_ipcp_pff_dump_resp_msg(ipc_process_id_t   ipc_id,
@@ -1073,52 +967,11 @@ int rnl_ipcm_query_rib_resp_msg(ipc_process_id_t   ipc_id,
                                 rnl_sn_t           seq_num,
                                 u32                nl_port_id);
 
-int rnl_set_policy_set_param_response(ipc_process_id_t id,
-                                      uint_t           res,
-                                      rnl_sn_t         seq_num,
-                                      u32              nl_port_id);
-
-int rnl_select_policy_set_response(ipc_process_id_t id,
-                                   uint_t           res,
-                                   rnl_sn_t         seq_num,
-                                   u32              nl_port_id);
-
-int rnl_update_crypto_state_response(ipc_process_id_t id,
-                                     uint_t           res,
-                                     rnl_sn_t         seq_num,
-                                     port_id_t	     n_1_port,
-                                     u32              nl_port_id);
-
-int rnl_allocate_port_response(ipc_process_id_t id,
-			       uint_t           res,
-			       rnl_sn_t         seq_num,
-			       port_id_t	port,
-			       u32              nl_port_id);
-
-int rnl_deallocate_port_response(ipc_process_id_t id,
-			         uint_t           res,
-				 rnl_sn_t         seq_num,
-				 port_id_t	port,
-				 u32              nl_port_id);
-
-int rnl_ipcp_write_mgmt_sdu_response(ipc_process_id_t id,
-			             uint_t           res,
-				     rnl_sn_t         seq_num,
-				     u32              nl_port_id);
-
 int rnl_ipcp_read_mgmt_sdu_notif(ipc_process_id_t id,
 			         uint_t           res,
 				 rnl_sn_t         seq_num,
 				 port_id_t	  port_id,
 				 struct sdu *     sdu,
 				 u32              nl_port_id);
-
-int rnl_create_ipcp_response(uint_t           res,
-			     rnl_sn_t         seq_num,
-			     u32              nl_port_id);
-
-int rnl_destroy_ipcp_response(uint_t           res,
-			      rnl_sn_t         seq_num,
-			      u32              nl_port_id);
 
 #endif

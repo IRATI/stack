@@ -415,6 +415,10 @@ IPCEvent* BaseNetlinkResponseMessage::toIPCEvent()
 	IPCEvent * event = 0;
 
 	switch(operationCode) {
+	case RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE: {
+		event = new IpcmDeallocateFlowResponseEvent(result, sequenceNumber);
+		break;
+	}
 	case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE: {
 		event = new IpcmRegisterApplicationResponseEvent(result, sequenceNumber);
 		break;
@@ -453,6 +457,55 @@ IPCEvent* BaseNetlinkResponseMessage::toIPCEvent()
 	}
 	case RINA_C_IPCM_DESTROY_IPCP_RESPONSE: {
 		event = new DestroyIPCPResponseEvent(result, sequenceNumber);
+		break;
+	}
+	default: {
+	}
+	}
+
+	return event;
+}
+
+//BaseNetlinkResponseMessageWPortId
+BaseNetlinkResponseMessageWPortId::BaseNetlinkResponseMessageWPortId(RINANetlinkOperationCode operationCode):
+		BaseNetlinkResponseMessage(operationCode)
+{
+	port_id = 0;
+}
+
+IPCEvent* BaseNetlinkResponseMessageWPortId::toIPCEvent()
+{
+	IPCEvent * event = 0;
+
+	switch(operationCode) {
+	case RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE: {
+		event = new DeallocatePortResponseEvent(result, port_id,
+				   	   	   	sequenceNumber);
+		break;
+	}
+	case RINA_C_IPCP_ALLOCATE_PORT_RESPONSE: {
+		event = new AllocatePortResponseEvent(result, port_id,
+				   	   	      sequenceNumber);
+		break;
+	}
+	case RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE: {
+		event = new UpdateCryptoStateResponseEvent(result, port_id,
+				   	   	   	   sequenceNumber);
+		break;
+	}
+	case RINA_C_IPCP_CONN_DESTROY_RESULT: {
+		event = new DestroyConnectionResultEvent(result, port_id,
+				   	   	   	 sequenceNumber);
+		break;
+	}
+	case RINA_C_IPCP_CONN_UPDATE_RESULT: {
+		event = new UpdateConnectionResponseEvent(port_id, result,
+				   	   	   	  sequenceNumber);
+		break;
+	}
+	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT: {
+		event = new IpcmAllocateFlowRequestResultEvent(result, port_id,
+				   	   	   	       sequenceNumber);
 		break;
 	}
 	default: {
@@ -1310,28 +1363,6 @@ IPCEvent* IpcmAllocateFlowRequestMessage::toIPCEvent(){
 	return event;
 }
 
-/* CLASS IPCM ALLOCATE FLOW REQUEST RESULT MESSAGE */
-IpcmAllocateFlowRequestResultMessage::IpcmAllocateFlowRequestResultMessage():
-	BaseNetlinkResponseMessage(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT) {
-        portId = 0;
-}
-
-int IpcmAllocateFlowRequestResultMessage::getPortId() const {
-        return portId;
-}
-
-void IpcmAllocateFlowRequestResultMessage::setPortId(int portId) {
-        this->portId = portId;
-}
-
-IPCEvent* IpcmAllocateFlowRequestResultMessage::toIPCEvent(){
-        IpcmAllocateFlowRequestResultEvent * event =
-                        new IpcmAllocateFlowRequestResultEvent(
-                                        getResult(), portId,
-                                        getSequenceNumber());
-        return event;
-}
-
 /* CLASS IPCM ALLOCATE FLOW REQUEST ARRIVED MESSAGE */
 IpcmAllocateFlowRequestArrivedMessage::IpcmAllocateFlowRequestArrivedMessage()
 	: BaseNetlinkMessage(
@@ -1451,18 +1482,6 @@ IPCEvent* IpcmDeallocateFlowRequestMessage::toIPCEvent(){
 	FlowDeallocateRequestEvent * event = new FlowDeallocateRequestEvent(
 			portId, getSequenceNumber());
 	return event;
-}
-
-/* CLASS IPCM DEALLOCATE FLOW RESPONSE MESSAGE */
-IpcmDeallocateFlowResponseMessage::IpcmDeallocateFlowResponseMessage() :
-	BaseNetlinkResponseMessage(RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE) {
-}
-
-IPCEvent* IpcmDeallocateFlowResponseMessage::toIPCEvent(){
-        IpcmDeallocateFlowResponseEvent * event =
-                        new IpcmDeallocateFlowResponseEvent(
-                                        getResult(), getSequenceNumber());
-        return event;
 }
 
 /* CLASS IPCM FLOW DEALLOCATED NOTIFICATION MESSAGE */
@@ -1688,25 +1707,6 @@ IPCEvent* IpcmPluginLoadResponseMessage::toIPCEvent(){
 	return event;
 }
 
-/* CLASS IPCM SOCKET CLOSED NOTIFICATION MESSAGE */
-IpcmNLSocketClosedNotificationMessage::IpcmNLSocketClosedNotificationMessage() :
-                                BaseNetlinkResponseMessage(
-                                                RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION) {
-        this->portId = 0;
-}
-
-int IpcmNLSocketClosedNotificationMessage::getPortId() const {
-	return portId;
-}
-
-void IpcmNLSocketClosedNotificationMessage::setPortId(int portId) {
-	this->portId = portId;
-}
-
-IPCEvent* IpcmNLSocketClosedNotificationMessage::toIPCEvent(){
-	return 0;
-}
-
 /* CLAS IPCM IPC MANAGER PRESENT MESSAGE */
 IpcmIPCManagerPresentMessage::IpcmIPCManagerPresentMessage() :
 BaseNetlinkMessage(RINA_C_IPCM_IPC_MANAGER_PRESENT){
@@ -1840,26 +1840,6 @@ IPCEvent* IpcpConnectionUpdateRequestMessage::toIPCEvent() {
         return 0;
 }
 
-/* CLASS CONNECTION UPDATE RESULT MESSAGE */
-IpcpConnectionUpdateResultMessage::IpcpConnectionUpdateResultMessage() :
-        BaseNetlinkResponseMessage(RINA_C_IPCP_CONN_UPDATE_RESULT) {
-        this->portId = 0;
-}
-
-int IpcpConnectionUpdateResultMessage::getPortId() const {
-        return portId;
-}
-
-void IpcpConnectionUpdateResultMessage::setPortId(int portId) {
-        this->portId = portId;
-}
-
-IPCEvent* IpcpConnectionUpdateResultMessage::toIPCEvent() {
-        IPCEvent * event = new UpdateConnectionResponseEvent(portId, getResult(),
-                        getSequenceNumber());
-        return event;
-}
-
 /* CLASS IPCM CONNECTION CREATE ARRIVED MESSAGE */
 IpcpConnectionCreateArrivedMessage::IpcpConnectionCreateArrivedMessage():
                 BaseNetlinkMessage(RINA_C_IPCP_CONN_CREATE_ARRIVED) {
@@ -1943,35 +1923,6 @@ IPCEvent* IpcpConnectionDestroyRequestMessage::toIPCEvent() {
         return 0;
 }
 
-/* CLASS IPCM CONNECTION DESTROY RESULT MESSAGE */
-IpcpConnectionDestroyResultMessage::IpcpConnectionDestroyResultMessage() :
-         BaseNetlinkMessage(RINA_C_IPCP_CONN_DESTROY_RESULT){
-        portId = 0;
-        result = 0;
-}
-
-int IpcpConnectionDestroyResultMessage::getResult() const {
-        return result;
-}
-
-void IpcpConnectionDestroyResultMessage::setResult(int result) {
-        this->result = result;
-}
-
-int IpcpConnectionDestroyResultMessage::getPortId() const {
-        return portId;
-}
-
-void IpcpConnectionDestroyResultMessage::setPortId(int portId) {
-        this->portId = portId;
-}
-
-IPCEvent* IpcpConnectionDestroyResultMessage::toIPCEvent() {
-        IPCEvent * event = new DestroyConnectionResultEvent(portId, result,
-                        getSequenceNumber());
-        return event;
-}
-
 /* CLASS RmtAddForwardingTableEntriesRequestMessage */
 RmtModifyPDUFTEntriesRequestMessage::
 RmtModifyPDUFTEntriesRequestMessage():
@@ -2053,21 +2004,6 @@ IPCEvent* IPCPUpdateCryptoStateRequestMessage::toIPCEvent() {
         return 0;
 }
 
-/// CLASS IPCPEnableEncryptionResponseMessage
-IPCPUpdateCryptoStateResponseMessage::IPCPUpdateCryptoStateResponseMessage()
-	: BaseNetlinkResponseMessage(RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE)
-{
-	port_id = 0;
-}
-
-IPCEvent* IPCPUpdateCryptoStateResponseMessage::toIPCEvent()
-{
-        IPCEvent * event = new UpdateCryptoStateResponseEvent(result,
-                        				      port_id,
-                        				      getSequenceNumber());
-        return event;
-}
-
 /// CLASS IPCPAddressChangeRequestMessage
 IPCPAddressChangeRequestMessage::IPCPAddressChangeRequestMessage()
 	: BaseNetlinkMessage(RINA_C_IPCP_ADDRESS_CHANGE_REQUEST)
@@ -2105,21 +2041,6 @@ IPCEvent* IPCPAllocatePortRequestMessage::toIPCEvent() {
         return 0;
 }
 
-/// CLASS IPCPAllocatePortResponseMessage
-IPCPAllocatePortResponseMessage::IPCPAllocatePortResponseMessage()
-	: BaseNetlinkResponseMessage(RINA_C_IPCP_ALLOCATE_PORT_RESPONSE)
-{
-	port_id = 0;
-}
-
-IPCEvent* IPCPAllocatePortResponseMessage::toIPCEvent()
-{
-        IPCEvent * event = new AllocatePortResponseEvent(result,
-        						 port_id,
-							 getSequenceNumber());
-        return event;
-}
-
 /// CLASS IPCPDeallocatePortRequestMessage
 IPCPDeallocatePortRequestMessage::IPCPDeallocatePortRequestMessage()
 	: BaseNetlinkMessage(RINA_C_IPCP_DEALLOCATE_PORT_REQUEST)
@@ -2130,21 +2051,6 @@ IPCPDeallocatePortRequestMessage::IPCPDeallocatePortRequestMessage()
 IPCEvent* IPCPDeallocatePortRequestMessage::toIPCEvent()
 {
         return 0;
-}
-
-/// CLASS IPCPDeallocatePortRequestMessage
-IPCPDeallocatePortResponseMessage::IPCPDeallocatePortResponseMessage()
-	: BaseNetlinkResponseMessage(RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE)
-{
-	port_id = 0;
-}
-
-IPCEvent* IPCPDeallocatePortResponseMessage::toIPCEvent()
-{
-        IPCEvent * event = new DeallocatePortResponseEvent(result,
-        						   port_id,
-							   getSequenceNumber());
-        return event;
 }
 
 /// Class IPCPWriteMgmtSDURequestMessage
