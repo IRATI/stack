@@ -96,7 +96,6 @@ bool ipcp_instance_is_normal(struct ipcp_instance_ops * ops)
             ops->connection_create_arrived ||
             ops->sdu_write                 ||
             ops->mgmt_sdu_write            ||
-            ops->mgmt_sdu_read             ||
             ops->mgmt_sdu_post             ||
             ops->pff_add                   ||
             ops->pff_remove                ||

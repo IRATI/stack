@@ -1790,7 +1790,6 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .sdu_enqueue               = NULL,
         .sdu_write                 = eth_vlan_sdu_write,
 
-        .mgmt_sdu_read             = NULL,
         .mgmt_sdu_write            = NULL,
         .mgmt_sdu_post             = NULL,
 
@@ -1941,7 +1940,8 @@ static void inst_cleanup(struct ipcp_instance * inst)
 
 static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
                                               const struct name *        name,
-                                              ipc_process_id_t           id)
+                                              ipc_process_id_t           id,
+					      uint_t			 us_nl_port)
 {
         struct ipcp_instance * inst;
 

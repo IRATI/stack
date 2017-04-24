@@ -1185,7 +1185,6 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .sdu_enqueue               = NULL,
         .sdu_write                 = shim_hv_sdu_write,
 
-        .mgmt_sdu_read             = NULL,
         .mgmt_sdu_write            = NULL,
         .mgmt_sdu_post             = NULL,
 
@@ -1234,7 +1233,8 @@ static int shim_hv_factory_fini(struct ipcp_factory_data * data)
 static struct ipcp_instance *
 shim_hv_factory_ipcp_create(struct ipcp_factory_data * factory_data,
                             const struct name *        name,
-                            ipc_process_id_t           id)
+                            ipc_process_id_t           id,
+			    uint_t		       us_nl_port)
 {
         struct ipcp_instance *      ipcp;
         struct ipcp_instance_data * priv;

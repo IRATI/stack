@@ -76,29 +76,40 @@ enum RINANetlinkOperationCode{
         RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST, /* 41, IPC Process (user space) -> IPC Process (kernel) */
         RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE, /* 42, IPC Process (kernel) -> IPC Process (user space) */
 	RINA_C_IPCP_ADDRESS_CHANGE_REQUEST, /* 43, IPC Process (user space) -> IPC Process (kernel) */
+	RINA_C_IPCP_ALLOCATE_PORT_REQUEST, /* 44, IPC Process (user space) -> K IPCM (kernel) */
+	RINA_C_IPCP_ALLOCATE_PORT_RESPONSE, /* 45, K IPCM (kernel) -> IPC Process (user space) */
+	RINA_C_IPCP_DEALLOCATE_PORT_REQUEST, /* 46, IPC Process (user space) -> K IPCM (kernel) */
+	RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE, /* 47, K IPCM (kernel) -> IPC Process (user space) */
+	RINA_C_IPCP_MANAGEMENT_SDU_WRITE_REQUEST, /* 48, IPC Process (user space) -> K IPCM (kernel) */
+	RINA_C_IPCP_MANAGEMENT_SDU_WRITE_RESPONSE, /* 49, K IPCM (kernel) -> IPC Process (user space) */
+	RINA_C_IPCP_MANAGEMENT_SDU_READ_NOTIF, /* 50, K IPCM (kernel) -> IPC Process (user space) */
+	RINA_C_IPCM_CREATE_IPCP_REQUEST, /* 51, IPC Process (user space) -> K IPCM (kernel) */
+	RINA_C_IPCM_CREATE_IPCP_RESPONSE, /* 52, K IPCM (kernel) -> IPC Process (user space) */
+	RINA_C_IPCM_DESTROY_IPCP_REQUEST, /* 53, IPC Process (user space) -> K IPCM (kernel) */
+	RINA_C_IPCM_DESTROY_IPCP_RESPONSE, /* 54, K IPCM (kernel) -> IPC Process (user space) */
 
         /* Userspace only messages MUST be after all the messages that are also
          * handled by the kernel. */
-	RINA_C_IPCM_IPC_PROCESS_INITIALIZED, /* 44 IPC Process -> IPC Manager */
-	RINA_C_APP_ALLOCATE_FLOW_REQUEST, /* 45 Allocate flow request, Application -> IPC Manager */
-	RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT, /* 46 Response to an application allocate flow request, IPC Manager -> Application */
-	RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED, /* 47 Allocate flow request from a remote application, IPC Manager -> Application */
-	RINA_C_APP_ALLOCATE_FLOW_RESPONSE, /* 48 Allocate flow response to an allocate request arrived operation, Application -> IPC Manager */
-	RINA_C_APP_DEALLOCATE_FLOW_REQUEST, /* 49 Application -> IPC Manager */
-	RINA_C_APP_DEALLOCATE_FLOW_RESPONSE, /* 50 IPC Manager -> Application */
-	RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION, /* 51 IPC Manager -> Application, flow deallocated without the application having requested it */
-	RINA_C_APP_REGISTER_APPLICATION_REQUEST, /* 52 Application -> IPC Manager */
-	RINA_C_APP_REGISTER_APPLICATION_RESPONSE, /* 53 IPC Manager -> Application */
-	RINA_C_APP_UNREGISTER_APPLICATION_REQUEST, /* 54 Application -> IPC Manager */
-	RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE, /* 55 IPC Manager -> Application */
-	RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION, /* 56 IPC Manager -> Application, application unregistered without the application having requested it */
-	RINA_C_APP_GET_DIF_PROPERTIES_REQUEST, /* 57 Application -> IPC Manager */
-	RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE, /* 58 IPC Manager -> Application */
-	RINA_C_IPCM_PLUGIN_LOAD_REQUEST, /* 59, IPC Manager -> IPC Process */
-	RINA_C_IPCM_PLUGIN_LOAD_RESPONSE, /* 60, IPC Process -> IPC Manager */
-	RINA_C_IPCM_FWD_CDAP_MSG_REQUEST, /* 61, IPC Manager <-> IPC Process */
-	RINA_C_IPCM_FWD_CDAP_MSG_RESPONSE, /* 62, IPC Manager <-> IPC Process */
-	RINA_C_IPCM_MEDIA_REPORT, /* 63, IPC Process -> IPC Manager */
+	RINA_C_IPCM_IPC_PROCESS_INITIALIZED, /* 55 IPC Process -> IPC Manager */
+	RINA_C_APP_ALLOCATE_FLOW_REQUEST, /* 56 Allocate flow request, Application -> IPC Manager */
+	RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT, /* 57 Response to an application allocate flow request, IPC Manager -> Application */
+	RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED, /* 58 Allocate flow request from a remote application, IPC Manager -> Application */
+	RINA_C_APP_ALLOCATE_FLOW_RESPONSE, /* 59 Allocate flow response to an allocate request arrived operation, Application -> IPC Manager */
+	RINA_C_APP_DEALLOCATE_FLOW_REQUEST, /* 60 Application -> IPC Manager */
+	RINA_C_APP_DEALLOCATE_FLOW_RESPONSE, /* 61 IPC Manager -> Application */
+	RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION, /* 62 IPC Manager -> Application, flow deallocated without the application having requested it */
+	RINA_C_APP_REGISTER_APPLICATION_REQUEST, /* 63 Application -> IPC Manager */
+	RINA_C_APP_REGISTER_APPLICATION_RESPONSE, /* 64 IPC Manager -> Application */
+	RINA_C_APP_UNREGISTER_APPLICATION_REQUEST, /* 65 Application -> IPC Manager */
+	RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE, /* 66 IPC Manager -> Application */
+	RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION, /* 67 IPC Manager -> Application, application unregistered without the application having requested it */
+	RINA_C_APP_GET_DIF_PROPERTIES_REQUEST, /* 68 Application -> IPC Manager */
+	RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE, /* 69 IPC Manager -> Application */
+	RINA_C_IPCM_PLUGIN_LOAD_REQUEST, /* 70, IPC Manager -> IPC Process */
+	RINA_C_IPCM_PLUGIN_LOAD_RESPONSE, /* 71, IPC Process -> IPC Manager */
+	RINA_C_IPCM_FWD_CDAP_MSG_REQUEST, /* 72, IPC Manager <-> IPC Process */
+	RINA_C_IPCM_FWD_CDAP_MSG_RESPONSE, /* 73, IPC Manager <-> IPC Process */
+	RINA_C_IPCM_MEDIA_REPORT, /* 74, IPC Process -> IPC Manager */
 	__RINA_C_MAX,
  };
 
@@ -111,6 +122,7 @@ struct rinaHeader{
  * Base class for Netlink messages to be sent or received
  */
 class BaseNetlinkMessage {
+public:
 	/**
 	 * The identity of the Generic RINA Netlink family - dynamically allocated
 	 * by the Netlink controller
@@ -152,7 +164,6 @@ class BaseNetlinkMessage {
 	/** True if this is a notification message */
 	bool notificationMessage;
 
-public:
 	BaseNetlinkMessage(RINANetlinkOperationCode operationCode);
 	virtual ~BaseNetlinkMessage();
 	virtual IPCEvent* toIPCEvent() = 0;
@@ -191,8 +202,19 @@ public:
 	int result;
 
 	BaseNetlinkResponseMessage(RINANetlinkOperationCode operationCode);
+	virtual ~BaseNetlinkResponseMessage(){};
 	int getResult() const;
 	void setResult(int result);
+	virtual IPCEvent* toIPCEvent();
+};
+
+class BaseNetlinkResponseMessageWPortId : public BaseNetlinkResponseMessage {
+public:
+	int port_id;
+
+	BaseNetlinkResponseMessageWPortId(RINANetlinkOperationCode operationCode);
+	virtual ~BaseNetlinkResponseMessageWPortId(){};
+	virtual IPCEvent* toIPCEvent();
 };
 
 /**
@@ -604,18 +626,6 @@ public:
 };
 
 /**
- * Response of the IPC Process to an application registration request.
- * IPC Process -> IPC Manager
- */
-class IpcmRegisterApplicationResponseMessage: public BaseNetlinkResponseMessage {
-
-public:
-	IpcmRegisterApplicationResponseMessage();
-	IPCEvent* toIPCEvent();
-};
-
-
-/**
  * Invoked by the IPC Manager when it wants to unregister an application.
  * IPC Manager -> IPC Process
  */
@@ -637,20 +647,6 @@ public:
 	IPCEvent* toIPCEvent();
 };
 
-
-/**
- * Response of the IPC Process to an application unregistration request.
- * IPC Process -> IPC Manager
- */
-class IpcmUnregisterApplicationResponseMessage: public BaseNetlinkResponseMessage {
-
-public:
-	IpcmUnregisterApplicationResponseMessage();
-	IPCEvent* toIPCEvent();
-};
-
-
-
 /**
  * Makes an IPC Process a member of a DIF.
  * IPC Manager -> IPC Process
@@ -664,18 +660,6 @@ public:
 	IpcmAssignToDIFRequestMessage();
 	const DIFInformation& getDIFInformation() const;
 	void setDIFInformation(const DIFInformation& difInformation);
-	IPCEvent* toIPCEvent();
-};
-
-/**
- * Reports the IPC Manager about the result of an Assign to DIF request
- * IPC Process -> IPC Manager
- */
-
-class IpcmAssignToDIFResponseMessage: public BaseNetlinkResponseMessage {
-
-public:
-	IpcmAssignToDIFResponseMessage();
 	IPCEvent* toIPCEvent();
 };
 
@@ -695,19 +679,6 @@ public:
         void setDIFConfiguration(const DIFConfiguration& difConfiguration);
         IPCEvent* toIPCEvent();
 };
-
-/**
- * Reports the IPC Manager about the result of an Update DIF Config operation
- * IPC Process -> IPC Manager
- */
-class IpcmUpdateDIFConfigurationResponseMessage:
-                public BaseNetlinkResponseMessage {
-
-public:
-        IpcmUpdateDIFConfigurationResponseMessage();
-        IPCEvent* toIPCEvent();
-};
-
 
 /**
  * Instruct a normal IPC Process to enroll in a given DIF, using the
@@ -784,17 +755,6 @@ public:
 };
 
 /**
- * Reports the IPC Manager about the result of an DisconnectNeighbor operation
- * IPC Process -> IPC Manager
- */
-class IpcmDisconnectNeighborResponseMessage:
-                public BaseNetlinkResponseMessage {
-public:
-	IpcmDisconnectNeighborResponseMessage();
-        IPCEvent* toIPCEvent();
-};
-
-/**
  * Used by the IPC Manager to request a flow allocation to an IPC Process
  */
 class IpcmAllocateFlowRequestMessage: public BaseNetlinkMessage {
@@ -821,21 +781,6 @@ public:
 			const ApplicationProcessNamingInformation& sourceAppName);
 	const ApplicationProcessNamingInformation& getDifName() const;
 	void setDifName(const ApplicationProcessNamingInformation& difName);
-	IPCEvent* toIPCEvent();
-};
-
-/**
- * Sent by the IPC Process to inform about the result of the flow allocation
- * request operation. IPC Process -> IPC Manager
- */
-class IpcmAllocateFlowRequestResultMessage: public BaseNetlinkResponseMessage {
-
-        /** The port id allocated to the flow */
-        int portId;
-public:
-	IpcmAllocateFlowRequestResultMessage();
-	int getPortId() const;
-	void setPortId(int portId);
 	IPCEvent* toIPCEvent();
 };
 
@@ -912,16 +857,6 @@ public:
 	IpcmDeallocateFlowRequestMessage();
 	int getPortId() const;
 	void setPortId(int portId);
-	IPCEvent* toIPCEvent();
-};
-
-/**
- * Response by the IPC Process to the flow deallocation request
- */
-class IpcmDeallocateFlowResponseMessage: public BaseNetlinkResponseMessage {
-
-public:
-	IpcmDeallocateFlowResponseMessage();
 	IPCEvent* toIPCEvent();
 };
 
@@ -1058,18 +993,6 @@ public:
 };
 
 /**
- * Reports the IPC Manager about the result of a set-policy-set-param
- * request operation
- * IPC Process -> IPC Manager
- */
-class IpcmSetPolicySetParamResponseMessage:
-                public BaseNetlinkResponseMessage {
-public:
-        IpcmSetPolicySetParamResponseMessage();
-        IPCEvent* toIPCEvent();
-};
-
-/**
  * Used by the IPC Manager to ask an IPC process to select a
  * policy-set for a component
  * IPC Manager -> IPC Process
@@ -1085,18 +1008,6 @@ public:
 
 	IpcmSelectPolicySetRequestMessage();
 	IPCEvent* toIPCEvent();
-};
-
-/**
- * Reports the IPC Manager about the result of a select-policy-set
- * request operation
- * IPC Process -> IPC Manager
- */
-class IpcmSelectPolicySetResponseMessage:
-                public BaseNetlinkResponseMessage {
-public:
-        IpcmSelectPolicySetResponseMessage();
-        IPCEvent* toIPCEvent();
 };
 
 /**
@@ -1163,24 +1074,6 @@ class IpcmPluginLoadResponseMessage:
 public:
         IpcmPluginLoadResponseMessage();
         IPCEvent* toIPCEvent();
-};
-
-/**
- * NL layer (kernel) -> IPC Manager. Received when a user-space NL socket has been
- * closed, which means the user process associated to that socket will be no longer
- * reachable.
- */
-class IpcmNLSocketClosedNotificationMessage:
-		public BaseNetlinkResponseMessage {
-
-	/** The portId of the NL socket that has been closed*/
-	int portId;
-
-public:
-	IpcmNLSocketClosedNotificationMessage();
-	int getPortId() const;
-	void setPortId(int portId);
-	IPCEvent* toIPCEvent();
 };
 
 /**
@@ -1287,23 +1180,6 @@ public:
 };
 
 /**
- * Kernel IPC Process -> IPC Process Daemon. Report about the result of a
- * connection update operation
- */
-class IpcpConnectionUpdateResultMessage:
-                public BaseNetlinkResponseMessage {
-
-        /** The port-id of the flow associated to this connection */
-        int portId;
-
-public:
-        IpcpConnectionUpdateResultMessage();
-        int getPortId() const;
-        void setPortId(int portId);
-        IPCEvent* toIPCEvent();
-};
-
-/**
  * IPC Process Daemon -> Kernel IPC Process. Request the creation of a
  * connection to the EFCP module in the kernel (receiving side of the
  * flow allocation process)
@@ -1374,29 +1250,6 @@ public:
 };
 
 /**
- * Kernel IPC PRocess -> IPC Process Daemon. Report about the result of
- * a connection destroy request operation
- */
-class IpcpConnectionDestroyResultMessage: public BaseNetlinkMessage {
-
-        /** The port-id where the connection will be bound to */
-        int portId;
-
-        /**
-         * The result of the operaiton
-         */
-        int result;
-
-public:
-        IpcpConnectionDestroyResultMessage();
-        int getResult() const;
-        void setResult(int result);
-        int getPortId() const;
-        void setPortId(int portId);
-        IPCEvent* toIPCEvent();
-};
-
-/**
  * IPC Process -> Kernel IPC Process. Add the following entries to the
  * PDU Forwarding Table.
  */
@@ -1452,14 +1305,6 @@ public:
 	CryptoState state;
 };
 
-class IPCPUpdateCryptoStateResponseMessage: public BaseNetlinkResponseMessage {
-public:
-	IPCPUpdateCryptoStateResponseMessage();
-	IPCEvent* toIPCEvent();
-
-	int port_id;
-};
-
 class IPCPAddressChangeRequestMessage : public BaseNetlinkMessage {
 public:
 	IPCPAddressChangeRequestMessage();
@@ -1477,6 +1322,62 @@ public:
 	IPCEvent* toIPCEvent();
 
 	MediaReport report;
+};
+
+class IPCPAllocatePortRequestMessage : public BaseNetlinkMessage {
+public:
+	IPCPAllocatePortRequestMessage();
+	IPCEvent* toIPCEvent();
+
+	ApplicationProcessNamingInformation app_name;
+};
+
+class IPCPDeallocatePortRequestMessage : public BaseNetlinkMessage {
+public:
+	IPCPDeallocatePortRequestMessage();
+	IPCEvent* toIPCEvent();
+
+	int port_id;
+};
+
+class IPCPWriteMgmtSDURequestMessage : public BaseNetlinkMessage {
+public:
+	IPCPWriteMgmtSDURequestMessage();
+	IPCEvent* toIPCEvent();
+
+	void * sdu;
+	int size;
+	unsigned int port_id;
+	unsigned int address;
+};
+
+class IPCPReadMgmtSDUNotificationMessage: public BaseNetlinkResponseMessage {
+public:
+	IPCPReadMgmtSDUNotificationMessage();
+	IPCEvent* toIPCEvent();
+
+	void * sdu;
+	int size;
+	unsigned int port_id;
+};
+
+class IpcmCreateIPCPRequestMessage : public BaseNetlinkMessage {
+public:
+	IpcmCreateIPCPRequestMessage();
+	IPCEvent* toIPCEvent();
+
+	ApplicationProcessNamingInformation ipcp_name;
+	std::string dif_type;
+	unsigned short ipcp_id;
+	unsigned int nl_port_id;
+};
+
+class IpcmDestroyIPCPRequestMessage : public BaseNetlinkMessage {
+public:
+	IpcmDestroyIPCPRequestMessage();
+	IPCEvent* toIPCEvent();
+
+	unsigned short ipcp_id;
 };
 
 }

@@ -32,6 +32,7 @@
 #define RINA_PREFIX "arp826-tables"
 
 #include "logs.h"
+#include "common.h"
 #include "debug.h"
 #include "utils.h"
 /* FIXME: End of dependencies ... */

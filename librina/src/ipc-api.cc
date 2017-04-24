@@ -31,7 +31,6 @@
 
 #include "librina/logs.h"
 #include "core.h"
-#include "rina-syscalls.h"
 #include "librina/ipc-api.h"
 
 namespace rina {
