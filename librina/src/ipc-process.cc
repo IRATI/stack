@@ -30,7 +30,6 @@
 #include "librina/logs.h"
 #include "core.h"
 #include "utils.h"
-#include "rina-syscalls.h"
 
 namespace rina {
 
@@ -259,6 +258,48 @@ UpdateCryptoStateResponseEvent::UpdateCryptoStateResponseEvent(int res,
 	result = res;
 }
 
+AllocatePortResponseEvent::AllocatePortResponseEvent(int res,
+						     int port,
+						     unsigned int sequenceNumber):
+		IPCEvent(IPC_PROCESS_ALLOCATE_PORT_RESPONSE,
+			 sequenceNumber)
+{
+	port_id = port;
+	result = res;
+}
+
+DeallocatePortResponseEvent::DeallocatePortResponseEvent(int res,
+						         int port,
+							 unsigned int sequenceNumber):
+		IPCEvent(IPC_PROCESS_DEALLOCATE_PORT_RESPONSE,
+			 sequenceNumber)
+{
+	port_id = port;
+	result = res;
+}
+
+WriteMgmtSDUResponseEvent::WriteMgmtSDUResponseEvent(int res,
+			  	  	  	     unsigned int sequenceNumber):
+		IPCEvent(IPC_PROCESS_WRITE_MGMT_SDU_RESPONSE,
+			 sequenceNumber)
+{
+	result = res;
+}
+
+ReadMgmtSDUResponseEvent::ReadMgmtSDUResponseEvent(int res,
+			 	 	 	   void * data,
+						   int s,
+						   unsigned int pid,
+						   unsigned int sequenceNumber):
+		IPCEvent(IPC_PROCESS_READ_MGMT_SDU_NOTIF,
+			 sequenceNumber)
+{
+	result = res;
+	sdu = data;
+	size = s;
+	port_id = pid;
+}
+
 /* CLASS EXTENDED IPC MANAGER */
 const std::string ExtendedIPCManager::error_allocate_flow =
 		"Error allocating flow";
@@ -381,7 +422,7 @@ void ExtendedIPCManager::assignToDIFResponse(
 #if STUB_API
 	//Do nothing
 #else
-	IpcmAssignToDIFResponseMessage responseMessage;
+	BaseNetlinkResponseMessage responseMessage(RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE);
 	responseMessage.setResult(result);
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
@@ -426,7 +467,7 @@ void ExtendedIPCManager::disconnectNeighborResponse(const DisconnectNeighborRequ
 #if STUB_API
         // Do nothing
 #else
-        IpcmDisconnectNeighborResponseMessage responseMessage;
+	BaseNetlinkResponseMessage responseMessage(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE);
         responseMessage.setResult(result);
         responseMessage.setSourceIpcProcessId(ipcProcessId);
         responseMessage.setDestPortId(ipcManagerPort);
@@ -446,7 +487,7 @@ void ExtendedIPCManager::registerApplicationResponse(
 #if STUB_API
 	//Do nothing
 #else
-	IpcmRegisterApplicationResponseMessage responseMessage;
+	BaseNetlinkResponseMessage responseMessage(RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE);
 	responseMessage.setResult(result);
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
@@ -465,7 +506,7 @@ void ExtendedIPCManager::unregisterApplicationResponse(
 #if STUB_API
 	// Do nothing
 #else
-	IpcmUnregisterApplicationResponseMessage responseMessage;
+	BaseNetlinkResponseMessage responseMessage(RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE);
 	responseMessage.setResult(result);
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
@@ -484,10 +525,9 @@ void ExtendedIPCManager::allocateFlowRequestResult(
 #if STUB_API
 	// Do nothing
 #else
-	IpcmAllocateFlowRequestResultMessage responseMessage;
-
+	BaseNetlinkResponseMessageWPortId responseMessage(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT);
 	responseMessage.setResult(result);
-	responseMessage.setPortId(event.portId);
+	responseMessage.port_id = event.portId;
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
 	responseMessage.setDestPortId(ipcManagerPort);
@@ -565,7 +605,7 @@ void ExtendedIPCManager::notifyflowDeallocated(
 #if STUB_API
 	// Do nothing
 #else
-	IpcmDeallocateFlowResponseMessage responseMessage;
+	BaseNetlinkResponseMessage responseMessage(RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE);
 	responseMessage.setResult(result);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
 	responseMessage.setSequenceNumber(flowDeallocateEvent.sequenceNumber);
@@ -622,30 +662,54 @@ void ExtendedIPCManager::queryRIBResponse(
 #endif
 }
 
-int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingInformation& appName)
+unsigned int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingInformation& appName)
 {
+	unsigned int result = 0;
+
 #if STUB_API
-        // Do nothing
-        return 1;
 #else
-        int result = syscallAllocatePortId(ipcProcessId, appName);
-        if (result < 0) {
-                throw PortAllocationException();
+        IPCPAllocatePortRequestMessage message;
+        message.app_name = appName;
+        message.setSourceIpcProcessId(ipcProcessId);
+        message.setDestIpcProcessId(ipcProcessId);
+        message.setDestPortId(0);
+        message.setRequestMessage(true);
+
+        try{
+                rinaManager->sendMessage(&message, true);
+        }catch(NetlinkException &e){
+                throw IPCException(e.what());
         }
+
+        result = message.getSequenceNumber();
+#endif
 
         return result;
-#endif
 }
 
-void ExtendedIPCManager::deallocatePortId(int portId) {
+unsigned int ExtendedIPCManager::deallocatePortId(int portId)
+{
+	unsigned int result = 0;
+
 #if STUB_API
-        // Do nothing
 #else
-        int result = syscallDeallocatePortId(ipcProcessId, portId);
-        if (result < 0) {
-                throw PortAllocationException();
+        IPCPDeallocatePortRequestMessage message;
+        message.port_id = portId;
+        message.setSourceIpcProcessId(ipcProcessId);
+        message.setDestIpcProcessId(ipcProcessId);
+        message.setDestPortId(0);
+        message.setRequestMessage(true);
+
+        try{
+                rinaManager->sendMessage(&message, true);
+        }catch(NetlinkException &e){
+                throw IPCException(e.what());
         }
+
+        result = message.getSequenceNumber();
 #endif
+
+        return result;
 }
 
 void ExtendedIPCManager::setPolicySetParamResponse(
@@ -653,7 +717,7 @@ void ExtendedIPCManager::setPolicySetParamResponse(
 #if STUB_API
 	//Do nothing
 #else
-	IpcmSetPolicySetParamResponseMessage responseMessage;
+	BaseNetlinkResponseMessage responseMessage(RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE);
 	responseMessage.result = result;
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
@@ -672,7 +736,7 @@ void ExtendedIPCManager::selectPolicySetResponse(
 #if STUB_API
 	//Do nothing
 #else
-	IpcmSelectPolicySetResponseMessage responseMessage;
+	BaseNetlinkResponseMessage responseMessage(RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE);
 	responseMessage.result = result;
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
@@ -1420,66 +1484,66 @@ unsigned int KernelIPCProcess::selectPolicySet(
         return seqNum;
 }
 
-void KernelIPCProcess::writeMgmgtSDUToPortId(void * sdu, int size,
-                unsigned int portId) {
+unsigned int KernelIPCProcess::writeMgmgtSDUToPortId(void * sdu,
+						     int size,
+						     unsigned int portId)
+{
+	unsigned int seqNum=0;
+
 #if STUB_API
-        // Do nothing
+	//Do nothing
 #else
-        int result = syscallWriteManagementSDU(ipcProcessId, sdu, 0, portId,
-                        size);
-        if (result < 0){
-                throw WriteSDUException();
-        }
+	IPCPWriteMgmtSDURequestMessage message;
+	message.setSourceIpcProcessId(ipcProcessId);
+	message.setDestIpcProcessId(ipcProcessId);
+	message.sdu = sdu;
+	message.size = size;
+	message.port_id = portId;
+	message.setDestPortId(0);
+	message.setRequestMessage(true);
+
+	try {
+		rinaManager->sendMessage(&message, true);
+	} catch (NetlinkException &e) {
+		throw Exception(e.what());
+	}
+
+	seqNum = message.getSequenceNumber();
 #endif
+
+	return seqNum;
 }
 
-void KernelIPCProcess::sendMgmgtSDUToAddress(void * sdu, int size,
-                unsigned int address) {
+unsigned int KernelIPCProcess::sendMgmgtSDUToAddress(void * sdu,
+						     int size,
+						     unsigned int address)
+{
+	unsigned int seqNum=0;
+
 #if STUB_API
-        // Do nothing
+	//Do nothing
 #else
-        int result = syscallWriteManagementSDU(ipcProcessId, sdu, address, 0,
-                        size);
-        if (result < 0) {
-                throw WriteSDUException();
-        }
+	IPCPWriteMgmtSDURequestMessage message;
+	message.setSourceIpcProcessId(ipcProcessId);
+	message.setDestIpcProcessId(ipcProcessId);
+	message.sdu = sdu;
+	message.size = size;
+	message.address = address;
+	message.setDestPortId(0);
+	message.setRequestMessage(true);
+
+	try {
+		rinaManager->sendMessage(&message, true);
+	} catch (NetlinkException &e) {
+		throw Exception(e.what());
+	}
+
+	seqNum = message.getSequenceNumber();
 #endif
+
+	return seqNum;
 }
 Singleton<KernelIPCProcess> kernelIPCProcess;
-
-ReadManagementSDUResult KernelIPCProcess::readManagementSDU(void * sdu,
-		int    maxBytes){
-        ReadManagementSDUResult readResult;
-
-#if STUB_API
-        unsigned char buffer[] = { 0, 23, 43, 32, 45, 23, 78 };
-
-        sdu = buffer;
-        readResult.setPortId(14);
-        readResult.setBytesRead(7);
-
-        return readResult;
-#else
-        int portId = 0;
-        int result = syscallReadManagementSDU(ipcProcessId, sdu, &portId,
-                        maxBytes);
-
-        if (result < 0)
-        {
-                switch(result) {
-                case -ESRCH:
-                        throw IPCException("the IPCP or the needed parts of the ipcp do not exist");
-                        break;
-                default:
-                        throw ReadSDUException("Unknown error");
-                }
-        }
-
-        readResult.setPortId(portId);
-        readResult.setBytesRead(result);
-        return readResult;
-#endif
-}
 
 // CLASS DirectoryForwardingTableEntry
 DirectoryForwardingTableEntry::DirectoryForwardingTableEntry() {

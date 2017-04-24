@@ -203,6 +203,9 @@ public:
 	/// @param portId
 	virtual void removeFlowAllocatorInstance(int portId) = 0;
 
+	virtual void processAllocatePortResponse(const rina::AllocatePortResponseEvent& event) = 0;
+	virtual void processDeallocatePortResponse(const rina::DeallocatePortResponseEvent& event) = 0;
+
         // Plugin support
 	virtual configs::Flow* createFlow() = 0;
 	virtual void destroyFlow(configs::Flow *) = 0;
@@ -453,6 +456,7 @@ public:
         virtual int64_t addObjRIB(const std::string& fqn,
         			  rina::rib::RIBObj** obj) = 0;
         virtual void removeObjRIB(const std::string& fqn) = 0;
+        virtual void processReadManagementSDUEvent(const rina::ReadMgmtSDUResponseEvent& event) = 0;
 };
 
 /// IPC Process interface

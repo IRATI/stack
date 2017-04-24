@@ -484,8 +484,27 @@ const std::string IPCEvent::eventTypeToString(IPCEventType eventType) {
 		break;
 	case IPCM_MEDIA_REPORT_EVENT:
 		result = "45_MEDIA_REPORT_EVENT";
+		break;
+	case IPC_PROCESS_ALLOCATE_PORT_RESPONSE:
+		result = "46_ALLOCATE_PORT_RESPONSE";
+		break;
+	case IPC_PROCESS_DEALLOCATE_PORT_RESPONSE:
+		result = "47_DEALLOCATE_PORT_RESPONSE";
+		break;
+	case IPC_PROCESS_WRITE_MGMT_SDU_RESPONSE:
+		result = "48_WRITE_MGMT_SDU_RESPONSE";
+		break;
+	case IPC_PROCESS_READ_MGMT_SDU_NOTIF:
+		result = "49_READ_MGMT_SDU_NOTIF";
+		break;
+	case IPCM_CREATE_IPCP_RESPONSE:
+		result = "50_CREATE_IPCP_RESPONSE";
+		break;
+	case IPCM_DESTROY_IPCP_RESPONSE:
+		result = "51_CREATE_IPCP_RESPONSE";
+		break;
 	case NO_EVENT:
-		result = "46_NO_EVENT";
+		result = "52_NO_EVENT";
 		break;
 	default:
 		result = "Unknown event";

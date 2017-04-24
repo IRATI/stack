@@ -44,13 +44,13 @@ namespace rinad {
 
 #define IPCP_DAEMON_INIT_RETRIES 5
 
-void IPCManager_::ipc_process_daemon_initialized_event_handler(
-				rina::IPCProcessDaemonInitializedEvent * e)
+void IPCManager_::ipc_process_daemon_initialized_event_handler(rina::IPCProcessDaemonInitializedEvent * e)
 {
 	ostringstream ss;
 	IPCMIPCProcess* ipcp;
 	int i;
 	SyscallTransState* trans = NULL;
+	bool trans_completed = false;
 
 	//There can be race condition between the caller and us (notification)
 	for(i=0; i<IPCP_DAEMON_INIT_RETRIES; ++i){
@@ -60,7 +60,9 @@ void IPCManager_::ipc_process_daemon_initialized_event_handler(
 	}
 
 	if(!trans){
-		ss << ": Warning: IPCP daemon '"<<e->ipcProcessId<<"'initialized, but no pending normal IPC process initialization. Corrupted state?"<< endl;
+		ss << ": Warning: IPCP daemon '"<<e->ipcProcessId
+		    <<"'initialized, but no pending normal IPC process "
+		      "initialization. Corrupted state?"<< endl;
 		assert(0);
 		return;
 	}
@@ -70,7 +72,9 @@ void IPCManager_::ipc_process_daemon_initialized_event_handler(
 
 	//If the ipcp is not there, there is some corruption
 	if(!ipcp){
-		ss << ": Warning: IPCP daemon '"<<e->ipcProcessId<<"'initialized, but no pending normal IPC process initialization. Corrupted state?"<< endl;
+		ss << ": Warning: IPCP daemon '"<< e->ipcProcessId
+		   <<"'initialized, but no pending normal IPC process "
+		     "initialization. Corrupted state?"<< endl;
 		FLUSH_LOG(WARN, ss);
 		assert(0);
 
@@ -92,11 +96,19 @@ void IPCManager_::ipc_process_daemon_initialized_event_handler(
 
 		//Initialize
 		ipcp->setInitialized();
+
+		if (ipcp->kernel_ready) {
+			trans_completed = true;
+		}
 	}
 
 	ss << "IPC process daemon initialized [id = " <<
 		e->ipcProcessId<< "]" << endl;
 	FLUSH_LOG(INFO, ss);
+
+	if (!trans_completed) {
+		return;
+	}
 
 	//Distribute the event to the addons
 	IPCMEvent addon_e(trans->callee, IPCM_IPCP_CREATED,
@@ -108,6 +120,117 @@ void IPCManager_::ipc_process_daemon_initialized_event_handler(
 	remove_syscall_transaction_state(trans->tid);
 
 	return;
+}
+
+void IPCManager_::ipc_process_create_response_event_handler(rina::CreateIPCPResponseEvent * e)
+{
+	ostringstream ss;
+	IPCMIPCProcess* ipcp;
+	int i;
+	SyscallTransState* trans = NULL;
+	bool trans_completed = false;
+	unsigned short ipcp_id = 0;
+	std::map<unsigned int, unsigned short>::iterator it;
+
+	rina::ScopedLock g(req_lock);
+
+	it = pending_cipcp_req.find(e->sequenceNumber);
+	if (it == pending_cipcp_req.end()) {
+		ss << "Could not find pending Create IPCP request "
+		   << "with seq num " << e->sequenceNumber;
+		FLUSH_LOG(ERR, ss);
+		return;
+	}
+
+	ipcp_id = it->second;
+	pending_cipcp_req.erase(it);
+
+	//There can be race condition between the caller and us (notification)
+	for(i=0; i<IPCP_DAEMON_INIT_RETRIES; ++i){
+		trans = get_syscall_transaction_state(ipcp_id);
+		if(trans)
+			break;
+	}
+
+	if(!trans){
+		ss << ": Warning: IPCP kernel components of '"<< ipcp_id
+		    <<"'created, but no pending IPC process "
+		      "create transaction. Corrupted state?"<< endl;
+		assert(0);
+		return;
+	}
+
+	//Recover IPCP process with writelock
+	ipcp = lookup_ipcp_by_id(ipcp_id, true);
+
+	//If the ipcp is not there, there is some corruption
+	if(!ipcp){
+		ss << ": Warning: IPCP kernel components of '"<< ipcp_id
+		   <<"'created, but no IPCMIPCProcess "
+		     "state. Corrupted state?"<< endl;
+		FLUSH_LOG(WARN, ss);
+		assert(0);
+
+		//Set promise return
+		trans->completed(IPCM_FAILURE);
+
+		//Remove syscall transaction and return
+		remove_syscall_transaction_state(ipcp_id);
+		return;
+	}
+
+	{
+		//Auto release the read lock
+		rina::WriteScopedLock writelock(ipcp->rwlock, false);
+
+		//Initialize
+		ipcp->kernel_ready = true;
+
+		if (ipcp->get_state() == IPCMIPCProcess::IPCM_IPCP_INITIALIZED) {
+			trans_completed = true;
+		}
+	}
+
+	ss << "IPC process kernel components of [id = " <<
+		ipcp_id << "] created" << endl;
+	FLUSH_LOG(INFO, ss);
+
+	if (!trans_completed) {
+		return;
+	}
+
+	//Distribute the event to the addons
+	IPCMEvent addon_e(trans->callee, IPCM_IPCP_CREATED, ipcp_id);
+	Addon::distribute_ipcm_event(addon_e);
+
+	//Set return value, mark as completed and signal
+	trans->completed(IPCM_SUCCESS);
+	remove_syscall_transaction_state(trans->tid);
+
+	return;
+}
+
+void IPCManager_::ipc_process_destroy_response_event_handler(rina::DestroyIPCPResponseEvent *e)
+{
+	std::map<unsigned int, unsigned short>::iterator it;
+	unsigned short ipcp_id = 0;
+
+	rina::ScopedLock g(req_lock);
+
+	it = pending_dipcp_req.find(e->sequenceNumber);
+	if (it == pending_dipcp_req.end()) {
+		LOG_ERR("Got unexpected destroy IPCP response with seq_num %d",
+			 e->sequenceNumber);
+		return;
+	}
+
+	ipcp_id = it->second;
+	pending_dipcp_req.erase(it);
+
+	if (e->result != 0) {
+		LOG_ERR("Problems destroying kernel components of IPCP %d",
+			ipcp_id);
+	}
 }
 
 void IPCManager_::ipcm_register_response_ipcp(IPCMIPCProcess * ipcp,

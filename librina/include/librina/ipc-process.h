@@ -684,17 +684,18 @@ public:
 	 * associated to the port-id requested (0 if is an application)
 	 * @param appName The name of the application that requested
 	 * the flow (could be an IPC Process or a regular application)
-	 * @return the port-id
+	 * @return the handle to the response message
 	 * @throws PortAllocationException if something goes wrong
 	 */
-	int allocatePortId(const ApplicationProcessNamingInformation& appName);
+	unsigned int allocatePortId(const ApplicationProcessNamingInformation& appName);
 
 	/**
 	 * Request the kernel to free a used port-id
 	 * @param portId the port-id to be freed
+	 * @return the handle to the request message
 	 * @throws PortAllocationException if something goes wrong
 	 */
-	void deallocatePortId(int portId);
+	unsigned int deallocatePortId(int portId);
 
 	/**
 	 * Reply to the IPC Manager, informing it about the result of a
@@ -976,6 +977,56 @@ public:
         int result;
 };
 
+class AllocatePortResponseEvent: public IPCEvent {
+public:
+	AllocatePortResponseEvent(int res,
+                        	  int port_id,
+                        	  unsigned int sequenceNumber);
+
+        // The N-1 port-id allocated
+        int port_id;
+
+        // Result of the operation, 0 success
+        int result;
+};
+
+class DeallocatePortResponseEvent: public IPCEvent {
+public:
+	DeallocatePortResponseEvent(int res,
+                        	    int port_id,
+				    unsigned int sequenceNumber);
+
+        // The N-1 port-id deallocated
+        int port_id;
+
+        // Result of the operation, 0 success
+        int result;
+};
+
+class WriteMgmtSDUResponseEvent: public IPCEvent {
+public:
+	WriteMgmtSDUResponseEvent(int res,
+				  unsigned int sequenceNumber);
+
+        // Result of the operation, 0 success
+        int result;
+};
+
+class ReadMgmtSDUResponseEvent: public IPCEvent {
+public:
+	ReadMgmtSDUResponseEvent(int res,
+				 void * sdu,
+				 int size,
+				 unsigned int port_id,
+				 unsigned int sequenceNumber);
+
+        // Result of the operation, 0 success
+        int result;
+        void * sdu;
+        int size;
+        unsigned int port_id;
+};
+
 /**
  * FIXME: Quick hack to get multiple parameters back
  */
@@ -1134,7 +1185,7 @@ public:
          * @param portId The N-1 portId where the data has to be written to
          * @throws WriteSDUException
          */
-        void writeMgmgtSDUToPortId(void * sdu, int size, unsigned int portId);
+        unsigned int writeMgmgtSDUToPortId(void * sdu, int size, unsigned int portId);
 
         /**
          * Requests the kernel to send a management SDU to the IPC Process
@@ -1146,19 +1197,7 @@ public:
          * destination of the SDU
          * @throws WriteSDUException
          */
-        void sendMgmgtSDUToAddress(void * sdu, int size, unsigned int address);
-
-        /**
-         * Requests the kernel to get a management SDU from a peer
-         * IPC Process. This operation will block until there is an SDU available
-         *
-         * @param sdu A buffer to store the SDU data
-         * @param maxBytes The maximum number of bytes to read
-         * @return int The number of bytes read and the portId where they have
-         * been read from
-         * @throws ReadSDUException
-         */
-        ReadManagementSDUResult readManagementSDU(void * sdu, int maxBytes);
+        unsigned int sendMgmgtSDUToAddress(void * sdu, int size, unsigned int address);
 };
 
 /**

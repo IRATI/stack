@@ -250,6 +250,15 @@ private:
 	IFlowAllocatorInstance * fai;
 };
 
+struct OngoingFlowAllocState {
+	rina::FlowRequestEvent flow_event;
+	configs::Flow * flow;
+	std::string object_name;
+	int invoke_id;
+	bool local_request;
+	unsigned int address;
+};
+
 /// Implementation of the Flow Allocator component
 class FlowAllocator: public IFlowAllocator {
 public:
@@ -273,6 +282,8 @@ public:
 	void submitDeallocate(const rina::FlowDeallocateRequestEvent& event);
 	void removeFlowAllocatorInstance(int portId);
 	void sync_with_kernel();
+	void processAllocatePortResponse(const rina::AllocatePortResponseEvent& event);
+	void processDeallocatePortResponse(const rina::DeallocatePortResponseEvent& event);
 
         // Plugin support
         configs::Flow* createFlow() { return new configs::Flow(); }
@@ -282,11 +293,22 @@ private:
 	IPCPRIBDaemon * rib_daemon_;
 	INamespaceManager * namespace_manager_;
 
+	std::map<unsigned int, OngoingFlowAllocState> pending_port_allocs;
+	rina::Lockable port_alloc_lock;
+
 	/// Create initial RIB objects
 	void populateRIB();
 
 	/// Reply to the IPC Manager
 	void replyToIPCManager(const rina::FlowRequestEvent& event, int result);
+
+	void __submitAllocateRequest(const rina::FlowRequestEvent& event,
+				     int port_id,
+				     unsigned int address);
+	void __createFlowRequestMessageReceived(configs::Flow * flow,
+		             	     	     	const std::string& object_name,
+						int invoke_id,
+						int port_id);
 };
 
 ///Implementation of the FlowAllocatorInstance

@@ -49,9 +49,9 @@ class IPCMIPCProcess {
 
 public:
 	enum State{IPCM_IPCP_CREATED,
-			   IPCM_IPCP_INITIALIZED,
-			   IPCM_IPCP_ASSIGN_TO_DIF_IN_PROGRESS,
-			   IPCM_IPCP_ASSIGNED_TO_DIF};
+		   IPCM_IPCP_INITIALIZED,
+		   IPCM_IPCP_ASSIGN_TO_DIF_IN_PROGRESS,
+		   IPCM_IPCP_ASSIGNED_TO_DIF};
 
 	/** The current information of the DIF where the IPC Process is assigned*/
 	rina::ApplicationProcessNamingInformation dif_name_;
@@ -67,6 +67,11 @@ public:
 
 	/** Rwlock */
 	rina::ReadWriteLockable rwlock;
+
+	/** The IPC Process proxy class */
+	rina::IPCProcessProxy* proxy_;
+
+	bool kernel_ready;
 
 	//Constructors and destructurs
 
@@ -452,8 +457,6 @@ public:
 				unsigned int opaque);
 
 private:
-	/** The IPC Process proxy class */
-	rina::IPCProcessProxy* proxy_;
 
 	//Friendship relation to be able to destroy proxies from
 	//the IPCMIPCProcessFactory
@@ -525,7 +528,7 @@ public:
      * @param ipcProcessId The identifier of the IPC Process to be destroyed
      * @throws DestroyIPCProcessException if an error happens during the operation execution
      */
-    void destroy(unsigned short ipcProcessId);
+    unsigned int destroy(unsigned short ipcProcessId);
 
     /**
      * Returns a list to all the IPC Processes that are currently running in

@@ -216,11 +216,12 @@ ipcm_res_t IPCManager_::create_ipcp(
             throw rina::CreateIPCProcessException();
         }
 
+        rina::ScopedLock g(req_lock);
+
         //Call the factory
         ipcp = ipcp_factory_.create(name, type);
-
-        //Get the ipcp_id and reduce locking scope
         ipcp_id = ipcp->get_id();
+        pending_cipcp_req[ipcp->proxy_->seq_num] = ipcp_id;
 
         //Set the promise
         if (promise)
@@ -235,63 +236,39 @@ ipcm_res_t IPCManager_::create_ipcp(
             // Shim IPC processes are set as initialized
             // immediately.
             ipcp->setInitialized();
-
-            //Release the lock asap
-            ipcp->rwlock.unlock();
-
-            //And mark the promise as completed
-            if (promise)
-            {
-                promise->ret = IPCM_SUCCESS;
-                promise->signal();
-            }
-
-            //Show a nice trace
-            ss << "IPC process " << name.toString() << " created "
-                    "[id = " << ipcp_id << "]" << std::endl;
-            FLUSH_LOG(INFO, ss);
-
-            //Distribute the event to the addons
-            IPCMEvent addon_e(callee, IPCM_IPCP_CREATED, ipcp_id);
-            Addon::distribute_ipcm_event(addon_e);
-
-            return IPCM_SUCCESS;
-        } else
-        {
-
-            //Release the lock asap
-            ipcp->rwlock.unlock();
-
-            // Normal IPC processes can be set as
-            // initialized only when the corresponding
-            // IPC process daemon is initialized, so we
-            // defer the operation.
-
-            //Add transaction state
-            trans = new SyscallTransState(callee, promise, ipcp_id);
-            if (!trans)
-            {
-                assert(0);
-                ss << "Failed to create IPC process '" << name.toString()
-                        << "' of type '" << type << "'. Out of memory!"
-                        << std::endl;
-                FLUSH_LOG(ERR, ss);
-                FLUSH_LOG(ERR, ss);
-                throw rina::CreateIPCProcessException();
-            }
-
-            if (add_syscall_transaction_state(trans) < 0)
-            {
-                assert(0);
-                throw rina::CreateIPCProcessException();
-            }
-            //Show a nice trace
-            ss << "IPC process " << name.toString()
-                    << " created and waiting for initialization"
-                            "[id = " << ipcp_id << "]" << std::endl;
-            FLUSH_LOG(INFO, ss);
-
         }
+
+        //Release the lock asap
+        ipcp->rwlock.unlock();
+
+        // Normal IPC processes can be set as
+        // initialized only when the corresponding
+        // IPC process daemon is initialized, so we
+        // defer the operation.
+
+        //Add transaction state
+        trans = new SyscallTransState(callee, promise, ipcp_id);
+        if (!trans)
+        {
+        	assert(0);
+        	ss << "Failed to create IPC process '" << name.toString()
+                        		<< "' of type '" << type << "'. Out of memory!"
+					<< std::endl;
+        	FLUSH_LOG(ERR, ss);
+        	FLUSH_LOG(ERR, ss);
+        	throw rina::CreateIPCProcessException();
+        }
+
+        if (add_syscall_transaction_state(trans) < 0)
+        {
+        	assert(0);
+        	throw rina::CreateIPCProcessException();
+        }
+        //Show a nice trace
+        ss << "IPC process " << name.toString()
+                		    << " created and waiting for initialization"
+				    "[id = " << ipcp_id << "]" << std::endl;
+        FLUSH_LOG(INFO, ss);
     } catch (rina::ConcurrentException& e)
     {
         ss << "Failed to create IPC process '" << name.toString()
@@ -313,14 +290,18 @@ ipcm_res_t IPCManager_::create_ipcp(
 ipcm_res_t IPCManager_::destroy_ipcp(Addon* callee, unsigned short ipcp_id)
 {
     std::ostringstream ss;
+    unsigned int seq_num = 0;
 
     //Distribute the event to the addons
     IPCMEvent addon_e(callee, IPCM_IPCP_TO_BE_DESTROYED, ipcp_id);
     Addon::distribute_ipcm_event(addon_e);
 
+    rina::ScopedLock g(req_lock);
+
     try
     {
-        ipcp_factory_.destroy(ipcp_id);
+        seq_num = ipcp_factory_.destroy(ipcp_id);
+        pending_dipcp_req[seq_num] = ipcp_id;
         ss << "IPC process destroyed [id = " << ipcp_id << "]" << std::endl;
         FLUSH_LOG(INFO, ss);
     } catch (rina::DestroyIPCProcessException& e)
@@ -2200,6 +2181,18 @@ void IPCManager_::io_loop()
                 case rina::IPC_PROCESS_PLUGIN_LOAD_RESPONSE: {
                     DOWNCAST_DECL(event, rina::PluginLoadResponseEvent, e);
                     ipc_process_plugin_load_response_handler(e);
+                }
+                    break;
+
+                case rina::IPCM_CREATE_IPCP_RESPONSE: {
+                    DOWNCAST_DECL(event, rina::CreateIPCPResponseEvent, e);
+                    ipc_process_create_response_event_handler(e);
+                }
+                    break;
+
+                case rina::IPCM_DESTROY_IPCP_RESPONSE: {
+                    DOWNCAST_DECL(event, rina::DestroyIPCPResponseEvent, e);
+                    ipc_process_destroy_response_event_handler(e);
                 }
                     break;
 

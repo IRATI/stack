@@ -319,6 +319,9 @@ public:
 	/** The IPC Process type */
 	std::string type;
 
+	/** The sequence number of the NL message when creating it */
+	unsigned int seq_num;
+
 	/** The name of the IPC Process */
 	ApplicationProcessNamingInformation name;
 
@@ -644,7 +647,7 @@ public:
          * @param ipcProcessId The identifier of the IPC Process to be destroyed
          * @throws DestroyIPCProcessException if an error happens during the operation execution
          */
-        void destroy(IPCProcessProxy* ipcp);
+        unsigned int destroy(IPCProcessProxy* ipcp);
 };
 
 /**
@@ -870,6 +873,24 @@ public:
 
         // The media report resulting from a scan
         MediaReport media_report;
+};
+
+class CreateIPCPResponseEvent: public IPCEvent {
+public:
+	CreateIPCPResponseEvent(int res,
+				unsigned int sequenceNumber);
+
+        // Result of the operation, 0 success
+        int result;
+};
+
+class DestroyIPCPResponseEvent: public IPCEvent {
+public:
+	DestroyIPCPResponseEvent(int res,
+				 unsigned int sequenceNumber);
+
+        // Result of the operation, 0 success
+        int result;
 };
 
 }

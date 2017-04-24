@@ -93,6 +93,7 @@ public:
         				    int fd,
 					    int cdap_session);
         void stop_internal_flow_sdu_reader(int port_id);
+        void processReadManagementSDUEvent(const rina::ReadMgmtSDUResponseEvent& event);
 
 private:
         friend class StopInternalFlowReaderTimerTask;

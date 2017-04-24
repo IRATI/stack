@@ -329,12 +329,6 @@
 320	common	kexec_file_load		sys_kexec_file_load
 321	common	bpf			sys_bpf
 322	64	execveat		stub_execveat
-323	common	ipc_create		sys_ipc_create
-324	common	ipc_destroy		sys_ipc_destroy
-327	common	allocate_port	        sys_allocate_port
-328	common	deallocate_port	        sys_deallocate_port
-329     common  management_sdu_read     sys_management_sdu_read
-330     common  management_sdu_write    sys_management_sdu_write
 
 #
 # x32-specific system call numbers start at 512 to avoid cache impact
