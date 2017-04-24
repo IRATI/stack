@@ -1949,11 +1949,6 @@ void LinkStateRoutingPolicy::set_dif_configuration(
 
 }
 
-const std::list<rina::FlowInformation>& LinkStateRoutingPolicy::get_allocated_flows() const
-{
-	return allocated_flows_;
-}
-
 void LinkStateRoutingPolicy::eventHappened(rina::InternalEvent * event)
 {
 	if (!event)
@@ -2032,14 +2027,6 @@ void LinkStateRoutingPolicy::processNeighborAddressChangeEvent(rina::NeighborAdd
 void LinkStateRoutingPolicy::processFlowDeallocatedEvent(
 		rina::NMinusOneFlowDeallocatedEvent * event)
 {
-	for (std::list<rina::FlowInformation>::iterator it
-		= allocated_flows_.begin(); it != allocated_flows_.end(); ++it) {
-		if (it->portId == event->port_id_) {
-			allocated_flows_.erase(it);
-			return;
-		}
-	}
-
 	LOG_IPCP_DBG("N-1 Flow with neighbor lost");
 	//TODO update cost
 }
@@ -2051,38 +2038,13 @@ void LinkStateRoutingPolicy::processNeighborLostEvent(rina::ConnectiviyToNeighbo
 }
 
 
-void LinkStateRoutingPolicy::processFlowAllocatedEvent(
-		rina::NMinusOneFlowAllocatedEvent * event)
+void LinkStateRoutingPolicy::processFlowAllocatedEvent(rina::NMinusOneFlowAllocatedEvent * event)
 {
 	std::list<unsigned int> addresses;
 	std::list<unsigned int> neigh_addresses;
 
-	if (ipc_process_->resource_allocator_->get_n_minus_one_flow_manager()->
-			numberOfFlowsToNeighbour(event->flow_information_.remoteAppName.processName,
-					event->flow_information_.remoteAppName.processInstance) > 1) {
-		LOG_IPCP_DBG("Already had an N-1 flow with this neighbor IPCP");
-		//TODO update the cost of the FlowStateObject
-		return;
-	}
-
-	try 
-	{
-		addresses.push_back(ipc_process_->get_address());
-		neigh_addresses.push_back(
-				ipc_process_->namespace_manager_->getAdressByname(
-						event->flow_information_.remoteAppName));
-
-		db_->addNewFSO(ipc_process_->get_name(),
-			       addresses,
-			       event->flow_information_.remoteAppName.processName,
-			       neigh_addresses,
-			       1,
-			       event->flow_information_.portId);
-	} catch (rina::Exception &e) 
-	{
-		LOG_IPCP_DBG("flow allocation waiting for enrollment");
-		allocated_flows_.push_back(event->flow_information_);
-	}
+	//TODO, if we are already neighbors, check if cost has to be updated or
+	//new FSOs have to be added for different (paralel) N-1 flows to neighbor
 }
 
 void LinkStateRoutingPolicy::processNeighborAddedEvent(rina::NeighborAddedEvent * event)
@@ -2091,30 +2053,21 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(rina::NeighborAddedEvent 
 	std::list<unsigned int> addresses;
 	std::list<unsigned int> neigh_addresses;
 
-	for (std::list<rina::FlowInformation>::iterator it = 
-		allocated_flows_.begin(); it != allocated_flows_.end(); ++it) 
-	{
-		if (it->portId == portId)
-		{
-			LOG_IPCP_INFO("There was an allocation flow event waiting for enrollment, launching it");
-			try {
-				addresses.push_back(ipc_process_->get_address());
-				neigh_addresses.push_back(
-						ipc_process_->namespace_manager_->getAdressByname(
-								event->neighbor_.get_name()));
+	LOG_IPCP_INFO("Adding new FSO to neighbor");
+	try {
+		addresses.push_back(ipc_process_->get_address());
+		neigh_addresses.push_back(
+				ipc_process_->namespace_manager_->getAdressByname(
+						event->neighbor_.get_name()));
 
-				db_->addNewFSO(ipc_process_->get_name(),
-					       addresses,
-					       event->neighbor_.get_name().processName,
-					       neigh_addresses,
-					       1,
-					       it->portId);
-				allocated_flows_.erase(it);
-				break;
-			} catch (rina::Exception &e) {
-				LOG_IPCP_ERR("Could not allocate the flow, no neighbor found");
-			}
-		}
+		db_->addNewFSO(ipc_process_->get_name(),
+				addresses,
+				event->neighbor_.get_name().processName,
+				neigh_addresses,
+				1,
+				portId);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Could not allocate the flow, no neighbor found");
 	}
 
 	std::list< std::list<FlowStateObject> > all_fsos;

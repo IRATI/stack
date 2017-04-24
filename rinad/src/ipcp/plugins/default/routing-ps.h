@@ -622,7 +622,6 @@ public:
 	~LinkStateRoutingPolicy();
 	void set_ipc_process(IPCProcess * ipc_process);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
-	const std::list<rina::FlowInformation>& get_allocated_flows() const;
 
 	/// N-1 Flow allocated, N-1 Flow deallocated or enrollment to neighbor completed
 	void eventHappened(rina::InternalEvent * event);
@@ -677,14 +676,6 @@ private:
 	bool test_;
 	FlowStateManager *db_;
 	rina::Lockable lock_;
-
-
-	/// If a flow allocation is launched before the enrollment is finished, the flow
-	/// allocation procedure of the PDU Forwarding table must wait. Otherwise it will
-	/// not have the necessary information about the neighbour IPC process. This pending
-	/// flow allocation has to be stored in a list, until the enrollment is finished or
-	/// until a flow deallocation over the same flow is called.
-	std::list<rina::FlowInformation> allocated_flows_;
 
 	void subscribeToEvents();
 
