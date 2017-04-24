@@ -1,3 +1,4 @@
+syntax="proto2";
 package rina.messages;
 import "ApplicationProcessNamingInfoMessage.proto";
 import "DataTransferConstantsMessage.proto";
