@@ -422,8 +422,8 @@ void ExtendedIPCManager::assignToDIFResponse(
 #if STUB_API
 	//Do nothing
 #else
-	BaseNetlinkResponseMessage responseMessage(RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE);
-	responseMessage.setResult(result);
+	BaseNetlinkMessage responseMessage(RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE);
+	responseMessage.result = result;
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
         responseMessage.setDestPortId(ipcManagerPort);
@@ -443,7 +443,7 @@ void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDAFRequestEvent& even
         // Do nothing
 #else
         IpcmEnrollToDIFResponseMessage responseMessage;
-        responseMessage.setResult(result);
+        responseMessage.result = result;
         responseMessage.setNeighbors(newNeighbors);
         responseMessage.setDIFInformation(difInformation);
         responseMessage.setSourceIpcProcessId(ipcProcessId);
@@ -467,8 +467,8 @@ void ExtendedIPCManager::disconnectNeighborResponse(const DisconnectNeighborRequ
 #if STUB_API
         // Do nothing
 #else
-	BaseNetlinkResponseMessage responseMessage(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE);
-        responseMessage.setResult(result);
+	BaseNetlinkMessage responseMessage(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE);
+        responseMessage.result = result;
         responseMessage.setSourceIpcProcessId(ipcProcessId);
         responseMessage.setDestPortId(ipcManagerPort);
         responseMessage.setSequenceNumber(event.sequenceNumber);
@@ -487,8 +487,8 @@ void ExtendedIPCManager::registerApplicationResponse(
 #if STUB_API
 	//Do nothing
 #else
-	BaseNetlinkResponseMessage responseMessage(RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE);
-	responseMessage.setResult(result);
+	BaseNetlinkMessage responseMessage(RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE);
+	responseMessage.result = result;
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
 	responseMessage.setDestPortId(ipcManagerPort);
@@ -506,8 +506,8 @@ void ExtendedIPCManager::unregisterApplicationResponse(
 #if STUB_API
 	// Do nothing
 #else
-	BaseNetlinkResponseMessage responseMessage(RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE);
-	responseMessage.setResult(result);
+	BaseNetlinkMessage responseMessage(RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE);
+	responseMessage.result = result;
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
 	responseMessage.setDestPortId(ipcManagerPort);
@@ -525,8 +525,8 @@ void ExtendedIPCManager::allocateFlowRequestResult(
 #if STUB_API
 	// Do nothing
 #else
-	BaseNetlinkResponseMessageWPortId responseMessage(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT);
-	responseMessage.setResult(result);
+	BaseNetlinkMessage responseMessage(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT);
+	responseMessage.result = result;
 	responseMessage.port_id = event.portId;
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
@@ -605,8 +605,8 @@ void ExtendedIPCManager::notifyflowDeallocated(
 #if STUB_API
 	// Do nothing
 #else
-	BaseNetlinkResponseMessage responseMessage(RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE);
-	responseMessage.setResult(result);
+	BaseNetlinkMessage responseMessage(RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE);
+	responseMessage.result = result;
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
 	responseMessage.setSequenceNumber(flowDeallocateEvent.sequenceNumber);
 	responseMessage.setDestPortId(ipcManagerPort);
@@ -624,9 +624,9 @@ void ExtendedIPCManager::flowDeallocatedRemotely(
 #if STUB_API
 	// Do nothing
 #else
-	IpcmFlowDeallocatedNotificationMessage message;
-	message.setPortId(portId);
-	message.setCode(code);
+	BaseNetlinkMessage message(RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION);
+	message.port_id = portId;
+	message.result = code;
 	message.setSourceIpcProcessId(ipcProcessId);
 	message.setDestPortId(ipcManagerPort);
 	message.setNotificationMessage(true);
@@ -645,7 +645,7 @@ void ExtendedIPCManager::queryRIBResponse(
 	//Do nothing
 #else
 	IpcmDIFQueryRIBResponseMessage responseMessage;
-	responseMessage.setResult(result);
+	responseMessage.result = result;
 	responseMessage.setRIBObjects(ribObjects);
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
@@ -693,7 +693,7 @@ unsigned int ExtendedIPCManager::deallocatePortId(int portId)
 
 #if STUB_API
 #else
-        IPCPDeallocatePortRequestMessage message;
+	BaseNetlinkMessage message(RINA_C_IPCP_DEALLOCATE_PORT_REQUEST);
         message.port_id = portId;
         message.setSourceIpcProcessId(ipcProcessId);
         message.setDestIpcProcessId(ipcProcessId);
@@ -717,7 +717,7 @@ void ExtendedIPCManager::setPolicySetParamResponse(
 #if STUB_API
 	//Do nothing
 #else
-	BaseNetlinkResponseMessage responseMessage(RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE);
+	BaseNetlinkMessage responseMessage(RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE);
 	responseMessage.result = result;
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
@@ -736,7 +736,7 @@ void ExtendedIPCManager::selectPolicySetResponse(
 #if STUB_API
 	//Do nothing
 #else
-	BaseNetlinkResponseMessage responseMessage(RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE);
+	BaseNetlinkMessage responseMessage(RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE);
 	responseMessage.result = result;
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
@@ -750,12 +750,12 @@ void ExtendedIPCManager::selectPolicySetResponse(
 #endif
 }
 
-void ExtendedIPCManager::pluginLoadResponse(
-		const PluginLoadRequestEvent& event, int result) {
+void ExtendedIPCManager::pluginLoadResponse(const PluginLoadRequestEvent& event,
+					    int result) {
 #if STUB_API
 	//Do nothing
 #else
-	IpcmPluginLoadResponseMessage responseMessage;
+	BaseNetlinkMessage responseMessage(RINA_C_IPCM_PLUGIN_LOAD_RESPONSE);
 	responseMessage.result = result;
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setSourceIpcProcessId(ipcProcessId);
@@ -1300,9 +1300,9 @@ destroyConnection(const Connection& connection) {
 #if STUB_API
         //Do nothing
 #else
-        IpcpConnectionDestroyRequestMessage message;
-        message.setPortId(connection.getPortId());
-        message.setCepId(connection.getSourceCepId());
+        BaseNetlinkMessage message(RINA_C_IPCP_CONN_DESTROY_REQUEST);
+        message.port_id = connection.getPortId();
+        message.cep_id = connection.getSourceCepId();
         message.setSourceIpcProcessId(ipcProcessId);
         message.setDestIpcProcessId(ipcProcessId);
         message.setDestPortId(0);
@@ -1348,7 +1348,7 @@ unsigned int KernelIPCProcess::dumptPDUFT() {
 #if STUB_API
         //Do nothing
 #else
-        RmtDumpPDUFTEntriesRequestMessage message;
+        BaseNetlinkMessage message(RINA_C_RMT_DUMP_FT_REQUEST);
         message.setSourceIpcProcessId(ipcProcessId);
         message.setDestIpcProcessId(ipcProcessId);
         message.setDestPortId(0);

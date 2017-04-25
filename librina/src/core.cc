@@ -488,8 +488,8 @@ void * doNetlinkMessageReaderWork(void * arg)
     //Process the message
     if (incomingMessage->getOperationCode()
         == RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION) {
-      BaseNetlinkResponseMessageWPortId * message =
-          dynamic_cast<BaseNetlinkResponseMessageWPortId *>(incomingMessage);
+      BaseNetlinkMessage * message =
+          dynamic_cast<BaseNetlinkMessage *>(incomingMessage);
       LOG_DBG("NL socket at port %d is closed", message->port_id);
 
       event = myRINAManager->osProcessFinalized(message->port_id);

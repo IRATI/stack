@@ -61,7 +61,7 @@ void initializeIPCManager(unsigned int        localPort,
 	_log_path = pathToLogFolder;
 	_log_level = logLevel;
 
-	IpcmIPCManagerPresentMessage message;
+	BaseNetlinkMessage message(RINA_C_IPCM_IPC_MANAGER_PRESENT);
 	message.setDestPortId(0);
 	message.setNotificationMessage(true);
 
@@ -366,7 +366,7 @@ void IPCProcessProxy::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 	//Do nothing
 #else
 	IpcmAllocateFlowResponseMessage responseMessage;
-	responseMessage.setResult(result);
+	responseMessage.result = result;
 	responseMessage.setNotifySource(notifySource);
 	responseMessage.setSourceIpcProcessId(flowAcceptorIpcProcessId);
 	responseMessage.setDestIpcProcessId(id);
@@ -387,8 +387,8 @@ void IPCProcessProxy::deallocateFlow(int flowPortId, unsigned int opaque)
 #if STUB_API
 	//Do nothing
 #else
-	IpcmDeallocateFlowRequestMessage message;
-	message.setPortId(flowPortId);
+	BaseNetlinkMessage message(RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST);
+	message.port_id = flowPortId;
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
@@ -725,7 +725,7 @@ void ApplicationManager::applicationRegistered(
 	responseMessage.setApplicationName(event.
 			applicationRegistrationInformation.appName);
 	responseMessage.setDifName(difName);
-	responseMessage.setResult(result);
+	responseMessage.result = result;
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setResponseMessage(true);
 	try {
@@ -747,7 +747,7 @@ void ApplicationManager::applicationUnregistered(
 #else
 	AppUnregisterApplicationResponseMessage responseMessage;
 	responseMessage.setApplicationName(event.applicationName);
-	responseMessage.setResult(result);
+	responseMessage.result = result;
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setResponseMessage(true);
 	try {
@@ -816,8 +816,8 @@ void ApplicationManager::flowDeallocated(
 #else
 	AppDeallocateFlowResponseMessage responseMessage;
 	responseMessage.setApplicationName(event.applicationName);
-	responseMessage.setPortId(event.portId);
-	responseMessage.setResult(result);
+	responseMessage.port_id = event.portId;
+	responseMessage.result = result;
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setResponseMessage(true);
 	try {
@@ -837,8 +837,8 @@ void ApplicationManager::flowDeallocatedRemotely(
 	//Do nothing
 #else
 	AppFlowDeallocatedNotificationMessage message;
-	message.setPortId(portId);
-	message.setCode(code);
+	message.port_id = portId;
+	message.result = code;
 	message.setApplicationName(appName);
 	message.setNotificationMessage(true);
 	try {
@@ -857,7 +857,7 @@ void ApplicationManager::getDIFPropertiesResponse(
 	//Do nothing
 #else
 	AppGetDIFPropertiesResponseMessage responseMessage;
-	responseMessage.setResult(result);
+	responseMessage.result = result;
 	responseMessage.setApplicationName(event.getApplicationName());
 	responseMessage.setDIFProperties(difProperties);
 	responseMessage.setSequenceNumber(event.sequenceNumber);

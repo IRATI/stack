@@ -274,7 +274,7 @@ FlowInformation IPCManager::internalAllocateFlowResponse(const FlowRequestEvent&
 #if STUB_API
 #else
         AppAllocateFlowResponseMessage responseMessage;
-        responseMessage.setResult(result);
+        responseMessage.result = result;
         responseMessage.setNotifySource(notifySource);
         responseMessage.setSourceIpcProcessId(ipcProcessId);
         responseMessage.setSequenceNumber(flowRequestEvent.sequenceNumber);
@@ -640,7 +640,7 @@ unsigned int IPCManager::requestFlowDeallocation(int portId)
 		flow->portId);
 	AppDeallocateFlowRequestMessage message;
 	message.setApplicationName(flow->localAppName);
-	message.setPortId(flow->portId);
+	message.port_id = flow->portId;
 	message.setRequestMessage(true);
 
 	try{

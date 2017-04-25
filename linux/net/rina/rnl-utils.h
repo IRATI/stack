@@ -220,43 +220,25 @@ enum ipcm_alloc_flow_resp_attrs_list {
  */
 #define ALLOC_RESP_DENY_REASON_1 "FAILED"
 
-enum ipcm_base_resp_attrs_list {
-        IBRESPM_ATTR_RESULT = 1,
-        __IBRESPM_ATTR_MAX,
-};
-#define IBRESPM_ATTR_MAX (__IBRESPM_ATTR_MAX -1)
-
-enum ipcm_base_resp_wpid_attrs_list {
-        IBRESPPM_ATTR_PORT_ID = 1,
-	IBRESPPM_ATTR_RESULT,
-        __IBRESPPM_ATTR_MAX,
-};
-#define IBRESPPM_ATTR_MAX (__IBRESPPM_ATTR_MAX -1)
-
 /*
  * FIXME: Need to specify the possible values of result to map with error
  * descriptions strings in US
  */
 #define ALLOC_RESP_ERR_DESC_1 "FAILED"
 
-enum ipcm_dealloc_flow_req_attrs_list {
-        IDFRT_ATTR_PORT_ID = 1,
-        __IDFRT_ATTR_MAX,
+enum base_nl_msg_attrs {
+        IBNLM_ATTR_RESULT = 1,
+	IBNLM_ATTR_PORT_ID,
+	IBNLM_ATTR_CEP_ID,
+        __IBNLM_ATTR_MAX,
 };
-#define IDFRT_ATTR_MAX (__IDFRT_ATTR_MAX -1)
+#define IBNLM_ATTR_MAX (__IBNLM_ATTR_MAX -1)
 
 /*
  * FIXME: Need to specify the possible values of result to map with error
  * descriptions strings in US
  */
 #define DEALLOC_RESP_ERR_DESC_1 "FAILED"
-
-enum ipcm_flow_dealloc_noti_attrs_list {
-        IFDN_ATTR_PORT_ID = 1,
-        IFDN_ATTR_CODE,
-        __IFDN_ATTR_MAX,
-};
-#define IFDN_ATTR_MAX (__IFDN_ATTR_MAX -1)
 
 enum ipcm_conn_create_req_attrs_list {
         ICCRQ_ATTR_PORT_ID = 1,
@@ -268,13 +250,6 @@ enum ipcm_conn_create_req_attrs_list {
         __ICCRQ_ATTR_MAX,
 };
 #define ICCRQ_ATTR_MAX (__ICCRQ_ATTR_MAX - 1)
-
-enum ipcm_conn_create_resp_attrs_list {
-        ICCRE_ATTR_PORT_ID = 1,
-        ICCRE_ATTR_SOURCE_CEP_ID,
-        __ICCRE_ATTR_MAX,
-};
-#define ICCRE_ATTR_MAX (__ICCRE_ATTR_MAX - 1)
 
 enum ipcm_conn_create_arrived_attrs_list {
         ICCA_ATTR_PORT_ID = 1,
@@ -305,13 +280,6 @@ enum ipcm_conn_update_req_attrs_list {
         __ICURQ_ATTR_MAX,
 };
 #define ICURQ_ATTR_MAX (__ICURQ_ATTR_MAX - 1)
-
-enum ipcm_conn_destroy_req_attrs_list {
-        ICDR_ATTR_PORT_ID = 1,
-        ICDR_ATTR_SOURCE_CEP_ID,
-        __ICDR_ATTR_MAX,
-};
-#define ICDR_ATTR_MAX (__ICDR_ATTR_MAX - 1)
 
 enum ipcm_reg_app_req_attrs_list {
         IRAR_ATTR_APP_NAME = 1,
@@ -516,12 +484,6 @@ enum ipcm_disconn_neighbor_resp_msg_attr_list {
 };
 #define IDNRE_ATTR_MAX (__IDNRE_ATTR_MAX -1)
 
-enum socket_closed_notification_msg_attr_list {
-        ISCN_ATTR_PORT = 1,
-        __ISCN_ATTR_MAX,
-};
-#define ISCN_ATTR_MAX (__ISCN_ATTR_MAX -1)
-
 enum rmt_mod_pdu_fte_entry_req {
         RMPFE_ATTR_ENTRIES = 1,
         RMPFE_ATTR_MODE,
@@ -589,12 +551,6 @@ enum ipcp_allocate_port_req_attrs_list {
 };
 #define IAPRM_ATTR_MAX (__IAPRM_ATTR_MAX -1)
 
-enum ipcp_deallocate_port_req_attrs_list {
-        IDAPRM_ATTR_PORT_ID = 1,
-        __IDAPRM_ATTR_MAX,
-};
-#define IDAPRM_ATTR_MAX (__IDAPRM_ATTR_MAX -1)
-
 enum ipcp_write_mgmt_sdu_req_attrs_list {
         IWMSRM_ATTR_SDU = 1,
 	IWMSRM_ATTR_PORT_ID,
@@ -634,7 +590,7 @@ struct rina_msg_hdr {
 enum rnl_msg_attr_type {
         RNL_MSG_ATTRS_ALLOCATE_FLOW_REQUEST,
         RNL_MSG_ATTRS_ALLOCATE_FLOW_RESPONSE,
-        RNL_MSG_ATTRS_DEALLOCATE_FLOW_REQUEST,
+        RNL_MST_ATTRS_BASE_NL_MESSAGE,
         RNL_MSG_ATTRS_ASSIGN_TO_DIF_REQUEST,
         RNL_MSG_ATTRS_UPDATE_DIF_CONFIG_REQUEST,
         RNL_MSG_ATTRS_REG_UNREG_REQUEST,
@@ -760,17 +716,14 @@ struct rnl_alloc_flow_resp_msg_attrs {
         port_id_t id;
 };
 
-struct rnl_ipcm_dealloc_flow_req_msg_attrs {
-        port_id_t id;
+struct rnl_ipcm_base_nl_msg_attrs {
+	int 	  result;
+        port_id_t port_id;
+        cep_id_t  cep_id;
 };
 
 struct rnl_ipcm_dealloc_flow_resp_msg_attrs {
         uint_t result;
-};
-
-struct rnl_ipcm_flow_dealloc_noti_msg_attrs {
-        port_id_t id;
-        uint_t    code;
 };
 
 /*  FIXME: policies should not be int */
@@ -815,11 +768,6 @@ struct rnl_ipcp_conn_update_req_msg_attrs {
 struct rnl_ipcp_conn_update_result_msg_attrs {
         port_id_t port_id;
         uint_t    result;
-};
-
-struct rnl_ipcp_conn_destroy_req_msg_attrs {
-        port_id_t port_id;
-        cep_id_t  src_cep;
 };
 
 struct rnl_ipcp_conn_destroy_result_msg_attrs {
@@ -891,10 +839,6 @@ struct rnl_ipcp_allocate_port_req_msg_attrs {
         struct name * app_name;
 };
 
-struct rnl_ipcp_deallocate_port_req_msg_attrs {
-	port_id_t port_id;
-};
-
 struct rnl_ipcp_write_mgmt_sdu_req_msg_attrs {
 	struct sdu_wpi * sdu_wpi;
 };
@@ -915,16 +859,11 @@ int rnl_parse_msg(struct genl_info * info,
 
 int rnl_base_response(ipc_process_id_t id,
                       uint_t           res,
+		      port_id_t        port_id,
+		      cep_id_t	       cep_id,
                       rnl_sn_t         seq_num,
 		      msg_type_t       msg_type,
                       u32              nl_port_id);
-
-int rnl_base_response_wport(ipc_process_id_t id,
-                            uint_t           res,
-			    port_id_t        port_id,
-                            rnl_sn_t         seq_num,
-		            msg_type_t       msg_type,
-                            u32              nl_port_id);
 
 int rnl_app_alloc_flow_req_arrived_msg(ipc_process_id_t         ipc_id,
                                        const struct name *      dif_name,
@@ -940,20 +879,12 @@ int rnl_flow_dealloc_not_msg(ipc_process_id_t ipc_id,
                              port_id_t        port_id,
                              u32              nl_port_id);
 
-int rnl_ipcp_conn_create_resp_msg(ipc_process_id_t ipc_id,
-                                  port_id_t        pid,
-                                  cep_id_t         src_cep,
-                                  rnl_sn_t         seq_num,
-                                  u32              nl_port_id);
-
 int rnl_ipcp_conn_create_result_msg(ipc_process_id_t ipc_id,
                                     port_id_t        pid,
                                     cep_id_t         src_cep,
                                     cep_id_t         dst_cep,
                                     rnl_sn_t         seq_num,
                                     u32              nl_port_id);
-
-int rnl_ipcm_sock_closed_notif_msg(u32 closed_port, u32 dest_port);
 
 int rnl_ipcp_pff_dump_resp_msg(ipc_process_id_t   ipc_id,
                                int                result,
