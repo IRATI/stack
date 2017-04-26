@@ -79,6 +79,7 @@ void IPCPCDAPIOHandler::__send_message(const rina::cdap_rib::con_handle_t & con_
 				       const rina::ser_obj_t& sdu)
 {
 	int fd = 0;
+	int ret;
 
 	if (con_handle.use_internal_flow) {
 		//Write to internal reliable N-flow
@@ -89,7 +90,13 @@ void IPCPCDAPIOHandler::__send_message(const rina::cdap_rib::con_handle_t & con_
 			throw rina::IPCException("Could not find fd associated to port-id");
 		}
 
-		write(fd, sdu.message_, sdu.size_);
+		LOG_IPCP_DBG("About to write %d bytes on fd %d from pointer %p",
+			      sdu.size_, fd, sdu.message_);
+
+		ret = write(fd, sdu.message_, sdu.size_);
+		if (ret != sdu.size_) {
+			LOG_IPCP_WARN("Partial write: %d of %d", ret, sdu.size_);
+		}
 	} else {
 		//Write to N-1 flow
 		rina::kernelIPCProcess->writeMgmgtSDUToPortId(sdu.message_,
@@ -501,7 +508,6 @@ int InternalFlowSDUReader::run()
 		     portid, cdap_session);
 
 	while(keep_going) {
-		LOG_IPCP_DBG("Going to invoke read on fd %d",fd);
 		bytes_read = read(fd, message.message_, 5000);
 		LOG_IPCP_DBG("Got message %d bytes of port-id %d, "
 				"handling to CDAP Provider",

@@ -774,9 +774,7 @@ void FlowAllocatorInstance::replyToIPCManager(int result)
 
 		if (result == 0)  {
 			try {
-				LOG_IPCP_DBG("Before flow allocated");
 				fd = rina::extendedIPCManager->internal_flow_allocated(flow_->to_flow_information(dif_name, port_id_));
-				LOG_IPCP_DBG("After flow allocated");
 			} catch (rina::Exception &e) {
 				LOG_ERR("Problems opening file descriptor associated to flow: %s", e.what());
 			}

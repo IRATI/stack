@@ -441,7 +441,7 @@ IEnrollmentStateMachine::IEnrollmentStateMachine(IPCProcess * ipcp,
 	state_ = STATE_NULL;
 	auth_ps_ = 0;
 	enroller_ = false;
-	internal_flow_fd = 0;
+	internal_flow_fd = -1;
 }
 
 IEnrollmentStateMachine::~IEnrollmentStateMachine() {
