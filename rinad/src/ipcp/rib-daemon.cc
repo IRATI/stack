@@ -43,8 +43,7 @@ ManagementSDUReaderData::ManagementSDUReaderData(unsigned int max_sdu_size)
 class IPCPCDAPIOHandler : public rina::cdap::CDAPIOHandler
 {
  public:
-	IPCPCDAPIOHandler() :etask(0) {};
-	void set_enrollment_task(IPCPEnrollmentTask * etask);
+	IPCPCDAPIOHandler(IPCPRIBDaemonImpl * ribd) : rib_daemon(ribd) {};
 	void send(const rina::cdap::cdap_m_t &m_sent,
 		  const rina::cdap_rib::con_handle_t& con_handle);
 
@@ -67,13 +66,8 @@ class IPCPCDAPIOHandler : public rina::cdap::CDAPIOHandler
 	// a reply the CDAP Session manager has been updated before
 	// receiving the response message
         rina::Lockable atomic_send_lock_;
-        IPCPEnrollmentTask * etask;
+        IPCPRIBDaemonImpl * rib_daemon;
 };
-
-void IPCPCDAPIOHandler::set_enrollment_task(IPCPEnrollmentTask * task)
-{
-	etask = task;
-}
 
 void IPCPCDAPIOHandler::__send_message(const rina::cdap_rib::con_handle_t & con_handle,
 				       const rina::ser_obj_t& sdu)
@@ -81,7 +75,7 @@ void IPCPCDAPIOHandler::__send_message(const rina::cdap_rib::con_handle_t & con_
 	int fd = 0;
 	int ret;
 
-	fd = etask->get_fd_associated_to_n1flow(con_handle.port_id);
+	fd = rib_daemon->get_fd(con_handle.port_id);
 	if (fd > 0) {
 		//Write to internal reliable N-flow
 		LOG_IPCP_DBG("About to write %d bytes on fd %d from pointer %p",
@@ -557,7 +551,7 @@ void IPCPRIBDaemonImpl::initialize_rib_daemon(rina::cacep::AppConHandlerInterfac
 	//Initialize the RIB library and cdap
 	params.ipcp = true;
 	rina::rib::init(app_con_callback, params);
-	io_handler = new IPCPCDAPIOHandler();
+	io_handler = new IPCPCDAPIOHandler(this);
 	rina::cdap::set_cdap_io_handler(io_handler);
 	ribd = rina::rib::RIBDaemonProxyFactory();
 
@@ -600,7 +594,6 @@ void IPCPRIBDaemonImpl::set_application_process(rina::ApplicationProcess * ap)
 	}
 
         n_minus_one_flow_manager_ = ipcp->resource_allocator_->get_n_minus_one_flow_manager();
-        io_handler->set_enrollment_task(ipcp->enrollment_task_);
 
         subscribeToEvents();
 }
@@ -685,6 +678,8 @@ void IPCPRIBDaemonImpl::start_internal_flow_sdu_reader(int port_id,
 
 	rina::ScopedLock g(iflow_readers_lock);
 
+	fds[cdap_session] = fd;
+
 	thread_attrs.setJoinable();
 	ss << "Internal Flow SDU Reader of port-id " << port_id;
 	thread_attrs.setName(ss.str());
@@ -700,6 +695,20 @@ void IPCPRIBDaemonImpl::stop_internal_flow_sdu_reader(int port_id)
 	timer.scheduleTask(timer_task, 0);
 }
 
+int IPCPRIBDaemonImpl::get_fd(unsigned int cdap_session)
+{
+	std::map<int, int>::iterator it;
+
+	rina::ScopedLock g(iflow_readers_lock);
+
+	it = fds.find(cdap_session);
+	if (it != fds.end()) {
+		return it->second;
+	}
+
+	return -1;
+}
+
 void IPCPRIBDaemonImpl::__stop_internal_flow_sdu_reader(int port_id)
 {
 	std::map<int, InternalFlowSDUReader *>::iterator it;
@@ -712,6 +721,7 @@ void IPCPRIBDaemonImpl::__stop_internal_flow_sdu_reader(int port_id)
 	if (it != iflow_sdu_readers.end()) {
 		reader = it->second;
 		iflow_sdu_readers.erase(it);
+		fds.erase(reader->cdap_session);
 		reader->join(&status);
 		delete reader;
 	}

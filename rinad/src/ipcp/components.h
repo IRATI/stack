@@ -111,7 +111,6 @@ public:
 	virtual void deallocateFlow(int portId) = 0;
 	virtual void add_enrollment_state_machine(int portId, IEnrollmentStateMachine * stateMachine) = 0;
 	virtual void update_neighbor_address(const rina::Neighbor& neighbor) = 0;
-	virtual int get_fd_associated_to_n1flow(int port_id) = 0;
 	// Return the con_handle to the next hop to reach the address
 	virtual int get_con_handle_to_address(unsigned int address,
 					      rina::cdap_rib::con_handle_t& con) = 0;

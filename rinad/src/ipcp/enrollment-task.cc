@@ -440,7 +440,6 @@ IEnrollmentStateMachine::IEnrollmentStateMachine(IPCProcess * ipcp,
 	state_ = STATE_NULL;
 	auth_ps_ = 0;
 	enroller_ = false;
-	internal_flow_fd = -1;
 }
 
 IEnrollmentStateMachine::~IEnrollmentStateMachine() {
@@ -842,21 +841,6 @@ void EnrollmentTask::internal_flow_deallocated(rina::IPCPInternalFlowDeallocated
 	timer.scheduleTask(dsm_task, 0);
 }
 
-int EnrollmentTask::get_fd_associated_to_n1flow(int port_id)
-{
-	std::map<int, IEnrollmentStateMachine*>::iterator it;
-
-	rina::ReadScopedLock readLock(sm_lock);
-
-	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
-		if (it->second->remote_peer_.underlying_port_id_ == port_id) {
-			return it->second->internal_flow_fd;
-		}
-	}
-
-	return -1;
-}
-
 void EnrollmentTask::operational_status_start(int port_id,
 			      	      	      int invoke_id,
 					      const rina::ser_obj_t &obj_req)
@@ -1103,7 +1087,7 @@ void EnrollmentTask::processDisconnectNeighborRequestEvent(const rina::Disconnec
 	IEnrollmentStateMachine * esm = 0;
 	std::map<int, IEnrollmentStateMachine *>::iterator it;
 
-	rina::WriteScopedLock writeLock(sm_lock);
+	rina::WriteScopedLock g(sm_lock);
 
 	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
 		if (it->second->remote_peer_.name_.processName.compare(event.neighborName.processName) == 0 &&

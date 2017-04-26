@@ -67,7 +67,6 @@ public:
 	~InternalFlowSDUReader() throw() {};
 	int run();
 
-private:
 	int portid;
 	int cdap_session;
 	int fd;
@@ -94,6 +93,7 @@ public:
 					    int cdap_session);
         void stop_internal_flow_sdu_reader(int port_id);
         void processReadManagementSDUEvent(const rina::ReadMgmtSDUResponseEvent& event);
+        int get_fd(unsigned int cdap_session);
 
 private:
         friend class StopInternalFlowReaderTimerTask;
@@ -110,6 +110,7 @@ private:
         rina::Lockable atomic_send_lock_;
 
         std::map<int, InternalFlowSDUReader *> iflow_sdu_readers;
+        std::map<int, int> fds;
         rina::Lockable iflow_readers_lock;
 
         void initialize_rib_daemon(rina::cacep::AppConHandlerInterface *app_con_callback);

@@ -224,7 +224,6 @@ public:
 	rina::Neighbor remote_peer_;
 	bool enroller_;
 	rina::cdap_rib::con_handle_t con;
-	int internal_flow_fd;
 
 	/// The enrollment request, store it to be able to retry enrollment afterwards
 	rina::EnrollmentRequest enr_request;
@@ -358,7 +357,6 @@ public:
 	void watchdog_read(const std::string& remote_app_name);
 	void watchdog_read_result(const std::string& remote_app_name,
 				  int stored_time);
-	int get_fd_associated_to_n1flow(int port_id);
 	void operational_status_start(int port_id,
 				      int invoke_id,
 			       	      const rina::ser_obj_t &obj_req);
