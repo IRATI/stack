@@ -692,9 +692,6 @@ void IPCPRIBDaemonImpl::start_internal_flow_sdu_reader(int port_id,
 	reader->start();
 
 	iflow_sdu_readers[port_id] = reader;
-
-	//Update con_handle to start using internal flow
-	io_handler->manager_->get_con_handle(cdap_session).use_internal_flow = true;
 }
 
 void IPCPRIBDaemonImpl::stop_internal_flow_sdu_reader(int port_id)
