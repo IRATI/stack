@@ -2085,7 +2085,6 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(rina::NeighborAddedEvent 
 			rina::cdap_rib::flags_t flags;
 			rina::cdap_rib::filt_info_t filt;
 			con.port_id = portId;
-			con.use_internal_flow = true;
 			if (obj.value_.size_ != 0)
 				rib_daemon_->getProxy()->remote_write(con,
 						obj,
@@ -2126,7 +2125,6 @@ void LinkStateRoutingPolicy::propagateFSDB()
 
 	FlowStateObjectListEncoder encoder;
 	rina::cdap_rib::con_handle_t con;
-	con.use_internal_flow = true;
 	for (std::map<int, std::list< std::list<FlowStateObject> > >::iterator it = objectsToSend.begin();
 		it != objectsToSend.end(); ++it)
 

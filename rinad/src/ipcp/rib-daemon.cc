@@ -81,27 +81,21 @@ void IPCPCDAPIOHandler::__send_message(const rina::cdap_rib::con_handle_t & con_
 	int fd = 0;
 	int ret;
 
-	if (con_handle.use_internal_flow) {
+	fd = etask->get_fd_associated_to_n1flow(con_handle.port_id);
+	if (fd > 0) {
 		//Write to internal reliable N-flow
-		fd = etask->get_fd_associated_to_n1flow(con_handle.port_id);
-		if (fd < 0) {
-			LOG_IPCP_ERR("Could not find fd associated to port-id %d",
-				     con_handle.port_id);
-			throw rina::IPCException("Could not find fd associated to port-id");
-		}
-
 		LOG_IPCP_DBG("About to write %d bytes on fd %d from pointer %p",
-			      sdu.size_, fd, sdu.message_);
+				sdu.size_, fd, sdu.message_);
 
 		ret = write(fd, sdu.message_, sdu.size_);
 		if (ret != sdu.size_) {
 			LOG_IPCP_WARN("Partial write: %d of %d", ret, sdu.size_);
 		}
-	} else {
+	}else {
 		//Write to N-1 flow
 		rina::kernelIPCProcess->writeMgmgtSDUToPortId(sdu.message_,
-							      sdu.size_,
-							      con_handle.port_id);
+				sdu.size_,
+				con_handle.port_id);
 	}
 }
 

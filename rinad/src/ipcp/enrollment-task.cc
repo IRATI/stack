@@ -352,7 +352,6 @@ void WatchdogRIBObject::sendMessages() {
 			obj.class_ = class_name;
 			obj.name_ = object_name;
 			con.port_id = it->underlying_port_id_;
-			con.use_internal_flow = true;
 
 			rib_daemon_->getProxy()->remote_read(con,
 							     obj,
@@ -885,7 +884,6 @@ int EnrollmentTask::get_con_handle_to_address(unsigned int dest_address,
 	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
 		if (it->second->remote_peer_.address_ == next_hop_address) {
 			con.port_id = it->second->con.port_id;
-			con.use_internal_flow = it->second->con.use_internal_flow;
 			return 0;
 		}
 	}
@@ -900,7 +898,6 @@ int EnrollmentTask::get_con_handle_to_address(unsigned int dest_address,
 	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
 		if (it->second->remote_peer_.address_ == next_hop_address) {
 			con.port_id = it->second->con.port_id;
-			con.use_internal_flow = it->second->con.use_internal_flow;
 			return 0;
 		}
 	}

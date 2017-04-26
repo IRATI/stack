@@ -904,7 +904,6 @@ void EnrolleeStateMachine::internal_flow_allocate_result(int portId,
 
 	remote_peer_.internal_port_id = portId;
 	internal_flow_fd = fd;
-	con.use_internal_flow = true;
 
 	// Send M_START_R message (transition to internal flow)
 	try {
@@ -1493,7 +1492,6 @@ void EnrollerStateMachine::internal_flow_allocate_result(int portId,
 
 	remote_peer_.internal_port_id = portId;
 	internal_flow_fd = fd;
-	con.use_internal_flow = true;
 
 	//Set timer
 	last_scheduled_task_ = new AbortEnrollmentTimerTask(enrollment_task_,

@@ -963,7 +963,7 @@ Neighbor::Neighbor()
 	enrolled_ = false;
 	underlying_port_id_ = 0;
 	number_of_enrollment_attempts_ = 0;
-	internal_port_id = 0;
+	internal_port_id = -1;
 }
 
 bool Neighbor::operator==(const Neighbor &other) const{
