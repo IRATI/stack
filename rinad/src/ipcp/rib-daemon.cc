@@ -496,11 +496,12 @@ int InternalFlowSDUReader::run()
 	int bytes_read = 0;
 	bool keep_going = true;
 
-	LOG_DBG("Internal flow SDU reader of port-id %d starting. "
-			"Attached to CDAP session %d",
-			portid, cdap_session);
+	LOG_IPCP_DBG("Internal flow SDU reader of port-id %d starting. "
+		     "Attached to CDAP session %d",
+		     portid, cdap_session);
 
 	while(keep_going) {
+		LOG_IPCP_DBG("Going to invoke read on fd %d",fd);
 		bytes_read = read(fd, message.message_, 5000);
 		LOG_IPCP_DBG("Got message %d bytes of port-id %d, "
 				"handling to CDAP Provider",
@@ -681,6 +682,7 @@ void IPCPRIBDaemonImpl::start_internal_flow_sdu_reader(int port_id,
 	rina::ThreadAttributes thread_attrs;
 	std::stringstream ss;
 	InternalFlowSDUReader * reader = 0;
+	rina::cdap_rib::con_handle_t con_handle;
 
 	rina::ScopedLock g(iflow_readers_lock);
 
@@ -691,6 +693,10 @@ void IPCPRIBDaemonImpl::start_internal_flow_sdu_reader(int port_id,
 	reader->start();
 
 	iflow_sdu_readers[port_id] = reader;
+
+	//Update con_handle to start using internal flow
+	con_handle = io_handler->manager_->get_con_handle(cdap_session);
+	con_handle.use_internal_flow = true;
 }
 
 void IPCPRIBDaemonImpl::stop_internal_flow_sdu_reader(int port_id)
