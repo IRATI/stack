@@ -682,7 +682,6 @@ void IPCPRIBDaemonImpl::start_internal_flow_sdu_reader(int port_id,
 	rina::ThreadAttributes thread_attrs;
 	std::stringstream ss;
 	InternalFlowSDUReader * reader = 0;
-	rina::cdap_rib::con_handle_t con_handle;
 
 	rina::ScopedLock g(iflow_readers_lock);
 
@@ -695,8 +694,7 @@ void IPCPRIBDaemonImpl::start_internal_flow_sdu_reader(int port_id,
 	iflow_sdu_readers[port_id] = reader;
 
 	//Update con_handle to start using internal flow
-	con_handle = io_handler->manager_->get_con_handle(cdap_session);
-	con_handle.use_internal_flow = true;
+	io_handler->manager_->get_con_handle(cdap_session).use_internal_flow = true;
 }
 
 void IPCPRIBDaemonImpl::stop_internal_flow_sdu_reader(int port_id)

@@ -476,7 +476,7 @@ class CDAPSessionManager : public CDAPSessionManagerInterface
 	CDAPSession* createCDAPSession(int port_id);
 	void getAllCDAPSessionIds(std::vector<int> &vector);
 	CDAPSession* get_cdap_session(int port_id);
-	cdap_rib::connection_handler get_con_handler(int port_id);
+	cdap_rib::connection_handler & get_con_handler(int port_id);
 	void encodeCDAPMessage(const cdap_m_t &cdap_message,
 			       ser_obj_t& result);
 	void decodeCDAPMessage(const ser_obj_t &cdap_message,
@@ -2310,14 +2310,14 @@ CDAPSession* CDAPSessionManager::get_cdap_session(int port_id)
 	return internal_get_cdap_session(port_id);
 }
 
-cdap_rib::connection_handler CDAPSessionManager::get_con_handler(int port_id)
+cdap_rib::connection_handler & CDAPSessionManager::get_con_handler(int port_id)
 {
 	CDAPSession * session;
 	ScopedLock g(lock);
 
 	session = internal_get_cdap_session(port_id);
 	if (!session) {
-		return cdap_rib::connection_handler();
+		throw IPCException("Could not find conn handler");
 	} else {
 		return session->get_con_handle();
 	}
