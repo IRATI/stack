@@ -1043,12 +1043,18 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         features = netif_skb_features(skb);
 
         if (skb_vlan_tag_present(skb) &&
-        		!vlan_hw_offload_capable(features, skb->vlan_proto))
+        		!vlan_hw_offload_capable(features, skb->vlan_proto)) {
+        	LOG_INFO("Adding VLAN tag");
         	skb = __vlan_hwaccel_push_inside(skb);
+        }
 
         /* skb->vlan_tci = 0, we don't want the dev_queue_xmit function to
          * create the vlan again */
         skb->vlan_tci = 0;
+
+        if (skb_vlan_tag_present(skb)) {
+        	LOG_INFO("VLAN tag still present");
+        }
 
         /* Before skb_get we must linearize the SKB if needed, otherwise */
         /* dev_queue_xmit will do it and will crash because the skb has more */
