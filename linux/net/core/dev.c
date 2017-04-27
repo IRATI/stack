@@ -2703,18 +2703,14 @@ static struct sk_buff *validate_xmit_skb(struct sk_buff *skb, struct net_device 
 		return skb;
 
 	features = netif_skb_features(skb);
-	printk("here");
 	skb = validate_xmit_vlan(skb, features);
-	printk("here2");
 	if (unlikely(!skb))
 		goto out_null;
 
 	if (netif_needs_gso(skb, features)) {
 		struct sk_buff *segs;
 
-		printk("here3");
 		segs = skb_gso_segment(skb, features);
-	        printk("here4");
 		if (IS_ERR(segs)) {
 			goto out_kfree_skb;
 		} else if (segs) {
@@ -2722,18 +2718,15 @@ static struct sk_buff *validate_xmit_skb(struct sk_buff *skb, struct net_device 
 			skb = segs;
 		}
 	} else {
-		printk("here5");
 		if (skb_needs_linearize(skb, features) &&
 		    __skb_linearize(skb))
 			goto out_kfree_skb;
 
-		printk("here6");
 		/* If packet is not checksummed and device does not
 		 * support checksumming for this protocol, complete
 		 * checksumming here.
 		 */
 		if (skb->ip_summed == CHECKSUM_PARTIAL) {
-			printk("here7");
 			if (skb->encapsulation)
 				skb_set_inner_transport_header(skb,
 							       skb_checksum_start_offset(skb));
@@ -2745,8 +2738,6 @@ static struct sk_buff *validate_xmit_skb(struct sk_buff *skb, struct net_device 
 				goto out_kfree_skb;
 		}
 	}
-
-	printk("here8");
 
 	return skb;
 
