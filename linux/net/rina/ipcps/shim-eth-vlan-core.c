@@ -1039,14 +1039,17 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         /* Before skb_get we must linearize the SKB if needed, otherwise */
         /* dev_queue_xmit will do it and will crash because the skb has more */
         /* than one user after the get */
-        LOG_INFO("Trying to linearize before");
         skb->dev = data->dev;
         features = netif_skb_features(skb);
-        if (skb_needs_linearize(skb, features) && __skb_linearize(skb)) {
-        	LOG_ERR("Problems linearizing SKB, bailing out ...");
-        	kfree_skb(skb);
-        	sdu_destroy(sdu);
-        	return -1;
+        LOG_INFO("Checking if it needs to linarize");
+        if (skb_needs_linearize(skb, features)) {
+        	LOG_INFO("Needs to linearize");
+        	if (__skb_linearize(skb)) {
+                	LOG_ERR("Problems linearizing SKB, bailing out ...");
+                	kfree_skb(skb);
+                	sdu_destroy(sdu);
+                	return -1;
+        	}
         }
 
         if (skb_needs_linearize(skb, features)) {

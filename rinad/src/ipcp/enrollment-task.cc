@@ -1687,6 +1687,7 @@ void EnrollmentTask::deallocate_flows_and_destroy_esm(IEnrollmentStateMachine * 
 	rina::FlowDeallocateRequestEvent fd_event;
 	IPCPEnrollmentTaskPS * ipcp_ps = 0;
 	rina::ConnectiviyToNeighborLostEvent * cnl_event = 0;
+	rina::Sleep sleep;
 
 	//In the case of the enrollee state machine, reply to the IPC Manager
 	if (call_ps) {
@@ -1709,7 +1710,8 @@ void EnrollmentTask::deallocate_flows_and_destroy_esm(IEnrollmentStateMachine * 
 		}
 	}
 
-	//Deallocate N-1 flow
+	//Deallocate N-1 flow, sleep for 50 ms first
+	sleep.sleepForMili(50);
 	deallocateFlow(port_id);
 
 	//Inform about connectivity to neighbor lost
