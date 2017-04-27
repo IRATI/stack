@@ -1447,25 +1447,27 @@ void EnrollerStateMachine::remoteStopResult(const rina::cdap_rib::con_handle_t &
 		//Add temp entry to the PDU forwarding table, to be able to forward PDUs to neighbor
 		ipcp_->resource_allocator_->add_temp_pduft_entry(remote_peer_.address_,
 				remote_peer_.underlying_port_id_);
+	}
 
-		try{
-			rina::cdap_rib::obj_info_t obj;
-			obj.class_ = OperationalStatusRIBObject::class_name;
-			obj.name_ = OperationalStatusRIBObject::object_name;
-			rina::cdap_rib::flags_t flags;
-			rina::cdap_rib::filt_info_t filt;
+	try{
+		rina::cdap_rib::obj_info_t obj;
+		obj.class_ = OperationalStatusRIBObject::class_name;
+		obj.name_ = OperationalStatusRIBObject::object_name;
+		rina::cdap_rib::flags_t flags;
+		rina::cdap_rib::filt_info_t filt;
 
-			rib_daemon_->getProxy()->remote_start(con,
-					obj,
-					flags,
-					filt,
-					this);
-		} catch(rina::Exception &e){
-			LOG_IPCP_ERR("Problems sending CDAP Message: %s", e.what());
-			abortEnrollment("Problems sending CDAP message", true);
-			return;
-		}
+		rib_daemon_->getProxy()->remote_start(con,
+				obj,
+				flags,
+				filt,
+				this);
+	} catch(rina::Exception &e){
+		LOG_IPCP_ERR("Problems sending CDAP Message: %s", e.what());
+		abortEnrollment("Problems sending CDAP message", true);
+		return;
+	}
 
+	if (enrollment_task_->use_reliable_n_flow) {
 		//Set timer
 		last_scheduled_task_ = new AbortEnrollmentTimerTask(enrollment_task_,
 				remote_peer_.name_,
@@ -1480,11 +1482,11 @@ void EnrollerStateMachine::remoteStopResult(const rina::cdap_rib::con_handle_t &
 	} else {
 		//Set timer
 		last_scheduled_task_ = new AbortEnrollmentTimerTask(enrollment_task_,
-	    	    	    	    	    	    	    	    remote_peer_.name_,
-								    con.port_id,
-								    remote_peer_.internal_port_id,
-								    START_RESPONSE_TIMEOUT,
-								    true);
+				remote_peer_.name_,
+				con.port_id,
+				remote_peer_.internal_port_id,
+				START_RESPONSE_TIMEOUT,
+				true);
 		timer_.scheduleTask(last_scheduled_task_, timeout_);
 
 		LOG_IPCP_DBG("Waiting for start response message");
