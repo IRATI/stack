@@ -948,6 +948,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 {
         struct shim_eth_flow *   flow;
         struct sk_buff *         skb;
+        struct sk_buff *	 bup_skb;
         const unsigned char *    src_hw;
         const unsigned char *    dest_hw;
         int                      hlen, tlen, length;
@@ -1014,45 +1015,47 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 
 	/* FIXME: sdu_detach_skb() has to be removed */
         skb = sdu_detach_skb(sdu);
-        if (unlikely(skb_tailroom(skb) < tlen)) {
-		LOG_ERR("Missing tail room in SKB, bailing out...");
+        bup_skb = skb_clone(skb, GFP_ATOMIC);
+        if (!bup_skb) {
+        	LOG_ERR("Error cloning SBK, bailing out");
                 kfree_skb(skb);
         	sdu_destroy(sdu);
         	return -1;
         }
+        sdu_attach_skb(sdu, skb);
 
-        skb_reset_network_header(skb);
-        skb->protocol = htons(ETH_P_RINA);
+        if (unlikely(skb_tailroom(bup_skb) < tlen)) {
+		LOG_ERR("Missing tail room in SKB, bailing out...");
+                kfree_skb(bup_skb);
+        	sdu_destroy(sdu);
+        	return -1;
+        }
 
-        retval = dev_hard_header(skb, data->dev,
-                                 ETH_P_RINA, dest_hw, src_hw, skb->len);
+        skb_reset_network_header(bup_skb);
+        bup_skb->protocol = htons(ETH_P_RINA);
+
+        retval = dev_hard_header(bup_skb, data->dev,
+                                 ETH_P_RINA, dest_hw, src_hw, bup_skb->len);
         if (retval < 0) {
                 LOG_ERR("Problems in dev_hard_header (%d)", retval);
-                kfree_skb(skb);
+                kfree_skb(bup_skb);
                 sdu_destroy(sdu);
                 return -1;
         }
 
-        skb->dev = data->dev;
-	/* skb_get is used to increase reference counter for the EAGAIN case */
-        skb = skb_get(skb);
-        retval = dev_queue_xmit(skb);
+        bup_skb->dev = data->dev;
+        retval = dev_queue_xmit(bup_skb);
 
         if (retval == -ENETDOWN) {
         	LOG_ERR("dev_q_xmit returned device down");
-		/* FIXME: this may produce a bad deallocation bug */
-                kfree_skb(skb);
         	sdu_destroy(sdu);
         	return -1;
         }
         if (retval != NET_XMIT_SUCCESS) {
-		skb_pull(skb, hlen); /* remove mac header */
-		sdu_attach_skb(sdu, skb);
         	LOG_DBG("qdisc cannot enqueue now (%d), try later", retval);
         	return -EAGAIN;
         }
 
-        kfree_skb(skb);
        	sdu_destroy(sdu);
         LOG_DBG("Packet sent");
         return 0;
