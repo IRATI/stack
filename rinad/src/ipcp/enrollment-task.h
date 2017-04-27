@@ -314,8 +314,8 @@ public:
 	static const std::string ENROLL_TIMEOUT_IN_MS;
 	static const std::string WATCHDOG_PERIOD_IN_MS;
 	static const std::string DECLARED_DEAD_INTERVAL_IN_MS;
-	static const std::string NEIGHBORS_ENROLLER_PERIOD_IN_MS;
 	static const std::string MAX_ENROLLMENT_RETRIES;
+	static const std::string USE_RELIABLE_N_FLOW;
 
 	EnrollmentTask();
 	~EnrollmentTask();
@@ -376,8 +376,8 @@ public:
 	/// The neighbor declared dead interval
 	int declared_dead_int_ms_;
 
-	/// The neighbor enroller period in ms
-	int neigh_enroll_per_ms_;
+	/// True if a reliable_n_flow is to be used, false otherwise
+	bool use_reliable_n_flow;
 
 private:
 	void _add_neighbor(const rina::Neighbor& neighbor);

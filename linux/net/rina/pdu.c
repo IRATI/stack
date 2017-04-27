@@ -63,6 +63,7 @@ pdu_create_gfp(pdu_type_t type, struct efcp_config *cfg, gfp_t flags)
 		return NULL;
 	}
 	skb_reserve(tmp->skb, MAX_PCIS_LEN);
+	tmp->skb->ip_summed = CHECKSUM_UNNECESSARY;
 	tmp->pci.h = skb_push(tmp->skb, pci_len);
 	tmp->pci.len = pci_len;
 	tmp->sdup_head = NULL;

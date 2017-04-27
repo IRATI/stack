@@ -659,8 +659,8 @@ void RetryEnrollmentTimerTask::run()
 const std::string EnrollmentTask::ENROLL_TIMEOUT_IN_MS = "enrollTimeoutInMs";
 const std::string EnrollmentTask::WATCHDOG_PERIOD_IN_MS = "watchdogPeriodInMs";
 const std::string EnrollmentTask::DECLARED_DEAD_INTERVAL_IN_MS = "declaredDeadIntervalInMs";
-const std::string EnrollmentTask::NEIGHBORS_ENROLLER_PERIOD_IN_MS = "neighborsEnrollerPeriodInMs";
 const std::string EnrollmentTask::MAX_ENROLLMENT_RETRIES = "maxEnrollmentRetries";
+const std::string EnrollmentTask::USE_RELIABLE_N_FLOW = "useReliableNFlow";
 
 EnrollmentTask::EnrollmentTask() : IPCPEnrollmentTask()
 {
@@ -673,8 +673,8 @@ EnrollmentTask::EnrollmentTask() : IPCPEnrollmentTask()
 	max_num_enroll_attempts_ = 0;
 	watchdog_per_ms_ = 0;
 	declared_dead_int_ms_ = 0;
-	neigh_enroll_per_ms_ = 0;
 	ipcp_ps = 0;
+	use_reliable_n_flow = true;
 }
 
 EnrollmentTask::~EnrollmentTask()
@@ -1005,11 +1005,35 @@ void EnrollmentTask::set_dif_configuration(const rina::DIFConfiguration& dif_con
 	}
 
 	// Parse policy config parameters
-	timeout_ = psconf.get_param_value_as_int(ENROLL_TIMEOUT_IN_MS);
-	max_num_enroll_attempts_ = psconf.get_param_value_as_uint(MAX_ENROLLMENT_RETRIES);
-	watchdog_per_ms_ = psconf.get_param_value_as_int(WATCHDOG_PERIOD_IN_MS);
-	declared_dead_int_ms_ = psconf.get_param_value_as_int(DECLARED_DEAD_INTERVAL_IN_MS);
-	neigh_enroll_per_ms_ = psconf.get_param_value_as_int(NEIGHBORS_ENROLLER_PERIOD_IN_MS);
+	try {
+		timeout_ = psconf.get_param_value_as_int(ENROLL_TIMEOUT_IN_MS);
+	} catch (rina::Exception &e) {
+		LOG_WARN("Problems parsing enroll timeout param: %s", e.what());
+	}
+
+	try {
+		max_num_enroll_attempts_ = psconf.get_param_value_as_uint(MAX_ENROLLMENT_RETRIES);
+	} catch (rina::Exception &e) {
+		LOG_WARN("Problems parsing max enroll retries param: %s", e.what());
+	}
+
+	try {
+		watchdog_per_ms_ = psconf.get_param_value_as_int(WATCHDOG_PERIOD_IN_MS);
+	} catch (rina::Exception &e) {
+		LOG_WARN("Problems parsing watchdog period param: %s", e.what());
+	}
+
+	try {
+		declared_dead_int_ms_ = psconf.get_param_value_as_int(DECLARED_DEAD_INTERVAL_IN_MS);
+	} catch (rina::Exception &e) {
+		LOG_WARN("Problems parsing neigh declared dead interval param: %s", e.what());
+	}
+
+	try {
+		use_reliable_n_flow = psconf.get_param_value_as_bool(USE_RELIABLE_N_FLOW);
+	} catch (rina::Exception &e) {
+		LOG_WARN("Problems parsing use reliable N flow param: %s", e.what());
+	}
 
 	//Add Watchdog RIB object to RIB
 	try{
