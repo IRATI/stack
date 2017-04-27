@@ -1710,8 +1710,8 @@ void EnrollmentTask::deallocate_flows_and_destroy_esm(IEnrollmentStateMachine * 
 		}
 	}
 
-	//Deallocate N-1 flow, sleep for 50 ms first
-	sleep.sleepForMili(50);
+	//Deallocate N-1 flow, sleep for 20 ms first (TODO Fix this)
+	sleep.sleepForMili(20);
 	deallocateFlow(port_id);
 
 	//Inform about connectivity to neighbor lost

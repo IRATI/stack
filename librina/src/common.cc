@@ -963,7 +963,7 @@ Neighbor::Neighbor()
 	enrolled_ = false;
 	underlying_port_id_ = 0;
 	number_of_enrollment_attempts_ = 0;
-	internal_port_id = -1;
+	internal_port_id = 0;
 }
 
 bool Neighbor::operator==(const Neighbor &other) const{
@@ -1076,8 +1076,7 @@ const std::string Neighbor::toString(){
 	ss<<"; Is enrolled: "<<enrolled_<<std::endl;
 	ss<<"Name: "<<name_.toString()<<std::endl;
 	ss<<"Supporting DIF in common: "<<supporting_dif_name_.processName;
-	ss<<"; N-1 port-id: "<<underlying_port_id_;
-	ss << "; Internal port-id: "<< internal_port_id <<std::endl;
+	ss<<"; N-1 port-id: "<<underlying_port_id_ <<std::endl;
 	ss<<"List of supporting DIFs: ";
 	for (std::list<ApplicationProcessNamingInformation>::iterator it = supporting_difs_.begin();
 			it != supporting_difs_.end(); it++)

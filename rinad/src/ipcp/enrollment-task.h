@@ -244,7 +244,7 @@ protected:
 
 	IPCProcess * ipcp_;
 	IPCPRIBDaemon * rib_daemon_;
-	rina::IEnrollmentTask * enrollment_task_;
+	IPCPEnrollmentTask * enrollment_task_;
 	rina::IAuthPolicySet * auth_ps_;
 	int timeout_;
 	rina::Timer timer_;
@@ -362,22 +362,6 @@ public:
 			       	      const rina::ser_obj_t &obj_req);
 	int get_con_handle_to_address(unsigned int address,
 				      rina::cdap_rib::con_handle_t& con);
-
-
-	/// The maximum time to wait between steps of the enrollment sequence (in ms)
-	int timeout_;
-
-	/// Maximum number of enrollment attempts
-	unsigned int max_num_enroll_attempts_;
-
-	/// Watchdog period in ms
-	int watchdog_per_ms_;
-
-	/// The neighbor declared dead interval
-	int declared_dead_int_ms_;
-
-	/// True if a reliable_n_flow is to be used, false otherwise
-	bool use_reliable_n_flow;
 
 private:
 	void _add_neighbor(const rina::Neighbor& neighbor);

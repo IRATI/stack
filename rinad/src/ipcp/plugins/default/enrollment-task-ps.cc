@@ -315,6 +315,8 @@ private:
 
 	void enrollmentCompleted();
 
+	void send_start_result_and_complete();
+
 	bool was_dif_member_before_enrollment_;
 	bool allowed_to_start_early_;
 	int stop_request_invoke_id_;
@@ -840,40 +842,82 @@ void EnrolleeStateMachine::operational_status_start(int invoke_id,
 	timer_.cancelTask(last_scheduled_task_);
 	start_request_invoke_id = invoke_id;
 
-	//Add temp entry to the PDU forwarding table, to be able to forward PDUs to neighbor
-	ipcp_->resource_allocator_->add_temp_pduft_entry(remote_peer_.address_,
-							 remote_peer_.underlying_port_id_);
+	if (enrollment_task_->use_reliable_n_flow) {
+		//Add temp entry to the PDU forwarding table, to be able to forward PDUs to neighbor
+		ipcp_->resource_allocator_->add_temp_pduft_entry(remote_peer_.address_,
+				remote_peer_.underlying_port_id_);
 
-	// Allocate internal reliable flow to layer management tasks of remote peer
+		// Allocate internal reliable flow to layer management tasks of remote peer
+		try {
+			event.DIFName.processName = enr_request.event_.dafName.processName;
+			event.localApplicationName.processName = ipcp_->get_name();
+			event.localApplicationName.processInstance = ipcp_->get_instance();
+			event.localApplicationName.entityName = IPCProcess::MANAGEMENT_AE;
+			event.remoteApplicationName.processName = remote_peer_.name_.processName;
+			event.remoteApplicationName.processInstance = remote_peer_.name_.processInstance;
+			event.remoteApplicationName.entityName = IPCProcess::MANAGEMENT_AE;
+			event.flowSpecification.maxAllowableGap = 0;
+			event.flowSpecification.orderedDelivery = true;
+			event.flowRequestorIpcProcessId = 0;
+			event.ipcProcessId = ipcp_->get_id();
+			event.internal = true;
+			ipc_process_->flow_allocator_->submitAllocateRequest(event,
+					remote_peer_.address_);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems allocating internal flow: %s", e.what());
+			abortEnrollment("Problems allocating internal flow", true);
+			return;
+		}
+
+		last_scheduled_task_ = new AbortEnrollmentTimerTask(enrollment_task_,
+				remote_peer_.name_,
+				con.port_id,
+				remote_peer_.internal_port_id,
+				INTERNAL_FLOW_ALLOCATION_TIMEOUT,
+				true);
+		timer_.scheduleTask(last_scheduled_task_, timeout_);
+		state_ = STATE_WAIT_INTERNAL_FLOW_ALLOCATION;
+	} else {
+		send_start_result_and_complete();
+	}
+}
+
+void EnrolleeStateMachine::send_start_result_and_complete()
+{
+	// Send M_START_R message (transition to internal flow)
 	try {
-		event.DIFName.processName = enr_request.event_.dafName.processName;
-		event.localApplicationName.processName = ipcp_->get_name();
-		event.localApplicationName.processInstance = ipcp_->get_instance();
-		event.localApplicationName.entityName = IPCProcess::MANAGEMENT_AE;
-		event.remoteApplicationName.processName = remote_peer_.name_.processName;
-		event.remoteApplicationName.processInstance = remote_peer_.name_.processInstance;
-		event.remoteApplicationName.entityName = IPCProcess::MANAGEMENT_AE;
-		event.flowSpecification.maxAllowableGap = 0;
-		event.flowSpecification.orderedDelivery = true;
-		event.flowRequestorIpcProcessId = 0;
-		event.ipcProcessId = ipcp_->get_id();
-		event.internal = true;
-		ipc_process_->flow_allocator_->submitAllocateRequest(event,
-								     remote_peer_.address_);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems allocating internal flow: %s", e.what());
-		abortEnrollment("Problems allocating internal flow", true);
-		return;
+		rina::cdap_rib::flags_t flags;
+		rina::cdap_rib::filt_info_t filt;
+		rina::cdap_rib::res_info_t res;
+		rina::cdap_rib::obj_info_t obj;
+		encoders::NeighborEncoder encoder;
+		rina::Neighbor neighbor;
+		obj.class_ = OperationalStatusRIBObject::class_name;
+		obj.name_ = OperationalStatusRIBObject::object_name;
+		neighbor.name_.processName = ipcp_->get_name();
+		neighbor.name_.processInstance = ipcp_->get_instance();
+		neighbor.name_.entityName = IPCProcess::MANAGEMENT_AE;
+		neighbor.name_.entityInstance = token;
+		encoder.encode(neighbor, obj.value_);
+		res.code_ = rina::cdap_rib::CDAP_SUCCESS;
+
+		rina::cdap::getProvider()->send_start_result(con,
+				obj,
+				flags,
+				res,
+				start_request_invoke_id);
+	}catch(rina::Exception &e){
+		LOG_IPCP_ERR("Problems sending CDAP message: %s", e.what());
 	}
 
-	last_scheduled_task_ = new AbortEnrollmentTimerTask(enrollment_task_,
-    	    	    	    	    	    	    	    remote_peer_.name_,
-							    con.port_id,
-							    remote_peer_.internal_port_id,
-							    INTERNAL_FLOW_ALLOCATION_TIMEOUT,
-							    true);
-	timer_.scheduleTask(last_scheduled_task_, timeout_);
-	state_ = STATE_WAIT_INTERNAL_FLOW_ALLOCATION;
+	// Complete enrollment
+	try{
+		commitEnrollment();
+		enrollmentCompleted();
+	}catch(rina::Exception &e){
+		LOG_IPCP_ERR("Problems commiting enrollment: %s", e.what());
+		abortEnrollment(PROBLEMS_COMMITTING_ENROLLMENT_INFO, true);
+	}
 }
 
 void EnrolleeStateMachine::internal_flow_allocate_result(int portId,
@@ -904,40 +948,7 @@ void EnrolleeStateMachine::internal_flow_allocate_result(int portId,
 
 	remote_peer_.internal_port_id = portId;
 
-	// Send M_START_R message (transition to internal flow)
-	try {
-		rina::cdap_rib::flags_t flags;
-		rina::cdap_rib::filt_info_t filt;
-		rina::cdap_rib::res_info_t res;
-		rina::cdap_rib::obj_info_t obj;
-		encoders::NeighborEncoder encoder;
-		rina::Neighbor neighbor;
-		obj.class_ = OperationalStatusRIBObject::class_name;
-		obj.name_ = OperationalStatusRIBObject::object_name;
-		neighbor.name_.processName = ipcp_->get_name();
-		neighbor.name_.processInstance = ipcp_->get_instance();
-		neighbor.name_.entityName = IPCProcess::MANAGEMENT_AE;
-		neighbor.name_.entityInstance = token;
-		encoder.encode(neighbor, obj.value_);
-		res.code_ = rina::cdap_rib::CDAP_SUCCESS;
-
-		rina::cdap::getProvider()->send_start_result(con,
-							     obj,
-							     flags,
-							     res,
-							     start_request_invoke_id);
-	}catch(rina::Exception &e){
-		LOG_IPCP_ERR("Problems sending CDAP message: %s", e.what());
-	}
-
-	// Complete enrollment
-	try{
-		commitEnrollment();
-		enrollmentCompleted();
-	}catch(rina::Exception &e){
-		LOG_IPCP_ERR("Problems commiting enrollment: %s", e.what());
-		abortEnrollment(PROBLEMS_COMMITTING_ENROLLMENT_INFO, true);
-	}
+	send_start_result_and_complete();
 }
 
 /// The state machine of the party that is a member of the DIF
@@ -1432,39 +1443,53 @@ void EnrollerStateMachine::remoteStopResult(const rina::cdap_rib::con_handle_t &
 		return;
 	}
 
-	//Add temp entry to the PDU forwarding table, to be able to forward PDUs to neighbor
-	ipcp_->resource_allocator_->add_temp_pduft_entry(remote_peer_.address_,
-							 remote_peer_.underlying_port_id_);
+	if (enrollment_task_->use_reliable_n_flow) {
+		//Add temp entry to the PDU forwarding table, to be able to forward PDUs to neighbor
+		ipcp_->resource_allocator_->add_temp_pduft_entry(remote_peer_.address_,
+				remote_peer_.underlying_port_id_);
 
-	try{
-		rina::cdap_rib::obj_info_t obj;
-		obj.class_ = OperationalStatusRIBObject::class_name;
-		obj.name_ = OperationalStatusRIBObject::object_name;
-		rina::cdap_rib::flags_t flags;
-		rina::cdap_rib::filt_info_t filt;
+		try{
+			rina::cdap_rib::obj_info_t obj;
+			obj.class_ = OperationalStatusRIBObject::class_name;
+			obj.name_ = OperationalStatusRIBObject::object_name;
+			rina::cdap_rib::flags_t flags;
+			rina::cdap_rib::filt_info_t filt;
 
-		rib_daemon_->getProxy()->remote_start(con,
-						      obj,
-						      flags,
-						      filt,
-						      this);
-	} catch(rina::Exception &e){
-		LOG_IPCP_ERR("Problems sending CDAP Message: %s", e.what());
-		abortEnrollment("Problems sending CDAP message", true);
-		return;
+			rib_daemon_->getProxy()->remote_start(con,
+					obj,
+					flags,
+					filt,
+					this);
+		} catch(rina::Exception &e){
+			LOG_IPCP_ERR("Problems sending CDAP Message: %s", e.what());
+			abortEnrollment("Problems sending CDAP message", true);
+			return;
+		}
+
+		//Set timer
+		last_scheduled_task_ = new AbortEnrollmentTimerTask(enrollment_task_,
+				remote_peer_.name_,
+				con.port_id,
+				remote_peer_.internal_port_id,
+				INTERNAL_FLOW_ALLOCATION_TIMEOUT,
+				true);
+		timer_.scheduleTask(last_scheduled_task_, timeout_);
+
+		LOG_IPCP_DBG("Waiting for internal flow allocation");
+		state_ = STATE_WAIT_INTERNAL_FLOW_ALLOCATION;
+	} else {
+		//Set timer
+		last_scheduled_task_ = new AbortEnrollmentTimerTask(enrollment_task_,
+	    	    	    	    	    	    	    	    remote_peer_.name_,
+								    con.port_id,
+								    remote_peer_.internal_port_id,
+								    START_RESPONSE_TIMEOUT,
+								    true);
+		timer_.scheduleTask(last_scheduled_task_, timeout_);
+
+		LOG_IPCP_DBG("Waiting for start response message");
+		state_ = STATE_WAIT_START_RESPONSE;
 	}
-
-	//Set timer
-	last_scheduled_task_ = new AbortEnrollmentTimerTask(enrollment_task_,
-    	    	    	    	    	    	    	    remote_peer_.name_,
-							    con.port_id,
-							    remote_peer_.internal_port_id,
-							    INTERNAL_FLOW_ALLOCATION_TIMEOUT,
-							    true);
-	timer_.scheduleTask(last_scheduled_task_, timeout_);
-
-	LOG_IPCP_DBG("Waiting for internal flow allocation");
-	state_ = STATE_WAIT_INTERNAL_FLOW_ALLOCATION;
 }
 
 void EnrollerStateMachine::internal_flow_allocate_result(int portId,

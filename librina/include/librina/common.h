@@ -752,8 +752,6 @@ public:
 
         /// The underlying portId used to communicate with this neighbor
         int underlying_port_id_;
-
-        /// The internal portId used to communicate with this neighbor
         int internal_port_id;
 
         /// The last time a KeepAlive message was received from
