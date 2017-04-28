@@ -4465,7 +4465,7 @@ int putIpcmUpdateDIFConfigurationRequestMessageObject(nl_msg* netlinkMessage,
 
 int putIpcmEnrollToDIFRequestMessageObject(nl_msg* netlinkMessage,
                 const IpcmEnrollToDIFRequestMessage& object) {
-        struct nlattr *difName, *supDIFName, *neighbourName;
+        struct nlattr *difName, *supDIFName, *neighbourName , *disc_neigh;
 
         if (!(difName = nla_nest_start(netlinkMessage, IETDR_ATTR_DIF_NAME))){
                 goto nla_put_failure;
@@ -4495,6 +4495,18 @@ int putIpcmEnrollToDIFRequestMessageObject(nl_msg* netlinkMessage,
                 goto nla_put_failure;
         }
         nla_nest_end(netlinkMessage, neighbourName);
+
+        if (object.prepare_for_handover) {
+        	NLA_PUT_FLAG(netlinkMessage, IETDR_ATTR_PREPARE_HAND);
+                if (!(disc_neigh = nla_nest_start(netlinkMessage, IETDR_ATTR_DISC_NEIGH_NAME))){
+                        goto nla_put_failure;
+                }
+                if (putApplicationProcessNamingInformationObject(netlinkMessage,
+                                object.disc_neigh_name) < 0) {
+                        goto nla_put_failure;
+                }
+                nla_nest_end(netlinkMessage, disc_neigh);
+        }
 
         return 0;
 
@@ -7758,6 +7770,12 @@ parseIpcmEnrollToDIFRequestMessage(nlmsghdr *hdr) {
         attr_policy[IETDR_ATTR_NEIGH].type = NLA_NESTED;
         attr_policy[IETDR_ATTR_NEIGH].minlen = 0;
         attr_policy[IETDR_ATTR_NEIGH].maxlen = 0;
+        attr_policy[IETDR_ATTR_PREPARE_HAND].type = NLA_FLAG;
+        attr_policy[IETDR_ATTR_PREPARE_HAND].minlen = 0;
+        attr_policy[IETDR_ATTR_PREPARE_HAND].maxlen = 0;
+        attr_policy[IETDR_ATTR_DISC_NEIGH_NAME].type = NLA_NESTED;
+        attr_policy[IETDR_ATTR_DISC_NEIGH_NAME].minlen = 0;
+        attr_policy[IETDR_ATTR_DISC_NEIGH_NAME].maxlen = 0;
         struct nlattr *attrs[IETDR_ATTR_MAX + 1];
 
         int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
@@ -7774,6 +7792,7 @@ parseIpcmEnrollToDIFRequestMessage(nlmsghdr *hdr) {
         ApplicationProcessNamingInformation * difName;
         ApplicationProcessNamingInformation * supDifName;
         ApplicationProcessNamingInformation * neighbour;
+        ApplicationProcessNamingInformation * disc_neigh;
 
         if (attrs[IETDR_ATTR_DIF_NAME]) {
                 difName = parseApplicationProcessNamingInformationObject(
@@ -7809,6 +7828,21 @@ parseIpcmEnrollToDIFRequestMessage(nlmsghdr *hdr) {
                         result->setNeighborName(*neighbour);
                         delete neighbour;
                 }
+        }
+
+        if (attrs[IETDR_ATTR_PREPARE_HAND]) {
+        	result->prepare_for_handover = true;
+        	if (attrs[IETDR_ATTR_DISC_NEIGH_NAME]) {
+                        disc_neigh = parseApplicationProcessNamingInformationObject(
+                                        attrs[IETDR_ATTR_DISC_NEIGH_NAME]);
+                        if (disc_neigh == 0) {
+                                delete result;
+                                return 0;
+                        } else {
+                                result->disc_neigh_name = *disc_neigh;
+                                delete disc_neigh;
+                        }
+        	}
         }
 
         return result;

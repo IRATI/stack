@@ -1151,6 +1151,7 @@ IPCEvent* IpcmUpdateDIFConfigurationRequestMessage::toIPCEvent()
 /* CLASS IPCM ENROLL TO DIF REQUEST MESSAGE */
 IpcmEnrollToDIFRequestMessage:: IpcmEnrollToDIFRequestMessage():
         BaseNetlinkMessage(RINA_C_IPCM_ENROLL_TO_DIF_REQUEST) {
+	prepare_for_handover = false;
 }
 
 const ApplicationProcessNamingInformation&
@@ -1187,7 +1188,8 @@ IPCEvent* IpcmEnrollToDIFRequestMessage::toIPCEvent(){
         EnrollToDAFRequestEvent * event =
                         new EnrollToDAFRequestEvent(
                                         difName, supportingDIFName,
-                                        neighborName, getSequenceNumber());
+                                        neighborName, prepare_for_handover,
+					disc_neigh_name, getSequenceNumber());
         return event;
 }
 

@@ -650,7 +650,7 @@ public:
  * supporting N-1 DIF (IPC Manager -> IPC Process)
  */
 class IpcmEnrollToDIFRequestMessage: public BaseNetlinkMessage {
-
+public:
         /** The DIF to enroll to */
         ApplicationProcessNamingInformation difName;
 
@@ -660,7 +660,13 @@ class IpcmEnrollToDIFRequestMessage: public BaseNetlinkMessage {
         /** The neighbor to enroll to */
         ApplicationProcessNamingInformation neighborName;
 
-public:
+        /** True if the IPCP must prepare for a handover after enrollment */
+        bool prepare_for_handover;
+
+        /** If it has to prepare for handover, the name of the IPCP that */
+        /** has to be disconnected after handover */
+        rina::ApplicationProcessNamingInformation disc_neigh_name;
+
         IpcmEnrollToDIFRequestMessage();
         const ApplicationProcessNamingInformation& getDifName() const;
         void setDifName(const ApplicationProcessNamingInformation& difName);

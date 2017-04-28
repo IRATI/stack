@@ -54,14 +54,31 @@ public:
 
         int current_enroll_attempts;
 
-        EnrollToDAFRequestEvent() : current_enroll_attempts(0) { };
+        bool prepare_for_handover;
+
+        rina::ApplicationProcessNamingInformation disc_neigh_name;
+
+        EnrollToDAFRequestEvent() : current_enroll_attempts(0),
+        		prepare_for_handover(false){ };
         EnrollToDAFRequestEvent(
                 const ApplicationProcessNamingInformation& daf,
                 const ApplicationProcessNamingInformation& supportingDIF,
                 const ApplicationProcessNamingInformation& neighbor,
                 unsigned int sequenceNumber) : IPCEvent(ENROLL_TO_DIF_REQUEST_EVENT, sequenceNumber),
                 	dafName(daf), supportingDIFName(supportingDIF),
-                	neighborName(neighbor), current_enroll_attempts(0) { };
+                	neighborName(neighbor), current_enroll_attempts(0),
+			prepare_for_handover(false) { };
+        EnrollToDAFRequestEvent(
+                const ApplicationProcessNamingInformation& daf,
+                const ApplicationProcessNamingInformation& supportingDIF,
+                const ApplicationProcessNamingInformation& neighbor,
+		bool prepare,
+		const ApplicationProcessNamingInformation& disc_neigh,
+                unsigned int sequenceNumber)
+        		: IPCEvent(ENROLL_TO_DIF_REQUEST_EVENT, sequenceNumber),
+                	dafName(daf), supportingDIFName(supportingDIF),
+                	neighborName(neighbor), current_enroll_attempts(0),
+			prepare_for_handover(prepare), disc_neigh_name(disc_neigh) { };
 };
 
 class DisconnectNeighborRequestEvent: public IPCEvent {

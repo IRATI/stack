@@ -229,16 +229,44 @@ void IPCProcessProxy::notifyUnregistrationFromSupportingDIF(
 #endif
 }
 
-void IPCProcessProxy::enroll(
-        const ApplicationProcessNamingInformation& difName,
-        const ApplicationProcessNamingInformation& supportingDifName,
-        const ApplicationProcessNamingInformation& neighborName,
-        unsigned int opaque)
+void IPCProcessProxy::enroll(const ApplicationProcessNamingInformation& difName,
+			     const ApplicationProcessNamingInformation& supportingDifName,
+			     const ApplicationProcessNamingInformation& neighborName,
+			     unsigned int opaque)
 {
 #if STUB_API
         //Do nothing
 #else
         IpcmEnrollToDIFRequestMessage message;
+        message.prepare_for_handover = false;
+        message.setDifName(difName);
+        message.setSupportingDifName(supportingDifName);
+        message.setNeighborName(neighborName);
+        message.setDestIpcProcessId(id);
+        message.setDestPortId(portId);
+        message.setRequestMessage(true);
+        message.setSequenceNumber(opaque);
+
+        try {
+                rinaManager->sendMessage(&message, false);
+        } catch(NetlinkException &e) {
+                throw EnrollException(e.what());
+        }
+#endif
+}
+
+void IPCProcessProxy::enroll_prepare_hand(const ApplicationProcessNamingInformation& difName,
+			 	 	  const ApplicationProcessNamingInformation& supportingDifName,
+					  const ApplicationProcessNamingInformation& neighborName,
+					  const ApplicationProcessNamingInformation& disc_neigh_name,
+					  unsigned int opaque)
+{
+#if STUB_API
+        //Do nothing
+#else
+        IpcmEnrollToDIFRequestMessage message;
+        message.prepare_for_handover = true;
+        message.disc_neigh_name = disc_neigh_name;
         message.setDifName(difName);
         message.setSupportingDifName(supportingDifName);
         message.setNeighborName(neighborName);

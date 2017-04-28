@@ -1516,9 +1516,14 @@ int testIpcmEnrollToDIFRequestMessage() {
         ApplicationProcessNamingInformation neighborName;
         neighborName.processName = "test";
         neighborName.processInstance = "1";
+        ApplicationProcessNamingInformation disc_neigh_name;
+        disc_neigh_name.processName = "test2";
+        disc_neigh_name.processInstance = "1";
         message.setDifName(difName);
         message.setSupportingDifName(supportingDifName);
         message.setNeighborName(neighborName);
+        message.prepare_for_handover = true;
+        message.disc_neigh_name = disc_neigh_name;
 
         struct nl_msg* netlinkMessage;
         netlinkMessage = nlmsg_alloc();
@@ -1554,6 +1559,14 @@ int testIpcmEnrollToDIFRequestMessage() {
                 returnValue = -1;
         } else if (message.getNeighborName() != recoveredMessage->getNeighborName()){
                 std::cout << "Neighbour Name on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.prepare_for_handover != recoveredMessage->prepare_for_handover) {
+                std::cout << "Prepare for handover on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.disc_neigh_name != recoveredMessage->disc_neigh_name){
+                std::cout << "disc_neigh_nameon original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
         }

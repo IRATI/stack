@@ -747,6 +747,8 @@ enum IpcmEnrollToDIFRequestMessageAttributes {
         IETDR_ATTR_DIF_NAME = 1,
         IETDR_ATTR_SUP_DIF_NAME,
         IETDR_ATTR_NEIGH,
+	IETDR_ATTR_PREPARE_HAND,
+	IETDR_ATTR_DISC_NEIGH_NAME,
         __IETDR_ATTR_MAX,
 };
 
