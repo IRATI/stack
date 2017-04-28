@@ -440,6 +440,7 @@ IEnrollmentStateMachine::IEnrollmentStateMachine(IPCProcess * ipcp,
 	state_ = STATE_NULL;
 	auth_ps_ = 0;
 	enroller_ = false;
+	being_destroyed = false;
 }
 
 IEnrollmentStateMachine::~IEnrollmentStateMachine() {
@@ -535,7 +536,6 @@ void IEnrollmentStateMachine::createOrUpdateNeighborInformation(bool enrolled)
 		remote_peer_.underlying_port_id_ = con.port_id;
 	} else {
 		remote_peer_.underlying_port_id_ = 0;
-		remote_peer_.internal_port_id = 0;
 	}
 
 	enrollment_task_->add_or_update_neighbor(remote_peer_);
@@ -889,6 +889,26 @@ int EnrollmentTask::get_con_handle_to_address(unsigned int dest_address,
 	return -1;
 }
 
+int EnrollmentTask::get_neighbor_info(rina::Neighbor& neigh)
+{
+	std::map<std::string, rina::Neighbor*>::iterator it;
+
+	rina::ReadScopedLock readLock(neigh_lock);
+
+	it = neighbors.find(neigh.name_.getProcessNamePlusInstance());
+	if (it == neighbors.end()) {
+		return -1;
+	}
+
+	neigh.address_ = it->second->address_;
+	neigh.enrolled_ = it->second->enrolled_;
+	neigh.internal_port_id = it->second->internal_port_id;
+	neigh.old_address_ = it->second->old_address_;
+	neigh.underlying_port_id_ = it->second->underlying_port_id_;
+
+	return 0;
+}
+
 void EnrollmentTask::addressChange(rina::AddressChangeEvent * event)
 {
 	rina::ScopedLock g(lock_);
@@ -930,10 +950,20 @@ void EnrollmentTask::addressChange(rina::AddressChangeEvent * event)
 void EnrollmentTask::update_neighbor_address(const rina::Neighbor& neighbor)
 {
 	std::map<std::string, rina::Neighbor *>::iterator it;
+	std::map<int, IEnrollmentStateMachine*>::iterator it2;
 	rina::NeighborAddressChangeEvent * event = 0;
 
-	rina::ReadScopedLock readLock(neigh_lock);
+	sm_lock.readlock();
+	for (it2 = state_machines_.begin(); it2 != state_machines_.end(); ++it2) {
+		if (it2->second->remote_peer_.name_.processName == neighbor.name_.processName) {
+			it2->second->remote_peer_.old_address_ = it2->second->remote_peer_.address_;
+			it2->second->remote_peer_.address_ = neighbor.address_;
+			break;
+		}
+	}
+	sm_lock.unlock();
 
+	rina::ReadScopedLock readLock(neigh_lock);
 	it = neighbors.find(neighbor.name_.getProcessNamePlusInstance());
 	if (it != neighbors.end()) {
 		it->second->old_address_ = it->second->address_;
@@ -1111,8 +1141,7 @@ void EnrollmentTask::processDisconnectNeighborRequestEvent(const rina::Disconnec
 	IEnrollmentStateMachine * esm = 0;
 	std::map<int, IEnrollmentStateMachine *>::iterator it;
 
-	rina::WriteScopedLock g(sm_lock);
-
+	sm_lock.writelock();
 	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
 		if (it->second->remote_peer_.name_.processName.compare(event.neighborName.processName) == 0 &&
 				it->second->get_state() != IEnrollmentStateMachine::STATE_NULL) {
@@ -1120,6 +1149,7 @@ void EnrollmentTask::processDisconnectNeighborRequestEvent(const rina::Disconnec
 			state_machines_.erase(it);
 		}
 	}
+	sm_lock.unlock();
 
 	if (!esm) {
 		LOG_IPCP_ERR("Not enrolled to IPC Process %s",
@@ -1373,6 +1403,7 @@ void EnrollmentTask::add_or_update_neighbor(const rina::Neighbor& neighbor)
 		it->second->enrolled_ = neighbor.enrolled_;
 		it->second->underlying_port_id_ = neighbor.underlying_port_id_;
 		it->second->last_heard_from_time_in_ms_ = neighbor.last_heard_from_time_in_ms_;
+		it->second->internal_port_id = neighbor.internal_port_id;
 	} else
 		_add_neighbor(neighbor);
 }

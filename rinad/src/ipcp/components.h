@@ -114,6 +114,7 @@ public:
 	// Return the con_handle to the next hop to reach the address
 	virtual int get_con_handle_to_address(unsigned int address,
 					      rina::cdap_rib::con_handle_t& con) = 0;
+	virtual int get_neighbor_info(rina::Neighbor& neigh) = 0;
 
 	/// The maximum time to wait between steps of the enrollment sequence (in ms)
 	int timeout_;
@@ -406,6 +407,8 @@ public:
 	virtual void set_rt_entries(const std::list<rina::RoutingTableEntry*>& rt) = 0;
 	// Returns the next hop address towards the destination
 	virtual unsigned int get_next_hop_address(unsigned int dest_address) = 0;
+	// Returns the N-1 port towards the destination
+	virtual unsigned int get_n1_port_to_address(unsigned int dest_address) = 0;
 
 	/// Add a temporary entry to the PDU FTE, until the routing policy
 	/// provides it when it modifies the forwarding table.

@@ -1311,6 +1311,15 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 	flow_->state = configs::Flow::WAITING_2_MPL_BEFORE_TEARING_DOWN;
 	state = WAITING_2_MPL_BEFORE_TEARING_DOWN;
 
+	if (flow_->internal) {
+		//Wait 2*MPL before tearing down the flow
+		TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(this,
+									      object_name_,
+									      true);
+		timer.scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
+		return;
+	}
+
 	//2 Send M_DELETE
 	if (flow_->source_address != flow_->destination_address) {
 		try {
@@ -1318,6 +1327,7 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 			dest_address = namespace_manager_->getDFTNextHop(flow_->destination_naming_info);
 			rv = ipc_process_->enrollment_task_->get_con_handle_to_address(dest_address,
 					con_handle);
+
 			if (rv == 0) {
 				con_handle.address = dest_address;
 				con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_ADATA;

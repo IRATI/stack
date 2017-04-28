@@ -766,6 +766,21 @@ unsigned int ResourceAllocator::get_next_hop_address(unsigned int dest_address)
 	return 0;
 }
 
+unsigned int ResourceAllocator::get_n1_port_to_address(unsigned int dest_address)
+{
+	std::map<std::string, rina::PDUForwardingTableEntry *>::iterator it;
+
+	rina::ReadScopedLock g(pduft_lock);
+
+	for (it = pduft.begin(); it != pduft.end(); ++it) {
+		if (it->second->address == dest_address) {
+			return it->second->portIdAltlists.front().alts.front();
+		}
+	}
+
+	return 0;
+}
+
 bool ResourceAllocator::contains_temp_entry(unsigned int dest_address)
 {
 	std::list<rina::PDUForwardingTableEntry*>::iterator it;

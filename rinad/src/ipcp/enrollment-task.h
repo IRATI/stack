@@ -227,6 +227,7 @@ public:
 
 	/// The enrollment request, store it to be able to retry enrollment afterwards
 	rina::EnrollmentRequest enr_request;
+	bool being_destroyed;
 
 protected:
 	bool isValidPortId(int portId);
@@ -362,6 +363,7 @@ public:
 			       	      const rina::ser_obj_t &obj_req);
 	int get_con_handle_to_address(unsigned int address,
 				      rina::cdap_rib::con_handle_t& con);
+	int get_neighbor_info(rina::Neighbor& neigh);
 
 private:
 	void _add_neighbor(const rina::Neighbor& neighbor);
