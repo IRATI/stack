@@ -192,11 +192,15 @@ const std::string ConnectiviyToNeighborLostEvent::toString()
 }
 
 //CLASS NeighborAddedEvent
-NeighborAddedEvent::NeighborAddedEvent(const Neighbor& neighbor, bool enrollee):
+NeighborAddedEvent::NeighborAddedEvent(const Neighbor& neighbor, bool enrollee,
+				       bool prepare_for_handover,
+				       const rina::ApplicationProcessNamingInformation& disc_neigh):
 		InternalEvent(InternalEvent::APP_NEIGHBOR_ADDED)
 {
 	neighbor_ = neighbor;
 	enrollee_ = enrollee;
+	prepare_handover = prepare_for_handover;
+	disc_neigh_name = disc_neigh;
 }
 
 const std::string NeighborAddedEvent::toString()
@@ -204,6 +208,10 @@ const std::string NeighborAddedEvent::toString()
 	std::stringstream ss;
 	ss<<"Event id: "<<type<<"; Neighbor: "<<neighbor_.toString()<<std::endl;
 	ss<<"Enrollee: "<<enrollee_<<std::endl;
+	if (prepare_handover) {
+		ss<<"Prepare for handover: true; Disc neighbor name: "
+		  << disc_neigh_name.toString()<<std::endl;
+	}
 	return ss.str();
 }
 

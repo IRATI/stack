@@ -496,7 +496,8 @@ public:
 				   unsigned int address,
 				   bool neighbor);
 	void deprecateObjectsNeighbor(const std::string& neigh_name,
-	                              const std::string& name);
+	                              const std::string& name,
+				      bool both);
 	std::map <int, std::list<FlowStateObject*> > prepareForPropagation
 	        (const std::list<rina::FlowInformation>& flows);
 	void incrementAge();

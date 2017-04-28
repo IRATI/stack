@@ -152,8 +152,9 @@ public:
 	/// @param enrollee true if this App process is the one that initiated the
 	/// enrollment sequence (i.e. it is the application process that wants to
 	/// join the DIF)
-	virtual void enrollmentCompleted(const Neighbor& neighbor,
-                                         bool enrollee) = 0;
+	virtual void enrollmentCompleted(const rina::Neighbor& neighbor, bool enrollee,
+				 	 bool prepare_handover,
+					 const rina::ApplicationProcessNamingInformation& disc_neigh_name) = 0;
 
 	/// Called by the enrollment state machine when the enrollment sequence fails
 	/// @param remotePeer

@@ -859,7 +859,9 @@ ipcm_res_t IPCManager_::unregister_ipcp_from_ipcp(
 
 ipcm_res_t IPCManager_::enroll_to_dif(Addon* callee, Promise* promise,
                                       const unsigned short ipcp_id,
-                                      const rinad::NeighborData& neighbor)
+                                      const rinad::NeighborData& neighbor,
+				      bool prepare_hand,
+				      const rina::ApplicationProcessNamingInformation& disc_neigh)
 {
     std::ostringstream ss;
     IPCMIPCProcess *ipcp;
@@ -900,8 +902,13 @@ ipcm_res_t IPCManager_::enroll_to_dif(Addon* callee, Promise* promise,
             throw rina::Exception();
         }
 
-        ipcp->enroll(neighbor.difName, neighbor.supportingDifName,
-                     neighbor.apName, trans->tid);
+        if (prepare_hand) {
+        	ipcp->enroll_prepare_handover(neighbor.difName, neighbor.supportingDifName,
+        				      neighbor.apName, disc_neigh, trans->tid);
+        } else {
+        	ipcp->enroll(neighbor.difName, neighbor.supportingDifName,
+        			neighbor.apName, trans->tid);
+        }
 
         ss << "Requested enrollment of IPC process "
                 << ipcp->get_name().toString() << " to DIF "

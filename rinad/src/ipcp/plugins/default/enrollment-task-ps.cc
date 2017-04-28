@@ -743,7 +743,9 @@ void EnrolleeStateMachine::enrollmentCompleted()
 	//Send DirectoryForwardingTableEntries
 	sendDFTEntries();
 
-	enrollment_task_->enrollmentCompleted(remote_peer_, true);
+	enrollment_task_->enrollmentCompleted(remote_peer_, true,
+					      enr_request.event_.prepare_for_handover,
+					      enr_request.event_.disc_neigh_name);
 
 	//Notify the kernel
 	if (!was_dif_member_before_enrollment_) {
@@ -1573,7 +1575,8 @@ void EnrollerStateMachine::enrollmentCompleted()
 
 	createOrUpdateNeighborInformation(true);
 
-	enrollment_task_->enrollmentCompleted(remote_peer_, false);
+	enrollment_task_->enrollmentCompleted(remote_peer_, false, false,
+					      rina::ApplicationProcessNamingInformation());
 }
 
 //Class EnrollmentRIBObject

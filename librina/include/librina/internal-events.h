@@ -160,7 +160,9 @@ public:
 /// The IPC Process has enrolled with a new neighbor
 class NeighborAddedEvent: public InternalEvent {
 public:
-	NeighborAddedEvent(const Neighbor& neighbor, bool enrollee);
+	NeighborAddedEvent(const Neighbor& neighbor, bool enrollee,
+			   bool prepare_for_handover,
+			   const rina::ApplicationProcessNamingInformation& disc_neigh);
 	const std::string toString();
 
 	Neighbor neighbor_;
@@ -168,6 +170,9 @@ public:
 	/// True if this IPC Process requested the enrollment operation,
 	/// false if it was its neighbor.
 	bool enrollee_;
+
+	bool prepare_handover;
+	rina::ApplicationProcessNamingInformation disc_neigh_name;
 };
 
 /// A connectivity to a neighbor has been lost

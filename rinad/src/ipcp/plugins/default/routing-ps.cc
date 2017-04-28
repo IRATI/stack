@@ -1699,14 +1699,18 @@ void FlowStateManager::getAllFSOsForPropagation(std::list< std::list<FlowStateOb
 }
 
 void FlowStateManager::deprecateObjectsNeighbor(const std::string& neigh_name,
-                                                const std::string& name)
+                                                const std::string& name,
+						bool both)
 {
 	fsos->deprecateObjects(neigh_name,
 			       name,
 			       maximum_age);
-	fsos->deprecateObjects(name,
-			       neigh_name,
-			       maximum_age);
+
+	if (both) {
+		fsos->deprecateObjects(name,
+				neigh_name,
+				maximum_age);
+	}
 }
 
 void FlowStateManager::force_table_update()
@@ -2034,7 +2038,8 @@ void LinkStateRoutingPolicy::processFlowDeallocatedEvent(
 void LinkStateRoutingPolicy::processNeighborLostEvent(rina::ConnectiviyToNeighborLostEvent* event)
 {
 	db_->deprecateObjectsNeighbor(event->neighbor_.name_.processName,
-				      ipc_process_->get_name());
+				      ipc_process_->get_name(),
+				      true);
 }
 
 
@@ -2068,6 +2073,12 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(rina::NeighborAddedEvent 
 				portId);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Could not allocate the flow, no neighbor found");
+	}
+
+	if (event->prepare_handover) {
+		db_->deprecateObjectsNeighbor(event->disc_neigh_name.processName,
+					      ipc_process_->get_name(),
+					      false);
 	}
 
 	std::list< std::list<FlowStateObject> > all_fsos;

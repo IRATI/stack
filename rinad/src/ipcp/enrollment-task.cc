@@ -1665,11 +1665,12 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 	}
 }
 
-void EnrollmentTask::enrollmentCompleted(const rina::Neighbor& neighbor,
-					 bool enrollee)
+void EnrollmentTask::enrollmentCompleted(const rina::Neighbor& neighbor, bool enrollee,
+			 	 	 bool prepare_handover,
+					 const rina::ApplicationProcessNamingInformation& disc_neigh_name)
 {
-	rina::NeighborAddedEvent * event = new rina::NeighborAddedEvent(neighbor,
-									enrollee);
+	rina::NeighborAddedEvent * event = new rina::NeighborAddedEvent(neighbor, enrollee,
+									prepare_handover, disc_neigh_name);
 	event_manager_->deliverEvent(event);
 }
 

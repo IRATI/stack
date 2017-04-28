@@ -283,7 +283,7 @@ void MobilityManager::execute_handover(const rina::MediaReport& report)
 	high_neigh_data.supportingDifName.processName = next_dif;
 	high_neigh_data.difName.processName = "mobile.DIF";
 
-	if(IPCManager->enroll_to_dif(this, &promise, normal_ipcp->get_id(), high_neigh_data) == IPCM_FAILURE ||
+	if(IPCManager->enroll_to_dif(this, &promise, normal_ipcp->get_id(), high_neigh_data, true, neighbor) == IPCM_FAILURE ||
 			promise.wait() != IPCM_SUCCESS) {
 		LOG_WARN("Problems enrolling IPCP %u to DIF %s via supporting DIF %s",
 				normal_ipcp->get_id(),

@@ -349,7 +349,9 @@ public:
 			      int internal_portId,
 			      const std::string& reason,
 			      bool sendReleaseMessage);
-	void enrollmentCompleted(const rina::Neighbor& neighbor, bool enrollee);
+	void enrollmentCompleted(const rina::Neighbor& neighbor, bool enrollee,
+				 bool prepare_handover,
+				 const rina::ApplicationProcessNamingInformation& disc_neigh_name);
 	IEnrollmentStateMachine * getEnrollmentStateMachine(int portId, bool remove);
 	void deallocateFlow(int portId);
 	void add_enrollment_state_machine(int portId, IEnrollmentStateMachine * stateMachine);
