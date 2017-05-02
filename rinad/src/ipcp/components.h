@@ -414,6 +414,7 @@ public:
 	/// provides it when it modifies the forwarding table.
 	/// Takes ownership of the entry.
 	virtual void add_temp_pduft_entry(unsigned int dest_address, int port_id) = 0;
+	virtual void remove_temp_pduft_entry(unsigned int dest_address) = 0;
 
 	IPDUFTGeneratorPs * pduft_gen_ps;
 };

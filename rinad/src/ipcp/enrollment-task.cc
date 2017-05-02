@@ -835,6 +835,8 @@ void EnrollmentTask::internal_flow_deallocated(rina::IPCPInternalFlowDeallocated
 	// Request deallocation of N-1 flow
 	deallocateFlow(esm->con.port_id);
 
+	ipcp->resource_allocator_->remove_temp_pduft_entry(esm->remote_peer_.address_);
+
 	// Update and defer deletion of state machine to a timer task (takes long)
 	esm->reset_state();
 	dsm_task = new DestroyESMTimerTask(esm);
@@ -1539,7 +1541,7 @@ void EnrollmentTask::neighborDeclaredDead(rina::NeighborDeclaredDeadEvent * dead
 
 void EnrollmentTask::nMinusOneFlowDeallocated(rina::NMinusOneFlowDeallocatedEvent * event)
 {
-	IEnrollmentStateMachine * enrollmentStateMachine = 0;
+	IEnrollmentStateMachine * esm = 0;
 	rina::ConnectiviyToNeighborLostEvent * event2 = 0;
 	rina::FlowDeallocateRequestEvent fd_event;
 	DestroyESMTimerTask * dsm_task = 0;
@@ -1549,29 +1551,31 @@ void EnrollmentTask::nMinusOneFlowDeallocated(rina::NMinusOneFlowDeallocatedEven
 	rina::ScopedLock g(lock_);
 
 	//1 Remove the enrollment state machine from the list
-	enrollmentStateMachine = getEnrollmentStateMachine(event->port_id_, true);
-	if (!enrollmentStateMachine){
+	esm = getEnrollmentStateMachine(event->port_id_, true);
+	if (!esm){
 		return;
 	}
 
-	enrollmentStateMachine->flowDeallocated(event->port_id_);
+	esm->flowDeallocated(event->port_id_);
 
 	//2 Request deallocation of internal reliable flow
-	if (enrollmentStateMachine->remote_peer_.internal_port_id != 0) {
-		fd_event.portId = enrollmentStateMachine->remote_peer_.internal_port_id;
+	if (esm->remote_peer_.internal_port_id != 0) {
+		fd_event.portId = esm->remote_peer_.internal_port_id;
 		fd_event.internal = true;
 		ipcp->flow_allocator_->submitDeallocate(fd_event);
 
 		//Stop the internal flow SDU reader
 		ribd->stop_internal_flow_sdu_reader(fd_event.portId);
+
+		ipcp->resource_allocator_->remove_temp_pduft_entry(esm->remote_peer_.address_);
 	}
 
 	//3 Notify about lost neighbor
-	event2 = new rina::ConnectiviyToNeighborLostEvent(enrollmentStateMachine->remote_peer_);
+	event2 = new rina::ConnectiviyToNeighborLostEvent(esm->remote_peer_);
 	event_manager_->deliverEvent(event2);
 
 	//4 Move destruction of state machine to a timer task
-	dsm_task = new DestroyESMTimerTask(enrollmentStateMachine);
+	dsm_task = new DestroyESMTimerTask(esm);
 	timer.scheduleTask(dsm_task, 0);
 }
 
@@ -1740,6 +1744,8 @@ void EnrollmentTask::deallocate_flows_and_destroy_esm(IEnrollmentStateMachine * 
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems deallocating internal flow: %s", e.what());
 		}
+
+		ipcp->resource_allocator_->remove_temp_pduft_entry(esm->remote_peer_.address_);
 	}
 
 	//Deallocate N-1 flow, sleep for 20 ms first (TODO Fix this)

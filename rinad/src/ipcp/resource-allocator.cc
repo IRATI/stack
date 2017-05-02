@@ -659,27 +659,20 @@ void ResourceAllocator::set_pduft_entries(const std::list<rina::PDUForwardingTab
 void ResourceAllocator::update_temp_entries()
 {
 	std::list<rina::PDUForwardingTableEntry*>::iterator it;
-	rina::PDUForwardingTableEntry * entry;
+	std::list<rina::PDUForwardingTableEntry*> to_add;
 
-	it = temp_entries.begin();
-	while (it != temp_entries.end()) {
-	    entry = *it;
-	    if (entry_is_in_pduft(entry->address)) {
-		    it = temp_entries.erase(it);
-		    LOG_IPCP_DBG("Deleting temp entry %s", entry->toString().c_str());
-		    delete entry;
-		    entry = 0;
-	    } else {
-	        ++it;
-	    }
+	for(it = temp_entries.begin(); it != temp_entries.end(); ++it) {
+		if (!entry_is_in_pduft((*it)->address)) {
+			to_add.push_back(*it);
+		}
 	}
 
-	if (temp_entries.size() == 0) {
+	if (to_add.size() == 0) {
 		return;
 	}
 
 	try {
-		rina::kernelIPCProcess->modifyPDUForwardingTableEntries(temp_entries, 0);
+		rina::kernelIPCProcess->modifyPDUForwardingTableEntries(to_add, 0);
 	} catch (rina::Exception & e) {
 		LOG_IPCP_ERR("Error adding entries to PDU Forwarding Table in the kernel: %s",
 				e.what());
@@ -833,6 +826,27 @@ void ResourceAllocator::add_temp_pduft_entry(unsigned int dest_address, int port
 	} catch (rina::Exception & e) {
 		LOG_IPCP_ERR("Error adding entry to PDU Forwarding Table in the kernel: %s",
 				e.what());
+	}
+}
+
+void ResourceAllocator::remove_temp_pduft_entry(unsigned int dest_address)
+{
+	std::list<rina::PDUForwardingTableEntry*>::iterator it;
+	rina::PDUForwardingTableEntry * entry;
+
+	rina::WriteScopedLock g(pduft_lock);
+
+	it = temp_entries.begin();
+	while (it != temp_entries.end()) {
+	    entry = *it;
+	    if (entry->address == dest_address) {
+		    it = temp_entries.erase(it);
+		    LOG_IPCP_DBG("Deleting temp entry %s", entry->toString().c_str());
+		    delete entry;
+		    entry = 0;
+	    } else {
+	        ++it;
+	    }
 	}
 }
 

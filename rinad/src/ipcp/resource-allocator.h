@@ -220,6 +220,7 @@ public:
 	/// provides it when it modifies the forwarding table.
 	/// Takes ownership of the entry.
 	void add_temp_pduft_entry(unsigned int dest_address, int port_id);
+	void remove_temp_pduft_entry(unsigned int dest_address);
 
 	void eventHappened(rina::InternalEvent * event);
 

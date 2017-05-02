@@ -308,7 +308,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         return 0;
 fail:
         rnl_msg_destroy(msg);
-        return -1;
+        return 0;
 }
 
 static int
