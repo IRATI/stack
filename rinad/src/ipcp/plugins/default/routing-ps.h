@@ -379,6 +379,9 @@ public:
 	void deprecateObjects(const std::string& neigh_name,
 			      const std::string& name,
 			      unsigned int max_age);
+	void updateCost(const std::string& neigh_name,
+			      const std::string& name,
+			      unsigned int cost);
 	void deprecateObjectsWithName(const std::string& name,
 				      unsigned int max_age,
 				      bool neighbor);
@@ -476,6 +479,9 @@ public:
 	void deprecateObjectsNeighbor(const std::string& neigh_name,
 	                              const std::string& name,
 				      bool both);
+	void updateCost(const std::string& neigh_name,
+			const std::string& name,
+			unsigned int cost);
 	std::map <int, std::list<FlowStateObject*> > prepareForPropagation
 	        (const std::list<rina::FlowInformation>& flows);
 	void incrementAge();

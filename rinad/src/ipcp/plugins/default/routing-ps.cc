@@ -268,7 +268,7 @@ void Graph::init_edges()
 				&& dest->connection_contains_name(origin->name_)) {
 			edges_.push_back(new Edge(origin->name_,
 						  dest->name_,
-						  1));
+						  flowIt->cost));
 			origin->connections.remove(dest->name_);
 			dest->connections.remove(origin->name_);
 		} else {
@@ -1169,6 +1169,24 @@ void FlowStateObjects::deprecateObjects(const std::string& neigh_name,
 	}
 }
 
+void FlowStateObjects::updateCost(const std::string& neigh_name,
+		      	      	  const std::string& name,
+				  unsigned int cost)
+{
+	rina::ScopedLock g(lock);
+
+	std::map<std::string, FlowStateObject *>::iterator it;
+	for (it = objects.begin(); it != objects.end();
+			++it) {
+		if (it->second->neighbor_name == neigh_name &&
+				it->second->name == name) {
+			it->second->cost = cost;
+			it->second->modified = true;
+			modified_ = true;
+		}
+	}
+}
+
 void FlowStateObjects::deprecateObjectsWithName(const std::string& name,
 						unsigned int max_age,
 						bool neighbor)
@@ -1592,15 +1610,19 @@ void FlowStateManager::deprecateObjectsNeighbor(const std::string& neigh_name,
                                                 const std::string& name,
 						bool both)
 {
-	fsos->deprecateObjects(neigh_name,
-			       name,
-			       maximum_age);
+	fsos->deprecateObjects(neigh_name, name, maximum_age);
 
 	if (both) {
-		fsos->deprecateObjects(name,
-				neigh_name,
-				maximum_age);
+		fsos->deprecateObjects(name, neigh_name, maximum_age);
 	}
+}
+
+void FlowStateManager::updateCost(const std::string& neigh_name,
+				  const std::string& name,
+				  unsigned int cost)
+{
+	fsos->updateCost(neigh_name, name, cost);
+	fsos->updateCost(name, neigh_name, cost);
 }
 
 void FlowStateManager::force_table_update()
@@ -1966,9 +1988,8 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(rina::NeighborAddedEvent 
 	}
 
 	if (event->prepare_handover) {
-		db_->deprecateObjectsNeighbor(event->disc_neigh_name.processName,
-					      ipc_process_->get_name(),
-					      false);
+		db_->updateCost(event->disc_neigh_name.processName,
+				ipc_process_->get_name(), 10000);
 	}
 
 	std::list< std::list<FlowStateObject> > all_fsos;

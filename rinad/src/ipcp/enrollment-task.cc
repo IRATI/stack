@@ -1225,6 +1225,10 @@ void EnrollmentTask::initiateEnrollment(const rina::EnrollmentRequest& request)
 								         request.event_);
 	to_store->ipcm_initiated_ = request.ipcm_initiated_;
 	to_store->enrollment_attempts = request.enrollment_attempts + 1;
+	to_store->abort_timer_task = new AbortEnrollmentTimerTask(this, request.neighbor_.name_,
+								  -1, handle,
+								  "N-1 Flow allocation timeout", false);
+	timer.scheduleTask(to_store->abort_timer_task, timeout_);
 	port_ids_pending_to_be_allocated_.put(handle, to_store);
 }
 
@@ -1591,6 +1595,8 @@ void EnrollmentTask::nMinusOneFlowAllocated(rina::NMinusOneFlowAllocatedEvent * 
 		return;
 	}
 
+	timer.cancelTask(request->abort_timer_task);
+
 	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
 	assert(ipcp_ps);
 	ipcp_ps->initiate_enrollment(*flowEvent, *request);
@@ -1609,6 +1615,8 @@ void EnrollmentTask::nMinusOneFlowAllocationFailed(rina::NMinusOneFlowAllocation
 	if (!request){
 		return;
 	}
+
+	timer.cancelTask(request->abort_timer_task);
 
 	LOG_IPCP_WARN("The allocation of management flow identified by handle %u has failed. Error code: %d",
 			event->handle_, event->flow_information_.portId);
@@ -1635,6 +1643,7 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 	IEnrollmentStateMachine * stateMachine = 0;
 	RetryEnrollmentTimerTask * timer_task = 0;
 	rina::EnrollmentRequest enr_request;
+	rina::EnrollmentRequest * pending_req;
 
 	rina::ScopedLock g(lock_);
 
@@ -1642,30 +1651,52 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 		      remotePeerNamingInfo.getEncodedString().c_str(),
 		      reason.c_str());
 
-	//1 Remove enrollment state machine from the store
-	stateMachine = getEnrollmentStateMachine(portId, true);
-	if (!stateMachine) {
-		// We have already cleared
-		return;
-	}
-
-	//2 Send message and deallocate flow if required
-	if(sendReleaseMessage){
-		try {
-			rib_daemon_->getProxy()->remote_close_connection(portId, false);
-		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Problems closing application connection: %s",
-				      e.what());
+	if (portId >= 0) {
+		//1 Remove enrollment state machine from the store
+		stateMachine = getEnrollmentStateMachine(portId, true);
+		if (!stateMachine) {
+			// We have already cleared
+			return;
 		}
-	}
 
-	enr_request = stateMachine->enr_request;
-	deallocate_flows_and_destroy_esm(stateMachine, portId);
+		//2 Send message and deallocate flow if required
+		if(sendReleaseMessage){
+			try {
+				rib_daemon_->getProxy()->remote_close_connection(portId, false);
+			} catch (rina::Exception &e) {
+				LOG_IPCP_ERR("Problems closing application connection: %s",
+						e.what());
+			}
+		}
+
+		enr_request = stateMachine->enr_request;
+		deallocate_flows_and_destroy_esm(stateMachine, portId, false);
+	} else {
+		//N-1 flow could not be allocated
+		pending_req = port_ids_pending_to_be_allocated_.erase(internal_portId);
+
+		if (!pending_req) {
+			return;
+		}
+
+		enr_request = *pending_req;
+
+		delete pending_req;
+	}
 
 	//3 If needed, retry enrollment
 	if (enr_request.enrollment_attempts < max_num_enroll_attempts_) {
 		timer_task = new RetryEnrollmentTimerTask(this, enr_request);
 		timer.scheduleTask(timer_task, 10);
+	} else if (enr_request.ipcm_initiated_) {
+		try {
+			rina::extendedIPCManager->enrollToDIFResponse(enr_request.event_,
+								      -1,
+								      std::list<rina::Neighbor>(),
+								      ipcp->get_dif_information());
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems sending message to IPC Manager: %s", e.what());
+		}
 	}
 }
 
