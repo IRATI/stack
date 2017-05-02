@@ -41,6 +41,7 @@
 #include <time.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <fcntl.h>
 
 #include <rina/api.h>
 
@@ -62,17 +63,17 @@ struct rinaperf;
 struct worker;
 
 struct rp_config_msg {
+    uint64_t cnt;       /* packet/transaction count for the test
+                         * (0 means infinite) */
     uint32_t opcode;    /* opcode: ping, perf, rr ... */
     uint32_t ticket;    /* valid with RP_OPCODE_DATAFLOW */
     uint32_t size;      /* packet size in bytes */
-    uint64_t cnt;       /* packet/transaction count for the test
-                         * (0 means infinite) */
-};
+} __attribute__((packed));
 
 struct rp_ticket_msg {
     uint32_t ticket; /* ticket allocated by the server for the
                       * client to identify the data flow */
-};
+} __attribute__((packed));
 
 struct rp_result_msg {
     uint64_t cnt; /* number of packets or completed transactions
@@ -80,7 +81,7 @@ struct rp_result_msg {
     uint64_t pps; /* average packet rate measured by the sender or receiver */
     uint64_t bps; /* average bandwidth measured by the sender or receiver */
     uint64_t latency; /* in nanoseconds */
-};
+} __attribute__((packed));
 
 typedef int (*perf_fn_t)(struct worker *);
 typedef void (*report_fn_t)(struct rp_result_msg *snd,
@@ -93,7 +94,7 @@ struct worker {
     struct rp_config_msg    test_config;
     struct rp_result_msg    result;
     uint32_t                ticket; /* ticket to be sent to the client */
-    pthread_cond_t          data_flow_ready; /* to wait for dfd */
+    sem_t                   data_flow_ready; /* to wait for dfd */
     unsigned int            interval;
     unsigned int            burst;
     int                     ping;
@@ -469,6 +470,12 @@ perf_server(struct worker *w)
     int timeout = 0;
     int n;
 
+    n = fcntl(w->dfd, F_SETFL, O_NONBLOCK);
+    if (n) {
+        perror("fcntl(F_SETFL)");
+        return -1;
+    }
+
     pfd[0].fd = w->dfd;
     pfd[1].fd = w->cfd;
     pfd[0].events = pfd[1].events = POLLIN;
@@ -477,29 +484,44 @@ perf_server(struct worker *w)
     t_start = rate_ts;
 
     for (i = 0; !limit || i < limit; i++) {
-        n = poll(pfd, 2, RP_DATA_WAIT_MSECS);
-        if (n < 0) {
-            perror("poll(flow)");
-
-        } else if (n == 0) {
-            /* Timeout */
-            timeout = 1;
-            if (verb) {
-                printf("Timeout occurred\n");
-            }
-            break;
-        }
-
-        if (pfd[1].revents & POLLIN) {
-            /* Stop signal received. */
-            if (verb) {
-                printf("Stopped remotely\n");
-            }
-            break;
-        }
-
-        /* Ready to read. */
+        /* Do a non-blocking read on the data flow. If we are in a livelock
+         * situation (or near so), it is highly likely that we will find
+         * some data to read; we can therefore read the data directly,
+         * without calling poll(). If we are not under pressure, read()
+         * will return EAGAIN and we can wait for the next packet with
+         * poll(). This strategy is convenient because it allows the receiver
+         * to operate at one syscall per packet when under pressure, rather
+         * than the usual two syscalls per packet. As a result, the receiver
+         * becomes a bit faster. The only drawback is that we pay the cost of
+         * an additional syscall when the receiver is not under pressure, but
+         * this is acceptable if we want to maximize throughput.
+         */
         n = read(w->dfd, buf, sizeof(buf));
+        if (n < 0 && errno == EAGAIN) {
+            n = poll(pfd, 2, RP_DATA_WAIT_MSECS);
+            if (n < 0) {
+                perror("poll(flow)");
+
+            } else if (n == 0) {
+                /* Timeout */
+                timeout = 1;
+                if (verb) {
+                    printf("Timeout occurred\n");
+                }
+                break;
+            }
+
+            if (pfd[1].revents & POLLIN) {
+                /* Stop signal received. */
+                if (verb) {
+                    printf("Stopped remotely\n");
+                }
+                break;
+            }
+
+            /* Ready to read. */
+            n = read(w->dfd, buf, sizeof(buf));
+        }
         if (n < 0) {
             perror("read(flow)");
             return -1;
@@ -728,6 +750,13 @@ client_worker_function(void *opaque)
     /* Run the test. */
     w->desc->client_fn(w);
 
+    if (!w->ping) {
+        /* Wait some milliseconds before asking the server to stop and get
+         * results. This heuristic is useful to let the last retransmissions
+         * happen before we get the server-side measurements. */
+        usleep(100000);
+    }
+
     /* Send the stop opcode on the control file descriptor. */
     memset(&cfg, 0, sizeof(cfg));
     cfg.opcode = htole32(RP_OPCODE_STOP);
@@ -798,6 +827,7 @@ server_worker_function(void *opaque)
     struct timespec to;
     struct pollfd pfd;
     uint32_t ticket;
+    int saved_errno;
     int ret;
 
     /* Wait for test configuration message and read it. */
@@ -844,13 +874,12 @@ server_worker_function(void *opaque)
         } else {
             struct worker *tw = rp->ticket_table[cfg.ticket];
 
-            rp->ticket_table[cfg.ticket] = NULL;
 #if 0
             printf("TicketTable: data flow for ticket %u\n", cfg.ticket);
 #endif
             tw->dfd = w->cfd;
             w->cfd = -1;
-            pthread_cond_signal(&tw->data_flow_ready);
+            sem_post(&tw->data_flow_ready);
         }
         pthread_mutex_unlock(&rp->ticket_lock);
     } else {
@@ -869,7 +898,7 @@ server_worker_function(void *opaque)
                     break;
                 }
             }
-            pthread_cond_init(&w->data_flow_ready, NULL);
+            sem_init(&w->data_flow_ready, 0, 0);
 #if 0
             printf("TicketTable: allocated ticket %u\n", ticket);
 #endif
@@ -897,20 +926,20 @@ server_worker_function(void *opaque)
         }
 
         /* Wait for the client to allocate a data flow and come back to us. */
-        pthread_mutex_lock(&rp->ticket_lock);
         clock_gettime(CLOCK_REALTIME, &to);
         to.tv_sec += 5;
-        ret = pthread_cond_timedwait(&w->data_flow_ready,
-                                     &rp->ticket_lock, &to);
-        pthread_cond_destroy(&w->data_flow_ready);
+        ret = sem_timedwait(&w->data_flow_ready, &to);
+        saved_errno = errno;
+        pthread_mutex_lock(&rp->ticket_lock);
+        rp->ticket_table[ticket] = NULL;
+        sem_destroy(&w->data_flow_ready);
         pthread_mutex_unlock(&rp->ticket_lock);
         if (ret) {
-            if (ret == ETIMEDOUT) {
+            if (saved_errno == ETIMEDOUT) {
                 printf("Timed out waiting for data flow [ticket %u]\n",
                         ticket);
             } else {
-                printf("pthread_cond_timedwait() failed [%s]\n",
-                        strerror(ret));
+                perror("sem_timedwait() failed");
             }
             goto out;
         }
@@ -1371,15 +1400,16 @@ main(int argc, char **argv)
 
             pthread_mutex_lock(&rp->cli_barrier_lock);
             ret = pthread_cond_timedwait(&rp->cli_barrier_done,
-                                        &rp->cli_barrier_lock, &to);
+                                         &rp->cli_barrier_lock, &to);
             pthread_mutex_unlock(&rp->cli_barrier_lock);
             if (ret) {
-                if (ret != ETIMEDOUT) {
-                    printf("pthread_cond_timedwait() failed [%s]\n",
-                            strerror(ret));
-                } else if (rp->verbose) {
-                    printf("Stopping clients, %d seconds elapsed\n",
-                            rp->duration);
+                if (ret == ETIMEDOUT) {
+                    if (rp->verbose) {
+                        printf("Stopping clients, %d seconds elapsed\n",
+                                rp->duration);
+                    }
+                } else {
+                    perror("pthread_cond_timedwait() failed");
                 }
                 stop_clients(rp); /* tell the clients to stop */
             } else {
