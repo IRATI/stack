@@ -117,9 +117,7 @@ struct rinaperf {
     int                     cli_flow_allocated; /* client flows allocated ? */
 
     /* Synchronization between client threads and main thread. */
-    pthread_mutex_t         cli_barrier_lock;
-    pthread_cond_t          cli_barrier_done;
-    int                     cli_done; /* client that finished */
+    sem_t                   cli_barrier;
 
     /* Ticket table. */
     pthread_mutex_t         ticket_lock;
@@ -807,11 +805,7 @@ client_worker_function(void *opaque)
 out:
     worker_fini(w);
 
-    pthread_mutex_lock(&rp->cli_barrier_lock);
-    if (++rp->cli_done == rp->parallel) {
-        pthread_cond_signal(&rp->cli_barrier_done);
-    }
-    pthread_mutex_unlock(&rp->cli_barrier_lock);
+    sem_post(&rp->cli_barrier);
 
     return NULL;
 }
@@ -1185,10 +1179,8 @@ main(int argc, char **argv)
     rp->cfd = -1;
     rp->stop_pipe[0] = rp->stop_pipe[1] = -1;
     rp->cli_stop = rp->cli_flow_allocated = 0;
-    rp->cli_done = 0;
     sem_init(&rp->workers_free, 0, RP_MAX_WORKERS);
-    pthread_mutex_init(&rp->cli_barrier_lock, NULL);
-    pthread_cond_init(&rp->cli_barrier_done, NULL);
+    sem_init(&rp->cli_barrier, 0, 0);
     pthread_mutex_init(&rp->ticket_lock, NULL);
 
     /* Start with a default flow configuration (unreliable flow). */
@@ -1398,22 +1390,26 @@ main(int argc, char **argv)
             clock_gettime(CLOCK_REALTIME, &to);
             to.tv_sec += rp->duration;
 
-            pthread_mutex_lock(&rp->cli_barrier_lock);
-            ret = pthread_cond_timedwait(&rp->cli_barrier_done,
-                                         &rp->cli_barrier_lock, &to);
-            pthread_mutex_unlock(&rp->cli_barrier_lock);
-            if (ret) {
-                if (ret == ETIMEDOUT) {
-                    if (rp->verbose) {
-                        printf("Stopping clients, %d seconds elapsed\n",
-                                rp->duration);
+            for (i = 0; i < rp->parallel; i++) {
+                ret = sem_timedwait(&rp->cli_barrier, &to);
+                if (ret) {
+                    if (errno == ETIMEDOUT) {
+                        if (rp->verbose) {
+                            printf("Stopping clients, %d seconds elapsed\n",
+                                    rp->duration);
+                        }
+                    } else {
+                        perror("pthread_cond_timedwait() failed");
                     }
-                } else {
-                    perror("pthread_cond_timedwait() failed");
+                    break;
                 }
-                stop_clients(rp); /* tell the clients to stop */
+            }
+
+            if (i < rp->parallel) {
+                /* Timeout (or error) occurred, tell the clients to stop. */
+                stop_clients(rp);
             } else {
-                /* Client finished themselves before rp->duration seconds. */
+                /* Client finished before rp->duration seconds. */
             }
         }
 
