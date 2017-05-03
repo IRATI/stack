@@ -366,6 +366,7 @@ public:
 	int get_con_handle_to_address(unsigned int address,
 				      rina::cdap_rib::con_handle_t& con);
 	int get_neighbor_info(rina::Neighbor& neigh);
+	void clean_state(unsigned int port_id);
 
 private:
 	void _add_neighbor(const rina::Neighbor& neighbor);

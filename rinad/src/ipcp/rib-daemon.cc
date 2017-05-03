@@ -185,6 +185,8 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
 		std::string reason = std::string(e.what());
 		if (reason.compare("Flow closed") == 0) { /* XXX this will never happen */
 			manager_->removeCDAPSession(con_handle.port_id);
+		} else if (reason.find("There are no open CDAP") != std::string::npos) {
+			rinad::IPCPFactory::getIPCP()->enrollment_task_->clean_state(con_handle.port_id);
 		}
 
 		atomic_send_lock_.unlock();

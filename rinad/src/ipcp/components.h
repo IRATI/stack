@@ -115,6 +115,7 @@ public:
 	virtual int get_con_handle_to_address(unsigned int address,
 					      rina::cdap_rib::con_handle_t& con) = 0;
 	virtual int get_neighbor_info(rina::Neighbor& neigh) = 0;
+	virtual void clean_state(unsigned int port_id) = 0;
 
 	/// The maximum time to wait between steps of the enrollment sequence (in ms)
 	int timeout_;

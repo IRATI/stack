@@ -1745,6 +1745,32 @@ void EnrollmentTask::release(int invoke_id,
 	deallocate_flows_and_destroy_esm(stateMachine, con_handle.port_id);
 }
 
+void EnrollmentTask::clean_state(unsigned int port_id)
+{
+	IEnrollmentStateMachine * esm;
+	rina::cdap_rib::con_handle_t con_handle;
+	rina::ConnectiviyToNeighborLostEvent * cnl_event = 0;
+	DestroyESMTimerTask * timer_task = 0;
+
+	rina::ScopedLock g(lock_);
+
+	esm = getEnrollmentStateMachine(port_id, true);
+
+	deallocateFlow(port_id);
+
+	if (esm) {
+		con_handle.port_id = port_id;
+		esm->release(0, con_handle);
+		cnl_event = new rina::ConnectiviyToNeighborLostEvent(esm->remote_peer_);
+		event_manager_->deliverEvent(cnl_event);
+
+		//Schedule destruction of enrollment state machine in a separate thread, since it may take time
+		esm->reset_state();
+		timer_task = new DestroyESMTimerTask(esm);
+		timer.scheduleTask(timer_task, 0);
+	}
+}
+
 void EnrollmentTask::deallocate_flows_and_destroy_esm(IEnrollmentStateMachine * esm,
 						      unsigned int port_id,
 						      bool call_ps)
