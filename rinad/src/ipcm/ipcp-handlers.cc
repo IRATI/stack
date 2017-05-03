@@ -472,6 +472,7 @@ IPCManager_::enroll_to_dif_response_event_handler(rina::EnrollToDIFResponseEvent
 			ret = IPCM_SUCCESS;
 
 			ipcp->add_neighbors(event->neighbors);
+			ipcp->dif_name_.processName = event->difInformation.dif_name_.processName;
 		} else {
 			ss  << ": Error: Enrollment operation of "
 				"process " << ipcp->get_name().toString() << " failed"
