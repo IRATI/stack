@@ -228,51 +228,38 @@ void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
 		manager_->messageReceived(message, m_rcv, handle);
 	} catch (rina::Exception &e) {
 		atomic_send_lock_.unlock();
-		LOG_IPCP_ERR("Error decoding CDAP message: %s", e.what());
-		return;
+		throw e;
 	}
 	atomic_send_lock_.unlock();
 
 	//2 If it is an A-Data PDU extract the real message and either forward or process it
 	if (m_rcv.obj_name_ == rina::cdap::ADataObject::A_DATA_OBJECT_NAME) {
-		rina::cdap::ADataObject adata;
+		rina::cdap::ADataObject a_data_obj;
 		encoders::ADataObjectEncoder encoder;
-		encoder.decode(m_rcv.obj_value_, adata);
-		if (adata.dest_address_ != IPCPFactory::getIPCP()->get_active_address()) {
-			forward_adata_msg(message, adata.dest_address_);
+		rina::cdap::cdap_m_t inner_m;
+
+		encoder.decode(m_rcv.obj_value_, a_data_obj);
+		if (a_data_obj.dest_address_ != IPCPFactory::getIPCP()->get_active_address()) {
+			forward_adata_msg(message, a_data_obj.dest_address_);
 			return;
 		}
 
-		try {
-			encoders::ADataObjectEncoder encoder;
-			rina::cdap::ADataObject a_data_obj;
-			rina::cdap::cdap_m_t inner_m;
-
-			encoder.decode(m_rcv.obj_value_, a_data_obj);
-
-			manager_->decodeCDAPMessage(a_data_obj.encoded_cdap_message_,
-						    inner_m);
-			if (inner_m.invoke_id_ != 0) {
-				if (inner_m.is_request_message()){
-					manager_->get_invoke_id_manager()->reserveInvokeId(inner_m.invoke_id_,
-											   false);
-				} else {
-					manager_->get_invoke_id_manager()->freeInvokeId(inner_m.invoke_id_,
-											false);
-				}
+		manager_->decodeCDAPMessage(a_data_obj.encoded_cdap_message_, inner_m);
+		if (inner_m.invoke_id_ != 0) {
+			if (inner_m.is_request_message()){
+				manager_->get_invoke_id_manager()->reserveInvokeId(inner_m.invoke_id_,
+						false);
+			} else {
+				manager_->get_invoke_id_manager()->freeInvokeId(inner_m.invoke_id_,
+						false);
 			}
-
-			LOG_IPCP_DBG("Received A-Data CDAP message from address %u through port %u \n%s",
-				     a_data_obj.source_address_,
-				     handle,
-				     inner_m.to_string().c_str());
-
-			invoke_callback(manager_->get_con_handle(handle), inner_m, false);
-			return;
-		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Error processing A-data message: %s", e.what());
-			return;
 		}
+
+		LOG_IPCP_DBG("Received A-Data CDAP message from address %u through port %u \n%s",
+			     a_data_obj.source_address_, handle, inner_m.to_string().c_str());
+
+		invoke_callback(manager_->get_con_handle(handle), inner_m, false);
+		return;
 	}
 
 	//3 Message came from a neighbor as part of an application connection
@@ -487,6 +474,8 @@ InternalFlowSDUReader::InternalFlowSDUReader(rina::ThreadAttributes * threadAttr
 int InternalFlowSDUReader::run()
 {
 	rina::ser_obj_t message;
+	rina::cdap_rib::con_handle_t con_handle;
+
 	message.message_ = new unsigned char[5000];
 	int bytes_read = 0;
 	bool keep_going = true;
@@ -512,8 +501,13 @@ int InternalFlowSDUReader::run()
 			rina::cdap::getProvider()->process_message(message,
 								   cdap_session);
 		} catch(rina::Exception &e){
-			LOG_ERR("Problems processing message from port-id %d and CDAP session id %d",
-				portid, cdap_session);
+			LOG_ERR("Problems processing message from port-id %d and CDAP session id %d: %s",
+				portid, cdap_session, e.what());
+			if (std::string(e.what()).find("M_CONNECT received on an") != std::string::npos) {
+				LOG_IPCP_WARN("Closing CDAP session on port-id %u", cdap_session);
+				con_handle.port_id = cdap_session;
+				rinad::IPCPFactory::getIPCP()->enrollment_task_->release(0, con_handle);
+			}
 		}
 	}
 
@@ -742,18 +736,25 @@ void StopInternalFlowReaderTimerTask::run()
 void IPCPRIBDaemonImpl::processReadManagementSDUEvent(const rina::ReadMgmtSDUResponseEvent& event)
 {
 	rina::ser_obj_t rcv_message;
+	rina::cdap_rib::con_handle_t con_handle;
+
 	rcv_message.size_ = event.size;
 	rcv_message.message_ = (unsigned char*) event.sdu;
 
 	LOG_IPCP_DBG("Got message of %d bytes, handling to CDAP Provider", rcv_message.size_);
 
 	//Instruct CDAP provider to process the messages
-	try{
+	try {
 		rina::cdap::getProvider()->process_message(rcv_message,
 							   event.port_id);
-	}catch(rina::WriteSDUException &e){
-		LOG_ERR("Cannot write to flow with port id: %u anymore",
-				event.port_id);
+	} catch(rina::Exception &e) {
+		LOG_IPCP_WARN("Error processing CDAP message on port-id %d: %e",
+			      event.port_id, e.what());
+		if (std::string(e.what()).find("M_CONNECT received on an") != std::string::npos) {
+			LOG_IPCP_WARN("Closing CDAP session on port-id %u", event.port_id);
+			con_handle.port_id = event.port_id;
+			ipcp->enrollment_task_->release(0, con_handle);
+		}
 	}
 }
 

@@ -602,7 +602,7 @@ eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                     rinarp_resolve_gpa(data->daf_handle,
                 		       flow->dest_pa,
 				       rinarp_resolve_handler,
-				       data)	) {
+				       data)) {
                         LOG_ERR("Failed to lookup ARP entry");
                         unbind_and_destroy_flow(data, flow);
                         return -1;
