@@ -106,7 +106,8 @@ MobilityManager::MobilityManager(const rinad::RINAConfiguration& config) :
 	parse_configuration(config);
 	factory = IPCManager->get_ipcp_factory();
 	hand_state.do_it_now = false;
-	hand_state.current_dif = "";
+	hand_state.dif = "";
+	hand_state.ipcp = 0;
 
 	LOG_INFO("Mobility Manager initialized");
 }
@@ -160,7 +161,7 @@ void MobilityManager::execute_handover(const rina::MediaReport& report)
 	std::map<std::string, rina::MediaDIFInfo>::const_iterator difs_it;
 	rina::BaseStationInfo bs_info;
 	NeighborData neigh_data, high_neigh_data;
-	IPCMIPCProcess * wifi1_ipcp, * wifi2_ipcp, * normal_ipcp, * next_ipcp, * current_ipcp;
+	IPCMIPCProcess * wifi1_ipcp, * wifi2_ipcp, * normal_ipcp, * ipcp_enroll, * ipcp_disc;
 	Promise promise;
 	std::string next_dif;
 	rina::Sleep sleep;
@@ -204,11 +205,11 @@ void MobilityManager::execute_handover(const rina::MediaReport& report)
 	}
 
 	// 2. See if it has been initialized before, otherwise do it
-	if (hand_state.current_dif == "") {
+	if (hand_state.dif == "") {
 		//Not enrolled anywhere yet, enroll for first time
-		difs_it = report.available_difs.find("arcfire");
+		difs_it = report.available_difs.find("irati");
 		if (difs_it == report.available_difs.end()) {
-			LOG_WARN("No members of DIF 'arcfire' are within range");
+			LOG_WARN("No members of DIF 'irati' are within range");
 			return;
 		}
 
@@ -216,7 +217,7 @@ void MobilityManager::execute_handover(const rina::MediaReport& report)
 
 		//Enroll the shim to the new DIF/AP
 		neigh_data.apName.processName = bs_info.ipcp_address;
-		neigh_data.difName.processName = "arcfire";
+		neigh_data.difName.processName = "irati";
 		if(IPCManager->enroll_to_dif(this, &promise, wifi1_ipcp->get_id(), neigh_data) == IPCM_FAILURE ||
 				promise.wait() != IPCM_SUCCESS) {
 			LOG_WARN("Problems enrolling IPCP %u to DIF %s via neighbor %s",
@@ -227,7 +228,7 @@ void MobilityManager::execute_handover(const rina::MediaReport& report)
 		}
 
 		//Enroll to DIF
-		high_neigh_data.supportingDifName.processName = "arcfire";
+		high_neigh_data.supportingDifName.processName = "irati";
 		high_neigh_data.difName.processName = "mobile.DIF";
 
 		if(IPCManager->enroll_to_dif(this, &promise, normal_ipcp->get_id(), high_neigh_data) == IPCM_FAILURE ||
@@ -239,22 +240,33 @@ void MobilityManager::execute_handover(const rina::MediaReport& report)
 			return;
 		}
 
-		hand_state.current_dif = "arcfire";
+		hand_state.dif = "irati";
+		hand_state.ipcp = wifi1_ipcp;
 		sleep.sleepForMili(1000);
 		LOG_DBG("Initialized");
 	}
 
-	if (hand_state.current_dif == "arcfire") {
+	//3 Update wifi IPCPs to use
+	if (hand_state.ipcp == wifi1_ipcp) {
+		ipcp_enroll = wifi2_ipcp;
+		ipcp_disc = wifi1_ipcp;
+	} else {
+		ipcp_enroll = wifi1_ipcp;
+		ipcp_disc = wifi2_ipcp;
+	}
+
+	//4 Update DIF name (irati -> pristine -> arcfire and start with irati again)
+	if (hand_state.dif == "irati") {
 		next_dif = "pristine";
-		next_ipcp = wifi2_ipcp;
-		current_ipcp = wifi1_ipcp;
 		neighbor.processName = "ap1.mobile";
 		neighbor.processInstance = "1";
-	} else {
+	} else if (hand_state.dif == "pristine") {
 		next_dif = "arcfire";
-		next_ipcp = wifi1_ipcp;
-		current_ipcp = wifi2_ipcp;
 		neighbor.processName = "ap2.mobile";
+		neighbor.processInstance = "1";
+	}else {
+		next_dif = "irati";
+		neighbor.processName = "ap3.mobile";
 		neighbor.processInstance = "1";
 	}
 
@@ -270,10 +282,10 @@ void MobilityManager::execute_handover(const rina::MediaReport& report)
 	//Enroll the shim to the new DIF/AP
 	neigh_data.apName.processName = bs_info.ipcp_address;
 	neigh_data.difName.processName = next_dif;
-	if(IPCManager->enroll_to_dif(this, &promise, next_ipcp->get_id(), neigh_data) == IPCM_FAILURE ||
+	if(IPCManager->enroll_to_dif(this, &promise, ipcp_enroll->get_id(), neigh_data) == IPCM_FAILURE ||
 			promise.wait() != IPCM_SUCCESS) {
 		LOG_WARN("Problems enrolling IPCP %u to DIF %s via neighbor %s",
-			  next_ipcp->get_id(),
+			  ipcp_enroll->get_id(),
 			 neigh_data.difName.processName.c_str(),
 			 bs_info.ipcp_address.c_str());
 		return;
@@ -295,7 +307,8 @@ void MobilityManager::execute_handover(const rina::MediaReport& report)
 	//4 Now it is multihomed, wait 5 seconds and break connectivity through former N-1 DIF
 	sleep.sleepForMili(5000);
 
-	hand_state.current_dif = next_dif;
+	hand_state.dif = next_dif;
+	hand_state.ipcp = ipcp_enroll;
 
 	if(IPCManager->disconnect_neighbor(this, &promise, normal_ipcp->get_id(), neighbor) == IPCM_FAILURE ||
 			promise.wait() != IPCM_SUCCESS) {
@@ -304,10 +317,10 @@ void MobilityManager::execute_handover(const rina::MediaReport& report)
 		return;
 	}
 
-	if(IPCManager->disconnect_neighbor(this, &promise, current_ipcp->get_id(), neighbor) == IPCM_FAILURE ||
+	if(IPCManager->disconnect_neighbor(this, &promise, ipcp_disc->get_id(), neighbor) == IPCM_FAILURE ||
 			promise.wait() != IPCM_SUCCESS) {
 		LOG_WARN("Problems invoking disconnect from neighbor on IPCP %u",
-				current_ipcp->get_id());
+				ipcp_disc->get_id());
 		return;
 	}
 

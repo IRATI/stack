@@ -38,7 +38,8 @@ struct WirelessDIFInfo {
 };
 
 struct HandoverState {
-	std::string current_dif;
+	std::string dif;
+	IPCMIPCProcess * ipcp;
 	bool do_it_now;
 };
 
