@@ -1495,6 +1495,7 @@ void FlowStateManager::updateObjects(const std::list<FlowStateObject>& newObject
 					obj_to_up->seq_num = newIt->seq_num+ 1;
 					obj_to_up->avoid_port = NO_AVOID_PORT;
 					obj_to_up->age = 0;
+					obj_to_up->cost = newIt->cost;
 				} else {
 					obj_to_up->avoid_port = avoidPort;
 					if (newIt->age >= maximum_age) {
@@ -1504,6 +1505,7 @@ void FlowStateManager::updateObjects(const std::list<FlowStateObject>& newObject
 						obj_to_up->seq_num = newIt->seq_num;
 						obj_to_up->set_addresses(newIt->addresses);
 						obj_to_up->set_neighboraddresses(newIt->neighbor_addresses);
+						obj_to_up->cost = newIt->cost;
 					}
 				}
 
