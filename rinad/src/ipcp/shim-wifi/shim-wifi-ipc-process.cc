@@ -1146,6 +1146,7 @@ void ShimWifiStaIPCProcessImpl::notify_connected(const std::string& neigh_name)
 	ap.name_ = sta_enr_sm.enroll_event.neighborName;
 	ap.enrolled_ = true;
 	neighbors.push_back(ap);
+	dif_information_.dif_name_.processName = sta_enr_sm.enroll_event.dafName.processName;
 
 	try {
 		rina::extendedIPCManager->enrollToDIFResponse(sta_enr_sm.enroll_event,
