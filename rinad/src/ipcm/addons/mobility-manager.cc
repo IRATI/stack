@@ -64,6 +64,14 @@ void MobilityManager::parse_configuration(const rinad::RINAConfiguration& config
 
 	fin.close();
 
+	if (config.ipcProcessesToCreate.size() == 4) {
+		hand_state.hand_type = 2;
+	} else if (config.ipcProcessesToCreate.size() == 3) {
+		hand_state.hand_type = 1;
+	} else {
+		hand_state.hand_type = 0;
+	}
+
 	mobman_conf = root["addons"]["mobman"];
         if (mobman_conf != 0) {
         	Json::Value wireless_difs = mobman_conf["wirelessDIFs"];
@@ -105,7 +113,11 @@ MobilityManager::MobilityManager(const rinad::RINAConfiguration& config) :
 {
 	parse_configuration(config);
 	factory = IPCManager->get_ipcp_factory();
-	hand_state.do_it_now = false;
+	if (hand_state.hand_type == 2) {
+		hand_state.do_it_now = false;
+	} else {
+		hand_state.do_it_now = true;
+	}
 	hand_state.dif = "";
 	hand_state.ipcp = 0;
 
@@ -150,13 +162,172 @@ void MobilityManager::media_reports_handler(rina::MediaReportEvent * event)
 		return;
 	}
 
-	hand_state.do_it_now = false;
+	if (hand_state.hand_type == 2) {
+		hand_state.do_it_now = false;
+	}
 
 	HandoverTimerTask * task = new HandoverTimerTask(this, event->media_report);
 	timer.scheduleTask(task, 0);
 }
 
 void MobilityManager::execute_handover(const rina::MediaReport& report)
+{
+	if (hand_state.hand_type == 1) {
+		execute_handover1(report);
+	} else if (hand_state.hand_type == 2) {
+		execute_handover2(report);
+	} else {
+		LOG_ERR("Unknown handover type: %d", hand_state.hand_type);
+	}
+}
+
+void MobilityManager::execute_handover1(const rina::MediaReport& report)
+{
+	std::map<std::string, rina::MediaDIFInfo>::const_iterator difs_it;
+	rina::BaseStationInfo bs_info;
+	NeighborData neigh_data, high_neigh_data;
+	IPCMIPCProcess * wifi_ipcp, * normal_ipcp;
+	Promise promise;
+	std::string next_dif;
+	rina::Sleep sleep;
+	rina::ApplicationProcessNamingInformation neighbor;
+
+	// Prevent any insertion or deletion of IPC Processes to happen
+	rina::ReadScopedLock readlock(factory->rwlock);
+
+	// 1. Get all IPCPS
+	wifi_ipcp = factory->getIPCProcess(1);
+	if (wifi_ipcp == NULL) {
+		LOG_ERR("Could not find IPCP with ID 1");
+		return;
+	}
+
+	if (wifi_ipcp->get_type () != rina::SHIM_WIFI_IPC_PROCESS_STA) {
+		LOG_ERR("Wrong IPCP type: %s", wifi_ipcp->get_type().c_str());
+		return;
+	}
+
+	normal_ipcp = factory->getIPCProcess(2);
+	if (normal_ipcp == NULL) {
+		LOG_ERR("Could not find IPCP with ID 2");
+		return;
+	}
+
+	if (normal_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
+		LOG_ERR("Wrong IPCP type: %s", normal_ipcp->get_type().c_str());
+		return;
+	}
+
+	// 2. See if it has been initialized before, otherwise do it
+	if (hand_state.dif == "") {
+		//Not enrolled anywhere yet, enroll for first time
+		difs_it = report.available_difs.find("irati");
+		if (difs_it == report.available_difs.end()) {
+			LOG_WARN("No members of DIF 'irati' are within range");
+			return;
+		}
+
+		bs_info = difs_it->second.available_bs_ipcps.front();
+
+		//Enroll the shim to the new DIF/AP
+		neigh_data.apName.processName = bs_info.ipcp_address;
+		neigh_data.difName.processName = "irati";
+		if(IPCManager->enroll_to_dif(this, &promise, wifi_ipcp->get_id(), neigh_data) == IPCM_FAILURE ||
+				promise.wait() != IPCM_SUCCESS) {
+			LOG_WARN("Problems enrolling IPCP %u to DIF %s via neighbor %s",
+				 wifi_ipcp->get_id(),
+				 neigh_data.difName.processName.c_str(),
+				 bs_info.ipcp_address.c_str());
+			return;
+		}
+
+		//Enroll to DIF
+		high_neigh_data.supportingDifName.processName = "irati";
+		high_neigh_data.difName.processName = "mobile.DIF";
+
+		if(IPCManager->enroll_to_dif(this, &promise, normal_ipcp->get_id(), high_neigh_data) == IPCM_FAILURE ||
+				promise.wait() != IPCM_SUCCESS) {
+			LOG_WARN("Problems enrolling IPCP %u to DIF %s via supporting DIF %s",
+					normal_ipcp->get_id(),
+					high_neigh_data.difName.processName.c_str(),
+					high_neigh_data.supportingDifName.processName.c_str());
+			return;
+		}
+
+		hand_state.dif = "irati";
+		hand_state.ipcp = wifi_ipcp;
+		sleep.sleepForMili(1000);
+		LOG_DBG("Initialized");
+	}
+
+	//3 Update DIF name (irati -> pristine -> arcfire and start with irati again)
+	if (hand_state.dif == "irati") {
+		next_dif = "pristine";
+		neighbor.processName = "ap1.mobile";
+		neighbor.processInstance = "1";
+	} else if (hand_state.dif == "pristine") {
+		next_dif = "arcfire";
+		neighbor.processName = "ap2.mobile";
+		neighbor.processInstance = "1";
+	}else {
+		next_dif = "irati";
+		neighbor.processName = "ap3.mobile";
+		neighbor.processInstance = "1";
+	}
+
+	// 4. Disconnect from current neighbor
+	if(IPCManager->disconnect_neighbor(this, &promise, normal_ipcp->get_id(), neighbor) == IPCM_FAILURE ||
+			promise.wait() != IPCM_SUCCESS) {
+		LOG_WARN("Problems invoking disconnect from neighbor on IPCP %u",
+				normal_ipcp->get_id());
+		return;
+	}
+
+	if(IPCManager->disconnect_neighbor(this, &promise, wifi_ipcp->get_id(), neighbor) == IPCM_FAILURE ||
+			promise.wait() != IPCM_SUCCESS) {
+		LOG_WARN("Problems invoking disconnect from neighbor on IPCP %u",
+				wifi_ipcp->get_id());
+		return;
+	}
+
+	// 5. Enroll to next DIF
+	difs_it = report.available_difs.find(next_dif);
+	if (difs_it == report.available_difs.end()) {
+		LOG_WARN("No members of DIF '%s' are within range", next_dif.c_str());
+		return;
+	}
+
+	bs_info = difs_it->second.available_bs_ipcps.front();
+
+	//Enroll the shim to the new DIF/AP
+	neigh_data.apName.processName = bs_info.ipcp_address;
+	neigh_data.difName.processName = next_dif;
+	if(IPCManager->enroll_to_dif(this, &promise, wifi_ipcp->get_id(), neigh_data) == IPCM_FAILURE ||
+			promise.wait() != IPCM_SUCCESS) {
+		LOG_WARN("Problems enrolling IPCP %u to DIF %s via neighbor %s",
+			  wifi_ipcp->get_id(),
+			 neigh_data.difName.processName.c_str(),
+			 bs_info.ipcp_address.c_str());
+		return;
+	}
+
+	//Enroll to DIF
+	high_neigh_data.supportingDifName.processName = next_dif;
+	high_neigh_data.difName.processName = "mobile.DIF";
+
+	if(IPCManager->enroll_to_dif(this, &promise, normal_ipcp->get_id(), high_neigh_data) == IPCM_FAILURE ||
+			promise.wait() != IPCM_SUCCESS) {
+		LOG_WARN("Problems enrolling IPCP %u to DIF %s via supporting DIF %s",
+				normal_ipcp->get_id(),
+				high_neigh_data.difName.processName.c_str(),
+				high_neigh_data.supportingDifName.processName.c_str());
+		return;
+	}
+
+	LOG_DBG("Handover done!");
+}
+
+void MobilityManager::execute_handover2(const rina::MediaReport& report)
 {
 	std::map<std::string, rina::MediaDIFInfo>::const_iterator difs_it;
 	rina::BaseStationInfo bs_info;
