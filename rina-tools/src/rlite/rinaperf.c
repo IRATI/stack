@@ -543,14 +543,16 @@ perf_server(struct worker *w)
                         (t_end.tv_nsec - t_start.tv_nsec);
     if (timeout) {
         /* There was a timeout, adjust the time measurement. */
-        if (ns < RP_DATA_WAIT_MSECS * 1000000) {
-            ns = 0;
+        if (ns <= RP_DATA_WAIT_MSECS * 1000000) {
+            ns = 1;
         } else {
             ns -= RP_DATA_WAIT_MSECS * 1000000;
         }
     }
 
-    w->result.pps = (1000000000ULL * i) / ns;
+    w->result.pps = 1000000000ULL;
+    w->result.pps *= i;
+    w->result.pps /= ns;
     w->result.bps = w->result.pps * 8 * w->test_config.size;
     w->result.cnt = i;
 
@@ -625,6 +627,10 @@ client_worker_function(void *opaque)
     pfd.fd = rina_flow_alloc(rp->dif_name, rp->cli_appl_name,
                              rp->srv_appl_name, &rp->flowspec,
                              RINA_F_NOWAIT);
+    if (pfd.fd < 0) {
+        perror("rina_flow_alloc(cfd)");
+        goto out;
+    }
     pfd.events = POLLIN;
     ret = poll(&pfd, 1, CLI_FA_TIMEOUT_MSECS);
     if (ret <= 0) {
@@ -638,7 +644,7 @@ client_worker_function(void *opaque)
     }
     w->cfd = rina_flow_alloc_wait(pfd.fd);
     if (w->cfd < 0) {
-        perror("rina_flow_alloc(cfd)");
+        perror("rina_flow_alloc_wait(cfd)");
         goto out;
     }
 
@@ -686,6 +692,10 @@ client_worker_function(void *opaque)
     pfd.fd = rina_flow_alloc(rp->dif_name, rp->cli_appl_name,
                              rp->srv_appl_name, &rp->flowspec,
                              RINA_F_NOWAIT);
+    if (pfd.fd < 0) {
+        perror("rina_flow_alloc(cfd)");
+        goto out;
+    }
     pfd.events = POLLIN;
     ret = poll(&pfd, 1, CLI_FA_TIMEOUT_MSECS);
     if (ret <= 0) {
@@ -700,7 +710,7 @@ client_worker_function(void *opaque)
     w->dfd = rina_flow_alloc_wait(pfd.fd);
     rp->cli_flow_allocated = 1;
     if (w->dfd < 0) {
-        perror("rina_flow_alloc(dfd)");
+        perror("rina_flow_alloc_wait(dfd)");
         goto out;
     }
 
@@ -988,6 +998,7 @@ server(struct rinaperf *rp)
     for (;;) {
         struct worker *p;
         int ret;
+        int cfd;
 
         /* Wait for more free workers. */
         sem_wait(&rp->workers_free);
@@ -1021,6 +1032,19 @@ server(struct rinaperf *rp)
             }
         }
 
+        /* Wait and accept an incoming flow. */
+        cfd = rina_flow_accept(rp->cfd, NULL, NULL, 0);
+        if (cfd < 0) {
+            if (errno == ENOSPC) {
+                /* Flow allocation response message was dropped,
+                 * so flow allocation failed. */
+                sem_post(&rp->workers_free);
+                continue;
+            }
+            perror("rina_flow_accept()");
+            break;
+        }
+
         /* Allocate new worker and accept a new flow. */
         w = malloc(sizeof(*w));
         if (!w) {
@@ -1029,12 +1053,7 @@ server(struct rinaperf *rp)
         }
         memset(w, 0, sizeof(*w));
         worker_init(w, rp);
-
-        w->cfd = rina_flow_accept(rp->cfd, NULL, NULL, 0);
-        if (w->cfd < 0) {
-            perror("rina_flow_accept()");
-            break;
-        }
+        w->cfd = cfd;
 
         ret = pthread_create(&w->th, NULL, server_worker_function, w);
         if (ret) {
@@ -1053,7 +1072,7 @@ server(struct rinaperf *rp)
 
     if (w) {
         worker_fini(w);
-        sem_post(&w->rp->workers_free);
+        sem_post(&rp->workers_free);
         free(w);
     }
 
