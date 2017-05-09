@@ -362,16 +362,16 @@ perf_client(struct worker *w)
     unsigned int burst = w->burst;
     struct rinaperf *rp = w->rp;
     unsigned int cdown = burst;
-    struct timeval t_start, t_end;
-    struct timeval w1, w2;
+    struct timespec t_start, t_end;
+    struct timespec w1, w2;
     char buf[SDU_SIZE_MAX];
-    unsigned long us;
+    unsigned long long ns;
     unsigned int i = 0;
     int ret;
 
     memset(buf, 'x', size);
 
-    gettimeofday(&t_start, NULL);
+    clock_gettime(CLOCK_MONOTONIC, &t_start);
 
     for (i = 0; !rp->cli_stop && (!limit || i < limit); i++) {
         ret = write(w->dfd, buf, size);
@@ -388,12 +388,12 @@ perf_client(struct worker *w)
             if (interval > 50) { /* slack default is 50 us*/
                 stoppable_usleep(rp, interval);
             } else {
-                gettimeofday(&w1, NULL);
+                clock_gettime(CLOCK_MONOTONIC, &w1);
                 for (;;) {
-                    gettimeofday(&w2, NULL);
-                    us = 1000000 * (w2.tv_sec - w1.tv_sec) +
-                        (w2.tv_usec - w1.tv_usec);
-                    if (us >= interval) {
+                    clock_gettime(CLOCK_MONOTONIC, &w2);
+                    ns = 1000000000ULL * (w2.tv_sec - w1.tv_sec) +
+                        (w2.tv_nsec - w1.tv_nsec);
+                    if (ns >= 1000 * interval) {
                         break;
                     }
                 }
@@ -402,13 +402,15 @@ perf_client(struct worker *w)
         }
     }
 
-    gettimeofday(&t_end, NULL);
-    us = 1000000 * (t_end.tv_sec - t_start.tv_sec) +
-            (t_end.tv_usec - t_start.tv_usec);
+    clock_gettime(CLOCK_MONOTONIC, &t_end);
+    ns = 1000000000ULL * (t_end.tv_sec - t_start.tv_sec) +
+            (t_end.tv_nsec - t_start.tv_nsec);
 
-    if (us) {
+    if (ns) {
         w->result.cnt = i;
-        w->result.pps = (1000000ULL * i) / us;
+        w->result.pps = 1000000000ULL;
+        w->result.pps *= i;
+        w->result.pps /= ns;
         w->result.bps = w->result.pps * 8 * size;
     }
 
