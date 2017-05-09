@@ -265,7 +265,9 @@ repoll:
             (t_end.tv_nsec - t_start.tv_nsec);
 
     w->result.cnt = i;
-    w->result.pps = (1000000000ULL * i) / ns;
+    w->result.pps = 1000000000ULL;
+    w->result.pps *= i;
+    w->result.pps /= ns;
     w->result.bps = w->result.pps * 8 * size;
     w->result.latency = (ns/i) - interval * 1000;
 
