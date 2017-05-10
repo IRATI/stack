@@ -1358,7 +1358,6 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                                         flow->port_id,
                                         du)) {
                                 LOG_ERR("Couldn't enqueue SDU to user IPCP");
-                                sdu_destroy(du);
                                 return -1;
                         }
 
