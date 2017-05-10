@@ -1158,12 +1158,17 @@ void ShimWifiStaIPCProcessImpl::notify_connected(const std::string& neigh_name)
 	}
 }
 
-void ShimWifiStaIPCProcessImpl::notify_disconnected()
+void ShimWifiStaIPCProcessImpl::notify_disconnected(const std::string& neigh_name)
 {
 	std::list<rina::Neighbor> neighbors;
 	StaEnrollmentSM::StaEnrollmentState current_state;
 
 	rina::ScopedLock g(*lock_);
+
+	if (sta_enr_sm.neighbor != neigh_name) {
+		LOG_IPCP_DBG("Disconnected from old AP: %s", neigh_name.c_str());
+		return;
+	}
 
 	current_state = sta_enr_sm.state;
 	sta_enr_sm.restart("", "");

@@ -334,7 +334,7 @@ void MobilityManager::execute_handover2(const rina::MediaReport& report)
 	NeighborData neigh_data, high_neigh_data;
 	IPCMIPCProcess * wifi1_ipcp, * wifi2_ipcp, * normal_ipcp, * ipcp_enroll, * ipcp_disc;
 	Promise promise;
-	std::string next_dif;
+	std::string next_dif, disc_dif;
 	rina::Sleep sleep;
 	rina::ApplicationProcessNamingInformation neighbor;
 
@@ -427,6 +427,7 @@ void MobilityManager::execute_handover2(const rina::MediaReport& report)
 	}
 
 	//4 Update DIF name (irati -> pristine -> arcfire and start with irati again)
+	disc_dif = hand_state.dif;
 	if (hand_state.dif == "irati") {
 		next_dif = "pristine";
 		neighbor.processName = "ap1.mobile";
@@ -487,6 +488,16 @@ void MobilityManager::execute_handover2(const rina::MediaReport& report)
 				normal_ipcp->get_id());
 		return;
 	}
+
+	difs_it = report.available_difs.find(disc_dif);
+	if (difs_it == report.available_difs.end()) {
+		LOG_WARN("No members of DIF '%s' are within range", disc_dif.c_str());
+	} else {
+		bs_info = difs_it->second.available_bs_ipcps.front();
+	}
+
+	neighbor.processName = bs_info.ipcp_address;
+	neighbor.processInstance = "";
 
 	if(IPCManager->disconnect_neighbor(this, &promise, ipcp_disc->get_id(), neighbor) == IPCM_FAILURE ||
 			promise.wait() != IPCM_SUCCESS) {
