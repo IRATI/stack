@@ -2466,7 +2466,6 @@ void RIBDaemon::remove_connection(const cdap_rib::con_handle_t& con){
 	if(!rib){
 		LOG_ERR("Could not remove connection for port id: %d!",
 								port_id);
-		assert(0);
 		return;
 	}
 
