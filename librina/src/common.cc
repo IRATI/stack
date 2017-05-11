@@ -291,6 +291,14 @@ bool FlowSpecification::operator!=(const FlowSpecification &other) const {
 }
 
 /* CLASS FLOW INFORMATION */
+FlowInformation::FlowInformation()
+{
+	fd = -1;
+	portId = 0;
+	state = FLOW_DEALLOCATED;
+	user_ipcp_id = 0;
+}
+
 bool FlowInformation::operator==(
 		const FlowInformation &other) const {
 	return portId == other.portId;
@@ -521,6 +529,7 @@ FlowRequestEvent::FlowRequestEvent(){
 	portId = 0;
 	ipcProcessId = 0;
 	flowRequestorIpcProcessId = 0;
+	internal = false;
 }
 
 FlowRequestEvent::FlowRequestEvent(
@@ -539,6 +548,7 @@ FlowRequestEvent::FlowRequestEvent(
 	this->flowRequestorIpcProcessId = flowRequestorIpcProcessId;
 	this->portId = 0;
 	this->ipcProcessId = 0;
+	this->internal = false;
 }
 
 FlowRequestEvent::FlowRequestEvent(int portId,
@@ -559,6 +569,7 @@ FlowRequestEvent::FlowRequestEvent(int portId,
 	this->flowRequestorIpcProcessId = ipcProcessId;
 	this->portId = portId;
 	this->ipcProcessId = ipcProcessId;
+	this->internal = false;
 }
 
 /* CLASS FLOW DEALLOCATE REQUEST EVENT */
@@ -569,6 +580,7 @@ FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
 								sequenceNumber){
 	this->portId = portId;
 	this->applicationName = appName;
+	this->internal = false;
 }
 
 FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
@@ -576,6 +588,7 @@ FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
 			IPCEvent(FLOW_DEALLOCATION_REQUESTED_EVENT,
 					sequenceNumber){
 	this->portId = portId;
+	this->internal = false;
 }
 
 /* CLASS FLOW DEALLOCATED EVENT */
@@ -950,6 +963,7 @@ Neighbor::Neighbor()
 	enrolled_ = false;
 	underlying_port_id_ = 0;
 	number_of_enrollment_attempts_ = 0;
+	internal_port_id = 0;
 }
 
 bool Neighbor::operator==(const Neighbor &other) const{
@@ -1062,7 +1076,7 @@ const std::string Neighbor::toString(){
 	ss<<"; Is enrolled: "<<enrolled_<<std::endl;
 	ss<<"Name: "<<name_.toString()<<std::endl;
 	ss<<"Supporting DIF in common: "<<supporting_dif_name_.processName;
-	ss<<"; N-1 port-id: "<<underlying_port_id_<<std::endl;
+	ss<<"; N-1 port-id: "<<underlying_port_id_ <<std::endl;
 	ss<<"List of supporting DIFs: ";
 	for (std::list<ApplicationProcessNamingInformation>::iterator it = supporting_difs_.begin();
 			it != supporting_difs_.end(); it++)

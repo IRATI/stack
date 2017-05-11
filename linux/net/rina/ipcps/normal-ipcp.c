@@ -50,6 +50,16 @@
 /*  FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
 
+/* FIXME: To be solved properly */
+static struct workqueue_struct * mgmt_sdu_wq;
+
+struct mgmt_sdu_work_data {
+        struct sdu *      sdu;
+        ipc_process_id_t  ipcp_id;
+        port_id_t	  port_id;
+        uint_t		  nl_port_id;
+};
+
 enum mgmt_state {
         MGMT_DATA_READY,
         MGMT_DATA_DESTROYED
@@ -774,10 +784,39 @@ static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
         return 0;
 }
 
+static int mgmt_sdu_notif_worker(void * o)
+{
+        struct mgmt_sdu_work_data * data;
+
+        LOG_DBG("Worker waking up, going to send a Mgmt SDU to IPCP Daemon");
+
+	ASSERT(o);
+
+        data = (struct mgmt_sdu_work_data *) o;
+
+	if (rnl_ipcp_read_mgmt_sdu_notif(data->ipcp_id,
+					 0,
+					 0,
+					 data->port_id,
+					 data->sdu,
+					 data->nl_port_id))
+		LOG_ERR("Problems sending NL message");
+
+	sdu_destroy(data->sdu);
+	rkfree(data);
+
+        LOG_DBG("Worker ends...");
+
+        return 0;
+}
+
 static int normal_mgmt_sdu_post(struct ipcp_instance_data * data,
                                 port_id_t                   port_id,
                                 struct sdu *                sdu)
 {
+        struct mgmt_sdu_work_data  * wdata;
+        struct rwq_work_item       * item;
+
 	if (!data) {
 		LOG_ERR("Bogus instance passed");
 		sdu_destroy(sdu);
@@ -795,18 +834,14 @@ static int normal_mgmt_sdu_post(struct ipcp_instance_data * data,
 		return -1;
 	}
 
-	if (rnl_ipcp_read_mgmt_sdu_notif(data->id,
-					 0,
-					 0,
-					 port_id,
-					 sdu,
-					 data->nl_port)) {
-		LOG_ERR("Problems sending NL message");
-		sdu_destroy(sdu);
-		return -1;
-	}
+        wdata = rkzalloc(sizeof(* wdata), GFP_ATOMIC);
+        wdata->sdu  = sdu;
+        wdata->port_id = port_id;
+        wdata->nl_port_id = data->nl_port;
+        wdata->ipcp_id = data->id;
+        item  = rwq_work_create_ni(mgmt_sdu_notif_worker, wdata);
 
-	sdu_destroy(sdu);
+        rwq_work_post(mgmt_sdu_wq, item);
 
         return 0;
 }
@@ -1349,6 +1384,14 @@ static struct ipcp_factory_ops normal_ops = {
 
 static int __init mod_init(void)
 {
+	mgmt_sdu_wq = alloc_workqueue(IPCP_NAME,
+                                      WQ_MEM_RECLAIM | WQ_HIGHPRI | WQ_UNBOUND,
+				      1);
+        if (!mgmt_sdu_wq) {
+                LOG_CRIT("Cannot create a workqueue for the normal IPCP");
+                return -1;
+        }
+
         normal = kipcm_ipcp_factory_register(default_kipcm,
                                              IPCP_NAME,
                                              &normal_data,
@@ -1362,6 +1405,9 @@ static int __init mod_init(void)
 static void __exit mod_exit(void)
 {
         ASSERT(normal);
+
+        flush_workqueue(mgmt_sdu_wq);
+        destroy_workqueue(mgmt_sdu_wq);
 
         kipcm_ipcp_factory_unregister(default_kipcm, normal);
 }

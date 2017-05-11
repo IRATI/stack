@@ -285,73 +285,51 @@ public:
 	const std::string toString() const;
 	void deprecateObject(unsigned int max_age);
 	//accessors
-	std::string get_name() const;
-	void set_name(const std::string& name);
-	std::string get_neighborname() const;
-	void set_neighborname(const std::string & neighbor_name);
-	std::list<unsigned int> get_addresses() const;
-	std::list<unsigned int> get_neighboraddresses() const;
-	unsigned int get_cost() const;
-	bool is_state() const;
-	unsigned int get_sequencenumber() const;
-	unsigned int get_age() const;
-	bool is_modified() const;
-	unsigned int get_avoidport() const;
-	bool is_beingerased() const;
-	std::string get_objectname() const;
 	void add_address(unsigned int address);
 	void remove_address(unsigned int address);
 	bool contains_address(unsigned int address) const;
-	void set_addresses(const std::list<unsigned int>& addresses);
 	void add_neighboraddress(unsigned int neighbor_address);
 	void remove_neighboraddress(unsigned int neighbor_address);
 	bool contains_neighboraddress(unsigned int address) const;
 	void set_neighboraddresses(const std::list<unsigned int>& addresses);
-	void set_cost(unsigned int cost);
-	void has_state(bool state);
-	void set_sequencenumber(unsigned int sequence_number);
-	void set_age(unsigned int age);
-	void set_object_name(const std::string& name);
-	void has_modified(bool modified);
-	void set_avoidport(unsigned int avoid_port);
-	void has_beingerased(bool being_erased);
+	void set_addresses(const std::list<unsigned int>& addresses_);
 	const std::string getKey() const;
-private:
+
 	// The name of the IPCP (encoded in a string)
 	std::string name;
-
-	// The addresses of the IPC Process
-	std::list<unsigned int> addresses;
 
 	// The name of the neighbor
 	std::string neighbor_name;
 
-	// The address of the neighbor IPC Process
-	std::list<unsigned int> neighbor_addresses;
-
-	// The port_id assigned by the neighbor IPC Process to the N-1 flow
-	unsigned int cost_;
+	// The object is being erased
+	bool being_erased;
 
 	// Flow up (true) or down (false)
-	bool state_;
-
-	// A sequence number to be able to discard old information
-	unsigned int sequence_number_;
+	bool state_up;
 
 	// Age of this FSO (in seconds)
-	unsigned int age_;
+	unsigned int age;
+
+	// The port_id assigned by the neighbor IPC Process to the N-1 flow
+	unsigned int cost;
 
 	// The object has been marked for propagation
-	bool modified_;
+	bool modified;
+
+	// A sequence number to be able to discard old information
+	unsigned int seq_num;
 
 	// Avoid port in the next propagation
-	int avoid_port_;
-
-	// The object is being erased
-	bool being_erased_;
+	int avoid_port;
 
 	// The name of the object in the RIB
-	std::string object_name_;
+	std::string object_name;
+
+	// The addresses of the IPC Process
+	std::list<unsigned int> addresses;
+
+	// The address of the neighbor IPC Process
+	std::list<unsigned int> neighbor_addresses;
 };
 
 class FlowStateManager;
@@ -401,6 +379,9 @@ public:
 	void deprecateObjects(const std::string& neigh_name,
 			      const std::string& name,
 			      unsigned int max_age);
+	void updateCost(const std::string& neigh_name,
+			      const std::string& name,
+			      unsigned int cost);
 	void deprecateObjectsWithName(const std::string& name,
 				      unsigned int max_age,
 				      bool neighbor);
@@ -496,7 +477,11 @@ public:
 				   unsigned int address,
 				   bool neighbor);
 	void deprecateObjectsNeighbor(const std::string& neigh_name,
-	                              const std::string& name);
+	                              const std::string& name,
+				      bool both);
+	void updateCost(const std::string& neigh_name,
+			const std::string& name,
+			unsigned int cost);
 	std::map <int, std::list<FlowStateObject*> > prepareForPropagation
 	        (const std::list<rina::FlowInformation>& flows);
 	void incrementAge();
@@ -622,7 +607,6 @@ public:
 	~LinkStateRoutingPolicy();
 	void set_ipc_process(IPCProcess * ipc_process);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
-	const std::list<rina::FlowInformation>& get_allocated_flows() const;
 
 	/// N-1 Flow allocated, N-1 Flow deallocated or enrollment to neighbor completed
 	void eventHappened(rina::InternalEvent * event);
@@ -677,14 +661,6 @@ private:
 	bool test_;
 	FlowStateManager *db_;
 	rina::Lockable lock_;
-
-
-	/// If a flow allocation is launched before the enrollment is finished, the flow
-	/// allocation procedure of the PDU Forwarding table must wait. Otherwise it will
-	/// not have the necessary information about the neighbour IPC process. This pending
-	/// flow allocation has to be stored in a list, until the enrollment is finished or
-	/// until a flow deallocation over the same flow is called.
-	std::list<rina::FlowInformation> allocated_flows_;
 
 	void subscribeToEvents();
 

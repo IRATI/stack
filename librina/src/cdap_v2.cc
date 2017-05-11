@@ -228,7 +228,8 @@ class ConnectionStateMachine
 		NONE,
 		AWAITCON,
 		CONNECTED,
-		AWAITCLOSE
+		AWAITCLOSE,
+		CLOSED
 	};
 
 	ConnectionStateMachine(CDAPSessionManagerInterface * sm_);
@@ -245,9 +246,6 @@ class ConnectionStateMachine
 	/// @throws CDAPException
 	void checkConnectResponse();
 	void connectResponseSentOrReceived(bool sent);
-	/// Checks if the CDAP M_RELEASE message can be sent
-	/// @throws CDAPException
-	void checkRelease();
 	void releaseSentOrReceived(const cdap_m_t &cdap_message, bool sent);
 	/// Checks if the CDAP M_RELEASE_R message can be sent
 	/// @throws CDAPException
@@ -476,7 +474,7 @@ class CDAPSessionManager : public CDAPSessionManagerInterface
 	CDAPSession* createCDAPSession(int port_id);
 	void getAllCDAPSessionIds(std::vector<int> &vector);
 	CDAPSession* get_cdap_session(int port_id);
-	cdap_rib::connection_handler get_con_handler(int port_id);
+	cdap_rib::connection_handler & get_con_handler(int port_id);
 	void encodeCDAPMessage(const cdap_m_t &cdap_message,
 			       ser_obj_t& result);
 	void decodeCDAPMessage(const ser_obj_t &cdap_message,
@@ -1055,19 +1053,6 @@ void ConnectionStateMachine::connectResponseSentOrReceived(bool sent)
 	}
 }
 
-void ConnectionStateMachine::checkRelease()
-{
-	ScopedLock g(my_lock);
-
-	if (connection_state_ != CONNECTED) {
-		std::stringstream ss;
-		ss << "Cannot close a connection because "
-		   << "this CDAP session is " << "currently in "
-		   << connection_state_ << " state";
-		throw CDAPException(ss.str());
-	}
-}
-
 void ConnectionStateMachine::releaseSentOrReceived(const cdap_m_t &cdap_message,
 						   bool sent)
 {
@@ -1212,19 +1197,12 @@ void ConnectionStateMachine::release(const cdap_m_t &cdap_message)
 {
 	ScopedLock g(my_lock);
 
-	if (connection_state_ != CONNECTED) {
-		std::stringstream ss;
-		ss << "Cannot close a connection because "
-		   << "this CDAP session is " << "currently in "
-		   << connection_state_ << " state";
-		throw CDAPException(ss.str());
-	}
-
-	connection_state_ = AWAITCLOSE;
-
 	if (cdap_message.invoke_id_ != 0) {
+		connection_state_ = AWAITCLOSE;
 		last_timer_task = new ReleaseConnectionTimerTask(cdap_session_->get_port_id(), sm);
 		timer.scheduleTask(last_timer_task, timeout_);
+	} else {
+		connection_state_ = CLOSED;
 	}
 }
 
@@ -1232,15 +1210,10 @@ void ConnectionStateMachine::releaseReceived(const cdap_m_t &message)
 {
 	ScopedLock g(my_lock);
 
-	if (connection_state_ != CONNECTED && connection_state_ != AWAITCLOSE) {
-		std::stringstream ss;
-		ss << "Cannot close the connection because this CDAP session is currently in "
-		   << connection_state_ << " state";
-		throw CDAPException(ss.str());
-	}
-
 	if (message.invoke_id_ != 0) {
 		connection_state_ = AWAITCLOSE;
+	} else {
+		connection_state_ = CLOSED;
 	}
 }
 
@@ -1255,7 +1228,7 @@ void ConnectionStateMachine::releaseResponse()
 		throw CDAPException(ss.str());
 	}
 
-	connection_state_ = NONE;
+	connection_state_ = CLOSED;
 }
 
 void ConnectionStateMachine::releaseResponseReceived()
@@ -1273,6 +1246,8 @@ void ConnectionStateMachine::releaseResponseReceived()
 		timer.cancelTask(last_timer_task);
 		last_timer_task = 0;
 	}
+
+	connection_state_ = CLOSED;
 }
 
 // CLASS ResetStablishmentTimerTask
@@ -1699,7 +1674,6 @@ void CDAPSession::encodeNextMessageToBeSent(const cdap_m_t &cdap_message,
 			connection_state_machine_->checkConnectResponse();
 			break;
 		case cdap_m_t::M_RELEASE:
-			connection_state_machine_->checkRelease();
 			break;
 		case cdap_m_t::M_RELEASE_R:
 			connection_state_machine_->checkReleaseResponse();
@@ -2310,14 +2284,14 @@ CDAPSession* CDAPSessionManager::get_cdap_session(int port_id)
 	return internal_get_cdap_session(port_id);
 }
 
-cdap_rib::connection_handler CDAPSessionManager::get_con_handler(int port_id)
+cdap_rib::connection_handler & CDAPSessionManager::get_con_handler(int port_id)
 {
 	CDAPSession * session;
 	ScopedLock g(lock);
 
 	session = internal_get_cdap_session(port_id);
 	if (!session) {
-		return cdap_rib::connection_handler();
+		throw IPCException("Could not find conn handler");
 	} else {
 		return session->get_con_handle();
 	}

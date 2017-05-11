@@ -245,6 +245,7 @@ public:
 private:
         void subscribeToEvents();
         void addressChange(rina::AddressChangeEvent * event);
+
         KernelSyncTrigger * kernel_sync;
         unsigned int old_address;
         bool address_change_period;

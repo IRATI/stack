@@ -163,7 +163,7 @@ private:
 	void notify_associated(const std::string& neigh_name);
 	void notify_key_negotiated(const std::string& neigh_name);
 	void notify_connected(const std::string& neigh_name);
-	void notify_disconnected(void);
+	void notify_disconnected(const std::string& neigh_name);
 	void notify_scan_results(void);
 };
 

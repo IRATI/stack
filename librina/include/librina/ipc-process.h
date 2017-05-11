@@ -753,6 +753,21 @@ public:
 	 * and what signal power levels
 	 */
 	void sendMediaReport(const MediaReport& report);
+
+	/**
+	 * Tell librina that an internal flow has been allocated, so that it creates
+	 * the flow structure and opens an I/O dev file descriptor associated to it
+	 *
+	 * @param information about the flow that has been allocated
+	 * @return the file descriptor
+	 */
+	int internal_flow_allocated(const rina::FlowInformation& flow_info);
+
+	/**
+	 * Tell librina that an internal flow has been deallocated, so that it deletes
+	 * the flow structure and closes the I/O dev file descriptor associated to it
+	 */
+	void internal_flow_deallocated(int port_id);
 };
 
 /**

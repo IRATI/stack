@@ -38,8 +38,10 @@ struct WirelessDIFInfo {
 };
 
 struct HandoverState {
-	std::string current_dif;
+	std::string dif;
+	IPCMIPCProcess * ipcp;
 	bool do_it_now;
+	int hand_type;
 };
 
 //
@@ -58,6 +60,9 @@ public:
 	void execute_handover(const rina::MediaReport& report);
 
 protected:
+	void execute_handover1(const rina::MediaReport& report);
+	void execute_handover2(const rina::MediaReport& report);
+
 	//Process flow event
 	void process_librina_event(rina::IPCEvent** event);
 

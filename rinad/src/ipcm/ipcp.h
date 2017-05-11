@@ -191,6 +191,12 @@ public:
 			const rina::ApplicationProcessNamingInformation& neighborName,
 			unsigned int opaque);
 
+	void enroll_prepare_handover(const rina::ApplicationProcessNamingInformation& difName,
+				     const rina::ApplicationProcessNamingInformation& supportingDifName,
+				     const rina::ApplicationProcessNamingInformation& neighborName,
+				     const rina::ApplicationProcessNamingInformation& disc_neigh_name,
+				     unsigned int opaque);
+
 	/**
 	 * Invoked by the IPC Manager to force an IPC Process to deallocate all the
 	 * N-1 flows to a neighbor IPC Process (for example, because it has been

@@ -210,8 +210,6 @@ public:
  * is a singleton.
  */
 class IPCManager {
-	/** The flows that are currently allocated */
-	std::map<int, FlowInformation*> allocatedFlows;
 
 	/** The flows that are pending to be allocated or deallocated*/
 	std::map<unsigned int, FlowInformation*> pendingFlows;
@@ -224,10 +222,13 @@ class IPCManager {
 	std::map<ApplicationProcessNamingInformation,
 	        ApplicationRegistration*> applicationRegistrations;
 
+protected:
+	/** The flows that are currently allocated */
+	std::map<int, FlowInformation*> allocatedFlows;
+
 	ReadWriteLockable flows_rw_lock;
 	ReadWriteLockable regs_rw_lock;
 
-protected:
 	/** Return the pending flow at sequenceNumber */
 	FlowInformation * getPendingFlow(unsigned int seqNumber);
 

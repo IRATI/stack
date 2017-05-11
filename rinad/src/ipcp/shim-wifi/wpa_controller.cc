@@ -210,7 +210,7 @@ void WpaController::__process_msg(const std::string& msg)
 	} else if (msg.find("CTRL-EVENT-CONNECTED") != std::string::npos) {
 		__process_connected_message(msg);
 	} else if (msg.find("CTRL-EVENT-DISCONNECTED") != std::string::npos) {
-		__process_disconnected_message();
+		__process_disconnected_message(msg);
 	} else if (msg.find("CTRL-EVENT-TERMINATING") != std::string::npos) {
 		LOG_IPCP_DBG("CTRL-EVENT-TERMINATING event received");
 	} else if (msg.find("CTRL-EVENT-SCAN-STARTED") != std::string::npos) {
@@ -284,9 +284,18 @@ void WpaController::__process_connected_message(const std::string& msg)
 	ipcp->notify_connected(neigh_name);
 }
 
-void WpaController::__process_disconnected_message()
+void WpaController::__process_disconnected_message(const std::string& msg)
 {
-	ipcp->notify_disconnected();
+	std::string delimiter = "bssid=";
+	std::string neigh_name;
+
+	std::string token = msg.substr(msg.find(delimiter) + delimiter.length(),
+				        msg.length() - 1);
+	neigh_name = token.substr(0, token.find(" "));
+
+	LOG_IPCP_DBG("Neighbor name: %s", neigh_name.c_str());
+
+	ipcp->notify_disconnected(neigh_name);
 }
 
 void WpaController::__process_scan_results_message()
