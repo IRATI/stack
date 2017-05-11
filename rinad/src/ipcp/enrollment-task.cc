@@ -669,12 +669,11 @@ EnrollmentTask::EnrollmentTask() : IPCPEnrollmentTask()
 	irm_ = 0;
 	event_manager_ = 0;
 	timeout_ = 10000;
-	timeout_ = 0;
-	max_num_enroll_attempts_ = 0;
-	watchdog_per_ms_ = 0;
-	declared_dead_int_ms_ = 0;
+	max_num_enroll_attempts_ = 3;
+	watchdog_per_ms_ = 30000;
+	declared_dead_int_ms_ = 120000;
 	ipcp_ps = 0;
-	use_reliable_n_flow = true;
+	use_reliable_n_flow = false;
 }
 
 EnrollmentTask::~EnrollmentTask()
@@ -1040,31 +1039,35 @@ void EnrollmentTask::set_dif_configuration(const rina::DIFConfiguration& dif_con
 	try {
 		timeout_ = psconf.get_param_value_as_int(ENROLL_TIMEOUT_IN_MS);
 	} catch (rina::Exception &e) {
-		LOG_WARN("Problems parsing enroll timeout param: %s", e.what());
+		LOG_IPCP_INFO("Could not parse timeout_value, using default value: %d", timeout_);
 	}
 
 	try {
 		max_num_enroll_attempts_ = psconf.get_param_value_as_uint(MAX_ENROLLMENT_RETRIES);
 	} catch (rina::Exception &e) {
-		LOG_WARN("Problems parsing max enroll retries param: %s", e.what());
+		LOG_IPCP_INFO("Could not parse max_num_enroll_attempts_, using default value: %d",
+			      max_num_enroll_attempts_);
 	}
 
 	try {
 		watchdog_per_ms_ = psconf.get_param_value_as_int(WATCHDOG_PERIOD_IN_MS);
 	} catch (rina::Exception &e) {
-		LOG_WARN("Problems parsing watchdog period param: %s", e.what());
+		LOG_IPCP_INFO("Could not parse watchdog_per_ms_, using default value: %d",
+			      watchdog_per_ms_);
 	}
 
 	try {
 		declared_dead_int_ms_ = psconf.get_param_value_as_int(DECLARED_DEAD_INTERVAL_IN_MS);
 	} catch (rina::Exception &e) {
-		LOG_WARN("Problems parsing neigh declared dead interval param: %s", e.what());
+		LOG_IPCP_INFO("Could not parse declared_dead_int_ms_, using default value: %d",
+			      declared_dead_int_ms_);
 	}
 
 	try {
 		use_reliable_n_flow = psconf.get_param_value_as_bool(USE_RELIABLE_N_FLOW);
 	} catch (rina::Exception &e) {
-		LOG_WARN("Problems parsing use reliable N flow param: %s", e.what());
+		LOG_IPCP_INFO("Could not parse use_reliable_n_flow, using default value: %d",
+			      use_reliable_n_flow);
 	}
 
 	//Add Watchdog RIB object to RIB
