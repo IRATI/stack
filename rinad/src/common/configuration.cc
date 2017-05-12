@@ -37,6 +37,7 @@ Flow::Flow()
         source = false;
         state = EMPTY;
         access_control = 0;
+        internal = false;
 }
 
 Flow::Flow(const Flow& flow)
@@ -55,6 +56,7 @@ Flow::Flow(const Flow& flow)
         source = flow.source;
         state = flow.state;
         access_control = 0;
+        internal = flow.internal;
 
         std::list<rina::Connection*>::const_iterator it;
         rina::Connection * current = 0;
@@ -116,7 +118,7 @@ std::string Flow::toString()
         ss << "* Source address: " << source_address << std::endl;
         ss << "* Source port id: " << source_port_id << std::endl;
         ss << "* Destination AP Naming Info: "
-           << destination_naming_info.toString();
+           << destination_naming_info.toString() << std::endl;
         ss << "* Destination addres: " << destination_address << std::endl;
         ss << "* Destination port id: " << destination_port_id << std::endl;
         if (connections.size() > 0)
@@ -143,5 +145,20 @@ const std::string Flow::getKey() const
         ss << source_address << "-" << source_port_id;
         return ss.str();
 }
+
+rina::FlowInformation Flow::to_flow_information(const std::string dif_name,
+					        int port_id)
+{
+	rina::FlowInformation flow_info;
+
+	flow_info.difName.processName = dif_name;
+	flow_info.flowSpecification = flow_specification;
+	flow_info.localAppName = source_naming_info;
+	flow_info.remoteAppName = destination_naming_info;
+	flow_info.portId = port_id;
+
+	return flow_info;
+}
+
 }  //namespace configs
 }  //namespace rinad

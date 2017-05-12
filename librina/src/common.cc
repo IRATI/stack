@@ -89,19 +89,6 @@ bool ApplicationProcessNamingInformation::operator!=(
 	return !(*this == other);
 }
 
-ApplicationProcessNamingInformation &
-ApplicationProcessNamingInformation::operator=(
-		const ApplicationProcessNamingInformation & other){
-	if (this != &other){
-		processName = other.processName;
-		processInstance = other.processInstance;
-		entityName = other.entityName;
-		entityInstance = other.entityInstance;
-	}
-
-	return *this;
-}
-
 bool ApplicationProcessNamingInformation::operator>(
 		const ApplicationProcessNamingInformation &other) const {
 	int aux = processName.compare(other.processName);
@@ -304,6 +291,14 @@ bool FlowSpecification::operator!=(const FlowSpecification &other) const {
 }
 
 /* CLASS FLOW INFORMATION */
+FlowInformation::FlowInformation()
+{
+	fd = -1;
+	portId = 0;
+	state = FLOW_DEALLOCATED;
+	user_ipcp_id = 0;
+}
+
 bool FlowInformation::operator==(
 		const FlowInformation &other) const {
 	return portId == other.portId;
@@ -487,8 +482,29 @@ const std::string IPCEvent::eventTypeToString(IPCEventType eventType) {
 	case DISCONNECT_NEIGHBOR_RESPONSE_EVENT:
 		result = "44_DISCONNECT_NEIGHBOR_RESPONSE_EVENT";
 		break;
+	case IPCM_MEDIA_REPORT_EVENT:
+		result = "45_MEDIA_REPORT_EVENT";
+		break;
+	case IPC_PROCESS_ALLOCATE_PORT_RESPONSE:
+		result = "46_ALLOCATE_PORT_RESPONSE";
+		break;
+	case IPC_PROCESS_DEALLOCATE_PORT_RESPONSE:
+		result = "47_DEALLOCATE_PORT_RESPONSE";
+		break;
+	case IPC_PROCESS_WRITE_MGMT_SDU_RESPONSE:
+		result = "48_WRITE_MGMT_SDU_RESPONSE";
+		break;
+	case IPC_PROCESS_READ_MGMT_SDU_NOTIF:
+		result = "49_READ_MGMT_SDU_NOTIF";
+		break;
+	case IPCM_CREATE_IPCP_RESPONSE:
+		result = "50_CREATE_IPCP_RESPONSE";
+		break;
+	case IPCM_DESTROY_IPCP_RESPONSE:
+		result = "51_CREATE_IPCP_RESPONSE";
+		break;
 	case NO_EVENT:
-		result = "45_NO_EVENT";
+		result = "52_NO_EVENT";
 		break;
 	default:
 		result = "Unknown event";
@@ -513,6 +529,7 @@ FlowRequestEvent::FlowRequestEvent(){
 	portId = 0;
 	ipcProcessId = 0;
 	flowRequestorIpcProcessId = 0;
+	internal = false;
 }
 
 FlowRequestEvent::FlowRequestEvent(
@@ -531,6 +548,7 @@ FlowRequestEvent::FlowRequestEvent(
 	this->flowRequestorIpcProcessId = flowRequestorIpcProcessId;
 	this->portId = 0;
 	this->ipcProcessId = 0;
+	this->internal = false;
 }
 
 FlowRequestEvent::FlowRequestEvent(int portId,
@@ -551,6 +569,7 @@ FlowRequestEvent::FlowRequestEvent(int portId,
 	this->flowRequestorIpcProcessId = ipcProcessId;
 	this->portId = portId;
 	this->ipcProcessId = ipcProcessId;
+	this->internal = false;
 }
 
 /* CLASS FLOW DEALLOCATE REQUEST EVENT */
@@ -561,6 +580,7 @@ FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
 								sequenceNumber){
 	this->portId = portId;
 	this->applicationName = appName;
+	this->internal = false;
 }
 
 FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
@@ -568,6 +588,7 @@ FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
 			IPCEvent(FLOW_DEALLOCATION_REQUESTED_EVENT,
 					sequenceNumber){
 	this->portId = portId;
+	this->internal = false;
 }
 
 /* CLASS FLOW DEALLOCATED EVENT */
@@ -593,6 +614,9 @@ ApplicationRegistrationInformation::ApplicationRegistrationInformation(
 const std::string ApplicationRegistrationInformation::toString(){
         std::stringstream ss;
 
+        if (dafName.processName != "") {
+        	ss << "DAF name: " << dafName.toString() << "; ";
+        }
         ss<<"Application name: "<<appName.toString()<<std::endl;
         ss<<"DIF name: "<<difName.processName;
         ss<<"; IPC Process id: "<<ipcProcessId;
@@ -939,34 +963,7 @@ Neighbor::Neighbor()
 	enrolled_ = false;
 	underlying_port_id_ = 0;
 	number_of_enrollment_attempts_ = 0;
-}
-
-Neighbor::Neighbor(const Neighbor &other)
-{
-	address_ = other.address_;
-	old_address_ = other.old_address_;
-	average_rtt_in_ms_ = other.average_rtt_in_ms_;
-	last_heard_from_time_in_ms_ = other.last_heard_from_time_in_ms_;
-	enrolled_ = other.enrolled_;
-	underlying_port_id_ = other.underlying_port_id_;
-	number_of_enrollment_attempts_ = other.number_of_enrollment_attempts_;
-	name_ = other.name_;
-	supporting_dif_name_ = other.supporting_dif_name_;
-	supporting_difs_ = other.supporting_difs_;
-}
-
-Neighbor& Neighbor::operator=(const Neighbor &other)
-{
-	address_ = other.address_;
-	average_rtt_in_ms_ = other.average_rtt_in_ms_;
-	last_heard_from_time_in_ms_ = other.last_heard_from_time_in_ms_;
-	enrolled_ = other.enrolled_;
-	underlying_port_id_ = other.underlying_port_id_;
-	number_of_enrollment_attempts_ = other.number_of_enrollment_attempts_;
-	name_ = other.name_;
-	supporting_dif_name_ = other.supporting_dif_name_;
-	supporting_difs_ = other.supporting_difs_;
-	return *this;
+	internal_port_id = 0;
 }
 
 bool Neighbor::operator==(const Neighbor &other) const{
@@ -977,7 +974,7 @@ bool Neighbor::operator!=(const Neighbor &other) const{
 	return !(*this == other);
 }
 
-const ApplicationProcessNamingInformation&
+const ApplicationProcessNamingInformation
 Neighbor::get_name() const {
 	return name_;
 }
@@ -987,7 +984,7 @@ void Neighbor::set_name(
 	name_ = name;
 }
 
-const ApplicationProcessNamingInformation&
+const ApplicationProcessNamingInformation
 Neighbor::get_supporting_dif_name() const {
 	return supporting_dif_name_;
 }
@@ -997,7 +994,7 @@ void Neighbor::set_supporting_dif_name(
 	supporting_dif_name_ = supporting_dif_name;
 }
 
-const std::list<ApplicationProcessNamingInformation>&
+const std::list<ApplicationProcessNamingInformation>
 Neighbor::get_supporting_difs() {
 	return supporting_difs_;
 }
@@ -1079,7 +1076,7 @@ const std::string Neighbor::toString(){
 	ss<<"; Is enrolled: "<<enrolled_<<std::endl;
 	ss<<"Name: "<<name_.toString()<<std::endl;
 	ss<<"Supporting DIF in common: "<<supporting_dif_name_.processName;
-	ss<<"; N-1 port-id: "<<underlying_port_id_<<std::endl;
+	ss<<"; N-1 port-id: "<<underlying_port_id_ <<std::endl;
 	ss<<"List of supporting DIFs: ";
 	for (std::list<ApplicationProcessNamingInformation>::iterator it = supporting_difs_.begin();
 			it != supporting_difs_.end(); it++)

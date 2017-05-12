@@ -34,7 +34,7 @@ public:
 	InternalEvent(const std::string& event_type) : type (event_type) {};
 	virtual ~InternalEvent(){};
 
-	/// App event types
+	/// Event types
 	static const std::string APP_CONNECTIVITY_TO_NEIGHBOR_LOST;
 	static const std::string APP_N_MINUS_1_FLOW_ALLOCATED;
 	static const std::string APP_N_MINUS_1_FLOW_ALLOCATION_FAILED;
@@ -43,6 +43,9 @@ public:
 	static const std::string APP_NEIGHBOR_ADDED;
 	static const std::string ADDRESS_CHANGE;
 	static const std::string NEIGHBOR_ADDRESS_CHANGE;
+	static const std::string IPCP_INTERNAL_FLOW_ALLOCATED;
+	static const std::string IPCP_INTERNAL_FLOW_ALLOCATION_FAILED;
+	static const std::string IPCP_INTERNAL_FLOW_DEALLOCATED;
 
 	std::string type;
 };
@@ -157,7 +160,9 @@ public:
 /// The IPC Process has enrolled with a new neighbor
 class NeighborAddedEvent: public InternalEvent {
 public:
-	NeighborAddedEvent(const Neighbor& neighbor, bool enrollee);
+	NeighborAddedEvent(const Neighbor& neighbor, bool enrollee,
+			   bool prepare_for_handover,
+			   const rina::ApplicationProcessNamingInformation& disc_neigh);
 	const std::string toString();
 
 	Neighbor neighbor_;
@@ -165,6 +170,9 @@ public:
 	/// True if this IPC Process requested the enrollment operation,
 	/// false if it was its neighbor.
 	bool enrollee_;
+
+	bool prepare_handover;
+	rina::ApplicationProcessNamingInformation disc_neigh_name;
 };
 
 /// A connectivity to a neighbor has been lost
@@ -202,6 +210,49 @@ public:
 	std::string neigh_name;
 	unsigned int new_address;
 	unsigned int old_address;
+};
+
+class IPCPInternalFlowAllocatedEvent: public InternalEvent {
+public:
+	IPCPInternalFlowAllocatedEvent(unsigned int port,
+				       int fd,
+				       const FlowInformation& flow_information);
+	const std::string toString();
+
+	/// The portId of the flow
+	unsigned int port_id;
+
+	/// The file descriptor to read the flow
+	int fd;
+
+	/// The FlowService object describing the flow
+	FlowInformation flow_info;
+};
+
+class IPCPInternalFlowAllocationFailedEvent: public InternalEvent {
+public:
+	IPCPInternalFlowAllocationFailedEvent(unsigned int errc,
+				         const FlowInformation& flow_information,
+				         const std::string& result_reason);
+	const std::string toString();
+
+	/// The portId of the flow denied
+	unsigned int error_code;
+
+	/// The FlowService object describing the flow
+	FlowInformation flow_info;
+
+	/// The reason why the allocation failed
+	std::string reason;
+};
+
+class IPCPInternalFlowDeallocatedEvent: public InternalEvent {
+public:
+	IPCPInternalFlowDeallocatedEvent(int port);
+	const std::string toString();
+
+	/// The portId of the flow deallocated
+	int port_id;
 };
 
 }

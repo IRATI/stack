@@ -1,3 +1,4 @@
+syntax="proto2";
 package rina.auth.policies.googleprotobuf;
 
 message authOptsSSH2_t {

@@ -319,6 +319,9 @@ public:
 	/** The IPC Process type */
 	std::string type;
 
+	/** The sequence number of the NL message when creating it */
+	unsigned int seq_num;
+
 	/** The name of the IPC Process */
 	ApplicationProcessNamingInformation name;
 
@@ -419,6 +422,15 @@ public:
 			unsigned int opaque);
 
 	/**
+	 * Idem to enrollment, but also tell the IPCP to prepare for handover
+	 */
+	void enroll_prepare_hand(const ApplicationProcessNamingInformation& difName,
+				 const ApplicationProcessNamingInformation& supportingDifName,
+				 const ApplicationProcessNamingInformation& neighborName,
+				 const ApplicationProcessNamingInformation& disc_neigh_name,
+				 unsigned int opaque);
+
+	/**
 	 * Invoked by the IPC Manager to force an IPC Process to deallocate all the
 	 * N-1 flows to a neighbor IPC Process (for example, because it has been
 	 * identified as a "rogue" member of the DIF). The operation blocks until the
@@ -436,16 +448,17 @@ public:
 	 * an IPC Process.
 	 *
 	 * @param applicationName The name of the application to be registered
+	 * @param dafName The name of the DAF of the application to be registered (optional)
 	 * @param regIpcProcessId The id of the registered IPC process (0 if it
 	 * is an application)
 	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws IpcmRegisterApplicationException if an error occurs
 	 */
-	void registerApplication(
-			const ApplicationProcessNamingInformation& applicationName,
-			unsigned short regIpcProcessId,
-			const ApplicationProcessNamingInformation& dif_name,
-			unsigned int opaque);
+	void registerApplication(const ApplicationProcessNamingInformation& applicationName,
+				 const ApplicationProcessNamingInformation& dafName,
+				 unsigned short regIpcProcessId,
+				 const ApplicationProcessNamingInformation& dif_name,
+				 unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to unregister an application in a DIF through
@@ -643,7 +656,7 @@ public:
          * @param ipcProcessId The identifier of the IPC Process to be destroyed
          * @throws DestroyIPCProcessException if an error happens during the operation execution
          */
-        void destroy(IPCProcessProxy* ipcp);
+        unsigned int destroy(IPCProcessProxy* ipcp);
 };
 
 /**
@@ -857,6 +870,36 @@ public:
 class TimerExpiredEvent: public IPCEvent {
 public:
         TimerExpiredEvent(unsigned int sequenceNumber);
+};
+
+/**
+ * Event informing about a new media report available
+ */
+class MediaReportEvent: public IPCEvent {
+public:
+	MediaReportEvent(const MediaReport& report,
+			 unsigned int sequenceNumber);
+
+        // The media report resulting from a scan
+        MediaReport media_report;
+};
+
+class CreateIPCPResponseEvent: public IPCEvent {
+public:
+	CreateIPCPResponseEvent(int res,
+				unsigned int sequenceNumber);
+
+        // Result of the operation, 0 success
+        int result;
+};
+
+class DestroyIPCPResponseEvent: public IPCEvent {
+public:
+	DestroyIPCPResponseEvent(int res,
+				 unsigned int sequenceNumber);
+
+        // Result of the operation, 0 success
+        int result;
 };
 
 }

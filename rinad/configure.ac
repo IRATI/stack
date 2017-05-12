@@ -51,6 +51,8 @@ AC_CHECK_FUNCS([backtrace backtrace_symbols])
 
 # Just to avoid warnings from libtool 1.14
 AM_PROG_AR
+# Just to avoid warnings coming from wpa_ctrl.c
+AM_PROG_CC_C_O
 LT_INIT
 
 AC_DEFINE_UNQUOTED([__INSTALLATION_PREFIX], ["$prefix"],

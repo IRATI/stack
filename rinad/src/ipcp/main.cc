@@ -47,6 +47,7 @@ rinad::AbstractIPCProcessImpl* Main::ipcp;
 
 int Main::wrapped_main(int argc, char * argv[])
 {
+	std::string install_dir = argv[0];
 	std::string log_level = argv[5];
 	std::string log_file = argv[6];
 	std::string ipcp_type = argv[7];
@@ -61,8 +62,8 @@ int Main::wrapped_main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 
-	ipcp = rinad::IPCPFactory::createIPCP(ipcp_type, name, ipcp_id, ipcm_port,
-	                                      log_level, log_file);
+	ipcp = rinad::IPCPFactory::createIPCP(ipcp_type, name, ipcp_id,
+				ipcm_port, log_level, log_file, install_dir);
 	if (!ipcp) {
 		LOG_IPCP_ERR("Problems creating IPCP");
 		return EXIT_FAILURE;

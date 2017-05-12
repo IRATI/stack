@@ -37,7 +37,9 @@
 #include <net/pkt_sched.h>
 #include <net/sch_generic.h>
 
-#define SHIM_NAME   "shim-eth-vlan"
+#define SHIM_NAME   	    "shim-eth-vlan"
+#define SHIM_WIFI_STA_NAME  "shim-wifi-sta"
+#define SHIM_WIFI_AP_NAME   "shim-wifi-ap"
 
 #define RINA_PREFIX SHIM_NAME
 
@@ -123,6 +125,7 @@ struct ipcp_instance_data {
 
         /* The IPC Process using the shim-eth-vlan */
         struct name *          app_name;
+        struct name *          daf_name;
 
         /* Stores the state of flows indexed by port_id */
         spinlock_t             lock;
@@ -132,7 +135,8 @@ struct ipcp_instance_data {
         struct kfa *           kfa;
 
         /* RINARP related */
-        struct rinarp_handle * handle;
+        struct rinarp_handle * app_handle;
+        struct rinarp_handle * daf_handle;
 
 	/* To handle device notifications. */
 	struct notifier_block ntfy;
@@ -298,16 +302,11 @@ find_flow_by_gpa(struct ipcp_instance_data * data,
         ASSERT(data);
 	ASSERT(gpa_is_ok(addr));
 
-        spin_lock(&data->lock);
-
         list_for_each_entry(flow, &data->flows, list) {
                 if (gpa_is_equal(addr, flow->dest_pa)) {
-                        spin_unlock(&data->lock);
                         return flow;
                 }
         }
-
-        spin_unlock(&data->lock);
 
         return NULL;
 }
@@ -378,6 +377,7 @@ static int flow_destroy(struct ipcp_instance_data * data,
 
         spin_lock(&data->lock);
         if (!list_empty(&flow->list)) {
+        	LOG_DBG("Deleting flow %d from list and destroying it", flow->port_id);
                 list_del(&flow->list);
         }
         spin_unlock(&data->lock);
@@ -459,13 +459,15 @@ static void rinarp_resolve_handler(void *             opaque,
 	ASSERT(dest_ha);
 
         data = (struct ipcp_instance_data *) opaque;
+
+        spin_lock_bh(&data->lock);
         flow = find_flow_by_gpa(data, dest_pa);
         if (!flow) {
+                spin_unlock_bh(&data->lock);
                 LOG_ERR("No flow found for this dest_pa");
                 return;
         }
 
-        spin_lock_bh(&data->lock);
         if (flow->port_id_state == PORT_STATE_PENDING) {
                 flow->port_id_state = PORT_STATE_ALLOCATED;
                 spin_unlock_bh(&data->lock);
@@ -593,10 +595,14 @@ eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
                         return -1;
                 }
 
-                if (rinarp_resolve_gpa(data->handle,
+                if (rinarp_resolve_gpa(data->app_handle,
                                        flow->dest_pa,
                                        rinarp_resolve_handler,
-                                       data)) {
+                                       data) &&
+                    rinarp_resolve_gpa(data->daf_handle,
+                		       flow->dest_pa,
+				       rinarp_resolve_handler,
+				       data)) {
                         LOG_ERR("Failed to lookup ARP entry");
                         unbind_and_destroy_flow(data, flow);
                         return -1;
@@ -743,7 +749,8 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
 }
 
 static int eth_vlan_application_register(struct ipcp_instance_data * data,
-                                         const struct name *         name)
+                                         const struct name *         name,
+					 const struct name *         daf_name)
 {
         struct gpa * pa;
         struct gha * ha;
@@ -786,8 +793,8 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
                 gpa_destroy(pa);
                 return -1;
         }
-        data->handle = rinarp_add(data->dev, pa, ha);
-        if (!data->handle) {
+        data->app_handle = rinarp_add(data->dev, pa, ha);
+        if (!data->app_handle) {
                 LOG_ERR("Failed to register application in ARP");
                 name_destroy(data->app_name);
                 gpa_destroy(pa);
@@ -796,6 +803,47 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
                 return -1;
         }
         gpa_destroy(pa);
+
+        if (daf_name) {
+        	data->daf_name = name_dup(daf_name);
+        	if (!data->daf_name) {
+                        char * tmp = name_tostring(daf_name);
+                        LOG_ERR("DAF %s registration has failed", tmp);
+                        if (tmp) rkfree(tmp);
+                        rinarp_remove(data->app_handle);
+                        data->app_handle = NULL;
+                        name_destroy(data->app_name);
+                        gha_destroy(ha);
+                        return -1;
+        	}
+
+        	pa = name_to_gpa(daf_name);
+        	if (!gpa_is_ok(pa)) {
+        		LOG_ERR("Failed to create gpa");
+        		rinarp_remove(data->app_handle);
+        		data->app_handle = NULL;
+        		name_destroy(data->daf_name);
+                        name_destroy(data->app_name);
+                        gha_destroy(ha);
+        		return -1;
+        	}
+
+                data->daf_handle = rinarp_add(data->dev, pa, ha);
+                if (!data->daf_handle) {
+                        LOG_ERR("Failed to register DAF in ARP");
+                        rinarp_remove(data->app_handle);
+                        data->app_handle = NULL;
+                        name_destroy(data->app_name);
+                        name_destroy(data->daf_name);
+                        gpa_destroy(pa);
+                        gha_destroy(ha);
+
+                        return -1;
+                }
+
+                gpa_destroy(pa);
+        }
+
         gha_destroy(ha);
 
         return 0;
@@ -825,16 +873,26 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
         }
 
         /* Remove from ARP cache */
-        if (data->handle) {
-                if (rinarp_remove(data->handle)) {
+        if (data->app_handle) {
+                if (rinarp_remove(data->app_handle)) {
                         LOG_ERR("Failed to remove the entry from the cache");
                         return -1;
                 }
-                data->handle = NULL;
+                data->app_handle = NULL;
+        }
+
+        if (data->daf_handle) {
+                if (rinarp_remove(data->daf_handle)) {
+                        LOG_ERR("Failed to remove the entry from the cache");
+                        return -1;
+                }
+                data->daf_handle = NULL;
         }
 
         name_destroy(data->app_name);
         data->app_name = NULL;
+        name_destroy(data->daf_name);
+        data->daf_name = NULL;
         return 0;
 }
 
@@ -890,6 +948,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 {
         struct shim_eth_flow *   flow;
         struct sk_buff *         skb;
+        struct sk_buff *	 bup_skb;
         const unsigned char *    src_hw;
         const unsigned char *    dest_hw;
         int                      hlen, tlen, length;
@@ -955,44 +1014,48 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         }
 
 	/* FIXME: sdu_detach_skb() has to be removed */
-	/* skb_get is used to increase reference counter for the EAGAIN case */
-        skb = skb_get(sdu_detach_skb(sdu));
-        if (unlikely(skb_tailroom(skb) < tlen)) {
-		LOG_ERR("Missing tail room in SKB, bailing out...");
+        skb = sdu_detach_skb(sdu);
+        bup_skb = skb_clone(skb, GFP_ATOMIC);
+        if (!bup_skb) {
+        	LOG_ERR("Error cloning SBK, bailing out");
                 kfree_skb(skb);
         	sdu_destroy(sdu);
         	return -1;
         }
-        skb_reset_network_header(skb);
-        skb->dev      = data->dev;
-        skb->protocol = htons(ETH_P_RINA);
+        sdu_attach_skb(sdu, skb);
 
-        retval = dev_hard_header(skb, data->dev,
-                                 ETH_P_RINA, dest_hw, src_hw, skb->len);
+        if (unlikely(skb_tailroom(bup_skb) < tlen)) {
+		LOG_ERR("Missing tail room in SKB, bailing out...");
+                kfree_skb(bup_skb);
+        	sdu_destroy(sdu);
+        	return -1;
+        }
+
+        skb_reset_network_header(bup_skb);
+        bup_skb->protocol = htons(ETH_P_RINA);
+
+        retval = dev_hard_header(bup_skb, data->dev,
+                                 ETH_P_RINA, dest_hw, src_hw, bup_skb->len);
         if (retval < 0) {
                 LOG_ERR("Problems in dev_hard_header (%d)", retval);
-                kfree_skb(skb);
+                kfree_skb(bup_skb);
                 sdu_destroy(sdu);
                 return -1;
         }
 
-        retval = dev_queue_xmit(skb);
+        bup_skb->dev = data->dev;
+        retval = dev_queue_xmit(bup_skb);
 
         if (retval == -ENETDOWN) {
         	LOG_ERR("dev_q_xmit returned device down");
-		/* FIXME: this may produce a bad deallocation bug */
-                kfree_skb(skb);
         	sdu_destroy(sdu);
         	return -1;
         }
         if (retval != NET_XMIT_SUCCESS) {
-		skb_pull(skb, hlen); /* remove mac header */
-		sdu_attach_skb(sdu, skb);
         	LOG_DBG("qdisc cannot enqueue now (%d), try later", retval);
         	return -EAGAIN;
         }
 
-        kfree_skb(skb);
        	sdu_destroy(sdu);
         LOG_DBG("Packet sent");
         return 0;
@@ -1009,6 +1072,7 @@ static int eth_vlan_rcv_worker(void * o)
         struct shim_eth_flow *          flow;
         struct rcv_work_data *          wdata;
         struct net_device *             dev;
+        string_t * 			gpastr;
 
         LOG_DBG("Worker waking up, going to create a flow");
 
@@ -1066,7 +1130,7 @@ static int eth_vlan_rcv_worker(void * o)
         LOG_DBG("Added flow to the list");
 
         sname  = NULL;
-        gpaddr = rinarp_find_gpa(data->handle, flow->dest_ha);
+        gpaddr = rinarp_find_gpa(data->app_handle, flow->dest_ha);
         if (gpaddr && gpa_is_ok(gpaddr)) {
                 flow->dest_pa = gpa_dup_gfp(GFP_KERNEL, gpaddr);
                 if (!flow->dest_pa) {
@@ -1076,13 +1140,22 @@ static int eth_vlan_rcv_worker(void * o)
                         return -1;
                 }
 
-                sname = string_toname_ni(gpa_address_value(gpaddr));
-                if (!sname) {
-                        LOG_ERR("Failed to convert name to string");
+                gpastr = gpa_address_to_string_gfp(GFP_KERNEL, gpaddr);
+                if (!gpastr) {
+                	LOG_ERR("Failed to convert GPA address to string");
                         kfa_port_id_release(data->kfa, flow->port_id);
                         unbind_and_destroy_flow(data, flow);
                         return -1;
                 }
+                sname = string_toname_ni(gpastr);
+                if (!sname) {
+                        LOG_ERR("Failed to convert name to string");
+                        kfree(gpastr);
+                        kfa_port_id_release(data->kfa, flow->port_id);
+                        unbind_and_destroy_flow(data, flow);
+                        return -1;
+                }
+                kfree(gpastr);
 
                 LOG_DBG("Got the address from ARP");
         } else {
@@ -1285,7 +1358,6 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                                         flow->port_id,
                                         du)) {
                                 LOG_ERR("Couldn't enqueue SDU to user IPCP");
-                                sdu_destroy(du);
                                 return -1;
                         }
 
@@ -1722,7 +1794,6 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .sdu_enqueue               = NULL,
         .sdu_write                 = eth_vlan_sdu_write,
 
-        .mgmt_sdu_read             = NULL,
         .mgmt_sdu_write            = NULL,
         .mgmt_sdu_post             = NULL,
 
@@ -1810,10 +1881,10 @@ static int eth_vlan_init(struct ipcp_factory_data * data)
 {
 	ASSERT(data == &eth_vlan_data);
 
-        bzero(data, sizeof(*data));
-        INIT_LIST_HEAD(&(data->instances));
+	bzero(data, sizeof(*data));
+	INIT_LIST_HEAD(&(data->instances));
 
-        INIT_LIST_HEAD(&data_instances_list);
+	INIT_LIST_HEAD(&data_instances_list);
 
 	memset(&data->ntfy, 0, sizeof(data->ntfy));
 	data->ntfy.notifier_call = eth_vlan_netdev_notify;
@@ -1824,15 +1895,31 @@ static int eth_vlan_init(struct ipcp_factory_data * data)
         return 0;
 }
 
+static int eth_vlan_init2(struct ipcp_factory_data * data)
+{
+	ASSERT(data == &eth_vlan_data);
+
+        LOG_INFO("Shim Wifi AP/STA initialized");
+
+        return 0;
+}
+
 static int eth_vlan_fini(struct ipcp_factory_data * data)
 {
 
-        ASSERT(data == &eth_vlan_data);
+	ASSERT(data == &eth_vlan_data);
 
-        ASSERT(list_empty(&(data->instances)));
+	ASSERT(list_empty(&(data->instances)));
 	unregister_netdevice_notifier(&data->ntfy);
 
-        return 0;
+	return 0;
+}
+
+static int eth_vlan_fini2(struct ipcp_factory_data * data)
+{
+
+	ASSERT(data == &eth_vlan_data);
+	return 0;
 }
 
 static void inst_cleanup(struct ipcp_instance * inst)
@@ -1857,7 +1944,8 @@ static void inst_cleanup(struct ipcp_instance * inst)
 
 static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
                                               const struct name *        name,
-                                              ipc_process_id_t           id)
+                                              ipc_process_id_t           id,
+					      uint_t			 us_nl_port)
 {
         struct ipcp_instance * inst;
 
@@ -2003,6 +2091,9 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                         if (pos->app_name)
                                 name_destroy(pos->app_name);
 
+                        if (pos->daf_name)
+                                name_destroy(pos->daf_name);
+
                         if (pos->info->interface_name)
                                 rkfree(pos->info->interface_name);
 
@@ -2012,8 +2103,16 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                         if (pos->fspec)
                                 rkfree(pos->fspec);
 
-                        if (pos->handle) {
-                                if (rinarp_remove(pos->handle)) {
+                        if (pos->app_handle) {
+                                if (rinarp_remove(pos->app_handle)) {
+                                        LOG_ERR("Failed to remove "
+                                                "the entry from the cache");
+                                        return -1;
+                                }
+                        }
+
+                        if (pos->daf_handle) {
+                                if (rinarp_remove(pos->daf_handle)) {
                                         LOG_ERR("Failed to remove "
                                                 "the entry from the cache");
                                         return -1;
@@ -2061,7 +2160,16 @@ static struct ipcp_factory_ops eth_vlan_ops = {
         .destroy   = eth_vlan_destroy,
 };
 
-static struct ipcp_factory * shim = NULL;
+static struct ipcp_factory_ops eth_vlan_ops2 = {
+        .init      = eth_vlan_init2,
+        .fini      = eth_vlan_fini2,
+        .create    = eth_vlan_create,
+        .destroy   = eth_vlan_destroy,
+};
+
+static struct ipcp_factory * shim_eth_vlan = NULL;
+static struct ipcp_factory * shim_wifi_sta = NULL;
+static struct ipcp_factory * shim_wifi_ap = NULL;
 
 #ifdef CONFIG_RINA_SHIM_ETH_VLAN_REGRESSION_TESTS
 static bool regression_test_create_vlan_interface_name(void)
@@ -2178,12 +2286,31 @@ static int __init mod_init(void)
                 return -1;
         }
 
-        shim = kipcm_ipcp_factory_register(default_kipcm,
-                                           SHIM_NAME,
-                                           &eth_vlan_data,
-                                           &eth_vlan_ops);
-        if (!shim)
+        shim_eth_vlan = kipcm_ipcp_factory_register(default_kipcm,
+                                           	    SHIM_NAME,
+                                          	    &eth_vlan_data,
+						    &eth_vlan_ops);
+        if (!shim_eth_vlan)
                 return -1;
+
+        shim_wifi_ap = kipcm_ipcp_factory_register(default_kipcm,
+                                           	   SHIM_WIFI_AP_NAME,
+                                          	   &eth_vlan_data,
+						   &eth_vlan_ops2);
+        if (!shim_wifi_ap) {
+        	kipcm_ipcp_factory_unregister(default_kipcm, shim_eth_vlan);
+                return -1;
+        }
+
+        shim_wifi_sta = kipcm_ipcp_factory_register(default_kipcm,
+                                           	    SHIM_WIFI_STA_NAME,
+                                          	    &eth_vlan_data,
+						    &eth_vlan_ops2);
+        if (!shim_wifi_sta) {
+        	kipcm_ipcp_factory_unregister(default_kipcm, shim_wifi_ap);
+        	kipcm_ipcp_factory_unregister(default_kipcm, shim_eth_vlan);
+                return -1;
+        }
 
         spin_lock_init(&data_instances_lock);
 
@@ -2192,12 +2319,16 @@ static int __init mod_init(void)
 
 static void __exit mod_exit(void)
 {
-        ASSERT(shim);
+        ASSERT(shim_eth_vlan);
+        ASSERT(shim_wifi_ap);
+        ASSERT(shim_wifi_sta);
 
         flush_workqueue(rcv_wq);
         destroy_workqueue(rcv_wq);
 
-        kipcm_ipcp_factory_unregister(default_kipcm, shim);
+        kipcm_ipcp_factory_unregister(default_kipcm, shim_eth_vlan);
+        kipcm_ipcp_factory_unregister(default_kipcm, shim_wifi_ap);
+        kipcm_ipcp_factory_unregister(default_kipcm, shim_wifi_sta);
 }
 
 module_init(mod_init);

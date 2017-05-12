@@ -181,12 +181,24 @@ unsigned long PolicyConfig::get_param_value_as_ulong(const std::string& name) co
 	std::string value = get_param_value_as_string(name);
 	result = strtoul(value.c_str(), &dummy, 10);
 	if (!value.size() || *dummy != '\0') {
-    std::stringstream ss;
-    ss << "Parameter '" << name << "' error converting value to ulong.";
+		std::stringstream ss;
+		ss << "Parameter '" << name << "' error converting value to ulong.";
 		throw Exception(ss.str().c_str());
 	}
 
 	return result;
+}
+
+bool PolicyConfig::get_param_value_as_bool(const std::string& name) const
+{
+	std::string value = get_param_value_as_string(name);
+	if (value == "true") {
+		return true;
+	} else if (value == "false") {
+		return false;
+	}
+
+	throw Exception("Wrong value for bool");
 }
 
 unsigned int PolicyConfig::get_param_value_as_uint(const std::string& name) const

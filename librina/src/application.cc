@@ -27,7 +27,6 @@
 
 #include "librina/logs.h"
 #include "core.h"
-#include "rina-syscalls.h"
 #include "librina/application.h"
 #include "librina/plugin-info.h"
 

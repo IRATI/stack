@@ -1,9 +1,12 @@
+syntax="proto2";
 package rina.messages;
 option optimize_for = LITE_RUNTIME;
 
 message neighbor_t{   //carries information about a neighbor
-        optional string applicationProcessName = 1;
-        optional string applicationProcessInstance = 2;
-        optional uint64 address = 3;
-	repeated string supportingDifs = 4;
+        optional string apname = 1;
+        optional string apinstance = 2;
+        optional string aename = 3;
+        optional string aeinstance = 4;
+        optional uint64 address = 5;
+		repeated string supportingDifs = 6;
 }

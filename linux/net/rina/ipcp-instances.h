@@ -238,7 +238,8 @@ struct ipcp_instance_ops {
                                  port_id_t                   id);
 
         int  (* application_register)(struct ipcp_instance_data *   data,
-                                      const struct name *           source);
+                                      const struct name *           source,
+				      const struct name *           daf_name);
         int  (* application_unregister)(struct ipcp_instance_data * data,
                                         const struct name *         source);
 
@@ -306,10 +307,6 @@ struct ipcp_instance_ops {
                                address_t                   dst_addr,
                                port_id_t                   port_id,
                                struct sdu *                sdu);
-
-        /* Passes the ownership of the sdu_wpi */
-        int (* mgmt_sdu_read)(struct ipcp_instance_data * data,
-                              struct sdu_wpi **           sdu_wpi);
 
         /* Takes the ownership of the passed sdu */
         int (* mgmt_sdu_post)(struct ipcp_instance_data * data,

@@ -92,8 +92,6 @@ void UseNewIPCPAddressTimerTask::run()
 	ipcp->activate_new_address();
 }
 
-
-
 //Class IPCProcessImpl
 IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& nm,
 			       unsigned short id,
@@ -383,6 +381,8 @@ void IPCProcessImpl::assign_to_dif_request_handler(const rina::AssignToDIFReques
 
 void IPCProcessImpl::assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event)
 {
+	rina::ApplicationRegistrationInformation ari;
+
 	rina::ScopedLock g(*lock_);
 
 	if (state == ASSIGNED_TO_DIF ) {
@@ -413,6 +413,7 @@ void IPCProcessImpl::assign_to_dif_response_handler(const rina::AssignToDIFRespo
 				event.result);
 		LOG_IPCP_ERR("Could not assign IPC Process to DIF %s",
 				it->second.difInformation.dif_name_.processName.c_str());
+		pending_events_.erase(it);
 		state = INITIALIZED;
 
 		try {
@@ -424,9 +425,6 @@ void IPCProcessImpl::assign_to_dif_response_handler(const rina::AssignToDIFRespo
 		return;
 	}
 
-	//TODO do stuff
-	LOG_IPCP_DBG("The kernel processed successfully the Assign to DIF request");
-
 	try{
 		rib_daemon_->set_dif_configuration(dif_information_.dif_configuration_);
 		resource_allocator_->set_dif_configuration(dif_information_.dif_configuration_);
@@ -435,26 +433,24 @@ void IPCProcessImpl::assign_to_dif_response_handler(const rina::AssignToDIFRespo
 		security_manager_->set_dif_configuration(dif_information_.dif_configuration_);
 		flow_allocator_->set_dif_configuration(dif_information_.dif_configuration_);
 		enrollment_task_->set_dif_configuration(dif_information_.dif_configuration_);
-	}
-	catch(rina::Exception &e){
+	} catch(rina::Exception &e) {
 		state = INITIALIZED;
 		LOG_IPCP_ERR("Bad configuration error: %s", e.what());
 		rina::extendedIPCManager->assignToDIFResponse(requestEvent, -1);
 	}
-
-	rina::ThreadAttributes threadAttributes;
-	threadAttributes.setJoinable();
-	threadAttributes.setName("sysfs-sync");
-	kernel_sync = new KernelSyncTrigger(&threadAttributes, this, 4000);
-	kernel_sync->start();
-
-	state = ASSIGNED_TO_DIF;
 
 	try {
 		rina::extendedIPCManager->assignToDIFResponse(requestEvent, 0);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
 	}
+
+	state = ASSIGNED_TO_DIF;
+	rina::ThreadAttributes threadAttributes;
+	threadAttributes.setJoinable();
+	threadAttributes.setName("sysfs-sync");
+	kernel_sync = new KernelSyncTrigger(&threadAttributes, this, 4000);
+	kernel_sync->start();
 }
 
 void IPCProcessImpl::allocate_flow_request_result_handler(const rina::AllocateFlowRequestResultEvent& event)
@@ -773,6 +769,27 @@ void IPCProcessImpl::fwd_cdap_msg_handler(rina::FwdCDAPMsgRequestEvent& event)
 						   rina::cdap_rib::CDAP_DEST_IPCM);
 
         return;
+}
+
+void IPCProcessImpl::ipcp_allocate_port_response_event_handler(const rina::AllocatePortResponseEvent& event)
+{
+	flow_allocator_->processAllocatePortResponse(event);
+}
+
+void IPCProcessImpl::ipcp_deallocate_port_response_event_handler(const rina::DeallocatePortResponseEvent& event)
+{
+	flow_allocator_->processDeallocatePortResponse(event);
+}
+
+void IPCProcessImpl::ipcp_write_mgmt_sdu_response_event_handler(const rina::WriteMgmtSDUResponseEvent& event)
+{
+	//Ignore for now, assuming all works well
+	//TODO add error handler in the RIB Daemon
+}
+
+void IPCProcessImpl::ipcp_read_mgmt_sdu_notif_event_handler(const rina::ReadMgmtSDUResponseEvent& event)
+{
+	rib_daemon_->processReadManagementSDUEvent(event);
 }
 
 

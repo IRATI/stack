@@ -395,6 +395,7 @@ AppGetDIFPropertiesResponseMessage * parseAppGetDIFPropertiesResponseMessage(
 /* IpcmRegisterApplicationRequestMessage CLASS*/
 enum IpcmRegisterApplicationRequestMessageAttributes {
 	IRAR_ATTR_APP_NAME = 1,
+	IRAR_ATTR_DAF_NAME,
 	IRAR_ATTR_DIF_NAME,
 	IRAR_ATTR_REG_IPC_ID,
 	__IRAR_ATTR_MAX,
@@ -408,19 +409,21 @@ int putIpcmRegisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
 IpcmRegisterApplicationRequestMessage *
 	parseIpcmRegisterApplicationRequestMessage(nlmsghdr *hdr);
 
-/* IpcmRegisterApplicationResponseMessage CLASS*/
-enum IpcmRegisterApplicationResponseMessageAttributes {
+/* IpcmBaseResponseResponseMessageAttributes CLASS*/
+enum IpcmBaseResponseResponseMessageAttributes {
 	IRARE_ATTR_RESULT = 1,
+	IRARE_ATTR_PORT_ID,
+	IRARE_ATTR_CEP_ID,
 	__IRARE_ATTR_MAX,
 };
 
 #define IRARE_ATTR_MAX (__IRARE_ATTR_MAX -1)
 
-int putIpcmRegisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
-		const IpcmRegisterApplicationResponseMessage& object);
+int putBaseNetlinkMessageObject(nl_msg* netlinkMessage,
+				const BaseNetlinkMessage& object);
 
-IpcmRegisterApplicationResponseMessage *
-	parseIpcmRegisterApplicationResponseMessage(nlmsghdr *hdr);
+BaseNetlinkMessage * parseBaseNetlinkMessageObject(nlmsghdr *hdr,
+					           RINANetlinkOperationCode operationCode);
 
 /* IpcmUnregisterApplicationRequestMessage CLASS*/
 enum IpcmUnregisterApplicationRequestMessageAttributes {
@@ -436,20 +439,6 @@ int putIpcmUnregisterApplicationRequestMessageObject(nl_msg* netlinkMessage,
 
 IpcmUnregisterApplicationRequestMessage *
 	parseIpcmUnregisterApplicationRequestMessage(nlmsghdr *hdr);
-
-/* IpcmUnregisterApplicationResponseMessage CLASS*/
-enum IpcmUnregisterApplicationResponseMessageAttributes {
-	IUARE_ATTR_RESULT = 1,
-	__IUARE_ATTR_MAX,
-};
-
-#define IUARE_ATTR_MAX (__IUARE_ATTR_MAX -1)
-
-int putIpcmUnregisterApplicationResponseMessageObject(nl_msg* netlinkMessage,
-		const IpcmUnregisterApplicationResponseMessage& object);
-
-IpcmUnregisterApplicationResponseMessage *
-	parseIpcmUnregisterApplicationResponseMessage(nlmsghdr *hdr);
 
 /* DataTransferConstants CLASS */
 enum DataTransferConstantsAttributes {
@@ -739,20 +728,6 @@ int putIpcmAssignToDIFRequestMessageObject(nl_msg* netlinkMessage,
 IpcmAssignToDIFRequestMessage *
 	parseIpcmAssignToDIFRequestMessage(nlmsghdr *hdr);
 
-/* IpcmAssignToDIFResponseMessage CLASS*/
-enum IpcmAssignToDIFResponseMessageAttributes {
-	IATDRE_ATTR_RESULT = 1,
-	__IATDRE_ATTR_MAX,
-};
-
-#define IATDRE_ATTR_MAX (__IATDRE_ATTR_MAX -1)
-
-int putIpcmAssignToDIFResponseMessageObject(nl_msg* netlinkMessage,
-		const IpcmAssignToDIFResponseMessage& object);
-
-IpcmAssignToDIFResponseMessage *
-	parseIpcmAssignToDIFResponseMessage(nlmsghdr *hdr);
-
 /* IpcmUpdateDIFConfiguraiotnRequestMessage CLASS*/
 enum IpcmUpdateDIFConfigurationRequestMessageAttributes {
         IUDCR_ATTR_DIF_CONFIGURATION = 1,
@@ -767,25 +742,13 @@ int putIpcmUpdateDIFConfigurationRequestMessageObject(nl_msg* netlinkMessage,
 IpcmUpdateDIFConfigurationRequestMessage *
         parseIpcmUpdateDIFConfigurationRequestMessage(nlmsghdr *hdr);
 
-/* IpcmUpdateDIFConfigurationResponseMessage CLASS*/
-enum IpcmUpdateDIFConfigurationResponseMessageAttributes {
-        IUDCRE_ATTR_RESULT = 1,
-        __IUDCRE_ATTR_MAX,
-};
-
-#define IUDCRE_ATTR_MAX (__IUDCRE_ATTR_MAX -1)
-
-int putIpcmUpdateDIFConfigurationResponseMessageObject(nl_msg* netlinkMessage,
-                const IpcmUpdateDIFConfigurationResponseMessage& object);
-
-IpcmUpdateDIFConfigurationResponseMessage *
-        parseIpcmUpdateDIFConfigurationResponseMessage(nlmsghdr *hdr);
-
 /* IpcmEnrollToDIFRequestMessage CLASS*/
 enum IpcmEnrollToDIFRequestMessageAttributes {
         IETDR_ATTR_DIF_NAME = 1,
         IETDR_ATTR_SUP_DIF_NAME,
         IETDR_ATTR_NEIGH,
+	IETDR_ATTR_PREPARE_HAND,
+	IETDR_ATTR_DISC_NEIGH_NAME,
         __IETDR_ATTR_MAX,
 };
 
@@ -827,20 +790,6 @@ int putIpcmDisconnectNeighborRequestMessageObject(nl_msg* netlinkMessage,
 IpcmDisconnectNeighborRequestMessage *
         parseIpcmDisconnectNeighborRequestMessage(nlmsghdr *hdr);
 
-/* IpcmDisconnectNeighborResponseMessage CLASS*/
-enum IpcmDisconnectNeighborResponseMessageAttributes {
-        IDNRE_ATTR_RESULT = 1,
-        __IDNRE_ATTR_MAX,
-};
-
-#define IDNRE_ATTR_MAX (__IDNRE_ATTR_MAX -1)
-
-int putIpcmDisconnectNeighborResponseMessageObject(nl_msg* netlinkMessage,
-                const IpcmDisconnectNeighborResponseMessage& object);
-
-IpcmDisconnectNeighborResponseMessage *
-        parseIpcmDisconnectNeighborResponseMessage(nlmsghdr *hdr);
-
 /* IpcmAllocateFlowRequestMessage CLASS*/
 enum IpcmAllocateFlowRequestMessageAttributes {
 	IAFRM_ATTR_SOURCE_APP_NAME = 1,
@@ -857,21 +806,6 @@ int putIpcmAllocateFlowRequestMessageObject(nl_msg* netlinkMessage,
 
 IpcmAllocateFlowRequestMessage *
 	parseIpcmAllocateFlowRequestMessage(nlmsghdr *hdr);
-
-/* IpcmAllocateFlowRequestResultMessage CLASS*/
-enum IpcmAllocateFlowRequestResultMessageAttributes {
-	IAFRRM_ATTR_RESULT = 1,
-	IAFRRM_ATTR_PORT_ID,
-	__IAFRRM_ATTR_MAX,
-};
-
-#define IAFRRM_ATTR_MAX (__IAFRRM_ATTR_MAX -1)
-
-int putIpcmAllocateFlowRequestResultMessageObject(nl_msg* netlinkMessage,
-		const IpcmAllocateFlowRequestResultMessage& object);
-
-IpcmAllocateFlowRequestResultMessage *
-	parseIpcmAllocateFlowRequestResultMessage(nlmsghdr *hdr);
 
 /* IpcmAllocateFlowRequestArrivedMessage CLASS*/
 enum IpcmAllocateFlowRequestArrivedMessageAttributes {
@@ -904,49 +838,6 @@ int putIpcmAllocateFlowResponseMessageObject(nl_msg* netlinkMessage,
 		const IpcmAllocateFlowResponseMessage& object);
 
 IpcmAllocateFlowResponseMessage * parseIpcmAllocateFlowResponseMessage(
-		nlmsghdr *hdr);
-
-/* IpcmDeallocateFlowRequestMessage CLASS*/
-enum IpcmDeallocateFlowRequestMessageAttributes {
-	IDFRT_ATTR_PORT_ID = 1,
-	__IDFRT_ATTR_MAX,
-};
-
-#define IDFRT_ATTR_MAX (__IDFRT_ATTR_MAX -1)
-
-int putIpcmDeallocateFlowRequestMessageObject(nl_msg* netlinkMessage,
-		const IpcmDeallocateFlowRequestMessage& object);
-
-IpcmDeallocateFlowRequestMessage * parseIpcmDeallocateFlowRequestMessage(
-		nlmsghdr *hdr);
-
-/* IpcmDeallocateFlowResponseMessage CLASS*/
-enum IpcmDeallocateFlowResponseMessageAttributes {
-	IDFRE_ATTR_RESULT = 1,
-	__IDFRE_ATTR_MAX,
-};
-
-#define IDFRE_ATTR_MAX (__IDFRE_ATTR_MAX -1)
-
-int putIpcmDeallocateFlowResponseMessageObject(nl_msg* netlinkMessage,
-		const IpcmDeallocateFlowResponseMessage& object);
-
-IpcmDeallocateFlowResponseMessage * parseIpcmDeallocateFlowResponseMessage(
-		nlmsghdr *hdr);
-
-/* IpcmFlowDeallocatedNotificationMessage CLASS*/
-enum IpcmFlowDeallocatedNotificationMessageAttributes {
-	IFDN_ATTR_PORT_ID = 1,
-	IFDN_ATTR_CODE,
-	__IFDN_ATTR_MAX,
-};
-
-#define IFDN_ATTR_MAX (__IFDN_ATTR_MAX -1)
-
-int putIpcmFlowDeallocatedNotificationMessageObject(nl_msg* netlinkMessage,
-		const IpcmFlowDeallocatedNotificationMessage& object);
-
-IpcmFlowDeallocatedNotificationMessage * parseIpcmFlowDeallocatedNotificationMessage(
 		nlmsghdr *hdr);
 
 /* IpcmDIFRegistrationNotification CLASS*/
@@ -1012,17 +903,6 @@ int putIpcmDIFQueryRIBResponseMessageObject(nl_msg* netlinkMessage,
 
 IpcmDIFQueryRIBResponseMessage *
 	parseIpcmDIFQueryRIBResponseMessage(nlmsghdr *hdr);
-
-/* IpcmDIFQueryRIBResponseMessage CLASS*/
-enum IpcmNLSocketClosedNotificationMessageAttributes {
-	INSCN_ATTR_PORT = 1,
-	__INSCN_ATTR_MAX,
-};
-
-#define INSCN_ATTR_MAX (__INSCN_ATTR_MAX -1)
-
-IpcmNLSocketClosedNotificationMessage *
-	parseIpcmNLSocketClosedNotificationMessage(nlmsghdr *hdr);
 
 /* IpcmIPCProcessInitializedMessage CLASS*/
 enum IpcmIPCProcessInitializedMessageAttributes {
@@ -1239,21 +1119,6 @@ int putIpcpConnectionCreateRequestMessageObject(nl_msg* netlinkMessage,
 IpcpConnectionCreateRequestMessage * parseIpcpConnectionCreateRequestMessage(
                 nlmsghdr *hdr);
 
-/* IpcpConnectionCreateResponseMessage CLASS */
-enum IpcpConnectionCreateResponseMessageAttributes {
-        ICCREM_ATTR_PORT_ID = 1,
-        ICCREM_ATTR_SRC_CEP_ID,
-        __ICCREM_ATTR_MAX,
-};
-
-#define ICCREM_ATTR_MAX (__ICCREM_ATTR_MAX -1)
-
-int putIpcpConnectionCreateResponseMessageObject(nl_msg* netlinkMessage,
-                const IpcpConnectionCreateResponseMessage& object);
-
-IpcpConnectionCreateResponseMessage * parseIpcpConnectionCreateResponseMessage(
-                nlmsghdr *hdr);
-
 /* IpcpConnectionUpdateRequestMessage CLASS*/
 enum IpcpConnectionUpdateRequestMessageAttributes {
         ICURM_ATTR_PORT_ID = 1,
@@ -1269,21 +1134,6 @@ int putIpcpConnectionUpdateRequestMessageObject(nl_msg* netlinkMessage,
                 const IpcpConnectionUpdateRequestMessage& object);
 
 IpcpConnectionUpdateRequestMessage * parseIpcpConnectionUpdateRequestMessage(
-                nlmsghdr *hdr);
-
-/* IpcpConnectionUpdateResultMessage CLASS */
-enum IpcpConnectionUpdateResultMessageAttributes {
-        ICUREM_ATTR_PORT_ID = 1,
-        ICUREM_ATTR_RESULT,
-        __ICUREM_ATTR_MAX,
-};
-
-#define ICUREM_ATTR_MAX (__ICUREM_ATTR_MAX -1)
-
-int putIpcpConnectionUpdateResultMessageObject(nl_msg* netlinkMessage,
-                const IpcpConnectionUpdateResultMessage& object);
-
-IpcpConnectionUpdateResultMessage * parseIpcpConnectionUpdateResultMessage(
                 nlmsghdr *hdr);
 
 /* IpcpConnectionCreateArrivedMessage CLASS*/
@@ -1321,36 +1171,6 @@ int putIpcpConnectionCreateResultMessageObject(nl_msg* netlinkMessage,
                 const IpcpConnectionCreateResultMessage& object);
 
 IpcpConnectionCreateResultMessage * parseIpcpConnectionCreateResultMessage(
-                nlmsghdr *hdr);
-
-/* IpcpConnectionDestroyRequestMessage CLASS */
-enum IpcpConnectionDestroyRequestMessageAttributes {
-        ICDRM_ATTR_PORT_ID = 1,
-        ICDRM_ATTR_CEP_ID,
-        __ICDRM_ATTR_MAX,
-};
-
-#define ICDRM_ATTR_MAX (__ICDRM_ATTR_MAX -1)
-
-int putIpcpConnectionDestroyRequestMessageObject(nl_msg* netlinkMessage,
-                const IpcpConnectionDestroyRequestMessage& object);
-
-IpcpConnectionDestroyRequestMessage * parseIpcpConnectionDestroyRequestMessage(
-                nlmsghdr *hdr);
-
-/* IpcpConnectionDestroyResultMessage CLASS */
-enum IpcpConnectionDestroyResultMessageAttributes {
-        ICDREM_ATTR_PORT_ID = 1,
-        ICDREM_ATTR_RESULT,
-        __ICDREM_ATTR_MAX,
-};
-
-#define ICDREM_ATTR_MAX (__ICDREM_ATTR_MAX -1)
-
-int putIpcpConnectionDestroyResultMessageObject(nl_msg* netlinkMessage,
-                const IpcpConnectionDestroyResultMessage& object);
-
-IpcpConnectionDestroyResultMessage * parseIpcpConnectionDestroyResultMessage(
                 nlmsghdr *hdr);
 
 /* PortIdAltlist CLASS */
@@ -1427,21 +1247,6 @@ int putIpcmSetPolicySetParamRequestMessageObject(nl_msg* netlinkMessage,
 IpcmSetPolicySetParamRequestMessage * parseIpcmSetPolicySetParamRequestMessage(
 		nlmsghdr *hdr);
 
-
-/* IpcmSetPolicySetParamResponseMessage CLASS*/
-enum IpcmSetPolicySetParamResponseMessageAttributes {
-	ISPSPRE_ATTR_RESULT = 1,
-	__ISPSPRE_ATTR_MAX,
-};
-
-#define ISPSPRE_ATTR_MAX (__ISPSPRE_ATTR_MAX -1)
-
-int putIpcmSetPolicySetParamResponseMessageObject(nl_msg* netlinkMessage,
-		const IpcmSetPolicySetParamResponseMessage& object);
-
-IpcmSetPolicySetParamResponseMessage *parseIpcmSetPolicySetParamResponseMessage(
-		nlmsghdr *hdr);
-
 /* IpcmSelectPolicySetRequestMessage CLASS*/
 enum IpcmSelectPolicySetRequestMessageAttributes {
 	ISPSR_ATTR_PATH = 1,
@@ -1457,21 +1262,6 @@ int putIpcmSelectPolicySetRequestMessageObject(nl_msg* netlinkMessage,
 IpcmSelectPolicySetRequestMessage * parseIpcmSelectPolicySetRequestMessage(
 		nlmsghdr *hdr);
 
-
-/* IpcmSelectPolicySetResponseMessage CLASS*/
-enum IpcmSelectPolicySetResponseMessageAttributes {
-	ISPSRE_ATTR_RESULT = 1,
-	__ISPSRE_ATTR_MAX,
-};
-
-#define ISPSRE_ATTR_MAX (__ISPSRE_ATTR_MAX -1)
-
-int putIpcmSelectPolicySetResponseMessageObject(nl_msg* netlinkMessage,
-		const IpcmSelectPolicySetResponseMessage& object);
-
-IpcmSelectPolicySetResponseMessage *parseIpcmSelectPolicySetResponseMessage(
-		nlmsghdr *hdr);
-
 /* IpcmPluginLoadRequestMessage CLASS*/
 enum IpcmPluginLoadRequestMessageAttributes {
 	IPLR_ATTR_NAME = 1,
@@ -1485,21 +1275,6 @@ int putIpcmPluginLoadRequestMessageObject(nl_msg* netlinkMessage,
 		const IpcmPluginLoadRequestMessage& object);
 
 IpcmPluginLoadRequestMessage * parseIpcmPluginLoadRequestMessage(
-		nlmsghdr *hdr);
-
-
-/* IpcmPluginLoadResponseMessage CLASS*/
-enum IpcmPluginLoadResponseMessageAttributes {
-	IPLRE_ATTR_RESULT = 1,
-	__IPLRE_ATTR_MAX,
-};
-
-#define IPLRE_ATTR_MAX (__IPLRE_ATTR_MAX -1)
-
-int putIpcmPluginLoadResponseMessageObject(nl_msg* netlinkMessage,
-		const IpcmPluginLoadResponseMessage& object);
-
-IpcmPluginLoadResponseMessage *parseIpcmPluginLoadResponseMessage(
 		nlmsghdr *hdr);
 
 /* CryptoState CLASS */
@@ -1541,21 +1316,6 @@ int putIPCPUpdateCryptoStateRequestMessage(nl_msg* netlinkMessage,
 IPCPUpdateCryptoStateRequestMessage * parseIPCPUpdateCryptoStateRequestMessage(
                 nlmsghdr *hdr);
 
-/* IPCPUpdateCryptoStateResponseMessageAttributes CLASS */
-enum IPCPUpdateCryptoStateResponseMessageAttributes {
-        UCSREM_ATTR_RESULT = 1,
-        UCSREM_ATTR_N_1_PORT,
-        __UCSREM_ATTR_MAX,
-};
-
-#define UCSREM_ATTR_MAX (__UCSREM_ATTR_MAX -1)
-
-int putIPCPUpdateCryptoStateResponseMessage(nl_msg* netlinkMessage,
-                const IPCPUpdateCryptoStateResponseMessage& object);
-
-IPCPUpdateCryptoStateResponseMessage * parseIPCPUpdateCryptoStateResponseMessage(
-                nlmsghdr *hdr);
-
 /* IPCPAddressChangeRequestMessage CLASS */
 enum IPCPAddressChangeRequestMessageAttributes {
         ACRM_ATTR_NEW_ADDRESS = 1,
@@ -1592,6 +1352,145 @@ int putIpcmFwdCDAPResponseMessageObject(nl_msg* netlinkMessage,
 
 IpcmFwdCDAPResponseMessage * parseIpcmFwdCDAPResponseMessage(
                 nlmsghdr *hdr);
+
+/* BaseStationInfo CLASS */
+enum BaseStationInfoAttributes {
+	BSINFO_ATTR_IPCP_ADDRESS = 1,
+	BSINFO_ATTR_SIGNAL_STRENGTH,
+	__BSINFO_ATTR_MAX,
+};
+
+#define BSINFO_ATTR_MAX (__BSINFO_ATTR_MAX -1)
+
+int putListOfBaseStationInfo(nl_msg* netlinkMessage,
+			     const std::list<BaseStationInfo>& dif_info);
+
+int putBaseStationInfo(nl_msg* netlinkMessage, const BaseStationInfo& object);
+
+int parseListOfBaseStationInfo(nlattr *nested, MediaDIFInfo & mediadif);
+
+void parseBaseStationInfo(nlattr *nested, std::list<BaseStationInfo>& stations);
+
+/* MediaDIFInfo CLASS */
+enum MediaDIFInfoAttributes {
+	MEDINFO_ATTR_DIF_NAME = 1,
+	MEDINFO_ATTR_SEC_POLICIES,
+	MEDINFO_ATTR_BS_IPCPS,
+	__MEDINFO_ATTR_MAX,
+};
+
+#define MEDINFO_ATTR_MAX (__MEDINFO_ATTR_MAX -1)
+
+int putListOfMediaDIFInfo(nl_msg* netlinkMessage,
+			  const std::list<MediaDIFInfo>& dif_info);
+
+int putMediaDIFInfo(nl_msg* netlinkMessage, const MediaDIFInfo& object);
+
+int parseListOfMediaDIFInfo(nlattr *nested, MediaReport & report);
+
+void parseMediaDIFInfo(nlattr *nested,
+			std::map<std::string, std::list<MediaDIFInfo> >& difs);
+
+/* MediaReport CLASS */
+enum IPCPMediaReportAttributes {
+        MEREP_ATTR_IPCP_ID = 1,
+        MEREP_ATTR_CDIF_NAME,
+	MEREP_ATTR_BS_IPCP_ADDR,
+	MEREP_ATTR_AVAILABLE_DIFS,
+        __MEREP_ATTR_MAX,
+};
+
+#define MEREP_ATTR_MAX (__MEREP_ATTR_MAX -1)
+
+int putMediaReport(nl_msg* netlinkMessage,
+                   const MediaReport& object);
+
+void parseMediaReport(nlattr *nested,
+		      IpcmMediaReportMessage * result);
+
+/* IpcmMediaReportMessage CLASS */
+enum IpcmMediaReportMessageAttributes {
+	IMERE_ATTR_REPORT = 1,
+	__IMERE_ATTR_MAX,
+};
+
+#define IMERE_ATTR_MAX (__IMERE_ATTR_MAX -1)
+
+int putIpcmMediaReportMessageObject(nl_msg* netlinkMessage,
+				    const IpcmMediaReportMessage& object);
+
+IpcmMediaReportMessage * parseIpcmMediaReportMessage(nlmsghdr *hdr);
+
+/* IPCPAllocatePortRequestMessage CLASS */
+enum IPCPIPCPAllocatePortRequestMessageAttributes {
+        IAPRM_ATTR_APP_NAME = 1,
+        __IAPRM_ATTR_MAX,
+};
+
+#define IAPRM_ATTR_MAX (__IAPRM_ATTR_MAX -1)
+
+int putIPCPAllocatePortRequestMessage(nl_msg* netlinkMessage,
+                		      const IPCPAllocatePortRequestMessage& object);
+
+IPCPAllocatePortRequestMessage * parseIPCPAllocatePortRequestMessage(nlmsghdr *hdr);
+
+/* IPCPWriteMgmtSDURequestMessage CLASS */
+enum IPCPWriteMgmtSDURequestMessageAttributes {
+        IWMSRM_ATTR_SDU = 1,
+	IWMSRM_ATTR_PORT_ID,
+	IWMSRM_ATTR_ADDRESS,
+        __IWMSRM_ATTR_MAX,
+};
+
+#define IWMSRM_ATTR_MAX (__IWMSRM_ATTR_MAX -1)
+
+int putIPCPWriteMgmtSDURequestMessage(nl_msg* netlinkMessage,
+                		       const IPCPWriteMgmtSDURequestMessage& object);
+
+IPCPWriteMgmtSDURequestMessage * parseIPCPWriteMgmtSDURequestMessage(nlmsghdr *hdr);
+
+/* IPCPReadMgmtSDUNotificationMessage CLASS */
+enum IPCPReadMgmtSDUNotificationMessageAttributes {
+	IRMSREM_ATTR_SDU = 1,
+	IRMSREM_ATTR_PORT_ID,
+	__IRMSREM_ATTR_MAX
+};
+
+#define IRMSREM_ATTR_MAX (__IRMSREM_ATTR_MAX -1)
+
+int putIPCPReadMgmtSDUNotificationMessage(nl_msg* netlinkMessage,
+                		         const IPCPReadMgmtSDUNotificationMessage& object);
+
+IPCPReadMgmtSDUNotificationMessage * parseIPCPReadMgmtSDUNotificationMessage(nlmsghdr *hdr);
+
+/* IpcmCreateIPCPRequestMessage CLASS */
+enum IPCMCreateIPCPRequestMessageAttributes {
+        ICIRM_ATTR_IPCP_NAME = 1,
+	ICIRM_ATTR_DIF_TYPE,
+	ICIRM_ATTR_IPCP_ID,
+	ICIRM_ATTR_NL_PORT_ID,
+        __ICIRM_ATTR_MAX,
+};
+
+#define ICIRM_ATTR_MAX (__ICIRM_ATTR_MAX -1)
+
+int putIpcmCreateIPCPRequestMessage(nl_msg* netlinkMessage,
+                		      const IpcmCreateIPCPRequestMessage& object);
+
+IpcmCreateIPCPRequestMessage * parseIpcmCreateIPCPRequestMessage(nlmsghdr *hdr);
+
+/* IpcmDestroyIPCPRequestMessage CLASS */
+enum IPCMDestroyIPCPRequestMessageAttributes {
+        IDIRM_ATTR_IPCP_ID = 1,
+        __IDIRM_ATTR_MAX,
+};
+
+#define IDIRM_ATTR_MAX (__IDIRM_ATTR_MAX -1)
+
+int putIpcmDestroyIPCPRequestMessage(nl_msg* netlinkMessage,
+                		     const IpcmDestroyIPCPRequestMessage& object);
+
+IpcmDestroyIPCPRequestMessage * parseIpcmDestroyIPCPRequestMessage(nlmsghdr *hdr);
 
 }
 

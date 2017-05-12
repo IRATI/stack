@@ -82,7 +82,6 @@ allsources =							\
         netlink-messages.cc  netlink-messages.h			\
         netlink-parsers.cc   netlink-parsers.h			\
         netlink-manager.cc   netlink-manager.h			\
-        syscalls-wrappers.cc rina-systypes.h    rina-syscalls.h	\
         $(protoSOURCES)						\
 	plugin-info.cc	     plugin-info.h
 

@@ -36,7 +36,6 @@
 
 #include "librina/ipc-manager.h"
 #include "librina/concurrency.h"
-#include "rina-syscalls.h"
 
 #include "utils.h"
 #include "core.h"
@@ -62,7 +61,7 @@ void initializeIPCManager(unsigned int        localPort,
 	_log_path = pathToLogFolder;
 	_log_level = logLevel;
 
-	IpcmIPCManagerPresentMessage message;
+	BaseNetlinkMessage message(RINA_C_IPCM_IPC_MANAGER_PRESENT);
 	message.setDestPortId(0);
 	message.setNotificationMessage(true);
 
@@ -101,6 +100,7 @@ IPCProcessProxy::IPCProcessProxy() {
 	id = 0;
 	portId = 0;
 	pid = 0;
+	seq_num = 0;
 }
 
 IPCProcessProxy::IPCProcessProxy(unsigned short id, unsigned int portId,
@@ -112,6 +112,7 @@ IPCProcessProxy::IPCProcessProxy(unsigned short id, unsigned int portId,
 	this->pid = pid;
 	this->type = type;
 	this->name = name;
+	seq_num = 0;
 }
 
 unsigned short IPCProcessProxy::getId() const
@@ -228,16 +229,44 @@ void IPCProcessProxy::notifyUnregistrationFromSupportingDIF(
 #endif
 }
 
-void IPCProcessProxy::enroll(
-        const ApplicationProcessNamingInformation& difName,
-        const ApplicationProcessNamingInformation& supportingDifName,
-        const ApplicationProcessNamingInformation& neighborName,
-        unsigned int opaque)
+void IPCProcessProxy::enroll(const ApplicationProcessNamingInformation& difName,
+			     const ApplicationProcessNamingInformation& supportingDifName,
+			     const ApplicationProcessNamingInformation& neighborName,
+			     unsigned int opaque)
 {
 #if STUB_API
         //Do nothing
 #else
         IpcmEnrollToDIFRequestMessage message;
+        message.prepare_for_handover = false;
+        message.setDifName(difName);
+        message.setSupportingDifName(supportingDifName);
+        message.setNeighborName(neighborName);
+        message.setDestIpcProcessId(id);
+        message.setDestPortId(portId);
+        message.setRequestMessage(true);
+        message.setSequenceNumber(opaque);
+
+        try {
+                rinaManager->sendMessage(&message, false);
+        } catch(NetlinkException &e) {
+                throw EnrollException(e.what());
+        }
+#endif
+}
+
+void IPCProcessProxy::enroll_prepare_hand(const ApplicationProcessNamingInformation& difName,
+			 	 	  const ApplicationProcessNamingInformation& supportingDifName,
+					  const ApplicationProcessNamingInformation& neighborName,
+					  const ApplicationProcessNamingInformation& disc_neigh_name,
+					  unsigned int opaque)
+{
+#if STUB_API
+        //Do nothing
+#else
+        IpcmEnrollToDIFRequestMessage message;
+        message.prepare_for_handover = true;
+        message.disc_neigh_name = disc_neigh_name;
         message.setDifName(difName);
         message.setSupportingDifName(supportingDifName);
         message.setNeighborName(neighborName);
@@ -275,17 +304,18 @@ void IPCProcessProxy::disconnectFromNeighbor(const ApplicationProcessNamingInfor
 #endif
 }
 
-void IPCProcessProxy::registerApplication(
-		const ApplicationProcessNamingInformation& applicationName,
-		unsigned short regIpcProcessId,
-		const ApplicationProcessNamingInformation& dif_name,
-		unsigned int opaque)
+void IPCProcessProxy::registerApplication(const ApplicationProcessNamingInformation& applicationName,
+					  const ApplicationProcessNamingInformation& dafName,
+					  unsigned short regIpcProcessId,
+					  const ApplicationProcessNamingInformation& dif_name,
+					  unsigned int opaque)
 {
 #if STUB_API
 	//Do nothing
 #else
 	IpcmRegisterApplicationRequestMessage message;
 	message.setApplicationName(applicationName);
+	message.dafName = dafName;
 	message.setDifName(dif_name);
 	message.setRegIpcProcessId(regIpcProcessId);
 	message.setDestIpcProcessId(id);
@@ -364,7 +394,7 @@ void IPCProcessProxy::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 	//Do nothing
 #else
 	IpcmAllocateFlowResponseMessage responseMessage;
-	responseMessage.setResult(result);
+	responseMessage.result = result;
 	responseMessage.setNotifySource(notifySource);
 	responseMessage.setSourceIpcProcessId(flowAcceptorIpcProcessId);
 	responseMessage.setDestIpcProcessId(id);
@@ -385,8 +415,8 @@ void IPCProcessProxy::deallocateFlow(int flowPortId, unsigned int opaque)
 #if STUB_API
 	//Do nothing
 #else
-	IpcmDeallocateFlowRequestMessage message;
-	message.setPortId(flowPortId);
+	BaseNetlinkMessage message(RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST);
+	message.port_id = flowPortId;
 	message.setDestIpcProcessId(id);
 	message.setDestPortId(portId);
 	message.setRequestMessage(true);
@@ -579,19 +609,15 @@ IPCProcessProxy * IPCProcessFactory::create(
 		unsigned short ipcProcessId)
 {
 	unsigned int portId = 0;
+	unsigned int seq_num = 0;
 	pid_t pid=0;
 
 #if STUB_API
 	//Do nothing
 #else
-	int result = syscallCreateIPCProcess(ipcProcessName,
-                                             ipcProcessId,
-                                             difType);
-	if (result != 0) {
-	        throw CreateIPCProcessException();
-	}
-
-	if (difType.compare(NORMAL_IPC_PROCESS) == 0) {
+	if (difType == NORMAL_IPC_PROCESS ||
+		difType == SHIM_WIFI_IPC_PROCESS_STA ||
+		difType == SHIM_WIFI_IPC_PROCESS_AP)	{
 		pid = fork();
 		if (pid == 0) {
 			//This is the OS process that has to execute the IPC Process
@@ -609,7 +635,7 @@ IPCProcessProxy * IPCProcessFactory::create(
 				stringToCharArray(_log_level),
 				stringToCharArray(_log_path + "/" + ipcProcessName.processName
 						+ "-" + ipcProcessName.processInstance + ".log"),
-				stringToCharArray(NORMAL_IPC_PROCESS),
+				stringToCharArray(difType),
 				0
 			};
 			char * envp[] =
@@ -625,14 +651,8 @@ IPCProcessProxy * IPCProcessFactory::create(
 
 			LOG_ERR("Problems loading IPC Process program, finalizing OS Process with error %s", strerror(errno));
 
-			//Destroy the IPC Process in the kernel
-			syscallDestroyIPCProcess(ipcProcessId);
-
 			exit(-1);
 		}else if (pid < 0) {
-			//This is the IPC Manager, and fork failed
-		        //Try to destroy the IPC Process in the kernel and return error
-		        syscallDestroyIPCProcess(ipcProcessId);
 			throw CreateIPCProcessException();
 		}else{
 			//This is the IPC Manager, and fork was successful
@@ -640,24 +660,60 @@ IPCProcessProxy * IPCProcessFactory::create(
 			LOG_DBG("Craeted a new IPC Process with pid = %d", pid);
 		}
 	}
+
+	//Ask the kernel to create the IPCP
+	IpcmCreateIPCPRequestMessage message;
+        message.dif_type = difType;
+        message.ipcp_name = ipcProcessName;
+        message.ipcp_id = ipcProcessId;
+        message.nl_port_id = portId;
+	message.setSourceIpcProcessId(0);
+	message.setDestIpcProcessId(0);
+	message.setDestPortId(0);
+	message.setRequestMessage(true);
+
+	try {
+	        rinaManager->sendMessage(&message, false);
+	} catch (NetlinkException &e) {
+	        throw CreateIPCProcessException(e.what());
+	}
+
+	seq_num = message.getSequenceNumber();
 #endif
 
 	IPCProcessProxy * ipcProcess = new IPCProcessProxy(ipcProcessId, portId, pid, difType,
 			ipcProcessName);
+	ipcProcess->seq_num = seq_num;
 	return ipcProcess;
 }
 
-void IPCProcessFactory::destroy(IPCProcessProxy* ipcp)
+unsigned int IPCProcessFactory::destroy(IPCProcessProxy* ipcp)
 {
 	int resultUserSpace = 0;
-	int resultKernel = 0;
+	unsigned int seq_num = 0;
 
 #if STUB_API
 	//Do nothing
 #else
-	resultKernel = syscallDestroyIPCProcess(ipcp->id);
+	//Ask the kernel to destroy the IPCP
+	IpcmDestroyIPCPRequestMessage message;
+        message.ipcp_id = ipcp->id;
+	message.setSourceIpcProcessId(0);
+	message.setDestIpcProcessId(0);
+	message.setDestPortId(0);
+	message.setRequestMessage(true);
 
-	if (ipcp->getType().compare(NORMAL_IPC_PROCESS) == 0)
+	try {
+	        rinaManager->sendMessage(&message, false);
+	} catch (NetlinkException &e) {
+	        throw DestroyIPCProcessException(e.what());
+	}
+
+	seq_num = message.getSequenceNumber();
+
+	if (ipcp->getType() == NORMAL_IPC_PROCESS ||
+			ipcp->getType() == SHIM_WIFI_IPC_PROCESS_AP ||
+			ipcp->getType() == SHIM_WIFI_IPC_PROCESS_STA)
 	{
 		// BUG: Zombie processes are automatically reaped using a
 		//      SIGCHLD handler, so the following lines often result
@@ -672,17 +728,15 @@ void IPCProcessFactory::destroy(IPCProcessProxy* ipcp)
 
 	delete ipcp;
 
-	if (resultKernel || resultUserSpace)
+	if (resultUserSpace)
 	{
 	        std::string error = "Problems destroying IPCP.";
-	        error = error + "Result in the kernel: " +
-	                        intToCharArray(resultKernel);
 	        error = error + "Result in user space:  " +
 	                        intToCharArray(resultUserSpace);
 	        LOG_ERR("%s", error.c_str());
-	        if (resultKernel) // ignore resultUserSpace due to above issue
-	                throw DestroyIPCProcessException(error);
 	}
+
+	return seq_num;
 }
 
 /** CLASS APPLICATION MANAGER */
@@ -699,7 +753,7 @@ void ApplicationManager::applicationRegistered(
 	responseMessage.setApplicationName(event.
 			applicationRegistrationInformation.appName);
 	responseMessage.setDifName(difName);
-	responseMessage.setResult(result);
+	responseMessage.result = result;
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setResponseMessage(true);
 	try {
@@ -721,7 +775,7 @@ void ApplicationManager::applicationUnregistered(
 #else
 	AppUnregisterApplicationResponseMessage responseMessage;
 	responseMessage.setApplicationName(event.applicationName);
-	responseMessage.setResult(result);
+	responseMessage.result = result;
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setResponseMessage(true);
 	try {
@@ -790,8 +844,8 @@ void ApplicationManager::flowDeallocated(
 #else
 	AppDeallocateFlowResponseMessage responseMessage;
 	responseMessage.setApplicationName(event.applicationName);
-	responseMessage.setPortId(event.portId);
-	responseMessage.setResult(result);
+	responseMessage.port_id = event.portId;
+	responseMessage.result = result;
 	responseMessage.setSequenceNumber(event.sequenceNumber);
 	responseMessage.setResponseMessage(true);
 	try {
@@ -811,8 +865,8 @@ void ApplicationManager::flowDeallocatedRemotely(
 	//Do nothing
 #else
 	AppFlowDeallocatedNotificationMessage message;
-	message.setPortId(portId);
-	message.setCode(code);
+	message.port_id = portId;
+	message.result = code;
 	message.setApplicationName(appName);
 	message.setNotificationMessage(true);
 	try {
@@ -831,7 +885,7 @@ void ApplicationManager::getDIFPropertiesResponse(
 	//Do nothing
 #else
 	AppGetDIFPropertiesResponseMessage responseMessage;
-	responseMessage.setResult(result);
+	responseMessage.result = result;
 	responseMessage.setApplicationName(event.getApplicationName());
 	responseMessage.setDIFProperties(difProperties);
 	responseMessage.setSequenceNumber(event.sequenceNumber);
@@ -965,5 +1019,29 @@ IPCProcessDaemonInitializedEvent::getName() const
 TimerExpiredEvent::TimerExpiredEvent(unsigned int sequenceNumber) :
                 IPCEvent(TIMER_EXPIRED_EVENT, sequenceNumber)
 { }
+
+/* Class Media Report Event */
+MediaReportEvent::MediaReportEvent(const MediaReport& report,
+		 	 	   unsigned int sequenceNumber) :
+			 IPCEvent(IPCM_MEDIA_REPORT_EVENT, sequenceNumber)
+{
+	media_report = report;
+}
+
+CreateIPCPResponseEvent::CreateIPCPResponseEvent(int res,
+						 unsigned int sequenceNumber):
+		IPCEvent(IPCM_CREATE_IPCP_RESPONSE,
+			 sequenceNumber)
+{
+	result = res;
+}
+
+DestroyIPCPResponseEvent::DestroyIPCPResponseEvent(int res,
+						   unsigned int sequenceNumber):
+		IPCEvent(IPCM_DESTROY_IPCP_RESPONSE,
+			 sequenceNumber)
+{
+	result = res;
+}
 
 }

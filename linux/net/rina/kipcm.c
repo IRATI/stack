@@ -115,7 +115,9 @@ static int alloc_flow_req_free_and_reply(struct rnl_msg *      msg,
 {
         rnl_msg_destroy(msg);
 
-        if (rnl_app_alloc_flow_result_msg(id, res, pid, seq_num, port_id)) {
+        if (rnl_base_response(id, res, pid, 0, seq_num,
+        		      RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
+			      port_id)) {
                 LOG_ERR("Could not send flow_result_msg");
                 return -1;
         }
@@ -306,7 +308,7 @@ static int notify_ipcp_allocate_flow_response(void *             data,
         return 0;
 fail:
         rnl_msg_destroy(msg);
-        return -1;
+        return 0;
 }
 
 static int
@@ -318,7 +320,8 @@ dealloc_flow_req_free_and_reply(struct rnl_msg * msg,
 {
         rnl_msg_destroy(msg);
 
-        if (rnl_app_dealloc_flow_resp_msg(id, res, seq_num, port_id))
+        if (rnl_base_response(id, res, 0, 0, seq_num,
+        		      RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE, port_id))
                 return -1;
 
         return 0;
@@ -332,11 +335,11 @@ static int notify_ipcp_deallocate_flow_request(void *             data,
                                                struct sk_buff *   buff,
                                                struct genl_info * info)
 {
-        struct rnl_ipcm_dealloc_flow_req_msg_attrs * attrs;
-        struct rnl_msg *                             msg;
-        struct ipcp_instance *                       ipc_process;
-        ipc_process_id_t                             ipc_id;
-        struct kipcm *                               kipcm;
+        struct rnl_ipcm_base_nl_msg_attrs * attrs;
+        struct rnl_msg *                    msg;
+        struct ipcp_instance *              ipc_process;
+        ipc_process_id_t                    ipc_id;
+        struct kipcm *                      kipcm;
 
         if (!data) {
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
@@ -350,7 +353,7 @@ static int notify_ipcp_deallocate_flow_request(void *             data,
 
         kipcm  = (struct kipcm *) data;
         ipc_id = 0;
-        msg    = rnl_msg_create(RNL_MSG_ATTRS_DEALLOCATE_FLOW_REQUEST);
+        msg    = rnl_msg_create(RNL_MST_ATTRS_BASE_NL_MESSAGE);
         if (!msg)
                 goto fail;
 
@@ -369,13 +372,13 @@ static int notify_ipcp_deallocate_flow_request(void *             data,
         ASSERT(ipc_process->ops);
         ASSERT(ipc_process->ops->flow_deallocate);
 
-        if (ipc_process->ops->flow_deallocate(ipc_process->data, attrs->id)) {
+        if (ipc_process->ops->flow_deallocate(ipc_process->data, attrs->port_id)) {
                 LOG_ERR("Failed deallocate flow request "
-                        "for port id: %d", attrs->id);
+                        "for port id: %d", attrs->port_id);
                 goto fail;
         }
 
-        kfa_port_id_release(kipcm->kfa, attrs->id);
+        kfa_port_id_release(kipcm->kfa, attrs->port_id);
 
         return dealloc_flow_req_free_and_reply(msg,
                                                ipc_id,
@@ -400,7 +403,8 @@ assign_to_dif_free_and_reply(struct rnl_msg * msg,
 {
         rnl_msg_destroy(msg);
 
-        if (rnl_assign_dif_response(id, res, seq_num, port_id))
+        if (rnl_base_response(id, res, 0, 0, seq_num,
+        		      RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE, port_id))
                 return -1;
 
         return 0;
@@ -485,7 +489,8 @@ update_dif_config_free_and_reply(struct rnl_msg * msg,
 {
         rnl_msg_destroy(msg);
 
-        if (rnl_update_dif_config_response(id, res, seq_num, port_id))
+        if (rnl_base_response(id, res, 0, 0, seq_num,
+        		      RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE, port_id))
                 return -1;
 
         return 0;
@@ -562,13 +567,15 @@ reg_unreg_resp_free_and_reply(struct rnl_msg * msg,
                               uint_t           port_id,
                               bool             is_register)
 {
+	uint_t command;
+
         rnl_msg_destroy(msg);
 
-        if (rnl_app_register_unregister_response_msg(id,
-                                                     res,
-                                                     seq_num,
-                                                     port_id,
-                                                     is_register))
+        command = is_register                               ?
+                RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE  :
+                RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE;
+
+        if (rnl_base_response(id, res, 0, 0, seq_num, command, port_id))
                 return -1;
 
         return 0;
@@ -620,7 +627,8 @@ static int notify_ipcp_register_app_request(void *             data,
         ASSERT(ipc_process->ops->application_register);
 
         if (ipc_process->ops->application_register(ipc_process->data,
-                                                   attrs->app_name))
+                                                   attrs->app_name,
+						   attrs->daf_name))
                 goto fail;
 
         return reg_unreg_resp_free_and_reply(msg,
@@ -712,11 +720,9 @@ conn_create_resp_free_and_reply(struct rnl_msg * msg,
 {
         rnl_msg_destroy(msg);
 
-        if (rnl_ipcp_conn_create_resp_msg(ipc_id,
-                                          pid,
-                                          src_cep,
-                                          seq_num,
-                                          nl_port_id)) {
+        if (rnl_base_response(ipc_id, 0, pid, src_cep,seq_num,
+        		      RINA_C_IPCP_CONN_CREATE_RESPONSE,
+			      nl_port_id)) {
                 LOG_ERR("Could not snd conn_create_resp_msg");
                 return -1;
         }
@@ -932,11 +938,9 @@ conn_update_result_free_and_reply(struct rnl_msg * msg,
 {
         rnl_msg_destroy(msg);
 
-        if (rnl_ipcp_conn_update_result_msg(ipc_id,
-                                            pid,
-                                            result,
-                                            seq_num,
-                                            nl_port_id)) {
+        if (rnl_base_response(ipc_id, result, pid, 0, seq_num,
+        		      RINA_C_IPCP_CONN_UPDATE_RESULT,
+			      nl_port_id)) {
                 LOG_ERR("Could not snd conn_update_result_msg");
                 return -1;
         }
@@ -1032,11 +1036,9 @@ conn_destroy_result_free_and_reply(struct rnl_msg * msg,
 {
         rnl_msg_destroy(msg);
 
-        if (rnl_ipcp_conn_destroy_result_msg(ipc_id,
-                                             pid,
-                                             result,
-                                             seq_num,
-                                             nl_port_id)) {
+        if (rnl_base_response(ipc_id, result, pid, 0, seq_num,
+        		      RINA_C_IPCP_CONN_DESTROY_RESULT,
+			      nl_port_id)) {
                 LOG_ERR("Could not snd conn_destroy_result_msg");
                 return -1;
         }
@@ -1048,12 +1050,12 @@ static int notify_ipcp_conn_destroy_req(void *             data,
                                         struct sk_buff *   buff,
                                         struct genl_info * info)
 {
-        struct rnl_ipcp_conn_destroy_req_msg_attrs * attrs;
-        struct rnl_msg *                             msg;
-        struct ipcp_instance *                       ipcp;
-        struct kipcm *                               kipcm;
-        ipc_process_id_t                             ipc_id;
-        port_id_t                                    port_id;
+        struct rnl_ipcm_base_nl_msg_attrs * attrs;
+        struct rnl_msg *                    msg;
+        struct ipcp_instance *              ipcp;
+        struct kipcm *                      kipcm;
+        ipc_process_id_t                    ipc_id;
+        port_id_t                           port_id;
 
         ipc_id  = 0;
         port_id = 0;
@@ -1069,7 +1071,7 @@ static int notify_ipcp_conn_destroy_req(void *             data,
         }
 
         kipcm = (struct kipcm *) data;
-        msg   = rnl_msg_create(RNL_MSG_ATTRS_CONN_DESTROY_REQUEST);
+        msg   = rnl_msg_create(RNL_MST_ATTRS_BASE_NL_MESSAGE);
         if (!msg)
                 goto fail;
 
@@ -1084,7 +1086,7 @@ static int notify_ipcp_conn_destroy_req(void *             data,
         if (!ipcp)
                 goto fail;
 
-        if (ipcp->ops->connection_destroy(ipcp->data, attrs->src_cep))
+        if (ipcp->ops->connection_destroy(ipcp->data, attrs->cep_id))
                 goto fail;
 
         return conn_destroy_result_free_and_reply(msg,
@@ -1426,8 +1428,9 @@ static int notify_ipcp_set_policy_set_param(void *             data,
 out:
         rnl_msg_destroy(msg);
 
-        if (rnl_set_policy_set_param_response(ipc_id, retval, info->snd_seq,
-                                    info->snd_portid))
+        if (rnl_base_response(ipc_id, retval, 0, 0, info->snd_seq,
+        		      RINA_C_IPCP_SET_POLICY_SET_PARAM_RESPONSE,
+                              info->snd_portid))
                 return -1;
 
         return 0;
@@ -1494,8 +1497,9 @@ static int notify_ipcp_select_policy_set(void *             data,
 out:
         rnl_msg_destroy(msg);
 
-        if (rnl_select_policy_set_response(ipc_id, retval, info->snd_seq,
-                                           info->snd_portid))
+        if (rnl_base_response(ipc_id, retval, 0, 0, info->snd_seq,
+        		      RINA_C_IPCP_SELECT_POLICY_SET_RESPONSE,
+			      info->snd_portid))
                 return -1;
 
         return 0;
@@ -1563,11 +1567,9 @@ static int notify_ipcp_update_crypto_state(void *             data,
 out:
         rnl_msg_destroy(msg);
 
-        if (rnl_update_crypto_state_response(ipc_id,
-        				     retval,
-        				     info->snd_seq,
-        				     port_id,
-        				     info->snd_portid))
+        if (rnl_base_response(ipc_id, retval, port_id, 0, info->snd_seq,
+        		      RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE,
+			      info->snd_portid))
                 return -1;
 
         return 0;
@@ -1577,7 +1579,7 @@ static int notify_ipcp_address_change(void *             data,
                                       struct sk_buff *   buff,
                                       struct genl_info * info)
 {
-        struct kipcm * kipcm = default_kipcm;
+        struct kipcm * kipcm = data;
         struct rnl_ipcp_address_change_req_msg_attrs * attrs;
         struct rnl_msg * msg;
         struct ipcp_instance * ipc_process;
@@ -1588,9 +1590,6 @@ static int notify_ipcp_address_change(void *             data,
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
                 return -1;
         }
-
-        LOG_INFO("Address change pointers: KIPCM %pK, default KIPCM %pK",
-        	 data, kipcm);
 
         if (!info) {
                 LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
@@ -1641,6 +1640,250 @@ out:
 
         if (retval)
         	LOG_ERR("Error processing address change request");
+
+        return 0;
+}
+
+static int notify_allocate_port(void *             data,
+				struct sk_buff *   buff,
+				struct genl_info * info)
+{
+        struct kipcm * kipcm = data;
+        struct rnl_ipcp_allocate_port_req_msg_attrs * attrs;
+        struct rnl_msg * msg;
+        int retval = 0;
+        ipc_process_id_t ipcp_id = 0;
+        port_id_t port_id = 0;
+
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
+
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
+
+        msg = rnl_msg_create(RNL_MSG_ATTRS_ALLOCATE_PORT_REQUEST);
+        if (!msg) {
+                retval = -1;
+                goto out;
+        }
+
+        attrs = msg->attrs;
+
+        if (rnl_parse_msg(info, msg)) {
+                retval = -1;
+                goto out;
+        }
+
+        ipcp_id = msg->header.src_ipc_id;
+        port_id = kipcm_flow_create(kipcm,
+        		      	    msg->header.src_ipc_id,
+				    attrs->app_name);
+        if (port_id == port_id_bad())
+        	retval = -1;
+out:
+        rnl_msg_destroy(msg);
+
+        if (rnl_base_response(ipcp_id, retval, port_id, 0, info->snd_seq,
+        		      RINA_C_IPCP_ALLOCATE_PORT_RESPONSE,
+			      info->snd_portid))
+                return -1;
+
+        return 0;
+}
+
+static int notify_deallocate_port(void *             data,
+				  struct sk_buff *   buff,
+				  struct genl_info * info)
+{
+        struct kipcm * kipcm = data;
+        struct rnl_ipcm_base_nl_msg_attrs * attrs;
+        struct rnl_msg * msg;
+        int retval = 0;
+        ipc_process_id_t ipcp_id = 0;
+        port_id_t port_id = 0;
+
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
+
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
+
+        msg = rnl_msg_create(RNL_MST_ATTRS_BASE_NL_MESSAGE);
+        if (!msg) {
+                retval = -1;
+                goto out;
+        }
+
+        attrs = msg->attrs;
+
+        if (rnl_parse_msg(info, msg)) {
+                retval = -1;
+                goto out;
+        }
+
+        ipcp_id = msg->header.src_ipc_id;
+        port_id = attrs->port_id;
+        retval = kipcm_flow_destroy(kipcm,
+        			    ipcp_id,
+				    attrs->port_id);
+out:
+        rnl_msg_destroy(msg);
+
+        if (rnl_base_response(ipcp_id, retval, port_id, 0, info->snd_seq,
+        		      RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE,
+			      info->snd_portid))
+                return -1;
+
+        return 0;
+}
+
+static int notify_ipcp_write_mgmt_sdu(void *             data,
+				      struct sk_buff *   buff,
+				      struct genl_info * info)
+{
+        struct kipcm * kipcm = data;
+        struct rnl_ipcp_write_mgmt_sdu_req_msg_attrs * attrs;
+        struct rnl_msg * msg;
+        int retval = 0;
+        ipc_process_id_t ipcp_id = 0;
+
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
+
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
+
+        msg = rnl_msg_create(RNL_MSG_ATTRS_WRITE_MGMT_SDU_REQUEST);
+        if (!msg) {
+                retval = -1;
+                LOG_ERR("Problems creating msg attributes");
+                goto out;
+        }
+
+        attrs = msg->attrs;
+
+        if (rnl_parse_msg(info, msg)) {
+                retval = -1;
+                LOG_ERR("Problems parsing NL message");
+                goto out;
+        }
+
+        ipcp_id = msg->header.src_ipc_id;
+        retval = kipcm_mgmt_sdu_write(kipcm,
+        			      ipcp_id,
+				      attrs->sdu_wpi);
+out:
+        rnl_msg_destroy(msg);
+
+        if (rnl_base_response(ipcp_id, retval, 0, 0, info->snd_seq,
+        		      RINA_C_IPCP_MANAGEMENT_SDU_WRITE_RESPONSE,
+			      info->snd_portid))
+                return -1;
+
+        return 0;
+}
+
+static int notify_create_ipcp(void *             data,
+			      struct sk_buff *   buff,
+			      struct genl_info * info)
+{
+        struct kipcm * kipcm = data;
+        struct rnl_create_ipcp_req_msg_attrs * attrs;
+        struct rnl_msg * msg;
+        int retval = 0;
+
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
+
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
+
+        msg = rnl_msg_create(RNL_MSG_ATTRS_CREATE_IPCP_REQUEST);
+        if (!msg) {
+                retval = -1;
+                goto out;
+        }
+
+        attrs = msg->attrs;
+
+        if (rnl_parse_msg(info, msg)) {
+                retval = -1;
+                goto out;
+        }
+
+        retval = kipcm_ipc_create(kipcm,
+        			  attrs->ipcp_name,
+				  attrs->ipcp_id,
+				  attrs->nl_port_id,
+				  attrs->dif_type);
+out:
+        rnl_msg_destroy(msg);
+
+        if (rnl_base_response(0, retval, 0, 0, info->snd_seq,
+        		      RINA_C_IPCM_CREATE_IPCP_RESPONSE,
+			      info->snd_portid))
+                return -1;
+
+        return 0;
+}
+
+static int notify_destroy_ipcp(void *             data,
+			       struct sk_buff *   buff,
+			       struct genl_info * info)
+{
+        struct kipcm * kipcm = data;
+        struct rnl_destroy_ipcp_req_msg_attrs * attrs;
+        struct rnl_msg * msg;
+        int retval = 0;
+
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
+
+        if (!info) {
+                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+                return -1;
+        }
+
+        msg = rnl_msg_create(RNL_MSG_ATTRS_DESTROY_IPCP_REQUEST);
+        if (!msg) {
+                retval = -1;
+                goto out;
+        }
+
+        attrs = msg->attrs;
+
+        if (rnl_parse_msg(info, msg)) {
+                retval = -1;
+                goto out;
+        }
+
+        retval = kipcm_ipc_destroy(kipcm,
+				   attrs->ipcp_id);
+out:
+        rnl_msg_destroy(msg);
+
+        if (rnl_base_response(0, retval, 0, 0, info->snd_seq,
+        		      RINA_C_IPCM_DESTROY_IPCP_RESPONSE,
+			      info->snd_portid))
+                return -1;
 
         return 0;
 }
@@ -1700,12 +1943,20 @@ static int netlink_handlers_register(struct kipcm * kipcm)
                 notify_ipcp_set_policy_set_param;
         kipcm_handlers[RINA_C_IPCP_SELECT_POLICY_SET_REQUEST]      =
                 notify_ipcp_select_policy_set;
-        kipcm_handlers[RINA_C_IPCP_SELECT_POLICY_SET_REQUEST]      =
-                notify_ipcp_select_policy_set;
         kipcm_handlers[RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST]    =
                 notify_ipcp_update_crypto_state;
         kipcm_handlers[RINA_C_IPCP_ADDRESS_CHANGE_REQUEST]    	   =
                 notify_ipcp_address_change;
+        kipcm_handlers[RINA_C_IPCP_ALLOCATE_PORT_REQUEST]    	   =
+                notify_allocate_port;
+        kipcm_handlers[RINA_C_IPCP_DEALLOCATE_PORT_REQUEST]    	   =
+                notify_deallocate_port;
+        kipcm_handlers[RINA_C_IPCP_MANAGEMENT_SDU_WRITE_REQUEST]   =
+                notify_ipcp_write_mgmt_sdu;
+        kipcm_handlers[RINA_C_IPCM_CREATE_IPCP_REQUEST]   	   =
+                notify_create_ipcp;
+        kipcm_handlers[RINA_C_IPCM_DESTROY_IPCP_REQUEST]   	   =
+                notify_destroy_ipcp;
 
         for (i = 1; i < RINA_C_MAX; i++) {
                 if (kipcm_handlers[i] != NULL) {
@@ -2037,6 +2288,7 @@ EXPORT_SYMBOL(kipcm_ipcp_factory_unregister);
 int kipcm_ipc_create(struct kipcm *      kipcm,
                      const struct name * ipcp_name,
                      ipc_process_id_t    id,
+		     uint_t		 us_nl_port,
                      const char *        factory_name)
 {
         char *                 name;
@@ -2067,9 +2319,10 @@ int kipcm_ipc_create(struct kipcm *      kipcm,
         ASSERT(factory_name);
 
         LOG_DBG("Creating IPC process:");
-        LOG_DBG("  name:      %s", name);
-        LOG_DBG("  id:        %d", id);
-        LOG_DBG("  factory:   %s", factory_name);
+        LOG_DBG("  name:       %s", name);
+        LOG_DBG("  id:         %d", id);
+        LOG_DBG("  us nl port; %d", us_nl_port);
+        LOG_DBG("  factory:    %s", factory_name);
         rkfree(name);
 
         KIPCM_LOCK(kipcm);
@@ -2086,7 +2339,8 @@ int kipcm_ipc_create(struct kipcm *      kipcm,
                 return -1;
         }
 
-        instance = factory->ops->create(factory->data, ipcp_name, id);
+        instance = factory->ops->create(factory->data, ipcp_name,
+        				id, us_nl_port);
         if (!instance) {
                 KIPCM_UNLOCK(kipcm);
                 return -1;
@@ -2275,13 +2529,11 @@ int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
-                sdu_wpi_destroy(sdu_wpi);
                 return -1;
         }
 
         if (!sdu_wpi_is_ok(sdu_wpi)) {
                 LOG_ERR("Bogus SDU with port-id received, bailing out");
-                sdu_wpi_destroy(sdu_wpi);
                 return -1;
         }
 
@@ -2289,14 +2541,12 @@ int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
         ipcp = ipcp_imap_find(kipcm->instances, id);
         if (!ipcp) {
                 LOG_ERR("Could not find IPC Process with id %d", id);
-                sdu_wpi_destroy(sdu_wpi);
                 KIPCM_UNLOCK(kipcm);
                 return -1;
         }
 
         if (!ipcp->ops) {
                 LOG_ERR("Bogus IPCP ops, bailing out");
-                sdu_wpi_destroy(sdu_wpi);
                 KIPCM_UNLOCK(kipcm);
                 return -1;
         }
@@ -2304,7 +2554,6 @@ int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
         if (!ipcp->ops->mgmt_sdu_write) {
                 LOG_ERR("The IPC Process %d doesn't support this operation",
                         id);
-                sdu_wpi_destroy(sdu_wpi);
                 KIPCM_UNLOCK(kipcm);
                 return -1;
         }
@@ -2314,54 +2563,14 @@ int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
                                       sdu_wpi->dst_addr,
                                       sdu_wpi->port_id,
                                       sdu_wpi->sdu)) {
-                sdu_wpi_detach(sdu_wpi);
-                sdu_wpi_destroy(sdu_wpi);
+        	sdu_wpi_detach(sdu_wpi);
                 return -1;
         }
 
         sdu_wpi_detach(sdu_wpi);
-        sdu_wpi_destroy(sdu_wpi);
+
         return 0;
 }
-
-int kipcm_mgmt_sdu_read(struct kipcm *    kipcm,
-                        ipc_process_id_t  id,
-                        struct sdu_wpi ** sdu_wpi)
-{
-        struct ipcp_instance * ipcp;
-
-        IRQ_BARRIER;
-
-        if (!kipcm) {
-                LOG_ERR("Bogus kipcm instance passed, bailing out");
-                return -ESRCH;
-        }
-
-        KIPCM_LOCK(kipcm);
-        ipcp = ipcp_imap_find(kipcm->instances, id);
-        if (!ipcp) {
-                LOG_ERR("Could not find IPC Process with id %d", id);
-                KIPCM_UNLOCK(kipcm);
-                return -ESRCH;
-        }
-
-        if (!ipcp->ops) {
-                LOG_ERR("Bogus IPCP ops, bailing out");
-                KIPCM_UNLOCK(kipcm);
-                return -ESRCH;
-        }
-
-        if (!ipcp->ops->mgmt_sdu_read) {
-                LOG_ERR("The IPC Process %d doesn't support this operation",
-                        id);
-                KIPCM_UNLOCK(kipcm);
-                return -ESRCH;
-        }
-        KIPCM_UNLOCK(kipcm);
-
-        return ipcp->ops->mgmt_sdu_read(ipcp->data, sdu_wpi);
-}
-
 
 /* Only called by the allocate_port syscall used only by the normal IPCP */
 port_id_t kipcm_flow_create(struct kipcm     *kipcm,
@@ -2376,7 +2585,6 @@ port_id_t kipcm_flow_create(struct kipcm     *kipcm,
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
-                name_destroy(process_name);
                 return port_id_bad();
         }
 
@@ -2387,14 +2595,12 @@ port_id_t kipcm_flow_create(struct kipcm     *kipcm,
         if (!ipc_process) {
                 LOG_ERR("Couldn't find the ipc process %d", ipc_id);
                 KIPCM_UNLOCK(kipcm);
-                name_destroy(process_name);
                 return port_id_bad();
         }
 
         pid = kfa_port_id_reserve(kipcm->kfa, ipc_id);
         if (!is_port_id_ok(pid)) {
                 KIPCM_UNLOCK(kipcm);
-                name_destroy(process_name);
                 return port_id_bad();
         }
 
@@ -2412,18 +2618,15 @@ port_id_t kipcm_flow_create(struct kipcm     *kipcm,
         if (user_ipc_process) {
                 KIPCM_UNLOCK(kipcm);
                 LOG_DBG("This flow is for an ipcp");
-                name_destroy(process_name);
                 return pid;
         }
 	/* creates a flow, default flow_opts */
         if (kfa_flow_create(kipcm->kfa, pid, ipc_process)) {
                 KIPCM_UNLOCK(kipcm);
                 kfa_port_id_release(kipcm->kfa, pid);
-                name_destroy(process_name);
                 return port_id_bad();
         }
         KIPCM_UNLOCK(kipcm);
-        name_destroy(process_name);
         return pid;
 }
 EXPORT_SYMBOL(kipcm_flow_create);
@@ -2487,7 +2690,8 @@ int kipcm_notify_flow_alloc_req_result(struct kipcm    *kipcm,
                 kfa_port_id_release(kipcm->kfa, pid);
 
         /* FIXME: The rnl_port_id shouldn't be hardcoded as 1 */
-        if (rnl_app_alloc_flow_result_msg(ipc_id, res, pid, seq_num, 1))
+        if (rnl_base_response(ipc_id, res, pid, 0, seq_num,
+        		      RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT, 1))
                 return -1;
 
         return 0;

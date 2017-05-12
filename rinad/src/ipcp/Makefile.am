@@ -11,17 +11,30 @@ CLEANFILES   =
 
 bin_PROGRAMS = ipcp
 
-COMMONCPPFLAGS =				\
-	$(CPPFLAGS_EXTRA)			\
-	$(LIBRINA_CFLAGS)			\
-	-I$(srcdir)/../				\
-	-I$(srcdir)/../common
+###Shim WiFi hostapd/wpa_supplicant dependencies
+shimwifi_CPPFLAGS = -I$(srcdir)/ipcp/shim-wifi/wpa_supplicant
+
+shimwifi_CFLAGS = -DCONFIG_CTRL_IFACE		\
+		-DCONFIG_CTRL_IFACE_UNIX
+
+shimwifi_SOURCES = 				\
+	shim-wifi/wpa_supplicant/wpa_ctrl.c	\
+	shim-wifi/wpa_supplicant/os_unix.c		
+
+
+COMMONCPPFLAGS =					\
+	$(CPPFLAGS_EXTRA)				\
+	$(LIBRINA_CFLAGS)				\
+	-I$(srcdir)/../					\
+	-I$(srcdir)/../common				\
+	-I$(srcdir)/					\
+	$(shimwifi_CPPFLAGS)
 
 COMMONLIBS =					\
 	$(builddir)/../common/librinad.la	\
 	$(LIBRINA_LIBS)
 
-ipcp_CFLAGS   =
+ipcp_CFLAGS   = $(shimwifi_CFLAGS)
 ipcp_CPPFLAGS =					\
 	$(COMMONCPPFLAGS)			\
 	-DPLUGINSDIR=\"$(pkglibdir)/ipcp\"
@@ -37,11 +50,17 @@ ipcp_SOURCES  =						\
 	resource-allocator.cc	resource-allocator.h	\
 	flow-allocator.cc       flow-allocator.h   	\
 	security-manager.cc				\
-	routing.cc                      \
-	ipc-process.cc          ipc-process.h \
-	normal-ipc-process.cc
+	routing.cc					\
+	ipc-process.cc		ipc-process.h		\
+	normal-ipc-process.cc				\
+	shim-wifi/shim-wifi-ipc-process.cc		\
+	shim-wifi/shim-wifi-ipc-process.h		\
+	shim-wifi/wpa_controller.h			\
+	shim-wifi/wpa_controller.cc			\
+	$(shimwifi_SOURCES)
 
 ipcpheadersdir = $(includedir)/rinad/ipcp
+	
 ipcpheaders_HEADERS = components.h		\
 		ipcp-logging.h
 

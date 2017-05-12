@@ -54,6 +54,10 @@
 namespace rina {
 
 static std::string NORMAL_IPC_PROCESS= "normal-ipc";
+static std::string SHIM_WIFI_IPC_PROCESS_STA= "shim-wifi-sta";
+static std::string SHIM_WIFI_IPC_PROCESS_AP= "shim-wifi-ap";
+static std::string SHIM_ETH_VLAN_IPC_PROCESS = "shim-eth-vlan";
+static std::string SHIM_TCP_UDP_IPC_PROCESS = "shim-tcp-udp";
 
 /**
  * Returns the version number of librina
@@ -69,9 +73,7 @@ class ApplicationProcessNamingInformation {
 public:
 	ApplicationProcessNamingInformation();
 	ApplicationProcessNamingInformation(const std::string& processName,
-			const std::string& processInstance);
-	ApplicationProcessNamingInformation & operator=(
-			const ApplicationProcessNamingInformation & other);
+					    const std::string& processInstance);
 	bool operator==(const ApplicationProcessNamingInformation &other) const;
 	bool operator!=(const ApplicationProcessNamingInformation &other) const;
 	bool operator>(const ApplicationProcessNamingInformation &other) const;
@@ -185,6 +187,8 @@ public:
 		FLOW_DEALLOCATED
 	};
 
+	FlowInformation();
+
 	/** The local application name */
 	ApplicationProcessNamingInformation localAppName;
 
@@ -199,6 +203,9 @@ public:
 
 	/** File descriptor to access this flow */
 	int fd;
+
+	/** 0 if the user of this flow is an app, the IPCP id otherwise */
+	unsigned short user_ipcp_id;
 
 	/** The name of the DIF where the flow has been allocated */
 	ApplicationProcessNamingInformation difName;
@@ -280,6 +287,13 @@ enum IPCEventType {
         IPC_PROCESS_FWD_CDAP_RESPONSE_MSG,
         DISCONNECT_NEIGHBOR_REQUEST_EVENT,
         DISCONNECT_NEIGHBOR_RESPONSE_EVENT,
+	IPCM_MEDIA_REPORT_EVENT,
+	IPC_PROCESS_ALLOCATE_PORT_RESPONSE,
+	IPC_PROCESS_DEALLOCATE_PORT_RESPONSE,
+	IPC_PROCESS_WRITE_MGMT_SDU_RESPONSE,
+	IPC_PROCESS_READ_MGMT_SDU_NOTIF,
+	IPCM_CREATE_IPCP_RESPONSE,
+	IPCM_DESTROY_IPCP_RESPONSE,
         NO_EVENT
 };
 
@@ -343,6 +357,12 @@ public:
 	/** the ID of the IPC Process that will provide the flow*/
 	unsigned short ipcProcessId;
 
+	/**
+	 * True if the flow will be used by internal IPCP tasks (e.g. layer management),
+	 * false otherwise (used by an external app)
+	 */
+	bool internal;
+
 	FlowRequestEvent();
 	FlowRequestEvent(const FlowSpecification& flowSpecification,
 			bool localRequest,
@@ -369,10 +389,16 @@ public:
 	/** The port-id that locally identifies the flow */
 	int portId;
 
+	/**
+	 * True if the flow will be used by internal IPCP tasks (e.g. layer management),
+	 * false otherwise (used by an external app)
+	 */
+	bool internal;
+
 	/** The application that requested the flow deallocation*/
 	ApplicationProcessNamingInformation applicationName;
 
-        FlowDeallocateRequestEvent() : portId(-1) { }
+        FlowDeallocateRequestEvent() : portId(-1), internal(false) { }
 	FlowDeallocateRequestEvent(int portId,
 			const ApplicationProcessNamingInformation& appName,
 			unsigned int sequenceNumber);
@@ -415,6 +441,9 @@ public:
         /** The name of the application being registered */
         ApplicationProcessNamingInformation appName;
 
+        /** The name of the DAF of the application being registered */
+        ApplicationProcessNamingInformation dafName;
+
         /**
          * The id of the IPC process being registered (0 if it is
          * an application
@@ -430,7 +459,7 @@ public:
 	ApplicationRegistrationInformation();
 	ApplicationRegistrationInformation(
 		ApplicationRegistrationType applicationRegistrationType);
-    const std::string toString();
+	const std::string toString();
 };
 
 /**
@@ -669,18 +698,16 @@ class Neighbor {
 
 public:
         Neighbor();
-        Neighbor(const Neighbor &other);
-        Neighbor& operator=(const Neighbor &other);
         bool operator==(const Neighbor &other) const;
         bool operator!=(const Neighbor &other) const;
 #ifndef SWIG
-        const ApplicationProcessNamingInformation& get_name() const;
+        const ApplicationProcessNamingInformation get_name() const;
         void set_name(const ApplicationProcessNamingInformation& name);
-        const ApplicationProcessNamingInformation&
+        const ApplicationProcessNamingInformation
                 get_supporting_dif_name() const;
         void set_supporting_dif_name(
                 const ApplicationProcessNamingInformation& supporting_dif_name);
-        const std::list<ApplicationProcessNamingInformation>& get_supporting_difs();
+        const std::list<ApplicationProcessNamingInformation> get_supporting_difs();
         void set_supporting_difs(
                         const std::list<ApplicationProcessNamingInformation>& supporting_difs);
         void add_supporting_dif(const ApplicationProcessNamingInformation& supporting_dif);
@@ -725,6 +752,7 @@ public:
 
         /// The underlying portId used to communicate with this neighbor
         int underlying_port_id_;
+        int internal_port_id;
 
         /// The last time a KeepAlive message was received from
         /// that neighbor, in ms

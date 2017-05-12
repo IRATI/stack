@@ -201,11 +201,12 @@ typedef struct version_info {
 } vers_info_t;
 
 enum cdap_dest_t { CDAP_DEST_PORT,
-		   CDAP_DEST_ADDRESS,
+		   CDAP_DEST_ADATA,
 		   CDAP_DEST_IPCM };
 
 typedef struct connection_handler {
 	unsigned int port_id;
+	unsigned int address;
 	cdap_dest_t cdap_dest;
 	int abs_syntax;
 	ep_info_t src_;
@@ -222,6 +223,7 @@ typedef struct connection_handler {
 		abs_syntax = 0;
 		port_id = 0;
 		fwd_mgs_seqn = 0;
+		address = 0;
 	};
 } con_handle_t;
 

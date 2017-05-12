@@ -27,6 +27,7 @@
 
 //Addons
 #include "addons/console.h"
+#include "addons/mobility-manager.h"
 #include "addons/scripting.h"
 #include "addons/ma/agent.h"
 //[+] Add more here...
@@ -52,6 +53,8 @@ void Addon::factory(rinad::RINAConfiguration& conf, const std::string& name){
 			addon = new IPCMConsole(conf.local.consoleSocket);
 		}else if(name == ScriptingEngine::NAME){
 			addon = new ScriptingEngine();
+		}else if(name == MobilityManager::NAME){
+			addon = new MobilityManager(conf);
 		}else{
 			//TODO add other types
 			LOG_EMERG("Uknown addon name '%s'. Ignoring...", name.c_str());

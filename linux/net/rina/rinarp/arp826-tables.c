@@ -32,6 +32,7 @@
 #define RINA_PREFIX "arp826-tables"
 
 #include "logs.h"
+#include "common.h"
 #include "debug.h"
 #include "utils.h"
 /* FIXME: End of dependencies ... */
@@ -396,8 +397,6 @@ int tbl_add(struct table *       instance,
 
                 /* FIXME: What about the other conditions ??? */
                 if (gha_is_equal(tble_ha(pos), tble_ha(entry))) {
-                        LOG_WARN("We already have the same GHA in the cache");
-
                         /* FIXME: What should we do here? */
 
                         /* Remember to: spin_unlock(&instance->lock); */
