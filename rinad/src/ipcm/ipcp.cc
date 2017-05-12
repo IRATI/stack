@@ -249,6 +249,16 @@ void IPCMIPCProcess::enroll(
 	proxy_->enroll(difName, supportingDifName, neighborName, opaque);
 }
 
+void IPCMIPCProcess::enroll_prepare_handover(const rina::ApplicationProcessNamingInformation& difName,
+			     	  	     const rina::ApplicationProcessNamingInformation& supportingDifName,
+					     const rina::ApplicationProcessNamingInformation& neighborName,
+					     const rina::ApplicationProcessNamingInformation& disc_neigh_name,
+					     unsigned int opaque)
+{
+	proxy_->enroll_prepare_hand(difName, supportingDifName, neighborName,
+				    disc_neigh_name, opaque);
+}
+
 void IPCMIPCProcess::disconnectFromNeighbor(const rina::ApplicationProcessNamingInformation& neighbor,
 					    unsigned int opaque)
 {

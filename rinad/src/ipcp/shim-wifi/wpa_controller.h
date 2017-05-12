@@ -96,7 +96,7 @@ private:
 	void __process_association_message(const std::string& msg);
 	void __process_key_negotiation_message(const std::string& msg);
 	void __process_connected_message(const std::string& msg);
-	void __process_disconnected_message(void);
+	void __process_disconnected_message(const std::string& msg);
 	void __process_scan_results_message(void);
 	int __send_command(const std::string& cmd);
 	std::string __send_command_with_results(const std::string& cmd);

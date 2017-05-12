@@ -422,6 +422,15 @@ public:
 			unsigned int opaque);
 
 	/**
+	 * Idem to enrollment, but also tell the IPCP to prepare for handover
+	 */
+	void enroll_prepare_hand(const ApplicationProcessNamingInformation& difName,
+				 const ApplicationProcessNamingInformation& supportingDifName,
+				 const ApplicationProcessNamingInformation& neighborName,
+				 const ApplicationProcessNamingInformation& disc_neigh_name,
+				 unsigned int opaque);
+
+	/**
 	 * Invoked by the IPC Manager to force an IPC Process to deallocate all the
 	 * N-1 flows to a neighbor IPC Process (for example, because it has been
 	 * identified as a "rogue" member of the DIF). The operation blocks until the

@@ -56,7 +56,8 @@ public:
 	/// directory and the directory forwarding table if needed)
 	/// @param flowRequestEvent The flow allocation request
 	/// @throws rina::Exception if there are not enough resources to fulfill the allocate request
-	virtual void submitAllocateRequest(const rina::FlowRequestEvent& event) = 0;
+	virtual void submitAllocateRequest(const rina::FlowRequestEvent& event,
+					   unsigned int address = 0) = 0;
 
 	virtual void processCreateConnectionResponseEvent(
 			const rina::CreateConnectionResponseEvent& event) = 0;
@@ -71,10 +72,10 @@ public:
 	/// allocation request.  (If the application is not executing, the FAI will cause the application
 	/// to be instantiated.)
 	/// @param flow
-	/// @param portId the destination portid as decided by the Flow allocator
-	/// @param requestMessate the CDAP request message
-	/// @param underlyingPortId the port id to reply later on
-	virtual void createFlowRequestMessageReceived(configs::Flow* flow, const std::string& object_name,
+	/// @param object_name the object name
+	/// @param invoke_id the invoke id for the M_CREATE_R message
+	virtual void createFlowRequestMessageReceived(configs::Flow* flow,
+						      const std::string& object_name,
 						      int invoke_id) = 0;
 
 	/// When the FAI gets a Allocate_Response from the destination application,
@@ -255,6 +256,7 @@ struct OngoingFlowAllocState {
 	std::string object_name;
 	int invoke_id;
 	bool local_request;
+	unsigned int address;
 };
 
 /// Implementation of the Flow Allocator component
@@ -268,7 +270,8 @@ public:
 	void createFlowRequestMessageReceived(configs::Flow * flow,
 					      const std::string& object_name,
 					      int invoke_id);
-	void submitAllocateRequest(const rina::FlowRequestEvent& flowRequestEvent);
+	void submitAllocateRequest(const rina::FlowRequestEvent& flowRequestEvent,
+				   unsigned int address = 0);
 	void processCreateConnectionResponseEvent(
 			const rina::CreateConnectionResponseEvent& event);
 	void submitAllocateResponse(const rina::AllocateFlowResponseEvent& event);
@@ -300,7 +303,8 @@ private:
 	void replyToIPCManager(const rina::FlowRequestEvent& event, int result);
 
 	void __submitAllocateRequest(const rina::FlowRequestEvent& event,
-				     int port_id);
+				     int port_id,
+				     unsigned int address);
 	void __createFlowRequestMessageReceived(configs::Flow * flow,
 		             	     	     	const std::string& object_name,
 						int invoke_id,
@@ -334,7 +338,8 @@ public:
 	unsigned int get_allocate_response_message_handle() const;
 	void set_allocate_response_message_handle(
 			unsigned int allocate_response_message_handle);
-	void submitAllocateRequest(const rina::FlowRequestEvent& event);
+	void submitAllocateRequest(const rina::FlowRequestEvent& event,
+				   unsigned int address = 0);
 	void processCreateConnectionResponseEvent(
 			const rina::CreateConnectionResponseEvent& event);
 	void createFlowRequestMessageReceived(configs::Flow * flow,
@@ -373,9 +378,9 @@ private:
 	void initialize(IPCProcess * ipc_process,
 			IFlowAllocator * flow_allocator,
 			int port_id);
-	void replyToIPCManager(rina::FlowRequestEvent & event,
-			       int result);
+	void replyToIPCManager(int result);
 	void releasePortId();
+	void complete_flow_allocation(bool success);
 
 	/// Release the port-id, unlock and remove the FAI from the FA
 	void releaseUnlockRemove();
@@ -404,7 +409,6 @@ private:
 	unsigned int allocate_response_message_handle_;
 	int invoke_id_;
 	rina::Lockable lock_;
-	rina::cdap_rib::con_handle_t con;
 };
 
 class TearDownFlowTimerTask: public rina::TimerTask {

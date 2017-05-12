@@ -48,7 +48,7 @@
 
 
 //Constants
-#define PROMISE_TIMEOUT_S 5
+#define PROMISE_TIMEOUT_S 8
 #define PROMISE_RETRY_NSEC 10000000 //10ms
 #define _PROMISE_1_SEC_NSEC 1000000000
 
@@ -388,8 +388,10 @@ public:
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t enroll_to_dif(Addon* callee, Promise* promise,
-			const unsigned short ipcp_id,
-			const rinad::NeighborData& neighbor);
+				 const unsigned short ipcp_id,
+				 const rinad::NeighborData& neighbor,
+				 bool prepare_hand = false,
+				 const rina::ApplicationProcessNamingInformation& disc_neigh = rina::ApplicationProcessNamingInformation());
 
 	//
 	// Ask the IPC Process to cancel the application connection and all N-1 flows

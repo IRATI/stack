@@ -452,7 +452,7 @@ class CDAPSessionManagerInterface
 	virtual CDAPSession* createCDAPSession(int port_id) = 0;
 	virtual void getAllCDAPSessionIds(std::vector<int> &vector) = 0;
 	virtual CDAPSession* get_cdap_session(int port_id) = 0;
-	cdap_rib::connection_handler get_con_handler(int port_id);
+	cdap_rib::connection_handler & get_con_handler(int port_id);
 	virtual void encodeCDAPMessage(const cdap_m_t& cdap_message,
 				       ser_obj_t& result) = 0;
 	virtual void decodeCDAPMessage(const ser_obj_t &cdap_message,

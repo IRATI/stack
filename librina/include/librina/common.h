@@ -187,6 +187,8 @@ public:
 		FLOW_DEALLOCATED
 	};
 
+	FlowInformation();
+
 	/** The local application name */
 	ApplicationProcessNamingInformation localAppName;
 
@@ -201,6 +203,9 @@ public:
 
 	/** File descriptor to access this flow */
 	int fd;
+
+	/** 0 if the user of this flow is an app, the IPCP id otherwise */
+	unsigned short user_ipcp_id;
 
 	/** The name of the DIF where the flow has been allocated */
 	ApplicationProcessNamingInformation difName;
@@ -352,6 +357,12 @@ public:
 	/** the ID of the IPC Process that will provide the flow*/
 	unsigned short ipcProcessId;
 
+	/**
+	 * True if the flow will be used by internal IPCP tasks (e.g. layer management),
+	 * false otherwise (used by an external app)
+	 */
+	bool internal;
+
 	FlowRequestEvent();
 	FlowRequestEvent(const FlowSpecification& flowSpecification,
 			bool localRequest,
@@ -378,10 +389,16 @@ public:
 	/** The port-id that locally identifies the flow */
 	int portId;
 
+	/**
+	 * True if the flow will be used by internal IPCP tasks (e.g. layer management),
+	 * false otherwise (used by an external app)
+	 */
+	bool internal;
+
 	/** The application that requested the flow deallocation*/
 	ApplicationProcessNamingInformation applicationName;
 
-        FlowDeallocateRequestEvent() : portId(-1) { }
+        FlowDeallocateRequestEvent() : portId(-1), internal(false) { }
 	FlowDeallocateRequestEvent(int portId,
 			const ApplicationProcessNamingInformation& appName,
 			unsigned int sequenceNumber);
@@ -735,6 +752,7 @@ public:
 
         /// The underlying portId used to communicate with this neighbor
         int underlying_port_id_;
+        int internal_port_id;
 
         /// The last time a KeepAlive message was received from
         /// that neighbor, in ms

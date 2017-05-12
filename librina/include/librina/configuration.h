@@ -71,6 +71,7 @@ class PolicyConfig {
     int get_param_value_as_int(const std::string& name) const;
     unsigned long get_param_value_as_ulong(const std::string& name) const;
     unsigned int get_param_value_as_uint(const std::string& name) const;
+    bool get_param_value_as_bool(const std::string& name) const;
     std::string toString();
     void add_parameter(const PolicyParameter& paremeter);
 #ifndef SWIG
