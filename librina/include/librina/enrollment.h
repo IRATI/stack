@@ -27,6 +27,8 @@
 
 #ifdef __cplusplus
 
+#include <limits>
+
 #include "irm.h"
 #include "timer.h"
 #include "security-manager.h"
@@ -50,14 +52,33 @@ public:
         /** The neighbor to contact */
         ApplicationProcessNamingInformation neighborName;
 
-        EnrollToDAFRequestEvent() { };
+        int current_enroll_attempts;
+
+        bool prepare_for_handover;
+
+        rina::ApplicationProcessNamingInformation disc_neigh_name;
+
+        EnrollToDAFRequestEvent() : current_enroll_attempts(0),
+        		prepare_for_handover(false){ };
         EnrollToDAFRequestEvent(
                 const ApplicationProcessNamingInformation& daf,
                 const ApplicationProcessNamingInformation& supportingDIF,
                 const ApplicationProcessNamingInformation& neighbor,
                 unsigned int sequenceNumber) : IPCEvent(ENROLL_TO_DIF_REQUEST_EVENT, sequenceNumber),
                 	dafName(daf), supportingDIFName(supportingDIF),
-                	neighborName(neighbor) { };
+                	neighborName(neighbor), current_enroll_attempts(0),
+			prepare_for_handover(false) { };
+        EnrollToDAFRequestEvent(
+                const ApplicationProcessNamingInformation& daf,
+                const ApplicationProcessNamingInformation& supportingDIF,
+                const ApplicationProcessNamingInformation& neighbor,
+		bool prepare,
+		const ApplicationProcessNamingInformation& disc_neigh,
+                unsigned int sequenceNumber)
+        		: IPCEvent(ENROLL_TO_DIF_REQUEST_EVENT, sequenceNumber),
+                	dafName(daf), supportingDIFName(supportingDIF),
+                	neighborName(neighbor), current_enroll_attempts(0),
+			prepare_for_handover(prepare), disc_neigh_name(disc_neigh) { };
 };
 
 class DisconnectNeighborRequestEvent: public IPCEvent {
@@ -76,20 +97,18 @@ public:
 class EnrollmentRequest
 {
 public:
-	EnrollmentRequest() : ipcm_initiated_(false) {};
+	EnrollmentRequest() : ipcm_initiated_(false),
+	                      enrollment_attempts(std::numeric_limits<unsigned int>::max()),
+			      abort_timer_task(0) {};
 	EnrollmentRequest(const rina::Neighbor& neighbor) : neighbor_(neighbor),
-		ipcm_initiated_(false) { };
+		ipcm_initiated_(false),
+		enrollment_attempts(std::numeric_limits<unsigned int>::max()),
+		 abort_timer_task(0) { };
 	EnrollmentRequest(const rina::Neighbor& neighbor,
                           const EnrollToDAFRequestEvent & event) : neighbor_(neighbor),
-                 event_(event), ipcm_initiated_(true) { };
-
-	EnrollmentRequest& operator=(const EnrollmentRequest &other)
-	{
-		neighbor_ = other.neighbor_;
-		event_ = other.event_;
-		ipcm_initiated_ = other.ipcm_initiated_;
-		return *this;
-	}
+                 event_(event), ipcm_initiated_(true),
+		 enrollment_attempts(std::numeric_limits<unsigned int>::max()),
+		 abort_timer_task(0) { };
 
 	/// The neighbor to enroll to
 	Neighbor neighbor_;
@@ -99,6 +118,11 @@ public:
 
 	/// True if the enrollment request came via the IPC Manager
 	bool ipcm_initiated_;
+
+	/// Current number of enrollment attempts
+	unsigned int enrollment_attempts;
+
+	TimerTask * abort_timer_task;
 };
 
 /// Interface that must be implementing by classes that provide
@@ -108,12 +132,11 @@ class IEnrollmentTask : public rina::ApplicationEntity,
 public:
 	IEnrollmentTask() : rina::ApplicationEntity(ApplicationEntity::ENROLLMENT_TASK_AE_NAME) { };
 	virtual ~IEnrollmentTask() { };
-	virtual const std::list<Neighbor> get_neighbors() const = 0;
-	virtual std::list<rina::Neighbor*> get_neighbor_pointers() = 0;
+	virtual std::list<Neighbor> get_neighbors() = 0;
 	virtual void add_neighbor(const Neighbor& neighbor) = 0;
 	virtual void add_or_update_neighbor(const Neighbor& neighbor) = 0;
 	virtual void remove_neighbor(const std::string& neighbor_key) = 0;
-	virtual const std::list<std::string> get_enrolled_app_names() const = 0;
+	virtual std::list<std::string> get_enrolled_app_names() = 0;
 
 	/// Process a request to initiate enrollment with a new Neighbor, triggered by the IPC Manager
 	/// @param event
@@ -134,8 +157,9 @@ public:
 	/// @param enrollee true if this App process is the one that initiated the
 	/// enrollment sequence (i.e. it is the application process that wants to
 	/// join the DIF)
-	virtual void enrollmentCompleted(const Neighbor& neighbor,
-                                         bool enrollee) = 0;
+	virtual void enrollmentCompleted(const rina::Neighbor& neighbor, bool enrollee,
+				 	 bool prepare_handover,
+					 const rina::ApplicationProcessNamingInformation& disc_neigh_name) = 0;
 
 	/// Called by the enrollment state machine when the enrollment sequence fails
 	/// @param remotePeer
@@ -145,6 +169,7 @@ public:
 	/// @param reason
 	virtual void enrollmentFailed(const ApplicationProcessNamingInformation& remotePeerNamingInfo,
                                       int portId,
+				      int internal_portId,
                                       const std::string& reason,
                                       bool sendReleaseMessage) = 0;
 

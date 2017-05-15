@@ -745,8 +745,10 @@ namespace neighbor_helpers {
 void toGPB(const rina::Neighbor &obj, rina::messages::neighbor_t &gpb)
 {
         gpb.set_address(obj.address_);
-        gpb.set_applicationprocessname(obj.name_.processName);
-        gpb.set_applicationprocessinstance(obj.name_.processInstance);
+        gpb.set_apname(obj.name_.processName);
+        gpb.set_apinstance(obj.name_.processInstance);
+        gpb.set_aename(obj.name_.entityName);
+        gpb.set_aeinstance(obj.name_.entityInstance);
         for (std::list<rina::ApplicationProcessNamingInformation>::const_iterator it =
                         obj.supporting_difs_.begin();
                         it != obj.supporting_difs_.end(); ++it)
@@ -757,8 +759,10 @@ void toGPB(const rina::Neighbor &obj, rina::messages::neighbor_t &gpb)
 void toModel(const rina::messages::neighbor_t &gpb, rina::Neighbor &des_obj)
 {
         des_obj.address_ = gpb.address();
-        des_obj.name_.processName = gpb.applicationprocessname();
-        des_obj.name_.processInstance = gpb.applicationprocessinstance();
+        des_obj.name_.processName = gpb.apname();
+        des_obj.name_.processInstance = gpb.apinstance();
+        des_obj.name_.entityName = gpb.aename();
+        des_obj.name_.entityInstance = gpb.aeinstance();
         for (int i = 0; i < gpb.supportingdifs_size(); i++)
         {
                 des_obj.supporting_difs_.push_back(
@@ -859,6 +863,7 @@ void EnrollmentInformationRequestEncoder::encode(
 
         gpb.set_address(obj.address_);
         gpb.set_startearly(obj.allowed_to_start_early_);
+        gpb.set_token(obj.token);
 
         for (std::list<rina::ApplicationProcessNamingInformation>::const_iterator it =
                         obj.supporting_difs_.begin();
@@ -880,8 +885,8 @@ void EnrollmentInformationRequestEncoder::decode(
         gpb.ParseFromArray(serobj.message_, serobj.size_);
 
         des_obj.address_ = gpb.address();
-        //FIXME that should read gpb_eir.startearly() but always returns false
-        des_obj.allowed_to_start_early_ = true;
+        des_obj.allowed_to_start_early_ = gpb.startearly();
+        des_obj.token = gpb.token();
 
         for (int i = 0; i < gpb.supportingdifs_size(); ++i)
         {

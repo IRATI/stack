@@ -24,6 +24,7 @@
 
 #include <map>
 
+#include <librina/ipc-manager.h>
 #include "ipcp/components.h"
 
 namespace rinad {
@@ -80,6 +81,14 @@ public:
         virtual void register_application_response_handler(const rina::RegisterApplicationResponseEvent& event) = 0;
         virtual void unregister_application_response_handler(const rina::UnregisterApplicationResponseEvent& event) = 0;
         virtual void update_dif_config_handler(const rina::UpdateDIFConfigurationRequestEvent& event) = 0;
+        virtual void app_reg_response_handler(const rina::IpcmRegisterApplicationResponseEvent& event) = 0;
+        virtual void unreg_app_response_handler(const rina::IpcmUnregisterApplicationResponseEvent& event) = 0;
+        virtual void ipcm_allocate_flow_request_result_handler(const rina::IpcmAllocateFlowRequestResultEvent& event) = 0;
+        virtual void ipcm_deallocate_flow_response_event_handler(const rina::IpcmDeallocateFlowResponseEvent& event) = 0;
+        virtual void ipcp_allocate_port_response_event_handler(const rina::AllocatePortResponseEvent& event) = 0;
+        virtual void ipcp_deallocate_port_response_event_handler(const rina::DeallocatePortResponseEvent& event) = 0;
+        virtual void ipcp_write_mgmt_sdu_response_event_handler(const rina::WriteMgmtSDUResponseEvent& event) = 0;
+        virtual void ipcp_read_mgmt_sdu_notif_event_handler(const rina::ReadMgmtSDUResponseEvent& event) = 0;
         // Cause relevant IPCP components to sync with information
         // exported by the kernel via sysfs
         virtual void sync_with_kernel() = 0;
@@ -87,7 +96,7 @@ public:
 
 protected:
         IPCProcessOperationalState state;
-		std::map<unsigned int, rina::AssignToDIFRequestEvent> pending_events_;
+	std::map<unsigned int, rina::AssignToDIFRequestEvent> pending_events_;
         std::map<unsigned int, rina::SetPolicySetParamRequestEvent>
                 pending_set_policy_set_param_events;
         std::map<unsigned int, rina::SelectPolicySetRequestEvent>
@@ -141,6 +150,14 @@ public:
         virtual void register_application_response_handler(const rina::RegisterApplicationResponseEvent& event);
         virtual void unregister_application_response_handler(const rina::UnregisterApplicationResponseEvent& event);
         virtual void update_dif_config_handler(const rina::UpdateDIFConfigurationRequestEvent& event);
+        virtual void app_reg_response_handler(const rina::IpcmRegisterApplicationResponseEvent& event);
+        virtual void unreg_app_response_handler(const rina::IpcmUnregisterApplicationResponseEvent& event);
+        virtual void ipcm_allocate_flow_request_result_handler(const rina::IpcmAllocateFlowRequestResultEvent& event);
+        virtual void ipcm_deallocate_flow_response_event_handler(const rina::IpcmDeallocateFlowResponseEvent& event);
+        virtual void ipcp_allocate_port_response_event_handler(const rina::AllocatePortResponseEvent& event);
+        virtual void ipcp_deallocate_port_response_event_handler(const rina::DeallocatePortResponseEvent& event);
+        virtual void ipcp_write_mgmt_sdu_response_event_handler(const rina::WriteMgmtSDUResponseEvent& event);
+        virtual void ipcp_read_mgmt_sdu_notif_event_handler(const rina::ReadMgmtSDUResponseEvent& event);
 	virtual void sync_with_kernel(void);
 };
 
@@ -219,11 +236,16 @@ public:
         void plugin_load_handler(const rina::PluginLoadRequestEvent& event);
         void update_crypto_state_response_handler(const rina::UpdateCryptoStateResponseEvent& event);
         void fwd_cdap_msg_handler(rina::FwdCDAPMsgRequestEvent& event);
+        void ipcp_allocate_port_response_event_handler(const rina::AllocatePortResponseEvent& event);
+        void ipcp_deallocate_port_response_event_handler(const rina::DeallocatePortResponseEvent& event);
+        void ipcp_write_mgmt_sdu_response_event_handler(const rina::WriteMgmtSDUResponseEvent& event);
+        void ipcp_read_mgmt_sdu_notif_event_handler(const rina::ReadMgmtSDUResponseEvent& event);
         void sync_with_kernel(void);
 
 private:
         void subscribeToEvents();
         void addressChange(rina::AddressChangeEvent * event);
+
         KernelSyncTrigger * kernel_sync;
         unsigned int old_address;
         bool address_change_period;
@@ -242,7 +264,8 @@ public:
 					  	  unsigned short id,
 						  unsigned int ipc_manager_port,
 						  std::string log_level,
-						  std::string log_file);
+						  std::string log_file,
+						  std::string install_dir);
 
 	static IPCProcessImpl* getIPCP();
 };

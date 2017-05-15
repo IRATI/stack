@@ -36,7 +36,16 @@ ipcmanager.conf: ipcmanager.conf.in \
 	chmod a-w $@.tmp
 	mv $@.tmp $@
 
-CLEANFILES    += ipcmanager.conf
-BUILT_SOURCES += ipcmanager.conf
-EXTRA_DIST    += ipcmanager.conf.in default.dif shim-eth-vlan.dif da.map
-sysconf_DATA  += ipcmanager.conf default.dif shim-eth-vlan.dif da.map
+wpa_supplicant.conf: wpa_supplicant.conf.in \
+	Makefile
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.in >$@.tmp
+	chmod a-w $@.tmp
+	mv $@.tmp $@
+
+CLEANFILES    += ipcmanager.conf wpa_supplicant.conf
+BUILT_SOURCES += ipcmanager.conf wpa_supplicant.conf
+EXTRA_DIST    += ipcmanager.conf.in default.dif shim-eth-vlan.dif da.map wpa_supplicant.conf.in
+sysconf_DATA  += ipcmanager.conf default.dif shim-eth-vlan.dif da.map wpa_supplicant.conf

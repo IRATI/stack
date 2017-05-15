@@ -122,7 +122,7 @@ unsigned int IPCResourceManager::allocateNMinus1Flow(const FlowInformation& flow
 										flowInformation.remoteAppName,
 										flowInformation.difName,
 										flowInformation.flowSpecification);
-			} else {
+		} else {
 			handle = ipcManager->requestFlowAllocationInDIF(flowInformation.localAppName,
 								 	flowInformation.remoteAppName,
 								 	flowInformation.difName,
@@ -234,7 +234,7 @@ void IPCResourceManager::flowAllocationRequested(const FlowRequestEvent& event)
 		return;
 	}
 
-	LOG_INFO("Accepted new flow from IPC Process %s-%s",
+	LOG_INFO("Accepted new flow from Application %s-%s",
 		  event.remoteApplicationName.processName.c_str(),
 	          event.remoteApplicationName.processInstance.c_str());
 	try {
@@ -337,13 +337,20 @@ bool IPCResourceManager::isSupportingDIF(const ApplicationProcessNamingInformati
 std::list<FlowInformation> IPCResourceManager::getAllNMinusOneFlowInformation() const
 {
 	std::vector<FlowInformation> flows;
+	std::list<FlowInformation> result;
+
 	if (ipcp) {
 		flows = extendedIPCManager->getAllocatedFlows();
 	} else {
 		flows = ipcManager->getAllocatedFlows();
 	}
-	std::list<FlowInformation> result;
+
 	for (unsigned int i=0; i<flows.size(); i++) {
+		//Don't report internal flows in case of an IPCP
+		if (ipcp && flows[i].fd > 0) {
+			continue;
+		}
+
 		result.push_back(flows[i]);
 	}
 

@@ -63,6 +63,7 @@ struct sdu *sdu_create_gfp(size_t data_len, gfp_t flags)
 	tmp->sdup_tail = NULL;
 	skb_reserve(tmp->skb, MAX_PCIS_LEN);
 	skb_put(tmp->skb, data_len);
+	tmp->skb->ip_summed = CHECKSUM_UNNECESSARY;
 
 	LOG_DBG("SDU allocated at %pk, with buffer %pk", tmp, tmp->skb);
 	return to_sdu(tmp);

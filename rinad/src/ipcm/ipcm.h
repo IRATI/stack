@@ -48,7 +48,7 @@
 
 
 //Constants
-#define PROMISE_TIMEOUT_S 5
+#define PROMISE_TIMEOUT_S 8
 #define PROMISE_RETRY_NSEC 10000000 //10ms
 #define _PROMISE_1_SEC_NSEC 1000000000
 
@@ -358,7 +358,7 @@ public:
 	//
 	ipcm_res_t assign_to_dif(Addon* callee, Promise* promise,
 			const unsigned short ipcp_id,
-			rinad::DIFTemplate * dif_template,
+			rinad::DIFTemplate& dif_template,
 			const rina::ApplicationProcessNamingInformation&
 				difName);
 	ipcm_res_t assign_to_dif(Addon* callee, Promise* promise,
@@ -388,8 +388,10 @@ public:
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	ipcm_res_t enroll_to_dif(Addon* callee, Promise* promise,
-			const unsigned short ipcp_id,
-			const rinad::NeighborData& neighbor);
+				 const unsigned short ipcp_id,
+				 const rinad::NeighborData& neighbor,
+				 bool prepare_hand = false,
+				 const rina::ApplicationProcessNamingInformation& disc_neigh = rina::ApplicationProcessNamingInformation());
 
 	//
 	// Ask the IPC Process to cancel the application connection and all N-1 flows
@@ -547,6 +549,8 @@ public:
 	//
 	std::string get_log_level() const;
 
+	IPCMIPCProcessFactory * get_ipcp_factory();
+
 	//
 	// Set the config
 	//
@@ -578,12 +582,12 @@ public:
 		req_to_stop = true;
 	}
 
-		/// returns the forwarded object sent with invoke_id and
-		/// removes it from the map
-		/// @param invoke_id
-		/// @return rina::rib::DelegationObj*
-		delegated_stored_t* get_forwarded_object(int invoke_id,
-												 bool remove);
+	/// returns the forwarded object sent with invoke_id and
+	/// removes it from the map
+	/// @param invoke_id
+	/// @return rina::rib::DelegationObj*
+	delegated_stored_t* get_forwarded_object(int invoke_id,
+						 bool remove);
 
         //Generator of opaque identifiers
         rina::ConsecutiveUnsignedIntegerGenerator __tid_gen;
@@ -596,7 +600,6 @@ public:
 
         //Catalog of policies
         Catalog catalog;
-
 
 protected:
 
@@ -731,8 +734,9 @@ protected:
 
 	//Misc
 	void os_process_finalized_handler(rina::OSProcessFinalizedEvent *event);
-	void ipc_process_daemon_initialized_event_handler(
-				rina::IPCProcessDaemonInitializedEvent *e);
+	void ipc_process_daemon_initialized_event_handler(rina::IPCProcessDaemonInitializedEvent *e);
+	void ipc_process_create_response_event_handler(rina::CreateIPCPResponseEvent *e);
+	void ipc_process_destroy_response_event_handler(rina::DestroyIPCPResponseEvent *e);
 	bool ipcm_register_response_common(
 		rina::IpcmRegisterApplicationResponseEvent *event,
 		const rina::ApplicationProcessNamingInformation& app_name,
@@ -882,6 +886,10 @@ private:
 	//Singleton
 	IPCManager_();
 	virtual ~IPCManager_();
+
+	rina::Lockable req_lock;
+	std::map<unsigned int, unsigned short> pending_cipcp_req;
+	std::map<unsigned int, unsigned short> pending_dipcp_req;
 
 	//I/O loop main thread
 	rina::Thread* io_thread;

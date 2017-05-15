@@ -48,6 +48,7 @@ public:
 	int get_only_milliseconds() const;
 	bool operator<(const Time &other) const;
 	void set_timeval(timeval t);
+	static int get_time_in_ms();
 	timeval time_;
 };
 

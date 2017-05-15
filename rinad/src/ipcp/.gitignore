@@ -1,4 +1,6 @@
 *.o
+*.swo
+*.swp
 
 /ipcp
 /test-encoders
