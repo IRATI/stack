@@ -104,7 +104,7 @@ static struct ringq * ringq_create_gfp(gfp_t flags, unsigned int length, size_t 
         	q->comp = NULL;
         	q->add  = NULL;
 
-                LOG_INFO("RINGQ %pK:%pK:%pK:%pK created successfully", q, &q->head, q->cur, &q->cur->list);
+                LOG_DBG("RINGQ %pK:%pK:%pK:%pK created successfully", q, &q->head, q->cur, &q->cur->list);
 
                 return q;
         }
@@ -134,7 +134,7 @@ static struct ringq * ringq_create_gfp(gfp_t flags, unsigned int length, size_t 
         	}
         	q->comp = NULL;
 
-                LOG_INFO("RINGQ %pK:%pK:%pK:%pK created successfully", q, &q->head, q->cur, &q->cur->list);
+                LOG_DBG("RINGQ %pK:%pK:%pK:%pK created successfully", q, &q->head, q->cur, &q->cur->list);
 
                 return q;
         }
@@ -201,7 +201,7 @@ int ringq_push(struct ringq * q, void * e)
         spin_lock_bh(&q->lock);
         if (q->occupation >= q->length) {
         	spin_unlock_bh(&q->lock);
-        	LOG_INFO("Attempted to push into a full ringq");
+        	LOG_WARN("Attempted to push into a full ringq");
         	return -1;
         }
         q->cur->data = e;
@@ -318,7 +318,7 @@ int ringq_order_push(struct ringq * q, void * e)
 
         if (q->occupation >= q->length) {
         	spin_unlock_bh(&q->lock);
-        	LOG_INFO("Attempted push into a full RINGQ");
+        	LOG_WARN("Attempted push into a full RINGQ");
 
         	return -1;
         }
@@ -389,7 +389,7 @@ int ringq_push_entry(struct ringq * q, void * entry)
 
         if (q->occupation >= q->length) {
         	spin_unlock_bh(&q->lock);
-        	LOG_INFO("Attempted push into a full RINGQ");
+        	LOG_WARN("Attempted push into a full RINGQ");
 
         	return -1;
         }

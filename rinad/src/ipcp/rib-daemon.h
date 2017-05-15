@@ -56,16 +56,31 @@ private:
         rina::rib::rib_handle_t rib;
 };
 
-/// The RIB Daemon will start a thread that continuously tries to retrieve management
-/// SDUs directed to this IPC Process
-void * doManagementSDUReaderWork(void* data);
+/// Reads layer management SDUs from internal flows
+class InternalFlowSDUReader : public rina::SimpleThread
+{
+public:
+	InternalFlowSDUReader(rina::ThreadAttributes * threadAttributes,
+			      int port_id,
+			      int fd_,
+			      int cdap_session);
+	~InternalFlowSDUReader() throw() {};
+	int run();
+
+	int portid;
+	int cdap_session;
+	int fd;
+};
+
+class StopInternalFlowReaderTimerTask;
+class IPCPCDAPIOHandler;
 
 ///Full implementation of the RIB Daemon
 class IPCPRIBDaemonImpl : public IPCPRIBDaemon, public rina::InternalEventListener {
 public:
-		IPCPRIBDaemonImpl(rina::cacep::AppConHandlerInterface *app_con_callback);
-		~IPCPRIBDaemonImpl();
-		rina::rib::RIBDaemonProxy * getProxy();
+	IPCPRIBDaemonImpl(rina::cacep::AppConHandlerInterface *app_con_callback);
+	~IPCPRIBDaemonImpl();
+	rina::rib::RIBDaemonProxy * getProxy();
         void set_application_process(rina::ApplicationProcess * ap);
         void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
         void eventHappened(rina::InternalEvent * event);
@@ -73,19 +88,32 @@ public:
         const rina::rib::rib_handle_t & get_rib_handle();
         int64_t addObjRIB(const std::string& fqn, rina::rib::RIBObj** obj);
         void removeObjRIB(const std::string& fqn);
+        void start_internal_flow_sdu_reader(int port_id,
+        				    int fd,
+					    int cdap_session);
+        void stop_internal_flow_sdu_reader(int port_id);
+        void processReadManagementSDUEvent(const rina::ReadMgmtSDUResponseEvent& event);
+        int get_fd(unsigned int cdap_session);
 
 private:
-	void initialize_rib_daemon(rina::cacep::AppConHandlerInterface *app_con_callback);
+        friend class StopInternalFlowReaderTimerTask;
 
 	//Handle to the RIB
 	rina::rib::rib_handle_t rib;
-
+	rina::Timer timer;
         INMinusOneFlowManager * n_minus_one_flow_manager_;
         rina::Thread * management_sdu_reader_;
+        IPCPCDAPIOHandler * io_handler;
 
         /// Lock to control that when sending a message requiring a reply the
         /// CDAP Session manager has been updated before receiving the response message
         rina::Lockable atomic_send_lock_;
+
+        std::map<int, InternalFlowSDUReader *> iflow_sdu_readers;
+        std::map<int, int> fds;
+        rina::Lockable iflow_readers_lock;
+
+        void initialize_rib_daemon(rina::cacep::AppConHandlerInterface *app_con_callback);
 
         void subscribeToEvents();
 
@@ -93,6 +121,22 @@ private:
         /// any CDAP sessions over it should be terminated.
         void nMinusOneFlowDeallocated(int portId);
         void nMinusOneFlowAllocated(rina::NMinusOneFlowAllocatedEvent * event);
+
+        void __stop_internal_flow_sdu_reader(int port_id);
+};
+
+/// The RIB Daemon will start a thread that continuously tries to retrieve management
+/// SDUs directed to this IPC Process
+void * doManagementSDUReaderWork(void* data);
+
+class StopInternalFlowReaderTimerTask: public rina::TimerTask {
+public:
+	StopInternalFlowReaderTimerTask(IPCPRIBDaemonImpl * ribd, int pid);
+	void run();
+
+private:
+	IPCPRIBDaemonImpl * rib_daemon;
+	int port_id;
 };
 
 } //namespace rinad

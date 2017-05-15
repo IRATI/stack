@@ -31,9 +31,6 @@ obj-$(CONFIG_RINA) +=						\
 	sdup-errc-ps-default.o					\
 	sdup-ttl-ps-default.o				
 
-obj-y +=							\
-	syscalls.o
-
 obj-m +=							\
 	rina-default-plugin.o
 	

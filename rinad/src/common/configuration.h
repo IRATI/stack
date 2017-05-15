@@ -48,6 +48,7 @@ class EnrollmentInformationRequest {
         unsigned int address_;
         std::list<rina::ApplicationProcessNamingInformation> supporting_difs_;
         bool allowed_to_start_early_;
+        std::string token;
 };
 
 /// Encapsulates all the information required to manage a Flow
@@ -67,6 +68,8 @@ class Flow {
         rina::Connection* getActiveConnection() const;
         std::string toString();
         const std::string getKey() const;
+        rina::FlowInformation to_flow_information(const std::string dif_name,
+        					  int port_id);
 
         /// The application that requested the flow
         rina::ApplicationProcessNamingInformation source_naming_info;
@@ -115,6 +118,9 @@ class Flow {
 
         ///True if this IPC process is the source of the flow, false otherwise
         bool source;
+
+        ///True if this flow is used by the layer management tasks of the IPCP, false otherwise
+        bool internal;
 };
 
 typedef struct {

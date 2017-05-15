@@ -90,11 +90,6 @@ test_concurrency_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_concurrency_CXXFLAGS = $(COMMONCXXFLAGS)
 test_concurrency_LDFLAGS  = $(FUNCTIONALLDFLAGS)
 
-test_syscalls_SOURCES  = test-syscalls.cc
-test_syscalls_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
-test_syscalls_CXXFLAGS = $(COMMONCXXFLAGS)
-test_syscalls_LDFLAGS  = $(FUNCTIONALLDFLAGS)
-
 test_timer_SOURCES  = test-timer.cc
 test_timer_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_timer_CXXFLAGS = $(COMMONCXXFLAGS)
@@ -113,7 +108,6 @@ check_PROGRAMS =				\
 	test-netlink-manager			\
 	test-netlink-parsers			\
 	test-concurrency			\
-	test-syscalls				\
 	test-timer				\
 	test-rib_v2
 
@@ -131,15 +125,11 @@ FUNCTIONAL_PASS_TESTS = \
 	test-netlink-manager \
 	test-netlink-parsers \
 	test-concurrency \
-	test-syscalls \
 	test-timer
 
 FUNCTIONAL_XFAIL_TESTS =
 
 FUNCTIONAL_TESTS = $(FUNCTIONAL_PASS_TESTS) $(FUNCTIONAL_XFAIL_TESTS)
-
-KERNEL_DEBUG_PASS_TESTS =			\
-	test-syscalls 
 
 KERNEL_DEBUG_XFAIL_TESTS =
 
@@ -154,6 +144,5 @@ check-all: check check-functional
 # ADD to functional tests plus backslash
 #test-netlink-manager			
 #test-netlink-parsers			
-#test-concurrency			
-#test-syscalls				
+#test-concurrency					
 #test-timer				

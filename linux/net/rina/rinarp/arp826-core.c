@@ -31,6 +31,7 @@
 /* FIXME: The following dependencies have to be removed */
 #define RINA_PREFIX "arp826-core"
 
+#include "common.h"
 #include "logs.h"
 #include "debug.h"
 #include "utils.h"

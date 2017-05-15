@@ -111,6 +111,26 @@ public:
 	virtual void deallocateFlow(int portId) = 0;
 	virtual void add_enrollment_state_machine(int portId, IEnrollmentStateMachine * stateMachine) = 0;
 	virtual void update_neighbor_address(const rina::Neighbor& neighbor) = 0;
+	// Return the con_handle to the next hop to reach the address
+	virtual int get_con_handle_to_address(unsigned int address,
+					      rina::cdap_rib::con_handle_t& con) = 0;
+	virtual int get_neighbor_info(rina::Neighbor& neigh) = 0;
+	virtual void clean_state(unsigned int port_id) = 0;
+
+	/// The maximum time to wait between steps of the enrollment sequence (in ms)
+	int timeout_;
+
+	/// Maximum number of enrollment attempts
+	unsigned int max_num_enroll_attempts_;
+
+	/// Watchdog period in ms
+	int watchdog_per_ms_;
+
+	/// The neighbor declared dead interval
+	int declared_dead_int_ms_;
+
+	/// True if a reliable_n_flow is to be used, false otherwise
+	bool use_reliable_n_flow;
 };
 
 /// Policy set of the IPCP enrollment task
@@ -162,8 +182,11 @@ public:
 	/// with a status of pending, or whether a response is withheld until an Allocate_Response can be delivered
 	/// with a status of success or failure.
 	/// @param allocateRequest the characteristics of the flow to be allocated.
+	/// @param address if the task that requests the flow already knows the address where to forward the
+	/// flow request, then the DFT lookup is ommitted
 	/// to honour the request
-	virtual void submitAllocateRequest(const rina::FlowRequestEvent& flowRequestEvent) = 0;
+	virtual void submitAllocateRequest(const rina::FlowRequestEvent& flowRequestEvent,
+					   unsigned int address = 0) = 0;
 
 	virtual void processCreateConnectionResponseEvent(const rina::CreateConnectionResponseEvent& event) = 0;
 
@@ -195,6 +218,9 @@ public:
 	/// Called by the flow allocator instance when it finishes to cleanup the state.
 	/// @param portId
 	virtual void removeFlowAllocatorInstance(int portId) = 0;
+
+	virtual void processAllocatePortResponse(const rina::AllocatePortResponseEvent& event) = 0;
+	virtual void processDeallocatePortResponse(const rina::DeallocatePortResponseEvent& event) = 0;
 
         // Plugin support
 	virtual configs::Flow* createFlow() = 0;
@@ -380,6 +406,16 @@ public:
 	virtual std::list<rina::RoutingTableEntry> get_rt_entries() = 0;
 	/// This operation takes ownership of the entries
 	virtual void set_rt_entries(const std::list<rina::RoutingTableEntry*>& rt) = 0;
+	// Returns the next hop address towards the destination
+	virtual unsigned int get_next_hop_address(unsigned int dest_address) = 0;
+	// Returns the N-1 port towards the destination
+	virtual unsigned int get_n1_port_to_address(unsigned int dest_address) = 0;
+
+	/// Add a temporary entry to the PDU FTE, until the routing policy
+	/// provides it when it modifies the forwarding table.
+	/// Takes ownership of the entry.
+	virtual void add_temp_pduft_entry(unsigned int dest_address, int port_id) = 0;
+	virtual void remove_temp_pduft_entry(unsigned int dest_address) = 0;
 
 	IPDUFTGeneratorPs * pduft_gen_ps;
 };
@@ -439,6 +475,7 @@ public:
         virtual int64_t addObjRIB(const std::string& fqn,
         			  rina::rib::RIBObj** obj) = 0;
         virtual void removeObjRIB(const std::string& fqn) = 0;
+        virtual void processReadManagementSDUEvent(const rina::ReadMgmtSDUResponseEvent& event) = 0;
 };
 
 /// IPC Process interface

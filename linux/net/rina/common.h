@@ -23,11 +23,12 @@
 #ifndef RINA_COMMON_H
 #define RINA_COMMON_H
 
+#define ETH_P_RINA      0xD1F0          /* Recursive Internet Architecture [ NOT AN OFFICIALLY REGISTERED ID ] */
+
 #include <linux/types.h>
 #include <linux/poll.h>
 
 #include "rds/rstr.h"
-
 
 /* FIXME: Shouldn't we keep contrained to int32 ids ? */
 typedef int           port_id_t;

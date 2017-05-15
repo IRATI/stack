@@ -1,0 +1,30 @@
+#Control interface dir
+ctrl_interface=@runstatedir@/
+
+# Automatic network selection behavior
+# 0 = do not automatically go through Interworking network selection
+#     (i.e., require explicit interworking_select command for this; default)
+# 1 = perform Interworking network selection if one or more
+#     credentials have been configured and scan did not find a
+#     matching network block
+auto_interworking=0
+
+# Disaable Interworking
+interworking=0
+
+#Networks section
+
+network={
+        ssid="my_ssid_dif_name"
+        #psk="password"
+	psk=<passphrase generated with wpa_passphrase>
+	bssid=<1st AP's MAC>
+}
+
+network={
+        ssid="my_ssid_dif_name"
+        #psk="password"
+	psk=<passphrase generated with wpa_passphrase>
+	bssid=<2nd AP's MAC>
+}
+

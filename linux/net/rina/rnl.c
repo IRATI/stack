@@ -192,13 +192,10 @@ static struct nla_policy iafre_policy[IAFRE_ATTR_MAX + 1] = {
         [IAFRE_ATTR_NOTIFY_SOURCE] = NLA_INIT_FLAG,
 };
 
-static struct nla_policy idfrt_policy[IDFRT_ATTR_MAX + 1] = {
-        [IDFRT_ATTR_PORT_ID] = NLA_INIT_U32,
-};
-
-static struct nla_policy ifdn_policy[IFDN_ATTR_MAX + 1] = {
-        [IFDN_ATTR_PORT_ID] = NLA_INIT_U32,
-        [IFDN_ATTR_CODE]    = NLA_INIT_U32,
+static struct nla_policy ibnlm_policy[IBNLM_ATTR_MAX + 1] = {
+        [IBNLM_ATTR_RESULT] = NLA_INIT_U32,
+	[IBNLM_ATTR_RESULT] = NLA_INIT_U32,
+	[IBNLM_ATTR_RESULT] = NLA_INIT_U32,
 };
 
 static struct nla_policy iccrq_policy[ICCRQ_ATTR_MAX + 1] = {
@@ -226,11 +223,6 @@ static struct nla_policy icurq_policy[ICURQ_ATTR_MAX + 1] = {
         [ICURQ_ATTR_SOURCE_CEP_ID]     = NLA_INIT_U32,
         [ICURQ_ATTR_DEST_CEP_ID]       = NLA_INIT_U32,
         [ICURQ_ATTR_FLOW_USER_IPCP_ID] = NLA_INIT_U16,
-};
-
-static struct nla_policy icdr_policy[ICDR_ATTR_MAX + 1] = {
-        [ICDR_ATTR_PORT_ID]       = NLA_INIT_U32,
-        [ICDR_ATTR_SOURCE_CEP_ID] = NLA_INIT_U32,
 };
 
 static struct nla_policy irar_policy[IRAR_ATTR_MAX + 1] = {
@@ -281,6 +273,27 @@ static struct nla_policy iacr_policy[IACR_ATTR_MAX + 1] = {
 	[IACR_ATTR_DEPRECATE_OLD_TIMEOUT]  = NLA_INIT_U32,
 };
 
+static struct nla_policy iaprm_policy[IAPRM_ATTR_MAX + 1] = {
+	[IAPRM_ATTR_APP_NAME] = NLA_INIT_NESTED,
+};
+
+static struct nla_policy iwmsrm_policy[IWMSRM_ATTR_MAX + 1] = {
+	[IWMSRM_ATTR_SDU] = NLA_INIT_UNSPEC,
+	[IWMSRM_ATTR_PORT_ID] = NLA_INIT_U32,
+	[IWMSRM_ATTR_ADDRESS] = NLA_INIT_U32,
+};
+
+static struct nla_policy icirm_policy[ICIRM_ATTR_MAX + 1] = {
+	[ICIRM_ATTR_IPCP_NAME] = NLA_INIT_NESTED,
+	[ICIRM_ATTR_DIF_TYPE] = NLA_INIT_STRING,
+	[ICIRM_ATTR_IPCP_ID] = NLA_INIT_U16,
+	[ICIRM_ATTR_NL_PORT_ID] = NLA_INIT_U32,
+};
+
+static struct nla_policy idirm_policy[IDIRM_ATTR_MAX + 1] = {
+	[IDIRM_ATTR_IPCP_ID] = NLA_INIT_U16,
+};
+
 #define DECL_NL_OP(COMMAND, POLICY) {           \
                 .cmd    = COMMAND,              \
                         .flags  = 0,            \
@@ -306,9 +319,9 @@ static struct genl_ops nl_ops[] = {
         DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED, iafra_policy),
         DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT, NULL),
         DECL_NL_OP(RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE, iafre_policy),
-        DECL_NL_OP(RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST, idfrt_policy),
+        DECL_NL_OP(RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST, ibnlm_policy),
         DECL_NL_OP(RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE, NULL),
-        DECL_NL_OP(RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION, ifdn_policy),
+        DECL_NL_OP(RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION, ibnlm_policy),
         DECL_NL_OP(RINA_C_IPCM_REGISTER_APPLICATION_REQUEST, irar_policy),
         DECL_NL_OP(RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE, NULL),
         DECL_NL_OP(RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST, iuar_policy),
@@ -326,7 +339,7 @@ static struct genl_ops nl_ops[] = {
         DECL_NL_OP(RINA_C_IPCP_CONN_CREATE_RESULT, NULL),
         DECL_NL_OP(RINA_C_IPCP_CONN_UPDATE_REQUEST, icurq_policy),
         DECL_NL_OP(RINA_C_IPCP_CONN_UPDATE_RESULT, NULL),
-        DECL_NL_OP(RINA_C_IPCP_CONN_DESTROY_REQUEST, icdr_policy),
+        DECL_NL_OP(RINA_C_IPCP_CONN_DESTROY_REQUEST, ibnlm_policy),
         DECL_NL_OP(RINA_C_IPCP_CONN_DESTROY_RESULT, NULL),
         DECL_NL_OP(RINA_C_IPCP_SET_POLICY_SET_PARAM_REQUEST, ispsp_policy),
         DECL_NL_OP(RINA_C_IPCP_SET_POLICY_SET_PARAM_RESPONSE, NULL),
@@ -334,7 +347,12 @@ static struct genl_ops nl_ops[] = {
         DECL_NL_OP(RINA_C_IPCP_SELECT_POLICY_SET_RESPONSE, NULL),
         DECL_NL_OP(RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST, iucsr_policy),
         DECL_NL_OP(RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE, NULL),
-	DECL_NL_OP(RINA_C_IPCP_ADDRESS_CHANGE_REQUEST, iacr_policy)
+	DECL_NL_OP(RINA_C_IPCP_ADDRESS_CHANGE_REQUEST, iacr_policy),
+	DECL_NL_OP(RINA_C_IPCP_ALLOCATE_PORT_REQUEST, iaprm_policy),
+	DECL_NL_OP(RINA_C_IPCP_DEALLOCATE_PORT_REQUEST, ibnlm_policy),
+	DECL_NL_OP(RINA_C_IPCP_MANAGEMENT_SDU_WRITE_REQUEST, iwmsrm_policy),
+	DECL_NL_OP(RINA_C_IPCM_CREATE_IPCP_REQUEST, icirm_policy),
+	DECL_NL_OP(RINA_C_IPCM_DESTROY_IPCP_REQUEST, idirm_policy)
 };
 
 int rnl_handler_register(struct rnl_set *   set,
@@ -543,8 +561,9 @@ static int socket_closed_worker(void * o)
                 return -1;
         }
 
-        rnl_ipcm_sock_closed_notif_msg(item_data->portid,
-                                       item_data->ipcmanagerport);
+        rnl_base_response(0, 0, item_data->portid, 0, 0,
+        		  RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION,
+			  item_data->ipcmanagerport);
 
         rkfree(item_data);
         return 0;

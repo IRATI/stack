@@ -64,11 +64,12 @@ struct echo_async {
 struct fdfsm {
     char buf[SDU_SIZE_MAX];
     int buflen;
-#define SELFD_S_ALLOC   1
-#define SELFD_S_WRITE   2
-#define SELFD_S_READ    3
-#define SELFD_S_NONE    4
-#define SELFD_S_ACCEPT  5
+#define SELFD_S_ALLOC       1
+#define SELFD_S_WRITE       2
+#define SELFD_S_READ        3
+#define SELFD_S_NONE        4
+#define SELFD_S_REGISTER    5
+#define SELFD_S_ACCEPT      6
     int state;
     int fd;
     time_t last_activity;
@@ -221,7 +222,8 @@ server(struct echo_async *rea)
     int i;
 
     /* In listen mode also register the application names. Here we use
-     * two-steps registration (RINA_F_NOWAIT) just for fun. */
+     * two-steps registration (RINA_F_NOWAIT), that will be completed
+     * by the event loop. */
     wfd = rina_register(rea->cfd, rea->dif_name, rea->srv_appl_name,
                         RINA_F_NOWAIT);
     if (wfd < 0) {
@@ -229,14 +231,8 @@ server(struct echo_async *rea)
         return wfd;
     }
 
-    ret = rina_register_wait(rea->cfd, wfd);
-    if (ret < 0) {
-        perror("rina_register_wait()");
-        return ret;
-    }
-
-    fsms[0].state = SELFD_S_ACCEPT;
-    fsms[0].fd = rea->cfd;
+    fsms[0].state = SELFD_S_REGISTER;
+    fsms[0].fd = wfd;
 
     for (i = 1; i <= MAX_CLIENTS; i++) {
         fsms[i].state = SELFD_S_NONE;
@@ -255,6 +251,7 @@ server(struct echo_async *rea)
                 break;
             case SELFD_S_READ:
             case SELFD_S_ACCEPT:
+            case SELFD_S_REGISTER:
                 FD_SET(fsms[i].fd, &rdfs);
                 break;
             case SELFD_S_NONE:
@@ -280,6 +277,18 @@ server(struct echo_async *rea)
 
         for (i = 0; i <= MAX_CLIENTS; i++) {
             switch (fsms[i].state) {
+            case SELFD_S_REGISTER:
+                if (FD_ISSET(fsms[i].fd, &rdfs)) {
+                    ret = rina_register_wait(rea->cfd, fsms[i].fd);
+                    if (ret < 0) {
+                        perror("rina_register_wait()");
+                        return ret;
+                    }
+                    fsms[i].fd = rea->cfd;
+                    fsms[i].state = SELFD_S_ACCEPT;
+                }
+                break;
+
             case SELFD_S_ACCEPT:
                 if (FD_ISSET(fsms[i].fd, &rdfs)) {
                     int handle;
@@ -307,7 +316,7 @@ server(struct echo_async *rea)
                     fsms[j].last_activity = time(NULL);
                     if (fsms[j].fd < 0) {
                         perror("rina_flow_respond()");
-                        return fsms[j].fd;
+                        break;
                     }
 
                     if (j <= MAX_CLIENTS) {

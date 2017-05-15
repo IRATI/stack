@@ -1,3 +1,4 @@
+syntax="proto2";
 package rina.messages;
 //option optimize_for = LITE_RUNTIME;
 import "NeighborMessage.proto";

@@ -34,7 +34,7 @@ namespace rinad {
 
 class NeighborRIBObj: public rina::rib::RIBObj {
 public:
-	NeighborRIBObj(rina::Neighbor* neigh);
+	NeighborRIBObj(const std::string& neigh_key);
 	const std::string get_displayable_value() const;
 	const std::string& get_class() const {
 		return class_name;
@@ -59,7 +59,7 @@ public:
 	const static std::string object_name_prefix;
 
 private:
-	rina::Neighbor * neighbor;
+	std::string neighbor_key;
 	static bool createNeighbor(rina::Neighbor &object);
 };
 
@@ -182,8 +182,9 @@ public:
 	static const std::string STATE_TERMINATED;
 
 	IEnrollmentStateMachine(IPCProcess * ipcp,
-			const rina::ApplicationProcessNamingInformation& remote_naming_info,
-			int timeout, rina::ApplicationProcessNamingInformation * supporting_dif_name);
+				const rina::ApplicationProcessNamingInformation& remote_naming_info,
+				int timeout,
+				const rina::ApplicationProcessNamingInformation& supporting_dif_name);
 	virtual ~IEnrollmentStateMachine();
 
 	/// Called by the EnrollmentTask when it got an M_RELEASE message
@@ -206,22 +207,33 @@ public:
 
 	/// Called by the EnrollmentTask when the flow supporting the CDAP session with the remote peer
 	/// has been deallocated
-	/// @param cdapSessionDescriptor
+	/// @param portid
 	void flowDeallocated(int portId);
 
+	/// Called by the Enrollment Task when the supporting internal flow allocation result is available
+	virtual void internal_flow_allocate_result(int portId,
+						   int fd,
+					   	   const std::string& result_reason) = 0;
+
+	virtual void operational_status_start(int invoke_id,
+					      const rina::ser_obj_t &obj_req) = 0;
+
+	void reset_state(void);
 	std::string get_state();
 
 	rina::Neighbor remote_peer_;
 	bool enroller_;
 	rina::cdap_rib::con_handle_t con;
 
+	/// The enrollment request, store it to be able to retry enrollment afterwards
+	rina::EnrollmentRequest enr_request;
+	bool being_destroyed;
+
 protected:
 	bool isValidPortId(int portId);
 
 	/// Called by the enrollment state machine when the enrollment sequence fails
-	void abortEnrollment(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
-			     int portId,
-			     const std::string& reason,
+	void abortEnrollment(const std::string& reason,
 			     bool sendReleaseMessage);
 
 	/// Create or update the neighbor information in the RIB
@@ -233,7 +245,7 @@ protected:
 
 	IPCProcess * ipcp_;
 	IPCPRIBDaemon * rib_daemon_;
-	rina::IEnrollmentTask * enrollment_task_;
+	IPCPEnrollmentTask * enrollment_task_;
 	rina::IAuthPolicySet * auth_ps_;
 	int timeout_;
 	rina::Timer timer_;
@@ -242,22 +254,12 @@ protected:
 	std::string state_;
 };
 
-class EnrollmentFailedTimerTask: public rina::TimerTask {
-public:
-	EnrollmentFailedTimerTask(IEnrollmentStateMachine * state_machine,
-			const std::string& reason);
-	~EnrollmentFailedTimerTask() throw() {};
-	void run();
-
-	IEnrollmentStateMachine * state_machine_;
-	std::string reason_;
-};
-
 class AbortEnrollmentTimerTask: public rina::TimerTask {
 public:
 	AbortEnrollmentTimerTask(rina::IEnrollmentTask * enr_task,
 				 const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
 				 int portId,
+				 int internal_portId,
 				 const std::string& reason,
 				 bool sendReleaseMessage);
 	~AbortEnrollmentTimerTask() throw() {};
@@ -267,8 +269,45 @@ private:
 	rina::IEnrollmentTask * etask;
 	rina::ApplicationProcessNamingInformation peer_name;
 	int port_id;
+	int internal_portId;
 	std::string reason;
 	bool send_message;
+};
+
+class DestroyESMTimerTask : public rina::TimerTask {
+public:
+	DestroyESMTimerTask(IEnrollmentStateMachine * sm);
+	~DestroyESMTimerTask() throw() {};
+	void run();
+
+private:
+	IEnrollmentStateMachine * state_machine;
+};
+
+class DeallocateFlowTimerTask : public rina::TimerTask {
+public:
+	DeallocateFlowTimerTask(IPCProcess * ipcp,
+				int port_id,
+				bool internal);
+	~DeallocateFlowTimerTask() throw() {};
+	void run();
+
+private:
+	IPCProcess * ipcp;
+	int port_id;
+	bool internal;
+};
+
+class RetryEnrollmentTimerTask: public rina::TimerTask {
+public:
+	RetryEnrollmentTimerTask(rina::IEnrollmentTask * enr_task,
+				 const rina::EnrollmentRequest& request);
+	~RetryEnrollmentTimerTask() throw() {};
+	void run();
+
+private:
+	rina::IEnrollmentTask * etask;
+	rina::EnrollmentRequest erequest;
 };
 
 class EnrollmentTask: public IPCPEnrollmentTask, public rina::InternalEventListener {
@@ -276,21 +315,21 @@ public:
 	static const std::string ENROLL_TIMEOUT_IN_MS;
 	static const std::string WATCHDOG_PERIOD_IN_MS;
 	static const std::string DECLARED_DEAD_INTERVAL_IN_MS;
-	static const std::string NEIGHBORS_ENROLLER_PERIOD_IN_MS;
 	static const std::string MAX_ENROLLMENT_RETRIES;
+	static const std::string USE_RELIABLE_N_FLOW;
 
 	EnrollmentTask();
 	~EnrollmentTask();
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	void eventHappened(rina::InternalEvent * event);
-	const std::list<rina::Neighbor> get_neighbors() const;
-	std::list<rina::Neighbor*> get_neighbor_pointers();
+	std::list<rina::Neighbor> get_neighbors();
 	void add_neighbor(const rina::Neighbor& neighbor);
 	void add_or_update_neighbor(const rina::Neighbor& neighbor);
+	rina::Neighbor get_neighbor(const std::string& neighbor_key);
 	void remove_neighbor(const std::string& neighbor_key);
 	bool isEnrolledTo(const std::string& applicationProcessName);
-	const std::list<std::string> get_enrolled_app_names() const;
+	std::list<std::string> get_enrolled_app_names();
 	void processEnrollmentRequestEvent(const rina::EnrollToDAFRequestEvent& event);
 	void processDisconnectNeighborRequestEvent(const rina::DisconnectNeighborRequestEvent& event);
 	void initiateEnrollment(const rina::EnrollmentRequest& request);
@@ -306,27 +345,28 @@ public:
 					    const rina::cdap_rib::con_handle_t &con);
 	void authentication_completed(int port_id, bool success);
 	void enrollmentFailed(const rina::ApplicationProcessNamingInformation& remotePeerNamingInfo,
-			int portId, const std::string& reason, bool sendReleaseMessage);
-	void enrollmentCompleted(const rina::Neighbor& neighbor, bool enrollee);
+			      int portId,
+			      int internal_portId,
+			      const std::string& reason,
+			      bool sendReleaseMessage);
+	void enrollmentCompleted(const rina::Neighbor& neighbor, bool enrollee,
+				 bool prepare_handover,
+				 const rina::ApplicationProcessNamingInformation& disc_neigh_name);
 	IEnrollmentStateMachine * getEnrollmentStateMachine(int portId, bool remove);
 	void deallocateFlow(int portId);
 	void add_enrollment_state_machine(int portId, IEnrollmentStateMachine * stateMachine);
 	void update_neighbor_address(const rina::Neighbor& neighbor);
-
-	/// The maximum time to wait between steps of the enrollment sequence (in ms)
-	int timeout_;
-
-	/// Maximum number of enrollment attempts
-	unsigned int max_num_enroll_attempts_;
-
-	/// Watchdog period in ms
-	int watchdog_per_ms_;
-
-	/// The neighbor declared dead interval
-	int declared_dead_int_ms_;
-
-	/// The neighbor enroller period in ms
-	int neigh_enroll_per_ms_;
+	void incr_neigh_enroll_attempts(const rina::Neighbor& neighbor);
+	void watchdog_read(const std::string& remote_app_name);
+	void watchdog_read_result(const std::string& remote_app_name,
+				  int stored_time);
+	void operational_status_start(int port_id,
+				      int invoke_id,
+			       	      const rina::ser_obj_t &obj_req);
+	int get_con_handle_to_address(unsigned int address,
+				      rina::cdap_rib::con_handle_t& con);
+	int get_neighbor_info(rina::Neighbor& neigh);
+	void clean_state(unsigned int port_id);
 
 private:
 	void _add_neighbor(const rina::Neighbor& neighbor);
@@ -354,22 +394,32 @@ private:
 
 	void addressChange(rina::AddressChangeEvent * event);
 
+	void internal_flow_allocated(rina::IPCPInternalFlowAllocatedEvent * event);
+	void internal_flow_deallocated(rina::IPCPInternalFlowDeallocatedEvent * event);
+	void internal_flow_allocation_failed(rina::IPCPInternalFlowAllocationFailedEvent * event);
+
+	void deallocate_flows_and_destroy_esm(IEnrollmentStateMachine * esm,
+					      unsigned int port_id,
+					      bool call_ps = true);
+
 	IPCPRIBDaemon * rib_daemon_;
 	rina::InternalEventManager * event_manager_;
 	rina::IPCResourceManager * irm_;
 	INamespaceManager * namespace_manager_;
-	rina::Thread * neighbors_enroller_;
 
 	rina::Lockable lock_;
 	rina::Timer timer;
 
 	/// Stores the enrollment state machines, one per remote IPC process that this IPC
 	/// process is enrolled to.
-	rina::ThreadSafeMapOfPointers<int, IEnrollmentStateMachine> state_machines_;
+	std::map<int, IEnrollmentStateMachine*> state_machines_;
+	rina::ReadWriteLockable sm_lock;
 
 	rina::ThreadSafeMapOfPointers<unsigned int, rina::EnrollmentRequest> port_ids_pending_to_be_allocated_;
 
-	rina::ThreadSafeMapOfPointers<std::string, rina::Neighbor> neighbors;
+	std::map<std::string, rina::Neighbor *> neighbors;
+	rina::ReadWriteLockable neigh_lock;
+
 	IPCPEnrollmentTaskPS * ipcp_ps;
 };
 

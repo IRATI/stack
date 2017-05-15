@@ -319,6 +319,9 @@ public:
 	/** The IPC Process type */
 	std::string type;
 
+	/** The sequence number of the NL message when creating it */
+	unsigned int seq_num;
+
 	/** The name of the IPC Process */
 	ApplicationProcessNamingInformation name;
 
@@ -417,6 +420,15 @@ public:
 			const ApplicationProcessNamingInformation& supportingDifName,
 			const ApplicationProcessNamingInformation& neighborName,
 			unsigned int opaque);
+
+	/**
+	 * Idem to enrollment, but also tell the IPCP to prepare for handover
+	 */
+	void enroll_prepare_hand(const ApplicationProcessNamingInformation& difName,
+				 const ApplicationProcessNamingInformation& supportingDifName,
+				 const ApplicationProcessNamingInformation& neighborName,
+				 const ApplicationProcessNamingInformation& disc_neigh_name,
+				 unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to force an IPC Process to deallocate all the
@@ -644,7 +656,7 @@ public:
          * @param ipcProcessId The identifier of the IPC Process to be destroyed
          * @throws DestroyIPCProcessException if an error happens during the operation execution
          */
-        void destroy(IPCProcessProxy* ipcp);
+        unsigned int destroy(IPCProcessProxy* ipcp);
 };
 
 /**
@@ -858,6 +870,36 @@ public:
 class TimerExpiredEvent: public IPCEvent {
 public:
         TimerExpiredEvent(unsigned int sequenceNumber);
+};
+
+/**
+ * Event informing about a new media report available
+ */
+class MediaReportEvent: public IPCEvent {
+public:
+	MediaReportEvent(const MediaReport& report,
+			 unsigned int sequenceNumber);
+
+        // The media report resulting from a scan
+        MediaReport media_report;
+};
+
+class CreateIPCPResponseEvent: public IPCEvent {
+public:
+	CreateIPCPResponseEvent(int res,
+				unsigned int sequenceNumber);
+
+        // Result of the operation, 0 success
+        int result;
+};
+
+class DestroyIPCPResponseEvent: public IPCEvent {
+public:
+	DestroyIPCPResponseEvent(int res,
+				 unsigned int sequenceNumber);
+
+        // Result of the operation, 0 success
+        int result;
 };
 
 }

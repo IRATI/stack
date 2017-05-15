@@ -49,9 +49,9 @@ class IPCMIPCProcess {
 
 public:
 	enum State{IPCM_IPCP_CREATED,
-			   IPCM_IPCP_INITIALIZED,
-			   IPCM_IPCP_ASSIGN_TO_DIF_IN_PROGRESS,
-			   IPCM_IPCP_ASSIGNED_TO_DIF};
+		   IPCM_IPCP_INITIALIZED,
+		   IPCM_IPCP_ASSIGN_TO_DIF_IN_PROGRESS,
+		   IPCM_IPCP_ASSIGNED_TO_DIF};
 
 	/** The current information of the DIF where the IPC Process is assigned*/
 	rina::ApplicationProcessNamingInformation dif_name_;
@@ -62,8 +62,16 @@ public:
 	/** The list of applications registered in this IPC Process */
 	std::list<rina::ApplicationProcessNamingInformation> registeredApplications;
 
+	/** The list of neighbors of this IPC Process */
+	std::list<rina::Neighbor> neighbors;
+
 	/** Rwlock */
 	rina::ReadWriteLockable rwlock;
+
+	/** The IPC Process proxy class */
+	rina::IPCProcessProxy* proxy_;
+
+	bool kernel_ready;
 
 	//Constructors and destructurs
 
@@ -92,6 +100,15 @@ public:
 		return proxy_->type;
 	}
 	const rina::ApplicationProcessNamingInformation& getDIFName() const;
+
+	/**
+	* Get the IPCP state
+	*/
+	inline State get_state(void) const{
+		return state_;
+	}
+
+	std::list<rina::ApplicationProcessNamingInformation> get_neighbors_with_n1dif(const rina::ApplicationProcessNamingInformation& dif_name);
 
 	void get_description(std::ostream& os);
 
@@ -174,6 +191,12 @@ public:
 			const rina::ApplicationProcessNamingInformation& neighborName,
 			unsigned int opaque);
 
+	void enroll_prepare_handover(const rina::ApplicationProcessNamingInformation& difName,
+				     const rina::ApplicationProcessNamingInformation& supportingDifName,
+				     const rina::ApplicationProcessNamingInformation& neighborName,
+				     const rina::ApplicationProcessNamingInformation& disc_neigh_name,
+				     unsigned int opaque);
+
 	/**
 	 * Invoked by the IPC Manager to force an IPC Process to deallocate all the
 	 * N-1 flows to a neighbor IPC Process (for example, because it has been
@@ -218,6 +241,10 @@ public:
 	 * is not found
 	 */
 	void registerApplicationResult(unsigned int sequenceNumber, bool success);
+
+	void disconnectFromNeighborResult(unsigned int sequenceNumber, bool success);
+
+	void add_neighbors(const std::list<rina::Neighbor> & neighbors);
 
 	/**
 	 * Invoked by the IPC Manager to unregister an application in a DIF through
@@ -436,8 +463,6 @@ public:
 				unsigned int opaque);
 
 private:
-	/** The IPC Process proxy class */
-	rina::IPCProcessProxy* proxy_;
 
 	//Friendship relation to be able to destroy proxies from
 	//the IPCMIPCProcessFactory
@@ -449,6 +474,9 @@ private:
 	/** The map of pending registrations */
 	std::map<unsigned int, rina::ApplicationProcessNamingInformation> pendingRegistrations;
 
+	/** The map of pending disconnections */
+	std::map<unsigned int, rina::ApplicationProcessNamingInformation> pendingDisconnections;
+
 	/** The map of pending flow operations */
 	std::map<unsigned int, rina::FlowInformation> pendingFlowOperations;
 
@@ -457,6 +485,9 @@ private:
 
 	rina::FlowInformation
 		getPendingFlowOperation(unsigned int seqNumber);
+
+	rina::ApplicationProcessNamingInformation
+		getPendingDisconnection(unsigned int seqNumber);
 };
 
 /**
@@ -503,7 +534,7 @@ public:
      * @param ipcProcessId The identifier of the IPC Process to be destroyed
      * @throws DestroyIPCProcessException if an error happens during the operation execution
      */
-    void destroy(unsigned short ipcProcessId);
+    unsigned int destroy(unsigned short ipcProcessId);
 
     /**
      * Returns a list to all the IPC Processes that are currently running in
@@ -525,6 +556,8 @@ public:
      * with the specified id is found
      */
     IPCMIPCProcess * getIPCProcess(unsigned short ipcProcessId);
+
+    IPCMIPCProcess * getIPCProcessByName(const rina::ApplicationProcessNamingInformation& ipcp_name);
 
     /// Returns the names of the DIFs local IPCPs are assigned to
     void get_local_dif_names(std::list<std::string>& result);
