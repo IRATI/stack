@@ -205,6 +205,7 @@ static struct nla_policy iccrq_policy[ICCRQ_ATTR_MAX + 1] = {
         [ICCRQ_ATTR_QOS_ID]      = NLA_INIT_U32,
         [ICCRQ_ATTR_DTP_CONFIG]  = NLA_INIT_NESTED,
         [ICCRQ_ATTR_DTCP_CONFIG] = NLA_INIT_NESTED,
+        [ICCRQ_ATTR_FLOW_USER_IPCP_ID] = NLA_INIT_U16,
 };
 
 static struct nla_policy icca_policy[ICCA_ATTR_MAX + 1] = {
@@ -222,7 +223,6 @@ static struct nla_policy icurq_policy[ICURQ_ATTR_MAX + 1] = {
         [ICURQ_ATTR_PORT_ID]           = NLA_INIT_U32,
         [ICURQ_ATTR_SOURCE_CEP_ID]     = NLA_INIT_U32,
         [ICURQ_ATTR_DEST_CEP_ID]       = NLA_INIT_U32,
-        [ICURQ_ATTR_FLOW_USER_IPCP_ID] = NLA_INIT_U16,
 };
 
 static struct nla_policy irar_policy[IRAR_ATTR_MAX + 1] = {

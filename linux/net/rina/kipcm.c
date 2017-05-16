@@ -739,8 +739,10 @@ static int notify_ipcp_conn_create_req(void *             data,
         struct ipcp_instance *                      ipcp;
         struct kipcm *                              kipcm;
         ipc_process_id_t                            ipc_id;
+        ipc_process_id_t                            user_ipc_id;
         port_id_t                                   port_id;
         cep_id_t                                    src_cep;
+        struct ipcp_instance *                      user_ipcp;
 
         ipc_id  = 0;
         port_id = 0;
@@ -773,8 +775,17 @@ static int notify_ipcp_conn_create_req(void *             data,
         if (!ipcp)
                 goto fail;
 
+        user_ipc_id = attrs->flow_user_ipc_process_id;
+        user_ipcp = kfa_ipcp_instance(kipcm->kfa);
+        if (user_ipc_id) {
+                user_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
+                if (!user_ipcp)
+                        goto fail;
+        }
+
         /* IPCP takes ownership of the dtp and dtcp cfg params */
         src_cep = ipcp->ops->connection_create(ipcp->data,
+        				       user_ipcp,
                                                attrs->port_id,
                                                attrs->src_addr,
                                                attrs->dst_addr,
@@ -957,9 +968,7 @@ static int notify_ipcp_conn_update_req(void *             data,
         struct ipcp_instance *                      ipcp;
         struct kipcm *                              kipcm;
         ipc_process_id_t                            ipc_id;
-        ipc_process_id_t                            user_ipc_id;
         port_id_t                                   port_id;
-        struct ipcp_instance *                      user_ipcp;
 
         ipc_id  = 0;
         port_id = 0;
@@ -986,24 +995,12 @@ static int notify_ipcp_conn_update_req(void *             data,
 
         port_id     = attrs->port_id;
         ipc_id      = msg->header.dst_ipc_id;
-        user_ipc_id = attrs->flow_user_ipc_process_id;
         ipcp        = ipcp_imap_find(kipcm->instances, ipc_id);
 
         if (!ipcp)
                 goto fail;
 
-        user_ipcp = kfa_ipcp_instance(kipcm->kfa);
-        if (user_ipc_id) {
-                user_ipcp = ipcp_imap_find(kipcm->instances, user_ipc_id);
-                if (!user_ipcp) {
-                        ipcp->ops->connection_destroy(ipcp->data,
-                                                      attrs->src_cep);
-                        goto fail;
-                }
-        }
-
         if (ipcp->ops->connection_update(ipcp->data,
-                                         user_ipcp,
                                          port_id,
                                          attrs->src_cep,
                                          attrs->dst_cep))

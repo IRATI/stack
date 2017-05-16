@@ -660,8 +660,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 return cep_id_bad();
         }
 
-        if (user_ipcp)
-                tmp->user_ipcp = user_ipcp;
+        tmp->user_ipcp = user_ipcp;
 
         cep_id = cidm_allocate(container->cidm);
         if (!is_cep_id_ok(cep_id)) {
@@ -897,7 +896,6 @@ int efcp_connection_destroy(struct efcp_container * container,
 EXPORT_SYMBOL(efcp_connection_destroy);
 
 int efcp_connection_update(struct efcp_container * container,
-                           struct ipcp_instance *  user_ipcp,
                            cep_id_t                from,
                            cep_id_t                to)
 {
@@ -934,7 +932,6 @@ int efcp_connection_update(struct efcp_container * container,
                 return 0;
         }
         connection_dst_cep_id_set(tmp->connection, to);
-        tmp->user_ipcp = user_ipcp;
         spin_unlock_bh(&container->lock);
 
         LOG_DBG("Connection updated");

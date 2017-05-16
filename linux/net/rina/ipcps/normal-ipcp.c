@@ -261,6 +261,7 @@ static int normal_flow_prebind(struct ipcp_instance_data * data,
 
 static
 cep_id_t connection_create_request(struct ipcp_instance_data * data,
+				   struct ipcp_instance *      user_ipcp,
                                    port_id_t                   port_id,
                                    address_t                   source,
                                    address_t                   dest,
@@ -271,8 +272,12 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
         cep_id_t               cep_id;
         struct normal_flow *   flow;
         struct cep_ids_entry * cep_entry;
+        struct ipcp_instance * ipcp;
 
-        cep_id = efcp_connection_create(data->efcpc, NULL, source, dest,
+        if (!user_ipcp)
+                return cep_id_bad();
+
+        cep_id = efcp_connection_create(data->efcpc, user_ipcp, source, dest,
                                         port_id, qos_id,
                                         cep_id_bad(), cep_id_bad(),
                                         dtp_cfg, dtcp_cfg);
@@ -290,12 +295,29 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
         INIT_LIST_HEAD(&cep_entry->list);
         cep_entry->cep_id = cep_id;
 
-        spin_lock_bh(&data->lock);
+        ipcp = kipcm_find_ipcp(default_kipcm, data->id);
+        if (!ipcp) {
+                LOG_ERR("KIPCM could not retrieve this IPCP");
+                efcp_connection_destroy(data->efcpc, cep_id);
+                return cep_id_bad();
+        }
 
+        ASSERT(user_ipcp->ops);
+        ASSERT(user_ipcp->ops->flow_binding_ipcp);
+        spin_lock_bh(&data->lock);
         flow = find_flow(data, port_id);
         if (!flow) {
                 spin_unlock_bh(&data->lock);
                 LOG_ERR("Could not retrieve normal flow to create connection");
+                efcp_connection_destroy(data->efcpc, cep_id);
+                return cep_id_bad();
+        }
+
+        if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
+                                              port_id,
+                                              ipcp)) {
+                spin_unlock_bh(&data->lock);
+                LOG_ERR("Could not bind flow with user_ipcp");
                 efcp_connection_destroy(data->efcpc, cep_id);
                 return cep_id_bad();
         }
@@ -310,16 +332,12 @@ cep_id_t connection_create_request(struct ipcp_instance_data * data,
 }
 
 static int connection_update_request(struct ipcp_instance_data * data,
-                                     struct ipcp_instance *      user_ipcp,
                                      port_id_t                   port_id,
                                      cep_id_t                    src_cep_id,
                                      cep_id_t                    dst_cep_id)
 {
         struct normal_flow *   flow;
         struct ipcp_instance * n1_ipcp;
-
-        if (!user_ipcp)
-                return cep_id_bad();
 
         n1_ipcp = kipcm_find_ipcp(default_kipcm, data->id);
         if (!n1_ipcp) {
@@ -328,7 +346,6 @@ static int connection_update_request(struct ipcp_instance_data * data,
                 return -1;
         }
         if (efcp_connection_update(data->efcpc,
-                                   user_ipcp,
                                    src_cep_id,
                                    dst_cep_id))
                 return -1;
@@ -355,14 +372,6 @@ static int connection_update_request(struct ipcp_instance_data * data,
         flow->state = PORT_STATE_ALLOCATED;
 
         spin_unlock_bh(&data->lock);
-
-        if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
-                                              port_id,
-                                              n1_ipcp)) {
-                LOG_ERR("Cannot bind flow with user ipcp");
-                efcp_connection_destroy(data->efcpc, src_cep_id);
-                return -1;
-        }
 
         LOG_DBG("Flow bound to port-id %d", port_id);
         return 0;

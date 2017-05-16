@@ -256,6 +256,7 @@ struct ipcp_instance_ops {
                            bool                        blocking);
 
         cep_id_t (* connection_create)(struct ipcp_instance_data * data,
+        			       struct ipcp_instance *      user_ipcp,
                                        port_id_t                   port_id,
                                        address_t                   source,
                                        address_t                   dest,
@@ -264,7 +265,6 @@ struct ipcp_instance_ops {
                                        struct dtcp_config *        dtcp_config);
 
         int      (* connection_update)(struct ipcp_instance_data * data,
-                                       struct ipcp_instance *      user_ipcp,
                                        port_id_t                   port_id,
                                        cep_id_t                    src_id,
                                        cep_id_t                    dst_id);

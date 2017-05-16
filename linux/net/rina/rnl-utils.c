@@ -2613,6 +2613,10 @@ static int rnl_parse_ipcm_conn_create_req_msg(struct genl_info * info,
                 }
         }
 
+        if (info->attrs[ICCRQ_ATTR_FLOW_USER_IPCP_ID])
+                msg_attrs->flow_user_ipc_process_id =
+                        nla_get_u16(info->attrs[ICCRQ_ATTR_FLOW_USER_IPCP_ID]);
+
         return 0;
 }
 
@@ -2673,9 +2677,6 @@ rnl_parse_ipcm_conn_update_req_msg(struct genl_info * info,
         if (info->attrs[ICURQ_ATTR_DEST_CEP_ID])
                 msg_attrs->dst_cep =
                         nla_get_u32(info->attrs[ICURQ_ATTR_DEST_CEP_ID]);
-        if (info->attrs[ICURQ_ATTR_FLOW_USER_IPCP_ID])
-                msg_attrs->flow_user_ipc_process_id =
-                        nla_get_u16(info->attrs[ICURQ_ATTR_FLOW_USER_IPCP_ID]);
         return 0;
 }
 
