@@ -247,6 +247,7 @@ enum ipcm_conn_create_req_attrs_list {
         ICCRQ_ATTR_QOS_ID,
         ICCRQ_ATTR_DTP_CONFIG,
         ICCRQ_ATTR_DTCP_CONFIG,
+	ICCRQ_ATTR_FLOW_USER_IPCP_ID,
         __ICCRQ_ATTR_MAX,
 };
 #define ICCRQ_ATTR_MAX (__ICCRQ_ATTR_MAX - 1)
@@ -276,7 +277,6 @@ enum ipcm_conn_update_req_attrs_list {
         ICURQ_ATTR_PORT_ID = 1,
         ICURQ_ATTR_SOURCE_CEP_ID,
         ICURQ_ATTR_DEST_CEP_ID,
-        ICURQ_ATTR_FLOW_USER_IPCP_ID,
         __ICURQ_ATTR_MAX,
 };
 #define ICURQ_ATTR_MAX (__ICURQ_ATTR_MAX - 1)
@@ -734,6 +734,7 @@ struct rnl_ipcp_conn_create_req_msg_attrs {
         qos_id_t             qos_id;
         struct dtp_config *  dtp_cfg;
         struct dtcp_config * dtcp_cfg;
+        ipc_process_id_t     flow_user_ipc_process_id;
 };
 
 struct rnl_ipcp_conn_create_resp_msg_attrs {
@@ -762,7 +763,6 @@ struct rnl_ipcp_conn_update_req_msg_attrs {
         port_id_t        port_id;
         cep_id_t         src_cep;
         cep_id_t         dst_cep;
-        ipc_process_id_t flow_user_ipc_process_id;
 };
 
 struct rnl_ipcp_conn_update_result_msg_attrs {

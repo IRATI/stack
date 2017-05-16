@@ -48,6 +48,7 @@ int	    kfa_flow_sdu_write(struct ipcp_instance_data *data,
 int	    kfa_flow_sdu_read(struct kfa  *instance,
 			      port_id_t    id,
 			      struct sdu **sdu,
+			      size_t       size,
                               bool blocking);
 
 void    kfa_flow_readable(struct kfa       *instance,

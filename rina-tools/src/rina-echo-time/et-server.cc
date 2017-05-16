@@ -48,10 +48,12 @@ EchoTimeServerWorker::EchoTimeServerWorker(ThreadAttributes * threadAttributes,
 			   	   	   int deallocate_wait,
 			   	   	   int interval,
 			   	   	   unsigned int max_buffer_size,
+					   unsigned int pr,
 			   	   	   Server * serv) : ServerWorker(threadAttributes, serv),
                                                 test_type(test_type), port_id(port_id), fd(fd),
                                                 dw(deallocate_wait), interval(interval),
-                                                max_buffer_size(max_buffer_size), last_task(0)
+                                                max_buffer_size(max_buffer_size), partial_read(pr),
+						last_task(0)
 {
 }
 
@@ -74,9 +76,30 @@ int EchoTimeServerWorker::internal_run()
         return 0;
 }
 
+int EchoTimeServerWorker::partial_read_bytes(int fd, char * buffer,
+					     int bytes_to_read)
+{
+	int total_bytes = 0;
+	int bytes_read = 0;
+
+	while (total_bytes < bytes_to_read) {
+		bytes_read = read(fd, buffer + total_bytes, partial_read);
+		if (bytes_read < 0) {
+			return -1;
+		}
+
+		total_bytes = total_bytes + bytes_read;
+	}
+
+	return total_bytes;
+}
+
 void EchoTimeServerWorker::servePingFlow()
 {
         char *buffer = new char[max_buffer_size];
+        int bytes_read = 0;
+        int sdu_size_partial_read = 0;
+        int ret = 0;
 
         // Setup a timer if dealloc_wait option is set */
         if (dw > 0) {
@@ -85,8 +108,16 @@ void EchoTimeServerWorker::servePingFlow()
         }
 
         for(;;) {
-                int bytes_read = read(fd, buffer, max_buffer_size);
-                int ret;
+        	if (sdu_size_partial_read != 0) {
+        		bytes_read = partial_read_bytes(fd, buffer,
+        						sdu_size_partial_read);
+        	} else {
+        		bytes_read = read(fd, buffer, max_buffer_size);
+        		if (partial_read > 0) {
+        			sdu_size_partial_read = bytes_read;
+        		}
+        	}
+
                 if (bytes_read < 0) {
                         ostringstream oss;
                         oss << "read() error: " << strerror(errno);
@@ -258,9 +289,11 @@ EchoTimeServer::EchoTimeServer(const string& t_type,
 			       const string& app_name,
 			       const string& app_instance,
 			       const int perf_interval,
-			       const int dealloc_wait) :
+			       const int dealloc_wait,
+			       unsigned int pr) :
         		Server(dif_names, app_name, app_instance),
-        test_type(t_type), interval(perf_interval), dw(dealloc_wait)
+        test_type(t_type), interval(perf_interval), dw(dealloc_wait),
+	partial_read(pr)
 {
 }
 
@@ -274,6 +307,7 @@ ServerWorker * EchoTimeServer::internal_start_worker(rina::FlowInformation flow)
         		    	    	         	 	 dw,
         		    	    	         	 	 interval,
         		    	    	         	 	 max_buffer_size,
+								 partial_read,
         		    	    	         	 	 this);
         worker->start();
         worker->detach();

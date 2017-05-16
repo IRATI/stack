@@ -209,6 +209,34 @@ void * rqueue_head_pop(struct rqueue * q)
 }
 EXPORT_SYMBOL(rqueue_head_pop);
 
+void * rqueue_head_peek(struct rqueue * q)
+{
+        struct rqueue_entry * entry;
+        void *                data;
+
+        if (!q) {
+                LOG_ERR("Cannot head-pop from a NULL queue");
+                return NULL;
+        }
+
+        if (list_empty(&q->head)) {
+                LOG_WARN("queue %pK is empty, can't head-pop", q);
+                return NULL;
+        }
+        ASSERT(q->length > 0);
+
+        entry = list_first_entry(&q->head, struct rqueue_entry, next);
+        ASSERT(entry);
+
+        data = entry->data;
+
+        LOG_DBG("Entry %pK head-peeked from queue %pK (length = %zd)",
+                entry, q, q->length);
+
+        return data;
+}
+EXPORT_SYMBOL(rqueue_head_peek);
+
 static int rqueue_tail_push_gfp(gfp_t flags, struct rqueue * q, void * data)
 {
         struct rqueue_entry * entry;

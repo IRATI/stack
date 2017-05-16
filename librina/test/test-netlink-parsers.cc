@@ -2198,7 +2198,9 @@ int testIpcpCreateConnectionRequest() {
         connection.setQosId(3);
         connection.setDTPConfig(dtpConfig);
         connection.setDTCPConfig(dtcpConfig);
-        message.setConnection(connection);
+
+        connection.flowUserIpcProcessId = 3424;
+        message.connection = connection;
 
         struct nl_msg* netlinkMessage;
         netlinkMessage = nlmsg_alloc();
@@ -2224,171 +2226,177 @@ int testIpcpCreateConnectionRequest() {
                 std::cout << "Error parsing Ipcp Create Connection request Message "
                                 << "\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPortId() !=
-                        recoveredMessage->getConnection().getPortId()) {
+        } else if (message.connection.getPortId() !=
+                        recoveredMessage->connection.getPortId()) {
                 std::cout << "Port id on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getSourceAddress()
-                        != recoveredMessage->getConnection().getSourceAddress()) {
+        } else if (message.connection.flowUserIpcProcessId !=
+                        recoveredMessage->connection.flowUserIpcProcessId) {
+                std::cout << "Flow user IPCP id on original and recovered messages"
+                                << " are different\n";
+                returnValue = -1;
+        } else if (message.connection.getSourceAddress()
+                        != recoveredMessage->connection.getSourceAddress()) {
                 std::cout << "Source address  on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDestAddress() !=
-                        recoveredMessage->getConnection().getDestAddress()) {
-                std::cout <<message.getConnection().getDestAddress()
-                                <<" "<<recoveredMessage->getConnection().getDestAddress();
+        } else if (message.connection.getDestAddress() !=
+                        recoveredMessage->connection.getDestAddress()) {
+                std::cout <<message.connection.getDestAddress()
+                                <<" "<<recoveredMessage->connection.getDestAddress();
                 std::cout << "\nDestination address on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getQosId() !=
-                        recoveredMessage->getConnection().getQosId()) {
+        } else if (message.connection.getQosId() !=
+                        recoveredMessage->connection.getQosId()) {
                 std::cout << "QoS id on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getSourceCepId()!=
-                        recoveredMessage->getConnection().getSourceCepId()) {
+        } else if (message.connection.getSourceCepId()!=
+                        recoveredMessage->connection.getSourceCepId()) {
                 std::cout << "Src CEP id on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDestCepId()!=
-                        recoveredMessage->getConnection().getDestCepId()) {
+        } else if (message.connection.getDestCepId()!=
+                        recoveredMessage->connection.getDestCepId()) {
                 std::cout << "Dest CEP id on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTPConfig().is_partial_delivery()!=
-                        recoveredMessage->getConnection().getDTPConfig().is_partial_delivery()) {
+        } else if (message.connection.getDTPConfig().is_partial_delivery()!=
+                        recoveredMessage->connection.getDTPConfig().is_partial_delivery()) {
                 std::cout << "Partial delivery on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTPConfig().is_in_order_delivery()!=
-                        recoveredMessage->getConnection().getDTPConfig().is_in_order_delivery()) {
+        } else if (message.connection.getDTPConfig().is_in_order_delivery()!=
+                        recoveredMessage->connection.getDTPConfig().is_in_order_delivery()) {
                 std::cout << "In order delivery on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTPConfig().is_incomplete_delivery()!=
-                        recoveredMessage->getConnection().getDTPConfig().is_incomplete_delivery()) {
+        } else if (message.connection.getDTPConfig().is_incomplete_delivery()!=
+                        recoveredMessage->connection.getDTPConfig().is_incomplete_delivery()) {
                 std::cout << "Incomplete delivery on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTPConfig().get_max_sdu_gap()!=
-                        recoveredMessage->getConnection().getDTPConfig().get_max_sdu_gap()) {
+        } else if (message.connection.getDTPConfig().get_max_sdu_gap()!=
+                        recoveredMessage->connection.getDTPConfig().get_max_sdu_gap()) {
                 std::cout << "Max SDU gap on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTPConfig().is_dtcp_present() !=
-                        recoveredMessage->getConnection().getDTPConfig().is_dtcp_present()) {
+        } else if (message.connection.getDTPConfig().is_dtcp_present() !=
+                        recoveredMessage->connection.getDTPConfig().is_dtcp_present()) {
                 std::cout << "dtpconfig.isDTCPPresent on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTPConfig().get_seq_num_rollover_threshold() !=
-                        recoveredMessage->getConnection().getDTPConfig().get_seq_num_rollover_threshold()) {
+        } else if (message.connection.getDTPConfig().get_seq_num_rollover_threshold() !=
+                        recoveredMessage->connection.getDTPConfig().get_seq_num_rollover_threshold()) {
                 std::cout << "dtpconfig.seqnumrolloverthreshold on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTCPConfig().is_flow_control() !=
-                        recoveredMessage->getConnection().getDTCPConfig().is_flow_control()){
+        } else if (message.connection.getDTCPConfig().is_flow_control() !=
+                        recoveredMessage->connection.getDTCPConfig().is_flow_control()){
                 std::cout << "dtcpconfig.isFlowcontrol on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTCPConfig().is_rtx_control() !=
-                        recoveredMessage->getConnection().getDTCPConfig().is_rtx_control()){
+        } else if (message.connection.getDTCPConfig().is_rtx_control() !=
+                        recoveredMessage->connection.getDTCPConfig().is_rtx_control()){
                 std::cout << "dtcpconfig.isRtxcontrol on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTCPConfig().get_rtx_control_config().get_max_time_to_retry() !=
-                        recoveredMessage->getConnection().getDTCPConfig().
+        } else if (message.connection.getDTCPConfig().get_rtx_control_config().get_max_time_to_retry() !=
+                        recoveredMessage->connection.getDTCPConfig().
                         get_rtx_control_config().get_max_time_to_retry()){
                 std::cout << "dtcpconfig.rtxctrlconfig.maxtimetorety on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTCPConfig().get_rtx_control_config().get_initial_rtx_time() !=
-        		recoveredMessage->getConnection().getDTCPConfig().
+        } else if (message.connection.getDTCPConfig().get_rtx_control_config().get_initial_rtx_time() !=
+        		recoveredMessage->connection.getDTCPConfig().
         		get_rtx_control_config().get_initial_rtx_time()){
         	std::cout << "dtcpconfig.rtxctrlconfig.initialrtxtime on original and recovered messages"
         			<< " are different\n";
         	returnValue = -1;
-        } else if (message.getConnection().getDTPConfig().get_initial_a_timer() !=
-        		recoveredMessage->getConnection().getDTPConfig().get_initial_a_timer()){
+        } else if (message.connection.getDTPConfig().get_initial_a_timer() !=
+        		recoveredMessage->connection.getDTPConfig().get_initial_a_timer()){
         	std::cout << "dtpconfig.initialAtimer on original and recovered messages"
         			<< " are different\n";
         	returnValue = -1;
-        } else if (message.getConnection().getDTCPConfig().get_flow_control_config().is_rate_based() !=
-                        recoveredMessage->getConnection().getDTCPConfig().
+        } else if (message.connection.getDTCPConfig().get_flow_control_config().is_rate_based() !=
+                        recoveredMessage->connection.getDTCPConfig().
                         get_flow_control_config().is_rate_based()){
                 std::cout << "dtcpconfig.flowctrlconfig.ratebased on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTCPConfig().get_flow_control_config().is_window_based() !=
-                        recoveredMessage->getConnection().getDTCPConfig().
+        } else if (message.connection.getDTCPConfig().get_flow_control_config().is_window_based() !=
+                        recoveredMessage->connection.getDTCPConfig().
                         get_flow_control_config().is_window_based()){
                 std::cout << "dtcpconfig.flowctrlconfig.windowbased on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTCPConfig().get_flow_control_config().get_rcv_buffers_threshold() !=
-                        recoveredMessage->getConnection().getDTCPConfig().
+        } else if (message.connection.getDTCPConfig().get_flow_control_config().get_rcv_buffers_threshold() !=
+                        recoveredMessage->connection.getDTCPConfig().
                         get_flow_control_config().get_rcv_buffers_threshold()){
                 std::cout << "dtcpconfig.flowctrlconfig.rcvbuffersthres on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTCPConfig().get_flow_control_config().get_rcv_bytes_percent_threshold() !=
-                        recoveredMessage->getConnection().getDTCPConfig().
+        } else if (message.connection.getDTCPConfig().get_flow_control_config().get_rcv_bytes_percent_threshold() !=
+                        recoveredMessage->connection.getDTCPConfig().
                         get_flow_control_config().get_rcv_bytes_percent_threshold()){
                 std::cout << "dtcpconfig.flowctrlconfig.rcvbytespercentthres on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTCPConfig().get_flow_control_config().get_rcv_bytes_threshold() !=
-                        recoveredMessage->getConnection().getDTCPConfig().
+        } else if (message.connection.getDTCPConfig().get_flow_control_config().get_rcv_bytes_threshold() !=
+                        recoveredMessage->connection.getDTCPConfig().
                         get_flow_control_config().get_rcv_bytes_threshold()){
                 std::cout << "dtcpconfig.flowctrlconfig.rcvbytesthres on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTCPConfig().get_flow_control_config().get_sent_buffers_threshold() !=
-                        recoveredMessage->getConnection().getDTCPConfig().
+        } else if (message.connection.getDTCPConfig().get_flow_control_config().get_sent_buffers_threshold() !=
+                        recoveredMessage->connection.getDTCPConfig().
                         get_flow_control_config().get_sent_buffers_threshold()){
                 std::cout << "dtcpconfig.flowctrlconfig.sentbuffersthres on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTCPConfig().get_flow_control_config().get_sent_bytes_percent_threshold() !=
-                        recoveredMessage->getConnection().getDTCPConfig().
+        } else if (message.connection.getDTCPConfig().get_flow_control_config().get_sent_bytes_percent_threshold() !=
+                        recoveredMessage->connection.getDTCPConfig().
                         get_flow_control_config().get_sent_bytes_percent_threshold()){
                 std::cout << "dtcpconfig.flowctrlconfig.sentbytespercentthres on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTCPConfig().get_flow_control_config().get_sent_bytes_threshold() !=
-                        recoveredMessage->getConnection().getDTCPConfig().
+        } else if (message.connection.getDTCPConfig().get_flow_control_config().get_sent_bytes_threshold() !=
+                        recoveredMessage->connection.getDTCPConfig().
                         get_flow_control_config().get_sent_bytes_threshold()){
                 std::cout << "dtcpconfig.flowctrlconfig.sentbytesthres on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTCPConfig().get_flow_control_config().get_closed_window_policy().get_name().
-                        compare(recoveredMessage->getConnection().getDTCPConfig().get_flow_control_config().
+        } else if (message.connection.getDTCPConfig().get_flow_control_config().get_closed_window_policy().get_name().
+                        compare(recoveredMessage->connection.getDTCPConfig().get_flow_control_config().
                         		get_closed_window_policy().get_name()) != 0 ){
                 std::cout << "dtcpconfig.flowctrlconfig.closedwindowpolicy.name on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTCPConfig().get_flow_control_config().get_closed_window_policy().get_version().compare(
-                        recoveredMessage->getConnection().getDTCPConfig().get_flow_control_config().
+        } else if (message.connection.getDTCPConfig().get_flow_control_config().get_closed_window_policy().get_version().compare(
+                        recoveredMessage->connection.getDTCPConfig().get_flow_control_config().
                         get_closed_window_policy().get_version()) != 0){
                 std::cout << "dtcpconfig.flowctrlconfig.closedwindowpolicy.version on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTCPConfig().get_flow_control_config().
-                        get_rate_based_config().get_sending_rate() != recoveredMessage->getConnection().getDTCPConfig().get_flow_control_config().get_rate_based_config().get_sending_rate()){
+        } else if (message.connection.getDTCPConfig().get_flow_control_config().
+                        get_rate_based_config().get_sending_rate() != recoveredMessage->connection.getDTCPConfig().get_flow_control_config().get_rate_based_config().get_sending_rate()){
                 std::cout << "dtcpconfig.flowctrlconfig.ratebasedconfig.sendingrate on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTCPConfig().get_flow_control_config().
-        		get_rate_based_config().get_time_period() != recoveredMessage->getConnection().getDTCPConfig().get_flow_control_config().get_rate_based_config().get_time_period()){
+        } else if (message.connection.getDTCPConfig().get_flow_control_config().
+        		get_rate_based_config().get_time_period() != recoveredMessage->connection.getDTCPConfig().get_flow_control_config().get_rate_based_config().get_time_period()){
                 std::cout << "dtcpconfig.flowctrlconfig.ratebasedconfig.timerperiod on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTCPConfig().get_flow_control_config().
-                        get_window_based_config().get_initial_credit() != recoveredMessage->getConnection().getDTCPConfig().get_flow_control_config().get_window_based_config().get_initial_credit()){
+        } else if (message.connection.getDTCPConfig().get_flow_control_config().
+                        get_window_based_config().get_initial_credit() != recoveredMessage->connection.getDTCPConfig().get_flow_control_config().get_window_based_config().get_initial_credit()){
                 std::cout << "dtcpconfig.flowctrlconfig.windowbasedconfig.initialcredit on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDTCPConfig().get_flow_control_config().get_window_based_config().get_maxclosed_window_queue_length() != recoveredMessage->getConnection().getDTCPConfig().get_flow_control_config().get_window_based_config().get_maxclosed_window_queue_length()){
+        } else if (message.connection.getDTCPConfig().get_flow_control_config().get_window_based_config().get_maxclosed_window_queue_length() !=
+        		recoveredMessage->connection.getDTCPConfig().get_flow_control_config().get_window_based_config().get_maxclosed_window_queue_length()){
                 std::cout << "dtcpconfig.flowctrlconfig.windowbasedconfig.maxclosedWindowQLength on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
@@ -2408,10 +2416,9 @@ int testIpcpUpdateConnectionRequest() {
         int returnValue = 0;
 
         IpcpConnectionUpdateRequestMessage message;
-        message.setPortId(25);
-        message.setSourceCepId(345);
-        message.setDestinationCepId(212);
-        message.setFlowUserIpcProcessId(35);
+        message.portId = 25;
+        message.sourceCepId = 345;
+        message.destinationCepId = 212;
 
         struct nl_msg* netlinkMessage;
         netlinkMessage = nlmsg_alloc();
@@ -2437,23 +2444,18 @@ int testIpcpUpdateConnectionRequest() {
                 std::cout << "Error parsing Ipcp Update Connection request Message "
                                 << "\n";
                 returnValue = -1;
-        } else if (message.getPortId() != recoveredMessage->getPortId()) {
+        } else if (message.portId != recoveredMessage->portId) {
                 std::cout << "Port id on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getSourceCepId()
-                        != recoveredMessage->getSourceCepId()) {
+        } else if (message.sourceCepId
+                        != recoveredMessage->sourceCepId) {
                 std::cout << "Source CEP-id  on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getDestinationCepId() !=
-                        recoveredMessage->getDestinationCepId()) {
+        } else if (message.destinationCepId !=
+                        recoveredMessage->destinationCepId) {
                 std::cout << "Destination CEP-id on original and recovered messages"
-                                << " are different\n";
-                returnValue = -1;
-        } else if (message.getFlowUserIpcProcessId() !=
-                        recoveredMessage->getFlowUserIpcProcessId()) {
-                std::cout << "Flow user IPC Process id on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
         }
@@ -2479,7 +2481,7 @@ int testIpcpCreateConnectionArrived() {
         connection.setQosId(3);
         connection.setDestCepId(346);
         connection.setFlowUserIpcProcessId(23);
-        message.setConnection(connection);
+        message.connection = connection;
 
         struct nl_msg* netlinkMessage;
         netlinkMessage = nlmsg_alloc();
@@ -2505,33 +2507,33 @@ int testIpcpCreateConnectionArrived() {
                 std::cout << "Error parsing Ipcp Create Connection arrived Message "
                                 << "\n";
                 returnValue = -1;
-        } else if (message.getConnection().getPortId() !=
-                        recoveredMessage->getConnection().getPortId()) {
+        } else if (message.connection.getPortId() !=
+                        recoveredMessage->connection.getPortId()) {
                 std::cout << "Port id on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getSourceAddress()
-                        != recoveredMessage->getConnection().getSourceAddress()) {
+        } else if (message.connection.getSourceAddress()
+                        != recoveredMessage->connection.getSourceAddress()) {
                 std::cout << "Source address  on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDestAddress() !=
-                        recoveredMessage->getConnection().getDestAddress()) {
+        } else if (message.connection.getDestAddress() !=
+                        recoveredMessage->connection.getDestAddress()) {
                 std::cout << "Destination address on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getQosId() !=
-                        recoveredMessage->getConnection().getQosId()) {
+        } else if (message.connection.getQosId() !=
+                        recoveredMessage->connection.getQosId()) {
                 std::cout << "QoS id on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getDestCepId() !=
-                        recoveredMessage->getConnection().getDestCepId()) {
+        } else if (message.connection.getDestCepId() !=
+                        recoveredMessage->connection.getDestCepId()) {
                 std::cout << "Dest cep-id on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;
-        } else if (message.getConnection().getFlowUserIpcProcessId() !=
-                        recoveredMessage->getConnection().getFlowUserIpcProcessId()) {
+        } else if (message.connection.getFlowUserIpcProcessId() !=
+                        recoveredMessage->connection.getFlowUserIpcProcessId()) {
                 std::cout << "Flow user IPC Process id on original and recovered messages"
                                 << " are different\n";
                 returnValue = -1;

@@ -131,6 +131,17 @@ void * rfifo_pop(struct rfifo * f)
 }
 EXPORT_SYMBOL(rfifo_pop);
 
+void * rfifo_peek(struct rfifo * f)
+{
+        if (!f) {
+                LOG_ERR("Can't peek from a NULL fifo ...");
+                return NULL;
+        }
+
+        return rqueue_head_peek(f->q);
+}
+EXPORT_SYMBOL(rfifo_peek);
+
 bool rfifo_is_empty(struct rfifo * f)
 {
         if (!f) {
