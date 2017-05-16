@@ -4830,13 +4830,15 @@ int putIpcpConnectionCreateRequestMessageObject(nl_msg* netlinkMessage,
         struct nlattr *dtpConfig, *dtcpConfig;
 
         NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_PORT_ID,
-                        object.getConnection().getPortId());
+                        object.connection.getPortId());
         NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_SOURCE_ADDR,
-                        object.getConnection().getSourceAddress());
+                        object.connection.getSourceAddress());
         NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_DEST_ADDR,
-                        object.getConnection().getDestAddress());
+                        object.connection.getDestAddress());
         NLA_PUT_U32(netlinkMessage, ICCRM_ATTR_QOS_ID,
-                        object.getConnection().getQosId());
+                        object.connection.getQosId());
+        NLA_PUT_U16(netlinkMessage, ICCRM_ATTR_FLOW_USER_IPCP_ID,
+                        object.connection.getFlowUserIpcProcessId());
 
         if (!(dtpConfig = nla_nest_start(
                         netlinkMessage, ICCRM_ATTR_DTP_CONFIG))){
@@ -4844,7 +4846,7 @@ int putIpcpConnectionCreateRequestMessageObject(nl_msg* netlinkMessage,
         }
 
         if (putDTPConfigObject(netlinkMessage,
-                        object.getConnection().getDTPConfig()) < 0) {
+                        object.connection.getDTPConfig()) < 0) {
                 goto nla_put_failure;
         }
 
@@ -4856,7 +4858,7 @@ int putIpcpConnectionCreateRequestMessageObject(nl_msg* netlinkMessage,
         }
 
         if (putDTCPConfigObject(netlinkMessage,
-                        object.getConnection().getDTCPConfig()) < 0) {
+                        object.connection.getDTCPConfig()) < 0) {
                 goto nla_put_failure;
         }
 
@@ -4871,13 +4873,11 @@ int putIpcpConnectionCreateRequestMessageObject(nl_msg* netlinkMessage,
 
 int putIpcpConnectionUpdateRequestMessageObject(nl_msg* netlinkMessage,
                 const IpcpConnectionUpdateRequestMessage& object) {
-        NLA_PUT_U32(netlinkMessage, ICURM_ATTR_PORT_ID, object.getPortId());
+        NLA_PUT_U32(netlinkMessage, ICURM_ATTR_PORT_ID, object.portId);
         NLA_PUT_U32(netlinkMessage, ICURM_ATTR_SRC_CEP_ID,
-                        object.getSourceCepId());
+                        object.sourceCepId);
         NLA_PUT_U32(netlinkMessage, ICURM_ATTR_DEST_CEP_ID,
-                                object.getDestinationCepId());
-        NLA_PUT_U16(netlinkMessage, ICURM_ATTR_FLOW_USER_IPC_PROCESS_ID,
-                        object.getFlowUserIpcProcessId());
+                                object.destinationCepId);
 
         return 0;
 
@@ -4891,17 +4891,17 @@ int putIpcpConnectionCreateArrivedMessageObject(nl_msg* netlinkMessage,
         struct nlattr *dtpConfig, *dtcpConfig;
 
         NLA_PUT_U32(netlinkMessage, ICCAM_ATTR_PORT_ID,
-                        object.getConnection().getPortId());
+                        object.connection.getPortId());
         NLA_PUT_U32(netlinkMessage, ICCAM_ATTR_SOURCE_ADDR,
-                        object.getConnection().getSourceAddress());
+                        object.connection.getSourceAddress());
         NLA_PUT_U32(netlinkMessage, ICCAM_ATTR_DEST_ADDR,
-                        object.getConnection().getDestAddress());
+                        object.connection.getDestAddress());
         NLA_PUT_U32(netlinkMessage, ICCAM_ATTR_DEST_CEP_ID,
-                        object.getConnection().getDestCepId());
+                        object.connection.getDestCepId());
         NLA_PUT_U32(netlinkMessage, ICCAM_ATTR_QOS_ID,
-                        object.getConnection().getQosId());
+                        object.connection.getQosId());
         NLA_PUT_U16(netlinkMessage, ICCAM_ATTR_FLOW_USER_IPCP_ID,
-                        object.getConnection().getFlowUserIpcProcessId());
+                        object.connection.getFlowUserIpcProcessId());
 
         if (!(dtpConfig = nla_nest_start(
                         netlinkMessage, ICCAM_ATTR_DTP_CONFIG))){
@@ -4909,7 +4909,7 @@ int putIpcpConnectionCreateArrivedMessageObject(nl_msg* netlinkMessage,
         }
 
         if (putDTPConfigObject(netlinkMessage,
-                        object.getConnection().getDTPConfig()) < 0) {
+                        object.connection.getDTPConfig()) < 0) {
                 goto nla_put_failure;
         }
 
@@ -4921,7 +4921,7 @@ int putIpcpConnectionCreateArrivedMessageObject(nl_msg* netlinkMessage,
         }
 
         if (putDTCPConfigObject(netlinkMessage,
-                        object.getConnection().getDTCPConfig()) < 0) {
+                        object.connection.getDTCPConfig()) < 0) {
                 goto nla_put_failure;
         }
 
@@ -8395,6 +8395,9 @@ IpcpConnectionCreateRequestMessage * parseIpcpConnectionCreateRequestMessage(
         attr_policy[ICCRM_ATTR_DTCP_CONFIG].type = NLA_NESTED;
         attr_policy[ICCRM_ATTR_DTCP_CONFIG].minlen = 0;
         attr_policy[ICCRM_ATTR_DTCP_CONFIG].maxlen = 0;
+        attr_policy[ICCRM_ATTR_FLOW_USER_IPCP_ID].type = NLA_U16;
+        attr_policy[ICCRM_ATTR_FLOW_USER_IPCP_ID].minlen = 2;
+        attr_policy[ICCRM_ATTR_FLOW_USER_IPCP_ID].maxlen = 2;
         struct nlattr *attrs[ICCRM_ATTR_MAX + 1];
 
         int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
@@ -8427,6 +8430,9 @@ IpcpConnectionCreateRequestMessage * parseIpcpConnectionCreateRequestMessage(
         if (attrs[ICCRM_ATTR_QOS_ID]) {
                 connection->setQosId(nla_get_u32(attrs[ICCRM_ATTR_QOS_ID]));
         }
+        if (attrs[ICCRM_ATTR_FLOW_USER_IPCP_ID]) {
+                connection->setFlowUserIpcProcessId(nla_get_u16(attrs[ICCRM_ATTR_FLOW_USER_IPCP_ID]));
+        }
 
 	if (attrs[ICCRM_ATTR_DTP_CONFIG]) {
 	        dtpConfig = parseDTPConfigObject(
@@ -8453,7 +8459,7 @@ IpcpConnectionCreateRequestMessage * parseIpcpConnectionCreateRequestMessage(
 	}
 
 	result = new IpcpConnectionCreateRequestMessage();
-	result->setConnection(*connection);
+	result->connection = *connection;
 	delete connection;
         return result;
 }
@@ -8470,9 +8476,6 @@ IpcpConnectionUpdateRequestMessage * parseIpcpConnectionUpdateRequestMessage(
         attr_policy[ICURM_ATTR_DEST_CEP_ID].type = NLA_U32;
         attr_policy[ICURM_ATTR_DEST_CEP_ID].minlen = 4;
         attr_policy[ICURM_ATTR_DEST_CEP_ID].maxlen = 4;
-        attr_policy[ICURM_ATTR_FLOW_USER_IPC_PROCESS_ID].type = NLA_U16;
-        attr_policy[ICURM_ATTR_FLOW_USER_IPC_PROCESS_ID].minlen = 2;
-        attr_policy[ICURM_ATTR_FLOW_USER_IPC_PROCESS_ID].maxlen = 2;
         struct nlattr *attrs[ICURM_ATTR_MAX + 1];
 
         int err = genlmsg_parse(hdr, sizeof(struct rinaHeader), attrs,
@@ -8487,22 +8490,15 @@ IpcpConnectionUpdateRequestMessage * parseIpcpConnectionUpdateRequestMessage(
                         new IpcpConnectionUpdateRequestMessage();
 
         if (attrs[ICURM_ATTR_PORT_ID]){
-                result->setPortId(nla_get_u32(attrs[ICURM_ATTR_PORT_ID]));
+                result->portId = nla_get_u32(attrs[ICURM_ATTR_PORT_ID]);
         }
 
         if (attrs[ICURM_ATTR_SRC_CEP_ID]){
-                result->setSourceCepId(
-                                nla_get_u32(attrs[ICURM_ATTR_SRC_CEP_ID]));
+                result->sourceCepId = nla_get_u32(attrs[ICURM_ATTR_SRC_CEP_ID]);
         }
 
         if (attrs[ICURM_ATTR_DEST_CEP_ID]){
-                result->setDestinationCepId(
-                                nla_get_u32(attrs[ICURM_ATTR_DEST_CEP_ID]));
-        }
-
-        if (attrs[ICURM_ATTR_FLOW_USER_IPC_PROCESS_ID]){
-                result->setFlowUserIpcProcessId(
-                                nla_get_u16(attrs[ICURM_ATTR_FLOW_USER_IPC_PROCESS_ID]));
+                result->destinationCepId = nla_get_u32(attrs[ICURM_ATTR_DEST_CEP_ID]);
         }
 
         return result;
@@ -8551,31 +8547,27 @@ IpcpConnectionCreateArrivedMessage * parseIpcpConnectionCreateArrivedMessage(
         DTCPConfig * dtcpConfig;
 
         if (attrs[ICCAM_ATTR_PORT_ID]) {
-                connection->setPortId(nla_get_u32(attrs[ICCAM_ATTR_PORT_ID]));
+                connection->portId = nla_get_u32(attrs[ICCAM_ATTR_PORT_ID]);
         }
 
         if (attrs[ICCAM_ATTR_SOURCE_ADDR]) {
-                connection->setSourceAddress(
-                                nla_get_u32(attrs[ICCAM_ATTR_SOURCE_ADDR]));
+                connection->sourceAddress = nla_get_u32(attrs[ICCAM_ATTR_SOURCE_ADDR]);
         }
 
         if (attrs[ICCAM_ATTR_DEST_ADDR]) {
-                connection->setDestAddress(
-                                nla_get_u32(attrs[ICCAM_ATTR_DEST_ADDR]));
+                connection->destAddress = nla_get_u32(attrs[ICCAM_ATTR_DEST_ADDR]);
         }
 
         if (attrs[ICCAM_ATTR_DEST_CEP_ID]) {
-                connection->setDestCepId(
-                                nla_get_u32(attrs[ICCAM_ATTR_DEST_CEP_ID]));
+                connection->destCepId = nla_get_u32(attrs[ICCAM_ATTR_DEST_CEP_ID]);
         }
 
         if (attrs[ICCAM_ATTR_QOS_ID]) {
-                connection->setQosId(nla_get_u32(attrs[ICCAM_ATTR_QOS_ID]));
+                connection->qosId = nla_get_u32(attrs[ICCAM_ATTR_QOS_ID]);
         }
 
         if (attrs[ICCAM_ATTR_FLOW_USER_IPCP_ID]) {
-                connection->setFlowUserIpcProcessId(
-                                nla_get_u16(attrs[ICCAM_ATTR_FLOW_USER_IPCP_ID]));
+                connection->flowUserIpcProcessId = nla_get_u16(attrs[ICCAM_ATTR_FLOW_USER_IPCP_ID]);
         }
 
         if (attrs[ICCAM_ATTR_DTP_CONFIG]) {
@@ -8603,7 +8595,7 @@ IpcpConnectionCreateArrivedMessage * parseIpcpConnectionCreateArrivedMessage(
         }
 
         result = new IpcpConnectionCreateArrivedMessage();
-        result->setConnection(*connection);
+        result->connection = *connection;
         delete connection;
         return result;
 }

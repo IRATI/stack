@@ -1613,15 +1613,6 @@ IpcpConnectionCreateRequestMessage::IpcpConnectionCreateRequestMessage():
                 BaseNetlinkMessage(RINA_C_IPCP_CONN_CREATE_REQUEST) {
 }
 
-const Connection& IpcpConnectionCreateRequestMessage::getConnection() const {
-        return connection;
-}
-
-void IpcpConnectionCreateRequestMessage::setConnection(
-                const Connection& connection) {
-        this->connection = connection;
-}
-
 IPCEvent* IpcpConnectionCreateRequestMessage::toIPCEvent() {
         return 0;
 }
@@ -1632,44 +1623,6 @@ IpcpConnectionUpdateRequestMessage::IpcpConnectionUpdateRequestMessage() :
         portId = 0;
         sourceCepId = 0;
         destinationCepId = 0;
-        flowUserIpcProcessId = 0;
-}
-
-int IpcpConnectionUpdateRequestMessage::getDestinationCepId() const {
-        return destinationCepId;
-}
-
-void IpcpConnectionUpdateRequestMessage::
-setDestinationCepId(int destinationCepId) {
-        this->destinationCepId = destinationCepId;
-}
-
-unsigned short
-IpcpConnectionUpdateRequestMessage::getFlowUserIpcProcessId() const {
-        return flowUserIpcProcessId;
-}
-
-void IpcpConnectionUpdateRequestMessage::
-setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId) {
-        this->flowUserIpcProcessId = flowUserIpcProcessId;
-}
-
-int IpcpConnectionUpdateRequestMessage::getPortId() const {
-        return portId;
-}
-
-void IpcpConnectionUpdateRequestMessage::
-setPortId(int portId) {
-        this->portId = portId;
-}
-
-int IpcpConnectionUpdateRequestMessage::getSourceCepId() const {
-        return sourceCepId;
-}
-
-void IpcpConnectionUpdateRequestMessage::
-setSourceCepId(int sourceCepId) {
-        this->sourceCepId = sourceCepId;
 }
 
 IPCEvent* IpcpConnectionUpdateRequestMessage::toIPCEvent() {
@@ -1679,15 +1632,6 @@ IPCEvent* IpcpConnectionUpdateRequestMessage::toIPCEvent() {
 /* CLASS IPCM CONNECTION CREATE ARRIVED MESSAGE */
 IpcpConnectionCreateArrivedMessage::IpcpConnectionCreateArrivedMessage():
                 BaseNetlinkMessage(RINA_C_IPCP_CONN_CREATE_ARRIVED) {
-}
-
-const Connection& IpcpConnectionCreateArrivedMessage::getConnection() const {
-        return connection;
-}
-
-void IpcpConnectionCreateArrivedMessage::setConnection(
-                const Connection& connection) {
-        this->connection = connection;
 }
 
 IPCEvent* IpcpConnectionCreateArrivedMessage::toIPCEvent() {

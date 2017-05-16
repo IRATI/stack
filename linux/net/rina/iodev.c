@@ -100,7 +100,7 @@ iodev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
         unsigned char * data;
         size_t retsize;
 
-        LOG_INFO("Syscall read SDU (size = %zd, port-id = %d)",
+        LOG_DBG("Syscall read SDU (size = %zd, port-id = %d)",
                 size, priv->port_id);
 
         tmp = NULL;
@@ -113,7 +113,7 @@ iodev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
 				blocking);
         /* Taking ownership from the internal layers */
 
-        LOG_INFO("SDU read returned %zd", retval);
+        LOG_DBG("SDU read returned %zd", retval);
 
         if (retval < 0) {
                 return retval;
@@ -127,8 +127,6 @@ iodev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
         partial_read = retsize > size;
         data = sdu_buffer(tmp);
         if (partial_read) {
-        	LOG_INFO("Doing a partial read of %d bytes (out of %d bytes)",
-        		size, retsize);
         	retsize = size;
         }
 

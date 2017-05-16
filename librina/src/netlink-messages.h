@@ -1008,14 +1008,12 @@ public:
  * connection to the EFCP module in the kernel.
  */
 class IpcpConnectionCreateRequestMessage: public BaseNetlinkMessage {
+public:
 
         /** Contains the data of the connection to be created */
         Connection connection;
 
-public:
         IpcpConnectionCreateRequestMessage();
-        const Connection& getConnection() const;
-        void setConnection(const Connection& connection);
         IPCEvent* toIPCEvent();
 };
 
@@ -1025,7 +1023,7 @@ public:
  * (IPC Process vs. application)
  */
 class IpcpConnectionUpdateRequestMessage: public BaseNetlinkMessage {
-
+public:
         /** The port-id where the connection will be bound to */
         int portId;
 
@@ -1035,22 +1033,7 @@ class IpcpConnectionUpdateRequestMessage: public BaseNetlinkMessage {
         /** The connection's destination CEP-ids */
         int destinationCepId;
 
-        /**
-         * The id of the IPC Process that will be using the flow
-         * (0 if it is an application)
-         */
-        unsigned short flowUserIpcProcessId;
-
-public:
         IpcpConnectionUpdateRequestMessage();
-        int getDestinationCepId() const;
-        void setDestinationCepId(int destinationCepId);
-        unsigned short getFlowUserIpcProcessId() const;
-        void setFlowUserIpcProcessId(unsigned short flowUserIpcProcessId);
-        int getPortId() const;
-        void setPortId(int portId);
-        int getSourceCepId() const;
-        void setSourceCepId(int sourceCepId);
         IPCEvent* toIPCEvent();
 };
 
@@ -1060,14 +1043,11 @@ public:
  * flow allocation process)
  */
 class IpcpConnectionCreateArrivedMessage: public BaseNetlinkMessage {
-
+public:
         /** Contains the data of the connection to be created */
         Connection connection;
 
-public:
         IpcpConnectionCreateArrivedMessage();
-        const Connection& getConnection() const;
-        void setConnection(const Connection& connection);
         IPCEvent* toIPCEvent();
 };
 
