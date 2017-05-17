@@ -57,9 +57,9 @@ RINA_SYSFS_OPS(core);
 RINA_ATTRS(core, version);
 RINA_KTYPE(core);
 
-int verbosity = LOG_VERB_INFO;
-EXPORT_SYMBOL(verbosity);
-module_param(verbosity, int, 0644);
+int irati_verbosity = LOG_VERB_INFO;
+EXPORT_SYMBOL(irati_verbosity);
+module_param(irati_verbosity, int, 0644);
 
 static int __init mod_init(void)
 {

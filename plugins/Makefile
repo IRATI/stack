@@ -1,33 +1,34 @@
 directories=$(shell ls)
 
-ifndef INSTALLDIR
-$(error "INSTALLDIR is not set")
+ifndef KREL
+KREL=`uname -r`
 endif
 
 ifndef KDIR
-$(warning "KDIR will be set to the linux directory of the repository")
-KDIR=$(shell echo `pwd`/../linux)
+KDIR=/lib/modules/$(KREL)/build
 endif
 
-KREL=$(shell make -s -C $(KDIR) kernelrelease)
+ifndef IRATI_KSDIR
+IRATI_KSDIR=${PWD}/../kernel
+endif
 
 all:
 	for i in $(directories); do 						\
 		cd $$i || continue; 						\
-		make KDIR=$(KDIR) INSTALLDIR=$(INSTALLDIR) KREL=$(KREL); 	\
+		make KDIR=$(KDIR) IRATI_KSDIR=$(IRATI_KSDIR) KREL=$(KREL); 	\
 		cd ..; 								\
 	done
 
 clean:
-	for i in $(directories); do 						\
-		cd $$i || continue; 						\
-		make KDIR=$(KDIR) INSTALLDIR=$(INSTALLDIR) KREL=$(KREL) clean; 	\
-		cd ..; 								\
+	for i in $(directories); do 						  \
+		cd $$i || continue; 						  \
+		make KDIR=$(KDIR) IRATI_KSDIR=$(IRATI_KSDIR) KREL=$(KREL) clean;  \
+		cd ..; 								  \
 	done
 
 install:
-	for i in $(directories); do 						\
-		cd $$i || continue; 						\
-		make KDIR=$(KDIR) INSTALLDIR=$(INSTALLDIR) KREL=$(KREL) install;\
-		cd ..; 								\
+	for i in $(directories); do 						  \
+		cd $$i || continue; 						  \
+		make KDIR=$(KDIR) IRATI_KSDIR=$(IRATI_KSDIR) KREL=$(KREL) install;\
+		cd ..; 								  \
 	done

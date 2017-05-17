@@ -36,7 +36,7 @@
 #define LOG_VERB_INFO    7
 #define LOG_VERB_DBG     8
 
-extern int verbosity;
+extern int irati_verbosity;
 
 /* The global logs prefix */
 #define __GPFX "rina-"
@@ -48,37 +48,37 @@ extern int verbosity;
 #define LOG_EMERG(FMT, ARGS...) __LOG(RINA_PREFIX, KERN_EMERG,      \
                                       "EMER", FMT, ##ARGS)
 #define LOG_ALERT(FMT, ARGS...) \
-	if (verbosity >= LOG_VERB_ALERT) \
+	if (irati_verbosity >= LOG_VERB_ALERT) \
 		 __LOG(RINA_PREFIX, KERN_ALERT,      \
                        "ALRT", FMT, ##ARGS)
 
 #define LOG_CRIT(FMT,  ARGS...) \
-	if (verbosity >= LOG_VERB_CRIT) \
+	if (irati_verbosity >= LOG_VERB_CRIT) \
 		 __LOG(RINA_PREFIX, KERN_CRIT,       \
                        "CRIT", FMT, ##ARGS)
 
 #define LOG_ERR(FMT,   ARGS...) \
-	if (verbosity >= LOG_VERB_ERR) \
+	if (irati_verbosity >= LOG_VERB_ERR) \
 		__LOG(RINA_PREFIX, KERN_ERR,        \
                       "ERR",  FMT, ##ARGS)
 
 #define LOG_WARN(FMT,  ARGS...) \
-	if (verbosity >= LOG_VERB_WARN) \
+	if (irati_verbosity >= LOG_VERB_WARN) \
 		__LOG(RINA_PREFIX, KERN_WARNING,    \
                       "WARN", FMT, ##ARGS)
 
 #define LOG_NOTE(FMT,  ARGS...) \
-	if (verbosity >= LOG_VERB_NOTE) \
+	if (irati_verbosity >= LOG_VERB_NOTE) \
 		 __LOG(RINA_PREFIX, KERN_NOTICE,     \
                        "NOTE", FMT, ##ARGS)
 
 #define LOG_INFO(FMT,  ARGS...) \
-	if (verbosity >= LOG_VERB_INFO) \
+	if (irati_verbosity >= LOG_VERB_INFO) \
 		__LOG(RINA_PREFIX, KERN_INFO,       \
                       "INFO", FMT, ##ARGS)
 
 #define LOG_DBG(FMT,   ARGS...) \
-	if (verbosity >= LOG_VERB_DBG) \
+	if (irati_verbosity >= LOG_VERB_DBG) \
 		__LOG(RINA_PREFIX, KERN_DEBUG,      \
                       "DBG", FMT, ##ARGS)
 

@@ -23,12 +23,12 @@
 
 struct rfifo;
 
-struct rfifo * rfifo_create(void);
-struct rfifo * rfifo_create_ni(void);
+extern struct rfifo * rfifo_create(void);
+extern struct rfifo * rfifo_create_ni(void);
 
 /* NOTE: dtor has the ownership of freeing the passed element */
-int            rfifo_destroy(struct rfifo * f,
-                             void        (* dtor)(void * e));
+extern int            rfifo_destroy(struct rfifo * f,
+                             	    void        (* dtor)(void * e));
 
 /*
  * NOTE: We allow pushing NULL entries in the fifo but the dtor passed to

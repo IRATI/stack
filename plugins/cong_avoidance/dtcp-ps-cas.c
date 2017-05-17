@@ -216,9 +216,6 @@ dtcp_ps_cas_create(struct rina_component * component)
         data->ecn_count                 = 0;
         data->rcv_count                 = 0;
 
-        LOG_DBG("Allocating %d bytes for rcv_vector with Wc %u, Wp %u",
-                VECTOR_SIZE(data->wc + data->wp), data->wc, data->wp);
-
         ps->priv                        = data;
 
         ps_conf = dtcp_ps(dtcp_cfg);
