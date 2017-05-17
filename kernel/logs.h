@@ -52,17 +52,17 @@ extern int rl_verbosity;
 		 __LOG(RINA_PREFIX, KERN_ALERT,      \
                        "ALRT", FMT, ##ARGS)
 
-#define LOG_CRIT(FMT,  ARGS...) \ 
+#define LOG_CRIT(FMT,  ARGS...) \
 	if (rl_verbosity >= LOG_VERB_CRIT) \
 		 __LOG(RINA_PREFIX, KERN_CRIT,       \
                        "CRIT", FMT, ##ARGS)
 
-#define LOG_ERR(FMT,   ARGS...) \ 
+#define LOG_ERR(FMT,   ARGS...) \
 	if (rl_verbosity >= LOG_VERB_ERR) \
 		__LOG(RINA_PREFIX, KERN_ERR,        \
                       "ERR",  FMT, ##ARGS)
 
-#define LOG_WARN(FMT,  ARGS...) \ 
+#define LOG_WARN(FMT,  ARGS...) \
 	if (rl_verbosity >= LOG_VERB_WARN) \
 		__LOG(RINA_PREFIX, KERN_WARNING,    \
                       "WARN", FMT, ##ARGS)
@@ -73,7 +73,7 @@ extern int rl_verbosity;
                        "NOTE", FMT, ##ARGS)
 
 #define LOG_INFO(FMT,  ARGS...) \
-	if (rl_verbosity >= LOG_VERB_INFO) \ 
+	if (rl_verbosity >= LOG_VERB_INFO) \
 		__LOG(RINA_PREFIX, KERN_INFO,       \
                       "INFO", FMT, ##ARGS)
 

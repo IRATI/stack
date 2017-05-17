@@ -3683,9 +3683,10 @@ static int format_ro_entries_list(struct list_head * entries,
                      nla_put_string(skb_out,
                     		    RIBO_ATTR_OBJECT_DISPLAY_VALUE,
                     		    pos->display_value)    ||
-                     nla_put_u64(skb_out,
-                    		 RIBO_ATTR_OBJECT_INSTANCE,
-                    		 pos->instance))
+                     nla_put_u64_64bit(skb_out,
+                    		       RIBO_ATTR_OBJECT_INSTANCE,
+                    		       pos->instance, 
+				       RIBO_ATTR_OBJECT_PAD))
                         return format_fail("rnl_ipcm_query_rib_resp_msg");
 
                 nla_nest_end(skb_out, msg_entry);

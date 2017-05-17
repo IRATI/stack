@@ -502,10 +502,11 @@ int rmt_set_policy_set_param(struct rmt *rmt,
 		rcu_read_lock();
 		ps = container_of(rcu_dereference(rmt->base.ps),
 				  struct rmt_ps, base);
-		if (!ps)
+		if (!ps) {
 			LOG_ERR("No policy-set selected for this RMT");
-		else
+		} else {
 			LOG_ERR("Unknown RMT parameter policy '%s'", name);
+		}
 
 		rcu_read_unlock();
 

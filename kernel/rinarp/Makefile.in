@@ -4,7 +4,7 @@
 # Written by Francesco Salvestrini <f.salvestrini@nextworks.it>
 #
 
-ccflags-y += -I..
+ccflags-y += -I${src}/..
 ccflags-y += -Wtype-limits
 
 obj-m += arp826.o

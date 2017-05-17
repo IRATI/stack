@@ -401,14 +401,16 @@ int pff_set_policy_set_param(struct pff * pff,
 
                 ps = container_of(rcu_dereference(pff->base.ps),
                                   struct pff_ps, base);
-                if (!ps)
+                if (!ps) {
                         LOG_ERR("No policy-set selected for this PFF");
-                 else
+                } else {
                         LOG_ERR("Unknown PFF parameter policy '%s'", name);
+		}
 
                 rcu_read_unlock();
-        } else
+        } else {
                 ret = base_set_policy_set_param(&pff->base, path, name, value);
+	}
 
         return ret;
 }

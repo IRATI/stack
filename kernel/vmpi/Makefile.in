@@ -5,8 +5,8 @@
 #            Francesco Salvestrini <f.salvestrini@nextworks.it>
 #
 
-ccflags-y += -I$..
-ccflags-y += -I$../ipcps
+ccflags-y += -I${src}/..
+ccflags-y += -I${src}/../ipcps
 ccflags-y += -Wtype-limits
 
 obj-m += vmpi-provider.o

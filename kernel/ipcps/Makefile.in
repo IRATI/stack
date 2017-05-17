@@ -4,8 +4,8 @@
 # Written by Francesco Salvestrini <f.salvestrini@nextworks.it>
 #
 
-ccflags-y += -I$..
-ccflags-y += -I$../vmpi
+ccflags-y += -I$(src)/..
+ccflags-y += -I$(src)../vmpi
 ccflags-y += -Wtype-limits
 
 obj-m  += normal-ipcp.o
