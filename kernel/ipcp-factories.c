@@ -223,7 +223,7 @@ int ipcpf_unregister(struct ipcp_factories * factories,
 
         rkfree(factory);
 
-        LOG_DBG("IPCP unregistered successfully");
+        LOG_INFO("Factory unregistered successfully");
 
         return 0;
 }

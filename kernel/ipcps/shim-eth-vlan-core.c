@@ -2329,6 +2329,8 @@ static void __exit mod_exit(void)
         kipcm_ipcp_factory_unregister(default_kipcm, shim_eth_vlan);
         kipcm_ipcp_factory_unregister(default_kipcm, shim_wifi_ap);
         kipcm_ipcp_factory_unregister(default_kipcm, shim_wifi_sta);
+	
+	LOG_INFO("IRATI shim Ethernet module removed");
 }
 
 module_init(mod_init);

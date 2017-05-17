@@ -337,15 +337,16 @@ static ssize_t shim_tcp_udp_ipcp_sysfs_store(struct kobject *   kobj,
 		config.entry = &entry;
 		for (; p < q; p++) {
 			if (!strcmp(p, "hostname")
-			 && !list_empty(&data->reg_apps))
+			 && !list_empty(&data->reg_apps)) {
 				LOG_ERR("Applications are already registered");
-			else if (!(entry.name = (char *) p,
+			} else if (!(entry.name = (char *) p,
 				   p = memchr(p, '\0', q - p))
 			      || !(entry.value = (char *) ++p,
-				   p = memchr(p, '\0', q - p)))
+				   p = memchr(p, '\0', q - p))) {
 				LOG_ERR("Error parsing config update");
-			else if (!parse_assign_conf(data, &dif_config))
+			} else if (!parse_assign_conf(data, &dif_config)) {
 				continue;
+			}
 			return -EINVAL;
 		}
 		return size;
@@ -449,8 +450,6 @@ find_flow_by_port(struct ipcp_instance_data * data,
 {
         struct shim_tcp_udp_flow * flow;
 
-        LOG_HBEAT;
-
         ASSERT(data);
         ASSERT(is_port_id_ok(id));
 
@@ -473,8 +472,6 @@ find_flow_by_socket(struct ipcp_instance_data * data,
                     const struct socket *       sock)
 {
         struct shim_tcp_udp_flow * flow;
-
-        LOG_HBEAT;
 
         ASSERT(data);
 
@@ -500,8 +497,6 @@ find_udp_flow(struct ipcp_instance_data * data,
 {
         struct shim_tcp_udp_flow * flow;
 
-        LOG_HBEAT;
-
         ASSERT(data);
         ASSERT(addr);
         ASSERT(sock);
@@ -521,8 +516,6 @@ find_app_by_socket(struct ipcp_instance_data * data,
                    const struct socket *       sock)
 {
         struct reg_app_data * app;
-
-        LOG_HBEAT;
 
         ASSERT(data);
         ASSERT(sock);
@@ -556,8 +549,6 @@ static struct reg_app_data * find_app_by_name(struct ipcp_instance_data * data,
 {
         struct reg_app_data * app;
 
-        LOG_HBEAT;
-
         ASSERT(data);
         ASSERT(name);
 
@@ -579,8 +570,6 @@ static struct reg_app_data * find_app_by_name(struct ipcp_instance_data * data,
 static int flow_destroy(struct ipcp_instance_data * data,
                         struct shim_tcp_udp_flow *  flow)
 {
-        LOG_HBEAT;
-
         ASSERT(data);
         ASSERT(flow);
 
@@ -600,8 +589,6 @@ static int flow_destroy(struct ipcp_instance_data * data,
 static int unbind_and_destroy_flow(struct ipcp_instance_data * data,
                                    struct shim_tcp_udp_flow *  flow)
 {
-        LOG_HBEAT;
-
         ASSERT(data);
 
         ASSERT(flow);
@@ -643,8 +630,6 @@ static int tcp_udp_unbind_user_ipcp(struct ipcp_instance_data * data,
 static int tcp_unbind_and_destroy_flow(struct ipcp_instance_data * data,
                                        struct shim_tcp_udp_flow *  flow)
 {
-        LOG_HBEAT;
-
         ASSERT(data);
         ASSERT(flow);
 
@@ -694,8 +679,6 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
         struct ipcp_instance *     ipcp;
         unsigned                   len;
 
-        LOG_HBEAT;
-
         ASSERT(data);
         ASSERT(source);
         ASSERT(dest);
@@ -738,7 +721,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                         flow->fspec_id = 0;
 
                         len = sockaddr_init(&addr, &data->host_name, 0);
-                        err = sock_create_kern(addr.family, SOCK_DGRAM,
+                        err = sock_create_kern(&init_net, addr.family, SOCK_DGRAM,
                                                IPPROTO_UDP, &flow->sock);
                         if (err < 0) {
                                 LOG_ERR("Could not create UDP socket");
@@ -764,7 +747,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                         LOG_DBG("Reliable flow requested");
                         flow->fspec_id = 1;
 
-                        err = sock_create_kern(flow->addr.family, SOCK_STREAM,
+                        err = sock_create_kern(&init_net, flow->addr.family, SOCK_STREAM,
                                                IPPROTO_TCP, &flow->sock);
                         if (err < 0) {
                                 LOG_ERR("Could not create TCP socket");
@@ -852,8 +835,6 @@ tcp_udp_flow_allocate_response(struct ipcp_instance_data * data,
         struct shim_tcp_udp_flow * flow;
         struct reg_app_data *      app;
         struct ipcp_instance *     ipcp;
-
-        LOG_HBEAT;
 
         ASSERT(data);
         ASSERT(is_port_id_ok(port_id));
@@ -1015,8 +996,6 @@ static int tcp_udp_flow_deallocate(struct ipcp_instance_data * data,
 {
         struct shim_tcp_udp_flow * flow;
 
-        LOG_HBEAT;
-
         ASSERT(data);
 
         flow = find_flow_by_port(data, id);
@@ -1083,11 +1062,11 @@ int send_msg(struct socket *      sock,
         msg.msg_namelen    = lother;
 
         size = kernel_sendmsg(sock, &msg, &iov, 1, len);
-        if (size > 0)
+        if (size > 0) {
                 LOG_DBG("Sent message with %d bytes", size);
-        else
+        } else {
                 LOG_ERR("Problems sending message");
-
+	}
         return size;
 }
 
@@ -1102,8 +1081,6 @@ static int udp_process_msg(struct ipcp_instance_data * data,
         int                         size;
         struct ipcp_instance      * ipcp, * user_ipcp;
         char			    api_string[12];
-
-        LOG_HBEAT;
 
 	/* Create SDU with max allowable size removing PCI and TAIL room */
 	du = sdu_create_ni(CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE
@@ -1331,8 +1308,6 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
         int             size;
         __be16          nlen;
 
-        LOG_HBEAT;
-
         size = recv_msg(sock, NULL, 0, sbuf, 2);
         if (size <= 0) {
                 return size;
@@ -1436,8 +1411,6 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
         struct sdu *    du;
         int             start, size;
 
-        LOG_HBEAT;
-
         start = flow->lbuf - flow->bytes_left;
 
         size = recv_msg(sock, NULL, 0, sdu_buffer(flow->sdu)+start, flow->bytes_left);
@@ -1509,8 +1482,6 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
         struct rcv_data *          recvd;
         int                        size;
 
-        LOG_HBEAT;
-
         ASSERT(data);
         ASSERT(sock);
 
@@ -1578,8 +1549,6 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
         int                        err;
         struct ipcp_instance     * ipcp, * user_ipcp;
         char	   		   api_string[12];
-
-        LOG_HBEAT;
 
         ASSERT(sock);
 
@@ -1714,8 +1683,6 @@ static int tcp_udp_rcv_process_msg(struct sock * sk)
         struct socket *                     sock;
         int                                 res, len;
 
-        LOG_HBEAT;
-
         ASSERT(sk);
 
         sock = sk->sk_socket;
@@ -1759,8 +1726,6 @@ static void tcp_udp_rcv_worker(struct work_struct * work)
 {
         struct rcv_data * recvd, * next;
 
-        LOG_HBEAT;
-
         /* FIXME: more efficient locking and better cleanup */
         spin_lock_bh(&rcv_wq_lock);
         list_for_each_entry_safe(recvd, next, &rcv_wq_data, list) {
@@ -1793,8 +1758,6 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
         unsigned              sa_len;
         struct exp_reg *      exp_reg;
         int                   err;
-
-        LOG_HBEAT;
 
         ASSERT(data);
         ASSERT(name);
@@ -1832,8 +1795,8 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
 
         app->port = exp_reg->port;
 
-        err = sock_create_kern(data->host_name.family, SOCK_DGRAM, IPPROTO_UDP,
-                               &app->udpsock);
+        err = sock_create_kern(&init_net, data->host_name.family, SOCK_DGRAM, 
+			       IPPROTO_UDP, &app->udpsock);
         if (err < 0) {
                 LOG_ERR("Could not create UDP socket for registration");
                 name_destroy(app->app_name);
@@ -1858,8 +1821,8 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
 
         LOG_DBG("UDP socket ready");
 
-        err = sock_create_kern(data->host_name.family, SOCK_STREAM, IPPROTO_TCP,
-                               &app->tcpsock);
+        err = sock_create_kern(&init_net, data->host_name.family, SOCK_STREAM, 
+			       IPPROTO_TCP, &app->tcpsock);
         if (err < 0) {
                 LOG_ERR("could not create TCP socket for registration");
                 sock_release(app->udpsock);
@@ -1950,8 +1913,6 @@ static int tcp_udp_application_unregister(struct ipcp_instance_data * data,
 {
         struct reg_app_data * app;
 
-        LOG_HBEAT;
-
         ASSERT(data);
         ASSERT(name);
 
@@ -2033,8 +1994,6 @@ static void clear_directory(struct ipcp_instance_data * data)
 {
         struct dir_entry * entry, * next;
 
-        LOG_HBEAT;
-
         ASSERT(data);
 
         list_for_each_entry_safe(entry, next, &data->directory, list) {
@@ -2059,8 +2018,6 @@ static void clear_exp_reg(struct ipcp_instance_data * data)
 
 static void undo_assignment(struct ipcp_instance_data * data)
 {
-        LOG_HBEAT;
-
         clear_directory(data);
         clear_exp_reg(data);
 }
@@ -2074,8 +2031,6 @@ static int parse_dir_entry(struct ipcp_instance_data * data, char **blob)
         struct dir_entry * dir_entry;
         struct dir_entry * entry;
         union address    * addr;
-
-        LOG_HBEAT;
 
         ASSERT(*blob);
 
@@ -2230,8 +2185,6 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
 {
         struct ipcp_config * tmp;
 
-        LOG_HBEAT;
-
         ASSERT(data);
         ASSERT(config);
 
@@ -2332,8 +2285,6 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
 static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                                  const struct dif_info *     dif_information)
 {
-        LOG_HBEAT;
-
         ASSERT(data);
         ASSERT(dif_information);
 
@@ -2369,8 +2320,6 @@ err:
 static int tcp_udp_update_dif_config(struct ipcp_instance_data * data,
                                      const struct dif_config *   new_config)
 {
-        LOG_HBEAT;
-
         ASSERT(data);
         ASSERT(new_config);
 
@@ -2399,8 +2348,6 @@ static int tcp_sdu_write(struct shim_tcp_udp_flow * flow,
         __be16 length;
         int    size, total;
 	char * buf;
-
-        LOG_HBEAT;
 
         ASSERT(flow);
         ASSERT(len);
@@ -2485,8 +2432,6 @@ static int __tcp_udp_sdu_write(struct ipcp_instance_data * data,
         ASSERT(data);
         ASSERT(sdu);
         ASSERT(is_port_id_ok(id));
-
-        LOG_HBEAT;
 
         flow = find_flow_by_port(data, id);
         if (!flow) {
@@ -2585,8 +2530,6 @@ static void tcp_udp_write_worker(struct work_struct * w)
 
 static const struct name * tcp_udp_ipcp_name(struct ipcp_instance_data * data)
 {
-        LOG_HBEAT;
-
         ASSERT(data);
         ASSERT(name_is_ok(data->name));
 
@@ -2595,8 +2538,6 @@ static const struct name * tcp_udp_ipcp_name(struct ipcp_instance_data * data)
 
 static const struct name * tcp_udp_dif_name(struct ipcp_instance_data * data)
 {
-        LOG_HBEAT;
-
         ASSERT(data);
         ASSERT(name_is_ok(data->dif_name));
 
@@ -2662,8 +2603,6 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
 
 static int tcp_udp_init(struct ipcp_factory_data * data)
 {
-        LOG_HBEAT;
-
         ASSERT(data);
 
         bzero(&tcp_udp_data, sizeof(tcp_udp_data));
@@ -2686,8 +2625,6 @@ static int tcp_udp_init(struct ipcp_factory_data * data)
 
 static int tcp_udp_fini(struct ipcp_factory_data * data)
 {
-        LOG_HBEAT;
-
         ASSERT(data);
 
         ASSERT(list_empty(&(data->instances)));
@@ -2744,8 +2681,6 @@ static struct ipcp_instance * tcp_udp_create(struct ipcp_factory_data * data,
 					     uint_t			us_nl_port)
 {
         struct ipcp_instance * inst;
-
-        LOG_HBEAT;
 
         ASSERT(data);
 
@@ -2878,8 +2813,6 @@ static int tcp_udp_destroy(struct ipcp_factory_data * data,
         struct shim_tcp_udp_flow 	  * flow, * nflow;
         struct reg_app_data	 	  * reg_app, *nreg_app;
 
-        LOG_HBEAT;
-
         ASSERT(data);
         ASSERT(instance);
 
@@ -2999,6 +2932,8 @@ static void __exit mod_exit(void)
         }
 
         kipcm_ipcp_factory_unregister(default_kipcm, shim);
+
+	LOG_INFO("IRATI shim-tcp-udp module removed successfully");
 }
 
 module_init(mod_init);

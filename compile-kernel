@@ -15,19 +15,8 @@
 
 ME=compile-kernel
 
-. ./.env || {
-    echo "$ME: Cannot load environment"
-    exit 1
-}
-
-echo "$ME: Compiling kernel"
-(cd linux && make bzImage) || {
+echo "$ME: Compiling kernel modules"
+(cd kernel && ./configure && make) || {
     echo "$ME: Cannot complete kernel compilation"
-    exit 1
-}
-
-echo "$ME: Compiling modules"
-(cd linux && make modules) || {
-    echo "$ME: Cannot complete modules compilation"
     exit 1
 }

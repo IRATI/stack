@@ -44,7 +44,8 @@ struct shim_eth_qdisc_priv {
 	bool 	 started_notifying;
 };
 
-static int shim_eth_qdisc_enqueue(struct sk_buff *skb, struct Qdisc *qdisc)
+static int shim_eth_qdisc_enqueue(struct sk_buff *skb, struct Qdisc *qdisc,
+				  struct sk_buff **to_free)
 {
 	struct shim_eth_qdisc_priv *priv;
 
@@ -61,13 +62,13 @@ static int shim_eth_qdisc_enqueue(struct sk_buff *skb, struct Qdisc *qdisc)
 	priv = qdisc_priv(qdisc);
 
 	LOG_DBG("shim-eth-enqueue called; current size is %u", qdisc->q.qlen);
-	if (skb_queue_len(&qdisc->q) < priv->q_max_size)
+	if (qdisc->q.qlen < priv->q_max_size)
 		return __qdisc_enqueue_tail(skb, qdisc, &qdisc->q);
 
 	priv->notifications = MAX_NOTIFICATIONS;
 	priv->started_notifying = false;
 
-	return qdisc_drop(skb, qdisc);
+	return qdisc_drop(skb, qdisc, to_free);
 }
 
 static struct sk_buff * shim_eth_qdisc_dequeue(struct Qdisc *qdisc)
@@ -81,9 +82,9 @@ static struct sk_buff * shim_eth_qdisc_dequeue(struct Qdisc *qdisc)
 
 	priv = qdisc_priv(qdisc);
 
-	if (skb_queue_len(&qdisc->q) > 0) {
-		struct sk_buff *skb = __qdisc_dequeue_head(qdisc, &qdisc->q);
-		if (skb_queue_len(&qdisc->q) == priv->q_enable_thres &&
+	if (qdisc->q.qlen > 0) {
+		struct sk_buff *skb = __qdisc_dequeue_head(&qdisc->q);
+		if (qdisc->q.qlen == priv->q_enable_thres &&
 				priv->notifications == MAX_NOTIFICATIONS)
 			priv->started_notifying = true;
 
@@ -105,7 +106,7 @@ static struct sk_buff * shim_eth_qdisc_peek(struct Qdisc *qdisc)
 		return NULL;
 	}
 
-	return skb_peek(&qdisc->q);
+	return qdisc->q.head;
 }
 
 static int shim_eth_qdisc_init(struct Qdisc *qdisc, struct nlattr *opt)
@@ -125,7 +126,8 @@ static int shim_eth_qdisc_init(struct Qdisc *qdisc, struct nlattr *opt)
 	priv->q_enable_thres = opt->nla_type;
 	priv->notifications = 0;
 	priv->started_notifying = false;
-	skb_queue_head_init(&qdisc->q);
+	qdisc_skb_head_init(&qdisc->q);
+	spin_lock_init(&qdisc->q.lock);
 
 	LOG_INFO("shim-eth-qdisc-init: max size: %u, enable thres: %u",
 		 priv->q_max_size, priv->q_enable_thres);
@@ -140,7 +142,7 @@ static void shim_eth_qdisc_reset(struct Qdisc *qdisc)
 		return;
 	}
 
-	__qdisc_reset_queue(qdisc, &qdisc->q);
+	__qdisc_reset_queue(&qdisc->q);
 
 	qdisc->qstats.backlog = 0;
 	qdisc->q.qlen = 0;

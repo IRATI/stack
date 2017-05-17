@@ -57,6 +57,10 @@ RINA_SYSFS_OPS(core);
 RINA_ATTRS(core, version);
 RINA_KTYPE(core);
 
+int verbosity = LOG_VERB_INFO;
+EXPORT_SYMBOL(verbosity);
+module_param(verbosity, int, 0644);
+
 static int __init mod_init(void)
 {
         LOG_DBG("IRATI RINA implementation initializing");
@@ -112,7 +116,7 @@ static void __exit mod_exit(void)
 	LOG_INFO("RNL finalized successfully");
 
 	robject_del(&core_object);
-	LOG_INFO("Deleted root rset");
+	LOG_INFO("IRATI RINA implementation kernel modules removed");
 }
 
 module_init(mod_init);

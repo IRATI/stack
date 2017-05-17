@@ -9,7 +9,7 @@ KERNMODDIR=@ROOTDIR@
 KERNBUILDDIR=@LIBMODPREFIX@/lib/modules/$(KER)/build
 
 all: 
-	$(MAKE) -C $(KERNBUILDDIR) HAVE_VMPI=@HAVE_VMPI@ M=$(KERNMODDIR)  modules
+	$(MAKE) -C $(KERNBUILDDIR) HAVE_VMPI=@HAVE_VMPI@ TCP_UDP_BUFFER_SIZE=@TCP_UDP_BUFFER_SIZE@ M=$(KERNMODDIR)  modules
 
 clean: 
 	$(MAKE) -C $(KERNBUILDDIR) M=$(KERNMODDIR) clean
@@ -42,17 +42,17 @@ rina-irati-core-y:=						\
 	kipcm-utils.o kipcm.o					\
 	sdup.o							\
 	ps-factory.o						\
-
-obj-m += rina-default-plugin.o
-rina-default-plugin-y :=					\
-	default-plugin.o					\
-	rmt-ps-default.o                                        \
+        rmt-ps-default.o                                        \
         dtp-ps-default.o                                        \
         dtcp-ps-default.o                                       \
         pff-ps-default.o                                        \
         sdup-crypto-ps-default.o                                \
         sdup-errc-ps-default.o                                  \
         sdup-ttl-ps-default.o
+
+obj-m += rina-default-plugin.o
+rina-default-plugin-y :=					\
+	default-plugin.o
 
 obj-$(HAVE_VMPI) += vmpi/
 obj-y += ipcps/
