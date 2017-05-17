@@ -19,13 +19,12 @@
  */
 
 #include <linux/export.h>
-#include <linux/init.h>
+#include <linux/module.h>
 #include <linux/sysfs.h>
 
 #define RINA_PREFIX "core"
 
 #include "logs.h"
-#include "debug.h"
 #include "rnl.h"
 #include "kipcm.h"
 #include "utils.h"
@@ -58,23 +57,18 @@ RINA_SYSFS_OPS(core);
 RINA_ATTRS(core, version);
 RINA_KTYPE(core);
 
-static int __init rina_core_init(void)
+static int __init mod_init(void)
 {
-        LOG_DBG("RINA stack initializing");
-
-        if (rina_debug_init())
-                return -1;
+        LOG_DBG("IRATI RINA implementation initializing");
 
         LOG_DBG("Creating root rset");
         if (robject_init_and_add(&core_object, &core_rtype, NULL, "rina")) {
                 LOG_ERR("Cannot initialize root rset, bailing out");
-                rina_debug_exit();
                 return -1;
 	}
         LOG_DBG("Initializing RNL");
         if (rnl_init()) {
 		robject_del(&core_object);
-                rina_debug_exit();
                 return -1;
         }
 
@@ -82,7 +76,6 @@ static int __init rina_core_init(void)
         if (iodev_init()) {
                 rnl_exit();
                 robject_del(&core_object);
-                rina_debug_exit();
                 return -1;
         }
 
@@ -91,11 +84,10 @@ static int __init rina_core_init(void)
                 iodev_fini();
                 rnl_exit();
                 robject_del(&core_object);
-                rina_debug_exit();
                 return -1;
         }
 
-        LOG_INFO("RINA stack v%d.%d.%d initialized",
+        LOG_INFO("IRATI RINA implementation v%d.%d.%d initialized",
                  RINA_VERSION_MAJOR(version),
                  RINA_VERSION_MINOR(version),
                  RINA_VERSION_MICRO(version));
@@ -105,4 +97,34 @@ static int __init rina_core_init(void)
         return 0;
 }
 
-__initcall(rina_core_init);
+static void __exit mod_exit(void)
+{
+	if (kipcm_fini(default_kipcm)) {
+		LOG_ERR("Problems finalizing KIPCM");
+	} else {
+		LOG_INFO("KIPCM finalized successfully");
+	}
+
+	iodev_fini();
+	LOG_INFO("IODEV finalized successfully");
+
+	rnl_exit();
+	LOG_INFO("RNL finalized successfully");
+
+	robject_del(&core_object);
+	LOG_INFO("Deleted root rset");
+}
+
+module_init(mod_init);
+module_exit(mod_exit);
+
+MODULE_DESCRIPTION("IRATI core plugin");
+
+MODULE_LICENSE("GPL");
+
+MODULE_AUTHOR("Vincenzo Maffione <v.maffione@nextworks.it>");
+MODULE_AUTHOR("Francesco Salvestrini <f.salvestrini@nextworks.it>");
+MODULE_AUTHOR("Miquel Tarzan <miquel.tarzan@i2cat.net>");
+MODULE_AUTHOR("Leonardo Begesio <leonardo.bergesio@i2cat.net>");
+MODULE_AUTHOR("Eduard Grasa <eduard.grasa@i2cat.net>");
+MODULE_AUTHOR("Sander Vrijders <sander.vrijders@intec.ugent.be>");

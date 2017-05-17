@@ -1,0 +1,77 @@
+#!/bin/bash
+
+HAVE_VMPI="n"
+INSTALL_PREFIX="/"
+LIBMODPREFIX=""
+
+# Option parsing
+while [[ $# > 0 ]]
+do
+    key="$1"
+    case $key in
+        "--with-vmpi")
+        HAVE_VMPI="y"
+        ;;
+
+        "--prefix")
+        if [ -n "$2" ]; then
+            INSTALL_PREFIX=$2
+            shift
+        else
+            echo "--prefix requires a path argument"
+            exit 255
+        fi
+        ;;
+
+        "--libmodprefix")
+        if [ -n "$2" ]; then
+            LIBMODPREFIX=$2
+            shift
+        else
+            echo "--libmodprefix requires a path argument"
+            exit 255
+        fi
+        ;;
+
+        *)
+        echo "Unknown option '$key'"
+        exit 255
+        ;;
+    esac
+    shift
+done
+
+# Check if kernel headers are there for out-of-tree build
+if [ ! -d /lib/modules/`uname -r`/build ]; then
+    echo "Cannot find '/lib/modules/$(uname -r)/build' directory"
+    echo "Make sure headers for the running kernel are installed"
+    exit 255
+fi
+
+# Generate the main Makefile
+cp Makefile.in Makefile
+sed -i "s|@HAVE_VMPI@|${HAVE_VMPI}|g" Makefile
+sed -i "s|@INSTALL_MOD_PATH@|${INSTALL_PREFIX}${LIBMODPREFIX}|g" Makefile
+sed -i "s|@ROOTDIR@|$PWD|g" Makefile
+sed -i "s|@LIBMODPREFIX@|${LIBMODPREFIX}|g" Makefile
+
+# Prepare VMPI
+if [ $HAVE_VMPI == "y" ]; then
+    cd kernel/vmpi
+    git clean -fdx .
+    tar -zxvf vmpi-*.tar.gz
+    rm vmpi/vmpi-bufs.c vmpi/vmpi-bufs.h
+    mv vmpi/* .
+    rm -rf vmpi
+    # Delete the vmpi-bufs module line
+    sed -i '/vmpi-bufs/d' Makefile
+    # Insert a line to set include directives
+    sed -i '1 i \
+    EXTRA_CFLAGS := -I$(PWD)/../include' Makefile
+    cd ../..
+fi
+
+# Generate other makefiles
+cp ipcps/Makefile.in ipcps/Makefile
+cp rinarp/Makefile.in rinarp/Makefile
+cp vmpi/Makefile.in vmpi/Makefile

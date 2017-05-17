@@ -27,6 +27,17 @@
 
 #include <linux/kernel.h>
 
+#define LOG_VERB_EMERG   1
+#define LOG_VERB_ALERT   2
+#define LOG_VERB_CRIT    3
+#define LOG_VERB_ERR     4
+#define LOG_VERB_WARN    5
+#define LOG_VERB_NOTE    6
+#define LOG_VERB_INFO    7
+#define LOG_VERB_DBG     8
+
+extern int rl_verbosity;
+
 /* The global logs prefix */
 #define __GPFX "rina-"
 
@@ -36,41 +47,44 @@
 /* Sorted by "urgency" (high to low) */
 #define LOG_EMERG(FMT, ARGS...) __LOG(RINA_PREFIX, KERN_EMERG,      \
                                       "EMER", FMT, ##ARGS)
-#define LOG_ALERT(FMT, ARGS...) __LOG(RINA_PREFIX, KERN_ALERT,      \
-                                      "ALRT", FMT, ##ARGS)
-#define LOG_CRIT(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_CRIT,       \
-                                      "CRIT", FMT, ##ARGS)
-#define LOG_ERR(FMT,   ARGS...) __LOG(RINA_PREFIX, KERN_ERR,        \
-                                      "ERR",  FMT, ##ARGS)
-#define LOG_WARN(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_WARNING,    \
-                                      "WARN", FMT, ##ARGS)
-#define LOG_NOTE(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_NOTICE,     \
-                                      "NOTE", FMT, ##ARGS)
-#define LOG_INFO(FMT,  ARGS...) __LOG(RINA_PREFIX, KERN_INFO,       \
-                                      "INFO", FMT, ##ARGS)
+#define LOG_ALERT(FMT, ARGS...) \
+	if (rl_verbosity >= LOG_VERB_ALERT) \
+		 __LOG(RINA_PREFIX, KERN_ALERT,      \
+                       "ALRT", FMT, ##ARGS)
 
-#ifdef CONFIG_RINA_DEBUG
-#ifdef CONFIG_RINA_SUPPRESS_DEBUG_LOGS
-//#warning Debugging logs WILL BE suppressed
-#define LOG_DBG(FMT,   ARGS...) do { } while (0)
-#else
-#define LOG_DBG(FMT,   ARGS...) __LOG(RINA_PREFIX, KERN_DEBUG,      \
-                                      "DBG", FMT, ##ARGS)
-#endif
-#else
-#define LOG_DBG(FMT,   ARGS...) do { } while (0)
-#endif
+#define LOG_CRIT(FMT,  ARGS...) \ 
+	if (rl_verbosity >= LOG_VERB_CRIT) \
+		 __LOG(RINA_PREFIX, KERN_CRIT,       \
+                       "CRIT", FMT, ##ARGS)
+
+#define LOG_ERR(FMT,   ARGS...) \ 
+	if (rl_verbosity >= LOG_VERB_ERR) \
+		__LOG(RINA_PREFIX, KERN_ERR,        \
+                      "ERR",  FMT, ##ARGS)
+
+#define LOG_WARN(FMT,  ARGS...) \ 
+	if (rl_verbosity >= LOG_VERB_WARN) \
+		__LOG(RINA_PREFIX, KERN_WARNING,    \
+                      "WARN", FMT, ##ARGS)
+
+#define LOG_NOTE(FMT,  ARGS...) \
+	if (rl_verbosity >= LOG_VERB_NOTE) \
+		 __LOG(RINA_PREFIX, KERN_NOTICE,     \
+                       "NOTE", FMT, ##ARGS)
+
+#define LOG_INFO(FMT,  ARGS...) \
+	if (rl_verbosity >= LOG_VERB_INFO) \ 
+		__LOG(RINA_PREFIX, KERN_INFO,       \
+                      "INFO", FMT, ##ARGS)
+
+#define LOG_DBG(FMT,   ARGS...) \
+	if (rl_verbosity >= LOG_VERB_DBG) \
+		__LOG(RINA_PREFIX, KERN_DEBUG,      \
+                      "DBG", FMT, ##ARGS)
 
 /* Helpers */
 #define LOG_DBGF(FMT,  ARGS...) LOG_DBG("(%s: " FMT, __FUNCTION__, ##ARGS)
 #define LOG_ERRF(FMT,  ARGS...) LOG_ERR("(%s: " FMT, __FUNCTION__, ##ARGS)
-
-#ifdef CONFIG_RINA_DEBUG_HEARTBEATS
-#define LOG_HBEAT LOG_DBG("I'm in %s (%s:%d)",                  \
-                          __FUNCTION__, __FILE__, __LINE__)
-#else
-#define LOG_HBEAT do { } while (0)
-#endif
 
 #define LOG_OBSOLETE    LOG_ERR("Code in %s:%d is obsolete and "        \
                                 "it will be removed soon, "             \

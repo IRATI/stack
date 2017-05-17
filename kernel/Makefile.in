@@ -5,20 +5,20 @@
 #
 
 KER=`uname -r`
-KERNMODDIR=/home/i2cat/edu/stack/kernel
-KERNBUILDDIR=/lib/modules/$(KER)/build
+KERNMODDIR=@ROOTDIR@
+KERNBUILDDIR=@LIBMODPREFIX@/lib/modules/$(KER)/build
 
 all: 
-	$(MAKE) -C $(KERNBUILDDIR) HAVE_VMPI=n M=$(KERNMODDIR)  modules
+	$(MAKE) -C $(KERNBUILDDIR) HAVE_VMPI=@HAVE_VMPI@ M=$(KERNMODDIR)  modules
 
 clean: 
 	$(MAKE) -C $(KERNBUILDDIR) M=$(KERNMODDIR) clean
 
 install: 
-	$(MAKE) -C $(KERNBUILDDIR) INSTALL_MOD_PATH=/ M=$(KERNMODDIR) modules_install
+	$(MAKE) -C $(KERNBUILDDIR) INSTALL_MOD_PATH=@INSTALL_MOD_PATH@ M=$(KERNMODDIR) modules_install
 
 depmod:
-	depmod -b / -a
+	depmod -b @INSTALL_MOD_PATH@ -a
 
 ccflags-y += -Wtype-limits
 ccflags-y += -I.
