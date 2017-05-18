@@ -1556,6 +1556,8 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                 rkfree(info->interface_name);
                 info->interface_name = NULL;
                 rkfree(complete_interface);
+                data->dev = NULL;
+                data->phy_dev = NULL;
                 return -1;
         }
 
@@ -1667,14 +1669,17 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         	restore_qdisc(data->phy_dev);
 
 	dev_remove_pack(data->eth_vlan_packet_type);
-        /* Remove from list */
-        mapping = inst_data_mapping_get(data->dev);
-        if (mapping) {
-                spin_lock(&data_instances_lock);
-                list_del(&mapping->list);
-                spin_unlock(&data_instances_lock);
-                rkfree(mapping);
-        }
+
+	if (data->dev) {
+		/* Remove from list */
+		mapping = inst_data_mapping_get(data->dev);
+		if (mapping) {
+			spin_lock(&data_instances_lock);
+			list_del(&mapping->list);
+			spin_unlock(&data_instances_lock);
+			rkfree(mapping);
+		}
+	}
 
         data->eth_vlan_packet_type->type = cpu_to_be16(ETH_P_RINA);
         data->eth_vlan_packet_type->func = eth_vlan_rcv;
@@ -2119,13 +2124,15 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                                 }
                         }
 
-                        mapping = inst_data_mapping_get(pos->dev);
-                        if (mapping) {
-                                LOG_DBG("removing mapping from list");
-                                spin_lock(&data_instances_lock);
-                                list_del(&mapping->list);
-                                spin_unlock(&data_instances_lock);
-                                rkfree(mapping);
+                        if (pos->dev) {
+                        	mapping = inst_data_mapping_get(pos->dev);
+                        	if (mapping) {
+                        		LOG_DBG("removing mapping from list");
+                        		spin_lock(&data_instances_lock);
+                        		list_del(&mapping->list);
+                        		spin_unlock(&data_instances_lock);
+                        		rkfree(mapping);
+                        	}
                         }
 
                         robject_del(&instance->robj);
