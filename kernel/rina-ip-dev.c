@@ -108,10 +108,9 @@ struct rina_ip_dev* rina_ip_dev_create(void)
 	struct net_device *dev;
 	struct rina_ip_dev* rina_dev;
 
-	dev = alloc_netdev_mq(sizeof(struct rina_ip_dev), "rina_ip",
+	dev = alloc_netdev(sizeof(struct rina_ip_dev), "rina_ip",
 							NET_NAME_UNKNOWN,
-			      				rina_ip_dev_setup,
-							0);
+			      				rina_ip_dev_setup);
 	if (!dev) {
 		LOG_ERR("Could not allocate RINA IP network device");
 		return NULL;
