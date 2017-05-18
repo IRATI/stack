@@ -165,7 +165,9 @@ int rcache_entry_add(ipaddr_t ip, ipaddr_t mask,
 
         INIT_LIST_HEAD(&tmp->next);
 
+	spin_lock(&rcache->lock);
 	list_add(&tmp->next, &rcache->head);
+	spin_unlock(&rcache->lock);
 
         return 0;
 }
@@ -173,13 +175,20 @@ int rcache_entry_add(ipaddr_t ip, ipaddr_t mask,
 struct flow_info* rcache_get_flow_info(ipaddr_t ip, struct rcache* rcache)
 {
         struct rcache_entry * cur;
+	struct flow_info * flow;
+
         if (!rcache)
                 return NULL;
 
+	spin_lock(&rcache->lock);
         list_for_each_entry(cur, &rcache->head, next) {
-		if ((ip&cur->mask) & (cur->ip&cur->mask))
-                	return &cur->flow;
+		if ((ip&cur->mask) & (cur->ip&cur->mask)) {
+                	flow = &cur->flow;
+			spin_unlock(&rcache->lock);
+			return flow;
+		}
         }
+	spin_unlock(&rcache->lock);
 
         return NULL;
 }
@@ -191,13 +200,16 @@ int rcache_entry_remove(ipaddr_t ip, ipaddr_t mask,
         if (!rcache)
                 return -1;
 
+	spin_lock(&rcache->lock);
         list_for_each_entry_safe(cur, n, &rcache->head, next) {
 		if (ip == cur->ip && mask == cur->mask) {
         		list_del(&cur->next);
         		rkfree(cur);
+			spin_unlock(&rcache->lock);
 			return 0;
 		}
         }
+	spin_unlock(&rcache->lock);
 
         return 0;
 }
@@ -208,10 +220,13 @@ int rcache_flush(struct rcache * rcache)
         if (!rcache)
                 return -1;
 
+	spin_lock(&rcache->lock);
         list_for_each_entry_safe(cur, n, &rcache->head, next) {
         	list_del(&cur->next);
         	rkfree(cur);
+		spin_unlock(&rcache->lock);
         }
+	spin_unlock(&rcache->lock);
 
         return 0;
 }
