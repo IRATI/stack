@@ -4,6 +4,7 @@ HAVE_VMPI="n"
 TCP_UDP_BUFFER_SIZE=1500
 INSTALL_PREFIX="/"
 LIBMODPREFIX=""
+REGRESSION_TESTS="n"
 
 # Option parsing
 while [[ $# > 0 ]]
@@ -22,6 +23,10 @@ do
             echo "--prefix requires a path argument"
             exit 255
         fi
+        ;;
+        
+        "--regression-tests")
+        REGRESSION_TESTS="y"
         ;;
 
         "--tcp-udp-buffer-size")
@@ -62,6 +67,7 @@ fi
 # Generate the main Makefile
 cp Makefile.in Makefile
 sed -i "s|@HAVE_VMPI@|${HAVE_VMPI}|g" Makefile
+sed -i "s|@REGRESSION_TESTS@|${REGRESSION_TESTS}|g" Makefile
 sed -i "s|@TCP_UDP_BUFFER_SIZE@|${TCP_UDP_BUFFER_SIZE}|g" Makefile
 sed -i "s|@INSTALL_MOD_PATH@|${INSTALL_PREFIX}${LIBMODPREFIX}|g" Makefile
 sed -i "s|@ROOTDIR@|$PWD|g" Makefile

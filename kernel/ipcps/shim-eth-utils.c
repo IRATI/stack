@@ -62,8 +62,10 @@ static int shim_eth_qdisc_enqueue(struct sk_buff *skb, struct Qdisc *qdisc,
 	priv = qdisc_priv(qdisc);
 
 	LOG_DBG("shim-eth-enqueue called; current size is %u", qdisc->q.qlen);
-	if (qdisc->q.qlen < priv->q_max_size)
+	if (qdisc->q.qlen < priv->q_max_size) {
+		qdisc->q.qlen++;
 		return __qdisc_enqueue_tail(skb, qdisc, &qdisc->q);
+	}
 
 	priv->notifications = MAX_NOTIFICATIONS;
 	priv->started_notifying = false;
@@ -84,6 +86,16 @@ static struct sk_buff * shim_eth_qdisc_dequeue(struct Qdisc *qdisc)
 
 	if (qdisc->q.qlen > 0) {
 		struct sk_buff *skb = __qdisc_dequeue_head(&qdisc->q);
+
+		if (likely(skb != NULL)) {
+			qdisc_qstats_backlog_dec(qdisc, skb);
+			qdisc_bstats_update(qdisc, skb);
+		} else {
+			LOG_WARN("Dequeued skb is NULL");
+		}
+
+		qdisc->q.qlen--;
+
 		if (qdisc->q.qlen == priv->q_enable_thres &&
 				priv->notifications == MAX_NOTIFICATIONS)
 			priv->started_notifying = true;
