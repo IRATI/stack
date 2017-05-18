@@ -24,6 +24,7 @@
 #define RINA_PREFIX "rina-ip-dev"
 
 #include "logs.h"
+#include "rds/rmem.h"
 #include "rina-ip-dev.h"
 
 
@@ -142,3 +143,71 @@ int rina_ip_dev_destroy(struct rina_ip_dev *ip_dev)
 	return 0;
 }
 
+int rcache_entry_add(ipaddr_t ip, ipaddr_t mask,
+                                                struct ipcp_instance_data* data,
+					        port_id_t port,
+						struct rcache* rcache)
+{
+        struct rcache_entry * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
+        if (!tmp)
+                return -1;
+
+        tmp->ip = ip;
+        tmp->mask = mask;
+	tmp->flow.data = data;
+	tmp->flow.port = port;
+
+        INIT_LIST_HEAD(&tmp->next);
+
+	list_add(&tmp->next, &rcache->head);
+
+        return 0;
+}
+
+struct flow_info* rcache_get_flow_info(ipaddr_t ip, struct rcache* rcache)
+{
+        struct rcache_entry * cur;
+        if (!rcache)
+                return NULL;
+
+        list_for_each_entry(cur, &rcache->head, next) {
+		if ((ip&cur->mask) & (cur->ip&cur->mask))
+                	return &cur->flow;
+        }
+
+        return NULL;
+}
+
+int rcache_entry_remove(ipaddr_t ip, ipaddr_t mask,
+                                            struct rcache* rcache)
+{
+        struct rcache_entry * cur, * n;
+        if (!rcache)
+                return -1;
+
+        list_for_each_entry_safe(cur, n, &rcache->head, next) {
+		if (ip == cur->ip && mask == cur->mask) {
+        		list_del(&cur->next);
+        		rkfree(cur);
+			return 0;
+		}
+        }
+
+        return 0;
+}
+
+int rcache_flush(struct rcache * rcache)
+{
+        struct rcache_entry * cur, * n;
+        if (!rcache)
+                return -1;
+
+        list_for_each_entry_safe(cur, n, &rcache->head, next) {
+        	list_del(&cur->next);
+        	rkfree(cur);
+        }
+
+        return 0;
+}

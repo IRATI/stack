@@ -23,6 +23,26 @@
 #define RINA_IP_DEV_H
 
 #include <linux/if_arp.h>
+#include "common.h"
+
+#define ipaddr_t __be32
+
+struct flow_info {
+	struct ipcp_instance_data* data;
+	port_id_t port;
+};
+
+struct rcache_entry {
+	ipaddr_t ip;
+	ipaddr_t mask;
+	struct flow_info flow;
+        struct list_head next;
+};
+
+struct rcache {
+        struct list_head head;
+	spinlock_t lock;
+};
 
 struct rina_ip_dev;
 
@@ -35,4 +55,13 @@ void				rina_ip_dev_setup(struct net_device *dev);
 struct rina_ip_dev*		rina_ip_dev_create(void);
 int				rina_ip_dev_destroy(struct rina_ip_dev *ip_dev);
 
+int				rcache_entry_add(ipaddr_t ip, ipaddr_t mask,
+						struct ipcp_instance_data* data,
+						port_id_t port,
+						struct rcache* rcache);
+struct flow_info*		rcache_get_flow_info(ipaddr_t ip,
+							struct rcache* rcache);
+int				rcache_entry_remove(ipaddr_t ip, ipaddr_t mask,
+							struct rcache* rcache);
+int				rcache_flush(struct rcache * rcache);
 #endif
