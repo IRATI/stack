@@ -29,6 +29,7 @@
 
 
 struct rina_ip_dev {
+	struct rcache rcache;
 	struct net_device_stats stats;
 	struct net_device* dev;
 };
@@ -121,6 +122,9 @@ struct rina_ip_dev* rina_ip_dev_create(void)
 	rina_dev = netdev_priv(dev);
 	rina_dev->dev = dev;
 
+        INIT_LIST_HEAD(&rina_dev->rcache.head);
+	spin_lock_init(&rina_dev->rcache.lock);
+
 	rv = register_netdev(dev);
 	if(rv) {
 		LOG_ERR("Could not register RINA IP device: %d", rv);
@@ -138,6 +142,7 @@ int rina_ip_dev_destroy(struct rina_ip_dev *ip_dev)
 	if(!ip_dev)
 		return -1;
 
+	rcache_flush(&ip_dev->rcache);
 	unregister_netdev(ip_dev->dev);
 	free_netdev(ip_dev->dev);
 	return 0;
