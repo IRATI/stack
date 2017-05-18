@@ -10,3 +10,6 @@ modprobe rina-default-plugin
 modprobe normal-ipcp
 modprobe shim-eth-vlan
 modprobe shim-tcp-udp
+
+#Up RINA IP hub virtual device
+ifconfig rina_ip up
