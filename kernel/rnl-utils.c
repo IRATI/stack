@@ -116,6 +116,8 @@ rnl_ipcm_alloc_flow_req_msg_attrs_create(void)
                 return NULL;
         }
 
+	tmp->ipv4_tunnel = false;
+
         return tmp;
 }
 
@@ -2520,6 +2522,9 @@ rnl_parse_ipcm_alloc_flow_req_msg(struct genl_info * info,
                 return -1;
         }
 
+        msg_attrs->ipv4_tunnel =
+                nla_get_flag(info->attrs[IAFRM_ATTR_IPV4_TUNNEL]);
+
         return 0;
 }
 
@@ -3685,7 +3690,7 @@ static int format_ro_entries_list(struct list_head * entries,
                     		    pos->display_value)    ||
                      nla_put_u64_64bit(skb_out,
                     		       RIBO_ATTR_OBJECT_INSTANCE,
-                    		       pos->instance, 
+                    		       pos->instance,
 				       RIBO_ATTR_OBJECT_PAD))
                         return format_fail("rnl_ipcm_query_rib_resp_msg");
 
