@@ -30,6 +30,10 @@
 #include <linux/sched.h>
 #include <linux/wait.h>
 
+/* For net_device related code */
+#include <linux/netdevice.h> /* basic data structures */
+#include <linux/init.h>      /* __init */
+
 /* For POLLIN etc. */
 #include <linux/poll.h>
 
@@ -42,6 +46,11 @@
 #include "kfa.h"
 #include "kfa-utils.h"
 
+struct rina_ip_dev {
+	struct net_device_stats stats;
+	struct net_device* dev;
+};
+
 struct kfa {
 	spinlock_t		 lock;
 	struct pidm             *pidm;
@@ -49,6 +58,7 @@ struct kfa {
 	struct ipcp_instance    *ipcp;
 	struct list_head	 list;
 	struct workqueue_struct *flowdelq;
+	struct rina_ip_dev       *ip_dev;
 };
 
 enum flow_state {
@@ -1024,6 +1034,108 @@ static struct ipcp_instance_ops kfa_instance_ops = {
 	.disable_write		   = disable_write
 };
 
+int rina_ip_dev_open(struct net_device *dev)
+{
+	LOG_DBG("RINA IP device opened...");
+	return 0;
+}
+
+int rina_ip_dev_close(struct net_device *dev)
+{
+	LOG_DBG("RINA IP device closed...");
+	return 0;
+}
+
+struct net_device_stats *rina_ip_dev_get_stats(struct net_device *dev)
+{
+    struct rina_ip_dev* ip_dev = netdev_priv(dev);
+    if(!ip_dev)
+	    return NULL;
+    return &ip_dev->stats;
+}
+
+int rina_ip_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
+{
+    return 0;
+}
+
+static const struct net_device_ops xenvif_netdev_ops = {
+	.ndo_start_xmit	= rina_ip_dev_start_xmit,
+	.ndo_get_stats	= rina_ip_dev_get_stats,
+	.ndo_open	= rina_ip_dev_open,
+	.ndo_stop	= rina_ip_dev_close,
+};
+
+/* as ether_setup to set internal dev fields */
+void rina_ip_dev_setup(struct net_device *dev)
+{
+	return;
+}
+
+struct rina_ip_dev* rina_ip_dev_create(void)
+{
+	int rv;
+	struct net_device *dev;
+	struct rina_ip_dev* rina_dev;
+
+	dev = alloc_netdev_mq(sizeof(struct rina_ip_dev), "rina_ip",
+							NET_NAME_UNKNOWN,
+			      				rina_ip_dev_setup,
+							0);
+	if (!dev) {
+		LOG_ERR("Could not allocate RINA IP network device");
+		return NULL;
+	}
+
+	//SET_NETDEV_DEV(dev, parent);
+
+	rina_dev = netdev_priv(dev);
+	rina_dev->dev = dev;
+
+	dev->netdev_ops	= &xenvif_netdev_ops;
+	dev->tx_queue_len = 0;
+
+	/* Figure out which fields are required...
+	dev->hw_features =
+	dev->features = dev->hw_features | NETIF_F_RXCSUM;
+	dev->ethtool_ops = &rina_ip_dev_ethtool_ops;
+	eth_broadcast_addr(dev->dev_addr);
+	netif_carrier_off(dev);
+	dev->header_ops		= &eth_header_ops;
+	dev->type		= ARPHRD_ETHER;
+	dev->hard_header_len 	= ETH_HLEN;
+	dev->min_header_len	= ETH_HLEN;
+	dev->mtu		= ETH_DATA_LEN;
+	dev->min_mtu		= ETH_MIN_MTU;
+	dev->max_mtu		= ETH_DATA_LEN;
+	dev->addr_len		= ETH_ALEN;
+	dev->tx_queue_len	= DEFAULT_TX_QUEUE_LEN;
+	dev->flags		= IFF_BROADCAST|IFF_MULTICAST;
+	dev->priv_flags		|= IFF_TX_SKB_SHARING;
+	*/
+
+	rv = register_netdev(dev);
+	if(rv) {
+		LOG_ERR("Could not register RINA IP device: %d", rv);
+		free_netdev(dev);
+		return NULL;
+	}
+
+	LOG_DBG("RINA IP device %p created with dev %p", rina_dev, dev);
+
+	return rina_dev;
+}
+
+int rina_ip_dev_destroy(struct rina_ip_dev *ip_dev)
+{
+	if(!ip_dev)
+		return -1;
+
+	unregister_netdev(ip_dev->dev);
+	free_netdev(ip_dev->dev);
+	return 0;
+}
+
 struct kfa *kfa_create(void)
 {
 	struct kfa *instance;
@@ -1074,6 +1186,16 @@ struct kfa *kfa_create(void)
 		return NULL;
 	}
 
+	instance->ip_dev = rina_ip_dev_create();
+	if (!instance->ip_dev) {
+		LOG_ERR("Could not allocate memory for kfa RINA IP virtual device");
+		pidm_destroy(instance->pidm);
+		kfa_pmap_destroy(instance->flows);
+		rwq_destroy(instance->flowdelq);
+		rkfree(instance);
+		return NULL;
+	}
+
 	spin_lock_init(&instance->lock);
 
 	return instance;
@@ -1092,6 +1214,7 @@ int kfa_destroy(struct kfa *instance)
 
 	pidm_destroy(instance->pidm);
 	rwq_destroy(instance->flowdelq);
+	rina_ip_dev_destroy(instance->ip_dev);
 
 	rkfree(instance);
 
