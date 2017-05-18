@@ -38,7 +38,7 @@ rina-irati-core-y:=						\
 	ipcp-factories.o ipcp-instances.o			\
 	cidm.o dt.o dt-utils.o dtcp.o dtp.o efcp-utils.o efcp.o	\
 	pff.o rmt.o						\
-	pim.o pidm.o kfa-utils.o kfa.o				\
+	pim.o pidm.o kfa-utils.o kfa.o rina-ip-dev.o		\
 	kipcm-utils.o kipcm.o					\
 	sdup.o							\
 	ps-factory.o						\
