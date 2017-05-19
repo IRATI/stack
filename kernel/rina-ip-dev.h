@@ -27,15 +27,12 @@
 
 #define ipaddr_t __be32
 
-struct flow_info {
-	struct ipcp_instance_data* data;
-	port_id_t port;
-};
+struct ipcp_instance;
 
 struct rcache_entry {
 	ipaddr_t ip;
 	ipaddr_t mask;
-	struct flow_info flow;
+	port_id_t port;
         struct list_head next;
 };
 
@@ -52,14 +49,14 @@ struct net_device_stats*	rina_ip_dev_get_stats(struct net_device *dev);
 int				rina_ip_dev_start_xmit(struct sk_buff *skb,
 							struct net_device *dev);
 void				rina_ip_dev_setup(struct net_device *dev);
-struct rina_ip_dev*		rina_ip_dev_create(void);
+struct rina_ip_dev*		rina_ip_dev_create(struct ipcp_instance*
+								kfa_ipcp);
 int				rina_ip_dev_destroy(struct rina_ip_dev *ip_dev);
 
 int				rcache_entry_add(ipaddr_t ip, ipaddr_t mask,
-						struct ipcp_instance_data* data,
 						port_id_t port,
 						struct rcache* rcache);
-struct flow_info*		rcache_get_flow_info(ipaddr_t ip,
+port_id_t			rcache_get_port(ipaddr_t ip,
 							struct rcache* rcache);
 int				rcache_entry_remove(ipaddr_t ip, ipaddr_t mask,
 							struct rcache* rcache);

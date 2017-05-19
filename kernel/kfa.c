@@ -1090,7 +1090,7 @@ struct kfa *kfa_create(void)
 		return NULL;
 	}
 
-	instance->ip_dev = rina_ip_dev_create();
+	instance->ip_dev = rina_ip_dev_create(instance->ipcp);
 	if (!instance->ip_dev) {
 		LOG_ERR("Could not allocate memory for kfa RINA IP virtual device");
 		pidm_destroy(instance->pidm);
