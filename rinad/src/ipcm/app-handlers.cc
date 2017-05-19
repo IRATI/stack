@@ -268,7 +268,6 @@ bool IPCManager_::ipcm_register_response_common(
         return success;
 }
 
-
 int IPCManager_::ipcm_register_response_app(
 		rina::IpcmRegisterApplicationResponseEvent *event,
 		IPCMIPCProcess * slave_ipcp,
@@ -333,7 +332,8 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
 		if(t1){
 			if (t1->req.applicationRegistrationInformation.appName.entityName
 					== RINA_IP_FLOW_ENT_NAME) {
-
+				//IP prefix registration
+				ipcm_register_response_ip_prefix(e, ipcp, t1->req);
 			} else {
 				//Application registration
 				ipcm_register_response_app(e, ipcp, t1->req);
@@ -361,7 +361,7 @@ void IPCManager_::application_manager_app_unregistered(
 		return;
 	try {
 		rina::applicationManager->applicationUnregistered(event,
-								result);
+								  result);
 		ss << "Application " << event.applicationName.
 		toString() << " informed about its "
 		"unregistration [success = " << (!result) <<

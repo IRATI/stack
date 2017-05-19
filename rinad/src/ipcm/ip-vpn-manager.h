@@ -25,6 +25,8 @@
 #ifndef __IP_VPN_MANAGER_H__
 #define __IP_VPN_MANAGER_H__
 
+#include <librina/concurrency.h>
+
 #define RINA_IP_FLOW_ENT_NAME "RINA_IP"
 
 namespace rinad {
@@ -33,6 +35,15 @@ class IPVPNManager {
 public:
 	IPVPNManager(){};
 	~IPVPNManager(){};
+	int add_registered_ip_prefix(const std::string& ip_prefix);
+	int remove_registered_ip_prefix(const std::string& ip_prefix);
+	bool ip_prefix_registered(const std::string& ip_prefix);
+
+private:
+	bool __ip_prefix_registered(const std::string& ip_prefix);
+
+	std::list<std::string> reg_ip_prefixes;
+	rina::Lockable lock;
 };
 
 

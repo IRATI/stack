@@ -25,18 +25,69 @@
 #define RINA_PREFIX     "ipcm.ip-vpn-manager"
 #include <librina/logs.h>
 
+#include "app-handlers.h"
 #include "ip-vpn-manager.h"
 #include "ipcm.h"
 
-using namespace std;
-
-
 namespace rinad {
 
-ipcm_res_t IPCManager_::register_ip_range_to_dif(Addon* callee,
-			   	    	    	 Promise* promise,
-						 const std::string& ip_range,
-						 const rina::ApplicationProcessNamingInformation& dif_name)
+int IPVPNManager::add_registered_ip_prefix(const std::string& ip_prefix)
+{
+	rina::ScopedLock g(lock);
+
+	if (__ip_prefix_registered(ip_prefix)) {
+		LOG_ERR("IP prefix %s is already registered",
+			ip_prefix.c_str());
+		return -1;
+	}
+
+	reg_ip_prefixes.push_back(ip_prefix);
+
+	return 0;
+}
+
+int IPVPNManager::remove_registered_ip_prefix(const std::string& ip_prefix)
+{
+	std::list<std::string>::iterator it;
+
+	rina::ScopedLock g(lock);
+
+	for (it = reg_ip_prefixes.begin(); it != reg_ip_prefixes.end(); ++it) {
+		if ((*it) == ip_prefix) {
+			reg_ip_prefixes.erase(it);
+			return 0;
+		}
+	}
+
+	LOG_ERR("IP prefix %s is not registered", ip_prefix.c_str());
+
+	return -1;
+}
+
+bool IPVPNManager::ip_prefix_registered(const std::string& ip_prefix)
+{
+	rina::ScopedLock g(lock);
+
+	return __ip_prefix_registered(ip_prefix);
+}
+
+bool IPVPNManager::__ip_prefix_registered(const std::string& ip_prefix)
+{
+	std::list<std::string>::iterator it;
+
+	for (it = reg_ip_prefixes.begin(); it != reg_ip_prefixes.end(); ++it) {
+		if ((*it) == ip_prefix) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+ipcm_res_t IPCManager_::register_ip_prefix_to_dif(Addon* callee,
+			   	    	    	  Promise* promise,
+						  const std::string& ip_range,
+						  const rina::ApplicationProcessNamingInformation& dif_name)
 {
 	IPCMIPCProcess *slave_ipcp = NULL;
 	APPregTransState* trans = NULL;
@@ -50,6 +101,10 @@ ipcm_res_t IPCManager_::register_ip_range_to_dif(Addon* callee,
 			"register IP range %s ", ip_range.c_str());
 		return IPCM_FAILURE;
 	}
+
+	//Populate application name
+	event.applicationRegistrationInformation.appName.processName = ip_range;
+	event.applicationRegistrationInformation.appName.entityName = RINA_IP_FLOW_ENT_NAME;
 
 	//Auto release the read lock
 	rina::ReadScopedLock readlock(slave_ipcp->rwlock, false);
@@ -69,14 +124,12 @@ ipcm_res_t IPCManager_::register_ip_range_to_dif(Addon* callee,
 			return IPCM_FAILURE;
 		}
 
-		event.applicationRegistrationInformation.appName.processName = ip_range;
-		event.applicationRegistrationInformation.appName.entityName = RINA_IP_FLOW_ENT_NAME;
 		slave_ipcp->registerApplication(event.applicationRegistrationInformation.appName,
 						daf_name,
 						0,
 						trans->tid);
 
-		LOG_INFO("Requested registration of IP range %s"
+		LOG_INFO("Requested registration of IP prefix %s"
 				" to IPC process %s ",
 				ip_range.c_str(),
 				slave_ipcp->get_name().toString().c_str());
@@ -84,12 +137,34 @@ ipcm_res_t IPCManager_::register_ip_range_to_dif(Addon* callee,
 		//Remove the transaction and return
 		remove_transaction_state(trans->tid);
 
-		LOG_ERR("Error while registering application "
-			 , app_name.toString().c_str());
+		LOG_ERR("Error while registering IP prefix %s",
+			event.applicationRegistrationInformation.appName.toString().c_str());
 		return IPCM_FAILURE;
 	}
 
 	return IPCM_PENDING;
+}
+
+int IPCManager_::ipcm_register_response_ip_prefix(rina::IpcmRegisterApplicationResponseEvent * event,
+				     	     	  IPCMIPCProcess * slave_ipcp,
+						  const rina::ApplicationRegistrationRequestEvent& req_event)
+{
+	const rina::ApplicationProcessNamingInformation& app_name =
+			req_event.applicationRegistrationInformation.appName;
+	const rina::ApplicationProcessNamingInformation& slave_dif_name =
+			slave_ipcp->dif_name_;
+	bool success;
+
+	success = ipcm_register_response_common(event, app_name, slave_ipcp,
+			slave_dif_name);
+
+	ip_vpn_manager->add_registered_ip_prefix(app_name.processName);
+
+	LOG_INFO("IP prefix %s registered to DIF %s",
+		 app_name.processName.c_str(),
+		 slave_dif_name.processName.c_str());
+
+	return success;
 }
 
 } //namespace rinad

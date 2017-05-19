@@ -39,6 +39,7 @@
 #include "dif-template-manager.h"
 #include "dif-allocator.h"
 #include "catalog.h"
+#include "ip-vpn-manager.h"
 
 //Addons
 #include "addon.h"
@@ -545,10 +546,10 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t register_ip_range_to_dif(Addon* callee,
-				   	    Promise* promise,
-					    const std::string& ip_range,
-					    const rina::ApplicationProcessNamingInformation& difName);
+	ipcm_res_t register_ip_prefix_to_dif(Addon* callee,
+				   	     Promise* promise,
+					     const std::string& ip_range,
+					     const rina::ApplicationProcessNamingInformation& difName);
 
 	//
 	// Update policy-set catalog, with the plugins stored in
@@ -725,6 +726,9 @@ protected:
 		rina::IpcmRegisterApplicationResponseEvent * event,
 		IPCMIPCProcess * slave_ipcp,
 		const rina::ApplicationRegistrationRequestEvent& req_event);
+	int ipcm_register_response_ip_prefix(rina::IpcmRegisterApplicationResponseEvent * event,
+					     IPCMIPCProcess * slave_ipcp,
+					     const rina::ApplicationRegistrationRequestEvent& req_event);
 
 	//IPCP mgmt
 	void ipcm_register_response_ipcp(IPCMIPCProcess * ipcp,
