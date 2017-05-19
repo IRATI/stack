@@ -29,36 +29,16 @@
 
 struct ipcp_instance;
 
-struct rcache_entry {
-	ipaddr_t ip;
-	ipaddr_t mask;
-	port_id_t port;
-        struct list_head next;
-};
-
-struct rcache {
-        struct list_head head;
-	spinlock_t lock;
-};
-
 struct rina_ip_dev;
 
-int				rina_ip_dev_open(struct net_device *dev);
-int				rina_ip_dev_close(struct net_device *dev);
-struct net_device_stats*	rina_ip_dev_get_stats(struct net_device *dev);
-int				rina_ip_dev_start_xmit(struct sk_buff *skb,
-							struct net_device *dev);
-void				rina_ip_dev_setup(struct net_device *dev);
-struct rina_ip_dev*		rina_ip_dev_create(struct ipcp_instance*
-								kfa_ipcp);
-int				rina_ip_dev_destroy(struct rina_ip_dev *ip_dev);
+int			 rina_ip_dev_open(struct net_device *dev);
+int			 rina_ip_dev_close(struct net_device *dev);
+struct net_device_stats* rina_ip_dev_get_stats(struct net_device *dev);
+int			 rina_ip_dev_start_xmit(struct sk_buff *skb,
+						struct net_device *dev);
+void			 rina_ip_dev_setup(struct net_device *dev);
+struct rina_ip_dev*	 rina_ip_dev_create(struct ipcp_instance* kfa_ipcp,
+			  			port_id_t port);
+int			 rina_ip_dev_destroy(struct rina_ip_dev *ip_dev);
 
-int				rcache_entry_add(ipaddr_t ip, ipaddr_t mask,
-						port_id_t port,
-						struct rcache* rcache);
-port_id_t			rcache_get_port(ipaddr_t ip,
-							struct rcache* rcache);
-int				rcache_entry_remove(ipaddr_t ip, ipaddr_t mask,
-							struct rcache* rcache);
-int				rcache_flush(struct rcache * rcache);
 #endif

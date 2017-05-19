@@ -66,7 +66,8 @@ struct rmt;
 /* structure automatically freed when there are no more readers or writers */
 int	    kfa_flow_create(struct kfa           *instance,
 			    port_id_t		  pid,
-			    struct ipcp_instance *ipcp);
+			    struct ipcp_instance *ipcp,
+		    	    struct name          *user_ipcp_name);
 
 struct ipcp_instance *kfa_ipcp_instance(struct kfa *instance);
 

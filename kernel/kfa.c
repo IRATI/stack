@@ -43,6 +43,8 @@
 #include "kfa-utils.h"
 #include "rina-ip-dev.h"
 
+#define RINA_IP_FLOW_ENT_NAME "RINA_IP"
+
 struct kfa {
 	spinlock_t		 lock;
 	struct pidm             *pidm;
@@ -50,7 +52,6 @@ struct kfa {
 	struct ipcp_instance    *ipcp;
 	struct list_head	 list;
 	struct workqueue_struct *flowdelq;
-	struct rina_ip_dev       *ip_dev;
 };
 
 enum flow_state {
@@ -71,6 +72,7 @@ struct ipcp_flow {
 	atomic_t	      readers;
 	atomic_t	      writers;
 	atomic_t	      posters;
+	struct rina_ip_dev   *ip_dev;
 };
 
 struct ipcp_instance_data {
@@ -139,6 +141,9 @@ static int kfa_flow_destroy(struct kfa       *instance,
 		LOG_ERR("Could not release pid %d from the map", id);
 		retval = -1;
 	}
+
+	if (rina_ip_dev_destroy(flow->ip_dev))
+		retval = -1;
 
 	rkfree(flow);
 
@@ -885,11 +890,22 @@ struct ipcp_flow *kfa_flow_find_by_pid(struct kfa *instance, port_id_t pid)
 EXPORT_SYMBOL(kfa_flow_find_by_pid);
 #endif
 
+static inline ipaddr_t get_ipv4_addr(char *ip_str)
+{
+	int a, b, c, d;
+	char arr[4];
+	sscanf(ip_str, "%d.%d.%d.%d", &a, &b, &c, &d);
+	arr[0] = a; arr[1] = b; arr[2] = c; arr[3] = d;
+	return *(ipaddr_t *)arr;
+}
+
 int kfa_flow_create(struct kfa           *instance,
 		    port_id_t		  pid,
-		    struct ipcp_instance *ipcp)
+		    struct ipcp_instance *ipcp,
+		    struct name          *user_ipcp_name)
 {
 	struct ipcp_flow *flow;
+	bool ip_flow = false;
 
 	if (!instance) {
 		LOG_ERR("Bogus kfa instance passed, bailing out");
@@ -904,6 +920,9 @@ int kfa_flow_create(struct kfa           *instance,
 		return -1;
 	}
 
+	ip_flow = (user_ipcp_name != NULL) &&
+		(!strcmp(user_ipcp_name->entity_name, RINA_IP_FLOW_ENT_NAME));
+
 	flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
 	if (!flow) {
 		LOG_ERR("Failed to created flow, bailing out");
@@ -912,6 +931,18 @@ int kfa_flow_create(struct kfa           *instance,
 	atomic_set(&flow->readers, 0);
 	atomic_set(&flow->writers, 0);
 	atomic_set(&flow->posters, 0);
+
+	/* Determine if this is an IP tunnel */
+	if (ip_flow) {
+		flow->ip_dev = rina_ip_dev_create(instance->ipcp, pid);
+		if (!flow->ip_dev) {
+			LOG_ERR("Could not allocate memory for RINA IP virtual device");
+			rkfree(flow);
+			return -1;
+		}
+	} else {
+		flow->ip_dev = NULL;
+	}
 
 	init_waitqueue_head(&flow->read_wqueue);
 	init_waitqueue_head(&flow->write_wqueue);
@@ -1076,16 +1107,6 @@ struct kfa *kfa_create(void)
 		return NULL;
 	}
 
-	instance->ip_dev = rina_ip_dev_create(instance->ipcp);
-	if (!instance->ip_dev) {
-		LOG_ERR("Could not allocate memory for kfa RINA IP virtual device");
-		pidm_destroy(instance->pidm);
-		kfa_pmap_destroy(instance->flows);
-		rwq_destroy(instance->flowdelq);
-		rkfree(instance);
-		return NULL;
-	}
-
 	spin_lock_init(&instance->lock);
 
 	return instance;
@@ -1104,7 +1125,6 @@ int kfa_destroy(struct kfa *instance)
 
 	pidm_destroy(instance->pidm);
 	rwq_destroy(instance->flowdelq);
-	rina_ip_dev_destroy(instance->ip_dev);
 
 	rkfree(instance);
 

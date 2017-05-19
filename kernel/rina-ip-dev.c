@@ -33,9 +33,9 @@
 
 
 struct rina_ip_dev {
-	struct rcache rcache;
 	struct net_device_stats stats;
 	struct ipcp_instance* kfa_ipcp;
+	port_id_t port;
 	struct net_device* dev;
 };
 
@@ -62,7 +62,6 @@ struct net_device_stats *rina_ip_dev_get_stats(struct net_device *dev)
 int rina_ip_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	struct iphdr* iph = NULL;
-	port_id_t port_id;
 	struct sdu* sdu;
 	struct rina_ip_dev* rina_dev = netdev_priv(dev);
 	ASSERT(rina_dev);
@@ -73,20 +72,14 @@ int rina_ip_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	iph = ip_hdr(skb);
 	ASSERT(iph);
 
-	port_id = rcache_get_port(iph->daddr, &rina_dev->rcache);
-	if(!is_port_id_ok(port_id)){
-		LOG_ERR("Could not transmit IP packet, unable to retrieve port info...");
-		kfree_skb(skb);
-		return NET_XMIT_DROP;
-	}
-
 	sdu = sdu_create_from_skb(skb);
 	if (!sdu){
 		kfree_skb(skb);
 		return NET_XMIT_DROP;
 	}
 
-        if(kfa_flow_sdu_write(rina_dev->kfa_ipcp->data, port_id, sdu, false)){
+        if(kfa_flow_sdu_write(rina_dev->kfa_ipcp->data, rina_dev->port, sdu,
+									false)){
 		LOG_ERR("Could not xmit IP packet, unable to send to KFA...");
 		return NET_XMIT_DROP;
 	}
@@ -137,7 +130,8 @@ void rina_ip_dev_setup(struct net_device *dev)
 	return;
 }
 
-struct rina_ip_dev* rina_ip_dev_create(struct ipcp_instance* kfa_ipcp)
+struct rina_ip_dev* rina_ip_dev_create(struct ipcp_instance* kfa_ipcp,
+					port_id_t port)
 {
 	int rv;
 	struct net_device *dev;
@@ -159,9 +153,7 @@ struct rina_ip_dev* rina_ip_dev_create(struct ipcp_instance* kfa_ipcp)
 	rina_dev = netdev_priv(dev);
 	rina_dev->dev = dev;
 	rina_dev->kfa_ipcp = kfa_ipcp;
-
-        INIT_LIST_HEAD(&rina_dev->rcache.head);
-	spin_lock_init(&rina_dev->rcache.lock);
+	rina_dev->port = port;
 
 	rv = register_netdev(dev);
 	if(rv) {
@@ -180,88 +172,7 @@ int rina_ip_dev_destroy(struct rina_ip_dev *ip_dev)
 	if(!ip_dev)
 		return -1;
 
-	rcache_flush(&ip_dev->rcache);
 	unregister_netdev(ip_dev->dev);
 	free_netdev(ip_dev->dev);
 	return 0;
-}
-
-int rcache_entry_add(ipaddr_t ip, ipaddr_t mask, port_id_t port,
-							struct rcache* rcache)
-{
-        struct rcache_entry * tmp;
-
-        tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
-        if (!tmp)
-                return -1;
-
-        tmp->ip = ip;
-        tmp->mask = mask;
-	tmp->port = port;
-
-        INIT_LIST_HEAD(&tmp->next);
-
-	spin_lock(&rcache->lock);
-	list_add(&tmp->next, &rcache->head);
-	spin_unlock(&rcache->lock);
-
-        return 0;
-}
-
-port_id_t rcache_get_port(ipaddr_t ip, struct rcache* rcache)
-{
-        struct rcache_entry * cur;
-	port_id_t port;
-
-        if (!rcache)
-		return port_id_bad();
-
-	spin_lock(&rcache->lock);
-        list_for_each_entry(cur, &rcache->head, next) {
-		if ((ip&cur->mask) & (cur->ip&cur->mask)) {
-                	port = cur->port;
-			spin_unlock(&rcache->lock);
-			return port;
-		}
-        }
-	spin_unlock(&rcache->lock);
-
-	return port_id_bad();
-}
-
-int rcache_entry_remove(ipaddr_t ip, ipaddr_t mask, struct rcache* rcache)
-{
-        struct rcache_entry * cur, * n;
-        if (!rcache)
-                return -1;
-
-	spin_lock(&rcache->lock);
-        list_for_each_entry_safe(cur, n, &rcache->head, next) {
-		if (ip == cur->ip && mask == cur->mask) {
-        		list_del(&cur->next);
-        		rkfree(cur);
-			spin_unlock(&rcache->lock);
-			return 0;
-		}
-        }
-	spin_unlock(&rcache->lock);
-
-        return 0;
-}
-
-int rcache_flush(struct rcache * rcache)
-{
-        struct rcache_entry * cur, * n;
-        if (!rcache)
-                return -1;
-
-	spin_lock(&rcache->lock);
-        list_for_each_entry_safe(cur, n, &rcache->head, next) {
-        	list_del(&cur->next);
-        	rkfree(cur);
-		spin_unlock(&rcache->lock);
-        }
-	spin_unlock(&rcache->lock);
-
-        return 0;
 }
