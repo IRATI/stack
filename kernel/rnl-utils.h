@@ -193,7 +193,6 @@ enum ipcm_alloc_flow_req_attrs_list {
         IAFRM_ATTR_DEST_APP_NAME,
         IAFRM_ATTR_FLOW_SPEC,
         IAFRM_ATTR_DIF_NAME,
-	IAFRM_ATTR_IPV4_TUNNEL,
         __IAFRM_ATTR_MAX,
 };
 #define IAFRM_ATTR_MAX (__IAFRM_ATTR_MAX -1)
@@ -697,7 +696,6 @@ struct rnl_ipcm_alloc_flow_req_msg_attrs {
         struct name      * dest;
         struct flow_spec * fspec;
         struct name      * dif_name;
-	bool               ipv4_tunnel;
 };
 
 struct rnl_ipcm_alloc_flow_req_arrived_msg_attrs {

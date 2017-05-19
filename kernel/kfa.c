@@ -71,7 +71,6 @@ struct ipcp_flow {
 	atomic_t	      readers;
 	atomic_t	      writers;
 	atomic_t	      posters;
-	bool                  ipv4_tunnel;
 };
 
 struct ipcp_instance_data {
@@ -886,10 +885,9 @@ struct ipcp_flow *kfa_flow_find_by_pid(struct kfa *instance, port_id_t pid)
 EXPORT_SYMBOL(kfa_flow_find_by_pid);
 #endif
 
-static int __kfa_flow_create(struct kfa           *instance,
-		             port_id_t		  pid,
-		             struct ipcp_instance *ipcp,
-		             bool                  ipv4_tunnel)
+int kfa_flow_create(struct kfa           *instance,
+		    port_id_t		  pid,
+		    struct ipcp_instance *ipcp)
 {
 	struct ipcp_flow *flow;
 
@@ -914,7 +912,6 @@ static int __kfa_flow_create(struct kfa           *instance,
 	atomic_set(&flow->readers, 0);
 	atomic_set(&flow->writers, 0);
 	atomic_set(&flow->posters, 0);
-	flow->ipv4_tunnel = ipv4_tunnel;
 
 	init_waitqueue_head(&flow->read_wqueue);
 	init_waitqueue_head(&flow->write_wqueue);
@@ -938,18 +935,7 @@ static int __kfa_flow_create(struct kfa           *instance,
 
 	return 0;
 }
-
-int kfa_flow_create(struct kfa           *instance,
-		    port_id_t		  pid,
-		    struct ipcp_instance *ipcp)
-{ return __kfa_flow_create(instance, pid, ipcp, false); }
 EXPORT_SYMBOL(kfa_flow_create);
-
-int kfa_flow_create_for_ip(struct kfa           *instance,
-		           port_id_t		  pid,
-		           struct ipcp_instance *ipcp)
-{ return __kfa_flow_create(instance, pid, ipcp, true); }
-EXPORT_SYMBOL(kfa_flow_create_for_ip);
 
 static int kfa_flow_ipcp_bind(struct ipcp_instance_data *data,
 			      port_id_t			 pid,

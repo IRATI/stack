@@ -141,9 +141,6 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         ipc_process_id_t                           user_ipc_id;
         struct kipcm *                             kipcm;
         port_id_t                                  pid = port_id_bad();
-	bool                                       ip;
-
-	int (*kfa_flow_create_cb)(struct kfa*, port_id_t, struct ipcp_instance*);
 
         if (!data) {
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
@@ -170,7 +167,6 @@ static int notify_ipcp_allocate_flow_request(void *             data,
 
         user_ipc_id  = msg->header.src_ipc_id;
         ipc_id       = msg->header.dst_ipc_id;
-	ip           = attrs->ipv4_tunnel;
         /* FIXME: Here we should take the lock */
         ipc_process  = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipc_process) {
@@ -198,10 +194,7 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         } else {
                 user_ipcp = kfa_ipcp_instance(kipcm->kfa);
 		/* NOTE: original function called non-blocking I/O?? */
-		ip ? (kfa_flow_create_cb = kfa_flow_create_for_ip) :
-		     (kfa_flow_create_cb = kfa_flow_create);
-		kfa_flow_create_cb = kfa_flow_create;
-                if (kfa_flow_create_cb(kipcm->kfa, pid, ipc_process)) {
+                if (kfa_flow_create(kipcm->kfa, pid, ipc_process)) {
                         LOG_ERR("Could not find the user ipcp of the flow...");
                         kfa_port_id_release(kipcm->kfa, pid);
                         goto fail;
@@ -2574,7 +2567,7 @@ int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
         return 0;
 }
 
-/* Only used by the normal IPCP */
+/* Only called by the allocate_port syscall used only by the normal IPCP */
 port_id_t kipcm_flow_create(struct kipcm     *kipcm,
 			    ipc_process_id_t  ipc_id,
 			    struct name      *process_name)
