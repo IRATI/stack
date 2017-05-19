@@ -130,17 +130,18 @@ void rina_ip_dev_setup(struct net_device *dev)
 	return;
 }
 
-struct rina_ip_dev* rina_ip_dev_create(struct ipcp_instance* kfa_ipcp,
+struct rina_ip_dev* rina_ip_dev_create(string_t* name,
+					struct ipcp_instance* kfa_ipcp,
 					port_id_t port)
 {
 	int rv;
 	struct net_device *dev;
 	struct rina_ip_dev* rina_dev;
 
-	if (!kfa_ipcp)
+	if (!kfa_ipcp || !name)
 		return NULL;
 
-	dev = alloc_netdev(sizeof(struct rina_ip_dev), "rina_ip",
+	dev = alloc_netdev(sizeof(struct rina_ip_dev), name,
 							NET_NAME_UNKNOWN,
 			      				rina_ip_dev_setup);
 	if (!dev) {

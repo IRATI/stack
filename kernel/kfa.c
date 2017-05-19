@@ -906,6 +906,7 @@ int kfa_flow_create(struct kfa           *instance,
 {
 	struct ipcp_flow *flow;
 	bool ip_flow = false;
+	string_t name[64];
 
 	if (!instance) {
 		LOG_ERR("Bogus kfa instance passed, bailing out");
@@ -934,7 +935,11 @@ int kfa_flow_create(struct kfa           *instance,
 
 	/* Determine if this is an IP tunnel */
 	if (ip_flow) {
-		flow->ip_dev = rina_ip_dev_create(instance->ipcp, pid);
+		sprintf(name,
+		       "rina-ip.%s.%u",
+		       ipcp->ops->ipcp_name(ipcp->data)->process_name,
+		       pid);
+		flow->ip_dev = rina_ip_dev_create(name, instance->ipcp, pid);
 		if (!flow->ip_dev) {
 			LOG_ERR("Could not allocate memory for RINA IP virtual device");
 			rkfree(flow);
