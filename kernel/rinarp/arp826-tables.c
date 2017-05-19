@@ -479,9 +479,6 @@ static struct table * tbls_create_gfp(gfp_t               flags,
 {
         struct table * cl;
 
-        LOG_DBG("Creating table for ptype = 0x%04X, hwlen = %zd",
-                ptype, hwlen);
-
         cl = tbls_find(device, ptype);
         if (cl) {
                 LOG_ERR("Table for ptype 0x%04X already created", ptype);
@@ -533,8 +530,8 @@ int tbls_destroy(struct net_device * device, uint16_t ptype)
 
         e = tmap_entry_find(tables, device, ptype);
         if (!e) {
-                LOG_ERR("Table for ptype 0x%04X is missing, cannot destroy",
-                        ptype);
+                LOG_DBG("Table for ptype 0x%04X is missing, cannot destroy",
+                         ptype);
                 spin_unlock(&tables_lock);
                 return -1;
         }
@@ -556,8 +553,6 @@ int tbls_destroy(struct net_device * device, uint16_t ptype)
 
 int tbls_init(void)
 {
-        LOG_DBG("Initializing");
-
         if (tables) {
                 LOG_WARN("Tables already initialized, bailing out");
                 return 0;
@@ -569,7 +564,7 @@ int tbls_init(void)
 
         spin_lock_init(&tables_lock);
 
-        LOG_DBG("Initialized successfully");
+        LOG_INFO("ARP826 tables initialized successfully");
 
         return 0;
 }
@@ -581,13 +576,13 @@ void tbls_fini(void)
                 return;
         }
 
-        LOG_DBG("Finalizing");
-
         ASSERT(tmap_is_empty(tables));
 
         tmap_destroy(tables);
 
         tables = NULL;
+
+        LOG_INFO("ARP826 tables finalized successfully");
 }
 
 int arp826_add(struct net_device * device,

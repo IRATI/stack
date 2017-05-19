@@ -467,7 +467,7 @@ int rnl_set_unregister(struct rnl_set * set)
 
         default_set = NULL;
 
-        LOG_DBG("Set %pK unregistered", set);
+        LOG_INFO("Set %pK unregistered", set);
 
         return 0;
 }
@@ -504,7 +504,7 @@ int rnl_set_destroy(struct rnl_set * set)
         for (i = 0; i < ARRAY_SIZE(set->handlers); i++) {
                 if (set->handlers[i].cb != NULL) {
                         count++;
-                        LOG_DBG("Set %pK has at least one hander still "
+                        LOG_WARN("Set %pK has at least one hander still "
                                 "registered, it will be unregistered", set);
                         break;
                 }
@@ -515,7 +515,7 @@ int rnl_set_destroy(struct rnl_set * set)
                          "unregistered ...", set, count);
         rkfree(set);
 
-        LOG_DBG("Set %pK destroyed %s", set, count ? "" : "successfully");
+        LOG_INFO("Set %pK destroyed %s", set, count ? "" : "successfully");
 
         return 0;
 }
@@ -706,8 +706,6 @@ void rnl_exit(void)
 {
         int ret;
 
-        LOG_DBG("Finalizing Netlink layer");
-
         /* Unregister the notifier */
         netlink_unregister_notifier(&netlink_notifier);
 
@@ -730,5 +728,5 @@ void rnl_exit(void)
         if (rnl_sock_closed_notifier_data.wq)
                 rwq_destroy(rnl_sock_closed_notifier_data.wq);
 
-        LOG_DBG("NetLink layer finalized successfully");
+        LOG_INFO("NetLink layer finalized successfully");
 }

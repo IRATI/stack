@@ -72,8 +72,6 @@ struct ipcp_factories * ipcpf_init(struct robject * parent)
 
 int ipcpf_fini(struct ipcp_factories * factories)
 {
-        LOG_DBG("Finalizing layer");
-
         if (!factories) {
                 LOG_ERR("Bogus parameter, cannot finalize");
                 return -1;
@@ -90,7 +88,7 @@ int ipcpf_fini(struct ipcp_factories * factories)
 
         rkfree(factories);
 
-        LOG_DBG("Layer finalized successfully");
+        LOG_INFO("IPCP Factories finalized successfully");
 
         return 0;
 }

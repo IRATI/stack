@@ -320,8 +320,6 @@ EXPORT_SYMBOL(arp826_resolve_gpa);
 
 int arm_init(void)
 {
-        LOG_DBG("Initializing");
-
         arm_wq = rwq_create("arp826-wq");
         if (!arm_wq)
                 return -1;
@@ -329,7 +327,7 @@ int arm_init(void)
         spin_lock_init(&resolutions_lock);
         INIT_LIST_HEAD(&resolutions_ongoing);
 
-        LOG_DBG("Initialized successfully");
+        LOG_INFO("ARM initialized successfully");
 
         return 0;
 }
@@ -339,8 +337,6 @@ int arm_fini(void)
         struct resolution * pos, * nxt;
         int                 ret;
 
-        LOG_DBG("Finalizing");
-
         list_for_each_entry_safe(pos, nxt, &resolutions_ongoing, next) {
                 resolve_data_destroy(pos->data);
                 rkfree(pos);
@@ -348,7 +344,7 @@ int arm_fini(void)
 
         ret = rwq_destroy(arm_wq);
 
-        LOG_DBG("Finalized successfully");
+        LOG_INFO("ARM finalized successfully");
 
         return ret;
 }

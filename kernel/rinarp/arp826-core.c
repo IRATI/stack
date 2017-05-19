@@ -367,8 +367,6 @@ static int __init mod_init(void)
         LOG_DBG("Regression tests completed successfully");
 #endif
 
-        LOG_DBG("Initializing");
-
         if (tbls_init())
                 return -1;
 
@@ -379,7 +377,7 @@ static int __init mod_init(void)
 
         dev_add_pack(&arp826_packet_type);
 
-        LOG_DBG("Initialized successfully");
+        LOG_INFO("ARP826 Initialized successfully");
 
         return 0;
 }
@@ -387,8 +385,6 @@ static int __init mod_init(void)
 static void __exit mod_exit(void)
 {
         struct net_device * device;
-
-        LOG_DBG("Finalizing");
 
         dev_remove_pack(&arp826_packet_type);
 
@@ -405,7 +401,7 @@ static void __exit mod_exit(void)
         arm_fini();
         tbls_fini();
 
-        LOG_DBG("Finalized successfully");
+        LOG_INFO("ARP826 kernel module finalized successfully");
 }
 
 module_init(mod_init);

@@ -1897,8 +1897,8 @@ static int netlink_handlers_unregister(struct rnl_set * rnls)
                 }
         }
 
-        LOG_DBG("NL handlers unregistered %s",
-                (retval == 0) ? "successfully" : "unsuccessfully");
+        LOG_INFO("NL handlers unregistered %s",
+                 (retval == 0) ? "successfully" : "unsuccessfully");
 
         return retval;
 }
@@ -2152,8 +2152,6 @@ int kipcm_fini(struct kipcm * kipcm)
                 return -1;
         }
 
-        LOG_DBG("Finalizing");
-
         KIPCM_LOCK(kipcm);
 
         if (kfa_destroy(kipcm->kfa)) {
@@ -2197,7 +2195,7 @@ int kipcm_fini(struct kipcm * kipcm)
         rkfree(kipcm);
 	default_kipcm = NULL;
 
-        LOG_DBG("Finalized successfully");
+        LOG_INFO("KIPCM finalized successfully");
 
         return 0;
 }

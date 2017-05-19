@@ -105,15 +105,10 @@ static void __exit mod_exit(void)
 {
 	if (kipcm_fini(default_kipcm)) {
 		LOG_ERR("Problems finalizing KIPCM");
-	} else {
-		LOG_INFO("KIPCM finalized successfully");
 	}
 
 	iodev_fini();
 	LOG_INFO("IODEV finalized successfully");
-
-	rnl_exit();
-	LOG_INFO("RNL finalized successfully");
 
 	robject_del(&core_object);
 	LOG_INFO("IRATI RINA implementation kernel modules removed");
