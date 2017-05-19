@@ -536,6 +536,19 @@ public:
 					int scope,
 					int invoke_id,
 					int port);
+	//
+	// Register an IP range to a DIF
+	//
+	// @param promise Promise object containing the future result of the
+	// operation. The promise shall always be accessible until the
+	// operation has been finished, so promise->ret value is different than
+	// IPCM_PENDING.
+	//
+	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
+	ipcm_res_t register_ip_range_to_dif(Addon* callee,
+				   	    Promise* promise,
+					    const std::string& ip_range,
+					    const rina::ApplicationProcessNamingInformation& difName);
 
 	//
 	// Update policy-set catalog, with the plugins stored in
@@ -597,6 +610,9 @@ public:
 
         //The DIF Allocator
         DIFAllocator * dif_allocator;
+
+        //The IP VPN Manager
+        IPVPNManager * ip_vpn_manager;
 
         //Catalog of policies
         Catalog catalog;

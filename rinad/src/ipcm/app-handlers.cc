@@ -33,6 +33,7 @@
 
 #include "rina-configuration.h"
 #include "app-handlers.h"
+#include "ip-vpn-manager.h"
 
 using namespace std;
 
@@ -297,6 +298,7 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
 	APPregTransState* t1;
 	IPCPregTransState* t2;
 	ipcm_res_t ret = IPCM_FAILURE;
+
 	if (e->result == 0) {
 		ret = IPCM_SUCCESS;
 	}
@@ -329,8 +331,13 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
 		//there is a single event
 		t1 = get_transaction_state<APPregTransState>(trans->tid);
 		if(t1){
-			//Application registration
-			ipcm_register_response_app(e, ipcp, t1->req);
+			if (t1->req.applicationRegistrationInformation.appName.entityName
+					== RINA_IP_FLOW_ENT_NAME) {
+
+			} else {
+				//Application registration
+				ipcm_register_response_app(e, ipcp, t1->req);
+			}
 		}else{
 			//IPCP registration
 			ipcm_register_response_ipcp(ipcp, e);

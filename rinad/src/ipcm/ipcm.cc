@@ -88,7 +88,8 @@ IPCManager_::IPCManager_()
         : req_to_stop(false),
           io_thread(NULL),
           dif_template_manager(NULL),
-          dif_allocator(NULL)
+          dif_allocator(NULL),
+	  ip_vpn_manager(NULL)
 {}
 
 IPCManager_::~IPCManager_()
@@ -102,6 +103,12 @@ IPCManager_::~IPCManager_()
     {
         delete dif_allocator;
     }
+
+    if (ip_vpn_manager)
+    {
+        delete ip_vpn_manager;
+    }
+
 
     forwarded_calls.clear();
 
@@ -136,10 +143,13 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
                                      &io_thread_attrs);
         io_thread->start();
 
-        // Initialize DIF Templates Manager (with its monitor thread)
         dif_allocator = new DIFAllocator(config_file);
+
+        // Initialize DIF Templates Manager (with its monitor thread)
         dif_template_manager = new DIFTemplateManager(config_file,
                                                       dif_allocator);
+
+        ip_vpn_manager = new IPVPNManager();
     } catch (rina::InitializationException& e)
     {
         LOG_ERR("Error while initializing librina-ipc-manager");
