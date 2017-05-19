@@ -1346,6 +1346,9 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
                         LOG_ERR("Error during TCP receive (%d)", size);
                         sdu_destroy(du);
                 }
+
+                flow->lbuf = flow->bytes_left;
+                flow->sdu = du;
                 return size;
         }
 

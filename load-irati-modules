@@ -5,7 +5,7 @@
 # Written by: Eduard Grasa <eduard DOT grasa AT i2CAT DOT net>
 #
 
-modprobe rina-irati-core
+modprobe rina-irati-core irati_verbosity=7
 modprobe rina-default-plugin
 modprobe normal-ipcp
 modprobe shim-eth-vlan

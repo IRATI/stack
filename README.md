@@ -49,7 +49,7 @@ straightforward.
 #############################################################################
 
 For the kernel modules, a Linux kernel with version 4.9+ has to be installed in the system, 
-with the kernel headers.
+with the kernel headers. 
 
 For the user-space parts, the following packages from the default repository are required:
 
@@ -68,8 +68,6 @@ For the user-space parts, the following packages from the default repository are
 Required packages to be build from source (only if generation of Java bindings is required)
 
 * SWIG (version >= 2.0.8 required, 2.0.12 is known to be working fine) from http://swig.org
-
-To use the shim-eth-vlan module you also need to install the *vlan* package.
 
 #############################################################################
 ## 3. Build instructions                                                       #
@@ -93,7 +91,7 @@ Build and install both kernel-space and user-space software
 **NOTE**: Please notice that before loading the shim-eth-vlan module, any VLAN interfaces
 used by IRATI must be created and up.
 
-To load the IRATI kernel modules, just call the load-rina-moduels script:
+To load the IRATI kernel modules, just call the load-rina-modules script:
 
     $ ./load-irati-modules
 
