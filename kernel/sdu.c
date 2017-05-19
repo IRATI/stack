@@ -77,6 +77,34 @@ struct sdu *sdu_create_ni(size_t data_len)
 { return sdu_create_gfp(data_len, GFP_ATOMIC); }
 EXPORT_SYMBOL(sdu_create_ni);
 
+struct sdu *sdu_create_from_skb(struct sk_buff* skb)
+{
+	struct du *tmp;
+
+	if (unlikely(!skb)) {
+		LOG_ERR("Could not allocate SDU...");
+		return NULL;
+	}
+
+	tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
+	if (unlikely(!tmp))
+		return NULL;
+
+	tmp->skb = skb;
+	/* init PCI */
+	tmp->pci.h = NULL;
+	//memset(&tmp->pci, 0x00, sizeof(tmp->pci));
+
+	tmp->cfg = NULL;
+	tmp->sdup_head = NULL;
+	tmp->sdup_tail = NULL;
+	skb_reserve(tmp->skb, MAX_PCIS_LEN);
+
+	LOG_DBG("SDU allocated at %pk, with skb %pk", tmp, tmp->skb);
+	return to_sdu(tmp);
+}
+EXPORT_SYMBOL(sdu_create_from_skb);
+
 struct sdu *sdu_from_buffer_ni(void *buffer)
 {
 	struct du *tmp;
