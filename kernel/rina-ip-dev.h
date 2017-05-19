@@ -31,15 +31,11 @@ struct ipcp_instance;
 
 struct rina_ip_dev;
 
-int			 rina_ip_dev_open(struct net_device *dev);
-int			 rina_ip_dev_close(struct net_device *dev);
-struct net_device_stats* rina_ip_dev_get_stats(struct net_device *dev);
-int			 rina_ip_dev_start_xmit(struct sk_buff *skb,
-						struct net_device *dev);
-void			 rina_ip_dev_setup(struct net_device *dev);
-struct rina_ip_dev*	 rina_ip_dev_create(string_t *name,
-						struct ipcp_instance* kfa_ipcp,
-			  			port_id_t port);
-int			 rina_ip_dev_destroy(struct rina_ip_dev *ip_dev);
+struct rina_ip_dev* rina_ip_dev_create(string_t *name,
+					struct ipcp_instance* kfa_ipcp,
+			  		port_id_t port);
+int		    rina_ip_dev_destroy(struct rina_ip_dev *ip_dev);
+int		    rina_ip_dev_rcv(struct sk_buff *skb,
+					struct rina_ip_dev *ip_dev);
 
 #endif

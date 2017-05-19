@@ -39,19 +39,19 @@ struct rina_ip_dev {
 	struct net_device* dev;
 };
 
-int rina_ip_dev_open(struct net_device *dev)
+static int rina_ip_dev_open(struct net_device *dev)
 {
 	LOG_DBG("RINA IP device opened...");
 	return 0;
 }
 
-int rina_ip_dev_close(struct net_device *dev)
+static int rina_ip_dev_close(struct net_device *dev)
 {
 	LOG_DBG("RINA IP device closed...");
 	return 0;
 }
 
-struct net_device_stats *rina_ip_dev_get_stats(struct net_device *dev)
+static struct net_device_stats *rina_ip_dev_get_stats(struct net_device *dev)
 {
     struct rina_ip_dev* ip_dev = netdev_priv(dev);
     if(!ip_dev)
@@ -59,7 +59,26 @@ struct net_device_stats *rina_ip_dev_get_stats(struct net_device *dev)
     return &ip_dev->stats;
 }
 
-int rina_ip_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
+int rina_ip_dev_rcv(struct sk_buff *skb, struct rina_ip_dev *ip_dev)
+{
+	struct packet_type *ptype, *pt_prev = NULL;
+
+	list_for_each_entry_rcu(ptype, &skb->dev->ptype_all, list) {
+		if (ptype->type != skb->protocol)
+			continue;
+		if (pt_prev) {
+			if (unlikely(skb_orphan_frags(skb, GFP_ATOMIC)))
+				return -1;
+			atomic_inc(&skb->users);
+			return pt_prev->func(skb, skb->dev, pt_prev, NULL);
+		}
+		pt_prev = ptype;
+	}
+
+	return 0;
+}
+
+static int rina_ip_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	struct iphdr* iph = NULL;
 	struct sdu* sdu;
@@ -95,7 +114,7 @@ static const struct net_device_ops rina_ip_dev_ops = {
 };
 
 /* as ether_setup to set internal dev fields */
-void rina_ip_dev_setup(struct net_device *dev)
+static void rina_ip_dev_setup(struct net_device *dev)
 {
 	/*Mix of properties from lo and tun ifaces */
 	/* This should be set depending on supporting DIF */

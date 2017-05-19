@@ -798,6 +798,7 @@ static int kfa_sdu_post(struct ipcp_instance_data *data,
 	struct ipcp_flow  *flow;
 	wait_queue_head_t *wq;
 	struct kfa        *instance;
+	struct sk_buff	  *skb;
 	int		   retval = 0;
 
 	if (!data) {
@@ -841,12 +842,20 @@ static int kfa_sdu_post(struct ipcp_instance_data *data,
 		return -1;
 	}
 
-	atomic_inc(&flow->posters);
+	/* IP tunnel */
+	if (flow->ip_dev) {
+        	skb = sdu_detach_skb(sdu);
+		sdu_destroy(sdu);
+		retval = rina_ip_dev_rcv(skb, flow->ip_dev);
+	/* RINA APP tunnel */
+	} else {
+		atomic_inc(&flow->posters);
 
-	if (rfifo_push_ni(flow->sdu_ready, sdu)) {
-		LOG_ERR("Could not write %zd bytes into port-id %d fifo",
-			sizeof(struct sdu *), id);
-		retval = -1;
+		if (rfifo_push_ni(flow->sdu_ready, sdu)) {
+			LOG_ERR("Could not write %zd bytes into port-id %d fifo",
+				sizeof(struct sdu *), id);
+			retval = -1;
+		}
 	}
 
 	if (atomic_dec_and_test(&flow->posters) &&
