@@ -581,7 +581,7 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 
 	q->handled++;
 	if (q->abs_th < (qset->occupation + 1)) {
-		LOG_DBG("Dropped PDU: abs_th exceeded %u", occupation);
+		LOG_DBG("Dropped PDU: abs_th exceeded %u", qset->occupation);
 		q->dropped++;
 		q->ps.length--;
 		q->ps.backlog -= w;
