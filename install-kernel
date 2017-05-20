@@ -15,29 +15,8 @@
 
 ME=install-kernel
 
-. ./.env || {
-    echo "$ME: Cannot load environment"
-    exit 1
-}
-
-echo "$ME: Installing kernel headers (sandboxed)"
-#(cd linux && make INSTALL_HDR_PATH=/usr headers_install) || {
-#(cd linux && make headers_install INSTALL_HDR_PATH=`pwd`/usr) || {
-(cd linux && make headers_install) || {
-    echo "$ME: Cannot install kernel headers"
-    exit 1
-}
-
 echo "$ME: Installing kernel modules"
-#(cd linux && make INSTALL_MOD_PATH=$PREFIX modules_install) || {
-(cd linux && make modules_install) || {
+(cd kernel && make install) || {
     echo "$ME: Cannot install kernel modules"
-    exit 1
-}
-
-echo "$ME: Installing kernel"
-#(cd linux && make INSTALL_PATH=$PREFIX/boot install) || {
-(cd linux && make install) || {
-    echo "$ME: Cannot install kernel"
     exit 1
 }

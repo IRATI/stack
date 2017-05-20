@@ -135,7 +135,7 @@ static int update_cycles(struct reg_cycle_t * prev_cycle,
 		return -1;
 	}
 
-	cur_cycle->avg_len /= (ulong) abs64(t_sub_ns);
+	cur_cycle->avg_len /= (ulong) abs(t_sub_ns);
 	return 0;
 }
 

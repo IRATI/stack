@@ -41,17 +41,15 @@ of IRATI in future releases.
 #############################################################################
 
 This section lists the software packages required to build and run *IRATI* on
-Linux-based operating systems. Only Debian 7 is explicitly
+Linux-based operating systems. Only Debian 8 is explicitly
 indicated here, but using other distributions should be equally
 straightforward.
 
-### Debian 7
+### Debian 8
 #############################################################################
 
-For the kernel parts, the following packages are required:
-
-* kernel-package
-* libncurses5-dev (needed for make menuconfig)
+For the kernel modules, a Linux kernel with version 4.9+ has to be installed in the system, 
+with the kernel headers. 
 
 For the user-space parts, the following packages from the default repository are required:
 
@@ -62,23 +60,14 @@ For the user-space parts, the following packages from the default repository are
 * git
 * g++
 * libssl-dev
+* protobuf-compiler, libprotobuf-dev (version >= 2.5.0 required)
+* libnl-genl-3-dev and libnl-3-dev (version >= 3.2.14 required)
 * openjdk-6-jdk (only if generation of Java bindings is required)
 * maven (only if generation of Java bindings is required)
-
-Required packages from the testing repository:
-
-* Add the testing repository
-* Add deb http://ftp.de.debian.org/debian jessie main in /etc/apt/sources.list
-* Run apt-get update
-* protobuf-compiler, libprotobuf-dev (version >= 2.5.0 required)
-* libnl-genl-3-dev and libnl-3-dev (version >= 3.2.14 required):
 
 Required packages to be build from source (only if generation of Java bindings is required)
 
 * SWIG (version >= 2.0.8 required, 2.0.12 is known to be working fine) from http://swig.org
-
-To use the shim-eth-vlan module you also need to install the *vlan* package.
-
 
 #############################################################################
 ## 3. Build instructions                                                       #
@@ -89,20 +78,9 @@ Download the repo and enter the root directory
     $ git clone https://github.com/IRATI/stack.git
     $ cd stack
 
-Enter the linux folder and copy default kernel build config file to *.config* 
-(you can further customize the kernel build config by running *make menuconfig* from 
-the same folder)
-
-    $ cd linux
-    $ copy config-IRATI .config
-
 Build and install both kernel-space and user-space software
 
     $ ./install-from-scratch --prefix=<path to IRATI installation folder>
-
-Once all the build process has finalized (it will take some time, since a whole 
-kernel has to be compiled), reboot your computer.
-
 
 #############################################################################
 ## 4. Running and configuring IRATI                                         #
@@ -110,29 +88,12 @@ kernel has to be compiled), reboot your computer.
 
 ### 4.1. Loading the required Kernel modules
 #############################################################################
-First the appropriate kernel space components have to be modprobed. If you want to use a 
-normal IPC process use:
+**NOTE**: Please notice that before loading the shim-eth-vlan module, any VLAN interfaces
+used by IRATI must be created and up.
 
-    $ modprobe normal-ipcp
+To load the IRATI kernel modules, just call the load-rina-modules script:
 
-Currently, there are 3 shim IPC processes available in IRATI:
-
-* **The shim IPC process for 802.1Q (VLANs)**, which requires a virtual interface to be 
-created on a VLAN before being inserted as a Linux kernel module. The VLAN id is a synonym 
-for the DIF name. **NOTE**: If you are installing IRATI in a VirtualBox VM, please do not 
-use the Intel PRO/1000 net card adaptor since it strips the VLAN tags.
-* **The shim IPC process for TCP/UDP**.
-* **The shim IPC process for Hypervisos**, which supports communication between a virtual 
-machine and its host.
-
-Each one can be loaded with the correct command:
-
-    $ modprobe shim-eth-vlan
-    $ modprobe shim-tcp-udp
-    $ modprobe shim-hv
-
-**NOTE**: Please notice that before loading the shim-eth-vlan module, the VLAN interface 
-must be created and up.
+    $ ./load-irati-modules
 
 Next, the IPC Manager (IPCM) has to be started in userspace, which is the local management agent. 
 The IPCM needs some configuration information.
