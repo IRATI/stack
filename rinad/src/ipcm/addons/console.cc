@@ -171,6 +171,10 @@ IPCMConsole::IPCMConsole(const std::string& socket_path_) :
 			ConsoleCmdInfo(&IPCMConsole::register_ip_prefix,
 				"USAGE: register-ip-prefix <ip-address> "
 				"<prefix> <dif-name>");
+	commands_map["unregister-ip-prefix"] =
+			ConsoleCmdInfo(&IPCMConsole::unregister_ip_prefix,
+				"USAGE: unregister-ip-prefix <ip-address> "
+				"<prefix> <dif-name>");
 
 	keep_on_running = true;
 	rina::ThreadAttributes ta;
@@ -656,6 +660,33 @@ IPCMConsole::register_ip_prefix(vector<string>& args)
 	}
 
 	outstream << "IP prefix registration completed successfully" << endl;
+
+	return CMDRETCONT;
+}
+
+int
+IPCMConsole::unregister_ip_prefix(vector<string>& args)
+{
+	std::string ip_prefix;
+	std::stringstream ss;
+	Promise promise;
+
+	if (args.size() < 4) {
+		outstream << commands_map[args[0]].usage << endl;
+		return CMDRETCONT;
+	}
+
+	ss << args[1] << "|" << args[2];
+	ip_prefix = ss.str();
+	rina::ApplicationProcessNamingInformation dif_name(args[3], string());
+
+	if(IPCManager->unregister_ip_prefix_from_dif(this, &promise, ip_prefix, dif_name) == IPCM_FAILURE ||
+			promise.wait() != IPCM_SUCCESS) {
+		outstream << "IP prefix registration failed" << endl;
+		return CMDRETCONT;
+	}
+
+	outstream << "IP prefix unregistration completed successfully" << endl;
 
 	return CMDRETCONT;
 }

@@ -102,6 +102,7 @@ class IPCMConsole : public Addon {
                 int update_catalog(std::vector<std::string>& args);
                 int query_ma_rib(std::vector<std::string>& args);
                 int register_ip_prefix(std::vector<std::string>& args);
+                int unregister_ip_prefix(std::vector<std::string>& args);
 
         public:
                 IPCMConsole(const std::string& socket_path);

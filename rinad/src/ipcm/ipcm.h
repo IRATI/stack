@@ -551,6 +551,11 @@ public:
 					     const std::string& ip_range,
 					     const rina::ApplicationProcessNamingInformation& difName);
 
+	ipcm_res_t unregister_ip_prefix_from_dif(Addon* callee,
+				   	         Promise* promise,
+					         const std::string& ip_range,
+						 const rina::ApplicationProcessNamingInformation& difName);
+
 	//
 	// Update policy-set catalog, with the plugins stored in
 	// the pluginsPaths configuration variable
@@ -729,6 +734,9 @@ protected:
 	int ipcm_register_response_ip_prefix(rina::IpcmRegisterApplicationResponseEvent * event,
 					     IPCMIPCProcess * slave_ipcp,
 					     const rina::ApplicationRegistrationRequestEvent& req_event);
+	int ipcm_unregister_response_ip_prefix(rina::IpcmUnregisterApplicationResponseEvent * event,
+			     	     	       IPCMIPCProcess * slave_ipcp,
+					       const rina::ApplicationUnregistrationRequestEvent& req_event);
 
 	//IPCP mgmt
 	void ipcm_register_response_ipcp(IPCMIPCProcess * ipcp,

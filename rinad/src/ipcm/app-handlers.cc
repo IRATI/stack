@@ -499,7 +499,11 @@ void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResp
 
 		//Application registration
 		if(t1) {
-			ipcm_unregister_response_app(e, ipcp, t1->req);
+			if (t1->req.applicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
+				ipcm_unregister_response_ip_prefix(e, ipcp, t1->req);
+			} else {
+				ipcm_unregister_response_app(e, ipcp, t1->req);
+			}
 		} else {
 			t2 = get_transaction_state<IPCPregTransState>(e->sequenceNumber);
 			if (t2){
