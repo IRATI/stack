@@ -16,7 +16,7 @@
 ME=install-kernel
 
 echo "$ME: Installing kernel modules"
-(cd kernel && make install) || {
+(cd kernel && make install && depmod -a) || {
     echo "$ME: Cannot install kernel modules"
     exit 1
 }
