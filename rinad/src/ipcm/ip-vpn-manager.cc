@@ -93,8 +93,7 @@ bool IPVPNManager::__ip_prefix_registered(const std::string& ip_prefix)
 	return false;
 }
 
-int IPVPNManager::iporina_flow_allocated(const rina::FlowRequestEvent& event,
-					 const std::string& ipcp_name)
+int IPVPNManager::iporina_flow_allocated(const rina::FlowRequestEvent& event)
 {
 	int res = 0;
 
@@ -108,7 +107,7 @@ int IPVPNManager::iporina_flow_allocated(const rina::FlowRequestEvent& event,
 
 	//Add entry to the IP forwarding table
 	res = add_or_remove_ip_route(event.remoteApplicationName.processName,
-			             ipcp_name, event.portId, true);
+			             event.ipcProcessId, event.portId, true);
 	if (res != 0) {
 		LOG_ERR("Problems adding route to IP routing table");
 	}
@@ -121,8 +120,8 @@ int IPVPNManager::iporina_flow_allocated(const rina::FlowRequestEvent& event,
 	return 0;
 }
 
-void IPVPNManager::iporina_flow_allocation_requested(const rina::FlowRequestEvent& event,
-						     const std::string& ipcp_name)
+void IPVPNManager::
+iporina_flow_allocation_requested(const rina::FlowRequestEvent& event)
 {
 	int res = 0;
 
@@ -145,7 +144,7 @@ void IPVPNManager::iporina_flow_allocation_requested(const rina::FlowRequestEven
 
 	//Add entry to the IP forwarding table
 	res = add_or_remove_ip_route(event.remoteApplicationName.processName,
-			             ipcp_name, event.portId, true);
+			             event.ipcProcessId, event.portId, true);
 	if (res != 0) {
 		LOG_ERR("Problems adding route to IP routing table");
 	}
@@ -158,7 +157,8 @@ void IPVPNManager::iporina_flow_allocation_requested(const rina::FlowRequestEven
 	IPCManager->allocate_iporina_flow_response(event, 0, true);
 }
 
-int IPVPNManager::get_iporina_flow_info(int port_id, rina::FlowRequestEvent& event)
+int IPVPNManager::get_iporina_flow_info(int port_id,
+					rina::FlowRequestEvent& event)
 {
 	int res = 0;
 	std::map<int, rina::FlowRequestEvent>::iterator it;
@@ -176,7 +176,7 @@ int IPVPNManager::get_iporina_flow_info(int port_id, rina::FlowRequestEvent& eve
 	return 0;
 }
 
-int IPVPNManager::iporina_flow_deallocated(int port_id, const std::string& ipcp_name)
+int IPVPNManager::iporina_flow_deallocated(int port_id, const int ipcp_id)
 {
 	int res = 0;
 	rina::FlowRequestEvent event;
@@ -191,7 +191,7 @@ int IPVPNManager::iporina_flow_deallocated(int port_id, const std::string& ipcp_
 
 	//Remove entry from the IP forwarding table
 	res = add_or_remove_ip_route(event.remoteApplicationName.processName,
-			             ipcp_name, event.portId, false);
+			             ipcp_id, event.portId, false);
 	if (res != 0) {
 		LOG_ERR("Problems removing entry from IP routing table");
 	}
@@ -261,11 +261,12 @@ std::string IPVPNManager::exec_shell_command(std::string command)
 	return result;
 }
 
-std::string IPVPNManager::get_rina_dev_name(const std::string& ipcp_name, int port_id)
+std::string IPVPNManager::get_rina_dev_name(const int ipcp_id,
+					    const int port_id)
 {
 	std::stringstream ss;
 
-	ss << "rina." << ipcp_name << "." << port_id;
+	ss << "rina." << ipcp_id << "." << port_id;
 	return ss.str();
 }
 
@@ -278,8 +279,9 @@ std::string IPVPNManager::get_ip_prefix_string(const std::string& input)
 }
 
 int IPVPNManager::add_or_remove_ip_route(const std::string ip_prefix,
-					 const std::string& ipcp_name,
-					 int port_id, bool add)
+					 const int ipcp_id,
+					 const int port_id,
+					 bool add)
 {
 	std::stringstream ss;
 	std::string prefix;
@@ -292,7 +294,7 @@ int IPVPNManager::add_or_remove_ip_route(const std::string ip_prefix,
 
 	ss << "ip route " << prefix
 	   << get_ip_prefix_string(ip_prefix) << " dev "
-	   << get_rina_dev_name(ipcp_name, port_id);
+	   << get_rina_dev_name(ipcp_id, port_id);
 
 	result = exec_shell_command(ss.str());
 	//TODO parse result
