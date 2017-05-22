@@ -388,6 +388,7 @@ void IPCManager_::ipcm_allocate_flow_request_result_handler(rina::IpcmAllocateFl
 	}
 
 	if (req_event.localApplicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
+		req_event.ipcProcessId = slave_ipcp->get_id();
 		ip_vpn_manager->iporina_flow_allocated(req_event);
 	} else {
 		// Inform the Application Manager about the flow allocation
