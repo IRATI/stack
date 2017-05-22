@@ -1118,7 +1118,8 @@ static int eth_vlan_rcv_worker(void * o)
 
         if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                 LOG_DBG("This flow goes for an app");
-                if (kfa_flow_create(data->kfa, flow->port_id, ipcp, NULL)) {
+                if (kfa_flow_create(data->kfa, flow->port_id, ipcp, data->id,
+									NULL)) {
                         LOG_ERR("Could not create flow in KFA");
                         kfa_port_id_release(data->kfa, flow->port_id);
                         if (flow_destroy(data, flow))
