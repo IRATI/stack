@@ -721,8 +721,6 @@ protected:
 	ipcm_res_t deallocate_flow(Promise* promise, const int ipcp_id,
 			    const rina::FlowDeallocateRequestEvent& event);
 
-
-
 	//Application registration mgmt
 	void app_reg_req_handler(rina::ApplicationRegistrationRequestEvent *e);
 	void app_reg_response_handler(rina::IpcmRegisterApplicationResponseEvent* e);

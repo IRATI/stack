@@ -179,6 +179,9 @@ IPCMConsole::IPCMConsole(const std::string& socket_path_) :
 			ConsoleCmdInfo(&IPCMConsole::allocate_iporina_flow,
 				"USAGE: allocate-iporina-flow <src-ip-address> "
 				"<src-prefix> <dest-ip-address> <dst-prefix> [<dif-name>]");
+	commands_map["deallocate-iporina-flow"] =
+			ConsoleCmdInfo(&IPCMConsole::deallocate_iporina_flow,
+				"USAGE: deallocate-iporina-flow <port_id>]");
 
 	keep_on_running = true;
 	rina::ThreadAttributes ta;
@@ -730,6 +733,33 @@ IPCMConsole::allocate_iporina_flow(std::vector<std::string>& args)
 	}
 
 	outstream << "IP over RINA flow allocated successfully" << endl;
+
+	return CMDRETCONT;
+}
+
+int
+IPCMConsole::deallocate_iporina_flow(std::vector<std::string>& args)
+{
+	int port_id;
+	Promise promise;
+
+	if (args.size() != 2) {
+		outstream << commands_map[args[0]].usage << endl;
+		return CMDRETCONT;
+	}
+
+	if (string2int(args[1], port_id)){
+		outstream << "Invalid IPC port id" << endl;
+		return CMDRETCONT;
+	}
+
+	if(IPCManager->deallocate_iporina_flow(&promise, port_id) == IPCM_FAILURE ||
+			promise.wait() != IPCM_SUCCESS) {
+		outstream << "IP over RINA flow deallocation failed" << endl;
+		return CMDRETCONT;
+	}
+
+	outstream << "IP over RINA flow deallocated successfully" << endl;
 
 	return CMDRETCONT;
 }

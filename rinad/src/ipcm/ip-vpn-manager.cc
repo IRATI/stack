@@ -95,7 +95,6 @@ int IPVPNManager::iporina_flow_allocated(const rina::FlowRequestEvent& event)
 		return res;
 	}
 
-	//TODO Set the rina device associated to the flow up
 	//TODO add entry to the IP forwarding table
 
 	LOG_INFO("IP over RINA flow between %s and %s allocated, port-id: %d",
@@ -127,7 +126,6 @@ void IPVPNManager::iporina_flow_allocation_requested(const rina::FlowRequestEven
 		return;
 	}
 
-	//TODO Set the rina device associated to the flow up
 	//TODO add entry to the IP forwarding table
 
 	LOG_INFO("Accepted IP over RINA flow between %s and %s; port-id: %d",
@@ -170,7 +168,6 @@ int IPVPNManager::iporina_flow_deallocated(int port_id)
 	}
 
 	//TODO remove entry from the IP forwarding table
-	//TODO set the RINA device associated to the flow down
 
 	LOG_INFO("IP over RINA flow between %s and %s deallocated, port-id: %d",
 		  event.localApplicationName.processName.c_str(),
