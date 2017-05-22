@@ -33,20 +33,27 @@ namespace rinad {
 
 class IPVPNManager {
 public:
-	IPVPNManager(){};
+	IPVPNManager();
 	~IPVPNManager(){};
 	int add_registered_ip_prefix(const std::string& ip_prefix);
 	int remove_registered_ip_prefix(const std::string& ip_prefix);
 	bool ip_prefix_registered(const std::string& ip_prefix);
-	int iporina_flow_allocated(const rina::FlowRequestEvent& event);
-	void iporina_flow_allocation_requested(const rina::FlowRequestEvent& event);
+	int iporina_flow_allocated(const rina::FlowRequestEvent& event,
+				   const std::string& ipcp_name);
+	void iporina_flow_allocation_requested(const rina::FlowRequestEvent& event,
+					       const std::string& ipcp_name);
 	int get_iporina_flow_info(int port_id, rina::FlowRequestEvent& event);
-	int iporina_flow_deallocated(int port_id);
+	int iporina_flow_deallocated(int port_id, const std::string& ipcp_name);
 
 private:
 	bool __ip_prefix_registered(const std::string& ip_prefix);
 	int add_flow(const rina::FlowRequestEvent& event);
 	int remove_flow(rina::FlowRequestEvent& event);
+	int add_or_remove_ip_route(const std::string ip_prefix, const std::string& ipcp_name,
+				   int port_id, bool add);
+	std::string exec_shell_command(std::string result);
+	std::string get_rina_dev_name(const std::string& ipcp_name, int port_id);
+	std::string get_ip_prefix_string(std::string input);
 
 	std::list<std::string> reg_ip_prefixes;
 	rina::Lockable lock;
