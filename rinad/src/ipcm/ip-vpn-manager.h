@@ -40,6 +40,7 @@ public:
 	bool ip_prefix_registered(const std::string& ip_prefix);
 	int iporina_flow_allocated(const rina::FlowRequestEvent& event);
 	void iporina_flow_allocation_requested(const rina::FlowRequestEvent& event);
+	int get_iporina_flow_info(int port_id, rina::FlowRequestEvent& event);
 	int iporina_flow_deallocated(int port_id);
 
 private:

@@ -46,7 +46,7 @@ namespace rinad {
 
 ipcm_res_t
 IPCManager_::deallocate_flow(Promise * promise, const int ipcp_id,
-			    const rina::FlowDeallocateRequestEvent& event)
+			     const rina::FlowDeallocateRequestEvent& event)
 {
 	ostringstream ss;
 	IPCMIPCProcess* ipcp;
@@ -474,7 +474,8 @@ void IPCManager_::allocate_flow_response_event_handler(rina::AllocateFlowRespons
 	remove_transaction_state(trans->tid);
 }
 
-void IPCManager_::flow_deallocation_requested_event_handler(rina::FlowDeallocateRequestEvent* event)
+ipcm_res_t IPCManager_::flow_deallocation_requested_event_handler(Promise * promise,
+							          rina::FlowDeallocateRequestEvent* event)
 {
 	IPCMIPCProcess *ipcp = lookup_ipcp_by_port(event->portId);
 	unsigned short ipcp_id = 0;
@@ -485,7 +486,7 @@ void IPCManager_::flow_deallocation_requested_event_handler(rina::FlowDeallocate
 			"provides the flow with port-id " << event->portId
 			<< endl;
 		FLUSH_LOG(ERR, ss);
-		return;
+		return IPCM_FAILURE;
 	}
 
 	{
@@ -494,7 +495,7 @@ void IPCManager_::flow_deallocation_requested_event_handler(rina::FlowDeallocate
 		ipcp_id = ipcp->get_id();
 	}
 
-	deallocate_flow(NULL, ipcp_id, *event);
+	return deallocate_flow(promise, ipcp_id, *event);
 }
 
 void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IpcmDeallocateFlowResponseEvent* event)
@@ -571,6 +572,10 @@ void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IpcmDealloca
 		}
 	}
 
+	if (req_event.applicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
+		ip_vpn_manager->iporina_flow_deallocated(req_event.portId);
+	}
+
 	trans->completed(ret);
 	remove_transaction_state(trans->tid);
 }
@@ -596,9 +601,12 @@ void IPCManager_::flow_deallocated_event_handler(rina::FlowDeallocatedEvent* eve
 		// Inform the IPC process that the flow corresponding to
 		// the specified port-id has been deallocated
 		info = ipcp->flowDeallocated(event->portId);
-		rina::applicationManager->
-			flowDeallocatedRemotely(event->portId, event->code,
-						info.localAppName);
+
+		if (ip_vpn_manager->iporina_flow_deallocated(event->portId)) {
+			rina::applicationManager->flowDeallocatedRemotely(event->portId,
+									  event->code,
+									  info.localAppName);
+		}
 
 		ss << "IPC process " << ipcp->get_name().toString() <<
 			" and local application " << info.localAppName.

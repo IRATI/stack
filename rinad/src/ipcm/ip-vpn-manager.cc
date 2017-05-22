@@ -138,6 +138,24 @@ void IPVPNManager::iporina_flow_allocation_requested(const rina::FlowRequestEven
 	IPCManager->allocate_iporina_flow_response(event, 0, true);
 }
 
+int IPVPNManager::get_iporina_flow_info(int port_id, rina::FlowRequestEvent& event)
+{
+	int res = 0;
+	std::map<int, rina::FlowRequestEvent>::iterator it;
+
+	rina::ScopedLock g(lock);
+
+	it = iporina_flows.find(port_id);
+	if (it == iporina_flows.end()) {
+		LOG_ERR("Could not find IP over RINA flow with port-id %d", port_id);
+		return -1;
+	}
+
+	event = it->second;
+
+	return 0;
+}
+
 int IPVPNManager::iporina_flow_deallocated(int port_id)
 {
 	int res = 0;
@@ -378,6 +396,23 @@ void IPCManager_::allocate_iporina_flow_response(const rina::FlowRequestEvent& e
 		LOG_ERR("Error while informing IPC process %d"
 			" about flow allocation", ipcp->proxy_->id);
 	}
+}
+
+ipcm_res_t IPCManager_::deallocate_iporina_flow(Promise* promise,
+				   	   	int port_id)
+{
+	rina::FlowRequestEvent req_event;
+	rina::FlowDeallocateRequestEvent event;
+
+	if (ip_vpn_manager->get_iporina_flow_info(port_id, req_event)) {
+		return IPCM_FAILURE;
+	}
+
+	event.sequenceNumber = 0;
+	event.portId = port_id;
+	event.applicationName = req_event.localApplicationName;
+
+	return flow_deallocation_requested_event_handler(promise, &event);
 }
 
 } //namespace rinad

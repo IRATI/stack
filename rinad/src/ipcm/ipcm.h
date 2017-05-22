@@ -564,6 +564,9 @@ public:
 					    int result,
 					    bool notify_source);
 
+	ipcm_res_t deallocate_iporina_flow(Promise* promise,
+					   int port_id);
+
 	//
 	// Update policy-set catalog, with the plugins stored in
 	// the pluginsPaths configuration variable
@@ -704,7 +707,8 @@ protected:
 	//Flow mgmt
 	ipcm_res_t flow_allocation_requested_event_handler(Promise * promise, rina::FlowRequestEvent* event);
 	void allocate_flow_response_event_handler( rina::AllocateFlowResponseEvent *event);
-	void flow_deallocation_requested_event_handler(rina::FlowDeallocateRequestEvent* event);
+	ipcm_res_t flow_deallocation_requested_event_handler(Promise * promise,
+						             rina::FlowDeallocateRequestEvent* event);
 	void flow_deallocated_event_handler(rina::FlowDeallocatedEvent* event);
 	void ipcm_deallocate_flow_response_event_handler(rina::IpcmDeallocateFlowResponseEvent* event);
 	void ipcm_allocate_flow_request_result_handler(rina::IpcmAllocateFlowRequestResultEvent* event);

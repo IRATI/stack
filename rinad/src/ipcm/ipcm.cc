@@ -2088,7 +2088,7 @@ void IPCManager_::io_loop()
 
                 case rina::FLOW_DEALLOCATION_REQUESTED_EVENT: {
                     DOWNCAST_DECL(event, rina::FlowDeallocateRequestEvent, e);
-                    flow_deallocation_requested_event_handler(e);
+                    flow_deallocation_requested_event_handler(NULL, e);
                 }
                     break;
 
