@@ -70,7 +70,8 @@ int rina_ip_dev_rcv(struct sk_buff *skb, struct rina_ip_dev *ip_dev)
 			if (unlikely(skb_orphan_frags(skb, GFP_ATOMIC)))
 				return -1;
 			atomic_inc(&skb->users);
-			return pt_prev->func(skb, skb->dev, pt_prev, NULL);
+			return pt_prev->func(skb, ip_dev->dev, pt_prev, NULL);
+			//return pt_prev->func(skb, skb->dev, pt_prev, NULL);
 		}
 		pt_prev = ptype;
 	}
@@ -135,6 +136,7 @@ static void rina_ip_dev_setup(struct net_device *dev)
 		| NETIF_F_SCTP_CRC
 		| NETIF_F_HIGHDMA
 		| NETIF_F_LLTX
+		/* This flag should be removed when ns are supported */
 		| NETIF_F_NETNS_LOCAL
 		| NETIF_F_VLAN_CHALLENGED
 		| NETIF_F_LOOPBACK;
