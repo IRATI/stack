@@ -61,6 +61,7 @@ static struct net_device_stats *rina_ip_dev_get_stats(struct net_device *dev)
 
 int rina_ip_dev_rcv(struct sk_buff *skb, struct rina_ip_dev *ip_dev)
 {
+	int rv;
 	struct packet_type *ptype, *pt_prev = NULL;
 
 	list_for_each_entry_rcu(ptype, &skb->dev->ptype_all, list) {
@@ -70,23 +71,37 @@ int rina_ip_dev_rcv(struct sk_buff *skb, struct rina_ip_dev *ip_dev)
 			if (unlikely(skb_orphan_frags(skb, GFP_ATOMIC)))
 				return -1;
 			atomic_inc(&skb->users);
+
 			LOG_DBG("RINA IP device %s rcv a packet...",
 							ip_dev->dev->name);
-			return pt_prev->func(skb, ip_dev->dev, pt_prev, NULL);
+
 			//return pt_prev->func(skb, skb->dev, pt_prev, NULL);
+			rv = pt_prev->func(skb, ip_dev->dev, pt_prev, NULL);
+			if(rv){
+				ip_dev->stats.rx_dropped++;
+			} else {
+				ip_dev->stats.rx_packets++;
+				ip_dev->stats.rx_bytes += skb->len;
+			}
+			return rv;
 		}
 		pt_prev = ptype;
 	}
 
-	return 0;
+	ip_dev->stats.rx_dropped++;
+	kfree_skb(skb);
+	LOG_ERR("Could not find IP handler for packet %p and RINA IP device %s",
+							skb, ip_dev->dev->name);
+
+	return -1;
 }
 
 static int rina_ip_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	struct iphdr* iph = NULL;
 	struct sdu* sdu;
-	struct rina_ip_dev* rina_dev = netdev_priv(dev);
-	ASSERT(rina_dev);
+	struct rina_ip_dev* ip_dev = netdev_priv(dev);
+	ASSERT(ip_dev);
 
 	skb_orphan(skb);
 	//skb_dst_force(skb);
@@ -97,15 +112,19 @@ static int rina_ip_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	sdu = sdu_create_from_skb(skb);
 	if (!sdu){
 		kfree_skb(skb);
+		ip_dev->stats.tx_dropped++;
 		return NET_XMIT_DROP;
 	}
 
-        if(kfa_flow_sdu_write(rina_dev->kfa_ipcp->data, rina_dev->port, sdu,
+        if(kfa_flow_sdu_write(ip_dev->kfa_ipcp->data, ip_dev->port, sdu,
 									false)){
+		ip_dev->stats.tx_dropped++;
 		LOG_ERR("Could not xmit IP packet, unable to send to KFA...");
 		return NET_XMIT_DROP;
 	}
 
+	ip_dev->stats.tx_packets++;
+	ip_dev->stats.tx_bytes += skb->len;
 	LOG_DBG("RINA IP device %s sent a packet...", dev->name);
 	return NETDEV_TX_OK;
 }
@@ -179,6 +198,7 @@ struct rina_ip_dev* rina_ip_dev_create(string_t* name,
 	ip_dev->dev = dev;
 	ip_dev->kfa_ipcp = kfa_ipcp;
 	ip_dev->port = port;
+	memset(&ip_dev->stats, 0x00, sizeof(struct net_device_stats));
 
 	rv = register_netdev(dev);
 	if(rv) {
