@@ -135,7 +135,8 @@ void IPCManager_::application_flow_allocation_failed_notify(rina::FlowRequestEve
 	}
 }
 
-void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
+ipcm_res_t IPCManager_::flow_allocation_requested_local(Promise * promise,
+						        rina::FlowRequestEvent *event)
 {
 	rina::ApplicationProcessNamingInformation dif_name;
 	IPCMIPCProcess *ipcp;
@@ -150,9 +151,8 @@ void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
 		dif_specified = true;
 	} else {
 		// Ask the DIF allocator
-		dif_specified = lookup_dif_by_application(
-					event->remoteApplicationName,
-					dif_name);
+		dif_specified = lookup_dif_by_application(event->remoteApplicationName,
+							  dif_name);
 	}
 
 	// Select an IPC process to serve the flow request
@@ -160,7 +160,6 @@ void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
 		ipcp = select_ipcp();
 	else
 		ipcp = select_ipcp_by_dif(dif_name);
-
 	if (!ipcp) {
 		ss  << " Error: Cannot find an IPC process to "
 			"serve flow allocation request (local-app = " <<
@@ -169,9 +168,10 @@ void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
 			toString() << endl;
 		FLUSH_LOG(ERR, ss);
 
-		application_flow_allocation_failed_notify(event);
+		if (!promise)
+			application_flow_allocation_failed_notify(event);
 
-		return;
+		return IPCM_FAILURE;
 	}
 
 	//Auto release the read lock
@@ -179,18 +179,23 @@ void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
 
 	try {
 		// Ask the IPC process to allocate a flow
-		trans = new FlowAllocTransState(NULL, NULL, ipcp->get_id(),
-								*event,
-								dif_specified);
+		trans = new FlowAllocTransState(NULL, promise, ipcp->get_id(),
+						*event, dif_specified);
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
-			throw rina::AllocateFlowException();
+			if (!promise)
+				throw rina::AllocateFlowException();
+
+			return IPCM_FAILURE;
 		}
 
 		//Store transaction
 		if(add_transaction_state(trans) < 0){
 			ss << "Unable to add transaction; out of memory? ";
-			throw rina::AllocateFlowException();
+			if (!promise)
+				throw rina::AllocateFlowException();
+
+			return IPCM_FAILURE;
 		}
 
 		ipcp->allocateFlow(*event, trans->tid);
@@ -209,16 +214,26 @@ void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
 			<< endl;
 		FLUSH_LOG(ERR, ss);
 
-		application_flow_allocation_failed_notify(event);
+		if (!promise)
+			application_flow_allocation_failed_notify(event);
+
+		return IPCM_FAILURE;
 	}
+
+	return IPCM_PENDING;
 }
 
-void
+ipcm_res_t
 IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 {
 	IPCMIPCProcess *ipcp;
 	ostringstream ss;
 	FlowAllocTransState* trans = NULL;
+
+	if (event->localApplicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
+		ip_vpn_manager->iporina_flow_allocation_requested(*event);
+		return IPCM_PENDING;
+	}
 
 	// Retrieve the local IPC process involved in the flow allocation
 	// request coming from a remote application
@@ -228,7 +243,7 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 			"with id " << event->ipcProcessId << ", to serve "
 			"remote flow allocation request" << endl;
 		FLUSH_LOG(ERR, ss);
-		return;
+		return IPCM_FAILURE;
 	}
 
 	//Auto release the read lock
@@ -294,18 +309,23 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 				" about failed flow allocation" << endl;
 			FLUSH_LOG(ERR, ss);
 		}
+
+		return IPCM_FAILURE;
 	}
+
+	return IPCM_SUCCESS;
 }
 
-void IPCManager_::flow_allocation_requested_event_handler(rina::FlowRequestEvent* event)
+ipcm_res_t IPCManager_::flow_allocation_requested_event_handler(Promise * promise,
+							  	rina::FlowRequestEvent* event)
 {
 	if (event->localRequest)
-		flow_allocation_requested_local(event);
+		return flow_allocation_requested_local(promise, event);
 	else
-		flow_allocation_requested_remote(event);
+		return flow_allocation_requested_remote(event);
 }
 
-void IPCManager_::ipcm_allocate_flow_request_result_handler( rina::IpcmAllocateFlowRequestResultEvent *event)
+void IPCManager_::ipcm_allocate_flow_request_result_handler(rina::IpcmAllocateFlowRequestResultEvent *event)
 {
 	bool success = (event->result == 0);
 	ostringstream ss;
@@ -366,21 +386,25 @@ void IPCManager_::ipcm_allocate_flow_request_result_handler( rina::IpcmAllocateF
 		ret = IPCM_FAILURE;
 	}
 
-	// Inform the Application Manager about the flow allocation
-	// result
-	try {
-		rina::applicationManager->flowAllocated(req_event);
-		ss << "Applications " <<
-			req_event.localApplicationName.toString() << " and "
-			<< req_event.remoteApplicationName.toString()
-			<< " informed about flow allocation result" << endl;
-		FLUSH_LOG(INFO, ss);
-	} catch (rina::NotifyFlowAllocatedException& e) {
-		ss  << ": Error while notifying the "
-			"Application Manager about flow allocation result"
-			<< endl;
-		FLUSH_LOG(ERR, ss);
-		//ret = IPCM_FAILURE; <= should this be marked as error?
+	if (req_event.localApplicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
+		ip_vpn_manager->iporina_flow_allocated(req_event);
+	} else {
+		// Inform the Application Manager about the flow allocation
+		// result
+		try {
+			rina::applicationManager->flowAllocated(req_event);
+			ss << "Applications " <<
+					req_event.localApplicationName.toString() << " and "
+					<< req_event.remoteApplicationName.toString()
+					<< " informed about flow allocation result" << endl;
+			FLUSH_LOG(INFO, ss);
+		} catch (rina::NotifyFlowAllocatedException& e) {
+			ss  << ": Error while notifying the "
+					"Application Manager about flow allocation result"
+					<< endl;
+			FLUSH_LOG(ERR, ss);
+			//ret = IPCM_FAILURE; <= should this be marked as error?
+		}
 	}
 
 	trans->completed(ret);

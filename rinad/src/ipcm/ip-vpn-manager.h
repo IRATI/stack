@@ -38,12 +38,18 @@ public:
 	int add_registered_ip_prefix(const std::string& ip_prefix);
 	int remove_registered_ip_prefix(const std::string& ip_prefix);
 	bool ip_prefix_registered(const std::string& ip_prefix);
+	int iporina_flow_allocated(const rina::FlowRequestEvent& event);
+	void iporina_flow_allocation_requested(const rina::FlowRequestEvent& event);
+	int iporina_flow_deallocated(int port_id);
 
 private:
 	bool __ip_prefix_registered(const std::string& ip_prefix);
+	int add_flow(const rina::FlowRequestEvent& event);
+	int remove_flow(rina::FlowRequestEvent& event);
 
 	std::list<std::string> reg_ip_prefixes;
 	rina::Lockable lock;
+	std::map<int, rina::FlowRequestEvent> iporina_flows;
 };
 
 

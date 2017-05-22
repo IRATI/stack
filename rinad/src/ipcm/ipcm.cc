@@ -2076,7 +2076,7 @@ void IPCManager_::io_loop()
             switch (event->eventType) {
                 case rina::FLOW_ALLOCATION_REQUESTED_EVENT: {
                     DOWNCAST_DECL(event, rina::FlowRequestEvent, e);
-                    flow_allocation_requested_event_handler(e);
+                    flow_allocation_requested_event_handler(NULL, e);
                 }
                     break;
 

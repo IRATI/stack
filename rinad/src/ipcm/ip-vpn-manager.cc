@@ -84,8 +84,118 @@ bool IPVPNManager::__ip_prefix_registered(const std::string& ip_prefix)
 	return false;
 }
 
-ipcm_res_t IPCManager_::register_ip_prefix_to_dif(Addon* callee,
-			   	    	    	  Promise* promise,
+int IPVPNManager::iporina_flow_allocated(const rina::FlowRequestEvent& event)
+{
+	int res = 0;
+
+	rina::ScopedLock g(lock);
+
+	res = add_flow(event);
+	if (res != 0) {
+		return res;
+	}
+
+	//TODO Set the rina device associated to the flow up
+	//TODO add entry to the IP forwarding table
+
+	LOG_INFO("IP over RINA flow between %s and %s allocated, port-id: %d",
+		  event.localApplicationName.processName.c_str(),
+		  event.remoteApplicationName.processName.c_str(),
+		  event.portId);
+
+	return 0;
+}
+
+void IPVPNManager::iporina_flow_allocation_requested(const rina::FlowRequestEvent& event)
+{
+	int res = 0;
+
+	rina::ScopedLock g(lock);
+
+	if (!ip_prefix_registered(event.localApplicationName.processName)) {
+		LOG_INFO("Rejected IP over RINA flow between %s and %s",
+			  event.localApplicationName.processName.c_str(),
+			  event.remoteApplicationName.processName.c_str());
+		IPCManager->allocate_iporina_flow_response(event, false, true);
+		return;
+	}
+
+	res = add_flow(event);
+	if (res != 0) {
+		LOG_ERR("Flow with port-id %d already exists", event.portId);
+		IPCManager->allocate_iporina_flow_response(event, false, true);
+		return;
+	}
+
+	//TODO Set the rina device associated to the flow up
+	//TODO add entry to the IP forwarding table
+
+	LOG_INFO("Accepted IP over RINA flow between %s and %s; port-id: %d",
+			event.localApplicationName.processName.c_str(),
+			event.remoteApplicationName.processName.c_str(),
+			event.portId);
+
+	IPCManager->allocate_iporina_flow_response(event, true, true);
+}
+
+int IPVPNManager::iporina_flow_deallocated(int port_id)
+{
+	int res = 0;
+	rina::FlowRequestEvent event;
+
+	rina::ScopedLock g(lock);
+
+	event.portId = port_id;
+	res = remove_flow(event);
+	if (res != 0) {
+		return res;
+	}
+
+	//TODO remove entry from the IP forwarding table
+	//TODO set the RINA device associated to the flow down
+
+	LOG_INFO("IP over RINA flow between %s and %s deallocated, port-id: %d",
+		  event.localApplicationName.processName.c_str(),
+		  event.remoteApplicationName.processName.c_str(),
+		  event.portId);
+
+	return 0;
+}
+
+int IPVPNManager::add_flow(const rina::FlowRequestEvent& event)
+{
+	std::map<int, rina::FlowRequestEvent>::iterator it;
+
+	it = iporina_flows.find(event.portId);
+	if (it != iporina_flows.end()) {
+		LOG_ERR("Cannot add IP over RINA flow with port-id %d, already exists",
+			 event.portId);
+		return -1;
+	}
+
+	iporina_flows[event.portId] = event;
+
+	return 0;
+}
+
+int IPVPNManager::remove_flow(rina::FlowRequestEvent& event)
+{
+	std::map<int, rina::FlowRequestEvent>::iterator it;
+
+	it = iporina_flows.find(event.portId);
+	if (it == iporina_flows.end()) {
+		LOG_ERR("Cannot remove IP over RINA flow with port-id %d, not found",
+			 event.portId);
+		return -1;
+	}
+
+	event = it->second;
+	iporina_flows.erase(it);
+
+	return 0;
+}
+
+ipcm_res_t IPCManager_::register_ip_prefix_to_dif(Promise* promise,
 						  const std::string& ip_range,
 						  const rina::ApplicationProcessNamingInformation& dif_name)
 {
@@ -145,30 +255,7 @@ ipcm_res_t IPCManager_::register_ip_prefix_to_dif(Addon* callee,
 	return IPCM_PENDING;
 }
 
-int IPCManager_::ipcm_register_response_ip_prefix(rina::IpcmRegisterApplicationResponseEvent * event,
-				     	     	  IPCMIPCProcess * slave_ipcp,
-						  const rina::ApplicationRegistrationRequestEvent& req_event)
-{
-	const rina::ApplicationProcessNamingInformation& app_name =
-			req_event.applicationRegistrationInformation.appName;
-	const rina::ApplicationProcessNamingInformation& slave_dif_name =
-			slave_ipcp->dif_name_;
-	bool success;
-
-	success = ipcm_register_response_common(event, app_name, slave_ipcp,
-			slave_dif_name);
-
-	ip_vpn_manager->add_registered_ip_prefix(app_name.processName);
-
-	LOG_INFO("IP prefix %s registered to DIF %s",
-		 app_name.processName.c_str(),
-		 slave_dif_name.processName.c_str());
-
-	return success;
-}
-
-ipcm_res_t IPCManager_::unregister_ip_prefix_from_dif(Addon* callee,
-			   	         	      Promise* promise,
+ipcm_res_t IPCManager_::unregister_ip_prefix_from_dif(Promise* promise,
 						      const std::string& ip_range,
 						      const rina::ApplicationProcessNamingInformation& dif_name)
 {
@@ -192,7 +279,7 @@ ipcm_res_t IPCManager_::unregister_ip_prefix_from_dif(Addon* callee,
 		//Create a transaction
 		req_event.applicationName.processName = ip_range;
 		req_event.applicationName.entityName = RINA_IP_FLOW_ENT_NAME;
-		trans = new APPUnregTransState(callee, promise, slave_ipcp->get_id(), req_event);
+		trans = new APPUnregTransState(NULL, promise, slave_ipcp->get_id(), req_event);
 		if (!trans)
 		{
 			LOG_ERR("Unable to allocate memory for the transaction object. Out of memory! ");
@@ -240,21 +327,57 @@ ipcm_res_t IPCManager_::unregister_ip_prefix_from_dif(Addon* callee,
 	return IPCM_PENDING;
 }
 
-int IPCManager_::ipcm_unregister_response_ip_prefix(rina::IpcmUnregisterApplicationResponseEvent * event,
-		     	     	       	       	    IPCMIPCProcess * slave_ipcp,
-						    const rina::ApplicationUnregistrationRequestEvent& req_event)
+ipcm_res_t IPCManager_::allocate_iporina_flow(Promise* promise,
+				 	      const std::string& src_ip_range,
+					      const std::string& dst_ip_range,
+					      const std::string& dif_name,
+					      const rina::FlowSpecification flow_spec)
 {
-        // Inform the supporting IPC process
-        ipcm_unregister_response_common(event, slave_ipcp,
-                                        req_event.applicationName);
+	rina::FlowRequestEvent event;
 
-	ip_vpn_manager->remove_registered_ip_prefix(req_event.applicationName.processName);
+	event.localRequest = true;
+	event.localApplicationName.processName = src_ip_range;
+	event.localApplicationName.entityName = RINA_IP_FLOW_ENT_NAME;
+	event.remoteApplicationName.processName = dst_ip_range;
+	event.remoteApplicationName.entityName = RINA_IP_FLOW_ENT_NAME;
+	event.flowSpecification = flow_spec;
+	event.DIFName.processName = dif_name;
+	event.DIFName.processInstance = "";
 
-	LOG_INFO("IP prefix %s unregistered from DIF %s",
-		 req_event.applicationName.processName.c_str(),
-		 slave_ipcp->dif_name_.processName.c_str());
+	return flow_allocation_requested_event_handler(promise, &event);
+}
 
-        return 0;
+void IPCManager_::allocate_iporina_flow_response(const rina::FlowRequestEvent& event,
+				    	    	 bool accept_flow,
+						 bool notify_source)
+{
+	IPCMIPCProcess * ipcp;
+
+	ipcp = lookup_ipcp_by_id(event.ipcProcessId);
+	if (!ipcp) {
+		LOG_ERR("Error: Could not retrieve IPC process with id %d "
+			", to serve remote flow allocation request", event.ipcProcessId);
+		return;
+	}
+
+	//Auto release the read lock
+	rina::ReadScopedLock readlock(ipcp->rwlock, false);
+
+	try {
+		// Inform the IPC process about the response of the flow
+		// allocation procedure
+		ipcp->allocateFlowResponse(event, accept_flow, notify_source, 0);
+
+		LOG_INFO("Informing IPC process %s about flow allocation from application %s"
+			" to application %s in DIF %s [success = %d, port-id = %d]",
+			 ipcp->proxy_->name.getProcessNamePlusInstance().c_str(),
+			 event.localApplicationName.toString().c_str(),
+			 event.remoteApplicationName.toString().c_str(),
+			 ipcp->dif_name_.processName.c_str(), accept_flow, event.portId);
+	} catch (rina::AllocateFlowException& e) {
+		LOG_ERR("Error while informing IPC process %d"
+			" about flow allocation", ipcp->proxy_->id);
+	}
 }
 
 } //namespace rinad

@@ -175,6 +175,10 @@ IPCMConsole::IPCMConsole(const std::string& socket_path_) :
 			ConsoleCmdInfo(&IPCMConsole::unregister_ip_prefix,
 				"USAGE: unregister-ip-prefix <ip-address> "
 				"<prefix> <dif-name>");
+	commands_map["allocate-iporina-flow"] =
+			ConsoleCmdInfo(&IPCMConsole::allocate_iporina_flow,
+				"USAGE: allocate-iporina-flow <src-ip-address> "
+				"<src-prefix> <dest-ip-address> <dst-prefix> [<dif-name>]");
 
 	keep_on_running = true;
 	rina::ThreadAttributes ta;
@@ -653,7 +657,7 @@ IPCMConsole::register_ip_prefix(vector<string>& args)
 	ip_prefix = ss.str();
 	rina::ApplicationProcessNamingInformation dif_name(args[3], string());
 
-	if(IPCManager->register_ip_prefix_to_dif(this, &promise, ip_prefix, dif_name) == IPCM_FAILURE ||
+	if(IPCManager->register_ip_prefix_to_dif(&promise, ip_prefix, dif_name) == IPCM_FAILURE ||
 			promise.wait() != IPCM_SUCCESS) {
 		outstream << "IP prefix registration failed" << endl;
 		return CMDRETCONT;
@@ -680,13 +684,52 @@ IPCMConsole::unregister_ip_prefix(vector<string>& args)
 	ip_prefix = ss.str();
 	rina::ApplicationProcessNamingInformation dif_name(args[3], string());
 
-	if(IPCManager->unregister_ip_prefix_from_dif(this, &promise, ip_prefix, dif_name) == IPCM_FAILURE ||
+	if(IPCManager->unregister_ip_prefix_from_dif(&promise, ip_prefix, dif_name) == IPCM_FAILURE ||
 			promise.wait() != IPCM_SUCCESS) {
 		outstream << "IP prefix registration failed" << endl;
 		return CMDRETCONT;
 	}
 
 	outstream << "IP prefix unregistration completed successfully" << endl;
+
+	return CMDRETCONT;
+}
+
+int
+IPCMConsole::allocate_iporina_flow(std::vector<std::string>& args)
+{
+	std::string src_ip_prefix;
+	std::string dest_ip_prefix;
+	std::string dif_name;
+	std::stringstream ss;
+	rina::FlowSpecification flow_spec;
+	Promise promise;
+
+	if (args.size() != 5 && args.size() != 6) {
+		outstream << commands_map[args[0]].usage << endl;
+		return CMDRETCONT;
+	}
+
+	ss << args[1] << "|" << args[2];
+	src_ip_prefix = ss.str();
+	ss.str("");
+	ss << args[3] << "|" << args[4];
+	dest_ip_prefix = ss.str();
+
+	if (args.size() == 6) {
+		dif_name = args[5];
+	} else {
+		dif_name = "";
+	}
+
+	if(IPCManager->allocate_iporina_flow(&promise, src_ip_prefix,
+					     dest_ip_prefix, dif_name, flow_spec) == IPCM_FAILURE ||
+			promise.wait() != IPCM_SUCCESS) {
+		outstream << "IP over RINA flow allocation failed" << endl;
+		return CMDRETCONT;
+	}
+
+	outstream << "IP over RINA flow allocated successfully" << endl;
 
 	return CMDRETCONT;
 }

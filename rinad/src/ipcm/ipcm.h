@@ -546,15 +546,23 @@ public:
 	// IPCM_PENDING.
 	//
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t register_ip_prefix_to_dif(Addon* callee,
-				   	     Promise* promise,
+	ipcm_res_t register_ip_prefix_to_dif(Promise* promise,
 					     const std::string& ip_range,
 					     const rina::ApplicationProcessNamingInformation& difName);
 
-	ipcm_res_t unregister_ip_prefix_from_dif(Addon* callee,
-				   	         Promise* promise,
+	ipcm_res_t unregister_ip_prefix_from_dif(Promise* promise,
 					         const std::string& ip_range,
 						 const rina::ApplicationProcessNamingInformation& difName);
+
+	ipcm_res_t allocate_iporina_flow(Promise* promise,
+					 const std::string& src_ip_range,
+					 const std::string& dst_ip_range,
+					 const std::string& dif_name,
+					 const rina::FlowSpecification flow_spec);
+
+	void allocate_iporina_flow_response(const rina::FlowRequestEvent& event,
+					    bool accept_flow,
+					    bool notify_source);
 
 	//
 	// Update policy-set catalog, with the plugins stored in
@@ -694,7 +702,7 @@ protected:
 	//
 
 	//Flow mgmt
-	void flow_allocation_requested_event_handler(rina::FlowRequestEvent* event);
+	ipcm_res_t flow_allocation_requested_event_handler(Promise * promise, rina::FlowRequestEvent* event);
 	void allocate_flow_response_event_handler( rina::AllocateFlowResponseEvent *event);
 	void flow_deallocation_requested_event_handler(rina::FlowDeallocateRequestEvent* event);
 	void flow_deallocated_event_handler(rina::FlowDeallocatedEvent* event);
@@ -702,9 +710,10 @@ protected:
 	void ipcm_allocate_flow_request_result_handler(rina::IpcmAllocateFlowRequestResultEvent* event);
 	void application_flow_allocation_failed_notify(
 						rina::FlowRequestEvent *event);
-	void flow_allocation_requested_local(rina::FlowRequestEvent *event);
+	ipcm_res_t flow_allocation_requested_local(Promise * promise,
+						   rina::FlowRequestEvent *event);
 
-	void flow_allocation_requested_remote(rina::FlowRequestEvent *event);
+	ipcm_res_t flow_allocation_requested_remote(rina::FlowRequestEvent *event);
 	ipcm_res_t deallocate_flow(Promise* promise, const int ipcp_id,
 			    const rina::FlowDeallocateRequestEvent& event);
 
@@ -731,12 +740,6 @@ protected:
 		rina::IpcmRegisterApplicationResponseEvent * event,
 		IPCMIPCProcess * slave_ipcp,
 		const rina::ApplicationRegistrationRequestEvent& req_event);
-	int ipcm_register_response_ip_prefix(rina::IpcmRegisterApplicationResponseEvent * event,
-					     IPCMIPCProcess * slave_ipcp,
-					     const rina::ApplicationRegistrationRequestEvent& req_event);
-	int ipcm_unregister_response_ip_prefix(rina::IpcmUnregisterApplicationResponseEvent * event,
-			     	     	       IPCMIPCProcess * slave_ipcp,
-					       const rina::ApplicationUnregistrationRequestEvent& req_event);
 
 	//IPCP mgmt
 	void ipcm_register_response_ipcp(IPCMIPCProcess * ipcp,
