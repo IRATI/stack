@@ -26,6 +26,7 @@
 #define __IP_VPN_MANAGER_H__
 
 #include <librina/concurrency.h>
+#include <librina/timer.h>
 
 #define RINA_IP_FLOW_ENT_NAME "RINA_IP"
 
@@ -50,8 +51,22 @@ private:
 	std::list<std::string> reg_ip_prefixes;
 	rina::Lockable lock;
 	std::map<int, rina::FlowRequestEvent> iporina_flows;
+	rina::Timer timer;
 };
 
+class IPVPNMgerAFRTimerTask: public rina::TimerTask {
+public:
+	IPVPNMgerAFRTimerTask(const rina::FlowRequestEvent& ev,
+			      bool acc, bool notif) : event(ev),
+			      accept(acc), notify(notif) {};
+	~IPVPNMgerAFRTimerTask() throw() {};
+	void run();
+
+private:
+	rina::FlowRequestEvent event;
+	bool accept;
+	bool notify;
+};
 
 } //namespace rinad
 

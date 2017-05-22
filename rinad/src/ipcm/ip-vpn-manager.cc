@@ -106,9 +106,15 @@ int IPVPNManager::iporina_flow_allocated(const rina::FlowRequestEvent& event)
 	return 0;
 }
 
+void IPVPNMgerAFRTimerTask::run()
+{
+	IPCManager->allocate_iporina_flow_response(event, accept, notify);
+}
+
 void IPVPNManager::iporina_flow_allocation_requested(const rina::FlowRequestEvent& event)
 {
 	int res = 0;
+	IPVPNMgerAFRTimerTask * task = 0;
 
 	rina::ScopedLock g(lock);
 
@@ -116,14 +122,16 @@ void IPVPNManager::iporina_flow_allocation_requested(const rina::FlowRequestEven
 		LOG_INFO("Rejected IP over RINA flow between %s and %s",
 			  event.localApplicationName.processName.c_str(),
 			  event.remoteApplicationName.processName.c_str());
-		IPCManager->allocate_iporina_flow_response(event, false, true);
+		task = new IPVPNMgerAFRTimerTask(event, false, true);
+		timer.scheduleTask(task, 0);
 		return;
 	}
 
 	res = add_flow(event);
 	if (res != 0) {
 		LOG_ERR("Flow with port-id %d already exists", event.portId);
-		IPCManager->allocate_iporina_flow_response(event, false, true);
+		task = new IPVPNMgerAFRTimerTask(event, false, true);
+		timer.scheduleTask(task, 0);
 		return;
 	}
 
@@ -135,7 +143,8 @@ void IPVPNManager::iporina_flow_allocation_requested(const rina::FlowRequestEven
 			event.remoteApplicationName.processName.c_str(),
 			event.portId);
 
-	IPCManager->allocate_iporina_flow_response(event, true, true);
+	task = new IPVPNMgerAFRTimerTask(event, true, true);
+	timer.scheduleTask(task, 0);
 }
 
 int IPVPNManager::iporina_flow_deallocated(int port_id)
