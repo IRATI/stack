@@ -911,6 +911,7 @@ static inline ipaddr_t get_ipv4_addr(char *ip_str)
 int kfa_flow_create(struct kfa           *instance,
 		    port_id_t		  pid,
 		    struct ipcp_instance *ipcp,
+		    ipc_process_id_t	 ipc_id,
 		    struct name          *user_ipcp_name)
 {
 	struct ipcp_flow *flow;
@@ -944,10 +945,7 @@ int kfa_flow_create(struct kfa           *instance,
 
 	/* Determine if this is an IP tunnel */
 	if (ip_flow) {
-		sprintf(name,
-		       "rina.%s.%u",
-		       ipcp->ops->ipcp_name(ipcp->data)->process_name,
-		       pid);
+		sprintf(name, "rina.%u.%u", ipc_id, pid);
 		flow->ip_dev = rina_ip_dev_create(name, instance->ipcp, pid);
 		if (!flow->ip_dev) {
 			LOG_ERR("Could not allocate memory for RINA IP virtual device");

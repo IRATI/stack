@@ -21,6 +21,7 @@
 
 #include <linux/if_arp.h>
 #include <linux/ip.h>
+#include <linux/if.h>
 
 #define RINA_PREFIX "rina-ip-dev"
 
@@ -183,6 +184,12 @@ struct rina_ip_dev* rina_ip_dev_create(string_t* name,
 
 	if (!kfa_ipcp || !name)
 		return NULL;
+
+	if (strlen(name) > IFNAMSIZ) {
+		LOG_ERR("Could not allocate RINA IP network device %s, name too long",
+									name);
+		return NULL;
+	}
 
 	dev = alloc_netdev(sizeof(struct rina_ip_dev), name,
 							NET_NAME_UNKNOWN,
