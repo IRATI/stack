@@ -41,7 +41,7 @@
 #include "pidm.h"
 #include "kfa.h"
 #include "kfa-utils.h"
-#include "rina-ip-dev.h"
+#include "rina-device.h"
 
 #define RINA_IP_FLOW_ENT_NAME "RINA_IP"
 
@@ -72,7 +72,7 @@ struct ipcp_flow {
 	atomic_t	      readers;
 	atomic_t	      writers;
 	atomic_t	      posters;
-	struct rina_ip_dev   *ip_dev;
+	struct rina_device   *ip_dev;
 };
 
 struct ipcp_instance_data {
@@ -142,7 +142,7 @@ static int kfa_flow_destroy(struct kfa       *instance,
 		retval = -1;
 	}
 
-	if (rina_ip_dev_destroy(flow->ip_dev))
+	if (rina_dev_destroy(flow->ip_dev))
 		retval = -1;
 
 	rkfree(flow);
@@ -846,7 +846,7 @@ static int kfa_sdu_post(struct ipcp_instance_data *data,
 	if (flow->ip_dev) {
         	skb = sdu_detach_skb(sdu);
 		sdu_destroy(sdu);
-		retval = rina_ip_dev_rcv(skb, flow->ip_dev);
+		retval = rina_dev_rcv(skb, flow->ip_dev);
 	/* RINA APP tunnel */
 	} else {
 		atomic_inc(&flow->posters);
@@ -911,6 +911,7 @@ static inline ipaddr_t get_ipv4_addr(char *ip_str)
 int kfa_flow_create(struct kfa           *instance,
 		    port_id_t		  pid,
 		    struct ipcp_instance *ipcp,
+		    ipc_process_id_t	 ipc_id,
 		    struct name          *user_ipcp_name)
 {
 	struct ipcp_flow *flow;
@@ -944,11 +945,8 @@ int kfa_flow_create(struct kfa           *instance,
 
 	/* Determine if this is an IP tunnel */
 	if (ip_flow) {
-		sprintf(name,
-		       "rina.%s.%u",
-		       ipcp->ops->ipcp_name(ipcp->data)->process_name,
-		       pid);
-		flow->ip_dev = rina_ip_dev_create(name, instance->ipcp, pid);
+		sprintf(name, "rina.%u.%u", ipc_id, pid);
+		flow->ip_dev = rina_dev_create(name, instance->ipcp, pid);
 		if (!flow->ip_dev) {
 			LOG_ERR("Could not allocate memory for RINA IP virtual device");
 			rkfree(flow);

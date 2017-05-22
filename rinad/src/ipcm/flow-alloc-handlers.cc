@@ -229,7 +229,6 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 	IPCMIPCProcess *ipcp;
 	ostringstream ss;
 	FlowAllocTransState* trans = NULL;
-	std::string ipcp_name;
 
 	// Retrieve the local IPC process involved in the flow allocation
 	// request coming from a remote application
@@ -243,9 +242,8 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 	}
 
 	if (event->localApplicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
-		ipcp_name = ipcp->get_name().processName;
 		ipcp->rwlock.unlock();
-		ip_vpn_manager->iporina_flow_allocation_requested(*event, ipcp_name);
+		ip_vpn_manager->iporina_flow_allocation_requested(*event);
 		return IPCM_PENDING;
 	}
 
@@ -390,8 +388,7 @@ void IPCManager_::ipcm_allocate_flow_request_result_handler(rina::IpcmAllocateFl
 	}
 
 	if (req_event.localApplicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
-		ip_vpn_manager->iporina_flow_allocated(req_event,
-						       slave_ipcp->get_name().processName);
+		ip_vpn_manager->iporina_flow_allocated(req_event);
 	} else {
 		// Inform the Application Manager about the flow allocation
 		// result
@@ -578,7 +575,7 @@ void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IpcmDealloca
 
 	if (req_event.applicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
 		ip_vpn_manager->iporina_flow_deallocated(req_event.portId,
-							 ipcp->get_name().processName);
+							 ipcp->get_id());
 	}
 
 	trans->completed(ret);
@@ -608,7 +605,7 @@ void IPCManager_::flow_deallocated_event_handler(rina::FlowDeallocatedEvent* eve
 		info = ipcp->flowDeallocated(event->portId);
 
 		if (ip_vpn_manager->iporina_flow_deallocated(event->portId,
-							     ipcp->get_name().processName)) {
+							     ipcp->get_id())) {
 			rina::applicationManager->flowDeallocatedRemotely(event->portId,
 									  event->code,
 									  info.localAppName);
