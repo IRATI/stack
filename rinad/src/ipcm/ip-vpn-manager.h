@@ -53,7 +53,7 @@ private:
 				   int port_id, bool add);
 	std::string exec_shell_command(std::string result);
 	std::string get_rina_dev_name(const std::string& ipcp_name, int port_id);
-	std::string get_ip_prefix_string(std::string input);
+	std::string get_ip_prefix_string(const std::string& input);
 
 	std::list<std::string> reg_ip_prefixes;
 	rina::Lockable lock;

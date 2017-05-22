@@ -243,7 +243,7 @@ std::string IPVPNManager::exec_shell_command(std::string command)
 	std::string result = "";
 	FILE * pipe = 0;
 
-	LOG_DBG("Executing command %s ...", command.c_str());
+	LOG_DBG("Executing command '%s' ...", command.c_str());
 
 	pipe = popen(command.c_str(), "r");
 	if (!pipe) throw std::runtime_error("popen() failed!");
@@ -271,10 +271,10 @@ std::string IPVPNManager::get_rina_dev_name(const std::string& ipcp_name, int po
 	return ss.str();
 }
 
-std::string IPVPNManager::get_ip_prefix_string(std::string input)
+std::string IPVPNManager::get_ip_prefix_string(const std::string& input)
 {
 	std::string result = input;
-	std::replace(input.begin(), input.end(), '|', '/'); // replace all '|' to '/'
+	std::replace(result.begin(), result.end(), '|', '/'); // replace all '|' to '/'
 
 	return result;
 }
