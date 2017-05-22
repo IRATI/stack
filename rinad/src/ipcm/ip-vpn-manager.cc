@@ -116,14 +116,14 @@ void IPVPNManager::iporina_flow_allocation_requested(const rina::FlowRequestEven
 		LOG_INFO("Rejected IP over RINA flow between %s and %s",
 			  event.localApplicationName.processName.c_str(),
 			  event.remoteApplicationName.processName.c_str());
-		IPCManager->allocate_iporina_flow_response(event, false, true);
+		IPCManager->allocate_iporina_flow_response(event, -1, true);
 		return;
 	}
 
 	res = add_flow(event);
 	if (res != 0) {
 		LOG_ERR("Flow with port-id %d already exists", event.portId);
-		IPCManager->allocate_iporina_flow_response(event, false, true);
+		IPCManager->allocate_iporina_flow_response(event, -1, true);
 		return;
 	}
 
@@ -135,7 +135,7 @@ void IPVPNManager::iporina_flow_allocation_requested(const rina::FlowRequestEven
 			event.remoteApplicationName.processName.c_str(),
 			event.portId);
 
-	IPCManager->allocate_iporina_flow_response(event, true, true);
+	IPCManager->allocate_iporina_flow_response(event, 0, true);
 }
 
 int IPVPNManager::iporina_flow_deallocated(int port_id)
@@ -348,7 +348,7 @@ ipcm_res_t IPCManager_::allocate_iporina_flow(Promise* promise,
 }
 
 void IPCManager_::allocate_iporina_flow_response(const rina::FlowRequestEvent& event,
-				    	    	 bool accept_flow,
+				    	    	 int result,
 						 bool notify_source)
 {
 	IPCMIPCProcess * ipcp;
@@ -366,14 +366,14 @@ void IPCManager_::allocate_iporina_flow_response(const rina::FlowRequestEvent& e
 	try {
 		// Inform the IPC process about the response of the flow
 		// allocation procedure
-		ipcp->allocateFlowResponse(event, accept_flow, notify_source, 0);
+		ipcp->allocateFlowResponse(event, result, notify_source, 0);
 
 		LOG_INFO("Informing IPC process %s about flow allocation from application %s"
 			" to application %s in DIF %s [success = %d, port-id = %d]",
 			 ipcp->proxy_->name.getProcessNamePlusInstance().c_str(),
 			 event.localApplicationName.toString().c_str(),
 			 event.remoteApplicationName.toString().c_str(),
-			 ipcp->dif_name_.processName.c_str(), accept_flow, event.portId);
+			 ipcp->dif_name_.processName.c_str(), result, event.portId);
 	} catch (rina::AllocateFlowException& e) {
 		LOG_ERR("Error while informing IPC process %d"
 			" about flow allocation", ipcp->proxy_->id);

@@ -561,7 +561,7 @@ public:
 					 const rina::FlowSpecification flow_spec);
 
 	void allocate_iporina_flow_response(const rina::FlowRequestEvent& event,
-					    bool accept_flow,
+					    int result,
 					    bool notify_source);
 
 	//
