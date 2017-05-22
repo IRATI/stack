@@ -1,5 +1,6 @@
 /*
- * RINA IP virtual network device (rina_ip_dev)
+ * RINA virtual network device (rina_device)
+ * At the moment only for IP support
  *
  *    Leonardo Bergesio     <leonardo.bergesio@i2cat.net>
  *
@@ -29,13 +30,13 @@
 
 struct ipcp_instance;
 
-struct rina_ip_dev;
+struct rina_device;
 
-struct rina_ip_dev* rina_ip_dev_create(string_t *name,
-					struct ipcp_instance* kfa_ipcp,
-			  		port_id_t port);
-int		    rina_ip_dev_destroy(struct rina_ip_dev *ip_dev);
-int		    rina_ip_dev_rcv(struct sk_buff *skb,
-					struct rina_ip_dev *ip_dev);
+struct rina_device* rina_dev_create(string_t *name,
+				    struct ipcp_instance* kfa_ipcp,
+			  	    port_id_t port);
+int		    rina_dev_destroy(struct rina_device *rina_dev);
+int		    rina_dev_rcv(struct sk_buff *skb,
+			  	 struct rina_device *rina_dev);
 
 #endif
