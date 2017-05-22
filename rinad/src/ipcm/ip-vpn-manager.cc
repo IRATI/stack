@@ -258,8 +258,6 @@ std::string IPVPNManager::exec_shell_command(std::string command)
 	}
 	pclose(pipe);
 
-	LOG_DBG("Command result: %s", result.c_str());
-
 	return result;
 }
 
