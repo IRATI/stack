@@ -945,7 +945,7 @@ int kfa_flow_create(struct kfa           *instance,
 	/* Determine if this is an IP tunnel */
 	if (ip_flow) {
 		sprintf(name,
-		       "rina-ip.%s.%u",
+		       "rina.%s.%u",
 		       ipcp->ops->ipcp_name(ipcp->data)->process_name,
 		       pid);
 		flow->ip_dev = rina_ip_dev_create(name, instance->ipcp, pid);

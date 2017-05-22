@@ -41,13 +41,13 @@ struct rina_ip_dev {
 
 static int rina_ip_dev_open(struct net_device *dev)
 {
-	LOG_DBG("RINA IP device opened...");
+	LOG_DBG("RINA IP device %s opened...", dev->name);
 	return 0;
 }
 
 static int rina_ip_dev_close(struct net_device *dev)
 {
-	LOG_DBG("RINA IP device closed...");
+	LOG_DBG("RINA IP device %s closed...", dev->name);
 	return 0;
 }
 
@@ -61,6 +61,7 @@ static struct net_device_stats *rina_ip_dev_get_stats(struct net_device *dev)
 
 int rina_ip_dev_rcv(struct sk_buff *skb, struct rina_ip_dev *ip_dev)
 {
+	int rv;
 	struct packet_type *ptype, *pt_prev = NULL;
 
 	list_for_each_entry_rcu(ptype, &skb->dev->ptype_all, list) {
@@ -70,20 +71,37 @@ int rina_ip_dev_rcv(struct sk_buff *skb, struct rina_ip_dev *ip_dev)
 			if (unlikely(skb_orphan_frags(skb, GFP_ATOMIC)))
 				return -1;
 			atomic_inc(&skb->users);
-			return pt_prev->func(skb, skb->dev, pt_prev, NULL);
+
+			LOG_DBG("RINA IP device %s rcv a packet...",
+							ip_dev->dev->name);
+
+			//return pt_prev->func(skb, skb->dev, pt_prev, NULL);
+			rv = pt_prev->func(skb, ip_dev->dev, pt_prev, NULL);
+			if(rv){
+				ip_dev->stats.rx_dropped++;
+			} else {
+				ip_dev->stats.rx_packets++;
+				ip_dev->stats.rx_bytes += skb->len;
+			}
+			return rv;
 		}
 		pt_prev = ptype;
 	}
 
-	return 0;
+	ip_dev->stats.rx_dropped++;
+	kfree_skb(skb);
+	LOG_ERR("Could not find IP handler for packet %p and RINA IP device %s",
+							skb, ip_dev->dev->name);
+
+	return -1;
 }
 
 static int rina_ip_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	struct iphdr* iph = NULL;
 	struct sdu* sdu;
-	struct rina_ip_dev* rina_dev = netdev_priv(dev);
-	ASSERT(rina_dev);
+	struct rina_ip_dev* ip_dev = netdev_priv(dev);
+	ASSERT(ip_dev);
 
 	skb_orphan(skb);
 	//skb_dst_force(skb);
@@ -94,15 +112,20 @@ static int rina_ip_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	sdu = sdu_create_from_skb(skb);
 	if (!sdu){
 		kfree_skb(skb);
+		ip_dev->stats.tx_dropped++;
 		return NET_XMIT_DROP;
 	}
 
-        if(kfa_flow_sdu_write(rina_dev->kfa_ipcp->data, rina_dev->port, sdu,
+        if(kfa_flow_sdu_write(ip_dev->kfa_ipcp->data, ip_dev->port, sdu,
 									false)){
+		ip_dev->stats.tx_dropped++;
 		LOG_ERR("Could not xmit IP packet, unable to send to KFA...");
 		return NET_XMIT_DROP;
 	}
 
+	ip_dev->stats.tx_packets++;
+	ip_dev->stats.tx_bytes += skb->len;
+	LOG_DBG("RINA IP device %s sent a packet...", dev->name);
 	return NETDEV_TX_OK;
 }
 
@@ -135,6 +158,7 @@ static void rina_ip_dev_setup(struct net_device *dev)
 		| NETIF_F_SCTP_CRC
 		| NETIF_F_HIGHDMA
 		| NETIF_F_LLTX
+		/* This should be removed when netns are supported */
 		| NETIF_F_NETNS_LOCAL
 		| NETIF_F_VLAN_CHALLENGED
 		| NETIF_F_LOOPBACK;
@@ -155,7 +179,7 @@ struct rina_ip_dev* rina_ip_dev_create(string_t* name,
 {
 	int rv;
 	struct net_device *dev;
-	struct rina_ip_dev* rina_dev;
+	struct rina_ip_dev* ip_dev;
 
 	if (!kfa_ipcp || !name)
 		return NULL;
@@ -164,27 +188,29 @@ struct rina_ip_dev* rina_ip_dev_create(string_t* name,
 							NET_NAME_UNKNOWN,
 			      				rina_ip_dev_setup);
 	if (!dev) {
-		LOG_ERR("Could not allocate RINA IP network device");
+		LOG_ERR("Could not allocate RINA IP network device %s", name);
 		return NULL;
 	}
 
 	//SET_NETDEV_DEV(dev, parent);
 
-	rina_dev = netdev_priv(dev);
-	rina_dev->dev = dev;
-	rina_dev->kfa_ipcp = kfa_ipcp;
-	rina_dev->port = port;
+	ip_dev = netdev_priv(dev);
+	ip_dev->dev = dev;
+	ip_dev->kfa_ipcp = kfa_ipcp;
+	ip_dev->port = port;
+	memset(&ip_dev->stats, 0x00, sizeof(struct net_device_stats));
 
 	rv = register_netdev(dev);
 	if(rv) {
-		LOG_ERR("Could not register RINA IP device: %d", rv);
+		LOG_ERR("Could not register RINA IP device %s: %d", name, rv);
 		free_netdev(dev);
 		return NULL;
 	}
 
-	LOG_DBG("RINA IP device %p created with dev %p", rina_dev, dev);
+	LOG_DBG("RINA IP device %s (%pk) created with dev %p", name, ip_dev,
+									dev);
 
-	return rina_dev;
+	return ip_dev;
 }
 
 int rina_ip_dev_destroy(struct rina_ip_dev *ip_dev)
