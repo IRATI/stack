@@ -329,6 +329,7 @@ public:
 	FlowAllocatorInstance(IPCProcess * ipc_process,
 			      IFlowAllocator * flow_allocator,
 			      int port_id,
+			      bool loc,
 			      const std::string& instance_id);
 	~FlowAllocatorInstance();
 	void set_application_entity(rina::ApplicationEntity * ae);
@@ -377,7 +378,7 @@ private:
 
 	void initialize(IPCProcess * ipc_process,
 			IFlowAllocator * flow_allocator,
-			int port_id);
+			int port_id, bool local);
 	void replyToIPCManager(int result);
 	void releasePortId();
 	void complete_flow_allocation(bool success);
@@ -408,6 +409,7 @@ private:
 
 	unsigned int allocate_response_message_handle_;
 	int invoke_id_;
+	bool local;
 	rina::Lockable lock_;
 };
 
