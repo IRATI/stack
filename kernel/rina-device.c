@@ -43,13 +43,17 @@ struct rina_device {
 
 static int rina_dev_open(struct net_device *dev)
 {
+	netif_tx_start_all_queues(dev);
 	LOG_DBG("RINA IP device %s opened...", dev->name);
+
 	return 0;
 }
 
 static int rina_dev_close(struct net_device *dev)
 {
+	netif_tx_stop_all_queues(dev);
 	LOG_DBG("RINA IP device %s closed...", dev->name);
+
 	return 0;
 }
 
@@ -143,11 +147,12 @@ static void rina_dev_setup(struct net_device *dev)
 {
 	/*Mix of properties from lo and tun ifaces */
 	/* This should be set depending on supporting DIF */
-	dev->mtu = 64 * 1024;
+	dev->mtu = 1400;
 	dev->hard_header_len = 0;
 	dev->addr_len = 0;
 	dev->type = ARPHRD_NONE;
-	dev->flags = IFF_UP | IFF_BROADCAST | IFF_RUNNING | IFF_MULTICAST;
+	dev->flags = IFF_UP | IFF_BROADCAST | IFF_RUNNING | IFF_MULTICAST |
+		     IFF_POINTOPOINT | IFF_NOARP;
 	dev->priv_flags	|= IFF_LIVE_ADDR_CHANGE | IFF_NO_QUEUE
 		| IFF_DONT_BRIDGE
 		| IFF_PHONY_HEADROOM;
