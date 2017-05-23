@@ -151,7 +151,7 @@ static void rina_dev_setup(struct net_device *dev)
 	dev->hard_header_len = 0;
 	dev->addr_len = 0;
 	dev->type = ARPHRD_NONE;
-	dev->flags = IFF_UP | IFF_BROADCAST | IFF_RUNNING | IFF_MULTICAST |
+	dev->flags = IFF_UP | IFF_RUNNING | IFF_MULTICAST |
 		     IFF_POINTOPOINT | IFF_NOARP;
 	dev->priv_flags	|= IFF_LIVE_ADDR_CHANGE | IFF_NO_QUEUE
 		| IFF_DONT_BRIDGE
