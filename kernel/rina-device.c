@@ -220,6 +220,8 @@ struct rina_device* rina_dev_create(string_t* name,
 		return NULL;
 	}
 
+	netif_tx_start_all_queues(dev);
+
 	LOG_DBG("RINA IP device %s (%pk) created with dev %p", name, rina_dev,
 									dev);
 
