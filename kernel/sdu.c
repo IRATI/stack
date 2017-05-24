@@ -98,7 +98,6 @@ struct sdu *sdu_create_from_skb(struct sk_buff* skb)
 	tmp->cfg = NULL;
 	tmp->sdup_head = NULL;
 	tmp->sdup_tail = NULL;
-	skb_reserve(tmp->skb, MAX_PCIS_LEN);
 
 	LOG_DBG("SDU allocated at %pk, with skb %pk", tmp, tmp->skb);
 	return to_sdu(tmp);
