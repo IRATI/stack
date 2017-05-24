@@ -286,15 +286,25 @@ int IPVPNManager::add_or_remove_ip_route(const std::string ip_prefix,
 	std::stringstream ss;
 	std::string prefix;
 	std::string result;
+	std::string dev_name;
 
-	if (add)
+	dev_name = get_rina_dev_name(ipcp_id, port_id);
+
+	if (add) {
 		prefix = "add ";
-	else
+
+		ss << "ifconfig " << dev_name << " up";
+		result = exec_shell_command(ss.str());
+		//TODO parse result
+
+		ss.str("");
+	} else {
 		prefix = "delete ";
+	}
 
 	ss << "ip route " << prefix
 	   << get_ip_prefix_string(ip_prefix) << " dev "
-	   << get_rina_dev_name(ipcp_id, port_id);
+	   << dev_name;
 
 	result = exec_shell_command(ss.str());
 	//TODO parse result
