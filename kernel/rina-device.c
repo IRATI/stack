@@ -149,6 +149,7 @@ static void rina_dev_setup(struct net_device *dev)
 	/* This should be set according to the N-1 DIF properties, 
          * for the moment an upper bound is provided */
 	dev->needed_headroom += RINA_EXTRA_HEADER_LENGTH;
+	dev->needed_tailroom += RINA_EXTRA_HEADER_LENGTH;
 	/* This should be set depending on supporting DIF */
 	dev->mtu = 1400;
 	dev->hard_header_len = 0;
