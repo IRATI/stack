@@ -156,18 +156,7 @@ static void rina_dev_setup(struct net_device *dev)
 		| IFF_DONT_BRIDGE
 		| IFF_PHONY_HEADROOM;
 	netif_keep_dst(dev);
-	dev->hw_features = NETIF_F_GSO_SOFTWARE;
-	dev->features = NETIF_F_SG | NETIF_F_FRAGLIST
-		| NETIF_F_GSO_SOFTWARE
-		| NETIF_F_HW_CSUM
-		| NETIF_F_RXCSUM
-		| NETIF_F_SCTP_CRC
-		| NETIF_F_HIGHDMA
-		| NETIF_F_LLTX
-		/* This should be removed when netns are supported */
-		| NETIF_F_NETNS_LOCAL
-		| NETIF_F_VLAN_CHALLENGED
-		| NETIF_F_LOOPBACK;
+	dev->features = NETIF_F_HW_CSUM;
 	/*
 	dev->ethtool_ops	= &loopback_ethtool_ops;
 	dev->header_ops		= &eth_header_ops;
@@ -218,8 +207,6 @@ struct rina_device* rina_dev_create(string_t* name,
 		free_netdev(dev);
 		return NULL;
 	}
-
-	netif_tx_start_all_queues(dev);
 
 	LOG_DBG("RINA IP device %s (%pk) created with dev %p", name, rina_dev,
 									dev);
