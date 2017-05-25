@@ -69,38 +69,32 @@ static struct net_device_stats *rina_dev_get_stats(struct net_device *dev)
 int rina_dev_rcv(struct sk_buff *skb, struct rina_device *rina_dev)
 {
 	int rv;
-	struct packet_type *ptype, *pt_prev = NULL;
+	ssize_t len;
 
-	list_for_each_entry_rcu(ptype, &skb->dev->ptype_all, list) {
-		if (ptype->type != skb->protocol)
-			continue;
-		if (pt_prev) {
-			if (unlikely(skb_orphan_frags(skb, GFP_ATOMIC)))
-				return -1;
-			atomic_inc(&skb->users);
-
-			LOG_DBG("RINA IP device %s rcv a packet...",
+	if(!(skb->data[0] & 0xf0)) {
+		LOG_DBG("RINA IP device %s rcv a non IP packet, dropping...",
 							rina_dev->dev->name);
-
-			//return pt_prev->func(skb, skb->dev, pt_prev, NULL);
-			rv = pt_prev->func(skb, rina_dev->dev, pt_prev, NULL);
-			if(rv){
-				rina_dev->stats.rx_dropped++;
-			} else {
-				rina_dev->stats.rx_packets++;
-				rina_dev->stats.rx_bytes += skb->len;
-			}
-			return rv;
-		}
-		pt_prev = ptype;
+		rina_dev->stats.rx_dropped++;
+		kfree_skb(skb);
+		return -1;
 	}
 
-	rina_dev->stats.rx_dropped++;
-	kfree_skb(skb);
-	LOG_ERR("Could not find IP handler for packet %p and RINA IP device %s",
-						skb, rina_dev->dev->name);
+	skb->protocol = htons(ETH_P_IP);
+	skb->dev = rina_dev->dev;
+	len = skb->len;
 
-	return -1;
+	rv = netif_rx(skb);
+
+	if(rv == NET_RX_DROP) {
+		rina_dev->stats.rx_dropped++;
+	}
+
+	rina_dev->stats.rx_packets++;
+	rina_dev->stats.rx_bytes += len;
+
+	LOG_DBG("RINA IP device %s rcv a IP packet...", rina_dev->dev->name);
+
+	return 0;
 }
 
 static int rina_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
