@@ -300,6 +300,8 @@ int IPVPNManager::add_or_remove_ip_route(const std::string ip_prefix,
 	std::string suffix;
 	std::string result;
 	std::string dev_name;
+	std::string ifconfig_command;
+	std::string iproute_command;
 
 	dev_name = get_rina_dev_name(ipcp_id, port_id);
 
@@ -312,16 +314,25 @@ int IPVPNManager::add_or_remove_ip_route(const std::string ip_prefix,
 	}
 
 	ss << "ifconfig " << dev_name << suffix;
-	result = exec_shell_command(ss.str());
-	//TODO parse result
+	ifconfig_command = ss.str();
 
 	ss.str("");
 	ss << "ip route " << prefix
 	   << get_ip_prefix_string(ip_prefix) << " dev "
 	   << dev_name;
+	iproute_command = ss.str();
 
-	result = exec_shell_command(ss.str());
-	//TODO parse result
+	if (add) {
+		result = exec_shell_command(ifconfig_command);
+		//TODO parse result
+		result = exec_shell_command(iproute_command);
+		//TODO parse result
+	} else {
+		result = exec_shell_command(iproute_command);
+		//TODO parse result
+		result = exec_shell_command(ifconfig_command);
+		//TODO parse result
+	}
 
 	return 0;
 }
