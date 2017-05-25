@@ -388,8 +388,10 @@ void IPCManager_::ipcm_allocate_flow_request_result_handler(rina::IpcmAllocateFl
 	}
 
 	if (req_event.localApplicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
-		req_event.ipcProcessId = slave_ipcp->get_id();
-		ip_vpn_manager->iporina_flow_allocated(req_event);
+		if (success) {
+			req_event.ipcProcessId = slave_ipcp->get_id();
+			ip_vpn_manager->iporina_flow_allocated(req_event);
+		}
 	} else {
 		// Inform the Application Manager about the flow allocation
 		// result
@@ -575,8 +577,10 @@ void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IpcmDealloca
 	}
 
 	if (req_event.applicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
-		ip_vpn_manager->iporina_flow_deallocated(req_event.portId,
-							 ipcp->get_id());
+		if (success) {
+			ip_vpn_manager->iporina_flow_deallocated(req_event.portId,
+								 ipcp->get_id());
+		}
 	}
 
 	trans->completed(ret);
