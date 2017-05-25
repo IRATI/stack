@@ -142,7 +142,7 @@ static int kfa_flow_destroy(struct kfa       *instance,
 		retval = -1;
 	}
 
-	if (rina_dev_destroy(flow->ip_dev))
+	if ((flow->ip_dev) && rina_dev_destroy(flow->ip_dev))
 		retval = -1;
 
 	rkfree(flow);

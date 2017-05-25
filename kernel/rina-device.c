@@ -132,6 +132,9 @@ static int rina_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	return NETDEV_TX_OK;
 }
 
+static void rina_dev_free(struct net_device *dev)
+{ return free_netdev(dev); }
+
 static const struct net_device_ops rina_dev_ops = {
 	.ndo_start_xmit	= rina_dev_start_xmit,
 	.ndo_get_stats	= rina_dev_get_stats,
@@ -160,8 +163,8 @@ static void rina_dev_setup(struct net_device *dev)
 	/*
 	dev->ethtool_ops	= &loopback_ethtool_ops;
 	dev->header_ops		= &eth_header_ops;
-	dev->destructor		= loopback_dev_free;
 	*/
+	dev->destructor	= rina_dev_free;
 	dev->netdev_ops	= &rina_dev_ops;
 	//dev->tx_queue_len = 0;
 
@@ -221,5 +224,6 @@ int rina_dev_destroy(struct rina_device *rina_dev)
 
 	unregister_netdev(rina_dev->dev);
 	free_netdev(rina_dev->dev);
+	rkfree(rina_dev);
 	return 0;
 }
