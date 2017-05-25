@@ -40,6 +40,19 @@ IPVPNManager::IPVPNManager()
 {
 }
 
+IPVPNManager::~IPVPNManager()
+{
+	std::map<int, rina::FlowRequestEvent>::iterator it;
+	rina::FlowRequestEvent event;
+
+	//Remove all IP over RINA routes and set RINA devs down
+	for (it = iporina_flows.begin(); it != iporina_flows.end(); ++it) {
+		event = it->second;
+		add_or_remove_ip_route(event.remoteApplicationName.processName,
+				       event.ipcProcessId, event.portId, false);
+	}
+}
+
 int IPVPNManager::add_registered_ip_prefix(const std::string& ip_prefix)
 {
 	rina::ScopedLock g(lock);
@@ -96,7 +109,6 @@ bool IPVPNManager::__ip_prefix_registered(const std::string& ip_prefix)
 int IPVPNManager::iporina_flow_allocated(const rina::FlowRequestEvent& event)
 {
 	int res = 0;
-
 
 	rina::ScopedLock g(lock);
 
@@ -285,6 +297,7 @@ int IPVPNManager::add_or_remove_ip_route(const std::string ip_prefix,
 {
 	std::stringstream ss;
 	std::string prefix;
+	std::string suffix;
 	std::string result;
 	std::string dev_name;
 
@@ -292,16 +305,17 @@ int IPVPNManager::add_or_remove_ip_route(const std::string ip_prefix,
 
 	if (add) {
 		prefix = "add ";
-
-		ss << "ifconfig " << dev_name << " up";
-		result = exec_shell_command(ss.str());
-		//TODO parse result
-
-		ss.str("");
+		suffix = " up";
 	} else {
 		prefix = "delete ";
+		suffix = " down";
 	}
 
+	ss << "ifconfig " << dev_name << suffix;
+	result = exec_shell_command(ss.str());
+	//TODO parse result
+
+	ss.str("");
 	ss << "ip route " << prefix
 	   << get_ip_prefix_string(ip_prefix) << " dev "
 	   << dev_name;

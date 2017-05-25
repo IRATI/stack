@@ -34,7 +34,7 @@ namespace rinad {
 class IPVPNManager {
 public:
 	IPVPNManager();
-	~IPVPNManager(){};
+	~IPVPNManager();
 	int add_registered_ip_prefix(const std::string& ip_prefix);
 	int remove_registered_ip_prefix(const std::string& ip_prefix);
 	bool ip_prefix_registered(const std::string& ip_prefix);
