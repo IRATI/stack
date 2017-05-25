@@ -108,6 +108,7 @@ static int rina_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	struct iphdr* iph = NULL;
 	struct sdu* sdu;
 	struct rina_device* rina_dev = netdev_priv(dev);
+	ssize_t len;
 	ASSERT(rina_dev);
 
 	skb_orphan(skb);
@@ -123,6 +124,7 @@ static int rina_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
 		return NET_XMIT_DROP;
 	}
 
+	len = skb->len;
         if(kfa_flow_sdu_write(rina_dev->kfa_ipcp->data, rina_dev->port, sdu,
 									false)){
 		rina_dev->stats.tx_dropped++;
@@ -131,7 +133,7 @@ static int rina_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	}
 
 	rina_dev->stats.tx_packets++;
-	rina_dev->stats.tx_bytes += skb->len;
+	rina_dev->stats.tx_bytes += len;
 	LOG_DBG("RINA IP device %s sent a packet...", dev->name);
 	return NETDEV_TX_OK;
 }
@@ -146,7 +148,7 @@ static const struct net_device_ops rina_dev_ops = {
 /* as ether_setup to set internal dev fields */
 static void rina_dev_setup(struct net_device *dev)
 {
-	/* This should be set according to the N-1 DIF properties, 
+	/* This should be set according to the N-1 DIF properties,
          * for the moment an upper bound is provided */
 	dev->needed_headroom += RINA_EXTRA_HEADER_LENGTH;
 	dev->needed_tailroom += RINA_EXTRA_HEADER_LENGTH;
