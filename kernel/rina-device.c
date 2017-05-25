@@ -69,6 +69,7 @@ static struct net_device_stats *rina_dev_get_stats(struct net_device *dev)
 int rina_dev_rcv(struct sk_buff *skb, struct rina_device *rina_dev)
 {
 	int rv;
+	ssize_t len;
 	struct packet_type *ptype, *pt_prev = NULL;
 
 	list_for_each_entry_rcu(ptype, &skb->dev->ptype_all, list) {
@@ -83,12 +84,13 @@ int rina_dev_rcv(struct sk_buff *skb, struct rina_device *rina_dev)
 							rina_dev->dev->name);
 
 			//return pt_prev->func(skb, skb->dev, pt_prev, NULL);
+			len = skb->len;
 			rv = pt_prev->func(skb, rina_dev->dev, pt_prev, NULL);
 			if(rv){
 				rina_dev->stats.rx_dropped++;
 			} else {
 				rina_dev->stats.rx_packets++;
-				rina_dev->stats.rx_bytes += skb->len;
+				rina_dev->stats.rx_bytes += len;
 			}
 			return rv;
 		}
