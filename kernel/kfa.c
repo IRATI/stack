@@ -849,8 +849,6 @@ static int kfa_sdu_post(struct ipcp_instance_data *data,
 		retval = rina_dev_rcv(skb, flow->ip_dev);
 	/* RINA APP tunnel */
 	} else {
-		atomic_inc(&flow->posters);
-
 		if (rfifo_push_ni(flow->sdu_ready, sdu)) {
 			LOG_ERR("Could not write %zd bytes into port-id %d fifo",
 				sizeof(struct sdu *), id);
@@ -858,6 +856,7 @@ static int kfa_sdu_post(struct ipcp_instance_data *data,
 		}
 	}
 
+	atomic_inc(&flow->posters);
 	if (atomic_dec_and_test(&flow->posters) &&
 	    (atomic_read(&flow->writers) == 0)	&&
 	    (atomic_read(&flow->readers) == 0)	&&
