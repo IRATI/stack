@@ -223,7 +223,6 @@ int rina_dev_destroy(struct rina_device *rina_dev)
 		return -1;
 
 	unregister_netdev(rina_dev->dev);
-	free_netdev(rina_dev->dev);
 	rkfree(rina_dev);
 	return 0;
 }
