@@ -75,9 +75,18 @@ struct ipcp_flow {
 	struct rina_device   *ip_dev;
 };
 
+struct flowdel_data {
+	struct kfa *kfa;
+	port_id_t  id;
+	struct rina_device *ip_dev;
+};
+
 struct ipcp_instance_data {
 	struct kfa *kfa;
 };
+
+//Fwd dec
+static int kfa_flow_deallocate_worker(void *data);
 
 port_id_t kfa_port_id_reserve(struct kfa      *instance,
 			      ipc_process_id_t id)
@@ -116,6 +125,9 @@ static int kfa_flow_destroy(struct kfa       *instance,
 			    port_id_t	      id)
 {
 	int retval = 0;
+	struct rina_device *ip_dev;
+	struct rwq_work_item *item;
+	struct flowdel_data  *wqdata;
 
 	ASSERT(flow);
 
@@ -142,10 +154,26 @@ static int kfa_flow_destroy(struct kfa       *instance,
 		retval = -1;
 	}
 
-	if ((flow->ip_dev) && rina_dev_destroy(flow->ip_dev))
-		retval = -1;
-
+	ip_dev = flow->ip_dev;
+	flow->ip_dev = NULL;
 	rkfree(flow);
+
+	if(!ip_dev)
+		return retval;
+
+	//the net device can not be unregistered in atomic, postpone it...
+	wqdata	       = rkzalloc(sizeof(*wqdata), GFP_ATOMIC);
+	wqdata->kfa    = NULL;
+	wqdata->id     = 0;
+	wqdata->ip_dev = ip_dev;
+
+	item = rwq_work_create_ni(kfa_flow_deallocate_worker, (void *) wqdata);
+	if (!item) {
+		rkfree(wqdata);
+		return -1;
+	}
+
+	rwq_work_post(instance->flowdelq, item);
 
 	return retval;
 }
@@ -197,17 +225,13 @@ int  kfa_port_id_release(struct kfa *instance,
 }
 EXPORT_SYMBOL(kfa_port_id_release);
 
-struct flowdel_data {
-	struct kfa *kfa;
-	port_id_t   id;
-};
-
 static int kfa_flow_deallocate_worker(void *data)
 {
 	struct ipcp_flow    *flow;
 	struct kfa          *instance;
 	port_id_t	     id;
 	struct flowdel_data *wqdata;
+	struct rina_device * ip_dev;
 
 	wqdata = (struct flowdel_data *) data;
 	if (!wqdata) {
@@ -217,12 +241,19 @@ static int kfa_flow_deallocate_worker(void *data)
 
 	instance = wqdata->kfa;
 	id = wqdata->id;
+	ip_dev = wqdata->ip_dev;
 	rkfree(wqdata);
 
+	//If we only need to clean the rina device
+	if(ip_dev)
+		return rina_dev_destroy(ip_dev);
+
+	// In any other case
 	if (!instance) {
 		LOG_ERR("Bogus instance passed, bailing out");
 		return -1;
 	}
+
 	if (!is_port_id_ok(id)) {
 		LOG_ERR("Bogus flow-id, bailing out");
 		return -1;
@@ -305,9 +336,10 @@ static int kfa_flow_deallocate(struct ipcp_instance_data *data,
 		return 0;
 	}
 
-	wqdata	     = rkzalloc(sizeof(*wqdata), GFP_ATOMIC);
-	wqdata->kfa  = instance;
-	wqdata->id   = id;
+	wqdata	       = rkzalloc(sizeof(*wqdata), GFP_ATOMIC);
+	wqdata->kfa    = instance;
+	wqdata->id     = id;
+	wqdata->ip_dev = NULL;
 
 	item = rwq_work_create_ni(kfa_flow_deallocate_worker, (void *) wqdata);
 	if (!item) {
