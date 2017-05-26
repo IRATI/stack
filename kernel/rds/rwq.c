@@ -81,13 +81,14 @@ static struct workqueue_struct * rwq_create_priority(const char * name,
         }
 
 #if 1
+	wq = create_singlethread_workqueue(name);
+#else
         wq = alloc_workqueue(name,
                              WQ_UNBOUND      |
                              WQ_MEM_RECLAIM  |
                              priority        |
                              WQ_CPU_INTENSIVE,
                              RWQ_MAX_ACTIVE);
-#else
         wq = create_workqueue(name);
 #endif
         if (!wq) {
