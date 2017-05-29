@@ -68,7 +68,6 @@ static struct net_device_stats *rina_dev_get_stats(struct net_device *dev)
 
 int rina_dev_rcv(struct sk_buff *skb, struct rina_device *rina_dev)
 {
-	int rv;
 	ssize_t len;
 
 	if(!(skb->data[0] & 0xf0)) {
@@ -83,14 +82,12 @@ int rina_dev_rcv(struct sk_buff *skb, struct rina_device *rina_dev)
 	skb->dev = rina_dev->dev;
 	len = skb->len;
 
-	rv = netif_rx(skb);
-
-	if(rv == NET_RX_DROP) {
+	if(likely(netif_rx(skb) == NET_RX_SUCCESS)) {
+		rina_dev->stats.rx_packets++;
+		rina_dev->stats.rx_bytes += len;
+	} else {
 		rina_dev->stats.rx_dropped++;
 	}
-
-	rina_dev->stats.rx_packets++;
-	rina_dev->stats.rx_bytes += len;
 
 	LOG_DBG("RINA IP device %s rcv a IP packet...", rina_dev->dev->name);
 
@@ -119,8 +116,8 @@ static int rina_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	}
 
 	len = skb->len;
-        if(kfa_flow_sdu_write(rina_dev->kfa_ipcp->data, rina_dev->port, sdu,
-									false)){
+        if(kfa_flow_sdu_write(rina_dev->kfa_ipcp->data, rina_dev->port,
+        		      sdu, false)){
 		rina_dev->stats.tx_dropped++;
 		LOG_ERR("Could not xmit IP packet, unable to send to KFA...");
 		return NET_XMIT_DROP;
@@ -142,7 +139,6 @@ static const struct net_device_ops rina_dev_ops = {
 	.ndo_stop	= rina_dev_close,
 };
 
-/* as ether_setup to set internal dev fields */
 static void rina_dev_setup(struct net_device *dev)
 {
 	/* This should be set according to the N-1 DIF properties,
@@ -160,13 +156,8 @@ static void rina_dev_setup(struct net_device *dev)
 		| IFF_PHONY_HEADROOM;
 	netif_keep_dst(dev);
 	dev->features = NETIF_F_HW_CSUM;
-	/*
-	dev->ethtool_ops	= &loopback_ethtool_ops;
-	dev->header_ops		= &eth_header_ops;
-	*/
 	dev->destructor	= rina_dev_free;
 	dev->netdev_ops	= &rina_dev_ops;
-	//dev->tx_queue_len = 0;
 
 	return;
 }
@@ -183,20 +174,17 @@ struct rina_device* rina_dev_create(string_t* name,
 		return NULL;
 
 	if (strlen(name) > IFNAMSIZ) {
-		LOG_ERR("Could not allocate RINA IP network device %s, name too long",
-									name);
+		LOG_ERR("Could not allocate RINA IP network device %s, "
+				"name too long", name);
 		return NULL;
 	}
 
 	dev = alloc_netdev(sizeof(struct rina_device), name,
-							NET_NAME_UNKNOWN,
-			      				rina_dev_setup);
+			   NET_NAME_UNKNOWN, rina_dev_setup);
 	if (!dev) {
 		LOG_ERR("Could not allocate RINA IP network device %s", name);
 		return NULL;
 	}
-
-	//SET_NETDEV_DEV(dev, parent);
 
 	rina_dev = netdev_priv(dev);
 	rina_dev->dev = dev;
@@ -211,8 +199,8 @@ struct rina_device* rina_dev_create(string_t* name,
 		return NULL;
 	}
 
-	LOG_DBG("RINA IP device %s (%pk) created with dev %p", name, rina_dev,
-									dev);
+	LOG_DBG("RINA IP device %s (%pk) created with dev %p",
+		 name, rina_dev, dev);
 
 	return rina_dev;
 }
