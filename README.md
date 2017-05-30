@@ -37,45 +37,79 @@ up to a day depending on the experiment tested). We are working on improving the
 of IRATI in future releases.
 
 #############################################################################
-## 2. Software requirements                                                 #
+## 2. Build instructions                                                       #
 #############################################################################
 
-This section lists the software packages required to build and run *IRATI* on
-Linux-based operating systems. Only Debian 8 is explicitly
-indicated here, but using other distributions should be equally
-straightforward.
-
-### Debian 8
+### Building on Debian 8
 #############################################################################
+For the kernel modules, a Linux kernel with version 4.9 has to be installed in the system,
+with the kernel headers.
 
-For the kernel modules, a Linux kernel with version 4.9+ has to be installed in the system, 
-with the kernel headers. 
+Once this is done, please install user-space dependencies
 
-For the user-space parts, the following packages from the default repository are required:
+    $ apt-get update
+    $ apt-get install autoconf
+    $ apt-get install automake
+    $ apt-get install libtool
+    $ apt-get install pkg-config
+    $ apt-get install git
+    $ apt-get install g++
+    $ apt-get install libssl-dev
+    $ apt-get install protobuf-compiler (version >= 2.5.0 required)
+    $ apt-get install libprotobuf-dev (version >= 2.5.0 required)
+    $ apt-get install libnl-genl-3-dev (version >= 3.2.14 required)
+    $ apt-get install libnl-3-dev (version >= 3.2.14 required)
+    $ apt-get install hostapd (if the system will be configured as an access point)
+    $ apt-get install wpa-supplicant (if the system will be configured as a mobile host)
 
-* autoconf
-* automake
-* libtool
-* pkg-config
-* git
-* g++
-* libssl-dev
-* protobuf-compiler, libprotobuf-dev (version >= 2.5.0 required)
-* libnl-genl-3-dev and libnl-3-dev (version >= 3.2.14 required)
-* openjdk-6-jdk (only if generation of Java bindings is required)
-* maven (only if generation of Java bindings is required)
+If you want to generate the Java bindings, the following packages are also required
+
+    $ apt-get install openjdk-6-jdk
+    $ apt-get install maven
 
 Required packages to be build from source (only if generation of Java bindings is required)
 
 * SWIG (version >= 2.0.8 required, 2.0.12 is known to be working fine) from http://swig.org
 
-#############################################################################
-## 3. Build instructions                                                       #
-#############################################################################
+Download the IRATI repo (arcfire branch) and enter the root directory
 
-Download the repo and enter the root directory
+    $ git clone -b arcfire https://github.com/IRATI/stack.git
+    $ cd stack
 
-    $ git clone https://github.com/IRATI/stack.git
+Build and install both kernel-space and user-space software
+
+    $ ./install-from-scratch --prefix=<path to IRATI installation folder>
+
+### Building on Raspbian
+#############################################################################
+(Tested with Raspberry Pi model 3B)
+
+Insert the SD card into the Raspberry Pi and power it on. Log in with user 'pi' and 
+password 'raspberry'.  As root ("sudo su -" or equivalent):
+
+Check your kernel version (via uname -r), if it is not 4.9.24-v7+, update the distro
+
+    $ apt-get update
+    $ apt-get dist-upgrade
+    $ reboot
+
+Install dependencies
+
+    $ apt-get install raspberrypi-kernel-headers
+    $ apt-get install socat
+    $ apt-get install hostapd (if the system will be configured as an access point)
+    $ apt-get install wpa-supplicant (if the system will be configured as a mobile host)
+    $ apt-get install autoconf
+    $ apt-get install libtool
+    $ apt-get install git
+    $ apt-get install libssl-dev
+    $ apt-get install protobuf-compiler
+    $ apt-get install libprotobuf-dev
+    $ apt-get install libnl-genl-3-dev
+
+Download the IRATI repo (arcfire branch) and enter the root directory
+
+    $ git clone -b arcfire https://github.com/IRATI/stack.git
     $ cd stack
 
 Build and install both kernel-space and user-space software
@@ -83,10 +117,10 @@ Build and install both kernel-space and user-space software
     $ ./install-from-scratch --prefix=<path to IRATI installation folder>
 
 #############################################################################
-## 4. Running and configuring IRATI                                         #
+## 3. Running and configuring IRATI                                         #
 #############################################################################
 
-### 4.1. Loading the required Kernel modules
+### 3.1. Loading the required Kernel modules
 #############################################################################
 **NOTE**: Please notice that before loading the shim-eth-vlan module, any VLAN interfaces
 used by IRATI must be created and up.
@@ -98,10 +132,10 @@ To load the IRATI kernel modules, just call the load-rina-modules script:
 Next, the IPC Manager (IPCM) has to be started in userspace, which is the local management agent. 
 The IPCM needs some configuration information.
 
-### 4.2 The IPC Manager configuration files
+### 3.2 The IPC Manager configuration files
 #############################################################################
 
-#### 4.2.1 Main configuration file
+#### 3.2.1 Main configuration file
 The main configuration file is located in your `INSTALLATION_PATH/etc/ipcmanager.conf`. It contains 
 instructions to optionally instantiate and configure a number of IPC Processes when the IPC Manager 
 Daemon starts its execution.
@@ -152,7 +186,7 @@ of the DIF, including its policies.
         "template" : "default.dif"
     } ]
 
-#### 4.2.2 DIF Template configuration files
+#### 3.2.2 DIF Template configuration files
 DIF template files contain the configuration of the components of a DIF. There is a mandatory DIF 
 template called "default.dif" (which gets installed during the IRATI installation procedure), all 
 other DIF templates extend from it (in the sense that they only need to define the JSON sections 
@@ -162,7 +196,7 @@ folder as the main configuration files (.conf) that use the templates.
 For exmples of different JSON configuration files, you can take a look at 
 https://github.com/IRATI/stack/tree/master/tests/conf.
 
-#### 4.2.3 Application to DIF mappings
+#### 3.2.3 Application to DIF mappings
 The da.map file contains the preferences for which DIFs should be used to register and to allocate 
 flows to/from specific applications. If no mapping is provided by a certain application, it will try 
 to randomly select a _normal DIF_ first; if there is non available a _shim DIF_ and if there is none 
@@ -187,7 +221,7 @@ it will fail. The contents of the da.map file can be modified while the IPC Mana
         }
     ],
 
-### 4.3 Running the IPC Manager Daemon
+### 3.3 Running the IPC Manager Daemon
 #############################################################################
 Once the configuration file is ready you can un the IPC Manager Daemon. To do so go to the 
 INSTALLATION_PATH/bin folder and type:
@@ -243,12 +277,12 @@ Now applications can be run that use the IPC API. Look at the Tutorials section 
 examples on how to use the rina-echo-time test application to experiment with IRATI.
 
 #############################################################################
-## 5. Tutorials                                                             #
+## 4. Tutorials                                                             #
 #############################################################################
 Several tutorials are available at https://github.com/IRATI/stack/wiki/Tutorials
 
 #############################################################################
-## 6. Overview of the software components                                   #
+## 5. Overview of the software components                                   #
 #############################################################################
 This section provides an overview of the software architecture and components of IRATI. For a more detailed 
 explanation we direct the reader to FP7-IRATI's at http://irati.eu:
