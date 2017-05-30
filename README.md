@@ -3,14 +3,13 @@
 #############################################################################
 
 * 1. Introduction
-* 2. Software requirements
-* 3. Build instructions
-* 4. Running and configuring IRATI
-    * 4.1 Loading the kernel modules
-    * 4.2 The configuration files
-    * 4.3 Running the IPC Manager Daemon
-* 5. Tutorials
-* 6. Overview of the software components
+* 2. Build instructions
+* 3. Running and configuring IRATI
+    * 3.1 Loading the kernel modules
+    * 3.2 The configuration files
+    * 3.3 Running the IPC Manager Daemon
+* 4. Tutorials
+* 5. Overview of the software components
 
 #############################################################################
 ## 1. Introduction                                                          #
@@ -42,6 +41,7 @@ of IRATI in future releases.
 
 ### Building on Debian 8
 #############################################################################
+
 For the kernel modules, a Linux kernel with version 4.9 has to be installed in the system,
 with the kernel headers.
 
@@ -82,6 +82,7 @@ Build and install both kernel-space and user-space software
 
 ### Building on Raspbian
 #############################################################################
+
 (Tested with Raspberry Pi model 3B)
 
 Insert the SD card into the Raspberry Pi and power it on. Log in with user 'pi' and 
@@ -122,8 +123,6 @@ Build and install both kernel-space and user-space software
 
 ### 3.1. Loading the required Kernel modules
 #############################################################################
-**NOTE**: Please notice that before loading the shim-eth-vlan module, any VLAN interfaces
-used by IRATI must be created and up.
 
 To load the IRATI kernel modules, just call the load-rina-modules script:
 
