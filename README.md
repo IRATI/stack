@@ -78,7 +78,7 @@ Download the IRATI repo (arcfire branch) and enter the root directory
 
 Build and install both kernel-space and user-space software
 
-    $ ./install-from-scratch --prefix=<path to IRATI installation folder>
+    $ ./install-from-scratch <path to IRATI installation folder>
 
 ### Building on Raspbian
 #############################################################################
@@ -115,7 +115,7 @@ Download the IRATI repo (arcfire branch) and enter the root directory
 
 Build and install both kernel-space and user-space software
 
-    $ ./install-from-scratch --prefix=<path to IRATI installation folder>
+    $ ./install-from-scratch <path to IRATI installation folder>
 
 #############################################################################
 ## 3. Running and configuring IRATI                                         #
