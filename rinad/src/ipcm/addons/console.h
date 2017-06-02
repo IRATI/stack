@@ -24,94 +24,21 @@
 #ifndef __IPCM_CONSOLE_H__
 #define __IPCM_CONSOLE_H__
 
-#include <cstdlib>
-#include <iostream>
-#include <map>
-#include <vector>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <cstring>
-#include <cerrno>
-#include <sstream>
-
-#include <librina/concurrency.h>
-#include <librina/common.h>
-#include <librina/ipc-manager.h>
+#include <librina/console.h>
 
 #include "rina-configuration.h"
 #include "../addon.h"
 
-
 namespace rinad {
 
-class IPCMConsole : public Addon {
-                struct Connection;
+class IPCMConsole : public rina::UNIXConsole, public Addon {
+public:
+	static const std::string NAME;
 
-                static const unsigned int CMDBUFSIZE = 120;
-                static const int CMDRETCONT = 0;
-                static const int CMDRETSTOP = 1;
+	IPCMConsole(const std::string& socket_path);
+	virtual ~IPCMConsole() throw() {};
 
-                typedef int (IPCMConsole::*ConsoleCmdFunction)
-                            (std::vector<std::string>& args);
-
-                struct ConsoleCmdInfo {
-                        ConsoleCmdFunction fun;
-                        const char *usage;
-
-                        ConsoleCmdInfo() : fun(NULL), usage(NULL) { }
-                        ConsoleCmdInfo(ConsoleCmdFunction f, const char *u)
-                                                        : fun(f), usage(u) { }
-                };
-
-                rina::Thread *worker;
-
-                std::map<std::string, ConsoleCmdInfo> commands_map;
-                std::ostringstream outstream;
-                std::string socket_path;
-
-                int init(void);
-                int process_command(Connection *conn, char *cmdbuf, int size);
-                int plugin_load_unload(std::vector<std::string>& args,
-                                       bool load);
-                bool cleanup_filesystem_socket();
-
-
-                // Console commands functions
-                int quit(std::vector<std::string>& args);
-                int help(std::vector<std::string>& args);
-                int create_ipcp(std::vector<std::string>& args);
-                int destroy_ipcp(std::vector<std::string>& args);
-                int list_ipcps(std::vector<std::string>& args);
-                int list_ipcp_types(std::vector<std::string>& args);
-                int query_rib(std::vector<std::string>& args);
-                int assign_to_dif(std::vector<std::string>& args);
-                int register_at_dif(std::vector<std::string>& args);
-                int unregister_from_dif(std::vector<std::string>& args);
-                int update_dif_config(std::vector<std::string>& args);
-                int enroll_to_dif(std::vector<std::string>& args);
-                int disconnect_neighbor(std::vector<std::string>& args);
-                int select_policy_set(std::vector<std::string>& args);
-                int set_policy_set_param(std::vector<std::string>& args);
-                int plugin_load(std::vector<std::string>& args);
-                int plugin_unload(std::vector<std::string>& args);
-                int plugin_get_info(std::vector<std::string>& args);
-                int show_dif_templates(std::vector<std::string>& args);
-                int read_ipcp_ribobj(std::vector<std::string>& args);
-                int show_catalog(std::vector<std::string>& args);
-                int update_catalog(std::vector<std::string>& args);
-                int query_ma_rib(std::vector<std::string>& args);
-                int register_ip_prefix(std::vector<std::string>& args);
-                int unregister_ip_prefix(std::vector<std::string>& args);
-                int allocate_iporina_flow(std::vector<std::string>& args);
-                int deallocate_iporina_flow(std::vector<std::string>& args);
-
-        public:
-                IPCMConsole(const std::string& socket_path);
-                void body();
-                virtual ~IPCMConsole() throw();
-		static const std::string NAME;
-		bool keep_on_running;
+	int plugin_load_unload(std::vector<std::string>& args, bool load);
 };
 
 }
