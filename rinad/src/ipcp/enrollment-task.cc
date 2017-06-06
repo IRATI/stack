@@ -916,7 +916,12 @@ int EnrollmentTask::get_neighbor_info(rina::Neighbor& neigh)
 	return 0;
 }
 
-void EnrollmentTask::addressChange(rina::AddressChangeEvent * event)
+void AddressChangeNotifyNeighborsTimerTask::run()
+{
+	enr_task->use_new_address(new_addr);
+}
+
+void EnrollmentTask::use_new_address(unsigned int new_addr)
 {
 	rina::ScopedLock g(lock_);
 	encoders::NeighborListEncoder encoder;
@@ -928,7 +933,7 @@ void EnrollmentTask::addressChange(rina::AddressChangeEvent * event)
 	rina::cdap_rib::obj_info_t obj_info;
 	rina::cdap_rib::con_handle_t con;
 
-	myself.address_ = event->new_address;
+	myself.address_ = new_addr;
 	myself.name_.processName = ipcp->get_name();
 	myself.name_.processInstance = ipcp->get_instance();
 	neighbors.push_back(myself);
@@ -952,6 +957,14 @@ void EnrollmentTask::addressChange(rina::AddressChangeEvent * event)
 					e.what());
 		}
 	}
+}
+
+void EnrollmentTask::addressChange(rina::AddressChangeEvent * event)
+{
+	AddressChangeNotifyNeighborsTimerTask * task =
+			new AddressChangeNotifyNeighborsTimerTask(event->new_address,
+								  this);
+	timer.scheduleTask(task, event->use_new_timeout);
 }
 
 void EnrollmentTask::update_neighbor_address(const rina::Neighbor& neighbor)

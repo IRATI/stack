@@ -367,6 +367,7 @@ public:
 				      rina::cdap_rib::con_handle_t& con);
 	int get_neighbor_info(rina::Neighbor& neigh);
 	void clean_state(unsigned int port_id);
+	void use_new_address(unsigned int new_addr);
 
 private:
 	void _add_neighbor(const rina::Neighbor& neighbor);
@@ -392,11 +393,10 @@ private:
 	/// @param resultReason
 	void nMinusOneFlowAllocationFailed(rina::NMinusOneFlowAllocationFailedEvent * event);
 
-	void addressChange(rina::AddressChangeEvent * event);
-
 	void internal_flow_allocated(rina::IPCPInternalFlowAllocatedEvent * event);
 	void internal_flow_deallocated(rina::IPCPInternalFlowDeallocatedEvent * event);
 	void internal_flow_allocation_failed(rina::IPCPInternalFlowAllocationFailedEvent * event);
+	void addressChange(rina::AddressChangeEvent * event);
 
 	void deallocate_flows_and_destroy_esm(IEnrollmentStateMachine * esm,
 					      unsigned int port_id,
@@ -421,6 +421,17 @@ private:
 	rina::ReadWriteLockable neigh_lock;
 
 	IPCPEnrollmentTaskPS * ipcp_ps;
+};
+
+class AddressChangeNotifyNeighborsTimerTask: public rina::TimerTask {
+public:
+	AddressChangeNotifyNeighborsTimerTask(unsigned int addr, EnrollmentTask * task) :
+		new_addr(addr), enr_task(task) {};
+	void run();
+
+private:
+	unsigned int new_addr;
+	EnrollmentTask * enr_task;
 };
 
 /// Handles the operations related to the "daf.management.operationalStatus" object
