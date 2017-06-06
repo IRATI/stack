@@ -213,7 +213,8 @@ public:
 	std::list<rina::RoutingTableEntry> get_rt_entries();
 	/// This operation takes ownership of the entries
 	void set_rt_entries(const std::list<rina::RoutingTableEntry*>& rt);
-	unsigned int get_next_hop_address(unsigned int dest_address);
+	void get_next_hop_address(unsigned int dest_address,
+				  std::list<unsigned int>& addresses);
 	unsigned int get_n1_port_to_address(unsigned int dest_address);
 
 	/// Add a temporary entry to the PDU FTE, until the routing policy

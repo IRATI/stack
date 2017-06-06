@@ -862,6 +862,8 @@ int EnrollmentTask::get_con_handle_to_address(unsigned int dest_address,
 {
 	std::map<int, IEnrollmentStateMachine*>::iterator it;
 	unsigned int next_hop_address = dest_address;
+	std::list<unsigned int> nhop_addresses;
+	std::list<unsigned int>::iterator addr_it;
 
 	rina::ReadScopedLock readLock(sm_lock);
 
@@ -874,16 +876,20 @@ int EnrollmentTask::get_con_handle_to_address(unsigned int dest_address,
 	}
 
 	// Check if we can find the address to the next hop via the resource allocator
-	next_hop_address = ipcp->resource_allocator_->get_next_hop_address(dest_address);
-	if (next_hop_address == 0) {
+	ipcp->resource_allocator_->get_next_hop_address(dest_address, nhop_addresses);
+	if (nhop_addresses.size() == 0) {
+		LOG_ERR("Could not find next hop for destination address %d", dest_address);
 		return -1;
 	}
 
 	// Get con from next hop
-	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
-		if (it->second->remote_peer_.address_ == next_hop_address) {
-			con.port_id = it->second->con.port_id;
-			return 0;
+	for (addr_it = nhop_addresses.begin(); addr_it != nhop_addresses.end(); ++addr_it) {
+		next_hop_address = *addr_it;
+		for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
+			if (it->second->remote_peer_.address_ == next_hop_address) {
+				con.port_id = it->second->con.port_id;
+				return 0;
+			}
 		}
 	}
 
