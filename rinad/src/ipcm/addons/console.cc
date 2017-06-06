@@ -33,7 +33,7 @@ using namespace std;
 
 namespace rinad {
 
-const std::string IPCMConsole::NAME = "console";
+const string IPCMConsole::NAME = "console";
 
 class CreateIPCPConsoleCmd: public rina::ConsoleCmdInfo {
 public:
@@ -41,7 +41,7 @@ public:
 		rina::ConsoleCmdInfo("USAGE: create-ipcp <process-name> "
 				"<process-instance> <ipcp-type>", console) {};
 
-	int execute(std::vector<std::string>& args) {
+	int execute(std::vector<string>& args) {
 		CreateIPCPPromise promise;
 
 		if (args.size() < 4) {
@@ -69,7 +69,7 @@ public:
 	DestroyIPCPConsoleCmd(IPCMConsole * console) :
 		rina::ConsoleCmdInfo("USAGE: destroy-ipcp <ipcp-id>", console) {};
 
-	int execute(std::vector<std::string>& args) {
+	int execute(std::vector<string>& args) {
 		int ipcp_id;
 
 		if (args.size() < 2) {
@@ -98,7 +98,7 @@ public:
 	ListIPCPsConsoleCmd(IPCMConsole * console) :
 		rina::ConsoleCmdInfo("USAGE: list-ipcps", console) {};
 
-	int execute(std::vector<std::string>& args) {
+	int execute(std::vector<string>& args) {
 		IPCManager->list_ipcps(console->outstream);
 
 		return rina::UNIXConsole::CMDRETCONT;
@@ -111,7 +111,7 @@ public:
 		rina::ConsoleCmdInfo("USAGE: list-ipcp-types", console) {};
 
 	int execute(std::vector<std::string>& args) {
-		std::list<std::string> types;
+		std::list<string> types;
 
 		IPCManager->list_ipcp_types(types);
 
@@ -131,7 +131,7 @@ public:
 		rina::ConsoleCmdInfo("USAGE: assign-to-dif <ipcp-id> "
 				"<dif-name> <dif-template-name>", console) {};
 
-	int execute(std::vector<std::string>& args) {
+	int execute(std::vector<string>& args) {
 		int ipcp_id;
 		Promise promise;
 		rinad::DIFTemplate dif_template;
@@ -178,7 +178,7 @@ public:
 		rina::ConsoleCmdInfo("USAGE: query-rib <ipcp-id> "
 				"[(<object-class>|-) [<object-name>]]", console) {};
 
-	int execute(std::vector<std::string>& args) {
+	int execute(std::vector<string>& args) {
 		int ipcp_id;
 		QueryRIBPromise promise;
 		string objectClass, objectName;
@@ -224,7 +224,7 @@ public:
 		rina::ConsoleCmdInfo("USAGE: register-at-dif <ipcp-id> "
 				"<dif-name>", console) {};
 
-	int execute(std::vector<std::string>& args) {
+	int execute(std::vector<string>& args) {
 		int ipcp_id;
 		Promise promise;
 
@@ -263,7 +263,7 @@ public:
 		rina::ConsoleCmdInfo("USAGE: unregister-from-dif <ipcp-id> "
 				"<dif-name>", console) {};
 
-	int execute(std::vector<std::string>& args) {
+	int execute(std::vector<string>& args) {
 		int ipcp_id;
 		Promise promise;
 
@@ -302,7 +302,7 @@ public:
 	UpdateDIFConfigConsoleCmd(IPCMConsole * console) :
 		rina::ConsoleCmdInfo("USAGE: update-dif-config <ipcp-id>", console) {};
 
-	int execute(std::vector<std::string>& args) {
+	int execute(std::vector<string>& args) {
 		int ipcp_id;
 		Promise promise;
 
@@ -345,7 +345,7 @@ public:
 				"enroll-to-dif <ipcp-id> <dif-name> "
 				"<supporting-dif-name>", console) {};
 
-	int execute(std::vector<std::string>& args) {
+	int execute(std::vector<string>& args) {
 	        int t0 = rina::Time::get_time_in_ms();
 	        NeighborData neighbor_data;
 		int ipcp_id;
@@ -395,7 +395,7 @@ public:
 				"<neighbor-process-name> "
 				"<neighbor-process-instance>", console) {};
 
-	int execute(std::vector<std::string>& args) {
+	int execute(std::vector<string>& args) {
 		int t0 = rina::Time::get_time_in_ms();
 	        rina::ApplicationProcessNamingInformation neighbor;
 		int ipcp_id;
@@ -438,7 +438,7 @@ public:
 		rina::ConsoleCmdInfo("USAGE: select-policy-set <ipcp-id> "
 				"<component-path> <policy-set-name> ", console) {};
 
-	int execute(std::vector<std::string>& args) {
+	int execute(std::vector<string>& args) {
 		int ipcp_id;
 		Promise promise;
 
@@ -475,7 +475,7 @@ public:
 		rina::ConsoleCmdInfo("USAGE: set-policy-set-param <ipcp-id> "
 				"<policy-path> <param-name> <param-value>", console) {};
 
-	int execute(std::vector<std::string>& args) {
+	int execute(std::vector<string>& args) {
 		int ipcp_id;
 		Promise promise;
 
@@ -512,7 +512,7 @@ public:
 		rina::ConsoleCmdInfo("USAGE: plugin-load <ipcp-id> "
 				"<plugin-name>", console) {};
 
-	int execute(std::vector<std::string>& args) {
+	int execute(std::vector<string>& args) {
 		return ((IPCMConsole *) console)->plugin_load_unload(args, true);
 	}
 };
@@ -523,7 +523,7 @@ public:
 		rina::ConsoleCmdInfo("USAGE: plugin-unload <ipcp-id> "
 				"<plugin-name>", console) {};
 
-	int execute(std::vector<std::string>& args) {
+	int execute(std::vector<string>& args) {
 		return ((IPCMConsole *) console)->plugin_load_unload(args, false);
 	}
 };
@@ -533,7 +533,7 @@ public:
 	PluginGetInfoConsoleCmd(IPCMConsole * console) :
 		rina::ConsoleCmdInfo("USAGE: plugin-get-info <plugin-name>", console) {};
 
-	int execute(std::vector<std::string>& args) {
+	int execute(std::vector<string>& args) {
 		if (args.size() < 2) {
 			console->outstream << console->commands_map[args[0]]->usage << endl;
 			return rina::UNIXConsole::CMDRETCONT;
@@ -564,7 +564,7 @@ public:
 	ShowDIFTemplatesConsoleCmd(IPCMConsole * console) :
 		rina::ConsoleCmdInfo("USAGE: show-dif-templates", console) {};
 
-	int execute(std::vector<std::string>& args) {
+	int execute(std::vector<string>& args) {
 		std::list<DIFTemplate> dif_templates;
 
 		if (args.size() != 1) {
@@ -591,7 +591,7 @@ public:
 		rina::ConsoleCmdInfo("USAGE: read-ipcp-ribobj <ipcp-id> <object-class> "
 				"<object-name> <scope>", console) {};
 
-	int execute(std::vector<std::string>& args) {
+	int execute(std::vector<string>& args) {
 		Promise promise;
 		int ipcp_id;
 		int scope;
@@ -639,7 +639,7 @@ public:
 	ShowCatalogueConsoleCmd(IPCMConsole * console) :
 		rina::ConsoleCmdInfo("USAGE: show-catalog [<component-name>]", console) {};
 
-	int execute(std::vector<std::string>& args) {
+	int execute(std::vector<string>& args) {
 		switch (args.size()) {
 		case 1:
 			console->outstream << IPCManager->catalog.toString();
@@ -663,7 +663,7 @@ public:
 	UpdateCatalogueConsoleCmd(IPCMConsole * console) :
 		rina::ConsoleCmdInfo("USAGE: update-catalog", console) {};
 
-	int execute(std::vector<std::string>& args) {
+	int execute(std::vector<string>& args) {
 		if (args.size() != 1) {
 			console->outstream << console->commands_map[args[0]]->usage << endl;
 			return rina::UNIXConsole::CMDRETCONT;
@@ -680,7 +680,7 @@ public:
 	QueryMARIBConsoleCmd(IPCMConsole * console) :
 		rina::ConsoleCmdInfo("USAGE: query_ma_rib", console) {};
 
-	int execute(std::vector<std::string>& args) {
+	int execute(std::vector<string>& args) {
 		IPCManager->update_catalog((IPCMConsole*) console);
 		console->outstream << "Catalog updated" << endl;
 
@@ -688,7 +688,145 @@ public:
 	}
 };
 
-IPCMConsole::IPCMConsole(const std::string& socket_path_) :
+class RegisterIPPrefixConsoleCmd: public rina::ConsoleCmdInfo {
+public:
+	RegisterIPPrefixConsoleCmd(IPCMConsole * console) :
+		rina::ConsoleCmdInfo("USAGE: register-ip-prefix <ip-address> "
+				"<prefix> <dif-name>", console) {};
+
+	int execute(vector<string>& args) {
+		string ip_prefix;
+		stringstream ss;
+		Promise promise;
+
+		if (args.size() < 4) {
+			console->outstream << console->commands_map[args[0]]->usage << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		ss << args[1] << "|" << args[2];
+		ip_prefix = ss.str();
+		rina::ApplicationProcessNamingInformation dif_name(args[3], string());
+
+		if(IPCManager->register_ip_prefix_to_dif(&promise, ip_prefix, dif_name) == IPCM_FAILURE ||
+				promise.wait() != IPCM_SUCCESS) {
+			console->outstream << "IP prefix registration failed" << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		console->outstream << "IP prefix registration completed successfully" << endl;
+
+		return rina::UNIXConsole::CMDRETCONT;
+	}
+};
+
+class UnegisterIPPrefixConsoleCmd: public rina::ConsoleCmdInfo {
+public:
+	UnegisterIPPrefixConsoleCmd(IPCMConsole * console) :
+		rina::ConsoleCmdInfo("USAGE: unregister-ip-prefix <ip-address> "
+				"<prefix> <dif-name>", console) {};
+
+	int execute(vector<string>& args) {
+		string ip_prefix;
+		stringstream ss;
+		Promise promise;
+
+		if (args.size() < 4) {
+			console->outstream << console->commands_map[args[0]]->usage << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		ss << args[1] << "|" << args[2];
+		ip_prefix = ss.str();
+		rina::ApplicationProcessNamingInformation dif_name(args[3], string());
+
+		if(IPCManager->unregister_ip_prefix_from_dif(&promise, ip_prefix, dif_name) == IPCM_FAILURE ||
+				promise.wait() != IPCM_SUCCESS) {
+			console->outstream << "IP prefix registration failed" << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		console->outstream << "IP prefix unregistration completed successfully" << endl;
+
+		return rina::UNIXConsole::CMDRETCONT;
+	}
+};
+
+class AllocateIPoRINAFlowConsoleCmd: public rina::ConsoleCmdInfo {
+public:
+	AllocateIPoRINAFlowConsoleCmd(IPCMConsole * console) :
+		rina::ConsoleCmdInfo("USAGE: allocate-iporina-flow <src-ip-address> "
+				"<src-prefix> <dest-ip-address> <dst-prefix> [<dif-name>]", console) {};
+
+	int execute(vector<string>& args) {
+		string src_ip_prefix;
+		string dest_ip_prefix;
+		string dif_name;
+		stringstream ss;
+		Promise promise;
+		rina::FlowSpecification flow_spec;
+
+		if (args.size() != 5 && args.size() != 6) {
+			console->outstream << console->commands_map[args[0]]->usage << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		ss << args[1] << "|" << args[2];
+		src_ip_prefix = ss.str();
+		ss.str("");
+		ss << args[3] << "|" << args[4];
+		dest_ip_prefix = ss.str();
+
+		if (args.size() == 6) {
+			dif_name = args[5];
+		} else {
+			dif_name = "";
+		}
+
+		if(IPCManager->allocate_iporina_flow(&promise, src_ip_prefix,
+						     dest_ip_prefix, dif_name, flow_spec) == IPCM_FAILURE ||
+				promise.wait() != IPCM_SUCCESS) {
+			console->outstream << "IP over RINA flow allocation failed" << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+		console->outstream << "IP over RINA flow allocated successfully" << endl;
+
+		return rina::UNIXConsole::CMDRETCONT;
+	}
+};
+
+class DeallocateIPoRINAFlowConsoleCmd: public rina::ConsoleCmdInfo {
+public:
+	DeallocateIPoRINAFlowConsoleCmd(IPCMConsole * console) :
+		rina::ConsoleCmdInfo("USAGE: deallocate-iporina-flow <port_id>]", console) {};
+
+	int execute(vector<string>& args) {
+		int port_id;
+		Promise promise;
+
+		if (args.size() != 2) {
+			console->outstream << console->commands_map[args[0]]->usage << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		if (rina::string2int(args[1], port_id)){
+			console->outstream << "Invalid IPC port id" << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		if(IPCManager->deallocate_iporina_flow(&promise, port_id) == IPCM_FAILURE ||
+				promise.wait() != IPCM_SUCCESS) {
+			console->outstream << "IP over RINA flow deallocation failed" << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		console->outstream << "IP over RINA flow deallocated successfully" << endl;
+
+		return rina::UNIXConsole::CMDRETCONT;
+	}
+};
+
+IPCMConsole::IPCMConsole(const string& socket_path_) :
 		rina::UNIXConsole(socket_path_),
 		Addon(IPCMConsole::NAME)
 {
@@ -713,9 +851,13 @@ IPCMConsole::IPCMConsole(const std::string& socket_path_) :
 	commands_map["show-catalog"] = new ShowCatalogueConsoleCmd(this);
 	commands_map["update-catalog"] = new UpdateCatalogueConsoleCmd(this);
 	commands_map["query-ma-rib"] = new QueryMARIBConsoleCmd(this);
+	commands_map["register-ip-prefix"] = new RegisterIPPrefixConsoleCmd(this);
+	commands_map["unregister-ip-prefix"] = new UnegisterIPPrefixConsoleCmd(this);
+	commands_map["allocate-iporina-flow"] = new AllocateIPoRINAFlowConsoleCmd(this);
+	commands_map["deallocate-iporina-flow"] = new DeallocateIPoRINAFlowConsoleCmd(this);
 }
 
-int IPCMConsole::plugin_load_unload(std::vector<std::string>& args, bool load)
+int IPCMConsole::plugin_load_unload(vector<string>& args, bool load)
 {
 	int ipcp_id;
 	Promise promise;
