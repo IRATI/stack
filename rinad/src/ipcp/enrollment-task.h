@@ -367,7 +367,6 @@ public:
 				      rina::cdap_rib::con_handle_t& con);
 	int get_neighbor_info(rina::Neighbor& neigh);
 	void clean_state(unsigned int port_id);
-	void use_new_address(unsigned int new_addr);
 
 private:
 	void _add_neighbor(const rina::Neighbor& neighbor);
@@ -421,17 +420,6 @@ private:
 	rina::ReadWriteLockable neigh_lock;
 
 	IPCPEnrollmentTaskPS * ipcp_ps;
-};
-
-class AddressChangeNotifyNeighborsTimerTask: public rina::TimerTask {
-public:
-	AddressChangeNotifyNeighborsTimerTask(unsigned int addr, EnrollmentTask * task) :
-		new_addr(addr), enr_task(task) {};
-	void run();
-
-private:
-	unsigned int new_addr;
-	EnrollmentTask * enr_task;
 };
 
 /// Handles the operations related to the "daf.management.operationalStatus" object

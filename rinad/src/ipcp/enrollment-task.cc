@@ -869,7 +869,8 @@ int EnrollmentTask::get_con_handle_to_address(unsigned int dest_address,
 
 	// Check if the destination address is one of our next hops
 	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
-		if (it->second->remote_peer_.address_ == next_hop_address) {
+		if (it->second->remote_peer_.address_ == next_hop_address ||
+				it->second->remote_peer_.old_address_ == next_hop_address) {
 			con.port_id = it->second->con.port_id;
 			return 0;
 		}
@@ -886,7 +887,8 @@ int EnrollmentTask::get_con_handle_to_address(unsigned int dest_address,
 	for (addr_it = nhop_addresses.begin(); addr_it != nhop_addresses.end(); ++addr_it) {
 		next_hop_address = *addr_it;
 		for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
-			if (it->second->remote_peer_.address_ == next_hop_address) {
+			if (it->second->remote_peer_.address_ == next_hop_address ||
+					it->second->remote_peer_.old_address_ == next_hop_address) {
 				con.port_id = it->second->con.port_id;
 				return 0;
 			}
@@ -916,12 +918,7 @@ int EnrollmentTask::get_neighbor_info(rina::Neighbor& neigh)
 	return 0;
 }
 
-void AddressChangeNotifyNeighborsTimerTask::run()
-{
-	enr_task->use_new_address(new_addr);
-}
-
-void EnrollmentTask::use_new_address(unsigned int new_addr)
+void EnrollmentTask::addressChange(rina::AddressChangeEvent * event)
 {
 	rina::ScopedLock g(lock_);
 	encoders::NeighborListEncoder encoder;
@@ -933,7 +930,7 @@ void EnrollmentTask::use_new_address(unsigned int new_addr)
 	rina::cdap_rib::obj_info_t obj_info;
 	rina::cdap_rib::con_handle_t con;
 
-	myself.address_ = new_addr;
+	myself.address_ = event->new_address;
 	myself.name_.processName = ipcp->get_name();
 	myself.name_.processInstance = ipcp->get_instance();
 	neighbors.push_back(myself);
@@ -957,14 +954,6 @@ void EnrollmentTask::use_new_address(unsigned int new_addr)
 					e.what());
 		}
 	}
-}
-
-void EnrollmentTask::addressChange(rina::AddressChangeEvent * event)
-{
-	AddressChangeNotifyNeighborsTimerTask * task =
-			new AddressChangeNotifyNeighborsTimerTask(event->new_address,
-								  this);
-	timer.scheduleTask(task, event->use_new_timeout);
 }
 
 void EnrollmentTask::update_neighbor_address(const rina::Neighbor& neighbor)
