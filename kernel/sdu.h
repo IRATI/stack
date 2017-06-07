@@ -33,6 +33,7 @@
 
 struct efcp_config;
 struct pdu;
+struct sk_buff;
 
 /*
  * Represents and SDU with the port-id the SDU is to be written to
@@ -47,6 +48,7 @@ struct sdu_wpi {
 struct sdu		*sdu_create(size_t data_len);
 struct sdu		*sdu_create_ni(size_t data_len);
 struct sdu		*sdu_from_buffer_ni(void *buffer);
+struct sdu		*sdu_create_from_skb(struct sk_buff* skb);
 
 int			sdu_destroy(struct sdu * sdu);
 bool		is_sdu_ok(const struct sdu *sdu);

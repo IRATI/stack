@@ -407,7 +407,7 @@ public:
 	/// This operation takes ownership of the entries
 	virtual void set_rt_entries(const std::list<rina::RoutingTableEntry*>& rt) = 0;
 	// Returns the next hop address towards the destination
-	virtual unsigned int get_next_hop_address(unsigned int dest_address) = 0;
+	virtual void get_next_hop_address(unsigned int dest_address, std::list<unsigned int>& addresses) = 0;
 	// Returns the N-1 port towards the destination
 	virtual unsigned int get_n1_port_to_address(unsigned int dest_address) = 0;
 

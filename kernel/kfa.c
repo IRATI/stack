@@ -41,6 +41,9 @@
 #include "pidm.h"
 #include "kfa.h"
 #include "kfa-utils.h"
+#include "rina-device.h"
+
+#define RINA_IP_FLOW_ENT_NAME "RINA_IP"
 
 struct kfa {
 	spinlock_t		 lock;
@@ -69,11 +72,21 @@ struct ipcp_flow {
 	atomic_t	      readers;
 	atomic_t	      writers;
 	atomic_t	      posters;
+	struct rina_device   *ip_dev;
+};
+
+struct flowdel_data {
+	struct kfa *kfa;
+	port_id_t  id;
+	struct rina_device *ip_dev;
 };
 
 struct ipcp_instance_data {
 	struct kfa *kfa;
 };
+
+//Fwd dec
+static int kfa_flow_deallocate_worker(void *data);
 
 port_id_t kfa_port_id_reserve(struct kfa      *instance,
 			      ipc_process_id_t id)
@@ -112,6 +125,9 @@ static int kfa_flow_destroy(struct kfa       *instance,
 			    port_id_t	      id)
 {
 	int retval = 0;
+	struct rina_device *ip_dev;
+	struct rwq_work_item *item;
+	struct flowdel_data  *wqdata;
 
 	ASSERT(flow);
 
@@ -138,7 +154,26 @@ static int kfa_flow_destroy(struct kfa       *instance,
 		retval = -1;
 	}
 
+	ip_dev = flow->ip_dev;
+	flow->ip_dev = NULL;
 	rkfree(flow);
+
+	if(!ip_dev)
+		return retval;
+
+	//the net device can not be unregistered in atomic, postpone it...
+	wqdata	       = rkzalloc(sizeof(*wqdata), GFP_ATOMIC);
+	wqdata->kfa    = NULL;
+	wqdata->id     = 0;
+	wqdata->ip_dev = ip_dev;
+
+	item = rwq_work_create_ni(kfa_flow_deallocate_worker, (void *) wqdata);
+	if (!item) {
+		rkfree(wqdata);
+		return -1;
+	}
+
+	rwq_work_post(instance->flowdelq, item);
 
 	return retval;
 }
@@ -190,17 +225,13 @@ int  kfa_port_id_release(struct kfa *instance,
 }
 EXPORT_SYMBOL(kfa_port_id_release);
 
-struct flowdel_data {
-	struct kfa *kfa;
-	port_id_t   id;
-};
-
 static int kfa_flow_deallocate_worker(void *data)
 {
 	struct ipcp_flow    *flow;
 	struct kfa          *instance;
 	port_id_t	     id;
 	struct flowdel_data *wqdata;
+	struct rina_device * ip_dev;
 
 	wqdata = (struct flowdel_data *) data;
 	if (!wqdata) {
@@ -210,12 +241,19 @@ static int kfa_flow_deallocate_worker(void *data)
 
 	instance = wqdata->kfa;
 	id = wqdata->id;
+	ip_dev = wqdata->ip_dev;
 	rkfree(wqdata);
 
+	//If we only need to clean the rina device
+	if(ip_dev)
+		return rina_dev_destroy(ip_dev);
+
+	// In any other case
 	if (!instance) {
 		LOG_ERR("Bogus instance passed, bailing out");
 		return -1;
 	}
+
 	if (!is_port_id_ok(id)) {
 		LOG_ERR("Bogus flow-id, bailing out");
 		return -1;
@@ -298,9 +336,10 @@ static int kfa_flow_deallocate(struct ipcp_instance_data *data,
 		return 0;
 	}
 
-	wqdata	     = rkzalloc(sizeof(*wqdata), GFP_ATOMIC);
-	wqdata->kfa  = instance;
-	wqdata->id   = id;
+	wqdata	       = rkzalloc(sizeof(*wqdata), GFP_ATOMIC);
+	wqdata->kfa    = instance;
+	wqdata->id     = id;
+	wqdata->ip_dev = NULL;
 
 	item = rwq_work_create_ni(kfa_flow_deallocate_worker, (void *) wqdata);
 	if (!item) {
@@ -791,6 +830,7 @@ static int kfa_sdu_post(struct ipcp_instance_data *data,
 	struct ipcp_flow  *flow;
 	wait_queue_head_t *wq;
 	struct kfa        *instance;
+	struct sk_buff	  *skb;
 	int		   retval = 0;
 
 	if (!data) {
@@ -834,14 +874,21 @@ static int kfa_sdu_post(struct ipcp_instance_data *data,
 		return -1;
 	}
 
-	atomic_inc(&flow->posters);
-
-	if (rfifo_push_ni(flow->sdu_ready, sdu)) {
-		LOG_ERR("Could not write %zd bytes into port-id %d fifo",
-			sizeof(struct sdu *), id);
-		retval = -1;
+	/* IP tunnel */
+	if (flow->ip_dev) {
+        	skb = sdu_detach_skb(sdu);
+		sdu_destroy(sdu);
+		retval = rina_dev_rcv(skb, flow->ip_dev);
+	/* RINA APP tunnel */
+	} else {
+		if (rfifo_push_ni(flow->sdu_ready, sdu)) {
+			LOG_ERR("Could not write %zd bytes into port-id %d fifo",
+				sizeof(struct sdu *), id);
+			retval = -1;
+		}
 	}
 
+	atomic_inc(&flow->posters);
 	if (atomic_dec_and_test(&flow->posters) &&
 	    (atomic_read(&flow->writers) == 0)	&&
 	    (atomic_read(&flow->readers) == 0)	&&
@@ -883,11 +930,24 @@ struct ipcp_flow *kfa_flow_find_by_pid(struct kfa *instance, port_id_t pid)
 EXPORT_SYMBOL(kfa_flow_find_by_pid);
 #endif
 
+static inline ipaddr_t get_ipv4_addr(char *ip_str)
+{
+	int a, b, c, d;
+	char arr[4];
+	sscanf(ip_str, "%d.%d.%d.%d", &a, &b, &c, &d);
+	arr[0] = a; arr[1] = b; arr[2] = c; arr[3] = d;
+	return *(ipaddr_t *)arr;
+}
+
 int kfa_flow_create(struct kfa           *instance,
 		    port_id_t		  pid,
-		    struct ipcp_instance *ipcp)
+		    struct ipcp_instance *ipcp,
+		    ipc_process_id_t	 ipc_id,
+		    struct name          *user_ipcp_name)
 {
 	struct ipcp_flow *flow;
+	bool ip_flow = false;
+	string_t name[64];
 
 	if (!instance) {
 		LOG_ERR("Bogus kfa instance passed, bailing out");
@@ -902,6 +962,9 @@ int kfa_flow_create(struct kfa           *instance,
 		return -1;
 	}
 
+	ip_flow = (user_ipcp_name != NULL) &&
+		(!strcmp(user_ipcp_name->entity_name, RINA_IP_FLOW_ENT_NAME));
+
 	flow = rkzalloc(sizeof(*flow), GFP_KERNEL);
 	if (!flow) {
 		LOG_ERR("Failed to created flow, bailing out");
@@ -910,6 +973,19 @@ int kfa_flow_create(struct kfa           *instance,
 	atomic_set(&flow->readers, 0);
 	atomic_set(&flow->writers, 0);
 	atomic_set(&flow->posters, 0);
+
+	/* Determine if this is an IP tunnel */
+	if (ip_flow) {
+		sprintf(name, "rina.%u.%u", ipc_id, pid);
+		flow->ip_dev = rina_dev_create(name, instance->ipcp, pid);
+		if (!flow->ip_dev) {
+			LOG_ERR("Could not allocate memory for RINA IP virtual device");
+			rkfree(flow);
+			return -1;
+		}
+	} else {
+		flow->ip_dev = NULL;
+	}
 
 	init_waitqueue_head(&flow->read_wqueue);
 	init_waitqueue_head(&flow->write_wqueue);

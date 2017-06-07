@@ -1169,7 +1169,9 @@ static int udp_process_msg(struct ipcp_instance_data * data,
 
                 if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                         LOG_DBG("This flow goes for an app");
-                        if (kfa_flow_create(data->kfa, flow->port_id, ipcp)) {
+                        if (kfa_flow_create(data->kfa, flow->port_id, ipcp,
+								data->id,
+								NULL)) {
                                 LOG_ERR("Could not create flow in KFA");
                                 sdu_destroy(du);
                                 kfa_port_id_release(data->kfa, flow->port_id);
@@ -1619,7 +1621,9 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
 
                 if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                         LOG_DBG("This flow goes for an app");
-                        if (kfa_flow_create(data->kfa, flow->port_id, ipcp)) {
+                        if (kfa_flow_create(data->kfa, flow->port_id, ipcp,
+								data->id,
+								NULL)) {
                                 LOG_ERR("Could not create flow in KFA");
                                 kfa_port_id_release(data->kfa, flow->port_id);
                                 if (flow_destroy(data, flow))
@@ -1798,7 +1802,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
 
         app->port = exp_reg->port;
 
-        err = sock_create_kern(&init_net, data->host_name.family, SOCK_DGRAM, 
+        err = sock_create_kern(&init_net, data->host_name.family, SOCK_DGRAM,
 			       IPPROTO_UDP, &app->udpsock);
         if (err < 0) {
                 LOG_ERR("Could not create UDP socket for registration");
@@ -1824,7 +1828,7 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
 
         LOG_DBG("UDP socket ready");
 
-        err = sock_create_kern(&init_net, data->host_name.family, SOCK_STREAM, 
+        err = sock_create_kern(&init_net, data->host_name.family, SOCK_STREAM,
 			       IPPROTO_TCP, &app->tcpsock);
         if (err < 0) {
                 LOG_ERR("could not create TCP socket for registration");

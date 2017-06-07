@@ -194,7 +194,8 @@ static int notify_ipcp_allocate_flow_request(void *             data,
         } else {
                 user_ipcp = kfa_ipcp_instance(kipcm->kfa);
 		/* NOTE: original function called non-blocking I/O?? */
-                if (kfa_flow_create(kipcm->kfa, pid, ipc_process)) {
+                if (kfa_flow_create(kipcm->kfa, pid, ipc_process, ipc_id,
+									NULL)) {
                         LOG_ERR("Could not find the user ipcp of the flow...");
                         kfa_port_id_release(kipcm->kfa, pid);
                         goto fail;
@@ -2567,7 +2568,7 @@ int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
         return 0;
 }
 
-/* Only called by the allocate_port syscall used only by the normal IPCP */
+/* Only called by the allocate_port netlink message used only by the normal IPCP */
 port_id_t kipcm_flow_create(struct kipcm     *kipcm,
 			    ipc_process_id_t  ipc_id,
 			    struct name      *process_name)
@@ -2616,7 +2617,8 @@ port_id_t kipcm_flow_create(struct kipcm     *kipcm,
                 return pid;
         }
 	/* creates a flow, default flow_opts */
-        if (kfa_flow_create(kipcm->kfa, pid, ipc_process)) {
+        if (kfa_flow_create(kipcm->kfa, pid, ipc_process, ipc_id,
+								process_name)) {
                 KIPCM_UNLOCK(kipcm);
                 kfa_port_id_release(kipcm->kfa, pid);
                 return port_id_bad();
