@@ -678,7 +678,7 @@ void MobilityManager::execute_handover3(const rina::MediaReport& report)
 		hand_state.change_mob_dif = true;
 		mob_ipcp_enroll = mobi2_ipcp;
 		mob_ipcp_disc = mobi1_ipcp;
-		int_neighbor.processName = "core1.mobile";
+		int_neighbor.processName = "core1.internet";
 		int_neighbor.processInstance = "1";
 	} else if (hand_state.dif == "irina"){
 		next_dif = "rinaisense";
@@ -704,7 +704,7 @@ void MobilityManager::execute_handover3(const rina::MediaReport& report)
 		hand_state.change_mob_dif = true;
 		mob_ipcp_enroll = mobi1_ipcp;
 		mob_ipcp_disc = mobi2_ipcp;
-		int_neighbor.processName = "core2.mobile2";
+		int_neighbor.processName = "core2.internet";
 		int_neighbor.processInstance = "1";
 	}
 
