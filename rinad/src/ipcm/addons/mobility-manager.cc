@@ -620,8 +620,6 @@ void MobilityManager::execute_handover3(const rina::MediaReport& report)
 			return;
 		}
 
-		sleep.sleepForMili(1000);
-
 		//Enroll to the internet DIF
 		int_neigh_data.supportingDifName.processName = "mobile.DIF";
 		int_neigh_data.difName.processName = "internet.DIF";
@@ -743,7 +741,6 @@ void MobilityManager::execute_handover3(const rina::MediaReport& report)
 	}
 
 	if (hand_state.change_mob_dif) {
-		sleep.sleepForMili(1000);
 		int_neigh_data.supportingDifName.processName = next_mob_dif;
 		int_neigh_data.difName.processName = "internet.DIF";
 		if(IPCManager->enroll_to_dif(this, &promise, inet_ipcp->get_id(), int_neigh_data,
