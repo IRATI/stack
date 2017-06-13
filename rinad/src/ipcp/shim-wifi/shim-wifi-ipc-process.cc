@@ -1226,6 +1226,14 @@ void ShimWifiStaIPCProcessImpl::notify_scan_results()
 		while(getline(value_ss, value, '\t')){
 			v.push_back(value);
 		}
+		if (line.find("irati") == std::string::npos &&
+				line.find("pristine") == std::string::npos &&
+				line.find("arcfire") == std::string::npos &&
+				line.find("rinaisense") == std::string::npos &&
+				line.find("irina") == std::string::npos &&
+				line.find("ocarina") == std::string::npos) {
+			continue;
+		}
 		rina::BaseStationInfo bs_info;
 		bs_info.ipcp_address = v[0];
 		bs_info.signal_strength = atoi(v[2].c_str());
