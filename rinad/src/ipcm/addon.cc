@@ -174,7 +174,4 @@ void Addon::unsubscribe(Addon* addon){
 	}
 }
 
-
-
-
 } //namespace rinad

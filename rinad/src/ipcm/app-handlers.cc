@@ -33,6 +33,7 @@
 
 #include "rina-configuration.h"
 #include "app-handlers.h"
+#include "ip-vpn-manager.h"
 
 using namespace std;
 
@@ -240,8 +241,6 @@ void IPCManager_::app_reg_req_handler(
 	}
 }
 
-
-/************************* TO BE REMOVED ************************************/
 bool IPCManager_::ipcm_register_response_common(
         rina::IpcmRegisterApplicationResponseEvent *event,
         const rina::ApplicationProcessNamingInformation& app_name,
@@ -267,7 +266,6 @@ bool IPCManager_::ipcm_register_response_common(
         return success;
 }
 
-
 int IPCManager_::ipcm_register_response_app(
 		rina::IpcmRegisterApplicationResponseEvent *event,
 		IPCMIPCProcess * slave_ipcp,
@@ -283,12 +281,19 @@ int IPCManager_::ipcm_register_response_app(
 	success = ipcm_register_response_common(event, app_name, slave_ipcp,
 			slave_dif_name);
 
-	// Notify the application about the (un)successful registration.
-	notify_app_reg(req_event, app_name, slave_dif_name, success);
+	if  (app_name.entityName == RINA_IP_FLOW_ENT_NAME) {
+		ip_vpn_manager->add_registered_ip_prefix(app_name.processName);
+
+		LOG_INFO("IP prefix %s registered to DIF %s",
+			 app_name.processName.c_str(),
+			 slave_dif_name.processName.c_str());
+	} else {
+		// Notify the application about the (un)successful registration.
+		notify_app_reg(req_event, app_name, slave_dif_name, success);
+	}
 
 	return success;
 }
-/************************* TO BE REMOVED END ********************************/
 
 void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponseEvent* e)
 {
@@ -297,6 +302,7 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
 	APPregTransState* t1;
 	IPCPregTransState* t2;
 	ipcm_res_t ret = IPCM_FAILURE;
+
 	if (e->result == 0) {
 		ret = IPCM_SUCCESS;
 	}
@@ -329,7 +335,6 @@ void IPCManager_::app_reg_response_handler(rina::IpcmRegisterApplicationResponse
 		//there is a single event
 		t1 = get_transaction_state<APPregTransState>(trans->tid);
 		if(t1){
-			//Application registration
 			ipcm_register_response_app(e, ipcp, t1->req);
 		}else{
 			//IPCP registration
@@ -354,7 +359,7 @@ void IPCManager_::application_manager_app_unregistered(
 		return;
 	try {
 		rina::applicationManager->applicationUnregistered(event,
-								result);
+								  result);
 		ss << "Application " << event.applicationName.
 		toString() << " informed about its "
 		"unregistration [success = " << (!result) <<
@@ -404,7 +409,6 @@ void IPCManager_::application_unregistration_request_event_handler(
         }
 }
 
-/**************************** TO BE REMOVED ************************************/
 bool IPCManager_::ipcm_unregister_response_common(
                         rina::IpcmUnregisterApplicationResponseEvent *event,
                         IPCMIPCProcess *slave_ipcp,
@@ -442,13 +446,20 @@ int IPCManager_::ipcm_unregister_response_app(
         ipcm_unregister_response_common(event, ipcp,
                                         req.applicationName);
 
-        // Inform the application
-        application_manager_app_unregistered(req,
-                                             event->result);
+        if (req.applicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
+        	ip_vpn_manager->remove_registered_ip_prefix(req.applicationName.processName);
+
+        	LOG_INFO("IP prefix %s unregistered from DIF %s",
+        		 req.applicationName.processName.c_str(),
+        		 ipcp->dif_name_.processName.c_str());
+        } else {
+        	// Inform the application
+        	application_manager_app_unregistered(req,
+        			event->result);
+        }
 
         return 0;
 }
-/**************************** TO BE REMOVED END ********************************/
 
 void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResponseEvent *e)
 {

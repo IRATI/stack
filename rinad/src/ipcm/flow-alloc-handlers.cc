@@ -46,7 +46,7 @@ namespace rinad {
 
 ipcm_res_t
 IPCManager_::deallocate_flow(Promise * promise, const int ipcp_id,
-			    const rina::FlowDeallocateRequestEvent& event)
+			     const rina::FlowDeallocateRequestEvent& event)
 {
 	ostringstream ss;
 	IPCMIPCProcess* ipcp;
@@ -135,7 +135,8 @@ void IPCManager_::application_flow_allocation_failed_notify(rina::FlowRequestEve
 	}
 }
 
-void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
+ipcm_res_t IPCManager_::flow_allocation_requested_local(Promise * promise,
+						        rina::FlowRequestEvent *event)
 {
 	rina::ApplicationProcessNamingInformation dif_name;
 	IPCMIPCProcess *ipcp;
@@ -150,9 +151,8 @@ void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
 		dif_specified = true;
 	} else {
 		// Ask the DIF allocator
-		dif_specified = lookup_dif_by_application(
-					event->remoteApplicationName,
-					dif_name);
+		dif_specified = lookup_dif_by_application(event->remoteApplicationName,
+							  dif_name);
 	}
 
 	// Select an IPC process to serve the flow request
@@ -160,7 +160,6 @@ void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
 		ipcp = select_ipcp();
 	else
 		ipcp = select_ipcp_by_dif(dif_name);
-
 	if (!ipcp) {
 		ss  << " Error: Cannot find an IPC process to "
 			"serve flow allocation request (local-app = " <<
@@ -169,9 +168,10 @@ void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
 			toString() << endl;
 		FLUSH_LOG(ERR, ss);
 
-		application_flow_allocation_failed_notify(event);
+		if (!promise)
+			application_flow_allocation_failed_notify(event);
 
-		return;
+		return IPCM_FAILURE;
 	}
 
 	//Auto release the read lock
@@ -179,18 +179,23 @@ void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
 
 	try {
 		// Ask the IPC process to allocate a flow
-		trans = new FlowAllocTransState(NULL, NULL, ipcp->get_id(),
-								*event,
-								dif_specified);
+		trans = new FlowAllocTransState(NULL, promise, ipcp->get_id(),
+						*event, dif_specified);
 		if(!trans){
 			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
-			throw rina::AllocateFlowException();
+			if (!promise)
+				throw rina::AllocateFlowException();
+
+			return IPCM_FAILURE;
 		}
 
 		//Store transaction
 		if(add_transaction_state(trans) < 0){
 			ss << "Unable to add transaction; out of memory? ";
-			throw rina::AllocateFlowException();
+			if (!promise)
+				throw rina::AllocateFlowException();
+
+			return IPCM_FAILURE;
 		}
 
 		ipcp->allocateFlow(*event, trans->tid);
@@ -209,11 +214,16 @@ void IPCManager_::flow_allocation_requested_local(rina::FlowRequestEvent *event)
 			<< endl;
 		FLUSH_LOG(ERR, ss);
 
-		application_flow_allocation_failed_notify(event);
+		if (!promise)
+			application_flow_allocation_failed_notify(event);
+
+		return IPCM_FAILURE;
 	}
+
+	return IPCM_PENDING;
 }
 
-void
+ipcm_res_t
 IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 {
 	IPCMIPCProcess *ipcp;
@@ -228,7 +238,13 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 			"with id " << event->ipcProcessId << ", to serve "
 			"remote flow allocation request" << endl;
 		FLUSH_LOG(ERR, ss);
-		return;
+		return IPCM_FAILURE;
+	}
+
+	if (event->localApplicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
+		ipcp->rwlock.unlock();
+		ip_vpn_manager->iporina_flow_allocation_requested(*event);
+		return IPCM_PENDING;
 	}
 
 	//Auto release the read lock
@@ -294,18 +310,23 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 				" about failed flow allocation" << endl;
 			FLUSH_LOG(ERR, ss);
 		}
+
+		return IPCM_FAILURE;
 	}
+
+	return IPCM_SUCCESS;
 }
 
-void IPCManager_::flow_allocation_requested_event_handler(rina::FlowRequestEvent* event)
+ipcm_res_t IPCManager_::flow_allocation_requested_event_handler(Promise * promise,
+							  	rina::FlowRequestEvent* event)
 {
 	if (event->localRequest)
-		flow_allocation_requested_local(event);
+		return flow_allocation_requested_local(promise, event);
 	else
-		flow_allocation_requested_remote(event);
+		return flow_allocation_requested_remote(event);
 }
 
-void IPCManager_::ipcm_allocate_flow_request_result_handler( rina::IpcmAllocateFlowRequestResultEvent *event)
+void IPCManager_::ipcm_allocate_flow_request_result_handler(rina::IpcmAllocateFlowRequestResultEvent *event)
 {
 	bool success = (event->result == 0);
 	ostringstream ss;
@@ -366,21 +387,28 @@ void IPCManager_::ipcm_allocate_flow_request_result_handler( rina::IpcmAllocateF
 		ret = IPCM_FAILURE;
 	}
 
-	// Inform the Application Manager about the flow allocation
-	// result
-	try {
-		rina::applicationManager->flowAllocated(req_event);
-		ss << "Applications " <<
-			req_event.localApplicationName.toString() << " and "
-			<< req_event.remoteApplicationName.toString()
-			<< " informed about flow allocation result" << endl;
-		FLUSH_LOG(INFO, ss);
-	} catch (rina::NotifyFlowAllocatedException& e) {
-		ss  << ": Error while notifying the "
-			"Application Manager about flow allocation result"
-			<< endl;
-		FLUSH_LOG(ERR, ss);
-		//ret = IPCM_FAILURE; <= should this be marked as error?
+	if (req_event.localApplicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
+		if (success) {
+			req_event.ipcProcessId = slave_ipcp->get_id();
+			ip_vpn_manager->iporina_flow_allocated(req_event);
+		}
+	} else {
+		// Inform the Application Manager about the flow allocation
+		// result
+		try {
+			rina::applicationManager->flowAllocated(req_event);
+			ss << "Applications " <<
+					req_event.localApplicationName.toString() << " and "
+					<< req_event.remoteApplicationName.toString()
+					<< " informed about flow allocation result" << endl;
+			FLUSH_LOG(INFO, ss);
+		} catch (rina::NotifyFlowAllocatedException& e) {
+			ss  << ": Error while notifying the "
+					"Application Manager about flow allocation result"
+					<< endl;
+			FLUSH_LOG(ERR, ss);
+			//ret = IPCM_FAILURE; <= should this be marked as error?
+		}
 	}
 
 	trans->completed(ret);
@@ -450,7 +478,8 @@ void IPCManager_::allocate_flow_response_event_handler(rina::AllocateFlowRespons
 	remove_transaction_state(trans->tid);
 }
 
-void IPCManager_::flow_deallocation_requested_event_handler(rina::FlowDeallocateRequestEvent* event)
+ipcm_res_t IPCManager_::flow_deallocation_requested_event_handler(Promise * promise,
+							          rina::FlowDeallocateRequestEvent* event)
 {
 	IPCMIPCProcess *ipcp = lookup_ipcp_by_port(event->portId);
 	unsigned short ipcp_id = 0;
@@ -461,7 +490,7 @@ void IPCManager_::flow_deallocation_requested_event_handler(rina::FlowDeallocate
 			"provides the flow with port-id " << event->portId
 			<< endl;
 		FLUSH_LOG(ERR, ss);
-		return;
+		return IPCM_FAILURE;
 	}
 
 	{
@@ -470,7 +499,7 @@ void IPCManager_::flow_deallocation_requested_event_handler(rina::FlowDeallocate
 		ipcp_id = ipcp->get_id();
 	}
 
-	deallocate_flow(NULL, ipcp_id, *event);
+	return deallocate_flow(promise, ipcp_id, *event);
 }
 
 void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IpcmDeallocateFlowResponseEvent* event)
@@ -547,6 +576,13 @@ void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IpcmDealloca
 		}
 	}
 
+	if (req_event.applicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
+		if (success) {
+			ip_vpn_manager->iporina_flow_deallocated(req_event.portId,
+								 ipcp->get_id());
+		}
+	}
+
 	trans->completed(ret);
 	remove_transaction_state(trans->tid);
 }
@@ -572,9 +608,13 @@ void IPCManager_::flow_deallocated_event_handler(rina::FlowDeallocatedEvent* eve
 		// Inform the IPC process that the flow corresponding to
 		// the specified port-id has been deallocated
 		info = ipcp->flowDeallocated(event->portId);
-		rina::applicationManager->
-			flowDeallocatedRemotely(event->portId, event->code,
-						info.localAppName);
+
+		if (ip_vpn_manager->iporina_flow_deallocated(event->portId,
+							     ipcp->get_id())) {
+			rina::applicationManager->flowDeallocatedRemotely(event->portId,
+									  event->code,
+									  info.localAppName);
+		}
 
 		ss << "IPC process " << ipcp->get_name().toString() <<
 			" and local application " << info.localAppName.

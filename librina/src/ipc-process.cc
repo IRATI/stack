@@ -1221,7 +1221,7 @@ unsigned int KernelIPCProcess::createConnection(const Connection& connection) {
         // Do nothing
 #else
         IpcpConnectionCreateRequestMessage message;
-        message.setConnection(connection);
+        message.connection = connection;
         message.setSourceIpcProcessId(ipcProcessId);
         message.setDestIpcProcessId(ipcProcessId);
         message.setDestPortId(0);
@@ -1246,10 +1246,9 @@ unsigned int KernelIPCProcess::updateConnection(const Connection& connection) {
         // Do nothing
 #else
         IpcpConnectionUpdateRequestMessage message;
-        message.setPortId(connection.getPortId());
-        message.setSourceCepId(connection.getSourceCepId());
-        message.setDestinationCepId(connection.getDestCepId());
-        message.setFlowUserIpcProcessId(connection.getFlowUserIpcProcessId());
+        message.portId = connection.portId;
+        message.sourceCepId = connection.sourceCepId;
+        message.destinationCepId = connection.destCepId;
         message.setSourceIpcProcessId(ipcProcessId);
         message.setDestIpcProcessId(ipcProcessId);
         message.setDestPortId(0);
@@ -1275,7 +1274,7 @@ createConnectionArrived(const Connection& connection) {
         // Do nothing
 #else
         IpcpConnectionCreateArrivedMessage message;
-        message.setConnection(connection);
+        message.connection = connection;
         message.setSourceIpcProcessId(ipcProcessId);
         message.setDestIpcProcessId(ipcProcessId);
         message.setDestPortId(0);

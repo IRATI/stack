@@ -347,6 +347,7 @@ void FlowAllocator::__createFlowRequestMessageReceived(configs::Flow * flow,
 	fai = new FlowAllocatorInstance(ipcp,
 					this,
 					port_id,
+					false,
 					ss.str());
 	add_instance(fai);
 
@@ -451,6 +452,7 @@ void FlowAllocator::__submitAllocateRequest(const rina::FlowRequestEvent& event,
 	fai = new FlowAllocatorInstance(ipcp,
 					this,
 					port_id,
+					true,
 					ss.str());
 	add_instance(fai);
 
@@ -637,10 +639,11 @@ void FlowAllocator::sync_with_kernel()
 FlowAllocatorInstance::FlowAllocatorInstance(IPCProcess * ipc_process,
 					     IFlowAllocator * flow_allocator,
 					     int port_id,
+					     bool loc,
 					     const std::string& instance_id)
 	: IFlowAllocatorInstance(instance_id)
 {
-	initialize(ipc_process, flow_allocator, port_id);
+	initialize(ipc_process, flow_allocator, port_id, loc);
 	LOG_IPCP_DBG("Created flow allocator instance to manage the flow identified by portId %d ",
 		     port_id);
 }
@@ -652,9 +655,9 @@ FlowAllocatorInstance::~FlowAllocatorInstance()
 	}
 }
 
-void FlowAllocatorInstance::initialize(
-		IPCProcess * ipc_process, IFlowAllocator * flow_allocator,
-		int port_id)
+void FlowAllocatorInstance::initialize(IPCProcess * ipc_process,
+				       IFlowAllocator * flow_allocator,
+				       int port_id, bool loc)
 {
 	flow_allocator_ = flow_allocator;
 	ipc_process_ = ipc_process;
@@ -665,6 +668,7 @@ void FlowAllocatorInstance::initialize(
 	state = NO_STATE;
 	allocate_response_message_handle_ = 0;
 	flow_ = 0;
+	local = loc;
 }
 
 void FlowAllocatorInstance::set_application_entity(rina::ApplicationEntity * app_entity)
@@ -895,6 +899,7 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(configs::Flow * flo
 	rina::cdap_rib::con_handle_t con_handle;
 	IPCPSecurityManagerPs *smps = 0;
 	int rv;
+	unsigned int aux;
 
 	smps = dynamic_cast<IPCPSecurityManagerPs *>(security_manager_->ps);
 	assert(smps);
@@ -914,7 +919,7 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(configs::Flow * flo
 	//1 Reverse connection source/dest addresses and CEP-ids
 	rina::Connection * connection = flow_->getActiveConnection();
 	connection->setPortId(port_id_);
-	unsigned int aux = connection->getSourceAddress();
+	aux = connection->getSourceAddress();
 	connection->setSourceAddress(connection->getDestAddress());
 	connection->setDestAddress(aux);
 	connection->setDestCepId(connection->getSourceCepId());
@@ -1324,7 +1329,10 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 	if (flow_->source_address != flow_->destination_address) {
 		try {
 			//Get destination address again in case it has changed
-			dest_address = namespace_manager_->getDFTNextHop(flow_->destination_naming_info);
+			if (local)
+				dest_address = namespace_manager_->getDFTNextHop(flow_->destination_naming_info);
+			else
+				dest_address = namespace_manager_->getDFTNextHop(flow_->source_naming_info);
 			rv = ipc_process_->enrollment_task_->get_con_handle_to_address(dest_address,
 					con_handle);
 

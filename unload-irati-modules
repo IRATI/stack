@@ -1,0 +1,14 @@
+#!/bin/sh
+# -*- sh -*-
+
+#
+# Written by: Eduard Grasa <eduard DOT grasa AT i2CAT DOT net>
+#
+
+rmmod shim-tcp-udp
+rmmod shim-eth-vlan
+rmmod rinarp
+rmmod arp826
+rmmod normal-ipcp
+rmmod rina-default-plugin
+rmmod rina-irati-core

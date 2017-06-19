@@ -57,6 +57,7 @@ int wrapped_main(int argc, char** argv)
         int rate;
         int delay;
         unsigned int lost_wait;
+        unsigned int partial_read;
         string test_type;
         string server_apn;
         string server_api;
@@ -168,6 +169,12 @@ int wrapped_main(int argc, char** argv)
                                              false,
                                              1,
                                              "integer");
+                TCLAP::ValueArg<unsigned int> partial_read_arg("",
+                                            	  	       "partial-read",
+							       "Server reads SDUs byte per byte (only in ping tests)",
+							       false,
+							       0,
+							       "unsigned integer");
 
                 cmd.add(listen_arg);
                 cmd.add(count_arg);
@@ -187,6 +194,7 @@ int wrapped_main(int argc, char** argv)
                 cmd.add(lost_wait_arg);
                 cmd.add(rate_arg);
                 cmd.add(delay_arg);
+                cmd.add(partial_read_arg);
 
                 cmd.parse(argc, argv);
 
@@ -208,6 +216,7 @@ int wrapped_main(int argc, char** argv)
                 lost_wait = lost_wait_arg.getValue();
                 rate = rate_arg.getValue();
                 delay = delay_arg.getValue();
+                partial_read = partial_read_arg.getValue();
 
                 if (size > Application::max_buffer_size) {
                         size = Application::max_buffer_size;
@@ -226,7 +235,7 @@ int wrapped_main(int argc, char** argv)
         if (listen) {
                 // Server mode
                 EchoTimeServer s(test_type, dif_names, server_apn, server_api,
-                                 perf_interval, dw);
+                                 perf_interval, dw, partial_read);
 
                 s.run(true);
         } else {

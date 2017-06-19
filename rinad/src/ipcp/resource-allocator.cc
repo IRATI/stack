@@ -740,7 +740,8 @@ void ResourceAllocator::set_rt_entries(const std::list<rina::RoutingTableEntry*>
 	}
 }
 
-unsigned int ResourceAllocator::get_next_hop_address(unsigned int dest_address)
+void ResourceAllocator::get_next_hop_address(unsigned int dest_address,
+					     std::list<unsigned int>& addresses)
 {
 	std::map<std::string, rina::RoutingTableEntry *>::iterator it;
 	std::list<unsigned int>::iterator it2;
@@ -751,12 +752,10 @@ unsigned int ResourceAllocator::get_next_hop_address(unsigned int dest_address)
 		for (it2 = it->second->destination.addresses.begin();
 				it2 != it->second->destination.addresses.end(); ++it2) {
 			if (dest_address == *it2) {
-				return it->second->nextHopNames.front().alts.front().addresses.front();
+				addresses = it->second->nextHopNames.front().alts.front().addresses;
 			}
 		}
 	}
-
-	return 0;
 }
 
 unsigned int ResourceAllocator::get_n1_port_to_address(unsigned int dest_address)
