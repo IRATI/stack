@@ -168,6 +168,9 @@ unsigned char *sdu_buffer(const struct sdu *sdu)
 
 	ASSERT(is_sdu_ok(sdu));
 	du = to_du(sdu);
+	if (skb_is_nonlinear(du->skb)) {
+		LOG_WARN("sk_buff contains fragments");
+	}
 	return du->skb->data;
 }
 EXPORT_SYMBOL(sdu_buffer);
