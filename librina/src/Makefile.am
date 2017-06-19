@@ -65,6 +65,7 @@ allsources =							\
         exceptions.cc						\
         librina.cc						\
         common.cc						\
+        console.cc						\
         ipc-api.cc                                              \
         application.cc						\
         internal-events.cc					\

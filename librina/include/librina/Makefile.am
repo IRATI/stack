@@ -30,4 +30,5 @@ nobase_pkginclude_HEADERS = \
 	concurrency.h				\
 	time.h					\
 	timer.h					\
-	plugin-info.h
+	plugin-info.h		    \
+	console.h

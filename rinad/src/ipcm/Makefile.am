@@ -48,6 +48,7 @@ ipcm_SOURCES  =								\
 	policies-handlers.cc						\
 	dif-allocator.cc		dif-allocator.h			\
 	dif-template-manager.cc		dif-template-manager.h		\
+	ip-vpn-manager.cc		ip-vpn-manager.h		\
 	catalog.cc			catalog.h
 
 test_empty_SOURCES  =				\

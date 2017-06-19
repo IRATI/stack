@@ -1108,6 +1108,7 @@ enum IpcpConnectionCreateRequestMessageAttributes {
         ICCRM_ATTR_QOS_ID,
         ICCRM_ATTR_DTP_CONFIG,
         ICCRM_ATTR_DTCP_CONFIG,
+	ICCRM_ATTR_FLOW_USER_IPCP_ID,
         __ICCRM_ATTR_MAX,
 };
 
@@ -1124,7 +1125,6 @@ enum IpcpConnectionUpdateRequestMessageAttributes {
         ICURM_ATTR_PORT_ID = 1,
         ICURM_ATTR_SRC_CEP_ID,
         ICURM_ATTR_DEST_CEP_ID,
-        ICURM_ATTR_FLOW_USER_IPC_PROCESS_ID,
         __ICURM_ATTR_MAX,
 };
 

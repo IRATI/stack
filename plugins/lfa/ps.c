@@ -259,6 +259,8 @@ static int __pff_add(struct pff_ps *ps,
 			return -1;
 		}
 	}
+
+	return 0;
 }
 
 static int lfa_add(struct pff_ps *ps,

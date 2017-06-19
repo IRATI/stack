@@ -38,6 +38,7 @@ public:
 			     int deallocate_wait,
 			     int inter,
 			     unsigned int max_buffer_size,
+			     unsigned int pr,
 			     Server * serv);
 	~EchoTimeServerWorker() throw() { };
 	int internal_run();
@@ -49,6 +50,9 @@ private:
         void printPerfStats(unsigned long pkt,
         		    unsigned long bytes,
         		    unsigned long us);
+        int partial_read_bytes(int fd,
+        		       char * buffer,
+			       int bytes_to_read);
 
         std::string test_type;
         int port_id;
@@ -56,6 +60,7 @@ private:
         int dw;
         int interval;
         unsigned int max_buffer_size;
+        unsigned int partial_read;
         rina::Timer timer;
         CancelFlowTimerTask * last_task;
 };
@@ -68,7 +73,8 @@ public:
 		       const std::string& app_name,
 		       const std::string& app_instance,
 		       const int perf_interval,
-		       const int dealloc_wait);
+		       const int dealloc_wait,
+		       unsigned int partial_read);
         ~EchoTimeServer() { };
 
 protected:
@@ -78,6 +84,7 @@ private:
         std::string test_type;
         int interval;
         int dw;
+        unsigned int partial_read;
 };
 
 #endif

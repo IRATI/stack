@@ -1,0 +1,59 @@
+#
+# Makefile for RINA
+#
+# Written by Francesco Salvestrini <f.salvestrini@nextworks.it>
+#
+
+KER=`uname -r`
+KERNMODDIR=@ROOTDIR@
+KERNBUILDDIR=@LIBMODPREFIX@/lib/modules/$(KER)/build
+
+all: 
+	$(MAKE) -C $(KERNBUILDDIR) REGRESSION_TESTS=@REGRESSION_TESTS@ HAVE_VMPI=@HAVE_VMPI@ TCP_UDP_BUFFER_SIZE=@TCP_UDP_BUFFER_SIZE@ M=$(KERNMODDIR) modules
+
+clean: 
+	$(MAKE) -C $(KERNBUILDDIR) M=$(KERNMODDIR) clean
+
+install: 
+	$(MAKE) -C $(KERNBUILDDIR) INSTALL_MOD_PATH=@INSTALL_MOD_PATH@ M=$(KERNMODDIR) modules_install
+
+depmod:
+	depmod -b @INSTALL_MOD_PATH@ -a
+
+ccflags-y += -Wtype-limits
+ccflags-y += -I$(src)
+
+obj-m += rina-irati-core.o
+rina-irati-core-y:=						\
+	core.o utils.o						\
+	rds/rstr.o rds/rmem.o rds/rmap.o rds/rwq.o rds/rbmp.o   \
+        rds/rqueue.o rds/rfifo.o rds/ringq.o rds/rref.o         \
+        rds/rtimer.o rds/robjects.o rds/rds.o                   \
+	iodev.o							\
+	rnl-utils.o rnl.o					\
+	buffer.o pci.o pdu.o sdu.o	        		\
+	ipcp-utils.o						\
+	connection.o common.o policies.o			\
+	dtp-conf-utils.o dtcp-conf-utils.o      		\
+	ipcp-factories.o ipcp-instances.o			\
+	cidm.o dt.o dt-utils.o dtcp.o dtp.o efcp-utils.o efcp.o	\
+	pff.o rmt.o						\
+	pim.o pidm.o kfa-utils.o kfa.o rina-device.o		\
+	kipcm-utils.o kipcm.o					\
+	sdup.o							\
+	ps-factory.o						\
+        rmt-ps-default.o                                        \
+        dtp-ps-default.o                                        \
+        dtcp-ps-default.o                                       \
+        pff-ps-default.o                                        \
+        sdup-crypto-ps-default.o                                \
+        sdup-errc-ps-default.o                                  \
+        sdup-ttl-ps-default.o
+
+obj-m += rina-default-plugin.o
+rina-default-plugin-y :=					\
+	default-plugin.o
+
+obj-$(HAVE_VMPI) += vmpi/
+obj-y += ipcps/
+obj-y += rinarp/

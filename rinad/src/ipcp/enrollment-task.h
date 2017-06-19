@@ -392,11 +392,10 @@ private:
 	/// @param resultReason
 	void nMinusOneFlowAllocationFailed(rina::NMinusOneFlowAllocationFailedEvent * event);
 
-	void addressChange(rina::AddressChangeEvent * event);
-
 	void internal_flow_allocated(rina::IPCPInternalFlowAllocatedEvent * event);
 	void internal_flow_deallocated(rina::IPCPInternalFlowDeallocatedEvent * event);
 	void internal_flow_allocation_failed(rina::IPCPInternalFlowAllocationFailedEvent * event);
+	void addressChange(rina::AddressChangeEvent * event);
 
 	void deallocate_flows_and_destroy_esm(IEnrollmentStateMachine * esm,
 					      unsigned int port_id,
