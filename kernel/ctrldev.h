@@ -1,7 +1,8 @@
 /*
- * RINA Strings
+ * IRATI Control device
  *
- *    Francesco Salvestrini <f.salvestrini@nextworks.it>
+ *    Eduard Grasa <eduard.grasa@i2cat.net>
+ *    Vincenzo Maffione <v.maffione@nextworks.it>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,23 +19,24 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef RINA_RSTR_H
-#define RINA_RSTR_H
+#ifndef IRATI_CTRLDEV_H
+#define IRATI_CTRLDEV_H
 
-#include <linux/uaccess.h>
+#include "common.h"
 
-#include <irati/kucommon.h>
+int ctrldev_init(void);
+void ctrldev_fini(void);
 
-/* FIXME: This file and all associated definitions must disappear */
+struct ctrldev_priv;
 
-string_t * string_from_user(const char __user * src);
-int        string_dup(const string_t * src, string_t ** dst);
-int        string_cmp(const string_t * a, const string_t * b);
-int        string_len(const string_t * s);
+/* The signature of a message handler. */
+typedef int (* irati_msg_handler_t)(struct ctrldev_priv *ctrl_dev,
+                                    struct irati_msg_base *bmsg,
+				    void * data);
 
-char *     rkstrdup_gfp(const char * s, gfp_t flags);
-char *     rkstrdup(const char * s);
-char *     rkstrdup_ni(const char * s);
-char *     get_zero_length_string(void);
+int irati_handler_register(irati_msg_t msg_type,
+		           irati_msg_handler_t handler,
+			   void * data);
+int irati_handler_unregister(irati_msg_t msg_type);
 
 #endif

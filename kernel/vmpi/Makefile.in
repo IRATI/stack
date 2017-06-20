@@ -9,6 +9,8 @@ ccflags-y += -I${src}/..
 ccflags-y += -I${src}/../ipcps
 ccflags-y += -Wtype-limits
 
+EXTRA_CFLAGS := -I$(PWD)/../../include
+
 obj-m += vmpi-provider.o
 
 obj-$(CONFIG_VMPI_KVM_GUEST) += vmpi-kvm-guest.o
