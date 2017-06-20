@@ -30,6 +30,7 @@
 #include "utils.h"
 #include "rds/robjects.h"
 #include "iodev.h"
+#include "ctrldev.h"
 
 #define MK_RINA_VERSION(MAJOR, MINOR, MICRO)                            \
         (((MAJOR & 0xFF) << 24) | ((MINOR & 0xFF) << 16) | (MICRO & 0xFFFF))
@@ -83,8 +84,17 @@ static int __init mod_init(void)
                 return -1;
         }
 
+        LOG_DBG("Initializing CTRLDEV");
+        if (ctrldev_init()) {
+                iodev_fini();
+                rnl_exit();
+                robject_del(&core_object);
+                return -1;
+        }
+
         LOG_DBG("Initializing KIPCM");
         if (kipcm_init(&core_object)) {
+        	ctrldev_fini();
                 iodev_fini();
                 rnl_exit();
                 robject_del(&core_object);
@@ -106,6 +116,9 @@ static void __exit mod_exit(void)
 	if (kipcm_fini(default_kipcm)) {
 		LOG_ERR("Problems finalizing KIPCM");
 	}
+
+	ctrldev_fini();
+	LOG_INFO("CTRLDEV finalized successfully");
 
 	iodev_fini();
 	LOG_INFO("IODEV finalized successfully");

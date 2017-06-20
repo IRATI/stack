@@ -28,10 +28,7 @@
 #include <linux/types.h>
 #include <linux/poll.h>
 
-#include "rds/rstr.h"
-
-/* FIXME: Shouldn't we keep contrained to int32 ids ? */
-typedef int           port_id_t;
+#include "irati/kucommon.h"
 
 /* ALWAYS use this function to check if the id looks good */
 bool      is_port_id_ok(port_id_t id);
@@ -39,114 +36,20 @@ bool      is_port_id_ok(port_id_t id);
 /* ALWAYS use this function to get a bad id */
 port_id_t port_id_bad(void);
 
-typedef int           cep_id_t;
-
 /* ALWAYS use this function to check if the id looks good */
 bool     is_cep_id_ok(cep_id_t id);
 
 /* ALWAYS use this function to get a bad id */
 cep_id_t cep_id_bad(void);
 
-typedef uint16_t      ipc_process_id_t;
-typedef unsigned int  ipc_process_address_t;
-
-/* We should get rid of the following definitions */
-typedef uint          uint_t;
-
-/* FIXME: Is this address_t definition correct ??? */
-typedef uint32_t      address_t;
-
 bool      is_address_ok(address_t address);
 address_t address_bad(void);
-
-typedef uint          timeout_t;
-typedef uint          seq_num_t;
-
-typedef int qos_id_t;
 
 /* ALWAYS use this function to check if the id looks good */
 bool is_qos_id_ok(qos_id_t id);
 
 /* ALWAYS use this function to get a bad id */
 qos_id_t qos_id_bad(void);
-
-struct uint_range {
-        uint_t min;
-        uint_t max;
-};
-
-struct name {
-        /*
-         * The process_name identifies an application process within the
-         * application process namespace. This value is required, it
-         * cannot be NULL. This name has global scope (it is defined by
-         * the chain of IDD databases that are linked together), and is
-         * assigned by an authority that manages the namespace that
-         * particular application name belongs to.
-         */
-        string_t * process_name;
-
-        /*
-         * The process_instance identifies a particular instance of the
-         * process. This value is optional, it may be NULL.
-         *
-         */
-        string_t * process_instance;
-
-        /*
-         * The entity_name identifies an application entity within the
-         * application process. This value is optional, it may be NULL.
-         */
-        string_t * entity_name;
-
-        /*
-         * The entity_name identifies a particular instance of an entity within
-         * the application process. This value is optional, it may be NULL.
-         */
-        string_t * entity_instance;
-};
-
-struct flow_spec {
-        /* This structure defines the characteristics of a flow */
-
-        /* Average bandwidth in bytes/s */
-        uint_t average_bandwidth;
-        /* Average bandwidth in SDUs/s */
-        uint_t average_sdu_bandwidth;
-        /* In milliseconds */
-        uint_t peak_bandwidth_duration;
-        /* In milliseconds */
-        uint_t peak_sdu_bandwidth_duration;
-
-        /* A value of 0 indicates 'do not care' */
-        /* FIXME: This uint_t has to be transformed back to double */
-        uint_t undetected_bit_error_rate;
-        /* Indicates if partial delivery of SDUs is allowed or not */
-        bool   partial_delivery;
-        /* Indicates if SDUs have to be delivered in order */
-        bool   ordered_delivery;
-        /*
-         * Indicates the maximum gap allowed among SDUs, a gap of N
-         * SDUs is considered the same as all SDUs delivered.
-         * A value of -1 indicates 'Any'
-         */
-        int    max_allowable_gap;
-        /*
-         * In milliseconds, indicates the maximum delay allowed in this
-         * flow. A value of 0 indicates 'do not care'
-         */
-        uint_t delay;
-        /*
-         * In milliseconds, indicates the maximum jitter allowed
-         * in this flow. A value of 0 indicates 'do not care'
-         */
-        uint_t jitter;
-        /*
-         * The maximum SDU size for the flow. May influence the choice
-         * of the DIF where the flow will be created.
-         */
-        uint_t max_sdu_size;
-};
 
 /* FIXME: Move RNL related types to RNL header(s) */
 

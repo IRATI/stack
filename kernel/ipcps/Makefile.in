@@ -12,6 +12,8 @@ ifeq ($(REGRESSION_TESTS),y)
 ccflags-y += -DCONFIG_RINA_SHIM_ETH_VLAN_REGRESSION_TESTS
 endif
 
+EXTRA_CFLAGS := -I$(PWD)/../include
+
 obj-m  += normal-ipcp.o
 obj-m  += shim-eth-vlan.o
 shim-eth-vlan-y :=				\
