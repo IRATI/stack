@@ -41,6 +41,7 @@
 #include "kipcm.h"
 #include "rds/rfifo.h"
 #include "irati/kernel-msg.h"
+#include "irati/serdes-utils.h"
 
 extern struct kipcm *default_kipcm;
 
@@ -221,8 +222,8 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
         }
 
         /* TODO: deserialize message */
-        /* ret = deserialize_irati_msg(); */
-        ret = 0;
+        ret = deserialize_irati_msg(irati_ker_numtables, IRATI_RINA_C_MAX,
+                        kbuf, len, priv->msgbuf, sizeof(priv->msgbuf));
         if (ret) {
         	rkfree(kbuf);
         	return -EINVAL;
@@ -249,6 +250,12 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
 			return -EFAULT;
         	}
         } else {
+        	if (bmsg->msg_type >= IRATI_RINA_C_MAX ||
+        			!irati_ctrl_dm.handlers[bmsg->msg_type].cb) {
+        		/* TODO free parsed message */
+        		rkfree(kbuf);
+        		return -EINVAL;
+        	}
         	/* TODO check permissions */
 
         	/* Invoke the message handler */
