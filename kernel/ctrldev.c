@@ -235,7 +235,8 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
         if (bmsg->dest_port != 0) {
         	entry = rkzalloc(sizeof(*entry), GFP_KERNEL);
         	if (!entry) {
-        		/* TODO free parsed message */
+        		rl_msg_free(irati_ker_numtables, IRATI_RINA_C_MAX,
+        			    bmsg);
         		rkfree(kbuf);
         		return -ENOMEM;
         	}
@@ -244,7 +245,8 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
         	entry->serlen = len;
 
         	if (ctrl_dev_data_post(entry, bmsg->dest_port)) {
-        		/* TODO free parsed message */
+        		rl_msg_free(irati_ker_numtables, IRATI_RINA_C_MAX,
+        			    bmsg);
         		rkfree(kbuf);
         		rkfree(entry);
 			return -EFAULT;
@@ -252,7 +254,8 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
         } else {
         	if (bmsg->msg_type >= IRATI_RINA_C_MAX ||
         			!irati_ctrl_dm.handlers[bmsg->msg_type].cb) {
-        		/* TODO free parsed message */
+        		rl_msg_free(irati_ker_numtables, IRATI_RINA_C_MAX,
+        			    bmsg);
         		rkfree(kbuf);
         		return -EINVAL;
         	}
@@ -263,7 +266,8 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
         			 irati_ctrl_dm.handlers[bmsg->msg_type].data);
         }
 
-	/* TODO free parsed message */
+	rl_msg_free(irati_ker_numtables, IRATI_RINA_C_MAX,
+		    bmsg);
 	rkfree(kbuf);
 
 	if (ret) {

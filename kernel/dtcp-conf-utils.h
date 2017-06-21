@@ -24,13 +24,6 @@
 
 #include "common.h"
 
-struct dtcp_config;
-struct dtcp_fctrl_config;
-struct dtcp_rxctrl_config;
-struct window_fctrl_config;
-struct rate_fctrl_config;
-struct policy;
-
 /* Constructors */
 struct dtcp_config *         dtcp_config_create(void);
 struct dtcp_config *         dtcp_config_create_ni(void);

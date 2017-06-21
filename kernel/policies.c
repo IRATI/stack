@@ -28,18 +28,6 @@
 #include "logs.h"
 #include "policies.h"
 
-struct policy_parm {
-        string_t *       name;
-        string_t *       value;
-        struct list_head next;
-};
-
-struct policy {
-        string_t *       name;
-        string_t *       version;
-        struct list_head params;
-};
-
 struct policy * policy_create_gfp(gfp_t flags)
 {
         struct policy * tmp;

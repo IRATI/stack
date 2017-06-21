@@ -32,63 +32,6 @@
 /* FIXME: These externs have to disappear from here */
 extern struct policy *    policy_create_gfp(gfp_t flags);
 
-struct window_fctrl_config {
-        uint_t          max_closed_winq_length; /* in cwq */
-        uint_t          initial_credit; /* to initialize sv */
-        struct policy * rcvr_flow_control;
-        struct policy * tx_control;
-};
-
-struct rate_fctrl_config {
-        /* FIXME: to initialize sv? does not seem so*/
-        uint_t          sending_rate;
-
-        uint_t          time_period;
-        struct policy * no_rate_slow_down;
-        struct policy * no_override_default_peak;
-        struct policy * rate_reduction;
-};
-
-struct dtcp_fctrl_config {
-        bool                         window_based_fctrl;
-        struct window_fctrl_config * wfctrl_cfg;
-        bool                         rate_based_fctrl;
-        struct rate_fctrl_config *   rfctrl_cfg;
-        uint_t                       sent_bytes_th;
-        uint_t                       sent_bytes_percent_th;
-        uint_t                       sent_buffers_th;
-        uint_t                       rcvd_bytes_th;
-        uint_t                       rcvd_bytes_percent_th;
-        uint_t                       rcvd_buffers_th;
-        struct policy *              closed_window;
-        /*struct policy *              flow_control_overrun;*/
-        struct policy *              reconcile_flow_conflict;
-        struct policy *              receiving_flow_control;
-};
-
-struct dtcp_rxctrl_config {
-        uint_t          max_time_retry;
-        uint_t          data_retransmit_max;
-        uint_t          initial_tr;
-        struct policy * retransmission_timer_expiry;
-        struct policy * sender_ack;
-        struct policy * receiving_ack_list;
-        struct policy * rcvr_ack;
-        struct policy * sending_ack;
-        struct policy * rcvr_control_ack;
-};
-
-/* This is the DTCP configurations from connection policies */
-struct dtcp_config {
-        bool                        flow_ctrl;
-        struct dtcp_fctrl_config *  fctrl_cfg;
-        bool                        rtx_ctrl;
-        struct dtcp_rxctrl_config * rxctrl_cfg;
-        struct policy *             lost_control_pdu;
-        struct policy *             dtcp_ps;
-        struct policy *             rtt_estimator;
-};
-
 static int window_fctrl_config_destroy(struct window_fctrl_config * cfg)
 {
         if (!cfg)

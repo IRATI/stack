@@ -28,11 +28,6 @@
 #include "debug.h"
 #include "buffer.h"
 
-struct buffer {
-        char * data;
-        size_t size;
-};
-
 bool buffer_is_ok(const struct buffer * b)
 { return (b && b->data && b->size) ? true : false; }
 EXPORT_SYMBOL(buffer_is_ok);

@@ -35,11 +35,6 @@ struct irati_msg_layout {
     unsigned int buffers;
 };
 
-struct irati_buf_field {
-    void        *buf;
-    uint32_t    len;
-};
-
 void serialize_string(void **pptr, const char *s);
 int deserialize_string(const void **pptr, char **s);
 
@@ -69,6 +64,8 @@ unsigned int serialize_irati_msg(struct irati_msg_layout *numtables,
 int deserialize_irati_msg(struct irati_msg_layout *numtables, size_t num_entries,
                           const void *serbuf, unsigned int serbuf_len,
                           void *msgbuf, unsigned int msgbuf_len);
+void irati_msg_free(struct irati_msg_layout *numtables, size_t num_entries,
+                    struct irati_msg_base *msg);
 
 #ifdef __KERNEL__
 /* GFP variations of some of the functions above. */

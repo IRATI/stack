@@ -197,7 +197,7 @@ unsigned int irati_msg_serlen(struct irati_msg_layout *numtables,
 	unsigned int ret;
 	struct name *name;
 	string_t *str;
-	const struct irati_buf_field *bf;
+	const struct buffer *bf;
 	int i;
 
 	if (msg->msg_type >= num_entries) {
@@ -515,7 +515,7 @@ unsigned int serialize_irati_msg(struct irati_msg_layout *numtables,
 	unsigned int copylen;
 	struct rina_name *name;
 	string_t *str;
-	const struct rl_buf_field *bf;
+	const struct buffer *bf;
 	int i;
 
 	if (msg->msg_type >= num_entries) {
@@ -537,7 +537,7 @@ unsigned int serialize_irati_msg(struct irati_msg_layout *numtables,
 		serialize_string(&serptr, *str);
 	}
 
-	bf = (const struct rl_buf_field *)str;
+	bf = (const struct buffer *)str;
 	for (i = 0; i < numtables[msg->msg_type].buffers; i++, bf++) {
 		serialize_buffer(&serptr, bf);
 	}
@@ -555,7 +555,7 @@ int deserialize_irati_msg(struct irati_msg_layout *numtables, size_t num_entries
 	struct irati_msg_base *bmsg = IRATI_MB(serbuf);
 	struct name *name;
 	string_t *str;
-	struct irati_buf_field *bf;
+	struct buffer *bf;
 	unsigned int copylen;
 	const void *desptr;
 	int ret;
@@ -587,7 +587,7 @@ int deserialize_irati_msg(struct irati_msg_layout *numtables, size_t num_entries
 		}
 	}
 
-	bf = (struct rl_buf_field *)str;
+	bf = (struct buffer *)str;
 	for (i = 0; i < numtables[bmsg->msg_type].buffers; i++, bf++) {
 		ret = deserialize_buffer(&desptr, bf);
 	}
@@ -598,4 +598,34 @@ int deserialize_irati_msg(struct irati_msg_layout *numtables, size_t num_entries
 
 	return 0;
 }
-COMMON_EXPORT(deserialize_rlite_msg);
+COMMON_EXPORT(deserialize_irati_msg);
+
+void irati_msg_free(struct irati_msg_layout *numtables, size_t num_entries,
+                    struct irati_msg_base *msg)
+{
+	unsigned int copylen = numtables[msg->msg_type].copylen;
+	struct name *name;
+	string_t *str;
+	int i;
+
+	if (msg->msg_type >= num_entries) {
+		LOG_ERR("Invalid numtables access [msg_type=%u]\n",
+			msg->msg_type);
+		return;
+	}
+
+	/* Skip the copiable part and scan all the names contained in
+	 * the message. */
+	name = (struct name *)(((void *)msg) + copylen);
+	for (i = 0; i < numtables[msg->msg_type].names; i++, name++) {
+		rina_name_free(name);
+	}
+
+	str = (string_t *)(name);
+	for (i = 0; i < numtables[msg->msg_type].strings; i++, str++) {
+		if (*str) {
+			COMMON_FREE(*str);
+		}
+	}
+}
+COMMON_EXPORT(irati_msg_free);
