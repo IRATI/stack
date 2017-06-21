@@ -26,19 +26,6 @@
 #include "debug.h"
 #include "policies.h"
 
-struct dtp_config {
-        bool                 dtcp_present;
-        /* Sequence number rollover threshold */
-        int                  seq_num_ro_th;
-        timeout_t            initial_a_timer;
-        bool                 partial_delivery;
-        bool                 incomplete_delivery;
-        bool                 in_order_delivery;
-        seq_num_t            max_sdu_gap;
-
-        struct policy *      dtp_ps;
-};
-
 int dtp_config_destroy(struct dtp_config * cfg)
 {
         if (!cfg)

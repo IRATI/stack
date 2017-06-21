@@ -21,8 +21,6 @@
 #ifndef RINA_BUFFER_H
 #define RINA_BUFFER_H
 
-struct buffer;
-
 /* NOTE: Creates a buffer from raw data (takes ownership) */
 struct buffer * buffer_create_with(void * data, size_t size);
 struct buffer * buffer_create_with_ni(void * data, size_t size);
