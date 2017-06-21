@@ -190,61 +190,6 @@ int deserialize_rina_name(const void **pptr, struct name *name)
 	return ret;
 }
 
-unsigned int irati_msg_serlen(struct irati_msg_layout *numtables,
-			      size_t num_entries,
-			      const struct irati_msg_base *msg)
-{
-	unsigned int ret;
-	struct name *name;
-	string_t *str;
-	const struct buffer *bf;
-	int i;
-
-	if (msg->msg_type >= num_entries) {
-		LOG_ERR("Invalid numtables access [msg_type=%u]\n", msg->msg_type);
-		return -1;
-	}
-
-	ret = numtables[msg->msg_type].copylen;
-
-	name = (struct name *)(((void *)msg) + ret);
-	for (i = 0; i < numtables[msg->msg_type].names; i++, name++) {
-		ret += rina_name_serlen(name);
-	}
-
-	str = (string_t *)name;
-	for (i = 0; i < numtables[msg->msg_type].strings; i++, str++) {
-		ret += sizeof(uint16_t) + string_prlen(*str);
-	}
-
-	bf = (const struct rl_buf_field *)str;
-	for (i = 0; i < numtables[msg->msg_type].buffers; i++, bf++) {
-		ret += sizeof(bf->len) + bf->len;
-	}
-
-	return ret;
-}
-COMMON_EXPORT(irati_msg_serlen);
-
-unsigned int irati_numtables_max_size(struct irati_msg_layout *numtables,
-				      unsigned int n)
-{
-	unsigned int max = 0;
-	int i = 0;
-
-	for (i = 0; i < n; i++) {
-		unsigned int cur = numtables[i].copylen +
-				numtables[i].names * sizeof(struct name) +
-				numtables[i].strings * sizeof(char *);
-
-		if (cur > max) {
-			max = cur;
-		}
-	}
-
-	return max;
-}
-
 void rina_name_free(struct name *name)
 {
 	if (!name) {
@@ -505,6 +450,11 @@ rina_name_valid(const struct name *name)
 }
 COMMON_EXPORT(rina_name_valid);
 
+int flow_spec_serlen(const struct flow_spec * fspec)
+{
+	return 8 * sizeof(uint32_t) + sizeof(int32_t) + 2* sizeof(bool);
+}
+
 unsigned int serialize_irati_msg(struct irati_msg_layout *numtables,
 				 size_t num_entries,
 				 void *serbuf,
@@ -516,6 +466,10 @@ unsigned int serialize_irati_msg(struct irati_msg_layout *numtables,
 	struct rina_name *name;
 	string_t *str;
 	const struct buffer *bf;
+	struct flow_spec *fspec;
+	struct dif_config *dif_config;
+	struct dtp_config *dtp_config;
+	struct dtcp_config *dtcp_config;
 	int i;
 
 	if (msg->msg_type >= num_entries) {
@@ -537,7 +491,27 @@ unsigned int serialize_irati_msg(struct irati_msg_layout *numtables,
 		serialize_string(&serptr, *str);
 	}
 
-	bf = (const struct buffer *)str;
+	fspec = (struct fspec *)str;
+	for (i = 0; i < numtables[msg->msg_type].flow_specs; i++, fspec++) {
+		serialize_flow_spec(&serptr, fspec);
+	}
+
+	dif_config = (struct dif_config *)fspec;
+	for (i = 0; i < numtables[msg->msg_type].dif_configs; i++, dif_config++) {
+		serialize_dif_config(&serptr, dif_config);
+	}
+
+	dtp_config = (struct dtp_config*)dif_config;
+	for (i = 0; i < numtables[msg->msg_type].dtp_configs; i++, dtp_config++) {
+		serialize_dtp_config(&serptr, dtp_config);
+	}
+
+	dtcp_config = (struct dtcp_config*)dtp_config;
+	for (i = 0; i < numtables[msg->msg_type].dtcp_configs; i++, dtcp_config++) {
+		serialize_dtcp_config(&serptr, dtcp_config);
+	}
+
+	bf = (const struct buffer *)dtcp_config;
 	for (i = 0; i < numtables[msg->msg_type].buffers; i++, bf++) {
 		serialize_buffer(&serptr, bf);
 	}
@@ -556,6 +530,10 @@ int deserialize_irati_msg(struct irati_msg_layout *numtables, size_t num_entries
 	struct name *name;
 	string_t *str;
 	struct buffer *bf;
+	struct flow_spec *fspec;
+	struct dif_config *dif_config;
+	struct dtp_config *dtp_config;
+	struct dtcp_config *dtcp_config;
 	unsigned int copylen;
 	const void *desptr;
 	int ret;
@@ -587,7 +565,27 @@ int deserialize_irati_msg(struct irati_msg_layout *numtables, size_t num_entries
 		}
 	}
 
-	bf = (struct buffer *)str;
+	fspec = (struct flow_spec *)str;
+	for (i = 0; i < numtables[bmsg->msg_type].flow_specs; i++, fspec++) {
+		ret = deserialize_flow_spec(&desptr, fspec);
+	}
+
+	dif_config = (struct dif_config *)fspec;
+	for (i = 0; i < numtables[bmsg->msg_type].dif_configs; i++, dif_config++) {
+		ret = deserialize_dif_config(&desptr, dif_config);
+	}
+
+	dtp_config = (struct dtp_config *)dif_config;
+	for (i = 0; i < numtables[bmsg->msg_type].dtp_configs; i++, dtp_config++) {
+		ret = deserialize_dtp_config(&desptr, dtp_config);
+	}
+
+	dtcp_config = (struct dtcp_config *)dtp_config;
+	for (i = 0; i < numtables[bmsg->msg_type].dtcp_configs; i++, dtcp_config++) {
+		ret = deserialize_dtcp_config(&desptr, dtcp_config);
+	}
+
+	bf = (struct buffer *)dtcp_config;
 	for (i = 0; i < numtables[bmsg->msg_type].buffers; i++, bf++) {
 		ret = deserialize_buffer(&desptr, bf);
 	}
@@ -599,6 +597,66 @@ int deserialize_irati_msg(struct irati_msg_layout *numtables, size_t num_entries
 	return 0;
 }
 COMMON_EXPORT(deserialize_irati_msg);
+
+unsigned int irati_msg_serlen(struct irati_msg_layout *numtables,
+			      size_t num_entries,
+			      const struct irati_msg_base *msg)
+{
+	unsigned int ret;
+	struct name *name;
+	string_t *str;
+	struct flow_spec *fspec;
+	struct dif_config *dif_config;
+	struct dtp_config *dtp_config;
+	struct dtcp_config *dtcp_config;
+	const struct buffer *bf;
+	int i;
+
+	if (msg->msg_type >= num_entries) {
+		LOG_ERR("Invalid numtables access [msg_type=%u]\n", msg->msg_type);
+		return -1;
+	}
+
+	ret = numtables[msg->msg_type].copylen;
+
+	name = (struct name *)(((void *)msg) + ret);
+	for (i = 0; i < numtables[msg->msg_type].names; i++, name++) {
+		ret += rina_name_serlen(name);
+	}
+
+	str = (string_t *)name;
+	for (i = 0; i < numtables[msg->msg_type].strings; i++, str++) {
+		ret += sizeof(uint16_t) + string_prlen(*str);
+	}
+
+	fspec = (struct flow_spec *)str;
+	for (i = 0; i < numtables[msg->msg_type].flow_specs; i++, fspec++) {
+		ret += flow_spec_serlen(fspec);
+	}
+
+	dif_config = (struct dif_config *)fspec;
+	for (i = 0; i < numtables[msg->msg_type].dif_configs; i++, dif_config++) {
+		ret += dif_config_serlen(dif_config);
+	}
+
+	dtp_config = (struct dtp_config *)dif_config;
+	for (i = 0; i < numtables[msg->msg_type].dtp_configs; i++, dtp_config++) {
+		ret += dtp_config_serlen(dtp_config);
+	}
+
+	dtcp_config = (struct dtcp_config *)dtp_config;
+	for (i = 0; i < numtables[msg->msg_type].dtcp_configs; i++, dtcp_config++) {
+		ret += dtcp_config_serlen(dtcp_config);
+	}
+
+	bf = (const struct buffer *)dtcp_config;
+	for (i = 0; i < numtables[msg->msg_type].buffers; i++, bf++) {
+		ret += sizeof(bf->size) + bf->size;
+	}
+
+	return ret;
+}
+COMMON_EXPORT(irati_msg_serlen);
 
 void irati_msg_free(struct irati_msg_layout *numtables, size_t num_entries,
                     struct irati_msg_base *msg)
@@ -627,5 +685,30 @@ void irati_msg_free(struct irati_msg_layout *numtables, size_t num_entries,
 			COMMON_FREE(*str);
 		}
 	}
+
+	/* TODO, check for fspecs, dif_configs, etc.. */
 }
 COMMON_EXPORT(irati_msg_free);
+
+unsigned int irati_numtables_max_size(struct irati_msg_layout *numtables,
+				      unsigned int n)
+{
+	unsigned int max = 0;
+	int i = 0;
+
+	for (i = 0; i < n; i++) {
+		unsigned int cur = numtables[i].copylen +
+				numtables[i].names * sizeof(struct name) +
+				numtables[i].strings * sizeof(char *) +
+				numtables[i].flow_specs * sizeof(struct flow_spec) +
+				numtables[i].dif_configs * sizeof(struct dif_config) +
+				numtables[i].dtp_configs * sizeof(struct dtp_config) +
+				numtables[i].dtcp_configs * sizeof(struct dtcp_config);
+
+		if (cur > max) {
+			max = cur;
+		}
+	}
+
+	return max;
+}

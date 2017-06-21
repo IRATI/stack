@@ -214,12 +214,21 @@ extern struct irati_msg_layout irati_ker_numtables[RINA_C_MAX+1];
  *   - the fifth field must be 'ipc_process_id_t dest_ipcp_id'
  *   - the sixth field must be 'uint32_t event_id'
  *   - then come (if any) all the fields that are not 'struct name' nor
- *     strings ('char *'), in whatever order
+ *     strings ('char *'), nor flow_specs, nor dif_config, nor dtp_config
+ *     nor dtcp_config, nor buffers , in whatever order
  *   - then come (if any) all the fields that are 'struct name', in
  *     whatever order
  *   - then come (if any) all the fields that are strings ('char *'), in
  *     whatever order
- *   - then come (if any) all the files that are buffer (struct rl_buf_field),
+ *   - then come (if any) all the fields that are fspecs (struct flow_spec),
+ *     in whatever order
+ *   - then come (if any) all the fields that are dif configs
+ *     (struct dif_config), in whatever order
+ *   - then come (if any) all the fields that are dtp configs
+ *     (struct dtp_config), in whatever order
+ *   - then come (if any) all the fields that are dtcp configs
+ *     (struct dtcp_config), in whatever order
+ *   - then come (if any) all the files that are buffer (struct buffer),
  *     in whatever order
  */
 
