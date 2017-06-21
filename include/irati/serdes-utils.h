@@ -32,6 +32,10 @@ struct irati_msg_layout {
     unsigned int copylen;
     unsigned int names;
     unsigned int strings;
+    unsigned int flow_specs;
+    unsigned int dif_configs;
+    unsigned int dtp_configs;
+    unsigned int dtcp_configs;
     unsigned int buffers;
 };
 
@@ -51,6 +55,22 @@ int rina_name_cmp(const struct name *one, const struct name *two);
 int rina_name_fill(struct name *name, const char *apn,
                    const char *api, const char *aen, const char *aei);
 int rina_name_valid(const struct name *name);
+
+int flow_spec_serlen(const struct flow_spec * fspec);
+void serialize_flow_spec(void **pptr, const struct flow_spec *fspec);
+int deserialize_flow_spec(const void **pptr, struct flow_spec *fspec);
+
+int dif_config_serlen(const struct dif_config * dif_config);
+void serialize_dif_config(void **pptr, const struct dif_config *dif_config);
+int deserialize_dif_config(const void **pptr, struct dif_config *dif_config);
+
+int dtp_config_serlen(const struct dtp_config * dtp_config);
+void serialize_dtp_config(void **pptr, const struct dtp_config *dtp_config);
+int deserialize_dtp_config(const void **pptr, struct dtp_config *dtp_config);
+
+int dtcp_config_serlen(const struct dtcp_config * dtcp_config);
+void serialize_dctp_config(void **pptr, const struct dtcp_config *dtcp_config);
+int deserialize_dtcp_config(const void **pptr, struct dtcp_config *dtcp_config);
 
 unsigned int irati_msg_serlen(struct irati_msg_layout *numtables,
                               size_t num_entries,

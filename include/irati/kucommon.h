@@ -107,17 +107,17 @@ struct flow_spec {
         /* This structure defines the characteristics of a flow */
 
         /* Average bandwidth in bytes/s */
-        uint_t average_bandwidth;
+        uint32_t average_bandwidth;
         /* Average bandwidth in SDUs/s */
-        uint_t average_sdu_bandwidth;
+        uint32_t average_sdu_bandwidth;
         /* In milliseconds */
-        uint_t peak_bandwidth_duration;
+        uint32_t peak_bandwidth_duration;
         /* In milliseconds */
-        uint_t peak_sdu_bandwidth_duration;
+        uint32_t peak_sdu_bandwidth_duration;
 
         /* A value of 0 indicates 'do not care' */
         /* FIXME: This uint_t has to be transformed back to double */
-        uint_t undetected_bit_error_rate;
+        uint32_t undetected_bit_error_rate;
         /* Indicates if partial delivery of SDUs is allowed or not */
         bool   partial_delivery;
         /* Indicates if SDUs have to be delivered in order */
@@ -127,22 +127,22 @@ struct flow_spec {
          * SDUs is considered the same as all SDUs delivered.
          * A value of -1 indicates 'Any'
          */
-        int    max_allowable_gap;
+        int32_t    max_allowable_gap;
         /*
          * In milliseconds, indicates the maximum delay allowed in this
          * flow. A value of 0 indicates 'do not care'
          */
-        uint_t delay;
+        uint32_t delay;
         /*
          * In milliseconds, indicates the maximum jitter allowed
          * in this flow. A value of 0 indicates 'do not care'
          */
-        uint_t jitter;
+        uint32_t jitter;
         /*
          * The maximum SDU size for the flow. May influence the choice
          * of the DIF where the flow will be created.
          */
-        uint_t max_sdu_size;
+        uint32_t max_sdu_size;
 };
 
 struct policy_parm {
