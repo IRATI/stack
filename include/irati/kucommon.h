@@ -108,26 +108,10 @@ struct flow_spec {
 
         /* Average bandwidth in bytes/s */
         uint32_t average_bandwidth;
+
         /* Average bandwidth in SDUs/s */
         uint32_t average_sdu_bandwidth;
-        /* In milliseconds */
-        uint32_t peak_bandwidth_duration;
-        /* In milliseconds */
-        uint32_t peak_sdu_bandwidth_duration;
 
-        /* A value of 0 indicates 'do not care' */
-        /* FIXME: This uint_t has to be transformed back to double */
-        uint32_t undetected_bit_error_rate;
-        /* Indicates if partial delivery of SDUs is allowed or not */
-        bool   partial_delivery;
-        /* Indicates if SDUs have to be delivered in order */
-        bool   ordered_delivery;
-        /*
-         * Indicates the maximum gap allowed among SDUs, a gap of N
-         * SDUs is considered the same as all SDUs delivered.
-         * A value of -1 indicates 'Any'
-         */
-        int32_t    max_allowable_gap;
         /*
          * In milliseconds, indicates the maximum delay allowed in this
          * flow. A value of 0 indicates 'do not care'
@@ -138,11 +122,35 @@ struct flow_spec {
          * in this flow. A value of 0 indicates 'do not care'
          */
         uint32_t jitter;
+
+        /*
+         * Indicates the maximum gap allowed among SDUs, a gap of N
+         * SDUs is considered the same as all SDUs delivered.
+         * A value of -1 indicates 'Any'
+         */
+        int32_t    max_allowable_gap;
+
         /*
          * The maximum SDU size for the flow. May influence the choice
          * of the DIF where the flow will be created.
          */
         uint32_t max_sdu_size;
+
+        /* Indicates if SDUs have to be delivered in order */
+        bool   ordered_delivery;
+
+        /* Indicates if partial delivery of SDUs is allowed or not */
+        bool   partial_delivery;
+
+        /* In milliseconds */
+        uint32_t peak_bandwidth_duration;
+
+        /* In milliseconds */
+        uint32_t peak_sdu_bandwidth_duration;
+
+        /* A value of 0 indicates 'do not care' */
+        /* FIXME: This uint_t has to be transformed back to double */
+        uint32_t undetected_bit_error_rate;
 };
 
 struct policy_parm {
@@ -171,17 +179,16 @@ struct dtp_config {
 };
 
 struct window_fctrl_config {
-        uint_t          max_closed_winq_length; /* in cwq */
-        uint_t          initial_credit; /* to initialize sv */
+        uint32_t        max_closed_winq_length; /* in cwq */
+        uint32_t        initial_credit; /* to initialize sv */
         struct policy * rcvr_flow_control;
         struct policy * tx_control;
 };
 
 struct rate_fctrl_config {
         /* FIXME: to initialize sv? does not seem so*/
-        uint_t          sending_rate;
-
-        uint_t          time_period;
+        uint32_t        sending_rate;
+        uint32_t        time_period;
         struct policy * no_rate_slow_down;
         struct policy * no_override_default_peak;
         struct policy * rate_reduction;
@@ -192,22 +199,21 @@ struct dtcp_fctrl_config {
         struct window_fctrl_config * wfctrl_cfg;
         bool                         rate_based_fctrl;
         struct rate_fctrl_config *   rfctrl_cfg;
-        uint_t                       sent_bytes_th;
-        uint_t                       sent_bytes_percent_th;
-        uint_t                       sent_buffers_th;
-        uint_t                       rcvd_bytes_th;
-        uint_t                       rcvd_bytes_percent_th;
-        uint_t                       rcvd_buffers_th;
+        uint32_t                     sent_bytes_th;
+        uint32_t                     sent_bytes_percent_th;
+        uint32_t                     sent_buffers_th;
+        uint32_t                     rcvd_bytes_th;
+        uint32_t                     rcvd_bytes_percent_th;
+        uint32_t                     rcvd_buffers_th;
         struct policy *              closed_window;
-        /*struct policy *              flow_control_overrun;*/
         struct policy *              reconcile_flow_conflict;
         struct policy *              receiving_flow_control;
 };
 
 struct dtcp_rxctrl_config {
-        uint_t          max_time_retry;
-        uint_t          data_retransmit_max;
-        uint_t          initial_tr;
+        uint32_t        max_time_retry;
+        uint32_t        data_retransmit_max;
+        uint32_t        initial_tr;
         struct policy * retransmission_timer_expiry;
         struct policy * sender_ack;
         struct policy * receiving_ack_list;
