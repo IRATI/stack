@@ -59,18 +59,51 @@ int rina_name_valid(const struct name *name);
 int flow_spec_serlen(const struct flow_spec * fspec);
 void serialize_flow_spec(void **pptr, const struct flow_spec *fspec);
 int deserialize_flow_spec(const void **pptr, struct flow_spec *fspec);
+void flow_spec_free(struct flow_spec * fspec);
 
-int dif_config_serlen(const struct dif_config * dif_config);
-void serialize_dif_config(void **pptr, const struct dif_config *dif_config);
-int deserialize_dif_config(const void **pptr, struct dif_config *dif_config);
+int policy_parm_serlen(const struct policy_parm * prm);
+void serialize_policy_parm(void **pptr, const struct policy_parm *prm);
+int deserialize_policy_parm(const void **pptr, struct policy_parm *prm);
+void policy_parm_free(struct policy_parm * prm);
+
+int policy_serlen(const struct policy * policy);
+void serialize_policy(void **pptr, const struct policy *prm);
+int deserialize_policy(const void **pptr, struct policy *prm);
+void policy_free(struct policy * policy);
 
 int dtp_config_serlen(const struct dtp_config * dtp_config);
 void serialize_dtp_config(void **pptr, const struct dtp_config *dtp_config);
 int deserialize_dtp_config(const void **pptr, struct dtp_config *dtp_config);
+void dtp_config_free(struct dtp_config * dtp_config);
+
+int window_fctrl_config_serlen(const struct window_fctrl_config * wfc);
+void serialize_window_fctrl_config(void **pptr, const struct window_fctrl_config *wfc);
+int deserialize_window_fctrl_config(const void **pptr, struct window_fctrl_config *wfc);
+void window_fctrl_config_free(struct window_fctrl_config * wfc);
+
+int rate_fctrl_config_serlen(const struct rate_fctrl_config * rfc);
+void serialize_rate_fctrl_config(void **pptr, const struct rate_fctrl_config *rfc);
+int deserialize_rate_fctrl_config(const void **pptr, struct rate_fctrl_config *rfc);
+void rate_fctrl_config_free(struct rate_fctrl_config * rfc);
+
+int dtcp_fctrl_config_serlen(const struct dtcp_fctrl_config * dfc);
+void serialize_dtcp_fctrl_config(void **pptr, const struct dtcp_fctrl_config *dfc);
+int deserialize_dtcp_fctrl_config(const void **pptr, struct dtcp_fctrl_config *dfc);
+void dtcp_fctrl_config_free(struct dtcp_fctrl_config * dfc);
+
+int dtcp_rxctrl_config_serlen(const struct dtcp_rxctrl_config * rxfc);
+void serialize_dtcp_rxctrl_config(void **pptr, const struct dtcp_rxctrl_config *rxfc);
+int deserialize_dtcp_rxctrl_config(const void **pptr, struct dtcp_rxctrl_config *rxfc);
+void dtcp_rxctrl_config_free(struct dtcp_rxctrl_config * rxfc);
 
 int dtcp_config_serlen(const struct dtcp_config * dtcp_config);
 void serialize_dctp_config(void **pptr, const struct dtcp_config *dtcp_config);
 int deserialize_dtcp_config(const void **pptr, struct dtcp_config *dtcp_config);
+void dtcp_config_free(struct dtcp_config * dtcp_config);
+
+int dif_config_serlen(const struct dif_config * dif_config);
+void serialize_dif_config(void **pptr, const struct dif_config *dif_config);
+int deserialize_dif_config(const void **pptr, struct dif_config *dif_config);
 
 unsigned int irati_msg_serlen(struct irati_msg_layout *numtables,
                               size_t num_entries,

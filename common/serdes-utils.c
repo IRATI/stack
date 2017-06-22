@@ -215,6 +215,8 @@ void rina_name_free(struct name *name)
 		COMMON_FREE(name->entity_instance);
 		name->entity_instance = NULL;
 	}
+
+	COMMON_FREE(name);
 }
 COMMON_EXPORT(rina_name_free);
 
@@ -455,6 +457,809 @@ int flow_spec_serlen(const struct flow_spec * fspec)
 	return 8 * sizeof(uint32_t) + sizeof(int32_t) + 2* sizeof(bool);
 }
 
+void serialize_flow_spec(void **pptr, const struct flow_spec *fspec)
+{
+	serialize_obj(*pptr, uint32_t, fspec->average_bandwidth);
+	serialize_obj(*pptr, uint32_t, fspec->average_sdu_bandwidth);
+	serialize_obj(*pptr, uint32_t, fspec->delay);
+	serialize_obj(*pptr, uint32_t, fspec->jitter);
+	serialize_obj(*pptr, int32_t, fspec->max_allowable_gap);
+	serialize_obj(*pptr, uint32_t, fspec->max_sdu_size);
+	serialize_obj(*pptr, bool, fspec->ordered_delivery);
+	serialize_obj(*pptr, bool, fspec->partial_delivery);
+	serialize_obj(*pptr, uint32_t, fspec->peak_bandwidth_duration);
+	serialize_obj(*pptr, uint32_t, fspec->peak_sdu_bandwidth_duration);
+	serialize_obj(*pptr, int32_t, fspec->undetected_bit_error_rate);
+}
+
+int deserialize_flow_spec(const void **pptr, struct flow_spec *fspec)
+{
+	memset(fspec, 0, sizeof(*fspec));
+
+	deserialize_obj(*pptr, uint32_t, fspec->average_bandwidth);
+	deserialize_obj(*pptr, uint32_t, fspec->average_sdu_bandwidth);
+	deserialize_obj(*pptr, uint32_t, fspec->delay);
+	deserialize_obj(*pptr, uint32_t, fspec->jitter);
+	deserialize_obj(*pptr, int32_t, fspec->max_allowable_gap);
+	deserialize_obj(*pptr, uint32_t, fspec->max_sdu_size);
+	deserialize_obj(*pptr, bool, fspec->ordered_delivery);
+	deserialize_obj(*pptr, bool, fspec->partial_delivery);
+	deserialize_obj(*pptr, uint32_t, fspec->peak_bandwidth_duration);
+	deserialize_obj(*pptr, uint32_t, fspec->peak_sdu_bandwidth_duration);
+	deserialize_obj(*pptr, int32_t, fspec->undetected_bit_error_rate);
+}
+
+void flow_spec_free(struct flow_spec * fspec)
+{
+	if (!fspec)
+		return;
+
+	COMMON_FREE(fspec);
+}
+
+int policy_parm_serlen(const struct policy_parm * prm)
+{
+	unsigned int ret = 2 * sizeof(uint16_t);
+
+	if (!prm) {
+		return ret;
+	}
+
+	return ret + string_prlen(prm->name) + string_prlen(prm->value);
+}
+
+void serialize_policy_parm(void **pptr, const struct policy_parm *prm)
+{
+	serialize_string(pptr, prm->name);
+	serialize_string(pptr, prm->value);
+}
+
+int deserialize_policy_parm(const void **pptr, struct policy_parm *prm)
+{
+	int ret;
+
+	memset(prm, 0, sizeof(*prm));
+
+	ret = deserialize_string(pptr, &prm->name);
+	if (ret) {
+		return ret;
+	}
+
+	ret = deserialize_string(pptr, &prm->value);
+
+	return ret;
+}
+
+void policy_parm_free(const struct policy_parm * prm)
+{
+	if (!prm) {
+		return;
+	}
+
+	if (prm->name) {
+		COMMON_FREE(prm->name);
+		prm->name = NULL;
+	}
+
+	if (prm->value) {
+		COMMON_FREE(prm->value);
+		prm->value = NULL;
+	}
+
+	COMMON_FREE(prm);
+}
+
+int policy_serlen(const struct policy * policy)
+{
+	struct policy_parm * pos;
+
+	unsigned int ret = 2 * sizeof(uint16_t);
+
+	if (!policy) {
+		return ret;
+	}
+
+	ret = ret + string_prlen(policy->name)
+		  + string_prlen(policy->version)
+		  + sizeof(uint16_t);
+
+        list_for_each_entry(pos, &(policy->params), next) {
+                ret = ret + policy_parm_serlen(pos);
+        }
+
+        return ret;
+}
+
+void serialize_policy(void **pptr, const struct policy *policy)
+{
+	struct policy_parm * pos;
+	uint16_t num_parms;
+
+	serialize_string(pptr, policy->name);
+	serialize_string(pptr, policy->version);
+
+	num_parms = 0;
+        list_for_each_entry(pos, &(policy->params), next) {
+                num_parms ++;
+        }
+
+        serialize_obj(*pptr, uint16_t, num_parms);
+
+        list_for_each_entry(pos, &(policy->params), next) {
+        	serialize_policy_parm(pos);
+        }
+}
+
+int deserialize_policy(const void **pptr, struct policy *policy)
+{
+	int ret;
+	uint16_t num_attrs;
+	struct policy_parm * pos;
+
+	memset(policy, 0, sizeof(*policy));
+
+	ret = deserialize_string(pptr, &policy->name);
+	if (ret) {
+		return ret;
+	}
+
+	ret = deserialize_string(pptr, &policy->version);
+	if (ret) {
+		return ret;
+	}
+
+	deserialize_obj(*pptr, uint16_t, &num_attrs);
+	for(int i = 0; i < num_attrs; i++) {
+		pos = COMMON_ALLOC(sizeof(struct policy_parm), 1);
+		if (!pos) {
+			return -1;
+		}
+
+		INIT_LIST_HEAD(&pos->next);
+		ret = deserialize_policy_parm(pptr, pos);
+		if (ret) {
+			return ret;
+		}
+
+		list_add_tail(&pos->next, &policy->params);
+	}
+
+	return ret;
+}
+
+void policy_free(const struct policy * policy)
+{
+	struct policy_parm * pos, * npos;
+
+	if (!policy)
+		return;
+
+	if (policy->name) {
+		COMMON_FREE(policy->name);
+		policy->name = NULL;
+	}
+
+	if (policy->version) {
+		COMMON_FREE(policy->version);
+		policy->version = NULL;
+	}
+
+	list_for_each_entry_safe(pos, npos, &policy->params, next) {
+		list_del(&pos->next);
+		policy_parm_free(pos);
+	}
+
+	COMMON_FREE(policy);
+}
+
+int dtp_config_serlen(const struct dtp_config * dtp_config)
+{
+	return 4 * sizeof(bool) + sizeof(int) + sizeof(timeout_t)
+	         + sizeof(seq_num_t) + policy_serlen(dtp_config->dtp_ps);
+}
+
+void serialize_dtp_config(void **pptr, const struct dtp_config *dtp_config)
+{
+	serialize_obj(*pptr, bool, dtp_config->dtcp_present);
+	serialize_obj(*pptr, int, dtp_config->seq_num_ro_th);
+	serialize_obj(*pptr, timeout_t, dtp_config->initial_a_timer);
+	serialize_obj(*pptr, bool, dtp_config->partial_delivery);
+	serialize_obj(*pptr, bool, dtp_config->incomplete_delivery);
+	serialize_obj(*pptr, bool, dtp_config->in_order_delivery);
+	serialize_obj(*pptr, seq_num_t, dtp_config->max_sdu_gap);
+	serialize_policy(pptr, dtp_config->dtp_ps);
+}
+
+int deserialize_dtp_config(const void **pptr, struct dtp_config *dtp_config)
+{
+	int ret;
+
+	memset(dtp_config, 0, sizeof(*dtp_config));
+
+	deserialize_obj(*pptr, bool, dtp_config->dtcp_present);
+	deserialize_obj(*pptr, int, dtp_config->seq_num_ro_th);
+	deserialize_obj(*pptr, timeout_t, dtp_config->initial_a_timer);
+	deserialize_obj(*pptr, bool, dtp_config->partial_delivery);
+	deserialize_obj(*pptr, bool, dtp_config->incomplete_delivery);
+	deserialize_obj(*pptr, bool, dtp_config->in_order_delivery);
+	deserialize_obj(*pptr, seq_num_t, dtp_config->max_sdu_gap);
+
+	dtp_config->dtp_ps = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!dtp_config->dtp_ps) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&dtp_config->dtp_ps->params);
+	return deserialize_policy(pptr, dtp_config->dtp_ps);
+}
+
+void dtp_config_free(struct dtp_config * dtp_config)
+{
+	if (!dtp_config)
+		return;
+
+	if (dtp_config->dtp_ps) {
+		policy_free(dtp_config->dtp_ps);
+		dtp_config->dtp_ps = 0;
+	}
+
+	COMMON_FREE(dtp_config);
+}
+
+int window_fctrl_config_serlen(const struct window_fctrl_config * wfc)
+{
+	return 2 * sizeof(uint32_t) + policy_serlen(wfc->rcvr_flow_control)
+				    + policy_serlen(wfc->tx_control);
+}
+
+void serialize_window_fctrl_config(void **pptr,
+				   const struct window_fctrl_config *wfc)
+{
+	serialize_obj(*pptr, uint32_t, wfc->initial_credit);
+	serialize_obj(*pptr, uint32_t, wfc->max_closed_winq_length);
+	serialize_policy(pptr, wfc->rcvr_flow_control);
+	serialize_policy(pptr, wfc->tx_control);
+}
+
+int deserialize_window_fctrl_config(const void **pptr,
+				    struct window_fctrl_config *wfc)
+{
+	int ret;
+
+	memset(wfc, 0, sizeof(*wfc));
+
+	deserialize_obj(*pptr, uint32_t, wfc->initial_credit);
+	deserialize_obj(*pptr, uint32_t, wfc->max_closed_winq_length);
+
+	wfc->rcvr_flow_control = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!wfc->rcvr_flow_control) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&wfc->rcvr_flow_control->params);
+	ret = deserialize_policy(pptr, wfc->rcvr_flow_control);
+	if (ret) {
+		return ret;
+	}
+
+	wfc->tx_control = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!wfc->tx_control) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&wfc->tx_control->params);
+	return deserialize_policy(pptr, wfc->tx_control);
+}
+
+void window_fctrl_config_free(struct window_fctrl_config * wfc)
+{
+	if (!wfc)
+		return;
+
+	if (wfc->rcvr_flow_control) {
+		policy_free(wfc->rcvr_flow_control);
+		wfc->rcvr_flow_control = 0;
+	}
+
+	if (wfc->tx_control) {
+		policy_free(wfc->tx_control);
+		wfc->tx_control = 0;
+	}
+
+	COMMON_FREE(wfc);
+}
+
+int rate_fctrl_config_serlen(const struct rate_fctrl_config * rfc)
+{
+	return 2 * sizeof(uint32_t) + policy_serlen(rfc->rate_reduction)
+                 + policy_serlen(rfc->no_rate_slow_down)
+		 + policy_serlen(rfc->no_override_default_peak);
+}
+
+void serialize_rate_fctrl_config(void **pptr, const struct rate_fctrl_config *rfc)
+{
+	serialize_obj(*pptr, uint32_t, rfc->sending_rate);
+	serialize_obj(*pptr, uint32_t, rfc->time_period);
+	serialize_policy(pptr, rfc->no_override_default_peak);
+	serialize_policy(pptr, rfc->no_rate_slow_down);
+	serialize_policy(pptr, rfc->rate_reduction);
+}
+
+int deserialize_rate_fctrl_config(const void **pptr, struct rate_fctrl_config *rfc)
+{
+	int ret;
+
+	memset(rfc, 0, sizeof(*rfc));
+
+	deserialize_obj(*pptr, uint32_t, rfc->sending_rate);
+	deserialize_obj(*pptr, uint32_t, rfc->time_period);
+
+	rfc->no_override_default_peak = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!rfc->no_override_default_peak) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&rfc->no_override_default_peak->params);
+	ret = deserialize_policy(pptr, rfc->no_override_default_peak);
+	if (ret) {
+		return ret;
+	}
+
+	rfc->no_rate_slow_down = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!rfc->no_rate_slow_down) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&rfc->no_rate_slow_down->params);
+	ret = deserialize_policy(pptr, rfc->no_rate_slow_down);
+	if (ret) {
+		return ret;
+	}
+
+	rfc->rate_reduction = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!rfc->rate_reduction) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&rfc->rate_reduction->params);
+	return deserialize_policy(pptr, rfc->rate_reduction);
+}
+
+void rate_fctrl_config_free(struct rate_fctrl_config * rfc)
+{
+	if (!rfc)
+		return;
+
+	if (rfc->no_override_default_peak) {
+		policy_free(rfc->no_override_default_peak);
+		rfc->no_override_default_peak = 0;
+	}
+
+	if (rfc->no_rate_slow_down) {
+		policy_free(rfc->no_rate_slow_down);
+		rfc->no_rate_slow_down = 0;
+	}
+
+	if (rfc->rate_reduction) {
+		policy_free(rfc->rate_reduction);
+		rfc->rate_reduction = 0;
+	}
+
+	COMMON_FREE(rfc);
+}
+
+int dtcp_fctrl_config_serlen(const struct dtcp_fctrl_config * dfc)
+{
+	int ret;
+
+	ret = 6 * sizeof(uint32_t) + 2 * sizeof(bool) +
+		 + policy_serlen(dfc->closed_window)
+                 + policy_serlen(dfc->receiving_flow_control)
+		 + policy_serlen(dfc->reconcile_flow_conflict);
+
+	if (dfc->window_based_fctrl)
+		ret = ret + window_fctrl_config_serlen(dfc->wfctrl_cfg);
+
+	if (dfc->rate_based_fctrl)
+		ret = ret + rate_fctrl_config_serlen(dfc->rfctrl_cfg);
+
+	return ret;
+}
+
+void serialize_dtcp_fctrl_config(void **pptr, const struct dtcp_fctrl_config *dfc)
+{
+	serialize_obj(*pptr, uint32_t, dfc->rcvd_buffers_th);
+	serialize_obj(*pptr, uint32_t, dfc->rcvd_bytes_percent_th);
+	serialize_obj(*pptr, uint32_t, dfc->rcvd_bytes_th);
+	serialize_obj(*pptr, uint32_t, dfc->sent_buffers_th);
+	serialize_obj(*pptr, uint32_t, dfc->sent_bytes_percent_th);
+	serialize_obj(*pptr, uint32_t, dfc->sent_bytes_th);
+	serialize_obj(*pptr, bool, dfc->window_based_fctrl);
+	serialize_obj(*pptr, bool, dfc->rate_based_fctrl);
+	serialize_policy(pptr, dfc->closed_window);
+	serialize_policy(pptr, dfc->receiving_flow_control);
+	serialize_policy(pptr, dfc->reconcile_flow_conflict);
+
+	if (dfc->window_based_fctrl)
+		serialize_window_fctrl_config(pptr, dfc->wfctrl_cfg);
+
+	if (dfc->rate_based_fctrl)
+		serialize_rate_fctrl_config(pptr, dfc->rfctrl_cfg);
+}
+
+int deserialize_dtcp_fctrl_config(const void **pptr, struct dtcp_fctrl_config *dfc)
+{
+	int ret;
+
+	memset(dfc, 0, sizeof(*dfc));
+
+	deserialize_obj(*pptr, uint32_t, dfc->rcvd_buffers_th);
+	deserialize_obj(*pptr, uint32_t, dfc->rcvd_bytes_percent_th);
+	deserialize_obj(*pptr, uint32_t, dfc->rcvd_bytes_th);
+	deserialize_obj(*pptr, uint32_t, dfc->sent_buffers_th);
+	deserialize_obj(*pptr, uint32_t, dfc->sent_bytes_percent_th);
+	deserialize_obj(*pptr, uint32_t, dfc->sent_bytes_th);
+	deserialize_obj(*pptr, bool, dfc->window_based_fctrl);
+	deserialize_obj(*pptr, bool, dfc->rate_based_fctrl);
+
+	dfc->closed_window = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!dfc->closed_window) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&dfc->closed_window->params);
+	ret = deserialize_policy(pptr, dfc->closed_window);
+	if (ret) {
+		return ret;
+	}
+
+	dfc->receiving_flow_control = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!dfc->receiving_flow_control) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&dfc->receiving_flow_control->params);
+	ret = deserialize_policy(pptr, dfc->receiving_flow_control);
+	if (ret) {
+		return ret;
+	}
+
+	dfc->reconcile_flow_conflict = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!dfc->reconcile_flow_conflict) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&dfc->reconcile_flow_conflict->params);
+	ret = deserialize_policy(pptr, dfc->reconcile_flow_conflict);
+	if (ret) {
+		return ret;
+	}
+
+	if (dfc->window_based_fctrl) {
+		dfc->wfctrl_cfg = COMMON_ALLOC(sizeof(struct window_fctrl_config), 1);
+		if (!dfc->wfctrl_cfg) {
+			return -1;
+		}
+
+		ret = deserialize_window_fctrl_config(pptr, dfc->wfctrl_cfg);
+		if (ret) {
+			return ret;
+		}
+	}
+
+	if (dfc->rate_based_fctrl) {
+		dfc->rfctrl_cfg = COMMON_ALLOC(sizeof(struct rate_fctrl_config), 1);
+		if (!dfc->rfctrl_cfg) {
+			return -1;
+		}
+
+		ret = deserialize_rate_fctrl_config(pptr, dfc->rfctrl_cfg);
+		if (ret) {
+			return ret;
+		}
+	}
+
+	return ret;
+}
+
+void dtcp_fctrl_config_free(struct dtcp_fctrl_config * dfc)
+{
+	if (!dfc)
+		return;
+
+	if (dfc->closed_window) {
+		policy_free(dfc->closed_window);
+		dfc->closed_window = 0;
+	}
+
+	if (dfc->receiving_flow_control) {
+		policy_free(dfc->receiving_flow_control);
+		dfc->receiving_flow_control = 0;
+	}
+
+	if (dfc->reconcile_flow_conflict) {
+		policy_free(dfc->reconcile_flow_conflict);
+		dfc->reconcile_flow_conflict = 0;
+	}
+
+	if (dfc->wfctrl_cfg) {
+		window_fctrl_config_free(dfc->wfctrl_cfg);
+		dfc->wfctrl_cfg = 0;
+	}
+
+	if (dfc->rfctrl_cfg) {
+		rate_fctrl_config_free(dfc->rfctrl_cfg);
+		dfc->rfctrl_cfg = 0;
+	}
+
+	COMMON_FREE(dfc);
+}
+
+int dtcp_rxctrl_config_serlen(const struct dtcp_rxctrl_config * rxfc)
+{
+	return 3 * sizeof(uint32_t)
+		 + policy_serlen(rxfc->rcvr_ack)
+                 + policy_serlen(rxfc->rcvr_control_ack)
+		 + policy_serlen(rxfc->receiving_ack_list)
+		 + policy_serlen(rxfc->retransmission_timer_expiry)
+		 + policy_serlen(rxfc->sender_ack)
+		 + policy_serlen(rxfc->sending_ack);
+}
+
+void serialize_dtcp_rxctrl_config(void **pptr, const struct dtcp_rxctrl_config *rxfc)
+{
+	serialize_obj(*pptr, uint32_t, rxfc->data_retransmit_max);
+	serialize_obj(*pptr, uint32_t, rxfc->initial_tr);
+	serialize_obj(*pptr, uint32_t, rxfc->max_time_retry);
+	serialize_policy(pptr, rxfc->rcvr_ack);
+	serialize_policy(pptr, rxfc->rcvr_control_ack);
+	serialize_policy(pptr, rxfc->receiving_ack_list);
+	serialize_policy(pptr, rxfc->retransmission_timer_expiry);
+	serialize_policy(pptr, rxfc->sender_ack);
+	serialize_policy(pptr, rxfc->sending_ack);
+}
+
+int deserialize_dtcp_rxctrl_config(const void **pptr, struct dtcp_rxctrl_config *rxfc)
+{
+	int ret;
+
+	memset(rxfc, 0, sizeof(*rxfc));
+
+	deserialize_obj(*pptr, uint32_t, rxfc->data_retransmit_max);
+	deserialize_obj(*pptr, uint32_t, rxfc->initial_tr);
+	deserialize_obj(*pptr, uint32_t, rxfc->max_time_retry);
+
+	rxfc->rcvr_ack = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!rxfc->rcvr_ack) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&rxfc->rcvr_ack->params);
+	ret = deserialize_policy(pptr, rxfc->rcvr_ack);
+	if (ret) {
+		return ret;
+	}
+
+	rxfc->rcvr_control_ack = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!rxfc->rcvr_control_ack) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&rxfc->rcvr_control_ack->params);
+	ret = deserialize_policy(pptr, rxfc->rcvr_control_ack);
+	if (ret) {
+		return ret;
+	}
+
+	rxfc->receiving_ack_list = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!rxfc->receiving_ack_list) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&rxfc->receiving_ack_list->params);
+	ret = deserialize_policy(pptr, rxfc->receiving_ack_list);
+	if (ret) {
+		return ret;
+	}
+
+	rxfc->retransmission_timer_expiry = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!rxfc->retransmission_timer_expiry) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&rxfc->retransmission_timer_expiry->params);
+	ret = deserialize_policy(pptr, rxfc->retransmission_timer_expiry);
+	if (ret) {
+		return ret;
+	}
+
+	rxfc->sender_ack = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!rxfc->sender_ack) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&rxfc->sender_ack->params);
+	ret = deserialize_policy(pptr, rxfc->sender_ack);
+	if (ret) {
+		return ret;
+	}
+
+	rxfc->sending_ack = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!rxfc->sending_ack) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&rxfc->sending_ack->params);
+	return deserialize_policy(pptr, rxfc->sending_ack);
+}
+
+void dtcp_rxctrl_config_free(struct dtcp_rxctrl_config * rxfc)
+{
+	if (!rxfc)
+		return;
+
+	if (rxfc->rcvr_ack) {
+		policy_free(rxfc->rcvr_ack);
+		rxfc->rcvr_ack = 0;
+	}
+
+	if (rxfc->rcvr_control_ack) {
+		policy_free(rxfc->rcvr_control_ack);
+		rxfc->rcvr_control_ack = 0;
+	}
+
+	if (rxfc->receiving_ack_list) {
+		policy_free(rxfc->receiving_ack_list);
+		rxfc->receiving_ack_list = 0;
+	}
+
+	if (rxfc->retransmission_timer_expiry) {
+		policy_free(rxfc->retransmission_timer_expiry);
+		rxfc->retransmission_timer_expiry = 0;
+	}
+
+	if (rxfc->sender_ack) {
+		policy_free(rxfc->sender_ack);
+		rxfc->sender_ack = 0;
+	}
+
+	if (rxfc->sending_ack) {
+		policy_free(rxfc->sending_ack);
+		rxfc->sending_ack = 0;
+	}
+
+	COMMON_FREE(rxfc);
+}
+
+int dtcp_config_serlen(const struct dtcp_config * dtcp_config)
+{
+	int ret;
+
+	ret = 2 * sizeof(bool)
+		+ policy_serlen(dtcp_config->dtcp_ps)
+		+ policy_serlen(dtcp_config->lost_control_pdu)
+		+ policy_serlen(dtcp_config->rtt_estimator);
+
+	if (dtcp_config->flow_ctrl)
+		ret = ret + dtcp_fctrl_config_serlen(dtcp_config->fctrl_cfg);
+
+	if (dtcp_config->rtx_ctrl)
+		ret = ret + dtcp_rxctrl_config_serlen(dtcp_config->rxctrl_cfg);
+}
+
+void serialize_dctp_config(void **pptr, const struct dtcp_config *dtcp_config)
+{
+	serialize_obj(*pptr, bool, dtcp_config->flow_ctrl);
+	serialize_obj(*pptr, bool, dtcp_config->rtx_ctrl);
+	serialize_policy(pptr, dtcp_config->dtcp_ps);
+	serialize_policy(pptr, dtcp_config->lost_control_pdu);
+	serialize_policy(pptr, dtcp_config->rtt_estimator);
+
+	if (dtcp_config->flow_ctrl)
+		serialize_dtcp_fctrl_config(dtcp_config->fctrl_cfg);
+
+	if (dtcp_config->rtx_ctrl)
+		serialize_dtcp_rxctrl_config(dtcp_config->rxctrl_cfg);
+}
+
+int deserialize_dtcp_config(const void **pptr, struct dtcp_config *dtcp_config)
+{
+	int ret;
+
+	memset(dtcp_config, 0, sizeof(*dtcp_config));
+
+	deserialize_obj(*pptr, bool, dtcp_config->flow_ctrl);
+	deserialize_obj(*pptr, bool, dtcp_config->rtx_ctrl);
+
+	dtcp_config->dtcp_ps = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!dtcp_config->dtcp_ps) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&dtcp_config->dtcp_ps->params);
+	ret = deserialize_policy(pptr, dtcp_config->dtcp_ps);
+	if (ret) {
+		return ret;
+	}
+
+	dtcp_config->lost_control_pdu = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!dtcp_config->lost_control_pdu) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&dtcp_config->lost_control_pdu->params);
+	ret = deserialize_policy(pptr, dtcp_config->lost_control_pdu);
+	if (ret) {
+		return ret;
+	}
+
+	dtcp_config->rtt_estimator = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!dtcp_config->rtt_estimator) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&dtcp_config->rtt_estimator->params);
+	ret = deserialize_policy(pptr, dtcp_config->rtt_estimator);
+	if (ret) {
+		return ret;
+	}
+
+	if (dtcp_config->flow_ctrl) {
+		dtcp_config->fctrl_cfg = COMMON_ALLOC(sizeof(struct dtcp_fctrl_config), 1);
+		if (!dtcp_config->fctrl_cfg)
+			return -1;
+
+		ret = deserialize_dtcp_fctrl_config(pptr, dtcp_config->fctrl_cfg);
+		if (ret)
+			return ret;
+	}
+
+	if (dtcp_config->rtx_ctrl) {
+		dtcp_config->rxctrl_cfg = COMMON_ALLOC(sizeof(struct dtcp_rxctrl_config), 1);
+		if (!dtcp_config->rxctrl_cfg)
+			return -1;
+
+		ret = deserialize_dtcp_rxctrl_config(pptr, dtcp_config->rxctrl_cfg);
+		if (ret)
+			return ret;
+	}
+
+	return ret;
+}
+
+void dtcp_config_free(struct dtcp_config * dtcp_config)
+{
+	if (!dtcp_config)
+		return;
+
+	if (dtcp_config->dtcp_ps) {
+		policy_free(dtcp_config->dtcp_ps);
+		dtcp_config->dtcp_ps = 0;
+	}
+
+	if (dtcp_config->lost_control_pdu) {
+		policy_free(dtcp_config->lost_control_pdu);
+		dtcp_config->lost_control_pdu = 0;
+	}
+
+	if (dtcp_config->rtt_estimator) {
+		policy_free(dtcp_config->rtt_estimator);
+		dtcp_config->rtt_estimator = 0;
+	}
+
+	if (dtcp_config->fctrl_cfg) {
+		dtcp_fctrl_config_free(dtcp_config->fctrl_cfg);
+		dtcp_config->fctrl_cfg = 0;
+	}
+
+	if (dtcp_config->rxctrl_cfg) {
+		dtcp_rxctrl_config_free(dtcp_config->rxctrl_cfg);
+		dtcp_config->rxctrl_cfg = 0;
+	}
+
+	COMMON_FREE(dtcp_config);
+}
+
 unsigned int serialize_irati_msg(struct irati_msg_layout *numtables,
 				 size_t num_entries,
 				 void *serbuf,
@@ -664,6 +1469,10 @@ void irati_msg_free(struct irati_msg_layout *numtables, size_t num_entries,
 	unsigned int copylen = numtables[msg->msg_type].copylen;
 	struct name *name;
 	string_t *str;
+	struct flow_spec *fspec;
+	struct dif_config * dif_config;
+	struct dtp_config * dtp_config;
+	struct dtcp_config * dtcp_config;
 	int i;
 
 	if (msg->msg_type >= num_entries) {
@@ -686,7 +1495,22 @@ void irati_msg_free(struct irati_msg_layout *numtables, size_t num_entries,
 		}
 	}
 
-	/* TODO, check for fspecs, dif_configs, etc.. */
+	fspec = (struct flow_spec *)(str);
+	for (i = 0; i < numtables[msg->msg_type].flow_specs; i++, fspec++) {
+		flow_spec_free(fspec);
+	}
+
+	/* TODO check for dif_config */
+
+	dtp_config = (struct dtp_config *)(dif_config);
+	for (i = 0; i < numtables[msg->msg_type].dtp_configs; i++, dtp_config++) {
+		dtp_config_free(dtp_config);
+	}
+
+	dtcp_config = (struct dtcp_config *)(dtp_config);
+	for (i = 0; i < numtables[msg->msg_type].dtcp_configs; i++, dtcp_config++) {
+		dtcp_config_free(dtcp_config);
+	}
 }
 COMMON_EXPORT(irati_msg_free);
 
