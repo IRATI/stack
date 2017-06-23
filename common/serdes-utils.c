@@ -1145,6 +1145,8 @@ int dtcp_config_serlen(const struct dtcp_config * dtcp_config)
 
 	if (dtcp_config->rtx_ctrl)
 		ret = ret + dtcp_rxctrl_config_serlen(dtcp_config->rxctrl_cfg);
+
+	return ret;
 }
 
 void serialize_dctp_config(void **pptr, const struct dtcp_config *dtcp_config)
@@ -1258,6 +1260,415 @@ void dtcp_config_free(struct dtcp_config * dtcp_config)
 	}
 
 	COMMON_FREE(dtcp_config);
+}
+
+int pff_config_serlen(const struct pff_config * pff)
+{
+	return policy_serlen(pff->policy_set);
+}
+
+void serialize_pff_config(void **pptr, const struct pff_config *pff)
+{
+	serialize_policy(pptr, pff->policy_set);
+}
+
+int deserialize_pff_config(const void **pptr, struct pff_config *pff)
+{
+	memset(pff, 0, sizeof(*pff));
+
+	pff->policy_set = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!pff->policy_set) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&pff->policy_set->params);
+	return deserialize_policy(pptr, pff->policy_set);
+}
+
+void pff_config_free(struct pff_config * pff)
+{
+	if (!pff)
+		return;
+
+	if (pff->policy_set) {
+		policy_free(pff->policy_set);
+		pff->policy_set = 0;
+	}
+
+	COMMON_FREE(pff);
+}
+
+int rmt_config_serlen(const struct rmt_config * rmt)
+{
+	return policy_serlen(rmt->policy_set)
+		+ pff_config_serlen(rmt->pff_conf);
+}
+
+void serialize_rmt_config(void **pptr, const struct rmt_config *rmt)
+{
+	serialize_policy(pptr, rmt->policy_set);
+	serialize_pff_config(pptr, rmt->pff_conf);
+}
+
+int deserialize_rmt_config(const void **pptr, struct rmt_config *rmt)
+{
+	int ret;
+
+	memset(rmt, 0, sizeof(*rmt));
+
+	rmt->policy_set = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!rmt->policy_set) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&rmt->policy_set->params);
+	ret = deserialize_policy(pptr, rmt->policy_set);
+	if (ret)
+		return ret;
+
+	rmt->pff_conf = COMMON_ALLOC(sizeof(struct pff_config), 1);
+	if (!rmt->pff_conf) {
+		return -1;
+	}
+
+	return deserialize_pff_config(pptr, rmt->pff_conf);
+}
+
+void rmt_config_free(struct rmt_config * rmt)
+{
+	if (!rmt)
+		return;
+
+	if (rmt->policy_set) {
+		policy_free(rmt->policy_set);
+		rmt->policy_set = 0;
+	}
+
+	if (rmt->pff_conf) {
+		pff_config_free(rmt->pff_conf);
+		rmt->pff_conf = 0;
+	}
+
+	COMMON_FREE(rmt);
+}
+
+int dup_config_entry_serlen(const struct dup_config_entry * dce)
+{
+	return sizeof(uint16_t) + string_prlen(dce->n_1_dif_name)
+			+ policy_serlen(dce->crypto_policy)
+			+ policy_serlen(dce->error_check_policy)
+			+ policy_serlen(dce->ttl_policy);
+}
+
+void serialize_dup_config_entry(void **pptr, const struct dup_config_entry *dce)
+{
+	serialize_string(pptr, dce->n_1_dif_name);
+	serialize_policy(pptr, dce->crypto_policy);
+	serialize_policy(pptr, dce->error_check_policy);
+	serialize_policy(pptr, dce->ttl_policy);
+}
+
+int deserialize_dup_config_entry(const void **pptr, struct dup_config_entry *dce)
+{
+	int ret;
+
+	memset(dce, 0, sizeof(*dce));
+
+	ret = deserialize_string(pptr, &dce->n_1_dif_name);
+	if (ret) {
+		return ret;
+	}
+
+	dce->crypto_policy = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!dce->crypto_policy) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&dce->crypto_policy->params);
+	ret = deserialize_policy(pptr, dce->crypto_policy);
+	if (ret)
+		return ret;
+
+	dce->error_check_policy = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!dce->error_check_policy) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&dce->error_check_policy->params);
+	ret = deserialize_policy(pptr, dce->error_check_policy);
+	if (ret)
+		return ret;
+
+	dce->ttl_policy = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!dce->ttl_policy) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&dce->ttl_policy->params);
+	return deserialize_policy(pptr, dce->ttl_policy);
+}
+
+void dup_config_entry_free(struct dup_config_entry * dce)
+{
+	if (!dce)
+		return;
+
+	if (dce->crypto_policy) {
+		policy_free(dce->crypto_policy);
+		dce->crypto_policy = 0;
+	}
+
+	if (dce->error_check_policy) {
+		policy_free(dce->error_check_policy);
+		dce->error_check_policy = 0;
+	}
+
+	if (dce->ttl_policy) {
+		policy_free(dce->ttl_policy);
+		dce->ttl_policy = 0;
+	}
+
+	if (dce->n_1_dif_name) {
+		COMMON_FREE(dce->n_1_dif_name);
+		dce->n_1_dif_name = 0;
+	}
+
+	COMMON_FREE(dce);
+}
+
+int sdup_config_serlen(const struct sdup_config * sdc)
+{
+	int ret;
+	struct dup_config * pos;
+
+	ret = dup_config_entry_serlen(sdc->default_dup_conf)
+		  + sizeof(uint16_t);
+
+        list_for_each_entry(pos, &(sdc->specific_dup_confs), next) {
+                ret = ret + dup_config_entry_serlen(pos->entry);
+        }
+
+        return ret;
+}
+
+void serialize_sdup_config(void **pptr, const struct sdup_config *sdc)
+{
+	struct dup_config * pos;
+	uint16_t num_parms;
+
+	serialize_dup_config_entry(pptr, sdc->default_dup_conf);
+
+	num_parms = 0;
+	list_for_each_entry(pos, &(sdc->specific_dup_confs), next) {
+		num_parms ++;
+	}
+
+	serialize_obj(*pptr, uint16_t, num_parms);
+
+	list_for_each_entry(pos, &(sdc->specific_dup_confs), next) {
+		serialize_dup_config_entry(pos->entry);
+	}
+}
+
+int deserialize_sdup_config(const void **pptr, struct sdup_config *sdc)
+{
+	int ret;
+	struct dup_config * pos;
+	uint16_t num_attrs;
+
+	memset(sdc, 0, sizeof(*sdc));
+
+	sdc->default_dup_conf = COMMON_ALLOC(sizeof(struct dup_config_entry), 1);
+	if (!sdc->default_dup_conf) {
+		return -1;
+	}
+
+	ret = deserialize_dup_config_entry(pptr, sdc->default_dup_conf);
+	if (ret)
+		return ret;
+
+	deserialize_obj(*pptr, uint16_t, &num_attrs);
+	for(int i = 0; i < num_attrs; i++) {
+		pos = COMMON_ALLOC(sizeof(struct dup_config), 1);
+		if (!pos) {
+			return -1;
+		}
+
+		INIT_LIST_HEAD(&pos->next);
+		pos->entry = COMMON_ALLOC(sizeof(struct dup_config_entry), 1);
+		if (!pos->entry) {
+			return -1;
+		}
+
+		ret = deserialize_policy_parm(pptr, pos->entry);
+		if (ret) {
+			return ret;
+		}
+
+		list_add_tail(&pos->next, &sdc->specific_dup_confs);
+	}
+
+	return ret;
+}
+
+void sdup_config_free(struct sdup_config * sdc)
+{
+	struct dup_config * pos, npos;
+
+	if (!sdc)
+		return;
+
+	if (sdc->default_dup_conf) {
+		dup_config_entry_free(sdc->default_dup_conf);
+		sdc->default_dup_conf = 0;
+	}
+
+	list_for_each_entry_safe(pos, npos, &sdc->specific_dup_confs, next) {
+		list_del(&pos->next);
+		if (pos->entry) {
+			dup_config_entry_free(pos->entry);
+			pos->entry = 0;
+		}
+
+		COMMON_FREE(pos);
+	}
+
+	COMMON_FREE(sdc);
+}
+
+int dt_cons_serlen(const struct dt_cons * dtc)
+{
+	return 9 * sizeof(uint16_t) + 2 * sizeof(uint32_t) + sizeof(bool);
+}
+
+void serialize_dt_cons(void **pptr, const struct dt_cons *dtc)
+{
+	serialize_obj(*pptr, uint16_t, dtc->address_length);
+	serialize_obj(*pptr, uint16_t, dtc->cep_id_length);
+	serialize_obj(*pptr, uint16_t, dtc->ctrl_seq_num_length);
+	serialize_obj(*pptr, bool, dtc->dif_integrity);
+	serialize_obj(*pptr, uint16_t, dtc->frame_length);
+	serialize_obj(*pptr, uint16_t, dtc->length_length);
+	serialize_obj(*pptr, uint32_t, dtc->max_pdu_life);
+	serialize_obj(*pptr, uint32_t, dtc->max_pdu_size);
+	serialize_obj(*pptr, uint16_t, dtc->port_id_length);
+	serialize_obj(*pptr, uint16_t, dtc->qos_id_length);
+	serialize_obj(*pptr, uint16_t, dtc->rate_length);
+	serialize_obj(*pptr, uint16_t, dtc->seq_num_length);
+
+}
+
+int deserialize_dt_cons(const void **pptr, struct dt_cons *dtc)
+{
+	deserialize_obj(*pptr, uint16_t, dtc->address_length);
+	deserialize_obj(*pptr, uint16_t, dtc->cep_id_length);
+	deserialize_obj(*pptr, uint16_t, dtc->ctrl_seq_num_length);
+	deserialize_obj(*pptr, bool, dtc->dif_integrity);
+	deserialize_obj(*pptr, uint16_t, dtc->frame_length);
+	deserialize_obj(*pptr, uint16_t, dtc->length_length);
+	deserialize_obj(*pptr, uint32_t, dtc->max_pdu_life);
+	deserialize_obj(*pptr, uint32_t, dtc->max_pdu_size);
+	deserialize_obj(*pptr, uint16_t, dtc->port_id_length);
+	deserialize_obj(*pptr, uint16_t, dtc->qos_id_length);
+	deserialize_obj(*pptr, uint16_t, dtc->rate_length);
+	deserialize_obj(*pptr, uint16_t, dtc->seq_num_length);
+}
+
+void dt_cons_free(struct dt_cons * dtc)
+{
+	if (!dtc)
+		return;
+
+	COMMON_FREE(dtc);
+}
+
+int efcp_config_serlen(const struct efcp_config * efc)
+{
+	return dt_cons_serlen(efc->dt_cons) + policy_len(efc->unknown_flow)
+			+ sizeof(uint8_t) + sizeof(ssize_t);
+}
+
+void serialize_efcp_config(void **pptr, const struct efcp_config *efc)
+{
+	uint8_t size = 0;
+
+	serialize_dt_cons(pptr, efc->dt_cons);
+	serialize_policy(pptr, efc->unknown_flow);
+
+	if (efc->pci_offset_table) {
+		size = sizeof(ssize_t);
+	}
+	serialize_obj(*pptr, uint8_t, size);
+
+	if (size > 0) {
+		memcpy(*pptr, efc->pci_offset_table, sizeof(ssize_t));
+		*pptr += sizeof(ssize_t);
+	}
+}
+
+int deserialize_efcp_config(const void **pptr, struct efcp_config *efc)
+{
+	int ret;
+	uint8_t size;
+
+	memset(efc, 0, sizeof(*efc));
+
+	efc->dt_cons = COMMON_ALLOC(sizeof(struct dt_cons), 1);
+	if (!efc->dt_cons) {
+		return -1;
+	}
+
+	ret = deserialize_dt_cons(pptr, efc->dt_cons);
+	if (ret)
+		return ret;
+
+	efc->unknown_flow = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!efc->unknown_flow) {
+		return -1;
+	}
+
+	INIT_LIST_HEAD(&efc->unknown_flow->params);
+	ret = deserialize_policy(pptr, efc->unknown_flow);
+	if (ret)
+		return ret;
+
+	deserialize_obj(*pptr, uint8_t, &size);
+	if (size > 0) {
+		efc->pci_offset_table = COMMON_ALLOC(size, 1);
+		if (!efc->pci_offset_table) {
+			return -1;
+		}
+
+		memcpy(efc->pci_offset_table, *pptr, size);
+		*pptr += size;
+	} else {
+		efc->pci_offset_table = 0;
+	}
+
+	return ret;
+}
+
+void efcp_config_free(struct efcp_config * efc)
+{
+	if (!efc)
+		return;
+
+	if (efc->dt_cons) {
+		dt_cons_free(efc->dt_cons);
+		efc->dt_cons = 0;
+	}
+
+	if (efc->unknown_flow) {
+		policy_free(efc->unknown_flow);
+		efc->unknown_flow = 0;
+	}
+
+	if (efc->pci_offset_table) {
+		COMMON_FREE(efc->pci_offset_table);
+		efc->pci_offset_table = 0;
+	}
+
+	COMMON_FREE(efc);
 }
 
 unsigned int serialize_irati_msg(struct irati_msg_layout *numtables,

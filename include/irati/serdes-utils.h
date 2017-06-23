@@ -101,6 +101,36 @@ void serialize_dctp_config(void **pptr, const struct dtcp_config *dtcp_config);
 int deserialize_dtcp_config(const void **pptr, struct dtcp_config *dtcp_config);
 void dtcp_config_free(struct dtcp_config * dtcp_config);
 
+int pff_config_serlen(const struct pff_config * pff);
+void serialize_pff_config(void **pptr, const struct pff_config *pff);
+int deserialize_pff_config(const void **pptr, struct pff_config *pff);
+void pff_config_free(struct pff_config * pff);
+
+int rmt_config_serlen(const struct rmt_config * rmt);
+void serialize_rmt_config(void **pptr, const struct rmt_config *rmt);
+int deserialize_rmt_config(const void **pptr, struct rmt_config *rmt);
+void rmt_config_free(struct rmt_config * rmt);
+
+int dup_config_entry_serlen(const struct dup_config_entry * dce);
+void serialize_dup_config_entry(void **pptr, const struct dup_config_entry *dce);
+int deserialize_dup_config_entry(const void **pptr, struct dup_config_entry *dce);
+void dup_config_entry_free(struct dup_config_entry * dce);
+
+int sdup_config_serlen(const struct sdup_config * sdc);
+void serialize_sdup_config(void **pptr, const struct sdup_config *sdc);
+int deserialize_sdup_config(const void **pptr, struct sdup_config *sdc);
+void sdup_config_free(struct sdup_config * sdc);
+
+int dt_cons_serlen(const struct dt_cons * dtc);
+void serialize_dt_cons(void **pptr, const struct dt_cons *dtc);
+int deserialize_dt_cons(const void **pptr, struct dt_cons *dtc);
+void dt_cons_free(struct dt_cons * dtc);
+
+int efcp_config_serlen(const struct efcp_config * efc);
+void serialize_efcp_config(void **pptr, const struct efcp_config *efc);
+int deserialize_efcp_config(const void **pptr, struct efcp_config *efc);
+void efcp_config_free(struct efcp_config * efc);
+
 int dif_config_serlen(const struct dif_config * dif_config);
 void serialize_dif_config(void **pptr, const struct dif_config *dif_config);
 int deserialize_dif_config(const void **pptr, struct dif_config *dif_config);
