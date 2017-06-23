@@ -255,40 +255,40 @@ struct ipcp_config {
 
 struct dt_cons {
         /* The length of the address field in the DTP PCI, in bytes */
-        u_int16_t address_length;
+        uint16_t address_length;
 
         /* The length of the CEP-id field in the DTP PCI, in bytes */
-        u_int16_t cep_id_length;
+        uint16_t cep_id_length;
 
         /* The length of the length field in the DTP PCI, in bytes */
-        u_int16_t length_length;
+        uint16_t length_length;
 
         /* The length of the Port-id field in the DTP PCI, in bytes */
-        u_int16_t port_id_length;
+        uint16_t port_id_length;
 
         /* The length of QoS-id field in the DTP PCI, in bytes */
-        u_int16_t qos_id_length;
+        uint16_t qos_id_length;
 
         /* The length of the sequence number field in the DTP PCI, in bytes */
-        u_int16_t seq_num_length;
+        uint16_t seq_num_length;
 
         /* The length of the sequence number field in the DTCP PCI, in bytes */
-        u_int16_t ctrl_seq_num_length;
+        uint16_t ctrl_seq_num_length;
 
         /* The maximum length allowed for a PDU in this DIF, in bytes */
-        u_int32_t max_pdu_size;
+        uint32_t max_pdu_size;
 
         /*
          * The maximum PDU lifetime in this DIF, in milliseconds. This is MPL
          * in delta-T
          */
-        u_int32_t max_pdu_life;
+        uint32_t max_pdu_life;
 
         /* Rate for rate based mechanism. */
-        u_int16_t rate_length;
+        uint16_t rate_length;
 
         /* Time frame for rate based mechanism. */
-        u_int16_t frame_length;
+        uint16_t frame_length;
 
         /*
          * True if the PDUs in this DIF have CRC, TTL, and/or encryption.
