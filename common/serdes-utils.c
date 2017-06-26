@@ -33,6 +33,7 @@
 #include "rds/rmem.h"
 #include "rds/rstr.h"
 #include "common.h"
+#include "buffer.h"
 
 #define COMMON_ALLOC(_sz, _sl)      rkzalloc(_sz, _sl ? GFP_KERNEL : GFP_ATOMIC)
 #define COMMON_FREE(_p)             rkfree(_p)
@@ -149,6 +150,49 @@ int deserialize_string(const void **pptr, char **s)
 		*pptr += slen;
 	} else {
 		*s = NULL;
+	}
+
+	return 0;
+}
+
+/* Size of a serialized buffer, not including the storage for the size
+ * field itself. */
+static unsigned int buffer_prlen(const struct buffer *b)
+{
+	if (!b)
+		return 0;
+	else
+		return b->size;
+}
+
+void serialize_buffer(void **pptr, const struct buffer * b)
+{
+	if (!b) {
+		serialize_obj(*pptr, size_t, 0);
+		return;
+	}
+
+	serialize_obj(*pptr, size_t, b->size);
+	memcpy(*pptr, b->data, b->size);
+	*pptr += b->size;
+}
+
+int deserialize_buffer(const void **pptr, struct buffer **b)
+{
+	size_t blen;
+
+	deserialize_obj(*pptr, size_t, &blen);
+	if (blen) {
+		*b = COMMON_ALLOC(blen, 1);
+		if (!(*b)) {
+			return -1;
+		}
+
+		memcpy((*b)->data, *pptr, blen);
+		(*b)->size = blen;
+		*pptr += blen;
+	} else {
+		*b = NULL;
 	}
 
 	return 0;
@@ -1513,7 +1557,7 @@ int deserialize_sdup_config(const void **pptr, struct sdup_config *sdc)
 
 void sdup_config_free(struct sdup_config * sdc)
 {
-	struct dup_config * pos, npos;
+	struct dup_config * pos, * npos;
 
 	if (!sdc)
 		return;
@@ -1671,6 +1715,634 @@ void efcp_config_free(struct efcp_config * efc)
 	COMMON_FREE(efc);
 }
 
+int ipcp_config_entry_serlen(const struct ipcp_config_entry * ice)
+{
+	return 2*sizeof(uint16_t) + string_prlen(ice->name)
+				  + string_prlen(ice->value);
+}
+
+void serialize_ipcp_config_entry(void **pptr, const struct ipcp_config_entry *ice)
+{
+	serialize_string(pptr, ice->name);
+	serialize_string(pptr, ice->value);
+}
+
+int deserialize_ipcp_config_entry(const void **pptr, struct ipcp_config_entry *ice)
+{
+	int ret;
+
+	ret = deserialize_string(pptr, &ice->name);
+	if (ret)
+		return ret;
+
+	return deserialize_string(pptr, &ice->value);
+}
+
+void ipcp_config_entry_free(struct ipcp_config_entry * ice)
+{
+	if (!ice)
+		return;
+
+	if (ice->name) {
+		COMMON_FREE(ice->name);
+		ice->name = 0;
+	}
+
+	if (ice->value) {
+		COMMON_FREE(ice->value);
+		ice->value = 0;
+	}
+	COMMON_FREE(ice);
+}
+
+int dif_config_serlen(const struct dif_config * dif_config)
+{
+	int ret;
+	struct ipcp_config * pos;
+
+	ret = sizeof(address_t) + sizeof(uint16_t);
+
+        list_for_each_entry(pos, &(dif_config->ipcp_config_entries), next) {
+                ret = ret + ipcp_config_entry_serlen(pos->entry);
+        }
+
+        if (dif_config->efcp_config)
+        	ret = ret + efcp_config_serlen(dif_config->efcp_config);
+
+        if (dif_config->rmt_config)
+        	ret = ret + rmt_config_serlen(dif_config->rmt_config);
+
+        if (dif_config->sdup_config)
+        	ret = ret + sdup_config_serlen(dif_config->sdup_config);
+
+        return ret;
+}
+
+void serialize_dif_config(void **pptr, const struct dif_config *dif_config)
+{
+	struct ipcp_config * pos;
+	uint16_t size = 0;
+
+	serialize_obj(*pptr, address_t, dif_config->address);
+
+	list_for_each_entry(pos, &(dif_config->ipcp_config_entries), next) {
+		size ++;
+	}
+
+	serialize_obj(*pptr, uint16_t, size);
+
+	list_for_each_entry(pos, &(dif_config->ipcp_config_entries), next) {
+		serialize_ipcp_config_entry(pos->entry);
+	}
+
+	if (dif_config->efcp_config)
+		serialize_efcp_config(pptr, dif_config->efcp_config);
+	if (dif_config->rmt_config)
+		serialize_rmt_config(pptr, dif_config->rmt_config);
+	if (dif_config->sdup_config)
+		serialize_sdup_config(pptr, dif_config->sdup_config);
+}
+
+int deserialize_dif_config(const void **pptr, struct dif_config *dif_config)
+{
+	int ret;
+	struct ipcp_config * pos;
+	uint16_t size;
+
+	memset(dif_config, 0, sizeof(*dif_config));
+
+	deserialize_obj(*pptr, address_t, dif_config->address);
+	deserialize_obj(*pptr, uint16_t, &size);
+
+	for(int i = 0; i < size; i++) {
+		pos = COMMON_ALLOC(sizeof(struct ipcp_config), 1);
+		if (!pos) {
+			return -1;
+		}
+
+		INIT_LIST_HEAD(&pos->next);
+		pos->entry = COMMON_ALLOC(sizeof(struct ipcp_config_entry), 1);
+		if (!pos->entry) {
+			return -1;
+		}
+
+		ret = deserialize_ipcp_config_entry(pptr, pos->entry);
+		if (ret) {
+			return ret;
+		}
+
+		list_add_tail(&pos->next, &dif_config->ipcp_config_entries);
+	}
+
+	deserialize_efcp_config(pptr, dif_config->efcp_config);
+	deserialize_rmt_config(pptr, dif_config->rmt_config);
+	deserialize_sdup_config(pptr, dif_config->sdup_config);
+
+	return ret;
+}
+
+void dif_config_free(struct dif_config * dif_config)
+{
+	struct ipcp_config * pos, * npos;
+
+	if (!dif_config)
+		return;
+
+	if (dif_config->efcp_config) {
+		efcp_config_free(dif_config->efcp_config);
+		dif_config->efcp_config = 0;
+	}
+
+	if (dif_config->rmt_config) {
+		rmt_config_free(dif_config->rmt_config);
+		dif_config->rmt_config = 0;
+	}
+
+	if (dif_config->sdup_config) {
+		sdup_config_free(dif_config->sdup_config);
+		dif_config->sdup_config = 0;
+	}
+
+	list_for_each_entry_safe(pos, npos, &dif_config->ipcp_config_entries, next) {
+		list_del(&pos->next);
+		if (pos->entry) {
+			ipcp_config_entry_free(pos->entry);
+			pos->entry = 0;
+		}
+
+		COMMON_FREE(pos);
+	}
+
+	COMMON_FREE(dif_config);
+}
+
+int rib_object_data_serlen(const struct rib_object_data * rod)
+{
+	return 3 * sizeof(uint16_t) + string_prlen(rod->name)
+			+ string_prlen(rod->class)
+			+ string_prlen(rod->disp_value)
+			+ sizeof(uint64_t);
+}
+
+void serialize_rib_object_data(void **pptr, const struct rib_object_data *rod)
+{
+	serialize_obj(*pptr, uint64_t, rod->instance);
+	serialize_string(rod->name);
+	serialize_string(rod->class);
+	serialize_string(rod->disp_value);
+}
+
+int deserialize_rib_object_data(const void **pptr, struct rib_object_data *rod)
+{
+	int ret;
+
+	memset(rod, 0, sizeof(*rod));
+
+	deserialize_obj(*pptr, uint64_t, rod->instance);
+
+	ret = deserialize_string(rod->name);
+	if (ret)
+		return ret;
+
+	ret = deserialize_string(rod->class);
+	if (ret)
+		return ret;
+
+	return deserialize_string(rod->disp_value);
+}
+
+void rib_object_data_free(struct rib_object_data * rod)
+{
+	if (!rod)
+		return;
+
+	if (rod->name) {
+		COMMON_FREE(rod->name);
+		rod->name = 0;
+	}
+
+	if (rod->class) {
+		COMMON_FREE(rod->class);
+		rod->class = 0;
+	}
+
+	if (rod->disp_value) {
+		COMMON_FREE(rod->disp_value);
+		rod->disp_value = 0;
+	}
+
+	COMMON_FREE(rod);
+}
+
+int query_rib_resp_serlen(const struct query_rib_resp * qrr)
+{
+	int ret;
+	struct rib_object_data * pos;
+
+	ret = sizeof(uint16_t);
+
+        list_for_each_entry(pos, &(qrr->rib_object_data_entries), next) {
+                ret = ret + rib_object_data_serlen(pos);
+        }
+
+        return ret;
+}
+
+void serialize_query_rib_resp(void **pptr, const struct query_rib_resp *qrr)
+{
+	struct rib_object_data * pos;
+	uint16_t size = 0;
+
+        list_for_each_entry(pos, &(qrr->rib_object_data_entries), next) {
+                size++;
+        }
+
+        serialize_obj(*pptr, uint16_t, size);
+
+        list_for_each_entry(pos, &(qrr->rib_object_data_entries), next) {
+                serialize_rib_object_data(pptr, pos);
+        }
+}
+
+int deserialize_query_rib_resp(const void **pptr, struct query_rib_resp *qrr)
+{
+	int ret;
+	struct rib_object_data * pos;
+	uint16_t size;
+
+	memset(qrr, 0, sizeof(*qrr));
+
+	deserialize_obj(*pptr, uint16_t, size);
+
+	for(int i = 0; i < size; i++) {
+		pos = COMMON_ALLOC(sizeof(struct rib_object_data), 1);
+		if (!pos) {
+			return -1;
+		}
+
+		INIT_LIST_HEAD(&pos->next);
+		ret = deserialize_rib_object_data(pptr, pos);
+		if (ret) {
+			return ret;
+		}
+
+		list_add_tail(&pos->next, &qrr->rib_object_data_entries);
+	}
+
+	return ret;
+}
+
+void query_rib_resp_free(struct query_rib_resp * qrr)
+{
+	struct rib_object_data * pos, * npos;
+
+	if (!qrr)
+		return;
+
+	list_for_each_entry_safe(pos, npos, &qrr->rib_object_data_entries, next) {
+		list_del(&pos->next);
+		rib_object_datay_free(pos);
+	}
+
+	COMMON_FREE(qrr);
+}
+
+int port_id_altlist_serlen(const struct port_id_altlist * pia)
+{
+	return sizeof(uint16_t) + pia->num_ports * sizeof(port_id_t);
+}
+
+void serialize_port_id_altlist(void **pptr, const struct port_id_altlist *pia)
+{
+	int plength;
+
+	serialize_obj(*pptr, uint16_t, pia->num_ports);
+	plength = pia->num_ports * sizeof(port_id_t);
+
+	if (pia->ports > 0) {
+		memcpy(*pptr, pia->ports, plength);
+		*pptr += plength;
+	}
+}
+
+int deserialize_port_id_altlist(const void **pptr, struct port_id_altlist *pia)
+{
+	int plength;
+
+	memset(pia, 0, sizeof(*pia));
+
+	deserialize_obj(*pptr, uint16_t, pia->num_ports);
+	plength = pia->num_ports * sizeof(port_id_t);
+
+	if (pia->ports > 0) {
+		memcpy(pia->ports, *pptr, plength);
+		*pptr += plength;
+	}
+
+	return 0;
+}
+
+void port_id_altlist_free(struct port_id_altlist * pia)
+{
+	if (!pia)
+		return;
+
+	if (pia->ports) {
+		COMMON_FREE(pia->ports);
+		pia->ports = 0;
+	}
+
+	COMMON_FREE(pia);
+}
+
+int mod_pff_entry_serlen(const struct mod_pff_entry * pffe)
+{
+	int ret;
+	struct port_id_altlist * pos;
+
+	ret = sizeof(address_t) + sizeof(qos_id_t) + sizeof(uint16_t);
+
+        list_for_each_entry(pos, &(pffe->next), next) {
+                ret = ret + port_id_altlist_serlen(pos);
+        }
+
+	return ret;
+}
+
+void serialize_mod_pff_entry(void **pptr, const struct mod_pff_entry *pffe)
+{
+	uint16_t num_alts = 0;
+	struct port_id_altlist * pos;
+
+	serialize_obj(*pptr, address_t, pffe->fwd_info);
+	serialize_obj(*pptr, qos_id_t, pffe->qos_id);
+
+        list_for_each_entry(pos, &(pffe->next), next) {
+               num_alts++;
+        }
+
+        serialize_obj(*pptr, uint16_t, num_alts);
+
+        list_for_each_entry(pos, &(pffe->next), next) {
+               serialize_port_id_altlist(pptr, pos);
+        }
+}
+
+int deserialize_mod_pff_entry(const void **pptr, struct mod_pff_entry *pffe)
+{
+	int ret;
+	uint16_t num_alts;
+	struct port_id_altlist * pos;
+
+	memset(pffe, 0, sizeof(*pffe));
+
+	deserialize_obj(*pptr, address_t, pffe->fwd_info);
+	deserialize_obj(*pptr, qos_id_t, pffe->qos_id);
+	deserialize_obj(*pptr, uint16_t, num_alts);
+
+	for(int i = 0; i < num_alts; i++) {
+		pos = COMMON_ALLOC(sizeof(struct port_id_altlist), 1);
+		if (!pos) {
+			return -1;
+		}
+
+		INIT_LIST_HEAD(&pos->next);
+		ret = deserialize_port_id_altlist(pptr, pos);
+		if (ret) {
+			return ret;
+		}
+
+		list_add_tail(&pos->next, &pffe->port_id_altlists);
+	}
+
+	return ret;
+}
+
+void mod_pff_entry_free(struct mod_pff_entry * pffe)
+{
+	struct port_id_altlist * pos, * npos;
+
+	if (!pffe)
+		return;
+
+	list_for_each_entry_safe(pos, npos, &pffe->port_id_altlists, next) {
+		list_del(&pos->next);
+		port_id_altlist_free(pos);
+	}
+
+	COMMON_FREE(pffe);
+}
+
+int pff_entry_list_serlen(const struct pff_entry_list * pel)
+{
+	int ret;
+	struct mod_pff_entry * pos;
+
+	ret = sizeof(uint16_t);
+
+        list_for_each_entry(pos, &(pel->pff_entries), next) {
+                ret = ret + mod_pff_entry_serlen(pos);
+        }
+
+        return ret;
+}
+
+void serialize_pff_entry_list(void **pptr, const struct pff_entry_list *pel)
+{
+	struct mod_pff_entry * pos;
+	uint16_t size = 0;
+
+        list_for_each_entry(pos, &(pel->pff_entries), next) {
+                size++;
+        }
+
+        serialize_obj(*pptr, uint16_t, size);
+
+        list_for_each_entry(pos, &(pel->pff_entries), next) {
+                serialize_mod_pff_entry(pptr, pos);
+        }
+}
+
+int deserialize_pff_entry_list(const void **pptr, struct pff_entry_list *pel)
+{
+	int ret;
+	struct mod_pff_entry * pos;
+	uint16_t size;
+
+	memset(pel, 0, sizeof(*pel));
+
+	deserialize_obj(*pptr, uint16_t, size);
+
+	for(int i = 0; i < size; i++) {
+		pos = COMMON_ALLOC(sizeof(struct mod_pff_entry), 1);
+		if (!pos) {
+			return -1;
+		}
+
+		INIT_LIST_HEAD(&pos->next);
+		ret = deserialize_mod_pff_entry(pptr, pos);
+		if (ret) {
+			return ret;
+		}
+
+		list_add_tail(&pos->next, &pel->pff_entries);
+	}
+
+	return ret;
+}
+
+void pff_entry_list_free(struct pff_entry_list * pel)
+{
+	struct mod_pff_entry * pos, * npos;
+
+	if (!pel)
+		return;
+
+	list_for_each_entry_safe(pos, npos, &pel->pff_entries, next) {
+		list_del(&pos->next);
+		mod_pff_entry_free(pos);
+	}
+
+	COMMON_FREE(pel);
+}
+
+int sdup_crypto_state_serlen(const struct sdup_crypto_state * scs)
+{
+	int ret;
+
+	ret = 2 * sizeof(bool) + 3 * sizeof(uint16_t)
+	       + string_prlen(scs->compress_alg)
+	       + string_prlen(scs->enc_alg)
+	       + string_prlen(scs->mac_alg)
+	       + 6 * sizeof(size_t)
+	       + buffer_prlen(scs->encrypt_key_rx)
+	       + buffer_prlen(scs->encrypt_key_tx)
+	       + buffer_prlen(scs->iv_rx)
+	       + buffer_prlen(scs->iv_tx)
+	       + buffer_prlen(scs->mac_key_rx)
+	       + buffer_prlen(scs->mac_key_tx);
+}
+
+void serialize_sdup_crypto_state(void **pptr, const struct sdup_crypto_state *scs)
+{
+	serialize_obj(*pptr, bool, scs->enable_crypto_rx);
+	serialize_obj(*pptr, bool, scs->enable_crypto_tx);
+	serialize_string(pptr, scs->compress_alg);
+	serialize_string(pptr, scs->enc_alg);
+	serialize_string(pptr, scs->mac_alg);
+	serialize_buffer(pptr, scs->encrypt_key_rx);
+	serialize_buffer(pptr, scs->encrypt_key_tx);
+	serialize_buffer(pptr, scs->iv_rx);
+	serialize_buffer(pptr, scs->iv_tx);
+	serialize_buffer(pptr, scs->mac_key_rx);
+	serialize_buffer(pptr, scs->mac_key_tx);
+}
+
+int deserialize_sdup_crypto_state(const void **pptr, struct sdup_crypto_state *scs)
+{
+	int ret;
+
+	memset(scs, 0, sizeof(*scs));
+
+	deserialize_obj(*pptr, bool, scs->enable_crypto_rx);
+	deserialize_obj(*pptr, bool, scs->enable_crypto_tx);
+
+	ret = deserialize_string(pptr, &scs->compress_alg);
+	if (ret) {
+		return ret;
+	}
+
+	ret = deserialize_string(pptr, &scs->enc_alg);
+	if (ret) {
+		return ret;
+	}
+
+	ret = deserialize_string(pptr, &scs->mac_alg);
+	if (ret) {
+		return ret;
+	}
+
+	ret = deserialize_buffer(pptr, &scs->encrypt_key_rx);
+	if (ret) {
+		return ret;
+	}
+
+	ret = deserialize_buffer(pptr, &scs->encrypt_key_tx);
+	if (ret) {
+		return ret;
+	}
+
+	ret = deserialize_buffer(pptr, &scs->iv_rx);
+	if (ret) {
+		return ret;
+	}
+
+	ret = deserialize_buffer(pptr, &scs->iv_tx);
+	if (ret) {
+		return ret;
+	}
+
+	ret = deserialize_buffer(pptr, &scs->mac_key_rx);
+	if (ret) {
+		return ret;
+	}
+
+	return deserialize_buffer(pptr, &scs->mac_key_tx);
+}
+
+void sdup_crypto_state_free(struct sdup_crypto_state * scs)
+{
+	if (!scs)
+		return;
+
+	if (scs->compress_alg) {
+		COMMON_FREE(scs->compress_alg);
+		scs->compress_alg = 0;
+	}
+
+	if (scs->enc_alg) {
+		COMMON_FREE(scs->enc_alg);
+		scs->enc_alg = 0;
+	}
+
+	if (scs->mac_alg) {
+		COMMON_FREE(scs->mac_alg);
+		scs->mac_alg = 0;
+	}
+
+	if (scs->encrypt_key_rx) {
+		buffer_destroy(scs->encrypt_key_rx);
+		scs->encrypt_key_rx = 0;
+	}
+
+	if (scs->encrypt_key_tx) {
+		buffer_destroy(scs->encrypt_key_tx);
+		scs->encrypt_key_rx = 0;
+	}
+
+	if (scs->iv_rx) {
+		buffer_destroy(scs->iv_rx);
+		scs->iv_rx = 0;
+	}
+
+	if (scs->iv_tx) {
+		buffer_destroy(scs->iv_tx);
+		scs->iv_tx = 0;
+	}
+
+	if (scs->mac_key_rx) {
+		buffer_destroy(scs->mac_key_rx);
+		scs->mac_key_rx = 0;
+	}
+
+	if (scs->mac_key_tx) {
+		buffer_destroy(scs->mac_key_tx);
+		scs->mac_key_tx = 0;
+	}
+
+	COMMON_FREE(scs);
+}
+
 unsigned int serialize_irati_msg(struct irati_msg_layout *numtables,
 				 size_t num_entries,
 				 void *serbuf,
@@ -1686,6 +2358,9 @@ unsigned int serialize_irati_msg(struct irati_msg_layout *numtables,
 	struct dif_config *dif_config;
 	struct dtp_config *dtp_config;
 	struct dtcp_config *dtcp_config;
+	struct query_rib_resp * qrr;
+	struct pff_entry_list * pel;
+	struct sdup_crypto_state * scs;
 	int i;
 
 	if (msg->msg_type >= num_entries) {
@@ -1727,7 +2402,22 @@ unsigned int serialize_irati_msg(struct irati_msg_layout *numtables,
 		serialize_dtcp_config(&serptr, dtcp_config);
 	}
 
-	bf = (const struct buffer *)dtcp_config;
+	qrr = (struct query_rib_resp *)dtcp_config;
+	for (i = 0; i < numtables[msg->msg_type].query_rib_resps; i++, qrr++) {
+		serialize_query_rib_resp(&serptr, qrr);
+	}
+
+	pel = (struct pff_entry_list *)qrr;
+	for (i = 0; i < numtables[msg->msg_type].pff_entry_lists; i++, pel++) {
+		serialize_pff_entry_list(&serptr, pel);
+	}
+
+	scs = (struct sdup_crypto_state *)pel;
+	for (i = 0; i < numtables[msg->msg_type].sdup_crypto_states; i++, scs++) {
+		serialize_sdup_crypto_state(&serptr, scs);
+	}
+
+	bf = (const struct buffer *)scs;
 	for (i = 0; i < numtables[msg->msg_type].buffers; i++, bf++) {
 		serialize_buffer(&serptr, bf);
 	}
@@ -1750,6 +2440,9 @@ int deserialize_irati_msg(struct irati_msg_layout *numtables, size_t num_entries
 	struct dif_config *dif_config;
 	struct dtp_config *dtp_config;
 	struct dtcp_config *dtcp_config;
+	struct query_rib_resp * qrr;
+	struct pff_entry_list * pel;
+	struct sdup_crypto_state * scs;
 	unsigned int copylen;
 	const void *desptr;
 	int ret;
@@ -1801,7 +2494,22 @@ int deserialize_irati_msg(struct irati_msg_layout *numtables, size_t num_entries
 		ret = deserialize_dtcp_config(&desptr, dtcp_config);
 	}
 
-	bf = (struct buffer *)dtcp_config;
+	qrr = (struct query_rib_resp *)dtcp_config;
+	for (i = 0; i < numtables[bmsg->msg_type].query_rib_resps; i++, qrr++) {
+		ret = deserialize_query_rib_resp(&desptr, qrr);
+	}
+
+	pel = (struct pff_entry_list *)qrr;
+	for (i = 0; i < numtables[bmsg->msg_type].pff_entry_lists; i++, pel++) {
+		ret = deserialize_pff_entry_list(&desptr, pel);
+	}
+
+	scs = (struct sdup_crypto_state *)pel;
+	for (i = 0; i < numtables[bmsg->msg_type].sdup_crypto_states; i++, scs++) {
+		ret = deserialize_sdup_crypto_state(&desptr, scs);
+	}
+
+	bf = (struct buffer *)scs;
 	for (i = 0; i < numtables[bmsg->msg_type].buffers; i++, bf++) {
 		ret = deserialize_buffer(&desptr, bf);
 	}
@@ -1825,6 +2533,9 @@ unsigned int irati_msg_serlen(struct irati_msg_layout *numtables,
 	struct dif_config *dif_config;
 	struct dtp_config *dtp_config;
 	struct dtcp_config *dtcp_config;
+	struct query_rib_resp *qrr;
+	struct pff_entry_list * pel;
+	struct sdup_crypto_state * scs;
 	const struct buffer *bf;
 	int i;
 
@@ -1865,7 +2576,22 @@ unsigned int irati_msg_serlen(struct irati_msg_layout *numtables,
 		ret += dtcp_config_serlen(dtcp_config);
 	}
 
-	bf = (const struct buffer *)dtcp_config;
+	qrr = (struct query_rib_resp *)dtcp_config;
+	for (i = 0; i < numtables[msg->msg_type].query_rib_resps; i++, qrr++) {
+		ret += query_rib_resp_serlen(qrr);
+	}
+
+	pel = (struct pff_entry_list *)qrr;
+	for (i = 0; i < numtables[msg->msg_type].pff_entry_lists; i++, pel++) {
+		ret += pff_entry_list_serlen(pel);
+	}
+
+	scs = (struct sdup_crypto_state *)pel;
+	for (i = 0; i < numtables[msg->msg_type].sdup_crypto_states; i++, scs++) {
+		ret += sdup_crypto_state_serlen(scs);
+	}
+
+	bf = (const struct buffer *)scs;
 	for (i = 0; i < numtables[msg->msg_type].buffers; i++, bf++) {
 		ret += sizeof(bf->size) + bf->size;
 	}
@@ -1884,6 +2610,9 @@ void irati_msg_free(struct irati_msg_layout *numtables, size_t num_entries,
 	struct dif_config * dif_config;
 	struct dtp_config * dtp_config;
 	struct dtcp_config * dtcp_config;
+	struct query_rib_resp * qrr;
+	struct pff_entry_list * pel;
+	struct sdup_crypto_state * scs;
 	int i;
 
 	if (msg->msg_type >= num_entries) {
@@ -1911,7 +2640,10 @@ void irati_msg_free(struct irati_msg_layout *numtables, size_t num_entries,
 		flow_spec_free(fspec);
 	}
 
-	/* TODO check for dif_config */
+	dif_config = (struct dif_config *)(fspec);
+	for (i = 0; i < numtables[msg->msg_type].dif_configs; i++, dif_config++) {
+		dif_config_free(dif_config);
+	}
 
 	dtp_config = (struct dtp_config *)(dif_config);
 	for (i = 0; i < numtables[msg->msg_type].dtp_configs; i++, dtp_config++) {
@@ -1921,6 +2653,21 @@ void irati_msg_free(struct irati_msg_layout *numtables, size_t num_entries,
 	dtcp_config = (struct dtcp_config *)(dtp_config);
 	for (i = 0; i < numtables[msg->msg_type].dtcp_configs; i++, dtcp_config++) {
 		dtcp_config_free(dtcp_config);
+	}
+
+	qrr = (struct query_rib_resp *)(dtcp_config);
+	for (i = 0; i < numtables[msg->msg_type].query_rib_resps; i++, qrr++) {
+		query_rib_resp_free(qrr);
+	}
+
+	pel = (struct pff_entry_list *)(qrr);
+	for (i = 0; i < numtables[msg->msg_type].pff_entry_lists; i++, pel++) {
+		pff_entry_list_free(pel);
+	}
+
+	scs = (struct sdup_crypto_state *)(pel);
+	for (i = 0; i < numtables[msg->msg_type].sdup_crypto_states; i++, scs++) {
+		sdup_crypto_state_free(scs);
 	}
 }
 COMMON_EXPORT(irati_msg_free);
@@ -1938,7 +2685,10 @@ unsigned int irati_numtables_max_size(struct irati_msg_layout *numtables,
 				numtables[i].flow_specs * sizeof(struct flow_spec) +
 				numtables[i].dif_configs * sizeof(struct dif_config) +
 				numtables[i].dtp_configs * sizeof(struct dtp_config) +
-				numtables[i].dtcp_configs * sizeof(struct dtcp_config);
+				numtables[i].dtcp_configs * sizeof(struct dtcp_config) +
+				numtables[i].query_rib_resps * sizeof(struct query_rib_resp) +
+				numtables[i].pff_entry_lists * sizeof(struct pff_entry_list) +
+				numtables[i].sdup_crypto_states * sizeof(struct sdup_crypto_state);
 
 		if (cur > max) {
 			max = cur;
