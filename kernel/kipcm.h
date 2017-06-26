@@ -27,7 +27,7 @@
 #include "ipcp-instances.h"
 #include "ipcp-factories.h"
 #include "sdu.h"
-#include "rnl.h"
+#include "ctrldev.h"
 #include "kfa.h"
 #include "rds/robjects.h"
 
@@ -75,8 +75,6 @@ port_id_t      kipcm_flow_create(struct kipcm *   kipcm,
 int            kipcm_flow_destroy(struct kipcm *   kipcm,
 				  ipc_process_id_t ipc_id,
 				  port_id_t        port_id);
-
-
 /*
  * The following functions represent the KIPCM southbound interface
  */

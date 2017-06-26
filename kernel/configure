@@ -64,6 +64,12 @@ if [ ! -d /lib/modules/`uname -r`/build ]; then
     exit 255
 fi
 
+# Generate symbolic links for common code
+(
+ln -sf ../common/ker-numtables.c ker-numtables.c
+ln -sf ../common/serdes-utils.c serdes-utils.c
+)
+
 # Generate the main Makefile
 cp Makefile.in Makefile
 sed -i "s|@HAVE_VMPI@|${HAVE_VMPI}|g" Makefile

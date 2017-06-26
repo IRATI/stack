@@ -654,20 +654,22 @@ static int disable_write(struct ipcp_instance_data * data,
 }
 
 static int normal_assign_to_dif(struct ipcp_instance_data * data,
-                                const struct dif_info *     dif_information)
+		                const struct name * dif_name,
+				const string_t * type,
+				const struct dif_config * config)
 {
         struct efcp_config * efcp_config;
         struct sdup_config * sdup_config;
         struct rmt_config *  rmt_config;
 
-        if (name_cpy(dif_information->dif_name, &data->dif_name)) {
+        if (name_cpy(dif_name, &data->dif_name)) {
                 LOG_ERR("%s: name_cpy() failed", __func__);
                 return -1;
         }
 
-        data->address  = dif_information->configuration->address;
+        data->address  = config->address;
 
-        efcp_config = dif_information->configuration->efcp_config;
+        efcp_config = config->efcp_config;
 
         if (!efcp_config) {
                 LOG_ERR("No EFCP configuration in the dif_info");
@@ -682,7 +684,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 
         efcp_container_config_set(data->efcpc, efcp_config);
 
-        rmt_config = dif_information->configuration->rmt_config;
+        rmt_config = config->rmt_config;
         if (!rmt_config) {
         	LOG_ERR("No RMT configuration in the dif_info");
         	return -1;
@@ -698,7 +700,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 		return -1;
         }
 
-	sdup_config = dif_information->configuration->sdup_config;
+	sdup_config = config->sdup_config;
 	if (!sdup_config) {
 		LOG_INFO("No SDU protection config specified, using default");
 		sdup_config = sdup_config_create();

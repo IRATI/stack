@@ -45,11 +45,11 @@ struct irati_msg_layout {
 void serialize_string(void **pptr, const char *s);
 int deserialize_string(const void **pptr, char **s);
 
-void serialize_buffer(void **pptr, const char *s);
-int deserialize_buffer(const void **pptr, char **s);
+void serialize_buffer(void **pptr, const struct buffer *b);
+int deserialize_buffer(const void **pptr, struct buffer **b);
 
 int rina_sername_valid(const char *str);
-unsigned rina_name_serlen(const struct rina_name *name);
+unsigned rina_name_serlen(const struct name *name);
 void serialize_rina_name(void **pptr, const struct name *name);
 int deserialize_rina_name(const void **pptr, struct name *name);
 void rina_name_free(struct name *name);
@@ -103,7 +103,7 @@ int deserialize_dtcp_rxctrl_config(const void **pptr, struct dtcp_rxctrl_config 
 void dtcp_rxctrl_config_free(struct dtcp_rxctrl_config * rxfc);
 
 int dtcp_config_serlen(const struct dtcp_config * dtcp_config);
-void serialize_dctp_config(void **pptr, const struct dtcp_config *dtcp_config);
+void serialize_dtcp_config(void **pptr, const struct dtcp_config *dtcp_config);
 int deserialize_dtcp_config(const void **pptr, struct dtcp_config *dtcp_config);
 void dtcp_config_free(struct dtcp_config * dtcp_config);
 

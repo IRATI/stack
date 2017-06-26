@@ -39,4 +39,9 @@ int irati_handler_register(irati_msg_t msg_type,
 			   void * data);
 int irati_handler_unregister(irati_msg_t msg_type);
 
+void irati_ctrl_dev_msg_free(struct irati_msg_base *bmsg);
+
+int irati_ctrl_dev_snd_resp_msg(struct ctrldev_priv *ctrl_dev,
+				struct irati_msg_base *bmsg);
+
 #endif
