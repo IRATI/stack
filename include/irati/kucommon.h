@@ -386,6 +386,18 @@ struct dif_info {
         struct dif_config * configuration;
 };
 
+struct rib_object_data {
+        struct list_head next;
+        string_t *	 class;
+        string_t *	 name;
+        string_t *	 disp_value;
+        uint64_t	 instance;
+};
+
+struct query_rib_resp {
+	struct list_head rib_object_data_entries;
+};
+
 /** The state of a particular instance of an SDU crypto protection policy */
 struct sdup_crypto_state {
 	/** Enable or disable encryption crypto operations on write */
@@ -419,6 +431,23 @@ struct sdup_crypto_state {
 	struct buffer * iv_rx;
 
         string_t * compress_alg;
+};
+
+struct port_id_altlist {
+	port_id_t *		ports;
+	uint16_t		num_ports;
+	struct list_head	next;
+};
+
+struct mod_pff_entry {
+        address_t        fwd_info; /* dest_addr, neighbor_addr, circuit-id */
+        qos_id_t         qos_id;
+	struct list_head port_id_altlists;
+        struct list_head next;
+};
+
+struct pff_entry_list {
+	struct list_head pff_entries;
 };
 
 #define IRATI_SUCC  0

@@ -60,24 +60,4 @@ enum rib_object_class_t {
         EMPTY,
 };
 
-struct rib_object_entry {
-        string_t *        class;
-        string_t *        name;
-        long unsigned int instance;
-        string_t *	  display_value;
-        struct list_head  next;
-};
-
-struct port_id_altlist {
-	port_id_t *		ports;
-	size_t			num_ports;
-	struct list_head	next;
-};
-
-struct mod_pff_entry {
-        address_t        fwd_info; /* dest_addr, neighbor_addr, circuit-id */
-        qos_id_t         qos_id;
-	struct list_head port_id_altlists;
-        struct list_head next;
-};
 #endif

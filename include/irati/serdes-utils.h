@@ -36,11 +36,17 @@ struct irati_msg_layout {
     unsigned int dif_configs;
     unsigned int dtp_configs;
     unsigned int dtcp_configs;
+    unsigned int query_rib_resps;
+    unsigned int pff_entry_lists;
+    unsigned int sdup_crypto_states;
     unsigned int buffers;
 };
 
 void serialize_string(void **pptr, const char *s);
 int deserialize_string(const void **pptr, char **s);
+
+void serialize_buffer(void **pptr, const char *s);
+int deserialize_buffer(const void **pptr, char **s);
 
 int rina_sername_valid(const char *str);
 unsigned rina_name_serlen(const struct rina_name *name);
@@ -131,9 +137,45 @@ void serialize_efcp_config(void **pptr, const struct efcp_config *efc);
 int deserialize_efcp_config(const void **pptr, struct efcp_config *efc);
 void efcp_config_free(struct efcp_config * efc);
 
+int ipcp_config_entry_serlen(const struct ipcp_config_entry * ice);
+void serialize_ipcp_config_entry(void **pptr, const struct ipcp_config_entry *ice);
+int deserialize_ipcp_config_entry(const void **pptr, struct ipcp_config_entry *ice);
+void ipcp_config_entry_free(struct ipcp_config_entry * ice);
+
 int dif_config_serlen(const struct dif_config * dif_config);
 void serialize_dif_config(void **pptr, const struct dif_config *dif_config);
 int deserialize_dif_config(const void **pptr, struct dif_config *dif_config);
+void dif_config_free(struct dif_config * dif_config);
+
+int rib_object_data_serlen(const struct rib_object_data * rod);
+void serialize_rib_object_data(void **pptr, const struct rib_object_data *rod);
+int deserialize_rib_object_data(const void **pptr, struct rib_object_data *rod);
+void rib_object_data_free(struct rib_object_data * rod);
+
+int query_rib_resp_serlen(const struct query_rib_resp * qrr);
+void serialize_query_rib_resp(void **pptr, const struct query_rib_resp *qrr);
+int deserialize_query_rib_resp(const void **pptr, struct query_rib_resp *qrr);
+void query_rib_resp_free(struct query_rib_resp * qrr);
+
+int port_id_altlist_serlen(const struct port_id_altlist * pia);
+void serialize_port_id_altlist(void **pptr, const struct port_id_altlist *pia);
+int deserialize_port_id_altlist(const void **pptr, struct port_id_altlist *pia);
+void port_id_altlist_free(struct port_id_altlist * pia);
+
+int mod_pff_entry_serlen(const struct mod_pff_entry * pffe);
+void serialize_mod_pff_entry(void **pptr, const struct mod_pff_entry *pffe);
+int deserialize_mod_pff_entry(const void **pptr, struct mod_pff_entry *pffe);
+void mod_pff_entry_free(struct mod_pff_entry * pffe);
+
+int pff_entry_list_serlen(const struct pff_entry_list * pel);
+void serialize_pff_entry_list(void **pptr, const struct pff_entry_list *pel);
+int deserialize_pff_entry_list(const void **pptr, struct pff_entry_list *pel);
+void pff_entry_list_free(struct pff_entry_list * pel);
+
+int sdup_crypto_state_serlen(const struct sdup_crypto_state * scs);
+void serialize_sdup_crypto_state(void **pptr, const struct sdup_crypto_state *scs);
+int deserialize_sdup_crypto_state(const void **pptr, struct sdup_crypto_state *scs);
+void sdup_crypto_state_free(struct sdup_crypto_state * scs);
 
 unsigned int irati_msg_serlen(struct irati_msg_layout *numtables,
                               size_t num_entries,

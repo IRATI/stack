@@ -52,152 +52,140 @@ typedef enum {
         RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION,
 
         /* 7 IPC Manager -> IPC Process */
-        RINA_C_IPCM_ENROLL_TO_DIF_REQUEST,
-
-        /* 8 IPC Process -> IPC Manager */
-        RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE,
-
-        /* 9 IPC Manager -> IPC Process */
-        RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST,
-
-        /* 10 IPC Process -> IPC Manager */
-        RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE,
-
-        /* 11 IPC Manager -> IPC Process */
         RINA_C_IPCM_ALLOCATE_FLOW_REQUEST,
 
-        /* 12 Allocate flow request from a remote application */
+        /* 8 Allocate flow request from a remote application */
         /* IPC Process -> IPC Manager */
         RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED,
 
-        /* 13 IPC Process -> IPC Manager */
+        /* 9 IPC Process -> IPC Manager */
         RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
 
-        /* 14 IPC Manager -> IPC Process */
+        /* 10 IPC Manager -> IPC Process */
         RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE,
 
-        /* 15 IPC Manager -> IPC Process */
+        /* 11 IPC Manager -> IPC Process */
         RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST,
 
-        /* 16 IPC Process -> IPC Manager*/
+        /* 12 IPC Process -> IPC Manager*/
         RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE,
 
-        /*  17 IPC Process -> IPC Manager, flow deallocated without the */
+        /*  13 IPC Process -> IPC Manager, flow deallocated without the */
         /*  application having requested it */
         RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION,
 
-        /* 18 IPC Manager -> IPC Process */
+        /* 14 IPC Manager -> IPC Process */
         RINA_C_IPCM_REGISTER_APPLICATION_REQUEST,
 
-        /* 19 IPC Process -> IPC Manager */
+        /* 15 IPC Process -> IPC Manager */
         RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE,
 
-        /* 20 IPC Manager -> IPC Process */
+        /* 16 IPC Manager -> IPC Process */
         RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST,
 
-        /* 21 IPC Process -> IPC Manager */
+        /* 17 IPC Process -> IPC Manager */
         RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE,
 
-        /* 22 IPC Manager -> IPC Process */
+        /* 18 IPC Manager -> IPC Process */
         RINA_C_IPCM_QUERY_RIB_REQUEST,
 
-        /* 23 IPC Process -> IPC Manager */
+        /* 19 IPC Process -> IPC Manager */
         RINA_C_IPCM_QUERY_RIB_RESPONSE,
 
-        /* 24 IPC Process (user space) -> RMT (kernel) */
+        /* 20 IPC Process (user space) -> RMT (kernel) */
         RINA_C_RMT_MODIFY_FTE_REQUEST,
 
-        /* 25 IPC Process (user space) -> RMT (kernel) */
+        /* 21 IPC Process (user space) -> RMT (kernel) */
         RINA_C_RMT_DUMP_FT_REQUEST,
 
-        /* 26 RMT (kernel) -> IPC Process (user space) */
+        /* 22 RMT (kernel) -> IPC Process (user space) */
         RINA_C_RMT_DUMP_FT_REPLY,
 
-        /* 27 NL layer -> IPC Manager */
+        /* 23 NL layer -> IPC Manager */
         RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION,
 
-        /* 28 IPC Manager -> Kernel (NL Layer) */
+        /* 24 IPC Manager -> Kernel (NL Layer) */
         RINA_C_IPCM_IPC_MANAGER_PRESENT,
 
-        /* 29 IPC Process (user space) -> KIPCM*/
+        /* 25 IPC Process (user space) -> KIPCM*/
         RINA_C_IPCP_CONN_CREATE_REQUEST,
 
-        /* 30 KIPCM -> IPC Process (user space)*/
+        /* 26 KIPCM -> IPC Process (user space)*/
         RINA_C_IPCP_CONN_CREATE_RESPONSE,
 
-        /* 31 IPC Process (user space) -> KIPCM */
+        /* 27 IPC Process (user space) -> KIPCM */
         RINA_C_IPCP_CONN_CREATE_ARRIVED,
 
-        /* 32 KIPCM -> IPC Process (user space)*/
+        /* 28 KIPCM -> IPC Process (user space)*/
         RINA_C_IPCP_CONN_CREATE_RESULT,
 
-        /* 33 IPC Process (user space) -> KIPCM */
+        /* 29 IPC Process (user space) -> KIPCM */
         RINA_C_IPCP_CONN_UPDATE_REQUEST,
 
-        /* 34 KIPCM -> IPC Process (user space)*/
+        /* 30 KIPCM -> IPC Process (user space)*/
         RINA_C_IPCP_CONN_UPDATE_RESULT,
 
-        /* 35 IPC Process (user space) -> KIPCM */
+        /* 31 IPC Process (user space) -> KIPCM */
         RINA_C_IPCP_CONN_DESTROY_REQUEST,
 
-        /* 36 KIPCM -> IPC Process (user space)*/
+        /* 32 KIPCM -> IPC Process (user space)*/
         RINA_C_IPCP_CONN_DESTROY_RESULT,
 
-        /* 37 IPC Process (user space) -> KIPCM */
+        /* 33 IPC Process (user space) -> KIPCM */
         RINA_C_IPCP_SET_POLICY_SET_PARAM_REQUEST,
 
-        /* 38 KIPCM -> IPC Process (user space) */
+        /* 34 KIPCM -> IPC Process (user space) */
         RINA_C_IPCP_SET_POLICY_SET_PARAM_RESPONSE,
 
-        /* 39 IPC Process (user space) -> KIPCM */
+        /* 35 IPC Process (user space) -> KIPCM */
         RINA_C_IPCP_SELECT_POLICY_SET_REQUEST,
 
-        /* 40 KIPCM -> IPC Process (user space) */
+        /* 36 KIPCM -> IPC Process (user space) */
         RINA_C_IPCP_SELECT_POLICY_SET_RESPONSE,
 
-        /* 41, IPC Process (user space) -> KIPCM */
+        /* 37, IPC Process (user space) -> KIPCM */
         RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST,
 
-        /* 42 KIPCM -> IPC Process (user space) */
+        /* 38 KIPCM -> IPC Process (user space) */
         RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE,
 
-	/* 43 IPC Process (user space) -> KIPCM */
+	/* 39 IPC Process (user space) -> KIPCM */
 	RINA_C_IPCP_ADDRESS_CHANGE_REQUEST,
 
-	/* 44, IPC Process (user space) -> K IPCM (kernel) */
+	/* 40, IPC Process (user space) -> K IPCM (kernel) */
 	RINA_C_IPCP_ALLOCATE_PORT_REQUEST,
 
-	/* 45, K IPCM (kernel) -> IPC Process (user space) */
+	/* 41, K IPCM (kernel) -> IPC Process (user space) */
 	RINA_C_IPCP_ALLOCATE_PORT_RESPONSE,
 
-	/* 46, IPC Process (user space) -> K IPCM (kernel) */
+	/* 42, IPC Process (user space) -> K IPCM (kernel) */
 	RINA_C_IPCP_DEALLOCATE_PORT_REQUEST,
 
-	/* 47, K IPCM (kernel) -> IPC Process (user space) */
+	/* 43, K IPCM (kernel) -> IPC Process (user space) */
 	RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE,
 
-	/* 48, IPC Process (user space) -> K IPCM (kernel) */
+	/* 44, IPC Process (user space) -> K IPCM (kernel) */
 	RINA_C_IPCP_MANAGEMENT_SDU_WRITE_REQUEST,
 
-	/* 49, K IPCM (kernel) -> IPC Process (user space) */
+	/* 45, K IPCM (kernel) -> IPC Process (user space) */
 	RINA_C_IPCP_MANAGEMENT_SDU_WRITE_RESPONSE,
 
-	/* 50, K IPCM (kernel) -> IPC Process (user space) */
+	/* 46, K IPCM (kernel) -> IPC Process (user space) */
 	RINA_C_IPCP_MANAGEMENT_SDU_READ_NOTIF,
 
-	/* 51, IPC Process (user space) -> K IPCM (kernel) */
+	/* 47, IPC Process (user space) -> K IPCM (kernel) */
 	RINA_C_IPCM_CREATE_IPCP_REQUEST,
 
-	/* 52, K IPCM (kernel) -> IPC Process (user space) */
+	/* 48, K IPCM (kernel) -> IPC Process (user space) */
 	RINA_C_IPCM_CREATE_IPCP_RESPONSE,
 
-	/* 53, IPC Process (user space) -> K IPCM (kernel) */
+	/* 49, IPC Process (user space) -> K IPCM (kernel) */
 	RINA_C_IPCM_DESTROY_IPCP_REQUEST,
 
-	/* 54, K IPCM (kernel) -> IPC Process (user space) */
+	/* 50, K IPCM (kernel) -> IPC Process (user space) */
 	RINA_C_IPCM_DESTROY_IPCP_RESPONSE,
 
-	/* 55 */
+	/* 51 */
         RINA_C_MAX,
 } msg_type_t;
 
@@ -232,7 +220,7 @@ extern struct irati_msg_layout irati_ker_numtables[RINA_C_MAX+1];
  *     in whatever order
  */
 
-/* TODO 1 RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST */
+/* 1 RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST */
 struct irati_kmsg_ipcm_assign_to_dif {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -249,7 +237,7 @@ struct irati_kmsg_ipcm_assign_to_dif {
 /* 2 RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE */
 /* Uses base response message */
 
-/* TODO 3 RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST */
+/* 3 RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST */
 struct irati_kmsg_ipcm_update_config {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -279,18 +267,8 @@ struct irati_kmsg_ipcp_dif_reg_not {
         struct name * dif_name;
 } __attribute__((packed));
 
-/* 7 TODO RINA_C_IPCM_ENROLL_TO_DIF_REQUEST */
-
-/* 8 RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE */
-/* Uses base response message */
-
-/* 9 TODO RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST */
-
-/* 10 RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE */
-/* Uses base response message  */
-
-/* 11 RINA_C_IPCM_ALLOCATE_FLOW_REQUEST*/
-/* TODO 12 RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED */
+/* 7 RINA_C_IPCM_ALLOCATE_FLOW_REQUEST*/
+/* 8 RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED */
 struct irati_kmsg_ipcm_allocate_flow {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -305,7 +283,7 @@ struct irati_kmsg_ipcm_allocate_flow {
         struct flow_spec * fspec;
 } __attribute__((packed));
 
-/* 14 RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE */
+/* 10 RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE */
 struct irati_kmsg_ipcp_dif_reg_not {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -319,10 +297,10 @@ struct irati_kmsg_ipcp_dif_reg_not {
         port_id_t id;
 } __attribute__((packed));
 
-/* 15 RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE */
+/* 11 RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE */
 /* Uses base netlink message */
 
-/* 18 RINA_C_IPCM_REGISTER_APPLICATION_REQUEST */
+/* 14 RINA_C_IPCM_REGISTER_APPLICATION_REQUEST */
 struct irati_kmsg_ipcm_reg_app {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -336,10 +314,10 @@ struct irati_kmsg_ipcm_reg_app {
         struct name * dif_name;
 } __attribute__((packed));
 
-/* 19 RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE */
+/* 15 RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE */
 /* Uses base response message */
 
-/* 20 RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST */
+/* 16 RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST */
 struct irati_kmsg_ipcm_unreg_app {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -352,10 +330,10 @@ struct irati_kmsg_ipcm_unreg_app {
         struct name * dif_name;
 } __attribute__((packed));
 
-/* 21 RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE */
+/* 27 RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE */
 /* Uses base response message */
 
-/* 22 RINA_C_IPCM_QUERY_RIB_REQUEST */
+/* 18 RINA_C_IPCM_QUERY_RIB_REQUEST */
 struct irati_kmsg_ipcm_query_rib {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -371,7 +349,7 @@ struct irati_kmsg_ipcm_query_rib {
         string_t * object_name;
 } __attribute__((packed));
 
-/* TODO 23 RINA_C_IPCM_QUERY_RIB_RESPONSE */
+/* 19 RINA_C_IPCM_QUERY_RIB_RESPONSE */
 struct irati_kmsg_ipcm_query_rib_resp {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -381,14 +359,14 @@ struct irati_kmsg_ipcm_query_rib_resp {
 	uint32_t event_id;
 
 	uint8_t result;
-        struct list_head rib_entries;
+        struct query_rib_resp * rib_entries;
 } __attribute__((packed));
 
-/* 25 RINA_C_RMT_DUMP_FT_REQUEST */
+/* 21 RINA_C_RMT_DUMP_FT_REQUEST */
 /* Uses base message */
 
-/* 24 RINA_C_RMT_MODIFY_FTE_REQUEST */
-/* TODO 26 RINA_C_RMT_DUMP_FT_REPLY */
+/* 20 RINA_C_RMT_MODIFY_FTE_REQUEST */
+/* 22 RINA_C_RMT_DUMP_FT_REPLY */
 struct irati_kmsg_rmt_dump_ft {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -398,17 +376,17 @@ struct irati_kmsg_rmt_dump_ft {
 	uint32_t event_id;
 
 	uint8_t result;
-        struct list_head pft_entries;
+        struct pff_entry_list * pft_entries;
 } __attribute__((packed));
 
-/* 27 RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION */
+/* 23 RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION */
 /* Uses base message */
 
-/* 28 RINA_C_IPCM_IPC_MANAGER_PRESENT */
+/* 24 RINA_C_IPCM_IPC_MANAGER_PRESENT */
 /* Uses base message */
 
-/* 29 RINA_C_IPCP_CONN_CREATE_REQUEST */
-/* TODO 31 RINA_C_IPCP_CONN_CREATE_ARRIVED */
+/* 25 RINA_C_IPCP_CONN_CREATE_REQUEST */
+/* 27 RINA_C_IPCP_CONN_CREATE_ARRIVED */
 struct irati_kmsg_ipcp_conn_create_arrived {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -427,9 +405,9 @@ struct irati_kmsg_ipcp_conn_create_arrived {
         struct dtcp_config * dtcp_cfg;
 } __attribute__((packed));
 
-/* 30 RINA_C_IPCP_CONN_CREATE_RESPONSE */
-/* 32 RINA_C_IPCP_CONN_CREATE_RESULT */
-/* 33 RINA_C_IPCP_CONN_UPDATE_REQUEST */
+/* 26 RINA_C_IPCP_CONN_CREATE_RESPONSE */
+/* 28 RINA_C_IPCP_CONN_CREATE_RESULT */
+/* 29 RINA_C_IPCP_CONN_UPDATE_REQUEST */
 struct irati_kmsg_ipcp_conn_update {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -443,7 +421,7 @@ struct irati_kmsg_ipcp_conn_update {
         cep_id_t  dst_cep;
 } __attribute__((packed));
 
-/* 37 RINA_C_IPCP_SET_POLICY_SET_PARAM_REQUEST */
+/* 33 RINA_C_IPCP_SET_POLICY_SET_PARAM_REQUEST */
 struct irati_kmsg_ipcp_select_ps_param {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -457,10 +435,10 @@ struct irati_kmsg_ipcp_select_ps_param {
         string_t * value;
 } __attribute__((packed));
 
-/* 38 RINA_C_IPCP_SET_POLICY_SET_RESPONSE */
+/* 34 RINA_C_IPCP_SET_POLICY_SET_RESPONSE */
 /* Uses base response message */
 
-/* 39 RINA_C_IPCP_SELECT_POLICY_SET_REQUEST */
+/* 35 RINA_C_IPCP_SELECT_POLICY_SET_REQUEST */
 struct irati_kmsg_ipcp_select_ps {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -473,10 +451,10 @@ struct irati_kmsg_ipcp_select_ps {
         string_t * name;
 } __attribute__((packed));
 
-/* 40 RINA_C_IPCP_SELECT_POLICY_SET_RESPONSE */
+/* 36 RINA_C_IPCP_SELECT_POLICY_SET_RESPONSE */
 /* Uses base response message */
 
-/* TODO 41 RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST */
+/* 37 RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST */
 struct irati_kmsg_ipcp_address_change {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -489,7 +467,7 @@ struct irati_kmsg_ipcp_address_change {
 	struct sdup_crypto_state * state;
 } __attribute__((packed));
 
-/* 43 RINA_C_IPCP_ADDRESS_CHANGE_REQUEST */
+/* 39 RINA_C_IPCP_ADDRESS_CHANGE_REQUEST */
 struct irati_kmsg_ipcp_address_change {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -504,7 +482,7 @@ struct irati_kmsg_ipcp_address_change {
 	timeout_t deprecate_old_timeout;
 } __attribute__((packed));
 
-/* 44 RINA_C_IPCP_ALLOCATE_PORT_REQUEST */
+/* 40 RINA_C_IPCP_ALLOCATE_PORT_REQUEST */
 struct irati_kmsg_ipcp_select_ps_param {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -516,16 +494,16 @@ struct irati_kmsg_ipcp_select_ps_param {
         struct name * app_name;
 } __attribute__((packed));
 
-/* 13 RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT */
-/* 15 RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST */
-/* 17 RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION */
-/* 34 RINA_C_IPCP_CONN_UPDATE_RESPONSE */
-/* 35 RINA_C_IPCP_CONN_DESTROY_REQUEST */
-/* 36 RINA_C_IPCP_CONN_DESTROY_RESPONSE */
-/* 42 RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE */
-/* 45 RINA_C_IPCP_ALLOCATE_PORT_RESPONSE */
-/* 46 RINA_C_IPCP_DEALLOCATE_PORT_REQUEST */
-/* 47 RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE */
+/* 9 RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT */
+/* 11 RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST */
+/* 13 RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION */
+/* 30 RINA_C_IPCP_CONN_UPDATE_RESPONSE */
+/* 31 RINA_C_IPCP_CONN_DESTROY_REQUEST */
+/* 32 RINA_C_IPCP_CONN_DESTROY_RESPONSE */
+/* 38 RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE */
+/* 41 RINA_C_IPCP_ALLOCATE_PORT_RESPONSE */
+/* 42 RINA_C_IPCP_DEALLOCATE_PORT_REQUEST */
+/* 43 RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE */
 struct irati_kmsg_multi_msg {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -539,8 +517,8 @@ struct irati_kmsg_multi_msg {
         cep_id_t  cep_id;
 } __attribute__((packed));
 
-/* 48 RINA_C_IPCP_MANAGEMENT_SDU_WRITE_REQUEST */
-/* 50 RINA_C_IPCP_MANAGEMENT_SDU_READ_NOTIF */
+/* 44 RINA_C_IPCP_MANAGEMENT_SDU_WRITE_REQUEST */
+/* 46 RINA_C_IPCP_MANAGEMENT_SDU_READ_NOTIF */
 struct irati_kmsg_ipcp_mgmt_sdu{
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -553,10 +531,10 @@ struct irati_kmsg_ipcp_mgmt_sdu{
         struct buffer * sdu;
 } __attribute__((packed));
 
-/* 49 RINA_C_IPCP_MANAGEMENT_SDU_WRITE_RESPONSE */
+/* 45 RINA_C_IPCP_MANAGEMENT_SDU_WRITE_RESPONSE */
 /* Uses base response message */
 
-/* 51 RINA_C_IPCM_CREATE_IPCP_REQUEST */
+/* 47 RINA_C_IPCM_CREATE_IPCP_REQUEST */
 struct irati_kmsg_ipcm_create_ipcp {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -571,10 +549,10 @@ struct irati_kmsg_ipcm_create_ipcp {
 	string_t * dif_type;
 } __attribute__((packed));
 
-/* 52, K IPCM (kernel) -> IPC Process (user space) */
+/* 48, K IPCM (kernel) -> IPC Process (user space) */
 /* Uses base response message */
 
-/* 53 RINA_C_IPCM_DESTROY_IPCP_REQUEST */
+/* 49 RINA_C_IPCM_DESTROY_IPCP_REQUEST */
 struct irati_kmsg_ipcm_destroy_ipcp {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -586,7 +564,7 @@ struct irati_kmsg_ipcm_destroy_ipcp {
 	ipc_process_id_t ipcp_id;
 } __attribute__((packed));
 
-/* 54, K IPCM (kernel) -> IPC Process (user space) */
+/* 50, K IPCM (kernel) -> IPC Process (user space) */
 /* Uses base response message */
 
 #endif /* IRATI_KERN_MSG_H */
