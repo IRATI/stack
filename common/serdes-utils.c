@@ -388,7 +388,7 @@ __rina_name_fill(struct name *name, const char *apn,
 			(aen && strlen(aen) && !name->entity_name) ||
 			(aei && strlen(aei) && !name->entity_instance)) {
 		rina_name_free(name);
-		PE("FAILED\n");
+		LOG_ERR("FAILED\n");
 		return -1;
 	}
 
@@ -520,17 +520,19 @@ int deserialize_flow_spec(const void **pptr, struct flow_spec *fspec)
 {
 	memset(fspec, 0, sizeof(*fspec));
 
-	deserialize_obj(*pptr, uint32_t, fspec->average_bandwidth);
-	deserialize_obj(*pptr, uint32_t, fspec->average_sdu_bandwidth);
-	deserialize_obj(*pptr, uint32_t, fspec->delay);
-	deserialize_obj(*pptr, uint32_t, fspec->jitter);
-	deserialize_obj(*pptr, int32_t, fspec->max_allowable_gap);
-	deserialize_obj(*pptr, uint32_t, fspec->max_sdu_size);
-	deserialize_obj(*pptr, bool, fspec->ordered_delivery);
-	deserialize_obj(*pptr, bool, fspec->partial_delivery);
-	deserialize_obj(*pptr, uint32_t, fspec->peak_bandwidth_duration);
-	deserialize_obj(*pptr, uint32_t, fspec->peak_sdu_bandwidth_duration);
-	deserialize_obj(*pptr, int32_t, fspec->undetected_bit_error_rate);
+	deserialize_obj(*pptr, uint32_t, &fspec->average_bandwidth);
+	deserialize_obj(*pptr, uint32_t, &fspec->average_sdu_bandwidth);
+	deserialize_obj(*pptr, uint32_t, &fspec->delay);
+	deserialize_obj(*pptr, uint32_t, &fspec->jitter);
+	deserialize_obj(*pptr, int32_t, &fspec->max_allowable_gap);
+	deserialize_obj(*pptr, uint32_t, &fspec->max_sdu_size);
+	deserialize_obj(*pptr, bool, &fspec->ordered_delivery);
+	deserialize_obj(*pptr, bool, &fspec->partial_delivery);
+	deserialize_obj(*pptr, uint32_t, &fspec->peak_bandwidth_duration);
+	deserialize_obj(*pptr, uint32_t, &fspec->peak_sdu_bandwidth_duration);
+	deserialize_obj(*pptr, int32_t, &fspec->undetected_bit_error_rate);
+
+	return 0;
 }
 
 void flow_spec_free(struct flow_spec * fspec)
@@ -574,7 +576,7 @@ int deserialize_policy_parm(const void **pptr, struct policy_parm *prm)
 	return ret;
 }
 
-void policy_parm_free(const struct policy_parm * prm)
+void policy_parm_free(struct policy_parm * prm)
 {
 	if (!prm) {
 		return;
@@ -630,7 +632,7 @@ void serialize_policy(void **pptr, const struct policy *policy)
         serialize_obj(*pptr, uint16_t, num_parms);
 
         list_for_each_entry(pos, &(policy->params), next) {
-        	serialize_policy_parm(pos);
+        	serialize_policy_parm(pptr, pos);
         }
 }
 
@@ -639,6 +641,7 @@ int deserialize_policy(const void **pptr, struct policy *policy)
 	int ret;
 	uint16_t num_attrs;
 	struct policy_parm * pos;
+	int i;
 
 	memset(policy, 0, sizeof(*policy));
 
@@ -653,7 +656,7 @@ int deserialize_policy(const void **pptr, struct policy *policy)
 	}
 
 	deserialize_obj(*pptr, uint16_t, &num_attrs);
-	for(int i = 0; i < num_attrs; i++) {
+	for(i = 0; i < num_attrs; i++) {
 		pos = COMMON_ALLOC(sizeof(struct policy_parm), 1);
 		if (!pos) {
 			return -1;
@@ -671,7 +674,7 @@ int deserialize_policy(const void **pptr, struct policy *policy)
 	return ret;
 }
 
-void policy_free(const struct policy * policy)
+void policy_free(struct policy * policy)
 {
 	struct policy_parm * pos, * npos;
 
@@ -716,17 +719,15 @@ void serialize_dtp_config(void **pptr, const struct dtp_config *dtp_config)
 
 int deserialize_dtp_config(const void **pptr, struct dtp_config *dtp_config)
 {
-	int ret;
-
 	memset(dtp_config, 0, sizeof(*dtp_config));
 
-	deserialize_obj(*pptr, bool, dtp_config->dtcp_present);
-	deserialize_obj(*pptr, int, dtp_config->seq_num_ro_th);
-	deserialize_obj(*pptr, timeout_t, dtp_config->initial_a_timer);
-	deserialize_obj(*pptr, bool, dtp_config->partial_delivery);
-	deserialize_obj(*pptr, bool, dtp_config->incomplete_delivery);
-	deserialize_obj(*pptr, bool, dtp_config->in_order_delivery);
-	deserialize_obj(*pptr, seq_num_t, dtp_config->max_sdu_gap);
+	deserialize_obj(*pptr, bool, &dtp_config->dtcp_present);
+	deserialize_obj(*pptr, int, &dtp_config->seq_num_ro_th);
+	deserialize_obj(*pptr, timeout_t, &dtp_config->initial_a_timer);
+	deserialize_obj(*pptr, bool, &dtp_config->partial_delivery);
+	deserialize_obj(*pptr, bool, &dtp_config->incomplete_delivery);
+	deserialize_obj(*pptr, bool, &dtp_config->in_order_delivery);
+	deserialize_obj(*pptr, seq_num_t, &dtp_config->max_sdu_gap);
 
 	dtp_config->dtp_ps = COMMON_ALLOC(sizeof(struct policy), 1);
 	if (!dtp_config->dtp_ps) {
@@ -772,8 +773,8 @@ int deserialize_window_fctrl_config(const void **pptr,
 
 	memset(wfc, 0, sizeof(*wfc));
 
-	deserialize_obj(*pptr, uint32_t, wfc->initial_credit);
-	deserialize_obj(*pptr, uint32_t, wfc->max_closed_winq_length);
+	deserialize_obj(*pptr, uint32_t, &wfc->initial_credit);
+	deserialize_obj(*pptr, uint32_t, &wfc->max_closed_winq_length);
 
 	wfc->rcvr_flow_control = COMMON_ALLOC(sizeof(struct policy), 1);
 	if (!wfc->rcvr_flow_control) {
@@ -835,8 +836,8 @@ int deserialize_rate_fctrl_config(const void **pptr, struct rate_fctrl_config *r
 
 	memset(rfc, 0, sizeof(*rfc));
 
-	deserialize_obj(*pptr, uint32_t, rfc->sending_rate);
-	deserialize_obj(*pptr, uint32_t, rfc->time_period);
+	deserialize_obj(*pptr, uint32_t, &rfc->sending_rate);
+	deserialize_obj(*pptr, uint32_t, &rfc->time_period);
 
 	rfc->no_override_default_peak = COMMON_ALLOC(sizeof(struct policy), 1);
 	if (!rfc->no_override_default_peak) {
@@ -937,14 +938,14 @@ int deserialize_dtcp_fctrl_config(const void **pptr, struct dtcp_fctrl_config *d
 
 	memset(dfc, 0, sizeof(*dfc));
 
-	deserialize_obj(*pptr, uint32_t, dfc->rcvd_buffers_th);
-	deserialize_obj(*pptr, uint32_t, dfc->rcvd_bytes_percent_th);
-	deserialize_obj(*pptr, uint32_t, dfc->rcvd_bytes_th);
-	deserialize_obj(*pptr, uint32_t, dfc->sent_buffers_th);
-	deserialize_obj(*pptr, uint32_t, dfc->sent_bytes_percent_th);
-	deserialize_obj(*pptr, uint32_t, dfc->sent_bytes_th);
-	deserialize_obj(*pptr, bool, dfc->window_based_fctrl);
-	deserialize_obj(*pptr, bool, dfc->rate_based_fctrl);
+	deserialize_obj(*pptr, uint32_t, &dfc->rcvd_buffers_th);
+	deserialize_obj(*pptr, uint32_t, &dfc->rcvd_bytes_percent_th);
+	deserialize_obj(*pptr, uint32_t, &dfc->rcvd_bytes_th);
+	deserialize_obj(*pptr, uint32_t, &dfc->sent_buffers_th);
+	deserialize_obj(*pptr, uint32_t, &dfc->sent_bytes_percent_th);
+	deserialize_obj(*pptr, uint32_t, &dfc->sent_bytes_th);
+	deserialize_obj(*pptr, bool, &dfc->window_based_fctrl);
+	deserialize_obj(*pptr, bool, &dfc->rate_based_fctrl);
 
 	dfc->closed_window = COMMON_ALLOC(sizeof(struct policy), 1);
 	if (!dfc->closed_window) {
@@ -1069,9 +1070,9 @@ int deserialize_dtcp_rxctrl_config(const void **pptr, struct dtcp_rxctrl_config 
 
 	memset(rxfc, 0, sizeof(*rxfc));
 
-	deserialize_obj(*pptr, uint32_t, rxfc->data_retransmit_max);
-	deserialize_obj(*pptr, uint32_t, rxfc->initial_tr);
-	deserialize_obj(*pptr, uint32_t, rxfc->max_time_retry);
+	deserialize_obj(*pptr, uint32_t, &rxfc->data_retransmit_max);
+	deserialize_obj(*pptr, uint32_t, &rxfc->initial_tr);
+	deserialize_obj(*pptr, uint32_t, &rxfc->max_time_retry);
 
 	rxfc->rcvr_ack = COMMON_ALLOC(sizeof(struct policy), 1);
 	if (!rxfc->rcvr_ack) {
@@ -1193,7 +1194,7 @@ int dtcp_config_serlen(const struct dtcp_config * dtcp_config)
 	return ret;
 }
 
-void serialize_dctp_config(void **pptr, const struct dtcp_config *dtcp_config)
+void serialize_dtcp_config(void **pptr, const struct dtcp_config *dtcp_config)
 {
 	serialize_obj(*pptr, bool, dtcp_config->flow_ctrl);
 	serialize_obj(*pptr, bool, dtcp_config->rtx_ctrl);
@@ -1202,10 +1203,10 @@ void serialize_dctp_config(void **pptr, const struct dtcp_config *dtcp_config)
 	serialize_policy(pptr, dtcp_config->rtt_estimator);
 
 	if (dtcp_config->flow_ctrl)
-		serialize_dtcp_fctrl_config(dtcp_config->fctrl_cfg);
+		serialize_dtcp_fctrl_config(pptr, dtcp_config->fctrl_cfg);
 
 	if (dtcp_config->rtx_ctrl)
-		serialize_dtcp_rxctrl_config(dtcp_config->rxctrl_cfg);
+		serialize_dtcp_rxctrl_config(pptr, dtcp_config->rxctrl_cfg);
 }
 
 int deserialize_dtcp_config(const void **pptr, struct dtcp_config *dtcp_config)
@@ -1214,8 +1215,8 @@ int deserialize_dtcp_config(const void **pptr, struct dtcp_config *dtcp_config)
 
 	memset(dtcp_config, 0, sizeof(*dtcp_config));
 
-	deserialize_obj(*pptr, bool, dtcp_config->flow_ctrl);
-	deserialize_obj(*pptr, bool, dtcp_config->rtx_ctrl);
+	deserialize_obj(*pptr, bool, &dtcp_config->flow_ctrl);
+	deserialize_obj(*pptr, bool, &dtcp_config->rtx_ctrl);
 
 	dtcp_config->dtcp_ps = COMMON_ALLOC(sizeof(struct policy), 1);
 	if (!dtcp_config->dtcp_ps) {
@@ -1510,7 +1511,7 @@ void serialize_sdup_config(void **pptr, const struct sdup_config *sdc)
 	serialize_obj(*pptr, uint16_t, num_parms);
 
 	list_for_each_entry(pos, &(sdc->specific_dup_confs), next) {
-		serialize_dup_config_entry(pos->entry);
+		serialize_dup_config_entry(pptr, pos->entry);
 	}
 }
 
@@ -1519,6 +1520,7 @@ int deserialize_sdup_config(const void **pptr, struct sdup_config *sdc)
 	int ret;
 	struct dup_config * pos;
 	uint16_t num_attrs;
+	int i;
 
 	memset(sdc, 0, sizeof(*sdc));
 
@@ -1532,7 +1534,7 @@ int deserialize_sdup_config(const void **pptr, struct sdup_config *sdc)
 		return ret;
 
 	deserialize_obj(*pptr, uint16_t, &num_attrs);
-	for(int i = 0; i < num_attrs; i++) {
+	for(i = 0; i < num_attrs; i++) {
 		pos = COMMON_ALLOC(sizeof(struct dup_config), 1);
 		if (!pos) {
 			return -1;
@@ -1544,7 +1546,7 @@ int deserialize_sdup_config(const void **pptr, struct sdup_config *sdc)
 			return -1;
 		}
 
-		ret = deserialize_policy_parm(pptr, pos->entry);
+		ret = deserialize_dup_config_entry(pptr, pos->entry);
 		if (ret) {
 			return ret;
 		}
@@ -1599,23 +1601,24 @@ void serialize_dt_cons(void **pptr, const struct dt_cons *dtc)
 	serialize_obj(*pptr, uint16_t, dtc->qos_id_length);
 	serialize_obj(*pptr, uint16_t, dtc->rate_length);
 	serialize_obj(*pptr, uint16_t, dtc->seq_num_length);
-
 }
 
 int deserialize_dt_cons(const void **pptr, struct dt_cons *dtc)
 {
-	deserialize_obj(*pptr, uint16_t, dtc->address_length);
-	deserialize_obj(*pptr, uint16_t, dtc->cep_id_length);
-	deserialize_obj(*pptr, uint16_t, dtc->ctrl_seq_num_length);
-	deserialize_obj(*pptr, bool, dtc->dif_integrity);
-	deserialize_obj(*pptr, uint16_t, dtc->frame_length);
-	deserialize_obj(*pptr, uint16_t, dtc->length_length);
-	deserialize_obj(*pptr, uint32_t, dtc->max_pdu_life);
-	deserialize_obj(*pptr, uint32_t, dtc->max_pdu_size);
-	deserialize_obj(*pptr, uint16_t, dtc->port_id_length);
-	deserialize_obj(*pptr, uint16_t, dtc->qos_id_length);
-	deserialize_obj(*pptr, uint16_t, dtc->rate_length);
-	deserialize_obj(*pptr, uint16_t, dtc->seq_num_length);
+	deserialize_obj(*pptr, uint16_t, &dtc->address_length);
+	deserialize_obj(*pptr, uint16_t, &dtc->cep_id_length);
+	deserialize_obj(*pptr, uint16_t, &dtc->ctrl_seq_num_length);
+	deserialize_obj(*pptr, bool, &dtc->dif_integrity);
+	deserialize_obj(*pptr, uint16_t, &dtc->frame_length);
+	deserialize_obj(*pptr, uint16_t, &dtc->length_length);
+	deserialize_obj(*pptr, uint32_t, &dtc->max_pdu_life);
+	deserialize_obj(*pptr, uint32_t, &dtc->max_pdu_size);
+	deserialize_obj(*pptr, uint16_t, &dtc->port_id_length);
+	deserialize_obj(*pptr, uint16_t, &dtc->qos_id_length);
+	deserialize_obj(*pptr, uint16_t, &dtc->rate_length);
+	deserialize_obj(*pptr, uint16_t, &dtc->seq_num_length);
+
+	return 0;
 }
 
 void dt_cons_free(struct dt_cons * dtc)
@@ -1628,7 +1631,7 @@ void dt_cons_free(struct dt_cons * dtc)
 
 int efcp_config_serlen(const struct efcp_config * efc)
 {
-	return dt_cons_serlen(efc->dt_cons) + policy_len(efc->unknown_flow)
+	return dt_cons_serlen(efc->dt_cons) + policy_serlen(efc->unknown_flow)
 			+ sizeof(uint8_t) + sizeof(ssize_t);
 }
 
@@ -1792,7 +1795,7 @@ void serialize_dif_config(void **pptr, const struct dif_config *dif_config)
 	serialize_obj(*pptr, uint16_t, size);
 
 	list_for_each_entry(pos, &(dif_config->ipcp_config_entries), next) {
-		serialize_ipcp_config_entry(pos->entry);
+		serialize_ipcp_config_entry(pptr, pos->entry);
 	}
 
 	if (dif_config->efcp_config)
@@ -1808,13 +1811,14 @@ int deserialize_dif_config(const void **pptr, struct dif_config *dif_config)
 	int ret;
 	struct ipcp_config * pos;
 	uint16_t size;
+	int i;
 
 	memset(dif_config, 0, sizeof(*dif_config));
 
-	deserialize_obj(*pptr, address_t, dif_config->address);
+	deserialize_obj(*pptr, address_t, &dif_config->address);
 	deserialize_obj(*pptr, uint16_t, &size);
 
-	for(int i = 0; i < size; i++) {
+	for(i = 0; i < size; i++) {
 		pos = COMMON_ALLOC(sizeof(struct ipcp_config), 1);
 		if (!pos) {
 			return -1;
@@ -1887,9 +1891,9 @@ int rib_object_data_serlen(const struct rib_object_data * rod)
 void serialize_rib_object_data(void **pptr, const struct rib_object_data *rod)
 {
 	serialize_obj(*pptr, uint64_t, rod->instance);
-	serialize_string(rod->name);
-	serialize_string(rod->class);
-	serialize_string(rod->disp_value);
+	serialize_string(pptr, rod->name);
+	serialize_string(pptr, rod->class);
+	serialize_string(pptr, rod->disp_value);
 }
 
 int deserialize_rib_object_data(const void **pptr, struct rib_object_data *rod)
@@ -1898,17 +1902,17 @@ int deserialize_rib_object_data(const void **pptr, struct rib_object_data *rod)
 
 	memset(rod, 0, sizeof(*rod));
 
-	deserialize_obj(*pptr, uint64_t, rod->instance);
+	deserialize_obj(*pptr, uint64_t, &rod->instance);
 
-	ret = deserialize_string(rod->name);
+	ret = deserialize_string(pptr, &rod->name);
 	if (ret)
 		return ret;
 
-	ret = deserialize_string(rod->class);
+	ret = deserialize_string(pptr, &rod->class);
 	if (ret)
 		return ret;
 
-	return deserialize_string(rod->disp_value);
+	return deserialize_string(pptr, &rod->disp_value);
 }
 
 void rib_object_data_free(struct rib_object_data * rod)
@@ -1969,12 +1973,13 @@ int deserialize_query_rib_resp(const void **pptr, struct query_rib_resp *qrr)
 	int ret;
 	struct rib_object_data * pos;
 	uint16_t size;
+	int i;
 
 	memset(qrr, 0, sizeof(*qrr));
 
-	deserialize_obj(*pptr, uint16_t, size);
+	deserialize_obj(*pptr, uint16_t, &size);
 
-	for(int i = 0; i < size; i++) {
+	for(i = 0; i < size; i++) {
 		pos = COMMON_ALLOC(sizeof(struct rib_object_data), 1);
 		if (!pos) {
 			return -1;
@@ -2001,7 +2006,7 @@ void query_rib_resp_free(struct query_rib_resp * qrr)
 
 	list_for_each_entry_safe(pos, npos, &qrr->rib_object_data_entries, next) {
 		list_del(&pos->next);
-		rib_object_datay_free(pos);
+		rib_object_data_free(pos);
 	}
 
 	COMMON_FREE(qrr);
@@ -2031,7 +2036,7 @@ int deserialize_port_id_altlist(const void **pptr, struct port_id_altlist *pia)
 
 	memset(pia, 0, sizeof(*pia));
 
-	deserialize_obj(*pptr, uint16_t, pia->num_ports);
+	deserialize_obj(*pptr, uint16_t, &pia->num_ports);
 	plength = pia->num_ports * sizeof(port_id_t);
 
 	if (pia->ports > 0) {
@@ -2093,14 +2098,15 @@ int deserialize_mod_pff_entry(const void **pptr, struct mod_pff_entry *pffe)
 	int ret;
 	uint16_t num_alts;
 	struct port_id_altlist * pos;
+	int i;
 
 	memset(pffe, 0, sizeof(*pffe));
 
-	deserialize_obj(*pptr, address_t, pffe->fwd_info);
-	deserialize_obj(*pptr, qos_id_t, pffe->qos_id);
-	deserialize_obj(*pptr, uint16_t, num_alts);
+	deserialize_obj(*pptr, address_t, &pffe->fwd_info);
+	deserialize_obj(*pptr, qos_id_t, &pffe->qos_id);
+	deserialize_obj(*pptr, uint16_t, &num_alts);
 
-	for(int i = 0; i < num_alts; i++) {
+	for(i = 0; i < num_alts; i++) {
 		pos = COMMON_ALLOC(sizeof(struct port_id_altlist), 1);
 		if (!pos) {
 			return -1;
@@ -2168,12 +2174,13 @@ int deserialize_pff_entry_list(const void **pptr, struct pff_entry_list *pel)
 	int ret;
 	struct mod_pff_entry * pos;
 	uint16_t size;
+	int i;
 
 	memset(pel, 0, sizeof(*pel));
 
-	deserialize_obj(*pptr, uint16_t, size);
+	deserialize_obj(*pptr, uint16_t, &size);
 
-	for(int i = 0; i < size; i++) {
+	for(i = 0; i < size; i++) {
 		pos = COMMON_ALLOC(sizeof(struct mod_pff_entry), 1);
 		if (!pos) {
 			return -1;
@@ -2208,9 +2215,7 @@ void pff_entry_list_free(struct pff_entry_list * pel)
 
 int sdup_crypto_state_serlen(const struct sdup_crypto_state * scs)
 {
-	int ret;
-
-	ret = 2 * sizeof(bool) + 3 * sizeof(uint16_t)
+	return 2 * sizeof(bool) + 3 * sizeof(uint16_t)
 	       + string_prlen(scs->compress_alg)
 	       + string_prlen(scs->enc_alg)
 	       + string_prlen(scs->mac_alg)
@@ -2244,8 +2249,8 @@ int deserialize_sdup_crypto_state(const void **pptr, struct sdup_crypto_state *s
 
 	memset(scs, 0, sizeof(*scs));
 
-	deserialize_obj(*pptr, bool, scs->enable_crypto_rx);
-	deserialize_obj(*pptr, bool, scs->enable_crypto_tx);
+	deserialize_obj(*pptr, bool, &scs->enable_crypto_rx);
+	deserialize_obj(*pptr, bool, &scs->enable_crypto_tx);
 
 	ret = deserialize_string(pptr, &scs->compress_alg);
 	if (ret) {
@@ -2351,7 +2356,7 @@ unsigned int serialize_irati_msg(struct irati_msg_layout *numtables,
 	void *serptr = serbuf;
 	unsigned int serlen;
 	unsigned int copylen;
-	struct rina_name *name;
+	struct name *name;
 	string_t *str;
 	const struct buffer *bf;
 	struct flow_spec *fspec;
@@ -2379,10 +2384,10 @@ unsigned int serialize_irati_msg(struct irati_msg_layout *numtables,
 
 	str = (string_t *)(name);
 	for (i = 0; i < numtables[msg->msg_type].strings; i++, str++) {
-		serialize_string(&serptr, *str);
+		serialize_string(&serptr, str);
 	}
 
-	fspec = (struct fspec *)str;
+	fspec = (struct flow_spec *)str;
 	for (i = 0; i < numtables[msg->msg_type].flow_specs; i++, fspec++) {
 		serialize_flow_spec(&serptr, fspec);
 	}
@@ -2468,7 +2473,7 @@ int deserialize_irati_msg(struct irati_msg_layout *numtables, size_t num_entries
 
 	str = (string_t *)name;
 	for (i = 0; i < numtables[bmsg->msg_type].strings; i++, str++) {
-		ret = deserialize_string(&desptr, str);
+		ret = deserialize_string(&desptr, &str);
 		if (ret) {
 			return ret;
 		}
@@ -2511,7 +2516,7 @@ int deserialize_irati_msg(struct irati_msg_layout *numtables, size_t num_entries
 
 	bf = (struct buffer *)scs;
 	for (i = 0; i < numtables[bmsg->msg_type].buffers; i++, bf++) {
-		ret = deserialize_buffer(&desptr, bf);
+		ret = deserialize_buffer(&desptr, &bf);
 	}
 
 	if ((desptr - serbuf) != serbuf_len) {
@@ -2553,7 +2558,7 @@ unsigned int irati_msg_serlen(struct irati_msg_layout *numtables,
 
 	str = (string_t *)name;
 	for (i = 0; i < numtables[msg->msg_type].strings; i++, str++) {
-		ret += sizeof(uint16_t) + string_prlen(*str);
+		ret += sizeof(uint16_t) + string_prlen(str);
 	}
 
 	fspec = (struct flow_spec *)str;
@@ -2630,8 +2635,8 @@ void irati_msg_free(struct irati_msg_layout *numtables, size_t num_entries,
 
 	str = (string_t *)(name);
 	for (i = 0; i < numtables[msg->msg_type].strings; i++, str++) {
-		if (*str) {
-			COMMON_FREE(*str);
+		if (str) {
+			COMMON_FREE(str);
 		}
 	}
 

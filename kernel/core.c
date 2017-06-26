@@ -25,7 +25,6 @@
 #define RINA_PREFIX "core"
 
 #include "logs.h"
-#include "rnl.h"
 #include "kipcm.h"
 #include "utils.h"
 #include "rds/robjects.h"
@@ -71,15 +70,9 @@ static int __init mod_init(void)
                 LOG_ERR("Cannot initialize root rset, bailing out");
                 return -1;
 	}
-        LOG_DBG("Initializing RNL");
-        if (rnl_init()) {
-		robject_del(&core_object);
-                return -1;
-        }
 
         LOG_DBG("Initializing IODEV");
         if (iodev_init()) {
-                rnl_exit();
                 robject_del(&core_object);
                 return -1;
         }
@@ -87,7 +80,6 @@ static int __init mod_init(void)
         LOG_DBG("Initializing CTRLDEV");
         if (ctrldev_init()) {
                 iodev_fini();
-                rnl_exit();
                 robject_del(&core_object);
                 return -1;
         }
@@ -96,7 +88,6 @@ static int __init mod_init(void)
         if (kipcm_init(&core_object)) {
         	ctrldev_fini();
                 iodev_fini();
-                rnl_exit();
                 robject_del(&core_object);
                 return -1;
         }

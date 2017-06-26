@@ -1017,7 +1017,9 @@ shim_hv_application_unregister(struct ipcp_instance_data *priv,
 /* Callback invoked when a shim IPC process is assigned to a DIF. */
 static int
 shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
-                      const struct dif_info *dif_information)
+                      const struct name * dif_name,
+		      const string_t * type,
+		      const struct dif_config * config)
 {
         struct ipcp_config *elem;
         bool vmpi_id_found = false;
@@ -1033,14 +1035,12 @@ shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
                 return -1;
         }
 
-        if (name_cpy(dif_information->dif_name, &priv->dif_name)) {
+        if (name_cpy(dif_name, &priv->dif_name)) {
                 LOG_ERR("%s: name_cpy() failed", __func__);
                 return -1;
         }
 
-        list_for_each_entry(elem,
-                            &(dif_information->configuration->ipcp_config_entries),
-                            next) {
+        list_for_each_entry(elem, &(config->ipcp_config_entries), next) {
                 const struct ipcp_config_entry *entry = elem->entry;
 
                 if (!strcmp(entry->name, "vmpi-id")) {

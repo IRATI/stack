@@ -33,7 +33,7 @@ rina-irati-core-y:=						\
         rds/rtimer.o rds/robjects.o rds/rds.o                   \
 	iodev.o							\
 	ctrldev.o						\
-	rnl-utils.o rnl.o					\
+	serdes-utils.o ker-numtables.o \
 	buffer.o pci.o pdu.o sdu.o	        		\
 	ipcp-utils.o						\
 	connection.o common.o policies.o			\

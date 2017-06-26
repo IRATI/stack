@@ -144,6 +144,40 @@ int irati_handler_unregister(irati_msg_t msg_type)
 }
 EXPORT_SYMBOL(irati_handler_unregister);
 
+void irati_ctrl_dev_msg_free(struct irati_msg_base *bmsg)
+{
+	return irati_msg_free(irati_ker_numtables, IRATI_RINA_C_MAX, bmsg);
+}
+EXPORT_SYMBOL(irati_ctrl_dev_msg_free);
+
+
+int irati_ctrl_dev_snd_resp_msg(struct ctrldev_priv *ctrl_dev,
+				struct irati_msg_base *bmsg)
+{
+	struct msg_queue_entry * entry;
+	int retval = 0;
+
+	//TODO serialize message
+
+        /* TODO implement maximum queue size */
+        spin_lock(&ctrl_dev->pending_msgs_lock);
+        if (rfifo_push_ni(ctrl_dev->pending_msgs, entry)) {
+        	LOG_ERR("Could not write %zd bytes into port-id %u fifo",
+        			sizeof(*entry), ctrl_dev->port_id);
+        	retval = -1;
+        }
+        spin_unlock(&ctrl_dev->pending_msgs_lock);
+
+        if (retval == 0) {
+		/* set_tsk_need_resched(current); */
+		wake_up_interruptible_poll(&ctrl_dev->read_wqueue,
+					   POLLIN | POLLRDNORM | POLLRDBAND);
+        }
+
+        return retval;
+}
+EXPORT_SYMBOL(irati_ctrl_dev_snd_resp_msg);
+
 static struct ctrldev_priv * get_ctrl_dev(irati_msg_port_t port_id)
 {
 	struct ctrldev_priv * pos;
@@ -235,8 +269,8 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
         if (bmsg->dest_port != 0) {
         	entry = rkzalloc(sizeof(*entry), GFP_KERNEL);
         	if (!entry) {
-        		rl_msg_free(irati_ker_numtables, IRATI_RINA_C_MAX,
-        			    bmsg);
+        		irati_msg_free(irati_ker_numtables, IRATI_RINA_C_MAX,
+        			       bmsg);
         		rkfree(kbuf);
         		return -ENOMEM;
         	}
@@ -245,8 +279,8 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
         	entry->serlen = len;
 
         	if (ctrl_dev_data_post(entry, bmsg->dest_port)) {
-        		rl_msg_free(irati_ker_numtables, IRATI_RINA_C_MAX,
-        			    bmsg);
+        		irati_msg_free(irati_ker_numtables, IRATI_RINA_C_MAX,
+        			       bmsg);
         		rkfree(kbuf);
         		rkfree(entry);
 			return -EFAULT;
@@ -254,8 +288,8 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
         } else {
         	if (bmsg->msg_type >= IRATI_RINA_C_MAX ||
         			!irati_ctrl_dm.handlers[bmsg->msg_type].cb) {
-        		rl_msg_free(irati_ker_numtables, IRATI_RINA_C_MAX,
-        			    bmsg);
+        		irati_msg_free(irati_ker_numtables, IRATI_RINA_C_MAX,
+        			       bmsg);
         		rkfree(kbuf);
         		return -EINVAL;
         	}
@@ -266,8 +300,6 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
         			 irati_ctrl_dm.handlers[bmsg->msg_type].data);
         }
 
-	rl_msg_free(irati_ker_numtables, IRATI_RINA_C_MAX,
-		    bmsg);
 	rkfree(kbuf);
 
 	if (ret) {

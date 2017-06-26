@@ -23,7 +23,7 @@
 #ifndef IRATI_KERN_MSG_H
 #define IRATI_KERN_MSG_H
 
-#include "irati/kucommon.h"
+#include "irati/serdes-utils.h"
 
 #define IRATI_RINA_C_MIN (RINA_C_MIN + 1)
 #define IRATI_RINA_C_MAX (RINA_C_MAX)
@@ -284,7 +284,7 @@ struct irati_kmsg_ipcm_allocate_flow {
 } __attribute__((packed));
 
 /* 10 RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE */
-struct irati_kmsg_ipcp_dif_reg_not {
+struct irati_kmsg_ipcm_allocate_flow_resp {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
 	irati_msg_port_t dest_port;
@@ -455,7 +455,7 @@ struct irati_kmsg_ipcp_select_ps {
 /* Uses base response message */
 
 /* 37 RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST */
-struct irati_kmsg_ipcp_address_change {
+struct irati_kmsg_ipcp_update_crypto_state {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
 	irati_msg_port_t dest_port;
@@ -483,7 +483,7 @@ struct irati_kmsg_ipcp_address_change {
 } __attribute__((packed));
 
 /* 40 RINA_C_IPCP_ALLOCATE_PORT_REQUEST */
-struct irati_kmsg_ipcp_select_ps_param {
+struct irati_kmsg_ipcp_allocate_port {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
 	irati_msg_port_t dest_port;
@@ -497,9 +497,9 @@ struct irati_kmsg_ipcp_select_ps_param {
 /* 9 RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT */
 /* 11 RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST */
 /* 13 RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION */
-/* 30 RINA_C_IPCP_CONN_UPDATE_RESPONSE */
+/* 30 RINA_C_IPCP_CONN_UPDATE_RESULT */
 /* 31 RINA_C_IPCP_CONN_DESTROY_REQUEST */
-/* 32 RINA_C_IPCP_CONN_DESTROY_RESPONSE */
+/* 32 RINA_C_IPCP_CONN_DESTROY_RESPULT */
 /* 38 RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE */
 /* 41 RINA_C_IPCP_ALLOCATE_PORT_RESPONSE */
 /* 42 RINA_C_IPCP_DEALLOCATE_PORT_REQUEST */
