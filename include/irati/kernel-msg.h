@@ -292,7 +292,7 @@ struct irati_kmsg_ipcm_allocate_flow_resp {
 	ipc_process_id_t dest_ipcp_id;
 	uint32_t event_id;
 
-        uint8_t    result;
+        int8_t    result;
         bool      notify_src;
         port_id_t id;
 } __attribute__((packed));
@@ -358,7 +358,7 @@ struct irati_kmsg_ipcm_query_rib_resp {
 	ipc_process_id_t dest_ipcp_id;
 	uint32_t event_id;
 
-	uint8_t result;
+	int8_t result;
         struct query_rib_resp * rib_entries;
 } __attribute__((packed));
 
@@ -375,7 +375,7 @@ struct irati_kmsg_rmt_dump_ft {
 	ipc_process_id_t dest_ipcp_id;
 	uint32_t event_id;
 
-	uint8_t result;
+	int8_t result;
         struct pff_entry_list * pft_entries;
 } __attribute__((packed));
 
@@ -512,7 +512,7 @@ struct irati_kmsg_multi_msg {
 	ipc_process_id_t dest_ipcp_id;
 	uint32_t event_id;
 
-	uint8_t   result;
+	int8_t   result;
         port_id_t port_id;
         cep_id_t  cep_id;
 } __attribute__((packed));
