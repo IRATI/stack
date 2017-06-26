@@ -103,23 +103,21 @@ irati_msg_handler_t kipcm_handlers[RINA_C_MAX];
                 KIPCM_UNLOCK_FOOTER(X);         \
         } while (0)
 
-static int alloc_flow_req_free_and_reply(struct ctrldev_priv   * ctrl_dev,
-					 struct irati_msg_base * msg,
-                                         ipc_process_id_t        id,
-                                         uint_t                	 res,
-                                         uint32_t                seq_num,
-                                         irati_msg_port_t        port_id,
-                                         port_id_t 		 pid)
+static int alloc_flow_req_reply(struct ctrldev_priv   * ctrl_dev,
+                                ipc_process_id_t        id,
+				int8_t                	res,
+				uint32_t                seq_num,
+				irati_msg_port_t        port_id,
+				port_id_t 		pid)
 {
 	struct irati_kmsg_multi_msg resp_msg;
-
-	irati_ctrl_dev_msg_free(msg);
 
 	resp_msg.msg_type = RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT;
 	resp_msg.port_id = pid;
 	resp_msg.src_ipcp_id = id;
 	resp_msg.dest_ipcp_id = 0;
 	resp_msg.result = res;
+	resp_msg.event_id = seq_num;
 
         if (irati_ctrl_dev_snd_resp_msg(ctrl_dev, &resp_msg)) {
                 LOG_ERR("Could not send flow_result_msg");
@@ -213,9 +211,8 @@ static int notify_ipcp_allocate_flow_request(struct ctrldev_priv *ctrl_dev,
         return 0;
 
  fail:
-        return alloc_flow_req_free_and_reply(ctrl_dev, msg, ipc_id, -1,
-                                             msg->event_id, msg->src_port,
-                                             port_id_bad());
+        return alloc_flow_req_reply(ctrl_dev, ipc_id, -1, msg->event_id,
+        			    msg->src_port, port_id_bad());
 }
 
 static int notify_ipcp_allocate_flow_response(struct ctrldev_priv *ctrl_dev,
@@ -275,29 +272,29 @@ static int notify_ipcp_allocate_flow_response(struct ctrldev_priv *ctrl_dev,
                                                      msg->result)) {
                 LOG_ERR("Failed allocate flow response for port id: %d",
                         attrs->id);
-                goto fail;
         }
-
-        irati_ctrl_dev_msg_free(msg);
-
-        return 0;
 fail:
-	irati_ctrl_dev_msg_free(msg);
         return 0;
 }
 
 static int
-dealloc_flow_req_free_and_reply(struct rnl_msg * msg,
-                                ipc_process_id_t id,
-                                uint_t           res,
-                                uint_t           seq_num,
-                                uint_t           port_id)
+dealloc_flow_req_reply(struct ctrldev_priv * ctrl_dev,
+		       ipc_process_id_t id,
+		       int8_t           res,
+		       uint32_t         seq_num)
 {
-        rnl_msg_destroy(msg);
+	struct irati_msg_base_resp resp_msg;
 
-        if (rnl_base_response(id, res, 0, 0, seq_num,
-        		      RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE, port_id))
+	resp_msg.msg_type = RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT;
+	resp_msg.src_ipcp_id = id;
+	resp_msg.dest_ipcp_id = 0;
+	resp_msg.result = res;
+	resp_msg.event_id = seq_num;
+
+        if (irati_ctrl_dev_snd_resp_msg(ctrl_dev, &resp_msg)) {
+                LOG_ERR("Could not send flow_result_msg");
                 return -1;
+        }
 
         return 0;
 }
@@ -306,81 +303,67 @@ dealloc_flow_req_free_and_reply(struct rnl_msg * msg,
  * It is the responsibility of the shims to send the alloc_req_arrived
  * and the alloc_req_result.
  */
-static int notify_ipcp_deallocate_flow_request(void *             data,
-                                               struct sk_buff *   buff,
-                                               struct genl_info * info)
+static int notify_ipcp_deallocate_flow_request(struct ctrldev_priv *ctrl_dev,
+                                               struct irati_kmsg_multi_msg * msg,
+                                               void * data)
 {
-        struct rnl_ipcm_base_nl_msg_attrs * attrs;
-        struct rnl_msg *                    msg;
-        struct ipcp_instance *              ipc_process;
-        ipc_process_id_t                    ipc_id;
-        struct kipcm *                      kipcm;
+        struct ipcp_instance * ipc_process;
+        ipc_process_id_t       ipc_id;
+        struct kipcm *         kipcm;
 
         if (!data) {
                 LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
                 return -1;
         }
 
-        if (!info) {
-                LOG_ERR("Bogus struct genl_info passed, cannot parse NL msg");
+        if (!msg) {
+                LOG_ERR("Bogus struct irati_kmsg_multi_msg passed");
                 return -1;
         }
 
         kipcm  = (struct kipcm *) data;
-        ipc_id = 0;
-        msg    = rnl_msg_create(RNL_MST_ATTRS_BASE_NL_MESSAGE);
-        if (!msg)
-                goto fail;
 
-        attrs = msg->attrs;
-        if (rnl_parse_msg(info, msg))
-                goto fail;
-
-        ipc_id      = msg->header.dst_ipc_id;
+        ipc_id      = msg->dest_ipcp_id;
         ipc_process = ipcp_imap_find(kipcm->instances, ipc_id);
         if (!ipc_process) {
                 LOG_ERR("IPC process %d not found", ipc_id);
                 goto fail;
         }
 
-
         ASSERT(ipc_process->ops);
         ASSERT(ipc_process->ops->flow_deallocate);
 
-        if (ipc_process->ops->flow_deallocate(ipc_process->data, attrs->port_id)) {
+        if (ipc_process->ops->flow_deallocate(ipc_process->data, msg->port_id)) {
                 LOG_ERR("Failed deallocate flow request "
-                        "for port id: %d", attrs->port_id);
+                        "for port id: %d", msg->port_id);
                 goto fail;
         }
 
-        kfa_port_id_release(kipcm->kfa, attrs->port_id);
+        kfa_port_id_release(kipcm->kfa, msg->port_id);
 
-        return dealloc_flow_req_free_and_reply(msg,
-                                               ipc_id,
-                                               0,
-                                               info->snd_seq,
-                                               info->snd_portid);
+        return dealloc_flow_req_reply(ctrl_dev, ipc_id, 0, msg->event_id);
 
  fail:
-        return dealloc_flow_req_free_and_reply(msg,
-                                               ipc_id,
-                                               -1,
-                                               info->snd_seq,
-                                               info->snd_portid);
+        return dealloc_flow_req_reply(ctrl_dev, ipc_id, -1, msg->event_id);
 }
 
-static int
-assign_to_dif_free_and_reply(struct rnl_msg * msg,
-                             ipc_process_id_t id,
-                             uint_t           res,
-                             uint_t           seq_num,
-                             uint_t           port_id)
+static int assign_to_dif_reply(struct ctrldev_priv * ctrl_dev,
+		    	       ipc_process_id_t id,
+			       int8_t           res,
+			       uint32_t         seq_num)
 {
-        rnl_msg_destroy(msg);
+	struct irati_msg_base_resp resp_msg;
 
-        if (rnl_base_response(id, res, 0, 0, seq_num,
-        		      RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE, port_id))
+	resp_msg.msg_type = RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE;
+	resp_msg.src_ipcp_id = id;
+	resp_msg.dest_ipcp_id = 0;
+	resp_msg.result = res;
+	resp_msg.event_id = seq_num;
+
+        if (irati_ctrl_dev_snd_resp_msg(ctrl_dev, &resp_msg)) {
+                LOG_ERR("Could not send flow_result_msg");
                 return -1;
+        }
 
         return 0;
 }
@@ -435,27 +418,28 @@ static int notify_ipcp_assign_dif_request(struct ctrldev_priv * ctrl_dev,
         LOG_DBG("Assign to dif operation seems ok, gonna complete it");
 
  fail:
-        return assign_to_dif_free_and_reply(msg,
-                                            ipc_id,
-                                            retval,
-                                            msg->event_id,
-                                            msg->src_port);
+        return assign_to_dif_reply(ctrl_dev, ipc_id, retval, msg->event_id);
 }
 
-static int
-update_dif_config_free_and_reply(struct rnl_msg * msg,
-                                 ipc_process_id_t id,
-                                 uint_t           res,
-                                 uint_t           seq_num,
-                                 uint_t           port_id)
+static int update_dif_config_reply(struct ctrldev_priv * ctrl_dev,
+				   ipc_process_id_t id,
+				   int8_t           res,
+				   uint32_t         seq_num)
 {
-        rnl_msg_destroy(msg);
+	struct irati_msg_base_resp resp_msg;
 
-        if (rnl_base_response(id, res, 0, 0, seq_num,
-        		      RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE, port_id))
-                return -1;
+	resp_msg.msg_type = RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE;
+	resp_msg.src_ipcp_id = id;
+	resp_msg.dest_ipcp_id = 0;
+	resp_msg.result = res;
+	resp_msg.event_id = seq_num;
 
-        return 0;
+	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev, &resp_msg)) {
+		LOG_ERR("Could not send flow_result_msg");
+		return -1;
+	}
+
+	return 0;
 }
 
 static int notify_ipcp_update_dif_config_request(struct ctrldev_priv * ctrl_dev,
@@ -498,17 +482,10 @@ static int notify_ipcp_update_dif_config_request(struct ctrldev_priv * ctrl_dev,
                 goto fail;
         }
 
-        return update_dif_config_free_and_reply(msg,
-                                                ipc_id,
-                                                0,
-                                                msg->event_id,
-                                                msg->src_port);
+        return update_dif_config_reply(ctrl_dev, ipc_id, 0, msg->event_id);
+
  fail:
-        return update_dif_config_free_and_reply(msg,
-                                                ipc_id,
-                                                -1,
-						msg->event_id,
-						msg->src_port);
+ 	return update_dif_config_reply(ctrl_dev, ipc_id, -1, msg->event_id);
 }
 
 static int

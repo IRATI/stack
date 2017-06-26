@@ -477,7 +477,7 @@ struct irati_msg_base_resp {
 	ipc_process_id_t dest_ipcp_id;
 	uint32_t event_id;
 
-	uint8_t result;
+	int8_t result;
 } __attribute__((packed));
 
 /* Some useful macros for casting. */
