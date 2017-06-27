@@ -277,6 +277,7 @@ struct irati_kmsg_ipcm_allocate_flow {
 	ipc_process_id_t dest_ipcp_id;
 	uint32_t event_id;
 
+	port_id_t	   port_id;
         struct name      * source;
         struct name      * dest;
         struct name      * dif_name;
@@ -376,6 +377,7 @@ struct irati_kmsg_rmt_dump_ft {
 	uint32_t event_id;
 
 	int8_t result;
+	uint8_t mode;
         struct pff_entry_list * pft_entries;
 } __attribute__((packed));
 

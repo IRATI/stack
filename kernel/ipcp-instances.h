@@ -118,7 +118,6 @@ struct ipcp_instance_ops {
 
         /* Takes the ownership of the passed sdu */
         int (* mgmt_sdu_write)(struct ipcp_instance_data * data,
-                               address_t                   dst_addr,
                                port_id_t                   port_id,
                                struct sdu *                sdu);
 

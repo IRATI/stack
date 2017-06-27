@@ -31,8 +31,7 @@ rina-irati-core-y:=						\
 	rds/rstr.o rds/rmem.o rds/rmap.o rds/rwq.o rds/rbmp.o   \
         rds/rqueue.o rds/rfifo.o rds/ringq.o rds/rref.o         \
         rds/rtimer.o rds/robjects.o rds/rds.o                   \
-	iodev.o							\
-	ctrldev.o						\
+	iodev.o	ctrldev.o					\
 	serdes-utils.o ker-numtables.o \
 	buffer.o pci.o pdu.o sdu.o	        		\
 	ipcp-utils.o						\
