@@ -802,6 +802,11 @@ public:
 struct irati_iodev_ctldata {
         uint32_t port_id;
 };
+
+struct irati_ctrldev_ctldata {
+	irati_msg_port_t port_id;
+};
+
 #define IRATI_FLOW_BIND _IOW(0xAF, 0x00, struct irati_iodev_ctldata)
 
 /**
