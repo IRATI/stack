@@ -2348,10 +2348,10 @@ void sdup_crypto_state_free(struct sdup_crypto_state * scs)
 	COMMON_FREE(scs);
 }
 
-unsigned int serialize_irati_msg(struct irati_msg_layout *numtables,
-				 size_t num_entries,
-				 void *serbuf,
-				 const struct irati_msg_base *msg)
+int serialize_irati_msg(struct irati_msg_layout *numtables,
+		        size_t num_entries,
+			void *serbuf,
+			const struct irati_msg_base *msg)
 {
 	void *serptr = serbuf;
 	unsigned int serlen;
@@ -2618,6 +2618,7 @@ void irati_msg_free(struct irati_msg_layout *numtables, size_t num_entries,
 	struct query_rib_resp * qrr;
 	struct pff_entry_list * pel;
 	struct sdup_crypto_state * scs;
+	struct buffer *bf;
 	int i;
 
 	if (msg->msg_type >= num_entries) {
@@ -2673,6 +2674,11 @@ void irati_msg_free(struct irati_msg_layout *numtables, size_t num_entries,
 	scs = (struct sdup_crypto_state *)(pel);
 	for (i = 0; i < numtables[msg->msg_type].sdup_crypto_states; i++, scs++) {
 		sdup_crypto_state_free(scs);
+	}
+
+	bf = (struct buffer *)(scs);
+	for (i = 0; i < numtables[msg->msg_type].buffers; i++, bf++) {
+		buffer_destroy(bf);
 	}
 }
 COMMON_EXPORT(irati_msg_free);

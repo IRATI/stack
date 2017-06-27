@@ -31,6 +31,7 @@
 #include <linux/wait.h>
 #include <linux/sched.h>
 #include <linux/spinlock.h>
+#include <asm/compat.h>
 
 #define RINA_PREFIX "ctrldev"
 
@@ -71,6 +72,12 @@ struct irati_ctrl_dm {
 
 	/* Lock for ipcp_factories and ctrl_devs list */
 	struct mutex general_lock;
+
+	/* Sequence number counter */
+	uint32_t sn_counter;
+
+	/* Pointer to IPCM control device */
+	struct ctrldev_priv * ipcm_ctrl_dev;
 };
 
 static struct irati_ctrl_dm irati_ctrl_dm;
@@ -150,14 +157,26 @@ void irati_ctrl_dev_msg_free(struct irati_msg_base *bmsg)
 }
 EXPORT_SYMBOL(irati_ctrl_dev_msg_free);
 
-
 int irati_ctrl_dev_snd_resp_msg(struct ctrldev_priv *ctrl_dev,
 				struct irati_msg_base *bmsg)
 {
 	struct msg_queue_entry * entry;
 	int retval = 0;
 
-	//TODO serialize message
+	//Serialize message
+	entry = rkzalloc(sizeof(*entry), GFP_KERNEL);
+	if (!entry) {
+		LOG_ERR("Could not create entry");
+		return -1;
+	}
+
+	retval = serialize_irati_msg(irati_ker_numtables, IRATI_RINA_C_MAX,
+                        	     entry->sermsg, bmsg);
+        if (retval < 0) {
+        	LOG_ERR("Problems serializing msg: %d", retval);
+        	rkfree(entry);
+        }
+        entry->serlen = retval;
 
         /* TODO implement maximum queue size */
         spin_lock(&ctrl_dev->pending_msgs_lock);
@@ -178,6 +197,44 @@ int irati_ctrl_dev_snd_resp_msg(struct ctrldev_priv *ctrl_dev,
 }
 EXPORT_SYMBOL(irati_ctrl_dev_snd_resp_msg);
 
+uint32_t ctrl_dev_get_next_seqn()
+{
+        uint32_t tmp;
+
+        mutex_lock(&irati_ctrl_dm.general_lock);
+
+        tmp = irati_ctrl_dm.sn_counter++;
+        if (irati_ctrl_dm.sn_counter == 0) {
+                LOG_WARN("RNL Sequence number rolled-over");
+                /* FIXME: What to do about roll-over? */
+        }
+
+        mutex_unlock(&irati_ctrl_dm.general_lock);
+
+        return tmp;
+}
+EXPORT_SYMBOL(ctrl_dev_get_next_seqn);
+
+void set_ipcm_ctrl_dev(struct ctrldev_priv *ctrl_dev)
+{
+	 mutex_lock(&irati_ctrl_dm.general_lock);
+	 irati_ctrl_dm.ipcm_ctrl_dev = ctrl_dev;
+	 mutex_unlock(&irati_ctrl_dm.general_lock);
+}
+EXPORT_SYMBOL(set_ipcm_ctrl_dev);
+
+struct ctrldev_priv * get_ipcm_ctrl_dev(void)
+{
+	struct ctrldev_priv * ret;
+
+	mutex_lock(&irati_ctrl_dm.general_lock);
+	ret = irati_ctrl_dm.ipcm_ctrl_dev;
+	mutex_unlock(&irati_ctrl_dm.general_lock);
+
+	return ret;
+}
+EXPORT_SYMBOL(get_ipcm_ctrl_dev);
+
 static struct ctrldev_priv * get_ctrl_dev(irati_msg_port_t port_id)
 {
 	struct ctrldev_priv * pos;
@@ -190,6 +247,18 @@ static struct ctrldev_priv * get_ctrl_dev(irati_msg_port_t port_id)
 
         return NULL;
 }
+
+struct ctrldev_priv * get_ctrl_dev_from_port_id(irati_msg_port_t port)
+{
+	struct ctrldev_priv * ret = 0;
+
+	mutex_lock(&irati_ctrl_dm.general_lock);
+	ret = get_ctrl_dev(port);
+	mutex_unlock(&irati_ctrl_dm.general_lock);
+
+	return ret;
+}
+EXPORT_SYMBOL(get_ctrl_dev_from_port_id);
 
 static int ctrl_dev_data_post(struct msg_queue_entry * entry, irati_msg_port_t port_id)
 {
@@ -431,6 +500,8 @@ static int
 ctrldev_release(struct inode *inode, struct file *f)
 {
         struct ctrldev_priv *priv = (struct ctrldev_priv *) f->private_data;
+        struct ctrldev_priv * ipcm_ctrl_dev;
+        struct irati_msg_base msg;
 
         mutex_lock(&irati_ctrl_dm.general_lock);
         list_del_init(&priv->node);
@@ -444,6 +515,25 @@ ctrldev_release(struct inode *inode, struct file *f)
         }
 
         /* TODO inform IPCM Daemon that a OS process has died */
+        mutex_lock(&irati_ctrl_dm.general_lock);
+        if (priv == irati_ctrl_dm.ipcm_ctrl_dev) {
+        	LOG_WARN("IPC Manager process has been destroyed");
+        	irati_ctrl_dm.ipcm_ctrl_dev = 0;
+        	mutex_unlock(&irati_ctrl_dm.general_lock);
+        } else {
+        	//Inform IPCM Daemon that a OS process has died
+        	ipcm_ctrl_dev = irati_ctrl_dm.ipcm_ctrl_dev;
+        	mutex_unlock(&irati_ctrl_dm.general_lock);
+        	msg.msg_type = RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION;
+        	msg.src_ipcp_id = 0;
+        	msg.src_port = priv->port_id;
+        	msg.event_id = 0;
+
+        	if (irati_ctrl_dev_snd_resp_msg(ipcm_ctrl_dev, &msg)) {
+        		LOG_ERR("Could not send flow_result_msg");
+        	}
+
+        }
 
         rkfree(priv);
         f->private_data = NULL;
@@ -528,6 +618,9 @@ ctrldev_init(void)
 
         mutex_init(&irati_ctrl_dm.general_lock);
         INIT_LIST_HEAD(&irati_ctrl_dm.ctrl_devs);
+
+        irati_ctrl_dm.sn_counter = 0;
+        irati_ctrl_dm.ipcm_ctrl_dev = 0;
 
         ret = misc_register(&irati_ctrl_misc);
         if (ret) {

@@ -1443,10 +1443,10 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         /* Get vlan id */
         result = kstrtouint(dif_name->process_name, 10, &temp);
         if (result) {
-                ASSERT(dif_information->dif_name->process_name);
+                ASSERT(dif_name->process_name);
 
                 LOG_ERR("Error converting DIF Name to VLAN ID: %s",
-                        dif_information->dif_name->process_name);
+                        dif_name->process_name);
                 return -1;
         }
         info->vlan_id = (uint16_t) temp;

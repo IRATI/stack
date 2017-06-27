@@ -30,7 +30,6 @@
 #include "utils.h"
 #include "common.h"
 #include "kipcm-utils.h"
-#include "rnl-utils.h"
 #include "ipcp-utils.h"
 
 /*

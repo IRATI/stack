@@ -30,6 +30,7 @@
 #include <linux/wait.h>
 #include <linux/sched.h>
 #include <linux/spinlock.h>
+#include <asm/compat.h>
 
 #define RINA_PREFIX "iodev"
 
@@ -249,7 +250,7 @@ iodev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 static long
 iodev_compat_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 {
-	return iodev_ioctl(f, cmd, (unsigned long)compat_ptr(arg));
+	return iodev_ioctl(f, cmd, (unsigned long) compat_ptr(arg));
 }
 #endif
 

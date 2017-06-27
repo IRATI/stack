@@ -182,10 +182,10 @@ unsigned int irati_msg_serlen(struct irati_msg_layout *numtables,
                               const struct irati_msg_base *msg);
 unsigned int irati_numtables_max_size(struct irati_msg_layout *numtables,
                                       unsigned int n);
-unsigned int serialize_irati_msg(struct irati_msg_layout *numtables,
-                                 size_t num_entries,
-                                 void *serbuf,
-                                 const struct irati_msg_base *msg);
+int serialize_irati_msg(struct irati_msg_layout *numtables,
+                        size_t num_entries,
+                        void *serbuf,
+                        const struct irati_msg_base *msg);
 int deserialize_irati_msg(struct irati_msg_layout *numtables, size_t num_entries,
                           const void *serbuf, unsigned int serbuf_len,
                           void *msgbuf, unsigned int msgbuf_len);
