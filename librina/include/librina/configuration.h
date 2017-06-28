@@ -850,64 +850,69 @@ class RoutingConfiguration {
 /// Contains the data about a DIF Configuration
 /// (QoS cubes, policies, parameters, etc)
 class DIFConfiguration {
- public:
+public:
+	DIFConfiguration();
+	DIFConfiguration(struct dif_config * dc);
+
 #ifndef SWIG
-    DIFConfiguration();
-    unsigned int get_address() const;
-    void set_address(unsigned int address);
-    const EFCPConfiguration& get_efcp_configuration() const;
-    void set_efcp_configuration(const EFCPConfiguration& efcp_configuration);
-    const RMTConfiguration& get_rmt_configuration() const;
-    void set_rmt_configuration(const RMTConfiguration& rmt_configuration);
-    const std::list<PolicyConfig>& get_policies();
-    void set_policies(const std::list<PolicyConfig>& policies);
-    void add_policy(const PolicyConfig& policy);
-    const std::list<PolicyParameter>& get_parameters() const;
-    void set_parameters(const std::list<PolicyParameter>& parameters);
-    void add_parameter(const PolicyParameter& parameter);
-    const FlowAllocatorConfiguration& get_fa_configuration() const;
-    void set_fa_configuration(
-            const FlowAllocatorConfiguration& fa_configuration);
+	unsigned int get_address() const;
+	void set_address(unsigned int address);
+	const EFCPConfiguration& get_efcp_configuration() const;
+	void set_efcp_configuration(const EFCPConfiguration& efcp_configuration);
+	const RMTConfiguration& get_rmt_configuration() const;
+	void set_rmt_configuration(const RMTConfiguration& rmt_configuration);
+	const std::list<PolicyConfig>& get_policies();
+	void set_policies(const std::list<PolicyConfig>& policies);
+	void add_policy(const PolicyConfig& policy);
+	const std::list<PolicyParameter>& get_parameters() const;
+	void set_parameters(const std::list<PolicyParameter>& parameters);
+	void add_parameter(const PolicyParameter& parameter);
+	const FlowAllocatorConfiguration& get_fa_configuration() const;
+	void set_fa_configuration(
+			const FlowAllocatorConfiguration& fa_configuration);
 #endif
-    /// The address of the IPC Process in the DIF
-    unsigned int address_;
-    /// Configuration of the Error and Flow Control Protocol
-    EFCPConfiguration efcp_configuration_;
-    /// Configuration of the Relaying and Multiplexing Task
-    RMTConfiguration rmt_configuration_;
-    /// Flow Allocator configuration parameters of the DIF
-    FlowAllocatorConfiguration fa_configuration_;
-    /// Configuration of the enrollment Task
-    EnrollmentTaskConfiguration et_configuration_;
-    /// Configuration of the NamespaceManager
-    NamespaceManagerConfiguration nsm_configuration_;
-    /// Configuration of routing
-    RoutingConfiguration routing_configuration_;
-    /// Configuration of the Resource Allocator
-    ResourceAllocatorConfiguration ra_configuration_;
-    /// Configuration of the security manager
-    SecurityManagerConfiguration sm_configuration_;
-    /// Other configuration parameters of the DIF
-    std::list<PolicyParameter> parameters_;
+/// The address of the IPC Process in the DIF
+	unsigned int address_;
+	/// Configuration of the Error and Flow Control Protocol
+	EFCPConfiguration efcp_configuration_;
+	/// Configuration of the Relaying and Multiplexing Task
+	RMTConfiguration rmt_configuration_;
+	/// Flow Allocator configuration parameters of the DIF
+	FlowAllocatorConfiguration fa_configuration_;
+	/// Configuration of the enrollment Task
+	EnrollmentTaskConfiguration et_configuration_;
+	/// Configuration of the NamespaceManager
+	NamespaceManagerConfiguration nsm_configuration_;
+	/// Configuration of routing
+	RoutingConfiguration routing_configuration_;
+	/// Configuration of the Resource Allocator
+	ResourceAllocatorConfiguration ra_configuration_;
+	/// Configuration of the security manager
+	SecurityManagerConfiguration sm_configuration_;
+	/// Other configuration parameters of the DIF
+	std::list<PolicyParameter> parameters_;
 };
 
 /// Contains the information about a DIF (name, type, configuration)
 class DIFInformation {
- public:
-    const ApplicationProcessNamingInformation& get_dif_name() const;
+public:
+	DIFInformation(){};
+	DIFInformation(struct dif_config * dc, struct name * name,
+		       string_t * type);
+	const ApplicationProcessNamingInformation& get_dif_name() const;
 #ifndef SWIG
-    void set_dif_name(const ApplicationProcessNamingInformation& dif_name);
-    const std::string& get_dif_type() const;
-    void set_dif_type(const std::string& dif_type);
-    const DIFConfiguration& get_dif_configuration() const;
-    void set_dif_configuration(const DIFConfiguration& dif_configuration);
+	void set_dif_name(const ApplicationProcessNamingInformation& dif_name);
+	const std::string& get_dif_type() const;
+	void set_dif_type(const std::string& dif_type);
+	const DIFConfiguration& get_dif_configuration() const;
+	void set_dif_configuration(const DIFConfiguration& dif_configuration);
 #endif
-    /// The type of DIF
-    std::string dif_type_;
-    /// The name of the DIF
-    ApplicationProcessNamingInformation dif_name_;
-    /// The DIF Configuration (qoscubes, policies, parameters, etc)
-    DIFConfiguration dif_configuration_;
+	/// The type of DIF
+	std::string dif_type_;
+	/// The name of the DIF
+	ApplicationProcessNamingInformation dif_name_;
+	/// The DIF Configuration (qoscubes, policies, parameters, etc)
+	DIFConfiguration dif_configuration_;
 };
 
 }

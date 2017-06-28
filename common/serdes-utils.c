@@ -49,7 +49,7 @@
 #include <stdint.h>
 
 #include "librina/logs.h"
-#include "librina/ctrldev.h"
+#include "irati/list.h"
 
 #define COMMON_ALLOC(_sz, _unused)  malloc(_sz)
 #define COMMON_FREE(_p)             free(_p)

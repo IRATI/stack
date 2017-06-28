@@ -50,6 +50,7 @@
 #include "librina/concurrency.h"
 #include "librina/exceptions.h"
 #include "librina/patterns.h"
+#include "irati/kucommon.h"
 
 namespace rina {
 
@@ -74,6 +75,7 @@ public:
 	ApplicationProcessNamingInformation();
 	ApplicationProcessNamingInformation(const std::string& processName,
 					    const std::string& processInstance);
+	ApplicationProcessNamingInformation(struct name * name);
 	bool operator==(const ApplicationProcessNamingInformation &other) const;
 	bool operator!=(const ApplicationProcessNamingInformation &other) const;
 	bool operator>(const ApplicationProcessNamingInformation &other) const;
@@ -84,6 +86,8 @@ public:
 	const std::string getProcessNamePlusInstance() const;
 	const std::string getEncodedString() const;
 	const std::string toString() const;
+
+	struct name * to_c_name() const;
 
 	/**
 	 * The process_name identifies an application process within the
@@ -173,6 +177,7 @@ public:
 	bool operator==(const FlowSpecification &other) const;
 	bool operator!=(const FlowSpecification &other) const;
 	const std::string toString();
+	struct flow_spec * to_c_flowspec() const;
 };
 
 /**

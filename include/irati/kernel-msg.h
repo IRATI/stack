@@ -185,7 +185,79 @@ typedef enum {
 	/* 50, K IPCM (kernel) -> IPC Process (user space) */
 	RINA_C_IPCM_DESTROY_IPCP_RESPONSE,
 
-	/* 51 */
+	/* 51 IPC Manager -> IPC Process */
+	RINA_C_IPCM_ENROLL_TO_DIF_REQUEST,
+
+	/* 52 IPC Process -> IPC Manager */
+	RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE,
+
+	/* 53 IPC Manager -> IPC Process */
+	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST,
+
+	/* 54 IPC Process -> IPC Manager */
+	RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE,
+
+	/* 55 IPC Process -> IPC Manager */
+	RINA_C_IPCM_IPC_PROCESS_INITIALIZED,
+
+	/* 56 Allocate flow request, Application -> IPC Manager */
+	RINA_C_APP_ALLOCATE_FLOW_REQUEST,
+
+	/* 57 Response to an application allocate flow request, IPC Manager -> Application */
+	RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT,
+
+	/* 58 Allocate flow request from a remote application, IPC Manager -> Application */
+	RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED,
+
+	/* 59 Allocate flow response to an allocate request arrived operation, Application -> IPC Manager */
+	RINA_C_APP_ALLOCATE_FLOW_RESPONSE,
+
+	/* 60 Application -> IPC Manager */
+	RINA_C_APP_DEALLOCATE_FLOW_REQUEST,
+
+	/* 61 IPC Manager -> Application */
+	RINA_C_APP_DEALLOCATE_FLOW_RESPONSE,
+
+	/* 62 IPC Manager -> Application, flow deallocated without the application having requested it */
+	RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION,
+
+	/* 63 Application -> IPC Manager */
+	RINA_C_APP_REGISTER_APPLICATION_REQUEST,
+
+	/* 64 IPC Manager -> Application */
+	RINA_C_APP_REGISTER_APPLICATION_RESPONSE,
+
+	/* 65 Application -> IPC Manager */
+	RINA_C_APP_UNREGISTER_APPLICATION_REQUEST,
+
+	/* 66 IPC Manager -> Application */
+	RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE,
+
+	/* 67 IPC Manager -> Application, application unregistered without the application having requested it */
+	RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION,
+
+	/* 68 Application -> IPC Manager */
+	RINA_C_APP_GET_DIF_PROPERTIES_REQUEST,
+
+	/* 69 IPC Manager -> Application */
+	RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE,
+
+	/* 70, IPC Manager -> IPC Process */
+	RINA_C_IPCM_PLUGIN_LOAD_REQUEST,
+
+	/* 71, IPC Process -> IPC Manager */
+	RINA_C_IPCM_PLUGIN_LOAD_RESPONSE,
+
+	/* 72, IPC Manager <-> IPC Process */
+	RINA_C_IPCM_FWD_CDAP_MSG_REQUEST,
+
+	/* 73, IPC Manager <-> IPC Process */
+	RINA_C_IPCM_FWD_CDAP_MSG_RESPONSE,
+
+	/* 74, IPC Process -> IPC Manager */
+	RINA_C_IPCM_MEDIA_REPORT,
+
+	/* 75 */
         RINA_C_MAX,
 } msg_type_t;
 
@@ -269,6 +341,8 @@ struct irati_kmsg_ipcp_dif_reg_not {
 
 /* 7 RINA_C_IPCM_ALLOCATE_FLOW_REQUEST*/
 /* 8 RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED */
+/* 56 RINA_C_APP_ALLOCATE_FLOW_REQUEST */
+/* 58 RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED */
 struct irati_kmsg_ipcm_allocate_flow {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -566,7 +640,179 @@ struct irati_kmsg_ipcm_destroy_ipcp {
 	ipc_process_id_t ipcp_id;
 } __attribute__((packed));
 
-/* 50, K IPCM (kernel) -> IPC Process (user space) */
+/* 50 RINA_C_IPCM_DESTROY_IPCP_RESPONSE */
 /* Uses base response message */
+
+/* 51 RINA_C_IPCM_ENROLL_TO_DIF_REQUEST */
+struct irati_msg_ipcm_enroll_to_dif {
+	irati_msg_t msg_type;
+	irati_msg_port_t src_port;
+	irati_msg_port_t dest_port;
+	ipc_process_id_t src_ipcp_id;
+	ipc_process_id_t dest_ipcp_id;
+	uint32_t event_id;
+
+	bool prepare_for_handover;
+	struct name * dif_name;
+	struct name * sup_dif_name;
+	struct name * neigh_name;
+	struct name * disc_neigh_name;
+} __attribute__((packed));
+
+/* 52 TODO RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE */
+
+/* 53 RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST */
+/* 55 RINA_C_IPCM_IPC_PROCESS_INITIALIZED */
+struct irati_msg_with_name {
+	irati_msg_t msg_type;
+	irati_msg_port_t src_port;
+	irati_msg_port_t dest_port;
+	ipc_process_id_t src_ipcp_id;
+	ipc_process_id_t dest_ipcp_id;
+	uint32_t event_id;
+
+	struct name * name;
+} __attribute__((packed));
+
+/* 54 RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE */
+/* Uses base response message */
+
+/* 57 RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT */
+struct irati_msg_app_alloc_flow_result {
+	irati_msg_t msg_type;
+	irati_msg_port_t src_port;
+	irati_msg_port_t dest_port;
+	ipc_process_id_t src_ipcp_id;
+	ipc_process_id_t dest_ipcp_id;
+	uint32_t event_id;
+
+	port_id_t port_id;
+	struct name * source_app_name;
+	struct name * dif_name;
+	string_t * error_desc;
+} __attribute__((packed));
+
+/* 59 RINA_C_APP_ALLOCATE_FLOW_RESPONSE */
+struct irati_msg_app_alloc_flow_response {
+	irati_msg_t msg_type;
+	irati_msg_port_t src_port;
+	irati_msg_port_t dest_port;
+	ipc_process_id_t src_ipcp_id;
+	ipc_process_id_t dest_ipcp_id;
+	uint32_t event_id;
+
+	int8_t result;
+	bool not_source;
+} __attribute__((packed));
+
+/* 60 RINA_C_APP_DEALLOCATE_FLOW_REQUEST */
+/* 61 RINA_C_APP_DEALLOCATE_FLOW_RESPONSE */
+/* 62 RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION*/
+struct irati_msg_app_dealloc_flow {
+	irati_msg_t msg_type;
+	irati_msg_port_t src_port;
+	irati_msg_port_t dest_port;
+	ipc_process_id_t src_ipcp_id;
+	ipc_process_id_t dest_ipcp_id;
+	uint32_t event_id;
+
+	int8_t result;
+	port_id_t port_id;
+	struct name * name;
+} __attribute__((packed));
+
+/* 63 RINA_C_APP_REGISTER_APPLICATION_REQUEST*/
+struct irati_msg_app_reg_app {
+	irati_msg_t msg_type;
+	irati_msg_port_t src_port;
+	irati_msg_port_t dest_port;
+	ipc_process_id_t src_ipcp_id;
+	ipc_process_id_t dest_ipcp_id;
+	uint32_t event_id;
+
+	ipc_process_id_t ipcp_id;
+	uint8_t	reg_type;
+        struct name * app_name;
+        struct name * daf_name;
+        struct name * dif_name;
+} __attribute__((packed));
+
+/* 64 RINA_C_APP_REGISTER_APPLICATION_RESPONSE */
+/* 65 RINA_C_APP_UNREGISTER_APPLICATION_REQUEST */
+/* 66 RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE */
+/* 68 RINA_C_APP_GET_DIF_PROPERTIES_REQUEST */
+struct irati_msg_app_reg_app_resp {
+	irati_msg_t msg_type;
+	irati_msg_port_t src_port;
+	irati_msg_port_t dest_port;
+	ipc_process_id_t src_ipcp_id;
+	ipc_process_id_t dest_ipcp_id;
+	uint32_t event_id;
+
+	int8_t	result;
+        struct name * app_name;
+        struct name * dif_name;
+} __attribute__((packed));
+
+/* 67 RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION */
+struct irati_msg_app_reg_cancel {
+	irati_msg_t msg_type;
+	irati_msg_port_t src_port;
+	irati_msg_port_t dest_port;
+	ipc_process_id_t src_ipcp_id;
+	ipc_process_id_t dest_ipcp_id;
+	uint32_t event_id;
+
+	int8_t	code;
+        struct name * app_name;
+        struct name * dif_name;
+        string_t * reason;
+} __attribute__((packed));
+
+/* TODO 69 RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE */
+struct irati_msg_get_dif_prop {
+	irati_msg_t msg_type;
+	irati_msg_port_t src_port;
+	irati_msg_port_t dest_port;
+	ipc_process_id_t src_ipcp_id;
+	ipc_process_id_t dest_ipcp_id;
+	uint32_t event_id;
+
+	int8_t	code;
+        struct name * app_name;
+        struct name * dif_name;
+} __attribute__((packed));
+
+/* 70 RINA_C_IPCM_PLUGIN_LOAD_REQUEST */
+struct irati_msg_ipcm_plugin_load {
+	irati_msg_t msg_type;
+	irati_msg_port_t src_port;
+	irati_msg_port_t dest_port;
+	ipc_process_id_t src_ipcp_id;
+	ipc_process_id_t dest_ipcp_id;
+	uint32_t event_id;
+
+	bool	load;
+        struct name * plugin_name;
+} __attribute__((packed));
+
+/* 71 RINA_C_IPCM_PLUGIN_LOAD_RESPONSE */
+/* Uses base response message */
+
+/* 72 RINA_C_IPCM_FWD_CDAP_MSG_REQUEST */
+/* 73 RINA_C_IPCM_FWD_CDAP_MSG_REQUEST */
+struct irati_msg_ipcm_fwd_cdap_msg {
+	irati_msg_t msg_type;
+	irati_msg_port_t src_port;
+	irati_msg_port_t dest_port;
+	ipc_process_id_t src_ipcp_id;
+	ipc_process_id_t dest_ipcp_id;
+	uint32_t event_id;
+
+	int8_t	result;
+        struct buffer * cdap_msg;
+} __attribute__((packed));
+
+/* TODO 74 RINA_C_IPCM_MEDIA_REPORT */
 
 #endif /* IRATI_KERN_MSG_H */

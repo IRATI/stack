@@ -70,7 +70,7 @@ struct irati_ctrl_dm {
 	/* Array with message handlers */
 	struct message_handler handlers[IRATI_RINA_C_MAX];
 
-	/* Lock for ipcp_factories and ctrl_devs list */
+	/* Lock for ctrl_devs list */
 	struct mutex general_lock;
 
 	/* Sequence number counter */

@@ -178,11 +178,11 @@ void IPCManager::removeApplicationRegistration(
         applicationRegistrations.erase(key);
 }
 
-unsigned int IPCManager::internalRequestFlowAllocation(
-                const ApplicationProcessNamingInformation& localAppName,
-                const ApplicationProcessNamingInformation& remoteAppName,
-                const FlowSpecification& flowSpec,
-                unsigned short sourceIPCProcessId)
+unsigned int
+IPCManager::internalRequestFlowAllocation(const ApplicationProcessNamingInformation& localAppName,
+					  const ApplicationProcessNamingInformation& remoteAppName,
+					  const FlowSpecification& flowSpec,
+					  unsigned short sourceIPCProcessId)
 {
         FlowInformation * flow;
         unsigned int result = 0;
@@ -191,20 +191,22 @@ unsigned int IPCManager::internalRequestFlowAllocation(
 
 #if STUB_API
 #else
-        AppAllocateFlowRequestMessage message;
-        message.setSourceAppName(localAppName);
-        message.setDestAppName(remoteAppName);
-        message.setSourceIpcProcessId(sourceIPCProcessId);
-        message.setFlowSpecification(flowSpec);
-        message.setRequestMessage(true);
+        struct irati_kmsg_ipcm_allocate_flow * msg;
 
-        try{
-                rinaManager->sendMessage(&message, true);
-        }catch(NetlinkException &e){
-                throw FlowAllocationException(e.what());
+        msg = new irati_kmsg_ipcm_allocate_flow();
+        msg->msg_type = RINA_C_APP_ALLOCATE_FLOW_REQUEST;
+        msg->source = localAppName.to_c_name();
+        msg->dest = remoteAppName.to_c_name();
+        msg->src_ipcp_id = sourceIPCProcessId;
+        msg->fspec = flowSpec.to_c_flowspec();
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw FlowAllocationException("Problems sending CTRL message");
         }
 
-        result = message.getSequenceNumber();
+        result = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 
         flow = new FlowInformation();
@@ -232,21 +234,23 @@ unsigned int IPCManager::internalRequestFlowAllocationInDIF(
 
 #if STUB_API
 #else
-        AppAllocateFlowRequestMessage message;
-        message.setSourceAppName(localAppName);
-        message.setDestAppName(remoteAppName);
-        message.setSourceIpcProcessId(sourceIPCProcessId);
-        message.setFlowSpecification(flowSpec);
-        message.setDifName(difName);
-        message.setRequestMessage(true);
+        struct irati_kmsg_ipcm_allocate_flow * msg;
 
-        try{
-                rinaManager->sendMessage(&message, true);
-        }catch(NetlinkException &e){
-                throw FlowAllocationException(e.what());
+        msg = new irati_kmsg_ipcm_allocate_flow();
+        msg->msg_type = RINA_C_APP_ALLOCATE_FLOW_REQUEST;
+        msg->source = localAppName.to_c_name();
+        msg->dest = remoteAppName.to_c_name();
+        msg->dif_name = difName.to_c_name();
+        msg->src_ipcp_id = sourceIPCProcessId;
+        msg->fspec = flowSpec.to_c_flowspec();
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw FlowAllocationException("Problems sending CTRL message");
         }
 
-        result = message.getSequenceNumber();
+        result = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 
         flow = new FlowInformation();
@@ -268,22 +272,27 @@ FlowInformation IPCManager::internalAllocateFlowResponse(const FlowRequestEvent&
 							 bool blocking)
 {
 	FlowInformation * flow = 0;
+	int ret = 0;
 
 	WriteScopedLock writeLock(flows_rw_lock);
 
 #if STUB_API
 #else
-        AppAllocateFlowResponseMessage responseMessage;
-        responseMessage.result = result;
-        responseMessage.setNotifySource(notifySource);
-        responseMessage.setSourceIpcProcessId(ipcProcessId);
-        responseMessage.setSequenceNumber(flowRequestEvent.sequenceNumber);
-        responseMessage.setResponseMessage(true);
-        try{
-                rinaManager->sendMessage(&responseMessage, false);
-        }catch(NetlinkException &e){
-                throw FlowAllocationException(e.what());
-        }
+        struct irati_msg_app_alloc_flow_response * msg;
+
+        msg = new irati_msg_app_alloc_flow_response();
+        msg->msg_type = RINA_C_APP_ALLOCATE_FLOW_RESPONSE;
+        msg->not_source = notifySource;
+        msg->result = result;
+        msg->src_ipcp_id = ipcProcessId;
+        msg->event_id = flowRequestEvent.sequenceNumber;
+
+        ret = irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false);
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
+
+        if (ret)
+        	throw FlowAllocationException("Problems sending CTRL message");
 #endif
         if (result != 0) {
                 LOG_WARN("Flow was not accepted, error code: %d", result);
@@ -314,57 +323,66 @@ FlowInformation IPCManager::internalAllocateFlowResponse(const FlowRequestEvent&
         return *flow;
 }
 
-unsigned int IPCManager::getDIFProperties(
-		const ApplicationProcessNamingInformation& applicationName,
-		const ApplicationProcessNamingInformation& DIFName)
+unsigned int
+IPCManager::getDIFProperties(const ApplicationProcessNamingInformation& applicationName,
+			     const ApplicationProcessNamingInformation& DIFName)
 {
+	int ret;
+	unsigned int seq_num = 0;
 
 #if STUB_API
-	return 0;
 #else
-	AppGetDIFPropertiesRequestMessage message;
-	message.setApplicationName(applicationName);
-	message.setDifName(DIFName);
-	message.setRequestMessage(true);
+        struct irati_msg_app_reg_app_resp * msg;
 
-	try{
-		rinaManager->sendMessage(&message, true);
-	}catch(NetlinkException &e){
-		throw GetDIFPropertiesException(e.what());
-	}
+        msg = new irati_msg_app_reg_app_resp();
+        msg->msg_type = RINA_C_APP_GET_DIF_PROPERTIES_REQUEST;
+        msg->app_name = applicationName.to_c_name();
+        msg->dif_name = DIFName.to_c_name();
 
-	return message.getSequenceNumber();
+        ret = irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true);
+        seq_num = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        if (ret) {
+        	throw GetDIFPropertiesException("Problems sending CTRL message");
+        }
 #endif
+        return seq_num;
 }
 
-unsigned int IPCManager::requestApplicationRegistration(
-                const ApplicationRegistrationInformation& appRegistrationInfo)
+unsigned int
+IPCManager::requestApplicationRegistration(const ApplicationRegistrationInformation& appRegistrationInfo)
 {
+	int ret;
+	unsigned int seq_num = 0;
+
 	WriteScopedLock writeLock(regs_rw_lock);
 
 #if STUB_API
         registrationInformation[0] = appRegistrationInfo;
-	return 0;
 #else
-	AppRegisterApplicationRequestMessage message;
-	message.setApplicationRegistrationInformation(appRegistrationInfo);
-	message.setRequestMessage(true);
+        struct irati_msg_app_reg_app * msg;
 
-	try{
-	        rinaManager->sendMessage(&message, true);
-	}catch(NetlinkException &e){
-	        throw ApplicationRegistrationException(e.what());
-	}
+        msg = new irati_msg_app_reg_app();
+        msg->msg_type = RINA_C_APP_REGISTER_APPLICATION_REQUEST;
+        msg->app_name = appRegistrationInfo.appName.to_c_name();
+        msg->dif_name = appRegistrationInfo.difName.to_c_name();
+        msg->daf_name = appRegistrationInfo.dafName.to_c_name();
+        msg->ipcp_id = appRegistrationInfo.ipcProcessId;
+        msg->reg_type = appRegistrationInfo.applicationRegistrationType;
 
-	registrationInformation[message.getSequenceNumber()] = appRegistrationInfo;
-
-	return message.getSequenceNumber();
+        ret = irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true);
+        seq_num = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        if (ret) {
+        	throw ApplicationRegistrationException("Problems sending CTRL message");
+        }
 #endif
+	return seq_num;
 }
 
-ApplicationRegistration * IPCManager::commitPendingRegistration(
-                        unsigned int seqNumber,
-                        const ApplicationProcessNamingInformation& DIFName)
+ApplicationRegistration *
+IPCManager::commitPendingRegistration(unsigned int seqNumber,
+				      const ApplicationProcessNamingInformation& DIFName)
 {
         ApplicationRegistrationInformation appRegInfo;
         ApplicationRegistration * applicationRegistration;
@@ -409,12 +427,14 @@ void IPCManager::withdrawPendingRegistration(unsigned int seqNumber)
         registrationInformation.erase(seqNumber);
 }
 
-unsigned int IPCManager::requestApplicationUnregistration(
-		const ApplicationProcessNamingInformation& applicationName,
-		const ApplicationProcessNamingInformation& DIFName)
+unsigned int
+IPCManager::requestApplicationUnregistration(const ApplicationProcessNamingInformation& applicationName,
+					     const ApplicationProcessNamingInformation& DIFName)
 {
         ApplicationRegistration * applicationRegistration;
         bool found = false;
+        int ret = 0;
+        unsigned int seq_num = 0;
 
         WriteScopedLock writeLock(regs_rw_lock);
 
@@ -444,24 +464,24 @@ unsigned int IPCManager::requestApplicationUnregistration(
 
 #if STUB_API
         registrationInformation[0] = appRegInfo;
-	return 0;
 #else
-	AppUnregisterApplicationRequestMessage message;
-	message.setApplicationName(applicationName);
-	message.setDifName(DIFName);
-	message.setRequestMessage(true);
+        struct irati_msg_app_reg_app_resp * msg;
 
-	try{
-	        rinaManager->sendMessage(&message, true);
-	}catch(NetlinkException &e){
-	        throw ApplicationUnregistrationException(e.what());
-	}
+        msg = new irati_msg_app_reg_app_resp();
+        msg->msg_type = RINA_C_APP_UNREGISTER_APPLICATION_REQUEST;
+        msg->app_name = applicationName.to_c_name();
+        msg->dif_name = DIFName.to_c_name();
 
-	registrationInformation[message.getSequenceNumber()] =
-	                appRegInfo;
+        ret = irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true);
+        seq_num = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        if (ret) {
+        	throw ApplicationUnregistrationException("Problems sending CTRL message");
+        }
 
-	return message.getSequenceNumber();
+	registrationInformation[seq_num] = appRegInfo;
 #endif
+	return seq_num;
 }
 
 void IPCManager::appUnregistrationResult(unsigned int seqNumber, bool success)
@@ -618,6 +638,8 @@ FlowInformation IPCManager::allocateFlowResponse(
 unsigned int IPCManager::requestFlowDeallocation(int portId)
 {
         FlowInformation * flow;
+        int ret = 0;
+        unsigned int seq_num = 0;
 
         WriteScopedLock writeLock(flows_rw_lock);
 
@@ -632,27 +654,28 @@ unsigned int IPCManager::requestFlowDeallocation(int portId)
 
 #if STUB_API
         flow->state = FlowInformation::FLOW_DEALLOCATION_REQUESTED;
-	return 0;
 #else
 
 	LOG_DBG("Application %s requested to deallocate flow with port-id %d",
 		flow->localAppName.processName.c_str(),
 		flow->portId);
-	AppDeallocateFlowRequestMessage message;
-	message.setApplicationName(flow->localAppName);
-	message.port_id = flow->portId;
-	message.setRequestMessage(true);
 
-	try{
-	        rinaManager->sendMessage(&message, true);
-	}catch(NetlinkException &e){
-	        throw FlowDeallocationException(e.what());
-	}
+        struct irati_msg_app_dealloc_flow * msg;
+
+        msg = new irati_msg_app_dealloc_flow();
+        msg->msg_type = RINA_C_APP_DEALLOCATE_FLOW_REQUEST;
+        msg->port_id = portId;
+
+        ret = irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true);
+        seq_num = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        if (ret) {
+        	throw ApplicationUnregistrationException("Problems sending CTRL message");
+        }
 
 	flow->state = FlowInformation::FLOW_DEALLOCATION_REQUESTED;
-
-	return message.getSequenceNumber();
 #endif
+	return seq_num;
 }
 
 void IPCManager::flowDeallocationResult(int portId, bool success)
@@ -733,7 +756,7 @@ std::vector<ApplicationRegistration *> IPCManager::getRegisteredApplications()
 
 int IPCManager::getControlFd()
 {
-        return rinaManager->getEventFd();
+        return irati_ctrl_mgr->get_ctrl_fd();
 }
 
 Singleton<IPCManager> ipcManager;

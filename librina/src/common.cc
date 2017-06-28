@@ -63,6 +63,24 @@ ApplicationProcessNamingInformation::ApplicationProcessNamingInformation(
 	this->processInstance = processInstance;
 }
 
+ApplicationProcessNamingInformation::ApplicationProcessNamingInformation(struct name * name)
+{
+	if (!name)
+		return;
+
+	if (name->process_name)
+		processName = name->process_name;
+
+	if (name->process_instance)
+		processInstance = name->process_instance;
+
+	if (name->entity_name)
+		entityName = name->entity_name;
+
+	if (name->entity_instance)
+		entityInstance = name->entity_instance;
+}
+
 bool ApplicationProcessNamingInformation::operator==(
 		const ApplicationProcessNamingInformation &other) const {
 	if (processName.compare(other.processName) != 0) {
@@ -182,6 +200,33 @@ const std::string ApplicationProcessNamingInformation::toString() const
         return ss.str();
 }
 
+struct name * ApplicationProcessNamingInformation::to_c_name() const
+{
+	struct name * app_name = new name();
+
+	if (processName != "")
+		app_name->process_name = processName.c_str();
+	else
+		app_name->process_name = 0;
+
+	if (processInstance != "")
+		app_name->process_instance = processInstance.c_str();
+	else
+		app_name->process_instance = 0;
+
+	if (entityName != "")
+		app_name->entity_name = entityName.c_str();
+	else
+		app_name->entity_name = 0;
+
+	if (entityInstance != "")
+		app_name->entity_instance = entityInstance.c_str();
+	else
+		app_name->entity_instance = 0;
+
+	return name;
+}
+
 ApplicationProcessNamingInformation
 decode_apnameinfo(const std::string &encodedString)
 {
@@ -236,6 +281,26 @@ const std::string FlowSpecification::toString() {
         ss<<"Peak bandwidth duration (ms): "<<peakBandwidthDuration;
         ss<<"; Peak SDU bandwidth duration (ms): "<<peakSDUBandwidthDuration;
         return ss.str();
+}
+
+struct flow_spec * FlowSpecification::to_c_flowspec() const
+{
+	struct flow_spec * fspec;
+
+	fspec = new flow_spec();
+	fspec->average_bandwidth = averageBandwidth;
+	fspec->average_sdu_bandwidth = averageSDUBandwidth;
+	fspec->delay = delay;
+	fspec->jitter = jitter;
+	fspec->max_allowable_gap = maxAllowableGap;
+	fspec->max_sdu_size = maxSDUsize;
+	fspec->ordered_delivery = orderedDelivery;
+	fspec->partial_delivery = partialDelivery;
+	fspec->peak_bandwidth_duration = peakBandwidthDuration;
+	fspec->peak_sdu_bandwidth_duration = peakSDUBandwidthDuration;
+	fspec->undetected_bit_error_rate = undetectedBitErrorRate;
+
+	return fspec;
 }
 
 bool FlowSpecification::operator==(const FlowSpecification &other) const {
@@ -783,13 +848,7 @@ IPCEvent * IPCEventProducer::eventWait()
 #if STUB_API
 	return getIPCEvent();
 #else
-	IPCEvent *event = rinaManager->getEventQueue()->take();
-
-	if (event) {
-		rinaManager->eventQueuePopped();
-	}
-
-	return event;
+	return irati_ctrl_mgr->get_next_ctrl_msg();
 #endif
 }
 
@@ -1102,12 +1161,12 @@ void initialize(unsigned int localPort, const std::string& logLevel,
                 throw InitializationException("Librina already initialized");
         }
 
-	setNetlinkPortId(localPort);
+        irati_ctrl_mgr->set_irati_ctrl_port(localPort);
 	setLogLevel(logLevel.c_str());
 	if (setLogFile(pathToLogFile.c_str()) != 0) {
 	        LOG_WARN("Error setting log file, using stdout only");
 	}
-	rinaManager->getNetlinkManager();
+	irati_ctrl_mgr->initialize();
 
 	librinaInitialized = true;
 	librinaInitializationLock.unlock();
@@ -1128,7 +1187,7 @@ void initialize(const std::string& logLevel,
 
         setLogLevel(logLevel.c_str());
 
-        rinaManager->getNetlinkManager();
+        irati_ctrl_mgr->initialize();
 
         librinaInitialized = true;
         librinaInitializationLock.unlock();
@@ -1136,7 +1195,7 @@ void initialize(const std::string& logLevel,
 
 void librina_finalize(){
 	// delete rinaManager Singleton
-	rinaManager.~Singleton();
+	irati_ctrl_mgr.~Singleton();
 }
 
 }
