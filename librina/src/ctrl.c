@@ -34,11 +34,11 @@
 #define RINA_PREFIX "librina.ctrldev"
 
 #include "librina/logs.h"
-#include "ctrldev.h"
+#include "ctrl.h"
 
 #include "irati/kernel-msg.h"
 
-struct irati_msg_base * irati_read_next_msg(int rfd)
+struct irati_msg_base * irati_read_next_msg(int cfd)
 {
 	unsigned int max_resp_size = irati_numtables_max_size(
 			irati_ker_numtables,
@@ -47,9 +47,9 @@ struct irati_msg_base * irati_read_next_msg(int rfd)
 	char serbuf[4096];
 	int ret;
 
-	ret = read(rfd, serbuf, sizeof(serbuf));
+	ret = read(cfd, serbuf, sizeof(serbuf));
 	if (ret < 0) {
-		LOG_ERR("read(rfd)");
+		LOG_ERR("read(cfd)");
 		return NULL;
 	}
 
@@ -74,7 +74,7 @@ struct irati_msg_base * irati_read_next_msg(int rfd)
 	return resp;
 }
 
-int irati_write_msg(int rfd, struct irati_msg_base *msg)
+int irati_write_msg(int cfd, struct irati_msg_base *msg)
 {
 	char serbuf[4096];
 	unsigned int serlen;
@@ -90,9 +90,9 @@ int irati_write_msg(int rfd, struct irati_msg_base *msg)
 	serlen = serialize_rlite_msg(irati_ker_numtables, RINA_C_MAX,
 				     serbuf, msg);
 
-	ret = write(rfd, serbuf, serlen);
+	ret = write(cfd, serbuf, serlen);
 	if (ret < 0) {
-		LOG_ERR("write(ctrlmsg)");
+		LOG_ERR("write(cfd)");
 	} else if (ret != serlen) {
 		/* This should never happen if kernel code is correct. */
 		LOG_ERR("Error: partial write [%d/%u]\n", ret, serlen);
@@ -136,5 +136,10 @@ int irati_open_appl_ipcp_port(irati_msg_port_t port_id)
 
 int irati_open_ipcm_port()
 {
-	return open_port_common(1);
+	return open_port_common(IRATI_IPCM_PORT);
+}
+
+void irati_ctrl_msg_free(struct irati_msg_base *msg)
+{
+	irati_msg_free(irati_ker_numtables, RINA_C_MAX, msg);
 }

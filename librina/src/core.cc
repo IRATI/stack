@@ -27,695 +27,533 @@
 #define RINA_PREFIX "librina.core"
 
 #include "librina/logs.h"
+#include "configuration.h"
 #include "core.h"
+#include "ctrl.h"
+#include "irati/serdes-utils.h"
 
 namespace rina {
 
 char * stringToCharArray(std::string s)
 {
-  char * result = new char[s.size() + 1];
-  result[s.size()] = 0;
-  memcpy(result, s.c_str(), s.size());
-  return result;
+	char * result = new char[s.size() + 1];
+	result[s.size()] = 0;
+	memcpy(result, s.c_str(), s.size());
+	return result;
 }
 
 char * intToCharArray(int i)
 {
-  std::stringstream strs;
-  strs << i;
-  return stringToCharArray(strs.str());
+	std::stringstream strs;
+	strs << i;
+	return stringToCharArray(strs.str());
 }
 
-/* CLASS RINA NETLINK ENDPOINT */
-RINANetlinkEndpoint::RINANetlinkEndpoint()
-{
-  netlinkPortId = 0;
-  ipcProcessId = 0;
-}
-
-RINANetlinkEndpoint::RINANetlinkEndpoint(unsigned int netlinkPortId,
-                                         unsigned short ipcProcessId)
-{
-  this->netlinkPortId = netlinkPortId;
-  this->ipcProcessId = ipcProcessId;
-}
-
-RINANetlinkEndpoint::RINANetlinkEndpoint(
-    unsigned int netlinkPortId, unsigned short ipcProcessId,
-    const ApplicationProcessNamingInformation& appNamingInfo)
-{
-  this->netlinkPortId = netlinkPortId;
-  this->ipcProcessId = ipcProcessId;
-  this->applicationProcessName = appNamingInfo;
-}
-
-unsigned short RINANetlinkEndpoint::getIpcProcessId() const
-{
-  return ipcProcessId;
-}
-
-void RINANetlinkEndpoint::setIpcProcessId(unsigned short ipcProcessId)
-{
-  this->ipcProcessId = ipcProcessId;
-}
-
-unsigned int RINANetlinkEndpoint::getNetlinkPortId() const
-{
-  return netlinkPortId;
-}
-
-void RINANetlinkEndpoint::setNetlinkPortId(unsigned int netlinkPortId)
-{
-  this->netlinkPortId = netlinkPortId;
-}
-
-const ApplicationProcessNamingInformation&
-RINANetlinkEndpoint::getApplicationProcessName() const
-{
-  return applicationProcessName;
-}
-
-void RINANetlinkEndpoint::setApplicationProcessName(
-    const ApplicationProcessNamingInformation& applicationProcessName)
-{
-  this->applicationProcessName = applicationProcessName;
-}
-
-
-/* CLASS NETLINK PORT ID MAP */
-NetlinkPortIdMap::~NetlinkPortIdMap(){
-        for (std::map<unsigned short, RINANetlinkEndpoint *>::iterator iterator
-                        = ipcProcessIdMappings.begin();
-                        iterator != ipcProcessIdMappings.end(); ++iterator) {
+/* CLASS CTRL PORT ID MAP */
+CtrlPortIdMap::~CtrlPortIdMap(){
+        for (std::map<ipc_process_id_t, struct irati_ep *>::iterator iterator
+                        = ipcp_id_map.begin();
+                        iterator != ipcp_id_map.end(); ++iterator) {
                 if (iterator->second) {
                         delete iterator->second;
                 }
         }
-        for (std::map<std::string, RINANetlinkEndpoint*>::iterator iterator
-                  = applicationNameMappings.begin();
-                  iterator != applicationNameMappings.end(); ++iterator) {
+        for (std::map<std::string, struct irati_ep *>::iterator iterator
+                  = app_name_map.begin();
+                  iterator != app_name_map.end(); ++iterator) {
                 if (iterator->second) {
                         delete iterator->second;
                 }
         }
 }
 
-void NetlinkPortIdMap::putIPCProcessIdToNelinkPortIdMapping(
-    unsigned int netlinkPortId, unsigned short ipcProcessId)
+void CtrlPortIdMap::add_ipcp_id_to_ctrl_port_mapping(irati_msg_port_t ctrl_port,
+		      	      	      	      	     ipc_process_id_t ipcp_id)
 {
-  RINANetlinkEndpoint * current = ipcProcessIdMappings[ipcProcessId];
-  if (current != 0) {
-    current->setIpcProcessId(ipcProcessId);
-    current->setNetlinkPortId(netlinkPortId);
-  } else {
-    ipcProcessIdMappings[ipcProcessId] = new RINANetlinkEndpoint(netlinkPortId,
-                                                                 ipcProcessId);
-  }
+	struct irati_ep * current;
+	bool add = false;
+
+	current = ipcp_id_map[ipcp_id];
+	if (!current) {
+		current = new irati_ep();
+		add = true;
+	}
+
+	current->ipcp_id = ipcp_id;
+	current->ctrl_port = ctrl_port;
+
+	if (add)
+		ipcp_id_map[ipcp_id] = current;
 }
 
-RINANetlinkEndpoint * NetlinkPortIdMap::getNetlinkPortIdFromIPCProcessId(
-    unsigned short ipcProcessId)
+struct irati_ep * CtrlPortIdMap::get_ctrl_port_from_ipcp_id(ipc_process_id_t ipcp_id)
 {
-  std::map<unsigned short, RINANetlinkEndpoint *>::iterator it =
-      ipcProcessIdMappings.find(ipcProcessId);
-  if (it == ipcProcessIdMappings.end()) {
-    LOG_ERR("Could not find the netlink endpoint of IPC Process %d",
-            ipcProcessId);
-    throw NetlinkException(NetlinkException::error_fetching_netlink_port_id);
-  }
+	std::map<ipc_process_id_t, struct irati_ep *>::iterator it;
 
-  return it->second;
+	it = ipcp_id_map.find(ipcp_id);
+	if (it == ipcp_id_map.end()) {
+		LOG_ERR("Could not find the netlink endpoint of IPC Process %d",
+			ipcp_id);
+		return 0;
+	}
+
+	return it->second;
 }
 
-void NetlinkPortIdMap::putAPNametoNetlinkPortIdMapping(
-    ApplicationProcessNamingInformation apName, unsigned int netlinkPortId,
-    unsigned short ipcProcessId)
+void CtrlPortIdMap::add_app_name_to_ctrl_port_map(const ApplicationProcessNamingInformation& app_name,
+					   	  irati_msg_port_t ctrl_port,
+						  ipc_process_id_t ipcp_id)
 {
-  RINANetlinkEndpoint * current = applicationNameMappings[apName
-      .getProcessNamePlusInstance()];
-  if (current != 0) {
-    current->setIpcProcessId(ipcProcessId);
-    current->setNetlinkPortId(netlinkPortId);
-  } else {
-    applicationNameMappings[apName.getProcessNamePlusInstance()] =
-        new RINANetlinkEndpoint(netlinkPortId, ipcProcessId, apName);
-  }
+	struct irati_ep * current;
+	bool add = false;
+
+	current = app_name_map[app_name.getProcessNamePlusInstance()];
+	if (!current) {
+		current = new irati_ep();
+		current->app_name = app_name;
+		add = true;
+	}
+
+	current->ipcp_id = ipcp_id;
+	current->ctrl_port = ctrl_port;
+
+	if (add)
+		app_name_map[app_name.getProcessNamePlusInstance()] = current;
 }
 
-RINANetlinkEndpoint * NetlinkPortIdMap::getNetlinkPortIdFromAPName(
-    ApplicationProcessNamingInformation apName)
+struct irati_ep * CtrlPortIdMap::get_ctrl_port_from_app_name(const ApplicationProcessNamingInformation& app_name)
 {
-  std::map<std::string, RINANetlinkEndpoint *>::iterator it =
-      applicationNameMappings.find(apName.getProcessNamePlusInstance());
-  if (it == applicationNameMappings.end()) {
-    LOG_ERR("Could not find the netlink endpoint of Application %s",
-            apName.toString().c_str());
-    throw NetlinkException(NetlinkException::error_fetching_netlink_port_id);
-  };
+	std::map<std::string, struct irati_ep *>::iterator it ;
 
-  return it->second;
+	it = app_name_map.find(app_name.getProcessNamePlusInstance());
+	if (it == app_name_map.end()) {
+		LOG_ERR("Could not find the netlink endpoint of Application %s",
+			 app_name.toString().c_str());
+		return 0;
+	};
+
+	return it->second;
 }
 
-unsigned int NetlinkPortIdMap::getIPCManagerPortId()
+irati_msg_port_t CtrlPortIdMap::get_ipcm_ctrl_port()
 {
-  return 1;
+	return IRATI_IPCM_PORT;
 }
 
-void NetlinkPortIdMap::updateMessageOrPortIdMap(BaseNetlinkMessage* message,
-                                                bool send)
+void CtrlPortIdMap::name_to_app_name_class(const struct name * name,
+					   ApplicationProcessNamingInformation & app_name)
 {
-  switch (message->getOperationCode()) {
-    case RINA_C_APP_ALLOCATE_FLOW_REQUEST: {
-      if (send) {
-        message->setDestPortId(getIPCManagerPortId());
-      } else {
-        AppAllocateFlowRequestMessage * specificMessage =
-            dynamic_cast<AppAllocateFlowRequestMessage *>(message);
-        putAPNametoNetlinkPortIdMapping(
-            specificMessage->getSourceAppName(),
-            specificMessage->getSourcePortId(),
-            specificMessage->getSourceIpcProcessId());
-      }
-      break;
-    }
-    case RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT: {
-      AppAllocateFlowRequestResultMessage * specificMessage =
-          dynamic_cast<AppAllocateFlowRequestResultMessage *>(message);
-      if (send) {
-        RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
-            specificMessage->getSourceAppName());
-        specificMessage->setDestPortId(endpoint->getNetlinkPortId());
-        specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
-      }
-      break;
-    }
-    case RINA_C_APP_ALLOCATE_FLOW_RESPONSE: {
-      if (send) {
-        message->setDestPortId(getIPCManagerPortId());
-      }
-      break;
-    }
-    case RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED: {
-      AppAllocateFlowRequestArrivedMessage * specificMessage =
-          dynamic_cast<AppAllocateFlowRequestArrivedMessage *>(message);
-      if (send) {
-        RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
-            specificMessage->getDestAppName());
-        specificMessage->setDestPortId(endpoint->getNetlinkPortId());
-        specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
-      }
-      break;
-    }
-    case RINA_C_APP_DEALLOCATE_FLOW_REQUEST: {
-      if (send) {
-        message->setDestPortId(getIPCManagerPortId());
-      }
-      break;
-    }
-    case RINA_C_APP_DEALLOCATE_FLOW_RESPONSE: {
-      AppDeallocateFlowResponseMessage * specificMessage =
-          dynamic_cast<AppDeallocateFlowResponseMessage *>(message);
-      if (send) {
-        RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
-            specificMessage->getApplicationName());
-        specificMessage->setDestPortId(endpoint->getNetlinkPortId());
-        specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
-      }
-      break;
-    }
-    case RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION: {
-      AppFlowDeallocatedNotificationMessage * specificMessage =
-          dynamic_cast<AppFlowDeallocatedNotificationMessage *>(message);
-      if (send) {
-        RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
-            specificMessage->getApplicationName());
-        specificMessage->setDestPortId(endpoint->getNetlinkPortId());
-        specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
-      }
-      break;
-    }
-    case RINA_C_APP_REGISTER_APPLICATION_REQUEST: {
-      AppRegisterApplicationRequestMessage * specificMessage =
-          dynamic_cast<AppRegisterApplicationRequestMessage *>(message);
-      if (send) {
-        specificMessage->setDestPortId(getIPCManagerPortId());
-      } else {
-        putAPNametoNetlinkPortIdMapping(
-            specificMessage->getApplicationRegistrationInformation().appName,
-            specificMessage->getSourcePortId(),
-            specificMessage->getSourceIpcProcessId());
-      }
-      break;
-    }
-    case RINA_C_APP_REGISTER_APPLICATION_RESPONSE: {
-      AppRegisterApplicationResponseMessage * specificMessage =
-          dynamic_cast<AppRegisterApplicationResponseMessage *>(message);
-      if (send) {
-        RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
-            specificMessage->getApplicationName());
-        specificMessage->setDestPortId(endpoint->getNetlinkPortId());
-        specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
-      }
-      break;
-    }
-    case RINA_C_APP_UNREGISTER_APPLICATION_REQUEST: {
-      if (send) {
-        message->setDestPortId(getIPCManagerPortId());
-      } else {
-        AppUnregisterApplicationRequestMessage * specificMessage =
-            dynamic_cast<AppUnregisterApplicationRequestMessage *>(message);
-        putAPNametoNetlinkPortIdMapping(
-            specificMessage->getApplicationName(),
-            specificMessage->getSourcePortId(),
-            specificMessage->getSourceIpcProcessId());
-      }
-      break;
-    }
-    case RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE: {
-      if (send) {
-        AppUnregisterApplicationResponseMessage * specificMessage =
-            dynamic_cast<AppUnregisterApplicationResponseMessage *>(message);
-        RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
-            specificMessage->getApplicationName());
-        specificMessage->setDestPortId(endpoint->getNetlinkPortId());
-        specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
-      }
-      break;
-    }
-    case RINA_C_APP_GET_DIF_PROPERTIES_REQUEST: {
-      if (send) {
-        message->setDestPortId(getIPCManagerPortId());
-      } else {
-        AppGetDIFPropertiesRequestMessage * specificMessage =
-            dynamic_cast<AppGetDIFPropertiesRequestMessage *>(message);
-        putAPNametoNetlinkPortIdMapping(
-            specificMessage->getApplicationName(),
-            specificMessage->getSourcePortId(),
-            specificMessage->getSourceIpcProcessId());
-      }
-      break;
-    }
-    case RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE: {
-      if (send) {
-        AppGetDIFPropertiesResponseMessage * specificMessage =
-            dynamic_cast<AppGetDIFPropertiesResponseMessage *>(message);
-        RINANetlinkEndpoint * endpoint = getNetlinkPortIdFromAPName(
-            specificMessage->getApplicationName());
-        specificMessage->setDestPortId(endpoint->getNetlinkPortId());
-        specificMessage->setDestIpcProcessId(endpoint->getIpcProcessId());
-      }
-      break;
-    }
-      // FIXME use the same code for multiple labels
-    case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE: {
-      if (send) {
-        message->setDestPortId(getIPCManagerPortId());
-      }
-      break;
-    }
-    case RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE: {
-      if (send) {
-        message->setDestPortId(getIPCManagerPortId());
-      }
-      break;
-    }
-    case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE: {
-      if (send) {
-        message->setDestPortId(getIPCManagerPortId());
-      }
-      break;
-    }
-    case RINA_C_IPCM_QUERY_RIB_RESPONSE: {
-      if (send) {
-        message->setDestPortId(getIPCManagerPortId());
-      }
-      break;
-    }
-    case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT: {
-      if (send) {
-        message->setDestPortId(getIPCManagerPortId());
-      }
-      break;
-    }
-    case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED: {
-      if (send) {
-        message->setDestPortId(getIPCManagerPortId());
-      }
-      break;
-    }
-    case RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE: {
-      if (send) {
-        message->setDestPortId(getIPCManagerPortId());
-      }
-      break;
-    }
-    case RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION: {
-      if (send) {
-        message->setDestPortId(getIPCManagerPortId());
-      }
-      break;
-    }
-    case RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE: {
-      if (send) {
-        message->setDestPortId(getIPCManagerPortId());
-      }
-      break;
-    }
-    case RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE: {
-      if (send) {
-        message->setDestPortId(getIPCManagerPortId());
-      }
-      break;
-    }
-    case RINA_C_IPCM_PLUGIN_LOAD_RESPONSE: {
-      if (send) {
-        message->setDestPortId(getIPCManagerPortId());
-      }
-      break;
-    }
-    case RINA_C_IPCM_IPC_PROCESS_INITIALIZED: {
-      if (send) {
-      } else {
-        putIPCProcessIdToNelinkPortIdMapping(message->getSourcePortId(),
-                                             message->getSourceIpcProcessId());
-        IpcmIPCProcessInitializedMessage * specificMessage =
-            dynamic_cast<IpcmIPCProcessInitializedMessage *>(message);
-        putAPNametoNetlinkPortIdMapping(
-            specificMessage->getName(), specificMessage->getSourcePortId(),
-            specificMessage->getSourceIpcProcessId());
-      }
-      break;
-    }
-    default: {
-      //Do nothing
-    }
-  }
+	if (!name)
+		return;
+
+	app_name.processName = name->process_name;
+	app_name.processInstance = name->process_instance;
+	app_name.entityName = name->entity_name;
+	app_name.entityInstance = name->entity_instance;
+}
+
+int CtrlPortIdMap::update_msg_or_pid_map(struct irati_msg_base * msg, bool send)
+{
+	ApplicationProcessNamingInformation app_name;
+	struct irati_ep * irati_ep;
+
+	switch (msg->msg_type) {
+	case RINA_C_APP_ALLOCATE_FLOW_REQUEST: {
+		if (send) {
+			msg->dest_port = get_ipcm_ctrl_port();
+		} else {
+			struct irati_kmsg_ipcm_allocate_flow * sp_msg =
+					(struct irati_kmsg_ipcm_allocate_flow *) msg;
+
+			CtrlPortIdMap::name_to_app_name_class(sp_msg->source, app_name);
+			add_app_name_to_ctrl_port_map(app_name, sp_msg->src_port,
+						      sp_msg->src_ipcp_id);
+		}
+		break;
+	}
+	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT: {
+		struct irati_kmsg_ipcm_allocate_flow * sp_msg =
+				(struct irati_kmsg_ipcm_allocate_flow *) msg;
+		if (send) {
+			CtrlPortIdMap::name_to_app_name_class(sp_msg->source, app_name);
+			irati_ep = get_ctrl_port_from_app_name(app_name);
+			if (!irati_ep) {
+				LOG_ERR("Could not locate IRATI ep for app_name %s",
+					app_name.toString().c_str());
+				return -1;
+			}
+			msg->dest_port = irati_ep->ctrl_port;
+			msg->dest_ipcp_id = irati_ep->ipcp_id;
+		}
+		break;
+	}
+	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED: {
+		struct irati_kmsg_ipcm_allocate_flow * sp_msg =
+				(struct irati_kmsg_ipcm_allocate_flow *) msg;
+		if (send) {
+			CtrlPortIdMap::name_to_app_name_class(sp_msg->dest, app_name);
+			irati_ep = get_ctrl_port_from_app_name(app_name);
+			if (!irati_ep) {
+				LOG_ERR("Could not locate IRATI ep for app_name %s",
+					app_name.toString().c_str());
+				return -1;
+			}
+			msg->dest_port = irati_ep->ctrl_port;
+			msg->dest_ipcp_id = irati_ep->ipcp_id;
+		}
+		break;
+	}
+	case RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION:
+	case RINA_C_APP_DEALLOCATE_FLOW_RESPONSE: {
+		struct irati_msg_app_dealloc_flow * sp_msg =
+				(struct irati_msg_app_dealloc_flow *) msg;
+		if (send) {
+			CtrlPortIdMap::name_to_app_name_class(sp_msg->name, app_name);
+			irati_ep = get_ctrl_port_from_app_name(app_name);
+			if (!irati_ep) {
+				LOG_ERR("Could not locate IRATI ep for app_name %s",
+					app_name.toString().c_str());
+				return -1;
+			}
+			msg->dest_port = irati_ep->ctrl_port;
+			msg->dest_ipcp_id = irati_ep->ipcp_id;
+		}
+		break;
+	}
+	case RINA_C_APP_REGISTER_APPLICATION_REQUEST: {
+		struct irati_msg_app_reg_app * sp_msg =
+				(struct irati_msg_app_reg_app *) msg;
+		if (send) {
+			msg->dest_port = get_ipcm_ctrl_port();
+		} else {
+			CtrlPortIdMap::name_to_app_name_class(sp_msg->app_name, app_name);
+			add_app_name_to_ctrl_port_map(app_name, sp_msg->src_port,
+						      sp_msg->src_ipcp_id);
+		}
+		break;
+	}
+	case RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE:
+	case RINA_C_APP_REGISTER_APPLICATION_RESPONSE: {
+		struct irati_msg_app_reg_app_resp * sp_msg =
+				(struct irati_msg_app_reg_app_resp *) msg;
+		if (send) {
+			CtrlPortIdMap::name_to_app_name_class(sp_msg->app_name, app_name);
+			irati_ep = get_ctrl_port_from_app_name(app_name);
+			if (!irati_ep) {
+				LOG_ERR("Could not locate IRATI ep for app_name %s",
+					app_name.toString().c_str());
+				return -1;
+			}
+			msg->dest_port = irati_ep->ctrl_port;
+			msg->dest_ipcp_id = irati_ep->ipcp_id;
+		}
+		break;
+	}
+	case RINA_C_APP_GET_DIF_PROPERTIES_REQUEST:
+	case RINA_C_APP_UNREGISTER_APPLICATION_REQUEST: {
+		if (send) {
+			msg->dest_port = get_ipcm_ctrl_port();
+		} else {
+			struct irati_msg_app_reg_app_resp * sp_msg =
+					(struct irati_msg_app_reg_app_resp *) msg;
+			CtrlPortIdMap::name_to_app_name_class(sp_msg->app_name, app_name);
+			add_app_name_to_ctrl_port_map(app_name, sp_msg->src_port,
+						      sp_msg->src_ipcp_id);
+		}
+		break;
+	}
+	case RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE: {
+		struct irati_msg_get_dif_prop * sp_msg =
+				(struct irati_msg_get_dif_prop *) msg;
+		if (send) {
+			CtrlPortIdMap::name_to_app_name_class(sp_msg->app_name, app_name);
+			irati_ep = get_ctrl_port_from_app_name(app_name);
+			if (!irati_ep) {
+				LOG_ERR("Could not locate IRATI ep for app_name %s",
+					app_name.toString().c_str());
+				return -1;
+			}
+			msg->dest_port = irati_ep->ctrl_port;
+			msg->dest_ipcp_id = irati_ep->ipcp_id;
+		}
+		break;
+	}
+	case RINA_C_APP_ALLOCATE_FLOW_RESPONSE:
+	case RINA_C_APP_DEALLOCATE_FLOW_REQUEST:
+	case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE:
+	case RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE:
+	case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE:
+	case RINA_C_IPCM_QUERY_RIB_RESPONSE:
+	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
+	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED:
+	case RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE:
+	case RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION:
+	case RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE:
+	case RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE:
+	case RINA_C_IPCM_PLUGIN_LOAD_RESPONSE: {
+		if (send) {
+			msg->dest_port = get_ipcm_ctrl_port();
+		}
+		break;
+	}
+	case RINA_C_IPCM_IPC_PROCESS_INITIALIZED: {
+		if (send) {
+		} else {
+			struct irati_msg_with_name * sp_msg =
+					(struct irati_msg_with_name *) msg;
+
+			add_ipcp_id_to_ctrl_port_mapping(msg->src_port, msg->src_ipcp_id);
+			CtrlPortIdMap::name_to_app_name_class(sp_msg->name, app_name);
+			add_app_name_to_ctrl_port_map(app_name, sp_msg->src_port,
+						      sp_msg->src_ipcp_id);
+		}
+		break;
+	}
+	default: {
+		//Do nothing
+	}
+	}
+
+	return 0;
 }
 
 /**
  * An OS Process has finalized. Retrieve the information associated to
- * the NL port-id (application name, IPC Process id if it is IPC process),
+ * the ctrñ port-id (application name, IPC Process id if it is IPC process),
  * and return it in the form of an OSProcessFinalized event
  * @param nl_portid
  * @return
  */
-IPCEvent * NetlinkPortIdMap::osProcessFinalized(unsigned int nl_portid)
+IPCEvent * CtrlPortIdMap::os_process_finalized(irati_msg_port_t ctrl_port)
 {
-  //1 Try to get application process name, if not there return 0
-  ApplicationProcessNamingInformation apNamingInfo;
-  std::map<std::string, RINANetlinkEndpoint*>::iterator iterator;
-  std::map<unsigned short, RINANetlinkEndpoint*>::iterator iterator2;
-  bool foundAppName = false;
-  unsigned short ipcProcessId = 0;
+	//1 Try to get application process name, if not there return 0
+	ApplicationProcessNamingInformation apNamingInfo;
+	std::map<std::string, struct irati_ep *>::iterator iterator;
+	std::map<ipc_process_id_t, struct irati_ep *>::iterator iterator2;
+	bool foundAppName = false;
+	unsigned short ipcp_id = 0;
 
-  for (iterator = applicationNameMappings.begin();
-      iterator != applicationNameMappings.end(); ++iterator) {
-    if (iterator->second->getNetlinkPortId() == nl_portid) {
-      apNamingInfo = iterator->second->getApplicationProcessName();
-      foundAppName = true;
-      delete iterator->second;
-      applicationNameMappings.erase(iterator);
-      break;
-    }
-  }
+	for (iterator = app_name_map.begin();
+			iterator != app_name_map.end(); ++iterator) {
+		if (iterator->second->ctrl_port == ctrl_port) {
+			apNamingInfo = iterator->second->app_name;
+			foundAppName = true;
+			delete iterator->second;
+			app_name_map.erase(iterator);
+			break;
+		}
+	}
 
-  if (!foundAppName) {
-    return 0;
-  }
+	if (!foundAppName) {
+		return 0;
+	}
 
-  //2 Try to get IPC Process id
-  for (iterator2 = ipcProcessIdMappings.begin();
-      iterator2 != ipcProcessIdMappings.end(); ++iterator2) {
-    if (iterator2->second->getNetlinkPortId() == nl_portid) {
-      ipcProcessId = iterator2->first;
-      delete iterator2->second;
-      ipcProcessIdMappings.erase(iterator2);
-      break;
-    }
-  }
+	//2 Try to get IPC Process id
+	for (iterator2 = ipcp_id_map.begin();
+			iterator2 != ipcp_id_map.end(); ++iterator2) {
+		if (iterator2->second->ctrl_port == ctrl_port) {
+			ipcp_id = iterator2->first;
+			delete iterator2->second;
+			ipcp_id_map.erase(iterator2);
+			break;
+		}
+	}
 
-  OSProcessFinalizedEvent * event = new OSProcessFinalizedEvent(apNamingInfo,
-                                                                ipcProcessId,
-                                                                0);
-  return event;
+	OSProcessFinalizedEvent * event =
+			new OSProcessFinalizedEvent(apNamingInfo, ipcp_id, 0);
+	return event;
 }
 
-/* CLASS RINA Manager */
-/** main function of the Netlink message reader thread */
-void * doNetlinkMessageReaderWork(void * arg)
+IRATICtrlManager::IRATICtrlManager()
 {
-  RINAManager * myRINAManager = (RINAManager *) arg;
-  NetlinkManager * netlinkManager = myRINAManager->getNetlinkManager();
-  BlockingFIFOQueue<IPCEvent> * eventsQueue = myRINAManager->getEventQueue();
-  BaseNetlinkMessage * incomingMessage;
-  IPCEvent * event;
-
-  //Continuously try to read incoming Netlink messages
-  while (myRINAManager->keep_on_reading) {
-    //Receive message
-    try {
-      incomingMessage = netlinkManager->getMessage();
-    } catch (NetlinkException &e) {
-      LOG_ERR("Error receiving netlink message. %s", e.what());
-      continue;
-    }
-
-    if (incomingMessage == NULL){
-      // Timeout while waiting for a message
-      continue;
-    }
-
-    //Process the message
-    if (incomingMessage->getOperationCode()
-        == RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION) {
-      BaseNetlinkMessage * message =
-          dynamic_cast<BaseNetlinkMessage *>(incomingMessage);
-      LOG_DBG("NL socket at port %d is closed", message->port_id);
-
-      event = myRINAManager->osProcessFinalized(message->port_id);
-      if (event) {
-        eventsQueue->put(event);
-        myRINAManager->eventQueuePushed();
-        LOG_DBG(
-            "Added event of type %s and sequence number %u to events queue",
-            IPCEvent::eventTypeToString(event->eventType).c_str(), event->sequenceNumber);
-      }
-
-      delete message;
-    } else {
-      myRINAManager->netlinkMessageArrived(incomingMessage);
-      event = incomingMessage->toIPCEvent();
-      if (event) {
-        LOG_DBG(
-            "Added event of type %s and sequence number %u to events queue",
-            IPCEvent::eventTypeToString(event->eventType).c_str(), event->sequenceNumber);
-        eventsQueue->put(event);
-        myRINAManager->eventQueuePushed();
-      } else
-        LOG_WARN("Event is null for message type %d",
-                 incomingMessage->getOperationCode());
-
-      delete incomingMessage;
-    }
-  }
-
-  return (void *) 0;
+	ctrl_port = getpid();
+	cfd = 0;
+	next_seq_number = 1;
 }
 
-RINAManager::RINAManager()
+void IRATICtrlManager::initialize()
 {
-  //1 Initialize NetlinkManager
-  try {
-    netlinkManager = new NetlinkManager(getNelinkPortId());
-  } catch (NetlinkException &e) {
-    LOG_ERR("Error initializing Netlink Manager. %s", e.what());
-    LOG_ERR("Program will exit now");
-    exit(-1); 	//FIXME Is this too drastic?
-  }
-  LOG_DBG("Initialized Netlink Manager");
+	// Open a control device
+	cfd = irati_open_appl_ipcp_port(ctrl_port);
+	if (cfd < 0) {
+		LOG_ERR("Error initializing IRATI Ctrl manager");
+		LOG_ERR("Program will exit now");
+		exit(-1);
+	}
 
-  initialize();
+	LOG_DBG("Initialized IRTI Ctrl Manager");
 }
 
-RINAManager::RINAManager(unsigned int netlinkPort)
+irati_msg_port_t IRATICtrlManager::get_irati_ctrl_port(void)
 {
-  //1 Initialize NetlinkManager
-  try {
-    netlinkManager = new NetlinkManager(netlinkPort);
-  } catch (NetlinkException &e) {
-    LOG_ERR("Error initializing Netlink Manager. %s", e.what());
-    LOG_ERR("Program will exit now");
-    exit(-1); 	//FIXME Is this too drastic?
-  }
-  LOG_DBG("Initialized Netlink Manager");
-
-  initialize();
+	ScopedLock g(irati_ctr_lock);
+	return ctrl_port;
 }
 
-void RINAManager::initialize()
+void IRATICtrlManager::set_irati_ctrl_port(irati_msg_port_t irati_ctrl_port)
 {
-  //2 Initialize eventsQueue and the associated eventfd
-  eventQueue = new BlockingFIFOQueue<IPCEvent>();
-  LOG_DBG("Initialized event queue");
-
-  /* This must be opened in blocking mode, see eventQueuePopped. */
-  eventQueueReady = eventfd(0 , EFD_SEMAPHORE);
-  if (eventQueueReady < 0) {
-    throw Exception("Failed to create eventfd");
-  }
-
-  keep_on_reading = true;
-
-  //3 Start Netlink message reader thread
-  ThreadAttributes threadAttributes;
-  threadAttributes.setJoinable();
-  threadAttributes.setName("netlink-message-reader");
-  netlinkMessageReader = new Thread(&doNetlinkMessageReaderWork,
-		  	  	    (void *) this,
-		  	  	    &threadAttributes);
-  netlinkMessageReader->start();
-  LOG_DBG("Started Netlink Message reader thread");
+	ScopedLock g(irati_ctr_lock);
+	ctrl_port = irati_ctrl_port;
 }
 
-RINAManager::~RINAManager()
+int IRATICtrlManager::get_ctrl_fd(void)
 {
-  void* status;
-
-  if (eventQueueReady >= 0) {
-    close(eventQueueReady);
-  }
-  keep_on_reading = false;
-  netlinkMessageReader->join(&status);
-  delete netlinkManager;
-  delete netlinkMessageReader;
-  delete eventQueue;
+	return cfd;
 }
 
-void RINAManager::sendMessage(BaseNetlinkMessage * netlinkMessage,
-		bool fill_seq_num)
+IRATICtrlManager::~IRATICtrlManager()
 {
-  sendReceiveLock.lock();
-
-  try {
-    netlinkPortIdMap.updateMessageOrPortIdMap(netlinkMessage, true);
-    if (fill_seq_num) {
-      netlinkMessage->setSequenceNumber(netlinkManager->getSequenceNumber());
-    }
-    netlinkManager->sendMessage(netlinkMessage);
-  } catch (NetlinkException &e) {
-    sendReceiveLock.unlock();
-    throw e;
-  }
-
-  sendReceiveLock.unlock();
 }
 
-void RINAManager::sendMessageOfMaxSize(BaseNetlinkMessage * netlinkMessage,
-                                       size_t maxSize, bool fill_seq_num)
+unsigned int IRATICtrlManager::get_next_seq_number()
 {
-  sendReceiveLock.lock();
+	unsigned int result;
 
-  try {
-    netlinkPortIdMap.updateMessageOrPortIdMap(netlinkMessage, true);
-    if (fill_seq_num) {
-      netlinkMessage->setSequenceNumber(netlinkManager->getSequenceNumber());
-    }
-    netlinkManager->sendMessageOfMaxSize(netlinkMessage, maxSize);
-  } catch (NetlinkException &e) {
-    sendReceiveLock.unlock();
-    throw e;
-  }
+	if (next_seq_number == 0)
+		next_seq_number = 1;
 
-  sendReceiveLock.unlock();
+	result = next_seq_number;
+	next_seq_number++;
+
+	return result;
 }
 
-void RINAManager::netlinkMessageArrived(BaseNetlinkMessage * message)
+int IRATICtrlManager::send_msg(struct irati_msg_base *msg, bool fill_seq_num)
 {
-  sendReceiveLock.lock();
+	int result = 0;
 
-  //Try to update netlink port id map
-  try {
-    netlinkPortIdMap.updateMessageOrPortIdMap(message, false);
-  } catch (NetlinkException &e) {
-    LOG_WARN("Exception while trying to update netlink portId map. %s",
-             e.what());
-  }
+	ScopedLock g(sendReceiveLock);
 
-  sendReceiveLock.unlock();
+	result = ctrl_pid_map.update_msg_or_pid_map(msg, true);
+	if (result != 0)
+		return result;
+
+	if (fill_seq_num)
+		msg->event_id = get_next_seq_number();
+
+	return irati_write_msg(cfd, msg);
 }
 
-IPCEvent * RINAManager::osProcessFinalized(unsigned int nl_portid)
+int IRATICtrlManager::send_msg_max_size(struct irati_msg_base *msg,
+					size_t maxSize, bool fill_seq_num)
 {
-  IPCEvent * event;
-  sendReceiveLock.lock();
-  event = netlinkPortIdMap.osProcessFinalized(nl_portid);
-  sendReceiveLock.unlock();
-  return event;
+	int result = 0;
+
+	ScopedLock g(sendReceiveLock);
+
+	result = ctrl_pid_map.update_msg_or_pid_map(msg, true);
+	if (result != 0)
+		return result;
+
+	if (fill_seq_num)
+		msg->event_id = get_next_seq_number();
+
+	return irati_write_msg(cfd, msg);
 }
 
-BlockingFIFOQueue<IPCEvent>* RINAManager::getEventQueue()
+IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *msg)
 {
-  return eventQueue;
+	IPCEvent * event = 0;
+
+	switch (msg->msg_type) {
+	case RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST: {
+		struct irati_kmsg_ipcm_assign_to_dif * sp_msg =
+				(struct irati_kmsg_ipcm_assign_to_dif *) msg;
+
+		DIFInformation dif_info(sp_msg->dif_config, sp_msg->dif_name,
+					sp_msg->type);
+		event = new AssignToDIFRequestEvent(dif_info,
+						    msg->event_id);
+		break;
+	}
+	case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE: {
+		struct irati_msg_base_resp * sp_msg =
+				(struct irati_msg_base_resp *) msg;
+		event = new AssignToDIFResponseEvent(sp_msg->result, msg->event_id);
+		break;
+	}
+	case RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST: {
+		struct irati_kmsg_ipcm_update_config * sp_msg =
+				(struct irati_kmsg_ipcm_update_config *) msg;
+
+		DIFConfiguration dif_config(sp_msg->dif_config);
+		event = new AssignToDIFRequestEvent(dif_config,
+						    msg->event_id);
+		break;
+	}
+	case RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE: {
+		struct irati_msg_base_resp * sp_msg =
+				(struct irati_msg_base_resp *) msg;
+		event = new UpdateDIFConfigurationResponseEvent(sp_msg->result,
+								msg->event_id);
+		break;
+	}
+	case RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION: {
+		struct irati_kmsg_ipcp_dif_reg_not * sp_msg =
+				(struct irati_kmsg_ipcp_dif_reg_not *) msg;
+		 event = new IPCProcessDIFRegistrationEvent(ApplicationProcessNamingInformation(sp_msg->ipcp_name),
+				 	 	 	    ApplicationProcessNamingInformation(sp_msg->dif_name),
+							    sp_msg->is_registered, msg->event_id);
+		break;
+	}
+	default: {
+		LOG_WARN("Unrecognized ctrl message type: %d", msg->msg_type);
+		event = 0;
+	}
+	}
+
+	return event;
 }
 
-NetlinkManager* RINAManager::getNetlinkManager()
+IPCEvent * IRATICtrlManager::get_next_ctrl_msg()
 {
-  return netlinkManager;
+	struct irati_msg_base * msg;
+	IPCEvent * event;
+
+	msg = irati_read_next_msg(cfd);
+	if (!msg) {
+		LOG_ERR("Could not retrieve next ctrl message for fd %d", cfd);
+		//TODO read errno
+		return 0;
+	}
+
+	if (msg->msg_type == RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION) {
+		LOG_DBG("Ctrl device at port %d is closed", msg->src_port);
+
+		event = os_process_finalized(msg->src_port);
+		if (event) {
+			LOG_DBG("Added event of type %s and sequence number %u to events queue",
+				 IPCEvent::eventTypeToString(event->eventType).c_str(),
+				 event->sequenceNumber);
+		}
+	} else {
+		ctrl_msg_arrived(msg);
+		event = irati_ctrl_msg_to_ipc_event(msg);
+		if (event) {
+			LOG_DBG("Added event of type %s and sequence number %u to events queue",
+				IPCEvent::eventTypeToString(event->eventType).c_str(),
+				event->sequenceNumber);
+		} else
+			LOG_WARN("Event is null for message type %d", msg->msg_type);
+	}
+
+	irati_ctrl_msg_free(msg);
+
+	return event;
 }
 
-void RINAManager::eventQueuePushed()
+void IRATICtrlManager::ctrl_msg_arrived(struct irati_msg_base *msg)
 {
-  uint64_t x = 1;
-  int n;
-
-  n = write(eventQueueReady, &x, sizeof(x));
-  if (n != sizeof(x)) {
-    throw Exception("Failed to write to to eventQueueReady eventfd");
-  }
+	ScopedLock g(sendReceiveLock);
+	ctrl_pid_map.update_msg_or_pid_map(msg, false);
 }
 
-/* It may be that the netlink reader has put() an event in the queue,
- * but has not called yet eventQueuePushed() when this function is
- * called by the event consumer, who has already seen the new event.
- * In case this happens, it is not a problem, because the eventfd is
- * open in blocking mode: the read() blocks, and returns as soon as
- * the netlink reader has the chance to call eventQueuePushed().
- */
-void RINAManager::eventQueuePopped()
+IPCEvent * IRATICtrlManager::os_process_finalized(irati_msg_port_t ctrl_port)
 {
-  uint64_t x;
-  int n;
-
-  n = read(eventQueueReady, &x, sizeof(x));
-  if (n != sizeof(x)) {
-    throw Exception("Failed to read from eventQueueReady eventfd");
-  }
-
-  if (x != 1) {
-    throw Exception("Unexpected value read from eventQueueReady eventfd");
-  }
+	ScopedLock g(sendReceiveLock);
+	return ctrl_pid_map.os_process_finalized(ctrl_port);
 }
 
-Singleton<RINAManager> rinaManager;
-
-/* Get and set default Netlink port id */
-unsigned int netlinkPortId = getpid();
-Lockable * netlinkLock = new Lockable();
-
-void setNetlinkPortId(unsigned int newNetlinkPortId)
-{
-  netlinkLock->lock();
-  netlinkPortId = newNetlinkPortId;
-  netlinkLock->unlock();
-}
-
-unsigned int getNelinkPortId()
-{
-  unsigned int result = 0;
-  netlinkLock->lock();
-  result = netlinkPortId;
-  netlinkLock->unlock();
-  return result;
-}
+Singleton<IRATICtrlManager> irati_ctrl_mgr;
 
 }

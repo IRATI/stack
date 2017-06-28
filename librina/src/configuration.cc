@@ -1374,7 +1374,12 @@ std::string SecurityManagerConfiguration::toString()
 
 // CLASS DIF CONFIGURATION
 DIFConfiguration::DIFConfiguration(){
-  address_ = 0;
+	address_ = 0;
+}
+
+DIFConfiguration::DIFConfiguration(struct dif_config * dc)
+{
+	address_ = dc->address;
 }
 
 unsigned int DIFConfiguration::get_address() const {
@@ -1425,6 +1430,14 @@ void DIFConfiguration::set_fa_configuration(
 }
 
 // CLASS DIF INFORMATION
+DIFInformation::DIFInformation(struct dif_config * dc, struct name * name,
+			       string_t * type)
+{
+	dif_name_.processName = name->process_name;
+	dif_type_ = type;
+	dif_configuration_(dc);
+}
+
 const ApplicationProcessNamingInformation& DIFInformation::get_dif_name()
 const {
 	return dif_name_;
