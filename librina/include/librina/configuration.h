@@ -836,6 +836,8 @@ public:
 class NamespaceManagerConfiguration {
 public:
 	NamespaceManagerConfiguration();
+	NamespaceManagerConfiguration(struct nsm_config * nsmc);
+	struct nsm_config * to_c_nsm_config(void) const;
 	std::string toString();
 #ifndef SWIG
 	const PolicyConfig& get_policy_set() const;
@@ -848,44 +850,49 @@ public:
 
 /// Configuration of
 class AuthSDUProtectionProfile {
- public:
-    std::string to_string();
+public:
+	AuthSDUProtectionProfile() {};
+	AuthSDUProtectionProfile(struct auth_sdup_profile * asp);
+	struct auth_sdup_profile * to_c_auth_profile(void) const;
 
-    ///The authentication-encryption-compression policy set
-    PolicyConfig authPolicy;
+	std::string to_string();
 
-    /// The encryption policy configuration (name/version)
-    PolicyConfig encryptPolicy;
+	///The authentication-encryption-compression policy set
+	PolicyConfig authPolicy;
 
-    /// The CRC policy config
-    PolicyConfig crcPolicy;
+	/// The encryption policy configuration (name/version)
+	PolicyConfig encryptPolicy;
 
-    /// The TTL policy config
-    PolicyConfig ttlPolicy;
+	/// The CRC policy config
+	PolicyConfig crcPolicy;
+
+	/// The TTL policy config
+	PolicyConfig ttlPolicy;
 };
 
 /// Configuration of the Security Manager
 class SecurityManagerConfiguration {
- public:
-    SecurityManagerConfiguration() {
-    }
-    ;
-    std::string toString();
+public:
+	SecurityManagerConfiguration() {};
+	SecurityManagerConfiguration(struct secman_config * sc);
+	struct secman_config * to_c_secman_config(void) const;
 
-    PolicyConfig policy_set_;
+	std::string toString();
 
-    AuthSDUProtectionProfile default_auth_profile;
-    std::map<std::string, AuthSDUProtectionProfile> specific_auth_profiles;
+	PolicyConfig policy_set_;
+	AuthSDUProtectionProfile default_auth_profile;
+	std::map<std::string, AuthSDUProtectionProfile> specific_auth_profiles;
 };
 
 class RoutingConfiguration {
- public:
-    RoutingConfiguration() {
-    }
-    ;
-    std::string toString();
+public:
+	RoutingConfiguration() {};
+	RoutingConfiguration(struct routing_config* rc);
+	struct routing_config * to_c_routing_config(void) const;
 
-    PolicyConfig policy_set_;
+	std::string toString();
+
+	PolicyConfig policy_set_;
 };
 
 /// Contains the data about a DIF Configuration
@@ -894,7 +901,6 @@ class DIFConfiguration {
 public:
 	DIFConfiguration();
 	DIFConfiguration(struct dif_config * dc);
-
 	struct dif_config * to_c_dif_config() const;
 
 #ifndef SWIG
@@ -914,7 +920,7 @@ public:
 	void set_fa_configuration(
 			const FlowAllocatorConfiguration& fa_configuration);
 #endif
-/// The address of the IPC Process in the DIF
+	/// The address of the IPC Process in the DIF
 	unsigned int address_;
 	/// Configuration of the Error and Flow Control Protocol
 	EFCPConfiguration efcp_configuration_;

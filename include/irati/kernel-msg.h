@@ -660,7 +660,21 @@ struct irati_msg_ipcm_enroll_to_dif {
 	struct name * disc_neigh_name;
 } __attribute__((packed));
 
-/* 52 TODO RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE */
+/* 52 RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE */
+struct irati_msg_ipcm_enroll_to_dif_resp {
+	irati_msg_t msg_type;
+	irati_msg_port_t src_port;
+	irati_msg_port_t dest_port;
+	ipc_process_id_t src_ipcp_id;
+	ipc_process_id_t dest_ipcp_id;
+	uint32_t event_id;
+
+	int8_t result;
+	string_t * dif_type;
+	struct name * dif_name;
+	struct dif_config * dif_config;
+	struct ipcp_neigh_list * neighbors;
+} __attribute__((packed));
 
 /* 53 RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST */
 /* 55 RINA_C_IPCM_IPC_PROCESS_INITIALIZED */

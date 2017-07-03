@@ -703,6 +703,9 @@ class Neighbor {
 
 public:
         Neighbor();
+        Neighbor(struct ipcp_neighbor * neigh);
+        struct ipcp_neighbor * to_c_neighbor(void) const;
+
         bool operator==(const Neighbor &other) const;
         bool operator!=(const Neighbor &other) const;
 #ifndef SWIG
