@@ -118,8 +118,6 @@ class IRATICtrlManager {
 
 	unsigned int get_next_seq_number();
 
-	IPCEvent * irati_ctrl_msg_to_ipc_event(struct irati_msg_base *msg);
-
 public:
 	IRATICtrlManager();
 	~IRATICtrlManager();
@@ -139,6 +137,8 @@ public:
 			      size_t maxSize, bool fill_seq_num);
 
 	IPCEvent * get_next_ctrl_msg();
+
+	static IPCEvent * irati_ctrl_msg_to_ipc_event(struct irati_msg_base *msg);
 
 	/**
 	 * Notify about the reception of a Netlink message

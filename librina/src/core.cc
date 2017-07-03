@@ -366,7 +366,7 @@ IPCEvent * CtrlPortIdMap::os_process_finalized(irati_msg_port_t ctrl_port)
 
 IRATICtrlManager::IRATICtrlManager()
 {
-	ctrl_port = getpid();
+	ctrl_port = 0;
 	cfd = 0;
 	next_seq_number = 1;
 }
@@ -374,7 +374,13 @@ IRATICtrlManager::IRATICtrlManager()
 void IRATICtrlManager::initialize()
 {
 	// Open a control device
-	cfd = irati_open_appl_ipcp_port(ctrl_port);
+	if (ctrl_port == IRATI_IPCM_PORT) {
+		cfd = irati_open_ipcm_port();
+	} else {
+		cfd = irati_open_appl_ipcp_port();
+		ctrl_port = cfd;
+	}
+
 	if (cfd < 0) {
 		LOG_ERR("Error initializing IRATI Ctrl manager");
 		LOG_ERR("Program will exit now");
@@ -528,7 +534,7 @@ IPCEvent * IRATICtrlManager::get_next_ctrl_msg()
 		}
 	} else {
 		ctrl_msg_arrived(msg);
-		event = irati_ctrl_msg_to_ipc_event(msg);
+		event = IRATICtrlManager::irati_ctrl_msg_to_ipc_event(msg);
 		if (event) {
 			LOG_DBG("Added event of type %s and sequence number %u to events queue",
 				IPCEvent::eventTypeToString(event->eventType).c_str(),

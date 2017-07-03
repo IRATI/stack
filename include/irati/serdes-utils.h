@@ -39,6 +39,7 @@ struct irati_msg_layout {
     unsigned int query_rib_resps;
     unsigned int pff_entry_lists;
     unsigned int sdup_crypto_states;
+    unsigned int dif_properties;
     unsigned int buffers;
 };
 
@@ -132,10 +133,45 @@ void serialize_dt_cons(void **pptr, const struct dt_cons *dtc);
 int deserialize_dt_cons(const void **pptr, struct dt_cons *dtc);
 void dt_cons_free(struct dt_cons * dtc);
 
+int qos_cube_serlen(const struct qos_cube * qos);
+void serialize_qos_cube(void **pptr, const struct qos_cube *qos);
+int deserialize_qos_cube(const void **pptr, struct qos_cube *qos);
+void qos_cube_free(struct qos_cube * qos);
+
 int efcp_config_serlen(const struct efcp_config * efc);
 void serialize_efcp_config(void **pptr, const struct efcp_config *efc);
 int deserialize_efcp_config(const void **pptr, struct efcp_config *efc);
 void efcp_config_free(struct efcp_config * efc);
+
+int fa_config_serlen(const struct fa_config * fac);
+void serialize_fa_config(void **pptr, const struct fa_config *fac);
+int deserialize_fa_config(const void **pptr, struct fa_config *fac);
+void fa_config_free(struct fa_config * fac);
+
+int resall_config_serlen(const struct resall_config * resc);
+void serialize_resall_config(void **pptr, const struct resall_config *resc);
+int deserialize_resall_config(const void **pptr, struct resall_config *resc);
+void resall_config_free(struct resall_config * resc);
+
+int et_config_serlen(const struct et_config * etc);
+void serialize_et_config(void **pptr, const struct et_config *etc);
+int deserialize_et_config(const void **pptr, struct et_config *etc);
+void et_config_free(struct et_config * etc);
+
+int static_ipcp_addr_serlen(const struct static_ipcp_addr * addr);
+void serialize_static_ipcp_addr(void **pptr, const struct static_ipcp_addr *addr);
+int deserialize_static_ipcp_addr(const void **pptr, struct static_ipcp_addr *addr);
+void static_ipcp_addr_free(struct static_ipcp_addr * addr);
+
+int address_pref_config_serlen(const struct address_pref_config * apc);
+void serialize_address_pref_config(void **pptr, const struct address_pref_config *apc);
+int deserialize_address_pref_config(const void **pptr, struct address_pref_config *apc);
+void address_pref_config_free(struct address_pref_config * apc);
+
+int addressing_config_serlen(const struct addressing_config * ac);
+void serialize_addressing_config(void **pptr, const struct addressing_config *ac);
+int deserialize_addressing_config(const void **pptr, struct addressing_config *ac);
+void addressing_config_free(struct addressing_config * ac);
 
 int ipcp_config_entry_serlen(const struct ipcp_config_entry * ice);
 void serialize_ipcp_config_entry(void **pptr, const struct ipcp_config_entry *ice);
@@ -176,6 +212,16 @@ int sdup_crypto_state_serlen(const struct sdup_crypto_state * scs);
 void serialize_sdup_crypto_state(void **pptr, const struct sdup_crypto_state *scs);
 int deserialize_sdup_crypto_state(const void **pptr, struct sdup_crypto_state *scs);
 void sdup_crypto_state_free(struct sdup_crypto_state * scs);
+
+int dif_properties_entry_serlen(const struct dif_properties_entry * dpe);
+void serialize_dif_properties_entry(void **pptr, const struct dif_properties_entry *dpe);
+int deserialize_dif_properties_entry(const void **pptr, struct dif_properties_entry *dpe);
+void dif_properties_entry_free(struct dif_properties_entry * dpe);
+
+int get_dif_prop_resp_serlen(const struct get_dif_prop_resp * gdp);
+void serialize_get_dif_prop_resp(void **pptr, const struct get_dif_prop_resp *gdp);
+int deserialize_get_dif_prop_resp(const void **pptr, struct get_dif_prop_resp *gdp);
+void get_dif_prop_resp_free(struct get_dif_prop_resp * gdp);
 
 unsigned int irati_msg_serlen(struct irati_msg_layout *numtables,
                               size_t num_entries,
