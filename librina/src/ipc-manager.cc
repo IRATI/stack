@@ -53,6 +53,8 @@ void initializeIPCManager(unsigned int        localPort,
                           const std::string & logLevel,
                           const std::string & pathToLogFolder)
 {
+	struct irati_msg_base msg;
+
 	std::string ipcmPathToLogFile = pathToLogFolder + "/ipcm.log";
 	initialize(localPort, logLevel, ipcmPathToLogFile);
 
@@ -61,15 +63,12 @@ void initializeIPCManager(unsigned int        localPort,
 	_log_path = pathToLogFolder;
 	_log_level = logLevel;
 
-	BaseNetlinkMessage message(RINA_C_IPCM_IPC_MANAGER_PRESENT);
-	message.setDestPortId(0);
-	message.setNotificationMessage(true);
+        msg.msg_type = RINA_C_IPCM_IPC_MANAGER_PRESENT;
+        msg.dest_port = 0;
 
-	try {
-		rinaManager->sendMessage(&message, false);
-	} catch (NetlinkException &e) {
-		throw InitializationException(e.what());
-	}
+        if (irati_ctrl_mgr->send_msg(&msg, false) != 0) {
+        	throw InitializationException("Problems sending CTRL message");
+        }
 }
 
 void destroyIPCManager()
@@ -137,95 +136,104 @@ void IPCProcessProxy::setPid(pid_t pid)
 { this->pid = pid; }
 
 void IPCProcessProxy::assignToDIF(const DIFInformation& difInformation,
-		unsigned int opaque)
+				  unsigned int opaque)
 {
 #if STUB_API
         //Do nothing
 #else
-        IpcmAssignToDIFRequestMessage message;
-        message.setDIFInformation(difInformation);
-        message.setDestIpcProcessId(id);
-        message.setDestPortId(portId);
-        message.setRequestMessage(true);
-        message.setSequenceNumber(opaque);
+        struct irati_kmsg_ipcm_assign_to_dif * msg;
 
-        try {
-                //FIXME, compute maximum message size dynamically
-                rinaManager->sendMessageOfMaxSize(&message,
-                                                  5 * get_page_size(),
-                                                  false);
-        } catch (NetlinkException &e) {
-                throw AssignToDIFException(e.what());
+        msg = new irati_kmsg_ipcm_assign_to_dif();
+        msg->msg_type = RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST;
+        msg->dif_name = difInformation.dif_name_.to_c_name();
+        msg->type = difInformation.dif_type_.c_str();
+        msg->dif_config = difInformation.dif_configuration_.to_c_dif_config();
+        msg->dest_ipcp_id = id;
+        msg->dest_port = portId;
+        msg->event_id = opaque;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
         }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
 void
 IPCProcessProxy::updateDIFConfiguration(const DIFConfiguration& difConfiguration,
-		unsigned int opaque)
+					unsigned int opaque)
 {
 #if STUB_API
         //Do nothing
 #else
-        IpcmUpdateDIFConfigurationRequestMessage message;
-        message.setDIFConfiguration(difConfiguration);
-        message.setDestIpcProcessId(id);
-        message.setDestPortId(portId);
-        message.setRequestMessage(true);
-        message.setSequenceNumber(opaque);
+        struct irati_kmsg_ipcm_update_config * msg;
 
-        try {
-                rinaManager->sendMessage(&message, false);
-        } catch (NetlinkException &e) {
-                throw UpdateDIFConfigurationException(e.what());
+        msg = new irati_kmsg_ipcm_update_config();
+        msg->msg_type = RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST;
+        msg->dif_config = difConfiguration.to_c_dif_config();
+        msg->dest_ipcp_id = id;
+        msg->dest_port = portId;
+        msg->event_id = opaque;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
         }
 
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
+
 #endif
 }
 
-void IPCProcessProxy::notifyRegistrationToSupportingDIF(
-		const ApplicationProcessNamingInformation& ipcProcessName,
-		const ApplicationProcessNamingInformation& difName)
+void IPCProcessProxy::notifyRegistrationToSupportingDIF(const ApplicationProcessNamingInformation& ipcProcessName,
+							const ApplicationProcessNamingInformation& difName)
 {
 #if STUB_API
 	//Do nothing
 #else
-	IpcmDIFRegistrationNotification message;
-	message.setIpcProcessName(ipcProcessName);
-	message.setDestIpcProcessId(id);
-	message.setDestPortId(portId);
-	message.setDifName(difName);
-	message.setRegistered(true);
-	message.setNotificationMessage(true);
+        struct irati_kmsg_ipcp_dif_reg_not * msg;
 
-	try {
-		rinaManager->sendMessage(&message, false);
-	} catch (NetlinkException &e) {
-		throw NotifyRegistrationToDIFException(e.what());
-	}
+        msg = new irati_kmsg_ipcp_dif_reg_not();
+        msg->msg_type = RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION;
+        msg->dif_name = difName.to_c_name();
+        msg->ipcp_name = ipcProcessName.to_c_name();
+        msg->dest_ipcp_id = id;
+        msg->dest_port = portId;
+        msg->is_registered = true;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
-void IPCProcessProxy::notifyUnregistrationFromSupportingDIF(
-		const ApplicationProcessNamingInformation& ipcProcessName,
-		const ApplicationProcessNamingInformation& difName)
+void IPCProcessProxy::notifyUnregistrationFromSupportingDIF(const ApplicationProcessNamingInformation& ipcProcessName,
+							    const ApplicationProcessNamingInformation& difName)
 {
 #if STUB_API
 	//Do nothing
 #else
-	IpcmDIFRegistrationNotification message;
-	message.setIpcProcessName(ipcProcessName);
-	message.setDestIpcProcessId(id);
-	message.setDestPortId(portId);
-	message.setDifName(difName);
-	message.setRegistered(false);
-	message.setNotificationMessage(true);
+        struct irati_kmsg_ipcp_dif_reg_not * msg;
 
-	try {
-		rinaManager->sendMessage(&message, false);
-	} catch (NetlinkException &e) {
-		throw NotifyUnregistrationFromDIFException(e.what());
-	}
+        msg = new irati_kmsg_ipcp_dif_reg_not();
+        msg->msg_type = RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION;
+        msg->dif_name = difName.to_c_name();
+        msg->ipcp_name = ipcProcessName.to_c_name();
+        msg->dest_ipcp_id = id;
+        msg->dest_port = portId;
+        msg->is_registered = false;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
@@ -237,21 +245,24 @@ void IPCProcessProxy::enroll(const ApplicationProcessNamingInformation& difName,
 #if STUB_API
         //Do nothing
 #else
-        IpcmEnrollToDIFRequestMessage message;
-        message.prepare_for_handover = false;
-        message.setDifName(difName);
-        message.setSupportingDifName(supportingDifName);
-        message.setNeighborName(neighborName);
-        message.setDestIpcProcessId(id);
-        message.setDestPortId(portId);
-        message.setRequestMessage(true);
-        message.setSequenceNumber(opaque);
+        struct irati_msg_ipcm_enroll_to_dif * msg;
 
-        try {
-                rinaManager->sendMessage(&message, false);
-        } catch(NetlinkException &e) {
-                throw EnrollException(e.what());
+        msg = new irati_msg_ipcm_enroll_to_dif();
+        msg->msg_type = RINA_C_IPCM_ENROLL_TO_DIF_REQUEST;
+        msg->dif_name = difName.to_c_name();
+        msg->sup_dif_name = supportingDifName.to_c_name();
+        msg->neigh_name = neighborName.to_c_name();
+        msg->dest_ipcp_id = id;
+        msg->dest_port = portId;
+        msg->prepare_for_handover = false;
+        msg->event_id = opaque;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
         }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
@@ -264,22 +275,25 @@ void IPCProcessProxy::enroll_prepare_hand(const ApplicationProcessNamingInformat
 #if STUB_API
         //Do nothing
 #else
-        IpcmEnrollToDIFRequestMessage message;
-        message.prepare_for_handover = true;
-        message.disc_neigh_name = disc_neigh_name;
-        message.setDifName(difName);
-        message.setSupportingDifName(supportingDifName);
-        message.setNeighborName(neighborName);
-        message.setDestIpcProcessId(id);
-        message.setDestPortId(portId);
-        message.setRequestMessage(true);
-        message.setSequenceNumber(opaque);
+        struct irati_msg_ipcm_enroll_to_dif * msg;
 
-        try {
-                rinaManager->sendMessage(&message, false);
-        } catch(NetlinkException &e) {
-                throw EnrollException(e.what());
+        msg = new irati_msg_ipcm_enroll_to_dif();
+        msg->msg_type = RINA_C_IPCM_ENROLL_TO_DIF_REQUEST;
+        msg->dif_name = difName.to_c_name();
+        msg->sup_dif_name = supportingDifName.to_c_name();
+        msg->neigh_name = neighborName.to_c_name();
+        msg->prepare_for_handover = true;
+        msg->disc_neigh_name = disc_neigh_name.to_c_name();
+        msg->dest_ipcp_id = id;
+        msg->dest_port = portId;
+        msg->event_id = opaque;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
         }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
@@ -289,18 +303,21 @@ void IPCProcessProxy::disconnectFromNeighbor(const ApplicationProcessNamingInfor
 #if STUB_API
         //Do nothing
 #else
-	IpcmDisconnectNeighborRequestMessage message;
-        message.setNeighborName(neighbor);
-        message.setDestIpcProcessId(id);
-        message.setDestPortId(portId);
-        message.setRequestMessage(true);
-        message.setSequenceNumber(opaque);
+        struct irati_msg_with_name * msg;
 
-        try {
-                rinaManager->sendMessage(&message, false);
-        } catch(NetlinkException &e) {
-                throw IPCException(e.what());
+        msg = new irati_msg_with_name();
+        msg->msg_type = RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST;
+        msg->name = neighbor.to_c_name();
+        msg->dest_ipcp_id = id;
+        msg->dest_port = portId;
+        msg->event_id = opaque;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
         }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
@@ -313,48 +330,51 @@ void IPCProcessProxy::registerApplication(const ApplicationProcessNamingInformat
 #if STUB_API
 	//Do nothing
 #else
-	IpcmRegisterApplicationRequestMessage message;
-	message.setApplicationName(applicationName);
-	message.dafName = dafName;
-	message.setDifName(dif_name);
-	message.setRegIpcProcessId(regIpcProcessId);
-	message.setDestIpcProcessId(id);
-	message.setDestPortId(portId);
-	message.setRequestMessage(true);
-	message.setSequenceNumber(opaque);
+        struct irati_kmsg_ipcm_reg_app * msg;
 
-	try {
-	        rinaManager->sendMessage(&message, false);
-	} catch (NetlinkException &e) {
-	        throw IpcmRegisterApplicationException(e.what());
-	}
+        msg = new irati_kmsg_ipcm_reg_app();
+        msg->msg_type = RINA_C_IPCM_REGISTER_APPLICATION_REQUEST;
+        msg->app_name = applicationName.to_c_name();
+        msg->daf_name = dafName.to_c_name();
+        msg->dif_name = dif_name.to_c_name();
+        msg->reg_ipcp_id = regIpcProcessId;
+        msg->dest_ipcp_id = id;
+        msg->dest_port = portId;
+        msg->event_id = opaque;
 
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
-void IPCProcessProxy::unregisterApplication(
-		const ApplicationProcessNamingInformation& applicationName,
-		const ApplicationProcessNamingInformation& dif_name,
-		unsigned int opaque)
+void IPCProcessProxy::unregisterApplication(const ApplicationProcessNamingInformation& applicationName,
+					    const ApplicationProcessNamingInformation& dif_name,
+					    unsigned int opaque)
 {
 
 #if STUB_API
 	//Do nothing
 #else
-        IpcmUnregisterApplicationRequestMessage message;
-        message.setApplicationName(applicationName);
-        message.setDifName(dif_name);
-        message.setDestIpcProcessId(id);
-        message.setDestPortId(portId);
-        message.setRequestMessage(true);
-        message.setSequenceNumber(opaque);
+        struct irati_kmsg_ipcm_unreg_app * msg;
 
-        try {
-        	rinaManager->sendMessage(&message, false);
-        } catch (NetlinkException &e) {
-        	LOG_DBG("Error %s", e.what());
-        	throw IpcmUnregisterApplicationException(e.what());
+        msg = new irati_kmsg_ipcm_unreg_app();
+        msg->msg_type = RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST;
+        msg->app_name = applicationName.to_c_name();
+        msg->dif_name = dif_name.to_c_name();
+        msg->dest_ipcp_id = id;
+        msg->dest_port = portId;
+        msg->event_id = opaque;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
         }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
@@ -364,24 +384,25 @@ void IPCProcessProxy::allocateFlow(const FlowRequestEvent& flowRequest,
 #if STUB_API
 	//Do nothing
 #else
-	IpcmAllocateFlowRequestMessage message;
-	message.setSourceAppName(flowRequest.localApplicationName);
-	message.setDestAppName(flowRequest.remoteApplicationName);
-	message.setFlowSpec(flowRequest.flowSpecification);
-	message.setDifName(flowRequest.DIFName);
-	message.setSourceIpcProcessId(
-	                flowRequest.flowRequestorIpcProcessId);
-	message.setDestIpcProcessId(id);
-	message.setDestPortId(portId);
-	message.setRequestMessage(true);
-	message.setSequenceNumber(opaque);
+        struct irati_kmsg_ipcm_allocate_flow * msg;
 
-	try {
-	        rinaManager->sendMessage(&message, false);
-	} catch (NetlinkException &e) {
-	        throw AllocateFlowException(e.what());
-	}
+        msg = new irati_kmsg_ipcm_allocate_flow();
+        msg->msg_type = RINA_C_IPCM_ALLOCATE_FLOW_REQUEST;
+        msg->source = flowRequest.localApplicationName.to_c_name();
+        msg->dest = flowRequest.remoteApplicationName.to_c_name();
+        msg->dif_name = flowRequest.DIFName.to_c_name();
+        msg->src_ipcp_id = flowRequest.flowRequestorIpcProcessId;
+        msg->fspec = flowRequest.flowSpecification.to_c_flowspec();
+        msg->dest_ipcp_id = id;
+        msg->dest_port = portId;
+        msg->event_id = opaque;
 
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
@@ -393,20 +414,23 @@ void IPCProcessProxy::allocateFlowResponse(const FlowRequestEvent& flowRequest,
 #if STUB_API
 	//Do nothing
 #else
-	IpcmAllocateFlowResponseMessage responseMessage;
-	responseMessage.result = result;
-	responseMessage.setNotifySource(notifySource);
-	responseMessage.setSourceIpcProcessId(flowAcceptorIpcProcessId);
-	responseMessage.setDestIpcProcessId(id);
-	responseMessage.setDestPortId(portId);
-	responseMessage.setSequenceNumber(flowRequest.sequenceNumber);
-	responseMessage.setResponseMessage(true);
+        struct irati_kmsg_ipcm_allocate_flow_resp * msg;
 
-	try {
-		rinaManager->sendMessage(&responseMessage, false);
-	} catch (NetlinkException &e) {
-		throw AllocateFlowException(e.what());
-	}
+        msg = new irati_kmsg_ipcm_allocate_flow_resp();
+        msg->msg_type = RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE;
+        msg->notify_src = notifySource;
+        msg->result = result;
+        msg->src_ipcp_id = flowAcceptorIpcProcessId;
+        msg->dest_ipcp_id = id;
+        msg->dest_port = portId;
+        msg->event_id = flowRequest.sequenceNumber;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
@@ -415,18 +439,21 @@ void IPCProcessProxy::deallocateFlow(int flowPortId, unsigned int opaque)
 #if STUB_API
 	//Do nothing
 #else
-	BaseNetlinkMessage message(RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST);
-	message.port_id = flowPortId;
-	message.setDestIpcProcessId(id);
-	message.setDestPortId(portId);
-	message.setRequestMessage(true);
-	message.setSequenceNumber(opaque);
+        struct irati_kmsg_multi_msg * msg;
 
-	try {
-	        rinaManager->sendMessage(&message, false);
-	} catch (NetlinkException &e) {
-	        throw IpcmDeallocateFlowException(e.what());
-	}
+        msg = new irati_kmsg_multi_msg();
+        msg->msg_type = RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST;
+        msg->port_id = flowPortId;
+        msg->dest_ipcp_id = id;
+        msg->dest_port = portId;
+        msg->event_id = opaque;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
@@ -437,22 +464,25 @@ void IPCProcessProxy::queryRIB(const std::string& objectClass,
 {
 #if STUB_API
 #else
-	IpcmDIFQueryRIBRequestMessage message;
-	message.setObjectClass(objectClass);
-	message.setObjectName(objectName);
-	message.setObjectInstance(objectInstance);
-	message.setScope(scope);
-	message.setFilter(filter);
-	message.setDestIpcProcessId(id);
-	message.setDestPortId(portId);
-	message.setRequestMessage(true);
-	message.setSequenceNumber(opaque);
+        struct irati_kmsg_ipcm_query_rib * msg;
 
-	try {
-	        rinaManager->sendMessage(&message, false);
-	} catch (NetlinkException &e) {
-	        throw QueryRIBException(e.what());
-	}
+        msg = new irati_kmsg_ipcm_query_rib();
+        msg->msg_type = RINA_C_IPCM_QUERY_RIB_REQUEST;
+        msg->object_class = objectClass.c_str();
+        msg->object_name = objectName.c_str();
+        msg->object_instance = objectInstance;
+        msg->scope = scope;
+        msg->filter = filter.c_str();
+        msg->dest_ipcp_id = id;
+        msg->dest_port = portId;
+        msg->event_id = opaque;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
@@ -462,20 +492,23 @@ void IPCProcessProxy::setPolicySetParam(const std::string& path,
 {
 #if STUB_API
 #else
-	IpcmSetPolicySetParamRequestMessage message;
-        message.path = path;
-        message.name = name;
-        message.value = value;
-	message.setDestIpcProcessId(id);
-	message.setDestPortId(portId);
-	message.setRequestMessage(true);
-	message.setSequenceNumber(opaque);
+        struct irati_kmsg_ipcp_select_ps_param * msg;
 
-	try {
-	        rinaManager->sendMessage(&message, false);
-	} catch (NetlinkException &e) {
-	        throw SetPolicySetParamException(e.what());
-	}
+        msg = new irati_kmsg_ipcp_select_ps_param();
+        msg->msg_type = RINA_C_IPCP_SET_POLICY_SET_PARAM_REQUEST;
+        msg->path = path.c_str();
+        msg->name = name.c_str();
+        msg->value = value.c_str();
+        msg->dest_ipcp_id = id;
+        msg->dest_port = portId;
+        msg->event_id = opaque;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
@@ -485,19 +518,22 @@ void IPCProcessProxy::selectPolicySet(const std::string& path,
 {
 #if STUB_API
 #else
-	IpcmSelectPolicySetRequestMessage message;
-        message.path = path;
-        message.name = name;
-	message.setDestIpcProcessId(id);
-	message.setDestPortId(portId);
-	message.setRequestMessage(true);
-	message.setSequenceNumber(opaque);
+        struct irati_kmsg_ipcp_select_ps * msg;
 
-	try {
-	        rinaManager->sendMessage(&message, false);
-	} catch (NetlinkException &e) {
-	        throw SelectPolicySetException(e.what());
-	}
+        msg = new irati_kmsg_ipcp_select_ps();
+        msg->msg_type = RINA_C_IPCP_SELECT_POLICY_SET_REQUEST;
+        msg->path = path.c_str();
+        msg->name = name.c_str();
+        msg->dest_ipcp_id = id;
+        msg->dest_port = portId;
+        msg->event_id = opaque;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
@@ -506,61 +542,74 @@ void IPCProcessProxy::pluginLoad(const std::string& name, bool load,
 {
 #if STUB_API
 #else
-	IpcmPluginLoadRequestMessage message;
-        message.name = name;
-        message.load = load;
-	message.setDestIpcProcessId(id);
-	message.setDestPortId(portId);
-	message.setRequestMessage(true);
-	message.setSequenceNumber(opaque);
+        struct irati_msg_ipcm_plugin_load * msg;
 
-	try {
-	        rinaManager->sendMessage(&message, false);
-	} catch (NetlinkException &e) {
-	        throw PluginLoadException(e.what());
-	}
+        msg = new irati_msg_ipcm_plugin_load();
+        msg->msg_type = RINA_C_IPCM_PLUGIN_LOAD_REQUEST;
+        msg->plugin_name = name.c_str();
+        msg->load = load;
+        msg->dest_ipcp_id = id;
+        msg->dest_port = portId;
+        msg->event_id = opaque;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
 void IPCProcessProxy::forwardCDAPRequestMessage(const ser_obj_t& sermsg,
-					 unsigned int opaque)
+					 	unsigned int opaque)
 {
 #if STUB_API
 #else
-	IpcmFwdCDAPRequestMessage message;
-        message.sermsg = sermsg;
-	message.result = 0;  // unused when IPC Manager sends
-	message.setDestIpcProcessId(id);
-	message.setDestPortId(portId);
-	message.setRequestMessage(true);
-	message.setSequenceNumber(opaque);
+        struct irati_msg_ipcm_fwd_cdap_msg * msg;
 
-	try {
-	        rinaManager->sendMessage(&message, false);
-	} catch (NetlinkException &e) {
-	        throw FwdCDAPMsgException(e.what());
-	}
+        msg = new irati_msg_ipcm_fwd_cdap_msg();
+        msg->msg_type = RINA_C_IPCM_FWD_CDAP_MSG_REQUEST;
+        msg->cdap_msg = new buffer();
+        msg->cdap_msg->data = new char[sermsg.size_];
+        msg->cdap_msg->size = sermsg.size_;
+        memcpy(msg->cdap_msg->data, sermsg.message_, sermsg.size_);
+        msg->dest_ipcp_id = id;
+        msg->dest_port = portId;
+        msg->event_id = opaque;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
 void IPCProcessProxy::forwardCDAPResponseMessage(const ser_obj_t& sermsg,
-                                         unsigned int opaque)
+                                         	 unsigned int opaque)
 {
 #if STUB_API
 #else
-        IpcmFwdCDAPResponseMessage message;
-        message.sermsg = sermsg;
-        message.result = 0;  // unused when IPC Manager sends
-        message.setDestIpcProcessId(id);
-        message.setDestPortId(portId);
-        message.setRequestMessage(true);
-        message.setSequenceNumber(opaque);
+        struct irati_msg_ipcm_fwd_cdap_msg * msg;
 
-        try {
-                rinaManager->sendMessage(&message, false);
-        } catch (NetlinkException &e) {
-                throw FwdCDAPMsgException(e.what());
+        msg = new irati_msg_ipcm_fwd_cdap_msg();
+        msg->msg_type = RINA_C_IPCM_FWD_CDAP_MSG_RESPONSE;
+        msg->cdap_msg = new buffer();
+        msg->cdap_msg->data = new char[sermsg.size_];
+        msg->cdap_msg->size = sermsg.size_;
+        memcpy(msg->cdap_msg->data, sermsg.message_, sermsg.size_);
+        msg->dest_ipcp_id = id;
+        msg->dest_port = portId;
+        msg->event_id = opaque;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
         }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
@@ -631,7 +680,7 @@ IPCProcessProxy * IPCProcessFactory::create(
 				stringToCharArray(ipcProcessName.processName),
 				stringToCharArray(ipcProcessName.processInstance),
 				intToCharArray(ipcProcessId),
-				intToCharArray(getNelinkPortId()),
+				intToCharArray(irati_ctrl_mgr->get_irati_ctrl_port()),
 				stringToCharArray(_log_level),
 				stringToCharArray(_log_path + "/" + ipcProcessName.processName
 						+ "-" + ipcProcessName.processInstance + ".log"),
@@ -661,28 +710,27 @@ IPCProcessProxy * IPCProcessFactory::create(
 		}
 	}
 
-	//Ask the kernel to create the IPCP
-	IpcmCreateIPCPRequestMessage message;
-        message.dif_type = difType;
-        message.ipcp_name = ipcProcessName;
-        message.ipcp_id = ipcProcessId;
-        message.nl_port_id = portId;
-	message.setSourceIpcProcessId(0);
-	message.setDestIpcProcessId(0);
-	message.setDestPortId(0);
-	message.setRequestMessage(true);
+        struct irati_kmsg_ipcm_create_ipcp * msg;
 
-	try {
-	        rinaManager->sendMessage(&message, false);
-	} catch (NetlinkException &e) {
-	        throw CreateIPCProcessException(e.what());
-	}
+        msg = new irati_kmsg_ipcm_create_ipcp();
+        msg->msg_type = RINA_C_IPCM_CREATE_IPCP_REQUEST;
+        msg->dif_type = difType.c_str();
+        msg->ipcp_name = ipcProcessName.to_c_name();
+        msg->irati_port_id = portId;
+        msg->dest_ipcp_id = 0;
+        msg->dest_port = 0;
 
-	seq_num = message.getSequenceNumber();
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        seq_num = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 
-	IPCProcessProxy * ipcProcess = new IPCProcessProxy(ipcProcessId, portId, pid, difType,
-			ipcProcessName);
+	IPCProcessProxy * ipcProcess = new IPCProcessProxy(ipcProcessId, portId,
+							   pid, difType, ipcProcessName);
 	ipcProcess->seq_num = seq_num;
 	return ipcProcess;
 }
@@ -695,21 +743,21 @@ unsigned int IPCProcessFactory::destroy(IPCProcessProxy* ipcp)
 #if STUB_API
 	//Do nothing
 #else
-	//Ask the kernel to destroy the IPCP
-	IpcmDestroyIPCPRequestMessage message;
-        message.ipcp_id = ipcp->id;
-	message.setSourceIpcProcessId(0);
-	message.setDestIpcProcessId(0);
-	message.setDestPortId(0);
-	message.setRequestMessage(true);
+        struct irati_kmsg_ipcm_destroy_ipcp * msg;
 
-	try {
-	        rinaManager->sendMessage(&message, false);
-	} catch (NetlinkException &e) {
-	        throw DestroyIPCProcessException(e.what());
-	}
+        msg = new irati_kmsg_ipcm_destroy_ipcp();
+        msg->msg_type = RINA_C_IPCM_DESTROY_IPCP_REQUEST;
+        msg->ipcp_id = ipcp->id;
+        msg->dest_ipcp_id = 0;
+        msg->dest_port = 0;
 
-	seq_num = message.getSequenceNumber();
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        seq_num = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 
 	if (ipcp->getType() == NORMAL_IPC_PROCESS ||
 			ipcp->getType() == SHIM_WIFI_IPC_PROCESS_AP ||
@@ -740,49 +788,54 @@ unsigned int IPCProcessFactory::destroy(IPCProcessProxy* ipcp)
 }
 
 /** CLASS APPLICATION MANAGER */
-void ApplicationManager::applicationRegistered(
-		const ApplicationRegistrationRequestEvent& event,
-		const ApplicationProcessNamingInformation& difName, int result)
+void ApplicationManager::applicationRegistered(const ApplicationRegistrationRequestEvent& event,
+					       const ApplicationProcessNamingInformation& difName, int result)
 {
 	LOG_DBG("ApplicationManager::applicationRegistered called");
 
 #if STUB_API
 	//Do nothing
 #else
-	AppRegisterApplicationResponseMessage responseMessage;
-	responseMessage.setApplicationName(event.
-			applicationRegistrationInformation.appName);
-	responseMessage.setDifName(difName);
-	responseMessage.result = result;
-	responseMessage.setSequenceNumber(event.sequenceNumber);
-	responseMessage.setResponseMessage(true);
-	try {
-		rinaManager->sendMessage(&responseMessage, false);
-	} catch (NetlinkException &e) {
-		throw NotifyApplicationRegisteredException(e.what());
-	}
+        struct irati_msg_app_reg_app_resp * msg;
+
+        msg = new irati_msg_app_reg_app_resp();
+        msg->msg_type = RINA_C_APP_REGISTER_APPLICATION_RESPONSE;
+        msg->app_name = event.applicationRegistrationInformation.appName.to_c_name();
+        msg->dif_name = difName.to_c_name();
+        msg->result = result;
+        msg->event_id = event.sequenceNumber;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
-void ApplicationManager::applicationUnregistered(
-		const ApplicationUnregistrationRequestEvent& event,
-		int result)
+void ApplicationManager::applicationUnregistered(const ApplicationUnregistrationRequestEvent& event,
+						 int result)
 {
 	LOG_DBG("ApplicationManager::applicationUnregistered called");
 
 #if STUB_API
 	//Do nothing
 #else
-	AppUnregisterApplicationResponseMessage responseMessage;
-	responseMessage.setApplicationName(event.applicationName);
-	responseMessage.result = result;
-	responseMessage.setSequenceNumber(event.sequenceNumber);
-	responseMessage.setResponseMessage(true);
-	try {
-		rinaManager->sendMessage(&responseMessage, false);
-	} catch (NetlinkException &e) {
-		throw NotifyApplicationUnregisteredException(e.what());
-	}
+        struct irati_msg_app_reg_app_resp * msg;
+
+        msg = new irati_msg_app_reg_app_resp();
+        msg->msg_type = RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE;
+        msg->app_name = event.applicationName.to_c_name();
+        msg->result = result;
+        msg->event_id = event.sequenceNumber;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
@@ -793,108 +846,133 @@ void ApplicationManager::flowAllocated(const FlowRequestEvent& flowRequestEvent)
 #if STUB_API
 	//Do nothing
 #else
-	AppAllocateFlowRequestResultMessage responseMessage;
-	responseMessage.setPortId(flowRequestEvent.portId);
-	responseMessage.setSourceAppName(flowRequestEvent.localApplicationName);
-	responseMessage.setDifName(flowRequestEvent.DIFName);
-	responseMessage.setSequenceNumber(flowRequestEvent.sequenceNumber);
-	responseMessage.setResponseMessage(true);
-	try {
-		rinaManager->sendMessage(&responseMessage, false);
-	} catch (NetlinkException &e) {
-		throw NotifyFlowAllocatedException(e.what());
-	}
+        struct irati_msg_app_alloc_flow_result * msg;
+
+        msg = new irati_msg_app_alloc_flow_result();
+        msg->msg_type = RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT;
+        msg->port_id = flowRequestEvent.portId;
+        msg->source_app_name = flowRequestEvent.localApplicationName.to_c_name();
+        msg->dif_name = flowRequestEvent.DIFName.to_c_name();
+        msg->event_id = flowRequestEvent.sequenceNumber;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
-void ApplicationManager::flowRequestArrived(
-			const ApplicationProcessNamingInformation& localAppName,
-			const ApplicationProcessNamingInformation& remoteAppName,
-			const FlowSpecification& flowSpec,
-			const ApplicationProcessNamingInformation& difName,
-			int portId,
-			unsigned int opaque)
+void ApplicationManager::flowRequestArrived(const ApplicationProcessNamingInformation& localAppName,
+					    const ApplicationProcessNamingInformation& remoteAppName,
+					    const FlowSpecification& flowSpec,
+					    const ApplicationProcessNamingInformation& difName,
+					    int portId,
+					    unsigned int opaque)
 {
 #if STUB_API
 #else
-	AppAllocateFlowRequestArrivedMessage message;
-	message.setSourceAppName(remoteAppName);
-	message.setDestAppName(localAppName);
-	message.setFlowSpecification(flowSpec);
-	message.setDifName(difName);
-	message.setPortId(portId);
-	message.setRequestMessage(true);
-	message.setSequenceNumber(opaque);
+        struct irati_kmsg_ipcm_allocate_flow * msg;
 
-	try {
-	        rinaManager->sendMessage(&message, false);
-	} catch (NetlinkException &e) {
-	        throw AppFlowArrivedException(e.what());
-	}
+        msg = new irati_kmsg_ipcm_allocate_flow();
+        msg->msg_type = RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED;
+        msg->port_id = portId;
+        msg->source = localAppName.to_c_name();
+        msg->dest = remoteAppName.to_c_name();
+        msg->fspec = flowSpec.to_c_flowspec();
+        msg->dif_name = difName.to_c_name();
+        msg->event_id = opaque;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
-void ApplicationManager::flowDeallocated(
-		const FlowDeallocateRequestEvent& event, int result)
+void ApplicationManager::flowDeallocated(const FlowDeallocateRequestEvent& event, int result)
 {
 	LOG_DBG("ApplicationManager::flowdeallocated called");
 
 #if STUB_API
 	//Do nothing
 #else
-	AppDeallocateFlowResponseMessage responseMessage;
-	responseMessage.setApplicationName(event.applicationName);
-	responseMessage.port_id = event.portId;
-	responseMessage.result = result;
-	responseMessage.setSequenceNumber(event.sequenceNumber);
-	responseMessage.setResponseMessage(true);
-	try {
-		rinaManager->sendMessage(&responseMessage, false);
-	} catch (NetlinkException &e) {
-		throw NotifyFlowDeallocatedException(e.what());
-	}
+        struct irati_msg_app_dealloc_flow * msg;
+
+        msg = new irati_msg_app_dealloc_flow();
+        msg->msg_type = RINA_C_APP_DEALLOCATE_FLOW_RESPONSE;
+        msg->port_id = event.portId;
+        msg->name = event.applicationName.to_c_name();
+        msg->result = result;
+        msg->event_id = event.sequenceNumber;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
-void ApplicationManager::flowDeallocatedRemotely(
-		int portId, int code,
-		const ApplicationProcessNamingInformation& appName)
+void ApplicationManager::flowDeallocatedRemotely(int portId, int code,
+						 const ApplicationProcessNamingInformation& appName)
 {
 	LOG_DBG("ApplicationManager::flowDeallocatedRemotely called");
 #if STUB_API
 	//Do nothing
 #else
-	AppFlowDeallocatedNotificationMessage message;
-	message.port_id = portId;
-	message.result = code;
-	message.setApplicationName(appName);
-	message.setNotificationMessage(true);
-	try {
-		rinaManager->sendMessage(&message, false);
-	} catch (NetlinkException &e) {
-		throw NotifyFlowDeallocatedException(e.what());
-	}
+        struct irati_msg_app_dealloc_flow * msg;
+
+        msg = new irati_msg_app_dealloc_flow();
+        msg->msg_type = RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION;
+        msg->port_id = portId;
+        msg->name = appName.to_c_name();
+        msg->result = code;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
-void ApplicationManager::getDIFPropertiesResponse(
-		const GetDIFPropertiesRequestEvent &event,
-			int result, const std::list<DIFProperties>& difProperties)
+void ApplicationManager::getDIFPropertiesResponse(const GetDIFPropertiesRequestEvent &event,
+						  int result, const std::list<DIFProperties>& difProperties)
 {
 #if STUB_API
 	//Do nothing
 #else
-	AppGetDIFPropertiesResponseMessage responseMessage;
-	responseMessage.result = result;
-	responseMessage.setApplicationName(event.getApplicationName());
-	responseMessage.setDIFProperties(difProperties);
-	responseMessage.setSequenceNumber(event.sequenceNumber);
-	responseMessage.setResponseMessage(true);
-	try {
-		rinaManager->sendMessage(&responseMessage, false);
-	} catch (NetlinkException &e) {
-		throw GetDIFPropertiesResponseException(e.what());
-	}
+        struct irati_msg_get_dif_prop * msg;
+        struct dif_properties_entry * dpe;
+        std::list<DIFProperties>::iterator it;
+
+        msg = new irati_msg_get_dif_prop();
+        msg->msg_type = RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE;
+        msg->code = result;
+        msg->app_name = event.getApplicationName().to_c_name();
+        msg->event_id = event.sequenceNumber;
+        msg->dif_props = new get_dif_prop_resp();
+        INIT_LIST_HEAD(&msg->dif_props->dif_propery_entries);
+        for(it = difProperties.begin(); it != difProperties.end(); ++it) {
+        	dpe = new dif_properties_entry();
+        	INIT_LIST_HEAD(&dpe->next);
+        	dpe->max_sdu_size = it->maxSDUSize;
+        	dpe->dif_name = it->DIFName.to_c_name();
+        	list_add_tail(&dpe->next, &msg->dif_props->dif_propery_entries);
+        }
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 

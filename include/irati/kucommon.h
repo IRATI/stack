@@ -208,6 +208,7 @@ struct dtcp_fctrl_config {
         struct policy *              closed_window;
         struct policy *              reconcile_flow_conflict;
         struct policy *              receiving_flow_control;
+        struct policy * 	     flow_control_overrun;
 };
 
 struct dtcp_rxctrl_config {
@@ -297,10 +298,38 @@ struct dt_cons {
          * encryption algorithm must be used for every PDU; we cannot identify
          * which flow owns a particular PDU until it has been decrypted.
          */
-        bool      dif_integrity;
+        bool dif_integrity;
+
+        uint32_t seq_rollover_thres;
+        bool dif_concat;
+        bool dif_frag;
+        uint32_t max_time_to_keep_ret_;
+        uint32_t max_time_to_ack_;
 };
 
 struct dt_cons * dt_cons_dup(const struct dt_cons * dt_cons);
+
+/* Configuration of a QoS cube with associated DTP/DTCP policies */
+struct qos_cube {
+	string_t * name;
+	uint16_t id;
+	uint32_t avg_bw;
+	uint32_t avg_sdu_bw;
+	uint32_t peak_bw_duration;
+	uint32_t peak_sdu_bw_duration;
+	bool partial_delivery;
+	bool ordered_delivery;
+	int32_t max_allowed_gap;
+	uint32_t delay;
+	uint32_t jitter;
+	struct dtp_config * dtpc;
+	struct dtcp_config * dtcpc;
+};
+
+struct qos_cube_entry {
+	struct list_head next;
+	struct qos_cube * entry;
+};
 
 /* Represents the configuration of the EFCP */
 struct efcp_config {
@@ -311,6 +340,58 @@ struct efcp_config {
 
         /* FIXME: Left here for phase 2 */
         struct policy * unknown_flow;
+
+        /* List of qos_cubes supported by the EFCP config */
+        struct list_head qos_cubes;
+};
+
+/* Represents the configuration of the Flow Allocator */
+struct fa_config {
+	struct policy * ps;
+	struct policy * allocate_notify;
+	struct policy * allocate_retry;
+	struct policy * new_flow_req;
+	struct policy * seq_roll_over;
+	uint32_t max_create_flow_retries;
+};
+
+/* Represents the configuration of the Resource Allocator */
+struct resall_config {
+	struct policy * pff_gen;
+};
+
+/* Represents the configuration of the Enrollment Task */
+struct et_config {
+	struct policy * ps;
+};
+
+/* A static IPC Process address*/
+struct static_ipcp_addr {
+	string_t * ap_name;
+	string_t * ap_instance;
+	uint32_t address;
+};
+
+struct static_ipcp_addr_entry {
+	struct list_head next;
+	struct static_ipcp_addr * entry;
+};
+
+/* An address prefix configuration*/
+struct address_pref_config {
+	string_t * org;
+	uint32_t prefix;
+};
+
+struct address_pref_config_entry {
+	struct list_head next;
+	struct address_pref_config * entry;
+};
+
+/* List of known IPCP addresses and prefixes */
+struct addressing_config {
+	struct list_head static_ipcp_addrs;
+	struct list_head address_prefixes;
 };
 
 struct dup_config_entry {
@@ -396,6 +477,17 @@ struct rib_object_data {
 
 struct query_rib_resp {
 	struct list_head rib_object_data_entries;
+};
+
+/* Represents the (static) properties of a DIF */
+struct dif_properties_entry {
+	struct list_head next;
+	struct name * dif_name;
+	uint16_t max_sdu_size;
+};
+
+struct get_dif_prop_resp {
+	struct list_head dif_propery_entries;
 };
 
 /** The state of a particular instance of an SDU crypto protection policy */

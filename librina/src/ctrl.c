@@ -104,7 +104,7 @@ int irati_write_msg(int cfd, struct irati_msg_base *msg)
 	return ret;
 }
 
-static int open_port_common(irati_msg_port_t port_id)
+static int open_port_common(bool ipcm)
 {
 	struct irati_dev_ctldata info;
 	int fd;
@@ -117,7 +117,10 @@ static int open_port_common(irati_msg_port_t port_id)
 		return -1;
 	}
 
-	info.port_id = port_id;
+	if (ipcm)
+		info.port_id = IRATI_IPCM_PORT;
+	else
+		info.port_id = fd;
 
 	ret = ioctl(fd, IRATI_FLOW_BIND, &info);
 	if (ret) {
@@ -129,14 +132,14 @@ static int open_port_common(irati_msg_port_t port_id)
 	return fd;
 }
 
-int irati_open_appl_ipcp_port(irati_msg_port_t port_id)
+int irati_open_appl_ipcp_port()
 {
-	return open_port_common(port_id);
+	return open_port_common(false);
 }
 
 int irati_open_ipcm_port()
 {
-	return open_port_common(IRATI_IPCM_PORT);
+	return open_port_common(true);
 }
 
 void irati_ctrl_msg_free(struct irati_msg_base *msg)

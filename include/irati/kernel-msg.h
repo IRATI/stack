@@ -384,6 +384,7 @@ struct irati_kmsg_ipcm_reg_app {
 	ipc_process_id_t dest_ipcp_id;
 	uint32_t event_id;
 
+	ipc_process_id_t reg_ipcp_id;
         struct name * app_name;
         struct name * daf_name;
         struct name * dif_name;
@@ -769,7 +770,7 @@ struct irati_msg_app_reg_cancel {
         string_t * reason;
 } __attribute__((packed));
 
-/* TODO 69 RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE */
+/* 69 RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE */
 struct irati_msg_get_dif_prop {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -781,6 +782,7 @@ struct irati_msg_get_dif_prop {
 	int8_t	code;
         struct name * app_name;
         struct name * dif_name;
+        struct get_dif_prop_resp * dif_props;
 } __attribute__((packed));
 
 /* 70 RINA_C_IPCM_PLUGIN_LOAD_REQUEST */
@@ -800,7 +802,7 @@ struct irati_msg_ipcm_plugin_load {
 /* Uses base response message */
 
 /* 72 RINA_C_IPCM_FWD_CDAP_MSG_REQUEST */
-/* 73 RINA_C_IPCM_FWD_CDAP_MSG_REQUEST */
+/* 73 RINA_C_IPCM_FWD_CDAP_MSG_RESPONSE */
 struct irati_msg_ipcm_fwd_cdap_msg {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;

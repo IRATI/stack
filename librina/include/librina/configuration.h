@@ -58,6 +58,8 @@ class PolicyConfig {
  public:
     PolicyConfig();
     PolicyConfig(const std::string& name, const std::string& version);
+    PolicyConfig(struct policy * pc);
+    struct policy * to_c_policy(void) const;
     bool operator==(const PolicyConfig &other) const;
     bool operator!=(const PolicyConfig &other) const;
     /// Get a parameter value as a string
@@ -94,6 +96,8 @@ class PolicyConfig {
 class DTCPWindowBasedFlowControlConfig {
  public:
     DTCPWindowBasedFlowControlConfig();
+    DTCPWindowBasedFlowControlConfig(struct window_fctrl_config * wfc);
+    struct window_fctrl_config * to_c_window_config(void) const;
 #ifndef SWIG
     unsigned int get_initial_credit() const;
     void set_initial_credit(int initial_credit);
@@ -129,6 +133,8 @@ class DTCPWindowBasedFlowControlConfig {
 class DTCPRateBasedFlowControlConfig {
  public:
     DTCPRateBasedFlowControlConfig();
+    DTCPRateBasedFlowControlConfig(struct rate_fctrl_config * rfg);
+    struct rate_fctrl_config * to_c_rate_config(void) const;
 #ifndef SWIG
     const PolicyConfig& get_no_override_default_peak_policy() const;
     void set_no_override_default_peak_policy(
@@ -170,6 +176,8 @@ class DTCPRateBasedFlowControlConfig {
 class DTCPFlowControlConfig {
  public:
     DTCPFlowControlConfig();
+    DTCPFlowControlConfig(struct dtcp_fctrl_config * fcc);
+    struct dtcp_fctrl_config * to_c_fconfig(void) const;
 #ifndef SWIG
     const PolicyConfig& get_closed_window_policy() const;
     void set_closed_window_policy(const PolicyConfig& closed_window_policy);
@@ -268,6 +276,8 @@ class DTCPFlowControlConfig {
 class DTCPRtxControlConfig {
  public:
     DTCPRtxControlConfig();
+    DTCPRtxControlConfig(struct dtcp_rxctrl_config * drc);
+    struct dtcp_rxctrl_config * to_c_rxconfig(void) const;
 #ifndef SWIG
     unsigned int get_data_rxmsn_max() const;
     void set_data_rxmsn_max(unsigned int data_rxmsn_max);
@@ -342,6 +352,8 @@ class DTCPRtxControlConfig {
 class DTCPConfig {
  public:
     DTCPConfig();
+    DTCPConfig(struct dtcp_config* dtc);
+    struct dtcp_config * to_c_dtcp_config(void) const;
 #ifndef SWIG
     bool is_flow_control() const;
     void set_flow_control(bool flow_control);
@@ -393,6 +405,9 @@ class DTCPConfig {
 class DTPConfig {
  public:
     DTPConfig();
+    DTPConfig(struct dtp_config * dtc);
+    struct dtp_config * to_c_dtp_config(void) const;
+
 #ifndef SWIG
     bool is_dtcp_present() const;
     void set_dtcp_present(bool dtcp_present);
@@ -448,361 +463,387 @@ class DTPConfig {
 
 /// Defines the properties that a QoSCube is able to provide
 class QoSCube {
- public:
-    QoSCube();
-    QoSCube(const std::string& name, int id);
-    bool operator==(const QoSCube &other) const;
-    bool operator!=(const QoSCube &other) const;
+public:
+	QoSCube();
+	QoSCube(const std::string& name, int id);
+	QoSCube(struct qos_cube * qos);
+	struct qos_cube * to_c_qos_cube(void) const;
+	bool operator==(const QoSCube &other) const;
+	bool operator!=(const QoSCube &other) const;
 #ifndef SWIG
-    void set_id(unsigned int id);
-    unsigned int get_id() const;
-    const std::string& get_name() const;
-    void set_name(const std::string& name);
-    const DTPConfig& get_dtp_config() const;
-    void set_dtp_config(const DTPConfig& dtp_config);
-    const DTCPConfig& get_dtcp_config() const;
-    void set_dtcp_config(const DTCPConfig& dtcp_config);
-    unsigned int get_average_bandwidth() const;
-    void set_average_bandwidth(unsigned int average_bandwidth);
-    unsigned int get_average_sdu_bandwidth() const;
-    void setAverageSduBandwidth(unsigned int average_sdu_bandwidth);
-    unsigned int get_delay() const;
-    void set_delay(unsigned int delay);
-    unsigned int get_jitter() const;
-    void set_jitter(unsigned int jitter);
-    int get_max_allowable_gap() const;
-    void set_max_allowable_gap(int max_allowable_gap);
-    bool is_ordered_delivery() const;
-    void set_ordered_delivery(bool ordered_delivery);
-    bool is_partial_delivery() const;
-    void set_partial_delivery(bool partial_delivery);
-    unsigned int get_peak_bandwidth_duration() const;
-    void set_peak_bandwidth_duration(unsigned int peak_bandwidth_duration);
-    unsigned int get_peak_sdu_bandwidth_duration() const;
-    void set_peak_sdu_bandwidth_duration(
-            unsigned int peak_sdu_bandwidth_duration);
-    double get_undetected_bit_error_rate() const;
-    void set_undetected_bit_error_rate(double undetected_bit_error_rate);
+	void set_id(unsigned int id);
+	unsigned int get_id() const;
+	const std::string& get_name() const;
+	void set_name(const std::string& name);
+	const DTPConfig& get_dtp_config() const;
+	void set_dtp_config(const DTPConfig& dtp_config);
+	const DTCPConfig& get_dtcp_config() const;
+	void set_dtcp_config(const DTCPConfig& dtcp_config);
+	unsigned int get_average_bandwidth() const;
+	void set_average_bandwidth(unsigned int average_bandwidth);
+	unsigned int get_average_sdu_bandwidth() const;
+	void setAverageSduBandwidth(unsigned int average_sdu_bandwidth);
+	unsigned int get_delay() const;
+	void set_delay(unsigned int delay);
+	unsigned int get_jitter() const;
+	void set_jitter(unsigned int jitter);
+	int get_max_allowable_gap() const;
+	void set_max_allowable_gap(int max_allowable_gap);
+	bool is_ordered_delivery() const;
+	void set_ordered_delivery(bool ordered_delivery);
+	bool is_partial_delivery() const;
+	void set_partial_delivery(bool partial_delivery);
+	unsigned int get_peak_bandwidth_duration() const;
+	void set_peak_bandwidth_duration(unsigned int peak_bandwidth_duration);
+	unsigned int get_peak_sdu_bandwidth_duration() const;
+	void set_peak_sdu_bandwidth_duration(
+			unsigned int peak_sdu_bandwidth_duration);
+	double get_undetected_bit_error_rate() const;
+	void set_undetected_bit_error_rate(double undetected_bit_error_rate);
 #endif
-    const std::string toString();
+	const std::string toString();
 
-    /// The name of the QoS cube
-    std::string name_;
+	/// The name of the QoS cube
+	std::string name_;
 
-    /// The id of the QoS cube
-    unsigned int id_;
+	/// The id of the QoS cube
+	unsigned int id_;
 
-    /// The DTP policies associated to this QoS Cube
-    DTPConfig dtp_config_;
+	/// The DTP policies associated to this QoS Cube
+	DTPConfig dtp_config_;
 
-    /// The DTCP policies associated to this QoS Cube
-    DTCPConfig dtcp_config_;
+	/// The DTCP policies associated to this QoS Cube
+	DTCPConfig dtcp_config_;
 
-    /// Average bandwidth in bytes/s. A value of 0 means don't care.
-    unsigned int average_bandwidth_;
+	/// Average bandwidth in bytes/s. A value of 0 means don't care.
+	unsigned int average_bandwidth_;
 
-    /// Average bandwidth in SDUs/s. A value of 0 means don't care
-    unsigned int average_sdu_bandwidth_;
+	/// Average bandwidth in SDUs/s. A value of 0 means don't care
+	unsigned int average_sdu_bandwidth_;
 
-    /// In milliseconds. A value of 0 means don't care
-    unsigned int peak_bandwidth_duration_;
+	/// In milliseconds. A value of 0 means don't care
+	unsigned int peak_bandwidth_duration_;
 
-    /// In milliseconds. A value of 0 means don't care
-    unsigned int peak_sdu_bandwidth_duration_;
+	/// In milliseconds. A value of 0 means don't care
+	unsigned int peak_sdu_bandwidth_duration_;
 
-    /// A value of 0 indicates 'do not care'
-    double undetected_bit_error_rate_;
+	/// A value of 0 indicates 'do not care'
+	double undetected_bit_error_rate_;
 
-    /// Indicates if partial delivery of SDUs is allowed or not
-    bool partial_delivery_;
+	/// Indicates if partial delivery of SDUs is allowed or not
+	bool partial_delivery_;
 
-    /// Indicates if SDUs have to be delivered in order
-    bool ordered_delivery_;
+	/// Indicates if SDUs have to be delivered in order
+	bool ordered_delivery_;
 
-    /// Indicates the maximum gap allowed among SDUs, a gap of N SDUs
-    /// is considered the same as all SDUs delivered. A value of -1
-    // indicates 'Any'
-    int max_allowable_gap_;
+	/// Indicates the maximum gap allowed among SDUs, a gap of N SDUs
+	/// is considered the same as all SDUs delivered. A value of -1
+	// indicates 'Any'
+	int max_allowable_gap_;
 
-    /// In milliseconds, indicates the maximum delay allowed in this
-    /// flow. A value of 0 indicates 'do not care'
-    unsigned int delay_;
+	/// In milliseconds, indicates the maximum delay allowed in this
+	/// flow. A value of 0 indicates 'do not care'
+	unsigned int delay_;
 
-    /// In milliseconds, indicates the maximum jitter allowed in this
-    /// flow. A value of 0 indicates 'do not care'
-    unsigned int jitter_;
+	/// In milliseconds, indicates the maximum jitter allowed in this
+	/// flow. A value of 0 indicates 'do not care'
+	unsigned int jitter_;
 };
 
 /// Contains the values of the constants for the Error and Flow Control
 /// Protocol (EFCP)
 class DataTransferConstants {
- public:
-    DataTransferConstants();
+public:
+	DataTransferConstants();
+	DataTransferConstants(struct dt_cons * dtc);
+	struct dt_cons * to_c_dt_cons(void) const;
 #ifndef SWIG
-    unsigned short get_address_length() const;
-    void set_address_length(unsigned short address_length);
-    unsigned short get_cep_id_length() const;
-    void set_cep_id_length(unsigned short cep_id_length);
-    bool is_dif_integrity() const;
-    void set_dif_integrity(bool dif_integrity);
-    unsigned short get_length_length() const;
-    void set_length_length(unsigned short length_length);
-    unsigned int get_max_pdu_lifetime() const;
-    void set_max_pdu_lifetime(unsigned int max_pdu_lifetime);
-    unsigned int get_max_pdu_size() const;
-    void set_max_pdu_size(unsigned int max_pdu_size);
-    unsigned short get_port_id_length() const;
-    void set_port_id_length(unsigned short port_id_length);
-    unsigned short get_qos_id_length() const;
-    void set_qos_id_length(unsigned short qos_id_length);
-    unsigned short get_sequence_number_length() const;
-    void set_sequence_number_length(unsigned short sequence_number_length);
-    unsigned short get_ctrl_sequence_number_length() const;
-    void set_ctrl_sequence_number_length(
-            unsigned short ctrl_sequence_number_length);
-    unsigned short get_rate_length() const;
-    void set_rate_length(unsigned short rate_length);
-    unsigned short get_frame_length() const;
-    void set_frame_length(unsigned short frame_length);
+	unsigned short get_address_length() const;
+	void set_address_length(unsigned short address_length);
+	unsigned short get_cep_id_length() const;
+	void set_cep_id_length(unsigned short cep_id_length);
+	bool is_dif_integrity() const;
+	void set_dif_integrity(bool dif_integrity);
+	unsigned short get_length_length() const;
+	void set_length_length(unsigned short length_length);
+	unsigned int get_max_pdu_lifetime() const;
+	void set_max_pdu_lifetime(unsigned int max_pdu_lifetime);
+	unsigned int get_max_pdu_size() const;
+	void set_max_pdu_size(unsigned int max_pdu_size);
+	unsigned short get_port_id_length() const;
+	void set_port_id_length(unsigned short port_id_length);
+	unsigned short get_qos_id_length() const;
+	void set_qos_id_length(unsigned short qos_id_length);
+	unsigned short get_sequence_number_length() const;
+	void set_sequence_number_length(unsigned short sequence_number_length);
+	unsigned short get_ctrl_sequence_number_length() const;
+	void set_ctrl_sequence_number_length(
+			unsigned short ctrl_sequence_number_length);
+	unsigned short get_rate_length() const;
+	void set_rate_length(unsigned short rate_length);
+	unsigned short get_frame_length() const;
+	void set_frame_length(unsigned short frame_length);
 #endif
-    bool isInitialized();
-    const std::string toString();
-    /// The length of QoS-id field in the DTP PCI, in bytes
-    unsigned short qos_id_length_;
-    /// The length of the Port-id field in the DTP PCI, in bytes
-    unsigned short port_id_length_;
-    /// The length of the CEP-id field in the DTP PCI, in bytes
-    unsigned short cep_id_length_;
-    /// The length of the sequence number field in the DTP PCI, in bytes
-    unsigned short sequence_number_length_;
-    /// The length of the control sequence number field in the DTCP PCI, in
-    unsigned short ctrl_sequence_number_length_;
-    /// The length of the address field in the DTP PCI, in bytes
-    unsigned short address_length_;
-    /// The length of the length field in the DTP PCI, in bytes
-    unsigned short length_length_;
-    /// The maximum length allowed for a PDU in this DIF, in bytes
-    unsigned int max_pdu_size_;
-    /// The length of the rate field in the DTP PCI, in bytes
-    unsigned short rate_length_;
-    /// The length of the frame field in the DTP PCI, in bytes
-    unsigned short frame_length_;
-    /// True if the PDUs in this DIF have CRC, TTL, and/or encryption. Since
-    /// headers are encrypted, not just user data, if any flow uses encryption,
-    /// all flows within the same DIF must do so and the same encryption
-    /// algorithm must be used for every PDU; we cannot identify which flow
-    /// owns a particular PDU until it has been decrypted.
-    bool dif_integrity_;
-    /// The maximum PDU lifetime in this DIF, in milliseconds. This is MPL
-    /// in delta-T
-    unsigned int max_pdu_lifetime_;
-    ///The sequence number after which the Flow Allocator instance should
-    ///create a new EFCP connection
-    unsigned int seq_rollover_thres_;
-    //This is true if multiple SDUs can be delimited and concatenated
-    /// within a single PDU
-    bool dif_concatenation_;
-    //This is true if multiple SDUs can be fragmented and reassembled
-    ///within a single PDU
-    bool dif_fragmentation_;
-    //The maximum time DTCP will try to keep retransmitting a PDU, before
-    ///discarding it. This is R in delta-T
-    unsigned int max_time_to_keep_ret_;
-    //The maximum time the receiving side of a DTCP connection will take to
-    ///ACK a PDU once it has received it. This is A in delta-T
-    unsigned int max_time_to_ack_;
+	bool isInitialized();
+	const std::string toString();
+	/// The length of QoS-id field in the DTP PCI, in bytes
+	unsigned short qos_id_length_;
+	/// The length of the Port-id field in the DTP PCI, in bytes
+	unsigned short port_id_length_;
+	/// The length of the CEP-id field in the DTP PCI, in bytes
+	unsigned short cep_id_length_;
+	/// The length of the sequence number field in the DTP PCI, in bytes
+	unsigned short sequence_number_length_;
+	/// The length of the control sequence number field in the DTCP PCI, in
+	unsigned short ctrl_sequence_number_length_;
+	/// The length of the address field in the DTP PCI, in bytes
+	unsigned short address_length_;
+	/// The length of the length field in the DTP PCI, in bytes
+	unsigned short length_length_;
+	/// The maximum length allowed for a PDU in this DIF, in bytes
+	unsigned int max_pdu_size_;
+	/// The length of the rate field in the DTP PCI, in bytes
+	unsigned short rate_length_;
+	/// The length of the frame field in the DTP PCI, in bytes
+	unsigned short frame_length_;
+	/// True if the PDUs in this DIF have CRC, TTL, and/or encryption. Since
+	/// headers are encrypted, not just user data, if any flow uses encryption,
+	/// all flows within the same DIF must do so and the same encryption
+	/// algorithm must be used for every PDU; we cannot identify which flow
+	/// owns a particular PDU until it has been decrypted.
+	bool dif_integrity_;
+	/// The maximum PDU lifetime in this DIF, in milliseconds. This is MPL
+	/// in delta-T
+	unsigned int max_pdu_lifetime_;
+	///The sequence number after which the Flow Allocator instance should
+	///create a new EFCP connection
+	unsigned int seq_rollover_thres_;
+	//This is true if multiple SDUs can be delimited and concatenated
+	/// within a single PDU
+	bool dif_concatenation_;
+	//This is true if multiple SDUs can be fragmented and reassembled
+	///within a single PDU
+	bool dif_fragmentation_;
+	//The maximum time DTCP will try to keep retransmitting a PDU, before
+	///discarding it. This is R in delta-T
+	unsigned int max_time_to_keep_ret_;
+	//The maximum time the receiving side of a DTCP connection will take to
+	///ACK a PDU once it has received it. This is A in delta-T
+	unsigned int max_time_to_ack_;
 };
 
 /// Contains the configuration of the Error and Flow Control Protocol for a
 /// particular DIF
 class EFCPConfiguration {
- public:
-    EFCPConfiguration();
-    EFCPConfiguration(const EFCPConfiguration& other);
-    EFCPConfiguration& operator=(const EFCPConfiguration & rhs);
-    ~EFCPConfiguration();
-    void add_qos_cube(QoSCube* qos_cube);
+public:
+	EFCPConfiguration();
+	EFCPConfiguration(struct efcp_config* efc);
+	struct efcp_config * to_c_efcp_conf(void) const;
+	EFCPConfiguration(const EFCPConfiguration& other);
+	EFCPConfiguration& operator=(const EFCPConfiguration & rhs);
+	~EFCPConfiguration();
+	void add_qos_cube(QoSCube* qos_cube);
 #ifndef SWIG
-    const DataTransferConstants& get_data_transfer_constants() const;
-    void set_data_transfer_constants(
-            const DataTransferConstants& data_transfer_constants);
-    const std::list<QoSCube *>& get_qos_cubes() const;
-    const PolicyConfig& get_unknown_flow_policy() const;
-    void set_unknown_flow_policy(const PolicyConfig& unknown_flow_policy);
+	const DataTransferConstants& get_data_transfer_constants() const;
+	void set_data_transfer_constants(
+			const DataTransferConstants& data_transfer_constants);
+	const std::list<QoSCube *>& get_qos_cubes() const;
+	const PolicyConfig& get_unknown_flow_policy() const;
+	void set_unknown_flow_policy(const PolicyConfig& unknown_flow_policy);
 #endif
 
-    /// DIF-wide parameters that define the concrete syntax of EFCP for this
-    /// DIF and other DIF-wide values
-    DataTransferConstants data_transfer_constants_;
+/// DIF-wide parameters that define the concrete syntax of EFCP for this
+	/// DIF and other DIF-wide values
+	DataTransferConstants data_transfer_constants_;
 
-    /// When a PDU arrives for a Data Transfer Flow terminating in this
-    /// IPC-Process and there is no active DTSV, this policy consults the
-    /// ResourceAllocator to determine what to do.
-    PolicyConfig unknown_flowpolicy_;
+	/// When a PDU arrives for a Data Transfer Flow terminating in this
+	/// IPC-Process and there is no active DTSV, this policy consults the
+	/// ResourceAllocator to determine what to do.
+	PolicyConfig unknown_flowpolicy_;
 
-    /// The QoS cubes supported by the DIF, and its associated EFCP policies
-    std::list<QoSCube*> qos_cubes_;
+	/// The QoS cubes supported by the DIF, and its associated EFCP policies
+	std::list<QoSCube*> qos_cubes_;
 
- private:
-    void copy(const EFCPConfiguration & other);
+private:
+	void copy(const EFCPConfiguration & other);
 };
 
 /// Configuration of the Flow Allocator
 class FlowAllocatorConfiguration {
- public:
-    FlowAllocatorConfiguration();
-    std::string toString();
+public:
+	FlowAllocatorConfiguration();
+	FlowAllocatorConfiguration(struct fa_config * fac);
+	struct fa_config * to_c_fa_config(void) const;
+	std::string toString();
 #ifndef SWIG
-    const PolicyConfig& get_policy_set() const;
-    void set_policy_set(const PolicyConfig& policy_set);
-    const PolicyConfig& get_allocate_notify_policy() const;
-    void set_allocate_notify_policy(const PolicyConfig& allocate_notify_policy);
-    const PolicyConfig& get_allocate_retry_policy() const;
-    void set_allocate_retry_policy(const PolicyConfig& allocate_retry_policy);
-    int get_max_create_flow_retries() const;
-    void set_max_create_flow_retries(int max_create_flow_retries);
-    const PolicyConfig& get_new_flow_request_policy() const;
-    void set_new_flow_request_policy(
-            const PolicyConfig& new_flow_request_policy);
-    const PolicyConfig& get_seq_rollover_policy() const;
-    void set_seq_rollover_policy(const PolicyConfig& seq_rollover_policy);
+	const PolicyConfig& get_policy_set() const;
+	void set_policy_set(const PolicyConfig& policy_set);
+	const PolicyConfig& get_allocate_notify_policy() const;
+	void set_allocate_notify_policy(const PolicyConfig& allocate_notify_policy);
+	const PolicyConfig& get_allocate_retry_policy() const;
+	void set_allocate_retry_policy(const PolicyConfig& allocate_retry_policy);
+	int get_max_create_flow_retries() const;
+	void set_max_create_flow_retries(int max_create_flow_retries);
+	const PolicyConfig& get_new_flow_request_policy() const;
+	void set_new_flow_request_policy(
+			const PolicyConfig& new_flow_request_policy);
+	const PolicyConfig& get_seq_rollover_policy() const;
+	void set_seq_rollover_policy(const PolicyConfig& seq_rollover_policy);
 #endif
-    /// Policy set for Flow Allocator
-    PolicyConfig policy_set_;
+/// Policy set for Flow Allocator
+	PolicyConfig policy_set_;
 
-    /// Maximum number of attempts to retry the flow allocation
-    int max_create_flow_retries_;
+	/// Maximum number of attempts to retry the flow allocation
+	int max_create_flow_retries_;
 
-    /// This policy determines when the requesting application is given
-    /// an Allocate_Response primitive. In general, the choices are once
-    /// the request is determined to be well-formed and a create_flow
-    /// request has been sent, or withheld until a create_flow response has
-    /// been received and MaxCreateRetires has been exhausted.
-    PolicyConfig allocate_notify_policy_;
+	/// This policy determines when the requesting application is given
+	/// an Allocate_Response primitive. In general, the choices are once
+	/// the request is determined to be well-formed and a create_flow
+	/// request has been sent, or withheld until a create_flow response has
+	/// been received and MaxCreateRetires has been exhausted.
+	PolicyConfig allocate_notify_policy_;
 
-    /// This policy is used when the destination has refused the create_flow
-    /// request, and the FAI can overcome the cause for refusal and try
-    /// again. This policy should re-formulate the request. This policy
-    /// should formulate the contents of the reply.
-    PolicyConfig allocate_retry_policy_;
+	/// This policy is used when the destination has refused the create_flow
+	/// request, and the FAI can overcome the cause for refusal and try
+	/// again. This policy should re-formulate the request. This policy
+	/// should formulate the contents of the reply.
+	PolicyConfig allocate_retry_policy_;
 
-    /// This policy is used to convert an allocate request to a create flow
-    /// request. Its primary task is to translate the request into the
-    /// proper QoS-class set, flow set and access control capabilities.
-    PolicyConfig new_flow_request_policy_;
+	/// This policy is used to convert an allocate request to a create flow
+	/// request. Its primary task is to translate the request into the
+	/// proper QoS-class set, flow set and access control capabilities.
+	PolicyConfig new_flow_request_policy_;
 
-    /// This policy is used when the SeqRollOverThres event occurs and
-    /// action may be required by the Flow Allocator to modify the bindings
-    /// between connection-endpoint-ids and port-ids.
-    PolicyConfig seq_rollover_policy_;
+	/// This policy is used when the SeqRollOverThres event occurs and
+	/// action may be required by the Flow Allocator to modify the bindings
+	/// between connection-endpoint-ids and port-ids.
+	PolicyConfig seq_rollover_policy_;
 };
 
 /// Contains the configuration data of the PDUFTG, so far its policy
 /// set
 class PDUFTGConfiguration {
- public:
-    PDUFTGConfiguration();
-    std::string toString();
+public:
+	PDUFTGConfiguration();
+	std::string toString();
 
-    /// Set of policies to define the PDUFTG's behaviour.
-    PolicyConfig policy_set_;
+	/// Set of policies to define the PDUFTG's behaviour.
+	PolicyConfig policy_set_;
 };
 
 /// Contains the configuration data of the Resource Allocator
 class ResourceAllocatorConfiguration {
- public:
-    ResourceAllocatorConfiguration();
-    std::string toString();
+public:
+	ResourceAllocatorConfiguration();
+	ResourceAllocatorConfiguration(struct resall_config * resc);
+	struct resall_config * to_c_rall_config(void) const;
+	std::string toString();
 
-    /// Set of policies to define the Resource Allocator's behaviour.
-    PDUFTGConfiguration pduftg_conf_;
+	/// Set of policies to define the Resource Allocator's behaviour.
+	PDUFTGConfiguration pduftg_conf_;
 };
 
 /// Contains the configuration data of the PDU Forwarding Table for a particular
 /// DIF
 class PFTConfiguration {
- public:
-    PFTConfiguration();
-    std::string toString();
+public:
+	PFTConfiguration();
+	PFTConfiguration(struct pff_config * pfc);
+	struct pff_config * to_c_pff_conf(void) const;
+	std::string toString();
 
-    /// Set of policies to define PDU Forwarding's behaviour.
-    // pft_nhop
-    PolicyConfig policy_set_;
+	/// Set of policies to define PDU Forwarding's behaviour.
+	// pft_nhop
+	PolicyConfig policy_set_;
 };
 
 /// Contains the configuration data of the Relaying and Multiplexing Task for a
 /// particular DIF
 class RMTConfiguration {
- public:
-    RMTConfiguration();
-    std::string toString();
+public:
+	RMTConfiguration();
+	RMTConfiguration(struct rmt_config * rt);
+	struct rmt_config * to_c_rmt_config(void) const;
 
-    /// Set of policies to define RMT's behaviour.
-    /// QMonitor Policy, MaxQ Policy and Scheduling Policy
-    PolicyConfig policy_set_;
+	struct rmt_config * to_c_rmt_config() const;
+	std::string toString();
 
-    /// Configuration of the PFT
-    PFTConfiguration pft_conf_;
+	/// Set of policies to define RMT's behaviour.
+	/// QMonitor Policy, MaxQ Policy and Scheduling Policy
+	PolicyConfig policy_set_;
+
+	/// Configuration of the PFT
+	PFTConfiguration pft_conf_;
 };
 
 /// Configuration of the resource allocator
 class EnrollmentTaskConfiguration {
- public:
-    EnrollmentTaskConfiguration();
+public:
+	EnrollmentTaskConfiguration();
+	EnrollmentTaskConfiguration(struct et_config * etc);
+	struct et_config * to_c_et_config(void) const;
 
-    /// Policy set for Enrollment Task
-    PolicyConfig policy_set_;
+	/// Policy set for Enrollment Task
+	PolicyConfig policy_set_;
 
-    std::string toString();
+	std::string toString();
 };
 
 /// Configuration of a static IPC Process address
 class StaticIPCProcessAddress {
- public:
-    StaticIPCProcessAddress();
+public:
+	StaticIPCProcessAddress();
+	StaticIPCProcessAddress(struct static_ipcp_addr * addr);
+	struct static_ipcp_addr * t_c_stipcp_addr(void) const;
 
-    std::string ap_name_;
-    std::string ap_instance_;
-    unsigned int address_;
+	std::string ap_name_;
+	std::string ap_instance_;
+	unsigned int address_;
 };
 
 /// Assigns an address prefix to a certain substring (the organization)
 /// that is part of the application process name
 class AddressPrefixConfiguration {
- public:
-    static const int MAX_ADDRESSES_PER_PREFIX = 16;
+public:
+	static const int MAX_ADDRESSES_PER_PREFIX = 16;
 
-    AddressPrefixConfiguration();
+	AddressPrefixConfiguration();
+	AddressPrefixConfiguration(struct address_pref_config * apc);
+	struct address_pref_config * to_c_pref_config(void) const;
 
-    /// The address prefix (it is the first valid address
-    /// for the given subdomain)
-    unsigned int address_prefix_;
+	/// The address prefix (it is the first valid address
+	/// for the given subdomain)
+	unsigned int address_prefix_;
 
-    /// The organization whose addresses start by the prefix
-    std::string organization_;
+	/// The organization whose addresses start by the prefix
+	std::string organization_;
 };
 
 /// Configuration of the assignment of addresses to IPC Processes
 class AddressingConfiguration {
- public:
-    void addAddress(StaticIPCProcessAddress &addr);
-    void addPrefix(AddressPrefixConfiguration &pref);
-    std::list<StaticIPCProcessAddress> static_address_;
-    std::list<AddressPrefixConfiguration> address_prefixes_;
+public:
+	AddressingConfiguration(){};
+	AddressingConfiguration(struct addressing_config * ac);
+	struct addressing_config * to_c_addr_config(void) const;
+
+	void addAddress(StaticIPCProcessAddress &addr);
+	void addPrefix(AddressPrefixConfiguration &pref);
+	std::list<StaticIPCProcessAddress> static_address_;
+	std::list<AddressPrefixConfiguration> address_prefixes_;
 };
 
 /// Configuration of the namespace manager
 class NamespaceManagerConfiguration {
- public:
-    NamespaceManagerConfiguration();
-    std::string toString();
+public:
+	NamespaceManagerConfiguration();
+	std::string toString();
 #ifndef SWIG
-    const PolicyConfig& get_policy_set() const;
-    void set_policy_set(const PolicyConfig& policy_set);
+	const PolicyConfig& get_policy_set() const;
+	void set_policy_set(const PolicyConfig& policy_set);
 #endif
 
-    AddressingConfiguration addressing_configuration_;
-    PolicyConfig policy_set_;
+	AddressingConfiguration addressing_configuration_;
+	PolicyConfig policy_set_;
 };
 
 /// Configuration of
@@ -853,6 +894,8 @@ class DIFConfiguration {
 public:
 	DIFConfiguration();
 	DIFConfiguration(struct dif_config * dc);
+
+	struct dif_config * to_c_dif_config() const;
 
 #ifndef SWIG
 	unsigned int get_address() const;
