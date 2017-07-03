@@ -173,6 +173,26 @@ void serialize_addressing_config(void **pptr, const struct addressing_config *ac
 int deserialize_addressing_config(const void **pptr, struct addressing_config *ac);
 void addressing_config_free(struct addressing_config * ac);
 
+int nsm_config_serlen(const struct nsm_config * nsmc);
+void serialize_nsm_config(void **pptr, const struct nsm_config *nsmc);
+int deserialize_nsm_config(const void **pptr, struct nsm_config *nsmc);
+void nsm_config_free(struct nsm_config * nsmc);
+
+int auth_sdup_profile_serlen(const struct auth_sdup_profile * asp);
+void serialize_auth_sdup_profile(void **pptr, const struct auth_sdup_profile *asp);
+int deserialize_auth_sdup_profile(const void **pptr, struct auth_sdup_profile *asp);
+void auth_sdup_profile_free(struct auth_sdup_profile * asp);
+
+int secman_config_serlen(const struct secman_config * sc);
+void serialize_secman_config(void **pptr, const struct secman_config *sc);
+int deserialize_secman_config(const void **pptr, struct secman_config *sc);
+void secman_config_free(struct secman_config * sc);
+
+int routing_config_serlen(const struct routing_config * rc);
+void serialize_routing_config(void **pptr, const struct routing_config *rc);
+int deserialize_routing_config(const void **pptr, struct routing_config *rc);
+void routing_config_free(struct routing_config * rc);
+
 int ipcp_config_entry_serlen(const struct ipcp_config_entry * ice);
 void serialize_ipcp_config_entry(void **pptr, const struct ipcp_config_entry *ice);
 int deserialize_ipcp_config_entry(const void **pptr, struct ipcp_config_entry *ice);
@@ -222,6 +242,11 @@ int get_dif_prop_resp_serlen(const struct get_dif_prop_resp * gdp);
 void serialize_get_dif_prop_resp(void **pptr, const struct get_dif_prop_resp *gdp);
 int deserialize_get_dif_prop_resp(const void **pptr, struct get_dif_prop_resp *gdp);
 void get_dif_prop_resp_free(struct get_dif_prop_resp * gdp);
+
+int ipcp_neighbor_serlen(const struct ipcp_neighbor * nei);
+void serialize_ipcp_neighbor(void **pptr, const struct ipcp_neighbor *nei);
+int deserialize_ipcp_neighbor(const void **pptr, struct ipcp_neighbor *nei);
+void ipcp_neighbor_free(struct ipcp_neighbor * nei);
 
 unsigned int irati_msg_serlen(struct irati_msg_layout *numtables,
                               size_t num_entries,

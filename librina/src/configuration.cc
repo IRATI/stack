@@ -1516,6 +1516,26 @@ void EFCPConfiguration::set_unknown_flow_policy(
 NamespaceManagerConfiguration::NamespaceManagerConfiguration(){
 }
 
+NamespaceManagerConfiguration::NamespaceManagerConfiguration(struct nsm_config * nsmc)
+{
+	if (!nsmc)
+		return;
+
+	policy_set_(nsmc->ps);
+	addressing_configuration_(nsmc->addr_conf);
+}
+
+struct nsm_config * NamespaceManagerConfiguration::to_c_nsm_config() const
+{
+	struct nsm_config * result;
+
+	result = new nsm_config();
+	result->ps = policy_set_.to_c_policy();
+	result->addr_conf = addressing_configuration_.to_c_addr_config();
+
+	return result;
+}
+
 const PolicyConfig&
 NamespaceManagerConfiguration::get_policy_set() const {
 	return policy_set_;
@@ -1536,6 +1556,24 @@ std::string NamespaceManagerConfiguration::toString()
 }
 
 // CLASS RoutingConfiguration
+RoutingConfiguration::RoutingConfiguration(struct routing_config* rc)
+{
+	if (!rc)
+		return;
+
+	policy_set_(rc->ps);
+}
+
+struct routing_config * RoutingConfiguration::to_c_routing_config() const
+{
+	struct routing_config * result;
+
+	result = new routing_config();
+	result->ps = policy_set_.to_c_policy();
+
+	return result;
+}
+
 std::string RoutingConfiguration::toString()
 {
 	std::stringstream ss;
@@ -1896,6 +1934,30 @@ void AddressingConfiguration::addPrefix(AddressPrefixConfiguration &pref)
 	address_prefixes_.push_back(pref);
 }
 //Class AuthSDUProtectionProfile
+AuthSDUProtectionProfile::AuthSDUProtectionProfile(struct auth_sdup_profile * asp)
+{
+	if (!asp)
+		return;
+
+	authPolicy(asp->auth);
+	encryptPolicy(asp->encrypt);
+	crcPolicy(asp->crc);
+	ttlPolicy(asp->ttl);
+}
+
+struct auth_sdup_profile * AuthSDUProtectionProfile::to_c_auth_profile() const
+{
+	struct auth_sdup_profile * result;
+
+	result = new auth_sdup_profile();
+	result->auth = authPolicy.to_c_policy();
+	result->encrypt = encryptPolicy.to_c_policy();
+	result->crc = crcPolicy.to_c_policy();
+	result->ttl = ttlPolicy.to_c_policy();
+
+	return result;
+}
+
 std::string AuthSDUProtectionProfile::to_string()
 {
 	std::stringstream ss;
@@ -1912,6 +1974,43 @@ std::string AuthSDUProtectionProfile::to_string()
 }
 
 //Class SecurityManagerConfiguration
+SecurityManagerConfiguration::SecurityManagerConfiguration(struct secman_config * sc)
+{
+	struct auth_sdup_profile_entry * pos;
+
+	if (!sc)
+		return;
+
+	policy_set_(sc->ps);
+	default_auth_profile(sc->default_profile);
+
+        list_for_each_entry(pos, &(sc->specific_profiles), next) {
+        	specific_auth_profiles[pos->n1_dif_name] = AuthSDUProtectionProfile(pos->entry);
+        }
+}
+
+struct secman_config * SecurityManagerConfiguration::to_c_secman_config(void) const
+{
+	struct secman_config * result;
+	struct auth_sdup_profile_entry * pos;
+	std::map<std::string, AuthSDUProtectionProfile>::iterator it;
+
+	result = new secman_config();
+	INIT_LIST_HEAD(&result->specific_profiles);
+	result->ps = policy_set_.to_c_policy();
+	result->default_profile = default_auth_profile.to_c_auth_profile();
+	for (it = specific_auth_profiles.begin();
+			it != specific_auth_profiles.end(); ++ it) {
+		pos = new auth_sdup_profile_entry();
+		pos->n1_dif_name = it->first.c_str();
+		INIT_LIST_HEAD(&pos->next);
+		pos->entry = it->second.to_c_auth_profile();
+		list_add_tail(&pos->next, &result->specific_profiles);
+	}
+
+	return result;
+}
+
 std::string SecurityManagerConfiguration::toString()
 {
 	std::stringstream ss;
@@ -1938,16 +2037,51 @@ DIFConfiguration::DIFConfiguration(){
 
 DIFConfiguration::DIFConfiguration(struct dif_config * dc)
 {
+	struct ipcp_config * pos;
+
+	if (!dc)
+		return;
+
 	address_ = dc->address;
+	efcp_configuration_(dc->efcp_config);
+	rmt_configuration_(dc->rmt_config);
+	fa_configuration_(dc->fa_config);
+	et_configuration_(dc->et_config);
+	nsm_configuration_(dc->nsm_config);
+	routing_configuration_(dc->routing_config);
+	ra_configuration_(dc->resall_config);
+	sm_configuration_(dc->secman_config);
+
+        list_for_each_entry(pos, &(dc->ipcp_config_entries), next) {
+        	parameters_.push_back(PolicyParameter(pos->entry->name, pos->entry->value));
+        }
 }
 
 struct dif_config * DIFConfiguration::to_c_dif_config() const
 {
-	struct dif_config * result = new dif_config();
+	std::list<PolicyParameter>::iterator it;
+	struct ipcp_config * pos;
+	struct dif_config * result;
 
+	result = new dif_config();
+	INIT_LIST_HEAD(&result->ipcp_config_entries);
 	result->address = address_;
-
-	//TODO
+	result->efcp_config = efcp_configuration_.to_c_efcp_conf();
+	result->rmt_config = rmt_configuration_.to_c_rmt_config();
+	result->fa_config = fa_configuration_.to_c_fa_config();
+	result->et_config = et_configuration_.to_c_et_config();
+	result->nsm_config = nsm_configuration_.to_c_nsm_config();
+	result->routing_config = routing_configuration_.to_c_routing_config();
+	result->resall_config = ra_configuration_.to_c_rall_config();
+	result->secman_config = sm_configuration_.to_c_secman_config();
+	for (it = parameters_.begin(); it != parameters_.end(); ++it) {
+		pos = new ipcp_config();
+		INIT_LIST_HEAD(&pos->next);
+		pos->entry = new ipcp_config_entry();
+		pos->entry->name = it->name_.c_str();
+		pos->entry->value = it->value_.c_str();
+		list_add_tail(&pos->next, &result->ipcp_config_entries);
+	}
 
 	return result;
 }

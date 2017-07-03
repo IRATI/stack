@@ -334,8 +334,7 @@ void ExtendedIPCManager::setIPCManagerPort(
         this->ipcManagerPort = ipcManagerPort;
 }
 
-void ExtendedIPCManager::notifyIPCProcessInitialized(
-                const ApplicationProcessNamingInformation& name) {
+void ExtendedIPCManager::notifyIPCProcessInitialized(const ApplicationProcessNamingInformation& name) {
 	ScopedLock slock(lock);
 
         if (ipcProcessInitialized) {
@@ -345,17 +344,20 @@ void ExtendedIPCManager::notifyIPCProcessInitialized(
 #if STUB_API
         // Do nothing
 #else
-        IpcmIPCProcessInitializedMessage message;
-        message.setName(name);
-        message.setSourceIpcProcessId(ipcProcessId);
-        message.setDestPortId(ipcManagerPort);
-        message.setNotificationMessage(true);
+        struct irati_msg_with_name * msg;
 
-        try {
-                rinaManager->sendMessage(&message, false);
-        } catch(NetlinkException &e) {
-                throw IPCException(e.what());
+        msg = new irati_msg_with_name();
+        msg->msg_type = RINA_C_IPCM_IPC_PROCESS_INITIALIZED;
+        msg->name = name.to_c_name();
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_port = ipcManagerPort;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
         }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
         ipcProcessInitialized = true;
 }
@@ -365,9 +367,10 @@ bool ExtendedIPCManager::isIPCProcessInitialized() const
         return ipcProcessInitialized;
 }
 
-ApplicationRegistration * ExtendedIPCManager::appRegistered(
-                        const ApplicationProcessNamingInformation& appName,
-                        const ApplicationProcessNamingInformation& DIFName) {
+ApplicationRegistration *
+ExtendedIPCManager::appRegistered(const ApplicationProcessNamingInformation& appName,
+				  const ApplicationProcessNamingInformation& DIFName)
+{
         ApplicationRegistration * applicationRegistration;
 
         ScopedLock slock(lock);
@@ -387,9 +390,9 @@ ApplicationRegistration * ExtendedIPCManager::appRegistered(
         return applicationRegistration;
 }
 
-void ExtendedIPCManager::appUnregistered(
-                const ApplicationProcessNamingInformation& appName,
-                const ApplicationProcessNamingInformation& DIFName) {
+void ExtendedIPCManager::appUnregistered(const ApplicationProcessNamingInformation& appName,
+                			 const ApplicationProcessNamingInformation& DIFName)
+{
 	ScopedLock slock(lock);
 
         ApplicationRegistration * applicationRegistration =
@@ -414,31 +417,36 @@ void ExtendedIPCManager::appUnregistered(
         }
 }
 
-void ExtendedIPCManager::assignToDIFResponse(
-		const AssignToDIFRequestEvent& event, int result) {
+void ExtendedIPCManager::assignToDIFResponse(const AssignToDIFRequestEvent& event, int result)
+{
 	if (result == 0) {
 		this->currentDIFInformation = event.getDIFInformation();
 	}
 #if STUB_API
 	//Do nothing
 #else
-	BaseNetlinkMessage responseMessage(RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE);
-	responseMessage.result = result;
-	responseMessage.setSequenceNumber(event.sequenceNumber);
-	responseMessage.setSourceIpcProcessId(ipcProcessId);
-        responseMessage.setDestPortId(ipcManagerPort);
-	responseMessage.setResponseMessage(true);
-	try {
-                rinaManager->sendMessage(&responseMessage, false);
-	} catch (NetlinkException &e) {
-		throw AssignToDIFResponseException(e.what());
-	}
+        struct irati_msg_base_resp * msg;
+
+        msg = new irati_msg_base_resp();
+        msg->msg_type = RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE;
+        msg->result = result;
+        msg->event_id = event.sequenceNumber;
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_port = ipcManagerPort;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
 void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDAFRequestEvent& event,
-                        int result, const std::list<Neighbor> & newNeighbors,
-                        const DIFInformation& difInformation) {
+                        		     int result, const std::list<Neighbor> & newNeighbors,
+					     const DIFInformation& difInformation)
+{
 #if STUB_API
         // Do nothing
 #else

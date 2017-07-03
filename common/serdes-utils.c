@@ -2110,10 +2110,387 @@ void address_pref_config_free(struct address_pref_config * apc)
 	COMMON_FREE(apc);
 }
 
-int addressing_config_serlen(const struct addressing_config * ac);
-void serialize_addressing_config(void **pptr, const struct addressing_config *ac);
-int deserialize_addressing_config(const void **pptr, struct addressing_config *ac);
-void addressing_config_free(struct addressing_config * ac);
+int addressing_config_serlen(const struct addressing_config * ac)
+{
+	int ret;
+	struct static_ipcp_addr_entry * addr_pos;
+	struct address_pref_config_entry * pref_pos;
+
+	ret = 2 * sizeof(uint16_t);
+
+        list_for_each_entry(addr_pos, &(ac->static_ipcp_addrs), next) {
+                ret = ret + static_ipcp_addr_serlen(addr_pos->entry);
+        }
+
+        list_for_each_entry(pref_pos, &(ac->address_prefixes), next) {
+                ret = ret + address_pref_config_serlen(pref_pos->entry);
+        }
+
+        return ret;
+}
+
+void serialize_addressing_config(void **pptr, const struct addressing_config *ac)
+{
+	struct static_ipcp_addr_entry * addr_pos;
+	struct address_pref_config_entry * pref_pos;
+	uint16_t size = 0;
+
+	list_for_each_entry(addr_pos, &(ac->static_ipcp_addrs), next) {
+		size ++;
+	}
+
+	serialize_obj(*pptr, uint16_t, size);
+
+	list_for_each_entry(addr_pos, &(ac->static_ipcp_addrs), next) {
+		serialize_static_ipcp_addr(pptr, addr_pos->entry);
+	}
+
+	size = 0;
+	list_for_each_entry(pref_pos, &(ac->address_prefixes), next) {
+		size ++;
+	}
+
+	serialize_obj(*pptr, uint16_t, size);
+
+	list_for_each_entry(pref_pos, &(ac->address_prefixes), next) {
+		serialize_address_pref_config(pptr, pref_pos->entry);
+	}
+}
+
+int deserialize_addressing_config(const void **pptr, struct addressing_config *ac)
+{
+	int ret;
+	struct static_ipcp_addr_entry * addr_pos;
+	struct address_pref_config_entry * pref_pos;
+	uint16_t size;
+	int i;
+
+	memset(ac, 0, sizeof(*ac));
+
+	deserialize_obj(*pptr, uint16_t, &size);
+
+	for(i = 0; i < size; i++) {
+		addr_pos = COMMON_ALLOC(sizeof(struct static_ipcp_addr_entry), 1);
+		if (!addr_pos) {
+			return -1;
+		}
+
+		INIT_LIST_HEAD(&addr_pos->next);
+		addr_pos->entry = COMMON_ALLOC(sizeof(struct static_ipcp_addr), 1);
+		if (!addr_pos->entry) {
+			return -1;
+		}
+
+		ret = deserialize_static_ipcp_addr(pptr, addr_pos->entry);
+		if (ret) {
+			return ret;
+		}
+
+		list_add_tail(&addr_pos->next, &ac->static_ipcp_addrs);
+	}
+
+	deserialize_obj(*pptr, uint16_t, &size);
+
+	for(i = 0; i < size; i++) {
+		pref_pos = COMMON_ALLOC(sizeof(struct address_pref_config_entry), 1);
+		if (!pref_pos) {
+			return -1;
+		}
+
+		INIT_LIST_HEAD(&pref_pos->next);
+		pref_pos->entry = COMMON_ALLOC(sizeof(struct address_pref_config), 1);
+		if (!pref_pos->entry) {
+			return -1;
+		}
+
+		ret = deserialize_address_pref_config(pptr, pref_pos->entry);
+		if (ret) {
+			return ret;
+		}
+
+		list_add_tail(&pref_pos->next, &ac->address_prefixes);
+	}
+
+	return ret;
+}
+
+void addressing_config_free(struct addressing_config * ac)
+{
+	struct static_ipcp_addr_entry * addr_pos, * naddr_pos;
+	struct address_pref_config_entry * pref_pos, * npref_pos;
+
+	if (!ac)
+		return;
+
+	list_for_each_entry_safe(addr_pos, naddr_pos, &ac->static_ipcp_addrs, next) {
+		list_del(&addr_pos->next);
+		if (addr_pos->entry) {
+			static_ipcp_addr_free(addr_pos->entry);
+			addr_pos->entry = 0;
+		}
+
+		COMMON_FREE(addr_pos);
+	}
+
+	list_for_each_entry_safe(pref_pos, npref_pos, &ac->address_prefixes, next) {
+		list_del(&pref_pos->next);
+		if (pref_pos->entry) {
+			address_pref_config_free(pref_pos->entry);
+			pref_pos->entry = 0;
+		}
+
+		COMMON_FREE(pref_pos);
+	}
+
+	COMMON_FREE(ac);
+}
+
+int nsm_config_serlen(const struct nsm_config * nsmc)
+{
+	return addressing_config_serlen(nsmc->addr_conf)
+			+ policy_serlen(nsmc->ps);
+}
+
+void serialize_nsm_config(void **pptr, const struct nsm_config *nsmc)
+{
+	serialize_policy(pptr, nsmc->ps);
+	serialize_addressing_config(pptr, nsmc->addr_conf);
+}
+
+int deserialize_nsm_config(const void **pptr, struct nsm_config *nsmc)
+{
+	int ret;
+
+	memset(nsmc, 0, sizeof(*nsmc));
+
+	ret = deserialize_policy(pptr, nsmc->ps);
+	if (ret)
+		return ret;
+
+	return deserialize_addressing_config(pptr, nsmc->addr_conf);
+}
+
+void nsm_config_free(struct nsm_config * nsmc)
+{
+	if (!nsmc)
+		return;
+
+	if (nsmc->ps) {
+		policy_free(nsmc->ps);
+		nsmc->ps = 0;
+	}
+
+	if (nsmc->addr_conf) {
+		addressing_config_free(nsmc->addr_conf);
+		nsmc->addr_conf = 0;
+	}
+
+	COMMON_FREE(nsmc);
+}
+
+int auth_sdup_profile_serlen(const struct auth_sdup_profile * asp)
+{
+	return policy_serlen(asp->auth) + policy_serlen(asp->encrypt)
+			+ policy_serlen(asp->crc) + policy_serlen(asp->ttl);
+}
+
+void serialize_auth_sdup_profile(void **pptr, const struct auth_sdup_profile *asp)
+{
+	serialize_policy(pptr, asp->auth);
+	serialize_policy(pptr, asp->encrypt);
+	serialize_policy(pptr, asp->crc);
+	serialize_policy(pptr, asp->ttl);
+}
+
+int deserialize_auth_sdup_profile(const void **pptr, struct auth_sdup_profile *asp)
+{
+	int ret;
+
+	memset(asp, 0, sizeof(*asp));
+
+	ret = deserialize_policy(pptr, asp->auth);
+	if (ret)
+		return ret;
+
+	ret = deserialize_policy(pptr, asp->encrypt);
+	if (ret)
+		return ret;
+
+	ret = deserialize_policy(pptr, asp->crc);
+	if (ret)
+		return ret;
+
+	return deserialize_policy(pptr, asp->ttl);
+}
+
+void auth_sdup_profile_free(struct auth_sdup_profile * asp)
+{
+	if (!asp)
+		return;
+
+	if (asp->auth) {
+		policy_free(asp->auth);
+		asp->auth = 0;
+	}
+
+	if (asp->encrypt) {
+		policy_free(asp->encrypt);
+		asp->encrypt = 0;
+	}
+
+	if (asp->crc) {
+		policy_free(asp->crc);
+		asp->crc = 0;
+	}
+
+	if (asp->ttl) {
+		policy_free(asp->ttl);
+		asp->ttl = 0;
+	}
+
+	COMMON_FREE(asp);
+}
+
+int secman_config_serlen(const struct secman_config * sc)
+{
+	int ret;
+	struct auth_sdup_profile_entry * pos;
+
+	ret = sizeof(uint16_t) + policy_serlen(sc->ps)
+			+ auth_sdup_profile_serlen(sc->default_profile);
+
+        list_for_each_entry(pos, &(sc->specific_profiles), next) {
+                ret = ret + auth_sdup_profile_serlen(pos->entry) +
+                		sizeof(uint16_t) + string_prlen(pos->n1_dif_name);
+        }
+
+        return ret;
+}
+
+
+void serialize_secman_config(void **pptr, const struct secman_config *sc)
+{
+	struct auth_sdup_profile_entry * pos;
+	uint16_t size = 0;
+
+	serialize_policy(pptr, sc->ps);
+	serialize_auth_sdup_profile(pptr, sc->default_profile);
+
+	list_for_each_entry(pos, &(sc->specific_profiles), next) {
+		size ++;
+	}
+
+	serialize_obj(*pptr, uint16_t, size);
+
+	list_for_each_entry(pos, &(sc->specific_profiles), next) {
+		serialize_string(pptr, pos->n1_dif_name);
+		serialize_auth_sdup_profile(pptr, pos->entry);
+	}
+}
+
+
+int deserialize_secman_config(const void **pptr, struct secman_config *sc)
+{
+	int ret;
+	struct auth_sdup_profile_entry * pos;
+	uint16_t size;
+	int i;
+
+	memset(sc, 0, sizeof(*sc));
+
+	deserialize_policy(pptr, sc->ps);
+	deserialize_auth_sdup_profile(pptr, sc->default_profile);
+	deserialize_obj(*pptr, uint16_t, &size);
+
+	for(i = 0; i < size; i++) {
+		pos = COMMON_ALLOC(sizeof(struct auth_sdup_profile_entry), 1);
+		if (!pos) {
+			return -1;
+		}
+
+		INIT_LIST_HEAD(&pos->next);
+		ret = deserialize_string(pptr, &pos->n1_dif_name);
+		if (ret)
+			return ret;
+
+		pos->entry = COMMON_ALLOC(sizeof(struct ipcp_config_entry), 1);
+		if (!pos->entry) {
+			return -1;
+		}
+
+		ret = deserialize_auth_sdup_profile(pptr, pos->entry);
+		if (ret) {
+			return ret;
+		}
+
+		list_add_tail(&pos->next, &sc->specific_profiles);
+	}
+
+	return ret;
+}
+
+void secman_config_free(struct secman_config * sc)
+{
+	struct auth_sdup_profile_entry * pos, * npos;
+
+	if (!sc)
+		return;
+
+	if (sc->ps) {
+		policy_free(sc->ps);
+		sc->ps = 0;
+	}
+
+	if (sc->default_profile) {
+		auth_sdup_profile_free(sc->default_profile);
+		sc->default_profile = 0;
+	}
+
+	list_for_each_entry_safe(pos, npos, &sc->specific_profiles, next) {
+		list_del(&pos->next);
+		if (pos->n1_dif_name) {
+			COMMON_FREE(pos->n1_dif_name);
+			pos->n1_dif_name = 0;
+		}
+		if (pos->entry) {
+			auth_sdup_profile_free(pos->entry);
+			pos->entry = 0;
+		}
+
+		COMMON_FREE(pos);
+	}
+
+	COMMON_FREE(sc);
+}
+
+int routing_config_serlen(const struct routing_config * rc)
+{
+	return policy_serlen(rc->ps);
+}
+
+void serialize_routing_config(void **pptr, const struct routing_config *rc)
+{
+	serialize_policy(pptr, rc->ps);
+}
+
+int deserialize_routing_config(const void **pptr, struct routing_config *rc)
+{
+	memset(rc, 0, sizeof(*rc));
+	return deserialize_policy(pptr, rc->ps);
+}
+
+void routing_config_free(struct routing_config * rc)
+{
+	if (!rc)
+		return;
+
+	if (rc->ps) {
+		policy_free(rc->ps);
+		rc->ps = 0;
+	}
+
+	COMMON_FREE(rc);
+}
 
 int ipcp_config_entry_serlen(const struct ipcp_config_entry * ice)
 {
@@ -2157,7 +2534,7 @@ void ipcp_config_entry_free(struct ipcp_config_entry * ice)
 
 int dif_config_serlen(const struct dif_config * dif_config)
 {
-	int ret;
+	int ret = 0;
 	struct ipcp_config * pos;
 
 	ret = sizeof(address_t) + sizeof(uint16_t);
@@ -2174,6 +2551,24 @@ int dif_config_serlen(const struct dif_config * dif_config)
 
         if (dif_config->sdup_config)
         	ret = ret + sdup_config_serlen(dif_config->sdup_config);
+
+        if (dif_config->fa_config)
+        	ret = ret + fa_config_serlen(dif_config->fa_config);
+
+        if (dif_config->et_config)
+        	ret = ret + et_config_serlen(dif_config->et_config);
+
+        if (dif_config->nsm_config)
+        	ret = ret + nsm_config_serlen(dif_config->nsm_config);
+
+        if (dif_config->routing_config)
+        	ret = ret + routing_config_serlen(dif_config->routing_config);
+
+        if (dif_config->resall_config)
+        	ret = ret + resall_config_serlen(dif_config->resall_config);
+
+        if (dif_config->secman_config)
+        	ret = ret + secman_config_serlen(dif_config->secman_config);
 
         return ret;
 }
@@ -2201,6 +2596,18 @@ void serialize_dif_config(void **pptr, const struct dif_config *dif_config)
 		serialize_rmt_config(pptr, dif_config->rmt_config);
 	if (dif_config->sdup_config)
 		serialize_sdup_config(pptr, dif_config->sdup_config);
+	if (dif_config->fa_config)
+		serialize_fa_config(pptr, dif_config->fa_config);
+	if (dif_config->et_config)
+		serialize_et_config(pptr, dif_config->et_config);
+	if (dif_config->nsm_config)
+		serialize_nsm_config(pptr, dif_config->nsm_config);
+	if (dif_config->routing_config)
+		serialize_routing_config(pptr, dif_config->routing_config);
+	if (dif_config->resall_config)
+		serialize_resall_config(pptr, dif_config->resall_config);
+	if (dif_config->secman_config)
+		serialize_secman_config(pptr, dif_config->secman_config);
 }
 
 int deserialize_dif_config(const void **pptr, struct dif_config *dif_config)
@@ -2238,6 +2645,12 @@ int deserialize_dif_config(const void **pptr, struct dif_config *dif_config)
 	deserialize_efcp_config(pptr, dif_config->efcp_config);
 	deserialize_rmt_config(pptr, dif_config->rmt_config);
 	deserialize_sdup_config(pptr, dif_config->sdup_config);
+	deserialize_fa_config(pptr, dif_config->fa_config);
+	deserialize_et_config(pptr, dif_config->et_config);
+	deserialize_nsm_config(pptr, dif_config->nsm_config);
+	deserialize_routing_config(pptr, dif_config->routing_config);
+	deserialize_resall_config(pptr, dif_config->resall_config);
+	deserialize_secman_config(pptr, dif_config->secman_config);
 
 	return ret;
 }
@@ -2262,6 +2675,36 @@ void dif_config_free(struct dif_config * dif_config)
 	if (dif_config->sdup_config) {
 		sdup_config_free(dif_config->sdup_config);
 		dif_config->sdup_config = 0;
+	}
+
+	if (dif_config->fa_config) {
+		fa_config_free(dif_config->fa_config);
+		dif_config->fa_config = 0;
+	}
+
+	if (dif_config->et_config) {
+		et_config_free(dif_config->et_config);
+		dif_config->et_config = 0;
+	}
+
+	if (dif_config->nsm_config) {
+		nsm_config_free(dif_config->nsm_config);
+		dif_config->nsm_config = 0;
+	}
+
+	if (dif_config->routing_config) {
+		routing_config_free(dif_config->routing_config);
+		dif_config->routing_config = 0;
+	}
+
+	if (dif_config->resall_config) {
+		resall_config_free(dif_config->resall_config);
+		dif_config->resall_config = 0;
+	}
+
+	if (dif_config->secman_config) {
+		secman_config_free(dif_config->secman_config);
+		dif_config->secman_config = 0;
 	}
 
 	list_for_each_entry_safe(pos, npos, &dif_config->ipcp_config_entries, next) {
@@ -2849,6 +3292,120 @@ void get_dif_prop_resp_free(struct get_dif_prop_resp * gdp)
 	}
 
 	COMMON_FREE(gdp);
+}
+
+int ipcp_neighbor_serlen(const struct ipcp_neighbor * nei)
+{
+	int ret;
+	struct name_entry * pos;
+
+	ret = 4 * sizeof(uint32_t) + sizeof(bool) + 3 * sizeof(int32_t)
+		+ sizeof(uint16_t) + rina_name_serlen(nei->ipcp_name)
+		+ rina_name_serlen(nei->sup_dif_name);
+
+        list_for_each_entry(pos, &(nei->supporting_difs), next) {
+                ret = ret + rina_name_serlen(pos->entry);
+        }
+
+        return ret;
+}
+
+void serialize_ipcp_neighbor(void **pptr, const struct ipcp_neighbor *nei)
+{
+	struct name_entry * pos;
+	uint16_t size = 0;
+
+	serialize_obj(*pptr, uint32_t, nei->address);
+	serialize_obj(*pptr, uint32_t, nei->old_address);
+	serialize_obj(*pptr, uint32_t, nei->average_rtt_in_ms);
+	serialize_obj(*pptr, uint32_t, nei->num_enroll_attempts);
+	serialize_obj(*pptr, bool, nei->enrolled);
+	serialize_obj(*pptr, int32_t, nei->under_port_id);
+	serialize_obj(*pptr, int32_t, nei->intern_port_id);
+	serialize_obj(*pptr, int32_t, nei->last_heard_time_ms);
+	serialize_rina_name(pptr, nei->ipcp_name);
+	serialize_rina_name(pptr, nei->sup_dif_name);
+
+        list_for_each_entry(pos, &(nei->supporting_difs), next) {
+                size++;
+        }
+
+        serialize_obj(*pptr, uint16_t, size);
+
+        list_for_each_entry(pos, &(nei->supporting_difs), next) {
+        	serialize_rina_name(pptr, pos->entry);
+        }
+}
+
+int deserialize_ipcp_neighbor(const void **pptr, struct ipcp_neighbor *nei)
+{
+	int ret;
+	struct name_entry * pos;
+	uint16_t size;
+	int i;
+
+	memset(nei, 0, sizeof(*nei));
+
+	deserialize_obj(*pptr, uint32_t, &nei->address);
+	deserialize_obj(*pptr, uint32_t, &nei->old_address);
+	deserialize_obj(*pptr, uint32_t, &nei->average_rtt_in_ms);
+	deserialize_obj(*pptr, uint32_t, &nei->num_enroll_attempts);
+	deserialize_obj(*pptr, bool, &nei->enrolled);
+	deserialize_obj(*pptr, int32_t, &nei->under_port_id);
+	deserialize_obj(*pptr, int32_t, &nei->intern_port_id);
+	deserialize_obj(*pptr, int32_t, &nei->last_heard_time_ms);
+	deserialize_rina_name(pptr, nei->ipcp_name);
+	deserialize_rina_name(pptr, nei->sup_dif_name);
+
+	deserialize_obj(*pptr, uint16_t, &size);
+
+	for(i = 0; i < size; i++) {
+		pos = COMMON_ALLOC(sizeof(struct name_entry), 1);
+		if (!pos) {
+			return -1;
+		}
+
+		INIT_LIST_HEAD(&pos->next);
+		ret = deserialize_rina_name(pptr, pos->entry);
+		if (ret) {
+			return ret;
+		}
+
+		list_add_tail(&pos->next, &nei->supporting_difs);
+	}
+
+	return ret;
+}
+
+void ipcp_neighbor_free(struct ipcp_neighbor * nei)
+{
+	struct name_entry * pos, * npos;
+
+	if (!nei)
+		return;
+
+	if (nei->ipcp_name) {
+		rina_name_free(nei->ipcp_name);
+		nei->ipcp_name = 0;
+	}
+
+	if (nei->sup_dif_name) {
+		rina_name_free(nei->sup_dif_name);
+		nei->sup_dif_name = 0;
+	}
+
+	list_for_each_entry_safe(pos, npos, &nei->supporting_difs, next) {
+		list_del(&pos->next);
+
+		if (pos->entry) {
+			rina_name_free(pos->entry);
+			pos->entry = 0;
+		}
+
+		COMMON_FREE(pos);
+	}
+
+	COMMON_FREE(nei);
 }
 
 int serialize_irati_msg(struct irati_msg_layout *numtables,

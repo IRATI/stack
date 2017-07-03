@@ -244,16 +244,6 @@ struct ipcp_config_value {
         void *                data;
 };
 
-struct ipcp_config_entry {
-        string_t * name;
-        string_t * value;
-};
-
-struct ipcp_config {
-        struct list_head           next;
-        struct ipcp_config_entry * entry;
-};
-
 struct dt_cons {
         /* The length of the address field in the DTP PCI, in bytes */
         uint16_t address_length;
@@ -394,6 +384,37 @@ struct addressing_config {
 	struct list_head address_prefixes;
 };
 
+/* Represents the configuration of the Namespace Manager */
+struct nsm_config {
+	struct policy * ps;
+	struct addressing_config * addr_conf;
+};
+
+struct auth_sdup_profile {
+	struct policy * auth;
+	struct policy * encrypt;
+	struct policy * crc;
+	struct policy * ttl;
+};
+
+struct auth_sdup_profile_entry {
+	struct list_head next;
+	string_t * n1_dif_name;
+	struct auth_sdup_profile * entry;
+};
+
+/* Represents the configuration of the Security Manager */
+struct secman_config {
+	struct policy * ps;
+	struct auth_sdup_profile * default_profile;
+	struct list_head specific_profiles;
+};
+
+/* Represents the configuration of the routing Task */
+struct routing_config {
+	struct policy * ps;
+};
+
 struct dup_config_entry {
 	// The N-1 dif_name this configuration applies to
 	string_t * 	n_1_dif_name;
@@ -437,6 +458,16 @@ struct rmt_config {
 	struct pff_config * pff_conf;
 };
 
+struct ipcp_config_entry {
+        string_t * name;
+        string_t * value;
+};
+
+struct ipcp_config {
+        struct list_head           next;
+        struct ipcp_config_entry * entry;
+};
+
 /* Represents a DIF configuration (policies, parameters, etc) */
 struct dif_config {
         /* List of configuration entries */
@@ -453,6 +484,13 @@ struct dif_config {
 
         /* List of Data Unit Protection configuration entries */
         struct sdup_config * sdup_config;
+
+        struct fa_config * fa_config;
+        struct et_config * et_config;
+        struct nsm_config * nsm_config;
+        struct routing_config * routing_config;
+        struct resall_config * resall_config;
+        struct secman_config * secman_config;
 };
 
 /* Represents the information about a DIF (name, type, configuration) */
@@ -465,6 +503,30 @@ struct dif_info {
 
         /* The DIF configuration (policies, parameters, etc) */
         struct dif_config * configuration;
+};
+
+struct name_entry {
+	struct list_head next;
+	struct name * entry;
+};
+
+/* Represents a neighbor of an IPCP */
+struct ipcp_neighbor {
+	struct name * ipcp_name;
+	struct name * sup_dif_name;
+	struct list_head supporting_difs;
+	uint32_t address;
+	uint32_t old_address;
+	bool enrolled;
+	uint32_t average_rtt_in_ms;
+	int32_t under_port_id;
+	int32_t intern_port_id;
+	int32_t last_heard_time_ms;
+	uint32_t num_enroll_attempts;
+};
+
+struct ipcp_neigh_list {
+	struct list_head ipcp_neighbors;
 };
 
 struct rib_object_data {
