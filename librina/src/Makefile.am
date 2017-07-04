@@ -66,7 +66,10 @@ allsources =							\
         librina.cc						\
         common.cc						\
         console.cc						\
-        ipc-api.cc                                              \
+        ctrl.c							 \
+        ker-numtables.c					 \
+        serdes-utils.c					\
+        ipc-api.cc                          \
         application.cc						\
         internal-events.cc					\
         configuration.cc					\
@@ -80,17 +83,12 @@ allsources =							\
         tlshand-authp.cc					\
         irm.cc							\
         sdu-protection.cc					\
-        netlink-messages.cc  netlink-messages.h			\
-        netlink-parsers.cc   netlink-parsers.h			\
-        netlink-manager.cc   netlink-manager.h			\
         $(protoSOURCES)						\
-	plugin-info.cc	     plugin-info.h
+		plugin-info.cc	     plugin-info.h
 
 librina_la_SOURCES  = $(allsources)
 librina_la_LDFLAGS  =
 librina_la_LIBADD   =				\
-	$(LIBNL3_LIBS)				\
-	$(LIBNLGENL3_LIBS)			\
 	$(LIBPROTOBUF_LIBS)			\
 	$(OPENSSL_LIBS)				\
         $(builddir)/librinajsoncpp.la           \
@@ -99,9 +97,8 @@ librina_la_CPPFLAGS =				\
 	$(CXX_SYSINCLUDES)			\
 	-DSTUB_API=0				\
 	-I$(top_srcdir)/include			\
-        -I$(srcdir)/jsoncpp                     \
-	$(LIBNL3_CFLAGS)			\
-	$(LIBNLGENL3_CFLAGS)			\
+    -I$(srcdir)/jsoncpp             \
+    -I$(top_srcdir)/../include			\
 	$(LIBPROTOBUF_CFLAGS)			\
 	$(OPENSSL_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)
@@ -112,19 +109,16 @@ librina_la_CXXFLAGS =				\
 librina_stubbed_la_SOURCES  = $(allsources)
 librina_stubbed_la_LDFLAGS  =
 librina_stubbed_la_LIBADD   =	\
-	$(LIBNL3_LIBS)				\
-	$(LIBNLGENL3_LIBS)			\
 	$(LIBPROTOBUF_LIBS)			\
 	$(OPENSSL_LIBS)				\
-        $(builddir)/librinajsoncpp.la           \
+    $(builddir)/librinajsoncpp.la           \
 	-ldl
 librina_stubbed_la_CPPFLAGS =			\
 	$(CXX_SYSINCLUDES)			\
 	-DSTUB_API=1				\
 	-I$(top_srcdir)/include			\
-        -I$(srcdir)/jsoncpp                     \
-	$(LIBNL3_CFLAGS)			\
-	$(LIBNLGENL3_CFLAGS)			\
+    -I$(srcdir)/jsoncpp                     \
+    -I$(top_srcdir)/../include			\
 	$(LIBPROTOBUF_CFLAGS)			\
 	$(OPENSSL_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)
@@ -141,17 +135,14 @@ test_linking_CFLAGS   =
 test_linking_CPPFLAGS =				\
 	-DSTUB_API=0				\
 	-I$(top_srcdir)/include			\
-        -I$(srcdir)/jsoncpp                     \
-	$(LIBNL3_CFLAGS)			\
-	$(LIBNLGENL3_CFLAGS)			\
+    -I$(srcdir)/jsoncpp                     \
+    -I$(top_srcdir)/../include			\
 	$(LIBPROTOBUF_CFLAGS)			\
 	$(OPENSSL_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)
 test_linking_CXXFLAGS =				\
 	$(CXXFLAGS_EXTRA)
 test_linking_LDADD    =				\
-	$(LIBNL3_LIBS)				\
-	$(LIBNLGENL3_LIBS)			\
 	$(LIBPROTOBUF_LIBS)			\
 	$(OPENSSL_LIBS)				\
         $(builddir)/librinajsoncpp.la           \
@@ -167,10 +158,6 @@ edit = $(SED)								\
         -e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'			\
         -e 's|@PACKAGE_URL[@]|$(PACKAGE_URL)|g'				\
 	-e 's|@LIBNL_MIN_VERSION[@]|$(LIBNL_MIN_VERSION)|g'		\
-	-e 's|@LIBNL3_CFLAGS[@]|$(LIBNL3_CFLAGS)|g'			\
-	-e 's|@LIBNL3_LIBS[@]|$(LIBNL3_LIBS)|g'				\
-	-e 's|@LIBNLGENL3_CFLAGS[@]|$(LIBNLGENL3_CFLAGS)|g'		\
-	-e 's|@LIBNLGENL3_LIBS[@]|$(LIBNLGENL3_LIBS)|g'			\
 	-e 's|@LIBPROTOBUF_MIN_VERSION[@]|$(LIBPROTOBUF_MIN_VERSION)|g'	\
 	-e 's|@LIBPROTOBUF_CFLAGS[@]|$(LIBPROTOBUF_CFLAGS)|g'		\
 	-e 's|@LIBPROTOBUF_LIBS[@]|$(LIBPROTOBUF_LIBS)|g'		\

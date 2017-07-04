@@ -33,6 +33,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <asm/ioctl.h>
+#include <stddef.h>
+#include <stdbool.h>
 #endif
 
 #ifdef __cplusplus
@@ -71,6 +73,74 @@ struct buffer {
         char * data;
         size_t size;
 };
+
+#ifdef __KERNEL__
+#else
+/* Buffer functions */
+int buffer_destroy(struct buffer * b);
+
+/* List API copied from kernel */
+struct list_head {
+	struct list_head *next, *prev;
+	void * container;
+};
+
+#define LIST_HEAD_INIT(name) { &(name), &(name) }
+
+#define LIST_HEAD(name) \
+	struct list_head name = LIST_HEAD_INIT(name)
+
+static inline void INIT_LIST_HEAD(struct list_head *list)
+{
+	list->next = list;
+	list->prev = list;
+}
+
+static inline void __list_add(struct list_head *newl,
+			      struct list_head *prev,
+			      struct list_head *next)
+{
+	next->prev = newl;
+	newl->next = next;
+	newl->prev = prev;
+	prev->next = newl;
+}
+
+static inline void list_add_tail(struct list_head *newl, struct list_head *head)
+{
+	__list_add(newl, head->prev, head);
+}
+
+static inline void __list_del(struct list_head * prev, struct list_head * next)
+{
+	next->prev = prev;
+	prev->next = next;
+}
+
+static inline void list_del(struct list_head *entry)
+{
+	__list_del(entry->prev, entry->next);
+	entry->next = 0;
+	entry->prev = 0;
+}
+
+#define container_of(ptr, type, member) ({\
+        const typeof( ((type *)0)->member ) *__mptr = (ptr); \
+        (type *)( (char *)__mptr - offsetof(type, member) );})
+
+#define list_for_each_entry(pos, head, member) \
+        for (pos = container_of((head)->next, typeof(*pos),member); \
+	     &pos->member != (head); \
+	     pos = container_of(pos->member.next,typeof(*pos), member))
+
+#define list_for_each_entry_safe(pos, n, head, member)			\
+	for (pos = container_of((head)->next, typeof(*pos),member); \
+	     n = container_of(pos->member.next,typeof(*pos), member);	\
+	     &pos->member != (head); 					\
+	     pos = n, 							\
+	     n = container_of(n->member.next,typeof(*n), member))
+
+#endif
 
 struct name {
         /*
