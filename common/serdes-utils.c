@@ -2723,7 +2723,7 @@ void dif_config_free(struct dif_config * dif_config)
 int rib_object_data_serlen(const struct rib_object_data * rod)
 {
 	return 3 * sizeof(uint16_t) + string_prlen(rod->name)
-			+ string_prlen(rod->class)
+			+ string_prlen(rod->clazz)
 			+ string_prlen(rod->disp_value)
 			+ sizeof(uint64_t);
 }
@@ -2732,7 +2732,7 @@ void serialize_rib_object_data(void **pptr, const struct rib_object_data *rod)
 {
 	serialize_obj(*pptr, uint64_t, rod->instance);
 	serialize_string(pptr, rod->name);
-	serialize_string(pptr, rod->class);
+	serialize_string(pptr, rod->clazz);
 	serialize_string(pptr, rod->disp_value);
 }
 
@@ -2748,7 +2748,7 @@ int deserialize_rib_object_data(const void **pptr, struct rib_object_data *rod)
 	if (ret)
 		return ret;
 
-	ret = deserialize_string(pptr, &rod->class);
+	ret = deserialize_string(pptr, &rod->clazz);
 	if (ret)
 		return ret;
 
@@ -2765,9 +2765,9 @@ void rib_object_data_free(struct rib_object_data * rod)
 		rod->name = 0;
 	}
 
-	if (rod->class) {
-		COMMON_FREE(rod->class);
-		rod->class = 0;
+	if (rod->clazz) {
+		COMMON_FREE(rod->clazz);
+		rod->clazz = 0;
 	}
 
 	if (rod->disp_value) {
@@ -2905,7 +2905,8 @@ int mod_pff_entry_serlen(const struct mod_pff_entry * pffe)
 	int ret;
 	struct port_id_altlist * pos;
 
-	ret = sizeof(address_t) + sizeof(qos_id_t) + sizeof(uint16_t);
+	ret = sizeof(address_t) + sizeof(qos_id_t) + sizeof(uint16_t)
+			+ sizeof(uint32_t);
 
         list_for_each_entry(pos, &(pffe->next), next) {
                 ret = ret + port_id_altlist_serlen(pos);
@@ -2921,6 +2922,7 @@ void serialize_mod_pff_entry(void **pptr, const struct mod_pff_entry *pffe)
 
 	serialize_obj(*pptr, address_t, pffe->fwd_info);
 	serialize_obj(*pptr, qos_id_t, pffe->qos_id);
+	serialize_obj(*pptr, uint32_t, pffe->cost);
 
         list_for_each_entry(pos, &(pffe->next), next) {
                num_alts++;
@@ -2944,6 +2946,7 @@ int deserialize_mod_pff_entry(const void **pptr, struct mod_pff_entry *pffe)
 
 	deserialize_obj(*pptr, address_t, &pffe->fwd_info);
 	deserialize_obj(*pptr, qos_id_t, &pffe->qos_id);
+	deserialize_obj(*pptr, uint32_t, &pffe->cost);
 	deserialize_obj(*pptr, uint16_t, &num_alts);
 
 	for(i = 0; i < num_alts; i++) {
@@ -3055,7 +3058,7 @@ void pff_entry_list_free(struct pff_entry_list * pel)
 
 int sdup_crypto_state_serlen(const struct sdup_crypto_state * scs)
 {
-	return 2 * sizeof(bool) + 3 * sizeof(uint16_t)
+	return 2 * sizeof(bool) + 3 * sizeof(uint16_t) + sizeof(port_id_t)
 	       + string_prlen(scs->compress_alg)
 	       + string_prlen(scs->enc_alg)
 	       + string_prlen(scs->mac_alg)
@@ -3072,6 +3075,7 @@ void serialize_sdup_crypto_state(void **pptr, const struct sdup_crypto_state *sc
 {
 	serialize_obj(*pptr, bool, scs->enable_crypto_rx);
 	serialize_obj(*pptr, bool, scs->enable_crypto_tx);
+	serialize_obj(*pptr, port_id_t, scs->port_id);
 	serialize_string(pptr, scs->compress_alg);
 	serialize_string(pptr, scs->enc_alg);
 	serialize_string(pptr, scs->mac_alg);
@@ -3091,6 +3095,7 @@ int deserialize_sdup_crypto_state(const void **pptr, struct sdup_crypto_state *s
 
 	deserialize_obj(*pptr, bool, &scs->enable_crypto_rx);
 	deserialize_obj(*pptr, bool, &scs->enable_crypto_tx);
+	deserialize_obj(*pptr, port_id_t, &scs->port_id);
 
 	ret = deserialize_string(pptr, &scs->compress_alg);
 	if (ret) {
@@ -3408,6 +3413,332 @@ void ipcp_neighbor_free(struct ipcp_neighbor * nei)
 	COMMON_FREE(nei);
 }
 
+int ipcp_neigh_list_serlen(const struct ipcp_neigh_list * nei)
+{
+	int ret;
+	struct ipcp_neighbor_entry * pos;
+
+	ret = sizeof(uint16_t);
+
+        list_for_each_entry(pos, &(nei->ipcp_neighbors), next) {
+                ret = ret + ipcp_neighbor_serlen(pos->entry);
+        }
+
+        return ret;
+}
+
+void serialize_ipcp_neigh_list(void **pptr, const struct ipcp_neigh_list *nei)
+{
+	struct ipcp_neighbor_entry * pos;
+	uint16_t size = 0;
+
+        list_for_each_entry(pos, &(nei->ipcp_neighbors), next) {
+                size++;
+        }
+
+        serialize_obj(*pptr, uint16_t, size);
+
+        list_for_each_entry(pos, &(nei->ipcp_neighbors), next) {
+        	serialize_ipcp_neighbor(pptr, pos->entry);
+        }
+}
+
+int deserialize_ipcp_neigh_list(const void **pptr, struct ipcp_neigh_list *nei)
+{
+	int ret;
+	struct ipcp_neighbor_entry * pos;
+	uint16_t size;
+	int i;
+
+	memset(nei, 0, sizeof(*nei));
+
+	deserialize_obj(*pptr, uint16_t, &size);
+
+	for(i = 0; i < size; i++) {
+		pos = COMMON_ALLOC(sizeof(struct ipcp_neighbor_entry), 1);
+		if (!pos) {
+			return -1;
+		}
+
+		INIT_LIST_HEAD(&pos->next);
+		ret = deserialize_ipcp_neighbor(pptr, pos->entry);
+		if (ret) {
+			return ret;
+		}
+
+		list_add_tail(&pos->next, &nei->ipcp_neighbors);
+	}
+
+	return ret;
+}
+
+void ipcp_neigh_list_free(struct ipcp_neigh_list * nei)
+{
+	struct ipcp_neighbor_entry * pos, * npos;
+
+	if (!nei)
+		return;
+
+	list_for_each_entry_safe(pos, npos, &nei->ipcp_neighbors, next) {
+		list_del(&pos->next);
+
+		if (pos->entry) {
+			ipcp_neighbor_free(pos->entry);
+			pos->entry = 0;
+		}
+
+		COMMON_FREE(pos);
+	}
+
+	COMMON_FREE(nei);
+}
+
+int bs_info_entry_serlen(const struct bs_info_entry * bie)
+{
+	return sizeof(int32_t) + sizeof(uint16_t)
+			+ string_prlen(bie->ipcp_addr);
+}
+
+void serialize_bs_info_entry(void **pptr, const struct bs_info_entry *bie)
+{
+	serialize_obj(*pptr, int32_t, bie->signal_strength);
+	serialize_string(pptr, bie->ipcp_addr);
+}
+
+int deserialize_bs_info_entry(const void **pptr, struct bs_info_entry *bie)
+{
+	memset(bie, 0, sizeof(*bie));
+
+	deserialize_obj(*pptr, int32_t, &bie->signal_strength);
+
+	return deserialize_string(pptr, &bie->ipcp_addr);
+}
+
+void bs_info_entry_free(struct bs_info_entry * bie)
+{
+	if (!bie)
+		return;
+
+	if (bie->ipcp_addr) {
+		COMMON_FREE(bie->ipcp_addr);
+		bie->ipcp_addr = 0;
+	}
+
+	COMMON_FREE(bie);
+}
+
+int media_dif_info_serlen(const struct media_dif_info * mdi)
+{
+	int ret;
+	struct bs_info_entry * pos;
+
+	ret = 3 * sizeof(uint16_t) + string_prlen(mdi->dif_name)
+			+ string_prlen(mdi->sec_policies);
+
+        list_for_each_entry(pos, &(mdi->available_bs_ipcps), next) {
+                ret = ret + bs_info_entry_serlen(pos);
+        }
+
+        return ret;
+}
+
+void serialize_media_dif_info(void **pptr, const struct media_dif_info *mdi)
+{
+	uint16_t size = 0;
+	struct bs_info_entry * pos;
+
+	serialize_string(pptr, mdi->dif_name);
+	serialize_string(pptr, mdi->sec_policies);
+
+        list_for_each_entry(pos, &(mdi->available_bs_ipcps), next) {
+                size++;
+        }
+
+        serialize_obj(*pptr, uint16_t, size);
+
+        list_for_each_entry(pos, &(mdi->available_bs_ipcps), next) {
+        	serialize_bs_info_entry(pptr, pos);
+        }
+}
+
+int deserialize_media_dif_info(const void **pptr, struct media_dif_info *mdi)
+{
+	int ret;
+	struct bs_info_entry * pos;
+	uint16_t size;
+	int i;
+
+	memset(mdi, 0, sizeof(*mdi));
+
+	ret = deserialize_string(pptr, &mdi->dif_name);
+	if (ret)
+		return ret;
+
+	ret = deserialize_string(pptr, &mdi->sec_policies);
+	if (ret)
+		return ret;
+
+	deserialize_obj(*pptr, uint16_t, &size);
+
+	for(i = 0; i < size; i++) {
+		pos = COMMON_ALLOC(sizeof(struct bs_info_entry), 1);
+		if (!pos) {
+			return -1;
+		}
+
+		INIT_LIST_HEAD(&pos->next);
+		ret = deserialize_bs_info_entry(pptr, pos);
+		if (ret) {
+			return ret;
+		}
+
+		list_add_tail(&pos->next, &mdi->available_bs_ipcps);
+	}
+
+	return ret;
+}
+
+void media_dif_info_free(struct media_dif_info * mdi)
+{
+	struct bs_info_entry * pos, * npos;
+
+	if (!mdi)
+		return;
+
+	if (mdi->dif_name) {
+		COMMON_FREE(mdi->dif_name);
+		mdi->dif_name = 0;
+	}
+
+	if (mdi->sec_policies) {
+		COMMON_FREE(mdi->sec_policies);
+		mdi->sec_policies = 0;
+	}
+
+	list_for_each_entry_safe(pos, npos, &mdi->available_bs_ipcps, next) {
+		list_del(&pos->next);
+		bs_info_entry_free(pos);
+	}
+
+	COMMON_FREE(mdi);
+}
+
+int media_report_serlen(const struct media_report * mre)
+{
+	int ret;
+	struct media_info_entry * pos;
+
+	ret = 3 * sizeof(uint16_t) + string_prlen(mre->dif_name)
+		+ string_prlen(mre->bs_ipcp_addr) + sizeof(ipc_process_id_t);
+
+	list_for_each_entry(pos, &(mre->available_difs), next) {
+		ret = ret + sizeof(uint16_t) + string_prlen(pos->dif_name)
+				+ media_dif_info_serlen(pos->entry);
+	}
+
+	return ret;
+}
+
+void serialize_media_report(void **pptr, const struct media_report *mre)
+{
+	uint16_t size = 0;
+	struct media_info_entry * pos;
+
+	serialize_obj(*pptr, ipc_process_id_t, mre->ipcp_id);
+	serialize_string(pptr, mre->dif_name);
+	serialize_string(pptr, mre->bs_ipcp_addr);
+
+        list_for_each_entry(pos, &(mre->available_difs), next) {
+                size++;
+        }
+
+        serialize_obj(*pptr, uint16_t, size);
+
+        list_for_each_entry(pos, &(mre->available_difs), next) {
+        	serialize_string(pptr, pos->dif_name);
+        	serialize_media_dif_info(pptr, pos->entry);
+        }
+}
+
+int deserialize_media_report(const void **pptr, struct media_report *mre)
+{
+	int ret;
+	struct media_info_entry * pos;
+	uint16_t size;
+	int i;
+
+	memset(mre, 0, sizeof(*mre));
+
+	deserialize_obj(*pptr, ipc_process_id_t, &mre->ipcp_id);
+
+	ret = deserialize_string(pptr, &mre->dif_name);
+	if (ret)
+		return ret;
+
+	ret = deserialize_string(pptr, &mre->bs_ipcp_addr);
+	if (ret)
+		return ret;
+
+	deserialize_obj(*pptr, uint16_t, &size);
+
+	for(i = 0; i < size; i++) {
+		pos = COMMON_ALLOC(sizeof(struct media_info_entry), 1);
+		if (!pos) {
+			return -1;
+		}
+
+		INIT_LIST_HEAD(&pos->next);
+		ret = deserialize_string(pptr, &pos->dif_name);
+		if (ret)
+			return ret;
+
+		ret = deserialize_media_dif_info(pptr, pos->entry);
+		if (ret) {
+			return ret;
+		}
+
+		list_add_tail(&pos->next, &mre->available_difs);
+	}
+
+	return ret;
+}
+
+void media_report_free(struct media_report * mre)
+{
+	struct media_info_entry * pos, * npos;
+
+	if (!mre)
+		return;
+
+	if (mre->dif_name) {
+		COMMON_FREE(mre->dif_name);
+		mre->dif_name = 0;
+	}
+
+	if (mre->bs_ipcp_addr) {
+		COMMON_FREE(mre->bs_ipcp_addr);
+		mre->bs_ipcp_addr = 0;
+	}
+
+	list_for_each_entry_safe(pos, npos, &mre->available_difs, next) {
+		list_del(&pos->next);
+
+		if (pos->dif_name) {
+			COMMON_FREE(pos->dif_name);
+			pos->dif_name = 0;
+		}
+
+		if (pos->entry) {
+			media_dif_info_free(pos->entry);
+			pos->entry = 0;
+		}
+
+		COMMON_FREE(pos);
+	}
+
+	COMMON_FREE(mre);
+}
+
 int serialize_irati_msg(struct irati_msg_layout *numtables,
 		        size_t num_entries,
 			void *serbuf,
@@ -3427,6 +3758,8 @@ int serialize_irati_msg(struct irati_msg_layout *numtables,
 	struct pff_entry_list * pel;
 	struct sdup_crypto_state * scs;
 	struct get_dif_prop_resp * gdp;
+	struct ipcp_neigh_list *inl;
+	struct media_report * mre;
 	int i;
 
 	if (msg->msg_type >= num_entries) {
@@ -3488,7 +3821,17 @@ int serialize_irati_msg(struct irati_msg_layout *numtables,
 		serialize_get_dif_prop_resp(&serptr, gdp);
 	}
 
-	bf = (const struct buffer *)gdp;
+	inl = (struct ipcp_neigh_list *)gdp;
+	for (i = 0; i < numtables[msg->msg_type].ipcp_neigh_lists; i++, inl++) {
+		serialize_ipcp_neigh_list(&serptr, inl);
+	}
+
+	mre = (struct media_report *)inl;
+	for (i = 0; i < numtables[msg->msg_type].media_reports; i++, mre++) {
+		serialize_media_report(&serptr, mre);
+	}
+
+	bf = (const struct buffer *)mre;
 	for (i = 0; i < numtables[msg->msg_type].buffers; i++, bf++) {
 		serialize_buffer(&serptr, bf);
 	}
@@ -3515,6 +3858,8 @@ int deserialize_irati_msg(struct irati_msg_layout *numtables, size_t num_entries
 	struct pff_entry_list * pel;
 	struct sdup_crypto_state * scs;
 	struct get_dif_prop_resp * gdp;
+	struct ipcp_neigh_list * inl;
+	struct media_report * mre;
 	unsigned int copylen;
 	const void *desptr;
 	int ret;
@@ -3586,7 +3931,17 @@ int deserialize_irati_msg(struct irati_msg_layout *numtables, size_t num_entries
 		ret = deserialize_get_dif_prop_resp(&desptr, gdp);
 	}
 
-	bf = (struct buffer *)gdp;
+	inl = (struct ipcp_neigh_list *)gdp;
+	for (i = 0; i < numtables[bmsg->msg_type].ipcp_neigh_lists; i++, inl++) {
+		ret = deserialize_ipcp_neigh_list(&desptr, inl);
+	}
+
+	mre = (struct media_report *)inl;
+	for (i = 0; i < numtables[bmsg->msg_type].media_reports; i++, mre++) {
+		ret = deserialize_media_report(&desptr, mre);
+	}
+
+	bf = (struct buffer *)mre;
 	for (i = 0; i < numtables[bmsg->msg_type].buffers; i++, bf++) {
 		ret = deserialize_buffer(&desptr, &bf);
 	}
@@ -3614,6 +3969,8 @@ unsigned int irati_msg_serlen(struct irati_msg_layout *numtables,
 	struct pff_entry_list * pel;
 	struct sdup_crypto_state * scs;
 	struct get_dif_prop_resp * gdp;
+	struct ipcp_neigh_list * inl;
+	struct media_report * mre;
 	const struct buffer *bf;
 	int i;
 
@@ -3674,7 +4031,17 @@ unsigned int irati_msg_serlen(struct irati_msg_layout *numtables,
 		ret += get_dif_prop_resp_serlen(gdp);
 	}
 
-	bf = (const struct buffer *)scs;
+	inl = (struct ipcp_neigh_list *)gdp;
+	for (i = 0; i < numtables[msg->msg_type].ipcp_neigh_lists; i++, inl++) {
+		ret += ipcp_neigh_list_serlen(inl);
+	}
+
+	mre = (struct media_report *)inl;
+	for (i = 0; i < numtables[msg->msg_type].media_reports; i++, mre++) {
+		ret += media_report_serlen(mre);
+	}
+
+	bf = (const struct buffer *)mre;
 	for (i = 0; i < numtables[msg->msg_type].buffers; i++, bf++) {
 		ret += sizeof(bf->size) + bf->size;
 	}
@@ -3697,6 +4064,8 @@ void irati_msg_free(struct irati_msg_layout *numtables, size_t num_entries,
 	struct pff_entry_list * pel;
 	struct sdup_crypto_state * scs;
 	struct get_dif_prop_resp * gdp;
+	struct ipcp_neigh_list * inl;
+	struct media_report * mre;
 	struct buffer *bf;
 	int i;
 
@@ -3760,7 +4129,17 @@ void irati_msg_free(struct irati_msg_layout *numtables, size_t num_entries,
 		get_dif_prop_resp_free(gdp);
 	}
 
-	bf = (struct buffer *)(gdp);
+	inl = (struct ipcp_neigh_list *)(gdp);
+	for (i = 0; i < numtables[msg->msg_type].ipcp_neigh_lists; i++, inl++) {
+		ipcp_neigh_list_free(inl);
+	}
+
+	mre = (struct media_report *)(inl);
+	for (i = 0; i < numtables[msg->msg_type].media_reports; i++, mre++) {
+		media_report_free(mre);
+	}
+
+	bf = (struct buffer *)(mre);
 	for (i = 0; i < numtables[msg->msg_type].buffers; i++, bf++) {
 		buffer_destroy(bf);
 	}
@@ -3784,7 +4163,9 @@ unsigned int irati_numtables_max_size(struct irati_msg_layout *numtables,
 				numtables[i].query_rib_resps * sizeof(struct query_rib_resp) +
 				numtables[i].pff_entry_lists * sizeof(struct pff_entry_list) +
 				numtables[i].sdup_crypto_states * sizeof(struct sdup_crypto_state) +
-				numtables[i].dif_properties * sizeof(struct get_dif_prop_resp);
+				numtables[i].dif_properties * sizeof(struct get_dif_prop_resp) +
+				numtables[i].ipcp_neigh_lists * sizeof(struct ipcp_neigh_list) +
+				numtables[i].media_reports * sizeof(struct media_report);
 
 		if (cur > max) {
 			max = cur;

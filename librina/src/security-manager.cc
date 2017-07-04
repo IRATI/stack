@@ -548,6 +548,70 @@ void decode_client_chall_reply_ssh2(const ser_obj_t &message,
 	}
 }
 
+// Class crypto state
+struct sdup_crypto_state * CryptoState::to_c_crypto_state() const
+{
+	struct sdup_crypto_state * result;
+
+	result = new sdup_crypto_state();
+	result->enable_crypto_rx = enable_crypto_tx;
+	result->enable_crypto_tx = enable_crypto_tx;
+	result->port_id = port_id;
+	result->compress_alg = compress_alg.c_str();
+	result->enc_alg = encrypt_alg.c_str();
+	result->mac_alg = mac_alg.c_str();
+
+	if (encrypt_key_rx.length > 0) {
+		result->encrypt_key_rx = new buffer();
+		result->encrypt_key_rx->size = encrypt_key_rx.length;
+		result->encrypt_key_rx->data = new char[encrypt_key_rx.length];
+		memcpy(result->encrypt_key_rx->data, encrypt_key_rx.data,
+		       encrypt_key_rx.length);
+	}
+
+	if (encrypt_key_tx.length > 0) {
+		result->encrypt_key_tx = new buffer();
+		result->encrypt_key_tx->size = encrypt_key_tx.length;
+		result->encrypt_key_tx->data = new char[encrypt_key_tx.length];
+		memcpy(result->encrypt_key_tx->data, encrypt_key_tx.data,
+		       encrypt_key_tx.length);
+	}
+
+	if (mac_key_rx.length > 0) {
+		result->mac_key_rx = new buffer();
+		result->mac_key_rx->size = mac_key_rx.length;
+		result->mac_key_rx->data = new char[mac_key_rx.length];
+		memcpy(result->mac_key_rx->data, mac_key_rx.data,
+		       mac_key_rx.length);
+	}
+
+	if (mac_key_tx.length > 0) {
+		result->mac_key_tx = new buffer();
+		result->mac_key_tx->size = mac_key_tx.length;
+		result->mac_key_tx->data = new char[mac_key_tx.length];
+		memcpy(result->mac_key_tx->data, mac_key_tx.data,
+		       mac_key_tx.length);
+	}
+
+	if (iv_rx.length > 0) {
+		result->iv_rx = new buffer();
+		result->iv_rx->size = iv_rx.length;
+		result->iv_rx->data = new char[iv_rx.length];
+		memcpy(result->iv_rx->data, iv_rx.data,
+		       iv_rx.length);
+	}
+
+	if (iv_tx.length > 0) {
+		result->iv_tx = new buffer();
+		result->iv_tx->size = iv_tx.length;
+		result->iv_tx->data = new char[iv_tx.length];
+		memcpy(result->iv_tx->data, iv_tx.data,
+		       iv_tx.length);
+	}
+
+	return result;
+}
+
 // Class SSH2SecurityContext
 const std::string SSH2SecurityContext::KEY_EXCHANGE_ALGORITHM = "keyExchangeAlg";
 const std::string SSH2SecurityContext::ENCRYPTION_ALGORITHM = "encryptAlg";

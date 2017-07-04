@@ -240,6 +240,7 @@ class CryptoState {
 public:
 	CryptoState() : port_id(0), enable_crypto_tx(false),
 			enable_crypto_rx(false){ };
+	struct sdup_crypto_state * to_c_crypto_state(void) const;
 
 	int port_id;
 	std::string mac_alg;

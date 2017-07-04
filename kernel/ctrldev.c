@@ -48,7 +48,7 @@ extern struct kipcm *default_kipcm;
 
 /* Private data to an ctrldev file instance. */
 struct ctrldev_priv {
-	char 		   msgbuf[1024];
+	char 		   msgbuf[8192];
 	irati_msg_port_t   port_id;
 	struct rfifo      *pending_msgs;
 	spinlock_t 	   pending_msgs_lock;

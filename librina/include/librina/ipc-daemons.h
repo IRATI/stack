@@ -225,6 +225,8 @@ public:
  */
 class BaseStationInfo {
 public:
+	struct bs_info_entry * to_c_bs_info(void) const;
+
 	/* Address of the IPCP at the base station */
 	std::string ipcp_address;
 
@@ -243,6 +245,8 @@ public:
  */
 class MediaDIFInfo {
 public:
+	struct media_dif_info * to_c_media_dif_info(void) const;
+
 	/* Name of the DIF */
 	std::string dif_name;
 
@@ -261,6 +265,8 @@ public:
  */
 class MediaReport {
 public:
+	struct media_report * to_c_media_report(void) const;
+
 	/** The id of the IPC Process that scanned the media */
 	unsigned short ipcp_id;
 

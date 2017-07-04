@@ -768,6 +768,11 @@ public:
 	 * the flow structure and closes the I/O dev file descriptor associated to it
 	 */
 	void internal_flow_deallocated(int port_id);
+
+private:
+	void send_base_resp_msg(irati_msg_t msg_t, unsigned int seq_num, int result);
+	void send_fwd_msg(irati_msg_t msg_t, unsigned int sequenceNumber,
+			  const ser_obj_t& sermsg, int result);
 };
 
 /**
@@ -908,6 +913,8 @@ struct PortIdAltlist {
 
 	PortIdAltlist();
 	PortIdAltlist(unsigned int pid);
+	struct port_id_altlist * to_c_pid_list(void) const;
+
 	void add_alt(unsigned int pid);
 };
 
@@ -929,6 +936,8 @@ public:
         std::list<PortIdAltlist> portIdAltlists;
 
         PDUForwardingTableEntry();
+        struct mod_pff_entry * to_c_pff_entry(void) const;
+
         bool operator==(const PDUForwardingTableEntry &other) const;
         bool operator!=(const PDUForwardingTableEntry &other) const;
 #ifndef SWIG
@@ -1186,18 +1195,6 @@ public:
          * @throws WriteSDUException
          */
         unsigned int writeMgmgtSDUToPortId(void * sdu, int size, unsigned int portId);
-
-        /**
-         * Requests the kernel to send a management SDU to the IPC Process
-         * of the address specified
-         *
-         * @param sdu A buffer that contains the SDU data
-         * @param size The size of the SDU data, in bytes
-         * @param address The address of the IPC Process that is the
-         * destination of the SDU
-         * @throws WriteSDUException
-         */
-        unsigned int sendMgmgtSDUToAddress(void * sdu, int size, unsigned int address);
 };
 
 /**
