@@ -476,6 +476,7 @@ struct irati_kmsg_ipcp_conn_create_arrived {
         address_t            src_addr;
         address_t            dst_addr;
         cep_id_t             dst_cep;
+        cep_id_t	     src_cep;
         qos_id_t             qos_id;
         ipc_process_id_t     flow_user_ipc_process_id;
         struct dtp_config *  dtp_cfg;
@@ -670,8 +671,8 @@ struct irati_msg_ipcm_enroll_to_dif_resp {
 	uint32_t event_id;
 
 	int8_t result;
-	string_t * dif_type;
 	struct name * dif_name;
+	string_t * dif_type;
 	struct dif_config * dif_config;
 	struct ipcp_neigh_list * neighbors;
 } __attribute__((packed));
@@ -829,6 +830,16 @@ struct irati_msg_ipcm_fwd_cdap_msg {
         struct buffer * cdap_msg;
 } __attribute__((packed));
 
-/* TODO 74 RINA_C_IPCM_MEDIA_REPORT */
+/* 74 RINA_C_IPCM_MEDIA_REPORT */
+struct irati_msg_ipcm_media_report {
+	irati_msg_t msg_type;
+	irati_msg_port_t src_port;
+	irati_msg_port_t dest_port;
+	ipc_process_id_t src_ipcp_id;
+	ipc_process_id_t dest_ipcp_id;
+	uint32_t event_id;
+
+        struct media_report * report;
+} __attribute__((packed));
 
 #endif /* IRATI_KERN_MSG_H */

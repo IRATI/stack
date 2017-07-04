@@ -225,6 +225,129 @@ struct irati_msg_layout irati_ker_numtables[] = {
     [RINA_C_IPCM_DESTROY_IPCP_RESPONSE] = {
         .copylen = sizeof(struct irati_msg_base_resp),
     },
+    [RINA_C_IPCM_ENROLL_TO_DIF_REQUEST] = {
+        .copylen = sizeof(struct irati_msg_ipcm_enroll_to_dif)
+		  - 4 * sizeof(struct name *),
+	.names = 4,
+    },
+    [RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE] = {
+        .copylen = sizeof(struct irati_msg_ipcm_enroll_to_dif_resp)
+		   - sizeof(struct name *) - sizeof(char *)
+		   - sizeof(struct dif_config *) - sizeof(struct ipcp_neigh_list *),
+	.names = 1,
+	.strings = 1,
+	.dif_configs = 1,
+	.ipcp_neigh_lists = 1,
+    },
+    [RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST] = {
+        .copylen = sizeof(struct irati_msg_with_name)
+		   - sizeof(struct name *),
+	.names = 1,
+    },
+    [RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE] = {
+        .copylen = sizeof(struct irati_msg_base_resp),
+    },
+    [RINA_C_IPCM_IPC_PROCESS_INITIALIZED] = {
+        .copylen = sizeof(struct irati_msg_with_name)
+		   - sizeof(struct name *),
+	.names = 1,
+    },
+    [RINA_C_APP_ALLOCATE_FLOW_REQUEST] = {
+        .copylen = sizeof(struct irati_kmsg_ipcm_allocate_flow)
+		   - 3 * sizeof(struct name *) - sizeof(struct flow_spec *),
+	.names = 3,
+	.flow_specs = 1,
+    },
+    [RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT] = {
+        .copylen = sizeof(struct irati_msg_app_alloc_flow_result)
+		   - 2 * sizeof(struct name *) - sizeof (char *),
+	.names = 2,
+	.strings = 1,
+    },
+    [RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED] = {
+	.copylen = sizeof(struct irati_kmsg_ipcm_allocate_flow)
+		   - 3 * sizeof(struct name *) - sizeof(struct flow_spec *),
+	.names = 3,
+	.flow_specs = 1,
+    },
+    [RINA_C_APP_ALLOCATE_FLOW_RESPONSE] = {
+        .copylen = sizeof(struct irati_msg_app_alloc_flow_response),
+    },
+    [RINA_C_APP_DEALLOCATE_FLOW_REQUEST] = {
+        .copylen = sizeof(struct irati_msg_app_dealloc_flow)
+		   - sizeof(struct name *),
+	.names = 1,
+    },
+    [RINA_C_APP_DEALLOCATE_FLOW_RESPONSE] = {
+	.copylen = sizeof(struct irati_msg_app_dealloc_flow)
+		   - sizeof(struct name *),
+	.names = 1,
+    },
+    [RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION] = {
+	.copylen = sizeof(struct irati_msg_app_dealloc_flow)
+		   - sizeof(struct name *),
+	.names = 1,
+    },
+    [RINA_C_APP_REGISTER_APPLICATION_REQUEST] = {
+        .copylen = sizeof(struct irati_msg_app_reg_app)
+		   - 3 * sizeof(struct name *),
+	.names = 3,
+    },
+    [RINA_C_APP_REGISTER_APPLICATION_RESPONSE] = {
+        .copylen = sizeof(struct irati_msg_app_reg_app_resp)
+		   - 2 * sizeof(struct name *),
+	.names = 2,
+    },
+    [RINA_C_APP_UNREGISTER_APPLICATION_REQUEST] = {
+	.copylen = sizeof(struct irati_msg_app_reg_app_resp)
+		   - 2 * sizeof(struct name *),
+	.names = 2,
+    },
+    [RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE] = {
+	.copylen = sizeof(struct irati_msg_app_reg_app_resp)
+		   - 2 * sizeof(struct name *),
+	.names = 2,
+    },
+    [RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION] = {
+        .copylen = sizeof(struct irati_msg_app_reg_cancel)
+		   - 2 * sizeof(struct name *) - sizeof(char *),
+	.names = 2,
+	.strings = 1,
+    },
+    [RINA_C_APP_GET_DIF_PROPERTIES_REQUEST] = {
+	.copylen = sizeof(struct irati_msg_app_reg_app_resp)
+		   - 2 * sizeof(struct name *),
+	.names = 2,
+    },
+    [RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE] = {
+        .copylen = sizeof(struct irati_msg_get_dif_prop)
+		   - 2 * sizeof(struct name *) - sizeof(struct get_dif_prop_resp *),
+	.names = 2,
+	.dif_properties = 1,
+    },
+    [RINA_C_IPCM_PLUGIN_LOAD_REQUEST] = {
+        .copylen = sizeof(struct irati_msg_ipcm_plugin_load)
+		   - sizeof(struct name *),
+	.names = 1,
+    },
+    [RINA_C_IPCM_PLUGIN_LOAD_RESPONSE] = {
+        .copylen = sizeof(struct irati_msg_base_resp),
+    },
+    [RINA_C_IPCM_FWD_CDAP_MSG_REQUEST] = {
+        .copylen = sizeof(struct irati_msg_ipcm_fwd_cdap_msg)
+		   - sizeof(struct buffer *),
+	.buffers = 1,
+    },
+    [RINA_C_IPCM_FWD_CDAP_MSG_RESPONSE] = {
+	.copylen = sizeof(struct irati_msg_ipcm_fwd_cdap_msg)
+		   - sizeof(struct buffer *),
+	.buffers = 1,
+    },
+    [RINA_C_IPCM_MEDIA_REPORT] = {
+        .copylen = sizeof(struct irati_msg_ipcm_media_report)
+		   - sizeof(struct media_report *),
+	.media_reports = 1,
+    },
     [RINA_C_MAX] = {
         .copylen = 0,
         .names = 0,
@@ -235,6 +358,9 @@ struct irati_msg_layout irati_ker_numtables[] = {
 	.pff_entry_lists = 0,
 	.query_rib_resps = 0,
 	.sdup_crypto_states = 0,
+	.dif_properties = 0,
+	.ipcp_neigh_lists = 0,
+	.media_reports = 0,
 	.buffers = 0,
     },
 };

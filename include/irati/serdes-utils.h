@@ -40,6 +40,8 @@ struct irati_msg_layout {
     unsigned int pff_entry_lists;
     unsigned int sdup_crypto_states;
     unsigned int dif_properties;
+    unsigned int ipcp_neigh_lists;
+    unsigned int media_reports;
     unsigned int buffers;
 };
 
@@ -247,6 +249,26 @@ int ipcp_neighbor_serlen(const struct ipcp_neighbor * nei);
 void serialize_ipcp_neighbor(void **pptr, const struct ipcp_neighbor *nei);
 int deserialize_ipcp_neighbor(const void **pptr, struct ipcp_neighbor *nei);
 void ipcp_neighbor_free(struct ipcp_neighbor * nei);
+
+int ipcp_neigh_list_serlen(const struct ipcp_neigh_list * nei);
+void serialize_ipcp_neigh_list(void **pptr, const struct ipcp_neigh_list *nei);
+int deserialize_ipcp_neigh_list(const void **pptr, struct ipcp_neigh_list *nei);
+void ipcp_neigh_list_free(struct ipcp_neigh_list * nei);
+
+int bs_info_entry_serlen(const struct bs_info_entry * bie);
+void serialize_bs_info_entry(void **pptr, const struct bs_info_entry *bie);
+int deserialize_bs_info_entry(const void **pptr, struct bs_info_entry *bie);
+void bs_info_entry_free(struct bs_info_entry * bie);
+
+int media_dif_info_serlen(const struct media_dif_info * mdi);
+void serialize_media_dif_info(void **pptr, const struct media_dif_info *mdi);
+int deserialize_media_dif_info(const void **pptr, struct media_dif_info *mdi);
+void media_dif_info_free(struct media_dif_info * mdi);
+
+int media_report_serlen(const struct media_report * mre);
+void serialize_media_report(void **pptr, const struct media_report *mre);
+int deserialize_media_report(const void **pptr, struct media_report *mre);
+void media_report_free(struct media_report * mre);
 
 unsigned int irati_msg_serlen(struct irati_msg_layout *numtables,
                               size_t num_entries,

@@ -44,7 +44,7 @@ struct irati_msg_base * irati_read_next_msg(int cfd)
 			irati_ker_numtables,
 			sizeof(irati_ker_numtables)/sizeof(struct irati_msg_layout));
 	struct irati_msg_base *resp;
-	char serbuf[4096];
+	char serbuf[8192];
 	int ret;
 
 	ret = read(cfd, serbuf, sizeof(serbuf));
@@ -76,7 +76,7 @@ struct irati_msg_base * irati_read_next_msg(int cfd)
 
 int irati_write_msg(int cfd, struct irati_msg_base *msg)
 {
-	char serbuf[4096];
+	char serbuf[8192];
 	unsigned int serlen;
 	int ret;
 

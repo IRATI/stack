@@ -525,13 +525,18 @@ struct ipcp_neighbor {
 	uint32_t num_enroll_attempts;
 };
 
+struct ipcp_neighbor_entry {
+	struct list_head next;
+	struct ipcp_neighbor * entry;
+};
+
 struct ipcp_neigh_list {
 	struct list_head ipcp_neighbors;
 };
 
 struct rib_object_data {
         struct list_head next;
-        string_t *	 class;
+        string_t *	 clazz;
         string_t *	 name;
         string_t *	 disp_value;
         uint64_t	 instance;
@@ -585,6 +590,8 @@ struct sdup_crypto_state {
 	struct buffer * iv_rx;
 
         string_t * compress_alg;
+
+        port_id_t port_id;
 };
 
 struct port_id_altlist {
@@ -596,12 +603,38 @@ struct port_id_altlist {
 struct mod_pff_entry {
         address_t        fwd_info; /* dest_addr, neighbor_addr, circuit-id */
         qos_id_t         qos_id;
+        uint32_t	 cost;
 	struct list_head port_id_altlists;
         struct list_head next;
 };
 
 struct pff_entry_list {
 	struct list_head pff_entries;
+};
+
+struct bs_info_entry {
+	struct list_head next;
+	int32_t signal_strength;
+	string_t * ipcp_addr;
+};
+
+struct media_dif_info {
+	string_t * dif_name;
+	string_t * sec_policies;
+	struct list_head available_bs_ipcps;
+};
+
+struct media_info_entry {
+	struct list_head next;
+	struct media_dif_info * entry;
+	string_t * dif_name;
+};
+
+struct media_report {
+	ipc_process_id_t ipcp_id;
+	string_t * dif_name;
+	string_t * bs_ipcp_addr;
+	struct list_head available_difs;
 };
 
 #define IRATI_SUCC  0
