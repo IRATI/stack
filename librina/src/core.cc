@@ -22,12 +22,13 @@
 
 #include <sstream>
 #include <unistd.h>
-#include <sys/eventfd.h>
 
 #define RINA_PREFIX "librina.core"
 
 #include "librina/logs.h"
-#include "configuration.h"
+#include "librina/configuration.h"
+#include "librina/ipc-process.h"
+#include "librina/ipc-manager.h"
 #include "core.h"
 #include "ctrl.h"
 #include "irati/serdes-utils.h"
@@ -288,8 +289,8 @@ int CtrlPortIdMap::update_msg_or_pid_map(struct irati_msg_base * msg, bool send)
 	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED:
 	case RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE:
 	case RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION:
-	case RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE:
-	case RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE:
+	case RINA_C_IPCP_SET_POLICY_SET_PARAM_RESPONSE:
+	case RINA_C_IPCP_SELECT_POLICY_SET_RESPONSE:
 	case RINA_C_IPCM_PLUGIN_LOAD_RESPONSE: {
 		if (send) {
 			msg->dest_port = get_ipcm_ctrl_port();
@@ -483,8 +484,8 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 				(struct irati_kmsg_ipcm_update_config *) msg;
 
 		DIFConfiguration dif_config(sp_msg->dif_config);
-		event = new AssignToDIFRequestEvent(dif_config,
-						    msg->event_id);
+		event = new UpdateDIFConfigurationRequestEvent(dif_config,
+							       msg->event_id);
 		break;
 	}
 	case RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE: {

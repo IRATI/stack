@@ -108,19 +108,8 @@ AC_SUBST(CXXFLAGS_EXTRA, $CXXFLAGS_EXTRA)
 
 PKG_PROG_PKG_CONFIG([0.26])
 
-LIBNL_MIN_VERSION=3.2.14
-AC_SUBST(LIBNL_MIN_VERSION, $LIBNL_MIN_VERSION)
-
 OPENSSL_MIN_VERSION=1.0.1
 AC_SUBST(OPENSSL_MIN_VERSION, $OPENSSL_MIN_VERSION)
-
-PKG_CHECK_MODULES(LIBNL3, [libnl-3.0 >= $LIBNL_MIN_VERSION],, [
-    AC_MSG_ERROR([Your system lacks of libnl-3 support (>= $LIBNL_MIN_VERSION)])
-])
-
-PKG_CHECK_MODULES(LIBNLGENL3, [libnl-genl-3.0 >= $LIBNL_MIN_VERSION],, [
-    AC_MSG_ERROR([Your system lacks of libnl-genl-3 support (>= $LIBNL_MIN_VERSION)])
-])
 
 AC_CHECK_LIB([pthread],[pthread_create],,[
     AC_MSG_ERROR([Your system lacks of libpthread support])
@@ -206,6 +195,12 @@ DX_XML_FEATURE(OFF)
 DX_PDF_FEATURE(ON)
 DX_PS_FEATURE(OFF)
 DX_INIT_DOXYGEN($PACKAGE_NAME,[doxygen.cfg],[doxygen])
+
+# Generate symbolic links for common code
+(
+ln -sf ../common/ker-numtables.c src/ker-numtables.c
+ln -sf ../common/serdes-utils.c src/serdes-utils.c
+)
 
 AC_CONFIG_FILES([
     Makefile

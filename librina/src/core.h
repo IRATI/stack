@@ -28,7 +28,7 @@
 #include <map>
 
 #include "librina/concurrency.h"
-#include "librina/patterns.h"
+#include "librina/common.h"
 
 #include "irati/kernel-msg.h"
 

@@ -765,7 +765,6 @@ public:
 	RMTConfiguration(struct rmt_config * rt);
 	struct rmt_config * to_c_rmt_config(void) const;
 
-	struct rmt_config * to_c_rmt_config() const;
 	std::string toString();
 
 	/// Set of policies to define RMT's behaviour.

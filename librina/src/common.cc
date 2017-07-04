@@ -205,26 +205,26 @@ struct name * ApplicationProcessNamingInformation::to_c_name() const
 	struct name * app_name = new name();
 
 	if (processName != "")
-		app_name->process_name = processName.c_str();
+		app_name->process_name = stringToCharArray(processName);
 	else
 		app_name->process_name = 0;
 
 	if (processInstance != "")
-		app_name->process_instance = processInstance.c_str();
+		app_name->process_instance = stringToCharArray(processInstance);
 	else
 		app_name->process_instance = 0;
 
 	if (entityName != "")
-		app_name->entity_name = entityName.c_str();
+		app_name->entity_name = stringToCharArray(entityName);
 	else
 		app_name->entity_name = 0;
 
 	if (entityInstance != "")
-		app_name->entity_instance = entityInstance.c_str();
+		app_name->entity_instance = stringToCharArray(entityInstance);
 	else
 		app_name->entity_instance = 0;
 
-	return name;
+	return app_name;
 }
 
 ApplicationProcessNamingInformation
@@ -828,43 +828,12 @@ IPCEvent * getIPCEvent(){
 	return event;
 }
 
-IPCEvent * IPCEventProducer::eventPoll()
-{
-#if STUB_API
-	return getIPCEvent();
-#else
-	IPCEvent * event = rinaManager->getEventQueue()->poll();
-
-	if (event) {
-		rinaManager->eventQueuePopped();
-	}
-
-	return event;
-#endif
-}
-
 IPCEvent * IPCEventProducer::eventWait()
 {
 #if STUB_API
 	return getIPCEvent();
 #else
 	return irati_ctrl_mgr->get_next_ctrl_msg();
-#endif
-}
-
-IPCEvent * IPCEventProducer::eventTimedWait(int seconds,
-                                            int nanoseconds)
-{
-#if STUB_API
-	return getIPCEvent();
-#else
-	IPCEvent * event = rinaManager->getEventQueue()->timedtake(seconds,
-								nanoseconds);
-	if (event) {
-		rinaManager->eventQueuePopped();
-	}
-
-	return event;
 #endif
 }
 
@@ -1040,18 +1009,18 @@ Neighbor::Neighbor(struct ipcp_neighbor * neigh)
 	underlying_port_id_ = neigh->under_port_id;
 	internal_port_id = neigh->intern_port_id;
 	number_of_enrollment_attempts_ = neigh->num_enroll_attempts;
-	name_(neigh->ipcp_name);
-	supporting_dif_name_(neigh->sup_dif_name);
+	name_ = ApplicationProcessNamingInformation(neigh->ipcp_name);
+	supporting_dif_name_ = ApplicationProcessNamingInformation(neigh->sup_dif_name);
 
         list_for_each_entry(pos, &(neigh->supporting_difs), next) {
-        	supporting_difs_.push_back(ApplicationProcessNamingInformation(pos->name));
+        	supporting_difs_.push_back(ApplicationProcessNamingInformation(pos->entry));
         }
 }
 
 struct ipcp_neighbor * Neighbor::to_c_neighbor() const
 {
 	struct ipcp_neighbor * result;
-	std::list<ApplicationProcessNamingInformation>::iterator it;
+	std::list<ApplicationProcessNamingInformation>::const_iterator it;
 	struct name_entry * pos;
 
 	result = new ipcp_neighbor();
@@ -1250,4 +1219,19 @@ void librina_finalize(){
 	irati_ctrl_mgr.~Singleton();
 }
 
+}
+
+int buffer_destroy(struct buffer * b)
+{
+        if (!b)
+        	return -1;
+
+        if (b->data) {
+        	delete b->data;
+        	b->data = 0;
+        }
+
+        delete b;
+
+        return 0;
 }

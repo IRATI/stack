@@ -706,14 +706,14 @@ unsigned int ExtendedIPCManager::deallocatePortId(int portId)
 void ExtendedIPCManager::setPolicySetParamResponse(const SetPolicySetParamRequestEvent& event,
 						   int result)
 {
-	send_base_resp_msg(RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE,
+	send_base_resp_msg(RINA_C_IPCP_SET_POLICY_SET_PARAM_RESPONSE,
 			   event.sequenceNumber, result);
 }
 
 void ExtendedIPCManager::selectPolicySetResponse(const SelectPolicySetRequestEvent& event,
 						 int result)
 {
-	send_base_resp_msg(RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE,
+	send_base_resp_msg(RINA_C_IPCP_SELECT_POLICY_SET_RESPONSE,
 			   event.sequenceNumber, result);
 }
 
