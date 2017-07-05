@@ -483,7 +483,8 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 		struct irati_kmsg_ipcm_update_config * sp_msg =
 				(struct irati_kmsg_ipcm_update_config *) msg;
 
-		DIFConfiguration dif_config(sp_msg->dif_config);
+		DIFConfiguration dif_config;
+		DIFConfiguration::from_c_dif_config(dif_config, sp_msg->dif_config);
 		event = new UpdateDIFConfigurationRequestEvent(dif_config,
 							       msg->event_id);
 		break;

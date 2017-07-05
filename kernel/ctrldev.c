@@ -541,13 +541,6 @@ ctrldev_release(struct inode *inode, struct file *f)
         return 0;
 }
 
-/* Data structure passed along with ioctl */
-struct irati_ctrldev_ctldata {
-	irati_msg_port_t port_id;
-};
-
-#define IRATI_FLOW_BIND _IOW(0xAF, 0x00, struct irati_ctrldev_ctldata)
-
 static long
 ctrldev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 {
@@ -555,7 +548,7 @@ ctrldev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
         void __user *p = (void __user *)arg;
         struct irati_ctrldev_ctldata data;
 
-        if (cmd != IRATI_FLOW_BIND) {
+        if (cmd != IRATI_CTRL_FLOW_BIND) {
                 LOG_ERR("Invalid cmd %u", cmd);
                 return -EINVAL;
         }

@@ -67,7 +67,7 @@ allsources =							\
         common.cc						\
         console.cc						\
         ctrl.c							 \
-        ker-numtables.c					 \
+        ker-numtables.c				 	\
         serdes-utils.c					\
         ipc-api.cc                          \
         application.cc						\

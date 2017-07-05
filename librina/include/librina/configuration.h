@@ -58,7 +58,7 @@ class PolicyConfig {
  public:
     PolicyConfig();
     PolicyConfig(const std::string& name, const std::string& version);
-    PolicyConfig(struct policy * pc);
+    static void from_c_policy(PolicyConfig & policy, struct policy * pc);
     struct policy * to_c_policy(void) const;
     bool operator==(const PolicyConfig &other) const;
     bool operator!=(const PolicyConfig &other) const;
@@ -96,7 +96,8 @@ class PolicyConfig {
 class DTCPWindowBasedFlowControlConfig {
  public:
     DTCPWindowBasedFlowControlConfig();
-    DTCPWindowBasedFlowControlConfig(struct window_fctrl_config * wfc);
+    static void from_c_window_config(DTCPWindowBasedFlowControlConfig & fc,
+		    	    	     struct window_fctrl_config * wfc);
     struct window_fctrl_config * to_c_window_config(void) const;
 #ifndef SWIG
     unsigned int get_initial_credit() const;
@@ -133,7 +134,8 @@ class DTCPWindowBasedFlowControlConfig {
 class DTCPRateBasedFlowControlConfig {
  public:
     DTCPRateBasedFlowControlConfig();
-    DTCPRateBasedFlowControlConfig(struct rate_fctrl_config * rfg);
+    static void from_c_rate_config(DTCPRateBasedFlowControlConfig & rf,
+		    	    	   struct rate_fctrl_config * rfg);
     struct rate_fctrl_config * to_c_rate_config(void) const;
 #ifndef SWIG
     const PolicyConfig& get_no_override_default_peak_policy() const;
@@ -176,7 +178,8 @@ class DTCPRateBasedFlowControlConfig {
 class DTCPFlowControlConfig {
  public:
     DTCPFlowControlConfig();
-    DTCPFlowControlConfig(struct dtcp_fctrl_config * fcc);
+    static void from_c_fconfig(DTCPFlowControlConfig & fc,
+		    	       struct dtcp_fctrl_config * fcc);
     struct dtcp_fctrl_config * to_c_fconfig(void) const;
 #ifndef SWIG
     const PolicyConfig& get_closed_window_policy() const;
@@ -276,7 +279,8 @@ class DTCPFlowControlConfig {
 class DTCPRtxControlConfig {
  public:
     DTCPRtxControlConfig();
-    DTCPRtxControlConfig(struct dtcp_rxctrl_config * drc);
+    static void from_c_rxconfig(DTCPRtxControlConfig & dr,
+		    	    	struct dtcp_rxctrl_config * drc);
     struct dtcp_rxctrl_config * to_c_rxconfig(void) const;
 #ifndef SWIG
     unsigned int get_data_rxmsn_max() const;
@@ -352,7 +356,8 @@ class DTCPRtxControlConfig {
 class DTCPConfig {
  public:
     DTCPConfig();
-    DTCPConfig(struct dtcp_config* dtc);
+    static void from_c_dtcp_config(DTCPConfig & dt,
+		    	    	   struct dtcp_config* dtc);
     struct dtcp_config * to_c_dtcp_config(void) const;
 #ifndef SWIG
     bool is_flow_control() const;
@@ -405,7 +410,7 @@ class DTCPConfig {
 class DTPConfig {
  public:
     DTPConfig();
-    DTPConfig(struct dtp_config * dtc);
+    static void from_c_dtp_config(DTPConfig & dt, struct dtp_config * dtc);
     struct dtp_config * to_c_dtp_config(void) const;
 
 #ifndef SWIG
@@ -466,7 +471,8 @@ class QoSCube {
 public:
 	QoSCube();
 	QoSCube(const std::string& name, int id);
-	QoSCube(struct qos_cube * qos);
+	static void from_c_qos_cube(QoSCube & qo,
+				    struct qos_cube * qos);
 	struct qos_cube * to_c_qos_cube(void) const;
 	bool operator==(const QoSCube &other) const;
 	bool operator!=(const QoSCube &other) const;
@@ -555,7 +561,8 @@ public:
 class DataTransferConstants {
 public:
 	DataTransferConstants();
-	DataTransferConstants(struct dt_cons * dtc);
+	static void from_c_dt_cons(DataTransferConstants & dt,
+				   struct dt_cons * dtc);
 	struct dt_cons * to_c_dt_cons(void) const;
 #ifndef SWIG
 	unsigned short get_address_length() const;
@@ -637,7 +644,8 @@ public:
 class EFCPConfiguration {
 public:
 	EFCPConfiguration();
-	EFCPConfiguration(struct efcp_config* efc);
+	static void from_c_efcp_conf(EFCPConfiguration &ef,
+				     struct efcp_config* efc);
 	struct efcp_config * to_c_efcp_conf(void) const;
 	EFCPConfiguration(const EFCPConfiguration& other);
 	EFCPConfiguration& operator=(const EFCPConfiguration & rhs);
@@ -672,7 +680,8 @@ private:
 class FlowAllocatorConfiguration {
 public:
 	FlowAllocatorConfiguration();
-	FlowAllocatorConfiguration(struct fa_config * fac);
+	static void from_c_fa_config(FlowAllocatorConfiguration & fa,
+				     struct fa_config * fac);
 	struct fa_config * to_c_fa_config(void) const;
 	std::string toString();
 #ifndef SWIG
@@ -735,7 +744,8 @@ public:
 class ResourceAllocatorConfiguration {
 public:
 	ResourceAllocatorConfiguration();
-	ResourceAllocatorConfiguration(struct resall_config * resc);
+	static void from_c_rall_config(ResourceAllocatorConfiguration & res,
+				       struct resall_config * resc);
 	struct resall_config * to_c_rall_config(void) const;
 	std::string toString();
 
@@ -748,7 +758,8 @@ public:
 class PFTConfiguration {
 public:
 	PFTConfiguration();
-	PFTConfiguration(struct pff_config * pfc);
+	static void from_c_pff_conf(PFTConfiguration & pf,
+				    struct pff_config * pfc);
 	struct pff_config * to_c_pff_conf(void) const;
 	std::string toString();
 
@@ -762,7 +773,8 @@ public:
 class RMTConfiguration {
 public:
 	RMTConfiguration();
-	RMTConfiguration(struct rmt_config * rt);
+	static void from_c_rmt_config(RMTConfiguration & rm,
+				      struct rmt_config * rt);
 	struct rmt_config * to_c_rmt_config(void) const;
 
 	std::string toString();
@@ -779,7 +791,8 @@ public:
 class EnrollmentTaskConfiguration {
 public:
 	EnrollmentTaskConfiguration();
-	EnrollmentTaskConfiguration(struct et_config * etc);
+	static void from_c_et_config(EnrollmentTaskConfiguration & et,
+				     struct et_config * etc);
 	struct et_config * to_c_et_config(void) const;
 
 	/// Policy set for Enrollment Task
@@ -792,7 +805,8 @@ public:
 class StaticIPCProcessAddress {
 public:
 	StaticIPCProcessAddress();
-	StaticIPCProcessAddress(struct static_ipcp_addr * addr);
+	static void from_c_stipcp_addr(StaticIPCProcessAddress & ad,
+				       struct static_ipcp_addr * addr);
 	struct static_ipcp_addr * t_c_stipcp_addr(void) const;
 
 	std::string ap_name_;
@@ -807,7 +821,8 @@ public:
 	static const int MAX_ADDRESSES_PER_PREFIX = 16;
 
 	AddressPrefixConfiguration();
-	AddressPrefixConfiguration(struct address_pref_config * apc);
+	static void from_c_pre_config(AddressPrefixConfiguration & ap,
+				      struct address_pref_config * apc);
 	struct address_pref_config * to_c_pref_config(void) const;
 
 	/// The address prefix (it is the first valid address
@@ -822,7 +837,8 @@ public:
 class AddressingConfiguration {
 public:
 	AddressingConfiguration(){};
-	AddressingConfiguration(struct addressing_config * ac);
+	static void from_c_addr_config(AddressingConfiguration & a,
+				       struct addressing_config * ac);
 	struct addressing_config * to_c_addr_config(void) const;
 
 	void addAddress(StaticIPCProcessAddress &addr);
@@ -835,7 +851,8 @@ public:
 class NamespaceManagerConfiguration {
 public:
 	NamespaceManagerConfiguration();
-	NamespaceManagerConfiguration(struct nsm_config * nsmc);
+	static void from_c_nsm_config(NamespaceManagerConfiguration & nsm,
+				      struct nsm_config * nsmc);
 	struct nsm_config * to_c_nsm_config(void) const;
 	std::string toString();
 #ifndef SWIG
@@ -851,7 +868,8 @@ public:
 class AuthSDUProtectionProfile {
 public:
 	AuthSDUProtectionProfile() {};
-	AuthSDUProtectionProfile(struct auth_sdup_profile * asp);
+	static void from_c_auth_profile(AuthSDUProtectionProfile & as,
+					struct auth_sdup_profile * asp);
 	struct auth_sdup_profile * to_c_auth_profile(void) const;
 
 	std::string to_string();
@@ -873,7 +891,8 @@ public:
 class SecurityManagerConfiguration {
 public:
 	SecurityManagerConfiguration() {};
-	SecurityManagerConfiguration(struct secman_config * sc);
+	static void from_c_secman_config(SecurityManagerConfiguration &s,
+					 struct secman_config * sc);
 	struct secman_config * to_c_secman_config(void) const;
 
 	std::string toString();
@@ -886,7 +905,8 @@ public:
 class RoutingConfiguration {
 public:
 	RoutingConfiguration() {};
-	RoutingConfiguration(struct routing_config* rc);
+	static void from_c_routing_config(RoutingConfiguration & r,
+					  struct routing_config* rc);
 	struct routing_config * to_c_routing_config(void) const;
 
 	std::string toString();
@@ -899,7 +919,8 @@ public:
 class DIFConfiguration {
 public:
 	DIFConfiguration();
-	DIFConfiguration(struct dif_config * dc);
+	static void from_c_dif_config(DIFConfiguration & d,
+				      struct dif_config * dc);
 	struct dif_config * to_c_dif_config() const;
 
 #ifndef SWIG

@@ -25,6 +25,7 @@
 
 #include "librina/logs.h"
 #include "librina/ipc-daemons.h"
+#include "core.h"
 
 namespace rina {
 
@@ -83,7 +84,7 @@ struct bs_info_entry * BaseStationInfo::to_c_bs_info() const
 
 	result = new bs_info_entry();
 	INIT_LIST_HEAD(&result->next);
-	result->ipcp_addr = ipcp_address;
+	result->ipcp_addr = stringToCharArray(ipcp_address);
 	result->signal_strength = signal_strength;
 
 	return result;
@@ -103,12 +104,12 @@ struct media_dif_info * MediaDIFInfo::to_c_media_dif_info() const
 {
 	struct media_dif_info * result;
 	struct bs_info_entry * pos;
-	std::list<BaseStationInfo>::iterator it;
+	std::list<BaseStationInfo>::const_iterator it;
 
 	result = new media_dif_info();
 	INIT_LIST_HEAD(&result->available_bs_ipcps);
-	result->dif_name = dif_name.c_str();
-	result->sec_policies = security_policies.c_str();
+	result->dif_name = stringToCharArray(dif_name);
+	result->sec_policies = stringToCharArray(security_policies);
 
 	for (it = available_bs_ipcps.begin();
 			it != available_bs_ipcps.end(); ++it) {
@@ -139,18 +140,18 @@ struct media_report * MediaReport::to_c_media_report() const
 {
 	struct media_report * result;
 	struct media_info_entry * pos;
-	std::map<std::string, MediaDIFInfo>::iterator it;
+	std::map<std::string, MediaDIFInfo>::const_iterator it;
 
 	result = new media_report();
 	INIT_LIST_HEAD(&result->available_difs);
-	result->bs_ipcp_addr = bs_ipcp_address.c_str();
-	result->dif_name = current_dif_name.c_str();
+	result->bs_ipcp_addr = stringToCharArray(bs_ipcp_address);
+	result->dif_name = stringToCharArray(current_dif_name);
 	result->ipcp_id = ipcp_id;
 
 	for(it = available_difs.begin(); it != available_difs.end(); ++it) {
 		pos = new media_info_entry();
 		INIT_LIST_HEAD(&pos->next);
-		pos->dif_name = it->first.c_str();
+		pos->dif_name = stringToCharArray(it->first);
 		pos->entry = it->second.to_c_media_dif_info();
 		list_add_tail(&pos->next, &result->available_difs);
 	}

@@ -28,8 +28,10 @@
 #define RINA_PREFIX "librina.ipc-process"
 
 #include "librina/logs.h"
+#include "librina/ipc-process.h"
 #include "core.h"
 #include "utils.h"
+#include "ctrl.h"
 
 namespace rina {
 
@@ -469,7 +471,7 @@ void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDAFRequestEvent& even
         msg->event_id = event.sequenceNumber;
         msg->src_ipcp_id = ipcProcessId;
         msg->dest_port = ipcManagerPort;
-        msg->dif_type = difInformation.dif_type_.c_str();
+        msg->dif_type = stringToCharArray(difInformation.dif_type_);
         msg->dif_name = difInformation.dif_name_.to_c_name();
         msg->dif_config = difInformation.dif_configuration_.to_c_dif_config();
         msg->neighbors = new ipcp_neigh_list();
@@ -620,7 +622,7 @@ void ExtendedIPCManager::queryRIBResponse(const QueryRIBRequestEvent& event,
 #else
         struct irati_kmsg_ipcm_query_rib_resp * msg;
         struct rib_object_data * rod;
-        std::list<rib::RIBObjectData>::iterator it;
+        std::list<rib::RIBObjectData>::const_iterator it;
 
         msg = new irati_kmsg_ipcm_query_rib_resp();
         msg->msg_type = RINA_C_IPCM_QUERY_RIB_RESPONSE;
@@ -634,9 +636,9 @@ void ExtendedIPCManager::queryRIBResponse(const QueryRIBRequestEvent& event,
         	rod = new rib_object_data();
         	INIT_LIST_HEAD(&rod->next);
         	rod->instance = it->instance_;
-        	rod->name = it->name_.c_str();
-        	rod->disp_value = it->displayable_value_.c_str();
-        	rod->clazz = it->class_.c_str();
+        	rod->name = stringToCharArray(it->name_);
+        	rod->disp_value = stringToCharArray(it->displayable_value_);
+        	rod->clazz = stringToCharArray(it->class_);
         	list_add_tail(&rod->next, &msg->rib_entries->rib_object_data_entries);
         }
 
@@ -1005,7 +1007,7 @@ PortIdAltlist::PortIdAltlist(unsigned int nh)
 struct port_id_altlist * PortIdAltlist::to_c_pid_list() const
 {
 	struct port_id_altlist * result;
-	std::list<unsigned int>::iterator it;
+	std::list<unsigned int>::const_iterator it;
 	int i = 0;
 
 	result = new port_id_altlist();
@@ -1035,7 +1037,7 @@ PDUForwardingTableEntry::PDUForwardingTableEntry() {
 struct mod_pff_entry * PDUForwardingTableEntry::to_c_pff_entry() const
 {
 	struct mod_pff_entry * result;
-	std::list<PortIdAltlist>::iterator it;
+	std::list<PortIdAltlist>::const_iterator it;
 	struct port_id_altlist * pia;
 
 	result = new mod_pff_entry();
@@ -1168,7 +1170,7 @@ unsigned int KernelIPCProcess::assignToDIF(const DIFInformation& difInformation)
         msg->msg_type = RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST;
         msg->dif_config = difInformation.dif_configuration_.to_c_dif_config();
         msg->dif_name = difInformation.dif_name_.to_c_name();
-        msg->type = difInformation.dif_type_.c_str();
+        msg->type = stringToCharArray(difInformation.dif_type_);
         msg->src_ipcp_id = ipcProcessId;
         msg->dest_ipcp_id = ipcProcessId;
         msg->dest_port = 0;
@@ -1474,9 +1476,9 @@ unsigned int KernelIPCProcess::setPolicySetParam(const std::string& path,
 
         msg = new irati_kmsg_ipcp_select_ps_param();
         msg->msg_type = RINA_C_IPCP_SET_POLICY_SET_PARAM_REQUEST;
-        msg->path = path.c_str();
-        msg->name = name.c_str();
-        msg->value = value.c_str();
+        msg->path = stringToCharArray(path);
+        msg->name = stringToCharArray(name);
+        msg->value = stringToCharArray(value);
         msg->src_ipcp_id = ipcProcessId;
         msg->dest_ipcp_id = ipcProcessId;
         msg->dest_port = 0;
@@ -1505,8 +1507,8 @@ unsigned int KernelIPCProcess::selectPolicySet(const std::string& path,
 
         msg = new irati_kmsg_ipcp_select_ps();
         msg->msg_type = RINA_C_IPCP_SELECT_POLICY_SET_REQUEST;
-        msg->path = path.c_str();
-        msg->name = name.c_str();
+        msg->path = stringToCharArray(path);
+        msg->name = stringToCharArray(name);
         msg->src_ipcp_id = ipcProcessId;
         msg->dest_ipcp_id = ipcProcessId;
         msg->dest_port = 0;

@@ -31,6 +31,7 @@
 
 #include "librina/logs.h"
 #include "core.h"
+#include "ctrl.h"
 #include "librina/ipc-api.h"
 
 namespace rina {
@@ -272,13 +273,13 @@ FlowInformation IPCManager::internalAllocateFlowResponse(const FlowRequestEvent&
 							 bool blocking)
 {
 	FlowInformation * flow = 0;
-	int ret = 0;
 
 	WriteScopedLock writeLock(flows_rw_lock);
 
 #if STUB_API
 #else
         struct irati_msg_app_alloc_flow_response * msg;
+        int ret = 0;
 
         msg = new irati_msg_app_alloc_flow_response();
         msg->msg_type = RINA_C_APP_ALLOCATE_FLOW_RESPONSE;
@@ -327,12 +328,12 @@ unsigned int
 IPCManager::getDIFProperties(const ApplicationProcessNamingInformation& applicationName,
 			     const ApplicationProcessNamingInformation& DIFName)
 {
-	int ret;
 	unsigned int seq_num = 0;
 
 #if STUB_API
 #else
         struct irati_msg_app_reg_app_resp * msg;
+        int ret;
 
         msg = new irati_msg_app_reg_app_resp();
         msg->msg_type = RINA_C_APP_GET_DIF_PROPERTIES_REQUEST;
@@ -352,7 +353,6 @@ IPCManager::getDIFProperties(const ApplicationProcessNamingInformation& applicat
 unsigned int
 IPCManager::requestApplicationRegistration(const ApplicationRegistrationInformation& appRegistrationInfo)
 {
-	int ret;
 	unsigned int seq_num = 0;
 
 	WriteScopedLock writeLock(regs_rw_lock);
@@ -361,6 +361,7 @@ IPCManager::requestApplicationRegistration(const ApplicationRegistrationInformat
         registrationInformation[0] = appRegistrationInfo;
 #else
         struct irati_msg_app_reg_app * msg;
+        int ret;
 
         msg = new irati_msg_app_reg_app();
         msg->msg_type = RINA_C_APP_REGISTER_APPLICATION_REQUEST;
@@ -433,7 +434,6 @@ IPCManager::requestApplicationUnregistration(const ApplicationProcessNamingInfor
 {
         ApplicationRegistration * applicationRegistration;
         bool found = false;
-        int ret = 0;
         unsigned int seq_num = 0;
 
         WriteScopedLock writeLock(regs_rw_lock);
@@ -466,6 +466,7 @@ IPCManager::requestApplicationUnregistration(const ApplicationProcessNamingInfor
         registrationInformation[0] = appRegInfo;
 #else
         struct irati_msg_app_reg_app_resp * msg;
+        int ret = 0;
 
         msg = new irati_msg_app_reg_app_resp();
         msg->msg_type = RINA_C_APP_UNREGISTER_APPLICATION_REQUEST;
@@ -638,7 +639,6 @@ FlowInformation IPCManager::allocateFlowResponse(
 unsigned int IPCManager::requestFlowDeallocation(int portId)
 {
         FlowInformation * flow;
-        int ret = 0;
         unsigned int seq_num = 0;
 
         WriteScopedLock writeLock(flows_rw_lock);
@@ -661,6 +661,7 @@ unsigned int IPCManager::requestFlowDeallocation(int portId)
 		flow->portId);
 
         struct irati_msg_app_dealloc_flow * msg;
+        int ret = 0;
 
         msg = new irati_msg_app_dealloc_flow();
         msg->msg_type = RINA_C_APP_DEALLOCATE_FLOW_REQUEST;
