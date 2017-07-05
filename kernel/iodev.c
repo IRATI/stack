@@ -198,13 +198,6 @@ iodev_release(struct inode *inode, struct file *f)
         return 0;
 }
 
-/* Data structure passed along with ioctl */
-struct irati_iodev_ctldata {
-        uint32_t port_id;
-};
-
-#define IRATI_FLOW_BIND _IOW(0xAF, 0x00, struct irati_iodev_ctldata)
-
 static long
 iodev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 {

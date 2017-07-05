@@ -810,7 +810,7 @@ struct irati_msg_ipcm_plugin_load {
 	uint32_t event_id;
 
 	bool	load;
-        struct name * plugin_name;
+        string_t * plugin_name;
 } __attribute__((packed));
 
 /* 71 RINA_C_IPCM_PLUGIN_LOAD_RESPONSE */

@@ -39,6 +39,7 @@
 
 #include "utils.h"
 #include "core.h"
+#include "ctrl.h"
 
 namespace rina {
 
@@ -146,7 +147,7 @@ void IPCProcessProxy::assignToDIF(const DIFInformation& difInformation,
         msg = new irati_kmsg_ipcm_assign_to_dif();
         msg->msg_type = RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST;
         msg->dif_name = difInformation.dif_name_.to_c_name();
-        msg->type = difInformation.dif_type_.c_str();
+        msg->type = stringToCharArray(difInformation.dif_type_);
         msg->dif_config = difInformation.dif_configuration_.to_c_dif_config();
         msg->dest_ipcp_id = id;
         msg->dest_port = portId;
@@ -468,11 +469,11 @@ void IPCProcessProxy::queryRIB(const std::string& objectClass,
 
         msg = new irati_kmsg_ipcm_query_rib();
         msg->msg_type = RINA_C_IPCM_QUERY_RIB_REQUEST;
-        msg->object_class = objectClass.c_str();
-        msg->object_name = objectName.c_str();
+        msg->object_class = stringToCharArray(objectClass);
+        msg->object_name = stringToCharArray(objectName);
         msg->object_instance = objectInstance;
         msg->scope = scope;
-        msg->filter = filter.c_str();
+        msg->filter = stringToCharArray(filter);
         msg->dest_ipcp_id = id;
         msg->dest_port = portId;
         msg->event_id = opaque;
@@ -496,9 +497,9 @@ void IPCProcessProxy::setPolicySetParam(const std::string& path,
 
         msg = new irati_kmsg_ipcp_select_ps_param();
         msg->msg_type = RINA_C_IPCP_SET_POLICY_SET_PARAM_REQUEST;
-        msg->path = path.c_str();
-        msg->name = name.c_str();
-        msg->value = value.c_str();
+        msg->path = stringToCharArray(path);
+        msg->name = stringToCharArray(name);
+        msg->value = stringToCharArray(value);
         msg->dest_ipcp_id = id;
         msg->dest_port = portId;
         msg->event_id = opaque;
@@ -522,8 +523,8 @@ void IPCProcessProxy::selectPolicySet(const std::string& path,
 
         msg = new irati_kmsg_ipcp_select_ps();
         msg->msg_type = RINA_C_IPCP_SELECT_POLICY_SET_REQUEST;
-        msg->path = path.c_str();
-        msg->name = name.c_str();
+        msg->path = stringToCharArray(path);
+        msg->name = stringToCharArray(name);
         msg->dest_ipcp_id = id;
         msg->dest_port = portId;
         msg->event_id = opaque;
@@ -546,7 +547,7 @@ void IPCProcessProxy::pluginLoad(const std::string& name, bool load,
 
         msg = new irati_msg_ipcm_plugin_load();
         msg->msg_type = RINA_C_IPCM_PLUGIN_LOAD_REQUEST;
-        msg->plugin_name = name.c_str();
+        msg->plugin_name = stringToCharArray(name);
         msg->load = load;
         msg->dest_ipcp_id = id;
         msg->dest_port = portId;
@@ -714,7 +715,7 @@ IPCProcessProxy * IPCProcessFactory::create(
 
         msg = new irati_kmsg_ipcm_create_ipcp();
         msg->msg_type = RINA_C_IPCM_CREATE_IPCP_REQUEST;
-        msg->dif_type = difType.c_str();
+        msg->dif_type = stringToCharArray(difType);
         msg->ipcp_name = ipcProcessName.to_c_name();
         msg->irati_port_id = portId;
         msg->dest_ipcp_id = 0;
@@ -950,7 +951,7 @@ void ApplicationManager::getDIFPropertiesResponse(const GetDIFPropertiesRequestE
 #else
         struct irati_msg_get_dif_prop * msg;
         struct dif_properties_entry * dpe;
-        std::list<DIFProperties>::iterator it;
+        std::list<DIFProperties>::const_iterator it;
 
         msg = new irati_msg_get_dif_prop();
         msg->msg_type = RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE;

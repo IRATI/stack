@@ -33,6 +33,7 @@
 #include "librina/logs.h"
 #include "librina/security-manager.h"
 #include "auth-policies.pb.h"
+#include "core.h"
 
 namespace rina {
 
@@ -557,9 +558,9 @@ struct sdup_crypto_state * CryptoState::to_c_crypto_state() const
 	result->enable_crypto_rx = enable_crypto_tx;
 	result->enable_crypto_tx = enable_crypto_tx;
 	result->port_id = port_id;
-	result->compress_alg = compress_alg.c_str();
-	result->enc_alg = encrypt_alg.c_str();
-	result->mac_alg = mac_alg.c_str();
+	result->compress_alg = stringToCharArray(compress_alg);
+	result->enc_alg = stringToCharArray(encrypt_alg);
+	result->mac_alg = stringToCharArray(mac_alg);
 
 	if (encrypt_key_rx.length > 0) {
 		result->encrypt_key_rx = new buffer();

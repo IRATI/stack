@@ -327,8 +327,8 @@ struct irati_msg_layout irati_ker_numtables[] = {
     },
     [RINA_C_IPCM_PLUGIN_LOAD_REQUEST] = {
         .copylen = sizeof(struct irati_msg_ipcm_plugin_load)
-		   - sizeof(struct name *),
-	.names = 1,
+		   - sizeof(char *),
+	.strings = 1,
     },
     [RINA_C_IPCM_PLUGIN_LOAD_RESPONSE] = {
         .copylen = sizeof(struct irati_msg_base_resp),

@@ -59,8 +59,8 @@ typedef uint16_t      ipc_process_id_t;
 typedef unsigned int  ipc_process_address_t;
 
 /* We should get rid of the following definitions */
-typedef uint          uint_t;
-typedef uint          timeout_t;
+typedef unsigned int  uint_t;
+typedef unsigned int  timeout_t;
 
 struct uint_range {
         uint_t min;
@@ -76,6 +76,7 @@ struct buffer {
 
 #ifdef __KERNEL__
 #else
+
 /* Buffer functions */
 int buffer_destroy(struct buffer * b);
 
@@ -133,12 +134,11 @@ static inline void list_del(struct list_head *entry)
 	     &pos->member != (head); \
 	     pos = container_of(pos->member.next,typeof(*pos), member))
 
-#define list_for_each_entry_safe(pos, n, head, member)			\
-	for (pos = container_of((head)->next, typeof(*pos),member); \
-	     n = container_of(pos->member.next,typeof(*pos), member);	\
-	     &pos->member != (head); 					\
-	     pos = n, 							\
-	     n = container_of(n->member.next,typeof(*n), member))
+#define list_for_each_entry_safe(pos, n, head, member) \
+	for (pos = container_of((head)->next, typeof(*pos),member), \
+	        n = container_of(pos->member.next,typeof(*pos), member); \
+	     &pos->member != (head); \
+	     pos = n, n = container_of(n->member.next,typeof(*n), member))
 
 #endif
 
@@ -740,6 +740,19 @@ struct irati_msg_base_resp {
 /* Some useful macros for casting. */
 #define IRATI_MB(m) (struct irati_msg_base *)(m)
 #define IRATI_MBR(m) (struct irati_msg_base_resp *)(m)
+
+/* Data structure passed along with ioctl */
+struct irati_iodev_ctldata {
+        uint32_t port_id;
+};
+
+/* Data structure passed along with ioctl */
+struct irati_ctrldev_ctldata {
+	irati_msg_port_t port_id;
+};
+
+#define IRATI_FLOW_BIND _IOW(0xAF, 0x00, struct irati_iodev_ctldata)
+#define IRATI_CTRL_FLOW_BIND _IOW(0xAF, 0x00, struct irati_ctrldev_ctldata)
 
 #ifdef __cplusplus
 }

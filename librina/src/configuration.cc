@@ -26,6 +26,7 @@
 
 #include "librina/configuration.h"
 #include "librina/logs.h"
+#include "core.h"
 
 namespace rina {
 
@@ -80,7 +81,7 @@ PolicyConfig::PolicyConfig(const std::string& name,
         version_ = version;
 }
 
-PolicyConfig::PolicyConfig(struct policy * pc)
+void PolicyConfig::from_c_policy(PolicyConfig & policy, struct policy * pc)
 {
 	PolicyParameter param;
 	struct policy_parm * pos;
@@ -88,31 +89,31 @@ PolicyConfig::PolicyConfig(struct policy * pc)
 	if (!pc)
 		return;
 
-	name_ = pc->name;
-	version_ = pc->version;
+	policy.name_ = pc->name;
+	policy.version_ = pc->version;
 
         list_for_each_entry(pos, &(pc->params), next) {
         	param.name_ = pos->name;
         	param.value_ = pos->value;
-        	add_parameter(param);
+        	policy.add_parameter(param);
         }
 }
 
 struct policy * PolicyConfig::to_c_policy() const
 {
-	std::list<PolicyParameter>::iterator it;
+	std::list<PolicyParameter>::const_iterator it;
 	struct policy * result;
 	struct policy_parm * pp;
 
 	result = new policy();
 	INIT_LIST_HEAD(&result->params);
-	result->name = name_.c_str();
-	result->version = version_.c_str();
+	result->name = stringToCharArray(name_);
+	result->version = stringToCharArray(version_);
 	for (it = parameters_.begin(); it != parameters_.end(); ++it) {
 		pp = new policy_parm();
 		INIT_LIST_HEAD(&pp->next);
-		pp->name = it->name_.c_str();
-		pp->value = it->value_.c_str();
+		pp->name = stringToCharArray(it->name_);
+		pp->value = stringToCharArray(it->value_);
 		list_add_tail(&pp->next, &result->params);
 	}
 
@@ -170,8 +171,8 @@ std::string PolicyConfig::get_param_value_as_string(const std::string& name) con
 			return it->value_;
 		}
 	}
-  std::stringstream ss;
-  ss << "Parameter '" << name << "' not found.";
+	std::stringstream ss;
+	ss << "Parameter '" << name << "' not found.";
 	throw Exception(ss.str().c_str());
 }
 
@@ -183,8 +184,8 @@ long PolicyConfig::get_param_value_as_long(const std::string& name) const
 	std::string value = get_param_value_as_string(name);
 	result = strtol(value.c_str(), &dummy, 10);
 	if (!value.size() || *dummy != '\0') {
-    std::stringstream ss;
-    ss << "Parameter '" << name << "' error converting value to long.";
+		std::stringstream ss;
+		ss << "Parameter '" << name << "' error converting value to long.";
 		throw Exception(ss.str().c_str());
 	}
 
@@ -199,8 +200,8 @@ float PolicyConfig::get_param_value_as_float(const std::string& name) const
 	std::string value = get_param_value_as_string(name);
 	result = strtof(value.c_str(), &dummy);
 	if (!value.size() || *dummy != '\0') {
-    std::stringstream ss;
-    ss << "Parameter '" << name << "' error converting value to float.";
+		std::stringstream ss;
+		ss << "Parameter '" << name << "' error converting value to float.";
 		throw Exception(ss.str().c_str());
 	}
 
@@ -266,18 +267,19 @@ DTCPWindowBasedFlowControlConfig::DTCPWindowBasedFlowControlConfig() {
         max_closed_window_queue_length_ = 0;
 }
 
-DTCPWindowBasedFlowControlConfig::DTCPWindowBasedFlowControlConfig(struct window_fctrl_config * wfc)
+void DTCPWindowBasedFlowControlConfig::from_c_window_config(DTCPWindowBasedFlowControlConfig & fc,
+							    struct window_fctrl_config * wfc)
 {
 	if (!wfc)
 		return;
 
-	initial_credit_ = wfc->initial_credit;
-	max_closed_window_queue_length_ = wfc->max_closed_winq_length;
-	rcvr_flow_control_policy_(wfc->rcvr_flow_control);
-	tx_control_policy_(wfc->tx_control);
+	fc.initial_credit_ = wfc->initial_credit;
+	fc.max_closed_window_queue_length_ = wfc->max_closed_winq_length;
+	PolicyConfig::from_c_policy(fc.rcvr_flow_control_policy_, wfc->rcvr_flow_control);
+	PolicyConfig::from_c_policy(fc.tx_control_policy_, wfc->tx_control);
 }
 
-struct window_fctrl_config * DTCPWindowBasedFlowControlConfig::to_c_window_config()
+struct window_fctrl_config * DTCPWindowBasedFlowControlConfig::to_c_window_config() const
 {
 	struct window_fctrl_config * result;
 
@@ -342,19 +344,23 @@ DTCPRateBasedFlowControlConfig::DTCPRateBasedFlowControlConfig() {
         time_period_ = 0;
 }
 
-DTCPRateBasedFlowControlConfig::DTCPRateBasedFlowControlConfig(struct rate_fctrl_config * rfg)
+void DTCPRateBasedFlowControlConfig::from_c_rate_config(DTCPRateBasedFlowControlConfig & rf,
+		    	    	   	   	   	struct rate_fctrl_config * rfg)
 {
 	if (!rfg)
 		return;
 
-	sending_rate_ = rfg->sending_rate;
-	time_period_ = rfg->time_period;
-	no_override_default_peak_policy_(rfg->no_override_default_peak);
-	no_rate_slow_down_policy_(rfg->no_rate_slow_down);
-	rate_reduction_policy_(rfg->rate_reduction);
+	rf.sending_rate_ = rfg->sending_rate;
+	rf.time_period_ = rfg->time_period;
+	PolicyConfig::from_c_policy(rf.no_override_default_peak_policy_,
+				    rfg->no_override_default_peak);
+	PolicyConfig::from_c_policy(rf.no_rate_slow_down_policy_,
+				    rfg->no_rate_slow_down);
+	PolicyConfig::from_c_policy(rf.rate_reduction_policy_,
+				    rfg->rate_reduction);
 }
 
-struct rate_fctrl_config * DTCPRateBasedFlowControlConfig::to_c_rate_config()
+struct rate_fctrl_config * DTCPRateBasedFlowControlConfig::to_c_rate_config() const
 {
 	struct rate_fctrl_config * result;
 
@@ -436,28 +442,35 @@ DTCPFlowControlConfig::DTCPFlowControlConfig() {
         sent_bytes_threshold_ = 0;
 }
 
-DTCPFlowControlConfig::DTCPFlowControlConfig(struct dtcp_fctrl_config * fcc)
+void DTCPFlowControlConfig::from_c_fconfig(DTCPFlowControlConfig & fc,
+					   struct dtcp_fctrl_config * fcc)
 {
 	if (!fcc)
 		return;
 
-	rate_based_ = fcc->rate_based_fctrl;
-	window_based_ = fcc->window_based_fctrl;
-	rcv_buffers_threshold_ = fcc->rcvd_buffers_th;
-	rcv_bytes_percent_threshold_ = fcc->rcvd_bytes_percent_th;
-        rcv_bytes_threshold_ = fcc->rcvd_bytes_th;
-        sent_buffers_threshold_ = fcc->sent_buffers_th;
-        sent_bytes_percent_threshold_ = fcc->sent_bytes_percent_th;
-        sent_bytes_threshold_ = fcc->sent_bytes_th;
-        window_based_config_(fcc->wfctrl_cfg);
-        rate_based_config_(fcc->rfctrl_cfg);
-        closed_window_policy_(fcc->closed_window);
-        flow_control_overrun_policy_(fcc->flow_control_overrun);
-        reconcile_flow_control_policy_(fcc->reconcile_flow_conflict);
-        receiving_flow_control_policy_(fcc->receiving_flow_control);
+	fc.rate_based_ = fcc->rate_based_fctrl;
+	fc.window_based_ = fcc->window_based_fctrl;
+	fc.rcv_buffers_threshold_ = fcc->rcvd_buffers_th;
+	fc.rcv_bytes_percent_threshold_ = fcc->rcvd_bytes_percent_th;
+        fc.rcv_bytes_threshold_ = fcc->rcvd_bytes_th;
+        fc.sent_buffers_threshold_ = fcc->sent_buffers_th;
+        fc.sent_bytes_percent_threshold_ = fcc->sent_bytes_percent_th;
+        fc.sent_bytes_threshold_ = fcc->sent_bytes_th;
+        DTCPWindowBasedFlowControlConfig::from_c_window_config(fc.window_based_config_,
+        						       fcc->wfctrl_cfg);
+        DTCPRateBasedFlowControlConfig::from_c_rate_config(fc.rate_based_config_,
+        						   fcc->rfctrl_cfg);
+	PolicyConfig::from_c_policy(fc.closed_window_policy_,
+				    fcc->closed_window);
+	PolicyConfig::from_c_policy(fc.flow_control_overrun_policy_,
+				    fcc->flow_control_overrun);
+	PolicyConfig::from_c_policy(fc.reconcile_flow_control_policy_,
+				    fcc->reconcile_flow_conflict);
+	PolicyConfig::from_c_policy(fc.receiving_flow_control_policy_,
+				    fcc->receiving_flow_control);
 }
 
-struct dtcp_fctrl_config * DTCPFlowControlConfig::to_c_fconfig()
+struct dtcp_fctrl_config * DTCPFlowControlConfig::to_c_fconfig() const
 {
 	struct dtcp_fctrl_config * result;
 
@@ -631,23 +644,30 @@ DTCPRtxControlConfig::DTCPRtxControlConfig() {
 	initial_rtx_time_ = 0;
 }
 
-DTCPRtxControlConfig::DTCPRtxControlConfig(struct dtcp_rxctrl_config * drc)
+void DTCPRtxControlConfig::from_c_rxconfig(DTCPRtxControlConfig & dr,
+		    	    		   struct dtcp_rxctrl_config * drc)
 {
 	if (!drc)
 		return;
 
-	max_time_to_retry_ = drc->max_time_retry;
-	data_rxms_nmax_ = drc->data_retransmit_max;
-	initial_rtx_time_ = drc->initial_tr;
-	rtx_timer_expiry_policy_(drc->retransmission_timer_expiry);
-	sender_ack_policy_(drc->sender_ack);
-	recving_ack_list_policy_(drc->receiving_ack_list);
-	rcvr_ack_policy_(drc->rcvr_ack);
-	sending_ack_policy_(drc->sending_ack);
-	rcvr_control_ack_policy_(drc->rcvr_control_ack);
+	dr.max_time_to_retry_ = drc->max_time_retry;
+	dr.data_rxms_nmax_ = drc->data_retransmit_max;
+	dr.initial_rtx_time_ = drc->initial_tr;
+	PolicyConfig::from_c_policy(dr.rtx_timer_expiry_policy_,
+				    drc->retransmission_timer_expiry);
+	PolicyConfig::from_c_policy(dr.sender_ack_policy_,
+				    drc->sender_ack);
+	PolicyConfig::from_c_policy(dr.recving_ack_list_policy_,
+				    drc->receiving_ack_list);
+	PolicyConfig::from_c_policy(dr.rcvr_ack_policy_,
+				    drc->rcvr_ack);
+	PolicyConfig::from_c_policy(dr.sending_ack_policy_,
+				    drc->sending_ack);
+	PolicyConfig::from_c_policy(dr.rcvr_control_ack_policy_,
+				    drc->rcvr_control_ack);
 }
 
-struct dtcp_rxctrl_config * DTCPRtxControlConfig::to_c_rxconfig()
+struct dtcp_rxctrl_config * DTCPRtxControlConfig::to_c_rxconfig() const
 {
 	struct dtcp_rxctrl_config * result;
 
@@ -766,21 +786,27 @@ DTCPConfig::DTCPConfig() {
         rtx_control_ = false;
 }
 
-DTCPConfig::DTCPConfig(struct dtcp_config* dtc)
+void DTCPConfig::from_c_dtcp_config(DTCPConfig & dt,
+		    	    	    struct dtcp_config* dtc)
 {
 	if (!dtc)
 		return;
 
-	flow_control_ = dtc->flow_ctrl;
-	rtx_control_ = dtc->rtx_ctrl;
-	flow_control_config_(dtc->fctrl_cfg);
-	rtx_control_config_(dtc->rxctrl_cfg);
-	dtcp_policy_set_(dtc->dtcp_ps);
-	lost_control_pdu_policy_(dtc->lost_control_pdu);
-	rtt_estimator_policy_(dtc->rtt_estimator);
+	dt.flow_control_ = dtc->flow_ctrl;
+	dt.rtx_control_ = dtc->rtx_ctrl;
+	DTCPFlowControlConfig::from_c_fconfig(dt.flow_control_config_,
+					      dtc->fctrl_cfg);
+	DTCPRtxControlConfig::from_c_rxconfig(dt.rtx_control_config_,
+					      dtc->rxctrl_cfg);
+	PolicyConfig::from_c_policy(dt.dtcp_policy_set_,
+				    dtc->dtcp_ps);
+	PolicyConfig::from_c_policy(dt.lost_control_pdu_policy_,
+				    dtc->lost_control_pdu);
+	PolicyConfig::from_c_policy(dt.rtt_estimator_policy_,
+				    dtc->rtt_estimator);
 }
 
-struct dtcp_config * DTCPConfig::to_c_dtcp_config()
+struct dtcp_config * DTCPConfig::to_c_dtcp_config() const
 {
 	struct dtcp_config * result;
 
@@ -884,22 +910,24 @@ DTPConfig::DTPConfig(){
 	max_sdu_gap_ = 0;
 }
 
-DTPConfig::DTPConfig(struct dtp_config * dtc)
+void DTPConfig::from_c_dtp_config(DTPConfig & dt,
+		     	          struct dtp_config * dtc)
 {
 	if (!dtc)
 		return;
 
-	dtcp_present_ = dtc->dtcp_present;
-	seq_num_rollover_threshold_ = dtc->seq_num_ro_th;
-	initial_a_timer_ = dtc->initial_a_timer;
-	partial_delivery_ = dtc->partial_delivery;
-	in_order_delivery_ = dtc->in_order_delivery;
-	incomplete_delivery_ = dtc->incomplete_delivery;
-	max_sdu_gap_ = dtc->max_sdu_gap;
-	dtp_policy_set_(dtc->dtp_ps);
+	dt.dtcp_present_ = dtc->dtcp_present;
+	dt.seq_num_rollover_threshold_ = dtc->seq_num_ro_th;
+	dt.initial_a_timer_ = dtc->initial_a_timer;
+	dt.partial_delivery_ = dtc->partial_delivery;
+	dt.in_order_delivery_ = dtc->in_order_delivery;
+	dt.incomplete_delivery_ = dtc->incomplete_delivery;
+	dt.max_sdu_gap_ = dtc->max_sdu_gap;
+	PolicyConfig::from_c_policy(dt.dtp_policy_set_,
+				    dtc->dtp_ps);
 }
 
-struct dtp_config * DTPConfig::to_c_dtp_config()
+struct dtp_config * DTPConfig::to_c_dtp_config() const
 {
 	struct dtp_config * result;
 
@@ -1024,25 +1052,26 @@ QoSCube::QoSCube(const std::string& name, int id) {
 	delay_ = 0;
 }
 
-QoSCube::QoSCube(struct qos_cube * qos)
+void QoSCube::from_c_qos_cube(QoSCube & qo,
+			      struct qos_cube * qos)
 {
 	if (!qos)
 		return;
 
-	name_ = qos->name;
-	id_ = qos->id;
-	average_bandwidth_ = qos->avg_bw;
-        average_sdu_bandwidth_ = qos->avg_sdu_bw;
-        peak_bandwidth_duration_ = qos->peak_bw_duration;
-        peak_sdu_bandwidth_duration_ = qos->peak_sdu_bw_duration;
-        undetected_bit_error_rate_ = 0;
-        partial_delivery_ = qos->partial_delivery;
-        ordered_delivery_ = qos->ordered_delivery;
-        max_allowable_gap_ = qos->max_allowed_gap;
-        jitter_ = qos->jitter;
-        delay_ = qos->delay;
-        dtp_config_(qos->dtpc);
-        dtcp_config_(qos->dtcpc);
+	qo.name_ = qos->name;
+	qo.id_ = qos->id;
+	qo.average_bandwidth_ = qos->avg_bw;
+	qo.average_sdu_bandwidth_ = qos->avg_sdu_bw;
+	qo.peak_bandwidth_duration_ = qos->peak_bw_duration;
+	qo.peak_sdu_bandwidth_duration_ = qos->peak_sdu_bw_duration;
+	qo.undetected_bit_error_rate_ = 0;
+	qo.partial_delivery_ = qos->partial_delivery;
+	qo.ordered_delivery_ = qos->ordered_delivery;
+	qo.max_allowable_gap_ = qos->max_allowed_gap;
+	qo.jitter_ = qos->jitter;
+	qo.delay_ = qos->delay;
+	DTPConfig::from_c_dtp_config(qo.dtp_config_, qos->dtpc);
+	DTCPConfig::from_c_dtcp_config(qo.dtcp_config_, qos->dtcpc);
 }
 
 struct qos_cube * QoSCube::to_c_qos_cube() const
@@ -1050,7 +1079,7 @@ struct qos_cube * QoSCube::to_c_qos_cube() const
 	struct qos_cube * result;
 
 	result = new qos_cube();
-	result->name = name_.c_str();
+	result->name = stringToCharArray(name_);
 	result->id = id_;
 	result->avg_bw = average_bandwidth_;
 	result->avg_sdu_bw = average_sdu_bandwidth_;
@@ -1226,28 +1255,29 @@ DataTransferConstants::DataTransferConstants()
 	max_time_to_ack_ = 0;
 }
 
-DataTransferConstants::DataTransferConstants(struct dt_cons * dtc)
+void DataTransferConstants::from_c_dt_cons(DataTransferConstants & dt,
+			   	   	   struct dt_cons * dtc)
 {
 	if (!dtc)
 		return;
 
-	qos_id_length_ = dtc->qos_id_length;
-	port_id_length_ = dtc->port_id_length;
-	cep_id_length_ = dtc->cep_id_length;
-	sequence_number_length_ = dtc->seq_num_length;
-	address_length_ = dtc->address_length;
-	length_length_ = dtc->length_length;
-	max_pdu_size_ = dtc->max_pdu_size;
-	dif_integrity_ = dtc->dif_integrity;
-	max_pdu_lifetime_ = dtc->max_pdu_life;
-	rate_length_ = dtc->rate_length;
-	frame_length_ = dtc->frame_length;
-	ctrl_sequence_number_length_ = dtc->ctrl_seq_num_length;
-	seq_rollover_thres_ = dtc->seq_rollover_thres;
-	dif_concatenation_ = dtc->dif_concat;
-	dif_fragmentation_ = dtc->dif_frag;
-	max_time_to_keep_ret_ = dtc->max_time_to_keep_ret_;
-	max_time_to_ack_ = dtc->max_time_to_ack_;
+	dt.qos_id_length_ = dtc->qos_id_length;
+	dt.port_id_length_ = dtc->port_id_length;
+	dt.cep_id_length_ = dtc->cep_id_length;
+	dt.sequence_number_length_ = dtc->seq_num_length;
+	dt.address_length_ = dtc->address_length;
+	dt.length_length_ = dtc->length_length;
+	dt.max_pdu_size_ = dtc->max_pdu_size;
+	dt.dif_integrity_ = dtc->dif_integrity;
+	dt.max_pdu_lifetime_ = dtc->max_pdu_life;
+	dt.rate_length_ = dtc->rate_length;
+	dt.frame_length_ = dtc->frame_length;
+	dt.ctrl_sequence_number_length_ = dtc->ctrl_seq_num_length;
+	dt.seq_rollover_thres_ = dtc->seq_rollover_thres;
+	dt.dif_concatenation_ = dtc->dif_concat;
+	dt.dif_fragmentation_ = dtc->dif_frag;
+	dt.max_time_to_keep_ret_ = dtc->max_time_to_keep_ret_;
+	dt.max_time_to_ack_ = dtc->max_time_to_ack_;
 }
 
 struct dt_cons * DataTransferConstants::to_c_dt_cons() const
@@ -1402,7 +1432,8 @@ const std::string DataTransferConstants::toString(){
 EFCPConfiguration::EFCPConfiguration(){
 }
 
-EFCPConfiguration::EFCPConfiguration(struct efcp_config* efc)
+void EFCPConfiguration::from_c_efcp_conf(EFCPConfiguration &ef,
+			     	     	 struct efcp_config* efc)
 {
 	QoSCube * qos_cube = 0;
 	struct qos_cube_entry * pos;
@@ -1410,12 +1441,14 @@ EFCPConfiguration::EFCPConfiguration(struct efcp_config* efc)
 	if (!efc)
 		return;
 
-	data_transfer_constants_(efc->dt_cons);
-	unknown_flowpolicy_(efc->unknown_flow);
+	DataTransferConstants::from_c_dt_cons(ef.data_transfer_constants_,
+					      efc->dt_cons);
+	PolicyConfig::from_c_policy(ef.unknown_flowpolicy_, efc->unknown_flow);
 	list_for_each_entry(pos, &(efc->qos_cubes), next) {
 		if (pos->entry) {
-			qos_cube = new QoSCube(pos->entry);
-			add_qos_cube(qos_cube);
+			qos_cube = new QoSCube();
+			QoSCube::from_c_qos_cube(*qos_cube, pos->entry);
+			ef.add_qos_cube(qos_cube);
 		}
 	}
 }
@@ -1423,7 +1456,7 @@ EFCPConfiguration::EFCPConfiguration(struct efcp_config* efc)
 struct efcp_config * EFCPConfiguration::to_c_efcp_conf() const
 {
 	struct efcp_config * result;
-	std::list<QoSCube *>::iterator it;
+	std::list<QoSCube *>::const_iterator it;
 	struct qos_cube_entry * qos_entry;
 
 	result = new efcp_config();
@@ -1516,13 +1549,15 @@ void EFCPConfiguration::set_unknown_flow_policy(
 NamespaceManagerConfiguration::NamespaceManagerConfiguration(){
 }
 
-NamespaceManagerConfiguration::NamespaceManagerConfiguration(struct nsm_config * nsmc)
+void NamespaceManagerConfiguration::from_c_nsm_config(NamespaceManagerConfiguration & nsm,
+		       	       	       	       	      struct nsm_config * nsmc)
 {
 	if (!nsmc)
 		return;
 
-	policy_set_(nsmc->ps);
-	addressing_configuration_(nsmc->addr_conf);
+	PolicyConfig::from_c_policy(nsm.policy_set_, nsmc->ps);
+	AddressingConfiguration::from_c_addr_config(nsm.addressing_configuration_,
+						    nsmc->addr_conf);
 }
 
 struct nsm_config * NamespaceManagerConfiguration::to_c_nsm_config() const
@@ -1556,12 +1591,13 @@ std::string NamespaceManagerConfiguration::toString()
 }
 
 // CLASS RoutingConfiguration
-RoutingConfiguration::RoutingConfiguration(struct routing_config* rc)
+void RoutingConfiguration::from_c_routing_config(RoutingConfiguration & r,
+				  	         struct routing_config* rc)
 {
 	if (!rc)
 		return;
 
-	policy_set_(rc->ps);
+	PolicyConfig::from_c_policy(r.policy_set_, rc->ps);
 }
 
 struct routing_config * RoutingConfiguration::to_c_routing_config() const
@@ -1598,12 +1634,14 @@ std::string PDUFTGConfiguration::toString()
 ResourceAllocatorConfiguration::ResourceAllocatorConfiguration(){
 }
 
-ResourceAllocatorConfiguration::ResourceAllocatorConfiguration(struct resall_config * resc)
+void ResourceAllocatorConfiguration::from_c_rall_config(ResourceAllocatorConfiguration & res,
+			       	       	       	        struct resall_config * resc)
 {
 	if (!resc)
 		return;
 
-	pduftg_conf_.policy_set_(resc->pff_gen);
+	PolicyConfig::from_c_policy(res.pduftg_conf_.policy_set_,
+				    resc->pff_gen);
 }
 
 struct resall_config * ResourceAllocatorConfiguration::to_c_rall_config() const
@@ -1630,17 +1668,23 @@ FlowAllocatorConfiguration::FlowAllocatorConfiguration(){
 	max_create_flow_retries_ = 0;
 }
 
-FlowAllocatorConfiguration::FlowAllocatorConfiguration(struct fa_config * fac)
+void FlowAllocatorConfiguration::from_c_fa_config(FlowAllocatorConfiguration & fa,
+			     	     	          struct fa_config * fac)
 {
 	if (!fac)
 		return;
 
-	max_create_flow_retries_ = fac->max_create_flow_retries;
-	policy_set_(fac->ps);
-	allocate_notify_policy_(fac->allocate_notify);
-	allocate_retry_policy_(fac->allocate_retry);
-	new_flow_request_policy_(fac->new_flow_req);
-	seq_rollover_policy_(fac->seq_roll_over);
+	fa.max_create_flow_retries_ = fac->max_create_flow_retries;
+	PolicyConfig::from_c_policy(fa.policy_set_,
+				    fac->ps);
+	PolicyConfig::from_c_policy(fa.allocate_notify_policy_,
+				    fac->allocate_notify);
+	PolicyConfig::from_c_policy(fa.allocate_retry_policy_,
+				    fac->allocate_retry);
+	PolicyConfig::from_c_policy(fa.new_flow_request_policy_,
+				    fac->new_flow_req);
+	PolicyConfig::from_c_policy(fa.seq_rollover_policy_,
+				    fac->seq_roll_over);
 }
 
 struct fa_config * FlowAllocatorConfiguration::to_c_fa_config() const
@@ -1728,12 +1772,13 @@ PFTConfiguration::PFTConfiguration(){
 	policy_set_ = PolicyConfig();
 }
 
-PFTConfiguration::PFTConfiguration(struct pff_config * pfc)
+void PFTConfiguration::from_c_pff_conf(PFTConfiguration & pf,
+			    	       struct pff_config * pfc)
 {
 	if (!pfc)
 		return;
 
-	policy_set_(pfc->policy_set);
+	PolicyConfig::from_c_policy(pf.policy_set_, pfc->policy_set);
 }
 
 struct pff_config * PFTConfiguration::to_c_pff_conf() const
@@ -1760,13 +1805,14 @@ RMTConfiguration::RMTConfiguration(){
 	policy_set_ = PolicyConfig();
 }
 
-RMTConfiguration::RMTConfiguration(struct rmt_config * rt)
+void RMTConfiguration::from_c_rmt_config(RMTConfiguration & rm,
+			      	         struct rmt_config * rt)
 {
 	if (!rt)
 		return;
 
-	policy_set_(rt->policy_set);
-	pft_conf_(rt->pff_conf);
+	PolicyConfig::from_c_policy(rm.policy_set_, rt->policy_set);
+	PFTConfiguration::from_c_pff_conf(rm.pft_conf_, rt->pff_conf);
 }
 
 struct rmt_config * RMTConfiguration::to_c_rmt_config() const
@@ -1795,12 +1841,13 @@ EnrollmentTaskConfiguration::EnrollmentTaskConfiguration()
 {
 }
 
-EnrollmentTaskConfiguration::EnrollmentTaskConfiguration(struct et_config * etc)
+void EnrollmentTaskConfiguration::from_c_et_config(EnrollmentTaskConfiguration & et,
+						   struct et_config * etc)
 {
 	if (!etc)
 		return;
 
-	policy_set_(etc->ps);
+	PolicyConfig::from_c_policy(et.policy_set_, etc->ps);
 }
 
 struct et_config * EnrollmentTaskConfiguration::to_c_et_config() const
@@ -1824,14 +1871,15 @@ StaticIPCProcessAddress::StaticIPCProcessAddress() {
 	address_ = 0;
 }
 
-StaticIPCProcessAddress::StaticIPCProcessAddress(struct static_ipcp_addr * addr)
+void StaticIPCProcessAddress::from_c_stipcp_addr(StaticIPCProcessAddress & ad,
+			       	       	         struct static_ipcp_addr * addr)
 {
 	if (!addr)
 		return;
 
-	ap_name_ = addr->ap_name;
-	ap_instance_ = addr->ap_instance;
-	address_ = addr->address;
+	ad.ap_name_ = addr->ap_name;
+	ad.ap_instance_ = addr->ap_instance;
+	ad.address_ = addr->address;
 }
 
 struct static_ipcp_addr * StaticIPCProcessAddress::t_c_stipcp_addr() const
@@ -1839,8 +1887,8 @@ struct static_ipcp_addr * StaticIPCProcessAddress::t_c_stipcp_addr() const
 	struct static_ipcp_addr * result;
 
 	result = new static_ipcp_addr();
-	result->ap_name = ap_name_.c_str();
-	result->ap_instance = ap_instance_.c_str();
+	result->ap_name = stringToCharArray(ap_name_);
+	result->ap_instance = stringToCharArray(ap_instance_);
 	result->address = address_;
 
 	return result;
@@ -1851,13 +1899,14 @@ AddressPrefixConfiguration::AddressPrefixConfiguration() {
 	address_prefix_ = 0;
 }
 
-AddressPrefixConfiguration::AddressPrefixConfiguration(struct address_pref_config * apc)
+void AddressPrefixConfiguration::from_c_pre_config(AddressPrefixConfiguration & ap,
+			      	      	           struct address_pref_config * apc)
 {
 	if (!apc)
 		return;
 
-	address_prefix_ = apc->prefix;
-	organization_ = apc->org;
+	ap.address_prefix_ = apc->prefix;
+	ap.organization_ = apc->org;
 }
 
 struct address_pref_config * AddressPrefixConfiguration::to_c_pref_config() const
@@ -1866,26 +1915,31 @@ struct address_pref_config * AddressPrefixConfiguration::to_c_pref_config() cons
 
 	result = new address_pref_config();
 	result->prefix = address_prefix_;
-	result->org = organization_.c_str();
+	result->org = stringToCharArray(organization_);
 
 	return result;
 }
 
 // Class AddressingConfiguration
-AddressingConfiguration::AddressingConfiguration(struct addressing_config * ac)
+void AddressingConfiguration::from_c_addr_config(AddressingConfiguration & a,
+			       	       	         struct addressing_config * ac)
 {
 	struct static_ipcp_addr_entry * addr_pos;
+	StaticIPCProcessAddress addr;
 	struct address_pref_config_entry * pref_pos;
+	AddressPrefixConfiguration pref;
 
 	if (!ac)
 		return;
 
         list_for_each_entry(addr_pos, &(ac->static_ipcp_addrs), next) {
-        	static_address_.push_back(StaticIPCProcessAddress(addr_pos));
+        	StaticIPCProcessAddress::from_c_stipcp_addr(addr, addr_pos->entry);
+        	a.static_address_.push_back(addr);
         }
 
         list_for_each_entry(pref_pos, &(ac->address_prefixes), next) {
-        	address_prefixes_.push_back(AddressPrefixConfiguration(pref_pos));
+        	AddressPrefixConfiguration::from_c_pre_config(pref, pref_pos->entry);
+        	a.address_prefixes_.push_back(pref);
         }
 }
 
@@ -1894,8 +1948,8 @@ struct addressing_config * AddressingConfiguration::to_c_addr_config() const
 	struct addressing_config * result;
 	struct static_ipcp_addr_entry * addr_pos;
 	struct address_pref_config_entry * pref_pos;
-	std::list<StaticIPCProcessAddress>::iterator addr_it;
-	std::list<AddressPrefixConfiguration>::iterator prefix_it;
+	std::list<StaticIPCProcessAddress>::const_iterator addr_it;
+	std::list<AddressPrefixConfiguration>::const_iterator prefix_it;
 
 	result = new addressing_config();
 	INIT_LIST_HEAD(&result->address_prefixes);
@@ -1905,20 +1959,15 @@ struct addressing_config * AddressingConfiguration::to_c_addr_config() const
 			addr_it != static_address_.end(); ++addr_it) {
 		addr_pos = new static_ipcp_addr_entry();
 		INIT_LIST_HEAD(&addr_pos->next);
-		addr_pos->entry = new static_ipcp_addr();
-		addr_pos->entry->address = addr_it->address_;
-		addr_pos->entry->ap_name = addr_it->ap_name_.c_str();
-		addr_pos->entry->ap_instance = addr_it->ap_instance_.c_str();
+		addr_pos->entry = addr_it->t_c_stipcp_addr();
 		list_add_tail(&addr_pos->next, &result->static_ipcp_addrs);
 	}
 
 	for(prefix_it = address_prefixes_.begin();
 			prefix_it != address_prefixes_.end(); ++addr_it) {
-		pref_pos = new static_ipcp_addr_entry();
+		pref_pos = new address_pref_config_entry();
 		INIT_LIST_HEAD(&pref_pos->next);
-		pref_pos->entry = new address_pref_config();
-		pref_pos->entry->prefix = prefix_it->address_prefix_;
-		pref_pos->entry->org = prefix_it->organization_.c_str();
+		pref_pos->entry = prefix_it->to_c_pref_config();
 		list_add_tail(&pref_pos->next, &result->address_prefixes);
 	}
 
@@ -1934,15 +1983,16 @@ void AddressingConfiguration::addPrefix(AddressPrefixConfiguration &pref)
 	address_prefixes_.push_back(pref);
 }
 //Class AuthSDUProtectionProfile
-AuthSDUProtectionProfile::AuthSDUProtectionProfile(struct auth_sdup_profile * asp)
+void AuthSDUProtectionProfile::from_c_auth_profile(AuthSDUProtectionProfile & as,
+						   struct auth_sdup_profile * asp)
 {
 	if (!asp)
 		return;
 
-	authPolicy(asp->auth);
-	encryptPolicy(asp->encrypt);
-	crcPolicy(asp->crc);
-	ttlPolicy(asp->ttl);
+	PolicyConfig::from_c_policy(as.authPolicy, asp->auth);
+	PolicyConfig::from_c_policy(as.encryptPolicy, asp->encrypt);
+	PolicyConfig::from_c_policy(as.crcPolicy, asp->crc);
+	PolicyConfig::from_c_policy(as.ttlPolicy, asp->ttl);
 }
 
 struct auth_sdup_profile * AuthSDUProtectionProfile::to_c_auth_profile() const
@@ -1974,18 +2024,22 @@ std::string AuthSDUProtectionProfile::to_string()
 }
 
 //Class SecurityManagerConfiguration
-SecurityManagerConfiguration::SecurityManagerConfiguration(struct secman_config * sc)
+void SecurityManagerConfiguration::from_c_secman_config(SecurityManagerConfiguration &s,
+				 	 	 	struct secman_config * sc)
 {
 	struct auth_sdup_profile_entry * pos;
+	AuthSDUProtectionProfile auth;
 
 	if (!sc)
 		return;
 
-	policy_set_(sc->ps);
-	default_auth_profile(sc->default_profile);
+	PolicyConfig::from_c_policy(s.policy_set_, sc->ps);
+	AuthSDUProtectionProfile::from_c_auth_profile(s.default_auth_profile,
+						      sc->default_profile);
 
         list_for_each_entry(pos, &(sc->specific_profiles), next) {
-        	specific_auth_profiles[pos->n1_dif_name] = AuthSDUProtectionProfile(pos->entry);
+        	AuthSDUProtectionProfile::from_c_auth_profile(auth, pos->entry);
+        	s.specific_auth_profiles[pos->n1_dif_name] = auth;
         }
 }
 
@@ -1993,7 +2047,7 @@ struct secman_config * SecurityManagerConfiguration::to_c_secman_config(void) co
 {
 	struct secman_config * result;
 	struct auth_sdup_profile_entry * pos;
-	std::map<std::string, AuthSDUProtectionProfile>::iterator it;
+	std::map<std::string, AuthSDUProtectionProfile>::const_iterator it;
 
 	result = new secman_config();
 	INIT_LIST_HEAD(&result->specific_profiles);
@@ -2002,7 +2056,7 @@ struct secman_config * SecurityManagerConfiguration::to_c_secman_config(void) co
 	for (it = specific_auth_profiles.begin();
 			it != specific_auth_profiles.end(); ++ it) {
 		pos = new auth_sdup_profile_entry();
-		pos->n1_dif_name = it->first.c_str();
+		pos->n1_dif_name = stringToCharArray(it->first);
 		INIT_LIST_HEAD(&pos->next);
 		pos->entry = it->second.to_c_auth_profile();
 		list_add_tail(&pos->next, &result->specific_profiles);
@@ -2035,31 +2089,41 @@ DIFConfiguration::DIFConfiguration(){
 	address_ = 0;
 }
 
-DIFConfiguration::DIFConfiguration(struct dif_config * dc)
+void DIFConfiguration::from_c_dif_config(DIFConfiguration & d,
+			      	         struct dif_config * dc)
 {
 	struct ipcp_config * pos;
 
 	if (!dc)
 		return;
 
-	address_ = dc->address;
-	efcp_configuration_(dc->efcp_config);
-	rmt_configuration_(dc->rmt_config);
-	fa_configuration_(dc->fa_config);
-	et_configuration_(dc->et_config);
-	nsm_configuration_(dc->nsm_config);
-	routing_configuration_(dc->routing_config);
-	ra_configuration_(dc->resall_config);
-	sm_configuration_(dc->secman_config);
+	d.address_ = dc->address;
+	EFCPConfiguration::from_c_efcp_conf(d.efcp_configuration_,
+				 	    dc->efcp_config);
+	RMTConfiguration::from_c_rmt_config(d.rmt_configuration_,
+					    dc->rmt_config);
+	FlowAllocatorConfiguration::from_c_fa_config(d.fa_configuration_,
+						     dc->fa_config);
+	EnrollmentTaskConfiguration::from_c_et_config(d.et_configuration_,
+						      dc->et_config);
+	NamespaceManagerConfiguration::from_c_nsm_config(d.nsm_configuration_,
+							 dc->nsm_config);
+	RoutingConfiguration::from_c_routing_config(d.routing_configuration_,
+						    dc->routing_config);
+	ResourceAllocatorConfiguration::from_c_rall_config(d.ra_configuration_,
+							   dc->resall_config);
+	SecurityManagerConfiguration::from_c_secman_config(d.sm_configuration_,
+							   dc->secman_config);
 
         list_for_each_entry(pos, &(dc->ipcp_config_entries), next) {
-        	parameters_.push_back(PolicyParameter(pos->entry->name, pos->entry->value));
+        	d.parameters_.push_back(PolicyParameter(pos->entry->name,
+        					        pos->entry->value));
         }
 }
 
 struct dif_config * DIFConfiguration::to_c_dif_config() const
 {
-	std::list<PolicyParameter>::iterator it;
+	std::list<PolicyParameter>::const_iterator it;
 	struct ipcp_config * pos;
 	struct dif_config * result;
 
@@ -2078,8 +2142,8 @@ struct dif_config * DIFConfiguration::to_c_dif_config() const
 		pos = new ipcp_config();
 		INIT_LIST_HEAD(&pos->next);
 		pos->entry = new ipcp_config_entry();
-		pos->entry->name = it->name_.c_str();
-		pos->entry->value = it->value_.c_str();
+		pos->entry->name = stringToCharArray(it->name_);
+		pos->entry->value = stringToCharArray(it->value_);
 		list_add_tail(&pos->next, &result->ipcp_config_entries);
 	}
 
@@ -2139,7 +2203,7 @@ DIFInformation::DIFInformation(struct dif_config * dc, struct name * name,
 {
 	dif_name_.processName = name->process_name;
 	dif_type_ = type;
-	dif_configuration_(dc);
+	DIFConfiguration::from_c_dif_config(dif_configuration_, dc);
 }
 
 const ApplicationProcessNamingInformation& DIFInformation::get_dif_name()

@@ -87,7 +87,7 @@ int irati_write_msg(int cfd, struct irati_msg_base *msg)
 		errno = EINVAL;
 		return -1;
 	}
-	serlen = serialize_rlite_msg(irati_ker_numtables, RINA_C_MAX,
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
 				     serbuf, msg);
 
 	ret = write(cfd, serbuf, serlen);
@@ -106,7 +106,7 @@ int irati_write_msg(int cfd, struct irati_msg_base *msg)
 
 static int open_port_common(bool ipcm)
 {
-	struct irati_dev_ctldata info;
+	struct irati_ctrldev_ctldata info;
 	int fd;
 	int ret;
 
@@ -122,7 +122,7 @@ static int open_port_common(bool ipcm)
 	else
 		info.port_id = fd;
 
-	ret = ioctl(fd, IRATI_FLOW_BIND, &info);
+	ret = ioctl(fd, IRATI_CTRL_FLOW_BIND, &info);
 	if (ret) {
 		fprintf(stderr, "ioctl(%s) failed: %s\n", IRATI_CTRLDEV_NAME,
 				strerror(errno));
