@@ -1004,6 +1004,17 @@ PortIdAltlist::PortIdAltlist(unsigned int nh)
 	add_alt(nh);
 }
 
+void PortIdAltlist::from_c_pid_list(PortIdAltlist & pi,
+			            struct port_id_altlist * pia)
+{
+	if (!pia)
+		return;
+
+	for (int i=0; i<pia->num_ports; i++) {
+		pi.alts.push_back(pia->ports[i]);
+	}
+}
+
 struct port_id_altlist * PortIdAltlist::to_c_pid_list() const
 {
 	struct port_id_altlist * result;
@@ -1032,6 +1043,22 @@ PDUForwardingTableEntry::PDUForwardingTableEntry() {
         address = 0;
         qosId = 0;
         cost = 0;
+}
+
+void PDUForwardingTableEntry::from_c_pff_entry(PDUForwardingTableEntry & pf,
+			     	     	       struct mod_pff_entry * pff)
+{
+	struct port_id_altlist * pos;
+
+	pf.address = pff->fwd_info;
+	pf.cost = pff->cost;
+	pf.qosId = pff->qos_id;
+
+	list_for_each_entry(pos, &(pff->port_id_altlists), next) {
+		PortIdAltlist pia;
+		PortIdAltlist::from_c_pid_list(pia, pos);
+		pf.portIdAltlists.push_back(pia);
+	}
 }
 
 struct mod_pff_entry * PDUForwardingTableEntry::to_c_pff_entry() const

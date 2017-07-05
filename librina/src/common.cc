@@ -269,6 +269,21 @@ FlowSpecification::FlowSpecification() {
 	maxSDUsize = 0;
 }
 
+FlowSpecification::FlowSpecification(struct flow_spec * fspec)
+{
+	averageSDUBandwidth = fspec->average_sdu_bandwidth;
+	averageBandwidth = fspec->average_sdu_bandwidth;
+	peakBandwidthDuration = fspec->peak_bandwidth_duration;
+	peakSDUBandwidthDuration = fspec->peak_sdu_bandwidth_duration;
+	undetectedBitErrorRate = 0;
+	partialDelivery = fspec->partial_delivery;
+	orderedDelivery = fspec->ordered_delivery;
+	maxAllowableGap = fspec->max_allowable_gap;
+	jitter = fspec->jitter;
+	delay = fspec->delay;
+	maxSDUsize = fspec->max_sdu_size;
+}
+
 const std::string FlowSpecification::toString() {
         std::stringstream ss;
         ss<<"Jitter: "<<jitter<<"; Delay: "<<delay<<std::endl;

@@ -78,6 +78,16 @@ FwdCDAPMsgResponseEvent::FwdCDAPMsgResponseEvent(const ser_obj_t& sm,
         this->result = result;
 }
 
+void BaseStationInfo::from_c_bs_info(BaseStationInfo & bs,
+			   	     struct bs_info_entry * bsi)
+{
+	if (!bsi)
+		return;
+
+	bs.ipcp_address = bsi->ipcp_addr;
+	bs.signal_strength = bsi->signal_strength;
+}
+
 struct bs_info_entry * BaseStationInfo::to_c_bs_info() const
 {
 	struct bs_info_entry * result;
@@ -98,6 +108,24 @@ std::string BaseStationInfo::toString() const
 	ss << "Signal strength: " << signal_strength << std::endl;
 
 	return ss.str();
+}
+
+void MediaDIFInfo::from_c_media_dif_info(MediaDIFInfo & md,
+				         struct media_dif_info * mdi)
+{
+	struct bs_info_entry * pos;
+
+	if (!mdi)
+		return;
+
+	md.dif_name = mdi->dif_name;
+	md.security_policies = mdi->sec_policies;
+
+        list_for_each_entry(pos, &(mdi->available_bs_ipcps), next) {
+        	BaseStationInfo bs;
+        	BaseStationInfo::from_c_bs_info(bs, pos);
+        	md.available_bs_ipcps.push_back(bs);
+        }
 }
 
 struct media_dif_info * MediaDIFInfo::to_c_media_dif_info() const
@@ -134,6 +162,25 @@ std::string MediaDIFInfo::toString() const
 	}
 
 	return ss.str();
+}
+
+void MediaReport::from_c_media_report(MediaReport &mr,
+				      struct media_report * mre)
+{
+	struct media_info_entry * pos;
+
+	if (!mre)
+		return;
+
+	mr.bs_ipcp_address = mre->bs_ipcp_addr;
+	mr.current_dif_name = mre->dif_name;
+	mr.ipcp_id = mre->ipcp_id;
+
+	list_for_each_entry(pos, &(mre->available_difs), next) {
+		MediaDIFInfo med;
+		MediaDIFInfo::from_c_media_dif_info(med, pos->entry);
+		mr.available_difs[pos->dif_name] = med;
+	}
 }
 
 struct media_report * MediaReport::to_c_media_report() const

@@ -225,6 +225,8 @@ public:
  */
 class BaseStationInfo {
 public:
+	static void from_c_bs_info(BaseStationInfo & bs,
+				   struct bs_info_entry * bsi);
 	struct bs_info_entry * to_c_bs_info(void) const;
 
 	/* Address of the IPCP at the base station */
@@ -245,6 +247,8 @@ public:
  */
 class MediaDIFInfo {
 public:
+	static void from_c_media_dif_info(MediaDIFInfo & md,
+					  struct media_dif_info * mdi);
 	struct media_dif_info * to_c_media_dif_info(void) const;
 
 	/* Name of the DIF */
@@ -265,6 +269,8 @@ public:
  */
 class MediaReport {
 public:
+	static void from_c_media_report(MediaReport &mr,
+					struct media_report * mre);
 	struct media_report * to_c_media_report(void) const;
 
 	/** The id of the IPC Process that scanned the media */
