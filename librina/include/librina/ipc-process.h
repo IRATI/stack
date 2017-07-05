@@ -913,6 +913,8 @@ struct PortIdAltlist {
 
 	PortIdAltlist();
 	PortIdAltlist(unsigned int pid);
+	static void from_c_pid_list(PortIdAltlist & pi,
+				    struct port_id_altlist * pia);
 	struct port_id_altlist * to_c_pid_list(void) const;
 
 	void add_alt(unsigned int pid);
@@ -936,6 +938,8 @@ public:
         std::list<PortIdAltlist> portIdAltlists;
 
         PDUForwardingTableEntry();
+        static void from_c_pff_entry(PDUForwardingTableEntry & pf,
+        			     struct mod_pff_entry * pff);
         struct mod_pff_entry * to_c_pff_entry(void) const;
 
         bool operator==(const PDUForwardingTableEntry &other) const;

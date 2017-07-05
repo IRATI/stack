@@ -174,6 +174,7 @@ public:
 	unsigned int maxSDUsize;
 
 	FlowSpecification();
+	FlowSpecification(struct flow_spec * fspec);
 	bool operator==(const FlowSpecification &other) const;
 	bool operator!=(const FlowSpecification &other) const;
 	const std::string toString();
