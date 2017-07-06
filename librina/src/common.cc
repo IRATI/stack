@@ -402,6 +402,10 @@ const std::string FlowInformation::toString(){
 }
 
 /* CLASS DIF PROPERTIES */
+DIFProperties::DIFProperties(){
+	maxSDUSize = 0;
+}
+
 DIFProperties::DIFProperties(
 		const ApplicationProcessNamingInformation& DIFName, int maxSDUSize) {
 	this->DIFName = DIFName;

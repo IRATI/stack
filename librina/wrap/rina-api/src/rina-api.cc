@@ -27,6 +27,7 @@
 #include <errno.h>
 #include <librina/librina.h>
 #include <rina/api.h>
+#include "ctrl.h"
 
 using namespace rina;
 using namespace std;
@@ -71,18 +72,9 @@ librina_init(void)
         return 0;
 }
 
-int
-rina_open(void)
+int rina_open(void)
 {
-        if (librina_init()) {
-                return -1;
-        }
-
-        /* The control file descriptor is process-wise, so we duplicate
-         * it to provide a consistent API. However, a process should
-         * not call rina_open() more than once, otherwise there would
-         * be a race on reading the control messages. */
-        return dup(ipcManager->getControlFd());
+        return irati_open_appl_ipcp_port();
 }
 
 static IPCEvent *

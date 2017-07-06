@@ -201,6 +201,9 @@ int deserialize_buffer(const void **pptr, struct buffer **b)
 /* Serialize a RINA name. */
 void serialize_rina_name(void **pptr, const struct name *name)
 {
+	if (!name)
+		return;
+
 	serialize_string(pptr, name->process_name);
 	serialize_string(pptr, name->process_instance);
 	serialize_string(pptr, name->entity_name);
@@ -208,28 +211,32 @@ void serialize_rina_name(void **pptr, const struct name *name)
 }
 
 /* Deserialize a RINA name. */
-int deserialize_rina_name(const void **pptr, struct name *name)
+int deserialize_rina_name(const void **pptr, struct name ** name)
 {
 	int ret;
 
-	memset(name, 0, sizeof(*name));
+	*name = COMMON_ALLOC(sizeof(struct name *), 1);
+	if (!*name)
+		return -1;
 
-	ret = deserialize_string(pptr, &name->process_name);
+	memset(*name, 0, sizeof(struct name *));
+
+	ret = deserialize_string(pptr, &(*name)->process_name);
 	if (ret) {
 		return ret;
 	}
 
-	ret = deserialize_string(pptr, &name->process_instance);
+	ret = deserialize_string(pptr, &(*name)->process_instance);
 	if (ret) {
 		return ret;
 	}
 
-	ret = deserialize_string(pptr, &name->entity_name);
+	ret = deserialize_string(pptr, &(*name)->entity_name);
 	if (ret) {
 		return ret;
 	}
 
-	ret = deserialize_string(pptr, &name->entity_instance);
+	ret = deserialize_string(pptr, &(*name)->entity_instance);
 
 	return ret;
 }
@@ -516,21 +523,25 @@ void serialize_flow_spec(void **pptr, const struct flow_spec *fspec)
 	serialize_obj(*pptr, int32_t, fspec->undetected_bit_error_rate);
 }
 
-int deserialize_flow_spec(const void **pptr, struct flow_spec *fspec)
+int deserialize_flow_spec(const void **pptr, struct flow_spec ** fspec)
 {
-	memset(fspec, 0, sizeof(*fspec));
+	*fspec = COMMON_ALLOC(sizeof(struct flow_spec *), 1);
+	if (!*fspec)
+		return -1;
 
-	deserialize_obj(*pptr, uint32_t, &fspec->average_bandwidth);
-	deserialize_obj(*pptr, uint32_t, &fspec->average_sdu_bandwidth);
-	deserialize_obj(*pptr, uint32_t, &fspec->delay);
-	deserialize_obj(*pptr, uint32_t, &fspec->jitter);
-	deserialize_obj(*pptr, int32_t, &fspec->max_allowable_gap);
-	deserialize_obj(*pptr, uint32_t, &fspec->max_sdu_size);
-	deserialize_obj(*pptr, bool, &fspec->ordered_delivery);
-	deserialize_obj(*pptr, bool, &fspec->partial_delivery);
-	deserialize_obj(*pptr, uint32_t, &fspec->peak_bandwidth_duration);
-	deserialize_obj(*pptr, uint32_t, &fspec->peak_sdu_bandwidth_duration);
-	deserialize_obj(*pptr, int32_t, &fspec->undetected_bit_error_rate);
+	memset(fspec, 0, sizeof(struct flow_spec *));
+
+	deserialize_obj(*pptr, uint32_t, &(*fspec)->average_bandwidth);
+	deserialize_obj(*pptr, uint32_t, &(*fspec)->average_sdu_bandwidth);
+	deserialize_obj(*pptr, uint32_t, &(*fspec)->delay);
+	deserialize_obj(*pptr, uint32_t, &(*fspec)->jitter);
+	deserialize_obj(*pptr, int32_t, &(*fspec)->max_allowable_gap);
+	deserialize_obj(*pptr, uint32_t, &(*fspec)->max_sdu_size);
+	deserialize_obj(*pptr, bool, &(*fspec)->ordered_delivery);
+	deserialize_obj(*pptr, bool, &(*fspec)->partial_delivery);
+	deserialize_obj(*pptr, uint32_t, &(*fspec)->peak_bandwidth_duration);
+	deserialize_obj(*pptr, uint32_t, &(*fspec)->peak_sdu_bandwidth_duration);
+	deserialize_obj(*pptr, int32_t, &(*fspec)->undetected_bit_error_rate);
 
 	return 0;
 }
@@ -3208,7 +3219,7 @@ int deserialize_dif_properties_entry(const void **pptr, struct dif_properties_en
 	memset(dpe, 0, sizeof(*dpe));
 
 	deserialize_obj(*pptr, uint16_t, &dpe->max_sdu_size);
-	return deserialize_rina_name(pptr, dpe->dif_name);
+	return deserialize_rina_name(pptr, &dpe->dif_name);
 }
 
 void dif_properties_entry_free(struct dif_properties_entry * dpe)
@@ -3358,8 +3369,8 @@ int deserialize_ipcp_neighbor(const void **pptr, struct ipcp_neighbor *nei)
 	deserialize_obj(*pptr, int32_t, &nei->under_port_id);
 	deserialize_obj(*pptr, int32_t, &nei->intern_port_id);
 	deserialize_obj(*pptr, int32_t, &nei->last_heard_time_ms);
-	deserialize_rina_name(pptr, nei->ipcp_name);
-	deserialize_rina_name(pptr, nei->sup_dif_name);
+	deserialize_rina_name(pptr, &nei->ipcp_name);
+	deserialize_rina_name(pptr, &nei->sup_dif_name);
 
 	deserialize_obj(*pptr, uint16_t, &size);
 
@@ -3370,7 +3381,7 @@ int deserialize_ipcp_neighbor(const void **pptr, struct ipcp_neighbor *nei)
 		}
 
 		INIT_LIST_HEAD(&pos->next);
-		ret = deserialize_rina_name(pptr, pos->entry);
+		ret = deserialize_rina_name(pptr, &pos->entry);
 		if (ret) {
 			return ret;
 		}
@@ -3746,19 +3757,19 @@ int serialize_irati_msg(struct irati_msg_layout *numtables,
 	void *serptr = serbuf;
 	unsigned int serlen;
 	unsigned int copylen;
-	struct name *name;
-	string_t *str;
-	const struct buffer *bf;
-	struct flow_spec *fspec;
-	struct dif_config *dif_config;
-	struct dtp_config *dtp_config;
-	struct dtcp_config *dtcp_config;
-	struct query_rib_resp * qrr;
-	struct pff_entry_list * pel;
-	struct sdup_crypto_state * scs;
-	struct get_dif_prop_resp * gdp;
-	struct ipcp_neigh_list *inl;
-	struct media_report * mre;
+	struct name ** name;
+	string_t ** str;
+	const struct buffer ** bf;
+	struct flow_spec ** fspec;
+	struct dif_config ** dif_config;
+	struct dtp_config ** dtp_config;
+	struct dtcp_config ** dtcp_config;
+	struct query_rib_resp ** qrr;
+	struct pff_entry_list ** pel;
+	struct sdup_crypto_state ** scs;
+	struct get_dif_prop_resp ** gdp;
+	struct ipcp_neigh_list ** inl;
+	struct media_report ** mre;
 	int i;
 
 	if (msg->msg_type >= num_entries) {
@@ -3770,69 +3781,69 @@ int serialize_irati_msg(struct irati_msg_layout *numtables,
 	memcpy(serbuf, msg, copylen);
 
 	serptr = serbuf + copylen;
-	name = (struct name *)(((void *)msg) + copylen);
+	name = (struct name **) (((void *)msg) + copylen);
 	for (i = 0; i < numtables[msg->msg_type].names; i++, name++) {
-		serialize_rina_name(&serptr, name);
+		serialize_rina_name(&serptr, *name);
 	}
 
-	str = (string_t *)(name);
+	str = (string_t **)(name);
 	for (i = 0; i < numtables[msg->msg_type].strings; i++, str++) {
-		serialize_string(&serptr, str);
+		serialize_string(&serptr, *str);
 	}
 
-	fspec = (struct flow_spec *)str;
+	fspec = (struct flow_spec **)str;
 	for (i = 0; i < numtables[msg->msg_type].flow_specs; i++, fspec++) {
-		serialize_flow_spec(&serptr, fspec);
+		serialize_flow_spec(&serptr, *fspec);
 	}
 
-	dif_config = (struct dif_config *)fspec;
+	dif_config = (struct dif_config **)fspec;
 	for (i = 0; i < numtables[msg->msg_type].dif_configs; i++, dif_config++) {
-		serialize_dif_config(&serptr, dif_config);
+		serialize_dif_config(&serptr, *dif_config);
 	}
 
-	dtp_config = (struct dtp_config*)dif_config;
+	dtp_config = (struct dtp_config **)dif_config;
 	for (i = 0; i < numtables[msg->msg_type].dtp_configs; i++, dtp_config++) {
-		serialize_dtp_config(&serptr, dtp_config);
+		serialize_dtp_config(&serptr, *dtp_config);
 	}
 
-	dtcp_config = (struct dtcp_config*)dtp_config;
+	dtcp_config = (struct dtcp_config **)dtp_config;
 	for (i = 0; i < numtables[msg->msg_type].dtcp_configs; i++, dtcp_config++) {
-		serialize_dtcp_config(&serptr, dtcp_config);
+		serialize_dtcp_config(&serptr, *dtcp_config);
 	}
 
-	qrr = (struct query_rib_resp *)dtcp_config;
+	qrr = (struct query_rib_resp **)dtcp_config;
 	for (i = 0; i < numtables[msg->msg_type].query_rib_resps; i++, qrr++) {
-		serialize_query_rib_resp(&serptr, qrr);
+		serialize_query_rib_resp(&serptr, *qrr);
 	}
 
-	pel = (struct pff_entry_list *)qrr;
+	pel = (struct pff_entry_list **)qrr;
 	for (i = 0; i < numtables[msg->msg_type].pff_entry_lists; i++, pel++) {
-		serialize_pff_entry_list(&serptr, pel);
+		serialize_pff_entry_list(&serptr, *pel);
 	}
 
-	scs = (struct sdup_crypto_state *)pel;
+	scs = (struct sdup_crypto_state **)pel;
 	for (i = 0; i < numtables[msg->msg_type].sdup_crypto_states; i++, scs++) {
-		serialize_sdup_crypto_state(&serptr, scs);
+		serialize_sdup_crypto_state(&serptr, *scs);
 	}
 
-	gdp = (struct get_dif_prop_resp *)scs;
+	gdp = (struct get_dif_prop_resp **)scs;
 	for (i = 0; i < numtables[msg->msg_type].dif_properties; i++, gdp++) {
-		serialize_get_dif_prop_resp(&serptr, gdp);
+		serialize_get_dif_prop_resp(&serptr, *gdp);
 	}
 
-	inl = (struct ipcp_neigh_list *)gdp;
+	inl = (struct ipcp_neigh_list **)gdp;
 	for (i = 0; i < numtables[msg->msg_type].ipcp_neigh_lists; i++, inl++) {
-		serialize_ipcp_neigh_list(&serptr, inl);
+		serialize_ipcp_neigh_list(&serptr, *inl);
 	}
 
-	mre = (struct media_report *)inl;
+	mre = (struct media_report **)inl;
 	for (i = 0; i < numtables[msg->msg_type].media_reports; i++, mre++) {
-		serialize_media_report(&serptr, mre);
+		serialize_media_report(&serptr, *mre);
 	}
 
-	bf = (const struct buffer *)mre;
+	bf = (const struct buffer **)mre;
 	for (i = 0; i < numtables[msg->msg_type].buffers; i++, bf++) {
-		serialize_buffer(&serptr, bf);
+		serialize_buffer(&serptr, *bf);
 	}
 
 	serlen = serptr - serbuf;
@@ -3846,10 +3857,10 @@ int deserialize_irati_msg(struct irati_msg_layout *numtables, size_t num_entries
                           void *msgbuf, unsigned int msgbuf_len)
 {
 	struct irati_msg_base *bmsg = IRATI_MB(serbuf);
-	struct name *name;
+	struct name ** name;
 	string_t *str;
 	struct buffer *bf;
-	struct flow_spec *fspec;
+	struct flow_spec ** fspec;
 	struct dif_config *dif_config;
 	struct dtp_config *dtp_config;
 	struct dtcp_config *dtcp_config;
@@ -3873,14 +3884,18 @@ int deserialize_irati_msg(struct irati_msg_layout *numtables, size_t num_entries
 	copylen = numtables[bmsg->msg_type].copylen;
 	memcpy(msgbuf, serbuf, copylen);
 
+	LOG_INFO("Aqui");
+
 	desptr = serbuf + copylen;
-	name = (struct name *)(msgbuf + copylen);
+	name = (struct name **)(msgbuf + copylen);
 	for (i = 0; i < numtables[bmsg->msg_type].names; i++, name++) {
 		ret = deserialize_rina_name(&desptr, name);
 		if (ret) {
 			return ret;
 		}
 	}
+
+	LOG_INFO("Aqui 2");
 
 	str = (string_t *)name;
 	for (i = 0; i < numtables[bmsg->msg_type].strings; i++, str++) {
@@ -3890,7 +3905,7 @@ int deserialize_irati_msg(struct irati_msg_layout *numtables, size_t num_entries
 		}
 	}
 
-	fspec = (struct flow_spec *)str;
+	fspec = (struct flow_spec **)str;
 	for (i = 0; i < numtables[bmsg->msg_type].flow_specs; i++, fspec++) {
 		ret = deserialize_flow_spec(&desptr, fspec);
 	}

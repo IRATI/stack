@@ -54,7 +54,7 @@ int deserialize_buffer(const void **pptr, struct buffer **b);
 int rina_sername_valid(const char *str);
 unsigned rina_name_serlen(const struct name *name);
 void serialize_rina_name(void **pptr, const struct name *name);
-int deserialize_rina_name(const void **pptr, struct name *name);
+int deserialize_rina_name(const void **pptr, struct name ** name);
 void rina_name_free(struct name *name);
 void rina_name_move(struct name *dst, struct name *src);
 int rina_name_copy(struct name *dst, const struct name *src);
@@ -67,7 +67,7 @@ int rina_name_valid(const struct name *name);
 
 int flow_spec_serlen(const struct flow_spec * fspec);
 void serialize_flow_spec(void **pptr, const struct flow_spec *fspec);
-int deserialize_flow_spec(const void **pptr, struct flow_spec *fspec);
+int deserialize_flow_spec(const void **pptr, struct flow_spec ** fspec);
 void flow_spec_free(struct flow_spec * fspec);
 
 int policy_parm_serlen(const struct policy_parm * prm);
