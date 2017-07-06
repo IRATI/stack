@@ -38,7 +38,7 @@ namespace rina {
 char * stringToCharArray(std::string s)
 {
 	char * result = new char[s.size() + 1];
-	result[s.size()] = 0;
+	result[s.size()] = '\0';
 	memcpy(result, s.c_str(), s.size());
 	return result;
 }

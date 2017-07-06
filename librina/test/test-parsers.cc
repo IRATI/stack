@@ -1,5 +1,5 @@
 //
-// Test netlink parsers
+// Test parsers
 //
 //    Eduard Grasa          <eduard.grasa@i2cat.net>
 //    Francesco Salvestrini <f.salvestrini@nextworks.it>
@@ -22,93 +22,124 @@
 
 #include <iostream>
 
-#include "netlink-parsers.h"
+#include "irati/serdes-utils.h"
+#include "irati/kernel-msg.h"
+#include "core.h"
+#include "ctrl.h"
 
 using namespace rina;
 
-int testAppAllocateFlowRequestMessage() {
-	std::cout << "TESTING APP ALLOCATE FLOW REQUEST MESSAGE\n";
-	int returnValue = 0;
+int test_irati_kmsg_ipcm_allocate_flow(irati_msg_t msg_t)
+{
+	struct irati_kmsg_ipcm_allocate_flow * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	ApplicationProcessNamingInformation before;
+	ApplicationProcessNamingInformation after;
 
-	ApplicationProcessNamingInformation sourceName;
-	sourceName.processName = "/apps/source";
-	sourceName.processInstance = "12";
-	sourceName.entityName = "database";
-	sourceName.entityInstance = "12";
+	std::cout << "TESTING KMSG IPCM ALOCATE FLOW \n";
 
-	ApplicationProcessNamingInformation destName;
-	destName.processName = "/apps/dest";
-	destName.processInstance = "12345";
-	destName.entityName = "printer";
-	destName.entityInstance = "12623456";
+	msg = new irati_kmsg_ipcm_allocate_flow();
+	msg->msg_type = msg_t;
+	msg->port_id = 25;
+	msg->source = new name();
+	msg->source->process_name = stringToCharArray("/apps/source");
+	msg->source->process_instance = stringToCharArray("12");
+	msg->source->entity_name = stringToCharArray("database");
+	msg->source->entity_instance = stringToCharArray("12");
 
-	FlowSpecification flowSpec;
+	std::cout << "Memory address of msg "<< msg << std::endl;
+	std::cout << "Memory address of msg->source "<< &(msg->source) << std::endl;
+	std::cout << "Memory address of msg->dest "<< &(msg->dest) << std::endl;
+	std::cout << "Memory address of msg->dif_info "<< &(msg->dif_name) << std::endl;
+	std::cout << "process name: " << msg->source->process_name << std::endl;
 
-	ApplicationProcessNamingInformation difName;
-	difName.processName = "test.DIF";
+	msg->dest = new name();
+	msg->dest->process_name = stringToCharArray("/apps/dest");
+	msg->dest->process_instance = stringToCharArray("12345");
+	msg->dest->entity_name = stringToCharArray("printer");
+	msg->dest->entity_instance = stringToCharArray("12623456");
 
-	AppAllocateFlowRequestMessage message;
-	message.setSourceAppName(sourceName);
-	message.setDestAppName(destName);
-	message.setFlowSpecification(flowSpec);
-	message.setDifName(difName);
+	std::cout << "Memory address of msg->dest "<< &(msg->dest) << std::endl;
 
-	struct nl_msg* netlinkMessage;
-	netlinkMessage = nlmsg_alloc();
-	if (!netlinkMessage) {
-		std::cout << "Error allocating Netlink message\n";
+	msg->fspec = new flow_spec();
+	msg->dif_name = new name();
+	msg->dif_name->process_name = stringToCharArray("test.DIF");
+
+	std::cout << "Memory address of msg->dif_info "<< &(msg->dif_name) << std::endl;
+
+	std::cout << "Before parsing" << std::endl;
+
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	std::cout << "Message serialized, size is " << serlen << std::endl;
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_kmsg_ipcm_allocate_flow message: "
+			  << serlen;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
 	}
-	genlmsg_put(netlinkMessage, NL_AUTO_PORT, message.getSequenceNumber(), 21,
-			sizeof(struct rinaHeader), 0, message.getOperationCode(), 0);
 
-	int result = putBaseNetlinkMessage(netlinkMessage, &message);
-	if (result < 0) {
-		std::cout << "Error constructing Application Allocate Flow request "
-				<< "Message \n";
-		nlmsg_free(netlinkMessage);
-		return result;
+	resp = new irati_kmsg_ipcm_allocate_flow();
+	ret = deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    serbuf, ret, (void *)resp, 10000);
+
+	if (ret) {
+		std::cout << "Error parsing irati_kmsg_ipcm_allocate_flow message: "
+			  << ret;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
 	}
 
-	nlmsghdr* netlinkMessageHeader = nlmsg_hdr(netlinkMessage);
-	AppAllocateFlowRequestMessage * recoveredMessage =
-			dynamic_cast<AppAllocateFlowRequestMessage *>(parseBaseNetlinkMessage(
-					netlinkMessageHeader));
-	if (recoveredMessage == NULL) {
-		std::cout << "Error parsing Application Allocate Flow request Message "
-				<< "\n";
-		returnValue = -1;
-	} else if (message.getSourceAppName()
-			!= recoveredMessage->getSourceAppName()) {
-		std::cout
-		<< "Source application name on original and recovered messages"
-		<< " are different\n";
-		returnValue = -1;
-	} else if (message.getDestAppName()
-			!= recoveredMessage->getDestAppName()) {
+	if (msg->port_id != ((irati_kmsg_ipcm_allocate_flow*) resp)->port_id) {
+		std::cout << "Port-id on original and recovered messages"
+			   << " are different\n";
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		irati_ctrl_msg_free((irati_msg_base *) resp);
+		return -1;
+	}
+
+	before = ApplicationProcessNamingInformation(msg->source);
+	after = ApplicationProcessNamingInformation(((irati_kmsg_ipcm_allocate_flow*) resp)->source);
+
+	if (before != after) {
+		std::cout << "Source application name on original and recovered messages"
+			   << " are different\n";
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		irati_ctrl_msg_free((irati_msg_base *) resp);
+		return -1;
+	}
+
+	before = ApplicationProcessNamingInformation(msg->dest);
+	after = ApplicationProcessNamingInformation(((irati_kmsg_ipcm_allocate_flow*) resp)->dest);
+
+	if (before != after) {
 		std::cout << "Destination application name on original and recovered "
 				<< "messages are different\n";
-		returnValue = -1;
-	} else if (message.getDifName()
-			!= recoveredMessage->getDifName()) {
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		irati_ctrl_msg_free((irati_msg_base *) resp);
+		return -1;
+	}
+
+	before = ApplicationProcessNamingInformation(msg->dif_name);
+	after = ApplicationProcessNamingInformation(((irati_kmsg_ipcm_allocate_flow*) resp)->dif_name);
+
+	if (before != after) {
 		std::cout << "DIF name on original and recovered "
 				<< "messages are different\n";
-		returnValue = -1;
-	} else if (message.getFlowSpecification()
-                        != recoveredMessage->getFlowSpecification()) {
-                std::cout << "Destination flow specification on original and recovered "
-                                << "messages are different\n";
-                returnValue = -1;
-        }
-
-	if (returnValue == 0) {
-		std::cout << "AppAllocateFlowRequestMessage test ok\n";
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		irati_ctrl_msg_free((irati_msg_base *) resp);
+		return -1;
 	}
-	nlmsg_free(netlinkMessage);
-	delete recoveredMessage;
 
-	return returnValue;
+	std::cout << "Test ok!" << std::endl;
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+	return 0;
 }
-
+/*
 int testAppAllocateFlowRequestResultMessage() {
 	std::cout << "TESTING APP ALLOCATE FLOW REQUEST RESULT MESSAGE\n";
 	int returnValue = 0;
@@ -3280,19 +3311,34 @@ int testIpcmDestroyIPCProcessRequestMessage()
         delete recoveredMessage;
 
         return returnValue;
-}
+}*/
 
 int main() {
-	std::cout << "TESTING LIBRINA-NETLINK-PARSERS\n";
+	std::cout << "TESTING LIBRINA-PARSERS\n";
 
 	int result;
 
-	result = testAppAllocateFlowRequestMessage();
+	result = test_irati_kmsg_ipcm_allocate_flow(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST);
 	if (result < 0) {
 		return result;
 	}
 
-	result = testAppAllocateFlowRequestResultMessage();
+	result = test_irati_kmsg_ipcm_allocate_flow(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED);
+	if (result < 0) {
+		return result;
+	}
+
+	result = test_irati_kmsg_ipcm_allocate_flow(RINA_C_APP_ALLOCATE_FLOW_REQUEST);
+	if (result < 0) {
+		return result;
+	}
+
+	result = test_irati_kmsg_ipcm_allocate_flow(RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED);
+	if (result < 0) {
+		return result;
+	}
+
+	/*result = testAppAllocateFlowRequestResultMessage();
 	if (result < 0) {
 		return result;
 	}
@@ -3495,7 +3541,7 @@ int main() {
 	result = testIpcmDestroyIPCProcessRequestMessage();
 	if (result < 0) {
 		return result;
-	}
+	}*/
 
 	return 0;
 }

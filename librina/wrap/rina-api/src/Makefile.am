@@ -12,6 +12,8 @@ librina_api_la_CPPFLAGS =			\
 	$(CXX_SYSINCLUDES)		\
 	-I$(top_srcdir)/include		\
 	-I$(srcdir)/../include		\
+	-I$(top_srcdir)/../include  \
+	-I$(top_srcdir)/src  \
 	$(CPPFLAGS_EXTRA)
 librina_api_la_CXXFLAGS =		\
 	$(CXXFLAGS_EXTRA)
