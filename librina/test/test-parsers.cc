@@ -35,10 +35,12 @@ int test_irati_kmsg_ipcm_allocate_flow(irati_msg_t msg_t)
 	int ret = 0;
 	char serbuf[8192];
 	unsigned int serlen;
+	unsigned int expected_serlen;
 	ApplicationProcessNamingInformation before;
 	ApplicationProcessNamingInformation after;
 
-	std::cout << "TESTING KMSG IPCM ALOCATE FLOW \n";
+	std::cout << "TESTING KMSG IPCM ALOCATE FLOW (" << msg_t
+		   << ")" << std::endl;
 
 	msg = new irati_kmsg_ipcm_allocate_flow();
 	msg->msg_type = msg_t;
@@ -49,51 +51,47 @@ int test_irati_kmsg_ipcm_allocate_flow(irati_msg_t msg_t)
 	msg->source->entity_name = stringToCharArray("database");
 	msg->source->entity_instance = stringToCharArray("12");
 
-	std::cout << "Memory address of msg "<< msg << std::endl;
-	std::cout << "Memory address of msg->source "<< &(msg->source) << std::endl;
-	std::cout << "Memory address of msg->dest "<< &(msg->dest) << std::endl;
-	std::cout << "Memory address of msg->dif_info "<< &(msg->dif_name) << std::endl;
-	std::cout << "process name: " << msg->source->process_name << std::endl;
-
 	msg->dest = new name();
 	msg->dest->process_name = stringToCharArray("/apps/dest");
 	msg->dest->process_instance = stringToCharArray("12345");
 	msg->dest->entity_name = stringToCharArray("printer");
 	msg->dest->entity_instance = stringToCharArray("12623456");
 
-	std::cout << "Memory address of msg->dest "<< &(msg->dest) << std::endl;
-
 	msg->fspec = new flow_spec();
 	msg->dif_name = new name();
 	msg->dif_name->process_name = stringToCharArray("test.DIF");
 
-	std::cout << "Memory address of msg->dif_info "<< &(msg->dif_name) << std::endl;
-
-	std::cout << "Before parsing" << std::endl;
-
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
 	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
 				     serbuf, (irati_msg_base *) msg);
 
-	std::cout << "Message serialized, size is " << serlen << std::endl;
 	if (serlen <= 0) {
 		std::cout << "Error serializing irati_kmsg_ipcm_allocate_flow message: "
-			  << serlen;
+			  << serlen << std::endl;
 		irati_ctrl_msg_free((irati_msg_base *) msg);
 		return -1;
 	}
 
-	resp = new irati_kmsg_ipcm_allocate_flow();
-	ret = deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
-				    serbuf, ret, (void *)resp, 10000);
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
 
-	if (ret) {
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_kmsg_ipcm_allocate_flow *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	    	       serbuf, serlen);
+	if (!resp) {
 		std::cout << "Error parsing irati_kmsg_ipcm_allocate_flow message: "
-			  << ret;
+			  << ret << std::endl;
 		irati_ctrl_msg_free((irati_msg_base *) msg);
 		return -1;
 	}
 
-	if (msg->port_id != ((irati_kmsg_ipcm_allocate_flow*) resp)->port_id) {
+	if (msg->port_id != resp->port_id) {
 		std::cout << "Port-id on original and recovered messages"
 			   << " are different\n";
 		irati_ctrl_msg_free((irati_msg_base *) msg);
@@ -102,7 +100,7 @@ int test_irati_kmsg_ipcm_allocate_flow(irati_msg_t msg_t)
 	}
 
 	before = ApplicationProcessNamingInformation(msg->source);
-	after = ApplicationProcessNamingInformation(((irati_kmsg_ipcm_allocate_flow*) resp)->source);
+	after = ApplicationProcessNamingInformation(resp->source);
 
 	if (before != after) {
 		std::cout << "Source application name on original and recovered messages"
@@ -137,6 +135,7 @@ int test_irati_kmsg_ipcm_allocate_flow(irati_msg_t msg_t)
 	std::cout << "Test ok!" << std::endl;
 	irati_ctrl_msg_free((irati_msg_base *) msg);
 	irati_ctrl_msg_free((irati_msg_base *) resp);
+
 	return 0;
 }
 /*

@@ -82,7 +82,7 @@ void policy_free(struct policy * policy);
 
 int dtp_config_serlen(const struct dtp_config * dtp_config);
 void serialize_dtp_config(void **pptr, const struct dtp_config *dtp_config);
-int deserialize_dtp_config(const void **pptr, struct dtp_config *dtp_config);
+int deserialize_dtp_config(const void **pptr, struct dtp_config ** dtp_config);
 void dtp_config_free(struct dtp_config * dtp_config);
 
 int window_fctrl_config_serlen(const struct window_fctrl_config * wfc);
@@ -107,7 +107,7 @@ void dtcp_rxctrl_config_free(struct dtcp_rxctrl_config * rxfc);
 
 int dtcp_config_serlen(const struct dtcp_config * dtcp_config);
 void serialize_dtcp_config(void **pptr, const struct dtcp_config *dtcp_config);
-int deserialize_dtcp_config(const void **pptr, struct dtcp_config *dtcp_config);
+int deserialize_dtcp_config(const void **pptr, struct dtcp_config **dtcp_config);
 void dtcp_config_free(struct dtcp_config * dtcp_config);
 
 int pff_config_serlen(const struct pff_config * pff);
@@ -202,7 +202,7 @@ void ipcp_config_entry_free(struct ipcp_config_entry * ice);
 
 int dif_config_serlen(const struct dif_config * dif_config);
 void serialize_dif_config(void **pptr, const struct dif_config *dif_config);
-int deserialize_dif_config(const void **pptr, struct dif_config *dif_config);
+int deserialize_dif_config(const void **pptr, struct dif_config ** dif_config);
 void dif_config_free(struct dif_config * dif_config);
 
 int rib_object_data_serlen(const struct rib_object_data * rod);
@@ -212,7 +212,7 @@ void rib_object_data_free(struct rib_object_data * rod);
 
 int query_rib_resp_serlen(const struct query_rib_resp * qrr);
 void serialize_query_rib_resp(void **pptr, const struct query_rib_resp *qrr);
-int deserialize_query_rib_resp(const void **pptr, struct query_rib_resp *qrr);
+int deserialize_query_rib_resp(const void **pptr, struct query_rib_resp **qrr);
 void query_rib_resp_free(struct query_rib_resp * qrr);
 
 int port_id_altlist_serlen(const struct port_id_altlist * pia);
@@ -227,12 +227,12 @@ void mod_pff_entry_free(struct mod_pff_entry * pffe);
 
 int pff_entry_list_serlen(const struct pff_entry_list * pel);
 void serialize_pff_entry_list(void **pptr, const struct pff_entry_list *pel);
-int deserialize_pff_entry_list(const void **pptr, struct pff_entry_list *pel);
+int deserialize_pff_entry_list(const void **pptr, struct pff_entry_list **pel);
 void pff_entry_list_free(struct pff_entry_list * pel);
 
 int sdup_crypto_state_serlen(const struct sdup_crypto_state * scs);
 void serialize_sdup_crypto_state(void **pptr, const struct sdup_crypto_state *scs);
-int deserialize_sdup_crypto_state(const void **pptr, struct sdup_crypto_state *scs);
+int deserialize_sdup_crypto_state(const void **pptr, struct sdup_crypto_state **scs);
 void sdup_crypto_state_free(struct sdup_crypto_state * scs);
 
 int dif_properties_entry_serlen(const struct dif_properties_entry * dpe);
@@ -242,7 +242,7 @@ void dif_properties_entry_free(struct dif_properties_entry * dpe);
 
 int get_dif_prop_resp_serlen(const struct get_dif_prop_resp * gdp);
 void serialize_get_dif_prop_resp(void **pptr, const struct get_dif_prop_resp *gdp);
-int deserialize_get_dif_prop_resp(const void **pptr, struct get_dif_prop_resp *gdp);
+int deserialize_get_dif_prop_resp(const void **pptr, struct get_dif_prop_resp **gdp);
 void get_dif_prop_resp_free(struct get_dif_prop_resp * gdp);
 
 int ipcp_neighbor_serlen(const struct ipcp_neighbor * nei);
@@ -252,7 +252,7 @@ void ipcp_neighbor_free(struct ipcp_neighbor * nei);
 
 int ipcp_neigh_list_serlen(const struct ipcp_neigh_list * nei);
 void serialize_ipcp_neigh_list(void **pptr, const struct ipcp_neigh_list *nei);
-int deserialize_ipcp_neigh_list(const void **pptr, struct ipcp_neigh_list *nei);
+int deserialize_ipcp_neigh_list(const void **pptr, struct ipcp_neigh_list **nei);
 void ipcp_neigh_list_free(struct ipcp_neigh_list * nei);
 
 int bs_info_entry_serlen(const struct bs_info_entry * bie);
@@ -267,7 +267,7 @@ void media_dif_info_free(struct media_dif_info * mdi);
 
 int media_report_serlen(const struct media_report * mre);
 void serialize_media_report(void **pptr, const struct media_report *mre);
-int deserialize_media_report(const void **pptr, struct media_report *mre);
+int deserialize_media_report(const void **pptr, struct media_report **mre);
 void media_report_free(struct media_report * mre);
 
 unsigned int irati_msg_serlen(struct irati_msg_layout *numtables,
@@ -279,10 +279,12 @@ int serialize_irati_msg(struct irati_msg_layout *numtables,
                         size_t num_entries,
                         void *serbuf,
                         const struct irati_msg_base *msg);
-int deserialize_irati_msg(struct irati_msg_layout *numtables, size_t num_entries,
-                          const void *serbuf, unsigned int serbuf_len,
-                          void *msgbuf, unsigned int msgbuf_len);
-void irati_msg_free(struct irati_msg_layout *numtables, size_t num_entries,
+void * deserialize_irati_msg(struct irati_msg_layout *numtables,
+			     size_t num_entries,
+                             const void *serbuf,
+			     unsigned int serbuf_len);
+void irati_msg_free(struct irati_msg_layout *numtables,
+		    size_t num_entries,
                     struct irati_msg_base *msg);
 
 #ifdef __KERNEL__
