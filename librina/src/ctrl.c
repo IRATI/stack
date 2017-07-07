@@ -40,9 +40,8 @@
 
 struct irati_msg_base * irati_read_next_msg(int cfd)
 {
-	unsigned int max_resp_size = irati_numtables_max_size(
-			irati_ker_numtables,
-			sizeof(irati_ker_numtables)/sizeof(struct irati_msg_layout));
+	unsigned int max_resp_size = irati_numtables_max_size(irati_ker_numtables,
+							      sizeof(irati_ker_numtables)/sizeof(struct irati_msg_layout));
 	struct irati_msg_base *resp;
 	char serbuf[8192];
 	int ret;
@@ -54,19 +53,11 @@ struct irati_msg_base * irati_read_next_msg(int cfd)
 	}
 
 	/* Here we can malloc the maximum kernel message size. */
-	resp = IRATI_MB(malloc(max_resp_size));
+	resp = (struct irati_msg_base *) deserialize_irati_msg(irati_ker_numtables,
+							       RINA_C_MAX,
+							       serbuf, ret);
 	if (!resp) {
-		LOG_ERR("Out of memory\n");
-		errno = ENOMEM;
-		return NULL;
-	}
-
-	/* Deserialize the message from serbuf into resp. */
-	ret = deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
-			serbuf, ret, (void *)resp, max_resp_size);
-	if (ret) {
 		LOG_ERR("Problems during deserialization [%d]\n", ret);
-		free(resp);
 		errno = ENOMEM;
 		return NULL;
 	}
