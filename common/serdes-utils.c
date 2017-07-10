@@ -57,6 +57,14 @@
 #define COMMON_EXPORT(_n)
 #define COMMON_STATIC               static
 
+#define DEFAULT_AP_NAME        "default/apname"
+#define DEFAULT_AP_INSTANCE    "default/apinstance"
+#define DEFAULT_AE_NAME        "default/aename"
+#define DEFAULT_AE_INSTANCE    "default/aeinstance"
+#define DEFAULT_POLICY_NAME    "default"
+#define DEFAULT_POLICY_VERSION "1"
+#define DEFAULT_DIF_NAME       "default.DIF"
+
 #endif
 
 /* Serialize a numeric variable _v of type _t. */
@@ -199,6 +207,21 @@ int deserialize_buffer(const void **pptr, struct buffer **b)
 	return 0;
 }
 
+struct buffer * default_buffer_create()
+{
+	struct buffer * result;
+
+	result = buffer_create();
+	if (!result)
+		return 0;
+
+	result->size = 10;
+	result->data = COMMON_ALLOC(10 * sizeof(char*), 1);
+	memset(result->data, 23, 10 * sizeof(char*));
+
+	return result;
+}
+
 /* Serialize a RINA name. */
 void serialize_rina_name(void **pptr, const struct name *name)
 {
@@ -216,11 +239,9 @@ int deserialize_rina_name(const void **pptr, struct name ** name)
 {
 	int ret;
 
-	*name = COMMON_ALLOC(sizeof(struct name), 1);
+	*name = rina_name_create();
 	if (!*name)
 		return -1;
-
-	memset(*name, 0, sizeof(struct name));
 
 	ret = deserialize_string(pptr, &(*name)->process_name);
 	if (ret) {
@@ -504,13 +525,47 @@ rina_name_valid(const struct name *name)
 }
 COMMON_EXPORT(rina_name_valid);
 
+struct name * rina_name_create()
+{
+	struct name * result;
+
+	result = COMMON_ALLOC(sizeof(struct name), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct name));
+
+	return result;
+}
+COMMON_EXPORT(rina_name_create);
+
+struct name * rina_default_name_create()
+{
+	struct name * result;
+
+	result = rina_name_create();
+	if (result) {
+		result->process_name = DEFAULT_AP_NAME;
+		result->process_instance = DEFAULT_AP_INSTANCE;
+		result->entity_name = DEFAULT_AE_NAME;
+		result->entity_instance = DEFAULT_AE_INSTANCE;
+	}
+
+	return result;
+}
+COMMON_EXPORT(rina_default_name_create);
+
 int flow_spec_serlen(const struct flow_spec * fspec)
 {
+	if (!fspec) return 0;
+
 	return 8 * sizeof(uint32_t) + sizeof(int32_t) + 2* sizeof(bool);
 }
 
 void serialize_flow_spec(void **pptr, const struct flow_spec *fspec)
 {
+	if (!fspec) return;
+
 	serialize_obj(*pptr, uint32_t, fspec->average_bandwidth);
 	serialize_obj(*pptr, uint32_t, fspec->average_sdu_bandwidth);
 	serialize_obj(*pptr, uint32_t, fspec->delay);
@@ -526,11 +581,9 @@ void serialize_flow_spec(void **pptr, const struct flow_spec *fspec)
 
 int deserialize_flow_spec(const void **pptr, struct flow_spec ** fspec)
 {
-	*fspec = COMMON_ALLOC(sizeof(struct flow_spec), 1);
+	*fspec = rina_fspec_create();
 	if (!*fspec)
 		return -1;
-
-	memset(*fspec, 0, sizeof(struct flow_spec));
 
 	deserialize_obj(*pptr, uint32_t, &(*fspec)->average_bandwidth);
 	deserialize_obj(*pptr, uint32_t, &(*fspec)->average_sdu_bandwidth);
@@ -555,19 +608,45 @@ void flow_spec_free(struct flow_spec * fspec)
 	COMMON_FREE(fspec);
 }
 
+struct flow_spec * rina_fspec_create()
+{
+	struct flow_spec * result;
+
+	result = COMMON_ALLOC(sizeof(struct flow_spec), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct flow_spec));
+	return result;
+}
+
+struct flow_spec * rina_default_fspec_create()
+{
+	struct flow_spec * result;
+
+	result = rina_fspec_create();
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct flow_spec));
+
+	return result;
+}
+
 int policy_parm_serlen(const struct policy_parm * prm)
 {
-	unsigned int ret = 2 * sizeof(uint16_t);
+	unsigned int ret;
 
-	if (!prm) {
-		return ret;
-	}
+	if (!prm) return 0;
 
-	return ret + string_prlen(prm->name) + string_prlen(prm->value);
+	return 2 * sizeof(uint16_t) + string_prlen(prm->name)
+			+ string_prlen(prm->value);
 }
 
 void serialize_policy_parm(void **pptr, const struct policy_parm *prm)
 {
+	if (!prm) return;
+
 	serialize_string(pptr, prm->name);
 	serialize_string(pptr, prm->value);
 }
@@ -575,8 +654,6 @@ void serialize_policy_parm(void **pptr, const struct policy_parm *prm)
 int deserialize_policy_parm(const void **pptr, struct policy_parm *prm)
 {
 	int ret;
-
-	memset(prm, 0, sizeof(*prm));
 
 	ret = deserialize_string(pptr, &prm->name);
 	if (ret) {
@@ -607,9 +684,39 @@ void policy_parm_free(struct policy_parm * prm)
 	COMMON_FREE(prm);
 }
 
+struct policy_parm * policy_parm_create()
+{
+	struct policy_parm * result;
+
+	result = COMMON_ALLOC(sizeof(struct policy_parm), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct policy_parm));
+	INIT_LIST_HEAD(&result->next);
+
+	return result;
+}
+
+struct policy_parm * policy_parm_default_create(void)
+{
+	struct policy_parm * result;
+
+	result = policy_parm_create();
+	if (!result)
+		return 0;
+
+	result->name = DEFAULT_POLICY_NAME;
+	result->value = DEFAULT_POLICY_VERSION;
+
+	return result;
+}
+
 int policy_serlen(const struct policy * policy)
 {
 	struct policy_parm * pos;
+
+	if (!policy) return 0;
 
 	unsigned int ret = 2 * sizeof(uint16_t);
 
@@ -632,6 +739,8 @@ void serialize_policy(void **pptr, const struct policy *policy)
 {
 	struct policy_parm * pos;
 	uint16_t num_parms;
+
+	if (!policy) return;
 
 	serialize_string(pptr, policy->name);
 	serialize_string(pptr, policy->version);
@@ -669,12 +778,11 @@ int deserialize_policy(const void **pptr, struct policy *policy)
 
 	deserialize_obj(*pptr, uint16_t, &num_attrs);
 	for(i = 0; i < num_attrs; i++) {
-		pos = COMMON_ALLOC(sizeof(struct policy_parm), 1);
+		pos = policy_parm_create();
 		if (!pos) {
 			return -1;
 		}
 
-		INIT_LIST_HEAD(&pos->next);
 		ret = deserialize_policy_parm(pptr, pos);
 		if (ret) {
 			return ret;
@@ -711,14 +819,46 @@ void policy_free(struct policy * policy)
 	COMMON_FREE(policy);
 }
 
+struct policy * policy_create()
+{
+	struct policy * result;
+
+	result = COMMON_ALLOC(sizeof(struct policy), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct policy));
+	INIT_LIST_HEAD(&result->params);
+
+	return result;
+}
+
+struct policy * policy_default_create()
+{
+	struct policy * result;
+
+	result = policy_create();
+	if (!result)
+		return 0;
+
+	result->name = DEFAULT_POLICY_NAME;
+	result->version = DEFAULT_POLICY_VERSION;
+
+	return result;
+}
+
 int dtp_config_serlen(const struct dtp_config * dtp_config)
 {
+	if (!dtp_config) return 0;
+
 	return 4 * sizeof(bool) + sizeof(int) + sizeof(timeout_t)
 	         + sizeof(seq_num_t) + policy_serlen(dtp_config->dtp_ps);
 }
 
 void serialize_dtp_config(void **pptr, const struct dtp_config *dtp_config)
 {
+	if (!dtp_config) return;
+
 	serialize_obj(*pptr, bool, dtp_config->dtcp_present);
 	serialize_obj(*pptr, int, dtp_config->seq_num_ro_th);
 	serialize_obj(*pptr, timeout_t, dtp_config->initial_a_timer);
@@ -731,11 +871,9 @@ void serialize_dtp_config(void **pptr, const struct dtp_config *dtp_config)
 
 int deserialize_dtp_config(const void **pptr, struct dtp_config ** dtp_config)
 {
-	*dtp_config = COMMON_ALLOC(sizeof(struct dtp_config), 1);
+	*dtp_config = dtp_config_create();
 	if (!*dtp_config)
 		return -1;
-
-	memset(*dtp_config, 0, sizeof(struct dtp_config));
 
 	deserialize_obj(*pptr, bool, &(*dtp_config)->dtcp_present);
 	deserialize_obj(*pptr, int, &(*dtp_config)->seq_num_ro_th);
@@ -745,12 +883,11 @@ int deserialize_dtp_config(const void **pptr, struct dtp_config ** dtp_config)
 	deserialize_obj(*pptr, bool, &(*dtp_config)->in_order_delivery);
 	deserialize_obj(*pptr, seq_num_t, &(*dtp_config)->max_sdu_gap);
 
-	(*dtp_config)->dtp_ps = COMMON_ALLOC(sizeof(struct policy), 1);
+	(*dtp_config)->dtp_ps = policy_create();
 	if (!(*dtp_config)->dtp_ps) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&(*dtp_config)->dtp_ps->params);
 	return deserialize_policy(pptr, (*dtp_config)->dtp_ps);
 }
 
@@ -767,8 +904,36 @@ void dtp_config_free(struct dtp_config * dtp_config)
 	COMMON_FREE(dtp_config);
 }
 
+struct dtp_config * dtp_config_create()
+{
+	struct dtp_config * result;
+
+	result = COMMON_ALLOC(sizeof(struct dtp_config), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct dtp_config));
+
+	return result;
+}
+
+struct dtp_config * dtp_config_default_create(void)
+{
+	struct dtp_config * result;
+
+	result = dtp_config_create();
+	if (!result)
+		return 0;
+
+	result->dtp_ps = policy_default_create();
+
+	return result;
+}
+
 int window_fctrl_config_serlen(const struct window_fctrl_config * wfc)
 {
+	if (!wfc) return 0;
+
 	return 2 * sizeof(uint32_t) + policy_serlen(wfc->rcvr_flow_control)
 				    + policy_serlen(wfc->tx_control);
 }
@@ -776,6 +941,8 @@ int window_fctrl_config_serlen(const struct window_fctrl_config * wfc)
 void serialize_window_fctrl_config(void **pptr,
 				   const struct window_fctrl_config *wfc)
 {
+	if (!wfc) return;
+
 	serialize_obj(*pptr, uint32_t, wfc->initial_credit);
 	serialize_obj(*pptr, uint32_t, wfc->max_closed_winq_length);
 	serialize_policy(pptr, wfc->rcvr_flow_control);
@@ -787,28 +954,24 @@ int deserialize_window_fctrl_config(const void **pptr,
 {
 	int ret;
 
-	memset(wfc, 0, sizeof(*wfc));
-
 	deserialize_obj(*pptr, uint32_t, &wfc->initial_credit);
 	deserialize_obj(*pptr, uint32_t, &wfc->max_closed_winq_length);
 
-	wfc->rcvr_flow_control = COMMON_ALLOC(sizeof(struct policy), 1);
+	wfc->rcvr_flow_control = policy_create();
 	if (!wfc->rcvr_flow_control) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&wfc->rcvr_flow_control->params);
 	ret = deserialize_policy(pptr, wfc->rcvr_flow_control);
 	if (ret) {
 		return ret;
 	}
 
-	wfc->tx_control = COMMON_ALLOC(sizeof(struct policy), 1);
+	wfc->tx_control = policy_create();
 	if (!wfc->tx_control) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&wfc->tx_control->params);
 	return deserialize_policy(pptr, wfc->tx_control);
 }
 
@@ -830,8 +993,37 @@ void window_fctrl_config_free(struct window_fctrl_config * wfc)
 	COMMON_FREE(wfc);
 }
 
+struct window_fctrl_config * window_fctrl_config_create()
+{
+	struct window_fctrl_config * result;
+
+	result = COMMON_ALLOC(sizeof(struct window_fctrl_config), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct window_fctrl_config));
+
+	return result;
+}
+
+struct window_fctrl_config * window_fctrl_config_default_create()
+{
+	struct window_fctrl_config * result;
+
+	result = window_fctrl_config_create();
+	if (!result)
+		return 0;
+
+	result->rcvr_flow_control = policy_default_create();
+	result->tx_control = policy_default_create();
+
+	return result;
+}
+
 int rate_fctrl_config_serlen(const struct rate_fctrl_config * rfc)
 {
+	if (!rfc) return 0;
+
 	return 2 * sizeof(uint32_t) + policy_serlen(rfc->rate_reduction)
                  + policy_serlen(rfc->no_rate_slow_down)
 		 + policy_serlen(rfc->no_override_default_peak);
@@ -839,6 +1031,8 @@ int rate_fctrl_config_serlen(const struct rate_fctrl_config * rfc)
 
 void serialize_rate_fctrl_config(void **pptr, const struct rate_fctrl_config *rfc)
 {
+	if (!rfc) return;
+
 	serialize_obj(*pptr, uint32_t, rfc->sending_rate);
 	serialize_obj(*pptr, uint32_t, rfc->time_period);
 	serialize_policy(pptr, rfc->no_override_default_peak);
@@ -850,39 +1044,34 @@ int deserialize_rate_fctrl_config(const void **pptr, struct rate_fctrl_config *r
 {
 	int ret;
 
-	memset(rfc, 0, sizeof(*rfc));
-
 	deserialize_obj(*pptr, uint32_t, &rfc->sending_rate);
 	deserialize_obj(*pptr, uint32_t, &rfc->time_period);
 
-	rfc->no_override_default_peak = COMMON_ALLOC(sizeof(struct policy), 1);
+	rfc->no_override_default_peak = policy_create();
 	if (!rfc->no_override_default_peak) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&rfc->no_override_default_peak->params);
 	ret = deserialize_policy(pptr, rfc->no_override_default_peak);
 	if (ret) {
 		return ret;
 	}
 
-	rfc->no_rate_slow_down = COMMON_ALLOC(sizeof(struct policy), 1);
+	rfc->no_rate_slow_down = policy_create();
 	if (!rfc->no_rate_slow_down) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&rfc->no_rate_slow_down->params);
 	ret = deserialize_policy(pptr, rfc->no_rate_slow_down);
 	if (ret) {
 		return ret;
 	}
 
-	rfc->rate_reduction = COMMON_ALLOC(sizeof(struct policy), 1);
+	rfc->rate_reduction = policy_create();
 	if (!rfc->rate_reduction) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&rfc->rate_reduction->params);
 	return deserialize_policy(pptr, rfc->rate_reduction);
 }
 
@@ -909,9 +1098,39 @@ void rate_fctrl_config_free(struct rate_fctrl_config * rfc)
 	COMMON_FREE(rfc);
 }
 
+struct rate_fctrl_config * rate_fctrl_config_create()
+{
+	struct rate_fctrl_config * result;
+
+	result = COMMON_ALLOC(sizeof(struct rate_fctrl_config), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct rate_fctrl_config));
+
+	return result;
+}
+
+struct rate_fctrl_config * rate_fctrl_config_default_create()
+{
+	struct rate_fctrl_config * result;
+
+	result = rate_fctrl_config_create();
+	if (!result)
+		return 0;
+
+	result->no_override_default_peak = policy_default_create();
+	result->no_rate_slow_down = policy_default_create();
+	result->rate_reduction = policy_default_create();
+
+	return result;
+}
+
 int dtcp_fctrl_config_serlen(const struct dtcp_fctrl_config * dfc)
 {
 	int ret;
+
+	if (!dfc) return 0;
 
 	ret = 6 * sizeof(uint32_t) + 2 * sizeof(bool) +
 		 + policy_serlen(dfc->closed_window)
@@ -930,6 +1149,8 @@ int dtcp_fctrl_config_serlen(const struct dtcp_fctrl_config * dfc)
 
 void serialize_dtcp_fctrl_config(void **pptr, const struct dtcp_fctrl_config *dfc)
 {
+	if (!dfc) return;
+
 	serialize_obj(*pptr, uint32_t, dfc->rcvd_buffers_th);
 	serialize_obj(*pptr, uint32_t, dfc->rcvd_bytes_percent_th);
 	serialize_obj(*pptr, uint32_t, dfc->rcvd_bytes_th);
@@ -954,8 +1175,6 @@ int deserialize_dtcp_fctrl_config(const void **pptr, struct dtcp_fctrl_config *d
 {
 	int ret;
 
-	memset(dfc, 0, sizeof(*dfc));
-
 	deserialize_obj(*pptr, uint32_t, &dfc->rcvd_buffers_th);
 	deserialize_obj(*pptr, uint32_t, &dfc->rcvd_bytes_percent_th);
 	deserialize_obj(*pptr, uint32_t, &dfc->rcvd_bytes_th);
@@ -965,52 +1184,48 @@ int deserialize_dtcp_fctrl_config(const void **pptr, struct dtcp_fctrl_config *d
 	deserialize_obj(*pptr, bool, &dfc->window_based_fctrl);
 	deserialize_obj(*pptr, bool, &dfc->rate_based_fctrl);
 
-	dfc->closed_window = COMMON_ALLOC(sizeof(struct policy), 1);
+	dfc->closed_window = policy_create();
 	if (!dfc->closed_window) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&dfc->closed_window->params);
 	ret = deserialize_policy(pptr, dfc->closed_window);
 	if (ret) {
 		return ret;
 	}
 
-	dfc->flow_control_overrun = COMMON_ALLOC(sizeof(struct policy), 1);
+	dfc->flow_control_overrun = policy_create();
 	if (!dfc->flow_control_overrun) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&dfc->flow_control_overrun->params);
 	ret = deserialize_policy(pptr, dfc->flow_control_overrun);
 	if (ret) {
 		return ret;
 	}
 
-	dfc->receiving_flow_control = COMMON_ALLOC(sizeof(struct policy), 1);
+	dfc->receiving_flow_control = policy_create();
 	if (!dfc->receiving_flow_control) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&dfc->receiving_flow_control->params);
 	ret = deserialize_policy(pptr, dfc->receiving_flow_control);
 	if (ret) {
 		return ret;
 	}
 
-	dfc->reconcile_flow_conflict = COMMON_ALLOC(sizeof(struct policy), 1);
+	dfc->reconcile_flow_conflict = policy_create();
 	if (!dfc->reconcile_flow_conflict) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&dfc->reconcile_flow_conflict->params);
 	ret = deserialize_policy(pptr, dfc->reconcile_flow_conflict);
 	if (ret) {
 		return ret;
 	}
 
 	if (dfc->window_based_fctrl) {
-		dfc->wfctrl_cfg = COMMON_ALLOC(sizeof(struct window_fctrl_config), 1);
+		dfc->wfctrl_cfg = window_fctrl_config_create();
 		if (!dfc->wfctrl_cfg) {
 			return -1;
 		}
@@ -1022,7 +1237,7 @@ int deserialize_dtcp_fctrl_config(const void **pptr, struct dtcp_fctrl_config *d
 	}
 
 	if (dfc->rate_based_fctrl) {
-		dfc->rfctrl_cfg = COMMON_ALLOC(sizeof(struct rate_fctrl_config), 1);
+		dfc->rfctrl_cfg = rate_fctrl_config_create();
 		if (!dfc->rfctrl_cfg) {
 			return -1;
 		}
@@ -1074,8 +1289,43 @@ void dtcp_fctrl_config_free(struct dtcp_fctrl_config * dfc)
 	COMMON_FREE(dfc);
 }
 
+struct dtcp_fctrl_config * dtcp_fctrl_config_create()
+{
+	struct dtcp_fctrl_config * result;
+
+	result = COMMON_ALLOC(sizeof(struct dtcp_fctrl_config), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct dtcp_fctrl_config));
+
+	return result;
+}
+
+struct dtcp_fctrl_config * dtcp_fctrl_config_default_create()
+{
+	struct dtcp_fctrl_config * result;
+
+	result = dtcp_fctrl_config_create();
+	if (!result)
+		return 0;
+
+	result->closed_window = policy_default_create();
+	result->flow_control_overrun = policy_default_create();
+	result->receiving_flow_control = policy_default_create();
+	result->reconcile_flow_conflict = policy_default_create();
+	result->rfctrl_cfg = rate_fctrl_config_default_create();
+	result->wfctrl_cfg = window_fctrl_config_default_create();
+	result->rate_based_fctrl = true;
+	result->window_based_fctrl = true;
+
+	return result;
+}
+
 int dtcp_rxctrl_config_serlen(const struct dtcp_rxctrl_config * rxfc)
 {
+	if (!rxfc) return 0;
+
 	return 3 * sizeof(uint32_t)
 		 + policy_serlen(rxfc->rcvr_ack)
                  + policy_serlen(rxfc->rcvr_control_ack)
@@ -1087,6 +1337,8 @@ int dtcp_rxctrl_config_serlen(const struct dtcp_rxctrl_config * rxfc)
 
 void serialize_dtcp_rxctrl_config(void **pptr, const struct dtcp_rxctrl_config *rxfc)
 {
+	if (!rxfc) return;
+
 	serialize_obj(*pptr, uint32_t, rxfc->data_retransmit_max);
 	serialize_obj(*pptr, uint32_t, rxfc->initial_tr);
 	serialize_obj(*pptr, uint32_t, rxfc->max_time_retry);
@@ -1102,73 +1354,65 @@ int deserialize_dtcp_rxctrl_config(const void **pptr, struct dtcp_rxctrl_config 
 {
 	int ret;
 
-	memset(rxfc, 0, sizeof(*rxfc));
-
 	deserialize_obj(*pptr, uint32_t, &rxfc->data_retransmit_max);
 	deserialize_obj(*pptr, uint32_t, &rxfc->initial_tr);
 	deserialize_obj(*pptr, uint32_t, &rxfc->max_time_retry);
 
-	rxfc->rcvr_ack = COMMON_ALLOC(sizeof(struct policy), 1);
+	rxfc->rcvr_ack = policy_create();
 	if (!rxfc->rcvr_ack) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&rxfc->rcvr_ack->params);
 	ret = deserialize_policy(pptr, rxfc->rcvr_ack);
 	if (ret) {
 		return ret;
 	}
 
-	rxfc->rcvr_control_ack = COMMON_ALLOC(sizeof(struct policy), 1);
+	rxfc->rcvr_control_ack = policy_create();
 	if (!rxfc->rcvr_control_ack) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&rxfc->rcvr_control_ack->params);
 	ret = deserialize_policy(pptr, rxfc->rcvr_control_ack);
 	if (ret) {
 		return ret;
 	}
 
-	rxfc->receiving_ack_list = COMMON_ALLOC(sizeof(struct policy), 1);
+	rxfc->receiving_ack_list = policy_create();
 	if (!rxfc->receiving_ack_list) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&rxfc->receiving_ack_list->params);
 	ret = deserialize_policy(pptr, rxfc->receiving_ack_list);
 	if (ret) {
 		return ret;
 	}
 
-	rxfc->retransmission_timer_expiry = COMMON_ALLOC(sizeof(struct policy), 1);
+	rxfc->retransmission_timer_expiry = policy_create();
 	if (!rxfc->retransmission_timer_expiry) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&rxfc->retransmission_timer_expiry->params);
 	ret = deserialize_policy(pptr, rxfc->retransmission_timer_expiry);
 	if (ret) {
 		return ret;
 	}
 
-	rxfc->sender_ack = COMMON_ALLOC(sizeof(struct policy), 1);
+	rxfc->sender_ack = policy_create();
 	if (!rxfc->sender_ack) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&rxfc->sender_ack->params);
 	ret = deserialize_policy(pptr, rxfc->sender_ack);
 	if (ret) {
 		return ret;
 	}
 
-	rxfc->sending_ack = COMMON_ALLOC(sizeof(struct policy), 1);
+	rxfc->sending_ack = policy_create();
 	if (!rxfc->sending_ack) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&rxfc->sending_ack->params);
 	return deserialize_policy(pptr, rxfc->sending_ack);
 }
 
@@ -1210,9 +1454,42 @@ void dtcp_rxctrl_config_free(struct dtcp_rxctrl_config * rxfc)
 	COMMON_FREE(rxfc);
 }
 
+struct dtcp_rxctrl_config * dtcp_rxctrl_config_create()
+{
+	struct dtcp_rxctrl_config * result;
+
+	result = COMMON_ALLOC(sizeof(struct dtcp_rxctrl_config), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct dtcp_rxctrl_config));
+
+	return result;
+}
+
+struct dtcp_rxctrl_config * dtcp_rxctrl_config_default_create()
+{
+	struct dtcp_rxctrl_config * result;
+
+	result = dtcp_rxctrl_config_create();
+	if (!result)
+		return 0;
+
+	result->rcvr_ack = policy_default_create();
+	result->rcvr_control_ack = policy_default_create();
+	result->receiving_ack_list = policy_default_create();
+	result->retransmission_timer_expiry = policy_default_create();
+	result->sender_ack = policy_default_create();
+	result->sending_ack = policy_default_create();
+
+	return result;
+}
+
 int dtcp_config_serlen(const struct dtcp_config * dtcp_config)
 {
 	int ret;
+
+	if (!dtcp_config) return 0;
 
 	ret = 2 * sizeof(bool)
 		+ policy_serlen(dtcp_config->dtcp_ps)
@@ -1230,6 +1507,8 @@ int dtcp_config_serlen(const struct dtcp_config * dtcp_config)
 
 void serialize_dtcp_config(void **pptr, const struct dtcp_config *dtcp_config)
 {
+	if (!dtcp_config) return;
+
 	serialize_obj(*pptr, bool, dtcp_config->flow_ctrl);
 	serialize_obj(*pptr, bool, dtcp_config->rtx_ctrl);
 	serialize_policy(pptr, dtcp_config->dtcp_ps);
@@ -1247,50 +1526,45 @@ int deserialize_dtcp_config(const void **pptr, struct dtcp_config ** dtcp_config
 {
 	int ret;
 
-	*dtcp_config = COMMON_ALLOC(sizeof(struct dtcp_config), 1);
+	*dtcp_config = dtcp_config_create();
 	if (!*dtcp_config)
 		return -1;
-
-	memset(*dtcp_config, 0, sizeof(struct dtcp_config));
 
 	deserialize_obj(*pptr, bool, &(*dtcp_config)->flow_ctrl);
 	deserialize_obj(*pptr, bool, &(*dtcp_config)->rtx_ctrl);
 
-	(*dtcp_config)->dtcp_ps = COMMON_ALLOC(sizeof(struct policy), 1);
+	(*dtcp_config)->dtcp_ps = policy_create();
 	if (!(*dtcp_config)->dtcp_ps) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&(*dtcp_config)->dtcp_ps->params);
 	ret = deserialize_policy(pptr, (*dtcp_config)->dtcp_ps);
 	if (ret) {
 		return ret;
 	}
 
-	(*dtcp_config)->lost_control_pdu = COMMON_ALLOC(sizeof(struct policy), 1);
+	(*dtcp_config)->lost_control_pdu = policy_create();
 	if (!(*dtcp_config)->lost_control_pdu) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&(*dtcp_config)->lost_control_pdu->params);
 	ret = deserialize_policy(pptr, (*dtcp_config)->lost_control_pdu);
 	if (ret) {
 		return ret;
 	}
 
-	(*dtcp_config)->rtt_estimator = COMMON_ALLOC(sizeof(struct policy), 1);
+	(*dtcp_config)->rtt_estimator = policy_create();
 	if (!(*dtcp_config)->rtt_estimator) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&(*dtcp_config)->rtt_estimator->params);
 	ret = deserialize_policy(pptr, (*dtcp_config)->rtt_estimator);
 	if (ret) {
 		return ret;
 	}
 
 	if ((*dtcp_config)->flow_ctrl) {
-		(*dtcp_config)->fctrl_cfg = COMMON_ALLOC(sizeof(struct dtcp_fctrl_config), 1);
+		(*dtcp_config)->fctrl_cfg = dtcp_fctrl_config_create();
 		if (!(*dtcp_config)->fctrl_cfg)
 			return -1;
 
@@ -1300,7 +1574,7 @@ int deserialize_dtcp_config(const void **pptr, struct dtcp_config ** dtcp_config
 	}
 
 	if ((*dtcp_config)->rtx_ctrl) {
-		(*dtcp_config)->rxctrl_cfg = COMMON_ALLOC(sizeof(struct dtcp_rxctrl_config), 1);
+		(*dtcp_config)->rxctrl_cfg = dtcp_rxctrl_config_create();
 		if (!(*dtcp_config)->rxctrl_cfg)
 			return -1;
 
@@ -1345,26 +1619,59 @@ void dtcp_config_free(struct dtcp_config * dtcp_config)
 	COMMON_FREE(dtcp_config);
 }
 
+struct dtcp_config * dtcp_config_create()
+{
+	struct dtcp_config * result;
+
+	result = COMMON_ALLOC(sizeof(struct dtcp_config), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct dtcp_config));
+
+	return result;
+}
+
+struct dtcp_config * dtcp_config_default_create()
+{
+	struct dtcp_config * result;
+
+	result = dtcp_config_create();
+	if (!result)
+		return 0;
+
+	result->lost_control_pdu = policy_default_create();
+	result->rtt_estimator = policy_default_create();
+	result->dtcp_ps = policy_default_create();
+	result->fctrl_cfg = dtcp_fctrl_config_default_create();
+	result->rxctrl_cfg = dtcp_rxctrl_config_default_create();
+	result->flow_ctrl = true;
+	result->rtx_ctrl = true;
+
+	return result;
+}
+
 int pff_config_serlen(const struct pff_config * pff)
 {
+	if (!pff) return 0;
+
 	return policy_serlen(pff->policy_set);
 }
 
 void serialize_pff_config(void **pptr, const struct pff_config *pff)
 {
+	if (!pff) return;
+
 	serialize_policy(pptr, pff->policy_set);
 }
 
 int deserialize_pff_config(const void **pptr, struct pff_config *pff)
 {
-	memset(pff, 0, sizeof(*pff));
-
-	pff->policy_set = COMMON_ALLOC(sizeof(struct policy), 1);
+	pff->policy_set = policy_create();
 	if (!pff->policy_set) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&pff->policy_set->params);
 	return deserialize_policy(pptr, pff->policy_set);
 }
 
@@ -1381,14 +1688,44 @@ void pff_config_free(struct pff_config * pff)
 	COMMON_FREE(pff);
 }
 
+struct pff_config * pff_config_create()
+{
+	struct pff_config * result;
+
+	result = COMMON_ALLOC(sizeof(struct pff_config), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct pff_config));
+
+	return result;
+}
+
+struct pff_config * pff_config_default_create()
+{
+	struct pff_config * result;
+
+	result = pff_config_create();
+	if (!result)
+		return 0;
+
+	result->policy_set = policy_default_create();
+
+	return result;
+}
+
 int rmt_config_serlen(const struct rmt_config * rmt)
 {
+	if (!rmt) return 0;
+
 	return policy_serlen(rmt->policy_set)
 		+ pff_config_serlen(rmt->pff_conf);
 }
 
 void serialize_rmt_config(void **pptr, const struct rmt_config *rmt)
 {
+	if (!rmt) return;
+
 	serialize_policy(pptr, rmt->policy_set);
 	serialize_pff_config(pptr, rmt->pff_conf);
 }
@@ -1397,19 +1734,16 @@ int deserialize_rmt_config(const void **pptr, struct rmt_config *rmt)
 {
 	int ret;
 
-	memset(rmt, 0, sizeof(*rmt));
-
-	rmt->policy_set = COMMON_ALLOC(sizeof(struct policy), 1);
+	rmt->policy_set = policy_create();
 	if (!rmt->policy_set) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&rmt->policy_set->params);
 	ret = deserialize_policy(pptr, rmt->policy_set);
 	if (ret)
 		return ret;
 
-	rmt->pff_conf = COMMON_ALLOC(sizeof(struct pff_config), 1);
+	rmt->pff_conf = pff_config_create();
 	if (!rmt->pff_conf) {
 		return -1;
 	}
@@ -1435,8 +1769,37 @@ void rmt_config_free(struct rmt_config * rmt)
 	COMMON_FREE(rmt);
 }
 
+struct rmt_config * rmt_config_create()
+{
+	struct rmt_config * result;
+
+	result = COMMON_ALLOC(sizeof(struct rmt_config), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct rmt_config));
+
+	return result;
+}
+
+struct rmt_config * rmt_config_default_create()
+{
+	struct rmt_config * result;
+
+	result = rmt_config_create();
+	if (!result)
+		return 0;
+
+	result->policy_set = policy_default_create();
+	result->pff_conf = pff_config_default_create();
+
+	return result;
+}
+
 int dup_config_entry_serlen(const struct dup_config_entry * dce)
 {
+	if (!dce) return 0;
+
 	return sizeof(uint16_t) + string_prlen(dce->n_1_dif_name)
 			+ policy_serlen(dce->crypto_policy)
 			+ policy_serlen(dce->error_check_policy)
@@ -1445,6 +1808,8 @@ int dup_config_entry_serlen(const struct dup_config_entry * dce)
 
 void serialize_dup_config_entry(void **pptr, const struct dup_config_entry *dce)
 {
+	if (!dce) return;
+
 	serialize_string(pptr, dce->n_1_dif_name);
 	serialize_policy(pptr, dce->crypto_policy);
 	serialize_policy(pptr, dce->error_check_policy);
@@ -1455,39 +1820,34 @@ int deserialize_dup_config_entry(const void **pptr, struct dup_config_entry *dce
 {
 	int ret;
 
-	memset(dce, 0, sizeof(*dce));
-
 	ret = deserialize_string(pptr, &dce->n_1_dif_name);
 	if (ret) {
 		return ret;
 	}
 
-	dce->crypto_policy = COMMON_ALLOC(sizeof(struct policy), 1);
+	dce->crypto_policy = policy_create();
 	if (!dce->crypto_policy) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&dce->crypto_policy->params);
 	ret = deserialize_policy(pptr, dce->crypto_policy);
 	if (ret)
 		return ret;
 
-	dce->error_check_policy = COMMON_ALLOC(sizeof(struct policy), 1);
+	dce->error_check_policy = policy_create();
 	if (!dce->error_check_policy) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&dce->error_check_policy->params);
 	ret = deserialize_policy(pptr, dce->error_check_policy);
 	if (ret)
 		return ret;
 
-	dce->ttl_policy = COMMON_ALLOC(sizeof(struct policy), 1);
+	dce->ttl_policy = policy_create();
 	if (!dce->ttl_policy) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&dce->ttl_policy->params);
 	return deserialize_policy(pptr, dce->ttl_policy);
 }
 
@@ -1519,17 +1879,48 @@ void dup_config_entry_free(struct dup_config_entry * dce)
 	COMMON_FREE(dce);
 }
 
+struct dup_config_entry * dup_config_entry_create(void)
+{
+	struct dup_config_entry * result;
+
+	result = COMMON_ALLOC(sizeof(struct dup_config_entry), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct dup_config_entry));
+
+	return result;
+}
+
+struct dup_config_entry * dup_config_entry_default_create(void)
+{
+	struct dup_config_entry * result;
+
+	result = dup_config_entry_create();
+	if (!result)
+		return 0;
+
+	result->crypto_policy = policy_default_create();
+	result->error_check_policy = policy_default_create();
+	result->ttl_policy = policy_default_create();
+	result->n_1_dif_name = DEFAULT_DIF_NAME;
+
+	return result;
+}
+
 int sdup_config_serlen(const struct sdup_config * sdc)
 {
 	int ret;
 	struct dup_config * pos;
 
+	if (!sdc) return 0;
+
 	ret = dup_config_entry_serlen(sdc->default_dup_conf)
 		  + sizeof(uint16_t);
 
-        list_for_each_entry(pos, &(sdc->specific_dup_confs), next) {
-                ret = ret + dup_config_entry_serlen(pos->entry);
-        }
+	list_for_each_entry(pos, &(sdc->specific_dup_confs), next) {
+		ret = ret + dup_config_entry_serlen(pos->entry);
+	}
 
         return ret;
 }
@@ -1539,9 +1930,12 @@ void serialize_sdup_config(void **pptr, const struct sdup_config *sdc)
 	struct dup_config * pos;
 	uint16_t num_parms;
 
+	if (!sdc) return;
+
 	serialize_dup_config_entry(pptr, sdc->default_dup_conf);
 
 	num_parms = 0;
+
 	list_for_each_entry(pos, &(sdc->specific_dup_confs), next) {
 		num_parms ++;
 	}
@@ -1560,9 +1954,7 @@ int deserialize_sdup_config(const void **pptr, struct sdup_config *sdc)
 	uint16_t num_attrs;
 	int i;
 
-	memset(sdc, 0, sizeof(*sdc));
-
-	sdc->default_dup_conf = COMMON_ALLOC(sizeof(struct dup_config_entry), 1);
+	sdc->default_dup_conf = dup_config_entry_create();
 	if (!sdc->default_dup_conf) {
 		return -1;
 	}
@@ -1579,7 +1971,7 @@ int deserialize_sdup_config(const void **pptr, struct sdup_config *sdc)
 		}
 
 		INIT_LIST_HEAD(&pos->next);
-		pos->entry = COMMON_ALLOC(sizeof(struct dup_config_entry), 1);
+		pos->entry = dup_config_entry_create();
 		if (!pos->entry) {
 			return -1;
 		}
@@ -1620,13 +2012,44 @@ void sdup_config_free(struct sdup_config * sdc)
 	COMMON_FREE(sdc);
 }
 
+struct sdup_config * sdup_config_create()
+{
+	struct sdup_config * result;
+
+	result = COMMON_ALLOC(sizeof(struct sdup_config), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct sdup_config));
+	INIT_LIST_HEAD(&result->specific_dup_confs);
+
+	return result;
+}
+
+struct sdup_config * sdup_config_default_create()
+{
+	struct sdup_config * result;
+
+	result = sdup_config_create();
+	if (!result)
+		return 0;
+
+	result->default_dup_conf = dup_config_entry_default_create();
+
+	return result;
+}
+
 int dt_cons_serlen(const struct dt_cons * dtc)
 {
+	if (!dtc) return 0;
+
 	return 9 * sizeof(uint16_t) + 5 * sizeof(uint32_t) + 3 * sizeof(bool);
 }
 
 void serialize_dt_cons(void **pptr, const struct dt_cons *dtc)
 {
+	if (!dtc) return;
+
 	serialize_obj(*pptr, uint16_t, dtc->address_length);
 	serialize_obj(*pptr, uint16_t, dtc->cep_id_length);
 	serialize_obj(*pptr, uint16_t, dtc->ctrl_seq_num_length);
@@ -1648,8 +2071,6 @@ void serialize_dt_cons(void **pptr, const struct dt_cons *dtc)
 
 int deserialize_dt_cons(const void **pptr, struct dt_cons *dtc)
 {
-	memset(dtc, 0, sizeof(*dtc));
-
 	deserialize_obj(*pptr, uint16_t, &dtc->address_length);
 	deserialize_obj(*pptr, uint16_t, &dtc->cep_id_length);
 	deserialize_obj(*pptr, uint16_t, &dtc->ctrl_seq_num_length);
@@ -1679,9 +2100,46 @@ void dt_cons_free(struct dt_cons * dtc)
 	COMMON_FREE(dtc);
 }
 
+struct dt_cons * dt_cons_create()
+{
+	struct dt_cons * result;
+
+	result = COMMON_ALLOC(sizeof(struct dt_cons), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct dt_cons));
+
+	return result;
+}
+
+struct dt_cons * dt_cons_default_create()
+{
+	struct dt_cons * result;
+
+	result = dt_cons_create();
+	if (!result)
+		return 0;
+
+	result->address_length = 2;
+	result->cep_id_length = 2;
+	result->ctrl_seq_num_length = 4;
+	result->dif_concat = false;
+	result->dif_frag = false;
+	result->dif_integrity = false;
+	result->frame_length = 2;
+	result->length_length = 2;
+	result->qos_id_length = 1;
+	result->seq_num_length = 4;
+
+	return result;
+}
+
 int qos_cube_serlen(const struct qos_cube * qos)
 {
 	int ret;
+
+	if (!qos) return 0;
 
 	ret = 6 * sizeof (uint32_t) + sizeof(bool) + sizeof(int32_t)
 			+ 2 * sizeof(uint16_t) + string_prlen(qos->name);
@@ -1697,6 +2155,8 @@ int qos_cube_serlen(const struct qos_cube * qos)
 
 void serialize_qos_cube(void **pptr, const struct qos_cube *qos)
 {
+	if (!qos) return;
+
 	serialize_obj(*pptr, uint16_t, qos->id);
 	serialize_obj(*pptr, uint32_t, qos->avg_bw);
 	serialize_obj(*pptr, uint32_t, qos->avg_sdu_bw);
@@ -1715,8 +2175,6 @@ void serialize_qos_cube(void **pptr, const struct qos_cube *qos)
 int deserialize_qos_cube(const void **pptr, struct qos_cube *qos)
 {
 	int ret;
-
-	memset(qos, 0, sizeof(*qos));
 
 	deserialize_obj(*pptr, uint16_t, &qos->id);
 	deserialize_obj(*pptr, uint32_t, &qos->avg_bw);
@@ -1763,17 +2221,49 @@ void qos_cube_free(struct qos_cube * qos)
 	COMMON_FREE(qos);
 }
 
+struct qos_cube * qos_cube_create(void)
+{
+	struct qos_cube * result;
+
+	result = COMMON_ALLOC(sizeof(struct qos_cube), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct qos_cube));
+
+	return result;
+}
+
+struct qos_cube * qos_cube_default_create(void)
+{
+	struct qos_cube * result;
+
+	result = qos_cube_create();
+	if (!result)
+		return 0;
+
+	result->name = DEFAULT_POLICY_NAME;
+	result->dtcpc = dtcp_config_default_create();
+	result->dtpc = dtp_config_default_create();
+
+	return result;
+}
+
 int efcp_config_serlen(const struct efcp_config * efc)
 {
 	int ret;
 	struct qos_cube_entry * pos;
 
-	ret = dt_cons_serlen(efc->dt_cons) + policy_serlen(efc->unknown_flow)
-			+ sizeof(uint8_t) + sizeof(ssize_t) + sizeof(uint16_t);
+	if (!efc) return 0;
 
-        list_for_each_entry(pos, &(efc->qos_cubes), next) {
-                ret = ret + qos_cube_serlen(pos->entry);
-        }
+	ret = dt_cons_serlen(efc->dt_cons)
+			+ sizeof(uint8_t) + sizeof(ssize_t)
+			+ sizeof(uint16_t)
+			+ policy_serlen(efc->unknown_flow);
+
+	list_for_each_entry(pos, &(efc->qos_cubes), next) {
+		ret = ret + qos_cube_serlen(pos->entry);
+	}
 
 	return ret;
 }
@@ -1783,6 +2273,8 @@ void serialize_efcp_config(void **pptr, const struct efcp_config *efc)
 	uint8_t size = 0;
 	uint16_t num_cubes = 0;
 	struct qos_cube_entry * pos;
+
+	if (!efc) return;
 
 	serialize_dt_cons(pptr, efc->dt_cons);
 	serialize_policy(pptr, efc->unknown_flow);
@@ -1816,9 +2308,7 @@ int deserialize_efcp_config(const void **pptr, struct efcp_config *efc)
 	int i;
 	struct qos_cube_entry * pos;
 
-	memset(efc, 0, sizeof(*efc));
-
-	efc->dt_cons = COMMON_ALLOC(sizeof(struct dt_cons), 1);
+	efc->dt_cons = dt_cons_create();
 	if (!efc->dt_cons) {
 		return -1;
 	}
@@ -1827,12 +2317,11 @@ int deserialize_efcp_config(const void **pptr, struct efcp_config *efc)
 	if (ret)
 		return ret;
 
-	efc->unknown_flow = COMMON_ALLOC(sizeof(struct policy), 1);
+	efc->unknown_flow = policy_create();
 	if (!efc->unknown_flow) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&efc->unknown_flow->params);
 	ret = deserialize_policy(pptr, efc->unknown_flow);
 	if (ret)
 		return ret;
@@ -1858,7 +2347,7 @@ int deserialize_efcp_config(const void **pptr, struct efcp_config *efc)
 		}
 
 		INIT_LIST_HEAD(&pos->next);
-		pos->entry = COMMON_ALLOC(sizeof(struct qos_cube), 1);
+		pos->entry = qos_cube_create();
 		if (!pos->entry) {
 			return -1;
 		}
@@ -1909,8 +2398,48 @@ void efcp_config_free(struct efcp_config * efc)
 	COMMON_FREE(efc);
 }
 
+struct efcp_config * efcp_config_create(void)
+{
+	struct efcp_config * result;
+
+	result = COMMON_ALLOC(sizeof(struct efcp_config), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct efcp_config));
+	INIT_LIST_HEAD(&result->qos_cubes);
+
+	return result;
+}
+
+struct efcp_config * efcp_config_default_create()
+{
+	struct efcp_config * result;
+	struct qos_cube_entry * pos;
+
+	result = efcp_config_create();
+	if (!result)
+		return 0;
+
+	result->dt_cons = dt_cons_default_create();
+	result->unknown_flow = policy_default_create();
+	result->pci_offset_table = COMMON_ALLOC(sizeof(ssize_t), 1);
+	*(result->pci_offset_table) = 3;
+	pos = COMMON_ALLOC(sizeof(struct qos_cube_entry), 1);
+	if (pos) {
+		INIT_LIST_HEAD(&pos->next);
+		pos->entry = qos_cube_default_create();
+		if (pos->entry)
+			list_add_tail(&pos->next, &result->qos_cubes);
+	}
+
+	return result;
+}
+
 int fa_config_serlen(const struct fa_config * fac)
 {
+	if (!fac) return 0;
+
 	return sizeof(uint32_t) + policy_serlen(fac->allocate_notify)
 			+ policy_serlen(fac->allocate_retry)
 			+ policy_serlen(fac->new_flow_req)
@@ -1920,6 +2449,8 @@ int fa_config_serlen(const struct fa_config * fac)
 
 void serialize_fa_config(void **pptr, const struct fa_config *fac)
 {
+	if (!fac) return;
+
 	serialize_obj(*pptr, uint32_t, fac->max_create_flow_retries);
 	serialize_policy(pptr, fac->allocate_notify);
 	serialize_policy(pptr, fac->allocate_retry);
@@ -1932,56 +2463,49 @@ int deserialize_fa_config(const void **pptr, struct fa_config *fac)
 {
 	int ret;
 
-	memset(fac, 0, sizeof(*fac));
-
 	deserialize_obj(*pptr, uint32_t, &fac->max_create_flow_retries);
 
-	fac->allocate_notify = COMMON_ALLOC(sizeof(struct policy), 1);
+	fac->allocate_notify = policy_create();
 	if (!fac->allocate_notify) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&fac->allocate_notify->params);
 	ret = deserialize_policy(pptr, fac->allocate_notify);
 	if (ret)
 		return ret;
 
-	fac->allocate_retry = COMMON_ALLOC(sizeof(struct policy), 1);
+	fac->allocate_retry = policy_create();
 	if (!fac->allocate_retry) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&fac->allocate_retry->params);
 	ret = deserialize_policy(pptr, fac->allocate_retry);
 	if (ret)
 		return ret;
 
-	fac->new_flow_req = COMMON_ALLOC(sizeof(struct policy), 1);
+	fac->new_flow_req = policy_create();
 	if (!fac->new_flow_req) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&fac->new_flow_req->params);
 	ret = deserialize_policy(pptr, fac->new_flow_req);
 	if (ret)
 		return ret;
 
-	fac->ps = COMMON_ALLOC(sizeof(struct policy), 1);
+	fac->ps = policy_create();
 	if (!fac->ps) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&fac->ps->params);
 	ret = deserialize_policy(pptr, fac->ps);
 	if (ret)
 		return ret;
 
-	fac->seq_roll_over = COMMON_ALLOC(sizeof(struct policy), 1);
+	fac->seq_roll_over = policy_create();
 	if (!fac->seq_roll_over) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&fac->seq_roll_over->params);
 	return deserialize_policy(pptr, fac->seq_roll_over);
 }
 
@@ -2018,26 +2542,57 @@ void fa_config_free(struct fa_config * fac)
 	COMMON_FREE(fac);
 }
 
+struct fa_config * fa_config_create()
+{
+	struct fa_config * result;
+
+	result = COMMON_ALLOC(sizeof(struct fa_config), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct fa_config));
+
+	return result;
+}
+
+struct fa_config * fa_config_default_create()
+{
+	struct fa_config * result;
+
+	result = fa_config_create();
+	if (!result)
+		return 0;
+
+	result->allocate_notify = policy_default_create();
+	result->allocate_retry = policy_default_create();
+	result->new_flow_req = policy_default_create();
+	result->ps = policy_default_create();
+	result->seq_roll_over = policy_default_create();
+
+	return result;
+}
+
 int resall_config_serlen(const struct resall_config * resc)
 {
+	if (!resc) return 0;
+
 	return policy_serlen(resc->pff_gen);
 }
 
 void serialize_resall_config(void **pptr, const struct resall_config *resc)
 {
+	if (!resc) return;
+
 	serialize_policy(pptr, resc->pff_gen);
 }
 
 int deserialize_resall_config(const void **pptr, struct resall_config *resc)
 {
-	memset(resc, 0, sizeof(*resc));
-
-	resc->pff_gen = COMMON_ALLOC(sizeof(struct policy), 1);
+	resc->pff_gen = policy_create();
 	if (!resc->pff_gen) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&resc->pff_gen->params);
 	return deserialize_policy(pptr, resc->pff_gen);
 }
 
@@ -2054,26 +2609,53 @@ void resall_config_free(struct resall_config * resc)
 	COMMON_FREE(resc);
 }
 
+struct resall_config * resall_config_create(void)
+{
+	struct resall_config * result;
+
+	result = COMMON_ALLOC(sizeof(struct resall_config), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct resall_config));
+
+	return result;
+}
+
+struct resall_config * resall_config_default_create(void)
+{
+	struct resall_config * result;
+
+	result = resall_config_create();
+	if (!result)
+		return 0;
+
+	result->pff_gen = policy_default_create();
+
+	return result;
+}
+
 int et_config_serlen(const struct et_config * etc)
 {
+	if (!etc) return 0;
+
 	return policy_serlen(etc->ps);
 }
 
 void serialize_et_config(void **pptr, const struct et_config *etc)
 {
+	if (!etc) return;
+
 	serialize_policy(pptr, etc->ps);
 }
 
 int deserialize_et_config(const void **pptr, struct et_config *etc)
 {
-	memset(etc, 0, sizeof(*etc));
-
-	etc->ps = COMMON_ALLOC(sizeof(struct policy), 1);
+	etc->ps = policy_create();
 	if (!etc->ps) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&etc->ps->params);
 	return deserialize_policy(pptr, etc->ps);
 }
 
@@ -2090,8 +2672,36 @@ void et_config_free(struct et_config * etc)
 	COMMON_FREE(etc);
 }
 
+struct et_config * et_config_create()
+{
+	struct et_config * result;
+
+	result = COMMON_ALLOC(sizeof(struct et_config), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct et_config));
+
+	return result;
+}
+
+struct et_config * et_config_default_create()
+{
+	struct et_config * result;
+
+	result = et_config_create();
+	if (!result)
+		return 0;
+
+	result->ps = policy_default_create();
+
+	return result;
+}
+
 int static_ipcp_addr_serlen(const struct static_ipcp_addr * addr)
 {
+	if (!addr) return 0;
+
 	return 2*sizeof(uint16_t) + sizeof(uint32_t)
 			+ string_prlen(addr->ap_name)
 			+ string_prlen(addr->ap_instance);
@@ -2099,6 +2709,8 @@ int static_ipcp_addr_serlen(const struct static_ipcp_addr * addr)
 
 void serialize_static_ipcp_addr(void **pptr, const struct static_ipcp_addr *addr)
 {
+	if (!addr) return;
+
 	serialize_obj(*pptr, uint32_t, addr->address);
 	serialize_string(pptr, addr->ap_name);
 	serialize_string(pptr, addr->ap_instance);
@@ -2107,8 +2719,6 @@ void serialize_static_ipcp_addr(void **pptr, const struct static_ipcp_addr *addr
 int deserialize_static_ipcp_addr(const void **pptr, struct static_ipcp_addr *addr)
 {
 	int ret;
-
-	memset(addr, 0, sizeof(*addr));
 
 	deserialize_obj(*pptr, uint32_t, &addr->address);
 
@@ -2137,22 +2747,52 @@ void static_ipcp_addr_free(struct static_ipcp_addr * addr)
 	COMMON_FREE(addr);
 }
 
+struct static_ipcp_addr * static_ipcp_addr_create()
+{
+	struct static_ipcp_addr * result;
+
+	result = COMMON_ALLOC(sizeof(struct static_ipcp_addr), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct static_ipcp_addr));
+
+	return result;
+}
+
+struct static_ipcp_addr * static_ipcp_addr_default_create()
+{
+	struct static_ipcp_addr * result;
+
+	result = static_ipcp_addr_create();
+	if (!result)
+		return 0;
+
+	result->address = 32;
+	result->ap_instance = DEFAULT_AP_INSTANCE;
+	result->ap_name = DEFAULT_AP_NAME;
+
+	return result;
+}
+
 int address_pref_config_serlen(const struct address_pref_config * apc)
 {
+	if (!apc) return 0;
+
 	return sizeof(uint16_t) + sizeof(uint32_t)
 			+ string_prlen(apc->org);
 }
 
 void serialize_address_pref_config(void **pptr, const struct address_pref_config *apc)
 {
+	if (!apc) return;
+
 	serialize_obj(*pptr, uint32_t, apc->prefix);
 	serialize_string(pptr, apc->org);
 }
 
 int deserialize_address_pref_config(const void **pptr, struct address_pref_config *apc)
 {
-	memset(apc, 0, sizeof(*apc));
-
 	deserialize_obj(*pptr, uint32_t, &apc->prefix);
 
 	return deserialize_string(pptr, &apc->org);
@@ -2171,11 +2811,40 @@ void address_pref_config_free(struct address_pref_config * apc)
 	COMMON_FREE(apc);
 }
 
+struct address_pref_config * address_pref_config_create()
+{
+	struct address_pref_config * result;
+
+	result = COMMON_ALLOC(sizeof(struct address_pref_config), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct address_pref_config));
+
+	return result;
+}
+
+struct address_pref_config * address_pref_config_default_create()
+{
+	struct address_pref_config * result;
+
+	result = address_pref_config_create();
+	if (!result)
+		return 0;
+
+	result->org = DEFAULT_POLICY_NAME;
+	result->prefix = 32;
+
+	return result;
+}
+
 int addressing_config_serlen(const struct addressing_config * ac)
 {
 	int ret;
 	struct static_ipcp_addr_entry * addr_pos;
 	struct address_pref_config_entry * pref_pos;
+
+	if (!ac) return 0;
 
 	ret = 2 * sizeof(uint16_t);
 
@@ -2195,6 +2864,8 @@ void serialize_addressing_config(void **pptr, const struct addressing_config *ac
 	struct static_ipcp_addr_entry * addr_pos;
 	struct address_pref_config_entry * pref_pos;
 	uint16_t size = 0;
+
+	if (!ac) return;
 
 	list_for_each_entry(addr_pos, &(ac->static_ipcp_addrs), next) {
 		size ++;
@@ -2226,8 +2897,6 @@ int deserialize_addressing_config(const void **pptr, struct addressing_config *a
 	uint16_t size;
 	int i;
 
-	memset(ac, 0, sizeof(*ac));
-
 	deserialize_obj(*pptr, uint16_t, &size);
 
 	for(i = 0; i < size; i++) {
@@ -2237,7 +2906,7 @@ int deserialize_addressing_config(const void **pptr, struct addressing_config *a
 		}
 
 		INIT_LIST_HEAD(&addr_pos->next);
-		addr_pos->entry = COMMON_ALLOC(sizeof(struct static_ipcp_addr), 1);
+		addr_pos->entry = static_ipcp_addr_create();
 		if (!addr_pos->entry) {
 			return -1;
 		}
@@ -2259,7 +2928,7 @@ int deserialize_addressing_config(const void **pptr, struct addressing_config *a
 		}
 
 		INIT_LIST_HEAD(&pref_pos->next);
-		pref_pos->entry = COMMON_ALLOC(sizeof(struct address_pref_config), 1);
+		pref_pos->entry = address_pref_config_create();
 		if (!pref_pos->entry) {
 			return -1;
 		}
@@ -2306,14 +2975,62 @@ void addressing_config_free(struct addressing_config * ac)
 	COMMON_FREE(ac);
 }
 
+struct addressing_config * addressing_config_create()
+{
+	struct addressing_config * result;
+
+	result = COMMON_ALLOC(sizeof(struct addressing_config), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct addressing_config));
+	INIT_LIST_HEAD(&result->address_prefixes);
+	INIT_LIST_HEAD(&result->static_ipcp_addrs);
+
+	return result;
+}
+
+struct addressing_config * addressing_config_default_create()
+{
+	struct addressing_config * result;
+	struct static_ipcp_addr_entry * addr_pos;
+	struct address_pref_config_entry * pref_pos;
+
+	result = addressing_config_create();
+	if (!result)
+		return 0;
+
+	addr_pos = COMMON_ALLOC(sizeof(struct static_ipcp_addr_entry), 1);
+	if (addr_pos) {
+		INIT_LIST_HEAD(&addr_pos->next);
+		addr_pos->entry = static_ipcp_addr_default_create();
+		if (addr_pos->entry)
+			list_add_tail(&addr_pos->next, &result->static_ipcp_addrs);
+	}
+
+	pref_pos = COMMON_ALLOC(sizeof(struct address_pref_config_entry), 1);
+	if (pref_pos) {
+		INIT_LIST_HEAD(&pref_pos->next);
+		pref_pos->entry = address_pref_config_default_create();
+		if (pref_pos->entry)
+			list_add_tail(&pref_pos->next, &result->address_prefixes);
+	}
+
+	return result;
+}
+
 int nsm_config_serlen(const struct nsm_config * nsmc)
 {
+	if (!nsmc) return 0;
+
 	return addressing_config_serlen(nsmc->addr_conf)
 			+ policy_serlen(nsmc->ps);
 }
 
 void serialize_nsm_config(void **pptr, const struct nsm_config *nsmc)
 {
+	if (!nsmc) return;
+
 	serialize_policy(pptr, nsmc->ps);
 	serialize_addressing_config(pptr, nsmc->addr_conf);
 }
@@ -2322,25 +3039,20 @@ int deserialize_nsm_config(const void **pptr, struct nsm_config *nsmc)
 {
 	int ret;
 
-	memset(nsmc, 0, sizeof(*nsmc));
-
-	nsmc->ps = COMMON_ALLOC(sizeof(struct policy), 1);
+	nsmc->ps = policy_create();
 	if (!nsmc->ps) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&nsmc->ps->params);
 	ret = deserialize_policy(pptr, nsmc->ps);
 	if (ret)
 		return ret;
 
-	nsmc->addr_conf = COMMON_ALLOC(sizeof(struct addressing_config), 1);
+	nsmc->addr_conf = addressing_config_create();
 	if (!nsmc->addr_conf) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&nsmc->addr_conf->address_prefixes);
-	INIT_LIST_HEAD(&nsmc->addr_conf->static_ipcp_addrs);
 	return deserialize_addressing_config(pptr, nsmc->addr_conf);
 }
 
@@ -2362,14 +3074,45 @@ void nsm_config_free(struct nsm_config * nsmc)
 	COMMON_FREE(nsmc);
 }
 
+struct nsm_config * nsm_config_create()
+{
+	struct nsm_config * result;
+
+	result = COMMON_ALLOC(sizeof(struct nsm_config), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct nsm_config));
+
+	return result;
+}
+
+struct nsm_config * nsm_config_default_create()
+{
+	struct nsm_config * result;
+
+	result = nsm_config_create();
+	if (!result)
+		return 0;
+
+	result->addr_conf = addressing_config_default_create();
+	result->ps = policy_default_create();
+
+	return result;
+}
+
 int auth_sdup_profile_serlen(const struct auth_sdup_profile * asp)
 {
-	return policy_serlen(asp->auth) + policy_serlen(asp->encrypt)
+	if (!asp) return 0;
+
+ 	return policy_serlen(asp->auth) + policy_serlen(asp->encrypt)
 			+ policy_serlen(asp->crc) + policy_serlen(asp->ttl);
 }
 
 void serialize_auth_sdup_profile(void **pptr, const struct auth_sdup_profile *asp)
 {
+	if (!asp) return;
+
 	serialize_policy(pptr, asp->auth);
 	serialize_policy(pptr, asp->encrypt);
 	serialize_policy(pptr, asp->crc);
@@ -2380,44 +3123,38 @@ int deserialize_auth_sdup_profile(const void **pptr, struct auth_sdup_profile *a
 {
 	int ret;
 
-	memset(asp, 0, sizeof(*asp));
-
-	asp->auth = COMMON_ALLOC(sizeof(struct policy), 1);
+	asp->auth = policy_create();
 	if (!asp->auth) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&asp->auth->params);
 	ret = deserialize_policy(pptr, asp->auth);
 	if (ret)
 		return ret;
 
-	asp->encrypt = COMMON_ALLOC(sizeof(struct policy), 1);
+	asp->encrypt = policy_create();
 	if (!asp->encrypt) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&asp->encrypt->params);
 	ret = deserialize_policy(pptr, asp->encrypt);
 	if (ret)
 		return ret;
 
-	asp->crc = COMMON_ALLOC(sizeof(struct policy), 1);
+	asp->crc = policy_create();
 	if (!asp->crc) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&asp->crc->params);
 	ret = deserialize_policy(pptr, asp->crc);
 	if (ret)
 		return ret;
 
-	asp->ttl = COMMON_ALLOC(sizeof(struct policy), 1);
+	asp->ttl = policy_create();
 	if (!asp->ttl) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&asp->ttl->params);
 	return deserialize_policy(pptr, asp->ttl);
 }
 
@@ -2449,10 +3186,41 @@ void auth_sdup_profile_free(struct auth_sdup_profile * asp)
 	COMMON_FREE(asp);
 }
 
+struct auth_sdup_profile * auth_sdup_profile_create()
+{
+	struct auth_sdup_profile * result;
+
+	result = COMMON_ALLOC(sizeof(struct auth_sdup_profile), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct auth_sdup_profile));
+
+	return result;
+}
+
+struct auth_sdup_profile * auth_sdup_profile_default_create()
+{
+	struct auth_sdup_profile * result;
+
+	result = auth_sdup_profile_create();
+	if (!result)
+		return 0;
+
+	result->auth = policy_default_create();
+	result->crc = policy_default_create();
+	result->encrypt = policy_default_create();
+	result->ttl = policy_default_create();
+
+	return result;
+}
+
 int secman_config_serlen(const struct secman_config * sc)
 {
 	int ret;
 	struct auth_sdup_profile_entry * pos;
+
+	if (!sc) return 0;
 
 	ret = sizeof(uint16_t) + policy_serlen(sc->ps)
 			+ auth_sdup_profile_serlen(sc->default_profile);
@@ -2470,6 +3238,8 @@ void serialize_secman_config(void **pptr, const struct secman_config *sc)
 {
 	struct auth_sdup_profile_entry * pos;
 	uint16_t size = 0;
+
+	if (!sc) return;
 
 	serialize_policy(pptr, sc->ps);
 	serialize_auth_sdup_profile(pptr, sc->default_profile);
@@ -2494,17 +3264,14 @@ int deserialize_secman_config(const void **pptr, struct secman_config *sc)
 	uint16_t size;
 	int i;
 
-	memset(sc, 0, sizeof(*sc));
-
-	sc->ps = COMMON_ALLOC(sizeof(struct policy), 1);
+	sc->ps = policy_create();
 	if (!sc->ps) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&sc->ps->params);
 	deserialize_policy(pptr, sc->ps);
 
-	sc->default_profile = COMMON_ALLOC(sizeof(struct auth_sdup_profile), 1);
+	sc->default_profile = auth_sdup_profile_create();
 	if (!sc->default_profile) {
 		return -1;
 	}
@@ -2523,7 +3290,7 @@ int deserialize_secman_config(const void **pptr, struct secman_config *sc)
 		if (ret)
 			return ret;
 
-		pos->entry = COMMON_ALLOC(sizeof(struct ipcp_config_entry), 1);
+		pos->entry = auth_sdup_profile_create();
 		if (!pos->entry) {
 			return -1;
 		}
@@ -2573,26 +3340,64 @@ void secman_config_free(struct secman_config * sc)
 	COMMON_FREE(sc);
 }
 
+struct secman_config * secman_config_create()
+{
+	struct secman_config * result;
+
+	result = COMMON_ALLOC(sizeof(struct secman_config), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct secman_config));
+	INIT_LIST_HEAD(&result->specific_profiles);
+
+	return result;
+}
+
+struct secman_config * secman_config_default_create()
+{
+	struct secman_config * result;
+	struct auth_sdup_profile_entry * pos;
+
+	result = secman_config_create();
+	if (!result)
+		return 0;
+
+	result->default_profile = auth_sdup_profile_default_create();
+	result->ps = policy_default_create();
+	pos = COMMON_ALLOC(sizeof(struct auth_sdup_profile_entry), 1);
+	if (pos) {
+		INIT_LIST_HEAD(&pos->next);
+		pos->entry = auth_sdup_profile_default_create();
+		pos->n1_dif_name = DEFAULT_DIF_NAME;
+		if (pos->entry)
+			list_add_tail(&pos->next, &result->specific_profiles);
+	}
+
+	return result;
+}
+
 int routing_config_serlen(const struct routing_config * rc)
 {
+	if (!rc) return 0;
+
 	return policy_serlen(rc->ps);
 }
 
 void serialize_routing_config(void **pptr, const struct routing_config *rc)
 {
+	if (!rc) return;
+
 	serialize_policy(pptr, rc->ps);
 }
 
 int deserialize_routing_config(const void **pptr, struct routing_config *rc)
 {
-	memset(rc, 0, sizeof(*rc));
-
-	rc->ps = COMMON_ALLOC(sizeof(struct policy), 1);
+	rc->ps = policy_create();
 	if (!rc->ps) {
 		return -1;
 	}
 
-	INIT_LIST_HEAD(&rc->ps->params);
 	return deserialize_policy(pptr, rc->ps);
 }
 
@@ -2609,14 +3414,44 @@ void routing_config_free(struct routing_config * rc)
 	COMMON_FREE(rc);
 }
 
+struct routing_config * routing_config_create()
+{
+	struct routing_config * result;
+
+	result = COMMON_ALLOC(sizeof(struct routing_config), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct routing_config));
+
+	return result;
+}
+
+struct routing_config * routing_config_default_create()
+{
+	struct routing_config * result;
+
+	result = routing_config_create();
+	if (!result)
+		return 0;
+
+	result->ps = policy_default_create();
+
+	return result;
+}
+
 int ipcp_config_entry_serlen(const struct ipcp_config_entry * ice)
 {
+	if (!ice) return 0;
+
 	return 2*sizeof(uint16_t) + string_prlen(ice->name)
 				  + string_prlen(ice->value);
 }
 
 void serialize_ipcp_config_entry(void **pptr, const struct ipcp_config_entry *ice)
 {
+	if (!ice) return;
+
 	serialize_string(pptr, ice->name);
 	serialize_string(pptr, ice->value);
 }
@@ -2649,10 +3484,39 @@ void ipcp_config_entry_free(struct ipcp_config_entry * ice)
 	COMMON_FREE(ice);
 }
 
+struct ipcp_config_entry * ipcp_config_entry_create()
+{
+	struct ipcp_config_entry * result;
+
+	result = COMMON_ALLOC(sizeof(struct ipcp_config_entry), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct ipcp_config_entry));
+
+	return result;
+}
+
+struct ipcp_config_entry * ipcp_config_entry_default_create()
+{
+	struct ipcp_config_entry * result;
+
+	result = ipcp_config_entry_create();
+	if (!result)
+		return 0;
+
+	result->name = DEFAULT_POLICY_NAME;
+	result->value = DEFAULT_POLICY_NAME;
+
+	return result;
+}
+
 int dif_config_serlen(const struct dif_config * dif_config)
 {
 	int ret = 0;
 	struct ipcp_config * pos;
+
+	if (!dif_config) return 0;
 
 	ret = sizeof(address_t) + sizeof(uint16_t);
 
@@ -2695,6 +3559,8 @@ void serialize_dif_config(void **pptr, const struct dif_config *dif_config)
 	struct ipcp_config * pos;
 	uint16_t size = 0;
 
+	if (!dif_config) return;
+
 	serialize_obj(*pptr, address_t, dif_config->address);
 
 	list_for_each_entry(pos, &(dif_config->ipcp_config_entries), next) {
@@ -2734,11 +3600,9 @@ int deserialize_dif_config(const void **pptr, struct dif_config ** dif_config)
 	uint16_t size;
 	int i;
 
-	*dif_config = COMMON_ALLOC(sizeof(struct dif_config), 1);
+	*dif_config = dif_config_create();
 	if (!*dif_config)
 		return -1;
-
-	memset(*dif_config, 0, sizeof(struct dif_config));
 
 	deserialize_obj(*pptr, address_t, &(*dif_config)->address);
 	deserialize_obj(*pptr, uint16_t, &size);
@@ -2750,7 +3614,7 @@ int deserialize_dif_config(const void **pptr, struct dif_config ** dif_config)
 		}
 
 		INIT_LIST_HEAD(&pos->next);
-		pos->entry = COMMON_ALLOC(sizeof(struct ipcp_config_entry), 1);
+		pos->entry = ipcp_config_entry_create();
 		if (!pos->entry) {
 			return -1;
 		}
@@ -2763,47 +3627,47 @@ int deserialize_dif_config(const void **pptr, struct dif_config ** dif_config)
 		list_add_tail(&pos->next, &(*dif_config)->ipcp_config_entries);
 	}
 
-	(*dif_config)->efcp_config = COMMON_ALLOC(sizeof(struct efcp_config), 1);
+	(*dif_config)->efcp_config = efcp_config_create();
 	if (!(*dif_config)->efcp_config)
 		return -1;
 	deserialize_efcp_config(pptr, (*dif_config)->efcp_config);
 
-	(*dif_config)->rmt_config = COMMON_ALLOC(sizeof(struct rmt_config), 1);
+	(*dif_config)->rmt_config = rmt_config_create();
 	if (!(*dif_config)->rmt_config)
 		return -1;
 	deserialize_rmt_config(pptr, (*dif_config)->rmt_config);
 
-	(*dif_config)->sdup_config = COMMON_ALLOC(sizeof(struct sdup_config), 1);
+	(*dif_config)->sdup_config = sdup_config_create();
 	if (!(*dif_config)->sdup_config)
 		return -1;
 	deserialize_sdup_config(pptr, (*dif_config)->sdup_config);
 
-	(*dif_config)->fa_config = COMMON_ALLOC(sizeof(struct fa_config), 1);
+	(*dif_config)->fa_config = fa_config_create();
 	if (!(*dif_config)->fa_config)
 		return -1;
 	deserialize_fa_config(pptr, (*dif_config)->fa_config);
 
-	(*dif_config)->et_config = COMMON_ALLOC(sizeof(struct et_config), 1);
+	(*dif_config)->et_config = et_config_create();
 	if (!(*dif_config)->et_config)
 		return -1;
 	deserialize_et_config(pptr, (*dif_config)->et_config);
 
-	(*dif_config)->nsm_config = COMMON_ALLOC(sizeof(struct nsm_config), 1);
+	(*dif_config)->nsm_config = nsm_config_create();
 	if (!(*dif_config)->nsm_config)
 		return -1;
 	deserialize_nsm_config(pptr, (*dif_config)->nsm_config);
 
-	(*dif_config)->routing_config = COMMON_ALLOC(sizeof(struct routing_config), 1);
+	(*dif_config)->routing_config = routing_config_create();
 	if (!(*dif_config)->routing_config)
 		return -1;
 	deserialize_routing_config(pptr, (*dif_config)->routing_config);
 
-	(*dif_config)->resall_config = COMMON_ALLOC(sizeof(struct resall_config), 1);
+	(*dif_config)->resall_config = resall_config_create();
 	if (!(*dif_config)->resall_config)
 		return -1;
 	deserialize_resall_config(pptr, (*dif_config)->resall_config);
 
-	(*dif_config)->secman_config = COMMON_ALLOC(sizeof(struct secman_config), 1);
+	(*dif_config)->secman_config = secman_config_create();
 	if (!(*dif_config)->secman_config)
 		return -1;
 	deserialize_secman_config(pptr, (*dif_config)->secman_config);
@@ -2876,8 +3740,56 @@ void dif_config_free(struct dif_config * dif_config)
 	COMMON_FREE(dif_config);
 }
 
+struct dif_config * dif_config_create()
+{
+	struct dif_config * result;
+
+	result = COMMON_ALLOC(sizeof(struct dif_config), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct dif_config));
+	INIT_LIST_HEAD(&result->ipcp_config_entries);
+
+	return result;
+}
+
+struct dif_config * dif_config_default_create()
+{
+	struct dif_config * result;
+	struct ipcp_config * pos;
+
+	result = dif_config_create();
+	if (!result)
+		return 0;
+
+	result->address = 15;
+	result->efcp_config = efcp_config_default_create();
+	result->et_config = et_config_default_create();
+	result->fa_config = fa_config_default_create();
+	result->nsm_config = nsm_config_default_create();
+	result->resall_config = resall_config_default_create();
+	result->rmt_config = rmt_config_default_create();
+	result->routing_config = routing_config_default_create();
+	result->sdup_config = sdup_config_default_create();
+	result->secman_config = secman_config_default_create();
+
+	pos = COMMON_ALLOC(sizeof(struct ipcp_config), 1);
+	if (pos) {
+		INIT_LIST_HEAD(&pos->next);
+		pos->entry = ipcp_config_entry_default_create();
+		if (pos->entry)
+			list_add_tail(&pos->next, &result->ipcp_config_entries);
+	}
+	LOG_INFO("Aqui");
+
+	return result;
+}
+
 int rib_object_data_serlen(const struct rib_object_data * rod)
 {
+	if (!rod) return 0;
+
 	return 3 * sizeof(uint16_t) + string_prlen(rod->name)
 			+ string_prlen(rod->clazz)
 			+ string_prlen(rod->disp_value)
@@ -2886,6 +3798,8 @@ int rib_object_data_serlen(const struct rib_object_data * rod)
 
 void serialize_rib_object_data(void **pptr, const struct rib_object_data *rod)
 {
+	if (!rod) return;
+
 	serialize_obj(*pptr, uint64_t, rod->instance);
 	serialize_string(pptr, rod->name);
 	serialize_string(pptr, rod->clazz);
@@ -2895,8 +3809,6 @@ void serialize_rib_object_data(void **pptr, const struct rib_object_data *rod)
 int deserialize_rib_object_data(const void **pptr, struct rib_object_data *rod)
 {
 	int ret;
-
-	memset(rod, 0, sizeof(*rod));
 
 	deserialize_obj(*pptr, uint64_t, &rod->instance);
 
@@ -2934,10 +3846,42 @@ void rib_object_data_free(struct rib_object_data * rod)
 	COMMON_FREE(rod);
 }
 
+struct rib_object_data * rib_object_data_create()
+{
+	struct rib_object_data * result;
+
+	result = COMMON_ALLOC(sizeof(struct rib_object_data), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct rib_object_data));
+	INIT_LIST_HEAD(&result->next);
+
+	return result;
+}
+
+struct rib_object_data * rib_object_data_default_create()
+{
+	struct rib_object_data * result;
+
+	result = rib_object_data_create();
+	if (!result)
+		return 0;
+
+	result->clazz = DEFAULT_POLICY_NAME;
+	result->disp_value = DEFAULT_POLICY_NAME;
+	result->name = DEFAULT_POLICY_NAME;
+	result->instance = 88792;
+
+	return result;
+}
+
 int query_rib_resp_serlen(const struct query_rib_resp * qrr)
 {
 	int ret;
 	struct rib_object_data * pos;
+
+	if (!qrr) return 0;
 
 	ret = sizeof(uint16_t);
 
@@ -2952,6 +3896,8 @@ void serialize_query_rib_resp(void **pptr, const struct query_rib_resp *qrr)
 {
 	struct rib_object_data * pos;
 	uint16_t size = 0;
+
+	if (!qrr) return;
 
         list_for_each_entry(pos, &(qrr->rib_object_data_entries), next) {
                 size++;
@@ -2971,21 +3917,18 @@ int deserialize_query_rib_resp(const void **pptr, struct query_rib_resp **qrr)
 	uint16_t size;
 	int i;
 
-	*qrr = COMMON_ALLOC(sizeof(struct query_rib_resp), 1);
+	*qrr = query_rib_resp_create();
 	if (!*qrr)
 		return -1;
-
-	memset(*qrr, 0, sizeof(struct query_rib_resp));
 
 	deserialize_obj(*pptr, uint16_t, &size);
 
 	for(i = 0; i < size; i++) {
-		pos = COMMON_ALLOC(sizeof(struct rib_object_data), 1);
+		pos = rib_object_data_create();
 		if (!pos) {
 			return -1;
 		}
 
-		INIT_LIST_HEAD(&pos->next);
 		ret = deserialize_rib_object_data(pptr, pos);
 		if (ret) {
 			return ret;
@@ -3012,14 +3955,48 @@ void query_rib_resp_free(struct query_rib_resp * qrr)
 	COMMON_FREE(qrr);
 }
 
+struct query_rib_resp * query_rib_resp_create()
+{
+	struct query_rib_resp * result;
+
+	result = COMMON_ALLOC(sizeof(struct query_rib_resp), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct query_rib_resp));
+	INIT_LIST_HEAD(&result->rib_object_data_entries);
+
+	return result;
+}
+
+struct query_rib_resp * query_rib_resp_default_create(void)
+{
+	struct query_rib_resp * result;
+	struct rib_object_data * pos;
+
+	result = query_rib_resp_create();
+	if (!result)
+		return 0;
+
+	pos = rib_object_data_default_create();
+	if (pos)
+		list_add_tail(&pos->next, &result->rib_object_data_entries);
+
+	return result;
+}
+
 int port_id_altlist_serlen(const struct port_id_altlist * pia)
 {
+	if (!pia) return 0;
+
 	return sizeof(uint16_t) + pia->num_ports * sizeof(port_id_t);
 }
 
 void serialize_port_id_altlist(void **pptr, const struct port_id_altlist *pia)
 {
 	int plength;
+
+	if (!pia) return;
 
 	serialize_obj(*pptr, uint16_t, pia->num_ports);
 	plength = pia->num_ports * sizeof(port_id_t);
@@ -3033,8 +4010,6 @@ void serialize_port_id_altlist(void **pptr, const struct port_id_altlist *pia)
 int deserialize_port_id_altlist(const void **pptr, struct port_id_altlist *pia)
 {
 	int plength;
-
-	memset(pia, 0, sizeof(*pia));
 
 	deserialize_obj(*pptr, uint16_t, &pia->num_ports);
 	plength = pia->num_ports * sizeof(port_id_t);
@@ -3061,10 +4036,41 @@ void port_id_altlist_free(struct port_id_altlist * pia)
 	COMMON_FREE(pia);
 }
 
+struct port_id_altlist * port_id_altlist_create()
+{
+	struct port_id_altlist * result;
+
+	result = COMMON_ALLOC(sizeof(struct port_id_altlist), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct port_id_altlist));
+	INIT_LIST_HEAD(&result->next);
+
+	return result;
+}
+
+struct port_id_altlist * port_id_altlist_default_create()
+{
+	struct port_id_altlist * result;
+
+	result = port_id_altlist_create();
+	if (!result)
+		return 0;
+
+	result->num_ports = 4;
+	result->ports = COMMON_ALLOC(4 * sizeof(port_id_t), 1);
+	memset(result->ports, 12, 4 * sizeof(port_id_t));
+
+	return result;
+}
+
 int mod_pff_entry_serlen(const struct mod_pff_entry * pffe)
 {
 	int ret;
 	struct port_id_altlist * pos;
+
+	if (!pffe) return 0;
 
 	ret = sizeof(address_t) + sizeof(qos_id_t) + sizeof(uint16_t)
 			+ sizeof(uint32_t);
@@ -3080,6 +4086,8 @@ void serialize_mod_pff_entry(void **pptr, const struct mod_pff_entry *pffe)
 {
 	uint16_t num_alts = 0;
 	struct port_id_altlist * pos;
+
+	if (!pffe) return;
 
 	serialize_obj(*pptr, address_t, pffe->fwd_info);
 	serialize_obj(*pptr, qos_id_t, pffe->qos_id);
@@ -3103,20 +4111,17 @@ int deserialize_mod_pff_entry(const void **pptr, struct mod_pff_entry *pffe)
 	struct port_id_altlist * pos;
 	int i;
 
-	memset(pffe, 0, sizeof(*pffe));
-
 	deserialize_obj(*pptr, address_t, &pffe->fwd_info);
 	deserialize_obj(*pptr, qos_id_t, &pffe->qos_id);
 	deserialize_obj(*pptr, uint32_t, &pffe->cost);
 	deserialize_obj(*pptr, uint16_t, &num_alts);
 
 	for(i = 0; i < num_alts; i++) {
-		pos = COMMON_ALLOC(sizeof(struct port_id_altlist), 1);
+		pos = port_id_altlist_create();
 		if (!pos) {
 			return -1;
 		}
 
-		INIT_LIST_HEAD(&pos->next);
 		ret = deserialize_port_id_altlist(pptr, pos);
 		if (ret) {
 			return ret;
@@ -3143,10 +4148,46 @@ void mod_pff_entry_free(struct mod_pff_entry * pffe)
 	COMMON_FREE(pffe);
 }
 
+struct mod_pff_entry * mod_pff_entry_create()
+{
+	struct mod_pff_entry * result;
+
+	result = COMMON_ALLOC(sizeof(struct mod_pff_entry), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct mod_pff_entry));
+	INIT_LIST_HEAD(&result->next);
+	INIT_LIST_HEAD(&result->port_id_altlists);
+
+	return result;
+}
+
+struct mod_pff_entry * mod_pff_entry_default_create()
+{
+	struct mod_pff_entry * result;
+	struct port_id_altlist * pos;
+
+	result = mod_pff_entry_create();
+	if (!result)
+		return 0;
+
+	result->cost = 3;
+	result->fwd_info = 37;
+	result->qos_id = 1;
+	pos = port_id_altlist_default_create();
+	if (pos)
+		list_add_tail(&pos->next, &result->port_id_altlists);
+
+	return result;
+}
+
 int pff_entry_list_serlen(const struct pff_entry_list * pel)
 {
 	int ret;
 	struct mod_pff_entry * pos;
+
+	if (!pel) return 0;
 
 	ret = sizeof(uint16_t);
 
@@ -3161,6 +4202,8 @@ void serialize_pff_entry_list(void **pptr, const struct pff_entry_list *pel)
 {
 	struct mod_pff_entry * pos;
 	uint16_t size = 0;
+
+	if (!pel) return;
 
         list_for_each_entry(pos, &(pel->pff_entries), next) {
                 size++;
@@ -3180,21 +4223,18 @@ int deserialize_pff_entry_list(const void **pptr, struct pff_entry_list **pel)
 	uint16_t size;
 	int i;
 
-	*pel = COMMON_ALLOC(sizeof(struct pff_entry_list), 1);
+	*pel = pff_entry_list_create();
 	if (!*pel)
 		return -1;
-
-	memset(*pel, 0, sizeof(struct pff_entry_list));
 
 	deserialize_obj(*pptr, uint16_t, &size);
 
 	for(i = 0; i < size; i++) {
-		pos = COMMON_ALLOC(sizeof(struct mod_pff_entry), 1);
+		pos = mod_pff_entry_create();
 		if (!pos) {
 			return -1;
 		}
 
-		INIT_LIST_HEAD(&pos->next);
 		ret = deserialize_mod_pff_entry(pptr, pos);
 		if (ret) {
 			return ret;
@@ -3221,8 +4261,40 @@ void pff_entry_list_free(struct pff_entry_list * pel)
 	COMMON_FREE(pel);
 }
 
+struct pff_entry_list * pff_entry_list_create()
+{
+	struct pff_entry_list * result;
+
+	result = COMMON_ALLOC(sizeof(struct pff_entry_list), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct pff_entry_list));
+	INIT_LIST_HEAD(&result->pff_entries);
+
+	return result;
+}
+
+struct pff_entry_list * pff_entry_list_default_create()
+{
+	struct pff_entry_list * result;
+	struct mod_pff_entry * pos;
+
+	result = pff_entry_list_create();
+	if (!result)
+		return 0;
+
+	pos = mod_pff_entry_default_create();
+	if (pos)
+		list_add_tail(&pos->next, &result->pff_entries);
+
+	return result;
+}
+
 int sdup_crypto_state_serlen(const struct sdup_crypto_state * scs)
 {
+	if (!scs) return 0;
+
 	return 2 * sizeof(bool) + 3 * sizeof(uint16_t) + sizeof(port_id_t)
 	       + string_prlen(scs->compress_alg)
 	       + string_prlen(scs->enc_alg)
@@ -3238,6 +4310,8 @@ int sdup_crypto_state_serlen(const struct sdup_crypto_state * scs)
 
 void serialize_sdup_crypto_state(void **pptr, const struct sdup_crypto_state *scs)
 {
+	if (!scs) return;
+
 	serialize_obj(*pptr, bool, scs->enable_crypto_rx);
 	serialize_obj(*pptr, bool, scs->enable_crypto_tx);
 	serialize_obj(*pptr, port_id_t, scs->port_id);
@@ -3256,11 +4330,9 @@ int deserialize_sdup_crypto_state(const void **pptr, struct sdup_crypto_state **
 {
 	int ret;
 
-	*scs = COMMON_ALLOC(sizeof(struct sdup_crypto_state), 1);
+	*scs = sdup_crypto_state_create();
 	if (!*scs)
 		return -1;
-
-	memset(*scs, 0, sizeof(struct sdup_crypto_state));
 
 	deserialize_obj(*pptr, bool, &(*scs)->enable_crypto_rx);
 	deserialize_obj(*pptr, bool, &(*scs)->enable_crypto_tx);
@@ -3362,21 +4434,57 @@ void sdup_crypto_state_free(struct sdup_crypto_state * scs)
 	COMMON_FREE(scs);
 }
 
+struct sdup_crypto_state * sdup_crypto_state_create()
+{
+	struct sdup_crypto_state * result;
+
+	result = COMMON_ALLOC(sizeof(struct sdup_crypto_state), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct sdup_crypto_state));
+
+	return result;
+}
+
+struct sdup_crypto_state * sdup_crypto_statet_default_create()
+{
+	struct sdup_crypto_state * result;
+
+	result = sdup_crypto_state_create();
+	if (!result)
+		return 0;
+
+	result->compress_alg = DEFAULT_POLICY_NAME;
+	result->enc_alg = DEFAULT_POLICY_NAME;
+	result->mac_alg = DEFAULT_POLICY_NAME;
+	result->encrypt_key_rx = default_buffer_create();
+	result->encrypt_key_tx = default_buffer_create();
+	result->mac_key_rx = default_buffer_create();
+	result->mac_key_tx = default_buffer_create();
+	result->iv_rx = default_buffer_create();
+	result->iv_tx = default_buffer_create();
+
+	return result;
+}
+
 int dif_properties_entry_serlen(const struct dif_properties_entry * dpe)
 {
+	if (!dpe) return 0;
+
 	return sizeof(uint16_t) + rina_name_serlen(dpe->dif_name);
 }
 
 void serialize_dif_properties_entry(void **pptr, const struct dif_properties_entry *dpe)
 {
+	if (!dpe) return;
+
 	serialize_obj(*pptr, uint16_t, dpe->max_sdu_size);
 	serialize_rina_name(pptr, dpe->dif_name);
 }
 
 int deserialize_dif_properties_entry(const void **pptr, struct dif_properties_entry *dpe)
 {
-	memset(dpe, 0, sizeof(*dpe));
-
 	deserialize_obj(*pptr, uint16_t, &dpe->max_sdu_size);
 	return deserialize_rina_name(pptr, &dpe->dif_name);
 }
@@ -3394,10 +4502,40 @@ void dif_properties_entry_free(struct dif_properties_entry * dpe)
 	COMMON_FREE(dpe);
 }
 
+struct dif_properties_entry * dif_properties_entry_create()
+{
+	struct dif_properties_entry * result;
+
+	result = COMMON_ALLOC(sizeof(struct dif_properties_entry), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct dif_properties_entry));
+	INIT_LIST_HEAD(&result->next);
+
+	return result;
+}
+
+struct dif_properties_entry * dif_properties_entry_default_create()
+{
+	struct dif_properties_entry * result;
+
+	result = dif_properties_entry_create();
+	if (!result)
+		return 0;
+
+	result->dif_name = rina_default_name_create();
+	result->max_sdu_size = 43;
+
+	return result;
+}
+
 int get_dif_prop_resp_serlen(const struct get_dif_prop_resp * gdp)
 {
 	int ret;
 	struct dif_properties_entry * pos;
+
+	if (!gdp) return 0;
 
 	ret = sizeof(uint16_t);
 
@@ -3412,6 +4550,8 @@ void serialize_get_dif_prop_resp(void **pptr, const struct get_dif_prop_resp *gd
 {
 	struct dif_properties_entry * pos;
 	uint16_t size = 0;
+
+	if (!gdp) return;
 
         list_for_each_entry(pos, &(gdp->dif_propery_entries), next) {
                 size++;
@@ -3431,21 +4571,18 @@ int deserialize_get_dif_prop_resp(const void **pptr, struct get_dif_prop_resp **
 	uint16_t size;
 	int i;
 
-	*gdp = COMMON_ALLOC(sizeof(struct get_dif_prop_resp), 1);
+	*gdp = get_dif_prop_resp_create();
 	if (!*gdp)
 		return -1;
-
-	memset(*gdp, 0, sizeof(struct get_dif_prop_resp));
 
 	deserialize_obj(*pptr, uint16_t, &size);
 
 	for(i = 0; i < size; i++) {
-		pos = COMMON_ALLOC(sizeof(struct dif_properties_entry), 1);
+		pos = dif_properties_entry_create();
 		if (!pos) {
 			return -1;
 		}
 
-		INIT_LIST_HEAD(&pos->next);
 		ret = deserialize_dif_properties_entry(pptr, pos);
 		if (ret) {
 			return ret;
@@ -3472,10 +4609,43 @@ void get_dif_prop_resp_free(struct get_dif_prop_resp * gdp)
 	COMMON_FREE(gdp);
 }
 
+struct get_dif_prop_resp * get_dif_prop_resp_create()
+{
+	struct get_dif_prop_resp * result;
+
+	result = COMMON_ALLOC(sizeof(struct get_dif_prop_resp), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct get_dif_prop_resp));
+	INIT_LIST_HEAD(&result->dif_propery_entries);
+
+	return result;
+}
+
+
+struct get_dif_prop_resp * get_dif_prop_resp_default_create()
+{
+	struct get_dif_prop_resp * result;
+	struct dif_properties_entry * pos;
+
+	result = get_dif_prop_resp_create();
+	if (!result)
+		return 0;
+
+	pos = dif_properties_entry_default_create();
+	if (pos)
+		list_add_tail(&pos->next, &result->dif_propery_entries);
+
+	return result;
+}
+
 int ipcp_neighbor_serlen(const struct ipcp_neighbor * nei)
 {
 	int ret;
 	struct name_entry * pos;
+
+	if (!nei) return 0;
 
 	ret = 4 * sizeof(uint32_t) + sizeof(bool) + 3 * sizeof(int32_t)
 		+ sizeof(uint16_t) + rina_name_serlen(nei->ipcp_name)
@@ -3492,6 +4662,8 @@ void serialize_ipcp_neighbor(void **pptr, const struct ipcp_neighbor *nei)
 {
 	struct name_entry * pos;
 	uint16_t size = 0;
+
+	if (!nei) return;
 
 	serialize_obj(*pptr, uint32_t, nei->address);
 	serialize_obj(*pptr, uint32_t, nei->old_address);
@@ -3521,8 +4693,6 @@ int deserialize_ipcp_neighbor(const void **pptr, struct ipcp_neighbor *nei)
 	struct name_entry * pos;
 	uint16_t size;
 	int i;
-
-	memset(nei, 0, sizeof(*nei));
 
 	deserialize_obj(*pptr, uint32_t, &nei->address);
 	deserialize_obj(*pptr, uint32_t, &nei->old_address);
@@ -3586,10 +4756,48 @@ void ipcp_neighbor_free(struct ipcp_neighbor * nei)
 	COMMON_FREE(nei);
 }
 
+struct ipcp_neighbor * ipcp_neighbor_create()
+{
+	struct ipcp_neighbor * result;
+
+	result = COMMON_ALLOC(sizeof(struct ipcp_neighbor), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct ipcp_neighbor));
+	INIT_LIST_HEAD(&result->supporting_difs);
+
+	return result;
+}
+
+struct ipcp_neighbor * ipcp_neighbor_default_create(void)
+{
+	struct ipcp_neighbor * result;
+	struct name_entry * pos;
+
+	result = ipcp_neighbor_create();
+	if (!result)
+		return 0;
+
+	result->ipcp_name = rina_default_name_create();
+	result->sup_dif_name = rina_default_name_create();
+	pos = COMMON_ALLOC(sizeof(struct name_entry), 1);
+	if (pos) {
+		INIT_LIST_HEAD(&pos->next);
+		pos->entry = rina_default_name_create();
+		if (pos->entry)
+			list_add_tail(&pos->next, &result->supporting_difs);
+	}
+
+	return result;
+}
+
 int ipcp_neigh_list_serlen(const struct ipcp_neigh_list * nei)
 {
 	int ret;
 	struct ipcp_neighbor_entry * pos;
+
+	if (!nei) return 0;
 
 	ret = sizeof(uint16_t);
 
@@ -3604,6 +4812,8 @@ void serialize_ipcp_neigh_list(void **pptr, const struct ipcp_neigh_list *nei)
 {
 	struct ipcp_neighbor_entry * pos;
 	uint16_t size = 0;
+
+	if (!nei) return;
 
         list_for_each_entry(pos, &(nei->ipcp_neighbors), next) {
                 size++;
@@ -3623,11 +4833,9 @@ int deserialize_ipcp_neigh_list(const void **pptr, struct ipcp_neigh_list **nei)
 	uint16_t size;
 	int i;
 
-	*nei = COMMON_ALLOC(sizeof(struct ipcp_neigh_list), 1);
+	*nei = ipcp_neigh_list_create();
 	if (!*nei)
 		return -1;
-
-	memset(*nei, 0, sizeof(struct ipcp_neigh_list));
 
 	deserialize_obj(*pptr, uint16_t, &size);
 
@@ -3638,6 +4846,10 @@ int deserialize_ipcp_neigh_list(const void **pptr, struct ipcp_neigh_list **nei)
 		}
 
 		INIT_LIST_HEAD(&pos->next);
+		pos->entry = ipcp_neighbor_create();
+		if (!pos->entry)
+			return -1;
+
 		ret = deserialize_ipcp_neighbor(pptr, pos->entry);
 		if (ret) {
 			return ret;
@@ -3670,22 +4882,58 @@ void ipcp_neigh_list_free(struct ipcp_neigh_list * nei)
 	COMMON_FREE(nei);
 }
 
+struct ipcp_neigh_list * ipcp_neigh_list_create()
+{
+	struct ipcp_neigh_list * result;
+
+	result = COMMON_ALLOC(sizeof(struct ipcp_neigh_list), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct ipcp_neigh_list));
+	INIT_LIST_HEAD(&result->ipcp_neighbors);
+
+	return result;
+}
+
+struct ipcp_neigh_list * ipcp_neigh_list_default_create()
+{
+	struct ipcp_neigh_list * result;
+	struct ipcp_neighbor_entry * pos;
+
+	result = ipcp_neigh_list_create();
+	if (!result)
+		return 0;
+
+	pos = COMMON_ALLOC(sizeof(struct ipcp_neighbor_entry), 1);
+	if (pos) {
+		INIT_LIST_HEAD(&pos->next);
+		pos->entry = ipcp_neighbor_default_create();
+		if (pos->entry)
+			list_add_tail(&pos->next, &result->ipcp_neighbors);
+	}
+
+	return result;
+}
+
 int bs_info_entry_serlen(const struct bs_info_entry * bie)
 {
+	if (!bie) return 0;
+
 	return sizeof(int32_t) + sizeof(uint16_t)
 			+ string_prlen(bie->ipcp_addr);
 }
 
 void serialize_bs_info_entry(void **pptr, const struct bs_info_entry *bie)
 {
+	if (!bie) return;
+
 	serialize_obj(*pptr, int32_t, bie->signal_strength);
 	serialize_string(pptr, bie->ipcp_addr);
 }
 
 int deserialize_bs_info_entry(const void **pptr, struct bs_info_entry *bie)
 {
-	memset(bie, 0, sizeof(*bie));
-
 	deserialize_obj(*pptr, int32_t, &bie->signal_strength);
 
 	return deserialize_string(pptr, &bie->ipcp_addr);
@@ -3704,10 +4952,40 @@ void bs_info_entry_free(struct bs_info_entry * bie)
 	COMMON_FREE(bie);
 }
 
+struct bs_info_entry * bs_info_entry_create()
+{
+	struct bs_info_entry * result;
+
+	result = COMMON_ALLOC(sizeof(struct bs_info_entry), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct bs_info_entry));
+	INIT_LIST_HEAD(&result->next);
+
+	return result;
+}
+
+struct bs_info_entry * bs_info_entry_default_create()
+{
+	struct bs_info_entry * result;
+
+	result = bs_info_entry_create();
+	if (!result)
+		return 0;
+
+	result->ipcp_addr = DEFAULT_POLICY_NAME;
+	result->signal_strength = 232;
+
+	return result;
+}
+
 int media_dif_info_serlen(const struct media_dif_info * mdi)
 {
 	int ret;
 	struct bs_info_entry * pos;
+
+	if (!mdi) return 0;
 
 	ret = 3 * sizeof(uint16_t) + string_prlen(mdi->dif_name)
 			+ string_prlen(mdi->sec_policies);
@@ -3723,6 +5001,8 @@ void serialize_media_dif_info(void **pptr, const struct media_dif_info *mdi)
 {
 	uint16_t size = 0;
 	struct bs_info_entry * pos;
+
+	if (!mdi) return;
 
 	serialize_string(pptr, mdi->dif_name);
 	serialize_string(pptr, mdi->sec_policies);
@@ -3745,8 +5025,6 @@ int deserialize_media_dif_info(const void **pptr, struct media_dif_info *mdi)
 	uint16_t size;
 	int i;
 
-	memset(mdi, 0, sizeof(*mdi));
-
 	ret = deserialize_string(pptr, &mdi->dif_name);
 	if (ret)
 		return ret;
@@ -3758,12 +5036,11 @@ int deserialize_media_dif_info(const void **pptr, struct media_dif_info *mdi)
 	deserialize_obj(*pptr, uint16_t, &size);
 
 	for(i = 0; i < size; i++) {
-		pos = COMMON_ALLOC(sizeof(struct bs_info_entry), 1);
+		pos = bs_info_entry_create();
 		if (!pos) {
 			return -1;
 		}
 
-		INIT_LIST_HEAD(&pos->next);
 		ret = deserialize_bs_info_entry(pptr, pos);
 		if (ret) {
 			return ret;
@@ -3800,10 +5077,44 @@ void media_dif_info_free(struct media_dif_info * mdi)
 	COMMON_FREE(mdi);
 }
 
+struct media_dif_info * media_dif_info_create()
+{
+	struct media_dif_info * result;
+
+	result = COMMON_ALLOC(sizeof(struct media_dif_info), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct media_dif_info));
+	INIT_LIST_HEAD(&result->available_bs_ipcps);
+
+	return result;
+}
+
+struct media_dif_info * media_dif_info_default_create()
+{
+	struct media_dif_info * result;
+	struct bs_info_entry * pos;
+
+	result = media_dif_info_create();
+	if (!result)
+		return 0;
+
+	result->dif_name = DEFAULT_DIF_NAME;
+	result->sec_policies = DEFAULT_POLICY_NAME;
+	pos = bs_info_entry_default_create();
+	if (pos)
+		list_add_tail(&pos->next, &result->available_bs_ipcps);
+
+	return result;
+}
+
 int media_report_serlen(const struct media_report * mre)
 {
 	int ret;
 	struct media_info_entry * pos;
+
+	if (!mre) return 0;
 
 	ret = 3 * sizeof(uint16_t) + string_prlen(mre->dif_name)
 		+ string_prlen(mre->bs_ipcp_addr) + sizeof(ipc_process_id_t);
@@ -3820,6 +5131,8 @@ void serialize_media_report(void **pptr, const struct media_report *mre)
 {
 	uint16_t size = 0;
 	struct media_info_entry * pos;
+
+	if (!mre) return;
 
 	serialize_obj(*pptr, ipc_process_id_t, mre->ipcp_id);
 	serialize_string(pptr, mre->dif_name);
@@ -3844,11 +5157,9 @@ int deserialize_media_report(const void **pptr, struct media_report **mre)
 	uint16_t size;
 	int i;
 
-	*mre = COMMON_ALLOC(sizeof(struct media_report), 1);
+	*mre = media_report_create();
 	if (!*mre)
 		return -1;
-
-	memset(*mre, 0, sizeof(struct media_report));
 
 	deserialize_obj(*pptr, ipc_process_id_t, &(*mre)->ipcp_id);
 
@@ -3873,12 +5184,11 @@ int deserialize_media_report(const void **pptr, struct media_report **mre)
 		if (ret)
 			return ret;
 
-		pos->entry = COMMON_ALLOC(sizeof(struct media_dif_info), 1);
+		pos->entry = media_dif_info_create();
 		if (!pos->entry) {
 			return -1;
 		}
 
-		INIT_LIST_HEAD(&pos->entry->available_bs_ipcps);
 		ret = deserialize_media_dif_info(pptr, pos->entry);
 		if (ret) {
 			return ret;
@@ -3924,6 +5234,44 @@ void media_report_free(struct media_report * mre)
 	}
 
 	COMMON_FREE(mre);
+}
+
+struct media_report * media_report_create()
+{
+	struct media_report * result;
+
+	result = COMMON_ALLOC(sizeof(struct media_report), 1);
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct media_report));
+	INIT_LIST_HEAD(&result->available_difs);
+
+	return result;
+}
+
+struct media_report * media_report_default_create()
+{
+	struct media_report * result;
+	struct media_info_entry * pos;
+
+	result = media_report_create();
+	if (!result)
+		return 0;
+
+	result->bs_ipcp_addr = DEFAULT_POLICY_NAME;
+	result->dif_name = DEFAULT_DIF_NAME;
+	result->ipcp_id = 4;
+	pos = COMMON_ALLOC(sizeof(struct media_info_entry), 1);
+	if (pos) {
+		INIT_LIST_HEAD(&pos->next);
+		pos->dif_name = DEFAULT_DIF_NAME;
+		pos->entry = media_dif_info_default_create();
+		if (pos->entry)
+			list_add_tail(&pos->next, &result->available_difs);
+	}
+
+	return result;
 }
 
 int serialize_irati_msg(struct irati_msg_layout *numtables,

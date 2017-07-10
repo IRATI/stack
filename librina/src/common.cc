@@ -1254,3 +1254,16 @@ int buffer_destroy(struct buffer * b)
 
         return 0;
 }
+
+struct buffer * buffer_create()
+{
+	struct buffer * result;
+
+	result = new buffer();
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct buffer));
+
+	return result;
+}

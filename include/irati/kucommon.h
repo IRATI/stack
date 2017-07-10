@@ -79,6 +79,7 @@ struct buffer {
 
 /* Buffer functions */
 int buffer_destroy(struct buffer * b);
+struct buffer * buffer_create(void);
 
 /* List API copied from kernel */
 struct list_head {

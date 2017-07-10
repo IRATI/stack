@@ -105,13 +105,11 @@ struct policy * PolicyConfig::to_c_policy() const
 	struct policy * result;
 	struct policy_parm * pp;
 
-	result = new policy();
-	INIT_LIST_HEAD(&result->params);
+	result = policy_create();
 	result->name = stringToCharArray(name_);
 	result->version = stringToCharArray(version_);
 	for (it = parameters_.begin(); it != parameters_.end(); ++it) {
-		pp = new policy_parm();
-		INIT_LIST_HEAD(&pp->next);
+		pp = policy_parm_create();
 		pp->name = stringToCharArray(it->name_);
 		pp->value = stringToCharArray(it->value_);
 		list_add_tail(&pp->next, &result->params);
@@ -283,7 +281,7 @@ struct window_fctrl_config * DTCPWindowBasedFlowControlConfig::to_c_window_confi
 {
 	struct window_fctrl_config * result;
 
-	result = new window_fctrl_config();
+	result = window_fctrl_config_create();
 	result->initial_credit = initial_credit_;
 	result->max_closed_winq_length = max_closed_window_queue_length_;
 	result->rcvr_flow_control = rcvr_flow_control_policy_.to_c_policy();
@@ -364,7 +362,7 @@ struct rate_fctrl_config * DTCPRateBasedFlowControlConfig::to_c_rate_config() co
 {
 	struct rate_fctrl_config * result;
 
-	result = new rate_fctrl_config();
+	result = rate_fctrl_config_create();
 	result->sending_rate = sending_rate_;
 	result->time_period = time_period_;
 	result->no_override_default_peak = no_override_default_peak_policy_.to_c_policy();
@@ -474,7 +472,7 @@ struct dtcp_fctrl_config * DTCPFlowControlConfig::to_c_fconfig() const
 {
 	struct dtcp_fctrl_config * result;
 
-	result = new dtcp_fctrl_config();
+	result = dtcp_fctrl_config_create();
 	result->rate_based_fctrl = rate_based_;
 	result->window_based_fctrl = window_based_;
 	result->rcvd_buffers_th = rcv_buffers_threshold_;
@@ -671,7 +669,7 @@ struct dtcp_rxctrl_config * DTCPRtxControlConfig::to_c_rxconfig() const
 {
 	struct dtcp_rxctrl_config * result;
 
-	result = new dtcp_rxctrl_config();
+	result = dtcp_rxctrl_config_create();
 	result->max_time_retry = max_time_to_retry_;
 	result->data_retransmit_max = data_rxms_nmax_;
 	result->initial_tr = initial_rtx_time_;
@@ -810,7 +808,7 @@ struct dtcp_config * DTCPConfig::to_c_dtcp_config() const
 {
 	struct dtcp_config * result;
 
-	result = new dtcp_config();
+	result = dtcp_config_create();
 	result->flow_ctrl = flow_control_;
 	result->rtx_ctrl = rtx_control_;
 	result->fctrl_cfg = flow_control_config_.to_c_fconfig();
@@ -931,7 +929,7 @@ struct dtp_config * DTPConfig::to_c_dtp_config() const
 {
 	struct dtp_config * result;
 
-	result = new dtp_config();
+	result = dtp_config_create();
 	result->dtcp_present = dtcp_present_;
 	result->seq_num_ro_th = seq_num_rollover_threshold_;
 	result->initial_a_timer = initial_a_timer_;
@@ -1078,7 +1076,7 @@ struct qos_cube * QoSCube::to_c_qos_cube() const
 {
 	struct qos_cube * result;
 
-	result = new qos_cube();
+	result = qos_cube_create();
 	result->name = stringToCharArray(name_);
 	result->id = id_;
 	result->avg_bw = average_bandwidth_;
@@ -1284,7 +1282,7 @@ struct dt_cons * DataTransferConstants::to_c_dt_cons() const
 {
 	struct dt_cons * result;
 
-	result = new dt_cons();
+	result = dt_cons_create();
 	result->qos_id_length = qos_id_length_;
 	result->port_id_length = port_id_length_;
 	result->cep_id_length = cep_id_length_;
@@ -1459,9 +1457,7 @@ struct efcp_config * EFCPConfiguration::to_c_efcp_conf() const
 	std::list<QoSCube *>::const_iterator it;
 	struct qos_cube_entry * qos_entry;
 
-	result = new efcp_config();
-	INIT_LIST_HEAD(&result->qos_cubes);
-	result->pci_offset_table = 0;
+	result = efcp_config_create();
 	result->dt_cons = data_transfer_constants_.to_c_dt_cons();
 	result->unknown_flow = unknown_flowpolicy_.to_c_policy();
 	for (it = qos_cubes_.begin(); it != qos_cubes_.end(); ++it) {
@@ -1564,7 +1560,7 @@ struct nsm_config * NamespaceManagerConfiguration::to_c_nsm_config() const
 {
 	struct nsm_config * result;
 
-	result = new nsm_config();
+	result = nsm_config_create();
 	result->ps = policy_set_.to_c_policy();
 	result->addr_conf = addressing_configuration_.to_c_addr_config();
 
@@ -1604,7 +1600,7 @@ struct routing_config * RoutingConfiguration::to_c_routing_config() const
 {
 	struct routing_config * result;
 
-	result = new routing_config();
+	result = routing_config_create();
 	result->ps = policy_set_.to_c_policy();
 
 	return result;
@@ -1648,7 +1644,7 @@ struct resall_config * ResourceAllocatorConfiguration::to_c_rall_config() const
 {
 	struct resall_config * result;
 
-	result = new resall_config();
+	result = resall_config_create();
 	result->pff_gen = pduftg_conf_.policy_set_.to_c_policy();
 
 	return result;
@@ -1691,7 +1687,7 @@ struct fa_config * FlowAllocatorConfiguration::to_c_fa_config() const
 {
 	struct fa_config * result;
 
-	result = new fa_config();
+	result = fa_config_create();
 	result->max_create_flow_retries = max_create_flow_retries_;
 	result->ps = policy_set_.to_c_policy();
 	result->allocate_notify = allocate_notify_policy_.to_c_policy();
@@ -1785,7 +1781,7 @@ struct pff_config * PFTConfiguration::to_c_pff_conf() const
 {
 	struct pff_config * result;
 
-	result = new pff_config();
+	result = pff_config_create();
 	result->policy_set = policy_set_.to_c_policy();
 
 	return result;
@@ -1819,7 +1815,7 @@ struct rmt_config * RMTConfiguration::to_c_rmt_config() const
 {
 	struct rmt_config * result;
 
-	result = new rmt_config();
+	result = rmt_config_create();
 	result->pff_conf = pft_conf_.to_c_pff_conf();
 	result->policy_set = policy_set_.to_c_policy();
 
@@ -1854,7 +1850,7 @@ struct et_config * EnrollmentTaskConfiguration::to_c_et_config() const
 {
 	struct et_config * result;
 
-	result = new et_config();
+	result = et_config_create();
 	result->ps = policy_set_.to_c_policy();
 
 	return result;
@@ -1886,7 +1882,7 @@ struct static_ipcp_addr * StaticIPCProcessAddress::t_c_stipcp_addr() const
 {
 	struct static_ipcp_addr * result;
 
-	result = new static_ipcp_addr();
+	result = static_ipcp_addr_create();
 	result->ap_name = stringToCharArray(ap_name_);
 	result->ap_instance = stringToCharArray(ap_instance_);
 	result->address = address_;
@@ -1913,7 +1909,7 @@ struct address_pref_config * AddressPrefixConfiguration::to_c_pref_config() cons
 {
 	struct address_pref_config * result;
 
-	result = new address_pref_config();
+	result = address_pref_config_create();
 	result->prefix = address_prefix_;
 	result->org = stringToCharArray(organization_);
 
@@ -1951,9 +1947,7 @@ struct addressing_config * AddressingConfiguration::to_c_addr_config() const
 	std::list<StaticIPCProcessAddress>::const_iterator addr_it;
 	std::list<AddressPrefixConfiguration>::const_iterator prefix_it;
 
-	result = new addressing_config();
-	INIT_LIST_HEAD(&result->address_prefixes);
-	INIT_LIST_HEAD(&result->static_ipcp_addrs);
+	result = addressing_config_create();
 
 	for(addr_it = static_address_.begin();
 			addr_it != static_address_.end(); ++addr_it) {
@@ -1999,7 +1993,7 @@ struct auth_sdup_profile * AuthSDUProtectionProfile::to_c_auth_profile() const
 {
 	struct auth_sdup_profile * result;
 
-	result = new auth_sdup_profile();
+	result = auth_sdup_profile_create();
 	result->auth = authPolicy.to_c_policy();
 	result->encrypt = encryptPolicy.to_c_policy();
 	result->crc = crcPolicy.to_c_policy();
@@ -2049,8 +2043,7 @@ struct secman_config * SecurityManagerConfiguration::to_c_secman_config(void) co
 	struct auth_sdup_profile_entry * pos;
 	std::map<std::string, AuthSDUProtectionProfile>::const_iterator it;
 
-	result = new secman_config();
-	INIT_LIST_HEAD(&result->specific_profiles);
+	result = secman_config_create();
 	result->ps = policy_set_.to_c_policy();
 	result->default_profile = default_auth_profile.to_c_auth_profile();
 	for (it = specific_auth_profiles.begin();
@@ -2127,8 +2120,7 @@ struct dif_config * DIFConfiguration::to_c_dif_config() const
 	struct ipcp_config * pos;
 	struct dif_config * result;
 
-	result = new dif_config();
-	INIT_LIST_HEAD(&result->ipcp_config_entries);
+	result = dif_config_create();
 	result->address = address_;
 	result->efcp_config = efcp_configuration_.to_c_efcp_conf();
 	result->rmt_config = rmt_configuration_.to_c_rmt_config();
