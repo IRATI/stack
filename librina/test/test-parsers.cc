@@ -26,8 +26,93 @@
 #include "irati/kernel-msg.h"
 #include "core.h"
 #include "ctrl.h"
+#include "librina/configuration.h"
 
 using namespace rina;
+
+int test_irati_kmsg_ipcm_assign_to_dif()
+{
+	struct irati_kmsg_ipcm_assign_to_dif * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+	ApplicationProcessNamingInformation before;
+	ApplicationProcessNamingInformation after;
+	DIFConfiguration d_before;
+	DIFConfiguration d_ater;
+	std::string s_before;
+	std::string s_after;
+
+	std::cout << "TESTING KMSG IPCM ASSIGN TO DIF" << std::endl;
+
+	msg = new irati_kmsg_ipcm_assign_to_dif();
+	msg->msg_type = RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST;
+	msg->dif_name = rina_default_name_create();
+	msg->type = stringToCharArray("normal-ipcp");
+	msg->dif_config = dif_config_default_create();
+
+	std::cout << "Aqui" << std::endl;
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	std::cout << "Aqui2" << std::endl;
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+	std::cout << "Aqui3" << std::endl;
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_kmsg_ipcm_assign_to_dif message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_kmsg_ipcm_assign_to_dif *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	    	       serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_kmsg_ipcm_assign_to_dif message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	s_before = msg->type;
+	s_after = resp->type;
+
+	if (s_before != s_after) {
+		std::cout << "Type on original and recovered messages"
+			   << " are different\n";
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		irati_ctrl_msg_free((irati_msg_base *) resp);
+		return -1;
+	}
+
+	before = ApplicationProcessNamingInformation(msg->dif_name);
+	after = ApplicationProcessNamingInformation(resp->dif_name);
+
+	if (before != after) {
+		std::cout << "Source application name on original and recovered messages"
+			   << " are different\n";
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		irati_ctrl_msg_free((irati_msg_base *) resp);
+		return -1;
+	}
+
+	std::cout << "Test ok!" << std::endl;
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return 0;
+}
 
 int test_irati_kmsg_ipcm_allocate_flow(irati_msg_t msg_t)
 {
@@ -3317,25 +3402,20 @@ int main() {
 
 	int result;
 
+	result = test_irati_kmsg_ipcm_assign_to_dif();
+	if (result < 0) return result;
+
 	result = test_irati_kmsg_ipcm_allocate_flow(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST);
-	if (result < 0) {
-		return result;
-	}
+	if (result < 0) return result;
 
 	result = test_irati_kmsg_ipcm_allocate_flow(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED);
-	if (result < 0) {
-		return result;
-	}
+	if (result < 0) return result;
 
 	result = test_irati_kmsg_ipcm_allocate_flow(RINA_C_APP_ALLOCATE_FLOW_REQUEST);
-	if (result < 0) {
-		return result;
-	}
+	if (result < 0) return result;
 
 	result = test_irati_kmsg_ipcm_allocate_flow(RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED);
-	if (result < 0) {
-		return result;
-	}
+	if (result < 0) return result;
 
 	/*result = testAppAllocateFlowRequestResultMessage();
 	if (result < 0) {
