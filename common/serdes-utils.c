@@ -57,14 +57,6 @@
 #define COMMON_EXPORT(_n)
 #define COMMON_STATIC               static
 
-#define DEFAULT_AP_NAME        "default/apname"
-#define DEFAULT_AP_INSTANCE    "default/apinstance"
-#define DEFAULT_AE_NAME        "default/aename"
-#define DEFAULT_AE_INSTANCE    "default/aeinstance"
-#define DEFAULT_POLICY_NAME    "default"
-#define DEFAULT_POLICY_VERSION "1"
-#define DEFAULT_DIF_NAME       "default.DIF"
-
 #endif
 
 /* Serialize a numeric variable _v of type _t. */
@@ -539,22 +531,6 @@ struct name * rina_name_create()
 }
 COMMON_EXPORT(rina_name_create);
 
-struct name * rina_default_name_create()
-{
-	struct name * result;
-
-	result = rina_name_create();
-	if (result) {
-		result->process_name = DEFAULT_AP_NAME;
-		result->process_instance = DEFAULT_AP_INSTANCE;
-		result->entity_name = DEFAULT_AE_NAME;
-		result->entity_instance = DEFAULT_AE_INSTANCE;
-	}
-
-	return result;
-}
-COMMON_EXPORT(rina_default_name_create);
-
 int flow_spec_serlen(const struct flow_spec * fspec)
 {
 	if (!fspec) return 0;
@@ -617,19 +593,6 @@ struct flow_spec * rina_fspec_create()
 		return 0;
 
 	memset(result, 0, sizeof(struct flow_spec));
-	return result;
-}
-
-struct flow_spec * rina_default_fspec_create()
-{
-	struct flow_spec * result;
-
-	result = rina_fspec_create();
-	if (!result)
-		return 0;
-
-	memset(result, 0, sizeof(struct flow_spec));
-
 	return result;
 }
 
@@ -698,33 +661,14 @@ struct policy_parm * policy_parm_create()
 	return result;
 }
 
-struct policy_parm * policy_parm_default_create(void)
-{
-	struct policy_parm * result;
-
-	result = policy_parm_create();
-	if (!result)
-		return 0;
-
-	result->name = DEFAULT_POLICY_NAME;
-	result->value = DEFAULT_POLICY_VERSION;
-
-	return result;
-}
-
 int policy_serlen(const struct policy * policy)
 {
 	struct policy_parm * pos;
+	int ret;
 
 	if (!policy) return 0;
 
-	unsigned int ret = 2 * sizeof(uint16_t);
-
-	if (!policy) {
-		return ret;
-	}
-
-	ret = ret + string_prlen(policy->name)
+	ret = 2 * sizeof(uint16_t) + string_prlen(policy->name)
 		  + string_prlen(policy->version)
 		  + sizeof(uint16_t);
 
@@ -763,8 +707,6 @@ int deserialize_policy(const void **pptr, struct policy *policy)
 	uint16_t num_attrs;
 	struct policy_parm * pos;
 	int i;
-
-	memset(policy, 0, sizeof(*policy));
 
 	ret = deserialize_string(pptr, &policy->name);
 	if (ret) {
@@ -829,20 +771,6 @@ struct policy * policy_create()
 
 	memset(result, 0, sizeof(struct policy));
 	INIT_LIST_HEAD(&result->params);
-
-	return result;
-}
-
-struct policy * policy_default_create()
-{
-	struct policy * result;
-
-	result = policy_create();
-	if (!result)
-		return 0;
-
-	result->name = DEFAULT_POLICY_NAME;
-	result->version = DEFAULT_POLICY_VERSION;
 
 	return result;
 }
@@ -913,19 +841,6 @@ struct dtp_config * dtp_config_create()
 		return 0;
 
 	memset(result, 0, sizeof(struct dtp_config));
-
-	return result;
-}
-
-struct dtp_config * dtp_config_default_create(void)
-{
-	struct dtp_config * result;
-
-	result = dtp_config_create();
-	if (!result)
-		return 0;
-
-	result->dtp_ps = policy_default_create();
 
 	return result;
 }
@@ -1002,20 +917,6 @@ struct window_fctrl_config * window_fctrl_config_create()
 		return 0;
 
 	memset(result, 0, sizeof(struct window_fctrl_config));
-
-	return result;
-}
-
-struct window_fctrl_config * window_fctrl_config_default_create()
-{
-	struct window_fctrl_config * result;
-
-	result = window_fctrl_config_create();
-	if (!result)
-		return 0;
-
-	result->rcvr_flow_control = policy_default_create();
-	result->tx_control = policy_default_create();
 
 	return result;
 }
@@ -1107,21 +1008,6 @@ struct rate_fctrl_config * rate_fctrl_config_create()
 		return 0;
 
 	memset(result, 0, sizeof(struct rate_fctrl_config));
-
-	return result;
-}
-
-struct rate_fctrl_config * rate_fctrl_config_default_create()
-{
-	struct rate_fctrl_config * result;
-
-	result = rate_fctrl_config_create();
-	if (!result)
-		return 0;
-
-	result->no_override_default_peak = policy_default_create();
-	result->no_rate_slow_down = policy_default_create();
-	result->rate_reduction = policy_default_create();
 
 	return result;
 }
@@ -1302,26 +1188,6 @@ struct dtcp_fctrl_config * dtcp_fctrl_config_create()
 	return result;
 }
 
-struct dtcp_fctrl_config * dtcp_fctrl_config_default_create()
-{
-	struct dtcp_fctrl_config * result;
-
-	result = dtcp_fctrl_config_create();
-	if (!result)
-		return 0;
-
-	result->closed_window = policy_default_create();
-	result->flow_control_overrun = policy_default_create();
-	result->receiving_flow_control = policy_default_create();
-	result->reconcile_flow_conflict = policy_default_create();
-	result->rfctrl_cfg = rate_fctrl_config_default_create();
-	result->wfctrl_cfg = window_fctrl_config_default_create();
-	result->rate_based_fctrl = true;
-	result->window_based_fctrl = true;
-
-	return result;
-}
-
 int dtcp_rxctrl_config_serlen(const struct dtcp_rxctrl_config * rxfc)
 {
 	if (!rxfc) return 0;
@@ -1463,24 +1329,6 @@ struct dtcp_rxctrl_config * dtcp_rxctrl_config_create()
 		return 0;
 
 	memset(result, 0, sizeof(struct dtcp_rxctrl_config));
-
-	return result;
-}
-
-struct dtcp_rxctrl_config * dtcp_rxctrl_config_default_create()
-{
-	struct dtcp_rxctrl_config * result;
-
-	result = dtcp_rxctrl_config_create();
-	if (!result)
-		return 0;
-
-	result->rcvr_ack = policy_default_create();
-	result->rcvr_control_ack = policy_default_create();
-	result->receiving_ack_list = policy_default_create();
-	result->retransmission_timer_expiry = policy_default_create();
-	result->sender_ack = policy_default_create();
-	result->sending_ack = policy_default_create();
 
 	return result;
 }
@@ -1632,25 +1480,6 @@ struct dtcp_config * dtcp_config_create()
 	return result;
 }
 
-struct dtcp_config * dtcp_config_default_create()
-{
-	struct dtcp_config * result;
-
-	result = dtcp_config_create();
-	if (!result)
-		return 0;
-
-	result->lost_control_pdu = policy_default_create();
-	result->rtt_estimator = policy_default_create();
-	result->dtcp_ps = policy_default_create();
-	result->fctrl_cfg = dtcp_fctrl_config_default_create();
-	result->rxctrl_cfg = dtcp_rxctrl_config_default_create();
-	result->flow_ctrl = true;
-	result->rtx_ctrl = true;
-
-	return result;
-}
-
 int pff_config_serlen(const struct pff_config * pff)
 {
 	if (!pff) return 0;
@@ -1697,19 +1526,6 @@ struct pff_config * pff_config_create()
 		return 0;
 
 	memset(result, 0, sizeof(struct pff_config));
-
-	return result;
-}
-
-struct pff_config * pff_config_default_create()
-{
-	struct pff_config * result;
-
-	result = pff_config_create();
-	if (!result)
-		return 0;
-
-	result->policy_set = policy_default_create();
 
 	return result;
 }
@@ -1778,263 +1594,6 @@ struct rmt_config * rmt_config_create()
 		return 0;
 
 	memset(result, 0, sizeof(struct rmt_config));
-
-	return result;
-}
-
-struct rmt_config * rmt_config_default_create()
-{
-	struct rmt_config * result;
-
-	result = rmt_config_create();
-	if (!result)
-		return 0;
-
-	result->policy_set = policy_default_create();
-	result->pff_conf = pff_config_default_create();
-
-	return result;
-}
-
-int dup_config_entry_serlen(const struct dup_config_entry * dce)
-{
-	if (!dce) return 0;
-
-	return sizeof(uint16_t) + string_prlen(dce->n_1_dif_name)
-			+ policy_serlen(dce->crypto_policy)
-			+ policy_serlen(dce->error_check_policy)
-			+ policy_serlen(dce->ttl_policy);
-}
-
-void serialize_dup_config_entry(void **pptr, const struct dup_config_entry *dce)
-{
-	if (!dce) return;
-
-	serialize_string(pptr, dce->n_1_dif_name);
-	serialize_policy(pptr, dce->crypto_policy);
-	serialize_policy(pptr, dce->error_check_policy);
-	serialize_policy(pptr, dce->ttl_policy);
-}
-
-int deserialize_dup_config_entry(const void **pptr, struct dup_config_entry *dce)
-{
-	int ret;
-
-	ret = deserialize_string(pptr, &dce->n_1_dif_name);
-	if (ret) {
-		return ret;
-	}
-
-	dce->crypto_policy = policy_create();
-	if (!dce->crypto_policy) {
-		return -1;
-	}
-
-	ret = deserialize_policy(pptr, dce->crypto_policy);
-	if (ret)
-		return ret;
-
-	dce->error_check_policy = policy_create();
-	if (!dce->error_check_policy) {
-		return -1;
-	}
-
-	ret = deserialize_policy(pptr, dce->error_check_policy);
-	if (ret)
-		return ret;
-
-	dce->ttl_policy = policy_create();
-	if (!dce->ttl_policy) {
-		return -1;
-	}
-
-	return deserialize_policy(pptr, dce->ttl_policy);
-}
-
-void dup_config_entry_free(struct dup_config_entry * dce)
-{
-	if (!dce)
-		return;
-
-	if (dce->crypto_policy) {
-		policy_free(dce->crypto_policy);
-		dce->crypto_policy = 0;
-	}
-
-	if (dce->error_check_policy) {
-		policy_free(dce->error_check_policy);
-		dce->error_check_policy = 0;
-	}
-
-	if (dce->ttl_policy) {
-		policy_free(dce->ttl_policy);
-		dce->ttl_policy = 0;
-	}
-
-	if (dce->n_1_dif_name) {
-		COMMON_FREE(dce->n_1_dif_name);
-		dce->n_1_dif_name = 0;
-	}
-
-	COMMON_FREE(dce);
-}
-
-struct dup_config_entry * dup_config_entry_create(void)
-{
-	struct dup_config_entry * result;
-
-	result = COMMON_ALLOC(sizeof(struct dup_config_entry), 1);
-	if (!result)
-		return 0;
-
-	memset(result, 0, sizeof(struct dup_config_entry));
-
-	return result;
-}
-
-struct dup_config_entry * dup_config_entry_default_create(void)
-{
-	struct dup_config_entry * result;
-
-	result = dup_config_entry_create();
-	if (!result)
-		return 0;
-
-	result->crypto_policy = policy_default_create();
-	result->error_check_policy = policy_default_create();
-	result->ttl_policy = policy_default_create();
-	result->n_1_dif_name = DEFAULT_DIF_NAME;
-
-	return result;
-}
-
-int sdup_config_serlen(const struct sdup_config * sdc)
-{
-	int ret;
-	struct dup_config * pos;
-
-	if (!sdc) return 0;
-
-	ret = dup_config_entry_serlen(sdc->default_dup_conf)
-		  + sizeof(uint16_t);
-
-	list_for_each_entry(pos, &(sdc->specific_dup_confs), next) {
-		ret = ret + dup_config_entry_serlen(pos->entry);
-	}
-
-        return ret;
-}
-
-void serialize_sdup_config(void **pptr, const struct sdup_config *sdc)
-{
-	struct dup_config * pos;
-	uint16_t num_parms;
-
-	if (!sdc) return;
-
-	serialize_dup_config_entry(pptr, sdc->default_dup_conf);
-
-	num_parms = 0;
-
-	list_for_each_entry(pos, &(sdc->specific_dup_confs), next) {
-		num_parms ++;
-	}
-
-	serialize_obj(*pptr, uint16_t, num_parms);
-
-	list_for_each_entry(pos, &(sdc->specific_dup_confs), next) {
-		serialize_dup_config_entry(pptr, pos->entry);
-	}
-}
-
-int deserialize_sdup_config(const void **pptr, struct sdup_config *sdc)
-{
-	int ret;
-	struct dup_config * pos;
-	uint16_t num_attrs;
-	int i;
-
-	sdc->default_dup_conf = dup_config_entry_create();
-	if (!sdc->default_dup_conf) {
-		return -1;
-	}
-
-	ret = deserialize_dup_config_entry(pptr, sdc->default_dup_conf);
-	if (ret)
-		return ret;
-
-	deserialize_obj(*pptr, uint16_t, &num_attrs);
-	for(i = 0; i < num_attrs; i++) {
-		pos = COMMON_ALLOC(sizeof(struct dup_config), 1);
-		if (!pos) {
-			return -1;
-		}
-
-		INIT_LIST_HEAD(&pos->next);
-		pos->entry = dup_config_entry_create();
-		if (!pos->entry) {
-			return -1;
-		}
-
-		ret = deserialize_dup_config_entry(pptr, pos->entry);
-		if (ret) {
-			return ret;
-		}
-
-		list_add_tail(&pos->next, &sdc->specific_dup_confs);
-	}
-
-	return ret;
-}
-
-void sdup_config_free(struct sdup_config * sdc)
-{
-	struct dup_config * pos, * npos;
-
-	if (!sdc)
-		return;
-
-	if (sdc->default_dup_conf) {
-		dup_config_entry_free(sdc->default_dup_conf);
-		sdc->default_dup_conf = 0;
-	}
-
-	list_for_each_entry_safe(pos, npos, &sdc->specific_dup_confs, next) {
-		list_del(&pos->next);
-		if (pos->entry) {
-			dup_config_entry_free(pos->entry);
-			pos->entry = 0;
-		}
-
-		COMMON_FREE(pos);
-	}
-
-	COMMON_FREE(sdc);
-}
-
-struct sdup_config * sdup_config_create()
-{
-	struct sdup_config * result;
-
-	result = COMMON_ALLOC(sizeof(struct sdup_config), 1);
-	if (!result)
-		return 0;
-
-	memset(result, 0, sizeof(struct sdup_config));
-	INIT_LIST_HEAD(&result->specific_dup_confs);
-
-	return result;
-}
-
-struct sdup_config * sdup_config_default_create()
-{
-	struct sdup_config * result;
-
-	result = sdup_config_create();
-	if (!result)
-		return 0;
-
-	result->default_dup_conf = dup_config_entry_default_create();
 
 	return result;
 }
@@ -2113,42 +1672,16 @@ struct dt_cons * dt_cons_create()
 	return result;
 }
 
-struct dt_cons * dt_cons_default_create()
-{
-	struct dt_cons * result;
-
-	result = dt_cons_create();
-	if (!result)
-		return 0;
-
-	result->address_length = 2;
-	result->cep_id_length = 2;
-	result->ctrl_seq_num_length = 4;
-	result->dif_concat = false;
-	result->dif_frag = false;
-	result->dif_integrity = false;
-	result->frame_length = 2;
-	result->length_length = 2;
-	result->qos_id_length = 1;
-	result->seq_num_length = 4;
-
-	return result;
-}
-
 int qos_cube_serlen(const struct qos_cube * qos)
 {
 	int ret;
 
 	if (!qos) return 0;
 
-	ret = 6 * sizeof (uint32_t) + sizeof(bool) + sizeof(int32_t)
-			+ 2 * sizeof(uint16_t) + string_prlen(qos->name);
-
-	if (qos->dtpc)
-		ret = ret + dtp_config_serlen(qos->dtpc);
-
-	if (qos->dtcpc)
-		ret = ret + dtcp_config_serlen(qos->dtcpc);
+	ret = 6 * sizeof (uint32_t) + 2 * sizeof(bool) + sizeof(int32_t)
+			+ 2*sizeof(uint16_t) + string_prlen(qos->name)
+			+ dtp_config_serlen(qos->dtpc)
+			+ dtcp_config_serlen(qos->dtcpc);
 
 	return ret;
 }
@@ -2234,21 +1767,6 @@ struct qos_cube * qos_cube_create(void)
 	return result;
 }
 
-struct qos_cube * qos_cube_default_create(void)
-{
-	struct qos_cube * result;
-
-	result = qos_cube_create();
-	if (!result)
-		return 0;
-
-	result->name = DEFAULT_POLICY_NAME;
-	result->dtcpc = dtcp_config_default_create();
-	result->dtpc = dtp_config_default_create();
-
-	return result;
-}
-
 int efcp_config_serlen(const struct efcp_config * efc)
 {
 	int ret;
@@ -2257,9 +1775,12 @@ int efcp_config_serlen(const struct efcp_config * efc)
 	if (!efc) return 0;
 
 	ret = dt_cons_serlen(efc->dt_cons)
-			+ sizeof(uint8_t) + sizeof(ssize_t)
+			+ sizeof(uint8_t)
 			+ sizeof(uint16_t)
 			+ policy_serlen(efc->unknown_flow);
+
+	if (efc->pci_offset_table)
+		ret = ret + sizeof(ssize_t);
 
 	list_for_each_entry(pos, &(efc->qos_cubes), next) {
 		ret = ret + qos_cube_serlen(pos->entry);
@@ -2412,30 +1933,6 @@ struct efcp_config * efcp_config_create(void)
 	return result;
 }
 
-struct efcp_config * efcp_config_default_create()
-{
-	struct efcp_config * result;
-	struct qos_cube_entry * pos;
-
-	result = efcp_config_create();
-	if (!result)
-		return 0;
-
-	result->dt_cons = dt_cons_default_create();
-	result->unknown_flow = policy_default_create();
-	result->pci_offset_table = COMMON_ALLOC(sizeof(ssize_t), 1);
-	*(result->pci_offset_table) = 3;
-	pos = COMMON_ALLOC(sizeof(struct qos_cube_entry), 1);
-	if (pos) {
-		INIT_LIST_HEAD(&pos->next);
-		pos->entry = qos_cube_default_create();
-		if (pos->entry)
-			list_add_tail(&pos->next, &result->qos_cubes);
-	}
-
-	return result;
-}
-
 int fa_config_serlen(const struct fa_config * fac)
 {
 	if (!fac) return 0;
@@ -2555,23 +2052,6 @@ struct fa_config * fa_config_create()
 	return result;
 }
 
-struct fa_config * fa_config_default_create()
-{
-	struct fa_config * result;
-
-	result = fa_config_create();
-	if (!result)
-		return 0;
-
-	result->allocate_notify = policy_default_create();
-	result->allocate_retry = policy_default_create();
-	result->new_flow_req = policy_default_create();
-	result->ps = policy_default_create();
-	result->seq_roll_over = policy_default_create();
-
-	return result;
-}
-
 int resall_config_serlen(const struct resall_config * resc)
 {
 	if (!resc) return 0;
@@ -2622,19 +2102,6 @@ struct resall_config * resall_config_create(void)
 	return result;
 }
 
-struct resall_config * resall_config_default_create(void)
-{
-	struct resall_config * result;
-
-	result = resall_config_create();
-	if (!result)
-		return 0;
-
-	result->pff_gen = policy_default_create();
-
-	return result;
-}
-
 int et_config_serlen(const struct et_config * etc)
 {
 	if (!etc) return 0;
@@ -2681,19 +2148,6 @@ struct et_config * et_config_create()
 		return 0;
 
 	memset(result, 0, sizeof(struct et_config));
-
-	return result;
-}
-
-struct et_config * et_config_default_create()
-{
-	struct et_config * result;
-
-	result = et_config_create();
-	if (!result)
-		return 0;
-
-	result->ps = policy_default_create();
 
 	return result;
 }
@@ -2760,21 +2214,6 @@ struct static_ipcp_addr * static_ipcp_addr_create()
 	return result;
 }
 
-struct static_ipcp_addr * static_ipcp_addr_default_create()
-{
-	struct static_ipcp_addr * result;
-
-	result = static_ipcp_addr_create();
-	if (!result)
-		return 0;
-
-	result->address = 32;
-	result->ap_instance = DEFAULT_AP_INSTANCE;
-	result->ap_name = DEFAULT_AP_NAME;
-
-	return result;
-}
-
 int address_pref_config_serlen(const struct address_pref_config * apc)
 {
 	if (!apc) return 0;
@@ -2820,20 +2259,6 @@ struct address_pref_config * address_pref_config_create()
 		return 0;
 
 	memset(result, 0, sizeof(struct address_pref_config));
-
-	return result;
-}
-
-struct address_pref_config * address_pref_config_default_create()
-{
-	struct address_pref_config * result;
-
-	result = address_pref_config_create();
-	if (!result)
-		return 0;
-
-	result->org = DEFAULT_POLICY_NAME;
-	result->prefix = 32;
 
 	return result;
 }
@@ -2990,35 +2415,6 @@ struct addressing_config * addressing_config_create()
 	return result;
 }
 
-struct addressing_config * addressing_config_default_create()
-{
-	struct addressing_config * result;
-	struct static_ipcp_addr_entry * addr_pos;
-	struct address_pref_config_entry * pref_pos;
-
-	result = addressing_config_create();
-	if (!result)
-		return 0;
-
-	addr_pos = COMMON_ALLOC(sizeof(struct static_ipcp_addr_entry), 1);
-	if (addr_pos) {
-		INIT_LIST_HEAD(&addr_pos->next);
-		addr_pos->entry = static_ipcp_addr_default_create();
-		if (addr_pos->entry)
-			list_add_tail(&addr_pos->next, &result->static_ipcp_addrs);
-	}
-
-	pref_pos = COMMON_ALLOC(sizeof(struct address_pref_config_entry), 1);
-	if (pref_pos) {
-		INIT_LIST_HEAD(&pref_pos->next);
-		pref_pos->entry = address_pref_config_default_create();
-		if (pref_pos->entry)
-			list_add_tail(&pref_pos->next, &result->address_prefixes);
-	}
-
-	return result;
-}
-
 int nsm_config_serlen(const struct nsm_config * nsmc)
 {
 	if (!nsmc) return 0;
@@ -3083,20 +2479,6 @@ struct nsm_config * nsm_config_create()
 		return 0;
 
 	memset(result, 0, sizeof(struct nsm_config));
-
-	return result;
-}
-
-struct nsm_config * nsm_config_default_create()
-{
-	struct nsm_config * result;
-
-	result = nsm_config_create();
-	if (!result)
-		return 0;
-
-	result->addr_conf = addressing_config_default_create();
-	result->ps = policy_default_create();
 
 	return result;
 }
@@ -3195,22 +2577,6 @@ struct auth_sdup_profile * auth_sdup_profile_create()
 		return 0;
 
 	memset(result, 0, sizeof(struct auth_sdup_profile));
-
-	return result;
-}
-
-struct auth_sdup_profile * auth_sdup_profile_default_create()
-{
-	struct auth_sdup_profile * result;
-
-	result = auth_sdup_profile_create();
-	if (!result)
-		return 0;
-
-	result->auth = policy_default_create();
-	result->crc = policy_default_create();
-	result->encrypt = policy_default_create();
-	result->ttl = policy_default_create();
 
 	return result;
 }
@@ -3354,29 +2720,6 @@ struct secman_config * secman_config_create()
 	return result;
 }
 
-struct secman_config * secman_config_default_create()
-{
-	struct secman_config * result;
-	struct auth_sdup_profile_entry * pos;
-
-	result = secman_config_create();
-	if (!result)
-		return 0;
-
-	result->default_profile = auth_sdup_profile_default_create();
-	result->ps = policy_default_create();
-	pos = COMMON_ALLOC(sizeof(struct auth_sdup_profile_entry), 1);
-	if (pos) {
-		INIT_LIST_HEAD(&pos->next);
-		pos->entry = auth_sdup_profile_default_create();
-		pos->n1_dif_name = DEFAULT_DIF_NAME;
-		if (pos->entry)
-			list_add_tail(&pos->next, &result->specific_profiles);
-	}
-
-	return result;
-}
-
 int routing_config_serlen(const struct routing_config * rc)
 {
 	if (!rc) return 0;
@@ -3423,19 +2766,6 @@ struct routing_config * routing_config_create()
 		return 0;
 
 	memset(result, 0, sizeof(struct routing_config));
-
-	return result;
-}
-
-struct routing_config * routing_config_default_create()
-{
-	struct routing_config * result;
-
-	result = routing_config_create();
-	if (!result)
-		return 0;
-
-	result->ps = policy_default_create();
 
 	return result;
 }
@@ -3497,20 +2827,6 @@ struct ipcp_config_entry * ipcp_config_entry_create()
 	return result;
 }
 
-struct ipcp_config_entry * ipcp_config_entry_default_create()
-{
-	struct ipcp_config_entry * result;
-
-	result = ipcp_config_entry_create();
-	if (!result)
-		return 0;
-
-	result->name = DEFAULT_POLICY_NAME;
-	result->value = DEFAULT_POLICY_NAME;
-
-	return result;
-}
-
 int dif_config_serlen(const struct dif_config * dif_config)
 {
 	int ret = 0;
@@ -3524,32 +2840,14 @@ int dif_config_serlen(const struct dif_config * dif_config)
                 ret = ret + ipcp_config_entry_serlen(pos->entry);
         }
 
-        if (dif_config->efcp_config)
-        	ret = ret + efcp_config_serlen(dif_config->efcp_config);
-
-        if (dif_config->rmt_config)
-        	ret = ret + rmt_config_serlen(dif_config->rmt_config);
-
-        if (dif_config->sdup_config)
-        	ret = ret + sdup_config_serlen(dif_config->sdup_config);
-
-        if (dif_config->fa_config)
-        	ret = ret + fa_config_serlen(dif_config->fa_config);
-
-        if (dif_config->et_config)
-        	ret = ret + et_config_serlen(dif_config->et_config);
-
-        if (dif_config->nsm_config)
-        	ret = ret + nsm_config_serlen(dif_config->nsm_config);
-
-        if (dif_config->routing_config)
-        	ret = ret + routing_config_serlen(dif_config->routing_config);
-
-        if (dif_config->resall_config)
-        	ret = ret + resall_config_serlen(dif_config->resall_config);
-
-        if (dif_config->secman_config)
-        	ret = ret + secman_config_serlen(dif_config->secman_config);
+	ret = ret + efcp_config_serlen(dif_config->efcp_config)
+		  + rmt_config_serlen(dif_config->rmt_config)
+		  + fa_config_serlen(dif_config->fa_config)
+		  + et_config_serlen(dif_config->et_config)
+		  + nsm_config_serlen(dif_config->nsm_config)
+		  + routing_config_serlen(dif_config->routing_config)
+		  + resall_config_serlen(dif_config->resall_config)
+		  + secman_config_serlen(dif_config->secman_config);
 
         return ret;
 }
@@ -3573,24 +2871,14 @@ void serialize_dif_config(void **pptr, const struct dif_config *dif_config)
 		serialize_ipcp_config_entry(pptr, pos->entry);
 	}
 
-	if (dif_config->efcp_config)
-		serialize_efcp_config(pptr, dif_config->efcp_config);
-	if (dif_config->rmt_config)
-		serialize_rmt_config(pptr, dif_config->rmt_config);
-	if (dif_config->sdup_config)
-		serialize_sdup_config(pptr, dif_config->sdup_config);
-	if (dif_config->fa_config)
-		serialize_fa_config(pptr, dif_config->fa_config);
-	if (dif_config->et_config)
-		serialize_et_config(pptr, dif_config->et_config);
-	if (dif_config->nsm_config)
-		serialize_nsm_config(pptr, dif_config->nsm_config);
-	if (dif_config->routing_config)
-		serialize_routing_config(pptr, dif_config->routing_config);
-	if (dif_config->resall_config)
-		serialize_resall_config(pptr, dif_config->resall_config);
-	if (dif_config->secman_config)
-		serialize_secman_config(pptr, dif_config->secman_config);
+	serialize_efcp_config(pptr, dif_config->efcp_config);
+	serialize_rmt_config(pptr, dif_config->rmt_config);
+	serialize_fa_config(pptr, dif_config->fa_config);
+	serialize_et_config(pptr, dif_config->et_config);
+	serialize_nsm_config(pptr, dif_config->nsm_config);
+	serialize_routing_config(pptr, dif_config->routing_config);
+	serialize_resall_config(pptr, dif_config->resall_config);
+	serialize_secman_config(pptr, dif_config->secman_config);
 }
 
 int deserialize_dif_config(const void **pptr, struct dif_config ** dif_config)
@@ -3636,11 +2924,6 @@ int deserialize_dif_config(const void **pptr, struct dif_config ** dif_config)
 	if (!(*dif_config)->rmt_config)
 		return -1;
 	deserialize_rmt_config(pptr, (*dif_config)->rmt_config);
-
-	(*dif_config)->sdup_config = sdup_config_create();
-	if (!(*dif_config)->sdup_config)
-		return -1;
-	deserialize_sdup_config(pptr, (*dif_config)->sdup_config);
 
 	(*dif_config)->fa_config = fa_config_create();
 	if (!(*dif_config)->fa_config)
@@ -3690,11 +2973,6 @@ void dif_config_free(struct dif_config * dif_config)
 	if (dif_config->rmt_config) {
 		rmt_config_free(dif_config->rmt_config);
 		dif_config->rmt_config = 0;
-	}
-
-	if (dif_config->sdup_config) {
-		sdup_config_free(dif_config->sdup_config);
-		dif_config->sdup_config = 0;
 	}
 
 	if (dif_config->fa_config) {
@@ -3750,38 +3028,6 @@ struct dif_config * dif_config_create()
 
 	memset(result, 0, sizeof(struct dif_config));
 	INIT_LIST_HEAD(&result->ipcp_config_entries);
-
-	return result;
-}
-
-struct dif_config * dif_config_default_create()
-{
-	struct dif_config * result;
-	struct ipcp_config * pos;
-
-	result = dif_config_create();
-	if (!result)
-		return 0;
-
-	result->address = 15;
-	result->efcp_config = efcp_config_default_create();
-	result->et_config = et_config_default_create();
-	result->fa_config = fa_config_default_create();
-	result->nsm_config = nsm_config_default_create();
-	result->resall_config = resall_config_default_create();
-	result->rmt_config = rmt_config_default_create();
-	result->routing_config = routing_config_default_create();
-	result->sdup_config = sdup_config_default_create();
-	result->secman_config = secman_config_default_create();
-
-	pos = COMMON_ALLOC(sizeof(struct ipcp_config), 1);
-	if (pos) {
-		INIT_LIST_HEAD(&pos->next);
-		pos->entry = ipcp_config_entry_default_create();
-		if (pos->entry)
-			list_add_tail(&pos->next, &result->ipcp_config_entries);
-	}
-	LOG_INFO("Aqui");
 
 	return result;
 }
@@ -3856,22 +3102,6 @@ struct rib_object_data * rib_object_data_create()
 
 	memset(result, 0, sizeof(struct rib_object_data));
 	INIT_LIST_HEAD(&result->next);
-
-	return result;
-}
-
-struct rib_object_data * rib_object_data_default_create()
-{
-	struct rib_object_data * result;
-
-	result = rib_object_data_create();
-	if (!result)
-		return 0;
-
-	result->clazz = DEFAULT_POLICY_NAME;
-	result->disp_value = DEFAULT_POLICY_NAME;
-	result->name = DEFAULT_POLICY_NAME;
-	result->instance = 88792;
 
 	return result;
 }
@@ -3969,22 +3199,6 @@ struct query_rib_resp * query_rib_resp_create()
 	return result;
 }
 
-struct query_rib_resp * query_rib_resp_default_create(void)
-{
-	struct query_rib_resp * result;
-	struct rib_object_data * pos;
-
-	result = query_rib_resp_create();
-	if (!result)
-		return 0;
-
-	pos = rib_object_data_default_create();
-	if (pos)
-		list_add_tail(&pos->next, &result->rib_object_data_entries);
-
-	return result;
-}
-
 int port_id_altlist_serlen(const struct port_id_altlist * pia)
 {
 	if (!pia) return 0;
@@ -4046,21 +3260,6 @@ struct port_id_altlist * port_id_altlist_create()
 
 	memset(result, 0, sizeof(struct port_id_altlist));
 	INIT_LIST_HEAD(&result->next);
-
-	return result;
-}
-
-struct port_id_altlist * port_id_altlist_default_create()
-{
-	struct port_id_altlist * result;
-
-	result = port_id_altlist_create();
-	if (!result)
-		return 0;
-
-	result->num_ports = 4;
-	result->ports = COMMON_ALLOC(4 * sizeof(port_id_t), 1);
-	memset(result->ports, 12, 4 * sizeof(port_id_t));
 
 	return result;
 }
@@ -4163,25 +3362,6 @@ struct mod_pff_entry * mod_pff_entry_create()
 	return result;
 }
 
-struct mod_pff_entry * mod_pff_entry_default_create()
-{
-	struct mod_pff_entry * result;
-	struct port_id_altlist * pos;
-
-	result = mod_pff_entry_create();
-	if (!result)
-		return 0;
-
-	result->cost = 3;
-	result->fwd_info = 37;
-	result->qos_id = 1;
-	pos = port_id_altlist_default_create();
-	if (pos)
-		list_add_tail(&pos->next, &result->port_id_altlists);
-
-	return result;
-}
-
 int pff_entry_list_serlen(const struct pff_entry_list * pel)
 {
 	int ret;
@@ -4271,22 +3451,6 @@ struct pff_entry_list * pff_entry_list_create()
 
 	memset(result, 0, sizeof(struct pff_entry_list));
 	INIT_LIST_HEAD(&result->pff_entries);
-
-	return result;
-}
-
-struct pff_entry_list * pff_entry_list_default_create()
-{
-	struct pff_entry_list * result;
-	struct mod_pff_entry * pos;
-
-	result = pff_entry_list_create();
-	if (!result)
-		return 0;
-
-	pos = mod_pff_entry_default_create();
-	if (pos)
-		list_add_tail(&pos->next, &result->pff_entries);
 
 	return result;
 }
@@ -4447,27 +3611,6 @@ struct sdup_crypto_state * sdup_crypto_state_create()
 	return result;
 }
 
-struct sdup_crypto_state * sdup_crypto_statet_default_create()
-{
-	struct sdup_crypto_state * result;
-
-	result = sdup_crypto_state_create();
-	if (!result)
-		return 0;
-
-	result->compress_alg = DEFAULT_POLICY_NAME;
-	result->enc_alg = DEFAULT_POLICY_NAME;
-	result->mac_alg = DEFAULT_POLICY_NAME;
-	result->encrypt_key_rx = default_buffer_create();
-	result->encrypt_key_tx = default_buffer_create();
-	result->mac_key_rx = default_buffer_create();
-	result->mac_key_tx = default_buffer_create();
-	result->iv_rx = default_buffer_create();
-	result->iv_tx = default_buffer_create();
-
-	return result;
-}
-
 int dif_properties_entry_serlen(const struct dif_properties_entry * dpe)
 {
 	if (!dpe) return 0;
@@ -4512,20 +3655,6 @@ struct dif_properties_entry * dif_properties_entry_create()
 
 	memset(result, 0, sizeof(struct dif_properties_entry));
 	INIT_LIST_HEAD(&result->next);
-
-	return result;
-}
-
-struct dif_properties_entry * dif_properties_entry_default_create()
-{
-	struct dif_properties_entry * result;
-
-	result = dif_properties_entry_create();
-	if (!result)
-		return 0;
-
-	result->dif_name = rina_default_name_create();
-	result->max_sdu_size = 43;
 
 	return result;
 }
@@ -4619,23 +3748,6 @@ struct get_dif_prop_resp * get_dif_prop_resp_create()
 
 	memset(result, 0, sizeof(struct get_dif_prop_resp));
 	INIT_LIST_HEAD(&result->dif_propery_entries);
-
-	return result;
-}
-
-
-struct get_dif_prop_resp * get_dif_prop_resp_default_create()
-{
-	struct get_dif_prop_resp * result;
-	struct dif_properties_entry * pos;
-
-	result = get_dif_prop_resp_create();
-	if (!result)
-		return 0;
-
-	pos = dif_properties_entry_default_create();
-	if (pos)
-		list_add_tail(&pos->next, &result->dif_propery_entries);
 
 	return result;
 }
@@ -4770,28 +3882,6 @@ struct ipcp_neighbor * ipcp_neighbor_create()
 	return result;
 }
 
-struct ipcp_neighbor * ipcp_neighbor_default_create(void)
-{
-	struct ipcp_neighbor * result;
-	struct name_entry * pos;
-
-	result = ipcp_neighbor_create();
-	if (!result)
-		return 0;
-
-	result->ipcp_name = rina_default_name_create();
-	result->sup_dif_name = rina_default_name_create();
-	pos = COMMON_ALLOC(sizeof(struct name_entry), 1);
-	if (pos) {
-		INIT_LIST_HEAD(&pos->next);
-		pos->entry = rina_default_name_create();
-		if (pos->entry)
-			list_add_tail(&pos->next, &result->supporting_difs);
-	}
-
-	return result;
-}
-
 int ipcp_neigh_list_serlen(const struct ipcp_neigh_list * nei)
 {
 	int ret;
@@ -4896,26 +3986,6 @@ struct ipcp_neigh_list * ipcp_neigh_list_create()
 	return result;
 }
 
-struct ipcp_neigh_list * ipcp_neigh_list_default_create()
-{
-	struct ipcp_neigh_list * result;
-	struct ipcp_neighbor_entry * pos;
-
-	result = ipcp_neigh_list_create();
-	if (!result)
-		return 0;
-
-	pos = COMMON_ALLOC(sizeof(struct ipcp_neighbor_entry), 1);
-	if (pos) {
-		INIT_LIST_HEAD(&pos->next);
-		pos->entry = ipcp_neighbor_default_create();
-		if (pos->entry)
-			list_add_tail(&pos->next, &result->ipcp_neighbors);
-	}
-
-	return result;
-}
-
 int bs_info_entry_serlen(const struct bs_info_entry * bie)
 {
 	if (!bie) return 0;
@@ -4962,20 +4032,6 @@ struct bs_info_entry * bs_info_entry_create()
 
 	memset(result, 0, sizeof(struct bs_info_entry));
 	INIT_LIST_HEAD(&result->next);
-
-	return result;
-}
-
-struct bs_info_entry * bs_info_entry_default_create()
-{
-	struct bs_info_entry * result;
-
-	result = bs_info_entry_create();
-	if (!result)
-		return 0;
-
-	result->ipcp_addr = DEFAULT_POLICY_NAME;
-	result->signal_strength = 232;
 
 	return result;
 }
@@ -5087,24 +4143,6 @@ struct media_dif_info * media_dif_info_create()
 
 	memset(result, 0, sizeof(struct media_dif_info));
 	INIT_LIST_HEAD(&result->available_bs_ipcps);
-
-	return result;
-}
-
-struct media_dif_info * media_dif_info_default_create()
-{
-	struct media_dif_info * result;
-	struct bs_info_entry * pos;
-
-	result = media_dif_info_create();
-	if (!result)
-		return 0;
-
-	result->dif_name = DEFAULT_DIF_NAME;
-	result->sec_policies = DEFAULT_POLICY_NAME;
-	pos = bs_info_entry_default_create();
-	if (pos)
-		list_add_tail(&pos->next, &result->available_bs_ipcps);
 
 	return result;
 }
@@ -5246,30 +4284,6 @@ struct media_report * media_report_create()
 
 	memset(result, 0, sizeof(struct media_report));
 	INIT_LIST_HEAD(&result->available_difs);
-
-	return result;
-}
-
-struct media_report * media_report_default_create()
-{
-	struct media_report * result;
-	struct media_info_entry * pos;
-
-	result = media_report_create();
-	if (!result)
-		return 0;
-
-	result->bs_ipcp_addr = DEFAULT_POLICY_NAME;
-	result->dif_name = DEFAULT_DIF_NAME;
-	result->ipcp_id = 4;
-	pos = COMMON_ALLOC(sizeof(struct media_info_entry), 1);
-	if (pos) {
-		INIT_LIST_HEAD(&pos->next);
-		pos->dif_name = DEFAULT_DIF_NAME;
-		pos->entry = media_dif_info_default_create();
-		if (pos->entry)
-			list_add_tail(&pos->next, &result->available_difs);
-	}
 
 	return result;
 }

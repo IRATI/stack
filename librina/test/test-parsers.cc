@@ -28,6 +28,14 @@
 #include "ctrl.h"
 #include "librina/configuration.h"
 
+#define DEFAULT_AP_NAME        "default/apname"
+#define DEFAULT_AP_INSTANCE    "default/apinstance"
+#define DEFAULT_AE_NAME        "default/aename"
+#define DEFAULT_AE_INSTANCE    "default/aeinstance"
+#define DEFAULT_POLICY_NAME    "default"
+#define DEFAULT_POLICY_VERSION "1"
+#define DEFAULT_DIF_NAME       "default.DIF"
+
 using namespace rina;
 
 int test_irati_kmsg_ipcm_assign_to_dif()
@@ -37,28 +45,100 @@ int test_irati_kmsg_ipcm_assign_to_dif()
 	char serbuf[8192];
 	unsigned int serlen;
 	unsigned int expected_serlen;
+	PolicyParameter param;
 	ApplicationProcessNamingInformation before;
 	ApplicationProcessNamingInformation after;
 	DIFConfiguration d_before;
-	DIFConfiguration d_ater;
+	DIFConfiguration d_after;
 	std::string s_before;
 	std::string s_after;
 
 	std::cout << "TESTING KMSG IPCM ASSIGN TO DIF" << std::endl;
 
+	before.processName = "/test.DIF";
+
+	d_before.address_ = 24;
+	d_before.efcp_configuration_.data_transfer_constants_.address_length_ = 2;
+	d_before.efcp_configuration_.data_transfer_constants_.cep_id_length_ = 3;
+	d_before.efcp_configuration_.data_transfer_constants_.ctrl_sequence_number_length_ = 3;
+	d_before.efcp_configuration_.data_transfer_constants_.dif_concatenation_ = true;
+	d_before.efcp_configuration_.data_transfer_constants_.dif_fragmentation_ = true;
+	d_before.efcp_configuration_.data_transfer_constants_.dif_integrity_ = true;
+	d_before.efcp_configuration_.data_transfer_constants_.frame_length_ = 2;
+	d_before.efcp_configuration_.data_transfer_constants_.length_length_ = 2;
+	d_before.efcp_configuration_.data_transfer_constants_.max_pdu_lifetime_ = 25;
+	d_before.efcp_configuration_.data_transfer_constants_.max_pdu_size_ = 32;
+	d_before.efcp_configuration_.data_transfer_constants_.max_time_to_ack_ = 22;
+	d_before.efcp_configuration_.data_transfer_constants_.max_time_to_keep_ret_ = 12;
+	d_before.efcp_configuration_.data_transfer_constants_.port_id_length_ = 2;
+	d_before.efcp_configuration_.data_transfer_constants_.qos_id_length_ = 3;
+	d_before.efcp_configuration_.data_transfer_constants_.rate_length_ = 2;
+	d_before.efcp_configuration_.data_transfer_constants_.seq_rollover_thres_ = 2;
+	d_before.efcp_configuration_.data_transfer_constants_.sequence_number_length_ = 25;
+	d_before.efcp_configuration_.unknown_flowpolicy_.name_ = DEFAULT_POLICY_NAME;
+	d_before.efcp_configuration_.unknown_flowpolicy_.version_ = DEFAULT_POLICY_VERSION;
+	param.name_ = DEFAULT_POLICY_NAME;
+	param.value_ = DEFAULT_POLICY_VERSION;
+	d_before.et_configuration_.policy_set_.name_ = DEFAULT_POLICY_NAME;
+	d_before.et_configuration_.policy_set_.version_ = DEFAULT_POLICY_NAME;
+	d_before.et_configuration_.policy_set_.parameters_.push_back(param);
+	d_before.fa_configuration_.allocate_notify_policy_.name_ = DEFAULT_POLICY_NAME;
+	d_before.fa_configuration_.allocate_notify_policy_.version_ = DEFAULT_POLICY_VERSION;
+	d_before.fa_configuration_.allocate_notify_policy_.parameters_.push_back(param);
+	d_before.fa_configuration_.allocate_retry_policy_.name_ = DEFAULT_POLICY_NAME;
+	d_before.fa_configuration_.allocate_retry_policy_.version_ = DEFAULT_POLICY_VERSION;
+	d_before.fa_configuration_.allocate_retry_policy_.parameters_.push_back(param);
+	d_before.fa_configuration_.new_flow_request_policy_.name_ = DEFAULT_POLICY_NAME;
+	d_before.fa_configuration_.new_flow_request_policy_.version_ = DEFAULT_POLICY_VERSION;
+	d_before.fa_configuration_.new_flow_request_policy_.parameters_.push_back(param);
+	d_before.fa_configuration_.policy_set_.name_ = DEFAULT_POLICY_NAME;
+	d_before.fa_configuration_.policy_set_.version_ = DEFAULT_POLICY_VERSION;
+	d_before.fa_configuration_.policy_set_.parameters_.push_back(param);
+	d_before.fa_configuration_.seq_rollover_policy_.name_ = DEFAULT_POLICY_NAME;
+	d_before.fa_configuration_.seq_rollover_policy_.version_ = DEFAULT_POLICY_VERSION;
+	d_before.fa_configuration_.seq_rollover_policy_.parameters_.push_back(param);
+	d_before.fa_configuration_.max_create_flow_retries_ = 3;
+	d_before.nsm_configuration_.policy_set_.name_ = DEFAULT_POLICY_NAME;
+	d_before.nsm_configuration_.policy_set_.version_ = DEFAULT_POLICY_VERSION;
+	d_before.nsm_configuration_.policy_set_.parameters_.push_back(param);
+	d_before.ra_configuration_.pduftg_conf_.policy_set_.name_ = DEFAULT_POLICY_NAME;
+	d_before.ra_configuration_.pduftg_conf_.policy_set_.version_ = DEFAULT_POLICY_VERSION;
+	d_before.ra_configuration_.pduftg_conf_.policy_set_.parameters_.push_back(param);
+	d_before.rmt_configuration_.policy_set_.name_ = DEFAULT_POLICY_NAME;
+	d_before.rmt_configuration_.policy_set_.version_ = DEFAULT_POLICY_VERSION;
+	d_before.rmt_configuration_.policy_set_.parameters_.push_back(param);
+	d_before.rmt_configuration_.pft_conf_.policy_set_.name_ = DEFAULT_POLICY_NAME;
+	d_before.rmt_configuration_.pft_conf_.policy_set_.version_ = DEFAULT_POLICY_VERSION;
+	d_before.rmt_configuration_.pft_conf_.policy_set_.parameters_.push_back(param);
+	d_before.routing_configuration_.policy_set_.name_ = DEFAULT_POLICY_NAME;
+	d_before.routing_configuration_.policy_set_.version_ = DEFAULT_POLICY_VERSION;
+	d_before.routing_configuration_.policy_set_.parameters_.push_back(param);
+	d_before.sm_configuration_.policy_set_.name_ = DEFAULT_POLICY_NAME;
+	d_before.sm_configuration_.policy_set_.version_ = DEFAULT_POLICY_VERSION;
+	d_before.sm_configuration_.policy_set_.parameters_.push_back(param);
+	d_before.sm_configuration_.default_auth_profile.authPolicy.name_ = DEFAULT_POLICY_NAME;
+	d_before.sm_configuration_.default_auth_profile.authPolicy.version_ = DEFAULT_POLICY_VERSION;
+	d_before.sm_configuration_.default_auth_profile.authPolicy.parameters_.push_back(param);
+	d_before.sm_configuration_.default_auth_profile.crcPolicy.name_ = DEFAULT_POLICY_NAME;
+	d_before.sm_configuration_.default_auth_profile.crcPolicy.version_ = DEFAULT_POLICY_VERSION;
+	d_before.sm_configuration_.default_auth_profile.crcPolicy.parameters_.push_back(param);
+	d_before.sm_configuration_.default_auth_profile.encryptPolicy.name_ = DEFAULT_POLICY_NAME;
+	d_before.sm_configuration_.default_auth_profile.encryptPolicy.version_ = DEFAULT_POLICY_VERSION;
+	d_before.sm_configuration_.default_auth_profile.encryptPolicy.parameters_.push_back(param);
+	d_before.sm_configuration_.default_auth_profile.ttlPolicy.name_ = DEFAULT_POLICY_NAME;
+	d_before.sm_configuration_.default_auth_profile.ttlPolicy.version_ = DEFAULT_POLICY_VERSION;
+	d_before.sm_configuration_.default_auth_profile.ttlPolicy.parameters_.push_back(param);
+
 	msg = new irati_kmsg_ipcm_assign_to_dif();
 	msg->msg_type = RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST;
-	msg->dif_name = rina_default_name_create();
+	msg->dif_name = before.to_c_name();
 	msg->type = stringToCharArray("normal-ipcp");
-	msg->dif_config = dif_config_default_create();
+	msg->dif_config = d_before.to_c_dif_config();
 
-	std::cout << "Aqui" << std::endl;
 	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
 			     	     	   (irati_msg_base *) msg);
-	std::cout << "Aqui2" << std::endl;
 	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
 				     serbuf, (irati_msg_base *) msg);
-	std::cout << "Aqui3" << std::endl;
 
 	if (serlen <= 0) {
 		std::cout << "Error serializing irati_kmsg_ipcm_assign_to_dif message: "
@@ -96,7 +176,6 @@ int test_irati_kmsg_ipcm_assign_to_dif()
 		return -1;
 	}
 
-	before = ApplicationProcessNamingInformation(msg->dif_name);
 	after = ApplicationProcessNamingInformation(resp->dif_name);
 
 	if (before != after) {
@@ -107,7 +186,18 @@ int test_irati_kmsg_ipcm_assign_to_dif()
 		return -1;
 	}
 
+	DIFConfiguration::from_c_dif_config(d_after, resp->dif_config);
+
+	if (d_before != d_after) {
+		std::cout << "Configuration on original and recovered messages"
+			   << " are different\n";
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		irati_ctrl_msg_free((irati_msg_base *) resp);
+		return -1;
+	}
+
 	std::cout << "Test ok!" << std::endl;
+
 	irati_ctrl_msg_free((irati_msg_base *) msg);
 	irati_ctrl_msg_free((irati_msg_base *) resp);
 

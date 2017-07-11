@@ -55,41 +55,41 @@ class PolicyParameter {
 
 /// Configuration of a policy (name/version/parameters)
 class PolicyConfig {
- public:
-    PolicyConfig();
-    PolicyConfig(const std::string& name, const std::string& version);
-    static void from_c_policy(PolicyConfig & policy, struct policy * pc);
-    struct policy * to_c_policy(void) const;
-    bool operator==(const PolicyConfig &other) const;
-    bool operator!=(const PolicyConfig &other) const;
-    /// Get a parameter value as a string
-    /// @throws Exception if parameter is not found
-    std::string get_param_value_as_string(const std::string& name) const;
-    /// Get a parameter value as long
-    /// @throws Exception if parameter is not found or the conversion
-    /// to long fails
-    long get_param_value_as_long(const std::string& name) const;
-    float get_param_value_as_float(const std::string& name) const;
-    int get_param_value_as_int(const std::string& name) const;
-    unsigned long get_param_value_as_ulong(const std::string& name) const;
-    unsigned int get_param_value_as_uint(const std::string& name) const;
-    bool get_param_value_as_bool(const std::string& name) const;
-    std::string toString();
-    void add_parameter(const PolicyParameter& paremeter);
+public:
+	PolicyConfig();
+	PolicyConfig(const std::string& name, const std::string& version);
+	static void from_c_policy(PolicyConfig & policy, struct policy * pc);
+	struct policy * to_c_policy(void) const;
+	bool operator==(const PolicyConfig &other) const;
+	bool operator!=(const PolicyConfig &other) const;
+	/// Get a parameter value as a string
+	/// @throws Exception if parameter is not found
+	std::string get_param_value_as_string(const std::string& name) const;
+	/// Get a parameter value as long
+	/// @throws Exception if parameter is not found or the conversion
+	/// to long fails
+	long get_param_value_as_long(const std::string& name) const;
+	float get_param_value_as_float(const std::string& name) const;
+	int get_param_value_as_int(const std::string& name) const;
+	unsigned long get_param_value_as_ulong(const std::string& name) const;
+	unsigned int get_param_value_as_uint(const std::string& name) const;
+	bool get_param_value_as_bool(const std::string& name) const;
+	std::string toString();
+	void add_parameter(const PolicyParameter& paremeter);
 #ifndef SWIG
-    const std::string& get_name() const;
-    void set_name(const std::string& name);
-    const std::list<PolicyParameter>& get_parameters() const;
-    void set_parameters(const std::list<PolicyParameter>& parameters);
-    const std::string& get_version() const;
-    void set_version(const std::string& version);
+	const std::string& get_name() const;
+	void set_name(const std::string& name);
+	const std::list<PolicyParameter>& get_parameters() const;
+	void set_parameters(const std::list<PolicyParameter>& parameters);
+	const std::string& get_version() const;
+	void set_version(const std::string& version);
 #endif
-    /// the name of policy
-    std::string name_;
-    /// the version of the policy
-    std::string version_;
-    /// optional name/value parameters to configure the policy
-    std::list<PolicyParameter> parameters_;
+/// the name of policy
+	std::string name_;
+	/// the version of the policy
+	std::string version_;
+	/// optional name/value parameters to configure the policy
+	std::list<PolicyParameter> parameters_;
 };
 
 ///The DTCP window based flow control configuration
@@ -561,6 +561,8 @@ public:
 class DataTransferConstants {
 public:
 	DataTransferConstants();
+	bool operator==(const DataTransferConstants &other) const;
+	bool operator!=(const DataTransferConstants &other) const;
 	static void from_c_dt_cons(DataTransferConstants & dt,
 				   struct dt_cons * dtc);
 	struct dt_cons * to_c_dt_cons(void) const;
@@ -644,6 +646,8 @@ public:
 class EFCPConfiguration {
 public:
 	EFCPConfiguration();
+	bool operator==(const EFCPConfiguration &other) const;
+	bool operator!=(const EFCPConfiguration &other) const;
 	static void from_c_efcp_conf(EFCPConfiguration &ef,
 				     struct efcp_config* efc);
 	struct efcp_config * to_c_efcp_conf(void) const;
@@ -680,6 +684,8 @@ private:
 class FlowAllocatorConfiguration {
 public:
 	FlowAllocatorConfiguration();
+	bool operator==(const FlowAllocatorConfiguration &other) const;
+	bool operator!=(const FlowAllocatorConfiguration &other) const;
 	static void from_c_fa_config(FlowAllocatorConfiguration & fa,
 				     struct fa_config * fac);
 	struct fa_config * to_c_fa_config(void) const;
@@ -699,7 +705,7 @@ public:
 	const PolicyConfig& get_seq_rollover_policy() const;
 	void set_seq_rollover_policy(const PolicyConfig& seq_rollover_policy);
 #endif
-/// Policy set for Flow Allocator
+	/// Policy set for Flow Allocator
 	PolicyConfig policy_set_;
 
 	/// Maximum number of attempts to retry the flow allocation
@@ -744,6 +750,8 @@ public:
 class ResourceAllocatorConfiguration {
 public:
 	ResourceAllocatorConfiguration();
+	bool operator==(const ResourceAllocatorConfiguration &other) const;
+	bool operator!=(const ResourceAllocatorConfiguration &other) const;
 	static void from_c_rall_config(ResourceAllocatorConfiguration & res,
 				       struct resall_config * resc);
 	struct resall_config * to_c_rall_config(void) const;
@@ -773,6 +781,8 @@ public:
 class RMTConfiguration {
 public:
 	RMTConfiguration();
+	bool operator==(const RMTConfiguration &other) const;
+	bool operator!=(const RMTConfiguration &other) const;
 	static void from_c_rmt_config(RMTConfiguration & rm,
 				      struct rmt_config * rt);
 	struct rmt_config * to_c_rmt_config(void) const;
@@ -791,6 +801,8 @@ public:
 class EnrollmentTaskConfiguration {
 public:
 	EnrollmentTaskConfiguration();
+	bool operator==(const EnrollmentTaskConfiguration &other) const;
+	bool operator!=(const EnrollmentTaskConfiguration &other) const;
 	static void from_c_et_config(EnrollmentTaskConfiguration & et,
 				     struct et_config * etc);
 	struct et_config * to_c_et_config(void) const;
@@ -837,6 +849,8 @@ public:
 class AddressingConfiguration {
 public:
 	AddressingConfiguration(){};
+	bool operator==(const AddressingConfiguration &other) const;
+	bool operator!=(const AddressingConfiguration &other) const;
 	static void from_c_addr_config(AddressingConfiguration & a,
 				       struct addressing_config * ac);
 	struct addressing_config * to_c_addr_config(void) const;
@@ -851,6 +865,8 @@ public:
 class NamespaceManagerConfiguration {
 public:
 	NamespaceManagerConfiguration();
+	bool operator==(const NamespaceManagerConfiguration &other) const;
+	bool operator!=(const NamespaceManagerConfiguration &other) const;
 	static void from_c_nsm_config(NamespaceManagerConfiguration & nsm,
 				      struct nsm_config * nsmc);
 	struct nsm_config * to_c_nsm_config(void) const;
@@ -868,6 +884,8 @@ public:
 class AuthSDUProtectionProfile {
 public:
 	AuthSDUProtectionProfile() {};
+	bool operator==(const AuthSDUProtectionProfile &other) const;
+	bool operator!=(const AuthSDUProtectionProfile &other) const;
 	static void from_c_auth_profile(AuthSDUProtectionProfile & as,
 					struct auth_sdup_profile * asp);
 	struct auth_sdup_profile * to_c_auth_profile(void) const;
@@ -891,6 +909,8 @@ public:
 class SecurityManagerConfiguration {
 public:
 	SecurityManagerConfiguration() {};
+	bool operator==(const SecurityManagerConfiguration &other) const;
+	bool operator!=(const SecurityManagerConfiguration &other) const;
 	static void from_c_secman_config(SecurityManagerConfiguration &s,
 					 struct secman_config * sc);
 	struct secman_config * to_c_secman_config(void) const;
@@ -905,6 +925,8 @@ public:
 class RoutingConfiguration {
 public:
 	RoutingConfiguration() {};
+	bool operator==(const RoutingConfiguration &other) const;
+	bool operator!=(const RoutingConfiguration &other) const;
 	static void from_c_routing_config(RoutingConfiguration & r,
 					  struct routing_config* rc);
 	struct routing_config * to_c_routing_config(void) const;
@@ -919,6 +941,8 @@ public:
 class DIFConfiguration {
 public:
 	DIFConfiguration();
+	bool operator==(const DIFConfiguration &other) const;
+	bool operator!=(const DIFConfiguration &other) const;
 	static void from_c_dif_config(DIFConfiguration & d,
 				      struct dif_config * dc);
 	struct dif_config * to_c_dif_config() const;
