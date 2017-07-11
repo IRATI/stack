@@ -89,12 +89,16 @@ void PolicyConfig::from_c_policy(PolicyConfig & policy, struct policy * pc)
 	if (!pc)
 		return;
 
-	policy.name_ = pc->name;
-	policy.version_ = pc->version;
+	if (pc->name)
+		policy.name_ = pc->name;
+	if (pc->version)
+		policy.version_ = pc->version;
 
         list_for_each_entry(pos, &(pc->params), next) {
-        	param.name_ = pos->name;
-        	param.value_ = pos->value;
+        	if (pos->name)
+        		param.name_ = pos->name;
+        	if (pos->value)
+        		param.value_ = pos->value;
         	policy.add_parameter(param);
         }
 }
@@ -119,8 +123,9 @@ struct policy * PolicyConfig::to_c_policy() const
 }
 
 bool PolicyConfig::operator==(const PolicyConfig &other) const {
-        return other.get_name().compare(name_) == 0 &&
-                        other.get_version().compare(version_) == 0;
+        return other.name_ == name_ &&
+               other.version_ == version_ &&
+	       other.parameters_.size() == parameters_.size();
 }
 
 bool PolicyConfig::operator!=(const PolicyConfig &other) const {
@@ -1056,7 +1061,8 @@ void QoSCube::from_c_qos_cube(QoSCube & qo,
 	if (!qos)
 		return;
 
-	qo.name_ = qos->name;
+	if (qos->name)
+		qo.name_ = qos->name;
 	qo.id_ = qos->id;
 	qo.average_bandwidth_ = qos->avg_bw;
 	qo.average_sdu_bandwidth_ = qos->avg_sdu_bw;
@@ -1253,6 +1259,32 @@ DataTransferConstants::DataTransferConstants()
 	max_time_to_ack_ = 0;
 }
 
+bool DataTransferConstants::operator==(const DataTransferConstants &other) const
+{
+	return other.address_length_ == address_length_ &&
+			other.cep_id_length_ == cep_id_length_ &&
+			other.ctrl_sequence_number_length_ == ctrl_sequence_number_length_ &&
+			other.dif_concatenation_ == dif_concatenation_ &&
+			other.dif_fragmentation_ == dif_fragmentation_ &&
+			other.dif_integrity_ == dif_integrity_ &&
+			other.frame_length_ == frame_length_ &&
+			other.length_length_ == length_length_ &&
+			other.max_pdu_lifetime_ == max_pdu_lifetime_ &&
+			other.max_pdu_size_ == max_pdu_size_ &&
+			other.max_time_to_ack_ == max_time_to_ack_ &&
+			other.max_time_to_keep_ret_ == max_time_to_keep_ret_ &&
+			other.port_id_length_ == port_id_length_ &&
+			other.qos_id_length_ == qos_id_length_ &&
+			other.rate_length_ == rate_length_ &&
+			other.seq_rollover_thres_ == seq_rollover_thres_ &&
+			other.sequence_number_length_ == sequence_number_length_;
+}
+
+bool DataTransferConstants::operator!=(const DataTransferConstants &other) const
+{
+	return !(*this == other);
+}
+
 void DataTransferConstants::from_c_dt_cons(DataTransferConstants & dt,
 			   	   	   struct dt_cons * dtc)
 {
@@ -1430,6 +1462,18 @@ const std::string DataTransferConstants::toString(){
 EFCPConfiguration::EFCPConfiguration(){
 }
 
+bool EFCPConfiguration::operator==(const EFCPConfiguration &other) const
+{
+	return other.data_transfer_constants_ == data_transfer_constants_ &&
+			other.qos_cubes_.size() == qos_cubes_.size() &&
+			other.unknown_flowpolicy_ == unknown_flowpolicy_;
+}
+
+bool EFCPConfiguration::operator!=(const EFCPConfiguration &other) const
+{
+	return !(*this == other);
+}
+
 void EFCPConfiguration::from_c_efcp_conf(EFCPConfiguration &ef,
 			     	     	 struct efcp_config* efc)
 {
@@ -1545,6 +1589,17 @@ void EFCPConfiguration::set_unknown_flow_policy(
 NamespaceManagerConfiguration::NamespaceManagerConfiguration(){
 }
 
+bool NamespaceManagerConfiguration::operator==(const NamespaceManagerConfiguration &other) const
+{
+	return other.policy_set_ == policy_set_ &&
+			other.addressing_configuration_ == addressing_configuration_;
+}
+
+bool NamespaceManagerConfiguration::operator!=(const NamespaceManagerConfiguration &other) const
+{
+	return !(*this == other);
+}
+
 void NamespaceManagerConfiguration::from_c_nsm_config(NamespaceManagerConfiguration & nsm,
 		       	       	       	       	      struct nsm_config * nsmc)
 {
@@ -1587,6 +1642,20 @@ std::string NamespaceManagerConfiguration::toString()
 }
 
 // CLASS RoutingConfiguration
+bool RoutingConfiguration::operator==(const RoutingConfiguration &other) const
+{
+	if (other.policy_set_ != policy_set_) {
+		return false;
+	}
+
+	return true;
+}
+
+bool RoutingConfiguration::operator!=(const RoutingConfiguration &other) const
+{
+	return !(*this == other);
+}
+
 void RoutingConfiguration::from_c_routing_config(RoutingConfiguration & r,
 				  	         struct routing_config* rc)
 {
@@ -1630,6 +1699,16 @@ std::string PDUFTGConfiguration::toString()
 ResourceAllocatorConfiguration::ResourceAllocatorConfiguration(){
 }
 
+bool ResourceAllocatorConfiguration::operator==(const ResourceAllocatorConfiguration &other) const
+{
+	return other.pduftg_conf_.policy_set_ == pduftg_conf_.policy_set_;
+}
+
+bool ResourceAllocatorConfiguration::operator!=(const ResourceAllocatorConfiguration &other) const
+{
+	return !(*this == other);
+}
+
 void ResourceAllocatorConfiguration::from_c_rall_config(ResourceAllocatorConfiguration & res,
 			       	       	       	        struct resall_config * resc)
 {
@@ -1662,6 +1741,21 @@ std::string ResourceAllocatorConfiguration::toString()
 // CLASS FlowAllocatorConfiguration
 FlowAllocatorConfiguration::FlowAllocatorConfiguration(){
 	max_create_flow_retries_ = 0;
+}
+
+bool FlowAllocatorConfiguration::operator==(const FlowAllocatorConfiguration &other) const
+{
+	return other.allocate_notify_policy_ == allocate_notify_policy_ &&
+	       other.allocate_retry_policy_ == allocate_retry_policy_ &&
+	       other.max_create_flow_retries_ == max_create_flow_retries_ &&
+	       other.new_flow_request_policy_ == new_flow_request_policy_ &&
+	       other.policy_set_ == policy_set_ &&
+	       other.seq_rollover_policy_ == seq_rollover_policy_;
+}
+
+bool FlowAllocatorConfiguration::operator!=(const FlowAllocatorConfiguration &other) const
+{
+	return !(*this == other);
 }
 
 void FlowAllocatorConfiguration::from_c_fa_config(FlowAllocatorConfiguration & fa,
@@ -1801,6 +1895,17 @@ RMTConfiguration::RMTConfiguration(){
 	policy_set_ = PolicyConfig();
 }
 
+bool RMTConfiguration::operator==(const RMTConfiguration &other) const
+{
+	return other.policy_set_ == policy_set_ &&
+			other.pft_conf_.policy_set_ == pft_conf_.policy_set_;
+}
+
+bool RMTConfiguration::operator!=(const RMTConfiguration &other) const
+{
+	return !(*this == other);
+}
+
 void RMTConfiguration::from_c_rmt_config(RMTConfiguration & rm,
 			      	         struct rmt_config * rt)
 {
@@ -1835,6 +1940,16 @@ std::string RMTConfiguration::toString()
 // Class Enrollment Task Configuration
 EnrollmentTaskConfiguration::EnrollmentTaskConfiguration()
 {
+}
+
+bool EnrollmentTaskConfiguration::operator==(const EnrollmentTaskConfiguration &other) const
+{
+	return other.policy_set_ == policy_set_;
+}
+
+bool EnrollmentTaskConfiguration::operator!=(const EnrollmentTaskConfiguration &other) const
+{
+	return !(*this == other);
 }
 
 void EnrollmentTaskConfiguration::from_c_et_config(EnrollmentTaskConfiguration & et,
@@ -1873,8 +1988,10 @@ void StaticIPCProcessAddress::from_c_stipcp_addr(StaticIPCProcessAddress & ad,
 	if (!addr)
 		return;
 
-	ad.ap_name_ = addr->ap_name;
-	ad.ap_instance_ = addr->ap_instance;
+	if (addr->ap_name)
+		ad.ap_name_ = addr->ap_name;
+	if (addr->ap_instance)
+		ad.ap_instance_ = addr->ap_instance;
 	ad.address_ = addr->address;
 }
 
@@ -1902,7 +2019,8 @@ void AddressPrefixConfiguration::from_c_pre_config(AddressPrefixConfiguration & 
 		return;
 
 	ap.address_prefix_ = apc->prefix;
-	ap.organization_ = apc->org;
+	if (apc->org)
+		ap.organization_ = apc->org;
 }
 
 struct address_pref_config * AddressPrefixConfiguration::to_c_pref_config() const
@@ -1917,6 +2035,17 @@ struct address_pref_config * AddressPrefixConfiguration::to_c_pref_config() cons
 }
 
 // Class AddressingConfiguration
+bool AddressingConfiguration::operator==(const AddressingConfiguration &other) const
+{
+	return other.address_prefixes_.size() == address_prefixes_.size() &&
+			other.static_address_.size() == static_address_.size();
+}
+
+bool AddressingConfiguration::operator!=(const AddressingConfiguration &other) const
+{
+	return !(*this == other);
+}
+
 void AddressingConfiguration::from_c_addr_config(AddressingConfiguration & a,
 			       	       	         struct addressing_config * ac)
 {
@@ -1977,6 +2106,19 @@ void AddressingConfiguration::addPrefix(AddressPrefixConfiguration &pref)
 	address_prefixes_.push_back(pref);
 }
 //Class AuthSDUProtectionProfile
+bool AuthSDUProtectionProfile::operator==(const AuthSDUProtectionProfile &other) const
+{
+	return other.authPolicy == authPolicy &&
+			other.crcPolicy == crcPolicy &&
+			other.encryptPolicy == encryptPolicy &&
+			other.ttlPolicy == ttlPolicy;
+}
+
+bool AuthSDUProtectionProfile::operator!=(const AuthSDUProtectionProfile &other) const
+{
+	return !(*this == other);
+}
+
 void AuthSDUProtectionProfile::from_c_auth_profile(AuthSDUProtectionProfile & as,
 						   struct auth_sdup_profile * asp)
 {
@@ -2018,6 +2160,24 @@ std::string AuthSDUProtectionProfile::to_string()
 }
 
 //Class SecurityManagerConfiguration
+bool SecurityManagerConfiguration::operator==(const SecurityManagerConfiguration &other) const
+{
+	if (other.policy_set_ != policy_set_) {
+		return false;
+	} else if (other.default_auth_profile != default_auth_profile) {
+		return false;
+	} else if (other.specific_auth_profiles.size() != specific_auth_profiles.size()) {
+		return false;
+	}
+
+	return true;
+}
+
+bool SecurityManagerConfiguration::operator!=(const SecurityManagerConfiguration &other) const
+{
+	return !(*this == other);
+}
+
 void SecurityManagerConfiguration::from_c_secman_config(SecurityManagerConfiguration &s,
 				 	 	 	struct secman_config * sc)
 {
@@ -2082,6 +2242,36 @@ DIFConfiguration::DIFConfiguration(){
 	address_ = 0;
 }
 
+bool DIFConfiguration::operator==(const DIFConfiguration &other) const
+{
+	if (other.address_ != address_) {
+		return false;
+	} else if (other.parameters_.size() != parameters_.size()) {
+		return false;
+	} else if (other.et_configuration_ != et_configuration_) {
+		return false;
+	} else if (other.fa_configuration_ != fa_configuration_) {
+		return false;
+	} else if (other.nsm_configuration_ != nsm_configuration_) {
+		return false;
+	} else if (other.ra_configuration_ != ra_configuration_) {
+		return false;
+	} else if (other.rmt_configuration_ != rmt_configuration_) {
+		return false;
+	} else if (other.routing_configuration_ != routing_configuration_) {
+		return false;
+	} else if (other.sm_configuration_ != sm_configuration_) {
+		return false;
+	}
+
+	return true;
+}
+
+bool DIFConfiguration::operator!=(const DIFConfiguration &other) const
+{
+	return !(*this == other);
+}
+
 void DIFConfiguration::from_c_dif_config(DIFConfiguration & d,
 			      	         struct dif_config * dc)
 {
@@ -2091,6 +2281,7 @@ void DIFConfiguration::from_c_dif_config(DIFConfiguration & d,
 		return;
 
 	d.address_ = dc->address;
+
 	EFCPConfiguration::from_c_efcp_conf(d.efcp_configuration_,
 				 	    dc->efcp_config);
 	RMTConfiguration::from_c_rmt_config(d.rmt_configuration_,
@@ -2107,7 +2298,6 @@ void DIFConfiguration::from_c_dif_config(DIFConfiguration & d,
 							   dc->resall_config);
 	SecurityManagerConfiguration::from_c_secman_config(d.sm_configuration_,
 							   dc->secman_config);
-
         list_for_each_entry(pos, &(dc->ipcp_config_entries), next) {
         	d.parameters_.push_back(PolicyParameter(pos->entry->name,
         					        pos->entry->value));

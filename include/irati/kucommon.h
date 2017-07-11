@@ -486,34 +486,6 @@ struct routing_config {
 	struct policy * ps;
 };
 
-struct dup_config_entry {
-	// The N-1 dif_name this configuration applies to
-	string_t * 	n_1_dif_name;
-
-	// If NULL TTL is disabled,
-	// otherwise contains the TTL policy data
-	struct policy * ttl_policy;
-
-	// if NULL error_check is disabled,
-	// otherwise contains the error check policy
-	// data
-	struct policy * error_check_policy;
-
-	//Cryptographic-related fields
-	struct policy * crypto_policy;
-};
-
-struct dup_config {
-	struct list_head          next;
-	struct dup_config_entry * entry;
-};
-
-/* Represents the configuration of the SDUProtection module */
-struct sdup_config {
-	struct dup_config_entry * default_dup_conf;
-	struct list_head	  specific_dup_confs;
-};
-
 /* Represents the configuration of the PFF */
 struct pff_config {
 	/* The PS name for the PDU Forwarding Function */
@@ -552,9 +524,6 @@ struct dif_config {
 
         /* The address of the IPC Process*/
         address_t           address;
-
-        /* List of Data Unit Protection configuration entries */
-        struct sdup_config * sdup_config;
 
         struct fa_config * fa_config;
         struct et_config * et_config;
