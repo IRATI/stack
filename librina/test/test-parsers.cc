@@ -27,6 +27,7 @@
 #include "core.h"
 #include "ctrl.h"
 #include "librina/configuration.h"
+#include "librina/security-manager.h"
 
 #define DEFAULT_AP_NAME        "default/apname"
 #define DEFAULT_AP_INSTANCE    "default/apinstance"
@@ -213,6 +214,28 @@ void populate_dtcp_config(DTCPConfig & dtcp_config)
 	dtcp_config.flow_control_config_.window_based_config_.tx_control_policy_.name_ = DEFAULT_POLICY_NAME;
 	dtcp_config.flow_control_config_.window_based_config_.tx_control_policy_.version_ = DEFAULT_POLICY_VERSION;
 	dtcp_config.flow_control_config_.window_based_config_.tx_control_policy_.parameters_.push_back(param);
+}
+
+void populate_uchar_array(UcharArray & array)
+{
+	array.length = 10;
+	array.data = new unsigned char[10];
+	memset(array.data, 23, array.length);
+}
+
+void populate_crypto_state(CryptoState & cs)
+{
+	cs.compress_alg = "compress-alg";
+	cs.enable_crypto_rx = true;
+	cs.enable_crypto_rx = true;
+	cs.encrypt_alg = "encrypt-alg";
+	cs.mac_alg = "mac-alg";
+	populate_uchar_array(cs.encrypt_key_rx);
+	populate_uchar_array(cs.encrypt_key_tx);
+	populate_uchar_array(cs.iv_rx);
+	populate_uchar_array(cs.iv_tx);
+	populate_uchar_array(cs.mac_key_rx);
+	populate_uchar_array(cs.mac_key_tx);
 }
 
 int test_irati_kmsg_ipcm_assign_to_dif()
@@ -1366,6 +1389,224 @@ int test_irati_kmsg_ipcp_conn_update(irati_msg_t msg_t)
 	return ret;
 }
 
+int test_irati_kmsg_ipcp_select_ps_param()
+{
+	struct irati_kmsg_ipcp_select_ps_param * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+	std::string p_before, p_after, n_before, n_after, v_before, v_after;
+
+	std::cout << "TESTING KMSG IPCP SELECT PS PARAM" << std::endl;
+
+	p_before = "/path/to/ps/param";
+	n_before = "name";
+	v_before = "value";
+
+	msg = new irati_kmsg_ipcp_select_ps_param();
+	msg->msg_type = RINA_C_IPCP_SET_POLICY_SET_PARAM_REQUEST;
+	msg->path = stringToCharArray(p_before);
+	msg->name = stringToCharArray(n_before);
+	msg->value = stringToCharArray(v_before);
+
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_kmsg_ipcp_select_ps_param message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_kmsg_ipcp_select_ps_param *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	             serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_kmsg_ipcp_select_ps_param message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	p_after = resp->path;
+	n_after = resp->name;
+	v_after = resp->value;
+
+	if (p_before != p_after) {
+		std::cout << "Path on original and recovered messages"
+			   << " are different\n";
+		ret = 0;
+	} else if (n_before != n_after) {
+		std::cout << "Name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (v_before != v_after) {
+		std::cout << "Value on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else {
+		std::cout << "Test ok!" << std::endl;
+		ret = 0;
+	}
+
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return ret;
+}
+
+int test_irati_kmsg_ipcp_select_ps()
+{
+	struct irati_kmsg_ipcp_select_ps * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+	std::string p_before, p_after, n_before, n_after;
+
+	std::cout << "TESTING KMSG IPCP SELECT PS" << std::endl;
+
+	p_before = "/path/to/ps/param";
+	n_before = "name";
+
+	msg = new irati_kmsg_ipcp_select_ps();
+	msg->msg_type = RINA_C_IPCP_SELECT_POLICY_SET_REQUEST;
+	msg->path = stringToCharArray(p_before);
+	msg->name = stringToCharArray(n_before);
+
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_kmsg_ipcp_select_ps message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_kmsg_ipcp_select_ps *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	             serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_kmsg_ipcp_select_ps message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	p_after = resp->path;
+	n_after = resp->name;
+
+	if (p_before != p_after) {
+		std::cout << "Path on original and recovered messages"
+			   << " are different\n";
+		ret = 0;
+	} else if (n_before != n_after) {
+		std::cout << "Name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else {
+		std::cout << "Test ok!" << std::endl;
+		ret = 0;
+	}
+
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return ret;
+}
+
+int test_irati_kmsg_ipcp_update_crypto_state()
+{
+	struct irati_kmsg_ipcp_update_crypto_state * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+	CryptoState before, after;
+
+	std::cout << "TESTING KMSG IPCP UPDATE CRYPTO STATE" << std::endl;
+
+	populate_crypto_state(before);
+
+	msg = new irati_kmsg_ipcp_update_crypto_state();
+	msg->msg_type = RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST;
+	msg->port_id = 32;
+	msg->state = before.to_c_crypto_state();
+
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_kmsg_ipcp_update_crypto_state message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_kmsg_ipcp_update_crypto_state *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	             	     serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_kmsg_ipcp_update_crypto_state message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	CryptoState::from_c_crypto_state(after, resp->state);
+
+	if (msg->port_id != resp->port_id) {
+		std::cout << "Port-id on original and recovered messages"
+			   << " are different\n";
+		ret = 0;
+	} else if (before != after) {
+		std::cout << "Crypto state on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else {
+		std::cout << "Test ok!" << std::endl;
+		ret = 0;
+	}
+
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return ret;
+}
+
 int test_irati_kmsg_multi_msg(irati_msg_t msg_t)
 {
 	struct irati_kmsg_multi_msg * msg, * resp;
@@ -1544,6 +1785,15 @@ int main()
 	if (result < 0) return result;
 
 	result = test_irati_kmsg_ipcp_conn_update(RINA_C_IPCP_CONN_UPDATE_REQUEST);
+	if (result < 0) return result;
+
+	result = test_irati_kmsg_ipcp_select_ps_param();
+	if (result < 0) return result;
+
+	result = test_irati_kmsg_ipcp_select_ps();
+	if (result < 0) return result;
+
+	result = test_irati_kmsg_ipcp_update_crypto_state();
 	if (result < 0) return result;
 
 	result = test_irati_kmsg_multi_msg(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT);

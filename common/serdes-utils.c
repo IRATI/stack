@@ -183,14 +183,16 @@ int deserialize_buffer(const void **pptr, struct buffer **b)
 	size_t blen;
 
 	deserialize_obj(*pptr, size_t, &blen);
+
 	if (blen) {
-		*b = COMMON_ALLOC(blen, 1);
+		*b = COMMON_ALLOC(sizeof(struct buffer), 1);
 		if (!(*b)) {
 			return -1;
 		}
 
-		memcpy((*b)->data, *pptr, blen);
 		(*b)->size = blen;
+		(*b)->data = COMMON_ALLOC(blen, 1);
+		memcpy((*b)->data, *pptr, blen);
 		*pptr += blen;
 	} else {
 		*b = NULL;
