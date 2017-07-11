@@ -270,6 +270,19 @@ DTCPWindowBasedFlowControlConfig::DTCPWindowBasedFlowControlConfig() {
         max_closed_window_queue_length_ = 0;
 }
 
+bool DTCPWindowBasedFlowControlConfig::operator==(const DTCPWindowBasedFlowControlConfig &other) const
+{
+	return other.initial_credit_ == initial_credit_ &&
+			other.max_closed_window_queue_length_ == max_closed_window_queue_length_ &&
+			other.rcvr_flow_control_policy_ == rcvr_flow_control_policy_ &&
+			other.tx_control_policy_ == tx_control_policy_;
+}
+
+bool DTCPWindowBasedFlowControlConfig::operator!=(const DTCPWindowBasedFlowControlConfig &other) const
+{
+	return !(*this == other);
+}
+
 void DTCPWindowBasedFlowControlConfig::from_c_window_config(DTCPWindowBasedFlowControlConfig & fc,
 							    struct window_fctrl_config * wfc)
 {
@@ -345,6 +358,20 @@ const std::string DTCPWindowBasedFlowControlConfig::toString() {
 DTCPRateBasedFlowControlConfig::DTCPRateBasedFlowControlConfig() {
         sending_rate_ = 0;
         time_period_ = 0;
+}
+
+bool DTCPRateBasedFlowControlConfig::operator==(const DTCPRateBasedFlowControlConfig &other) const
+{
+	return other.no_override_default_peak_policy_ == no_override_default_peak_policy_ &&
+			other.no_rate_slow_down_policy_ == no_rate_slow_down_policy_ &&
+			other.rate_reduction_policy_ == rate_reduction_policy_ &&
+			other.sending_rate_ == sending_rate_ &&
+			other.time_period_ == time_period_;
+}
+
+bool DTCPRateBasedFlowControlConfig::operator!=(const DTCPRateBasedFlowControlConfig &other) const
+{
+	return !(*this == other);
 }
 
 void DTCPRateBasedFlowControlConfig::from_c_rate_config(DTCPRateBasedFlowControlConfig & rf,
@@ -443,6 +470,29 @@ DTCPFlowControlConfig::DTCPFlowControlConfig() {
         sent_buffers_threshold_ = 0;
         sent_bytes_percent_threshold_ = 0;
         sent_bytes_threshold_ = 0;
+}
+
+bool DTCPFlowControlConfig::operator==(const DTCPFlowControlConfig &other) const
+{
+	return other.closed_window_policy_ == closed_window_policy_ &&
+			other.flow_control_overrun_policy_ == flow_control_overrun_policy_ &&
+			other.rate_based_ == rate_based_ &&
+			other.rate_based_config_ == rate_based_config_ &&
+			other.rcv_buffers_threshold_ == rcv_buffers_threshold_ &&
+			other.rcv_bytes_percent_threshold_ == rcv_bytes_percent_threshold_ &&
+			other.rcv_bytes_threshold_ == rcv_bytes_threshold_ &&
+			other.receiving_flow_control_policy_ == receiving_flow_control_policy_ &&
+			other.reconcile_flow_control_policy_ == reconcile_flow_control_policy_ &&
+			other.sent_buffers_threshold_ == sent_buffers_threshold_ &&
+			other.sent_bytes_percent_threshold_ == sent_bytes_percent_threshold_ &&
+			other.sent_bytes_threshold_ == sent_bytes_threshold_ &&
+			other.window_based_ == window_based_ &&
+			other.window_based_config_ == window_based_config_;
+}
+
+bool DTCPFlowControlConfig::operator!=(const DTCPFlowControlConfig &other) const
+{
+	return !(*this == other);
 }
 
 void DTCPFlowControlConfig::from_c_fconfig(DTCPFlowControlConfig & fc,
@@ -647,6 +697,24 @@ DTCPRtxControlConfig::DTCPRtxControlConfig() {
 	initial_rtx_time_ = 0;
 }
 
+bool DTCPRtxControlConfig::operator==(const DTCPRtxControlConfig &other) const
+{
+	return other.data_rxms_nmax_ == data_rxms_nmax_ &&
+			other.initial_rtx_time_ == initial_rtx_time_ &&
+			other.max_time_to_retry_ == max_time_to_retry_ &&
+			other.rcvr_ack_policy_ == rcvr_ack_policy_ &&
+			other.rcvr_control_ack_policy_ == rcvr_control_ack_policy_ &&
+			other.recving_ack_list_policy_ == recving_ack_list_policy_ &&
+			other.rtx_timer_expiry_policy_ == rtx_timer_expiry_policy_ &&
+			other.sender_ack_policy_ == sender_ack_policy_ &&
+			other.sending_ack_policy_ == sending_ack_policy_;
+}
+
+bool DTCPRtxControlConfig::operator!=(const DTCPRtxControlConfig &other) const
+{
+	return !(*this == other);
+}
+
 void DTCPRtxControlConfig::from_c_rxconfig(DTCPRtxControlConfig & dr,
 		    	    		   struct dtcp_rxctrl_config * drc)
 {
@@ -682,7 +750,7 @@ struct dtcp_rxctrl_config * DTCPRtxControlConfig::to_c_rxconfig() const
 	result->sender_ack = sender_ack_policy_.to_c_policy();
 	result->receiving_ack_list = recving_ack_list_policy_.to_c_policy();
 	result->rcvr_ack = rcvr_ack_policy_.to_c_policy();
-	result->sender_ack = sending_ack_policy_.to_c_policy();
+	result->sending_ack = sending_ack_policy_.to_c_policy();
 	result->rcvr_control_ack = rcvr_control_ack_policy_.to_c_policy();
 
 	return result;
@@ -787,6 +855,22 @@ const std::string DTCPRtxControlConfig::toString() {
 DTCPConfig::DTCPConfig() {
         flow_control_ = false;
         rtx_control_ = false;
+}
+
+bool DTCPConfig::operator==(const DTCPConfig &other) const
+{
+	return other.dtcp_policy_set_ == dtcp_policy_set_ &&
+			other.flow_control_ == flow_control_ &&
+			other.flow_control_config_ == flow_control_config_ &&
+			other.lost_control_pdu_policy_ == lost_control_pdu_policy_ &&
+			other.rtt_estimator_policy_ == rtt_estimator_policy_ &&
+			other.rtx_control_ == rtx_control_ &&
+			other.rtx_control_config_ == rtx_control_config_;
+}
+
+bool DTCPConfig::operator!=(const DTCPConfig &other) const
+{
+	return !(*this == other);
 }
 
 void DTCPConfig::from_c_dtcp_config(DTCPConfig & dt,
@@ -903,7 +987,8 @@ const std::string DTCPConfig::toString() {
 }
 
 // CLASS DTP CONFIG
-DTPConfig::DTPConfig(){
+DTPConfig::DTPConfig()
+{
 	dtcp_present_ = false;
 	seq_num_rollover_threshold_ = 0;
 	initial_a_timer_ = 0;
@@ -911,6 +996,23 @@ DTPConfig::DTPConfig(){
 	in_order_delivery_ = false;
 	incomplete_delivery_ = false;
 	max_sdu_gap_ = 0;
+}
+
+bool DTPConfig::operator==(const DTPConfig &other) const
+{
+	return other.dtcp_present_ == dtcp_present_ &&
+			other.dtp_policy_set_ == dtp_policy_set_ &&
+			other.in_order_delivery_ == in_order_delivery_ &&
+			other.incomplete_delivery_ == incomplete_delivery_ &&
+			other.initial_a_timer_ == initial_a_timer_ &&
+			other.max_sdu_gap_ == max_sdu_gap_ &&
+			other.partial_delivery_ == partial_delivery_ &&
+			other.seq_num_rollover_threshold_ == seq_num_rollover_threshold_;
+}
+
+bool DTPConfig::operator!=(const DTPConfig &other) const
+{
+	return !(*this == other);
 }
 
 void DTPConfig::from_c_dtp_config(DTPConfig & dt,

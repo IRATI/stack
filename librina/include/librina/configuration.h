@@ -94,376 +94,388 @@ public:
 
 ///The DTCP window based flow control configuration
 class DTCPWindowBasedFlowControlConfig {
- public:
-    DTCPWindowBasedFlowControlConfig();
-    static void from_c_window_config(DTCPWindowBasedFlowControlConfig & fc,
-		    	    	     struct window_fctrl_config * wfc);
-    struct window_fctrl_config * to_c_window_config(void) const;
+public:
+	DTCPWindowBasedFlowControlConfig();
+	bool operator==(const DTCPWindowBasedFlowControlConfig &other) const;
+	bool operator!=(const DTCPWindowBasedFlowControlConfig &other) const;
+	static void from_c_window_config(DTCPWindowBasedFlowControlConfig & fc,
+			struct window_fctrl_config * wfc);
+	struct window_fctrl_config * to_c_window_config(void) const;
 #ifndef SWIG
-    unsigned int get_initial_credit() const;
-    void set_initial_credit(int initial_credit);
-    unsigned int get_maxclosed_window_queue_length() const;
-    void set_max_closed_window_queue_length(
-            unsigned int max_closed_window_queue_length);
-    const PolicyConfig& get_rcvr_flow_control_policy() const;
-    void set_rcvr_flow_control_policy(
-            const PolicyConfig& rcvr_flow_control_policy);
-    const PolicyConfig& getTxControlPolicy() const;
-    void set_tx_control_policy(const PolicyConfig& tx_control_policy);
+	unsigned int get_initial_credit() const;
+	void set_initial_credit(int initial_credit);
+	unsigned int get_maxclosed_window_queue_length() const;
+	void set_max_closed_window_queue_length(
+			unsigned int max_closed_window_queue_length);
+	const PolicyConfig& get_rcvr_flow_control_policy() const;
+	void set_rcvr_flow_control_policy(
+			const PolicyConfig& rcvr_flow_control_policy);
+	const PolicyConfig& getTxControlPolicy() const;
+	void set_tx_control_policy(const PolicyConfig& tx_control_policy);
 #endif
-    const std::string toString();
+const std::string toString();
 
-    /// Integer that the number PDUs that can be put on the
-    /// ClosedWindowQueue before something must be done.
-    unsigned int max_closed_window_queue_length_;
+/// Integer that the number PDUs that can be put on the
+/// ClosedWindowQueue before something must be done.
+unsigned int max_closed_window_queue_length_;
 
-    /// initial sequence number to get right window edge.
-    unsigned int initial_credit_;
+/// initial sequence number to get right window edge.
+unsigned int initial_credit_;
 
-    /// Invoked when a Transfer PDU is received to give the receiving PM an
-    /// opportunity to update the flow control allocations.
-    PolicyConfig rcvr_flow_control_policy_;
+/// Invoked when a Transfer PDU is received to give the receiving PM an
+/// opportunity to update the flow control allocations.
+PolicyConfig rcvr_flow_control_policy_;
 
-    /// This policy is used when there are conditions that warrant sending
-    /// fewer PDUs than allowed by the sliding window flow control, e.g.
-    /// the ECN bit is set.
-    PolicyConfig tx_control_policy_;
+/// This policy is used when there are conditions that warrant sending
+/// fewer PDUs than allowed by the sliding window flow control, e.g.
+/// the ECN bit is set.
+PolicyConfig tx_control_policy_;
 };
 
 /// The DTCP rate-basd flow control configuration
 class DTCPRateBasedFlowControlConfig {
- public:
-    DTCPRateBasedFlowControlConfig();
-    static void from_c_rate_config(DTCPRateBasedFlowControlConfig & rf,
-		    	    	   struct rate_fctrl_config * rfg);
-    struct rate_fctrl_config * to_c_rate_config(void) const;
+public:
+	DTCPRateBasedFlowControlConfig();
+	bool operator==(const DTCPRateBasedFlowControlConfig &other) const;
+	bool operator!=(const DTCPRateBasedFlowControlConfig &other) const;
+	static void from_c_rate_config(DTCPRateBasedFlowControlConfig & rf,
+			struct rate_fctrl_config * rfg);
+	struct rate_fctrl_config * to_c_rate_config(void) const;
 #ifndef SWIG
-    const PolicyConfig& get_no_override_default_peak_policy() const;
-    void set_no_override_default_peak_policy(
-            const PolicyConfig& no_override_default_peak_policy);
-    const PolicyConfig& get_no_rate_slow_down_policy() const;
-    void set_no_rate_slow_down_policy(
-            const PolicyConfig& no_rate_slow_down_policy);
-    const PolicyConfig& get_rate_reduction_policy() const;
-    void set_rate_reduction_policy(const PolicyConfig& rate_reduction_policy);
-    unsigned int get_sending_rate() const;
-    void set_sending_rate(unsigned int sending_rate);
-    unsigned int get_time_period() const;
-    void set_time_period(unsigned int time_period);
+	const PolicyConfig& get_no_override_default_peak_policy() const;
+	void set_no_override_default_peak_policy(
+			const PolicyConfig& no_override_default_peak_policy);
+	const PolicyConfig& get_no_rate_slow_down_policy() const;
+	void set_no_rate_slow_down_policy(
+			const PolicyConfig& no_rate_slow_down_policy);
+	const PolicyConfig& get_rate_reduction_policy() const;
+	void set_rate_reduction_policy(const PolicyConfig& rate_reduction_policy);
+	unsigned int get_sending_rate() const;
+	void set_sending_rate(unsigned int sending_rate);
+	unsigned int get_time_period() const;
+	void set_time_period(unsigned int time_period);
 #endif
-    const std::string toString();
+const std::string toString();
 
-    /// the number of PDUs that may be sent in a TimePeriod. Used with
-    /// rate-based flow control.
-    unsigned int sending_rate_;
+/// the number of PDUs that may be sent in a TimePeriod. Used with
+/// rate-based flow control.
+unsigned int sending_rate_;
 
-    /// length of time in microseconds for pacing rate-based flow control.
-    unsigned int time_period_;
+/// length of time in microseconds for pacing rate-based flow control.
+unsigned int time_period_;
 
-    /// used to momentarily lower the send rate below the rate allowed
-    PolicyConfig no_rate_slow_down_policy_;
+/// used to momentarily lower the send rate below the rate allowed
+PolicyConfig no_rate_slow_down_policy_;
 
-    /// Allows rate-based flow control to exceed its nominal rate.
-    /// Presumably this would be for short periods and policies should
-    /// enforce this.  Like all policies, if this returns True it creates
-    /// the default action which is no override.
-    PolicyConfig no_override_default_peak_policy_;
+/// Allows rate-based flow control to exceed its nominal rate.
+/// Presumably this would be for short periods and policies should
+/// enforce this.  Like all policies, if this returns True it creates
+/// the default action which is no override.
+PolicyConfig no_override_default_peak_policy_;
 
-    /// Allows an alternate action when using rate-based flow control and
-    /// the number of free buffers is getting low.
-    PolicyConfig rate_reduction_policy_;
+/// Allows an alternate action when using rate-based flow control and
+/// the number of free buffers is getting low.
+PolicyConfig rate_reduction_policy_;
 };
 
 /// The flow control configuration of a DTCP instance
 class DTCPFlowControlConfig {
- public:
-    DTCPFlowControlConfig();
-    static void from_c_fconfig(DTCPFlowControlConfig & fc,
-		    	       struct dtcp_fctrl_config * fcc);
-    struct dtcp_fctrl_config * to_c_fconfig(void) const;
+public:
+	DTCPFlowControlConfig();
+	bool operator==(const DTCPFlowControlConfig &other) const;
+	bool operator!=(const DTCPFlowControlConfig &other) const;
+	static void from_c_fconfig(DTCPFlowControlConfig & fc,
+			struct dtcp_fctrl_config * fcc);
+	struct dtcp_fctrl_config * to_c_fconfig(void) const;
 #ifndef SWIG
-    const PolicyConfig& get_closed_window_policy() const;
-    void set_closed_window_policy(const PolicyConfig& closed_window_policy);
-    const PolicyConfig& get_flow_control_overrun_policy() const;
-    void set_flow_control_overrun_policy(
-            const PolicyConfig& flow_control_overrun_policy);
-    bool is_rate_based() const;
-    void set_rate_based(bool rate_based);
-    const DTCPRateBasedFlowControlConfig& get_rate_based_config() const;
-    void set_rate_based_config(
-            const DTCPRateBasedFlowControlConfig& rate_based_config);
-    int get_rcv_buffers_threshold() const;
-    void set_rcv_buffers_threshold(int rcv_buffers_threshold);
-    int get_rcv_bytes_percent_threshold() const;
-    void set_rcv_bytes_percent_threshold(int rcv_bytes_percent_threshold);
-    int get_rcv_bytes_threshold() const;
-    void set_rcv_bytes_threshold(int rcv_bytes_threshold);
-    const PolicyConfig& get_reconcile_flow_control_policy() const;
-    void set_reconcile_flow_control_policy(
-            const PolicyConfig& reconcile_flow_control_policy);
-    int get_sent_buffers_threshold() const;
-    void set_sent_buffers_threshold(int sent_buffers_threshold);
-    int get_sent_bytes_percent_threshold() const;
-    void set_sent_bytes_percent_threshold(int sent_bytes_percent_threshold);
-    int get_sent_bytes_threshold() const;
-    void set_sent_bytes_threshold(int sent_bytes_threshold);
-    bool is_window_based() const;
-    void set_window_based(bool window_based);
-    const DTCPWindowBasedFlowControlConfig& get_window_based_config() const;
-    void set_window_based_config(
-            const DTCPWindowBasedFlowControlConfig& window_based_config);
-    const PolicyConfig& get_receiving_flow_control_policy() const;
-    void set_receiving_flow_control_policy(
-            const PolicyConfig& receiving_flow_control_policy);
+	const PolicyConfig& get_closed_window_policy() const;
+	void set_closed_window_policy(const PolicyConfig& closed_window_policy);
+	const PolicyConfig& get_flow_control_overrun_policy() const;
+	void set_flow_control_overrun_policy(
+			const PolicyConfig& flow_control_overrun_policy);
+	bool is_rate_based() const;
+	void set_rate_based(bool rate_based);
+	const DTCPRateBasedFlowControlConfig& get_rate_based_config() const;
+	void set_rate_based_config(
+			const DTCPRateBasedFlowControlConfig& rate_based_config);
+	int get_rcv_buffers_threshold() const;
+	void set_rcv_buffers_threshold(int rcv_buffers_threshold);
+	int get_rcv_bytes_percent_threshold() const;
+	void set_rcv_bytes_percent_threshold(int rcv_bytes_percent_threshold);
+	int get_rcv_bytes_threshold() const;
+	void set_rcv_bytes_threshold(int rcv_bytes_threshold);
+	const PolicyConfig& get_reconcile_flow_control_policy() const;
+	void set_reconcile_flow_control_policy(
+			const PolicyConfig& reconcile_flow_control_policy);
+	int get_sent_buffers_threshold() const;
+	void set_sent_buffers_threshold(int sent_buffers_threshold);
+	int get_sent_bytes_percent_threshold() const;
+	void set_sent_bytes_percent_threshold(int sent_bytes_percent_threshold);
+	int get_sent_bytes_threshold() const;
+	void set_sent_bytes_threshold(int sent_bytes_threshold);
+	bool is_window_based() const;
+	void set_window_based(bool window_based);
+	const DTCPWindowBasedFlowControlConfig& get_window_based_config() const;
+	void set_window_based_config(
+			const DTCPWindowBasedFlowControlConfig& window_based_config);
+	const PolicyConfig& get_receiving_flow_control_policy() const;
+	void set_receiving_flow_control_policy(
+			const PolicyConfig& receiving_flow_control_policy);
 #endif
-    const std::string toString();
+const std::string toString();
 
-    ///indicates whether window-based flow control is in use
-    bool window_based_;
+///indicates whether window-based flow control is in use
+bool window_based_;
 
-    /// the window-based flow control configuration
-    DTCPWindowBasedFlowControlConfig window_based_config_;
+/// the window-based flow control configuration
+DTCPWindowBasedFlowControlConfig window_based_config_;
 
-    /// indicates whether rate-based flow control is in use
-    bool rate_based_;
+/// indicates whether rate-based flow control is in use
+bool rate_based_;
 
-    /// the rate-based flow control configuration
-    DTCPRateBasedFlowControlConfig rate_based_config_;
+/// the rate-based flow control configuration
+DTCPRateBasedFlowControlConfig rate_based_config_;
 
-    /// The number of free bytes below which flow control should slow or
-    /// block the user from doing any more Writes.
-    int sent_bytes_threshold_;
+/// The number of free bytes below which flow control should slow or
+/// block the user from doing any more Writes.
+int sent_bytes_threshold_;
 
-    /// The percent of free bytes below, which flow control should slow or
-    /// block the user from doing any more Writes.
-    int sent_bytes_percent_threshold_;
+/// The percent of free bytes below, which flow control should slow or
+/// block the user from doing any more Writes.
+int sent_bytes_percent_threshold_;
 
-    /// The number of free buffers below which flow control should slow or
-    /// block the user from doing any more Writes.
-    int sent_buffers_threshold_;
+/// The number of free buffers below which flow control should slow or
+/// block the user from doing any more Writes.
+int sent_buffers_threshold_;
 
-    /// The number of free bytes below which flow control does not move or
-    /// decreases the amount the Right Window Edge is moved.
-    int rcv_bytes_threshold_;
+/// The number of free bytes below which flow control does not move or
+/// decreases the amount the Right Window Edge is moved.
+int rcv_bytes_threshold_;
 
-    /// The number of free buffers at which flow control does not advance
-    /// or decreases the amount the Right Window Edge is moved.
-    int rcv_bytes_percent_threshold_;
+/// The number of free buffers at which flow control does not advance
+/// or decreases the amount the Right Window Edge is moved.
+int rcv_bytes_percent_threshold_;
 
-    /// The percent of free buffers below which flow control should not
-    /// advance or decreases the amount the Right Window Edge is moved.
-    int rcv_buffers_threshold_;
+/// The percent of free buffers below which flow control should not
+/// advance or decreases the amount the Right Window Edge is moved.
+int rcv_buffers_threshold_;
 
-    /// Used with flow control to determine the action to be taken when the
-    /// receiver has not extended more credit to allow the sender to send more
-    /// PDUs. Typically, the action will be to queue the PDUs until credit is
-    /// extended. This action is taken by DTCP, not DTP.
-    PolicyConfig closed_window_policy_;
+/// Used with flow control to determine the action to be taken when the
+/// receiver has not extended more credit to allow the sender to send more
+/// PDUs. Typically, the action will be to queue the PDUs until credit is
+/// extended. This action is taken by DTCP, not DTP.
+PolicyConfig closed_window_policy_;
 
-    /// Determines what action to take if the receiver receives PDUs but the
-    /// credit or rate has been exceeded
-    PolicyConfig flow_control_overrun_policy_;
+/// Determines what action to take if the receiver receives PDUs but the
+/// credit or rate has been exceeded
+PolicyConfig flow_control_overrun_policy_;
 
-    /// Invoked when both Credit and Rate based flow control are in use and
-    /// they disagree on whether the PM can send or receive data. If it
-    /// returns True, then the PM can send or receive; if False, it cannot.
-    PolicyConfig reconcile_flow_control_policy_;
+/// Invoked when both Credit and Rate based flow control are in use and
+/// they disagree on whether the PM can send or receive data. If it
+/// returns True, then the PM can send or receive; if False, it cannot.
+PolicyConfig reconcile_flow_control_policy_;
 
-    /// Allows some discretion in when to send a Flow Control PDU when there
-    /// is no Retransmission Control.
-    PolicyConfig receiving_flow_control_policy_;
+/// Allows some discretion in when to send a Flow Control PDU when there
+/// is no Retransmission Control.
+PolicyConfig receiving_flow_control_policy_;
 };
 
 /// The configuration of the retransmission control functions of a
 /// DTCP instance
 class DTCPRtxControlConfig {
- public:
-    DTCPRtxControlConfig();
-    static void from_c_rxconfig(DTCPRtxControlConfig & dr,
-		    	    	struct dtcp_rxctrl_config * drc);
-    struct dtcp_rxctrl_config * to_c_rxconfig(void) const;
+public:
+	DTCPRtxControlConfig();
+	bool operator==(const DTCPRtxControlConfig &other) const;
+	bool operator!=(const DTCPRtxControlConfig &other) const;
+	static void from_c_rxconfig(DTCPRtxControlConfig & dr,
+			struct dtcp_rxctrl_config * drc);
+	struct dtcp_rxctrl_config * to_c_rxconfig(void) const;
 #ifndef SWIG
-    unsigned int get_data_rxmsn_max() const;
-    void set_data_rxmsn_max(unsigned int data_rxmsn_max);
-    unsigned int get_initial_rtx_time() const;
-    void set_initial_rtx_time(unsigned int initial_rtx_time);
-    const PolicyConfig& get_rcvr_ack_policy() const;
-    void set_rcvr_ack_policy(const PolicyConfig& rcvr_ack_policy);
-    const PolicyConfig& get_rcvr_control_ack_policy() const;
-    void set_rcvr_control_ack_policy(
-            const PolicyConfig& rcvr_control_ack_policy);
-    const PolicyConfig& get_recving_ack_list_policy() const;
-    void set_recving_ack_list_policy(
-            const PolicyConfig& recving_ack_list_policy);
-    void set_rtx_timer_expiry_policy(
-            const PolicyConfig& rtx_timer_expiry_policy);
-    const PolicyConfig& get_rtx_timer_expiry_policy() const;
-    const PolicyConfig& get_sender_ack_policy() const;
-    void set_sender_ack_policy(const PolicyConfig& sender_ack_policy);
-    const PolicyConfig& get_sending_ack_policy() const;
-    void set_sending_ack_policy(const PolicyConfig& sending_ack_policy);
-    unsigned int get_max_time_to_retry() const;
-    void set_max_time_to_retry(unsigned int max_time_to_retry);
+	unsigned int get_data_rxmsn_max() const;
+	void set_data_rxmsn_max(unsigned int data_rxmsn_max);
+	unsigned int get_initial_rtx_time() const;
+	void set_initial_rtx_time(unsigned int initial_rtx_time);
+	const PolicyConfig& get_rcvr_ack_policy() const;
+	void set_rcvr_ack_policy(const PolicyConfig& rcvr_ack_policy);
+	const PolicyConfig& get_rcvr_control_ack_policy() const;
+	void set_rcvr_control_ack_policy(
+			const PolicyConfig& rcvr_control_ack_policy);
+	const PolicyConfig& get_recving_ack_list_policy() const;
+	void set_recving_ack_list_policy(
+			const PolicyConfig& recving_ack_list_policy);
+	void set_rtx_timer_expiry_policy(
+			const PolicyConfig& rtx_timer_expiry_policy);
+	const PolicyConfig& get_rtx_timer_expiry_policy() const;
+	const PolicyConfig& get_sender_ack_policy() const;
+	void set_sender_ack_policy(const PolicyConfig& sender_ack_policy);
+	const PolicyConfig& get_sending_ack_policy() const;
+	void set_sending_ack_policy(const PolicyConfig& sending_ack_policy);
+	unsigned int get_max_time_to_retry() const;
+	void set_max_time_to_retry(unsigned int max_time_to_retry);
 #endif
-    const std::string toString();
+const std::string toString();
 
-    ///  Maximum time to attempt the retransmission of a packet, this is R.
-    unsigned int max_time_to_retry_;
+///  Maximum time to attempt the retransmission of a packet, this is R.
+unsigned int max_time_to_retry_;
 
-    /// the number of times the retransmission of a PDU will be attempted
-    /// before some other action must be taken.
-    unsigned int data_rxms_nmax_;
+/// the number of times the retransmission of a PDU will be attempted
+/// before some other action must be taken.
+unsigned int data_rxms_nmax_;
 
-    /// Initial retransmission time: Tr. R = tr*data_rxms_max_;
-    unsigned int initial_rtx_time_;
+/// Initial retransmission time: Tr. R = tr*data_rxms_max_;
+unsigned int initial_rtx_time_;
 
-    /// Executed by the sender when a Retransmission Timer Expires. If this
-    /// policy returns True, then all PDUs with sequence number less than
-    /// or equal to the sequence number of the PDU associated with this
-    /// timeout are retransmitted; otherwise the procedure must determine
-    /// what action to take. This policy must be executed in less than the
-    /// maximum time to Ack
-    PolicyConfig rtx_timer_expiry_policy_;
+/// Executed by the sender when a Retransmission Timer Expires. If this
+/// policy returns True, then all PDUs with sequence number less than
+/// or equal to the sequence number of the PDU associated with this
+/// timeout are retransmitted; otherwise the procedure must determine
+/// what action to take. This policy must be executed in less than the
+/// maximum time to Ack
+PolicyConfig rtx_timer_expiry_policy_;
 
-    /// Executed by the sender and provides the Sender with some discretion
-    /// on when PDUs may be deleted from the ReTransmissionQ. This is useful
-    /// for multicast and similar situations where one might want to delay
-    /// discarding PDUs from the retransmission queue.
-    PolicyConfig sender_ack_policy_;
+/// Executed by the sender and provides the Sender with some discretion
+/// on when PDUs may be deleted from the ReTransmissionQ. This is useful
+/// for multicast and similar situations where one might want to delay
+/// discarding PDUs from the retransmission queue.
+PolicyConfig sender_ack_policy_;
 
-    /// Executed by the Sender and provides the Sender with some discretion
-    ///  on when PDUs may be deleted from the ReTransmissionQ. This policy
-    ///  is used in conjunction with the selective acknowledgement aspects
-    ///  of the mechanism and may be useful for multicast and similar
-    ///  situations where there may be a requirement to delay discarding PDUs
-    ///  from the retransmission queue
-    PolicyConfig recving_ack_list_policy_;
+/// Executed by the Sender and provides the Sender with some discretion
+///  on when PDUs may be deleted from the ReTransmissionQ. This policy
+///  is used in conjunction with the selective acknowledgement aspects
+///  of the mechanism and may be useful for multicast and similar
+///  situations where there may be a requirement to delay discarding PDUs
+///  from the retransmission queue
+PolicyConfig recving_ack_list_policy_;
 
-    /// Executed by the receiver of the PDU and provides some discretion in
-    /// the action taken.  The default action is to either Ack immediately
-    /// or to start the A-Timer and Ack the LeftWindowEdge when it expires.
-    PolicyConfig rcvr_ack_policy_;
+/// Executed by the receiver of the PDU and provides some discretion in
+/// the action taken.  The default action is to either Ack immediately
+/// or to start the A-Timer and Ack the LeftWindowEdge when it expires.
+PolicyConfig rcvr_ack_policy_;
 
-    /// This policy allows an alternate action when the A-Timer expires when
-    /// DTCP is present.
-    PolicyConfig sending_ack_policy_;
+/// This policy allows an alternate action when the A-Timer expires when
+/// DTCP is present.
+PolicyConfig sending_ack_policy_;
 
-    /// Allows an alternate action when a Control Ack PDU is received.
-    PolicyConfig rcvr_control_ack_policy_;
+/// Allows an alternate action when a Control Ack PDU is received.
+PolicyConfig rcvr_control_ack_policy_;
 };
 
 /// Configuration of the DTCP instance, including policies and its parameters
 class DTCPConfig {
- public:
-    DTCPConfig();
-    static void from_c_dtcp_config(DTCPConfig & dt,
-		    	    	   struct dtcp_config* dtc);
-    struct dtcp_config * to_c_dtcp_config(void) const;
+public:
+	DTCPConfig();
+	bool operator==(const DTCPConfig &other) const;
+	bool operator!=(const DTCPConfig &other) const;
+	static void from_c_dtcp_config(DTCPConfig & dt,
+			struct dtcp_config* dtc);
+	struct dtcp_config * to_c_dtcp_config(void) const;
 #ifndef SWIG
-    bool is_flow_control() const;
-    void set_flow_control(bool flow_control);
-    const DTCPFlowControlConfig& get_flow_control_config() const;
-    void set_flow_control_config(
-            const DTCPFlowControlConfig& flow_control_config);
-    const PolicyConfig& get_lost_control_pdu_policy() const;
-    void set_lost_control_pdu_policy(const PolicyConfig& lostcontrolpdupolicy);
-    bool is_rtx_control() const;
-    void set_rtx_control(bool rtx_control);
-    const DTCPRtxControlConfig& get_rtx_control_config() const;
-    void set_rtx_control_config(const DTCPRtxControlConfig& rtx_control_config);
-    const PolicyConfig& get_dtcp_policy_set() const;
-    void set_dtcp_policy_set(const PolicyConfig& dtcp_policy_set);
-    const PolicyConfig& get_rtt_estimator_policy() const;
-    void set_rtt_estimator_policy(const PolicyConfig& rtt_estimator_policy);
+	bool is_flow_control() const;
+	void set_flow_control(bool flow_control);
+	const DTCPFlowControlConfig& get_flow_control_config() const;
+	void set_flow_control_config(
+			const DTCPFlowControlConfig& flow_control_config);
+	const PolicyConfig& get_lost_control_pdu_policy() const;
+	void set_lost_control_pdu_policy(const PolicyConfig& lostcontrolpdupolicy);
+	bool is_rtx_control() const;
+	void set_rtx_control(bool rtx_control);
+	const DTCPRtxControlConfig& get_rtx_control_config() const;
+	void set_rtx_control_config(const DTCPRtxControlConfig& rtx_control_config);
+	const PolicyConfig& get_dtcp_policy_set() const;
+	void set_dtcp_policy_set(const PolicyConfig& dtcp_policy_set);
+	const PolicyConfig& get_rtt_estimator_policy() const;
+	void set_rtt_estimator_policy(const PolicyConfig& rtt_estimator_policy);
 #endif
-    const std::string toString();
+const std::string toString();
 
-    /// True if flow control is required
-    bool flow_control_;
+/// True if flow control is required
+bool flow_control_;
 
-    /// The flow control configuration of a DTCP instance
-    DTCPFlowControlConfig flow_control_config_;
+/// The flow control configuration of a DTCP instance
+DTCPFlowControlConfig flow_control_config_;
 
-    /// True if rtx control is required
-    bool rtx_control_;
+/// True if rtx control is required
+bool rtx_control_;
 
-    /// the rtx control configuration of a DTCP instance
-    DTCPRtxControlConfig rtx_control_config_;
+/// the rtx control configuration of a DTCP instance
+DTCPRtxControlConfig rtx_control_config_;
 
-    /// Policy set for DTCP.
-    PolicyConfig dtcp_policy_set_;
+/// Policy set for DTCP.
+PolicyConfig dtcp_policy_set_;
 
-    /// This policy determines what action to take when the PM detects that
-    /// a control PDU (Ack or Flow Control) may have been lost.  If this
-    /// procedure returns True, then the PM will send a Control Ack and an
-    /// empty Transfer PDU.  If it returns False, then any action is determined
-    /// by the policy
-    PolicyConfig lost_control_pdu_policy_;
+/// This policy determines what action to take when the PM detects that
+/// a control PDU (Ack or Flow Control) may have been lost.  If this
+/// procedure returns True, then the PM will send a Control Ack and an
+/// empty Transfer PDU.  If it returns False, then any action is determined
+/// by the policy
+PolicyConfig lost_control_pdu_policy_;
 
-    /// Executed by the sender to estimate the duration of the retx timer.
-    /// This policy will be based on an estimate of round-trip time and the
-    /// Ack or Ack List policy in use
-    PolicyConfig rtt_estimator_policy_;
+/// Executed by the sender to estimate the duration of the retx timer.
+/// This policy will be based on an estimate of round-trip time and the
+/// Ack or Ack List policy in use
+PolicyConfig rtt_estimator_policy_;
 };
 
 /// This class defines the policies paramenters for the DTP Component
 class DTPConfig {
- public:
-    DTPConfig();
-    static void from_c_dtp_config(DTPConfig & dt, struct dtp_config * dtc);
-    struct dtp_config * to_c_dtp_config(void) const;
+public:
+	DTPConfig();
+	bool operator==(const DTPConfig &other) const;
+	bool operator!=(const DTPConfig &other) const;
+	static void from_c_dtp_config(DTPConfig & dt, struct dtp_config * dtc);
+	struct dtp_config * to_c_dtp_config(void) const;
 
 #ifndef SWIG
-    bool is_dtcp_present() const;
-    void set_dtcp_present(bool dtcp_present);
-    unsigned int get_seq_num_rollover_threshold() const;
-    void set_seq_num_rollover_threshold(
-            unsigned int seq_num_rollover_threshold);
-    unsigned int get_initial_a_timer() const;
-    void set_initial_a_timer(unsigned int initial_a_timer);
-    bool is_in_order_delivery() const;
-    void set_in_order_delivery(bool in_order_delivery);
-    int get_max_sdu_gap() const;
-    void set_max_sdu_gap(int max_sdu_gap);
-    bool is_partial_delivery() const;
-    void set_partial_delivery(bool partial_delivery);
-    bool is_incomplete_delivery() const;
-    void set_incomplete_delivery(bool incomplete_delivery);
-    const PolicyConfig& get_dtp_policy_set() const;
-    void set_dtp_policy_set(const PolicyConfig& dtp_policy_set);
-    const PolicyConfig& get_dtcp_policy_set() const;
-    void set_dtcp_policy_set(const PolicyConfig& dtcp_policy_set);
+	bool is_dtcp_present() const;
+	void set_dtcp_present(bool dtcp_present);
+	unsigned int get_seq_num_rollover_threshold() const;
+	void set_seq_num_rollover_threshold(
+			unsigned int seq_num_rollover_threshold);
+	unsigned int get_initial_a_timer() const;
+	void set_initial_a_timer(unsigned int initial_a_timer);
+	bool is_in_order_delivery() const;
+	void set_in_order_delivery(bool in_order_delivery);
+	int get_max_sdu_gap() const;
+	void set_max_sdu_gap(int max_sdu_gap);
+	bool is_partial_delivery() const;
+	void set_partial_delivery(bool partial_delivery);
+	bool is_incomplete_delivery() const;
+	void set_incomplete_delivery(bool incomplete_delivery);
+	const PolicyConfig& get_dtp_policy_set() const;
+	void set_dtp_policy_set(const PolicyConfig& dtp_policy_set);
+	const PolicyConfig& get_dtcp_policy_set() const;
+	void set_dtcp_policy_set(const PolicyConfig& dtcp_policy_set);
 #endif
-    const std::string toString() const;
+const std::string toString() const;
 
-    /// Indicates if DTCP is required
-    bool dtcp_present_;
+/// Indicates if DTCP is required
+bool dtcp_present_;
 
-    /// Policy Set for DTP.
-    PolicyConfig dtp_policy_set_;
+/// Policy Set for DTP.
+PolicyConfig dtp_policy_set_;
 
-    /// When the sequence number is increasing beyond this value, the
-    /// sequence number space is close to rolling over, a new connection
-    /// should be instantiated and bound to the same port-ids, so that new
-    /// PDUs can be sent on the new connection.
-    unsigned int seq_num_rollover_threshold_;
+/// When the sequence number is increasing beyond this value, the
+/// sequence number space is close to rolling over, a new connection
+/// should be instantiated and bound to the same port-ids, so that new
+/// PDUs can be sent on the new connection.
+unsigned int seq_num_rollover_threshold_;
 
-    /// indicates the maximum time that a receiver will wait before sending
-    /// an Ack. Some DIFs may wish to set a maximum value for the DIF.
-    unsigned int initial_a_timer_;
+/// indicates the maximum time that a receiver will wait before sending
+/// an Ack. Some DIFs may wish to set a maximum value for the DIF.
+unsigned int initial_a_timer_;
 
-    /// True if partial delivery of an SDU is allowed, false otherwise
-    bool partial_delivery_;
+/// True if partial delivery of an SDU is allowed, false otherwise
+bool partial_delivery_;
 
-    /// True if incomplete delivery is allowed (one fragment of SDU
-    /// delivered is the same as all the SDU delivered), false otherwise
-    bool incomplete_delivery_;
+/// True if incomplete delivery is allowed (one fragment of SDU
+/// delivered is the same as all the SDU delivered), false otherwise
+bool incomplete_delivery_;
 
-    /// True if in order delivery of SDUs is mandatory, false otherwise
-    bool in_order_delivery_;
+/// True if in order delivery of SDUs is mandatory, false otherwise
+bool in_order_delivery_;
 
-    /// The maximum gap of SDUs allowed
-    int max_sdu_gap_;
+/// The maximum gap of SDUs allowed
+int max_sdu_gap_;
 };
 
 /// Defines the properties that a QoSCube is able to provide

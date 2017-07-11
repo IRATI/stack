@@ -3213,6 +3213,7 @@ void serialize_port_id_altlist(void **pptr, const struct port_id_altlist *pia)
 	if (!pia) return;
 
 	serialize_obj(*pptr, uint16_t, pia->num_ports);
+
 	plength = pia->num_ports * sizeof(port_id_t);
 
 	if (pia->ports > 0) {
@@ -3228,7 +3229,7 @@ int deserialize_port_id_altlist(const void **pptr, struct port_id_altlist *pia)
 	deserialize_obj(*pptr, uint16_t, &pia->num_ports);
 	plength = pia->num_ports * sizeof(port_id_t);
 
-	if (pia->ports > 0) {
+	if (pia->num_ports > 0) {
 		pia->ports = COMMON_ALLOC(plength, 1);
 		memcpy(pia->ports, *pptr, plength);
 		*pptr += plength;
@@ -3274,7 +3275,7 @@ int mod_pff_entry_serlen(const struct mod_pff_entry * pffe)
 	ret = sizeof(address_t) + sizeof(qos_id_t) + sizeof(uint16_t)
 			+ sizeof(uint32_t);
 
-        list_for_each_entry(pos, &(pffe->next), next) {
+        list_for_each_entry(pos, &(pffe->port_id_altlists), next) {
                 ret = ret + port_id_altlist_serlen(pos);
         }
 
@@ -3297,8 +3298,7 @@ void serialize_mod_pff_entry(void **pptr, const struct mod_pff_entry *pffe)
         }
 
         serialize_obj(*pptr, uint16_t, num_alts);
-
-        list_for_each_entry(pos, &(pffe->next), next) {
+        list_for_each_entry(pos, &(pffe->port_id_altlists), next) {
                serialize_port_id_altlist(pptr, pos);
         }
 }
@@ -3329,7 +3329,7 @@ int deserialize_mod_pff_entry(const void **pptr, struct mod_pff_entry *pffe)
 		list_add_tail(&pos->next, &pffe->port_id_altlists);
 	}
 
-	return ret;
+	return 0;
 }
 
 void mod_pff_entry_free(struct mod_pff_entry * pffe)
@@ -3423,7 +3423,7 @@ int deserialize_pff_entry_list(const void **pptr, struct pff_entry_list **pel)
 		list_add_tail(&pos->next, &(*pel)->pff_entries);
 	}
 
-	return ret;
+	return 0;
 }
 
 void pff_entry_list_free(struct pff_entry_list * pel)
