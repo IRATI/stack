@@ -46,12 +46,12 @@ struct irati_msg_layout irati_ker_numtables[] = {
     },
     [RINA_C_IPCM_IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION] = {
         .copylen = sizeof(struct irati_kmsg_ipcp_dif_reg_not)
-	           - sizeof(struct name *),
+	           - 2 * sizeof(struct name *),
 	.names = 2,
     },
     [RINA_C_IPCM_IPC_PROCESS_DIF_UNREGISTRATION_NOTIFICATION] = {
         .copylen = sizeof(struct irati_kmsg_ipcp_dif_reg_not)
-	           - sizeof(struct name *),
+	           - 2 * sizeof(struct name *),
 	.names = 2,
     },
     [RINA_C_IPCM_ALLOCATE_FLOW_REQUEST] = {
