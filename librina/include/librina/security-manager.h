@@ -240,7 +240,12 @@ class CryptoState {
 public:
 	CryptoState() : port_id(0), enable_crypto_tx(false),
 			enable_crypto_rx(false){ };
+	bool operator==(const CryptoState &other) const;
+	bool operator!=(const CryptoState &other) const;
+	static void from_c_crypto_state(CryptoState & cs,
+					struct sdup_crypto_state * ccs);
 	struct sdup_crypto_state * to_c_crypto_state(void) const;
+	std::string toString(void) const;
 
 	int port_id;
 	std::string mac_alg;
