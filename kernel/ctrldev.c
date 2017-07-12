@@ -44,6 +44,8 @@
 #include "irati/kernel-msg.h"
 #include "irati/serdes-utils.h"
 
+#define IRATI_CTRL_MSG_MAX_SIZE 5000
+
 extern struct kipcm *default_kipcm;
 
 /* Private data to an ctrldev file instance. */
@@ -82,7 +84,7 @@ struct irati_ctrl_dm {
 static struct irati_ctrl_dm irati_ctrl_dm;
 
 struct msg_queue_entry {
-	void   * sermsg;
+	char   * sermsg;
 	size_t   serlen;
 };
 
@@ -99,7 +101,7 @@ int irati_handler_register(irati_msg_t msg_type,
                 return -1;
         }
 
-        if (msg_type <= IRATI_RINA_C_MIN ||
+        if (msg_type <= IRATI_RINA_C_MIN &&
         		msg_type >= IRATI_RINA_C_MAX) {
                 LOG_ERR("Message type %d is out-of-range, "
                         "cannot register", msg_type);
@@ -160,7 +162,7 @@ int irati_ctrl_dev_snd_resp_msg(struct ctrldev_priv *ctrl_dev,
 				struct irati_msg_base *bmsg)
 {
 	struct msg_queue_entry * entry;
-	int retval = 0;
+	int serlen = 0;
 
 	//Serialize message
 	entry = rkzalloc(sizeof(*entry), GFP_KERNEL);
@@ -169,30 +171,41 @@ int irati_ctrl_dev_snd_resp_msg(struct ctrldev_priv *ctrl_dev,
 		return -1;
 	}
 
-	retval = serialize_irati_msg(irati_ker_numtables, IRATI_RINA_C_MAX,
+	entry->sermsg = rkzalloc(IRATI_CTRL_MSG_MAX_SIZE * sizeof (char),
+				 GFP_KERNEL);
+	if (!entry->sermsg) {
+		LOG_ERR("Could not create enry->sermsg");
+		rkfree(entry);
+		return -1;
+	}
+
+	serlen = serialize_irati_msg(irati_ker_numtables, IRATI_RINA_C_MAX,
                         	     entry->sermsg, bmsg);
-        if (retval < 0) {
-        	LOG_ERR("Problems serializing msg: %d", retval);
+        if (serlen <= 0) {
+        	LOG_ERR("Problems serializing msg: %d", serlen);
+        	rkfree(entry->sermsg);
         	rkfree(entry);
+        	return -1;
         }
-        entry->serlen = retval;
+        entry->serlen = serlen;
 
         /* TODO implement maximum queue size */
         spin_lock(&ctrl_dev->pending_msgs_lock);
         if (rfifo_push_ni(ctrl_dev->pending_msgs, entry)) {
         	LOG_ERR("Could not write %zd bytes into port-id %u fifo",
         			sizeof(*entry), ctrl_dev->port_id);
-        	retval = -1;
+        	spin_unlock(&ctrl_dev->pending_msgs_lock);
+        	rkfree(entry->sermsg);
+        	rkfree(entry);
+        	return -1;
         }
         spin_unlock(&ctrl_dev->pending_msgs_lock);
 
-        if (retval == 0) {
-		/* set_tsk_need_resched(current); */
-		wake_up_interruptible_poll(&ctrl_dev->read_wqueue,
-					   POLLIN | POLLRDNORM | POLLRDBAND);
-        }
+        /* set_tsk_need_resched(current); */
+        wake_up_interruptible_poll(&ctrl_dev->read_wqueue,
+        		POLLIN | POLLRDNORM | POLLRDBAND);
 
-        return retval;
+        return 0;
 }
 EXPORT_SYMBOL(irati_ctrl_dev_snd_resp_msg);
 
@@ -276,7 +289,10 @@ static int ctrl_dev_data_post(struct msg_queue_entry * entry, irati_msg_port_t p
 
         /* TODO implement maximum queue size */
         spin_lock(&ctrl_dev->pending_msgs_lock);
-        if (rfifo_push_ni(ctrl_dev->pending_msgs, entry)) {
+        if (!ctrl_dev->pending_msgs) {
+        	LOG_ERR("Control device has been closed");
+        	retval = -1;
+        } else if (rfifo_push_ni(ctrl_dev->pending_msgs, entry)) {
         	LOG_ERR("Could not write %zd bytes into port-id %u fifo",
         			sizeof(*entry), port_id);
         	retval = -1;
@@ -305,6 +321,11 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
 
         LOG_DBG("Syscall write SDU (size = %zd, port-id = %d)",
                         len, priv->port_id);
+
+        if (!priv) {
+        	LOG_ERR("Device has been closed");
+        	return -1;
+        }
 
         if (len < sizeof(irati_msg_t)) {
         	/* This message doesn't even contain a message type. */
@@ -388,7 +409,19 @@ ctrldev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
         LOG_DBG("Syscall read SDU (size = %zd, port-id = %d)",
                 size, priv->port_id);
 
+        if (!priv) {
+        	LOG_ERR("Device private data is null");
+        	return -1;
+        }
+
         spin_lock(&priv->pending_msgs_lock);
+        if (!priv->pending_msgs) {
+        	spin_unlock(&priv->pending_msgs_lock);
+        	LOG_INFO("Control device has been closed");
+        	rkfree(priv);
+        	return -1;
+        }
+
 	if (blocking) { /* blocking I/O */
 		while (rfifo_is_empty(priv->pending_msgs)) {
 			spin_unlock(&priv->pending_msgs_lock);
@@ -404,6 +437,13 @@ ctrldev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
 
 			spin_lock(&priv->pending_msgs_lock);
 		}
+
+	        if (!priv->pending_msgs) {
+	        	spin_unlock(&priv->pending_msgs_lock);
+	        	LOG_INFO("Control device has been closed");
+	        	rkfree(priv);
+	        	return -1;
+	        }
 
 		if (rfifo_is_empty(priv->pending_msgs)) {
 			spin_unlock(&priv->pending_msgs_lock);
@@ -449,6 +489,11 @@ ctrldev_poll(struct file *f, poll_table *wait)
 {
 	struct ctrldev_priv *priv = (struct ctrldev_priv *) f->private_data;
 	unsigned int mask = 0;
+
+	if (!priv) {
+		LOG_ERR("Device has been closed");
+		return mask;
+	}
 
 	poll_wait(f, &priv->read_wqueue, wait);
 
@@ -498,20 +543,25 @@ ctrldev_release(struct inode *inode, struct file *f)
 {
         struct ctrldev_priv *priv = (struct ctrldev_priv *) f->private_data;
         struct ctrldev_priv * ipcm_ctrl_dev;
+        struct rfifo * pmsgs;
         struct irati_msg_base msg;
 
         mutex_lock(&irati_ctrl_dm.general_lock);
         list_del_init(&priv->node);
         mutex_unlock(&irati_ctrl_dm.general_lock);
 
+        spin_lock(&priv->pending_msgs_lock);
+        pmsgs = priv->pending_msgs;
+        priv->pending_msgs = 0;
+        spin_unlock(&priv->pending_msgs_lock);
+
         /* Drain queue of pending messages */
-        if (rfifo_destroy(priv->pending_msgs,
-        		  (void (*) (void *)) rkfree)) {
+        if (rfifo_destroy(pmsgs, (void (*) (void *)) rkfree)) {
         	LOG_ERR("Ctrl-dev %u FIFO has not been destroyed",
         		priv->port_id);
         }
 
-        /* TODO inform IPCM Daemon that a OS process has died */
+        /* Inform IPCM Daemon that a OS process has died */
         mutex_lock(&irati_ctrl_dm.general_lock);
         if (priv == irati_ctrl_dm.ipcm_ctrl_dev) {
         	LOG_WARN("IPC Manager process has been destroyed");
@@ -532,8 +582,9 @@ ctrldev_release(struct inode *inode, struct file *f)
 
         }
 
-        rkfree(priv);
-        f->private_data = NULL;
+        /* Notify reader of the control device (will delete priv) */
+        wake_up_interruptible_poll(&priv->read_wqueue,
+        			   POLLIN | POLLRDNORM | POLLRDBAND);
 
         return 0;
 }

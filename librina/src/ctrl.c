@@ -95,6 +95,11 @@ int irati_write_msg(int cfd, struct irati_msg_base *msg)
 	return ret;
 }
 
+int close_port(int cfd)
+{
+	return close(cfd);
+}
+
 static int open_port_common(bool ipcm)
 {
 	struct irati_ctrldev_ctldata info;

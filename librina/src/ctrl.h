@@ -39,6 +39,7 @@ int irati_write_msg(int cfd, struct irati_msg_base *msg);
 int irati_open_appl_ipcp_port(void);
 int irati_open_ipcm_port(void);
 void irati_ctrl_msg_free(struct irati_msg_base *msg);
+int close_port(int cfd);
 
 #ifdef __cplusplus
 }

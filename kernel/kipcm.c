@@ -286,7 +286,7 @@ static int dealloc_flow_req_reply(struct ctrldev_priv * ctrl_dev,
 {
 	struct irati_msg_base_resp resp_msg;
 
-	resp_msg.msg_type = RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT;
+	resp_msg.msg_type = RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE;
 	resp_msg.src_ipcp_id = id;
 	resp_msg.dest_ipcp_id = 0;
 	resp_msg.result = res;
@@ -294,7 +294,7 @@ static int dealloc_flow_req_reply(struct ctrldev_priv * ctrl_dev,
 
         if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
         				(struct irati_msg_base *) &resp_msg)) {
-                LOG_ERR("Could not send flow_result_msg");
+                LOG_ERR("Could not send deallocate flow response msg");
                 return -1;
         }
 
@@ -365,7 +365,7 @@ static int assign_to_dif_reply(struct ctrldev_priv * ctrl_dev,
 
         if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
         				(struct irati_msg_base *) &resp_msg)) {
-                LOG_ERR("Could not send flow_result_msg");
+                LOG_ERR("Could not send assign to dif response msg");
                 return -1;
         }
 
@@ -516,7 +516,7 @@ static int reg_unreg_resp_reply(struct ctrldev_priv * ctrl_dev,
 
 	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
 					(struct irati_msg_base *) &resp_msg)) {
-		LOG_ERR("Could not send flow_result_msg");
+		LOG_ERR("Could not send (un)register app response msg");
 		return -1;
 	}
 
@@ -625,7 +625,7 @@ static int conn_create_resp_reply(struct ctrldev_priv * ctrl_dev,
 
 	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
 					(struct irati_msg_base *) &resp_msg)) {
-		LOG_ERR("Could not send flow_result_msg");
+		LOG_ERR("Could not send conn create response msg");
 		return -1;
 	}
 
@@ -726,7 +726,7 @@ static int conn_create_result_reply(struct ctrldev_priv * ctrl_dev,
 
 	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
 					(struct irati_msg_base *) &resp_msg)) {
-		LOG_ERR("Could not send flow_result_msg");
+		LOG_ERR("Could not send conn create result msg");
 		return -1;
 	}
 
@@ -822,7 +822,7 @@ static int conn_update_result_reply(struct ctrldev_priv * ctrl_dev,
 
 	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
 					(struct irati_msg_base *) &resp_msg)) {
-		LOG_ERR("Could not send flow_result_msg");
+		LOG_ERR("Could not send conn update result msg");
 		return -1;
 	}
 
@@ -893,7 +893,7 @@ static int conn_destroy_result_reply(struct ctrldev_priv * ctrl_dev,
 
 	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
 					(struct irati_msg_base *) &resp_msg)) {
-		LOG_ERR("Could not send flow_result_msg");
+		LOG_ERR("Could not send conn destroy result msg");
 		return -1;
 	}
 
@@ -1045,7 +1045,7 @@ static int ipcp_dump_pff_reply(struct ctrldev_priv * ctrl_dev,
 
 	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
 					(struct irati_msg_base *) &resp_msg)) {
-		LOG_ERR("Could not send flow_result_msg");
+		LOG_ERR("Could not send dump pff reply msg");
 		ret = -1;
 	}
 
@@ -1119,7 +1119,7 @@ static int ipcm_query_rib_reply(struct ctrldev_priv * ctrl_dev,
 
 	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
 					(struct irati_msg_base *) &resp_msg)) {
-		LOG_ERR("Could not send flow_result_msg");
+		LOG_ERR("Could not send query rib reply msg");
 		ret = -1;
 	}
 
@@ -1233,7 +1233,7 @@ out:
 
 	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
 					(struct irati_msg_base *) &resp_msg)) {
-		LOG_ERR("Could not send flow_result_msg");
+		LOG_ERR("Could not send set policy param msg");
 		return -1;
 	}
 
@@ -1296,7 +1296,7 @@ out:
 
 	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
 					(struct irati_msg_base *) &resp_msg)) {
-		LOG_ERR("Could not send flow_result_msg");
+		LOG_ERR("Could not send select policy set response msg");
 		return -1;
 	}
 
@@ -1361,7 +1361,7 @@ out:
 
 	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
 					(struct irati_msg_base *) &resp_msg)) {
-		LOG_ERR("Could not send flow_result_msg");
+		LOG_ERR("Could not send update crypto state resp mesg");
 		return -1;
 	}
 
@@ -1463,7 +1463,7 @@ static int notify_allocate_port(struct ctrldev_priv * ctrl_dev,
 
 	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
 					(struct irati_msg_base *) &resp_msg)) {
-		LOG_ERR("Could not send flow_result_msg");
+		LOG_ERR("Could not send allocate port response msg");
 		return -1;
 	}
 
@@ -1509,7 +1509,7 @@ static int notify_deallocate_port(struct ctrldev_priv * ctrl_dev,
 
 	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
 					(struct irati_msg_base *) &resp_msg)) {
-		LOG_ERR("Could not send flow_result_msg");
+		LOG_ERR("Could not send deallocate port response msg");
 		return -1;
 	}
 
@@ -1566,7 +1566,7 @@ out:
 
 	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
 					(struct irati_msg_base *) &resp_msg)) {
-		LOG_ERR("Could not send flow_result_msg");
+		LOG_ERR("Could not send mgmt sdu write response msg");
 		return -1;
 	}
 
@@ -1607,7 +1607,7 @@ static int notify_create_ipcp(struct ctrldev_priv * ctrl_dev,
 
 	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
 					(struct irati_msg_base *) &resp_msg)) {
-		LOG_ERR("Could not send flow_result_msg");
+		LOG_ERR("Could not send create IPCP response msg");
 		return -1;
 	}
 
@@ -1645,7 +1645,7 @@ static int notify_destroy_ipcp(struct ctrldev_priv * ctrl_dev,
 
 	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
 					(struct irati_msg_base *) &resp_msg)) {
-		LOG_ERR("Could not send flow_result_msg");
+		LOG_ERR("Could not send destroy IPCP msg");
 		return -1;
 	}
 
@@ -2191,7 +2191,7 @@ int kipcm_flow_arrived(struct kipcm *         kipcm,
 
 	if (irati_ctrl_dev_snd_resp_msg(get_ipcm_ctrl_dev(),
 					(struct irati_msg_base *) &msg)) {
-		LOG_ERR("Could not send flow_result_msg");
+		LOG_ERR("Could not send allocate flow req arrived msg");
 		return -1;
 	}
 
@@ -2478,7 +2478,7 @@ int kipcm_notify_flow_dealloc(ipc_process_id_t ipc_id,
 
 	if (irati_ctrl_dev_snd_resp_msg(get_ctrl_dev_from_port_id(irati_port),
 					(struct irati_msg_base *) &msg)) {
-		LOG_ERR("Could not send flow_result_msg");
+		LOG_ERR("Could not send flow deallocated notif msg");
 		return -1;
 	}
 
