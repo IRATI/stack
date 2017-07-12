@@ -100,6 +100,7 @@ void sighandler_segv(int signum)
 
 	if (signum == SIGSEGV) {
 		dump_backtrace();
+		rina::librina_finalize();
 		exit(EXIT_FAILURE);
 	}
 }
@@ -110,6 +111,7 @@ void sighandler_sigint(int signum)
 
         if (signum == SIGINT) {
                 Main::ipcp->keep_running = false;
+                rina::librina_finalize();
         }
 }
 
@@ -158,6 +160,7 @@ int main(int argc, char * argv[])
 		retval = main.wrapped_main(argc, argv);
 	} catch (std::exception & e) {
 		LOG_IPCP_ERR("Got unhandled exception (%s)", e.what());
+		rina::librina_finalize();
 		retval = EXIT_FAILURE;
 	}
 

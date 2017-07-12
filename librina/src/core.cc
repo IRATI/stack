@@ -410,6 +410,10 @@ int IRATICtrlManager::get_ctrl_fd(void)
 
 IRATICtrlManager::~IRATICtrlManager()
 {
+	if (close_port(cfd)) {
+		LOG_ERR("Problems closing file descriptor %d in control device",
+			cfd);
+	}
 }
 
 unsigned int IRATICtrlManager::get_next_seq_number()
@@ -437,6 +441,8 @@ int IRATICtrlManager::send_msg(struct irati_msg_base *msg, bool fill_seq_num)
 
 	if (fill_seq_num)
 		msg->event_id = get_next_seq_number();
+
+	msg->src_port = ctrl_port;
 
 	return irati_write_msg(cfd, msg);
 }

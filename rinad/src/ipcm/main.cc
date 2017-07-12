@@ -59,11 +59,13 @@ void handler(int signum)
 		case SIGSEGV:
 			LOG_CRIT("Got signal SIGSEGV");
 			dump_backtrace();
+			rina::librina_finalize();
 			exit(EXIT_FAILURE);
 		case SIGINT:
 		case SIGQUIT:
 		case SIGTERM:
 		case SIGHUP:
+			rina::librina_finalize();
 			rinad::IPCManager->stop();
 			break;
 		case SIGCHLD:
