@@ -22,6 +22,7 @@ COMMONCPPFLAGS =				\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)			\
 	-I$(top_srcdir)/src			\
+	-I$(top_srcdir)/../include			\
 	-I$(top_srcdir)/src/common
 	
 COMMONLIBS =								\

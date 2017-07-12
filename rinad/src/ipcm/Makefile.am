@@ -26,6 +26,7 @@ ipcm_CPPFLAGS =					\
 	$(LIBRINA_CFLAGS)			\
 	-I$(srcdir)/..				\
 	-I$(srcdir)/../common			\
+	-I$(top_srcdir)/../include			\
 	-DPLUGINSDIR=\"$(pkglibdir)/ipcm\"	\
 	-DIPCPPLUGINSDIR=\"$(pkglibdir)/ipcp\"
 
@@ -57,6 +58,7 @@ test_empty_CPPFLAGS =				\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)			\
 	-I$(srcdir)/..				\
+	-I$(top_srcdir)/../include			\
 	-I$(srcdir)/../common
 test_empty_LDADD    = $(builddir)/../common/librinad.la $(LIBRINA_LIBS)
 

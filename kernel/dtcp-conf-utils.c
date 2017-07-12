@@ -183,10 +183,6 @@ static struct dtcp_fctrl_config * dtcp_fctrl_config_create_gfp(gfp_t flags)
         return NULL;
 }
 
-struct dtcp_fctrl_config * dtcp_fctrl_config_create(void)
-{ return dtcp_fctrl_config_create_gfp(GFP_KERNEL); }
-EXPORT_SYMBOL(dtcp_fctrl_config_create);
-
 struct dtcp_fctrl_config * dtcp_fctrl_config_create_ni(void)
 { return dtcp_fctrl_config_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(dtcp_fctrl_config_create_ni);
@@ -241,10 +237,6 @@ static struct dtcp_rxctrl_config * dtcp_rxctrl_config_create_gfp(gfp_t flags)
 
         return tmp;
 }
-
-struct dtcp_rxctrl_config * dtcp_rxctrl_config_create(void)
-{ return dtcp_rxctrl_config_create_gfp(GFP_KERNEL); }
-EXPORT_SYMBOL(dtcp_rxctrl_config_create);
 
 struct dtcp_rxctrl_config * dtcp_rxctrl_config_create_ni(void)
 { return dtcp_rxctrl_config_create_gfp(GFP_ATOMIC); }
@@ -321,10 +313,6 @@ static struct dtcp_config * dtcp_config_create_gfp(gfp_t flags)
         dtcp_config_destroy(tmp);
         return NULL;
 }
-
-struct dtcp_config * dtcp_config_create(void)
-{ return dtcp_config_create_gfp(GFP_KERNEL); }
-EXPORT_SYMBOL(dtcp_config_create);
 
 struct dtcp_config * dtcp_config_create_ni(void)
 { return dtcp_config_create_gfp(GFP_ATOMIC); }

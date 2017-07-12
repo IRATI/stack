@@ -659,7 +659,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 				const struct dif_config * config)
 {
         struct efcp_config * efcp_config;
-        struct sdup_config * sdup_config;
+        struct secman_config * sm_config;
         struct rmt_config *  rmt_config;
 
         if (name_cpy(dif_name, &data->dif_name)) {
@@ -678,7 +678,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 
         if (!efcp_config->dt_cons) {
                 LOG_ERR("Configuration constants for the DIF are bogus...");
-                efcp_config_destroy(efcp_config);
+                efcp_config_free(efcp_config);
                 return -1;
         }
 
@@ -700,13 +700,13 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 		return -1;
         }
 
-	sdup_config = config->sdup_config;
-	if (!sdup_config) {
+        sm_config = config->secman_config;
+	if (!sm_config) {
 		LOG_INFO("No SDU protection config specified, using default");
-		sdup_config = sdup_config_create();
-		sdup_config->default_dup_conf = dup_config_entry_create();
+		sm_config = secman_config_create();
+		sm_config->default_profile = auth_sdup_profile_create();
 	}
-	if (sdup_config_set(data->sdup, sdup_config)) {
+	if (sdup_config_set(data->sdup, sm_config)) {
                 LOG_ERR("Could not set SDUP conf");
 		return -1;
 	}

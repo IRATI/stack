@@ -113,28 +113,13 @@ char *        name_tostring_ni(const struct name * n);
 struct name * string_toname(const string_t * s);
 struct name * string_toname_ni(const string_t * s);
 
-struct ipcp_config * ipcp_config_create(void);
-int                  ipcp_config_destroy(struct ipcp_config * cfg);
-
-struct efcp_config * efcp_config_create(void);
-int                  efcp_config_destroy(struct efcp_config * efcp_config);
-struct sdup_config * sdup_config_create(void);
-int                  sdup_config_destroy(struct sdup_config * sdup_config);
-struct rmt_config *  rmt_config_create(void);
-int                  rmt_config_destroy(struct rmt_config * rmt_config);
-struct dif_config *  dif_config_create(void);
-int                  dif_config_destroy(struct dif_config * dif_config);
 struct dif_info *    dif_info_create(void);
 int                  dif_info_destroy(struct dif_info * dif_info);
 
 struct flow_spec *   flow_spec_dup(const struct flow_spec * fspec);
 
-struct dup_config * 	  dup_config_create(void);
-int                 	  dup_config_destroy(struct dup_config * cfg);
-struct dup_config_entry * dup_config_entry_create(void);
-int                 	  dup_config_entry_destroy(struct dup_config_entry * entry);
-int                 	  dup_config_entry_cpy(const struct dup_config_entry * src,
-                                               struct dup_config_entry * dst);
-struct dup_config_entry * dup_config_entry_dup(const struct dup_config_entry * src);
+int                 	  dup_config_entry_cpy(const struct auth_sdup_profile * src,
+                                               struct auth_sdup_profile * dst);
+struct auth_sdup_profile * dup_config_entry_dup(const struct auth_sdup_profile * src);
 
 #endif

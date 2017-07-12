@@ -20,4 +20,5 @@ libencoders_la_SOURCES =			\
 libencoders_la_CPPFLAGS =			\
 	-I$(builddir)/..			\
 	-I$(srcdir)/..				\
+	-I$(top_srcdir)/../include			\
 	$(CPPFLAGS_EXTRA)

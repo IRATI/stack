@@ -97,16 +97,9 @@ void AbstractIPCProcessImpl::event_loop(void)
 	LOG_DBG("Starting main I/O loop...");
 
 	while(keep_running) {
-		e = rina::ipcEventProducer->eventTimedWait(
-				IPCP_EVENT_TIMEOUT_S,
-				IPCP_EVENT_TIMEOUT_NS);
+		e = rina::ipcEventProducer->eventWait();
 		if(!e)
-			continue;
-
-		if(!keep_running){
-			delete e;
 			break;
-		}
 
 		LOG_IPCP_DBG("Got event of type %s and sequence number %u",
 				rina::IPCEvent::eventTypeToString(e->eventType).c_str(),

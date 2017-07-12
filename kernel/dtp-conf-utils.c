@@ -58,10 +58,6 @@ clean:
         return NULL;
 }
 
-struct dtp_config * dtp_config_create(void)
-{ return dtp_config_create_gfp(GFP_KERNEL); }
-EXPORT_SYMBOL(dtp_config_create);
-
 struct dtp_config * dtp_config_create_ni(void)
 { return dtp_config_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(dtp_config_create_ni);

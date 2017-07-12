@@ -22,6 +22,7 @@ libaddons_la_CPPFLAGS =				\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)			\
 	-I$(srcdir)/../../			\
+	-I$(top_srcdir)/../include			\
 	-I$(srcdir)/../../common
 	
 libaddons_la_LIBADD =				\

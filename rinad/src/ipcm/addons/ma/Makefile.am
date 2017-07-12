@@ -20,6 +20,7 @@ libaddons_ma_la_CPPFLAGS =			\
 	$(LIBRINA_CFLAGS)			\
 	-I$(srcdir)/../../../			\
 	-I$(srcdir)/../../../common		\
+	-I$(top_srcdir)/../include			\
 	-I${srcdir}/../../jsoncpp
 
 libaddons_ma_la_LIBADD = 			\
