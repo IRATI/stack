@@ -28,6 +28,7 @@
 #include "ctrl.h"
 #include "librina/configuration.h"
 #include "librina/security-manager.h"
+#include "librina/ipc-daemons.h"
 
 #define DEFAULT_AP_NAME        "default/apname"
 #define DEFAULT_AP_INSTANCE    "default/apinstance"
@@ -236,6 +237,20 @@ void populate_crypto_state(CryptoState & cs)
 	populate_uchar_array(cs.iv_tx);
 	populate_uchar_array(cs.mac_key_rx);
 	populate_uchar_array(cs.mac_key_tx);
+}
+
+void populate_neighbor(Neighbor & nei)
+{
+	nei.address_ = 23;
+	nei.average_rtt_in_ms_ = 232;
+	nei.enrolled_ = true;
+	nei.internal_port_id = 534;
+	nei.last_heard_from_time_in_ms_ = 3232;
+	nei.name_.processName = "test1.IRATI";
+	nei.name_.processInstance = "1";
+	nei.number_of_enrollment_attempts_ = 3;
+	nei.old_address_ = 34;
+	nei.supporting_dif_name_.processName = "test.DIF";
 }
 
 int test_irati_kmsg_ipcm_assign_to_dif()
@@ -1607,6 +1622,147 @@ int test_irati_kmsg_ipcp_update_crypto_state()
 	return ret;
 }
 
+int test_irati_kmsg_ipcp_address_change()
+{
+	struct irati_kmsg_ipcp_address_change * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+
+	std::cout << "TESTING KMSG IPCP ADDRESS CHANGE" << std::endl;
+
+	msg = new irati_kmsg_ipcp_address_change();
+	msg->msg_type = RINA_C_IPCP_ADDRESS_CHANGE_REQUEST;
+	msg->new_address = 54;
+	msg->old_address = 13;
+	msg->use_new_timeout = 22;
+	msg->deprecate_old_timeout = 3;
+
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_kmsg_ipcp_address_change message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_kmsg_ipcp_address_change *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	      serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_kmsg_ipcp_address_change message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (msg->new_address != resp->new_address) {
+		std::cout << "New address on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (msg->old_address != resp->old_address) {
+		std::cout << "Old address on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (msg->use_new_timeout != resp->use_new_timeout) {
+		std::cout << "Use new timeout on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (msg->deprecate_old_timeout != resp->deprecate_old_timeout) {
+		std::cout << "Deprecate old timeout on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else {
+		std::cout << "Test ok!" << std::endl;
+		ret = 0;
+	}
+
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return ret;
+}
+
+int test_irati_kmsg_ipcp_allocate_port()
+{
+	struct irati_kmsg_ipcp_allocate_port * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+	ApplicationProcessNamingInformation before, after;
+
+	std::cout << "TESTING KMSG IPCP ALLOCATE PORT" << std::endl;
+
+	before.processName = "test/app";
+	before.processInstance = "123";
+	before.entityName = "database";
+	before.entityInstance = "121";
+
+	msg = new irati_kmsg_ipcp_allocate_port();
+	msg->msg_type = RINA_C_IPCP_ALLOCATE_PORT_REQUEST;
+	msg->app_name = before.to_c_name();
+
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_kmsg_ipcp_allocate_port message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_kmsg_ipcp_allocate_port *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	      serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_kmsg_ipcp_allocate_port message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	after = ApplicationProcessNamingInformation(resp->app_name);
+
+	if (before != after) {
+		std::cout << "App name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else {
+		std::cout << "Test ok!" << std::endl;
+		ret = 0;
+	}
+
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return ret;
+}
+
 int test_irati_kmsg_multi_msg(irati_msg_t msg_t)
 {
 	struct irati_kmsg_multi_msg * msg, * resp;
@@ -1663,6 +1819,1298 @@ int test_irati_kmsg_multi_msg(irati_msg_t msg_t)
 		ret = -1;
 	} else if (msg->result != resp->result) {
 		std::cout << "Result on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else {
+		std::cout << "Test ok!" << std::endl;
+		ret = 0;
+	}
+
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return ret;
+}
+
+int test_irati_kmsg_ipcp_mgmt_sdu(irati_msg_t msg_t)
+{
+	struct irati_kmsg_ipcp_mgmt_sdu * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+
+	std::cout << "TESTING KMSG IPCP MGMT SDU (" << msg_t << ")" << std::endl;
+
+	msg = new irati_kmsg_ipcp_mgmt_sdu();
+	msg->msg_type = msg_t;
+	msg->port_id = 25;
+	msg->sdu = new buffer();
+	msg->sdu->size = 19;
+	msg->sdu->data = new char[19];
+	memset(msg->sdu->data, 34, 19);
+
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_kmsg_ipcp_mgmt_sdu message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_kmsg_ipcp_mgmt_sdu *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	      serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_kmsg_ipcp_mgmt_sdu message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (msg->port_id != resp->port_id) {
+		std::cout << "Port-id on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (msg->sdu->size != resp->sdu->size) {
+		std::cout << "SDU size on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else {
+		std::cout << "Test ok!" << std::endl;
+		ret = 0;
+	}
+
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return ret;
+}
+
+int test_irati_kmsg_ipcm_create_ipcp()
+{
+	struct irati_kmsg_ipcm_create_ipcp * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+	ApplicationProcessNamingInformation n_before, n_after;
+	std::string t_before, t_after;
+
+	std::cout << "TESTING KMSG IPCM CREATE IPCP" << std::endl;
+
+	n_before.processName = "test.irati";
+	n_before.processInstance = "1";
+	t_before = "normal-ipcp";
+
+	msg = new irati_kmsg_ipcm_create_ipcp();
+	msg->msg_type = RINA_C_IPCM_CREATE_IPCP_REQUEST;
+	msg->ipcp_id = 23;
+	msg->irati_port_id = 54;
+	msg->ipcp_name = n_before.to_c_name();
+	msg->dif_type = stringToCharArray(t_before);
+
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_kmsg_ipcm_create_ipcp message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_kmsg_ipcm_create_ipcp *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	      serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_kmsg_ipcm_create_ipcp message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	n_after = ApplicationProcessNamingInformation(resp->ipcp_name);
+	t_after = resp->dif_type;
+
+	if (msg->ipcp_id != resp->ipcp_id) {
+		std::cout << "IPCP-id on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (msg->irati_port_id != resp->irati_port_id) {
+		std::cout << "IRATI port-id on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (t_before != t_after) {
+		std::cout << "DIF type on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (n_before != n_after) {
+		std::cout << "IPCP name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else {
+		std::cout << "Test ok!" << std::endl;
+		ret = 0;
+	}
+
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return ret;
+}
+
+int test_irati_kmsg_ipcm_destroy_ipcp()
+{
+	struct irati_kmsg_ipcm_destroy_ipcp * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+
+	std::cout << "TESTING KMSG IPCM DESTROY IPCP" << std::endl;
+
+	msg = new irati_kmsg_ipcm_destroy_ipcp();
+	msg->msg_type = RINA_C_IPCM_DESTROY_IPCP_REQUEST;
+	msg->ipcp_id = 23;
+
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_kmsg_ipcm_destroy_ipcp message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_kmsg_ipcm_destroy_ipcp *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	      serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_kmsg_ipcm_destroy_ipcp message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (msg->ipcp_id != resp->ipcp_id) {
+		std::cout << "IPCP-id on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else {
+		std::cout << "Test ok!" << std::endl;
+		ret = 0;
+	}
+
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return ret;
+}
+
+int test_irati_msg_ipcm_enroll_to_dif()
+{
+	struct irati_msg_ipcm_enroll_to_dif * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+	ApplicationProcessNamingInformation dn_before, dn_after, sdn_before,
+			sdn_after, nn_before, nn_after, dnn_before, dnn_after;
+
+	std::cout << "TESTING KMSG IPCM ENROLL TO DIF" << std::endl;
+
+	dn_before.processName = "test.DIF";
+	sdn_before.processName = "shim.DIF";
+	nn_before.processName = "test1.IRATI";
+	nn_before.processInstance = "1";
+	dnn_before.processName = "test2.IRATI";
+	dnn_before.processInstance = "1";
+
+	msg = new irati_msg_ipcm_enroll_to_dif();
+	msg->msg_type = RINA_C_IPCM_ENROLL_TO_DIF_REQUEST;
+	msg->prepare_for_handover = true;
+	msg->dif_name = dn_before.to_c_name();
+	msg->sup_dif_name = sdn_before.to_c_name();
+	msg->neigh_name = nn_before.to_c_name();
+	msg->disc_neigh_name = dnn_before.to_c_name();
+
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_msg_ipcm_enroll_to_dif message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_msg_ipcm_enroll_to_dif *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	      serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_msg_ipcm_enroll_to_dif message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	dn_after = ApplicationProcessNamingInformation(resp->dif_name);
+	sdn_after = ApplicationProcessNamingInformation(resp->sup_dif_name);
+	nn_after = ApplicationProcessNamingInformation(resp->neigh_name);
+	dnn_after = ApplicationProcessNamingInformation(resp->disc_neigh_name);
+
+	if (msg->prepare_for_handover != resp->prepare_for_handover) {
+		std::cout << "Prepare for handover on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (dn_before != dn_after) {
+		std::cout << "DIF name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (sdn_before != sdn_after) {
+		std::cout << "Supporting DIF name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (nn_before != nn_after) {
+		std::cout << "Neighbor name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (dnn_before != dnn_after) {
+		std::cout << "Disconnect neighbor name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else {
+		std::cout << "Test ok!" << std::endl;
+		ret = 0;
+	}
+
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return ret;
+}
+
+int test_irati_msg_ipcm_enroll_to_dif_resp()
+{
+	struct irati_msg_ipcm_enroll_to_dif_resp * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+	ApplicationProcessNamingInformation dn_before, dn_after;
+	DIFConfiguration c_before, c_after;
+	std::string t_before, t_after;
+	Neighbor n_before, n_after;
+	struct ipcp_neighbor_entry * ndata, * pos;
+	int num_entries = 0;
+
+	std::cout << "TESTING KMSG IPCM ENROLL TO DIF RESP" << std::endl;
+
+	dn_before.processName = "test.DIF";
+	populate_dif_config(c_before);
+	t_before = "normal-ipcp";
+	populate_neighbor(n_before);
+
+	msg = new irati_msg_ipcm_enroll_to_dif_resp();
+	msg->msg_type = RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE;
+	msg->result = 23;
+	msg->dif_name = dn_before.to_c_name();
+	msg->dif_type = stringToCharArray(t_before);
+	msg->dif_config = c_before.to_c_dif_config();
+	msg->neighbors = ipcp_neigh_list_create();
+	ndata = new ipcp_neighbor_entry();
+	INIT_LIST_HEAD(&ndata->next);
+	ndata->entry = n_before.to_c_neighbor();
+	list_add_tail(&ndata->next, &msg->neighbors->ipcp_neighbors);
+
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_msg_ipcm_enroll_to_dif_resp message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_msg_ipcm_enroll_to_dif_resp *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	      serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_msg_ipcm_enroll_to_dif_resp message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	dn_after = ApplicationProcessNamingInformation(resp->dif_name);
+	DIFConfiguration::from_c_dif_config(c_after, resp->dif_config);
+	t_after = resp->dif_type;
+
+	ndata = 0;
+        list_for_each_entry(pos, &(resp->neighbors->ipcp_neighbors), next) {
+                num_entries ++;
+                ndata = pos;
+        }
+
+        if (ndata)
+        	Neighbor::from_c_neighbor(n_after, ndata->entry);
+
+	if (msg->result != resp->result) {
+		std::cout << "Result on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (dn_before != dn_after) {
+		std::cout << "DIF name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (c_before != c_after) {
+		std::cout << "DIF configuration on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (t_before != t_after) {
+		std::cout << "Type on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (num_entries != 1) {
+		std::cout << "Number of neighbors on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (n_before != n_after) {
+		std::cout << "Neighbor on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else {
+		std::cout << "Test ok!" << std::endl;
+		ret = 0;
+	}
+
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return ret;
+}
+
+int test_irati_msg_with_name(irati_msg_t msg_t)
+{
+	struct irati_msg_with_name * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+	ApplicationProcessNamingInformation n_before, n_after;
+
+	std::cout << "TESTING MSG WITH NAME (" << msg_t << ")" << std::endl;
+
+	n_before.processName = "test.irati";
+	n_before.processInstance = "1";
+	n_before.entityName = "fa";
+	n_before.entityInstance = "23";
+
+	msg = new irati_msg_with_name();
+	msg->msg_type = msg_t;
+	msg->name = n_before.to_c_name();
+
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_msg_with_name message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_msg_with_name *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	      serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_msg_with_name message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	n_after = ApplicationProcessNamingInformation(resp->name);
+
+	if (n_before != n_after) {
+		std::cout << "IPCP name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else {
+		std::cout << "Test ok!" << std::endl;
+		ret = 0;
+	}
+
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return ret;
+}
+
+int test_irati_msg_app_alloc_flow_result()
+{
+	struct irati_msg_app_alloc_flow_result * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+	ApplicationProcessNamingInformation san_before, san_after,
+					    dn_before, dn_after;
+	std::string e_before, e_after;
+
+	std::cout << "TESTING KMSG APP ALLOCATE FLOW RESULT" << std::endl;
+
+	dn_before.processName = "test.DIF";
+	san_before.processName = "test1.IRATI";
+	san_before.processInstance = "1";
+	san_before.entityName = "fa";
+	san_before.entityInstance = "1";
+	e_before = "my error";
+
+	msg = new irati_msg_app_alloc_flow_result();
+	msg->msg_type = RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT;
+	msg->port_id = 31;
+	msg->dif_name = dn_before.to_c_name();
+	msg->source_app_name = san_before.to_c_name();
+	msg->error_desc = stringToCharArray(e_before);
+
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_msg_app_alloc_flow_result message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_msg_app_alloc_flow_result *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	      serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_msg_app_alloc_flow_result message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	dn_after = ApplicationProcessNamingInformation(resp->dif_name);
+	san_after = ApplicationProcessNamingInformation(resp->source_app_name);
+	e_after = resp->error_desc;
+
+	if (msg->port_id != resp->port_id) {
+		std::cout << "Port-id on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (dn_before != dn_after) {
+		std::cout << "DIF name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (san_before != san_after) {
+		std::cout << "Source app name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (e_before != e_after) {
+		std::cout << "Error description on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else {
+		std::cout << "Test ok!" << std::endl;
+		ret = 0;
+	}
+
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return ret;
+}
+
+int test_irati_msg_app_alloc_flow_response()
+{
+	struct irati_msg_app_alloc_flow_response * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+
+	std::cout << "TESTING KMSG APP ALLOCATE FLOW RESPONSE" << std::endl;
+
+	msg = new irati_msg_app_alloc_flow_response();
+	msg->msg_type = RINA_C_APP_ALLOCATE_FLOW_RESPONSE;
+	msg->result = 43;
+	msg->not_source = true;
+
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_msg_app_alloc_flow_response message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_msg_app_alloc_flow_response *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	      serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_msg_app_alloc_flow_response message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (msg->result != resp->result) {
+		std::cout << "Result on  original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (msg->not_source != resp->not_source) {
+		std::cout << "Notify source on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else {
+		std::cout << "Test ok!" << std::endl;
+		ret = 0;
+	}
+
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return ret;
+}
+
+int test_irati_msg_app_dealloc_flow(irati_msg_t msg_t)
+{
+	struct irati_msg_app_dealloc_flow * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+	ApplicationProcessNamingInformation before, after;
+
+	std::cout << "TESTING KMSG APP DEALLOCATE FLOW (" << msg_t << ")" << std::endl;
+
+	before.processName = "test1.IRATI";
+	before.processInstance = "1";
+	before.entityName = "fa";
+	before.entityInstance = "1";
+
+	msg = new irati_msg_app_dealloc_flow();
+	msg->msg_type = msg_t;
+	msg->port_id = 31;
+	msg->result = 35;
+	msg->name = before.to_c_name();
+
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_msg_app_dealloc_flow message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_msg_app_dealloc_flow *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	      serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_msg_app_dealloc_flow message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	after = ApplicationProcessNamingInformation(resp->name);
+
+	if (msg->port_id != resp->port_id) {
+		std::cout << "Port-id on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (msg->result != resp->result) {
+		std::cout << "Result on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (before != after) {
+		std::cout << "Name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else {
+		std::cout << "Test ok!" << std::endl;
+		ret = 0;
+	}
+
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return ret;
+}
+
+int test_irati_msg_app_reg_app()
+{
+	struct irati_msg_app_reg_app * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+	ApplicationProcessNamingInformation a_before, a_after, da_before,
+					da_after, d_before, d_after;
+
+	std::cout << "TESTING KMSG APP REGISTER APP" << std::endl;
+
+	a_before.processName = "test1.IRATI";
+	a_before.processInstance = "1";
+	a_before.entityName = "fa";
+	a_before.entityInstance = "1";
+	da_before.processName = "mydaf";
+	d_before.processName = "test.DIF";
+
+	msg = new irati_msg_app_reg_app();
+	msg->msg_type = RINA_C_APP_REGISTER_APPLICATION_REQUEST;
+	msg->ipcp_id = 31;
+	msg->reg_type = 2;
+	msg->app_name = a_before.to_c_name();
+	msg->daf_name = da_before.to_c_name();
+	msg->dif_name = d_before.to_c_name();
+
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_msg_app_reg_app message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_msg_app_reg_app *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	      serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_msg_app_reg_app message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	a_after = ApplicationProcessNamingInformation(resp->app_name);
+	da_after = ApplicationProcessNamingInformation(resp->daf_name);
+	d_after = ApplicationProcessNamingInformation(resp->dif_name);
+
+	if (msg->ipcp_id != resp->ipcp_id) {
+		std::cout << "IPCP id on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (msg->reg_type != resp->reg_type) {
+		std::cout << "Registration type on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (a_before != a_after) {
+		std::cout << "App name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (da_before != da_after) {
+		std::cout << "DAF name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (d_before != d_after) {
+		std::cout << "DIF name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else {
+		std::cout << "Test ok!" << std::endl;
+		ret = 0;
+	}
+
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return ret;
+}
+
+int test_irati_msg_app_reg_app_resp(irati_msg_t msg_t)
+{
+	struct irati_msg_app_reg_app_resp * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+	ApplicationProcessNamingInformation a_before, a_after,
+					d_before, d_after;
+
+	std::cout << "TESTING KMSG APP REGISTER APP RESP ("<<msg_t<<")" << std::endl;
+
+	a_before.processName = "test1.IRATI";
+	a_before.processInstance = "1";
+	a_before.entityName = "fa";
+	a_before.entityInstance = "1";
+	d_before.processName = "test.DIF";
+
+	msg = new irati_msg_app_reg_app_resp();
+	msg->msg_type = msg_t;
+	msg->result = 89;
+	msg->app_name = a_before.to_c_name();
+	msg->dif_name = d_before.to_c_name();
+
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_msg_app_reg_app_resp message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_msg_app_reg_app_resp *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	      serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_msg_app_reg_app_resp message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	a_after = ApplicationProcessNamingInformation(resp->app_name);
+	d_after = ApplicationProcessNamingInformation(resp->dif_name);
+
+	if (msg->result != resp->result) {
+		std::cout << "Result on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (a_before != a_after) {
+		std::cout << "App name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (d_before != d_after) {
+		std::cout << "DIF name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else {
+		std::cout << "Test ok!" << std::endl;
+		ret = 0;
+	}
+
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return ret;
+}
+
+int test_irati_msg_app_reg_cancel()
+{
+	struct irati_msg_app_reg_cancel * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+	ApplicationProcessNamingInformation a_before, a_after,
+					d_before, d_after;
+	std::string res_before, res_after;
+
+	std::cout << "TESTING KMSG APP REGISTER APP CANCEL" << std::endl;
+
+	a_before.processName = "test1.IRATI";
+	a_before.processInstance = "1";
+	a_before.entityName = "fa";
+	a_before.entityInstance = "1";
+	d_before.processName = "test.DIF";
+	res_before = "my reason";
+
+	msg = new irati_msg_app_reg_cancel();
+	msg->msg_type = RINA_C_APP_APPLICATION_REGISTRATION_CANCELED_NOTIFICATION;
+	msg->code = 89;
+	msg->app_name = a_before.to_c_name();
+	msg->dif_name = d_before.to_c_name();
+	msg->reason = stringToCharArray(res_before);
+
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_msg_app_reg_cancel message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_msg_app_reg_cancel *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	      serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_msg_app_reg_cancel message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	a_after = ApplicationProcessNamingInformation(resp->app_name);
+	d_after = ApplicationProcessNamingInformation(resp->dif_name);
+	res_after = resp->reason;
+
+	if (msg->code != resp->code) {
+		std::cout << "Code on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (a_before != a_after) {
+		std::cout << "App name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (d_before != d_after) {
+		std::cout << "DIF name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (res_before != res_after) {
+		std::cout << "Reason on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else {
+		std::cout << "Test ok!" << std::endl;
+		ret = 0;
+	}
+
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return ret;
+}
+
+int test_irati_msg_get_dif_prop()
+{
+	struct irati_msg_get_dif_prop * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+	ApplicationProcessNamingInformation a_before, a_after,
+					d_before, d_after ,d2_after;
+	struct dif_properties_entry * data, * pos;
+	int num_entries = 0;
+
+	std::cout << "TESTING KMSG APP GET DIF PROPERTIES" << std::endl;
+
+	a_before.processName = "test1.IRATI";
+	a_before.processInstance = "1";
+	a_before.entityName = "fa";
+	a_before.entityInstance = "1";
+	d_before.processName = "test.DIF";
+
+	msg = new irati_msg_get_dif_prop();
+	msg->msg_type = RINA_C_APP_GET_DIF_PROPERTIES_RESPONSE;
+	msg->code = 89;
+	msg->app_name = a_before.to_c_name();
+	msg->dif_name = d_before.to_c_name();
+	msg->dif_props = get_dif_prop_resp_create();
+	data = dif_properties_entry_create();
+	data->dif_name = d_before.to_c_name();
+	data->max_sdu_size = 15;
+	list_add_tail(&data->next, &msg->dif_props->dif_propery_entries);
+
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_msg_get_dif_prop message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_msg_get_dif_prop *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	      serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_msg_get_dif_prop message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	a_after = ApplicationProcessNamingInformation(resp->app_name);
+	d_after = ApplicationProcessNamingInformation(resp->dif_name);
+	data = 0;
+        list_for_each_entry(pos, &(resp->dif_props->dif_propery_entries), next) {
+                num_entries ++;
+                data = pos;
+        }
+
+        if (data)
+        	d2_after = ApplicationProcessNamingInformation(data->dif_name);
+
+	if (msg->code != resp->code) {
+		std::cout << "Code on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (a_before != a_after) {
+		std::cout << "App name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (d_before != d_after) {
+		std::cout << "DIF name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (num_entries != 1) {
+		std::cout << "Number of entries on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (d_before != d2_after) {
+		std::cout << "DIF name property on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else {
+		std::cout << "Test ok!" << std::endl;
+		ret = 0;
+	}
+
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return ret;
+}
+
+int test_irati_msg_ipcm_plugin_load()
+{
+	struct irati_msg_ipcm_plugin_load * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+	std::string before, after;
+
+	std::cout << "TESTING KMSG IPCM PLUGIN LOAD" << std::endl;
+
+	before = "my plugin name";
+
+	msg = new irati_msg_ipcm_plugin_load();
+	msg->msg_type = RINA_C_IPCM_PLUGIN_LOAD_REQUEST;
+	msg->load = true;
+	msg->plugin_name = stringToCharArray(before);
+
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_msg_ipcm_plugin_load message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_msg_ipcm_plugin_load *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	      serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_msg_ipcm_plugin_load message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	after = resp->plugin_name;
+
+	if (msg->load != resp->load) {
+		std::cout << "Load on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (before != after) {
+		std::cout << "Plugin name on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else {
+		std::cout << "Test ok!" << std::endl;
+		ret = 0;
+	}
+
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return ret;
+}
+
+int test_irati_msg_ipcm_fwd_cdap_msg(irati_msg_t msg_t)
+{
+	struct irati_msg_ipcm_fwd_cdap_msg * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+
+	std::cout << "TESTING KMSG IPCM FWD CDAP MSG (" << msg_t << ")" << std::endl;
+
+	msg = new irati_msg_ipcm_fwd_cdap_msg();
+	msg->msg_type = msg_t;
+	msg->result = 25;
+	msg->cdap_msg = new buffer();
+	msg->cdap_msg->size = 19;
+	msg->cdap_msg->data = new char[19];
+	memset(msg->cdap_msg->data, 34, 19);
+
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_msg_ipcm_fwd_cdap_msg message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_msg_ipcm_fwd_cdap_msg *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	      serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_msg_ipcm_fwd_cdap_msg message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (msg->result != resp->result) {
+		std::cout << "Result on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (msg->cdap_msg->size != resp->cdap_msg->size) {
+		std::cout << "CDAP msg size on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else {
+		std::cout << "Test ok!" << std::endl;
+		ret = 0;
+	}
+
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return ret;
+}
+
+int test_irati_msg_ipcm_media_report()
+{
+	struct irati_msg_ipcm_media_report * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+	MediaReport m_before, m_after;
+	MediaDIFInfo md_before, md_after;
+	BaseStationInfo bs_before, bs_after;
+
+	std::cout << "TESTING KMSG IPCM MEDIA REPORT" << std::endl;
+
+	bs_before.ipcp_address = "3434";
+	bs_before.signal_strength = 5343;
+	md_before.dif_name = "test.DIF";
+	md_before.security_policies = "my security policies";
+	md_before.available_bs_ipcps.push_back(bs_before);
+	m_before.bs_ipcp_address = "451412";
+	m_before.current_dif_name = "test.DIF";
+	m_before.ipcp_id = 3;
+	m_before.available_difs["test.DIF"] = md_before;
+
+	msg = new irati_msg_ipcm_media_report();
+	msg->msg_type = RINA_C_IPCM_MEDIA_REPORT;
+	msg->report = m_before.to_c_media_report();
+
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_msg_ipcm_media_report message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_msg_ipcm_media_report *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	      serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_msg_ipcm_media_report message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	MediaReport::from_c_media_report(m_after, resp->report);
+	md_after = m_after.available_difs["test.DIF"];
+	bs_after = md_after.available_bs_ipcps.front();
+
+	if (m_before != m_after) {
+		std::cout << "Media report on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (md_after != md_before) {
+		std::cout << "Media DIF Info on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (bs_before != bs_after) {
+		std::cout << "Base station info name on original and recovered messages"
 			   << " are different\n";
 		ret = -1;
 	} else {
@@ -1796,6 +3244,12 @@ int main()
 	result = test_irati_kmsg_ipcp_update_crypto_state();
 	if (result < 0) return result;
 
+	result = test_irati_kmsg_ipcp_address_change();
+	if (result < 0) return result;
+
+	result = test_irati_kmsg_ipcp_allocate_port();
+	if (result < 0) return result;
+
 	result = test_irati_kmsg_multi_msg(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT);
 	if (result < 0) return result;
 
@@ -1826,6 +3280,77 @@ int main()
 	result = test_irati_kmsg_multi_msg(RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE);
 	if (result < 0) return result;
 
+	result = test_irati_kmsg_ipcp_mgmt_sdu(RINA_C_IPCP_MANAGEMENT_SDU_WRITE_REQUEST);
+	if (result < 0) return result;
+
+	result = test_irati_kmsg_ipcp_mgmt_sdu(RINA_C_IPCP_MANAGEMENT_SDU_READ_NOTIF);
+	if (result < 0) return result;
+
+	result = test_irati_kmsg_ipcm_create_ipcp();
+	if (result < 0) return result;
+
+	result = test_irati_kmsg_ipcm_destroy_ipcp();
+	if (result < 0) return result;
+
+	result = test_irati_msg_ipcm_enroll_to_dif();
+	if (result < 0) return result;
+
+	result = test_irati_msg_ipcm_enroll_to_dif_resp();
+	if (result < 0) return result;
+
+	result = test_irati_msg_with_name(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_REQUEST);
+	if (result < 0) return result;
+
+	result = test_irati_msg_with_name(RINA_C_IPCM_IPC_PROCESS_INITIALIZED);
+	if (result < 0) return result;
+
+	result = test_irati_msg_app_alloc_flow_result();
+	if (result < 0) return result;
+
+	result = test_irati_msg_app_alloc_flow_response();
+	if (result < 0) return result;
+
+	result = test_irati_msg_app_dealloc_flow(RINA_C_APP_DEALLOCATE_FLOW_REQUEST);
+	if (result < 0) return result;
+
+	result = test_irati_msg_app_dealloc_flow(RINA_C_APP_DEALLOCATE_FLOW_RESPONSE);
+	if (result < 0) return result;
+
+	result = test_irati_msg_app_dealloc_flow(RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION);
+	if (result < 0) return result;
+
+	result = test_irati_msg_app_reg_app();
+	if (result < 0) return result;
+
+	result = test_irati_msg_app_reg_app_resp(RINA_C_APP_REGISTER_APPLICATION_RESPONSE);
+	if (result < 0) return result;
+
+	result = test_irati_msg_app_reg_app_resp(RINA_C_APP_UNREGISTER_APPLICATION_REQUEST);
+	if (result < 0) return result;
+
+	result = test_irati_msg_app_reg_app_resp(RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE);
+	if (result < 0) return result;
+
+	result = test_irati_msg_app_reg_app_resp(RINA_C_APP_GET_DIF_PROPERTIES_REQUEST);
+	if (result < 0) return result;
+
+	result = test_irati_msg_app_reg_cancel();
+	if (result < 0) return result;
+
+	result = test_irati_msg_get_dif_prop();
+	if (result < 0) return result;
+
+	result = test_irati_msg_ipcm_plugin_load();
+	if (result < 0) return result;
+
+	result = test_irati_msg_ipcm_fwd_cdap_msg(RINA_C_IPCM_FWD_CDAP_MSG_REQUEST);
+	if (result < 0) return result;
+
+	result = test_irati_msg_ipcm_fwd_cdap_msg(RINA_C_IPCM_FWD_CDAP_MSG_RESPONSE);
+	if (result < 0) return result;
+
+	result = test_irati_msg_ipcm_media_report();
+	if (result < 0) return result;
 
 	return 0;
 }

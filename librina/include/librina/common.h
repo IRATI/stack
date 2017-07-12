@@ -695,7 +695,7 @@ class Neighbor {
 
 public:
         Neighbor();
-        Neighbor(struct ipcp_neighbor * neigh);
+        static void from_c_neighbor(Neighbor & nei, struct ipcp_neighbor * cnei);
         struct ipcp_neighbor * to_c_neighbor(void) const;
 
         bool operator==(const Neighbor &other) const;
