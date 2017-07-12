@@ -740,13 +740,15 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 	}
 	case RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE: {
 		std::list<Neighbor> neighbors;
+		Neighbor nei;
 		struct ipcp_neighbor_entry * pos;
 		struct irati_msg_ipcm_enroll_to_dif_resp * sp_msg =
 				(struct irati_msg_ipcm_enroll_to_dif_resp *) msg;
 		DIFInformation dif_info(sp_msg->dif_config, sp_msg->dif_name, sp_msg->dif_type);
 		if (sp_msg->neighbors) {
 		        list_for_each_entry(pos, &(sp_msg->neighbors->ipcp_neighbors), next) {
-		        	neighbors.push_back(Neighbor(pos->entry));
+		        	Neighbor::from_c_neighbor(nei, pos->entry);
+		        	neighbors.push_back(nei);
 		        }
 		}
 		event = new EnrollToDIFResponseEvent(neighbors, dif_info, sp_msg->result, sp_msg->event_id);

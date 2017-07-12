@@ -78,6 +78,17 @@ FwdCDAPMsgResponseEvent::FwdCDAPMsgResponseEvent(const ser_obj_t& sm,
         this->result = result;
 }
 
+bool BaseStationInfo::operator==(const BaseStationInfo &other) const
+{
+	return other.ipcp_address == ipcp_address &&
+			other.signal_strength == signal_strength;
+}
+
+bool BaseStationInfo::operator!=(const BaseStationInfo &other) const
+{
+	return !(*this == other);
+}
+
 void BaseStationInfo::from_c_bs_info(BaseStationInfo & bs,
 			   	     struct bs_info_entry * bsi)
 {
@@ -108,6 +119,18 @@ std::string BaseStationInfo::toString() const
 	ss << "Signal strength: " << signal_strength << std::endl;
 
 	return ss.str();
+}
+
+bool MediaDIFInfo::operator==(const MediaDIFInfo &other) const
+{
+	return other.available_bs_ipcps.size() == available_bs_ipcps.size() &&
+			other.dif_name == dif_name &&
+			other.security_policies == security_policies;
+}
+
+bool MediaDIFInfo::operator!=(const MediaDIFInfo &other) const
+{
+	return !(*this == other);
 }
 
 void MediaDIFInfo::from_c_media_dif_info(MediaDIFInfo & md,
@@ -162,6 +185,19 @@ std::string MediaDIFInfo::toString() const
 	}
 
 	return ss.str();
+}
+
+bool MediaReport::operator==(const MediaReport &other) const
+{
+	return other.available_difs.size() == available_difs.size() &&
+			other.bs_ipcp_address == bs_ipcp_address &&
+			other.current_dif_name == current_dif_name &&
+			other.ipcp_id == ipcp_id;
+}
+
+bool MediaReport::operator!=(const MediaReport &other) const
+{
+	return !(*this == other);
 }
 
 void MediaReport::from_c_media_report(MediaReport &mr,

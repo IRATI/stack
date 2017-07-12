@@ -1013,26 +1013,25 @@ Neighbor::Neighbor()
 	internal_port_id = 0;
 }
 
-Neighbor::Neighbor(struct ipcp_neighbor * neigh)
+void Neighbor::from_c_neighbor(Neighbor & nei, struct ipcp_neighbor * cnei)
 {
 	struct name_entry * pos;
 
-	if (!neigh)
+	if (!cnei)
 		return;
 
-	address_ = neigh->address;
-	old_address_ = neigh->old_address;
-	average_rtt_in_ms_ = neigh->average_rtt_in_ms;
-	last_heard_from_time_in_ms_ = neigh->last_heard_time_ms;
-	enrolled_ = neigh->enrolled;
-	underlying_port_id_ = neigh->under_port_id;
-	internal_port_id = neigh->intern_port_id;
-	number_of_enrollment_attempts_ = neigh->num_enroll_attempts;
-	name_ = ApplicationProcessNamingInformation(neigh->ipcp_name);
-	supporting_dif_name_ = ApplicationProcessNamingInformation(neigh->sup_dif_name);
-
-        list_for_each_entry(pos, &(neigh->supporting_difs), next) {
-        	supporting_difs_.push_back(ApplicationProcessNamingInformation(pos->entry));
+	nei.address_ = cnei->address;
+	nei.average_rtt_in_ms_ = cnei->average_rtt_in_ms;
+	nei.enrolled_ = cnei->enrolled;
+	nei.internal_port_id = cnei->intern_port_id;
+	nei.last_heard_from_time_in_ms_ = cnei->last_heard_time_ms;
+	nei.name_ = ApplicationProcessNamingInformation(cnei->ipcp_name);
+	nei.number_of_enrollment_attempts_ = cnei->num_enroll_attempts;
+	nei.old_address_ = cnei->old_address;
+	nei.supporting_dif_name_ = ApplicationProcessNamingInformation(cnei->sup_dif_name);
+	nei.underlying_port_id_ = cnei->under_port_id;
+        list_for_each_entry(pos, &(cnei->supporting_difs), next) {
+        	nei.supporting_difs_.push_back(ApplicationProcessNamingInformation(pos->entry));
         }
 }
 
@@ -1042,8 +1041,7 @@ struct ipcp_neighbor * Neighbor::to_c_neighbor() const
 	std::list<ApplicationProcessNamingInformation>::const_iterator it;
 	struct name_entry * pos;
 
-	result = new ipcp_neighbor();
-	INIT_LIST_HEAD(&result->supporting_difs);
+	result = ipcp_neighbor_create();
 	result->address = address_;
 	result->old_address = old_address_;
 	result->average_rtt_in_ms = average_rtt_in_ms_;

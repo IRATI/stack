@@ -225,6 +225,8 @@ public:
  */
 class BaseStationInfo {
 public:
+        bool operator==(const BaseStationInfo &other) const;
+        bool operator!=(const BaseStationInfo &other) const;
 	static void from_c_bs_info(BaseStationInfo & bs,
 				   struct bs_info_entry * bsi);
 	struct bs_info_entry * to_c_bs_info(void) const;
@@ -247,6 +249,8 @@ public:
  */
 class MediaDIFInfo {
 public:
+        bool operator==(const MediaDIFInfo &other) const;
+        bool operator!=(const MediaDIFInfo &other) const;
 	static void from_c_media_dif_info(MediaDIFInfo & md,
 					  struct media_dif_info * mdi);
 	struct media_dif_info * to_c_media_dif_info(void) const;
@@ -269,6 +273,8 @@ public:
  */
 class MediaReport {
 public:
+        bool operator==(const MediaReport &other) const;
+        bool operator!=(const MediaReport &other) const;
 	static void from_c_media_report(MediaReport &mr,
 					struct media_report * mre);
 	struct media_report * to_c_media_report(void) const;
