@@ -17,6 +17,7 @@ librinad_ma_ribs_la_CPPFLAGS =				\
 	$(LIBRINA_CFLAGS)				\
 	$(LIBPROTOBUF_CFLAGS)				\
 	-I$(srcdir)/../../				\
+	-I$(top_srcdir)/../include			\
 	-I$(srcdir)/../../../../common
 
 librinad_ma_ribs_la_LIBADD   =				\

@@ -2053,19 +2053,14 @@ void IPCManager_::io_loop()
 
     while (!req_to_stop)
     {
-        event = rina::ipcEventProducer->eventTimedWait(
-        IPCM_EVENT_TIMEOUT_S,
-                                                       IPCM_EVENT_TIMEOUT_NS);
-        if (req_to_stop)
+        event = rina::ipcEventProducer->eventWait();
+        if (!event || req_to_stop)
         {
             //Signal the main thread to start
             //the stop procedure
             stop_cond.signal();
             break;
         }
-
-        if (!event)
-            continue;
 
         LOG_DBG("Got event of type %s and sequence number %u",
                 rina::IPCEvent::eventTypeToString(event->eventType).c_str(),

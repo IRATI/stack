@@ -42,10 +42,6 @@ struct policy * policy_create_gfp(gfp_t flags)
 }
 EXPORT_SYMBOL(policy_create_gfp);
 
-struct policy * policy_create(void)
-{ return policy_create_gfp(GFP_KERNEL); }
-EXPORT_SYMBOL(policy_create);
-
 struct policy * policy_create_ni(void)
 { return policy_create_gfp(GFP_ATOMIC); }
 EXPORT_SYMBOL(policy_create_ni);

@@ -201,21 +201,6 @@ int deserialize_buffer(const void **pptr, struct buffer **b)
 	return 0;
 }
 
-struct buffer * default_buffer_create()
-{
-	struct buffer * result;
-
-	result = buffer_create();
-	if (!result)
-		return 0;
-
-	result->size = 10;
-	result->data = COMMON_ALLOC(10 * sizeof(char*), 1);
-	memset(result->data, 23, 10 * sizeof(char*));
-
-	return result;
-}
-
 /* Serialize a RINA name. */
 void serialize_rina_name(void **pptr, const struct name *name)
 {
@@ -600,8 +585,6 @@ struct flow_spec * rina_fspec_create()
 
 int policy_parm_serlen(const struct policy_parm * prm)
 {
-	unsigned int ret;
-
 	if (!prm) return 0;
 
 	return 2 * sizeof(uint16_t) + string_prlen(prm->name)
@@ -1920,6 +1903,7 @@ void efcp_config_free(struct efcp_config * efc)
 
 	COMMON_FREE(efc);
 }
+COMMON_EXPORT(efcp_config_free);
 
 struct efcp_config * efcp_config_create(void)
 {
@@ -2582,6 +2566,7 @@ struct auth_sdup_profile * auth_sdup_profile_create()
 
 	return result;
 }
+COMMON_EXPORT(auth_sdup_profile_create);
 
 int secman_config_serlen(const struct secman_config * sc)
 {
@@ -2600,7 +2585,6 @@ int secman_config_serlen(const struct secman_config * sc)
 
         return ret;
 }
-
 
 void serialize_secman_config(void **pptr, const struct secman_config *sc)
 {
@@ -2623,7 +2607,6 @@ void serialize_secman_config(void **pptr, const struct secman_config *sc)
 		serialize_auth_sdup_profile(pptr, pos->entry);
 	}
 }
-
 
 int deserialize_secman_config(const void **pptr, struct secman_config *sc)
 {
@@ -2721,6 +2704,7 @@ struct secman_config * secman_config_create()
 
 	return result;
 }
+COMMON_EXPORT(secman_config_create);
 
 int routing_config_serlen(const struct routing_config * rc)
 {

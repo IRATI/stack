@@ -42,6 +42,7 @@
 #include "sdup-crypto-ps.h"
 #include "sdup-errc-ps.h"
 #include "sdup-ttl-ps.h"
+#include "irati/kucommon.h"
 
 static struct policy_set_list crypto_policy_sets = {
 	.head = LIST_HEAD_INIT(crypto_policy_sets.head)
@@ -313,7 +314,7 @@ static void sdup_port_destroy(struct sdup_port * instance)
 };
 
 static struct sdup_port * sdup_port_create(port_id_t port_id,
-					   struct dup_config_entry * dup_conf,
+					   struct auth_sdup_profile * dup_conf,
 					   struct dt_cons * dt_cons)
 {
 	struct sdup_port * tmp;
@@ -337,8 +338,8 @@ static struct sdup_port * sdup_port_create(port_id_t port_id,
 	tmp->conf = dup_conf;
 	tmp->dt_cons = dt_cons;
 
-	if (dup_conf->crypto_policy) {
-		crypto_ps_name = policy_name(dup_conf->crypto_policy);
+	if (dup_conf->encrypt) {
+		crypto_ps_name = policy_name(dup_conf->encrypt);
 		tmp->crypto = sdup_comp_create(tmp);
 		if (!tmp->crypto) {
 			sdup_port_destroy(tmp);
@@ -354,8 +355,8 @@ static struct sdup_port * sdup_port_create(port_id_t port_id,
 	} else
 		tmp->crypto = NULL;
 
-	if (dup_conf->error_check_policy) {
-		errc_ps_name = policy_name(dup_conf->error_check_policy);
+	if (dup_conf->crc) {
+		errc_ps_name = policy_name(dup_conf->crc);
 		tmp->errc = sdup_comp_create(tmp);
 		if (!tmp->errc) {
 			sdup_port_destroy(tmp);
@@ -371,8 +372,8 @@ static struct sdup_port * sdup_port_create(port_id_t port_id,
 	} else
 		tmp->errc = NULL;
 
-	if (dup_conf->ttl_policy) {
-		ttl_ps_name = policy_name(dup_conf->ttl_policy);
+	if (dup_conf->ttl) {
+		ttl_ps_name = policy_name(dup_conf->ttl);
 		tmp->ttl = sdup_comp_create(tmp);
 		if (!tmp->ttl) {
 			sdup_port_destroy(tmp);
@@ -391,16 +392,16 @@ static struct sdup_port * sdup_port_create(port_id_t port_id,
 	return tmp;
 }
 
-static struct dup_config_entry * find_dup_config(struct sdup_config * sdup_conf,
+static struct auth_sdup_profile * find_dup_config(struct secman_config * sdup_conf,
 						 string_t * n_1_dif_name)
 {
-	struct dup_config * dup_pos;
+	struct auth_sdup_profile_entry * dup_pos;
 
 	if (!sdup_conf)
 		return NULL;
 
-	list_for_each_entry(dup_pos, &sdup_conf->specific_dup_confs, next) {
-		if (string_cmp(dup_pos->entry->n_1_dif_name,
+	list_for_each_entry(dup_pos, &sdup_conf->specific_profiles, next) {
+		if (string_cmp(dup_pos->n1_dif_name,
 			       n_1_dif_name) == 0) {
 			LOG_DBG("SDU Protection config for N-1 DIF %s",
 				n_1_dif_name);
@@ -410,7 +411,7 @@ static struct dup_config_entry * find_dup_config(struct sdup_config * sdup_conf,
 
 	LOG_DBG("Returning default SDU Protection config for N-1 DIF %s",
 		n_1_dif_name);
-	return sdup_conf->default_dup_conf;
+	return sdup_conf->default_profile;
 }
 
 int sdup_crypto_set_policy_set_param(struct sdup_comp * sdup_comp,
@@ -569,19 +570,19 @@ int sdup_set_policy_set_param(struct sdup_port * sdup_port,
 EXPORT_SYMBOL(sdup_set_policy_set_param);
 
 int sdup_config_set(struct sdup *        instance,
-		    struct sdup_config * sdup_config)
+		    struct secman_config * sm_config)
 {
 	if (!instance) {
 		LOG_ERR("Bogus instance passed");
 		return -1;
 	}
 
-	if (!sdup_config) {
+	if (!sm_config) {
 		LOG_ERR("Bogus sdup_conf passed");
 		return -1;
 	}
 
-	instance->sdup_conf = sdup_config;
+	instance->sm_conf = sm_config;
 
 	return 0;
 }
@@ -620,7 +621,7 @@ struct sdup * sdup_create(struct ipcp_instance * parent)
 		return NULL;
 
 	/*init attributes*/
-	tmp->sdup_conf = NULL;
+	tmp->sm_conf = NULL;
 	INIT_LIST_HEAD(&(tmp->instances));
 
 	return tmp;
@@ -643,8 +644,8 @@ int sdup_destroy(struct sdup * instance)
 		sdup_port_destroy(pos);
 	}
 
-	if (instance->sdup_conf)
-		sdup_config_destroy(instance->sdup_conf);
+	if (instance->sm_conf)
+		secman_config_free(instance->sm_conf);
 
 	if (instance->dt_cons)
 		rkfree(instance->dt_cons);
@@ -662,9 +663,9 @@ struct sdup_port * sdup_init_port_config(struct sdup * instance,
 			  	         port_id_t port_id)
 {
 	struct sdup_port *tmp;
-	struct dup_config_entry * dup_conf;
+	struct auth_sdup_profile * dup_conf;
 
-	dup_conf = find_dup_config(instance->sdup_conf,
+	dup_conf = find_dup_config(instance->sm_conf,
 				   n1_dif_name->process_name);
 	if (!dup_conf) {
 		LOG_ERR("Problems finding config for N-1 DIF %s",

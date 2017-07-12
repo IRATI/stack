@@ -48,7 +48,6 @@ extern struct kipcm *default_kipcm;
 
 /* Private data to an ctrldev file instance. */
 struct ctrldev_priv {
-	char 		   msgbuf[8192];
 	irati_msg_port_t   port_id;
 	struct rfifo      *pending_msgs;
 	spinlock_t 	   pending_msgs_lock;
@@ -302,7 +301,7 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
         struct irati_msg_base  * bmsg;
         struct msg_queue_entry * entry;
         char 		       * kbuf;
-        ssize_t 		 ret;
+        ssize_t 		 ret = 0;
 
         LOG_DBG("Syscall write SDU (size = %zd, port-id = %d)",
                         len, priv->port_id);
@@ -325,14 +324,12 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
         }
 
         /* TODO: deserialize message */
-        ret = deserialize_irati_msg(irati_ker_numtables, IRATI_RINA_C_MAX,
-                        kbuf, len, priv->msgbuf, sizeof(priv->msgbuf));
-        if (ret) {
+        bmsg = (struct irati_msg_base *) deserialize_irati_msg(irati_ker_numtables, IRATI_RINA_C_MAX,
+        						       kbuf, len);
+        if (!bmsg) {
         	rkfree(kbuf);
         	return -EINVAL;
         }
-
-        bmsg = IRATI_MB(priv->msgbuf);
 
         /* Check if message is for the kernel, otherwise, put in right queue */
         if (bmsg->dest_port != 0) {

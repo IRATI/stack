@@ -51,7 +51,7 @@ struct sdup_port {
 	struct sdup_comp * ttl;
 
 	/* Configuration of this instance */
-	struct dup_config_entry * conf;
+	struct auth_sdup_profile * conf;
 
 	/* Data transfer constants - needed to check max pdu size on RX */
 	struct dt_cons * dt_cons;
@@ -63,7 +63,7 @@ struct sdup_port {
 /** The SDU Protection component of an IPC Process */
 struct sdup {
 	/* The SDU Protection module configuration */
-	struct sdup_config * sdup_conf;
+	struct secman_config * sm_conf;
 
 	/* Data transfer constants - needed to check max pdu size on RX */
 	struct dt_cons * dt_cons;
@@ -108,7 +108,7 @@ int sdup_set_policy_set_param(struct sdup_port * sdup_port,
                               const char * value);
 
 int sdup_config_set(struct sdup *        instance,
-		    struct sdup_config * sdup_config);
+		    struct secman_config * sm_config);
 
 int sdup_dt_cons_set(struct sdup *        instance,
 		     struct dt_cons *     dt_cons);
