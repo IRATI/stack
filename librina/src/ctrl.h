@@ -36,8 +36,7 @@ extern "C" {
 
 struct irati_msg_base * irati_read_next_msg(int cfd);
 int irati_write_msg(int cfd, struct irati_msg_base *msg);
-int irati_open_appl_ipcp_port(void);
-int irati_open_ipcm_port(void);
+int irati_open_ctrl_port(irati_msg_port_t port_id);
 void irati_ctrl_msg_free(struct irati_msg_base *msg);
 int close_port(int cfd);
 
