@@ -14,7 +14,7 @@ ifndef IRATI_KSDIR
 IRATI_KSDIR=${PWD}/../../kernel
 endif
 
-ccflags-y = -Wtype-limits -I${src}/../../kernel
+ccflags-y = -Wtype-limits -I${src}/../../kernel -I${src}/../../include
 
 obj-m := dummy-plugin.o
 dummy-plugin-y := dummy-plugin-ps.o rmt-ps-dummy.o dtcp-ps-dummy.o dtp-ps-dummy.o pft-ps-dummy.o

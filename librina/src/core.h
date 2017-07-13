@@ -72,8 +72,6 @@ public:
 					   ipc_process_id_t ipcp_id);
 	struct irati_ep * get_ctrl_port_from_app_name(const ApplicationProcessNamingInformation& app_name);
 	irati_msg_port_t get_ipcm_ctrl_port();
-	static void name_to_app_name_class(const struct name * name,
-					   ApplicationProcessNamingInformation & app_name);
 
 	/**
 	 * Poulates the "destPortId" field for messages that have to be sent,

@@ -74,7 +74,7 @@ librina_init(void)
 
 int rina_open(void)
 {
-        return irati_open_appl_ipcp_port();
+        return irati_open_ctrl_port(0);
 }
 
 static IPCEvent *

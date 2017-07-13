@@ -718,6 +718,7 @@ IPCProcessProxy * IPCProcessFactory::create(
         msg->dif_type = stringToCharArray(difType);
         msg->ipcp_name = ipcProcessName.to_c_name();
         msg->irati_port_id = portId;
+        msg->ipcp_id = ipcProcessId;
         msg->dest_ipcp_id = 0;
         msg->dest_port = 0;
 

@@ -59,7 +59,7 @@ AbstractIPCProcessImpl::AbstractIPCProcessImpl(const rina::ApplicationProcessNam
         try {
                 std::stringstream ss;
                 ss << IPCP_LOG_IPCP_FILE_PREFIX << "-" << id;
-                rina::initialize(log_level, log_file);
+                rina::initialize(getpid(), log_level, log_file);
                 LOG_DBG("IPCProcessImpl");
                 rina::extendedIPCManager->ipcManagerPort = ipc_manager_port;
                 rina::extendedIPCManager->ipcProcessId = id;

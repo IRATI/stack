@@ -141,18 +141,6 @@ irati_msg_port_t CtrlPortIdMap::get_ipcm_ctrl_port()
 	return IRATI_IPCM_PORT;
 }
 
-void CtrlPortIdMap::name_to_app_name_class(const struct name * name,
-					   ApplicationProcessNamingInformation & app_name)
-{
-	if (!name)
-		return;
-
-	app_name.processName = name->process_name;
-	app_name.processInstance = name->process_instance;
-	app_name.entityName = name->entity_name;
-	app_name.entityInstance = name->entity_instance;
-}
-
 int CtrlPortIdMap::update_msg_or_pid_map(struct irati_msg_base * msg, bool send)
 {
 	ApplicationProcessNamingInformation app_name;
@@ -166,7 +154,7 @@ int CtrlPortIdMap::update_msg_or_pid_map(struct irati_msg_base * msg, bool send)
 			struct irati_kmsg_ipcm_allocate_flow * sp_msg =
 					(struct irati_kmsg_ipcm_allocate_flow *) msg;
 
-			CtrlPortIdMap::name_to_app_name_class(sp_msg->source, app_name);
+			app_name = ApplicationProcessNamingInformation(sp_msg->source);
 			add_app_name_to_ctrl_port_map(app_name, sp_msg->src_port,
 						      sp_msg->src_ipcp_id);
 		}
@@ -176,7 +164,7 @@ int CtrlPortIdMap::update_msg_or_pid_map(struct irati_msg_base * msg, bool send)
 		struct irati_kmsg_ipcm_allocate_flow * sp_msg =
 				(struct irati_kmsg_ipcm_allocate_flow *) msg;
 		if (send) {
-			CtrlPortIdMap::name_to_app_name_class(sp_msg->source, app_name);
+			app_name = ApplicationProcessNamingInformation(sp_msg->source);
 			irati_ep = get_ctrl_port_from_app_name(app_name);
 			if (!irati_ep) {
 				LOG_ERR("Could not locate IRATI ep for app_name %s",
@@ -192,7 +180,7 @@ int CtrlPortIdMap::update_msg_or_pid_map(struct irati_msg_base * msg, bool send)
 		struct irati_kmsg_ipcm_allocate_flow * sp_msg =
 				(struct irati_kmsg_ipcm_allocate_flow *) msg;
 		if (send) {
-			CtrlPortIdMap::name_to_app_name_class(sp_msg->dest, app_name);
+			app_name = ApplicationProcessNamingInformation(sp_msg->dest);
 			irati_ep = get_ctrl_port_from_app_name(app_name);
 			if (!irati_ep) {
 				LOG_ERR("Could not locate IRATI ep for app_name %s",
@@ -209,7 +197,7 @@ int CtrlPortIdMap::update_msg_or_pid_map(struct irati_msg_base * msg, bool send)
 		struct irati_msg_app_dealloc_flow * sp_msg =
 				(struct irati_msg_app_dealloc_flow *) msg;
 		if (send) {
-			CtrlPortIdMap::name_to_app_name_class(sp_msg->name, app_name);
+			app_name = ApplicationProcessNamingInformation(sp_msg->name);
 			irati_ep = get_ctrl_port_from_app_name(app_name);
 			if (!irati_ep) {
 				LOG_ERR("Could not locate IRATI ep for app_name %s",
@@ -227,7 +215,7 @@ int CtrlPortIdMap::update_msg_or_pid_map(struct irati_msg_base * msg, bool send)
 		if (send) {
 			msg->dest_port = get_ipcm_ctrl_port();
 		} else {
-			CtrlPortIdMap::name_to_app_name_class(sp_msg->app_name, app_name);
+			app_name = ApplicationProcessNamingInformation(sp_msg->app_name);
 			add_app_name_to_ctrl_port_map(app_name, sp_msg->src_port,
 						      sp_msg->src_ipcp_id);
 		}
@@ -238,7 +226,7 @@ int CtrlPortIdMap::update_msg_or_pid_map(struct irati_msg_base * msg, bool send)
 		struct irati_msg_app_reg_app_resp * sp_msg =
 				(struct irati_msg_app_reg_app_resp *) msg;
 		if (send) {
-			CtrlPortIdMap::name_to_app_name_class(sp_msg->app_name, app_name);
+			app_name = ApplicationProcessNamingInformation(sp_msg->app_name);
 			irati_ep = get_ctrl_port_from_app_name(app_name);
 			if (!irati_ep) {
 				LOG_ERR("Could not locate IRATI ep for app_name %s",
@@ -257,7 +245,7 @@ int CtrlPortIdMap::update_msg_or_pid_map(struct irati_msg_base * msg, bool send)
 		} else {
 			struct irati_msg_app_reg_app_resp * sp_msg =
 					(struct irati_msg_app_reg_app_resp *) msg;
-			CtrlPortIdMap::name_to_app_name_class(sp_msg->app_name, app_name);
+			app_name = ApplicationProcessNamingInformation(sp_msg->app_name);
 			add_app_name_to_ctrl_port_map(app_name, sp_msg->src_port,
 						      sp_msg->src_ipcp_id);
 		}
@@ -267,7 +255,7 @@ int CtrlPortIdMap::update_msg_or_pid_map(struct irati_msg_base * msg, bool send)
 		struct irati_msg_get_dif_prop * sp_msg =
 				(struct irati_msg_get_dif_prop *) msg;
 		if (send) {
-			CtrlPortIdMap::name_to_app_name_class(sp_msg->app_name, app_name);
+			app_name = ApplicationProcessNamingInformation(sp_msg->app_name);
 			irati_ep = get_ctrl_port_from_app_name(app_name);
 			if (!irati_ep) {
 				LOG_ERR("Could not locate IRATI ep for app_name %s",
@@ -304,7 +292,7 @@ int CtrlPortIdMap::update_msg_or_pid_map(struct irati_msg_base * msg, bool send)
 					(struct irati_msg_with_name *) msg;
 
 			add_ipcp_id_to_ctrl_port_mapping(msg->src_port, msg->src_ipcp_id);
-			CtrlPortIdMap::name_to_app_name_class(sp_msg->name, app_name);
+			app_name = ApplicationProcessNamingInformation(sp_msg->name);
 			add_app_name_to_ctrl_port_map(app_name, sp_msg->src_port,
 						      sp_msg->src_ipcp_id);
 		}
@@ -375,12 +363,9 @@ IRATICtrlManager::IRATICtrlManager()
 void IRATICtrlManager::initialize()
 {
 	// Open a control device
-	if (ctrl_port == IRATI_IPCM_PORT) {
-		cfd = irati_open_ipcm_port();
-	} else {
-		cfd = irati_open_appl_ipcp_port();
+	cfd = irati_open_ctrl_port(ctrl_port);
+	if (ctrl_port == 0)
 		ctrl_port = cfd;
-	}
 
 	if (cfd < 0) {
 		LOG_ERR("Error initializing IRATI Ctrl manager");
@@ -954,7 +939,7 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 IPCEvent * IRATICtrlManager::get_next_ctrl_msg()
 {
 	struct irati_msg_base * msg;
-	IPCEvent * event;
+	IPCEvent * event = 0;
 
 	msg = irati_read_next_msg(cfd);
 	if (!msg) {

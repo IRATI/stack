@@ -318,6 +318,7 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
         struct msg_queue_entry * entry;
         char 		       * kbuf;
         ssize_t 		 ret = 0;
+        bool 			 destroy_kbuf = true;
 
         LOG_DBG("Syscall write SDU (size = %zd, port-id = %d)",
                         len, priv->port_id);
@@ -344,7 +345,7 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
         	return -EFAULT;
         }
 
-        /* TODO: deserialize message */
+        /* Deserialize message */
         bmsg = (struct irati_msg_base *) deserialize_irati_msg(irati_ker_numtables, IRATI_RINA_C_MAX,
         						       kbuf, len);
         if (!bmsg) {
@@ -364,6 +365,7 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
 
         	entry->sermsg = kbuf;
         	entry->serlen = len;
+        	destroy_kbuf = false;
 
         	if (ctrl_dev_data_post(entry, bmsg->dest_port)) {
         		irati_msg_free(irati_ker_numtables, IRATI_RINA_C_MAX,
@@ -388,7 +390,8 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
         }
 
         irati_msg_free(irati_ker_numtables, IRATI_RINA_C_MAX, bmsg);
-	rkfree(kbuf);
+        if (destroy_kbuf)
+        	rkfree(kbuf);
 
 	if (ret) {
 		return ret;
@@ -396,6 +399,18 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
 
         *ppos += len;
         return len;
+}
+
+bool queue_ready(struct ctrldev_priv * priv)
+{
+	LOG_DBG("Evaluating queue_reqdy");
+
+	if (!priv || !priv->pending_msgs) {
+		LOG_DBG("File descriptor has closed");
+		return true;
+	}
+
+	return !rfifo_is_empty(priv->pending_msgs);
 }
 
 static ssize_t
@@ -418,7 +433,6 @@ ctrldev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
         if (!priv->pending_msgs) {
         	spin_unlock(&priv->pending_msgs_lock);
         	LOG_INFO("Control device has been closed");
-        	rkfree(priv);
         	return -1;
         }
 
@@ -429,11 +443,20 @@ ctrldev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
 			LOG_DBG("Going to sleep on wait queue %pK (reading)",
 					&priv->read_wqueue);
 			ret = wait_event_interruptible(priv->read_wqueue,
-						       rfifo_is_empty(priv->pending_msgs));
+						       queue_ready(f->private_data));
 			LOG_DBG("Read woken up (%zd)", ret);
 
-			if (ret < 0)
+			if (ret < 0) {
 				goto finish;
+			}
+
+			priv = f->private_data;
+
+			if (!priv) {
+				LOG_INFO("Control device has been closed");
+				ret = -1;
+				goto finish;
+			}
 
 			spin_lock(&priv->pending_msgs_lock);
 		}
@@ -441,8 +464,8 @@ ctrldev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
 	        if (!priv->pending_msgs) {
 	        	spin_unlock(&priv->pending_msgs_lock);
 	        	LOG_INFO("Control device has been closed");
-	        	rkfree(priv);
-	        	return -1;
+	        	ret = -1;
+	        	goto finish;
 	        }
 
 		if (rfifo_is_empty(priv->pending_msgs)) {
@@ -477,6 +500,8 @@ ctrldev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
 		*ppos += ret;
 	}
 
+	LOG_DBG("Read on port %u finishing, read %zd bytes",
+		priv->port_id, ret);
 	rkfree(entry->sermsg);
 	rkfree(entry);
 
@@ -582,7 +607,10 @@ ctrldev_release(struct inode *inode, struct file *f)
 
         }
 
-        /* Notify reader of the control device (will delete priv) */
+        LOG_DBG("Instance of control device bound to port %d released",
+                priv->port_id);
+
+        /* Notify reader of the control device */
         wake_up_interruptible_poll(&priv->read_wqueue,
         			   POLLIN | POLLRDNORM | POLLRDBAND);
 
@@ -619,7 +647,7 @@ ctrldev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 
         priv->port_id = data.port_id;
 
-        LOG_DBG("Bound to port id %d", data.port_id);
+        LOG_DBG("Control device instance bound to port id %d", data.port_id);
 
         return 0;
 }

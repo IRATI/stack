@@ -60,6 +60,7 @@ void handler(int signum)
 			LOG_CRIT("Got signal SIGSEGV");
 			dump_backtrace();
 			rina::librina_finalize();
+			rinad::IPCManager->stop();
 			exit(EXIT_FAILURE);
 		case SIGINT:
 		case SIGQUIT:

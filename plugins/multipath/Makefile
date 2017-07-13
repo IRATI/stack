@@ -14,7 +14,7 @@ ifndef IRATI_KSDIR
 IRATI_KSDIR=${PWD}/../../kernel
 endif
 
-ccflags-y = -Wtype-limits -I${src}/../../kernel
+ccflags-y = -Wtype-limits -I${src}/../../kernel -I${src}/../../include
 
 obj-m := pff-multipath.o
 pff-multipath-y := mp-plugin-ps.o pff-ps-multipath.o

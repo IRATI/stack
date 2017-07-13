@@ -8,7 +8,7 @@ KDIR=/pristine/linux
 
 ifneq ($(KERNELRELEASE),)
 
-ccflags-y = -Wtype-limits -Inet/rina
+ccflags-y = -Wtype-limits -Inet/rina -I${src}/../../../include
 
 obj-m	+= cdrr.o
 cdrr-y	:= dtcp-ps-cdrr.o
