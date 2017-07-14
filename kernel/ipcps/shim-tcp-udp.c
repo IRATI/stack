@@ -2292,7 +2292,7 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
 static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                 		 const struct name * dif_name,
 				 const string_t * type,
-				 const struct dif_config * config)
+				 struct dif_config * config)
 {
         ASSERT(data);
         ASSERT(dif_information);

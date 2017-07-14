@@ -158,7 +158,9 @@ void IPCProcessProxy::assignToDIF(const DIFInformation& difInformation,
         	throw IPCException("Problems sending CTRL message");
         }
 
+        LOG_INFO("mere");
         irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        LOG_INFO("mere");
 #endif
 }
 
@@ -247,6 +249,7 @@ void IPCProcessProxy::enroll(const ApplicationProcessNamingInformation& difName,
         //Do nothing
 #else
         struct irati_msg_ipcm_enroll_to_dif * msg;
+        ApplicationProcessNamingInformation no_name;
 
         msg = new irati_msg_ipcm_enroll_to_dif();
         msg->msg_type = RINA_C_IPCM_ENROLL_TO_DIF_REQUEST;
@@ -256,6 +259,7 @@ void IPCProcessProxy::enroll(const ApplicationProcessNamingInformation& difName,
         msg->dest_ipcp_id = id;
         msg->dest_port = portId;
         msg->prepare_for_handover = false;
+        msg->disc_neigh_name = no_name.to_c_name();
         msg->event_id = opaque;
 
         if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {

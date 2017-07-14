@@ -668,7 +668,7 @@ int rmt_config_set(struct rmt *instance,
 	if (pff_select_policy_set(instance->pff, "", pff_ps_name))
 		LOG_ERR("Could not set policy set %s for PFF", pff_ps_name);
 
-	rmt_config_free(rmt_config);
+	rmt_config_free(instance->rmt_cfg);
 	instance->rmt_cfg = NULL;
 	return 0;
 }

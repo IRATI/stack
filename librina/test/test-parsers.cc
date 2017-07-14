@@ -40,84 +40,6 @@
 
 using namespace rina;
 
-void populate_dif_config(DIFConfiguration & dif_config)
-{
-	PolicyParameter param;
-
-	param.name_ = DEFAULT_POLICY_NAME;
-	param.value_ = DEFAULT_POLICY_VERSION;
-
-	dif_config.address_ = 24;
-	dif_config.efcp_configuration_.data_transfer_constants_.address_length_ = 2;
-	dif_config.efcp_configuration_.data_transfer_constants_.cep_id_length_ = 3;
-	dif_config.efcp_configuration_.data_transfer_constants_.ctrl_sequence_number_length_ = 3;
-	dif_config.efcp_configuration_.data_transfer_constants_.dif_concatenation_ = true;
-	dif_config.efcp_configuration_.data_transfer_constants_.dif_fragmentation_ = true;
-	dif_config.efcp_configuration_.data_transfer_constants_.dif_integrity_ = true;
-	dif_config.efcp_configuration_.data_transfer_constants_.frame_length_ = 2;
-	dif_config.efcp_configuration_.data_transfer_constants_.length_length_ = 2;
-	dif_config.efcp_configuration_.data_transfer_constants_.max_pdu_lifetime_ = 25;
-	dif_config.efcp_configuration_.data_transfer_constants_.max_pdu_size_ = 32;
-	dif_config.efcp_configuration_.data_transfer_constants_.max_time_to_ack_ = 22;
-	dif_config.efcp_configuration_.data_transfer_constants_.max_time_to_keep_ret_ = 12;
-	dif_config.efcp_configuration_.data_transfer_constants_.port_id_length_ = 2;
-	dif_config.efcp_configuration_.data_transfer_constants_.qos_id_length_ = 3;
-	dif_config.efcp_configuration_.data_transfer_constants_.rate_length_ = 2;
-	dif_config.efcp_configuration_.data_transfer_constants_.seq_rollover_thres_ = 2;
-	dif_config.efcp_configuration_.data_transfer_constants_.sequence_number_length_ = 25;
-	dif_config.efcp_configuration_.unknown_flowpolicy_.name_ = DEFAULT_POLICY_NAME;
-	dif_config.efcp_configuration_.unknown_flowpolicy_.version_ = DEFAULT_POLICY_VERSION;
-	dif_config.et_configuration_.policy_set_.name_ = DEFAULT_POLICY_NAME;
-	dif_config.et_configuration_.policy_set_.version_ = DEFAULT_POLICY_NAME;
-	dif_config.et_configuration_.policy_set_.parameters_.push_back(param);
-	dif_config.fa_configuration_.allocate_notify_policy_.name_ = DEFAULT_POLICY_NAME;
-	dif_config.fa_configuration_.allocate_notify_policy_.version_ = DEFAULT_POLICY_VERSION;
-	dif_config.fa_configuration_.allocate_notify_policy_.parameters_.push_back(param);
-	dif_config.fa_configuration_.allocate_retry_policy_.name_ = DEFAULT_POLICY_NAME;
-	dif_config.fa_configuration_.allocate_retry_policy_.version_ = DEFAULT_POLICY_VERSION;
-	dif_config.fa_configuration_.allocate_retry_policy_.parameters_.push_back(param);
-	dif_config.fa_configuration_.new_flow_request_policy_.name_ = DEFAULT_POLICY_NAME;
-	dif_config.fa_configuration_.new_flow_request_policy_.version_ = DEFAULT_POLICY_VERSION;
-	dif_config.fa_configuration_.new_flow_request_policy_.parameters_.push_back(param);
-	dif_config.fa_configuration_.policy_set_.name_ = DEFAULT_POLICY_NAME;
-	dif_config.fa_configuration_.policy_set_.version_ = DEFAULT_POLICY_VERSION;
-	dif_config.fa_configuration_.policy_set_.parameters_.push_back(param);
-	dif_config.fa_configuration_.seq_rollover_policy_.name_ = DEFAULT_POLICY_NAME;
-	dif_config.fa_configuration_.seq_rollover_policy_.version_ = DEFAULT_POLICY_VERSION;
-	dif_config.fa_configuration_.seq_rollover_policy_.parameters_.push_back(param);
-	dif_config.fa_configuration_.max_create_flow_retries_ = 3;
-	dif_config.nsm_configuration_.policy_set_.name_ = DEFAULT_POLICY_NAME;
-	dif_config.nsm_configuration_.policy_set_.version_ = DEFAULT_POLICY_VERSION;
-	dif_config.nsm_configuration_.policy_set_.parameters_.push_back(param);
-	dif_config.ra_configuration_.pduftg_conf_.policy_set_.name_ = DEFAULT_POLICY_NAME;
-	dif_config.ra_configuration_.pduftg_conf_.policy_set_.version_ = DEFAULT_POLICY_VERSION;
-	dif_config.ra_configuration_.pduftg_conf_.policy_set_.parameters_.push_back(param);
-	dif_config.rmt_configuration_.policy_set_.name_ = DEFAULT_POLICY_NAME;
-	dif_config.rmt_configuration_.policy_set_.version_ = DEFAULT_POLICY_VERSION;
-	dif_config.rmt_configuration_.policy_set_.parameters_.push_back(param);
-	dif_config.rmt_configuration_.pft_conf_.policy_set_.name_ = DEFAULT_POLICY_NAME;
-	dif_config.rmt_configuration_.pft_conf_.policy_set_.version_ = DEFAULT_POLICY_VERSION;
-	dif_config.rmt_configuration_.pft_conf_.policy_set_.parameters_.push_back(param);
-	dif_config.routing_configuration_.policy_set_.name_ = DEFAULT_POLICY_NAME;
-	dif_config.routing_configuration_.policy_set_.version_ = DEFAULT_POLICY_VERSION;
-	dif_config.routing_configuration_.policy_set_.parameters_.push_back(param);
-	dif_config.sm_configuration_.policy_set_.name_ = DEFAULT_POLICY_NAME;
-	dif_config.sm_configuration_.policy_set_.version_ = DEFAULT_POLICY_VERSION;
-	dif_config.sm_configuration_.policy_set_.parameters_.push_back(param);
-	dif_config.sm_configuration_.default_auth_profile.authPolicy.name_ = DEFAULT_POLICY_NAME;
-	dif_config.sm_configuration_.default_auth_profile.authPolicy.version_ = DEFAULT_POLICY_VERSION;
-	dif_config.sm_configuration_.default_auth_profile.authPolicy.parameters_.push_back(param);
-	dif_config.sm_configuration_.default_auth_profile.crcPolicy.name_ = DEFAULT_POLICY_NAME;
-	dif_config.sm_configuration_.default_auth_profile.crcPolicy.version_ = DEFAULT_POLICY_VERSION;
-	dif_config.sm_configuration_.default_auth_profile.crcPolicy.parameters_.push_back(param);
-	dif_config.sm_configuration_.default_auth_profile.encryptPolicy.name_ = DEFAULT_POLICY_NAME;
-	dif_config.sm_configuration_.default_auth_profile.encryptPolicy.version_ = DEFAULT_POLICY_VERSION;
-	dif_config.sm_configuration_.default_auth_profile.encryptPolicy.parameters_.push_back(param);
-	dif_config.sm_configuration_.default_auth_profile.ttlPolicy.name_ = DEFAULT_POLICY_NAME;
-	dif_config.sm_configuration_.default_auth_profile.ttlPolicy.version_ = DEFAULT_POLICY_VERSION;
-	dif_config.sm_configuration_.default_auth_profile.ttlPolicy.parameters_.push_back(param);
-}
-
 void populate_dtp_config(DTPConfig & dtp_config)
 {
 	PolicyParameter param;
@@ -215,6 +137,104 @@ void populate_dtcp_config(DTCPConfig & dtcp_config)
 	dtcp_config.flow_control_config_.window_based_config_.tx_control_policy_.name_ = DEFAULT_POLICY_NAME;
 	dtcp_config.flow_control_config_.window_based_config_.tx_control_policy_.version_ = DEFAULT_POLICY_VERSION;
 	dtcp_config.flow_control_config_.window_based_config_.tx_control_policy_.parameters_.push_back(param);
+}
+
+void populate_qos_cube(QoSCube & qos_cube)
+{
+	qos_cube.average_bandwidth_ = 232323;
+	qos_cube.average_sdu_bandwidth_ = 34232;
+	qos_cube.delay_ = 34;
+	populate_dtp_config(qos_cube.dtp_config_);
+	populate_dtcp_config(qos_cube.dtcp_config_);
+	qos_cube.id_ = 1;
+	qos_cube.jitter_ = 23;
+	qos_cube.max_allowable_gap_ = 2;
+	qos_cube.name_ = DEFAULT_POLICY_NAME;
+	qos_cube.ordered_delivery_ = true;
+	qos_cube.partial_delivery_ = true;
+	qos_cube.peak_bandwidth_duration_ = 323;
+	qos_cube.peak_sdu_bandwidth_duration_ = 23;
+}
+
+void populate_dif_config(DIFConfiguration & dif_config)
+{
+	PolicyParameter param;
+	QoSCube * qos = new QoSCube();
+
+	param.name_ = DEFAULT_POLICY_NAME;
+	param.value_ = DEFAULT_POLICY_VERSION;
+	populate_qos_cube(*qos);
+
+	dif_config.address_ = 24;
+	dif_config.efcp_configuration_.data_transfer_constants_.address_length_ = 2;
+	dif_config.efcp_configuration_.data_transfer_constants_.cep_id_length_ = 3;
+	dif_config.efcp_configuration_.data_transfer_constants_.ctrl_sequence_number_length_ = 3;
+	dif_config.efcp_configuration_.data_transfer_constants_.dif_concatenation_ = true;
+	dif_config.efcp_configuration_.data_transfer_constants_.dif_fragmentation_ = true;
+	dif_config.efcp_configuration_.data_transfer_constants_.dif_integrity_ = true;
+	dif_config.efcp_configuration_.data_transfer_constants_.frame_length_ = 2;
+	dif_config.efcp_configuration_.data_transfer_constants_.length_length_ = 2;
+	dif_config.efcp_configuration_.data_transfer_constants_.max_pdu_lifetime_ = 25;
+	dif_config.efcp_configuration_.data_transfer_constants_.max_pdu_size_ = 32;
+	dif_config.efcp_configuration_.data_transfer_constants_.max_time_to_ack_ = 22;
+	dif_config.efcp_configuration_.data_transfer_constants_.max_time_to_keep_ret_ = 12;
+	dif_config.efcp_configuration_.data_transfer_constants_.port_id_length_ = 2;
+	dif_config.efcp_configuration_.data_transfer_constants_.qos_id_length_ = 3;
+	dif_config.efcp_configuration_.data_transfer_constants_.rate_length_ = 2;
+	dif_config.efcp_configuration_.data_transfer_constants_.seq_rollover_thres_ = 2;
+	dif_config.efcp_configuration_.data_transfer_constants_.sequence_number_length_ = 25;
+	dif_config.efcp_configuration_.unknown_flowpolicy_.name_ = DEFAULT_POLICY_NAME;
+	dif_config.efcp_configuration_.unknown_flowpolicy_.version_ = DEFAULT_POLICY_VERSION;
+	dif_config.efcp_configuration_.qos_cubes_.push_back(qos);
+	dif_config.et_configuration_.policy_set_.name_ = DEFAULT_POLICY_NAME;
+	dif_config.et_configuration_.policy_set_.version_ = DEFAULT_POLICY_NAME;
+	dif_config.et_configuration_.policy_set_.parameters_.push_back(param);
+	dif_config.fa_configuration_.allocate_notify_policy_.name_ = DEFAULT_POLICY_NAME;
+	dif_config.fa_configuration_.allocate_notify_policy_.version_ = DEFAULT_POLICY_VERSION;
+	dif_config.fa_configuration_.allocate_notify_policy_.parameters_.push_back(param);
+	dif_config.fa_configuration_.allocate_retry_policy_.name_ = DEFAULT_POLICY_NAME;
+	dif_config.fa_configuration_.allocate_retry_policy_.version_ = DEFAULT_POLICY_VERSION;
+	dif_config.fa_configuration_.allocate_retry_policy_.parameters_.push_back(param);
+	dif_config.fa_configuration_.new_flow_request_policy_.name_ = DEFAULT_POLICY_NAME;
+	dif_config.fa_configuration_.new_flow_request_policy_.version_ = DEFAULT_POLICY_VERSION;
+	dif_config.fa_configuration_.new_flow_request_policy_.parameters_.push_back(param);
+	dif_config.fa_configuration_.policy_set_.name_ = DEFAULT_POLICY_NAME;
+	dif_config.fa_configuration_.policy_set_.version_ = DEFAULT_POLICY_VERSION;
+	dif_config.fa_configuration_.policy_set_.parameters_.push_back(param);
+	dif_config.fa_configuration_.seq_rollover_policy_.name_ = DEFAULT_POLICY_NAME;
+	dif_config.fa_configuration_.seq_rollover_policy_.version_ = DEFAULT_POLICY_VERSION;
+	dif_config.fa_configuration_.seq_rollover_policy_.parameters_.push_back(param);
+	dif_config.fa_configuration_.max_create_flow_retries_ = 3;
+	dif_config.nsm_configuration_.policy_set_.name_ = DEFAULT_POLICY_NAME;
+	dif_config.nsm_configuration_.policy_set_.version_ = DEFAULT_POLICY_VERSION;
+	dif_config.nsm_configuration_.policy_set_.parameters_.push_back(param);
+	dif_config.ra_configuration_.pduftg_conf_.policy_set_.name_ = DEFAULT_POLICY_NAME;
+	dif_config.ra_configuration_.pduftg_conf_.policy_set_.version_ = DEFAULT_POLICY_VERSION;
+	dif_config.ra_configuration_.pduftg_conf_.policy_set_.parameters_.push_back(param);
+	dif_config.rmt_configuration_.policy_set_.name_ = DEFAULT_POLICY_NAME;
+	dif_config.rmt_configuration_.policy_set_.version_ = DEFAULT_POLICY_VERSION;
+	dif_config.rmt_configuration_.policy_set_.parameters_.push_back(param);
+	dif_config.rmt_configuration_.pft_conf_.policy_set_.name_ = DEFAULT_POLICY_NAME;
+	dif_config.rmt_configuration_.pft_conf_.policy_set_.version_ = DEFAULT_POLICY_VERSION;
+	dif_config.rmt_configuration_.pft_conf_.policy_set_.parameters_.push_back(param);
+	dif_config.routing_configuration_.policy_set_.name_ = DEFAULT_POLICY_NAME;
+	dif_config.routing_configuration_.policy_set_.version_ = DEFAULT_POLICY_VERSION;
+	dif_config.routing_configuration_.policy_set_.parameters_.push_back(param);
+	dif_config.sm_configuration_.policy_set_.name_ = DEFAULT_POLICY_NAME;
+	dif_config.sm_configuration_.policy_set_.version_ = DEFAULT_POLICY_VERSION;
+	dif_config.sm_configuration_.policy_set_.parameters_.push_back(param);
+	dif_config.sm_configuration_.default_auth_profile.authPolicy.name_ = DEFAULT_POLICY_NAME;
+	dif_config.sm_configuration_.default_auth_profile.authPolicy.version_ = DEFAULT_POLICY_VERSION;
+	dif_config.sm_configuration_.default_auth_profile.authPolicy.parameters_.push_back(param);
+	dif_config.sm_configuration_.default_auth_profile.crcPolicy.name_ = DEFAULT_POLICY_NAME;
+	dif_config.sm_configuration_.default_auth_profile.crcPolicy.version_ = DEFAULT_POLICY_VERSION;
+	dif_config.sm_configuration_.default_auth_profile.crcPolicy.parameters_.push_back(param);
+	dif_config.sm_configuration_.default_auth_profile.encryptPolicy.name_ = DEFAULT_POLICY_NAME;
+	dif_config.sm_configuration_.default_auth_profile.encryptPolicy.version_ = DEFAULT_POLICY_VERSION;
+	dif_config.sm_configuration_.default_auth_profile.encryptPolicy.parameters_.push_back(param);
+	dif_config.sm_configuration_.default_auth_profile.ttlPolicy.name_ = DEFAULT_POLICY_NAME;
+	dif_config.sm_configuration_.default_auth_profile.ttlPolicy.version_ = DEFAULT_POLICY_VERSION;
+	dif_config.sm_configuration_.default_auth_profile.ttlPolicy.parameters_.push_back(param);
 }
 
 void populate_uchar_array(UcharArray & array)

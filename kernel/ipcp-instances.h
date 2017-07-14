@@ -58,7 +58,7 @@ struct ipcp_instance_ops {
         int  (* assign_to_dif)(struct ipcp_instance_data * data,
         		       const struct name * dif_name,
 			       const string_t * type,
-                               const struct dif_config * config);
+                               struct dif_config * config);
 
         int  (* update_dif_config)(struct ipcp_instance_data * data,
                                    const struct dif_config *   configuration);
