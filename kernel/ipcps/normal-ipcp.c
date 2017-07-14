@@ -656,7 +656,7 @@ static int disable_write(struct ipcp_instance_data * data,
 static int normal_assign_to_dif(struct ipcp_instance_data * data,
 		                const struct name * dif_name,
 				const string_t * type,
-				const struct dif_config * config)
+				struct dif_config * config)
 {
         struct efcp_config * efcp_config;
         struct secman_config * sm_config;
@@ -670,6 +670,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         data->address  = config->address;
 
         efcp_config = config->efcp_config;
+        config->efcp_config = 0;
 
         if (!efcp_config) {
                 LOG_ERR("No EFCP configuration in the dif_info");
@@ -685,6 +686,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         efcp_container_config_set(data->efcpc, efcp_config);
 
         rmt_config = config->rmt_config;
+        config->rmt_config = 0;
         if (!rmt_config) {
         	LOG_ERR("No RMT configuration in the dif_info");
         	return -1;
@@ -701,6 +703,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         }
 
         sm_config = config->secman_config;
+        config->secman_config = 0;
 	if (!sm_config) {
 		LOG_INFO("No SDU protection config specified, using default");
 		sm_config = secman_config_create();

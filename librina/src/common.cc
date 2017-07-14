@@ -585,7 +585,7 @@ const std::string IPCEvent::eventTypeToString(IPCEventType eventType) {
 		result = "50_CREATE_IPCP_RESPONSE";
 		break;
 	case IPCM_DESTROY_IPCP_RESPONSE:
-		result = "51_CREATE_IPCP_RESPONSE";
+		result = "51_DESTROY_IPCP_RESPONSE";
 		break;
 	case NO_EVENT:
 		result = "52_NO_EVENT";

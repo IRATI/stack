@@ -2189,7 +2189,7 @@ struct addressing_config * AddressingConfiguration::to_c_addr_config() const
 	}
 
 	for(prefix_it = address_prefixes_.begin();
-			prefix_it != address_prefixes_.end(); ++addr_it) {
+			prefix_it != address_prefixes_.end(); ++prefix_it) {
 		pref_pos = new address_pref_config_entry();
 		INIT_LIST_HEAD(&pref_pos->next);
 		pref_pos->entry = prefix_it->to_c_pref_config();

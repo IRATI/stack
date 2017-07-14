@@ -345,20 +345,11 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
         	return -EFAULT;
         }
 
-        /* Deserialize message */
-        bmsg = (struct irati_msg_base *) deserialize_irati_msg(irati_ker_numtables, IRATI_RINA_C_MAX,
-        						       kbuf, len);
-        if (!bmsg) {
-        	rkfree(kbuf);
-        	return -EINVAL;
-        }
-
+        bmsg = IRATI_MB(kbuf);
         /* Check if message is for the kernel, otherwise, put in right queue */
         if (bmsg->dest_port != 0) {
         	entry = rkzalloc(sizeof(*entry), GFP_KERNEL);
         	if (!entry) {
-        		irati_msg_free(irati_ker_numtables, IRATI_RINA_C_MAX,
-        			       bmsg);
         		rkfree(kbuf);
         		return -ENOMEM;
         	}
@@ -368,8 +359,6 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
         	destroy_kbuf = false;
 
         	if (ctrl_dev_data_post(entry, bmsg->dest_port)) {
-        		irati_msg_free(irati_ker_numtables, IRATI_RINA_C_MAX,
-        			       bmsg);
         		rkfree(kbuf);
         		rkfree(entry);
 			return -EFAULT;
@@ -377,19 +366,26 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
         } else {
         	if (bmsg->msg_type >= IRATI_RINA_C_MAX ||
         			!irati_ctrl_dm.handlers[bmsg->msg_type].cb) {
-        		irati_msg_free(irati_ker_numtables, IRATI_RINA_C_MAX,
-        			       bmsg);
         		rkfree(kbuf);
         		return -EINVAL;
         	}
         	/* TODO check permissions */
 
+                /* Deserialize message */
+                bmsg = (struct irati_msg_base *) deserialize_irati_msg(irati_ker_numtables, IRATI_RINA_C_MAX,
+                						       kbuf, len);
+                if (!bmsg) {
+                	rkfree(kbuf);
+                	return -EINVAL;
+                }
+
         	/* Invoke the message handler */
         	ret = irati_ctrl_dm.handlers[bmsg->msg_type].cb(priv, bmsg,
         			 irati_ctrl_dm.handlers[bmsg->msg_type].data);
+
+        	irati_msg_free(irati_ker_numtables, IRATI_RINA_C_MAX, bmsg);
         }
 
-        irati_msg_free(irati_ker_numtables, IRATI_RINA_C_MAX, bmsg);
         if (destroy_kbuf)
         	rkfree(kbuf);
 

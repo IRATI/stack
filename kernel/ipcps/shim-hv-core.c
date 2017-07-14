@@ -1019,7 +1019,7 @@ static int
 shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
                       const struct name * dif_name,
 		      const string_t * type,
-		      const struct dif_config * config)
+		      struct dif_config * config)
 {
         struct ipcp_config *elem;
         bool vmpi_id_found = false;

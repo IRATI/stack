@@ -580,9 +580,15 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 	case RINA_C_IPCM_QUERY_RIB_REQUEST: {
 		struct irati_kmsg_ipcm_query_rib * sp_msg =
 				(struct irati_kmsg_ipcm_query_rib *) msg;
-		event = new QueryRIBRequestEvent(sp_msg->object_class, sp_msg->object_name,
-						 sp_msg->object_instance, sp_msg->scope,
-						 sp_msg->filter, sp_msg->event_id);
+		std::string oc, on, fil;
+		if (sp_msg->object_class)
+			oc = sp_msg->object_class;
+		if (sp_msg->object_name)
+			on = sp_msg->object_name;
+		if (sp_msg->filter)
+			fil = sp_msg->filter;
+		event = new QueryRIBRequestEvent(oc, on, sp_msg->object_instance,
+						 sp_msg->scope, fil, sp_msg->event_id);
 		break;
 	}
 	case RINA_C_IPCM_QUERY_RIB_RESPONSE: {
@@ -593,9 +599,12 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 				(struct irati_kmsg_ipcm_query_rib_resp *) msg;
 		if (sp_msg->rib_entries) {
 		        list_for_each_entry(pos, &(sp_msg->rib_entries->rib_object_data_entries), next) {
-				object.class_ = pos->clazz;
-				object.displayable_value_ = pos->disp_value;
-				object.name_ = pos->name;
+		        	if (pos->clazz)
+		        		object.class_ = pos->clazz;
+		        	if (pos->disp_value)
+		        		object.displayable_value_ = pos->disp_value;
+		        	if (pos->name)
+		        		object.name_ = pos->name;
 				object.instance_ = pos->instance;
 				objects.push_back(object);
 		        }
