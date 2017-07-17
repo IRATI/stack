@@ -71,7 +71,7 @@ typedef char string_t;
 
 struct buffer {
         char * data;
-        size_t size;
+        uint32_t size;
 };
 
 #ifdef __KERNEL__

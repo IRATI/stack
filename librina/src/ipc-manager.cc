@@ -72,6 +72,19 @@ void initializeIPCManager(unsigned int        localPort,
         }
 }
 
+void request_ipcm_finalization(unsigned int localPort)
+{
+	struct irati_msg_base msg;
+
+	msg.src_port = localPort;
+	msg.dest_port = localPort;
+	msg.msg_type = RINA_C_IPCM_FINALIZE_REQUEST;
+
+        if (irati_ctrl_mgr->send_msg(&msg, false) != 0) {
+        	throw IPCException("Problems sending CTRL message");
+        }
+}
+
 void destroyIPCManager()
 {
 	librina_finalize();
@@ -158,9 +171,7 @@ void IPCProcessProxy::assignToDIF(const DIFInformation& difInformation,
         	throw IPCException("Problems sending CTRL message");
         }
 
-        LOG_INFO("mere");
         irati_ctrl_msg_free((struct irati_msg_base *) msg);
-        LOG_INFO("mere");
 #endif
 }
 

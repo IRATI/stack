@@ -285,7 +285,7 @@ static char * name_tostring_gfp(gfp_t               flags,
 {
         char *       tmp;
         size_t       size;
-        const char * none     = "<NONE>";
+        const char * none     = "";
         size_t       none_len = strlen(none);
 
         if (!n)

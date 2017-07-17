@@ -169,7 +169,7 @@ static unsigned int buffer_prlen(const struct buffer *b)
 void serialize_buffer(void **pptr, const struct buffer * b)
 {
 	if (!b) {
-		serialize_obj(*pptr, size_t, 0);
+		serialize_obj(*pptr, uint32_t, 0);
 		return;
 	}
 
@@ -181,8 +181,9 @@ void serialize_buffer(void **pptr, const struct buffer * b)
 int deserialize_buffer(const void **pptr, struct buffer **b)
 {
 	size_t blen;
+	char * p;
 
-	deserialize_obj(*pptr, size_t, &blen);
+	deserialize_obj(*pptr, uint32_t, &blen);
 
 	if (blen) {
 		*b = COMMON_ALLOC(sizeof(struct buffer), 1);
@@ -191,7 +192,12 @@ int deserialize_buffer(const void **pptr, struct buffer **b)
 		}
 
 		(*b)->size = blen;
-		(*b)->data = COMMON_ALLOC(blen, 1);
+		p = COMMON_ALLOC(blen, 1);
+		(*b)->data = p;
+		if (!(*b)->data) {
+			return -1;
+		}
+
 		memcpy((*b)->data, *pptr, blen);
 		*pptr += blen;
 	} else {
@@ -223,6 +229,7 @@ int deserialize_rina_name(const void **pptr, struct name ** name)
 		return -1;
 
 	ret = deserialize_string(pptr, &(*name)->process_name);
+
 	if (ret) {
 		return ret;
 	}
@@ -4459,6 +4466,7 @@ static void * allocate_irati_msg(irati_msg_t msg_t)
 		result = COMMON_ALLOC(sizeof(struct irati_kmsg_ipcm_query_rib_resp), 1);
 		return result;
 	}
+	case RINA_C_IPCM_FINALIZE_REQUEST:
 	case RINA_C_IPCM_IPC_MANAGER_PRESENT:
 	case RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION:
 	case RINA_C_RMT_DUMP_FT_REQUEST: {
