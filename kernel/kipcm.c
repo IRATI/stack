@@ -1528,7 +1528,7 @@ static int notify_ipcp_write_mgmt_sdu(struct ctrldev_priv * ctrl_dev,
         struct irati_msg_base_resp resp_msg;
 
         if (!data) {
-                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                LOG_ERR("Bogus kipcm instance passed");
                 return -1;
         }
         kipcm = (struct kipcm *) data;
@@ -1543,15 +1543,12 @@ static int notify_ipcp_write_mgmt_sdu(struct ctrldev_priv * ctrl_dev,
 
         sdu = sdu_create(msg->sdu->size);
         if (!sdu) {
-                return -1;
-        }
-        ASSERT(is_sdu_ok(sdu));
-
-        if (memcpy(sdu_buffer(sdu), msg->sdu->data, msg->sdu->size)) {
-                sdu_destroy(sdu);
                 retval = -1;
                 goto out;
         }
+        ASSERT(is_sdu_ok(sdu));
+
+        memcpy(sdu_buffer(sdu), msg->sdu->data, msg->sdu->size);
 
         retval = kipcm_mgmt_sdu_write(kipcm,
         			      ipcp_id,

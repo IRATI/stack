@@ -126,7 +126,7 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
 
     try
     {
-        rina::initializeIPCManager(1, config.local.installationPath,
+        rina::initializeIPCManager(IPCM_CTRLDEV_PORT, config.local.installationPath,
                                    config.local.libraryPath, loglevel,
                                    config.local.logPath);
         LOG_DBG("IPC Manager daemon initialized");
@@ -156,6 +156,17 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
         LOG_ERR("Error while initializing librina-ipc-manager");
         exit (EXIT_FAILURE);
     }
+}
+
+void IPCManager_::request_finalization(void)
+{
+	try {
+		rina::request_ipcm_finalization(IPCM_CTRLDEV_PORT);
+	} catch (rina::IPCException &e) {
+	        LOG_ERR("Error while requesting IPCM finalization");
+	        rina::librina_finalize();
+	        exit (EXIT_FAILURE);
+	}
 }
 
 void IPCManager_::load_addons(const std::string& addon_list)
@@ -2054,12 +2065,20 @@ void IPCManager_::io_loop()
     while (!req_to_stop)
     {
         event = rina::ipcEventProducer->eventWait();
-        if (!event || req_to_stop)
+        if (!event) {
+        	LOG_WARN("Event is NULL");
+        	rina::librina_finalize();
+        	stop_cond.signal();
+        	break;
+        }
+
+        if (event->eventType == rina::IPCM_FINALIZATION_REQUEST_EVENT && req_to_stop)
         {
-            //Signal the main thread to start
-            //the stop procedure
-            stop_cond.signal();
-            break;
+        	//Signal the main thread to start
+        	//the stop procedure
+        	LOG_INFO("IPCM event loop requested to stop");
+        	stop_cond.signal();
+        	break;
         }
 
         LOG_DBG("Got event of type %s and sequence number %u",

@@ -348,6 +348,9 @@ struct irati_msg_layout irati_ker_numtables[] = {
 		   - sizeof(struct media_report *),
 	.media_reports = 1,
     },
+    [RINA_C_IPCM_FINALIZE_REQUEST] = {
+        .copylen = sizeof(struct irati_msg_base),
+    },
     [RINA_C_MAX] = {
         .copylen = 0,
         .names = 0,

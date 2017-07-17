@@ -271,6 +271,8 @@ void initializeIPCManager(unsigned int localPort,
                 const std::string& logLevel,
                 const std::string& pathToLogFolder);
 
+void request_ipcm_finalization(unsigned int localPort);
+
 /** Destroys the IPC Manager
 */
 void destroyIPCManager();
@@ -900,6 +902,12 @@ public:
 
         // Result of the operation, 0 success
         int result;
+};
+
+class IPCMFinalizationRequestEvent: public IPCEvent {
+public:
+	IPCMFinalizationRequestEvent():
+		IPCEvent(IPCM_FINALIZATION_REQUEST_EVENT, 0) {};
 };
 
 }

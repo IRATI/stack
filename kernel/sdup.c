@@ -338,7 +338,7 @@ static struct sdup_port * sdup_port_create(port_id_t port_id,
 	tmp->conf = dup_conf;
 	tmp->dt_cons = dt_cons;
 
-	if (dup_conf->encrypt) {
+	if (dup_conf->encrypt && policy_name(dup_conf->encrypt)) {
 		crypto_ps_name = policy_name(dup_conf->encrypt);
 		tmp->crypto = sdup_comp_create(tmp);
 		if (!tmp->crypto) {
@@ -355,7 +355,7 @@ static struct sdup_port * sdup_port_create(port_id_t port_id,
 	} else
 		tmp->crypto = NULL;
 
-	if (dup_conf->crc) {
+	if (dup_conf->crc && policy_name(dup_conf->crc)) {
 		errc_ps_name = policy_name(dup_conf->crc);
 		tmp->errc = sdup_comp_create(tmp);
 		if (!tmp->errc) {
@@ -372,7 +372,7 @@ static struct sdup_port * sdup_port_create(port_id_t port_id,
 	} else
 		tmp->errc = NULL;
 
-	if (dup_conf->ttl) {
+	if (dup_conf->ttl && policy_name(dup_conf->ttl)) {
 		ttl_ps_name = policy_name(dup_conf->ttl);
 		tmp->ttl = sdup_comp_create(tmp);
 		if (!tmp->ttl) {

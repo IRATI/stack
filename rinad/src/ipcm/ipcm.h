@@ -49,6 +49,7 @@
 
 
 //Constants
+#define IPCM_CTRLDEV_PORT 1
 #define PROMISE_TIMEOUT_S 8
 #define PROMISE_RETRY_NSEC 10000000 //10ms
 #define _PROMISE_1_SEC_NSEC 1000000000
@@ -262,6 +263,8 @@ public:
 	// Initialize the IPCManager
 	//
 	void init(const std::string& loglevel, std::string& config_file);
+
+	void request_finalization(void);
 
 	//
 	// Load the specified addons
@@ -610,6 +613,7 @@ public:
 	//
 	inline void stop(void){
 		req_to_stop = true;
+		request_finalization();
 	}
 
 	/// returns the forwarded object sent with invoke_id and

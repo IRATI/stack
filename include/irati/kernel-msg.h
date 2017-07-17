@@ -257,6 +257,9 @@ typedef enum {
 	/* 74, IPC Process -> IPC Manager */
 	RINA_C_IPCM_MEDIA_REPORT,
 
+	/* 75, IPC Manager -> IPC Manager */
+	RINA_C_IPCM_FINALIZE_REQUEST,
+
 	/* 75 */
         RINA_C_MAX,
 } msg_type_t;
@@ -841,5 +844,8 @@ struct irati_msg_ipcm_media_report {
 
         struct media_report * report;
 } __attribute__((packed));
+
+/* RINA_C_IPCM_FINALIZE_REQUEST */
+/* Base msg */
 
 #endif /* IRATI_KERN_MSG_H */

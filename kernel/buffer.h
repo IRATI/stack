@@ -22,21 +22,21 @@
 #define RINA_BUFFER_H
 
 /* NOTE: Creates a buffer from raw data (takes ownership) */
-struct buffer * buffer_create_with(void * data, size_t size);
-struct buffer * buffer_create_with_ni(void * data, size_t size);
+struct buffer * buffer_create_with(void * data, uint32_t size);
+struct buffer * buffer_create_with_ni(void * data, uint32_t size);
 
-struct buffer * buffer_create_from(const void * data, size_t size);
-struct buffer * buffer_create_from_ni(const void * data, size_t size);
+struct buffer * buffer_create_from(const void * data, uint32_t size);
+struct buffer * buffer_create_from_ni(const void * data, uint32_t size);
 
 /* NOTE: Creates an uninitialized buffer (data might be garbage) */
-struct buffer * buffer_create(size_t size);
-struct buffer * buffer_create_ni(size_t size);
+struct buffer * buffer_create(uint32_t size);
+struct buffer * buffer_create_ni(uint32_t size);
 
 int             buffer_destroy(struct buffer * b);
 
 /* NOTE: The following function may return -1 */
 ssize_t         buffer_length(const struct buffer * b);
-int buffer_set_length(struct buffer * b, size_t len);
+int buffer_set_length(struct buffer * b, uint32_t len);
 
 /* NOTE: Returns the raw buffer memory, watch-out ... */
 const void *    buffer_data_ro(const struct buffer * b); /* Read only */
@@ -44,17 +44,17 @@ void *          buffer_data_rw(struct buffer * b);       /* Read/Write */
 
 void buffer_assign(struct buffer * buffer,
 		   char *          new_data,
-		   size_t          new_len);
+		   uint32_t          new_len);
 
 struct buffer * buffer_dup(const struct buffer * b);
 struct buffer * buffer_dup_ni(const struct buffer * b);
 bool            buffer_is_ok(const struct buffer * b);
 
-int             buffer_head_grow(gfp_t flags, struct buffer * b, size_t bytes);
+int             buffer_head_grow(gfp_t flags, struct buffer * b, uint32_t bytes);
 int             buffer_head_shrink(gfp_t           flags,
                                    struct buffer * b,
-                                   size_t          bytes);
-int             buffer_tail_grow(struct buffer * b, size_t bytes);
-int             buffer_tail_shrink(struct buffer * b, size_t bytes);
+				   uint32_t          bytes);
+int             buffer_tail_grow(struct buffer * b, uint32_t bytes);
+int             buffer_tail_shrink(struct buffer * b, uint32_t bytes);
 
 #endif

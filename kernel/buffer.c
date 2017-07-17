@@ -53,7 +53,7 @@ EXPORT_SYMBOL(buffer_destroy);
 
 struct buffer * buffer_create_with_gfp(gfp_t  flags,
                                        void * data,
-                                       size_t size)
+				       uint32_t size)
 {
         struct buffer * tmp;
 
@@ -77,18 +77,18 @@ struct buffer * buffer_create_with_gfp(gfp_t  flags,
 }
 
 struct buffer * buffer_create_with(void * data,
-                                   size_t size)
+				   uint32_t size)
 { return buffer_create_with_gfp(GFP_KERNEL, data, size); }
 EXPORT_SYMBOL(buffer_create_with);
 
 struct buffer * buffer_create_with_ni(void * data,
-                                      size_t size)
+				      uint32_t size)
 { return buffer_create_with_gfp(GFP_ATOMIC, data, size); }
 EXPORT_SYMBOL(buffer_create_with_ni);
 
 struct buffer * buffer_create_from_gfp(gfp_t        flags,
                                        const void * data,
-                                       size_t       size)
+				       uint32_t       size)
 {
         struct buffer * tmp;
 
@@ -120,16 +120,16 @@ struct buffer * buffer_create_from_gfp(gfp_t        flags,
         return tmp;
 }
 
-struct buffer * buffer_create_from(const void * data, size_t size)
+struct buffer * buffer_create_from(const void * data, uint32_t size)
 { return buffer_create_from_gfp(GFP_KERNEL, data, size); }
 EXPORT_SYMBOL(buffer_create_from);
 
-struct buffer * buffer_create_from_ni(const void * data, size_t size)
+struct buffer * buffer_create_from_ni(const void * data, uint32_t size)
 { return buffer_create_from_gfp(GFP_ATOMIC, data, size); }
 EXPORT_SYMBOL(buffer_create_from_ni);
 
 struct buffer * buffer_create_gfp(gfp_t  flags,
-                                  size_t size)
+				  uint32_t size)
 {
         struct buffer * tmp;
 
@@ -153,11 +153,11 @@ struct buffer * buffer_create_gfp(gfp_t  flags,
         return tmp;
 }
 
-struct buffer * buffer_create(size_t size)
+struct buffer * buffer_create(uint32_t size)
 { return buffer_create_gfp(GFP_KERNEL, size); }
 EXPORT_SYMBOL(buffer_create);
 
-struct buffer * buffer_create_ni(size_t size)
+struct buffer * buffer_create_ni(uint32_t size)
 { return buffer_create_gfp(GFP_ATOMIC, size); }
 EXPORT_SYMBOL(buffer_create_ni);
 
@@ -207,7 +207,7 @@ ssize_t buffer_length(const struct buffer * b)
 }
 EXPORT_SYMBOL(buffer_length);
 
-int buffer_set_length(struct buffer * b, size_t len)
+int buffer_set_length(struct buffer * b, uint32_t len)
 {
         if (len > b->size) {
                 return -1;
@@ -240,7 +240,7 @@ EXPORT_SYMBOL(buffer_data_rw);
 /* FIXME: To be heavily hammered, it is temporary (lastin' forever, sigh) */
 void buffer_assign(struct buffer * buffer,
 		   char *          new_data,
-		   size_t          new_len)
+		   uint32_t        new_len)
 {
         ASSERT(buffer);
         ASSERT(new_data);
@@ -257,7 +257,7 @@ EXPORT_SYMBOL(buffer_assign);
 /* FIXME: To be heavily hammered, it is temporary (lastin' forever, sigh) */
 int buffer_head_grow(gfp_t           flags,
                      struct buffer * buffer,
-                     size_t          bytes)
+		     uint32_t        bytes)
 {
         char * new_data;
 
@@ -281,7 +281,7 @@ EXPORT_SYMBOL(buffer_head_grow);
 /* FIXME: To be heavily hammered, it is temporary (lastin' forever, sigh) */
 int buffer_head_shrink(gfp_t           flags,
                        struct buffer * buffer,
-                       size_t          bytes)
+		       uint32_t        bytes)
 {
         char * new_data;
 
@@ -304,7 +304,7 @@ EXPORT_SYMBOL(buffer_head_shrink);
 
 /* FIXME: To be heavily hammered, it is temporary (lastin' forever, sigh) */
 int buffer_tail_grow(struct buffer * buffer,
-                     size_t          bytes)
+		     uint32_t          bytes)
 {
         char * new_data;
 
@@ -327,7 +327,7 @@ EXPORT_SYMBOL(buffer_tail_grow);
 
 /* FIXME: To be heavily hammered, it is temporary (lastin' forever, sigh) */
 int buffer_tail_shrink(struct buffer * buffer,
-                       size_t          bytes)
+		       uint32_t          bytes)
 {
         char * new_data;
 

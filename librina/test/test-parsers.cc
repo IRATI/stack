@@ -3225,6 +3225,9 @@ int main()
 	result = test_irati_kmsg_ipcm_query_rib_resp();
 	if (result < 0) return result;
 
+	result = test_irati_msg_base(RINA_C_IPCM_FINALIZE_REQUEST);
+	if (result < 0) return result;
+
 	result = test_irati_msg_base(RINA_C_IPCM_IPC_MANAGER_PRESENT);
 	if (result < 0) return result;
 

@@ -506,11 +506,12 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 			local = false;
 			port_id = sp_msg->port_id;
 		}
-		 event = new FlowRequestEvent(port_id, FlowSpecification(sp_msg->fspec), local,
-			                      ApplicationProcessNamingInformation(sp_msg->source),
-					      ApplicationProcessNamingInformation(sp_msg->dest),
-					      ApplicationProcessNamingInformation(sp_msg->dif_name),
-					      sp_msg->src_ipcp_id, sp_msg->event_id);
+
+		event = new FlowRequestEvent(port_id, FlowSpecification(sp_msg->fspec), local,
+			                     ApplicationProcessNamingInformation(sp_msg->source),
+					     ApplicationProcessNamingInformation(sp_msg->dest),
+					     ApplicationProcessNamingInformation(sp_msg->dif_name),
+					     sp_msg->src_ipcp_id, sp_msg->event_id);
 		break;
 	}
 	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT: {
@@ -782,6 +783,7 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 					     ApplicationProcessNamingInformation(sp_msg->source),
 					     ApplicationProcessNamingInformation(sp_msg->dest),
 					     sp_msg->src_ipcp_id, sp_msg->event_id);
+		((FlowRequestEvent *) event)->DIFName = ApplicationProcessNamingInformation(sp_msg->dif_name);
 		break;
 	}
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT: {
@@ -934,6 +936,10 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 				(struct irati_msg_ipcm_media_report *) msg;
 		MediaReport::from_c_media_report(report, sp_msg->report);
 		event = new MediaReportEvent(report, sp_msg->event_id);
+		break;
+	}
+	case RINA_C_IPCM_FINALIZE_REQUEST: {
+		event = new IPCMFinalizationRequestEvent();
 		break;
 	}
 	default: {
