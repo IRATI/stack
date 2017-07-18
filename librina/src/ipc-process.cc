@@ -518,8 +518,27 @@ void ExtendedIPCManager::unregisterApplicationResponse(const ApplicationUnregist
 void ExtendedIPCManager::allocateFlowRequestResult(const FlowRequestEvent& event,
 						   int result)
 {
-	send_base_resp_msg(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
-			   event.sequenceNumber, result);
+#if STUP_API
+	//Do nothing
+#else
+        struct irati_kmsg_multi_msg * msg;
+
+        msg = new irati_kmsg_multi_msg();
+        msg->msg_type = RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT;
+        msg->result = result;
+        msg->port_id = event.portId;
+        msg->event_id = event.sequenceNumber;
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_port = ipcManagerPort;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
+
+#endif
 }
 
 unsigned int
@@ -661,6 +680,7 @@ unsigned int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingIn
 #else
         struct irati_kmsg_ipcp_allocate_port * msg;
 
+        LOG_INFO("App name: %s", appName.toString().c_str());
         msg = new irati_kmsg_ipcp_allocate_port();
         msg->msg_type = RINA_C_IPCP_ALLOCATE_PORT_REQUEST;
         msg->app_name = appName.to_c_name();

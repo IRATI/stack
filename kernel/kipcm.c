@@ -108,7 +108,6 @@ static int alloc_flow_req_reply(struct ctrldev_priv   * ctrl_dev,
                                 ipc_process_id_t        id,
 				int8_t                	res,
 				uint32_t                seq_num,
-				irati_msg_port_t        port_id,
 				port_id_t 		pid)
 {
 	struct irati_kmsg_multi_msg resp_msg;
@@ -213,7 +212,7 @@ static int notify_ipcp_allocate_flow_request(struct ctrldev_priv *ctrl_dev,
 
  fail:
         return alloc_flow_req_reply(ctrl_dev, ipc_id, -1, msg->event_id,
-        			    msg->src_port, port_id_bad());
+        			    port_id_bad());
 }
 
 static int notify_ipcp_allocate_flow_response(struct ctrldev_priv *ctrl_dev,
