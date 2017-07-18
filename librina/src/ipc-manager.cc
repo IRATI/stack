@@ -587,7 +587,7 @@ void IPCProcessProxy::forwardCDAPRequestMessage(const ser_obj_t& sermsg,
         msg = new irati_msg_ipcm_fwd_cdap_msg();
         msg->msg_type = RINA_C_IPCM_FWD_CDAP_MSG_REQUEST;
         msg->cdap_msg = new buffer();
-        msg->cdap_msg->data = new char[sermsg.size_];
+        msg->cdap_msg->data = new unsigned char[sermsg.size_];
         msg->cdap_msg->size = sermsg.size_;
         memcpy(msg->cdap_msg->data, sermsg.message_, sermsg.size_);
         msg->dest_ipcp_id = id;
@@ -613,7 +613,7 @@ void IPCProcessProxy::forwardCDAPResponseMessage(const ser_obj_t& sermsg,
         msg = new irati_msg_ipcm_fwd_cdap_msg();
         msg->msg_type = RINA_C_IPCM_FWD_CDAP_MSG_RESPONSE;
         msg->cdap_msg = new buffer();
-        msg->cdap_msg->data = new char[sermsg.size_];
+        msg->cdap_msg->data = new unsigned char[sermsg.size_];
         msg->cdap_msg->size = sermsg.size_;
         memcpy(msg->cdap_msg->data, sermsg.message_, sermsg.size_);
         msg->dest_ipcp_id = id;

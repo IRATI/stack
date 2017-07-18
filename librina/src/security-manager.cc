@@ -641,7 +641,7 @@ struct sdup_crypto_state * CryptoState::to_c_crypto_state() const
 	result->encrypt_key_rx = new buffer();
 	result->encrypt_key_rx->size = encrypt_key_rx.length;
 	if (encrypt_key_rx.length > 0) {
-		result->encrypt_key_rx->data = new char[encrypt_key_rx.length];
+		result->encrypt_key_rx->data = new unsigned char[encrypt_key_rx.length];
 		memcpy(result->encrypt_key_rx->data, encrypt_key_rx.data,
 				encrypt_key_rx.length);
 	}
@@ -649,7 +649,7 @@ struct sdup_crypto_state * CryptoState::to_c_crypto_state() const
 	result->encrypt_key_tx = new buffer();
 	result->encrypt_key_tx->size = encrypt_key_tx.length;
 	if (encrypt_key_tx.length > 0) {
-		result->encrypt_key_tx->data = new char[encrypt_key_tx.length];
+		result->encrypt_key_tx->data = new unsigned char[encrypt_key_tx.length];
 		memcpy(result->encrypt_key_tx->data, encrypt_key_tx.data,
 				encrypt_key_tx.length);
 	}
@@ -657,7 +657,7 @@ struct sdup_crypto_state * CryptoState::to_c_crypto_state() const
 	result->mac_key_rx = new buffer();
 	result->mac_key_rx->size = mac_key_rx.length;
 	if (mac_key_rx.length > 0) {
-		result->mac_key_rx->data = new char[mac_key_rx.length];
+		result->mac_key_rx->data = new unsigned char[mac_key_rx.length];
 		memcpy(result->mac_key_rx->data, mac_key_rx.data,
 				mac_key_rx.length);
 	}
@@ -665,7 +665,7 @@ struct sdup_crypto_state * CryptoState::to_c_crypto_state() const
 	result->mac_key_tx = new buffer();
 	result->mac_key_tx->size = mac_key_tx.length;
 	if (mac_key_tx.length > 0) {
-		result->mac_key_tx->data = new char[mac_key_tx.length];
+		result->mac_key_tx->data = new unsigned char[mac_key_tx.length];
 		memcpy(result->mac_key_tx->data, mac_key_tx.data,
 				mac_key_tx.length);
 	}
@@ -673,7 +673,7 @@ struct sdup_crypto_state * CryptoState::to_c_crypto_state() const
 	result->iv_rx = new buffer();
 	result->iv_rx->size = iv_rx.length;
 	if (iv_rx.length > 0) {
-		result->iv_rx->data = new char[iv_rx.length];
+		result->iv_rx->data = new unsigned char[iv_rx.length];
 		memcpy(result->iv_rx->data, iv_rx.data,
 				iv_rx.length);
 	}
@@ -681,7 +681,7 @@ struct sdup_crypto_state * CryptoState::to_c_crypto_state() const
 	result->iv_tx = new buffer();
 	result->iv_tx->size = iv_tx.length;
 	if (iv_tx.length > 0) {
-		result->iv_tx->data = new char[iv_tx.length];
+		result->iv_tx->data = new unsigned char[iv_tx.length];
 		memcpy(result->iv_tx->data, iv_tx.data,
 				iv_tx.length);
 	}

@@ -712,8 +712,8 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 	case RINA_C_IPCP_MANAGEMENT_SDU_READ_NOTIF: {
 		struct irati_kmsg_ipcp_mgmt_sdu * sp_msg =
 				(struct irati_kmsg_ipcp_mgmt_sdu *) msg;
-		event = new ReadMgmtSDUResponseEvent(0, sp_msg->sdu->data,
-						     sp_msg->sdu->size, sp_msg->port_id, 0);
+		event = new ReadMgmtSDUResponseEvent(0, sp_msg->sdu,
+						     sp_msg->port_id, 0);
 		break;
 	}
 	case RINA_C_IPCM_CREATE_IPCP_RESPONSE: {

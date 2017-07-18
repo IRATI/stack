@@ -70,7 +70,7 @@ struct uint_range {
 typedef char string_t;
 
 struct buffer {
-        char * data;
+        unsigned char * data;
         uint32_t size;
 };
 

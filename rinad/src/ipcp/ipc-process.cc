@@ -549,7 +549,7 @@ void LazyIPCProcessImpl::ipcp_write_mgmt_sdu_response_event_handler(const rina::
 	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
 }
 
-void LazyIPCProcessImpl::ipcp_read_mgmt_sdu_notif_event_handler(const rina::ReadMgmtSDUResponseEvent& event)
+void LazyIPCProcessImpl::ipcp_read_mgmt_sdu_notif_event_handler(rina::ReadMgmtSDUResponseEvent& event)
 {
 	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
 }
