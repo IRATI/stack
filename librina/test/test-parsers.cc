@@ -159,11 +159,9 @@ void populate_qos_cube(QoSCube & qos_cube)
 void populate_dif_config(DIFConfiguration & dif_config)
 {
 	PolicyParameter param;
-	QoSCube * qos = new QoSCube();
 
 	param.name_ = DEFAULT_POLICY_NAME;
 	param.value_ = DEFAULT_POLICY_VERSION;
-	//populate_qos_cube(*qos);
 
 	dif_config.address_ = 24;
 	dif_config.efcp_configuration_.data_transfer_constants_.address_length_ = 2;
@@ -185,7 +183,6 @@ void populate_dif_config(DIFConfiguration & dif_config)
 	dif_config.efcp_configuration_.data_transfer_constants_.sequence_number_length_ = 25;
 	dif_config.efcp_configuration_.unknown_flowpolicy_.name_ = DEFAULT_POLICY_NAME;
 	dif_config.efcp_configuration_.unknown_flowpolicy_.version_ = DEFAULT_POLICY_VERSION;
-	dif_config.efcp_configuration_.qos_cubes_.push_back(qos);
 	dif_config.et_configuration_.policy_set_.name_ = DEFAULT_POLICY_NAME;
 	dif_config.et_configuration_.policy_set_.version_ = DEFAULT_POLICY_NAME;
 	dif_config.et_configuration_.policy_set_.parameters_.push_back(param);
@@ -1798,6 +1795,7 @@ int test_irati_kmsg_multi_msg(irati_msg_t msg_t)
 	msg->port_id = 25;
 	msg->cep_id = 13;
 	msg->result = 2;
+	msg->event_id = 13;
 
 	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
 			     	     	   (irati_msg_base *) msg);
@@ -1839,6 +1837,10 @@ int test_irati_kmsg_multi_msg(irati_msg_t msg_t)
 		ret = -1;
 	} else if (msg->result != resp->result) {
 		std::cout << "Result on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (msg->event_id != resp->event_id) {
+		std::cout << "Event id on original and recovered messages"
 			   << " are different\n";
 		ret = -1;
 	} else {
@@ -3268,6 +3270,36 @@ int main()
 	result = test_irati_kmsg_ipcm_query_rib_resp();
 	if (result < 0) return result;
 
+	result = test_irati_kmsg_multi_msg(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT);
+	if (result < 0) return result;
+
+	result = test_irati_kmsg_multi_msg(RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST);
+	if (result < 0) return result;
+
+	result = test_irati_kmsg_multi_msg(RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION);
+	if (result < 0) return result;
+
+	result = test_irati_kmsg_multi_msg(RINA_C_IPCP_CONN_UPDATE_RESULT);
+	if (result < 0) return result;
+
+	result = test_irati_kmsg_multi_msg(RINA_C_IPCP_CONN_DESTROY_REQUEST);
+	if (result < 0) return result;
+
+	result = test_irati_kmsg_multi_msg(RINA_C_IPCP_CONN_DESTROY_RESULT);
+	if (result < 0) return result;
+
+	result = test_irati_kmsg_multi_msg(RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE);
+	if (result < 0) return result;
+
+	result = test_irati_kmsg_multi_msg(RINA_C_IPCP_ALLOCATE_PORT_RESPONSE);
+	if (result < 0) return result;
+
+	result = test_irati_kmsg_multi_msg(RINA_C_IPCP_DEALLOCATE_PORT_REQUEST);
+	if (result < 0) return result;
+
+	result = test_irati_kmsg_multi_msg(RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE);
+	if (result < 0) return result;
+
 	result = test_irati_msg_base(RINA_C_IPCM_FINALIZE_REQUEST);
 	if (result < 0) return result;
 
@@ -3314,36 +3346,6 @@ int main()
 	if (result < 0) return result;
 
 	result = test_irati_kmsg_ipcp_allocate_port();
-	if (result < 0) return result;
-
-	result = test_irati_kmsg_multi_msg(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT);
-	if (result < 0) return result;
-
-	result = test_irati_kmsg_multi_msg(RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST);
-	if (result < 0) return result;
-
-	result = test_irati_kmsg_multi_msg(RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION);
-	if (result < 0) return result;
-
-	result = test_irati_kmsg_multi_msg(RINA_C_IPCP_CONN_UPDATE_RESULT);
-	if (result < 0) return result;
-
-	result = test_irati_kmsg_multi_msg(RINA_C_IPCP_CONN_DESTROY_REQUEST);
-	if (result < 0) return result;
-
-	result = test_irati_kmsg_multi_msg(RINA_C_IPCP_CONN_DESTROY_RESULT);
-	if (result < 0) return result;
-
-	result = test_irati_kmsg_multi_msg(RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE);
-	if (result < 0) return result;
-
-	result = test_irati_kmsg_multi_msg(RINA_C_IPCP_ALLOCATE_PORT_RESPONSE);
-	if (result < 0) return result;
-
-	result = test_irati_kmsg_multi_msg(RINA_C_IPCP_DEALLOCATE_PORT_REQUEST);
-	if (result < 0) return result;
-
-	result = test_irati_kmsg_multi_msg(RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE);
 	if (result < 0) return result;
 
 	result = test_irati_kmsg_ipcm_create_ipcp();

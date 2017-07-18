@@ -2062,7 +2062,7 @@ void IPCManager_::io_loop()
 
     LOG_DBG("Starting main I/O loop...");
 
-    while (!req_to_stop)
+    while (true)
     {
         event = rina::ipcEventProducer->eventWait();
         if (!event) {
