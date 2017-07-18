@@ -666,6 +666,7 @@ unsigned int IPCManager::requestFlowDeallocation(int portId)
         msg = new irati_msg_app_dealloc_flow();
         msg->msg_type = RINA_C_APP_DEALLOCATE_FLOW_REQUEST;
         msg->port_id = portId;
+        msg->name = flow->localAppName.to_c_name();
 
         ret = irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true);
         seq_num = msg->event_id;

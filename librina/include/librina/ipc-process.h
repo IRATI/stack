@@ -1028,15 +1028,13 @@ public:
 class ReadMgmtSDUResponseEvent: public IPCEvent {
 public:
 	ReadMgmtSDUResponseEvent(int res,
-				 void * sdu,
-				 int size,
+				 struct buffer * buf,
 				 unsigned int port_id,
 				 unsigned int sequenceNumber);
 
         // Result of the operation, 0 success
         int result;
-        void * sdu;
-        int size;
+        rina::ser_obj_t msg;
         unsigned int port_id;
 };
 

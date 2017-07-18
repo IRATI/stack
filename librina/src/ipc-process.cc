@@ -289,17 +289,19 @@ WriteMgmtSDUResponseEvent::WriteMgmtSDUResponseEvent(int res,
 }
 
 ReadMgmtSDUResponseEvent::ReadMgmtSDUResponseEvent(int res,
-			 	 	 	   void * data,
-						   int s,
+			 	 	 	   struct buffer * buf,
 						   unsigned int pid,
 						   unsigned int sequenceNumber):
 		IPCEvent(IPC_PROCESS_READ_MGMT_SDU_NOTIF,
 			 sequenceNumber)
 {
 	result = res;
-	sdu = data;
-	size = s;
 	port_id = pid;
+	if (buf) {
+		msg.size_ = buf->size;
+		msg.message_ = new unsigned char[msg.size_];
+		memcpy(msg.message_, buf->data, msg.size_);
+	}
 }
 
 /* CLASS EXTENDED IPC MANAGER */
@@ -742,7 +744,7 @@ void ExtendedIPCManager::send_fwd_msg(irati_msg_t msg_t, unsigned int sequenceNu
         msg->dest_port = ipcManagerPort;
         msg->cdap_msg = new buffer();
         msg->cdap_msg->size = sermsg.size_;
-        msg->cdap_msg->data = new char[sermsg.size_];
+        msg->cdap_msg->data = new unsigned char[sermsg.size_];
         memcpy(msg->cdap_msg->data, sermsg.message_, sermsg.size_);
 
         if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
@@ -1561,7 +1563,7 @@ unsigned int KernelIPCProcess::writeMgmgtSDUToPortId(void * sdu,
         msg->msg_type = RINA_C_IPCP_MANAGEMENT_SDU_WRITE_REQUEST;
         msg->sdu = new buffer();
         msg->sdu->size = size;
-        msg->sdu->data = new char[size];
+        msg->sdu->data = new unsigned char[size];
         memcpy(msg->sdu->data, sdu, size);
         msg->port_id = portId;
         msg->src_ipcp_id = ipcProcessId;

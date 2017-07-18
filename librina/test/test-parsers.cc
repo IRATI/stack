@@ -163,7 +163,7 @@ void populate_dif_config(DIFConfiguration & dif_config)
 
 	param.name_ = DEFAULT_POLICY_NAME;
 	param.value_ = DEFAULT_POLICY_VERSION;
-	populate_qos_cube(*qos);
+	//populate_qos_cube(*qos);
 
 	dif_config.address_ = 24;
 	dif_config.efcp_configuration_.data_transfer_constants_.address_length_ = 2;
@@ -1852,6 +1852,21 @@ int test_irati_kmsg_multi_msg(irati_msg_t msg_t)
 	return ret;
 }
 
+int compare_byte_arrays(unsigned char * a, unsigned char * b, uint32_t size)
+{
+	unsigned int i;
+
+	for (i = 0; i< size; i++) {
+		std::cout << "Comparing a[" << i << "] and b["
+			  << i << "]: " << a[i]
+			  << "; " << b[i] << std::endl;
+		if (a[i] != b[i])
+			return -1;
+	}
+
+	return 0;
+}
+
 int test_irati_kmsg_ipcp_mgmt_sdu(irati_msg_t msg_t)
 {
 	struct irati_kmsg_ipcp_mgmt_sdu * msg, * resp;
@@ -1867,8 +1882,26 @@ int test_irati_kmsg_ipcp_mgmt_sdu(irati_msg_t msg_t)
 	msg->port_id = 25;
 	msg->sdu = new buffer();
 	msg->sdu->size = 19;
-	msg->sdu->data = new char[19];
-	memset(msg->sdu->data, 34, 19);
+	msg->sdu->data = new unsigned char[19];
+	msg->sdu->data[0] = 12;
+	msg->sdu->data[1] = 1;
+	msg->sdu->data[2] = 2;
+	msg->sdu->data[3] = 34;
+	msg->sdu->data[4] = 5;
+	msg->sdu->data[5] = 87;
+	msg->sdu->data[6] = 32;
+	msg->sdu->data[7] = 98;
+	msg->sdu->data[8] = 6;
+	msg->sdu->data[9] = 99;
+	msg->sdu->data[10] = 32;
+	msg->sdu->data[11] = 65;
+	msg->sdu->data[12] = 23;
+	msg->sdu->data[13] = 71;
+	msg->sdu->data[14] = 98;
+	msg->sdu->data[15] = 15;
+	msg->sdu->data[16] = 11;
+	msg->sdu->data[17] = 22;
+	msg->sdu->data[18] = 55;
 
 	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
 			     	     	   (irati_msg_base *) msg);
@@ -1907,6 +1940,10 @@ int test_irati_kmsg_ipcp_mgmt_sdu(irati_msg_t msg_t)
 	} else if (msg->sdu->size != resp->sdu->size) {
 		std::cout << "SDU size on original and recovered messages"
 			   << " are different\n";
+		ret = -1;
+	} else if (compare_byte_arrays(msg->sdu->data, resp->sdu->data, msg->sdu->size)) {
+		std::cout << "Data on the byte arrays"
+			   << " is different\n";
 		ret = -1;
 	} else {
 		std::cout << "Test ok!" << std::endl;
@@ -3008,7 +3045,7 @@ int test_irati_msg_ipcm_fwd_cdap_msg(irati_msg_t msg_t)
 	msg->result = 25;
 	msg->cdap_msg = new buffer();
 	msg->cdap_msg->size = 19;
-	msg->cdap_msg->data = new char[19];
+	msg->cdap_msg->data = new unsigned char[19];
 	memset(msg->cdap_msg->data, 34, 19);
 
 	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
@@ -3151,6 +3188,12 @@ int main()
 	std::cout << "TESTING LIBRINA-PARSERS\n";
 
 	result = test_irati_kmsg_ipcm_assign_to_dif();
+	if (result < 0) return result;
+
+	result = test_irati_kmsg_ipcp_mgmt_sdu(RINA_C_IPCP_MANAGEMENT_SDU_WRITE_REQUEST);
+	if (result < 0) return result;
+
+	result = test_irati_kmsg_ipcp_mgmt_sdu(RINA_C_IPCP_MANAGEMENT_SDU_READ_NOTIF);
 	if (result < 0) return result;
 
 	result = test_irati_msg_base_resp(RINA_C_IPCM_PLUGIN_LOAD_RESPONSE);
@@ -3301,12 +3344,6 @@ int main()
 	if (result < 0) return result;
 
 	result = test_irati_kmsg_multi_msg(RINA_C_IPCP_DEALLOCATE_PORT_RESPONSE);
-	if (result < 0) return result;
-
-	result = test_irati_kmsg_ipcp_mgmt_sdu(RINA_C_IPCP_MANAGEMENT_SDU_WRITE_REQUEST);
-	if (result < 0) return result;
-
-	result = test_irati_kmsg_ipcp_mgmt_sdu(RINA_C_IPCP_MANAGEMENT_SDU_READ_NOTIF);
 	if (result < 0) return result;
 
 	result = test_irati_kmsg_ipcm_create_ipcp();

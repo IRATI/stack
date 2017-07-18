@@ -735,22 +735,18 @@ void StopInternalFlowReaderTimerTask::run()
 	rib_daemon->__stop_internal_flow_sdu_reader(port_id);
 }
 
-void IPCPRIBDaemonImpl::processReadManagementSDUEvent(const rina::ReadMgmtSDUResponseEvent& event)
+void IPCPRIBDaemonImpl::processReadManagementSDUEvent(rina::ReadMgmtSDUResponseEvent& event)
 {
-	rina::ser_obj_t rcv_message;
 	rina::cdap_rib::con_handle_t con_handle;
 
-	rcv_message.size_ = event.size;
-	rcv_message.message_ = (unsigned char*) event.sdu;
-
-	LOG_IPCP_DBG("Got message of %d bytes, handling to CDAP Provider", rcv_message.size_);
+	LOG_IPCP_DBG("Got message of %d bytes, handling to CDAP Provider", event.msg.size_);
 
 	//Instruct CDAP provider to process the messages
 	try {
-		rina::cdap::getProvider()->process_message(rcv_message,
+		rina::cdap::getProvider()->process_message(event.msg,
 							   event.port_id);
 	} catch(rina::Exception &e) {
-		LOG_IPCP_WARN("Error processing CDAP message on port-id %d: %e",
+		LOG_IPCP_WARN("Error processing CDAP message on port-id %d: %s",
 			      event.port_id, e.what());
 		if (std::string(e.what()).find("M_CONNECT received on an") != std::string::npos) {
 			LOG_IPCP_WARN("Closing CDAP session on port-id %u", event.port_id);

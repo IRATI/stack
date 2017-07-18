@@ -173,15 +173,15 @@ void serialize_buffer(void **pptr, const struct buffer * b)
 		return;
 	}
 
-	serialize_obj(*pptr, size_t, b->size);
+	serialize_obj(*pptr, uint32_t, b->size);
+
 	memcpy(*pptr, b->data, b->size);
 	*pptr += b->size;
 }
 
 int deserialize_buffer(const void **pptr, struct buffer **b)
 {
-	size_t blen;
-	char * p;
+	uint32_t blen;
 
 	deserialize_obj(*pptr, uint32_t, &blen);
 
@@ -192,8 +192,7 @@ int deserialize_buffer(const void **pptr, struct buffer **b)
 		}
 
 		(*b)->size = blen;
-		p = COMMON_ALLOC(blen, 1);
-		(*b)->data = p;
+		(*b)->data = COMMON_ALLOC(blen, 1);
 		if (!(*b)->data) {
 			return -1;
 		}
@@ -4653,6 +4652,7 @@ void * deserialize_irati_msg(struct irati_msg_layout *numtables,
 	name = (struct name **)(msgbuf + copylen);
 	for (i = 0; i < numtables[bmsg->msg_type].names; i++, name++) {
 		if (deserialize_rina_name(&desptr, name)) {
+			LOG_ERR("Problems deserialiazing name");
 			irati_msg_free(numtables, num_entries,
 					(struct irati_msg_base *) msgbuf);
 			return 0;
@@ -4662,6 +4662,7 @@ void * deserialize_irati_msg(struct irati_msg_layout *numtables,
 	str = (string_t **) name;
 	for (i = 0; i < numtables[bmsg->msg_type].strings; i++, str++) {
 		if (deserialize_string(&desptr, str)) {
+			LOG_ERR("Problems deserialiazing string");
 			irati_msg_free(numtables, num_entries,
 					(struct irati_msg_base *) msgbuf);
 			return 0;
@@ -4671,6 +4672,7 @@ void * deserialize_irati_msg(struct irati_msg_layout *numtables,
 	fspec = (struct flow_spec **) str;
 	for (i = 0; i < numtables[bmsg->msg_type].flow_specs; i++, fspec++) {
 		if (deserialize_flow_spec(&desptr, fspec)) {
+			LOG_ERR("Problems deserialiazing flow spec");
 			irati_msg_free(numtables, num_entries,
 					(struct irati_msg_base *) msgbuf);
 			return 0;
@@ -4680,6 +4682,7 @@ void * deserialize_irati_msg(struct irati_msg_layout *numtables,
 	dif_config = (struct dif_config **) fspec;
 	for (i = 0; i < numtables[bmsg->msg_type].dif_configs; i++, dif_config++) {
 		if (deserialize_dif_config(&desptr, dif_config)) {
+			LOG_ERR("Problems deserialiazing DIF config");
 			irati_msg_free(numtables, num_entries,
 					(struct irati_msg_base *) msgbuf);
 			return 0;
@@ -4689,6 +4692,7 @@ void * deserialize_irati_msg(struct irati_msg_layout *numtables,
 	dtp_config = (struct dtp_config **) dif_config;
 	for (i = 0; i < numtables[bmsg->msg_type].dtp_configs; i++, dtp_config++) {
 		if (deserialize_dtp_config(&desptr, dtp_config)) {
+			LOG_ERR("Problems deserialiazing DTP config");
 			irati_msg_free(numtables, num_entries,
 					(struct irati_msg_base *) msgbuf);
 			return 0;
@@ -4698,6 +4702,7 @@ void * deserialize_irati_msg(struct irati_msg_layout *numtables,
 	dtcp_config = (struct dtcp_config **) dtp_config;
 	for (i = 0; i < numtables[bmsg->msg_type].dtcp_configs; i++, dtcp_config++) {
 		if (deserialize_dtcp_config(&desptr, dtcp_config)) {
+			LOG_ERR("Problems deserialiazing DTCP config");
 			irati_msg_free(numtables, num_entries,
 					(struct irati_msg_base *) msgbuf);
 			return 0;
@@ -4707,6 +4712,7 @@ void * deserialize_irati_msg(struct irati_msg_layout *numtables,
 	qrr = (struct query_rib_resp **) dtcp_config;
 	for (i = 0; i < numtables[bmsg->msg_type].query_rib_resps; i++, qrr++) {
 		if (deserialize_query_rib_resp(&desptr, qrr)) {
+			LOG_ERR("Problems deserialiazing query RIB response");
 			irati_msg_free(numtables, num_entries,
 					(struct irati_msg_base *) msgbuf);
 			return 0;
@@ -4716,6 +4722,7 @@ void * deserialize_irati_msg(struct irati_msg_layout *numtables,
 	pel = (struct pff_entry_list **) qrr;
 	for (i = 0; i < numtables[bmsg->msg_type].pff_entry_lists; i++, pel++) {
 		if (deserialize_pff_entry_list(&desptr, pel)) {
+			LOG_ERR("Problems deserialiazing PFF entry list");
 			irati_msg_free(numtables, num_entries,
 					(struct irati_msg_base *) msgbuf);
 			return 0;
@@ -4725,6 +4732,7 @@ void * deserialize_irati_msg(struct irati_msg_layout *numtables,
 	scs = (struct sdup_crypto_state **) pel;
 	for (i = 0; i < numtables[bmsg->msg_type].sdup_crypto_states; i++, scs++) {
 		if (deserialize_sdup_crypto_state(&desptr, scs)) {
+			LOG_ERR("Problems deserialiazing sdup crypto state");
 			irati_msg_free(numtables, num_entries,
 					(struct irati_msg_base *) msgbuf);
 			return 0;
@@ -4734,6 +4742,7 @@ void * deserialize_irati_msg(struct irati_msg_layout *numtables,
 	gdp = (struct get_dif_prop_resp **) scs;
 	for (i = 0; i < numtables[bmsg->msg_type].dif_properties; i++, gdp++) {
 		if (deserialize_get_dif_prop_resp(&desptr, gdp)) {
+			LOG_ERR("Problems deserialiazing get DIF properties response");
 			irati_msg_free(numtables, num_entries,
 					(struct irati_msg_base *) msgbuf);
 			return 0;
@@ -4743,6 +4752,7 @@ void * deserialize_irati_msg(struct irati_msg_layout *numtables,
 	inl = (struct ipcp_neigh_list **) gdp;
 	for (i = 0; i < numtables[bmsg->msg_type].ipcp_neigh_lists; i++, inl++) {
 		if (deserialize_ipcp_neigh_list(&desptr, inl)) {
+			LOG_ERR("Problems deserialiazing IPCP neighbor list");
 			irati_msg_free(numtables, num_entries,
 					(struct irati_msg_base *) msgbuf);
 			return 0;
@@ -4752,6 +4762,7 @@ void * deserialize_irati_msg(struct irati_msg_layout *numtables,
 	mre = (struct media_report **) inl;
 	for (i = 0; i < numtables[bmsg->msg_type].media_reports; i++, mre++) {
 		if (deserialize_media_report(&desptr, mre)) {
+			LOG_ERR("Problems deserialiazing media report");
 			irati_msg_free(numtables, num_entries,
 				       (struct irati_msg_base *) msgbuf);
 			return 0;
@@ -4761,6 +4772,7 @@ void * deserialize_irati_msg(struct irati_msg_layout *numtables,
 	bf = (struct buffer **) mre;
 	for (i = 0; i < numtables[bmsg->msg_type].buffers; i++, bf++) {
 		if (deserialize_buffer(&desptr, bf)) {
+			LOG_ERR("Problems deserialiazing buffer");
 			irati_msg_free(numtables, num_entries,
 				       (struct irati_msg_base *) msgbuf);
 			return 0;
@@ -4768,6 +4780,7 @@ void * deserialize_irati_msg(struct irati_msg_layout *numtables,
 	}
 
 	if ((desptr - serbuf) != serbuf_len) {
+		LOG_ERR("Some bytes are still left to be parsed");
 		irati_msg_free(numtables, num_entries,
 			       (struct irati_msg_base *) msgbuf);
 		return 0;

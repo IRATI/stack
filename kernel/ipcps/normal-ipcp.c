@@ -808,20 +808,14 @@ static int mgmt_sdu_notif_worker(void * o)
 	msg.src_ipcp_id = data->ipcp_id;
 	msg.sdu = buffer_create(sdu_len(data->sdu));
 	if (!msg.sdu) {
-		LOG_ERR("Problems createing buffer");
+		LOG_ERR("Problems creating buffer");
 		sdu_destroy(data->sdu);
 		rkfree(data);
 		return 0;
 	}
 
 	sdu_data = sdu_buffer(data->sdu);
-	if (memcpy(msg.sdu->data, sdu_data, msg.sdu->size)) {
-		LOG_ERR("Problems copying data to buffer");
-		buffer_destroy(msg.sdu);
-		sdu_destroy(data->sdu);
-		rkfree(data);
-		return 0;
-	}
+	memcpy(msg.sdu->data, sdu_data, msg.sdu->size);
 
 	if (irati_ctrl_dev_snd_resp_msg(get_ctrl_dev_from_port_id(data->irati_port_id),
 					(struct irati_msg_base *) &msg)) {
