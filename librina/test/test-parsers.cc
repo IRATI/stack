@@ -582,8 +582,8 @@ int test_irati_kmsg_ipcm_allocate_flow(irati_msg_t msg_t)
 	msg = new irati_kmsg_ipcm_allocate_flow();
 	msg->msg_type = msg_t;
 	msg->port_id = 25;
-	msg->source = s_before.to_c_name();
-	msg->dest = d_before.to_c_name();
+	msg->local = s_before.to_c_name();
+	msg->remote = d_before.to_c_name();
 	msg->fspec = new flow_spec();
 	msg->dif_name = dif_before.to_c_name();
 
@@ -617,8 +617,8 @@ int test_irati_kmsg_ipcm_allocate_flow(irati_msg_t msg_t)
 		return -1;
 	}
 
-	s_after = ApplicationProcessNamingInformation(resp->source);
-	d_after = ApplicationProcessNamingInformation(resp->dest);
+	s_after = ApplicationProcessNamingInformation(resp->local);
+	d_after = ApplicationProcessNamingInformation(resp->remote);
 	dif_after = ApplicationProcessNamingInformation(resp->dif_name);
 
 	if (msg->port_id != resp->port_id) {

@@ -26,10 +26,10 @@ namespace configs {
 //	CLASS Flow
 Flow::Flow()
 {
-        source_port_id = 0;
-        destination_port_id = 0;
-        source_address = 0;
-        destination_address = 0;
+        local_port_id = 0;
+        remote_port_id = 0;
+        local_address = 0;
+        remote_address = 0;
         current_connection_index = 0;
         max_create_flow_retries = 0;
         create_flow_retries = 0;
@@ -42,13 +42,13 @@ Flow::Flow()
 
 Flow::Flow(const Flow& flow)
 {
-        source_naming_info = flow.source_naming_info;
-        destination_naming_info = flow.destination_naming_info;
+        local_naming_info = flow.local_naming_info;
+        remote_naming_info = flow.remote_naming_info;
         flow_specification = flow.flow_specification;
-        source_port_id = flow.source_port_id;
-        destination_port_id = flow.destination_port_id;
-        source_address = flow.source_address;
-        destination_address = flow.destination_address;
+        local_port_id = flow.local_port_id;
+        remote_port_id = flow.remote_port_id;
+        local_address = flow.local_address;
+        remote_address = flow.remote_address;
         current_connection_index = flow.current_connection_index;
         max_create_flow_retries = flow.max_create_flow_retries;
         create_flow_retries = flow.create_flow_retries;
@@ -112,15 +112,15 @@ std::string Flow::toString()
         ss << "* Max create flow retries: " << max_create_flow_retries
            << std::endl;
         ss << "* Hop count: " << hop_count << std::endl;
-        ss << "* Source AP Naming Info: " << source_naming_info.toString()
+        ss << "* Local AP Naming Info: " << local_naming_info.toString()
            << std::endl;
         ;
-        ss << "* Source address: " << source_address << std::endl;
-        ss << "* Source port id: " << source_port_id << std::endl;
-        ss << "* Destination AP Naming Info: "
-           << destination_naming_info.toString() << std::endl;
-        ss << "* Destination addres: " << destination_address << std::endl;
-        ss << "* Destination port id: " << destination_port_id << std::endl;
+        ss << "* Local address: " << local_address << std::endl;
+        ss << "* Local port id: " << local_port_id << std::endl;
+        ss << "* Remote AP Naming Info: "
+           << remote_naming_info.toString() << std::endl;
+        ss << "* Remote address: " << remote_address << std::endl;
+        ss << "* Remote port id: " << remote_port_id << std::endl;
         if (connections.size() > 0)
         {
                 ss << "* Connection ids of the connection supporting this flow: +\n";
@@ -142,7 +142,7 @@ std::string Flow::toString()
 const std::string Flow::getKey() const
 {
         std::stringstream ss;
-        ss << source_address << "-" << source_port_id;
+        ss << local_address << "-" << local_port_id;
         return ss.str();
 }
 
@@ -153,8 +153,8 @@ rina::FlowInformation Flow::to_flow_information(const std::string dif_name,
 
 	flow_info.difName.processName = dif_name;
 	flow_info.flowSpecification = flow_specification;
-	flow_info.localAppName = source_naming_info;
-	flow_info.remoteAppName = destination_naming_info;
+	flow_info.localAppName = local_naming_info;
+	flow_info.remoteAppName = remote_naming_info;
 	flow_info.portId = port_id;
 
 	return flow_info;

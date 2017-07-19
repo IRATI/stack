@@ -404,8 +404,8 @@ void IPCProcessProxy::allocateFlow(const FlowRequestEvent& flowRequest,
 
         msg = new irati_kmsg_ipcm_allocate_flow();
         msg->msg_type = RINA_C_IPCM_ALLOCATE_FLOW_REQUEST;
-        msg->source = flowRequest.localApplicationName.to_c_name();
-        msg->dest = flowRequest.remoteApplicationName.to_c_name();
+        msg->local = flowRequest.localApplicationName.to_c_name();
+        msg->remote = flowRequest.remoteApplicationName.to_c_name();
         msg->dif_name = flowRequest.DIFName.to_c_name();
         msg->src_ipcp_id = flowRequest.flowRequestorIpcProcessId;
         msg->fspec = flowRequest.flowSpecification.to_c_flowspec();
@@ -895,8 +895,8 @@ void ApplicationManager::flowRequestArrived(const ApplicationProcessNamingInform
         msg = new irati_kmsg_ipcm_allocate_flow();
         msg->msg_type = RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED;
         msg->port_id = portId;
-        msg->source = localAppName.to_c_name();
-        msg->dest = remoteAppName.to_c_name();
+        msg->local = localAppName.to_c_name();
+        msg->remote = remoteAppName.to_c_name();
         msg->fspec = flowSpec.to_c_flowspec();
         msg->dif_name = difName.to_c_name();
         msg->event_id = opaque;

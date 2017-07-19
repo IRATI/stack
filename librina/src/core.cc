@@ -124,11 +124,11 @@ void CtrlPortIdMap::add_app_name_to_ctrl_port_map(const ApplicationProcessNaming
 
 struct irati_ep * CtrlPortIdMap::get_ctrl_port_from_app_name(const ApplicationProcessNamingInformation& app_name)
 {
-	std::map<std::string, struct irati_ep *>::iterator it ;
+	std::map<std::string, struct irati_ep *>::iterator it;
 
 	it = app_name_map.find(app_name.getProcessNamePlusInstance());
 	if (it == app_name_map.end()) {
-		LOG_ERR("Could not find the netlink endpoint of Application %s",
+		LOG_ERR("Could not find the irati endpoint of Application %s",
 			 app_name.toString().c_str());
 		return 0;
 	};
@@ -154,7 +154,7 @@ int CtrlPortIdMap::update_msg_or_pid_map(struct irati_msg_base * msg, bool send)
 			struct irati_kmsg_ipcm_allocate_flow * sp_msg =
 					(struct irati_kmsg_ipcm_allocate_flow *) msg;
 
-			app_name = ApplicationProcessNamingInformation(sp_msg->source);
+			app_name = ApplicationProcessNamingInformation(sp_msg->local);
 			add_app_name_to_ctrl_port_map(app_name, sp_msg->src_port,
 						      sp_msg->src_ipcp_id);
 		}
@@ -164,7 +164,7 @@ int CtrlPortIdMap::update_msg_or_pid_map(struct irati_msg_base * msg, bool send)
 		struct irati_kmsg_ipcm_allocate_flow * sp_msg =
 				(struct irati_kmsg_ipcm_allocate_flow *) msg;
 		if (send) {
-			app_name = ApplicationProcessNamingInformation(sp_msg->source);
+			app_name = ApplicationProcessNamingInformation(sp_msg->local);
 			irati_ep = get_ctrl_port_from_app_name(app_name);
 			if (!irati_ep) {
 				LOG_ERR("Could not locate IRATI ep for app_name %s",
@@ -180,7 +180,7 @@ int CtrlPortIdMap::update_msg_or_pid_map(struct irati_msg_base * msg, bool send)
 		struct irati_kmsg_ipcm_allocate_flow * sp_msg =
 				(struct irati_kmsg_ipcm_allocate_flow *) msg;
 		if (send) {
-			app_name = ApplicationProcessNamingInformation(sp_msg->dest);
+			app_name = ApplicationProcessNamingInformation(sp_msg->local);
 			irati_ep = get_ctrl_port_from_app_name(app_name);
 			if (!irati_ep) {
 				LOG_ERR("Could not locate IRATI ep for app_name %s",
@@ -212,6 +212,7 @@ int CtrlPortIdMap::update_msg_or_pid_map(struct irati_msg_base * msg, bool send)
 	case RINA_C_APP_REGISTER_APPLICATION_REQUEST: {
 		struct irati_msg_app_reg_app * sp_msg =
 				(struct irati_msg_app_reg_app *) msg;
+
 		if (send) {
 			msg->dest_port = get_ipcm_ctrl_port();
 		} else {
@@ -496,20 +497,24 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 							    sp_msg->is_registered, msg->event_id);
 		break;
 	}
-	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED:
+	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED:{
+		struct irati_kmsg_ipcm_allocate_flow * sp_msg =
+				(struct irati_kmsg_ipcm_allocate_flow *) msg;
+
+		event = new FlowRequestEvent(sp_msg->port_id, FlowSpecification(sp_msg->fspec), false,
+			                     ApplicationProcessNamingInformation(sp_msg->local),
+					     ApplicationProcessNamingInformation(sp_msg->remote),
+					     ApplicationProcessNamingInformation(sp_msg->dif_name),
+					     sp_msg->src_ipcp_id, sp_msg->event_id);
+		break;
+	}
 	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST: {
 		struct irati_kmsg_ipcm_allocate_flow * sp_msg =
 				(struct irati_kmsg_ipcm_allocate_flow *) msg;
-		bool local = true;
-		int port_id = -1;
-		if (msg->msg_type == RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED) {
-			local = false;
-			port_id = sp_msg->port_id;
-		}
 
-		event = new FlowRequestEvent(port_id, FlowSpecification(sp_msg->fspec), local,
-			                     ApplicationProcessNamingInformation(sp_msg->source),
-					     ApplicationProcessNamingInformation(sp_msg->dest),
+		event = new FlowRequestEvent(-1, FlowSpecification(sp_msg->fspec), true,
+			                     ApplicationProcessNamingInformation(sp_msg->local),
+					     ApplicationProcessNamingInformation(sp_msg->remote),
 					     ApplicationProcessNamingInformation(sp_msg->dif_name),
 					     sp_msg->src_ipcp_id, sp_msg->event_id);
 		break;
@@ -780,8 +785,8 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 		struct irati_kmsg_ipcm_allocate_flow * sp_msg =
 				(struct irati_kmsg_ipcm_allocate_flow *) msg;
 		event = new FlowRequestEvent(FlowSpecification(sp_msg->fspec), true,
-					     ApplicationProcessNamingInformation(sp_msg->source),
-					     ApplicationProcessNamingInformation(sp_msg->dest),
+					     ApplicationProcessNamingInformation(sp_msg->local),
+					     ApplicationProcessNamingInformation(sp_msg->remote),
 					     sp_msg->src_ipcp_id, sp_msg->event_id);
 		((FlowRequestEvent *) event)->DIFName = ApplicationProcessNamingInformation(sp_msg->dif_name);
 		break;
@@ -798,8 +803,8 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 		struct irati_kmsg_ipcm_allocate_flow * sp_msg =
 				(struct irati_kmsg_ipcm_allocate_flow *) msg;
 		event = new FlowRequestEvent(sp_msg->port_id, FlowSpecification(sp_msg->fspec), false,
-					     ApplicationProcessNamingInformation(sp_msg->dest),
-					     ApplicationProcessNamingInformation(sp_msg->source),
+					     ApplicationProcessNamingInformation(sp_msg->local),
+					     ApplicationProcessNamingInformation(sp_msg->remote),
 					     ApplicationProcessNamingInformation(sp_msg->dif_name),
 					     sp_msg->src_ipcp_id, sp_msg->event_id);
 		break;
