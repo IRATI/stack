@@ -199,8 +199,8 @@ static int notify_ipcp_allocate_flow_request(struct ctrldev_priv *ctrl_dev,
 
         if (ipc_process->ops->flow_allocate_request(ipc_process->data,
                                                     user_ipcp,
-                                                    msg->source,
-                                                    msg->dest,
+                                                    msg->local,
+                                                    msg->remote,
                                                     msg->fspec,
                                                     pid)) {
                 LOG_ERR("Failed allocating flow request");
@@ -2153,8 +2153,8 @@ int kipcm_flow_arrived(struct kipcm *         kipcm,
                        ipc_process_id_t       ipc_id,
                        port_id_t              port_id,
                        struct name *          dif_name,
-                       struct name *          source,
-                       struct name *          dest,
+                       struct name *          local,
+                       struct name *          remote,
                        struct flow_spec *     fspec)
 {
         uint32_t           seq_num;
@@ -2180,9 +2180,9 @@ int kipcm_flow_arrived(struct kipcm *         kipcm,
 	msg.dest_ipcp_id = 0;
 	msg.event_id = seq_num;
 	msg.port_id = port_id;
-	msg.dest = dest;
+	msg.local = local;
 	msg.fspec = fspec;
-	msg.source = source;
+	msg.remote = remote;
 	msg.dif_name = dif_name;
 
 	if (irati_ctrl_dev_snd_resp_msg(get_ipcm_ctrl_dev(),
@@ -2374,7 +2374,7 @@ port_id_t kipcm_flow_create(struct kipcm     *kipcm,
         }
 	/* creates a flow, default flow_opts */
         if (kfa_flow_create(kipcm->kfa, pid, ipc_process, ipc_id,
-								process_name)) {
+        		    process_name)) {
                 KIPCM_UNLOCK(kipcm);
                 kfa_port_id_release(kipcm->kfa, pid);
                 return port_id_bad();

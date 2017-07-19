@@ -196,8 +196,8 @@ IPCManager::internalRequestFlowAllocation(const ApplicationProcessNamingInformat
 
         msg = new irati_kmsg_ipcm_allocate_flow();
         msg->msg_type = RINA_C_APP_ALLOCATE_FLOW_REQUEST;
-        msg->source = localAppName.to_c_name();
-        msg->dest = remoteAppName.to_c_name();
+        msg->local = localAppName.to_c_name();
+        msg->remote = remoteAppName.to_c_name();
         msg->src_ipcp_id = sourceIPCProcessId;
         msg->fspec = flowSpec.to_c_flowspec();
 
@@ -239,8 +239,8 @@ unsigned int IPCManager::internalRequestFlowAllocationInDIF(
 
         msg = new irati_kmsg_ipcm_allocate_flow();
         msg->msg_type = RINA_C_APP_ALLOCATE_FLOW_REQUEST;
-        msg->source = localAppName.to_c_name();
-        msg->dest = remoteAppName.to_c_name();
+        msg->local = localAppName.to_c_name();
+        msg->remote = remoteAppName.to_c_name();
         msg->dif_name = difName.to_c_name();
         msg->src_ipcp_id = sourceIPCProcessId;
         msg->fspec = flowSpec.to_c_flowspec();

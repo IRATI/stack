@@ -963,6 +963,7 @@ int kfa_flow_create(struct kfa           *instance,
 	}
 
 	ip_flow = (user_ipcp_name != NULL) &&
+		  (user_ipcp_name->entity_name != NULL) &&
 		(!strcmp(user_ipcp_name->entity_name, RINA_IP_FLOW_ENT_NAME));
 
 	flow = rkzalloc(sizeof(*flow), GFP_KERNEL);

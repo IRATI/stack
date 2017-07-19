@@ -1185,8 +1185,8 @@ static int eth_vlan_rcv_worker(void * o)
                                data->id,
                                flow->port_id,
                                data->dif_name,
+			       data->app_name,
                                sname,
-                               data->app_name,
                                data->fspec)) {
                 LOG_ERR("Couldn't tell the KIPCM about the flow");
                 kfa_port_id_release(data->kfa, flow->port_id);

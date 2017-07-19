@@ -355,8 +355,8 @@ struct irati_kmsg_ipcm_allocate_flow {
 	uint32_t event_id;
 
 	port_id_t	   port_id;
-        struct name      * source;
-        struct name      * dest;
+        struct name      * local;
+        struct name      * remote;
         struct name      * dif_name;
         struct flow_spec * fspec;
 } __attribute__((packed));

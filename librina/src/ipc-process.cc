@@ -555,13 +555,14 @@ ExtendedIPCManager::allocateFlowRequestArrived(const ApplicationProcessNamingInf
         struct irati_kmsg_ipcm_allocate_flow * msg;
 
         msg = new irati_kmsg_ipcm_allocate_flow();
-        msg->msg_type = RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED;
-        msg->source = localAppName.to_c_name();
-        msg->dest = remoteAppName.to_c_name();
+        msg->msg_type = RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED;
+        msg->local = localAppName.to_c_name();
+        msg->remote = remoteAppName.to_c_name();
         msg->fspec = flowSpecification.to_c_flowspec();
         msg->dif_name = currentDIFInformation.get_dif_name().to_c_name();
         msg->src_ipcp_id = ipcProcessId;
         msg->dest_port = ipcManagerPort;
+        msg->port_id = portId;
 
         if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
         	irati_ctrl_msg_free((struct irati_msg_base *) msg);
@@ -680,7 +681,6 @@ unsigned int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingIn
 #else
         struct irati_kmsg_ipcp_allocate_port * msg;
 
-        LOG_INFO("App name: %s", appName.toString().c_str());
         msg = new irati_kmsg_ipcp_allocate_port();
         msg->msg_type = RINA_C_IPCP_ALLOCATE_PORT_REQUEST;
         msg->app_name = appName.to_c_name();

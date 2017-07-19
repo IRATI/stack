@@ -1234,8 +1234,8 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                                        data->id,
                                        flow->port_id,
                                        data->dif_name,
+				       app->app_name,
                                        sname,
-                                       app->app_name,
                                        data->qos[CUBE_UNRELIABLE])) {
                         LOG_ERR("Couldn't tell the KIPCM about the flow");
                         kfa_port_id_release(data->kfa, flow->port_id);

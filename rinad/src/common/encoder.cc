@@ -952,19 +952,19 @@ void FlowEncoder::encode(const configs::Flow &obj, rina::ser_obj_t& serobj)
         // SourceNamingInfo
         gpb.set_allocated_sourcenaminginfo(
                         helpers::get_applicationProcessNamingInfo_t(
-                                        obj.source_naming_info));
+                                        obj.local_naming_info));
         // DestinationNamingInfo
         gpb.set_allocated_destinationnaminginfo(
                         helpers::get_applicationProcessNamingInfo_t(
-                                        obj.destination_naming_info));
+                                        obj.remote_naming_info));
         // sourcePortId
-        gpb.set_sourceportid(obj.source_port_id);
+        gpb.set_sourceportid(obj.local_port_id);
         //destinationPortId
-        gpb.set_destinationportid(obj.destination_port_id);
+        gpb.set_destinationportid(obj.remote_port_id);
         //sourceAddress
-        gpb.set_sourceaddress(obj.source_address);
+        gpb.set_sourceaddress(obj.local_address);
         //destinationAddress
-        gpb.set_destinationaddress(obj.destination_address);
+        gpb.set_destinationaddress(obj.remote_address);
         //connectionIds
         for (std::list<rina::Connection*>::const_iterator it = obj.connections
                         .begin(); it != obj.connections.end(); ++it)
@@ -1018,17 +1018,17 @@ void FlowEncoder::decode(const rina::ser_obj_t &serobj, configs::Flow &des_obj)
         rina::ApplicationProcessNamingInformation src_app;
         helpers::get_ApplicationProcessNamingInformation(gpb.sourcenaminginfo(),
                                                          src_app);
-        des_obj.source_naming_info = src_app;
+        des_obj.local_naming_info = src_app;
 
         rina::ApplicationProcessNamingInformation dest_app;
         helpers::get_ApplicationProcessNamingInformation(
                         gpb.destinationnaminginfo(), dest_app);
-        des_obj.destination_naming_info = dest_app;
+        des_obj.remote_naming_info = dest_app;
 
-        des_obj.source_port_id = gpb.sourceportid();
-        des_obj.destination_port_id = gpb.destinationportid();
-        des_obj.source_address = gpb.sourceaddress();
-        des_obj.destination_address = gpb.destinationaddress();
+        des_obj.local_port_id = gpb.sourceportid();
+        des_obj.remote_port_id = gpb.destinationportid();
+        des_obj.local_address = gpb.sourceaddress();
+        des_obj.remote_address = gpb.destinationaddress();
 
         rina::DTPConfig dtp_config;
         cube_helpers::get_DTPConfig(gpb.dtpconfig(), dtp_config);

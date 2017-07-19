@@ -670,8 +670,8 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
         }
 
         err = kipcm_flow_arrived(default_kipcm, priv->id, port_id,
-                                 &priv->dif_name, src_application,
-                                 dst_application, &priv->fspec);
+                                 &priv->dif_name, dst_application,
+                                 src_application, &priv->fspec);
         if (err) {
                 LOG_ERR("%s: kipcm_flow_arrived() failed", __func__);
                 goto flow_arrived;
