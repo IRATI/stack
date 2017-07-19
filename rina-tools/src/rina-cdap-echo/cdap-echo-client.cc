@@ -213,7 +213,7 @@ void Client::sendReadRMessage()
 {
     while (count_ < echo_times)
     {
-        IPCEvent* event = ipcEventProducer->eventPoll();
+        IPCEvent* event = ipcEventProducer->eventWait();
         unsigned char buffer[max_buffer_size];
         if (event)
         {

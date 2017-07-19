@@ -16,6 +16,7 @@ rina_echo_time_LDADD    = $(LIBRINA_LIBS) -lrt \
 rina_echo_time_CPPFLAGS =			\
 	$(LIBRINA_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)			\
+	-I$(top_srcdir)/../include			\
 	-I$(srcdir)/../common
 rina_echo_time_CXXFLAGS =			\
 	$(CPPFLAGS_EXTRA)

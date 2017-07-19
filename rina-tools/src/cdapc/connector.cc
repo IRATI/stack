@@ -111,7 +111,7 @@ void Connector::rina_run() {
 
 	for (;;)
 	{
-		rina::IPCEvent* event = rina::ipcEventProducer->eventTimedWait(1,0);
+		rina::IPCEvent* event = rina::ipcEventProducer->eventWait();
 		int port_id = 0;
 
 		if (event == nullptr) {

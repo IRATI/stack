@@ -13,7 +13,8 @@ cdapc_CPPFLAGS =					 \
 	-std=c++11           \
 	$(CPPFLAGS_EXTRA)		 \
 	$(LIBRINA_CFLAGS)		 \
-	-I$(srcdir)/../common	
+	-I$(srcdir)/../common	 \
+	-I$(top_srcdir)/../include
 	
 cdapc_LDADD    = 	$(LIBRINA_LIBS) -ldl -lrinad \
 	-Lencoders -lfullencoders \
@@ -46,6 +47,7 @@ unittests_CPPFLAGS =		\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)			\
 	-I$(srcdir)/..				\
+	-I$(top_srcdir)/../include			\
 	-I$(srcdir)/../common
 	
 unittests_LDADD    = 	$(LIBRINA_LIBS) -ldl \
