@@ -63,6 +63,7 @@ void AppEventLoop::stop()
 {
 	rina::ScopedLock g(lock);
 	keep_running = false;
+	rina::librina_finalize();
 }
 
 void AppEventLoop::event_loop()
@@ -74,8 +75,11 @@ void AppEventLoop::event_loop()
 	LOG_INFO("Starting main I/O loop...");
 
 	while(keep_running) {
-		e = rina::ipcEventProducer->eventTimedWait(0, 1000000000);
-		if(!e)
+		e = rina::ipcEventProducer->eventWait();
+		if(!e && !keep_running)
+			break;
+
+		if (!e)
 			continue;
 
 		if(!keep_running){

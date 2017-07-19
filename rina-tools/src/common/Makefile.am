@@ -11,6 +11,7 @@ noinst_LTLIBRARIES = librinaapp.la
 librinaapp_la_CFLAGS   =
 librinaapp_la_CPPFLAGS =				\
 	$(LIBRINA_CFLAGS)			\
+	-I$(top_srcdir)/../include			\
 	$(CPPFLAGS_EXTRA)			
 librinaapp_la_LIBADD   =				\
 	$(LIBRINA_LIBS)
