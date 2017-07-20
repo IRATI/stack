@@ -269,7 +269,7 @@ enum IPCEventType {
         IPC_PROCESS_QUERY_RIB,
         GET_DIF_PROPERTIES,
         GET_DIF_PROPERTIES_RESPONSE_EVENT,
-        OS_PROCESS_FINALIZED,
+        IPCM_CTRL_PORT_CLOSED,
         IPCM_REGISTER_APP_RESPONSE_EVENT,
         IPCM_UNREGISTER_APP_RESPONSE_EVENT,
         IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT,
@@ -301,6 +301,7 @@ enum IPCEventType {
 	IPCM_CREATE_IPCP_RESPONSE,
 	IPCM_DESTROY_IPCP_RESPONSE,
 	IPCM_FINALIZATION_REQUEST_EVENT,
+	IPCM_CTRL_PORT_OPENED,
         NO_EVENT
 };
 
@@ -464,6 +465,9 @@ public:
          */
         unsigned short ipcProcessId;
 
+        /** The control port to send flow allocation requests */
+        unsigned int ctrl_port;
+
 	/** The type of registration requested */
 	ApplicationRegistrationType applicationRegistrationType;
 
@@ -600,7 +604,14 @@ public:
  */
 class CtrlPortClosedEvent: public IPCEvent {
 public:
-	CtrlPortClosedEvent(unsigned int ctrl_p);
+	CtrlPortClosedEvent(unsigned int ctrl_p, pid_t pid);
+	pid_t pid;
+};
+
+class CtrlPortOpenedEvent: public IPCEvent {
+public:
+	CtrlPortOpenedEvent(unsigned int ctrl_p, pid_t pid);
+	pid_t pid;
 };
 
 /**

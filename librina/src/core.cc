@@ -551,13 +551,6 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 							msg->src_port, msg->src_ipcp_id);
 		break;
 	}
-	case RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION: {
-		struct irati_msg_app_dealloc_flow * sp_msg =
-				(struct irati_msg_app_dealloc_flow *) msg;
-		event = new FlowDeallocatedEvent(sp_msg->port_id, sp_msg->result,
-						 msg->src_port, msg->src_ipcp_id);
-		break;
-	}
 	case RINA_C_APP_REGISTER_APPLICATION_REQUEST: {
 		struct irati_msg_app_reg_app * sp_msg =
 				(struct irati_msg_app_reg_app *) msg;
@@ -567,6 +560,7 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 		ari.dafName = ApplicationProcessNamingInformation(sp_msg->daf_name);
 		ari.difName = ApplicationProcessNamingInformation(sp_msg->dif_name);
 		ari.ipcProcessId = sp_msg->ipcp_id;
+		ari.ctrl_port = sp_msg->fa_ctrl_port;
 		event = new ApplicationRegistrationRequestEvent(ari, sp_msg->event_id,
 								msg->src_port, msg->src_ipcp_id);
 		break;
@@ -671,8 +665,16 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 					      msg->src_port, msg->src_ipcp_id);
 		break;
 	}
-	case RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION: {
-		event = new CtrlPortClosedEvent(msg->src_port);
+	case RINA_C_IPCM_CTRL_PORT_CLOSED_NOTIFICATION: {
+		struct irati_msg_ctrl_port_not * sp_msg =
+				(struct irati_msg_ctrl_port_not *) msg;
+		event = new CtrlPortClosedEvent(sp_msg->port, sp_msg->pid);
+		break;
+	}
+	case RINA_C_IPCM_CTRL_PORT_OPEN_NOTIFICATION: {
+		struct irati_msg_ctrl_port_not * sp_msg =
+				(struct irati_msg_ctrl_port_not *) msg;
+		event = new CtrlPortOpenedEvent(sp_msg->port, sp_msg->pid);
 		break;
 	}
 	case RINA_C_IPCM_FINALIZE_REQUEST: {

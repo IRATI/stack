@@ -35,6 +35,7 @@
 #include <asm/ioctl.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <sys/types.h>
 #endif
 
 #ifdef __cplusplus
@@ -800,6 +801,7 @@ struct irati_iodev_ctldata {
 /* Data structure passed along with ioctl */
 struct irati_ctrldev_ctldata {
 	irati_msg_port_t port_id;
+	pid_t pid;
 };
 
 #define IRATI_FLOW_BIND _IOW(0xAF, 0x00, struct irati_iodev_ctldata)
