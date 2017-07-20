@@ -565,9 +565,7 @@ static int
 ctrldev_release(struct inode *inode, struct file *f)
 {
         struct ctrldev_priv *priv = (struct ctrldev_priv *) f->private_data;
-        struct ctrldev_priv * ipcm_ctrl_dev;
         struct rfifo * pmsgs;
-        struct irati_msg_ctrl_port_not msg;
 
         mutex_lock(&irati_ctrl_dm.general_lock);
         list_del_init(&priv->node);
@@ -589,23 +587,9 @@ ctrldev_release(struct inode *inode, struct file *f)
         if (priv == irati_ctrl_dm.ipcm_ctrl_dev) {
         	LOG_WARN("IPC Manager process has been destroyed");
         	irati_ctrl_dm.ipcm_ctrl_dev = 0;
-        	mutex_unlock(&irati_ctrl_dm.general_lock);
-        } else {
-        	//Inform IPCM Daemon that a control port has closed
-        	ipcm_ctrl_dev = irati_ctrl_dm.ipcm_ctrl_dev;
-        	mutex_unlock(&irati_ctrl_dm.general_lock);
-        	msg.msg_type = RINA_C_IPCM_CTRL_PORT_CLOSED_NOTIFICATION;
-        	msg.src_ipcp_id = 0;
-        	msg.src_port = 0;
-        	msg.dest_port = irati_ctrl_dm.ipcm_ctrl_dev->port_id;
-        	msg.dest_ipcp_id = 0;
-        	msg.event_id = 0;
-        	msg.pid = priv->pid;
-        	msg.port = priv->port_id;
 
-        	if (irati_ctrl_dev_snd_resp_msg(ipcm_ctrl_dev, IRATI_MB(&msg))) {
-        		LOG_ERR("Could not send ctrl port closed notif_msg");
-        	}
+        	//TODO destroy all control devices and IPCPs
+        	mutex_unlock(&irati_ctrl_dm.general_lock);
         }
 
         LOG_DBG("Instance of control device bound to port %d released",
@@ -624,8 +608,6 @@ ctrldev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
         struct ctrldev_priv *priv = (struct ctrldev_priv *) f->private_data;
         void __user *p = (void __user *)arg;
         struct irati_ctrldev_ctldata data;
-        struct ctrldev_priv * ipcm_ctrl_dev;
-        struct irati_msg_ctrl_port_not msg;
 
         if (cmd != IRATI_CTRL_FLOW_BIND) {
                 LOG_ERR("Invalid cmd %u", cmd);
@@ -650,21 +632,6 @@ ctrldev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 
         priv->port_id = data.port_id;
         priv->pid = data.pid;
-
-	ipcm_ctrl_dev = irati_ctrl_dm.ipcm_ctrl_dev;
-	mutex_unlock(&irati_ctrl_dm.general_lock);
-	msg.msg_type = RINA_C_IPCM_CTRL_PORT_OPEN_NOTIFICATION;
-	msg.src_ipcp_id = 0;
-	msg.src_port = 0;
-	msg.dest_port = irati_ctrl_dm.ipcm_ctrl_dev->port_id;
-	msg.dest_ipcp_id = 0;
-	msg.event_id = 0;
-	msg.pid = priv->pid;
-	msg.port = priv->port_id;
-
-	if (irati_ctrl_dev_snd_resp_msg(ipcm_ctrl_dev, IRATI_MB(&msg))) {
-		LOG_ERR("Could not send ctrl port open notif msg");
-	}
 
         LOG_DBG("Control device instance bound to port id %d", data.port_id);
 

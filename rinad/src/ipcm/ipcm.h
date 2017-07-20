@@ -685,9 +685,10 @@ protected:
 	/**
 	* Collect flows for an application name
 	*/
-	void collect_flows_by_application(
-			const rina::ApplicationProcessNamingInformation& app_name,
-			std::list<rina::FlowInformation>& result);
+	void collect_flows_by_application(const rina::ApplicationProcessNamingInformation& app_name,
+					  std::list<rina::FlowInformation>& result);
+
+	void collect_flows_by_pid(pid_t pid, std::list<rina::FlowInformation>& result);
 
 	/**
 	* Get the IPCP instance pointer
@@ -770,7 +771,7 @@ protected:
 	void query_rib_response_event_handler(rina::QueryRIBResponseEvent *e);
 
 	//Misc
-	void os_process_finalized_handler(rina::OSProcessFinalizedEvent *event);
+	void os_process_finalized_handler(pid_t pid);
 	void ipc_process_daemon_initialized_event_handler(rina::IPCProcessDaemonInitializedEvent *e);
 	void ipc_process_create_response_event_handler(rina::CreateIPCPResponseEvent *e);
 	void ipc_process_destroy_response_event_handler(rina::DestroyIPCPResponseEvent *e);

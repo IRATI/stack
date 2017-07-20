@@ -193,7 +193,7 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 			                     ApplicationProcessNamingInformation(sp_msg->local),
 					     ApplicationProcessNamingInformation(sp_msg->remote),
 					     ApplicationProcessNamingInformation(sp_msg->dif_name),
-					     sp_msg->event_id, msg->src_port, msg->src_ipcp_id);
+					     sp_msg->event_id, msg->src_port, msg->src_ipcp_id, 0);
 		break;
 	}
 	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST: {
@@ -204,7 +204,7 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 			                     ApplicationProcessNamingInformation(sp_msg->local),
 					     ApplicationProcessNamingInformation(sp_msg->remote),
 					     ApplicationProcessNamingInformation(sp_msg->dif_name),
-					     sp_msg->event_id, msg->src_port, msg->src_ipcp_id);
+					     sp_msg->event_id, msg->src_port, msg->src_ipcp_id, 0);
 		break;
 	}
 	case RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT: {
@@ -220,7 +220,7 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 				(struct irati_kmsg_ipcm_allocate_flow_resp *) msg;
 		event = new AllocateFlowResponseEvent(sp_msg->result, sp_msg->notify_src,
                                 		      sp_msg->src_ipcp_id, sp_msg->event_id,
-						      msg->src_port, msg->src_ipcp_id);
+						      msg->src_port, msg->src_ipcp_id, 0);
 		break;
 	}
 	case RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE: {
@@ -494,7 +494,8 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 				(struct irati_msg_with_name *) msg;
 		event = new IPCProcessDaemonInitializedEvent(sp_msg->src_ipcp_id,
 							     ApplicationProcessNamingInformation(sp_msg->name),
-							     sp_msg->event_id, msg->src_port, msg->src_ipcp_id);
+							     sp_msg->event_id, msg->src_port,
+							     msg->src_ipcp_id, sp_msg->pid);
 		break;
 	}
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST: {
@@ -504,7 +505,7 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 					     ApplicationProcessNamingInformation(sp_msg->local),
 					     ApplicationProcessNamingInformation(sp_msg->remote),
 					     sp_msg->src_ipcp_id, sp_msg->event_id,
-					     msg->src_port, msg->src_ipcp_id);
+					     msg->src_port, msg->src_ipcp_id, sp_msg->pid);
 		((FlowRequestEvent *) event)->DIFName = ApplicationProcessNamingInformation(sp_msg->dif_name);
 		break;
 	}
@@ -524,7 +525,8 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 					     ApplicationProcessNamingInformation(sp_msg->local),
 					     ApplicationProcessNamingInformation(sp_msg->remote),
 					     ApplicationProcessNamingInformation(sp_msg->dif_name),
-					     sp_msg->event_id, msg->src_port, msg->src_ipcp_id);
+					     sp_msg->event_id, msg->src_port, msg->src_ipcp_id,
+					     sp_msg->pid);
 		break;
 	}
 	case RINA_C_APP_ALLOCATE_FLOW_RESPONSE: {
@@ -532,7 +534,7 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 				(struct irati_msg_app_alloc_flow_response *) msg;
 		event = new AllocateFlowResponseEvent(sp_msg->result, sp_msg->not_source,
 						      sp_msg->src_ipcp_id, sp_msg->event_id,
-						      msg->src_port, msg->src_ipcp_id);
+						      msg->src_port, msg->src_ipcp_id, sp_msg->pid);
 		break;
 	}
 	case RINA_C_APP_DEALLOCATE_FLOW_REQUEST: {
@@ -561,6 +563,7 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 		ari.difName = ApplicationProcessNamingInformation(sp_msg->dif_name);
 		ari.ipcProcessId = sp_msg->ipcp_id;
 		ari.ctrl_port = sp_msg->fa_ctrl_port;
+		ari.pid = sp_msg->pid;
 		event = new ApplicationRegistrationRequestEvent(ari, sp_msg->event_id,
 								msg->src_port, msg->src_ipcp_id);
 		break;
@@ -663,18 +666,6 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 		MediaReport::from_c_media_report(report, sp_msg->report);
 		event = new MediaReportEvent(report, sp_msg->event_id,
 					      msg->src_port, msg->src_ipcp_id);
-		break;
-	}
-	case RINA_C_IPCM_CTRL_PORT_CLOSED_NOTIFICATION: {
-		struct irati_msg_ctrl_port_not * sp_msg =
-				(struct irati_msg_ctrl_port_not *) msg;
-		event = new CtrlPortClosedEvent(sp_msg->port, sp_msg->pid);
-		break;
-	}
-	case RINA_C_IPCM_CTRL_PORT_OPEN_NOTIFICATION: {
-		struct irati_msg_ctrl_port_not * sp_msg =
-				(struct irati_msg_ctrl_port_not *) msg;
-		event = new CtrlPortOpenedEvent(sp_msg->port, sp_msg->pid);
 		break;
 	}
 	case RINA_C_IPCM_FINALIZE_REQUEST: {

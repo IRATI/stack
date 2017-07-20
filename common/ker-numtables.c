@@ -111,9 +111,6 @@ struct irati_msg_layout irati_ker_numtables[] = {
 	           - sizeof(struct pff_entry_list *),
 	.pff_entry_lists = 1,
     },
-    [RINA_C_IPCM_CTRL_PORT_CLOSED_NOTIFICATION] = {
-        .copylen = sizeof(struct irati_msg_ctrl_port_not),
-    },
     [RINA_C_IPCM_IPC_MANAGER_PRESENT] = {
         .copylen = sizeof(struct irati_msg_base),
     },
@@ -350,9 +347,6 @@ struct irati_msg_layout irati_ker_numtables[] = {
     },
     [RINA_C_IPCM_FINALIZE_REQUEST] = {
         .copylen = sizeof(struct irati_msg_base),
-    },
-    [RINA_C_IPCM_CTRL_PORT_OPEN_NOTIFICATION] = {
-        .copylen = sizeof(struct irati_msg_ctrl_port_not),
     },
     [RINA_C_MAX] = {
         .copylen = 0,

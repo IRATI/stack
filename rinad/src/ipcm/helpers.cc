@@ -153,9 +153,8 @@ IPCManager_::lookup_ipcp_by_port(unsigned int port_id, bool write_lock)
 }
 
 void
-IPCManager_::collect_flows_by_application(
-			const rina::ApplicationProcessNamingInformation&
-			app_name, list<rina::FlowInformation>& result)
+IPCManager_::collect_flows_by_application(const rina::ApplicationProcessNamingInformation& app_name,
+					  list<rina::FlowInformation>& result)
 {
 	//Prevent any insertion/deletion to happen
 	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
@@ -172,6 +171,30 @@ IPCManager_::collect_flows_by_application(
 		for (list<rina::FlowInformation>::const_iterator it =
 			flows.begin(); it != flows.end(); it++) {
 			if (it->localAppName == app_name) {
+				result.push_back(*it);
+			}
+		}
+	}
+}
+
+void
+IPCManager_::collect_flows_by_pid(pid_t pid, list<rina::FlowInformation>& result)
+{
+	//Prevent any insertion/deletion to happen
+	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
+
+	vector<IPCMIPCProcess *> ipcps;
+	ipcp_factory_.listIPCProcesses(ipcps);
+
+	result.clear();
+
+	for (unsigned int i = 0; i < ipcps.size(); i++) {
+		const list<rina::FlowInformation>& flows =
+			ipcps[i]->allocatedFlows;
+
+		for (list<rina::FlowInformation>::const_iterator it =
+			flows.begin(); it != flows.end(); it++) {
+			if (it->pid == pid) {
 				result.push_back(*it);
 			}
 		}

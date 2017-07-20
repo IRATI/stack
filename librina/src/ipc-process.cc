@@ -401,6 +401,7 @@ void ExtendedIPCManager::notifyIPCProcessInitialized(const ApplicationProcessNam
         msg->src_ipcp_id = ipcProcessId;
         msg->dest_port = ipcManagerPort;
         msg->dest_ipcp_id = 0;
+        msg->pid = getpid();
 
         if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
         	irati_ctrl_msg_free((struct irati_msg_base *) msg);

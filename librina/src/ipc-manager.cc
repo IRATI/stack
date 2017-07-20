@@ -1127,12 +1127,13 @@ IPCProcessDaemonInitializedEvent::IPCProcessDaemonInitializedEvent(
                 unsigned short ipcProcessId,
                 const ApplicationProcessNamingInformation&  name,
                 unsigned int sequenceNumber,
-		unsigned int ctrl_p, unsigned short ipcp_id):
+		unsigned int ctrl_p, unsigned short ipcp_id, pid_t pid):
                         IPCEvent(IPC_PROCESS_DAEMON_INITIALIZED_EVENT,
                                         sequenceNumber, ctrl_p, ipcp_id)
 {
         this->ipcProcessId = ipcProcessId;
         this->name = name;
+        this->pid = pid;
 }
 
 unsigned short IPCProcessDaemonInitializedEvent::getIPCProcessId() const
