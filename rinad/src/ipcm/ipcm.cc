@@ -763,10 +763,12 @@ ipcm_res_t IPCManager_::register_at_dif(Addon* callee,
         }
 
         //Register
-        slave_ipcp->registerApplication(ipcp->get_name(),
-        				ipcp->dif_name_,
-        				ipcp->get_id(),
-                                        trans->tid);
+        rina::ApplicationRegistrationInformation ari;
+        ari.appName = ipcp->get_name();
+        ari.difName = ipcp->dif_name_;
+        ari.ipcProcessId = ipcp->get_id();
+        ari.pid = ipcp->pid;
+        slave_ipcp->registerApplication(ari, trans->tid);
 
         ss << "Requested DIF registration of IPC process "
                 << ipcp->get_name().toString() << " at DIF "
@@ -2151,12 +2153,6 @@ void IPCManager_::io_loop()
                 }
                     break;
 
-                case rina::OS_PROCESS_FINALIZED: {
-                    DOWNCAST_DECL(event, rina::OSProcessFinalizedEvent, e);
-                    os_process_finalized_handler(e);
-                }
-                    break;
-
                 case rina::IPCM_REGISTER_APP_RESPONSE_EVENT: {
                     DOWNCAST_DECL(event,
                                   rina::IpcmRegisterApplicationResponseEvent, e);
@@ -2193,8 +2189,8 @@ void IPCManager_::io_loop()
                     break;
 
                 case rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT: {
-                    DOWNCAST_DECL(event, rina::IPCProcessDaemonInitializedEvent,
-                                  e);
+                    DOWNCAST_DECL(event,
+                		  rina::IPCProcessDaemonInitializedEvent, e);
                     ipc_process_daemon_initialized_event_handler(e);
                 }
                     break;

@@ -218,6 +218,9 @@ public:
 
 	FlowState state;
 
+	/** The PID of the local OS process using this flow */
+	pid_t pid;
+
 	bool operator==(const FlowInformation &other) const;
 	bool operator!=(const FlowInformation &other) const;
 	const std::string toString();
@@ -371,6 +374,9 @@ public:
 	/** the ID of the IPC Process that will provide the flow*/
 	unsigned short ipcProcessId;
 
+	/** PID of the process that requested the flow */
+	pid_t pid;
+
 	/**
 	 * True if the flow will be used by internal IPCP tasks (e.g. layer management),
 	 * false otherwise (used by an external app)
@@ -383,14 +389,16 @@ public:
 			const ApplicationProcessNamingInformation& localApplicationName,
 			const ApplicationProcessNamingInformation& remoteApplicationName,
 			int flowRequestorIpcProcessId,
-			unsigned int sequenceNumber, unsigned int ctrl_p, unsigned short ipcp_id);
+			unsigned int sequenceNumber, unsigned int ctrl_p,
+			unsigned short ipcp_id, pid_t pid);
 	FlowRequestEvent(int portId,
 			const FlowSpecification& flowSpecification,
 			bool localRequest,
 			const ApplicationProcessNamingInformation& localApplicationName,
 			const ApplicationProcessNamingInformation& remoteApplicationName,
 			const ApplicationProcessNamingInformation& DIFName,
-			unsigned int sequenceNumber, unsigned int ctrl_p, unsigned short ipcp_id);
+			unsigned int sequenceNumber, unsigned int ctrl_p,
+			unsigned short ipcp_id, pid_t pid);
 	bool isLocalRequest() const;
 };
 
@@ -467,6 +475,9 @@ public:
 
         /** The control port to send flow allocation requests */
         unsigned int ctrl_port;
+
+        /** PID of the process that registered */
+        pid_t pid;
 
 	/** The type of registration requested */
 	ApplicationRegistrationType applicationRegistrationType;
@@ -591,11 +602,15 @@ public:
         /** 0 if it is an application, or the ID of the IPC Process otherwise */
         int flowAcceptorIpcProcessId;
 
+        /** PID of the process that accepted the flow */
+        pid_t pid;
+
         AllocateFlowResponseEvent(int result,
                         	  bool notifysource,
 				  int flowAcceptorIpcProcessId,
 				  unsigned int sequenceNumber,
-				  unsigned int ctrl_p, unsigned short ipcp_id);
+				  unsigned int ctrl_p,
+				  unsigned short ipcp_id, pid_t pid);
 };
 
 /**

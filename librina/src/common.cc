@@ -376,15 +376,16 @@ FlowInformation::FlowInformation()
 	portId = 0;
 	state = FLOW_DEALLOCATED;
 	user_ipcp_id = 0;
+	pid = 0;
 }
 
-bool FlowInformation::operator==(
-		const FlowInformation &other) const {
+bool FlowInformation::operator==(const FlowInformation &other) const
+{
 	return portId == other.portId;
 }
 
-bool FlowInformation::operator!=(
-		const FlowInformation &other) const {
+bool FlowInformation::operator!=(const FlowInformation &other) const
+{
 	return !(*this == other);
 }
 
@@ -621,6 +622,7 @@ FlowRequestEvent::FlowRequestEvent() :
 {
 	localRequest = false;
 	portId = 0;
+	pid = 0;
 	ipcProcessId = 0;
 	flowRequestorIpcProcessId = 0;
 	internal = false;
@@ -632,7 +634,8 @@ FlowRequestEvent::FlowRequestEvent(
 		const ApplicationProcessNamingInformation& localApplicationName,
 		const ApplicationProcessNamingInformation& remoteApplicationName,
 		int flowRequestorIpcProcessId,
-		unsigned int sequenceNumber, unsigned int ctrl_p, unsigned short ipcp_id):
+		unsigned int sequenceNumber, unsigned int ctrl_p,
+		unsigned short ipcp_id, pid_t pid):
 				IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT,
 					 sequenceNumber, ctrl_p, ipcp_id) {
 	this->flowSpecification = flowSpecification;
@@ -643,6 +646,7 @@ FlowRequestEvent::FlowRequestEvent(
 	this->portId = 0;
 	this->ipcProcessId = 0;
 	this->internal = false;
+	this->pid = pid;
 }
 
 FlowRequestEvent::FlowRequestEvent(int portId,
@@ -651,7 +655,8 @@ FlowRequestEvent::FlowRequestEvent(int portId,
 		const ApplicationProcessNamingInformation& localApplicationName,
 		const ApplicationProcessNamingInformation& remoteApplicationName,
 		const ApplicationProcessNamingInformation& DIFName,
-		unsigned int sequenceNumber, unsigned int ctrl_p, unsigned short ipcp_id) :
+		unsigned int sequenceNumber, unsigned int ctrl_p,
+		unsigned short ipcp_id, pid_t pid) :
 		IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT,
 				sequenceNumber, ctrl_p, ipcp_id) {
 	this->flowSpecification = flowSpecification;
@@ -663,6 +668,7 @@ FlowRequestEvent::FlowRequestEvent(int portId,
 	this->portId = portId;
 	this->ipcProcessId = ipcProcessId;
 	this->internal = false;
+	this->pid = pid;
 }
 
 /* CLASS FLOW DEALLOCATE REQUEST EVENT */
@@ -700,6 +706,7 @@ ApplicationRegistrationInformation::ApplicationRegistrationInformation()
 	applicationRegistrationType = APPLICATION_REGISTRATION_ANY_DIF;
 	ipcProcessId = 0;
 	ctrl_port = 0;
+	pid = 0;
 }
 
 ApplicationRegistrationInformation::ApplicationRegistrationInformation(
@@ -708,6 +715,7 @@ ApplicationRegistrationInformation::ApplicationRegistrationInformation(
 	this->applicationRegistrationType = applicationRegistrationType;
 	ipcProcessId = 0;
 	ctrl_port = 0;
+	pid = 0;
 }
 
 const std::string ApplicationRegistrationInformation::toString(){
@@ -820,13 +828,15 @@ AllocateFlowResponseEvent::AllocateFlowResponseEvent(
                 bool notifySource,
                 int flowAcceptorIpcProcessId,
                 unsigned int sequenceNumber,
-		unsigned int ctrl_p, unsigned short ipcp_id) :
+		unsigned int ctrl_p,
+		unsigned short ipcp_id, pid_t pid) :
         BaseResponseEvent(result,
                           ALLOCATE_FLOW_RESPONSE_EVENT,
                           sequenceNumber, ctrl_port, ipcp_id)
 {
         this->notifySource             = notifySource;
         this->flowAcceptorIpcProcessId = flowAcceptorIpcProcessId;
+        this->pid = pid;
 }
 
 /* CLASS OS PROCESS FINALIZED EVENT */
@@ -864,7 +874,7 @@ IPCEvent * getIPCEvent(){
 
 	FlowRequestEvent * event = new
 			FlowRequestEvent(flowSpec, true, sourceName,
-			                destName, 0, 24, 23, 2);
+			                destName, 0, 24, 23, 2, 0);
 
 	return event;
 }

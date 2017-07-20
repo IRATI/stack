@@ -202,6 +202,7 @@ IPCManager::internalRequestFlowAllocation(const ApplicationProcessNamingInformat
         msg->local = localAppName.to_c_name();
         msg->remote = remoteAppName.to_c_name();
         msg->fspec = flowSpec.to_c_flowspec();
+        msg->pid = getpid();
 
         if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
         	irati_ctrl_msg_free((struct irati_msg_base *) msg);
@@ -248,6 +249,7 @@ unsigned int IPCManager::internalRequestFlowAllocationInDIF(
         msg->remote = remoteAppName.to_c_name();
         msg->dif_name = difName.to_c_name();
         msg->fspec = flowSpec.to_c_flowspec();
+        msg->pid = getpid();
 
         if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
         	irati_ctrl_msg_free((struct irati_msg_base *) msg);
@@ -293,6 +295,7 @@ FlowInformation IPCManager::internalAllocateFlowResponse(const FlowRequestEvent&
         msg->result = result;
         msg->src_ipcp_id = ipcProcessId;
         msg->event_id = flowRequestEvent.sequenceNumber;
+        msg->pid = getpid();
 
         ret = irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false);
 
@@ -381,6 +384,7 @@ IPCManager::requestApplicationRegistration(const ApplicationRegistrationInformat
         msg->daf_name = appRegistrationInfo.dafName.to_c_name();
         msg->ipcp_id = appRegistrationInfo.ipcProcessId;
         msg->reg_type = appRegistrationInfo.applicationRegistrationType;
+        msg->pid = getpid();
 
         ret = irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true);
         seq_num = msg->event_id;

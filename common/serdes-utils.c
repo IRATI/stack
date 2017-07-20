@@ -4472,13 +4472,6 @@ static void * allocate_irati_msg(irati_msg_t msg_t)
 		result = COMMON_ALLOC(sizeof(struct irati_msg_base), 1);
 		return result;
 	}
-	case RINA_C_IPCM_CTRL_PORT_CLOSED_NOTIFICATION:
-	case RINA_C_IPCM_CTRL_PORT_OPEN_NOTIFICATION:
-	{
-		struct irati_msg_ctrl_port_not * result;
-		result = COMMON_ALLOC(sizeof(struct irati_msg_ctrl_port_not), 1);
-		return result;
-	}
 	case RINA_C_RMT_MODIFY_FTE_REQUEST:
 	case RINA_C_RMT_DUMP_FT_REPLY: {
 		struct irati_kmsg_rmt_dump_ft * result;

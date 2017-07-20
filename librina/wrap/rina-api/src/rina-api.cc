@@ -96,6 +96,7 @@ irati_register_req_fill(struct irati_msg_app_reg_app *req, const char *dif_name,
 	req->fa_ctrl_port = fd;
 	req->dif_name = dn;
 	req->app_name = appn;
+	req->pid = getpid();
 
 	return 0;
 }
@@ -296,6 +297,7 @@ irati_fa_req_fill(struct irati_kmsg_ipcm_allocate_flow *req, const char *dif_nam
 	req->fspec->max_allowable_gap = flowspec->max_sdu_gap;
 	req->fspec->undetected_bit_error_rate = flowspec->max_loss;
 	req->fspec->ordered_delivery = flowspec->in_order_delivery;
+	req->pid = getpid();
 
 	return 0;
 }
@@ -405,6 +407,20 @@ static void sa_unlock(void)
     __sync_lock_release(&sa_lock_var);
 }
 
+static int
+irati_fa_resp_fill(struct irati_msg_app_alloc_flow_response *req,
+		   uint32_t event_id, int resp, int fd)
+{
+	req->msg_type = RINA_C_APP_ALLOCATE_FLOW_RESPONSE;
+	irati_msg_fill_common(IRATI_MB(req), fd);
+	req->event_id = event_id;
+	req->result = resp;
+	req->not_source = true;
+	req->pid = getpid();
+
+	return 0;
+}
+
 int
 rina_flow_accept(int fd, char **remote_appl, struct rina_flow_spec *spec,
 		 unsigned int flags)
@@ -482,12 +498,8 @@ rina_flow_accept(int fd, char **remote_appl, struct rina_flow_spec *spec,
 	}
 
 	resp = new irati_msg_app_alloc_flow_response();
-	resp->msg_type = RINA_C_APP_ALLOCATE_FLOW_RESPONSE;
-	irati_msg_fill_common(IRATI_MB(resp), fd);
-	resp->event_id = req->event_id;
-	resp->result = 0;
-	resp->not_source = true;
-
+	irati_fa_resp_fill((irati_msg_app_alloc_flow_response*) resp,
+			   req->event_id, 0, fd);
 	ret = irati_write_msg(fd, IRATI_MB(resp));
 	if (ret < 0) {
 		goto out2;
@@ -535,12 +547,8 @@ int rina_flow_respond(int fd, int handle, int response)
 	free(spi);
 
 	resp = new irati_msg_app_alloc_flow_response();
-	resp->msg_type = RINA_C_APP_ALLOCATE_FLOW_RESPONSE;
-	irati_msg_fill_common(IRATI_MB(resp), fd);
-	resp->event_id = req->event_id;
-	resp->result = response;
-	resp->not_source = true;
-
+	irati_fa_resp_fill((irati_msg_app_alloc_flow_response*) resp,
+			   req->event_id, response, fd);
 	ret = irati_write_msg(fd, IRATI_MB(resp));
 	if (ret < 0) {
 		goto out;
