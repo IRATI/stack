@@ -52,7 +52,6 @@ int string2int(const std::string& s, int& ret)
 }
 
 /* CLASS APPLICATION PROCESS NAMING INFORMATION */
-
 ApplicationProcessNamingInformation::ApplicationProcessNamingInformation() {
 }
 
@@ -416,13 +415,18 @@ DIFProperties::DIFProperties(
 IPCEvent::IPCEvent() {
 	eventType = NO_EVENT;
 	sequenceNumber = 0;
+	ctrl_port = 0;
+	ipcp_id = 0;
 }
 
-IPCEvent::IPCEvent(IPCEventType eventType, unsigned int sequenceNumber) {
-	this->eventType = eventType;
-	this->sequenceNumber = sequenceNumber;
+IPCEvent::IPCEvent(IPCEventType et, unsigned int sn,
+		   unsigned int cp, unsigned short ipid)
+{
+	eventType = et;
+	sequenceNumber = sn;
+	ctrl_port = cp;
+	ipcp_id = ipid;
 }
-
 
 IPCEvent::~IPCEvent() {
 }
@@ -598,17 +602,17 @@ const std::string IPCEvent::eventTypeToString(IPCEventType eventType) {
 }
 
 /* CLASS BASE RESPONSE EVENT */
-BaseResponseEvent::BaseResponseEvent(
-                        int result,
-                        IPCEventType eventType,
-                        unsigned int sequenceNumber) :
-                              IPCEvent(eventType,
-                                             sequenceNumber){
-        this->result = result;
+BaseResponseEvent::BaseResponseEvent(int res, IPCEventType eventType,
+                        unsigned int sn, unsigned int ctrl_p, unsigned short ipcp_id) :
+                              IPCEvent(eventType, sn, ctrl_p, ipcp_id)
+{
+        result = res;
 }
 
 /* CLASS FLOW REQUEST EVENT */
-FlowRequestEvent::FlowRequestEvent(){
+FlowRequestEvent::FlowRequestEvent() :
+		IPCEvent (FLOW_ALLOCATION_REQUESTED_EVENT, 0, 0, 0)
+{
 	localRequest = false;
 	portId = 0;
 	ipcProcessId = 0;
@@ -622,9 +626,9 @@ FlowRequestEvent::FlowRequestEvent(
 		const ApplicationProcessNamingInformation& localApplicationName,
 		const ApplicationProcessNamingInformation& remoteApplicationName,
 		int flowRequestorIpcProcessId,
-		unsigned int sequenceNumber):
+		unsigned int sequenceNumber, unsigned int ctrl_p, unsigned short ipcp_id):
 				IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT,
-						sequenceNumber) {
+					 sequenceNumber, ctrl_p, ipcp_id) {
 	this->flowSpecification = flowSpecification;
 	this->localRequest = localRequest;
 	this->localApplicationName = localApplicationName;
@@ -641,10 +645,9 @@ FlowRequestEvent::FlowRequestEvent(int portId,
 		const ApplicationProcessNamingInformation& localApplicationName,
 		const ApplicationProcessNamingInformation& remoteApplicationName,
 		const ApplicationProcessNamingInformation& DIFName,
-		unsigned short ipcProcessId,
-		unsigned int sequenceNumber) :
+		unsigned int sequenceNumber, unsigned int ctrl_p, unsigned short ipcp_id) :
 		IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT,
-				sequenceNumber) {
+				sequenceNumber, ctrl_p, ipcp_id) {
 	this->flowSpecification = flowSpecification;
 	this->localRequest = localRequest;
 	this->localApplicationName = localApplicationName;
@@ -657,34 +660,37 @@ FlowRequestEvent::FlowRequestEvent(int portId,
 }
 
 /* CLASS FLOW DEALLOCATE REQUEST EVENT */
-FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
-			const ApplicationProcessNamingInformation& appName,
-			unsigned int sequenceNumber):
-						IPCEvent(FLOW_DEALLOCATION_REQUESTED_EVENT,
-								sequenceNumber){
-	this->portId = portId;
-	this->applicationName = appName;
-	this->internal = false;
+FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int pid,
+			const ApplicationProcessNamingInformation& an,
+			unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id):
+		IPCEvent(FLOW_DEALLOCATION_REQUESTED_EVENT,sequenceNumber, ctrl_p, ipcp_id)
+{
+	portId = pid;
+	applicationName = an;
+	internal = false;
 }
 
-FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
-		unsigned int sequenceNumber):
+FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId, unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id):
 			IPCEvent(FLOW_DEALLOCATION_REQUESTED_EVENT,
-					sequenceNumber){
+					sequenceNumber, ctrl_p, ipcp_id){
 	this->portId = portId;
 	this->internal = false;
 }
 
 /* CLASS FLOW DEALLOCATED EVENT */
-FlowDeallocatedEvent::FlowDeallocatedEvent(
-		int portId, int code) :
-				IPCEvent(FLOW_DEALLOCATED_EVENT, 0) {
+FlowDeallocatedEvent::FlowDeallocatedEvent(int portId, int code,
+		 unsigned int ctrl_port, unsigned short ipcp_id) :
+				IPCEvent(FLOW_DEALLOCATED_EVENT, 0, ctrl_port, ipcp_id)
+{
 	this->portId = portId;
 	this->code = code;
 }
 
 /* CLASS APPLICATION REGISTRATION INFORMATION */
-ApplicationRegistrationInformation::ApplicationRegistrationInformation(){
+ApplicationRegistrationInformation::ApplicationRegistrationInformation()
+{
 	applicationRegistrationType = APPLICATION_REGISTRATION_ANY_DIF;
 	ipcProcessId = 0;
 }
@@ -709,31 +715,31 @@ const std::string ApplicationRegistrationInformation::toString(){
 }
 
 /* CLASS APPLICATION REGISTRATION REQUEST */
-ApplicationRegistrationRequestEvent::ApplicationRegistrationRequestEvent(
-	const ApplicationRegistrationInformation&
-	applicationRegistrationInformation, unsigned int sequenceNumber) :
+ApplicationRegistrationRequestEvent::ApplicationRegistrationRequestEvent(const ApplicationRegistrationInformation&
+			applicationRegistrationInformation, unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id) :
 		IPCEvent(APPLICATION_REGISTRATION_REQUEST_EVENT,
-				sequenceNumber) {
+				sequenceNumber, ctrl_p, ipcp_id) {
 	this->applicationRegistrationInformation =
 			applicationRegistrationInformation;
 }
 
 /* CLASS BASE APPLICATION REGISTRATION EVENT */
-BaseApplicationRegistrationEvent::BaseApplicationRegistrationEvent(
-                        const ApplicationProcessNamingInformation& appName,
+BaseApplicationRegistrationEvent::BaseApplicationRegistrationEvent(const ApplicationProcessNamingInformation& appName,
                         const ApplicationProcessNamingInformation& DIFName,
                         IPCEventType eventType,
-                        unsigned int sequenceNumber):
-                                IPCEvent(eventType, sequenceNumber) {
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id):
+                                IPCEvent(eventType, sequenceNumber, ctrl_p, ipcp_id)
+{
         this->applicationName = appName;
         this->DIFName = DIFName;
 }
 
-BaseApplicationRegistrationEvent::BaseApplicationRegistrationEvent(
-                        const ApplicationProcessNamingInformation& appName,
+BaseApplicationRegistrationEvent::BaseApplicationRegistrationEvent(const ApplicationProcessNamingInformation& appName,
                         IPCEventType eventType,
-                        unsigned int sequenceNumber):
-                                IPCEvent(eventType, sequenceNumber) {
+                        unsigned int sequenceNumber, unsigned int ctrl_p, unsigned short ipcp_id):
+                                IPCEvent(eventType, sequenceNumber, ctrl_p, ipcp_id) {
         this->applicationName = appName;
 }
 
@@ -741,11 +747,12 @@ BaseApplicationRegistrationEvent::BaseApplicationRegistrationEvent(
 ApplicationUnregistrationRequestEvent::ApplicationUnregistrationRequestEvent(
 		const ApplicationProcessNamingInformation& appName,
 		const ApplicationProcessNamingInformation& DIFName,
-		unsigned int sequenceNumber) :
+		unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id) :
                 BaseApplicationRegistrationEvent(
                                 appName, DIFName,
                                 APPLICATION_UNREGISTRATION_REQUEST_EVENT,
-				sequenceNumber) {
+				sequenceNumber, ctrl_port, ipcp_id) {
 }
 
 /* CLASS BASE APPLICATION RESPONSE EVENT */
@@ -755,10 +762,10 @@ BaseApplicationRegistrationResponseEvent::
                 const ApplicationProcessNamingInformation& DIFName,
                 int result,
                 IPCEventType eventType,
-                unsigned int sequenceNumber) :
-                BaseApplicationRegistrationEvent (
-                                appName, DIFName,
-                                eventType, sequenceNumber){
+                unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id) :
+                BaseApplicationRegistrationEvent (appName, DIFName,
+                                eventType, sequenceNumber, ctrl_port, ipcp_id){
         this->result = result;
 }
 
@@ -767,10 +774,10 @@ BaseApplicationRegistrationResponseEvent::
                 const ApplicationProcessNamingInformation& appName,
                 int result,
                 IPCEventType eventType,
-                unsigned int sequenceNumber) :
-                BaseApplicationRegistrationEvent (
-                                appName,
-                                eventType, sequenceNumber){
+                unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id) :
+                BaseApplicationRegistrationEvent (appName, eventType,
+                		sequenceNumber, ctrl_port, ipcp_id){
         this->result = result;
 }
 
@@ -779,22 +786,23 @@ RegisterApplicationResponseEvent::RegisterApplicationResponseEvent(
                         const ApplicationProcessNamingInformation& appName,
                         const ApplicationProcessNamingInformation& difName,
                         int result,
-                        unsigned int sequenceNumber):
-                BaseApplicationRegistrationResponseEvent(
-                                       appName, difName, result,
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id):
+                BaseApplicationRegistrationResponseEvent(appName, difName, result,
                                        REGISTER_APPLICATION_RESPONSE_EVENT,
-                                       sequenceNumber){
+                                       sequenceNumber, ctrl_port, ipcp_id){
 }
 
 /* CLASS UNREGISTER APPLICATION RESPONSE EVENT */
 UnregisterApplicationResponseEvent::UnregisterApplicationResponseEvent(
                         const ApplicationProcessNamingInformation& appName,
                         int result,
-                        unsigned int sequenceNumber):
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id):
                 BaseApplicationRegistrationResponseEvent(
                                        appName, result,
                                        UNREGISTER_APPLICATION_RESPONSE_EVENT,
-                                       sequenceNumber){
+                                       sequenceNumber, ctrl_port, ipcp_id){
 }
 
 /* CLASS ALLOCATE FLOW RESPONSE EVENT */
@@ -802,24 +810,20 @@ AllocateFlowResponseEvent::AllocateFlowResponseEvent(
                 int result,
                 bool notifySource,
                 int flowAcceptorIpcProcessId,
-                unsigned int sequenceNumber) :
+                unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id) :
         BaseResponseEvent(result,
                           ALLOCATE_FLOW_RESPONSE_EVENT,
-                          sequenceNumber)
+                          sequenceNumber, ctrl_port, ipcp_id)
 {
         this->notifySource             = notifySource;
         this->flowAcceptorIpcProcessId = flowAcceptorIpcProcessId;
 }
 
 /* CLASS OS PROCESS FINALIZED EVENT */
-OSProcessFinalizedEvent::OSProcessFinalizedEvent(
-		const ApplicationProcessNamingInformation& appName,
-		unsigned int ipcProcessId,
-		unsigned int sequenceNumber) :
+CtrlPortClosedEvent::CtrlPortClosedEvent(unsigned int ctrl_p) :
 		IPCEvent(OS_PROCESS_FINALIZED,
-				sequenceNumber) {
-	this->applicationName = appName;
-	this->ipcProcessId = ipcProcessId;
+			 0, ctrl_p, 0) {
 }
 
 /* CLASS IPC EVENT PRODUCER */
@@ -842,7 +846,7 @@ IPCEvent * getIPCEvent(){
 
 	FlowRequestEvent * event = new
 			FlowRequestEvent(flowSpec, true, sourceName,
-			                destName, 0, 24);
+			                destName, 0, 24, 23, 2);
 
 	return event;
 }

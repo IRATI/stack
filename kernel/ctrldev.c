@@ -384,6 +384,7 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
         			 irati_ctrl_dm.handlers[bmsg->msg_type].data);
 
         	irati_msg_free(irati_ker_numtables, IRATI_RINA_C_MAX, bmsg);
+        	rkfree(bmsg);
         }
 
         if (destroy_kbuf)

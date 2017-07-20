@@ -821,6 +821,9 @@ void ApplicationManager::applicationRegistered(const ApplicationRegistrationRequ
         msg->dif_name = difName.to_c_name();
         msg->result = result;
         msg->event_id = event.sequenceNumber;
+        msg->dest_port = event.ctrl_port;
+        msg->dest_ipcp_id = event.ipcp_id;
+        msg->src_ipcp_id = 0;
 
         if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
         	irati_ctrl_msg_free((struct irati_msg_base *) msg);
@@ -846,6 +849,9 @@ void ApplicationManager::applicationUnregistered(const ApplicationUnregistration
         msg->app_name = event.applicationName.to_c_name();
         msg->result = result;
         msg->event_id = event.sequenceNumber;
+        msg->dest_port = event.ctrl_port;
+        msg->dest_ipcp_id = event.ipcp_id;
+        msg->src_ipcp_id = 0;
 
         if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
         	irati_ctrl_msg_free((struct irati_msg_base *) msg);
@@ -871,6 +877,9 @@ void ApplicationManager::flowAllocated(const FlowRequestEvent& flowRequestEvent)
         msg->source_app_name = flowRequestEvent.localApplicationName.to_c_name();
         msg->dif_name = flowRequestEvent.DIFName.to_c_name();
         msg->event_id = flowRequestEvent.sequenceNumber;
+        msg->dest_port = flowRequestEvent.ctrl_port;
+        msg->dest_ipcp_id = flowRequestEvent.ipcp_id;
+        msg->src_ipcp_id = 0;
 
         if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
         	irati_ctrl_msg_free((struct irati_msg_base *) msg);
@@ -886,7 +895,7 @@ void ApplicationManager::flowRequestArrived(const ApplicationProcessNamingInform
 					    const FlowSpecification& flowSpec,
 					    const ApplicationProcessNamingInformation& difName,
 					    int portId,
-					    unsigned int opaque)
+					    unsigned int opaque, unsigned int ctrl_port)
 {
 #if STUB_API
 #else
@@ -900,6 +909,8 @@ void ApplicationManager::flowRequestArrived(const ApplicationProcessNamingInform
         msg->fspec = flowSpec.to_c_flowspec();
         msg->dif_name = difName.to_c_name();
         msg->event_id = opaque;
+        msg->dest_port = ctrl_port;
+        msg->src_ipcp_id = 0;
 
         if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
         	irati_ctrl_msg_free((struct irati_msg_base *) msg);
@@ -925,6 +936,9 @@ void ApplicationManager::flowDeallocated(const FlowDeallocateRequestEvent& event
         msg->name = event.applicationName.to_c_name();
         msg->result = result;
         msg->event_id = event.sequenceNumber;
+        msg->dest_port = event.ctrl_port;
+        msg->dest_ipcp_id = event.ipcp_id;
+        msg->src_ipcp_id = 0;
 
         if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
         	irati_ctrl_msg_free((struct irati_msg_base *) msg);
@@ -936,7 +950,8 @@ void ApplicationManager::flowDeallocated(const FlowDeallocateRequestEvent& event
 }
 
 void ApplicationManager::flowDeallocatedRemotely(int portId, int code,
-						 const ApplicationProcessNamingInformation& appName)
+						 const ApplicationProcessNamingInformation& appName,
+						 unsigned int ctrl_port)
 {
 	LOG_DBG("ApplicationManager::flowDeallocatedRemotely called");
 #if STUB_API
@@ -949,6 +964,9 @@ void ApplicationManager::flowDeallocatedRemotely(int portId, int code,
         msg->port_id = portId;
         msg->name = appName.to_c_name();
         msg->result = code;
+        msg->dest_port = ctrl_port;
+        msg->event_id = 0;
+        msg->src_ipcp_id = 0;
 
         if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
         	irati_ctrl_msg_free((struct irati_msg_base *) msg);
@@ -974,6 +992,9 @@ void ApplicationManager::getDIFPropertiesResponse(const GetDIFPropertiesRequestE
         msg->code = result;
         msg->app_name = event.getApplicationName().to_c_name();
         msg->event_id = event.sequenceNumber;
+        msg->dest_port = event.ctrl_port;
+        msg->dest_ipcp_id = event.ipcp_id;
+        msg->src_ipcp_id = 0;
         msg->dif_props = new get_dif_prop_resp();
         INIT_LIST_HEAD(&msg->dif_props->dif_propery_entries);
         for(it = difProperties.begin(); it != difProperties.end(); ++it) {
@@ -999,8 +1020,10 @@ Singleton<ApplicationManager> applicationManager;
 GetDIFPropertiesRequestEvent::GetDIFPropertiesRequestEvent(
 		const ApplicationProcessNamingInformation& appName,
 		const ApplicationProcessNamingInformation& DIFName,
-		unsigned int sequenceNumber):
-        IPCEvent(GET_DIF_PROPERTIES, sequenceNumber)
+		unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id):
+        IPCEvent(GET_DIF_PROPERTIES, sequenceNumber,
+        		ctrl_port, ipcp_id)
 {
 	this->applicationName = appName;
 	this->DIFName = DIFName;
@@ -1016,34 +1039,38 @@ const ApplicationProcessNamingInformation&
 
 /* CLASS IPCM REGISTER APPLICATION RESPONSE EVENT */
 IpcmRegisterApplicationResponseEvent::IpcmRegisterApplicationResponseEvent(
-                int result, unsigned int sequenceNumber):
+                int result, unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id):
                         BaseResponseEvent(result,
                                         IPCM_REGISTER_APP_RESPONSE_EVENT,
-                                        sequenceNumber)
+                                        sequenceNumber, ctrl_p, ipcp_id)
 { }
 
 /* CLASS IPCM UNREGISTER APPLICATION RESPONSE EVENT */
 IpcmUnregisterApplicationResponseEvent::IpcmUnregisterApplicationResponseEvent(
-                int result, unsigned int sequenceNumber):
+                int result, unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id):
                         BaseResponseEvent(result,
                                         IPCM_UNREGISTER_APP_RESPONSE_EVENT,
-                                        sequenceNumber)
+                                        sequenceNumber, ctrl_p, ipcp_id)
 { }
 
 /* CLASS IPCM DEALLOCATE FLOW RESPONSE EVENT */
 IpcmDeallocateFlowResponseEvent::IpcmDeallocateFlowResponseEvent(
-                int result, unsigned int sequenceNumber):
+                int result, unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id):
                         BaseResponseEvent(result,
                                         IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT,
-                                        sequenceNumber)
+                                        sequenceNumber, ctrl_p, ipcp_id)
 { }
 
 /* CLASS IPCM ALLOCATE FLOW REQUEST RESULT EVENT */
 IpcmAllocateFlowRequestResultEvent::IpcmAllocateFlowRequestResultEvent(
-                int result, int portId, unsigned int sequenceNumber):
+                int result, int portId, unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id):
                         BaseResponseEvent(result,
                                         IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
-                                        sequenceNumber)
+                                        sequenceNumber, ctrl_p, ipcp_id)
 { this->portId = portId; }
 
 int IpcmAllocateFlowRequestResultEvent::getPortId() const
@@ -1053,10 +1080,11 @@ int IpcmAllocateFlowRequestResultEvent::getPortId() const
 QueryRIBResponseEvent::QueryRIBResponseEvent(
                 const std::list<rib::RIBObjectData>& ribObjects,
                 int result,
-                unsigned int sequenceNumber) :
+                unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id) :
         BaseResponseEvent(result,
                           QUERY_RIB_RESPONSE_EVENT,
-                          sequenceNumber)
+                          sequenceNumber, ctrl_p, ipcp_id)
 { this->ribObjects = ribObjects; }
 
 const std::list<rib::RIBObjectData>& QueryRIBResponseEvent::getRIBObject() const
@@ -1064,20 +1092,23 @@ const std::list<rib::RIBObjectData>& QueryRIBResponseEvent::getRIBObject() const
 
 /* CLASS UPDATE DIF CONFIGURATION RESPONSE EVENT */
 UpdateDIFConfigurationResponseEvent::UpdateDIFConfigurationResponseEvent(
-                int result, unsigned int sequenceNumber):
+                int result, unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id):
                         BaseResponseEvent(result,
                                         UPDATE_DIF_CONFIG_RESPONSE_EVENT,
-                                        sequenceNumber)
+                                        sequenceNumber, ctrl_p, ipcp_id)
 { }
 
 /* CLASS ENROLL TO DIF RESPONSE EVENT */
 EnrollToDIFResponseEvent::EnrollToDIFResponseEvent(
                 const std::list<Neighbor>& neighbors,
                 const DIFInformation& difInformation,
-                int result, unsigned int sequenceNumber):
+                int result, unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id):
                         BaseResponseEvent(result,
                                         ENROLL_TO_DIF_RESPONSE_EVENT,
-                                        sequenceNumber)
+                                        sequenceNumber,
+					ctrl_p, ipcp_id)
 {
         this->neighbors = neighbors;
         this->difInformation = difInformation;
@@ -1095,9 +1126,10 @@ EnrollToDIFResponseEvent::getDIFInformation() const
 IPCProcessDaemonInitializedEvent::IPCProcessDaemonInitializedEvent(
                 unsigned short ipcProcessId,
                 const ApplicationProcessNamingInformation&  name,
-                unsigned int sequenceNumber):
+                unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id):
                         IPCEvent(IPC_PROCESS_DAEMON_INITIALIZED_EVENT,
-                                        sequenceNumber)
+                                        sequenceNumber, ctrl_p, ipcp_id)
 {
         this->ipcProcessId = ipcProcessId;
         this->name = name;
@@ -1111,30 +1143,36 @@ IPCProcessDaemonInitializedEvent::getName() const
 { return name; }
 
 /* CLASS TIMER EXPIRED EVENT */
-TimerExpiredEvent::TimerExpiredEvent(unsigned int sequenceNumber) :
-                IPCEvent(TIMER_EXPIRED_EVENT, sequenceNumber)
+TimerExpiredEvent::TimerExpiredEvent(unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id) :
+                IPCEvent(TIMER_EXPIRED_EVENT, sequenceNumber,
+                		ctrl_p, ipcp_id)
 { }
 
 /* Class Media Report Event */
 MediaReportEvent::MediaReportEvent(const MediaReport& report,
-		 	 	   unsigned int sequenceNumber) :
-			 IPCEvent(IPCM_MEDIA_REPORT_EVENT, sequenceNumber)
+		 	 	   unsigned int sequenceNumber,
+				   unsigned int ctrl_p, unsigned short ipcp_id) :
+			 IPCEvent(IPCM_MEDIA_REPORT_EVENT, sequenceNumber,
+					 ctrl_p, ipcp_id)
 {
 	media_report = report;
 }
 
 CreateIPCPResponseEvent::CreateIPCPResponseEvent(int res,
-						 unsigned int sequenceNumber):
+						 unsigned int sequenceNumber,
+						 unsigned int ctrl_p, unsigned short ipcp_id):
 		IPCEvent(IPCM_CREATE_IPCP_RESPONSE,
-			 sequenceNumber)
+			 sequenceNumber, ctrl_p, ipcp_id)
 {
 	result = res;
 }
 
 DestroyIPCPResponseEvent::DestroyIPCPResponseEvent(int res,
-						   unsigned int sequenceNumber):
+						   unsigned int sequenceNumber,
+						   unsigned int ctrl_p, unsigned short ipcp_id):
 		IPCEvent(IPCM_DESTROY_IPCP_RESPONSE,
-			 sequenceNumber)
+			 sequenceNumber, ctrl_p, ipcp_id)
 {
 	result = res;
 }

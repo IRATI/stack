@@ -34,6 +34,7 @@
 #define RINA_PREFIX "librina.ctrldev"
 
 #include "librina/logs.h"
+#include "librina/concurrency.h"
 #include "ctrl.h"
 
 #include "irati/kernel-msg.h"
@@ -135,4 +136,30 @@ int irati_open_ctrl_port(irati_msg_port_t port_id)
 void irati_ctrl_msg_free(struct irati_msg_base *msg)
 {
 	irati_msg_free(irati_ker_numtables, RINA_C_MAX, msg);
+	free(msg);
+}
+
+int irati_open_io_port(int port_id)
+{
+        struct irati_iodev_ctldata iodata;
+        int fd;
+
+        if (port_id < 0) {
+                /* This happens in case of flow allocation failure. Don't
+                 * open the I/O device, just set the file descriptor to an
+                 * invalid value. */
+                return -1;
+        }
+
+        fd = open("/dev/irati", O_RDWR);
+        if (fd < 0)
+                return fd;
+
+        iodata.port_id = (uint32_t) port_id;
+        if (ioctl(fd, IRATI_FLOW_BIND, &iodata)) {
+                close(fd);
+                return -1;
+        }
+
+        return fd;
 }

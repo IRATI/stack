@@ -101,7 +101,7 @@ typedef enum {
         /* 22 RMT (kernel) -> IPC Process (user space) */
         RINA_C_RMT_DUMP_FT_REPLY,
 
-        /* 23 NL layer -> IPC Manager */
+        /* 23 Kernel -> IPC Manager */
         RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION,
 
         /* 24 IPC Manager -> Kernel (NL Layer) */
@@ -750,6 +750,7 @@ struct irati_msg_app_reg_app {
 	uint32_t event_id;
 
 	ipc_process_id_t ipcp_id;
+	irati_msg_port_t fa_ctrl_port;
 	uint8_t	reg_type;
         struct name * app_name;
         struct name * daf_name;

@@ -39,6 +39,7 @@ int irati_write_msg(int cfd, struct irati_msg_base *msg);
 int irati_open_ctrl_port(irati_msg_port_t port_id);
 void irati_ctrl_msg_free(struct irati_msg_base *msg);
 int close_port(int cfd);
+int irati_open_io_port(int port_id);
 
 #ifdef __cplusplus
 }

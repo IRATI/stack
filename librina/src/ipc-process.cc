@@ -38,8 +38,10 @@ namespace rina {
 /* CLASS ASSIGN TO DIF REQUEST EVENT */
 AssignToDIFRequestEvent::AssignToDIFRequestEvent(
 		const DIFInformation& difInformation,
-			unsigned int sequenceNumber):
-		IPCEvent(ASSIGN_TO_DIF_REQUEST_EVENT, sequenceNumber)
+			unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id):
+		IPCEvent(ASSIGN_TO_DIF_REQUEST_EVENT, sequenceNumber,
+				ctrl_p, ipcp_id)
 {
 	this->difInformation = difInformation;
 }
@@ -57,8 +59,10 @@ UpdateDIFConfigurationRequestEvent::getDIFConfiguration() const
 
 UpdateDIFConfigurationRequestEvent::UpdateDIFConfigurationRequestEvent(
                 const DIFConfiguration& difConfiguration,
-                        unsigned int sequenceNumber):
-                IPCEvent(UPDATE_DIF_CONFIG_REQUEST_EVENT, sequenceNumber)
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id):
+                IPCEvent(UPDATE_DIF_CONFIG_REQUEST_EVENT, sequenceNumber,
+                		ctrl_p, ipcp_id)
 {
         this->difConfiguration = difConfiguration;
 }
@@ -68,9 +72,10 @@ IPCProcessDIFRegistrationEvent::IPCProcessDIFRegistrationEvent(
 		const ApplicationProcessNamingInformation& ipcProcessName,
 		const ApplicationProcessNamingInformation& difName,
 		bool registered,
-		unsigned int sequenceNumber): IPCEvent(
+		unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id): IPCEvent(
 		                IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION,
-		                sequenceNumber)
+		                sequenceNumber, ctrl_p, ipcp_id)
 {
         this->ipcProcessName = ipcProcessName;
         this->difName = difName;
@@ -95,9 +100,10 @@ bool IPCProcessDIFRegistrationEvent::isRegistered() const {
 QueryRIBRequestEvent::QueryRIBRequestEvent(const std::string& objectClass,
 		const std::string& objectName, long objectInstance,
 		int scope, const std::string& filter,
-		unsigned int sequenceNumber):
+		unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id):
 				IPCEvent(IPC_PROCESS_QUERY_RIB,
-                                         sequenceNumber)
+                                         sequenceNumber, ctrl_p, ipcp_id)
 {
 	this->objectClass = objectClass;
 	this->objectName = objectName;
@@ -129,9 +135,10 @@ const std::string& QueryRIBRequestEvent::getFilter() const{
 /* CLASS SET POLICY SET PARAM REQUEST EVENT */
 SetPolicySetParamRequestEvent::SetPolicySetParamRequestEvent(
                 const std::string& path, const std::string& name,
-                const std::string& value, unsigned int sequenceNumber) :
+                const std::string& value, unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id) :
 				IPCEvent(IPC_PROCESS_SET_POLICY_SET_PARAM,
-                                         sequenceNumber)
+                                         sequenceNumber, ctrl_p, ipcp_id)
 {
         this->path = path;
         this->name = name;
@@ -141,9 +148,10 @@ SetPolicySetParamRequestEvent::SetPolicySetParamRequestEvent(
 /* CLASS SELECT POLICY SET REQUEST EVENT */
 SelectPolicySetRequestEvent::SelectPolicySetRequestEvent(
                 const std::string& path, const std::string& name,
-                                        unsigned int sequenceNumber) :
+                                        unsigned int sequenceNumber,
+					unsigned int ctrl_p, unsigned short ipcp_id) :
 				IPCEvent(IPC_PROCESS_SELECT_POLICY_SET,
-                                         sequenceNumber)
+                                         sequenceNumber, ctrl_p, ipcp_id)
 {
         this->path = path;
         this->name = name;
@@ -151,9 +159,10 @@ SelectPolicySetRequestEvent::SelectPolicySetRequestEvent(
 
 /* CLASS PLUGIN LOAD REQUEST EVENT */
 PluginLoadRequestEvent::PluginLoadRequestEvent(const std::string& name,
-                                bool load, unsigned int sequenceNumber) :
+                                bool load, unsigned int sequenceNumber,
+				unsigned int ctrl_p, unsigned short ipcp_id) :
 				IPCEvent(IPC_PROCESS_PLUGIN_LOAD,
-                                         sequenceNumber)
+                                         sequenceNumber, ctrl_p, ipcp_id)
 {
         this->name = name;
         this->load = load;
@@ -161,9 +170,10 @@ PluginLoadRequestEvent::PluginLoadRequestEvent(const std::string& name,
 
 /* CLASS CREATE CONNECTION RESPONSE EVENT */
 CreateConnectionResponseEvent::CreateConnectionResponseEvent(int portId,
-        int cepId, unsigned int sequenceNumber):
+        int cepId, unsigned int sequenceNumber,
+	unsigned int ctrl_p, unsigned short ipcp_id):
                 IPCEvent(IPC_PROCESS_CREATE_CONNECTION_RESPONSE,
-                                sequenceNumber) {
+                                sequenceNumber, ctrl_p, ipcp_id) {
         this->cepId = cepId;
         this->portId = portId;
 }
@@ -178,9 +188,10 @@ int CreateConnectionResponseEvent::getPortId() const {
 
 /* CLASS UPDATE CONNECTION RESPONSE EVENT */
 UpdateConnectionResponseEvent::UpdateConnectionResponseEvent(int portId,
-        int result, unsigned int sequenceNumber):
+        int result, unsigned int sequenceNumber,
+	unsigned int ctrl_p, unsigned short ipcp_id):
                 IPCEvent(IPC_PROCESS_UPDATE_CONNECTION_RESPONSE,
-                                sequenceNumber) {
+                                sequenceNumber, ctrl_p, ipcp_id) {
         this->result = result;
         this->portId = portId;
 }
@@ -195,9 +206,10 @@ int UpdateConnectionResponseEvent::getPortId() const {
 
 /* CLASS CREATE CONNECTION RESULT EVENT */
 CreateConnectionResultEvent::CreateConnectionResultEvent(int portId,
-        int sourceCepId, int destCepId, unsigned int sequenceNumber):
+        int sourceCepId, int destCepId, unsigned int sequenceNumber,
+	unsigned int ctrl_p, unsigned short ipcp_id):
                 IPCEvent(IPC_PROCESS_CREATE_CONNECTION_RESULT,
-                                sequenceNumber) {
+                                sequenceNumber, ctrl_p, ipcp_id) {
         this->sourceCepId = sourceCepId;
         this->destCepId = destCepId;
         this->portId = portId;
@@ -217,9 +229,10 @@ int CreateConnectionResultEvent::getPortId() const {
 
 /* CLASS DESTROY CONNECTION RESULT EVENT */
 DestroyConnectionResultEvent::DestroyConnectionResultEvent(int portId,
-        int result, unsigned int sequenceNumber):
+        int result, unsigned int sequenceNumber,
+	unsigned int ctrl_p, unsigned short ipcp_id):
                 IPCEvent(IPC_PROCESS_DESTROY_CONNECTION_RESULT,
-                                sequenceNumber) {
+                                sequenceNumber, ctrl_p, ipcp_id) {
         this->result = result;
         this->portId = portId;
 }
@@ -234,9 +247,10 @@ int DestroyConnectionResultEvent::getPortId() const {
 
 /* CLASS DUMP PDU FT RESULT EVENT*/
 DumpFTResponseEvent::DumpFTResponseEvent(const std::list<PDUForwardingTableEntry>& entries,
-                int result, unsigned int sequenceNumber):
+                int result, unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id):
                 IPCEvent(IPC_PROCESS_DUMP_FT_RESPONSE,
-                                sequenceNumber) {
+                                sequenceNumber, ctrl_p, ipcp_id) {
         this->entries = entries;
         this->result = result;
 }
@@ -252,9 +266,10 @@ int DumpFTResponseEvent::getResult() const {
 
 // Class enable encryption response event
 UpdateCryptoStateResponseEvent::UpdateCryptoStateResponseEvent(int res,
-                int port, unsigned int sequenceNumber) :
+                int port, unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id) :
                 		IPCEvent(IPC_PROCESS_UPDATE_CRYPTO_STATE_RESPONSE,
-                				sequenceNumber)
+                				sequenceNumber, ctrl_p, ipcp_id)
 {
 	port_id = port;
 	result = res;
@@ -262,9 +277,10 @@ UpdateCryptoStateResponseEvent::UpdateCryptoStateResponseEvent(int res,
 
 AllocatePortResponseEvent::AllocatePortResponseEvent(int res,
 						     int port,
-						     unsigned int sequenceNumber):
+						     unsigned int sequenceNumber,
+						     unsigned int ctrl_p, unsigned short ipcp_id):
 		IPCEvent(IPC_PROCESS_ALLOCATE_PORT_RESPONSE,
-			 sequenceNumber)
+			 sequenceNumber, ctrl_p, ipcp_id)
 {
 	port_id = port;
 	result = res;
@@ -272,18 +288,20 @@ AllocatePortResponseEvent::AllocatePortResponseEvent(int res,
 
 DeallocatePortResponseEvent::DeallocatePortResponseEvent(int res,
 						         int port,
-							 unsigned int sequenceNumber):
+							 unsigned int sequenceNumber,
+							 unsigned int ctrl_p, unsigned short ipcp_id):
 		IPCEvent(IPC_PROCESS_DEALLOCATE_PORT_RESPONSE,
-			 sequenceNumber)
+			 sequenceNumber, ctrl_p, ipcp_id)
 {
 	port_id = port;
 	result = res;
 }
 
 WriteMgmtSDUResponseEvent::WriteMgmtSDUResponseEvent(int res,
-			  	  	  	     unsigned int sequenceNumber):
+			  	  	  	     unsigned int sequenceNumber,
+						     unsigned int ctrl_p, unsigned short ipcp_id):
 		IPCEvent(IPC_PROCESS_WRITE_MGMT_SDU_RESPONSE,
-			 sequenceNumber)
+			 sequenceNumber, ctrl_p, ipcp_id)
 {
 	result = res;
 }
@@ -291,9 +309,10 @@ WriteMgmtSDUResponseEvent::WriteMgmtSDUResponseEvent(int res,
 ReadMgmtSDUResponseEvent::ReadMgmtSDUResponseEvent(int res,
 			 	 	 	   struct buffer * buf,
 						   unsigned int pid,
-						   unsigned int sequenceNumber):
+						   unsigned int sequenceNumber,
+						   unsigned int ctrl_p, unsigned short ipcp_id):
 		IPCEvent(IPC_PROCESS_READ_MGMT_SDU_NOTIF,
-			 sequenceNumber)
+			 sequenceNumber, ctrl_p, ipcp_id)
 {
 	result = res;
 	port_id = pid;
@@ -352,6 +371,7 @@ void ExtendedIPCManager::send_base_resp_msg(irati_msg_t msg_t,
         msg->event_id = seq_num;
         msg->src_ipcp_id = ipcProcessId;
         msg->dest_port = ipcManagerPort;
+        msg->dest_ipcp_id = 0;
 
         if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
         	irati_ctrl_msg_free((struct irati_msg_base *) msg);
@@ -380,6 +400,7 @@ void ExtendedIPCManager::notifyIPCProcessInitialized(const ApplicationProcessNam
         msg->name = name.to_c_name();
         msg->src_ipcp_id = ipcProcessId;
         msg->dest_port = ipcManagerPort;
+        msg->dest_ipcp_id = 0;
 
         if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
         	irati_ctrl_msg_free((struct irati_msg_base *) msg);
@@ -473,6 +494,7 @@ void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDAFRequestEvent& even
         msg->event_id = event.sequenceNumber;
         msg->src_ipcp_id = ipcProcessId;
         msg->dest_port = ipcManagerPort;
+        msg->dest_ipcp_id = 0;
         msg->dif_type = stringToCharArray(difInformation.dif_type_);
         msg->dif_name = difInformation.dif_name_.to_c_name();
         msg->dif_config = difInformation.dif_configuration_.to_c_dif_config();
@@ -530,6 +552,7 @@ void ExtendedIPCManager::allocateFlowRequestResult(const FlowRequestEvent& event
         msg->event_id = event.sequenceNumber;
         msg->src_ipcp_id = ipcProcessId;
         msg->dest_port = ipcManagerPort;
+        msg->dest_ipcp_id = 0;
 
         if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
         	irati_ctrl_msg_free((struct irati_msg_base *) msg);
@@ -562,6 +585,7 @@ ExtendedIPCManager::allocateFlowRequestArrived(const ApplicationProcessNamingInf
         msg->dif_name = currentDIFInformation.get_dif_name().to_c_name();
         msg->src_ipcp_id = ipcProcessId;
         msg->dest_port = ipcManagerPort;
+        msg->dest_ipcp_id = 0;
         msg->port_id = portId;
 
         if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
@@ -625,6 +649,7 @@ void ExtendedIPCManager::flowDeallocatedRemotely(int portId, int code)
         msg->port_id = portId;
         msg->src_ipcp_id = ipcProcessId;
         msg->dest_port = ipcManagerPort;
+        msg->dest_ipcp_id = 0;
 
         if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
         	irati_ctrl_msg_free((struct irati_msg_base *) msg);
@@ -652,6 +677,7 @@ void ExtendedIPCManager::queryRIBResponse(const QueryRIBRequestEvent& event,
         msg->event_id = event.sequenceNumber;
         msg->src_ipcp_id = ipcProcessId;
         msg->dest_port = ipcManagerPort;
+        msg->dest_ipcp_id = 0;
         msg->rib_entries = new query_rib_resp();
         INIT_LIST_HEAD(&msg->rib_entries->rib_object_data_entries);
         for (it = ribObjects.begin(); it != ribObjects.end(); ++ it) {
@@ -762,6 +788,7 @@ void ExtendedIPCManager::send_fwd_msg(irati_msg_t msg_t, unsigned int sequenceNu
         msg->event_id = sequenceNumber;
         msg->src_ipcp_id = ipcProcessId;
         msg->dest_port = ipcManagerPort;
+        msg->dest_ipcp_id = 0;
         msg->cdap_msg = new buffer();
         msg->cdap_msg->size = sermsg.size_;
         msg->cdap_msg->data = new unsigned char[sermsg.size_];
@@ -804,6 +831,7 @@ void ExtendedIPCManager::sendMediaReport(const MediaReport& report)
         msg->report = report.to_c_media_report();
         msg->src_ipcp_id = ipcProcessId;
         msg->dest_port = ipcManagerPort;
+        msg->dest_ipcp_id = 0;
 
         if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
         	irati_ctrl_msg_free((struct irati_msg_base *) msg);
