@@ -4467,10 +4467,16 @@ static void * allocate_irati_msg(irati_msg_t msg_t)
 	}
 	case RINA_C_IPCM_FINALIZE_REQUEST:
 	case RINA_C_IPCM_IPC_MANAGER_PRESENT:
-	case RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION:
 	case RINA_C_RMT_DUMP_FT_REQUEST: {
 		struct irati_msg_base * result;
 		result = COMMON_ALLOC(sizeof(struct irati_msg_base), 1);
+		return result;
+	}
+	case RINA_C_IPCM_CTRL_PORT_CLOSED_NOTIFICATION:
+	case RINA_C_IPCM_CTRL_PORT_OPEN_NOTIFICATION:
+	{
+		struct irati_msg_ctrl_port_not * result;
+		result = COMMON_ALLOC(sizeof(struct irati_msg_ctrl_port_not), 1);
 		return result;
 	}
 	case RINA_C_RMT_MODIFY_FTE_REQUEST:
@@ -4560,8 +4566,7 @@ static void * allocate_irati_msg(irati_msg_t msg_t)
 		return result;
 	}
 	case RINA_C_APP_DEALLOCATE_FLOW_REQUEST:
-	case RINA_C_APP_DEALLOCATE_FLOW_RESPONSE:
-	case RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION: {
+	case RINA_C_APP_DEALLOCATE_FLOW_RESPONSE: {
 		struct irati_msg_app_dealloc_flow * result;
 		result = COMMON_ALLOC(sizeof(struct irati_msg_app_dealloc_flow), 1);
 		return result;

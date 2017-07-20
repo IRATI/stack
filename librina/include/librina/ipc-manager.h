@@ -735,7 +735,6 @@ public:
 	void flowDeallocatedRemotely(int portId, int code,
 			             const ApplicationProcessNamingInformation& appName,
 				     unsigned int ctrl_port);
-
 	/**
 	 * Return the properties of zero or more DIFs to the application
 	 * @param event the event containing the query

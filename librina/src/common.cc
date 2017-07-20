@@ -501,8 +501,8 @@ const std::string IPCEvent::eventTypeToString(IPCEventType eventType) {
 	case GET_DIF_PROPERTIES_RESPONSE_EVENT:
 		result = "21_GET_DIF_PROPERTIES_RESPONSE";
 		break;
-	case OS_PROCESS_FINALIZED:
-		result = "22_OS_PROCESS_FINALIZED";
+	case IPCM_CTRL_PORT_CLOSED:
+		result = "22_IPCM_CTRL_PORT_CLOSED";
 		break;
 	case IPCM_REGISTER_APP_RESPONSE_EVENT:
 		result = "23_IPCM_REGISTER_APP_RESPONSE";
@@ -591,8 +591,14 @@ const std::string IPCEvent::eventTypeToString(IPCEventType eventType) {
 	case IPCM_DESTROY_IPCP_RESPONSE:
 		result = "51_DESTROY_IPCP_RESPONSE";
 		break;
+	case IPCM_FINALIZATION_REQUEST_EVENT:
+		result = "52_IPCM_FINALIZATION_REQUEST_EVENT";
+		break;
+	case IPCM_CTRL_PORT_OPENED:
+		result = "53_IPCM_CTRL_PORT_OPENED";
+		break;
 	case NO_EVENT:
-		result = "52_NO_EVENT";
+		result = "54_NO_EVENT";
 		break;
 	default:
 		result = "Unknown event";
@@ -693,12 +699,15 @@ ApplicationRegistrationInformation::ApplicationRegistrationInformation()
 {
 	applicationRegistrationType = APPLICATION_REGISTRATION_ANY_DIF;
 	ipcProcessId = 0;
+	ctrl_port = 0;
 }
 
 ApplicationRegistrationInformation::ApplicationRegistrationInformation(
-		ApplicationRegistrationType applicationRegistrationType){
+		ApplicationRegistrationType applicationRegistrationType)
+{
 	this->applicationRegistrationType = applicationRegistrationType;
 	ipcProcessId = 0;
+	ctrl_port = 0;
 }
 
 const std::string ApplicationRegistrationInformation::toString(){
@@ -821,9 +830,18 @@ AllocateFlowResponseEvent::AllocateFlowResponseEvent(
 }
 
 /* CLASS OS PROCESS FINALIZED EVENT */
-CtrlPortClosedEvent::CtrlPortClosedEvent(unsigned int ctrl_p) :
-		IPCEvent(OS_PROCESS_FINALIZED,
-			 0, ctrl_p, 0) {
+CtrlPortClosedEvent::CtrlPortClosedEvent(unsigned int ctrl_p, pid_t p) :
+		IPCEvent(IPCM_CTRL_PORT_CLOSED,
+			 0, ctrl_p, 0)
+{
+	pid = p;
+}
+
+CtrlPortOpenedEvent::CtrlPortOpenedEvent(unsigned int ctrl_p, pid_t p) :
+		IPCEvent(IPCM_CTRL_PORT_OPENED,
+			 0, ctrl_p, 0)
+{
+	pid = p;
 }
 
 /* CLASS IPC EVENT PRODUCER */

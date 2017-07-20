@@ -102,7 +102,7 @@ typedef enum {
         RINA_C_RMT_DUMP_FT_REPLY,
 
         /* 23 Kernel -> IPC Manager */
-        RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION,
+        RINA_C_IPCM_CTRL_PORT_CLOSED_NOTIFICATION,
 
         /* 24 IPC Manager -> Kernel (NL Layer) */
         RINA_C_IPCM_IPC_MANAGER_PRESENT,
@@ -218,7 +218,7 @@ typedef enum {
 	/* 61 IPC Manager -> Application */
 	RINA_C_APP_DEALLOCATE_FLOW_RESPONSE,
 
-	/* 62 IPC Manager -> Application, flow deallocated without the application having requested it */
+	/* 62 IPC Manager -> Application */
 	RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION,
 
 	/* 63 Application -> IPC Manager */
@@ -260,7 +260,10 @@ typedef enum {
 	/* 75, IPC Manager -> IPC Manager */
 	RINA_C_IPCM_FINALIZE_REQUEST,
 
-	/* 75 */
+        /* 76 Kernel -> IPC Manager */
+        RINA_C_IPCM_CTRL_PORT_OPEN_NOTIFICATION,
+
+	/* 77 */
         RINA_C_MAX,
 } msg_type_t;
 
@@ -844,6 +847,20 @@ struct irati_msg_ipcm_media_report {
 	uint32_t event_id;
 
         struct media_report * report;
+} __attribute__((packed));
+
+/* RINA_C_IPCM_CTRL_PORT_CLOSED_NOTIFICATION */
+/* RINA_C_IPCM_CTRL_PORT_OPEN_NOTIFICATION */
+struct irati_msg_ctrl_port_not {
+	irati_msg_t msg_type;
+	irati_msg_port_t src_port;
+	irati_msg_port_t dest_port;
+	ipc_process_id_t src_ipcp_id;
+	ipc_process_id_t dest_ipcp_id;
+	uint32_t event_id;
+
+	irati_msg_port_t port;
+        pid_t pid;
 } __attribute__((packed));
 
 /* RINA_C_IPCM_FINALIZE_REQUEST */

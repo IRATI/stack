@@ -1134,6 +1134,70 @@ int test_irati_msg_base(irati_msg_t msg_t)
 	return ret;
 }
 
+int test_irati_msg_ctrl_port_not(irati_msg_t msg_t)
+{
+	struct irati_msg_ctrl_port_not * msg, * resp;
+	int ret = 0;
+	char serbuf[8192];
+	unsigned int serlen;
+	unsigned int expected_serlen;
+
+	std::cout << "TESTING IRATI MSG CTRL PORT NOT (" << msg_t << ")" << std::endl;
+
+	msg = new irati_msg_ctrl_port_not();
+	msg->msg_type = msg_t;
+	msg->port = 2342;
+	msg->pid = 53;
+
+	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
+			     	     	   (irati_msg_base *) msg);
+	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				     serbuf, (irati_msg_base *) msg);
+
+	if (serlen <= 0) {
+		std::cout << "Error serializing irati_msg_ctrl_port_not message: "
+			  << serlen << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (serlen != expected_serlen) {
+		std::cout << "Expected (" << expected_serlen << ") and actual ("
+			  << serlen <<") message sizes are different" << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	std::cout << "Serialized message size: " << serlen << std::endl;
+
+	resp =  (struct irati_msg_ctrl_port_not *) deserialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
+				    	    	    	    	             serbuf, serlen);
+	if (!resp) {
+		std::cout << "Error parsing irati_msg_ctrl_port_not message: "
+			  << ret << std::endl;
+		irati_ctrl_msg_free((irati_msg_base *) msg);
+		return -1;
+	}
+
+	if (msg->port != resp->port) {
+		std::cout << "Port on original and recovered messages"
+			   << " are different\n";
+		ret = -1;
+	} else if (msg->pid != resp->pid) {
+		std::cout << "PID on original and recovered messages"
+				<< " are different\n";
+		ret = -1;
+	} else {
+		std::cout << "Test ok!" << std::endl;
+		ret = 0;
+	}
+
+	irati_ctrl_msg_free((irati_msg_base *) msg);
+	irati_ctrl_msg_free((irati_msg_base *) resp);
+
+	return ret;
+}
+
 int test_irati_kmsg_rmt_dump_ft(irati_msg_t msg_t)
 {
 	struct irati_kmsg_rmt_dump_ft * msg, * resp;
@@ -3306,9 +3370,6 @@ int main()
 	result = test_irati_msg_base(RINA_C_IPCM_IPC_MANAGER_PRESENT);
 	if (result < 0) return result;
 
-	result = test_irati_msg_base(RINA_C_IPCM_SOCKET_CLOSED_NOTIFICATION);
-	if (result < 0) return result;
-
 	result = test_irati_msg_base(RINA_C_RMT_DUMP_FT_REQUEST);
 	if (result < 0) return result;
 
@@ -3378,9 +3439,6 @@ int main()
 	result = test_irati_msg_app_dealloc_flow(RINA_C_APP_DEALLOCATE_FLOW_RESPONSE);
 	if (result < 0) return result;
 
-	result = test_irati_msg_app_dealloc_flow(RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION);
-	if (result < 0) return result;
-
 	result = test_irati_msg_app_reg_app();
 	if (result < 0) return result;
 
@@ -3412,6 +3470,12 @@ int main()
 	if (result < 0) return result;
 
 	result = test_irati_msg_ipcm_media_report();
+	if (result < 0) return result;
+
+	result = test_irati_msg_ctrl_port_not(RINA_C_IPCM_CTRL_PORT_CLOSED_NOTIFICATION);
+	if (result < 0) return result;
+
+	result = test_irati_msg_ctrl_port_not(RINA_C_IPCM_CTRL_PORT_OPEN_NOTIFICATION);
 	if (result < 0) return result;
 
 	return 0;
