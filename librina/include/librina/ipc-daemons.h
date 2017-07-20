@@ -145,8 +145,8 @@ public:
  */
 class AssignToDIFResponseEvent: public BaseResponseEvent {
 public:
-        AssignToDIFResponseEvent(
-                        int result, unsigned int sequenceNumber);
+        AssignToDIFResponseEvent(int result, unsigned int sequenceNumber,
+        		unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -158,7 +158,8 @@ public:
         int result;
 
 	SetPolicySetParamResponseEvent(int result,
-                                       unsigned int sequenceNumber);
+                                       unsigned int sequenceNumber,
+				       unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -169,7 +170,8 @@ public:
         int result;
 
 	SelectPolicySetResponseEvent(int result,
-                                     unsigned int sequenceNumber);
+                                     unsigned int sequenceNumber,
+				     unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -181,7 +183,8 @@ public:
         int result;
 
 	PluginLoadResponseEvent(int result,
-                                unsigned int sequenceNumber);
+                                unsigned int sequenceNumber,
+				unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -199,7 +202,8 @@ public:
 	int result;
 
 	FwdCDAPMsgRequestEvent(const ser_obj_t& sm, int result,
-			unsigned int sequenceNumber);
+			unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -217,7 +221,8 @@ public:
         int result;
 
         FwdCDAPMsgResponseEvent(const ser_obj_t& sm, int result,
-                        unsigned int sequenceNumber);
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**

@@ -31,38 +31,43 @@ namespace rina {
 
 /* CLASS ASSIGN TO DIF RESPONSE EVENT */
 AssignToDIFResponseEvent::AssignToDIFResponseEvent(
-                int result, unsigned int sequenceNumber):
+                int result, unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id):
                         BaseResponseEvent(result,
                                         ASSIGN_TO_DIF_RESPONSE_EVENT,
-                                        sequenceNumber) {
+                                        sequenceNumber, ctrl_port, ipcp_id) {
 }
 
 /* CLASS SET POLICY SET PARAM RESPONSE EVENT */
 SetPolicySetParamResponseEvent::SetPolicySetParamResponseEvent(
-                int result, unsigned int sequenceNumber) :
+                int result, unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id) :
 			IPCEvent(IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE,
-                                         sequenceNumber)
+                                         sequenceNumber, ctrl_port, ipcp_id)
 { this->result = result; }
 
 /* CLASS SELECT POLICY SET RESPONSE EVENT */
 SelectPolicySetResponseEvent::SelectPolicySetResponseEvent(
-                int result, unsigned int sequenceNumber) :
+                int result, unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id) :
 			IPCEvent(IPC_PROCESS_SELECT_POLICY_SET_RESPONSE,
-                                         sequenceNumber)
+                                         sequenceNumber, ctrl_port, ipcp_id)
 { this->result = result; }
 
 /* CLASS PLUGIN LOAD RESPONSE EVENT */
 PluginLoadResponseEvent::PluginLoadResponseEvent(
-                int result, unsigned int sequenceNumber) :
+                int result, unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id) :
 			IPCEvent(IPC_PROCESS_PLUGIN_LOAD_RESPONSE,
-                                         sequenceNumber)
+                                         sequenceNumber, ctrl_port, ipcp_id)
 { this->result = result; }
 
 /* CLASS FWD CDAP MSG REQUEST EVENT */
 FwdCDAPMsgRequestEvent::FwdCDAPMsgRequestEvent(const ser_obj_t& sm,
-				 int result, unsigned int sequenceNumber) :
+				 int result, unsigned int sequenceNumber,
+				 unsigned int ctrl_p, unsigned short ipcp_id) :
 				IPCEvent(IPC_PROCESS_FWD_CDAP_MSG,
-                                         sequenceNumber)
+                                         sequenceNumber, ctrl_port, ipcp_id)
 {
         this->sermsg = sm;
 	this->result = result;
@@ -70,9 +75,10 @@ FwdCDAPMsgRequestEvent::FwdCDAPMsgRequestEvent(const ser_obj_t& sm,
 
 /* CLASS FWD CDAP MSG REQUEST EVENT */
 FwdCDAPMsgResponseEvent::FwdCDAPMsgResponseEvent(const ser_obj_t& sm,
-                                 int result, unsigned int sequenceNumber) :
+                                 int result, unsigned int sequenceNumber,
+				 unsigned int ctrl_p, unsigned short ipcp_id) :
                                 IPCEvent(IPC_PROCESS_FWD_CDAP_RESPONSE_MSG,
-                                         sequenceNumber)
+                                         sequenceNumber, ctrl_port, ipcp_id)
 {
         this->sermsg = sm;
         this->result = result;

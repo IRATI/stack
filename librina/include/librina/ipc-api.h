@@ -502,7 +502,8 @@ public:
 	ApplicationUnregisteredEvent(
 			const ApplicationProcessNamingInformation& appName,
 			const ApplicationProcessNamingInformation& DIFName,
-			unsigned int sequenceNumber);
+			unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -525,7 +526,8 @@ public:
 
 	AppRegistrationCanceledEvent(int code, const std::string& reason,
 			const ApplicationProcessNamingInformation& difName,
-			unsigned int sequenceNumber);
+			unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -550,7 +552,8 @@ public:
         AllocateFlowRequestResultEvent(
                         const ApplicationProcessNamingInformation& appName,
                         const ApplicationProcessNamingInformation& difName,
-                        int portId, unsigned int sequenceNumber);
+                        int portId, unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -566,7 +569,8 @@ public:
 
         DeallocateFlowResponseEvent(
                         const ApplicationProcessNamingInformation& appName,
-                        int portId, int result, unsigned int sequenceNumber);
+                        int portId, int result, unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -585,7 +589,8 @@ public:
         GetDIFPropertiesResponseEvent(
                         const ApplicationProcessNamingInformation& appName,
                         const std::list<DIFProperties>& difProperties,
-                        int result, unsigned int sequenceNumber);
+                        int result, unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 }

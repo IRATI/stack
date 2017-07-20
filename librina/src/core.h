@@ -40,58 +40,6 @@ char * stringToCharArray(std::string s);
 char * intToCharArray(int i);
 
 /**
- * Contains the information to identify an IRATI ep
- * ctrl port ID and IPC Process id
- */
-struct irati_ep {
-	irati_msg_port_t ctrl_port;
-	ipc_process_id_t ipcp_id;
-	ApplicationProcessNamingInformation app_name;
-};
-
-/**
- * Contains mappings of application process name to netlink portId,
- * or IPC process id to netlink portId.
- */
-class CtrlPortIdMap {
-
-	/** Stores the mappings of IPC Process id to nelink portId */
-	std::map<ipc_process_id_t, struct irati_ep *> ipcp_id_map;
-
-	/** Stores the mappings of application process name to netlink port id */
-	std::map<std::string, struct irati_ep *> app_name_map;
-
-public:
-	~CtrlPortIdMap();
-
-	void add_ipcp_id_to_ctrl_port_mapping(irati_msg_port_t ctrl_port,
-					      ipc_process_id_t ipcp_id);
-	struct irati_ep * get_ctrl_port_from_ipcp_id(ipc_process_id_t ipcp_id);
-	void add_app_name_to_ctrl_port_map(const ApplicationProcessNamingInformation& app_name,
-					   irati_msg_port_t ctrl_port,
-					   ipc_process_id_t ipcp_id);
-	struct irati_ep * get_ctrl_port_from_app_name(const ApplicationProcessNamingInformation& app_name);
-	irati_msg_port_t get_ipcm_ctrl_port();
-
-	/**
-	 * Poulates the "destPortId" field for messages that have to be sent,
-	 * or updates the mappings for received messages
-	 * @param message
-	 * @param sent
-	 */
-	int update_msg_or_pid_map(struct irati_msg_base * msg, bool send);
-
-	/**
-	 * An OS Process has finalized. Retrieve the information associated to
-	 * the NL port-id (application name, IPC Process id if it is IPC process),
-	 * and return it in the form of an OSProcessFinalized event
-	 * @param nl_portid
-	 * @return
-	 */
-	IPCEvent * os_process_finalized(irati_msg_port_t ctrl_port);
-};
-
-/**
  * Main class of libRINA. Initializes the NetlinkManager,
  * the eventsQueue, and the NetlinkMessageReader thread.
  */
@@ -107,9 +55,6 @@ class IRATICtrlManager {
 
 	/** The lock for send/receive operations */
 	Lockable sendReceiveLock;
-
-	/** Keeps the mappings between control port ids and app/dif names */
-	CtrlPortIdMap ctrl_pid_map;
 
 	/** Linear sequence number generator */
 	unsigned int next_seq_number;

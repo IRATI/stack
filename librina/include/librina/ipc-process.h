@@ -46,7 +46,8 @@ public:
 	DIFInformation difInformation;
 
 	AssignToDIFRequestEvent(const DIFInformation& difInformation,
-			unsigned int sequenceNumber);
+			unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
 	const DIFInformation& getDIFInformation() const;
 #endif
@@ -63,7 +64,8 @@ public:
 
         UpdateDIFConfigurationRequestEvent(
                         const DIFConfiguration& difConfiguration,
-                        unsigned int sequenceNumber);
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
         const DIFConfiguration& getDIFConfiguration() const;
 #endif
@@ -87,7 +89,8 @@ public:
 	                const ApplicationProcessNamingInformation& ipcProcessName,
 			const ApplicationProcessNamingInformation& difName,
 			bool registered,
-			unsigned int sequenceNumber);
+			unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
 	const ApplicationProcessNamingInformation& getIPCProcessName() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
@@ -123,7 +126,8 @@ public:
 
 	QueryRIBRequestEvent(const std::string& objectClass,
 			const std::string& objectName, long objectInstance, int scope,
-			const std::string& filter, unsigned int sequenceNumber);
+			const std::string& filter, unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
 	const std::string& getObjectClass() const;
 	const std::string& getObjectName() const;
@@ -150,7 +154,8 @@ public:
 
 	SetPolicySetParamRequestEvent(const std::string& path,
                         const std::string& name, const std::string& value,
-			unsigned int sequenceNumber);
+			unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -166,7 +171,8 @@ public:
 
 	SelectPolicySetRequestEvent(const std::string& path,
                                     const std::string& name,
-			            unsigned int sequenceNumber);
+			            unsigned int sequenceNumber,
+				    unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -182,7 +188,8 @@ public:
 	bool load;
 
 	PluginLoadRequestEvent(const std::string& name, bool load,
-                               unsigned int sequenceNumber);
+                               unsigned int sequenceNumber,
+			       unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -202,7 +209,8 @@ public:
         int cepId;
 
         CreateConnectionResponseEvent(int portId, int cepId,
-                        unsigned int sequenceNumber);
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
         int getCepId() const;
         int getPortId() const;
@@ -224,7 +232,8 @@ public:
         int result;
 
         UpdateConnectionResponseEvent(int portId, int result,
-                        unsigned int sequenceNumber);
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
         int getResult() const;
         int getPortId() const;
@@ -251,7 +260,8 @@ public:
         int destCepId;
 
         CreateConnectionResultEvent(int portId, int sourceCepId,
-                        int destCepId, unsigned int sequenceNumber);
+                        int destCepId, unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
         int getSourceCepId() const;
         int getDestCepId() const;
@@ -268,7 +278,8 @@ public:
         int result;
 
         DestroyConnectionResultEvent(int portId, int result,
-                        unsigned int sequenceNumber);
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
         int getResult() const;
         int getPortId() const;
@@ -970,7 +981,8 @@ public:
         int result;
 
         DumpFTResponseEvent(const std::list<PDUForwardingTableEntry>& entries,
-                        int result, unsigned int sequenceNumber);
+                        int result, unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
         const std::list<PDUForwardingTableEntry>& getEntries() const;
         int getResult() const;
@@ -981,7 +993,8 @@ class UpdateCryptoStateResponseEvent: public IPCEvent {
 public:
 	UpdateCryptoStateResponseEvent(int res,
                         	       int port_id,
-                        	       unsigned int sequenceNumber);
+                        	       unsigned int sequenceNumber,
+				       unsigned int ctrl_p, unsigned short ipcp_id);
 
         // The N-1 port-id where crypto state was updated
         int port_id;
@@ -994,7 +1007,8 @@ class AllocatePortResponseEvent: public IPCEvent {
 public:
 	AllocatePortResponseEvent(int res,
                         	  int port_id,
-                        	  unsigned int sequenceNumber);
+                        	  unsigned int sequenceNumber,
+				  unsigned int ctrl_p, unsigned short ipcp_id);
 
         // The N-1 port-id allocated
         int port_id;
@@ -1007,7 +1021,8 @@ class DeallocatePortResponseEvent: public IPCEvent {
 public:
 	DeallocatePortResponseEvent(int res,
                         	    int port_id,
-				    unsigned int sequenceNumber);
+				    unsigned int sequenceNumber,
+				    unsigned int ctrl_p, unsigned short ipcp_id);
 
         // The N-1 port-id deallocated
         int port_id;
@@ -1019,7 +1034,8 @@ public:
 class WriteMgmtSDUResponseEvent: public IPCEvent {
 public:
 	WriteMgmtSDUResponseEvent(int res,
-				  unsigned int sequenceNumber);
+				  unsigned int sequenceNumber,
+				  unsigned int ctrl_p, unsigned short ipcp_id);
 
         // Result of the operation, 0 success
         int result;
@@ -1030,7 +1046,8 @@ public:
 	ReadMgmtSDUResponseEvent(int res,
 				 struct buffer * buf,
 				 unsigned int port_id,
-				 unsigned int sequenceNumber);
+				 unsigned int sequenceNumber,
+				 unsigned int ctrl_p, unsigned short ipcp_id);
 
         // Result of the operation, 0 success
         int result;

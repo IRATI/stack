@@ -196,9 +196,11 @@ IPCManager::internalRequestFlowAllocation(const ApplicationProcessNamingInformat
 
         msg = new irati_kmsg_ipcm_allocate_flow();
         msg->msg_type = RINA_C_APP_ALLOCATE_FLOW_REQUEST;
+        msg->src_ipcp_id = sourceIPCProcessId;
+        msg->dest_ipcp_id = 0;
+        msg->dest_port = IRATI_IPCM_PORT;
         msg->local = localAppName.to_c_name();
         msg->remote = remoteAppName.to_c_name();
-        msg->src_ipcp_id = sourceIPCProcessId;
         msg->fspec = flowSpec.to_c_flowspec();
 
         if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
@@ -239,10 +241,12 @@ unsigned int IPCManager::internalRequestFlowAllocationInDIF(
 
         msg = new irati_kmsg_ipcm_allocate_flow();
         msg->msg_type = RINA_C_APP_ALLOCATE_FLOW_REQUEST;
+        msg->src_ipcp_id = sourceIPCProcessId;
+        msg->dest_ipcp_id = 0;
+        msg->dest_port = IRATI_IPCM_PORT;
         msg->local = localAppName.to_c_name();
         msg->remote = remoteAppName.to_c_name();
         msg->dif_name = difName.to_c_name();
-        msg->src_ipcp_id = sourceIPCProcessId;
         msg->fspec = flowSpec.to_c_flowspec();
 
         if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
@@ -283,6 +287,8 @@ FlowInformation IPCManager::internalAllocateFlowResponse(const FlowRequestEvent&
 
         msg = new irati_msg_app_alloc_flow_response();
         msg->msg_type = RINA_C_APP_ALLOCATE_FLOW_RESPONSE;
+        msg->dest_ipcp_id = 0;
+        msg->dest_port = IRATI_IPCM_PORT;
         msg->not_source = notifySource;
         msg->result = result;
         msg->src_ipcp_id = ipcProcessId;
@@ -337,6 +343,8 @@ IPCManager::getDIFProperties(const ApplicationProcessNamingInformation& applicat
 
         msg = new irati_msg_app_reg_app_resp();
         msg->msg_type = RINA_C_APP_GET_DIF_PROPERTIES_REQUEST;
+        msg->dest_ipcp_id = 0;
+        msg->dest_port = IRATI_IPCM_PORT;
         msg->app_name = applicationName.to_c_name();
         msg->dif_name = DIFName.to_c_name();
 
@@ -365,6 +373,9 @@ IPCManager::requestApplicationRegistration(const ApplicationRegistrationInformat
 
         msg = new irati_msg_app_reg_app();
         msg->msg_type = RINA_C_APP_REGISTER_APPLICATION_REQUEST;
+        msg->src_ipcp_id = appRegistrationInfo.ipcProcessId;
+        msg->dest_ipcp_id = 0;
+        msg->dest_port = IRATI_IPCM_PORT;
         msg->app_name = appRegistrationInfo.appName.to_c_name();
         msg->dif_name = appRegistrationInfo.difName.to_c_name();
         msg->daf_name = appRegistrationInfo.dafName.to_c_name();
@@ -470,6 +481,8 @@ IPCManager::requestApplicationUnregistration(const ApplicationProcessNamingInfor
 
         msg = new irati_msg_app_reg_app_resp();
         msg->msg_type = RINA_C_APP_UNREGISTER_APPLICATION_REQUEST;
+        msg->dest_ipcp_id = 0;
+        msg->dest_port = IRATI_IPCM_PORT;
         msg->app_name = applicationName.to_c_name();
         msg->dif_name = DIFName.to_c_name();
 
@@ -550,28 +563,10 @@ unsigned int IPCManager::requestFlowAllocationInDIF(
 
 void IPCManager::initIodev(FlowInformation *flow, int portId)
 {
-        struct irati_iodev_ctldata iodata;
-
-        if (portId < 0) {
-                /* This happens in case of flow allocation failure. Don't
-                 * open the I/O device, just set the file descriptor to an
-                 * invalid value. */
-                flow->fd = -1;
-                return;
-        }
-
-        flow->fd = open("/dev/irati", O_RDWR);
+        flow->fd = irati_open_io_port(portId);
         if (flow->fd < 0) {
                 std::ostringstream oss;
                 oss << "Cannot open /dev/irati [" << strerror(errno) << "]";
-                throw FlowAllocationException(oss.str());
-        }
-
-        iodata.port_id = (uint32_t)portId;
-        if (ioctl(flow->fd, IRATI_FLOW_BIND, &iodata)) {
-                std::ostringstream oss;
-                oss << "Cannot bind port id " << iodata.port_id <<
-                        " on /dev/irati [" << strerror(errno) << "]";
                 throw FlowAllocationException(oss.str());
         }
 }
@@ -665,6 +660,8 @@ unsigned int IPCManager::requestFlowDeallocation(int portId)
 
         msg = new irati_msg_app_dealloc_flow();
         msg->msg_type = RINA_C_APP_DEALLOCATE_FLOW_REQUEST;
+        msg->dest_ipcp_id = 0;
+        msg->dest_port = IRATI_IPCM_PORT;
         msg->port_id = portId;
         msg->name = flow->localAppName.to_c_name();
 
@@ -768,9 +765,10 @@ Singleton<IPCManager> ipcManager;
 ApplicationUnregisteredEvent::ApplicationUnregisteredEvent(
 		const ApplicationProcessNamingInformation& appName,
 		const ApplicationProcessNamingInformation& DIFName,
-		unsigned int sequenceNumber) :
+		unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id) :
 				IPCEvent(APPLICATION_UNREGISTERED_EVENT,
-						sequenceNumber)
+					 sequenceNumber, ctrl_port, ipcp_id)
 {
 	this->applicationName = appName;
 	this->DIFName = DIFName;
@@ -780,9 +778,10 @@ ApplicationUnregisteredEvent::ApplicationUnregisteredEvent(
 AppRegistrationCanceledEvent::AppRegistrationCanceledEvent(int code,
                 const std::string& reason,
                 const ApplicationProcessNamingInformation& difName,
-                unsigned int sequenceNumber):
+                unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id):
 			IPCEvent(APPLICATION_REGISTRATION_CANCELED_EVENT,
-				 sequenceNumber)
+				 sequenceNumber, ctrl_port, ipcp_id)
 {
         this->code = code;
         this->reason = reason;
@@ -794,9 +793,10 @@ AllocateFlowRequestResultEvent::AllocateFlowRequestResultEvent(
                         const ApplicationProcessNamingInformation& appName,
                         const ApplicationProcessNamingInformation& difName,
                         int portId,
-                        unsigned int sequenceNumber):
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id):
                                 IPCEvent(ALLOCATE_FLOW_REQUEST_RESULT_EVENT,
-                                         sequenceNumber)
+                                         sequenceNumber, ctrl_port, ipcp_id)
 {
         this->sourceAppName = appName;
         this->difName = difName;
@@ -807,10 +807,11 @@ AllocateFlowRequestResultEvent::AllocateFlowRequestResultEvent(
 DeallocateFlowResponseEvent::DeallocateFlowResponseEvent(
                         const ApplicationProcessNamingInformation& appName,
                         int portId, int result,
-                        unsigned int sequenceNumber):
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id):
                                 BaseResponseEvent(result,
                                          DEALLOCATE_FLOW_RESPONSE_EVENT,
-                                         sequenceNumber)
+                                         sequenceNumber, ctrl_port, ipcp_id)
 {
         this->appName = appName;
         this->portId = portId;
@@ -821,10 +822,11 @@ GetDIFPropertiesResponseEvent::GetDIFPropertiesResponseEvent(
                         const ApplicationProcessNamingInformation& appName,
                         const std::list<DIFProperties>& difProperties,
                         int result,
-                        unsigned int sequenceNumber):
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id):
                                 BaseResponseEvent(result,
                                          GET_DIF_PROPERTIES_RESPONSE_EVENT,
-                                         sequenceNumber)
+                                         sequenceNumber, ctrl_port, ipcp_id)
 {
         this->applicationName = appName;
         this->difProperties = difProperties;

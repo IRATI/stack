@@ -296,7 +296,8 @@ public:
 	GetDIFPropertiesRequestEvent(
 			const ApplicationProcessNamingInformation& appName,
 			const ApplicationProcessNamingInformation& DIFName,
-			unsigned int sequenceNumber);
+			unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
 	const ApplicationProcessNamingInformation& getApplicationName() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
@@ -710,13 +711,11 @@ public:
 	 * @throws AppFlowArrivedException if something goes wrong or the application
 	 * doesn't accept the flow
 	 */
-	void flowRequestArrived(
-			const ApplicationProcessNamingInformation& localAppName,
-			const ApplicationProcessNamingInformation& remoteAppName,
-			const FlowSpecification& flowSpec,
-			const ApplicationProcessNamingInformation& difName,
-			int portId,
-			unsigned int opaque);
+	void flowRequestArrived(const ApplicationProcessNamingInformation& localAppName,
+				const ApplicationProcessNamingInformation& remoteAppName,
+				const FlowSpecification& flowSpec,
+				const ApplicationProcessNamingInformation& difName,
+				int portId, unsigned int opaque, unsigned int ctrl_port);
 
 	/**
 	 * Inform the application about the result of a flow deallocation operation
@@ -734,7 +733,8 @@ public:
 	 * @throws NotifyFlowDeallocatedException
 	 */
 	void flowDeallocatedRemotely(int portId, int code,
-			const ApplicationProcessNamingInformation& appName);
+			             const ApplicationProcessNamingInformation& appName,
+				     unsigned int ctrl_port);
 
 	/**
 	 * Return the properties of zero or more DIFs to the application
@@ -758,8 +758,9 @@ extern Singleton<ApplicationManager> applicationManager;
  */
 class IpcmRegisterApplicationResponseEvent: public BaseResponseEvent {
 public:
-        IpcmRegisterApplicationResponseEvent(
-                        int result, unsigned int sequenceNumber);
+        IpcmRegisterApplicationResponseEvent(int result,
+        		unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -767,8 +768,9 @@ public:
  */
 class IpcmUnregisterApplicationResponseEvent: public BaseResponseEvent {
 public:
-        IpcmUnregisterApplicationResponseEvent(
-                        int result, unsigned int sequenceNumber);
+        IpcmUnregisterApplicationResponseEvent(int result,
+        		unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -776,8 +778,9 @@ public:
  */
 class IpcmDeallocateFlowResponseEvent: public BaseResponseEvent {
 public:
-        IpcmDeallocateFlowResponseEvent(
-                        int result, unsigned int sequenceNumber);
+        IpcmDeallocateFlowResponseEvent(int result,
+        		unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -789,8 +792,9 @@ public:
         /** The port id assigned to the flow */
         int portId;
 
-        IpcmAllocateFlowRequestResultEvent(
-                        int result, int portId, unsigned int sequenceNumber);
+        IpcmAllocateFlowRequestResultEvent(int result, int portId,
+        		unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
         int getPortId() const;
 #endif
@@ -805,7 +809,8 @@ public:
 
         QueryRIBResponseEvent(const std::list<rib::RIBObjectData>& ribObjects,
                         int result,
-                        unsigned int sequenceNumber);
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
         const std::list<rib::RIBObjectData>& getRIBObject() const;
 #endif
@@ -816,8 +821,9 @@ public:
  */
 class UpdateDIFConfigurationResponseEvent: public BaseResponseEvent {
 public:
-        UpdateDIFConfigurationResponseEvent(
-                        int result, unsigned int sequenceNumber);
+        UpdateDIFConfigurationResponseEvent(int result,
+        		unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -829,10 +835,10 @@ public:
 
         DIFInformation difInformation;
 
-        EnrollToDIFResponseEvent(
-                        const std::list<Neighbor> & neighbors,
+        EnrollToDIFResponseEvent(const std::list<Neighbor> & neighbors,
                         const DIFInformation& difInformation,
-                        int result, unsigned int sequenceNumber);
+                        int result, unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
         const std::list<Neighbor>& getNeighbors() const;
         const DIFInformation& getDIFInformation() const;
@@ -842,10 +848,11 @@ public:
 class DisconnectNeighborResponseEvent: public BaseResponseEvent {
 public:
 	DisconnectNeighborResponseEvent(int result,
-					unsigned int sequenceNumber)
+					unsigned int sequenceNumber,
+					unsigned int ctrl_p, unsigned short ipcp_id)
 			: BaseResponseEvent(result,
                                             DISCONNECT_NEIGHBOR_RESPONSE_EVENT,
-					    sequenceNumber) {}
+					    sequenceNumber, ctrl_port, ipcp_id) {}
 };
 
 /**
@@ -859,7 +866,8 @@ public:
 
         IPCProcessDaemonInitializedEvent(unsigned short ipcProcessId,
                         const ApplicationProcessNamingInformation& name,
-                        unsigned int sequenceNumber);
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
         unsigned short getIPCProcessId() const;
         const ApplicationProcessNamingInformation& getName() const;
@@ -871,7 +879,8 @@ public:
  */
 class TimerExpiredEvent: public IPCEvent {
 public:
-        TimerExpiredEvent(unsigned int sequenceNumber);
+        TimerExpiredEvent(unsigned int sequenceNumber,
+        		  unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -880,7 +889,8 @@ public:
 class MediaReportEvent: public IPCEvent {
 public:
 	MediaReportEvent(const MediaReport& report,
-			 unsigned int sequenceNumber);
+			 unsigned int sequenceNumber,
+			 unsigned int ctrl_p, unsigned short ipcp_id);
 
         // The media report resulting from a scan
         MediaReport media_report;
@@ -889,7 +899,8 @@ public:
 class CreateIPCPResponseEvent: public IPCEvent {
 public:
 	CreateIPCPResponseEvent(int res,
-				unsigned int sequenceNumber);
+				unsigned int sequenceNumber,
+				unsigned int ctrl_p, unsigned short ipcp_id);
 
         // Result of the operation, 0 success
         int result;
@@ -898,7 +909,8 @@ public:
 class DestroyIPCPResponseEvent: public IPCEvent {
 public:
 	DestroyIPCPResponseEvent(int res,
-				 unsigned int sequenceNumber);
+				 unsigned int sequenceNumber,
+				 unsigned int ctrl_p, unsigned short ipcp_id);
 
         // Result of the operation, 0 success
         int result;
@@ -907,7 +919,7 @@ public:
 class IPCMFinalizationRequestEvent: public IPCEvent {
 public:
 	IPCMFinalizationRequestEvent():
-		IPCEvent(IPCM_FINALIZATION_REQUEST_EVENT, 0) {};
+		IPCEvent(IPCM_FINALIZATION_REQUEST_EVENT, 0, 0, 0) {};
 };
 
 }
