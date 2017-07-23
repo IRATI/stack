@@ -50,7 +50,6 @@ IPCMIPCProcess::IPCMIPCProcess() {
 	proxy_ = NULL;
 	state_ = IPCM_IPCP_CREATED;
 	kernel_ready = false;
-	pid = 0;
 }
 
 IPCMIPCProcess::~IPCMIPCProcess() throw(){
@@ -62,7 +61,6 @@ IPCMIPCProcess::IPCMIPCProcess(rina::IPCProcessProxy* ipcp_proxy)
 	state_ = IPCM_IPCP_CREATED;
 	proxy_ = ipcp_proxy;
 	kernel_ready = false;
-	pid = 0;
 }
 
 /** Return the information of a registration request */
@@ -149,13 +147,13 @@ void IPCMIPCProcess::get_description(std::ostream& os) {
 
 	os << " | ";
 	if (registeredApplications.size() > 0) {
-		std::list<rina::ApplicationProcessNamingInformation>::const_iterator it;
+		std::list<rina::ApplicationRegistrationInformation>::const_iterator it;
 		for (it = registeredApplications.begin();
 				it != registeredApplications.end(); ++it) {
 			if (it != registeredApplications.begin()) {
 				os << ", ";
 			}
-			os << it->getEncodedString();
+			os << it->appName.getEncodedString();
 		}
 	} else {
 		os << "-";
@@ -181,6 +179,19 @@ void IPCMIPCProcess::get_description(std::ostream& os) {
 void IPCMIPCProcess::setInitialized()
 {
 	state_ = IPCM_IPCP_INITIALIZED;
+}
+
+unsigned int IPCMIPCProcess::get_fa_ctrl_port(const rina::ApplicationProcessNamingInformation& reg_app)
+{
+	std::list<rina::ApplicationRegistrationInformation>::iterator it;
+
+	for(it = registeredApplications.begin();
+			it != registeredApplications.end(); ++it) {
+		if (it->appName == reg_app)
+			return it->ctrl_port;
+	}
+
+	return 0;
 }
 
 void IPCMIPCProcess::assignToDIF(const rina::DIFInformation& difInformation,
@@ -385,7 +396,7 @@ void IPCMIPCProcess::unregisterApplicationResult(unsigned int sequenceNumber,
 		return;
 	for (it = registeredApplications.begin(); it != registeredApplications.end(); ++it) {
 		if (it->appName == app_reg.appName) {
-			registeredApplications.remove(*it);
+			registeredApplications.erase(it);
 			return;
 		}
 	}
@@ -642,6 +653,20 @@ bool IPCMIPCProcessFactory::exists(const unsigned short id)
 		return false;
 
 	return true;
+}
+
+unsigned short IPCMIPCProcessFactory::exists_by_pid(pid_t pid)
+{
+	std::map<unsigned short, IPCMIPCProcess*>::iterator it;
+	rina::ReadScopedLock readlock(rwlock);
+
+	for (it = ipcProcesses.begin(); it != ipcProcesses.end(); ++it) {
+		if (it->second->proxy_->pid == pid) {
+			return it->first;
+		}
+	}
+
+	return 0;
 }
 
 void IPCMIPCProcessFactory::listIPCProcesses(std::vector<IPCMIPCProcess *>& result)

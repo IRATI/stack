@@ -109,9 +109,11 @@ void sighandler_sigint(int signum)
 {
         LOG_IPCP_CRIT("Got signal %d", signum);
 
-        if (signum == SIGINT) {
+        if (signum == SIGINT && Main::ipcp->keep_running) {
                 Main::ipcp->keep_running = false;
                 rina::librina_finalize();
+        } else {
+        	LOG_DBG("Ignoring signal, IPCP is already exiting");
         }
 }
 

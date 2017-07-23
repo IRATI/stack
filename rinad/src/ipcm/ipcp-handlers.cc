@@ -97,7 +97,6 @@ void IPCManager_::ipc_process_daemon_initialized_event_handler(rina::IPCProcessD
 				ipcp->get_type() == rina::SHIM_WIFI_IPC_PROCESS_STA);
 
 		//Initialize
-		ipcp->pid = e->pid;
 		ipcp->setInitialized();
 
 		if (ipcp->kernel_ready) {

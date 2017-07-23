@@ -71,9 +71,6 @@ public:
 	/** The IPC Process proxy class */
 	rina::IPCProcessProxy* proxy_;
 
-	/** The PID of the OS process that is the IPC Process */
-	pid_t pid;
-
 	bool kernel_ready;
 
 	//Constructors and destructurs
@@ -121,6 +118,11 @@ public:
 	 * acquired
 	 */
 	void setInitialized();
+
+	/**
+	 * Get ctrl port where to send the flow allocate request (to the local app)
+	 */
+	unsigned int get_fa_ctrl_port(const rina::ApplicationProcessNamingInformation& reg_app);
 
 	/**
 	 * Invoked by the IPC Manager to make an existing IPC Process a member of a
@@ -549,6 +551,12 @@ public:
      * Check if the ipcp exists
      */
     bool exists(const unsigned short id);
+
+    /**
+     * Check if the ipcp exists by PID. If so, return IPCP ID,
+     * otherwise return 0
+     */
+    unsigned short exists_by_pid(pid_t pid);
 
     /**
      * Returns a pointer to the IPCProcess identified by ipcProcessId

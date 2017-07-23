@@ -50,6 +50,7 @@ ipcm_SOURCES  =								\
 	dif-allocator.cc		dif-allocator.h			\
 	dif-template-manager.cc		dif-template-manager.h		\
 	ip-vpn-manager.cc		ip-vpn-manager.h		\
+	process-event-listener.cc process-event-listener.h \
 	catalog.cc			catalog.h
 
 test_empty_SOURCES  =				\

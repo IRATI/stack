@@ -689,7 +689,6 @@ struct irati_msg_with_name {
 	uint32_t event_id;
 
 	struct name * name;
-	pid_t pid;
 } __attribute__((packed));
 
 /* 54 RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE */

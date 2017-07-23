@@ -229,6 +229,7 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 	IPCMIPCProcess *ipcp;
 	ostringstream ss;
 	FlowAllocTransState* trans = NULL;
+	unsigned int ctrl_port = 0;
 
 	// Retrieve the local IPC process involved in the flow allocation
 	// request coming from a remote application
@@ -247,6 +248,15 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 		return IPCM_PENDING;
 	}
 
+	ctrl_port = ipcp->get_fa_ctrl_port(event->localApplicationName);
+	if (ctrl_port == 0) {
+		ipcp->rwlock.unlock();
+		ss  << ": Error: Could not ctrl port to send a FA request "
+			"to local application " << event->localApplicationName.toString() << endl;
+		FLUSH_LOG(ERR, ss);
+		return IPCM_FAILURE;
+	}
+
 	//Auto release the read lock
 	rina::ReadScopedLock readlock(ipcp->rwlock, false);
 
@@ -254,8 +264,7 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 		// Inform the local application that a remote application
 		// wants to allocate a flow
 		trans = new FlowAllocTransState(NULL, NULL, ipcp->get_id(),
-									*event,
-									true);
+						*event, true);
 		if(!trans){
 			ss  << ": Error: Could not allocate memory to serve "
 			"remote flow allocation request for ipcp:"<< event->ipcProcessId << endl;
@@ -269,19 +278,18 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 			throw rina::AppFlowArrivedException();
 		}
 
-		rina::applicationManager->flowRequestArrived(
-					event->localApplicationName,
-					event->remoteApplicationName,
-					event->flowSpecification,
-					event->DIFName, event->portId,
-					trans->tid);
+		rina::applicationManager->flowRequestArrived(event->localApplicationName,
+							     event->remoteApplicationName,
+							     event->flowSpecification,
+							     event->DIFName, event->portId,
+							     trans->tid, ctrl_port);
 
 		ss << "Arrived request for flow allocation between " <<
 			event->localApplicationName.toString()
 			<< " and " << event->remoteApplicationName.toString()
 			<< endl;
 		FLUSH_LOG(INFO, ss);
-	} catch (rina::AppFlowArrivedException& e) {
+	} catch (rina::IPCException& e) {
 		ss  << ": Error while informing application "
 			<< event->localApplicationName.toString() <<
 			" about a flow request coming from remote application "
@@ -295,7 +303,7 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 		try {
 			// Inform the IPC process that it was not possible
 			// to allocate the flow
-			ipcp->allocateFlowResponse(*event, -1, true, 0);
+			ipcp->allocateFlowResponse(*event, -1, true, 0, 0);
 
 			ss << "IPC process " << ipcp->get_name().toString() <<
 				" informed that it was not possible to "
@@ -446,11 +454,9 @@ void IPCManager_::allocate_flow_response_event_handler(rina::AllocateFlowRespons
 
 		// Inform the IPC process about the response of the flow
 		// allocation procedure
-		slave_ipcp->allocateFlowResponse(
-			req_event,
-			event->result,
-			event->notifySource,
-			event->flowAcceptorIpcProcessId);
+		slave_ipcp->allocateFlowResponse(req_event, event->result,
+						 event->pid, event->notifySource,
+						 event->flowAcceptorIpcProcessId);
 		if (!success)
 			req_event.portId = -1;
 
@@ -589,10 +595,12 @@ void IPCManager_::ipcm_deallocate_flow_response_event_handler(rina::IpcmDealloca
 
 void IPCManager_::flow_deallocated_event_handler(rina::FlowDeallocatedEvent* event)
 {
-	IPCMIPCProcess *ipcp = lookup_ipcp_by_port(event->portId);
+	IPCMIPCProcess * ipcp, * user_ipcp;
 	rina::FlowInformation info;
+	int ret = 0;
 	ostringstream ss;
 
+	ipcp = lookup_ipcp_by_port(event->portId);
 	if (!ipcp) {
 		ss  << ": Cannot find the IPC process that "
 			"provides the flow with port-id " << event->portId
@@ -609,11 +617,19 @@ void IPCManager_::flow_deallocated_event_handler(rina::FlowDeallocatedEvent* eve
 		// the specified port-id has been deallocated
 		info = ipcp->flowDeallocated(event->portId);
 
-		if (ip_vpn_manager->iporina_flow_deallocated(event->portId,
-							     ipcp->get_id())) {
-			rina::applicationManager->flowDeallocatedRemotely(event->portId,
-									  event->code,
-									  info.localAppName);
+		// Check if the registered app is an IP endpoint
+		ret = ip_vpn_manager->iporina_flow_deallocated(event->portId,
+				     ipcp->get_id());
+		if (ret == 0)
+			return;
+
+		// Only notify app about deallocated flow if it is an IPCP
+		// Otherwise app will find out because the I/O fd will close
+		user_ipcp = ipcp_factory_.getIPCProcess(info.user_ipcp_id);
+		if (user_ipcp) {
+			rina::applicationManager->flowDeallocatedRemotely(event->portId, event->code,
+									  info.localAppName,
+									  user_ipcp->proxy_->portId);
 		}
 
 		ss << "IPC process " << ipcp->get_name().toString() <<

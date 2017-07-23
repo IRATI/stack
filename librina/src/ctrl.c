@@ -118,9 +118,8 @@ int irati_open_ctrl_port(irati_msg_port_t port_id)
 		return -1;
 	}
 
-	info.pid = getpid();
 	if (port_id == 0)
-		info.port_id = fd;
+		info.port_id = getpid()*10000 + fd;
 	else
 		info.port_id = port_id;
 
