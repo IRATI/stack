@@ -495,7 +495,7 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 		event = new IPCProcessDaemonInitializedEvent(sp_msg->src_ipcp_id,
 							     ApplicationProcessNamingInformation(sp_msg->name),
 							     sp_msg->event_id, msg->src_port,
-							     msg->src_ipcp_id, sp_msg->pid);
+							     msg->src_ipcp_id);
 		break;
 	}
 	case RINA_C_APP_ALLOCATE_FLOW_REQUEST: {

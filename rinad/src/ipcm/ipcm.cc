@@ -90,34 +90,30 @@ IPCManager_::IPCManager_()
           io_thread(NULL),
           dif_template_manager(NULL),
           dif_allocator(NULL),
-	  ip_vpn_manager(NULL)
+	  ip_vpn_manager(NULL),
+	  osp_monitor(NULL)
 {}
 
 IPCManager_::~IPCManager_()
 {
-    if (dif_template_manager)
-    {
-        delete dif_template_manager;
-    }
+	if (dif_template_manager) {
+		delete dif_template_manager;
+	}
 
-    if (dif_allocator)
-    {
-        delete dif_allocator;
-    }
+	if (dif_allocator) {
+		delete dif_allocator;
+	}
 
-    if (ip_vpn_manager)
-    {
-        delete ip_vpn_manager;
-    }
+	if (ip_vpn_manager) {
+		delete ip_vpn_manager;
+	}
 
+	forwarded_calls.clear();
 
-    forwarded_calls.clear();
-
-    for (std::map<int, TransactionState*>::iterator
-    		it = pend_transactions.begin(); it != pend_transactions.end(); ++it)
-    {
-    	delete it->second;
-    }
+	for (std::map<int, TransactionState*>::iterator
+			it = pend_transactions.begin(); it != pend_transactions.end(); ++it) {
+		delete it->second;
+	}
 }
 
 void IPCManager_::init(const std::string& loglevel, std::string& config_file)
@@ -150,7 +146,15 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
         dif_template_manager = new DIFTemplateManager(config_file,
                                                       dif_allocator);
 
+        // Initialize IP VPN Manager
         ip_vpn_manager = new IPVPNManager();
+
+        // Initialize OS Process Monitor
+	rina::ThreadAttributes thread_attrs;
+	thread_attrs.setJoinable();
+	thread_attrs.setName("os-process-monitor");
+        osp_monitor = new OSProcessMonitor(&thread_attrs);
+        osp_monitor->start();
     } catch (rina::InitializationException& e)
     {
         LOG_ERR("Error while initializing librina-ipc-manager");
@@ -420,12 +424,17 @@ void IPCManager_::list_ipcps(std::list<int>& list)
 
 bool IPCManager_::ipcp_exists(const unsigned short ipcp_id)
 {
-    return ipcp_factory_.exists(ipcp_id);
+	return ipcp_factory_.exists(ipcp_id);
+}
+
+unsigned short IPCManager_::ipcp_exists_by_pid(pid_t pid)
+{
+	return ipcp_factory_.exists_by_pid(pid);
 }
 
 void IPCManager_::list_ipcp_types(std::list<std::string>& types)
 {
-    types = ipcp_factory_.getSupportedIPCProcessTypes();
+	types = ipcp_factory_.getSupportedIPCProcessTypes();
 }
 
 //TODO this assumes single IPCP per DIF
@@ -765,9 +774,11 @@ ipcm_res_t IPCManager_::register_at_dif(Addon* callee,
         //Register
         rina::ApplicationRegistrationInformation ari;
         ari.appName = ipcp->get_name();
-        ari.difName = ipcp->dif_name_;
+        ari.dafName = ipcp->dif_name_;
+        ari.difName = slave_ipcp->dif_name_;
         ari.ipcProcessId = ipcp->get_id();
-        ari.pid = ipcp->pid;
+        ari.pid = ipcp->proxy_->pid;
+        ari.ctrl_port = ipcp->proxy_->portId;
         slave_ipcp->registerApplication(ari, trans->tid);
 
         ss << "Requested DIF registration of IPC process "
@@ -2079,6 +2090,15 @@ void IPCManager_::io_loop()
         	//Signal the main thread to start
         	//the stop procedure
         	LOG_INFO("IPCM event loop requested to stop");
+
+        	void * status;
+        	if (osp_monitor) {
+        		osp_monitor->do_stop();
+        		osp_monitor->join(&status);
+
+        		delete osp_monitor;
+        	}
+
         	stop_cond.signal();
         	break;
         }

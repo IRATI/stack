@@ -42,11 +42,10 @@ namespace rinad {
 void IPCManager_::os_process_finalized_handler(pid_t pid)
 {
 	list<rina::FlowInformation> involved_flows;
+	vector<IPCMIPCProcess *> ipcps;
+	rina::ApplicationProcessNamingInformation app_name;
+	unsigned short ipcp_id = 0;
 	ostringstream ss;
-
-	ss  << "OS process with PID " << pid
-			<< " terminated" << endl;
-	FLUSH_LOG(INFO, ss);
 
 	{
 		//Prevent any insertion/deletion to happen
@@ -76,44 +75,49 @@ void IPCManager_::os_process_finalized_handler(pid_t pid)
 
 			rina::FlowDeallocateRequestEvent req_event(fit->portId, 0, 0, 0);
 			IPCManager->deallocate_flow(NULL, ipcp_id, req_event);
+			LOG_INFO("OS process %d terminated, deallocated flow %d",
+					pid, fit->portId);
 		}
 
 		// Look if the terminating application has pending registrations
 		// with some IPC processes
-		vector<IPCMIPCProcess *> ipcps;
 		ipcp_factory_.listIPCProcesses(ipcps);
 		for (unsigned int i = 0; i < ipcps.size(); i++) {
-			if (application_is_registered_to_ipcp(app_name, ipcps[i])) {
+			if (application_is_registered_to_ipcp(app_name, pid, ipcps[i])) {
 				// Build a structure that will be used during
 				// the unregistration process. The last argument
 				// is the request sequence number: 0 means that
 				// the unregistration response does not match
 				// an application request - this is indeed an
 				// unregistration forced by the IPCM.
-				rina::ApplicationUnregistrationRequestEvent
-				req_event(app_name, ipcps[i]->dif_name_, 0);
-
+				rina::ApplicationUnregistrationRequestEvent req_event(app_name,
+										      ipcps[i]->dif_name_,
+										      0, 0, 0);
 				IPCManager->unregister_app_from_ipcp(NULL, NULL,
-						req_event,
-						ipcps[i]->get_id());
+								     req_event,
+								     ipcps[i]->get_id());
+				LOG_INFO("OS process %d terminated, unregistering name %s",
+						pid, app_name.toString().c_str());
 			}
 		}
 	}
 
-	if (IPCManager->ipcp_exists(event->ipcProcessId)) {
+	ipcp_id = IPCManager->ipcp_exists_by_pid(pid);
+	if (ipcp_id != 0) {
+		LOG_INFO("OS process %d terminated, it was IPCP with id %u",
+				pid, ipcp_id);
 		//An IPCP OS process has crashed, we need to clean up state
 		//TODO if the IPCP was supporting flows or had
 		//registered applications, notify them
 
 		//Distribute the event to the addons
-		IPCMEvent addon_e(NULL, IPCM_IPCP_CRASHED,
-						event->ipcProcessId);
+		IPCMEvent addon_e(NULL, IPCM_IPCP_CRASHED, ipcp_id);
 		Addon::distribute_ipcm_event(addon_e);
 
 		// Cleanup IPC Process state in the kernel
-		if(IPCManager->destroy_ipcp(NULL, event->ipcProcessId) < 0 ){
+		if(IPCManager->destroy_ipcp(NULL, ipcp_id) < 0 ){
 			LOG_WARN("Problems cleaning up state of IPCP with id: %d\n",
-					event->ipcProcessId);
+				 ipcp_id);
 		}
 	}
 }

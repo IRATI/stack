@@ -341,7 +341,6 @@ void AbstractIPCProcessImpl::event_loop(void)
 		case rina::ENROLL_TO_DIF_RESPONSE_EVENT:
 		case rina::GET_DIF_PROPERTIES:
 		case rina::GET_DIF_PROPERTIES_RESPONSE_EVENT:
-		case rina::OS_PROCESS_FINALIZED:
 		case rina::QUERY_RIB_RESPONSE_EVENT:
 		case rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT:
 		case rina::TIMER_EXPIRED_EVENT:

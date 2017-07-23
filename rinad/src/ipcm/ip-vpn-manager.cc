@@ -345,7 +345,6 @@ ipcm_res_t IPCManager_::register_ip_prefix_to_dif(Promise* promise,
 	IPCMIPCProcess *slave_ipcp = NULL;
 	APPregTransState* trans = NULL;
 	rina::ApplicationRegistrationRequestEvent event;
-	rina::ApplicationProcessNamingInformation daf_name;
 
 	// Select an IPC process from the DIF specified in the request
 	slave_ipcp = select_ipcp_by_dif(dif_name);
@@ -377,9 +376,7 @@ ipcm_res_t IPCManager_::register_ip_prefix_to_dif(Promise* promise,
 			return IPCM_FAILURE;
 		}
 
-		slave_ipcp->registerApplication(event.applicationRegistrationInformation.appName,
-						daf_name,
-						0,
+		slave_ipcp->registerApplication(event.applicationRegistrationInformation,
 						trans->tid);
 
 		LOG_INFO("Requested registration of IP prefix %s"
@@ -509,7 +506,7 @@ void IPCManager_::allocate_iporina_flow_response(const rina::FlowRequestEvent& e
 	try {
 		// Inform the IPC process about the response of the flow
 		// allocation procedure
-		ipcp->allocateFlowResponse(event, result, notify_source, 0);
+		ipcp->allocateFlowResponse(event, result, notify_source, 0, 0);
 
 		LOG_INFO("Informing IPC process %s about flow allocation from application %s"
 			" to application %s in DIF %s [success = %d, port-id = %d]",

@@ -862,13 +862,11 @@ class IPCProcessDaemonInitializedEvent: public IPCEvent {
 public:
         unsigned short ipcProcessId;
         ApplicationProcessNamingInformation name;
-        pid_t pid;
 
         IPCProcessDaemonInitializedEvent(unsigned short ipcProcessId,
                         const ApplicationProcessNamingInformation& name,
                         unsigned int sequenceNumber,
-			unsigned int ctrl_p, unsigned short ipcp_id,
-			pid_t pid);
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
         unsigned short getIPCProcessId() const;
         const ApplicationProcessNamingInformation& getName() const;

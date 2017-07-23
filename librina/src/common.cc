@@ -664,9 +664,9 @@ FlowRequestEvent::FlowRequestEvent(int portId,
 	this->localApplicationName = localApplicationName;
 	this->remoteApplicationName = remoteApplicationName;
 	this->DIFName = DIFName;
-	this->flowRequestorIpcProcessId = ipcProcessId;
+	this->flowRequestorIpcProcessId = ipcp_id;
 	this->portId = portId;
-	this->ipcProcessId = ipcProcessId;
+	this->ipcProcessId = ipcp_id;
 	this->internal = false;
 	this->pid = pid;
 }

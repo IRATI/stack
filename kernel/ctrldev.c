@@ -51,7 +51,6 @@ extern struct kipcm *default_kipcm;
 /* Private data to an ctrldev file instance. */
 struct ctrldev_priv {
 	irati_msg_port_t   port_id;
-	pid_t		   pid;
 	struct rfifo      *pending_msgs;
 	spinlock_t 	   pending_msgs_lock;
 	struct list_head   node;        /* queue of ctrl device file descriptors */
@@ -589,8 +588,8 @@ ctrldev_release(struct inode *inode, struct file *f)
         	irati_ctrl_dm.ipcm_ctrl_dev = 0;
 
         	//TODO destroy all control devices and IPCPs
-        	mutex_unlock(&irati_ctrl_dm.general_lock);
         }
+        mutex_unlock(&irati_ctrl_dm.general_lock);
 
         LOG_DBG("Instance of control device bound to port %d released",
                 priv->port_id);
@@ -631,7 +630,6 @@ ctrldev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
         }
 
         priv->port_id = data.port_id;
-        priv->pid = data.pid;
 
         LOG_DBG("Control device instance bound to port id %d", data.port_id);
 
