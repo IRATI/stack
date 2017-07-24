@@ -104,7 +104,7 @@ irati_msg_handler_t kipcm_handlers[RINA_C_MAX];
                 KIPCM_UNLOCK_FOOTER(X);         \
         } while (0)
 
-static int alloc_flow_req_reply(struct ctrldev_priv   * ctrl_dev,
+static int alloc_flow_req_reply(irati_msg_port_t ctrl_port,
                                 ipc_process_id_t        id,
 				int8_t                	res,
 				uint32_t                seq_num,
@@ -119,7 +119,7 @@ static int alloc_flow_req_reply(struct ctrldev_priv   * ctrl_dev,
 	resp_msg.result = res;
 	resp_msg.event_id = seq_num;
 
-        if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
+        if (irati_ctrl_dev_snd_resp_msg(ctrl_port,
         				(struct irati_msg_base *) &resp_msg)) {
                 LOG_ERR("Could not send flow_result_msg");
                 return -1;
@@ -132,7 +132,7 @@ static int alloc_flow_req_reply(struct ctrldev_priv   * ctrl_dev,
  * It is the responsibility of the shims to send the alloc_req_arrived
  * and the alloc_req_result.
  */
-static int notify_ipcp_allocate_flow_request(struct ctrldev_priv *ctrl_dev,
+static int notify_ipcp_allocate_flow_request(irati_msg_port_t ctrl_port,
 					     struct irati_msg_base *bmsg,
 					     void * data)
 {
@@ -211,11 +211,11 @@ static int notify_ipcp_allocate_flow_request(struct ctrldev_priv *ctrl_dev,
         return 0;
 
  fail:
-        return alloc_flow_req_reply(ctrl_dev, ipc_id, -1, msg->event_id,
+        return alloc_flow_req_reply(ctrl_port, ipc_id, -1, msg->event_id,
         			    port_id_bad());
 }
 
-static int notify_ipcp_allocate_flow_response(struct ctrldev_priv *ctrl_dev,
+static int notify_ipcp_allocate_flow_response(irati_msg_port_t ctrl_port,
 					      struct irati_msg_base *bmsg,
 					      void * data)
 {
@@ -278,7 +278,7 @@ fail:
         return 0;
 }
 
-static int dealloc_flow_req_reply(struct ctrldev_priv * ctrl_dev,
+static int dealloc_flow_req_reply(irati_msg_port_t ctrl_port,
 				  ipc_process_id_t id,
 				  int8_t           res,
 				  uint32_t         seq_num)
@@ -291,7 +291,7 @@ static int dealloc_flow_req_reply(struct ctrldev_priv * ctrl_dev,
 	resp_msg.result = res;
 	resp_msg.event_id = seq_num;
 
-        if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
+        if (irati_ctrl_dev_snd_resp_msg(ctrl_port,
         				(struct irati_msg_base *) &resp_msg)) {
                 LOG_ERR("Could not send deallocate flow response msg");
                 return -1;
@@ -304,7 +304,7 @@ static int dealloc_flow_req_reply(struct ctrldev_priv * ctrl_dev,
  * It is the responsibility of the shims to send the alloc_req_arrived
  * and the alloc_req_result.
  */
-static int notify_ipcp_deallocate_flow_request(struct ctrldev_priv *ctrl_dev,
+static int notify_ipcp_deallocate_flow_request(irati_msg_port_t ctrl_port,
 					       struct irati_msg_base *bmsg,
                                                void * data)
 {
@@ -343,13 +343,13 @@ static int notify_ipcp_deallocate_flow_request(struct ctrldev_priv *ctrl_dev,
 
         kfa_port_id_release(kipcm->kfa, msg->port_id);
 
-        return dealloc_flow_req_reply(ctrl_dev, ipc_id, 0, msg->event_id);
+        return dealloc_flow_req_reply(ctrl_port, ipc_id, 0, msg->event_id);
 
  fail:
-        return dealloc_flow_req_reply(ctrl_dev, ipc_id, -1, msg->event_id);
+        return dealloc_flow_req_reply(ctrl_port, ipc_id, -1, msg->event_id);
 }
 
-static int assign_to_dif_reply(struct ctrldev_priv * ctrl_dev,
+static int assign_to_dif_reply(irati_msg_port_t ctrl_port,
 		    	       ipc_process_id_t id,
 			       int8_t           res,
 			       uint32_t         seq_num)
@@ -362,7 +362,7 @@ static int assign_to_dif_reply(struct ctrldev_priv * ctrl_dev,
 	resp_msg.result = res;
 	resp_msg.event_id = seq_num;
 
-        if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
+        if (irati_ctrl_dev_snd_resp_msg(ctrl_port,
         				(struct irati_msg_base *) &resp_msg)) {
                 LOG_ERR("Could not send assign to dif response msg");
                 return -1;
@@ -371,7 +371,7 @@ static int assign_to_dif_reply(struct ctrldev_priv * ctrl_dev,
         return 0;
 }
 
-static int notify_ipcp_assign_dif_request(struct ctrldev_priv * ctrl_dev,
+static int notify_ipcp_assign_dif_request(irati_msg_port_t ctrl_port,
 					  struct irati_msg_base *bmsg,
 					  void * data)
 {
@@ -424,10 +424,10 @@ static int notify_ipcp_assign_dif_request(struct ctrldev_priv * ctrl_dev,
         LOG_DBG("Assign to dif operation seems ok, gonna complete it");
 
  fail:
-        return assign_to_dif_reply(ctrl_dev, ipc_id, retval, msg->event_id);
+        return assign_to_dif_reply(ctrl_port, ipc_id, retval, msg->event_id);
 }
 
-static int update_dif_config_reply(struct ctrldev_priv * ctrl_dev,
+static int update_dif_config_reply(irati_msg_port_t ctrl_port,
 				   ipc_process_id_t id,
 				   int8_t           res,
 				   uint32_t         seq_num)
@@ -440,7 +440,7 @@ static int update_dif_config_reply(struct ctrldev_priv * ctrl_dev,
 	resp_msg.result = res;
 	resp_msg.event_id = seq_num;
 
-	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
+	if (irati_ctrl_dev_snd_resp_msg(ctrl_port,
 					(struct irati_msg_base *) &resp_msg)) {
 		LOG_ERR("Could not send flow_result_msg");
 		return -1;
@@ -449,7 +449,7 @@ static int update_dif_config_reply(struct ctrldev_priv * ctrl_dev,
 	return 0;
 }
 
-static int notify_ipcp_update_dif_config_request(struct ctrldev_priv * ctrl_dev,
+static int notify_ipcp_update_dif_config_request(irati_msg_port_t ctrl_port,
 						 struct irati_msg_base *bmsg,
 						 void * data)
 {
@@ -491,13 +491,13 @@ static int notify_ipcp_update_dif_config_request(struct ctrldev_priv * ctrl_dev,
                 goto fail;
         }
 
-        return update_dif_config_reply(ctrl_dev, ipc_id, 0, msg->event_id);
+        return update_dif_config_reply(ctrl_port, ipc_id, 0, msg->event_id);
 
  fail:
- 	return update_dif_config_reply(ctrl_dev, ipc_id, -1, msg->event_id);
+ 	return update_dif_config_reply(ctrl_port, ipc_id, -1, msg->event_id);
 }
 
-static int reg_unreg_resp_reply(struct ctrldev_priv * ctrl_dev,
+static int reg_unreg_resp_reply(irati_msg_port_t ctrl_port,
 		   	        ipc_process_id_t id,
 				int8_t           res,
 				uint32_t         seq_num,
@@ -513,7 +513,7 @@ static int reg_unreg_resp_reply(struct ctrldev_priv * ctrl_dev,
 	resp_msg.result = res;
 	resp_msg.event_id = seq_num;
 
-	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
+	if (irati_ctrl_dev_snd_resp_msg(ctrl_port,
 					(struct irati_msg_base *) &resp_msg)) {
 		LOG_ERR("Could not send (un)register app response msg");
 		return -1;
@@ -522,7 +522,7 @@ static int reg_unreg_resp_reply(struct ctrldev_priv * ctrl_dev,
 	return 0;
 }
 
-static int notify_ipcp_register_app_request(struct ctrldev_priv * ctrl_dev,
+static int notify_ipcp_register_app_request(irati_msg_port_t ctrl_port,
 					    struct irati_msg_base *bmsg,
 					    void * data)
 {
@@ -558,13 +558,13 @@ static int notify_ipcp_register_app_request(struct ctrldev_priv * ctrl_dev,
 						   msg->daf_name))
                 goto fail;
 
-        return reg_unreg_resp_reply(ctrl_dev, ipc_id, 0, msg->event_id, true);
+        return reg_unreg_resp_reply(ctrl_port, ipc_id, 0, msg->event_id, true);
 
  fail:
- 	return reg_unreg_resp_reply(ctrl_dev, ipc_id, -1, msg->event_id, true);
+ 	return reg_unreg_resp_reply(ctrl_port, ipc_id, -1, msg->event_id, true);
 }
 
-static int notify_ipcp_unregister_app_request(struct ctrldev_priv * ctrl_dev,
+static int notify_ipcp_unregister_app_request(irati_msg_port_t ctrl_port,
 					      struct irati_msg_base *bmsg,
 					      void * data)
 {
@@ -601,13 +601,12 @@ static int notify_ipcp_unregister_app_request(struct ctrldev_priv * ctrl_dev,
                                                      msg->app_name))
                 goto fail;
 
-        return reg_unreg_resp_reply(ctrl_dev, ipc_id, 0, msg->event_id, false);
+        return reg_unreg_resp_reply(ctrl_port, ipc_id, 0, msg->event_id, false);
  fail:
- 	 return reg_unreg_resp_reply(ctrl_dev, ipc_id, -1,
- 			 	     msg->event_id, false);
+ 	return reg_unreg_resp_reply(ctrl_port, ipc_id, -1, msg->event_id, false);
 }
 
-static int conn_create_resp_reply(struct ctrldev_priv * ctrl_dev,
+static int conn_create_resp_reply(irati_msg_port_t ctrl_port,
                                   ipc_process_id_t id,
                                   port_id_t        pid,
                                   cep_id_t         src_cep,
@@ -622,7 +621,7 @@ static int conn_create_resp_reply(struct ctrldev_priv * ctrl_dev,
 	resp_msg.src_cep = src_cep;
 	resp_msg.event_id = seq_num;
 
-	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
+	if (irati_ctrl_dev_snd_resp_msg(ctrl_port,
 					(struct irati_msg_base *) &resp_msg)) {
 		LOG_ERR("Could not send conn create response msg");
 		return -1;
@@ -631,7 +630,7 @@ static int conn_create_resp_reply(struct ctrldev_priv * ctrl_dev,
         return 0;
 }
 
-static int notify_ipcp_conn_create_req(struct ctrldev_priv * ctrl_dev,
+static int notify_ipcp_conn_create_req(irati_msg_port_t ctrl_port,
 				       struct irati_msg_base *bmsg,
                                        void * data)
 {
@@ -693,11 +692,11 @@ static int notify_ipcp_conn_create_req(struct ctrldev_priv * ctrl_dev,
                 goto fail;
         }
 
-        return conn_create_resp_reply(ctrl_dev, ipc_id, port_id, src_cep,
+        return conn_create_resp_reply(ctrl_port, ipc_id, port_id, src_cep,
                                       msg->event_id);
 
  fail:
- 	return conn_create_resp_reply(ctrl_dev, ipc_id, port_id, cep_id_bad(),
+ 	return conn_create_resp_reply(ctrl_port, ipc_id, port_id, cep_id_bad(),
                                	      msg->event_id);
 }
 
@@ -706,7 +705,7 @@ static int notify_ipcp_conn_create_req(struct ctrldev_priv * ctrl_dev,
  *        reused
  */
 
-static int conn_create_result_reply(struct ctrldev_priv * ctrl_dev,
+static int conn_create_result_reply(irati_msg_port_t ctrl_port,
                                     ipc_process_id_t id,
                                     port_id_t        pid,
 				    cep_id_t         src_cep,
@@ -723,7 +722,7 @@ static int conn_create_result_reply(struct ctrldev_priv * ctrl_dev,
 	resp_msg.dst_cep = dst_cep;
 	resp_msg.event_id = seq_num;
 
-	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
+	if (irati_ctrl_dev_snd_resp_msg(ctrl_port,
 					(struct irati_msg_base *) &resp_msg)) {
 		LOG_ERR("Could not send conn create result msg");
 		return -1;
@@ -732,7 +731,7 @@ static int conn_create_result_reply(struct ctrldev_priv * ctrl_dev,
         return 0;
 }
 
-static int notify_ipcp_conn_create_arrived(struct ctrldev_priv * ctrl_dev,
+static int notify_ipcp_conn_create_arrived(irati_msg_port_t ctrl_port,
 					   struct irati_msg_base *bmsg,
                                            void * data)
 {
@@ -795,16 +794,16 @@ static int notify_ipcp_conn_create_arrived(struct ctrldev_priv * ctrl_dev,
                 goto fail;
         }
 
-        return conn_create_result_reply(ctrl_dev, ipc_id, port_id, src_cep,
+        return conn_create_result_reply(ctrl_port, ipc_id, port_id, src_cep,
         			        msg->dst_cep, msg->event_id);
 
  fail:
- 	return conn_create_result_reply(ctrl_dev, ipc_id, port_id,
+ 	return conn_create_result_reply(ctrl_port, ipc_id, port_id,
  					cep_id_bad(), cep_id_bad(),
 					msg->event_id);
 }
 
-static int conn_update_result_reply(struct ctrldev_priv * ctrl_dev,
+static int conn_update_result_reply(irati_msg_port_t ctrl_port,
                          	    ipc_process_id_t id,
 				    int8_t           result,
 				    port_id_t        pid,
@@ -819,7 +818,7 @@ static int conn_update_result_reply(struct ctrldev_priv * ctrl_dev,
 	resp_msg.result = result;
 	resp_msg.event_id = seq_num;
 
-	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
+	if (irati_ctrl_dev_snd_resp_msg(ctrl_port,
 					(struct irati_msg_base *) &resp_msg)) {
 		LOG_ERR("Could not send conn update result msg");
 		return -1;
@@ -828,7 +827,7 @@ static int conn_update_result_reply(struct ctrldev_priv * ctrl_dev,
         return 0;
 }
 
-static int notify_ipcp_conn_update_req(struct ctrldev_priv * ctrl_dev,
+static int notify_ipcp_conn_update_req(irati_msg_port_t ctrl_port,
 				       struct irati_msg_base *bmsg,
                                        void * data)
 {
@@ -866,16 +865,16 @@ static int notify_ipcp_conn_update_req(struct ctrldev_priv * ctrl_dev,
                                          msg->dst_cep))
                 goto fail;
 
-        return conn_update_result_reply(ctrl_dev, ipc_id, 0, port_id,
+        return conn_update_result_reply(ctrl_port, ipc_id, 0, port_id,
         				msg->event_id);
 
  fail:
- 	return conn_update_result_reply(ctrl_dev, ipc_id, -1, port_id,
+ 	return conn_update_result_reply(ctrl_port, ipc_id, -1, port_id,
  					msg->event_id);
 
 }
 
-static int conn_destroy_result_reply(struct ctrldev_priv * ctrl_dev,
+static int conn_destroy_result_reply(irati_msg_port_t ctrl_port,
                                      ipc_process_id_t id,
 				     int8_t           result,
 				     port_id_t        pid,
@@ -890,7 +889,7 @@ static int conn_destroy_result_reply(struct ctrldev_priv * ctrl_dev,
 	resp_msg.result = result;
 	resp_msg.event_id = seq_num;
 
-	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
+	if (irati_ctrl_dev_snd_resp_msg(ctrl_port,
 					(struct irati_msg_base *) &resp_msg)) {
 		LOG_ERR("Could not send conn destroy result msg");
 		return -1;
@@ -899,7 +898,7 @@ static int conn_destroy_result_reply(struct ctrldev_priv * ctrl_dev,
         return 0;
 }
 
-static int notify_ipcp_conn_destroy_req(struct ctrldev_priv * ctrl_dev,
+static int notify_ipcp_conn_destroy_req(irati_msg_port_t ctrl_port,
 					struct irati_msg_base *bmsg,
                                         void * data)
 {
@@ -933,27 +932,15 @@ static int notify_ipcp_conn_destroy_req(struct ctrldev_priv * ctrl_dev,
         if (ipcp->ops->connection_destroy(ipcp->data, msg->cep_id))
                 goto fail;
 
-        return conn_destroy_result_reply(ctrl_dev, ipc_id, 0, port_id,
+        return conn_destroy_result_reply(ctrl_port, ipc_id, 0, port_id,
                                          msg->event_id);
 
  fail:
- 	return conn_destroy_result_reply(ctrl_dev, ipc_id, -1, port_id,
+ 	return conn_destroy_result_reply(ctrl_port, ipc_id, -1, port_id,
  					 msg->event_id);
 }
 
-static int notify_ipc_manager_present(struct ctrldev_priv * ctrl_dev,
-                                      struct irati_msg_base * msg,
-                                      void * data)
-{
-        LOG_INFO("IPC Manager started. It is listening at NL port-id %d",
-                 msg->src_port);
-
-        set_ipcm_ctrl_dev(ctrl_dev);
-
-        return 0;
-}
-
-static int notify_ipcp_modify_pffe(struct ctrldev_priv * ctrl_dev,
+static int notify_ipcp_modify_pffe(irati_msg_port_t ctrl_port,
 				   struct irati_msg_base *bmsg,
                                    void * data)
 {
@@ -1020,7 +1007,7 @@ static int notify_ipcp_modify_pffe(struct ctrldev_priv * ctrl_dev,
         return 0;
 }
 
-static int ipcp_dump_pff_reply(struct ctrldev_priv * ctrl_dev,
+static int ipcp_dump_pff_reply(irati_msg_port_t ctrl_port,
                                ipc_process_id_t   ipc_id,
                                int8_t             result,
                                struct list_head * entries,
@@ -1042,7 +1029,7 @@ static int ipcp_dump_pff_reply(struct ctrldev_priv * ctrl_dev,
 	INIT_LIST_HEAD(&resp_msg.pft_entries->pff_entries);
 	list_replace(entries, &resp_msg.pft_entries->pff_entries);
 
-	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
+	if (irati_ctrl_dev_snd_resp_msg(ctrl_port,
 					(struct irati_msg_base *) &resp_msg)) {
 		LOG_ERR("Could not send dump pff reply msg");
 		ret = -1;
@@ -1052,7 +1039,7 @@ static int ipcp_dump_pff_reply(struct ctrldev_priv * ctrl_dev,
         return ret;
 }
 
-static int notify_ipcp_dump_pff(struct ctrldev_priv * ctrl_dev,
+static int notify_ipcp_dump_pff(irati_msg_port_t ctrl_port,
                                 struct irati_msg_base * msg,
                                 void * data)
 {
@@ -1090,11 +1077,11 @@ static int notify_ipcp_dump_pff(struct ctrldev_priv * ctrl_dev,
         result = 0;
 
  end:
-        return ipcp_dump_pff_reply(ctrl_dev, ipc_id, result, &entries,
+        return ipcp_dump_pff_reply(ctrl_port, ipc_id, result, &entries,
                                    msg->event_id);
 }
 
-static int ipcm_query_rib_reply(struct ctrldev_priv * ctrl_dev,
+static int ipcm_query_rib_reply(irati_msg_port_t ctrl_port,
 				ipc_process_id_t   ipc_id,
                                 int8_t             result,
                                 struct list_head * entries,
@@ -1116,7 +1103,7 @@ static int ipcm_query_rib_reply(struct ctrldev_priv * ctrl_dev,
 	INIT_LIST_HEAD(&resp_msg.rib_entries->rib_object_data_entries);
 	list_replace(entries, &resp_msg.rib_entries->rib_object_data_entries);
 
-	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
+	if (irati_ctrl_dev_snd_resp_msg(ctrl_port,
 					(struct irati_msg_base *) &resp_msg)) {
 		LOG_ERR("Could not send query rib reply msg");
 		ret = -1;
@@ -1126,7 +1113,7 @@ static int ipcm_query_rib_reply(struct ctrldev_priv * ctrl_dev,
         return ret;
 }
 
-static int notify_ipcm_query_rib(struct ctrldev_priv * ctrl_dev,
+static int notify_ipcm_query_rib(irati_msg_port_t ctrl_port,
 				 struct irati_msg_base *bmsg,
                                  void * data)
 {
@@ -1171,11 +1158,11 @@ static int notify_ipcm_query_rib(struct ctrldev_priv * ctrl_dev,
         result = 0;
 
  end:
-        return ipcm_query_rib_reply(ctrl_dev, ipc_id, result, &entries,
+        return ipcm_query_rib_reply(ctrl_port, ipc_id, result, &entries,
                                     msg->event_id);
 }
 
-static int notify_ipcp_set_policy_set_param(struct ctrldev_priv * ctrl_dev,
+static int notify_ipcp_set_policy_set_param(irati_msg_port_t ctrl_port,
 					    struct irati_msg_base *bmsg,
                                             void * data)
 {
@@ -1230,7 +1217,7 @@ out:
 	resp_msg.result = retval;
 	resp_msg.event_id = msg->event_id;
 
-	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
+	if (irati_ctrl_dev_snd_resp_msg(ctrl_port,
 					(struct irati_msg_base *) &resp_msg)) {
 		LOG_ERR("Could not send set policy param msg");
 		return -1;
@@ -1239,7 +1226,7 @@ out:
 	return 0;
 }
 
-static int notify_ipcp_select_policy_set(struct ctrldev_priv * ctrl_dev,
+static int notify_ipcp_select_policy_set(irati_msg_port_t ctrl_port,
 					 struct irati_msg_base *bmsg,
                                          void * data)
 {
@@ -1293,7 +1280,7 @@ out:
 	resp_msg.result = retval;
 	resp_msg.event_id = msg->event_id;
 
-	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
+	if (irati_ctrl_dev_snd_resp_msg(ctrl_port,
 					(struct irati_msg_base *) &resp_msg)) {
 		LOG_ERR("Could not send select policy set response msg");
 		return -1;
@@ -1302,7 +1289,7 @@ out:
 	return 0;
 }
 
-static int notify_ipcp_update_crypto_state(struct ctrldev_priv * ctrl_dev,
+static int notify_ipcp_update_crypto_state(irati_msg_port_t ctrl_port,
 					   struct irati_msg_base *bmsg,
                                            void * data)
 {
@@ -1358,7 +1345,7 @@ out:
 	resp_msg.event_id = msg->event_id;
 	resp_msg.port_id = port_id;
 
-	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
+	if (irati_ctrl_dev_snd_resp_msg(ctrl_port,
 					(struct irati_msg_base *) &resp_msg)) {
 		LOG_ERR("Could not send update crypto state resp mesg");
 		return -1;
@@ -1367,7 +1354,7 @@ out:
 	return 0;
 }
 
-static int notify_ipcp_address_change(struct ctrldev_priv * ctrl_dev,
+static int notify_ipcp_address_change(irati_msg_port_t ctrl_port,
 				      struct irati_msg_base *bmsg,
                                       void * data)
 {
@@ -1423,7 +1410,7 @@ out:
         return 0;
 }
 
-static int notify_allocate_port(struct ctrldev_priv * ctrl_dev,
+static int notify_allocate_port(irati_msg_port_t ctrl_port,
 				struct irati_msg_base *bmsg,
 				void * data)
 {
@@ -1460,7 +1447,7 @@ static int notify_allocate_port(struct ctrldev_priv * ctrl_dev,
 	resp_msg.event_id = msg->event_id;
 	resp_msg.port_id = port_id;
 
-	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
+	if (irati_ctrl_dev_snd_resp_msg(ctrl_port,
 					(struct irati_msg_base *) &resp_msg)) {
 		LOG_ERR("Could not send allocate port response msg");
 		return -1;
@@ -1470,7 +1457,7 @@ static int notify_allocate_port(struct ctrldev_priv * ctrl_dev,
 }
 
 
-static int notify_deallocate_port(struct ctrldev_priv * ctrl_dev,
+static int notify_deallocate_port(irati_msg_port_t ctrl_port,
 				  struct irati_msg_base *bmsg,
 				  void * data)
 {
@@ -1506,7 +1493,7 @@ static int notify_deallocate_port(struct ctrldev_priv * ctrl_dev,
 	resp_msg.event_id = msg->event_id;
 	resp_msg.port_id = port_id;
 
-	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
+	if (irati_ctrl_dev_snd_resp_msg(ctrl_port,
 					(struct irati_msg_base *) &resp_msg)) {
 		LOG_ERR("Could not send deallocate port response msg");
 		return -1;
@@ -1515,7 +1502,7 @@ static int notify_deallocate_port(struct ctrldev_priv * ctrl_dev,
 	return 0;
 }
 
-static int notify_ipcp_write_mgmt_sdu(struct ctrldev_priv * ctrl_dev,
+static int notify_ipcp_write_mgmt_sdu(irati_msg_port_t ctrl_port,
 				      struct irati_msg_base *bmsg,
 				      void * data)
 {
@@ -1560,7 +1547,7 @@ out:
 	resp_msg.result = retval;
 	resp_msg.event_id = msg->event_id;
 
-	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
+	if (irati_ctrl_dev_snd_resp_msg(ctrl_port,
 					(struct irati_msg_base *) &resp_msg)) {
 		LOG_ERR("Could not send mgmt sdu write response msg");
 		return -1;
@@ -1569,7 +1556,7 @@ out:
         return 0;
 }
 
-static int notify_create_ipcp(struct ctrldev_priv * ctrl_dev,
+static int notify_create_ipcp(irati_msg_port_t ctrl_port,
 			      struct irati_msg_base *bmsg,
 			      void * data)
 {
@@ -1601,7 +1588,7 @@ static int notify_create_ipcp(struct ctrldev_priv * ctrl_dev,
 	resp_msg.result = retval;
 	resp_msg.event_id = msg->event_id;
 
-	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
+	if (irati_ctrl_dev_snd_resp_msg(ctrl_port,
 					(struct irati_msg_base *) &resp_msg)) {
 		LOG_ERR("Could not send create IPCP response msg");
 		return -1;
@@ -1610,7 +1597,7 @@ static int notify_create_ipcp(struct ctrldev_priv * ctrl_dev,
 	return 0;
 }
 
-static int notify_destroy_ipcp(struct ctrldev_priv * ctrl_dev,
+static int notify_destroy_ipcp(irati_msg_port_t ctrl_port,
 			       struct irati_msg_base *bmsg,
 			       void * data)
 {
@@ -1639,7 +1626,7 @@ static int notify_destroy_ipcp(struct ctrldev_priv * ctrl_dev,
 	resp_msg.result = retval;
 	resp_msg.event_id = msg->event_id;
 
-	if (irati_ctrl_dev_snd_resp_msg(ctrl_dev,
+	if (irati_ctrl_dev_snd_resp_msg(ctrl_port,
 					(struct irati_msg_base *) &resp_msg)) {
 		LOG_ERR("Could not send destroy IPCP msg");
 		return -1;
@@ -1663,8 +1650,6 @@ static int ctrldev_handlers_unregister(void)
         if (irati_handler_unregister(RINA_C_IPCM_UNREGISTER_APPLICATION_REQUEST))
         	retval = -1;
         if (irati_handler_unregister(RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST))
-        	retval = -1;
-        if (irati_handler_unregister(RINA_C_IPCM_IPC_MANAGER_PRESENT))
         	retval = -1;
         if (irati_handler_unregister(RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST))
         	retval = -1;
@@ -1723,8 +1708,6 @@ static int ctrldev_handlers_register(struct kipcm * kipcm)
                 notify_ipcp_unregister_app_request;
         kipcm_handlers[RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST]        =
                 notify_ipcp_deallocate_flow_request;
-        kipcm_handlers[RINA_C_IPCM_IPC_MANAGER_PRESENT]            =
-                notify_ipc_manager_present;
         kipcm_handlers[RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST]      =
                 notify_ipcp_update_dif_config_request;
         kipcm_handlers[RINA_C_IPCP_CONN_CREATE_REQUEST]            =
@@ -2185,7 +2168,7 @@ int kipcm_flow_arrived(struct kipcm *         kipcm,
 	msg.remote = remote;
 	msg.dif_name = dif_name;
 
-	if (irati_ctrl_dev_snd_resp_msg(get_ipcm_ctrl_dev(),
+	if (irati_ctrl_dev_snd_resp_msg(IPCM_CTRLDEV_PORT,
 					(struct irati_msg_base *) &msg)) {
 		LOG_ERR("Could not send allocate flow req arrived msg");
 		return -1;
@@ -2446,7 +2429,7 @@ int kipcm_notify_flow_alloc_req_result(struct kipcm    *kipcm,
 	msg.event_id = seq_num;
 	msg.port_id = pid;
 
-	if (irati_ctrl_dev_snd_resp_msg(get_ipcm_ctrl_dev(),
+	if (irati_ctrl_dev_snd_resp_msg(IPCM_CTRLDEV_PORT,
 					(struct irati_msg_base *) &msg)) {
 		LOG_ERR("Could not send flow_result_msg");
 		return -1;
@@ -2472,7 +2455,7 @@ int kipcm_notify_flow_dealloc(ipc_process_id_t ipc_id,
 	msg.event_id = 0;
 	msg.port_id = port_id;
 
-	if (irati_ctrl_dev_snd_resp_msg(get_ctrl_dev_from_port_id(irati_port),
+	if (irati_ctrl_dev_snd_resp_msg(irati_port,
 					(struct irati_msg_base *) &msg)) {
 		LOG_ERR("Could not send flow deallocated notif msg");
 		return -1;

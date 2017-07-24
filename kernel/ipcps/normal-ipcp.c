@@ -817,7 +817,7 @@ static int mgmt_sdu_notif_worker(void * o)
 	sdu_data = sdu_buffer(data->sdu);
 	memcpy(msg.sdu->data, sdu_data, msg.sdu->size);
 
-	if (irati_ctrl_dev_snd_resp_msg(get_ctrl_dev_from_port_id(data->irati_port_id),
+	if (irati_ctrl_dev_snd_resp_msg(data->irati_port_id,
 					(struct irati_msg_base *) &msg)) {
 		LOG_ERR("Could not send flow_result_msg");
 	}

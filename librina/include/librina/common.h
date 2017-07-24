@@ -272,7 +272,6 @@ enum IPCEventType {
         IPC_PROCESS_QUERY_RIB,
         GET_DIF_PROPERTIES,
         GET_DIF_PROPERTIES_RESPONSE_EVENT,
-        IPCM_CTRL_PORT_CLOSED,
         IPCM_REGISTER_APP_RESPONSE_EVENT,
         IPCM_UNREGISTER_APP_RESPONSE_EVENT,
         IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT,
@@ -304,7 +303,6 @@ enum IPCEventType {
 	IPCM_CREATE_IPCP_RESPONSE,
 	IPCM_DESTROY_IPCP_RESPONSE,
 	IPCM_FINALIZATION_REQUEST_EVENT,
-	IPCM_CTRL_PORT_OPENED,
         NO_EVENT
 };
 
@@ -611,22 +609,6 @@ public:
 				  unsigned int sequenceNumber,
 				  unsigned int ctrl_p,
 				  unsigned short ipcp_id, pid_t pid);
-};
-
-/**
- * Event informing that an OS process (an application or an
- * IPC Process daemon) has finalized
- */
-class CtrlPortClosedEvent: public IPCEvent {
-public:
-	CtrlPortClosedEvent(unsigned int ctrl_p, pid_t pid);
-	pid_t pid;
-};
-
-class CtrlPortOpenedEvent: public IPCEvent {
-public:
-	CtrlPortOpenedEvent(unsigned int ctrl_p, pid_t pid);
-	pid_t pid;
 };
 
 /**

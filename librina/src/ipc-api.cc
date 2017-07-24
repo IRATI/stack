@@ -187,6 +187,7 @@ IPCManager::internalRequestFlowAllocation(const ApplicationProcessNamingInformat
 {
         FlowInformation * flow;
         unsigned int result = 0;
+        ApplicationProcessNamingInformation dif_name;
 
         WriteScopedLock writeLock(flows_rw_lock);
 
@@ -198,9 +199,10 @@ IPCManager::internalRequestFlowAllocation(const ApplicationProcessNamingInformat
         msg->msg_type = RINA_C_APP_ALLOCATE_FLOW_REQUEST;
         msg->src_ipcp_id = sourceIPCProcessId;
         msg->dest_ipcp_id = 0;
-        msg->dest_port = IRATI_IPCM_PORT;
+        msg->dest_port = IPCM_CTRLDEV_PORT;
         msg->local = localAppName.to_c_name();
         msg->remote = remoteAppName.to_c_name();
+        msg->dif_name = dif_name.to_c_name();
         msg->fspec = flowSpec.to_c_flowspec();
         msg->pid = getpid();
 
@@ -244,7 +246,7 @@ unsigned int IPCManager::internalRequestFlowAllocationInDIF(
         msg->msg_type = RINA_C_APP_ALLOCATE_FLOW_REQUEST;
         msg->src_ipcp_id = sourceIPCProcessId;
         msg->dest_ipcp_id = 0;
-        msg->dest_port = IRATI_IPCM_PORT;
+        msg->dest_port = IPCM_CTRLDEV_PORT;
         msg->local = localAppName.to_c_name();
         msg->remote = remoteAppName.to_c_name();
         msg->dif_name = difName.to_c_name();
@@ -290,7 +292,7 @@ FlowInformation IPCManager::internalAllocateFlowResponse(const FlowRequestEvent&
         msg = new irati_msg_app_alloc_flow_response();
         msg->msg_type = RINA_C_APP_ALLOCATE_FLOW_RESPONSE;
         msg->dest_ipcp_id = 0;
-        msg->dest_port = IRATI_IPCM_PORT;
+        msg->dest_port = IPCM_CTRLDEV_PORT;
         msg->not_source = notifySource;
         msg->result = result;
         msg->src_ipcp_id = ipcProcessId;
@@ -347,7 +349,7 @@ IPCManager::getDIFProperties(const ApplicationProcessNamingInformation& applicat
         msg = new irati_msg_app_reg_app_resp();
         msg->msg_type = RINA_C_APP_GET_DIF_PROPERTIES_REQUEST;
         msg->dest_ipcp_id = 0;
-        msg->dest_port = IRATI_IPCM_PORT;
+        msg->dest_port = IPCM_CTRLDEV_PORT;
         msg->app_name = applicationName.to_c_name();
         msg->dif_name = DIFName.to_c_name();
 
@@ -378,7 +380,7 @@ IPCManager::requestApplicationRegistration(const ApplicationRegistrationInformat
         msg->msg_type = RINA_C_APP_REGISTER_APPLICATION_REQUEST;
         msg->src_ipcp_id = appRegistrationInfo.ipcProcessId;
         msg->dest_ipcp_id = 0;
-        msg->dest_port = IRATI_IPCM_PORT;
+        msg->dest_port = IPCM_CTRLDEV_PORT;
         msg->app_name = appRegistrationInfo.appName.to_c_name();
         msg->dif_name = appRegistrationInfo.difName.to_c_name();
         msg->daf_name = appRegistrationInfo.dafName.to_c_name();
@@ -486,7 +488,7 @@ IPCManager::requestApplicationUnregistration(const ApplicationProcessNamingInfor
         msg = new irati_msg_app_reg_app_resp();
         msg->msg_type = RINA_C_APP_UNREGISTER_APPLICATION_REQUEST;
         msg->dest_ipcp_id = 0;
-        msg->dest_port = IRATI_IPCM_PORT;
+        msg->dest_port = IPCM_CTRLDEV_PORT;
         msg->app_name = applicationName.to_c_name();
         msg->dif_name = DIFName.to_c_name();
 
@@ -665,7 +667,7 @@ unsigned int IPCManager::requestFlowDeallocation(int portId)
         msg = new irati_msg_app_dealloc_flow();
         msg->msg_type = RINA_C_APP_DEALLOCATE_FLOW_REQUEST;
         msg->dest_ipcp_id = 0;
-        msg->dest_port = IRATI_IPCM_PORT;
+        msg->dest_port = IPCM_CTRLDEV_PORT;
         msg->port_id = portId;
         msg->name = flow->localAppName.to_c_name();
 

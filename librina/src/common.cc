@@ -502,9 +502,6 @@ const std::string IPCEvent::eventTypeToString(IPCEventType eventType) {
 	case GET_DIF_PROPERTIES_RESPONSE_EVENT:
 		result = "21_GET_DIF_PROPERTIES_RESPONSE";
 		break;
-	case IPCM_CTRL_PORT_CLOSED:
-		result = "22_IPCM_CTRL_PORT_CLOSED";
-		break;
 	case IPCM_REGISTER_APP_RESPONSE_EVENT:
 		result = "23_IPCM_REGISTER_APP_RESPONSE";
 		break;
@@ -594,9 +591,6 @@ const std::string IPCEvent::eventTypeToString(IPCEventType eventType) {
 		break;
 	case IPCM_FINALIZATION_REQUEST_EVENT:
 		result = "52_IPCM_FINALIZATION_REQUEST_EVENT";
-		break;
-	case IPCM_CTRL_PORT_OPENED:
-		result = "53_IPCM_CTRL_PORT_OPENED";
 		break;
 	case NO_EVENT:
 		result = "54_NO_EVENT";
@@ -839,23 +833,7 @@ AllocateFlowResponseEvent::AllocateFlowResponseEvent(
         this->pid = pid;
 }
 
-/* CLASS OS PROCESS FINALIZED EVENT */
-CtrlPortClosedEvent::CtrlPortClosedEvent(unsigned int ctrl_p, pid_t p) :
-		IPCEvent(IPCM_CTRL_PORT_CLOSED,
-			 0, ctrl_p, 0)
-{
-	pid = p;
-}
-
-CtrlPortOpenedEvent::CtrlPortOpenedEvent(unsigned int ctrl_p, pid_t p) :
-		IPCEvent(IPCM_CTRL_PORT_OPENED,
-			 0, ctrl_p, 0)
-{
-	pid = p;
-}
-
 /* CLASS IPC EVENT PRODUCER */
-
 /* Auxiliar function called in case of using the stubbed version of the API */
 IPCEvent * getIPCEvent(){
 	ApplicationProcessNamingInformation sourceName;

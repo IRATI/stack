@@ -54,8 +54,6 @@ void initializeIPCManager(unsigned int        localPort,
                           const std::string & logLevel,
                           const std::string & pathToLogFolder)
 {
-	struct irati_msg_base msg;
-
 	std::string ipcmPathToLogFile = pathToLogFolder + "/ipcm.log";
 	initialize(localPort, logLevel, ipcmPathToLogFile);
 
@@ -63,13 +61,6 @@ void initializeIPCManager(unsigned int        localPort,
 	_library_path = libraryPath;
 	_log_path = pathToLogFolder;
 	_log_level = logLevel;
-
-        msg.msg_type = RINA_C_IPCM_IPC_MANAGER_PRESENT;
-        msg.dest_port = 0;
-
-        if (irati_ctrl_mgr->send_msg(&msg, false) != 0) {
-        	throw InitializationException("Problems sending CTRL message");
-        }
 }
 
 void request_ipcm_finalization(unsigned int localPort)
