@@ -63,7 +63,7 @@ static int
 irati_register_req_fill(struct irati_msg_app_reg_app *req, const char *dif_name,
 		        const char *appl_name, int wfd, int fd)
 {
-	struct name * dn, * appn;
+	struct name * dn, * appn, *dan;
 
 	if (!req)
 		return -1;
@@ -72,7 +72,7 @@ irati_register_req_fill(struct irati_msg_app_reg_app *req, const char *dif_name,
 	if (!dn)
 		return -1;
 
-	if (rina_name_from_string(dif_name, dn)) {
+	if (dif_name && rina_name_from_string(dif_name, dn)) {
 		rina_name_free(dn);
 		return -1;
 	}
@@ -83,7 +83,14 @@ irati_register_req_fill(struct irati_msg_app_reg_app *req, const char *dif_name,
 		return -1;
 	}
 
-	if (rina_name_from_string(appl_name, appn)) {
+	if (appl_name && rina_name_from_string(appl_name, appn)) {
+		rina_name_free(dn);
+		rina_name_free(appn);
+		return -1;
+	}
+
+	dan = rina_name_create();
+	if (!dan) {
 		rina_name_free(dn);
 		rina_name_free(appn);
 		return -1;
@@ -96,7 +103,12 @@ irati_register_req_fill(struct irati_msg_app_reg_app *req, const char *dif_name,
 	req->fa_ctrl_port = get_app_ctrl_port_from_cfd(fd);
 	req->dif_name = dn;
 	req->app_name = appn;
+	req->daf_name = dan;
 	req->pid = getpid();
+	if (dif_name)
+		req->reg_type = rina::APPLICATION_REGISTRATION_SINGLE_DIF;
+	else
+		req->reg_type = rina::APPLICATION_REGISTRATION_ANY_DIF;
 
 	return 0;
 }
@@ -114,7 +126,7 @@ irati_unregister_req_fill(struct irati_msg_app_reg_app_resp *req, const char *di
 	if (!dn)
 		return -1;
 
-	if (rina_name_from_string(dif_name, dn)) {
+	if (dif_name && rina_name_from_string(dif_name, dn)) {
 		rina_name_free(dn);
 		return -1;
 	}
@@ -125,7 +137,7 @@ irati_unregister_req_fill(struct irati_msg_app_reg_app_resp *req, const char *di
 		return -1;
 	}
 
-	if (rina_name_from_string(appl_name, appn)) {
+	if (appl_name && rina_name_from_string(appl_name, appn)) {
 		rina_name_free(dn);
 		rina_name_free(appn);
 		return -1;
@@ -160,6 +172,8 @@ int rina_register_wait(int fd, int wfd)
 	if (response) {
 		errno = EBUSY;
 		goto out;
+	} else {
+		ret = 0;
 	}
 
 out:
@@ -251,7 +265,7 @@ irati_fa_req_fill(struct irati_kmsg_ipcm_allocate_flow *req, const char *dif_nam
 	if (!dn)
 		return -1;
 
-	if (rina_name_from_string(dif_name, dn)) {
+	if (dif_name && rina_name_from_string(dif_name, dn)) {
 		rina_name_free(dn);
 		return -1;
 	}
@@ -262,7 +276,7 @@ irati_fa_req_fill(struct irati_kmsg_ipcm_allocate_flow *req, const char *dif_nam
 		return -1;
 	}
 
-	if (rina_name_from_string(local_appl, ln)) {
+	if (local_appl && rina_name_from_string(local_appl, ln)) {
 		rina_name_free(dn);
 		rina_name_free(ln);
 		return -1;
@@ -275,7 +289,7 @@ irati_fa_req_fill(struct irati_kmsg_ipcm_allocate_flow *req, const char *dif_nam
 		return -1;
 	}
 
-	if (rina_name_from_string(remote_appl, rn)) {
+	if (remote_appl && rina_name_from_string(remote_appl, rn)) {
 		rina_name_free(dn);
 		rina_name_free(ln);
 		rina_name_free(rn);
