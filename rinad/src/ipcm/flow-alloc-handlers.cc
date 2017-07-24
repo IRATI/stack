@@ -251,7 +251,7 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 	ctrl_port = ipcp->get_fa_ctrl_port(event->localApplicationName);
 	if (ctrl_port == 0) {
 		ipcp->rwlock.unlock();
-		ss  << ": Error: Could not ctrl port to send a FA request "
+		ss  << ": Error: Could not find ctrl port to send a FA request "
 			"to local application " << event->localApplicationName.toString() << endl;
 		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;

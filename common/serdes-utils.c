@@ -4777,8 +4777,7 @@ void * deserialize_irati_msg(struct irati_msg_layout *numtables,
 	}
 
 	if ((desptr - serbuf) != serbuf_len) {
-		LOG_ERR("Some bytes are still left to be parsed: %u, %u",
-			desptr - serbuf, serbuf_len);
+		LOG_ERR("Some bytes are still left to be parsed");
 		irati_msg_free(numtables, num_entries,
 			       (struct irati_msg_base *) msgbuf);
 		return 0;
