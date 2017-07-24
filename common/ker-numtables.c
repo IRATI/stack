@@ -111,9 +111,6 @@ struct irati_msg_layout irati_ker_numtables[] = {
 	           - sizeof(struct pff_entry_list *),
 	.pff_entry_lists = 1,
     },
-    [RINA_C_IPCM_IPC_MANAGER_PRESENT] = {
-        .copylen = sizeof(struct irati_msg_base),
-    },
     [RINA_C_IPCP_CONN_CREATE_REQUEST] = {
         .copylen = sizeof(struct irati_kmsg_ipcp_conn_create_arrived)
 		   - sizeof(struct dtp_config *) - sizeof(struct dtcp_config *),

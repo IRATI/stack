@@ -55,7 +55,7 @@ static void irati_msg_fill_common(struct irati_msg_base * msg, int wfd)
 
 	msg->dest_ipcp_id = 0;
 	msg->src_ipcp_id = 0;
-	msg->dest_port = IRATI_IPCM_PORT;
+	msg->dest_port = IPCM_CTRLDEV_PORT;
 	msg->src_port = wfd;
 }
 

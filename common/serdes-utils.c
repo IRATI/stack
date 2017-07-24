@@ -4466,7 +4466,6 @@ static void * allocate_irati_msg(irati_msg_t msg_t)
 		return result;
 	}
 	case RINA_C_IPCM_FINALIZE_REQUEST:
-	case RINA_C_IPCM_IPC_MANAGER_PRESENT:
 	case RINA_C_RMT_DUMP_FT_REQUEST: {
 		struct irati_msg_base * result;
 		result = COMMON_ALLOC(sizeof(struct irati_msg_base), 1);
@@ -4778,7 +4777,8 @@ void * deserialize_irati_msg(struct irati_msg_layout *numtables,
 	}
 
 	if ((desptr - serbuf) != serbuf_len) {
-		LOG_ERR("Some bytes are still left to be parsed");
+		LOG_ERR("Some bytes are still left to be parsed: %u, %u",
+			desptr - serbuf, serbuf_len);
 		irati_msg_free(numtables, num_entries,
 			       (struct irati_msg_base *) msgbuf);
 		return 0;

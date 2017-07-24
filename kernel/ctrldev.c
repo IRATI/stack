@@ -76,9 +76,6 @@ struct irati_ctrl_dm {
 
 	/* Sequence number counter */
 	uint32_t sn_counter;
-
-	/* Pointer to IPCM control device */
-	struct ctrldev_priv * ipcm_ctrl_dev;
 };
 
 static struct irati_ctrl_dm irati_ctrl_dm;
@@ -158,57 +155,6 @@ void irati_ctrl_dev_msg_free(struct irati_msg_base *bmsg)
 }
 EXPORT_SYMBOL(irati_ctrl_dev_msg_free);
 
-int irati_ctrl_dev_snd_resp_msg(struct ctrldev_priv *ctrl_dev,
-				struct irati_msg_base *bmsg)
-{
-	struct msg_queue_entry * entry;
-	int serlen = 0;
-
-	//Serialize message
-	entry = rkzalloc(sizeof(*entry), GFP_KERNEL);
-	if (!entry) {
-		LOG_ERR("Could not create entry");
-		return -1;
-	}
-
-	entry->sermsg = rkzalloc(IRATI_CTRL_MSG_MAX_SIZE * sizeof (char),
-				 GFP_KERNEL);
-	if (!entry->sermsg) {
-		LOG_ERR("Could not create enry->sermsg");
-		rkfree(entry);
-		return -1;
-	}
-
-	serlen = serialize_irati_msg(irati_ker_numtables, IRATI_RINA_C_MAX,
-                        	     entry->sermsg, bmsg);
-        if (serlen <= 0) {
-        	LOG_ERR("Problems serializing msg: %d", serlen);
-        	rkfree(entry->sermsg);
-        	rkfree(entry);
-        	return -1;
-        }
-        entry->serlen = serlen;
-
-        /* TODO implement maximum queue size */
-        spin_lock(&ctrl_dev->pending_msgs_lock);
-        if (rfifo_push_ni(ctrl_dev->pending_msgs, entry)) {
-        	LOG_ERR("Could not write %zd bytes into port-id %u fifo",
-        			sizeof(*entry), ctrl_dev->port_id);
-        	spin_unlock(&ctrl_dev->pending_msgs_lock);
-        	rkfree(entry->sermsg);
-        	rkfree(entry);
-        	return -1;
-        }
-        spin_unlock(&ctrl_dev->pending_msgs_lock);
-
-        /* set_tsk_need_resched(current); */
-        wake_up_interruptible_poll(&ctrl_dev->read_wqueue,
-        		POLLIN | POLLRDNORM | POLLRDBAND);
-
-        return 0;
-}
-EXPORT_SYMBOL(irati_ctrl_dev_snd_resp_msg);
-
 uint32_t ctrl_dev_get_next_seqn()
 {
         uint32_t tmp;
@@ -227,26 +173,6 @@ uint32_t ctrl_dev_get_next_seqn()
 }
 EXPORT_SYMBOL(ctrl_dev_get_next_seqn);
 
-void set_ipcm_ctrl_dev(struct ctrldev_priv *ctrl_dev)
-{
-	 mutex_lock(&irati_ctrl_dm.general_lock);
-	 irati_ctrl_dm.ipcm_ctrl_dev = ctrl_dev;
-	 mutex_unlock(&irati_ctrl_dm.general_lock);
-}
-EXPORT_SYMBOL(set_ipcm_ctrl_dev);
-
-struct ctrldev_priv * get_ipcm_ctrl_dev(void)
-{
-	struct ctrldev_priv * ret;
-
-	mutex_lock(&irati_ctrl_dm.general_lock);
-	ret = irati_ctrl_dm.ipcm_ctrl_dev;
-	mutex_unlock(&irati_ctrl_dm.general_lock);
-
-	return ret;
-}
-EXPORT_SYMBOL(get_ipcm_ctrl_dev);
-
 static struct ctrldev_priv * get_ctrl_dev(irati_msg_port_t port_id)
 {
 	struct ctrldev_priv * pos;
@@ -259,18 +185,6 @@ static struct ctrldev_priv * get_ctrl_dev(irati_msg_port_t port_id)
 
         return NULL;
 }
-
-struct ctrldev_priv * get_ctrl_dev_from_port_id(irati_msg_port_t port)
-{
-	struct ctrldev_priv * ret = 0;
-
-	mutex_lock(&irati_ctrl_dm.general_lock);
-	ret = get_ctrl_dev(port);
-	mutex_unlock(&irati_ctrl_dm.general_lock);
-
-	return ret;
-}
-EXPORT_SYMBOL(get_ctrl_dev_from_port_id);
 
 static int ctrl_dev_data_post(struct msg_queue_entry * entry, irati_msg_port_t port_id)
 {
@@ -309,6 +223,47 @@ static int ctrl_dev_data_post(struct msg_queue_entry * entry, irati_msg_port_t p
 
         return retval;
 }
+
+int irati_ctrl_dev_snd_resp_msg(irati_msg_port_t port,
+				struct irati_msg_base *bmsg)
+{
+	struct msg_queue_entry * entry;
+	int serlen = 0;
+
+	//Serialize message
+	entry = rkzalloc(sizeof(*entry), GFP_KERNEL);
+	if (!entry) {
+		LOG_ERR("Could not create entry");
+		return -1;
+	}
+
+	entry->sermsg = rkzalloc(IRATI_CTRL_MSG_MAX_SIZE * sizeof (char),
+				 GFP_KERNEL);
+	if (!entry->sermsg) {
+		LOG_ERR("Could not create enry->sermsg");
+		rkfree(entry);
+		return -1;
+	}
+
+	serlen = serialize_irati_msg(irati_ker_numtables, IRATI_RINA_C_MAX,
+                        	     entry->sermsg, bmsg);
+        if (serlen <= 0) {
+        	LOG_ERR("Problems serializing msg: %d", serlen);
+        	rkfree(entry->sermsg);
+        	rkfree(entry);
+        	return -1;
+        }
+        entry->serlen = serlen;
+
+        if (ctrl_dev_data_post(entry, port)) {
+		rkfree(entry->sermsg);
+		rkfree(entry);
+		return -1;
+        }
+
+        return 0;
+}
+EXPORT_SYMBOL(irati_ctrl_dev_snd_resp_msg);
 
 static ssize_t
 ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
@@ -380,7 +335,7 @@ ctrldev_write(struct file *f, const char __user *ubuf, size_t len, loff_t *ppos)
                 }
 
         	/* Invoke the message handler */
-        	ret = irati_ctrl_dm.handlers[bmsg->msg_type].cb(priv, bmsg,
+        	ret = irati_ctrl_dm.handlers[bmsg->msg_type].cb(priv->port_id, bmsg,
         			 irati_ctrl_dm.handlers[bmsg->msg_type].data);
 
         	irati_msg_free(irati_ker_numtables, IRATI_RINA_C_MAX, bmsg);
@@ -581,15 +536,10 @@ ctrldev_release(struct inode *inode, struct file *f)
         		priv->port_id);
         }
 
-        /* Inform IPCM Daemon that a OS process has died */
-        mutex_lock(&irati_ctrl_dm.general_lock);
-        if (priv == irati_ctrl_dm.ipcm_ctrl_dev) {
+        //TODO If IPC Manager has died, destroy all control devices and IPCPs
+        if (priv->port_id == 1) {
         	LOG_WARN("IPC Manager process has been destroyed");
-        	irati_ctrl_dm.ipcm_ctrl_dev = 0;
-
-        	//TODO destroy all control devices and IPCPs
         }
-        mutex_unlock(&irati_ctrl_dm.general_lock);
 
         LOG_DBG("Instance of control device bound to port %d released",
                 priv->port_id);
@@ -599,6 +549,22 @@ ctrldev_release(struct inode *inode, struct file *f)
         			   POLLIN | POLLRDNORM | POLLRDBAND);
 
         return 0;
+}
+
+static bool ctrl_port_in_use(irati_msg_port_t port_id)
+{
+	struct ctrldev_priv * pos;
+
+        mutex_lock(&irati_ctrl_dm.general_lock);
+        list_for_each_entry(pos, &(irati_ctrl_dm.ctrl_devs), node) {
+                if (port_id == pos->port_id) {
+                	mutex_unlock(&irati_ctrl_dm.general_lock);
+                	return true;
+                }
+        }
+        mutex_unlock(&irati_ctrl_dm.general_lock);
+
+        return false;
 }
 
 static long
@@ -620,6 +586,11 @@ ctrldev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
         if (!is_port_id_ok(data.port_id)) {
                 LOG_ERR("Bad port id %d", data.port_id);
                 return -EINVAL;
+        }
+
+        if (ctrl_port_in_use(data.port_id)) {
+        	LOG_ERR("Control port is already in use, %d", data.port_id);
+        	return -EINVAL;
         }
 
         if (is_port_id_ok(priv->port_id)) {
@@ -673,7 +644,6 @@ ctrldev_init(void)
         INIT_LIST_HEAD(&irati_ctrl_dm.ctrl_devs);
 
         irati_ctrl_dm.sn_counter = 0;
-        irati_ctrl_dm.ipcm_ctrl_dev = 0;
 
         ret = misc_register(&irati_ctrl_misc);
         if (ret) {

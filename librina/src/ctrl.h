@@ -27,9 +27,6 @@
 
 #include "irati/kucommon.h"
 
-#define IRATI_CTRLDEV_NAME "/dev/irati-ctrl"
-#define IRATI_IPCM_PORT 1
-
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -42,8 +42,9 @@
 extern "C" {
 #endif
 
-#define IRATI_CTRLDEV_NAME	"/dev/irati-ctrl"
-#define IRATI_IODEV_NAME	"/dev/irati"
+#define IRATI_CTRLDEV_NAME "/dev/irati-ctrl"
+#define IRATI_IODEV_NAME   "/dev/irati"
+#define IPCM_CTRLDEV_PORT  1
 
 #define PORT_ID_WRONG -1
 #define CEP_ID_WRONG -1

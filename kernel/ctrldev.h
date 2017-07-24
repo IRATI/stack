@@ -27,10 +27,8 @@
 int ctrldev_init(void);
 void ctrldev_fini(void);
 
-struct ctrldev_priv;
-
 /* The signature of a message handler. */
-typedef int (* irati_msg_handler_t)(struct ctrldev_priv *ctrl_dev,
+typedef int (* irati_msg_handler_t)(irati_msg_port_t ctrl_port,
                                     struct irati_msg_base *bmsg,
 				    void * data);
 
@@ -41,15 +39,9 @@ int irati_handler_unregister(irati_msg_t msg_type);
 
 void irati_ctrl_dev_msg_free(struct irati_msg_base *bmsg);
 
-int irati_ctrl_dev_snd_resp_msg(struct ctrldev_priv *ctrl_dev,
+int irati_ctrl_dev_snd_resp_msg(irati_msg_port_t port,
 				struct irati_msg_base *bmsg);
 
 uint32_t ctrl_dev_get_next_seqn(void);
-
-void set_ipcm_ctrl_dev(struct ctrldev_priv *ctrl_dev);
-
-struct ctrldev_priv * get_ipcm_ctrl_dev(void);
-
-struct ctrldev_priv * get_ctrl_dev_from_port_id(irati_msg_port_t port);
 
 #endif
