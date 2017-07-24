@@ -56,7 +56,7 @@ static void irati_msg_fill_common(struct irati_msg_base * msg, int wfd)
 	msg->dest_ipcp_id = 0;
 	msg->src_ipcp_id = 0;
 	msg->dest_port = IPCM_CTRLDEV_PORT;
-	msg->src_port = wfd;
+	msg->src_port = get_app_ctrl_port_from_cfd(wfd);
 }
 
 static int
@@ -93,7 +93,7 @@ irati_register_req_fill(struct irati_msg_app_reg_app *req, const char *dif_name,
 	irati_msg_fill_common(IRATI_MB(req), wfd);
 	req->msg_type = RINA_C_APP_REGISTER_APPLICATION_REQUEST;
 	req->event_id = RINA_REG_EVENT_ID;
-	req->fa_ctrl_port = fd;
+	req->fa_ctrl_port = get_app_ctrl_port_from_cfd(fd);
 	req->dif_name = dn;
 	req->app_name = appn;
 	req->pid = getpid();

@@ -1327,6 +1327,8 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 		try {
 			//Get destination address again in case it has changed
 			dest_address = namespace_manager_->getDFTNextHop(flow_->remote_naming_info);
+			if (dest_address == 0)
+				dest_address = flow_->remote_address;
 			rv = ipc_process_->enrollment_task_->get_con_handle_to_address(dest_address,
 										       con_handle);
 

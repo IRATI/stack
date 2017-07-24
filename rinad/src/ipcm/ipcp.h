@@ -229,7 +229,7 @@ public:
 	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws IpcmRegisterApplicationException if an error occurs
 	 */
-	void registerApplication(const rina::ApplicationRegistrationInformation ari,
+	void registerApplication(const rina::ApplicationRegistrationInformation& ari,
 				 unsigned int opaque);
 
 	/**

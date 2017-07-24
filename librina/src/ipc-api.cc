@@ -371,7 +371,6 @@ IPCManager::requestApplicationRegistration(const ApplicationRegistrationInformat
 	WriteScopedLock writeLock(regs_rw_lock);
 
 #if STUB_API
-        registrationInformation[0] = appRegistrationInfo;
 #else
         struct irati_msg_app_reg_app * msg;
         int ret;
@@ -387,6 +386,7 @@ IPCManager::requestApplicationRegistration(const ApplicationRegistrationInformat
         msg->ipcp_id = appRegistrationInfo.ipcProcessId;
         msg->reg_type = appRegistrationInfo.applicationRegistrationType;
         msg->pid = getpid();
+        msg->fa_ctrl_port = irati_ctrl_mgr->get_irati_ctrl_port();
 
         ret = irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true);
         seq_num = msg->event_id;
@@ -394,7 +394,9 @@ IPCManager::requestApplicationRegistration(const ApplicationRegistrationInformat
         if (ret) {
         	throw ApplicationRegistrationException("Problems sending CTRL message");
         }
+
 #endif
+        registrationInformation[seq_num] = appRegistrationInfo;
 	return seq_num;
 }
 

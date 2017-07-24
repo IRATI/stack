@@ -105,6 +105,11 @@ int close_port(int cfd)
 	return close(cfd);
 }
 
+irati_msg_port_t get_app_ctrl_port_from_cfd(int cfd)
+{
+	return getpid()*1000 + cfd;
+}
+
 int irati_open_ctrl_port(irati_msg_port_t port_id)
 {
 	struct irati_ctrldev_ctldata info;
@@ -119,7 +124,7 @@ int irati_open_ctrl_port(irati_msg_port_t port_id)
 	}
 
 	if (port_id == 0)
-		info.port_id = getpid()*10000 + fd;
+		info.port_id = get_app_ctrl_port_from_cfd(fd);
 	else
 		info.port_id = port_id;
 

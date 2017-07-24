@@ -62,7 +62,7 @@ void IRATICtrlManager::initialize()
 	// Open a control device
 	cfd = irati_open_ctrl_port(ctrl_port);
 	if (ctrl_port == 0)
-		ctrl_port = cfd;
+		ctrl_port = get_app_ctrl_port_from_cfd(cfd);
 
 	if (cfd < 0) {
 		LOG_ERR("Error initializing IRATI Ctrl manager");
@@ -564,7 +564,7 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 		ari.ipcProcessId = sp_msg->ipcp_id;
 		ari.ctrl_port = sp_msg->fa_ctrl_port;
 		ari.pid = sp_msg->pid;
-		event = new ApplicationRegistrationRequestEvent(ari, sp_msg->event_id,
+		event = new ApplicationRegistrationRequestEvent(ari, msg->event_id,
 								msg->src_port, msg->src_ipcp_id);
 		break;
 	}

@@ -187,8 +187,9 @@ unsigned int IPCMIPCProcess::get_fa_ctrl_port(const rina::ApplicationProcessNami
 
 	for(it = registeredApplications.begin();
 			it != registeredApplications.end(); ++it) {
-		if (it->appName == reg_app)
+		if (it->appName == reg_app) {
 			return it->ctrl_port;
+		}
 	}
 
 	return 0;
@@ -280,7 +281,7 @@ void IPCMIPCProcess::disconnectFromNeighbor(const rina::ApplicationProcessNaming
 	pendingDisconnections[opaque] = neighbor;
 }
 
-void IPCMIPCProcess::registerApplication(const rina::ApplicationRegistrationInformation ari,
+void IPCMIPCProcess::registerApplication(const rina::ApplicationRegistrationInformation & ari,
 					 unsigned int opaque)
 {
 	if (state_ != IPCM_IPCP_ASSIGNED_TO_DIF)
