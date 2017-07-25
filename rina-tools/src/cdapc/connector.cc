@@ -96,7 +96,6 @@ void Connector::rina_run() {
 	// Variables used for casting
 	rina::RegisterApplicationResponseEvent*   r = nullptr;
 	rina::UnregisterApplicationResponseEvent* ur = nullptr;
-	rina::DeallocateFlowResponseEvent*        dfr = nullptr;
 
 	ServerWorker * worker = internal_start_worker(flow);
 	if (worker != NULL) {
@@ -185,20 +184,6 @@ void Connector::rina_run() {
 			}
 			break;
 
-		case rina::DEALLOCATE_FLOW_RESPONSE_EVENT:
-			LOG_INFO("Destroying the flow after time-out");
-			dfr = dynamic_cast<rina::DeallocateFlowResponseEvent*>(event);
-			port_id = dfr->portId;
-			flow = rina::ipcManager->getFlowInformation(port_id);
-
-			rina::ipcManager->flowDeallocationResult(port_id,
-					dfr->result == 0);
-			if (ma_worker_ != nullptr) {
-				ma_worker_->closeFlowRequest(flow);
-			} else {
-				LOG_INFO("No MA");
-			}
-			break;
 		default:
 			LOG_INFO("Server got event of type %d", event->eventType);
 			break;

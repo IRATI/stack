@@ -656,18 +656,6 @@ public:
 	FlowInformation allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
 					     int result,
 					     bool notifySource);
-	/**
-	 * Invoked by the IPC Process to respond to the Application Process that
-	 * requested a flow deallocation
-	 * @param flowDeallocateEvent Object containing information about the flow
-	 * deallocate request event
-	 * @param result 0 indicates success, a negative number an error code
-	 * @throws DeallocateFlowResponseException if there are issues
-	 * replying ot the application
-	 */
-	void notifyflowDeallocated(
-		const FlowDeallocateRequestEvent flowDeallocateEvent,
-		int result);
 
 	/**
 	 * Invoked by the ipC Process to notify that a flow has been remotely

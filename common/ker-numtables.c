@@ -69,9 +69,6 @@ struct irati_msg_layout irati_ker_numtables[] = {
     [RINA_C_IPCM_ALLOCATE_FLOW_RESPONSE] = {
         .copylen = sizeof(struct irati_kmsg_ipcm_allocate_flow_resp),
     },
-    [RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE] = {
-        .copylen = sizeof(struct irati_msg_base_resp),
-    },
     [RINA_C_IPCM_REGISTER_APPLICATION_REQUEST] = {
         .copylen = sizeof(struct irati_kmsg_ipcm_reg_app) -
                     3 * sizeof(struct name *),
@@ -268,19 +265,10 @@ struct irati_msg_layout irati_ker_numtables[] = {
         .copylen = sizeof(struct irati_msg_app_alloc_flow_response),
     },
     [RINA_C_APP_DEALLOCATE_FLOW_REQUEST] = {
-        .copylen = sizeof(struct irati_msg_app_dealloc_flow)
-		   - sizeof(struct name *),
-	.names = 1,
-    },
-    [RINA_C_APP_DEALLOCATE_FLOW_RESPONSE] = {
-	.copylen = sizeof(struct irati_msg_app_dealloc_flow)
-		   - sizeof(struct name *),
-	.names = 1,
+        .copylen = sizeof(struct irati_msg_app_dealloc_flow),
     },
     [RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION] = {
-	.copylen = sizeof(struct irati_msg_app_dealloc_flow)
-		   - sizeof(struct name *),
-	.names = 1,
+	.copylen = sizeof(struct irati_msg_app_dealloc_flow),
     },
     [RINA_C_APP_REGISTER_APPLICATION_REQUEST] = {
         .copylen = sizeof(struct irati_msg_app_reg_app)

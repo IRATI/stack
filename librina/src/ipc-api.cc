@@ -639,10 +639,9 @@ FlowInformation IPCManager::allocateFlowResponse(
 			blocking);
 }
 
-unsigned int IPCManager::requestFlowDeallocation(int portId)
+void IPCManager::deallocate_flow(int portId)
 {
         FlowInformation * flow;
-        unsigned int seq_num = 0;
 
         WriteScopedLock writeLock(flows_rw_lock);
 
@@ -656,61 +655,30 @@ unsigned int IPCManager::requestFlowDeallocation(int portId)
         }
 
 #if STUB_API
-        flow->state = FlowInformation::FLOW_DEALLOCATION_REQUESTED;
 #else
 
-	LOG_DBG("Application %s requested to deallocate flow with port-id %d",
+	LOG_DBG("Application %s requested to deallocate flow with port-id %d and fd %d",
 		flow->localAppName.processName.c_str(),
-		flow->portId);
+		flow->portId, flow->fd);
 
-        struct irati_msg_app_dealloc_flow * msg;
-        int ret = 0;
+	if (flow->fd > 0) {
+		close(flow->fd);
+	} else {
+		//IPCP
+		struct irati_msg_app_dealloc_flow msg;
 
-        msg = new irati_msg_app_dealloc_flow();
-        msg->msg_type = RINA_C_APP_DEALLOCATE_FLOW_REQUEST;
-        msg->dest_ipcp_id = 0;
-        msg->dest_port = IPCM_CTRLDEV_PORT;
-        msg->port_id = portId;
-        msg->name = flow->localAppName.to_c_name();
+	        msg.msg_type = RINA_C_APP_DEALLOCATE_FLOW_REQUEST;
+	        msg.port_id = portId;
+	        msg.dest_port = IPCM_CTRLDEV_PORT;
+	        msg.src_ipcp_id = flow->user_ipcp_id;
+	        msg.dest_ipcp_id = 0;
+	        msg.event_id = 0;
+	        irati_ctrl_mgr->send_msg((struct irati_msg_base *) &msg, true);
+	}
 
-        ret = irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true);
-        seq_num = msg->event_id;
-        irati_ctrl_msg_free((struct irati_msg_base *) msg);
-        if (ret) {
-        	throw ApplicationUnregistrationException("Problems sending CTRL message");
-        }
-
-	flow->state = FlowInformation::FLOW_DEALLOCATION_REQUESTED;
+	allocatedFlows.erase(portId);
+	delete flow;
 #endif
-	return seq_num;
-}
-
-void IPCManager::flowDeallocationResult(int portId, bool success)
-{
-        FlowInformation * flow;
-
-        WriteScopedLock writeLock(flows_rw_lock);
-
-        flow = getAllocatedFlow(portId);
-        if (flow == 0) {
-                throw FlowDeallocationException(
-                                IPCManager::unknown_flow_error);
-        }
-
-        if (flow->state != FlowInformation::FLOW_DEALLOCATION_REQUESTED) {
-                throw FlowDeallocationException(
-                                IPCManager::wrong_flow_state);
-        }
-
-        if (success) {
-        	if (flow->fd > 0) {
-        		close(flow->fd);
-        	}
-                allocatedFlows.erase(portId);
-                delete flow;
-        } else {
-                flow->state = FlowInformation::FLOW_ALLOCATED;
-        }
 }
 
 void IPCManager::flowDeallocated(int portId)
@@ -808,20 +776,6 @@ AllocateFlowRequestResultEvent::AllocateFlowRequestResultEvent(
 {
         this->sourceAppName = appName;
         this->difName = difName;
-        this->portId = portId;
-}
-
-/* CLASS Deallocate Flow Response EVENT*/
-DeallocateFlowResponseEvent::DeallocateFlowResponseEvent(
-                        const ApplicationProcessNamingInformation& appName,
-                        int portId, int result,
-                        unsigned int sequenceNumber,
-			unsigned int ctrl_p, unsigned short ipcp_id):
-                                BaseResponseEvent(result,
-                                         DEALLOCATE_FLOW_RESPONSE_EVENT,
-                                         sequenceNumber, ctrl_port, ipcp_id)
-{
-        this->appName = appName;
         this->portId = portId;
 }
 

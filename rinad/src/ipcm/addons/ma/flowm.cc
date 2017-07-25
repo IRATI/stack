@@ -136,7 +136,7 @@ class Worker {
 		keep_running = false;
 
 		try{
-			rina::ipcManager->requestFlowDeallocation(port_id);
+			rina::ipcManager->deallocate_flow(port_id);
 		}catch(...){}
 	}
 
@@ -365,7 +365,7 @@ void* ActiveWorker::run(void* param)
                                 if (bytes_read < 0) {
                                         LOG_ERR("read() error on port id %u [%s]",
                                                 port_id, strerror(errno));
-					rina::ipcManager->requestFlowDeallocation(port_id);
+					rina::ipcManager->deallocate_flow(port_id);
                                         break;
                                 }
                                 message.size_ = bytes_read;
@@ -377,7 +377,7 @@ void* ActiveWorker::run(void* param)
 									port_id);
 				}catch(rina::WriteSDUException &e){
 					LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
-					rina::ipcManager->requestFlowDeallocation(port_id);
+					rina::ipcManager->deallocate_flow(port_id);
 					break;
 				}catch(rina::FlowNotAllocatedException &e) {
 					break;
@@ -441,7 +441,6 @@ void FlowManager::process_librina_event(rina::IPCEvent** event_)
 
 	rina::FlowInformation flow;
 	unsigned int port_id;
-	rina::DeallocateFlowResponseEvent *resp;
 
 	//Make it easy
 	rina::IPCEvent* event = *event_;
@@ -487,16 +486,6 @@ void FlowManager::process_librina_event(rina::IPCEvent** event_)
 			rina::ipcManager->flowDeallocated(port_id);
 			LOG_INFO("Flow torn down remotely [port-id = %d]",
 				 port_id);
-			//TODO: add pasive worker
-			//joinWorker(port_id);
-			break;
-
-		case rina::DEALLOCATE_FLOW_RESPONSE_EVENT:
-			LOG_INFO("Destroying the flow after time-out");
-			resp = dynamic_cast<rina::DeallocateFlowResponseEvent*>(event);
-			port_id = resp->portId;
-			rina::ipcManager->flowDeallocationResult(
-					port_id, resp->result == 0);
 			//TODO: add pasive worker
 			//joinWorker(port_id);
 			break;

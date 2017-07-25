@@ -718,14 +718,6 @@ public:
 				int portId, unsigned int opaque, unsigned int ctrl_port);
 
 	/**
-	 * Inform the application about the result of a flow deallocation operation
-	 * @param event
-	 * @param result
-	 * @throws NotifyFlowDeallocatedException
-	 */
-	void flowDeallocated(const FlowDeallocateRequestEvent& event, int result);
-
-	/**
 	 * Invoked by the IPC Manager to notify that a flow has been remotely
 	 * unallocated
 	 * @param portId
@@ -733,7 +725,6 @@ public:
 	 * @throws NotifyFlowDeallocatedException
 	 */
 	void flowDeallocatedRemotely(int portId, int code,
-			             const ApplicationProcessNamingInformation& appName,
 				     unsigned int ctrl_port);
 	/**
 	 * Return the properties of zero or more DIFs to the application
@@ -768,16 +759,6 @@ public:
 class IpcmUnregisterApplicationResponseEvent: public BaseResponseEvent {
 public:
         IpcmUnregisterApplicationResponseEvent(int result,
-        		unsigned int sequenceNumber,
-			unsigned int ctrl_p, unsigned short ipcp_id);
-};
-
-/**
- * Event informing about the result of a flow deallocation
- */
-class IpcmDeallocateFlowResponseEvent: public BaseResponseEvent {
-public:
-        IpcmDeallocateFlowResponseEvent(int result,
         		unsigned int sequenceNumber,
 			unsigned int ctrl_p, unsigned short ipcp_id);
 };

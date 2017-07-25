@@ -51,34 +51,6 @@ void IPCManager_::os_process_finalized_handler(pid_t pid)
 		//Prevent any insertion/deletion to happen
 		rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
 
-		// Look if the terminating application has allocated flows
-		// with some IPC processes
-		collect_flows_by_pid(pid, involved_flows);
-		unsigned short ipcp_id = 0;
-		for (list<rina::FlowInformation>::iterator fit = involved_flows.begin();
-				fit != involved_flows.end(); fit++) {
-
-			IPCMIPCProcess *ipcp = select_ipcp_by_dif(fit->difName);
-			if (!ipcp) {
-				ss  << ": Cannot find the IPC process "
-						"that provides the flow with port-id " <<
-						fit->portId << endl;
-				FLUSH_LOG(ERR, ss);
-				continue;
-			}
-
-			{
-				//Auto release the read lock
-				rina::ReadScopedLock readlock(ipcp->rwlock, false);
-				ipcp_id = ipcp->get_id();
-			}
-
-			rina::FlowDeallocateRequestEvent req_event(fit->portId, 0, 0, 0);
-			IPCManager->deallocate_flow(NULL, ipcp_id, req_event);
-			LOG_INFO("OS process %d terminated, deallocated flow %d",
-					pid, fit->portId);
-		}
-
 		// Look if the terminating application has pending registrations
 		// with some IPC processes
 		ipcp_factory_.listIPCProcesses(ipcps);

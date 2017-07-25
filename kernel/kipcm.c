@@ -278,28 +278,6 @@ fail:
         return 0;
 }
 
-static int dealloc_flow_req_reply(irati_msg_port_t ctrl_port,
-				  ipc_process_id_t id,
-				  int8_t           res,
-				  uint32_t         seq_num)
-{
-	struct irati_msg_base_resp resp_msg;
-
-	resp_msg.msg_type = RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE;
-	resp_msg.src_ipcp_id = id;
-	resp_msg.dest_ipcp_id = 0;
-	resp_msg.result = res;
-	resp_msg.event_id = seq_num;
-
-        if (irati_ctrl_dev_snd_resp_msg(ctrl_port,
-        				(struct irati_msg_base *) &resp_msg)) {
-                LOG_ERR("Could not send deallocate flow response msg");
-                return -1;
-        }
-
-        return 0;
-}
-
 /*
  * It is the responsibility of the shims to send the alloc_req_arrived
  * and the alloc_req_result.
@@ -343,10 +321,8 @@ static int notify_ipcp_deallocate_flow_request(irati_msg_port_t ctrl_port,
 
         kfa_port_id_release(kipcm->kfa, msg->port_id);
 
-        return dealloc_flow_req_reply(ctrl_port, ipc_id, 0, msg->event_id);
-
  fail:
-        return dealloc_flow_req_reply(ctrl_port, ipc_id, -1, msg->event_id);
+        return 0;
 }
 
 static int assign_to_dif_reply(irati_msg_port_t ctrl_port,

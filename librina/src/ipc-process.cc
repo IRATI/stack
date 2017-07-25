@@ -629,13 +629,6 @@ FlowInformation ExtendedIPCManager::allocateFlowResponse(const FlowRequestEvent&
                                             ipcProcessId);
 }
 
-void ExtendedIPCManager::notifyflowDeallocated(const FlowDeallocateRequestEvent flowDeallocateEvent,
-					       int result)
-{
-	send_base_resp_msg(RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE,
-			   flowDeallocateEvent.sequenceNumber, result);
-}
-
 void ExtendedIPCManager::flowDeallocatedRemotely(int portId, int code)
 {
 #if STUB_API

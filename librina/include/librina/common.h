@@ -274,7 +274,6 @@ enum IPCEventType {
         GET_DIF_PROPERTIES_RESPONSE_EVENT,
         IPCM_REGISTER_APP_RESPONSE_EVENT,
         IPCM_UNREGISTER_APP_RESPONSE_EVENT,
-        IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT,
         IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
         QUERY_RIB_RESPONSE_EVENT,
         IPC_PROCESS_DAEMON_INITIALIZED_EVENT,
@@ -414,15 +413,9 @@ public:
 	 */
 	bool internal;
 
-	/** The application that requested the flow deallocation*/
-	ApplicationProcessNamingInformation applicationName;
-
         FlowDeallocateRequestEvent() : portId(-1), internal(false) { }
 	FlowDeallocateRequestEvent(int portId,
-				   const ApplicationProcessNamingInformation& appName,
 				   unsigned int sequenceNumber,
-				   unsigned int ctrl_p, unsigned short ipcp_id);
-	FlowDeallocateRequestEvent(int portId, unsigned int sequenceNumber,
 				   unsigned int ctrl_p, unsigned short ipcp_id);
 };
 

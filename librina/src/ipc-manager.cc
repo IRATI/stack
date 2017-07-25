@@ -912,36 +912,7 @@ void ApplicationManager::flowRequestArrived(const ApplicationProcessNamingInform
 #endif
 }
 
-void ApplicationManager::flowDeallocated(const FlowDeallocateRequestEvent& event, int result)
-{
-	LOG_DBG("ApplicationManager::flowdeallocated called");
-
-#if STUB_API
-	//Do nothing
-#else
-        struct irati_msg_app_dealloc_flow * msg;
-
-        msg = new irati_msg_app_dealloc_flow();
-        msg->msg_type = RINA_C_APP_DEALLOCATE_FLOW_RESPONSE;
-        msg->port_id = event.portId;
-        msg->name = event.applicationName.to_c_name();
-        msg->result = result;
-        msg->event_id = event.sequenceNumber;
-        msg->dest_port = event.ctrl_port;
-        msg->dest_ipcp_id = event.ipcp_id;
-        msg->src_ipcp_id = 0;
-
-        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
-        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
-        	throw IPCException("Problems sending CTRL message");
-        }
-
-        irati_ctrl_msg_free((struct irati_msg_base *) msg);
-#endif
-}
-
 void ApplicationManager::flowDeallocatedRemotely(int portId, int code,
-						 const ApplicationProcessNamingInformation& appName,
 						 unsigned int ctrl_port)
 {
 	LOG_DBG("ApplicationManager::flowDeallocatedRemotely called");
@@ -953,7 +924,6 @@ void ApplicationManager::flowDeallocatedRemotely(int portId, int code,
         msg = new irati_msg_app_dealloc_flow();
         msg->msg_type = RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION;
         msg->port_id = portId;
-        msg->name = appName.to_c_name();
         msg->result = code;
         msg->dest_port = ctrl_port;
         msg->event_id = 0;
@@ -1043,15 +1013,6 @@ IpcmUnregisterApplicationResponseEvent::IpcmUnregisterApplicationResponseEvent(
 		unsigned int ctrl_p, unsigned short ipcp_id):
                         BaseResponseEvent(result,
                                         IPCM_UNREGISTER_APP_RESPONSE_EVENT,
-                                        sequenceNumber, ctrl_p, ipcp_id)
-{ }
-
-/* CLASS IPCM DEALLOCATE FLOW RESPONSE EVENT */
-IpcmDeallocateFlowResponseEvent::IpcmDeallocateFlowResponseEvent(
-                int result, unsigned int sequenceNumber,
-		unsigned int ctrl_p, unsigned short ipcp_id):
-                        BaseResponseEvent(result,
-                                        IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT,
                                         sequenceNumber, ctrl_p, ipcp_id)
 { }
 

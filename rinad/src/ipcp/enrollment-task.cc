@@ -1656,8 +1656,7 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 	rina::EnrollmentRequest enr_request;
 	rina::EnrollmentRequest * pending_req;
 
-	rina::ScopedLock g(lock_);
-
+	lock_.lock();
 	LOG_IPCP_ERR("An error happened during enrollment of remote IPC Process %s because of %s",
 		      remotePeerNamingInfo.getEncodedString().c_str(),
 		      reason.c_str());
@@ -1665,6 +1664,7 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 	if (portId >= 0) {
 		//1 Remove enrollment state machine from the store
 		stateMachine = getEnrollmentStateMachine(portId, true);
+		lock_.unlock();
 		if (!stateMachine) {
 			// We have already cleared
 			return;
@@ -1685,6 +1685,7 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 	} else {
 		//N-1 flow could not be allocated
 		pending_req = port_ids_pending_to_be_allocated_.erase(internal_portId);
+		lock_.unlock();
 
 		if (!pending_req) {
 			return;
@@ -1725,12 +1726,12 @@ void EnrollmentTask::release(int invoke_id,
 {
 	IEnrollmentStateMachine * stateMachine;
 
-	rina::ScopedLock g(lock_);
-
+	lock_.lock();
 	LOG_DBG("M_RELEASE cdapMessage from portId %u", con_handle.port_id);
 
 	stateMachine = getEnrollmentStateMachine(con_handle.port_id,
 						 true);
+	lock_.unlock();
 	if (!stateMachine) {
 		//Already cleaned up, return
 		return;

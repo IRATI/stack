@@ -479,9 +479,11 @@ rina_flow_accept(int fd, char **remote_appl, struct rina_flow_spec *spec,
 
 	assert(req->msg_type == RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED);
 
-	* remote_appl = rina_name_to_string(req->remote);
-	if (!(*remote_appl)) {
-		goto out1;
+	if (remote_appl) {
+		* remote_appl = rina_name_to_string(req->remote);
+		if (!(*remote_appl)) {
+			goto out1;
+		}
 	}
 
 	if (spec) {

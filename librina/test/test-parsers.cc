@@ -2530,20 +2530,13 @@ int test_irati_msg_app_dealloc_flow(irati_msg_t msg_t)
 	char serbuf[8192];
 	unsigned int serlen;
 	unsigned int expected_serlen;
-	ApplicationProcessNamingInformation before, after;
 
 	std::cout << "TESTING KMSG APP DEALLOCATE FLOW (" << msg_t << ")" << std::endl;
-
-	before.processName = "test1.IRATI";
-	before.processInstance = "1";
-	before.entityName = "fa";
-	before.entityInstance = "1";
 
 	msg = new irati_msg_app_dealloc_flow();
 	msg->msg_type = msg_t;
 	msg->port_id = 31;
 	msg->result = 35;
-	msg->name = before.to_c_name();
 
 	expected_serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX,
 			     	     	   (irati_msg_base *) msg);
@@ -2575,18 +2568,12 @@ int test_irati_msg_app_dealloc_flow(irati_msg_t msg_t)
 		return -1;
 	}
 
-	after = ApplicationProcessNamingInformation(resp->name);
-
 	if (msg->port_id != resp->port_id) {
 		std::cout << "Port-id on original and recovered messages"
 			   << " are different\n";
 		ret = -1;
 	} else if (msg->result != resp->result) {
 		std::cout << "Result on original and recovered messages"
-			   << " are different\n";
-		ret = -1;
-	} else if (before != after) {
-		std::cout << "Name on original and recovered messages"
 			   << " are different\n";
 		ret = -1;
 	} else {
@@ -3225,9 +3212,6 @@ int main()
 	result = test_irati_msg_base_resp(RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE);
 	if (result < 0) return result;
 
-	result = test_irati_msg_base_resp(RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE);
-	if (result < 0) return result;
-
 	result = test_irati_msg_base_resp(RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE);
 	if (result < 0) return result;
 
@@ -3367,9 +3351,6 @@ int main()
 	if (result < 0) return result;
 
 	result = test_irati_msg_app_dealloc_flow(RINA_C_APP_DEALLOCATE_FLOW_REQUEST);
-	if (result < 0) return result;
-
-	result = test_irati_msg_app_dealloc_flow(RINA_C_APP_DEALLOCATE_FLOW_RESPONSE);
 	if (result < 0) return result;
 
 	result = test_irati_msg_app_reg_app();

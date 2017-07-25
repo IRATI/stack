@@ -468,11 +468,6 @@ void IPCProcessImpl::flow_allocation_requested_handler(const rina::FlowRequestEv
 		resource_allocator_->get_n_minus_one_flow_manager()->flowAllocationRequested(event);
 }
 
-void IPCProcessImpl::deallocate_flow_response_handler(const rina::DeallocateFlowResponseEvent& event)
-{
-	resource_allocator_->get_n_minus_one_flow_manager()->deallocateFlowResponse(event);
-}
-
 void IPCProcessImpl::flow_deallocated_handler(const rina::FlowDeallocatedEvent& event)
 {
 	resource_allocator_->get_n_minus_one_flow_manager()->flowDeallocatedRemotely(event);

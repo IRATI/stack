@@ -69,7 +69,7 @@ void ServerWorker::destroyFlow(int port_id)
         // TODO here we should store the seqnum (handle) returned by
         // requestFlowDeallocation() and match it in the event loop
         try {
-        	ipcManager->requestFlowDeallocation(port_id);
+        	ipcManager->deallocate_flow(port_id);
         } catch(rina::Exception &e) {
         	//Ignore, flow was already deallocated
         }
@@ -138,7 +138,6 @@ void Server::run(bool blocking)
         for(;;) {
                 IPCEvent* event = ipcEventProducer->eventWait();
                 int port_id = 0;
-                DeallocateFlowResponseEvent *resp = NULL;
 
                 if (!event)
                         return;
@@ -166,14 +165,6 @@ void Server::run(bool blocking)
                         port_id = dynamic_cast<FlowDeallocatedEvent*>(event)->portId;
                         ipcManager->flowDeallocated(port_id);
                         LOG_INFO("Flow torn down remotely [port-id = %d]", port_id);
-                        break;
-
-                case DEALLOCATE_FLOW_RESPONSE_EVENT:
-                        LOG_INFO("Destroying the flow after time-out");
-                        resp = dynamic_cast<DeallocateFlowResponseEvent*>(event);
-                        port_id = resp->portId;
-
-                        ipcManager->flowDeallocationResult(port_id, resp->result == 0);
                         break;
 
                 default:
