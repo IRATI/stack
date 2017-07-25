@@ -196,12 +196,6 @@ DX_PDF_FEATURE(ON)
 DX_PS_FEATURE(OFF)
 DX_INIT_DOXYGEN($PACKAGE_NAME,[doxygen.cfg],[doxygen])
 
-# Generate symbolic links for common code
-(
-ln -sf ../../common/ker-numtables.c src/ker-numtables.c
-ln -sf ../../common/serdes-utils.c src/serdes-utils.c
-)
-
 AC_CONFIG_FILES([
     Makefile
 
