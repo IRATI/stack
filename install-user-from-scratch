@@ -44,6 +44,8 @@ if test -n "$BUILDDIR/java" ; then
     }
 fi
 
+(cd librina/src && ln -sf ../../common/ker-numtables.c ker-numtables.c && ln -sf ../../common/serdes-utils.c serdes-utils.c)
+
 echo "$ME: Starting librina phase"
 (cd librina && ./bootstrap) || {
     echo "$ME: Cannot bootstrap"
