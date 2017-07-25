@@ -58,29 +58,6 @@ public:
         bool try_only_a_dif;
 };
 
-/**
-* Flow deallocation transaction state
-*/
-class FlowDeallocTransState: public TransactionState{
-
-public:
-	FlowDeallocTransState(Addon* callee, Promise* promise,
-				int _slave_ipcp_id,
-				const rina::FlowDeallocateRequestEvent& _req_e):
-					TransactionState(callee, promise),
-					slave_ipcp_id(_slave_ipcp_id),
-					req_event(_req_e),
-					req_by_ipcm(false)
-					{}
-	virtual ~FlowDeallocTransState(){};
-
-    int slave_ipcp_id;
-	rina::FlowDeallocateRequestEvent req_event;
-
-	// True if the flow deallocation was requested by the IPCM
-	// reacting to an OS process finalized event
-	bool req_by_ipcm;
-};
 }//rinad namespace
 
 #endif  /* __FLOW_ALLOC_H__ */

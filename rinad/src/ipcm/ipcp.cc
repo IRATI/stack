@@ -492,8 +492,11 @@ void IPCMIPCProcess::deallocateFlow(int flowPortId, unsigned int opaque)
 	rina::FlowInformation flowInformation;
 
 	if (state_ != IPCM_IPCP_ASSIGNED_TO_DIF)
-		throw rina::IpcmRegisterApplicationException(
-				rina::IPCProcessProxy::error_not_a_dif_member);
+		throw rina::IPCException(rina::IPCProcessProxy::error_not_a_dif_member);
+
+	if (!getFlowInformation(flowPortId, flowInformation)) {
+		throw rina::IPCException("No flow for such port-id");
+	}
 
 	try {
 		proxy_->deallocateFlow(flowPortId, opaque);
@@ -501,23 +504,7 @@ void IPCMIPCProcess::deallocateFlow(int flowPortId, unsigned int opaque)
 		throw e;
 	}
 
-	if (getFlowInformation(flowPortId, flowInformation))
-		pendingFlowOperations[opaque] = flowInformation;
-}
-
-void IPCMIPCProcess::deallocateFlowResult(unsigned int sequenceNumber, bool success)
-{
-	rina::FlowInformation flowInformation;
-
-	try {
-		flowInformation = getPendingFlowOperation(sequenceNumber);
-	} catch(rina::IPCException &e) {
-		throw rina::IpcmDeallocateFlowException(e.what());
-	}
-
-	pendingFlowOperations.erase(sequenceNumber);
-	if (success)
-		allocatedFlows.remove(flowInformation);
+	allocatedFlows.remove(flowInformation);
 }
 
 rina::FlowInformation IPCMIPCProcess::flowDeallocated(int flowPortId)

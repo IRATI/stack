@@ -132,6 +132,32 @@ int IPVPNManager::iporina_flow_allocated(const rina::FlowRequestEvent& event)
 	return 0;
 }
 
+int IPVPNManager::iporina_flow_deallocated(int port_id, const int ipcp_id)
+{
+	int res = 0;
+	rina::FlowRequestEvent event;
+
+	event.portId = port_id;
+	res = remove_iporina_flow_info(port_id, event);
+	if (res != 0) {
+		return res;
+	}
+
+	//Remove entry from the IP forwarding table
+	res = add_or_remove_ip_route(event.remoteApplicationName.processName,
+			ipcp_id, event.portId, false);
+	if (res != 0) {
+		LOG_ERR("Problems removing entry from IP routing table");
+	}
+
+	LOG_INFO("IP over RINA flow between %s and %s deallocated, port-id: %d",
+			event.localApplicationName.processName.c_str(),
+			event.remoteApplicationName.processName.c_str(),
+			event.portId);
+
+	return 0;
+}
+
 void IPVPNManager::
 iporina_flow_allocation_requested(const rina::FlowRequestEvent& event)
 {
@@ -169,49 +195,22 @@ iporina_flow_allocation_requested(const rina::FlowRequestEvent& event)
 	IPCManager->allocate_iporina_flow_response(event, 0, true);
 }
 
-int IPVPNManager::get_iporina_flow_info(int port_id,
-					rina::FlowRequestEvent& event)
+int IPVPNManager::remove_iporina_flow_info(int port_id,
+					   rina::FlowRequestEvent& event)
 {
-	int res = 0;
 	std::map<int, rina::FlowRequestEvent>::iterator it;
 
 	rina::ScopedLock g(lock);
 
 	it = iporina_flows.find(port_id);
 	if (it == iporina_flows.end()) {
-		LOG_ERR("Could not find IP over RINA flow with port-id %d", port_id);
+		LOG_ERR("Cannot remove IP over RINA flow with port-id %d, not found",
+			 event.portId);
 		return -1;
 	}
 
 	event = it->second;
-
-	return 0;
-}
-
-int IPVPNManager::iporina_flow_deallocated(int port_id, const int ipcp_id)
-{
-	int res = 0;
-	rina::FlowRequestEvent event;
-
-	rina::ScopedLock g(lock);
-
-	event.portId = port_id;
-	res = remove_flow(event);
-	if (res != 0) {
-		return res;
-	}
-
-	//Remove entry from the IP forwarding table
-	res = add_or_remove_ip_route(event.remoteApplicationName.processName,
-			             ipcp_id, event.portId, false);
-	if (res != 0) {
-		LOG_ERR("Problems removing entry from IP routing table");
-	}
-
-	LOG_INFO("IP over RINA flow between %s and %s deallocated, port-id: %d",
-		  event.localApplicationName.processName.c_str(),
-		  event.remoteApplicationName.processName.c_str(),
-		  event.portId);
+	iporina_flows.erase(it);
 
 	return 0;
 }
@@ -228,23 +227,6 @@ int IPVPNManager::add_flow(const rina::FlowRequestEvent& event)
 	}
 
 	iporina_flows[event.portId] = event;
-
-	return 0;
-}
-
-int IPVPNManager::remove_flow(rina::FlowRequestEvent& event)
-{
-	std::map<int, rina::FlowRequestEvent>::iterator it;
-
-	it = iporina_flows.find(event.portId);
-	if (it == iporina_flows.end()) {
-		LOG_ERR("Cannot remove IP over RINA flow with port-id %d, not found",
-			 event.portId);
-		return -1;
-	}
-
-	event = it->second;
-	iporina_flows.erase(it);
 
 	return 0;
 }
@@ -291,8 +273,7 @@ std::string IPVPNManager::get_ip_prefix_string(const std::string& input)
 }
 
 int IPVPNManager::add_or_remove_ip_route(const std::string ip_prefix,
-					 const int ipcp_id,
-					 const int port_id,
+					 int ipcp_id, int port_id,
 					 bool add)
 {
 	std::stringstream ss;
@@ -525,16 +506,43 @@ ipcm_res_t IPCManager_::deallocate_iporina_flow(Promise* promise,
 {
 	rina::FlowRequestEvent req_event;
 	rina::FlowDeallocateRequestEvent event;
+	IPCMIPCProcess *ipcp;
+	int ipcp_id = 0;
+	int res;
 
-	if (ip_vpn_manager->get_iporina_flow_info(port_id, req_event)) {
+	ipcp = lookup_ipcp_by_port(port_id);
+	if (!ipcp) {
+		LOG_ERR("Cannot find the IPC process that provides "
+				"the flow with port-id %d", port_id);
 		return IPCM_FAILURE;
 	}
 
+	{
+		//Auto release the read lock
+		rina::ReadScopedLock readlock(ipcp->rwlock, false);
+		ipcp_id = ipcp->get_id();
+	}
+
+	if (ip_vpn_manager->remove_iporina_flow_info(port_id, req_event)) {
+		return IPCM_FAILURE;
+	}
+
+	//Remove entry from the IP forwarding table
+	res = ip_vpn_manager->add_or_remove_ip_route(req_event.remoteApplicationName.processName,
+			             	     	     ipcp_id, port_id, false);
+	if (res != 0) {
+		LOG_ERR("Problems removing entry from IP routing table");
+	}
+
+	LOG_INFO("IP over RINA flow between %s and %s deallocated, port-id: %d",
+		  req_event.localApplicationName.processName.c_str(),
+		  req_event.remoteApplicationName.processName.c_str(),
+		  event.portId);
+
 	event.sequenceNumber = 0;
 	event.portId = port_id;
-	event.applicationName = req_event.localApplicationName;
 
-	return flow_deallocation_requested_event_handler(promise, &event);
+	return deallocate_flow(promise, ipcp_id, event);
 }
 
 } //namespace rinad

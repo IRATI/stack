@@ -719,7 +719,6 @@ protected:
 	ipcm_res_t flow_deallocation_requested_event_handler(Promise * promise,
 						             rina::FlowDeallocateRequestEvent* event);
 	void flow_deallocated_event_handler(rina::FlowDeallocatedEvent* event);
-	void ipcm_deallocate_flow_response_event_handler(rina::IpcmDeallocateFlowResponseEvent* event);
 	void ipcm_allocate_flow_request_result_handler(rina::IpcmAllocateFlowRequestResultEvent* event);
 	void application_flow_allocation_failed_notify(
 						rina::FlowRequestEvent *event);

@@ -223,13 +223,6 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 						      msg->src_port, msg->src_ipcp_id, 0);
 		break;
 	}
-	case RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE: {
-		struct irati_msg_base_resp * sp_msg =
-				(struct irati_msg_base_resp *) msg;
-		event = new IpcmDeallocateFlowResponseEvent(sp_msg->result, sp_msg->event_id,
-							    msg->src_port, msg->src_ipcp_id);
-		break;
-	}
 	case RINA_C_IPCM_DEALLOCATE_FLOW_REQUEST: {
 		struct irati_kmsg_multi_msg * sp_msg =
 				(struct irati_kmsg_multi_msg *) msg;
@@ -540,17 +533,8 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 	case RINA_C_APP_DEALLOCATE_FLOW_REQUEST: {
 		struct irati_msg_app_dealloc_flow * sp_msg =
 				(struct irati_msg_app_dealloc_flow *) msg;
-		event = new FlowDeallocateRequestEvent(sp_msg->port_id,
-						       ApplicationProcessNamingInformation(sp_msg->name),
-						       sp_msg->event_id, msg->src_port, msg->src_ipcp_id);
-		break;
-	}
-	case RINA_C_APP_DEALLOCATE_FLOW_RESPONSE: {
-		struct irati_msg_app_dealloc_flow * sp_msg =
-				(struct irati_msg_app_dealloc_flow *) msg;
-		event = new DeallocateFlowResponseEvent(ApplicationProcessNamingInformation(sp_msg->name),
-							sp_msg->port_id, sp_msg->result, sp_msg->event_id,
-							msg->src_port, msg->src_ipcp_id);
+		event = new FlowDeallocateRequestEvent(sp_msg->port_id, sp_msg->event_id,
+						       msg->src_port, msg->src_ipcp_id);
 		break;
 	}
 	case RINA_C_APP_REGISTER_APPLICATION_REQUEST: {

@@ -40,17 +40,15 @@ public:
 	bool ip_prefix_registered(const std::string& ip_prefix);
 	int iporina_flow_allocated(const rina::FlowRequestEvent& event);
 	void iporina_flow_allocation_requested(const rina::FlowRequestEvent& event);
-	int get_iporina_flow_info(int port_id, rina::FlowRequestEvent& event);
+	int remove_iporina_flow_info(int port_id, rina::FlowRequestEvent& event);
 	int iporina_flow_deallocated(int port_id, const int ipcp_id);
+	int add_or_remove_ip_route(const std::string ip_prefix,
+				   int ipcp_id, int port_id,
+				   bool add);
 
 private:
 	bool __ip_prefix_registered(const std::string& ip_prefix);
 	int add_flow(const rina::FlowRequestEvent& event);
-	int remove_flow(rina::FlowRequestEvent& event);
-	int add_or_remove_ip_route(const std::string ip_prefix,
-				   const int ipcp_id,
-				   int port_id,
-				   bool add);
 	std::string exec_shell_command(std::string result);
 	std::string get_rina_dev_name(const int ipcp_id, int port_id);
 	std::string get_ip_prefix_string(const std::string& input);

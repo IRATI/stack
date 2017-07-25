@@ -508,92 +508,89 @@ const std::string IPCEvent::eventTypeToString(IPCEventType eventType) {
 	case IPCM_UNREGISTER_APP_RESPONSE_EVENT:
 		result = "24_IPCM_UNREGISTER_APP_RESPONSE";
 		break;
-	case IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT:
-		result = "25_IPCM_DEALLOCATE_FLOW_RESPONSE";
-		break;
 	case IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
-		result = "26_IPCM_ALLOCATE_FLOW_RESULT";
+		result = "25_IPCM_ALLOCATE_FLOW_RESULT";
 		break;
 	case QUERY_RIB_RESPONSE_EVENT:
-		result = "27_QUERY_RIB_RESPONSE";
+		result = "26_QUERY_RIB_RESPONSE";
 		break;
 	case IPC_PROCESS_DAEMON_INITIALIZED_EVENT:
-		result = "28_IPC_PROCESS_DAEMON_INITIALIZED";
+		result = "27_IPC_PROCESS_DAEMON_INITIALIZED";
 		break;
 	case TIMER_EXPIRED_EVENT:
-		result = "29_TIMER_EXPIRED";
+		result = "28_TIMER_EXPIRED";
 		break;
 	case IPC_PROCESS_CREATE_CONNECTION_RESPONSE:
-		result = "30_CREATE_EFCP_CONN_RESPONSE";
+		result = "29_CREATE_EFCP_CONN_RESPONSE";
 		break;
 	case IPC_PROCESS_UPDATE_CONNECTION_RESPONSE:
-		result = "31_UPDATE_EFCP_CONN_RESPONSE";
+		result = "30_UPDATE_EFCP_CONN_RESPONSE";
 		break;
 	case IPC_PROCESS_CREATE_CONNECTION_RESULT:
-		result = "32_CREATE_EFCP_CONN_RESULT";
+		result = "31_CREATE_EFCP_CONN_RESULT";
 		break;
 	case IPC_PROCESS_DESTROY_CONNECTION_RESULT:
-		result = "33_DESTROY_EFCP_CONN_RESULT";
+		result = "32_DESTROY_EFCP_CONN_RESULT";
 		break;
 	case IPC_PROCESS_DUMP_FT_RESPONSE:
-		result = "34_DUMP_FT_RESPONSE";
+		result = "33_DUMP_FT_RESPONSE";
 		break;
         case IPC_PROCESS_SET_POLICY_SET_PARAM:
-                result = "35_SET_POLICY_SET_PARAM";
+                result = "34_SET_POLICY_SET_PARAM";
                 break;
         case IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE:
-                result = "36_SET_POLICY_SET_PARAM_RESPONSE";
+                result = "35_SET_POLICY_SET_PARAM_RESPONSE";
                 break;
         case IPC_PROCESS_SELECT_POLICY_SET:
-                result = "37_SELECT_POLICY_SET";
+                result = "36_SELECT_POLICY_SET";
                 break;
         case IPC_PROCESS_SELECT_POLICY_SET_RESPONSE:
-                result = "38_SELECT_POLICY_SET_RESPONSE";
+                result = "37_SELECT_POLICY_SET_RESPONSE";
                 break;
         case IPC_PROCESS_PLUGIN_LOAD:
-                result = "39_PLUGIN_LOAD";
+                result = "38_PLUGIN_LOAD";
                 break;
         case IPC_PROCESS_PLUGIN_LOAD_RESPONSE:
-                result = "40_PLUGIN_LOAD_RESPONSE";
+                result = "39_PLUGIN_LOAD_RESPONSE";
                 break;
         case IPC_PROCESS_UPDATE_CRYPTO_STATE_RESPONSE:
-                result = "41_UPDATE_CRYPTO_STATE_RESPONSE";
+                result = "40_UPDATE_CRYPTO_STATE_RESPONSE";
                 break;
 	case IPC_PROCESS_FWD_CDAP_MSG:
-		result = "42_IPC_PROCESS_FWD_CDAP_MSG";
+		result = "41_IPC_PROCESS_FWD_CDAP_MSG";
 		break;
 	case DISCONNECT_NEIGHBOR_REQUEST_EVENT:
-		result = "43_DISCONNECT_NEIGHBOR_REQUEST_EVENT";
+		result = "42_DISCONNECT_NEIGHBOR_REQUEST_EVENT";
 		break;
 	case DISCONNECT_NEIGHBOR_RESPONSE_EVENT:
-		result = "44_DISCONNECT_NEIGHBOR_RESPONSE_EVENT";
+		result = "43_DISCONNECT_NEIGHBOR_RESPONSE_EVENT";
 		break;
 	case IPCM_MEDIA_REPORT_EVENT:
-		result = "45_MEDIA_REPORT_EVENT";
+		result = "44_MEDIA_REPORT_EVENT";
 		break;
 	case IPC_PROCESS_ALLOCATE_PORT_RESPONSE:
-		result = "46_ALLOCATE_PORT_RESPONSE";
+		result = "45_ALLOCATE_PORT_RESPONSE";
 		break;
 	case IPC_PROCESS_DEALLOCATE_PORT_RESPONSE:
-		result = "47_DEALLOCATE_PORT_RESPONSE";
+		result = "46_DEALLOCATE_PORT_RESPONSE";
 		break;
 	case IPC_PROCESS_WRITE_MGMT_SDU_RESPONSE:
-		result = "48_WRITE_MGMT_SDU_RESPONSE";
+		result = "47_WRITE_MGMT_SDU_RESPONSE";
 		break;
 	case IPC_PROCESS_READ_MGMT_SDU_NOTIF:
-		result = "49_READ_MGMT_SDU_NOTIF";
+		result = "48_READ_MGMT_SDU_NOTIF";
 		break;
 	case IPCM_CREATE_IPCP_RESPONSE:
-		result = "50_CREATE_IPCP_RESPONSE";
+		result = "49_CREATE_IPCP_RESPONSE";
 		break;
 	case IPCM_DESTROY_IPCP_RESPONSE:
-		result = "51_DESTROY_IPCP_RESPONSE";
+		result = "50_DESTROY_IPCP_RESPONSE";
 		break;
 	case IPCM_FINALIZATION_REQUEST_EVENT:
-		result = "52_IPCM_FINALIZATION_REQUEST_EVENT";
+		result = "51_IPCM_FINALIZATION_REQUEST_EVENT";
 		break;
 	case NO_EVENT:
-		result = "54_NO_EVENT";
+		result = "52_NO_EVENT";
 		break;
 	default:
 		result = "Unknown event";
@@ -666,17 +663,6 @@ FlowRequestEvent::FlowRequestEvent(int portId,
 }
 
 /* CLASS FLOW DEALLOCATE REQUEST EVENT */
-FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int pid,
-			const ApplicationProcessNamingInformation& an,
-			unsigned int sequenceNumber,
-			unsigned int ctrl_p, unsigned short ipcp_id):
-		IPCEvent(FLOW_DEALLOCATION_REQUESTED_EVENT,sequenceNumber, ctrl_p, ipcp_id)
-{
-	portId = pid;
-	applicationName = an;
-	internal = false;
-}
-
 FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId, unsigned int sequenceNumber,
 		unsigned int ctrl_p, unsigned short ipcp_id):
 			IPCEvent(FLOW_DEALLOCATION_REQUESTED_EVENT,

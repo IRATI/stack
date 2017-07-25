@@ -548,7 +548,6 @@ void Manager::run()
     {
         rina::IPCEvent* event = rina::ipcEventProducer->eventWait();
         int port_id = 0;
-        rina::DeallocateFlowResponseEvent *resp = NULL;
 
         if (!event)
             return;
@@ -585,7 +584,7 @@ void Manager::run()
                         std::cout
                                 << "Error, flow with the same mad already exist: "
                                 << flow.remoteAppName.processName << std::endl;
-                        rina::ipcManager->requestFlowDeallocation(flow.portId);
+                        rina::ipcManager->deallocate_flow(flow.portId);
                     }
                 }
                 if (flow.remoteAppName.processName == "rina.apps.mad.2")
@@ -598,7 +597,7 @@ void Manager::run()
                         std::cout
                                 << "Error, flow with the same mad already exist: "
                                 << flow.remoteAppName.processName << std::endl;
-                        rina::ipcManager->requestFlowDeallocation(flow.portId);
+                        rina::ipcManager->deallocate_flow(flow.portId);
                     }
                 }
                 if (flow.remoteAppName.processName == "rina.apps.mad.3")
@@ -611,7 +610,7 @@ void Manager::run()
                         std::cout
                                 << "Error, flow with the same mad already exist: "
                                 << flow.remoteAppName.processName << std::endl;
-                        rina::ipcManager->requestFlowDeallocation(flow.portId);
+                        rina::ipcManager->deallocate_flow(flow.portId);
                     }
                 }
                 while (waiting.find(order) != waiting.end())
@@ -626,15 +625,6 @@ void Manager::run()
                         ->portId;
                 rina::ipcManager->flowDeallocated(port_id);
                 LOG_INFO("Flow torn down remotely [port-id = %d]", port_id);
-                break;
-
-            case rina::DEALLOCATE_FLOW_RESPONSE_EVENT:
-                LOG_INFO("Destroying the flow after time-out");
-                resp = dynamic_cast<rina::DeallocateFlowResponseEvent*>(event);
-                port_id = resp->portId;
-
-                rina::ipcManager->flowDeallocationResult(port_id,
-                                                         resp->result == 0);
                 break;
 
             default:

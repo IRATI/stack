@@ -2188,13 +2188,6 @@ void IPCManager_::io_loop()
                 }
                     break;
 
-                case rina::IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT: {
-                    DOWNCAST_DECL(event, rina::IpcmDeallocateFlowResponseEvent,
-                                  e);
-                    ipcm_deallocate_flow_response_event_handler(e);
-                }
-                    break;
-
                 case rina::IPCM_ALLOCATE_FLOW_REQUEST_RESULT: {
                     DOWNCAST_DECL(event,
                                   rina::IpcmAllocateFlowRequestResultEvent, e);

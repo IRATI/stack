@@ -295,6 +295,7 @@ private:
 
 	std::map<unsigned int, OngoingFlowAllocState> pending_port_allocs;
 	rina::Lockable port_alloc_lock;
+	rina::Lockable fai_lock;
 
 	/// Create initial RIB objects
 	void populateRIB();

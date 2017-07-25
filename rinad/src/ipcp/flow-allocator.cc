@@ -355,6 +355,8 @@ void FlowAllocator::__createFlowRequestMessageReceived(configs::Flow * flow,
 	IFlowAllocatorInstance * fai;
 	std::stringstream ss;
 
+	rina::ScopedLock g(fai_lock);
+
 	ss << port_id;
 	fai = new FlowAllocatorInstance(ipcp,
 					this,
@@ -459,6 +461,8 @@ void FlowAllocator::__submitAllocateRequest(const rina::FlowRequestEvent& event,
 {
 	IFlowAllocatorInstance * fai;
 	std::stringstream ss;
+
+	rina::ScopedLock g(fai_lock);
 
 	ss << port_id;
 	fai = new FlowAllocatorInstance(ipcp,
@@ -593,31 +597,17 @@ void FlowAllocator::submitDeallocate(const rina::FlowDeallocateRequestEvent& eve
 					"Problems requesting IPC Manager to deallocate port-id %d: %s",
 					event.portId, e.what());
 		}
-
-		try {
-			rina::extendedIPCManager->notifyflowDeallocated(event, -1);
-		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Error communicating with the IPC Manager: %s",
-					e.what());
-		}
 	} else {
 		fai->submitDeallocate(event);
-		if (event.internal) {
-			return;
-		}
-
-		try {
-			rina::extendedIPCManager->notifyflowDeallocated(event, 0);
-		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Error communicating with the IPC Manager: %s",
-					e.what());
-		}
 	}
 }
 
 void FlowAllocator::removeFlowAllocatorInstance(int portId)
 {
 	std::stringstream ss;
+
+	rina::ScopedLock g(fai_lock);
+
 	ss << portId;
 	IFlowAllocatorInstance * fai =
 		dynamic_cast<IFlowAllocatorInstance*>(remove_instance(ss.str()));
@@ -630,6 +620,8 @@ void FlowAllocator::sync_with_kernel()
 {
 	IFlowAllocatorInstance * fai = NULL;
 	std::list<rina::ApplicationEntityInstance*>::iterator it;
+
+	rina::ScopedLock g(fai_lock);
 	std::list<rina::ApplicationEntityInstance*> entities = get_all_instances();
 
 	for (it = entities.begin(); it != entities.end(); ++it) {

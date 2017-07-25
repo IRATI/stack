@@ -352,19 +352,6 @@ public:
 	void deallocateFlow(int portId, unsigned int opaque);
 
 	/**
-	 * Invoked by the IPC Manager to inform about the result of a deallocate
-	 * flow operation and update the internal data structures
-	 * This method is NOT thread safe and must be called with the writelock
-	 * acquired
-	 *
-	 * @param sequenceNumber the handle associated to the pending allocation
-	 * @param success true if success, false otherwise
-	 * @throws IpcmDeallocateFlowException if the pending deallocation
-	 * is not found
-	 */
-	void deallocateFlowResult(unsigned int sequenceNumber, bool success);
-
-	/**
 	 * Invoked by the IPC Manager to notify that a flow has been remotely
 	 * deallocated, so that librina updates the internal data structures
 	 * This method is NOT thread safe and must be called with the writelock

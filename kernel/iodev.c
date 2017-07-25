@@ -41,6 +41,8 @@
 #include "kipcm.h"
 #include "kfa.h"
 #include "kfa-utils.h"
+#include "ctrldev.h"
+#include "irati/kernel-msg.h"
 
 extern struct kipcm *default_kipcm;
 
@@ -191,8 +193,13 @@ static int
 iodev_release(struct inode *inode, struct file *f)
 {
         struct iodev_priv *priv = f->private_data;
+        struct irati_msg_app_dealloc_flow msg;
 
-        /* TODO possibly deallocate the flow */
+        /* Request flow deallocation */
+        msg.msg_type = RINA_C_APP_DEALLOCATE_FLOW_REQUEST;
+        msg.port_id = priv->port_id;
+        irati_ctrl_dev_snd_resp_msg(IPCM_CTRLDEV_PORT, IRATI_MB(&msg));
+
         rkfree(priv);
 
         return 0;

@@ -304,24 +304,6 @@ void Client::release()
 
 void Client::destroyFlow()
 {
-    DeallocateFlowResponseEvent *resp = 0;
-    unsigned int seqnum;
-    IPCEvent* event;
     cdap::destroy(flow_.portId);
-    seqnum = ipcManager->requestFlowDeallocation(flow_.portId);
-
-    for (;;)
-    {
-        event = ipcEventProducer->eventWait();
-        if (event && event->eventType == DEALLOCATE_FLOW_RESPONSE_EVENT
-                && event->sequenceNumber == seqnum)
-        {
-            break;
-        }
-        LOG_DBG("Client got new event %d", event->eventType);
-    }
-    resp = dynamic_cast<DeallocateFlowResponseEvent*>(event);
-    assert(resp);
-
-    ipcManager->flowDeallocationResult(flow_.portId, resp->result == 0);
+    ipcManager->deallocate_flow(flow_.portId);
 }

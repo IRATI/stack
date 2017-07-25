@@ -53,7 +53,6 @@ public:
 	void allocateRequestResult(const AllocateFlowRequestResultEvent& event);
 	void flowAllocationRequested(const FlowRequestEvent& event);
 	void deallocateNMinus1Flow(int portId);
-	void deallocateFlowResponse(const DeallocateFlowResponseEvent& event);
 	void flowDeallocatedRemotely(const FlowDeallocatedEvent& event);
 	FlowInformation getNMinus1FlowInformation(int portId) const;
 	bool isSupportingDIF(const ApplicationProcessNamingInformation& difName);

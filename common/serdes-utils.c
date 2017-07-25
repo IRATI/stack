@@ -4400,7 +4400,6 @@ static void * allocate_irati_msg(irati_msg_t msg_t)
 	case RINA_C_IPCP_SELECT_POLICY_SET_RESPONSE:
 	case RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE:
 	case RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE:
-	case RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE:
 	case RINA_C_IPCM_UPDATE_DIF_CONFIG_RESPONSE:
 	case RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE: {
 		struct irati_msg_base_resp * result;
@@ -4558,11 +4557,6 @@ static void * allocate_irati_msg(irati_msg_t msg_t)
 		return result;
 	}
 	case RINA_C_APP_DEALLOCATE_FLOW_REQUEST:
-	case RINA_C_APP_DEALLOCATE_FLOW_RESPONSE: {
-		struct irati_msg_app_dealloc_flow * result;
-		result = COMMON_ALLOC(sizeof(struct irati_msg_app_dealloc_flow), 1);
-		return result;
-	}
 	case RINA_C_APP_REGISTER_APPLICATION_REQUEST: {
 		struct irati_msg_app_reg_app * result;
 		result = COMMON_ALLOC(sizeof(struct irati_msg_app_reg_app), 1);
