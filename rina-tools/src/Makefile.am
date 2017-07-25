@@ -4,7 +4,7 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-SUBDIRS                            = common rina-echo-time rina-cdap-echo manager cdapc mac2ifname rlite key-managers
+SUBDIRS                            = common rina-echo-time rina-cdap-echo manager cdapc mac2ifname rlite key-managers rina-cat
 EXTRA_DIST                         =
 DISTCLEANFILES                     =
 bin_PROGRAMS                       =
