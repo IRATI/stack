@@ -35,7 +35,6 @@
 #include <fcntl.h>		// for fcntl()
 #include <string.h>
 
-// #include "api.h"	// RINA api
 #include "rina/api.h"
 
 #include "cat_client.h"
@@ -63,8 +62,8 @@ int CatClient::run()
 	struct rina_flow_spec fspec;
 	
 	rina_flow_spec_default (&fspec);
-	fspec.in_order_delivery = 1;	// in-order delivery
-	fspec.max_sdu_gap = 0;		// no loss
+	//fspec.in_order_delivery = 1;	// in-order delivery
+	//fspec.max_sdu_gap = 0;	// no loss
 	fspec.msg_boundaries = 0;	// no boundaries -- streaming mode, like stdin/stdout
 	
 	flowfd = rina_flow_alloc(dif_name, my_apname, server_name, &fspec, 0);
