@@ -176,6 +176,7 @@ AC_CONFIG_FILES([
     src/mac2ifname/Makefile
     src/rlite/Makefile
     src/key-managers/Makefile
+    src/rina-cat/Makefile
 
     doc/Makefile
 ])
