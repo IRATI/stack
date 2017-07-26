@@ -762,7 +762,7 @@ static int qta_mux_ps_set_policy_set_param_priv(struct qta_mux_data * data,
 		buf[dotlen] = '\0';
 	}
 
-	ret = kstrtoint(buf, 10, &qos_id);
+	ret = kstrtoint(buf, 10, (int *) &qos_id);
 	LOG_DBG("Arrived parameter info for QoS id %u", qos_id);
 	rkfree(buf);
 	conf_qos = config_q_qos_find(data->config, qos_id);
