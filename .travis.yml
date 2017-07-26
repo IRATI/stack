@@ -16,7 +16,8 @@ before_install:
   - sudo apt-get install libprotobuf-dev 
   - sudo apt-get install libnl-genl-3-dev 
   - sudo apt-get install libnl-3-dev 
-  - sudo apt-get install hostapd 
+  - sudo apt-get install hostapd
+  - sudo apt-get install wpasupplicant
 
 before_script:
   # Make a build directory 
