@@ -34,7 +34,7 @@ public:
 	configs::Flow *newFlowRequest(IPCProcess * ipc_process,
 			const rina::FlowRequestEvent& flowRequestEvent);
 	int set_policy_set_param(const std::string& name,
-							 const std::string& value);
+				 const std::string& value);
 	virtual ~FlowAllocatorPs() {}
 
 private:

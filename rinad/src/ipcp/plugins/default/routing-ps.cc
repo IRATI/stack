@@ -70,13 +70,13 @@ LinkStateRoutingPs::~LinkStateRoutingPs()
 extern "C" rina::IPolicySet *
 createRoutingComponentPs(rina::ApplicationEntity * ctx)
 {
-		IRoutingComponent * rc = dynamic_cast<IRoutingComponent *>(ctx);
+	IRoutingComponent * rc = dynamic_cast<IRoutingComponent *>(ctx);
 
-		if (!rc) {
-			return NULL;
-		}
+	if (!rc) {
+		return NULL;
+	}
 
-		return new LinkStateRoutingPs(rc);
+	return new LinkStateRoutingPs(rc);
 }
 
 extern "C" void
@@ -1786,7 +1786,7 @@ void LinkStateRoutingPolicy::set_dif_configuration(
         rina::PolicyConfig psconf;
         long delay;
 
-        psconf = dif_configuration.routing_configuration_.policy_set_;;
+        psconf = dif_configuration.routing_configuration_.policy_set_;
 
         try {
         	routing_alg = psconf.get_param_value_as_string(ROUTING_ALGORITHM);
