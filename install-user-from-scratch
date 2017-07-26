@@ -44,7 +44,9 @@ if test -n "$BUILDDIR/java" ; then
     }
 fi
 
+echo "$ME: Creating symbolic links within librina folder"
 (cd librina/src && ln -sf ../../common/ker-numtables.c ker-numtables.c && ln -sf ../../common/serdes-utils.c serdes-utils.c)
+(cd librina/src && mkdir irati && cd irati && ln -sf ../../../include/irati/kucommon.h kucommon.h && ln -sf ../../../include/irati/kernel-msg.h kernel-msg.h && ln -sf ../../../include/irati/serdes-utils.h serdes-utils.h)
 
 echo "$ME: Starting librina phase"
 (cd librina && ./bootstrap) || {
