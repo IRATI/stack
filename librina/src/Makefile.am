@@ -11,7 +11,7 @@ EXTRA_DIST       =
 include $(srcdir)/Makefile.inc
 
 #
-#JSON lib
+# JSON lib
 #
 lib_LTLIBRARIES    = librinajsoncpp.la
 
@@ -49,6 +49,23 @@ librinajsoncpp_la_LDFLAGS  =
 librinajsoncpp_la_LIBADD   =
 librinajsoncpp_la_CPPFLAGS = -I$(srcdir)/jsoncpp
 
+#
+# IRATI lib (shared headers and functions between user-space and kernel)
+#
+lib_LTLIBRARIES   += librinairati.la
+librinairati_ladir = $(includedir)/irati
+librinairati_la_SOURCES  =  \
+        ker-numtables.c	 \
+        serdes-utils.c
+
+librinairati_la_HEADERS =	\
+        irati/kucommon.h  \
+        irati/kernel-msg.h    \
+        irati/serdes-utils.h
+
+librinairati_la_LDFLAGS  =
+librinairati_la_LIBADD   =
+librinairati_la_CPPFLAGS = -I$(srcdir)
 
 #
 # librina
@@ -67,8 +84,6 @@ allsources =							\
         common.cc						\
         console.cc						\
         ctrl.c							 \
-        ker-numtables.c				 	\
-        serdes-utils.c					\
         ipc-api.cc                          \
         application.cc						\
         internal-events.cc					\
@@ -91,14 +106,14 @@ librina_la_LDFLAGS  =
 librina_la_LIBADD   =				\
 	$(LIBPROTOBUF_LIBS)			\
 	$(OPENSSL_LIBS)				\
-        $(builddir)/librinajsoncpp.la           \
+    $(builddir)/librinajsoncpp.la           \
+    $(builddir)/librinairati.la           \
 	-ldl
 librina_la_CPPFLAGS =				\
 	$(CXX_SYSINCLUDES)			\
 	-DSTUB_API=0				\
 	-I$(top_srcdir)/include			\
     -I$(srcdir)/jsoncpp             \
-    -I$(top_srcdir)/../include			\
 	$(LIBPROTOBUF_CFLAGS)			\
 	$(OPENSSL_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)
@@ -112,13 +127,13 @@ librina_stubbed_la_LIBADD   =	\
 	$(LIBPROTOBUF_LIBS)			\
 	$(OPENSSL_LIBS)				\
     $(builddir)/librinajsoncpp.la           \
+    $(builddir)/librinairati.la           \
 	-ldl
 librina_stubbed_la_CPPFLAGS =			\
 	$(CXX_SYSINCLUDES)			\
 	-DSTUB_API=1				\
 	-I$(top_srcdir)/include			\
     -I$(srcdir)/jsoncpp                     \
-    -I$(top_srcdir)/../include			\
 	$(LIBPROTOBUF_CFLAGS)			\
 	$(OPENSSL_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)
@@ -136,7 +151,6 @@ test_linking_CPPFLAGS =				\
 	-DSTUB_API=0				\
 	-I$(top_srcdir)/include			\
     -I$(srcdir)/jsoncpp                     \
-    -I$(top_srcdir)/../include			\
 	$(LIBPROTOBUF_CFLAGS)			\
 	$(OPENSSL_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)
@@ -145,7 +159,8 @@ test_linking_CXXFLAGS =				\
 test_linking_LDADD    =				\
 	$(LIBPROTOBUF_LIBS)			\
 	$(OPENSSL_LIBS)				\
-        $(builddir)/librinajsoncpp.la           \
+    $(builddir)/librinajsoncpp.la           \
+    $(builddir)/librinairati.la           \
 	-ldl					\
 	librina.la
 

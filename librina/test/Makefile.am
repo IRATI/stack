@@ -38,7 +38,6 @@ EXTRA_DIST += SWIGTest.java
 
 COMMONCPPFLAGS =				\
 	-I$(top_srcdir)/include			\
-	-I$(top_srcdir)/../include	\
 	$(LIBNL3_CFLAGS)			\
 	$(LIBNLGENL3_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)

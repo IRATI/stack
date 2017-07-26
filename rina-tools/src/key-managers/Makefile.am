@@ -26,7 +26,6 @@ key_managers_CPPFLAGS =			\
 	$(LIBRINA_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)			\
     $(LIBPROTOBUF_CFLAGS)  		\
-    -I$(top_srcdir)/../include			\
 	-I$(srcdir)/../common
 key_managers_CXXFLAGS =			\
 	$(CPPFLAGS_EXTRA)

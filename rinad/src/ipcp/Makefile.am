@@ -28,7 +28,6 @@ COMMONCPPFLAGS =					\
 	-I$(srcdir)/../					\
 	-I$(srcdir)/../common				\
 	-I$(srcdir)/					\
-	-I$(top_srcdir)/../include			\
 	$(shimwifi_CPPFLAGS)
 
 COMMONLIBS =					\

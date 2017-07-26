@@ -12,7 +12,6 @@ bin_PROGRAMS = manager
 manager_CPPFLAGS =					\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)		 \
-	-I$(top_srcdir)/../include			\
 	-I$(srcdir)/../common	
 	
 manager_LDADD    = 	$(LIBRINA_LIBS) -ldl -lrinad \
