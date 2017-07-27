@@ -49,8 +49,8 @@ COMMONLDFLAGS =					\
 	$(LIBNL3_LIBS)				\
 	$(LIBNLGENL3_LIBS)
 
-REGRESSIONLDFLAGS = $(COMMONLDFLAGS) $(top_builddir)/src/librina-stubbed.la
-FUNCTIONALLDFLAGS = $(COMMONLDFLAGS) $(top_builddir)/src/librina.la
+REGRESSIONLDFLAGS = $(COMMONLDFLAGS) $(top_builddir)/src/librinairati.la $(top_builddir)/src/librina-stubbed.la
+FUNCTIONALLDFLAGS = $(COMMONLDFLAGS) $(top_builddir)/src/librinairati.la $(top_builddir)/src/librina.la
 
 #
 # Regression tests

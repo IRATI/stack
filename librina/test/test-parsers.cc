@@ -1141,8 +1141,8 @@ int test_irati_kmsg_rmt_dump_ft(irati_msg_t msg_t)
 	char serbuf[8192];
 	unsigned int serlen;
 	unsigned int expected_serlen;
-	struct mod_pff_entry * modata, * pos, * modata_after;
-	struct port_id_altlist * podata, * ppos, * podata_after;
+	struct mod_pff_entry * modata, * pos;
+	struct port_id_altlist * podata;
 	int num_entries = 0, num_entries2 = 0;
 
 	std::cout << "TESTING KMSG RMT DUMP FT (" << msg_t << ")" << std::endl;
@@ -1152,6 +1152,17 @@ int test_irati_kmsg_rmt_dump_ft(irati_msg_t msg_t)
 	msg->result = 14;
 	msg->mode = 5;
 	msg->pft_entries = pff_entry_list_create();
+	modata = mod_pff_entry_create();
+	modata->cost = 123;
+	modata->fwd_info = 54;
+	modata->qos_id = 2;
+	podata = port_id_altlist_create();
+	podata->num_ports = 2;
+	podata->ports = (port_id_t *) malloc(sizeof(port_id_t) * podata->num_ports);
+	*(podata->ports) = 3;
+	*(podata->ports + sizeof(port_id_t)) = 4;
+	list_add_tail(&podata->next, &modata->port_id_altlists);
+	list_add_tail(&modata->next, &msg->pft_entries->pff_entries);
 	modata = mod_pff_entry_create();
 	modata->cost = 123;
 	modata->fwd_info = 54;
@@ -1194,16 +1205,12 @@ int test_irati_kmsg_rmt_dump_ft(irati_msg_t msg_t)
 		return -1;
 	}
 
-	modata_after = 0;
-	podata_after = 0;
-        list_for_each_entry(pos, &(resp->pft_entries->pff_entries), next) {
+        list_for_each_entry(pos, &(msg->pft_entries->pff_entries), next) {
                 num_entries ++;
-                modata_after = pos;
         }
 
-        list_for_each_entry(ppos, &(modata_after->port_id_altlists), next) {
+        list_for_each_entry(pos, &(resp->pft_entries->pff_entries), next) {
                 num_entries2 ++;
-                podata_after = ppos;
         }
 
 	if (msg->result != resp->result) {
@@ -1214,24 +1221,8 @@ int test_irati_kmsg_rmt_dump_ft(irati_msg_t msg_t)
 		std::cout << "Mode on original and recovered messages"
 			   << " are different\n";
 		ret = -1;
-	} else if (num_entries != 1 || num_entries2 != 1) {
+	} else if (num_entries != 2 || num_entries2 != 2) {
 		std::cout << "Number of entries on original and recovered "
-				<< "messages are different\n";
-		ret = -1;
-	} else if (modata->cost != modata_after->cost) {
-		std::cout << "Cost on original and recovered "
-				<< "messages are different\n";
-		ret = -1;
-	} else if (modata->fwd_info != modata_after->fwd_info) {
-		std::cout << "Address on original and recovered "
-				<< "messages are different\n";
-		ret = -1;
-	} else if (modata->qos_id != modata_after->qos_id) {
-		std::cout << "Qos-id on original and recovered "
-				<< "messages are different\n";
-		ret = -1;
-	} else if (podata->num_ports != podata_after->num_ports) {
-		std::cout << "Num ports on original and recovered "
 				<< "messages are different\n";
 		ret = -1;
 	} else {

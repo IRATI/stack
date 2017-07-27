@@ -3201,7 +3201,6 @@ void serialize_port_id_altlist(void **pptr, const struct port_id_altlist *pia)
 	if (!pia) return;
 
 	serialize_obj(*pptr, uint16_t, pia->num_ports);
-
 	plength = pia->num_ports * sizeof(port_id_t);
 
 	if (pia->ports > 0) {
@@ -3281,7 +3280,7 @@ void serialize_mod_pff_entry(void **pptr, const struct mod_pff_entry *pffe)
 	serialize_obj(*pptr, qos_id_t, pffe->qos_id);
 	serialize_obj(*pptr, uint32_t, pffe->cost);
 
-        list_for_each_entry(pos, &(pffe->next), next) {
+        list_for_each_entry(pos, &(pffe->port_id_altlists), next) {
                num_alts++;
         }
 
