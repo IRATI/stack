@@ -61,6 +61,10 @@ void StaticRoutingPs::subscribeToEvents()
 		subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED, this);
 	rc->ipcp->internal_event_manager_->
 		subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED, this);
+	rc->ipcp->internal_event_manager_->
+		subscribeToEvent(rina::InternalEvent::APP_NEIGHBOR_ADDED, this);
+	rc->ipcp->internal_event_manager_->
+		subscribeToEvent(rina::InternalEvent::APP_CONNECTIVITY_TO_NEIGHBOR_LOST, this);
 }
 
 void StaticRoutingPs::update_forwarding_table(void)
