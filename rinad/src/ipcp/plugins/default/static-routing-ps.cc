@@ -28,27 +28,57 @@
 
 namespace rinad {
 
-class StaticRoutingPs: public IRoutingPs {
+class StaticRoutingPs: public IRoutingPs, public rina::InternalEventListener {
 public:
 	StaticRoutingPs(IRoutingComponent * dm);
+	virtual ~StaticRoutingPs() {};
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	int set_policy_set_param(const std::string& name,
 				 const std::string& value);
-	virtual ~StaticRoutingPs() {}
+	void eventHappened(rina::InternalEvent * event);
 
 private:
+	void subscribeToEvents(void);
 	void parse_policy_param(rina::PolicyParameter pm);
 	void split(std::vector<std::string> & result,
 	           const char *str, char c);
 	void get_rt_entries_as_list(std::list<rina::RoutingTableEntry *> & result);
+	void update_forwarding_table(void);
 
         // Data model of the security manager component.
 	IRoutingComponent * rc;
 	std::map<std::string, rina::RoutingTableEntry *> rt_entries;
+	rina::Lockable lock;
 };
 
 StaticRoutingPs::StaticRoutingPs(IRoutingComponent * dm) {
 	rc = dm;
+}
+
+void StaticRoutingPs::subscribeToEvents()
+{
+	rc->ipcp->internal_event_manager_->
+		subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED, this);
+	rc->ipcp->internal_event_manager_->
+		subscribeToEvent(rina::InternalEvent::APP_N_MINUS_1_FLOW_ALLOCATED, this);
+}
+
+void StaticRoutingPs::update_forwarding_table(void)
+{
+	std::list<rina::RoutingTableEntry *> current_entries;
+
+	get_rt_entries_as_list(current_entries);
+	rc->ipcp->resource_allocator_->pduft_gen_ps->routingTableUpdated(current_entries);
+}
+
+void StaticRoutingPs::eventHappened(rina::InternalEvent * event)
+{
+	if (!event)
+		return;
+
+	rina::ScopedLock g(lock);
+
+	update_forwarding_table();
 }
 
 int StaticRoutingPs::set_policy_set_param(const std::string& name,
@@ -63,7 +93,10 @@ void StaticRoutingPs::set_dif_configuration(const rina::DIFConfiguration& dif_co
 {
 	rina::PolicyConfig psconf;
 	std::list<rina::PolicyParameter>::const_iterator it;
-	std::list<rina::RoutingTableEntry *> current_entries;
+
+	rina::ScopedLock g(lock);
+
+	subscribeToEvents();
 
 	psconf = dif_configuration.routing_configuration_.policy_set_;
 	for (it = psconf.parameters_.begin();
@@ -71,8 +104,7 @@ void StaticRoutingPs::set_dif_configuration(const rina::DIFConfiguration& dif_co
 		parse_policy_param(*it);
 	}
 
-	get_rt_entries_as_list(current_entries);
-	rc->ipcp->resource_allocator_->pduft_gen_ps->routingTableUpdated(current_entries);
+	update_forwarding_table();
 }
 
 //Parameter name is the destination address,
