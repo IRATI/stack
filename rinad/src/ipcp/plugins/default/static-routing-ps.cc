@@ -188,9 +188,15 @@ void StaticRoutingPs::split(std::vector<std::string> & result,
 void StaticRoutingPs::get_rt_entries_as_list(std::list<rina::RoutingTableEntry *> & result)
 {
 	std::map<std::string, rina::RoutingTableEntry *>::iterator it;
+	rina::RoutingTableEntry * rte;
 
 	for (it = rt_entries.begin(); it != rt_entries.end(); ++it) {
-		result.push_back(it->second);
+		rte = new rina::RoutingTableEntry();
+		rte->cost = it->second->cost;
+		rte->qosId = it->second->qosId;
+		rte->destination = it->second->destination;
+		rte->nextHopNames = it->second->nextHopNames;
+		result.push_back(rte);
 	}
 }
 
