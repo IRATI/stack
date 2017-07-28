@@ -123,19 +123,6 @@ int IRATICtrlManager::send_msg(struct irati_msg_base *msg, bool fill_seq_num)
 	return irati_write_msg(cfd, msg);
 }
 
-int IRATICtrlManager::send_msg_max_size(struct irati_msg_base *msg,
-					size_t maxSize, bool fill_seq_num)
-{
-	ScopedLock g(sendReceiveLock);
-
-	if (fill_seq_num)
-		msg->event_id = get_next_seq_number();
-
-	msg->src_port = ctrl_port;
-
-	return irati_write_msg(cfd, msg);
-}
-
 IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *msg)
 {
 	IPCEvent * event = 0;
