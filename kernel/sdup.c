@@ -912,7 +912,6 @@ int sdup_update_crypto_state(struct sdup * instance,
 				         struct sdup_crypto_ps,
 				         base);
 
-		LOG_INFO("Aqui");
 		if (crypto_ps->sdup_update_crypto_state(crypto_ps,
 						        state)) {
 			rcu_read_unlock();
