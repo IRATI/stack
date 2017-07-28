@@ -39,12 +39,12 @@
 
 #include "irati/kernel-msg.h"
 
+#define IRATI_MAX_CTRL_MSG_SIZE 20000
+
 struct irati_msg_base * irati_read_next_msg(int cfd)
 {
-	unsigned int max_resp_size = irati_numtables_max_size(irati_ker_numtables,
-							      sizeof(irati_ker_numtables)/sizeof(struct irati_msg_layout));
 	struct irati_msg_base *resp;
-	char serbuf[8192];
+	char serbuf[IRATI_MAX_CTRL_MSG_SIZE];
 	int ret;
 
 	ret = read(cfd, serbuf, sizeof(serbuf));
@@ -70,13 +70,13 @@ struct irati_msg_base * irati_read_next_msg(int cfd)
 
 int irati_write_msg(int cfd, struct irati_msg_base *msg)
 {
-	char serbuf[8192];
+	char serbuf[IRATI_MAX_CTRL_MSG_SIZE];
 	unsigned int serlen;
 	int ret;
 
 	/* Serialize the message. */
 	serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX, msg);
-	if (serlen > sizeof(serbuf)) {
+	if (serlen > IRATI_MAX_CTRL_MSG_SIZE) {
 		LOG_ERR("Serialized message would be too long [%u]\n", serlen);
 		errno = EINVAL;
 		return -1;

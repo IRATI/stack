@@ -75,10 +75,6 @@ public:
 	/** Sends a message of default maximum size (PAGE SIZE) */
 	int send_msg(struct irati_msg_base *msg, bool fill_seq_num);
 
-	/** Sends a control message of specified maximum size */
-	int send_msg_max_size(struct irati_msg_base *msg,
-			      size_t maxSize, bool fill_seq_num);
-
 	IPCEvent * get_next_ctrl_msg();
 
 	static IPCEvent * irati_ctrl_msg_to_ipc_event(struct irati_msg_base *msg);
