@@ -1311,8 +1311,6 @@ static int notify_ipcp_update_crypto_state(irati_msg_port_t ctrl_port,
                 retval = -1;
                 LOG_ERR("IPC process %d does not support enabling encryption", ipc_id);
         }
-
-        LOG_DBG("enable encryption request served");
 out:
 	resp_msg.msg_type = RINA_C_IPCP_UPDATE_CRYPTO_STATE_RESPONSE;
 	resp_msg.src_ipcp_id = ipc_id;

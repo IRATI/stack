@@ -886,7 +886,7 @@ static struct sdup_port * find_port(struct sdup * sdup,
 		}
 	}
 
-	LOG_DBG("SDUP port config not found for port_id %d", port_id);
+	LOG_WARN("SDUP port config not found for port_id %d", port_id);
 	return NULL;
 }
 
@@ -912,6 +912,7 @@ int sdup_update_crypto_state(struct sdup * instance,
 				         struct sdup_crypto_ps,
 				         base);
 
+		LOG_INFO("Aqui");
 		if (crypto_ps->sdup_update_crypto_state(crypto_ps,
 						        state)) {
 			rcu_read_unlock();

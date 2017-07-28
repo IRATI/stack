@@ -1483,6 +1483,7 @@ unsigned int KernelIPCProcess::updateCryptoState(const CryptoState& state)
         msg = new irati_kmsg_ipcp_update_crypto_state();
         msg->msg_type = RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST;
         msg->state = state.to_c_crypto_state();
+        msg->port_id = state.port_id;
         msg->src_ipcp_id = ipcProcessId;
         msg->dest_ipcp_id = ipcProcessId;
         msg->dest_port = 0;
