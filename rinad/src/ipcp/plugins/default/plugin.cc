@@ -56,6 +56,12 @@ createRoutingComponentPs(rina::ApplicationEntity * context);
 extern "C" void
 destroyRoutingComponentPs(rina::IPolicySet * instance);
 
+extern "C" rina::IPolicySet *
+createStaticRoutingComponentPs(rina::ApplicationEntity * context);
+
+extern "C" void
+destroyStaticRoutingComponentPs(rina::IPolicySet * instance);
+
 extern "C" int
 get_factories(std::vector<struct rina::PsFactory>& factories)
 {
@@ -67,6 +73,7 @@ get_factories(std::vector<struct rina::PsFactory>& factories)
         struct rina::PsFactory pduft_gen_factory;
         struct rina::PsFactory et_factory;
         struct rina::PsFactory rc_factory;
+        struct rina::PsFactory src_factory;
 
         sm_factory.info.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;
         sm_factory.info.app_entity = rina::ApplicationEntity::SECURITY_MANAGER_AE_NAME;
@@ -122,6 +129,12 @@ get_factories(std::vector<struct rina::PsFactory>& factories)
         rc_factory.create = createRoutingComponentPs;
         rc_factory.destroy = destroyRoutingComponentPs;
 	factories.push_back(rc_factory);
+
+        src_factory.info.name = "static";
+        src_factory.info.app_entity = IRoutingComponent::ROUTING_COMPONENT_AE_NAME;
+        src_factory.create = createStaticRoutingComponentPs;
+        src_factory.destroy = destroyStaticRoutingComponentPs;
+	factories.push_back(src_factory);
 
 	return 0;
 }

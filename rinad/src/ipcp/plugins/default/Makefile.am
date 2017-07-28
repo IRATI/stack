@@ -35,7 +35,8 @@ default_la_SOURCES =		 \
         resource-allocator-ps.cc \
         enrollment-task-ps.cc    \
         routing-ps.h 	 	 \
-        routing-ps.cc
+        routing-ps.cc        \
+        static-routing-ps.cc
 
 plugins_LTLIBRARIES += default.la
 

@@ -67,6 +67,7 @@ void DefaultPDUFTGeneratorPs::routingTableUpdated(const std::list<rina::RoutingT
 			entry = new rina::PDUForwardingTableEntry();
 			entry->address = *at;
 			entry->qosId = (*it)->qosId;
+			entry->cost = (*it)->cost;
 
 			LOG_IPCP_DBG("Processing entry for destination %u", *at);
 
@@ -76,8 +77,11 @@ void DefaultPDUFTGeneratorPs::routingTableUpdated(const std::list<rina::RoutingT
 
 				for (kt = jt->alts.begin();
 						kt != jt->alts.end(); kt++) {
-					port_id = n1fm->
-							getManagementFlowToNeighbour(kt->name);
+					if (kt->name != "") {
+						port_id = n1fm->getManagementFlowToNeighbour(kt->name);
+					} else {
+						port_id = n1fm->getManagementFlowToNeighbour(kt->addresses.front());
+					}
 					if (port_id == -1)
 						continue;
 

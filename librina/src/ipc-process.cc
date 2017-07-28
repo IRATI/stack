@@ -1032,7 +1032,13 @@ RoutingTableEntry::RoutingTableEntry(){
 const std::string RoutingTableEntry::getKey() const
 {
 	std::stringstream ss;
-	ss << destination.name << "-" << qosId << "-" << nextHopNames.front().alts.front().name;
+	if (destination.name != "") {
+		ss << destination.name << "-" << qosId << "-" << cost << "-"
+		   << nextHopNames.front().alts.front().name;
+	} else {
+		ss << destination.addresses.front() << "-" << qosId << "-" << cost << "-"
+		   << nextHopNames.front().alts.front().addresses.front();
+	}
 
 	return ss.str();
 }
