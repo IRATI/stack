@@ -179,6 +179,7 @@ public:
 	void processRegistrationNotification(const rina::IPCProcessDIFRegistrationEvent& event);;
 	std::list<int> getNMinusOneFlowsToNeighbour(unsigned int address);
 	int getManagementFlowToNeighbour(const std::string& name);
+	int getManagementFlowToNeighbour(unsigned int address);
 	unsigned int numberOfFlowsToNeighbour(const std::string& apn,
 			const std::string& api);
 
