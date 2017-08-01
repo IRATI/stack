@@ -94,6 +94,33 @@ static int condwrite (int outfd, int &count, char *buffer)
 	return (0);
 }
 
+// Allow a short time for the network or stdout to accept buffered data after the source end EOFs.
+// Rather than wait forever with a blocking write, we use a timed select but use a modest wait
+// time.  Blocking stdout or a long network outage can cause this strategy to fail, so we print a
+// warning to stderr if there's still unbuffered data when we exit.
+const int DRAIN_SECONDS = 3;
+
+void drain_buffer (int fd_to_drain, int &count, char *buffer, int verbose)
+{
+	struct timeval draintime;
+	
+	if (verbose > 1)
+		cerr << "Draining fd " << fd_to_drain << " of " << count << " Bytes" << endl;
+	
+	if (count <= 0)
+		return;
+	draintime.tv_usec = 0;
+	draintime.tv_sec = DRAIN_SECONDS;
+	FD_ZERO(&writebits);
+	
+	FD_SET (fd_to_drain, &writebits);
+	select(fd_to_drain + 1, NULL, &writebits, NULL, &draintime);
+
+	if (write(fd_to_drain, buffer, count) != count) {
+		cerr << "WARNING: Failed to drain final output buffer!! Incomplete final write to file " << fd_to_drain << endl;
+	}
+}
+
 // A zero return is "normal".  EOF on input or output is "normal"; errors aren't, errno is returned.
 int pumpdata_bothdirections (int flowfd, int sdu_size, int verbose)
 {
@@ -122,19 +149,25 @@ int pumpdata_bothdirections (int flowfd, int sdu_size, int verbose)
 			return (errno);
 
 		// try reading
-		if (FD_ISSET(0, &readbits)) {
+		if (stdincount == 0 && FD_ISSET(0, &readbits)) {
 			stdincount = (int)read(0, stdinbuf, sdu_size);
 			if (stdincount < 0 && errno != EWOULDBLOCK)
 				return (errno);
-			if (stdincount == 0)
+			if (stdincount == 0) {
+				drain_buffer(flowfd, stdincount, stdinbuf, verbose);
+				drain_buffer(1, flowcount, flowbuf, verbose);
 				break;
+			}
 		}
-		if (FD_ISSET(flowfd, &readbits)) {
+		if (flowcount == 0 && FD_ISSET(flowfd, &readbits)) {
 			flowcount = (int)read(flowfd, flowbuf, sdu_size);
 			if (flowcount < 0 && errno != EWOULDBLOCK)
 				return (errno);
-			if (flowcount == 0)
+			if (flowcount == 0) {
+				drain_buffer(1, flowcount, flowbuf, verbose);
+				drain_buffer(flowfd, stdincount, stdinbuf, verbose);
 				break;
+			}
 		}
 	}
 	return (0);
