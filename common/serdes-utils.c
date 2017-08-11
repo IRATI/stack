@@ -137,18 +137,15 @@ int deserialize_string(const void **pptr, char **s)
 	uint16_t slen;
 
 	deserialize_obj(*pptr, uint16_t, &slen);
-	if (slen) {
-		*s = COMMON_ALLOC(slen + 1, 1);
-		if (!(*s)) {
-			return -1;
-		}
 
-		memcpy(*s, *pptr, slen);
-		(*s)[slen] = '\0';
-		*pptr += slen;
-	} else {
-		*s = NULL;
+	*s = COMMON_ALLOC(slen + 1, 1);
+	if (!(*s)) {
+		return -1;
 	}
+
+	memcpy(*s, *pptr, slen);
+	(*s)[slen] = '\0';
+	*pptr += slen;
 
 	return 0;
 }
