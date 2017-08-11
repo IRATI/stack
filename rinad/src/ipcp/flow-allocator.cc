@@ -64,6 +64,25 @@ void FlowRIBObject::read(const rina::cdap_rib::con_handle_t &con,
 	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
 
+void FlowRIBObject::write(const rina::cdap_rib::con_handle_t &con,
+			  const std::string& fqn,
+			  const std::string& class_,
+			  const rina::cdap_rib::filt_info_t &filt,
+			  const int invoke_id,
+			  const rina::ser_obj_t &obj_req,
+			  rina::ser_obj_t &obj_reply,
+			  rina::cdap_rib::res_info_t& res)
+{
+	encoders::FlowEncoder encoder;
+	configs::Flow flow;
+	encoder.decode(obj_req, flow);
+
+	flow_allocator_instance_->modify_flow_request(flow);
+
+	//Does not require a response message, return CDAP_PENDING
+	res.code_ = rina::cdap_rib::CDAP_PENDING;
+}
+
 bool FlowRIBObject::delete_(const rina::cdap_rib::con_handle_t &con,
 			    const std::string& fqn,
 			    const std::string& class_,
@@ -232,6 +251,59 @@ void FlowAllocator::set_application_process(rina::ApplicationProcess * ap)
 	rib_daemon_ = ipcp->rib_daemon_;
 	namespace_manager_ = ipcp->namespace_manager_;
 	populateRIB();
+	subscribeToEvents();
+}
+
+void FlowAllocator::subscribeToEvents()
+{
+	ipcp->internal_event_manager_->subscribeToEvent(rina::InternalEvent::ADDRESS_CHANGE,
+					 	 	this);
+}
+
+void FlowAllocator::eventHappened(rina::InternalEvent * event)
+{
+	if (event->type == rina::InternalEvent::ADDRESS_CHANGE){
+		rina::AddressChangeEvent * addrEvent =
+				(rina::AddressChangeEvent *) event;
+		FAAddressChangeTimerTask * task = new FAAddressChangeTimerTask(this,
+				addrEvent->new_address,
+				addrEvent->old_address);
+		timer.scheduleTask(task, addrEvent->use_new_timeout);
+	}
+}
+
+void FlowAllocator::address_changed(unsigned int new_address,
+				    unsigned int old_address)
+{
+	std::list<rina::ApplicationEntityInstance*> fais;
+	std::list<rina::ApplicationEntityInstance*>::iterator it;
+	FlowAllocatorInstance * fai = 0;
+
+	rina::ScopedLock g(fai_lock);
+
+	//Tell all FAIs src address has changed
+	fais = get_all_instances();
+	for (it = fais.begin(); it != fais.end(); ++it) {
+		fai = static_cast<FlowAllocatorInstance *>(*it);
+		if (!fai)
+			continue;
+
+		fai->address_changed(new_address, old_address);
+	}
+}
+
+FAAddressChangeTimerTask::FAAddressChangeTimerTask(FlowAllocator * fa,
+		       	       	       	       	   unsigned int naddr,
+						   unsigned int oaddr)
+{
+	fall = fa;
+	new_address = naddr;
+	old_address = oaddr;
+}
+
+void FAAddressChangeTimerTask::run()
+{
+	fall->address_changed(new_address, old_address);
 }
 
 void FlowAllocator::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
@@ -1317,11 +1389,7 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 	//2 Send M_DELETE
 	if (flow_->local_address != flow_->remote_address) {
 		try {
-			//Get destination address again in case it has changed
-			dest_address = namespace_manager_->getDFTNextHop(flow_->remote_naming_info);
-			if (dest_address == 0)
-				dest_address = flow_->remote_address;
-			rv = ipc_process_->enrollment_task_->get_con_handle_to_address(dest_address,
+			rv = ipc_process_->enrollment_task_->get_con_handle_to_address(flow_->remote_address,
 										       con_handle);
 
 			if (rv == 0) {
@@ -1440,6 +1508,19 @@ void FlowAllocatorInstance::destroyFlowAllocatorInstance(
 	releaseUnlockRemove();
 }
 
+void FlowAllocatorInstance::modify_flow_request(const configs::Flow & flow)
+{
+	rina::ScopedLock g(lock_);
+
+	flow_->remote_address = flow.local_address;
+	flow_->getActiveConnection()->setDestAddress(flow.local_address);
+	try {
+		rina::kernelIPCProcess->modify_connection(*(flow_->getActiveConnection()));
+	} catch (rina::IPCException & e) {
+		LOG_ERR("Problems calling modify connection: %s", e.what());
+	}
+}
+
 void FlowAllocatorInstance::remoteCreateResult(const rina::cdap_rib::con_handle_t &con,
 					       const rina::cdap_rib::obj_info_t &obj,
 					       const rina::cdap_rib::res_info_t &res)
@@ -1517,6 +1598,50 @@ void FlowAllocatorInstance::sync_with_kernel()
 	SysfsHelper::get_dtp_error_pdus(ipc_process_->get_id(),
 				        con->sourceCepId,
 				        con->stats.err_pdus);
+}
+
+void FlowAllocatorInstance::address_changed(unsigned int new_address,
+		     	     	     	    unsigned int old_address)
+{
+	rina::cdap_rib::con_handle_t con_handle;
+	int rv;
+
+	rina::ScopedLock g(lock_);
+
+	flow_->local_address = new_address;
+	flow_->getActiveConnection()->setSourceAddress(new_address);
+
+	//Sent message to peer
+	try {
+		rv = ipc_process_->enrollment_task_->get_con_handle_to_address(flow_->remote_address,
+									       con_handle);
+
+		if (rv == 0) {
+			con_handle.address = flow_->remote_address;
+			con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_ADATA;
+
+			rina::cdap_rib::flags_t flags;
+			rina::cdap_rib::filt_info_t filt;
+			rina::cdap_rib::obj_info_t obj;
+			encoders::FlowEncoder encoder;
+			obj.class_ = FlowRIBObject::class_name;
+			obj.name_ = object_name_;
+			encoder.encode(*flow_, obj.value_);
+
+			rib_daemon_->getProxy()->remote_write(con_handle,
+							      obj,
+							      flags,
+							      filt,
+							      NULL);
+
+		} else {
+			LOG_IPCP_ERR("Could not find CDAP session for reaching next hop to %d",
+					flow_->remote_address);
+		}
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems sending M_WRITE flow request: %s",
+				e.what());
+	}
 }
 
 //CLASS TEARDOWNFLOW TIMERTASK
