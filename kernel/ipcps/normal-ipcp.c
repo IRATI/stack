@@ -377,6 +377,15 @@ static int connection_update_request(struct ipcp_instance_data * data,
         return 0;
 }
 
+static int connection_modify_request(struct ipcp_instance_data * data,
+				     cep_id_t			 src_cep_id,
+			     	     address_t		   	 src_address,
+				     address_t		   	 dst_address)
+{
+	return efcp_connection_modify(data->efcpc, src_cep_id,
+				      src_address, dst_address);
+}
+
 static struct normal_flow * find_flow_cepid(struct ipcp_instance_data * data,
                                             cep_id_t                    id)
 {
@@ -1199,6 +1208,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .connection_update         = connection_update_request,
         .connection_destroy        = connection_destroy_request,
         .connection_create_arrived = connection_create_arrived,
+	.connection_modify 	   = connection_modify_request,
 
         .sdu_enqueue               = normal_sdu_enqueue,
         .sdu_write                 = normal_sdu_write,

@@ -248,7 +248,10 @@ typedef enum {
 	/* 71, IPC Manager -> IPC Manager */
 	RINA_C_IPCM_FINALIZE_REQUEST,
 
-	/* 72 */
+	/* 72, IPC Process -> Kernel */
+	RINA_C_IPCP_CONN_MODIFY_REQUEST,
+
+	/* 73 */
         RINA_C_MAX,
 } msg_type_t;
 
@@ -471,6 +474,7 @@ struct irati_kmsg_ipcp_conn_create_arrived {
 /* 26 RINA_C_IPCP_CONN_CREATE_RESPONSE */
 /* 28 RINA_C_IPCP_CONN_CREATE_RESULT */
 /* 29 RINA_C_IPCP_CONN_UPDATE_REQUEST */
+/* 72 RINA_C_IPCP_CONN_MODIFY_REQUEST */
 struct irati_kmsg_ipcp_conn_update {
 	irati_msg_t msg_type;
 	irati_msg_port_t src_port;
@@ -482,6 +486,8 @@ struct irati_kmsg_ipcp_conn_update {
         port_id_t port_id;
         cep_id_t  src_cep;
         cep_id_t  dst_cep;
+        address_t src_addr;
+        address_t dest_addr;
 } __attribute__((packed));
 
 /* 33 RINA_C_IPCP_SET_POLICY_SET_PARAM_REQUEST */

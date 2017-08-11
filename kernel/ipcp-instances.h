@@ -83,6 +83,11 @@ struct ipcp_instance_ops {
                                        cep_id_t                    src_id,
                                        cep_id_t                    dst_id);
 
+        int      (* connection_modify)(struct ipcp_instance_data * data,
+        			       cep_id_t			   src_cep_id,
+				       address_t		   src_address,
+				       address_t		   dst_address);
+
         int      (* connection_destroy)(struct ipcp_instance_data * data,
                                         cep_id_t                    src_id);
 

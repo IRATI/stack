@@ -1795,6 +1795,7 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .connection_update         = NULL,
         .connection_destroy        = NULL,
         .connection_create_arrived = NULL,
+	.connection_modify 	   = NULL,
 
         .sdu_enqueue               = NULL,
         .sdu_write                 = eth_vlan_sdu_write,

@@ -2584,6 +2584,7 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
         .connection_update         = NULL,
         .connection_destroy        = NULL,
         .connection_create_arrived = NULL,
+	.connection_modify 	   = NULL,
 
         .sdu_enqueue               = NULL,
         .sdu_write                 = tcp_udp_sdu_write,
