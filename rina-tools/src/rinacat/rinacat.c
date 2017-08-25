@@ -347,8 +347,19 @@ int exec_command (int flowfd, int argc, const char **argv, int *ret_pid)
 		*ret_pid = pid;
 		VERBOSE("Fork successful, pid %d\n", pid);
 	} else if (pid == 0) { // child
-		close(0); dup (flowfd);
-		close (1); dup (flowfd);
+		int newfd;
+		close(0);
+		newfd = dup(flowfd);
+		if (newfd) {
+			PRINTERRORMSG("ERROR: Dup(flowfd) returned %d, not expected 0, error %s\n", newfd, strerror(errno));
+			return (-1);
+		}
+		close (1);
+		newfd = dup (flowfd);
+		if (newfd != 1) {
+			PRINTERRORMSG("ERROR: Dup(flowfd) returned %d, not expected 1, error %s\n", newfd, strerror(errno));
+			return (-1);
+		}
 		for (int i = 3; i < 100; i++)	// disconnect from control fd or any other irrelevant fds
 			close(i);
 		setpgid(0, pgrp);	// ensure that child sees parent's signals, can access parent's controlling terminal
