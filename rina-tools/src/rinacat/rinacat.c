@@ -1,6 +1,6 @@
 //
 //  rinacat.c
-//  rina-cat
+//  rinacat
 //
 //  Created by Steve Bunch on 8/2/17.
 //  Copyright © 2017 Steve Bunch. All rights reserved.
@@ -26,7 +26,7 @@
 
 #define NON_PERSISTENT	0		// value that indicates to do the command once, then terminate, >0 == persist
 #define MAX_REPS		100		// arbitrary sanity bound on simultaneous servers we'll launch
-#define DEFAULT_SDUSIZE 4096
+#define DEFAULT_SDUSIZE 1024	// default should be less than expected MTU of any reasonable underlying transport
 #define DRAIN_SECONDS	3		// seconds for a blocked write to be allowed to drain before exiting anyway
 #define MAXHOSTNAME		256		// longest host name we will use -- gethostname() result truncated if necessary
 #define APN_API_SEPARATOR_CHAR_STRING "|"	// separator between APN and API in appname in the rina/api API
@@ -53,7 +53,7 @@ const char *command = "";		// command string will be executed by a shell -c, so 
 
 int getver = 0;					// set to 1 if all that's desired is the version information
 #ifndef _VERSION
-#define _VERSION "20170811_beta"	// Override if desired by providing -D_VERSION=xx at compile time on command line
+#define _VERSION "2017081126"	// Override if desired by providing -D_VERSION=xx at compile time on command line
 #endif
 
 #define UNRELIABLE_FLOW	0		// request an unreliable flow (client side only - ignored by server)

@@ -1,6 +1,6 @@
 # rinacat -- A RINA Flow Redirection Utility
 
-### Steve Bunch, 10 August 2017
+### Steve Bunch, 26 August 2017
 
 ## rinacat Operation:
 
@@ -35,50 +35,51 @@ As a convenience for scripting, if an application instance is provided on the co
 
 ***Simple two-way “chat” session between a client and server:  Copy input from standard input on each system to standard output on the other.***
 
-_Client:_
-	# rinacat -a chat_app -d normal.DIF  
 _Server:_
-	# rinacat -l -A chat_app -d normal.DIF
+	# rinacat -l -A chat_app  
+_Client:_
+	# rinacat -a chat_app 
 
 Input typed to the standard input of the client instance will be sent over the RINA flow and sent to standard output of the server instance, and vice versa.  (The -d DIFNAME option is not generally needed unless multiple DIFs are available and the user cares which is used.)  An EOF (control-D) at either end will terminate both applications above and end the conversation.  The server could be made persistent, e.g., with -p 1, in which case it would remain active and listening for future client sessions.
 
 
-***Simple echo test:  Copy input from standard input on one system to another system and bounce it back unchanged.***
+***Simple echo test:  Standard input on one system is remotely echoed back to the sender's stdout.***
 
+_Server:_
+    # rinacat -l -A echo_app -c "cat"  
 _Client:_
     # rinacat -a echo_app  
-_Server:_
-    # rinacat -l -A echo_app -c "cat"
 
-The standard input of the client instance will be sent to the server and sent back to the client unchanged.
+Anything typed at the client instance will be sent to the server, bounced back, and printed out unchanged.
 
 
 ***To do a file copy, just redirect the input and output to files:***
 
+_Server:_
+	# rinacat -l -A copy_app >filename  
 _Client:_
 	# rinacat -a copy_app <filename  
-_Server:_
-	# rinacat -l -A copy_app >filename
+
 
 Note that the copy could have instead been done in the other direction.  (Copying files simultaneously in both directions will likely result in one file being truncated, as rinacat terminates as soon as any file read hits EOF.)
 
 
-***Copy a video stream from a Raspberry Pi camera to the display of another Raspberry Pi:***
+***Copy a video stream from a Raspberry Pi camera to the display of another computer (e.g., another Raspberry Pi or other Linux):***
 
+_Server:_
+	# rinacat -l -A display | mplayer -fps 10 -cache 32 -vo x11 -  
 _Client:_
 	# raspivid -fps 10 -w 800 -h 600 -t 0 -o - | rinacat -a display -d  
-_Server:_
-	# rinacat -l -A display | mplayer -fps 10 -cache 32 -vo x11 -
 
 
-***Run a persistent video server (often a better pattern than the last example, as it doesn’t buffer data in a pipe and risk over-buffering and reduces inefficiency, and allows destination application output to be fed back to the source, in cases where that’s useful).***
+***Run a persistent video player (compared to the previous example, this pattern doesn’t buffer as much data in pipes and so improves efficiency, allows the player to be persistent, and allows destination application output to be fed back to the source, in cases where that’s useful).***
 
-_Client:_
-	# rinacat -a server_app -c “mplayer -fps 10 -cache 32 -vo x11 -“  
-_Server (persistent, allowing one active flow at a time):_
-	# rinacat -l -A server_app -p 1 -c “raspivid -fps 10 -w 800 -h 600 -t 0 -o -“
+_Server (persistent, allowing one active flow at a time):_  
+	# rinacat -l -A video-player -p 1 -c "mplayer -fps 11 -cache 512 -vo x11 -  2>/dev/null"  
+_Client:_  
+	# raspivid -fps 10 -w 800 -h 600 -t 0 -o - | rinacat -a video-player   
 
-*(NOTE: we've noticed that the raspivid program sometimes enters a state where it stops sending video but doesn't quit, possibly when the network flow blocks it for too long.  The pipe version above, or running it over a network with more buffering, can avoid this problem somewhat, but in any event it appears that there is a bug in raspivid that needs to be worked around at this time.)*
+*(NOTE: The raspivid program does not read from its stdin file, but the mplayer program outputs status information about the video stream, so directly connecting the two by using _rinacat -c "command"_ at both ends to bidirectionally connect mplayer with raspivid will NOT work -- the unread mplayer output will build up until something breaks.  So a sink must be provided for mplayer's output.  In this example, that is provided by the rinacat client instance, whose stdout is not redirected by the shell when setting up the pipe and therefore will print the status information from the player at the client end.  That output could instead be redirected, e.g., to /dev/null, as could the mplayer stdout as is shown for stderr.)*
 
 
 ***Commands executed by rinacat have access via environment variables to information about the rinacat instance that ran them.  In particular (experimental, details subject to change):***  
@@ -104,5 +105,6 @@ rinacat-args -A razzycam4.echo -a razzycam2.rinacat -d -sdusize 4096 -l l -v 0
 
 ## Misc. Notes, as of current version:
   * rinacat now allows setting some flow properties, see --help for details.  It will eventually by default request a reliable, in-order, stream flow for maximum compatibility with existing Linux commands.  However, the current version (as of the above date) uses the default flow spec provided by rina_flow_spec_default unless either the -u (unreliable) or -r (reliable) option is used, in which case it sets the flow spec accordingly.  This is to work around a near-term bug in the stack that causes a crash if a reliable flow is requested.
-  * rinacat lets a server specify the sole application name that is allowed to connect to it (by using the normally-optional-in-server-mode -a option), and will refuse flow requests from any other app.  This is untested, and unlikely to work as expected at this time.  It should include some wild-card name flexibility, and could include setting requirements on incoming flow specs (e.g., reliable vs. unreliable, stream vs. record), via command-line options since only the person specifying the application receiving rinacat’s output knows what it needs.  Details will be finalized when the behavior of the rina-api library with application and AE names and instances becomes clearer and we gain experience with what is found useful.  
+  * rinacat lets a server specify the sole application name that is allowed to connect to it (by using the normally-optional-in-server-mode -a option), and will refuse flow requests from any other app.  This is untested, and unlikely to work as expected at this time.  It will be enhanced to include some wild-card name flexibility, and could include setting requirements on incoming flow specs (e.g., reliable vs. unreliable, stream vs. record), via command-line options since the person specifying the application receiving rinacat’s output knows what it needs.  Details will be finalized when the behavior of the rina-api library with application and AE names and instances becomes clearer and we gain experience with what is found useful.  
+  * Note that the --sdusize value used must be smaller than the MTU of the underlying transport(s) if fragmentation isn't in use.  The default sdusize is currently set to 1024 to make it unnecesssary to override it on the command line when transporting over Ethernet without fragmentation -- a larger value would improve performance, but could cause overly-long SDUs to be dropped.
 
