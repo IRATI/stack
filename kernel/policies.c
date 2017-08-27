@@ -199,6 +199,12 @@ const string_t * policy_name(struct policy * policy)
         if (!policy)
                 return NULL;
 
+        if (!policy->name)
+        	return NULL;
+
+        if (string_len(policy->name) == 0)
+        	return NULL;
+
         return policy->name;
 }
 EXPORT_SYMBOL(policy_name);

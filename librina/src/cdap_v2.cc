@@ -419,10 +419,9 @@ class CDAPSession
 	void messageSentOrReceived(const cdap_m_t &cdap_message, bool sent);
 	void freeOrReserveInvokeId(const cdap_m_t &cdap_message, bool sent);
 	void checkIsConnected() const;
-	void checkInvokeIdNotExists(int invoke_id,
-				    bool sent) const;
+	void checkInvokeIdNotExists(int invoke_id, bool sent);
 	void checkCanSendOrReceiveCancelReadRequest(int invoke_id,
-						    bool sent) const;
+						    bool sent);
 	void requestMessageSentOrReceived(const cdap_m_t &cdap_message,
 					  cdap_m_t::Opcode op_code,
 					  bool sent);
@@ -430,7 +429,7 @@ class CDAPSession
 					     bool sender);
 	void checkCanSendOrReceiveResponse(int invoke_id,
 					   cdap_m_t::Opcode op_code,
-					   bool sender) const;
+					   bool sender);
 	void checkCanSendOrReceiveCancelReadResponse(int invoke_id,
 						     bool send) const;
 	void responseMessageSentOrReceived(const cdap_m_t &cdap_message,
@@ -458,6 +457,7 @@ class CDAPSession
 	cdap_rib::con_handle_t con_handle;
 	CDAPSessionManager *cdap_session_manager_;
 	CDAPInvokeIdManagerImpl *invoke_id_manager_;
+	Lockable pending_msg_lock;
 };
 
 /// Implements a CDAP session manager.
@@ -1949,7 +1949,7 @@ void CDAPSession::checkIsConnected() const
 	}
 }
 void CDAPSession::checkInvokeIdNotExists(int invoke_id,
-					 bool sent) const
+					 bool sent)
 {
 	if (invoke_id == 0)
 		return;
@@ -1960,6 +1960,8 @@ void CDAPSession::checkInvokeIdNotExists(int invoke_id,
 	else
 		pending_messages = &pending_messages_recv_;
 
+	ScopedLock g(pending_msg_lock);
+
 	if (pending_messages->find(invoke_id)
 			!= pending_messages->end()) {
 		std::stringstream ss;
@@ -1969,7 +1971,7 @@ void CDAPSession::checkInvokeIdNotExists(int invoke_id,
 	}
 }
 void CDAPSession::checkCanSendOrReceiveCancelReadRequest(int invoke_id,
-							 bool sent) const
+							 bool sent)
 {
 	bool validationFailed = false;
 	const std::map<int, CDAPOperationState*>* pending_messages;
@@ -1977,6 +1979,8 @@ void CDAPSession::checkCanSendOrReceiveCancelReadRequest(int invoke_id,
 		pending_messages = &pending_messages_sent_;
 	else
 		pending_messages = &pending_messages_recv_;
+
+	ScopedLock g(pending_msg_lock);
 
 	if (pending_messages->find(invoke_id)
 			!= pending_messages->end()) {
@@ -2019,6 +2023,8 @@ void CDAPSession::requestMessageSentOrReceived(const cdap_m_t &cdap_message,
 	else
 		pending_messages = &pending_messages_recv_;
 
+	ScopedLock g(pending_msg_lock);
+
 	if (cdap_message.invoke_id_ != 0) {
 		CDAPOperationState *new_operation_state =
 				new CDAPOperationState(op_code, sent);
@@ -2041,7 +2047,7 @@ void CDAPSession::cancelReadMessageSentOrReceived(const cdap_m_t &cdap_message,
 }
 void CDAPSession::checkCanSendOrReceiveResponse(int invoke_id,
 						cdap_m_t::Opcode op_code,
-						bool sender) const
+						bool sender)
 {
 	if (invoke_id == 0)
 		return;
@@ -2052,6 +2058,8 @@ void CDAPSession::checkCanSendOrReceiveResponse(int invoke_id,
 		pending_messages = &pending_messages_sent_;
 	else
 		pending_messages = &pending_messages_recv_;
+
+	ScopedLock g(pending_msg_lock);
 
 	std::map<int, CDAPOperationState*>::const_iterator iterator;
 	iterator = pending_messages->find(invoke_id);
@@ -2132,11 +2140,15 @@ void CDAPSession::responseMessageSentOrReceived(const cdap_m_t &cdap_message,
 		}
 	}
 
+	ScopedLock g(pending_msg_lock);
+
 	if (operation_complete) {
 		std::map<int, CDAPOperationState*>::iterator it =
 				pending_messages->find(cdap_message.invoke_id_);
-		delete it->second;
-		pending_messages->erase(it);
+		if (it != pending_messages->end()) {
+			delete it->second;
+			pending_messages->erase(it);
+		}
 	}
 	// check for M_READ_R and M_CANCELREAD race condition
 	if (!sent) {
@@ -2150,6 +2162,9 @@ void CDAPSession::cancelReadResponseMessageSentOrReceived(const cdap_m_t &cdap_m
 							  bool sent)
 {
 	checkIsConnected();
+
+	ScopedLock g(pending_msg_lock);
+
 	checkCanSendOrReceiveCancelReadResponse(cdap_message.invoke_id_,
 						sent);
 	cancel_read_pending_messages_.erase(cdap_message.invoke_id_);
