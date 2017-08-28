@@ -373,6 +373,7 @@ ctrldev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
         struct msg_queue_entry * entry = NULL;
         bool blocking = !(f->f_flags & O_NONBLOCK);
         ssize_t ret;
+        uint32_t msg_size;
 
         LOG_DBG("Syscall read SDU (size = %zd, port-id = %d)",
                 size, priv->port_id);
@@ -443,8 +444,9 @@ ctrldev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
 	}
 
 	if (size == 0) {
-		LOG_INFO("size of uint32_t is %d", sizeof(uint32_t));
-		if (unlikely(copy_to_user(buffer, &(entry->serlen), sizeof(uint32_t)))) {
+		msg_size = entry->serlen;
+		LOG_INFO("msg size is %u", msg_size);
+		if (unlikely(copy_to_user(buffer, &msg_size, sizeof(uint32_t)))) {
 			ret = -EFAULT;
 		} else {
 			ret = sizeof(uint32_t);
