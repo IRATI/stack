@@ -442,11 +442,11 @@ ctrldev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
 		goto finish;
 	}
 
-	if (size == sizeof(uint32_t)) {
-		if (unlikely(copy_to_user(buffer, &(entry->serlen), size))) {
+	if (size == 0) {
+		if (unlikely(copy_to_user(buffer, &(entry->serlen), sizeof(uint32_t)))) {
 			ret = -EFAULT;
 		} else {
-			ret = size;
+			ret = sizeof(uint32_t);
 		}
 		spin_unlock(&priv->pending_msgs_lock);
 		goto finish;

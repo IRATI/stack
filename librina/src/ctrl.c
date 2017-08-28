@@ -48,8 +48,8 @@ struct irati_msg_base * irati_read_next_msg(int cfd)
 	uint32_t size;
 	int ret;
 
-	ret = read(cfd, &size, sizeof(uint32_t));
-	if(ret < 0) {
+	ret = read(cfd, &size, 0);
+	if (ret < 0) {
 		LOG_ERR("read(cfd)");
 		return NULL;
 	}
