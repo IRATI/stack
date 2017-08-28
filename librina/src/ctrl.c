@@ -39,17 +39,33 @@
 
 #include "irati/kernel-msg.h"
 
-#define IRATI_MAX_CTRL_MSG_SIZE 20000
+#define IRATI_MAX_CTRL_MSG_SIZE 1000000
 
 struct irati_msg_base * irati_read_next_msg(int cfd)
 {
 	struct irati_msg_base *resp;
-	char serbuf[IRATI_MAX_CTRL_MSG_SIZE];
+	char * serbuf;
+	uint32_t size;
 	int ret;
 
-	ret = read(cfd, serbuf, sizeof(serbuf));
+	ret = read(cfd, &size, sizeof(uint32_t));
+	if(ret < 0) {
+		LOG_ERR("read(cfd)");
+		return NULL;
+	}
+
+	LOG_DBG("Trying to read ctrl msg of %u bytes", size);
+
+	serbuf = malloc(size);
+	if (!serbuf) {
+		LOG_ERR("Cannot allocate memory");
+		return NULL;
+	}
+
+	ret = read(cfd, serbuf, size);
 	if (ret < 0) {
 		LOG_ERR("read(cfd)");
+		free(serbuf);
 		return NULL;
 	}
 
@@ -59,6 +75,8 @@ struct irati_msg_base * irati_read_next_msg(int cfd)
 	resp = (struct irati_msg_base *) deserialize_irati_msg(irati_ker_numtables,
 							       RINA_C_MAX,
 							       serbuf, ret);
+	free(serbuf);
+
 	if (!resp) {
 		LOG_ERR("Problems during deserialization [%d]\n", ret);
 		errno = ENOMEM;
@@ -71,8 +89,8 @@ struct irati_msg_base * irati_read_next_msg(int cfd)
 int irati_write_msg(int cfd, struct irati_msg_base *msg)
 {
 	char serbuf[IRATI_MAX_CTRL_MSG_SIZE];
-	unsigned int serlen;
 	int ret;
+	unsigned int serlen;
 
 	/* Serialize the message. */
 	serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX, msg);

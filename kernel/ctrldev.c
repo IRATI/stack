@@ -228,7 +228,8 @@ int irati_ctrl_dev_snd_resp_msg(irati_msg_port_t port,
 				struct irati_msg_base *bmsg)
 {
 	struct msg_queue_entry * entry;
-	int serlen = 0;
+	unsigned int serlen = 0;
+	int ret = 0;
 
 	//Serialize message
 	entry = rkzalloc(sizeof(*entry), GFP_KERNEL);
@@ -237,23 +238,23 @@ int irati_ctrl_dev_snd_resp_msg(irati_msg_port_t port,
 		return -1;
 	}
 
-	entry->sermsg = rkzalloc(IRATI_CTRL_MSG_MAX_SIZE * sizeof (char),
-				 GFP_KERNEL);
+	serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX, bmsg);
+	entry->sermsg = rkzalloc(serlen * sizeof (char), GFP_KERNEL);
 	if (!entry->sermsg) {
 		LOG_ERR("Could not create enry->sermsg");
 		rkfree(entry);
 		return -1;
 	}
 
-	serlen = serialize_irati_msg(irati_ker_numtables, IRATI_RINA_C_MAX,
-                        	     entry->sermsg, bmsg);
-        if (serlen <= 0) {
+	ret = serialize_irati_msg(irati_ker_numtables, IRATI_RINA_C_MAX,
+                        	  entry->sermsg, bmsg);
+        if (ret <= 0) {
         	LOG_ERR("Problems serializing msg: %d", serlen);
         	rkfree(entry->sermsg);
         	rkfree(entry);
         	return -1;
         }
-        entry->serlen = serlen;
+        entry->serlen = ret;
 
         if (ctrl_dev_data_post(entry, port)) {
 		rkfree(entry->sermsg);
@@ -435,6 +436,22 @@ ctrldev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
 	}
 
 	entry = rfifo_peek(priv->pending_msgs);
+	if (!entry) {
+		spin_unlock(&priv->pending_msgs_lock);
+		ret = -EFAULT;
+		goto finish;
+	}
+
+	if (size == sizeof(uint32_t)) {
+		if (unlikely(copy_to_user(buffer, &(entry->serlen), size))) {
+			ret = -EFAULT;
+		} else {
+			ret = size;
+		}
+		spin_unlock(&priv->pending_msgs_lock);
+		goto finish;
+	}
+
 	if (entry->serlen > size) {
 		spin_unlock(&priv->pending_msgs_lock);
 		ret = -ENOBUFS;
