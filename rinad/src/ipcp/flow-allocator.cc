@@ -1359,8 +1359,6 @@ void FlowAllocatorInstance::processUpdateConnectionResponseEvent(
 void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEvent& event)
 {
 	rina::cdap_rib::con_handle_t con_handle;
-	unsigned int dest_address;
-	unsigned int dest_addresss;
 	IFlowAllocatorInstance * fai = 0;
 	int rv;
 
@@ -1393,7 +1391,7 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 										       con_handle);
 
 			if (rv == 0) {
-				con_handle.address = dest_address;
+				con_handle.address = flow_->remote_address;
 				con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_ADATA;
 
 				rina::cdap_rib::flags_t flags;
@@ -1408,7 +1406,7 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 						NULL);
 			} else {
 				LOG_IPCP_ERR("Could not find CDAP session for reaching next hop to %d",
-						dest_address);
+						flow_->remote_address);
 			}
 		} catch (rina::Exception &e) {
 			if (!event.internal) {
