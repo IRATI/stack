@@ -1763,6 +1763,12 @@ static const struct name * eth_vlan_dif_name(struct ipcp_instance_data * data)
         return data->dif_name;
 }
 
+ipc_process_id_t eth_vlan_ipcp_id(struct ipcp_instance_data * data)
+{
+	ASSERT(data);
+	return data->id;
+}
+
 static int eth_vlan_query_rib(struct ipcp_instance_data * data,
                               struct list_head *          entries,
                               const string_t *            object_class,
@@ -1813,6 +1819,7 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
 
         .ipcp_name                 = eth_vlan_ipcp_name,
         .dif_name                  = eth_vlan_dif_name,
+	.ipcp_id		   = eth_vlan_ipcp_id,
 
         .set_policy_set_param      = NULL,
         .select_policy_set         = NULL,

@@ -1461,7 +1461,7 @@ struct rmt *rmt_create(struct kfa *kfa,
                 return NULL;
 	}
 
-	tmp->pff = pff_create(&tmp->robj);
+	tmp->pff = pff_create(&tmp->robj, tmp->parent);
 	if (!tmp->pff) {
 		rmt_destroy(tmp);
 		return NULL;

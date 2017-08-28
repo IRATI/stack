@@ -155,6 +155,7 @@ struct ipcp_instance_ops {
 
         const struct name * (* ipcp_name)(struct ipcp_instance_data * data);
         const struct name * (* dif_name)(struct ipcp_instance_data * data);
+        ipc_process_id_t (* ipcp_id)(struct ipcp_instance_data * data);
 
         int (* set_policy_set_param)(struct ipcp_instance_data * data,
                                      const string_t * path,
