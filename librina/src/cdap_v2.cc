@@ -3782,10 +3782,15 @@ void AppCDAPIOHandler::send(const cdap_m_t & m_sent,
 
 	rina::ScopedLock slock(atomic_send_lock_);
 	try{
+		ssize_t written;
+
 		sdup_->protect_sdu(ser_sent_m, con.port_id);
-		write(fd,
+		written = write(fd,
 		      ser_sent_m.message_,
 		      ser_sent_m.size_);
+		if (written != ser_sent_m.size_) {
+			LOG_ERR("Write failed to send entire message %d/%d\n", (int)written, (int)ser_sent_m.size_);
+		}
 		manager_->messageSent(m_sent, con.port_id);
 	} catch (rina::Exception &e)
 	{
