@@ -443,6 +443,7 @@ ctrldev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
 	}
 
 	if (size == 0) {
+		LOG_INFO("size of uint32_t is %d", sizeof(uint32_t));
 		if (unlikely(copy_to_user(buffer, &(entry->serlen), sizeof(uint32_t)))) {
 			ret = -EFAULT;
 		} else {

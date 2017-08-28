@@ -54,6 +54,7 @@ struct irati_msg_base * irati_read_next_msg(int cfd)
 		return NULL;
 	}
 
+	LOG_INFO("Size of uint32_t is %d", sizeof(uint32_t));
 	LOG_DBG("Trying to read ctrl msg of %u bytes", size);
 
 	serbuf = malloc(size);
