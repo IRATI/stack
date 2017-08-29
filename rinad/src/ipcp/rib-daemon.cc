@@ -119,6 +119,7 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
 	rina::cdap::cdap_m_t a_data_m;
 	int fd = 0;
 
+	LOG_INFO("Aqui");
 	atomic_send_lock_.lock();
 	try {
 		if (con_handle.cdap_dest == rina::cdap_rib::CDAP_DEST_ADATA) {
@@ -155,13 +156,15 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
 										true);
 			}
 		} else if (con_handle.cdap_dest == rina::cdap_rib::CDAP_DEST_PORT) {
+			LOG_INFO("Aqui2");
 			manager_->encodeNextMessageToBeSent(m_sent,
 							    sdu,
 							    con_handle.port_id);
 
+			LOG_INFO("Aqui3");
 			__send_message(con_handle, sdu);
 
-			LOG_IPCP_DBG("Sent CDAP message of size %d through port-id %u: \n%s" ,
+			LOG_IPCP_INFO("Sent CDAP message of size %d through port-id %u: \n%s" ,
 				      sdu.size_,
 				      con_handle.port_id,
 				      m_sent.to_string().c_str());
