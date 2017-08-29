@@ -44,16 +44,19 @@
 struct irati_msg_base * irati_read_next_msg(int cfd)
 {
 	struct irati_msg_base *resp;
+	char aux[100];
 	char * serbuf;
 	uint32_t size;
 	int ret;
 
-	ret = read(cfd, &size, 0);
+	ret = read(cfd, aux, 0);
 	if (ret < 0) {
 		LOG_ERR("read(cfd) returned %d", ret);
 		return NULL;
 	}
 
+	resp = IRATI_MB(aux);
+	size = resp->event_id;
 	LOG_DBG("Trying to read ctrl msg of %u bytes", size);
 
 	serbuf = malloc(size);

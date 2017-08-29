@@ -371,6 +371,7 @@ ctrldev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
 {
         struct ctrldev_priv * priv = f->private_data;
         struct msg_queue_entry * entry = NULL;
+        struct irati_msg_base aux;
         bool blocking = !(f->f_flags & O_NONBLOCK);
         ssize_t ret;
 
@@ -444,10 +445,11 @@ ctrldev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
 
 	if (size == 0) {
 		LOG_INFO("msg size is %u", entry->serlen);
-		if (unlikely(copy_to_user(buffer, &entry->serlen, sizeof(uint32_t)))) {
+		aux.event_id = entry->serlen;
+		if (unlikely(copy_to_user(buffer, &aux, sizeof(struct irati_msg_base)))) {
 			ret = -EFAULT;
 		} else {
-			ret = sizeof(uint32_t);
+			ret = sizeof(struct irati_msg_base);
 		}
 		spin_unlock(&priv->pending_msgs_lock);
 		goto finish;
