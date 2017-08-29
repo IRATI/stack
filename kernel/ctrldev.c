@@ -82,7 +82,7 @@ static struct irati_ctrl_dm irati_ctrl_dm;
 
 struct msg_queue_entry {
 	char   * sermsg;
-	size_t   serlen;
+	uint32_t   serlen;
 };
 
 int irati_handler_register(irati_msg_t msg_type,
@@ -373,7 +373,6 @@ ctrldev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
         struct msg_queue_entry * entry = NULL;
         bool blocking = !(f->f_flags & O_NONBLOCK);
         ssize_t ret;
-        uint32_t msg_size;
 
         LOG_DBG("Syscall read SDU (size = %zd, port-id = %d)",
                 size, priv->port_id);
@@ -444,9 +443,8 @@ ctrldev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
 	}
 
 	if (size == 0) {
-		msg_size = entry->serlen;
-		LOG_INFO("msg size is %u", msg_size);
-		if (unlikely(copy_to_user(buffer, &msg_size, sizeof(uint32_t)))) {
+		LOG_INFO("msg size is %u", entry->serlen);
+		if (unlikely(copy_to_user(buffer, &entry->serlen, sizeof(uint32_t)))) {
 			ret = -EFAULT;
 		} else {
 			ret = sizeof(uint32_t);
