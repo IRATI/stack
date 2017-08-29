@@ -920,7 +920,9 @@ int EnrollmentTask::get_neighbor_info(rina::Neighbor& neigh)
 
 void EnrollmentTask::addressChange(rina::AddressChangeEvent * event)
 {
+	LOG_INFO("Aquiblock");
 	rina::ScopedLock g(lock_);
+	LOG_INFO("Aquialock");
 	encoders::NeighborListEncoder encoder;
 	std::list<rina::Neighbor> neighbors;
 	std::map<int, IEnrollmentStateMachine*>::iterator it;
@@ -939,7 +941,9 @@ void EnrollmentTask::addressChange(rina::AddressChangeEvent * event)
 	obj_info.name_ = NeighborsRIBObj::object_name;
 	obj_info.inst_ = 0;
 
+	LOG_INFO("Aquialock2");
 	rina::ReadScopedLock readLock(sm_lock);
+	LOG_INFO("Aquiblock2");
 
 	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
 		con.port_id = it->second->remote_peer_.underlying_port_id_;
