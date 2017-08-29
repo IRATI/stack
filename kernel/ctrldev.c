@@ -31,7 +31,7 @@
 #include <linux/wait.h>
 #include <linux/sched.h>
 #include <linux/spinlock.h>
-#include <asm/compat.h>
+#include <linux/compat.h>
 
 #define RINA_PREFIX "ctrldev"
 
