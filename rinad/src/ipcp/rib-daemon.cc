@@ -76,6 +76,7 @@ void IPCPCDAPIOHandler::__send_message(const rina::cdap_rib::con_handle_t & con_
 	int ret;
 
 	fd = rib_daemon->get_fd(con_handle.port_id);
+	LOG_IPCP_INFO("Heyday");
 	if (fd > 0) {
 		//Write to internal reliable N-flow
 		LOG_IPCP_DBG("About to write %d bytes on fd %d from pointer %p",
@@ -86,6 +87,7 @@ void IPCPCDAPIOHandler::__send_message(const rina::cdap_rib::con_handle_t & con_
 			LOG_IPCP_WARN("Partial write: %d of %d", ret, sdu.size_);
 		}
 	}else {
+		LOG_IPCP_INFO("Heyday2");
 		//Write to N-1 flow
 		rina::kernelIPCProcess->writeMgmgtSDUToPortId(sdu.message_,
 				sdu.size_,

@@ -177,9 +177,36 @@ static bool pfte_is_ok(struct pft_entry * entry)
 { return entry ? true : false; }
 #endif
 
-static void pfte_destroy(struct pft_entry * entry)
+static int pff_sysfs_worker(void * o)
+{
+        struct pff_sysfs_work_data * data;
+
+	ASSERT(o);
+
+        data = (struct pff_sysfs_work_data *) o;
+
+        if (data->add) {
+        	robject_rset_add(&data->entry->robj, data->rset,
+        			 "%u", data->entry->destination);
+        } else {
+        	robject_del(&data->entry->robj);
+                rkfree(&data->entry);
+        }
+
+        return 0;
+}
+
+struct pff_ps_priv {
+        spinlock_t       lock;
+        struct list_head entries;
+        struct workqueue_struct * sysfs_wq;
+};
+
+static void pfte_destroy(struct pft_entry * entry, struct pff_ps_priv * priv)
 {
         struct pft_port_entry * pos, * next;
+        struct pff_sysfs_work_data * wdata;
+        struct rwq_work_item       * item;
 
         ASSERT(pfte_is_ok(entry));
 
@@ -188,8 +215,15 @@ static void pfte_destroy(struct pft_entry * entry)
         }
 
         list_del(&entry->next);
-	robject_del(&entry->robj);
-        rkfree(entry);
+
+	/* Defer sysfs entry deletion to workqueue, since it may sleep */
+        wdata = rkzalloc(sizeof(* wdata), GFP_ATOMIC);
+        wdata->entry = entry;
+        wdata->rset = 0;
+        wdata->add = false;
+        item  = rwq_work_create_ni(pff_sysfs_worker, wdata);
+
+        rwq_work_post(priv->sysfs_wq, item);
 }
 
 static struct pft_port_entry * pfte_port_find(struct pft_entry * entry,
@@ -284,12 +318,6 @@ static int pfte_ports_copy(struct pft_entry * entry,
         return 0;
 }
 
-struct pff_ps_priv {
-        spinlock_t       lock;
-        struct list_head entries;
-        struct workqueue_struct * sysfs_wq;
-};
-
 static bool priv_is_ok(struct pff_ps_priv * priv)
 { return priv != NULL; }
 
@@ -310,21 +338,6 @@ static struct pft_entry * pft_find(struct pff_ps_priv * priv,
         }
 
         return NULL;
-}
-
-static int pff_sysfs_worker(void * o)
-{
-        struct pff_sysfs_work_data * data;
-
-	ASSERT(o);
-
-        data = (struct pff_sysfs_work_data *) o;
-
-        if (data->add)
-        	robject_rset_add(&data->entry->robj, data->rset,
-        			 "%u", data->entry->destination);
-
-        return 0;
 }
 
 static int __pff_add(struct pff_ps *        ps,
@@ -362,7 +375,7 @@ static int __pff_add(struct pff_ps *        ps,
 
 		/* Just add the first alternative and ignore the others. */
 		if (pfte_port_add(tmp, alts->ports[0])) {
-			pfte_destroy(tmp);
+			pfte_destroy(tmp, priv);
 			return -1;
 		}
 	}
@@ -446,7 +459,7 @@ int default_remove(struct pff_ps *        ps,
 
         /* If the list of port-ids is empty, remove the entry */
         if (list_empty(&tmp->ports)) {
-                pfte_destroy(tmp);
+                pfte_destroy(tmp, priv);
         }
 
         spin_unlock_bh(&priv->lock);
@@ -477,7 +490,7 @@ static void __pff_flush(struct pff_ps_priv * priv)
         ASSERT(priv_is_ok(priv));
 
         list_for_each_entry_safe(pos, next, &priv->entries, next) {
-                pfte_destroy(pos);
+                pfte_destroy(pos, priv);
         }
 }
 
