@@ -59,6 +59,7 @@ struct irati_msg_base * irati_read_next_msg(int cfd)
 	serbuf = malloc(size);
 	if (!serbuf) {
 		LOG_ERR("Cannot allocate memory");
+		errno = ENOMEM;
 		return NULL;
 	}
 
@@ -88,7 +89,7 @@ struct irati_msg_base * irati_read_next_msg(int cfd)
 
 int irati_write_msg(int cfd, struct irati_msg_base *msg)
 {
-	char serbuf[IRATI_MAX_CTRL_MSG_SIZE];
+	char * serbuf;
 	int ret;
 	unsigned int serlen;
 
@@ -99,15 +100,26 @@ int irati_write_msg(int cfd, struct irati_msg_base *msg)
 		errno = EINVAL;
 		return -1;
 	}
+
+	serbuf = malloc(serlen);
+	if (!serbuf) {
+		LOG_ERR("Cannot allocate memory");
+		errno = ENOMEM;
+		return -1;
+	}
+
 	serlen = serialize_irati_msg(irati_ker_numtables, RINA_C_MAX,
 				     serbuf, msg);
 
 	ret = write(cfd, serbuf, serlen);
+	free(serbuf);
 	if (ret < 0) {
 		LOG_ERR("write(cfd)");
+		errno = EFAULT;
 	} else if (ret != serlen) {
 		/* This should never happen if kernel code is correct. */
 		LOG_ERR("Error: partial write [%d/%u]\n", ret, serlen);
+		errno = EFAULT;
 		ret = -1;
 	} else {
 		ret = 0;
