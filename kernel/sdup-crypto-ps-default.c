@@ -808,7 +808,7 @@ int default_sdup_update_crypto_state(struct sdup_crypto_ps * ps,
 			LOG_DBG("TX encryption cipher is %s", next_tx_state->enc_alg);
 			LOG_DBG("RX encryption cipher is %s", next_rx_state->enc_alg);
 		} else {
-			LOG_DBG("Unsupported encryption algorithm %s",
+			LOG_ERR("Unsupported encryption algorithm %s",
 				state->enc_alg);
 			return -1;
 		}
@@ -872,7 +872,7 @@ int default_sdup_update_crypto_state(struct sdup_crypto_ps * ps,
 			LOG_DBG("TX message digest is %s", next_tx_state->mac_alg);
 			LOG_DBG("RX message digest is %s", next_rx_state->mac_alg);
 		} else {
-			LOG_DBG("Unsupported mac_alg %s", state->mac_alg);
+			LOG_ERR("Unsupported mac_alg %s", state->mac_alg);
 			return -1;
 		}
 
@@ -922,7 +922,7 @@ int default_sdup_update_crypto_state(struct sdup_crypto_ps * ps,
 			LOG_DBG("TX compress algorithm is %s", next_tx_state->compress_alg);
 			LOG_DBG("RX compress algorithm is %s", next_rx_state->compress_alg);
 		} else {
-			LOG_DBG("Unsupported compress algorithm %s", state->compress_alg);
+			LOG_ERR("Unsupported compress algorithm %s", state->compress_alg);
 			return -1;
 		}
 
@@ -977,7 +977,7 @@ EXPORT_SYMBOL(default_sdup_update_crypto_state);
 
 struct ps_base * sdup_crypto_ps_default_create(struct rina_component * component)
 {
-	struct dup_config_entry * conf;
+	struct auth_sdup_profile * conf;
 	struct sdup_comp * sdup_comp;
 	struct sdup_crypto_ps * ps;
 	struct sdup_port * sdup_port;
@@ -1010,8 +1010,8 @@ struct ps_base * sdup_crypto_ps_default_create(struct rina_component * component
 	ps->dm          = sdup_port;
 	ps->priv        = data;
 
-	if (conf->crypto_policy) {
-		parameter = policy_param_find(conf->crypto_policy,
+	if (conf->encrypt) {
+		parameter = policy_param_find(conf->encrypt,
 					      "seq_win_size");
 		if (!parameter) {
 			data->seq_win_size = 0;

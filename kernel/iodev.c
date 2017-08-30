@@ -30,6 +30,7 @@
 #include <linux/wait.h>
 #include <linux/sched.h>
 #include <linux/spinlock.h>
+#include <linux/compat.h>
 
 #define RINA_PREFIX "iodev"
 
@@ -40,6 +41,8 @@
 #include "kipcm.h"
 #include "kfa.h"
 #include "kfa-utils.h"
+#include "ctrldev.h"
+#include "irati/kernel-msg.h"
 
 extern struct kipcm *default_kipcm;
 
@@ -190,19 +193,17 @@ static int
 iodev_release(struct inode *inode, struct file *f)
 {
         struct iodev_priv *priv = f->private_data;
+        struct irati_msg_app_dealloc_flow msg;
 
-        /* TODO possibly deallocate the flow */
+        /* Request flow deallocation */
+        msg.msg_type = RINA_C_APP_DEALLOCATE_FLOW_REQUEST;
+        msg.port_id = priv->port_id;
+        irati_ctrl_dev_snd_resp_msg(IPCM_CTRLDEV_PORT, IRATI_MB(&msg));
+
         rkfree(priv);
 
         return 0;
 }
-
-/* Data structure passed along with ioctl */
-struct irati_iodev_ctldata {
-        uint32_t port_id;
-};
-
-#define IRATI_FLOW_BIND _IOW(0xAF, 0x00, struct irati_iodev_ctldata)
 
 static long
 iodev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
@@ -249,7 +250,7 @@ iodev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 static long
 iodev_compat_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 {
-	return iodev_ioctl(f, cmd, (unsigned long)compat_ptr(arg));
+	return iodev_ioctl(f, cmd, (unsigned long) compat_ptr(arg));
 }
 #endif
 

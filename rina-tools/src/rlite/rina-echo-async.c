@@ -464,7 +464,7 @@ main(int argc, char **argv)
         return ret;
     }
 
-    /* Initialization of RLITE application. */
+    /* Initialization of IRATI application. */
     rea.cfd = rina_open();
     if (rea.cfd < 0) {
         perror("rina_open()");

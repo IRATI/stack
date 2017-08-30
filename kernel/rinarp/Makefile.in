@@ -10,6 +10,8 @@ ifeq ($(REGRESSION_TESTS),y)
 ccflags-y += -DCONFIG_ARP826_REGRESSION_TESTS
 endif
 
+EXTRA_CFLAGS := -I$(PWD)/../include
+
 obj-m += arp826.o
 arp826-y :=				\
 	arp826-tables.o				\

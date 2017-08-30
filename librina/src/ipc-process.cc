@@ -28,16 +28,20 @@
 #define RINA_PREFIX "librina.ipc-process"
 
 #include "librina/logs.h"
+#include "librina/ipc-process.h"
 #include "core.h"
 #include "utils.h"
+#include "ctrl.h"
 
 namespace rina {
 
 /* CLASS ASSIGN TO DIF REQUEST EVENT */
 AssignToDIFRequestEvent::AssignToDIFRequestEvent(
 		const DIFInformation& difInformation,
-			unsigned int sequenceNumber):
-		IPCEvent(ASSIGN_TO_DIF_REQUEST_EVENT, sequenceNumber)
+			unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id):
+		IPCEvent(ASSIGN_TO_DIF_REQUEST_EVENT, sequenceNumber,
+				ctrl_p, ipcp_id)
 {
 	this->difInformation = difInformation;
 }
@@ -55,8 +59,10 @@ UpdateDIFConfigurationRequestEvent::getDIFConfiguration() const
 
 UpdateDIFConfigurationRequestEvent::UpdateDIFConfigurationRequestEvent(
                 const DIFConfiguration& difConfiguration,
-                        unsigned int sequenceNumber):
-                IPCEvent(UPDATE_DIF_CONFIG_REQUEST_EVENT, sequenceNumber)
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id):
+                IPCEvent(UPDATE_DIF_CONFIG_REQUEST_EVENT, sequenceNumber,
+                		ctrl_p, ipcp_id)
 {
         this->difConfiguration = difConfiguration;
 }
@@ -66,9 +72,10 @@ IPCProcessDIFRegistrationEvent::IPCProcessDIFRegistrationEvent(
 		const ApplicationProcessNamingInformation& ipcProcessName,
 		const ApplicationProcessNamingInformation& difName,
 		bool registered,
-		unsigned int sequenceNumber): IPCEvent(
+		unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id): IPCEvent(
 		                IPC_PROCESS_DIF_REGISTRATION_NOTIFICATION,
-		                sequenceNumber)
+		                sequenceNumber, ctrl_p, ipcp_id)
 {
         this->ipcProcessName = ipcProcessName;
         this->difName = difName;
@@ -93,9 +100,10 @@ bool IPCProcessDIFRegistrationEvent::isRegistered() const {
 QueryRIBRequestEvent::QueryRIBRequestEvent(const std::string& objectClass,
 		const std::string& objectName, long objectInstance,
 		int scope, const std::string& filter,
-		unsigned int sequenceNumber):
+		unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id):
 				IPCEvent(IPC_PROCESS_QUERY_RIB,
-                                         sequenceNumber)
+                                         sequenceNumber, ctrl_p, ipcp_id)
 {
 	this->objectClass = objectClass;
 	this->objectName = objectName;
@@ -127,9 +135,10 @@ const std::string& QueryRIBRequestEvent::getFilter() const{
 /* CLASS SET POLICY SET PARAM REQUEST EVENT */
 SetPolicySetParamRequestEvent::SetPolicySetParamRequestEvent(
                 const std::string& path, const std::string& name,
-                const std::string& value, unsigned int sequenceNumber) :
+                const std::string& value, unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id) :
 				IPCEvent(IPC_PROCESS_SET_POLICY_SET_PARAM,
-                                         sequenceNumber)
+                                         sequenceNumber, ctrl_p, ipcp_id)
 {
         this->path = path;
         this->name = name;
@@ -139,9 +148,10 @@ SetPolicySetParamRequestEvent::SetPolicySetParamRequestEvent(
 /* CLASS SELECT POLICY SET REQUEST EVENT */
 SelectPolicySetRequestEvent::SelectPolicySetRequestEvent(
                 const std::string& path, const std::string& name,
-                                        unsigned int sequenceNumber) :
+                                        unsigned int sequenceNumber,
+					unsigned int ctrl_p, unsigned short ipcp_id) :
 				IPCEvent(IPC_PROCESS_SELECT_POLICY_SET,
-                                         sequenceNumber)
+                                         sequenceNumber, ctrl_p, ipcp_id)
 {
         this->path = path;
         this->name = name;
@@ -149,9 +159,10 @@ SelectPolicySetRequestEvent::SelectPolicySetRequestEvent(
 
 /* CLASS PLUGIN LOAD REQUEST EVENT */
 PluginLoadRequestEvent::PluginLoadRequestEvent(const std::string& name,
-                                bool load, unsigned int sequenceNumber) :
+                                bool load, unsigned int sequenceNumber,
+				unsigned int ctrl_p, unsigned short ipcp_id) :
 				IPCEvent(IPC_PROCESS_PLUGIN_LOAD,
-                                         sequenceNumber)
+                                         sequenceNumber, ctrl_p, ipcp_id)
 {
         this->name = name;
         this->load = load;
@@ -159,9 +170,10 @@ PluginLoadRequestEvent::PluginLoadRequestEvent(const std::string& name,
 
 /* CLASS CREATE CONNECTION RESPONSE EVENT */
 CreateConnectionResponseEvent::CreateConnectionResponseEvent(int portId,
-        int cepId, unsigned int sequenceNumber):
+        int cepId, unsigned int sequenceNumber,
+	unsigned int ctrl_p, unsigned short ipcp_id):
                 IPCEvent(IPC_PROCESS_CREATE_CONNECTION_RESPONSE,
-                                sequenceNumber) {
+                                sequenceNumber, ctrl_p, ipcp_id) {
         this->cepId = cepId;
         this->portId = portId;
 }
@@ -176,9 +188,10 @@ int CreateConnectionResponseEvent::getPortId() const {
 
 /* CLASS UPDATE CONNECTION RESPONSE EVENT */
 UpdateConnectionResponseEvent::UpdateConnectionResponseEvent(int portId,
-        int result, unsigned int sequenceNumber):
+        int result, unsigned int sequenceNumber,
+	unsigned int ctrl_p, unsigned short ipcp_id):
                 IPCEvent(IPC_PROCESS_UPDATE_CONNECTION_RESPONSE,
-                                sequenceNumber) {
+                                sequenceNumber, ctrl_p, ipcp_id) {
         this->result = result;
         this->portId = portId;
 }
@@ -193,9 +206,10 @@ int UpdateConnectionResponseEvent::getPortId() const {
 
 /* CLASS CREATE CONNECTION RESULT EVENT */
 CreateConnectionResultEvent::CreateConnectionResultEvent(int portId,
-        int sourceCepId, int destCepId, unsigned int sequenceNumber):
+        int sourceCepId, int destCepId, unsigned int sequenceNumber,
+	unsigned int ctrl_p, unsigned short ipcp_id):
                 IPCEvent(IPC_PROCESS_CREATE_CONNECTION_RESULT,
-                                sequenceNumber) {
+                                sequenceNumber, ctrl_p, ipcp_id) {
         this->sourceCepId = sourceCepId;
         this->destCepId = destCepId;
         this->portId = portId;
@@ -215,9 +229,10 @@ int CreateConnectionResultEvent::getPortId() const {
 
 /* CLASS DESTROY CONNECTION RESULT EVENT */
 DestroyConnectionResultEvent::DestroyConnectionResultEvent(int portId,
-        int result, unsigned int sequenceNumber):
+        int result, unsigned int sequenceNumber,
+	unsigned int ctrl_p, unsigned short ipcp_id):
                 IPCEvent(IPC_PROCESS_DESTROY_CONNECTION_RESULT,
-                                sequenceNumber) {
+                                sequenceNumber, ctrl_p, ipcp_id) {
         this->result = result;
         this->portId = portId;
 }
@@ -232,9 +247,10 @@ int DestroyConnectionResultEvent::getPortId() const {
 
 /* CLASS DUMP PDU FT RESULT EVENT*/
 DumpFTResponseEvent::DumpFTResponseEvent(const std::list<PDUForwardingTableEntry>& entries,
-                int result, unsigned int sequenceNumber):
+                int result, unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id):
                 IPCEvent(IPC_PROCESS_DUMP_FT_RESPONSE,
-                                sequenceNumber) {
+                                sequenceNumber, ctrl_p, ipcp_id) {
         this->entries = entries;
         this->result = result;
 }
@@ -250,9 +266,10 @@ int DumpFTResponseEvent::getResult() const {
 
 // Class enable encryption response event
 UpdateCryptoStateResponseEvent::UpdateCryptoStateResponseEvent(int res,
-                int port, unsigned int sequenceNumber) :
+                int port, unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id) :
                 		IPCEvent(IPC_PROCESS_UPDATE_CRYPTO_STATE_RESPONSE,
-                				sequenceNumber)
+                				sequenceNumber, ctrl_p, ipcp_id)
 {
 	port_id = port;
 	result = res;
@@ -260,9 +277,10 @@ UpdateCryptoStateResponseEvent::UpdateCryptoStateResponseEvent(int res,
 
 AllocatePortResponseEvent::AllocatePortResponseEvent(int res,
 						     int port,
-						     unsigned int sequenceNumber):
+						     unsigned int sequenceNumber,
+						     unsigned int ctrl_p, unsigned short ipcp_id):
 		IPCEvent(IPC_PROCESS_ALLOCATE_PORT_RESPONSE,
-			 sequenceNumber)
+			 sequenceNumber, ctrl_p, ipcp_id)
 {
 	port_id = port;
 	result = res;
@@ -270,34 +288,39 @@ AllocatePortResponseEvent::AllocatePortResponseEvent(int res,
 
 DeallocatePortResponseEvent::DeallocatePortResponseEvent(int res,
 						         int port,
-							 unsigned int sequenceNumber):
+							 unsigned int sequenceNumber,
+							 unsigned int ctrl_p, unsigned short ipcp_id):
 		IPCEvent(IPC_PROCESS_DEALLOCATE_PORT_RESPONSE,
-			 sequenceNumber)
+			 sequenceNumber, ctrl_p, ipcp_id)
 {
 	port_id = port;
 	result = res;
 }
 
 WriteMgmtSDUResponseEvent::WriteMgmtSDUResponseEvent(int res,
-			  	  	  	     unsigned int sequenceNumber):
+			  	  	  	     unsigned int sequenceNumber,
+						     unsigned int ctrl_p, unsigned short ipcp_id):
 		IPCEvent(IPC_PROCESS_WRITE_MGMT_SDU_RESPONSE,
-			 sequenceNumber)
+			 sequenceNumber, ctrl_p, ipcp_id)
 {
 	result = res;
 }
 
 ReadMgmtSDUResponseEvent::ReadMgmtSDUResponseEvent(int res,
-			 	 	 	   void * data,
-						   int s,
+			 	 	 	   struct buffer * buf,
 						   unsigned int pid,
-						   unsigned int sequenceNumber):
+						   unsigned int sequenceNumber,
+						   unsigned int ctrl_p, unsigned short ipcp_id):
 		IPCEvent(IPC_PROCESS_READ_MGMT_SDU_NOTIF,
-			 sequenceNumber)
+			 sequenceNumber, ctrl_p, ipcp_id)
 {
 	result = res;
-	sdu = data;
-	size = s;
 	port_id = pid;
+	if (buf) {
+		msg.size_ = buf->size;
+		msg.message_ = new unsigned char[msg.size_];
+		memcpy(msg.message_, buf->data, msg.size_);
+	}
 }
 
 /* CLASS EXTENDED IPC MANAGER */
@@ -334,8 +357,33 @@ void ExtendedIPCManager::setIPCManagerPort(
         this->ipcManagerPort = ipcManagerPort;
 }
 
-void ExtendedIPCManager::notifyIPCProcessInitialized(
-                const ApplicationProcessNamingInformation& name) {
+void ExtendedIPCManager::send_base_resp_msg(irati_msg_t msg_t,
+					    unsigned int seq_num, int result)
+{
+#if STUB_API
+	//Do nothing
+#else
+        struct irati_msg_base_resp * msg;
+
+        msg = new irati_msg_base_resp();
+        msg->msg_type = msg_t;
+        msg->result = result;
+        msg->event_id = seq_num;
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_port = ipcManagerPort;
+        msg->dest_ipcp_id = 0;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
+#endif
+}
+
+void ExtendedIPCManager::notifyIPCProcessInitialized(const ApplicationProcessNamingInformation& name)
+{
 	ScopedLock slock(lock);
 
         if (ipcProcessInitialized) {
@@ -345,17 +393,21 @@ void ExtendedIPCManager::notifyIPCProcessInitialized(
 #if STUB_API
         // Do nothing
 #else
-        IpcmIPCProcessInitializedMessage message;
-        message.setName(name);
-        message.setSourceIpcProcessId(ipcProcessId);
-        message.setDestPortId(ipcManagerPort);
-        message.setNotificationMessage(true);
+        struct irati_msg_with_name * msg;
 
-        try {
-                rinaManager->sendMessage(&message, false);
-        } catch(NetlinkException &e) {
-                throw IPCException(e.what());
+        msg = new irati_msg_with_name();
+        msg->msg_type = RINA_C_IPCM_IPC_PROCESS_INITIALIZED;
+        msg->name = name.to_c_name();
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_port = ipcManagerPort;
+        msg->dest_ipcp_id = 0;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
         }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
         ipcProcessInitialized = true;
 }
@@ -365,9 +417,10 @@ bool ExtendedIPCManager::isIPCProcessInitialized() const
         return ipcProcessInitialized;
 }
 
-ApplicationRegistration * ExtendedIPCManager::appRegistered(
-                        const ApplicationProcessNamingInformation& appName,
-                        const ApplicationProcessNamingInformation& DIFName) {
+ApplicationRegistration *
+ExtendedIPCManager::appRegistered(const ApplicationProcessNamingInformation& appName,
+				  const ApplicationProcessNamingInformation& DIFName)
+{
         ApplicationRegistration * applicationRegistration;
 
         ScopedLock slock(lock);
@@ -387,9 +440,9 @@ ApplicationRegistration * ExtendedIPCManager::appRegistered(
         return applicationRegistration;
 }
 
-void ExtendedIPCManager::appUnregistered(
-                const ApplicationProcessNamingInformation& appName,
-                const ApplicationProcessNamingInformation& DIFName) {
+void ExtendedIPCManager::appUnregistered(const ApplicationProcessNamingInformation& appName,
+                			 const ApplicationProcessNamingInformation& DIFName)
+{
 	ScopedLock slock(lock);
 
         ApplicationRegistration * applicationRegistration =
@@ -414,178 +467,156 @@ void ExtendedIPCManager::appUnregistered(
         }
 }
 
-void ExtendedIPCManager::assignToDIFResponse(
-		const AssignToDIFRequestEvent& event, int result) {
+void ExtendedIPCManager::assignToDIFResponse(const AssignToDIFRequestEvent& event, int result)
+{
 	if (result == 0) {
 		this->currentDIFInformation = event.getDIFInformation();
 	}
-#if STUB_API
-	//Do nothing
-#else
-	BaseNetlinkMessage responseMessage(RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE);
-	responseMessage.result = result;
-	responseMessage.setSequenceNumber(event.sequenceNumber);
-	responseMessage.setSourceIpcProcessId(ipcProcessId);
-        responseMessage.setDestPortId(ipcManagerPort);
-	responseMessage.setResponseMessage(true);
-	try {
-                rinaManager->sendMessage(&responseMessage, false);
-	} catch (NetlinkException &e) {
-		throw AssignToDIFResponseException(e.what());
-	}
-#endif
+
+	send_base_resp_msg(RINA_C_IPCM_ASSIGN_TO_DIF_RESPONSE,
+			   event.sequenceNumber, result);
 }
 
 void ExtendedIPCManager::enrollToDIFResponse(const EnrollToDAFRequestEvent& event,
-                        int result, const std::list<Neighbor> & newNeighbors,
-                        const DIFInformation& difInformation) {
+                        		     int result, const std::list<Neighbor> & newNeighbors,
+					     const DIFInformation& difInformation)
+{
 #if STUB_API
         // Do nothing
 #else
-        IpcmEnrollToDIFResponseMessage responseMessage;
-        responseMessage.result = result;
-        responseMessage.setNeighbors(newNeighbors);
-        responseMessage.setDIFInformation(difInformation);
-        responseMessage.setSourceIpcProcessId(ipcProcessId);
-        responseMessage.setDestPortId(ipcManagerPort);
-        responseMessage.setSequenceNumber(event.sequenceNumber);
-        responseMessage.setResponseMessage(true);
-        try {
-        	//FIXME, compute maximum message size dynamically
-        	rinaManager->sendMessageOfMaxSize(&responseMessage,
-        					  5 * get_page_size(),
-        					  false);
-        } catch (NetlinkException &e) {
-                throw EnrollException(e.what());
+        struct irati_msg_ipcm_enroll_to_dif_resp * msg;
+        struct ipcp_neighbor_entry * nei;
+        std::list<Neighbor>::const_iterator it;
+
+        msg = new irati_msg_ipcm_enroll_to_dif_resp();
+        msg->msg_type = RINA_C_IPCM_ENROLL_TO_DIF_RESPONSE;
+        msg->result = result;
+        msg->event_id = event.sequenceNumber;
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_port = ipcManagerPort;
+        msg->dest_ipcp_id = 0;
+        msg->dif_type = stringToCharArray(difInformation.dif_type_);
+        msg->dif_name = difInformation.dif_name_.to_c_name();
+        msg->dif_config = difInformation.dif_configuration_.to_c_dif_config();
+        msg->neighbors = new ipcp_neigh_list();
+        INIT_LIST_HEAD(&msg->neighbors->ipcp_neighbors);
+        for (it = newNeighbors.begin(); it != newNeighbors.end(); ++it) {
+        	nei = new ipcp_neighbor_entry();
+        	INIT_LIST_HEAD(&nei->next);
+        	nei->entry = it->to_c_neighbor();
+        	list_add_tail(&nei->next, &msg->neighbors->ipcp_neighbors);
         }
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
 void ExtendedIPCManager::disconnectNeighborResponse(const DisconnectNeighborRequestEvent& event,
 			        		    int result)
 {
-#if STUB_API
-        // Do nothing
-#else
-	BaseNetlinkMessage responseMessage(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE);
-        responseMessage.result = result;
-        responseMessage.setSourceIpcProcessId(ipcProcessId);
-        responseMessage.setDestPortId(ipcManagerPort);
-        responseMessage.setSequenceNumber(event.sequenceNumber);
-        responseMessage.setResponseMessage(true);
-        try {
-        	//FIXME, compute maximum message size dynamically
-        	rinaManager->sendMessage(&responseMessage, false);
-        } catch (NetlinkException &e) {
-                throw IPCException(e.what());
-        }
-#endif
+	send_base_resp_msg(RINA_C_IPCM_DISCONNECT_FROM_NEIGHBOR_RESPONSE,
+			   event.sequenceNumber, result);
 }
 
-void ExtendedIPCManager::registerApplicationResponse(
-		const ApplicationRegistrationRequestEvent& event, int result) {
-#if STUB_API
+void ExtendedIPCManager::registerApplicationResponse(const ApplicationRegistrationRequestEvent& event,
+						     int result)
+{
+	send_base_resp_msg(RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE,
+			   event.sequenceNumber, result);
+}
+
+void ExtendedIPCManager::unregisterApplicationResponse(const ApplicationUnregistrationRequestEvent& event,
+						       int result)
+{
+	send_base_resp_msg(RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE,
+			   event.sequenceNumber, result);
+}
+
+void ExtendedIPCManager::allocateFlowRequestResult(const FlowRequestEvent& event,
+						   int result)
+{
+#if STUP_API
 	//Do nothing
 #else
-	BaseNetlinkMessage responseMessage(RINA_C_IPCM_REGISTER_APPLICATION_RESPONSE);
-	responseMessage.result = result;
-	responseMessage.setSequenceNumber(event.sequenceNumber);
-	responseMessage.setSourceIpcProcessId(ipcProcessId);
-	responseMessage.setDestPortId(ipcManagerPort);
-	responseMessage.setResponseMessage(true);
-	try {
-		rinaManager->sendMessage(&responseMessage, false);
-	} catch(NetlinkException &e) {
-		throw RegisterApplicationResponseException(e.what());
-	}
+        struct irati_kmsg_multi_msg * msg;
+
+        msg = new irati_kmsg_multi_msg();
+        msg->msg_type = RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT;
+        msg->result = result;
+        msg->port_id = event.portId;
+        msg->event_id = event.sequenceNumber;
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_port = ipcManagerPort;
+        msg->dest_ipcp_id = 0;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
+
 #endif
 }
 
-void ExtendedIPCManager::unregisterApplicationResponse(
-		const ApplicationUnregistrationRequestEvent& event, int result) {
-#if STUB_API
-	// Do nothing
-#else
-	BaseNetlinkMessage responseMessage(RINA_C_IPCM_UNREGISTER_APPLICATION_RESPONSE);
-	responseMessage.result = result;
-	responseMessage.setSequenceNumber(event.sequenceNumber);
-	responseMessage.setSourceIpcProcessId(ipcProcessId);
-	responseMessage.setDestPortId(ipcManagerPort);
-	responseMessage.setResponseMessage(true);
-	try {
-		rinaManager->sendMessage(&responseMessage, false);
-	} catch (NetlinkException &e) {
-		throw UnregisterApplicationResponseException(e.what());
-	}
-#endif
-}
+unsigned int
+ExtendedIPCManager::allocateFlowRequestArrived(const ApplicationProcessNamingInformation& localAppName,
+					       const ApplicationProcessNamingInformation& remoteAppName,
+					       const FlowSpecification& flowSpecification,
+					       int portId)
+{
+	unsigned int seq_num = 0;
 
-void ExtendedIPCManager::allocateFlowRequestResult(
-		const FlowRequestEvent& event, int result) {
-#if STUB_API
-	// Do nothing
-#else
-	BaseNetlinkMessage responseMessage(RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_RESULT);
-	responseMessage.result = result;
-	responseMessage.port_id = event.portId;
-	responseMessage.setSequenceNumber(event.sequenceNumber);
-	responseMessage.setSourceIpcProcessId(ipcProcessId);
-	responseMessage.setDestPortId(ipcManagerPort);
-	responseMessage.setResponseMessage(true);
-
-	try {
-		rinaManager->sendMessage(&responseMessage, false);
-	} catch(NetlinkException &e) {
-		throw AllocateFlowResponseException(e.what());
-	}
-#endif
-}
-
-unsigned int ExtendedIPCManager::allocateFlowRequestArrived(
-			const ApplicationProcessNamingInformation& localAppName,
-			const ApplicationProcessNamingInformation& remoteAppName,
-			const FlowSpecification& flowSpecification,
-			int portId) {
 #if STUP_API
-	return 0;
+	//Do nothing
 #else
-	IpcmAllocateFlowRequestArrivedMessage message;
-	message.setSourceAppName(remoteAppName);
-	message.setDestAppName(localAppName);
-	message.setFlowSpecification(flowSpecification);
-	message.setDifName(currentDIFInformation.get_dif_name());
-	message.setPortId(portId);
-	message.setSourceIpcProcessId(ipcProcessId);
-	message.setDestPortId(ipcManagerPort);
-	message.setRequestMessage(true);
+        struct irati_kmsg_ipcm_allocate_flow * msg;
 
-	try {
-	        rinaManager->sendMessage(&message, true);
-	} catch (NetlinkException &e) {
-	        throw AllocateFlowRequestArrivedException(e.what());
-	}
+        msg = new irati_kmsg_ipcm_allocate_flow();
+        msg->msg_type = RINA_C_IPCM_ALLOCATE_FLOW_REQUEST_ARRIVED;
+        msg->local = localAppName.to_c_name();
+        msg->remote = remoteAppName.to_c_name();
+        msg->fspec = flowSpecification.to_c_flowspec();
+        msg->dif_name = currentDIFInformation.get_dif_name().to_c_name();
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_port = ipcManagerPort;
+        msg->dest_ipcp_id = 0;
+        msg->port_id = portId;
 
-	return message.getSequenceNumber();
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        seq_num = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
+
 #endif
+        return seq_num;
 }
 
-unsigned int ExtendedIPCManager::requestFlowAllocation(
-                const ApplicationProcessNamingInformation& localAppName,
-                const ApplicationProcessNamingInformation& remoteAppName,
-                const FlowSpecification& flowSpec)
+unsigned int
+ExtendedIPCManager::requestFlowAllocation(const ApplicationProcessNamingInformation& localAppName,
+                			  const ApplicationProcessNamingInformation& remoteAppName,
+					  const FlowSpecification& flowSpec)
 {
-        return internalRequestFlowAllocation(
-                        localAppName, remoteAppName, flowSpec, ipcProcessId);
+        return internalRequestFlowAllocation(localAppName, remoteAppName,
+        				     flowSpec, ipcProcessId);
 }
 
-unsigned int ExtendedIPCManager::requestFlowAllocationInDIF(
-                const ApplicationProcessNamingInformation& localAppName,
-                const ApplicationProcessNamingInformation& remoteAppName,
-                const ApplicationProcessNamingInformation& difName,
-                const FlowSpecification& flowSpec)
+unsigned int
+ExtendedIPCManager::requestFlowAllocationInDIF(const ApplicationProcessNamingInformation& localAppName,
+					       const ApplicationProcessNamingInformation& remoteAppName,
+					       const ApplicationProcessNamingInformation& difName,
+					       const FlowSpecification& flowSpec)
 {
-        return internalRequestFlowAllocationInDIF(localAppName,
-                        remoteAppName, difName, ipcProcessId, flowSpec);
+        return internalRequestFlowAllocationInDIF(localAppName, remoteAppName,
+        					  difName, ipcProcessId, flowSpec);
 }
 
 FlowInformation ExtendedIPCManager::allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
@@ -598,67 +629,66 @@ FlowInformation ExtendedIPCManager::allocateFlowResponse(const FlowRequestEvent&
                                             ipcProcessId);
 }
 
-void ExtendedIPCManager::notifyflowDeallocated(
-		const FlowDeallocateRequestEvent flowDeallocateEvent,
-		int result)
+void ExtendedIPCManager::flowDeallocatedRemotely(int portId, int code)
 {
 #if STUB_API
 	// Do nothing
 #else
-	BaseNetlinkMessage responseMessage(RINA_C_IPCM_DEALLOCATE_FLOW_RESPONSE);
-	responseMessage.result = result;
-	responseMessage.setSourceIpcProcessId(ipcProcessId);
-	responseMessage.setSequenceNumber(flowDeallocateEvent.sequenceNumber);
-	responseMessage.setDestPortId(ipcManagerPort);
-	responseMessage.setResponseMessage(true);
-	try {
-		rinaManager->sendMessage(&responseMessage, false);
-	} catch (NetlinkException &e) {
-		throw DeallocateFlowResponseException(e.what());
-	}
+        struct irati_kmsg_multi_msg * msg;
+
+        msg = new irati_kmsg_multi_msg();
+        msg->msg_type = RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION;
+        msg->result = code;
+        msg->port_id = portId;
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_port = ipcManagerPort;
+        msg->dest_ipcp_id = 0;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
-void ExtendedIPCManager::flowDeallocatedRemotely(
-		int portId, int code) {
-#if STUB_API
-	// Do nothing
-#else
-	BaseNetlinkMessage message(RINA_C_IPCM_FLOW_DEALLOCATED_NOTIFICATION);
-	message.port_id = portId;
-	message.result = code;
-	message.setSourceIpcProcessId(ipcProcessId);
-	message.setDestPortId(ipcManagerPort);
-	message.setNotificationMessage(true);
-	try {
-		rinaManager->sendMessage(&message, false);
-	} catch (NetlinkException &e) {
-		throw DeallocateFlowResponseException(e.what());
-	}
-#endif
-}
-
-void ExtendedIPCManager::queryRIBResponse(
-		const QueryRIBRequestEvent& event, int result,
-		const std::list<rib::RIBObjectData>& ribObjects) {
+void ExtendedIPCManager::queryRIBResponse(const QueryRIBRequestEvent& event,
+					  int result,
+					  const std::list<rib::RIBObjectData>& ribObjects)
+{
 #if STUB_API
 	//Do nothing
 #else
-	IpcmDIFQueryRIBResponseMessage responseMessage;
-	responseMessage.result = result;
-	responseMessage.setRIBObjects(ribObjects);
-	responseMessage.setSequenceNumber(event.sequenceNumber);
-	responseMessage.setSourceIpcProcessId(ipcProcessId);
-	responseMessage.setDestPortId(ipcManagerPort);
-	responseMessage.setResponseMessage(true);
-	try {
-	        //FIXME, compute maximum message size dynamically
-		rinaManager->sendMessageOfMaxSize(&responseMessage,
-                                          5 * get_page_size(),
-                                          false);
-	} catch (NetlinkException &e) {
-		throw QueryRIBResponseException(e.what());
-	}
+        struct irati_kmsg_ipcm_query_rib_resp * msg;
+        struct rib_object_data * rod;
+        std::list<rib::RIBObjectData>::const_iterator it;
+
+        msg = new irati_kmsg_ipcm_query_rib_resp();
+        msg->msg_type = RINA_C_IPCM_QUERY_RIB_RESPONSE;
+        msg->result = result;
+        msg->event_id = event.sequenceNumber;
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_port = ipcManagerPort;
+        msg->dest_ipcp_id = 0;
+        msg->rib_entries = new query_rib_resp();
+        INIT_LIST_HEAD(&msg->rib_entries->rib_object_data_entries);
+        for (it = ribObjects.begin(); it != ribObjects.end(); ++ it) {
+        	rod = new rib_object_data();
+        	INIT_LIST_HEAD(&rod->next);
+        	rod->instance = it->instance_;
+        	rod->name = stringToCharArray(it->name_);
+        	rod->disp_value = stringToCharArray(it->displayable_value_);
+        	rod->clazz = stringToCharArray(it->class_);
+        	list_add_tail(&rod->next, &msg->rib_entries->rib_object_data_entries);
+        }
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
@@ -668,20 +698,22 @@ unsigned int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingIn
 
 #if STUB_API
 #else
-        IPCPAllocatePortRequestMessage message;
-        message.app_name = appName;
-        message.setSourceIpcProcessId(ipcProcessId);
-        message.setDestIpcProcessId(ipcProcessId);
-        message.setDestPortId(0);
-        message.setRequestMessage(true);
+        struct irati_kmsg_ipcp_allocate_port * msg;
 
-        try{
-                rinaManager->sendMessage(&message, true);
-        }catch(NetlinkException &e){
-                throw IPCException(e.what());
+        msg = new irati_kmsg_ipcp_allocate_port();
+        msg->msg_type = RINA_C_IPCP_ALLOCATE_PORT_REQUEST;
+        msg->app_name = appName.to_c_name();
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_ipcp_id = ipcProcessId;
+        msg->dest_port = 0;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
         }
 
-        result = message.getSequenceNumber();
+        result = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 
         return result;
@@ -693,132 +725,91 @@ unsigned int ExtendedIPCManager::deallocatePortId(int portId)
 
 #if STUB_API
 #else
-	BaseNetlinkMessage message(RINA_C_IPCP_DEALLOCATE_PORT_REQUEST);
-        message.port_id = portId;
-        message.setSourceIpcProcessId(ipcProcessId);
-        message.setDestIpcProcessId(ipcProcessId);
-        message.setDestPortId(0);
-        message.setRequestMessage(true);
+        struct irati_kmsg_multi_msg * msg;
 
-        try{
-                rinaManager->sendMessage(&message, true);
-        }catch(NetlinkException &e){
-                throw IPCException(e.what());
+        msg = new irati_kmsg_multi_msg();
+        msg->msg_type = RINA_C_IPCP_DEALLOCATE_PORT_REQUEST;
+        msg->port_id = portId;
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_ipcp_id = ipcProcessId;
+        msg->dest_port = 0;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
         }
 
-        result = message.getSequenceNumber();
+        result = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 
         return result;
 }
 
-void ExtendedIPCManager::setPolicySetParamResponse(
-		const SetPolicySetParamRequestEvent& event, int result) {
-#if STUB_API
-	//Do nothing
-#else
-	BaseNetlinkMessage responseMessage(RINA_C_IPCM_SET_POLICY_SET_PARAM_RESPONSE);
-	responseMessage.result = result;
-	responseMessage.setSequenceNumber(event.sequenceNumber);
-	responseMessage.setSourceIpcProcessId(ipcProcessId);
-        responseMessage.setDestPortId(ipcManagerPort);
-	responseMessage.setResponseMessage(true);
-	try {
-		rinaManager->sendMessage(&responseMessage, false);
-	} catch (NetlinkException &e) {
-		throw SetPolicySetParamException(e.what());
-	}
-#endif
+void ExtendedIPCManager::setPolicySetParamResponse(const SetPolicySetParamRequestEvent& event,
+						   int result)
+{
+	send_base_resp_msg(RINA_C_IPCP_SET_POLICY_SET_PARAM_RESPONSE,
+			   event.sequenceNumber, result);
 }
 
-void ExtendedIPCManager::selectPolicySetResponse(
-		const SelectPolicySetRequestEvent& event, int result) {
-#if STUB_API
-	//Do nothing
-#else
-	BaseNetlinkMessage responseMessage(RINA_C_IPCM_SELECT_POLICY_SET_RESPONSE);
-	responseMessage.result = result;
-	responseMessage.setSequenceNumber(event.sequenceNumber);
-	responseMessage.setSourceIpcProcessId(ipcProcessId);
-        responseMessage.setDestPortId(ipcManagerPort);
-	responseMessage.setResponseMessage(true);
-	try {
-		rinaManager->sendMessage(&responseMessage, false);
-	} catch (NetlinkException &e) {
-		throw SelectPolicySetException(e.what());
-	}
-#endif
+void ExtendedIPCManager::selectPolicySetResponse(const SelectPolicySetRequestEvent& event,
+						 int result)
+{
+	send_base_resp_msg(RINA_C_IPCP_SELECT_POLICY_SET_RESPONSE,
+			   event.sequenceNumber, result);
 }
 
 void ExtendedIPCManager::pluginLoadResponse(const PluginLoadRequestEvent& event,
-					    int result) {
-#if STUB_API
-	//Do nothing
-#else
-	BaseNetlinkMessage responseMessage(RINA_C_IPCM_PLUGIN_LOAD_RESPONSE);
-	responseMessage.result = result;
-	responseMessage.setSequenceNumber(event.sequenceNumber);
-	responseMessage.setSourceIpcProcessId(ipcProcessId);
-        responseMessage.setDestPortId(ipcManagerPort);
-	responseMessage.setResponseMessage(true);
-	try {
-		rinaManager->sendMessage(&responseMessage, false);
-	} catch (NetlinkException &e) {
-		throw PluginLoadException(e.what());
-	}
-#endif
+					    int result)
+{
+	send_base_resp_msg(RINA_C_IPCM_PLUGIN_LOAD_RESPONSE,
+			   event.sequenceNumber, result);
 }
 
-void ExtendedIPCManager::forwardCDAPRequest(unsigned int sequenceNumber,
-                                             const ser_obj_t& sermsg,
-                                             int result)
+void ExtendedIPCManager::send_fwd_msg(irati_msg_t msg_t, unsigned int sequenceNumber,
+		  	  	      const ser_obj_t& sermsg, int result)
 {
 #if STUB_API
         //Do nothing
 #else
-        IpcmFwdCDAPRequestMessage requestMessage;
+        struct irati_msg_ipcm_fwd_cdap_msg * msg;
 
-        requestMessage.sermsg = sermsg;
-        requestMessage.result = result;
-        requestMessage.setSequenceNumber(sequenceNumber);
-        requestMessage.setSourceIpcProcessId(ipcProcessId);
-        requestMessage.setDestPortId(ipcManagerPort);
-        requestMessage.setResponseMessage(true);
-        int size = get_page_size() + sermsg.size_;
-        try {
-                rinaManager->sendMessageOfMaxSize(&requestMessage,
-                                                  size,
-                                                  false);
-        } catch (NetlinkException &e) {
-                throw FwdCDAPMsgException(e.what());
+        msg = new irati_msg_ipcm_fwd_cdap_msg();
+        msg->msg_type = msg_t;
+        msg->result = result;
+        msg->event_id = sequenceNumber;
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_port = ipcManagerPort;
+        msg->dest_ipcp_id = 0;
+        msg->cdap_msg = new buffer();
+        msg->cdap_msg->size = sermsg.size_;
+        msg->cdap_msg->data = new unsigned char[sermsg.size_];
+        memcpy(msg->cdap_msg->data, sermsg.message_, sermsg.size_);
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
         }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
+}
+
+void ExtendedIPCManager::forwardCDAPRequest(unsigned int sequenceNumber,
+                                            const ser_obj_t& sermsg,
+                                            int result)
+{
+	send_fwd_msg(RINA_C_IPCM_FWD_CDAP_MSG_REQUEST, sequenceNumber,
+		     sermsg, result);
 }
 
 void ExtendedIPCManager::forwardCDAPResponse(unsigned int sequenceNumber,
 					     const ser_obj_t& sermsg,
 					     int result)
 {
-#if STUB_API
-	//Do nothing
-#else
-	IpcmFwdCDAPResponseMessage responseMessage;
-
-	responseMessage.sermsg = sermsg;
-	responseMessage.result = result;
-	responseMessage.setSequenceNumber(sequenceNumber);
-	responseMessage.setSourceIpcProcessId(ipcProcessId);
-        responseMessage.setDestPortId(ipcManagerPort);
-	responseMessage.setResponseMessage(true);
-	int size = get_page_size() + sermsg.size_;
-	try {
-		rinaManager->sendMessageOfMaxSize(&responseMessage,
-		                                  2 * size,
-                                                  false);
-	} catch (NetlinkException &e) {
-		throw FwdCDAPMsgException(e.what());
-	}
-#endif
+	send_fwd_msg(RINA_C_IPCM_FWD_CDAP_MSG_RESPONSE, sequenceNumber,
+		     sermsg, result);
 }
 
 void ExtendedIPCManager::sendMediaReport(const MediaReport& report)
@@ -826,17 +817,21 @@ void ExtendedIPCManager::sendMediaReport(const MediaReport& report)
 #if STUB_API
 	//Do nothing
 #else
-	IpcmMediaReportMessage message;
+        struct irati_msg_ipcm_media_report * msg;
 
-	message.report = report;
-	message.setSourceIpcProcessId(ipcProcessId);
-	message.setDestPortId(ipcManagerPort);
-	message.setNotificationMessage(true);
-	try {
-		rinaManager->sendMessage(&message, false);
-	} catch (NetlinkException &e) {
-		throw IPCException(e.what());
-	}
+        msg = new irati_msg_ipcm_media_report();
+        msg->msg_type = RINA_C_IPCM_MEDIA_REPORT;
+        msg->report = report.to_c_media_report();
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_port = ipcManagerPort;
+        msg->dest_ipcp_id = 0;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
@@ -1032,7 +1027,13 @@ RoutingTableEntry::RoutingTableEntry(){
 const std::string RoutingTableEntry::getKey() const
 {
 	std::stringstream ss;
-	ss << destination.name << "-" << qosId << "-" << nextHopNames.front().alts.front().name;
+	if (destination.name != "") {
+		ss << destination.name << "-" << qosId << "-" << cost << "-"
+		   << nextHopNames.front().alts.front().name;
+	} else {
+		ss << destination.addresses.front() << "-" << qosId << "-" << cost << "-"
+		   << nextHopNames.front().alts.front().addresses.front();
+	}
 
 	return ss.str();
 }
@@ -1046,6 +1047,35 @@ PortIdAltlist::PortIdAltlist(unsigned int nh)
 	add_alt(nh);
 }
 
+void PortIdAltlist::from_c_pid_list(PortIdAltlist & pi,
+			            struct port_id_altlist * pia)
+{
+	if (!pia)
+		return;
+
+	for (int i=0; i<pia->num_ports; i++) {
+		pi.alts.push_back(pia->ports[i]);
+	}
+}
+
+struct port_id_altlist * PortIdAltlist::to_c_pid_list() const
+{
+	struct port_id_altlist * result;
+	std::list<unsigned int>::const_iterator it;
+	int i = 0;
+
+	result = new port_id_altlist();
+	INIT_LIST_HEAD(&result->next);
+	result->num_ports = alts.size();
+	result->ports = new port_id_t[result->num_ports];
+	for (it = alts.begin(); it != alts.end(); ++it) {
+		result->ports[i] = (*it);
+		i++;
+	}
+
+	return result;
+}
+
 void PortIdAltlist::add_alt(unsigned int nh)
 {
 	alts.push_back(nh);
@@ -1056,6 +1086,43 @@ PDUForwardingTableEntry::PDUForwardingTableEntry() {
         address = 0;
         qosId = 0;
         cost = 0;
+}
+
+void PDUForwardingTableEntry::from_c_pff_entry(PDUForwardingTableEntry & pf,
+			     	     	       struct mod_pff_entry * pff)
+{
+	struct port_id_altlist * pos;
+
+	pf.address = pff->fwd_info;
+	pf.cost = pff->cost;
+	pf.qosId = pff->qos_id;
+
+	list_for_each_entry(pos, &(pff->port_id_altlists), next) {
+		PortIdAltlist pia;
+		PortIdAltlist::from_c_pid_list(pia, pos);
+		pf.portIdAltlists.push_back(pia);
+	}
+}
+
+struct mod_pff_entry * PDUForwardingTableEntry::to_c_pff_entry() const
+{
+	struct mod_pff_entry * result;
+	std::list<PortIdAltlist>::const_iterator it;
+	struct port_id_altlist * pia;
+
+	result = new mod_pff_entry();
+	INIT_LIST_HEAD(&result->next);
+	INIT_LIST_HEAD(&result->port_id_altlists);
+	result->qos_id = qosId;
+	result->fwd_info = address;
+	result->cost = cost;
+
+	for(it = portIdAltlists.begin(); it != portIdAltlists.end(); ++it) {
+		pia = it->to_c_pid_list();
+		list_add_tail(&pia->next, &result->port_id_altlists);
+	}
+
+	return result;
 }
 
 bool PDUForwardingTableEntry::operator==(
@@ -1160,206 +1227,245 @@ unsigned short KernelIPCProcess::getIPCProcessId() const {
         return ipcProcessId;
 }
 
-unsigned int KernelIPCProcess::assignToDIF(
-                const DIFInformation& difInformation) {
+unsigned int KernelIPCProcess::assignToDIF(const DIFInformation& difInformation)
+{
         unsigned int seqNum = 0;
 
 #if STUB_API
         // Do nothing
 #else
-        IpcmAssignToDIFRequestMessage message;
-        message.setDIFInformation(difInformation);
-        message.setSourceIpcProcessId(ipcProcessId);
-        message.setDestIpcProcessId(ipcProcessId);
-        message.setDestPortId(0);
-        message.setRequestMessage(true);
+        struct irati_kmsg_ipcm_assign_to_dif * msg;
 
-        try {
-        	//FIXME, compute maximum message size dynamically
-		rinaManager->sendMessageOfMaxSize(&message,
-                                          	  5 * get_page_size(),
-                                          	  true);
-        } catch (NetlinkException &e) {
-                throw AssignToDIFException(e.what());
+        msg = new irati_kmsg_ipcm_assign_to_dif();
+        msg->msg_type = RINA_C_IPCM_ASSIGN_TO_DIF_REQUEST;
+        msg->dif_config = difInformation.dif_configuration_.to_c_dif_config();
+        msg->dif_name = difInformation.dif_name_.to_c_name();
+        msg->type = stringToCharArray(difInformation.dif_type_);
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_ipcp_id = ipcProcessId;
+        msg->dest_port = 0;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
         }
 
-        seqNum = message.getSequenceNumber();
+        seqNum = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
         return seqNum;
 }
 
-unsigned int KernelIPCProcess::updateDIFConfiguration(
-                const DIFConfiguration& difConfiguration) {
+unsigned int
+KernelIPCProcess::updateDIFConfiguration(const DIFConfiguration& difConfiguration)
+{
         unsigned int seqNum=0;
 
 #if STUB_API
         // Do nothing
 #else
-        IpcmUpdateDIFConfigurationRequestMessage message;
-        message.setDIFConfiguration(difConfiguration);
-        message.setSourceIpcProcessId(ipcProcessId);
-        message.setDestIpcProcessId(ipcProcessId);
-        message.setDestPortId(0);
-        message.setRequestMessage(true);
+        struct irati_kmsg_ipcm_update_config * msg;
 
-        try {
-                rinaManager->sendMessage(&message, true);
-        } catch (NetlinkException &e) {
-                throw UpdateDIFConfigurationException(e.what());
+        msg = new irati_kmsg_ipcm_update_config();
+        msg->msg_type = RINA_C_IPCM_UPDATE_DIF_CONFIG_REQUEST;
+        msg->dif_config = difConfiguration.to_c_dif_config();
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_ipcp_id = ipcProcessId;
+        msg->dest_port = 0;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
         }
 
-        seqNum = message.getSequenceNumber();
-
+        seqNum = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
         return seqNum;
 }
 
-unsigned int KernelIPCProcess::createConnection(const Connection& connection) {
+unsigned int KernelIPCProcess::createConnection(const Connection& connection)
+{
         unsigned int seqNum=0;
 
 #if STUB_API
         // Do nothing
 #else
-        IpcpConnectionCreateRequestMessage message;
-        message.connection = connection;
-        message.setSourceIpcProcessId(ipcProcessId);
-        message.setDestIpcProcessId(ipcProcessId);
-        message.setDestPortId(0);
-        message.setRequestMessage(true);
+        struct irati_kmsg_ipcp_conn_create_arrived * msg;
 
-        try {
-                rinaManager->sendMessage(&message, true);
-        } catch (NetlinkException &e) {
-                throw CreateConnectionException(e.what());
+        msg = new irati_kmsg_ipcp_conn_create_arrived();
+        msg->msg_type = RINA_C_IPCP_CONN_CREATE_REQUEST;
+        msg->dst_addr = connection.destAddress;
+        msg->dst_cep = connection.destCepId;
+        msg->dtcp_cfg = connection.dtcpConfig.to_c_dtcp_config();
+        msg->dtp_cfg = connection.dtpConfig.to_c_dtp_config();
+        msg->port_id = connection.portId;
+        msg->qos_id = connection.qosId;
+        msg->flow_user_ipc_process_id = connection.flowUserIpcProcessId;
+        msg->src_addr = connection.sourceAddress;
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_ipcp_id = ipcProcessId;
+        msg->dest_port = 0;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
         }
 
-        seqNum = message.getSequenceNumber();
-
+        seqNum = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
         return seqNum;
 }
 
-unsigned int KernelIPCProcess::updateConnection(const Connection& connection) {
+unsigned int KernelIPCProcess::updateConnection(const Connection& connection)
+{
         unsigned int seqNum=0;
 
 #if STUB_API
         // Do nothing
 #else
-        IpcpConnectionUpdateRequestMessage message;
-        message.portId = connection.portId;
-        message.sourceCepId = connection.sourceCepId;
-        message.destinationCepId = connection.destCepId;
-        message.setSourceIpcProcessId(ipcProcessId);
-        message.setDestIpcProcessId(ipcProcessId);
-        message.setDestPortId(0);
-        message.setRequestMessage(true);
+        struct irati_kmsg_ipcp_conn_update * msg;
 
-        try {
-                rinaManager->sendMessage(&message, true);
-        } catch (NetlinkException &e) {
-                throw UpdateConnectionException(e.what());
+        msg = new irati_kmsg_ipcp_conn_update();
+        msg->msg_type = RINA_C_IPCP_CONN_UPDATE_REQUEST;
+        msg->dst_cep = connection.destCepId;
+        msg->port_id = connection.portId;
+        msg->src_cep = connection.sourceCepId;
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_ipcp_id = ipcProcessId;
+        msg->dest_port = 0;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
         }
 
-        seqNum = message.getSequenceNumber();
-
+        seqNum = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
         return seqNum;
 }
 
-unsigned int KernelIPCProcess::
-createConnectionArrived(const Connection& connection) {
+unsigned int
+KernelIPCProcess::createConnectionArrived(const Connection& connection)
+{
         unsigned int seqNum=0;
 
 #if STUB_API
         // Do nothing
 #else
-        IpcpConnectionCreateArrivedMessage message;
-        message.connection = connection;
-        message.setSourceIpcProcessId(ipcProcessId);
-        message.setDestIpcProcessId(ipcProcessId);
-        message.setDestPortId(0);
-        message.setRequestMessage(true);
+        struct irati_kmsg_ipcp_conn_create_arrived * msg;
 
-        try {
-                rinaManager->sendMessage(&message, true);
-        } catch (NetlinkException &e) {
-                throw CreateConnectionException(e.what());
+        msg = new irati_kmsg_ipcp_conn_create_arrived();
+        msg->msg_type = RINA_C_IPCP_CONN_CREATE_ARRIVED;
+        msg->dst_addr = connection.destAddress;
+        msg->dst_cep = connection.destCepId;
+        msg->dtcp_cfg = connection.dtcpConfig.to_c_dtcp_config();
+        msg->dtp_cfg = connection.dtpConfig.to_c_dtp_config();
+        msg->port_id = connection.portId;
+        msg->qos_id = connection.qosId;
+        msg->src_cep = connection.sourceCepId;
+        msg->flow_user_ipc_process_id = connection.flowUserIpcProcessId;
+        msg->src_addr = connection.sourceAddress;
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_ipcp_id = ipcProcessId;
+        msg->dest_port = 0;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
         }
 
-        seqNum = message.getSequenceNumber();
-
+        seqNum = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
         return seqNum;
 }
 
-unsigned int KernelIPCProcess::
-destroyConnection(const Connection& connection) {
+unsigned int
+KernelIPCProcess::destroyConnection(const Connection& connection)
+{
         unsigned int seqNum = 0;
 
 #if STUB_API
         //Do nothing
 #else
-        BaseNetlinkMessage message(RINA_C_IPCP_CONN_DESTROY_REQUEST);
-        message.port_id = connection.getPortId();
-        message.cep_id = connection.getSourceCepId();
-        message.setSourceIpcProcessId(ipcProcessId);
-        message.setDestIpcProcessId(ipcProcessId);
-        message.setDestPortId(0);
-        message.setRequestMessage(true);
+        struct irati_kmsg_multi_msg * msg;
 
-        try {
-                rinaManager->sendMessage(&message, true);
-        } catch (NetlinkException &e) {
-                throw DestroyConnectionException(e.what());
+        msg = new irati_kmsg_multi_msg();
+        msg->msg_type = RINA_C_IPCP_CONN_DESTROY_REQUEST;
+        msg->port_id = connection.portId;
+        msg->cep_id = connection.sourceCepId;
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_ipcp_id = ipcProcessId;
+        msg->dest_port = 0;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
         }
 
-        seqNum = message.getSequenceNumber();
-
+        seqNum = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
         return seqNum;
 }
 
-void KernelIPCProcess::
-modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry *>& entries,
-                        int mode) {
+void KernelIPCProcess::modifyPDUForwardingTableEntries(const std::list<PDUForwardingTableEntry *>& entries,
+                        			       int mode)
+{
 #if STUB_API
         //Do nothing
 #else
-        RmtModifyPDUFTEntriesRequestMessage message;
-        message.setEntries(entries);
-        message.setMode(mode);
-        message.setSourceIpcProcessId(ipcProcessId);
-        message.setDestIpcProcessId(ipcProcessId);
-        message.setDestPortId(0);
-        message.setRequestMessage(true);
+        struct irati_kmsg_rmt_dump_ft * msg;
+        std::list<PDUForwardingTableEntry *>::const_iterator it;
+        struct mod_pff_entry * entry;
 
-        try {
-                rinaManager->sendMessage(&message, true);
-        } catch (NetlinkException &e) {
-                throw PDUForwardingTableException(e.what());
+        msg = new irati_kmsg_rmt_dump_ft();
+        msg->msg_type = RINA_C_RMT_MODIFY_FTE_REQUEST;
+        msg->mode = mode;
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_ipcp_id = ipcProcessId;
+        msg->dest_port = 0;
+        msg->pft_entries = new pff_entry_list();
+        INIT_LIST_HEAD(&msg->pft_entries->pff_entries);
+        for (it = entries.begin(); it != entries.end(); ++it) {
+        	entry = (*it)->to_c_pff_entry();
+        	list_add_tail(&entry->next, &msg->pft_entries->pff_entries);
         }
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 }
 
-unsigned int KernelIPCProcess::dumptPDUFT() {
+unsigned int KernelIPCProcess::dumptPDUFT()
+{
         unsigned int seqNum=0;
 
 #if STUB_API
         //Do nothing
 #else
-        BaseNetlinkMessage message(RINA_C_RMT_DUMP_FT_REQUEST);
-        message.setSourceIpcProcessId(ipcProcessId);
-        message.setDestIpcProcessId(ipcProcessId);
-        message.setDestPortId(0);
-        message.setRequestMessage(true);
+        struct irati_msg_base * msg;
 
-        try {
-                rinaManager->sendMessage(&message, true);
-        } catch (NetlinkException &e) {
-                throw PDUForwardingTableException(e.what());
+        msg = new irati_msg_base();
+        msg->msg_type = RINA_C_RMT_DUMP_FT_REQUEST;
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_ipcp_id = ipcProcessId;
+        msg->dest_port = 0;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
         }
 
-        seqNum = message.getSequenceNumber();
+        seqNum = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 
         return seqNum;
@@ -1372,20 +1478,23 @@ unsigned int KernelIPCProcess::updateCryptoState(const CryptoState& state)
 #if STUB_API
         //Do nothing
 #else
-        IPCPUpdateCryptoStateRequestMessage message;
-        message.setSourceIpcProcessId(ipcProcessId);
-        message.setDestIpcProcessId(ipcProcessId);
-        message.state = state;
-        message.setDestPortId(0);
-        message.setRequestMessage(true);
+        struct irati_kmsg_ipcp_update_crypto_state * msg;
 
-        try {
-                rinaManager->sendMessage(&message, true);
-        } catch (NetlinkException &e) {
-                throw Exception(e.what());
+        msg = new irati_kmsg_ipcp_update_crypto_state();
+        msg->msg_type = RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST;
+        msg->state = state.to_c_crypto_state();
+        msg->port_id = state.port_id;
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_ipcp_id = ipcProcessId;
+        msg->dest_port = 0;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
         }
 
-        seqNum = message.getSequenceNumber();
+        seqNum = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 
         return seqNum;
@@ -1401,83 +1510,87 @@ unsigned int KernelIPCProcess::changeAddress(unsigned int new_address,
 #if STUB_API
 	//Do nothing
 #else
-	IPCPAddressChangeRequestMessage message;
-	message.setSourceIpcProcessId(ipcProcessId);
-	message.setDestIpcProcessId(ipcProcessId);
-	message.new_address = new_address;
-	message.old_address = old_address;
-	message.use_new_timeout = use_new_t;
-	message.deprecate_old_timeout = deprecate_old_t;
-	message.setDestPortId(0);
-	message.setRequestMessage(true);
+        struct irati_kmsg_ipcp_address_change * msg;
 
-	try {
-		rinaManager->sendMessage(&message, true);
-	} catch (NetlinkException &e) {
-		throw Exception(e.what());
-	}
+        msg = new irati_kmsg_ipcp_address_change();
+        msg->msg_type = RINA_C_IPCP_ADDRESS_CHANGE_REQUEST;
+        msg->new_address = new_address;
+        msg->old_address = old_address;
+        msg->use_new_timeout = use_new_t;
+        msg->deprecate_old_timeout = deprecate_old_t;
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_ipcp_id = ipcProcessId;
+        msg->dest_port = 0;
 
-	seqNum = message.getSequenceNumber();
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        seqNum = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 
 	return seqNum;
 }
 
-unsigned int KernelIPCProcess::setPolicySetParam(
-                                const std::string& path,
-                                const std::string& name,
-                                const std::string& value)
+unsigned int KernelIPCProcess::setPolicySetParam(const std::string& path,
+                                		 const std::string& name,
+						 const std::string& value)
 {
         unsigned int seqNum=0;
 
 #if STUB_API
         //Do nothing
 #else
-        IpcmSetPolicySetParamRequestMessage message;
-        message.path = path;
-        message.name = name;
-        message.value = value;
-        message.setSourceIpcProcessId(ipcProcessId);
-        message.setDestIpcProcessId(ipcProcessId);
-        message.setDestPortId(0);
-        message.setRequestMessage(true);
+        struct irati_kmsg_ipcp_select_ps_param * msg;
 
-        try {
-                rinaManager->sendMessage(&message, true);
-        } catch (NetlinkException &e) {
-                throw SetPolicySetParamException(e.what());
+        msg = new irati_kmsg_ipcp_select_ps_param();
+        msg->msg_type = RINA_C_IPCP_SET_POLICY_SET_PARAM_REQUEST;
+        msg->path = stringToCharArray(path);
+        msg->name = stringToCharArray(name);
+        msg->value = stringToCharArray(value);
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_ipcp_id = ipcProcessId;
+        msg->dest_port = 0;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
         }
 
-        seqNum = message.getSequenceNumber();
+        seqNum = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 
         return seqNum;
 }
 
-unsigned int KernelIPCProcess::selectPolicySet(
-                                const std::string& path,
-                                const std::string& name)
+unsigned int KernelIPCProcess::selectPolicySet(const std::string& path,
+                                	       const std::string& name)
 {
         unsigned int seqNum=0;
 
 #if STUB_API
         //Do nothing
 #else
-        IpcmSelectPolicySetRequestMessage message;
-        message.path = path;
-        message.name = name;
-        message.setSourceIpcProcessId(ipcProcessId);
-        message.setDestIpcProcessId(ipcProcessId);
-        message.setDestPortId(0);
-        message.setRequestMessage(true);
+        struct irati_kmsg_ipcp_select_ps * msg;
 
-        try {
-                rinaManager->sendMessage(&message, true);
-        } catch (NetlinkException &e) {
-                throw SelectPolicySetException(e.what());
+        msg = new irati_kmsg_ipcp_select_ps();
+        msg->msg_type = RINA_C_IPCP_SELECT_POLICY_SET_REQUEST;
+        msg->path = stringToCharArray(path);
+        msg->name = stringToCharArray(name);
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_ipcp_id = ipcProcessId;
+        msg->dest_port = 0;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
         }
 
-        seqNum = message.getSequenceNumber();
+        seqNum = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 
         return seqNum;
@@ -1492,56 +1605,31 @@ unsigned int KernelIPCProcess::writeMgmgtSDUToPortId(void * sdu,
 #if STUB_API
 	//Do nothing
 #else
-	IPCPWriteMgmtSDURequestMessage message;
-	message.setSourceIpcProcessId(ipcProcessId);
-	message.setDestIpcProcessId(ipcProcessId);
-	message.sdu = sdu;
-	message.size = size;
-	message.port_id = portId;
-	message.setDestPortId(0);
-	message.setRequestMessage(true);
+        struct irati_kmsg_ipcp_mgmt_sdu * msg;
 
-	try {
-		rinaManager->sendMessage(&message, true);
-	} catch (NetlinkException &e) {
-		throw Exception(e.what());
-	}
+        msg = new irati_kmsg_ipcp_mgmt_sdu();
+        msg->msg_type = RINA_C_IPCP_MANAGEMENT_SDU_WRITE_REQUEST;
+        msg->sdu = new buffer();
+        msg->sdu->size = size;
+        msg->sdu->data = new unsigned char[size];
+        memcpy(msg->sdu->data, sdu, size);
+        msg->port_id = portId;
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_ipcp_id = ipcProcessId;
+        msg->dest_port = 0;
 
-	seqNum = message.getSequenceNumber();
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        seqNum = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 
 	return seqNum;
 }
 
-unsigned int KernelIPCProcess::sendMgmgtSDUToAddress(void * sdu,
-						     int size,
-						     unsigned int address)
-{
-	unsigned int seqNum=0;
-
-#if STUB_API
-	//Do nothing
-#else
-	IPCPWriteMgmtSDURequestMessage message;
-	message.setSourceIpcProcessId(ipcProcessId);
-	message.setDestIpcProcessId(ipcProcessId);
-	message.sdu = sdu;
-	message.size = size;
-	message.address = address;
-	message.setDestPortId(0);
-	message.setRequestMessage(true);
-
-	try {
-		rinaManager->sendMessage(&message, true);
-	} catch (NetlinkException &e) {
-		throw Exception(e.what());
-	}
-
-	seqNum = message.getSequenceNumber();
-#endif
-
-	return seqNum;
-}
 Singleton<KernelIPCProcess> kernelIPCProcess;
 
 // CLASS DirectoryForwardingTableEntry

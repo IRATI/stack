@@ -27,6 +27,10 @@
 #include <errno.h>
 #include <librina/librina.h>
 #include <rina/api.h>
+#include "ctrl.h"
+#include "irati/kucommon.h"
+#include "irati/serdes-utils.h"
+#include "irati/kernel-msg.h"
 
 using namespace rina;
 using namespace std;
@@ -37,640 +41,547 @@ extern "C"
 #define APIDBG
 #undef APIDBG
 
-/*
- * Global variable, not protected by lock. Its purpose is to avoid calling
- * rina::initialize() for every API call. Actually, without a lock there is
- * is race condition and the function may be called twice. However,
- * if this really happens, rina::initialize() - which is internally protected
- * by a lock - will raise and exception that we can catch. The race is
- * therefore harmless. */
-static int initialized = 0;
+int rina_open(void)
+{
+        return irati_open_ctrl_port(0);
+}
+
+#define RINA_REG_EVENT_ID   0x7a6b /* casual value, used just for assert() */
+
+static void irati_msg_fill_common(struct irati_msg_base * msg, int wfd)
+{
+	if (!msg)
+		return;
+
+	msg->dest_ipcp_id = 0;
+	msg->src_ipcp_id = 0;
+	msg->dest_port = IPCM_CTRLDEV_PORT;
+	msg->src_port = get_app_ctrl_port_from_cfd(wfd);
+}
 
 static int
-librina_init(void)
+irati_register_req_fill(struct irati_msg_app_reg_app *req, const char *dif_name,
+		        const char *appl_name, int wfd, int fd)
 {
-        errno = 0; /* reset at the beginning of each API call */
+	struct name * dn, * appn, *dan;
 
-        if (initialized) {
-                return 0;
-        }
-        initialized = 1;
-        try {
-                rina::initialize("INFO", "/dev/null");
-        } catch (rina::Exception &e) {
-#ifdef APIDBG
-                cout << __func__ << ": " << e.what() << endl;
-#endif /* APIDBG */
-        } catch (...) {
-                /*
-                 * We got an exception because librina is already
-                 * initialized. The race happened, but it was harmless
-                 * and there is nothing that we need to do.
-                 */
-        }
-        return 0;
+	if (!req)
+		return -1;
+
+	dn = rina_name_create();
+	if (!dn)
+		return -1;
+
+	if (dif_name && rina_name_from_string(dif_name, dn)) {
+		rina_name_free(dn);
+		return -1;
+	}
+
+	appn = rina_name_create();
+	if (!appn) {
+		rina_name_free(dn);
+		return -1;
+	}
+
+	if (appl_name && rina_name_from_string(appl_name, appn)) {
+		rina_name_free(dn);
+		rina_name_free(appn);
+		return -1;
+	}
+
+	dan = rina_name_create();
+	if (!dan) {
+		rina_name_free(dn);
+		rina_name_free(appn);
+		return -1;
+	}
+
+	memset(req, 0, sizeof(*req));
+	irati_msg_fill_common(IRATI_MB(req), wfd);
+	req->msg_type = RINA_C_APP_REGISTER_APPLICATION_REQUEST;
+	req->event_id = RINA_REG_EVENT_ID;
+	req->fa_ctrl_port = get_app_ctrl_port_from_cfd(fd);
+	req->dif_name = dn;
+	req->app_name = appn;
+	req->daf_name = dan;
+	req->pid = getpid();
+	if (dif_name)
+		req->reg_type = rina::APPLICATION_REGISTRATION_SINGLE_DIF;
+	else
+		req->reg_type = rina::APPLICATION_REGISTRATION_ANY_DIF;
+
+	return 0;
 }
-
-int
-rina_open(void)
-{
-        if (librina_init()) {
-                return -1;
-        }
-
-        /* The control file descriptor is process-wise, so we duplicate
-         * it to provide a consistent API. However, a process should
-         * not call rina_open() more than once, otherwise there would
-         * be a race on reading the control messages. */
-        return dup(ipcManager->getControlFd());
-}
-
-static IPCEvent *
-wait_for_event(IPCEventType wtype, unsigned int wseqnum)
-{
-        /* Wait for events to come, forever. In the future we
-         * could use select to add a timeout mechanism, and return
-         * errno = ETIMEDOUT in case of timeout. */
-        for (;;) {
-                IPCEvent* event = ipcEventProducer->eventWait();
-                bool match;
-
-                if (!event) {
-                        errno = ENXIO;
-                        return NULL;
-                }
-
-                /* Exit the loop if the event matches what we asked for, or
-                 * if we were not asked for anything in particular. */
-                match = ((wtype == NO_EVENT || event->eventType == wtype) &&
-                        (wseqnum == ~0U || event->sequenceNumber == wseqnum));
-
-                switch (event->eventType) {
-
-                /* Process here the events for which we only need some
-                 * bookkeeping. */
-                case REGISTER_APPLICATION_RESPONSE_EVENT: {
-                        RegisterApplicationResponseEvent *resp;
-
-                        resp = dynamic_cast<RegisterApplicationResponseEvent*>(event);
-
-                        /* Update librina state */
-                        if (resp->result) {
-                                errno = EPERM;
-                                ipcManager->withdrawPendingRegistration(
-                                                        event->sequenceNumber);
-                        } else {
-                                ipcManager->commitPendingRegistration(
-                                                        event->sequenceNumber,
-                                                        resp->DIFName);
-                        }
-                        delete event;
-                        event = NULL;
-                        break;
-                }
-
-                case UNREGISTER_APPLICATION_RESPONSE_EVENT: {
-                        UnregisterApplicationResponseEvent *resp;
-
-                        resp = dynamic_cast<UnregisterApplicationResponseEvent*>(event);
-                        ipcManager->appUnregistrationResult(
-                                                event->sequenceNumber,
-                                                resp->result == 0);
-                        delete event;
-                        event = NULL;
-                        break;
-                }
-
-                case FLOW_DEALLOCATED_EVENT:
-                        ipcManager->flowDeallocated(dynamic_cast<FlowDeallocatedEvent*>(event)->portId);
-                        delete event;
-                        event = NULL;
-                        break;
-
-                case DEALLOCATE_FLOW_RESPONSE_EVENT: {
-                        DeallocateFlowResponseEvent *resp;
-
-                        resp = dynamic_cast<DeallocateFlowResponseEvent*>(event);
-                        ipcManager->flowDeallocationResult(resp->portId, resp->result == 0);
-                        delete event;
-                        event = NULL;
-                        break;
-                }
-
-                /* Other events are returned to the caller, if they match. */
-                case FLOW_ALLOCATION_REQUESTED_EVENT:
-                case ALLOCATE_FLOW_REQUEST_RESULT_EVENT:
-                        break;
-                default:
-                        break;
-                }
-
-                if (match) {
-                        return event;
-                }
-        }
-
-        return NULL;
-}
-
-/* Data structures used to implement:
- *    - the splitted call rina_flow_accept(RINA_F_NORESP)/rina_flow_respond():
- *              - a table for pending requests
- *              - a counter for handles.
- *    - the rina_flow_alloc() with RINA_F_NOWAIT
- *              - a table for pending requests
- *    - the rina_register() and rina_unregister() with RINA_F_NOWAIT
- *              - a table for pending requests
- */
-
-struct RegPendingEvent {
-        unsigned seqnum;
-        rina::IPCEventType evtype;
-};
-
-static map<int, FlowRequestEvent *> pending_fre;
-static int handle_next = 0;
-static map<int, unsigned int> pending_fa;
-static map<int, RegPendingEvent> pending_reg;
-rina::Lockable split_lock;
 
 static int
-registration_complete(const RegPendingEvent &rpe)
+irati_unregister_req_fill(struct irati_msg_app_reg_app_resp *req, const char *dif_name,
+		          const char *appl_name, int wfd)
 {
-        IPCEvent *event = wait_for_event(rpe.evtype, rpe.seqnum);
+	struct name * dn, * appn;
 
-        assert(event == NULL);
-        if (errno != 0) {
-                return -1;
-        }
+	if (!req)
+		return -1;
 
-        return 0;
+	dn = rina_name_create();
+	if (!dn)
+		return -1;
+
+	if (dif_name && rina_name_from_string(dif_name, dn)) {
+		rina_name_free(dn);
+		return -1;
+	}
+
+	appn = rina_name_create();
+	if (!appn) {
+		rina_name_free(dn);
+		return -1;
+	}
+
+	if (appl_name && rina_name_from_string(appl_name, appn)) {
+		rina_name_free(dn);
+		rina_name_free(appn);
+		return -1;
+	}
+
+	memset(req, 0, sizeof(*req));
+	irati_msg_fill_common(IRATI_MB(req), wfd);
+	req->msg_type = RINA_C_APP_REGISTER_APPLICATION_REQUEST;
+	req->event_id = RINA_REG_EVENT_ID;
+	req->dif_name = dn;
+	req->app_name = appn;
+
+	return 0;
 }
 
-int
-rina_register_wait(int fd, int wfd)
+int rina_register_wait(int fd, int wfd)
 {
-        map<int, RegPendingEvent>::iterator mit;
-        RegPendingEvent rpe;
-        int ret = -1;
+	struct irati_msg_app_reg_app_resp *resp;
+	int8_t response;
+	int ret = -1;
 
-        (void)fd; /* The netlink socket file descriptor is used internally */
-        if (librina_init()) {
-                return -1;
-        }
+	resp = (struct irati_msg_app_reg_app_resp *) irati_read_next_msg(wfd);
+	if (!resp) {
+		goto out;
+	}
 
-        split_lock.lock();
-        mit = pending_reg.find(wfd);
-        if (mit == pending_reg.end()) {
-                split_lock.unlock();
-                errno = EINVAL;
-                return -1;
-        }
-        rpe = mit->second;
-        pending_reg.erase(mit);
-        split_lock.unlock();
+	assert(resp->msg_type == RINA_C_APP_REGISTER_APPLICATION_RESPONSE);
+	assert(resp->event_id == RINA_REG_EVENT_ID);
+	response = resp->result;
+	irati_ctrl_msg_free(IRATI_MB(resp));
 
-        try {
-                ret = registration_complete(rpe);
-        } catch (rina::Exception &e) {
-#ifdef APIDBG
-                cout << __func__ << ": " << e.what() << endl;
-#endif /* APIDBG */
-                errno = ENXIO; /* IPC Manager Daemon is not running */
-        } catch (...) {
-                errno = ENOMEM;
-        }
+	if (response) {
+		errno = EBUSY;
+		goto out;
+	} else {
+		ret = 0;
+	}
 
-        return ret;
+out:
+	close (wfd);
+
+	return ret;
 }
 
-static void
-str2apninfo(const string& str, ApplicationProcessNamingInformation &apni)
+static int
+rina_register_common(int fd, const char *dif_name, const char *local_appl,
+                     int flags, bool reg)
 {
-        std::string *vps[] = { &apni.processName, &apni.processInstance,
-                               &apni.entityName, &apni.entityInstance };
-        std::stringstream ss(str);
+	void * req = 0;
+	int ret = 0;
+	int wfd;
 
-        for (int i = 0; i < 4 && getline(ss, *(vps[i]), '|'); i++) {
-        }
+	if (flags & ~(RINA_F_NOWAIT)) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	/* Open a dedicated file descriptor to perform the operation and wait
+	 * for the response. */
+	wfd = rina_open();
+	if (wfd < 0) {
+		return wfd;
+	}
+
+	if (reg) {
+		req = new irati_msg_app_reg_app();
+		ret = irati_register_req_fill((struct irati_msg_app_reg_app*) req,
+				              dif_name, local_appl, wfd, fd);
+	} else {
+		req = new irati_msg_app_reg_app_resp();
+		ret = irati_unregister_req_fill((struct irati_msg_app_reg_app_resp*) req,
+			              	        dif_name, local_appl, wfd);
+	}
+
+	if (ret) {
+		errno = ENOMEM;
+		irati_ctrl_msg_free(IRATI_MB(req));
+		goto out;
+	}
+
+	/* Issue the request ad wait for the response. */
+	ret = irati_write_msg(wfd, IRATI_MB(req));
+	irati_ctrl_msg_free(IRATI_MB(req));
+	if (ret < 0) {
+		goto out;
+	}
+
+	if (flags & RINA_F_NOWAIT) {
+		return wfd; /* Return the file descriptor to wait on. */
+	}
+
+	/* Wait for the operation to complete right now. */
+	return rina_register_wait(fd, wfd);
+out:
+	close_port(wfd);
+
+	return ret;
 }
 
 int
 rina_register(int fd, const char *dif_name, const char *local_appl, int flags)
 {
-        ApplicationRegistrationInformation ari;
-        RegPendingEvent rpe;
-
-        (void)fd; /* The netlink socket file descriptor is used internally */
-        if (librina_init()) {
-                return -1;
-        }
-
-        if (flags & ~RINA_F_NOWAIT) {
-                errno = EINVAL;
-                return -1;
-        }
-
-        ari.ipcProcessId = 0;  /* This is an application, not an IPC process */
-        str2apninfo(string(local_appl), ari.appName);
-
-        if (dif_name) {
-                ari.applicationRegistrationType = APPLICATION_REGISTRATION_SINGLE_DIF;
-                ari.difName = ApplicationProcessNamingInformation(
-                                                string(dif_name), string());
-        } else {
-                ari.applicationRegistrationType = APPLICATION_REGISTRATION_ANY_DIF;
-        }
-
-        try {
-                /* Issue a registration request. */
-                rpe.seqnum = ipcManager->requestApplicationRegistration(ari);
-                rpe.evtype = REGISTER_APPLICATION_RESPONSE_EVENT;
-
-                if (flags & RINA_F_NOWAIT) {
-                        int wfd = rina_open();
-
-                        /* Store the seqnum in the pending registration
-                         * mapped from a duplicate of the control
-                         * file descriptor. */
-                        split_lock.lock();
-                        pending_reg[wfd] = rpe;
-                        split_lock.unlock();
-
-                        return wfd;
-                }
-
-                return registration_complete(rpe);
-
-        } catch (rina::Exception &e) {
-#ifdef APIDBG
-                cout << __func__ << ": " << e.what() << endl;
-#endif /* APIDBG */
-                errno = ENXIO; /* IPC Manager Daemon is not running */
-                return -1;
-        } catch (...) {
-                /* Operations can fail because of allocation failures. */
-                errno = ENOMEM;
-                return -1;
-        }
-
-        return 0;
+	return rina_register_common(fd, dif_name, local_appl, flags, true);
 }
 
 int
 rina_unregister(int fd, const char *dif_name, const char *local_appl, int flags)
 {
-        ApplicationProcessNamingInformation appi;
-        ApplicationProcessNamingInformation difi;
-        RegPendingEvent rpe;
-
-        (void)fd; /* The netlink socket file descriptor is used internally */
-        if (librina_init()) {
-                return -1;
-        }
-
-        if (flags & ~RINA_F_NOWAIT) {
-                errno = EINVAL;
-                return -1;
-        }
-
-        difi = ApplicationProcessNamingInformation(string(dif_name), string());
-        str2apninfo(string(local_appl), appi);
-
-        try {
-                /* Issue unregistration request. */
-                rpe.seqnum = ipcManager->requestApplicationUnregistration(appi,
-                                difi);
-                rpe.evtype = UNREGISTER_APPLICATION_RESPONSE_EVENT;
-
-                if (flags & RINA_F_NOWAIT) {
-                        int wfd = rina_open();
-
-                        /* Store the seqnum in the pending registration
-                         * mapped from a duplicate of the control
-                         * file descriptor. */
-                        split_lock.lock();
-                        pending_reg[wfd] = rpe;
-                        split_lock.unlock();
-
-                        return wfd;
-                }
-
-                return registration_complete(rpe);
-
-        } catch (rina::Exception &e) {
-#ifdef APIDBG
-                cout << __func__ << ": " << e.what() << endl;
-#endif /* APIDBG */
-                errno = ENXIO; /* IPC Manager Daemon is not running */
-                return -1;
-        } catch (...) {
-                /* Operations can fail because of allocation failures. */
-                errno = ENOMEM;
-                return -1;
-        }
-
-        return 0;
+	return rina_register_common(fd, dif_name, local_appl, flags, false);
 }
 
-static void
-remote_appl_fill(FlowRequestEvent *fre, char **remote_appl)
-{
-        if (remote_appl == NULL) {
-                return;
-        }
+#define RINA_FA_EVENT_ID    0x6271 /* casual value, used just for assert() */
 
-        *remote_appl = strdup(fre->remoteApplicationName.toString().c_str());
-        if (*remote_appl == NULL) {
-                throw std::bad_alloc();
-                ipcManager->allocateFlowResponse(*fre,
-                                /* result */ -1,
-                                /* notifySource */ true,
-                                /* blocking */ true);
-        }
+static int
+irati_fa_req_fill(struct irati_kmsg_ipcm_allocate_flow *req, const char *dif_name,
+		  const char *local_appl, const char *remote_appl,
+		  const struct rina_flow_spec *flowspec, int wfd)
+{
+	struct name * dn, * ln, * rn;
+
+	if (!req)
+		return -1;
+
+	dn = rina_name_create();
+	if (!dn)
+		return -1;
+
+	if (dif_name && rina_name_from_string(dif_name, dn)) {
+		rina_name_free(dn);
+		return -1;
+	}
+
+	ln = rina_name_create();
+	if (!ln) {
+		rina_name_free(dn);
+		return -1;
+	}
+
+	if (local_appl && rina_name_from_string(local_appl, ln)) {
+		rina_name_free(dn);
+		rina_name_free(ln);
+		return -1;
+	}
+
+	rn = rina_name_create();
+	if (!rn) {
+		rina_name_free(dn);
+		rina_name_free(ln);
+		return -1;
+	}
+
+	if (remote_appl && rina_name_from_string(remote_appl, rn)) {
+		rina_name_free(dn);
+		rina_name_free(ln);
+		rina_name_free(rn);
+		return -1;
+	}
+
+	memset(req, 0, sizeof(*req));
+	irati_msg_fill_common(IRATI_MB(req), wfd);
+	req->msg_type = RINA_C_IPCM_ALLOCATE_FLOW_REQUEST;
+	req->event_id = RINA_FA_EVENT_ID;
+	req->dif_name = dn;
+	req->local = ln;
+	req->remote = rn;
+	req->fspec = new flow_spec();
+	req->fspec->average_bandwidth = flowspec->avg_bandwidth;
+	req->fspec->average_sdu_bandwidth = 0;
+	req->fspec->delay = flowspec->max_delay;
+	req->fspec->jitter = flowspec->max_jitter;
+	req->fspec->max_allowable_gap = flowspec->max_sdu_gap;
+	req->fspec->undetected_bit_error_rate = flowspec->max_loss;
+	req->fspec->ordered_delivery = flowspec->in_order_delivery;
+	req->pid = getpid();
+
+	return 0;
 }
 
-int
-rina_flow_respond(int fd, int handle, int response)
+int rina_flow_alloc_wait(int wfd)
 {
-        map<int, FlowRequestEvent *>::iterator mit;
-        FlowRequestEvent *fre;
-        FlowInformation flow;
+	struct irati_msg_app_alloc_flow_result *resp;
+	int ret = -1;
 
-        (void)fd; /* The netlink socket file descriptor is used internally */
-        if (librina_init()) {
-                return -1;
-        }
+	resp = (struct irati_msg_app_alloc_flow_result *) irati_read_next_msg(wfd);
+	if (!resp && errno == EAGAIN) {
+		/* Nothing to read, propagate the error without closing wfd,
+		 * because the caller will call us again. */
+		return ret;
+	}
+	if (!resp) {
+		goto out;
+	}
 
-        /* Look up the event in the pending table. */
-        split_lock.lock();
-        mit = pending_fre.find(handle);
-        if (mit == pending_fre.end()) {
-                split_lock.unlock();
-                errno = EINVAL;
-                return -1;
-        }
-        fre = mit->second;
-        mit->second = NULL;
-        pending_fre.erase(mit);
-        split_lock.unlock();
+	assert(resp->msg_type == RINA_C_APP_ALLOCATE_FLOW_REQUEST_RESULT);
+	assert(resp->event_id == RINA_FA_EVENT_ID);
 
-        try {
-                flow = ipcManager->allocateFlowResponse(*fre,
-                                                /* result */ response,
-                                                /* notifySource */ true,
-                                                /* blocking */ true);
-        } catch (rina::Exception &e) {
-#ifdef APIDBG
-                cout << __func__ << ": " << e.what() << endl;
-#endif /* APIDBG */
-                errno = ENXIO; /* IPC Manager Daemon is not running */
-                flow.fd = -1;
-        } catch (...) {
-                errno = ENOMEM;
-                flow.fd = -1;
-        }
-        delete fre;
+	if (resp->port_id < 0) {
+		errno = EPERM;
+	} else {
+		ret = irati_open_io_port(resp->port_id);
+	}
 
-        return flow.fd;
-}
+	irati_ctrl_msg_free(IRATI_MB(resp));
+out:
+	close(wfd);
 
-int
-rina_flow_accept(int fd, char **remote_appl, struct rina_flow_spec *spec,
-                 unsigned int flags)
-{
-        FlowInformation flow;
-        IPCEvent *event = NULL;
-        int retfd = -1;
-
-        if (flags & ~RINA_F_NORESP) {
-                errno = EINVAL;
-                return -1;
-        }
-
-        if (remote_appl) {
-                *remote_appl = NULL;
-        }
-
-        if (spec) {
-                rina_flow_spec_default(spec);
-        }
-
-        (void)fd; /* The netlink socket file descriptor is used internally */
-        if (librina_init()) {
-                return -1;
-        }
-
-        try {
-                FlowRequestEvent *fre;
-
-                event = wait_for_event(FLOW_ALLOCATION_REQUESTED_EVENT, ~0U);
-                if (event == NULL) {
-                        /* This is an error, errno already set internally. */
-                        return -1;
-                }
-
-                fre = dynamic_cast<FlowRequestEvent*>(event);
-                assert(fre);
-
-                remote_appl_fill(fre, remote_appl);
-
-                if (spec) {
-                        /* Convert fre->flowSpecification (FlowSpecification)
-                         *           --> spec (struct rina_flow_spec) */
-                        spec->max_sdu_gap = fre->flowSpecification.maxAllowableGap;
-                        spec->avg_bandwidth = fre->flowSpecification.averageBandwidth;
-                        spec->max_delay = fre->flowSpecification.delay;
-                        spec->max_jitter = fre->flowSpecification.jitter;
-                        spec->in_order_delivery = fre->flowSpecification.orderedDelivery;
-                        spec->msg_boundaries = fre->flowSpecification.partialDelivery;
-                }
-
-                if (flags & RINA_F_NORESP) {
-                        int handle;
-
-                        /* Store the event in the pending table. */
-                        split_lock.lock();
-                        handle = handle_next ++;
-                        if (handle_next < 0) { /* Overflow */
-                                handle_next = 0;
-                        }
-                        pending_fre[handle] = fre;
-                        split_lock.unlock();
-
-                        return handle;
-                }
-
-                flow = ipcManager->allocateFlowResponse(*fre,
-                                                /* result */ 0,
-                                                /* notifySource */ true,
-                                                /* blocking */ true);
-                retfd = flow.fd;
-        } catch (rina::Exception &e) {
-#ifdef APIDBG
-                cout << __func__ << ": " << e.what() << endl;
-#endif /* APIDBG */
-                errno = ENXIO; /* IPC Manager Daemon is not running */
-        } catch (...) {
-                errno = ENOMEM;
-        }
-        delete event;
-
-        return retfd;
-}
-
-static FlowInformation
-flow_alloc_complete(unsigned int seqnum)
-{
-        AllocateFlowRequestResultEvent *resp;
-        FlowInformation flow;
-        IPCEvent *event;
-
-        event = wait_for_event(ALLOCATE_FLOW_REQUEST_RESULT_EVENT,
-                                         seqnum);
-
-        /*
-         * Note that it may be resp->portId < 0, which means the
-         * flow allocation request was denied. In this case the
-         * commitPendingFlow() function will set flow.fd to -1,
-         * and the same invalid fd is returned to the application,
-         * which is what we want.
-         */
-        resp = dynamic_cast<AllocateFlowRequestResultEvent *>(event);
-
-        try {
-                flow = ipcManager->commitPendingFlow(resp->sequenceNumber,
-                                                     resp->portId,
-                                                     resp->difName);
-                if (flow.fd < 0) {
-                        errno = EPERM;
-                }
-        } catch (...) {
-                delete event;
-                throw;
-        }
-
-        delete event;
-
-        return flow;
+	return ret;
 }
 
 int
 rina_flow_alloc(const char *dif_name, const char *local_appl,
-                const char *remote_appl, const struct rina_flow_spec *flowspec,
-                unsigned int flags)
+		const char *remote_appl, const struct rina_flow_spec *flowspec,
+		unsigned int flags)
 {
-        ApplicationProcessNamingInformation local_apni, remote_apni, dif_apni;
-        FlowSpecification flowspec_i;
-        struct rina_flow_spec spec;
-        FlowInformation flow;
-        unsigned int seqnum;
+	struct irati_kmsg_ipcm_allocate_flow * req;
+	int wfd, ret;
 
-        if (librina_init()) {
-                return -1;
-        }
+	if (flags & ~(RINA_F_NOWAIT)) {
+		errno = EINVAL;
+		return -1;
+	}
 
-        if (flags & ~RINA_F_NOWAIT) {
-                errno = EINVAL;
-                return -1;
-        }
+	wfd = rina_open();
+	if (wfd < 0) {
+		return wfd;
+	}
 
-        if (local_appl == NULL || remote_appl == NULL) {
-                errno = EINVAL;
-                return -1;
-        }
+	req = new irati_kmsg_ipcm_allocate_flow();
+	ret = irati_fa_req_fill(req, dif_name, local_appl,
+			        remote_appl, flowspec, wfd);
+	if (ret) {
+		errno = ENOMEM;
+		return -1;
+	}
 
-        if (flowspec == NULL) {
-                rina_flow_spec_default(&spec);
-                flowspec = &spec;
-        }
+	ret = irati_write_msg(wfd, IRATI_MB(req));
+	irati_ctrl_msg_free(IRATI_MB(req));
+	if (ret < 0) {
+		close(wfd);
+		return ret;
+	}
 
-        /* Convert flowspec (struct rina_flow_spec) -->
-         *         flowspec_i (FlowSpecification) */
-        flowspec_i.maxAllowableGap = flowspec->max_sdu_gap;
-        flowspec_i.averageBandwidth = flowspec->avg_bandwidth;
-        flowspec_i.delay = flowspec->max_delay;
-        flowspec_i.jitter = flowspec->max_jitter;
-        flowspec_i.orderedDelivery = flowspec->in_order_delivery;
-        flowspec_i.partialDelivery = flowspec->msg_boundaries;
+	if (flags & RINA_F_NOWAIT) {
+		/* Return the control file descriptor. */
+		return wfd;
+	}
 
-        str2apninfo(string(local_appl), local_apni);
-        str2apninfo(string(remote_appl), remote_apni);
+	/* Return the I/O file descriptor (or an error). */
+	return rina_flow_alloc_wait(wfd);
+}
 
-        try {
-                if (dif_name == NULL) {
-                        seqnum = ipcManager->requestFlowAllocation(local_apni,
-                                                                   remote_apni,
-                                                                   flowspec_i);
-                } else {
-                        str2apninfo(string(dif_name), dif_apni);
-                        seqnum = ipcManager->requestFlowAllocationInDIF(
-                                                                local_apni,
-                                                                remote_apni,
-                                                                dif_apni,
-                                                                flowspec_i);
-                }
+/* Split accept lock and pending lists. */
+static volatile char sa_lock_var = 0;
+static int sa_handle = 0;
+static unsigned int sa_pending_len = 0;
+struct sa_list {
+	struct list_head sa_handles;
+};
+static struct sa_list sa_pending;
+bool sa_init = false;
+#define SA_PENDING_MAXLEN   (1 << 11)
 
-                if (flags & RINA_F_NOWAIT) {
-                        int wfd = rina_open();
+struct sa_pending_item {
+	int handle;
+	struct irati_kmsg_ipcm_allocate_flow *req;
+	struct list_head node;
+};
 
-                        /* Store the seqnum in the pending flow allocation
-                         * table, mapped from a duplicate of the control
-                         * file descriptor. */
-                        split_lock.lock();
-                        pending_fa[wfd] = seqnum;
-                        split_lock.unlock();
+static void sa_lock(void)
+{
+	while (__sync_lock_test_and_set(&sa_lock_var, 1)) {
+		/* Memory barrier is implicit into the compiler built-in.
+		 * We could also use the newer __atomic_test_and_set() built-in. */
+	}
+}
 
-                        return wfd;
-                }
+static void sa_unlock(void)
+{
+    /* Stores 0 in the lock variable. We could also use the newer
+     * __atomic_clear() built-in. */
+    __sync_lock_release(&sa_lock_var);
+}
 
-                flow = flow_alloc_complete(seqnum);
-        } catch (rina::Exception &e) {
-#ifdef APIDBG
-                cout << __func__ << ": " << e.what() << endl;
-#endif /* APIDBG */
-                errno = ENXIO; /* IPC Manager Daemon is not running */
-                flow.fd = -1;
-        } catch (...) {
-                errno = ENOMEM;
-                flow.fd = -1;
-        }
+static int
+irati_fa_resp_fill(struct irati_msg_app_alloc_flow_response *req,
+		   uint32_t event_id, int resp, int fd)
+{
+	req->msg_type = RINA_C_APP_ALLOCATE_FLOW_RESPONSE;
+	irati_msg_fill_common(IRATI_MB(req), fd);
+	req->event_id = event_id;
+	req->result = resp;
+	req->not_source = true;
+	req->pid = getpid();
 
-        return flow.fd;
+	return 0;
 }
 
 int
-rina_flow_alloc_wait(int wfd)
+rina_flow_accept(int fd, char **remote_appl, struct rina_flow_spec *spec,
+		 unsigned int flags)
 {
-        map<int, unsigned int>::iterator mit;
-        FlowInformation flow;
-        unsigned int seqnum;
+	struct irati_kmsg_ipcm_allocate_flow *req = NULL;
+	struct sa_pending_item * spi = NULL;
+	struct irati_msg_app_alloc_flow_response * resp;
+	int ffd = -1;
+	int ret;
 
-        split_lock.lock();
-        mit = pending_fa.find(wfd);
-        if (mit == pending_fa.end()) {
-                split_lock.unlock();
-                errno = EINVAL;
-                return -1;
-        }
-        seqnum = mit->second;
-        pending_fa.erase(mit);
-        split_lock.unlock();
+	if (remote_appl) {
+		*remote_appl = NULL;
+	}
 
-        try {
-                flow = flow_alloc_complete(seqnum);
-        } catch (rina::Exception &e) {
-#ifdef APIDBG
-                cout << __func__ << ": " << e.what() << endl;
-#endif /* APIDBG */
-                errno = ENXIO; /* IPC Manager Daemon is not running */
-                flow.fd = -1;
-        } catch (...) {
-                errno = ENOMEM;
-                flow.fd = -1;
-        }
+	if (spec) {
+		memset(spec, 0, sizeof(*spec));
+	}
 
-        return flow.fd;
+	if (flags & ~(RINA_F_NORESP)) { /* wrong flags */
+		errno = EINVAL;
+		return -1;
+	}
+
+	if (flags & RINA_F_NORESP) {
+		if (sa_pending_len >= SA_PENDING_MAXLEN) {
+			errno = ENOSPC;
+			return -1;
+		}
+
+		spi = new sa_pending_item();
+		if (!spi) {
+			errno = ENOMEM;
+			return -1;
+		}
+		memset(spi, 0, sizeof(*spi));
+	}
+
+	req = (struct irati_kmsg_ipcm_allocate_flow *) irati_read_next_msg(fd);
+	if (!req) {
+		goto out0;
+	}
+
+	assert(req->msg_type == RINA_C_APP_ALLOCATE_FLOW_REQUEST_ARRIVED);
+
+	if (remote_appl) {
+		* remote_appl = rina_name_to_string(req->remote);
+		if (!(*remote_appl)) {
+			goto out1;
+		}
+	}
+
+	if (spec) {
+		spec->avg_bandwidth = req->fspec->average_bandwidth;
+		spec->in_order_delivery = req->fspec->ordered_delivery;
+		spec->max_delay = req->fspec->delay;
+		spec->max_jitter = req->fspec->jitter;
+		spec->max_loss = req->fspec->undetected_bit_error_rate;
+		spec->max_sdu_gap = req->fspec->max_allowable_gap;
+	}
+
+	if (flags & RINA_F_NORESP) {
+		sa_lock();
+		if (!sa_init) {
+			INIT_LIST_HEAD(&sa_pending.sa_handles);
+			sa_init = true;
+		}
+		spi->req = req;
+		spi->handle = sa_handle ++;
+		if (sa_handle < 0) { /* Overflow */
+			sa_handle = 0;
+		}
+		list_add_tail(&spi->node, &sa_pending.sa_handles);
+		sa_pending_len ++;
+		sa_unlock();
+
+		return spi->handle;
+	}
+
+	resp = new irati_msg_app_alloc_flow_response();
+	irati_fa_resp_fill((irati_msg_app_alloc_flow_response*) resp,
+			   req->event_id, 0, fd);
+	ret = irati_write_msg(fd, IRATI_MB(resp));
+	if (ret < 0) {
+		goto out2;
+	}
+
+	ffd = irati_open_io_port(req->port_id);
+
+out2:
+	irati_ctrl_msg_free(IRATI_MB(resp));
+out1:
+	irati_ctrl_msg_free(IRATI_MB(req));
+	out0:
+	if (spi) {
+		free(spi);
+	}
+
+	return ffd;
+}
+
+int rina_flow_respond(int fd, int handle, int response)
+{
+	struct sa_pending_item *cur, *spi = NULL;
+	struct irati_kmsg_ipcm_allocate_flow *req;
+	struct irati_msg_app_alloc_flow_response * resp;
+	int ffd = -1;
+	int ret;
+
+	sa_lock();
+	list_for_each_entry(cur, &sa_pending.sa_handles, node) {
+		if (handle == cur->handle) {
+			spi = cur;
+			list_del(&spi->node);
+			sa_pending_len --;
+			break;
+		}
+	}
+	sa_unlock();
+
+	if (spi == NULL) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	req = spi->req;
+	free(spi);
+
+	resp = new irati_msg_app_alloc_flow_response();
+	irati_fa_resp_fill((irati_msg_app_alloc_flow_response*) resp,
+			   req->event_id, response, fd);
+	ret = irati_write_msg(fd, IRATI_MB(resp));
+	if (ret < 0) {
+		goto out;
+	}
+
+	if (response == 0) {
+		/* Positive response, open an I/O device. */
+		ffd = irati_open_io_port(req->port_id);
+	} else {
+		/* Negative response, just return 0. */
+		ffd = 0;
+	}
+out:
+	irati_ctrl_msg_free(IRATI_MB(req));
+	irati_ctrl_msg_free(IRATI_MB(resp));
+
+	return ffd;
 }
 
 void

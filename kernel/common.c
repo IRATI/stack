@@ -26,8 +26,6 @@
 #include "logs.h"
 #include "common.h"
 
-#define PORT_ID_WRONG -1
-
 port_id_t port_id_bad(void)
 { return PORT_ID_WRONG; }
 EXPORT_SYMBOL(port_id_bad);
@@ -35,8 +33,6 @@ EXPORT_SYMBOL(port_id_bad);
 bool is_port_id_ok(port_id_t id)
 { return id >= 0 ? true : false; }
 EXPORT_SYMBOL(is_port_id_ok);
-
-#define CEP_ID_WRONG -1
 
 bool is_cep_id_ok(cep_id_t id)
 { return id >= 0 ? true : false; }
@@ -46,8 +42,6 @@ cep_id_t cep_id_bad(void)
 { return CEP_ID_WRONG; }
 EXPORT_SYMBOL(cep_id_bad);
 
-#define ADDRESS_WRONG -1
-
 bool is_address_ok(address_t address)
 { return address != ADDRESS_WRONG ? true : false; }
 EXPORT_SYMBOL(is_address_ok);
@@ -55,8 +49,6 @@ EXPORT_SYMBOL(is_address_ok);
 address_t address_bad(void)
 { return ADDRESS_WRONG; }
 EXPORT_SYMBOL(address_bad);
-
-#define QOS_ID_WRONG -1
 
 qos_id_t qos_id_bad(void)
 { return QOS_ID_WRONG; }

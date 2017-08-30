@@ -28,9 +28,9 @@
 #include <map>
 
 #include "librina/concurrency.h"
-#include "librina/patterns.h"
+#include "librina/common.h"
 
-#include "netlink-manager.h"
+#include "irati/kernel-msg.h"
 
 #define WAIT_RESPONSE_TIMEOUT 10
 
@@ -40,118 +40,49 @@ char * stringToCharArray(std::string s);
 char * intToCharArray(int i);
 
 /**
- * Contains the information to identify a RINA netlink endpoing:
- * netlink port ID and IPC Process id
- */
-class RINANetlinkEndpoint{
-	unsigned int netlinkPortId;
-	unsigned short ipcProcessId;
-	ApplicationProcessNamingInformation applicationProcessName;
-
-public:
-	RINANetlinkEndpoint();
-	RINANetlinkEndpoint(unsigned int netlinkPortId,
-			unsigned short ipcProcessId);
-	RINANetlinkEndpoint(unsigned int netlinkPortId,
-				unsigned short ipcProcessId,
-				const ApplicationProcessNamingInformation& appNamingInfo);
-	unsigned short getIpcProcessId() const;
-	void setIpcProcessId(unsigned short ipcProcessId);
-	unsigned int getNetlinkPortId() const;
-	void setNetlinkPortId(unsigned int netlinkPortId);
-	const ApplicationProcessNamingInformation&
-		getApplicationProcessName() const;
-	void setApplicationProcessName(
-		const ApplicationProcessNamingInformation& applicationProcessName);
-};
-
-/**
- * Contains mappings of application process name to netlink portId,
- * or IPC process id to netlink portId.
- */
-class NetlinkPortIdMap {
-
-	/** Stores the mappings of IPC Process id to nelink portId */
-	std::map<unsigned short, RINANetlinkEndpoint *> ipcProcessIdMappings;
-
-	/** Stores the mappings of application process name to netlink port id */
-	std::map<std::string, RINANetlinkEndpoint *>
-		applicationNameMappings;
-
-public:
-	~NetlinkPortIdMap();
-
-	void putIPCProcessIdToNelinkPortIdMapping(
-			unsigned int netlinkPortId, unsigned short ipcProcessId);
-	RINANetlinkEndpoint * getNetlinkPortIdFromIPCProcessId(
-			unsigned short ipcProcessId);
-	void putAPNametoNetlinkPortIdMapping(
-			ApplicationProcessNamingInformation apName,
-			unsigned int netlinkPortId, unsigned short ipcProcessId);
-	RINANetlinkEndpoint * getNetlinkPortIdFromAPName(
-			ApplicationProcessNamingInformation apName);
-	unsigned int getIPCManagerPortId();
-
-	/**
-	 * Poulates the "destPortId" field for messages that have to be sent,
-	 * or updates the mappings for received messages
-	 * @param message
-	 * @param sent
-	 */
-	void updateMessageOrPortIdMap(BaseNetlinkMessage* message, bool send);
-
-	/**
-	 * An OS Process has finalized. Retrieve the information associated to
-	 * the NL port-id (application name, IPC Process id if it is IPC process),
-	 * and return it in the form of an OSProcessFinalized event
-	 * @param nl_portid
-	 * @return
-	 */
-	IPCEvent * osProcessFinalized(unsigned int nl_portid);
-};
-
-/**
  * Main class of libRINA. Initializes the NetlinkManager,
  * the eventsQueue, and the NetlinkMessageReader thread.
  */
-class RINAManager {
+class IRATICtrlManager {
 
-	/** The netlinkManager used to send and receive netlink messages */
-	NetlinkManager * netlinkManager;
+	/** The control file descriptor */
+	int cfd;
 
-	/** The events queue */
-	BlockingFIFOQueue<IPCEvent> * eventQueue;
+	/** The local port of the file descriptor */
+	irati_msg_port_t ctrl_port;
 
-	/** eventfd to notify applications about events arriving in
-	 *  eventQueue. */
-	int eventQueueReady;
-
-	/** The thread that is continuously reading incoming Netlink messages */
-	Thread * netlinkMessageReader;
+	Lockable irati_ctr_lock;
 
 	/** The lock for send/receive operations */
 	Lockable sendReceiveLock;
 
-	/** Keeps the mappings between netlink port ids and app/dif names */
-	NetlinkPortIdMap netlinkPortIdMap;
+	/** Linear sequence number generator */
+	unsigned int next_seq_number;
 
-	void initialize();
+	unsigned int get_next_seq_number();
+
 public:
-	RINAManager();
-	RINAManager(unsigned int netlinkPort);
-	~RINAManager();
+	IRATICtrlManager();
+	~IRATICtrlManager();
 
-	/** Sends a NL message of default maximum size (PAGE SIZE) */
-	void sendMessage(BaseNetlinkMessage * netlinkMessage, bool fill_seq_num);
+	void initialize(void);
 
-	/** Sends a NL message of specified maximum size */
-	void sendMessageOfMaxSize(BaseNetlinkMessage * netlinkMessage,
-			size_t maxSize, bool fill_seq_num);
+	irati_msg_port_t get_irati_ctrl_port(void);
+	void set_irati_ctrl_port(irati_msg_port_t ctrl_port);
+
+	int get_ctrl_fd(void);
+
+	/** Sends a message of default maximum size (PAGE SIZE) */
+	int send_msg(struct irati_msg_base *msg, bool fill_seq_num);
+
+	IPCEvent * get_next_ctrl_msg();
+
+	static IPCEvent * irati_ctrl_msg_to_ipc_event(struct irati_msg_base *msg);
 
 	/**
 	 * Notify about the reception of a Netlink message
 	 */
-	void netlinkMessageArrived(BaseNetlinkMessage * notification);
+	void ctrl_msg_arrived(struct irati_msg_base *msg);
 
 	/**
 	 * An OS Process has finalized. Retrieve the information associated to
@@ -160,23 +91,13 @@ public:
 	 * @param nl_portid
 	 * @return
 	 */
-	IPCEvent * osProcessFinalized(unsigned int nl_portid);
-
-	BlockingFIFOQueue<IPCEvent>* getEventQueue();
-	NetlinkManager* getNetlinkManager();
-	int getEventFd() const { return eventQueueReady; }
-	void eventQueuePushed();
-	void eventQueuePopped();
-	bool keep_on_reading;
+	IPCEvent * os_process_finalized(irati_msg_port_t ctrl_port);
 };
 
 /**
  * Make RINAManager singleton
  */
-extern Singleton<RINAManager> rinaManager;
-
-void setNetlinkPortId(unsigned int netlinkPortId);
-unsigned int getNelinkPortId();
+extern Singleton<IRATICtrlManager> irati_ctrl_mgr;
 
 }
 

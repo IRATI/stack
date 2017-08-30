@@ -24,23 +24,13 @@
 
 #include "common.h"
 
-struct dtcp_config;
-struct dtcp_fctrl_config;
-struct dtcp_rxctrl_config;
-struct window_fctrl_config;
-struct rate_fctrl_config;
-struct policy;
-
 /* Constructors */
-struct dtcp_config *         dtcp_config_create(void);
 struct dtcp_config *         dtcp_config_create_ni(void);
 struct window_fctrl_config * dtcp_window_fctrl_config_create(void);
 struct window_fctrl_config * dtcp_window_fctrl_config_create_ni(void);
 struct rate_fctrl_config *   dtcp_rate_fctrl_config_create(void);
 struct rate_fctrl_config *   dtcp_rate_fctrl_config_create_ni(void);
-struct dtcp_fctrl_config *   dtcp_fctrl_config_create(void);
 struct dtcp_fctrl_config *   dtcp_fctrl_config_create_ni(void);
-struct dtcp_rxctrl_config *  dtcp_rxctrl_config_create(void);
 struct dtcp_rxctrl_config *  dtcp_rxctrl_config_create_ni(void);
 /* Destructors */
 int dtcp_config_destroy(struct dtcp_config * cfg);

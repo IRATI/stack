@@ -42,7 +42,7 @@ using namespace std;
 
 namespace rinad {
 
-#define IPCP_DAEMON_INIT_RETRIES 5
+#define IPCP_DAEMON_INIT_RETRIES 500
 
 void IPCManager_::ipc_process_daemon_initialized_event_handler(rina::IPCProcessDaemonInitializedEvent * e)
 {
@@ -51,12 +51,14 @@ void IPCManager_::ipc_process_daemon_initialized_event_handler(rina::IPCProcessD
 	int i;
 	SyscallTransState* trans = NULL;
 	bool trans_completed = false;
+	rina::Sleep sleep;
 
 	//There can be race condition between the caller and us (notification)
 	for(i=0; i<IPCP_DAEMON_INIT_RETRIES; ++i){
 		trans = get_syscall_transaction_state(e->ipcProcessId);
 		if(trans)
 			break;
+		sleep.sleepForMili(1);
 	}
 
 	if(!trans){

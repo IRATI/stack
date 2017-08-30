@@ -59,7 +59,7 @@ AbstractIPCProcessImpl::AbstractIPCProcessImpl(const rina::ApplicationProcessNam
         try {
                 std::stringstream ss;
                 ss << IPCP_LOG_IPCP_FILE_PREFIX << "-" << id;
-                rina::initialize(log_level, log_file);
+                rina::initialize(getpid(), log_level, log_file);
                 LOG_DBG("IPCProcessImpl");
                 rina::extendedIPCManager->ipcManagerPort = ipc_manager_port;
                 rina::extendedIPCManager->ipcProcessId = id;
@@ -97,16 +97,9 @@ void AbstractIPCProcessImpl::event_loop(void)
 	LOG_DBG("Starting main I/O loop...");
 
 	while(keep_running) {
-		e = rina::ipcEventProducer->eventTimedWait(
-				IPCP_EVENT_TIMEOUT_S,
-				IPCP_EVENT_TIMEOUT_NS);
+		e = rina::ipcEventProducer->eventWait();
 		if(!e)
-			continue;
-
-		if(!keep_running){
-			delete e;
 			break;
-		}
 
 		LOG_IPCP_DBG("Got event of type %s and sequence number %u",
 				rina::IPCEvent::eventTypeToString(e->eventType).c_str(),
@@ -141,12 +134,6 @@ void AbstractIPCProcessImpl::event_loop(void)
 		{
 			DOWNCAST_DECL(e, rina::FlowRequestEvent, event);
 			flow_allocation_requested_handler(*event);
-		}
-		break;
-		case rina::DEALLOCATE_FLOW_RESPONSE_EVENT:
-		{
-			DOWNCAST_DECL(e, rina::DeallocateFlowResponseEvent, event);
-			deallocate_flow_response_handler(*event);
 		}
 		break;
 		case rina::FLOW_DEALLOCATED_EVENT:
@@ -311,12 +298,6 @@ void AbstractIPCProcessImpl::event_loop(void)
 			ipcm_allocate_flow_request_result_handler(*event);
 		}
 		break;
-		case rina::IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT:
-		{
-			DOWNCAST_DECL(e, rina::IpcmDeallocateFlowResponseEvent, event);
-			ipcm_deallocate_flow_response_event_handler(*event);
-		}
-		break;
 		case rina::IPC_PROCESS_ALLOCATE_PORT_RESPONSE:
 		{
 			DOWNCAST_DECL(e, rina::AllocatePortResponseEvent, event);
@@ -348,7 +329,6 @@ void AbstractIPCProcessImpl::event_loop(void)
 		case rina::ENROLL_TO_DIF_RESPONSE_EVENT:
 		case rina::GET_DIF_PROPERTIES:
 		case rina::GET_DIF_PROPERTIES_RESPONSE_EVENT:
-		case rina::OS_PROCESS_FINALIZED:
 		case rina::QUERY_RIB_RESPONSE_EVENT:
 		case rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT:
 		case rina::TIMER_EXPIRED_EVENT:
@@ -392,11 +372,6 @@ void LazyIPCProcessImpl::allocate_flow_request_result_handler(const rina::Alloca
 }
 
 void LazyIPCProcessImpl::flow_allocation_requested_handler(const rina::FlowRequestEvent& event)
-{
-	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
-}
-
-void LazyIPCProcessImpl::deallocate_flow_response_handler(const rina::DeallocateFlowResponseEvent& event)
 {
 	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
 }
@@ -536,11 +511,6 @@ void LazyIPCProcessImpl::ipcm_allocate_flow_request_result_handler(const rina::I
 	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
 }
 
-void LazyIPCProcessImpl::ipcm_deallocate_flow_response_event_handler(const rina::IpcmDeallocateFlowResponseEvent& event)
-{
-	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
-}
-
 void LazyIPCProcessImpl::ipcp_allocate_port_response_event_handler(const rina::AllocatePortResponseEvent& event)
 {
 	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
@@ -556,7 +526,7 @@ void LazyIPCProcessImpl::ipcp_write_mgmt_sdu_response_event_handler(const rina::
 	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
 }
 
-void LazyIPCProcessImpl::ipcp_read_mgmt_sdu_notif_event_handler(const rina::ReadMgmtSDUResponseEvent& event)
+void LazyIPCProcessImpl::ipcp_read_mgmt_sdu_notif_event_handler(rina::ReadMgmtSDUResponseEvent& event)
 {
 	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
 }

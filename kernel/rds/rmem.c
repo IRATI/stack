@@ -329,7 +329,7 @@ void * rkmalloc(size_t size, gfp_t flags)
 EXPORT_SYMBOL(rkmalloc);
 
 void * rkzalloc(size_t size, gfp_t flags)
-{ return generic_alloc(kzalloc, size, flags); }
+{ 	return generic_alloc(kzalloc, size, flags); }
 EXPORT_SYMBOL(rkzalloc);
 
 #ifdef CONFIG_RINA_MEMORY_TAMPERING

@@ -50,6 +50,7 @@
 #include "librina/concurrency.h"
 #include "librina/exceptions.h"
 #include "librina/patterns.h"
+#include "irati/kucommon.h"
 
 namespace rina {
 
@@ -74,6 +75,7 @@ public:
 	ApplicationProcessNamingInformation();
 	ApplicationProcessNamingInformation(const std::string& processName,
 					    const std::string& processInstance);
+	ApplicationProcessNamingInformation(struct name * name);
 	bool operator==(const ApplicationProcessNamingInformation &other) const;
 	bool operator!=(const ApplicationProcessNamingInformation &other) const;
 	bool operator>(const ApplicationProcessNamingInformation &other) const;
@@ -84,6 +86,8 @@ public:
 	const std::string getProcessNamePlusInstance() const;
 	const std::string getEncodedString() const;
 	const std::string toString() const;
+
+	struct name * to_c_name() const;
 
 	/**
 	 * The process_name identifies an application process within the
@@ -170,9 +174,11 @@ public:
 	unsigned int maxSDUsize;
 
 	FlowSpecification();
+	FlowSpecification(struct flow_spec * fspec);
 	bool operator==(const FlowSpecification &other) const;
 	bool operator!=(const FlowSpecification &other) const;
 	const std::string toString();
+	struct flow_spec * to_c_flowspec() const;
 };
 
 /**
@@ -211,6 +217,9 @@ public:
 	ApplicationProcessNamingInformation difName;
 
 	FlowState state;
+
+	/** The PID of the local OS process using this flow */
+	pid_t pid;
 
 	bool operator==(const FlowInformation &other) const;
 	bool operator!=(const FlowInformation &other) const;
@@ -263,10 +272,8 @@ enum IPCEventType {
         IPC_PROCESS_QUERY_RIB,
         GET_DIF_PROPERTIES,
         GET_DIF_PROPERTIES_RESPONSE_EVENT,
-        OS_PROCESS_FINALIZED,
         IPCM_REGISTER_APP_RESPONSE_EVENT,
         IPCM_UNREGISTER_APP_RESPONSE_EVENT,
-        IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT,
         IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
         QUERY_RIB_RESPONSE_EVENT,
         IPC_PROCESS_DAEMON_INITIALIZED_EVENT,
@@ -294,6 +301,7 @@ enum IPCEventType {
 	IPC_PROCESS_READ_MGMT_SDU_NOTIF,
 	IPCM_CREATE_IPCP_RESPONSE,
 	IPCM_DESTROY_IPCP_RESPONSE,
+	IPCM_FINALIZATION_REQUEST_EVENT,
         NO_EVENT
 };
 
@@ -303,7 +311,8 @@ enum IPCEventType {
 class IPCEvent {
 public:
 	IPCEvent();
-	IPCEvent(IPCEventType eventType, unsigned int sequenceNumber);
+	IPCEvent(IPCEventType eventType, unsigned int sn,
+		 unsigned int ctrl_port, unsigned short ipcp_id);
 	virtual ~IPCEvent();
 	static const std::string eventTypeToString(IPCEventType eventType);
 
@@ -315,6 +324,12 @@ public:
 	 * witht the response
 	 */
 	unsigned int sequenceNumber;
+
+	/* Ctrl port that produced the event (to reply to) */
+	unsigned int ctrl_port;
+
+	/* IPCP id of the entity that produced the event */
+	unsigned short ipcp_id;
 };
 
 class BaseResponseEvent: public IPCEvent {
@@ -322,10 +337,9 @@ public:
         /** The result of the operation */
         int result;
 
-        BaseResponseEvent(
-                        int result,
-                        IPCEventType eventType,
-                        unsigned int sequenceNumber);
+        BaseResponseEvent(int result, IPCEventType eventType,
+			  unsigned int sn, unsigned int ctrl_p,
+			  unsigned short ipcp_id);
 };
 
 /**
@@ -357,6 +371,9 @@ public:
 	/** the ID of the IPC Process that will provide the flow*/
 	unsigned short ipcProcessId;
 
+	/** PID of the process that requested the flow */
+	pid_t pid;
+
 	/**
 	 * True if the flow will be used by internal IPCP tasks (e.g. layer management),
 	 * false otherwise (used by an external app)
@@ -369,15 +386,16 @@ public:
 			const ApplicationProcessNamingInformation& localApplicationName,
 			const ApplicationProcessNamingInformation& remoteApplicationName,
 			int flowRequestorIpcProcessId,
-			unsigned int sequenceNumber);
+			unsigned int sequenceNumber, unsigned int ctrl_p,
+			unsigned short ipcp_id, pid_t pid);
 	FlowRequestEvent(int portId,
 			const FlowSpecification& flowSpecification,
 			bool localRequest,
 			const ApplicationProcessNamingInformation& localApplicationName,
 			const ApplicationProcessNamingInformation& remoteApplicationName,
 			const ApplicationProcessNamingInformation& DIFName,
-			unsigned short ipcProcessId,
-			unsigned int sequenceNumber);
+			unsigned int sequenceNumber, unsigned int ctrl_p,
+			unsigned short ipcp_id, pid_t pid);
 	bool isLocalRequest() const;
 };
 
@@ -395,15 +413,10 @@ public:
 	 */
 	bool internal;
 
-	/** The application that requested the flow deallocation*/
-	ApplicationProcessNamingInformation applicationName;
-
         FlowDeallocateRequestEvent() : portId(-1), internal(false) { }
 	FlowDeallocateRequestEvent(int portId,
-			const ApplicationProcessNamingInformation& appName,
-			unsigned int sequenceNumber);
-	FlowDeallocateRequestEvent(int portId,
-				unsigned int sequenceNumber);
+				   unsigned int sequenceNumber,
+				   unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -418,7 +431,8 @@ public:
 	/** An error code indicating why the flow was deallocated */
 	int code;
 
-	FlowDeallocatedEvent(int portId, int code);
+	FlowDeallocatedEvent(int portId, int code, unsigned int ctrl_port,
+			     unsigned short ipcp_id);
 };
 
 /**
@@ -450,6 +464,12 @@ public:
          */
         unsigned short ipcProcessId;
 
+        /** The control port to send flow allocation requests */
+        unsigned int ctrl_port;
+
+        /** PID of the process that registered */
+        pid_t pid;
+
 	/** The type of registration requested */
 	ApplicationRegistrationType applicationRegistrationType;
 
@@ -474,7 +494,8 @@ public:
         ApplicationRegistrationRequestEvent() { }
 	ApplicationRegistrationRequestEvent(
 		const ApplicationRegistrationInformation&
-		applicationRegistrationInformation, unsigned int sequenceNumber);
+		applicationRegistrationInformation, unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 class BaseApplicationRegistrationEvent: public IPCEvent {
@@ -486,15 +507,13 @@ public:
         ApplicationProcessNamingInformation DIFName;
 
         BaseApplicationRegistrationEvent() { }
-        BaseApplicationRegistrationEvent(
-                        const ApplicationProcessNamingInformation& appName,
+        BaseApplicationRegistrationEvent(const ApplicationProcessNamingInformation& appName,
                         const ApplicationProcessNamingInformation& DIFName,
                         IPCEventType eventType,
-                        unsigned int sequenceNumber);
-        BaseApplicationRegistrationEvent(
-                        const ApplicationProcessNamingInformation& appName,
+                        unsigned int sequenceNumber, unsigned int ctrl_p, unsigned short ipcp_id);
+        BaseApplicationRegistrationEvent(const ApplicationProcessNamingInformation& appName,
                         IPCEventType eventType,
-                        unsigned int sequenceNumber);
+                        unsigned int sequenceNumber, unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -509,7 +528,8 @@ public:
 	ApplicationUnregistrationRequestEvent(
 			const ApplicationProcessNamingInformation& appName,
 			const ApplicationProcessNamingInformation& DIFName,
-			unsigned int sequenceNumber);
+			unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 class BaseApplicationRegistrationResponseEvent:
@@ -523,12 +543,14 @@ public:
                         const ApplicationProcessNamingInformation& DIFName,
                         int result,
                         IPCEventType eventType,
-                        unsigned int sequenceNumber);
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
         BaseApplicationRegistrationResponseEvent(
                         const ApplicationProcessNamingInformation& appName,
                         int result,
                         IPCEventType eventType,
-                        unsigned int sequenceNumber);
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -540,7 +562,8 @@ public:
         RegisterApplicationResponseEvent(
                         const ApplicationProcessNamingInformation& appName,
                         const ApplicationProcessNamingInformation& difName,
-                        int result, unsigned int sequenceNumber);
+                        int result, unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -551,7 +574,8 @@ class UnregisterApplicationResponseEvent:
 public:
         UnregisterApplicationResponseEvent(
                         const ApplicationProcessNamingInformation& appName,
-                        int result, unsigned int sequenceNumber);
+                        int result, unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -569,34 +593,15 @@ public:
         /** 0 if it is an application, or the ID of the IPC Process otherwise */
         int flowAcceptorIpcProcessId;
 
-        AllocateFlowResponseEvent(
-                        int result,
-                        bool notifysource,
-                        int flowAcceptorIpcProcessId,
-                        unsigned int sequenceNumber);
-};
+        /** PID of the process that accepted the flow */
+        pid_t pid;
 
-/**
- * Event informing that an OS process (an application or an
- * IPC Process daemon) has finalized
- */
-class OSProcessFinalizedEvent: public IPCEvent {
-public:
-	/**
-	 * The naming information of the application that has
-	 * finalized
-	 */
-	ApplicationProcessNamingInformation applicationName;
-
-	/**
-	 * If this id is greater than 0, it means that the process
-	 * that finalized was an IPC Process Daemon. Otherwise it is an
-	 * application process.
-	 */
-	unsigned int ipcProcessId;
-
-	OSProcessFinalizedEvent(const ApplicationProcessNamingInformation& appName,
-			unsigned int ipcProcessId, unsigned int sequenceNumber);
+        AllocateFlowResponseEvent(int result,
+                        	  bool notifysource,
+				  int flowAcceptorIpcProcessId,
+				  unsigned int sequenceNumber,
+				  unsigned int ctrl_p,
+				  unsigned short ipcp_id, pid_t pid);
 };
 
 /**
@@ -605,17 +610,8 @@ public:
  */
 class IPCEventProducer {
 public:
-	/** Retrieves the next available event, if any */
-	IPCEvent * eventPoll();
-
 	/** Blocks until there is an event available */
 	IPCEvent * eventWait();
-
-	/**
-	 * Blocks until there is an event available, no more than the
-	 * time specified
-	 */
-	IPCEvent * eventTimedWait(int seconds, int nanoseconds);
 };
 
 /**
@@ -698,6 +694,9 @@ class Neighbor {
 
 public:
         Neighbor();
+        static void from_c_neighbor(Neighbor & nei, struct ipcp_neighbor * cnei);
+        struct ipcp_neighbor * to_c_neighbor(void) const;
+
         bool operator==(const Neighbor &other) const;
         bool operator!=(const Neighbor &other) const;
 #ifndef SWIG
@@ -802,6 +801,11 @@ public:
 struct irati_iodev_ctldata {
         uint32_t port_id;
 };
+
+struct irati_ctrldev_ctldata {
+	irati_msg_port_t port_id;
+};
+
 #define IRATI_FLOW_BIND _IOW(0xAF, 0x00, struct irati_iodev_ctldata)
 
 /**

@@ -46,7 +46,8 @@ public:
 	DIFInformation difInformation;
 
 	AssignToDIFRequestEvent(const DIFInformation& difInformation,
-			unsigned int sequenceNumber);
+			unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
 	const DIFInformation& getDIFInformation() const;
 #endif
@@ -63,7 +64,8 @@ public:
 
         UpdateDIFConfigurationRequestEvent(
                         const DIFConfiguration& difConfiguration,
-                        unsigned int sequenceNumber);
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
         const DIFConfiguration& getDIFConfiguration() const;
 #endif
@@ -87,7 +89,8 @@ public:
 	                const ApplicationProcessNamingInformation& ipcProcessName,
 			const ApplicationProcessNamingInformation& difName,
 			bool registered,
-			unsigned int sequenceNumber);
+			unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
 	const ApplicationProcessNamingInformation& getIPCProcessName() const;
 	const ApplicationProcessNamingInformation& getDIFName() const;
@@ -123,7 +126,8 @@ public:
 
 	QueryRIBRequestEvent(const std::string& objectClass,
 			const std::string& objectName, long objectInstance, int scope,
-			const std::string& filter, unsigned int sequenceNumber);
+			const std::string& filter, unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
 	const std::string& getObjectClass() const;
 	const std::string& getObjectName() const;
@@ -150,7 +154,8 @@ public:
 
 	SetPolicySetParamRequestEvent(const std::string& path,
                         const std::string& name, const std::string& value,
-			unsigned int sequenceNumber);
+			unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -166,7 +171,8 @@ public:
 
 	SelectPolicySetRequestEvent(const std::string& path,
                                     const std::string& name,
-			            unsigned int sequenceNumber);
+			            unsigned int sequenceNumber,
+				    unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -182,7 +188,8 @@ public:
 	bool load;
 
 	PluginLoadRequestEvent(const std::string& name, bool load,
-                               unsigned int sequenceNumber);
+                               unsigned int sequenceNumber,
+			       unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -202,7 +209,8 @@ public:
         int cepId;
 
         CreateConnectionResponseEvent(int portId, int cepId,
-                        unsigned int sequenceNumber);
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
         int getCepId() const;
         int getPortId() const;
@@ -224,7 +232,8 @@ public:
         int result;
 
         UpdateConnectionResponseEvent(int portId, int result,
-                        unsigned int sequenceNumber);
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
         int getResult() const;
         int getPortId() const;
@@ -251,7 +260,8 @@ public:
         int destCepId;
 
         CreateConnectionResultEvent(int portId, int sourceCepId,
-                        int destCepId, unsigned int sequenceNumber);
+                        int destCepId, unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
         int getSourceCepId() const;
         int getDestCepId() const;
@@ -268,7 +278,8 @@ public:
         int result;
 
         DestroyConnectionResultEvent(int portId, int result,
-                        unsigned int sequenceNumber);
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
         int getResult() const;
         int getPortId() const;
@@ -645,18 +656,6 @@ public:
 	FlowInformation allocateFlowResponse(const FlowRequestEvent& flowRequestEvent,
 					     int result,
 					     bool notifySource);
-	/**
-	 * Invoked by the IPC Process to respond to the Application Process that
-	 * requested a flow deallocation
-	 * @param flowDeallocateEvent Object containing information about the flow
-	 * deallocate request event
-	 * @param result 0 indicates success, a negative number an error code
-	 * @throws DeallocateFlowResponseException if there are issues
-	 * replying ot the application
-	 */
-	void notifyflowDeallocated(
-		const FlowDeallocateRequestEvent flowDeallocateEvent,
-		int result);
 
 	/**
 	 * Invoked by the ipC Process to notify that a flow has been remotely
@@ -768,6 +767,11 @@ public:
 	 * the flow structure and closes the I/O dev file descriptor associated to it
 	 */
 	void internal_flow_deallocated(int port_id);
+
+private:
+	void send_base_resp_msg(irati_msg_t msg_t, unsigned int seq_num, int result);
+	void send_fwd_msg(irati_msg_t msg_t, unsigned int sequenceNumber,
+			  const ser_obj_t& sermsg, int result);
 };
 
 /**
@@ -908,6 +912,10 @@ struct PortIdAltlist {
 
 	PortIdAltlist();
 	PortIdAltlist(unsigned int pid);
+	static void from_c_pid_list(PortIdAltlist & pi,
+				    struct port_id_altlist * pia);
+	struct port_id_altlist * to_c_pid_list(void) const;
+
 	void add_alt(unsigned int pid);
 };
 
@@ -929,6 +937,10 @@ public:
         std::list<PortIdAltlist> portIdAltlists;
 
         PDUForwardingTableEntry();
+        static void from_c_pff_entry(PDUForwardingTableEntry & pf,
+        			     struct mod_pff_entry * pff);
+        struct mod_pff_entry * to_c_pff_entry(void) const;
+
         bool operator==(const PDUForwardingTableEntry &other) const;
         bool operator!=(const PDUForwardingTableEntry &other) const;
 #ifndef SWIG
@@ -957,7 +969,8 @@ public:
         int result;
 
         DumpFTResponseEvent(const std::list<PDUForwardingTableEntry>& entries,
-                        int result, unsigned int sequenceNumber);
+                        int result, unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 #ifndef SWIG
         const std::list<PDUForwardingTableEntry>& getEntries() const;
         int getResult() const;
@@ -968,7 +981,8 @@ class UpdateCryptoStateResponseEvent: public IPCEvent {
 public:
 	UpdateCryptoStateResponseEvent(int res,
                         	       int port_id,
-                        	       unsigned int sequenceNumber);
+                        	       unsigned int sequenceNumber,
+				       unsigned int ctrl_p, unsigned short ipcp_id);
 
         // The N-1 port-id where crypto state was updated
         int port_id;
@@ -981,7 +995,8 @@ class AllocatePortResponseEvent: public IPCEvent {
 public:
 	AllocatePortResponseEvent(int res,
                         	  int port_id,
-                        	  unsigned int sequenceNumber);
+                        	  unsigned int sequenceNumber,
+				  unsigned int ctrl_p, unsigned short ipcp_id);
 
         // The N-1 port-id allocated
         int port_id;
@@ -994,7 +1009,8 @@ class DeallocatePortResponseEvent: public IPCEvent {
 public:
 	DeallocatePortResponseEvent(int res,
                         	    int port_id,
-				    unsigned int sequenceNumber);
+				    unsigned int sequenceNumber,
+				    unsigned int ctrl_p, unsigned short ipcp_id);
 
         // The N-1 port-id deallocated
         int port_id;
@@ -1006,7 +1022,8 @@ public:
 class WriteMgmtSDUResponseEvent: public IPCEvent {
 public:
 	WriteMgmtSDUResponseEvent(int res,
-				  unsigned int sequenceNumber);
+				  unsigned int sequenceNumber,
+				  unsigned int ctrl_p, unsigned short ipcp_id);
 
         // Result of the operation, 0 success
         int result;
@@ -1015,15 +1032,14 @@ public:
 class ReadMgmtSDUResponseEvent: public IPCEvent {
 public:
 	ReadMgmtSDUResponseEvent(int res,
-				 void * sdu,
-				 int size,
+				 struct buffer * buf,
 				 unsigned int port_id,
-				 unsigned int sequenceNumber);
+				 unsigned int sequenceNumber,
+				 unsigned int ctrl_p, unsigned short ipcp_id);
 
         // Result of the operation, 0 success
         int result;
-        void * sdu;
-        int size;
+        rina::ser_obj_t msg;
         unsigned int port_id;
 };
 
@@ -1186,18 +1202,6 @@ public:
          * @throws WriteSDUException
          */
         unsigned int writeMgmgtSDUToPortId(void * sdu, int size, unsigned int portId);
-
-        /**
-         * Requests the kernel to send a management SDU to the IPC Process
-         * of the address specified
-         *
-         * @param sdu A buffer that contains the SDU data
-         * @param size The size of the SDU data, in bytes
-         * @param address The address of the IPC Process that is the
-         * destination of the SDU
-         * @throws WriteSDUException
-         */
-        unsigned int sendMgmgtSDUToAddress(void * sdu, int size, unsigned int address);
 };
 
 /**

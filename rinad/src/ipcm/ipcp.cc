@@ -64,11 +64,11 @@ IPCMIPCProcess::IPCMIPCProcess(rina::IPCProcessProxy* ipcp_proxy)
 }
 
 /** Return the information of a registration request */
-rina::ApplicationProcessNamingInformation
+rina::ApplicationRegistrationInformation
 IPCMIPCProcess::getPendingRegistration(unsigned int seqNumber)
 {
         std::map<unsigned int,
-                 rina::ApplicationProcessNamingInformation>::iterator iterator;
+                 rina::ApplicationRegistrationInformation>::iterator iterator;
 
         iterator = pendingRegistrations.find(seqNumber);
         if (iterator == pendingRegistrations.end()) {
@@ -107,7 +107,8 @@ IPCMIPCProcess::getPendingDisconnection(unsigned int seqNumber)
 const rina::ApplicationProcessNamingInformation& IPCMIPCProcess::getDIFName() const
 { return dif_name_; }
 
-std::list<rina::ApplicationProcessNamingInformation> IPCMIPCProcess::get_neighbors_with_n1dif(const rina::ApplicationProcessNamingInformation& dif_name)
+std::list<rina::ApplicationProcessNamingInformation>
+IPCMIPCProcess::get_neighbors_with_n1dif(const rina::ApplicationProcessNamingInformation& dif_name)
 {
 	std::list<rina::Neighbor>::iterator it;
 	std::list<rina::ApplicationProcessNamingInformation> result;
@@ -146,13 +147,13 @@ void IPCMIPCProcess::get_description(std::ostream& os) {
 
 	os << " | ";
 	if (registeredApplications.size() > 0) {
-		std::list<rina::ApplicationProcessNamingInformation>::const_iterator it;
+		std::list<rina::ApplicationRegistrationInformation>::const_iterator it;
 		for (it = registeredApplications.begin();
 				it != registeredApplications.end(); ++it) {
 			if (it != registeredApplications.begin()) {
 				os << ", ";
 			}
-			os << it->getEncodedString();
+			os << it->appName.getEncodedString();
 		}
 	} else {
 		os << "-";
@@ -178,6 +179,20 @@ void IPCMIPCProcess::get_description(std::ostream& os) {
 void IPCMIPCProcess::setInitialized()
 {
 	state_ = IPCM_IPCP_INITIALIZED;
+}
+
+unsigned int IPCMIPCProcess::get_fa_ctrl_port(const rina::ApplicationProcessNamingInformation& reg_app)
+{
+	std::list<rina::ApplicationRegistrationInformation>::iterator it;
+
+	for(it = registeredApplications.begin();
+			it != registeredApplications.end(); ++it) {
+		if (it->appName == reg_app) {
+			return it->ctrl_port;
+		}
+	}
+
+	return 0;
 }
 
 void IPCMIPCProcess::assignToDIF(const rina::DIFInformation& difInformation,
@@ -266,43 +281,40 @@ void IPCMIPCProcess::disconnectFromNeighbor(const rina::ApplicationProcessNaming
 	pendingDisconnections[opaque] = neighbor;
 }
 
-void IPCMIPCProcess::registerApplication(
-		const rina::ApplicationProcessNamingInformation& applicationName,
-		const rina::ApplicationProcessNamingInformation& dafName,
-		unsigned short regIpcProcessId,
-		unsigned int opaque)
+void IPCMIPCProcess::registerApplication(const rina::ApplicationRegistrationInformation & ari,
+					 unsigned int opaque)
 {
 	if (state_ != IPCM_IPCP_ASSIGNED_TO_DIF)
 		throw rina::IpcmRegisterApplicationException(
 				rina::IPCProcessProxy::error_not_a_dif_member);
 
 	try {
-		proxy_->registerApplication(applicationName,
-					    dafName,
-					    regIpcProcessId,
+		proxy_->registerApplication(ari.appName,
+					    ari.dafName,
+					    ari.ipcProcessId,
 					    dif_name_,
 					    opaque);
 	}catch (rina::Exception &e) {
 		throw e;
 	}
 
-	pendingRegistrations[opaque] = applicationName;
+	pendingRegistrations[opaque] = ari;
 }
 
 void IPCMIPCProcess::registerApplicationResult(unsigned int sequenceNumber,
 					       bool success)
 {
-	rina::ApplicationProcessNamingInformation appName;
+	rina::ApplicationRegistrationInformation app_reg;
 
 	try {
-		appName = getPendingRegistration(sequenceNumber);
+		app_reg = getPendingRegistration(sequenceNumber);
 	} catch(rina::IPCException &e) {
 		throw rina::IpcmRegisterApplicationException(e.what());
 	}
 
 	pendingRegistrations.erase(sequenceNumber);
 	if (success)
-		registeredApplications.push_back(appName);
+		registeredApplications.push_back(app_reg);
 }
 
 void IPCMIPCProcess::disconnectFromNeighborResult(unsigned int sequenceNumber,
@@ -348,39 +360,47 @@ void IPCMIPCProcess::add_neighbors(const std::list<rina::Neighbor> & new_neighs)
 	}
 }
 
-void IPCMIPCProcess::unregisterApplication(
-		const rina::ApplicationProcessNamingInformation& applicationName,
-		unsigned int opaque) {
+void IPCMIPCProcess::unregisterApplication(const rina::ApplicationProcessNamingInformation & app_name,
+					   unsigned int opaque)
+{
+	rina::ApplicationRegistrationInformation ari;
+	ari.appName = app_name;
 
 	if (state_ != IPCM_IPCP_ASSIGNED_TO_DIF)
 		throw rina::IpcmRegisterApplicationException(
 				rina::IPCProcessProxy::error_not_a_dif_member);
 
 	try {
-		proxy_->unregisterApplication(applicationName, dif_name_, opaque);
+		proxy_->unregisterApplication(app_name, dif_name_, opaque);
 	}catch (rina::Exception &e) {
 		throw e;
 	}
 
-	pendingRegistrations[opaque] = applicationName;
+	pendingRegistrations[opaque] = ari;
 }
 
 void IPCMIPCProcess::unregisterApplicationResult(unsigned int sequenceNumber,
-		bool success)
+						 bool success)
 {
-	rina::ApplicationProcessNamingInformation appName;
+	rina::ApplicationRegistrationInformation app_reg;
+	std::list<rina::ApplicationRegistrationInformation>::iterator it;
 
 	try {
-		appName = getPendingRegistration(sequenceNumber);
+		app_reg = getPendingRegistration(sequenceNumber);
 	} catch(rina::IPCException &e) {
 		throw rina::IpcmRegisterApplicationException(e.what());
 	}
 
 	pendingRegistrations.erase(sequenceNumber);
 
-	if (success)
-		registeredApplications.remove(appName);
-
+	if (!success)
+		return;
+	for (it = registeredApplications.begin(); it != registeredApplications.end(); ++it) {
+		if (it->appName == app_reg.appName) {
+			registeredApplications.erase(it);
+			return;
+		}
+	}
 }
 
 void IPCMIPCProcess::allocateFlow(const rina::FlowRequestEvent& flowRequest,
@@ -402,11 +422,12 @@ void IPCMIPCProcess::allocateFlow(const rina::FlowRequestEvent& flowRequest,
 	flowInformation.difName = dif_name_;
 	flowInformation.flowSpecification = flowRequest.flowSpecification;
 	flowInformation.portId = flowRequest.portId;
+	flowInformation.pid = flowRequest.pid;
 	pendingFlowOperations[opaque] = flowInformation;
 }
 
-void IPCMIPCProcess::allocateFlowResult(
-                unsigned int sequenceNumber, bool success, int portId)
+void IPCMIPCProcess::allocateFlowResult(unsigned int sequenceNumber,
+					bool success, int portId)
 {
 	rina::FlowInformation flowInformation;
 	try {
@@ -421,11 +442,10 @@ void IPCMIPCProcess::allocateFlowResult(
 		allocatedFlows.push_back(flowInformation);
 }
 
-void IPCMIPCProcess::allocateFlowResponse(
-	const rina::FlowRequestEvent& flowRequest,
-	int result,
-	bool notifySource,
-	int flowAcceptorIpcProcessId)
+void IPCMIPCProcess::allocateFlowResponse(const rina::FlowRequestEvent& flowRequest,
+					  int result, pid_t pid,
+					  bool notifySource,
+					  int flowAcceptorIpcProcessId)
 {
 	if (state_ != IPCM_IPCP_ASSIGNED_TO_DIF)
 		throw rina::IpcmRegisterApplicationException(
@@ -447,6 +467,7 @@ void IPCMIPCProcess::allocateFlowResponse(
 		flowInformation.difName = dif_name_;
 		flowInformation.flowSpecification = flowRequest.flowSpecification;
 		flowInformation.portId = flowRequest.portId;
+		flowInformation.pid = pid;
 
 		allocatedFlows.push_back(flowInformation);
 	}
@@ -471,8 +492,11 @@ void IPCMIPCProcess::deallocateFlow(int flowPortId, unsigned int opaque)
 	rina::FlowInformation flowInformation;
 
 	if (state_ != IPCM_IPCP_ASSIGNED_TO_DIF)
-		throw rina::IpcmRegisterApplicationException(
-				rina::IPCProcessProxy::error_not_a_dif_member);
+		throw rina::IPCException(rina::IPCProcessProxy::error_not_a_dif_member);
+
+	if (!getFlowInformation(flowPortId, flowInformation)) {
+		throw rina::IPCException("No flow for such port-id");
+	}
 
 	try {
 		proxy_->deallocateFlow(flowPortId, opaque);
@@ -480,23 +504,7 @@ void IPCMIPCProcess::deallocateFlow(int flowPortId, unsigned int opaque)
 		throw e;
 	}
 
-	if (getFlowInformation(flowPortId, flowInformation))
-		pendingFlowOperations[opaque] = flowInformation;
-}
-
-void IPCMIPCProcess::deallocateFlowResult(unsigned int sequenceNumber, bool success)
-{
-	rina::FlowInformation flowInformation;
-
-	try {
-		flowInformation = getPendingFlowOperation(sequenceNumber);
-	} catch(rina::IPCException &e) {
-		throw rina::IpcmDeallocateFlowException(e.what());
-	}
-
-	pendingFlowOperations.erase(sequenceNumber);
-	if (success)
-		allocatedFlows.remove(flowInformation);
+	allocatedFlows.remove(flowInformation);
 }
 
 rina::FlowInformation IPCMIPCProcess::flowDeallocated(int flowPortId)
@@ -633,6 +641,20 @@ bool IPCMIPCProcessFactory::exists(const unsigned short id)
 		return false;
 
 	return true;
+}
+
+unsigned short IPCMIPCProcessFactory::exists_by_pid(pid_t pid)
+{
+	std::map<unsigned short, IPCMIPCProcess*>::iterator it;
+	rina::ReadScopedLock readlock(rwlock);
+
+	for (it = ipcProcesses.begin(); it != ipcProcesses.end(); ++it) {
+		if (it->second->proxy_->pid == pid) {
+			return it->first;
+		}
+	}
+
+	return 0;
 }
 
 void IPCMIPCProcessFactory::listIPCProcesses(std::vector<IPCMIPCProcess *>& result)

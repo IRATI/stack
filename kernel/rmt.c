@@ -595,7 +595,7 @@ int rmt_destroy(struct rmt *instance)
 	if (instance->pff)
 		pff_destroy(instance->pff);
 	if (instance->rmt_cfg)
-		rmt_config_destroy(instance->rmt_cfg);
+		rmt_config_free(instance->rmt_cfg);
 
 	robject_del(&instance->robj);
 
@@ -651,7 +651,7 @@ int rmt_config_set(struct rmt *instance,
 
 	if (!instance) {
 		LOG_ERR("Bogus instance passed");
-		rmt_config_destroy(rmt_config);
+		rmt_config_free(rmt_config);
 		return -1;
 	}
 
@@ -668,7 +668,7 @@ int rmt_config_set(struct rmt *instance,
 	if (pff_select_policy_set(instance->pff, "", pff_ps_name))
 		LOG_ERR("Could not set policy set %s for PFF", pff_ps_name);
 
-	rmt_config_destroy(rmt_config);
+	rmt_config_free(instance->rmt_cfg);
 	instance->rmt_cfg = NULL;
 	return 0;
 }

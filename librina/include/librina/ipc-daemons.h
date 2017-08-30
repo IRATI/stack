@@ -145,8 +145,8 @@ public:
  */
 class AssignToDIFResponseEvent: public BaseResponseEvent {
 public:
-        AssignToDIFResponseEvent(
-                        int result, unsigned int sequenceNumber);
+        AssignToDIFResponseEvent(int result, unsigned int sequenceNumber,
+        		unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -158,7 +158,8 @@ public:
         int result;
 
 	SetPolicySetParamResponseEvent(int result,
-                                       unsigned int sequenceNumber);
+                                       unsigned int sequenceNumber,
+				       unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -169,7 +170,8 @@ public:
         int result;
 
 	SelectPolicySetResponseEvent(int result,
-                                     unsigned int sequenceNumber);
+                                     unsigned int sequenceNumber,
+				     unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -181,7 +183,8 @@ public:
         int result;
 
 	PluginLoadResponseEvent(int result,
-                                unsigned int sequenceNumber);
+                                unsigned int sequenceNumber,
+				unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -199,7 +202,8 @@ public:
 	int result;
 
 	FwdCDAPMsgRequestEvent(const ser_obj_t& sm, int result,
-			unsigned int sequenceNumber);
+			unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -217,7 +221,8 @@ public:
         int result;
 
         FwdCDAPMsgResponseEvent(const ser_obj_t& sm, int result,
-                        unsigned int sequenceNumber);
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -225,6 +230,12 @@ public:
  */
 class BaseStationInfo {
 public:
+        bool operator==(const BaseStationInfo &other) const;
+        bool operator!=(const BaseStationInfo &other) const;
+	static void from_c_bs_info(BaseStationInfo & bs,
+				   struct bs_info_entry * bsi);
+	struct bs_info_entry * to_c_bs_info(void) const;
+
 	/* Address of the IPCP at the base station */
 	std::string ipcp_address;
 
@@ -243,6 +254,12 @@ public:
  */
 class MediaDIFInfo {
 public:
+        bool operator==(const MediaDIFInfo &other) const;
+        bool operator!=(const MediaDIFInfo &other) const;
+	static void from_c_media_dif_info(MediaDIFInfo & md,
+					  struct media_dif_info * mdi);
+	struct media_dif_info * to_c_media_dif_info(void) const;
+
 	/* Name of the DIF */
 	std::string dif_name;
 
@@ -261,6 +278,12 @@ public:
  */
 class MediaReport {
 public:
+        bool operator==(const MediaReport &other) const;
+        bool operator!=(const MediaReport &other) const;
+	static void from_c_media_report(MediaReport &mr,
+					struct media_report * mre);
+	struct media_report * to_c_media_report(void) const;
+
 	/** The id of the IPC Process that scanned the media */
 	unsigned short ipcp_id;
 

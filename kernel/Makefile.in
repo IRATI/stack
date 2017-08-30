@@ -23,14 +23,16 @@ depmod:
 ccflags-y += -Wtype-limits
 ccflags-y += -I$(src)
 
+EXTRA_CFLAGS := -I$(PWD)/../include
+
 obj-m += rina-irati-core.o
 rina-irati-core-y:=						\
 	core.o utils.o						\
 	rds/rstr.o rds/rmem.o rds/rmap.o rds/rwq.o rds/rbmp.o   \
         rds/rqueue.o rds/rfifo.o rds/ringq.o rds/rref.o         \
         rds/rtimer.o rds/robjects.o rds/rds.o                   \
-	iodev.o							\
-	rnl-utils.o rnl.o					\
+	iodev.o	ctrldev.o					\
+	serdes-utils.o ker-numtables.o \
 	buffer.o pci.o pdu.o sdu.o	        		\
 	ipcp-utils.o						\
 	connection.o common.o policies.o			\
@@ -42,13 +44,13 @@ rina-irati-core-y:=						\
 	kipcm-utils.o kipcm.o					\
 	sdup.o							\
 	ps-factory.o						\
-        rmt-ps-default.o                                        \
-        dtp-ps-default.o                                        \
-        dtcp-ps-default.o                                       \
-        pff-ps-default.o                                        \
-        sdup-crypto-ps-default.o                                \
-        sdup-errc-ps-default.o                                  \
-        sdup-ttl-ps-default.o
+    rmt-ps-default.o                                        \
+    dtp-ps-default.o                                        \
+    dtcp-ps-default.o                                       \
+    pff-ps-default.o                                        \
+    sdup-crypto-ps-default.o                                \
+    sdup-errc-ps-default.o                                  \
+    sdup-ttl-ps-default.o
 
 obj-m += rina-default-plugin.o
 rina-default-plugin-y :=					\

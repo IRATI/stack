@@ -33,6 +33,7 @@
 #include "librina/logs.h"
 #include "librina/security-manager.h"
 #include "auth-policies.pb.h"
+#include "core.h"
 
 namespace rina {
 
@@ -546,6 +547,157 @@ void decode_client_chall_reply_ssh2(const ser_obj_t &message,
 		       gpb_chall.server_challenge().size());
 		server_chall.length = gpb_chall.server_challenge().size();
 	}
+}
+
+bool CryptoState::operator==(const CryptoState &other) const
+{
+	return other.compress_alg == compress_alg &&
+			other.enable_crypto_rx == enable_crypto_rx &&
+			other.enable_crypto_tx == enable_crypto_tx &&
+			other.encrypt_alg == encrypt_alg &&
+			other.encrypt_key_rx.length == encrypt_key_rx.length &&
+			other.encrypt_key_tx.length == encrypt_key_tx.length &&
+			other.iv_rx.length == iv_rx.length &&
+			other.iv_tx.length == iv_tx.length &&
+			other.mac_alg == mac_alg &&
+			other.mac_key_rx.length == mac_key_rx.length &&
+			other.mac_key_tx.length == mac_key_tx.length;
+}
+
+bool CryptoState::operator!=(const CryptoState &other) const
+{
+	return !(*this == other);
+}
+
+void CryptoState::from_c_crypto_state(CryptoState & cs,
+				      struct sdup_crypto_state * ccs)
+{
+	if (ccs->compress_alg)
+		cs.compress_alg = ccs->compress_alg;
+	if (ccs->mac_alg)
+		cs.mac_alg = ccs->mac_alg;
+	if (ccs->enc_alg)
+		cs.encrypt_alg = ccs->enc_alg;
+
+	cs.enable_crypto_rx = ccs->enable_crypto_rx;
+	cs.enable_crypto_tx = ccs->enable_crypto_tx;
+
+	if (ccs->encrypt_key_rx) {
+		cs.encrypt_key_rx.length = ccs->encrypt_key_rx->size;
+		cs.encrypt_key_rx.data = new unsigned char[cs.encrypt_key_rx.length];
+		memcpy(cs.encrypt_key_rx.data, ccs->encrypt_key_rx->data,
+		       cs.encrypt_key_rx.length);
+	}
+
+	if (ccs->encrypt_key_tx) {
+		cs.encrypt_key_tx.length = ccs->encrypt_key_tx->size;
+		cs.encrypt_key_tx.data = new unsigned char[cs.encrypt_key_tx.length];
+		memcpy(cs.encrypt_key_tx.data, ccs->encrypt_key_tx->data,
+		       cs.encrypt_key_tx.length);
+	}
+
+	if (ccs->iv_rx) {
+		cs.iv_rx.length = ccs->iv_rx->size;
+		cs.iv_rx.data = new unsigned char[cs.iv_rx.length];
+		memcpy(cs.iv_rx.data, ccs->iv_rx->data,
+		       cs.iv_rx.length);
+	}
+
+	if (ccs->iv_tx) {
+		cs.iv_tx.length = ccs->iv_tx->size;
+		cs.iv_tx.data = new unsigned char[cs.iv_tx.length];
+		memcpy(cs.iv_tx.data, ccs->iv_tx->data,
+		       cs.iv_tx.length);
+	}
+
+	if (ccs->mac_key_rx) {
+		cs.mac_key_rx.length = ccs->mac_key_rx->size;
+		cs.mac_key_rx.data = new unsigned char[cs.mac_key_rx.length];
+		memcpy(cs.mac_key_rx.data, ccs->mac_key_rx->data,
+		       cs.mac_key_rx.length);
+	}
+
+	if (ccs->mac_key_tx) {
+		cs.mac_key_tx.length = ccs->mac_key_tx->size;
+		cs.mac_key_tx.data = new unsigned char[cs.mac_key_tx.length];
+		memcpy(cs.mac_key_tx.data, ccs->mac_key_tx->data,
+		       cs.mac_key_tx.length);
+	}
+}
+
+// Class crypto state
+struct sdup_crypto_state * CryptoState::to_c_crypto_state() const
+{
+	struct sdup_crypto_state * result;
+
+	result = new sdup_crypto_state();
+	result->enable_crypto_rx = enable_crypto_rx;
+	result->enable_crypto_tx = enable_crypto_tx;
+	result->port_id = port_id;
+	result->compress_alg = stringToCharArray(compress_alg);
+	result->enc_alg = stringToCharArray(encrypt_alg);
+	result->mac_alg = stringToCharArray(mac_alg);
+
+	result->encrypt_key_rx = new buffer();
+	result->encrypt_key_rx->size = encrypt_key_rx.length;
+	if (encrypt_key_rx.length > 0) {
+		result->encrypt_key_rx->data = new unsigned char[encrypt_key_rx.length];
+		memcpy(result->encrypt_key_rx->data, encrypt_key_rx.data,
+				encrypt_key_rx.length);
+	}
+
+	result->encrypt_key_tx = new buffer();
+	result->encrypt_key_tx->size = encrypt_key_tx.length;
+	if (encrypt_key_tx.length > 0) {
+		result->encrypt_key_tx->data = new unsigned char[encrypt_key_tx.length];
+		memcpy(result->encrypt_key_tx->data, encrypt_key_tx.data,
+				encrypt_key_tx.length);
+	}
+
+	result->mac_key_rx = new buffer();
+	result->mac_key_rx->size = mac_key_rx.length;
+	if (mac_key_rx.length > 0) {
+		result->mac_key_rx->data = new unsigned char[mac_key_rx.length];
+		memcpy(result->mac_key_rx->data, mac_key_rx.data,
+				mac_key_rx.length);
+	}
+
+	result->mac_key_tx = new buffer();
+	result->mac_key_tx->size = mac_key_tx.length;
+	if (mac_key_tx.length > 0) {
+		result->mac_key_tx->data = new unsigned char[mac_key_tx.length];
+		memcpy(result->mac_key_tx->data, mac_key_tx.data,
+				mac_key_tx.length);
+	}
+
+	result->iv_rx = new buffer();
+	result->iv_rx->size = iv_rx.length;
+	if (iv_rx.length > 0) {
+		result->iv_rx->data = new unsigned char[iv_rx.length];
+		memcpy(result->iv_rx->data, iv_rx.data,
+				iv_rx.length);
+	}
+
+	result->iv_tx = new buffer();
+	result->iv_tx->size = iv_tx.length;
+	if (iv_tx.length > 0) {
+		result->iv_tx->data = new unsigned char[iv_tx.length];
+		memcpy(result->iv_tx->data, iv_tx.data,
+				iv_tx.length);
+	}
+
+	return result;
+}
+
+std::string CryptoState::toString(void) const
+{
+	std::stringstream ss;
+
+	ss << "Enable crypto rx: " << enable_crypto_rx
+	   << "; enable crypto tx: " << enable_crypto_tx << std::endl;
+	ss << "Encrypt alg: " << encrypt_alg << "; Compress alg: "
+	   << compress_alg << "; MAC alg: " << mac_alg << std::endl;
+	return ss.str();
 }
 
 // Class SSH2SecurityContext

@@ -515,24 +515,7 @@ void Client::perfFlow()
 
 void Client::destroyFlow()
 {
-        DeallocateFlowResponseEvent *resp = NULL;
-        unsigned int seqnum;
-        IPCEvent* event;
-
-        seqnum = ipcManager->requestFlowDeallocation(port_id);
-
-        for (;;) {
-                event = ipcEventProducer->eventWait();
-                if (event && event->eventType == DEALLOCATE_FLOW_RESPONSE_EVENT
-                                && event->sequenceNumber == seqnum) {
-                        break;
-                }
-                LOG_DBG("Client got new event %d", event->eventType);
-        }
-        resp = dynamic_cast<DeallocateFlowResponseEvent*>(event);
-        assert(resp);
-
-        ipcManager->flowDeallocationResult(port_id, resp->result == 0);
+        ipcManager->deallocate_flow(port_id);
         if (snd) delete snd;
 }
 
@@ -610,7 +593,7 @@ void Client::set_maxTP(timespec tp)
 void Client::cancelFloodFlow()
 {
         try {
-        	ipcManager->requestFlowDeallocation(port_id);
+        	ipcManager->deallocate_flow(port_id);
         } catch(rina::Exception &e) {
         	//Ignore, flow was already deallocated
         }

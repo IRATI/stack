@@ -52,7 +52,6 @@ int string2int(const std::string& s, int& ret)
 }
 
 /* CLASS APPLICATION PROCESS NAMING INFORMATION */
-
 ApplicationProcessNamingInformation::ApplicationProcessNamingInformation() {
 }
 
@@ -61,6 +60,24 @@ ApplicationProcessNamingInformation::ApplicationProcessNamingInformation(
 		const std::string & processInstance) {
 	this->processName = processName;
 	this->processInstance = processInstance;
+}
+
+ApplicationProcessNamingInformation::ApplicationProcessNamingInformation(struct name * name)
+{
+	if (!name)
+		return;
+
+	if (name->process_name)
+		processName = name->process_name;
+
+	if (name->process_instance)
+		processInstance = name->process_instance;
+
+	if (name->entity_name)
+		entityName = name->entity_name;
+
+	if (name->entity_instance)
+		entityInstance = name->entity_instance;
 }
 
 bool ApplicationProcessNamingInformation::operator==(
@@ -182,6 +199,33 @@ const std::string ApplicationProcessNamingInformation::toString() const
         return ss.str();
 }
 
+struct name * ApplicationProcessNamingInformation::to_c_name() const
+{
+	struct name * app_name = new name();
+
+	if (processName != "")
+		app_name->process_name = stringToCharArray(processName);
+	else
+		app_name->process_name = 0;
+
+	if (processInstance != "")
+		app_name->process_instance = stringToCharArray(processInstance);
+	else
+		app_name->process_instance = 0;
+
+	if (entityName != "")
+		app_name->entity_name = stringToCharArray(entityName);
+	else
+		app_name->entity_name = 0;
+
+	if (entityInstance != "")
+		app_name->entity_instance = stringToCharArray(entityInstance);
+	else
+		app_name->entity_instance = 0;
+
+	return app_name;
+}
+
 ApplicationProcessNamingInformation
 decode_apnameinfo(const std::string &encodedString)
 {
@@ -224,6 +268,21 @@ FlowSpecification::FlowSpecification() {
 	maxSDUsize = 0;
 }
 
+FlowSpecification::FlowSpecification(struct flow_spec * fspec)
+{
+	averageSDUBandwidth = fspec->average_sdu_bandwidth;
+	averageBandwidth = fspec->average_sdu_bandwidth;
+	peakBandwidthDuration = fspec->peak_bandwidth_duration;
+	peakSDUBandwidthDuration = fspec->peak_sdu_bandwidth_duration;
+	undetectedBitErrorRate = 0;
+	partialDelivery = fspec->partial_delivery;
+	orderedDelivery = fspec->ordered_delivery;
+	maxAllowableGap = fspec->max_allowable_gap;
+	jitter = fspec->jitter;
+	delay = fspec->delay;
+	maxSDUsize = fspec->max_sdu_size;
+}
+
 const std::string FlowSpecification::toString() {
         std::stringstream ss;
         ss<<"Jitter: "<<jitter<<"; Delay: "<<delay<<std::endl;
@@ -236,6 +295,26 @@ const std::string FlowSpecification::toString() {
         ss<<"Peak bandwidth duration (ms): "<<peakBandwidthDuration;
         ss<<"; Peak SDU bandwidth duration (ms): "<<peakSDUBandwidthDuration;
         return ss.str();
+}
+
+struct flow_spec * FlowSpecification::to_c_flowspec() const
+{
+	struct flow_spec * fspec;
+
+	fspec = new flow_spec();
+	fspec->average_bandwidth = averageBandwidth;
+	fspec->average_sdu_bandwidth = averageSDUBandwidth;
+	fspec->delay = delay;
+	fspec->jitter = jitter;
+	fspec->max_allowable_gap = maxAllowableGap;
+	fspec->max_sdu_size = maxSDUsize;
+	fspec->ordered_delivery = orderedDelivery;
+	fspec->partial_delivery = partialDelivery;
+	fspec->peak_bandwidth_duration = peakBandwidthDuration;
+	fspec->peak_sdu_bandwidth_duration = peakSDUBandwidthDuration;
+	fspec->undetected_bit_error_rate = undetectedBitErrorRate;
+
+	return fspec;
 }
 
 bool FlowSpecification::operator==(const FlowSpecification &other) const {
@@ -297,15 +376,16 @@ FlowInformation::FlowInformation()
 	portId = 0;
 	state = FLOW_DEALLOCATED;
 	user_ipcp_id = 0;
+	pid = 0;
 }
 
-bool FlowInformation::operator==(
-		const FlowInformation &other) const {
+bool FlowInformation::operator==(const FlowInformation &other) const
+{
 	return portId == other.portId;
 }
 
-bool FlowInformation::operator!=(
-		const FlowInformation &other) const {
+bool FlowInformation::operator!=(const FlowInformation &other) const
+{
 	return !(*this == other);
 }
 
@@ -322,6 +402,10 @@ const std::string FlowInformation::toString(){
 }
 
 /* CLASS DIF PROPERTIES */
+DIFProperties::DIFProperties(){
+	maxSDUSize = 0;
+}
+
 DIFProperties::DIFProperties(
 		const ApplicationProcessNamingInformation& DIFName, int maxSDUSize) {
 	this->DIFName = DIFName;
@@ -332,13 +416,18 @@ DIFProperties::DIFProperties(
 IPCEvent::IPCEvent() {
 	eventType = NO_EVENT;
 	sequenceNumber = 0;
+	ctrl_port = 0;
+	ipcp_id = 0;
 }
 
-IPCEvent::IPCEvent(IPCEventType eventType, unsigned int sequenceNumber) {
-	this->eventType = eventType;
-	this->sequenceNumber = sequenceNumber;
+IPCEvent::IPCEvent(IPCEventType et, unsigned int sn,
+		   unsigned int cp, unsigned short ipid)
+{
+	eventType = et;
+	sequenceNumber = sn;
+	ctrl_port = cp;
+	ipcp_id = ipid;
 }
-
 
 IPCEvent::~IPCEvent() {
 }
@@ -413,95 +502,92 @@ const std::string IPCEvent::eventTypeToString(IPCEventType eventType) {
 	case GET_DIF_PROPERTIES_RESPONSE_EVENT:
 		result = "21_GET_DIF_PROPERTIES_RESPONSE";
 		break;
-	case OS_PROCESS_FINALIZED:
-		result = "22_OS_PROCESS_FINALIZED";
-		break;
 	case IPCM_REGISTER_APP_RESPONSE_EVENT:
 		result = "23_IPCM_REGISTER_APP_RESPONSE";
 		break;
 	case IPCM_UNREGISTER_APP_RESPONSE_EVENT:
 		result = "24_IPCM_UNREGISTER_APP_RESPONSE";
 		break;
-	case IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT:
-		result = "25_IPCM_DEALLOCATE_FLOW_RESPONSE";
-		break;
 	case IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
-		result = "26_IPCM_ALLOCATE_FLOW_RESULT";
+		result = "25_IPCM_ALLOCATE_FLOW_RESULT";
 		break;
 	case QUERY_RIB_RESPONSE_EVENT:
-		result = "27_QUERY_RIB_RESPONSE";
+		result = "26_QUERY_RIB_RESPONSE";
 		break;
 	case IPC_PROCESS_DAEMON_INITIALIZED_EVENT:
-		result = "28_IPC_PROCESS_DAEMON_INITIALIZED";
+		result = "27_IPC_PROCESS_DAEMON_INITIALIZED";
 		break;
 	case TIMER_EXPIRED_EVENT:
-		result = "29_TIMER_EXPIRED";
+		result = "28_TIMER_EXPIRED";
 		break;
 	case IPC_PROCESS_CREATE_CONNECTION_RESPONSE:
-		result = "30_CREATE_EFCP_CONN_RESPONSE";
+		result = "29_CREATE_EFCP_CONN_RESPONSE";
 		break;
 	case IPC_PROCESS_UPDATE_CONNECTION_RESPONSE:
-		result = "31_UPDATE_EFCP_CONN_RESPONSE";
+		result = "30_UPDATE_EFCP_CONN_RESPONSE";
 		break;
 	case IPC_PROCESS_CREATE_CONNECTION_RESULT:
-		result = "32_CREATE_EFCP_CONN_RESULT";
+		result = "31_CREATE_EFCP_CONN_RESULT";
 		break;
 	case IPC_PROCESS_DESTROY_CONNECTION_RESULT:
-		result = "33_DESTROY_EFCP_CONN_RESULT";
+		result = "32_DESTROY_EFCP_CONN_RESULT";
 		break;
 	case IPC_PROCESS_DUMP_FT_RESPONSE:
-		result = "34_DUMP_FT_RESPONSE";
+		result = "33_DUMP_FT_RESPONSE";
 		break;
         case IPC_PROCESS_SET_POLICY_SET_PARAM:
-                result = "35_SET_POLICY_SET_PARAM";
+                result = "34_SET_POLICY_SET_PARAM";
                 break;
         case IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE:
-                result = "36_SET_POLICY_SET_PARAM_RESPONSE";
+                result = "35_SET_POLICY_SET_PARAM_RESPONSE";
                 break;
         case IPC_PROCESS_SELECT_POLICY_SET:
-                result = "37_SELECT_POLICY_SET";
+                result = "36_SELECT_POLICY_SET";
                 break;
         case IPC_PROCESS_SELECT_POLICY_SET_RESPONSE:
-                result = "38_SELECT_POLICY_SET_RESPONSE";
+                result = "37_SELECT_POLICY_SET_RESPONSE";
                 break;
         case IPC_PROCESS_PLUGIN_LOAD:
-                result = "39_PLUGIN_LOAD";
+                result = "38_PLUGIN_LOAD";
                 break;
         case IPC_PROCESS_PLUGIN_LOAD_RESPONSE:
-                result = "40_PLUGIN_LOAD_RESPONSE";
+                result = "39_PLUGIN_LOAD_RESPONSE";
                 break;
         case IPC_PROCESS_UPDATE_CRYPTO_STATE_RESPONSE:
-                result = "41_UPDATE_CRYPTO_STATE_RESPONSE";
+                result = "40_UPDATE_CRYPTO_STATE_RESPONSE";
                 break;
 	case IPC_PROCESS_FWD_CDAP_MSG:
-		result = "42_IPC_PROCESS_FWD_CDAP_MSG";
+		result = "41_IPC_PROCESS_FWD_CDAP_MSG";
 		break;
 	case DISCONNECT_NEIGHBOR_REQUEST_EVENT:
-		result = "43_DISCONNECT_NEIGHBOR_REQUEST_EVENT";
+		result = "42_DISCONNECT_NEIGHBOR_REQUEST_EVENT";
 		break;
 	case DISCONNECT_NEIGHBOR_RESPONSE_EVENT:
-		result = "44_DISCONNECT_NEIGHBOR_RESPONSE_EVENT";
+		result = "43_DISCONNECT_NEIGHBOR_RESPONSE_EVENT";
 		break;
 	case IPCM_MEDIA_REPORT_EVENT:
-		result = "45_MEDIA_REPORT_EVENT";
+		result = "44_MEDIA_REPORT_EVENT";
 		break;
 	case IPC_PROCESS_ALLOCATE_PORT_RESPONSE:
-		result = "46_ALLOCATE_PORT_RESPONSE";
+		result = "45_ALLOCATE_PORT_RESPONSE";
 		break;
 	case IPC_PROCESS_DEALLOCATE_PORT_RESPONSE:
-		result = "47_DEALLOCATE_PORT_RESPONSE";
+		result = "46_DEALLOCATE_PORT_RESPONSE";
 		break;
 	case IPC_PROCESS_WRITE_MGMT_SDU_RESPONSE:
-		result = "48_WRITE_MGMT_SDU_RESPONSE";
+		result = "47_WRITE_MGMT_SDU_RESPONSE";
 		break;
 	case IPC_PROCESS_READ_MGMT_SDU_NOTIF:
-		result = "49_READ_MGMT_SDU_NOTIF";
+		result = "48_READ_MGMT_SDU_NOTIF";
 		break;
 	case IPCM_CREATE_IPCP_RESPONSE:
-		result = "50_CREATE_IPCP_RESPONSE";
+		result = "49_CREATE_IPCP_RESPONSE";
 		break;
 	case IPCM_DESTROY_IPCP_RESPONSE:
-		result = "51_CREATE_IPCP_RESPONSE";
+		result = "50_DESTROY_IPCP_RESPONSE";
+		break;
+	case IPCM_FINALIZATION_REQUEST_EVENT:
+		result = "51_IPCM_FINALIZATION_REQUEST_EVENT";
 		break;
 	case NO_EVENT:
 		result = "52_NO_EVENT";
@@ -514,19 +600,20 @@ const std::string IPCEvent::eventTypeToString(IPCEventType eventType) {
 }
 
 /* CLASS BASE RESPONSE EVENT */
-BaseResponseEvent::BaseResponseEvent(
-                        int result,
-                        IPCEventType eventType,
-                        unsigned int sequenceNumber) :
-                              IPCEvent(eventType,
-                                             sequenceNumber){
-        this->result = result;
+BaseResponseEvent::BaseResponseEvent(int res, IPCEventType eventType,
+                        unsigned int sn, unsigned int ctrl_p, unsigned short ipcp_id) :
+                              IPCEvent(eventType, sn, ctrl_p, ipcp_id)
+{
+        result = res;
 }
 
 /* CLASS FLOW REQUEST EVENT */
-FlowRequestEvent::FlowRequestEvent(){
+FlowRequestEvent::FlowRequestEvent() :
+		IPCEvent (FLOW_ALLOCATION_REQUESTED_EVENT, 0, 0, 0)
+{
 	localRequest = false;
 	portId = 0;
+	pid = 0;
 	ipcProcessId = 0;
 	flowRequestorIpcProcessId = 0;
 	internal = false;
@@ -538,9 +625,10 @@ FlowRequestEvent::FlowRequestEvent(
 		const ApplicationProcessNamingInformation& localApplicationName,
 		const ApplicationProcessNamingInformation& remoteApplicationName,
 		int flowRequestorIpcProcessId,
-		unsigned int sequenceNumber):
+		unsigned int sequenceNumber, unsigned int ctrl_p,
+		unsigned short ipcp_id, pid_t pid):
 				IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT,
-						sequenceNumber) {
+					 sequenceNumber, ctrl_p, ipcp_id) {
 	this->flowSpecification = flowSpecification;
 	this->localRequest = localRequest;
 	this->localApplicationName = localApplicationName;
@@ -549,6 +637,7 @@ FlowRequestEvent::FlowRequestEvent(
 	this->portId = 0;
 	this->ipcProcessId = 0;
 	this->internal = false;
+	this->pid = pid;
 }
 
 FlowRequestEvent::FlowRequestEvent(int portId,
@@ -557,58 +646,56 @@ FlowRequestEvent::FlowRequestEvent(int portId,
 		const ApplicationProcessNamingInformation& localApplicationName,
 		const ApplicationProcessNamingInformation& remoteApplicationName,
 		const ApplicationProcessNamingInformation& DIFName,
-		unsigned short ipcProcessId,
-		unsigned int sequenceNumber) :
+		unsigned int sequenceNumber, unsigned int ctrl_p,
+		unsigned short ipcp_id, pid_t pid) :
 		IPCEvent(FLOW_ALLOCATION_REQUESTED_EVENT,
-				sequenceNumber) {
+				sequenceNumber, ctrl_p, ipcp_id) {
 	this->flowSpecification = flowSpecification;
 	this->localRequest = localRequest;
 	this->localApplicationName = localApplicationName;
 	this->remoteApplicationName = remoteApplicationName;
 	this->DIFName = DIFName;
-	this->flowRequestorIpcProcessId = ipcProcessId;
+	this->flowRequestorIpcProcessId = ipcp_id;
 	this->portId = portId;
-	this->ipcProcessId = ipcProcessId;
+	this->ipcProcessId = ipcp_id;
 	this->internal = false;
+	this->pid = pid;
 }
 
 /* CLASS FLOW DEALLOCATE REQUEST EVENT */
-FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
-			const ApplicationProcessNamingInformation& appName,
-			unsigned int sequenceNumber):
-						IPCEvent(FLOW_DEALLOCATION_REQUESTED_EVENT,
-								sequenceNumber){
-	this->portId = portId;
-	this->applicationName = appName;
-	this->internal = false;
-}
-
-FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId,
-		unsigned int sequenceNumber):
+FlowDeallocateRequestEvent::FlowDeallocateRequestEvent(int portId, unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id):
 			IPCEvent(FLOW_DEALLOCATION_REQUESTED_EVENT,
-					sequenceNumber){
+					sequenceNumber, ctrl_p, ipcp_id){
 	this->portId = portId;
 	this->internal = false;
 }
 
 /* CLASS FLOW DEALLOCATED EVENT */
-FlowDeallocatedEvent::FlowDeallocatedEvent(
-		int portId, int code) :
-				IPCEvent(FLOW_DEALLOCATED_EVENT, 0) {
+FlowDeallocatedEvent::FlowDeallocatedEvent(int portId, int code,
+		 unsigned int ctrl_port, unsigned short ipcp_id) :
+				IPCEvent(FLOW_DEALLOCATED_EVENT, 0, ctrl_port, ipcp_id)
+{
 	this->portId = portId;
 	this->code = code;
 }
 
 /* CLASS APPLICATION REGISTRATION INFORMATION */
-ApplicationRegistrationInformation::ApplicationRegistrationInformation(){
+ApplicationRegistrationInformation::ApplicationRegistrationInformation()
+{
 	applicationRegistrationType = APPLICATION_REGISTRATION_ANY_DIF;
 	ipcProcessId = 0;
+	ctrl_port = 0;
+	pid = 0;
 }
 
 ApplicationRegistrationInformation::ApplicationRegistrationInformation(
-		ApplicationRegistrationType applicationRegistrationType){
+		ApplicationRegistrationType applicationRegistrationType)
+{
 	this->applicationRegistrationType = applicationRegistrationType;
 	ipcProcessId = 0;
+	ctrl_port = 0;
+	pid = 0;
 }
 
 const std::string ApplicationRegistrationInformation::toString(){
@@ -625,31 +712,31 @@ const std::string ApplicationRegistrationInformation::toString(){
 }
 
 /* CLASS APPLICATION REGISTRATION REQUEST */
-ApplicationRegistrationRequestEvent::ApplicationRegistrationRequestEvent(
-	const ApplicationRegistrationInformation&
-	applicationRegistrationInformation, unsigned int sequenceNumber) :
+ApplicationRegistrationRequestEvent::ApplicationRegistrationRequestEvent(const ApplicationRegistrationInformation&
+			applicationRegistrationInformation, unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id) :
 		IPCEvent(APPLICATION_REGISTRATION_REQUEST_EVENT,
-				sequenceNumber) {
+				sequenceNumber, ctrl_p, ipcp_id) {
 	this->applicationRegistrationInformation =
 			applicationRegistrationInformation;
 }
 
 /* CLASS BASE APPLICATION REGISTRATION EVENT */
-BaseApplicationRegistrationEvent::BaseApplicationRegistrationEvent(
-                        const ApplicationProcessNamingInformation& appName,
+BaseApplicationRegistrationEvent::BaseApplicationRegistrationEvent(const ApplicationProcessNamingInformation& appName,
                         const ApplicationProcessNamingInformation& DIFName,
                         IPCEventType eventType,
-                        unsigned int sequenceNumber):
-                                IPCEvent(eventType, sequenceNumber) {
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id):
+                                IPCEvent(eventType, sequenceNumber, ctrl_p, ipcp_id)
+{
         this->applicationName = appName;
         this->DIFName = DIFName;
 }
 
-BaseApplicationRegistrationEvent::BaseApplicationRegistrationEvent(
-                        const ApplicationProcessNamingInformation& appName,
+BaseApplicationRegistrationEvent::BaseApplicationRegistrationEvent(const ApplicationProcessNamingInformation& appName,
                         IPCEventType eventType,
-                        unsigned int sequenceNumber):
-                                IPCEvent(eventType, sequenceNumber) {
+                        unsigned int sequenceNumber, unsigned int ctrl_p, unsigned short ipcp_id):
+                                IPCEvent(eventType, sequenceNumber, ctrl_p, ipcp_id) {
         this->applicationName = appName;
 }
 
@@ -657,11 +744,12 @@ BaseApplicationRegistrationEvent::BaseApplicationRegistrationEvent(
 ApplicationUnregistrationRequestEvent::ApplicationUnregistrationRequestEvent(
 		const ApplicationProcessNamingInformation& appName,
 		const ApplicationProcessNamingInformation& DIFName,
-		unsigned int sequenceNumber) :
+		unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id) :
                 BaseApplicationRegistrationEvent(
                                 appName, DIFName,
                                 APPLICATION_UNREGISTRATION_REQUEST_EVENT,
-				sequenceNumber) {
+				sequenceNumber, ctrl_port, ipcp_id) {
 }
 
 /* CLASS BASE APPLICATION RESPONSE EVENT */
@@ -671,10 +759,10 @@ BaseApplicationRegistrationResponseEvent::
                 const ApplicationProcessNamingInformation& DIFName,
                 int result,
                 IPCEventType eventType,
-                unsigned int sequenceNumber) :
-                BaseApplicationRegistrationEvent (
-                                appName, DIFName,
-                                eventType, sequenceNumber){
+                unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id) :
+                BaseApplicationRegistrationEvent (appName, DIFName,
+                                eventType, sequenceNumber, ctrl_port, ipcp_id){
         this->result = result;
 }
 
@@ -683,10 +771,10 @@ BaseApplicationRegistrationResponseEvent::
                 const ApplicationProcessNamingInformation& appName,
                 int result,
                 IPCEventType eventType,
-                unsigned int sequenceNumber) :
-                BaseApplicationRegistrationEvent (
-                                appName,
-                                eventType, sequenceNumber){
+                unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id) :
+                BaseApplicationRegistrationEvent (appName, eventType,
+                		sequenceNumber, ctrl_port, ipcp_id){
         this->result = result;
 }
 
@@ -695,22 +783,23 @@ RegisterApplicationResponseEvent::RegisterApplicationResponseEvent(
                         const ApplicationProcessNamingInformation& appName,
                         const ApplicationProcessNamingInformation& difName,
                         int result,
-                        unsigned int sequenceNumber):
-                BaseApplicationRegistrationResponseEvent(
-                                       appName, difName, result,
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id):
+                BaseApplicationRegistrationResponseEvent(appName, difName, result,
                                        REGISTER_APPLICATION_RESPONSE_EVENT,
-                                       sequenceNumber){
+                                       sequenceNumber, ctrl_port, ipcp_id){
 }
 
 /* CLASS UNREGISTER APPLICATION RESPONSE EVENT */
 UnregisterApplicationResponseEvent::UnregisterApplicationResponseEvent(
                         const ApplicationProcessNamingInformation& appName,
                         int result,
-                        unsigned int sequenceNumber):
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id):
                 BaseApplicationRegistrationResponseEvent(
                                        appName, result,
                                        UNREGISTER_APPLICATION_RESPONSE_EVENT,
-                                       sequenceNumber){
+                                       sequenceNumber, ctrl_port, ipcp_id){
 }
 
 /* CLASS ALLOCATE FLOW RESPONSE EVENT */
@@ -718,28 +807,19 @@ AllocateFlowResponseEvent::AllocateFlowResponseEvent(
                 int result,
                 bool notifySource,
                 int flowAcceptorIpcProcessId,
-                unsigned int sequenceNumber) :
+                unsigned int sequenceNumber,
+		unsigned int ctrl_p,
+		unsigned short ipcp_id, pid_t pid) :
         BaseResponseEvent(result,
                           ALLOCATE_FLOW_RESPONSE_EVENT,
-                          sequenceNumber)
+                          sequenceNumber, ctrl_port, ipcp_id)
 {
         this->notifySource             = notifySource;
         this->flowAcceptorIpcProcessId = flowAcceptorIpcProcessId;
-}
-
-/* CLASS OS PROCESS FINALIZED EVENT */
-OSProcessFinalizedEvent::OSProcessFinalizedEvent(
-		const ApplicationProcessNamingInformation& appName,
-		unsigned int ipcProcessId,
-		unsigned int sequenceNumber) :
-		IPCEvent(OS_PROCESS_FINALIZED,
-				sequenceNumber) {
-	this->applicationName = appName;
-	this->ipcProcessId = ipcProcessId;
+        this->pid = pid;
 }
 
 /* CLASS IPC EVENT PRODUCER */
-
 /* Auxiliar function called in case of using the stubbed version of the API */
 IPCEvent * getIPCEvent(){
 	ApplicationProcessNamingInformation sourceName;
@@ -758,24 +838,9 @@ IPCEvent * getIPCEvent(){
 
 	FlowRequestEvent * event = new
 			FlowRequestEvent(flowSpec, true, sourceName,
-			                destName, 0, 24);
+			                destName, 0, 24, 23, 2, 0);
 
 	return event;
-}
-
-IPCEvent * IPCEventProducer::eventPoll()
-{
-#if STUB_API
-	return getIPCEvent();
-#else
-	IPCEvent * event = rinaManager->getEventQueue()->poll();
-
-	if (event) {
-		rinaManager->eventQueuePopped();
-	}
-
-	return event;
-#endif
 }
 
 IPCEvent * IPCEventProducer::eventWait()
@@ -783,29 +848,7 @@ IPCEvent * IPCEventProducer::eventWait()
 #if STUB_API
 	return getIPCEvent();
 #else
-	IPCEvent *event = rinaManager->getEventQueue()->take();
-
-	if (event) {
-		rinaManager->eventQueuePopped();
-	}
-
-	return event;
-#endif
-}
-
-IPCEvent * IPCEventProducer::eventTimedWait(int seconds,
-                                            int nanoseconds)
-{
-#if STUB_API
-	return getIPCEvent();
-#else
-	IPCEvent * event = rinaManager->getEventQueue()->timedtake(seconds,
-								nanoseconds);
-	if (event) {
-		rinaManager->eventQueuePopped();
-	}
-
-	return event;
+	return irati_ctrl_mgr->get_next_ctrl_msg();
 #endif
 }
 
@@ -966,6 +1009,56 @@ Neighbor::Neighbor()
 	internal_port_id = 0;
 }
 
+void Neighbor::from_c_neighbor(Neighbor & nei, struct ipcp_neighbor * cnei)
+{
+	struct name_entry * pos;
+
+	if (!cnei)
+		return;
+
+	nei.address_ = cnei->address;
+	nei.average_rtt_in_ms_ = cnei->average_rtt_in_ms;
+	nei.enrolled_ = cnei->enrolled;
+	nei.internal_port_id = cnei->intern_port_id;
+	nei.last_heard_from_time_in_ms_ = cnei->last_heard_time_ms;
+	nei.name_ = ApplicationProcessNamingInformation(cnei->ipcp_name);
+	nei.number_of_enrollment_attempts_ = cnei->num_enroll_attempts;
+	nei.old_address_ = cnei->old_address;
+	nei.supporting_dif_name_ = ApplicationProcessNamingInformation(cnei->sup_dif_name);
+	nei.underlying_port_id_ = cnei->under_port_id;
+        list_for_each_entry(pos, &(cnei->supporting_difs), next) {
+        	nei.supporting_difs_.push_back(ApplicationProcessNamingInformation(pos->entry));
+        }
+}
+
+struct ipcp_neighbor * Neighbor::to_c_neighbor() const
+{
+	struct ipcp_neighbor * result;
+	std::list<ApplicationProcessNamingInformation>::const_iterator it;
+	struct name_entry * pos;
+
+	result = ipcp_neighbor_create();
+	result->address = address_;
+	result->old_address = old_address_;
+	result->average_rtt_in_ms = average_rtt_in_ms_;
+	result->last_heard_time_ms = last_heard_from_time_in_ms_;
+	result->enrolled = enrolled_;
+	result->under_port_id = underlying_port_id_;
+	result->intern_port_id = internal_port_id;
+	result->num_enroll_attempts = number_of_enrollment_attempts_;
+	result->ipcp_name = name_.to_c_name();
+	result->sup_dif_name = supporting_dif_name_.to_c_name();
+	for (it = supporting_difs_.begin();
+			it != supporting_difs_.end(); ++it) {
+		pos = new name_entry();
+		INIT_LIST_HEAD(&pos->next);
+		pos->entry = it->to_c_name();
+		list_add_tail(&pos->next, &result->supporting_difs);
+	}
+
+	return result;
+}
+
 bool Neighbor::operator==(const Neighbor &other) const{
 	return name_ == other.get_name();
 }
@@ -1102,12 +1195,12 @@ void initialize(unsigned int localPort, const std::string& logLevel,
                 throw InitializationException("Librina already initialized");
         }
 
-	setNetlinkPortId(localPort);
+        irati_ctrl_mgr->set_irati_ctrl_port(localPort);
 	setLogLevel(logLevel.c_str());
 	if (setLogFile(pathToLogFile.c_str()) != 0) {
 	        LOG_WARN("Error setting log file, using stdout only");
 	}
-	rinaManager->getNetlinkManager();
+	irati_ctrl_mgr->initialize();
 
 	librinaInitialized = true;
 	librinaInitializationLock.unlock();
@@ -1128,7 +1221,7 @@ void initialize(const std::string& logLevel,
 
         setLogLevel(logLevel.c_str());
 
-        rinaManager->getNetlinkManager();
+        irati_ctrl_mgr->initialize();
 
         librinaInitialized = true;
         librinaInitializationLock.unlock();
@@ -1136,7 +1229,35 @@ void initialize(const std::string& logLevel,
 
 void librina_finalize(){
 	// delete rinaManager Singleton
-	rinaManager.~Singleton();
+	irati_ctrl_mgr.~Singleton();
 }
 
+}
+
+int buffer_destroy(struct buffer * b)
+{
+        if (!b)
+        	return -1;
+
+        if (b->data) {
+        	delete b->data;
+        	b->data = 0;
+        }
+
+        delete b;
+
+        return 0;
+}
+
+struct buffer * buffer_create()
+{
+	struct buffer * result;
+
+	result = new buffer();
+	if (!result)
+		return 0;
+
+	memset(result, 0, sizeof(struct buffer));
+
+	return result;
 }

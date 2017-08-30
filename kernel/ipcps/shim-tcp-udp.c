@@ -1234,8 +1234,8 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                                        data->id,
                                        flow->port_id,
                                        data->dif_name,
+				       app->app_name,
                                        sname,
-                                       app->app_name,
                                        data->qos[CUBE_UNRELIABLE])) {
                         LOG_ERR("Couldn't tell the KIPCM about the flow");
                         kfa_port_id_release(data->kfa, flow->port_id);
@@ -2290,7 +2290,9 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
 }
 
 static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
-                                 const struct dif_info *     dif_information)
+                		 const struct name * dif_name,
+				 const string_t * type,
+				 struct dif_config * config)
 {
         ASSERT(data);
         ASSERT(dif_information);
@@ -2303,14 +2305,13 @@ static int tcp_udp_assign_to_dif(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        data->dif_name = name_dup(dif_information->dif_name);
+        data->dif_name = name_dup(dif_name);
         if (!data->dif_name) {
                 LOG_ERR("Error duplicating name, bailing out");
                 return -1;
         }
 
-        if (parse_assign_conf(data,
-                              dif_information->configuration)) {
+        if (parse_assign_conf(data, config)) {
                 LOG_ERR("Failed to parse configuration");
                 goto err;
         }

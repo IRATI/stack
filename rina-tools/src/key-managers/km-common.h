@@ -47,7 +47,6 @@ public:
 	virtual void unregister_application_response_handler(const rina::UnregisterApplicationResponseEvent& event) = 0;
 	virtual void allocate_flow_request_result_handler(const rina::AllocateFlowRequestResultEvent& event) = 0;
 	virtual void flow_allocation_requested_handler(const rina::FlowRequestEvent& event) = 0;
-	virtual void deallocate_flow_response_handler(const rina::DeallocateFlowResponseEvent& event) = 0;
 	virtual void flow_deallocated_event_handler(const rina::FlowDeallocatedEvent& event) = 0;
 
 protected:
@@ -204,7 +203,6 @@ public:
 	void unregister_application_response_handler(const rina::UnregisterApplicationResponseEvent& event);
 	void allocate_flow_request_result_handler(const rina::AllocateFlowRequestResultEvent& event);
 	void flow_allocation_requested_handler(const rina::FlowRequestEvent& event);
-	void deallocate_flow_response_handler(const rina::DeallocateFlowResponseEvent& event);
 	void flow_deallocated_event_handler(const rina::FlowDeallocatedEvent& event);
 
         KMRIBDaemon * ribd;

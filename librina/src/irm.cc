@@ -254,32 +254,17 @@ void IPCResourceManager::flowAllocationRequested(const FlowRequestEvent& event)
 
 void IPCResourceManager::deallocateNMinus1Flow(int portId)
 {
-	if (ipcp) {
-		extendedIPCManager->requestFlowDeallocation(portId);
-	} else {
-		ipcManager->requestFlowDeallocation(portId);
-	}
-}
-
-void IPCResourceManager::deallocateFlowResponse(const DeallocateFlowResponseEvent& event)
-{
-	bool success = false;
-
-	if (event.result == 0){
-		success = true;
-	}
-
 	try {
 		if (ipcp) {
-			extendedIPCManager->flowDeallocationResult(event.portId, success);
+			extendedIPCManager->deallocate_flow(portId);
 		} else {
-			ipcManager->flowDeallocationResult(event.portId, success);
+			ipcManager->deallocate_flow(portId);
 		}
-	} catch (Exception &e) {
-		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
-	}
 
-	cleanFlowAndNotify(event.portId);
+		cleanFlowAndNotify(portId);
+	}catch (Exception &e) {
+		LOG_ERR("Problems deallocating N-1 flow: %s", e.what());
+	}
 }
 
 void IPCResourceManager::flowDeallocatedRemotely(const FlowDeallocatedEvent& event)
@@ -291,7 +276,7 @@ void IPCResourceManager::flowDeallocatedRemotely(const FlowDeallocatedEvent& eve
 			ipcManager->flowDeallocated(event.portId);
 		}
 	} catch (Exception &e) {
-		LOG_ERR("Problems communicating with the IPC Manager: %s", e.what());
+		LOG_ERR("%s", e.what());
 	}
 
 	cleanFlowAndNotify(event.portId);

@@ -27,7 +27,7 @@
 #include "ipcp-instances.h"
 #include "ipcp-factories.h"
 #include "sdu.h"
-#include "rnl.h"
+#include "ctrldev.h"
 #include "kfa.h"
 #include "rds/robjects.h"
 
@@ -67,7 +67,8 @@ int            kipcm_sdu_read(struct kipcm * kipcm,
 /* If successful: takes the ownership of the SDU */
 int            kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
                                     ipc_process_id_t id,
-                                    struct sdu_wpi * sdu_wpi);
+	                            port_id_t      port_id,
+	                            struct sdu *   sdu);
 port_id_t      kipcm_flow_create(struct kipcm *   kipcm,
 				 ipc_process_id_t ipc_id,
 				 struct name *    process_name);
@@ -75,8 +76,6 @@ port_id_t      kipcm_flow_create(struct kipcm *   kipcm,
 int            kipcm_flow_destroy(struct kipcm *   kipcm,
 				  ipc_process_id_t ipc_id,
 				  port_id_t        port_id);
-
-
 /*
  * The following functions represent the KIPCM southbound interface
  */
@@ -120,9 +119,9 @@ int            kipcm_notify_flow_alloc_req_result(struct kipcm *   kipcm,
                                                   uint_t           res);
 
 int            kipcm_notify_flow_dealloc(ipc_process_id_t ipc_id,
-                                         uint_t           code,
+                                         int8_t           code,
                                          port_id_t        port_id,
-                                         u32              nl_port_id);
+					 irati_msg_port_t irati_port);
 
 struct ipcp_instance * kipcm_find_ipcp_by_name(struct kipcm * kipcm,
                                                struct name *  name);

@@ -40,6 +40,7 @@
 #include "dif-allocator.h"
 #include "catalog.h"
 #include "ip-vpn-manager.h"
+#include "process-event-listener.h"
 
 //Addons
 #include "addon.h"
@@ -263,6 +264,8 @@ public:
 	//
 	void init(const std::string& loglevel, std::string& config_file);
 
+	void request_finalization(void);
+
 	//
 	// Load the specified addons
 	//
@@ -308,6 +311,12 @@ public:
 	// Checks if an IPCP exists by its ID
 	//
 	bool ipcp_exists(const unsigned short ipcp_id);
+
+	//
+	// Checks if an IPCP exists by its PID. Returns its
+	// ID if it exists, 0 otherwise
+	//
+	unsigned short ipcp_exists_by_pid(pid_t pid);
 
 	//
 	// List the available IPCP types
@@ -610,6 +619,7 @@ public:
 	//
 	inline void stop(void){
 		req_to_stop = true;
+		request_finalization();
 	}
 
 	/// returns the forwarded object sent with invoke_id and
@@ -618,6 +628,8 @@ public:
 	/// @return rina::rib::DelegationObj*
 	delegated_stored_t* get_forwarded_object(int invoke_id,
 						 bool remove);
+
+	void os_process_finalized_handler(pid_t pid);
 
         //Generator of opaque identifiers
         rina::ConsecutiveUnsignedIntegerGenerator __tid_gen;
@@ -630,6 +642,9 @@ public:
 
         //The IP VPN Manager
         IPVPNManager * ip_vpn_manager;
+
+        //The OS process Monitor
+        OSProcessMonitor * osp_monitor;
 
         //Catalog of policies
         Catalog catalog;
@@ -663,9 +678,8 @@ protected:
 	/**
 	* Check application registration
 	*/
-	bool application_is_registered_to_ipcp(
-			const rina::ApplicationProcessNamingInformation&,
-			IPCMIPCProcess *slave_ipcp);
+	bool application_is_registered_to_ipcp(rina::ApplicationProcessNamingInformation & app_name,
+					       pid_t pid, IPCMIPCProcess *slave_ipcp);
 	/**
 	* Get the IPCP by port id
 	*
@@ -678,12 +692,7 @@ protected:
 	IPCMIPCProcess* lookup_ipcp_by_port(unsigned int port_id,
 						bool write_lock=false);
 
-	/**
-	* Collect flows for an application name
-	*/
-	void collect_flows_by_application(
-			const rina::ApplicationProcessNamingInformation& app_name,
-			std::list<rina::FlowInformation>& result);
+	void collect_flows_by_pid(pid_t pid, std::list<rina::FlowInformation>& result);
 
 	/**
 	* Get the IPCP instance pointer
@@ -710,7 +719,6 @@ protected:
 	ipcm_res_t flow_deallocation_requested_event_handler(Promise * promise,
 						             rina::FlowDeallocateRequestEvent* event);
 	void flow_deallocated_event_handler(rina::FlowDeallocatedEvent* event);
-	void ipcm_deallocate_flow_response_event_handler(rina::IpcmDeallocateFlowResponseEvent* event);
 	void ipcm_allocate_flow_request_result_handler(rina::IpcmAllocateFlowRequestResultEvent* event);
 	void application_flow_allocation_failed_notify(
 						rina::FlowRequestEvent *event);
@@ -766,7 +774,6 @@ protected:
 	void query_rib_response_event_handler(rina::QueryRIBResponseEvent *e);
 
 	//Misc
-	void os_process_finalized_handler(rina::OSProcessFinalizedEvent *event);
 	void ipc_process_daemon_initialized_event_handler(rina::IPCProcessDaemonInitializedEvent *e);
 	void ipc_process_create_response_event_handler(rina::CreateIPCPResponseEvent *e);
 	void ipc_process_destroy_response_event_handler(rina::DestroyIPCPResponseEvent *e);

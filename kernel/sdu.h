@@ -35,16 +35,6 @@ struct efcp_config;
 struct pdu;
 struct sk_buff;
 
-/*
- * Represents and SDU with the port-id the SDU is to be written to
- * or has been read from OR the destination address
- */
-struct sdu_wpi {
-        struct sdu * sdu;
-        address_t    dst_addr;
-        port_id_t    port_id;
-};
-
 struct sdu		*sdu_create(size_t data_len);
 struct sdu		*sdu_create_ni(size_t data_len);
 struct sdu		*sdu_from_buffer_ni(void *buffer);
@@ -69,12 +59,5 @@ int			sdu_shrink(struct sdu *sdu, size_t bytes);
 /* For shim HV */
 int			sdu_pop(struct sdu *sdu, size_t bytes);
 int			sdu_push(struct sdu *sdu, size_t bytes);
-
-/* For SDU_WPI */
-struct sdu_wpi		*sdu_wpi_create(size_t data_len);
-struct sdu_wpi		*sdu_wpi_create_ni(size_t data_len);
-int			sdu_wpi_destroy(struct sdu_wpi *s);
-bool		sdu_wpi_is_ok(const struct sdu_wpi *s);
-int		sdu_wpi_detach(struct sdu_wpi *s);
 
 #endif

@@ -82,7 +82,6 @@ IPCPSecurityManager::~IPCPSecurityManager()
 
 rina::AuthSDUProtectionProfile IPCPSecurityManager::get_auth_sdup_profile(const std::string& under_dif_name)
 {
-        LOG_DBG("IPCPSecurityManager: update crypto state (under-dif-name %s)", under_dif_name.c_str());
 	std::map<std::string, rina::AuthSDUProtectionProfile>::const_iterator it =
 			config.specific_auth_profiles.find(under_dif_name);
 	if (it == config.specific_auth_profiles.end()) {

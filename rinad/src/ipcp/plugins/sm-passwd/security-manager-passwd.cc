@@ -86,7 +86,7 @@ void SecurityManagerPasswdPs::checkRIBOperation(const rina::cdap_rib::auth_polic
 bool SecurityManagerPasswdPs::acceptFlow(const configs::Flow& newFlow)
 {
 	LOG_IPCP_DBG("Accepting flow from remote application %s",
-			newFlow.source_naming_info.getEncodedString().c_str());
+			newFlow.remote_naming_info.getEncodedString().c_str());
 	return true;
 }
 

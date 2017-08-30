@@ -492,61 +492,13 @@ void ShimWifiIPCProcessImpl::flow_deallocation_requested_handler(const rina::Flo
 		LOG_IPCP_ERR("Got a flow deallocation request while not in "
 				"ASSIGNED_TO_DIF state. Current state is: %d",
 				state);
-		rina::extendedIPCManager->flowDeallocationResult(event.portId, -1);
 		return;
 	}
 
 	try {
 		ipcp_proxy->deallocateFlow(event.portId, event.sequenceNumber);
-		pending_flow_deallocation_events.insert(std::pair<unsigned int,
-				rina::FlowDeallocateRequestEvent>(event.sequenceNumber, event));
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems sending flow deallocation request to the kernel: %s", e.what());
-		rina::extendedIPCManager->flowDeallocationResult(event.portId, -1);
-	}
-}
-
-void ShimWifiIPCProcessImpl::ipcm_deallocate_flow_response_event_handler(const rina::IpcmDeallocateFlowResponseEvent& event)
-{
-	rina::ScopedLock g(*lock_);
-
-	if (state != ASSIGNED_TO_DIF) {
-		LOG_IPCP_ERR("Got a flow deallocation response while not in  "
-				"ASSIGNED_TO_DIF state. State is %d ",
-				state);
-		return;
-	}
-
-	std::map<unsigned int, rina::FlowDeallocateRequestEvent>::iterator it;
-	it = pending_flow_deallocation_events.find(event.sequenceNumber);
-	if (it == pending_flow_deallocation_events.end()) {
-		LOG_IPCP_ERR("Couldn't find a flow deallocation request event associated to the handle %u",
-				event.sequenceNumber);
-		return;
-	}
-
-	rina::FlowDeallocateRequestEvent requestEvent = it->second;
-	pending_flow_deallocation_events.erase(it);
-	if (event.result != 0) {
-		LOG_IPCP_ERR("The kernel couldn't successfully process the Flow deallocation request: %d",
-				event.result);
-		LOG_IPCP_ERR("Could not deallocate flow at port-id %d",
-				it->second.portId);
-
-		try {
-			rina::extendedIPCManager->notifyflowDeallocated(requestEvent, -1);
-		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
-		}
-
-		return;
-	}
-
-	LOG_IPCP_DBG("The kernel processed successfully the flow deallocation request");
-	try {
-		rina::extendedIPCManager->notifyflowDeallocated(requestEvent, 0);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems communicating with the IPC Manager: %s", e.what());
 	}
 }
 

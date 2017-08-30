@@ -39,85 +39,57 @@ using namespace std;
 
 namespace rinad {
 
-void IPCManager_::os_process_finalized_handler(
-					rina::OSProcessFinalizedEvent *event)
+void IPCManager_::os_process_finalized_handler(pid_t pid)
 {
-	const rina::ApplicationProcessNamingInformation& app_name =
-						event->applicationName;
 	list<rina::FlowInformation> involved_flows;
+	vector<IPCMIPCProcess *> ipcps;
+	rina::ApplicationProcessNamingInformation app_name;
+	unsigned short ipcp_id = 0;
 	ostringstream ss;
-
-	ss  << "Application " << app_name.toString()
-			<< "terminated" << endl;
-	FLUSH_LOG(INFO, ss);
 
 	{
 		//Prevent any insertion/deletion to happen
 		rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
 
-		// Look if the terminating application has allocated flows
-		// with some IPC processes
-		collect_flows_by_application(app_name, involved_flows);
-		unsigned short ipcp_id = 0;
-		for (list<rina::FlowInformation>::iterator fit = involved_flows.begin();
-				fit != involved_flows.end(); fit++) {
-
-			IPCMIPCProcess *ipcp = select_ipcp_by_dif(fit->difName);
-			if (!ipcp) {
-				ss  << ": Cannot find the IPC process "
-						"that provides the flow with port-id " <<
-						fit->portId << endl;
-				FLUSH_LOG(ERR, ss);
-				continue;
-			}
-
-			{
-				//Auto release the read lock
-				rina::ReadScopedLock readlock(ipcp->rwlock, false);
-				ipcp_id = ipcp->get_id();
-			}
-
-			rina::FlowDeallocateRequestEvent req_event(fit->portId, 0);
-			IPCManager->deallocate_flow(NULL, ipcp_id, req_event);
-		}
-
 		// Look if the terminating application has pending registrations
 		// with some IPC processes
-		vector<IPCMIPCProcess *> ipcps;
 		ipcp_factory_.listIPCProcesses(ipcps);
 		for (unsigned int i = 0; i < ipcps.size(); i++) {
-			if (application_is_registered_to_ipcp(app_name,
-					ipcps[i])) {
+			if (application_is_registered_to_ipcp(app_name, pid, ipcps[i])) {
 				// Build a structure that will be used during
 				// the unregistration process. The last argument
 				// is the request sequence number: 0 means that
 				// the unregistration response does not match
 				// an application request - this is indeed an
 				// unregistration forced by the IPCM.
-				rina::ApplicationUnregistrationRequestEvent
-				req_event(app_name, ipcps[i]->dif_name_, 0);
-
+				rina::ApplicationUnregistrationRequestEvent req_event(app_name,
+										      ipcps[i]->dif_name_,
+										      0, 0, 0);
 				IPCManager->unregister_app_from_ipcp(NULL, NULL,
-						req_event,
-						ipcps[i]->get_id());
+								     req_event,
+								     ipcps[i]->get_id());
+				LOG_INFO("OS process %d terminated, unregistering name %s",
+						pid, app_name.toString().c_str());
 			}
 		}
 	}
 
-	if (IPCManager->ipcp_exists(event->ipcProcessId)) {
+	ipcp_id = IPCManager->ipcp_exists_by_pid(pid);
+	if (ipcp_id != 0) {
+		LOG_INFO("OS process %d terminated, it was IPCP with id %u",
+				pid, ipcp_id);
 		//An IPCP OS process has crashed, we need to clean up state
 		//TODO if the IPCP was supporting flows or had
 		//registered applications, notify them
 
 		//Distribute the event to the addons
-		IPCMEvent addon_e(NULL, IPCM_IPCP_CRASHED,
-						event->ipcProcessId);
+		IPCMEvent addon_e(NULL, IPCM_IPCP_CRASHED, ipcp_id);
 		Addon::distribute_ipcm_event(addon_e);
 
 		// Cleanup IPC Process state in the kernel
-		if(IPCManager->destroy_ipcp(NULL, event->ipcProcessId) < 0 ){
+		if(IPCManager->destroy_ipcp(NULL, ipcp_id) < 0 ){
 			LOG_WARN("Problems cleaning up state of IPCP with id: %d\n",
-					event->ipcProcessId);
+				 ipcp_id);
 		}
 	}
 }
@@ -146,8 +118,7 @@ void IPCManager_::notify_app_reg(
         }
 }
 
-void IPCManager_::app_reg_req_handler(
-		rina::ApplicationRegistrationRequestEvent *event)
+void IPCManager_::app_reg_req_handler(rina::ApplicationRegistrationRequestEvent *event)
 {
 	const rina::ApplicationRegistrationInformation& info = event->
 			applicationRegistrationInformation;
@@ -218,9 +189,7 @@ void IPCManager_::app_reg_req_handler(
 			throw rina::IpcmRegisterApplicationException();
 		}
 
-		slave_ipcp->registerApplication(app_name,
-						daf_name,
-						info.ipcProcessId,
+		slave_ipcp->registerApplication(info,
 						trans->tid);
 
 		ss << "Requested registration of application " <<
@@ -241,11 +210,11 @@ void IPCManager_::app_reg_req_handler(
 	}
 }
 
-bool IPCManager_::ipcm_register_response_common(
-        rina::IpcmRegisterApplicationResponseEvent *event,
-        const rina::ApplicationProcessNamingInformation& app_name,
-        IPCMIPCProcess *slave_ipcp,
-        const rina::ApplicationProcessNamingInformation& slave_dif_name)
+bool
+IPCManager_::ipcm_register_response_common(rina::IpcmRegisterApplicationResponseEvent *event,
+					   const rina::ApplicationProcessNamingInformation& app_name,
+					   IPCMIPCProcess *slave_ipcp,
+					   const rina::ApplicationProcessNamingInformation& slave_dif_name)
 {
         bool success = (event->result == 0);
         ostringstream ss;
@@ -266,10 +235,10 @@ bool IPCManager_::ipcm_register_response_common(
         return success;
 }
 
-int IPCManager_::ipcm_register_response_app(
-		rina::IpcmRegisterApplicationResponseEvent *event,
-		IPCMIPCProcess * slave_ipcp,
-		const rina::ApplicationRegistrationRequestEvent& req_event)
+int
+IPCManager_::ipcm_register_response_app(rina::IpcmRegisterApplicationResponseEvent *event,
+					IPCMIPCProcess * slave_ipcp,
+					const rina::ApplicationRegistrationRequestEvent& req_event)
 {
 	const rina::ApplicationProcessNamingInformation& app_name =
 			req_event.applicationRegistrationInformation.appName;

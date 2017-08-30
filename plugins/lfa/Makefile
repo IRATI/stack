@@ -14,7 +14,7 @@ ifndef IRATI_KSDIR
 IRATI_KSDIR=${PWD}/../../kernel
 endif
 
-ccflags-y = -Wtype-limits -I${src}/../../kernel
+ccflags-y = -Wtype-limits -I${src}/../../kernel -I${src}/../../include
 
 obj-m := pff-lfa.o
 pff-lfa-y := ps.o

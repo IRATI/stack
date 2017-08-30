@@ -23,9 +23,6 @@
 
 #include "common.h"
 
-struct dtp_config;
-
-struct dtp_config * dtp_config_create(void);
 struct dtp_config * dtp_config_create_ni(void);
 int                 dtp_config_destroy(struct dtp_config * cfg);
 

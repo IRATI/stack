@@ -64,7 +64,9 @@ public:
                 const ApplicationProcessNamingInformation& daf,
                 const ApplicationProcessNamingInformation& supportingDIF,
                 const ApplicationProcessNamingInformation& neighbor,
-                unsigned int sequenceNumber) : IPCEvent(ENROLL_TO_DIF_REQUEST_EVENT, sequenceNumber),
+                unsigned int sequenceNumber,
+		unsigned int ctrl_port, unsigned short ipcp_id)
+        	: IPCEvent(ENROLL_TO_DIF_REQUEST_EVENT, sequenceNumber, ctrl_port, ipcp_id),
                 	dafName(daf), supportingDIFName(supportingDIF),
                 	neighborName(neighbor), current_enroll_attempts(0),
 			prepare_for_handover(false) { };
@@ -74,8 +76,9 @@ public:
                 const ApplicationProcessNamingInformation& neighbor,
 		bool prepare,
 		const ApplicationProcessNamingInformation& disc_neigh,
-                unsigned int sequenceNumber)
-        		: IPCEvent(ENROLL_TO_DIF_REQUEST_EVENT, sequenceNumber),
+                unsigned int sequenceNumber,
+		unsigned int ctrl_port, unsigned short ipcp_id)
+        		: IPCEvent(ENROLL_TO_DIF_REQUEST_EVENT, sequenceNumber, ctrl_port, ipcp_id),
                 	dafName(daf), supportingDIFName(supportingDIF),
                 	neighborName(neighbor), current_enroll_attempts(0),
 			prepare_for_handover(prepare), disc_neigh_name(disc_neigh) { };
@@ -89,7 +92,9 @@ public:
         DisconnectNeighborRequestEvent() { };
         DisconnectNeighborRequestEvent(
                 const ApplicationProcessNamingInformation& neighbor,
-                unsigned int sequenceNumber) : IPCEvent(DISCONNECT_NEIGHBOR_REQUEST_EVENT, sequenceNumber),
+                unsigned int sequenceNumber,
+		unsigned int ctrl_port, unsigned short ipcp_id)
+        : IPCEvent(DISCONNECT_NEIGHBOR_REQUEST_EVENT, sequenceNumber, ctrl_port, ipcp_id),
                 	neighborName(neighbor) { };
 };
 

@@ -23,9 +23,9 @@
 
 #include <linux/uaccess.h>
 
-/* FIXME: This file and all associated definitions must disappear */
+#include <irati/kucommon.h>
 
-typedef char string_t;
+/* FIXME: This file and all associated definitions must disappear */
 
 string_t * string_from_user(const char __user * src);
 int        string_dup(const string_t * src, string_t ** dst);

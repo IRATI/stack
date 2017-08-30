@@ -26,8 +26,6 @@
 
 #include "rds/rstr.h"
 
-struct policy_parm;
-
 struct policy_parm * policy_param_create(void);
 struct policy_parm * policy_param_create_ni(void);
 int                  policy_param_destroy(struct policy_parm * param);
@@ -40,7 +38,6 @@ int                  policy_param_value_set(struct policy_parm * param,
 
 struct policy;
 
-struct policy *      policy_create(void);
 struct policy *      policy_dup_name_version(const struct policy * policy);
 struct policy *      policy_create_ni(void);
 int                  policy_destroy(struct policy * p);

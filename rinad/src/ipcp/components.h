@@ -354,6 +354,8 @@ public:
 
 	virtual int getManagementFlowToNeighbour(const std::string& name) = 0;
 
+	virtual int getManagementFlowToNeighbour(unsigned int address) = 0;
+
 	virtual unsigned int numberOfFlowsToNeighbour(const std::string& apn,
 			const std::string& api) = 0;
 };
@@ -475,7 +477,7 @@ public:
         virtual int64_t addObjRIB(const std::string& fqn,
         			  rina::rib::RIBObj** obj) = 0;
         virtual void removeObjRIB(const std::string& fqn) = 0;
-        virtual void processReadManagementSDUEvent(const rina::ReadMgmtSDUResponseEvent& event) = 0;
+        virtual void processReadManagementSDUEvent(rina::ReadMgmtSDUResponseEvent& event) = 0;
 };
 
 /// IPC Process interface
