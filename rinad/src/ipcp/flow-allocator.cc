@@ -1405,7 +1405,7 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 						filt,
 						NULL);
 			} else {
-				LOG_IPCP_ERR("Could not find CDAP session for reaching next hop to %d",
+				LOG_IPCP_ERR("Could not find CDAP session for reaching next hop to %d (deallocate)",
 						flow_->remote_address);
 			}
 		} catch (rina::Exception &e) {
@@ -1633,7 +1633,7 @@ void FlowAllocatorInstance::address_changed(unsigned int new_address,
 							      NULL);
 
 		} else {
-			LOG_IPCP_ERR("Could not find CDAP session for reaching next hop to %d",
+			LOG_IPCP_ERR("Could not find CDAP session for reaching next hop to %d (address change)",
 					flow_->remote_address);
 		}
 	} catch (rina::Exception &e) {

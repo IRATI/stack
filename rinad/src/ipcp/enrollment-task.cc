@@ -879,7 +879,7 @@ int EnrollmentTask::get_con_handle_to_address(unsigned int dest_address,
 	// Check if we can find the address to the next hop via the resource allocator
 	ipcp->resource_allocator_->get_next_hop_address(dest_address, nhop_addresses);
 	if (nhop_addresses.size() == 0) {
-		LOG_ERR("Could not find next hop for destination address %d", dest_address);
+		LOG_IPCP_ERR("Could not find next hop for destination address %d", dest_address);
 		return -1;
 	}
 
@@ -920,9 +920,7 @@ int EnrollmentTask::get_neighbor_info(rina::Neighbor& neigh)
 
 void EnrollmentTask::addressChange(rina::AddressChangeEvent * event)
 {
-	LOG_IPCP_INFO("Aquiblock");
 	rina::ScopedLock g(lock_);
-	LOG_IPCP_INFO("Aquialock");
 	encoders::NeighborListEncoder encoder;
 	std::list<rina::Neighbor> neighbors;
 	std::map<int, IEnrollmentStateMachine*>::iterator it;
@@ -941,9 +939,7 @@ void EnrollmentTask::addressChange(rina::AddressChangeEvent * event)
 	obj_info.name_ = NeighborsRIBObj::object_name;
 	obj_info.inst_ = 0;
 
-	LOG_IPCP_INFO("Aquialock2");
 	rina::ReadScopedLock readLock(sm_lock);
-	LOG_IPCP_INFO("Aquiblock2");
 
 	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
 		con.port_id = it->second->remote_peer_.underlying_port_id_;
