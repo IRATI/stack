@@ -113,7 +113,9 @@ unsigned int IRATICtrlManager::get_next_seq_number()
 
 int IRATICtrlManager::send_msg(struct irati_msg_base *msg, bool fill_seq_num)
 {
+	LOG_INFO("Before lock");
 	ScopedLock g(sendReceiveLock);
+	LOG_INFO("After lock");
 
 	if (fill_seq_num)
 		msg->event_id = get_next_seq_number();
