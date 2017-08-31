@@ -1643,8 +1643,6 @@ unsigned int KernelIPCProcess::writeMgmgtSDUToPortId(void * sdu,
         msg->dest_ipcp_id = ipcProcessId;
         msg->dest_port = 0;
 
-        LOG_INFO("About to send");
-
         if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
         	irati_ctrl_msg_free((struct irati_msg_base *) msg);
         	throw IPCException("Problems sending CTRL message");

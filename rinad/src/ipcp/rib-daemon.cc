@@ -204,7 +204,7 @@ void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
 {
 	rina::cdap::cdap_m_t m_rcv;
 
-	LOG_IPCP_INFO("Received message at %d", rina::Time::get_time_in_ms());
+	LOG_IPCP_DBG("Received message at %d", rina::Time::get_time_in_ms());
 
 	if (cdap_dest == rina::cdap_rib::CDAP_DEST_IPCM) {
 		try {
