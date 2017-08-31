@@ -241,7 +241,7 @@ void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
 		rina::cdap::cdap_m_t inner_m;
 
 		encoder.decode(m_rcv.obj_value_, a_data_obj);
-		if (a_data_obj.dest_address_ != IPCPFactory::getIPCP()->get_active_address()) {
+		if (!IPCPFactory::getIPCP()->check_address_is_mine(a_data_obj.dest_address_)) {
 			forward_adata_msg(message, a_data_obj.dest_address_);
 			return;
 		}
