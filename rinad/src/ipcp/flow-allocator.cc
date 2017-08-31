@@ -1510,6 +1510,8 @@ void FlowAllocatorInstance::modify_flow_request(const configs::Flow & flow)
 {
 	rina::ScopedLock g(lock_);
 
+	LOG_INFO("Modified flow remote address from %u to %u",
+			flow_->remote_address, flow.local_address);
 	flow_->remote_address = flow.local_address;
 	flow_->getActiveConnection()->setDestAddress(flow.local_address);
 	try {
@@ -1611,6 +1613,8 @@ void FlowAllocatorInstance::address_changed(unsigned int new_address,
 
 	//Sent message to peer
 	try {
+		LOG_IPCP_INFO("Informing peer %u about address change from %u to %u",
+			      flow_->remote_address, old_address, new_address);
 		rv = ipc_process_->enrollment_task_->get_con_handle_to_address(flow_->remote_address,
 									       con_handle);
 
