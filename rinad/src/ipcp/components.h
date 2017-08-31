@@ -112,8 +112,7 @@ public:
 	virtual void add_enrollment_state_machine(int portId, IEnrollmentStateMachine * stateMachine) = 0;
 	virtual void update_neighbor_address(const rina::Neighbor& neighbor) = 0;
 	// Return the con_handle to the next hop to reach the address
-	virtual int get_con_handle_to_ipcp(const std::string& name,
-					   unsigned int address,
+	virtual int get_con_handle_to_ipcp(unsigned int address,
 					   rina::cdap_rib::con_handle_t& con) = 0;
 	virtual int get_neighbor_info(rina::Neighbor& neigh) = 0;
 	virtual void clean_state(unsigned int port_id) = 0;

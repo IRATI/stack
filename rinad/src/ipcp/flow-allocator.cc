@@ -916,8 +916,7 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::Cre
 	flow_->getActiveConnection()->setSourceCepId(event.getCepId());
 
 	if (flow_->remote_address != flow_->local_address) {
-		rv = ipc_process_->enrollment_task_->get_con_handle_to_ipcp(flow_->remote_naming_info.processName,
-									    flow_->remote_address,
+		rv = ipc_process_->enrollment_task_->get_con_handle_to_ipcp(flow_->remote_address,
 									    con_handle);
 		if (rv != 0) {
 			LOG_IPCP_ERR("Could not find con_handle to next hop for destination address %u",
@@ -999,8 +998,7 @@ void FlowAllocatorInstance::createFlowRequestMessageReceived(configs::Flow * flo
 				flow_->remote_naming_info.getEncodedString().c_str());
 
 		if (flow_->local_address != flow_->remote_address) {
-			rv = ipc_process_->enrollment_task_->get_con_handle_to_ipcp(flow_->remote_naming_info.processName,
-										    flow_->remote_address,
+			rv = ipc_process_->enrollment_task_->get_con_handle_to_ipcp(flow_->remote_address,
 										    con_handle);
 			if (rv != 0) {
 				LOG_IPCP_ERR("Could not find con_handle to next hop for destination address %u",
@@ -1144,8 +1142,7 @@ void FlowAllocatorInstance::complete_flow_allocation(bool success)
 		//Obtain con_handle to next hop, to be able to send A-data
 		con_handle.address = flow_->remote_address;
 		con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_ADATA;
-		rv = ipc_process_->enrollment_task_->get_con_handle_to_ipcp(flow_->remote_naming_info.processName,
-									    flow_->remote_address,
+		rv = ipc_process_->enrollment_task_->get_con_handle_to_ipcp(flow_->remote_address,
 									    con_handle);
 		if (rv != 0) {
 			LOG_IPCP_ERR("Could not find con_handle to next hop for destination address %u",
@@ -1390,8 +1387,7 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 	//2 Send M_DELETE
 	if (flow_->local_address != flow_->remote_address) {
 		try {
-			rv = ipc_process_->enrollment_task_->get_con_handle_to_ipcp(flow_->remote_naming_info.processName,
-										    flow_->remote_address,
+			rv = ipc_process_->enrollment_task_->get_con_handle_to_ipcp(flow_->remote_address,
 										    con_handle);
 
 			if (rv == 0) {
@@ -1619,8 +1615,7 @@ void FlowAllocatorInstance::address_changed(unsigned int new_address,
 	try {
 		LOG_IPCP_INFO("Informing peer %u about address change from %u to %u",
 			      flow_->remote_address, old_address, new_address);
-		rv = ipc_process_->enrollment_task_->get_con_handle_to_ipcp(flow_->remote_naming_info.processName,
-									    flow_->remote_address,
+		rv = ipc_process_->enrollment_task_->get_con_handle_to_ipcp(flow_->remote_address,
 									    con_handle);
 
 		if (rv == 0) {
