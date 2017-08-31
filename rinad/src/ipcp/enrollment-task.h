@@ -363,8 +363,9 @@ public:
 	void operational_status_start(int port_id,
 				      int invoke_id,
 			       	      const rina::ser_obj_t &obj_req);
-	int get_con_handle_to_address(unsigned int address,
-				      rina::cdap_rib::con_handle_t& con);
+	int get_con_handle_to_ipcp(const std::string& name,
+				   unsigned int address,
+				   rina::cdap_rib::con_handle_t& con);
 	int get_neighbor_info(rina::Neighbor& neigh);
 	void clean_state(unsigned int port_id);
 
@@ -400,6 +401,12 @@ private:
 	void deallocate_flows_and_destroy_esm(IEnrollmentStateMachine * esm,
 					      unsigned int port_id,
 					      bool call_ps = true);
+
+	int get_con_handle_to_ipcp_with_name(const std::string& name,
+				   	     rina::cdap_rib::con_handle_t& con);
+
+	int get_con_handle_to_ipcp_with_address(unsigned int address,
+				   	   	rina::cdap_rib::con_handle_t& con);
 
 	IPCPRIBDaemon * rib_daemon_;
 	rina::InternalEventManager * event_manager_;

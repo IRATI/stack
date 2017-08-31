@@ -99,7 +99,7 @@ void IPCPCDAPIOHandler::forward_adata_msg(const rina::ser_obj_t &message,
 	rina::cdap_rib::con_handle_t con;
 	int rv;
 
-	rv = IPCPFactory::getIPCP()->enrollment_task_->get_con_handle_to_address(address, con);
+	rv = IPCPFactory::getIPCP()->enrollment_task_->get_con_handle_to_ipcp("", address, con);
 	if (rv != 0) {
 		LOG_IPCP_ERR("Could not find next hop for destination address %d, "
 				"dropping A-DATA CDAP PDU", address);
