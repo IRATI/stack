@@ -857,16 +857,15 @@ void EnrollmentTask::operational_status_start(int port_id,
 	}
 }
 
-int EnrollmentTask::get_con_handle_to_address(unsigned int dest_address,
-			      	      	      rina::cdap_rib::con_handle_t& con)
+int EnrollmentTask::get_con_handle_to_ipcp_with_address(unsigned int dest_address,
+			   	   		        rina::cdap_rib::con_handle_t& con)
 {
 	std::map<int, IEnrollmentStateMachine*>::iterator it;
 	unsigned int next_hop_address = dest_address;
 	std::list<unsigned int> nhop_addresses;
 	std::list<unsigned int>::iterator addr_it;
 
-	rina::ReadScopedLock readLock(sm_lock);
-
+	sm_lock.readlock();
 	// Check if the destination address is one of our next hops
 	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
 		if (it->second->remote_peer_.address_ == next_hop_address ||
@@ -875,27 +874,40 @@ int EnrollmentTask::get_con_handle_to_address(unsigned int dest_address,
 			return 0;
 		}
 	}
+	sm_lock.unlock();
 
 	// Check if we can find the address to the next hop via the resource allocator
-	ipcp->resource_allocator_->get_next_hop_address(dest_address, nhop_addresses);
+	ipcp->resource_allocator_->get_next_hop_addresses(dest_address, nhop_addresses);
 	if (nhop_addresses.size() == 0) {
-		LOG_ERR("Could not find next hop for destination address %d", dest_address);
+		LOG_IPCP_ERR("Could not find next hop for destination address %d", dest_address);
 		return -1;
 	}
 
 	// Get con from next hop
 	for (addr_it = nhop_addresses.begin(); addr_it != nhop_addresses.end(); ++addr_it) {
 		next_hop_address = *addr_it;
+
+		sm_lock.readlock();
 		for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
 			if (it->second->remote_peer_.address_ == next_hop_address ||
 					it->second->remote_peer_.old_address_ == next_hop_address) {
 				con.port_id = it->second->con.port_id;
+				sm_lock.unlock();
 				return 0;
 			}
 		}
+		sm_lock.unlock();
 	}
 
+	LOG_IPCP_ERR("Could not find neighbor with address %u", next_hop_address);
 	return -1;
+}
+
+int EnrollmentTask::get_con_handle_to_ipcp(unsigned int dest_address,
+			      	      	   rina::cdap_rib::con_handle_t& con)
+{
+
+	return get_con_handle_to_ipcp_with_address(dest_address, con);
 }
 
 int EnrollmentTask::get_neighbor_info(rina::Neighbor& neigh)

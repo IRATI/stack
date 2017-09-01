@@ -2115,67 +2115,39 @@ void LinkStateRoutingPolicy::populateAddresses(std::list<rina::RoutingTableEntry
 {
 	std::map<std::string, std::list<unsigned int> > name_address_map;
 	std::list<rinad::FlowStateObject>::const_iterator it;
-	std::list<rinad::FlowStateObject>::const_iterator jt;
-	std::list<unsigned int>::iterator kt;
-	std::list<rina::RoutingTableEntry *>::iterator lt;
-	std::map<std::string, std::list<unsigned int> >::iterator mt;
+	std::map<std::string, std::list<unsigned int> >::iterator jt;
+	std::list<rina::RoutingTableEntry *>::iterator kt;
 	std::list<rina::NHopAltList>::iterator nt;
 	std::list<rina::IPCPNameAddresses>::iterator ot;
-	std::list<unsigned int> addresses;
 	std::list<unsigned int> aux;
 
 	for (it = fsos.begin(); it != fsos.end(); ++it) {
-		jt = it;
-		++jt;
-
-		while (jt != fsos.end()) {
-			if (it->name == jt->neighbor_name &&
-					it->neighbor_name ==  jt->name) {
-
-				aux = it->addresses;
-				for (kt = aux.begin(); kt != aux.end(); ++kt) {
-					if (jt->contains_neighboraddress(*kt))
-						addresses.push_back(*kt);
-				}
-				name_address_map[it->name] = addresses;
-				addresses.clear();
-
-				aux = it->neighbor_addresses;
-				for (kt = aux.begin(); kt != aux.end(); ++kt) {
-					if (jt->contains_address(*kt))
-						addresses.push_back(*kt);
-				}
-				name_address_map[it->neighbor_name] = addresses;
-				addresses.clear();
-
-				break;
-			}
-
-			++jt;
-		}
+		jt = name_address_map.find(it->name);
+		if (jt == name_address_map.end())
+			name_address_map[it->name] = it->addresses;
 	}
 
-	for (lt = rt.begin(); lt != rt.end(); ++lt) {
-		mt = name_address_map.find((*lt)->destination.name);
-		if (mt == name_address_map.end()) {
+	for (kt = rt.begin(); kt != rt.end(); ++kt) {
+		jt = name_address_map.find((*kt)->destination.name);
+		if (jt == name_address_map.end()) {
 			LOG_IPCP_WARN("Could not find addresses for IPCP %s",
-				      (*lt)->destination.name.c_str());
+				      (*kt)->destination.name.c_str());
 			continue;
 		}
-		(*lt)->destination.addresses = mt->second;
+		(*kt)->destination.addresses = jt->second;
 
-		for (nt = (*lt)->nextHopNames.begin();
-				nt != (*lt)->nextHopNames.end(); ++nt) {
+		for (nt = (*kt)->nextHopNames.begin();
+				nt != (*kt)->nextHopNames.end(); ++nt) {
 
 			for (ot = nt->alts.begin(); ot != nt->alts.end(); ++ot) {
-				mt = name_address_map.find(ot->name);
-				if (mt == name_address_map.end()) {
+				jt = name_address_map.find(ot->name);
+				if (jt == name_address_map.end()) {
 					LOG_IPCP_WARN("Could not find addresses for IPCP %s",
 							ot->name.c_str());
 					continue;
 				}
 
-				ot->addresses = mt->second;
+				ot->addresses = jt->second;
 			}
 		}
 	}

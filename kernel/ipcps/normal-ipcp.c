@@ -377,6 +377,15 @@ static int connection_update_request(struct ipcp_instance_data * data,
         return 0;
 }
 
+static int connection_modify_request(struct ipcp_instance_data * data,
+				     cep_id_t			 src_cep_id,
+			     	     address_t		   	 src_address,
+				     address_t		   	 dst_address)
+{
+	return efcp_connection_modify(data->efcpc, src_cep_id,
+				      src_address, dst_address);
+}
+
 static struct normal_flow * find_flow_cepid(struct ipcp_instance_data * data,
                                             cep_id_t                    id)
 {
@@ -925,6 +934,12 @@ static const struct name * normal_dif_name(struct ipcp_instance_data * data)
         return &data->dif_name;
 }
 
+ipc_process_id_t normal_ipcp_id(struct ipcp_instance_data * data)
+{
+	ASSERT(data);
+        return data->id;
+}
+
 typedef const string_t *const_string;
 
 /* Helper function to parse the component id path for EFCP container. */
@@ -1136,8 +1151,11 @@ int normal_address_change(struct ipcp_instance_data * data,
 		return -1;
 	}
 
+	spin_lock_bh(&data->lock);
 	data->old_address = old_address;
 	data->address = new_address;
+	spin_unlock_bh(&data->lock);
+
 	rmt_address_add(data->rmt, new_address);
 
 	/* Set timer to start advertising new address in EFCP connections
@@ -1154,12 +1172,14 @@ static void tf_use_naddress(void * data)
 {
         struct ipcp_instance_data * inst_data;
 
-        LOG_INFO("Running Use New Address Timer...");
         inst_data = (struct ipcp_instance_data *) data;
         if (!inst_data) {
                 LOG_ERR("No IPCP instance data to work with");
                 return;
         }
+
+        LOG_INFO("Running Use New Address Timer, starting to use address %u",
+        	  inst_data->address);
 
         efcp_address_change(inst_data->efcpc, inst_data->address);
 }
@@ -1199,6 +1219,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .connection_update         = connection_update_request,
         .connection_destroy        = connection_destroy_request,
         .connection_create_arrived = connection_create_arrived,
+	.connection_modify 	   = connection_modify_request,
 
         .sdu_enqueue               = normal_sdu_enqueue,
         .sdu_write                 = normal_sdu_write,
@@ -1216,6 +1237,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
 
         .ipcp_name                 = normal_ipcp_name,
         .dif_name                  = normal_dif_name,
+	.ipcp_id    		   = normal_ipcp_id,
 
         .set_policy_set_param      = normal_set_policy_set_param,
         .select_policy_set         = normal_select_policy_set,

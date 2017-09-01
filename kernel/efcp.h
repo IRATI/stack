@@ -62,6 +62,10 @@ int                     efcp_connection_destroy(struct efcp_container * cont,
 int                     efcp_connection_update(struct efcp_container * cont,
                                                cep_id_t                from,
                                                cep_id_t                to);
+int                     efcp_connection_modify(struct efcp_container * cont,
+					       cep_id_t		       cep_id,
+                                               address_t               src,
+                                               address_t               dst);
 int                     efcp_container_unbind_user_ipcp(struct efcp_container * cont,
                                                        cep_id_t cep_id);
 

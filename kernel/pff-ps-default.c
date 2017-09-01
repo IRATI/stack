@@ -30,14 +30,22 @@
 #include "logs.h"
 #include "rds/rmem.h"
 #include "rds/rtimer.h"
+#include "rds/rwq.h"
 #include "pff-ps-default.h"
 #include "debug.h"
 #include "rds/robjects.h"
+#include "ipcp-instances.h"
 
 /* FIXME: This representation is crappy and MUST be changed */
 struct pft_port_entry {
         port_id_t        port_id;
         struct list_head next;
+};
+
+struct pff_sysfs_work_data {
+	struct pft_entry * entry;
+	struct rset * rset;
+	bool add;
 };
 
 static struct pft_port_entry * pft_pe_create_gfp(gfp_t     flags,
@@ -169,9 +177,36 @@ static bool pfte_is_ok(struct pft_entry * entry)
 { return entry ? true : false; }
 #endif
 
-static void pfte_destroy(struct pft_entry * entry)
+static int pff_sysfs_worker(void * o)
+{
+        struct pff_sysfs_work_data * data;
+
+	ASSERT(o);
+
+        data = (struct pff_sysfs_work_data *) o;
+
+        if (data->add) {
+        	robject_rset_add(&data->entry->robj, data->rset,
+        			 "%u", data->entry->destination);
+        } else {
+        	robject_del(&data->entry->robj);
+                rkfree(&data->entry);
+        }
+
+        return 0;
+}
+
+struct pff_ps_priv {
+        spinlock_t       lock;
+        struct list_head entries;
+        struct workqueue_struct * sysfs_wq;
+};
+
+static void pfte_destroy(struct pft_entry * entry, struct pff_ps_priv * priv)
 {
         struct pft_port_entry * pos, * next;
+        struct pff_sysfs_work_data * wdata;
+        struct rwq_work_item       * item;
 
         ASSERT(pfte_is_ok(entry));
 
@@ -180,8 +215,15 @@ static void pfte_destroy(struct pft_entry * entry)
         }
 
         list_del(&entry->next);
-	robject_del(&entry->robj);
-        rkfree(entry);
+
+	/* Defer sysfs entry deletion to workqueue, since it may sleep */
+        wdata = rkzalloc(sizeof(* wdata), GFP_ATOMIC);
+        wdata->entry = entry;
+        wdata->rset = 0;
+        wdata->add = false;
+        item  = rwq_work_create_ni(pff_sysfs_worker, wdata);
+
+        rwq_work_post(priv->sysfs_wq, item);
 }
 
 static struct pft_port_entry * pfte_port_find(struct pft_entry * entry,
@@ -276,11 +318,6 @@ static int pfte_ports_copy(struct pft_entry * entry,
         return 0;
 }
 
-struct pff_ps_priv {
-        spinlock_t       lock;
-        struct list_head entries;
-};
-
 static bool priv_is_ok(struct pff_ps_priv * priv)
 { return priv != NULL; }
 
@@ -309,6 +346,8 @@ static int __pff_add(struct pff_ps *        ps,
 {
         struct pft_entry *       tmp;
 	struct port_id_altlist * alts;
+        struct pff_sysfs_work_data * wdata;
+        struct rwq_work_item       * item;
 
 	tmp = pft_find(priv, entry->fwd_info, entry->qos_id);
 	if (!tmp) {
@@ -316,8 +355,16 @@ static int __pff_add(struct pff_ps *        ps,
 		if (!tmp) {
 			return -1;
 		}
-		robject_rset_add(&tmp->robj, pff_rset(ps->dm), "%u", tmp->destination);
 		list_add(&tmp->next, &priv->entries);
+
+		/* Defer sysfs entry creation to workqueue, since it may sleep */
+	        wdata = rkzalloc(sizeof(* wdata), GFP_ATOMIC);
+	        wdata->entry = tmp;
+	        wdata->rset = pff_rset(ps->dm);
+	        wdata->add = true;
+	        item  = rwq_work_create_ni(pff_sysfs_worker, wdata);
+
+	        rwq_work_post(priv->sysfs_wq, item);
 	}
 
 	list_for_each_entry(alts, &entry->port_id_altlists, next) {
@@ -328,7 +375,7 @@ static int __pff_add(struct pff_ps *        ps,
 
 		/* Just add the first alternative and ignore the others. */
 		if (pfte_port_add(tmp, alts->ports[0])) {
-			pfte_destroy(tmp);
+			pfte_destroy(tmp, priv);
 			return -1;
 		}
 	}
@@ -412,7 +459,7 @@ int default_remove(struct pff_ps *        ps,
 
         /* If the list of port-ids is empty, remove the entry */
         if (list_empty(&tmp->ports)) {
-                pfte_destroy(tmp);
+                pfte_destroy(tmp, priv);
         }
 
         spin_unlock_bh(&priv->lock);
@@ -443,7 +490,7 @@ static void __pff_flush(struct pff_ps_priv * priv)
         ASSERT(priv_is_ok(priv));
 
         list_for_each_entry_safe(pos, next, &priv->entries, next) {
-                pfte_destroy(pos);
+                pfte_destroy(pos, priv);
         }
 }
 
@@ -617,12 +664,43 @@ int default_dump(struct pff_ps *    ps,
         return 0;
 }
 
+static string_t * create_pff_wq_name(ipc_process_id_t id)
+{
+        char       string_ipcp_id[5];
+        char 	   prefix[4] = "pff";
+        string_t * wq_name;
+        size_t     length;
+
+        prefix[3] = 0;
+        bzero(string_ipcp_id, sizeof(string_ipcp_id)); /* Be safe */
+        snprintf(string_ipcp_id, sizeof(string_ipcp_id), "%d", id);
+
+        length = strlen(prefix) +
+                sizeof(char)            +
+                strlen(string_ipcp_id)  +
+                1 /* Terminator */;
+
+        wq_name = rkmalloc(length, GFP_KERNEL);
+        if (!wq_name)
+                return NULL;
+
+        wq_name[0] = 0;
+        strcat(wq_name, prefix);
+        strcat(wq_name, "-");
+        strcat(wq_name, string_ipcp_id);
+        wq_name[length - 1] = 0; /* Final terminator */
+
+        return wq_name;
+}
+
 struct ps_base *
 pff_ps_default_create(struct rina_component * component)
 {
         struct pff_ps * ps;
         struct pff_ps_priv * priv;
         struct pff * pff = pff_from_component(component);
+        ipc_process_id_t ipc_process_id;
+        struct ipcp_instance * ipcp;
 
         priv = rkzalloc(sizeof(*priv), GFP_KERNEL);
         if (!priv) {
@@ -632,6 +710,11 @@ pff_ps_default_create(struct rina_component * component)
         spin_lock_init(&priv->lock);
 
         INIT_LIST_HEAD(&priv->entries);
+
+        ipcp = pff_ipcp_get(pff);
+        ipc_process_id = ipcp->ops->ipcp_id(ipcp->data);
+        priv->sysfs_wq = alloc_workqueue(create_pff_wq_name(ipc_process_id),
+                        	WQ_MEM_RECLAIM | WQ_HIGHPRI | WQ_UNBOUND, 1);
 
         ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
         if (!ps) {
@@ -672,6 +755,9 @@ void pff_ps_default_destroy(struct ps_base * bps)
                 __pff_flush(priv);
 
                 spin_unlock_bh(&priv->lock);
+
+                flush_workqueue(priv->sysfs_wq);
+                destroy_workqueue(priv->sysfs_wq);
 
                 rkfree(priv);
                 rkfree(ps);

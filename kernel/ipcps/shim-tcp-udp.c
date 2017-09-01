@@ -2552,6 +2552,12 @@ static const struct name * tcp_udp_dif_name(struct ipcp_instance_data * data)
         return data->dif_name;
 }
 
+ipc_process_id_t tcp_udp_ipcp_id(struct ipcp_instance_data * data)
+{
+	ASSERT(data);
+	return data->id;
+}
+
 static int tcp_udp_query_rib(struct ipcp_instance_data * data,
                              struct list_head *          entries,
                              const string_t *            object_class,
@@ -2584,6 +2590,7 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
         .connection_update         = NULL,
         .connection_destroy        = NULL,
         .connection_create_arrived = NULL,
+	.connection_modify 	   = NULL,
 
         .sdu_enqueue               = NULL,
         .sdu_write                 = tcp_udp_sdu_write,
@@ -2601,6 +2608,7 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
 
         .ipcp_name                 = tcp_udp_ipcp_name,
         .dif_name                  = tcp_udp_dif_name,
+	.ipcp_id		   = tcp_udp_ipcp_id,
 
         .set_policy_set_param      = NULL,
         .select_policy_set         = NULL,

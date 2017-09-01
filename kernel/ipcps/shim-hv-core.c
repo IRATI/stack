@@ -1149,6 +1149,12 @@ shim_hv_dif_name(struct ipcp_instance_data *priv)
         return &priv->dif_name;
 }
 
+ipc_process_id_t shim_hv_ipcp_id(struct ipcp_instance_data * data)
+{
+	ASSERT(data);
+	return data->id;
+}
+
 static int shim_hv_query_rib(struct ipcp_instance_data * data,
                              struct list_head *          entries,
                              const string_t *            object_class,
@@ -1181,6 +1187,7 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .connection_update         = NULL,
         .connection_destroy        = NULL,
         .connection_create_arrived = NULL,
+	.connection_modify 	   = NULL,
 
         .sdu_enqueue               = NULL,
         .sdu_write                 = shim_hv_sdu_write,
@@ -1202,7 +1209,8 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .select_policy_set         = NULL,
         .update_crypto_state	   = NULL,
 	.address_change		   = NULL,
-        .dif_name		   = shim_hv_dif_name
+        .dif_name		   = shim_hv_dif_name,
+	.ipcp_id		   = shim_hv_ipcp_id
 };
 
 /* Initialize the IPC process factory. */
