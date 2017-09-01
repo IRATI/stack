@@ -464,6 +464,10 @@ void FlowAllocator::submitAllocateRequest(const rina::FlowRequestEvent& event,
 	OngoingFlowAllocState flow_state;
 	rina::ApplicationProcessNamingInformation app_info;
 
+	LOG_IPCP_INFO("TO DELETE: Trying to allocate flow between %s and %s",
+			event.localApplicationName.toString().c_str(),
+			event.remoteApplicationName.toString().c_str());
+
 	if (!event.internal) {
 		app_info = event.localApplicationName;
 	}
