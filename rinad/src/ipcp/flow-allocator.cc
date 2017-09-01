@@ -281,7 +281,7 @@ void FlowAllocator::address_changed(unsigned int new_address,
 {
 	std::map<int, FlowAllocatorInstance *>::iterator it;
 
-	LOG_IPCP_INFO("TO DELETE: Local address has changed from %u to &u, notifying EFCP peers",
+	LOG_IPCP_DBG("Local address has changed from %u to &u, notifying EFCP peers",
 			new_address, old_address);
 	rina::ScopedLock g(fai_lock);
 
@@ -461,7 +461,7 @@ void FlowAllocator::submitAllocateRequest(const rina::FlowRequestEvent& event,
 	OngoingFlowAllocState flow_state;
 	rina::ApplicationProcessNamingInformation app_info;
 
-	LOG_IPCP_INFO("TO DELETE: Trying to allocate flow between %s and %s",
+	LOG_IPCP_DBG("Trying to allocate flow between %s and %s",
 			event.localApplicationName.toString().c_str(),
 			event.remoteApplicationName.toString().c_str());
 
@@ -661,7 +661,7 @@ void FlowAllocator::submitDeallocate(const rina::FlowDeallocateRequestEvent& eve
 {
 	std::map<int, FlowAllocatorInstance *>::iterator it;
 
-	LOG_IPCP_INFO("TO DELETE: Requested deallocation of flow %d", event.portId);
+	LOG_IPCP_DBG("Requested deallocation of flow %d", event.portId);
 
 	rina::ScopedLock g(fai_lock);
 
@@ -684,7 +684,7 @@ void FlowAllocator::removeFlowAllocatorInstance(int portId)
 	std::map<int, FlowAllocatorInstance *>::iterator it;
 	FlowAllocatorInstance * fai = 0;
 
-	LOG_IPCP_INFO("TO DELETE: Removing FAI of port-id %d from Flow Allocator", portId);
+	LOG_IPCP_DBG("Removing FAI of port-id %d from Flow Allocator", portId);
 
 	fai_lock.lock();
 	it = fa_instances.find(portId);
@@ -1372,7 +1372,7 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 	IFlowAllocatorInstance * fai = 0;
 	int rv;
 
-	LOG_IPCP_INFO("TO DELETE (FAI): Requested deallocation of flow %d", event.portId);
+	LOG_IPCP_DBG("Requested deallocation of flow %d", event.portId);
 	lock_.lock();
 
 	if (state != FLOW_ALLOCATED) {
@@ -1447,7 +1447,7 @@ void FlowAllocatorInstance::deleteFlowRequestMessageReceived()
 {
 	rina::InternalEvent * event = 0;
 
-	LOG_IPCP_INFO("TO DELETE: Received delete flow request message from peer %d", port_id_);
+	LOG_IPCP_DBG("Received delete flow request message from peer %d", port_id_);
 
 	lock_.lock();
 	if (state != FLOW_ALLOCATED) {
