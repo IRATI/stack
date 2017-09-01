@@ -865,8 +865,7 @@ int EnrollmentTask::get_con_handle_to_ipcp_with_address(unsigned int dest_addres
 	std::list<unsigned int> nhop_addresses;
 	std::list<unsigned int>::iterator addr_it;
 
-	rina::ReadScopedLock readLock(sm_lock);
-
+	sm_lock.readlock();
 	// Check if the destination address is one of our next hops
 	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
 		if (it->second->remote_peer_.address_ == next_hop_address ||
@@ -875,26 +874,39 @@ int EnrollmentTask::get_con_handle_to_ipcp_with_address(unsigned int dest_addres
 			return 0;
 		}
 	}
+	sm_lock.unlock();
 
 	// Check if we can find the address to the next hop via the resource allocator
 	ipcp->resource_allocator_->get_next_hop_addresses(dest_address, nhop_addresses);
 	if (nhop_addresses.size() == 0) {
-		LOG_IPCP_WARN("Could not find next hop for destination address %d", dest_address);
+		LOG_IPCP_ERR("Could not find next hop for destination address %d", dest_address);
 		return -1;
 	}
 
 	// Get con from next hop
 	for (addr_it = nhop_addresses.begin(); addr_it != nhop_addresses.end(); ++addr_it) {
 		next_hop_address = *addr_it;
+
+		sm_lock.readlock();
 		for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
 			if (it->second->remote_peer_.address_ == next_hop_address ||
 					it->second->remote_peer_.old_address_ == next_hop_address) {
 				con.port_id = it->second->con.port_id;
+				sm_lock.unlock();
 				return 0;
 			}
 		}
+		sm_lock.unlock();
 	}
 
+	LOG_IPCP_ERR("Could not find neighbor with address %u", next_hop_address);
+	sm_lock.readlock();
+	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
+		LOG_IPCP_INFO("Neigbor address (new/old): %u %u",
+				it->second->remote_peer_.address_,
+				it->second->remote_peer_.old_address_);
+	}
+	sm_lock.unlock();
 	return -1;
 }
 
