@@ -270,6 +270,8 @@ struct OngoingFlowAllocState {
 	unsigned int address;
 };
 
+class FlowAllocatorInstance;
+
 /// Implementation of the Flow Allocator component
 class FlowAllocator: public IFlowAllocator, public rina::InternalEventListener {
 public:
@@ -309,6 +311,7 @@ private:
 
 	std::map<unsigned int, OngoingFlowAllocState> pending_port_allocs;
 	rina::Lockable port_alloc_lock;
+	std::map<int, FlowAllocatorInstance *> fa_instances;
 	rina::Lockable fai_lock;
 
 	/// Create initial RIB objects
@@ -418,7 +421,7 @@ private:
 	void complete_flow_allocation(bool success);
 
 	/// Release the port-id, unlock and remove the FAI from the FA
-	void releaseUnlockRemove();
+	void release_remove();
 
 	IPCProcess * ipc_process_;
 	IFlowAllocator * flow_allocator_;

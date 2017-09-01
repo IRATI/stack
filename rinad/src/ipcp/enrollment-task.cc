@@ -900,13 +900,6 @@ int EnrollmentTask::get_con_handle_to_ipcp_with_address(unsigned int dest_addres
 	}
 
 	LOG_IPCP_ERR("Could not find neighbor with address %u", next_hop_address);
-	sm_lock.readlock();
-	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
-		LOG_IPCP_INFO("Neigbor address (new/old): %u %u",
-				it->second->remote_peer_.address_,
-				it->second->remote_peer_.old_address_);
-	}
-	sm_lock.unlock();
 	return -1;
 }
 
