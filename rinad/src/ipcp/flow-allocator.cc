@@ -279,6 +279,8 @@ void FlowAllocator::address_changed(unsigned int new_address,
 	std::list<rina::ApplicationEntityInstance*>::iterator it;
 	FlowAllocatorInstance * fai = 0;
 
+	LOG_IPCP_INFO("TO DELETE: Local address has changed from %u to &u, notifying EFCP peers",
+			new_address, old_address);
 	rina::ScopedLock g(fai_lock);
 
 	//Tell all FAIs src address has changed
@@ -581,9 +583,12 @@ void FlowAllocator::processDeallocatePortResponse(const rina::DeallocatePortResp
 void FlowAllocator::processCreateConnectionResponseEvent(const rina::CreateConnectionResponseEvent& event)
 {
 	std::stringstream ss;
+	IFlowAllocatorInstance * fai;
+
+	rina::ScopedLock g(fai_lock);
+
 	ss << event.portId;
-	IFlowAllocatorInstance * fai =
-		dynamic_cast<IFlowAllocatorInstance*>(get_instance(ss.str()));
+	fai = dynamic_cast<IFlowAllocatorInstance*>(get_instance(ss.str()));
 	if (fai) {
 		fai->processCreateConnectionResponseEvent(event);
 	} else {
@@ -595,13 +600,16 @@ void FlowAllocator::processCreateConnectionResponseEvent(const rina::CreateConne
 void FlowAllocator::submitAllocateResponse(const rina::AllocateFlowResponseEvent& event)
 {
 	IFlowAllocatorInstance * fai;
+	std::list<rina::ApplicationEntityInstance *> fais;
+	std::list<rina::ApplicationEntityInstance *>::iterator iterator;
 
 	LOG_IPCP_DBG("Local application invoked allocate response with seq num %ud and result %d, ",
 		     event.sequenceNumber,
 		     event.result);
 
-	std::list<rina::ApplicationEntityInstance *> fais = get_all_instances();
-	std::list<rina::ApplicationEntityInstance *>::iterator iterator;
+	rina::ScopedLock g(fai_lock);
+
+	fais = get_all_instances();
 	for (iterator = fais.begin(); iterator != fais.end(); ++iterator) {
 		fai = dynamic_cast<IFlowAllocatorInstance*>(*iterator);
 		if (!fai)
@@ -618,9 +626,12 @@ void FlowAllocator::submitAllocateResponse(const rina::AllocateFlowResponseEvent
 void FlowAllocator::processCreateConnectionResultEvent(const rina::CreateConnectionResultEvent& event)
 {
 	std::stringstream ss;
+	IFlowAllocatorInstance * fai;
+
+	rina::ScopedLock g(fai_lock);
+
 	ss << event.portId;
-	IFlowAllocatorInstance * fai =
-		dynamic_cast<IFlowAllocatorInstance*>(get_instance(ss.str()));
+	fai = dynamic_cast<IFlowAllocatorInstance*>(get_instance(ss.str()));
 	if (!fai) {
 		LOG_IPCP_ERR("Problems looking for FAI at portId %d", event.portId);
 		try {
@@ -637,9 +648,12 @@ void FlowAllocator::processCreateConnectionResultEvent(const rina::CreateConnect
 void FlowAllocator::processUpdateConnectionResponseEvent(const rina::UpdateConnectionResponseEvent& event)
 {
 	std::stringstream ss;
+	IFlowAllocatorInstance * fai;
+
+	rina::ScopedLock g(fai_lock);
+
 	ss << event.portId;
-	IFlowAllocatorInstance * fai =
-		dynamic_cast<IFlowAllocatorInstance*>(get_instance(ss.str()));
+	fai = dynamic_cast<IFlowAllocatorInstance*>(get_instance(ss.str()));
 	if (!fai) {
 		LOG_IPCP_ERR("Problems looking for FAI at portId %d", event.portId);
 		try {
@@ -656,18 +670,22 @@ void FlowAllocator::processUpdateConnectionResponseEvent(const rina::UpdateConne
 void FlowAllocator::submitDeallocate(const rina::FlowDeallocateRequestEvent& event)
 {
 	std::stringstream ss;
+	IFlowAllocatorInstance * fai;
+
+	LOG_IPCP_INFO("TO DELETE: Requested deallocation of flow %d", event.portId);
+
+	rina::ScopedLock g(fai_lock);
+
 	ss << event.portId;
-	IFlowAllocatorInstance * fai =
-		dynamic_cast<IFlowAllocatorInstance*>(get_instance(ss.str()));
+	fai = dynamic_cast<IFlowAllocatorInstance*>(get_instance(ss.str()));
 
 	if (!fai) {
 		LOG_IPCP_ERR("Problems looking for FAI at portId %d", event.portId);
 		try {
 			rina::extendedIPCManager->deallocatePortId(event.portId);
 		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR(
-					"Problems requesting IPC Manager to deallocate port-id %d: %s",
-					event.portId, e.what());
+			LOG_IPCP_ERR("Problems requesting IPC Manager to deallocate port-id %d: %s",
+				      event.portId, e.what());
 		}
 	} else {
 		fai->submitDeallocate(event);
@@ -677,12 +695,13 @@ void FlowAllocator::submitDeallocate(const rina::FlowDeallocateRequestEvent& eve
 void FlowAllocator::removeFlowAllocatorInstance(int portId)
 {
 	std::stringstream ss;
+	IFlowAllocatorInstance * fai;
 
+	LOG_IPCP_INFO("TO DELETE: Removing FAI of port-id %d from Flow Allocator", portId);
 	rina::ScopedLock g(fai_lock);
 
 	ss << portId;
-	IFlowAllocatorInstance * fai =
-		dynamic_cast<IFlowAllocatorInstance*>(remove_instance(ss.str()));
+	fai = dynamic_cast<IFlowAllocatorInstance*>(remove_instance(ss.str()));
 	if (fai) {
 		delete fai;
 	}
@@ -1362,6 +1381,7 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 	IFlowAllocatorInstance * fai = 0;
 	int rv;
 
+	LOG_IPCP_INFO("TO DELETE (FAI): Requested deallocation of flow %d", event.portId);
 	rina::ScopedLock g(lock_);
 
 	if (state != FLOW_ALLOCATED) {
@@ -1433,6 +1453,8 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 void FlowAllocatorInstance::deleteFlowRequestMessageReceived()
 {
 	rina::InternalEvent * event = 0;
+
+	LOG_IPCP_INFO("TO DELETE: Received delete flow request message from peer %d", port_id_);
 
 	rina::ScopedLock g(lock_);
 

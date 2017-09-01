@@ -982,7 +982,8 @@ int rmt_send(struct rmt *instance,
 	if (pff_nhop(instance->pff, pci,
 		     &(instance->cache.pids),
 		     &(instance->cache.count))) {
-		LOG_ERR("Cannot get the NHOP for this PDU");
+		LOG_ERR("Cannot get the NHOP for this PDU (saddr: %u daddr: %u type: %u)",
+				pci_source(pci), pci_destination(pci), pci_type(pci));
 
 		pdu_destroy(pdu);
 		return -1;

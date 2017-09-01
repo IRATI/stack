@@ -1151,8 +1151,11 @@ int normal_address_change(struct ipcp_instance_data * data,
 		return -1;
 	}
 
+	spin_lock_bh(&data->lock);
 	data->old_address = old_address;
 	data->address = new_address;
+	spin_unlock_bh(&data->lock);
+
 	rmt_address_add(data->rmt, new_address);
 
 	/* Set timer to start advertising new address in EFCP connections
@@ -1169,12 +1172,14 @@ static void tf_use_naddress(void * data)
 {
         struct ipcp_instance_data * inst_data;
 
-        LOG_INFO("Running Use New Address Timer...");
         inst_data = (struct ipcp_instance_data *) data;
         if (!inst_data) {
                 LOG_ERR("No IPCP instance data to work with");
                 return;
         }
+
+        LOG_INFO("Running Use New Address Timer, starting to use address %u",
+        	  inst_data->address);
 
         efcp_address_change(inst_data->efcpc, inst_data->address);
 }
