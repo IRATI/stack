@@ -2298,9 +2298,13 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
 			int syntax;
 
 			count = get_syntax_and_count (entry->value, &copy, &val, &syntax);
+			if (count < 0) {
+				return (-1);
+			}
 
                         while (count-- > 0) {
                                 if (parse_dir_entry(data, &val, syntax) < 0) {
+					rkfree(copy);
                                         return -1;
                                 }
                         }
@@ -2312,9 +2316,13 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
 			int syntax;
 
 			count = get_syntax_and_count (entry->value, &copy, &val, &syntax);
+			if (count < 0) {
+				return (-1);
+			}
 
                         while (count-- > 0) {
                                 if (parse_exp_reg_entry(data, &val, syntax) < 0) {
+					rkfree(copy);
                                         return -1;
                                 }
                         }
