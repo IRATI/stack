@@ -1365,7 +1365,9 @@ IEnrollmentStateMachine * EnrollmentTask::getEnrollmentStateMachine(int portId, 
 	std::map<int, IEnrollmentStateMachine*>::iterator it;
 	IEnrollmentStateMachine * esm = 0;
 
+	LOG_IPCP_DBG("Before lock, port-id: %d, remove: %d", portId, remove);
 	rina::WriteScopedLock writeLock(sm_lock);
+	LOG_IPCP_DBG("After lock, port-id: %d, remove: %d", portId, remove);
 
 	it = state_machines_.find(portId);
 	if (it == state_machines_.end()) {
@@ -1726,7 +1728,7 @@ void EnrollmentTask::release(int invoke_id,
 {
 	IEnrollmentStateMachine * stateMachine;
 
-	LOG_DBG("M_RELEASE cdapMessage from portId %u", con_handle.port_id);
+	LOG_IPCP_DBG("M_RELEASE cdapMessage from portId %u", con_handle.port_id);
 
 	stateMachine = getEnrollmentStateMachine(con_handle.port_id,
 						 true);
