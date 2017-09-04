@@ -847,13 +847,16 @@ void EnrollmentTask::operational_status_start(int port_id,
 {
 	std::map<int, IEnrollmentStateMachine*>::iterator it;
 
-	rina::ReadScopedLock readLock(sm_lock);
-
+	sm_lock.readlock();
 	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
 		if (it->second->remote_peer_.underlying_port_id_ == port_id) {
+			sm_lock.unlock();
 			it->second->operational_status_start(invoke_id, obj_req);
+			return;
 		}
 	}
+
+	sm_lock.unlock();
 }
 
 int EnrollmentTask::get_con_handle_to_ipcp_with_address(unsigned int dest_address,
@@ -870,6 +873,7 @@ int EnrollmentTask::get_con_handle_to_ipcp_with_address(unsigned int dest_addres
 		if (it->second->remote_peer_.address_ == next_hop_address ||
 				it->second->remote_peer_.old_address_ == next_hop_address) {
 			con.port_id = it->second->con.port_id;
+			sm_lock.unlock();
 			return 0;
 		}
 	}
@@ -1365,9 +1369,7 @@ IEnrollmentStateMachine * EnrollmentTask::getEnrollmentStateMachine(int portId, 
 	std::map<int, IEnrollmentStateMachine*>::iterator it;
 	IEnrollmentStateMachine * esm = 0;
 
-	LOG_IPCP_DBG("Before lock, port-id: %d, remove: %d", portId, remove);
 	rina::WriteScopedLock writeLock(sm_lock);
-	LOG_IPCP_DBG("After lock, port-id: %d, remove: %d", portId, remove);
 
 	it = state_machines_.find(portId);
 	if (it == state_machines_.end()) {
