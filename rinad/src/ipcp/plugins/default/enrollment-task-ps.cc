@@ -1851,7 +1851,7 @@ void EnrollmentTaskPs::initiate_enrollment(const rina::NMinusOneFlowAllocatedEve
 	rina::Time currentTime;
         int t = currentTime.get_current_time_in_ms();
         LOG_IPCP_INFO("initiate_enrollment at %d", t);
-        
+
         rina::ScopedLock g(lock);
 
 	EnrolleeStateMachine * enrollmentStateMachine = 0;
