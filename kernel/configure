@@ -5,6 +5,8 @@ TCP_UDP_BUFFER_SIZE=1500
 INSTALL_PREFIX="/"
 LIBMODPREFIX=""
 REGRESSION_TESTS="n"
+CONFIG_RINA_DTCP_RCVR_ACK="y"
+CONFIG_RINA_DTCP_RCVR_ACK_ATIMER="n"
 
 # Option parsing
 while [[ $# > 0 ]]
@@ -78,6 +80,8 @@ sed -i "s|@TCP_UDP_BUFFER_SIZE@|${TCP_UDP_BUFFER_SIZE}|g" Makefile
 sed -i "s|@INSTALL_MOD_PATH@|${INSTALL_PREFIX}${LIBMODPREFIX}|g" Makefile
 sed -i "s|@ROOTDIR@|$PWD|g" Makefile
 sed -i "s|@LIBMODPREFIX@|${LIBMODPREFIX}|g" Makefile
+sed -i "s|@CONFIG_RINA_DTCP_RCVR_ACK@|${CONFIG_RINA_DTCP_RCVR_ACK}|g" Makefile
+sed -i "s|@CONFIG_RINA_DTCP_RCVR_ACK_ATIMER@|${CONFIG_RINA_DTCP_RCVR_ACK_ATIMER}|g" Makefile
 
 # Prepare VMPI
 if [ $HAVE_VMPI == "y" ]; then
