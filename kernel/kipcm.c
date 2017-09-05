@@ -916,6 +916,39 @@ static int notify_ipcp_conn_destroy_req(irati_msg_port_t ctrl_port,
  					 msg->event_id);
 }
 
+static int notify_ipcp_conn_modify_req(irati_msg_port_t ctrl_port,
+				       struct irati_msg_base *bmsg,
+                                       void * data)
+{
+	struct irati_kmsg_ipcp_conn_update * msg;
+        struct ipcp_instance * ipcp;
+        struct kipcm * kipcm;
+
+        if (!data) {
+                LOG_ERR("Bogus kipcm instance passed, cannot parse NL msg");
+                return -1;
+        }
+        kipcm = (struct kipcm *) data;
+
+        msg = (struct irati_kmsg_ipcp_conn_update *) bmsg;
+        if (!msg) {
+                LOG_ERR("Bogus struct irati_kmsg_ipcp_conn_update passed");
+                return -1;
+        }
+
+        ipcp = ipcp_imap_find(kipcm->instances, msg->dest_ipcp_id);
+        if (!ipcp)
+                return -1;
+
+        if (ipcp->ops->connection_modify(ipcp->data,
+                                         msg->src_cep,
+                                         msg->src_addr,
+					 msg->dest_addr))
+                return -1;
+
+        return 0;
+}
+
 static int notify_ipcp_modify_pffe(irati_msg_port_t ctrl_port,
 				   struct irati_msg_base *bmsg,
                                    void * data)
@@ -1635,6 +1668,8 @@ static int ctrldev_handlers_unregister(void)
         	retval = -1;
         if (irati_handler_unregister(RINA_C_IPCP_CONN_DESTROY_REQUEST))
         	retval = -1;
+        if (irati_handler_unregister(RINA_C_IPCP_CONN_MODIFY_REQUEST))
+        	retval = -1;
         if (irati_handler_unregister(RINA_C_RMT_MODIFY_FTE_REQUEST))
         	retval = -1;
         if (irati_handler_unregister(RINA_C_RMT_DUMP_FT_REQUEST))
@@ -1692,6 +1727,8 @@ static int ctrldev_handlers_register(struct kipcm * kipcm)
                 notify_ipcp_conn_update_req;
         kipcm_handlers[RINA_C_IPCP_CONN_DESTROY_REQUEST]           =
                 notify_ipcp_conn_destroy_req;
+        kipcm_handlers[RINA_C_IPCP_CONN_MODIFY_REQUEST]            =
+                notify_ipcp_conn_modify_req;
         kipcm_handlers[RINA_C_RMT_MODIFY_FTE_REQUEST]              =
                 notify_ipcp_modify_pffe;
         kipcm_handlers[RINA_C_RMT_DUMP_FT_REQUEST]                 =

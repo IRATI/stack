@@ -37,6 +37,7 @@ static struct policy_set_list policy_sets = {
 struct pff {
         struct rina_component base;
         struct rset * rset;
+        struct ipcp_instance * ipcp;
 };
 
 /*
@@ -68,7 +69,8 @@ RINA_KTYPE(pff);
 static bool __pff_is_ok(struct pff * instance)
 { return instance ? true : false; }
 
-static struct pff * pff_create_gfp(struct robject * parent, gfp_t flags)
+static struct pff * pff_create_gfp(struct robject * parent,
+				   struct ipcp_instance * ipcp, gfp_t flags)
 {
         struct pff * tmp;
 
@@ -86,6 +88,8 @@ static struct pff * pff_create_gfp(struct robject * parent, gfp_t flags)
                 return NULL;
 	}
 
+	tmp->ipcp = ipcp;
+
         /* Try to select the default policy-set. */
         if (pff_select_policy_set(tmp, "", RINA_PS_DEFAULT_NAME)) {
                 pff_destroy(tmp);
@@ -101,8 +105,9 @@ struct pff * pff_create_ni(void)
 { return pff_create_gfp(GFP_ATOMIC); }
 #endif
 
-struct pff * pff_create(struct robject * parent)
-{ return pff_create_gfp(parent, GFP_KERNEL); }
+struct pff * pff_create(struct robject * parent,
+			struct ipcp_instance * ipcp)
+{ return pff_create_gfp(parent, ipcp, GFP_KERNEL); }
 
 int pff_destroy(struct pff * instance)
 {
@@ -426,6 +431,12 @@ struct pff_ps * pff_ps_get(struct pff * pff)
 struct rset * pff_rset(struct pff * pff)
 { return pff->rset; }
 EXPORT_SYMBOL(pff_rset);
+
+struct ipcp_instance * pff_ipcp_get(struct pff * pff)
+{
+	return pff->ipcp;
+}
+EXPORT_SYMBOL(pff_ipcp_get);
 
 struct pff * pff_from_component(struct rina_component * component)
 { return container_of(component, struct pff, base); }

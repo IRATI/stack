@@ -1347,6 +1347,31 @@ unsigned int KernelIPCProcess::updateConnection(const Connection& connection)
         return seqNum;
 }
 
+void KernelIPCProcess::modify_connection(const Connection& connection)
+{
+#if STUB_API
+        // Do nothing
+#else
+        struct irati_kmsg_ipcp_conn_update * msg;
+
+        msg = new irati_kmsg_ipcp_conn_update();
+        msg->msg_type = RINA_C_IPCP_CONN_MODIFY_REQUEST;
+        msg->src_addr = connection.sourceAddress;
+        msg->dest_addr = connection.destAddress;
+        msg->src_cep = connection.sourceCepId;
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_ipcp_id = ipcProcessId;
+        msg->dest_port = 0;
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
+#endif
+}
+
 unsigned int
 KernelIPCProcess::createConnectionArrived(const Connection& connection)
 {

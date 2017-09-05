@@ -99,7 +99,7 @@ void IPCPCDAPIOHandler::forward_adata_msg(const rina::ser_obj_t &message,
 	rina::cdap_rib::con_handle_t con;
 	int rv;
 
-	rv = IPCPFactory::getIPCP()->enrollment_task_->get_con_handle_to_address(address, con);
+	rv = IPCPFactory::getIPCP()->enrollment_task_->get_con_handle_to_ipcp(address, con);
 	if (rv != 0) {
 		LOG_IPCP_ERR("Could not find next hop for destination address %d, "
 				"dropping A-DATA CDAP PDU", address);
@@ -194,7 +194,7 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
 		throw e;
 	}
 
-	LOG_IPCP_INFO("Send message at %d", rina::Time::get_time_in_ms());
+	LOG_IPCP_DBG("Send message at %d", rina::Time::get_time_in_ms());
 	atomic_send_lock_.unlock();
 }
 
@@ -204,7 +204,7 @@ void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
 {
 	rina::cdap::cdap_m_t m_rcv;
 
-	LOG_IPCP_INFO("Received message at %d", rina::Time::get_time_in_ms());
+	LOG_IPCP_DBG("Received message at %d", rina::Time::get_time_in_ms());
 
 	if (cdap_dest == rina::cdap_rib::CDAP_DEST_IPCM) {
 		try {
@@ -241,7 +241,7 @@ void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
 		rina::cdap::cdap_m_t inner_m;
 
 		encoder.decode(m_rcv.obj_value_, a_data_obj);
-		if (a_data_obj.dest_address_ != IPCPFactory::getIPCP()->get_active_address()) {
+		if (!IPCPFactory::getIPCP()->check_address_is_mine(a_data_obj.dest_address_)) {
 			forward_adata_msg(message, a_data_obj.dest_address_);
 			return;
 		}
