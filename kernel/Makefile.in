@@ -22,6 +22,12 @@ depmod:
 
 ccflags-y += -Wtype-limits
 ccflags-y += -I$(src)
+ifeq ($(CONFIG_RINA_DTCP_RCVR_ACK),y)
+ccflags-y += -DCONFIG_RINA_DTCP_RCVR_ACK
+endif
+ifeq ($(CONFIG_RINA_DTCP_RCVR_ACK_ATIMER),y)
+ccflags-y += -DCONFIG_RINA_DTCP_RCVR_ACK_ATIMER
+endif
 
 EXTRA_CFLAGS := -I$(PWD)/../include
 
