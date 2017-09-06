@@ -25,11 +25,13 @@
 #include "common.h"
 #include "ps-factory.h"
 #include "rds/robjects.h"
+#include "ipcp-instances.h"
 
 struct pff;
 struct pci;
 
-struct pff *    pff_create(struct robject * parent);
+struct pff *    pff_create(struct robject * parent,
+			   struct ipcp_instance * ipcp);
 int             pff_destroy(struct pff * instance);
 
 bool            pff_is_ok(struct pff * instance);
@@ -70,5 +72,6 @@ int             pff_set_policy_set_param(struct pff * pff,
 struct pff_ps * pff_ps_get(struct pff * pff);
 struct rset *   pff_rset(struct pff * pff);
 struct pff *    pff_from_component(struct rina_component * component);
+struct ipcp_instance * pff_ipcp_get(struct pff * pff);
 
 #endif

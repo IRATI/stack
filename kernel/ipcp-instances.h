@@ -83,6 +83,11 @@ struct ipcp_instance_ops {
                                        cep_id_t                    src_id,
                                        cep_id_t                    dst_id);
 
+        int      (* connection_modify)(struct ipcp_instance_data * data,
+        			       cep_id_t			   src_cep_id,
+				       address_t		   src_address,
+				       address_t		   dst_address);
+
         int      (* connection_destroy)(struct ipcp_instance_data * data,
                                         cep_id_t                    src_id);
 
@@ -150,6 +155,7 @@ struct ipcp_instance_ops {
 
         const struct name * (* ipcp_name)(struct ipcp_instance_data * data);
         const struct name * (* dif_name)(struct ipcp_instance_data * data);
+        ipc_process_id_t (* ipcp_id)(struct ipcp_instance_data * data);
 
         int (* set_policy_set_param)(struct ipcp_instance_data * data,
                                      const string_t * path,

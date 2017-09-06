@@ -1118,6 +1118,17 @@ public:
         unsigned int updateConnection(const Connection& connection);
 
         /**
+         * Invoked by the IPC Process Daemon to request a modification of an
+         * EFCP connection to the kernel components of the IPC Process
+         * (right now only src (=local) and destination (=remote) addresses)
+         *
+         * @param connection
+         * @throws UpdateConnectionException
+         * @return the handle to the response message
+         */
+        void modify_connection(const Connection& connection);
+
+        /**
          * Invoked by the IPC Process Daemon to request the creation of an
          * EFCP connection to the kernel components of the IPC Process
          * (receiving side of the Flow allocation procedure)

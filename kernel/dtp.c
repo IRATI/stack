@@ -1678,9 +1678,6 @@ int dtp_receive(struct dtp * instance,
         }
         rcu_read_unlock();
 
-        /* In case EFCP address of peer has changed */
-        efcp_dst_addr_set(efcp, pci_source(pci));
-
         seq_num = pci_sequence_number_get(pci);
 	sbytes = pdu_data_len(pdu);
 

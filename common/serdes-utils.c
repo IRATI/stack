@@ -4475,6 +4475,7 @@ static void * allocate_irati_msg(irati_msg_t msg_t)
 	}
 	case RINA_C_IPCP_CONN_CREATE_RESPONSE:
 	case RINA_C_IPCP_CONN_CREATE_RESULT:
+	case RINA_C_IPCP_CONN_MODIFY_REQUEST:
 	case RINA_C_IPCP_CONN_UPDATE_REQUEST: {
 		struct irati_kmsg_ipcp_conn_update * result;
 		result = COMMON_ALLOC(sizeof(struct irati_kmsg_ipcp_conn_update), 1);

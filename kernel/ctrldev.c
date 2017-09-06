@@ -82,7 +82,7 @@ static struct irati_ctrl_dm irati_ctrl_dm;
 
 struct msg_queue_entry {
 	char   * sermsg;
-	size_t   serlen;
+	uint32_t   serlen;
 };
 
 int irati_handler_register(irati_msg_t msg_type,
@@ -228,7 +228,7 @@ int irati_ctrl_dev_snd_resp_msg(irati_msg_port_t port,
 				struct irati_msg_base *bmsg)
 {
 	struct msg_queue_entry * entry;
-	int serlen = 0;
+	int ret = 0;
 
 	//Serialize message
 	entry = rkzalloc(sizeof(*entry), GFP_KERNEL);
@@ -237,23 +237,23 @@ int irati_ctrl_dev_snd_resp_msg(irati_msg_port_t port,
 		return -1;
 	}
 
-	entry->sermsg = rkzalloc(IRATI_CTRL_MSG_MAX_SIZE * sizeof (char),
-				 GFP_KERNEL);
+	entry->serlen = irati_msg_serlen(irati_ker_numtables, RINA_C_MAX, bmsg);
+	entry->sermsg = rkzalloc(entry->serlen * sizeof (char), GFP_KERNEL);
 	if (!entry->sermsg) {
-		LOG_ERR("Could not create enry->sermsg");
+		LOG_ERR("Could not create entry->sermsg");
 		rkfree(entry);
 		return -1;
 	}
 
-	serlen = serialize_irati_msg(irati_ker_numtables, IRATI_RINA_C_MAX,
-                        	     entry->sermsg, bmsg);
-        if (serlen <= 0) {
-        	LOG_ERR("Problems serializing msg: %d", serlen);
+	ret = serialize_irati_msg(irati_ker_numtables, IRATI_RINA_C_MAX,
+                        	  entry->sermsg, bmsg);
+        if (ret <= 0) {
+        	LOG_ERR("Problems serializing msg: %d", entry->serlen);
         	rkfree(entry->sermsg);
         	rkfree(entry);
         	return -1;
         }
-        entry->serlen = serlen;
+        entry->serlen = ret;
 
         if (ctrl_dev_data_post(entry, port)) {
 		rkfree(entry->sermsg);
@@ -371,6 +371,7 @@ ctrldev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
         struct ctrldev_priv * priv = f->private_data;
         struct msg_queue_entry * entry = NULL;
         bool blocking = !(f->f_flags & O_NONBLOCK);
+        uint32_t msg_size;
         ssize_t ret;
 
         LOG_DBG("Syscall read SDU (size = %zd, port-id = %d)",
@@ -435,6 +436,23 @@ ctrldev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
 	}
 
 	entry = rfifo_peek(priv->pending_msgs);
+	if (!entry) {
+		spin_unlock(&priv->pending_msgs_lock);
+		ret = -EFAULT;
+		goto finish;
+	}
+
+	if (size == 0) {
+		msg_size = entry->serlen;
+		spin_unlock(&priv->pending_msgs_lock);
+		if (unlikely(copy_to_user(buffer, &msg_size, sizeof(uint32_t)))) {
+			ret = -EFAULT;
+		} else {
+			ret = sizeof(uint32_t);
+		}
+		goto finish;
+	}
+
 	if (entry->serlen > size) {
 		spin_unlock(&priv->pending_msgs_lock);
 		ret = -ENOBUFS;

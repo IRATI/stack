@@ -113,10 +113,11 @@ unsigned int IRATICtrlManager::get_next_seq_number()
 
 int IRATICtrlManager::send_msg(struct irati_msg_base *msg, bool fill_seq_num)
 {
-	ScopedLock g(sendReceiveLock);
-
-	if (fill_seq_num)
+	if (fill_seq_num) {
+		sendReceiveLock.lock();
 		msg->event_id = get_next_seq_number();
+		sendReceiveLock.unlock();
+	}
 
 	msg->src_port = ctrl_port;
 

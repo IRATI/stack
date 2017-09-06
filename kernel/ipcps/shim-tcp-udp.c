@@ -1934,25 +1934,43 @@ static int tcp_udp_application_unregister(struct ipcp_instance_data * data,
         return application_unregister(data, app);
 }
 
+#define HASCOUNT_SYNTAX 0	// entries:count:fieldcount:fieldcount:field
+#define NOCOUNT_SYNTAX  1	// :entries:field:field:field
+
 static int get_nxt_len(char ** enc,
-                       int *   len)
+                       int *   len,
+		       int     syntax)
 {
         char * tmp;
 
         ASSERT(enc);
+	ASSERT(*enc);
 
-        tmp = strsep(enc, ":");
-        if (!enc) {
-                LOG_ERR("No separator found!");
-                return -1;
-        }
+	switch (syntax) {
+	    case HASCOUNT_SYNTAX:
+		tmp = strsep(enc, ":");
+		if (!*enc) {
+			LOG_ERR("No separator found!");
+			return -1;
+		}
+		if (kstrtouint(tmp, 10, len)) {
+			LOG_ERR("Failed to convert int");
+			return -1;
+		}
+		break;
 
-        if (kstrtouint(tmp, 10, len)) {
-                LOG_ERR("Failed to convert int");
-                return -1;
-        }
-
-        return 0;
+	    case NOCOUNT_SYNTAX:
+	    default:
+		if (**enc != ':')
+			return (-1);
+		(*enc)++;
+		// count characters preceding first nul or :
+		for (*len = 0; (*enc)[*len] && (*enc)[*len] != ':';)
+			(*len)++;
+		break;
+	}
+	//LOG_INFO ("Return *len = %d, string '%s'", *len, *enc);
+	return 0;
 }
 
 static int eat_substr(char ** dst,
@@ -1972,19 +1990,21 @@ static int eat_substr(char ** dst,
         memcpy(*dst, *src, *len);
         (*dst)[*len] = '\0';
         *src += *len;
+	LOG_INFO ("Config field is '%s'", *dst);
 
         return 0;
 }
 
 static int get_nxt_val(char ** dst,
                        char ** val,
-                       int  *  len)
+                       int  *  len,
+		       int     syntax)
 {
         ASSERT(len);
         ASSERT(dst);
         ASSERT(val);
 
-        if (get_nxt_len(val, len)) {
+        if (get_nxt_len(val, len, syntax)) {
                 LOG_ERR("get_nxt_len failed");
                 return -1;
         }
@@ -2029,7 +2049,7 @@ static void undo_assignment(struct ipcp_instance_data * data)
         clear_exp_reg(data);
 }
 
-static int parse_dir_entry(struct ipcp_instance_data * data, char **blob)
+static int parse_dir_entry(struct ipcp_instance_data * data, char **blob, int syntax)
 {
         int                result = -1;
         unsigned int       len, port_nr;
@@ -2045,11 +2065,11 @@ static int parse_dir_entry(struct ipcp_instance_data * data, char **blob)
         if (!dir_entry)
                 return -1;
 
-        /* len:aplen:aelen:iplen:port */
-        if (get_nxt_val(&pn, blob, &len)
-         || get_nxt_val(&en, blob, &len)
-         || get_nxt_val(&ip, blob, &len)
-         || get_nxt_val(&port, blob, &len)) {
+	/* ap, ae, ip, port */
+        if (get_nxt_val(&pn, blob, &len, syntax)
+         || get_nxt_val(&en, blob, &len, syntax)
+         || get_nxt_val(&ip, blob, &len, syntax)
+         || get_nxt_val(&port, blob, &len, syntax)) {
                 LOG_ERR("Failed to get next value");
                 goto out;
         }
@@ -2127,7 +2147,7 @@ out:
         return result;
 }
 
-static int parse_exp_reg_entry(struct ipcp_instance_data * data, char ** blob)
+static int parse_exp_reg_entry(struct ipcp_instance_data * data, char ** blob, int syntax)
 {
         int              result = -1;
         struct exp_reg * exp_reg;
@@ -2140,10 +2160,10 @@ static int parse_exp_reg_entry(struct ipcp_instance_data * data, char ** blob)
         if (!exp_reg)
                 return -1;
 
-        /* len:aplen:aelen:port */
-        if (get_nxt_val(&pn, blob, &len)
-         || get_nxt_val(&en, blob, &len)
-         || get_nxt_val(&port, blob, &len)) {
+        /* ap, ae, port */
+        if (get_nxt_val(&pn, blob, &len, syntax)
+         || get_nxt_val(&en, blob, &len, syntax)
+         || get_nxt_val(&port, blob, &len, syntax)) {
                 LOG_ERR("Failed to get next value");
                 goto out;
         }
@@ -2185,6 +2205,50 @@ out:
                 rkfree(exp_reg);
         }
         return result;
+}
+
+int get_syntax_and_count (char *command, char **copy, char **parse, int *syntax)
+{
+	int count = 0;
+	char *val;
+
+	ASSERT(command);
+
+	val = *copy = rkstrdup(command);
+	if (!val) {
+		LOG_ERR("Failed to dup value");
+		return -1;
+	}
+
+	*syntax = HASCOUNT_SYNTAX;	// default -- old syntax
+	if (val[0] == ':') {
+		int lencount, i;
+
+		*syntax = NOCOUNT_SYNTAX;
+		LOG_INFO("New config syntax detected");
+
+		if (get_nxt_len (&val, &lencount, NOCOUNT_SYNTAX)) {
+			goto syntax_error;
+		}
+		// kstrtoint wants null-termination, not length... so brute force.
+		for (i=0; i < lencount; i++) {
+			if (val[i] < '0' || val[i] > '9')
+				goto syntax_error;
+			count = (count * 10) + (val[i] - '0');
+		}
+		val += lencount;
+	}
+	else if (get_nxt_len(&val, &count, HASCOUNT_SYNTAX)) {
+		goto syntax_error;
+	}
+
+	*parse = val;
+	return (count);
+
+syntax_error:
+	LOG_ERR ("Syntax error: Unable to extract syntax and count from '%s'", command);
+	rkfree (*copy);
+	return (-1);
 }
 
 static int parse_assign_conf(struct ipcp_instance_data * data,
@@ -2231,25 +2295,16 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
                 } else if (!strcmp(entry->name, "dirEntry")) {
                         int  count;
                         char * val, * copy;
+			int syntax;
 
-                        ASSERT(entry->value);
-
-                        copy = rkstrdup(entry->value);
-                        if (!copy) {
-                                LOG_ERR("Failed to dup value");
-                                return -1;
-                        }
-                        val = copy;
-
-                        if (get_nxt_len(&val, &count)) {
-                                LOG_ERR("Failed to get number of objects");
-                                rkfree(copy);
-                                return -1;
-                        }
+			count = get_syntax_and_count (entry->value, &copy, &val, &syntax);
+			if (count < 0) {
+				return (-1);
+			}
 
                         while (count-- > 0) {
-                                if (parse_dir_entry(data, &val) < 0) {
-                                        rkfree(copy);
+                                if (parse_dir_entry(data, &val, syntax) < 0) {
+					rkfree(copy);
                                         return -1;
                                 }
                         }
@@ -2258,25 +2313,16 @@ static int parse_assign_conf(struct ipcp_instance_data * data,
                 } else if (!strcmp(entry->name, "expReg")) {
                         char * val, * copy;
                         int  count;
+			int syntax;
 
-                        ASSERT(entry->value);
-
-                        copy = rkstrdup(entry->value);
-                        if (!copy) {
-                                LOG_ERR("Failed to dup value");
-                                return -1;
-                        }
-                        val = copy;
-
-                        if (get_nxt_len(&val, &count)) {
-                                LOG_ERR("Failed to get number of objects");
-                                rkfree(copy);
-                                return -1;
-                        }
+			count = get_syntax_and_count (entry->value, &copy, &val, &syntax);
+			if (count < 0) {
+				return (-1);
+			}
 
                         while (count-- > 0) {
-                                if (parse_exp_reg_entry(data, &val) < 0) {
-                                        rkfree(copy);
+                                if (parse_exp_reg_entry(data, &val, syntax) < 0) {
+					rkfree(copy);
                                         return -1;
                                 }
                         }
@@ -2552,6 +2598,12 @@ static const struct name * tcp_udp_dif_name(struct ipcp_instance_data * data)
         return data->dif_name;
 }
 
+ipc_process_id_t tcp_udp_ipcp_id(struct ipcp_instance_data * data)
+{
+	ASSERT(data);
+	return data->id;
+}
+
 static int tcp_udp_query_rib(struct ipcp_instance_data * data,
                              struct list_head *          entries,
                              const string_t *            object_class,
@@ -2584,6 +2636,7 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
         .connection_update         = NULL,
         .connection_destroy        = NULL,
         .connection_create_arrived = NULL,
+	.connection_modify 	   = NULL,
 
         .sdu_enqueue               = NULL,
         .sdu_write                 = tcp_udp_sdu_write,
@@ -2601,6 +2654,7 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
 
         .ipcp_name                 = tcp_udp_ipcp_name,
         .dif_name                  = tcp_udp_dif_name,
+	.ipcp_id		   = tcp_udp_ipcp_id,
 
         .set_policy_set_param      = NULL,
         .select_policy_set         = NULL,
