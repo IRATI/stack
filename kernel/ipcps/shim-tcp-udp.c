@@ -717,7 +717,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
 
                 LOG_DBG("Max allowable gap is %d", fspec->max_allowable_gap);
                 if (fspec->max_allowable_gap != 0) {
-                        LOG_DBG("Unreliable flow requested");
+                        LOG_INFO("Unreliable flow requested");
                         flow->fspec_id = 0;
 
                         len = sockaddr_init(&addr, &data->host_name, 0);
@@ -744,7 +744,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                                 tcp_udp_rcv;
                         write_unlock_bh(&flow->sock->sk->sk_callback_lock);
                 } else {
-                        LOG_DBG("Reliable flow requested");
+                        LOG_INFO("Reliable flow requested");
                         flow->fspec_id = 1;
 
                         err = sock_create_kern(&init_net, flow->addr.family, SOCK_STREAM,
