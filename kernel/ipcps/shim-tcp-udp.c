@@ -716,7 +716,7 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                 len = sockaddr_copy(&entry->addr, &flow->addr);
 
                 LOG_DBG("Max allowable gap is %d", fspec->max_allowable_gap);
-                if (fspec->max_allowable_gap != 0) {
+                if (0/*fspec->max_allowable_gap != 0*/) {
                         LOG_INFO("Unreliable flow requested");
                         flow->fspec_id = 0;
 
@@ -1669,8 +1669,8 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                                        data->id,
                                        flow->port_id,
                                        data->dif_name,
-                                       sname,
                                        app->app_name,
+                                       sname,
                                        data->qos[CUBE_RELIABLE])) {
                         LOG_ERR("Couldn't tell the KIPCM about the flow");
                         kfa_port_id_release(data->kfa, flow->port_id);
