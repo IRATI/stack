@@ -345,9 +345,16 @@ void IPCManager_::application_manager_app_unregistered(
 void IPCManager_::application_unregistration_request_event_handler(
 			rina::ApplicationUnregistrationRequestEvent* event)
 {
-        // Select any IPC process in the DIF from which the application
-        // wants to unregister from
-        IPCMIPCProcess *slave_ipcp = select_ipcp_by_dif(event->DIFName);
+	IPCMIPCProcess * slave_ipcp = NULL;
+
+	if (event->DIFName.processName == "") {
+		slave_ipcp = select_ipcp_by_reg_app(event->applicationName);
+	} else {
+	        // Select any IPC process in the DIF from which the application
+	        // wants to unregister from
+		slave_ipcp = select_ipcp_by_dif(event->DIFName);
+	}
+
         ostringstream ss;
         int err;
         unsigned short ipcp_id;
@@ -364,14 +371,14 @@ void IPCManager_::application_unregistration_request_event_handler(
                 return;
         }
 
-		{
-			//Auto release the read lock
-			rina::ReadScopedLock readlock(slave_ipcp->rwlock, false);
-			ipcp_id = slave_ipcp->get_id();
-		}
+        {
+        	//Auto release the read lock
+        	rina::ReadScopedLock readlock(slave_ipcp->rwlock, false);
+        	ipcp_id = slave_ipcp->get_id();
+        }
 
         err = unregister_app_from_ipcp(NULL, NULL, *event, ipcp_id);
-        if (err) {
+        if (err < 0) {
                 // Inform the unregistering application that the unregistration
                 // operation failed
                 application_manager_app_unregistered(*event, -1);

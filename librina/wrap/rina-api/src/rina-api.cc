@@ -164,7 +164,8 @@ int rina_register_wait(int fd, int wfd)
 		goto out;
 	}
 
-	assert(resp->msg_type == RINA_C_APP_REGISTER_APPLICATION_RESPONSE);
+	assert(resp->msg_type == RINA_C_APP_REGISTER_APPLICATION_RESPONSE ||
+			resp->msg_type == RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE);
 	assert(resp->event_id == RINA_REG_EVENT_ID);
 	response = resp->result;
 	irati_ctrl_msg_free(IRATI_MB(resp));
