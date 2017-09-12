@@ -443,7 +443,7 @@ int pumpdata_bothdirections (int flowfd, int sdu_size)
 		else
 			FD_SET(flowfd, &readbits);
 		select(flowfd + 1, &readbits, &writebits, NULL, NULL);
-		
+
 		// Try getting rid of buffered data
 		if (condwrite(flowfd, &stdincount, stdinbuf))
 			return (errno);
