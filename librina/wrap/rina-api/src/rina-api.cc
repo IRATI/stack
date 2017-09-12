@@ -145,7 +145,7 @@ irati_unregister_req_fill(struct irati_msg_app_reg_app_resp *req, const char *di
 
 	memset(req, 0, sizeof(*req));
 	irati_msg_fill_common(IRATI_MB(req), wfd);
-	req->msg_type = RINA_C_APP_REGISTER_APPLICATION_REQUEST;
+	req->msg_type = RINA_C_APP_UNREGISTER_APPLICATION_REQUEST;
 	req->event_id = RINA_REG_EVENT_ID;
 	req->dif_name = dn;
 	req->app_name = appn;

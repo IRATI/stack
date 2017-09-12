@@ -666,7 +666,7 @@ int CatServer()
 	
 	V3VERBOSE("Done. Closing registration fd\n");
 	close (regfd);
-	V3VERBOSE("Unregistering apn\n");
+	V3VERBOSE("Unregistering apn %s \n", this_apn);
 	if (rina_unregister(cfd, difname, this_apn, 0) < 0) {
 		PRINTERRORMSG("WARNING: Unregistering failed, error %s\n", strerror(errno));
 		result = EXIT_FAILURE;
