@@ -45,7 +45,7 @@
 #include "sdup.h"
 #include "efcp-utils.h"
 #include "rds/rtimer.h"
-#include "rnl-utils.h"
+#include "irati/kernel-msg.h"
 
 /*  FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
@@ -57,7 +57,7 @@ struct mgmt_sdu_work_data {
         struct sdu *      sdu;
         ipc_process_id_t  ipcp_id;
         port_id_t	  port_id;
-        uint_t		  nl_port_id;
+        irati_msg_port_t  irati_port_id;
 };
 
 enum mgmt_state {
@@ -68,7 +68,7 @@ enum mgmt_state {
 struct ipcp_instance_data {
         /* FIXME: add missing needed attributes */
         ipc_process_id_t        id;
-        u32                     nl_port;
+        irati_msg_port_t        irati_port;
         struct name             name;
         struct name             dif_name;
         struct list_head        flows;
@@ -377,6 +377,15 @@ static int connection_update_request(struct ipcp_instance_data * data,
         return 0;
 }
 
+static int connection_modify_request(struct ipcp_instance_data * data,
+				     cep_id_t			 src_cep_id,
+			     	     address_t		   	 src_address,
+				     address_t		   	 dst_address)
+{
+	return efcp_connection_modify(data->efcpc, src_cep_id,
+				      src_address, dst_address);
+}
+
 static struct normal_flow * find_flow_cepid(struct ipcp_instance_data * data,
                                             cep_id_t                    id)
 {
@@ -654,20 +663,23 @@ static int disable_write(struct ipcp_instance_data * data,
 }
 
 static int normal_assign_to_dif(struct ipcp_instance_data * data,
-                                const struct dif_info *     dif_information)
+		                const struct name * dif_name,
+				const string_t * type,
+				struct dif_config * config)
 {
         struct efcp_config * efcp_config;
-        struct sdup_config * sdup_config;
+        struct secman_config * sm_config;
         struct rmt_config *  rmt_config;
 
-        if (name_cpy(dif_information->dif_name, &data->dif_name)) {
+        if (name_cpy(dif_name, &data->dif_name)) {
                 LOG_ERR("%s: name_cpy() failed", __func__);
                 return -1;
         }
 
-        data->address  = dif_information->configuration->address;
+        data->address  = config->address;
 
-        efcp_config = dif_information->configuration->efcp_config;
+        efcp_config = config->efcp_config;
+        config->efcp_config = 0;
 
         if (!efcp_config) {
                 LOG_ERR("No EFCP configuration in the dif_info");
@@ -676,13 +688,14 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 
         if (!efcp_config->dt_cons) {
                 LOG_ERR("Configuration constants for the DIF are bogus...");
-                efcp_config_destroy(efcp_config);
+                efcp_config_free(efcp_config);
                 return -1;
         }
 
         efcp_container_config_set(data->efcpc, efcp_config);
 
-        rmt_config = dif_information->configuration->rmt_config;
+        rmt_config = config->rmt_config;
+        config->rmt_config = 0;
         if (!rmt_config) {
         	LOG_ERR("No RMT configuration in the dif_info");
         	return -1;
@@ -698,13 +711,14 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 		return -1;
         }
 
-	sdup_config = dif_information->configuration->sdup_config;
-	if (!sdup_config) {
+        sm_config = config->secman_config;
+        config->secman_config = 0;
+	if (!sm_config) {
 		LOG_INFO("No SDU protection config specified, using default");
-		sdup_config = sdup_config_create();
-		sdup_config->default_dup_conf = dup_config_entry_create();
+		sm_config = secman_config_create();
+		sm_config->default_profile = auth_sdup_profile_create();
 	}
-	if (sdup_config_set(data->sdup, sdup_config)) {
+	if (sdup_config_set(data->sdup, sm_config)) {
                 LOG_ERR("Could not set SDUP conf");
 		return -1;
 	}
@@ -717,7 +731,6 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
 }
 
 static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
-                                 address_t                   dst_addr,
                                  port_id_t                   port_id,
                                  struct sdu *                sdu)
 {
@@ -757,7 +770,7 @@ static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
                        0,
                        0,
                        data->address,
-                       dst_addr,
+                       0,
                        0,
                        1,
                        PDU_TYPE_MGMT)) {
@@ -771,13 +784,7 @@ static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
          *   Decide on how to deliver to the RMT depending on
          *   port_id or dst_addr
          */
-        if (dst_addr) {
-                if (rmt_send(data->rmt,
-                             pdu)) {
-                        LOG_ERR("Could not send to RMT (using dst_addr");
-                        return -1;
-                }
-        } else if (port_id) {
+        if (port_id) {
                 if (rmt_send_port_id(data->rmt,
                                      port_id,
                                      pdu)) {
@@ -796,6 +803,8 @@ static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
 static int mgmt_sdu_notif_worker(void * o)
 {
         struct mgmt_sdu_work_data * data;
+        struct irati_kmsg_ipcp_mgmt_sdu msg;
+        unsigned char * sdu_data;
 
         LOG_DBG("Worker waking up, going to send a Mgmt SDU to IPCP Daemon");
 
@@ -803,14 +812,26 @@ static int mgmt_sdu_notif_worker(void * o)
 
         data = (struct mgmt_sdu_work_data *) o;
 
-	if (rnl_ipcp_read_mgmt_sdu_notif(data->ipcp_id,
-					 0,
-					 0,
-					 data->port_id,
-					 data->sdu,
-					 data->nl_port_id))
-		LOG_ERR("Problems sending NL message");
+	msg.msg_type = RINA_C_IPCP_MANAGEMENT_SDU_READ_NOTIF;
+	msg.port_id = data->port_id;
+	msg.src_ipcp_id = data->ipcp_id;
+	msg.sdu = buffer_create(sdu_len(data->sdu));
+	if (!msg.sdu) {
+		LOG_ERR("Problems creating buffer");
+		sdu_destroy(data->sdu);
+		rkfree(data);
+		return 0;
+	}
 
+	sdu_data = sdu_buffer(data->sdu);
+	memcpy(msg.sdu->data, sdu_data, msg.sdu->size);
+
+	if (irati_ctrl_dev_snd_resp_msg(data->irati_port_id,
+					(struct irati_msg_base *) &msg)) {
+		LOG_ERR("Could not send flow_result_msg");
+	}
+
+	buffer_destroy(msg.sdu);
 	sdu_destroy(data->sdu);
 	rkfree(data);
 
@@ -846,7 +867,7 @@ static int normal_mgmt_sdu_post(struct ipcp_instance_data * data,
         wdata = rkzalloc(sizeof(* wdata), GFP_ATOMIC);
         wdata->sdu  = sdu;
         wdata->port_id = port_id;
-        wdata->nl_port_id = data->nl_port;
+        wdata->irati_port_id = data->irati_port;
         wdata->ipcp_id = data->id;
         item  = rwq_work_create_ni(mgmt_sdu_notif_worker, wdata);
 
@@ -911,6 +932,12 @@ static const struct name * normal_dif_name(struct ipcp_instance_data * data)
         ASSERT(name_is_ok(&data->dif_name));
 
         return &data->dif_name;
+}
+
+ipc_process_id_t normal_ipcp_id(struct ipcp_instance_data * data)
+{
+	ASSERT(data);
+        return data->id;
 }
 
 typedef const string_t *const_string;
@@ -1124,8 +1151,11 @@ int normal_address_change(struct ipcp_instance_data * data,
 		return -1;
 	}
 
+	spin_lock_bh(&data->lock);
 	data->old_address = old_address;
 	data->address = new_address;
+	spin_unlock_bh(&data->lock);
+
 	rmt_address_add(data->rmt, new_address);
 
 	/* Set timer to start advertising new address in EFCP connections
@@ -1142,12 +1172,14 @@ static void tf_use_naddress(void * data)
 {
         struct ipcp_instance_data * inst_data;
 
-        LOG_INFO("Running Use New Address Timer...");
         inst_data = (struct ipcp_instance_data *) data;
         if (!inst_data) {
                 LOG_ERR("No IPCP instance data to work with");
                 return;
         }
+
+        LOG_INFO("Running Use New Address Timer, starting to use address %u",
+        	  inst_data->address);
 
         efcp_address_change(inst_data->efcpc, inst_data->address);
 }
@@ -1187,6 +1219,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .connection_update         = connection_update_request,
         .connection_destroy        = connection_destroy_request,
         .connection_create_arrived = connection_create_arrived,
+	.connection_modify 	   = connection_modify_request,
 
         .sdu_enqueue               = normal_sdu_enqueue,
         .sdu_write                 = normal_sdu_write,
@@ -1204,6 +1237,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
 
         .ipcp_name                 = normal_ipcp_name,
         .dif_name                  = normal_dif_name,
+	.ipcp_id    		   = normal_ipcp_id,
 
         .set_policy_set_param      = normal_set_policy_set_param,
         .select_policy_set         = normal_select_policy_set,
@@ -1218,7 +1252,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
 static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                                             const struct name *        name,
                                             ipc_process_id_t           id,
-					    uint_t		       us_nl_port)
+					    irati_msg_port_t	       us_nl_port)
 {
         struct ipcp_instance * instance;
 
@@ -1260,7 +1294,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         }
 
         instance->data->id      = id;
-        instance->data->nl_port = us_nl_port;
+        instance->data->irati_port = us_nl_port;
 
         if (name_cpy(name, &instance->data->name)) {
                 LOG_ERR("Failed creation of ipc name");

@@ -595,7 +595,7 @@ int rmt_destroy(struct rmt *instance)
 	if (instance->pff)
 		pff_destroy(instance->pff);
 	if (instance->rmt_cfg)
-		rmt_config_destroy(instance->rmt_cfg);
+		rmt_config_free(instance->rmt_cfg);
 
 	robject_del(&instance->robj);
 
@@ -651,7 +651,7 @@ int rmt_config_set(struct rmt *instance,
 
 	if (!instance) {
 		LOG_ERR("Bogus instance passed");
-		rmt_config_destroy(rmt_config);
+		rmt_config_free(rmt_config);
 		return -1;
 	}
 
@@ -668,7 +668,7 @@ int rmt_config_set(struct rmt *instance,
 	if (pff_select_policy_set(instance->pff, "", pff_ps_name))
 		LOG_ERR("Could not set policy set %s for PFF", pff_ps_name);
 
-	rmt_config_destroy(rmt_config);
+	rmt_config_free(instance->rmt_cfg);
 	instance->rmt_cfg = NULL;
 	return 0;
 }
@@ -982,7 +982,8 @@ int rmt_send(struct rmt *instance,
 	if (pff_nhop(instance->pff, pci,
 		     &(instance->cache.pids),
 		     &(instance->cache.count))) {
-		LOG_ERR("Cannot get the NHOP for this PDU");
+		LOG_ERR("Cannot get the NHOP for this PDU (saddr: %u daddr: %u type: %u)",
+				pci_source(pci), pci_destination(pci), pci_type(pci));
 
 		pdu_destroy(pdu);
 		return -1;
@@ -1461,7 +1462,7 @@ struct rmt *rmt_create(struct kfa *kfa,
                 return NULL;
 	}
 
-	tmp->pff = pff_create(&tmp->robj);
+	tmp->pff = pff_create(&tmp->robj, tmp->parent);
 	if (!tmp->pff) {
 		rmt_destroy(tmp);
 		return NULL;

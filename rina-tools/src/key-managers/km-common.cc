@@ -63,6 +63,7 @@ void AppEventLoop::stop()
 {
 	rina::ScopedLock g(lock);
 	keep_running = false;
+	rina::librina_finalize();
 }
 
 void AppEventLoop::event_loop()
@@ -74,8 +75,11 @@ void AppEventLoop::event_loop()
 	LOG_INFO("Starting main I/O loop...");
 
 	while(keep_running) {
-		e = rina::ipcEventProducer->eventTimedWait(0, 1000000000);
-		if(!e)
+		e = rina::ipcEventProducer->eventWait();
+		if(!e && !keep_running)
+			break;
+
+		if (!e)
 			continue;
 
 		if(!keep_running){
@@ -110,12 +114,6 @@ void AppEventLoop::event_loop()
 		{
 			DOWNCAST_DECL(e, rina::FlowRequestEvent, event);
 			flow_allocation_requested_handler(*event);
-		}
-		break;
-		case rina::DEALLOCATE_FLOW_RESPONSE_EVENT:
-		{
-			DOWNCAST_DECL(e, rina::DeallocateFlowResponseEvent, event);
-			deallocate_flow_response_handler(*event);
 		}
 		break;
 		case rina::FLOW_DEALLOCATED_EVENT:
@@ -154,10 +152,8 @@ void AppEventLoop::event_loop()
 		case rina::ENROLL_TO_DIF_RESPONSE_EVENT:
 		case rina::GET_DIF_PROPERTIES:
 		case rina::GET_DIF_PROPERTIES_RESPONSE_EVENT:
-		case rina::OS_PROCESS_FINALIZED:
 		case rina::IPCM_REGISTER_APP_RESPONSE_EVENT:
 		case rina::IPCM_UNREGISTER_APP_RESPONSE_EVENT:
-		case rina::IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT:
 		case rina::IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
 		case rina::QUERY_RIB_RESPONSE_EVENT:
 		case rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT:
@@ -645,7 +641,7 @@ void KMIPCResourceManager::allocate_flow(const ApplicationProcessNamingInformati
 
 void KMIPCResourceManager::deallocate_flow(int port_id)
 {
-	ipcManager->requestFlowDeallocation(port_id);
+	ipcManager->deallocate_flow(port_id);
 }
 
 void KMIPCResourceManager::start_flow_reader(int port_id, int fd)
@@ -742,11 +738,6 @@ void AbstractKM::allocate_flow_request_result_handler(const rina::AllocateFlowRe
 void AbstractKM::flow_allocation_requested_handler(const rina::FlowRequestEvent& event)
 {
 	irm->flowAllocationRequested(event);
-}
-
-void AbstractKM::deallocate_flow_response_handler(const rina::DeallocateFlowResponseEvent& event)
-{
-	irm->deallocateFlowResponse(event);
 }
 
 void AbstractKM::flow_deallocated_event_handler(const rina::FlowDeallocatedEvent& event)

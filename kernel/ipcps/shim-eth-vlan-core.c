@@ -1185,8 +1185,8 @@ static int eth_vlan_rcv_worker(void * o)
                                data->id,
                                flow->port_id,
                                data->dif_name,
+			       data->app_name,
                                sname,
-                               data->app_name,
                                data->fspec)) {
                 LOG_ERR("Couldn't tell the KIPCM about the flow");
                 kfa_port_id_release(data->kfa, flow->port_id);
@@ -1409,7 +1409,9 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 };
 
 static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
-                                  const struct dif_info *     dif_information)
+                		  const struct name * dif_name,
+				  const string_t * type,
+				  struct dif_config * config)
 {
         struct eth_vlan_info *          info;
         struct ipcp_config *            tmp;
@@ -1423,7 +1425,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
 		return -1;
 	}
 
-        if (!dif_information) {
+        if (!config) {
 		LOG_ERR("Bogus dif_information passed, bailing out");
 		return -1;
 	}
@@ -1439,13 +1441,12 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         }
 
         /* Get vlan id */
-        result = kstrtouint(dif_information->dif_name->process_name,
-                            10, &temp);
+        result = kstrtouint(dif_name->process_name, 10, &temp);
         if (result) {
-                ASSERT(dif_information->dif_name->process_name);
+                ASSERT(dif_name->process_name);
 
                 LOG_ERR("Error converting DIF Name to VLAN ID: %s",
-                        dif_information->dif_name->process_name);
+                        dif_name->process_name);
                 return -1;
         }
         info->vlan_id = (uint16_t) temp;
@@ -1457,16 +1458,14 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                 }
         }
 
-        data->dif_name = name_dup(dif_information->dif_name);
+        data->dif_name = name_dup(dif_name);
         if (!data->dif_name) {
                 LOG_ERR("Error duplicating name, bailing out");
                 return -1;
         }
 
         /* Retrieve configuration of IPC process from params */
-        list_for_each_entry(tmp, &(dif_information->
-                                   configuration->
-                                   ipcp_config_entries), next) {
+        list_for_each_entry(tmp, &(config->ipcp_config_entries), next) {
 		const struct ipcp_config_entry * entry = tmp->entry;
 		if (!strcmp(entry->name, "interface-name")) {
 			ASSERT(entry->value);
@@ -1764,6 +1763,12 @@ static const struct name * eth_vlan_dif_name(struct ipcp_instance_data * data)
         return data->dif_name;
 }
 
+ipc_process_id_t eth_vlan_ipcp_id(struct ipcp_instance_data * data)
+{
+	ASSERT(data);
+	return data->id;
+}
+
 static int eth_vlan_query_rib(struct ipcp_instance_data * data,
                               struct list_head *          entries,
                               const string_t *            object_class,
@@ -1796,6 +1801,7 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .connection_update         = NULL,
         .connection_destroy        = NULL,
         .connection_create_arrived = NULL,
+	.connection_modify 	   = NULL,
 
         .sdu_enqueue               = NULL,
         .sdu_write                 = eth_vlan_sdu_write,
@@ -1813,6 +1819,7 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
 
         .ipcp_name                 = eth_vlan_ipcp_name,
         .dif_name                  = eth_vlan_dif_name,
+	.ipcp_id		   = eth_vlan_ipcp_id,
 
         .set_policy_set_param      = NULL,
         .select_policy_set         = NULL,

@@ -13,7 +13,7 @@ ifndef IRATI_KSDIR
 IRATI_KSDIR=${PWD}/../../kernel
 endif
 
-ccflags-y = -Wtype-limits -I${src}/../../kernel
+ccflags-y = -Wtype-limits -I${src}/../../kernel -I${src}/../../include
 
 obj-m := cas-plugin.o
 cas-plugin-y := cas-plugin-ps.o rmt-ps-cas.o dtcp-ps-cas.o 

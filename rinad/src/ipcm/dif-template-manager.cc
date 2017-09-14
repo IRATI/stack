@@ -161,6 +161,7 @@ int DIFConfigFolderMonitor::run()
 
 		if (pollnum == EINVAL) {
 			LOG_ERR("Poll returned EINVAL, stopping DIF template monitor");
+			close(fd);
 			return -1;
 		}
 

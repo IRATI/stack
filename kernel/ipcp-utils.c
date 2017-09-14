@@ -30,6 +30,7 @@
 #include "common.h"
 #include "ipcp-utils.h"
 #include "policies.h"
+#include "irati/kucommon.h"
 
 /* FIXME: These externs have to disappear from here */
 extern int string_dup_gfp(gfp_t            flags,
@@ -284,7 +285,7 @@ static char * name_tostring_gfp(gfp_t               flags,
 {
         char *       tmp;
         size_t       size;
-        const char * none     = "<NONE>";
+        const char * none     = "";
         size_t       none_len = strlen(none);
 
         if (!n)
@@ -388,40 +389,6 @@ struct name * string_toname_ni(const string_t * input)
 { return string_toname_gfp(GFP_ATOMIC, input); }
 EXPORT_SYMBOL(string_toname_ni);
 
-struct ipcp_config * ipcp_config_create(void)
-{
-        struct ipcp_config * tmp;
-
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
-                return NULL;
-
-        tmp->entry = NULL;
-
-        INIT_LIST_HEAD(&tmp->next);
-
-        return tmp;
-}
-
-int ipcp_config_destroy(struct ipcp_config * cfg)
-{
-        if (!cfg)
-                return -1;
-
-        if (!cfg->entry)
-                return -1;
-
-        if (cfg->entry->name) rkfree(cfg->entry->name);
-
-        if (cfg->entry->value) rkfree(cfg->entry->value);
-
-        rkfree(cfg->entry);
-
-        rkfree(cfg);
-
-        return 0;
-}
-
 struct flow_spec * flow_spec_dup(const struct flow_spec * fspec)
 {
         struct flow_spec * tmp;
@@ -438,169 +405,6 @@ struct flow_spec * flow_spec_dup(const struct flow_spec * fspec)
         return tmp;
 }
 EXPORT_SYMBOL(flow_spec_dup);
-
-struct efcp_config * efcp_config_create(void)
-{
-        struct efcp_config * tmp;
-        struct dt_cons *     tmp_dt;
-
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
-                return NULL;
-
-        tmp_dt = rkzalloc(sizeof(*tmp_dt), GFP_KERNEL);
-        if (!tmp_dt) {
-                rkfree(tmp);
-                return NULL;
-        }
-        tmp->dt_cons = tmp_dt;
-
-        tmp->unknown_flow = policy_create();
-        if (!tmp->unknown_flow) {
-                rkfree(tmp_dt);
-                rkfree(tmp);
-                return NULL;
-        }
-
-        return tmp;
-}
-EXPORT_SYMBOL(efcp_config_create);
-
-int efcp_config_destroy(struct efcp_config * efcp_config)
-{
-        if (efcp_config->dt_cons)
-                rkfree(efcp_config->dt_cons);
-
-        if (efcp_config->unknown_flow)
-                policy_destroy(efcp_config->unknown_flow);
-
-        rkfree(efcp_config);
-
-        return 0;
-}
-EXPORT_SYMBOL(efcp_config_destroy);
-
-struct sdup_config * sdup_config_create(void)
-{
-        struct sdup_config * tmp;
-
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
-                return NULL;
-
-        INIT_LIST_HEAD(&(tmp->specific_dup_confs));
-
-        tmp->default_dup_conf = NULL;
-
-        return tmp;
-}
-EXPORT_SYMBOL(sdup_config_create);
-
-int sdup_config_destroy(struct sdup_config * sdup_config)
-{
-	struct dup_config  * dup_pos, * dup_nxt;
-
-        if (sdup_config->default_dup_conf)
-        	dup_config_entry_destroy(sdup_config->default_dup_conf);
-
-        list_for_each_entry_safe(dup_pos, dup_nxt,
-        			 &sdup_config->specific_dup_confs,
-        			 next) {
-        	list_del(&dup_pos->next);
-        	dup_config_destroy(dup_pos);
-        }
-
-
-        rkfree(sdup_config);
-
-        return 0;
-}
-EXPORT_SYMBOL(sdup_config_destroy);
-
-struct rmt_config * rmt_config_create(void)
-{
-        struct rmt_config * tmp;
-
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
-                return NULL;
-
-        tmp->pff_conf = rkzalloc(sizeof(*tmp->pff_conf), GFP_KERNEL);
-        if (!tmp->pff_conf) {
-                rkfree(tmp);
-                return NULL;
-        }
-
-        tmp->pff_conf->policy_set = policy_create();
-        if (!tmp->pff_conf->policy_set) {
-                rkfree(tmp->pff_conf);
-                rkfree(tmp);
-                return NULL;
-        }
-
-        tmp->policy_set = policy_create();
-        if (!tmp->policy_set) {
-        	rkfree(tmp->pff_conf->policy_set);
-                rkfree(tmp->pff_conf);
-                rkfree(tmp);
-                return NULL;
-        }
-
-        return tmp;
-}
-EXPORT_SYMBOL(rmt_config_create);
-
-int rmt_config_destroy(struct rmt_config * rmt_config)
-{
-        if (rmt_config->pff_conf) {
-                if (rmt_config->pff_conf->policy_set)
-                        policy_destroy(rmt_config->pff_conf->policy_set);
-                rkfree(rmt_config->pff_conf);
-        }
-        if (rmt_config->policy_set)
-                policy_destroy(rmt_config->policy_set);
-
-        rkfree(rmt_config);
-
-        return 0;
-}
-EXPORT_SYMBOL(rmt_config_destroy);
-
-struct dif_config * dif_config_create(void)
-{
-        struct dif_config * tmp;
-
-        tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-        if (!tmp)
-                return NULL;
-
-        tmp->efcp_config = NULL;
-        tmp->rmt_config = NULL;
-        INIT_LIST_HEAD(&(tmp->ipcp_config_entries));
-
-        return tmp;
-}
-EXPORT_SYMBOL(dif_config_create);
-
-int dif_config_destroy(struct dif_config * dif_config)
-{
-        struct ipcp_config * pos, * nxt;
-
-        if (!dif_config)
-                return -1;
-
-        list_for_each_entry_safe(pos, nxt,
-                                 &dif_config->ipcp_config_entries,
-                                 next) {
-                list_del(&pos->next);
-                ipcp_config_destroy(pos);
-        }
-
-        rkfree(dif_config);
-
-        return 0;
-}
-EXPORT_SYMBOL(dif_config_destroy);
 
 struct dif_info * dif_info_create(void)
 {
@@ -636,8 +440,7 @@ int dif_info_destroy(struct dif_info * dif_info)
                 }
 
                 if (dif_info->configuration) {
-                        if (dif_config_destroy(dif_info->configuration))
-                                return -1;
+                        dif_config_free(dif_info->configuration);
                 }
 
                 rkfree(dif_info->type);
@@ -648,105 +451,29 @@ int dif_info_destroy(struct dif_info * dif_info)
 }
 EXPORT_SYMBOL(dif_info_destroy);
 
-struct dup_config_entry * dup_config_entry_create(void)
-{
-	struct dup_config_entry * tmp;
-
-	tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-	if (!tmp)
-		return NULL;
-
-	tmp->n_1_dif_name = NULL;
-	tmp->crypto_policy = NULL;
-	tmp->error_check_policy = NULL;
-	tmp->ttl_policy = NULL;
-
-	return tmp;
-}
-EXPORT_SYMBOL(dup_config_entry_create);
-
-struct dup_config * dup_config_create(void)
-{
-	struct dup_config * tmp;
-
-	tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
-	if (!tmp)
-		return NULL;
-
-	tmp->entry = NULL;
-
-	INIT_LIST_HEAD(&tmp->next);
-
-	return tmp;
-}
-EXPORT_SYMBOL(dup_config_create);
-
-int dup_config_entry_destroy(struct dup_config_entry * entry)
-{
-	if (!entry)
-		return -1;
-
-	if (entry->n_1_dif_name)
-		rkfree(entry->n_1_dif_name);
-
-	if (entry->error_check_policy)
-		policy_destroy(entry->error_check_policy);
-
-	if (entry->ttl_policy)
-		policy_destroy(entry->ttl_policy);
-
-	if (entry->crypto_policy)
-		policy_destroy(entry->crypto_policy);
-
-	rkfree(entry);
-
-	return 0;
-}
-EXPORT_SYMBOL(dup_config_entry_destroy);
-
-int dup_config_destroy(struct dup_config * cfg)
-{
-	if (!cfg)
-		return -1;
-
-	if (!cfg->entry)
-		return -1;
-
-	dup_config_entry_destroy(cfg->entry);
-
-	rkfree(cfg);
-
-	return 0;
-}
-EXPORT_SYMBOL(dup_config_destroy);
-
-int dup_config_entry_cpy(const struct dup_config_entry * src,
-                         struct dup_config_entry       * dst)
+int dup_config_entry_cpy(const struct auth_sdup_profile * src,
+                         struct auth_sdup_profile       * dst)
 {
         if (!src || !dst)
                 return -1;
 
-        if (string_dup(src->n_1_dif_name, &dst->n_1_dif_name)) {
-        	return -1;
-        }
-
-        if (src->error_check_policy) {
-        	dst->error_check_policy = policy_dup_name_version(src->error_check_policy);
-        	if (!dst->error_check_policy) {
+        if (src->crc) {
+        	dst->crc = policy_dup_name_version(src->crc);
+        	if (!dst->crc) {
         		return -1;
         	}
         }
 
-        if (src->ttl_policy) {
-        	dst->ttl_policy = policy_dup_name_version(src->ttl_policy);
-        	if (!dst->ttl_policy) {
+        if (src->ttl) {
+        	dst->ttl = policy_dup_name_version(src->ttl);
+        	if (!dst->ttl) {
         		return -1;
         	}
         }
 
-        if (src->crypto_policy) {
-        	dst->crypto_policy = policy_dup_name_version(src->crypto_policy);
-        	if (!dst->crypto_policy) {
+        if (src->encrypt) {
+        	dst->encrypt = policy_dup_name_version(src->encrypt);
+        	if (!dst->encrypt) {
         		return -1;
         	}
         }
@@ -755,19 +482,19 @@ int dup_config_entry_cpy(const struct dup_config_entry * src,
 }
 EXPORT_SYMBOL(dup_config_entry_cpy);
 
-struct dup_config_entry * dup_config_entry_dup(const struct dup_config_entry * src)
+struct auth_sdup_profile * dup_config_entry_dup(const struct auth_sdup_profile * src)
 {
-	struct dup_config_entry * tmp;
+	struct auth_sdup_profile * tmp;
 
 	if (!src)
 		return NULL;
 
-	tmp = dup_config_entry_create();
+	tmp = auth_sdup_profile_create();
 	if (!tmp)
 		return NULL;
 
 	if (dup_config_entry_cpy(src, tmp) != 0) {
-		dup_config_entry_destroy(tmp);
+		auth_sdup_profile_free(tmp);
 		return NULL;
 	}
 

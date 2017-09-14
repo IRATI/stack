@@ -67,12 +67,12 @@ class LinkStateRoutingPolicy;
 
 class LinkStateRoutingPs: public IRoutingPs {
 public:
-		static std::string LINK_STATE_POLICY;
-		LinkStateRoutingPs(IRoutingComponent * rc);
-		void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
-		int set_policy_set_param(const std::string& name,
+	static std::string LINK_STATE_POLICY;
+	LinkStateRoutingPs(IRoutingComponent * rc);
+	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+	int set_policy_set_param(const std::string& name,
 			const std::string& value);
-		~LinkStateRoutingPs();
+	~LinkStateRoutingPs();
 
 private:
         // Data model of the routing component.

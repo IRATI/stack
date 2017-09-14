@@ -92,7 +92,7 @@ public:
         				    int fd,
 					    int cdap_session);
         void stop_internal_flow_sdu_reader(int port_id);
-        void processReadManagementSDUEvent(const rina::ReadMgmtSDUResponseEvent& event);
+        void processReadManagementSDUEvent(rina::ReadMgmtSDUResponseEvent& event);
         int get_fd(unsigned int cdap_session);
 
 private:

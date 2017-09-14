@@ -30,6 +30,7 @@
 #include <linux/wait.h>
 #include <linux/sched.h>
 #include <linux/spinlock.h>
+#include <linux/compat.h>
 
 #define RINA_PREFIX "iodev"
 
@@ -40,12 +41,15 @@
 #include "kipcm.h"
 #include "kfa.h"
 #include "kfa-utils.h"
+#include "ctrldev.h"
+#include "irati/kernel-msg.h"
 
 extern struct kipcm *default_kipcm;
 
 /* Private data to an iodev file instance. */
 struct iodev_priv {
         port_id_t       port_id;
+        struct iowaitqs * wqs;
 };
 
 static ssize_t
@@ -154,6 +158,7 @@ iodev_poll(struct file *f, poll_table *wait)
         struct kfa *kfa = kipcm_kfa(default_kipcm);
         struct iodev_priv *priv = f->private_data;
         unsigned int mask = 0;
+        int res;
 
         if (!is_port_id_ok(priv->port_id)) {
                 return -ENXIO;
@@ -162,10 +167,11 @@ iodev_poll(struct file *f, poll_table *wait)
         /* Set POLLIN if the receive queue is not empty or
          * the flow has been deallocated. Also call poll_wait(),
          * as required by the caller. */
-        kfa_flow_readable(kfa, priv->port_id, &mask, f, wait);
-
-        /* TODO check that the IPCP can handle the SDU write */
-        mask |= POLLOUT | POLLWRNORM;
+        res = kfa_flow_readable(kfa, priv->port_id, &mask, f, wait);
+        if (res == 0) {
+        	/* If the flow is there, allow writes on the port-id */
+        	mask |= POLLOUT | POLLWRNORM;
+        }
 
         return mask;
 }
@@ -181,6 +187,15 @@ iodev_open(struct inode *inode, struct file *f)
         }
 
         priv->port_id = port_id_bad();
+        priv->wqs = rkzalloc(sizeof(struct iowaitqs), GFP_KERNEL);
+        if (!priv->wqs) {
+        	rkfree(priv);
+        	return -ENOMEM;
+        }
+
+	init_waitqueue_head(&priv->wqs->read_wqueue);
+	init_waitqueue_head(&priv->wqs->write_wqueue);
+
         f->private_data = priv;
 
         return 0;
@@ -189,20 +204,25 @@ iodev_open(struct inode *inode, struct file *f)
 static int
 iodev_release(struct inode *inode, struct file *f)
 {
+	struct kfa *kfa = kipcm_kfa(default_kipcm);
         struct iodev_priv *priv = f->private_data;
+        struct irati_msg_app_dealloc_flow msg;
 
-        /* TODO possibly deallocate the flow */
+        /* Unbind waitqueues from flow */
+        kfa_flow_cancel_iowqs(kfa, priv->port_id);
+
+        /* Request flow deallocation */
+        msg.msg_type = RINA_C_APP_DEALLOCATE_FLOW_REQUEST;
+        msg.port_id = priv->port_id;
+        irati_ctrl_dev_snd_resp_msg(IPCM_CTRLDEV_PORT, IRATI_MB(&msg));
+
+        LOG_DBG("Released I/O fdesc assciated to port %d", priv->port_id);
+
+        rkfree(priv->wqs);
         rkfree(priv);
 
         return 0;
 }
-
-/* Data structure passed along with ioctl */
-struct irati_iodev_ctldata {
-        uint32_t port_id;
-};
-
-#define IRATI_FLOW_BIND _IOW(0xAF, 0x00, struct irati_iodev_ctldata)
 
 static long
 iodev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
@@ -226,16 +246,16 @@ iodev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
                 return -EINVAL;
         }
 
-        if (0 /* TODO */ && !kfa_flow_exists(kfa, data.port_id)) {
-                LOG_ERR("Cannot find flow for port id %d", data.port_id);
-                return -ENXIO;
-        }
-
         if (is_port_id_ok(priv->port_id)) {
                 LOG_ERR("Cannot bind to port %d, "
                         "already bound to port id %d",
                         data.port_id, priv->port_id);
                 return -EBUSY;
+        }
+
+        if (kfa_flow_set_iowqs(kfa, priv->wqs, data.port_id) != 0) {
+        	LOG_ERR("Error binding to port-id %d", data.port_id);
+        	return -ENXIO;
         }
 
         priv->port_id = data.port_id;
@@ -249,7 +269,7 @@ iodev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 static long
 iodev_compat_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 {
-	return iodev_ioctl(f, cmd, (unsigned long)compat_ptr(arg));
+	return iodev_ioctl(f, cmd, (unsigned long) compat_ptr(arg));
 }
 #endif
 

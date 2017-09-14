@@ -68,6 +68,40 @@ IPCManager_::select_ipcp_by_dif(
 	return NULL;
 }
 
+// Returns an IPC process where the application is registered,
+// if any.
+IPCMIPCProcess *
+IPCManager_::select_ipcp_by_reg_app(
+		const rina::ApplicationProcessNamingInformation& reg_app,
+		bool write_lock)
+{
+	std::list<rina::ApplicationRegistrationInformation>::iterator it;
+
+	//Prevent any insertion/deletion to happen
+	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
+
+	vector<IPCMIPCProcess *> ipcps;
+	ipcp_factory_.listIPCProcesses(ipcps);
+
+	for (unsigned int i = 0; i < ipcps.size(); i++) {
+		for (it = ipcps[i]->registeredApplications.begin();
+				it != ipcps[i]->registeredApplications.end();
+				++ it) {
+			if (it->appName.getEncodedString() ==
+					reg_app.getEncodedString()) {
+				//Acquire lock before leaving rwlock of the factory
+				if(write_lock)
+					ipcps[i]->rwlock.writelock();
+				else
+					ipcps[i]->rwlock.readlock();
+				return ipcps[i];
+			}
+		}
+	}
+
+	return NULL;
+}
+
 // Returns any IPC process in the system, giving priority to
 // normal IPC processes.
 IPCMIPCProcess *
@@ -106,20 +140,21 @@ IPCManager_::select_ipcp(bool write_lock)
 }
 
 bool
-IPCManager_::application_is_registered_to_ipcp(
-		const rina::ApplicationProcessNamingInformation& app_name,
-		IPCMIPCProcess *slave_ipcp)
+IPCManager_::application_is_registered_to_ipcp(rina::ApplicationProcessNamingInformation & app_name,
+		       	       	       	       pid_t pid, IPCMIPCProcess *slave_ipcp)
 {
+	list<rina::ApplicationRegistrationInformation>::iterator it;
+
 	//Prevent any insertion/deletion to happen
 	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
 
-	const list<rina::ApplicationProcessNamingInformation>&
-		registered_apps = slave_ipcp->registeredApplications;
-
-	for (list<rina::ApplicationProcessNamingInformation>::const_iterator
-			it = registered_apps.begin();
-				it != registered_apps.end(); it++) {
-		if (app_name == *it) {
+	for (it = slave_ipcp->registeredApplications.begin();
+				it != slave_ipcp->registeredApplications.end(); it++) {
+		if (it->pid == pid) {
+			app_name.processName = it->appName.processName;
+			app_name.processInstance = it->appName.processInstance;
+			app_name.entityName = it->appName.entityName;
+			app_name.entityInstance = it->appName.entityInstance;
 			return true;
 		}
 	}
@@ -153,9 +188,7 @@ IPCManager_::lookup_ipcp_by_port(unsigned int port_id, bool write_lock)
 }
 
 void
-IPCManager_::collect_flows_by_application(
-			const rina::ApplicationProcessNamingInformation&
-			app_name, list<rina::FlowInformation>& result)
+IPCManager_::collect_flows_by_pid(pid_t pid, list<rina::FlowInformation>& result)
 {
 	//Prevent any insertion/deletion to happen
 	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
@@ -171,7 +204,7 @@ IPCManager_::collect_flows_by_application(
 
 		for (list<rina::FlowInformation>::const_iterator it =
 			flows.begin(); it != flows.end(); it++) {
-			if (it->localAppName == app_name) {
+			if (it->pid == pid) {
 				result.push_back(*it);
 			}
 		}

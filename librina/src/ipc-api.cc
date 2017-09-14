@@ -31,6 +31,7 @@
 
 #include "librina/logs.h"
 #include "core.h"
+#include "ctrl.h"
 #include "librina/ipc-api.h"
 
 namespace rina {
@@ -178,33 +179,40 @@ void IPCManager::removeApplicationRegistration(
         applicationRegistrations.erase(key);
 }
 
-unsigned int IPCManager::internalRequestFlowAllocation(
-                const ApplicationProcessNamingInformation& localAppName,
-                const ApplicationProcessNamingInformation& remoteAppName,
-                const FlowSpecification& flowSpec,
-                unsigned short sourceIPCProcessId)
+unsigned int
+IPCManager::internalRequestFlowAllocation(const ApplicationProcessNamingInformation& localAppName,
+					  const ApplicationProcessNamingInformation& remoteAppName,
+					  const FlowSpecification& flowSpec,
+					  unsigned short sourceIPCProcessId)
 {
         FlowInformation * flow;
         unsigned int result = 0;
+        ApplicationProcessNamingInformation dif_name;
 
         WriteScopedLock writeLock(flows_rw_lock);
 
 #if STUB_API
 #else
-        AppAllocateFlowRequestMessage message;
-        message.setSourceAppName(localAppName);
-        message.setDestAppName(remoteAppName);
-        message.setSourceIpcProcessId(sourceIPCProcessId);
-        message.setFlowSpecification(flowSpec);
-        message.setRequestMessage(true);
+        struct irati_kmsg_ipcm_allocate_flow * msg;
 
-        try{
-                rinaManager->sendMessage(&message, true);
-        }catch(NetlinkException &e){
-                throw FlowAllocationException(e.what());
+        msg = new irati_kmsg_ipcm_allocate_flow();
+        msg->msg_type = RINA_C_APP_ALLOCATE_FLOW_REQUEST;
+        msg->src_ipcp_id = sourceIPCProcessId;
+        msg->dest_ipcp_id = 0;
+        msg->dest_port = IPCM_CTRLDEV_PORT;
+        msg->local = localAppName.to_c_name();
+        msg->remote = remoteAppName.to_c_name();
+        msg->dif_name = dif_name.to_c_name();
+        msg->fspec = flowSpec.to_c_flowspec();
+        msg->pid = getpid();
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw FlowAllocationException("Problems sending CTRL message");
         }
 
-        result = message.getSequenceNumber();
+        result = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 
         flow = new FlowInformation();
@@ -232,21 +240,26 @@ unsigned int IPCManager::internalRequestFlowAllocationInDIF(
 
 #if STUB_API
 #else
-        AppAllocateFlowRequestMessage message;
-        message.setSourceAppName(localAppName);
-        message.setDestAppName(remoteAppName);
-        message.setSourceIpcProcessId(sourceIPCProcessId);
-        message.setFlowSpecification(flowSpec);
-        message.setDifName(difName);
-        message.setRequestMessage(true);
+        struct irati_kmsg_ipcm_allocate_flow * msg;
 
-        try{
-                rinaManager->sendMessage(&message, true);
-        }catch(NetlinkException &e){
-                throw FlowAllocationException(e.what());
+        msg = new irati_kmsg_ipcm_allocate_flow();
+        msg->msg_type = RINA_C_APP_ALLOCATE_FLOW_REQUEST;
+        msg->src_ipcp_id = sourceIPCProcessId;
+        msg->dest_ipcp_id = 0;
+        msg->dest_port = IPCM_CTRLDEV_PORT;
+        msg->local = localAppName.to_c_name();
+        msg->remote = remoteAppName.to_c_name();
+        msg->dif_name = difName.to_c_name();
+        msg->fspec = flowSpec.to_c_flowspec();
+        msg->pid = getpid();
+
+        if (irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true) != 0) {
+        	irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        	throw FlowAllocationException("Problems sending CTRL message");
         }
 
-        result = message.getSequenceNumber();
+        result = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
 #endif
 
         flow = new FlowInformation();
@@ -273,17 +286,25 @@ FlowInformation IPCManager::internalAllocateFlowResponse(const FlowRequestEvent&
 
 #if STUB_API
 #else
-        AppAllocateFlowResponseMessage responseMessage;
-        responseMessage.result = result;
-        responseMessage.setNotifySource(notifySource);
-        responseMessage.setSourceIpcProcessId(ipcProcessId);
-        responseMessage.setSequenceNumber(flowRequestEvent.sequenceNumber);
-        responseMessage.setResponseMessage(true);
-        try{
-                rinaManager->sendMessage(&responseMessage, false);
-        }catch(NetlinkException &e){
-                throw FlowAllocationException(e.what());
-        }
+        struct irati_msg_app_alloc_flow_response * msg;
+        int ret = 0;
+
+        msg = new irati_msg_app_alloc_flow_response();
+        msg->msg_type = RINA_C_APP_ALLOCATE_FLOW_RESPONSE;
+        msg->dest_ipcp_id = 0;
+        msg->dest_port = IPCM_CTRLDEV_PORT;
+        msg->not_source = notifySource;
+        msg->result = result;
+        msg->src_ipcp_id = ipcProcessId;
+        msg->event_id = flowRequestEvent.sequenceNumber;
+        msg->pid = getpid();
+
+        ret = irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, false);
+
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
+
+        if (ret)
+        	throw FlowAllocationException("Problems sending CTRL message");
 #endif
         if (result != 0) {
                 LOG_WARN("Flow was not accepted, error code: %d", result);
@@ -314,57 +335,74 @@ FlowInformation IPCManager::internalAllocateFlowResponse(const FlowRequestEvent&
         return *flow;
 }
 
-unsigned int IPCManager::getDIFProperties(
-		const ApplicationProcessNamingInformation& applicationName,
-		const ApplicationProcessNamingInformation& DIFName)
+unsigned int
+IPCManager::getDIFProperties(const ApplicationProcessNamingInformation& applicationName,
+			     const ApplicationProcessNamingInformation& DIFName)
 {
+	unsigned int seq_num = 0;
 
 #if STUB_API
-	return 0;
 #else
-	AppGetDIFPropertiesRequestMessage message;
-	message.setApplicationName(applicationName);
-	message.setDifName(DIFName);
-	message.setRequestMessage(true);
+        struct irati_msg_app_reg_app_resp * msg;
+        int ret;
 
-	try{
-		rinaManager->sendMessage(&message, true);
-	}catch(NetlinkException &e){
-		throw GetDIFPropertiesException(e.what());
-	}
+        msg = new irati_msg_app_reg_app_resp();
+        msg->msg_type = RINA_C_APP_GET_DIF_PROPERTIES_REQUEST;
+        msg->dest_ipcp_id = 0;
+        msg->dest_port = IPCM_CTRLDEV_PORT;
+        msg->app_name = applicationName.to_c_name();
+        msg->dif_name = DIFName.to_c_name();
 
-	return message.getSequenceNumber();
+        ret = irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true);
+        seq_num = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        if (ret) {
+        	throw GetDIFPropertiesException("Problems sending CTRL message");
+        }
 #endif
+        return seq_num;
 }
 
-unsigned int IPCManager::requestApplicationRegistration(
-                const ApplicationRegistrationInformation& appRegistrationInfo)
+unsigned int
+IPCManager::requestApplicationRegistration(const ApplicationRegistrationInformation& appRegistrationInfo)
 {
+	unsigned int seq_num = 0;
+
 	WriteScopedLock writeLock(regs_rw_lock);
 
 #if STUB_API
-        registrationInformation[0] = appRegistrationInfo;
-	return 0;
 #else
-	AppRegisterApplicationRequestMessage message;
-	message.setApplicationRegistrationInformation(appRegistrationInfo);
-	message.setRequestMessage(true);
+        struct irati_msg_app_reg_app * msg;
+        int ret;
 
-	try{
-	        rinaManager->sendMessage(&message, true);
-	}catch(NetlinkException &e){
-	        throw ApplicationRegistrationException(e.what());
-	}
+        msg = new irati_msg_app_reg_app();
+        msg->msg_type = RINA_C_APP_REGISTER_APPLICATION_REQUEST;
+        msg->src_ipcp_id = appRegistrationInfo.ipcProcessId;
+        msg->dest_ipcp_id = 0;
+        msg->dest_port = IPCM_CTRLDEV_PORT;
+        msg->app_name = appRegistrationInfo.appName.to_c_name();
+        msg->dif_name = appRegistrationInfo.difName.to_c_name();
+        msg->daf_name = appRegistrationInfo.dafName.to_c_name();
+        msg->ipcp_id = appRegistrationInfo.ipcProcessId;
+        msg->reg_type = appRegistrationInfo.applicationRegistrationType;
+        msg->pid = getpid();
+        msg->fa_ctrl_port = irati_ctrl_mgr->get_irati_ctrl_port();
 
-	registrationInformation[message.getSequenceNumber()] = appRegistrationInfo;
+        ret = irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true);
+        seq_num = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        if (ret) {
+        	throw ApplicationRegistrationException("Problems sending CTRL message");
+        }
 
-	return message.getSequenceNumber();
 #endif
+        registrationInformation[seq_num] = appRegistrationInfo;
+	return seq_num;
 }
 
-ApplicationRegistration * IPCManager::commitPendingRegistration(
-                        unsigned int seqNumber,
-                        const ApplicationProcessNamingInformation& DIFName)
+ApplicationRegistration *
+IPCManager::commitPendingRegistration(unsigned int seqNumber,
+				      const ApplicationProcessNamingInformation& DIFName)
 {
         ApplicationRegistrationInformation appRegInfo;
         ApplicationRegistration * applicationRegistration;
@@ -409,12 +447,13 @@ void IPCManager::withdrawPendingRegistration(unsigned int seqNumber)
         registrationInformation.erase(seqNumber);
 }
 
-unsigned int IPCManager::requestApplicationUnregistration(
-		const ApplicationProcessNamingInformation& applicationName,
-		const ApplicationProcessNamingInformation& DIFName)
+unsigned int
+IPCManager::requestApplicationUnregistration(const ApplicationProcessNamingInformation& applicationName,
+					     const ApplicationProcessNamingInformation& DIFName)
 {
         ApplicationRegistration * applicationRegistration;
         bool found = false;
+        unsigned int seq_num = 0;
 
         WriteScopedLock writeLock(regs_rw_lock);
 
@@ -444,24 +483,27 @@ unsigned int IPCManager::requestApplicationUnregistration(
 
 #if STUB_API
         registrationInformation[0] = appRegInfo;
-	return 0;
 #else
-	AppUnregisterApplicationRequestMessage message;
-	message.setApplicationName(applicationName);
-	message.setDifName(DIFName);
-	message.setRequestMessage(true);
+        struct irati_msg_app_reg_app_resp * msg;
+        int ret = 0;
 
-	try{
-	        rinaManager->sendMessage(&message, true);
-	}catch(NetlinkException &e){
-	        throw ApplicationUnregistrationException(e.what());
-	}
+        msg = new irati_msg_app_reg_app_resp();
+        msg->msg_type = RINA_C_APP_UNREGISTER_APPLICATION_REQUEST;
+        msg->dest_ipcp_id = 0;
+        msg->dest_port = IPCM_CTRLDEV_PORT;
+        msg->app_name = applicationName.to_c_name();
+        msg->dif_name = DIFName.to_c_name();
 
-	registrationInformation[message.getSequenceNumber()] =
-	                appRegInfo;
+        ret = irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true);
+        seq_num = msg->event_id;
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        if (ret) {
+        	throw ApplicationUnregistrationException("Problems sending CTRL message");
+        }
 
-	return message.getSequenceNumber();
+	registrationInformation[seq_num] = appRegInfo;
 #endif
+	return seq_num;
 }
 
 void IPCManager::appUnregistrationResult(unsigned int seqNumber, bool success)
@@ -529,28 +571,10 @@ unsigned int IPCManager::requestFlowAllocationInDIF(
 
 void IPCManager::initIodev(FlowInformation *flow, int portId)
 {
-        struct irati_iodev_ctldata iodata;
-
-        if (portId < 0) {
-                /* This happens in case of flow allocation failure. Don't
-                 * open the I/O device, just set the file descriptor to an
-                 * invalid value. */
-                flow->fd = -1;
-                return;
-        }
-
-        flow->fd = open("/dev/irati", O_RDWR);
+        flow->fd = irati_open_io_port(portId);
         if (flow->fd < 0) {
                 std::ostringstream oss;
                 oss << "Cannot open /dev/irati [" << strerror(errno) << "]";
-                throw FlowAllocationException(oss.str());
-        }
-
-        iodata.port_id = (uint32_t)portId;
-        if (ioctl(flow->fd, IRATI_FLOW_BIND, &iodata)) {
-                std::ostringstream oss;
-                oss << "Cannot bind port id " << iodata.port_id <<
-                        " on /dev/irati [" << strerror(errno) << "]";
                 throw FlowAllocationException(oss.str());
         }
 }
@@ -615,7 +639,7 @@ FlowInformation IPCManager::allocateFlowResponse(
 			blocking);
 }
 
-unsigned int IPCManager::requestFlowDeallocation(int portId)
+void IPCManager::deallocate_flow(int portId)
 {
         FlowInformation * flow;
 
@@ -631,56 +655,30 @@ unsigned int IPCManager::requestFlowDeallocation(int portId)
         }
 
 #if STUB_API
-        flow->state = FlowInformation::FLOW_DEALLOCATION_REQUESTED;
-	return 0;
 #else
 
-	LOG_DBG("Application %s requested to deallocate flow with port-id %d",
+	LOG_DBG("Application %s requested to deallocate flow with port-id %d and fd %d",
 		flow->localAppName.processName.c_str(),
-		flow->portId);
-	AppDeallocateFlowRequestMessage message;
-	message.setApplicationName(flow->localAppName);
-	message.port_id = flow->portId;
-	message.setRequestMessage(true);
+		flow->portId, flow->fd);
 
-	try{
-	        rinaManager->sendMessage(&message, true);
-	}catch(NetlinkException &e){
-	        throw FlowDeallocationException(e.what());
+	if (flow->fd > 0) {
+		close(flow->fd);
+	} else {
+		//IPCP
+		struct irati_msg_app_dealloc_flow msg;
+
+	        msg.msg_type = RINA_C_APP_DEALLOCATE_FLOW_REQUEST;
+	        msg.port_id = portId;
+	        msg.dest_port = IPCM_CTRLDEV_PORT;
+	        msg.src_ipcp_id = flow->user_ipcp_id;
+	        msg.dest_ipcp_id = 0;
+	        msg.event_id = 0;
+	        irati_ctrl_mgr->send_msg((struct irati_msg_base *) &msg, true);
 	}
 
-	flow->state = FlowInformation::FLOW_DEALLOCATION_REQUESTED;
-
-	return message.getSequenceNumber();
+	allocatedFlows.erase(portId);
+	delete flow;
 #endif
-}
-
-void IPCManager::flowDeallocationResult(int portId, bool success)
-{
-        FlowInformation * flow;
-
-        WriteScopedLock writeLock(flows_rw_lock);
-
-        flow = getAllocatedFlow(portId);
-        if (flow == 0) {
-                throw FlowDeallocationException(
-                                IPCManager::unknown_flow_error);
-        }
-
-        if (flow->state != FlowInformation::FLOW_DEALLOCATION_REQUESTED) {
-                throw FlowDeallocationException(
-                                IPCManager::wrong_flow_state);
-        }
-
-        if (success) {
-        	if (flow->fd > 0) {
-        		close(flow->fd);
-        	}
-                allocatedFlows.erase(portId);
-                delete flow;
-        } else {
-                flow->state = FlowInformation::FLOW_ALLOCATED;
-        }
 }
 
 void IPCManager::flowDeallocated(int portId)
@@ -733,7 +731,7 @@ std::vector<ApplicationRegistration *> IPCManager::getRegisteredApplications()
 
 int IPCManager::getControlFd()
 {
-        return rinaManager->getEventFd();
+        return irati_ctrl_mgr->get_ctrl_fd();
 }
 
 Singleton<IPCManager> ipcManager;
@@ -743,9 +741,10 @@ Singleton<IPCManager> ipcManager;
 ApplicationUnregisteredEvent::ApplicationUnregisteredEvent(
 		const ApplicationProcessNamingInformation& appName,
 		const ApplicationProcessNamingInformation& DIFName,
-		unsigned int sequenceNumber) :
+		unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id) :
 				IPCEvent(APPLICATION_UNREGISTERED_EVENT,
-						sequenceNumber)
+					 sequenceNumber, ctrl_port, ipcp_id)
 {
 	this->applicationName = appName;
 	this->DIFName = DIFName;
@@ -755,9 +754,10 @@ ApplicationUnregisteredEvent::ApplicationUnregisteredEvent(
 AppRegistrationCanceledEvent::AppRegistrationCanceledEvent(int code,
                 const std::string& reason,
                 const ApplicationProcessNamingInformation& difName,
-                unsigned int sequenceNumber):
+                unsigned int sequenceNumber,
+		unsigned int ctrl_p, unsigned short ipcp_id):
 			IPCEvent(APPLICATION_REGISTRATION_CANCELED_EVENT,
-				 sequenceNumber)
+				 sequenceNumber, ctrl_port, ipcp_id)
 {
         this->code = code;
         this->reason = reason;
@@ -769,25 +769,13 @@ AllocateFlowRequestResultEvent::AllocateFlowRequestResultEvent(
                         const ApplicationProcessNamingInformation& appName,
                         const ApplicationProcessNamingInformation& difName,
                         int portId,
-                        unsigned int sequenceNumber):
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id):
                                 IPCEvent(ALLOCATE_FLOW_REQUEST_RESULT_EVENT,
-                                         sequenceNumber)
+                                         sequenceNumber, ctrl_port, ipcp_id)
 {
         this->sourceAppName = appName;
         this->difName = difName;
-        this->portId = portId;
-}
-
-/* CLASS Deallocate Flow Response EVENT*/
-DeallocateFlowResponseEvent::DeallocateFlowResponseEvent(
-                        const ApplicationProcessNamingInformation& appName,
-                        int portId, int result,
-                        unsigned int sequenceNumber):
-                                BaseResponseEvent(result,
-                                         DEALLOCATE_FLOW_RESPONSE_EVENT,
-                                         sequenceNumber)
-{
-        this->appName = appName;
         this->portId = portId;
 }
 
@@ -796,10 +784,11 @@ GetDIFPropertiesResponseEvent::GetDIFPropertiesResponseEvent(
                         const ApplicationProcessNamingInformation& appName,
                         const std::list<DIFProperties>& difProperties,
                         int result,
-                        unsigned int sequenceNumber):
+                        unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id):
                                 BaseResponseEvent(result,
                                          GET_DIF_PROPERTIES_RESPONSE_EVENT,
-                                         sequenceNumber)
+                                         sequenceNumber, ctrl_port, ipcp_id)
 {
         this->applicationName = appName;
         this->difProperties = difProperties;

@@ -32,7 +32,6 @@
 
 #define RINA_PREFIX "librina.logs"
 
-#include "librina/likely.h"
 #include "librina/logs.h"
 
 enum LOG_LEVEL logLevel = DBG;

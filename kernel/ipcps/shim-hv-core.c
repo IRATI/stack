@@ -670,8 +670,8 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
         }
 
         err = kipcm_flow_arrived(default_kipcm, priv->id, port_id,
-                                 &priv->dif_name, src_application,
-                                 dst_application, &priv->fspec);
+                                 &priv->dif_name, dst_application,
+                                 src_application, &priv->fspec);
         if (err) {
                 LOG_ERR("%s: kipcm_flow_arrived() failed", __func__);
                 goto flow_arrived;
@@ -1017,7 +1017,9 @@ shim_hv_application_unregister(struct ipcp_instance_data *priv,
 /* Callback invoked when a shim IPC process is assigned to a DIF. */
 static int
 shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
-                      const struct dif_info *dif_information)
+                      const struct name * dif_name,
+		      const string_t * type,
+		      struct dif_config * config)
 {
         struct ipcp_config *elem;
         bool vmpi_id_found = false;
@@ -1033,14 +1035,12 @@ shim_hv_assign_to_dif(struct ipcp_instance_data *priv,
                 return -1;
         }
 
-        if (name_cpy(dif_information->dif_name, &priv->dif_name)) {
+        if (name_cpy(dif_name, &priv->dif_name)) {
                 LOG_ERR("%s: name_cpy() failed", __func__);
                 return -1;
         }
 
-        list_for_each_entry(elem,
-                            &(dif_information->configuration->ipcp_config_entries),
-                            next) {
+        list_for_each_entry(elem, &(config->ipcp_config_entries), next) {
                 const struct ipcp_config_entry *entry = elem->entry;
 
                 if (!strcmp(entry->name, "vmpi-id")) {
@@ -1149,6 +1149,12 @@ shim_hv_dif_name(struct ipcp_instance_data *priv)
         return &priv->dif_name;
 }
 
+ipc_process_id_t shim_hv_ipcp_id(struct ipcp_instance_data * data)
+{
+	ASSERT(data);
+	return data->id;
+}
+
 static int shim_hv_query_rib(struct ipcp_instance_data * data,
                              struct list_head *          entries,
                              const string_t *            object_class,
@@ -1181,6 +1187,7 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .connection_update         = NULL,
         .connection_destroy        = NULL,
         .connection_create_arrived = NULL,
+	.connection_modify 	   = NULL,
 
         .sdu_enqueue               = NULL,
         .sdu_write                 = shim_hv_sdu_write,
@@ -1202,7 +1209,8 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .select_policy_set         = NULL,
         .update_crypto_state	   = NULL,
 	.address_change		   = NULL,
-        .dif_name		   = shim_hv_dif_name
+        .dif_name		   = shim_hv_dif_name,
+	.ipcp_id		   = shim_hv_ipcp_id
 };
 
 /* Initialize the IPC process factory. */

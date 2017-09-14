@@ -436,15 +436,7 @@ public:
 	 * @throws FlowDeallocationException if the flow is not in
 	 * the ALLOCATED state or there are problems deallocating the flow
 	 */
-	unsigned int requestFlowDeallocation(int portId);
-
-	/**
-	 * Inform about the success/failure of a flow deallocation request
-	 * @param success true if request has been successful, false otherwise
-	 * @param portId the portId of the flow to be deallocated
-	 * @throws flowDeallocationException if there are problems
-	 */
-	void flowDeallocationResult(int portId, bool success);
+	void deallocate_flow(int portId);
 
 	/**
 	 * Inform the IPC Manager that a flow has been deallocated remotely,
@@ -502,7 +494,8 @@ public:
 	ApplicationUnregisteredEvent(
 			const ApplicationProcessNamingInformation& appName,
 			const ApplicationProcessNamingInformation& DIFName,
-			unsigned int sequenceNumber);
+			unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -525,7 +518,8 @@ public:
 
 	AppRegistrationCanceledEvent(int code, const std::string& reason,
 			const ApplicationProcessNamingInformation& difName,
-			unsigned int sequenceNumber);
+			unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -550,23 +544,8 @@ public:
         AllocateFlowRequestResultEvent(
                         const ApplicationProcessNamingInformation& appName,
                         const ApplicationProcessNamingInformation& difName,
-                        int portId, unsigned int sequenceNumber);
-};
-
-/**
- * Event informing about the result of a flow deallocation request
- */
-class DeallocateFlowResponseEvent: public BaseResponseEvent {
-public:
-        /** The application that requested the flow deallocation */
-        ApplicationProcessNamingInformation appName;
-
-        /** The portId of the flow */
-        int portId;
-
-        DeallocateFlowResponseEvent(
-                        const ApplicationProcessNamingInformation& appName,
-                        int portId, int result, unsigned int sequenceNumber);
+                        int portId, unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 /**
@@ -585,7 +564,8 @@ public:
         GetDIFPropertiesResponseEvent(
                         const ApplicationProcessNamingInformation& appName,
                         const std::list<DIFProperties>& difProperties,
-                        int result, unsigned int sequenceNumber);
+                        int result, unsigned int sequenceNumber,
+			unsigned int ctrl_p, unsigned short ipcp_id);
 };
 
 }

@@ -34,7 +34,7 @@ public:
 	configs::Flow *newFlowRequest(IPCProcess * ipc_process,
 			const rina::FlowRequestEvent& flowRequestEvent);
 	int set_policy_set_param(const std::string& name,
-							 const std::string& value);
+				 const std::string& value);
 	virtual ~FlowAllocatorPs() {}
 
 private:
@@ -56,8 +56,8 @@ configs::Flow * FlowAllocatorPs::newFlowRequest(IPCProcess * ipc_process,
 	rina::QoSCube * qosCube = NULL;
 
 	flow = dm->createFlow();
-	flow->destination_naming_info = event.remoteApplicationName;
-	flow->source_naming_info = event.localApplicationName;
+	flow->remote_naming_info = event.remoteApplicationName;
+	flow->local_naming_info = event.localApplicationName;
 	flow->hop_count = 3;
 	flow->max_create_flow_retries = 1;
 	flow->source = true;
@@ -158,8 +158,9 @@ private:
         int last_qos_index;
 };
 
-configs::Flow * FlowAllocatorRoundRobinPs::newFlowRequest(IPCProcess * ipc_process,
-                                       	         const rina::FlowRequestEvent& event)
+configs::Flow *
+FlowAllocatorRoundRobinPs::newFlowRequest(IPCProcess * ipc_process,
+                                       	  const rina::FlowRequestEvent& event)
 {
 	configs::Flow* flow;
 	rina::QoSCube * qosCube = NULL;
@@ -193,8 +194,8 @@ configs::Flow * FlowAllocatorRoundRobinPs::newFlowRequest(IPCProcess * ipc_proce
 	LOG_IPCP_DBG("Selected qos cube with name %s", qosCube->get_name().c_str());
 
 	flow = dm->createFlow();
-	flow->destination_naming_info = event.remoteApplicationName;
-	flow->source_naming_info = event.localApplicationName;
+	flow->remote_naming_info = event.remoteApplicationName;
+	flow->local_naming_info = event.localApplicationName;
 	flow->hop_count = 3;
 	flow->max_create_flow_retries = 1;
 	flow->source = true;
@@ -248,8 +249,9 @@ private:
         IFlowAllocator * dm;
 };
 
-configs::Flow * FlowAllocatorDelayBasedPs::newFlowRequest(IPCProcess * ipc_process,
-		const rina::FlowRequestEvent& event)
+configs::Flow *
+FlowAllocatorDelayBasedPs::newFlowRequest(IPCProcess * ipc_process,
+					  const rina::FlowRequestEvent& event)
 {
 	configs::Flow* flow;
 	rina::QoSCube * qosCube = NULL;
@@ -287,8 +289,8 @@ configs::Flow * FlowAllocatorDelayBasedPs::newFlowRequest(IPCProcess * ipc_proce
 	LOG_IPCP_INFO("Selected qos cube with name %s", qosCube->get_name().c_str());
 
 	flow = dm->createFlow();
-	flow->destination_naming_info = event.remoteApplicationName;
-	flow->source_naming_info = event.localApplicationName;
+	flow->remote_naming_info = event.remoteApplicationName;
+	flow->local_naming_info = event.localApplicationName;
 	flow->hop_count = 3;
 	flow->max_create_flow_retries = 1;
 	flow->source = true;

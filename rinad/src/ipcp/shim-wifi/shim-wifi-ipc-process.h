@@ -82,7 +82,6 @@ public:
         virtual void ipcm_allocate_flow_request_result_handler(const rina::IpcmAllocateFlowRequestResultEvent& event);
         virtual void allocate_flow_response_handler(const rina::AllocateFlowResponseEvent& event);
         virtual void flow_deallocation_requested_handler(const rina::FlowDeallocateRequestEvent& event);
-        virtual void ipcm_deallocate_flow_response_event_handler(const rina::IpcmDeallocateFlowResponseEvent& event);
         virtual void enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event);
 
 protected:
@@ -95,8 +94,6 @@ protected:
                 pending_app_unregistration_events;
         std::map<unsigned int, rina::FlowRequestEvent>
                 pending_flow_allocation_events;
-        std::map<unsigned int, rina::FlowDeallocateRequestEvent>
-                pending_flow_deallocation_events;
 };
 
 /// Class that captures the state of an enrollment operation

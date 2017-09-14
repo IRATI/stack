@@ -60,7 +60,7 @@ public:
 	std::list<rina::FlowInformation> allocatedFlows;
 
 	/** The list of applications registered in this IPC Process */
-	std::list<rina::ApplicationProcessNamingInformation> registeredApplications;
+	std::list<rina::ApplicationRegistrationInformation> registeredApplications;
 
 	/** The list of neighbors of this IPC Process */
 	std::list<rina::Neighbor> neighbors;
@@ -118,6 +118,11 @@ public:
 	 * acquired
 	 */
 	void setInitialized();
+
+	/**
+	 * Get ctrl port where to send the flow allocate request (to the local app)
+	 */
+	unsigned int get_fa_ctrl_port(const rina::ApplicationProcessNamingInformation& reg_app);
 
 	/**
 	 * Invoked by the IPC Manager to make an existing IPC Process a member of a
@@ -224,9 +229,7 @@ public:
 	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws IpcmRegisterApplicationException if an error occurs
 	 */
-	void registerApplication(const rina::ApplicationProcessNamingInformation& applicationName,
-				 const rina::ApplicationProcessNamingInformation& dafName,
-				 unsigned short regIpcProcessId,
+	void registerApplication(const rina::ApplicationRegistrationInformation& ari,
 				 unsigned int opaque);
 
 	/**
@@ -256,9 +259,8 @@ public:
 	 * @param opaque an opaque identifier to correlate requests and responses
 	 * @throws IpcmUnregisterApplicationException if an error occurs
 	 */
-	void unregisterApplication(
-			const rina::ApplicationProcessNamingInformation& applicationName,
-			unsigned int opaque);
+	void unregisterApplication(const rina::ApplicationProcessNamingInformation& app_name,
+				   unsigned int opaque);
 
 	/**
 	 * Invoked by the IPC Manager to inform about the result of an unregistration
@@ -303,7 +305,8 @@ public:
 	 * @throws AllocateFlowException if the pending allocation
 	 * is not found
 	 */
-	void allocateFlowResult(unsigned int sequenceNumber, bool success, int portId);
+	void allocateFlowResult(unsigned int sequenceNumber,
+				bool success, int portId);
 
 	/**
 	 * Get the information of the flow identified by portId
@@ -332,7 +335,7 @@ public:
 	 * @throws AllocateFlowException if something goes wrong
 	 */
 	void allocateFlowResponse(const rina::FlowRequestEvent& flowRequest,
-				  int result,
+				  int result, pid_t pid,
 				  bool notifySource,
 				  int flowAcceptorIpcProcessId);
 
@@ -347,19 +350,6 @@ public:
 	 * the flow deallocation procedure
 	 */
 	void deallocateFlow(int portId, unsigned int opaque);
-
-	/**
-	 * Invoked by the IPC Manager to inform about the result of a deallocate
-	 * flow operation and update the internal data structures
-	 * This method is NOT thread safe and must be called with the writelock
-	 * acquired
-	 *
-	 * @param sequenceNumber the handle associated to the pending allocation
-	 * @param success true if success, false otherwise
-	 * @throws IpcmDeallocateFlowException if the pending deallocation
-	 * is not found
-	 */
-	void deallocateFlowResult(unsigned int sequenceNumber, bool success);
 
 	/**
 	 * Invoked by the IPC Manager to notify that a flow has been remotely
@@ -472,7 +462,7 @@ private:
 	State state_;
 
 	/** The map of pending registrations */
-	std::map<unsigned int, rina::ApplicationProcessNamingInformation> pendingRegistrations;
+	std::map<unsigned int, rina::ApplicationRegistrationInformation> pendingRegistrations;
 
 	/** The map of pending disconnections */
 	std::map<unsigned int, rina::ApplicationProcessNamingInformation> pendingDisconnections;
@@ -480,7 +470,7 @@ private:
 	/** The map of pending flow operations */
 	std::map<unsigned int, rina::FlowInformation> pendingFlowOperations;
 
-	rina::ApplicationProcessNamingInformation
+	rina::ApplicationRegistrationInformation
 		getPendingRegistration(unsigned int seqNumber);
 
 	rina::FlowInformation
@@ -548,6 +538,12 @@ public:
      * Check if the ipcp exists
      */
     bool exists(const unsigned short id);
+
+    /**
+     * Check if the ipcp exists by PID. If so, return IPCP ID,
+     * otherwise return 0
+     */
+    unsigned short exists_by_pid(pid_t pid);
 
     /**
      * Returns a pointer to the IPCProcess identified by ipcProcessId

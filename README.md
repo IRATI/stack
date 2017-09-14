@@ -57,10 +57,8 @@ Once this is done, please install user-space dependencies
     $ apt-get install libssl-dev
     $ apt-get install protobuf-compiler (version >= 2.5.0 required)
     $ apt-get install libprotobuf-dev (version >= 2.5.0 required)
-    $ apt-get install libnl-genl-3-dev (version >= 3.2.14 required)
-    $ apt-get install libnl-3-dev (version >= 3.2.14 required)
     $ apt-get install hostapd (if the system will be configured as an access point)
-    $ apt-get install wpa-supplicant (if the system will be configured as a mobile host)
+    $ apt-get install wpasupplicant (if the system will be configured as a mobile host)
 
 If you want to generate the Java bindings, the following packages are also required
 

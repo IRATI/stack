@@ -56,7 +56,6 @@ public:
         virtual void assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event) = 0;
         virtual void allocate_flow_request_result_handler(const rina::AllocateFlowRequestResultEvent& event) = 0;
         virtual void flow_allocation_requested_handler(const rina::FlowRequestEvent& event) = 0;
-        virtual void deallocate_flow_response_handler(const rina::DeallocateFlowResponseEvent& event) = 0;
         virtual void flow_deallocated_handler(const rina::FlowDeallocatedEvent& event) = 0;
         virtual void flow_deallocation_requested_handler(const rina::FlowDeallocateRequestEvent& event) = 0;
         virtual void allocate_flow_response_handler(const rina::AllocateFlowResponseEvent& event) = 0;
@@ -84,11 +83,10 @@ public:
         virtual void app_reg_response_handler(const rina::IpcmRegisterApplicationResponseEvent& event) = 0;
         virtual void unreg_app_response_handler(const rina::IpcmUnregisterApplicationResponseEvent& event) = 0;
         virtual void ipcm_allocate_flow_request_result_handler(const rina::IpcmAllocateFlowRequestResultEvent& event) = 0;
-        virtual void ipcm_deallocate_flow_response_event_handler(const rina::IpcmDeallocateFlowResponseEvent& event) = 0;
         virtual void ipcp_allocate_port_response_event_handler(const rina::AllocatePortResponseEvent& event) = 0;
         virtual void ipcp_deallocate_port_response_event_handler(const rina::DeallocatePortResponseEvent& event) = 0;
         virtual void ipcp_write_mgmt_sdu_response_event_handler(const rina::WriteMgmtSDUResponseEvent& event) = 0;
-        virtual void ipcp_read_mgmt_sdu_notif_event_handler(const rina::ReadMgmtSDUResponseEvent& event) = 0;
+        virtual void ipcp_read_mgmt_sdu_notif_event_handler(rina::ReadMgmtSDUResponseEvent& event) = 0;
         // Cause relevant IPCP components to sync with information
         // exported by the kernel via sysfs
         virtual void sync_with_kernel() = 0;
@@ -125,7 +123,6 @@ public:
         virtual void assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event);
         virtual void allocate_flow_request_result_handler(const rina::AllocateFlowRequestResultEvent& event);
         virtual void flow_allocation_requested_handler(const rina::FlowRequestEvent& event);
-        virtual void deallocate_flow_response_handler(const rina::DeallocateFlowResponseEvent& event);
         virtual void flow_deallocated_handler(const rina::FlowDeallocatedEvent& event);
         virtual void flow_deallocation_requested_handler(const rina::FlowDeallocateRequestEvent& event);
         virtual void allocate_flow_response_handler(const rina::AllocateFlowResponseEvent& event);
@@ -153,11 +150,10 @@ public:
         virtual void app_reg_response_handler(const rina::IpcmRegisterApplicationResponseEvent& event);
         virtual void unreg_app_response_handler(const rina::IpcmUnregisterApplicationResponseEvent& event);
         virtual void ipcm_allocate_flow_request_result_handler(const rina::IpcmAllocateFlowRequestResultEvent& event);
-        virtual void ipcm_deallocate_flow_response_event_handler(const rina::IpcmDeallocateFlowResponseEvent& event);
         virtual void ipcp_allocate_port_response_event_handler(const rina::AllocatePortResponseEvent& event);
         virtual void ipcp_deallocate_port_response_event_handler(const rina::DeallocatePortResponseEvent& event);
         virtual void ipcp_write_mgmt_sdu_response_event_handler(const rina::WriteMgmtSDUResponseEvent& event);
-        virtual void ipcp_read_mgmt_sdu_notif_event_handler(const rina::ReadMgmtSDUResponseEvent& event);
+        virtual void ipcp_read_mgmt_sdu_notif_event_handler(rina::ReadMgmtSDUResponseEvent& event);
 	virtual void sync_with_kernel(void);
 };
 
@@ -215,7 +211,6 @@ public:
         void assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event);
         void allocate_flow_request_result_handler(const rina::AllocateFlowRequestResultEvent& event);
         void flow_allocation_requested_handler(const rina::FlowRequestEvent& event);
-        void deallocate_flow_response_handler(const rina::DeallocateFlowResponseEvent& event);
         void flow_deallocated_handler(const rina::FlowDeallocatedEvent& event);
         void flow_deallocation_requested_handler(const rina::FlowDeallocateRequestEvent& event);
         void allocate_flow_response_handler(const rina::AllocateFlowResponseEvent& event);
@@ -239,7 +234,7 @@ public:
         void ipcp_allocate_port_response_event_handler(const rina::AllocatePortResponseEvent& event);
         void ipcp_deallocate_port_response_event_handler(const rina::DeallocatePortResponseEvent& event);
         void ipcp_write_mgmt_sdu_response_event_handler(const rina::WriteMgmtSDUResponseEvent& event);
-        void ipcp_read_mgmt_sdu_notif_event_handler(const rina::ReadMgmtSDUResponseEvent& event);
+        void ipcp_read_mgmt_sdu_notif_event_handler(rina::ReadMgmtSDUResponseEvent& event);
         void sync_with_kernel(void);
 
 private:

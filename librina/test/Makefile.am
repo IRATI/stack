@@ -49,8 +49,8 @@ COMMONLDFLAGS =					\
 	$(LIBNL3_LIBS)				\
 	$(LIBNLGENL3_LIBS)
 
-REGRESSIONLDFLAGS = $(COMMONLDFLAGS) $(top_builddir)/src/librina-stubbed.la
-FUNCTIONALLDFLAGS = $(COMMONLDFLAGS) $(top_builddir)/src/librina.la
+REGRESSIONLDFLAGS = $(COMMONLDFLAGS) $(top_builddir)/src/librinairati.la $(top_builddir)/src/librina-stubbed.la
+FUNCTIONALLDFLAGS = $(COMMONLDFLAGS) $(top_builddir)/src/librinairati.la $(top_builddir)/src/librina.la
 
 #
 # Regression tests
@@ -75,15 +75,10 @@ test_03_LDFLAGS  = $(REGRESSIONLDFLAGS)
 # Functional tests
 #
 
-test_netlink_manager_SOURCES  = test-netlink-manager.cc
-test_netlink_manager_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
-test_netlink_manager_CXXFLAGS = $(COMMONCXXFLAGS)
-test_netlink_manager_LDFLAGS  = $(FUNCTIONALLDFLAGS)
-
-test_netlink_parsers_SOURCES  = test-netlink-parsers.cc
-test_netlink_parsers_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
-test_netlink_parsers_CXXFLAGS = $(COMMONCXXFLAGS)
-test_netlink_parsers_LDFLAGS  = $(FUNCTIONALLDFLAGS)
+test_parsers_SOURCES  = test-parsers.cc
+test_parsers_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
+test_parsers_CXXFLAGS = $(COMMONCXXFLAGS)
+test_parsers_LDFLAGS  = $(FUNCTIONALLDFLAGS)
 
 test_concurrency_SOURCES  = test-concurrency.cc
 test_concurrency_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
@@ -105,8 +100,7 @@ check_PROGRAMS =				\
 	test-01					\
 	test-02					\
 	test-03					\
-	test-netlink-manager			\
-	test-netlink-parsers			\
+	test-parsers			\
 	test-concurrency			\
 	test-timer				\
 	test-rib_v2
@@ -122,8 +116,7 @@ PASS_TESTS =					\
 TESTS = $(PASS_TESTS) $(XFAIL_TESTS)			
 	
 FUNCTIONAL_PASS_TESTS = \
-	test-netlink-manager \
-	test-netlink-parsers \
+	test-parsers \
 	test-concurrency \
 	test-timer
 
@@ -139,10 +132,4 @@ check-kernel-debug: check-kernel-debug-am
 
 check-functional: check-functional-am
 
-check-all: check check-functional
-
-# ADD to functional tests plus backslash
-#test-netlink-manager			
-#test-netlink-parsers			
-#test-concurrency					
-#test-timer				
+check-all: check check-functional			

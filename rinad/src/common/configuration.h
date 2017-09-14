@@ -72,24 +72,24 @@ class Flow {
         					  int port_id);
 
         /// The application that requested the flow
-        rina::ApplicationProcessNamingInformation source_naming_info;
+        rina::ApplicationProcessNamingInformation local_naming_info;
 
         /// The destination application of the flow
-        rina::ApplicationProcessNamingInformation destination_naming_info;
+        rina::ApplicationProcessNamingInformation remote_naming_info;
 
         /// The port-id returned to the Application process that requested the flow. This port-id is used for
         /// the life of the flow.
-        unsigned int source_port_id;
+        unsigned int local_port_id;
 
-        /// The port-id returned to the destination Application process. This port-id is used for
+        /// The port-id returned to the remote Application process. This port-id is used for
         // the life of the flow
-        unsigned int destination_port_id;
+        unsigned int remote_port_id;
 
-        /// The address of the IPC process that is the source of this flow
-        unsigned int source_address;
+        /// The address of the IPC process that is this end of this flow
+        unsigned int local_address;
 
-        /// The address of the IPC process that is the destination of this flow
-        unsigned int destination_address;
+        /// The address of the remote IPC process that is at the other end of this flow
+        unsigned int remote_address;
 
         /// All the possible connections of this flow
         std::list<rina::Connection*> connections;

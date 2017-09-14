@@ -28,18 +28,6 @@
 #include "logs.h"
 #include "policies.h"
 
-struct policy_parm {
-        string_t *       name;
-        string_t *       value;
-        struct list_head next;
-};
-
-struct policy {
-        string_t *       name;
-        string_t *       version;
-        struct list_head params;
-};
-
 struct policy * policy_create_gfp(gfp_t flags)
 {
         struct policy * tmp;
@@ -53,10 +41,6 @@ struct policy * policy_create_gfp(gfp_t flags)
         return tmp;
 }
 EXPORT_SYMBOL(policy_create_gfp);
-
-struct policy * policy_create(void)
-{ return policy_create_gfp(GFP_KERNEL); }
-EXPORT_SYMBOL(policy_create);
 
 struct policy * policy_create_ni(void)
 { return policy_create_gfp(GFP_ATOMIC); }
@@ -214,6 +198,12 @@ const string_t * policy_name(struct policy * policy)
 {
         if (!policy)
                 return NULL;
+
+        if (!policy->name)
+        	return NULL;
+
+        if (string_len(policy->name) == 0)
+        	return NULL;
 
         return policy->name;
 }

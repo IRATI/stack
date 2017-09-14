@@ -112,8 +112,8 @@ public:
 	virtual void add_enrollment_state_machine(int portId, IEnrollmentStateMachine * stateMachine) = 0;
 	virtual void update_neighbor_address(const rina::Neighbor& neighbor) = 0;
 	// Return the con_handle to the next hop to reach the address
-	virtual int get_con_handle_to_address(unsigned int address,
-					      rina::cdap_rib::con_handle_t& con) = 0;
+	virtual int get_con_handle_to_ipcp(unsigned int address,
+					   rina::cdap_rib::con_handle_t& con) = 0;
 	virtual int get_neighbor_info(rina::Neighbor& neigh) = 0;
 	virtual void clean_state(unsigned int port_id) = 0;
 
@@ -354,6 +354,8 @@ public:
 
 	virtual int getManagementFlowToNeighbour(const std::string& name) = 0;
 
+	virtual int getManagementFlowToNeighbour(unsigned int address) = 0;
+
 	virtual unsigned int numberOfFlowsToNeighbour(const std::string& apn,
 			const std::string& api) = 0;
 };
@@ -406,8 +408,11 @@ public:
 	virtual std::list<rina::RoutingTableEntry> get_rt_entries() = 0;
 	/// This operation takes ownership of the entries
 	virtual void set_rt_entries(const std::list<rina::RoutingTableEntry*>& rt) = 0;
-	// Returns the next hop address towards the destination
-	virtual void get_next_hop_address(unsigned int dest_address, std::list<unsigned int>& addresses) = 0;
+	// Returns the next hop addresses towards the destination
+	virtual int get_next_hop_addresses(unsigned int dest_address,
+					   std::list<unsigned int>& addresses) = 0;
+	// Returns the next hop names towards the destination
+	virtual int get_next_hop_name(const std::string& dest_name, std::string& name) = 0;
 	// Returns the N-1 port towards the destination
 	virtual unsigned int get_n1_port_to_address(unsigned int dest_address) = 0;
 
@@ -475,7 +480,7 @@ public:
         virtual int64_t addObjRIB(const std::string& fqn,
         			  rina::rib::RIBObj** obj) = 0;
         virtual void removeObjRIB(const std::string& fqn) = 0;
-        virtual void processReadManagementSDUEvent(const rina::ReadMgmtSDUResponseEvent& event) = 0;
+        virtual void processReadManagementSDUEvent(rina::ReadMgmtSDUResponseEvent& event) = 0;
 };
 
 /// IPC Process interface

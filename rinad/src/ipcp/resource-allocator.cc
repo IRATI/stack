@@ -340,6 +340,20 @@ int NMinusOneFlowManager::getManagementFlowToNeighbour(const std::string& name) 
 	return -1;
 }
 
+int NMinusOneFlowManager::getManagementFlowToNeighbour(unsigned int address)
+{
+	const std::list<rina::Neighbor> neighbors =
+			ipc_process_->enrollment_task_->get_neighbors();
+	for (std::list<rina::Neighbor>::const_iterator it = neighbors.begin();
+			it != neighbors.end(); ++it) {
+		if (it->address_ == address) {
+			return it->underlying_port_id_;
+		}
+	}
+
+	return -1;
+}
+
 unsigned int NMinusOneFlowManager::numberOfFlowsToNeighbour(const std::string& apn,
 		const std::string& api) {
 	std::vector<rina::FlowInformation> flows = rina::extendedIPCManager->getAllocatedFlows();
@@ -740,8 +754,8 @@ void ResourceAllocator::set_rt_entries(const std::list<rina::RoutingTableEntry*>
 	}
 }
 
-void ResourceAllocator::get_next_hop_address(unsigned int dest_address,
-					     std::list<unsigned int>& addresses)
+int ResourceAllocator::get_next_hop_addresses(unsigned int dest_address,
+					      std::list<unsigned int>& addresses)
 {
 	std::map<std::string, rina::RoutingTableEntry *>::iterator it;
 	std::list<unsigned int>::iterator it2;
@@ -753,9 +767,29 @@ void ResourceAllocator::get_next_hop_address(unsigned int dest_address,
 				it2 != it->second->destination.addresses.end(); ++it2) {
 			if (dest_address == *it2) {
 				addresses = it->second->nextHopNames.front().alts.front().addresses;
+				return 0;
 			}
 		}
 	}
+
+	return -1;
+}
+
+int ResourceAllocator::get_next_hop_name(const std::string& dest_name,
+					 std::string& name)
+{
+	std::map<std::string, rina::RoutingTableEntry *>::iterator it;
+
+	rina::ReadScopedLock g(rt_lock);
+
+	for (it = rt.begin(); it != rt.end(); ++it) {
+		if (it->second->destination.name == dest_name) {
+			name = it->second->nextHopNames.front().alts.front().name;
+			return 0;
+		}
+	}
+
+	return -1;
 }
 
 unsigned int ResourceAllocator::get_n1_port_to_address(unsigned int dest_address)

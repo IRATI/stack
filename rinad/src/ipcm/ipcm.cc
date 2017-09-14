@@ -90,34 +90,30 @@ IPCManager_::IPCManager_()
           io_thread(NULL),
           dif_template_manager(NULL),
           dif_allocator(NULL),
-	  ip_vpn_manager(NULL)
+	  ip_vpn_manager(NULL),
+	  osp_monitor(NULL)
 {}
 
 IPCManager_::~IPCManager_()
 {
-    if (dif_template_manager)
-    {
-        delete dif_template_manager;
-    }
+	if (dif_template_manager) {
+		delete dif_template_manager;
+	}
 
-    if (dif_allocator)
-    {
-        delete dif_allocator;
-    }
+	if (dif_allocator) {
+		delete dif_allocator;
+	}
 
-    if (ip_vpn_manager)
-    {
-        delete ip_vpn_manager;
-    }
+	if (ip_vpn_manager) {
+		delete ip_vpn_manager;
+	}
 
+	forwarded_calls.clear();
 
-    forwarded_calls.clear();
-
-    for (std::map<int, TransactionState*>::iterator
-    		it = pend_transactions.begin(); it != pend_transactions.end(); ++it)
-    {
-    	delete it->second;
-    }
+	for (std::map<int, TransactionState*>::iterator
+			it = pend_transactions.begin(); it != pend_transactions.end(); ++it) {
+		delete it->second;
+	}
 }
 
 void IPCManager_::init(const std::string& loglevel, std::string& config_file)
@@ -126,7 +122,7 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
 
     try
     {
-        rina::initializeIPCManager(1, config.local.installationPath,
+        rina::initializeIPCManager(IPCM_CTRLDEV_PORT, config.local.installationPath,
                                    config.local.libraryPath, loglevel,
                                    config.local.logPath);
         LOG_DBG("IPC Manager daemon initialized");
@@ -150,12 +146,31 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
         dif_template_manager = new DIFTemplateManager(config_file,
                                                       dif_allocator);
 
+        // Initialize IP VPN Manager
         ip_vpn_manager = new IPVPNManager();
+
+        // Initialize OS Process Monitor
+	rina::ThreadAttributes thread_attrs;
+	thread_attrs.setJoinable();
+	thread_attrs.setName("os-process-monitor");
+        osp_monitor = new OSProcessMonitor(&thread_attrs);
+        osp_monitor->start();
     } catch (rina::InitializationException& e)
     {
         LOG_ERR("Error while initializing librina-ipc-manager");
         exit (EXIT_FAILURE);
     }
+}
+
+void IPCManager_::request_finalization(void)
+{
+	try {
+		rina::request_ipcm_finalization(IPCM_CTRLDEV_PORT);
+	} catch (rina::IPCException &e) {
+	        LOG_ERR("Error while requesting IPCM finalization");
+	        rina::librina_finalize();
+	        exit (EXIT_FAILURE);
+	}
 }
 
 void IPCManager_::load_addons(const std::string& addon_list)
@@ -409,12 +424,17 @@ void IPCManager_::list_ipcps(std::list<int>& list)
 
 bool IPCManager_::ipcp_exists(const unsigned short ipcp_id)
 {
-    return ipcp_factory_.exists(ipcp_id);
+	return ipcp_factory_.exists(ipcp_id);
+}
+
+unsigned short IPCManager_::ipcp_exists_by_pid(pid_t pid)
+{
+	return ipcp_factory_.exists_by_pid(pid);
 }
 
 void IPCManager_::list_ipcp_types(std::list<std::string>& types)
 {
-    types = ipcp_factory_.getSupportedIPCProcessTypes();
+	types = ipcp_factory_.getSupportedIPCProcessTypes();
 }
 
 //TODO this assumes single IPCP per DIF
@@ -752,10 +772,14 @@ ipcm_res_t IPCManager_::register_at_dif(Addon* callee,
         }
 
         //Register
-        slave_ipcp->registerApplication(ipcp->get_name(),
-        				ipcp->dif_name_,
-        				ipcp->get_id(),
-                                        trans->tid);
+        rina::ApplicationRegistrationInformation ari;
+        ari.appName = ipcp->get_name();
+        ari.dafName = ipcp->dif_name_;
+        ari.difName = slave_ipcp->dif_name_;
+        ari.ipcProcessId = ipcp->get_id();
+        ari.pid = ipcp->proxy_->pid;
+        ari.ctrl_port = ipcp->proxy_->portId;
+        slave_ipcp->registerApplication(ari, trans->tid);
 
         ss << "Requested DIF registration of IPC process "
                 << ipcp->get_name().toString() << " at DIF "
@@ -2051,21 +2075,33 @@ void IPCManager_::io_loop()
 
     LOG_DBG("Starting main I/O loop...");
 
-    while (!req_to_stop)
+    while (true)
     {
-        event = rina::ipcEventProducer->eventTimedWait(
-        IPCM_EVENT_TIMEOUT_S,
-                                                       IPCM_EVENT_TIMEOUT_NS);
-        if (req_to_stop)
-        {
-            //Signal the main thread to start
-            //the stop procedure
-            stop_cond.signal();
-            break;
+        event = rina::ipcEventProducer->eventWait();
+        if (!event) {
+        	LOG_WARN("Event is NULL");
+        	rina::librina_finalize();
+        	stop_cond.signal();
+        	break;
         }
 
-        if (!event)
-            continue;
+        if (event->eventType == rina::IPCM_FINALIZATION_REQUEST_EVENT && req_to_stop)
+        {
+        	//Signal the main thread to start
+        	//the stop procedure
+        	LOG_INFO("IPCM event loop requested to stop");
+
+        	void * status;
+        	if (osp_monitor) {
+        		osp_monitor->do_stop();
+        		osp_monitor->join(&status);
+
+        		delete osp_monitor;
+        	}
+
+        	stop_cond.signal();
+        	break;
+        }
 
         LOG_DBG("Got event of type %s and sequence number %u",
                 rina::IPCEvent::eventTypeToString(event->eventType).c_str(),
@@ -2137,12 +2173,6 @@ void IPCManager_::io_loop()
                 }
                     break;
 
-                case rina::OS_PROCESS_FINALIZED: {
-                    DOWNCAST_DECL(event, rina::OSProcessFinalizedEvent, e);
-                    os_process_finalized_handler(e);
-                }
-                    break;
-
                 case rina::IPCM_REGISTER_APP_RESPONSE_EVENT: {
                     DOWNCAST_DECL(event,
                                   rina::IpcmRegisterApplicationResponseEvent, e);
@@ -2155,13 +2185,6 @@ void IPCManager_::io_loop()
                                   rina::IpcmUnregisterApplicationResponseEvent,
                                   e);
                     unreg_app_response_handler(e);
-                }
-                    break;
-
-                case rina::IPCM_DEALLOCATE_FLOW_RESPONSE_EVENT: {
-                    DOWNCAST_DECL(event, rina::IpcmDeallocateFlowResponseEvent,
-                                  e);
-                    ipcm_deallocate_flow_response_event_handler(e);
                 }
                     break;
 
@@ -2179,8 +2202,8 @@ void IPCManager_::io_loop()
                     break;
 
                 case rina::IPC_PROCESS_DAEMON_INITIALIZED_EVENT: {
-                    DOWNCAST_DECL(event, rina::IPCProcessDaemonInitializedEvent,
-                                  e);
+                    DOWNCAST_DECL(event,
+                		  rina::IPCProcessDaemonInitializedEvent, e);
                     ipc_process_daemon_initialized_event_handler(e);
                 }
                     break;

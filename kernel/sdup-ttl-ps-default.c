@@ -114,12 +114,13 @@ EXPORT_SYMBOL(default_sdup_dec_check_lifetime_limit_policy);
 
 struct ps_base * sdup_ttl_ps_default_create(struct rina_component * component)
 {
-	struct dup_config_entry * conf;
+	struct auth_sdup_profile * conf;
 	struct sdup_comp * sdup_comp;
 	struct sdup_ttl_ps * ps;
 	struct sdup_port * sdup_port;
 	struct sdup_ttl_ps_default_data * data;
 	struct policy_parm * parameter;
+	unsigned int aux = 0;
 
 	sdup_comp = sdup_comp_from_component(component);
 	if (!sdup_comp)
@@ -147,8 +148,8 @@ struct ps_base * sdup_ttl_ps_default_create(struct rina_component * component)
         ps->priv        = data;
 
         /* Parse parameters from config */
-	if (conf->ttl_policy) {
-		parameter = policy_param_find(conf->ttl_policy, "initialValue");
+	if (conf->ttl) {
+		parameter = policy_param_find(conf->ttl, "initialValue");
 		if (!parameter) {
 			LOG_ERR("Could not find 'initialValue' in TTL policy");
 			rkfree(ps);
@@ -156,14 +157,13 @@ struct ps_base * sdup_ttl_ps_default_create(struct rina_component * component)
 			return NULL;
 		}
 
-		if (kstrtouint(policy_param_value(parameter),
-			       10,
-			       (int*)&data->initial_ttl_value)) {
+		if (kstrtouint(policy_param_value(parameter), 10, &aux)) {
 			LOG_ERR("Failed to convert TTL string to int");
 			rkfree(ps);
 			rkfree(data);
 			return NULL;
 		}
+		data->initial_ttl_value = aux;
 
 		LOG_DBG("Initial TTL value is %u", data->initial_ttl_value);
 	} else {

@@ -114,6 +114,8 @@ public:
 	/// and sends a Delete_Response indicating the result.
 	virtual void deleteFlowRequestMessageReceived() = 0;
 
+	virtual void modify_flow_request(const configs::Flow & flow) = 0;
+
 	virtual void destroyFlowAllocatorInstance(const std::string& flowObjectName,
 			bool requestor) = 0;
 
@@ -141,6 +143,15 @@ public:
 		  const int invoke_id,
 		  rina::cdap_rib::obj_info_t &obj_reply,
 		  rina::cdap_rib::res_info_t& res);
+
+	void write(const rina::cdap_rib::con_handle_t &con,
+		   const std::string& fqn,
+		   const std::string& class_,
+		   const rina::cdap_rib::filt_info_t &filt,
+		   const int invoke_id,
+		   const rina::ser_obj_t &obj_req,
+		   rina::ser_obj_t &obj_reply,
+		   rina::cdap_rib::res_info_t& res);
 
 	bool delete_(const rina::cdap_rib::con_handle_t &con,
 		     const std::string& fqn,
@@ -259,11 +270,14 @@ struct OngoingFlowAllocState {
 	unsigned int address;
 };
 
+class FlowAllocatorInstance;
+
 /// Implementation of the Flow Allocator component
-class FlowAllocator: public IFlowAllocator {
+class FlowAllocator: public IFlowAllocator, public rina::InternalEventListener {
 public:
 	FlowAllocator();
 	~FlowAllocator();
+	void eventHappened(rina::InternalEvent * event);
 	IFlowAllocatorInstance * getFAI(int portId);
 	void set_application_process(rina::ApplicationProcess * ap);
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
@@ -284,6 +298,7 @@ public:
 	void sync_with_kernel();
 	void processAllocatePortResponse(const rina::AllocatePortResponseEvent& event);
 	void processDeallocatePortResponse(const rina::DeallocatePortResponseEvent& event);
+	void address_changed(unsigned int new_address, unsigned int old_address);
 
         // Plugin support
         configs::Flow* createFlow() { return new configs::Flow(); }
@@ -292,12 +307,16 @@ public:
 private:
 	IPCPRIBDaemon * rib_daemon_;
 	INamespaceManager * namespace_manager_;
+	rina::Timer timer;
 
 	std::map<unsigned int, OngoingFlowAllocState> pending_port_allocs;
 	rina::Lockable port_alloc_lock;
+	std::map<int, FlowAllocatorInstance *> fa_instances;
+	rina::Lockable fai_lock;
 
 	/// Create initial RIB objects
 	void populateRIB();
+	void subscribeToEvents();
 
 	/// Reply to the IPC Manager
 	void replyToIPCManager(const rina::FlowRequestEvent& event, int result);
@@ -309,6 +328,19 @@ private:
 		             	     	     	const std::string& object_name,
 						int invoke_id,
 						int port_id);
+};
+
+class FAAddressChangeTimerTask: public rina::TimerTask {
+public:
+	FAAddressChangeTimerTask(FlowAllocator * fa,
+			       unsigned int naddr,
+			       unsigned int oaddr);
+	~FAAddressChangeTimerTask() throw() {};
+	void run();
+
+	FlowAllocator * fall;
+	unsigned int new_address;
+	unsigned int old_address;
 };
 
 ///Implementation of the FlowAllocatorInstance
@@ -356,6 +388,8 @@ public:
 	void destroyFlowAllocatorInstance(const std::string& flowObjectName,
 			bool requestor);
 
+	void modify_flow_request(const configs::Flow & flow);
+
 	/// If the response to the allocate request is negative
 	/// the Allocation invokes the AllocateRetryPolicy. If the AllocateRetryPolicy returns a
 	/// positive result, a new Create_Flow Request is sent and the CreateFlowTimer is reset.
@@ -374,6 +408,9 @@ public:
 
 	void sync_with_kernel();
 
+	void address_changed(unsigned int new_address,
+			     unsigned int old_address);
+
 private:
 
 	void initialize(IPCProcess * ipc_process,
@@ -384,7 +421,7 @@ private:
 	void complete_flow_allocation(bool success);
 
 	/// Release the port-id, unlock and remove the FAI from the FA
-	void releaseUnlockRemove();
+	void release_remove();
 
 	IPCProcess * ipc_process_;
 	IFlowAllocator * flow_allocator_;

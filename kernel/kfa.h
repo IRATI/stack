@@ -26,6 +26,7 @@
 #include "common.h"
 #include "sdu.h"
 #include "ipcp-factories.h"
+#include "iodev.h"
 
 struct kfa;
 
@@ -51,11 +52,19 @@ int	    kfa_flow_sdu_read(struct kfa  *instance,
 			      size_t       size,
                               bool blocking);
 
-void    kfa_flow_readable(struct kfa       *instance,
+int    kfa_flow_readable(struct kfa       *instance,
                           port_id_t        id,
                           unsigned int     *mask,
                           struct file      *f,
                           poll_table       *wait);
+
+int kfa_flow_set_iowqs(struct kfa      * instance,
+		       struct iowaitqs * wqs,
+		       port_id_t pid);
+
+void kfa_flow_cancel_iowqs(struct kfa      * instance,
+			   port_id_t pid);
+
 #if 0
 struct ipcp_flow *kfa_flow_find_by_pid(struct kfa *instance,
 				       port_id_t   pid);

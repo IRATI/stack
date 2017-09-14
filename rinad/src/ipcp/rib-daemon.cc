@@ -99,7 +99,7 @@ void IPCPCDAPIOHandler::forward_adata_msg(const rina::ser_obj_t &message,
 	rina::cdap_rib::con_handle_t con;
 	int rv;
 
-	rv = IPCPFactory::getIPCP()->enrollment_task_->get_con_handle_to_address(address, con);
+	rv = IPCPFactory::getIPCP()->enrollment_task_->get_con_handle_to_ipcp(address, con);
 	if (rv != 0) {
 		LOG_IPCP_ERR("Could not find next hop for destination address %d, "
 				"dropping A-DATA CDAP PDU", address);
@@ -194,7 +194,7 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
 		throw e;
 	}
 
-	LOG_IPCP_INFO("Send message at %d", rina::Time::get_time_in_ms());
+	LOG_IPCP_DBG("Send message at %d", rina::Time::get_time_in_ms());
 	atomic_send_lock_.unlock();
 }
 
@@ -204,7 +204,7 @@ void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
 {
 	rina::cdap::cdap_m_t m_rcv;
 
-	LOG_IPCP_INFO("Received message at %d", rina::Time::get_time_in_ms());
+	LOG_IPCP_DBG("Received message at %d", rina::Time::get_time_in_ms());
 
 	if (cdap_dest == rina::cdap_rib::CDAP_DEST_IPCM) {
 		try {
@@ -241,7 +241,7 @@ void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
 		rina::cdap::cdap_m_t inner_m;
 
 		encoder.decode(m_rcv.obj_value_, a_data_obj);
-		if (a_data_obj.dest_address_ != IPCPFactory::getIPCP()->get_active_address()) {
+		if (!IPCPFactory::getIPCP()->check_address_is_mine(a_data_obj.dest_address_)) {
 			forward_adata_msg(message, a_data_obj.dest_address_);
 			return;
 		}
@@ -735,22 +735,18 @@ void StopInternalFlowReaderTimerTask::run()
 	rib_daemon->__stop_internal_flow_sdu_reader(port_id);
 }
 
-void IPCPRIBDaemonImpl::processReadManagementSDUEvent(const rina::ReadMgmtSDUResponseEvent& event)
+void IPCPRIBDaemonImpl::processReadManagementSDUEvent(rina::ReadMgmtSDUResponseEvent& event)
 {
-	rina::ser_obj_t rcv_message;
 	rina::cdap_rib::con_handle_t con_handle;
 
-	rcv_message.size_ = event.size;
-	rcv_message.message_ = (unsigned char*) event.sdu;
-
-	LOG_IPCP_DBG("Got message of %d bytes, handling to CDAP Provider", rcv_message.size_);
+	LOG_IPCP_DBG("Got message of %d bytes, handling to CDAP Provider", event.msg.size_);
 
 	//Instruct CDAP provider to process the messages
 	try {
-		rina::cdap::getProvider()->process_message(rcv_message,
+		rina::cdap::getProvider()->process_message(event.msg,
 							   event.port_id);
 	} catch(rina::Exception &e) {
-		LOG_IPCP_WARN("Error processing CDAP message on port-id %d: %e",
+		LOG_IPCP_WARN("Error processing CDAP message on port-id %d: %s",
 			      event.port_id, e.what());
 		if (std::string(e.what()).find("M_CONNECT received on an") != std::string::npos) {
 			LOG_IPCP_WARN("Closing CDAP session on port-id %u", event.port_id);

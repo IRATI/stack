@@ -179,6 +179,7 @@ public:
 	void processRegistrationNotification(const rina::IPCProcessDIFRegistrationEvent& event);;
 	std::list<int> getNMinusOneFlowsToNeighbour(unsigned int address);
 	int getManagementFlowToNeighbour(const std::string& name);
+	int getManagementFlowToNeighbour(unsigned int address);
 	unsigned int numberOfFlowsToNeighbour(const std::string& apn,
 			const std::string& api);
 
@@ -213,8 +214,10 @@ public:
 	std::list<rina::RoutingTableEntry> get_rt_entries();
 	/// This operation takes ownership of the entries
 	void set_rt_entries(const std::list<rina::RoutingTableEntry*>& rt);
-	void get_next_hop_address(unsigned int dest_address,
-				  std::list<unsigned int>& addresses);
+	int get_next_hop_addresses(unsigned int dest_address,
+				   std::list<unsigned int>& addresses);
+	int get_next_hop_name(const std::string& dest_name,
+			      std::string& name);
 	unsigned int get_n1_port_to_address(unsigned int dest_address);
 
 	/// Add a temporary entry to the PDU FTE, until the routing policy

@@ -278,7 +278,7 @@ int efcp_container_destroy(struct efcp_container * container)
                                                      efcp_destroy);
         if (container->cidm)       cidm_destroy(container->cidm);
 
-        if (container->config)     efcp_config_destroy(container->config);
+        if (container->config)     efcp_config_free(container->config);
 
 	if (container->rset)       rset_unregister(container->rset);
         rkfree(container);
@@ -947,6 +947,44 @@ int efcp_connection_update(struct efcp_container * container,
         return 0;
 }
 EXPORT_SYMBOL(efcp_connection_update);
+
+int efcp_connection_modify(struct efcp_container * cont,
+			   cep_id_t		   cep_id,
+			   address_t               src,
+			   address_t               dst)
+{
+	struct efcp * tmp;
+
+	if (!cont) {
+		LOG_ERR("Bogus container passed, bailing out");
+		return -1;
+	}
+
+	spin_lock_bh(&cont->lock);
+	tmp = efcp_imap_find(cont->instances, cep_id);
+	if (!tmp) {
+		spin_unlock_bh(&cont->lock);
+		LOG_ERR("Cannot get instance %d from container %pK",
+				cep_id, cont);
+		return -1;
+	}
+	if (atomic_read(&tmp->pending_ops) == 0 &&
+			tmp->state == EFCP_DEALLOCATED) {
+		spin_unlock_bh(&cont->lock);
+		if (efcp_destroy(tmp)) {
+			LOG_ERR("Cannot destroy instance %d, instance lost",
+				cep_id);
+			return -1;
+		}
+		return 0;
+	}
+	connection_src_addr_set(tmp->connection, src);
+	connection_dst_addr_set(tmp->connection, dst);
+	spin_unlock_bh(&cont->lock);
+
+	return 0;
+}
+EXPORT_SYMBOL(efcp_connection_modify);
 
 int efcp_bind_rmt(struct efcp_container * container,
                   struct rmt *            rmt)
