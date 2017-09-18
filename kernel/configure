@@ -4,6 +4,7 @@ HAVE_VMPI="n"
 TCP_UDP_BUFFER_SIZE=1500
 INSTALL_PREFIX="/"
 LIBMODPREFIX=""
+KERNBUILDDIR="/lib/modules/`uname -r`/build"
 REGRESSION_TESTS="n"
 CONFIG_RINA_DTCP_RCVR_ACK="y"
 CONFIG_RINA_DTCP_RCVR_ACK_ATIMER="n"
@@ -51,6 +52,16 @@ do
         fi
         ;;
 
+        "--kernbuilddir")
+        if [ -n "$2" ]; then
+            KERNBUILDDIR=$2
+            shift
+        else
+            echo "--kernbuilddir requires a path argument"
+            exit 255
+        fi
+        ;;
+
         *)
         echo "Unknown option '$key'"
         exit 255
@@ -60,9 +71,9 @@ do
 done
 
 # Check if kernel headers are there for out-of-tree build
-if [ ! -d /lib/modules/`uname -r`/build ]; then
-    echo "Cannot find '/lib/modules/$(uname -r)/build' directory"
-    echo "Make sure headers for the running kernel are installed"
+if [ ! -d $KERNBUILDDIR ]; then
+    printmsg "Cannot find '$KERNBUILDDIR' kernel build directory"
+    printmsg "Make sure headers for the running kernel are installed"
     exit 255
 fi
 
@@ -78,6 +89,7 @@ sed -i "s|@HAVE_VMPI@|${HAVE_VMPI}|g" Makefile
 sed -i "s|@REGRESSION_TESTS@|${REGRESSION_TESTS}|g" Makefile
 sed -i "s|@TCP_UDP_BUFFER_SIZE@|${TCP_UDP_BUFFER_SIZE}|g" Makefile
 sed -i "s|@INSTALL_MOD_PATH@|${INSTALL_PREFIX}${LIBMODPREFIX}|g" Makefile
+sed -i "s|@KERNBUILDDIR@|$KERNBUILDDIR|g" Makefile
 sed -i "s|@ROOTDIR@|$PWD|g" Makefile
 sed -i "s|@LIBMODPREFIX@|${LIBMODPREFIX}|g" Makefile
 sed -i "s|@CONFIG_RINA_DTCP_RCVR_ACK@|${CONFIG_RINA_DTCP_RCVR_ACK}|g" Makefile
