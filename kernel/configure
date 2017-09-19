@@ -18,16 +18,6 @@ do
         HAVE_VMPI="y"
         ;;
 
-        "--prefix")
-        if [ -n "$2" ]; then
-            INSTALL_PREFIX=$2
-            shift
-        else
-            echo "--prefix requires a path argument"
-            exit 255
-        fi
-        ;;
-        
         "--regression-tests")
         REGRESSION_TESTS="y"
         ;;
@@ -91,7 +81,6 @@ sed -i "s|@TCP_UDP_BUFFER_SIZE@|${TCP_UDP_BUFFER_SIZE}|g" Makefile
 sed -i "s|@INSTALL_MOD_PATH@|${INSTALL_PREFIX}${LIBMODPREFIX}|g" Makefile
 sed -i "s|@KERNBUILDDIR@|$KERNBUILDDIR|g" Makefile
 sed -i "s|@ROOTDIR@|$PWD|g" Makefile
-sed -i "s|@LIBMODPREFIX@|${LIBMODPREFIX}|g" Makefile
 sed -i "s|@CONFIG_RINA_DTCP_RCVR_ACK@|${CONFIG_RINA_DTCP_RCVR_ACK}|g" Makefile
 sed -i "s|@CONFIG_RINA_DTCP_RCVR_ACK_ATIMER@|${CONFIG_RINA_DTCP_RCVR_ACK_ATIMER}|g" Makefile
 
