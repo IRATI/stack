@@ -42,13 +42,13 @@ ker_install:
 	cd kernel && $(MAKE) && $(MAKE) install
 
 librina_install:
-	cd build/librina && $(MAKE) install
+	cd build/librina && $(MAKE) install installcheck
 
 rinad_install:
-	cd build/rinad && $(MAKE) install
+	cd build/rinad && $(MAKE) install installcheck
 
 rinatools_install:
-	cd build/rina-tools && $(MAKE) install
+	cd build/rina-tools && $(MAKE) install installcheck
 
 plugins_install:
 	cd plugins && $(MAKE) KDIR=$(KERNBUILDDIR) INSTALLDIR=$(INSTALLDIR) && $(MAKE) install KDIR=$(KERNBUILDDIR) INSTALLDIR=$(INSTALLDIR)
