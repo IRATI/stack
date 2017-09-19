@@ -68,6 +68,40 @@ IPCManager_::select_ipcp_by_dif(
 	return NULL;
 }
 
+// Returns an IPC process where the application is registered,
+// if any.
+IPCMIPCProcess *
+IPCManager_::select_ipcp_by_reg_app(
+		const rina::ApplicationProcessNamingInformation& reg_app,
+		bool write_lock)
+{
+	std::list<rina::ApplicationRegistrationInformation>::iterator it;
+
+	//Prevent any insertion/deletion to happen
+	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
+
+	vector<IPCMIPCProcess *> ipcps;
+	ipcp_factory_.listIPCProcesses(ipcps);
+
+	for (unsigned int i = 0; i < ipcps.size(); i++) {
+		for (it = ipcps[i]->registeredApplications.begin();
+				it != ipcps[i]->registeredApplications.end();
+				++ it) {
+			if (it->appName.getEncodedString() ==
+					reg_app.getEncodedString()) {
+				//Acquire lock before leaving rwlock of the factory
+				if(write_lock)
+					ipcps[i]->rwlock.writelock();
+				else
+					ipcps[i]->rwlock.readlock();
+				return ipcps[i];
+			}
+		}
+	}
+
+	return NULL;
+}
+
 // Returns any IPC process in the system, giving priority to
 // normal IPC processes.
 IPCMIPCProcess *

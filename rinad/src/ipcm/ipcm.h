@@ -664,9 +664,14 @@ protected:
 	* @param read_lock When true, the IPCProcess instance is recovered with
 	* the read lock acquired, otherwise the write lock is acquired.
 	*/
-	IPCMIPCProcess* select_ipcp_by_dif(const
-			rina::ApplicationProcessNamingInformation& dif_name,
-			bool write_lock=false);
+	IPCMIPCProcess* select_ipcp_by_dif(const rina::ApplicationProcessNamingInformation& dif_name,
+					   bool write_lock=false);
+
+	/**
+	 * Get the IPCP by registered application name
+	 */
+	IPCMIPCProcess * select_ipcp_by_reg_app(const rina::ApplicationProcessNamingInformation& reg_app,
+					        bool write_lock=false);
 
 	/**
 	* Select a suitable IPCP

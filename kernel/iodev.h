@@ -21,7 +21,14 @@
 #ifndef IRATI_IODEV_H
 #define IRATI_IODEV_H
 
+#include <linux/wait.h>
+
 int iodev_init(void);
 void iodev_fini(void);
+
+struct iowaitqs {
+	wait_queue_head_t     read_wqueue;
+	wait_queue_head_t     write_wqueue;
+};
 
 #endif

@@ -749,7 +749,7 @@ ApplicationUnregistrationRequestEvent::ApplicationUnregistrationRequestEvent(
                 BaseApplicationRegistrationEvent(
                                 appName, DIFName,
                                 APPLICATION_UNREGISTRATION_REQUEST_EVENT,
-				sequenceNumber, ctrl_port, ipcp_id) {
+				sequenceNumber, ctrl_p, ipcp_id) {
 }
 
 /* CLASS BASE APPLICATION RESPONSE EVENT */
@@ -762,7 +762,7 @@ BaseApplicationRegistrationResponseEvent::
                 unsigned int sequenceNumber,
 		unsigned int ctrl_p, unsigned short ipcp_id) :
                 BaseApplicationRegistrationEvent (appName, DIFName,
-                                eventType, sequenceNumber, ctrl_port, ipcp_id){
+                                eventType, sequenceNumber, ctrl_p, ipcp_id){
         this->result = result;
 }
 
@@ -774,7 +774,7 @@ BaseApplicationRegistrationResponseEvent::
                 unsigned int sequenceNumber,
 		unsigned int ctrl_p, unsigned short ipcp_id) :
                 BaseApplicationRegistrationEvent (appName, eventType,
-                		sequenceNumber, ctrl_port, ipcp_id){
+                		sequenceNumber, ctrl_p, ipcp_id){
         this->result = result;
 }
 
@@ -787,7 +787,7 @@ RegisterApplicationResponseEvent::RegisterApplicationResponseEvent(
 			unsigned int ctrl_p, unsigned short ipcp_id):
                 BaseApplicationRegistrationResponseEvent(appName, difName, result,
                                        REGISTER_APPLICATION_RESPONSE_EVENT,
-                                       sequenceNumber, ctrl_port, ipcp_id){
+                                       sequenceNumber, ctrl_p, ipcp_id){
 }
 
 /* CLASS UNREGISTER APPLICATION RESPONSE EVENT */
@@ -799,7 +799,7 @@ UnregisterApplicationResponseEvent::UnregisterApplicationResponseEvent(
                 BaseApplicationRegistrationResponseEvent(
                                        appName, result,
                                        UNREGISTER_APPLICATION_RESPONSE_EVENT,
-                                       sequenceNumber, ctrl_port, ipcp_id){
+                                       sequenceNumber, ctrl_p, ipcp_id){
 }
 
 /* CLASS ALLOCATE FLOW RESPONSE EVENT */
@@ -812,7 +812,7 @@ AllocateFlowResponseEvent::AllocateFlowResponseEvent(
 		unsigned short ipcp_id, pid_t pid) :
         BaseResponseEvent(result,
                           ALLOCATE_FLOW_RESPONSE_EVENT,
-                          sequenceNumber, ctrl_port, ipcp_id)
+                          sequenceNumber, ctrl_p, ipcp_id)
 {
         this->notifySource             = notifySource;
         this->flowAcceptorIpcProcessId = flowAcceptorIpcProcessId;

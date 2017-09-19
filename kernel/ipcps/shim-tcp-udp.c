@@ -1083,9 +1083,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
         char			    api_string[12];
 
 	/* Create SDU with max allowable size removing PCI and TAIL room */
-	du = sdu_create_ni(CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE
-								- MAX_PCIS_LEN
-								- MAX_TAIL_LEN);
+	du = sdu_create_ni(CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE);
         if (!du) {
                 LOG_ERR("Couldn't create sdu");
                 return -1;
@@ -1099,6 +1097,8 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 sdu_destroy(du);
                 return -1;
         }
+
+        LOG_DBG("Received message of %d bytes", size);
 
 	if (sdu_shrink(du, CONFIG_RINA_SHIM_TCP_UDP_BUFFER_SIZE - size)) {
 		LOG_ERR("Could not shrink SDU");
@@ -1399,7 +1399,7 @@ static int tcp_recv_new_message(struct ipcp_instance_data * data,
 
                 return size;
         } else {
-                LOG_DBG("Didn't receive complete message");
+                LOG_DBG("Didn't receive complete message, missing %d bytes", flow->bytes_left);
 
                 flow->lbuf = flow->bytes_left;
                 flow->bytes_left = flow->bytes_left - size;
@@ -1472,9 +1472,9 @@ static int tcp_recv_partial_message(struct ipcp_instance_data * data,
 
                 return size;
         } else {
-                LOG_DBG("Still didn't receive complete message");
-
-                flow->bytes_left = flow->bytes_left - size;
+        	flow->bytes_left = flow->bytes_left - size;
+                LOG_DBG("Still didn't receive complete message, missing %d bytes",
+                	 flow->bytes_left);
 
                 return -1;
         }
@@ -1541,6 +1541,8 @@ static int tcp_process_msg(struct ipcp_instance_data * data,
 
                 return 0;
         }
+
+        LOG_DBG("Got message of %d bytes", size);
 
         return size;
 }
@@ -1665,8 +1667,8 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                                        data->id,
                                        flow->port_id,
                                        data->dif_name,
-                                       sname,
                                        app->app_name,
+                                       sname,
                                        data->qos[CUBE_RELIABLE])) {
                         LOG_ERR("Couldn't tell the KIPCM about the flow");
                         kfa_port_id_release(data->kfa, flow->port_id);
@@ -2399,27 +2401,19 @@ static int tcp_sdu_write(struct shim_tcp_udp_flow * flow,
                          int                        len,
                          char *                     sbuf)
 {
-        __be16 length;
+        uint16_t length;
         int    size, total;
-	char * buf;
 
         ASSERT(flow);
         ASSERT(len);
         ASSERT(sbuf);
 
-        buf = rkmalloc(len + sizeof(__be16), GFP_ATOMIC);
-        if (!buf)
-                return -1; /* FIXME: Check this return value */
-
         length = htons((short)len);
 
-        memcpy(&buf[0], &length, sizeof(__be16));
-        memcpy(&buf[sizeof(__be16)], &sbuf[0], len);
-
         total = 0;
-        while (total < sizeof(__be16)) {
+        while (total < sizeof(uint16_t)) {
                 size = send_msg(flow->sock, NULL, 0, (char*)(&length+total),
-                                sizeof(__be16) - total);
+                                sizeof(uint16_t) - total);
                 if (size < 0) {
                         LOG_ERR("error during sdu write (tcp): %d", size);
                         return -1;

@@ -838,6 +838,7 @@ void ApplicationManager::applicationUnregistered(const ApplicationUnregistration
         msg = new irati_msg_app_reg_app_resp();
         msg->msg_type = RINA_C_APP_UNREGISTER_APPLICATION_RESPONSE;
         msg->app_name = event.applicationName.to_c_name();
+        msg->dif_name = event.DIFName.to_c_name();
         msg->result = result;
         msg->event_id = event.sequenceNumber;
         msg->dest_port = event.ctrl_port;
