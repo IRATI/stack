@@ -114,3 +114,4 @@ echo "Starting rina-tools phase"
 # Generate the main Makefile
 cp Makefile.in Makefile
 sed -i "s|@KERNBUILDDIR@|${KERNBUILDDIR}|g" Makefile
+sed -i "s|@INSTALLDIR@|${INSTALL_PREFIX}|g" Makefile

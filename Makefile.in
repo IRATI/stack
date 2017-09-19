@@ -1,4 +1,5 @@
 KERNBUILDDIR=@KERNBUILDDIR@
+INSTALLDIR=@INSTALLDIR@
 MAKEFLAGS="-j1"
 
 all: ker librina rinad rinatools plugins
@@ -16,7 +17,7 @@ rinatools:
 	cd build/rina-tools && $(MAKE) $(MAKEFLAGS)
 
 plugins:
-	cd plugins && $(MAKE) $(MAKEFLAGS) KDIR=$KERNELBUILDDIR 
+	cd plugins && $(MAKE) $(MAKEFLAGS) INSTALLDIR=$(INSTALLDIR) KDIR=$(KERNBUILDDIR) 
 
 clean: ker_clean librina_clean rinad_clean rinatools_clean plugins_clean
 
@@ -33,7 +34,7 @@ rinatools_clean:
 	cd build/rina-tools && $(MAKE) clean
 
 plugins_clean:
-	cd plugins && $(MAKE) clean KDIR=$KERNELBUILDDIR
+	cd plugins && $(MAKE) clean KDIR=$(KERNBUILDDIR) INSTALLDIR=$(INSTALLDIR)
 
 install: ker_install librina_install rinad_install rinatools_install plugins_install
 
@@ -50,4 +51,4 @@ rinatools_install:
 	cd build/rina-tools && $(MAKE) install
 
 plugins_install:
-	cd plugins && $(MAKE) install KDIR=$KERNELBUILDDIR
+	cd plugins && $(MAKE) KDIR=$(KERNBUILDDIR) INSTALLDIR=$(INSTALLDIR) && $(MAKE) install KDIR=$(KERNBUILDDIR) INSTALLDIR=$(INSTALLDIR)
