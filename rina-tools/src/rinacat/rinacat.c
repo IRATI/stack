@@ -443,7 +443,7 @@ int pumpdata_bothdirections (int flowfd, int sdu_size)
 		else
 			FD_SET(flowfd, &readbits);
 		select(flowfd + 1, &readbits, &writebits, NULL, NULL);
-		
+
 		// Try getting rid of buffered data
 		if (condwrite(flowfd, &stdincount, stdinbuf))
 			return (errno);
@@ -666,7 +666,7 @@ int CatServer()
 	
 	V3VERBOSE("Done. Closing registration fd\n");
 	close (regfd);
-	V3VERBOSE("Unregistering apn\n");
+	V3VERBOSE("Unregistering apn %s \n", this_apn);
 	if (rina_unregister(cfd, difname, this_apn, 0) < 0) {
 		PRINTERRORMSG("WARNING: Unregistering failed, error %s\n", strerror(errno));
 		result = EXIT_FAILURE;

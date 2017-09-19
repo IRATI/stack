@@ -28,7 +28,6 @@
 
 /* For wait_queue */
 #include <linux/sched.h>
-#include <linux/wait.h>
 
 /* For POLLIN etc. */
 #include <linux/poll.h>
@@ -63,16 +62,15 @@ enum flow_state {
 };
 
 struct ipcp_flow {
-	port_id_t	      port_id;
-	enum flow_state	      state;
-	struct ipcp_instance *ipc_process;
-	struct rfifo         *sdu_ready;
-	wait_queue_head_t     read_wqueue;
-	wait_queue_head_t     write_wqueue;
-	atomic_t	      readers;
-	atomic_t	      writers;
-	atomic_t	      posters;
-	struct rina_device   *ip_dev;
+	port_id_t	       port_id;
+	enum flow_state	       state;
+	struct ipcp_instance * ipc_process;
+	struct rfifo         * sdu_ready;
+	struct iowaitqs	     * wqs;
+	atomic_t	       readers;
+	atomic_t	       writers;
+	atomic_t	       posters;
+	struct rina_device   * ip_dev;
 };
 
 struct flowdel_data {
@@ -156,6 +154,12 @@ static int kfa_flow_destroy(struct kfa       *instance,
 
 	ip_dev = flow->ip_dev;
 	flow->ip_dev = NULL;
+
+	if (flow->wqs) {
+		wake_up_interruptible_all(&flow->wqs->read_wqueue);
+		wake_up_interruptible_all(&flow->wqs->write_wqueue);
+	}
+
 	rkfree(flow);
 
 	if(!ip_dev)
@@ -245,8 +249,9 @@ static int kfa_flow_deallocate_worker(void *data)
 	rkfree(wqdata);
 
 	//If we only need to clean the rina device
-	if(ip_dev)
+	if(ip_dev) {
 		return rina_dev_destroy(ip_dev);
+	}
 
 	// In any other case
 	if (!instance) {
@@ -285,9 +290,10 @@ static int kfa_flow_deallocate_worker(void *data)
 
 	spin_unlock_bh(&instance->lock);
 
-	LOG_DBG("Waking up all!");
-	wake_up_interruptible_all(&flow->read_wqueue);
-	wake_up_interruptible_all(&flow->write_wqueue);
+	if (flow->wqs) {
+		wake_up_interruptible_all(&flow->wqs->read_wqueue);
+		wake_up_interruptible_all(&flow->wqs->write_wqueue);
+	}
 
 	return 0;
 }
@@ -446,15 +452,19 @@ static int enable_write(struct ipcp_instance_data *data, port_id_t id)
 	}
 	if (flow->state == PORT_STATE_DISABLED) {
 		flow->state = PORT_STATE_ALLOCATED;
-		wq = &flow->write_wqueue;
-		spin_unlock_bh(&instance->lock);
-		LOG_DBG("IPCP notified CWQ is now enabled");
-		LOG_DBG("Enabled write in port id %d", id);
-		wake_up_interruptible(wq);
-		return 0;
+		if (flow->wqs) {
+			wq = &flow->wqs->write_wqueue;
+			spin_unlock_bh(&instance->lock);
+			LOG_DBG("IPCP notified CWQ is now enabled");
+			LOG_DBG("Enabled write in port id %d", id);
+			wake_up_interruptible(wq);
+			return 0;
+		}
+	} else {
+		LOG_DBG("IPCP notified CWQ already enabled");
 	}
+
 	spin_unlock_bh(&instance->lock);
-	LOG_DBG("IPCP notified CWQ already enabled");
 
 	return 0;
 }
@@ -468,6 +478,7 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 	struct ipcp_instance *ipcp;
 	struct kfa           *instance;
 	int		      retval = 0;
+	struct iowaitqs * wqs = 0;
 
 	if (!data) {
 		LOG_ERR("Bogus ipcp data passed, bailing out");
@@ -513,13 +524,23 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 	atomic_inc(&flow->writers);
 
 	if (blocking) { /* blocking I/O */
+		if (flow->wqs == 0) {
+			LOG_ERR("Waitqueues are null, flow %d is being deallocated", id);
+			retval = -EBADF;
+			sdu_destroy(sdu);
+			goto finish;
+		} else {
+			wqs = flow->wqs;
+		}
+
 		while (!ok_write(flow)) {
 			spin_unlock_bh(&instance->lock);
 
 			LOG_DBG("Going to sleep on wait queue %pK (writing)",
-					&flow->write_wqueue);
+					&wqs->write_wqueue);
 			LOG_DBG("OK_write check called: %d", flow->state);
-			retval = wait_event_interruptible(flow->write_wqueue,
+
+			retval = wait_event_interruptible(wqs->write_wqueue,
 							  ok_write(flow));
 			LOG_DBG("Write woken up (%d)", retval);
 
@@ -540,9 +561,15 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 			if (!flow) {
 				spin_unlock_bh(&instance->lock);
 				sdu_destroy(sdu);
-
 				LOG_ERR("No more flow bound to port-id %d", id);
 				return -EBADF;
+			}
+
+			if (flow->wqs == 0) {
+				LOG_ERR("Waitqueues are null, flow %d is being deallocated", id);
+				retval = -EBADF;
+				sdu_destroy(sdu);
+				goto finish;
 			}
 
 			if (retval < 0) {
@@ -643,24 +670,24 @@ static bool queue_ready(struct ipcp_flow *flow)
 	return false;
 }
 
-void kfa_flow_readable(struct kfa       *instance,
-                       port_id_t        id,
-                       unsigned int     *mask,
-                       struct file      *f,
-                       poll_table       *wait)
+int kfa_flow_readable(struct kfa       *instance,
+                      port_id_t        id,
+                      unsigned int     *mask,
+                      struct file      *f,
+                      poll_table       *wait)
 {
         struct ipcp_flow *flow;
 
 	if (!instance) {
 		LOG_ERR("Bogus instance passed, bailing out");
                 *mask |= POLLERR;
-                return;
+                return -1;
 	}
 
 	if (!is_port_id_ok(id)) {
 		LOG_ERR("Bogus port-id, bailing out");
                 *mask |= POLLERR;
-		return;
+		return -1;
 	}
 
 	spin_lock_bh(&instance->lock);
@@ -670,10 +697,10 @@ void kfa_flow_readable(struct kfa       *instance,
 		spin_unlock_bh(&instance->lock);
 		LOG_ERR("There is no flow bound to port-id %d", id);
                 *mask |= POLLERR;
-		return;
+		return -1;
 	}
 
-        poll_wait(f, &flow->read_wqueue, wait);
+        poll_wait(f, &flow->wqs->read_wqueue, wait);
 
         /* We set a POLLIN event if there is something in the receive queue
          * or if the flow has been deallocated, which is our EOF condition. */
@@ -682,6 +709,71 @@ void kfa_flow_readable(struct kfa       *instance,
         }
 
 	spin_unlock_bh(&instance->lock);
+
+	return 0;
+}
+
+int kfa_flow_set_iowqs(struct kfa * instance,
+		       struct iowaitqs * wqs,
+		       port_id_t pid)
+{
+        struct ipcp_flow *flow;
+
+	if (!instance) {
+		LOG_ERR("Bogus instance passed, bailing out");
+                return -1;
+	}
+
+	if (!is_port_id_ok(pid)) {
+		LOG_ERR("Bogus port-id, bailing out");
+		return -1;
+	}
+
+	spin_lock_bh(&instance->lock);
+
+	flow = kfa_pmap_find(instance->flows, pid);
+	if (!flow) {
+		spin_unlock_bh(&instance->lock);
+		LOG_ERR("There is no flow bound to port-id %d", pid);
+		return -1;
+	}
+
+	flow->wqs = wqs;
+
+	spin_unlock_bh(&instance->lock);
+
+	return 0;
+}
+
+void kfa_flow_cancel_iowqs(struct kfa      * instance,
+			   port_id_t pid)
+{
+        struct ipcp_flow *flow;
+        struct iowaitqs * wqs;
+
+	if (!instance)
+		return;
+
+	if (!is_port_id_ok(pid))
+		return;
+
+	spin_lock_bh(&instance->lock);
+
+	flow = kfa_pmap_find(instance->flows, pid);
+	if (!flow) {
+		spin_unlock_bh(&instance->lock);
+		return;
+	}
+
+	wqs = flow->wqs;
+	flow->wqs = 0;
+
+	spin_unlock_bh(&instance->lock);
+
+	if (wqs) {
+		wake_up_interruptible_all(&wqs->read_wqueue);
+		wake_up_interruptible_all(&wqs->write_wqueue);
+	}
 }
 
 struct sdu * get_sdu_to_read(struct ipcp_flow * flow, size_t size)
@@ -704,6 +796,7 @@ int kfa_flow_sdu_read(struct kfa  *instance,
 {
 	struct ipcp_flow *flow;
 	int		  retval = 0;
+	struct iowaitqs * wqs = 0;
 
 	if (!instance) {
 		LOG_ERR("Bogus instance passed, bailing out");
@@ -737,13 +830,21 @@ int kfa_flow_sdu_read(struct kfa  *instance,
 	atomic_inc(&flow->readers);
 
 	if (blocking) { /* blocking I/O */
+		if (flow->wqs == 0) {
+			LOG_ERR("Waitqueues are null, flow %d is being deallocated", id);
+			retval = -EBADF;
+			goto finish;
+		} else {
+			wqs = flow->wqs;
+		}
+
 		while (flow->state == PORT_STATE_PENDING ||
 				rfifo_is_empty(flow->sdu_ready)) {
 			spin_unlock_bh(&instance->lock);
 
 			LOG_DBG("Going to sleep on wait queue %pK (reading)",
-					&flow->read_wqueue);
-			retval = wait_event_interruptible(flow->read_wqueue,
+					&wqs->read_wqueue);
+			retval = wait_event_interruptible(wqs->read_wqueue,
 							  queue_ready(flow));
 			LOG_DBG("Read woken up (%d)", retval);
 
@@ -764,6 +865,12 @@ int kfa_flow_sdu_read(struct kfa  *instance,
 				spin_unlock_bh(&instance->lock);
 				LOG_ERR("No more flow bound to port-id %d", id);
 				return -EBADF;
+			}
+
+			if (flow->wqs == 0) {
+				LOG_ERR("Waitqueues are null, flow %d is being deallocated", id);
+				retval = -EBADF;
+				goto finish;
 			}
 
 			if (retval < 0)
@@ -900,8 +1007,8 @@ static int kfa_sdu_post(struct ipcp_instance_data *data,
 
 	spin_unlock_bh(&instance->lock);
 
-	if (flow && (retval == 0)) {
-		wq = &flow->read_wqueue;
+	if (flow && (retval == 0) && (flow->wqs != 0)) {
+		wq = &flow->wqs->read_wqueue;
 		ASSERT(wq);
 
 		/* set_tsk_need_resched(current); */
@@ -974,6 +1081,7 @@ int kfa_flow_create(struct kfa           *instance,
 	atomic_set(&flow->readers, 0);
 	atomic_set(&flow->writers, 0);
 	atomic_set(&flow->posters, 0);
+	flow->wqs = 0;
 
 	/* Determine if this is an IP tunnel */
 	if (ip_flow) {
@@ -987,9 +1095,6 @@ int kfa_flow_create(struct kfa           *instance,
 	} else {
 		flow->ip_dev = NULL;
 	}
-
-	init_waitqueue_head(&flow->read_wqueue);
-	init_waitqueue_head(&flow->write_wqueue);
 
 	flow->ipc_process = ipcp;
 
