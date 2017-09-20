@@ -1,0 +1,12 @@
+stages:
+  - buildstack
+
+before_script:
+  - mkdir build
+  - mkdir install
+
+build_stack:
+  stage: buildstack
+  script:
+    - sudo ./configure --prefix ~/install
+    - sudo make
