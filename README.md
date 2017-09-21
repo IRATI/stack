@@ -42,8 +42,8 @@ of IRATI in future releases.
 ### Building on Debian 8
 #############################################################################
 
-For the kernel modules, a Linux kernel with version 4.9 has to be installed in the system,
-with the kernel headers.
+For the kernel modules, a Linux kernel with a version between 4.1 and 4.9 (included) has to be installed in 
+the system, with the kernel headers.
 
 Once this is done, please install user-space dependencies
 
@@ -54,9 +54,9 @@ Once this is done, please install user-space dependencies
     $ apt-get install pkg-config
     $ apt-get install git
     $ apt-get install g++
-    $ apt-get install libssl-dev
-    $ apt-get install protobuf-compiler (version >= 2.5.0 required)
-    $ apt-get install libprotobuf-dev (version >= 2.5.0 required)
+    $ apt-get install libssl-dev=1.0.1k-3
+    $ apt-get install protobuf-compiler=2.6.1-1
+    $ apt-get install libprotobuf-dev=2.6.1-1
     $ apt-get install hostapd (if the system will be configured as an access point)
     $ apt-get install wpasupplicant (if the system will be configured as a mobile host)
 
@@ -76,8 +76,55 @@ Download the IRATI repo (arcfire branch) and enter the root directory
 
 Build and install both kernel-space and user-space software
 
-    $ ./configure --prefix <path to IRATI installation folder>
-    $ make install
+    $ sudo ./configure --prefix <path to IRATI installation folder>
+    $ sudo make install
+
+### Building on Debian 9
+#############################################################################
+
+The default kernel of Debian 9 (4.9) is supported by IRATI, so there is no need to install 
+a new kernel. Kernel headers may not be present, therefore they should be installed using 
+
+    $ sudo apt-get install linux-headers-$(uname -r)
+
+Once this is done, please install user-space dependencies. Before installing please remove 
+the default versions of libssl-dev, libprotobuf-dev and protobuf-compiler, since they are 
+not supported by the current IRATI implementation
+
+    $ apt-get update
+    $ apt-get remove protobuf-compiler
+    $ apt-get remove libprotobuf-dev
+    $ apt-get remove libssl-dev
+    $ apt-get install autoconf
+    $ apt-get install automake
+    $ apt-get install libtool
+    $ apt-get install pkg-config
+    $ apt-get install git
+    $ apt-get install g++
+    $ apt-get install libssl-dev=1.0.1k-3
+    $ apt-get install protobuf-compiler=2.6.1-1
+    $ apt-get install libprotobuf-dev=2.6.1-1
+    $ apt-get install hostapd (if the system will be configured as an access point)
+    $ apt-get install wpasupplicant (if the system will be configured as a mobile host)
+
+If you want to generate the Java bindings, the following packages are also required
+
+    $ apt-get install openjdk-6-jdk
+    $ apt-get install maven
+
+Required packages to be build from source (only if generation of Java bindings is required)
+
+* SWIG (version >= 2.0.8 required, 2.0.12 is known to be working fine) from http://swig.org
+
+Download the IRATI repo (arcfire branch) and enter the root directory
+
+    $ git clone -b arcfire https://github.com/IRATI/stack.git
+    $ cd stack
+
+Build and install both kernel-space and user-space software
+
+    $ sudo ./configure --prefix <path to IRATI installation folder>
+    $ sudo make install
 
 ### Building on Raspbian
 #############################################################################
@@ -102,10 +149,9 @@ Install dependencies
     $ apt-get install autoconf
     $ apt-get install libtool
     $ apt-get install git
-    $ apt-get install libssl-dev
-    $ apt-get install protobuf-compiler
-    $ apt-get install libprotobuf-dev
-    $ apt-get install libnl-genl-3-dev
+    $ apt-get install libssl-dev=1.0.1k-3
+    $ apt-get install protobuf-compiler=2.6.1-1
+    $ apt-get install libprotobuf-dev=2.6.1-1
 
 Download the IRATI repo (arcfire branch) and enter the root directory
 
@@ -114,8 +160,8 @@ Download the IRATI repo (arcfire branch) and enter the root directory
 
 Build and install both kernel-space and user-space software
 
-    $ ./configure --prefix <path to IRATI installation folder>
-    $ make install
+    $ sudo ./configure --prefix <path to IRATI installation folder>
+    $ sudo make install
 
 #############################################################################
 ## 3. Running and configuring IRATI                                         #
