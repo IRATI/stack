@@ -32,6 +32,7 @@
 #include <linux/mutex.h>
 #include <linux/inet.h>
 #include <net/sock.h>
+#include <linux/version.h>
 
 #define SHIM_NAME     "shim-tcp-udp"
 #define SHIM_NAME_RWQ SHIM_NAME "-rwq"
@@ -721,8 +722,13 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                         flow->fspec_id = 0;
 
                         len = sockaddr_init(&addr, &data->host_name, 0);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,2,0)
+                        err = sock_create_kern(addr.family, SOCK_DGRAM,
+                                               IPPROTO_UDP, &flow->sock);
+#else
                         err = sock_create_kern(&init_net, addr.family, SOCK_DGRAM,
                                                IPPROTO_UDP, &flow->sock);
+#endif
                         if (err < 0) {
                                 LOG_ERR("Could not create UDP socket");
                                 unbind_and_destroy_flow(data, flow);
@@ -747,8 +753,13 @@ tcp_udp_flow_allocate_request(struct ipcp_instance_data * data,
                         LOG_DBG("Reliable flow requested");
                         flow->fspec_id = 1;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,2,0)
+                        err = sock_create_kern(flow->addr.family, SOCK_STREAM,
+                                               IPPROTO_TCP, &flow->sock);
+#else
                         err = sock_create_kern(&init_net, flow->addr.family, SOCK_STREAM,
                                                IPPROTO_TCP, &flow->sock);
+#endif
                         if (err < 0) {
                                 LOG_ERR("Could not create TCP socket");
                                 unbind_and_destroy_flow(data, flow);
@@ -1804,8 +1815,13 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
 
         app->port = exp_reg->port;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,2,0)
+        err = sock_create_kern(data->host_name.family, SOCK_DGRAM,
+			       IPPROTO_UDP, &app->udpsock);
+#else
         err = sock_create_kern(&init_net, data->host_name.family, SOCK_DGRAM,
 			       IPPROTO_UDP, &app->udpsock);
+#endif
         if (err < 0) {
                 LOG_ERR("Could not create UDP socket for registration");
                 name_destroy(app->app_name);
@@ -1830,8 +1846,13 @@ static int tcp_udp_application_register(struct ipcp_instance_data * data,
 
         LOG_DBG("UDP socket ready");
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,2,0)
+        err = sock_create_kern(data->host_name.family, SOCK_STREAM,
+			       IPPROTO_TCP, &app->tcpsock);
+#else
         err = sock_create_kern(&init_net, data->host_name.family, SOCK_STREAM,
 			       IPPROTO_TCP, &app->tcpsock);
+#endif
         if (err < 0) {
                 LOG_ERR("could not create TCP socket for registration");
                 sock_release(app->udpsock);

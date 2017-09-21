@@ -15,20 +15,20 @@ endif
 all:
 	for i in $(directories); do 						\
 		cd $$i || continue; 						\
-		make KDIR=$(KDIR) IRATI_KSDIR=$(IRATI_KSDIR) KREL=$(KREL); 	\
+		make INSTALLDIR=$(INSTALLDIR) KDIR=$(KDIR) IRATI_KSDIR=$(IRATI_KSDIR) KREL=$(KREL); 	\
 		cd ..; 								\
 	done
 
 clean:
 	for i in $(directories); do 						  \
 		cd $$i || continue; 						  \
-		make KDIR=$(KDIR) IRATI_KSDIR=$(IRATI_KSDIR) KREL=$(KREL) clean;  \
+		make INSTALLDIR=$(INSTALLDIR) KDIR=$(KDIR) IRATI_KSDIR=$(IRATI_KSDIR) KREL=$(KREL) clean;  \
 		cd ..; 								  \
 	done
 
 install:
 	for i in $(directories); do 						  \
 		cd $$i || continue; 						  \
-		make KDIR=$(KDIR) IRATI_KSDIR=$(IRATI_KSDIR) KREL=$(KREL) install;\
+		make INSTALLDIR=$(INSTALLDIR) KDIR=$(KDIR) IRATI_KSDIR=$(IRATI_KSDIR) KREL=$(KREL) install;\
 		cd ..; 								  \
 	done
