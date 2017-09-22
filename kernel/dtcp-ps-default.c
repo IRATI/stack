@@ -236,7 +236,7 @@ default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
 {
         struct dtcp *       dtcp;
         struct dt *         dt;
-        uint_t              rtt, new_rtt, srtt, rttvar, trmsecs;
+        uint_t              rtt, new_sample, srtt, rttvar, trmsecs;
         timeout_t           start_time;
         int                 abs;
         struct rtxq_entry * entry;
@@ -268,7 +268,7 @@ default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
         }
 
         start_time = rtxq_entry_timestamp(entry);
-        new_rtt    = jiffies_to_msecs(jiffies - start_time);
+        new_sample = jiffies_to_msecs(jiffies - start_time);
 
         /* NOTE: the acking process has alrady deleted old entries from rtxq
          * except for the one with the sn we need, here we have to detroy just
@@ -280,10 +280,13 @@ default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
         rttvar     = dtcp_rttvar(dtcp);
 
         if (!rtt) {
-                rttvar = new_rtt >> 1;
-                srtt   = new_rtt;
+        	rtt = new_sample;
+                rttvar = new_sample >> 1;
+                srtt   = new_sample;
         } else {
-                abs = srtt - new_rtt;
+        	/* RTT <== RTT * (112/128) + SAMPLE * (16/128)*/
+        	rtt = (rtt * 112 + (new_sample << 4)) >> 7;
+                abs = srtt - new_sample;
                 abs = abs < 0 ? -abs : abs;
                 rttvar = ((3 * rttvar) >> 2) + (((uint_t)abs) >> 2);
         }
@@ -299,11 +302,11 @@ default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
         /* RTO (tr) less than 1s? (not for the common policy) */
         /*trmsecs  = trmsecs < 1000 ? 1000 : trmsecs;*/
 
-        dtcp_rtt_set(dtcp, new_rtt);
+        dtcp_rtt_set(dtcp, rtt);
         dtcp_rttvar_set(dtcp, rttvar);
         dtcp_srtt_set(dtcp, srtt);
         dt_sv_tr_set(dt, msecs_to_jiffies(trmsecs));
-        LOG_DBG("TR set to %u msecs", trmsecs);
+	LOG_DBG("New RTT %u; New Tr: %u ms", rtt, trmsecs);
 
         return 0;
 }

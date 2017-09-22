@@ -73,6 +73,8 @@ struct efcp;
 
 struct efcp *           efcp_container_find(struct efcp_container * container,
                                             cep_id_t                id);
+struct efcp *           efcp_container_find_rtxlock(struct efcp_container * container,
+                                            	    cep_id_t                id);
 struct efcp_config *    efcp_container_config(struct efcp_container * c);
 
 int                     efcp_bind_rmt(struct efcp_container * container,

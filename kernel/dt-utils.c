@@ -492,9 +492,6 @@ static struct rtxqueue * rtxqueue_create_gfp(gfp_t flags)
 static struct rtxqueue * rtxqueue_create(void)
 { return rtxqueue_create_gfp(GFP_KERNEL); }
 
-static struct rtxqueue * rtxqueue_create_ni(void)
-{ return rtxqueue_create_gfp(GFP_ATOMIC); }
-
 static int rtxqueue_flush(struct rtxqueue * q)
 {
         struct rtxq_entry * cur, * n;
@@ -709,7 +706,6 @@ static int rtxqueue_rtx(struct rtxqueue * q,
         struct rtxq_entry * cur, * n;
         struct pdu *        tmp;
         seq_num_t           seq = 0;
-        unsigned long       tr_jiffies;
         // Used by rbfc.
         struct dtp *        dtp;
         struct dtcp *	    dtcp;
@@ -723,15 +719,11 @@ static int rtxqueue_rtx(struct rtxqueue * q,
         dtp = dt_dtp(dt);
         dtcp = dt_dtcp(dt);
 
-        tr_jiffies = msecs_to_jiffies(tr);
-
         list_for_each_entry_safe(cur, n, &q->head, next) {
                 seq = pci_sequence_number_get(pdu_pci_get_ro(cur->pdu));
-                LOG_DBG("Checking RTX PDU %u, now: %lu >?< %lu + %lu (%u ms)",
-                        seq, jiffies, cur->time_stamp, tr_jiffies,
-                        tr);
-                if (time_before_eq(cur->time_stamp + tr_jiffies,
-                                   jiffies)) {
+                LOG_DBG("Checking RTX PDU %u, now: %lu >?< %lu + %u",
+                        seq, jiffies, cur->time_stamp, tr);
+                if (time_before_eq(cur->time_stamp + tr, jiffies)) {
                         cur->retries++;
                         if (cur->retries >= data_rtx_max) {
                                 LOG_ERR("Maximum number of rtx has been "
@@ -770,6 +762,7 @@ static int rtxqueue_rtx(struct rtxqueue * q,
                                         rmt,
                                         tmp))
                                 continue;
+                        LOG_DBG("Retransmitted PDU with seqN %u", seq);
                 } else {
                         LOG_DBG("RTX timer: from here PDUs still have time,"
                                 "finishing...");
@@ -798,42 +791,43 @@ struct rtxq {
         struct rtxqueue *         queue;
 };
 
+struct rtxt_data {
+	struct efcp_container * efcpc;
+	unsigned int data_retransmit_max;
+	cep_id_t	cep_id;
+};
+
 static void rtx_timer_func(void * data)
 {
         struct rtxq *        q;
-        struct dtcp_config * dtcp_cfg;
+        struct efcp * 	     efcp;
+        struct rtxt_data *   rtxtd;
         unsigned int         tr;
-        unsigned int         data_retransmit_max;
 
         LOG_DBG("RTX timer triggered...");
 
-        q = (struct rtxq *) data;
-        if (!q || !q->rmt || !q->parent) {
-                LOG_ERR("No RTXQ to work with");
+        rtxtd = (struct rtxt_data *) data;
+        if (!rtxtd) {
+                LOG_ERR("No RTX data to work with");
                 return;
         }
 
-        dtcp_cfg = dtcp_config_get(dt_dtcp(q->parent));
-        if (!dtcp_cfg) {
-                LOG_ERR("RTX failed");
-                return;
+        efcp = efcp_container_find_rtxlock(rtxtd->efcpc, rtxtd->cep_id);
+        if (!efcp) {
+        	LOG_DBG("EFCP instance with cep-id %d destroyed",
+        		rtxtd->cep_id);
+        	return;
         }
 
-        rcu_read_lock();
-        data_retransmit_max = dtcp_ps_get(dt_dtcp(q->parent))
-                                        ->rtx.data_retransmit_max;
-        rcu_read_unlock();
-
+        q = dt_rtxq(efcp_dt(efcp));
         tr = dt_sv_tr(q->parent);
 
-        spin_lock(&q->lock);
         if (rtxqueue_rtx(q->queue,
                          tr,
                          q->parent,
                          q->rmt,
-                         data_retransmit_max))
+                         rtxtd->data_retransmit_max))
                 LOG_ERR("RTX failed");
-        spin_unlock(&q->lock);
 
 #if RTIMER_ENABLED
         if (!rtxqueue_empty(q->queue))
@@ -841,22 +835,27 @@ static void rtx_timer_func(void * data)
         LOG_DBG("RTX timer ending...");
 #endif
 
+        spin_unlock(&q->lock);
+
         return;
 }
 
 int rtxq_destroy(struct rtxq * q)
 {
+	unsigned long flags;
+
         if (!q)
                 return -1;
 
-        spin_lock_bh(&q->lock);
+        spin_lock_irqsave(&q->lock, flags);
 #if RTIMER_ENABLED
         if (q->r_timer && rtimer_destroy(q->r_timer))
                 LOG_ERR("Problems destroying timer for RTXQ %pK", q->r_timer);
 #endif
         if (q->queue && rtxqueue_destroy(q->queue))
                 LOG_ERR("Problems destroying queue for RTXQ %pK", q->queue);
-        spin_unlock_bh(&q->lock);
+
+        spin_unlock_irqrestore(&q->lock, flags);
 
         rkfree(q);
 
@@ -864,16 +863,29 @@ int rtxq_destroy(struct rtxq * q)
 }
 
 struct rtxq * rtxq_create(struct dt *  dt,
-                          struct rmt * rmt)
+                          struct rmt * rmt,
+			  struct efcp_container * container,
+			  struct dtcp_config * dtcp_cfg,
+			  cep_id_t cep_id)
 {
         struct rtxq * tmp;
+        struct rtxt_data * data;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;
 
 #if RTIMER_ENABLED
-        tmp->r_timer = rtimer_create(rtx_timer_func, tmp);
+        data = rkzalloc(sizeof(*data), GFP_KERNEL);
+        if (!data) {
+        	rkfree(tmp);
+                return NULL;
+        }
+
+        data->efcpc = container;
+        data->cep_id = cep_id;
+        data->data_retransmit_max = dtcp_cfg->rxctrl_cfg->data_retransmit_max;
+        tmp->r_timer = rtimer_create(rtx_timer_func, data);
         if (!tmp->r_timer) {
                 LOG_ERR("Failed to create retransmission queue");
                 rtxq_destroy(tmp);
@@ -882,42 +894,6 @@ struct rtxq * rtxq_create(struct dt *  dt,
 #endif
 
         tmp->queue = rtxqueue_create();
-        if (!tmp->queue) {
-                LOG_ERR("Failed to create retransmission queue");
-                rtxq_destroy(tmp);
-                return NULL;
-        }
-
-        ASSERT(dt);
-        ASSERT(rmt);
-
-        tmp->parent = dt;
-        tmp->rmt    = rmt;
-
-        spin_lock_init(&tmp->lock);
-
-        return tmp;
-}
-
-struct rtxq * rtxq_create_ni(struct dt *  dt,
-                             struct rmt * rmt)
-{
-        struct rtxq * tmp;
-
-        tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
-        if (!tmp)
-                return NULL;
-
-#if RTIMER_ENABLED
-        tmp->r_timer = rtimer_create_ni(rtx_timer_func, tmp);
-        if (!tmp->r_timer) {
-                LOG_ERR("Failed to create retransmission queue");
-                rtxq_destroy(tmp);
-                return NULL;
-        }
-#endif
-
-        tmp->queue = rtxqueue_create_ni();
         if (!tmp->queue) {
                 LOG_ERR("Failed to create retransmission queue");
                 rtxq_destroy(tmp);
@@ -1020,6 +996,16 @@ int rtxq_flush(struct rtxq * q)
 
 }
 EXPORT_SYMBOL(rtxq_flush);
+
+int rtxq_lock(struct rtxq * q)
+{
+        if (!q || !q->queue)
+                return -1;
+
+        spin_lock(&q->lock);
+        return 0;
+}
+EXPORT_SYMBOL(rtxq_lock);
 
 int rtxq_ack(struct rtxq * q,
              seq_num_t     seq_num,
