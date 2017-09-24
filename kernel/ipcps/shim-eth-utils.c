@@ -23,6 +23,7 @@
 #include <linux/rtnetlink.h>
 #include <net/pkt_sched.h>
 #include <net/sch_generic.h>
+#include <linux/version.h>
 
 #define RINA_PREFIX "shim-eth-utils"
 #define MAX_NOTIFICATIONS 5
@@ -44,8 +45,12 @@ struct shim_eth_qdisc_priv {
 	bool 	 started_notifying;
 };
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,8,0)
+static int shim_eth_qdisc_enqueue(struct sk_buff *skb, struct Qdisc *qdisc)
+#else
 static int shim_eth_qdisc_enqueue(struct sk_buff *skb, struct Qdisc *qdisc,
 				  struct sk_buff **to_free)
+#endif
 {
 	struct shim_eth_qdisc_priv *priv;
 
@@ -69,13 +74,17 @@ static int shim_eth_qdisc_enqueue(struct sk_buff *skb, struct Qdisc *qdisc,
 
 	priv->notifications = MAX_NOTIFICATIONS;
 	priv->started_notifying = false;
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,8,0)
+	return qdisc_drop(skb, qdisc);
+#else
 	return qdisc_drop(skb, qdisc, to_free);
+#endif
 }
 
 static struct sk_buff * shim_eth_qdisc_dequeue(struct Qdisc *qdisc)
 {
 	struct shim_eth_qdisc_priv *priv;
+	struct sk_buff *skb;
 
 	if (!qdisc) {
 		LOG_ERR("Bogus qdisc passed, bailing out");
@@ -85,7 +94,7 @@ static struct sk_buff * shim_eth_qdisc_dequeue(struct Qdisc *qdisc)
 	priv = qdisc_priv(qdisc);
 
 	if (qdisc->q.qlen > 0) {
-		struct sk_buff *skb = __qdisc_dequeue_head(&qdisc->q);
+		skb = qdisc_dequeue_head(qdisc);
 
 		if (likely(skb != NULL)) {
 			qdisc_qstats_backlog_dec(qdisc, skb);
@@ -118,7 +127,11 @@ static struct sk_buff * shim_eth_qdisc_peek(struct Qdisc *qdisc)
 		return NULL;
 	}
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0)
+	return skb_peek(&qdisc->q);
+#else
 	return qdisc->q.head;
+#endif
 }
 
 static int shim_eth_qdisc_init(struct Qdisc *qdisc, struct nlattr *opt)
@@ -138,7 +151,10 @@ static int shim_eth_qdisc_init(struct Qdisc *qdisc, struct nlattr *opt)
 	priv->q_enable_thres = opt->nla_type;
 	priv->notifications = 0;
 	priv->started_notifying = false;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0)
+#else
 	qdisc_skb_head_init(&qdisc->q);
+#endif
 	spin_lock_init(&qdisc->q.lock);
 
 	LOG_INFO("shim-eth-qdisc-init: max size: %u, enable thres: %u",
@@ -154,9 +170,8 @@ static void shim_eth_qdisc_reset(struct Qdisc *qdisc)
 		return;
 	}
 
-	__qdisc_reset_queue(&qdisc->q);
+	qdisc_reset_queue(qdisc);
 
-	qdisc->qstats.backlog = 0;
 	qdisc->q.qlen = 0;
 }
 
