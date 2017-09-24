@@ -40,6 +40,9 @@
 
 #define RTIMER_ENABLED 1
 
+/* Maximum retransmission time is 60 seconds */
+#define MAX_RTX_WAIT_TIME msecs_to_jiffies(60000)
+
 struct cwq {
         struct rqueue * q;
         spinlock_t      lock;
@@ -697,6 +700,18 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
         return 0;
 }
 
+/* Exponential backoff after each retransmission */
+static unsigned long time_to_rtx(struct rtxq_entry * cur, unsigned int tr)
+{
+	unsigned long rtx_wtime;
+
+	rtx_wtime = (1 + cur->retries*cur->retries)*tr;
+	if (rtx_wtime > MAX_RTX_WAIT_TIME)
+		rtx_wtime = MAX_RTX_WAIT_TIME;
+
+	return cur->time_stamp + rtx_wtime;
+}
+
 static int rtxqueue_rtx(struct rtxqueue * q,
                         unsigned int      tr,
                         struct dt *       dt,
@@ -723,8 +738,9 @@ static int rtxqueue_rtx(struct rtxqueue * q,
                 seq = pci_sequence_number_get(pdu_pci_get_ro(cur->pdu));
                 LOG_DBG("Checking RTX PDU %u, now: %lu >?< %lu + %u",
                         seq, jiffies, cur->time_stamp, tr);
-                if (time_before_eq(cur->time_stamp + tr, jiffies)) {
+                if (time_before_eq(time_to_rtx(cur, tr), jiffies)) {
                         cur->retries++;
+                        cur->time_stamp = jiffies;
                         if (cur->retries >= data_rtx_max) {
                                 LOG_ERR("Maximum number of rtx has been "
                                         "achieved for SeqN %u. Can't "
