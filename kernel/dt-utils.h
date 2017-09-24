@@ -54,9 +54,10 @@ seq_num_t            cwq_peek(struct cwq * queue);
 struct rtxq;
 
 struct rtxq *       rtxq_create(struct dt *  dt,
-                                struct rmt * rmt);
-struct rtxq *       rtxq_create_ni(struct dt *  dt,
-                                   struct rmt * rmt);
+                                struct rmt * rmt,
+				struct efcp_container * container,
+				struct dtcp_config * dtcp_cfg,
+				cep_id_t cep_id);
 int                 rtxq_destroy(struct rtxq * q);
 
 int		    rtxq_size(struct rtxq * q);
@@ -78,6 +79,7 @@ int                 rtxq_nack(struct rtxq * q,
                               seq_num_t     seq_num,
                               timeout_t     tr);
 int                 rtxq_flush(struct rtxq * q);
+int                 rtxq_lock(struct rtxq * q);
 
 int 		    dt_pdu_send(struct dt *  dt,
         	    	        struct rmt * rmt,

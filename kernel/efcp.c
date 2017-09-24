@@ -309,6 +309,35 @@ struct efcp * efcp_container_find(struct efcp_container * container,
 }
 EXPORT_SYMBOL(efcp_container_find);
 
+struct efcp * efcp_container_find_rtxlock(struct efcp_container * container,
+				          cep_id_t id)
+{
+        struct efcp * tmp = NULL;
+        struct rtxq * rtxq = NULL;
+
+        if (!container) {
+                LOG_ERR("Bogus container passed, bailing out");
+                return NULL;
+        }
+        if (!is_cep_id_ok(id)) {
+                LOG_ERR("Bad cep-id, cannot find instance");
+                return NULL;
+        }
+
+        spin_lock_bh(&container->lock);
+        tmp = efcp_imap_find(container->instances, id);
+        if (tmp) {
+        	rtxq = dt_rtxq(tmp->dt);
+        	if (rtxq)
+        		rtxq_lock(rtxq);
+
+        }
+        spin_unlock_bh(&container->lock);
+
+        return tmp;
+}
+EXPORT_SYMBOL(efcp_container_find_rtxlock);
+
 struct efcp_config * efcp_container_config(struct efcp_container * container)
 {
         if (!container) {
@@ -758,7 +787,8 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         if (dtcp_window_based_fctrl(dtcp_cfg) ||
             dtcp_rate_based_fctrl(dtcp_cfg) ||
             dtcp_rtx_ctrl(dtcp_cfg)) {
-                rtxq = rtxq_create(tmp->dt, container->rmt);
+                rtxq = rtxq_create(tmp->dt, container->rmt, container,
+                		   dtcp_cfg, cep_id);
                 if (!rtxq) {
                         LOG_ERR("Failed to create rexmsn queue");
                         efcp_destroy(tmp);
