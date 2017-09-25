@@ -347,7 +347,7 @@ void FlowAllocator::createFlowRequestMessageReceived(configs::Flow * flow,
 	unsigned int address = 0;
 	int portId = 0;
 	bool process_flow_request = false;
-	rina::ApplicationProcessNamingInformation remote_info;
+	rina::ApplicationProcessNamingInformation remote_info, app_info;
 	OngoingFlowAllocState flow_state;
 	unsigned int seq_num;
 
@@ -364,6 +364,8 @@ void FlowAllocator::createFlowRequestMessageReceived(configs::Flow * flow,
 					flow->remote_naming_info.toString().c_str());
 			return;
 		}
+
+		app_info = flow->remote_naming_info;
 
 		if (ipcp->check_address_is_mine(address)) {
 			process_flow_request = true;
@@ -390,7 +392,7 @@ void FlowAllocator::createFlowRequestMessageReceived(configs::Flow * flow,
 		connection->setDestCepId(connection->getSourceCepId());
 
 		try {
-			seq_num = rina::extendedIPCManager->allocatePortId(flow->local_naming_info);
+			seq_num = rina::extendedIPCManager->allocatePortId(app_info);
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems requesting an available port-id to the Kernel IPC Manager: %s",
 					e.what());
