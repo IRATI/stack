@@ -784,9 +784,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 }
         }
 
-        if (dtcp_window_based_fctrl(dtcp_cfg) ||
-            dtcp_rate_based_fctrl(dtcp_cfg) ||
-            dtcp_rtx_ctrl(dtcp_cfg)) {
+        if (dtcp_rtx_ctrl(dtcp_cfg)) {
                 rtxq = rtxq_create(tmp->dt, container->rmt, container,
                 		   dtcp_cfg, cep_id);
                 if (!rtxq) {
