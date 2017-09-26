@@ -814,9 +814,14 @@ void EnrolleeStateMachine::remoteReadResult(const rina::cdap_rib::con_handle_t &
 		encoder.decode(obj.value_, neighbors);
 
 		std::list<rina::Neighbor>::const_iterator it;
-		for (it = neighbors.begin(); it != neighbors.end(); ++it)
+		for (it = neighbors.begin(); it != neighbors.end(); ++it) {
 			ipc_process_->enrollment_task_->add_neighbor(*it);
 
+			//Update remote peer address, it may have changed
+			if (it->name_.processName == remote_peer_.name_.processName) {
+				remote_peer_.address_ = it->address_;
+			}
+		}
 	}else{
 		LOG_IPCP_WARN("The object to be created is not required for enrollment");
 	}
