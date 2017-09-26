@@ -913,6 +913,25 @@ int EnrollmentTask::get_con_handle_to_ipcp(unsigned int dest_address,
 	return get_con_handle_to_ipcp_with_address(dest_address, con);
 }
 
+unsigned int EnrollmentTask::get_con_handle_to_ipcp(const std::string& ipcp_name,
+			   	   	            rina::cdap_rib::con_handle_t& con)
+{
+	std::map<int, IEnrollmentStateMachine*>::iterator it;
+
+	sm_lock.readlock();
+	// Check if the destination address is one of our next hops
+	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
+		if (it->second->remote_peer_.name_.processName == ipcp_name) {
+			con.port_id = it->second->con.port_id;
+			sm_lock.unlock();
+			return it->second->remote_peer_.address_;
+		}
+	}
+	sm_lock.unlock();
+
+	return 0;
+}
+
 int EnrollmentTask::get_neighbor_info(rina::Neighbor& neigh)
 {
 	std::map<std::string, rina::Neighbor*>::iterator it;

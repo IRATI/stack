@@ -365,6 +365,8 @@ public:
 			       	      const rina::ser_obj_t &obj_req);
 	int get_con_handle_to_ipcp(unsigned int address,
 				   rina::cdap_rib::con_handle_t& con);
+	unsigned int get_con_handle_to_ipcp(const std::string& ipcp_name,
+				            rina::cdap_rib::con_handle_t& con);
 	int get_neighbor_info(rina::Neighbor& neigh);
 	void clean_state(unsigned int port_id);
 
