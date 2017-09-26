@@ -9,4 +9,4 @@ build_stack:
   stage: buildstack
   script:
     - sudo ./configure --prefix ~/install
-    - sudo make
+    - sudo make install
