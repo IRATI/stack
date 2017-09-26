@@ -851,6 +851,8 @@ void EnrolleeStateMachine::operational_status_start(int invoke_id,
 	start_request_invoke_id = invoke_id;
 
 	//Update remote peer address based on the information it provided us
+	aux.name_.processName = remote_peer_.name_.processName;
+	aux.name_.processInstance = remote_peer_.name_.processInstance;
 	ipcp_->enrollment_task_->get_neighbor_info(aux);
 	remote_peer_.address_ = aux.address_;
 	remote_peer_.old_address_ = aux.old_address_;
