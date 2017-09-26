@@ -849,6 +849,9 @@ void EnrolleeStateMachine::operational_status_start(int invoke_id,
 	timer_.cancelTask(last_scheduled_task_);
 	start_request_invoke_id = invoke_id;
 
+	//Update remote peer address based on the information it provided us
+	ipcp_->enrollment_task_->get_neighbor_info(remote_peer_);
+
 	if (enrollment_task_->use_reliable_n_flow) {
 		//Add temp entry to the PDU forwarding table, to be able to forward PDUs to neighbor
 		ipcp_->resource_allocator_->add_temp_pduft_entry(remote_peer_.address_,
