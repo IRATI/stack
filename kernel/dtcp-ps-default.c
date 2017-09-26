@@ -239,7 +239,6 @@ default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
         uint_t              rtt, new_sample, srtt, rttvar, trmsecs;
         timeout_t           start_time;
         int                 abs;
-        struct rtxq_entry * entry;
 
         if (!ps)
                 return -1;
@@ -252,28 +251,13 @@ default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
 
         LOG_DBG("RTT Estimator...");
 
-        entry = rtxq_entry_peek(dt_rtxq(dt), sn);
-        if (!entry) {
-                LOG_ERR("Could not retrieve timestamp of Seq num: %u for RTT "
-                        "estimation", sn);
-                return -1;
-        }
-
-        /* if it is a retransmission we do not consider it*/
-        if (rtxq_entry_retries(entry) != 0) {
-                LOG_DBG("RTTestimator PDU %u has been retransmitted %u",
-                        sn, rtxq_entry_retries(entry));
-                rtxq_entry_destroy(entry);
+        start_time = rtxq_entry_timestamp(dt_rtxq(dt), sn);
+        if (start_time == 0) {
+        	LOG_DBG("RTTestimator: PDU %u has been retransmitted", sn);
                 return 0;
         }
 
-        start_time = rtxq_entry_timestamp(entry);
         new_sample = jiffies_to_msecs(jiffies - start_time);
-
-        /* NOTE: the acking process has alrady deleted old entries from rtxq
-         * except for the one with the sn we need, here we have to detroy just
-         * the one we use */
-        rtxq_entry_destroy(entry);
 
         rtt        = dtcp_rtt(dtcp);
         srtt       = dtcp_srtt(dtcp);

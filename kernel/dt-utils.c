@@ -534,7 +534,7 @@ static int rtxqueue_entries_ack(struct rtxqueue * q,
                 seq = pci_sequence_number_get(pdu_pci_get_rw((cur->pdu)));
                 /*NOTE: <= is not used because the entry is needed by RTT
                  * estimator policy which will destroy it*/
-                if (seq < seq_num) {
+                if (seq <= seq_num) {
                         LOG_DBG("Seq num acked: %u", seq);
                         rtxq_entry_destroy(cur);
 			q->len--;
@@ -618,22 +618,26 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
         return 0;
 }
 
-static struct rtxq_entry * rtxqueue_entry_peek(struct rtxqueue * q,
-                                               seq_num_t sn)
+unsigned long rtxqueue_entry_timestamp(struct rtxqueue * q, seq_num_t sn)
 {
         struct rtxq_entry * cur;
         seq_num_t           csn;
+
         list_for_each_entry(cur, &q->head, next) {
                 csn = pci_sequence_number_get(pdu_pci_get_rw((cur->pdu)));
                 if (csn > sn) {
                         LOG_ERR("PDU was already removed from rtxq");
-                        return NULL;
+                        return 0;
                 }
                 if (csn == sn) {
-                        return cur;
+                	/* Ignore time_stamps from retransmitted PDUs */
+                        if (cur->retries != 0)
+                        	return 0;
+                        return cur->time_stamp;
                 }
         }
-        return NULL;
+
+        return 0;
 }
 
 /* push in seq_num order */
@@ -952,34 +956,20 @@ int rtxq_drop_pdus(struct rtxq * q)
         return ret;
 }
 
-struct rtxq_entry * rtxq_entry_peek(struct rtxq * q, seq_num_t sn)
+unsigned long rtxq_entry_timestamp(struct rtxq * q, seq_num_t sn)
 {
-        struct rtxq_entry * entry;
+        unsigned long timestamp;
+
         if (!q)
-                return NULL;
+                return 0;
 
         spin_lock_bh(&q->lock);
-        entry = rtxqueue_entry_peek(q->queue, sn);
+        timestamp = rtxqueue_entry_timestamp(q->queue, sn);
         spin_unlock_bh(&q->lock);
-        return entry;
-}
-EXPORT_SYMBOL(rtxq_entry_peek);
 
-unsigned long rtxq_entry_timestamp(struct rtxq_entry * entry)
-{
-        if (!entry)
-                return 0;
-        return entry->time_stamp;
+        return timestamp;
 }
 EXPORT_SYMBOL(rtxq_entry_timestamp);
-
-int rtxq_entry_retries(struct rtxq_entry * entry)
-{
-        if (!entry)
-                return -1;
-        return entry->retries;
-}
-EXPORT_SYMBOL(rtxq_entry_retries);
 
 int rtxq_push_ni(struct rtxq * q,
                  struct pdu *  pdu)

@@ -842,10 +842,11 @@ static int rcv_ack(struct dtcp * dtcp,
         rcu_read_lock();
         ps = container_of(rcu_dereference(dtcp->base.ps),
                           struct dtcp_ps, base);
-        ret = ps->sender_ack(ps, seq);
-	if (ps->rtt_estimator)
+	if (ps->rtx_ctrl && ps->rtt_estimator)
         	ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
+	ret = ps->sender_ack(ps, seq);
         rcu_read_unlock();
+
 
         LOG_DBG("DTCP received ACK (CPU: %d)", smp_processor_id());
         dump_we(dtcp, pci);
@@ -916,10 +917,10 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         ps = container_of(rcu_dereference(dtcp->base.ps),
                           struct dtcp_ps, base);
         /* This updates sender LWE */
-        if (ps->sender_ack(ps, seq))
-                LOG_ERR("Could not update RTXQ and LWE");
 	if (ps->rtx_ctrl && ps->rtt_estimator)
         	ps->rtt_estimator(ps, pci_control_ack_seq_num(pci));
+        if (ps->sender_ack(ps, seq))
+                LOG_ERR("Could not update RTXQ and LWE");
         rcu_read_unlock();
 
 	if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
