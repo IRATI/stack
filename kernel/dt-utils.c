@@ -532,8 +532,6 @@ static int rtxqueue_entries_ack(struct rtxqueue * q,
                 seq_num_t    seq;
 
                 seq = pci_sequence_number_get(pdu_pci_get_rw((cur->pdu)));
-                /*NOTE: <= is not used because the entry is needed by RTT
-                 * estimator policy which will destroy it*/
                 if (seq <= seq_num) {
                         LOG_DBG("Seq num acked: %u", seq);
                         rtxq_entry_destroy(cur);

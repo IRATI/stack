@@ -38,8 +38,7 @@
 #include "dt-utils.h"
 #include "debug.h"
 
-int
-default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
+int default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
 {
         struct dtp *  dtp = ps->dm;
         struct dt  *  dt;
@@ -70,8 +69,7 @@ default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
         return dt_pdu_send(dt, dtp_rmt(dtp), pdu);
 }
 
-int
-default_closed_window(struct dtp_ps * ps, struct pdu * pdu)
+int default_closed_window(struct dtp_ps * ps, struct pdu * pdu)
 {
         struct dtp * dtp = ps->dm;
         struct dtcp * dtcp;
@@ -128,9 +126,7 @@ default_closed_window(struct dtp_ps * ps, struct pdu * pdu)
 	return 0;
 }
 
-int
-default_snd_flow_control_overrun(struct dtp_ps * ps,
-                            struct pdu *    pdu)
+int default_snd_flow_control_overrun(struct dtp_ps * ps, struct pdu * pdu)
 {
         struct cwq * cwq;
         struct dt *  dt;
@@ -172,8 +168,7 @@ default_snd_flow_control_overrun(struct dtp_ps * ps,
         return 0;
 }
 
-int
-default_initial_sequence_number(struct dtp_ps * ps)
+int default_initial_sequence_number(struct dtp_ps * ps)
 {
         struct dtp * dtp = ps->dm;
         seq_num_t    seq_num;
@@ -193,9 +188,7 @@ default_initial_sequence_number(struct dtp_ps * ps)
         return 0;
 }
 
-
-int
-default_receiver_inactivity_timer(struct dtp_ps * ps)
+int default_receiver_inactivity_timer(struct dtp_ps * ps)
 {
         struct dtp * dtp = ps->dm;
         struct dt *          dt;
@@ -221,8 +214,7 @@ default_receiver_inactivity_timer(struct dtp_ps * ps)
         return 0;
 }
 
-int
-default_sender_inactivity_timer(struct dtp_ps * ps)
+int default_sender_inactivity_timer(struct dtp_ps * ps)
 {
         struct dtp *         dtp = ps->dm;
         struct dt *          dt;
@@ -300,8 +292,7 @@ bool default_reconcile_flow_conflict(struct dtp_ps * ps)
         return true;
 }
 
-struct ps_base *
-dtp_ps_default_create(struct rina_component * component)
+struct ps_base * dtp_ps_default_create(struct rina_component * component)
 {
         struct dtp * dtp = dtp_from_component(component);
         struct dtp_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);

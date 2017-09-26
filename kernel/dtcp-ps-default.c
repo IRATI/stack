@@ -35,8 +35,7 @@
 #include "logs.h"
 
 
-int
-default_lost_control_pdu(struct dtcp_ps * ps)
+int default_lost_control_pdu(struct dtcp_ps * ps)
 {
         struct dtcp * dtcp = ps->dm;
 
@@ -91,8 +90,7 @@ int default_rcvr_ack_atimer(struct dtcp_ps * ps, const struct pci * pci)
 { return 0; }
 #endif
 
-int
-default_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
+int default_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
 {
         struct dtcp * dtcp = ps->dm;
 
@@ -115,8 +113,7 @@ default_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
         return 0;
 }
 
-int
-default_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
+int default_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
 {
         struct dtp * dtp;
         struct pci * pci;
@@ -147,8 +144,7 @@ default_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
         return ret;
 }
 
-int
-default_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
+int default_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {
         struct dtcp * dtcp = ps->dm;
         struct pdu * pdu;
@@ -175,8 +171,7 @@ default_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         return 0;
 }
 
-int
-default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
+int default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {
         struct dtcp * dtcp = ps->dm;
         seq_num_t LWE;
@@ -199,9 +194,8 @@ default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         return 0;
 }
 
-int
-default_rate_reduction(struct dtcp_ps * ps, const struct pci * pci) {
-
+int default_rate_reduction(struct dtcp_ps * ps, const struct pci * pci)
+{
 	struct dtcp * dtcp = ps->dm;
 	u_int32_t rt;
 	u_int32_t tf;
@@ -231,8 +225,7 @@ default_rate_reduction(struct dtcp_ps * ps, const struct pci * pci) {
 	return 0;
 }
 
-int
-default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
+int default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
 {
         struct dtcp *       dtcp;
         struct dt *         dt;
@@ -295,8 +288,7 @@ default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
         return 0;
 }
 
-struct ps_base *
-dtcp_ps_default_create(struct rina_component * component)
+struct ps_base * dtcp_ps_default_create(struct rina_component * component)
 {
         struct dtcp * dtcp = dtcp_from_component(component);
         struct dtcp_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
