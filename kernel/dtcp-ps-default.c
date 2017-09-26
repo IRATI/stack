@@ -35,8 +35,7 @@
 #include "logs.h"
 
 
-int
-default_lost_control_pdu(struct dtcp_ps * ps)
+int default_lost_control_pdu(struct dtcp_ps * ps)
 {
         struct dtcp * dtcp = ps->dm;
 
@@ -91,8 +90,7 @@ int default_rcvr_ack_atimer(struct dtcp_ps * ps, const struct pci * pci)
 { return 0; }
 #endif
 
-int
-default_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
+int default_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
 {
         struct dtcp * dtcp = ps->dm;
 
@@ -115,8 +113,7 @@ default_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
         return 0;
 }
 
-int
-default_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
+int default_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
 {
         struct dtp * dtp;
         struct pci * pci;
@@ -147,8 +144,7 @@ default_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
         return ret;
 }
 
-int
-default_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
+int default_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {
         struct dtcp * dtcp = ps->dm;
         struct pdu * pdu;
@@ -175,8 +171,7 @@ default_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         return 0;
 }
 
-int
-default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
+int default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {
         struct dtcp * dtcp = ps->dm;
         seq_num_t LWE;
@@ -199,9 +194,8 @@ default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         return 0;
 }
 
-int
-default_rate_reduction(struct dtcp_ps * ps, const struct pci * pci) {
-
+int default_rate_reduction(struct dtcp_ps * ps, const struct pci * pci)
+{
 	struct dtcp * dtcp = ps->dm;
 	u_int32_t rt;
 	u_int32_t tf;
@@ -231,15 +225,13 @@ default_rate_reduction(struct dtcp_ps * ps, const struct pci * pci) {
 	return 0;
 }
 
-int
-default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
+int default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
 {
         struct dtcp *       dtcp;
         struct dt *         dt;
         uint_t              rtt, new_sample, srtt, rttvar, trmsecs;
         timeout_t           start_time;
         int                 abs;
-        struct rtxq_entry * entry;
 
         if (!ps)
                 return -1;
@@ -252,28 +244,13 @@ default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
 
         LOG_DBG("RTT Estimator...");
 
-        entry = rtxq_entry_peek(dt_rtxq(dt), sn);
-        if (!entry) {
-                LOG_ERR("Could not retrieve timestamp of Seq num: %u for RTT "
-                        "estimation", sn);
-                return -1;
-        }
-
-        /* if it is a retransmission we do not consider it*/
-        if (rtxq_entry_retries(entry) != 0) {
-                LOG_DBG("RTTestimator PDU %u has been retransmitted %u",
-                        sn, rtxq_entry_retries(entry));
-                rtxq_entry_destroy(entry);
+        start_time = rtxq_entry_timestamp(dt_rtxq(dt), sn);
+        if (start_time == 0) {
+        	LOG_DBG("RTTestimator: PDU %u has been retransmitted", sn);
                 return 0;
         }
 
-        start_time = rtxq_entry_timestamp(entry);
         new_sample = jiffies_to_msecs(jiffies - start_time);
-
-        /* NOTE: the acking process has alrady deleted old entries from rtxq
-         * except for the one with the sn we need, here we have to detroy just
-         * the one we use */
-        rtxq_entry_destroy(entry);
 
         rtt        = dtcp_rtt(dtcp);
         srtt       = dtcp_srtt(dtcp);
@@ -311,8 +288,7 @@ default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
         return 0;
 }
 
-struct ps_base *
-dtcp_ps_default_create(struct rina_component * component)
+struct ps_base * dtcp_ps_default_create(struct rina_component * component)
 {
         struct dtcp * dtcp = dtcp_from_component(component);
         struct dtcp_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
