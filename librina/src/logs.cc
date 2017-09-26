@@ -35,7 +35,7 @@
 #include "librina/logs.h"
 
 enum LOG_LEVEL logLevel = DBG;
-FILE* logStream = stdout;
+FILE* logStream = stderr;
 
 //To str
 const std::string LOG_LEVEL_DBG   = "DBG";
@@ -86,12 +86,12 @@ int setLogFile(const char* file)
 
 	pthread_mutex_lock(&log_mutex);
 
-	if (logStream != stdout) {
+	if (logStream != stderr) {
 		result = -1;
 	} else {
 		logStream = fopen(pathToFile.c_str(), "w");
 		if (!logStream) {
-			logStream = stdout;
+			logStream = stderr;
 			result = -1;
 		}
 	}
