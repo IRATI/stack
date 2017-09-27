@@ -47,6 +47,7 @@ public:
 	static const std::string POLICY_PARAM_DEPRECATE_OLD_TIMEOUT;
 	static const std::string POLICY_PARAM_CHANGE_PERIOD;
 	static const std::string POLICY_PARAM_ADDRESS_RANGE;
+	static const std::string POLICY_PARAM_START_DELAY;
 
 private:
     	unsigned int getIPCProcessAddress(const std::string& process_name,
@@ -63,6 +64,7 @@ private:
     	unsigned int min_address;
     	unsigned int max_address;
     	unsigned int current_address;
+    	unsigned int start_delay;
     	bool first_time;
 };
 
@@ -90,6 +92,7 @@ const std::string AddressChangeNamespaceManagerPs::POLICY_PARAM_USE_NEW_TIMEOUT 
 const std::string AddressChangeNamespaceManagerPs::POLICY_PARAM_DEPRECATE_OLD_TIMEOUT = "deprecateOldTimeout";
 const std::string AddressChangeNamespaceManagerPs::POLICY_PARAM_CHANGE_PERIOD = "changePeriod";
 const std::string AddressChangeNamespaceManagerPs::POLICY_PARAM_ADDRESS_RANGE = "addressRange";
+const std::string AddressChangeNamespaceManagerPs::POLICY_PARAM_START_DELAY = "startDelay";
 
 AddressChangeNamespaceManagerPs::AddressChangeNamespaceManagerPs(INamespaceManager * nsm_) : nsm(nsm_)
 {
@@ -99,6 +102,7 @@ AddressChangeNamespaceManagerPs::AddressChangeNamespaceManagerPs(INamespaceManag
 	min_address = 0;
 	max_address = 0;
 	current_address = 0;
+	start_delay = 0;
 	first_time = true;
 }
 
@@ -120,6 +124,8 @@ void AddressChangeNamespaceManagerPs::set_dif_configuration(const rina::DIFConfi
 				get_param_value_as_uint(POLICY_PARAM_CHANGE_PERIOD);
 		address_range = dif_configuration.nsm_configuration_.policy_set_.
 				get_param_value_as_uint(POLICY_PARAM_ADDRESS_RANGE);
+		start_delay = dif_configuration.nsm_configuration_.policy_set_.
+				get_param_value_as_uint(POLICY_PARAM_START_DELAY);
 		min_address = current_address * address_range;
 		max_address = min_address + address_range - 1;
 	} catch (rina::Exception &e) {
@@ -133,9 +139,10 @@ void AddressChangeNamespaceManagerPs::set_dif_configuration(const rina::DIFConfi
 	LOG_IPCP_DBG("Change period (ms): %u", change_period);
 	LOG_IPCP_DBG("Minimum address: %u", min_address);
 	LOG_IPCP_DBG("Maximum address: %u", max_address);
+	LOG_IPCP_DBG("Start delay: %u", start_delay);
 
 	task = new NSMChangeAddressTimerTask(this);
-	delay = deprecate_old_timeout + use_new_timeout + (rand() % (change_period + 1));
+	delay = start_delay + deprecate_old_timeout + use_new_timeout + (rand() % (change_period + 1));
 	LOG_IPCP_DBG("Will update address again in %ld ms", delay);
 	timer.scheduleTask(task, delay);
 }
