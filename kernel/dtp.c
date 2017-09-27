@@ -1734,25 +1734,19 @@ int dtp_receive(struct dtp * instance,
 
         if ((seq_num <= LWE) || (is_fc_overrun(dt, dtcp, seq_num, sbytes)))
         {
+        	/* Duplicate PDU or flow control overrun */
                 pdu_destroy(pdu);
                 stats_inc(drop, sv);
 
-                /*FIXME: Rtimer should not be restarted here, to be deleted */
-#if DTP_INACTIVITY_TIMERS_ENABLE
-                /* Start ReceiverInactivityTimer */
-                if (rtimer_restart(instance->timers.receiver_inactivity,
-                                   3 * (dt_sv_mpl(dt) +
-                                        dt_sv_r(dt)   +
-                                        dt_sv_a(dt))))
-                        LOG_ERR("Failed restart RcvrInactivity timer");
-#endif
-
-                /* Send an ACK/Flow Control PDU with current window values */
                 if (dtcp) {
-                        if (dtcp_ack_flow_control_pdu_send(dtcp, LWE)) {
+                	/* Send an ACK/Flow Control PDU with current window values */
+                	/* FIXME: we have to send a Control ACK PDU, not an
+                	 * ack flow control one
+                	 */
+                        /*if (dtcp_ack_flow_control_pdu_send(dtcp, LWE)) {
                                 LOG_ERR("Failed to send ack/flow control pdu");
                                 return -1;
-                        }
+                        }*/
                 }
                 return 0;
         }

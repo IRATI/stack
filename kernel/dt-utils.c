@@ -624,7 +624,8 @@ unsigned long rtxqueue_entry_timestamp(struct rtxqueue * q, seq_num_t sn)
         list_for_each_entry(cur, &q->head, next) {
                 csn = pci_sequence_number_get(pdu_pci_get_rw((cur->pdu)));
                 if (csn > sn) {
-                        LOG_ERR("PDU was already removed from rtxq");
+                        LOG_WARN("PDU not in rtxq (duplicate ACK). Received "
+                        		"SN: %u, RtxQ SN: %u", sn, csn);
                         return 0;
                 }
                 if (csn == sn) {
