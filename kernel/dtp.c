@@ -1612,7 +1612,6 @@ int dtp_pdu_ctrl_send(struct dtp * dtp, struct pdu * pdu)
 	return ringq_push(dtp->to_send, pdu);
 }
 
-
 int dtp_receive(struct dtp * instance,
                 struct pdu * pdu)
 {

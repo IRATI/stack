@@ -488,9 +488,10 @@ EXPORT_SYMBOL(efcp_container_write);
 static int efcp_receive(struct efcp * efcp,
                         struct pdu *  pdu)
 {
-        struct dtp *          dtp;
-        struct dtcp *         dtcp;
-        pdu_type_t            pdu_type;
+        struct dtp *  dtp;
+        struct dtcp * dtcp;
+        pdu_type_t    pdu_type;
+        const struct pci *  pci;
 
         if (!pdu) {
                 LOG_ERR("No pdu passed");
@@ -503,8 +504,9 @@ static int efcp_receive(struct efcp * efcp,
         }
 
         ASSERT(efcp->dt);
+        pci = pdu_pci_get_ro(pdu);
 
-        pdu_type = pci_type(pdu_pci_get_ro(pdu));
+        pdu_type = pci_type(pci);
         if (pdu_type_is_control(pdu_type)) {
                 dtcp = dt_dtcp(efcp->dt);
                 if (!dtcp) {
@@ -538,8 +540,10 @@ int efcp_container_receive(struct efcp_container * container,
                            cep_id_t                cep_id,
                            struct pdu *            pdu)
 {
-        struct efcp * tmp;
-        int           ret = 0;
+        struct efcp *      tmp;
+        int                ret = 0;
+        const struct pci * pci;
+        pdu_type_t         pdu_type;
 
         if (!container || !pdu_is_ok(pdu)) {
                 LOG_ERR("Bogus input parameters");
@@ -569,6 +573,15 @@ int efcp_container_receive(struct efcp_container * container,
                 return 0;
         }
         atomic_inc(&tmp->pending_ops);
+
+        pci = pdu_pci_get_ro(pdu);
+        pdu_type = pci_type(pci);
+        if (pdu_type == PDU_TYPE_DT && efcp_dst_cep_id(tmp) < 0) {
+        	/* Check that the destination cep-id is set to avoid races,
+        	 * otherwise set it*/
+        	connection_dst_cep_id_set(tmp->connection,
+        				  pci_cep_source(pci));
+        }
         spin_unlock_bh(&container->lock);
 
         ret = efcp_receive(tmp, pdu);
