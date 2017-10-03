@@ -5,6 +5,9 @@ before_script:
   - mkdir build
   - mkdir install
 
+after_script:
+  - sudo chown -R gitlab-runner:gitlab-runner . 
+
 build_stack:
   stage: buildstack
   script:
