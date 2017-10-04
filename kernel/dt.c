@@ -25,6 +25,8 @@
 #include "debug.h"
 #include "dt.h"
 #include "dt-utils.h"
+#include "dtp.h"
+#include "dtcp.h"
 
 static struct dt_sv default_sv = {
         .max_flow_pdu_size    = UINT_MAX,
