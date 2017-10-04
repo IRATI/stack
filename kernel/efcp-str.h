@@ -97,7 +97,10 @@ struct cwq {
         spinlock_t      lock;
 };
 
-struct dt_sv {
+/* This is the DT-SV part maintained by DTP */
+struct dtp_sv {
+        spinlock_t lock;
+
         uint_t       max_flow_pdu_size;
         uint_t       max_flow_sdu_size;
         timeout_t    MPL;
@@ -107,23 +110,6 @@ struct dt_sv {
         seq_num_t    rcv_left_window_edge;
         bool         window_closed;
         bool         drf_flag;
-};
-
-struct dt {
-        struct dt_sv *      sv;
-        struct dtp *        dtp;
-        struct dtcp *       dtcp;
-        struct efcp *       efcp;
-
-        struct cwq *        cwq;
-        struct rtxq *       rtxq;
-
-        spinlock_t          lock;
-};
-
-/* This is the DT-SV part maintained by DTP */
-struct dtp_sv {
-        spinlock_t lock;
 
         uint_t     seq_number_rollover_threshold;
 	/* FIXME: we need to control rollovers...*/
@@ -147,7 +133,12 @@ struct dtp_sv {
 };
 
 struct dtp {
-        struct dt *               parent;
+        struct dtcp *       dtcp;
+        struct efcp *       efcp;
+
+        struct cwq *        cwq;
+        struct rtxq *       rtxq;
+
         /*
          * NOTE: The DTP State Vector is discarded only after and explicit
          *       release by the AP or by the system (if the AP crashes).
@@ -167,6 +158,8 @@ struct dtp {
                 struct rtimer * rate_window;
         } timers;
 	struct robject		  robj;
+
+	spinlock_t          lock;
 };
 
 /* This is the DT-SV part maintained by DTCP */

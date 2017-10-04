@@ -67,6 +67,15 @@ static struct dtp_sv default_sv = {
         .window_based                  = false,
         .drf_required                  = true,
         .rate_fulfiled                 = false,
+        .max_flow_pdu_size    = UINT_MAX,
+        .max_flow_sdu_size    = UINT_MAX,
+        .MPL                  = 1000,
+        .R                    = 100,
+        .A                    = 0,
+        .tr                   = 0,
+        .rcv_left_window_edge = 0,
+        .window_closed        = false,
+        .drf_flag             = false,
 };
 
 #define stats_get(name, sv, retval)				\
@@ -796,7 +805,13 @@ static void tf_rate_window(void * o)
 int dtp_sv_init(struct dtp * dtp,
                 bool         rexmsn_ctrl,
                 bool         window_based,
-                bool         rate_based)
+                bool         rate_based,
+		uint_t      mfps,
+		uint_t      mfss,
+		u_int32_t   mpl,
+		timeout_t   a,
+		timeout_t   r,
+		timeout_t   tr)
 {
         ASSERT(dtp);
         ASSERT(dtp->sv);
@@ -814,6 +829,13 @@ int dtp_sv_init(struct dtp * dtp,
         /* Init seq numbers */
         dtp->sv->max_seq_nr_sent = dtp->sv->seq_nr_to_send;
         dtp->sv->max_seq_nr_rcv  = 0;
+
+        dtp->sv->max_flow_pdu_size = mfps;
+        dtp->sv->max_flow_sdu_size = mfss;
+        dtp->sv->MPL               = mpl;
+        dtp->sv->A                 = a;
+        dtp->sv->R                 = r;
+        dtp->sv->tr                = tr;
 
         return 0;
 }
@@ -1060,6 +1082,8 @@ struct dtp * dtp_create(struct dt * dt,
                 return NULL;
         }
 
+        spin_lock_init(&tmp->lock);
+
         LOG_DBG("Instance %pK created successfully", tmp);
 
         return tmp;
@@ -1067,9 +1091,52 @@ struct dtp * dtp_create(struct dt * dt,
 
 int dtp_destroy(struct dtp * instance)
 {
-        if (!instance) {
-                LOG_ERR("Bad instance passed, bailing out");
+	struct dtcp * dtcp = NULL;
+	struct cwq * cwq = NULL;
+	struct rtxq * rtxq = NULL;
+	int ret = 0;
+
+        if (!instance)
                 return -1;
+
+	spin_lock_bh(&instance->lock);
+
+        if (instance->dtcp) {
+                dtcp = instance->dtcp;
+                instance->dtcp = NULL; /* Useful */
+        }
+
+        if (instance->cwq) {
+                cwq = instance->cwq;
+                instance->cwq = NULL; /* Useful */
+        }
+
+        if (instance->rtxq) {
+        	rtxq = instance->rtxq;
+        	instance->rtxq = NULL; /* Useful */
+        }
+
+        spin_unlock_bh(&instance->lock);
+
+        if (dtcp) {
+        	if (dtcp_destroy(dtcp)) {
+        		LOG_WARN("Error destroying DTCP");
+        		ret = -1;
+        	}
+        }
+
+        if (cwq) {
+        	if (cwq_destroy(cwq)) {
+        		LOG_WARN("Error destroying CWQ");
+        		ret = -1;
+        	}
+        }
+
+        if (rtxq) {
+                if (rtxq_destroy(rtxq)) {
+                        LOG_ERR("Failed to destroy rexmsn queue");
+                        ret = -1;
+                }
         }
 
         if (instance->timers.a)
