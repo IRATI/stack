@@ -29,7 +29,6 @@
 #include "utils.h"
 #include "debug.h"
 #include "dtp-ps-default.h"
-#include "dtp.h"
 #include "dt.h"
 #include "dt-utils.h"
 #include "dtcp.h"
@@ -42,60 +41,13 @@
 #include "rds/ringq.h"
 #include "pci.h"
 #include "rds/robjects.h"
+#include "efcp-str.h"
 
 #define TO_POST_LENGTH 100
 #define TO_SEND_LENGTH 16
 
 static struct policy_set_list policy_sets = {
         .head = LIST_HEAD_INIT(policy_sets.head)
-};
-
-/* This is the DT-SV part maintained by DTP */
-struct dtp_sv {
-        spinlock_t lock;
-
-        uint_t     seq_number_rollover_threshold;
-	/* FIXME: we need to control rollovers...*/
-	struct {
-		unsigned int drop_pdus;
-		unsigned int err_pdus;
-		unsigned int tx_pdus;
-		unsigned int tx_bytes;
-		unsigned int rx_pdus;
-		unsigned int rx_bytes;
-	} stats;
-        seq_num_t  max_seq_nr_rcv;
-        seq_num_t  seq_nr_to_send;
-        seq_num_t  max_seq_nr_sent;
-
-        bool       window_based;
-        bool       rexmsn_ctrl;
-        bool       rate_based;
-        bool       drf_required;
-        bool       rate_fulfiled;
-};
-
-struct dtp {
-        struct dt *               parent;
-        /*
-         * NOTE: The DTP State Vector is discarded only after and explicit
-         *       release by the AP or by the system (if the AP crashes).
-         */
-        struct dtp_sv *           sv; /* The state-vector */
-
-        struct rina_component     base;
-        struct dtp_config *       cfg;
-        struct rmt *              rmt;
-        struct squeue *           seqq;
-        struct ringq *            to_post;
-        struct ringq *            to_send;
-        struct {
-                struct rtimer * sender_inactivity;
-                struct rtimer * receiver_inactivity;
-                struct rtimer * a;
-                struct rtimer * rate_window;
-        } timers;
-	struct robject		  robj;
 };
 
 static struct dtp_sv default_sv = {

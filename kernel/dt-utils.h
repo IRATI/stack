@@ -24,14 +24,9 @@
 
 #include <linux/list.h>
 
-#include "common.h"
+#include "efcp-str.h"
 #include "pdu.h"
 #include "rmt.h"
-
-struct cwq;
-struct dtp;
-struct dt;
-struct rtxq_entry;
 
 struct cwq *        cwq_create(void);
 struct cwq *        cwq_create_ni(void);
