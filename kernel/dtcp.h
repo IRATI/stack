@@ -79,13 +79,10 @@ struct pdu	*pdu_ctrl_generate(struct dtcp *dtcp, pdu_type_t type);
 void		update_rt_wind_edge(struct dtcp *dtcp);
 void		update_credit_and_rt_wind_edge(struct dtcp *dtcp,
 						       uint_t credit);
-int		dtcp_last_time(struct dtcp *dtcp, struct timespec *s);
 int		dtcp_last_time_set(struct dtcp *dtcp,
 					   struct timespec *s);
 int		dtcp_recv_itu_inc(struct dtcp *dtcp, uint_t recv);
 int		dtcp_sent_itu_inc(struct dtcp *dtcp, uint_t sent);
-int			dtcp_rate_fc_reset(struct dtcp *dtcp,
-					   struct timespec *now);
 bool			dtcp_rate_exceeded(struct dtcp *dtcp, int send);
 
 /* end SDK */

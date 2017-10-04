@@ -43,6 +43,9 @@
 /* Maximum retransmission time is 60 seconds */
 #define MAX_RTX_WAIT_TIME msecs_to_jiffies(60000)
 
+static struct dtcp_config * dtcp_config_get(struct dtcp * dtcp)
+{ return dtcp->cfg; }
+
 struct cwq * cwq_create(void)
 {
         struct cwq * tmp;
@@ -254,6 +257,7 @@ void cwq_deliver(struct cwq * queue,
 {
         struct rtxq *           rtxq;
         struct dtp *            dtp;
+        struct dtcp *           dtcp;
         struct pdu  *           tmp;
         bool                    rtx_ctrl;
         bool                    flow_ctrl;
@@ -276,12 +280,16 @@ void cwq_deliver(struct cwq * queue,
         flow_ctrl = dtcp_ps_get(dt->dtcp)->flow_ctrl;
         rcu_read_unlock();
 
-        dtp = dt_dtp(dt);
+        dtp = dt->dtp;
         if (!dtp)
                 return;
 
+        dtcp = dt->dtcp;
+        if (!dtcp)
+                return;
+
         if(flow_ctrl) {
-        	rate_ctrl = dtcp_rate_based_fctrl(dtcp_config_get(dtcp));
+        	rate_ctrl = dtcp_rate_based_fctrl(dtcp->cfg);
         }
 
         spin_lock(&queue->lock);
@@ -295,7 +303,7 @@ void cwq_deliver(struct cwq * queue,
                         return;
                 }
                 if (rtx_ctrl) {
-                        rtxq = dt_rtxq(dt);
+                        rtxq = dt->rtxq;
                         if (!rtxq) {
                                 spin_unlock(&queue->lock);
                                 LOG_ERR("Couldn't find the RTX queue");
@@ -310,36 +318,33 @@ void cwq_deliver(struct cwq * queue,
                 }
                 if(rate_ctrl) {
                 	sz = pdu_data_len(pdu);
-			sc = dtcp_sent_itu(dtcp);
+			sc = dtcp->sv->pdus_sent_in_time_unit;
 
 			if(sz >= 0) {
-				if (sz + sc >= dtcp_sndr_rate(dtcp)) {
-					dtcp_sent_itu_set(
-						dtcp,
-						dtcp_sndr_rate(dtcp));
+				if (sz + sc >= dtcp->sv->sndr_rate) {
+					dtcp->sv->pdus_sent_in_time_unit =
+						dtcp->sv->sndr_rate;
 
 					break;
 				} else {
-					dtcp_sent_itu_inc(dtcp, sz);
+					dtcp->sv->pdus_sent_in_time_unit += sz;
 				}
 			}
                 }
                 pci = pdu_pci_get_ro(pdu);
-                if (dtp_sv_max_seq_nr_set(dtp,
-                                          pci_sequence_number_get(pci)))
-                        LOG_ERR("Problems setting sender left window edge");
+                dtp->sv->max_seq_nr_sent = pci_sequence_number_get(pci);
 
                 dt_pdu_send(dt, rmt, pdu);
         }
 
         if (!can_deliver(dtp, dtcp)) {
         	if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
-			dt_sv_window_closed_set(dt, true);
+			dt->sv->window_closed = true;
         	}
 
                 if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
                 	LOG_DBG("rbfc Cannot deliver anymore, closing...");
-                	dtp_sv_rate_fulfiled_set(dtp, true);
+                	dtp->sv->rate_fulfiled = true;
                 	dtp_start_rate_timer(dtp, dtcp);
 
                 	// Cannot use anymore that port.
@@ -352,19 +357,19 @@ void cwq_deliver(struct cwq * queue,
         }
 
         if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
-        	dt_sv_window_closed_set(dt, false);
+		dt->sv->window_closed = false;
         }
 
         if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
         	//LOG_DBG("rbfc Re-opening the rate mechanism");
-        	dtp_sv_rate_fulfiled_set(dtp, false);
+                dtp->sv->rate_fulfiled = true;
         }
 
         enable_write(queue, dt);
 
         spin_unlock(&queue->lock);
 
-        LOG_DBG("CWQ has delivered until %u", dtp_sv_max_seq_nr_sent(dtp));
+        LOG_DBG("CWQ has delivered until %u", dtp->sv->max_seq_nr_sent);
         return;
 }
 
@@ -534,8 +539,8 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
         ASSERT(dt);
         ASSERT(rmt);
 
-        dtp = dt_dtp(dt);
-        dtcp = dt_dtcp(dt);
+        dtp = dt->dtp;
+        dtcp = dt->dtcp;
 
         /*
          * FIXME: this should be change since we are sending in inverse order
@@ -558,20 +563,19 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
 				dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
 
 				sz = pdu_data_len(cur->pdu);
-				sc = dtcp_sent_itu(dtcp);
+				sc = dtcp->sv->pdus_sent_in_time_unit;
 
 				if(sz >= 0) {
-					if (sz + sc >= dtcp_sndr_rate(dtcp)) {
-						dtcp_sent_itu_set(
-							dtcp,
-							dtcp_sndr_rate(dtcp));
+					if ( (sz + sc) >= dtcp->sv->sndr_rate) {
+						dtcp->sv->pdus_sent_in_time_unit =
+							dtcp->sv->sndr_rate;
 					} else {
-						dtcp_sent_itu_inc(dtcp, sz);
+						dtcp->sv->pdus_sent_in_time_unit += sz;
 					}
 				}
 
 				if(dtcp_rate_exceeded(dtcp, 1)) {
-					dtp_sv_rate_fulfiled_set(dtp, true);
+					dtp->sv->rate_fulfiled = true;
 					dtp_start_rate_timer(dtp, dtcp);
 					break;
 				}
@@ -706,8 +710,8 @@ static int rtxqueue_rtx(struct rtxqueue * q,
         ASSERT(dt);
         ASSERT(rmt);
 
-        dtp = dt_dtp(dt);
-        dtcp = dt_dtcp(dt);
+        dtp = dt->dtp;
+        dtcp = dt->dtcp;
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
                 seq = pci_sequence_number_get(pdu_pci_get_ro(cur->pdu));
@@ -730,20 +734,19 @@ static int rtxqueue_rtx(struct rtxqueue * q,
 				dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
 
                         	sz = pdu_data_len(cur->pdu);
-				sc = dtcp_sent_itu(dtcp);
+				sc = dtcp->sv->pdus_sent_in_time_unit;
 
 				if(sz >= 0) {
-					if (sz + sc >= dtcp_sndr_rate(dtcp)) {
-						dtcp_sent_itu_set(
-							dtcp,
-							dtcp_sndr_rate(dtcp));
+					if ( (sz + sc) >= dtcp->sv->sndr_rate) {
+						dtcp->sv->pdus_sent_in_time_unit = 
+							dtcp->sv->sndr_rate;
 					} else {
-						dtcp_sent_itu_inc(dtcp, sz);
+						dtcp->sv->pdus_sent_in_time_unit += sz; 
 					}
 				}
 
 				if(dtcp_rate_exceeded(dtcp, 1)) {
-					dtp_sv_rate_fulfiled_set(dtp, true);
+					dtp->sv->rate_fulfiled = true;
 					dtp_start_rate_timer(dtp, dtcp);
 					break;
 				}
@@ -810,7 +813,7 @@ static void rtx_timer_func(void * data)
         	return;
         }
 
-        q = dt_rtxq(efcp_dt(efcp));
+        q = efcp->dt->rtxq;
         tr = dt_sv_tr(q->parent);
 
         if (rtxqueue_rtx(q->queue,

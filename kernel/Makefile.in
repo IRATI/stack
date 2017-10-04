@@ -44,7 +44,7 @@ rina-irati-core-y:=						\
 	connection.o common.o policies.o			\
 	dtp-conf-utils.o dtcp-conf-utils.o      		\
 	ipcp-factories.o ipcp-instances.o			\
-	cidm.o dt.o dt-utils.o dtcp.o dtp.o efcp-utils.o efcp.o	\
+	cidm.o dt-utils.o dtcp.o dtp.o efcp-utils.o efcp.o	\
 	pff.o rmt.o						\
 	pim.o pidm.o kfa-utils.o kfa.o rina-device.o		\
 	kipcm-utils.o kipcm.o					\
