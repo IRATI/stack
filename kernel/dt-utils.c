@@ -856,7 +856,7 @@ int rtxq_destroy(struct rtxq * q)
         return 0;
 }
 
-struct rtxq * rtxq_create(struct dt *  dt,
+struct rtxq * rtxq_create(struct dtp * dtp,
                           struct rmt * rmt,
 			  struct efcp_container * container,
 			  struct dtcp_config * dtcp_cfg,

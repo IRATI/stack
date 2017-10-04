@@ -975,7 +975,7 @@ int dtp_set_policy_set_param(struct dtp* dtp,
 }
 EXPORT_SYMBOL(dtp_set_policy_set_param);
 
-struct dtp * dtp_create(struct dt * dt,
+struct dtp * dtp_create(struct efcp *       efcp,
                         struct rmt *        rmt,
                         struct dtp_config * dtp_cfg,
 			struct robject *    parent)

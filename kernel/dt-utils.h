@@ -48,7 +48,7 @@ seq_num_t            cwq_peek(struct cwq * queue);
 
 struct rtxq;
 
-struct rtxq *       rtxq_create(struct dt *  dt,
+struct rtxq *       rtxq_create(struct dtp * dtp,
                                 struct rmt * rmt,
 				struct efcp_container * container,
 				struct dtcp_config * dtcp_cfg,
