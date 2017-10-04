@@ -138,14 +138,6 @@ int efcp_container_unbind_user_ipcp(struct efcp_container * efcpc,
 }
 EXPORT_SYMBOL(efcp_container_unbind_user_ipcp);
 
-struct efcp_container * efcp_container_get(struct efcp * instance)
-{
-        if(!instance)
-                return NULL;
-        return instance->container;
-}
-EXPORT_SYMBOL(efcp_container_get);
-
 static int efcp_destroy(struct efcp * instance)
 {
         if (!instance) {
@@ -313,22 +305,6 @@ struct efcp * efcp_container_find_rtxlock(struct efcp_container * container,
 }
 EXPORT_SYMBOL(efcp_container_find_rtxlock);
 
-struct efcp_config * efcp_container_config(struct efcp_container * container)
-{
-        if (!container) {
-                LOG_ERR("Bogus container passed, bailing out");
-                return NULL;
-        }
-
-        if (!container->config) {
-                LOG_ERR("No container config set!");
-                return NULL;
-        }
-
-        return container->config;
-}
-EXPORT_SYMBOL(efcp_container_config);
-
 int efcp_container_config_set(struct efcp_container * container,
 			      struct efcp_config *    efcp_cfg)
 {
@@ -344,33 +320,6 @@ int efcp_container_config_set(struct efcp_container * container,
         return 0;
 }
 EXPORT_SYMBOL(efcp_container_config_set);
-
-cep_id_t efcp_src_cep_id(struct efcp * efcp)
-{ return connection_src_cep_id(efcp->connection); }
-
-cep_id_t efcp_dst_cep_id(struct efcp * efcp)
-{ return connection_dst_cep_id(efcp->connection); }
-
-address_t efcp_src_addr(struct efcp * efcp)
-{ return connection_src_addr(efcp->connection); }
-EXPORT_SYMBOL(efcp_src_addr);
-
-void efcp_src_addr_set(struct efcp  * efcp, address_t src_addr)
-{ connection_src_addr_set(efcp->connection, src_addr); }
-EXPORT_SYMBOL(efcp_src_addr_set);
-
-address_t efcp_dst_addr(struct efcp * efcp)
-{ return connection_dst_addr(efcp->connection); }
-
-void efcp_dst_addr_set(struct efcp * efcp, address_t dst_addr)
-{ connection_dst_addr_set(efcp->connection, dst_addr); }
-EXPORT_SYMBOL(efcp_dst_addr_set);
-
-qos_id_t efcp_qos_id(struct efcp * efcp)
-{ return connection_qos_id(efcp->connection); }
-
-port_id_t efcp_port_id(struct efcp * efcp)
-{ return connection_port_id(efcp->connection); }
 
 static int efcp_write(struct efcp * efcp,
                       struct sdu *  sdu)
@@ -1002,37 +951,6 @@ int efcp_connection_modify(struct efcp_container * cont,
 }
 EXPORT_SYMBOL(efcp_connection_modify);
 
-int efcp_bind_rmt(struct efcp_container * container,
-                  struct rmt *            rmt)
-{
-        if (!container) {
-                LOG_ERR("Bogus EFCP container passed");
-                return -1;
-        }
-        if (!rmt) {
-                LOG_ERR("Bogus RMT instance passed");
-                return -1;
-        }
-
-        container->rmt = rmt;
-
-        return 0;
-}
-EXPORT_SYMBOL(efcp_bind_rmt);
-
-int efcp_unbind_rmt(struct efcp_container * container)
-{
-        if (!container) {
-                LOG_ERR("Bogus EFCP container passed");
-                return -1;
-        }
-
-        container->rmt = NULL;
-
-        return 0;
-}
-EXPORT_SYMBOL(efcp_unbind_rmt);
-
 int efcp_enqueue(struct efcp * efcp,
                  port_id_t     port,
                  struct sdu *  sdu)
@@ -1054,13 +972,6 @@ int efcp_enqueue(struct efcp * efcp,
         }
         return 0;
 }
-
-struct dt *
-efcp_dt(struct efcp * efcp)
-{
-        return efcp->dt;
-}
-EXPORT_SYMBOL(efcp_dt);
 
 struct efcp_imap *
 efcp_container_get_instances(struct efcp_container *efcpc)

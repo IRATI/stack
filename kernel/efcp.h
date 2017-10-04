@@ -74,28 +74,12 @@ struct efcp *           efcp_container_find(struct efcp_container * container,
                                             cep_id_t                id);
 struct efcp *           efcp_container_find_rtxlock(struct efcp_container * container,
                                             	    cep_id_t                id);
-struct efcp_config *    efcp_container_config(struct efcp_container * c);
 
-int                     efcp_bind_rmt(struct efcp_container * container,
-                                      struct rmt *            rmt);
-int                     efcp_unbind_rmt(struct efcp_container * container);
-struct efcp_container * efcp_container_get(struct efcp * efcp);
 int                     efcp_enqueue(struct efcp * efcp,
                                      port_id_t     port,
                                      struct sdu *  sdu);
 int                     efcp_enable_write(struct efcp * efcp);
 int                     efcp_disable_write(struct efcp * efcp);
-
-cep_id_t                efcp_src_cep_id(struct efcp * efcp);
-cep_id_t                efcp_dst_cep_id(struct efcp * efcp);
-address_t               efcp_src_addr(struct efcp * efcp);
-void                    efcp_src_addr_set(struct efcp  * efcp, address_t src_addr);
-address_t               efcp_dst_addr(struct efcp * efcp);
-void                    efcp_dst_addr_set(struct efcp  * efcp, address_t dst_addr);
-qos_id_t                efcp_qos_id(struct efcp * efcp);
-port_id_t               efcp_port_id(struct efcp * efcp);
-
-struct dt *             efcp_dt(struct efcp * efcp);
 
 int                     efcp_address_change(struct efcp_container * c,
 					    address_t new_address);
