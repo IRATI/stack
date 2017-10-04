@@ -1138,8 +1138,8 @@ struct dtcp * dtcp_create(struct dtp *         dtp,
         struct dtcp * tmp;
         string_t *    ps_name;
 
-        if (!dt) {
-                LOG_ERR("No DT passed, bailing out");
+        if (!dtp) {
+                LOG_ERR("No DTP passed, bailing out");
                 return NULL;
         }
         if (!dtcp_cfg) {
@@ -1157,7 +1157,7 @@ struct dtcp * dtcp_create(struct dtp *         dtp,
                 return NULL;
         }
 
-        tmp->parent = dt;
+        tmp->parent = dtp;
 
 	if (robject_init_and_add(&tmp->robj,
 				 &dtcp_rtype,
