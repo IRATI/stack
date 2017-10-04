@@ -33,7 +33,6 @@
 #include "dtcp.h"
 #include "dtcp-ps.h"
 #include "dtcp-conf-utils.h"
-#include "dt.h"
 #include "dtp.h"
 #include "rmt.h"
 #include "dtp-ps.h"

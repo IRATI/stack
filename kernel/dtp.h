@@ -24,7 +24,6 @@
 #include "common.h"
 #include "rmt.h"
 #include "kfa.h"
-#include "dt.h"
 #include "ps-factory.h"
 #include "rds/robjects.h"
 
