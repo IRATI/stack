@@ -26,30 +26,6 @@
 #include "dt.h"
 #include "dt-utils.h"
 
-struct dt_sv {
-        uint_t       max_flow_pdu_size;
-        uint_t       max_flow_sdu_size;
-        timeout_t    MPL;
-        timeout_t    R;
-        timeout_t    A;
-        timeout_t    tr;
-        seq_num_t    rcv_left_window_edge;
-        bool         window_closed;
-        bool         drf_flag;
-};
-
-struct dt {
-        struct dt_sv *      sv;
-        struct dtp *        dtp;
-        struct dtcp *       dtcp;
-        struct efcp *       efcp;
-
-        struct cwq *        cwq;
-        struct rtxq *       rtxq;
-
-        spinlock_t          lock;
-};
-
 static struct dt_sv default_sv = {
         .max_flow_pdu_size    = UINT_MAX,
         .max_flow_sdu_size    = UINT_MAX,

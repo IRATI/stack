@@ -26,7 +26,6 @@
 #include "sdu.h"
 #include "ipcp-instances.h"
 #include "kfa.h"
-#include "connection.h"
 #include "rds/robjects.h"
 
 struct rmt;

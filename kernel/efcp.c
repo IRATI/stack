@@ -32,6 +32,7 @@
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
+#include "efcp-str.h"
 #include "efcp.h"
 #include "efcp-utils.h"
 #include "ipcp-utils.h"
@@ -46,21 +47,6 @@
 #include "dt-utils.h"
 #include "dtp-ps.h"
 #include "policies.h"
-
-enum efcp_state {
-        EFCP_ALLOCATED = 1,
-        EFCP_DEALLOCATED
-};
-
-struct efcp {
-        struct connection *     connection;
-        struct ipcp_instance *  user_ipcp;
-        struct dt *             dt;
-        struct efcp_container * container;
-        enum efcp_state         state;
-        atomic_t                pending_ops;
-	struct robject          robj;
-};
 
 static ssize_t efcp_attr_show(struct robject *		     robj,
                          	     struct robj_attribute * attr,
@@ -109,17 +95,6 @@ RINA_ATTRS(efcp, src_address, dst_address, src_cep_id, dst_cep_id,
 	qos_id, port_id, a_timer, r_timer, tr_timeout, max_flow_pdu_size,
 	max_flow_sdu_size, max_packet_life);
 RINA_KTYPE(efcp);
-
-struct efcp_container {
-	struct rset *        rset;
-        struct efcp_imap *   instances;
-        struct cidm *        cidm;
-        struct efcp_config * config;
-        struct rmt *         rmt;
-        struct kfa *         kfa;
-        spinlock_t           lock;
-	wait_queue_head_t    del_wq;
-};
 
 static struct efcp * efcp_create(void)
 {

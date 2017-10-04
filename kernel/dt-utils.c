@@ -43,11 +43,6 @@
 /* Maximum retransmission time is 60 seconds */
 #define MAX_RTX_WAIT_TIME msecs_to_jiffies(60000)
 
-struct cwq {
-        struct rqueue * q;
-        spinlock_t      lock;
-};
-
 struct cwq * cwq_create(void)
 {
         struct cwq * tmp;
@@ -424,14 +419,6 @@ seq_num_t cwq_peek(struct cwq * queue)
 
         return ret;
 }
-
-
-struct rtxq_entry {
-        unsigned long    time_stamp;
-        struct pdu *     pdu;
-        int              retries;
-        struct list_head next;
-};
 
 static struct rtxq_entry * rtxq_entry_create_gfp(struct pdu * pdu, gfp_t flag)
 {

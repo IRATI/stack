@@ -21,7 +21,7 @@
 #ifndef RINA_DT_H
 #define RINA_DT_H
 
-#include "common.h"
+#include "efcp-str.h"
 
 struct dtp;
 struct dtcp;
