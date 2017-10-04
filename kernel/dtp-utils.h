@@ -42,7 +42,7 @@ bool                cwq_is_empty(struct cwq * q);
 int                 cwq_flush(struct cwq * q);
 ssize_t             cwq_size(struct cwq * q);
 void                cwq_deliver(struct cwq * queue,
-                                struct dt *  dt,
+                                struct dtp * dtp,
                                 struct rmt * rmt);
 seq_num_t            cwq_peek(struct cwq * queue);
 
@@ -72,7 +72,7 @@ int                 rtxq_nack(struct rtxq * q,
                               timeout_t     tr);
 int                 rtxq_flush(struct rtxq * q);
 
-int 		    dt_pdu_send(struct dt *  dt,
+int 		    dt_pdu_send(struct dtp *  dtp,
         	    	        struct rmt * rmt,
                                 struct pdu * pdu);
 #endif

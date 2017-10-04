@@ -31,7 +31,7 @@
 #include "rmt.h"
 #include "efcp-str.h"
 #include "dtp.h"
-#include "dt-utils.h"
+#include "dtp-utils.h"
 #include "dtcp-conf-utils.h"
 #include "ps-factory.h"
 #include "dtcp-ps.h"

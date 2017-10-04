@@ -28,7 +28,7 @@
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
-#include "dt-utils.h"
+#include "dtp-utils.h"
 /* FIXME: Maybe dtcp_cfg should be moved somewhere else and then delete this */
 #include "dtcp.h"
 #include "dtcp-ps.h"
@@ -41,9 +41,6 @@
 
 /* Maximum retransmission time is 60 seconds */
 #define MAX_RTX_WAIT_TIME msecs_to_jiffies(60000)
-
-static struct dtcp_config * dtcp_config_get(struct dtcp * dtcp)
-{ return dtcp->cfg; }
 
 struct cwq * cwq_create(void)
 {
@@ -200,21 +197,18 @@ ssize_t cwq_size(struct cwq * queue)
 EXPORT_SYMBOL(cwq_size);
 
 static void enable_write(struct cwq * cwq,
-                         struct dt *  dt)
+                         struct dtp *  dtp)
 {
         struct dtcp_config * cfg;
         uint_t               max_len;
 
-        if (!dt)
-                return;
-
-        cfg = dt->dtcp->cfg;
+        cfg = dtp->dtcp->cfg;
         if (!cfg)
                 return;
 
         max_len = dtcp_max_closed_winq_length(cfg);
         if (rqueue_length(cwq->q) < max_len)
-                efcp_enable_write(dt->efcp);
+                efcp_enable_write(dtp->efcp);
 
         return;
 }
@@ -337,11 +331,11 @@ void cwq_deliver(struct cwq * queue,
         }
 
         if (!can_deliver(dtp, dtcp)) {
-        	if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
+        	if(dtcp_window_based_fctrl(dtcp->cfg)) {
 			dt->sv->window_closed = true;
         	}
 
-                if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
+                if(dtcp_rate_based_fctrl(dtcp->cfg)) {
                 	LOG_DBG("rbfc Cannot deliver anymore, closing...");
                 	dtp->sv->rate_fulfiled = true;
                 	dtp_start_rate_timer(dtp, dtcp);
@@ -355,11 +349,11 @@ void cwq_deliver(struct cwq * queue,
                 return;
         }
 
-        if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
+        if(dtcp_window_based_fctrl(dtcp->cfg)) {
 		dt->sv->window_closed = false;
         }
 
-        if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
+        if(dtcp_rate_based_fctrl(dtcp->cfg)) {
         	//LOG_DBG("rbfc Re-opening the rate mechanism");
                 dtp->sv->rate_fulfiled = true;
         }
@@ -559,7 +553,7 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
                         }
 			if(dtp &&
 				dtcp &&
-				dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
+				dtcp_rate_based_fctrl(dtcp->cfg) {
 
 				sz = pdu_data_len(cur->pdu);
 				sc = dtcp->sv->pdus_sent_in_time_unit;
@@ -730,7 +724,7 @@ static int rtxqueue_rtx(struct rtxqueue * q,
                         }
                         if(dtp &&
 				dtcp &&
-				dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
+				dtcp_rate_based_fctrl(dtcp->cfg)) {
 
                         	sz = pdu_data_len(cur->pdu);
 				sc = dtcp->sv->pdus_sent_in_time_unit;
@@ -893,10 +887,9 @@ struct rtxq * rtxq_create(struct dtp * dtp,
                 return NULL;
         }
 
-        ASSERT(dt);
         ASSERT(rmt);
 
-        tmp->parent = dt;
+        tmp->parent = dtp;
         tmp->rmt    = rmt;
 
         spin_lock_init(&tmp->lock);
