@@ -60,40 +60,14 @@ int dtcp_last_time_set(struct dtcp * dtcp, struct timespec * s)
 	ASSERT(dtcp->sv);
 	ASSERT(s);
 
-	spin_lock_bh(&dtcp->sv->lock);
+	spin_lock_bh(&dtcp->parent->sv_lock);
 	dtcp->sv->last_time.tv_sec = s->tv_sec;
 	dtcp->sv->last_time.tv_nsec = s->tv_nsec;
-	spin_unlock_bh(&dtcp->sv->lock);
+	spin_unlock_bh(&dtcp->parent->sv_lock);
 
 	return 0;
 }
 EXPORT_SYMBOL(dtcp_last_time_set);
-
-int dtcp_recv_itu_inc(struct dtcp * dtcp, uint_t recv)
-{
-	ASSERT(dtcp);
-	ASSERT(dtcp->sv);
-
-	spin_lock_bh(&dtcp->sv->lock);
-	dtcp->sv->pdus_rcvd_in_time_unit += recv;
-	spin_unlock_bh(&dtcp->sv->lock);
-
-	return 0;
-}
-EXPORT_SYMBOL(dtcp_recv_itu_inc);
-
-int dtcp_sent_itu_inc(struct dtcp * dtcp, uint_t sent)
-{
-	ASSERT(dtcp);
-	ASSERT(dtcp->sv);
-
-	spin_lock_bh(&dtcp->sv->lock);
-	dtcp->sv->pdus_sent_in_time_unit += sent;
-	spin_unlock_bh(&dtcp->sv->lock);
-
-	return 0;
-}
-EXPORT_SYMBOL(dtcp_sent_itu_inc);
 
 static seq_num_t next_snd_ctl_seq(struct dtcp * dtcp)
 {
@@ -102,9 +76,9 @@ static seq_num_t next_snd_ctl_seq(struct dtcp * dtcp)
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock_bh(&dtcp->sv->lock);
+        spin_lock_bh(&dtcp->parent->sv_lock);
         tmp = ++dtcp->sv->next_snd_ctl_seq;
-        spin_unlock_bh(&dtcp->sv->lock);
+        spin_unlock_bh(&dtcp->parent->sv_lock);
 
         return tmp;
 }
@@ -117,10 +91,10 @@ void update_rt_wind_edge(struct dtcp * dtcp)
         ASSERT(dtcp->sv);
 
         seq = dt_sv_rcv_lft_win(dtcp->parent);
-        spin_lock_bh(&dtcp->sv->lock);
+        spin_lock_bh(&dtcp->parent->sv_lock);
         seq += dtcp->sv->rcvr_credit;
         dtcp->sv->rcvr_rt_wind_edge = seq;
-        spin_unlock_bh(&dtcp->sv->lock);
+        spin_unlock_bh(&dtcp->parent->sv_lock);
 }
 EXPORT_SYMBOL(update_rt_wind_edge);
 
@@ -129,12 +103,12 @@ void update_credit_and_rt_wind_edge(struct dtcp * dtcp, uint_t credit)
         ASSERT(dtcp);
         ASSERT(dtcp->sv);
 
-        spin_lock_bh(&dtcp->sv->lock);
+        spin_lock_bh(&dtcp->parent->sv_lock);
         dtcp->sv->rcvr_credit = credit;
 	/* applying the TCP rule of not shrinking the window */
 	if (dt_sv_rcv_lft_win(dtcp->parent) + credit > dtcp->sv->rcvr_rt_wind_edge)
         	dtcp->sv->rcvr_rt_wind_edge = dt_sv_rcv_lft_win(dtcp->parent) + credit;
-        spin_unlock_bh(&dtcp->sv->lock);
+        spin_unlock_bh(&dtcp->parent->sv_lock);
 }
 EXPORT_SYMBOL(update_credit_and_rt_wind_edge);
 
@@ -265,7 +239,7 @@ static int populate_ctrl_pci(struct pci *  pci,
          * FIXME: Shouldn't we check if PDU_TYPE_ACK_AND_FC or
          * PDU_TYPE_NACK_AND_FC ?
          */
-        spin_lock_bh(&dtcp->parent->lock);
+        spin_lock_bh(&dtcp->parent->sv_lock);
         LWE = dtcp->parent->sv->rcv_left_window_edge;
         last_rcv_ctl_seq = dtcp->sv->last_rcv_ctl_seq;
 
@@ -294,7 +268,7 @@ static int populate_ctrl_pci(struct pci *  pci,
                         pci_control_time_frame_set(pci, tf);
                 }
         }
-        spin_unlock_bh(&dtcp->sv->lock);
+        spin_unlock_bh(&dtcp->parent->sv_lock);
 
         switch (pci_type(pci)) {
         case PDU_TYPE_ACK_AND_FC:
@@ -401,12 +375,12 @@ void dump_we(struct dtcp * dtcp, struct pci *  pci)
         ASSERT(dtcp);
         ASSERT(pci);
 
-        spin_lock_bh(&dtcp->sv->lock);
+        spin_lock_bh(&dtcp->parent->sv_lock);
         snd_rt_we = dtcp->sv->snd_rt_wind_edge;
         snd_lf_we = dtcp->sv->snd_lft_win;
         rcv_rt_we = dtcp->sv->rcvr_rt_wind_edge;
         rcv_lf_we = dtcp->parent->sv->rcv_left_window_edge;
-        spin_unlock_bh(&dtcp->sv->lock);
+        spin_unlock_bh(&dtcp->parent->sv_lock);
 
         new_rt_we = pci_control_new_rt_wind_edge(pci);
         new_lf_we = pci_control_new_left_wind_edge(pci);
@@ -444,9 +418,9 @@ static int rcv_nack_ctl(struct dtcp * dtcp,
         ps = container_of(rcu_dereference(dtcp->base.ps),
                           struct dtcp_ps, base);
 
-        spin_lock_bh(&dtcp->parent->lock);
+        spin_lock_bh(&dtcp->parent->sv_lock);
         tr = dtcp->parent->sv->tr;
-        spin_unlock_bh(&dtcp->parent->lock);
+        spin_unlock_bh(&dtcp->parent->sv_lock);
 
         if (ps->rtx_ctrl) {
                 if (!dtcp->parent->rtxq) {
@@ -515,7 +489,7 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
         rt = pci_control_sndr_rate(pci);
         tf = pci_control_time_frame(pci);
 
-        spin_lock_bh(&dtcp->sv->lock);
+        spin_lock_bh(&dtcp->parent->sv_lock);
         if(dtcp_window_based_fctrl(dtcp->cfg)) {
         	dtcp->sv->snd_rt_wind_edge = pci_control_new_rt_wind_edge(pci);
         }
@@ -530,7 +504,7 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
 				rt, tf);
 		}
         }
-        spin_unlock_bh(&dtcp->sv->lock);
+        spin_unlock_bh(&dtcp->parent->sv_lock);
 
         push_pdus_rmt(dtcp);
 
@@ -569,7 +543,7 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
                 LOG_ERR("Could not update RTXQ and LWE");
         rcu_read_unlock();
 
-        spin_lock_bh(&dtcp->sv->lock);
+        spin_lock_bh(&dtcp->parent->sv_lock);
 	if(dtcp_window_based_fctrl(dtcp->cfg)) {
 		dtcp->sv->snd_rt_wind_edge = pci_control_new_rt_wind_edge(pci);
 		LOG_DBG("Right Window Edge: %u", snd_rt_wind_edge(dtcp));
@@ -587,7 +561,7 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
 				rt, tf);
 	        }
 	}
-	spin_unlock_bh(&dtcp->sv->lock);
+	spin_unlock_bh(&dtcp->parent->sv_lock);
 
         LOG_DBG("Calling CWQ_deliver for DTCP: %pK", dtcp);
         push_pdus_rmt(dtcp);
@@ -636,7 +610,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
         dtcp->parent->efcp->connection->destination_address = pci_source(pci);
 
         sn = pci_sequence_number_get(pci);
-        spin_lock_bh(&dtcp->sv->lock);
+        spin_lock_bh(&dtcp->parent->sv_lock);
         last_ctrl = dtcp->sv->last_rcv_ctl_seq;
 
         if (sn <= last_ctrl) {
@@ -655,12 +629,11 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                         break;
                 }
 
-                spin_unlock_bh(&dtcp->sv->lock);
+                spin_unlock_bh(&dtcp->parent->sv_lock);
                 pdu_destroy(pdu);
                 return 0;
 
         }
-        spin_unlock_bh(&dtcp->sv->lock);
 
         rcu_read_lock();
         ps = container_of(rcu_dereference(dtcp->base.ps),
@@ -672,9 +645,8 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         /* We are in sn >= last_ctrl + 1 */
 
-        spin_lock_bh(&dtcp->sv->lock);
         dtcp->sv->last_rcv_ctl_seq = sn;
-        spin_unlock_bh(&dtcp->sv->lock);
+        spin_unlock_bh(&dtcp->parent->sv_lock);
 
         LOG_DBG("dtcp_common_rcv_control sending to proper function...");
 
@@ -743,15 +715,13 @@ pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
         flow_ctrl = ps->flow_ctrl;
         rcu_read_unlock();
 
-        spin_lock_bh(&dtcp->parent->lock);
+        spin_lock_bh(&dtcp->parent->sv_lock);
         a = dtcp->parent->sv->A;
         LWE = dtcp->parent->sv->rcv_left_window_edge;
-        spin_unlock_bh(&dtcp->parent->lock);
 
-        spin_lock_bh(&dtcp->sv->lock);
         if (dtcp->sv->last_snd_data_ack < LWE) {
         	dtcp->sv->last_snd_data_ack = LWE;
-        	spin_unlock_bh(&dtcp->sv->lock);
+        	spin_unlock_bh(&dtcp->parent->sv_lock);
 
                 if (!a) {
 #if 0
@@ -787,7 +757,7 @@ pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
                 }
                 return PDU_TYPE_ACK;
         }
-        spin_unlock_bh(&dtcp->sv->lock);
+        spin_unlock_bh(&dtcp->parent->sv_lock);
 
         return 0;
 }
@@ -872,7 +842,6 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
                 return -1;
 
         *instance->sv = sv;
-        spin_lock_init(&instance->sv->lock);
 
         rcu_read_lock();
         ps = container_of(rcu_dereference(instance->base.ps),
@@ -1342,7 +1311,7 @@ bool dtcp_rate_exceeded(struct dtcp * dtcp, int send) {
 
 	getnstimeofday(&now);
 
-	spin_lock_bh(&dtcp->sv->lock);
+	spin_lock_bh(&dtcp->parent->sv_lock);
 
 	last.tv_sec = dtcp->sv->last_time.tv_sec;
 	last.tv_nsec = dtcp->sv->last_time.tv_nsec;
@@ -1364,7 +1333,7 @@ bool dtcp_rate_exceeded(struct dtcp * dtcp, int send) {
 		rate = dtcp->sv->pdus_rcvd_in_time_unit;
 		lim = dtcp->sv->rcvr_rate;
 	}
-	spin_unlock_bh(&dtcp->sv->lock);
+	spin_unlock_bh(&dtcp->parent->sv_lock);
 
 	if (rate >= lim)
 	{

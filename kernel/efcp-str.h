@@ -98,8 +98,6 @@ struct cwq {
 
 /* This is the DT-SV part maintained by DTP */
 struct dtp_sv {
-        spinlock_t lock;
-
         uint_t       max_flow_pdu_size;
         uint_t       max_flow_sdu_size;
         timeout_t    MPL;
@@ -143,6 +141,7 @@ struct dtp {
          *       release by the AP or by the system (if the AP crashes).
          */
         struct dtp_sv *           sv; /* The state-vector */
+        spinlock_t          sv_lock; /* The state vector lock (DTP & DTCP) */
 
         struct rina_component     base;
         struct dtp_config *       cfg;
@@ -163,9 +162,6 @@ struct dtp {
 
 /* This is the DT-SV part maintained by DTCP */
 struct dtcp_sv {
-        /* SV lock */
-        spinlock_t   lock;
-
         /* TimeOuts */
         /*
          * When flow control is rate based this timeout may be

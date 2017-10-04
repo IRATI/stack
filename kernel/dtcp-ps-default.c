@@ -31,7 +31,7 @@
 #include "dtp.h"
 #include "dtcp-ps.h"
 #include "dtcp-ps-default.h"
-#include "dt-utils.h"
+#include "dtp-utils.h"
 #include "logs.h"
 
 
@@ -48,9 +48,12 @@ int default_lost_control_pdu(struct dtcp_ps * ps)
         struct pdu * pdu_ctrl;
         seq_num_t last_rcv_ctrl, snd_lft, snd_rt;
 
-        last_rcv_ctrl = last_rcv_ctrl_seq(dtcp);
-        snd_lft       = snd_lft_win(dtcp);
-        snd_rt        = snd_rt_wind_edge(dtcp);
+        spin_lock_bh(&dtcp->parent->sv_lock);
+        last_rcv_ctrl = dtcp->sv->last_rcv_ctl_seq;
+        snd_lft       = dtcp->sv->snd_lft_win;
+        snd_rt        = dtcp->sv->snd_rt_wind_edge;
+        spin_unlock_bh(&dtcp->parent->sv_lock);
+
         pdu_ctrl      = pdu_ctrl_ack_create(dtcp,
                                             last_rcv_ctrl,
                                             snd_lft,
@@ -115,7 +118,6 @@ int default_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
 
 int default_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
 {
-        struct dtp * dtp;
         struct pci * pci;
         int ret;
 
@@ -126,15 +128,14 @@ int default_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
                 return -1;
         }
 
-        dtp = dt_dtp(dtcp_dt(dtcp));
-        if (!dtp) {
+        if (!dtcp->parent) {
                 LOG_ERR("No DTP from dtcp->parent");
                 return -1;
         }
 
         /* Invoke delimiting and update left window edge */
 
-        pci = process_A_expiration(dtp, dtcp);
+        pci = process_A_expiration(dtcp->parent, dtcp);
         if (!pci)
                 return 0;
 
@@ -175,6 +176,7 @@ int default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {
         struct dtcp * dtcp = ps->dm;
         seq_num_t LWE;
+        seq_num_t RWE;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -185,11 +187,14 @@ int default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
                 return -1;
         }
 
-        LWE = dt_sv_rcv_lft_win(dtcp_dt(dtcp));
-        update_rt_wind_edge(dtcp);
+        spin_lock_bh(&dtcp->parent->sv_lock);
+        LWE = dtcp->parent->sv->rcv_left_window_edge;
+        dtcp->sv->rcvr_rt_wind_edge = LWE + dtcp->sv->rcvr_credit;
+        RWE = dtcp->sv->rcvr_rt_wind_edge;
+        spin_unlock_bh(&dtcp->parent->sv_lock);
 
         LOG_DBG("DTCP: %pK", dtcp);
-        LOG_DBG("LWE: %u  RWE: %u", LWE, rcvr_rt_wind_edge(dtcp));
+        LOG_DBG("LWE: %u  RWE: %u", LWE, RWE);
 
         return 0;
 }
@@ -212,15 +217,17 @@ int default_rate_reduction(struct dtcp_ps * ps, const struct pci * pci)
 	       return 0;
 	}
 
-	dtcp_sndr_rate_set(dtcp, rt);
-	dtcp_rcvr_rate_set(dtcp, rt);
-
-	dtcp_time_frame_set(dtcp, pci_control_time_frame(pci));
+	spin_lock_bh(&dtcp->parent->sv_lock);
+	dtcp->sv->sndr_rate = rt;
+	dtcp->sv->rcvr_rate = rt;
+	dtcp->sv->time_unit = tf;
 
 	LOG_DBG("DTCP: %pK", dtcp);
 	LOG_DBG("    Rate: %u, Time: %u",
-		dtcp_sndr_rate(dtcp),
-		dtcp_time_frame(dtcp));;
+		dtcp->sv->sndr_rate,
+		dtcp->sv->time_unit;
+
+	spin_unlock_bh(&dtcp->parent->sv_lock);
 
 	return 0;
 }
@@ -228,7 +235,6 @@ int default_rate_reduction(struct dtcp_ps * ps, const struct pci * pci)
 int default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
 {
         struct dtcp *       dtcp;
-        struct dt *         dt;
         uint_t              rtt, new_sample, srtt, rttvar, trmsecs;
         timeout_t           start_time;
         int                 abs;
@@ -238,13 +244,10 @@ int default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
         dtcp = ps->dm;
         if (!dtcp)
                 return -1;
-        dt = dtcp_dt(dtcp);
-        if (!dt)
-                return -1;
 
         LOG_DBG("RTT Estimator...");
 
-        start_time = rtxq_entry_timestamp(dt_rtxq(dt), sn);
+        start_time = rtxq_entry_timestamp(dtcp->parent->rtxq, sn);
         if (start_time == 0) {
         	LOG_DBG("RTTestimator: PDU %u has been retransmitted", sn);
                 return 0;
@@ -252,9 +255,11 @@ int default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
 
         new_sample = jiffies_to_msecs(jiffies - start_time);
 
-        rtt        = dtcp_rtt(dtcp);
-        srtt       = dtcp_srtt(dtcp);
-        rttvar     = dtcp_rttvar(dtcp);
+        spin_lock_bh(&dtcp->parent->sv_lock);
+
+        rtt        = dtcp->sv->rtt;
+        srtt       = dtcp->sv->srtt;
+        rttvar     = dtcp->sv->rttvar;
 
         if (!rtt) {
         	rtt = new_sample;
@@ -279,10 +284,13 @@ int default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
         /* RTO (tr) less than 1s? (not for the common policy) */
         /*trmsecs  = trmsecs < 1000 ? 1000 : trmsecs;*/
 
-        dtcp_rtt_set(dtcp, rtt);
-        dtcp_rttvar_set(dtcp, rttvar);
-        dtcp_srtt_set(dtcp, srtt);
-        dt_sv_tr_set(dt, msecs_to_jiffies(trmsecs));
+        dtcp->sv->rtt = rtt;
+        dtcp->sv->rttvar = rttvar;
+        dtcp->sv->srtt = srtt;
+        dtcp->sv->tr = msecs_to_jiffies(trmsecs);
+
+        spin_unlock_bh(&dtcp->parent->sv_lock);
+
 	LOG_DBG("New RTT %u; New Tr: %u ms", rtt, trmsecs);
 
         return 0;
