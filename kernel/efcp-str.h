@@ -78,7 +78,7 @@ struct efcp_container {
 struct efcp {
         struct connection *     connection;
         struct ipcp_instance *  user_ipcp;
-        struct dt *             dt;
+        struct dtp *            dtp;
         struct efcp_container * container;
         enum efcp_state         state;
         atomic_t                pending_ops;

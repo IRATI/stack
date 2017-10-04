@@ -60,24 +60,24 @@ static ssize_t efcp_attr_show(struct robject *		     robj,
 
 	if (strcmp(robject_attr_name(attr), "src_address") == 0)
 		return sprintf(buf, "%u\n",
-			connection_src_addr(instance->connection));
+			       instance->connection->source_address);
 	if (strcmp(robject_attr_name(attr), "dst_address") == 0)
 		return sprintf(buf, "%u\n",
-			connection_dst_addr(instance->connection));
+			       instance->connection->destination_address);
 	if (strcmp(robject_attr_name(attr), "src_cep_id") == 0)
 		return sprintf(buf, "%d\n",
-			connection_src_cep_id(instance->connection));
+			       instance->connection->source_cep_id);
 	if (strcmp(robject_attr_name(attr), "dst_cep_id") == 0)
 		return sprintf(buf, "%d\n",
-			connection_dst_cep_id(instance->connection));
+			       instance->connection->destination_cep_id);
 	if (strcmp(robject_attr_name(attr), "qos_id") == 0)
 		return sprintf(buf, "%u\n",
-			connection_qos_id(instance->connection));
+			       instance->connection->qos_id);
 	if (strcmp(robject_attr_name(attr), "port_id") == 0)
 		return sprintf(buf, "%u\n",
-			connection_port_id(instance->connection));
+			       instance->connection->port_id);
 	if (strcmp(robject_attr_name(attr), "a_timer") == 0)
-		return sprintf(buf, "%u\n", dt_sv_a(instance->dt));
+		return sprintf(buf, "%u\n", instance->);
 	if (strcmp(robject_attr_name(attr), "r_timer") == 0)
 		return sprintf(buf, "%u\n", dt_sv_r(instance->dt));
 	if (strcmp(robject_attr_name(attr), "tr_timeout") == 0)
