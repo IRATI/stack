@@ -26,6 +26,7 @@
 #define RINA_PREFIX "connection"
 
 #include "connection.h"
+#include "rds/rmem.h"
 
 struct connection * connection_create(void)
 {

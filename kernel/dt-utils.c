@@ -253,7 +253,6 @@ void cwq_deliver(struct cwq * queue,
                  struct rmt * rmt)
 {
         struct rtxq *           rtxq;
-        struct dtcp *           dtcp;
         struct dtp *            dtp;
         struct pdu  *           tmp;
         bool                    rtx_ctrl;
@@ -272,13 +271,9 @@ void cwq_deliver(struct cwq * queue,
         if (!dt)
                 return;
 
-        dtcp = dt_dtcp(dt);
-        if (!dtcp)
-                return;
-
         rcu_read_lock();
-        rtx_ctrl  = dtcp_ps_get(dtcp)->rtx_ctrl;
-        flow_ctrl = dtcp_ps_get(dtcp)->flow_ctrl;
+        rtx_ctrl  = dtcp_ps_get(dt->dtcp)->rtx_ctrl;
+        flow_ctrl = dtcp_ps_get(dt->dtcp)->flow_ctrl;
         rcu_read_unlock();
 
         dtp = dt_dtp(dt);
