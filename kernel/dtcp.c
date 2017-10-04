@@ -1130,7 +1130,7 @@ int dtcp_set_policy_set_param(struct dtcp * dtcp,
 }
 EXPORT_SYMBOL(dtcp_set_policy_set_param);
 
-struct dtcp * dtcp_create(struct dt *          dt,
+struct dtcp * dtcp_create(struct dtp *         dtp,
                           struct rmt *         rmt,
                           struct dtcp_config * dtcp_cfg,
 			  struct robject *     parent)

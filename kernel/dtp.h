@@ -30,7 +30,7 @@
 
 #define DTP_INACTIVITY_TIMERS_ENABLE 1
 
-struct dtp * dtp_create(struct dt *         dt,
+struct dtp * dtp_create(struct efcp *       efcp,
                         struct rmt *        rmt,
                         struct dtp_config * dtp_cfg,
 			struct robject *    parent);

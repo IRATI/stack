@@ -55,7 +55,7 @@ static ssize_t efcp_attr_show(struct robject *		     robj,
 	struct efcp * instance;
 
 	instance = container_of(robj, struct efcp, robj);
-	if (!instance || !instance->connection || !instance->dt)
+	if (!instance || !instance->connection || !instance->dtp)
 		return 0;
 
 	if (strcmp(robject_attr_name(attr), "src_address") == 0)
@@ -77,17 +77,19 @@ static ssize_t efcp_attr_show(struct robject *		     robj,
 		return sprintf(buf, "%u\n",
 			       instance->connection->port_id);
 	if (strcmp(robject_attr_name(attr), "a_timer") == 0)
-		return sprintf(buf, "%u\n", instance->);
+		return sprintf(buf, "%u\n", instance->dtp->sv->A);
 	if (strcmp(robject_attr_name(attr), "r_timer") == 0)
-		return sprintf(buf, "%u\n", dt_sv_r(instance->dt));
+		return sprintf(buf, "%u\n", instance->dtp->sv->R);
 	if (strcmp(robject_attr_name(attr), "tr_timeout") == 0)
-		return sprintf(buf, "%u\n", dt_sv_tr(instance->dt));
+		return sprintf(buf, "%u\n", instance->dtp->sv->tr);
 	if (strcmp(robject_attr_name(attr), "max_flow_pdu_size") == 0)
-		return sprintf(buf, "%u\n", dt_sv_max_pdu_size(instance->dt));
+		return sprintf(buf, "%u\n",
+			       instance->dtp->sv->max_flow_pdu_size);
 	if (strcmp(robject_attr_name(attr), "max_flow_sdu_size") == 0)
-		return sprintf(buf, "%u\n", dt_sv_max_sdu_size(instance->dt));
+		return sprintf(buf, "%u\n",
+			       instance->dtp->sv->max_flow_sdu_size);
 	if (strcmp(robject_attr_name(attr), "max_packet_life") == 0)
-		return sprintf(buf, "%u\n", dt_sv_mpl(instance->dt));
+		return sprintf(buf, "%u\n", instance->dtp->sv->MPL);
 	return 0;
 }
 RINA_SYSFS_OPS(efcp);
@@ -140,12 +142,6 @@ EXPORT_SYMBOL(efcp_container_unbind_user_ipcp);
 
 static int efcp_destroy(struct efcp * instance)
 {
-	struct cwq * cwq;
-	struct dt * dt;
-	struct dtp * dtp;
-	struct dtcp * dtcp;
-	struct rtxq * rtxq;
-
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
@@ -157,13 +153,13 @@ static int efcp_destroy(struct efcp * instance)
                                 connection_port_id(instance->connection));
         }
 
-        if (instance->dt) {
+        if (instance->dtp) {
                 /*
                  * FIXME:
                  *   Shouldn't we check for flows running, before
                  *   unbinding dtp, dtcp, cwq and rtxw ???
                  */
-                dt_destroy(instance->dt);
+                dtp_destroy(instance->dtp);
         } else
                 LOG_WARN("No DT instance present");
 
@@ -288,8 +284,8 @@ struct efcp * efcp_container_find_rtxlock(struct efcp_container * container,
         spin_lock_bh(&container->lock);
         tmp = efcp_imap_find(container->instances, id);
         if (tmp) {
-        	if (tmp->dt->rtxq)
-        		spin_lock(&tmp->dt->rtxq->lock);
+        	if (tmp->dtp->rtxq)
+        		spin_lock(&tmp->dtp->rtxq->lock);
 
         }
         spin_unlock_bh(&container->lock);
@@ -327,13 +323,13 @@ static int efcp_write(struct efcp * efcp,
                 return -1;
         }
 
-        if (!efcp->dt || !efcp->dt->dtp) {
+        if (!efcp->dtp) {
                 LOG_ERR("No DTP instance available");
                 sdu_destroy(sdu);
                 return -1;
         }
 
-        if (dtp_write(efcp->dt->dtp, sdu)) {
+        if (dtp_write(efcp->dtp, sdu)) {
                 LOG_ERR("Could not write SDU to DTP");
                 return -1;
         }
@@ -418,25 +414,19 @@ static int efcp_receive(struct efcp * efcp,
 
         pdu_type = pci_type(pci);
         if (pdu_type_is_control(pdu_type)) {
-                if (!efcp->dt->dtcp) {
+                if (!efcp->dtp || !efcp->dtp->dtcp) {
                         LOG_ERR("No DTCP instance available");
                         pdu_destroy(pdu);
                         return -1;
                 }
 
-                if (dtcp_common_rcv_control(efcp->dt->dtcp, pdu))
+                if (dtcp_common_rcv_control(efcp->dtp->dtcp, pdu))
                         return -1;
 
                 return 0;
         }
 
-        if (!efcp->dt->dtp) {
-                LOG_ERR("No DTP instance available");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        if (dtp_receive(efcp->dt->dtp, pdu)) {
+        if (dtp_receive(efcp->dtp, pdu)) {
                 LOG_ERR("DTP cannot receive this PDU");
                 return -1;
         }
@@ -577,7 +567,6 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         struct efcp *       tmp;
         struct connection * connection;
         cep_id_t            cep_id;
-        struct dtp *        dtp;
         struct dtcp *       dtcp;
         struct cwq *        cwq;
         struct rtxq *       rtxq;
@@ -640,35 +629,22 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 return cep_id_bad();
 	}
 
-        tmp->dt = dt_create();
-        if (!tmp->dt) {
-                efcp_destroy(tmp);
-                return cep_id_bad();
-        }
-        ASSERT(tmp->dt);
-        /* FIXME: Initialization of dt required */
 
         /* FIXME: dtp_create() takes ownership of the connection parameter */
-        dtp = dtp_create(tmp->dt,
-                         container->rmt,
-                         dtp_cfg,
-			 &tmp->robj);
-        if (!dtp) {
+        tmp->dtp = dtp_create(tmp, container->rmt, dtp_cfg, &tmp->robj);
+        if (!tmp->dtp) {
                 efcp_destroy(tmp);
                 return cep_id_bad();
         }
-
-        ASSERT(dtp);
-        tmp->dt->dtp = dtp;
 
         dtcp = NULL;
         rcu_read_lock();
-        dtp_ps = dtp_ps_get(dtp);
+        dtp_ps = dtp_ps_get(tmp->dtp);
         a = dtp_ps->initial_a_timer;
         dtcp_present = dtp_ps->dtcp_present;
         rcu_read_unlock();
         if (dtcp_present) {
-                dtcp = dtcp_create(tmp->dt,
+                dtcp = dtcp_create(tmp->dtp,
                                    container->rmt,
                                    dtcp_cfg,
 				   &tmp->robj);
@@ -677,7 +653,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                         return cep_id_bad();
                 }
 
-                tmp->dt->dtcp = dtcp;
+                tmp->dtp->dtcp = dtcp;
         }
 
         if (dtcp_window_based_fctrl(dtcp_cfg) ||
@@ -688,21 +664,21 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                         efcp_destroy(tmp);
                         return cep_id_bad();
                 }
-                tmp->dt->cwq = cwq;
+                tmp->dtp->cwq = cwq;
         }
 
         if (dtcp_rtx_ctrl(dtcp_cfg)) {
-                rtxq = rtxq_create(tmp->dt, container->rmt, container,
+                rtxq = rtxq_create(tmp->dtp, container->rmt, container,
                 		   dtcp_cfg, cep_id);
                 if (!rtxq) {
                         LOG_ERR("Failed to create rexmsn queue");
                         efcp_destroy(tmp);
                         return cep_id_bad();
                 }
-                tmp->dt->rtxq = rtxq;
+                tmp->dtp->rtxq = rtxq;
         }
 
-        tmp->dt->efcp = tmp;
+        tmp->dtp->efcp = tmp;
 
         /* FIXME: This is crap and have to be rethinked */
 
@@ -730,7 +706,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 return cep_id_bad();
         }
 
-        if (dtp_sv_init(dtp,
+        if (dtp_sv_init(tmp->dtp,
                         dtcp_rtx_ctrl(dtcp_cfg),
                         dtcp_window_based_fctrl(dtcp_cfg),
                         dtcp_rate_based_fctrl(dtcp_cfg))) {

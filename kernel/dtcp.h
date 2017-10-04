@@ -24,7 +24,7 @@
 #include "common.h"
 #include "sdu.h"
 #include "pdu.h"
-#include "dt.h"
+#include "efcp-str.h"
 #include "ps-factory.h"
 #include "rds/robjects.h"
 
@@ -34,7 +34,7 @@ struct dtcp_rctrl_config;
 struct connection;
 struct rmt;
 
-struct dtcp *        dtcp_create(struct dt *          dt,
+struct dtcp *        dtcp_create(struct dtp *         dtp,
                                  struct rmt *         rmt,
                                  struct dtcp_config * dtcp_cfg,
 				 struct robject *     parent);
