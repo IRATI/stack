@@ -164,153 +164,6 @@ RINA_ATTRS(dtp, init_a_timer, max_sdu_gap, partial_delivery,
 		    ps_name);
 RINA_KTYPE(dtp);
 
-struct dt * dtp_dt(struct dtp * dtp)
-{
-        return dtp->parent;
-}
-
-struct rmt * dtp_rmt(struct dtp * dtp)
-{
-        return dtp->rmt;
-}
-
-struct dtp_sv * dtp_dtp_sv(struct dtp * dtp)
-{
-        return dtp->sv;
-}
-
-struct dtp_config * dtp_config_get(struct dtp * dtp)
-{
-	return dtp->cfg;
-}
-
-int nxt_seq_reset(struct dtp_sv * sv, seq_num_t sn)
-{
-        if (!sv)
-                return -1;
-
-        spin_lock_bh(&sv->lock);
-        sv->seq_nr_to_send = sn;
-        spin_unlock_bh(&sv->lock);
-
-        return 0;
-}
-
-static seq_num_t nxt_seq_get(struct dtp_sv * sv)
-{
-        seq_num_t     tmp;
-
-        ASSERT(sv);
-
-        spin_lock_bh(&sv->lock);
-        tmp = ++sv->seq_nr_to_send;
-        spin_unlock_bh(&sv->lock);
-
-        return tmp;
-}
-
-seq_num_t dtp_sv_last_nxt_seq_nr(struct dtp * instance)
-{
-        seq_num_t       tmp;
-        struct dtp_sv * sv;
-
-        if (!instance) {
-                LOG_ERR("Bogus instance passed");
-                return -1;
-        }
-        sv = instance->sv;
-        ASSERT(sv);
-
-        spin_lock_bh(&sv->lock);
-        tmp = sv->seq_nr_to_send;
-        spin_unlock_bh(&sv->lock);
-
-        return tmp;
-}
-
-seq_num_t dtp_sv_max_seq_nr_sent(struct dtp * instance)
-{
-        seq_num_t       tmp;
-        struct dtp_sv * sv;
-
-        if (!instance) {
-                LOG_ERR("Bogus instance passed");
-                return -1;
-        }
-        sv = instance->sv;
-        ASSERT(sv);
-
-        spin_lock_bh(&sv->lock);
-        tmp = sv->max_seq_nr_sent;
-        spin_unlock_bh(&sv->lock);
-
-        return tmp;
-}
-
-int dtp_sv_max_seq_nr_set(struct dtp * instance, seq_num_t num)
-{
-        struct dtp_sv * sv;
-
-        if (!instance) {
-                LOG_ERR("Bogus instance passed");
-                return -1;
-        }
-        sv = instance->sv;
-        ASSERT(sv);
-
-        spin_lock_bh(&sv->lock);
-        if (sv->max_seq_nr_sent < num)
-                sv->max_seq_nr_sent = num;
-        spin_unlock_bh(&sv->lock);
-
-        return 0;
-}
-
-static bool sv_rate_fulfiled(struct dtp_sv * sv)
-{
-        bool          tmp;
-
-        spin_lock_bh(&sv->lock);
-        tmp = sv->rate_fulfiled;
-        spin_unlock_bh(&sv->lock);
-
-        return tmp;
-}
-
-bool dtp_sv_rate_fulfiled(struct dtp * instance)
-{
-        struct dtp_sv * sv;
-
-        if (!instance) {
-                LOG_ERR("Bogus instance passed");
-                return false;
-        }
-        sv = instance->sv;
-        ASSERT(sv);
-
-        return sv_rate_fulfiled(sv);
-}
-
-int dtp_sv_rate_fulfiled_set(struct dtp * instance, bool fulfiled)
-{
-        struct dtp_sv * sv;
-
-        if (!instance) {
-                LOG_ERR("Bogus instance passed");
-                return -1;
-        }
-        sv = instance->sv;
-        ASSERT(sv);
-
-        LOG_DBG("rbfc Rate set to %u (0=some more, 1=consumed)", fulfiled);
-
-        spin_lock_bh(&sv->lock);
-        sv->rate_fulfiled = fulfiled;
-        spin_unlock_bh(&sv->lock);
-
-        return 0;
-}
-
 int dtp_initial_sequence_number(struct dtp * instance)
 {
         struct dtp_ps *ps;
@@ -1498,19 +1351,6 @@ stats_nounlock_err_exit:
 	return -1;
 }
 
-void dtp_drf_required_set(struct dtp * dtp)
-{ dtp->sv->drf_required = true; }
-
-/*
-static bool is_drf_required(struct dtp * dtp)
-{
-        spin_lock_bh(&dtp->sv->lock);
-        ret = dtp->sv->drf_required;
-        spin_unlock_bh(&dtp->sv->lock);
-        return ret;
-}
-*/
-
 static bool is_fc_overrun(
 	struct dt * dt, struct dtcp * dtcp, seq_num_t seq_num, int pdul)
 {
@@ -1821,11 +1661,6 @@ int dtp_receive(struct dtp * instance,
 
         LOG_DBG("DTP receive ended...");
         return 0;
-}
-
-struct rtimer * dtp_sender_inactivity_timer(struct dtp * instance)
-{
-        return instance->timers.sender_inactivity;
 }
 
 int dtp_ps_publish(struct ps_factory * factory)
