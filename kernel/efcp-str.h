@@ -273,7 +273,7 @@ struct dtcp_sv {
 };
 
 struct dtcp {
-        struct dt *            parent;
+        struct dtp *            parent;
 
         /*
          * NOTE: The DTCP State Vector can be discarded during long periods of
