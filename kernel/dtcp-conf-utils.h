@@ -161,7 +161,6 @@ bool                        dtcp_rtx_ctrl(struct dtcp_config * cfg);
 struct dtcp_fctrl_config *  dtcp_fctrl_cfg(struct dtcp_config * cfg);
 struct dtcp_rxctrl_config * dtcp_rxctrl_cfg(struct dtcp_config * cfg);
 struct policy *             dtcp_lost_control_pdu(struct dtcp_config * cfg);
-struct policy *             dtcp_ps(struct dtcp_config * cfg);
 struct policy *             dtcp_rtt_estimator(struct dtcp_config * cfg);
 
 #endif
