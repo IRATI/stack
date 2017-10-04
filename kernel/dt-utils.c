@@ -989,16 +989,6 @@ int rtxq_flush(struct rtxq * q)
 }
 EXPORT_SYMBOL(rtxq_flush);
 
-int rtxq_lock(struct rtxq * q)
-{
-        if (!q || !q->queue)
-                return -1;
-
-        spin_lock(&q->lock);
-        return 0;
-}
-EXPORT_SYMBOL(rtxq_lock);
-
 int rtxq_ack(struct rtxq * q,
              seq_num_t     seq_num,
              unsigned int  tr)
