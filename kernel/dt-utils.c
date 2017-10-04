@@ -200,29 +200,19 @@ EXPORT_SYMBOL(cwq_size);
 static void enable_write(struct cwq * cwq,
                          struct dt *  dt)
 {
-        struct dtcp *        dtcp;
-        struct dtp *         dtp;
         struct dtcp_config * cfg;
         uint_t               max_len;
 
         if (!dt)
                 return;
 
-        dtcp = dt_dtcp(dt);
-        if (!dtcp)
-                return;
-
-        cfg = dtcp_config_get(dtcp);
+        cfg = dt->dtcp->cfg;
         if (!cfg)
-                return;
-
-        dtp = dt_dtp(dt);
-        if (!dtp)
                 return;
 
         max_len = dtcp_max_closed_winq_length(cfg);
         if (rqueue_length(cwq->q) < max_len)
-                efcp_enable_write(dt_efcp(dt));
+                efcp_enable_write(dt->efcp);
 
         return;
 }
@@ -233,11 +223,11 @@ static bool can_deliver(struct dtp * dtp, struct dtcp * dtcp)
         bool is_wb, is_rb;
         struct dtp_ps * ps;
 
-        is_wb = dtcp_window_based_fctrl(dtcp_config_get(dtcp));
-        is_rb = dtcp_rate_based_fctrl(dtcp_config_get(dtcp));
+        is_wb = dtcp_window_based_fctrl(dtcp->cfg);
+        is_rb = dtcp_rate_based_fctrl(dtcp->cfg);
 
         if (is_wb)
-                w_ret = (dtp_sv_max_seq_nr_sent(dtp) < dtcp_snd_rt_win(dtcp));
+                w_ret = (dtp->sv->max_seq_nr_sent < dtcp->sv->snd_rt_wind_edge);
 
 	if (is_rb)
                 r_ret = !dtcp_rate_exceeded(dtcp, 0);
