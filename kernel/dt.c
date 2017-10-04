@@ -80,40 +80,71 @@ struct dt * dt_create(void)
 
 int dt_destroy(struct dt * dt)
 {
+	struct dtp * dtp = NULL;
+	struct dtcp * dtcp = NULL;
+	struct cwq * cwq = NULL;
+	struct rtxq * rtxq = NULL;
+	int ret = 0;
+
         if (!dt)
                 return -1;
 
+	spin_lock_bh(&dt->lock);
+
         if (dt->dtp) {
-                LOG_ERR("DTP %pK is still bound to instace %pK, "
-                        "unbind it first", dt->dtp, dt);
-                return -1;
+                dtp = dt->dtp;
+                dt->dtp = NULL; /* Useful */
         }
+
         if (dt->dtcp) {
-                LOG_ERR("DTCP %pK is still bound to DT %pK, "
-                        "unbind it first", dt->dtcp, dt);
-                return -1;
+                dtcp = dt->dtcp;
+                dt->dtcp = NULL; /* Useful */
         }
 
         if (dt->cwq) {
-                if (cwq_destroy(dt->cwq)) {
-                        LOG_ERR("Failed to destroy closed window queue");
-                        return -1;
-                }
+                cwq = dt->cwq;
                 dt->cwq = NULL; /* Useful */
         }
 
         if (dt->rtxq) {
-                if (rtxq_destroy(dt->rtxq)) {
+        	rtxq = dt->rtxq;
+        	dt->rtxq = NULL; /* Useful */
+        }
+
+        spin_unlock_bh(&dt->lock);
+
+        if (dtp) {
+        	if (dtp_destroy(dtp)) {
+        		LOG_WARN("Error destroying DTP");
+        		ret = -1;
+        	}
+        }
+
+        if (dtcp) {
+        	if (dtcp_destroy(dtcp)) {
+        		LOG_WARN("Error destroying DTCP");
+        		ret = -1;
+        	}
+        }
+
+        if (cwq) {
+        	if (cwq_destroy(cwq)) {
+        		LOG_WARN("Error destroying CWQ");
+        		ret = -1;
+        	}
+        }
+
+        if (rtxq) {
+                if (rtxq_destroy(rtxq)) {
                         LOG_ERR("Failed to destroy rexmsn queue");
-                        return -1;
+                        ret = -1;
                 }
-                dt->rtxq = NULL; /* Useful */
         }
 
         rkfree(dt->sv);
         rkfree(dt);
 
-        LOG_DBG("Instance %pK destroyed successfully", dt);
+        LOG_DBG("Instance %pK destroyed. Result %d", dt, ret);
 
-        return 0;
+        return ret;
 }

@@ -25,7 +25,6 @@
 
 #include "common.h"
 #include "kfa.h"
-#include "connection.h"
 #include "rmt.h"
 #include "dt.h"
 #include "ps-factory.h"
@@ -45,6 +44,15 @@ struct efcp_imap_entry {
         cep_id_t          key;
         struct efcp *     value;
         struct hlist_node hlist;
+};
+
+struct connection {
+        port_id_t              port_id;
+        address_t              source_address;
+        address_t              destination_address;
+        cep_id_t               source_cep_id;
+        cep_id_t               destination_cep_id;
+        qos_id_t               qos_id;
 };
 
 /*

@@ -71,7 +71,6 @@ int                 rtxq_nack(struct rtxq * q,
                               seq_num_t     seq_num,
                               timeout_t     tr);
 int                 rtxq_flush(struct rtxq * q);
-int                 rtxq_lock(struct rtxq * q);
 
 int 		    dt_pdu_send(struct dt *  dt,
         	    	        struct rmt * rmt,
