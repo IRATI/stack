@@ -1,0 +1,117 @@
+#!/bin/bash
+
+BUILDDIR=`pwd`/build
+SRCDIR=`pwd`
+FLAGS="--enable-debug"
+TCP_UDP_BUFFER_SIZE=1500
+INSTALL_PREFIX="/"
+KERNBUILDDIR="/lib/modules/`uname -r`/build"
+
+# Option parsing
+while [[ $# > 0 ]]
+do
+    key="$1"
+    case $key in
+        "--prefix")
+        if [ -n "$2" ]; then
+            INSTALL_PREFIX=$2
+            shift
+        else
+            echo "--prefix requires a path argument"
+            exit 255
+        fi
+        ;;
+        
+        "--tcp-udp-buffer-size")
+        if [ -n "$2" ]; then
+            TCP_UDP_BUFFER_SIZE=$2
+            shift
+        else
+            echo "--tcp-udp-buffer-size requires a value argument"
+            exit 255
+        fi
+        ;;
+
+        "--kernbuilddir")
+        if [ -n "$2" ]; then
+            KERNBUILDDIR=$2
+            shift
+        else
+            echo "--kernbuilddir requires a path argument"
+            exit 255
+        fi
+        ;;
+
+        *)
+        echo "Unknown option '$key'"
+        exit 255
+        ;;
+    esac
+    shift
+done
+
+(cd kernel && ./configure --kernbuilddir $KERNBUILDDIR --tcp-udp-buffer-size $TCP_UDP_BUFFER_SIZE) || {
+    echo "Cannot complete kernel configuration"
+    exit 1
+}
+
+echo "Installation directory will be \`$INSTALL_PREFIX'"
+if test -n "$INSTALL_PREFIX" ; then
+    mkdir -p $INSTALL_PREFIX || {
+        echo "Cannot create directory \`$INSTALL_PREFIX'"
+    }
+fi
+
+echo "Build directory will be \`$BUILDDIR'"
+rm -rf $BUILDDIR
+if test -n "$BUILDDIR" ; then
+    mkdir -p $BUILDDIR || {
+        echo "Cannot create directory \`$BUILDDIR'"
+    }
+fi
+
+echo "Java directory will be \`$BUILDDIR/java'"
+if test -n "$BUILDDIR/java" ; then
+    mkdir -p $BUILDDIR/java || {
+        echo "Cannot create directory \`$BUILDDIR/java'"
+    }
+fi
+
+echo "Creating symbolic links within librina folder"
+(cd librina/src && ln -sf ../../common/ker-numtables.c ker-numtables.c && ln -sf ../../common/serdes-utils.c serdes-utils.c)
+(cd librina/src && mkdir irati && cd irati && ln -sf ../../../include/irati/kucommon.h kucommon.h && ln -sf ../../../include/irati/kernel-msg.h kernel-msg.h && ln -sf ../../../include/irati/serdes-utils.h serdes-utils.h)
+
+echo "Starting librina phase"
+(cd librina && ./bootstrap) || {
+    echo "Cannot bootstrap"
+    exit 1
+}
+(mkdir -p $BUILDDIR/librina && cd $BUILDDIR/librina && $SRCDIR/librina/configure --disable-java-bindings $FLAGS --prefix=$INSTALL_PREFIX && make clean install) || {
+    echo "Cannot complete librina phase"
+    exit 1
+}
+
+echo "Starting rinad phase"
+(cd rinad && ./bootstrap) || {
+    echo "Cannot bootstrap"
+    exit 1
+}
+(mkdir -p $BUILDDIR/rinad && cd $BUILDDIR/rinad && PKG_CONFIG_PATH=$INSTALL_PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$INSTALL_PREFIX/lib:$LD_LIBRARY_PATH $SRCDIR/rinad/configure --prefix=$INSTALL_PREFIX --disable-java-bindings $FLAGS) || {
+    echo "Cannot complete rinad phase"
+    exit 1
+}
+
+echo "Starting rina-tools phase"
+(cd rina-tools && ./bootstrap) || {
+    echo "$ME: Cannot bootstrap"
+    exit 1
+}
+(mkdir -p $BUILDDIR/rina-tools && cd $BUILDDIR/rina-tools && PKG_CONFIG_PATH=$INSTALL_PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$INSTALL_PREFIX/lib:$LD_LIBRARY_PATH $SRCDIR/rina-tools/configure $FLAGS --prefix=$INSTALL_PREFIX) || {
+    echo "Cannot complete rina-tools phase"
+    exit 1
+}
+
+# Generate the main Makefile
+cp Makefile.in Makefile
+sed -i "s|@KERNBUILDDIR@|${KERNBUILDDIR}|g" Makefile
+sed -i "s|@INSTALLDIR@|${INSTALL_PREFIX}|g" Makefile
