@@ -22,6 +22,7 @@
 #define RINA_DTP_H
 
 #include "common.h"
+#include "efcp-str.h"
 #include "rmt.h"
 #include "kfa.h"
 #include "ps-factory.h"

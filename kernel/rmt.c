@@ -37,6 +37,7 @@
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
+#include "efcp-str.h"
 #include "rmt.h"
 #include "pff.h"
 #include "efcp-utils.h"
@@ -1332,7 +1333,7 @@ int rmt_receive(struct rmt *rmt,
 	}
 
 	bytes = sdu_len(sdu);
-	sdu_efcp_config_bind(sdu, efcp_container_config(rmt->efcpc));
+	sdu_efcp_config_bind(sdu, rmt->efcpc->config);
 	pdu = pdu_from_sdu(sdu); /* protected PDU */
 
 	n1_port = n1pmap_find(rmt, from);

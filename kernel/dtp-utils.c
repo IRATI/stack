@@ -436,12 +436,6 @@ int rtxq_entry_destroy(struct rtxq_entry * entry)
 }
 EXPORT_SYMBOL(rtxq_entry_destroy);
 
-struct rtxqueue {
-	int len;
-	int drop_pdus;
-        struct list_head head;
-};
-
 static struct rtxqueue * rtxqueue_create_gfp(gfp_t flags)
 {
         struct rtxqueue * tmp;
@@ -760,14 +754,6 @@ static bool rtxqueue_empty(struct rtxqueue * q)
 
         return list_empty(&q->head);
 }
-
-struct rtxq {
-        spinlock_t                lock;
-        struct rtimer *           r_timer;
-        struct dtp *              parent;
-        struct rmt *              rmt;
-        struct rtxqueue *         queue;
-};
 
 struct rtxt_data {
 	struct efcp_container * efcpc;

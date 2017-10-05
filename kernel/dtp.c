@@ -565,7 +565,7 @@ struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
 
                 if (a_timer_expired || (seq_num - LWE - 1 <= max_sdu_gap)) {
                         if (a_timer_expired &&
-                        		dtcp_rtx_ctrl(dtcp_config_get(dtcp))) {
+                        		dtcp_rtx_ctrl(dtcp->cfg)) {
                                 LOG_DBG("Retransmissions will be required");
                                 list_del(&pos->next);
                                 seq_queue_entry_destroy(pos);
@@ -1251,12 +1251,12 @@ int dtp_write(struct dtp * instance,
 
         csn = ++instance->sv->seq_nr_to_send;
         if (pci_format(pci,
-                       efcp_src_cep_id(efcp),
-                       efcp_dst_cep_id(efcp),
-                       efcp_src_addr(efcp),
-                       efcp_dst_addr(efcp),
+                       efcp->connection->source_cep_id,
+                       efcp->connection->destination_cep_id,
+                       efcp->connection->source_address,
+                       efcp->connection->destination_address,
                        csn,
-                       efcp_qos_id(efcp),
+                       efcp->connection->qos_id,
                        PDU_TYPE_DT)) {
 		LOG_ERR("Could not format PCI");
 		goto pdu_err_exit;
@@ -1358,10 +1358,6 @@ int dtp_write(struct dtp * instance,
 	spin_unlock_bh(&instance->sv_lock);
 	return 0;
 
-sdu_err_exit:
-	sdu_destroy(sdu);
-	return -1;
-
 pdu_err_exit:
 	pdu_destroy(pdu);
 	return -1;
@@ -1386,11 +1382,11 @@ static bool is_fc_overrun(struct dtp * dtp, struct dtcp * dtcp,
         if (!dtcp)
                 return false;
 
-        if (dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
+        if (dtcp_window_based_fctrl(dtcp->cfg)) {
                 w_ret = (seq_num > dtcp->sv->rcvr_rt_wind_edge);
         }
 
-        if (dtcp_rate_based_fctrl(dtcp_config_get(dtcp))){
+        if (dtcp_rate_based_fctrl(dtcp->cfg)){
         	if(pdul >= 0) {
         		dtcp->sv->pdus_rcvd_in_time_unit =
         				dtcp->sv->pdus_rcvd_in_time_unit + pdul;
@@ -1456,7 +1452,7 @@ int dtp_receive(struct dtp * instance,
         }
 
         if (!instance                  ||
-            !instance->ercp          ||
+            !instance->efcp          ||
             !instance->sv) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 pdu_destroy(pdu);
@@ -1516,11 +1512,11 @@ int dtp_receive(struct dtp * instance,
                         while (!ringq_is_empty(instance->to_send)) {
                                 struct pdu * pdu_ctrl = ringq_pop(instance->to_send);
                                 if (pdu_ctrl) {
-                                       dtp_pdu_send(dtp, instance->rmt, pdu_ctrl);
+                                       dtp_pdu_send(instance, instance->rmt, pdu_ctrl);
                                 }
                         }
                         pdu_post(instance, pdu);
-			stats_inc_bytes(rx, sv, sbytes);
+			stats_inc_bytes(rx, instance->sv, sbytes);
                         LOG_DBG("Data run flag DRF");
                         return 0;
                 }

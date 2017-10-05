@@ -96,6 +96,20 @@ struct cwq {
         spinlock_t      lock;
 };
 
+struct rtxqueue {
+	int len;
+	int drop_pdus;
+        struct list_head head;
+};
+
+struct rtxq {
+        spinlock_t                lock;
+        struct rtimer *           r_timer;
+        struct dtp *              parent;
+        struct rmt *              rmt;
+        struct rtxqueue *         queue;
+};
+
 /* This is the DT-SV part maintained by DTP */
 struct dtp_sv {
         uint_t       max_flow_pdu_size;

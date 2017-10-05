@@ -31,6 +31,7 @@
 
 #include "logs.h"
 #include "utils.h"
+#include "connection.h"
 #include "debug.h"
 #include "efcp-str.h"
 #include "efcp.h"
@@ -149,7 +150,7 @@ static int efcp_destroy(struct efcp * instance)
         if (instance->user_ipcp) {
                 instance->user_ipcp->ops->flow_unbinding_ipcp(
                                 instance->user_ipcp->data,
-                                connection_port_id(instance->connection));
+                                instance->connection->port_id);
         }
 
         if (instance->dtp) {
