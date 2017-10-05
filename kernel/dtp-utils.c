@@ -267,14 +267,14 @@ void cwq_deliver(struct cwq * queue,
         if (!dtp)
                 return;
 
-        rcu_read_lock();
-        rtx_ctrl  = dtcp_ps_get(dt->dtcp)->rtx_ctrl;
-        flow_ctrl = dtcp_ps_get(dt->dtcp)->flow_ctrl;
-        rcu_read_unlock();
-
         dtcp = dtp->dtcp;
         if (!dtcp)
                 return;
+
+        rcu_read_lock();
+        rtx_ctrl  = dtcp_ps_get(dtcp)->rtx_ctrl;
+        flow_ctrl = dtcp_ps_get(dtcp)->flow_ctrl;
+        rcu_read_unlock();
 
         if(flow_ctrl) {
         	rate_ctrl = dtcp_rate_based_fctrl(dtcp->cfg);
@@ -291,7 +291,7 @@ void cwq_deliver(struct cwq * queue,
                         return;
                 }
                 if (rtx_ctrl) {
-                        rtxq = dt->rtxq;
+                        rtxq = dtp->rtxq;
                         if (!rtxq) {
                                 spin_unlock(&queue->lock);
                                 LOG_ERR("Couldn't find the RTX queue");
@@ -322,7 +322,7 @@ void cwq_deliver(struct cwq * queue,
                 pci = pdu_pci_get_ro(pdu);
                 dtp->sv->max_seq_nr_sent = pci_sequence_number_get(pci);
 
-                dtp_pdu_send(dt, rmt, pdu);
+                dtp_pdu_send(dtp, rmt, pdu);
         }
 
         if (!can_deliver(dtp, dtcp)) {
@@ -339,7 +339,7 @@ void cwq_deliver(struct cwq * queue,
                 	//efcp_disable_write(dt_efcp(dt));
                 }
 
-                enable_write(queue, dt);
+                enable_write(queue, dtp);
                 spin_unlock(&queue->lock);
                 return;
         }
@@ -353,7 +353,7 @@ void cwq_deliver(struct cwq * queue,
                 dtp->sv->rate_fulfiled = true;
         }
 
-        enable_write(queue, dt);
+        enable_write(queue, dtp);
 
         spin_unlock(&queue->lock);
 
@@ -509,7 +509,7 @@ static int rtxqueue_entries_ack(struct rtxqueue * q,
 }
 
 static int rtxqueue_entries_nack(struct rtxqueue * q,
-                                 struct dt *       dt,
+                                 struct dtp *      dtp,
                                  struct rmt *      rmt,
                                  seq_num_t         seq_num,
                                  uint_t            data_rtx_max)
@@ -527,8 +527,7 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
         ASSERT(dt);
         ASSERT(rmt);
 
-        dtp = dt->dtp;
-        dtcp = dt->dtcp;
+        dtcp = dtp->dtcp;
 
         /*
          * FIXME: this should be change since we are sending in inverse order
@@ -1018,9 +1017,9 @@ int rtxq_nack(struct rtxq * q,
         return 0;
 }
 
-int dt_pdu_send(struct dt *   dt,
-        	struct rmt *  rmt,
-		struct pdu *  pdu)
+int dtp_pdu_send(struct dtp *   dt,
+        	 struct rmt *  rmt,
+		 struct pdu *  pdu)
 {
         struct pci *	        pci;
 	struct efcp_container * efcpc;
