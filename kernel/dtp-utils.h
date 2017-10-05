@@ -72,7 +72,7 @@ int                 rtxq_nack(struct rtxq * q,
                               timeout_t     tr);
 int                 rtxq_flush(struct rtxq * q);
 
-int 		    dt_pdu_send(struct dtp *  dtp,
-        	    	        struct rmt * rmt,
-                                struct pdu * pdu);
+int 		    dtp_pdu_send(struct dtp *  dtp,
+				 struct rmt * rmt,
+                                 struct pdu * pdu);
 #endif

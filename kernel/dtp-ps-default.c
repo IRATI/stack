@@ -35,7 +35,7 @@
 #include "dtcp.h"
 #include "dtcp-ps.h"
 #include "dtcp-conf-utils.h"
-#include "dt-utils.h"
+#include "dtp-utils.h"
 #include "debug.h"
 
 int default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
@@ -66,7 +66,7 @@ int default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
 
         LOG_DBG("local_soft_irq_pending: %d", local_softirq_pending());
 
-        return dt_pdu_send(dt, dtp_rmt(dtp), pdu);
+        return dtp_pdu_send(dt, dtp_rmt(dtp), pdu);
 }
 
 int default_closed_window(struct dtp_ps * ps, struct pdu * pdu)

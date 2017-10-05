@@ -245,11 +245,10 @@ static bool can_deliver(struct dtp * dtp, struct dtcp * dtcp)
 }
 
 void cwq_deliver(struct cwq * queue,
-                 struct dt *  dt,
+                 struct dtp * dtp,
                  struct rmt * rmt)
 {
         struct rtxq *           rtxq;
-        struct dtp *            dtp;
         struct dtcp *           dtcp;
         struct pdu  *           tmp;
         bool                    rtx_ctrl;
@@ -265,7 +264,7 @@ void cwq_deliver(struct cwq * queue,
         if (!queue->q)
                 return;
 
-        if (!dt)
+        if (!dtp)
                 return;
 
         rcu_read_lock();
@@ -273,11 +272,7 @@ void cwq_deliver(struct cwq * queue,
         flow_ctrl = dtcp_ps_get(dt->dtcp)->flow_ctrl;
         rcu_read_unlock();
 
-        dtp = dt->dtp;
-        if (!dtp)
-                return;
-
-        dtcp = dt->dtcp;
+        dtcp = dtp->dtcp;
         if (!dtcp)
                 return;
 
@@ -327,7 +322,7 @@ void cwq_deliver(struct cwq * queue,
                 pci = pdu_pci_get_ro(pdu);
                 dtp->sv->max_seq_nr_sent = pci_sequence_number_get(pci);
 
-                dt_pdu_send(dt, rmt, pdu);
+                dtp_pdu_send(dt, rmt, pdu);
         }
 
         if (!can_deliver(dtp, dtcp)) {
