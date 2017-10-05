@@ -50,7 +50,7 @@ int dtcp_pdu_send(struct dtcp * dtcp, struct pdu * pdu)
         ASSERT(dtcp->rmt);
         ASSERT(dtcp->parent);
 
-        return dtp_pdu_ctrl_send(dtcp->parent->dtp, pdu);
+        return dtp_pdu_ctrl_send(dtcp->parent, pdu);
 }
 EXPORT_SYMBOL(dtcp_pdu_send);
 
@@ -82,21 +82,6 @@ static seq_num_t next_snd_ctl_seq(struct dtcp * dtcp)
 
         return tmp;
 }
-
-void update_rt_wind_edge(struct dtcp * dtcp)
-{
-        seq_num_t     seq;
-
-        ASSERT(dtcp);
-        ASSERT(dtcp->sv);
-
-        seq = dt_sv_rcv_lft_win(dtcp->parent);
-        spin_lock_bh(&dtcp->parent->sv_lock);
-        seq += dtcp->sv->rcvr_credit;
-        dtcp->sv->rcvr_rt_wind_edge = seq;
-        spin_unlock_bh(&dtcp->parent->sv_lock);
-}
-EXPORT_SYMBOL(update_rt_wind_edge);
 
 void update_credit_and_rt_wind_edge(struct dtcp * dtcp, uint_t credit)
 {
