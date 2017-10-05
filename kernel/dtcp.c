@@ -1313,8 +1313,6 @@ bool dtcp_rate_exceeded(struct dtcp * dtcp, int send) {
 
 	getnstimeofday(&now);
 
-	spin_lock_bh(&dtcp->parent->sv_lock);
-
 	last.tv_sec = dtcp->sv->last_time.tv_sec;
 	last.tv_nsec = dtcp->sv->last_time.tv_nsec;
 
@@ -1335,7 +1333,6 @@ bool dtcp_rate_exceeded(struct dtcp * dtcp, int send) {
 		rate = dtcp->sv->pdus_rcvd_in_time_unit;
 		lim = dtcp->sv->rcvr_rate;
 	}
-	spin_unlock_bh(&dtcp->parent->sv_lock);
 
 	if (rate >= lim)
 	{
