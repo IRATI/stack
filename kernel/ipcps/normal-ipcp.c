@@ -31,6 +31,7 @@
 #include "logs.h"
 #include "common.h"
 #include "debug.h"
+#include "efcp-str.h"
 #include "utils.h"
 #include "kipcm.h"
 #include "ipcp-utils.h"
@@ -745,7 +746,7 @@ static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
                 return -1;
         }
 
-	if (sdu_efcp_config_bind(sdu, efcp_container_config(data->efcpc))) {
+	if (sdu_efcp_config_bind(sdu, data->efcpc->config)) {
 		LOG_ERR("Could not bind EFCP config to incoming SDU");
 		sdu_destroy(sdu);
 		return -1;
@@ -1008,11 +1009,13 @@ static int efcp_select_policy_set(struct efcp * efcp,
         ps_factory_parse_component_id(path, &cmplen, &offset);
 
         if (cmplen && strncmp(path, "dtp", cmplen) == 0) {
-                return dtp_select_policy_set(dt_dtp(efcp_dt(efcp)), path + offset,
+                return dtp_select_policy_set(efcp->dtp, path + offset,
                                              ps_name);
-        } else if (cmplen && strncmp(path, "dtcp", cmplen) == 0 && dt_dtcp(efcp_dt(efcp))) {
-                return dtcp_select_policy_set(dt_dtcp(efcp_dt(efcp)), path + offset,
-                                             ps_name);
+        } else if (cmplen && strncmp(path, "dtcp", cmplen) == 0
+        		&& efcp->dtp->dtcp) {
+                return dtcp_select_policy_set(efcp->dtp->dtcp,
+                			      path + offset,
+                                              ps_name);
         }
 
         /* Currently there are no policy sets specified for EFCP (strictly
@@ -1073,10 +1076,10 @@ static int efcp_set_policy_set_param(struct efcp * efcp,
         ps_factory_parse_component_id(path, &cmplen, &offset);
 
         if (strncmp(path, "dtp", cmplen) == 0) {
-                return dtp_set_policy_set_param(dt_dtp(efcp_dt(efcp)),
+                return dtp_set_policy_set_param(efcp->dtp,
                                         path + offset, name, value);
-        } else if (strncmp(path, "dtcp", cmplen) == 0 && dt_dtcp(efcp_dt(efcp))) {
-                return dtcp_set_policy_set_param(dt_dtcp(efcp_dt(efcp)),
+        } else if (strncmp(path, "dtcp", cmplen) == 0 && efcp->dtp->dtcp) {
+                return dtcp_set_policy_set_param(efcp->dtp->dtcp,
                                         path + offset, name, value);
         }
 
@@ -1336,15 +1339,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
-        if (efcp_bind_rmt(instance->data->efcpc, instance->data->rmt)) {
-                LOG_ERR("Failed binding of RMT and EFCPC");
-                rmt_destroy(instance->data->rmt);
-		sdup_destroy(instance->data->sdup);
-                efcp_container_destroy(instance->data->efcpc);
-                rkfree(instance->data);
-                rkfree(instance);
-                return NULL;
-        }
+        instance->data->efcpc->rmt = instance->data->rmt;
 
         instance->data->timers.use_naddress = rtimer_create(tf_use_naddress,
                                				    instance->data);

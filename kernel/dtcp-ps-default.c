@@ -96,6 +96,7 @@ int default_rcvr_ack_atimer(struct dtcp_ps * ps, const struct pci * pci)
 int default_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
 {
         struct dtcp * dtcp = ps->dm;
+        timeout_t tr;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -103,14 +104,15 @@ int default_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
         }
 
         if (ps->rtx_ctrl) {
-                struct rtxq * q;
-
-                q = dt_rtxq(dtcp_dt(dtcp));
-                if (!q) {
+                if (!dtcp->parent->rtxq) {
                         LOG_ERR("Couldn't find the Retransmission queue");
                         return -1;
                 }
-                rtxq_ack(q, seq_num, dt_sv_tr(dtcp_dt(dtcp)));
+
+                spin_lock_bh(&dtcp->parent->sv_lock);
+                tr = dtcp->parent->sv->tr;
+                spin_unlock_bh(&dtcp->parent->sv_lock);
+                rtxq_ack(dtcp->parent->rtxq, seq_num, tr);
         }
 
         return 0;
@@ -225,7 +227,7 @@ int default_rate_reduction(struct dtcp_ps * ps, const struct pci * pci)
 	LOG_DBG("DTCP: %pK", dtcp);
 	LOG_DBG("    Rate: %u, Time: %u",
 		dtcp->sv->sndr_rate,
-		dtcp->sv->time_unit;
+		dtcp->sv->time_unit);
 
 	spin_unlock_bh(&dtcp->parent->sv_lock);
 
@@ -236,7 +238,7 @@ int default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
 {
         struct dtcp *       dtcp;
         uint_t              rtt, new_sample, srtt, rttvar, trmsecs;
-        timeout_t           start_time;
+        timeout_t           start_time, a;
         int                 abs;
 
         if (!ps)
@@ -260,6 +262,7 @@ int default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
         rtt        = dtcp->sv->rtt;
         srtt       = dtcp->sv->srtt;
         rttvar     = dtcp->sv->rttvar;
+        a 	   = dtcp->parent->sv->A;
 
         if (!rtt) {
         	rtt = new_sample;
@@ -280,14 +283,14 @@ int default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
         trmsecs  = rttvar << 2;
         /* G is 0.1s according to RFC6298, then 100ms */
         trmsecs  = 100 > trmsecs ? 100 : trmsecs;
-        trmsecs += srtt + jiffies_to_msecs(dt_sv_a(dt));
+        trmsecs += srtt + jiffies_to_msecs(a);
         /* RTO (tr) less than 1s? (not for the common policy) */
         /*trmsecs  = trmsecs < 1000 ? 1000 : trmsecs;*/
 
         dtcp->sv->rtt = rtt;
         dtcp->sv->rttvar = rttvar;
         dtcp->sv->srtt = srtt;
-        dtcp->sv->tr = msecs_to_jiffies(trmsecs);
+        dtcp->parent->sv->tr = msecs_to_jiffies(trmsecs);
 
         spin_unlock_bh(&dtcp->parent->sv_lock);
 
