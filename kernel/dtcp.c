@@ -83,20 +83,6 @@ static seq_num_t next_snd_ctl_seq(struct dtcp * dtcp)
         return tmp;
 }
 
-void update_credit_and_rt_wind_edge(struct dtcp * dtcp, uint_t credit)
-{
-        ASSERT(dtcp);
-        ASSERT(dtcp->sv);
-
-        spin_lock_bh(&dtcp->parent->sv_lock);
-        dtcp->sv->rcvr_credit = credit;
-	/* applying the TCP rule of not shrinking the window */
-	if (dt_sv_rcv_lft_win(dtcp->parent) + credit > dtcp->sv->rcvr_rt_wind_edge)
-        	dtcp->sv->rcvr_rt_wind_edge = dt_sv_rcv_lft_win(dtcp->parent) + credit;
-        spin_unlock_bh(&dtcp->parent->sv_lock);
-}
-EXPORT_SYMBOL(update_credit_and_rt_wind_edge);
-
 static ssize_t dtcp_attr_show(struct robject *		     robj,
                          	     struct robj_attribute * attr,
                                      char *		     buf)
@@ -235,7 +221,7 @@ static int populate_ctrl_pci(struct pci *  pci,
 
                         pci_control_new_left_wind_edge_set(pci, LWE);
                         pci_control_new_rt_wind_edge_set(pci,
-				rcvr_rt_wind_edge(dtcp));
+				dtcp->sv->rcvr_rt_wind_edge);
 
                         pci_control_my_left_wind_edge_set(pci, snd_lft);
                         pci_control_my_rt_wind_edge_set(pci, snd_rt);
@@ -531,7 +517,7 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         spin_lock_bh(&dtcp->parent->sv_lock);
 	if(dtcp_window_based_fctrl(dtcp->cfg)) {
 		dtcp->sv->snd_rt_wind_edge = pci_control_new_rt_wind_edge(pci);
-		LOG_DBG("Right Window Edge: %u", snd_rt_wind_edge(dtcp));
+		LOG_DBG("Right Window Edge: %u", dtcp->sv->snd_rt_wind_edge);
 	}
 
 	if(dtcp_rate_based_fctrl(dtcp->cfg)) {
@@ -824,7 +810,7 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
         ASSERT(instance);
         ASSERT(instance->sv);
 
-        cfg = dtcp_config_get(instance);
+        cfg = instance->cfg;
         if (!cfg)
                 return -1;
 
@@ -843,7 +829,7 @@ static int dtcp_sv_init(struct dtcp * instance, struct dtcp_sv sv)
                                 ps->flowctrl.window.initial_credit;
                         instance->sv->snd_rt_wind_edge =
                                 ps->flowctrl.window.initial_credit +
-                                dtp_sv_last_nxt_seq_nr(dt_dtp(instance->parent));
+                                instance->parent->sv->seq_nr_to_send;
                         instance->sv->rcvr_credit =
                                 ps->flowctrl.window.initial_credit;
                         instance->sv->rcvr_rt_wind_edge =

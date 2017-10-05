@@ -76,9 +76,6 @@ struct pdu	*pdu_ctrl_ack_create(struct dtcp *dtcp,
 				     seq_num_t snd_left_wind_edge,
 				     seq_num_t snd_rt_wind_edge);
 struct pdu	*pdu_ctrl_generate(struct dtcp *dtcp, pdu_type_t type);
-void		update_rt_wind_edge(struct dtcp *dtcp);
-void		update_credit_and_rt_wind_edge(struct dtcp *dtcp,
-						       uint_t credit);
 int		dtcp_last_time_set(struct dtcp *dtcp,
 					   struct timespec *s);
 bool		dtcp_rate_exceeded(struct dtcp *dtcp, int send);
