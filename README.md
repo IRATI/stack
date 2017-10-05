@@ -48,6 +48,7 @@ the system, with the kernel headers.
 Once this is done, please install user-space dependencies
 
     $ apt-get update
+    $ apt-get install linux-headers-$(uname -r)
     $ apt-get install autoconf
     $ apt-get install automake
     $ apt-get install libtool
