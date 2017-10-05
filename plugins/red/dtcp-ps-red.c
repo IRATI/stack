@@ -54,6 +54,19 @@ struct red_dtcp_ps_data {
 #endif
 };
 
+static void update_credit_and_rt_wind_edge(struct dtcp * dtcp, uint_t credit)
+{
+        ASSERT(dtcp);
+        ASSERT(dtcp->sv);
+
+        spin_lock_bh(&dtcp->parent->sv_lock);
+        dtcp->sv->rcvr_credit = credit;
+	/* applying the TCP rule of not shrinking the window */
+	if (dtcp->parent->sv->rcv_left_window_edge + credit > dtcp->sv->rcvr_rt_wind_edge)
+        	dtcp->sv->rcvr_rt_wind_edge = dtcp->parent->sv->rcv_left_window_edge + credit;
+        spin_unlock_bh(&dtcp->parent->sv_lock);
+}
+
 static int
 red_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {

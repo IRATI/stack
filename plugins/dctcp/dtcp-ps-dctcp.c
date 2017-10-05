@@ -55,11 +55,10 @@ static void update_credit_and_rt_wind_edge(struct dtcp * dtcp, uint_t credit)
         spin_lock_bh(&dtcp->parent->sv_lock);
         dtcp->sv->rcvr_credit = credit;
 	/* applying the TCP rule of not shrinking the window */
-	if (dt_sv_rcv_lft_win(dtcp->parent) + credit > dtcp->sv->rcvr_rt_wind_edge)
-        	dtcp->sv->rcvr_rt_wind_edge = dt_sv_rcv_lft_win(dtcp->parent) + credit;
+	if (dtcp->parent->sv->rcv_left_window_edge + credit > dtcp->sv->rcvr_rt_wind_edge)
+        	dtcp->sv->rcvr_rt_wind_edge = dtcp->parent->sv->rcv_left_window_edge + credit;
         spin_unlock_bh(&dtcp->parent->sv_lock);
 }
-EXPORT_SYMBOL(update_credit_and_rt_wind_edge);
 
 static int dctcp_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {
