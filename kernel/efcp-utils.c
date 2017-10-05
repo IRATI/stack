@@ -114,7 +114,7 @@ int efcp_imap_address_change(struct efcp_imap *  map,
         ASSERT(map);
 
         hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
-        	efcp_src_addr_set(entry->value, address);
+        	entry->value->connection->source_address = address;
         }
 
         return 0;

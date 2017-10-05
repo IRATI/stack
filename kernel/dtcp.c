@@ -634,6 +634,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
                 return 0;
 
         }
+        spin_unlock_bh(&dtcp->parent->sv_lock);
 
         rcu_read_lock();
         ps = container_of(rcu_dereference(dtcp->base.ps),
@@ -645,6 +646,7 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct pdu * pdu)
 
         /* We are in sn >= last_ctrl + 1 */
 
+        spin_lock_bh(&dtcp->parent->sv_lock);
         dtcp->sv->last_rcv_ctl_seq = sn;
         spin_unlock_bh(&dtcp->parent->sv_lock);
 

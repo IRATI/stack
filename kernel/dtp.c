@@ -79,27 +79,21 @@ static struct dtp_sv default_sv = {
 
 #define stats_get(name, sv, retval)				\
         ASSERT(sv);						\
-        spin_lock_bh(&sv->lock);				\
         retval = sv->stats.name;				\
-        spin_unlock_bh(&sv->lock);
 
 #define stats_inc(name, sv)					\
         ASSERT(sv);						\
-        spin_lock_bh(&sv->lock);				\
         sv->stats.name##_pdus++;				\
         LOG_DBG("PDUs __STRINGIFY(name) %u",			\
 		sv->stats.name##_pdus);				\
-        spin_unlock_bh(&sv->lock);
 
 #define stats_inc_bytes(name, sv, bytes)			\
         ASSERT(sv);						\
-        spin_lock_bh(&sv->lock);				\
         sv->stats.name##_pdus++;				\
 	sv->stats.name##_bytes += (unsigned long) bytes;	\
         LOG_DBG("PDUs __STRINGIFY(name) %u (%u)",		\
 		sv->stats.name##_pdus,				\
 		sv->stats.name##_bytes);			\
-        spin_unlock_bh(&sv->lock);
 
 static ssize_t dtp_attr_show(struct robject *		     robj,
                          	     struct robj_attribute * attr,
@@ -137,27 +131,39 @@ static ssize_t dtp_attr_show(struct robject *		     robj,
 			dtp_conf_seq_num_ro_th(instance->cfg));
 	}
 	if (strcmp(robject_attr_name(attr), "drop_pdus") == 0) {
+		spin_lock_bh(instance->sv_lock);
 		stats_get(drop_pdus, instance->sv, stats_ret);
+		spin_unlock_bh(instance->sv_lock);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
 	if (strcmp(robject_attr_name(attr), "err_pdus") == 0) {
+		spin_lock_bh(instance->sv_lock);
 		stats_get(err_pdus, instance->sv, stats_ret);
+		spin_unlock_bh(instance->sv_lock);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
 	if (strcmp(robject_attr_name(attr), "tx_pdus") == 0) {
+		spin_lock_bh(instance->sv_lock);
 		stats_get(tx_pdus, instance->sv, stats_ret);
+		spin_unlock_bh(instance->sv_lock);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
 	if (strcmp(robject_attr_name(attr), "tx_bytes") == 0) {
+		spin_lock_bh(instance->sv_lock);
 		stats_get(tx_bytes, instance->sv, stats_ret);
+		spin_unlock_bh(instance->sv_lock);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
 	if (strcmp(robject_attr_name(attr), "rx_pdus") == 0) {
+		spin_lock_bh(instance->sv_lock);
 		stats_get(rx_pdus, instance->sv, stats_ret);
+		spin_unlock_bh(instance->sv_lock);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
 	if (strcmp(robject_attr_name(attr), "rx_bytes") == 0) {
+		spin_lock_bh(instance->sv_lock);
 		stats_get(rx_bytes, instance->sv, stats_ret);
+		spin_unlock_bh(instance->sv_lock);
 		return sprintf(buf, "%u\n", stats_ret);
 	}
 	if (strcmp(robject_attr_name(attr), "ps_name") == 0) {
