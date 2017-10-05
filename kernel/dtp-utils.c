@@ -327,7 +327,7 @@ void cwq_deliver(struct cwq * queue,
 
         if (!can_deliver(dtp, dtcp)) {
         	if(dtcp_window_based_fctrl(dtcp->cfg)) {
-			dt->sv->window_closed = true;
+			dtp->sv->window_closed = true;
         	}
 
                 if(dtcp_rate_based_fctrl(dtcp->cfg)) {
@@ -336,7 +336,7 @@ void cwq_deliver(struct cwq * queue,
                 	dtp_start_rate_timer(dtp, dtcp);
 
                 	// Cannot use anymore that port.
-                	//efcp_disable_write(dt_efcp(dt));
+                	//efcp_disable_write(dt_efcp(dtp));
                 }
 
                 enable_write(queue, dtp);
@@ -345,7 +345,7 @@ void cwq_deliver(struct cwq * queue,
         }
 
         if(dtcp_window_based_fctrl(dtcp->cfg)) {
-		dt->sv->window_closed = false;
+		dtp->sv->window_closed = false;
         }
 
         if(dtcp_rate_based_fctrl(dtcp->cfg)) {
@@ -517,7 +517,6 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
         struct rtxq_entry * cur, * p;
         struct pdu *        tmp;
         // Used by rbfc.
-        struct dtp * 	    dtp;
         struct dtcp *	    dtcp;
 
         int sz;
@@ -547,7 +546,7 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
                         }
 			if(dtp &&
 				dtcp &&
-				dtcp_rate_based_fctrl(dtcp->cfg) {
+				dtcp_rate_based_fctrl(dtcp->cfg)) {
 
 				sz = pdu_data_len(cur->pdu);
 				sc = dtcp->sv->pdus_sent_in_time_unit;
@@ -568,9 +567,9 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
 				}
 			}
                         tmp = pdu_dup_ni(cur->pdu);
-                        if (dt_pdu_send(dt,
-                                        rmt,
-                                        tmp))
+                        if (dtp_pdu_send(dtp,
+					 rmt,
+					 tmp))
                                 continue;
                 } else
                         return 0;
@@ -680,7 +679,7 @@ static unsigned long time_to_rtx(struct rtxq_entry * cur, unsigned int tr)
 
 static int rtxqueue_rtx(struct rtxqueue * q,
                         unsigned int      tr,
-                        struct dt *       dt,
+                        struct dtp *      dtp,
                         struct rmt *      rmt,
                         uint_t            data_rtx_max)
 {
@@ -688,7 +687,6 @@ static int rtxqueue_rtx(struct rtxqueue * q,
         struct pdu *        tmp;
         seq_num_t           seq = 0;
         // Used by rbfc.
-        struct dtp *        dtp;
         struct dtcp *	    dtcp;
         int sz;
         uint_t sc;
@@ -697,8 +695,7 @@ static int rtxqueue_rtx(struct rtxqueue * q,
         ASSERT(dt);
         ASSERT(rmt);
 
-        dtp = dt->dtp;
-        dtcp = dt->dtcp;
+        dtcp = dtp->dtcp;
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
                 seq = pci_sequence_number_get(pdu_pci_get_ro(cur->pdu));
@@ -739,9 +736,9 @@ static int rtxqueue_rtx(struct rtxqueue * q,
 				}
                         }
                         tmp = pdu_dup_ni(cur->pdu);
-                        if (dt_pdu_send(dt,
-                                        rmt,
-                                        tmp))
+                        if (dtp_pdu_send(dtp,
+                                         rmt,
+                                         tmp))
                                 continue;
                         LOG_DBG("Retransmitted PDU with seqN %u", seq);
                 } else {
@@ -767,7 +764,7 @@ static bool rtxqueue_empty(struct rtxqueue * q)
 struct rtxq {
         spinlock_t                lock;
         struct rtimer *           r_timer;
-        struct dt *               parent;
+        struct dtp *              parent;
         struct rmt *              rmt;
         struct rtxqueue *         queue;
 };
@@ -784,6 +781,7 @@ static void rtx_timer_func(void * data)
         struct efcp * 	     efcp;
         struct rtxt_data *   rtxtd;
         unsigned int         tr;
+	struct dtp *         dtp;
 
         LOG_DBG("RTX timer triggered...");
 
@@ -800,12 +798,13 @@ static void rtx_timer_func(void * data)
         	return;
         }
 
-        q = efcp->dt->rtxq;
-        tr = dt_sv_tr(q->parent);
+	dtp = efcp->dtp;
+        q = dtp->rtxq;
+        tr = dtp->sv->tr;
 
         if (rtxqueue_rtx(q->queue,
                          tr,
-                         q->parent,
+                         dtp,
                          q->rmt,
                          rtxtd->data_retransmit_max))
                 LOG_ERR("RTX failed");
@@ -940,7 +939,7 @@ int rtxq_push_ni(struct rtxq * q,
         spin_lock_bh(&q->lock);
 #if RTIMER_ENABLED
         /* is the first transmitted PDU */
-        rtimer_start(q->r_timer, dt_sv_tr(q->parent));
+        rtimer_start(q->r_timer, q->parent->sv->tr);
 #endif
         rtxqueue_push_ni(q->queue, pdu);
         spin_unlock_bh(&q->lock);
@@ -991,12 +990,12 @@ int rtxq_nack(struct rtxq * q,
         if (!q || !q->parent || !q->rmt)
                 return -1;
 
-        dtcp_cfg = dtcp_config_get(dt_dtcp(q->parent));
+        dtcp_cfg = q->parent->dtcp->cfg;
         if (!dtcp_cfg)
                 return -1;
 
         rcu_read_lock();
-        data_retransmit_max = dtcp_ps_get(dt_dtcp(q->parent))->
+        data_retransmit_max = dtcp_ps_get(q->parent->dtcp)->
                                         rtx.data_retransmit_max;
         rcu_read_unlock();
 
@@ -1017,7 +1016,7 @@ int rtxq_nack(struct rtxq * q,
         return 0;
 }
 
-int dtp_pdu_send(struct dtp *   dt,
+int dtp_pdu_send(struct dtp *   dtp,
         	 struct rmt *  rmt,
 		 struct pdu *  pdu)
 {
@@ -1028,7 +1027,7 @@ int dtp_pdu_send(struct dtp *   dt,
 	if (!pdu)
 	        return -1;
 
-        if (!dt)
+        if (!dtp)
                 return -1;
 
 	pci = pdu_pci_get_rw(pdu);
@@ -1046,7 +1045,7 @@ int dtp_pdu_send(struct dtp *   dt,
 
 	/* Local flow case */
 	dest_cep_id = pci_cep_destination(pci);
-	efcpc = efcp_container_get(dt_efcp(dt));
+	efcpc = dtp->efcp->container;
 	if (unlikely(!efcpc || pdu_decap(pdu) || !pdu_is_ok(pdu))) { /*Decap PDU */
 	        LOG_ERR("Could not retrieve the EFCP container in"
 	        "loopback operation");
@@ -1060,4 +1059,4 @@ int dtp_pdu_send(struct dtp *   dt,
 
 	return 0;
 }
-EXPORT_SYMBOL(dt_pdu_send);
+EXPORT_SYMBOL(dtp_pdu_send);
