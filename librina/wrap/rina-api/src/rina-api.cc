@@ -597,4 +597,11 @@ rina_flow_spec_default(struct rina_flow_spec *spec)
         spec->msg_boundaries = 1;
 }
 
+unsigned int
+rina_flow_mss_get(int fd)
+{
+	errno = ENOSYS;
+	return 0;
+}
+
 }
