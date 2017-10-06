@@ -8,22 +8,23 @@
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *
- * 1. Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer.
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <stdio.h>
@@ -42,10 +43,9 @@
 
 #include <rina/api.h>
 
-
-#define SDU_SIZE_MAX    64
-#define MAX_CLIENTS     128
-#define TIMEOUT_SECS    2
+#define SDU_SIZE_MAX 64
+#define MAX_CLIENTS 128
+#define TIMEOUT_SECS 2
 #if TIMEOUT_SECS < 2
 #error "TIMEOUT_SECS must be >= 2"
 #endif
@@ -59,17 +59,17 @@ struct echo_async {
     int p; /* parallel clients */
 };
 
-#define MAX(a,b) ((a)>(b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 struct fdfsm {
     char buf[SDU_SIZE_MAX];
     int buflen;
-#define SELFD_S_ALLOC       1
-#define SELFD_S_WRITE       2
-#define SELFD_S_READ        3
-#define SELFD_S_NONE        4
-#define SELFD_S_REGISTER    5
-#define SELFD_S_ACCEPT      6
+#define SELFD_S_ALLOC 1
+#define SELFD_S_WRITE 2
+#define SELFD_S_READ 3
+#define SELFD_S_NONE 4
+#define SELFD_S_REGISTER 5
+#define SELFD_S_ACCEPT 6
     int state;
     int fd;
     time_t last_activity;
@@ -80,7 +80,7 @@ shutdown_flow(struct fdfsm *fsm)
 {
     close(fsm->fd);
     fsm->state = SELFD_S_NONE;
-    fsm->fd = -1;
+    fsm->fd    = -1;
 }
 
 static int
@@ -103,11 +103,11 @@ client(struct echo_async *rea)
 
     /* Start flow allocations in parallel, without waiting for completion. */
 
-    for (i = 0; i < rea->p; i ++) {
+    for (i = 0; i < rea->p; i++) {
         fsms[i].state = SELFD_S_ALLOC;
-        fsms[i].fd = rina_flow_alloc(rea->dif_name, rea->cli_appl_name,
-                                     rea->srv_appl_name, &rea->flowspec,
-                                     RINA_F_NOWAIT);
+        fsms[i].fd =
+            rina_flow_alloc(rea->dif_name, rea->cli_appl_name,
+                            rea->srv_appl_name, &rea->flowspec, RINA_F_NOWAIT);
         fsms[i].last_activity = time(NULL);
         if (fsms[i].fd < 0) {
             perror("rina_flow_alloc()");
@@ -142,7 +142,7 @@ client(struct echo_async *rea)
             break;
         }
 
-        to.tv_sec = TIMEOUT_SECS - 1;
+        to.tv_sec  = TIMEOUT_SECS - 1;
         to.tv_usec = 0;
 
         ret = select(maxfd + 1, &rdfs, &wrfs, NULL, &to);
@@ -232,11 +232,11 @@ server(struct echo_async *rea)
     }
 
     fsms[0].state = SELFD_S_REGISTER;
-    fsms[0].fd = wfd;
+    fsms[0].fd    = wfd;
 
     for (i = 1; i <= MAX_CLIENTS; i++) {
         fsms[i].state = SELFD_S_NONE;
-        fsms[i].fd = -1;
+        fsms[i].fd    = -1;
     }
 
     for (;;) {
@@ -264,7 +264,7 @@ server(struct echo_async *rea)
 
         assert(maxfd >= 0);
 
-        to.tv_sec = TIMEOUT_SECS - 1;
+        to.tv_sec  = TIMEOUT_SECS - 1;
         to.tv_usec = 0;
 
         ret = select(maxfd + 1, &rdfs, &wrfs, NULL, &to);
@@ -284,7 +284,7 @@ server(struct echo_async *rea)
                         perror("rina_register_wait()");
                         return ret;
                     }
-                    fsms[i].fd = rea->cfd;
+                    fsms[i].fd    = rea->cfd;
                     fsms[i].state = SELFD_S_ACCEPT;
                 }
                 break;
@@ -303,8 +303,8 @@ server(struct echo_async *rea)
 
                     /* Receive flow allocation request without
                      * responding. */
-                    handle = rina_flow_accept(fsms[i].fd, NULL, NULL,
-                                              RINA_F_NORESP);
+                    handle =
+                        rina_flow_accept(fsms[i].fd, NULL, NULL, RINA_F_NORESP);
                     if (handle < 0) {
                         perror("rina_flow_accept()");
                         return handle;
@@ -330,8 +330,8 @@ server(struct echo_async *rea)
                 if (FD_ISSET(fsms[i].fd, &rdfs)) {
                     fsms[i].last_activity = time(NULL);
                     /* File descriptor is ready for reading. */
-                    fsms[i].buflen = read(fsms[i].fd, fsms[i].buf,
-                                          sizeof(fsms[i].buf));
+                    fsms[i].buflen =
+                        read(fsms[i].fd, fsms[i].buf, sizeof(fsms[i].buf));
                     if (fsms[i].buflen < 0) {
                         shutdown_flow(fsms + i);
                         printf("Shutdown client %d\n", i);
@@ -358,8 +358,8 @@ server(struct echo_async *rea)
             }
 
             if (fsms[i].state != SELFD_S_ACCEPT &&
-                    fsms[i].state != SELFD_S_NONE &&
-                        (time(NULL) - fsms[i].last_activity) >= TIMEOUT_SECS) {
+                fsms[i].state != SELFD_S_NONE &&
+                (time(NULL) - fsms[i].last_activity) >= TIMEOUT_SECS) {
                 printf("Client %d timed out\n", i);
                 shutdown_flow(fsms + i);
             }
@@ -378,15 +378,17 @@ sigint_handler(int signum)
 static void
 usage(void)
 {
-    printf("rina-echo-async [OPTIONS]\n"
+    printf(
+        "rina-echo-async [OPTIONS]\n"
         "   -h : show this help\n"
         "   -l : run in server mode (listen)\n"
         "   -d DIF : name of DIF to which register or ask to allocate a flow\n"
-        "   -a APNAME : application process name/instance of the echo_async client\n"
-        "   -z APNAME : application process name/instance of the echo_async server\n"
+        "   -a APNAME : application process name/instance of the echo_async "
+        "client\n"
+        "   -z APNAME : application process name/instance of the echo_async "
+        "server\n"
         "   -g NUM : max SDU gap to use for the data flow\n"
-        "   -p NUM : open NUM parallel flows\n"
-          );
+        "   -p NUM : open NUM parallel flows\n");
 }
 
 int
@@ -395,57 +397,57 @@ main(int argc, char **argv)
     struct sigaction sa;
     struct echo_async rea;
     const char *dif_name = NULL;
-    int listen = 0;
+    int listen           = 0;
     int ret;
     int opt;
 
     memset(&rea, 0, sizeof(rea));
 
-    rea.cli_appl_name = "rina-echo-async:client";
-    rea.srv_appl_name = "rina-echo-async:server";
-    rea.p = 1;
+    rea.cli_appl_name = "rina-echo-async|client";
+    rea.srv_appl_name = "rina-echo-async|server";
+    rea.p             = 1;
 
     /* Start with a default flow configuration (unreliable flow). */
-    rina_flow_spec_default(&rea.flowspec);
+    rina_flow_spec_unreliable(&rea.flowspec);
 
     while ((opt = getopt(argc, argv, "hld:a:z:g:p:")) != -1) {
         switch (opt) {
-            case 'h':
-                usage();
-                return 0;
+        case 'h':
+            usage();
+            return 0;
 
-            case 'l':
-                listen = 1;
-                break;
+        case 'l':
+            listen = 1;
+            break;
 
-            case 'd':
-                dif_name = optarg;
-                break;
+        case 'd':
+            dif_name = optarg;
+            break;
 
-            case 'a':
-                rea.cli_appl_name = optarg;
-                break;
+        case 'a':
+            rea.cli_appl_name = optarg;
+            break;
 
-            case 'z':
-                rea.srv_appl_name = optarg;
-                break;
+        case 'z':
+            rea.srv_appl_name = optarg;
+            break;
 
-            case 'g': /* Set max_sdu_gap flow specification parameter. */
-                rea.flowspec.max_sdu_gap = atoll(optarg);
-                break;
+        case 'g': /* Set max_sdu_gap flow specification parameter. */
+            rea.flowspec.max_sdu_gap = atoll(optarg);
+            break;
 
-            case 'p':
-                rea.p = atoll(optarg);
-                if (rea.p <= 0) {
-                    printf("Invalid -p argument '%d'\n", rea.p);
-                    return -1;
-                }
-                break;
-
-            default:
-                printf("    Unrecognized option %c\n", opt);
-                usage();
+        case 'p':
+            rea.p = atoll(optarg);
+            if (rea.p <= 0) {
+                printf("Invalid -p argument '%d'\n", rea.p);
                 return -1;
+            }
+            break;
+
+        default:
+            printf("    Unrecognized option %c\n", opt);
+            usage();
+            return -1;
         }
     }
 
@@ -453,7 +455,7 @@ main(int argc, char **argv)
     sa.sa_handler = sigint_handler;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_RESTART;
-    ret = sigaction(SIGINT, &sa, NULL);
+    ret         = sigaction(SIGINT, &sa, NULL);
     if (ret) {
         perror("sigaction(SIGINT)");
         return ret;
@@ -464,7 +466,7 @@ main(int argc, char **argv)
         return ret;
     }
 
-    /* Initialization of IRATI application. */
+    /* Initialization of RLITE application. */
     rea.cfd = rina_open();
     if (rea.cfd < 0) {
         perror("rina_open()");
