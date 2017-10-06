@@ -203,7 +203,7 @@ void rina_flow_spec_unreliable(struct rina_flow_spec *spec);
 #define rina_flow_spec_default rina_flow_spec_unreliable
 
 /*
- * Retrieve the MSS (Maximum Segment Size) that can be written to the flow
+ * Retrieve the MSS (Maximum SDU Size) that can be written to the flow
  * with a single write. Returns 0 on error with errno set properly.
  */
 unsigned int rina_flow_mss_get(int fd);
