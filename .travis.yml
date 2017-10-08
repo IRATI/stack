@@ -14,8 +14,6 @@ before_install:
   - sudo apt-get install libssl-dev
   #- sudo apt-get install protobuf-compiler 
   #- sudo apt-get install libprotobuf-dev 
-  - sudo apt-get install libnl-genl-3-dev 
-  - sudo apt-get install libnl-3-dev 
   - sudo apt-get install hostapd
   - sudo apt-get install wpasupplicant
   - sudo apt-get install zlib1g-dev
