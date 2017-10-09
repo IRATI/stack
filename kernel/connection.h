@@ -29,8 +29,7 @@
 #include "efcp-str.h"
 
 struct connection *  connection_create(void);
-struct connection *  connection_dup_from_user(const
-                                                struct connection __user * c);
+struct connection *  connection_dup_from_user(const struct connection __user * c);
 int                  connection_destroy(struct connection * conn);
 
 #endif

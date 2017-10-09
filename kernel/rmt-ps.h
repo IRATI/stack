@@ -25,7 +25,7 @@
 #include <linux/types.h>
 
 #include "rmt.h"
-#include "pdu.h"
+#include "du.h"
 #include "rds/rfifo.h"
 #include "ps-factory.h"
 
@@ -38,11 +38,11 @@ struct rmt_ps {
 	struct ps_base base;
 
 	/* Behavioural policies. */
-	struct pdu *(*rmt_dequeue_policy)(struct rmt_ps *,
+	struct du *(*rmt_dequeue_policy)(struct rmt_ps *,
 					  struct rmt_n1_port *);
 	int (*rmt_enqueue_policy)(struct rmt_ps *,
 				  struct rmt_n1_port *,
-				  struct pdu *);
+				  struct du *);
 	void* (*rmt_q_create_policy)(struct rmt_ps *,
 				   struct rmt_n1_port *);
 	int (*rmt_q_destroy_policy)(struct rmt_ps *,

@@ -22,8 +22,7 @@
 #define RINA_EFCP_H
 
 #include "common.h"
-#include "pdu.h"
-#include "sdu.h"
+#include "du.h"
 #include "ipcp-instances.h"
 #include "kfa.h"
 #include "rds/robjects.h"
@@ -40,10 +39,10 @@ int                     efcp_container_config_set(struct efcp_container * c,
                                                   struct efcp_config *    cfg);
 int                     efcp_container_write(struct efcp_container * container,
                                              cep_id_t                cep_id,
-                                             struct sdu *            sdu);
+                                             struct du *             du);
 int                     efcp_container_receive(struct efcp_container * c,
                                                cep_id_t                cep_id,
-                                               struct pdu *            pdu);
+                                               struct du *             du);
 
 /* FIXME: Rename efcp_connection_*() as efcp_*() */
 cep_id_t                efcp_connection_create(struct efcp_container * container,
@@ -77,7 +76,7 @@ struct efcp *           efcp_container_find_rtxlock(struct efcp_container * cont
 
 int                     efcp_enqueue(struct efcp * efcp,
                                      port_id_t     port,
-                                     struct sdu *  sdu);
+                                     struct du *   du);
 int                     efcp_enable_write(struct efcp * efcp);
 int                     efcp_disable_write(struct efcp * efcp);
 

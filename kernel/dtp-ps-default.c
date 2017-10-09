@@ -38,14 +38,14 @@
 #include "dtp-utils.h"
 #include "debug.h"
 
-int default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
+int default_transmission_control(struct dtp_ps * ps, struct du * du)
 {
         struct dtp *  dtp;
 
         dtp = ps->dm;
         if (!dtp) {
                 LOG_ERR("No instance passed, cannot run policy");
-                pdu_destroy(pdu);
+                du_destroy(du);
                 return -1;
         }
 
@@ -53,16 +53,15 @@ int default_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
         LOG_DBG("defaultTxPolicy - sending to rmt");
 
         spin_lock_bh(&dtp->sv_lock);
-        dtp->sv->max_seq_nr_sent =
-        		pci_sequence_number_get(pdu_pci_get_ro(pdu));
+        dtp->sv->max_seq_nr_sent = pci_sequence_number_get(&du->pci);
         spin_unlock_bh(&dtp->sv_lock);
 
         LOG_DBG("local_soft_irq_pending: %d", local_softirq_pending());
 
-        return dtp_pdu_send(dtp, dtp->rmt, pdu);
+        return dtp_pdu_send(dtp, dtp->rmt, du);
 }
 
-int default_closed_window(struct dtp_ps * ps, struct pdu * pdu)
+int default_closed_window(struct dtp_ps * ps, struct du * du)
 {
         struct dtp * dtp = ps->dm;
         struct dtcp * dtcp;
@@ -71,13 +70,7 @@ int default_closed_window(struct dtp_ps * ps, struct pdu * pdu)
 
         if (!dtp) {
                 LOG_ERR("No instance passed, cannot run policy");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        if (!pdu_is_ok(pdu)) {
-                LOG_ERR("PDU is not ok, cannot run policy");
-                pdu_destroy(pdu);
+                du_destroy(du);
                 return -1;
         }
 
@@ -89,7 +82,7 @@ int default_closed_window(struct dtp_ps * ps, struct pdu * pdu)
 	max_len = dtcp_max_closed_winq_length(dtcp->cfg);
 
 	if (max_len != 0 && (cwq_size(cwq) < max_len - 1)) {
-		if (cwq_push(cwq, pdu)) {
+		if (cwq_push(cwq, du)) {
 			LOG_ERR("Failed to push into cwq");
 			return -1;
 		}
@@ -99,7 +92,7 @@ int default_closed_window(struct dtp_ps * ps, struct pdu * pdu)
 
 	ASSERT(ps->snd_flow_control_overrun);
 
-	if (ps->snd_flow_control_overrun(ps, pdu)) {
+	if (ps->snd_flow_control_overrun(ps, du)) {
 		LOG_ERR("Failed Flow Control Overrun");
 		return -1;
 	}
@@ -107,9 +100,8 @@ int default_closed_window(struct dtp_ps * ps, struct pdu * pdu)
 	return 0;
 }
 
-int default_snd_flow_control_overrun(struct dtp_ps * ps, struct pdu * pdu)
+int default_snd_flow_control_overrun(struct dtp_ps * ps, struct du * du)
 {
-        struct cwq * cwq;
         struct dtp * dtp = ps->dm;
 
         if (!dtp) {
@@ -117,21 +109,9 @@ int default_snd_flow_control_overrun(struct dtp_ps * ps, struct pdu * pdu)
                 return -1;
         }
 
-        cwq = dtp->cwq;
-        if (!cwq) {
-                LOG_ERR("Failed to get cwq");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
         LOG_DBG("Default Flow Control");
 
-        if (!pdu_is_ok(pdu)) {
-                LOG_ERR("PDU is not ok, cannot run policy");
-                return -1;
-        }
-
-        if (cwq_push(cwq, pdu)) {
+        if (cwq_push(dtp->cwq, du)) {
                 LOG_ERR("Failed to push into cwq");
                 return -1;
         }

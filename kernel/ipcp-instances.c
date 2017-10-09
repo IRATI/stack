@@ -54,7 +54,7 @@ static bool has_common_hooks(struct ipcp_instance_ops * ops)
 
         if (ops->assign_to_dif     &&
             ops->update_dif_config &&
-            ops->sdu_write         &&
+            ops->du_write         &&
             ops->ipcp_name)
                 return true;
 
@@ -75,7 +75,7 @@ bool ipcp_instance_is_shim(struct ipcp_instance_ops * ops)
             ops->application_register   &&
             ops->application_unregister &&
             ops->flow_unbinding_ipcp    &&
-            ops->sdu_write)
+            ops->du_write)
                 return true;
 
         return false;
@@ -94,9 +94,9 @@ bool ipcp_instance_is_normal(struct ipcp_instance_ops * ops)
             ops->connection_update         ||
             ops->connection_destroy        ||
             ops->connection_create_arrived ||
-            ops->sdu_write                 ||
-            ops->mgmt_sdu_write            ||
-            ops->mgmt_sdu_post             ||
+            ops->du_write                 ||
+            ops->mgmt_du_write            ||
+            ops->mgmt_du_post             ||
             ops->pff_add                   ||
             ops->pff_remove                ||
             ops->pff_dump                  ||
@@ -104,7 +104,7 @@ bool ipcp_instance_is_normal(struct ipcp_instance_ops * ops)
             ops->flow_binding_ipcp         ||
             ops->flow_unbinding_ipcp       ||
             ops->flow_deallocate           ||
-            ops->sdu_enqueue)
+            ops->du_enqueue)
                 return true;
 
         return false;

@@ -24,7 +24,7 @@
 #include <linux/types.h>
 
 #include "sdup.h"
-#include "pdu.h"
+#include "du.h"
 #include "ps-factory.h"
 
 struct sdup_ttl_ps {
@@ -33,11 +33,11 @@ struct sdup_ttl_ps {
 	/* Behavioural policies. */
 
 	int (* sdup_set_lifetime_limit_policy)(struct sdup_ttl_ps *,
-					       struct pdu *);
+					       struct du *);
 	int (* sdup_get_lifetime_limit_policy)(struct sdup_ttl_ps *,
-					       struct pdu *);
+					       struct du *);
 	int (* sdup_dec_check_lifetime_limit_policy)(struct sdup_ttl_ps *,
-						     struct pdu *);
+						     struct du *);
 
 	/* Reference used to access the SDUP data model. */
 	struct sdup_port * dm;

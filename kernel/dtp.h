@@ -49,11 +49,11 @@ int          dtp_sv_init(struct dtp * dtp,
 
 /* Sends a SDU to the DTP (DTP takes the ownership of the passed SDU) */
 int          dtp_write(struct dtp * instance,
-                       struct sdu * sdu);
+                       struct du * du);
 
 /* DTP receives a PDU from RMT */
 int          dtp_receive(struct dtp * instance,
-                         struct pdu * pdu);
+                         struct du * du);
 
 /*FIXME: This may be changed depending on the discussion around
  * RcvrInactivityTimer Policy */
@@ -69,7 +69,7 @@ void         dtp_start_rate_timer(struct dtp * dtp, struct dtcp * dtcp);
 /* FIXME: temporal addition so that DTCP's sending ack can call this function
  * that was originally static */
 struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp);
-int dtp_pdu_ctrl_send(struct dtp * dtp, struct pdu * pdu);
+int dtp_pdu_ctrl_send(struct dtp * dtp, struct du * du);
 
 int                dtp_select_policy_set(struct dtp * dtp, const string_t *path,
                                          const string_t * name);

@@ -311,25 +311,10 @@ int efcp_container_config_set(struct efcp_container * container,
 EXPORT_SYMBOL(efcp_container_config_set);
 
 static int efcp_write(struct efcp * efcp,
-                      struct sdu *  sdu)
+                      struct du *  du)
 {
-        if (!sdu) {
-                LOG_ERR("Bogus SDU passed");
-                return -1;
-        }
-        if (!efcp) {
-                LOG_ERR("Bogus EFCP passed");
-                sdu_destroy(sdu);
-                return -1;
-        }
 
-        if (!efcp->dtp) {
-                LOG_ERR("No DTP instance available");
-                sdu_destroy(sdu);
-                return -1;
-        }
-
-        if (dtp_write(efcp->dtp, sdu)) {
+        if (dtp_write(efcp->dtp, du)) {
                 LOG_ERR("Could not write SDU to DTP");
                 return -1;
         }
@@ -339,46 +324,37 @@ static int efcp_write(struct efcp * efcp,
 
 int efcp_container_write(struct efcp_container * container,
                          cep_id_t                cep_id,
-                         struct sdu *            sdu)
+                         struct du *             du)
 {
         struct efcp * efcp;
         int           ret;
 
-        if (!container || !is_sdu_ok(sdu)) {
-                LOG_ERR("Bogus input parameters, cannot write into container");
-                sdu_destroy(sdu);
-                return -1;
-        }
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Bad cep-id, cannot write into container");
-                sdu_destroy(sdu);
+                du_destroy(du);
                 return -1;
         }
 
-	if (sdu_efcp_config_bind(sdu, container->config)) {
-		LOG_ERR("Could not bind EFCP config to incoming SDU");
-		sdu_destroy(sdu);
-		return -1;
-	}
+        du->cfg = container->config;
 
         spin_lock_bh(&container->lock);
         efcp = efcp_imap_find(container->instances, cep_id);
         if (!efcp) {
                 spin_unlock_bh(&container->lock);
                 LOG_ERR("There is no EFCP bound to this cep-id %d", cep_id);
-                sdu_destroy(sdu);
+                du_destroy(du);
                 return -1;
         }
         if (efcp->state == EFCP_DEALLOCATED) {
                 spin_unlock_bh(&container->lock);
-                sdu_destroy(sdu);
+                du_destroy(du);
                 LOG_DBG("EFCP already deallocated");
                 return 0;
         }
         atomic_inc(&efcp->pending_ops);
         spin_unlock_bh(&container->lock);
 
-        ret = efcp_write(efcp, sdu);
+        ret = efcp_write(efcp, du);
 
         spin_lock_bh(&container->lock);
         if (atomic_dec_and_test(&efcp->pending_ops) &&
@@ -394,39 +370,25 @@ int efcp_container_write(struct efcp_container * container,
 EXPORT_SYMBOL(efcp_container_write);
 
 static int efcp_receive(struct efcp * efcp,
-                        struct pdu *  pdu)
+                        struct du *  du)
 {
         pdu_type_t    pdu_type;
-        const struct pci *  pci;
 
-        if (!pdu) {
-                LOG_ERR("No pdu passed");
-                return -1;
-        }
-        if (!efcp) {
-                LOG_ERR("No efcp instance passed");
-                pdu_destroy(pdu);
-                return -1;
-        }
-
-        ASSERT(efcp->dt);
-        pci = pdu_pci_get_ro(pdu);
-
-        pdu_type = pci_type(pci);
+        pdu_type = pci_type(&du->pci);
         if (pdu_type_is_control(pdu_type)) {
                 if (!efcp->dtp || !efcp->dtp->dtcp) {
                         LOG_ERR("No DTCP instance available");
-                        pdu_destroy(pdu);
+                        du_destroy(du);
                         return -1;
                 }
 
-                if (dtcp_common_rcv_control(efcp->dtp->dtcp, pdu))
+                if (dtcp_common_rcv_control(efcp->dtp->dtcp, du))
                         return -1;
 
                 return 0;
         }
 
-        if (dtp_receive(efcp->dtp, pdu)) {
+        if (dtp_receive(efcp->dtp, du)) {
                 LOG_ERR("DTP cannot receive this PDU");
                 return -1;
         }
@@ -436,21 +398,15 @@ static int efcp_receive(struct efcp * efcp,
 
 int efcp_container_receive(struct efcp_container * container,
                            cep_id_t                cep_id,
-                           struct pdu *            pdu)
+                           struct du *             du)
 {
         struct efcp *      efcp;
         int                ret = 0;
-        const struct pci * pci;
         pdu_type_t         pdu_type;
 
-        if (!container || !pdu_is_ok(pdu)) {
-                LOG_ERR("Bogus input parameters");
-                pdu_destroy(pdu);
-                return -1;
-        }
         if (!is_cep_id_ok(cep_id)) {
                 LOG_ERR("Bad cep-id, cannot write into container");
-                pdu_destroy(pdu);
+                du_destroy(du);
                 return -1;
         }
 
@@ -461,28 +417,27 @@ int efcp_container_receive(struct efcp_container * container,
                 LOG_ERR("Cannot find the requested instance cep-id: %d",
                         cep_id);
                 /* FIXME: It should call unknown_flow policy of EFCP */
-                pdu_destroy(pdu);
+                du_destroy(du);
                 return -1;
         }
         if (efcp->state == EFCP_DEALLOCATED) {
                 spin_unlock_bh(&container->lock);
-                pdu_destroy(pdu);
+                du_destroy(du);
                 LOG_DBG("EFCP already deallocated");
                 return 0;
         }
         atomic_inc(&efcp->pending_ops);
 
-        pci = pdu_pci_get_ro(pdu);
-        pdu_type = pci_type(pci);
+        pdu_type = pci_type(&du->pci);
         if (pdu_type == PDU_TYPE_DT &&
         		efcp->connection->destination_cep_id < 0) {
         	/* Check that the destination cep-id is set to avoid races,
         	 * otherwise set it*/
-        	efcp->connection->destination_cep_id = pci_cep_source(pci);
+        	efcp->connection->destination_cep_id = pci_cep_source(&du->pci);
         }
         spin_unlock_bh(&container->lock);
 
-        ret = efcp_receive(efcp, pdu);
+        ret = efcp_receive(efcp, du);
 
         spin_lock_bh(&container->lock);
         if (atomic_dec_and_test(&efcp->pending_ops) &&
@@ -886,20 +841,17 @@ EXPORT_SYMBOL(efcp_connection_modify);
 
 int efcp_enqueue(struct efcp * efcp,
                  port_id_t     port,
-                 struct sdu *  sdu)
+                 struct du *   du)
 {
-        ASSERT(is_sdu_ok(sdu));
-	ASSERT(efcp);
-
         if (!efcp->user_ipcp) {
         	LOG_ERR("Flow is being deallocated, dropping SDU");
-        	sdu_destroy(sdu);
+        	du_destroy(du);
         	return -1;
         }
 
-        if (efcp->user_ipcp->ops->sdu_enqueue(efcp->user_ipcp->data,
-                                              port,
-                                              sdu)) {
+        if (efcp->user_ipcp->ops->du_enqueue(efcp->user_ipcp->data,
+                                             port,
+                                             du)) {
                 LOG_ERR("Upper ipcp could not enqueue sdu to port: %d", port);
                 return -1;
         }

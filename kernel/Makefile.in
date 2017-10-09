@@ -39,7 +39,7 @@ rina-irati-core-y:=						\
         rds/rtimer.o rds/robjects.o rds/rds.o                   \
 	iodev.o	ctrldev.o					\
 	serdes-utils.o ker-numtables.o \
-	buffer.o pci.o pdu.o sdu.o	        		\
+	buffer.o pci.o du.o	        		\
 	ipcp-utils.o						\
 	connection.o common.o policies.o			\
 	dtp-conf-utils.o dtcp-conf-utils.o      		\

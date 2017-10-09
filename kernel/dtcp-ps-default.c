@@ -32,8 +32,8 @@
 #include "dtcp-ps.h"
 #include "dtcp-ps-default.h"
 #include "dtp-utils.h"
+#include "du.h"
 #include "logs.h"
-
 
 int default_lost_control_pdu(struct dtcp_ps * ps)
 {
@@ -45,7 +45,7 @@ int default_lost_control_pdu(struct dtcp_ps * ps)
         }
 
 #if 0
-        struct pdu * pdu_ctrl;
+        struct du * du_ctrl;
         seq_num_t last_rcv_ctrl, snd_lft, snd_rt;
 
         spin_lock_bh(&dtcp->parent->sv_lock);
@@ -54,16 +54,16 @@ int default_lost_control_pdu(struct dtcp_ps * ps)
         snd_rt        = dtcp->sv->snd_rt_wind_edge;
         spin_unlock_bh(&dtcp->parent->sv_lock);
 
-        pdu_ctrl      = pdu_ctrl_ack_create(dtcp,
-                                            last_rcv_ctrl,
-                                            snd_lft,
-                                            snd_rt);
-        if (!pdu_ctrl) {
+        du_ctrl      = pdu_ctrl_ack_create(dtcp,
+                                           last_rcv_ctrl,
+                                           snd_lft,
+                                           snd_rt);
+        if (!du_ctrl) {
                 LOG_ERR("Failed Lost Control PDU policy");
                 return -1;
         }
 
-        if (dt_pdu_send(dtcp->parent, pdu_ctrl))
+        if (dt_pdu_send(dtcp->parent, du_ctrl))
                 return -1;
 #endif
 
@@ -150,7 +150,7 @@ int default_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
 int default_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {
         struct dtcp * dtcp = ps->dm;
-        struct pdu * pdu;
+        struct du * du;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -161,14 +161,14 @@ int default_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
                 return -1;
         }
 
-        pdu = pdu_ctrl_generate(dtcp, PDU_TYPE_FC);
-        if (!pdu)
+        du = pdu_ctrl_generate(dtcp, PDU_TYPE_FC);
+        if (!du)
                 return -1;
 
         LOG_DBG("DTCP Sending FC (CPU: %d)", smp_processor_id());
-        dump_we(dtcp, pdu_pci_get_rw(pdu));
+        dump_we(dtcp, &du->pci);
 
-        if (dtcp_pdu_send(dtcp, pdu))
+        if (dtcp_pdu_send(dtcp, du))
                return -1;
 
         return 0;

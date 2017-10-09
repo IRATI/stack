@@ -25,7 +25,7 @@
 #include <linux/list.h>
 
 #include "efcp-str.h"
-#include "pdu.h"
+#include "du.h"
 #include "rmt.h"
 
 struct cwq *        cwq_create(void);
@@ -36,8 +36,8 @@ bool                cwq_write_enable(struct cwq * queue);
 void                cwq_write_enable_set(struct cwq * queue,
                                          bool         flag);
 int                 cwq_push(struct cwq * q,
-                             struct pdu * pdu);
-struct pdu *        cwq_pop(struct cwq * q);
+                             struct du * du);
+struct du *         cwq_pop(struct cwq * q);
 bool                cwq_is_empty(struct cwq * q);
 int                 cwq_flush(struct cwq * q);
 ssize_t             cwq_size(struct cwq * q);
@@ -63,7 +63,7 @@ int                 rtxq_entry_destroy(struct rtxq_entry * entry);
 int                 rtxq_push_sn(struct rtxq * q,
                                  seq_num_t sn);
 int                 rtxq_push_ni(struct rtxq * q,
-                                 struct pdu *  pdu);
+                                 struct du *  du);
 int                 rtxq_ack(struct rtxq * q,
                              seq_num_t     seq_num,
                              timeout_t     tr);
@@ -74,5 +74,5 @@ int                 rtxq_flush(struct rtxq * q);
 
 int 		    dtp_pdu_send(struct dtp *  dtp,
 				 struct rmt * rmt,
-                                 struct pdu * pdu);
+                                 struct du * du);
 #endif

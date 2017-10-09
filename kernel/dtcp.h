@@ -22,8 +22,7 @@
 #define RINA_DTCP_H
 
 #include "common.h"
-#include "sdu.h"
-#include "pdu.h"
+#include "du.h"
 #include "efcp-str.h"
 #include "ps-factory.h"
 #include "rds/robjects.h"
@@ -42,15 +41,15 @@ struct dtcp *        dtcp_create(struct dtp *         dtp,
 int                  dtcp_destroy(struct dtcp * instance);
 
 int                  dtcp_send(struct dtcp * instance,
-                               struct sdu *  sdu);
+                               struct du *  du);
 
 /* Used by the DTP to notify the DTCP about events */
 int                  dtcp_sv_update(struct dtcp *      dtcp,
-                                    const struct pci * pci);
+                                    struct pci * pci);
 
 /* Used by EFCP to send an incoming DTCP PDU */
 int                  dtcp_common_rcv_control(struct dtcp * dtcp,
-                                             struct pdu *  pdu);
+                                             struct du *  du);
 
 /* Used by DTP to have an ack-control PDU sent by DTCP */
 int                  dtcp_ack_flow_control_pdu_send(struct dtcp * instance,
@@ -68,14 +67,14 @@ int          dtcp_set_policy_set_param(struct dtcp * dtcp,
 struct dtcp	*dtcp_from_component(struct rina_component *component);
 struct dtcp_ps	*dtcp_ps_get(struct dtcp *dtcp);
 pdu_type_t	pdu_ctrl_type_get(struct dtcp *dtcp, seq_num_t seq);
-struct pdu	*pdu_ctrl_create_ni(struct dtcp *dtcp, pdu_type_t type);
+struct du	*pdu_ctrl_create_ni(struct dtcp *dtcp, pdu_type_t type);
 void		dump_we(struct dtcp *dtcp, struct pci *pci);
-int		dtcp_pdu_send(struct dtcp *dtcp, struct pdu *pdu);
-struct pdu	*pdu_ctrl_ack_create(struct dtcp *dtcp,
+int		dtcp_pdu_send(struct dtcp *dtcp, struct du *du);
+struct du	*pdu_ctrl_ack_create(struct dtcp *dtcp,
 				     seq_num_t last_ctrl_seq_rcvd,
 				     seq_num_t snd_left_wind_edge,
 				     seq_num_t snd_rt_wind_edge);
-struct pdu	*pdu_ctrl_generate(struct dtcp *dtcp, pdu_type_t type);
+struct du	*pdu_ctrl_generate(struct dtcp *dtcp, pdu_type_t type);
 int		dtcp_last_time_set(struct dtcp *dtcp,
 					   struct timespec *s);
 bool		dtcp_rate_exceeded(struct dtcp *dtcp, int send);

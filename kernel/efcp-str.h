@@ -86,7 +86,7 @@ struct efcp {
 
 struct rtxq_entry {
         unsigned long    time_stamp;
-        struct pdu *     pdu;
+        struct du *      du;
         int              retries;
         struct list_head next;
 };
