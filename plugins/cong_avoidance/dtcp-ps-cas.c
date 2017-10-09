@@ -40,7 +40,6 @@ struct cas_dtcp_ps_data {
         unsigned int w_inc_a_p;
         unsigned int ecn_count;
         unsigned int rcv_count;
-        spinlock_t   lock;
 
         /* Value of window in fixed point, most significant 16 bits are the
          * integer part, less significant 16 bits are the decimal part (i.e.
@@ -104,7 +103,7 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         }
 */
 
-        spin_lock_bh(&data->lock);
+        spin_lock_bh(&dtcp->parent->sv_lock);
         /* if we passed the wp bits, consider ecn bit */
         if ((++data->rcv_count > data->wp) &&
              ((int) (pci_flags_get(pci) & PDU_FLAGS_EXPLICIT_CONGESTION))) {
@@ -140,14 +139,11 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 #endif
                 data->rcv_count = 0;
                 data->ecn_count = 0;
-                spin_lock_bh(&dtcp->parent->sv_lock);
                 dtcp->sv->rcvr_credit = data->wc;
-        	spin_unlock_bh(&dtcp->parent->sv_lock);
         }
-        spin_unlock_bh(&data->lock);
 
-        spin_lock_bh(&dtcp->parent->sv_lock);
-        dtcp->sv->rcvr_rt_wind_edge = dtcp->sv->rcvr_credit + dtcp->parent->sv->rcv_left_window_edge;
+        dtcp->sv->rcvr_rt_wind_edge = dtcp->sv->rcvr_credit +
+        		dtcp->parent->sv->rcv_left_window_edge;
         rwe = dtcp->sv->rcvr_rt_wind_edge;
 	spin_unlock_bh(&dtcp->parent->sv_lock);
 

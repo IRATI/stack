@@ -41,7 +41,6 @@ enum tx_state {
 };
 
 struct red_dtcp_ps_data {
-	spinlock_t    lock;
         uint_t        new_ecn_burst;
 	uint_t        init_credit;
 	uint_t        sshtresh;
@@ -54,29 +53,15 @@ struct red_dtcp_ps_data {
 #endif
 };
 
-static void update_credit_and_rt_wind_edge(struct dtcp * dtcp, uint_t credit)
-{
-        ASSERT(dtcp);
-        ASSERT(dtcp->sv);
-
-        spin_lock_bh(&dtcp->parent->sv_lock);
-        dtcp->sv->rcvr_credit = credit;
-	/* applying the TCP rule of not shrinking the window */
-	if (dtcp->parent->sv->rcv_left_window_edge + credit > dtcp->sv->rcvr_rt_wind_edge)
-        	dtcp->sv->rcvr_rt_wind_edge = dtcp->parent->sv->rcv_left_window_edge + credit;
-        spin_unlock_bh(&dtcp->parent->sv_lock);
-}
-
 static int
 red_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {
         struct dtcp * dtcp = ps->dm;
         struct red_dtcp_ps_data * data = ps->priv;
         seq_num_t new_credit;
-	unsigned long flags;
 
-	spin_lock_irqsave(&data->lock, flags);
-        new_credit = dtcp_rcvr_credit(dtcp);
+	spin_lock_bh(&dtcp->parent->sv_lock);
+        new_credit = dtcp->sv->rcvr_credit;
 	if (data->state == SLOW_START) {
 		new_credit++;
 		if (new_credit >= data->sshtresh) {
@@ -95,15 +80,20 @@ red_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 		data->sshtresh = new_credit;
 		data->state = CONG_AVOID;
 		data->new_ecn_burst = new_credit;
-		LOG_DBG("change enc_burst to %u", data->new_ecn_burst);
+		LOG_DBG("change ecn_burst to %u", data->new_ecn_burst);
 	} else if (data->new_ecn_burst != 0)
 		data->new_ecn_burst--;
 
         /* set new credit */
-        dtcp_rcvr_credit_set(dtcp, new_credit);
-	spin_unlock_irqrestore(&data->lock, flags);
-        //update_rt_wind_edge(dtcp);
-	update_credit_and_rt_wind_edge(dtcp, new_credit);
+        dtcp->sv->rcvr_credit = new_credit;
+
+	/* applying the TCP rule of not shrinking the window */
+	if (dtcp->parent->sv->rcv_left_window_edge + new_credit >
+			dtcp->sv->rcvr_rt_wind_edge)
+        	dtcp->sv->rcvr_rt_wind_edge =
+        			dtcp->parent->sv->rcv_left_window_edge + new_credit;
+
+        spin_unlock_bh(&dtcp->parent->sv_lock);
 
 #if DTCP_DEBUG
 	/* Debug register */
@@ -131,12 +121,10 @@ dtcp_ps_red_create(struct rina_component * component)
 	data->init_credit = 3;
 	data->dec_credit = 0;
 	data->sshtresh = 0XFFFFFFFF;
-	dtcp_rcvr_credit_set(dtcp, data->init_credit);
+	dtcp->sv->rcvr_credit = data->init_credit;
 #if DTCP_DEBUG
 	data->debug = red_dtcp_debug_create();
 #endif
-
-	spin_lock_init(&data->lock);
 
         ps->base.set_policy_set_param   = NULL; /* default */
         ps->dm                          = dtcp;
