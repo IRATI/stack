@@ -334,15 +334,14 @@ static int ecn_destroy_q(
 int ecn_enqueue(
 	struct rmt_ps * ps,
 	struct rmt_n1_port * n1_port,
-	struct pdu * pdu) {
+	struct du * du) {
 
 	struct rmt_queue *q;
-	struct pci * pci = 0;
 	struct rmt_ps_data * data = ps->priv;
 
 	ssize_t c = 0;
 
-	if (!ps || !n1_port || !pdu) {
+	if (!ps || !n1_port || !du) {
 		LOG_ERR("Wrong input parameters");
 		return RMT_PS_ENQ_ERR;
 	}
@@ -352,22 +351,21 @@ int ecn_enqueue(
 	if (!q) {
 		LOG_ERR("Could not find queue for n1_port %u",
 			n1_port->port_id);
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return RMT_PS_ENQ_ERR;
 	}
 
-	pci = pdu_pci_get_rw(pdu);
 	c = rfifo_length(q->queue);
 
 	/* NOTE: This is a workaround... */
-	if(pci_type(pci) == PDU_TYPE_MGMT) {
-		rfifo_push_ni(q->mgmt, pdu);
+	if(pci_type(&du->pci) == PDU_TYPE_MGMT) {
+		rfifo_push_ni(q->mgmt, du);
 
 		return RMT_PS_ENQ_SCHED;
 	}
 
 	if (c >= data->q_max) {
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return RMT_PS_ENQ_DROP;
 	}
 
@@ -376,22 +374,21 @@ int ecn_enqueue(
 	 * congestion.
 	 */
 	if(c > data->thre) {
-		pci_flags_set(
-			pci,
-			pci_flags_get(pci) | PDU_FLAGS_EXPLICIT_CONGESTION);
+		pci_flags_set(&du->pci, pci_flags_get(&du->pci) |
+				PDU_FLAGS_EXPLICIT_CONGESTION);
 	}
 
-	rfifo_push_ni(q->queue, pdu);
+	rfifo_push_ni(q->queue, du);
 
 	return RMT_PS_ENQ_SCHED;
 }
 
-struct pdu * ecn_dequeue(
+struct du * ecn_dequeue(
 	struct rmt_ps *ps,
 	struct rmt_n1_port *n1_port) {
 
 	struct rmt_queue * q;
-	struct pdu * ret_pdu;
+	struct du * ret_pdu;
 
 	if (!ps || !n1_port) {
 		LOG_ERR("Wrong input parameters");

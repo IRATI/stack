@@ -89,7 +89,7 @@ static int cas_rmt_queue_destroy(struct cas_rmt_queue * q)
                 return -1;
         }
 
-        if (q->queue) rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
+        if (q->queue) rfifo_destroy(q->queue, (void (*)(void *)) du_destroy);
 
         rkfree(q);
 
@@ -139,36 +139,24 @@ static int update_cycles(struct reg_cycle_t * prev_cycle,
 	return 0;
 }
 
-static int mark_pdu(struct pdu * ret_pdu)
+static int mark_pdu(struct du * ret_pdu)
 {
-        struct pci *    pci;
         pdu_flags_t     pci_flags;
 
-        pci = pdu_pci_get_rw(ret_pdu);
-        if (!pci) {
-        	LOG_ERR("No PCI to mark in this PDU...");
-		pdu_destroy(ret_pdu);
-                return -1;
-        }
-        pci_flags = pci_flags_get(pci);
-        pci_flags_set(pci, pci_flags |= PDU_FLAGS_EXPLICIT_CONGESTION);
+        pci_flags = pci_flags_get(&ret_pdu->pci);
+        pci_flags_set(&ret_pdu->pci, pci_flags |= PDU_FLAGS_EXPLICIT_CONGESTION);
         LOG_DBG("ECN bit marked");
 	return 0;
 }
 
 static int cas_rmt_enqueue_policy(struct rmt_ps      *ps,
 				  struct rmt_n1_port *port,
-				  struct pdu	     *pdu)
+				  struct du	     *du)
 {
         struct cas_rmt_queue *   q;
         struct cas_rmt_ps_data * data;
         ssize_t                  cur_qlen;
         struct reg_cycle_t *     prev_cycle, * cur_cycle;
-
-        ASSERT(ps);
-        ASSERT(ps->priv);
-        ASSERT(pdu);
-        ASSERT(port);
 
         data = ps->priv;
 
@@ -181,7 +169,7 @@ static int cas_rmt_enqueue_policy(struct rmt_ps      *ps,
 
         cur_qlen = rfifo_length(q->queue);
 	if (cur_qlen >= data->q_max) {
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return RMT_PS_ENQ_DROP;
 	}
 
@@ -189,7 +177,7 @@ static int cas_rmt_enqueue_policy(struct rmt_ps      *ps,
         cur_cycle  = &q->reg_cycles.cur_cycle;
 
 	if (update_cycles(prev_cycle, cur_cycle, cur_qlen, true)) {
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return RMT_PS_ENQ_ERR;
 	}
 
@@ -197,25 +185,21 @@ static int cas_rmt_enqueue_policy(struct rmt_ps      *ps,
                 port->port_id, cur_cycle->avg_len);
 
         if (cur_cycle->avg_len >= 1)
-		if (mark_pdu(pdu))
+		if (mark_pdu(du))
 			return RMT_PS_ENQ_ERR;
 
-	rfifo_push_ni(q->queue, pdu);
+	rfifo_push_ni(q->queue, du);
         return RMT_PS_ENQ_SCHED;
 }
 
-static struct pdu * cas_rmt_dequeue_policy(struct rmt_ps      *ps,
-					   struct rmt_n1_port *port)
+static struct du * cas_rmt_dequeue_policy(struct rmt_ps      *ps,
+					  struct rmt_n1_port *port)
 {
         struct cas_rmt_queue *   q;
         struct cas_rmt_ps_data * data;
         ssize_t                  cur_qlen;
         struct reg_cycle_t *     prev_cycle, * cur_cycle;
-	struct pdu *             ret_pdu;
-
-        ASSERT(ps);
-        ASSERT(ps->priv);
-        ASSERT(port);
+	struct du *              ret_pdu;
 
         data = ps->priv;
 
@@ -237,7 +221,7 @@ static struct pdu * cas_rmt_dequeue_policy(struct rmt_ps      *ps,
         cur_cycle  = &q->reg_cycles.cur_cycle;
 
 	if (update_cycles(prev_cycle, cur_cycle, cur_qlen, false)) {
-		pdu_destroy(ret_pdu);
+		du_destroy(ret_pdu);
 		return NULL;
 	}
 

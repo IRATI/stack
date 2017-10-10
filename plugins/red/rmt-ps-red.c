@@ -93,20 +93,20 @@ static int red_rmt_queue_destroy(struct red_rmt_queue * q)
                 LOG_ERR("No RMT Key-queue to destroy...");
                 return -1;
         }
-        if (q->queue) rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
+        if (q->queue) rfifo_destroy(q->queue, (void (*)(void *)) du_destroy);
 
         rkfree(q);
 
         return 0;
 }
 
-static struct pdu *
+static struct du *
 red_rmt_dequeue_policy(struct rmt_ps *      ps,
 		       struct rmt_n1_port * port)
 {
         struct red_rmt_queue *   q;
         struct red_rmt_ps_data * data = ps->priv;
-        struct pdu *             ret_pdu;
+        struct du *              ret_pdu;
 	unsigned int             qlen;
 
         if (!ps || !port || !data) {
@@ -149,16 +149,15 @@ red_rmt_dequeue_policy(struct rmt_ps *      ps,
 
 static int red_rmt_enqueue_policy(struct rmt_ps *      ps,
                                   struct rmt_n1_port * port,
-                                  struct pdu *         pdu)
+                                  struct du *          du)
 {
         struct red_rmt_queue *   q;
         struct red_rmt_ps_data * data = ps->priv;
-        struct pci *             pci;
         unsigned long            pci_flags;
 	int			 ret;
 	unsigned int             qlen;
 
-        if (!ps || !port || !pdu || !data) {
+        if (!ps || !port || !du || !data) {
                 LOG_ERR("Wrong input parameters for "
                         "rmt_enqueu_scheduling_policy_tx");
                 return RMT_PS_ENQ_ERR;
@@ -168,7 +167,7 @@ static int red_rmt_enqueue_policy(struct rmt_ps *      ps,
         if (!q) {
                 LOG_ERR("Could not find queue for n1_port %u",
                         port->port_id);
-                pdu_destroy(pdu);
+                du_destroy(du);
                 return RMT_PS_ENQ_ERR;
         }
 
@@ -187,7 +186,7 @@ static int red_rmt_enqueue_policy(struct rmt_ps *      ps,
 	if(qlen >= data->conf_data.limit) {
 		q->stats.forced_drop++;
 		ret = RMT_PS_ENQ_DROP;
-        	pdu_destroy(pdu);
+        	du_destroy(du);
         	LOG_DBG("PDU dropped, qmax reached...");
 		goto exit;
 	}
@@ -201,22 +200,22 @@ static int red_rmt_enqueue_policy(struct rmt_ps *      ps,
 		LOG_DBG("RED_PROB_MARK");
 		q->stats.prob_mark++;
 		/* mark ECN bit */
-                pci = pdu_pci_get_rw(pdu);
-                pci_flags = pci_flags_get(pci);
-                pci_flags_set(pci, pci_flags |= PDU_FLAGS_EXPLICIT_CONGESTION);
+                pci_flags = pci_flags_get(&du->pci);
+                pci_flags_set(&du->pci, pci_flags
+                		|= PDU_FLAGS_EXPLICIT_CONGESTION);
 		break;
 
 	case RED_HARD_MARK:
 		LOG_DBG("RED_HARD_MARK");
 		q->stats.forced_mark++;
 		/* mark ECN bit */
-                pci = pdu_pci_get_rw(pdu);
-                pci_flags = pci_flags_get(pci);
-                pci_flags_set(pci, pci_flags |= PDU_FLAGS_EXPLICIT_CONGESTION);
+                pci_flags = pci_flags_get(&du->pci);
+                pci_flags_set(&du->pci, pci_flags
+                		|= PDU_FLAGS_EXPLICIT_CONGESTION);
 		break;
 	}
 
-	rfifo_push_ni(q->queue, pdu);
+	rfifo_push_ni(q->queue, du);
 	ret = RMT_PS_ENQ_SCHED;
 
 exit:
@@ -231,7 +230,7 @@ exit:
 }
 
 static void * red_rmt_q_create_policy(struct rmt_ps *      ps,
-                                   struct rmt_n1_port * port)
+                                      struct rmt_n1_port * port)
 {
         struct red_rmt_queue *   q;
         struct red_rmt_ps_data * data;

@@ -47,13 +47,13 @@ dummy_rmt_q_destroy_policy(struct rmt_ps      *ps,
 static int
 dummy_rmt_enqueue_policy(struct rmt_ps	    *ps,
 			 struct rmt_n1_port *port,
-			 struct pdu	    *pdu)
+			 struct du	    *du)
 {
         printk("%s: called()\n", __func__);
         return RMT_PS_ENQ_SCHED;
 }
 
-static struct pdu *
+static struct du *
 dummy_rmt_dequeue_policy(struct rmt_ps	    *ps,
 			 struct rmt_n1_port *port)
 {
