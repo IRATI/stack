@@ -19,7 +19,6 @@
 #include <string>
 #include <climits>
 
-#include "ipcp/ipcp-logging.h"
 #include "ipcp/components.h"
 
 namespace rinad {
@@ -63,8 +62,8 @@ configs::Flow * FlowAllocatorPs::newFlowRequest(
 	rina::DTCPConfig dtcpConfig;
 
 	flow = dm->createFlow();
-	flow->destination_naming_info = event.remoteApplicationName;
-	flow->source_naming_info = event.localApplicationName;
+	flow->remote_naming_info = event.remoteApplicationName;
+	flow->local_naming_info = event.localApplicationName;
 	flow->hop_count = 3;
 	flow->max_create_flow_retries = 1;
 	flow->source = true;
