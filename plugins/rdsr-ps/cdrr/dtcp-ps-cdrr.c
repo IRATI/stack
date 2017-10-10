@@ -36,7 +36,6 @@
 #include "dtcp-ps.h"
 #include "dtcp-conf-utils.h"
 #include "pdu.h"
-#include "serdes.h"
 
 /* This identifies the link maximum capacity at 10msec, 1Gb/s
  */

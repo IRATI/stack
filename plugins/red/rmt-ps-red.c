@@ -181,7 +181,7 @@ static int red_rmt_enqueue_policy(struct rmt_ps *      ps,
 	q->vars.qavg = red_calc_qavg(&q->parms,
 				     &q->vars,
 				     qlen);
-	LOG_DBG("qavg':  %lu, qlen: %lu", q->vars.qavg >> (q->parms.Wlog),
+	LOG_DBG("qavg':  %lu, qlen: %u", q->vars.qavg >> (q->parms.Wlog),
 					  qlen);
 
 	if(qlen >= data->conf_data.limit) {
