@@ -124,15 +124,9 @@ int default_snd_flow_control_overrun(struct dtp_ps * ps, struct du * du)
         return 0;
 }
 
-int default_initial_sequence_number(struct dtp_ps * ps)
+static void initial_seq_num(struct dtp * dtp)
 {
-        struct dtp * dtp = ps->dm;
         seq_num_t    seq_num;
-
-        if (!dtp) {
-                LOG_ERR("No instance passed, cannot run policy");
-                return -1;
-        }
 
         get_random_bytes(&seq_num, sizeof(seq_num_t));
         if (seq_num == 0)
@@ -143,6 +137,19 @@ int default_initial_sequence_number(struct dtp_ps * ps)
         spin_unlock_bh(&dtp->sv_lock);
 
         LOG_DBG("initial_seq_number reset");
+}
+
+int default_initial_sequence_number(struct dtp_ps * ps)
+{
+        struct dtp * dtp = ps->dm;
+
+        if (!dtp) {
+                LOG_ERR("No instance passed, cannot run policy");
+                return -1;
+        }
+
+        initial_seq_num(dtp);
+
         return 0;
 }
 
@@ -181,10 +188,16 @@ int default_sender_inactivity_timer(struct dtp_ps * ps)
         if (!dtp) return 0;
 
         dtcp = dtp->dtcp;
-        if (!dtp)
+        if (!dtcp) {
+        	LOG_ERR("No DTCP to work with");
                 return -1;
+        }
+        if (!dtcp->cfg) {
+        	LOG_ERR("No configuration in DTCP");
+        	return -1;
+        }
 
-        dtp_initial_sequence_number(dtp);
+        initial_seq_num(dtp);
 
         spin_lock_bh(&dtp->sv_lock);
 
@@ -194,8 +207,7 @@ int default_sender_inactivity_timer(struct dtp_ps * ps)
         max_sent    = dtp->sv->max_seq_nr_sent;
         snd_rt_win  = dtcp->sv->snd_rt_wind_edge;
         next_send   = dtp->sv->seq_nr_to_send;
-        dtcp->sv->snd_rt_wind_edge = dtcp->sv->snd_rt_wind_edge
-        		+ next_send + init_credit;
+        dtcp->sv->snd_rt_wind_edge = next_send + init_credit;
 
         LOG_DBG("Current values:\n\tinit_credit: %u "
                 "max_sent: %u snd_rt_win: %u next_send: %u",
