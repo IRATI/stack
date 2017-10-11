@@ -1117,7 +1117,7 @@ int dtcp_destroy(struct dtcp * instance)
 
         /* FIXME: this is horrible*/
         while(atomic_read(&instance->cpdus_in_transit) && (i < 3)) {
-        	LOG_INFO("Waiting to destroy DTCP");
+        	LOG_DBG("Waiting to destroy DTCP");
         	i++;
                 msleep(20);
         }

@@ -170,7 +170,7 @@ int rtimer_destroy(struct rtimer * timer)
 
         rkfree(timer);
 
-        LOG_INFO("Timer %pK destroyed", timer);
+        LOG_DBG("Timer %pK destroyed", timer);
 
         return 0;
 }
