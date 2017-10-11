@@ -40,7 +40,6 @@ struct cas_dtcp_ps_data {
         unsigned int w_inc_a_p;
         unsigned int ecn_count;
         unsigned int rcv_count;
-        spinlock_t   lock;
 
         /* Value of window in fixed point, most significant 16 bits are the
          * integer part, less significant 16 bits are the decimal part (i.e.
@@ -83,7 +82,7 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {
         struct dtcp *             dtcp = ps->dm;
         struct cas_dtcp_ps_data * data = ps->priv;
-        unsigned long		  flags;
+        uint_t rwe;
 
         if (!dtcp || !data) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -104,7 +103,7 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         }
 */
 
-        spin_lock_irqsave(&data->lock, flags);
+        spin_lock_bh(&dtcp->parent->sv_lock);
         /* if we passed the wp bits, consider ecn bit */
         if ((++data->rcv_count > data->wp) &&
              ((int) (pci_flags_get(pci) & PDU_FLAGS_EXPLICIT_CONGESTION))) {
@@ -140,13 +139,15 @@ cas_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 #endif
                 data->rcv_count = 0;
                 data->ecn_count = 0;
-                dtcp_rcvr_credit_set(dtcp, data->wc);
+                dtcp->sv->rcvr_credit = data->wc;
         }
-	spin_unlock_irqrestore(&data->lock, flags);
 
-        update_rt_wind_edge(dtcp);
+        dtcp->sv->rcvr_rt_wind_edge = dtcp->sv->rcvr_credit +
+        		dtcp->parent->sv->rcv_left_window_edge;
+        rwe = dtcp->sv->rcvr_rt_wind_edge;
+	spin_unlock_bh(&dtcp->parent->sv_lock);
 
-        LOG_DBG("Credit and RWE set: %u, %u", data->wc, rcvr_rt_wind_edge(dtcp));
+        LOG_DBG("Credit and RWE set: %u, %u", data->wc, rwe);
 
         return 0;
 }
@@ -197,7 +198,7 @@ dtcp_ps_cas_create(struct rina_component * component)
                 return NULL;
         }
 
-        dtcp_cfg                        = dtcp_config_get(dtcp);
+        dtcp_cfg                        = dtcp->cfg;
 
         ps->base.set_policy_set_param   = dtcp_ps_cas_set_policy_set_param;
         ps->dm                          = dtcp;
@@ -218,7 +219,8 @@ dtcp_ps_cas_create(struct rina_component * component)
 
         ps->priv                        = data;
 
-        ps_conf = dtcp_ps(dtcp_cfg);
+        //ps_conf = dtcp_ps(dtcp_cfg);
+        ps_conf = dtcp_cfg->dtcp_ps;
         if (!ps_conf) {
                 LOG_ERR("No PS conf struct");
                 return NULL;

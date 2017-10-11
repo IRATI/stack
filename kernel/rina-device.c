@@ -30,7 +30,7 @@
 #include "logs.h"
 #include "debug.h"
 #include "kfa.h"
-#include "sdu.h"
+#include "du.h"
 #include "rds/rmem.h"
 #include "rina-device.h"
 
@@ -98,7 +98,7 @@ int rina_dev_rcv(struct sk_buff *skb, struct rina_device *rina_dev)
 static int rina_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	struct iphdr* iph = NULL;
-	struct sdu* sdu;
+	struct du * du;
 	struct rina_device* rina_dev = netdev_priv(dev);
 	ssize_t len;
 	ASSERT(rina_dev);
@@ -109,16 +109,16 @@ static int rina_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	iph = ip_hdr(skb);
 	ASSERT(iph);
 
-	sdu = sdu_create_from_skb(skb);
-	if (!sdu){
+	du = du_create_from_skb(skb);
+	if (!du){
 		kfree_skb(skb);
 		rina_dev->stats.tx_dropped++;
 		return NET_XMIT_DROP;
 	}
 
 	len = skb->len;
-        if(kfa_flow_sdu_write(rina_dev->kfa_ipcp->data, rina_dev->port,
-        		      sdu, false)){
+        if(kfa_flow_du_write(rina_dev->kfa_ipcp->data, rina_dev->port,
+        		     du, false)){
 		rina_dev->stats.tx_dropped++;
 		LOG_ERR("Could not xmit IP packet, unable to send to KFA...");
 		return NET_XMIT_DROP;

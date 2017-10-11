@@ -26,8 +26,7 @@
 #include <linux/hashtable.h>
 
 #include "common.h"
-#include "sdu.h"
-#include "pdu.h"
+#include "du.h"
 #include "efcp.h"
 #include "ipcp-factories.h"
 #include "ipcp-instances.h"
@@ -82,7 +81,7 @@ struct rmt_n1_port {
 	struct hlist_node	hlist;
 	enum flow_state		state;
 	atomic_t		refs_c;
-	struct sdu		*pending_sdu;
+	struct du		*pending_du;
 	struct sdup_port 	*sdup_port;
 	struct n1_port_stats	stats;
 	bool			wbusy;
@@ -116,12 +115,12 @@ int		   rmt_pff_flush(struct rmt *instance);
 int		   rmt_pff_modify(struct rmt *instance,
 				  struct list_head *entries);
 int		   rmt_send(struct rmt *instance,
-			    struct pdu *pdu);
+			    struct du * du);
 int		   rmt_send_port_id(struct rmt *instance,
 				    port_id_t id,
-				    struct pdu *pdu);
+				    struct du * du);
 int		   rmt_receive(struct rmt *instance,
-			       struct sdu *sdu,
+			       struct du *du,
 			       port_id_t from);
 int		   rmt_enable_port_id(struct rmt *instance,
 				      port_id_t id);

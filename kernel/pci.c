@@ -30,9 +30,7 @@
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
-#include "pci.h"
 #include "du.h"
-#include "pdu.h"
 
 #define VERSION_SIZE 1
 #define FLAGS_SIZE 1
@@ -725,7 +723,7 @@ int pci_release(struct pci *pci)
 		return -1;
 
 	if (unlikely(atomic_read(&du->skb->users) == 1))
-		return pdu_destroy((struct pdu*)du);
+		return du_destroy(du);
 
 	kfree_skb(du->skb);
 	return 0;
@@ -740,9 +738,7 @@ EXPORT_SYMBOL(pci_release);
 
 bool pci_getset_test(void)
 {
-	struct sdu *sdu;
-	struct pdu *pdu;
-	struct pci *pci;
+	struct du *du;
 	struct efcp_config *cfg;
 
 	cep_id_t src_cep_id = 1;
@@ -771,33 +767,23 @@ bool pci_getset_test(void)
 		return false;
 	}
 
-	sdu = sdu_create(2);
-	if (!is_sdu_ok(sdu)) {
+	du = du_create(2);
+	if (!is_du_ok(du)) {
 		LOG_ERR("Could not create SDU");
 		rkfree(cfg->pci_offset_table);
 		efcp_config_destroy(cfg);
-		sdu_destroy(sdu);
+		du_destroy(du);
 		return true;
 	}
-	sdu_efcp_config_bind(sdu, cfg);
+	du->cfg = cfg;
 
-	pdu = pdu_from_sdu(sdu);
-	pdu_encap(sdu, type);
-	if (!pdu_is_ok(pdu)) {
-		LOG_ERR("Could not encap to PDU");
-		rkfree(cfg->pci_offset_table);
-		efcp_config_destroy(cfg);
-		sdu_destroy(sdu);
-		return true;
-	}
-
-	pci = pdu_pci_get_rw(pdu);
-	if (!pci) {
+	du_encap(du, type);
+	if (!du->pci) {
 		LOG_ERR("Could not retrieve pci");
 		goto fail;
 	}
 
-	if (pci_format(pci,
+	if (pci_format(du->pci,
 		       src_cep_id,
 		       dst_cep_id,
 		       src_address,
@@ -808,62 +794,62 @@ bool pci_getset_test(void)
 		LOG_ERR("Could not format PCI");
 		goto fail;
 	}
-	if (pci_type(pci) != type                           ||
-	    pci_destination(pci) != dst_address             ||
-	    pci_source(pci) != src_address                  ||
-	    pci_cep_source(pci) != src_cep_id               ||
-	    pci_cep_destination(pci) != dst_cep_id          ||
-	    pci_sequence_number_get(pci) != sequence_number ||
-	    pci_qos_id(pci) != qos_id) {
+	if (pci_type(du->pci) != type                           ||
+	    pci_destination(du->pci) != dst_address             ||
+	    pci_source(du->pci) != src_address                  ||
+	    pci_cep_source(du->pci) != src_cep_id               ||
+	    pci_cep_destination(du->pci) != dst_cep_id          ||
+	    pci_sequence_number_get(du->pci) != sequence_number ||
+	    pci_qos_id(du->pci) != qos_id) {
 		LOG_ERR("Somethig after format does not match");
 		goto fail;
 	}
 
-	pci_type_set(pci, type);
-	pci_destination_set(pci, dst_address);
-	pci_source_set(pci, src_address);
-	pci_cep_source_set(pci, src_cep_id);
-	pci_cep_destination_set(pci, dst_cep_id);
-	pci_qos_id_set(pci, qos_id);
-	pci_sequence_number_set(pci, sequence_number);
+	pci_type_set(du->pci, type);
+	pci_destination_set(du->pci, dst_address);
+	pci_source_set(du->pci, src_address);
+	pci_cep_source_set(du->pci, src_cep_id);
+	pci_cep_destination_set(du->pci, dst_cep_id);
+	pci_qos_id_set(du->pci, qos_id);
+	pci_sequence_number_set(du->pci, sequence_number);
 
-	if (pci_type(pci) != type) {
+	if (pci_type(du->pci) != type) {
 		LOG_ERR("type id does not match");
 		goto fail;
 	}
-	if (pci_destination(pci) != dst_address) {
+	if (pci_destination(du->pci) != dst_address) {
 		LOG_ERR("destination address does not match");
 		goto fail;
 	}
-	if (pci_source(pci) != src_address) {
+	if (pci_source(du->pci) != src_address) {
 		LOG_ERR("source address does not match");
 		goto fail;
 	}
-	if (pci_cep_source(pci) != src_cep_id) {
+	if (pci_cep_source(du->pci) != src_cep_id) {
 		LOG_ERR("source cep id does not match");
 		goto fail;
 	}
-	if (pci_cep_destination(pci) != dst_cep_id) {
+	if (pci_cep_destination(du->pci) != dst_cep_id) {
 		LOG_ERR("destination cep id does not match");
 		goto fail;
 	}
-	if (pci_sequence_number_get(pci) != sequence_number) {
+	if (pci_sequence_number_get(du->pci) != sequence_number) {
 		LOG_ERR("seq num does not match");
 		goto fail;
 	}
-	if (pci_qos_id(pci) != qos_id) {
+	if (pci_qos_id(du->pci) != qos_id) {
 		LOG_ERR("qos id does not match");
 		goto fail;
 	}
 
 	rkfree(cfg->pci_offset_table);
 	efcp_config_destroy(cfg);
-	pdu_destroy(pdu);
+	du_destroy(du);
 	return false;
 fail:
 	rkfree(cfg->pci_offset_table);
 	efcp_config_destroy(cfg);
-	pdu_destroy(pdu);
+	du_destroy(du);
 	return true;
 
 }

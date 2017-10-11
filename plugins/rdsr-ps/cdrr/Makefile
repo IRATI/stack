@@ -1,6 +1,8 @@
 #
 # Written by Francesco Salvestrini <f.salvestrini@nextworks.it>
 #
+# Author: Kewin Rausch <kewin.rausch@create-net.org>
+#
 
 ifndef KREL
 KREL=`uname -r`
