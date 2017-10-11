@@ -1113,9 +1113,14 @@ struct dtcp * dtcp_create(struct dtp *         dtp,
 
 int dtcp_destroy(struct dtcp * instance)
 {
+	int i = 0;
+
         /* FIXME: this is horrible*/
-        while(atomic_read(&instance->cpdus_in_transit))
+        while(atomic_read(&instance->cpdus_in_transit) && (i < 3)) {
+        	LOG_INFO("Waiting to destroy DTCP");
+        	i++;
                 msleep(20);
+        }
 
         if (!instance) {
                 LOG_ERR("Bad instance passed, bailing out");
