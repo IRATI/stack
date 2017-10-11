@@ -1,31 +1,26 @@
 #
-# Makefile for IRATI Congestion Detection Rate Reduction policy.
-#
-# Author: Kewin Rausch <kewin.rausch@create-net.org>
+# Written by Francesco Salvestrini <f.salvestrini@nextworks.it>
 #
 
-KDIR=/pristine/linux
-
-ifneq ($(KERNELRELEASE),)
-
-ccflags-y = -Wtype-limits -Inet/rina
-
-obj-m	+= ecn.o
-ecn-y	:= rmt-ps-ecn.o
-
-else
+ifndef KREL
+KREL=`uname -r`
+endif
 
 ifndef KDIR
-$(warning "KDIR will be set to the linux directory of the repository")
-KDIR=../../../linux
+KDIR=/lib/modules/$(KREL)/build
 endif
 
-ifndef
-KREL=$(shell make -s -C $(KDIR) kernelrelease)
+ifndef IRATI_KSDIR
+IRATI_KSDIR=${PWD}/../../../kernel
 endif
+
+ccflags-y = -Wtype-limits -I${src}/../../../kernel -I${src}/../../../include
+
+obj-m := rmt-ps-ecn.o
+qta-mux-plugin-y := ecn.o
 
 all:
-	$(MAKE) -C $(KDIR) M=$$PWD
+	$(MAKE) -C $(KDIR) KBUILD_EXTRA_SYMBOLS=${IRATI_KSDIR}/Module.symvers M=$$PWD
 
 clean:
 	rm -r -f *.o *.ko *.mod.c *.mod.o Module.symvers .*.cmd .tmp_versions modules.order
@@ -38,5 +33,3 @@ install:
 uninstall:
 	@echo "This target has not been implemented yet"
 	@exit 1
-
-endif

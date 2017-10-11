@@ -36,8 +36,6 @@
 #include "dtcp-ps.h"
 #include "dtcp-conf-utils.h"
 #include "pdu.h"
-#include "policies.h"
-#include "efcp-str.h"
 
 /* This identifies the link maximum capacity at 10msec, 1Gb/s
  */
