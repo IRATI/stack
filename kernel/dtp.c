@@ -1042,8 +1042,8 @@ struct dtp * dtp_create(struct efcp *       efcp,
 
         spin_lock_init(&dtp->lock);
 
-        LOG_INFO("Instance %pK created successfully", dtp);
-        LOG_INFO("Sender Inactivity Timer %pK", dtp->timers.sender_inactivity);
+        LOG_INFO("Instance %pK with STimer %pK created successfully", dtp,
+        		dtp->timers.sender_inactivity);
 
         return dtp;
 }
@@ -1122,7 +1122,7 @@ int dtp_destroy(struct dtp * instance)
 	robject_del(&instance->robj);
         rkfree(instance);
 
-        LOG_DBG("Instance %pK destroyed successfully", instance);
+        LOG_INFO("DTP %pK destroyed successfully", instance);
 
         return 0;
 }
