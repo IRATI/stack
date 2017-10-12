@@ -86,7 +86,7 @@ static struct rmt_queue *rmt_queue_create(port_id_t port)
 
 	tmp->mgt_queue = rfifo_create_ni();
 	if (!tmp->mgt_queue) {
-		rfifo_destroy(tmp->dt_queue, (void (*)(void *)) pdu_destroy);
+		rfifo_destroy(tmp->dt_queue, (void (*)(void *)) du_destroy);
 		rkfree(tmp);
 		return NULL;
 	}
@@ -104,10 +104,10 @@ static int rmt_queue_destroy(struct rmt_queue *q)
 	}
 
 	if (q->dt_queue)
-		rfifo_destroy(q->dt_queue, (void (*)(void *)) pdu_destroy);
+		rfifo_destroy(q->dt_queue, (void (*)(void *)) du_destroy);
 
 	if (q->mgt_queue)
-		rfifo_destroy(q->mgt_queue, (void (*)(void *)) pdu_destroy);
+		rfifo_destroy(q->mgt_queue, (void (*)(void *)) du_destroy);
 
 	rkfree(q);
 
@@ -167,13 +167,13 @@ EXPORT_SYMBOL(default_rmt_q_destroy_policy);
 
 int default_rmt_enqueue_policy(struct rmt_ps	  *ps,
 			       struct rmt_n1_port *n1_port,
-			       struct pdu	  *pdu)
+			       struct du	  *du)
 {
 	struct rmt_queue *q;
 	struct rmt_ps_default_data *data = ps->priv;
 	pdu_type_t pdu_type;
 
-	if (!ps || !n1_port || !pdu) {
+	if (!ps || !n1_port || !du) {
 		LOG_ERR("Wrong input parameters");
 		return RMT_PS_ENQ_ERR;
 	}
@@ -182,31 +182,31 @@ int default_rmt_enqueue_policy(struct rmt_ps	  *ps,
 	if (!q) {
 		LOG_ERR("Could not find queue for n1_port %u",
 			n1_port->port_id);
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return RMT_PS_ENQ_ERR;
 	}
 
-	pdu_type = pci_type(pdu_pci_get_ro(pdu));
+	pdu_type = pci_type(&du->pci);
 	if (pdu_type == PDU_TYPE_MGMT) {
-		rfifo_push_ni(q->mgt_queue, pdu);
+		rfifo_push_ni(q->mgt_queue, du);
 		return RMT_PS_ENQ_SCHED;
 	}
 
 	if (rfifo_length(q->dt_queue) >= data->q_max) {
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return RMT_PS_ENQ_DROP;
 	}
 
-	rfifo_push_ni(q->dt_queue, pdu);
+	rfifo_push_ni(q->dt_queue, du);
 	return RMT_PS_ENQ_SCHED;
 }
 EXPORT_SYMBOL(default_rmt_enqueue_policy);
 
-struct pdu *default_rmt_dequeue_policy(struct rmt_ps	  *ps,
-				       struct rmt_n1_port *n1_port)
+struct du *default_rmt_dequeue_policy(struct rmt_ps	  *ps,
+				      struct rmt_n1_port *n1_port)
 {
 	struct rmt_queue *q;
-	struct pdu *ret_pdu;
+	struct du *ret_du;
 
 	if (!ps || !n1_port) {
 		LOG_ERR("Wrong input parameters");
@@ -221,16 +221,16 @@ struct pdu *default_rmt_dequeue_policy(struct rmt_ps	  *ps,
 	}
 
 	if (!rfifo_is_empty(q->mgt_queue))
-		ret_pdu = rfifo_pop(q->mgt_queue);
+		ret_du = rfifo_pop(q->mgt_queue);
 	else
-		ret_pdu = rfifo_pop(q->dt_queue);
+		ret_du = rfifo_pop(q->dt_queue);
 
-	if (!ret_pdu) {
+	if (!ret_du) {
 		LOG_ERR("Could not dequeue scheduled pdu");
 		return NULL;
 	}
 
-	return ret_pdu;
+	return ret_du;
 }
 EXPORT_SYMBOL(default_rmt_dequeue_policy);
 

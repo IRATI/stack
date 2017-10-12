@@ -29,14 +29,13 @@
 
 #include "logs.h"
 #include "connection.h"
-#include "dt.h"
-#include "dt-utils.h"
+#include "dtp.h"
+#include "dtp-utils.h"
 #include "dtp.h"
 #include "rds/rmem.h"
 #include "dtcp-ps.h"
 #include "dtcp-conf-utils.h"
 #include "pdu.h"
-#include "serdes.h"
 
 /* This identifies the link maximum capacity at 10msec, 1Gb/s
  */
@@ -158,7 +157,7 @@ static ssize_t cdrr_attr_show(
 	if(strcmp(attr->name, "current_rate") == 0) {
 		ri = container_of(kobj, struct cdrr_rate_info, robj);
 		return snprintf(
-			buf, PAGE_SIZE, "%u\n", dtcp_sndr_rate(ri->dtcp));
+			buf, PAGE_SIZE, "%u\n", ri->dtcp->sv->sndr_rate);
 	}
 
 	return 0;
@@ -353,17 +352,25 @@ static int cdrr_rate_reduction(struct dtcp_ps * ps, const struct pci * pci) {
 	if(ri->mode == 0) {
 		if(c) {
 			/* MGB not set yet? */
-			if(dtcp_sndr_rate(dtcp) != ri->mgb) {
-				dtcp_sndr_rate_set(dtcp, ri->mgb);
+			spin_lock_bh(&dtcp->parent->sv_lock);
+			if(dtcp->sv->sndr_rate != ri->mgb) {
+				dtcp->sv->sndr_rate = ri->mgb;
+				spin_unlock_bh(&dtcp->parent->sv_lock);
 				cdrr_send_control(dtcp);
 				ri->feedback++;
+			} else {
+				spin_unlock_bh(&dtcp->parent->sv_lock);
 			}
 		} else {
 			/* Reset rate not set yet? */
-			if(dtcp_sndr_rate(dtcp) != ri->reset_rate) {
-				dtcp_sndr_rate_set(dtcp, ri->reset_rate);
+			spin_lock_bh(&dtcp->parent->sv_lock);
+			if(dtcp->sv->sndr_rate != ri->reset_rate) {
+				dtcp->sv->sndr_rate = ri->reset_rate;
+				spin_unlock_bh(&dtcp->parent->sv_lock);
 				cdrr_send_control(dtcp);
 				ri->feedback++;
+			}else {
+				spin_unlock_bh(&dtcp->parent->sv_lock);
 			}
 		}
 	}
@@ -493,8 +500,8 @@ static struct ps_base * cdrr_create(struct rina_component * component) {
         ri->mode 	= cdrr_mode;
         ri->reset_rate 	= cdrr_link_rate;
         ri->dtcp 	= dtcp;
-        ri->mgb  	= dtcp_sending_rate(dtcp_config_get(dtcp));
-        ri->time_frame	= dtcp_time_period(dtcp_config_get(dtcp));
+        ri->mgb  	= dtcp_sending_rate(dtcp->cfg);
+        ri->time_frame	= dtcp_time_period(dtcp->cfg);
 
         getnstimeofday(&ri->last);
 

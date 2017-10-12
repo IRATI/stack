@@ -53,16 +53,16 @@ const char *command = "";		// command string will be executed by a shell -c, so 
 
 int getver = 0;					// set to 1 if all that's desired is the version information
 #ifndef _VERSION
-#define _VERSION "2017081126"	// Override if desired by providing -D_VERSION=xx at compile time on command line
+#define _VERSION "20170921"	// Override if desired by providing -D_VERSION=xx at compile time on command line
 #endif
 
 #define UNRELIABLE_FLOW	0		// request an unreliable flow (client side only - ignored by server)
 #define RELIABLE_FLOW	1		// request a reliable flow (client side only - ignored by server)
 #define DEFAULT_FLOW	2		// DO NOT OVERRIDE the default flow spec produced by rina_flow_spec_default()
-#define USE_AS_DEFAULT_FLOW	DEFAULT_FLOW	// this is the default if no command line option overrides it
+#define USE_AS_DEFAULT_FLOW	RELIABLE_FLOW	// this is the default if no command line option overrides it
 int flow_reliability = USE_AS_DEFAULT_FLOW;	// user can override the default on command line
 
-#define STREAM_FLOW		1		// request a stream-oriented flow (client)
+#define STREAM_FLOW	1		// request a stream-oriented flow (client)
 #define MESSAGE_FLOW	0		// request a message/SDU-oriented flow (client)
 int flow_boundaries = MESSAGE_FLOW;	// default to a message-oriented flow, allow override on command line
 
@@ -94,7 +94,8 @@ static struct option cmd_options[] =
 	{ "version",	no_argument,		&getver,	1 },
 	{ "unreliable", no_argument,		NULL,		'u' },
 	{ "reliable",	no_argument,		NULL,		'r' },
-	{ "stream",		no_argument,		&flow_boundaries, STREAM_FLOW },
+	{ "defaultFS",	no_argument,		&flow_reliability, DEFAULT_FLOW },
+	{ "stream",	no_argument,		&flow_boundaries, STREAM_FLOW },
 	{ NULL, 0, NULL, 0 }
 };
 
@@ -328,6 +329,8 @@ void usage (int error, const char *command)
 	\n\
   --r, --reliable\n\
 	Force client to use a reliable flow instead of the (unspecified) default\n\
+  --defaultFS\n\
+	Force client to use the default Flow Spec provided by the implementation\n\
   --stream\n\
 	Force client to use a stream (boundary-less) flow instead of the default record/SDU\n\
 	\n\
@@ -347,7 +350,7 @@ int exec_command (int flowfd, int argc, const char **argv, int *ret_pid)
 		*ret_pid = pid;
 		VERBOSE("Fork successful, pid %d\n", pid);
 	} else if (pid == 0) { // child
-		int newfd;
+		int newfd, i;
 		close(0);
 		newfd = dup(flowfd);
 		if (newfd) {
@@ -360,7 +363,7 @@ int exec_command (int flowfd, int argc, const char **argv, int *ret_pid)
 			PRINTERRORMSG("ERROR: Dup(flowfd) returned %d, not expected 1, error %s\n", newfd, strerror(errno));
 			return (-1);
 		}
-		for (int i = 3; i < 100; i++)	// disconnect from control fd or any other irrelevant fds
+		for (i = 3; i < 10; i++)	// disconnect from control fd or any other irrelevant fds
 			close(i);
 		setpgid(0, pgrp);	// ensure that child sees parent's signals, can access parent's controlling terminal
 		execvp(argv[0], (char * const *)argv);

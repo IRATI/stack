@@ -26,7 +26,7 @@
 #include <linux/types.h>
 
 #include "sdup.h"
-#include "pdu.h"
+#include "du.h"
 #include "ps-factory.h"
 
 struct sdup_crypto_ps {
@@ -35,9 +35,9 @@ struct sdup_crypto_ps {
 	/* Behavioural policies. */
 
 	int (* sdup_apply_crypto)(struct sdup_crypto_ps *,
-		             	  struct pdu *);
+		             	  struct du *);
 	int (* sdup_remove_crypto)(struct sdup_crypto_ps *,
-			     	   struct pdu *);
+			     	   struct du *);
 	int (* sdup_update_crypto_state)(struct sdup_crypto_ps *,
 					 struct sdup_crypto_state *);
 

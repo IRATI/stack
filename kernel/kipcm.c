@@ -1517,7 +1517,7 @@ static int notify_ipcp_write_mgmt_sdu(irati_msg_port_t ctrl_port,
         struct kipcm * kipcm;
         int retval = 0;
         ipc_process_id_t ipcp_id = 0;
-        struct sdu * sdu;
+        struct du * du;
         struct irati_msg_base_resp resp_msg;
 
         if (!data) {
@@ -1534,19 +1534,19 @@ static int notify_ipcp_write_mgmt_sdu(irati_msg_port_t ctrl_port,
 
         ipcp_id = msg->src_ipcp_id;
 
-        sdu = sdu_create(msg->sdu->size);
-        if (!sdu) {
+        du = du_create(msg->sdu->size);
+        if (!du) {
                 retval = -1;
                 goto out;
         }
         ASSERT(is_sdu_ok(sdu));
 
-        memcpy(sdu_buffer(sdu), msg->sdu->data, msg->sdu->size);
+        memcpy(du_buffer(du), msg->sdu->data, msg->sdu->size);
 
-        retval = kipcm_mgmt_sdu_write(kipcm,
-        			      ipcp_id,
-				      msg->port_id,
-				      sdu);
+        retval = kipcm_mgmt_du_write(kipcm,
+        			     ipcp_id,
+				     msg->port_id,
+				     du);
 out:
 	resp_msg.msg_type = RINA_C_IPCP_MANAGEMENT_SDU_WRITE_RESPONSE;
 	resp_msg.src_ipcp_id = ipcp_id;
@@ -2209,10 +2209,10 @@ struct ipcp_instance * kipcm_find_ipcp(struct kipcm *   kipcm,
 EXPORT_SYMBOL(kipcm_find_ipcp);
 
 /* ONLY USED BY APPS */
-int kipcm_sdu_write(struct kipcm * kipcm,
-                    port_id_t      port_id,
-                    struct sdu *   sdu,
-                    bool blocking)
+int kipcm_du_write(struct kipcm * kipcm,
+                   port_id_t      port_id,
+                   struct du *    du,
+                   bool blocking)
 {
         struct ipcp_instance * kfa_ipcp;
 
@@ -2220,33 +2220,27 @@ int kipcm_sdu_write(struct kipcm * kipcm,
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
-                sdu_destroy(sdu);
-                return -EINVAL;
-        }
-
-        if (!is_sdu_ok(sdu)) {
-                LOG_ERR("Bogus SDU received, bailing out");
-                sdu_destroy(sdu);
+                du_destroy(du);
                 return -EINVAL;
         }
 
         kfa_ipcp = kfa_ipcp_instance(kipcm->kfa);
         if (!kfa_ipcp) {
                 LOG_ERR("Could not resolve KFA IPCP API");
-                sdu_destroy(sdu);
+                du_destroy(du);
                 return -1;
         }
         LOG_DBG("Tring to write SDU to port_id %d", port_id);
 
         /* The SDU is ours */
-        return kfa_ipcp->ops->sdu_write(kfa_ipcp->data,
+        return kfa_ipcp->ops->du_write(kfa_ipcp->data,
         				port_id,
-        				sdu, blocking);
+        				du, blocking);
 }
 
-int kipcm_sdu_read(struct kipcm * kipcm,
+int kipcm_du_read(struct kipcm * kipcm,
                    port_id_t      port_id,
-                   struct sdu **  sdu,
+                   struct du **   du,
 		   size_t         size,
                    bool blocking)
 {
@@ -2258,17 +2252,13 @@ int kipcm_sdu_read(struct kipcm * kipcm,
         }
 
         /* The SDU is theirs now */
-        return kfa_flow_sdu_read(kipcm->kfa,
-        			 port_id,
-				 sdu,
-				 size,
-				 blocking);
+        return kfa_flow_du_read(kipcm->kfa, port_id, du, size, blocking);
 }
 
-int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
-                         ipc_process_id_t id,
-                         port_id_t      port_id,
-                         struct sdu *   sdu)
+int kipcm_mgmt_du_write(struct kipcm *   kipcm,
+                        ipc_process_id_t id,
+                        port_id_t      port_id,
+                        struct du *    du)
 {
         struct ipcp_instance * ipcp;
 
@@ -2279,39 +2269,34 @@ int kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
                 return -1;
         }
 
-        if (!is_sdu_ok(sdu)) {
-                LOG_ERR("Bogus SDU received, bailing out");
-                return -1;
-        }
-
         KIPCM_LOCK(kipcm);
         ipcp = ipcp_imap_find(kipcm->instances, id);
         if (!ipcp) {
                 LOG_ERR("Could not find IPC Process with id %d", id);
                 KIPCM_UNLOCK(kipcm);
-                sdu_destroy(sdu);
+                du_destroy(du);
                 return -1;
         }
 
         if (!ipcp->ops) {
                 LOG_ERR("Bogus IPCP ops, bailing out");
                 KIPCM_UNLOCK(kipcm);
-                sdu_destroy(sdu);
+                du_destroy(du);
                 return -1;
         }
 
-        if (!ipcp->ops->mgmt_sdu_write) {
+        if (!ipcp->ops->mgmt_du_write) {
                 LOG_ERR("The IPC Process %d doesn't support this operation",
                         id);
                 KIPCM_UNLOCK(kipcm);
-                sdu_destroy(sdu);
+                du_destroy(du);
                 return -1;
         }
         KIPCM_UNLOCK(kipcm);
 
-        if (ipcp->ops->mgmt_sdu_write(ipcp->data,
-                                      port_id,
-                                      sdu)) {
+        if (ipcp->ops->mgmt_du_write(ipcp->data,
+                                     port_id,
+                                     du)) {
                 return -1;
         }
 

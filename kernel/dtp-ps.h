@@ -25,7 +25,7 @@
 #include <linux/types.h>
 
 #include "dtp.h"
-#include "pdu.h"
+#include "du.h"
 #include "rds/rfifo.h"
 #include "ps-factory.h"
 
@@ -34,13 +34,13 @@ struct dtp_ps {
 
         /* Behavioural policies. */
         int (* transmission_control)(struct dtp_ps * ps,
-                                     struct pdu * pdu);
+                                     struct du * du);
         int (* closed_window)(struct dtp_ps * instance,
-                              struct pdu * pdu);
+                              struct du * du);
         int (* rcv_flow_control_overrun)(struct dtp_ps * ps,
-                                         struct pdu * pdu);
+                                         struct du * du);
         int (* snd_flow_control_overrun)(struct dtp_ps * ps,
-                                         struct pdu * pdu);
+                                         struct du * du);
         int (* initial_sequence_number)(struct dtp_ps * ps);
         int (* receiver_inactivity_timer)(struct dtp_ps * ps);
         int (* sender_inactivity_timer)(struct dtp_ps * ps);

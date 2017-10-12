@@ -1,6 +1,6 @@
 # rinacat -- A RINA Flow Redirection Utility
 
-### Steve Bunch, 26 August 2017
+### Steve Bunch, 20 September 2017
 
 ## rinacat Operation:
 
@@ -104,7 +104,7 @@ rinacat-args -A razzycam4.echo -a razzycam2.rinacat -d -sdusize 4096 -l l -v 0
 *(Note that in this example some parameters, such as the -A application name, have been allowed to default.)*
 
 ## Misc. Notes, as of current version:
-  * rinacat now allows setting some flow properties, see --help for details.  It will eventually by default request a reliable, in-order, stream flow for maximum compatibility with existing Linux commands.  However, the current version (as of the above date) uses the default flow spec provided by rina_flow_spec_default unless either the -u (unreliable) or -r (reliable) option is used, in which case it sets the flow spec accordingly.  This is to work around a near-term bug in the stack that causes a crash if a reliable flow is requested.
+  * rinacat now allows setting some flow properties, see --help for details.  It by default requests a reliable, in-order, stream flow for maximum compatibility with existing Linux commands.  Flow reliability can be overridden with -u (unreliable) or --defaultFS (the system-provided default, whatever it is).   
   * rinacat lets a server specify the sole application name that is allowed to connect to it (by using the normally-optional-in-server-mode -a option), and will refuse flow requests from any other app.  This is untested, and unlikely to work as expected at this time.  It will be enhanced to include some wild-card name flexibility, and could include setting requirements on incoming flow specs (e.g., reliable vs. unreliable, stream vs. record), via command-line options since the person specifying the application receiving rinacat’s output knows what it needs.  Details will be finalized when the behavior of the rina-api library with application and AE names and instances becomes clearer and we gain experience with what is found useful.  
   * Note that the --sdusize value used must be smaller than the MTU of the underlying transport(s) if fragmentation isn't in use.  The default sdusize is currently set to 1024 to make it unnecesssary to override it on the command line when transporting over Ethernet without fragmentation -- a larger value would improve performance, but could cause overly-long SDUs to be dropped.
 

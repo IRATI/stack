@@ -28,22 +28,7 @@
 #include "utils.h"
 #include "common.h"
 #include "efcp.h"
-
-/*
- * IMAPs
- */
-
-#define IMAP_HASH_BITS 7
-
-struct efcp_imap {
-        DECLARE_HASHTABLE(table, IMAP_HASH_BITS);
-};
-
-struct efcp_imap_entry {
-        cep_id_t          key;
-        struct efcp *     value;
-        struct hlist_node hlist;
-};
+#include "efcp-str.h"
 
 struct efcp_imap * efcp_imap_create(void)
 {
@@ -129,7 +114,7 @@ int efcp_imap_address_change(struct efcp_imap *  map,
         ASSERT(map);
 
         hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
-        	efcp_src_addr_set(entry->value, address);
+        	entry->value->connection->source_address = address;
         }
 
         return 0;

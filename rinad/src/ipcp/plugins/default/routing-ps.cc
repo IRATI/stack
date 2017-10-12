@@ -1181,6 +1181,7 @@ void FlowStateObjects::updateCost(const std::string& neigh_name,
 		if (it->second->neighbor_name == neigh_name &&
 				it->second->name == name) {
 			it->second->cost = cost;
+			it->second->seq_num = it->second->seq_num + 1;
 			it->second->modified = true;
 			modified_ = true;
 		}

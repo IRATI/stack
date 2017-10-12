@@ -814,9 +814,14 @@ void EnrolleeStateMachine::remoteReadResult(const rina::cdap_rib::con_handle_t &
 		encoder.decode(obj.value_, neighbors);
 
 		std::list<rina::Neighbor>::const_iterator it;
-		for (it = neighbors.begin(); it != neighbors.end(); ++it)
+		for (it = neighbors.begin(); it != neighbors.end(); ++it) {
 			ipc_process_->enrollment_task_->add_neighbor(*it);
 
+			//Update remote peer address, it may have changed
+			if (it->name_.processName == remote_peer_.name_.processName) {
+				remote_peer_.address_ = it->address_;
+			}
+		}
 	}else{
 		LOG_IPCP_WARN("The object to be created is not required for enrollment");
 	}
@@ -829,6 +834,7 @@ void EnrolleeStateMachine::operational_status_start(int invoke_id,
 					      	    const rina::ser_obj_t &obj_req)
 {
 	rina::FlowRequestEvent event;
+	rina::Neighbor aux;
 
 	rina::ScopedLock g(lock_);
 
@@ -843,6 +849,13 @@ void EnrolleeStateMachine::operational_status_start(int invoke_id,
 
 	timer_.cancelTask(last_scheduled_task_);
 	start_request_invoke_id = invoke_id;
+
+	//Update remote peer address based on the information it provided us
+	aux.name_.processName = remote_peer_.name_.processName;
+	aux.name_.processInstance = remote_peer_.name_.processInstance;
+	ipcp_->enrollment_task_->get_neighbor_info(aux);
+	remote_peer_.address_ = aux.address_;
+	remote_peer_.old_address_ = aux.old_address_;
 
 	if (enrollment_task_->use_reliable_n_flow) {
 		//Add temp entry to the PDU forwarding table, to be able to forward PDUs to neighbor

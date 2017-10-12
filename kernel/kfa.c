@@ -136,7 +136,7 @@ static int kfa_flow_destroy(struct kfa       *instance,
 		LOG_WARN("Instance %pK SDU-ready FIFO is NULL", instance);
 	} else {
 		if (rfifo_destroy(flow->sdu_ready,
-				  (void (*) (void *)) sdu_destroy)) {
+				  (void (*) (void *)) du_destroy)) {
 			LOG_ERR("Flow %d FIFO has not been destroyed", id);
 			retval = -1;
 		}
@@ -469,10 +469,10 @@ static int enable_write(struct ipcp_instance_data *data, port_id_t id)
 	return 0;
 }
 
-int kfa_flow_sdu_write(struct ipcp_instance_data *data,
-		       port_id_t		  id,
-		       struct sdu                *sdu,
-                       bool                      blocking)
+int kfa_flow_du_write(struct ipcp_instance_data *data,
+		      port_id_t		  id,
+		      struct du                * du,
+                      bool                      blocking)
 {
 	struct ipcp_flow     *flow;
 	struct ipcp_instance *ipcp;
@@ -480,26 +480,16 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 	int		      retval = 0;
 	struct iowaitqs * wqs = 0;
 
-	if (!data) {
-		LOG_ERR("Bogus ipcp data passed, bailing out");
-		sdu_destroy(sdu);
+	if (!data || !is_port_id_ok(id) || !is_du_ok(du)) {
+		LOG_ERR("Bogus input params, bailing out");
+		du_destroy(du);
 		return -EINVAL;
 	}
 
 	instance = data->kfa;
 	if (!instance) {
 		LOG_ERR("Bogus instance passed, bailing out");
-		sdu_destroy(sdu);
-		return -EINVAL;
-	}
-	if (!is_port_id_ok(id)) {
-		LOG_ERR("Bogus port-id, bailing out");
-		sdu_destroy(sdu);
-		return -EINVAL;
-	}
-	if (!is_sdu_ok(sdu)) {
-		LOG_ERR("Bogus sdu, bailing out");
-		sdu_destroy(sdu);
+		du_destroy(du);
 		return -EINVAL;
 	}
 
@@ -511,13 +501,13 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 	if (!flow) {
 		spin_unlock_bh(&instance->lock);
 		LOG_ERR("There is no flow bound to port-id %d", id);
-		sdu_destroy(sdu);
+		du_destroy(du);
 		return -EBADF;
 	}
 	if (flow->state == PORT_STATE_DEALLOCATED) {
 		spin_unlock_bh(&instance->lock);
 		LOG_ERR("Flow with port-id %d is already deallocated", id);
-		sdu_destroy(sdu);
+		du_destroy(du);
 		return -ESHUTDOWN;
 	}
 
@@ -527,7 +517,7 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 		if (flow->wqs == 0) {
 			LOG_ERR("Waitqueues are null, flow %d is being deallocated", id);
 			retval = -EBADF;
-			sdu_destroy(sdu);
+			du_destroy(du);
 			goto finish;
 		} else {
 			wqs = flow->wqs;
@@ -560,7 +550,7 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 			flow = kfa_pmap_find(instance->flows, id);
 			if (!flow) {
 				spin_unlock_bh(&instance->lock);
-				sdu_destroy(sdu);
+				du_destroy(du);
 				LOG_ERR("No more flow bound to port-id %d", id);
 				return -EBADF;
 			}
@@ -568,17 +558,17 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 			if (flow->wqs == 0) {
 				LOG_ERR("Waitqueues are null, flow %d is being deallocated", id);
 				retval = -EBADF;
-				sdu_destroy(sdu);
+				du_destroy(du);
 				goto finish;
 			}
 
 			if (retval < 0) {
-				sdu_destroy(sdu);
+				du_destroy(du);
 				goto finish;
 			}
 
 			if (flow->state == PORT_STATE_DEALLOCATED) {
-				sdu_destroy(sdu);
+				du_destroy(du);
 				retval = -ESHUTDOWN;
 				goto finish;
 			}
@@ -587,15 +577,12 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 		ipcp = flow->ipc_process;
 		if (!ipcp) {
 			retval = -EBADF;
-			sdu_destroy(sdu);
+			du_destroy(du);
 			goto finish;
 		}
 
-		ASSERT(ipcp->ops);
-		ASSERT(ipcp->ops->sdu_write);
-
 		spin_unlock_bh(&instance->lock);
-		if (ipcp->ops->sdu_write(ipcp->data, id, sdu, blocking)) {
+		if (ipcp->ops->du_write(ipcp->data, id, du, blocking)) {
 			LOG_ERR("Couldn't write SDU on port-id %d", id);
 			retval = -EIO;
 		}
@@ -617,15 +604,12 @@ int kfa_flow_sdu_write(struct ipcp_instance_data *data,
 		ipcp = flow->ipc_process;
 		if (!ipcp) {
 			retval = -EBADF;
-			sdu_destroy(sdu);
+			du_destroy(du);
 			goto finish;
 		}
 
-		ASSERT(ipcp->ops);
-		ASSERT(ipcp->ops->sdu_write);
-
 		spin_unlock_bh(&instance->lock);
-		if (ipcp->ops->sdu_write(ipcp->data, id, sdu, blocking)) {
+		if (ipcp->ops->du_write(ipcp->data, id, du, blocking)) {
 			LOG_ERR("Couldn't write SDU on port-id %d", id);
 			retval = -EIO;
 		}
@@ -776,23 +760,23 @@ void kfa_flow_cancel_iowqs(struct kfa      * instance,
 	}
 }
 
-struct sdu * get_sdu_to_read(struct ipcp_flow * flow, size_t size)
+struct du * get_du_to_read(struct ipcp_flow * flow, size_t size)
 {
-	struct sdu * sdu;
+	struct du * du;
 
-	sdu = rfifo_peek(flow->sdu_ready);
-	if (size >= sdu_len(sdu)) {
-		sdu = rfifo_pop(flow->sdu_ready);
+	du = rfifo_peek(flow->sdu_ready);
+	if (size >= du_len(du)) {
+		du = rfifo_pop(flow->sdu_ready);
 	}
 
-	return sdu;
+	return du;
 }
 
-int kfa_flow_sdu_read(struct kfa  *instance,
-		      port_id_t	   id,
-		      struct sdu **sdu,
-		      size_t       size,
-                      bool blocking)
+int kfa_flow_du_read(struct kfa  *instance,
+		     port_id_t	   id,
+		     struct du ** du,
+		     size_t       size,
+                     bool blocking)
 {
 	struct ipcp_flow *flow;
 	int		  retval = 0;
@@ -806,7 +790,7 @@ int kfa_flow_sdu_read(struct kfa  *instance,
 		LOG_ERR("Bogus port-id, bailing out");
 		return -EINVAL;
 	}
-	if (!sdu) {
+	if (!du) {
 		LOG_ERR("Bogus output sdu parameter passed, bailing out");
 		return -EINVAL;
 	}
@@ -890,8 +874,8 @@ int kfa_flow_sdu_read(struct kfa  *instance,
 			goto finish;
 		}
 
-		*sdu = get_sdu_to_read(flow, size);
-		if (!is_sdu_ok(*sdu)) {
+		*du = get_du_to_read(flow, size);
+		if (!is_du_ok(*du)) {
 			LOG_ERR("There is not a valid in port-id %d fifo", id);
 			retval = -EIO;
 		}
@@ -908,8 +892,8 @@ int kfa_flow_sdu_read(struct kfa  *instance,
 			goto finish;
 		}
 
-		*sdu = get_sdu_to_read(flow, size);
-		if (!is_sdu_ok(*sdu)) {
+		*du = get_du_to_read(flow, size);
+		if (!is_du_ok(*du)) {
 			LOG_ERR("There is not a valid in port-id %d fifo", id);
 			retval = -EIO;
 		}
@@ -930,9 +914,9 @@ int kfa_flow_sdu_read(struct kfa  *instance,
 	return retval;
 }
 
-static int kfa_sdu_post(struct ipcp_instance_data *data,
-			port_id_t		   id,
-			struct sdu                *sdu)
+static int kfa_du_post(struct ipcp_instance_data *data,
+		       port_id_t		   id,
+		       struct du                * du)
 {
 	struct ipcp_flow  *flow;
 	wait_queue_head_t *wq;
@@ -940,57 +924,47 @@ static int kfa_sdu_post(struct ipcp_instance_data *data,
 	struct sk_buff	  *skb;
 	int		   retval = 0;
 
-	if (!data) {
+	if (!data || !is_port_id_ok(id) || !is_du_ok(du)) {
 		LOG_ERR("Bogus ipcp data instance passed, cannot post SDU");
-		sdu_destroy(sdu);
+		du_destroy(du);
 		return -1;
 	}
 
 	instance = data->kfa;
 	if (!instance) {
 		LOG_ERR("Bogus kfa instance passed, cannot post SDU");
-		sdu_destroy(sdu);
-		return -1;
-	}
-	if (!is_port_id_ok(id)) {
-		LOG_ERR("Bogus port-id, bailing out");
-		sdu_destroy(sdu);
-		return -1;
-	}
-	if (!is_sdu_ok(sdu)) {
-		LOG_ERR("Bogus parameters passed, bailing out");
-		sdu_destroy(sdu);
+		du_destroy(du);
 		return -1;
 	}
 
-	LOG_DBG("Posting SDU to port-id %d ", id);
+	LOG_DBG("Posting DU to port-id %d ", id);
 
 	spin_lock_bh(&instance->lock);
 	flow = kfa_pmap_find(instance->flows, id);
 	if (!flow) {
 		spin_unlock_bh(&instance->lock);
 		LOG_ERR("There is no flow bound to port-id %d", id);
-		sdu_destroy(sdu);
+		du_destroy(du);
 		return -1;
 	}
 
 	if (flow->state == PORT_STATE_DEALLOCATED) {
 		spin_unlock_bh(&instance->lock);
 		LOG_ERR("Flow with port-id %d is already deallocated", id);
-		sdu_destroy(sdu);
+		du_destroy(du);
 		return -1;
 	}
 
 	/* IP tunnel */
 	if (flow->ip_dev) {
-        	skb = sdu_detach_skb(sdu);
-		sdu_destroy(sdu);
+        	skb = du_detach_skb(du);
+		du_destroy(du);
 		retval = rina_dev_rcv(skb, flow->ip_dev);
 	/* RINA APP tunnel */
 	} else {
-		if (rfifo_push_ni(flow->sdu_ready, sdu)) {
+		if (rfifo_push_ni(flow->sdu_ready, du)) {
 			LOG_ERR("Could not write %zd bytes into port-id %d fifo",
-				sizeof(struct sdu *), id);
+				sizeof(struct du *), id);
 			retval = -1;
 		}
 	}
@@ -1199,8 +1173,8 @@ static struct ipcp_instance_ops kfa_instance_ops = {
 	.connection_update	   = NULL,
 	.connection_destroy	   = NULL,
 	.connection_create_arrived = NULL,
-	.sdu_enqueue		   = kfa_sdu_post,
-	.sdu_write		   = kfa_flow_sdu_write,
+	.du_enqueue		   = kfa_du_post,
+	.du_write		   = kfa_flow_du_write,
 	.ipcp_name		   = kfa_name,
 	.enable_write		   = enable_write,
 	.disable_write		   = disable_write

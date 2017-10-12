@@ -42,21 +42,22 @@ of IRATI in future releases.
 ### Building on Debian 8
 #############################################################################
 
-For the kernel modules, a Linux kernel with version 4.9 has to be installed in the system,
-with the kernel headers.
+For the kernel modules, a Linux kernel with a version between 4.1 and 4.9 (included) has to be installed in 
+the system, with the kernel headers.
 
 Once this is done, please install user-space dependencies
 
     $ apt-get update
+    $ apt-get install linux-headers-$(uname -r)
     $ apt-get install autoconf
     $ apt-get install automake
     $ apt-get install libtool
     $ apt-get install pkg-config
     $ apt-get install git
     $ apt-get install g++
-    $ apt-get install libssl-dev
-    $ apt-get install protobuf-compiler (version >= 2.5.0 required)
-    $ apt-get install libprotobuf-dev (version >= 2.5.0 required)
+    $ apt-get install libssl-dev=1.0.1k-3
+    $ apt-get install protobuf-compiler=2.6.1-1
+    $ apt-get install libprotobuf-dev=2.6.1-1
     $ apt-get install hostapd (if the system will be configured as an access point)
     $ apt-get install wpasupplicant (if the system will be configured as a mobile host)
 
@@ -76,8 +77,8 @@ Download the IRATI repo (arcfire branch) and enter the root directory
 
 Build and install both kernel-space and user-space software
 
-    $ ./configure --prefix <path to IRATI installation folder>
-    $ make install
+    $ sudo ./configure --prefix <path to IRATI installation folder>
+    $ sudo make install
 
 ### Building on Raspbian
 #############################################################################
@@ -102,10 +103,9 @@ Install dependencies
     $ apt-get install autoconf
     $ apt-get install libtool
     $ apt-get install git
-    $ apt-get install libssl-dev
-    $ apt-get install protobuf-compiler
-    $ apt-get install libprotobuf-dev
-    $ apt-get install libnl-genl-3-dev
+    $ apt-get install libssl-dev=1.0.1k-3
+    $ apt-get install protobuf-compiler=2.6.1-1
+    $ apt-get install libprotobuf-dev=2.6.1-1
 
 Download the IRATI repo (arcfire branch) and enter the root directory
 
@@ -114,8 +114,8 @@ Download the IRATI repo (arcfire branch) and enter the root directory
 
 Build and install both kernel-space and user-space software
 
-    $ ./configure --prefix <path to IRATI installation folder>
-    $ make install
+    $ sudo ./configure --prefix <path to IRATI installation folder>
+    $ sudo make install
 
 #############################################################################
 ## 3. Running and configuring IRATI                                         #

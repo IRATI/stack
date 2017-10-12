@@ -1131,15 +1131,6 @@ struct policy * dtcp_lost_control_pdu(struct dtcp_config * cfg)
 }
 EXPORT_SYMBOL(dtcp_lost_control_pdu);
 
-struct policy * dtcp_ps(struct dtcp_config * cfg)
-{
-        if (!cfg)
-                return NULL;
-
-        return cfg->dtcp_ps;
-}
-EXPORT_SYMBOL(dtcp_ps);
-
 struct policy * dtcp_rtt_estimator(struct dtcp_config * cfg)
 {
         if (!cfg)

@@ -31,12 +31,11 @@
 #include "dtp.h"
 #include "dtcp-ps.h"
 #include "dtcp-ps-default.h"
-#include "dt-utils.h"
+#include "dtp-utils.h"
+#include "du.h"
 #include "logs.h"
 
-
-int
-default_lost_control_pdu(struct dtcp_ps * ps)
+int default_lost_control_pdu(struct dtcp_ps * ps)
 {
         struct dtcp * dtcp = ps->dm;
 
@@ -46,22 +45,25 @@ default_lost_control_pdu(struct dtcp_ps * ps)
         }
 
 #if 0
-        struct pdu * pdu_ctrl;
+        struct du * du_ctrl;
         seq_num_t last_rcv_ctrl, snd_lft, snd_rt;
 
-        last_rcv_ctrl = last_rcv_ctrl_seq(dtcp);
-        snd_lft       = snd_lft_win(dtcp);
-        snd_rt        = snd_rt_wind_edge(dtcp);
-        pdu_ctrl      = pdu_ctrl_ack_create(dtcp,
-                                            last_rcv_ctrl,
-                                            snd_lft,
-                                            snd_rt);
-        if (!pdu_ctrl) {
+        spin_lock_bh(&dtcp->parent->sv_lock);
+        last_rcv_ctrl = dtcp->sv->last_rcv_ctl_seq;
+        snd_lft       = dtcp->sv->snd_lft_win;
+        snd_rt        = dtcp->sv->snd_rt_wind_edge;
+        spin_unlock_bh(&dtcp->parent->sv_lock);
+
+        du_ctrl      = pdu_ctrl_ack_create(dtcp,
+                                           last_rcv_ctrl,
+                                           snd_lft,
+                                           snd_rt);
+        if (!du_ctrl) {
                 LOG_ERR("Failed Lost Control PDU policy");
                 return -1;
         }
 
-        if (dt_pdu_send(dtcp->parent, pdu_ctrl))
+        if (dt_pdu_send(dtcp->parent, du_ctrl))
                 return -1;
 #endif
 
@@ -91,10 +93,10 @@ int default_rcvr_ack_atimer(struct dtcp_ps * ps, const struct pci * pci)
 { return 0; }
 #endif
 
-int
-default_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
+int default_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
 {
         struct dtcp * dtcp = ps->dm;
+        timeout_t tr;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -102,23 +104,22 @@ default_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
         }
 
         if (ps->rtx_ctrl) {
-                struct rtxq * q;
-
-                q = dt_rtxq(dtcp_dt(dtcp));
-                if (!q) {
+                if (!dtcp->parent->rtxq) {
                         LOG_ERR("Couldn't find the Retransmission queue");
                         return -1;
                 }
-                rtxq_ack(q, seq_num, dt_sv_tr(dtcp_dt(dtcp)));
+
+                spin_lock_bh(&dtcp->parent->sv_lock);
+                tr = dtcp->parent->sv->tr;
+                spin_unlock_bh(&dtcp->parent->sv_lock);
+                rtxq_ack(dtcp->parent->rtxq, seq_num, tr);
         }
 
         return 0;
 }
 
-int
-default_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
+int default_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
 {
-        struct dtp * dtp;
         struct pci * pci;
         int ret;
 
@@ -129,15 +130,14 @@ default_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
                 return -1;
         }
 
-        dtp = dt_dtp(dtcp_dt(dtcp));
-        if (!dtp) {
+        if (!dtcp->parent) {
                 LOG_ERR("No DTP from dtcp->parent");
                 return -1;
         }
 
         /* Invoke delimiting and update left window edge */
 
-        pci = process_A_expiration(dtp, dtcp);
+        pci = process_A_expiration(dtcp->parent, dtcp);
         if (!pci)
                 return 0;
 
@@ -147,11 +147,10 @@ default_sending_ack(struct dtcp_ps * ps, seq_num_t seq)
         return ret;
 }
 
-int
-default_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
+int default_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {
         struct dtcp * dtcp = ps->dm;
-        struct pdu * pdu;
+        struct du * du;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -162,24 +161,24 @@ default_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
                 return -1;
         }
 
-        pdu = pdu_ctrl_generate(dtcp, PDU_TYPE_FC);
-        if (!pdu)
+        du = pdu_ctrl_generate(dtcp, PDU_TYPE_FC);
+        if (!du)
                 return -1;
 
         LOG_DBG("DTCP Sending FC (CPU: %d)", smp_processor_id());
-        dump_we(dtcp, pdu_pci_get_rw(pdu));
+        dump_we(dtcp, &du->pci);
 
-        if (dtcp_pdu_send(dtcp, pdu))
+        if (dtcp_pdu_send(dtcp, du))
                return -1;
 
         return 0;
 }
 
-int
-default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
+int default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {
         struct dtcp * dtcp = ps->dm;
         seq_num_t LWE;
+        seq_num_t RWE;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -190,18 +189,20 @@ default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
                 return -1;
         }
 
-        LWE = dt_sv_rcv_lft_win(dtcp_dt(dtcp));
-        update_rt_wind_edge(dtcp);
+        spin_lock_bh(&dtcp->parent->sv_lock);
+        LWE = dtcp->parent->sv->rcv_left_window_edge;
+        dtcp->sv->rcvr_rt_wind_edge = LWE + dtcp->sv->rcvr_credit;
+        RWE = dtcp->sv->rcvr_rt_wind_edge;
+        spin_unlock_bh(&dtcp->parent->sv_lock);
 
         LOG_DBG("DTCP: %pK", dtcp);
-        LOG_DBG("LWE: %u  RWE: %u", LWE, rcvr_rt_wind_edge(dtcp));
+        LOG_DBG("LWE: %u  RWE: %u", LWE, RWE);
 
         return 0;
 }
 
-int
-default_rate_reduction(struct dtcp_ps * ps, const struct pci * pci) {
-
+int default_rate_reduction(struct dtcp_ps * ps, const struct pci * pci)
+{
 	struct dtcp * dtcp = ps->dm;
 	u_int32_t rt;
 	u_int32_t tf;
@@ -218,72 +219,59 @@ default_rate_reduction(struct dtcp_ps * ps, const struct pci * pci) {
 	       return 0;
 	}
 
-	dtcp_sndr_rate_set(dtcp, rt);
-	dtcp_rcvr_rate_set(dtcp, rt);
-
-	dtcp_time_frame_set(dtcp, pci_control_time_frame(pci));
+	spin_lock_bh(&dtcp->parent->sv_lock);
+	dtcp->sv->sndr_rate = rt;
+	dtcp->sv->rcvr_rate = rt;
+	dtcp->sv->time_unit = tf;
 
 	LOG_DBG("DTCP: %pK", dtcp);
 	LOG_DBG("    Rate: %u, Time: %u",
-		dtcp_sndr_rate(dtcp),
-		dtcp_time_frame(dtcp));;
+		dtcp->sv->sndr_rate,
+		dtcp->sv->time_unit);
+
+	spin_unlock_bh(&dtcp->parent->sv_lock);
 
 	return 0;
 }
 
-int
-default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
+int default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
 {
         struct dtcp *       dtcp;
-        struct dt *         dt;
-        uint_t              rtt, new_rtt, srtt, rttvar, trmsecs;
-        timeout_t           start_time;
+        uint_t              rtt, new_sample, srtt, rttvar, trmsecs;
+        timeout_t           start_time, a;
         int                 abs;
-        struct rtxq_entry * entry;
 
         if (!ps)
                 return -1;
         dtcp = ps->dm;
         if (!dtcp)
                 return -1;
-        dt = dtcp_dt(dtcp);
-        if (!dt)
-                return -1;
 
         LOG_DBG("RTT Estimator...");
 
-        entry = rtxq_entry_peek(dt_rtxq(dt), sn);
-        if (!entry) {
-                LOG_ERR("Could not retrieve timestamp of Seq num: %u for RTT "
-                        "estimation", sn);
-                return -1;
-        }
-
-        /* if it is a retransmission we do not consider it*/
-        if (rtxq_entry_retries(entry) != 0) {
-                LOG_DBG("RTTestimator PDU %u has been retransmitted %u",
-                        sn, rtxq_entry_retries(entry));
-                rtxq_entry_destroy(entry);
+        start_time = rtxq_entry_timestamp(dtcp->parent->rtxq, sn);
+        if (start_time == 0) {
+        	LOG_DBG("RTTestimator: PDU %u has been retransmitted", sn);
                 return 0;
         }
 
-        start_time = rtxq_entry_timestamp(entry);
-        new_rtt    = jiffies_to_msecs(jiffies - start_time);
+        new_sample = jiffies_to_msecs(jiffies - start_time);
 
-        /* NOTE: the acking process has alrady deleted old entries from rtxq
-         * except for the one with the sn we need, here we have to detroy just
-         * the one we use */
-        rtxq_entry_destroy(entry);
+        spin_lock_bh(&dtcp->parent->sv_lock);
 
-        rtt        = dtcp_rtt(dtcp);
-        srtt       = dtcp_srtt(dtcp);
-        rttvar     = dtcp_rttvar(dtcp);
+        rtt        = dtcp->sv->rtt;
+        srtt       = dtcp->sv->srtt;
+        rttvar     = dtcp->sv->rttvar;
+        a 	   = dtcp->parent->sv->A;
 
         if (!rtt) {
-                rttvar = new_rtt >> 1;
-                srtt   = new_rtt;
+        	rtt = new_sample;
+                rttvar = new_sample >> 1;
+                srtt   = new_sample;
         } else {
-                abs = srtt - new_rtt;
+        	/* RTT <== RTT * (112/128) + SAMPLE * (16/128)*/
+        	rtt = (rtt * 112 + (new_sample << 4)) >> 7;
+                abs = srtt - new_sample;
                 abs = abs < 0 ? -abs : abs;
                 rttvar = ((3 * rttvar) >> 2) + (((uint_t)abs) >> 2);
         }
@@ -295,21 +283,23 @@ default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
         trmsecs  = rttvar << 2;
         /* G is 0.1s according to RFC6298, then 100ms */
         trmsecs  = 100 > trmsecs ? 100 : trmsecs;
-        trmsecs += srtt + jiffies_to_msecs(dt_sv_a(dt));
+        trmsecs += srtt + jiffies_to_msecs(a);
         /* RTO (tr) less than 1s? (not for the common policy) */
         /*trmsecs  = trmsecs < 1000 ? 1000 : trmsecs;*/
 
-        dtcp_rtt_set(dtcp, new_rtt);
-        dtcp_rttvar_set(dtcp, rttvar);
-        dtcp_srtt_set(dtcp, srtt);
-        dt_sv_tr_set(dt, msecs_to_jiffies(trmsecs));
-        LOG_DBG("TR set to %u msecs", trmsecs);
+        dtcp->sv->rtt = rtt;
+        dtcp->sv->rttvar = rttvar;
+        dtcp->sv->srtt = srtt;
+        dtcp->parent->sv->tr = msecs_to_jiffies(trmsecs);
+
+        spin_unlock_bh(&dtcp->parent->sv_lock);
+
+	LOG_DBG("New RTT %u; New Tr: %u ms", rtt, trmsecs);
 
         return 0;
 }
 
-struct ps_base *
-dtcp_ps_default_create(struct rina_component * component)
+struct ps_base * dtcp_ps_default_create(struct rina_component * component)
 {
         struct dtcp * dtcp = dtcp_from_component(component);
         struct dtcp_ps * ps = rkzalloc(sizeof(*ps), GFP_KERNEL);

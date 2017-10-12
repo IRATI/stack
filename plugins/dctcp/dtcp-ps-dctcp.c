@@ -47,6 +47,16 @@ struct dctcp_dtcp_ps_data {
     uint_t        dctcp_alpha;
 };
 
+static void update_credit_and_rt_wind_edge(struct dtcp * dtcp, uint_t credit)
+{
+        spin_lock_bh(&dtcp->parent->sv_lock);
+        dtcp->sv->rcvr_credit = credit;
+	/* applying the TCP rule of not shrinking the window */
+	if (dtcp->parent->sv->rcv_left_window_edge + credit > dtcp->sv->rcvr_rt_wind_edge)
+        	dtcp->sv->rcvr_rt_wind_edge = dtcp->parent->sv->rcv_left_window_edge + credit;
+        spin_unlock_bh(&dtcp->parent->sv_lock);
+}
+
 static int dctcp_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {
     struct dtcp * dtcp = ps->dm;
@@ -54,7 +64,8 @@ static int dctcp_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
     seq_num_t new_credit;
     uint_t alpha_old = 0;
 
-    new_credit = dtcp_rcvr_credit(dtcp);
+    spin_lock_bh(&dtcp->parent->sv_lock);
+    new_credit = dtcp->sv->rcvr_credit;
     if (data->state == SLOW_START) {
         new_credit++;
         if (new_credit >= data->sshtresh) {
@@ -67,6 +78,7 @@ static int dctcp_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
             data->dec_credit -= DEC_PRECISION;
         }
     }
+    spin_unlock_bh(&dtcp->parent->sv_lock);
     data->sent_total++;
     alpha_old = data->dctcp_alpha;
     if ((pci_flags_get(pci) & PDU_FLAGS_EXPLICIT_CONGESTION)) {
@@ -80,8 +92,8 @@ static int dctcp_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
     }
 
     /* set the new credit */
-    dtcp_rcvr_credit_set(dtcp, new_credit);
     update_credit_and_rt_wind_edge(dtcp, new_credit);
+
     return 0;
 }
 
@@ -130,7 +142,7 @@ static struct ps_base * dtcp_ps_dctcp_create(struct rina_component * component)
     data->shift_g = 4;
     data->sent_total = 0;
     data->ecn_total = 0;
-    dtcp_rcvr_credit_set(dtcp, data->init_credit);
+    dtcp->sv->rcvr_credit = data->init_credit;
 
     ps->base.set_policy_set_param   = dtcp_ps_set_policy_set_param;
     ps->dm                          = dtcp;

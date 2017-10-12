@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
 #ifndef __RINA_API_H__
@@ -34,13 +34,13 @@ extern "C" {
  * Some spare space is reserved to allow future ABI-compatible extensions.
  */
 struct rina_flow_spec {
-    uint64_t max_sdu_gap;       /* in SDUs */
-    uint64_t avg_bandwidth;     /* in bits per second */
-    uint32_t max_delay;         /* in microseconds */
-    uint16_t max_loss;          /* percentage */
-    uint32_t max_jitter;        /* in microseconds */
-    uint8_t in_order_delivery;  /* boolean */
-    uint8_t msg_boundaries;     /* boolean */
+    uint64_t max_sdu_gap;      /* in SDUs */
+    uint64_t avg_bandwidth;    /* in bits per second */
+    uint32_t max_delay;        /* in microseconds */
+    uint16_t max_loss;         /* percentage */
+    uint32_t max_jitter;       /* in microseconds */
+    uint8_t in_order_delivery; /* boolean */
+    uint8_t msg_boundaries;    /* boolean */
 
     /* for future use */
     uint32_t spare1;
@@ -48,8 +48,8 @@ struct rina_flow_spec {
     uint32_t spare3;
 };
 
-#define RINA_F_NOWAIT       (1 << 0)
-#define RINA_F_NORESP       (1 << 1)
+#define RINA_F_NOWAIT (1 << 0)
+#define RINA_F_NORESP (1 << 1)
 
 /*
  * Open a file descriptor that can be used to register/unregister names,
@@ -98,8 +98,8 @@ int rina_unregister(int fd, const char *dif_name, const char *local_appl,
 
 /*
  * Wait for the completion of a (un)registration procedure previosuly initiated
- * with a call to rina_[un]register() with the RINA_F_NOWAIT flag set. The @wfd
- * file descriptor must match the one returned by rina_[un]register().
+ * with a call to rina_[un]register() on @fd with the RINA_F_NOWAIT flag set.
+ * The @wfd file descriptor must match the one returned by rina_[un]register().
  *
  * On success it returns 0, on error -1, with the errno code properly set.
  */
@@ -116,13 +116,13 @@ int rina_register_wait(int fd, int wfd);
  * @spec is not NULL, the referenced data structure is filled with the QoS
  * specification specified by the requesting application.
  *
- * If @flags does not contain RINA_F_NORESP, on success it returns a file
- * descriptor that can be subsequently used with standard I/O system calls
- * (write(), read(), select(), ...) to exchange SDUs on the flow and
+ * If @flags does not contain RINA_F_NORESP, on success this function returns
+ * a file descriptor that can be subsequently used with standard I/O system
+ * calls (write(), read(), select(), ...) to exchange SDUs on the flow and
  * synchronize.
  *
  * If @flags does contain RINA_F_NORESP, on success a positive number is
- * returned as an handle to be passed to subsequent call to
+ * returned as an handle to be passed to a subsequent call to
  * rina_flow_respond().
  *
  * A call to rina_flow_accept(fd, &x, flags & ~RINA_F_NORESP) is functionally
@@ -142,16 +142,17 @@ int rina_flow_accept(int fd, char **remote_appl, struct rina_flow_spec *spec,
  * response, which completes the flow allocation procedure. A non-zero
  * @response indicates that the flow allocation request is denied. In both
  * cases @response is sent to the requesting application to inform it
- * about the verdict. When the response is positive, this function returns
- * a file descriptor that can be subsequently used with standard I/O system
- * calls (write(), read(), select(), ...) to exchange SDUs on the flow and
- * synchronize. When the response is negative, 0 is returned. On error -1
- * is returned, with the errno code properly set.
+ * about the verdict. When the response is positive, on success this
+ * function returns a file descriptor that can be subsequently used with
+ * standard I/O system calls (write(), read(), select(), ...) to exchange
+ * SDUs on the flow and synchronize. When the response is negative, 0 is
+ * returned on success. In any case, -1 is returned on error, with the
+ * errno code properly set.
  */
 int rina_flow_respond(int fd, int handle, int response);
 
 /*
- * Issue a flow allocation reuqest towards the destination application called
+ * Issue a flow allocation request towards the destination application called
  * @remote_appl, using @local_appl as a source application name. If @flowspec
  * is not NULL, it specifies the QoS parameters to be used for the flow, if the
  * flow allocation request is successful. If @flowspec is NULL, an
@@ -174,7 +175,7 @@ int rina_flow_respond(int fd, int handle, int response);
  * calls (write(), read(), select(), ...) to exchange SDUs on the flow and
  * synchronize.
  *
- * On error -1 is returned, with the errno code properly set.
+ * In any case, -1 is returned on error, with the errno code properly set.
  */
 int rina_flow_alloc(const char *dif_name, const char *local_appl,
                     const char *remote_appl,
@@ -194,13 +195,21 @@ int rina_flow_alloc(const char *dif_name, const char *local_appl,
 int rina_flow_alloc_wait(int wfd);
 
 /*
- * Fills in the provided @spec with an implementation-specific default QoS,
- * which typically corresponds to a best-effort QoS.
+ * Fills in the provided @spec with an unrelable best-effort QoS.
  */
-void rina_flow_spec_default(struct rina_flow_spec *spec);
+void rina_flow_spec_unreliable(struct rina_flow_spec *spec);
+
+/* Deprecated function. */
+#define rina_flow_spec_default rina_flow_spec_unreliable
+
+/*
+ * Retrieve the MSS (Maximum SDU Size) that can be written to the flow
+ * with a single write. Returns 0 on error with errno set properly.
+ */
+unsigned int rina_flow_mss_get(int fd);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  /* __RINA_API_H__ */
+#endif /* __RINA_API_H__ */

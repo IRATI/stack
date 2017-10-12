@@ -39,7 +39,7 @@
 
 struct q_entry {
 	struct list_head next;
-	struct pdu * data;
+	struct du * data;
 	struct q_qos * qqos;
 	int w;
 };
@@ -197,9 +197,9 @@ static void qta_queue_destroy(struct qta_queue * queue)
 	struct q_entry *pos, *next;
 
 	list_del(&queue->list);
-	rfifo_destroy(queue->queue, (void (*)(void *)) pdu_destroy);
+	rfifo_destroy(queue->queue, (void (*)(void *)) du_destroy);
 	list_for_each_entry_safe(pos, next, &queue->list_q_entry, next) {
-		pdu_destroy(pos->data);
+		du_destroy(pos->data);
 		list_del(&pos->next);
 		rkfree(pos);
 	}
@@ -213,7 +213,7 @@ static void q_qos_destroy(struct q_qos * q)
 		return;
 
 	list_del(&q->list);
-	//rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
+	//rfifo_destroy(q->queue, (void (*)(void *)) du_destroy);
 	robject_del(&q->robj);
 	rkfree(q);
 }
@@ -462,10 +462,10 @@ struct qta_queue_set * queue_set_find(struct qta_mux_data * q,
 	return NULL;
 }
 
-static struct pdu * dequeue_entry(struct q_entry * entry,
-				  struct qta_queue_set * qset)
+static struct du * dequeue_entry(struct q_entry * entry,
+				 struct qta_queue_set * qset)
 {
-	struct pdu * ret_pdu = entry->data;
+	struct du * ret_pdu = entry->data;
 	struct q_qos * qqos = entry->qqos;
 
 	list_del(&entry->next);
@@ -475,7 +475,6 @@ static struct pdu * dequeue_entry(struct q_entry * entry,
 	qqos->ps.backlog -= entry->w;
 
 	return ret_pdu;
-
 }
 
 static struct q_entry * dequeue_qta_q_entry(struct qta_queue * q)
@@ -488,11 +487,11 @@ static struct q_entry * dequeue_qta_q_entry(struct qta_queue * q)
 	return entry;
 }
 
-struct pdu * qta_rmt_dequeue_policy(struct rmt_ps	  *ps,
-				    struct rmt_n1_port *n1_port)
+struct du * qta_rmt_dequeue_policy(struct rmt_ps	  *ps,
+				   struct rmt_n1_port *n1_port)
 {
 	struct qta_queue *     entry;
-	struct pdu *           ret_pdu;
+	struct du *            ret_pdu;
 	struct qta_queue_set * qset;
 	struct q_entry *pos;
 
@@ -525,26 +524,24 @@ struct pdu * qta_rmt_dequeue_policy(struct rmt_ps	  *ps,
 
 int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 			   struct rmt_n1_port *n1_port,
-			   struct pdu	  *pdu)
+			   struct du	  *du)
 {
 	struct qta_queue_set * qset;
 	struct q_qos *         q;
 	int                    i;
 	qos_id_t               qos_id;
-	const struct pci * pci;
 	struct q_entry * entry;
 	uint_t mlength;
 	uint_t mbacklog;
 	uint_t w;
 
-	if (!ps || !n1_port || !pdu) {
+	if (!ps || !n1_port || !du) {
 		LOG_ERR("Wrong input parameters for "
 				"rmt_enqueu_scheduling_policy_tx");
 		return RMT_PS_ENQ_ERR;
 	}
 
-	pci    = pdu_pci_get_ro(pdu);
-	qos_id = pci_qos_id(pci);
+	qos_id = pci_qos_id(&du->pci);
 	qset   = n1_port->rmt_ps_queues;
 	q      = qta_q_qos_find(qset, qos_id);
 	LOG_DBG("Enqueueing for QoS id %u", qos_id);
@@ -552,7 +549,7 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 	LOG_DBG("First of all, Policer/Shaper");
 	if (!q) {
 		LOG_ERR("No queue for QoS id %u, dropping PDU", qos_id);
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return RMT_PS_ENQ_ERR;
 	}
 
@@ -562,20 +559,20 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 
 	if (mlength && q->ps.length > mlength) {
 		LOG_INFO("Length exceeded for QoS id %u, dropping PDU", qos_id);
-		pdu_destroy(pdu);
+		du_destroy(du);
 		q->ps.length--;
 		q->dropped++;
 		return RMT_PS_ENQ_DROP;
 	}
 
-	w = (int) pdu_len(pdu);
+	w = (int) du_len(du);
 	q->ps.backlog += w;
 	if (mbacklog && q->ps.backlog > mbacklog) {
 		LOG_INFO("Backlog exceeded for QoS id %u, dropping PDU", qos_id);
 		q->dropped++;
 		q->ps.length--;
 		q->ps.backlog -= w;
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return RMT_PS_ENQ_DROP;
 	}
 
@@ -585,7 +582,7 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 		q->dropped++;
 		q->ps.length--;
 		q->ps.backlog -= w;
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return RMT_PS_ENQ_DROP;
 	}
 	get_random_bytes(&i, sizeof(i));
@@ -595,7 +592,7 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 		q->dropped++;
 		q->ps.length--;
 		q->ps.backlog -= w;
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return RMT_PS_ENQ_DROP;
 	}
 
@@ -605,10 +602,10 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 		q->dropped++;
 		q->ps.length--;
 		q->ps.backlog -= w;
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return RMT_PS_ENQ_ERR;
 	}
-	entry->data = pdu;
+	entry->data = du;
 	entry->qqos = q;
 	entry->w    = w;
 	INIT_LIST_HEAD(&entry->next);
