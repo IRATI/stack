@@ -19,7 +19,7 @@ endif
 ccflags-y = -Wtype-limits -I${src}/../../../kernel -I${src}/../../../include
 
 obj-m := dtcp-ps-cdrr.o
-qta-mux-plugin-y := cddr.o
+qta-mux-plugin-y := cdrr.o
 
 all:
 	$(MAKE) -C $(KDIR) KBUILD_EXTRA_SYMBOLS=${IRATI_KSDIR}/Module.symvers M=$$PWD
@@ -29,7 +29,7 @@ clean:
 
 install:
 	$(MAKE) -C $(KDIR) M=$$PWD modules_install
-	cp cddr.manifest /lib/modules/$(KREL)/extra/
+	cp cdrr.manifest /lib/modules/$(KREL)/extra/
 	depmod -a
 
 uninstall:
