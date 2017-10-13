@@ -35,7 +35,7 @@
 #include "rds/rmem.h"
 #include "dtcp-ps.h"
 #include "dtcp-conf-utils.h"
-#include "pdu.h"
+#include "du.h"
 
 /* This identifies the link maximum capacity at 10msec, 1Gb/s
  */
@@ -305,13 +305,13 @@ static inline unsigned long cdrr_to_ms(struct timespec * t) {
 }
 
 static int cdrr_send_control(struct dtcp * dtcp) {
-	struct pdu * pdu = pdu_ctrl_generate(dtcp, PDU_TYPE_FC);
+	struct du * du = pdu_ctrl_generate(dtcp, PDU_TYPE_FC);
 
-	if (!pdu) {
+	if (!du) {
 		return -1;
 	}
 
-	if (dtcp_pdu_send(dtcp, pdu)) {
+	if (dtcp_pdu_send(dtcp, du)) {
 	       return -1;
 	}
 

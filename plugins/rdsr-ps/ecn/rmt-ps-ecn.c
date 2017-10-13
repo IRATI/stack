@@ -236,7 +236,7 @@ static struct rmt_queue * ecn_queue_create(port_id_t port) {
 	tmp->mgmt = rfifo_create_ni();
 
 	if (!tmp->mgmt) {
-		rfifo_destroy(tmp->queue, (void (*)(void *)) pdu_destroy);
+		rfifo_destroy(tmp->queue, (void (*)(void *)) du_destroy);
 		rkfree(tmp);
 		return NULL;
 	}
@@ -264,11 +264,11 @@ static int ecn_queue_destroy(struct rmt_queue *q) {
 	flush_scheduled_work();
 
 	if (q->queue) {
-		rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
+		rfifo_destroy(q->queue, (void (*)(void *)) du_destroy);
 	}
 
 	if (q->mgmt) {
-		rfifo_destroy(q->mgmt, (void (*)(void *)) pdu_destroy);
+		rfifo_destroy(q->mgmt, (void (*)(void *)) du_destroy);
 	}
 
 	kobject_put(&q->qobj);
