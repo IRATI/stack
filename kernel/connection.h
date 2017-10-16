@@ -26,30 +26,10 @@
 #include <linux/uaccess.h>
 
 #include "common.h"
-
-struct connection;
+#include "efcp-str.h"
 
 struct connection *  connection_create(void);
-struct connection *  connection_dup_from_user(const
-                                                struct connection __user * c);
+struct connection *  connection_dup_from_user(const struct connection __user * c);
 int                  connection_destroy(struct connection * conn);
-port_id_t            connection_port_id(const struct connection * conn);
-address_t            connection_src_addr(const struct connection * conn);
-address_t            connection_dst_addr(const struct connection * conn);
-cep_id_t             connection_src_cep_id(const struct connection * conn);
-cep_id_t             connection_dst_cep_id(const struct connection * conn);
-qos_id_t             connection_qos_id(const struct connection * conn);
-int                  connection_port_id_set(struct connection * conn,
-                                            port_id_t           port_id);
-int                  connection_src_addr_set(struct connection * conn,
-                                             address_t           addr);
-int                  connection_dst_addr_set(struct connection * conn,
-                                             address_t           addr);
-int                  connection_src_cep_id_set(struct connection * conn,
-                                               cep_id_t            cep_id);
-int                  connection_dst_cep_id_set(struct connection * conn,
-                                               cep_id_t            cep_id);
-int                  connection_qos_id_set(struct connection * conn,
-                                           qos_id_t            qos_id);
 
 #endif

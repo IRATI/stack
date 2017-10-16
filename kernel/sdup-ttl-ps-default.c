@@ -35,22 +35,22 @@ struct sdup_ttl_ps_default_data {
 };
 
 int default_sdup_set_lifetime_limit_policy(struct sdup_ttl_ps * ps,
-					   struct pdu * pdu)
+					   struct du * du)
 {
 	struct sdup_ttl_ps_default_data * priv_data = ps->priv;
 
-	if (!ps || !pdu){
+	if (!ps || !du){
 		LOG_ERR("Failed set_lifetime_limit");
 		return -1;
 	}
 
-	if (pdu_sdup_head(pdu) == NULL && priv_data->initial_ttl_value > 0){
-		if (pdu_head_grow(pdu, sizeof(priv_data->initial_ttl_value))) {
+	if (du_sdup_head(du) == NULL && priv_data->initial_ttl_value > 0){
+		if (du_head_grow(du, sizeof(priv_data->initial_ttl_value))) {
 			LOG_ERR("Failed to grow ser PDU");
 			return -1;
 		}
-		pdu_sdup_head_set(pdu, pdu_buffer(pdu)); /*pointer to ttl*/
-		memcpy(pdu_buffer(pdu),
+		du_sdup_head_set(du, du_buffer(du)); /*pointer to ttl*/
+		memcpy(du_buffer(du),
 			&priv_data->initial_ttl_value,
 			sizeof(priv_data->initial_ttl_value));
 		LOG_DBG("SETTTL! %d", (int)priv_data->initial_ttl_value);
@@ -60,24 +60,24 @@ int default_sdup_set_lifetime_limit_policy(struct sdup_ttl_ps * ps,
 EXPORT_SYMBOL(default_sdup_set_lifetime_limit_policy);
 
 int default_sdup_get_lifetime_limit_policy(struct sdup_ttl_ps * ps,
-					   struct pdu * pdu)
+					   struct du * du)
 {
 	struct sdup_ttl_ps_default_data * priv_data = ps->priv;
 
-	if (!ps || !pdu){
+	if (!ps || !du){
 		LOG_ERR("Failed get_lifetime_limit");
 		return -1;
 	}
 
 	if (priv_data->initial_ttl_value > 0){
 		/* set pdu->sdup_head */
-		pdu_sdup_head_set(pdu, pdu_buffer(pdu));
+		du_sdup_head_set(du, du_buffer(du));
 		/* update pdu->pci.h */
-		if (pdu_head_shrink(pdu, sizeof(priv_data->initial_ttl_value))) {
+		if (du_head_shrink(du, sizeof(priv_data->initial_ttl_value))) {
 			LOG_ERR("Failed to shrink ser PDU");
 			return -1;
 		}
-		LOG_DBG("GET_TTL! %d", (int)*((__u8*)(pdu_sdup_head(pdu))));
+		LOG_DBG("GET_TTL! %d", (int)*((__u8*)(du_sdup_head(du))));
 	}
 
 	return 0;
@@ -85,26 +85,26 @@ int default_sdup_get_lifetime_limit_policy(struct sdup_ttl_ps * ps,
 EXPORT_SYMBOL(default_sdup_get_lifetime_limit_policy);
 
 int default_sdup_dec_check_lifetime_limit_policy(struct sdup_ttl_ps * ps,
-						 struct pdu * pdu)
+						 struct du * du)
 {
 	__u8 ttl;
 	struct sdup_ttl_ps_default_data * priv_data = ps->priv;
 
-	if (!ps || !pdu){
+	if (!ps || !du){
 		LOG_ERR("Failed dec_check_lifetime_limit");
 		return -1;
 	}
 
 	if (priv_data->initial_ttl_value > 0){
-		ttl = *((__u8*)(pdu_sdup_head(pdu)));
+		ttl = *((__u8*)(du_sdup_head(du)));
 		ttl = ttl-1;
 
 		if (ttl == 0){
 			LOG_DBG("TTL dropped to 0, dropping pdu.");
 			return -1;
 		}
-		memcpy(pdu_sdup_head(pdu), &ttl, sizeof(ttl));
-		pdu_head_grow(pdu, sizeof(ttl));
+		memcpy(du_sdup_head(du), &ttl, sizeof(ttl));
+		du_head_grow(du, sizeof(ttl));
 		LOG_DBG("DEC_CHECK_TTL! new ttl: %d", (int)ttl);
 	}
 

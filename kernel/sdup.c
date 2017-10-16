@@ -707,7 +707,7 @@ int sdup_destroy_port_config(struct sdup_port * instance)
 EXPORT_SYMBOL(sdup_destroy_port_config);
 
 int sdup_protect_pdu(struct sdup_port * instance,
-		     struct pdu * pdu)
+		     struct du * du)
 {
 	struct sdup_crypto_ps * crypto_ps = NULL;
 	struct sdup_errc_ps * errc_ps = NULL;
@@ -723,7 +723,7 @@ int sdup_protect_pdu(struct sdup_port * instance,
 				         struct sdup_crypto_ps,
 				         base);
 
-		if (crypto_ps->sdup_apply_crypto(crypto_ps, pdu)) {
+		if (crypto_ps->sdup_apply_crypto(crypto_ps, du)) {
 			rcu_read_unlock();
 			return -1;
 		}
@@ -734,7 +734,7 @@ int sdup_protect_pdu(struct sdup_port * instance,
 				       struct sdup_errc_ps,
 				       base);
 
-		if (errc_ps->sdup_add_error_check_policy(errc_ps, pdu)) {
+		if (errc_ps->sdup_add_error_check_policy(errc_ps, du)) {
 			rcu_read_unlock();
 			return -1;
 		}
@@ -749,7 +749,7 @@ int sdup_protect_pdu(struct sdup_port * instance,
 EXPORT_SYMBOL(sdup_protect_pdu);
 
 int sdup_unprotect_pdu(struct sdup_port * instance,
-		       struct pdu * pdu)
+		       struct du * du)
 {
 	struct sdup_crypto_ps * crypto_ps = NULL;
 	struct sdup_errc_ps * errc_ps = NULL;
@@ -766,7 +766,7 @@ int sdup_unprotect_pdu(struct sdup_port * instance,
 				       struct sdup_errc_ps,
 				       base);
 
-		if (errc_ps->sdup_check_error_check_policy(errc_ps, pdu)) {
+		if (errc_ps->sdup_check_error_check_policy(errc_ps, du)) {
 			rcu_read_unlock();
 			return -1;
 		}
@@ -777,7 +777,7 @@ int sdup_unprotect_pdu(struct sdup_port * instance,
 				         struct sdup_crypto_ps,
 				         base);
 
-		if (crypto_ps->sdup_remove_crypto(crypto_ps, pdu)) {
+		if (crypto_ps->sdup_remove_crypto(crypto_ps, du)) {
 			rcu_read_unlock();
 			return -1;
 		}
@@ -791,7 +791,7 @@ int sdup_unprotect_pdu(struct sdup_port * instance,
 EXPORT_SYMBOL(sdup_unprotect_pdu);
 
 int sdup_set_lifetime_limit(struct sdup_port * instance,
-			    struct pdu * pdu)
+			    struct du * du)
 {
 	struct sdup_ttl_ps * ttl_ps;
 
@@ -807,7 +807,7 @@ int sdup_set_lifetime_limit(struct sdup_port * instance,
 				      struct sdup_ttl_ps,
 				      base);
 
-		if (ttl_ps->sdup_set_lifetime_limit_policy(ttl_ps, pdu)) {
+		if (ttl_ps->sdup_set_lifetime_limit_policy(ttl_ps, du)) {
 			rcu_read_unlock();
 			return -1;
 		}
@@ -820,7 +820,7 @@ int sdup_set_lifetime_limit(struct sdup_port * instance,
 EXPORT_SYMBOL(sdup_set_lifetime_limit);
 
 int sdup_get_lifetime_limit(struct sdup_port * instance,
-			    struct pdu * pdu)
+			    struct du * du)
 {
 	struct sdup_ttl_ps * ttl_ps;
 
@@ -835,7 +835,7 @@ int sdup_get_lifetime_limit(struct sdup_port * instance,
 				      struct sdup_ttl_ps,
 				      base);
 
-		if (ttl_ps->sdup_get_lifetime_limit_policy(ttl_ps, pdu)) {
+		if (ttl_ps->sdup_get_lifetime_limit_policy(ttl_ps, du)) {
 			rcu_read_unlock();
 			return -1;
 		}
@@ -848,7 +848,7 @@ int sdup_get_lifetime_limit(struct sdup_port * instance,
 EXPORT_SYMBOL(sdup_get_lifetime_limit);
 
 int sdup_dec_check_lifetime_limit(struct sdup_port * instance,
-				  struct pdu * pdu)
+				  struct du * du)
 {
 	struct sdup_ttl_ps * ttl_ps;
 
@@ -863,7 +863,7 @@ int sdup_dec_check_lifetime_limit(struct sdup_port * instance,
 				      struct sdup_ttl_ps,
 				      base);
 
-		if (ttl_ps->sdup_dec_check_lifetime_limit_policy(ttl_ps, pdu)) {
+		if (ttl_ps->sdup_dec_check_lifetime_limit_policy(ttl_ps, du)) {
 			rcu_read_unlock();
 			return -1;
 		}

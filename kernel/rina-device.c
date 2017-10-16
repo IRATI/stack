@@ -23,13 +23,14 @@
 #include <linux/if_arp.h>
 #include <linux/ip.h>
 #include <linux/if.h>
+#include <linux/version.h>
 
 #define RINA_PREFIX "rina-device"
 
 #include "logs.h"
 #include "debug.h"
 #include "kfa.h"
-#include "sdu.h"
+#include "du.h"
 #include "rds/rmem.h"
 #include "rina-device.h"
 
@@ -97,7 +98,7 @@ int rina_dev_rcv(struct sk_buff *skb, struct rina_device *rina_dev)
 static int rina_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	struct iphdr* iph = NULL;
-	struct sdu* sdu;
+	struct du * du;
 	struct rina_device* rina_dev = netdev_priv(dev);
 	ssize_t len;
 	ASSERT(rina_dev);
@@ -108,16 +109,16 @@ static int rina_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	iph = ip_hdr(skb);
 	ASSERT(iph);
 
-	sdu = sdu_create_from_skb(skb);
-	if (!sdu){
+	du = du_create_from_skb(skb);
+	if (!du){
 		kfree_skb(skb);
 		rina_dev->stats.tx_dropped++;
 		return NET_XMIT_DROP;
 	}
 
 	len = skb->len;
-        if(kfa_flow_sdu_write(rina_dev->kfa_ipcp->data, rina_dev->port,
-        		      sdu, false)){
+        if(kfa_flow_du_write(rina_dev->kfa_ipcp->data, rina_dev->port,
+        		     du, false)){
 		rina_dev->stats.tx_dropped++;
 		LOG_ERR("Could not xmit IP packet, unable to send to KFA...");
 		return NET_XMIT_DROP;
@@ -151,9 +152,16 @@ static void rina_dev_setup(struct net_device *dev)
 	dev->addr_len = 0;
 	dev->type = ARPHRD_NONE;
 	dev->flags = IFF_POINTOPOINT | IFF_NOARP | IFF_MULTICAST;
-	dev->priv_flags	|= IFF_LIVE_ADDR_CHANGE | IFF_NO_QUEUE
-		| IFF_DONT_BRIDGE
-		| IFF_PHONY_HEADROOM;
+	dev->priv_flags	|= IFF_LIVE_ADDR_CHANGE
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
+#else
+			| IFF_NO_QUEUE
+#endif
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0)
+		| IFF_DONT_BRIDGE;
+#else
+		| IFF_DONT_BRIDGE | IFF_PHONY_HEADROOM;
+#endif
 	netif_keep_dst(dev);
 	dev->features = NETIF_F_HW_CSUM;
 	dev->destructor	= rina_dev_free;

@@ -24,13 +24,13 @@
 #include "sdup-ttl-ps.h"
 
 int default_sdup_set_lifetime_limit_policy(struct sdup_ttl_ps * ps,
-					   struct pdu * pdu);
+					   struct du * du);
 
 int default_sdup_get_lifetime_limit_policy(struct sdup_ttl_ps * ps,
-					   struct pdu * pdu);
+					   struct du * du);
 
 int default_sdup_dec_check_lifetime_limit_policy(struct sdup_ttl_ps * ps,
-						 struct pdu * pdu);
+						 struct du * du);
 
 struct ps_base * sdup_ttl_ps_default_create(struct rina_component * component);
 

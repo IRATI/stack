@@ -6,7 +6,7 @@
 
 KER=`uname -r`
 KERNMODDIR=@ROOTDIR@
-KERNBUILDDIR=@LIBMODPREFIX@/lib/modules/$(KER)/build
+KERNBUILDDIR=@KERNBUILDDIR@
 
 all: 
 	$(MAKE) -C $(KERNBUILDDIR) CONFIG_RINA_DTCP_RCVR_ACK=@CONFIG_RINA_DTCP_RCVR_ACK@ CONFIG_RINA_DTCP_RCVR_ACK_ATIMER=@CONFIG_RINA_DTCP_RCVR_ACK_ATIMER@ REGRESSION_TESTS=@REGRESSION_TESTS@ HAVE_VMPI=@HAVE_VMPI@ TCP_UDP_BUFFER_SIZE=@TCP_UDP_BUFFER_SIZE@ M=$(KERNMODDIR) modules
@@ -39,12 +39,12 @@ rina-irati-core-y:=						\
         rds/rtimer.o rds/robjects.o rds/rds.o                   \
 	iodev.o	ctrldev.o					\
 	serdes-utils.o ker-numtables.o \
-	buffer.o pci.o pdu.o sdu.o	        		\
+	buffer.o pci.o du.o	        		\
 	ipcp-utils.o						\
 	connection.o common.o policies.o			\
 	dtp-conf-utils.o dtcp-conf-utils.o      		\
 	ipcp-factories.o ipcp-instances.o			\
-	cidm.o dt.o dt-utils.o dtcp.o dtp.o efcp-utils.o efcp.o	\
+	cidm.o dtp-utils.o dtcp.o dtp.o efcp-utils.o efcp.o	\
 	pff.o rmt.o						\
 	pim.o pidm.o kfa-utils.o kfa.o rina-device.o		\
 	kipcm-utils.o kipcm.o					\

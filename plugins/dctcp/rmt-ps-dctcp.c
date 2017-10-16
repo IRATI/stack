@@ -69,7 +69,7 @@ static int dctcp_rmt_queue_destroy(struct dctcp_rmt_queue *q)
         LOG_ERR("No DCTCP RMT Key-queue to destroy...");
         return -1;
     }
-    if (q->queue) rfifo_destroy(q->queue, (void (*)(void *)) pdu_destroy);
+    if (q->queue) rfifo_destroy(q->queue, (void (*)(void *)) du_destroy);
 
     rkfree(q);
 
@@ -115,13 +115,14 @@ static int dctcp_rmt_q_destroy_policy(struct rmt_ps *ps, struct rmt_n1_port *por
     return -1;
 }
 
-static int dctcp_rmt_enqueue_policy(struct rmt_ps *ps, struct rmt_n1_port *port, struct pdu *pdu)
+static int dctcp_rmt_enqueue_policy(struct rmt_ps *ps,
+				    struct rmt_n1_port *port, struct du * du)
 {
     struct dctcp_rmt_queue    *q;
     struct dctcp_rmt_ps_data  *data = ps->priv;
     unsigned int qlen;
 
-    if (!ps || !port || !pdu || !data) {
+    if (!ps || !port || !du || !data) {
         LOG_ERR("DCTCP RMT: Wrong input parameters for dctcp_enqueu_scheduling_policy_tx");
         return RMT_PS_ENQ_ERR;
     }
@@ -129,30 +130,29 @@ static int dctcp_rmt_enqueue_policy(struct rmt_ps *ps, struct rmt_n1_port *port,
     q = port->rmt_ps_queues;
     if (!q) {
         LOG_ERR("DCTCP RMT: Could not find queue for n1_port %u", port->port_id);
-        pdu_destroy(pdu);
+        du_destroy(du);
         return RMT_PS_ENQ_ERR;
     }
 
     qlen = rfifo_length(q->queue);
     if(qlen >= data->q_max) {
-        if(pci_type(pdu_pci_get_ro(pdu)) != PDU_TYPE_MGMT) {
-            pdu_destroy(pdu);
+        if(pci_type(&du->pci) != PDU_TYPE_MGMT) {
+            du_destroy(du);
             LOG_DBG("DCTCP RMT: PDU dropped, q_max reached...");
             return RMT_PS_ENQ_DROP;
         }
     }
 
     LOG_DBG("DCTCP RMT: PDU enqued...");
-    rfifo_push_ni(q->queue, pdu);
+    rfifo_push_ni(q->queue, du);
     return RMT_PS_ENQ_SCHED;
 }
 
-static struct pdu * dctcp_rmt_dequeue_policy(struct rmt_ps *ps, struct rmt_n1_port *port)
+static struct du * dctcp_rmt_dequeue_policy(struct rmt_ps *ps, struct rmt_n1_port *port)
 {
     struct dctcp_rmt_queue    *q;
     struct dctcp_rmt_ps_data  *data = ps->priv;
-    struct pdu *ret_pdu;
-    struct pci *pci;
+    struct du *ret_pdu;
     unsigned long pci_flags;
     unsigned int qlen;
 
@@ -178,9 +178,9 @@ static struct pdu * dctcp_rmt_dequeue_policy(struct rmt_ps *ps, struct rmt_n1_po
     if (qlen >= data->q_threshold) {
         LOG_DBG("DCTCP RMT: Marking");
         /* mark ECN bit */
-        pci = pdu_pci_get_rw(ret_pdu);
-        pci_flags = pci_flags_get(pci);
-        pci_flags_set(pci, pci_flags |= PDU_FLAGS_EXPLICIT_CONGESTION);
+        pci_flags = pci_flags_get(&ret_pdu->pci);
+        pci_flags_set(&ret_pdu->pci,
+        	      pci_flags |= PDU_FLAGS_EXPLICIT_CONGESTION);
     }
 
     return ret_pdu;

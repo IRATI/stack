@@ -59,7 +59,7 @@ iodev_write(struct file *f, const char __user *buffer, size_t size,
         struct iodev_priv *priv = f->private_data;
         bool blocking = !(f->f_flags & O_NONBLOCK);
         ssize_t retval;
-        struct sdu *sdu;
+        struct du * du;
 
         LOG_DBG("Syscall write SDU (size = %zd, port-id = %d)",
                         size, priv->port_id);
@@ -69,21 +69,21 @@ iodev_write(struct file *f, const char __user *buffer, size_t size,
         }
 
         /* NOTE: sdu_create takes the ownership of the buffer */
-        sdu = sdu_create(size);
-        if (!sdu) {
+        du = du_create(size);
+        if (!du) {
                 return -ENOMEM;
         }
-        ASSERT(is_sdu_ok(sdu));
+        ASSERT(is_du_ok(du));
 
         /* NOTE: We don't handle partial copies */
-        if (copy_from_user(sdu_buffer(sdu), buffer, size)) {
-                sdu_destroy(sdu);
+        if (copy_from_user(du_buffer(du), buffer, size)) {
+                du_destroy(du);
                 return -EIO;
         }
 
         /* Passing ownership to the internal layers */
         ASSERT(default_kipcm);
-        retval = kipcm_sdu_write(default_kipcm, priv->port_id, sdu, blocking);
+        retval = kipcm_du_write(default_kipcm, priv->port_id, du, blocking);
         LOG_DBG("SDU write returned %zd", retval);
         if (retval < 0) {
                 /* NOTE: Do not destroy SDU, ownership isn't our anymore */
@@ -100,7 +100,7 @@ iodev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
         bool blocking = !(f->f_flags & O_NONBLOCK);
         bool partial_read;
         ssize_t retval;
-        struct sdu *tmp;
+        struct du *tmp;
         unsigned char * data;
         size_t retsize;
 
@@ -110,11 +110,11 @@ iodev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
         tmp = NULL;
 
         ASSERT(default_kipcm);
-        retval = kipcm_sdu_read(default_kipcm,
-        			priv->port_id,
-				&tmp,
-				size,
-				blocking);
+        retval = kipcm_du_read(default_kipcm,
+        		       priv->port_id,
+			       &tmp,
+			       size,
+			       blocking);
         /* Taking ownership from the internal layers */
 
         LOG_DBG("SDU read returned %zd", retval);
@@ -123,27 +123,27 @@ iodev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
                 return retval;
         }
 
-        if (!is_sdu_ok(tmp)) {
+        if (!is_du_ok(tmp)) {
                 return -EIO;
         }
 
-        retsize = sdu_len(tmp);
+        retsize = du_len(tmp);
         partial_read = retsize > size;
-        data = sdu_buffer(tmp);
+        data = du_buffer(tmp);
         if (partial_read) {
         	retsize = size;
         }
 
         if (copy_to_user(buffer, data, retsize)) {
                 LOG_ERR("Error copying data to user-space");
-                sdu_destroy(tmp);
+                du_destroy(tmp);
                 return -EIO;
         }
 
         if (partial_read) {
-        	sdu_consume_data(tmp, size);
+        	du_consume_data(tmp, size);
         }else{
-        	sdu_destroy(tmp);
+        	du_destroy(tmp);
         }
 
         return retsize;

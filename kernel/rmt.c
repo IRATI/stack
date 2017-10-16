@@ -37,6 +37,7 @@
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
+#include "efcp-str.h"
 #include "rmt.h"
 #include "pff.h"
 #include "efcp-utils.h"
@@ -45,7 +46,7 @@
 #include "rds/rstr.h"
 #include "ipcp-instances.h"
 #include "ipcp-utils.h"
-#include "sdu.h"
+#include "du.h"
 #include "rmt-ps-default.h"
 
 #define rmap_hash(T, K) hash_min(K, HASH_BITS(T))
@@ -235,8 +236,8 @@ static int n1_port_destroy(struct rmt_n1_port *n1p)
 	if (n1p->sdup_port)
 		sdup_destroy_port_config(n1p->sdup_port);
 
-	if (n1p->pending_sdu)
-		sdu_destroy(n1p->pending_sdu);
+	if (n1p->pending_du)
+		du_destroy(n1p->pending_du);
 
 	if (n1p->wbusy)
 		LOG_WARN("Deleting n1_port with bussy writer... there may be something wrong...");
@@ -674,30 +675,30 @@ int rmt_config_set(struct rmt *instance,
 }
 EXPORT_SYMBOL(rmt_config_set);
 
-static int n1_port_write_sdu(struct rmt *rmt,
-			     struct rmt_n1_port *n1_port,
-			     struct sdu *sdu)
+static int n1_port_write_du(struct rmt *rmt,
+			    struct rmt_n1_port *n1_port,
+			    struct du * du)
 {
 	int ret;
-	ssize_t bytes = sdu_len(sdu);
+	ssize_t bytes = du_len(du);
 
 	LOG_DBG("Gonna send SDU to port-id %d", n1_port->port_id);
-	ret = n1_port->n1_ipcp->ops->sdu_write(n1_port->n1_ipcp->data,
-					       n1_port->port_id,
-					       sdu, false);
+	ret = n1_port->n1_ipcp->ops->du_write(n1_port->n1_ipcp->data,
+					      n1_port->port_id,
+					      du, false);
 	if (!ret)
 		return (int) bytes;
 
 	if (ret == -EAGAIN) {
 		n1_port_lock(n1_port);
-		if (n1_port->pending_sdu) {
+		if (n1_port->pending_du) {
 			LOG_ERR("Already a pending SDU present for port %d",
 					n1_port->port_id);
-			sdu_destroy(n1_port->pending_sdu);
+			du_destroy(n1_port->pending_du);
 			n1_port->stats.plen--;
 		}
 
-		n1_port->pending_sdu = sdu;
+		n1_port->pending_du = du;
 		n1_port->stats.plen++;
 
 		if (n1_port->state == N1_PORT_STATE_DO_NOT_DISABLE) {
@@ -708,38 +709,28 @@ static int n1_port_write_sdu(struct rmt *rmt,
 
 		n1_port_unlock(n1_port);
 	}
+
 	return ret;
 }
 
 static inline int n1_port_write(struct rmt *rmt,
 				struct rmt_n1_port *n1_port,
-				struct pdu *pdu)
+				struct du *du)
 {
-	struct sdu *sdu;
-
-	ASSERT(n1_port);
-	ASSERT(rmt);
-
 	/* SDU Protection */
-	if (sdup_set_lifetime_limit(n1_port->sdup_port, pdu)){
+	if (sdup_set_lifetime_limit(n1_port->sdup_port, du)){
 		LOG_ERR("Error adding a Lifetime limit to serialized PDU");
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return -1;
 	}
 
-	if (sdup_protect_pdu(n1_port->sdup_port, pdu)){
+	if (sdup_protect_pdu(n1_port->sdup_port, du)){
 		LOG_ERR("Error Protecting serialized PDU");
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return -1;
 	}
 
-	sdu = sdu_from_pdu(pdu);
-	if (!is_sdu_ok(sdu)) {
-		sdu_destroy(sdu);
-		return -1;
-	}
-
-	return n1_port_write_sdu(rmt, n1_port, sdu);
+	return n1_port_write_du(rmt, n1_port, du);
 }
 
 static void send_worker(unsigned long o)
@@ -751,8 +742,8 @@ static void send_worker(unsigned long o)
 	int reschedule = 0;
 	int pdus_sent;
 	struct rmt_ps *ps;
-	struct pdu *pdu = NULL;
-	struct sdu *sdu = NULL;
+	struct du * du = NULL;
+	struct du * pendu = NULL;
 	int ret;
 
 	LOG_DBG("Send worker called");
@@ -807,15 +798,15 @@ static void send_worker(unsigned long o)
 
 		while ((pdus_sent < MAX_PDUS_SENT_PER_CYCLE) &&
 			n1_port->stats.plen) {
-			pdu = NULL;
-			sdu = NULL;
-			if (n1_port->pending_sdu) {
-				sdu = n1_port->pending_sdu;
-				n1_port->pending_sdu = NULL;
+			du = NULL;
+			pendu = NULL;
+			if (n1_port->pending_du) {
+				pendu = n1_port->pending_du;
+				n1_port->pending_du = NULL;
 				n1_port->stats.plen--;
 			} else {
-				pdu = ps->rmt_dequeue_policy(ps, n1_port);
-				if (!pdu) {
+				du = ps->rmt_dequeue_policy(ps, n1_port);
+				if (!du) {
 					if (n1_port->stats.plen)
 						LOG_ERR("rmt_dequeue_policy returned no pdu but plen is %u",
 								n1_port->stats.plen);
@@ -825,10 +816,10 @@ static void send_worker(unsigned long o)
 			}
 
 			spin_unlock(&n1_port->lock);
-			if (sdu)
-				ret = n1_port_write_sdu(rmt, n1_port, sdu);
+			if (pendu)
+				ret = n1_port_write_du(rmt, n1_port, pendu);
 			else
-				ret = n1_port_write(rmt, n1_port, pdu);
+				ret = n1_port_write(rmt, n1_port, du);
 			spin_lock(&n1_port->lock);
 
 			if (ret < 0)
@@ -867,28 +858,11 @@ static void send_worker(unsigned long o)
 
 int rmt_send_port_id(struct rmt *instance,
 		     port_id_t id,
-		     struct pdu *pdu)
+		     struct du * du)
 {
 	struct rmt_n1_port *n1_port;
 	struct rmt_ps *ps;
 	int ret;
-
-	if (!pdu_is_ok(pdu)) {
-		LOG_ERR("Bogus PDU passed");
-		return -1;
-	}
-
-	if (!instance) {
-		LOG_ERR("Bogus RMT passed");
-		pdu_destroy(pdu);
-		return -1;
-	}
-
-	if (!instance->n1_ports) {
-		LOG_ERR("No N-1 ports to push into");
-		pdu_destroy(pdu);
-		return -1;
-	}
 
 	rcu_read_lock();
 	ps = container_of(rcu_dereference(instance->base.ps),
@@ -897,7 +871,7 @@ int rmt_send_port_id(struct rmt *instance,
 	if (!ps || !ps->rmt_enqueue_policy) {
 		rcu_read_unlock();
 		LOG_ERR("PS or enqueue policy null, dropping pdu");
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return -1;
 	}
 
@@ -905,7 +879,7 @@ int rmt_send_port_id(struct rmt *instance,
 	if (!n1_port) {
 		rcu_read_unlock();
 		LOG_ERR("Could not find the N-1 port");
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return -1;
 	}
 
@@ -913,7 +887,7 @@ int rmt_send_port_id(struct rmt *instance,
 	if (n1_port->stats.plen 				||
 		n1_port->wbusy 					||
 		n1_port->state == N1_PORT_STATE_DISABLED) {
-		ret = ps->rmt_enqueue_policy(ps, n1_port, pdu);
+		ret = ps->rmt_enqueue_policy(ps, n1_port, du);
 		rcu_read_unlock();
 		switch (ret) {
 		case RMT_PS_ENQ_SCHED:
@@ -940,7 +914,7 @@ int rmt_send_port_id(struct rmt *instance,
 	n1_port->wbusy = true;
 	n1_port_unlock(n1_port);
 	LOG_DBG("PDU ready to be sent, no need to enqueue");
-	ret = n1_port_write(instance, n1_port, pdu);
+	ret = n1_port_write(instance, n1_port, du);
 	/*FIXME LB: This is just horrible, needs to be rethinked */
 	n1_port_lock(n1_port);
 	n1_port->wbusy = false;
@@ -956,55 +930,43 @@ int rmt_send_port_id(struct rmt *instance,
 EXPORT_SYMBOL(rmt_send_port_id);
 
 int rmt_send(struct rmt *instance,
-	     struct pdu *pdu)
+	     struct du * du)
 {
 	int i;
-	struct pci *pci;
 
-	if (!instance) {
-		LOG_ERR("Bogus RMT passed");
-		pdu_destroy(pdu);
-		return -1;
-	}
-	if (!pdu) {
-		LOG_ERR("Bogus PDU passed");
-		pdu_destroy(pdu);
+	if (!instance || !du || !pci_is_ok(&du->pci)) {
+		LOG_ERR("Bogus input parameters passed");
+		du_destroy(du);
 		return -1;
 	}
 
-	pci = pdu_pci_get_rw(pdu);
-	if (!pci_is_ok(pci)) {
-		LOG_ERR("PCI is not ok");
-		pdu_destroy(pdu);
-		return -1;
-	}
-
-	if (pff_nhop(instance->pff, pci,
+	if (pff_nhop(instance->pff, &du->pci,
 		     &(instance->cache.pids),
 		     &(instance->cache.count))) {
 		LOG_ERR("Cannot get the NHOP for this PDU (saddr: %u daddr: %u type: %u)",
-				pci_source(pci), pci_destination(pci), pci_type(pci));
+				pci_source(&du->pci), pci_destination(&du->pci),
+				pci_type(&du->pci));
 
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return -1;
 	}
 
 	if (instance->cache.count == 0) {
 		LOG_WARN("No NHOP for this PDU ...");
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return 0;
 	}
 
 	for (i = 0; i < instance->cache.count; i++) {
 		port_id_t   pid;
-		struct pdu *p;
+		struct du *p;
 
 		pid = instance->cache.pids[i];
 
 		if (i == instance->cache.count-1)
-			p = pdu;
+			p = du;
 		else
-			p = pdu_dup(pdu);
+			p = du_dup(du);
 
 		if (rmt_send_port_id(instance, pid, p))
 			LOG_ERR("Failed to send a PDU to port-id %d", pid);
@@ -1226,64 +1188,44 @@ EXPORT_SYMBOL(rmt_n1port_unbind);
 
 static inline int process_mgmt_pdu(struct rmt *rmt,
 				   port_id_t port_id,
-				   struct pdu *pdu)
+				   struct du * du)
 {
-	struct sdu *sdu;
-
-	ASSERT(rmt);
-	ASSERT(is_port_id_ok(port_id));
-
-	sdu = sdu_from_pdu(pdu);
-	if (!is_sdu_ok(sdu)) {
-		LOG_ERR("Cannot create SDU");
-		pdu_destroy(pdu);
-		return -1;
-	}
-
-	ASSERT(rmt->parent);
-	ASSERT(rmt->parent->ops);
-	ASSERT(rmt->parent->ops->mgmt_sdu_post);
-
-	return (rmt->parent->ops->mgmt_sdu_post(rmt->parent->data,
-						port_id,
-						sdu) ? -1 : 0);
+	return (rmt->parent->ops->mgmt_du_post(rmt->parent->data,
+					       port_id,
+					       du) ? -1 : 0);
 }
 
 static int process_dt_pdu(struct rmt *rmt,
 			  port_id_t port_id,
-			  struct pdu *pdu)
+			  struct du *du)
 {
 	address_t dst_addr;
 	cep_id_t c;
 	pdu_type_t pdu_type;
 
-	ASSERT(rmt);
-	ASSERT(is_port_id_ok(port_id));
-	ASSERT(pdu_is_ok(pdu));
-
-	dst_addr = pci_destination(pdu_pci_get_ro(pdu));
+	dst_addr = pci_destination(&du->pci);
 	if (!is_address_ok(dst_addr)) {
 		LOG_ERR("PDU has wrong destination address");
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return -1;
 	}
 
-	pdu_type = pci_type(pdu_pci_get_ro(pdu));
+	pdu_type = pci_type(&du->pci);
 
 	if (pdu_type == PDU_TYPE_MGMT) {
 		LOG_ERR("MGMT should not be here");
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return -1;
 	}
 
-	c = pci_cep_destination(pdu_pci_get_ro(pdu));
+	c = pci_cep_destination(&du->pci);
 	if (!is_cep_id_ok(c)) {
 		LOG_ERR("Wrong CEP-id in PDU");
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return -1;
 	}
 
-	if (efcp_container_receive(rmt->efcpc, c, pdu)) {
+	if (efcp_container_receive(rmt->efcpc, c, du)) {
 		LOG_ERR("EFCP container problems");
 		return -1;
 	}
@@ -1309,12 +1251,10 @@ int pdu_is_addressed_to_me(struct rmt * rmt, address_t address)
 }
 
 int rmt_receive(struct rmt *rmt,
-		struct sdu *sdu,
+		struct du * du,
 		port_id_t from)
 {
 	pdu_type_t pdu_type;
-	struct pci *pci;
-	struct pdu *pdu;
 	address_t dst_addr;
 	qos_id_t qos_id;
 	struct rmt_n1_port *n1_port;
@@ -1322,66 +1262,64 @@ int rmt_receive(struct rmt *rmt,
 
 	if (!rmt) {
 		LOG_ERR("No RMT passed");
-		sdu_destroy(sdu);
+		du_destroy(du);
 		return -1;
 	}
 	if (!is_port_id_ok(from)) {
 		LOG_ERR("Wrong port-id %d", from);
-		sdu_destroy(sdu);
+		du_destroy(du);
 		return -1;
 	}
 
-	bytes = sdu_len(sdu);
-	sdu_efcp_config_bind(sdu, efcp_container_config(rmt->efcpc));
-	pdu = pdu_from_sdu(sdu); /* protected PDU */
+	bytes = du_len(du);
+	du->cfg = rmt->efcpc->config;
 
 	n1_port = n1pmap_find(rmt, from);
 	if (!n1_port) {
 		LOG_ERR("Could not retrieve N-1 port for the received PDU...");
-                pdu_destroy(pdu);
+                du_destroy(du);
 		return -1;
 	}
 	stats_inc(rx, n1_port, bytes);
 
 	/* SDU Protection */
-	if (sdup_unprotect_pdu(n1_port->sdup_port, pdu)) {
+	if (sdup_unprotect_pdu(n1_port->sdup_port, du)) {
                 LOG_ERR("Failed to unprotect PDU");
-                pdu_destroy(pdu);
+                du_destroy(du);
                 return -1;
         }
 
 	/* This one updates the pci->sdup_header and pdu->skb->data pointers */
-	if (sdup_get_lifetime_limit(n1_port->sdup_port, pdu)) {
+	if (sdup_get_lifetime_limit(n1_port->sdup_port, du)) {
                 LOG_ERR("Failed to get PDU's TTL");
-                pdu_destroy(pdu);
+                du_destroy(du);
                 return -1;
         }
 	/* end SDU Protection */
 
 	n1pmap_release(rmt, n1_port);
 
-	if (unlikely(pdu_decap(pdu) || !pdu_is_ok(pdu))) { /*Decap PDU */
+	if (unlikely(du_decap(du))) { /*Decap PDU */
 		LOG_ERR("Could not decap PDU");
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return -1;
 	}
 
-	pci = pdu_pci_get_rw(pdu);
-	if (!pci_is_ok(pci)) {
+	if (!pci_is_ok(&du->pci)) {
 		LOG_ERR("No PCI to work with, dropping SDU!");
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return -1;
 	}
 
-	pdu_type = pci_type(pci);
-	dst_addr = pci_destination(pci);
-	qos_id = pci_qos_id(pci);
+	pdu_type = pci_type(&du->pci);
+	dst_addr = pci_destination(&du->pci);
+	qos_id = pci_qos_id(&du->pci);
 	if (!pdu_type_is_ok(pdu_type) ||
 		!is_address_ok(dst_addr)  ||
 		!is_qos_id_ok(qos_id)) {
 		LOG_ERR("Wrong PDU type (%u), dst address (%u) or qos_id (%u)",
 			pdu_type, dst_addr, qos_id);
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return -1;
 	}
 
@@ -1390,7 +1328,7 @@ int rmt_receive(struct rmt *rmt,
 		/* pdu is for me */
 		switch (pdu_type) {
 		case PDU_TYPE_MGMT:
-			return process_mgmt_pdu(rmt, from, pdu);
+			return process_mgmt_pdu(rmt, from, du);
 
 		case PDU_TYPE_CACK:
 		case PDU_TYPE_SACK:
@@ -1405,29 +1343,29 @@ int rmt_receive(struct rmt *rmt,
 			 * enqueue PDU in pdus_dt[dest-addr, qos-id]
 			 * don't process it now ...
 			 */
-			return process_dt_pdu(rmt, from, pdu);
+			return process_dt_pdu(rmt, from, du);
 
 		default:
 			LOG_ERR("Unknown PDU type %d", pdu_type);
-			pdu_destroy(pdu);
+			du_destroy(du);
 			return -1;
 		}
 	/* pdu is not for me*/
 	} else {
 		if (!dst_addr)
-			return process_mgmt_pdu(rmt, from, pdu);
+			return process_mgmt_pdu(rmt, from, du);
 		else {
 			/* We need to rencap the pdu again to get pci properly
 			 * in rmt_send */
-			if (unlikely(pdu_encap(pdu, pdu_type)))
+			if (unlikely(du_encap(du, pdu_type)))
 				return -1;
-			if (sdup_dec_check_lifetime_limit(n1_port->sdup_port, pdu)) {
+			if (sdup_dec_check_lifetime_limit(n1_port->sdup_port, du)) {
 				LOG_ERR("Lifetime of PDU reached dropping PDU!");
-				pdu_destroy(pdu);
+				du_destroy(du);
 				return -1;
 			}
 			/* Forward PDU */
-			return rmt_send(rmt, pdu);
+			return rmt_send(rmt, du);
 		}
 	}
 }

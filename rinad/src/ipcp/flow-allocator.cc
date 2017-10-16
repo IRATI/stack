@@ -347,7 +347,7 @@ void FlowAllocator::createFlowRequestMessageReceived(configs::Flow * flow,
 	unsigned int address = 0;
 	int portId = 0;
 	bool process_flow_request = false;
-	rina::ApplicationProcessNamingInformation remote_info;
+	rina::ApplicationProcessNamingInformation remote_info, app_info;
 	OngoingFlowAllocState flow_state;
 	unsigned int seq_num;
 
@@ -364,6 +364,8 @@ void FlowAllocator::createFlowRequestMessageReceived(configs::Flow * flow,
 					flow->remote_naming_info.toString().c_str());
 			return;
 		}
+
+		app_info = flow->remote_naming_info;
 
 		if (ipcp->check_address_is_mine(address)) {
 			process_flow_request = true;
@@ -390,7 +392,7 @@ void FlowAllocator::createFlowRequestMessageReceived(configs::Flow * flow,
 		connection->setDestCepId(connection->getSourceCepId());
 
 		try {
-			seq_num = rina::extendedIPCManager->allocatePortId(flow->local_naming_info);
+			seq_num = rina::extendedIPCManager->allocatePortId(app_info);
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems requesting an available port-id to the Kernel IPC Manager: %s",
 					e.what());
@@ -1145,6 +1147,7 @@ void FlowAllocatorInstance::complete_flow_allocation(bool success)
 {
 	rina::cdap_rib::con_handle_t con_handle;
 	int rv;
+	unsigned int rz;
 	std::stringstream ss;
 
 	if (flow_->local_address != flow_->remote_address) {
@@ -1153,6 +1156,16 @@ void FlowAllocatorInstance::complete_flow_allocation(bool success)
 		con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_ADATA;
 		rv = ipc_process_->enrollment_task_->get_con_handle_to_ipcp(flow_->remote_address,
 									    con_handle);
+		if (rv != 0 && flow_->internal) {
+			//Retry, remote peer address may have changed, we still have its name
+			rz = ipc_process_->enrollment_task_->get_con_handle_to_ipcp(flow_->remote_naming_info.processName,
+					    	    	    	    	    	    con_handle);
+			if (rz != 0) {
+				flow_->remote_address = rz;
+				rv = 0;
+			}
+		}
+
 		if (rv != 0) {
 			LOG_IPCP_ERR("Could not find con_handle to next hop for destination address %u",
 				     flow_->remote_address);
@@ -1371,6 +1384,7 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 	rina::cdap_rib::con_handle_t con_handle;
 	IFlowAllocatorInstance * fai = 0;
 	int rv;
+	unsigned int rz;
 
 	LOG_IPCP_DBG("Requested deallocation of flow %d", event.portId);
 	lock_.lock();
@@ -1402,6 +1416,16 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 		try {
 			rv = ipc_process_->enrollment_task_->get_con_handle_to_ipcp(flow_->remote_address,
 										    con_handle);
+
+			if (rv != 0 && flow_->internal) {
+				//Retry, remote peer address may have changed, we still have its name
+				rz = ipc_process_->enrollment_task_->get_con_handle_to_ipcp(flow_->remote_naming_info.processName,
+						    	    	    	    	    	    con_handle);
+				if (rz != 0) {
+					flow_->remote_address = rz;
+					rv = 0;
+				}
+			}
 
 			if (rv == 0) {
 				con_handle.address = flow_->remote_address;

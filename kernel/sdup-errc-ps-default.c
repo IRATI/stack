@@ -31,13 +31,13 @@
 #include "debug.h"
 
 int default_sdup_add_error_check_policy(struct sdup_errc_ps * ps,
-					struct pdu * pdu)
+					struct du * du)
 {
 	u32             crc;
 	unsigned char * data;
 	ssize_t         len;
 
-	if (!ps || !pdu){
+	if (!ps || !du){
 		LOG_ERR("Error check arguments not initialized!");
 		return -1;
 	}
@@ -46,14 +46,11 @@ int default_sdup_add_error_check_policy(struct sdup_errc_ps * ps,
 	data = 0;
 	len  = 0;
 
-	if (!pdu_is_ok(pdu))
-		return -1;
-
-	data = pdu_buffer(pdu);
-	len = pdu_len(pdu);
+	data = du_buffer(du);
+	len = du_len(du);
 	crc = crc32_le(0, data, len);
 
-	if (pdu_tail_grow(pdu, sizeof(crc))) {
+	if (du_tail_grow(du, sizeof(crc))) {
 		LOG_ERR("Failed to grow ser PDU");
 		return -1;
 	}
@@ -65,32 +62,29 @@ int default_sdup_add_error_check_policy(struct sdup_errc_ps * ps,
 EXPORT_SYMBOL(default_sdup_add_error_check_policy);
 
 int default_sdup_check_error_check_policy(struct sdup_errc_ps * ps,
-					  struct pdu * pdu)
+					  struct du * du)
 {
 	u32             crc;
 	unsigned char * data;
 	ssize_t         len;
 
-	if (!ps || !pdu){
+	if (!ps || !du){
 		LOG_ERR("Error check arguments not initialized!");
 		return -1;
 	}
-
-	if (!pdu_is_ok(pdu))
-		return -1;
 
 	data = 0;
 	crc  = 0;
 	len  = 0;
 
-	data = pdu_buffer(pdu);
-	len = pdu_len(pdu);
+	data = du_buffer(du);
+	len = du_len(du);
 	crc = crc32_le(0, data, len - sizeof(crc));
 
 	if (memcmp(&crc, data+len-sizeof(crc), sizeof(crc)))
 		return -1;
 
-	if (pdu_tail_shrink(pdu, sizeof(crc))) {
+	if (du_tail_shrink(du, sizeof(crc))) {
 		LOG_ERR("Failed to shrink ser PDU");
 		return -1;
 	}

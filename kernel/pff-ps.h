@@ -25,7 +25,7 @@
 #include <linux/types.h>
 
 #include "pff.h"
-#include "pdu.h"
+#include "pci.h"
 #include "ps-factory.h"
 
 struct pff_ps {

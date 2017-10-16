@@ -8,22 +8,23 @@
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *
- * 1. Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer.
+ * 1. Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
- * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 
 #define _GNU_SOURCE
@@ -45,29 +46,28 @@
 
 #include <rina/api.h>
 
+#define SDU_SIZE_MAX 65535
+#define RP_MAX_WORKERS 1023
 
-#define SDU_SIZE_MAX        65535
-#define RP_MAX_WORKERS      1023
+#define RP_OPCODE_PING 0
+#define RP_OPCODE_RR 1
+#define RP_OPCODE_PERF 2
+#define RP_OPCODE_DATAFLOW 3
+#define RP_OPCODE_STOP 4 /* must be the last */
 
-#define RP_OPCODE_PING      0
-#define RP_OPCODE_RR        1
-#define RP_OPCODE_PERF      2
-#define RP_OPCODE_DATAFLOW  3
-#define RP_OPCODE_STOP      4 /* must be the last */
-
-#define CLI_FA_TIMEOUT_MSECS        5000
-#define CLI_RESULT_TIMEOUT_MSECS    5000
-#define RP_DATA_WAIT_MSECS          2000
+#define CLI_FA_TIMEOUT_MSECS 5000
+#define CLI_RESULT_TIMEOUT_MSECS 5000
+#define RP_DATA_WAIT_MSECS 2000
 
 struct rinaperf;
 struct worker;
 
 struct rp_config_msg {
-    uint64_t cnt;       /* packet/transaction count for the test
-                         * (0 means infinite) */
-    uint32_t opcode;    /* opcode: ping, perf, rr ... */
-    uint32_t ticket;    /* valid with RP_OPCODE_DATAFLOW */
-    uint32_t size;      /* packet size in bytes */
+    uint64_t cnt;    /* packet/transaction count for the test
+                      * (0 means infinite) */
+    uint32_t opcode; /* opcode: ping, perf, rr ... */
+    uint32_t ticket; /* valid with RP_OPCODE_DATAFLOW */
+    uint32_t size;   /* packet size in bytes */
 } __attribute__((packed));
 
 struct rp_ticket_msg {
@@ -85,48 +85,49 @@ struct rp_result_msg {
 
 typedef int (*perf_fn_t)(struct worker *);
 typedef void (*report_fn_t)(struct rp_result_msg *snd,
-                                  struct rp_result_msg *rcv);
+                            struct rp_result_msg *rcv);
 
 struct worker {
     pthread_t th;
-    struct rinaperf         *rp;   /* backpointer */
-    struct worker           *next; /* next worker */
-    struct rp_config_msg    test_config;
-    struct rp_result_msg    result;
-    uint32_t                ticket; /* ticket to be sent to the client */
-    sem_t                   data_flow_ready; /* to wait for dfd */
-    unsigned int            interval;
-    unsigned int            burst;
-    int                     ping;
-    struct rp_test_desc     *desc;
-    int                     cfd; /* control file descriptor */
-    int                     dfd; /* data file descriptor */
+    struct rinaperf *rp; /* backpointer */
+    struct worker *next; /* next worker */
+    struct rp_config_msg test_config;
+    struct rp_result_msg result;
+    uint32_t ticket;       /* ticket to be sent to the client */
+    sem_t data_flow_ready; /* to wait for dfd */
+    unsigned int interval;
+    unsigned int burst;
+    int ping;
+    struct rp_test_desc *desc;
+    int cfd; /* control file descriptor */
+    int dfd; /* data file descriptor */
 };
 
 struct rinaperf {
-    struct rina_flow_spec   flowspec;
-    const char              *cli_appl_name;
-    const char              *srv_appl_name;
-    const char              *dif_name;
-    int                     cfd; /* Control file descriptor */
-    int                     parallel; /* num of parallel clients */
-    int                     duration; /* duration of client test (secs) */
-    int                     verbose;
-    int                     stop_pipe[2]; /* to stop client threads */
-    int                     cli_stop; /* another way to stop client threads */
-    int                     cli_flow_allocated; /* client flows allocated ? */
+    struct rina_flow_spec flowspec;
+    const char *cli_appl_name;
+    const char *srv_appl_name;
+    const char *dif_name;
+    int cfd;          /* Control file descriptor */
+    int parallel;     /* num of parallel clients */
+    int duration;     /* duration of client test (secs) */
+    int use_mss_size; /* use flow MSS as packet size */
+    int verbose;
+    int stop_pipe[2];       /* to stop client threads */
+    int cli_stop;           /* another way to stop client threads */
+    int cli_flow_allocated; /* client flows allocated ? */
 
     /* Synchronization between client threads and main thread. */
-    sem_t                   cli_barrier;
+    sem_t cli_barrier;
 
     /* Ticket table. */
-    pthread_mutex_t         ticket_lock;
-    struct worker           *ticket_table[RP_MAX_WORKERS];
+    pthread_mutex_t ticket_lock;
+    struct worker *ticket_table[RP_MAX_WORKERS];
 
     /* List of workers. */
-    struct worker           *workers_head;
-    struct worker           *workers_tail;
-    sem_t                   workers_free;
+    struct worker *workers_head;
+    struct worker *workers_tail;
+    sem_t workers_free;
 };
 
 static struct rinaperf _rp;
@@ -134,7 +135,7 @@ static struct rinaperf _rp;
 static void
 worker_init(struct worker *w, struct rinaperf *rp)
 {
-    w->rp = rp;
+    w->rp  = rp;
     w->cfd = w->dfd = -1;
 }
 
@@ -158,7 +159,7 @@ static void
 stoppable_usleep(struct rinaperf *rp, unsigned int usecs)
 {
     struct timeval to = {
-        .tv_sec = 0,
+        .tv_sec  = 0,
         .tv_usec = usecs,
     };
     fd_set rfds;
@@ -178,19 +179,19 @@ ping_client(struct worker *w)
     unsigned int limit = w->test_config.cnt;
     struct timespec t_start, t_end, t1, t2;
     unsigned int interval = w->interval;
-    int size = w->test_config.size;
+    int size              = w->test_config.size;
     char buf[SDU_SIZE_MAX];
     volatile uint16_t *seqnum = (uint16_t *)buf;
-    uint16_t expected = 0;
-    unsigned int timeouts = 0;
-    int ping = w->ping;
-    unsigned int i = 0;
+    uint16_t expected         = 0;
+    unsigned int timeouts     = 0;
+    int ping                  = w->ping;
+    unsigned int i            = 0;
     unsigned long long ns;
     struct pollfd pfd[2];
     int ret = 0;
 
-    pfd[0].fd = w->dfd;
-    pfd[1].fd = w->rp->stop_pipe[0];
+    pfd[0].fd     = w->dfd;
+    pfd[1].fd     = w->rp->stop_pipe[0];
     pfd[0].events = pfd[1].events = POLLIN;
 
     memset(buf, 'x', size);
@@ -213,7 +214,7 @@ ping_client(struct worker *w)
             }
             break;
         }
-repoll:
+    repoll:
         ret = poll(pfd, 2, RP_DATA_WAIT_MSECS);
         if (ret < 0) {
             perror("poll(flow)");
@@ -221,7 +222,7 @@ repoll:
 
         if (ret == 0) {
             printf("Timeout: %d bytes lost\n", size);
-            if (++ timeouts > 8) {
+            if (++timeouts > 8) {
                 printf("Stopping after %u consecutive timeouts\n", timeouts);
                 break;
             }
@@ -230,7 +231,7 @@ repoll:
         } else {
             /* Ready to read. */
             timeouts = 0;
-            ret = read(w->dfd, buf, sizeof(buf));
+            ret      = read(w->dfd, buf, sizeof(buf));
             if (ret <= 0) {
                 if (ret) {
                     perror("read(buf");
@@ -242,12 +243,13 @@ repoll:
                 if (*seqnum == expected) {
                     clock_gettime(CLOCK_MONOTONIC, &t2);
                     ns = 1000000000 * (t2.tv_sec - t1.tv_sec) +
-                                      (t2.tv_nsec - t1.tv_nsec);
+                         (t2.tv_nsec - t1.tv_nsec);
                     printf("%d bytes from server: rtt = %.3f ms\n", ret,
-                           ((float)ns)/1000000.0);
+                           ((float)ns) / 1000000.0);
                 } else {
                     printf("Packet lost or out of order: got %u, "
-                           "expected %u\n", *seqnum, expected);
+                           "expected %u\n",
+                           *seqnum, expected);
                     if (*seqnum < expected) {
                         goto repoll;
                     }
@@ -262,14 +264,14 @@ repoll:
 
     clock_gettime(CLOCK_MONOTONIC, &t_end);
     ns = 1000000000 * (t_end.tv_sec - t_start.tv_sec) +
-            (t_end.tv_nsec - t_start.tv_nsec);
+         (t_end.tv_nsec - t_start.tv_nsec);
 
     w->result.cnt = i;
     w->result.pps = 1000000000ULL;
     w->result.pps *= i;
     w->result.pps /= ns;
-    w->result.bps = w->result.pps * 8 * size;
-    w->result.latency = (ns/i) - interval * 1000;
+    w->result.bps     = w->result.pps * 8 * size;
+    w->result.latency = i ? ((ns / i) - interval * 1000) : 0;
 
     return 0;
 }
@@ -284,8 +286,8 @@ ping_server(struct worker *w)
     unsigned int i;
     int n, ret;
 
-    pfd[0].fd = w->dfd;
-    pfd[1].fd = w->cfd;
+    pfd[0].fd     = w->dfd;
+    pfd[1].fd     = w->cfd;
     pfd[0].events = pfd[1].events = POLLIN;
 
     for (i = 0; !limit || i < limit; i++) {
@@ -341,11 +343,11 @@ ping_server(struct worker *w)
 static void
 ping_report(struct rp_result_msg *snd, struct rp_result_msg *rcv)
 {
-    printf("%10s %15s %10s %10s %15s\n",
-            "", "Transactions", "Kpps", "Mbps", "Latency (ns)");
-    printf("%-10s %15lu %10.3f %10.3f %15lu\n",
-            "Sender", snd->cnt, (double)snd->pps/1000.0,
-                (double)snd->bps/1000000.0, snd->latency);
+    printf("%10s %15s %10s %10s %15s\n", "", "Transactions", "Kpps", "Mbps",
+           "Latency (ns)");
+    printf("%-10s %15lu %10.3f %10.3f %15lu\n", "Sender", snd->cnt,
+           (double)snd->pps / 1000.0, (double)snd->bps / 1000000.0,
+           snd->latency);
 #if 0
     printf("%-10s %15lu %10.3f %10.3f %15lu\n",
             "Receiver", rcv->cnt, (double)rcv->pps/1000.0,
@@ -356,12 +358,12 @@ ping_report(struct rp_result_msg *snd, struct rp_result_msg *rcv)
 static int
 perf_client(struct worker *w)
 {
-    unsigned limit = w->test_config.cnt;
-    int size = w->test_config.size;
+    unsigned limit        = w->test_config.cnt;
+    int size              = w->test_config.size;
     unsigned int interval = w->interval;
-    unsigned int burst = w->burst;
-    struct rinaperf *rp = w->rp;
-    unsigned int cdown = burst;
+    unsigned int burst    = w->burst;
+    struct rinaperf *rp   = w->rp;
+    unsigned int cdown    = burst;
     struct timespec t_start, t_end;
     struct timespec w1, w2;
     char buf[SDU_SIZE_MAX];
@@ -392,7 +394,7 @@ perf_client(struct worker *w)
                 for (;;) {
                     clock_gettime(CLOCK_MONOTONIC, &w2);
                     ns = 1000000000ULL * (w2.tv_sec - w1.tv_sec) +
-                        (w2.tv_nsec - w1.tv_nsec);
+                         (w2.tv_nsec - w1.tv_nsec);
                     if (ns >= 1000 * interval) {
                         break;
                     }
@@ -404,7 +406,7 @@ perf_client(struct worker *w)
 
     clock_gettime(CLOCK_MONOTONIC, &t_end);
     ns = 1000000000ULL * (t_end.tv_sec - t_start.tv_sec) +
-            (t_end.tv_nsec - t_start.tv_nsec);
+         (t_end.tv_nsec - t_start.tv_nsec);
 
     if (ns) {
         w->result.cnt = i;
@@ -419,8 +421,8 @@ perf_client(struct worker *w)
 
 static void
 rate_print(unsigned long long *bytes, unsigned long long *cnt,
-            unsigned long long *bytes_limit, struct timespec *ts,
-            struct rp_result_msg *rmsg)
+           unsigned long long *bytes_limit, struct timespec *ts,
+           struct rp_result_msg *rmsg)
 {
     struct timespec now;
     unsigned long long elapsed_ns;
@@ -429,11 +431,11 @@ rate_print(unsigned long long *bytes, unsigned long long *cnt,
 
     clock_gettime(CLOCK_MONOTONIC, &now);
 
-    elapsed_ns = ((now.tv_sec - ts->tv_sec) * 1000000000 +
-                    now.tv_nsec - ts->tv_nsec);
+    elapsed_ns =
+        ((now.tv_sec - ts->tv_sec) * 1000000000 + now.tv_nsec - ts->tv_nsec);
 
-    kpps = ((1000000) * (double) *cnt) / elapsed_ns;
-    mbps = ((8 * 1000) * (double) *bytes) / elapsed_ns;
+    kpps = ((1000000) * (double)*cnt) / elapsed_ns;
+    mbps = ((8 * 1000) * (double)*bytes) / elapsed_ns;
 
     /* We don't want to prints which are too close. */
     if (elapsed_ns > 500000000U) {
@@ -444,14 +446,14 @@ rate_print(unsigned long long *bytes, unsigned long long *cnt,
     rmsg->bps = (8000000000ULL * *bytes) / elapsed_ns;
 
     if (elapsed_ns < 1000000000U) {
-            *bytes_limit *= 2;
+        *bytes_limit *= 2;
     } else if (elapsed_ns > 3 * 1000000000U && *bytes >= 1000) {
-            *bytes_limit /= 2;
+        *bytes_limit /= 2;
     }
 
     if (*bytes >= 1000) {
         clock_gettime(CLOCK_MONOTONIC, ts);
-        *cnt = 0;
+        *cnt   = 0;
         *bytes = 0;
     }
 }
@@ -459,16 +461,16 @@ rate_print(unsigned long long *bytes, unsigned long long *cnt,
 static int
 perf_server(struct worker *w)
 {
-    unsigned limit = w->test_config.cnt;
-    unsigned long long rate_cnt = 0;
+    unsigned limit                      = w->test_config.cnt;
+    unsigned long long rate_cnt         = 0;
     unsigned long long rate_bytes_limit = 1000;
-    unsigned long long rate_bytes = 0;
+    unsigned long long rate_bytes       = 0;
     struct timespec rate_ts, t_start, t_end;
     char buf[SDU_SIZE_MAX];
     unsigned long long ns;
     struct pollfd pfd[2];
     unsigned int i;
-    int verb = w->rp->verbose;
+    int verb    = w->rp->verbose;
     int timeout = 0;
     int n;
 
@@ -478,8 +480,8 @@ perf_server(struct worker *w)
         return -1;
     }
 
-    pfd[0].fd = w->dfd;
-    pfd[1].fd = w->cfd;
+    pfd[0].fd     = w->dfd;
+    pfd[1].fd     = w->cfd;
     pfd[0].events = pfd[1].events = POLLIN;
 
     clock_gettime(CLOCK_MONOTONIC, &rate_ts);
@@ -537,14 +539,14 @@ perf_server(struct worker *w)
         rate_cnt++;
 
         if (rate_bytes >= rate_bytes_limit && verb) {
-            rate_print(&rate_bytes, &rate_cnt, &rate_bytes_limit,
-                       &rate_ts, &w->result);
+            rate_print(&rate_bytes, &rate_cnt, &rate_bytes_limit, &rate_ts,
+                       &w->result);
         }
     }
 
     clock_gettime(CLOCK_MONOTONIC, &t_end);
     ns = 1000000000 * (t_end.tv_sec - t_start.tv_sec) +
-                        (t_end.tv_nsec - t_start.tv_nsec);
+         (t_end.tv_nsec - t_start.tv_nsec);
     if (timeout) {
         /* There was a timeout, adjust the time measurement. */
         if (ns <= RP_DATA_WAIT_MSECS * 1000000) {
@@ -570,55 +572,53 @@ perf_server(struct worker *w)
 static void
 perf_report(struct rp_result_msg *snd, struct rp_result_msg *rcv)
 {
-    printf("%10s %12s %10s %10s\n",
-            "", "Packets", "Kpps", "Mbps");
-    printf("%-10s %12lu %10.3f %10.3f\n",
-            "Sender", snd->cnt, (double)snd->pps/1000.0,
-                (double)snd->bps/1000000.0);
-    printf("%-10s %12lu %10.3f %10.3f\n",
-            "Receiver", rcv->cnt, (double)rcv->pps/1000.0,
-                (double)rcv->bps/1000000.0);
+    printf("%10s %12s %10s %10s\n", "", "Packets", "Kpps", "Mbps");
+    printf("%-10s %12lu %10.3f %10.3f\n", "Sender", snd->cnt,
+           (double)snd->pps / 1000.0, (double)snd->bps / 1000000.0);
+    printf("%-10s %12lu %10.3f %10.3f\n", "Receiver", rcv->cnt,
+           (double)rcv->pps / 1000.0, (double)rcv->bps / 1000000.0);
 }
 
 struct rp_test_desc {
-    const char      *name;
-    const char      *description;
-    unsigned int    opcode;
-    perf_fn_t       client_fn;
-    perf_fn_t       server_fn;
-    report_fn_t     report_fn;
+    const char *name;
+    const char *description;
+    unsigned int opcode;
+    perf_fn_t client_fn;
+    perf_fn_t server_fn;
+    report_fn_t report_fn;
 };
 
 static struct rp_test_desc descs[] = {
     {
-        .name = "ping",
-        .opcode = RP_OPCODE_PING,
+        .name      = "ping",
+        .opcode    = RP_OPCODE_PING,
         .client_fn = ping_client,
         .server_fn = ping_server,
         .report_fn = ping_report,
     },
     {
-        .name = "rr",
+        .name        = "rr",
         .description = "request-response test",
-        .opcode = RP_OPCODE_RR,
-        .client_fn = ping_client,
-        .server_fn = ping_server,
-        .report_fn = ping_report,
+        .opcode      = RP_OPCODE_RR,
+        .client_fn   = ping_client,
+        .server_fn   = ping_server,
+        .report_fn   = ping_report,
     },
-    {   .name = "perf",
+    {
+        .name        = "perf",
         .description = "unidirectional throughput test",
-        .opcode = RP_OPCODE_PERF,
-        .client_fn = perf_client,
-        .server_fn = perf_server,
-        .report_fn = perf_report,
+        .opcode      = RP_OPCODE_PERF,
+        .client_fn   = perf_client,
+        .server_fn   = perf_server,
+        .report_fn   = perf_report,
     },
 };
 
 static void *
 client_worker_function(void *opaque)
 {
-    struct worker *w = opaque;
-    struct rinaperf *rp = w->rp;
+    struct worker *w         = opaque;
+    struct rinaperf *rp      = w->rp;
     struct rp_config_msg cfg = w->test_config;
     struct rp_ticket_msg tmsg;
     struct rp_result_msg rmsg;
@@ -628,15 +628,14 @@ client_worker_function(void *opaque)
     /* Allocate the control flow to be used for test configuration and
      * to receive test result.
      * We should always use reliable flows. */
-    pfd.fd = rina_flow_alloc(rp->dif_name, rp->cli_appl_name,
-                             rp->srv_appl_name, &rp->flowspec,
-                             RINA_F_NOWAIT);
+    pfd.fd = rina_flow_alloc(rp->dif_name, rp->cli_appl_name, rp->srv_appl_name,
+                             &rp->flowspec, RINA_F_NOWAIT);
     if (pfd.fd < 0) {
         perror("rina_flow_alloc(cfd)");
         goto out;
     }
     pfd.events = POLLIN;
-    ret = poll(&pfd, 1, CLI_FA_TIMEOUT_MSECS);
+    ret        = poll(&pfd, 1, CLI_FA_TIMEOUT_MSECS);
     if (ret <= 0) {
         if (ret < 0) {
             perror("poll(cfd)");
@@ -652,10 +651,20 @@ client_worker_function(void *opaque)
         goto out;
     }
 
+    /* Override packet size with the MSS size if necessary. */
+    if (rp->use_mss_size) {
+        unsigned int mss = rina_flow_mss_get(w->cfd);
+
+        if (mss) {
+            cfg.size            = mss;
+            w->test_config.size = mss;
+        }
+    }
+
     /* Send test configuration to the server. */
     cfg.opcode = htole32(cfg.opcode);
-    cfg.cnt = htole64(cfg.cnt);
-    cfg.size = htole32(cfg.size);
+    cfg.cnt    = htole64(cfg.cnt);
+    cfg.size   = htole32(cfg.size);
 
     ret = write(w->cfd, &cfg, sizeof(cfg));
     if (ret != sizeof(cfg)) {
@@ -663,15 +672,15 @@ client_worker_function(void *opaque)
             perror("write(cfg)");
         } else {
             printf("Partial write %d/%lu\n", ret,
-                    (unsigned long int)sizeof(cfg));
+                   (unsigned long int)sizeof(cfg));
         }
         goto out;
     }
 
     /* Wait for the ticket message from the server and read it. */
-    pfd.fd = w->cfd;
+    pfd.fd     = w->cfd;
     pfd.events = POLLIN;
-    ret = poll(&pfd, 1, RP_DATA_WAIT_MSECS);
+    ret        = poll(&pfd, 1, RP_DATA_WAIT_MSECS);
     if (ret <= 0) {
         if (ret < 0) {
             perror("poll(ticket)");
@@ -687,21 +696,21 @@ client_worker_function(void *opaque)
             perror("read(ticket)");
         } else {
             printf("Error reading ticket message: wrong length %d "
-                   "(should be %lu)\n", ret, (unsigned long int)sizeof(tmsg));
+                   "(should be %lu)\n",
+                   ret, (unsigned long int)sizeof(tmsg));
         }
         goto out;
     }
 
     /* Allocate a data flow for the test. */
-    pfd.fd = rina_flow_alloc(rp->dif_name, rp->cli_appl_name,
-                             rp->srv_appl_name, &rp->flowspec,
-                             RINA_F_NOWAIT);
+    pfd.fd = rina_flow_alloc(rp->dif_name, rp->cli_appl_name, rp->srv_appl_name,
+                             &rp->flowspec, RINA_F_NOWAIT);
     if (pfd.fd < 0) {
         perror("rina_flow_alloc(cfd)");
         goto out;
     }
     pfd.events = POLLIN;
-    ret = poll(&pfd, 1, CLI_FA_TIMEOUT_MSECS);
+    ret        = poll(&pfd, 1, CLI_FA_TIMEOUT_MSECS);
     if (ret <= 0) {
         if (ret < 0) {
             perror("poll(dfd)");
@@ -711,7 +720,7 @@ client_worker_function(void *opaque)
         close(pfd.fd);
         goto out;
     }
-    w->dfd = rina_flow_alloc_wait(pfd.fd);
+    w->dfd                 = rina_flow_alloc_wait(pfd.fd);
     rp->cli_flow_allocated = 1;
     if (w->dfd < 0) {
         perror("rina_flow_alloc_wait(dfd)");
@@ -722,13 +731,13 @@ client_worker_function(void *opaque)
     memset(&cfg, 0, sizeof(cfg));
     cfg.opcode = htole32(RP_OPCODE_DATAFLOW);
     cfg.ticket = tmsg.ticket;
-    ret = write(w->dfd, &cfg, sizeof(cfg));
+    ret        = write(w->dfd, &cfg, sizeof(cfg));
     if (ret != sizeof(cfg)) {
         if (ret < 0) {
             perror("write(identify)");
         } else {
             printf("Partial write %d/%lu\n", ret,
-                    (unsigned long int)sizeof(cfg));
+                   (unsigned long int)sizeof(cfg));
         }
         goto out;
     }
@@ -755,8 +764,8 @@ client_worker_function(void *opaque)
         }
 
         printf("Starting %s; message size: %u, number of messages: %s,"
-                " duration: %s\n", w->desc->description, w->test_config.size,
-                countbuf, durbuf);
+               " duration: %s\n",
+               w->desc->description, w->test_config.size, countbuf, durbuf);
     }
 
     /* Run the test. */
@@ -772,22 +781,22 @@ client_worker_function(void *opaque)
     /* Send the stop opcode on the control file descriptor. */
     memset(&cfg, 0, sizeof(cfg));
     cfg.opcode = htole32(RP_OPCODE_STOP);
-    ret = write(w->cfd, &cfg, sizeof(cfg));
+    ret        = write(w->cfd, &cfg, sizeof(cfg));
     if (ret != sizeof(cfg)) {
         if (ret < 0) {
             perror("write(stop)");
         } else {
             printf("Partial write %d/%lu\n", ret,
-                    (unsigned long int)sizeof(cfg));
+                   (unsigned long int)sizeof(cfg));
         }
         goto out;
     }
 
     if (!w->ping) {
         /* Wait for the result message from the server and read it. */
-        pfd.fd = w->cfd;
+        pfd.fd     = w->cfd;
         pfd.events = POLLIN;
-        ret = poll(&pfd, 1, CLI_RESULT_TIMEOUT_MSECS);
+        ret        = poll(&pfd, 1, CLI_RESULT_TIMEOUT_MSECS);
         if (ret <= 0) {
             if (ret < 0) {
                 perror("poll(result)");
@@ -803,15 +812,16 @@ client_worker_function(void *opaque)
                 perror("read(result)");
             } else {
                 printf("Error reading result message: wrong length %d "
-                       "(should be %lu)\n", ret, (unsigned long int)sizeof(rmsg));
+                       "(should be %lu)\n",
+                       ret, (unsigned long int)sizeof(rmsg));
             }
             goto out;
         }
 
-        rmsg.cnt        = le64toh(rmsg.cnt);
-        rmsg.pps        = le64toh(rmsg.pps);
-        rmsg.bps        = le64toh(rmsg.bps);
-        rmsg.latency    = le64toh(rmsg.latency);
+        rmsg.cnt     = le64toh(rmsg.cnt);
+        rmsg.pps     = le64toh(rmsg.pps);
+        rmsg.bps     = le64toh(rmsg.bps);
+        rmsg.latency = le64toh(rmsg.latency);
 
         w->desc->report_fn(&w->result, &rmsg);
     }
@@ -827,7 +837,7 @@ out:
 static void *
 server_worker_function(void *opaque)
 {
-    struct worker *w = opaque;
+    struct worker *w    = opaque;
     struct rinaperf *rp = w->rp;
     struct rp_config_msg cfg;
     struct rp_ticket_msg tmsg;
@@ -839,9 +849,9 @@ server_worker_function(void *opaque)
     int ret;
 
     /* Wait for test configuration message and read it. */
-    pfd.fd = w->cfd;
+    pfd.fd     = w->cfd;
     pfd.events = POLLIN;
-    ret = poll(&pfd, 1, RP_DATA_WAIT_MSECS);
+    ret        = poll(&pfd, 1, RP_DATA_WAIT_MSECS);
     if (ret <= 0) {
         if (ret < 0) {
             perror("poll(cfg)");
@@ -857,28 +867,31 @@ server_worker_function(void *opaque)
             perror("read(cfg)");
         } else {
             printf("Error reading test configuration: wrong length %d "
-                   "(should be %lu)\n", ret, (unsigned long int)sizeof(cfg));
+                   "(should be %lu)\n",
+                   ret, (unsigned long int)sizeof(cfg));
         }
         goto out;
     }
 
-    cfg.opcode  = le32toh(cfg.opcode);
-    cfg.ticket  = le32toh(cfg.ticket);
-    cfg.cnt     = le64toh(cfg.cnt);
-    cfg.size    = le32toh(cfg.size);
+    cfg.opcode = le32toh(cfg.opcode);
+    cfg.ticket = le32toh(cfg.ticket);
+    cfg.cnt    = le64toh(cfg.cnt);
+    cfg.size   = le32toh(cfg.size);
 
     if (cfg.opcode >= RP_OPCODE_STOP) {
-        printf("Invalid test configuration: test type %u is invalid\n", cfg.opcode);
+        printf("Invalid test configuration: test type %u is invalid\n",
+               cfg.opcode);
         goto out;
     }
 
     if (cfg.opcode == RP_OPCODE_DATAFLOW) {
-        /* This is a data flow. We need to pass the file descriptor to the worker
-         * associated to the ticket, and notify it. */
+        /* This is a data flow. We need to pass the file descriptor to the
+         * worker associated to the ticket, and notify it. */
 
         pthread_mutex_lock(&rp->ticket_lock);
         if (cfg.ticket >= RP_MAX_WORKERS || !rp->ticket_table[cfg.ticket]) {
-            printf("Invalid ticket request: ticket %u is invalid\n", cfg.ticket);
+            printf("Invalid ticket request: ticket %u is invalid\n",
+                   cfg.ticket);
         } else {
             struct worker *tw = rp->ticket_table[cfg.ticket];
 
@@ -886,21 +899,22 @@ server_worker_function(void *opaque)
             printf("TicketTable: data flow for ticket %u\n", cfg.ticket);
 #endif
             tw->dfd = w->cfd;
-            w->cfd = -1;
+            w->cfd  = -1;
             sem_post(&tw->data_flow_ready);
         }
         pthread_mutex_unlock(&rp->ticket_lock);
     } else {
         /* This is a control flow. */
         if (cfg.size < sizeof(uint16_t)) {
-            printf("Invalid test configuration: size %u is invalid\n", cfg.size);
+            printf("Invalid test configuration: size %u is invalid\n",
+                   cfg.size);
             goto out;
         }
 
         /* Allocate a ticket for the client. */
         {
             pthread_mutex_lock(&rp->ticket_lock);
-            for (ticket = 0; ticket < RP_MAX_WORKERS; ticket ++) {
+            for (ticket = 0; ticket < RP_MAX_WORKERS; ticket++) {
                 if (rp->ticket_table[ticket] == NULL) {
                     rp->ticket_table[ticket] = w;
                     break;
@@ -916,27 +930,28 @@ server_worker_function(void *opaque)
 
         /* Send ticket back to the client. */
         tmsg.ticket = htole32(ticket);
-        ret = write(w->cfd, &tmsg, sizeof(tmsg));
+        ret         = write(w->cfd, &tmsg, sizeof(tmsg));
         if (ret != sizeof(tmsg)) {
             if (ret < 0) {
                 perror("write(ticket)");
             } else {
                 printf("Error writing ticket: wrong length %d "
-                       "(should be %lu)\n", ret, (unsigned long int)sizeof(tmsg));
+                       "(should be %lu)\n",
+                       ret, (unsigned long int)sizeof(tmsg));
             }
             goto out;
         }
 
         if (rp->verbose) {
             printf("Configuring test type %u, SDU count %lu, SDU size %u, "
-                    "ticket %u\n",
+                   "ticket %u\n",
                    cfg.opcode, cfg.cnt, cfg.size, ticket);
         }
 
         /* Wait for the client to allocate a data flow and come back to us. */
         clock_gettime(CLOCK_REALTIME, &to);
         to.tv_sec += 5;
-        ret = sem_timedwait(&w->data_flow_ready, &to);
+        ret         = sem_timedwait(&w->data_flow_ready, &to);
         saved_errno = errno;
         pthread_mutex_lock(&rp->ticket_lock);
         rp->ticket_table[ticket] = NULL;
@@ -944,8 +959,7 @@ server_worker_function(void *opaque)
         pthread_mutex_unlock(&rp->ticket_lock);
         if (ret) {
             if (saved_errno == ETIMEDOUT) {
-                printf("Timed out waiting for data flow [ticket %u]\n",
-                        ticket);
+                printf("Timed out waiting for data flow [ticket %u]\n", ticket);
             } else {
                 perror("sem_timedwait() failed");
             }
@@ -957,23 +971,25 @@ server_worker_function(void *opaque)
 
         /* Serve the client on the flow file descriptor. */
         w->test_config = cfg;
-        w->desc = descs + cfg.opcode;
+        w->desc        = descs + cfg.opcode;
         assert(w->desc);
         w->desc->server_fn(w);
 
-        /* Write the result back to the client on the control file descriptor. */
-        rmsg = w->result;
-        rmsg.cnt        = htole64(rmsg.cnt);
-        rmsg.pps        = htole64(rmsg.pps);
-        rmsg.bps        = htole64(rmsg.bps);
-        rmsg.latency    = htole64(rmsg.latency);
-        ret = write(w->cfd, &rmsg, sizeof(rmsg));
+        /* Write the result back to the client on the control file descriptor.
+         */
+        rmsg         = w->result;
+        rmsg.cnt     = htole64(rmsg.cnt);
+        rmsg.pps     = htole64(rmsg.pps);
+        rmsg.bps     = htole64(rmsg.bps);
+        rmsg.latency = htole64(rmsg.latency);
+        ret          = write(w->cfd, &rmsg, sizeof(rmsg));
         if (ret != sizeof(rmsg)) {
             if (ret < 0) {
                 perror("write(result)");
             } else {
                 printf("Error writing result: wrong length %d "
-                       "(should be %lu)\n", ret, (unsigned long int)sizeof(rmsg));
+                       "(should be %lu)\n",
+                       ret, (unsigned long int)sizeof(rmsg));
             }
             goto out;
         }
@@ -1008,7 +1024,7 @@ server(struct rinaperf *rp)
         sem_wait(&rp->workers_free);
 
         /* Try to join terminated threads. */
-        for (p = NULL, w = rp->workers_head; w; ) {
+        for (p = NULL, w = rp->workers_head; w;) {
             ret = pthread_tryjoin_np(w->th, NULL);
             if (ret == 0) {
                 if (w == rp->workers_head) {
@@ -1023,7 +1039,7 @@ server(struct rinaperf *rp)
                 {
                     struct worker *tmp;
                     tmp = w;
-                    w = w->next;
+                    w   = w->next;
                     free(tmp);
                 }
 
@@ -1070,7 +1086,7 @@ server(struct rinaperf *rp)
             rp->workers_head = rp->workers_tail = w;
         } else {
             rp->workers_tail->next = w;
-            rp->workers_tail = w;
+            rp->workers_tail       = w;
         }
     }
 
@@ -1124,19 +1140,19 @@ parse_bandwidth(struct rina_flow_spec *spec, const char *arg)
     }
 
     spec->avg_bandwidth = 1;
-    switch (arg[arglen-1]) {
-        case 'G':
-            spec->avg_bandwidth *= 1000;
-        case 'M':
-            spec->avg_bandwidth *= 1000;
-        case 'K':
-            spec->avg_bandwidth *= 1000;
-            break;
-        default:
-            if (arg[arglen-1] < '0' || arg[arglen-1] > '9') {
-                goto err;
-            }
-            break;
+    switch (arg[arglen - 1]) {
+    case 'G':
+        spec->avg_bandwidth *= 1000;
+    case 'M':
+        spec->avg_bandwidth *= 1000;
+    case 'K':
+        spec->avg_bandwidth *= 1000;
+        break;
+    default:
+        if (arg[arglen - 1] < '0' || arg[arglen - 1] > '9') {
+            goto err;
+        }
+        break;
     }
 
     spec->avg_bandwidth *= strtoul(arg, NULL, 10);
@@ -1150,56 +1166,59 @@ err:
 static void
 usage(void)
 {
-    printf("rinaperf [OPTIONS]\n"
+    printf(
+        "rinaperf [OPTIONS]\n"
         "   -h : show this help\n"
         "   -l : run in server mode (listen)\n"
         "   -t TEST : specify the type of the test to be performed "
-            "(ping, perf, rr)\n"
+        "(ping, perf, rr)\n"
         "   -d DIF : name of DIF to which register or ask to allocate a flow\n"
         "   -c NUM : number of SDUs to send during the test\n"
         "   -s NUM : size of the SDUs that are sent during the test\n"
         "   -i NUM : number of microseconds to wait after each SDUs is sent\n"
         "   -g NUM : max SDU gap to use for the data flow\n"
-        "   -B NUM : average bandwitdh for the data flow, in bits per second\n"
+        "   -B NUM : average bandwidth for the data flow, in bits per second\n"
         "   -f : enable flow control\n"
         "   -b NUM : How many SDUs to send before waiting as "
-                "specified by -i option (default b=1)\n"
-        "   -a APNAME : application process name and instance of the rinaperf client\n"
-        "   -z APNAME : application process name and instance of the rinaperf server\n"
+        "specified by -i option (default b=1)\n"
+        "   -a APNAME : application process name and instance of the rinaperf "
+        "client\n"
+        "   -z APNAME : application process name and instance of the rinaperf "
+        "server\n"
         "   -p NUM : clients run NUM parallel instances, using NUM threads\n"
-        "   -v : be verbose\n"
-          );
+        "   -v : be verbose\n");
 }
 
 int
 main(int argc, char **argv)
 {
     struct sigaction sa;
-    struct rinaperf *rp = &_rp;
-    const char *type = "ping";
+    struct rinaperf *rp    = &_rp;
+    const char *type       = "ping";
     int interval_specified = 0;
     int duration_specified = 0;
-    int listen = 0;
-    int cnt = 0;
-    int size = sizeof(uint16_t);
-    int interval = 0;
-    int burst = 1;
+    int listen             = 0;
+    int cnt                = 0;
+    int size               = sizeof(uint16_t);
+    int interval           = 0;
+    int burst              = 1;
     struct worker wt; /* template */
     int ret;
     int opt;
     int i;
 
     memset(&wt, 0, sizeof(wt));
-    wt.rp = rp;
+    wt.rp  = rp;
     wt.cfd = -1;
 
     memset(rp, 0, sizeof(*rp));
-    rp->cli_appl_name = "rinaperf-data:client";
-    rp->srv_appl_name = "rinaperf-data:server";
-    rp->parallel = 1;
-    rp->duration = 0;
-    rp->verbose = 0;
-    rp->cfd = -1;
+    rp->cli_appl_name = "rinaperf-data|client";
+    rp->srv_appl_name = "rinaperf-data|server";
+    rp->parallel      = 1;
+    rp->duration      = 0;
+    rp->use_mss_size  = 1;
+    rp->verbose       = 0;
+    rp->cfd           = -1;
     rp->stop_pipe[0] = rp->stop_pipe[1] = -1;
     rp->cli_stop = rp->cli_flow_allocated = 0;
     sem_init(&rp->workers_free, 0, RP_MAX_WORKERS);
@@ -1207,103 +1226,105 @@ main(int argc, char **argv)
     pthread_mutex_init(&rp->ticket_lock, NULL);
 
     /* Start with a default flow configuration (unreliable flow). */
-    rina_flow_spec_default(&rp->flowspec);
+    rina_flow_spec_unreliable(&rp->flowspec);
 
     while ((opt = getopt(argc, argv, "hlt:d:c:s:i:B:g:fb:a:z:p:D:v")) != -1) {
         switch (opt) {
-            case 'h':
-                usage();
-                return 0;
+        case 'h':
+            usage();
+            return 0;
 
-            case 'l':
-                listen = 1;
-                break;
+        case 'l':
+            listen = 1;
+            break;
 
-            case 't':
-                type = optarg;
-                break;
+        case 't':
+            type = optarg;
+            break;
 
-            case 'd':
-                rp->dif_name = optarg;
-                break;
+        case 'd':
+            rp->dif_name = optarg;
+            break;
 
-            case 'c':
-                cnt = atoi(optarg);
-                if (cnt < 0) {
-                    printf("    Invalid 'cnt' %d\n", cnt);
-                    return -1;
-                }
-                break;
-
-            case 's':
-                size = atoi(optarg);
-                if (size < sizeof(uint16_t)) {
-                    printf("    Invalid 'size' %d\n", size);
-                    return -1;
-                }
-                break;
-
-            case 'i':
-                interval = atoi(optarg);
-                if (interval < 0) {
-                    printf("    Invalid 'interval' %d\n", interval);
-                    return -1;
-                }
-                interval_specified = 1;
-                break;
-
-            case 'g': /* Set max_sdu_gap flow specification parameter. */
-                rp->flowspec.max_sdu_gap = atoll(optarg);
-                break;
-
-            case 'B': /* Set the average bandwidth parameter. */
-                parse_bandwidth(&rp->flowspec, optarg);
-                break;
-
-            case 'f': /* Enable flow control. */
-                rp->flowspec.spare3 = 1;
-                break;
-
-            case 'b':
-                burst = atoi(optarg);
-                if (burst <= 0) {
-                    printf("    Invalid 'burst' %d\n", burst);
-                    return -1;
-                }
-                break;
-
-            case 'a':
-                rp->cli_appl_name = optarg;
-                break;
-
-            case 'z':
-                rp->srv_appl_name = optarg;
-                break;
-
-            case 'p':
-                rp->parallel = atoi(optarg);
-                if (rp->parallel <= 0) {
-                    printf("    Invalid 'parallel' %d\n", rp->parallel);
-                    return -1;
-                }
-                break;
-
-            case 'D':
-                rp->duration = atoi(optarg);
-                if (rp->duration < 0) {
-                    printf("    Invalid 'duration' %d\n", rp->duration);
-                }
-                duration_specified = 1;
-                break;
-
-            case 'v':
-                rp->verbose = 1;
-                break;
-
-            default:
-                printf("    Unrecognized option %c\n", opt);
-                usage();
+        case 'c':
+            cnt = atoi(optarg);
+            if (cnt < 0) {
+                printf("    Invalid 'cnt' %d\n", cnt);
                 return -1;
+            }
+            break;
+
+        case 's':
+            size = atoi(optarg);
+            if (size < sizeof(uint16_t)) {
+                printf("    Invalid 'size' %d\n", size);
+                return -1;
+            }
+            /* Explicit size was specified, so we don't override it. */
+            rp->use_mss_size = 0;
+            break;
+
+        case 'i':
+            interval = atoi(optarg);
+            if (interval < 0) {
+                printf("    Invalid 'interval' %d\n", interval);
+                return -1;
+            }
+            interval_specified = 1;
+            break;
+
+        case 'g': /* Set max_sdu_gap flow specification parameter. */
+            rp->flowspec.max_sdu_gap = atoll(optarg);
+            break;
+
+        case 'B': /* Set the average bandwidth parameter. */
+            parse_bandwidth(&rp->flowspec, optarg);
+            break;
+
+        case 'f': /* Enable flow control. */
+            rp->flowspec.spare3 = 1;
+            break;
+
+        case 'b':
+            burst = atoi(optarg);
+            if (burst <= 0) {
+                printf("    Invalid 'burst' %d\n", burst);
+                return -1;
+            }
+            break;
+
+        case 'a':
+            rp->cli_appl_name = optarg;
+            break;
+
+        case 'z':
+            rp->srv_appl_name = optarg;
+            break;
+
+        case 'p':
+            rp->parallel = atoi(optarg);
+            if (rp->parallel <= 0) {
+                printf("    Invalid 'parallel' %d\n", rp->parallel);
+                return -1;
+            }
+            break;
+
+        case 'D':
+            rp->duration = atoi(optarg);
+            if (rp->duration < 0) {
+                printf("    Invalid 'duration' %d\n", rp->duration);
+            }
+            duration_specified = 1;
+            break;
+
+        case 'v':
+            rp->verbose = 1;
+            break;
+
+        default:
+            printf("    Unrecognized option %c\n", opt);
+            usage();
+            return -1;
         }
     }
 
@@ -1316,6 +1337,8 @@ main(int argc, char **argv)
      *   - When not in ping mode, ff user did not specify the number of
      *     packets (or transactions) nor the test duration, use a 10 seconds
      *     test duration.
+     *   - When in perf mode, use the flow MSS as a packet size, unless the
+     *     user has specified the size explicitely.
      */
     if (strcmp(type, "ping") == 0) {
         if (!interval_specified) {
@@ -1326,16 +1349,20 @@ main(int argc, char **argv)
         }
         wt.ping = 1;
 
-    } else if (strcmp(type, "rr") == 0) {
+    } else {
         wt.ping = 0;
         if (!duration_specified && !cnt) {
             rp->duration = 10; /* seconds */
         }
     }
 
+    if (strcmp(type, "perf") != 0) {
+        rp->use_mss_size = 0; /* default MTU size only for perf */
+    }
+
     /* Set defaults. */
     wt.interval = interval;
-    wt.burst = burst;
+    wt.burst    = burst;
 
     if (!listen) {
         ret = pipe(rp->stop_pipe);
@@ -1345,7 +1372,7 @@ main(int argc, char **argv)
         }
 
         /* Function selection. */
-        for (i = 0; i < sizeof(descs)/sizeof(descs[0]); i++) {
+        for (i = 0; i < sizeof(descs) / sizeof(descs[0]); i++) {
             if (descs[i].name && strcmp(descs[i].name, type) == 0) {
                 wt.desc = descs + i;
                 break;
@@ -1358,15 +1385,15 @@ main(int argc, char **argv)
             return -1;
         }
         wt.test_config.opcode = descs[i].opcode;
-        wt.test_config.cnt = cnt;
-        wt.test_config.size = size;
+        wt.test_config.cnt    = cnt;
+        wt.test_config.size   = size;
     }
 
     /* Set some signal handler */
     sa.sa_handler = listen ? sigint_handler_server : sigint_handler_client;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_RESTART;
-    ret = sigaction(SIGINT, &sa, NULL);
+    ret         = sigaction(SIGINT, &sa, NULL);
     if (ret) {
         perror("sigaction(SIGINT)");
         return ret;
@@ -1419,7 +1446,7 @@ main(int argc, char **argv)
                     if (errno == ETIMEDOUT) {
                         if (rp->verbose) {
                             printf("Stopping clients, %d seconds elapsed\n",
-                                    rp->duration);
+                                   rp->duration);
                         }
                     } else {
                         perror("pthread_cond_timedwait() failed");
@@ -1442,6 +1469,7 @@ main(int argc, char **argv)
                 printf("pthread_join(#%d) failed: %s\n", i, strerror(ret));
             }
         }
+        free(workers);
     }
 
     return close(rp->cfd);

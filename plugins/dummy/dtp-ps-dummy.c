@@ -28,14 +28,14 @@
 #include "dtp-ps.h"
 
 static int
-dummy_transmission_control(struct dtp_ps * ps, struct pdu * pdu)
+dummy_transmission_control(struct dtp_ps * ps, struct du * du)
 {
         printk("%s: called()\n", __func__);
         return 0;
 }
 
 static int
-dummy_closed_window(struct dtp_ps * ps, struct pdu * pdu)
+dummy_closed_window(struct dtp_ps * ps, struct du * du)
 {
         printk("%s: called()\n", __func__);
         return 0;
@@ -43,7 +43,7 @@ dummy_closed_window(struct dtp_ps * ps, struct pdu * pdu)
 
 static int
 dummy_flow_control_overrun(struct dtp_ps * ps,
-                             struct pdu *    pdu)
+                             struct du *   du)
 {
         printk("%s: called()\n", __func__);
         return 0;

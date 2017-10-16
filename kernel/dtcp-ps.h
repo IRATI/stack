@@ -25,7 +25,6 @@
 #include <linux/types.h>
 
 #include "dtcp.h"
-#include "pdu.h"
 #include "rds/rfifo.h"
 #include "ps-factory.h"
 
