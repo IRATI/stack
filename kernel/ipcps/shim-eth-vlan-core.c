@@ -1269,7 +1269,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
 		kfree_skb(skb);
 	}
 
-	du = du_from_buffer_ni(linear_skb);
+	du = du_create_from_skb(linear_skb);
 	if (!du) {
 		LOG_ERR("Could not create SDU from buffer");
                 kfree_skb(linear_skb);

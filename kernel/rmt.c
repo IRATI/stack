@@ -1305,12 +1305,6 @@ int rmt_receive(struct rmt *rmt,
 		return -1;
 	}
 
-	if (!pci_is_ok(&du->pci)) {
-		LOG_ERR("No PCI to work with, dropping SDU!");
-		du_destroy(du);
-		return -1;
-	}
-
 	pdu_type = pci_type(&du->pci);
 	dst_addr = pci_destination(&du->pci);
 	qos_id = pci_qos_id(&du->pci);

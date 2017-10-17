@@ -23,7 +23,7 @@
 #include <linux/export.h>
 #include <linux/types.h>
 
-#define RINA_PREFIX "pdu"
+#define RINA_PREFIX "du"
 
 #include "logs.h"
 #include "utils.h"
@@ -88,8 +88,6 @@ struct du *du_create_gfp(size_t data_len, gfp_t flags)
 	/* init PCI */
 	tmp->pci.h = NULL;
 	tmp->pci.len = 0;
-	//memset(&tmp->pci, 0x00, sizeof(tmp->pci));
-
 	tmp->cfg = NULL;
 	tmp->sdup_head = NULL;
 	tmp->sdup_tail = NULL;
@@ -160,7 +158,7 @@ int du_decap(struct du * du)
 	du->pci.h = du->skb->data;
 	type = pci_type(&du->pci);
 	if (unlikely(!pdu_type_is_ok(type))) {
-		LOG_ERR("Could not decap PDU. Type is not ok");
+		LOG_ERR("Could not decap DU. Type is not ok");
 		return -1;
 	}
 
@@ -170,7 +168,7 @@ int du_decap(struct du * du)
 		du->pci.len = pci_len;
 		return 0;
 	}
-	LOG_ERR("Could not decap PDU. PCI len is < 0");
+	LOG_ERR("Could not decap DU. PCI len is < 0");
 	return -1;
 }
 EXPORT_SYMBOL(du_decap);
@@ -227,15 +225,12 @@ struct du * du_create_from_skb(struct sk_buff* skb)
 		return NULL;
 
 	tmp->skb = skb;
-	/* init PCI */
 	tmp->pci.h = NULL;
-	//memset(&tmp->pci, 0x00, sizeof(tmp->pci));
-
 	tmp->cfg = NULL;
 	tmp->sdup_head = NULL;
 	tmp->sdup_tail = NULL;
 
-	LOG_DBG("SDU allocated at %pk, with skb %pk", tmp, tmp->skb);
+	LOG_DBG("DU allocated at %pk, with skb %pk", tmp, tmp->skb);
 
 	return tmp;
 }
@@ -244,8 +239,17 @@ EXPORT_SYMBOL(du_create_from_skb);
 int du_tail_grow(struct du *du, size_t bytes)
 {
 	if (unlikely(skb_tailroom(du->skb) < bytes)){
-		LOG_ERR("Could not grow PDU tail, no mem...");
-		return -1;
+		LOG_DBG("Could not grow DU tail, no mem... (%d < %zd)",
+			skb_tailroom(du->skb), bytes);
+		if (pskb_expand_head(du->skb, 0, bytes, GFP_ATOMIC)) {
+			LOG_ERR("Could not add tailroom to DU...");
+			return -1;
+		}
+
+		/* Expand head has moved the pointers, update PCI */
+		if (du->pci.h != NULL) {
+			du->pci.h = du->skb->data;
+		}
 	}
 
 	skb_put(du->skb, bytes);
@@ -263,22 +267,38 @@ EXPORT_SYMBOL(du_tail_shrink);
 
 int du_head_grow(struct du * du, size_t bytes)
 {
+#ifdef PDU_HEAD_GROW_WITH_PCI
+	int offset;
+
+	if (du->pci.h != NULL)
+		offset = du->skb->data - du->pci.h;
+	else
+		offset = 0;
+#endif
+
 	if (unlikely(skb_headroom(du->skb) < bytes)){
-		LOG_DBG("Can not grow PDU head, no mem... (%d < %zd)", skb_headroom(du->skb), bytes);
+		LOG_DBG("Can not grow DU head, no mem... (%d < %zd)",
+			 skb_headroom(du->skb), bytes);
 		if (pskb_expand_head(du->skb, bytes, 0, GFP_ATOMIC)) {
-			LOG_ERR("Could not expand PDU...");
+			LOG_ERR("Could not add headroom to DU...");
 			return -1;
+		}
+
+		/* Expand head has moved the pointers, update PCI */
+		if (du->pci.h != NULL) {
+			du->pci.h = du->skb->data;
 		}
 	}
 
 #ifdef PDU_HEAD_GROW_WITH_PCI
-	if (du->pci.h == NULL || du->pci.h >= du->skb->data) {
+	if (du->pci.h == NULL || offset <= 0) {
 		/* not PCI in this PDU yet */
 		skb_push(du->skb, bytes);
 	} else {
 		/* PCI is part of this PDU and must be considered */
-		/* pci.h remains the same, skb->data is pushed bytes over pci.h. Used when relaying*/
-		skb_push(du->skb, (du->skb->data - du->pci.h) + bytes);
+		/* pci.h remains the same, skb->data is pushed bytes over */
+		/* pci.h. Used when relaying */
+		skb_push(du->skb, offset + bytes);
 	}
 #else
 	skb_push(du->skb, bytes);
@@ -363,32 +383,6 @@ void du_attach_skb(struct du *du, struct sk_buff *skb)
 	du->skb = skb;
 }
 EXPORT_SYMBOL(du_attach_skb);
-
-struct du * du_from_buffer_ni(void *buffer)
-{
-	struct du *tmp;
-
-	if (!unlikely(buffer))
-		return NULL;
-
-	tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
-	if (!unlikely(tmp))
-		return NULL;
-
-	/* FIXME: check if skb_get is needed */
-	//tmp->skb = skb_get((struct sk_buff *)buffer);
-	tmp->skb = (struct sk_buff *)buffer;
-	tmp->cfg = NULL;
-	tmp->sdup_head = NULL;
-	tmp->sdup_tail = NULL;
-	/* init PCI */
-	memset(&tmp->pci, 0x00, sizeof(tmp->pci));
-
-	LOG_DBG("SDU allocated at %pk, with buffer %pk", tmp, tmp->skb);
-
-	return tmp;
-}
-EXPORT_SYMBOL(du_from_buffer_ni);
 
 /* For shim TCP/UDP */
 int du_shrink(struct du * du, size_t bytes)
