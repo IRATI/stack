@@ -245,6 +245,11 @@ int du_tail_grow(struct du *du, size_t bytes)
 			LOG_ERR("Could not add tailroom to DU...");
 			return -1;
 		}
+
+		/* Expand head has moved the pointers, update PCI */
+		if (du->pci.h != NULL) {
+			du->pci.h = du->skb->data;
+		}
 	}
 
 	skb_put(du->skb, bytes);
@@ -262,6 +267,10 @@ EXPORT_SYMBOL(du_tail_shrink);
 
 int du_head_grow(struct du * du, size_t bytes)
 {
+#ifdef PDU_HEAD_GROW_WITH_PCI
+	int offset = du->skb->data - du->pci.h;
+#endif
+
 	if (unlikely(skb_headroom(du->skb) < bytes)){
 		LOG_DBG("Can not grow DU head, no mem... (%d < %zd)",
 			 skb_headroom(du->skb), bytes);
@@ -269,16 +278,22 @@ int du_head_grow(struct du * du, size_t bytes)
 			LOG_ERR("Could not add headroom to DU...");
 			return -1;
 		}
+
+		/* Expand head has moved the pointers, update PCI */
+		if (du->pci.h != NULL) {
+			du->pci.h = du->skb->data;
+		}
 	}
 
 #ifdef PDU_HEAD_GROW_WITH_PCI
-	if (du->pci.h == NULL || du->pci.h >= du->skb->data) {
+	if (du->pci.h == NULL || offset <= 0) {
 		/* not PCI in this PDU yet */
 		skb_push(du->skb, bytes);
 	} else {
 		/* PCI is part of this PDU and must be considered */
-		/* pci.h remains the same, skb->data is pushed bytes over pci.h. Used when relaying*/
-		skb_push(du->skb, (du->skb->data - du->pci.h) + bytes);
+		/* pci.h remains the same, skb->data is pushed bytes over */
+		/* pci.h. Used when relaying */
+		skb_push(du->skb, offset + bytes);
 	}
 #else
 	skb_push(du->skb, bytes);
