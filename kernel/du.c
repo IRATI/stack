@@ -267,12 +267,8 @@ EXPORT_SYMBOL(du_tail_shrink);
 
 int du_head_grow(struct du * du, size_t bytes)
 {
-	unsigned char * old_skb_data;
-
 #ifdef PDU_HEAD_GROW_WITH_PCI
 	int offset;
-
-	LOG_INFO("PDU_HEAD_GROW_WITH_PCI");
 
 	if (du->pci.h != NULL)
 		offset = du->skb->data - du->pci.h;
@@ -283,19 +279,13 @@ int du_head_grow(struct du * du, size_t bytes)
 	if (unlikely(skb_headroom(du->skb) < bytes)){
 		LOG_DBG("Can not grow DU head, no mem... (%d < %zd)",
 			 skb_headroom(du->skb), bytes);
-		old_skb_data = du->skb->data;
 		if (pskb_expand_head(du->skb, bytes, 0, GFP_ATOMIC)) {
 			LOG_ERR("Could not add headroom to DU...");
 			return -1;
 		}
 
-		LOG_INFO("Expanded DU head");
-
 		/* Expand head has moved the pointers, update PCI */
 		if (du->pci.h != NULL) {
-			LOG_INFO("Head expanded, updating PCI. Old skb data: "
-				 "%pK, new skb data: %pK, old PCI.h: %pK",
-				 old_skb_data, du->skb->data, du->pci.h);
 			du->pci.h = du->skb->data;
 		}
 	}
@@ -309,7 +299,6 @@ int du_head_grow(struct du * du, size_t bytes)
 		/* pci.h remains the same, skb->data is pushed bytes over */
 		/* pci.h. Used when relaying */
 		skb_push(du->skb, offset + bytes);
-		LOG_INFO("Here, pushed %zd bytes", offset + bytes);
 	}
 #else
 	skb_push(du->skb, bytes);
