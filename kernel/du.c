@@ -23,7 +23,7 @@
 #include <linux/export.h>
 #include <linux/types.h>
 
-#define RINA_PREFIX "pdu"
+#define RINA_PREFIX "du"
 
 #include "logs.h"
 #include "utils.h"
@@ -229,7 +229,7 @@ struct du * du_create_from_skb(struct sk_buff* skb)
 	tmp->skb = skb;
 	/* init PCI */
 	tmp->pci.h = NULL;
-	//memset(&tmp->pci, 0x00, sizeof(tmp->pci));
+	memset(&tmp->pci, 0x00, sizeof(tmp->pci));
 
 	tmp->cfg = NULL;
 	tmp->sdup_head = NULL;
@@ -244,8 +244,12 @@ EXPORT_SYMBOL(du_create_from_skb);
 int du_tail_grow(struct du *du, size_t bytes)
 {
 	if (unlikely(skb_tailroom(du->skb) < bytes)){
-		LOG_ERR("Could not grow PDU tail, no mem...");
-		return -1;
+		LOG_DBG("Could not grow PDU tail, no mem... (%d < %zd)",
+			skb_tailroom(du->skb), bytes);
+		if (pskb_expand_head(du->skb, 0, bytes, GFP_ATOMIC)) {
+			LOG_ERR("Could not add tailroom to PDU...");
+			return -1;
+		}
 	}
 
 	skb_put(du->skb, bytes);
@@ -264,9 +268,10 @@ EXPORT_SYMBOL(du_tail_shrink);
 int du_head_grow(struct du * du, size_t bytes)
 {
 	if (unlikely(skb_headroom(du->skb) < bytes)){
-		LOG_DBG("Can not grow PDU head, no mem... (%d < %zd)", skb_headroom(du->skb), bytes);
+		LOG_DBG("Can not grow PDU head, no mem... (%d < %zd)",
+			 skb_headroom(du->skb), bytes);
 		if (pskb_expand_head(du->skb, bytes, 0, GFP_ATOMIC)) {
-			LOG_ERR("Could not expand PDU...");
+			LOG_ERR("Could not add headroom to PDU...");
 			return -1;
 		}
 	}
@@ -363,32 +368,6 @@ void du_attach_skb(struct du *du, struct sk_buff *skb)
 	du->skb = skb;
 }
 EXPORT_SYMBOL(du_attach_skb);
-
-struct du * du_from_buffer_ni(void *buffer)
-{
-	struct du *tmp;
-
-	if (!unlikely(buffer))
-		return NULL;
-
-	tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
-	if (!unlikely(tmp))
-		return NULL;
-
-	/* FIXME: check if skb_get is needed */
-	//tmp->skb = skb_get((struct sk_buff *)buffer);
-	tmp->skb = (struct sk_buff *)buffer;
-	tmp->cfg = NULL;
-	tmp->sdup_head = NULL;
-	tmp->sdup_tail = NULL;
-	/* init PCI */
-	memset(&tmp->pci, 0x00, sizeof(tmp->pci));
-
-	LOG_DBG("SDU allocated at %pk, with buffer %pk", tmp, tmp->skb);
-
-	return tmp;
-}
-EXPORT_SYMBOL(du_from_buffer_ni);
 
 /* For shim TCP/UDP */
 int du_shrink(struct du * du, size_t bytes)
