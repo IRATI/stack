@@ -463,7 +463,7 @@ static int check_hmac(struct sdup_crypto_ps_default_data * priv_data,
 		LOG_ERR("HMAC verification FAILED!");
 		c = (char*) data;
 		for(i=0; i<digest_size; i++) {
-			LOG_DBG("Verify digest[%d]: %u, data digest[%d]: %u",
+			LOG_INFO("Verify digest[%d]: %u, data digest[%d]: %u",
 				i, *(verify_digest+i), i, *(c + buffer_size - digest_size +i));
 		}
 		rkfree(verify_digest);
