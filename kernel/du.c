@@ -88,8 +88,6 @@ struct du *du_create_gfp(size_t data_len, gfp_t flags)
 	/* init PCI */
 	tmp->pci.h = NULL;
 	tmp->pci.len = 0;
-	//memset(&tmp->pci, 0x00, sizeof(tmp->pci));
-
 	tmp->cfg = NULL;
 	tmp->sdup_head = NULL;
 	tmp->sdup_tail = NULL;
@@ -160,7 +158,7 @@ int du_decap(struct du * du)
 	du->pci.h = du->skb->data;
 	type = pci_type(&du->pci);
 	if (unlikely(!pdu_type_is_ok(type))) {
-		LOG_ERR("Could not decap PDU. Type is not ok");
+		LOG_ERR("Could not decap DU. Type is not ok");
 		return -1;
 	}
 
@@ -170,7 +168,7 @@ int du_decap(struct du * du)
 		du->pci.len = pci_len;
 		return 0;
 	}
-	LOG_ERR("Could not decap PDU. PCI len is < 0");
+	LOG_ERR("Could not decap DU. PCI len is < 0");
 	return -1;
 }
 EXPORT_SYMBOL(du_decap);
@@ -227,15 +225,12 @@ struct du * du_create_from_skb(struct sk_buff* skb)
 		return NULL;
 
 	tmp->skb = skb;
-	/* init PCI */
 	tmp->pci.h = NULL;
-	//memset(&tmp->pci, 0x00, sizeof(tmp->pci));
-
 	tmp->cfg = NULL;
 	tmp->sdup_head = NULL;
 	tmp->sdup_tail = NULL;
 
-	LOG_DBG("SDU allocated at %pk, with skb %pk", tmp, tmp->skb);
+	LOG_DBG("DU allocated at %pk, with skb %pk", tmp, tmp->skb);
 
 	return tmp;
 }
@@ -244,10 +239,10 @@ EXPORT_SYMBOL(du_create_from_skb);
 int du_tail_grow(struct du *du, size_t bytes)
 {
 	if (unlikely(skb_tailroom(du->skb) < bytes)){
-		LOG_INFO("Could not grow PDU tail, no mem... (%d < %zd)",
+		LOG_DBG("Could not grow DU tail, no mem... (%d < %zd)",
 			skb_tailroom(du->skb), bytes);
 		if (pskb_expand_head(du->skb, 0, bytes, GFP_ATOMIC)) {
-			LOG_ERR("Could not add tailroom to PDU...");
+			LOG_ERR("Could not add tailroom to DU...");
 			return -1;
 		}
 	}
@@ -268,10 +263,10 @@ EXPORT_SYMBOL(du_tail_shrink);
 int du_head_grow(struct du * du, size_t bytes)
 {
 	if (unlikely(skb_headroom(du->skb) < bytes)){
-		LOG_INFO("Can not grow PDU head, no mem... (%d < %zd)",
+		LOG_DBG("Can not grow DU head, no mem... (%d < %zd)",
 			 skb_headroom(du->skb), bytes);
 		if (pskb_expand_head(du->skb, bytes, 0, GFP_ATOMIC)) {
-			LOG_ERR("Could not add headroom to PDU...");
+			LOG_ERR("Could not add headroom to DU...");
 			return -1;
 		}
 	}
