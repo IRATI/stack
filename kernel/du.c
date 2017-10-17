@@ -229,7 +229,7 @@ struct du * du_create_from_skb(struct sk_buff* skb)
 	tmp->skb = skb;
 	/* init PCI */
 	tmp->pci.h = NULL;
-	memset(&tmp->pci, 0x00, sizeof(tmp->pci));
+	//memset(&tmp->pci, 0x00, sizeof(tmp->pci));
 
 	tmp->cfg = NULL;
 	tmp->sdup_head = NULL;
@@ -244,7 +244,7 @@ EXPORT_SYMBOL(du_create_from_skb);
 int du_tail_grow(struct du *du, size_t bytes)
 {
 	if (unlikely(skb_tailroom(du->skb) < bytes)){
-		LOG_DBG("Could not grow PDU tail, no mem... (%d < %zd)",
+		LOG_INFO("Could not grow PDU tail, no mem... (%d < %zd)",
 			skb_tailroom(du->skb), bytes);
 		if (pskb_expand_head(du->skb, 0, bytes, GFP_ATOMIC)) {
 			LOG_ERR("Could not add tailroom to PDU...");
@@ -268,7 +268,7 @@ EXPORT_SYMBOL(du_tail_shrink);
 int du_head_grow(struct du * du, size_t bytes)
 {
 	if (unlikely(skb_headroom(du->skb) < bytes)){
-		LOG_DBG("Can not grow PDU head, no mem... (%d < %zd)",
+		LOG_INFO("Can not grow PDU head, no mem... (%d < %zd)",
 			 skb_headroom(du->skb), bytes);
 		if (pskb_expand_head(du->skb, bytes, 0, GFP_ATOMIC)) {
 			LOG_ERR("Could not add headroom to PDU...");
