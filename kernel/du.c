@@ -270,7 +270,14 @@ int du_head_grow(struct du * du, size_t bytes)
 	unsigned char * old_skb_data;
 
 #ifdef PDU_HEAD_GROW_WITH_PCI
-	int offset = du->skb->data - du->pci.h;
+	int offset;
+
+	LOG_INFO("PDU_HEAD_GROW_WITH_PCI");
+
+	if (du->pci.h != NULL)
+		offset = du->skb->data - du->pci.h;
+	else
+		offset = 0;
 #endif
 
 	if (unlikely(skb_headroom(du->skb) < bytes)){
@@ -281,6 +288,8 @@ int du_head_grow(struct du * du, size_t bytes)
 			LOG_ERR("Could not add headroom to DU...");
 			return -1;
 		}
+
+		LOG_INFO("Expanded DU head");
 
 		/* Expand head has moved the pointers, update PCI */
 		if (du->pci.h != NULL) {
