@@ -57,7 +57,6 @@ int du_head_grow(struct du * du, size_t bytes);
 int du_head_shrink(struct du * du, size_t bytes);
 void * du_sdup_head(struct du *du);
 int du_sdup_head_set(struct du *pdu, void *header);
-struct du * du_from_buffer_ni(void *buffer);
 int du_shrink(struct du * du, size_t bytes);
 
 #endif

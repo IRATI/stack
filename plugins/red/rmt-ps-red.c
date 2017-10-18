@@ -338,7 +338,9 @@ static int red_rmt_ps_set_policy_set_param(struct ps_base * bps,
 		int i;
 		size_t size = 256;
 		u8 * stab_table = rkmalloc(sizeof(*stab_table)*size, GFP_KERNEL);
-		kstrtoul(value, 16, (unsigned long *) &user_address);
+		ret = kstrtoul(value, 16, (unsigned long *) &user_address);
+		if (!ret)
+			user_address = 0;
 		user_pointer = (void __user *) user_address;
 		ret = copy_from_user(stab_table, (const void __user *) user_pointer, size*sizeof(u8));
 		if (ret !=0) {
