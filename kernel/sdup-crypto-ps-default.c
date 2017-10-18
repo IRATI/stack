@@ -426,8 +426,6 @@ static int check_hmac(struct sdup_crypto_ps_default_data * priv_data,
 	unsigned int		digest_size;
 	char *			verify_digest;
 	SHASH_DESC_ON_STACK(shash, priv_data->current_rx_state->shash);
-	int i;
-	char * c;
 
 	if (!priv_data || !du){
 		LOG_ERR("HMAC arguments not initialized!");
@@ -461,11 +459,6 @@ static int check_hmac(struct sdup_crypto_ps_default_data * priv_data,
 
 	if (memcmp(verify_digest, data+buffer_size-digest_size, digest_size)){
 		LOG_ERR("HMAC verification FAILED!");
-		c = (char*) data;
-		for(i=0; i<digest_size; i++) {
-			LOG_INFO("Verify digest[%d]: %u, data digest[%d]: %u",
-				i, *(verify_digest+i), i, *(c + buffer_size - digest_size +i));
-		}
 		rkfree(verify_digest);
 		return -1;
 	}
