@@ -16,29 +16,18 @@ before_install:
   #- sudo apt-get install libprotobuf-dev 
   - sudo apt-get install hostapd
   - sudo apt-get install wpasupplicant
-  - sudo apt-get install zlib1g-dev
 
 before_script:
-  - wget http://es.archive.ubuntu.com/ubuntu/pool/main/p/protobuf/libprotobuf9v5_2.6.1-1.3_amd64.deb
-  - wget http://es.archive.ubuntu.com/ubuntu/pool/main/p/protobuf/libprotobuf-lite9v5_2.6.1-1.3_amd64.deb
-  - wget http://es.archive.ubuntu.com/ubuntu/pool/main/p/protobuf/libprotoc9v5_2.6.1-1.3_amd64.deb
-  - wget http://es.archive.ubuntu.com/ubuntu/pool/main/p/protobuf/protobuf-compiler_2.6.1-1.3_amd64.deb
-  - wget http://es.archive.ubuntu.com/ubuntu/pool/main/p/protobuf/libprotobuf-dev_2.6.1-1.3_amd64.deb
-  - sudo dpkg -i libprotobuf9v5_2.6.1-1.3_amd64.deb
-  - sudo dpkg -i libprotobuf-lite9v5_2.6.1-1.3_amd64.deb
-  - sudo dpkg -i libprotoc9v5_2.6.1-1.3_amd64.deb
-  - sudo dpkg -i protobuf-compiler_2.6.1-1.3_amd64.deb
-  - sudo dpkg -i libprotobuf-dev_2.6.1-1.3_amd64.deb
   # Make a build and install directory 
   - mkdir build
   - mkdir install
   # Install version 2.6.1 of Protocol Buffers
-  #- wget https://github.com/google/protobuf/releases/download/v2.6.1/protobuf-2.6.1.tar.gz
-  #- tar -xvzf protobuf-2.6.1.tar.gz
-  #- cd protobuf-2.6.1
-  #- ./configure && make
-  #- sudo make install
-  #- cd ..
+  - wget https://github.com/google/protobuf/releases/download/v2.6.1/protobuf-2.6.1.tar.gz
+  - tar -xvzf protobuf-2.6.1.tar.gz
+  - cd protobuf-2.6.1
+  - ./configure && make
+  - sudo make install
+  - cd ..
 
 script:
   # Run the IRATI stack build script
