@@ -3,7 +3,7 @@ dist: trusty
 
 before_install:
   # Install Dependencies
-  - sudo apt-get update -qq
+  #- sudo apt-get update -qq
   - sudo apt-get install linux-headers-$(uname -r)
   - sudo apt-get install autoconf
   - sudo apt-get install automake
