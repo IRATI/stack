@@ -32,5 +32,6 @@ before_script:
 
 script:
   # Run the IRATI stack build script
+  - sudo ldconfig
   - sudo ./configure --prefix ~/install
   - sudo make install
