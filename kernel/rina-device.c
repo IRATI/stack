@@ -116,8 +116,8 @@ static int rina_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
 		return NET_XMIT_DROP;
 	}
 
-	len = skb->len;
-        if(kfa_flow_du_write(rina_dev->kfa, rina_dev->port, du)){
+	len = du_len(du);
+        if(kfa_flow_du_write(rina_dev->kfa, rina_dev->port, du) != len){
 		rina_dev->stats.tx_dropped++;
 		LOG_ERR("Could not xmit IP packet, unable to send to KFA...");
 		return NET_XMIT_DROP;
