@@ -145,8 +145,6 @@ static void rina_dev_setup(struct net_device *dev)
          * for the moment an upper bound is provided */
 	dev->needed_headroom += RINA_EXTRA_HEADER_LENGTH;
 	dev->needed_tailroom += RINA_EXTRA_HEADER_LENGTH;
-	/* This should be set depending on supporting DIF */
-	dev->mtu = 1400;
 	dev->hard_header_len = 0;
 	dev->addr_len = 0;
 	dev->type = ARPHRD_NONE;
@@ -171,7 +169,8 @@ static void rina_dev_setup(struct net_device *dev)
 
 struct rina_device* rina_dev_create(string_t* name,
 				    struct kfa* kfa,
-				    port_id_t port)
+				    port_id_t port,
+				    unsigned int mtu)
 {
 	int rv;
 	struct net_device *dev;
@@ -194,6 +193,7 @@ struct rina_device* rina_dev_create(string_t* name,
 	rina_dev->dev = dev;
 	rina_dev->kfa = kfa;
 	rina_dev->port = port;
+	dev->mtu = mtu;
 	memset(&rina_dev->stats, 0x00, sizeof(struct net_device_stats));
 
 	rv = register_netdev(dev);
