@@ -594,14 +594,14 @@ int kfa_flow_ub_write(struct kfa * instance,
 	while (left) {
 		copylen = min(left, max_sdu_size);
 
-		du = du_create(size);
+		du = du_create(copylen);
 		if (!du) {
 			retval = -ENOMEM;
 			goto finish;
 		}
 
 		/* NOTE: We don't handle partial copies */
-		if (copy_from_user(du_buffer(du), buffer, size)) {
+		if (copy_from_user(du_buffer(du), buffer + data_written, copylen)) {
 			du_destroy(du);
 			retval = -EIO;
 			goto finish;
@@ -1136,19 +1136,6 @@ int kfa_flow_create(struct kfa           *instance,
 	struct ipcp_flow *flow;
 	bool ip_flow = false;
 	string_t name[64];
-
-	if (!instance) {
-		LOG_ERR("Bogus kfa instance passed, bailing out");
-		return -1;
-	}
-	if (!is_port_id_ok(pid)) {
-		LOG_ERR("Bogus PID passed, bailing out");
-		return -1;
-	}
-	if (!ipcp) {
-		LOG_ERR("Bogus ipcp passed, bailing out");
-		return -1;
-	}
 
 	ip_flow = (user_ipcp_name != NULL) &&
 		  (user_ipcp_name->entity_name != NULL) &&
