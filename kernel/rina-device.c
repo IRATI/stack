@@ -38,7 +38,7 @@
 
 struct rina_device {
 	struct net_device_stats stats;
-	struct ipcp_instance* kfa_ipcp;
+	struct kfa* kfa;
 	port_id_t port;
 	struct net_device* dev;
 };
@@ -117,8 +117,7 @@ static int rina_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	}
 
 	len = skb->len;
-        if(kfa_flow_du_write(rina_dev->kfa_ipcp->data, rina_dev->port,
-        		     du, false)){
+        if(kfa_flow_du_write(rina_dev->kfa, rina_dev->port, du)){
 		rina_dev->stats.tx_dropped++;
 		LOG_ERR("Could not xmit IP packet, unable to send to KFA...");
 		return NET_XMIT_DROP;
@@ -171,15 +170,12 @@ static void rina_dev_setup(struct net_device *dev)
 }
 
 struct rina_device* rina_dev_create(string_t* name,
-				    struct ipcp_instance* kfa_ipcp,
+				    struct kfa* kfa,
 				    port_id_t port)
 {
 	int rv;
 	struct net_device *dev;
 	struct rina_device* rina_dev;
-
-	if (!kfa_ipcp || !name)
-		return NULL;
 
 	if (strlen(name) > IFNAMSIZ) {
 		LOG_ERR("Could not allocate RINA IP network device %s, "
@@ -196,7 +192,7 @@ struct rina_device* rina_dev_create(string_t* name,
 
 	rina_dev = netdev_priv(dev);
 	rina_dev->dev = dev;
-	rina_dev->kfa_ipcp = kfa_ipcp;
+	rina_dev->kfa = kfa;
 	rina_dev->port = port;
 	memset(&rina_dev->stats, 0x00, sizeof(struct net_device_stats));
 

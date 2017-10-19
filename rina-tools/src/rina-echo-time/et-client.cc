@@ -181,6 +181,7 @@ int Client::createFlow()
         if (gap >= 0)
                 qosspec.maxAllowableGap = gap;
 
+        qosspec.msg_boundaries = true;
         qosspec.delay = delay;
 
         get_current_time(begintp);
