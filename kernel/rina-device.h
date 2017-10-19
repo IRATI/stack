@@ -34,7 +34,8 @@ struct rina_device;
 
 struct rina_device* rina_dev_create(string_t *name,
 				    struct kfa* kfa,
-			  	    port_id_t port);
+			  	    port_id_t port,
+				    unsigned int mtu);
 int		    rina_dev_destroy(struct rina_device *rina_dev);
 int		    rina_dev_rcv(struct sk_buff *skb,
 			  	 struct rina_device *rina_dev);

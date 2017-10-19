@@ -1157,7 +1157,8 @@ int kfa_flow_create(struct kfa           *instance,
 	/* Determine if this is an IP tunnel */
 	if (ip_flow) {
 		sprintf(name, "rina.%u.%u", ipc_id, pid);
-		flow->ip_dev = rina_dev_create(name, instance, pid);
+		flow->ip_dev = rina_dev_create(name, instance, pid,
+					       ipcp->ops->max_sdu_size(ipcp->data));
 		if (!flow->ip_dev) {
 			LOG_ERR("Could not allocate memory for RINA IP virtual device");
 			rkfree(flow);
