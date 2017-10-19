@@ -917,6 +917,7 @@ rina::messages::qosSpecification_t* get_qosSpecification_t(
 	gpf_flow_spec->set_maxallowablegapsdu(flow_spec.maxAllowableGap);
 	gpf_flow_spec->set_delay(flow_spec.delay);
 	gpf_flow_spec->set_jitter(flow_spec.jitter);
+	gpf_flow_spec->set_msg_boundaries(flow_spec.msg_boundaries);
 
 	return gpf_flow_spec;
 }
@@ -942,6 +943,7 @@ void get_FlowSpecification(const rina::messages::qosSpecification_t &gpf_qos,
         qos.maxAllowableGap = gpf_qos.maxallowablegapsdu();
         qos.delay = gpf_qos.delay();
         qos.jitter = gpf_qos.jitter();
+        qos.msg_boundaries = gpf_qos.msg_boundaries();
 }
 }  // namespace flow_helpers
 

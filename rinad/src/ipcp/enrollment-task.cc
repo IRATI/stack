@@ -1245,6 +1245,8 @@ void EnrollmentTask::initiateEnrollment(const rina::EnrollmentRequest& request)
 	flowInformation.localAppName.processName = ipcp->get_name();
 	flowInformation.localAppName.processInstance = ipcp->get_instance();
 	flowInformation.difName = request.neighbor_.supporting_dif_name_;
+	flowInformation.flowSpecification.msg_boundaries = true;
+	flowInformation.flowSpecification.orderedDelivery = true;
 	unsigned int handle = -1;
 	try {
 		handle = irm_->allocateNMinus1Flow(flowInformation);

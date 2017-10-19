@@ -33,8 +33,9 @@ struct ipcp_instance;
 struct rina_device;
 
 struct rina_device* rina_dev_create(string_t *name,
-				    struct ipcp_instance* kfa_ipcp,
-			  	    port_id_t port);
+				    struct kfa* kfa,
+			  	    port_id_t port,
+				    unsigned int mtu);
 int		    rina_dev_destroy(struct rina_device *rina_dev);
 int		    rina_dev_rcv(struct sk_buff *skb,
 			  	 struct rina_device *rina_dev);

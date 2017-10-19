@@ -59,7 +59,6 @@ iodev_write(struct file *f, const char __user *buffer, size_t size,
         struct iodev_priv *priv = f->private_data;
         bool blocking = !(f->f_flags & O_NONBLOCK);
         ssize_t retval;
-        struct du * du;
 
         LOG_DBG("Syscall write SDU (size = %zd, port-id = %d)",
                         size, priv->port_id);
@@ -68,29 +67,12 @@ iodev_write(struct file *f, const char __user *buffer, size_t size,
                 return -EINVAL;
         }
 
-        /* NOTE: sdu_create takes the ownership of the buffer */
-        du = du_create(size);
-        if (!du) {
-                return -ENOMEM;
-        }
-        ASSERT(is_du_ok(du));
-
-        /* NOTE: We don't handle partial copies */
-        if (copy_from_user(du_buffer(du), buffer, size)) {
-                du_destroy(du);
-                return -EIO;
-        }
-
-        /* Passing ownership to the internal layers */
         ASSERT(default_kipcm);
-        retval = kipcm_du_write(default_kipcm, priv->port_id, du, blocking);
+        retval = kipcm_du_write(default_kipcm, priv->port_id, buffer,
+        			size, blocking);
         LOG_DBG("SDU write returned %zd", retval);
-        if (retval < 0) {
-                /* NOTE: Do not destroy SDU, ownership isn't our anymore */
-                return retval;
-        }
 
-        return size;
+        return retval;
 }
 
 static ssize_t

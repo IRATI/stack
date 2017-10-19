@@ -919,6 +919,16 @@ static const struct name * normal_dif_name(struct ipcp_instance_data * data)
         return &data->dif_name;
 }
 
+static size_t normal_max_sdu_size(struct ipcp_instance_data * data)
+{
+        ASSERT(data);
+        if (!data->efcpc || !data->efcpc->config)
+        	return 0;
+
+        return data->efcpc->config->dt_cons->max_pdu_size -
+        		pci_calculate_size(data->efcpc->config, PDU_TYPE_DT);
+}
+
 ipc_process_id_t normal_ipcp_id(struct ipcp_instance_data * data)
 {
 	ASSERT(data);
@@ -1233,7 +1243,8 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .disable_write             = disable_write,
         .update_crypto_state       = normal_update_crypto_state,
 	.address_change            = normal_address_change,
-        .dif_name		   = normal_dif_name
+        .dif_name		   = normal_dif_name,
+	.max_sdu_size		   = normal_max_sdu_size
 };
 
 static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
