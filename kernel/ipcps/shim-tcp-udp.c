@@ -1173,8 +1173,7 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                         LOG_DBG("This flow goes for an app");
                         if (kfa_flow_create(data->kfa, flow->port_id, ipcp,
-								data->id,
-								NULL)) {
+                        		    data->id, NULL, false)) {
                                 LOG_ERR("Could not create flow in KFA");
                                 du_destroy(du);
                                 kfa_port_id_release(data->kfa, flow->port_id);
@@ -1621,8 +1620,7 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
                 if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                         LOG_DBG("This flow goes for an app");
                         if (kfa_flow_create(data->kfa, flow->port_id, ipcp,
-								data->id,
-								NULL)) {
+                        		    data->id, NULL, false)) {
                                 LOG_ERR("Could not create flow in KFA");
                                 kfa_port_id_release(data->kfa, flow->port_id);
                                 if (flow_destroy(data, flow))
@@ -2595,6 +2593,14 @@ static const struct name * tcp_udp_dif_name(struct ipcp_instance_data * data)
         return data->dif_name;
 }
 
+static size_t tcp_udp_max_sdu_size(struct ipcp_instance_data * data)
+{
+        ASSERT(data);
+
+        /* FIXME: return a value that makes more sense */
+        return 2000000;
+}
+
 ipc_process_id_t tcp_udp_ipcp_id(struct ipcp_instance_data * data)
 {
 	ASSERT(data);
@@ -2657,7 +2663,8 @@ static struct ipcp_instance_ops tcp_udp_instance_ops = {
         .select_policy_set         = NULL,
         .update_crypto_state	   = NULL,
 	.address_change            = NULL,
-        .dif_name		   = tcp_udp_dif_name
+        .dif_name		   = tcp_udp_dif_name,
+	.max_sdu_size		   = tcp_udp_max_sdu_size
 };
 
 static int tcp_udp_init(struct ipcp_factory_data * data)

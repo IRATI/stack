@@ -560,6 +560,7 @@ struct irati_kmsg_ipcp_allocate_port {
 	ipc_process_id_t dest_ipcp_id;
 	uint32_t event_id;
 
+	bool msg_boundaries;
         struct name * app_name;
 } __attribute__((packed));
 

@@ -253,7 +253,6 @@ decode_apnameinfo(const std::string &encodedString)
 }
 
 /* CLASS FLOW SPECIFICATION */
-
 FlowSpecification::FlowSpecification() {
 	averageSDUBandwidth = 0;
 	averageBandwidth = 0;
@@ -266,6 +265,7 @@ FlowSpecification::FlowSpecification() {
 	jitter = 0;
 	delay = 0;
 	maxSDUsize = 0;
+	msg_boundaries = false;
 }
 
 FlowSpecification::FlowSpecification(struct flow_spec * fspec)
@@ -281,13 +281,15 @@ FlowSpecification::FlowSpecification(struct flow_spec * fspec)
 	jitter = fspec->jitter;
 	delay = fspec->delay;
 	maxSDUsize = fspec->max_sdu_size;
+	msg_boundaries = fspec->msg_boundaries;
 }
 
 const std::string FlowSpecification::toString() {
         std::stringstream ss;
         ss<<"Jitter: "<<jitter<<"; Delay: "<<delay<<std::endl;
         ss<<"In oder delivery: "<<orderedDelivery;
-        ss<<"; Partial delivery allowed: "<<partialDelivery<<std::endl;
+        ss<<"; Partial delivery allowed: "<<partialDelivery;
+        ss<<"; Preserve message boundaries: "<<msg_boundaries<<std::endl;
         ss<<"Max allowed gap between SDUs: "<<maxAllowableGap;
         ss<<"; Undetected bit error rate: "<<undetectedBitErrorRate<<std::endl;
         ss<<"Average bandwidth (bytes/s): "<<averageBandwidth;
@@ -313,6 +315,7 @@ struct flow_spec * FlowSpecification::to_c_flowspec() const
 	fspec->peak_bandwidth_duration = peakBandwidthDuration;
 	fspec->peak_sdu_bandwidth_duration = peakSDUBandwidthDuration;
 	fspec->undetected_bit_error_rate = undetectedBitErrorRate;
+	fspec->msg_boundaries = msg_boundaries;
 
 	return fspec;
 }

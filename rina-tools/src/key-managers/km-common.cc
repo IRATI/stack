@@ -633,6 +633,7 @@ void KMIPCResourceManager::allocate_flow(const ApplicationProcessNamingInformati
         //Request a reliable flow
         qosspec.maxAllowableGap = 0;
         qosspec.orderedDelivery = true;
+        qosspec.msg_boundaries = true;
 
         ipcManager->requestFlowAllocation(local_app_name,
         				  remote_app_name,
