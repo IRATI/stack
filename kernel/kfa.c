@@ -564,11 +564,6 @@ int kfa_flow_ub_write(struct kfa * instance,
 	size_t copylen = 0;
 	size_t data_written = 0;
 
-	if (!instance || !is_port_id_ok(id) || !is_du_ok(du)) {
-		LOG_ERR("Bogus input params, bailing out");
-		return -EINVAL;
-	}
-
 	LOG_DBG("Trying to write SDU to port-id %d", id);
 
 	spin_lock_bh(&instance->lock);
