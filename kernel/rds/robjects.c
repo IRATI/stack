@@ -142,13 +142,3 @@ void
 rset_unregister(struct rset * set)
 { return kset_unregister(to_kset(set)); }
 EXPORT_SYMBOL(rset_unregister);
-
-struct robject *rset_find_obj(struct rset *rset, const char *name)
-{
-	struct kobject * kobj;
-	kobj = kset_find_obj(to_kset(rset), name);
-	if (kobj)
-		return container_of(kobj, struct robject, kobj);
-	return NULL;
-}
-EXPORT_SYMBOL(rset_find_obj);

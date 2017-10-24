@@ -26,7 +26,9 @@
 #include "ipcp-factories.h"
 
 struct ipcp_factories {
-        struct rset * set;
+        struct rset *    set;
+        struct list_head factories;
+        spinlock_t       lock;
 };
 
 #define to_ipcp(O) container_of(O, struct ipcp_factory, robj)
@@ -51,7 +53,7 @@ struct ipcp_factories * ipcpf_init(struct robject * parent)
 {
         struct ipcp_factories * temp;
 
-        LOG_DBG("Initializing layer");
+        LOG_DBG("Initializing IPCP factories");
 
         temp = rkzalloc(sizeof(*temp), GFP_KERNEL);
         if (!temp)
@@ -59,13 +61,17 @@ struct ipcp_factories * ipcpf_init(struct robject * parent)
 
         temp->set = rset_create_and_add("ipcp-factories", parent);
         if (!temp->set) {
-                LOG_ERR("Cannot initialize layer");
+                LOG_ERR("Cannot initialize IPCP factories");
                 return NULL;
         }
 
         ASSERT(temp->set != NULL);
 
-        LOG_DBG("Layer initialized successfully");
+        spin_lock_init(&temp->lock);
+
+        INIT_LIST_HEAD(&temp->factories);
+
+        LOG_DBG("IPCP factories initialized successfully");
 
         return temp;
 }
@@ -99,14 +105,21 @@ static bool string_is_ok(const char * name)
 struct ipcp_factory * ipcpf_find(struct ipcp_factories * factories,
                                  const char *            name)
 {
-        struct robject * k;
+        struct ipcp_factory * fac;
 
         if (!factories || !factories->set || !string_is_ok(name))
                 return NULL;
 
-        k = rset_find_obj(factories->set, name);
-        if (k)
-                return to_ipcp(k);
+        spin_lock_bh(&factories->lock);
+
+        list_for_each_entry(fac, &factories->factories, list) {
+                if (string_cmp(fac->name, name) == 0) {
+                        spin_unlock_bh(&factories->lock);
+                        return fac;
+                }
+        }
+
+        spin_unlock_bh(&factories->lock);
 
         return NULL;
 }
@@ -147,6 +160,13 @@ struct ipcp_factory * ipcpf_register(struct ipcp_factories *         factories,
         if (!factory)
                 return NULL;
 
+        if (string_dup(name, &factory->name)) {
+        	LOG_ERR("Error duplicating string");
+        	rkfree(factory);
+        	return NULL;
+        }
+
+        INIT_LIST_HEAD(&factory->list);
         factory->data      = data;
         factory->ops       = ops;
         if (robject_rset_init_and_add(&factory->robj, &ipcp_factory_rtype,
@@ -170,6 +190,10 @@ struct ipcp_factory * ipcpf_register(struct ipcp_factories *         factories,
                 rkfree(factory);
                 return NULL;
         }
+
+        spin_lock(&factories->lock);
+        list_add(&factory->list, &factories->factories);
+        spin_unlock(&factories->lock);
 
         /* Double checking for bugs */
         LOG_INFO("Factory '%s' registered successfully",
@@ -219,6 +243,13 @@ int ipcpf_unregister(struct ipcp_factories * factories,
         robject_put(&factory->robj);
 	*/
 
+        spin_lock(&factories->lock);
+        if (!list_empty(&factory->list)) {
+                list_del(&factory->list);
+        }
+        spin_unlock(&factories->lock);
+
+        rkfree(factory->name);
         rkfree(factory);
 
         LOG_INFO("Factory unregistered successfully");
