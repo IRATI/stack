@@ -12,13 +12,13 @@ before_install:
   - sudo apt-get install git
   - sudo apt-get install g++
   - sudo apt-get install libssl-dev
-  #- sudo apt-get install protobuf-compiler 
-  #- sudo apt-get install libprotobuf-dev 
+  #- sudo apt-get install protobuf-compiler
+  #- sudo apt-get install libprotobuf-dev
   - sudo apt-get install hostapd
   - sudo apt-get install wpasupplicant
 
 before_script:
-  # Make a build and install directory 
+  # Make a build and install directory
   - mkdir build
   - mkdir install
   # Install version 2.6.1 of Protocol Buffers
@@ -27,11 +27,12 @@ before_script:
   - cd protobuf-2.6.1
   - ./configure && make
   - sudo make install
-  - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
   - cd ..
 
 script:
   # Run the IRATI stack build script
+  - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/install/lib
+  - export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:~/install/lib/pkgconfig
   - sudo ldconfig
   - sudo ./configure --prefix ~/install
   - sudo make install
