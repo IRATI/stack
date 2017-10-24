@@ -31,8 +31,8 @@ before_script:
 
 script:
   # Run the IRATI stack build script
-  - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:~/install/lib
-  - export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:~/install/lib/pkgconfig
+  - export LD_LIBRARY_PATH=~/install/lib:$LD_LIBRARY_PATH
+  - export PKG_CONFIG_PATH=~/install/lib/pkgconfig:$PKG_CONFIG_PATH
   - sudo ldconfig
   - sudo ./configure --prefix ~/install
   - sudo make install
