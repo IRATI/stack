@@ -92,7 +92,7 @@ echo "Starting librina phase"
 }
 
 echo "Starting rinad phase"
-(cd rinad && PKG_CONFIG_PATH=$INSTALL_PREFIX/lib/pkgconfig ./bootstrap) || {
+(cd rinad && export PKG_CONFIG_PATH=$INSTALL_PREFIX/lib/pkgconfig && ./bootstrap) || {
     echo "Cannot bootstrap"
     exit 1
 }
