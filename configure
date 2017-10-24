@@ -21,7 +21,7 @@ do
             exit 255
         fi
         ;;
-        
+
         "--tcp-udp-buffer-size")
         if [ -n "$2" ]; then
             TCP_UDP_BUFFER_SIZE=$2
@@ -86,7 +86,7 @@ echo "Starting librina phase"
     echo "Cannot bootstrap"
     exit 1
 }
-(mkdir -p $BUILDDIR/librina && cd $BUILDDIR/librina && $SRCDIR/librina/configure --disable-java-bindings $FLAGS --prefix=$INSTALL_PREFIX && make clean install) || {
+(mkdir -p $BUILDDIR/librina && cd $BUILDDIR/librina && $SRCDIR/librina/configure --disable-java-bindings $FLAGS --prefix=$INSTALL_PREFIX && make clean install && sudo ldconfig) || {
     echo "Cannot complete librina phase"
     exit 1
 }
