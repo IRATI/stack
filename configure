@@ -86,13 +86,13 @@ echo "Starting librina phase"
     echo "Cannot bootstrap"
     exit 1
 }
-(mkdir -p $BUILDDIR/librina && cd $BUILDDIR/librina && $SRCDIR/librina/configure --disable-java-bindings $FLAGS --prefix=$INSTALL_PREFIX && make clean install && sudo ldconfig) || {
+(mkdir -p $BUILDDIR/librina && cd $BUILDDIR/librina && $SRCDIR/librina/configure --disable-java-bindings $FLAGS --prefix=$INSTALL_PREFIX && make clean install) || {
     echo "Cannot complete librina phase"
     exit 1
 }
 
 echo "Starting rinad phase"
-(cd rinad && ./bootstrap) || {
+(cd rinad && PKG_CONFIG_PATH=$INSTALL_PREFIX/lib/pkgconfig ./bootstrap) || {
     echo "Cannot bootstrap"
     exit 1
 }
