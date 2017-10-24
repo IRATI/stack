@@ -39,11 +39,12 @@ of IRATI in future releases.
 ## 2. Build instructions                                                       #
 #############################################################################
 
-### Building on Debian 8
+### Building on Ubuntu 16.04 and Debian 8
 #############################################################################
 
-For the kernel modules, a Linux kernel with a version between 4.1 and 4.9 (included) has to be installed in 
-the system, with the kernel headers.
+**NOTE for Debian 8**: For the kernel modules, a Linux kernel with a version between 4.1 
+and 4.9 (included) has to be installed in the system, with the kernel headers. Ubuntu 
+16.04 already comes with Linux kernel 4.4, therefore no new kernel needs to be installed. 
 
 Once this is done, please install user-space dependencies
 
@@ -55,9 +56,9 @@ Once this is done, please install user-space dependencies
     $ apt-get install pkg-config
     $ apt-get install git
     $ apt-get install g++
-    $ apt-get install libssl-dev=1.0.1k-3
-    $ apt-get install protobuf-compiler=2.6.1-1
-    $ apt-get install libprotobuf-dev=2.6.1-1
+    $ apt-get install libssl-dev
+    $ apt-get install protobuf-compiler
+    $ apt-get install libprotobuf-dev
     $ apt-get install hostapd (if the system will be configured as an access point)
     $ apt-get install wpasupplicant (if the system will be configured as a mobile host)
 
