@@ -96,8 +96,10 @@ echo "Starting rinad phase"
     echo "Cannot bootstrap"
     exit 1
 }
-(mkdir -p $BUILDDIR/rinad && cd $BUILDDIR/rinad && PKG_CONFIG_PATH=$INSTALL_PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$INSTALL_PREFIX/lib:$LD_LIBRARY_PATH $SRCDIR/rinad/configure --prefix=$INSTALL_PREFIX --disable-java-bindings $FLAGS && echo $PKG_CONFIG_PATH) || {
-    echo "Cannot complete rinad phase"
+(mkdir -p $BUILDDIR/rinad && cd $BUILDDIR/rinad && PKG_CONFIG_PATH=$INSTALL_PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$INSTALL_PREFIX/lib:$LD_LIBRARY_PATH $SRCDIR/rinad/configure --prefix=$INSTALL_PREFIX --disable-java-bindings $FLAGS) || {
+    echo "Cannot complete rinad phase \n"
+    echo $PKG_CONFIG_PATH
+    pkg-config --list-all
     exit 1
 }
 
