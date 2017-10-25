@@ -1004,6 +1004,7 @@ void MobilityManager::execute_handover4(const rina::MediaReport& report)
 
 	//Enroll to mobile DIF
 	mob_neigh_data.supportingDifName.processName = next_dif;
+	mob_neigh_data.difName.processName = "mobile.DIF";
 
 	if(IPCManager->enroll_to_dif(this, &promise, mobi1_ipcp->get_id(), mob_neigh_data, true, neighbor) == IPCM_FAILURE ||
 			promise.wait() != IPCM_SUCCESS) {
