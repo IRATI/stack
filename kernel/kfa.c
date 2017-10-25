@@ -594,9 +594,11 @@ int kfa_flow_ub_write(struct kfa * instance,
 	atomic_inc(&flow->writers);
 
 	while (left) {
+		spin_unlock_bh(&instance->lock);
+
 		copylen = min(left, max_sdu_size);
 
-		du = du_create_ni(copylen);
+		du = du_create(copylen);
 		if (!du) {
 			retval = -ENOMEM;
 			goto finish;
@@ -608,6 +610,8 @@ int kfa_flow_ub_write(struct kfa * instance,
 			retval = -EIO;
 			goto finish;
 		}
+
+		spin_lock_bh(&instance->lock);
 
 		if (blocking) { /* blocking I/O */
 			if (flow->wqs == 0) {
