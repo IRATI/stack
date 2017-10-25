@@ -1,6 +1,11 @@
 sudo: enabled
 dist: trusty
 
+env:
+   INSTALL_PREFIX=~/install
+   PKG_CONFIG_PATH=$INSTALL_PREFIX/lib/pkgconfig 
+   LD_LIBRARY_PATH=$INSTALL_PREFIX/lib:$LD_LIBRARY_PATH
+
 before_install:
   # Install Dependencies
   #- sudo apt-get update -qq
@@ -32,5 +37,5 @@ before_script:
 script:
   # Run the IRATI stack build script
   - sudo ldconfig
-  - sudo ./configure --prefix ~/install
+  - sudo ./configure --prefix $INSTALL_PREFIX
   - sudo make install
