@@ -144,7 +144,7 @@ PKG_CHECK_MODULES([LIBRINA], [librina],, [
 # FIXME: A cleaner solution would be better
 AC_SUBST([LIBRINA_VERSION],`pkg-config --modversion librina`)
 
-PKG_CHECK_MODULES([LIBRINA_API], [librina-api >= 0.2.0],, [
+PKG_CHECK_MODULES([LIBRINA_API], [librina-api],, [
     AC_MSG_ERROR([Your system lacks of librina-api support])
 ])
 # FIXME: A cleaner solution would be better
