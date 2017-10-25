@@ -88,7 +88,7 @@ struct ipcp_instance_data {
 static int kfa_flow_deallocate_worker(void *data);
 
 port_id_t kfa_port_id_reserve(struct kfa      *instance,
-			      ipc_process_id_t id)
+			      ipc_process_id_t id, gfp_t flags)
 {
 	port_id_t     pid;
 
@@ -105,7 +105,7 @@ port_id_t kfa_port_id_reserve(struct kfa      *instance,
 		return port_id_bad();
 	}
 
-	pid = pidm_allocate(instance->pidm);
+	pid = pidm_allocate(instance->pidm, flags);
 	if (!is_port_id_ok(pid)) {
 		spin_unlock_bh(&instance->lock);
 		LOG_ERR("Cannot get a port-id");

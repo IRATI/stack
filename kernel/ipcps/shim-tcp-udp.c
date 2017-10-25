@@ -1149,7 +1149,8 @@ static int udp_process_msg(struct ipcp_instance_data * data,
                 }
 
                 flow->port_id_state = PORT_STATE_PENDING;
-                flow->port_id       = kfa_port_id_reserve(data->kfa, data->id);
+                flow->port_id       = kfa_port_id_reserve(data->kfa, data->id,
+                					  GFP_ATOMIC);
                 flow->user_ipcp     = user_ipcp;
                 flow->sock          = sock;
                 flow->fspec_id      = 0;
@@ -1596,7 +1597,8 @@ static int tcp_process(struct ipcp_instance_data * data, struct socket * sock)
 
                 flow->port_id_state = PORT_STATE_PENDING;
                 flow->fspec_id      = 1;
-                flow->port_id       = kfa_port_id_reserve(data->kfa, data->id);
+                flow->port_id       = kfa_port_id_reserve(data->kfa, data->id,
+                					  GFP_ATOMIC);
                 flow->sock          = acsock;
 
                 spin_lock_bh(&data->lock);

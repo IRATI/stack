@@ -1094,7 +1094,8 @@ static int eth_vlan_rcv_worker(void * o)
 
         /* Continue filling the flow data that was started in the interrupt */
         flow->user_ipcp     = user_ipcp;
-        flow->port_id       = kfa_port_id_reserve(data->kfa, data->id);
+        flow->port_id       = kfa_port_id_reserve(data->kfa, data->id,
+        					  GFP_ATOMIC);
 
         if (!is_port_id_ok(flow->port_id)) {
                 LOG_DBG("Port id is not ok");

@@ -92,7 +92,7 @@ int pidm_allocated(struct pidm * instance, port_id_t port_id)
         return 0;
 }
 
-port_id_t pidm_allocate(struct pidm * instance)
+port_id_t pidm_allocate(struct pidm * instance, gfp_t flags)
 {
 	struct alloc_pid * new_port_id;
         port_id_t pid;
@@ -116,7 +116,7 @@ port_id_t pidm_allocate(struct pidm * instance)
         	}
         }
 
-        new_port_id = rkmalloc(sizeof(*new_port_id), GFP_KERNEL);
+        new_port_id = rkmalloc(sizeof(*new_port_id), flags);
         if (!new_port_id)
         	return port_id_bad();
 

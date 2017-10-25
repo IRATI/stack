@@ -166,7 +166,7 @@ static int notify_ipcp_allocate_flow_request(irati_msg_port_t ctrl_port,
                 goto fail;
         }
 
-        pid = kfa_port_id_reserve(kipcm->kfa, ipc_id);
+        pid = kfa_port_id_reserve(kipcm->kfa, ipc_id, GFP_KERNEL);
         ASSERT(is_port_id_ok(pid));
 
         if (kipcm_pmap_add(kipcm->messages->ingress, pid, msg->event_id)) {
@@ -2318,7 +2318,7 @@ port_id_t kipcm_flow_create(struct kipcm     *kipcm,
                 return port_id_bad();
         }
 
-        pid = kfa_port_id_reserve(kipcm->kfa, ipc_id);
+        pid = kfa_port_id_reserve(kipcm->kfa, ipc_id, GFP_KERNEL);
         if (!is_port_id_ok(pid)) {
                 KIPCM_UNLOCK(kipcm);
                 return port_id_bad();

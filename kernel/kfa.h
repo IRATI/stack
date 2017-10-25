@@ -35,7 +35,8 @@ int	    kfa_destroy(struct kfa *instance);
 
 /* Only requests the pidm to reserve a valid port-id */
 port_id_t   kfa_port_id_reserve(struct kfa      *instance,
-				ipc_process_id_t id);
+				ipc_process_id_t id,
+				gfp_t flags);
 
 /* Rquest the pidm to release a valid port-id */
 int	    kfa_port_id_release(struct kfa *instance,
