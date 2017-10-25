@@ -224,6 +224,9 @@ struct flow_spec {
         /* A value of 0 indicates 'do not care' */
         /* FIXME: This uint_t has to be transformed back to double */
         uint32_t undetected_bit_error_rate;
+
+        /* Preserve message boundaries */
+        bool msg_boundaries;
 };
 
 struct policy_parm {

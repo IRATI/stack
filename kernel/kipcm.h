@@ -55,7 +55,8 @@ int            kipcm_ipc_destroy(struct kipcm *   kipcm,
 /* If successful: takes the ownership of the DU */
 int            kipcm_du_write(struct kipcm * kipcm,
                                port_id_t      id,
-                               struct du *   du,
+			       const char __user *buffer,
+			       size_t size,
                                bool blocking);
 /* If successful: passes the ownership of the SDU */
 int            kipcm_du_read(struct kipcm * kipcm,
@@ -71,6 +72,7 @@ int            kipcm_mgmt_du_write(struct kipcm *   kipcm,
 	                           struct du *   du);
 port_id_t      kipcm_flow_create(struct kipcm *   kipcm,
 				 ipc_process_id_t ipc_id,
+				 bool		  msg_boundaries,
 				 struct name *    process_name);
 
 int            kipcm_flow_destroy(struct kipcm *   kipcm,

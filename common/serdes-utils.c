@@ -521,7 +521,7 @@ int flow_spec_serlen(const struct flow_spec * fspec)
 {
 	if (!fspec) return 0;
 
-	return 8 * sizeof(uint32_t) + sizeof(int32_t) + 2* sizeof(bool);
+	return 8 * sizeof(uint32_t) + sizeof(int32_t) + 3* sizeof(bool);
 }
 
 void serialize_flow_spec(void **pptr, const struct flow_spec *fspec)
@@ -539,6 +539,7 @@ void serialize_flow_spec(void **pptr, const struct flow_spec *fspec)
 	serialize_obj(*pptr, uint32_t, fspec->peak_bandwidth_duration);
 	serialize_obj(*pptr, uint32_t, fspec->peak_sdu_bandwidth_duration);
 	serialize_obj(*pptr, int32_t, fspec->undetected_bit_error_rate);
+	serialize_obj(*pptr, bool, fspec->msg_boundaries);
 }
 
 int deserialize_flow_spec(const void **pptr, struct flow_spec ** fspec)
@@ -558,6 +559,7 @@ int deserialize_flow_spec(const void **pptr, struct flow_spec ** fspec)
 	deserialize_obj(*pptr, uint32_t, &(*fspec)->peak_bandwidth_duration);
 	deserialize_obj(*pptr, uint32_t, &(*fspec)->peak_sdu_bandwidth_duration);
 	deserialize_obj(*pptr, int32_t, &(*fspec)->undetected_bit_error_rate);
+	deserialize_obj(*pptr, bool, &(*fspec)->msg_boundaries);
 
 	return 0;
 }

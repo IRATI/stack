@@ -1107,7 +1107,7 @@ static int eth_vlan_rcv_worker(void * o)
         if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                 LOG_DBG("This flow goes for an app");
                 if (kfa_flow_create(data->kfa, flow->port_id, ipcp, data->id,
-									NULL)) {
+                		    NULL, false)) {
                         LOG_ERR("Could not create flow in KFA");
                         kfa_port_id_release(data->kfa, flow->port_id);
                         if (flow_destroy(data, flow))
@@ -1751,6 +1751,16 @@ static const struct name * eth_vlan_dif_name(struct ipcp_instance_data * data)
         return data->dif_name;
 }
 
+static size_t eth_vlan_max_sdu_size(struct ipcp_instance_data * data)
+{
+	if (!data) {
+		LOG_ERR("Bogus data passed, bailing out");
+		return 0;
+	}
+
+        return data->dev->mtu - sizeof(struct ethhdr);
+}
+
 ipc_process_id_t eth_vlan_ipcp_id(struct ipcp_instance_data * data)
 {
 	ASSERT(data);
@@ -1813,7 +1823,8 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .select_policy_set         = NULL,
         .update_crypto_state	   = NULL,
 	.address_change            = NULL,
-        .dif_name		   = eth_vlan_dif_name
+        .dif_name		   = eth_vlan_dif_name,
+	.max_sdu_size		   = eth_vlan_max_sdu_size
 };
 
 static int ntfy_user_ipcp_on_if_state_change(struct ipcp_instance_data * data,

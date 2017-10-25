@@ -686,7 +686,8 @@ public:
 	 * @return the handle to the response message
 	 * @throws PortAllocationException if something goes wrong
 	 */
-	unsigned int allocatePortId(const ApplicationProcessNamingInformation& appName);
+	unsigned int allocatePortId(const ApplicationProcessNamingInformation& appName,
+				    const FlowSpecification& fspec);
 
 	/**
 	 * Request the kernel to free a used port-id

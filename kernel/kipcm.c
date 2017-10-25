@@ -187,7 +187,7 @@ static int notify_ipcp_allocate_flow_request(irati_msg_port_t ctrl_port,
                 user_ipcp = kfa_ipcp_instance(kipcm->kfa);
 		/* NOTE: original function called non-blocking I/O?? */
                 if (kfa_flow_create(kipcm->kfa, pid, ipc_process, ipc_id,
-									NULL)) {
+                		NULL, msg->fspec->msg_boundaries)) {
                         LOG_ERR("Could not find the user ipcp of the flow...");
                         kfa_port_id_release(kipcm->kfa, pid);
                         goto fail;
@@ -1443,6 +1443,7 @@ static int notify_allocate_port(irati_msg_port_t ctrl_port,
         ipcp_id = msg->src_ipcp_id;
         port_id = kipcm_flow_create(kipcm,
         		      	    msg->src_ipcp_id,
+				    msg->msg_boundaries,
 				    msg->app_name);
         if (port_id == port_id_bad())
         	retval = -1;
@@ -2211,31 +2212,18 @@ EXPORT_SYMBOL(kipcm_find_ipcp);
 /* ONLY USED BY APPS */
 int kipcm_du_write(struct kipcm * kipcm,
                    port_id_t      port_id,
-                   struct du *    du,
+		   const char __user *buffer,
+		   size_t size,
                    bool blocking)
 {
-        struct ipcp_instance * kfa_ipcp;
-
         IRQ_BARRIER;
 
         if (!kipcm) {
                 LOG_ERR("Bogus kipcm instance passed, bailing out");
-                du_destroy(du);
                 return -EINVAL;
         }
 
-        kfa_ipcp = kfa_ipcp_instance(kipcm->kfa);
-        if (!kfa_ipcp) {
-                LOG_ERR("Could not resolve KFA IPCP API");
-                du_destroy(du);
-                return -1;
-        }
-        LOG_DBG("Tring to write SDU to port_id %d", port_id);
-
-        /* The SDU is ours */
-        return kfa_ipcp->ops->du_write(kfa_ipcp->data,
-        				port_id,
-        				du, blocking);
+        return kfa_flow_ub_write(kipcm->kfa, port_id, buffer, size, blocking);
 }
 
 int kipcm_du_read(struct kipcm * kipcm,
@@ -2306,6 +2294,7 @@ int kipcm_mgmt_du_write(struct kipcm *   kipcm,
 /* Only called by the allocate_port netlink message used only by the normal IPCP */
 port_id_t kipcm_flow_create(struct kipcm     *kipcm,
 			    ipc_process_id_t  ipc_id,
+			    bool	      msg_boundaries,
 			    struct name      *process_name)
 {
         struct ipcp_instance *ipc_process;
@@ -2353,7 +2342,7 @@ port_id_t kipcm_flow_create(struct kipcm     *kipcm,
         }
 	/* creates a flow, default flow_opts */
         if (kfa_flow_create(kipcm->kfa, pid, ipc_process, ipc_id,
-        		    process_name)) {
+        		    process_name, msg_boundaries)) {
                 KIPCM_UNLOCK(kipcm);
                 kfa_port_id_release(kipcm->kfa, pid);
                 return port_id_bad();

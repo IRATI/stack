@@ -44,6 +44,8 @@ struct ipcp_factory {
         struct robject                  robj;
         struct ipcp_factory_data *      data;
         const struct ipcp_factory_ops * ops;
+        struct list_head       		list;
+        char * 				name;
 };
 
 struct ipcp_factories;

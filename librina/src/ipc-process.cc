@@ -692,7 +692,8 @@ void ExtendedIPCManager::queryRIBResponse(const QueryRIBRequestEvent& event,
 #endif
 }
 
-unsigned int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingInformation& appName)
+unsigned int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingInformation& appName,
+						const FlowSpecification& fspec)
 {
 	unsigned int result = 0;
 
@@ -703,6 +704,7 @@ unsigned int ExtendedIPCManager::allocatePortId(const ApplicationProcessNamingIn
         msg = new irati_kmsg_ipcp_allocate_port();
         msg->msg_type = RINA_C_IPCP_ALLOCATE_PORT_REQUEST;
         msg->app_name = appName.to_c_name();
+        msg->msg_boundaries = fspec.msg_boundaries;
         msg->src_ipcp_id = ipcProcessId;
         msg->dest_ipcp_id = ipcProcessId;
         msg->dest_port = 0;
