@@ -114,7 +114,7 @@ AC_SUBST(CXXFLAGS_EXTRA, $CXXFLAGS_EXTRA)
 
 PKG_PROG_PKG_CONFIG([0.26])
 
-PKG_CHECK_MODULES([LIBRINA], [librina >= 0.2.0],, [
+PKG_CHECK_MODULES([LIBRINA], [librina],, [
     AC_MSG_ERROR([Your system lacks of librina support])
 ])
 # FIXME: A cleaner solution would be better
