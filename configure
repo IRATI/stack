@@ -98,9 +98,7 @@ echo "Starting rinad phase"
 }
 (mkdir -p $BUILDDIR/rinad && cd $BUILDDIR/rinad && PKG_CONFIG_PATH=$INSTALL_PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$INSTALL_PREFIX/lib:$LD_LIBRARY_PATH $SRCDIR/rinad/configure --prefix=$INSTALL_PREFIX --disable-java-bindings $FLAGS) || {
     echo "Cannot complete rinad phase"
-    echo "PKG_CONFIG_PATH=" $PKG_CONFIG_PATH
-    pkg-config --modversion librina
-    more $INSTALL_PREFIX/lib/pkgconfig/librina.pc
+    echo "LIBRINA Version =" pkg-config --modversion librina
     exit 1
 }
 
@@ -111,6 +109,7 @@ echo "Starting rina-tools phase"
 }
 (mkdir -p $BUILDDIR/rina-tools && cd $BUILDDIR/rina-tools && PKG_CONFIG_PATH=$INSTALL_PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$INSTALL_PREFIX/lib:$LD_LIBRARY_PATH $SRCDIR/rina-tools/configure $FLAGS --prefix=$INSTALL_PREFIX) || {
     echo "Cannot complete rina-tools phase"
+    echo "LIBRINA Version =" pkg-config --modversion librina
     exit 1
 }
 
