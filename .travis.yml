@@ -2,8 +2,9 @@ sudo: enabled
 dist: trusty
 
 env:
+   VERSION=1.2.0
    INSTALL_PREFIX=~/install
-   PKG_CONFIG_PATH=$INSTALL_PREFIX/lib/pkgconfig 
+   PKG_CONFIG_PATH=$INSTALL_PREFIX/lib/pkgconfig
    LD_LIBRARY_PATH=$INSTALL_PREFIX/lib:$LD_LIBRARY_PATH
 
 before_install:
