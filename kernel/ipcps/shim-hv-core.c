@@ -655,7 +655,7 @@ static void shim_hv_handle_allocate_req(struct ipcp_instance_data *priv,
                 goto port_alloc;
         }
 
-        port_id = kfa_port_id_reserve(priv->kfa, priv->id, GFP_ATOMIC);
+        port_id = kfa_port_id_reserve(priv->kfa, priv->id);
         if (!is_port_id_ok(port_id)) {
                 LOG_ERR("%s: kfa_port_id_reserve() failed", __func__);
                 goto port_alloc;

@@ -28,8 +28,7 @@ struct pidm;
 struct pidm * pidm_create(void);
 int           pidm_destroy(struct pidm * instance);
 
-port_id_t     pidm_allocate(struct pidm * instance,
-			    gfp_t flags);
+port_id_t     pidm_allocate(struct pidm * instance);
 int           pidm_release(struct pidm * instance,
                            port_id_t     id);
 
