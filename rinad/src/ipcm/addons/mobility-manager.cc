@@ -115,7 +115,8 @@ MobilityManager::MobilityManager(const rinad::RINAConfiguration& config) :
 {
 	parse_configuration(config);
 	factory = IPCManager->get_ipcp_factory();
-	if (hand_state.hand_type == 2 || hand_state.hand_type == 3) {
+	if (hand_state.hand_type == 2 || hand_state.hand_type == 3
+			|| hand_state.hand_type == 4) {
 		hand_state.do_it_now = false;
 	} else {
 		hand_state.do_it_now = true;
@@ -164,7 +165,8 @@ void MobilityManager::media_reports_handler(rina::MediaReportEvent * event)
 		return;
 	}
 
-	if (hand_state.hand_type == 2 || hand_state.hand_type == 3) {
+	if (hand_state.hand_type == 2 || hand_state.hand_type == 3
+			|| hand_state.hand_type == 4) {
 		hand_state.do_it_now = false;
 	}
 
@@ -907,7 +909,7 @@ void MobilityManager::execute_handover4(const rina::MediaReport& report)
 			return;
 		}
 
-		sleep.sleepForMili(500);
+		sleep.sleepForMili(1000);
 
 		//Enroll to the internet DIF
 		int_neigh_data.supportingDifName.processName = "mobile.DIF";
@@ -921,7 +923,7 @@ void MobilityManager::execute_handover4(const rina::MediaReport& report)
 			return;
 		}
 
-		sleep.sleepForMili(500);
+		sleep.sleepForMili(1000);
 
 		//Enroll to the slice DIF
 		slice_neigh_data.supportingDifName.processName = "mobile.DIF";
