@@ -596,7 +596,7 @@ int kfa_flow_ub_write(struct kfa * instance,
 	while (left) {
 		copylen = min(left, max_sdu_size);
 
-		du = du_create(copylen);
+		du = du_create_ni(copylen);
 		if (!du) {
 			retval = -ENOMEM;
 			goto finish;
