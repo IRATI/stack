@@ -139,6 +139,15 @@ private:
 	int port_id;
 };
 
+class ETCleanStateTimerTask: public rina::TimerTask {
+public:
+	ETCleanStateTimerTask(unsigned int port_id) : pid(port_id) {};
+	void run();
+
+private:
+	unsigned int pid;
+};
+
 } //namespace rinad
 
 #endif //IPCP_RIB_DAEMON_HH
