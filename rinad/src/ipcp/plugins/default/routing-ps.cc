@@ -292,13 +292,13 @@ Graph::CheckedVertex * Graph::get_checked_vertex(const std::string& name) const
 
 void Graph::print() const
 {
-	LOG_IPCP_INFO("Graph edges:");
+	LOG_IPCP_DBG("Graph edges:");
 
 	for (std::list<Edge *>::const_iterator it = edges_.begin();
 					it != edges_.end(); it++) {
 		const Edge& e = **it;
 
-		LOG_IPCP_INFO("    (%s --> %s, %d)", e.name1_.c_str(),
+		LOG_IPCP_DBG("    (%s --> %s, %d)", e.name1_.c_str(),
 			      e.name2_.c_str(), e.weight_);
 	}
 }
@@ -977,7 +977,7 @@ void FlowStateObject::set_neighboraddresses(const std::list<unsigned int>& addre
 
 void FlowStateObject::deprecateObject(unsigned int max_age)
 {
-	LOG_IPCP_INFO("Object %s deprecated", object_name.c_str());
+	LOG_IPCP_DBG("Object %s deprecated", object_name.c_str());
 	state_up = false;
 	age = max_age +1 ;
 	seq_num++;
@@ -1213,7 +1213,7 @@ void FlowStateObjects::removeObject(const std::string& fqn)
 {
 	rina::ScopedLock g(lock);
 
-	LOG_IPCP_INFO("Trying to remove object %s", fqn.c_str());
+	LOG_IPCP_DBG("Trying to remove object %s", fqn.c_str());
 
 	std::map<std::string, FlowStateObject*>::iterator it =
 			objects.find(fqn);
@@ -1926,7 +1926,7 @@ void LinkStateRoutingPolicy::processNeighborAddressChangeEvent(rina::NeighborAdd
 
 	db_->getAllFSOs(all_fsos);
 
-	LOG_IPCP_INFO("Neighbor %s address changed: old address %d, new address %d",
+	LOG_IPCP_DBG("Neighbor %s address changed: old address %d, new address %d",
 		      event->neigh_name.c_str(),
 		      event->old_address,
 		      event->new_address);
@@ -1973,7 +1973,7 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(rina::NeighborAddedEvent 
 	std::list<unsigned int> addresses;
 	std::list<unsigned int> neigh_addresses;
 
-	LOG_IPCP_INFO("Adding new FSO to neighbor");
+	LOG_IPCP_DBG("Adding new FSO to neighbor");
 	try {
 		addresses.push_back(ipc_process_->get_address());
 		neigh_addresses.push_back(
@@ -2107,7 +2107,7 @@ void LinkStateRoutingPolicy::printNhopTable(std::list<rina::RoutingTableEntry *>
 			 ss << jt->alts.front().get_addresses_as_string() << "; ";
 		}
 
-		LOG_IPCP_INFO("%s", ss.str().c_str());
+		LOG_IPCP_DBG("%s", ss.str().c_str());
 	}
 }
 
@@ -2196,7 +2196,7 @@ void LinkStateRoutingPolicy::_routingTableUpdate()
 	//Populate addresses (right now there are only names int he RT entries)
 	populateAddresses(rt, flow_state_objects);
 
-	LOG_IPCP_INFO("Computed new Next Hop and PDU Forwarding Tables");
+	LOG_IPCP_DBG("Computed new Next Hop and PDU Forwarding Tables");
 	printNhopTable(rt);
 
 	assert(ipc_process_->resource_allocator_->pduft_gen_ps);
