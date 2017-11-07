@@ -21,7 +21,7 @@ do
             exit 255
         fi
         ;;
-        
+
         "--tcp-udp-buffer-size")
         if [ -n "$2" ]; then
             TCP_UDP_BUFFER_SIZE=$2
@@ -98,6 +98,8 @@ echo "Starting rinad phase"
 }
 (mkdir -p $BUILDDIR/rinad && cd $BUILDDIR/rinad && PKG_CONFIG_PATH=$INSTALL_PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$INSTALL_PREFIX/lib:$LD_LIBRARY_PATH $SRCDIR/rinad/configure --prefix=$INSTALL_PREFIX --disable-java-bindings $FLAGS) || {
     echo "Cannot complete rinad phase"
+    echo "LIBRINA Version ="
+    pkg-config --modversion librina
     exit 1
 }
 
@@ -108,6 +110,8 @@ echo "Starting rina-tools phase"
 }
 (mkdir -p $BUILDDIR/rina-tools && cd $BUILDDIR/rina-tools && PKG_CONFIG_PATH=$INSTALL_PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$INSTALL_PREFIX/lib:$LD_LIBRARY_PATH $SRCDIR/rina-tools/configure $FLAGS --prefix=$INSTALL_PREFIX) || {
     echo "Cannot complete rina-tools phase"
+    echo "LIBRINA Version ="
+    pkg-config --modversion librina
     exit 1
 }
 

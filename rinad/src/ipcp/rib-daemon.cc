@@ -67,6 +67,7 @@ class IPCPCDAPIOHandler : public rina::cdap::CDAPIOHandler
 	// receiving the response message
         rina::Lockable atomic_send_lock_;
         IPCPRIBDaemonImpl * rib_daemon;
+        rina::Timer timer;
 };
 
 void IPCPCDAPIOHandler::__send_message(const rina::cdap_rib::con_handle_t & con_handle,
@@ -186,7 +187,8 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
 		if (reason.compare("Flow closed") == 0) { /* XXX this will never happen */
 			manager_->removeCDAPSession(con_handle.port_id);
 		} else if (reason.find("There are no open CDAP") != std::string::npos) {
-			rinad::IPCPFactory::getIPCP()->enrollment_task_->clean_state(con_handle.port_id);
+			ETCleanStateTimerTask * task = new ETCleanStateTimerTask(con_handle.port_id);
+			timer.scheduleTask(task, 0);
 		}
 
 		atomic_send_lock_.unlock();
@@ -733,6 +735,11 @@ StopInternalFlowReaderTimerTask::StopInternalFlowReaderTimerTask(IPCPRIBDaemonIm
 void StopInternalFlowReaderTimerTask::run()
 {
 	rib_daemon->__stop_internal_flow_sdu_reader(port_id);
+}
+
+void ETCleanStateTimerTask::run()
+{
+	rinad::IPCPFactory::getIPCP()->enrollment_task_->clean_state(pid);
 }
 
 void IPCPRIBDaemonImpl::processReadManagementSDUEvent(rina::ReadMgmtSDUResponseEvent& event)

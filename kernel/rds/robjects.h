@@ -200,5 +200,4 @@ rset_create_and_add(const char *name, struct robject *parent);
 void
 rset_unregister(struct rset * set);
 
-struct robject *rset_find_obj(struct rset *rset, const char *name);
 #endif

@@ -138,13 +138,13 @@ AM_CONDITIONAL([HAVE_PYTHON_MATPLOT_LIB], [ test "$ax_cv_have_matplotlib" != "no
 
 PKG_PROG_PKG_CONFIG([0.26])
 
-PKG_CHECK_MODULES([LIBRINA], [librina >= 0.2.0],, [
+PKG_CHECK_MODULES([LIBRINA], [librina],, [
     AC_MSG_ERROR([Your system lacks of librina support])
 ])
 # FIXME: A cleaner solution would be better
 AC_SUBST([LIBRINA_VERSION],`pkg-config --modversion librina`)
 
-PKG_CHECK_MODULES([LIBRINA_API], [librina-api >= 0.2.0],, [
+PKG_CHECK_MODULES([LIBRINA_API], [librina-api],, [
     AC_MSG_ERROR([Your system lacks of librina-api support])
 ])
 # FIXME: A cleaner solution would be better
