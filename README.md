@@ -49,23 +49,13 @@ and 4.9 (included) has to be installed in the system, with the kernel headers. U
 Once this is done, please install user-space dependencies
 
     $ apt-get update
-    $ apt-get install linux-headers-$(uname -r)
-    $ apt-get install autoconf
-    $ apt-get install automake
-    $ apt-get install libtool
-    $ apt-get install pkg-config
-    $ apt-get install git
-    $ apt-get install g++
-    $ apt-get install libssl-dev
-    $ apt-get install protobuf-compiler
-    $ apt-get install libprotobuf-dev
+    $ apt-get install autoconf automake libtool pkg-config git g++ libssl-dev protobuf-compiler libprotobuf-dev socat
     $ apt-get install hostapd (if the system will be configured as an access point)
     $ apt-get install wpasupplicant (if the system will be configured as a mobile host)
 
 If you want to generate the Java bindings, the following packages are also required
 
-    $ apt-get install openjdk-6-jdk
-    $ apt-get install maven
+    $ apt-get install openjdk-6-jdk maven
 
 Required packages to be build from source (only if generation of Java bindings is required)
 
@@ -97,16 +87,10 @@ Check your kernel version (via uname -r), if it is not 4.9.24-v7+, update the di
 
 Install dependencies
 
-    $ apt-get install raspberrypi-kernel-headers
-    $ apt-get install socat
+    $ apt-get install raspberrypi-kernel-headers socat
     $ apt-get install hostapd (if the system will be configured as an access point)
     $ apt-get install wpa-supplicant (if the system will be configured as a mobile host)
-    $ apt-get install autoconf
-    $ apt-get install libtool
-    $ apt-get install git
-    $ apt-get install libssl-dev=1.0.1k-3
-    $ apt-get install protobuf-compiler=2.6.1-1
-    $ apt-get install libprotobuf-dev=2.6.1-1
+    $ apt-get install autoconf libtool git libssl-dev protobuf-compiler libprotobuf-dev
 
 Download the IRATI repo (arcfire branch) and enter the root directory
 
