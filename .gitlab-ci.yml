@@ -1,15 +1,22 @@
 stages:
   - buildstack
+  - checkstack
 
 before_script:
   - mkdir build
   - mkdir install
 
 after_script:
-  - sudo chown -R gitlab-runner:gitlab-runner . 
+  - sudo chown -R gitlab-runner:gitlab-runner .
 
 build_stack:
   stage: buildstack
   script:
     - sudo ./configure --prefix ~/install
     - sudo make install
+
+check_stack:
+    stage: checkstack
+    script:
+      - cd librina
+      - sudo make check-functional
