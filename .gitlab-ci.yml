@@ -16,7 +16,7 @@ build_stack:
     - sudo make install
 
 check_stack:
-    stage: checkstack
-    script:
-      - cd librina
-      - sudo make check-functional
+  stage: checkstack
+  script:
+    - cd librina
+    - sudo make check-functional
