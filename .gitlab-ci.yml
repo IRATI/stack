@@ -1,6 +1,5 @@
 stages:
   - buildstack
-  - checkstack
 
 before_script:
   - mkdir build
@@ -14,9 +13,5 @@ build_stack:
   script:
     - sudo ./configure --prefix ~/install
     - sudo make install
-
-check_stack:
-  stage: checkstack
-  script:
     - cd librina
     - sudo make check-functional
