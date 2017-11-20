@@ -13,5 +13,3 @@ build_stack:
   script:
     - sudo ./configure --prefix ~/install
     - sudo make install
-    - cd librina
-    - sudo make check-functional

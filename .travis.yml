@@ -40,3 +40,5 @@ script:
   - sudo ldconfig
   - sudo ./configure --prefix $INSTALL_PREFIX
   - sudo make install
+  - cd librina
+  - sudo make check-functional
