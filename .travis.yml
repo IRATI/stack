@@ -39,6 +39,7 @@ script:
   # Run the IRATI stack build script
   - sudo ldconfig
   - sudo ./configure --prefix $INSTALL_PREFIX
-  - sudo make install
-  - cd librina
+  - cd build/librina
   - sudo make check-functional
+  - cd ../..
+  - sudo make install

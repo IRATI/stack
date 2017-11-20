@@ -39,9 +39,22 @@ of IRATI in future releases.
 ## 2. Build instructions                                                    #
 #############################################################################
 
-[![Build Status of the Master branch](https://travis-ci.org/IRATI/stack.svg?branch=master)](https://travis-ci.org/IRATI/stack)
+Build Status of the Master branch on Debian via Gitlab Runner.
 
-[![Build Status of arcfire branch](https://travis-ci.org/IRATI/stack.svg?branch=arcfire)](https://travis-ci.org/IRATI/stack)
+[![pipeline status](https://gitlab.com/arcfire/irati/stack/badges/master/pipeline.svg)](https://gitlab.com/arcfire/irati/stack/commits/master)
+
+Build Status of arcfire branch on Debian via Gitlab Runner.
+
+[![pipeline status](https://gitlab.com/arcfire/irati/stack/badges/arcfire/pipeline.svg)](https://gitlab.com/arcfire/irati/stack/commits/arcfire)
+
+Build Status of the Master branch on Ubuntu via Travis CI.
+
+[![Build Status of the Master branch on Ubuntu](https://travis-ci.org/IRATI/stack.svg?branch=master)](https://travis-ci.org/IRATI/stack)
+
+Build Status of arcfire branch on Ubuntu via Travis CI.
+
+[![Build Status of arcfire branch on Ubuntu](https://travis-ci.org/IRATI/stack.svg?branch=arcfire)](https://travis-ci.org/IRATI/stack)
+
 
 
 ### Building on Ubuntu 16.04 and Debian 8
