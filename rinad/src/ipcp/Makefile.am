@@ -78,7 +78,13 @@ test_encoders_SOURCES  =			\
 	enrollment-task.cc    enrollment-task.h \
 	resource-allocator.cc    resource-allocator.h \
 	rib-daemon.h	   rib-daemon.cc \
-	routing.cc          security-manager.cc
+	routing.cc          security-manager.cc \
+	shim-wifi/shim-wifi-ipc-process.cc		\
+	shim-wifi/shim-wifi-ipc-process.h		\
+	shim-wifi/wpa_controller.h			\
+	shim-wifi/wpa_controller.cc			\
+	$(shimwifi_SOURCES)
+test_encoders_CFLAGS   = $(shimwifi_CFLAGS)
 test_encoders_CPPFLAGS = $(testsCPPFLAGS)
 test_encoders_LDADD    = $(testsLIBS)
 

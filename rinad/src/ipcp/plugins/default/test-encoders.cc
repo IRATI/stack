@@ -49,21 +49,21 @@ bool test_flow_state_object()
 	encoder.encode(fso, encoded_obj);
 	encoder.decode(encoded_obj, recovered_obj);
 
-	if (fso.get_name() != recovered_obj.get_name()) {
+	if (fso.name != recovered_obj.name) {
 		LOG_IPCP_ERR("Names are different; original: %s, recovered: %s",
-			     fso.get_name().c_str(),
-			     recovered_obj.get_name().c_str());
+			     fso.name.c_str(),
+			     recovered_obj.name.c_str());
 		return false;
 	}
 
-	if (fso.get_neighborname() != recovered_obj.get_neighborname()) {
+	if (fso.neighbor_name != recovered_obj.neighbor_name) {
 		LOG_IPCP_ERR("Neighbor names are different; original: %s, recovered: %s",
-			     fso.get_neighborname().c_str(),
-			     recovered_obj.get_neighborname().c_str());
+			     fso.neighbor_name.c_str(),
+			     recovered_obj.neighbor_name.c_str());
 		return false;
 	}
 
-	if (fso.get_addresses().size() != recovered_obj.get_addresses().size()) {
+	if (fso.addresses.size() != recovered_obj.addresses.size()) {
 		LOG_IPCP_ERR("Address sizes are different");
 		return false;
 	}
@@ -73,7 +73,7 @@ bool test_flow_state_object()
 		return false;
 	}
 
-	if (fso.get_neighboraddresses().size() != recovered_obj.get_neighboraddresses().size()) {
+	if (fso.neighbor_addresses.size() != recovered_obj.neighbor_addresses.size()) {
 		LOG_IPCP_ERR("Neighbor address sizes are different");
 		return false;
 	}
@@ -83,31 +83,27 @@ bool test_flow_state_object()
 		return false;
 	}
 
-	if (fso.get_cost() != recovered_obj.get_cost()) {
+	if (fso.cost != recovered_obj.cost) {
 		LOG_IPCP_ERR("Costs are different; original: %u, recovered: %u",
-			     fso.get_cost(),
-			     recovered_obj.get_cost());
+			     fso.cost, recovered_obj.cost);
 		return false;
 	}
 
-	if (fso.get_sequencenumber() != recovered_obj.get_sequencenumber()) {
+	if (fso.seq_num != recovered_obj.seq_num) {
 		LOG_IPCP_ERR("Sequence numbers are different; original: %d, recovered: %d",
-		             fso.get_sequencenumber(),
-		             recovered_obj.get_sequencenumber());
+		             fso.seq_num, recovered_obj.seq_num);
 		return false;
 	}
 
-	if (fso.is_state() != recovered_obj.is_state()) {
+	if (fso.state_up != recovered_obj.state_up) {
 		LOG_IPCP_ERR("States are different; original: %d, recovered: %d",
-			     fso.is_state(),
-			     recovered_obj.is_state());
+			     fso.state_up, recovered_obj.state_up);
 		return false;
 	}
 
-	if (fso.get_age() != recovered_obj.get_age()) {
+	if (fso.age != recovered_obj.age) {
 		LOG_IPCP_ERR("Ages are different; original: %u, recovered: %u",
-			     fso.get_age(),
-			     recovered_obj.get_age());
+			     fso.age, recovered_obj.age);
 		return false;
 	}
 

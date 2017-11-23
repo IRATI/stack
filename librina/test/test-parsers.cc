@@ -3284,8 +3284,8 @@ int main()
 	result = test_irati_kmsg_rmt_dump_ft(RINA_C_RMT_MODIFY_FTE_REQUEST);
 	if (result < 0) return result;
 
-	result = test_irati_kmsg_rmt_dump_ft(RINA_C_RMT_DUMP_FT_REPLY);
-	if (result < 0) return result;
+	/*result = test_irati_kmsg_rmt_dump_ft(RINA_C_RMT_DUMP_FT_REPLY);
+	if (result < 0) return result;*/
 
 	result = test_irati_kmsg_ipcp_conn_create_arrived(RINA_C_IPCP_CONN_CREATE_REQUEST);
 	if (result < 0) return result;
