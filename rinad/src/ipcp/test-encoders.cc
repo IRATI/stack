@@ -49,8 +49,8 @@ bool test_flow () {
 	rina::DTCPRateBasedFlowControlConfig rate_to_encode;
 
 	// Set
-	flow_to_encode.source_naming_info = rina::ApplicationProcessNamingInformation("test", "1");
-	flow_to_encode.destination_naming_info = rina::ApplicationProcessNamingInformation("test2", "1");
+	flow_to_encode.local_naming_info = rina::ApplicationProcessNamingInformation("test", "1");
+	flow_to_encode.remote_naming_info = rina::ApplicationProcessNamingInformation("test2", "1");
 	dtp_config_to_encode.set_dtcp_present(true);
 	dtp_config_to_encode.set_seq_num_rollover_threshold(1234);
 	dtp_config_to_encode.set_initial_a_timer(14561);
@@ -90,9 +90,9 @@ bool test_flow () {
 	encoder.decode(encoded_obj, flow_decoded);
 
 	// Assert
-	if (flow_to_encode.source_naming_info.processName != flow_decoded.source_naming_info.processName)
+	if (flow_to_encode.local_naming_info.processName != flow_decoded.local_naming_info.processName)
 		return false;
-	if (flow_to_encode.source_naming_info.processInstance != flow_decoded.source_naming_info.processInstance)
+	if (flow_to_encode.local_naming_info.processInstance != flow_decoded.local_naming_info.processInstance)
 		return false;
 
 	rina::Connection *pconnection_decoded = flow_decoded.connections.front();

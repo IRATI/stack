@@ -769,23 +769,23 @@ void populateAddresses(std::list<rina::RoutingTableEntry *>& rt,
 		++jt;
 
 		while (jt != fsos.end()) {
-			if (it->get_name() == jt->get_neighborname() &&
-					it->get_neighborname() ==  jt->get_name()) {
+			if (it->name == jt->neighbor_name &&
+					it->neighbor_name ==  jt->name) {
 
-				aux = it->get_addresses();
+				aux = it->addresses;
 				for (kt = aux.begin(); kt != aux.end(); ++kt) {
 					if (jt->contains_neighboraddress(*kt))
 						addresses.push_back(*kt);
 				}
-				name_address_map[it->get_name()] = addresses;
+				name_address_map[it->name] = addresses;
 				addresses.clear();
 
-				aux = it->get_neighboraddresses();
+				aux = it->neighbor_addresses;
 				for (kt = aux.begin(); kt != aux.end(); ++kt) {
 					if (jt->contains_address(*kt))
 						addresses.push_back(*kt);
 				}
-				name_address_map[it->get_neighborname()] = addresses;
+				name_address_map[it->neighbor_name] = addresses;
 				addresses.clear();
 
 				break;
@@ -1066,7 +1066,7 @@ int getRoutingTable_MultipathGraphRoutesTest() {
 	for (it = rtable.begin(); it != rtable.end(); ++it) {
 		const rina::RoutingTableEntry& e = **it;
 		if (e.destination.name == "d") {
-		    if (e.nextHopNames.size() != 3) {
+		    if (e.nextHopNames.size() != 4) {
 			result = -1;
 		    }
 		}

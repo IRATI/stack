@@ -79,7 +79,7 @@ int main() {
 	/* TEST ALLOCATE FLOW */
 	FlowSpecification *flowSpec = new FlowSpecification();
 	FlowRequestEvent * flowRequest = new FlowRequestEvent(*flowSpec,
-			true, *sourceName, *difName, 1234, 4545);
+			true, *sourceName, *difName, 1234, 4545, 15, 20, 4);
 	flowRequest->portId = 430;
 	ipcProcess1->allocateFlow(*flowRequest, 23);
 
@@ -92,17 +92,17 @@ int main() {
 			ApplicationRegistrationInformation(APPLICATION_REGISTRATION_SINGLE_DIF);
 	appRegInfo.difName = *difName;
 	ApplicationRegistrationRequestEvent * event = new
-			ApplicationRegistrationRequestEvent(appRegInfo, 34);
+			ApplicationRegistrationRequestEvent(appRegInfo, 34, 3, 4);
 	applicationManager->applicationRegistered(*event, *difName, 0);
 
 	/* TEST APPLICATION UNREGISTERED */
 	ApplicationUnregistrationRequestEvent * event2 = new
-			ApplicationUnregistrationRequestEvent(*sourceName, *difName, 34);
+			ApplicationUnregistrationRequestEvent(*sourceName, *difName, 34, 1, 2);
 	applicationManager->applicationUnregistered(*event2, 0);
 
 	/* TEST FLOW ALLOCATED */
 	FlowRequestEvent * flowEvent = new FlowRequestEvent(25, *flowSpec,
-			true, *sourceName, *destinationName, *difName, 3, 2323);
+			true, *sourceName, *destinationName, *difName, 3, 2323, 2, 3);
 	applicationManager->flowAllocated(*flowEvent);
 
 	factory.destroy(ipcProcess1);
