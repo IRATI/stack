@@ -26,9 +26,7 @@ cdapc_SOURCES  =						\
 	dmsworker.cc 			maworker.cc \
 	eventfilters.cc   eventfilters.h \
 	json_format.cc 		json_format.h \
-	strutil.h 		    stl_util.h \
-	map_util.h        eventsystem.h	    
-
+	eventsystem.h
 
 unittests_SOURCES  =				\
 	unittests.cc \
