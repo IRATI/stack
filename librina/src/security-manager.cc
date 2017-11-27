@@ -1364,6 +1364,8 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::crypto_state_updated(int port_id)
 
 IAuthPolicySet::AuthStatus AuthSSH2PolicySet::decryption_enabled_server(SSH2SecurityContext * sc)
 {
+	const BIGNUM *pub_key;
+
 	if (sc->state != SSH2SecurityContext::REQUESTED_ENABLE_DECRYPTION_SERVER) {
 		LOG_ERR("Wrong state of policy");
 		sec_man->destroy_security_context(sc->id);
@@ -1379,13 +1381,13 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::decryption_enabled_server(SSH2Secu
 	auth_options.encrypt_algs.push_back(sc->encrypt_alg);
 	auth_options.mac_algs.push_back(sc->mac_alg);
 	auth_options.compress_algs.push_back(sc->compress_alg);
-	auth_options.dh_public_key.data = BN_to_binary(sc->dh_state->pub_key,
-						       &auth_options.dh_public_key.length);
-
-	if (auth_options.dh_public_key.length <= 0) {
+	DH_get0_key(sc->dh_state, &pub_key, NULL);
+	auth_options.dh_public_key.length = BN_num_bytes(pub_key);
+	auth_options.dh_public_key.data = new unsigned char[auth_options.dh_public_key.length];
+	if (BN_bn2bin(pub_key, auth_options.dh_public_key.data) <= 0 ) {
 		LOG_ERR("Error transforming big number to binary");
-		sec_man->destroy_security_context(sc->id);
-		return IAuthPolicySet::FAILED;
+		delete sc;
+		throw Exception();
 	}
 
 	//Send message to peer with selected algorithms and public key
