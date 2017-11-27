@@ -875,6 +875,14 @@ void DH_get0_key(const DH *dh, const BIGNUM **pub_key, const BIGNUM **priv_key)
 	*pub_key = dh->pub_key;
 	*priv_key = dh->priv_key;
 }
+
+void DH_get0_pqg(const DH *dh, const BIGNUM **p,
+		 const BIGNUM **q, const BIGNUM **g)
+{
+	*p = dh->p;
+	*q = dh->q;
+	*g = dh->g;
+}
 #endif
 
 //Class AuthSSH2
@@ -1124,6 +1132,7 @@ int AuthSSH2PolicySet::load_authentication_keys(SSH2SecurityContext * sc)
 int AuthSSH2PolicySet::edh_init_keys(SSH2SecurityContext * sc)
 {
 	DH *dh_state;
+	const BIGNUM *p, *g;
 
 	// Init own parameters
 	if (!dh_parameters) {
@@ -1137,8 +1146,8 @@ int AuthSSH2PolicySet::edh_init_keys(SSH2SecurityContext * sc)
 	}
 
 	// Set P and G (re-use defaults or use the ones sent by the peer)
-	dh_state->p = BN_dup(dh_parameters->p);
-	dh_state->g = BN_dup(dh_parameters->g);
+	DH_get0_pqg(dh_parameters, &p, NULL, &g);
+	DH_set0_pqg(dh_state, BN_dup(p), NULL, BN_dup(g));
 
 	// Generate the public and private key pair
 	if (DH_generate_key(dh_state) != 1) {
