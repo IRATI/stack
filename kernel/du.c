@@ -22,6 +22,7 @@
 
 #include <linux/export.h>
 #include <linux/types.h>
+#include <linux/version.h>
 
 #define RINA_PREFIX "du"
 
@@ -40,7 +41,11 @@ int du_destroy(struct du * du)
 	bool free_du = false;
 
 	if (du->skb) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,13,0)
 		if (likely(atomic_read(&du->skb->users) == 1))
+#else
+		if (likely(atomic_read(&du->skb->users.refs) == 1))
+#endif
 			free_du = true;
 		kfree_skb(du->skb); /* this destroys pci too */
 		if (likely(free_du))
