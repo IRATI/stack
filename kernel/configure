@@ -62,8 +62,8 @@ done
 
 # Check if kernel headers are there for out-of-tree build
 if [ ! -d $KERNBUILDDIR ]; then
-    printmsg "Cannot find '$KERNBUILDDIR' kernel build directory"
-    printmsg "Make sure headers for the running kernel are installed"
+    echo "Cannot find '$KERNBUILDDIR' kernel build directory"
+    echo "Make sure headers for the running kernel are installed"
     exit 255
 fi
 
