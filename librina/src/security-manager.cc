@@ -859,6 +859,18 @@ SSH2SecurityContext::SSH2SecurityContext(int session_id,
 	state = BEGIN;
 }
 
+//OpenSSL 1.1 compatibility layer
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+int DH_set0_pqg(DH *dh, BIGNUM *p, BIGNUM *q, BIGNUM *g)
+{
+	dh->p = p;
+	dh->q = q;
+	dh->g = g;
+
+	return 0;
+}
+#endif
+
 //Class AuthSSH2
 const int AuthSSH2PolicySet::DEFAULT_TIMEOUT = 10000;
 const std::string AuthSSH2PolicySet::EDH_EXCHANGE = "Ephemeral Diffie-Hellman exchange";
@@ -893,6 +905,7 @@ AuthSSH2PolicySet::~AuthSSH2PolicySet()
 void AuthSSH2PolicySet::edh_init_params()
 {
 	int codes;
+	BIGNUM *p, *g;
 
 	static unsigned char dh2048_p[]={
 		0xC4,0x25,0x37,0x63,0x56,0x46,0xDA,0x97,0x3A,0x51,0x98,0xA1,
@@ -927,11 +940,26 @@ void AuthSSH2PolicySet::edh_init_params()
 		return;
 	}
 
-	dh_parameters->p = BN_bin2bn(dh2048_p,sizeof(dh2048_p),NULL);
-	dh_parameters->g = BN_bin2bn(dh2048_g,sizeof(dh2048_g),NULL);
-	if ((dh_parameters->p == NULL) || (dh_parameters->g == NULL)) {
-		LOG_ERR("Problems converting DH parameters to big number");
+	p = BN_bin2bn(dh2048_p,sizeof(dh2048_p),NULL);
+	if (p == NULL) {
+		LOG_ERR("Problems converting P to big number");
 		DH_free(dh_parameters);
+		return;
+	}
+
+	g = BN_bin2bn(dh2048_g,sizeof(dh2048_g),NULL);
+	if (g == NULL) {
+		LOG_ERR("Problems converting G to big number");
+		DH_free(dh_parameters);
+		BN_free(p);
+		return;
+	}
+
+	if (DH_set0_pqg(dh_parameters, p, NULL, g)) {
+		LOG_ERR("Problems setting P and G");
+		DH_free(dh_parameters);
+		BN_free(p);
+		BN_free(g);
 		return;
 	}
 
