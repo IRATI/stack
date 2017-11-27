@@ -869,6 +869,12 @@ int DH_set0_pqg(DH *dh, BIGNUM *p, BIGNUM *q, BIGNUM *g)
 
 	return 0;
 }
+
+void DH_get0_key(const DH *dh, const BIGNUM **pub_key, const BIGNUM **priv_key)
+{
+	*pub_key = dh->pub_key;
+	*priv_key = dh->priv_key;
+}
 #endif
 
 //Class AuthSSH2
@@ -955,7 +961,7 @@ void AuthSSH2PolicySet::edh_init_params()
 		return;
 	}
 
-	if (DH_set0_pqg(dh_parameters, p, NULL, g)) {
+	if (DH_set0_pqg(dh_parameters, p, NULL, g) != 1) {
 		LOG_ERR("Problems setting P and G");
 		DH_free(dh_parameters);
 		BN_free(p);
@@ -992,6 +998,8 @@ cdap_rib::auth_policy_t AuthSSH2PolicySet::get_auth_policy(int session_id,
 							   const cdap_rib::ep_info_t& peer_ap,
 					            	   const AuthSDUProtectionProfile& profile)
 {
+	const BIGNUM *pub_key;
+
 	if (profile.authPolicy.name_ != type) {
 		LOG_ERR("Wrong policy name: %s, expected: %s",
 				profile.authPolicy.name_.c_str(),
@@ -1032,10 +1040,10 @@ cdap_rib::auth_policy_t AuthSSH2PolicySet::get_auth_policy(int session_id,
 	options.encrypt_algs.push_back(sc->encrypt_alg);
 	options.mac_algs.push_back(sc->mac_alg);
 	options.compress_algs.push_back(sc->compress_alg);
-	options.dh_public_key.data = BN_to_binary(sc->dh_state->pub_key,
-						  &options.dh_public_key.length);
-
-	if (options.dh_public_key.length <= 0 ) {
+	DH_get0_key(sc->dh_state, &pub_key, NULL);
+	options.dh_public_key.length = BN_num_bytes(pub_key);
+	options.dh_public_key.data = new unsigned char[options.dh_public_key.length];
+	if (BN_bn2bin(pub_key, options.dh_public_key.data) <= 0 ) {
 		LOG_ERR("Error transforming big number to binary");
 		delete sc;
 		throw Exception();
