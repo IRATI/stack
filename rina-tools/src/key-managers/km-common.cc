@@ -871,17 +871,28 @@ void KeyContainerManager::set_application_process(rina::ApplicationProcess * ap)
 
 int KeyContainerManager::generate_rsa_key_pair(struct key_container * kc)
 {
-	RSA *myrsa;
+	RSA * myrsa;
+	BIO * pri, * pub;
+	BIGNUM * bne = NULL;
 	unsigned long e = RSA_3;
+	int bits = 1024;
 
-	myrsa = RSA_generate_key(1024,e,NULL,NULL);
-	if (!myrsa) {
-		LOG_ERR("Problems generating RSA key");
+	bne = BN_new();
+	if (BN_set_word(bne, e) != 1) {
+		BN_free(bne);
 		return -1;
 	}
 
-	BIO *pri = BIO_new(BIO_s_mem());
-	BIO *pub = BIO_new(BIO_s_mem());
+	myrsa = RSA_new();
+	if (RSA_generate_key_ex(myrsa, bits, bne, NULL) != 1) {
+		LOG_ERR("Problems generating RSA key");
+		RSA_free(myrsa);
+		BN_free(bne);
+		return -1;
+	}
+
+	pri = BIO_new(BIO_s_mem());
+	pub = BIO_new(BIO_s_mem());
 
 	PEM_write_bio_RSAPrivateKey(pri, myrsa, NULL, NULL, 0, NULL, NULL);
 	PEM_write_bio_RSAPublicKey(pub, myrsa);
@@ -893,6 +904,9 @@ int KeyContainerManager::generate_rsa_key_pair(struct key_container * kc)
 
 	BIO_read(pri, kc->private_key.message_, kc->private_key.size_);
 	BIO_read(pub, kc->public_key.message_, kc->public_key.size_);
+
+	RSA_free(myrsa);
+	BN_free(bne);
 
 	return 0;
 }
