@@ -867,21 +867,29 @@ int DH_set0_pqg(DH *dh, BIGNUM *p, BIGNUM *q, BIGNUM *g)
 	dh->q = q;
 	dh->g = g;
 
-	return 0;
+	return 1;
 }
 
 void DH_get0_key(const DH *dh, const BIGNUM **pub_key, const BIGNUM **priv_key)
 {
-	*pub_key = dh->pub_key;
-	*priv_key = dh->priv_key;
+	if (pub_key)
+		*pub_key = dh->pub_key;
+
+	if (priv_key)
+		*priv_key = dh->priv_key;
 }
 
 void DH_get0_pqg(const DH *dh, const BIGNUM **p,
 		 const BIGNUM **q, const BIGNUM **g)
 {
-	*p = dh->p;
-	*q = dh->q;
-	*g = dh->g;
+	if (p)
+		*p = dh->p;
+
+	if (q)
+		*q = dh->q;
+
+	if (g)
+		*g = dh->g;
 }
 #endif
 
