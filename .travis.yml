@@ -43,3 +43,5 @@ script:
   - sudo make check-functional
   - cd ../..
   - sudo make install
+  - cd build/rinad
+  - sudo make check
