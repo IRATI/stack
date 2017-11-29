@@ -11,7 +11,7 @@ COMMONCPPFLAGS =				\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)			\
 	-I$(top_srcdir)/src			\
-	-I$(top_srcdir)/src/common
+	-I$(top_srcdir)/src/common 
 	
 COMMONLIBS =								\
 	$(builddir)/../../../common/librinad.la	\
@@ -42,6 +42,17 @@ plugins_LTLIBRARIES += default.la
 
 testsCPPFLAGS = $(COMMONCPPFLAGS)
 testsLIBS =	$(COMMONLIBS)
+
+shimwifi_CPPFLAGS = -I$(top_srcdir)/src/ipcp/shim-wifi/wpa_supplicant
+
+shimwifi_CFLAGS = -DCONFIG_CTRL_IFACE		\
+		-DCONFIG_CTRL_IFACE_UNIX
+
+shimwifi_SOURCES = 				\
+	../../shim-wifi/wpa_supplicant/wpa_ctrl.c	\
+	../../shim-wifi/wpa_supplicant/os_unix.c	\
+	../../shim-wifi/wpa_controller.cc ../../shim-wifi/wpa_controller.h \
+	../../shim-wifi/shim-wifi-ipc-process.cc ../../shim-wifi/shim-wifi-ipc-process.h	
 	
 test_routing_SOURCES  =					    \
 	test-routing.cc							\
@@ -56,8 +67,11 @@ test_routing_SOURCES  =					    \
 	../../rib-daemon.h	   ../../rib-daemon.cc \
 	../../routing.cc           \
 	../../security-manager.cc \
+	$(shimwifi_SOURCES) \
 	routing-ps.cc 	     routing-ps.h
-test_routing_CPPFLAGS = $(testsCPPFLAGS) \
+test_routing_CFLAGS = $(shimwifi_CFLAGS)
+test_routing_CPPFLAGS = -I$(top_srcdir)/src/ipcp/ \ 
+             $(testsCPPFLAGS) \
 			-DPLUGINSDIR=\"$(pkglibdir)/ipcp\"
 test_routing_LDADD    = $(testsLIBS)
 
@@ -74,8 +88,11 @@ test_encoders_SOURCES  =			\
 	../../rib-daemon.h	   ../../rib-daemon.cc \
 	../../routing.cc           \
 	../../security-manager.cc \
+	$(shimwifi_SOURCES) \
 	routing-ps.cc 	     routing-ps.h
-test_encoders_CPPFLAGS = $(testsCPPFLAGS) \
+test_encoders_CFLAGS = $(shimwifi_CFLAGS)
+test_encoders_CPPFLAGS = -I$(top_srcdir)/src/ipcp/ \
+			 $(testsCPPFLAGS) \
 			-DPLUGINSDIR=\"$(pkglibdir)/ipcp\"
 test_encoders_LDADD    = $(testsLIBS)
 

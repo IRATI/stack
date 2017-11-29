@@ -60,9 +60,9 @@
 #include <google/protobuf/unknown_field_set.h>
 #include <google/protobuf/descriptor.pb.h>
 #include <google/protobuf/io/tokenizer.h>
-#include "strutil.h"
-#include "map_util.h"
-#include "stl_util.h"
+#include <google/protobuf/stubs/strutil.h>
+#include <google/protobuf/stubs/map_util.h>
+#include <google/protobuf/stubs/stl_util.h>
 #include "eventsystem.h"
 //#include <google/protobuf/stubs/strutil.h>
 //#include <google/protobuf/stubs/map_util.h>

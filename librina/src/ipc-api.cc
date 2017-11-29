@@ -323,12 +323,15 @@ FlowInformation IPCManager::internalAllocateFlowResponse(const FlowRequestEvent&
 
         // If the user of the flow is an application, init the I/O dev so that
         // data can be read and written to the flow via read/write calls
+#if STUB_API
+#else
         if (ipcProcessId == 0) {
         	initIodev(flow, flowRequestEvent.portId);
         	if (fcntl(flow->fd, F_SETFL, blocking ? 0 : O_NONBLOCK)) {
         		LOG_WARN("Failed to set blocking mode on fd %d", flow->fd);
         	}
         }
+#endif
 
         allocatedFlows[flowRequestEvent.portId] = flow;
 
@@ -590,10 +593,12 @@ FlowInformation IPCManager::commitPendingFlow(unsigned int sequenceNumber,
         if (flow == 0) {
                 throw FlowAllocationException(IPCManager::unknown_flow_error);
         }
-
+#if STUB_API
+#else
         if (flow->user_ipcp_id == 0) {
         	initIodev(flow, portId);
         }
+#endif
 
         pendingFlows.erase(sequenceNumber);
 
@@ -675,10 +680,10 @@ void IPCManager::deallocate_flow(int portId)
 	        msg.event_id = 0;
 	        irati_ctrl_mgr->send_msg((struct irati_msg_base *) &msg, true);
 	}
+#endif
 
 	allocatedFlows.erase(portId);
 	delete flow;
-#endif
 }
 
 void IPCManager::flowDeallocated(int portId)
