@@ -39,7 +39,7 @@ of IRATI in future releases.
 ## 2. Build instructions                                                       #
 #############################################################################
 
-### Building on Ubuntu 16.04 and Debian 8
+### Building on Ubuntu 16.04, Debian 8 and Debian 9
 #############################################################################
 
 **NOTE for Debian 8**: For the kernel modules, a Linux kernel with a version between 4.1 
@@ -49,17 +49,28 @@ and 4.9 (included) has to be installed in the system, with the kernel headers. U
 Once this is done, please install user-space dependencies
 
     $ apt-get update
-    $ apt-get install autoconf automake libtool pkg-config git g++ libssl-dev protobuf-compiler libprotobuf-dev socat
+    $ apt-get install autoconf automake libtool pkg-config git g++ libssl-dev protobuf-compiler libprotobuf-dev socat python linux-headers-$(uname -r)
     $ apt-get install hostapd (if the system will be configured as an access point)
     $ apt-get install wpasupplicant (if the system will be configured as a mobile host)
 
-If you want to generate the Java bindings, the following packages are also required
+Download the IRATI repo (arcfire branch) and enter the root directory
 
-    $ apt-get install openjdk-6-jdk maven
+    $ git clone -b arcfire https://github.com/IRATI/stack.git
+    $ cd stack
 
-Required packages to be build from source (only if generation of Java bindings is required)
+Build and install both kernel-space and user-space software
 
-* SWIG (version >= 2.0.8 required, 2.0.12 is known to be working fine) from http://swig.org
+    $ sudo ./configure --prefix <path to IRATI installation folder>
+    $ sudo make install
+
+### Building on Arch Linux
+#############################################################################
+
+Install user-space dependencies
+
+    $ pacman -S autoconf automake autoconf libtool pkg-config git openssl protobuf socat python linux-headers
+    $ pacman -S hostapd (if the system will be configured as an access point)
+    $ pacman -S wpa_supplicant (if the system will be configured as a mobile host)
 
 Download the IRATI repo (arcfire branch) and enter the root directory
 
@@ -79,7 +90,7 @@ Build and install both kernel-space and user-space software
 Insert the SD card into the Raspberry Pi and power it on. Log in with user 'pi' and 
 password 'raspberry'.  As root ("sudo su -" or equivalent):
 
-Check your kernel version (via uname -r), if it is not 4.9.24-v7+, update the distro
+Check your kernel version (via uname -r), if it is not at least 4.9.24-v7+, update the distro
 
     $ apt-get update
     $ apt-get dist-upgrade
