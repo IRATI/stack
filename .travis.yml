@@ -2,10 +2,20 @@ sudo: enabled
 dist: trusty
 
 env:
-   VERSION=1.2.0
-   INSTALL_PREFIX=~/install
-   PKG_CONFIG_PATH=$INSTALL_PREFIX/lib/pkgconfig
-   LD_LIBRARY_PATH=$INSTALL_PREFIX/lib:$LD_LIBRARY_PATH
+  - KERNEL_VERSION=4.1
+  - KERNEL_VERSION=4.2
+  - KERNEL_VERSION=4.3
+  - KERNEL_VERSION=4.4
+  - KERNEL_VERSION=4.5
+  - KERNEL_VERSION=4.6
+  - KERNEL_VERSION=4.7
+  - KERNEL_VERSION=4.8
+  - KERNEL_VERSION=4.9
+  - KERNEL_VERSION=4.10
+  - KERNEL_VERSION=4.11
+  - KERNEL_VERSION=4.12
+  - KERNEL_VERSION=4.13
+  - KERNEL_VERSION=local
 
 before_install:
   # Install Dependencies
@@ -34,4 +44,5 @@ before_script:
   - sudo ldconfig
 
 script:
-  - ./ci/build-all
+  - "[ ${KERNEL_VERSION} != local ] || ./ci/build-all"
+  - "[ ${KERNEL_VERSION} == local ] || ./ci/build-kernel"

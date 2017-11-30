@@ -1,5 +1,10 @@
 #!/bin/bash -eu
 
+export INSTALL_PREFIX=~/install
+export PKG_CONFIG_PATH=$INSTALL_PREFIX/lib/pkgconfig
+export LD_LIBRARY_PATH=$INSTALL_PREFIX/lib:$LD_LIBRARY_PATH
+export VERSION=1.2.0
+
 # Run the IRATI stack build script
 mkdir build
 mkdir -p $INSTALL_PREFIX
