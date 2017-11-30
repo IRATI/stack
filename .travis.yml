@@ -1,5 +1,6 @@
 sudo: enabled
 dist: trusty
+language: cpp
 
 env:
   - KERNEL_VERSION=local
