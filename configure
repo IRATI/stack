@@ -6,6 +6,7 @@ FLAGS="--enable-debug"
 TCP_UDP_BUFFER_SIZE=1500
 INSTALL_PREFIX="/"
 KERNBUILDDIR="/lib/modules/`uname -r`/build"
+BUILD_USER="y"
 
 # Option parsing
 while [[ $# > 0 ]]
@@ -42,6 +43,10 @@ do
         fi
         ;;
 
+        "--no-user")
+        BUILD_USER="n"
+        ;;
+
         *)
         echo "Unknown option '$key'"
         exit 255
@@ -50,10 +55,19 @@ do
     shift
 done
 
+# Generate the main Makefile
+cp Makefile.in Makefile
+sed -i "s|@KERNBUILDDIR@|${KERNBUILDDIR}|g" Makefile
+sed -i "s|@INSTALLDIR@|${INSTALL_PREFIX}|g" Makefile
+
 (cd kernel && ./configure --kernbuilddir $KERNBUILDDIR --tcp-udp-buffer-size $TCP_UDP_BUFFER_SIZE) || {
     echo "Cannot complete kernel configuration"
     exit 1
 }
+
+if [ "$BUILD_USER" == "n" ]; then
+    exit 0
+fi
 
 echo "Installation directory will be \`$INSTALL_PREFIX'"
 if test -n "$INSTALL_PREFIX" ; then
@@ -115,7 +129,3 @@ echo "Starting rina-tools phase"
     exit 1
 }
 
-# Generate the main Makefile
-cp Makefile.in Makefile
-sed -i "s|@KERNBUILDDIR@|${KERNBUILDDIR}|g" Makefile
-sed -i "s|@INSTALLDIR@|${INSTALL_PREFIX}|g" Makefile
