@@ -884,7 +884,6 @@ connect_to_remotes(void *opaque)
                     spec.max_sdu_gap       = 0;
                     spec.in_order_delivery = 1;
                     spec.msg_boundaries    = 1;
-                    spec.spare3            = 1;
                 }
                 wfd = rina_flow_alloc(
                     re->second.dif_name.c_str(), myname.c_str(),
