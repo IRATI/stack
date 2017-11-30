@@ -1,16 +1,26 @@
 sudo: enabled
 dist: trusty
+language: cpp
 
 env:
-   VERSION=1.2.0
-   INSTALL_PREFIX=~/install
-   PKG_CONFIG_PATH=$INSTALL_PREFIX/lib/pkgconfig
-   LD_LIBRARY_PATH=$INSTALL_PREFIX/lib:$LD_LIBRARY_PATH
+  - KERNEL_VERSION=local
+  - KERNEL_VERSION=4.1
+  - KERNEL_VERSION=4.2
+  - KERNEL_VERSION=4.3
+  - KERNEL_VERSION=4.4
+  - KERNEL_VERSION=4.5
+  - KERNEL_VERSION=4.6
+  - KERNEL_VERSION=4.7
+  - KERNEL_VERSION=4.8
+  - KERNEL_VERSION=4.9
+  - KERNEL_VERSION=4.10
+  - KERNEL_VERSION=4.11
+  - KERNEL_VERSION=4.12
+  - KERNEL_VERSION=4.13
 
 before_install:
   # Install Dependencies
-  #- sudo apt-get update -qq
-  - sudo apt-get install linux-headers-$(uname -r)
+  - sudo apt-get update -qq
   - sudo apt-get install autoconf
   - sudo apt-get install automake
   - sudo apt-get install libtool
@@ -22,21 +32,8 @@ before_install:
   #- sudo apt-get install libprotobuf-dev
   - sudo apt-get install hostapd
   - sudo apt-get install wpasupplicant
-
-before_script:
-  # Make a build and install directory
-  - mkdir build
-  - mkdir install
-  # Install version 2.6.1 of Protocol Buffers
-  - wget https://github.com/google/protobuf/releases/download/v2.6.1/protobuf-2.6.1.tar.gz
-  - tar -xvzf protobuf-2.6.1.tar.gz
-  - cd protobuf-2.6.1
-  - ./configure && make
-  - sudo make install
-  - cd ..
+  - sudo apt-get install linux-headers-$(uname -r)
 
 script:
-  # Run the IRATI stack build script
-  - sudo ldconfig
-  - sudo ./configure --prefix $INSTALL_PREFIX
-  - sudo make install
+  - "[ ${KERNEL_VERSION} != local ] || ./ci/build-all"
+  - "[ ${KERNEL_VERSION} == local ] || ./ci/build-kernel"

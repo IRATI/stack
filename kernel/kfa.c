@@ -22,15 +22,10 @@
  */
 
 #include <linux/export.h>
-
-/* For sdu_ready */
 #include <linux/kfifo.h>
-
-/* For wait_queue */
 #include <linux/sched.h>
-
-/* For POLLIN etc. */
 #include <linux/poll.h>
+#include <linux/version.h>
 
 #define RINA_PREFIX "kfa"
 
@@ -635,7 +630,11 @@ int kfa_flow_ub_write(struct kfa * instance,
 				LOG_DBG("Write woken up (%d)", retval);
 
 				if (retval < 0) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,11,0)
 					if (signal_pending(current)) {
+#else
+					if (unlikely(test_tsk_thread_flag(current, TIF_SIGPENDING))) {
+#endif
 						LOG_DBG("A signal is pending");
 #if 0
 						LOG_DBG("Pending signal (0x%08zx%08zx)",
@@ -945,7 +944,11 @@ int kfa_flow_du_read(struct kfa  *instance,
 			LOG_DBG("Read woken up (%d)", retval);
 
 			if (retval < 0) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,11,0)
 				if (signal_pending(current)) {
+#else
+				if (unlikely(test_tsk_thread_flag(current, TIF_SIGPENDING))) {
+#endif
 					LOG_DBG("A signal is pending");
 #if 0
 					LOG_DBG("Pending signal (0x%08zx%08zx)",

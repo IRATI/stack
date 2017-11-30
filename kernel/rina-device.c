@@ -161,7 +161,11 @@ static void rina_dev_setup(struct net_device *dev)
 #endif
 	netif_keep_dst(dev);
 	dev->features = NETIF_F_HW_CSUM;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,12,0)
 	dev->destructor	= rina_dev_free;
+#else
+	dev->priv_destructor = rina_dev_free;
+#endif
 	dev->netdev_ops	= &rina_dev_ops;
 
 	return;

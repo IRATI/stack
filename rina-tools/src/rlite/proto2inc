@@ -1,0 +1,55 @@
+#!/bin/sh
+
+#
+# proto2inc
+#
+# Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
+#
+
+rm Makefile.inc
+
+cat > Makefile.inc <<EOF
+protoSOURCES =
+DISTCLEANFILES =
+
+EOF
+
+for i in *.proto; do
+    name=`echo $i|sed -e s,\.proto,,`
+    cat >> Makefile.inc << EOF
+$name.stamp: $name.proto
+	rm -f $name.tmp
+	touch $name.tmp
+	\$(PROTOC) -I\$(builddir) -I\$(srcdir)	\\
+		--cpp_out=\$(builddir)		\\
+		\$(srcdir)/$name.proto
+	mv -f $name.tmp \$@
+
+$name.pb.h $name.pb.cc: $name.stamp
+	if test -f \$@; then :; else \\
+	  trap 'rm -rf $name.lock $name.stamp' 1 2 13 15; \\
+	  if mkdir $name.lock 2>/dev/null; then \\
+	    rm -f $name.stamp; \\
+	    \$(MAKE) \$(AM_MAKEFLAGS) $name.stamp; \\
+	    result=\$\$?; rm -rf $name.lock; exit \$\$result; \\
+	  else \\
+	    while test -d $name.lock; do sleep 1; done; \\
+	    test -f $name.stamp; \\
+	  fi; \\
+	fi
+
+DISTCLEANFILES +=                               \\
+        $name.pb.h $name.pb.cc $name.stamp
+
+MOSTLYCLEANFILES +=                             \\
+        $name.tmp
+
+EXTRA_DIST +=                                   \\
+        $name.proto
+
+protoSOURCES += $name.pb.cc $name.pb.h
+
+
+EOF
+
+done

@@ -24,6 +24,7 @@
 #include <linux/export.h>
 #include <linux/types.h>
 #include <linux/skbuff.h>
+#include <linux/version.h>
 
 #define RINA_PREFIX "pci"
 
@@ -722,7 +723,11 @@ int pci_release(struct pci *pci)
 	if (!du)
 		return -1;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,13,0)
 	if (unlikely(atomic_read(&du->skb->users) == 1))
+#else
+	if (unlikely(atomic_read(&du->skb->users.refs) == 1))
+#endif
 		return du_destroy(du);
 
 	kfree_skb(du->skb);
