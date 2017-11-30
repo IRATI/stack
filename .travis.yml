@@ -9,8 +9,7 @@ env:
 
 before_install:
   # Install Dependencies
-  #- sudo apt-get update -qq
-  - sudo apt-get install linux-headers-$(uname -r)
+  - sudo apt-get update -qq
   - sudo apt-get install autoconf
   - sudo apt-get install automake
   - sudo apt-get install libtool
@@ -22,11 +21,9 @@ before_install:
   #- sudo apt-get install libprotobuf-dev
   - sudo apt-get install hostapd
   - sudo apt-get install wpasupplicant
+  - sudo apt-get install linux-headers-$(uname -r)
 
 before_script:
-  # Make a build and install directory
-  - mkdir build
-  - mkdir install
   # Install version 2.6.1 of Protocol Buffers
   - wget https://github.com/google/protobuf/releases/download/v2.6.1/protobuf-2.6.1.tar.gz
   - tar -xvzf protobuf-2.6.1.tar.gz
@@ -34,9 +31,11 @@ before_script:
   - ./configure && make
   - sudo make install
   - cd ..
+  - sudo ldconfig
 
 script:
   # Run the IRATI stack build script
-  - sudo ldconfig
-  - sudo ./configure --prefix $INSTALL_PREFIX
+  - mkdir build
+  - mkdir -p $INSTALL_PREFIX
+  - ./configure --prefix $INSTALL_PREFIX
   - sudo make install
