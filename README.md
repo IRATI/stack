@@ -1,19 +1,17 @@
-#############################################################################
-## Table of contents                                                        #
-#############################################################################
+## Table of contents
+````
 
-* 1. Introduction
-* 2. Build instructions
-* 3. Running and configuring IRATI
-    * 3.1 Loading the kernel modules
-    * 3.2 The configuration files
-    * 3.3 Running the IPC Manager Daemon
-* 4. Tutorials
-* 5. Overview of the software components
+1. Introduction
+2. Build instructions
+3. Running and configuring IRATI
+    3.1 Loading the kernel modules
+    3.2 The configuration files
+    3.3 Running the IPC Manager Daemon
+4. Tutorials
+5. Overview of the software components
+````
 
-#############################################################################
-## 1. Introduction                                                          #
-#############################################################################
+## 1. Introduction
 
 IRATI is an open source implementation of the RINA architecture targeted to the OS/Linux 
 system, initially developed by the FP7-IRATI project (for information about RINA please 
@@ -35,12 +33,9 @@ with each system having up to 10 IPC Processes instantiated), during relatively 
 up to a day depending on the experiment tested). We are working on improving the stability and robustness 
 of IRATI in future releases.
 
-#############################################################################
-## 2. Build instructions                                                       #
-#############################################################################
+## 2. Build instructions
 
-### Building on Ubuntu 16.04, Debian 8 and Debian 9
-#############################################################################
+### 2.1. Building on Ubuntu 16.04, Debian 8 and Debian 9
 
 **NOTE for Debian 8**: For the kernel modules, a Linux kernel with a version between 4.1 
 and 4.9 (included) has to be installed in the system, with the kernel headers. Ubuntu 
@@ -63,8 +58,10 @@ Build and install both kernel-space and user-space software
     $ sudo ./configure --prefix <path to IRATI installation folder>
     $ sudo make install
 
-### Building on Arch Linux
-#############################################################################
+(`sudo` is not necessary in the `./configure` phase if the current user has
+write permissions on the directory specified with `--prefix`).
+
+### 2.2. Building on Arch Linux
 
 Install user-space dependencies
 
@@ -82,8 +79,10 @@ Build and install both kernel-space and user-space software
     $ sudo ./configure --prefix <path to IRATI installation folder>
     $ sudo make install
 
-### Building on Raspbian
-#############################################################################
+(`sudo` is not necessary in the `./configure` phase if the current user has
+write permissions on the directory specified with `--prefix`).
+
+### 2.3. Building on Raspbian
 
 (Tested with Raspberry Pi model 3B)
 
@@ -113,12 +112,12 @@ Build and install both kernel-space and user-space software
     $ sudo ./configure --prefix <path to IRATI installation folder>
     $ sudo make install
 
-#############################################################################
-## 3. Running and configuring IRATI                                         #
-#############################################################################
+(`sudo` is not necessary in the `./configure` phase if the current user has
+write permissions on the directory specified with `--prefix`).
+
+## 3. Running and configuring IRATI
 
 ### 3.1. Loading the required Kernel modules
-#############################################################################
 
 To load the IRATI kernel modules, just call the load-rina-modules script:
 
@@ -128,7 +127,6 @@ Next, the IPC Manager (IPCM) has to be started in userspace, which is the local 
 The IPCM needs some configuration information.
 
 ### 3.2 The IPC Manager configuration files
-#############################################################################
 
 #### 3.2.1 Main configuration file
 The main configuration file is located in your `INSTALLATION_PATH/etc/ipcmanager.conf`. It contains 
@@ -217,7 +215,6 @@ it will fail. The contents of the da.map file can be modified while the IPC Mana
     ],
 
 ### 3.3 Running the IPC Manager Daemon
-#############################################################################
 Once the configuration file is ready you can un the IPC Manager Daemon. To do so go to the 
 INSTALLATION_PATH/bin folder and type:
 
@@ -271,14 +268,10 @@ Example of IPCM console output:
 Now applications can be run that use the IPC API. Look at the Tutorials section for some step-by-step 
 examples on how to use the rina-echo-time test application to experiment with IRATI.
 
-#############################################################################
-## 4. Tutorials                                                             #
-#############################################################################
+## 4. Tutorials
 Several tutorials are available at https://github.com/IRATI/stack/wiki/Tutorials
 
-#############################################################################
-## 5. Overview of the software components                                   #
-#############################################################################
+## 5. Overview of the software components
 This section provides an overview of the software architecture and components of IRATI. For a more detailed 
 explanation we direct the reader to FP7-IRATI's at http://irati.eu:
  
