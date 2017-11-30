@@ -34,8 +34,4 @@ before_script:
   - sudo ldconfig
 
 script:
-  # Run the IRATI stack build script
-  - mkdir build
-  - mkdir -p $INSTALL_PREFIX
-  - ./configure --prefix $INSTALL_PREFIX
-  - sudo make install
+  - ./ci/build-all
