@@ -28,12 +28,11 @@
 #include "logs.h"
 #include "utils.h"
 #include "debug.h"
-#include "dt-utils.h"
+#include "dtp-utils.h"
 /* FIXME: Maybe dtcp_cfg should be moved somewhere else and then delete this */
 #include "dtcp.h"
 #include "dtcp-ps.h"
 #include "dtcp-conf-utils.h"
-#include "dt.h"
 #include "dtp.h"
 #include "rmt.h"
 #include "dtp-ps.h"
@@ -42,11 +41,6 @@
 
 /* Maximum retransmission time is 60 seconds */
 #define MAX_RTX_WAIT_TIME msecs_to_jiffies(60000)
-
-struct cwq {
-        struct rqueue * q;
-        spinlock_t      lock;
-};
 
 struct cwq * cwq_create(void)
 {
@@ -95,7 +89,7 @@ int cwq_destroy(struct cwq * queue)
 
         ASSERT(queue->q);
 
-        if (rqueue_destroy(queue->q, (void (*)(void *)) pdu_destroy)) {
+        if (rqueue_destroy(queue->q, (void (*)(void *)) du_destroy)) {
                 LOG_ERR("Failed to destroy closed window queue");
                 return -1;
         }
@@ -106,21 +100,13 @@ int cwq_destroy(struct cwq * queue)
 }
 
 int cwq_push(struct cwq * queue,
-             struct pdu * pdu)
+             struct du * du)
 {
-        if (!queue)
-                return -1;
-
-        if (!pdu_is_ok(pdu)) {
-                LOG_ERR("Bogus PDU passed");
-                return -1;
-        }
-
         LOG_DBG("Pushing in the Closed Window Queue");
 
         spin_lock_bh(&queue->lock);
-        if (rqueue_tail_push_ni(queue->q, pdu)) {
-                pdu_destroy(pdu);
+        if (rqueue_tail_push_ni(queue->q, du)) {
+                du_destroy(du);
                 spin_unlock_bh(&queue->lock);
                 LOG_ERR("Failed to add PDU");
                 return -1;
@@ -131,15 +117,15 @@ int cwq_push(struct cwq * queue,
 }
 EXPORT_SYMBOL(cwq_push);
 
-struct pdu * cwq_pop(struct cwq * queue)
+struct du * cwq_pop(struct cwq * queue)
 {
-        struct pdu * tmp;
+        struct du * tmp;
 
         if (!queue)
                 return NULL;
 
         spin_lock(&queue->lock);
-        tmp = (struct pdu *) rqueue_head_pop(queue->q);
+        tmp = (struct du *) rqueue_head_pop(queue->q);
         spin_unlock(&queue->lock);
 
         if (!tmp) {
@@ -166,20 +152,20 @@ bool cwq_is_empty(struct cwq * queue)
 
 int cwq_flush(struct cwq * queue)
 {
-        struct pdu * tmp;
+        struct du * tmp;
 
         if (!queue)
                 return -1;
 
         spin_lock(&queue->lock);
         while (!rqueue_is_empty(queue->q)) {
-                tmp = (struct pdu *) rqueue_head_pop(queue->q);
+                tmp = (struct du *) rqueue_head_pop(queue->q);
                 if (!tmp) {
                         spin_unlock(&queue->lock);
                         LOG_ERR("Failed to retrieve PDU");
                         return -1;
                 }
-                pdu_destroy(tmp);
+                du_destroy(tmp);
         }
         spin_unlock(&queue->lock);
 
@@ -203,31 +189,18 @@ ssize_t cwq_size(struct cwq * queue)
 EXPORT_SYMBOL(cwq_size);
 
 static void enable_write(struct cwq * cwq,
-                         struct dt *  dt)
+                         struct dtp *  dtp)
 {
-        struct dtcp *        dtcp;
-        struct dtp *         dtp;
         struct dtcp_config * cfg;
         uint_t               max_len;
 
-        if (!dt)
-                return;
-
-        dtcp = dt_dtcp(dt);
-        if (!dtcp)
-                return;
-
-        cfg = dtcp_config_get(dtcp);
+        cfg = dtp->dtcp->cfg;
         if (!cfg)
-                return;
-
-        dtp = dt_dtp(dt);
-        if (!dtp)
                 return;
 
         max_len = dtcp_max_closed_winq_length(cfg);
         if (rqueue_length(cwq->q) < max_len)
-                efcp_enable_write(dt_efcp(dt));
+                efcp_enable_write(dtp->efcp);
 
         return;
 }
@@ -238,11 +211,11 @@ static bool can_deliver(struct dtp * dtp, struct dtcp * dtcp)
         bool is_wb, is_rb;
         struct dtp_ps * ps;
 
-        is_wb = dtcp_window_based_fctrl(dtcp_config_get(dtcp));
-        is_rb = dtcp_rate_based_fctrl(dtcp_config_get(dtcp));
+        is_wb = dtcp_window_based_fctrl(dtcp->cfg);
+        is_rb = dtcp_rate_based_fctrl(dtcp->cfg);
 
         if (is_wb)
-                w_ret = (dtp_sv_max_seq_nr_sent(dtp) < dtcp_snd_rt_win(dtcp));
+                w_ret = (dtp->sv->max_seq_nr_sent < dtcp->sv->snd_rt_wind_edge);
 
 	if (is_rb)
                 r_ret = !dtcp_rate_exceeded(dtcp, 0);
@@ -264,13 +237,12 @@ static bool can_deliver(struct dtp * dtp, struct dtcp * dtcp)
 }
 
 void cwq_deliver(struct cwq * queue,
-                 struct dt *  dt,
+                 struct dtp * dtp,
                  struct rmt * rmt)
 {
         struct rtxq *           rtxq;
         struct dtcp *           dtcp;
-        struct dtp *            dtp;
-        struct pdu  *           tmp;
+        struct du  *            tmp;
         bool                    rtx_ctrl;
         bool                    flow_ctrl;
 
@@ -278,50 +250,34 @@ void cwq_deliver(struct cwq * queue,
         int 			sz = 0;
 	uint_t 			sc = 0;
 
-        if (!queue)
-                return;
-
-        if (!queue->q)
-                return;
-
-        if (!dt)
-                return;
-
-        dtcp = dt_dtcp(dt);
-        if (!dtcp)
-                return;
+	dtcp = dtp->dtcp;
 
         rcu_read_lock();
         rtx_ctrl  = dtcp_ps_get(dtcp)->rtx_ctrl;
         flow_ctrl = dtcp_ps_get(dtcp)->flow_ctrl;
         rcu_read_unlock();
 
-        dtp = dt_dtp(dt);
-        if (!dtp)
-                return;
-
         if(flow_ctrl) {
-        	rate_ctrl = dtcp_rate_based_fctrl(dtcp_config_get(dtcp));
+        	rate_ctrl = dtcp_rate_based_fctrl(dtcp->cfg);
         }
 
         spin_lock(&queue->lock);
         while (!rqueue_is_empty(queue->q) && can_deliver(dtp, dtcp)) {
-                struct pdu *       pdu;
-                const struct pci * pci;
+                struct du *       du;
 
-                pdu = (struct pdu *) rqueue_head_pop(queue->q);
-                if (!pdu) {
+                du = (struct du *) rqueue_head_pop(queue->q);
+                if (!du) {
                         spin_unlock(&queue->lock);
                         return;
                 }
                 if (rtx_ctrl) {
-                        rtxq = dt_rtxq(dt);
+                        rtxq = dtp->rtxq;
                         if (!rtxq) {
                                 spin_unlock(&queue->lock);
                                 LOG_ERR("Couldn't find the RTX queue");
                                 return;
                         }
-                        tmp = pdu_dup_ni(pdu);
+                        tmp = du_dup_ni(du);
                         if (!tmp) {
                                 spin_unlock(&queue->lock);
                                 return;
@@ -329,62 +285,58 @@ void cwq_deliver(struct cwq * queue,
                         rtxq_push_ni(rtxq, tmp);
                 }
                 if(rate_ctrl) {
-                	sz = pdu_data_len(pdu);
-			sc = dtcp_sent_itu(dtcp);
+                	sz = du_data_len(du);
+			sc = dtcp->sv->pdus_sent_in_time_unit;
 
 			if(sz >= 0) {
-				if (sz + sc >= dtcp_sndr_rate(dtcp)) {
-					dtcp_sent_itu_set(
-						dtcp,
-						dtcp_sndr_rate(dtcp));
+				if (sz + sc >= dtcp->sv->sndr_rate) {
+					dtcp->sv->pdus_sent_in_time_unit =
+						dtcp->sv->sndr_rate;
 
 					break;
 				} else {
-					dtcp_sent_itu_inc(dtcp, sz);
+					dtcp->sv->pdus_sent_in_time_unit += sz;
 				}
 			}
                 }
-                pci = pdu_pci_get_ro(pdu);
-                if (dtp_sv_max_seq_nr_set(dtp,
-                                          pci_sequence_number_get(pci)))
-                        LOG_ERR("Problems setting sender left window edge");
+                dtp->sv->max_seq_nr_sent = pci_sequence_number_get(&du->pci);
 
-                dt_pdu_send(dt, rmt, pdu);
+                dtp_pdu_send(dtp, rmt, du);
         }
 
         if (!can_deliver(dtp, dtcp)) {
-        	if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
-			dt_sv_window_closed_set(dt, true);
+        	if(dtcp_window_based_fctrl(dtcp->cfg)) {
+			dtp->sv->window_closed = true;
         	}
 
-                if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
+                if(dtcp_rate_based_fctrl(dtcp->cfg)) {
                 	LOG_DBG("rbfc Cannot deliver anymore, closing...");
-                	dtp_sv_rate_fulfiled_set(dtp, true);
+                	dtp->sv->rate_fulfiled = true;
                 	dtp_start_rate_timer(dtp, dtcp);
 
                 	// Cannot use anymore that port.
-                	//efcp_disable_write(dt_efcp(dt));
+                	//efcp_disable_write(dt_efcp(dtp));
                 }
 
-                enable_write(queue, dt);
+                enable_write(queue, dtp);
                 spin_unlock(&queue->lock);
                 return;
         }
 
-        if(dtcp_window_based_fctrl(dtcp_config_get(dtcp))) {
-        	dt_sv_window_closed_set(dt, false);
+        if(dtcp_window_based_fctrl(dtcp->cfg)) {
+		dtp->sv->window_closed = false;
         }
 
-        if(dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
+        if(dtcp_rate_based_fctrl(dtcp->cfg)) {
         	//LOG_DBG("rbfc Re-opening the rate mechanism");
-        	dtp_sv_rate_fulfiled_set(dtp, false);
+                dtp->sv->rate_fulfiled = true;
         }
 
-        enable_write(queue, dt);
+        enable_write(queue, dtp);
 
         spin_unlock(&queue->lock);
 
-        LOG_DBG("CWQ has delivered until %u", dtp_sv_max_seq_nr_sent(dtp));
+        LOG_DBG("CWQ has delivered until %u", dtp->sv->max_seq_nr_sent);
         return;
 }
 
@@ -392,32 +344,24 @@ void cwq_deliver(struct cwq * queue,
 seq_num_t cwq_peek(struct cwq * queue)
 {
         seq_num_t          ret;
-        struct pdu *       pdu;
-        const struct pci * pci;
-
-        if (!queue)
-                return -1;
+        struct du *        du;
 
         spin_lock_bh(&queue->lock);
         if (rqueue_is_empty(queue->q)){
                 spin_unlock_bh(&queue->lock);
                 return 0;
         }
-        pdu = (struct pdu *) rqueue_head_pop(queue->q);
-        if (!pdu) {
+
+        du = (struct du *) rqueue_head_pop(queue->q);
+        if (!du) {
                 spin_unlock_bh(&queue->lock);
                 return -1;
         }
-        pci = pdu_pci_get_ro(pdu);
-        if (!pci) {
+
+        ret = pci_sequence_number_get(&du->pci);
+        if (rqueue_head_push_ni(queue->q, du)) {
                 spin_unlock_bh(&queue->lock);
-                pdu_destroy(pdu);
-                return -1;
-        }
-        ret = pci_sequence_number_get(pci);
-        if (rqueue_head_push_ni(queue->q, pdu)) {
-                spin_unlock_bh(&queue->lock);
-                pdu_destroy(pdu);
+                du_destroy(du);
                 return ret;
         }
         spin_unlock_bh(&queue->lock);
@@ -425,15 +369,7 @@ seq_num_t cwq_peek(struct cwq * queue)
         return ret;
 }
 
-
-struct rtxq_entry {
-        unsigned long    time_stamp;
-        struct pdu *     pdu;
-        int              retries;
-        struct list_head next;
-};
-
-static struct rtxq_entry * rtxq_entry_create_gfp(struct pdu * pdu, gfp_t flag)
+static struct rtxq_entry * rtxq_entry_create_gfp(struct du * du, gfp_t flag)
 {
         struct rtxq_entry * tmp;
 
@@ -441,7 +377,7 @@ static struct rtxq_entry * rtxq_entry_create_gfp(struct pdu * pdu, gfp_t flag)
         if (!tmp)
                 return NULL;
 
-        tmp->pdu        = pdu;
+        tmp->du        = du;
         tmp->time_stamp = jiffies;
         tmp->retries    = 0;
 
@@ -451,31 +387,25 @@ static struct rtxq_entry * rtxq_entry_create_gfp(struct pdu * pdu, gfp_t flag)
 }
 
 #if 0
-static struct rtxq_entry * rtxq_entry_create(struct pdu * pdu)
-{ return rtxq_entry_create_gfp(pdu, GFP_KERNEL); }
+static struct rtxq_entry * rtxq_entry_create(struct du * du)
+{ return rtxq_entry_create_gfp(du, GFP_KERNEL); }
 #endif
 
-static struct rtxq_entry * rtxq_entry_create_ni(struct pdu * pdu)
-{ return rtxq_entry_create_gfp(pdu, GFP_ATOMIC); }
+static struct rtxq_entry * rtxq_entry_create_ni(struct du * du)
+{ return rtxq_entry_create_gfp(du, GFP_ATOMIC); }
 
 int rtxq_entry_destroy(struct rtxq_entry * entry)
 {
         if (!entry)
                 return -1;
 
-        pdu_destroy(entry->pdu);
+        du_destroy(entry->du);
         list_del(&entry->next);
         rkfree(entry);
 
         return 0;
 }
 EXPORT_SYMBOL(rtxq_entry_destroy);
-
-struct rtxqueue {
-	int len;
-	int drop_pdus;
-        struct list_head head;
-};
 
 static struct rtxqueue * rtxqueue_create_gfp(gfp_t flags)
 {
@@ -531,7 +461,7 @@ static int rtxqueue_entries_ack(struct rtxqueue * q,
         list_for_each_entry_safe(cur, n, &q->head, next) {
                 seq_num_t    seq;
 
-                seq = pci_sequence_number_get(pdu_pci_get_rw((cur->pdu)));
+                seq = pci_sequence_number_get(&cur->du->pci);
                 if (seq <= seq_num) {
                         LOG_DBG("Seq num acked: %u", seq);
                         rtxq_entry_destroy(cur);
@@ -544,33 +474,27 @@ static int rtxqueue_entries_ack(struct rtxqueue * q,
 }
 
 static int rtxqueue_entries_nack(struct rtxqueue * q,
-                                 struct dt *       dt,
+                                 struct dtp *      dtp,
                                  struct rmt *      rmt,
                                  seq_num_t         seq_num,
                                  uint_t            data_rtx_max)
 {
         struct rtxq_entry * cur, * p;
-        struct pdu *        tmp;
+        struct du *        tmp;
         // Used by rbfc.
-        struct dtp * 	    dtp;
         struct dtcp *	    dtcp;
 
         int sz;
 	uint_t sc;
 
-        ASSERT(q);
-        ASSERT(dt);
-        ASSERT(rmt);
-
-        dtp = dt_dtp(dt);
-        dtcp = dt_dtcp(dt);
+        dtcp = dtp->dtcp;
 
         /*
          * FIXME: this should be change since we are sending in inverse order
          * and it could be problematic because of gaps and A timer
          */
         list_for_each_entry_safe_reverse(cur, p, &q->head, next) {
-                if (pci_sequence_number_get(pdu_pci_get_rw((cur->pdu))) >=
+                if (pci_sequence_number_get(&cur->du->pci) >=
                     seq_num) {
                         cur->retries++;
                         if (cur->retries >= data_rtx_max) {
@@ -583,31 +507,30 @@ static int rtxqueue_entries_nack(struct rtxqueue * q,
                         }
 			if(dtp &&
 				dtcp &&
-				dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
+				dtcp_rate_based_fctrl(dtcp->cfg)) {
 
-				sz = pdu_data_len(cur->pdu);
-				sc = dtcp_sent_itu(dtcp);
+				sz = du_data_len(cur->du);
+				sc = dtcp->sv->pdus_sent_in_time_unit;
 
 				if(sz >= 0) {
-					if (sz + sc >= dtcp_sndr_rate(dtcp)) {
-						dtcp_sent_itu_set(
-							dtcp,
-							dtcp_sndr_rate(dtcp));
+					if ( (sz + sc) >= dtcp->sv->sndr_rate) {
+						dtcp->sv->pdus_sent_in_time_unit =
+							dtcp->sv->sndr_rate;
 					} else {
-						dtcp_sent_itu_inc(dtcp, sz);
+						dtcp->sv->pdus_sent_in_time_unit += sz;
 					}
 				}
 
 				if(dtcp_rate_exceeded(dtcp, 1)) {
-					dtp_sv_rate_fulfiled_set(dtp, true);
+					dtp->sv->rate_fulfiled = true;
 					dtp_start_rate_timer(dtp, dtcp);
 					break;
 				}
 			}
-                        tmp = pdu_dup_ni(cur->pdu);
-                        if (dt_pdu_send(dt,
-                                        rmt,
-                                        tmp))
+                        tmp = du_dup_ni(cur->du);
+                        if (dtp_pdu_send(dtp,
+					 rmt,
+					 tmp))
                                 continue;
                 } else
                         return 0;
@@ -622,7 +545,7 @@ unsigned long rtxqueue_entry_timestamp(struct rtxqueue * q, seq_num_t sn)
         seq_num_t           csn;
 
         list_for_each_entry(cur, &q->head, next) {
-                csn = pci_sequence_number_get(pdu_pci_get_rw((cur->pdu)));
+                csn = pci_sequence_number_get(&cur->du->pci);
                 if (csn > sn) {
                         LOG_WARN("PDU not in rtxq (duplicate ACK). Received "
                         		"SN: %u, RtxQ SN: %u", sn, csn);
@@ -640,19 +563,14 @@ unsigned long rtxqueue_entry_timestamp(struct rtxqueue * q, seq_num_t sn)
 }
 
 /* push in seq_num order */
-static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
+static int rtxqueue_push_ni(struct rtxqueue * q, struct du * du)
 {
         struct rtxq_entry * tmp, * cur, * last = NULL;
         seq_num_t           csn, psn;
-        const struct pci *  pci;
 
-        if (!q)
-                return -1;
+        csn  = pci_sequence_number_get(&du->pci);
 
-        pci  = pdu_pci_get_ro(pdu);
-        csn  = pci_sequence_number_get(pci);
-
-        tmp = rtxq_entry_create_ni(pdu);
+        tmp = rtxq_entry_create_ni(du);
         if (!tmp)
                 return -1;
 
@@ -668,7 +586,7 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
         if (!last)
                 return -1;
 
-        psn = pci_sequence_number_get(pdu_pci_get_ro(last->pdu));
+        psn = pci_sequence_number_get(&last->du->pci);
         if (csn == psn) {
                 LOG_ERR("Another PDU with the same seq_num %u, is in "
                         "the rtx queue!", csn);
@@ -683,7 +601,7 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct pdu * pdu)
         }
 
         list_for_each_entry(cur, &q->head, next) {
-                psn = pci_sequence_number_get(pdu_pci_get_ro(cur->pdu));
+                psn = pci_sequence_number_get(&cur->du->pci);
                 if (csn == psn) {
                         LOG_ERR("Another PDU with the same seq_num is in "
                                 "the rtx queue!");
@@ -717,15 +635,14 @@ static unsigned long time_to_rtx(struct rtxq_entry * cur, unsigned int tr)
 
 static int rtxqueue_rtx(struct rtxqueue * q,
                         unsigned int      tr,
-                        struct dt *       dt,
+                        struct dtp *      dtp,
                         struct rmt *      rmt,
                         uint_t            data_rtx_max)
 {
         struct rtxq_entry * cur, * n;
-        struct pdu *        tmp;
+        struct du *        tmp;
         seq_num_t           seq = 0;
         // Used by rbfc.
-        struct dtp *        dtp;
         struct dtcp *	    dtcp;
         int sz;
         uint_t sc;
@@ -734,11 +651,10 @@ static int rtxqueue_rtx(struct rtxqueue * q,
         ASSERT(dt);
         ASSERT(rmt);
 
-        dtp = dt_dtp(dt);
-        dtcp = dt_dtcp(dt);
+        dtcp = dtp->dtcp;
 
         list_for_each_entry_safe(cur, n, &q->head, next) {
-                seq = pci_sequence_number_get(pdu_pci_get_ro(cur->pdu));
+                seq = pci_sequence_number_get(&cur->du->pci);
                 LOG_DBG("Checking RTX PDU %u, now: %lu >?< %lu + %u",
                         seq, jiffies, cur->time_stamp, tr);
                 if (time_before_eq(time_to_rtx(cur, tr), jiffies)) {
@@ -755,31 +671,30 @@ static int rtxqueue_rtx(struct rtxqueue * q,
                         }
                         if(dtp &&
 				dtcp &&
-				dtcp_rate_based_fctrl(dtcp_config_get(dtcp))) {
+				dtcp_rate_based_fctrl(dtcp->cfg)) {
 
-                        	sz = pdu_data_len(cur->pdu);
-				sc = dtcp_sent_itu(dtcp);
+                        	sz = du_data_len(cur->du);
+				sc = dtcp->sv->pdus_sent_in_time_unit;
 
 				if(sz >= 0) {
-					if (sz + sc >= dtcp_sndr_rate(dtcp)) {
-						dtcp_sent_itu_set(
-							dtcp,
-							dtcp_sndr_rate(dtcp));
+					if ( (sz + sc) >= dtcp->sv->sndr_rate) {
+						dtcp->sv->pdus_sent_in_time_unit = 
+							dtcp->sv->sndr_rate;
 					} else {
-						dtcp_sent_itu_inc(dtcp, sz);
+						dtcp->sv->pdus_sent_in_time_unit += sz; 
 					}
 				}
 
 				if(dtcp_rate_exceeded(dtcp, 1)) {
-					dtp_sv_rate_fulfiled_set(dtp, true);
+					dtp->sv->rate_fulfiled = true;
 					dtp_start_rate_timer(dtp, dtcp);
 					break;
 				}
                         }
-                        tmp = pdu_dup_ni(cur->pdu);
-                        if (dt_pdu_send(dt,
-                                        rmt,
-                                        tmp))
+                        tmp = du_dup_ni(cur->du);
+                        if (dtp_pdu_send(dtp,
+                                         rmt,
+                                         tmp))
                                 continue;
                         LOG_DBG("Retransmitted PDU with seqN %u", seq);
                 } else {
@@ -802,14 +717,6 @@ static bool rtxqueue_empty(struct rtxqueue * q)
         return list_empty(&q->head);
 }
 
-struct rtxq {
-        spinlock_t                lock;
-        struct rtimer *           r_timer;
-        struct dt *               parent;
-        struct rmt *              rmt;
-        struct rtxqueue *         queue;
-};
-
 struct rtxt_data {
 	struct efcp_container * efcpc;
 	unsigned int data_retransmit_max;
@@ -822,6 +729,7 @@ static void rtx_timer_func(void * data)
         struct efcp * 	     efcp;
         struct rtxt_data *   rtxtd;
         unsigned int         tr;
+	struct dtp *         dtp;
 
         LOG_DBG("RTX timer triggered...");
 
@@ -838,12 +746,13 @@ static void rtx_timer_func(void * data)
         	return;
         }
 
-        q = dt_rtxq(efcp_dt(efcp));
-        tr = dt_sv_tr(q->parent);
+	dtp = efcp->dtp;
+        q = dtp->rtxq;
+        tr = dtp->sv->tr;
 
         if (rtxqueue_rtx(q->queue,
                          tr,
-                         q->parent,
+                         dtp,
                          q->rmt,
                          rtxtd->data_retransmit_max))
                 LOG_ERR("RTX failed");
@@ -881,7 +790,7 @@ int rtxq_destroy(struct rtxq * q)
         return 0;
 }
 
-struct rtxq * rtxq_create(struct dt *  dt,
+struct rtxq * rtxq_create(struct dtp * dtp,
                           struct rmt * rmt,
 			  struct efcp_container * container,
 			  struct dtcp_config * dtcp_cfg,
@@ -919,10 +828,9 @@ struct rtxq * rtxq_create(struct dt *  dt,
                 return NULL;
         }
 
-        ASSERT(dt);
         ASSERT(rmt);
 
-        tmp->parent = dt;
+        tmp->parent = dtp;
         tmp->rmt    = rmt;
 
         spin_lock_init(&tmp->lock);
@@ -971,17 +879,14 @@ unsigned long rtxq_entry_timestamp(struct rtxq * q, seq_num_t sn)
 EXPORT_SYMBOL(rtxq_entry_timestamp);
 
 int rtxq_push_ni(struct rtxq * q,
-                 struct pdu *  pdu)
+                 struct du *  du)
 {
-        if (!q || !pdu_is_ok(pdu))
-                return -1;
-
         spin_lock_bh(&q->lock);
 #if RTIMER_ENABLED
         /* is the first transmitted PDU */
-        rtimer_start(q->r_timer, dt_sv_tr(q->parent));
+        rtimer_start(q->r_timer, q->parent->sv->tr);
 #endif
-        rtxqueue_push_ni(q->queue, pdu);
+        rtxqueue_push_ni(q->queue, du);
         spin_unlock_bh(&q->lock);
         return 0;
 }
@@ -1001,16 +906,6 @@ int rtxq_flush(struct rtxq * q)
 
 }
 EXPORT_SYMBOL(rtxq_flush);
-
-int rtxq_lock(struct rtxq * q)
-{
-        if (!q || !q->queue)
-                return -1;
-
-        spin_lock(&q->lock);
-        return 0;
-}
-EXPORT_SYMBOL(rtxq_lock);
 
 int rtxq_ack(struct rtxq * q,
              seq_num_t     seq_num,
@@ -1040,12 +935,12 @@ int rtxq_nack(struct rtxq * q,
         if (!q || !q->parent || !q->rmt)
                 return -1;
 
-        dtcp_cfg = dtcp_config_get(dt_dtcp(q->parent));
+        dtcp_cfg = q->parent->dtcp->cfg;
         if (!dtcp_cfg)
                 return -1;
 
         rcu_read_lock();
-        data_retransmit_max = dtcp_ps_get(dt_dtcp(q->parent))->
+        data_retransmit_max = dtcp_ps_get(q->parent->dtcp)->
                                         rtx.data_retransmit_max;
         rcu_read_unlock();
 
@@ -1066,27 +961,16 @@ int rtxq_nack(struct rtxq * q,
         return 0;
 }
 
-int dt_pdu_send(struct dt *   dt,
-        	struct rmt *  rmt,
-		struct pdu *  pdu)
+int dtp_pdu_send(struct dtp *  dtp,
+        	 struct rmt *  rmt,
+		 struct du *   du)
 {
-        struct pci *	        pci;
 	struct efcp_container * efcpc;
 	cep_id_t		dest_cep_id;
 
-	if (!pdu)
-	        return -1;
-
-        if (!dt)
-                return -1;
-
-	pci = pdu_pci_get_rw(pdu);
-	if (!pci)
-		return -1;
-
 	/* Remote flow case */
-	if (pci_source(pci) != pci_destination(pci)) {
-	        if (rmt_send(rmt, pdu)) {
+	if (pci_source(&du->pci) != pci_destination(&du->pci)) {
+	        if (rmt_send(rmt, du)) {
 	                LOG_ERR("Problems sending PDU to RMT");
 	                return -1;
 	        }
@@ -1094,19 +978,19 @@ int dt_pdu_send(struct dt *   dt,
 	}
 
 	/* Local flow case */
-	dest_cep_id = pci_cep_destination(pci);
-	efcpc = efcp_container_get(dt_efcp(dt));
-	if (unlikely(!efcpc || pdu_decap(pdu) || !pdu_is_ok(pdu))) { /*Decap PDU */
+	dest_cep_id = pci_cep_destination(&du->pci);
+	efcpc = dtp->efcp->container;
+	if (unlikely(!efcpc || du_decap(du) || !is_du_ok(du))) { /*Decap PDU */
 	        LOG_ERR("Could not retrieve the EFCP container in"
 	        "loopback operation");
-	        pdu_destroy(pdu);
+	        du_destroy(du);
 	        return -1;
  	}
-	if (efcp_container_receive(efcpc, dest_cep_id, pdu)) {
+	if (efcp_container_receive(efcpc, dest_cep_id, du)) {
 	        LOG_ERR("Problems sending PDU to loopback EFCP");
 	        return -1;
 	}
 
 	return 0;
 }
-EXPORT_SYMBOL(dt_pdu_send);
+EXPORT_SYMBOL(dtp_pdu_send);

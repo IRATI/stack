@@ -213,7 +213,9 @@ MASDUProtectionHandler::MASDUProtectionHandler()
 	/* Initialise OpenSSL library */
 	ERR_load_crypto_strings();
 	OpenSSL_add_all_algorithms();
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	OPENSSL_config(NULL);
+#endif
 }
 
 void MASDUProtectionHandler::set_security_manager(rina::ISecurityManager * sec_man)

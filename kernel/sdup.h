@@ -124,19 +124,19 @@ struct sdup_port * sdup_init_port_config(struct sdup * instance,
 int sdup_destroy_port_config(struct sdup_port * instance);
 
 int sdup_protect_pdu(struct sdup_port * instance,
-		     struct pdu * pdu);
+		     struct du * du);
 
 int sdup_unprotect_pdu(struct sdup_port * instance,
-		       struct pdu * pdu);
+		       struct du * du);
 
 int sdup_set_lifetime_limit(struct sdup_port * instance,
-			    struct pdu * pdu);
+			    struct du * du);
 
 int sdup_get_lifetime_limit(struct sdup_port * instance,
-			    struct pdu * pdu);
+			    struct du * du);
 
 int sdup_dec_check_lifetime_limit(struct sdup_port * instance,
-				  struct pdu * pdu);
+				  struct du * du);
 
 int sdup_update_crypto_state(struct sdup * instance,
 			     struct sdup_crypto_state * state,

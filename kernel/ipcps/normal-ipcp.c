@@ -31,6 +31,7 @@
 #include "logs.h"
 #include "common.h"
 #include "debug.h"
+#include "efcp-str.h"
 #include "utils.h"
 #include "kipcm.h"
 #include "ipcp-utils.h"
@@ -40,8 +41,7 @@
 #include "dtp.h"
 #include "dtcp.h"
 #include "rmt.h"
-#include "pdu.h"
-#include "sdu.h"
+#include "du.h"
 #include "sdup.h"
 #include "efcp-utils.h"
 #include "rds/rtimer.h"
@@ -53,8 +53,8 @@ extern struct kipcm * default_kipcm;
 /* FIXME: To be solved properly */
 static struct workqueue_struct * mgmt_sdu_wq;
 
-struct mgmt_sdu_work_data {
-        struct sdu *      sdu;
+struct mgmt_du_work_data {
+        struct du *       du;
         ipc_process_id_t  ipcp_id;
         port_id_t	  port_id;
         irati_msg_port_t  irati_port_id;
@@ -174,11 +174,11 @@ static int normal_fini(struct ipcp_factory_data * data)
         return 0;
 }
 
-static int normal_sdu_enqueue(struct ipcp_instance_data * data,
-                              port_id_t                   id,
-                              struct sdu *                sdu)
+static int normal_du_enqueue(struct ipcp_instance_data * data,
+                             port_id_t                   id,
+                             struct du *                du)
 {
-        if (rmt_receive(data->rmt, sdu, id)) {
+        if (rmt_receive(data->rmt, du, id)) {
                 LOG_ERR("Could not enqueue SDU into the RMT");
                 return -1;
         }
@@ -186,10 +186,10 @@ static int normal_sdu_enqueue(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int normal_sdu_write(struct ipcp_instance_data * data,
-                            port_id_t                   id,
-                            struct sdu *                sdu,
-                            bool                        blocking)
+static int normal_du_write(struct ipcp_instance_data * data,
+                           port_id_t                   id,
+                           struct du *                 du,
+                           bool                        blocking)
 {
         struct normal_flow * flow;
 
@@ -199,12 +199,12 @@ static int normal_sdu_write(struct ipcp_instance_data * data,
                 spin_unlock_bh(&data->lock);
                 LOG_ERR("Write: There is no flow bound to this port_id: %d",
                         id);
-                sdu_destroy(sdu);
+                du_destroy(du);
                 return -1;
         }
         spin_unlock_bh(&data->lock);
 
-        if (efcp_container_write(data->efcpc, flow->active, sdu)) {
+        if (efcp_container_write(data->efcpc, flow->active, du)) {
                 LOG_ERR("Could not send sdu to EFCP Container");
                 return -1;
         }
@@ -730,43 +730,28 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
-                                 port_id_t                   port_id,
-                                 struct sdu *                sdu)
+static int normal_mgmt_du_write(struct ipcp_instance_data * data,
+                                port_id_t                   port_id,
+                                struct du *                 du)
 {
-        struct pci *pci;
-        struct pdu *pdu;
-
         LOG_DBG("Passing SDU to be written to N-1 port %d "
                 "from IPC Process %d", port_id, data->id);
 
-        if (!sdu) {
+        if (!du) {
                 LOG_ERR("No data passed, bailing out");
                 return -1;
         }
 
-	if (sdu_efcp_config_bind(sdu, efcp_container_config(data->efcpc))) {
-		LOG_ERR("Could not bind EFCP config to incoming SDU");
-		sdu_destroy(sdu);
-		return -1;
-	}
+        du->cfg = data->efcpc->config;
 
-	pdu = pdu_from_sdu(sdu);
-	if (pdu_encap(pdu, PDU_TYPE_MGMT)){
+	if (du_encap(du, PDU_TYPE_MGMT)){
 		LOG_ERR("Could not encap Mgmt PDU");
-		pdu_destroy(pdu);
+		du_destroy(du);
 		return -1;
-	}
-
-        pci = pdu_pci_get_rw(pdu);
-        if (!pci) {
-        	LOG_ERR("No PCI, bailing out");
-		pdu_destroy(pdu);
-                return -1;
 	}
 
         /* FIXME: qos_id is set to 1 since 0 is QOS_ID_WRONG */
-        if (pci_format(pci,
+        if (pci_format(&du->pci,
                        0,
                        0,
                        data->address,
@@ -775,7 +760,7 @@ static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
                        1,
                        PDU_TYPE_MGMT)) {
         	LOG_ERR("Problems formatting PCI");
-                pdu_destroy(pdu);
+                du_destroy(du);
                 return -1;
         }
 
@@ -787,13 +772,13 @@ static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
         if (port_id) {
                 if (rmt_send_port_id(data->rmt,
                                      port_id,
-                                     pdu)) {
+                                     du)) {
                         LOG_ERR("Could not send to RMT (using port_id)");
                         return -1;
                 }
         } else {
                 LOG_ERR("Could not send to RMT: no port_id nor dst_addr");
-                pdu_destroy(pdu);
+                du_destroy(du);
                 return -1;
         }
 
@@ -802,7 +787,7 @@ static int normal_mgmt_sdu_write(struct ipcp_instance_data * data,
 
 static int mgmt_sdu_notif_worker(void * o)
 {
-        struct mgmt_sdu_work_data * data;
+        struct mgmt_du_work_data * data;
         struct irati_kmsg_ipcp_mgmt_sdu msg;
         unsigned char * sdu_data;
 
@@ -810,20 +795,20 @@ static int mgmt_sdu_notif_worker(void * o)
 
 	ASSERT(o);
 
-        data = (struct mgmt_sdu_work_data *) o;
+        data = (struct mgmt_du_work_data *) o;
 
 	msg.msg_type = RINA_C_IPCP_MANAGEMENT_SDU_READ_NOTIF;
 	msg.port_id = data->port_id;
 	msg.src_ipcp_id = data->ipcp_id;
-	msg.sdu = buffer_create(sdu_len(data->sdu));
+	msg.sdu = buffer_create(du_len(data->du));
 	if (!msg.sdu) {
 		LOG_ERR("Problems creating buffer");
-		sdu_destroy(data->sdu);
+		du_destroy(data->du);
 		rkfree(data);
 		return 0;
 	}
 
-	sdu_data = sdu_buffer(data->sdu);
+	sdu_data = du_buffer(data->du);
 	memcpy(msg.sdu->data, sdu_data, msg.sdu->size);
 
 	if (irati_ctrl_dev_snd_resp_msg(data->irati_port_id,
@@ -832,7 +817,7 @@ static int mgmt_sdu_notif_worker(void * o)
 	}
 
 	buffer_destroy(msg.sdu);
-	sdu_destroy(data->sdu);
+	du_destroy(data->du);
 	rkfree(data);
 
         LOG_DBG("Worker ends...");
@@ -840,32 +825,32 @@ static int mgmt_sdu_notif_worker(void * o)
         return 0;
 }
 
-static int normal_mgmt_sdu_post(struct ipcp_instance_data * data,
-                                port_id_t                   port_id,
-                                struct sdu *                sdu)
+static int normal_mgmt_du_post(struct ipcp_instance_data * data,
+                               port_id_t                   port_id,
+                               struct du *                 du)
 {
-        struct mgmt_sdu_work_data  * wdata;
-        struct rwq_work_item       * item;
+        struct mgmt_du_work_data  * wdata;
+        struct rwq_work_item      * item;
 
 	if (!data) {
 		LOG_ERR("Bogus instance passed");
-		sdu_destroy(sdu);
+		du_destroy(du);
 		return -1;
 	}
 
 	if (!is_port_id_ok(port_id)) {
 		LOG_ERR("Wrong port id");
-		sdu_destroy(sdu);
+		du_destroy(du);
 		return -1;
 	}
-	if (!is_sdu_ok(sdu)) {
+	if (!is_du_ok(du)) {
 		LOG_ERR("Bogus management SDU");
-		sdu_destroy(sdu);
+		du_destroy(du);
 		return -1;
 	}
 
         wdata = rkzalloc(sizeof(* wdata), GFP_ATOMIC);
-        wdata->sdu  = sdu;
+        wdata->du  = du;
         wdata->port_id = port_id;
         wdata->irati_port_id = data->irati_port;
         wdata->ipcp_id = data->id;
@@ -932,6 +917,16 @@ static const struct name * normal_dif_name(struct ipcp_instance_data * data)
         ASSERT(name_is_ok(&data->dif_name));
 
         return &data->dif_name;
+}
+
+static size_t normal_max_sdu_size(struct ipcp_instance_data * data)
+{
+        ASSERT(data);
+        if (!data->efcpc || !data->efcpc->config)
+        	return 0;
+
+        return data->efcpc->config->dt_cons->max_pdu_size -
+        		pci_calculate_size(data->efcpc->config, PDU_TYPE_DT);
 }
 
 ipc_process_id_t normal_ipcp_id(struct ipcp_instance_data * data)
@@ -1008,11 +1003,13 @@ static int efcp_select_policy_set(struct efcp * efcp,
         ps_factory_parse_component_id(path, &cmplen, &offset);
 
         if (cmplen && strncmp(path, "dtp", cmplen) == 0) {
-                return dtp_select_policy_set(dt_dtp(efcp_dt(efcp)), path + offset,
+                return dtp_select_policy_set(efcp->dtp, path + offset,
                                              ps_name);
-        } else if (cmplen && strncmp(path, "dtcp", cmplen) == 0 && dt_dtcp(efcp_dt(efcp))) {
-                return dtcp_select_policy_set(dt_dtcp(efcp_dt(efcp)), path + offset,
-                                             ps_name);
+        } else if (cmplen && strncmp(path, "dtcp", cmplen) == 0
+        		&& efcp->dtp->dtcp) {
+                return dtcp_select_policy_set(efcp->dtp->dtcp,
+                			      path + offset,
+                                              ps_name);
         }
 
         /* Currently there are no policy sets specified for EFCP (strictly
@@ -1073,10 +1070,10 @@ static int efcp_set_policy_set_param(struct efcp * efcp,
         ps_factory_parse_component_id(path, &cmplen, &offset);
 
         if (strncmp(path, "dtp", cmplen) == 0) {
-                return dtp_set_policy_set_param(dt_dtp(efcp_dt(efcp)),
+                return dtp_set_policy_set_param(efcp->dtp,
                                         path + offset, name, value);
-        } else if (strncmp(path, "dtcp", cmplen) == 0 && dt_dtcp(efcp_dt(efcp))) {
-                return dtcp_set_policy_set_param(dt_dtcp(efcp_dt(efcp)),
+        } else if (strncmp(path, "dtcp", cmplen) == 0 && efcp->dtp->dtcp) {
+                return dtcp_set_policy_set_param(efcp->dtp->dtcp,
                                         path + offset, name, value);
         }
 
@@ -1221,11 +1218,11 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .connection_create_arrived = connection_create_arrived,
 	.connection_modify 	   = connection_modify_request,
 
-        .sdu_enqueue               = normal_sdu_enqueue,
-        .sdu_write                 = normal_sdu_write,
+        .du_enqueue               = normal_du_enqueue,
+        .du_write                 = normal_du_write,
 
-        .mgmt_sdu_write            = normal_mgmt_sdu_write,
-        .mgmt_sdu_post             = normal_mgmt_sdu_post,
+        .mgmt_du_write            = normal_mgmt_du_write,
+        .mgmt_du_post             = normal_mgmt_du_post,
 
         .pff_add                   = normal_pff_add,
         .pff_remove                = normal_pff_remove,
@@ -1246,7 +1243,8 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .disable_write             = disable_write,
         .update_crypto_state       = normal_update_crypto_state,
 	.address_change            = normal_address_change,
-        .dif_name		   = normal_dif_name
+        .dif_name		   = normal_dif_name,
+	.max_sdu_size		   = normal_max_sdu_size
 };
 
 static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
@@ -1336,15 +1334,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
-        if (efcp_bind_rmt(instance->data->efcpc, instance->data->rmt)) {
-                LOG_ERR("Failed binding of RMT and EFCPC");
-                rmt_destroy(instance->data->rmt);
-		sdup_destroy(instance->data->sdup);
-                efcp_container_destroy(instance->data->efcpc);
-                rkfree(instance->data);
-                rkfree(instance);
-                return NULL;
-        }
+        instance->data->efcpc->rmt = instance->data->rmt;
 
         instance->data->timers.use_naddress = rtimer_create(tf_use_naddress,
                                				    instance->data);

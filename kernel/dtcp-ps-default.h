@@ -29,7 +29,6 @@
 #include <linux/string.h>
 #include <linux/random.h>
 
-
 #include "dtcp-ps.h"
 
 struct ps_base * dtcp_ps_default_create(struct rina_component *component);

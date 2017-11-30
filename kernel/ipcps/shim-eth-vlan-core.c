@@ -47,8 +47,7 @@
 #include "kipcm.h"
 #include "debug.h"
 #include "utils.h"
-#include "sdu.h"
-#include "pdu.h"
+#include "du.h"
 #include "ipcp-utils.h"
 #include "ipcp-factories.h"
 #include "rinarp/rinarp.h"
@@ -385,7 +384,7 @@ static int flow_destroy(struct ipcp_instance_data * data,
         if (flow->dest_pa) gpa_destroy(flow->dest_pa);
         if (flow->dest_ha) gha_destroy(flow->dest_ha);
         if (flow->sdu_queue)
-                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) sdu_destroy);
+                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) du_destroy);
         rkfree(flow);
 
         return 0;
@@ -498,7 +497,7 @@ static void rinarp_resolve_handler(void *             opaque,
                 ASSERT(flow->sdu_queue);
 
                 while (!rfifo_is_empty(flow->sdu_queue)) {
-                        struct sdu * tmp = NULL;
+                        struct du * tmp = NULL;
 
                         tmp = rfifo_pop(flow->sdu_queue);
                         ASSERT(tmp);
@@ -506,7 +505,7 @@ static void rinarp_resolve_handler(void *             opaque,
                         LOG_DBG("Got a new element from the fifo");
 
                         ASSERT(user_ipcp->ops->sdu_enqueue);
-                        if (user_ipcp->ops->sdu_enqueue(user_ipcp->data,
+                        if (user_ipcp->ops->du_enqueue(user_ipcp->data,
                                                         flow->port_id,
                                                         tmp)) {
                                 LOG_ERR("Couldn't enqueue SDU to KFA ...");
@@ -514,7 +513,7 @@ static void rinarp_resolve_handler(void *             opaque,
                         }
                 }
 
-                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) sdu_destroy);
+                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) du_destroy);
                 flow->sdu_queue = NULL;
 
                 if (kipcm_notify_flow_alloc_req_result(default_kipcm,
@@ -686,7 +685,7 @@ eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                 ASSERT(flow->sdu_queue);
 
                 while (!rfifo_is_empty(flow->sdu_queue)) {
-                        struct sdu * tmp = NULL;
+                        struct du * tmp = NULL;
 
                         tmp = rfifo_pop(flow->sdu_queue);
                         ASSERT(tmp);
@@ -695,7 +694,7 @@ eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
 
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
                         if (flow->user_ipcp->ops->
-                            sdu_enqueue(flow->user_ipcp->data,
+                            du_enqueue(flow->user_ipcp->data,
                                         flow->port_id,
                                         tmp)) {
                                 LOG_ERR("Couldn't enqueue SDU to KFA ...");
@@ -703,7 +702,7 @@ eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                         }
                 }
 
-                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) sdu_destroy);
+                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) du_destroy);
                 flow->sdu_queue = NULL;
         } else {
                 spin_lock(&data->lock);
@@ -717,7 +716,7 @@ eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
                  *  the IPC manager deallocates the NULL state flow first.
                  */
                 ASSERT(flow->sdu_queue);
-                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) sdu_destroy);
+                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) du_destroy);
                 flow->sdu_queue = NULL;
         }
 
@@ -941,10 +940,10 @@ static bool qdisc_should_be_restored(struct net_device * dev)
 	return true;
 }
 
-static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
-                              port_id_t                   id,
-                              struct sdu *                sdu,
-                              bool                        blocking)
+static int eth_vlan_du_write(struct ipcp_instance_data * data,
+                             port_id_t                   id,
+                             struct du *                 du,
+                             bool                        blocking)
 {
         struct shim_eth_flow *   flow;
         struct sk_buff *         skb;
@@ -962,38 +961,27 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 		return -1;
 	}
 
-	if (unlikely(!is_port_id_ok(id))) {
-		LOG_ERR("Invalide port ID passed, bailing out");
-		return -1;
-	}
-
-        if (unlikely(!is_sdu_ok(sdu))) {
-        	LOG_ERR("Bogus SDU passed, bailing out");
-        	sdu_destroy(sdu);
-        	return -1;
-        }
-
         hlen   = sizeof(struct ethhdr);
         tlen   = data->dev->needed_tailroom;
-        length = sdu_len(sdu);
+        length = du_len(du);
 
         if (unlikely(length > (data->dev->mtu - hlen))) {
         	LOG_ERR("SDU too large (%d), dropping", length);
-        	sdu_destroy(sdu);
+        	du_destroy(du);
         	return -1;
         }
 
         flow = find_flow(data, id);
         if (!flow) {
                 LOG_ERR("Flow does not exist, you shouldn't call this");
-                sdu_destroy(sdu);
+                du_destroy(du);
                 return -1;
         }
 
         spin_lock_bh(&data->lock);
         if (flow->port_id_state != PORT_STATE_ALLOCATED) {
                 LOG_ERR("Flow is not in the right state to call this");
-                sdu_destroy(sdu);
+                du_destroy(du);
                 spin_unlock_bh(&data->lock);
                 return -1;
         }
@@ -1002,32 +990,32 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         src_hw = data->dev->dev_addr;
         if (!src_hw) {
                 LOG_ERR("Failed to get source HW addr");
-                sdu_destroy(sdu);
+                du_destroy(du);
                 return -1;
         }
 
         dest_hw = gha_address(flow->dest_ha);
         if (!dest_hw) {
                 LOG_ERR("Destination HW address is unknown");
-                sdu_destroy(sdu);
+                du_destroy(du);
                 return -1;
         }
 
 	/* FIXME: sdu_detach_skb() has to be removed */
-        skb = sdu_detach_skb(sdu);
+        skb = du_detach_skb(du);
         bup_skb = skb_clone(skb, GFP_ATOMIC);
         if (!bup_skb) {
         	LOG_ERR("Error cloning SBK, bailing out");
                 kfree_skb(skb);
-        	sdu_destroy(sdu);
+        	du_destroy(du);
         	return -1;
         }
-        sdu_attach_skb(sdu, skb);
+        du_attach_skb(du, skb);
 
         if (unlikely(skb_tailroom(bup_skb) < tlen)) {
 		LOG_ERR("Missing tail room in SKB, bailing out...");
                 kfree_skb(bup_skb);
-        	sdu_destroy(sdu);
+        	du_destroy(du);
         	return -1;
         }
 
@@ -1039,7 +1027,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         if (retval < 0) {
                 LOG_ERR("Problems in dev_hard_header (%d)", retval);
                 kfree_skb(bup_skb);
-                sdu_destroy(sdu);
+                du_destroy(du);
                 return -1;
         }
 
@@ -1048,7 +1036,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
 
         if (retval == -ENETDOWN) {
         	LOG_ERR("dev_q_xmit returned device down");
-        	sdu_destroy(sdu);
+        	du_destroy(du);
         	return -1;
         }
         if (retval != NET_XMIT_SUCCESS) {
@@ -1056,7 +1044,7 @@ static int eth_vlan_sdu_write(struct ipcp_instance_data * data,
         	return -EAGAIN;
         }
 
-       	sdu_destroy(sdu);
+       	du_destroy(du);
         LOG_DBG("Packet sent");
         return 0;
 }
@@ -1119,7 +1107,7 @@ static int eth_vlan_rcv_worker(void * o)
         if (!user_ipcp->ops->ipcp_name(user_ipcp->data)) {
                 LOG_DBG("This flow goes for an app");
                 if (kfa_flow_create(data->kfa, flow->port_id, ipcp, data->id,
-									NULL)) {
+                		    NULL, false)) {
                         LOG_ERR("Could not create flow in KFA");
                         kfa_port_id_release(data->kfa, flow->port_id);
                         if (flow_destroy(data, flow))
@@ -1209,7 +1197,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
         struct interface_data_mapping * mapping;
         struct shim_eth_flow *          flow;
         struct gha *                    ghaddr;
-        struct sdu *                    du;
+        struct du *                     du;
 	struct sk_buff *                linear_skb;
 
         struct rcv_work_data          * wdata;
@@ -1281,7 +1269,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
 		kfree_skb(skb);
 	}
 
-	du = sdu_from_buffer_ni(linear_skb);
+	du = du_create_from_skb(linear_skb);
 	if (!du) {
 		LOG_ERR("Could not create SDU from buffer");
                 kfree_skb(linear_skb);
@@ -1295,7 +1283,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 /* Create flow and its queue to handle next packets */
                 flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
                 if (!flow) {
-                        sdu_destroy(du);
+                        du_destroy(du);
                         gha_destroy(ghaddr);
                         return -1;
                 }
@@ -1307,7 +1295,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 if (!flow->sdu_queue) {
                         LOG_ERR("Couldn't create the SDU queue "
                                 "for a new flow");
-                        sdu_destroy(du);
+                        du_destroy(du);
                         gha_destroy(ghaddr);
                         rkfree(flow);
                         return -1;
@@ -1316,11 +1304,11 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 /* Store SDU in queue */
                 if (rfifo_push_ni(flow->sdu_queue, du)) {
                         LOG_ERR("Could not push a SDU into the flow queue");
-                        sdu_destroy(du);
+                        du_destroy(du);
                         gha_destroy(ghaddr);
                         rkfree (flow);
                         rfifo_destroy(flow->sdu_queue,
-                                      (void (*)(void *)) sdu_destroy);
+                                      (void (*)(void *)) du_destroy);
                         return -1;
                 }
 
@@ -1346,7 +1334,7 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         if (!flow->user_ipcp) {
                         	spin_unlock(&data->lock);
                         	LOG_ERR("Flow is being deallocated, dropping PDU");
-                                sdu_destroy(du);
+                                du_destroy(du);
                                 return -1;
                         }
 
@@ -1355,9 +1343,9 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         ASSERT(flow->user_ipcp->ops);
                         ASSERT(flow->user_ipcp->ops->sdu_enqueue);
                         if (flow->user_ipcp->ops->
-                            sdu_enqueue(flow->user_ipcp->data,
-                                        flow->port_id,
-                                        du)) {
+                            du_enqueue(flow->user_ipcp->data,
+                                       flow->port_id,
+                                       du)) {
                                 LOG_ERR("Couldn't enqueue SDU to user IPCP");
                                 return -1;
                         }
@@ -1370,14 +1358,14 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                                         "into the fifo",
                                         sizeof(struct sdu *));
                                 spin_unlock(&data->lock);
-                                sdu_destroy(du);
+                                du_destroy(du);
                                 return -1;
                         }
 
                         spin_unlock(&data->lock);
                 } else if (flow->port_id_state == PORT_STATE_NULL) {
                         spin_unlock(&data->lock);
-                        sdu_destroy(du);
+                        du_destroy(du);
                 }
 
                 LOG_DBG("eth_vlan_recv_process_packet ends ...");
@@ -1763,6 +1751,16 @@ static const struct name * eth_vlan_dif_name(struct ipcp_instance_data * data)
         return data->dif_name;
 }
 
+static size_t eth_vlan_max_sdu_size(struct ipcp_instance_data * data)
+{
+	if (!data) {
+		LOG_ERR("Bogus data passed, bailing out");
+		return 0;
+	}
+
+        return data->dev->mtu - sizeof(struct ethhdr);
+}
+
 ipc_process_id_t eth_vlan_ipcp_id(struct ipcp_instance_data * data)
 {
 	ASSERT(data);
@@ -1803,11 +1801,11 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .connection_create_arrived = NULL,
 	.connection_modify 	   = NULL,
 
-        .sdu_enqueue               = NULL,
-        .sdu_write                 = eth_vlan_sdu_write,
+        .du_enqueue               = NULL,
+        .du_write                 = eth_vlan_du_write,
 
-        .mgmt_sdu_write            = NULL,
-        .mgmt_sdu_post             = NULL,
+        .mgmt_du_write            = NULL,
+        .mgmt_du_post             = NULL,
 
         .pff_add                   = NULL,
         .pff_remove                = NULL,
@@ -1825,7 +1823,8 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .select_policy_set         = NULL,
         .update_crypto_state	   = NULL,
 	.address_change            = NULL,
-        .dif_name		   = eth_vlan_dif_name
+        .dif_name		   = eth_vlan_dif_name,
+	.max_sdu_size		   = eth_vlan_max_sdu_size
 };
 
 static int ntfy_user_ipcp_on_if_state_change(struct ipcp_instance_data * data,

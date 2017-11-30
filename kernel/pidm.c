@@ -116,7 +116,7 @@ port_id_t pidm_allocate(struct pidm * instance)
         	}
         }
 
-        new_port_id = rkmalloc(sizeof(*new_port_id), GFP_KERNEL);
+        new_port_id = rkmalloc(sizeof(*new_port_id), GFP_ATOMIC);
         if (!new_port_id)
         	return port_id_bad();
 

@@ -26,7 +26,7 @@
 #include "common.h"
 #include "ipcp-instances.h"
 #include "ipcp-factories.h"
-#include "sdu.h"
+#include "du.h"
 #include "ctrldev.h"
 #include "kfa.h"
 #include "rds/robjects.h"
@@ -52,25 +52,27 @@ int            kipcm_ipc_create(struct kipcm *      kipcm,
 int            kipcm_ipc_destroy(struct kipcm *   kipcm,
                                  ipc_process_id_t id);
 
-/* If successful: takes the ownership of the SDU */
-int            kipcm_sdu_write(struct kipcm * kipcm,
+/* If successful: takes the ownership of the DU */
+int            kipcm_du_write(struct kipcm * kipcm,
                                port_id_t      id,
-                               struct sdu *   sdu,
+			       const char __user *buffer,
+			       size_t size,
                                bool blocking);
 /* If successful: passes the ownership of the SDU */
-int            kipcm_sdu_read(struct kipcm * kipcm,
-                              port_id_t      id,
-                              struct sdu **  sdu,
-			      size_t         size,
-                              bool           blocking);
+int            kipcm_du_read(struct kipcm * kipcm,
+                             port_id_t      id,
+                             struct du **   du,
+			     size_t         size,
+                             bool           blocking);
 
 /* If successful: takes the ownership of the SDU */
-int            kipcm_mgmt_sdu_write(struct kipcm *   kipcm,
-                                    ipc_process_id_t id,
-	                            port_id_t      port_id,
-	                            struct sdu *   sdu);
+int            kipcm_mgmt_du_write(struct kipcm *   kipcm,
+                                   ipc_process_id_t id,
+	                           port_id_t      port_id,
+	                           struct du *   du);
 port_id_t      kipcm_flow_create(struct kipcm *   kipcm,
 				 ipc_process_id_t ipc_id,
+				 bool		  msg_boundaries,
 				 struct name *    process_name);
 
 int            kipcm_flow_destroy(struct kipcm *   kipcm,

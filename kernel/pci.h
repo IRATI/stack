@@ -82,7 +82,10 @@ typedef uint8_t pdu_type_t;
 	       ((X == PDU_TYPE_SNACK_AND_FC) ? true :   \
 		false))))))))
 
-struct pci;
+struct pci {
+	unsigned char *h; /* do not move from 1st position */
+	size_t len;
+};
 
 ssize_t		*pci_offset_table_create(struct dt_cons *dt_cons);
 

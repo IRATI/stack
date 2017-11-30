@@ -1,0 +1,32 @@
+#!/bin/bash -eu
+
+readonly GCC_MAJOR_VERSION=$(echo '#include <stdio.h>
+void main() { printf("%u\n", __GNUC__); }' | gcc -x c - -o /tmp/getgccversion  && /tmp/getgccversion)
+
+# Fetch the kernel code
+wget https://www.kernel.org/pub/linux/kernel/v${KERNEL_VERSION:0:1}.x/linux-${KERNEL_VERSION}.tar.gz
+tar xzf linux-${KERNEL_VERSION}.tar.gz
+
+# Configure and prepare kernel
+pushd linux-${KERNEL_VERSION}
+compiler_file=compiler-gcc${GCC_MAJOR_VERSION}.h
+if [ ! -f include/linux/${compiler_file} -a ! -h include/linux/${compiler_file} ]
+then
+  # Fix compilation of old kernels with recent GCC
+  pushd include/linux
+  if [ -f compiler-gcc5.h -a $GCC_MAJOR_VERSION -gt 5 ]
+  then
+    ln -sv compiler-gcc5.h ${compiler_file}
+  else
+    ln -sv compiler-gcc4.h ${compiler_file}
+  fi
+  popd
+fi
+make mrproper
+make defconfig
+make modules_prepare
+popd
+
+# Build only the kernel
+./configure --kernbuilddir $PWD/linux-${KERNEL_VERSION} --no-user
+make ker

@@ -1,0 +1,39 @@
+sudo: enabled
+dist: trusty
+language: cpp
+
+env:
+  - KERNEL_VERSION=local
+  - KERNEL_VERSION=4.1
+  - KERNEL_VERSION=4.2
+  - KERNEL_VERSION=4.3
+  - KERNEL_VERSION=4.4
+  - KERNEL_VERSION=4.5
+  - KERNEL_VERSION=4.6
+  - KERNEL_VERSION=4.7
+  - KERNEL_VERSION=4.8
+  - KERNEL_VERSION=4.9
+  - KERNEL_VERSION=4.10
+  - KERNEL_VERSION=4.11
+  - KERNEL_VERSION=4.12
+  - KERNEL_VERSION=4.13
+
+before_install:
+  # Install Dependencies
+  - sudo apt-get update -qq
+  - sudo apt-get install autoconf
+  - sudo apt-get install automake
+  - sudo apt-get install libtool
+  - sudo apt-get install pkg-config
+  - sudo apt-get install git
+  - sudo apt-get install g++
+  - sudo apt-get install libssl-dev
+  #- sudo apt-get install protobuf-compiler
+  #- sudo apt-get install libprotobuf-dev
+  - sudo apt-get install hostapd
+  - sudo apt-get install wpasupplicant
+  - sudo apt-get install linux-headers-$(uname -r)
+
+script:
+  - "[ ${KERNEL_VERSION} != local ] || ./ci/build-all"
+  - "[ ${KERNEL_VERSION} == local ] || ./ci/build-kernel"

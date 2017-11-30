@@ -30,7 +30,7 @@
 #include "logs.h"
 #include "debug.h"
 #include "kfa.h"
-#include "sdu.h"
+#include "du.h"
 #include "rds/rmem.h"
 #include "rina-device.h"
 
@@ -38,7 +38,7 @@
 
 struct rina_device {
 	struct net_device_stats stats;
-	struct ipcp_instance* kfa_ipcp;
+	struct kfa* kfa;
 	port_id_t port;
 	struct net_device* dev;
 };
@@ -98,7 +98,7 @@ int rina_dev_rcv(struct sk_buff *skb, struct rina_device *rina_dev)
 static int rina_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	struct iphdr* iph = NULL;
-	struct sdu* sdu;
+	struct du * du;
 	struct rina_device* rina_dev = netdev_priv(dev);
 	ssize_t len;
 	ASSERT(rina_dev);
@@ -109,16 +109,15 @@ static int rina_dev_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	iph = ip_hdr(skb);
 	ASSERT(iph);
 
-	sdu = sdu_create_from_skb(skb);
-	if (!sdu){
+	du = du_create_from_skb(skb);
+	if (!du){
 		kfree_skb(skb);
 		rina_dev->stats.tx_dropped++;
 		return NET_XMIT_DROP;
 	}
 
-	len = skb->len;
-        if(kfa_flow_sdu_write(rina_dev->kfa_ipcp->data, rina_dev->port,
-        		      sdu, false)){
+	len = du_len(du);
+        if(kfa_flow_du_write(rina_dev->kfa, rina_dev->port, du) != len){
 		rina_dev->stats.tx_dropped++;
 		LOG_ERR("Could not xmit IP packet, unable to send to KFA...");
 		return NET_XMIT_DROP;
@@ -146,8 +145,6 @@ static void rina_dev_setup(struct net_device *dev)
          * for the moment an upper bound is provided */
 	dev->needed_headroom += RINA_EXTRA_HEADER_LENGTH;
 	dev->needed_tailroom += RINA_EXTRA_HEADER_LENGTH;
-	/* This should be set depending on supporting DIF */
-	dev->mtu = 1400;
 	dev->hard_header_len = 0;
 	dev->addr_len = 0;
 	dev->type = ARPHRD_NONE;
@@ -164,22 +161,24 @@ static void rina_dev_setup(struct net_device *dev)
 #endif
 	netif_keep_dst(dev);
 	dev->features = NETIF_F_HW_CSUM;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,12,0)
 	dev->destructor	= rina_dev_free;
+#else
+	dev->priv_destructor = rina_dev_free;
+#endif
 	dev->netdev_ops	= &rina_dev_ops;
 
 	return;
 }
 
 struct rina_device* rina_dev_create(string_t* name,
-				    struct ipcp_instance* kfa_ipcp,
-				    port_id_t port)
+				    struct kfa* kfa,
+				    port_id_t port,
+				    unsigned int mtu)
 {
 	int rv;
 	struct net_device *dev;
 	struct rina_device* rina_dev;
-
-	if (!kfa_ipcp || !name)
-		return NULL;
 
 	if (strlen(name) > IFNAMSIZ) {
 		LOG_ERR("Could not allocate RINA IP network device %s, "
@@ -196,8 +195,9 @@ struct rina_device* rina_dev_create(string_t* name,
 
 	rina_dev = netdev_priv(dev);
 	rina_dev->dev = dev;
-	rina_dev->kfa_ipcp = kfa_ipcp;
+	rina_dev->kfa = kfa;
 	rina_dev->port = port;
+	dev->mtu = mtu;
 	memset(&rina_dev->stats, 0x00, sizeof(struct net_device_stats));
 
 	rv = register_netdev(dev);

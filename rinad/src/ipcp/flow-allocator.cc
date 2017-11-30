@@ -392,7 +392,8 @@ void FlowAllocator::createFlowRequestMessageReceived(configs::Flow * flow,
 		connection->setDestCepId(connection->getSourceCepId());
 
 		try {
-			seq_num = rina::extendedIPCManager->allocatePortId(app_info);
+			seq_num = rina::extendedIPCManager->allocatePortId(app_info,
+									   flow->flow_specification);
 		} catch (rina::Exception &e) {
 			LOG_IPCP_ERR("Problems requesting an available port-id to the Kernel IPC Manager: %s",
 					e.what());
@@ -474,7 +475,8 @@ void FlowAllocator::submitAllocateRequest(const rina::FlowRequestEvent& event,
 	rina::ScopedLock g(port_alloc_lock);
 
 	try {
-		seq_num = rina::extendedIPCManager->allocatePortId(app_info);
+		seq_num = rina::extendedIPCManager->allocatePortId(app_info,
+								   event.flowSpecification);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems requesting an available port-id to the Kernel IPC Manager: %s",
 				e.what());

@@ -96,10 +96,9 @@ int main() {
 			<< "; DIF name is: " << flow.difName.processName
 			<< "; state is: "<<flow.state << "\n";
 
-
 	/* TEST ALLOCATE RESPONSE */
 	FlowRequestEvent flowRequestEvent = FlowRequestEvent(25, flowSpecification,
-			true, sourceName, destinationName, difName, 23, 234);
+			true, sourceName, destinationName, difName, 23, 234, 15, 12);
 	FlowInformation flow2 = ipcManager->allocateFlowResponse(flowRequestEvent, 0, true);
 	std::cout << "Accepted flow allocation, portId is " << flow2.portId
 			<< "; DIF name is: " << flow2.difName.processName
@@ -110,19 +109,17 @@ int main() {
 		return 1;
 	}
 	/* TEST DEALLOCATE FLOW */
-	ipcManager->requestFlowDeallocation(flow.portId);
-	ipcManager->flowDeallocationResult(flow.portId, true);
+	ipcManager->deallocate_flow(flow.portId);
 	if (!checkAllocatedFlows(1)) {
 		return 1;
 	}
-	ipcManager->requestFlowDeallocation(flow2.portId);
-	ipcManager->flowDeallocationResult(flow2.portId, true);
+	ipcManager->deallocate_flow(flow2.portId);
 	if (!checkAllocatedFlows(0)) {
 		return -1;
 	}
 
 	try {
-		ipcManager->requestFlowDeallocation(234);
+		ipcManager->deallocate_flow(234);
 	} catch (IPCException &e) {
 		std::cout << "Caught expected exception: " << e.what() << "\n";
 	}

@@ -199,7 +199,11 @@ void restore_qdisc(struct net_device * dev)
 	if (dev->flags & IFF_UP)
 		dev_deactivate(dev);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,13,0)
 	atomic_dec(&dev->qdisc->refcnt);
+#else
+	atomic_dec(&dev->qdisc->refcnt.refs);
+#endif
 
 	/* Destroy all qdiscs in TX queues, point them to no-op (so that
 	 * the kernel will create default ones when activating the device)
@@ -274,7 +278,11 @@ int  update_qdisc(struct net_device * dev,
 		dev_deactivate(dev);
 
 	dev->qdisc = netdev_get_tx_queue(dev, 0)->qdisc_sleeping;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,13,0)
 	atomic_inc(&dev->qdisc->refcnt);
+#else
+	atomic_inc(&dev->qdisc->refcnt.refs);
+#endif
 
 	if (dev->flags & IFF_UP)
 		dev_activate(dev);

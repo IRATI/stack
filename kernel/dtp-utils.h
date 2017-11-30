@@ -24,14 +24,9 @@
 
 #include <linux/list.h>
 
-#include "common.h"
-#include "pdu.h"
+#include "efcp-str.h"
+#include "du.h"
 #include "rmt.h"
-
-struct cwq;
-struct dtp;
-struct dt;
-struct rtxq_entry;
 
 struct cwq *        cwq_create(void);
 struct cwq *        cwq_create_ni(void);
@@ -41,19 +36,19 @@ bool                cwq_write_enable(struct cwq * queue);
 void                cwq_write_enable_set(struct cwq * queue,
                                          bool         flag);
 int                 cwq_push(struct cwq * q,
-                             struct pdu * pdu);
-struct pdu *        cwq_pop(struct cwq * q);
+                             struct du * du);
+struct du *         cwq_pop(struct cwq * q);
 bool                cwq_is_empty(struct cwq * q);
 int                 cwq_flush(struct cwq * q);
 ssize_t             cwq_size(struct cwq * q);
 void                cwq_deliver(struct cwq * queue,
-                                struct dt *  dt,
+                                struct dtp * dtp,
                                 struct rmt * rmt);
 seq_num_t            cwq_peek(struct cwq * queue);
 
 struct rtxq;
 
-struct rtxq *       rtxq_create(struct dt *  dt,
+struct rtxq *       rtxq_create(struct dtp * dtp,
                                 struct rmt * rmt,
 				struct efcp_container * container,
 				struct dtcp_config * dtcp_cfg,
@@ -68,7 +63,7 @@ int                 rtxq_entry_destroy(struct rtxq_entry * entry);
 int                 rtxq_push_sn(struct rtxq * q,
                                  seq_num_t sn);
 int                 rtxq_push_ni(struct rtxq * q,
-                                 struct pdu *  pdu);
+                                 struct du *  du);
 int                 rtxq_ack(struct rtxq * q,
                              seq_num_t     seq_num,
                              timeout_t     tr);
@@ -76,9 +71,8 @@ int                 rtxq_nack(struct rtxq * q,
                               seq_num_t     seq_num,
                               timeout_t     tr);
 int                 rtxq_flush(struct rtxq * q);
-int                 rtxq_lock(struct rtxq * q);
 
-int 		    dt_pdu_send(struct dt *  dt,
-        	    	        struct rmt * rmt,
-                                struct pdu * pdu);
+int 		    dtp_pdu_send(struct dtp *  dtp,
+				 struct rmt * rmt,
+                                 struct du * du);
 #endif

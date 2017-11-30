@@ -305,13 +305,27 @@ irati_fa_req_fill(struct irati_kmsg_ipcm_allocate_flow *req, const char *dif_nam
 	req->local = ln;
 	req->remote = rn;
 	req->fspec = new flow_spec();
-	req->fspec->average_bandwidth = flowspec->avg_bandwidth;
-	req->fspec->average_sdu_bandwidth = 0;
-	req->fspec->delay = flowspec->max_delay;
-	req->fspec->jitter = flowspec->max_jitter;
-	req->fspec->max_allowable_gap = flowspec->max_sdu_gap;
-	req->fspec->undetected_bit_error_rate = flowspec->max_loss;
-	req->fspec->ordered_delivery = flowspec->in_order_delivery;
+	if (flowspec) {
+		req->fspec->average_bandwidth = flowspec->avg_bandwidth;
+		req->fspec->average_sdu_bandwidth = 0;
+		req->fspec->delay = flowspec->max_delay;
+		req->fspec->jitter = flowspec->max_jitter;
+		req->fspec->max_allowable_gap = flowspec->max_sdu_gap;
+		req->fspec->undetected_bit_error_rate = flowspec->max_loss;
+		req->fspec->ordered_delivery = flowspec->in_order_delivery;
+		req->fspec->msg_boundaries = flowspec->msg_boundaries;
+	} else {
+		req->fspec->average_bandwidth = 0;
+		req->fspec->average_sdu_bandwidth = 0;
+		req->fspec->delay = 0;
+		req->fspec->jitter = 0;
+		req->fspec->max_allowable_gap = 10;
+		req->fspec->ordered_delivery = false;
+		req->fspec->undetected_bit_error_rate = 0;
+		req->fspec->partial_delivery = true;
+		req->fspec->msg_boundaries = false;
+	}
+
 	req->pid = getpid();
 
 	return 0;

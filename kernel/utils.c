@@ -32,6 +32,8 @@
 #include "utils.h"
 #include "debug.h"
 
+#define USTR_MAX_SIZE 10000
+
 bool is_value_in_range(int value, int min_value, int max_value)
 { return ((value >= min_value || value <= max_value) ? true : false); }
 
@@ -46,7 +48,7 @@ char * strdup_from_user(const char __user * src)
                 return NULL;
         }
 
-        size = strlen_user(src); /* Includes the terminating NUL */
+        size = strnlen_user(src, USTR_MAX_SIZE); /* Includes the terminating NUL */
         if (!size) {
                 LOG_ERR("Got exception while detecting string length");
                 return NULL;

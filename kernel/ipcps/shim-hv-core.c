@@ -1149,6 +1149,15 @@ shim_hv_dif_name(struct ipcp_instance_data *priv)
         return &priv->dif_name;
 }
 
+static size_t
+shim_hv_max_sdu_size(struct ipcp_instance_data *priv)
+{
+        ASSERT(priv);
+
+        /* FIXME: return something that makes more sense*/
+        return 200000;
+}
+
 ipc_process_id_t shim_hv_ipcp_id(struct ipcp_instance_data * data)
 {
 	ASSERT(data);
@@ -1210,7 +1219,8 @@ static struct ipcp_instance_ops shim_hv_ipcp_ops = {
         .update_crypto_state	   = NULL,
 	.address_change		   = NULL,
         .dif_name		   = shim_hv_dif_name,
-	.ipcp_id		   = shim_hv_ipcp_id
+	.ipcp_id		   = shim_hv_ipcp_id,
+	.max_sdu_size		   = shim_hv_max_sdu_size
 };
 
 /* Initialize the IPC process factory. */

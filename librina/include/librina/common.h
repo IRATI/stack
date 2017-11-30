@@ -173,6 +173,12 @@ public:
 	 */
 	unsigned int maxSDUsize;
 
+	/**
+	 * True if message boundaries have to be preserved, false
+	 * otherwise
+	 */
+	bool msg_boundaries;
+
 	FlowSpecification();
 	FlowSpecification(struct flow_spec * fspec);
 	bool operator==(const FlowSpecification &other) const;

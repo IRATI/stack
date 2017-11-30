@@ -90,6 +90,7 @@ void Client::createFlow()
     IPCEvent* event;
     uint seqnum;
 
+    qosspec.msg_boundaries = true;
     if (gap >= 0)
         qosspec.maxAllowableGap = gap;
 

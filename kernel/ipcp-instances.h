@@ -24,9 +24,10 @@
 #include <linux/list.h>
 
 #include "rds/robjects.h"
-#include "sdu.h"
 #include "buffer.h"
+#include "du.h"
 
+struct du;
 struct dtp_config;
 struct dtcp_config;
 
@@ -64,10 +65,10 @@ struct ipcp_instance_ops {
                                    const struct dif_config *   configuration);
 
         /* Takes the ownership of the passed SDU */
-        int  (* sdu_write)(struct ipcp_instance_data * data,
-                           port_id_t                   id,
-                           struct sdu *                sdu,
-                           bool                        blocking);
+        int  (* du_write)(struct ipcp_instance_data * data,
+                          port_id_t                   id,
+                          struct du *                 du,
+                          bool                        blocking);
 
         cep_id_t (* connection_create)(struct ipcp_instance_data * data,
         			       struct ipcp_instance *      user_ipcp,
@@ -117,19 +118,19 @@ struct ipcp_instance_ops {
 	int	(* nm1_flow_state_change)(struct ipcp_instance_data *data,
 					  port_id_t port_id, bool up);
 
-        int      (* sdu_enqueue)(struct ipcp_instance_data * data,
-                                 port_id_t                   id,
-                                 struct sdu *                sdu);
+        int      (* du_enqueue)(struct ipcp_instance_data * data,
+                                port_id_t                   id,
+                                struct du *                 du);
 
         /* Takes the ownership of the passed sdu */
-        int (* mgmt_sdu_write)(struct ipcp_instance_data * data,
-                               port_id_t                   port_id,
-                               struct sdu *                sdu);
-
-        /* Takes the ownership of the passed sdu */
-        int (* mgmt_sdu_post)(struct ipcp_instance_data * data,
+        int (* mgmt_du_write)(struct ipcp_instance_data * data,
                               port_id_t                   port_id,
-                              struct sdu *                sdu);
+                              struct du *                 du);
+
+        /* Takes the ownership of the passed sdu */
+        int (* mgmt_du_post)(struct ipcp_instance_data * data,
+                             port_id_t                   port_id,
+                             struct du *                 du);
 
         int (* pff_add)(struct ipcp_instance_data * data,
 			struct mod_pff_entry	  * entry);
@@ -176,11 +177,16 @@ struct ipcp_instance_ops {
          * Start using new address after first timeout, deprecate old
          * address after second timeout
          */
-         int (* address_change)(struct ipcp_instance_data * data,
+        int (* address_change)(struct ipcp_instance_data * data,
          		       address_t new_address,
  			       address_t old_address,
  			       timeout_t use_new_address_t,
  			       timeout_t deprecate_old_address_t);
+
+        /*
+         * The maximum size of SDUs that this IPCP will accept
+         */
+        size_t (* max_sdu_size)(struct ipcp_instance_data * data);
 };
 
 /* FIXME: Should work on struct ipcp_instance, not on ipcp_instance_ops */

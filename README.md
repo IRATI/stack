@@ -1,19 +1,17 @@
-#############################################################################
-## Table of contents                                                        #
-#############################################################################
+## Table of contents
+````
 
-* 1. Introduction
-* 2. Build instructions
-* 3. Running and configuring IRATI
-    * 3.1 Loading the kernel modules
-    * 3.2 The configuration files
-    * 3.3 Running the IPC Manager Daemon
-* 4. Tutorials
-* 5. Overview of the software components
+1. Introduction
+2. Build instructions
+3. Running and configuring IRATI
+    3.1 Loading the kernel modules
+    3.2 The configuration files
+    3.3 Running the IPC Manager Daemon
+4. Tutorials
+5. Overview of the software components
+````
 
-#############################################################################
-## 1. Introduction                                                          #
-#############################################################################
+## 1. Introduction
 
 IRATI is an open source implementation of the RINA architecture targeted to the OS/Linux 
 system, initially developed by the FP7-IRATI project (for information about RINA please 
@@ -35,40 +33,20 @@ with each system having up to 10 IPC Processes instantiated), during relatively 
 up to a day depending on the experiment tested). We are working on improving the stability and robustness 
 of IRATI in future releases.
 
-#############################################################################
-## 2. Build instructions                                                       #
-#############################################################################
+## 2. Build instructions
 
-### Building on Debian 8
-#############################################################################
+### 2.1. Building on Ubuntu 16.04, Debian 8 and Debian 9
 
-For the kernel modules, a Linux kernel with a version between 4.1 and 4.9 (included) has to be installed in 
-the system, with the kernel headers.
+**NOTE for Debian 8**: For the kernel modules, a Linux kernel with a version between 4.1 
+and 4.9 (included) has to be installed in the system, with the kernel headers. Ubuntu 
+16.04 already comes with Linux kernel 4.4, therefore no new kernel needs to be installed. 
 
 Once this is done, please install user-space dependencies
 
     $ apt-get update
-    $ apt-get install linux-headers-$(uname -r)
-    $ apt-get install autoconf
-    $ apt-get install automake
-    $ apt-get install libtool
-    $ apt-get install pkg-config
-    $ apt-get install git
-    $ apt-get install g++
-    $ apt-get install libssl-dev=1.0.1k-3
-    $ apt-get install protobuf-compiler=2.6.1-1
-    $ apt-get install libprotobuf-dev=2.6.1-1
+    $ apt-get install autoconf automake libtool pkg-config git g++ libssl-dev protobuf-compiler libprotobuf-dev socat python linux-headers-$(uname -r)
     $ apt-get install hostapd (if the system will be configured as an access point)
     $ apt-get install wpasupplicant (if the system will be configured as a mobile host)
-
-If you want to generate the Java bindings, the following packages are also required
-
-    $ apt-get install openjdk-6-jdk
-    $ apt-get install maven
-
-Required packages to be build from source (only if generation of Java bindings is required)
-
-* SWIG (version >= 2.0.8 required, 2.0.12 is known to be working fine) from http://swig.org
 
 Download the IRATI repo (arcfire branch) and enter the root directory
 
@@ -80,15 +58,38 @@ Build and install both kernel-space and user-space software
     $ sudo ./configure --prefix <path to IRATI installation folder>
     $ sudo make install
 
-### Building on Raspbian
-#############################################################################
+(`sudo` is not necessary in the `./configure` phase if the current user has
+write permissions on the directory specified with `--prefix`).
+
+### 2.2. Building on Arch Linux
+
+Install user-space dependencies
+
+    $ pacman -S autoconf automake autoconf libtool pkg-config git openssl protobuf socat python linux-headers
+    $ pacman -S hostapd (if the system will be configured as an access point)
+    $ pacman -S wpa_supplicant (if the system will be configured as a mobile host)
+
+Download the IRATI repo (arcfire branch) and enter the root directory
+
+    $ git clone -b arcfire https://github.com/IRATI/stack.git
+    $ cd stack
+
+Build and install both kernel-space and user-space software
+
+    $ sudo ./configure --prefix <path to IRATI installation folder>
+    $ sudo make install
+
+(`sudo` is not necessary in the `./configure` phase if the current user has
+write permissions on the directory specified with `--prefix`).
+
+### 2.3. Building on Raspbian
 
 (Tested with Raspberry Pi model 3B)
 
 Insert the SD card into the Raspberry Pi and power it on. Log in with user 'pi' and 
 password 'raspberry'.  As root ("sudo su -" or equivalent):
 
-Check your kernel version (via uname -r), if it is not 4.9.24-v7+, update the distro
+Check your kernel version (via uname -r), if it is not at least 4.9.24-v7+, update the distro
 
     $ apt-get update
     $ apt-get dist-upgrade
@@ -96,16 +97,10 @@ Check your kernel version (via uname -r), if it is not 4.9.24-v7+, update the di
 
 Install dependencies
 
-    $ apt-get install raspberrypi-kernel-headers
-    $ apt-get install socat
+    $ apt-get install raspberrypi-kernel-headers socat
     $ apt-get install hostapd (if the system will be configured as an access point)
     $ apt-get install wpa-supplicant (if the system will be configured as a mobile host)
-    $ apt-get install autoconf
-    $ apt-get install libtool
-    $ apt-get install git
-    $ apt-get install libssl-dev=1.0.1k-3
-    $ apt-get install protobuf-compiler=2.6.1-1
-    $ apt-get install libprotobuf-dev=2.6.1-1
+    $ apt-get install autoconf libtool git libssl-dev protobuf-compiler libprotobuf-dev
 
 Download the IRATI repo (arcfire branch) and enter the root directory
 
@@ -117,12 +112,12 @@ Build and install both kernel-space and user-space software
     $ sudo ./configure --prefix <path to IRATI installation folder>
     $ sudo make install
 
-#############################################################################
-## 3. Running and configuring IRATI                                         #
-#############################################################################
+(`sudo` is not necessary in the `./configure` phase if the current user has
+write permissions on the directory specified with `--prefix`).
+
+## 3. Running and configuring IRATI
 
 ### 3.1. Loading the required Kernel modules
-#############################################################################
 
 To load the IRATI kernel modules, just call the load-rina-modules script:
 
@@ -132,7 +127,6 @@ Next, the IPC Manager (IPCM) has to be started in userspace, which is the local 
 The IPCM needs some configuration information.
 
 ### 3.2 The IPC Manager configuration files
-#############################################################################
 
 #### 3.2.1 Main configuration file
 The main configuration file is located in your `INSTALLATION_PATH/etc/ipcmanager.conf`. It contains 
@@ -221,7 +215,6 @@ it will fail. The contents of the da.map file can be modified while the IPC Mana
     ],
 
 ### 3.3 Running the IPC Manager Daemon
-#############################################################################
 Once the configuration file is ready you can un the IPC Manager Daemon. To do so go to the 
 INSTALLATION_PATH/bin folder and type:
 
@@ -275,14 +268,10 @@ Example of IPCM console output:
 Now applications can be run that use the IPC API. Look at the Tutorials section for some step-by-step 
 examples on how to use the rina-echo-time test application to experiment with IRATI.
 
-#############################################################################
-## 4. Tutorials                                                             #
-#############################################################################
+## 4. Tutorials
 Several tutorials are available at https://github.com/IRATI/stack/wiki/Tutorials
 
-#############################################################################
-## 5. Overview of the software components                                   #
-#############################################################################
+## 5. Overview of the software components
 This section provides an overview of the software architecture and components of IRATI. For a more detailed 
 explanation we direct the reader to FP7-IRATI's at http://irati.eu:
  
