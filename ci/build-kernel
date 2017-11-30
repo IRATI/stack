@@ -28,5 +28,5 @@ make modules_prepare
 popd
 
 # Build only the kernel
-./configure --kernbuilddir=$PWD/linux-${KERNEL_VERSION} --no-user
+./configure --kernbuilddir $PWD/linux-${KERNEL_VERSION} --no-user
 make ker

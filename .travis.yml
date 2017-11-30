@@ -2,6 +2,7 @@ sudo: enabled
 dist: trusty
 
 env:
+  - KERNEL_VERSION=local
   - KERNEL_VERSION=4.1
   - KERNEL_VERSION=4.2
   - KERNEL_VERSION=4.3
@@ -15,7 +16,6 @@ env:
   - KERNEL_VERSION=4.11
   - KERNEL_VERSION=4.12
   - KERNEL_VERSION=4.13
-  - KERNEL_VERSION=local
 
 before_install:
   # Install Dependencies
@@ -32,16 +32,6 @@ before_install:
   - sudo apt-get install hostapd
   - sudo apt-get install wpasupplicant
   - sudo apt-get install linux-headers-$(uname -r)
-
-before_script:
-  # Install version 2.6.1 of Protocol Buffers
-  - wget https://github.com/google/protobuf/releases/download/v2.6.1/protobuf-2.6.1.tar.gz
-  - tar -xvzf protobuf-2.6.1.tar.gz
-  - cd protobuf-2.6.1
-  - ./configure && make
-  - sudo make install
-  - cd ..
-  - sudo ldconfig
 
 script:
   - "[ ${KERNEL_VERSION} != local ] || ./ci/build-all"
