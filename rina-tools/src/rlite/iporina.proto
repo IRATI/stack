@@ -1,0 +1,14 @@
+syntax="proto2";
+package gpb;
+option optimize_for = LITE_RUNTIME;
+
+message hello_msg_t {
+    required string tun_subnet = 1;
+    required string tun_src_addr = 2;
+    required string tun_dst_addr = 3;
+    required uint32 num_routes = 4;
+}
+
+message route_msg_t {
+    required string route = 1;
+}
