@@ -3445,6 +3445,14 @@ int sdup_crypto_state_serlen(const struct sdup_crypto_state * scs)
 {
 	if (!scs) return 0;
 
+	printf("%d, %d, %d, %d, %d, %d \n",
+			buffer_prlen(scs->encrypt_key_rx),
+			buffer_prlen(scs->encrypt_key_tx),
+			buffer_prlen(scs->iv_rx),
+			buffer_prlen(scs->iv_tx),
+			buffer_prlen(scs->mac_key_rx),
+			buffer_prlen(scs->mac_key_tx));
+
 	return 2 * sizeof(bool) + 3 * sizeof(uint16_t) + sizeof(port_id_t)
 	       + string_prlen(scs->compress_alg)
 	       + string_prlen(scs->enc_alg)
