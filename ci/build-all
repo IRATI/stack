@@ -19,3 +19,9 @@ mkdir build
 mkdir -p $INSTALL_PREFIX
 ./configure --prefix $INSTALL_PREFIX
 sudo make install
+cd build/librina
+sudo make check-functional
+cd ../..
+sudo make install
+cd build/rinad
+sudo make check
