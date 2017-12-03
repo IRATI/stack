@@ -859,6 +859,40 @@ SSH2SecurityContext::SSH2SecurityContext(int session_id,
 	state = BEGIN;
 }
 
+//OpenSSL 1.1 compatibility layer
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+int DH_set0_pqg(DH *dh, BIGNUM *p, BIGNUM *q, BIGNUM *g)
+{
+	dh->p = p;
+	dh->q = q;
+	dh->g = g;
+
+	return 1;
+}
+
+void DH_get0_key(const DH *dh, const BIGNUM **pub_key, const BIGNUM **priv_key)
+{
+	if (pub_key)
+		*pub_key = dh->pub_key;
+
+	if (priv_key)
+		*priv_key = dh->priv_key;
+}
+
+void DH_get0_pqg(const DH *dh, const BIGNUM **p,
+		 const BIGNUM **q, const BIGNUM **g)
+{
+	if (p)
+		*p = dh->p;
+
+	if (q)
+		*q = dh->q;
+
+	if (g)
+		*g = dh->g;
+}
+#endif
+
 //Class AuthSSH2
 const int AuthSSH2PolicySet::DEFAULT_TIMEOUT = 10000;
 const std::string AuthSSH2PolicySet::EDH_EXCHANGE = "Ephemeral Diffie-Hellman exchange";
@@ -893,6 +927,7 @@ AuthSSH2PolicySet::~AuthSSH2PolicySet()
 void AuthSSH2PolicySet::edh_init_params()
 {
 	int codes;
+	BIGNUM *p, *g;
 
 	static unsigned char dh2048_p[]={
 		0xC4,0x25,0x37,0x63,0x56,0x46,0xDA,0x97,0x3A,0x51,0x98,0xA1,
@@ -927,11 +962,26 @@ void AuthSSH2PolicySet::edh_init_params()
 		return;
 	}
 
-	dh_parameters->p = BN_bin2bn(dh2048_p,sizeof(dh2048_p),NULL);
-	dh_parameters->g = BN_bin2bn(dh2048_g,sizeof(dh2048_g),NULL);
-	if ((dh_parameters->p == NULL) || (dh_parameters->g == NULL)) {
-		LOG_ERR("Problems converting DH parameters to big number");
+	p = BN_bin2bn(dh2048_p,sizeof(dh2048_p),NULL);
+	if (p == NULL) {
+		LOG_ERR("Problems converting P to big number");
 		DH_free(dh_parameters);
+		return;
+	}
+
+	g = BN_bin2bn(dh2048_g,sizeof(dh2048_g),NULL);
+	if (g == NULL) {
+		LOG_ERR("Problems converting G to big number");
+		DH_free(dh_parameters);
+		BN_free(p);
+		return;
+	}
+
+	if (DH_set0_pqg(dh_parameters, p, NULL, g) != 1) {
+		LOG_ERR("Problems setting P and G");
+		DH_free(dh_parameters);
+		BN_free(p);
+		BN_free(g);
 		return;
 	}
 
@@ -964,6 +1014,8 @@ cdap_rib::auth_policy_t AuthSSH2PolicySet::get_auth_policy(int session_id,
 							   const cdap_rib::ep_info_t& peer_ap,
 					            	   const AuthSDUProtectionProfile& profile)
 {
+	const BIGNUM *pub_key;
+
 	if (profile.authPolicy.name_ != type) {
 		LOG_ERR("Wrong policy name: %s, expected: %s",
 				profile.authPolicy.name_.c_str(),
@@ -1004,10 +1056,10 @@ cdap_rib::auth_policy_t AuthSSH2PolicySet::get_auth_policy(int session_id,
 	options.encrypt_algs.push_back(sc->encrypt_alg);
 	options.mac_algs.push_back(sc->mac_alg);
 	options.compress_algs.push_back(sc->compress_alg);
-	options.dh_public_key.data = BN_to_binary(sc->dh_state->pub_key,
-						  &options.dh_public_key.length);
-
-	if (options.dh_public_key.length <= 0 ) {
+	DH_get0_key(sc->dh_state, &pub_key, NULL);
+	options.dh_public_key.length = BN_num_bytes(pub_key);
+	options.dh_public_key.data = new unsigned char[options.dh_public_key.length];
+	if (BN_bn2bin(pub_key, options.dh_public_key.data) <= 0 ) {
 		LOG_ERR("Error transforming big number to binary");
 		delete sc;
 		throw Exception();
@@ -1088,6 +1140,7 @@ int AuthSSH2PolicySet::load_authentication_keys(SSH2SecurityContext * sc)
 int AuthSSH2PolicySet::edh_init_keys(SSH2SecurityContext * sc)
 {
 	DH *dh_state;
+	const BIGNUM *p, *g;
 
 	// Init own parameters
 	if (!dh_parameters) {
@@ -1101,8 +1154,8 @@ int AuthSSH2PolicySet::edh_init_keys(SSH2SecurityContext * sc)
 	}
 
 	// Set P and G (re-use defaults or use the ones sent by the peer)
-	dh_state->p = BN_dup(dh_parameters->p);
-	dh_state->g = BN_dup(dh_parameters->g);
+	DH_get0_pqg(dh_parameters, &p, NULL, &g);
+	DH_set0_pqg(dh_state, BN_dup(p), NULL, BN_dup(g));
 
 	// Generate the public and private key pair
 	if (DH_generate_key(dh_state) != 1) {
@@ -1319,6 +1372,8 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::crypto_state_updated(int port_id)
 
 IAuthPolicySet::AuthStatus AuthSSH2PolicySet::decryption_enabled_server(SSH2SecurityContext * sc)
 {
+	const BIGNUM *pub_key;
+
 	if (sc->state != SSH2SecurityContext::REQUESTED_ENABLE_DECRYPTION_SERVER) {
 		LOG_ERR("Wrong state of policy");
 		sec_man->destroy_security_context(sc->id);
@@ -1334,13 +1389,13 @@ IAuthPolicySet::AuthStatus AuthSSH2PolicySet::decryption_enabled_server(SSH2Secu
 	auth_options.encrypt_algs.push_back(sc->encrypt_alg);
 	auth_options.mac_algs.push_back(sc->mac_alg);
 	auth_options.compress_algs.push_back(sc->compress_alg);
-	auth_options.dh_public_key.data = BN_to_binary(sc->dh_state->pub_key,
-						       &auth_options.dh_public_key.length);
-
-	if (auth_options.dh_public_key.length <= 0) {
+	DH_get0_key(sc->dh_state, &pub_key, NULL);
+	auth_options.dh_public_key.length = BN_num_bytes(pub_key);
+	auth_options.dh_public_key.data = new unsigned char[auth_options.dh_public_key.length];
+	if (BN_bn2bin(pub_key, auth_options.dh_public_key.data) <= 0 ) {
 		LOG_ERR("Error transforming big number to binary");
-		sec_man->destroy_security_context(sc->id);
-		return IAuthPolicySet::FAILED;
+		delete sc;
+		throw Exception();
 	}
 
 	//Send message to peer with selected algorithms and public key

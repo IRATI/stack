@@ -45,7 +45,8 @@
 
 #define SDU_SIZE_MAX 64
 #define MAX_CLIENTS 128
-#define TIMEOUT_SECS 2
+#define TIMEOUT_SECS 3
+#define REGISTER_TIMEOUT_SECS 10
 #if TIMEOUT_SECS < 2
 #error "TIMEOUT_SECS must be >= 2"
 #endif
@@ -75,6 +76,12 @@ struct fdfsm {
     time_t last_activity;
 };
 
+#define PRINTF(FMT, ...)                                                       \
+    do {                                                                       \
+        printf(FMT, ##__VA_ARGS__);                                            \
+        fflush(stdout);                                                        \
+    } while (0)
+
 static void
 shutdown_flow(struct fdfsm *fsm)
 {
@@ -97,7 +104,7 @@ client(struct echo_async *rea)
 
     fsms = calloc(rea->p, sizeof(*fsms));
     if (fsms == NULL) {
-        printf("Failed to allocate memory for %d parallel flows\n", rea->p);
+        PRINTF("Failed to allocate memory for %d parallel flows\n", rea->p);
         return -1;
     }
 
@@ -161,11 +168,11 @@ client(struct echo_async *rea)
                     /* Complete flow allocation, replacing the fd. */
                     fsms[i].fd = rina_flow_alloc_wait(fsms[i].fd);
                     if (fsms[i].fd < 0) {
-                        printf("rina_flow_alloc_wait(): flow %d denied\n", i);
+                        PRINTF("rina_flow_alloc_wait(): flow %d denied\n", i);
                         shutdown_flow(fsms + i);
                     } else {
                         fsms[i].state = SELFD_S_WRITE;
-                        printf("Flow %d allocated\n", i);
+                        PRINTF("Flow %d allocated\n", i);
                     }
                 }
                 break;
@@ -192,8 +199,8 @@ client(struct echo_async *rea)
                     ret = read(fsms[i].fd, fsms[i].buf, sizeof(fsms[i].buf));
                     if (ret > 0) {
                         fsms[i].buf[ret] = '\0';
-                        printf("Response: '%s'\n", fsms[i].buf);
-                        printf("Flow %d deallocated\n", i);
+                        PRINTF("Response: '%s'\n", fsms[i].buf);
+                        PRINTF("Flow %d deallocated\n", i);
                     }
                     shutdown_flow(fsms + i);
                 }
@@ -201,7 +208,7 @@ client(struct echo_async *rea)
             }
 
             if (time(NULL) - fsms[i].last_activity >= TIMEOUT_SECS) {
-                printf("Flow %d timed out\n", i);
+                PRINTF("Flow %d timed out\n", i);
                 shutdown_flow(fsms + i);
             }
         }
@@ -231,12 +238,14 @@ server(struct echo_async *rea)
         return wfd;
     }
 
-    fsms[0].state = SELFD_S_REGISTER;
-    fsms[0].fd    = wfd;
+    fsms[0].state         = SELFD_S_REGISTER;
+    fsms[0].fd            = wfd;
+    fsms[0].last_activity = time(NULL);
 
     for (i = 1; i <= MAX_CLIENTS; i++) {
-        fsms[i].state = SELFD_S_NONE;
-        fsms[i].fd    = -1;
+        fsms[i].state         = SELFD_S_NONE;
+        fsms[i].fd            = -1;
+        fsms[i].last_activity = time(NULL);
     }
 
     for (;;) {
@@ -276,9 +285,12 @@ server(struct echo_async *rea)
         }
 
         for (i = 0; i <= MAX_CLIENTS; i++) {
+            time_t inactivity;
+
             switch (fsms[i].state) {
             case SELFD_S_REGISTER:
                 if (FD_ISSET(fsms[i].fd, &rdfs)) {
+                    fsms[i].last_activity = time(NULL);
                     ret = rina_register_wait(rea->cfd, fsms[i].fd);
                     if (ret < 0) {
                         perror("rina_register_wait()");
@@ -321,7 +333,7 @@ server(struct echo_async *rea)
 
                     if (j <= MAX_CLIENTS) {
                         fsms[j].state = SELFD_S_READ;
-                        printf("Accept client %d\n", j);
+                        PRINTF("Accept client %d\n", j);
                     }
                 }
                 break;
@@ -334,10 +346,10 @@ server(struct echo_async *rea)
                         read(fsms[i].fd, fsms[i].buf, sizeof(fsms[i].buf));
                     if (fsms[i].buflen < 0) {
                         shutdown_flow(fsms + i);
-                        printf("Shutdown client %d\n", i);
+                        PRINTF("Shutdown client %d\n", i);
                     } else {
                         fsms[i].buf[fsms[i].buflen] = '\0';
-                        printf("Request: '%s'\n", fsms[i].buf);
+                        PRINTF("Request: '%s'\n", fsms[i].buf);
                         fsms[i].state = SELFD_S_WRITE;
                     }
                 }
@@ -348,25 +360,62 @@ server(struct echo_async *rea)
                     fsms[i].last_activity = time(NULL);
                     ret = write(fsms[i].fd, fsms[i].buf, fsms[i].buflen);
                     if (ret == fsms[i].buflen) {
-                        printf("Response sent back\n");
-                        printf("Close client %d\n", i);
+                        PRINTF("Response sent back\n");
+                        PRINTF("Close client %d\n", i);
                     } else {
-                        printf("Shutdown client %d\n", i);
+                        PRINTF("Shutdown client %d\n", i);
                     }
                     shutdown_flow(fsms + i);
                 }
             }
 
-            if (fsms[i].state != SELFD_S_ACCEPT &&
-                fsms[i].state != SELFD_S_NONE &&
-                (time(NULL) - fsms[i].last_activity) >= TIMEOUT_SECS) {
-                printf("Client %d timed out\n", i);
-                shutdown_flow(fsms + i);
+            inactivity = time(NULL) - fsms[i].last_activity;
+            switch (fsms[i].state) {
+            case SELFD_S_READ:
+            case SELFD_S_WRITE:
+                if (inactivity > TIMEOUT_SECS) {
+                    PRINTF("Client %d timed out\n", i);
+                    shutdown_flow(fsms + i);
+                }
+                break;
+
+            case SELFD_S_REGISTER:
+                if (inactivity > REGISTER_TIMEOUT_SECS) {
+                    PRINTF("Server timed out on rina_register()\n");
+                    return -1;
+                }
+                break;
             }
         }
     }
 
     return 0;
+}
+
+/* Turn this program into a daemon process. */
+static void
+daemonize(void)
+{
+    pid_t pid = fork();
+    pid_t sid;
+
+    if (pid < 0) {
+        perror("fork(daemonize)");
+        exit(EXIT_FAILURE);
+    }
+
+    if (pid > 0) {
+        /* This is the parent. We can terminate it. */
+        exit(0);
+    }
+
+    /* Execution continues only in the child's context. */
+    sid = setsid();
+    if (sid < 0) {
+        exit(EXIT_FAILURE);
+    }
+
+    chdir("/");
 }
 
 static void
@@ -378,7 +427,7 @@ sigint_handler(int signum)
 static void
 usage(void)
 {
-    printf(
+    PRINTF(
         "rina-echo-async [OPTIONS]\n"
         "   -h : show this help\n"
         "   -l : run in server mode (listen)\n"
@@ -388,7 +437,8 @@ usage(void)
         "   -z APNAME : application process name/instance of the echo_async "
         "server\n"
         "   -g NUM : max SDU gap to use for the data flow\n"
-        "   -p NUM : open NUM parallel flows\n");
+        "   -p NUM : open NUM parallel flows\n"
+        "   -w : server runs in background\n");
 }
 
 int
@@ -398,6 +448,7 @@ main(int argc, char **argv)
     struct echo_async rea;
     const char *dif_name = NULL;
     int listen           = 0;
+    int background       = 0;
     int ret;
     int opt;
 
@@ -410,7 +461,7 @@ main(int argc, char **argv)
     /* Start with a default flow configuration (unreliable flow). */
     rina_flow_spec_unreliable(&rea.flowspec);
 
-    while ((opt = getopt(argc, argv, "hld:a:z:g:p:")) != -1) {
+    while ((opt = getopt(argc, argv, "hld:a:z:g:p:w")) != -1) {
         switch (opt) {
         case 'h':
             usage();
@@ -439,13 +490,17 @@ main(int argc, char **argv)
         case 'p':
             rea.p = atoll(optarg);
             if (rea.p <= 0) {
-                printf("Invalid -p argument '%d'\n", rea.p);
+                PRINTF("Invalid -p argument '%d'\n", rea.p);
                 return -1;
             }
             break;
 
+        case 'w':
+            background = 1;
+            break;
+
         default:
-            printf("    Unrecognized option %c\n", opt);
+            PRINTF("    Unrecognized option %c\n", opt);
             usage();
             return -1;
         }
@@ -476,11 +531,11 @@ main(int argc, char **argv)
     rea.dif_name = dif_name ? strdup(dif_name) : NULL;
 
     if (listen) {
-        server(&rea);
-
-    } else {
-        client(&rea);
+        if (background) {
+            daemonize();
+        }
+        return server(&rea);
     }
 
-    return close(rea.cfd);
+    return client(&rea);
 }

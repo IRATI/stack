@@ -2611,7 +2611,7 @@ void serialize_secman_config(void **pptr, const struct secman_config *sc)
 
 int deserialize_secman_config(const void **pptr, struct secman_config *sc)
 {
-	int ret;
+	int ret = 0;
 	struct auth_sdup_profile_entry * pos;
 	uint16_t size;
 	int i;
@@ -3129,7 +3129,7 @@ void serialize_query_rib_resp(void **pptr, const struct query_rib_resp *qrr)
 
 int deserialize_query_rib_resp(const void **pptr, struct query_rib_resp **qrr)
 {
-	int ret;
+	int ret = 0;
 	struct rib_object_data * pos;
 	uint16_t size;
 	int i;
@@ -3449,7 +3449,7 @@ int sdup_crypto_state_serlen(const struct sdup_crypto_state * scs)
 	       + string_prlen(scs->compress_alg)
 	       + string_prlen(scs->enc_alg)
 	       + string_prlen(scs->mac_alg)
-	       + 6 * sizeof(size_t)
+	       + 6 * sizeof(uint32_t)
 	       + buffer_prlen(scs->encrypt_key_rx)
 	       + buffer_prlen(scs->encrypt_key_tx)
 	       + buffer_prlen(scs->iv_rx)
@@ -3681,7 +3681,7 @@ void serialize_get_dif_prop_resp(void **pptr, const struct get_dif_prop_resp *gd
 
 int deserialize_get_dif_prop_resp(const void **pptr, struct get_dif_prop_resp **gdp)
 {
-	int ret;
+	int ret = 0;
 	struct dif_properties_entry * pos;
 	uint16_t size;
 	int i;
@@ -3787,7 +3787,7 @@ void serialize_ipcp_neighbor(void **pptr, const struct ipcp_neighbor *nei)
 
 int deserialize_ipcp_neighbor(const void **pptr, struct ipcp_neighbor *nei)
 {
-	int ret;
+	int ret = 0;
 	struct name_entry * pos;
 	uint16_t size;
 	int i;
@@ -3904,7 +3904,7 @@ void serialize_ipcp_neigh_list(void **pptr, const struct ipcp_neigh_list *nei)
 
 int deserialize_ipcp_neigh_list(const void **pptr, struct ipcp_neigh_list **nei)
 {
-	int ret;
+	int ret = 0;
 	struct ipcp_neighbor_entry * pos;
 	uint16_t size;
 	int i;
