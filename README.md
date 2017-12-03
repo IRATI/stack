@@ -13,30 +13,27 @@
 
 ## 1. Introduction
 
-IRATI is an open source implementation of the RINA architecture targeted to the OS/Linux
-system, initially developed by the FP7-IRATI project (for information about RINA please
-visit http://pouzinsociety.org).  This README file and the following
+IRATI is an open source implementation of the RINA architecture targeted to the OS/Linux 
+system, initially developed by the FP7-IRATI project (for information about RINA please 
+visit http://pouzinsociety.org).  This README file and the following 
 wiki pages provide information on using IRATI and understanding its design:
 
 * **Software Architecture Overview**: Explanation of the different components of IRATI.
 See https://github.com/IRATI/stack/wiki/Software-architecture-overview.
 * **Getting Started**: How to install and run IRATI. See https://github.com/IRATI/stack/wiki/Getting-Started
-* **IRATI in depth**: Detailed explanation of how specific aspects of the IRATI
+* **IRATI in depth**: Detailed explanation of how specific aspects of the IRATI 
 implementation work. See https://github.com/IRATI/stack/wiki/IRATI-in-depth
 * **Tutorials**: Step-by-step experimentation scenarios. See https://github.com/IRATI/stack/wiki/Tutorials
 
-A public mailing list, is available here: http://www.freelists.org/list/irati. The list is to be used as a
+A public mailing list, is available here: http://www.freelists.org/list/irati. The list is to be used as a 
 means for communication with the IRATI open source development community.
 
-The current implementation is mature enough to allow small/mid scale experimentation (up to 50-70 systems,
-with each system having up to 10 IPC Processes instantiated), during relatively short periods of time (hours,
-up to a day depending on the experiment tested). We are working on improving the stability and robustness
+The current implementation is mature enough to allow small/mid scale experimentation (up to 50-70 systems, 
+with each system having up to 10 IPC Processes instantiated), during relatively short periods of time (hours, 
+up to a day depending on the experiment tested). We are working on improving the stability and robustness 
 of IRATI in future releases.
 
-<<<<<<< HEAD
-#############################################################################
-## 2. Build instructions                                                    #
-#############################################################################
+## 2. Build instructions
 
 Build Status of the Master branch on Debian via Gitlab Runner.
 
@@ -56,17 +53,12 @@ Build Status of arcfire branch on Ubuntu via Travis CI.
 
 
 
-### Building on Ubuntu 16.04 and Debian 8
+### Building on Ubuntu 16.04 and Debian 8, Debian 9
 #############################################################################
-=======
-## 2. Build instructions
 
-### 2.1. Building on Ubuntu 16.04, Debian 8 and Debian 9
->>>>>>> arcfire
-
-**NOTE for Debian 8**: For the kernel modules, a Linux kernel with a version between 4.1
-and 4.9 (included) has to be installed in the system, with the kernel headers. Ubuntu
-16.04 already comes with Linux kernel 4.4, therefore no new kernel needs to be installed.
+**NOTE for Debian 8**: For the kernel modules, a Linux kernel with a version between 4.1 
+and 4.9 (included) has to be installed in the system, with the kernel headers. Ubuntu 
+16.04 already comes with Linux kernel 4.4, therefore no new kernel needs to be installed. 
 
 Once this is done, please install user-space dependencies
 
@@ -113,7 +105,7 @@ write permissions on the directory specified with `--prefix`).
 
 (Tested with Raspberry Pi model 3B)
 
-Insert the SD card into the Raspberry Pi and power it on. Log in with user 'pi' and
+Insert the SD card into the Raspberry Pi and power it on. Log in with user 'pi' and 
 password 'raspberry'.  As root ("sudo su -" or equivalent):
 
 Check your kernel version (via uname -r), if it is not at least 4.9.24-v7+, update the distro
@@ -150,18 +142,18 @@ To load the IRATI kernel modules, just call the load-rina-modules script:
 
     $ ./load-irati-modules
 
-Next, the IPC Manager (IPCM) has to be started in userspace, which is the local management agent.
+Next, the IPC Manager (IPCM) has to be started in userspace, which is the local management agent. 
 The IPCM needs some configuration information.
 
 ### 3.2 The IPC Manager configuration files
 
 #### 3.2.1 Main configuration file
-The main configuration file is located in your `INSTALLATION_PATH/etc/ipcmanager.conf`. It contains
-instructions to optionally instantiate and configure a number of IPC Processes when the IPC Manager
+The main configuration file is located in your `INSTALLATION_PATH/etc/ipcmanager.conf`. It contains 
+instructions to optionally instantiate and configure a number of IPC Processes when the IPC Manager 
 Daemon starts its execution.
 
-**Local configuration**. The first part of the configuration file contains the settings for IRATI,
-such as the paths to the  UNIX socket for the local console or the paths where to search for
+**Local configuration**. The first part of the configuration file contains the settings for IRATI, 
+such as the paths to the  UNIX socket for the local console or the paths where to search for 
 user-space or kernel plugins.
 
       "configFileVersion" : "1.4.1",
@@ -173,10 +165,10 @@ user-space or kernel plugins.
         "pluginsPaths" : ["/usr/lib/rinad/ipcp"]
       },
 
-**IPC Processes to create**. The next section specifies which IPC processes should be created.
-It requires for each IPC process the type, which can be either a normal IPC process, or a certain
-shim IPC process. The names of the IPC process and the DIF then have to be specified. The name of
-the DIF the IPC process should register with is also supplied. Enrollment however, will have to be
+**IPC Processes to create**. The next section specifies which IPC processes should be created. 
+It requires for each IPC process the type, which can be either a normal IPC process, or a certain 
+shim IPC process. The names of the IPC process and the DIF then have to be specified. The name of 
+the DIF the IPC process should register with is also supplied. Enrollment however, will have to be 
 done manually from the local management console.
 
     "ipcProcessesToCreate" : [ {
@@ -192,10 +184,10 @@ done manually from the local management console.
       "difsToRegisterAt" : ["110"]
      } ],
 
-**DIF Configurations**. This only specifies what DIFs to create, but it does not yet explain how
-the DIFs should be configured. Thats why there is a section called difConfigurations, which specifies
-what is the DIF template file for each of the DIF names in the main configuration file (the same
-template file can be used for multiple DIFs). DIF template files contain the actual configuration
+**DIF Configurations**. This only specifies what DIFs to create, but it does not yet explain how 
+the DIFs should be configured. Thats why there is a section called difConfigurations, which specifies 
+what is the DIF template file for each of the DIF names in the main configuration file (the same 
+template file can be used for multiple DIFs). DIF template files contain the actual configuration 
 of the DIF, including its policies.
 
     "difConfigurations" : [ {
@@ -207,19 +199,19 @@ of the DIF, including its policies.
     } ]
 
 #### 3.2.2 DIF Template configuration files
-DIF template files contain the configuration of the components of a DIF. There is a mandatory DIF
-template called "default.dif" (which gets installed during the IRATI installation procedure), all
-other DIF templates extend from it (in the sense that they only need to define the JSON sections
-that are different from the default.dif file). All DIF templates have to be located in the same
+DIF template files contain the configuration of the components of a DIF. There is a mandatory DIF 
+template called "default.dif" (which gets installed during the IRATI installation procedure), all 
+other DIF templates extend from it (in the sense that they only need to define the JSON sections 
+that are different from the default.dif file). All DIF templates have to be located in the same 
 folder as the main configuration files (.conf) that use the templates.
 
-For exmples of different JSON configuration files, you can take a look at
+For exmples of different JSON configuration files, you can take a look at 
 https://github.com/IRATI/stack/tree/master/tests/conf.
 
 #### 3.2.3 Application to DIF mappings
-The da.map file contains the preferences for which DIFs should be used to register and to allocate
-flows to/from specific applications. If no mapping is provided by a certain application, it will try
-to randomly select a _normal DIF_ first; if there is non available a _shim DIF_ and if there is none
+The da.map file contains the preferences for which DIFs should be used to register and to allocate 
+flows to/from specific applications. If no mapping is provided by a certain application, it will try 
+to randomly select a _normal DIF_ first; if there is non available a _shim DIF_ and if there is none 
 it will fail. The contents of the da.map file can be modified while the IPC Manager Daemon is running.
 
     "applicationToDIFMappings": [
@@ -242,12 +234,7 @@ it will fail. The contents of the da.map file can be modified while the IPC Mana
     ],
 
 ### 3.3 Running the IPC Manager Daemon
-<<<<<<< HEAD
-#############################################################################
-Once the configuration file is ready you can un the IPC Manager Daemon. To do so go to the
-=======
 Once the configuration file is ready you can un the IPC Manager Daemon. To do so go to the 
->>>>>>> arcfire
 INSTALLATION_PATH/bin folder and type:
 
     $ ./ipcm -c <PATH TO THE CONFIGURATION FILE>
@@ -256,8 +243,8 @@ There are more options for the ipcm launch script, to see them just type
 
     $ ./ipcm --help
 
-IRATI has a local management console to interact with the IPC Manager Daemon and get information
-on the state of the software (number of IPCPs, type, status, DIF information, etc.). To access the
+IRATI has a local management console to interact with the IPC Manager Daemon and get information 
+on the state of the software (number of IPCPs, type, status, DIF information, etc.). To access the 
 management console type
 
     $ socat - UNIX:/<INSTALLATION_PATH>/var/run/ipcm-console.sock
@@ -271,7 +258,7 @@ Type help to get an overview of all available commands:
 * **list-ipcps**: List the existing IPC processes with associated information.
 * **list-ipcp-types**: List the IPC process types currently available in the system.
 * **assign-to-dif**: Assign an IPC process to a DIF.
-* **register-at-dif**: Register an IPC process within a DIF.
+* **register-at-dif**: Register an IPC process within a DIF. 
 * **unregister-from-dif**: Unregister an IPC process from a DIF.
 * **enroll-to-dif**: Enroll an IPC process to a DIF.
 * **query-rib**. Display the information of the objects present at RIB of an IPC Processs.
@@ -297,61 +284,56 @@ Example of IPCM console output:
         4 | eth.4.IPCP:1:: | shim-eth-vlan | ASSIGNED TO DIF 2007 | renumber.19.IPCP-1-- | 3
         5 | renumber.19.IPCP:1:: | normal-ipc | ASSIGNED TO DIF renumber.DIF | - | -
 
-Now applications can be run that use the IPC API. Look at the Tutorials section for some step-by-step
+Now applications can be run that use the IPC API. Look at the Tutorials section for some step-by-step 
 examples on how to use the rina-echo-time test application to experiment with IRATI.
 
 ## 4. Tutorials
 Several tutorials are available at https://github.com/IRATI/stack/wiki/Tutorials
 
-<<<<<<< HEAD
-#############################################################################
-## 5. Overview of the software components                                   #
-#############################################################################
-This section provides an overview of the software architecture and components of IRATI. For a more detailed
-=======
 ## 5. Overview of the software components
 This section provides an overview of the software architecture and components of IRATI. For a more detailed 
->>>>>>> arcfire
 explanation we direct the reader to FP7-IRATI's at http://irati.eu:
+ 
+* D3.1: http://irati.eu/wp-content/uploads/2012/07/IRATI-D3.1-v1.0.pdf 
+* D3.2: http://irati.eu/wp-content/uploads/2012/07/IRATI-D3.2-v1.0.pdf 
+* D3.3: http://irati.eu/wp-content/uploads/2012/07/IRATI-D3.3-bundle.zip 
 
-* D3.1: http://irati.eu/wp-content/uploads/2012/07/IRATI-D3.1-v1.0.pdf
-* D3.2: http://irati.eu/wp-content/uploads/2012/07/IRATI-D3.2-v1.0.pdf
-* D3.3: http://irati.eu/wp-content/uploads/2012/07/IRATI-D3.3-bundle.zip
-
-The FP7 PRISTINE (http://ict-pristine.eu) project enhanced the base IRATI implementation with a Software Development Kit to allow
-for programmbility of policies for the different components, and the ability to dynamically load the plugins
+The FP7 PRISTINE (http://ict-pristine.eu) project enhanced the base IRATI implementation with a Software Development Kit to allow 
+for programmbility of policies for the different components, and the ability to dynamically load the plugins 
 containing such policies at runtime. Documentation about the SDK is available at the following URLs:
 
 * D2.3: http://ict-pristine.eu/wp-content/uploads/2013/12/pristine-d23-sdk-v1_0.pdf
 * D2.5: http://ict-pristine.eu/wp-content/uploads/2013/12/pristine-d25-draft.pdf
 
-The software architecture of IRATI is shown in Figure 1.
+The software architecture of IRATI is shown in Figure 1. 
 
 ![Figure 1. Main software components of the RINA implementation by the FP7-IRATI project](https://github.com/IRATI/stack/wiki/images/irati-softarch.png)
-_Figure 1. Source: [S. Vrijders et al; "Prototyping the recursive internet architecture: the IRATI project approach ", IEEE Network Vol 28 (2), pp. 20-25, March 2014](http://ieeexplore.ieee.org/xpl/articleDetails.jsp?arnumber=6786609)_
+_Figure 1. Source: [S. Vrijders et al; "Prototyping the recursive internet architecture: the IRATI project approach ", IEEE Network Vol 28 (2), pp. 20-25, March 2014](http://ieeexplore.ieee.org/xpl/articleDetails.jsp?arnumber=6786609)_ 
 
 The main components of IRATI have been divided into four packages:
 
-1. **Daemons** ([rinad](https://github.com/IRATI/stack/tree/master/rinad)). This package contains two types
+1. **Daemons** ([rinad](https://github.com/IRATI/stack/tree/master/rinad)). This package contains two types 
 of daemons (OS Processes that run in the background), implemented in C++.
-   * **IPC Manager Daemon** ([rinad/src/ipcm](https://github.com/IRATI/stack/tree/master/rinad/src/ipcm)). The
-IPC Manager Daemon is the core of IPC Management in the system, acting both as the manager of IPC Processes and
-a broker between applications and IPC Processes (enforcing access rights, mapping flow allocation or application
+   * **IPC Manager Daemon** ([rinad/src/ipcm](https://github.com/IRATI/stack/tree/master/rinad/src/ipcm)). The 
+IPC Manager Daemon is the core of IPC Management in the system, acting both as the manager of IPC Processes and 
+a broker between applications and IPC Processes (enforcing access rights, mapping flow allocation or application 
 registration requests to the right IPC Processes, etc.)
-   * **IPC Process Daemon**  ([rinad/src/ipcp](https://github.com/IRATI/stack/tree/master/rinad/src/ipcp)). The
-IPC Process Daemons (one per running IPC Process in the system) implement the layer management components of an
+   * **IPC Process Daemon**  ([rinad/src/ipcp](https://github.com/IRATI/stack/tree/master/rinad/src/ipcp)). The 
+IPC Process Daemons (one per running IPC Process in the system) implement the layer management components of an 
 IPC Process (enrollment, flow allocation, PDU Forwarding table generation or distributed resource allocation functions).
 
-2. **Librina** ([librina](https://github.com/IRATI/stack/tree/master/librina)). The librina package contains all
-IRATI libraries that have been introduced to abstract from the user all the kernel interactions (such as syscalls
-and Netlink details). Librina provides its functionalities to user-space RINA programs via scripting language
+2. **Librina** ([librina](https://github.com/IRATI/stack/tree/master/librina)). The librina package contains all 
+IRATI libraries that have been introduced to abstract from the user all the kernel interactions (such as syscalls 
+and Netlink details). Librina provides its functionalities to user-space RINA programs via scripting language 
 extensions or statically/dynamically linkable libraries (i.e. for C/C++ programs).
 
-3. **Kernel components** ([linux/net/rina](https://github.com/IRATI/stack/tree/master/linux/net/rina)). The kernel
-contains the implementation of the data transfer / data transfer control components of normal IPC Processes as well
-as the implementation of shim DIFs - which usually need to access functionality only available at the kernel. The
-Kernel IPC Manager (KIPCM) manages the lifetime (creation, destruction, monitoring) of the other component instances
+3. **Kernel components** ([linux/net/rina](https://github.com/IRATI/stack/tree/master/linux/net/rina)). The kernel 
+contains the implementation of the data transfer / data transfer control components of normal IPC Processes as well 
+as the implementation of shim DIFs - which usually need to access functionality only available at the kernel. The 
+Kernel IPC Manager (KIPCM) manages the lifetime (creation, destruction, monitoring) of the other component instances 
 in the kernel, as well as its configuration. It also provides coordination at the boundary between the different IPC processes.
 
-4. **Test applications and tools** ([rina-tools](https://github.com/IRATI/stack/tree/master/rina-tools)). This package
+4. **Test applications and tools** ([rina-tools](https://github.com/IRATI/stack/tree/master/rina-tools)). This package 
 contains test applications and tools to test and debug the RINA Prototype.
+
+
