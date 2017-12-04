@@ -23,4 +23,4 @@ cd build/librina
 make check-functional
 cd ../..
 cd build/rinad
-make check
+sudo make check
