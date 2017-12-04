@@ -18,9 +18,9 @@ sudo ldconfig
 mkdir build
 mkdir -p $INSTALL_PREFIX
 ./configure --prefix $INSTALL_PREFIX
-make install
+sudo make install
 cd build/librina
-sudo make check-functional
+make check-functional
 cd ../..
 cd build/rinad
 make check
