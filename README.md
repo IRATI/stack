@@ -52,9 +52,7 @@ Build Status of arcfire branch on Ubuntu via Travis CI.
 [![Build Status of arcfire branch on Ubuntu](https://travis-ci.org/IRATI/stack.svg?branch=arcfire)](https://travis-ci.org/IRATI/stack)
 
 
-
-### Building on Ubuntu 16.04 and Debian 8, Debian 9
-#############################################################################
+### 2.1. Building on Ubuntu 16.04, Debian 8 and Debian 9
 
 **NOTE for Debian 8**: For the kernel modules, a Linux kernel with a version between 4.1 
 and 4.9 (included) has to be installed in the system, with the kernel headers. Ubuntu 
