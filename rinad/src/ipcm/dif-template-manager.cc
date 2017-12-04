@@ -99,7 +99,7 @@ void DIFConfigFolderMonitor::process_events(int fd)
                 	event = (const struct inotify_event *) ptr;
                 	std::string file_name = std::string(event->name);
 
-                	if (file_name == DIFAllocator::DIF_DIRECTORY_FILE_NAME) {
+                	if (file_name == StaticDIFAllocator::DIF_DIRECTORY_FILE_NAME) {
                 		dif_allocator->update_directory_contents();
                 		continue;
                 	}

@@ -110,26 +110,31 @@ ipcm_res_t IPCManager_::flow_allocation_requested_local(Promise * promise,
 {
 	rina::ApplicationProcessNamingInformation dif_name;
 	IPCMIPCProcess *ipcp;
-	bool dif_specified;
+	da_res_t dif_specified;
 	FlowAllocTransState* trans;
 	ostringstream ss;
+	std::list<std::string> dif_names;
 
 	// Find the name of the DIF that will provide the flow
 	if (event->DIFName != rina::ApplicationProcessNamingInformation()) {
 		// The requestor specified a DIF name
 		dif_name = event->DIFName;
-		dif_specified = true;
+		dif_specified = DA_SUCCESS;
 	} else {
 		// Ask the DIF allocator
-		dif_specified = lookup_dif_by_application(event->remoteApplicationName,
-							  dif_name);
+		ipcp_factory_.get_local_dif_names(dif_names);
+		dif_specified =  dif_allocator->lookup_dif_by_application(event->remoteApplicationName,
+								dif_name,
+								dif_names);
+		if (dif_specified == DA_PENDING)
+			return IPCM_PENDING;
 	}
 
 	// Select an IPC process to serve the flow request
-	if (!dif_specified)
-		ipcp = select_ipcp();
-	else
+	if (dif_specified == DA_SUCCESS)
 		ipcp = select_ipcp_by_dif(dif_name);
+	else
+		ipcp = select_ipcp();
 	if (!ipcp) {
 		ss  << " Error: Cannot find an IPC process to "
 			"serve flow allocation request (local-app = " <<

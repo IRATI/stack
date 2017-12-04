@@ -140,7 +140,13 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
                                      &io_thread_attrs);
         io_thread->start();
 
-        dif_allocator = new DIFAllocator(config_file);
+        // Initialize DIF Allocator
+        DIFAllocatorConfig da_config;
+        rina::Parameter param;
+        param.value = config_file;
+        da_config.parameters.push_back(param);
+        da_config.type = StaticDIFAllocator::TYPE;
+        dif_allocator = DIFAllocator::create_instance(da_config);
 
         // Initialize DIF Templates Manager (with its monitor thread)
         dif_template_manager = new DIFTemplateManager(config_file,
@@ -1047,17 +1053,6 @@ ipcm_res_t IPCManager_::disconnect_neighbor(Addon* callee,
 	}
 
 	return IPCM_PENDING;
-}
-
-bool IPCManager_::lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& apName,
-					    rina::ApplicationProcessNamingInformation& difName)
-{
-	std::list<std::string> dif_names;
-
-	ipcp_factory_.get_local_dif_names(dif_names);
-	return dif_allocator->lookup_dif_by_application(apName,
-							difName,
-							dif_names);
 }
 
 ipcm_res_t IPCManager_::apply_configuration()
