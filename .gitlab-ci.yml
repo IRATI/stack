@@ -6,10 +6,15 @@ before_script:
   - mkdir install
 
 after_script:
-  - sudo chown -R gitlab-runner:gitlab-runner . 
+  - sudo chown -R gitlab-runner:gitlab-runner .
 
 build_stack:
   stage: buildstack
   script:
     - sudo ./configure --prefix ~/install
+    - cd build/librina
+    - sudo make check-functional
+    - cd ../..
     - sudo make install
+    - cd build/rinad
+    - sudo make check
