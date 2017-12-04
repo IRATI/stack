@@ -35,13 +35,17 @@ using namespace std;
 namespace rinad {
 
 // Class DIF Allocator
-DIFAllocator * DIFAllocator::create_instance(const DIFAllocatorConfig& da_config)
+DIFAllocator * DIFAllocator::create_instance(const DIFAllocatorConfig& da_config,
+					     rina::ApplicationProcessNamingInformation& da_name)
 {
 	DIFAllocator * result;
 
 	if (da_config.type == StaticDIFAllocator::TYPE) {
 		result = new StaticDIFAllocator();
-		result->set_config(da_config);
+		result->set_config(da_config, da_name);
+	} else if (da_config.type == DynamicDIFAllocator::TYPE) {
+		result = new DynamicDIFAllocator();
+		result->set_config(da_config, da_name);
 	} else {
 		result = NULL;
 	}
@@ -61,7 +65,8 @@ StaticDIFAllocator::~StaticDIFAllocator()
 {
 }
 
-int StaticDIFAllocator::set_config(const DIFAllocatorConfig& da_config)
+int StaticDIFAllocator::set_config(const DIFAllocatorConfig& da_config,
+				   rina::ApplicationProcessNamingInformation& da_name)
 {
 	std::string folder_name;
 	rina::Parameter folder_name_parm;
@@ -156,6 +161,58 @@ void StaticDIFAllocator::print_directory_contents()
 	}
 
 	LOG_DBG("%s", ss.str().c_str());
+}
+
+//Class Dynamic DIF Allocator
+const std::string DynamicDIFAllocator::TYPE = "dynamic-dif-allocator";
+
+DynamicDIFAllocator::DynamicDIFAllocator() : DIFAllocator()
+{
+}
+
+DynamicDIFAllocator::~DynamicDIFAllocator()
+{
+}
+
+int DynamicDIFAllocator::set_config(const DIFAllocatorConfig& da_config,
+				    rina::ApplicationProcessNamingInformation& da_name)
+{
+	//TODO parse config
+	daf_name = da_config.daf_name;
+	dap_name = da_config.dap_name;
+
+	da_name.processName = da_config.daf_name.processName;
+	da_name.processInstance = da_config.dap_name.processName;
+}
+
+void DynamicDIFAllocator::local_app_registered(const rina::ApplicationProcessNamingInformation& local_app_name,
+		          	  	       const rina::ApplicationProcessNamingInformation& dif_name)
+{
+	//TODO
+}
+
+void DynamicDIFAllocator::local_app_unregistered(const rina::ApplicationProcessNamingInformation& local_app_name,
+		            	    	    	 const rina::ApplicationProcessNamingInformation& dif_name)
+{
+	//Ignore registrations from the DIF Allocator itself
+	if (local_app_name.processName == daf_name.processName &&
+			local_app_name.processInstance == dap_name.processName) {
+		return;
+	}
+
+	//TODO
+}
+
+da_res_t DynamicDIFAllocator::lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
+			       	   	   	        rina::ApplicationProcessNamingInformation& result,
+							const std::list<std::string>& supported_difs)
+{
+	//TODO
+}
+
+void DynamicDIFAllocator::update_directory_contents()
+{
+	//Ignore
 }
 
 } //namespace rinad

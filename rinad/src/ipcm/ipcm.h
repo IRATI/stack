@@ -639,6 +639,9 @@ public:
         //Catalog of policies
         Catalog catalog;
 
+        //DIF Allocator name to be registered
+        rina::ApplicationProcessNamingInformation da_name;
+
 protected:
 
 	//

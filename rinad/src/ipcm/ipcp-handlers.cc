@@ -36,6 +36,7 @@
 
 #include "rina-configuration.h"
 #include "ipcp-handlers.h"
+#include "app-handlers.h"
 
 using namespace std;
 
@@ -390,7 +391,53 @@ IPCManager_::assign_to_dif_response_event_handler(rina::AssignToDIFResponseEvent
 	//Mark as completed
 	trans->completed(ret);
 	remove_transaction_state(trans->tid);
+
+	// If there are is a dynamic DIF Allocator in this IPCM,
+	// register it to the DIF
+	if (ipcp->proxy_->type != rina::NORMAL_IPC_PROCESS ||
+			da_name.processName == "") {
+		return;
+	}
+
+	//Auto release the read lock
+	rina::ReadScopedLock readlock(ipcp->rwlock, true);
+	rina::ApplicationRegistrationRequestEvent local_req;
+	APPregTransState * reg_trans;
+	local_req.applicationRegistrationInformation.appName = da_name;
+	local_req.applicationRegistrationInformation.applicationRegistrationType =
+			rina::APPLICATION_REGISTRATION_SINGLE_DIF;
+	local_req.applicationRegistrationInformation.difName = ipcp->dif_name_;
+
+	//Perform the registration
+	try {
+		//Create a transaction
+		reg_trans = new APPregTransState(NULL, NULL, ipcp->get_id(), local_req);
+		if(!reg_trans){
+			return;
+		}
+
+		//Store transaction
+		if(add_transaction_state(reg_trans) < 0){
+			return;
+		}
+
+		ipcp->registerApplication(local_req.applicationRegistrationInformation,
+					  reg_trans->tid);
+
+		ss << "Requested registration of application " <<
+				da_name.toString() << " to IPC process " <<
+				ipcp->get_name().toString() << endl;
+		FLUSH_LOG(INFO, ss);
+	} catch (rina::IpcmRegisterApplicationException& e) {
+		//Remove the transaction and return
+		remove_transaction_state(reg_trans->tid);
+
+		ss  << ": Error while registering application "
+				<< da_name.toString() << endl;
+		FLUSH_LOG(ERR, ss);
+	}
 }
+
 
 void
 IPCManager_::update_dif_config_response_event_handler(rina::UpdateDIFConfigurationResponseEvent* e)

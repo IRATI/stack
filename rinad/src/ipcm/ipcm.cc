@@ -140,13 +140,16 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
                                      &io_thread_attrs);
         io_thread->start();
 
-        // Initialize DIF Allocator
+        // Initialize DIF Allocator TODO properly parse configuration
         DIFAllocatorConfig da_config;
-        rina::Parameter param;
+        /*rina::Parameter param;
         param.value = config_file;
         da_config.parameters.push_back(param);
-        da_config.type = StaticDIFAllocator::TYPE;
-        dif_allocator = DIFAllocator::create_instance(da_config);
+        da_config.type = StaticDIFAllocator::TYPE;*/
+        da_config.daf_name.processName  = "DA-default";
+        da_config.dap_name.processName = "test1";
+        da_config.type = DynamicDIFAllocator::TYPE;
+        dif_allocator = DIFAllocator::create_instance(da_config, da_name);
 
         // Initialize DIF Templates Manager (with its monitor thread)
         dif_template_manager = new DIFTemplateManager(config_file,

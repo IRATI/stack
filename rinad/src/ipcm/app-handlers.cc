@@ -261,6 +261,13 @@ IPCManager_::ipcm_register_response_app(rina::IpcmRegisterApplicationResponseEve
 	success = ipcm_register_response_common(event, app_name, slave_ipcp,
 			slave_dif_name);
 
+	if (app_name.processName == da_name.processName &&
+			app_name.processInstance == da_name.processInstance) {
+		LOG_INFO("DIF Allocator registered to DIF %s",
+				slave_dif_name.processName.c_str());
+		return success;
+	}
+
 	if  (app_name.entityName == RINA_IP_FLOW_ENT_NAME) {
 		ip_vpn_manager->add_registered_ip_prefix(app_name.processName);
 

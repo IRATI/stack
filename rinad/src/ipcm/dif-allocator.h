@@ -66,10 +66,14 @@ public:
 	DIFAllocator(){};
 	virtual ~DIFAllocator(void){};
 
-	static DIFAllocator * create_instance(const DIFAllocatorConfig& da_config);
+	/// Create a new instance and configure it, returning the DIF Allocator
+	/// name to register to all normal DIFs if any
+	static DIFAllocator * create_instance(const DIFAllocatorConfig& da_config,
+					      rina::ApplicationProcessNamingInformation& da_name);
 
 	/// Returns 0 is configuration is correclty applied, -1 otherwise
-	virtual int set_config(const DIFAllocatorConfig& da_config) = 0;
+	virtual int set_config(const DIFAllocatorConfig& da_config,
+			       rina::ApplicationProcessNamingInformation& da_name) = 0;
 
 	/// A local app (or IPCP) has registered to an N-1 DIF
 	virtual void local_app_registered(const rina::ApplicationProcessNamingInformation& local_app_name,
@@ -95,14 +99,15 @@ public:
 
 	StaticDIFAllocator();
 	virtual ~StaticDIFAllocator(void);
-	int set_config(const DIFAllocatorConfig& da_config);
+	int set_config(const DIFAllocatorConfig& da_config,
+		       rina::ApplicationProcessNamingInformation& da_name);
 	void local_app_registered(const rina::ApplicationProcessNamingInformation& local_app_name,
 			          const rina::ApplicationProcessNamingInformation& dif_name);
 	void local_app_unregistered(const rina::ApplicationProcessNamingInformation& local_app_name,
 			            const rina::ApplicationProcessNamingInformation& dif_name);
 	da_res_t lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
         			       	   rina::ApplicationProcessNamingInformation& result,
-					     const std::list<std::string>& supported_difs);
+					   const std::list<std::string>& supported_difs);
         void update_directory_contents();
 
 private:
@@ -115,6 +120,32 @@ private:
 	std::list< std::pair<std::string, std::string> > dif_directory;
 
 	rina::ReadWriteLockable directory_lock;
+};
+
+class DynamicDIFAllocator : public DIFAllocator {
+public:
+	static const std::string TYPE;
+
+	DynamicDIFAllocator();
+	virtual ~DynamicDIFAllocator(void);
+	int set_config(const DIFAllocatorConfig& da_config,
+		       rina::ApplicationProcessNamingInformation& da_name);
+	void local_app_registered(const rina::ApplicationProcessNamingInformation& local_app_name,
+			          const rina::ApplicationProcessNamingInformation& dif_name);
+	void local_app_unregistered(const rina::ApplicationProcessNamingInformation& local_app_name,
+			            const rina::ApplicationProcessNamingInformation& dif_name);
+	da_res_t lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
+        			       	   rina::ApplicationProcessNamingInformation& result,
+					   const std::list<std::string>& supported_difs);
+        void update_directory_contents();
+
+private:
+
+	/// The name of the DIF Allocator DAP instance
+	rina::ApplicationProcessNamingInformation dap_name;
+
+	/// The name of the DIF Allocator DAF
+	rina::ApplicationProcessNamingInformation daf_name;
 };
 
 } //namespace rinad
