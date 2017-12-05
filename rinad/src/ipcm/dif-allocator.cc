@@ -22,9 +22,13 @@
 #include <dirent.h>
 #include <errno.h>
 #include <poll.h>
+#include <fstream>
+#include <sstream>
 
 #define RINA_PREFIX     "ipcm.dif-allocator"
 #include <librina/logs.h>
+#include <librina/json/json.h>
+#include <librina/rib_v2.h>
 
 #include "configuration.h"
 #include "dif-allocator.h"
@@ -35,10 +39,97 @@ using namespace std;
 namespace rinad {
 
 // Class DIF Allocator
-DIFAllocator * DIFAllocator::create_instance(const DIFAllocatorConfig& da_config,
+void DIFAllocator::parse_config(DIFAllocatorConfig& da_config,
+		  	        const rinad::RINAConfiguration& config)
+{
+	Json::Reader    reader;
+	Json::Value     root;
+        Json::Value     da_json_conf;
+	std::ifstream   fin;
+
+	fin.open(config.configuration_file.c_str());
+	if (fin.fail()) {
+		LOG_ERR("Failed to open config file");
+		return populate_with_default_conf(da_config,
+						  config.configuration_file);
+	}
+
+	if (!reader.parse(fin, root, false)) {
+		LOG_ERR("Failed to parse JSON configuration %s",
+			 reader.getFormatedErrorMessages().c_str());
+		return populate_with_default_conf(da_config,
+						  config.configuration_file);
+	}
+
+	fin.close();
+
+	da_json_conf = root["difallocator"];
+        if (da_json_conf == 0) {
+        	LOG_INFO("No specific DIF Allocator config found, using default");
+        	return populate_with_default_conf(da_config,
+        					  config.configuration_file);
+        }
+
+        da_config.type = da_json_conf.get("type", da_config.type).asString();
+        if (da_config.type != StaticDIFAllocator::TYPE &&
+        		da_config.type != DynamicDIFAllocator::TYPE) {
+        	LOG_ERR("Unrecognized DIF Allocator type: %s, using default",
+        		 da_config.type.c_str());
+        	return populate_with_default_conf(da_config,
+        				  	  config.configuration_file);
+        }
+
+        Json::Value daf_name = da_json_conf["dafName"];
+        if (daf_name != 0) {
+        	da_config.daf_name.processName = daf_name.get("processName",
+        						       da_config.daf_name.processName).asString();
+        }
+
+        Json::Value dap_name = da_json_conf["dapName"];
+        if (dap_name != 0) {
+        	da_config.dap_name.processName = dap_name.get("processName",
+        						       da_config.dap_name.processName).asString();
+        	da_config.dap_name.processInstance = dap_name.get("processInstance",
+        							   da_config.dap_name.processInstance).asString();
+        }
+
+        Json::Value parameters = da_json_conf["parameters"];
+        if (parameters != 0) {
+        	for (unsigned i = 0; i< parameters.size(); i++) {
+        		rina::Parameter param;
+
+        		param.name = parameters[i].get("name", param.name).asString();
+        		param.value = parameters[i].get("value", param.value).asString();
+        		da_config.parameters.push_back(param);
+        	}
+        }
+
+        //TODO, parse security configuration
+}
+
+void DIFAllocator::populate_with_default_conf(DIFAllocatorConfig& da_config,
+					      const std::string& config_file)
+{
+	rina::Parameter folder_name_parm;
+
+	da_config.type = StaticDIFAllocator::TYPE;
+	da_config.daf_name.processName = "da-default";
+	da_config.dap_name.processName = "test-system";
+	da_config.dap_name.processInstance = "1";
+
+	folder_name_parm.value = config_file;
+	da_config.parameters.push_back(folder_name_parm);
+
+	return;
+}
+
+DIFAllocator * DIFAllocator::create_instance(const rinad::RINAConfiguration& config,
 					     rina::ApplicationProcessNamingInformation& da_name)
 {
 	DIFAllocator * result;
+	DIFAllocatorConfig da_config;
+
+	DIFAllocator::parse_config(da_config, config);
 
 	if (da_config.type == StaticDIFAllocator::TYPE) {
 		result = new StaticDIFAllocator();
@@ -162,6 +253,221 @@ void StaticDIFAllocator::print_directory_contents()
 
 	LOG_DBG("%s", ss.str().c_str());
 }
+
+// Class AppToDIFEntriesRIBObject
+class AppToDIFEntriesRIBObject: public rina::rib::RIBObj {
+public:
+	AppToDIFEntriesRIBObject();
+	const std::string& get_class() const {
+		return class_name;
+	};
+
+	const static std::string class_name;
+	const static std::string object_name;
+};
+
+const std::string AppToDIFEntriesRIBObject::class_name = "AppDIFEntries";
+const std::string AppToDIFEntriesRIBObject::object_name = "/app_dif_entries";
+AppToDIFEntriesRIBObject::AppToDIFEntriesRIBObject() : rina::rib::RIBObj(class_name)
+{
+}
+
+// Class AppToDIFEntryRIBObject
+class AppToDIFEntryRIBObject: public rina::rib::RIBObj {
+public:
+	AppToDIFEntryRIBObject();
+	const std::string& get_class() const {
+		return class_name;
+	};
+
+	const static std::string class_name;
+	const static std::string object_name;
+
+	static void create_cb(const rina::rib::rib_handle_t rib,
+			      const rina::cdap_rib::con_handle_t &con,
+			      const std::string& fqn,
+			      const std::string& class_,
+			      const rina::cdap_rib::filt_info_t &filt,
+			      const int invoke_id,
+			      const rina::ser_obj_t &obj_req,
+			      rina::cdap_rib::obj_info_t &obj_reply,
+			      rina::cdap_rib::res_info_t& res);
+};
+
+const std::string AppToDIFEntryRIBObject::class_name = "AppDIFEntry";
+const std::string AppToDIFEntryRIBObject::object_name = "/app_dif_entries/id=";
+AppToDIFEntryRIBObject::AppToDIFEntryRIBObject() : rina::rib::RIBObj(class_name)
+{
+}
+
+void AppToDIFEntryRIBObject::create_cb(const rina::rib::rib_handle_t rib,
+		      	      	      const rina::cdap_rib::con_handle_t &con,
+				      const std::string& fqn,
+				      const std::string& class_,
+				      const rina::cdap_rib::filt_info_t &filt,
+				      const int invoke_id,
+				      const rina::ser_obj_t &obj_req,
+				      rina::cdap_rib::obj_info_t &obj_reply,
+				      rina::cdap_rib::res_info_t& res)
+{
+	//TODO
+}
+
+// Class Dynamic DIF Allocator RIB Daemon
+class DDARIBDaemon : public rina::rib::RIBDaemonAE
+{
+public:
+	DDARIBDaemon(rina::cacep::AppConHandlerInterface *app_con_callback);
+	~DDARIBDaemon(){};
+
+	rina::rib::RIBDaemonProxy * getProxy();
+        const rina::rib::rib_handle_t & get_rib_handle();
+        int64_t addObjRIB(const std::string& fqn, rina::rib::RIBObj** obj);
+        void removeObjRIB(const std::string& fqn);
+
+private:
+	//Handle to the RIB
+	rina::rib::rib_handle_t rib;
+	rina::rib::RIBDaemonProxy* ribd;
+};
+
+DDARIBDaemon::DDARIBDaemon(rina::cacep::AppConHandlerInterface *app_con_callback)
+{
+	rina::cdap_rib::cdap_params params;
+	rina::cdap_rib::vers_info_t vers;
+	rina::rib::RIBObj * robj = 0;
+
+	//Initialize the RIB library and cdap
+	params.ipcp = false;
+	rina::rib::init(app_con_callback, params);
+	ribd = rina::rib::RIBDaemonProxyFactory();
+
+	//Create schema
+	vers.version_ = 0x1ULL;
+	ribd->createSchema(vers);
+
+	//TODO: Add create callbacks
+	ribd->addCreateCallbackSchema(vers,
+				      AppToDIFEntryRIBObject::class_name,
+				      AppToDIFEntriesRIBObject::object_name,
+				      AppToDIFEntryRIBObject::create_cb);
+
+	//Create RIB
+	rib = ribd->createRIB(vers);
+	ribd->associateRIBtoAE(rib, "");
+
+	LOG_INFO("RIB Daemon Initialized");
+}
+
+rina::rib::RIBDaemonProxy * DDARIBDaemon::getProxy()
+{
+	if (ribd)
+		return ribd;
+
+	return NULL;
+}
+
+const rina::rib::rib_handle_t & DDARIBDaemon::get_rib_handle()
+{
+	return rib;
+}
+
+int64_t DDARIBDaemon::addObjRIB(const std::string& fqn,
+			        rina::rib::RIBObj** obj)
+{
+	return ribd->addObjRIB(rib, fqn, obj);
+}
+
+void DDARIBDaemon::removeObjRIB(const std::string& fqn)
+{
+	ribd->removeObjRIB(rib, fqn);
+}
+
+// Class DDAEnrollmentTask
+/*class DDAEnrollmentTask: public rina::cacep::AppConHandlerInterface,
+			 public rina::ApplicationEntity
+{
+public:
+	DDAEnrollmentTask(const std::string& ckm_name);
+	~DDAEnrollmentTask();
+
+	void set_application_process(rina::ApplicationProcess * ap);
+	void connect(const rina::cdap::CDAPMessage& message,
+		     rina::cdap_rib::con_handle_t &con);
+	void connectResult(const rina::cdap::CDAPMessage& message,
+			   rina::cdap_rib::con_handle_t &con);
+	void release(int invoke_id,
+		     const rina::cdap_rib::con_handle_t &con);
+	void releaseResult(const rina::cdap_rib::res_info_t &res,
+			   const rina::cdap_rib::con_handle_t &con);
+	void process_authentication_message(const rina::cdap::CDAPMessage& message,
+				            const rina::cdap_rib::con_handle_t &con);
+
+private:
+	void initiateEnrollment(const rina::NMinusOneFlowAllocatedEvent& event);
+
+	rina::Lockable lock;
+	std::string ckm_ap_name;
+	DynamicDIFAllocator * dda;
+	CKMEnrollmentState ckm_state;
+	CKMEnrollmentState ma_state;
+	int ma_invoke_id;
+};
+
+void DDAEnrollmentTask::set_application_process(rina::ApplicationProcess * ap)
+{
+	if (!ap) {
+		LOG_ERR("Bogus app passed");
+		return;
+	}
+
+	dda = static_cast<DynamicDIFAllocator *>(ap);
+}
+
+void DDAEnrollmentTask::initiateEnrollment(const rina::NMinusOneFlowAllocatedEvent& event)
+{
+
+	LOG_INFO("Starting enrollment with %s over port-id %d",
+		  event.flow_information_.remoteAppName.getEncodedString().c_str(),
+		  event.flow_information_.portId);
+
+	rina::ScopedLock g(lock);
+
+	ckm_state.con.dest_.ap_name_ = event.flow_information_.remoteAppName.processName;
+	ckm_state.con.dest_.ap_inst_ = event.flow_information_.remoteAppName.processInstance;
+	ckm_state.con.dest_.ae_name_ = event.flow_information_.remoteAppName.entityName;
+	ckm_state.con.dest_.ae_inst_ = event.flow_information_.remoteAppName.entityInstance;
+	ckm_state.con.src_.ap_name_ = event.flow_information_.localAppName.processName;
+	ckm_state.con.src_.ap_inst_ = event.flow_information_.localAppName.processInstance;
+	ckm_state.con.src_.ae_name_ = event.flow_information_.localAppName.entityName;
+	ckm_state.con.src_.ae_inst_ = event.flow_information_.localAppName.entityInstance;
+	ckm_state.con.port_id = event.flow_information_.portId;
+	ckm_state.con.version_.version_ = 0x01;
+
+	ckm_state.auth_ps_ = kma->secman->get_auth_policy_set(kma->secman->sec_profile.authPolicy.name_);
+	if (!ckm_state.auth_ps_) {
+		LOG_ERR("Could not %s authentication policy set, aborting",
+			kma->secman->sec_profile.authPolicy.name_.c_str());
+		kma->irm->deallocate_flow(event.flow_information_.portId);
+		return;
+	}
+
+	try {
+		rina::cdap_rib::auth_policy_t auth = ckm_state.auth_ps_->get_auth_policy(event.flow_information_.portId,
+				  	  	  	  	  	  	  	 ckm_state.con.dest_,
+											 kma->secman->sec_profile);
+		kma->ribd->getProxy()->remote_open_connection(ckm_state.con.version_,
+							      ckm_state.con.src_,
+							      ckm_state.con.dest_,
+							      auth,
+							      ckm_state.con.port_id);
+	} catch (rina::Exception &e) {
+		LOG_ERR("Problems opening CDAP connection to %s: %s",
+				event.flow_information_.remoteAppName.getEncodedString().c_str(),
+				e.what());
+	}
+}*/
+
 
 //Class Dynamic DIF Allocator
 const std::string DynamicDIFAllocator::TYPE = "dynamic-dif-allocator";

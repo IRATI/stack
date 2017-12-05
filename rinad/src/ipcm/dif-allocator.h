@@ -68,8 +68,12 @@ public:
 
 	/// Create a new instance and configure it, returning the DIF Allocator
 	/// name to register to all normal DIFs if any
-	static DIFAllocator * create_instance(const DIFAllocatorConfig& da_config,
+	static DIFAllocator * create_instance(const rinad::RINAConfiguration& config,
 					      rina::ApplicationProcessNamingInformation& da_name);
+
+	/// Parse the DIF Allocator configuration information from the main config file
+	static void parse_config(DIFAllocatorConfig& da_config,
+				 const rinad::RINAConfiguration& config);
 
 	/// Returns 0 is configuration is correclty applied, -1 otherwise
 	virtual int set_config(const DIFAllocatorConfig& da_config,
@@ -89,6 +93,10 @@ public:
         			       	     	   rina::ApplicationProcessNamingInformation& result,
 						   const std::list<std::string>& supported_difs) = 0;
         virtual void update_directory_contents() = 0;
+
+private:
+        static void populate_with_default_conf(DIFAllocatorConfig& da_config,
+        				       const std::string& config_file);
 };
 
 /// Static DIF Allocator, reads Application to DIF mappings from a config file
