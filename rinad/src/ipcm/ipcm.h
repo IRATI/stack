@@ -592,6 +592,8 @@ public:
 
 	void os_process_finalized_handler(pid_t pid);
 
+	ipcm_res_t flow_allocation_requested_event_handler(Promise * promise, rina::FlowRequestEvent* event);
+
         //Generator of opaque identifiers
         rina::ConsecutiveUnsignedIntegerGenerator __tid_gen;
 
@@ -606,9 +608,6 @@ public:
 
         //Catalog of policies
         Catalog catalog;
-
-        //DIF Allocator name to be registered
-        rina::ApplicationProcessNamingInformation da_name;
 
 protected:
 
@@ -680,7 +679,6 @@ protected:
 	//
 
 	//Flow mgmt
-	ipcm_res_t flow_allocation_requested_event_handler(Promise * promise, rina::FlowRequestEvent* event);
 	void allocate_flow_response_event_handler( rina::AllocateFlowResponseEvent *event);
 	ipcm_res_t flow_deallocation_requested_event_handler(Promise * promise,
 						             rina::FlowDeallocateRequestEvent* event);
@@ -969,7 +967,6 @@ public:
 	/// Create a new instance and configure it, returning the DIF Allocator
 	/// name to register to all normal DIFs if any
 	static DIFAllocator * create_instance(const rinad::RINAConfiguration& config,
-					      rina::ApplicationProcessNamingInformation& da_name,
 					      IPCManager_ * ipcm);
 
 	/// Parse the DIF Allocator configuration information from the main config file
@@ -977,16 +974,10 @@ public:
 				 const rinad::RINAConfiguration& config);
 
 	/// Returns 0 is configuration is correclty applied, -1 otherwise
-	virtual int set_config(const DIFAllocatorConfig& da_config,
-			       rina::ApplicationProcessNamingInformation& da_name) = 0;
+	virtual int set_config(const DIFAllocatorConfig& da_config) = 0;
 
-	/// A local app (or IPCP) has registered to an N-1 DIF
-	virtual void local_app_registered(const rina::ApplicationProcessNamingInformation& local_app_name,
-					  const rina::ApplicationProcessNamingInformation& dif_name) = 0;
-
-	/// A local app (or IPCP) has unregistered from an N-1 DIF
-	virtual void local_app_unregistered(const rina::ApplicationProcessNamingInformation& local_app_name,
-					    const rina::ApplicationProcessNamingInformation& dif_name) = 0;
+	/// Inform the DIF Allocator that the IPCP has been assigned to the DIF
+	virtual void assigned_to_dif(const std::string& dif_name) = 0;
 
 	/// Returns IPCM_SUCCESS on success, IPCM_ERROR on error and IPCM_ONGOING
 	/// if the operation is still in progress

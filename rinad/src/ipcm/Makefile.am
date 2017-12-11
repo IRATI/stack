@@ -24,6 +24,7 @@ ipcm_CFLAGS   =
 ipcm_CPPFLAGS =					\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)			\
+	$(LIBRINA_API_CFLAGS)			\
 	-I$(srcdir)/..				\
 	-I$(srcdir)/../common			\
 	-DPLUGINSDIR=\"$(pkglibdir)/ipcm\"	\
@@ -32,6 +33,7 @@ ipcm_CPPFLAGS =					\
 ipcm_LDADD    =					\
 	$(builddir)/../common/librinad.la	\
 	$(builddir)/addons/libaddons.la		\
+	$(LIBRINA_API_LIBS) \
 	$(LIBRINA_LIBS)
 ipcm_SOURCES  =								\
 	addon.cc			addon.h				\
@@ -56,9 +58,10 @@ test_empty_SOURCES  =				\
 test_empty_CPPFLAGS =				\
 	$(CPPFLAGS_EXTRA)			\
 	$(LIBRINA_CFLAGS)			\
+	$(LIBRINA_API_CFLAGS)			\
 	-I$(srcdir)/..				\
 	-I$(srcdir)/../common
-test_empty_LDADD    = $(builddir)/../common/librinad.la $(LIBRINA_LIBS)
+test_empty_LDADD    = $(builddir)/../common/librinad.la $(LIBRINA_LIBS) $(LIBRINA_API_LIBS)
 
 check_PROGRAMS =				\
 	test-empty

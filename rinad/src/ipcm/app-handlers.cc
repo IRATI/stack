@@ -238,10 +238,6 @@ IPCManager_::ipcm_register_response_common(rina::IpcmRegisterApplicationResponse
                 FLUSH_LOG(ERR, ss);
         }
 
-        //Notify the DIF Allocator
-        if (success)
-        	dif_allocator->local_app_registered(app_name, slave_dif_name);
-
         return success;
 }
 
@@ -259,13 +255,6 @@ IPCManager_::ipcm_register_response_app(rina::IpcmRegisterApplicationResponseEve
 
 	success = ipcm_register_response_common(event, app_name, slave_ipcp,
 			slave_dif_name);
-
-	if (app_name.processName == da_name.processName &&
-			app_name.processInstance == da_name.processInstance) {
-		LOG_INFO("DIF Allocator registered to DIF %s",
-				slave_dif_name.processName.c_str());
-		return success;
-	}
 
 	notify_app_reg(req_event, app_name, slave_dif_name, success);
 
@@ -417,10 +406,6 @@ bool IPCManager_::ipcm_unregister_response_common(
                         << app_name.toString() << endl;
                 FLUSH_LOG(ERR, ss);
         }
-
-        //Notify the DIF Allocator
-        if (success)
-        	dif_allocator->local_app_unregistered(app_name, slave_ipcp->dif_name_);
 
         return success;
 }

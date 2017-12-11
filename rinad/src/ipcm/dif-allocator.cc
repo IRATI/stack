@@ -30,82 +30,14 @@
 #include <librina/json/json.h>
 #include <librina/rib_v2.h>
 #include <librina/security-manager.h>
+#include <rina/api.h>
 
 #include "configuration.h"
-#include "ipcm.h"
+#include "dif-allocator.h"
 
 using namespace std;
 
-
 namespace rinad {
-
-/// Static DIF Allocator, reads Application to DIF mappings from a config file
-class StaticDIFAllocator : public DIFAllocator {
-public:
-	static const std::string TYPE;
-
-	StaticDIFAllocator();
-	virtual ~StaticDIFAllocator(void);
-	int set_config(const DIFAllocatorConfig& da_config,
-		       rina::ApplicationProcessNamingInformation& da_name);
-	void local_app_registered(const rina::ApplicationProcessNamingInformation& local_app_name,
-			          const rina::ApplicationProcessNamingInformation& dif_name);
-	void local_app_unregistered(const rina::ApplicationProcessNamingInformation& local_app_name,
-			            const rina::ApplicationProcessNamingInformation& dif_name);
-	da_res_t lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
-        			       	   rina::ApplicationProcessNamingInformation& result,
-					   const std::list<std::string>& supported_difs);
-        void update_directory_contents();
-
-private:
-        void print_directory_contents();
-
-        std::string folder_name;
-        std::string fq_file_name;
-
-	//The current DIF Directory
-	std::list< std::pair<std::string, std::string> > dif_directory;
-
-	rina::ReadWriteLockable directory_lock;
-};
-
-class DDARIBDaemon;
-class DDAEnrollmentTask;
-
-class DynamicDIFAllocator : public DIFAllocator, public rina::ApplicationProcess {
-public:
-	static const std::string TYPE;
-
-	DynamicDIFAllocator(const rina::ApplicationProcessNamingInformation& ap_name,
-			    IPCManager_ * ipcm);
-	virtual ~DynamicDIFAllocator(void);
-	int set_config(const DIFAllocatorConfig& da_config,
-		       rina::ApplicationProcessNamingInformation& da_name);
-	void local_app_registered(const rina::ApplicationProcessNamingInformation& local_app_name,
-			          const rina::ApplicationProcessNamingInformation& dif_name);
-	void local_app_unregistered(const rina::ApplicationProcessNamingInformation& local_app_name,
-			            const rina::ApplicationProcessNamingInformation& dif_name);
-	da_res_t lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
-        			       	   rina::ApplicationProcessNamingInformation& result,
-					   const std::list<std::string>& supported_difs);
-        void update_directory_contents();
-        unsigned int get_address() const;
-
-	/// The name of the DIF Allocator DAP instance
-	rina::ApplicationProcessNamingInformation dap_name;
-
-	DDARIBDaemon * ribd;
-	DDAEnrollmentTask * et;
-
-private:
-	IPCManager_ * ipcm;
-
-	/// The name of the DIF Allocator DAF
-	rina::ApplicationProcessNamingInformation daf_name;
-
-	/// Peer DA instances to enroll to
-	std::list<rina::Neighbor> enrollments;
-};
 
 // Class DIF Allocator
 const std::string DIFAllocator::STATIC_DIF_ALLOCATOR_FILE_NAME = "da.map";
@@ -209,7 +141,6 @@ void DIFAllocator::populate_with_default_conf(DIFAllocatorConfig& da_config,
 }
 
 DIFAllocator * DIFAllocator::create_instance(const rinad::RINAConfiguration& config,
-					     rina::ApplicationProcessNamingInformation& da_name,
 					     IPCManager_ * ipcm)
 {
 	DIFAllocator * result;
@@ -219,10 +150,10 @@ DIFAllocator * DIFAllocator::create_instance(const rinad::RINAConfiguration& con
 
 	if (da_config.type == StaticDIFAllocator::TYPE) {
 		result = new StaticDIFAllocator();
-		result->set_config(da_config, da_name);
+		result->set_config(da_config);
 	} else if (da_config.type == DynamicDIFAllocator::TYPE) {
 		result = new DynamicDIFAllocator(da_config.dap_name, ipcm);
-		result->set_config(da_config, da_name);
+		result->set_config(da_config);
 	} else {
 		result = NULL;
 	}
@@ -240,8 +171,7 @@ StaticDIFAllocator::~StaticDIFAllocator()
 {
 }
 
-int StaticDIFAllocator::set_config(const DIFAllocatorConfig& da_config,
-				   rina::ApplicationProcessNamingInformation& da_name)
+int StaticDIFAllocator::set_config(const DIFAllocatorConfig& da_config)
 {
 	std::string folder_name;
 	rina::Parameter folder_name_parm;
@@ -277,18 +207,6 @@ int StaticDIFAllocator::set_config(const DIFAllocatorConfig& da_config,
 	return 0;
 }
 
-void StaticDIFAllocator::local_app_registered(const rina::ApplicationProcessNamingInformation& local_app_name,
-		          	  	      const rina::ApplicationProcessNamingInformation& dif_name)
-{
-	//Ignore
-}
-
-void StaticDIFAllocator::local_app_unregistered(const rina::ApplicationProcessNamingInformation& local_app_name,
-		            	    	    	const rina::ApplicationProcessNamingInformation& dif_name)
-{
-	//Ignore
-}
-
 da_res_t StaticDIFAllocator::lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
                 			     	       rina::ApplicationProcessNamingInformation& result,
 						       const std::list<std::string>& supported_difs)
@@ -310,6 +228,11 @@ da_res_t StaticDIFAllocator::lookup_dif_by_application(const rina::ApplicationPr
         }
 
         return DA_FAILURE;
+}
+
+void StaticDIFAllocator::assigned_to_dif(const std::string& dif_name)
+{
+	//Ignore
 }
 
 void StaticDIFAllocator::update_directory_contents()
@@ -636,7 +559,6 @@ void DDAEnrollmentTask::connect(const rina::cdap::CDAPMessage& message,
 		  con.dest_.ap_inst_.c_str());
 
 	//TODO authenticate
-
 	LOG_INFO("Authentication successful!");
 
 	peer->status = DA_SUCCESS;
@@ -688,6 +610,209 @@ void DDAEnrollmentTask::connectResult(const rina::cdap::CDAPMessage& message,
 	//TODO send directory entries to peer
 }
 
+//DDAEnrollmentWorker
+class DDAEnrollerWorker : public rina::SimpleThread
+{
+public:
+	DDAEnrollerWorker(rina::ThreadAttributes * threadAttributes,
+			    DynamicDIFAllocator * dda,
+			    const std::list<rina::Neighbor>& enrollments);
+	~DDAEnrollerWorker() throw() {};
+	int run();
+
+private:
+	DynamicDIFAllocator * dda;
+	std::list<rina::Neighbor> peers;
+
+	int allocate_flow(const rina::FlowRequestEvent& alloc_event);
+};
+
+DDAEnrollerWorker::DDAEnrollerWorker(rina::ThreadAttributes * threadAttributes,
+					 DynamicDIFAllocator * dda_,
+					 const std::list<rina::Neighbor>& enrollments)
+			: SimpleThread(threadAttributes)
+{
+	dda = dda_;
+	peers = enrollments;
+}
+
+int DDAEnrollerWorker::allocate_flow(const rina::FlowRequestEvent& alloc_event)
+{
+	std::stringstream ss;
+	std::string local_app_name;
+	std::string remote_app_name;
+	std::string dif_name;
+
+	ss << alloc_event.localApplicationName.processName << ":"
+	   << alloc_event.localApplicationName.processInstance << ":::";
+	local_app_name = ss.str();
+	ss.str("");
+
+	ss << alloc_event.remoteApplicationName.processName << ":"
+	   << alloc_event.remoteApplicationName.processInstance << ":::";
+	remote_app_name = ss.str();
+	ss.str("");
+
+	dif_name = alloc_event.DIFName.processName;
+
+	return rina_flow_alloc(dif_name.c_str(), local_app_name.c_str(),
+	                       remote_app_name.c_str(), NULL, 0);
+}
+
+int DDAEnrollerWorker::run()
+{
+	int pending_peers;
+	std::list<rina::Neighbor>::iterator it;
+	rina::FlowRequestEvent event;
+	rina::Sleep sleep;
+	int fd;
+
+	event.localRequest = true;
+	event.localApplicationName = dda->dap_name;
+	event.flowSpecification.maxAllowableGap = -1;
+	event.flowSpecification.orderedDelivery = false;
+	pending_peers = peers.size();
+	while (pending_peers != 0) {
+		LOG_DBG("DIF Allocator enroller sleeping for 5 seconds before attempting to connect to %d peers",
+				pending_peers);
+		sleep.sleepForMili(5000);
+
+		pending_peers = 0;
+		for (it = peers.begin(); it != peers.end(); ++it) {
+			if (it->enrolled_)
+				continue;
+
+			event.remoteApplicationName = it->name_;
+			event.DIFName = it->supporting_dif_name_;
+
+			fd = allocate_flow(event);
+			if(fd < 0) {
+				it->enrolled_ = false;
+				pending_peers ++;
+			} else {
+				it->enrolled_ = true;
+				dda->n1_flow_allocated(*it, fd);
+			}
+		}
+	}
+
+	LOG_DBG("All peers connected, DIF Allocator enroller terminating");
+
+	return 0;
+}
+
+//Class SDUReader
+class DDAFlowAcceptor : public rina::SimpleThread
+{
+public:
+	DDAFlowAcceptor(rina::ThreadAttributes * threadAttributes,
+		     const std::string& dif_name, const std::string& local_app_name,
+		     DynamicDIFAllocator * dda_, int cfd);
+	~DDAFlowAcceptor() throw() {};
+	int run();
+
+private:
+	std::string dif_name;
+	std::string app_name;
+	DynamicDIFAllocator * dda;
+	int cfd;
+};
+
+DDAFlowAcceptor::DDAFlowAcceptor(rina::ThreadAttributes * threadAttributes,
+				const std::string& dn, const std::string& lap,
+				DynamicDIFAllocator * dda_, int cfd_)
+					: SimpleThread(threadAttributes)
+{
+	dif_name = dn;
+	app_name = lap;
+	dda = dda_;
+	cfd = cfd_;
+}
+
+int DDAFlowAcceptor::run()
+{
+	int ret = 0;
+	char *incomingapn = NULL;
+	struct rina_flow_spec fspec;
+
+	ret = rina_register(cfd, dif_name.c_str(), app_name.c_str(), 0);
+	if (ret < 0) {
+		LOG_ERR("Error registering DIF allocator to DIF %s",
+			dif_name.c_str());
+		return -1;
+	}
+
+	while (true) {
+		ret = rina_flow_accept(cfd, &incomingapn, &fspec, 0);
+		if (ret < 0)
+			break;
+
+		//TODO notify dynamic DIF Allocator
+	}
+
+	LOG_DBG("DIF Allocator flow acceptor exiting");
+}
+
+//Class SDUReader
+class SDUReader : public rina::SimpleThread
+{
+public:
+	SDUReader(rina::ThreadAttributes * threadAttributes, int port_id, int fd_);
+	~SDUReader() throw() {};
+	int run();
+
+private:
+	int portid;
+	int fd;
+};
+
+SDUReader::SDUReader(rina::ThreadAttributes * threadAttributes, int port_id, int fd_)
+				: SimpleThread(threadAttributes)
+{
+	portid = port_id;
+	fd = fd_;
+}
+
+int SDUReader::run()
+{
+	rina::ser_obj_t message;
+	message.message_ = new unsigned char[5000];
+	int bytes_read = 0;
+	bool keep_going = true;
+
+	LOG_DBG("SDU reader of port-id %d starting", portid);
+
+	while(keep_going) {
+		try {
+			LOG_INFO("Going to read from file descriptor %d", fd);
+			bytes_read = read(fd, message.message_, 5000);
+			LOG_INFO("Read %d bytes", bytes_read);
+			message.size_ = bytes_read;
+		} catch (rina::FlowAllocationException &e) {
+			LOG_ERR("Flow has been deallocated");
+			break;
+		} catch (rina::UnknownFlowException &e) {
+			LOG_ERR("Flow does not exist");
+			break;
+		} catch (rina::Exception &e) {
+			LOG_ERR("Problems reading SDU from flow, exiting");
+			break;
+		}
+
+		//Instruct CDAP provider to process the CACEP message
+		try{
+			rina::cdap::getProvider()->process_message(message,
+								   portid);
+		} catch(rina::Exception &e){
+			LOG_ERR("Problems processing message from port-id %d",
+				portid);
+		}
+	}
+
+	LOG_DBG("SDU Reader of port-id %d terminating", portid);
+
+	return 0;
+}
 
 //Class Dynamic DIF Allocator
 const std::string DynamicDIFAllocator::TYPE = "dynamic-dif-allocator";
@@ -699,47 +824,73 @@ DynamicDIFAllocator::DynamicDIFAllocator(const rina::ApplicationProcessNamingInf
 	ribd = NULL;
 	et = NULL;
 	ipcm = ipc_manager;
+	dda_enroller = NULL;
 }
 
 DynamicDIFAllocator::~DynamicDIFAllocator()
 {
+	void * status;
+
 	if (ribd)
 		delete ribd;
 
 	if (et)
 		delete et;
+
+	if (dda_enroller) {
+		dda_enroller->join(&status);
+		delete dda_enroller;
+	}
 }
 
-int DynamicDIFAllocator::set_config(const DIFAllocatorConfig& da_config,
-				    rina::ApplicationProcessNamingInformation& da_name)
+int DynamicDIFAllocator::set_config(const DIFAllocatorConfig& da_config)
 {
+	rina::ThreadAttributes thread_attrs;
+
 	daf_name = da_config.daf_name;
 	dap_name = da_config.dap_name;
 	enrollments = da_config.enrollments;
 
-	da_name.processName = da_config.dap_name.processName;
-	da_name.processInstance = da_config.dap_name.processInstance;
-
 	et = new DDAEnrollmentTask();
 	ribd = new DDARIBDaemon(et);
+
+	thread_attrs.setJoinable();
+	thread_attrs.setName("Peer enroller of DIF Allocator");
+	dda_enroller = new DDAEnrollerWorker(&thread_attrs, this, enrollments);
+	dda_enroller->start();
+
+	return 0;
 }
 
-void DynamicDIFAllocator::local_app_registered(const rina::ApplicationProcessNamingInformation& local_app_name,
-		          	  	       const rina::ApplicationProcessNamingInformation& dif_name)
+void DynamicDIFAllocator::assigned_to_dif(const std::string& dif_name)
 {
-	//TODO
-}
+	std::stringstream ss;
+	int cfd;
+	rina::ThreadAttributes thread_attrs;
+	DDAFlowAcceptor * facc;
 
-void DynamicDIFAllocator::local_app_unregistered(const rina::ApplicationProcessNamingInformation& local_app_name,
-		            	    	    	 const rina::ApplicationProcessNamingInformation& dif_name)
-{
-	//Ignore registrations from the DIF Allocator itself
-	if (local_app_name.processName == daf_name.processName &&
-			local_app_name.processInstance == dap_name.processName) {
+	rina::ScopedLock g(lock);
+
+	cfd = rina_open();
+	if (cfd < 0) {
+		LOG_ERR("DIF Allocator: could not open file descriptor");
 		return;
 	}
 
-	//TODO
+	ss << dap_name.processName << ":" << dap_name.processInstance << "::";
+
+	thread_attrs.setJoinable();
+	thread_attrs.setName("Flow acceptor of DIF Allocator");
+	facc = new DDAFlowAcceptor(&thread_attrs, dif_name, ss.str(), this, cfd);
+	flow_acceptors[cfd] = facc;
+
+	facc->start();
+}
+
+void DynamicDIFAllocator::n1_flow_allocated(const rina::Neighbor& neighbor, int fd)
+{
+	et->initiateEnrollment(neighbor.name_, neighbor.supporting_dif_name_.processName,
+			       fd);
 }
 
 da_res_t DynamicDIFAllocator::lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,

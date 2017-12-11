@@ -136,8 +136,7 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
         io_thread->start();
 
         // Initialize DIF Allocator
-        dif_allocator = DIFAllocator::create_instance(config,
-        					      da_name, this);
+        dif_allocator = DIFAllocator::create_instance(config, this);
 
         // Initialize DIF Templates Manager (with its monitor thread)
         dif_template_manager = new DIFTemplateManager(config_file,
