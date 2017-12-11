@@ -37,7 +37,6 @@
 #include <librina/patterns.h>
 
 #include "dif-template-manager.h"
-#include "dif-allocator.h"
 #include "catalog.h"
 #include "ip-vpn-manager.h"
 #include "process-event-listener.h"
@@ -255,6 +254,8 @@ typedef struct DelegatedStored{
 	int port;
 	rina::rib::DelegationObj* obj;
 }delegated_stored_t;
+
+class DIFAllocator;
 
 class IPCManager_ {
 
@@ -955,6 +956,81 @@ private:
 
 	rina::Lockable forwarded_calls_lock;
 	std::map<int, delegated_stored_t*> forwarded_calls;
+};
+
+/// The DIF Allocator configuration
+class DIFAllocatorConfig {
+public:
+	/// The type of DIF Allocator
+	std::string type;
+
+	/// The name of the DIF Allocator DAP instance
+	rina::ApplicationProcessNamingInformation dap_name;
+
+	/// The name of the DIF Allocator DAF
+	rina::ApplicationProcessNamingInformation daf_name;
+
+	/// The security manager configuration (Authentication & SDU Protection)
+	rina::SecurityManagerConfiguration sec_config;
+
+	/// Enrollments to peer DIF Allocators
+	std::list<rina::Neighbor> enrollments;
+
+	/// Other configuration parameters as name/value pairs
+	std::list<rina::Parameter> parameters;
+};
+
+typedef enum da_res{
+	//Success
+	DA_SUCCESS = 0,
+
+	//Return value will be deferred
+	DA_PENDING = 1,
+
+	//Generic failure
+	DA_FAILURE = -1,
+} da_res_t;
+
+/// Abstract class that must be extended by DIF Allocator implementations
+class DIFAllocator {
+public:
+	static const std::string STATIC_DIF_ALLOCATOR_FILE_NAME;
+
+	DIFAllocator(){};
+	virtual ~DIFAllocator(void){};
+
+	/// Create a new instance and configure it, returning the DIF Allocator
+	/// name to register to all normal DIFs if any
+	static DIFAllocator * create_instance(const rinad::RINAConfiguration& config,
+					      rina::ApplicationProcessNamingInformation& da_name,
+					      IPCManager_ * ipcm);
+
+	/// Parse the DIF Allocator configuration information from the main config file
+	static void parse_config(DIFAllocatorConfig& da_config,
+				 const rinad::RINAConfiguration& config);
+
+	/// Returns 0 is configuration is correclty applied, -1 otherwise
+	virtual int set_config(const DIFAllocatorConfig& da_config,
+			       rina::ApplicationProcessNamingInformation& da_name) = 0;
+
+	/// A local app (or IPCP) has registered to an N-1 DIF
+	virtual void local_app_registered(const rina::ApplicationProcessNamingInformation& local_app_name,
+					  const rina::ApplicationProcessNamingInformation& dif_name) = 0;
+
+	/// A local app (or IPCP) has unregistered from an N-1 DIF
+	virtual void local_app_unregistered(const rina::ApplicationProcessNamingInformation& local_app_name,
+					    const rina::ApplicationProcessNamingInformation& dif_name) = 0;
+
+	/// Returns IPCM_SUCCESS on success, IPCM_ERROR on error and IPCM_ONGOING
+	/// if the operation is still in progress
+	virtual da_res_t lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
+        			       	     	   rina::ApplicationProcessNamingInformation& result,
+						   const std::list<std::string>& supported_difs) = 0;
+        virtual void update_directory_contents() = 0;
+
+private:
+        static void populate_with_default_conf(DIFAllocatorConfig& da_config,
+        				       const std::string& config_file);
 };
 
 
