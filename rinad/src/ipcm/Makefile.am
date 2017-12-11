@@ -48,7 +48,6 @@ ipcm_SOURCES  =								\
 	policies-handlers.cc						\
 	dif-allocator.cc		dif-allocator.h			\
 	dif-template-manager.cc		dif-template-manager.h		\
-	ip-vpn-manager.cc		ip-vpn-manager.h		\
 	process-event-listener.cc process-event-listener.h \
 	catalog.cc			catalog.h
 

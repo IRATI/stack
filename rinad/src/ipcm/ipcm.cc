@@ -90,7 +90,6 @@ IPCManager_::IPCManager_()
           io_thread(NULL),
           dif_template_manager(NULL),
           dif_allocator(NULL),
-	  ip_vpn_manager(NULL),
 	  osp_monitor(NULL)
 {}
 
@@ -102,10 +101,6 @@ IPCManager_::~IPCManager_()
 
 	if (dif_allocator) {
 		delete dif_allocator;
-	}
-
-	if (ip_vpn_manager) {
-		delete ip_vpn_manager;
 	}
 
 	forwarded_calls.clear();
@@ -147,9 +142,6 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
         // Initialize DIF Templates Manager (with its monitor thread)
         dif_template_manager = new DIFTemplateManager(config_file,
                                                       dif_allocator);
-
-        // Initialize IP VPN Manager
-        ip_vpn_manager = new IPVPNManager();
 
         // Initialize OS Process Monitor
 	rina::ThreadAttributes thread_attrs;

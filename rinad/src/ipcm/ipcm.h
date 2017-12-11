@@ -38,7 +38,6 @@
 
 #include "dif-template-manager.h"
 #include "catalog.h"
-#include "ip-vpn-manager.h"
 #include "process-event-listener.h"
 
 //Addons
@@ -537,35 +536,6 @@ public:
 					int scope,
 					int invoke_id,
 					int port);
-	//
-	// Register an IP range to a DIF
-	//
-	// @param promise Promise object containing the future result of the
-	// operation. The promise shall always be accessible until the
-	// operation has been finished, so promise->ret value is different than
-	// IPCM_PENDING.
-	//
-	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t register_ip_prefix_to_dif(Promise* promise,
-					     const std::string& ip_range,
-					     const rina::ApplicationProcessNamingInformation& difName);
-
-	ipcm_res_t unregister_ip_prefix_from_dif(Promise* promise,
-					         const std::string& ip_range,
-						 const rina::ApplicationProcessNamingInformation& difName);
-
-	ipcm_res_t allocate_iporina_flow(Promise* promise,
-					 const std::string& src_ip_range,
-					 const std::string& dst_ip_range,
-					 const std::string& dif_name,
-					 const rina::FlowSpecification flow_spec);
-
-	void allocate_iporina_flow_response(const rina::FlowRequestEvent& event,
-					    int result,
-					    bool notify_source);
-
-	ipcm_res_t deallocate_iporina_flow(Promise* promise,
-					   int port_id);
 
 	//
 	// Update policy-set catalog, with the plugins stored in
@@ -630,9 +600,6 @@ public:
 
         //The DIF Allocator
         DIFAllocator * dif_allocator;
-
-        //The IP VPN Manager
-        IPVPNManager * ip_vpn_manager;
 
         //The OS process Monitor
         OSProcessMonitor * osp_monitor;

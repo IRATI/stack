@@ -33,7 +33,6 @@
 
 #include "rina-configuration.h"
 #include "app-handlers.h"
-#include "ip-vpn-manager.h"
 
 using namespace std;
 
@@ -268,16 +267,7 @@ IPCManager_::ipcm_register_response_app(rina::IpcmRegisterApplicationResponseEve
 		return success;
 	}
 
-	if  (app_name.entityName == RINA_IP_FLOW_ENT_NAME) {
-		ip_vpn_manager->add_registered_ip_prefix(app_name.processName);
-
-		LOG_INFO("IP prefix %s registered to DIF %s",
-			 app_name.processName.c_str(),
-			 slave_dif_name.processName.c_str());
-	} else {
-		// Notify the application about the (un)successful registration.
-		notify_app_reg(req_event, app_name, slave_dif_name, success);
-	}
+	notify_app_reg(req_event, app_name, slave_dif_name, success);
 
 	return success;
 }
@@ -444,17 +434,8 @@ int IPCManager_::ipcm_unregister_response_app(
         ipcm_unregister_response_common(event, ipcp,
                                         req.applicationName);
 
-        if (req.applicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
-        	ip_vpn_manager->remove_registered_ip_prefix(req.applicationName.processName);
-
-        	LOG_INFO("IP prefix %s unregistered from DIF %s",
-        		 req.applicationName.processName.c_str(),
-        		 ipcp->dif_name_.processName.c_str());
-        } else {
-        	// Inform the application
-        	application_manager_app_unregistered(req,
-        			event->result);
-        }
+        // Inform the application
+        application_manager_app_unregistered(req, event->result);
 
         return 0;
 }
