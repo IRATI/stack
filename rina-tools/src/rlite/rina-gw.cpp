@@ -313,7 +313,7 @@ accept_rina_flow(int fd, const InetName &inet)
     }
 
     if (ret == 0) {
-        gw->workers[0]->submit(cfd, rfd);
+        gw->workers[0]->submit(0, cfd, rfd);
         return 0;
     }
 
@@ -388,7 +388,7 @@ complete_flow_alloc(int wfd, int cfd)
     }
 
     set_nonblocking(rfd);
-    gw->workers[0]->submit(cfd, rfd);
+    gw->workers[0]->submit(0, cfd, rfd);
 
     return 0;
 }
@@ -619,7 +619,7 @@ main(int argc, char **argv)
              mit != gw->pending_conns.end(); mit++, n++) {
             if (pfd[n].revents & POLLOUT) {
                 /* TCP connection handshake completed. */
-                gw->workers[0]->submit(mit->first, mit->second);
+                gw->workers[0]->submit(0, mit->first, mit->second);
                 completed_conns.push_back(mit->first);
             }
         }
