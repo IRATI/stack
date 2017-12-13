@@ -33,21 +33,30 @@
 #define MAX_SESSIONS 16
 #define FDFWD_MAX_BUFSZ 16384
 
+#include <list>
+#include <thread>
+#include <mutex>
+
+using FwdToken = unsigned int;
+
 struct Fd {
     int fd;
     int len;
     int ofs;
-    char close;
+    bool closed;
+    FwdToken token;
     char data[FDFWD_MAX_BUFSZ];
 
-    Fd(int _fd) : fd(_fd), len(0), ofs(0), close(0) {}
-    Fd() : fd(0), len(0), ofs(0), close(0) {}
+    Fd(int _fd, FwdToken t) : fd(_fd), len(0), ofs(0), closed(false), token(t)
+    {
+    }
+    Fd() : fd(0), len(0), ofs(0), closed(false), token(0) {}
 };
 
-struct FwdWorker {
-    pthread_t th;
-    pthread_mutex_t lock;
-    int syncfd;
+class FwdWorker {
+    std::thread th;
+    std::mutex lock;
+    int repoll_syncfd;
     int idx;
 
     /* Holds the active mappings between RINA file descriptors and
@@ -55,16 +64,25 @@ struct FwdWorker {
     struct Fd fds[MAX_SESSIONS * 2];
     int nfds;
 
+    /* List of tokens corresponding to terminated mappings, together
+     * with an eventfd file descriptor to notify termination. */
+    std::list<unsigned int> terminated;
+    int closed_syncfd;
+
     int verbose;
 
+    void eventfd_write(int fd);
+    void eventfd_drain(int fd);
+    void terminate(unsigned int i, int ret, int errcode);
+
+public:
     FwdWorker(int idx_, int verb);
     ~FwdWorker();
 
-    int repoll();
-    int drain_syncfd();
-    void submit(int cfd, int rfd);
-    void terminate(unsigned int i, int ret, int errcode);
+    void submit(FwdToken token, int cfd, int rfd);
     void run();
+    FwdToken get_next_closed();
+    int closed_eventfd() const { return closed_syncfd; }
 };
 
 #endif /* __FDFWD_HH__ */
