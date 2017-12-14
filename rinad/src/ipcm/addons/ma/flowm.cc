@@ -362,8 +362,8 @@ void* ActiveWorker::run(void* param)
 			while(true) {
                                 bytes_read = read(fd, message.message_,
                                                 max_sdu_size_in_bytes);
-                                if (bytes_read < 0) {
-                                        LOG_ERR("read() error on port id %u [%s]",
+                                if (bytes_read <= 0) {
+                                        LOG_ERR("read() error or EOF on port id %u [%s]",
                                                 port_id, strerror(errno));
 					rina::ipcManager->deallocate_flow(port_id);
                                         break;

@@ -111,18 +111,18 @@ void CDAPEchoWorker::serveEchoFlow()
 	while (keep_serving) {
                 while (true) {
                         bytes_read = read(fd, buffer, max_sdu_size);
-                        if (bytes_read == 0) {
+                        if (bytes_read < 0 && errno == EAGAIN) {
                                 sleep_wrapper.sleepForMili(50);
                         } else {
-                                if (bytes_read < 0) {
-                                        LOG_ERR("Error while reading from flow %d [%s]",
+                                if (bytes_read <= 0) {
+                                        LOG_ERR("Error while reading from flow %d [%s] or EOF",
                                                         port_id, strerror(errno));
                                 }
                                 break;
                         }
                 }
 
-                if (bytes_read < 0) {
+                if (bytes_read <= 0) {
                         break;
                 }
 

@@ -141,8 +141,8 @@ void ManagerWorker::cacep(int port_id, int fd)
     unsigned char *buffer = new unsigned char[max_sdu_size_in_bytes];
     int bytes_read = read(fd, buffer, max_sdu_size_in_bytes);
 
-    if (bytes_read < 0) {
-        LOG_ERR("read() error: %s", strerror(errno));
+    if (bytes_read <= 0) {
+        LOG_ERR("read() error or EOF: %s", strerror(errno));
         return;
     }
 
@@ -378,8 +378,8 @@ bool ManagerWorker::createIPCP_1(int port_id, int fd)
 
         int bytes_read = read(fd, buffer, max_sdu_size_in_bytes);
 
-        if (bytes_read < 0) {
-                LOG_ERR("read() error: %s", strerror(errno));
+        if (bytes_read <= 0) {
+                LOG_ERR("read() error or EOF: %s", strerror(errno));
                 return false;
         }
 
