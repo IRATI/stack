@@ -34,18 +34,51 @@ using namespace std;
 
 namespace rinad {
 
-//Class DIF Allocator
-const std::string DIFAllocator::DIF_DIRECTORY_FILE_NAME = "da.map";
-
-DIFAllocator::DIFAllocator(const std::string& folder)
+// Class DIF Allocator
+DIFAllocator * DIFAllocator::create_instance(const DIFAllocatorConfig& da_config)
 {
-	stringstream ss;
+	DIFAllocator * result;
 
-	std::string::size_type pos = folder.rfind("/");
+	if (da_config.type == StaticDIFAllocator::TYPE) {
+		result = new StaticDIFAllocator();
+		result->set_config(da_config);
+	} else {
+		result = NULL;
+	}
+
+	return result;
+}
+
+//Class Static DIF Allocator
+const std::string StaticDIFAllocator::DIF_DIRECTORY_FILE_NAME = "da.map";
+const std::string StaticDIFAllocator::TYPE = "static-dif-allocator";
+
+StaticDIFAllocator::StaticDIFAllocator() : DIFAllocator()
+{
+}
+
+StaticDIFAllocator::~StaticDIFAllocator()
+{
+}
+
+int StaticDIFAllocator::set_config(const DIFAllocatorConfig& da_config)
+{
+	std::string folder_name;
+	rina::Parameter folder_name_parm;
+	stringstream ss;
+	std::string::size_type pos;
+
+	if (da_config.parameters.size() == 0) {
+		LOG_ERR("Could not find config folder name, wrong config");
+		return -1;
+	}
+
+	folder_name_parm = da_config.parameters.front();
+	pos = folder_name_parm.value.rfind("/");
 	if (pos == std::string::npos) {
 		ss << ".";
 	} else {
-		ss << folder.substr(0, pos);
+		ss << folder_name_parm.value.substr(0, pos);
 	}
 	folder_name = ss.str();
 	ss << "/" << DIF_DIRECTORY_FILE_NAME;
@@ -56,18 +89,29 @@ DIFAllocator::DIFAllocator(const std::string& folder)
 	//load current mappings
 	if (!parse_app_to_dif_mappings(fq_file_name, dif_directory)) {
 		LOG_ERR("Problems loading initial directory");
-	} else {
-		print_directory_contents();
+		return -1;
 	}
+
+	print_directory_contents();
+
+	return 0;
 }
 
-DIFAllocator::~DIFAllocator()
+void StaticDIFAllocator::local_app_registered(const rina::ApplicationProcessNamingInformation& local_app_name,
+		          	  	      const rina::ApplicationProcessNamingInformation& dif_name)
 {
+	//Ignore
 }
 
-bool DIFAllocator::lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
-                			     rina::ApplicationProcessNamingInformation& result,
-					     const std::list<std::string>& supported_difs)
+void StaticDIFAllocator::local_app_unregistered(const rina::ApplicationProcessNamingInformation& local_app_name,
+		            	    	    	const rina::ApplicationProcessNamingInformation& dif_name)
+{
+	//Ignore
+}
+
+da_res_t StaticDIFAllocator::lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
+                			     	       rina::ApplicationProcessNamingInformation& result,
+						       const std::list<std::string>& supported_difs)
 {
 	rina::ReadScopedLock g(directory_lock);
         string encoded_name = app_name.getEncodedString();
@@ -79,16 +123,16 @@ bool DIFAllocator::lookup_dif_by_application(const rina::ApplicationProcessNamin
         		for (jt = supported_difs.begin(); jt != supported_difs.end(); ++jt) {
         			if (it->second == *jt) {
         				result.processName = it->second;
-        				return true;
+        				return DA_SUCCESS;
         			}
         		}
         	}
         }
 
-        return false;
+        return DA_FAILURE;
 }
 
-void DIFAllocator::update_directory_contents()
+void StaticDIFAllocator::update_directory_contents()
 {
 	rina::WriteScopedLock g(directory_lock);
 	dif_directory.clear();
@@ -100,7 +144,7 @@ void DIFAllocator::update_directory_contents()
         }
 }
 
-void DIFAllocator::print_directory_contents()
+void StaticDIFAllocator::print_directory_contents()
 {
 	std::list< std::pair<std::string, std::string> >::iterator it;
 	std::stringstream ss;

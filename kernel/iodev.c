@@ -101,7 +101,7 @@ iodev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
 
         LOG_DBG("SDU read returned %zd", retval);
 
-        if (retval < 0) {
+        if (retval <= 0) {
                 return retval;
         }
 
@@ -109,7 +109,7 @@ iodev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
                 return -EIO;
         }
 
-        retsize = du_len(tmp);
+        retsize = retval;
         partial_read = retsize > size;
         data = du_buffer(tmp);
         if (partial_read) {

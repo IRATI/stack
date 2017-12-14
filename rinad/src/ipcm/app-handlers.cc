@@ -129,13 +129,20 @@ void IPCManager_::app_reg_req_handler(rina::ApplicationRegistrationRequestEvent 
 	rina::ApplicationProcessNamingInformation dif_name;
 	rina::ApplicationProcessNamingInformation daf_name;
 	APPregTransState* trans;
+	da_res_t dif_specified;
+	std::list<std::string> dif_names;
 
 	//Prepare the registration information
 	if (info.applicationRegistrationType ==
 			rina::APPLICATION_REGISTRATION_ANY_DIF) {
 		// See if the configuration specifies a mapping between
 		// the registering application and a DIF.
-		if (lookup_dif_by_application(app_name, dif_name)){
+		// Ask the DIF allocator
+		ipcp_factory_.get_local_dif_names(dif_names);
+		dif_specified =  dif_allocator->lookup_dif_by_application(app_name,
+								dif_name,
+								dif_names);
+		if (dif_specified == DA_SUCCESS){
 			// If a mapping exists, select an IPC process
 			// from the specified DIF.
 			slave_ipcp = select_ipcp_by_dif(dif_name);
@@ -231,6 +238,10 @@ IPCManager_::ipcm_register_response_common(rina::IpcmRegisterApplicationResponse
                         << endl;
                 FLUSH_LOG(ERR, ss);
         }
+
+        //Notify the DIF Allocator
+        if (success)
+        	dif_allocator->local_app_registered(app_name, slave_dif_name);
 
         return success;
 }
@@ -409,6 +420,10 @@ bool IPCManager_::ipcm_unregister_response_common(
                         << app_name.toString() << endl;
                 FLUSH_LOG(ERR, ss);
         }
+
+        //Notify the DIF Allocator
+        if (success)
+        	dif_allocator->local_app_unregistered(app_name, slave_ipcp->dif_name_);
 
         return success;
 }

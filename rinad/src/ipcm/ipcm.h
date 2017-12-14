@@ -323,16 +323,6 @@ public:
 	//
 	void list_ipcp_types(std::list<std::string>& types);
 
-
-	//
-	// Get the IPCP identifier where the application is registered
-	// FIXME: return id instead?
-	//
-	bool lookup_dif_by_application(
-		const rina::ApplicationProcessNamingInformation& apName,
-		rina::ApplicationProcessNamingInformation& difName);
-
-
 	//
 	// Creates an IPCP process
 	//

@@ -914,12 +914,12 @@ int kfa_flow_du_read(struct kfa  *instance,
 	if (!flow) {
 		LOG_ERR("There is no flow bound to port-id %d", id);
 		spin_unlock_bh(&instance->lock);
-		return -EBADF;
+		return 0;
 	}
 	if (flow->state == PORT_STATE_DEALLOCATED) {
 		LOG_ERR("Flow with port-id %d is already deallocated", id);
 		spin_unlock_bh(&instance->lock);
-		return -ESHUTDOWN;
+		return 0;
 	}
 
 	atomic_inc(&flow->readers);
@@ -927,7 +927,7 @@ int kfa_flow_du_read(struct kfa  *instance,
 	if (blocking) { /* blocking I/O */
 		if (flow->wqs == 0) {
 			LOG_ERR("Waitqueues are null, flow %d is being deallocated", id);
-			retval = -EBADF;
+			retval = 0;
 			goto finish;
 		} else {
 			wqs = flow->wqs;
@@ -963,12 +963,12 @@ int kfa_flow_du_read(struct kfa  *instance,
 			if (!flow) {
 				spin_unlock_bh(&instance->lock);
 				LOG_ERR("No more flow bound to port-id %d", id);
-				return -EBADF;
+				return 0;
 			}
 
 			if (flow->wqs == 0) {
 				LOG_ERR("Waitqueues are null, flow %d is being deallocated", id);
-				retval = -EBADF;
+				retval = 0;
 				goto finish;
 			}
 
@@ -977,7 +977,7 @@ int kfa_flow_du_read(struct kfa  *instance,
 
 			if (flow->state == PORT_STATE_DEALLOCATED) {
 				if (rfifo_is_empty(flow->sdu_ready)) {
-					retval = -ESHUTDOWN;
+					retval = 0;
 					goto finish;
 				}
 				break;
@@ -994,6 +994,7 @@ int kfa_flow_du_read(struct kfa  *instance,
 			LOG_ERR("There is not a valid in port-id %d fifo", id);
 			retval = -EIO;
 		}
+		retval = du_len(*du);
 	} else { /* non-blocking I/O */
 		if (flow->state == PORT_STATE_PENDING) {
 			LOG_WARN("Flow %d still not allocated", id);
@@ -1012,6 +1013,7 @@ int kfa_flow_du_read(struct kfa  *instance,
 			LOG_ERR("There is not a valid in port-id %d fifo", id);
 			retval = -EIO;
 		}
+		retval = du_len(*du);
 	}
 
  finish:
