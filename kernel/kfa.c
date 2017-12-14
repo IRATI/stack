@@ -952,7 +952,7 @@ int kfa_flow_du_read(struct kfa  *instance,
 				goto finish;
 			}
 
-			if (retval <= 0)
+			if (retval < 0)
 				goto finish;
 
 			if (flow->state == PORT_STATE_DEALLOCATED) {
