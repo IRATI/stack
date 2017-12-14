@@ -527,7 +527,7 @@ int Client::readTimeout(void * sdu, int maxBytes, unsigned int timeout)
 	ReadSDUWithTimeout _(fd, timeout);
 	do {
 		int bytes_read = read(fd, sdu, maxBytes);
-                if (bytes_read >= 0 || errno == EAGAIN) {
+                if (bytes_read > 0 || errno == EAGAIN) {
                         return bytes_read;
                 }
                 if (errno != EINTR) {

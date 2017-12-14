@@ -49,7 +49,7 @@ struct irati_msg_base * irati_read_next_msg(int cfd)
 	int ret;
 
 	ret = read(cfd, &size, 0);
-	if (ret < 0) {
+	if (ret <= 0) {
 		LOG_ERR("read(cfd) returned %d", ret);
 		return NULL;
 	}
@@ -64,7 +64,7 @@ struct irati_msg_base * irati_read_next_msg(int cfd)
 	}
 
 	ret = read(cfd, serbuf, size);
-	if (ret < 0) {
+	if (ret <= 0) {
 		LOG_ERR("read(cfd) returned %d", ret);
 		free(serbuf);
 		return NULL;

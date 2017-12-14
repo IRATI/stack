@@ -84,7 +84,7 @@ int EchoTimeServerWorker::partial_read_bytes(int fd, char * buffer,
 
 	while (total_bytes < bytes_to_read) {
 		bytes_read = read(fd, buffer + total_bytes, partial_read);
-		if (bytes_read < 0) {
+		if (bytes_read <= 0) {
 			return -1;
 		}
 
@@ -118,9 +118,9 @@ void EchoTimeServerWorker::servePingFlow()
         		}
         	}
 
-                if (bytes_read < 0) {
+                if (bytes_read <= 0) {
                         ostringstream oss;
-                        oss << "read() error: " << strerror(errno);
+                        oss << "read() error or EOF: " << strerror(errno);
                         LOG_ERR("%s", oss.str().c_str());
                         break;
                 }
@@ -158,9 +158,9 @@ void EchoTimeServerWorker::serveFloodFlow()
         for(;;) {
                 int bytes_read = read(fd, buffer, max_buffer_size);
                 int ret;
-                if (bytes_read < 0) {
+                if (bytes_read <= 0) {
                         ostringstream oss;
-                        oss << "read() error: " << strerror(errno);
+                        oss << "read() error or EOF: " << strerror(errno);
                         LOG_ERR("%s", oss.str().c_str());
                         break;
                 }

@@ -169,17 +169,17 @@ void Client::cacep()
     while (true)
     {
             bytes_read = read(flow_.fd, buffer, max_buffer_size);
-            if (bytes_read == 0) {
+            if (bytes_read < 0 && errno == EAGAIN) {
                 sleep_wrapper.sleepForMili(50);
-            } else if (bytes_read < 0) {
-                LOG_ERR("Problems while reading: %s", strerror(errno));
+            } else if (bytes_read <= 0) {
+                LOG_ERR("Problems while reading or EOF: %s", strerror(errno));
                 break;
             } else {
                 break;
             }
     }
 
-    if (bytes_read < 0) {
+    if (bytes_read <= 0) {
         return;
     }
 
@@ -248,10 +248,10 @@ void Client::sendReadRMessage()
             while (true)
             {
                     bytes_read = read(flow_.fd, buffer, max_buffer_size);
-                    if (bytes_read == 0) {
+                    if (bytes_read < 0 && errno == EAGAIN) {
                         sleep_wrapper.sleepForMili(50);
-                    } else if (bytes_read < 0) {
-                        LOG_ERR("Problems while reading: %s", strerror(errno));
+                    } else if (bytes_read <= 0) {
+                        LOG_ERR("Problems while reading or EOF: %s", strerror(errno));
                         break;
                     } else {
                         break;
@@ -282,10 +282,10 @@ void Client::release()
     while (true)
     {
             bytes_read = read(flow_.fd, buffer, max_buffer_size);
-            if (bytes_read == 0) {
+            if (bytes_read < 0 && errno == EAGAIN) {
                 sleep_wrapper.sleepForMili(50);
-            } else if (bytes_read < 0) {
-                LOG_ERR("Problems while reading: %s", strerror(errno));
+            } else if (bytes_read <= 0) {
+                LOG_ERR("Problems while reading or EOF: %s", strerror(errno));
                 break;
             } else {
                 break;
