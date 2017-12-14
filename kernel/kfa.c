@@ -771,8 +771,8 @@ int kfa_flow_readable(struct kfa       *instance,
 	if (!flow) {
 		spin_unlock_bh(&instance->lock);
 		LOG_ERR("There is no flow bound to port-id %d", id);
-                *mask |= POLLERR;
-		return -1;
+		*mask |= POLLIN | POLLRDNORM;
+		return 0;
 	}
 
         poll_wait(f, &flow->wqs->read_wqueue, wait);
