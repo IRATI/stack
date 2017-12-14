@@ -15,7 +15,7 @@ rina_echo_async_CPPFLAGS = $(LIBRINA_API_CFLAGS)
 
 rina_gw_SOURCES = rina-gw.cpp fdfwd.cpp
 rina_gw_LDADD = $(LIBRINA_API_LIBS)
-rina_gw_CPPFLAGS = $(LIBRINA_API_CFLAGS)
+rina_gw_CPPFLAGS = $(LIBRINA_API_CFLAGS) -std=c++11
 
 MOSTLYCLEANFILES =
 EXTRA_DIST =
