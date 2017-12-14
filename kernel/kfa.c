@@ -974,6 +974,7 @@ int kfa_flow_du_read(struct kfa  *instance,
 			LOG_ERR("There is not a valid in port-id %d fifo", id);
 			retval = -EIO;
 		}
+		retval = du_len(*du);
 	} else { /* non-blocking I/O */
 		if (flow->state == PORT_STATE_PENDING) {
 			LOG_WARN("Flow %d still not allocated", id);
@@ -992,6 +993,7 @@ int kfa_flow_du_read(struct kfa  *instance,
 			LOG_ERR("There is not a valid in port-id %d fifo", id);
 			retval = -EIO;
 		}
+		retval = du_len(*du);
 	}
 
  finish:

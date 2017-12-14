@@ -84,7 +84,6 @@ iodev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
         ssize_t retval;
         struct du *tmp;
         unsigned char * data;
-        size_t retsize;
 
         LOG_DBG("Syscall read SDU (size = %zd, port-id = %d)",
                 size, priv->port_id);
@@ -109,7 +108,7 @@ iodev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
                 return -EIO;
         }
 
-        retsize = du_len(tmp);
+        retsize = retval;
         partial_read = retsize > size;
         data = du_buffer(tmp);
         if (partial_read) {
