@@ -24,7 +24,7 @@
 #include <stdint.h>
 #include <rina/api.h>
 
-#include <rina/cdap.hpp>
+#include "cdap.hpp"
 #include "fdfwd.hpp"
 #include "iporina.pb.h"
 
