@@ -815,21 +815,15 @@ int SDUReader::run()
 	LOG_DBG("SDU reader of port-id %d starting", portid);
 
 	while(keep_going) {
-		try {
-			LOG_INFO("Going to read from file descriptor %d", fd);
-			bytes_read = read(fd, message.message_, 5000);
-			LOG_INFO("Read %d bytes", bytes_read);
-			message.size_ = bytes_read;
-		} catch (rina::FlowAllocationException &e) {
-			LOG_ERR("Flow has been deallocated");
-			break;
-		} catch (rina::UnknownFlowException &e) {
-			LOG_ERR("Flow does not exist");
-			break;
-		} catch (rina::Exception &e) {
-			LOG_ERR("Problems reading SDU from flow, exiting");
+		LOG_INFO("Going to read from file descriptor %d", fd);
+		bytes_read = read(fd, message.message_, 5000);
+		if (bytes_read <= 0) {
+			LOG_INFO("Error reading fd %d or EOF", fd);
 			break;
 		}
+
+		LOG_INFO("Read %d bytes", bytes_read);
+		message.size_ = bytes_read;
 
 		//Instruct CDAP provider to process the CACEP message
 		try{

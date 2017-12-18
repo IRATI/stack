@@ -58,7 +58,11 @@ int            kipcm_du_write(struct kipcm * kipcm,
 			       const char __user *buffer,
 			       size_t size,
                                bool blocking);
-/* If successful: passes the ownership of the SDU */
+
+/* If the flow is deallocated it returns 0 (EOF), otherwise
+ * it may report an error with a negative value or return
+ * the number of bytes read (positive value)
+ */
 int            kipcm_du_read(struct kipcm * kipcm,
                              port_id_t      id,
                              struct du **   du,

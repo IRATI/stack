@@ -51,6 +51,10 @@ int	    kfa_flow_ub_write(struct kfa * kfa,
 			      size_t size,
                               bool blocking);
 
+/* If the flow is deallocated it returns 0 (EOF), otherwise
+ * it may report an error with a negative value or return
+ * the number of bytes read (positive value)
+ */
 int	    kfa_flow_du_read(struct kfa  * instance,
 			      port_id_t    id,
 			      struct du ** du,
