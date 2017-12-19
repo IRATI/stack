@@ -77,6 +77,7 @@ public:
         void update_directory_contents();
         void assigned_to_dif(const std::string& dif_name);
         void n1_flow_allocated(const rina::Neighbor& neighbor, int fd);
+        void n1_flow_accepted(const char * incomingapn, int fd);
         unsigned int get_address() const;
 
 	/// The name of the DIF Allocator DAP instance

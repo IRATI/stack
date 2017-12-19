@@ -483,8 +483,6 @@ void DDAEnrollmentTask::initiateEnrollment(const rina::ApplicationProcessNamingI
 	LOG_INFO("Starting enrollment with %s over port-id %d",
 		  peer_name.getEncodedString().c_str(), port_id);
 
-	rina::ScopedLock g(lock);
-
 	for (it = enrolled_das.begin(); it != enrolled_das.end(); ++it) {
 		if (it->second->con.dest_.ap_name_ == peer_name.processName ||
 				it->second->con.src_.ap_name_ == peer_name.processName) {
@@ -734,6 +732,7 @@ int DDAFlowAcceptor::run()
 	int ret = 0;
 	char *incomingapn = NULL;
 	struct rina_flow_spec fspec;
+	rina::Neighbor neigh;
 
 	ret = rina_register(cfd, dif_name.c_str(), app_name.c_str(), 0);
 	if (ret < 0) {
@@ -747,7 +746,8 @@ int DDAFlowAcceptor::run()
 		if (ret < 0)
 			break;
 
-		//TODO notify dynamic DIF Allocator
+		dda->n1_flow_accepted(incomingapn, ret);
+		free(incomingapn);
 	}
 
 	LOG_DBG("DIF Allocator flow acceptor exiting");
@@ -778,26 +778,19 @@ int SDUReader::run()
 	rina::ser_obj_t message;
 	message.message_ = new unsigned char[5000];
 	int bytes_read = 0;
-	bool keep_going = true;
 
 	LOG_DBG("SDU reader of port-id %d starting", portid);
 
-	while(keep_going) {
-		try {
-			LOG_INFO("Going to read from file descriptor %d", fd);
-			bytes_read = read(fd, message.message_, 5000);
-			LOG_INFO("Read %d bytes", bytes_read);
-			message.size_ = bytes_read;
-		} catch (rina::FlowAllocationException &e) {
-			LOG_ERR("Flow has been deallocated");
-			break;
-		} catch (rina::UnknownFlowException &e) {
-			LOG_ERR("Flow does not exist");
-			break;
-		} catch (rina::Exception &e) {
-			LOG_ERR("Problems reading SDU from flow, exiting");
+	while(true) {
+		LOG_INFO("Going to read from file descriptor %d", fd);
+		bytes_read = read(fd, message.message_, 5000);
+		if (bytes_read <= 0) {
+			LOG_ERR("Read error or EOF: %d", bytes_read);
 			break;
 		}
+
+		LOG_INFO("Read %d bytes", bytes_read);
+		message.size_ = bytes_read;
 
 		//Instruct CDAP provider to process the CACEP message
 		try{
@@ -854,6 +847,9 @@ int DynamicDIFAllocator::set_config(const DIFAllocatorConfig& da_config)
 	et = new DDAEnrollmentTask();
 	ribd = new DDARIBDaemon(et);
 
+	ribd->set_application_process(this);
+	et->set_application_process(this);
+
 	thread_attrs.setJoinable();
 	thread_attrs.setName("Peer enroller of DIF Allocator");
 	dda_enroller = new DDAEnrollerWorker(&thread_attrs, this, enrollments);
@@ -889,8 +885,46 @@ void DynamicDIFAllocator::assigned_to_dif(const std::string& dif_name)
 
 void DynamicDIFAllocator::n1_flow_allocated(const rina::Neighbor& neighbor, int fd)
 {
+	rina::ThreadAttributes thread_attrs;
+	std::stringstream ss;
+	SDUReader * reader = 0;
+
+	rina::ScopedLock g(lock);
+
+	thread_attrs.setJoinable();
+	ss << "SDU Reader of fd " << fd;
+	thread_attrs.setName(ss.str());
+	// Use fd as port-id
+	reader = new SDUReader(&thread_attrs, fd, fd);
+	reader->start();
+
+	sdu_readers[fd] = reader;
+
+	rina::cdap::add_fd_to_port_id_mapping(fd, fd);
 	et->initiateEnrollment(neighbor.name_, neighbor.supporting_dif_name_.processName,
 			       fd);
+}
+
+void DynamicDIFAllocator::n1_flow_accepted(const char * incoming_apn, int fd)
+{
+	rina::ThreadAttributes thread_attrs;
+	std::stringstream ss;
+	SDUReader * reader = 0;
+
+	LOG_DBG("Accepted flow from peer DA: %s", incoming_apn);
+
+	rina::ScopedLock g(lock);
+
+	rina::cdap::add_fd_to_port_id_mapping(fd, fd);
+
+	thread_attrs.setJoinable();
+	ss << "SDU Reader of fd " << fd;
+	thread_attrs.setName(ss.str());
+	// Use fd as port-id
+	reader = new SDUReader(&thread_attrs, fd, fd);
+	reader->start();
+
+	sdu_readers[fd] = reader;
 }
 
 da_res_t DynamicDIFAllocator::lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
