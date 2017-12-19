@@ -238,6 +238,8 @@ IPCManager_::ipcm_register_response_common(rina::IpcmRegisterApplicationResponse
                 FLUSH_LOG(ERR, ss);
         }
 
+        if (success)
+
         return success;
 }
 
@@ -255,6 +257,11 @@ IPCManager_::ipcm_register_response_app(rina::IpcmRegisterApplicationResponseEve
 
 	success = ipcm_register_response_common(event, app_name, slave_ipcp,
 			slave_dif_name);
+
+        //Inform DIF allocator
+        if (event->result == 0)
+        	dif_allocator->app_registered(req_event.applicationRegistrationInformation.appName,
+        			              slave_ipcp->dif_name_.processName);
 
 	notify_app_reg(req_event, app_name, slave_dif_name, success);
 
@@ -418,6 +425,11 @@ int IPCManager_::ipcm_unregister_response_app(
         // Inform the supporting IPC process
         ipcm_unregister_response_common(event, ipcp,
                                         req.applicationName);
+
+        //Inform DIF allocator
+        if (event->result == 0)
+        	dif_allocator->app_unregistered(req.applicationName,
+        					ipcp->dif_name_.processName);
 
         // Inform the application
         application_manager_app_unregistered(req, event->result);

@@ -241,6 +241,7 @@ void IPCManager_::ipcm_register_response_ipcp(IPCMIPCProcess * ipcp,
 {
 	ostringstream ss;
 	ipcm_res_t ret = IPCM_FAILURE;
+	rina::ApplicationProcessNamingInformation daf_name;
 
 	IPCPregTransState* trans = get_transaction_state<IPCPregTransState>(e->sequenceNumber);
 
@@ -290,6 +291,18 @@ void IPCManager_::ipcm_register_response_ipcp(IPCMIPCProcess * ipcp,
 		FLUSH_LOG(ERR, ss);
 		throw rina::Exception();
 	}
+
+        //Inform DIF allocator
+        if (e->result == 0) {
+        	dif_allocator->app_registered(ipcp->get_name(),
+        			              slave_ipcp->dif_name_.processName);
+
+        	daf_name.processName = ipcp->dif_name_.processName;
+        	daf_name.processInstance = ipcp->get_name().processName;
+
+        	dif_allocator->app_registered(daf_name,
+        			              slave_ipcp->dif_name_.processName);
+        }
 }
 
 void IPCManager_::ipcm_unregister_response_ipcp(IPCMIPCProcess * ipcp,
@@ -298,6 +311,7 @@ void IPCManager_::ipcm_unregister_response_ipcp(IPCMIPCProcess * ipcp,
 {
 	ostringstream ss;
 	bool success;
+	rina::ApplicationProcessNamingInformation daf_name;
 	IPCPregTransState *trans = dynamic_cast<IPCPregTransState*>(t);
 	if(!trans){
 		LOG_ERR("Transaction is not of the right type");
@@ -343,6 +357,18 @@ void IPCManager_::ipcm_unregister_response_ipcp(IPCMIPCProcess * ipcp,
 		FLUSH_LOG(ERR, ss);
 		throw rina::Exception();
 	}
+
+        //Inform DIF allocator
+        if (e->result == 0) {
+        	dif_allocator->app_unregistered(ipcp->get_name(),
+        			                slave_ipcp->dif_name_.processName);
+
+        	daf_name.processName = ipcp->dif_name_.processName;
+        	daf_name.processInstance = ipcp->get_name().processName;
+
+        	dif_allocator->app_unregistered(daf_name,
+        			                slave_ipcp->dif_name_.processName);
+        }
 }
 
 void

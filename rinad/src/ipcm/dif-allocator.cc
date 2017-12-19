@@ -230,6 +230,18 @@ da_res_t StaticDIFAllocator::lookup_dif_by_application(const rina::ApplicationPr
         return DA_FAILURE;
 }
 
+void StaticDIFAllocator::app_registered(const rina::ApplicationProcessNamingInformation & app_name,
+			    	        const std::string& dif_name)
+{
+	//Ignore
+}
+
+void StaticDIFAllocator::app_unregistered(const rina::ApplicationProcessNamingInformation & app_name,
+			      	          const std::string& dif_name)
+{
+	//Ignore
+}
+
 void StaticDIFAllocator::assigned_to_dif(const std::string& dif_name)
 {
 	//Ignore
@@ -264,60 +276,107 @@ void StaticDIFAllocator::print_directory_contents()
 // Class AppToDIFEntriesRIBObject
 class AppToDIFEntriesRIBObject: public rina::rib::RIBObj {
 public:
-	AppToDIFEntriesRIBObject();
+	AppToDIFEntriesRIBObject(DynamicDIFAllocator * dda_);
 	const std::string& get_class() const {
 		return class_name;
 	};
 
+	void create(const rina::cdap_rib::con_handle_t &con,
+		    const std::string& fqn,
+		    const std::string& class_,
+		    const rina::cdap_rib::filt_info_t &filt,
+		    const int invoke_id,
+		    const rina::ser_obj_t &obj_req,
+		    rina::ser_obj_t &obj_reply,
+		    rina::cdap_rib::res_info_t& res);
+
 	const static std::string class_name;
 	const static std::string object_name;
+
+private:
+	DynamicDIFAllocator * dda;
 };
 
 const std::string AppToDIFEntriesRIBObject::class_name = "AppDIFEntries";
 const std::string AppToDIFEntriesRIBObject::object_name = "/app_dif_entries";
-AppToDIFEntriesRIBObject::AppToDIFEntriesRIBObject() : rina::rib::RIBObj(class_name)
+AppToDIFEntriesRIBObject::AppToDIFEntriesRIBObject(DynamicDIFAllocator * dda_)
+	: rina::rib::RIBObj(class_name)
 {
+	dda = dda_;
 }
 
-// Class AppToDIFEntryRIBObject
-class AppToDIFEntryRIBObject: public rina::rib::RIBObj {
-public:
-	AppToDIFEntryRIBObject();
-	const std::string& get_class() const {
-		return class_name;
-	};
-
-	const static std::string class_name;
-	const static std::string object_name;
-
-	static void create_cb(const rina::rib::rib_handle_t rib,
-			      const rina::cdap_rib::con_handle_t &con,
-			      const std::string& fqn,
-			      const std::string& class_,
-			      const rina::cdap_rib::filt_info_t &filt,
-			      const int invoke_id,
-			      const rina::ser_obj_t &obj_req,
-			      rina::cdap_rib::obj_info_t &obj_reply,
-			      rina::cdap_rib::res_info_t& res);
-};
-
-const std::string AppToDIFEntryRIBObject::class_name = "AppDIFEntry";
-const std::string AppToDIFEntryRIBObject::object_name = "/app_dif_entries/id=";
-AppToDIFEntryRIBObject::AppToDIFEntryRIBObject() : rina::rib::RIBObj(class_name)
-{
-}
-
-void AppToDIFEntryRIBObject::create_cb(const rina::rib::rib_handle_t rib,
-		      	      	      const rina::cdap_rib::con_handle_t &con,
+void AppToDIFEntriesRIBObject::create(const rina::cdap_rib::con_handle_t &con,
 				      const std::string& fqn,
 				      const std::string& class_,
 				      const rina::cdap_rib::filt_info_t &filt,
 				      const int invoke_id,
 				      const rina::ser_obj_t &obj_req,
-				      rina::cdap_rib::obj_info_t &obj_reply,
+				      rina::ser_obj_t &obj_reply,
 				      rina::cdap_rib::res_info_t& res)
 {
-	//TODO
+	std::list<AppToDIFMapping> mappings;
+	std::list<int> neighs_to_exclude;
+
+	neighs_to_exclude.push_back(con.port_id);
+
+	//TODO decode mappings from CDAP object value
+
+	dda->register_app(mappings, true, neighs_to_exclude);
+}
+
+// Class AppToDIFEntryRIBObject
+class AppToDIFEntryRIBObject: public rina::rib::RIBObj {
+public:
+	AppToDIFEntryRIBObject(DynamicDIFAllocator * dda_,
+			       const rina::ApplicationProcessNamingInformation& appn,
+			       const std::string& dn);
+
+	const std::string& get_class() const {
+		return class_name;
+	};
+
+	const static std::string class_name;
+	const static std::string object_name;
+
+	bool delete_(const rina::cdap_rib::con_handle_t &con,
+		     const std::string& fqn,
+		     const std::string& class_,
+		     const rina::cdap_rib::filt_info_t &filt,
+		     const int invoke_id,
+		     rina::cdap_rib::res_info_t& res);
+
+private:
+
+	rina::ApplicationProcessNamingInformation app_name;
+	std::string dif_name;
+	DynamicDIFAllocator * dda;
+};
+
+const std::string AppToDIFEntryRIBObject::class_name = "AppDIFEntry";
+const std::string AppToDIFEntryRIBObject::object_name = "/app_dif_entries/id=";
+
+AppToDIFEntryRIBObject::AppToDIFEntryRIBObject(DynamicDIFAllocator * dda_,
+					       const rina::ApplicationProcessNamingInformation& appn,
+					       const std::string& dn)
+		: rina::rib::RIBObj(class_name)
+{
+	dda = dda_;
+	app_name = appn;
+	dif_name = dn;
+}
+
+bool AppToDIFEntryRIBObject::delete_(const rina::cdap_rib::con_handle_t &con,
+				     const std::string& fqn,
+				     const std::string& class_,
+				     const rina::cdap_rib::filt_info_t &filt,
+				     const int invoke_id,
+				     rina::cdap_rib::res_info_t& res)
+{
+	std::list<int> exc_neighs;
+	exc_neighs.push_back(con.port_id);
+	dda->unregister_app(app_name, dif_name,
+			       true, exc_neighs);
+	return true;
 }
 
 // Class Dynamic DIF Allocator RIB Daemon
@@ -325,7 +384,7 @@ class DDARIBDaemon : public rina::rib::RIBDaemonAE
 {
 public:
 	DDARIBDaemon(rina::cacep::AppConHandlerInterface *app_con_callback);
-	~DDARIBDaemon(){};
+	~DDARIBDaemon();
 
 	rina::rib::RIBDaemonProxy * getProxy();
         const rina::rib::rib_handle_t & get_rib_handle();
@@ -337,6 +396,10 @@ private:
 	rina::rib::rib_handle_t rib;
 	rina::rib::RIBDaemonProxy* ribd;
 };
+
+DDARIBDaemon::~DDARIBDaemon() {
+	rina::rib::fini();
+}
 
 DDARIBDaemon::DDARIBDaemon(rina::cacep::AppConHandlerInterface *app_con_callback)
 {
@@ -352,12 +415,6 @@ DDARIBDaemon::DDARIBDaemon(rina::cacep::AppConHandlerInterface *app_con_callback
 	//Create schema
 	vers.version_ = 0x1ULL;
 	ribd->createSchema(vers);
-
-	//TODO: Add create callbacks
-	ribd->addCreateCallbackSchema(vers,
-				      AppToDIFEntryRIBObject::class_name,
-				      AppToDIFEntriesRIBObject::object_name,
-				      AppToDIFEntryRIBObject::create_cb);
 
 	//Create RIB
 	rib = ribd->createRIB(vers);
@@ -532,35 +589,28 @@ void DDAEnrollmentTask::connect(const rina::cdap::CDAPMessage& message,
 	//1 Find out if the sender is really connecting to us
 	if(con.src_.ap_name_.compare(dda->dap_name.processName)!= 0){
 		LOG_ERR("an M_CONNECT message whose destination was not this DA instance, ignoring it");
-		//TODO deallocate flow con.port_id
+		dda->disconnect_from_peer(con.port_id);
 		return;
 	}
 
-	rina::ScopedLock g(lock);
-
 	//2 Check we are not enrolled yet
+	lock.lock();
 	it = enrolled_das.find(con.dest_.ap_name_);
 	if (it != enrolled_das.end()) {
+		lock.unlock();
 		LOG_ERR("I am already enrolled to DIF Allocator instance %s",
 			con.dest_.ap_name_.c_str());
-		//TODO deallocate flow con.port_id
+		dda->disconnect_from_peer(con.port_id);
 		return;
 	}
 
 	//3 Send connectResult
-	peer = new DAPeer();
-	peer->con = con;
-	peer->invoke_id = message.invoke_id_;
-
 	LOG_INFO("Authenticating DIF Allocator %s-%s ...",
 		  con.dest_.ap_name_.c_str(),
 		  con.dest_.ap_inst_.c_str());
 
 	//TODO authenticate
 	LOG_INFO("Authentication successful!");
-
-	peer->status = DA_SUCCESS;
-	enrolled_das[con.dest_.ap_name_] = peer;
 
 	//Send M_CONNECT_R
 	try{
@@ -570,13 +620,21 @@ void DDAEnrollmentTask::connect(const rina::cdap::CDAPMessage& message,
 								       peer->con.auth_,
 								       peer->invoke_id);
 	}catch(rina::Exception &e){
+		lock.unlock();
 		LOG_ERR("Problems sending CDAP message: %s", e.what());
-		//TODO deallocate flow
-		//ckm->irm->deallocate_flow(con.port_id);
+		dda->disconnect_from_peer(con.port_id);
 		return;
 	}
 
-	//TODO send directory update
+	peer = new DAPeer();
+	peer->con = con;
+	peer->invoke_id = message.invoke_id_;
+	peer->status = DA_SUCCESS;
+	enrolled_das[con.dest_.ap_name_] = peer;
+
+	lock.unlock();
+
+	dda->enrollment_completed(con);
 }
 
 void DDAEnrollmentTask::connectResult(const rina::cdap::CDAPMessage& message,
@@ -585,27 +643,31 @@ void DDAEnrollmentTask::connectResult(const rina::cdap::CDAPMessage& message,
 	std::map<std::string, DAPeer *>::iterator it;
 	DAPeer * peer;
 
-	rina::ScopedLock g(lock);
+	lock.lock();
 	it = enrolled_das.find(con.dest_.ap_name_);
 	if (it == enrolled_das.end()) {
+		lock.unlock();
 		LOG_ERR("Enrollment with %s not in process, ignoring M_CONNECT_R",
 				con.src_.ap_name_.c_str());
-		//TODO deallocate flow con.port_id
+		dda->disconnect_from_peer(con.port_id);
 		return;
 	}
 
 	peer = it->second;
 	if (message.result_ != 0) {
+		lock.unlock();
 		LOG_ERR("Application connection rejected");
 		enrolled_das.erase(it);
-		// TODO deallocate flow con.port_id
+		dda->disconnect_from_peer(con.port_id);
 		delete peer;
 		return;
 	}
 
 	peer->status = DA_SUCCESS;
 
-	//TODO send directory entries to peer
+	lock.unlock();
+
+	dda->enrollment_completed(con);
 }
 
 //DDAEnrollmentWorker
@@ -823,6 +885,8 @@ DynamicDIFAllocator::DynamicDIFAllocator(const rina::ApplicationProcessNamingInf
 DynamicDIFAllocator::~DynamicDIFAllocator()
 {
 	void * status;
+	std::map<int, SDUReader *>::iterator itr;
+	SDUReader * reader;
 
 	if (ribd)
 		delete ribd;
@@ -834,11 +898,41 @@ DynamicDIFAllocator::~DynamicDIFAllocator()
 		dda_enroller->join(&status);
 		delete dda_enroller;
 	}
+
+	itr = sdu_readers.begin();
+	while (itr != sdu_readers.end()) {
+		close(itr->first);
+		reader = itr->second;
+		reader->join(&status);
+		sdu_readers.erase(itr++);
+		delete reader;
+	}
+}
+
+void DynamicDIFAllocator::disconnect_from_peer(int fd)
+{
+	void * status;
+	std::map<int, SDUReader *>::iterator itr;
+	SDUReader * reader;
+
+	rina::ScopedLock g(lock);
+
+	itr = sdu_readers.find(fd);
+	if (itr == sdu_readers.end())
+		return;
+
+	close(itr->first);
+	reader = itr->second;
+	reader->join(&status);
+	sdu_readers.erase(itr);
+
+	delete reader;
 }
 
 int DynamicDIFAllocator::set_config(const DIFAllocatorConfig& da_config)
 {
 	rina::ThreadAttributes thread_attrs;
+	rina::rib::RIBObj* tmp;
 
 	daf_name = da_config.daf_name;
 	dap_name = da_config.dap_name;
@@ -849,6 +943,13 @@ int DynamicDIFAllocator::set_config(const DIFAllocatorConfig& da_config)
 
 	ribd->set_application_process(this);
 	et->set_application_process(this);
+
+	try {
+		tmp = new AppToDIFEntriesRIBObject(this);
+		ribd->addObjRIB(AppToDIFEntriesRIBObject::object_name, &tmp);
+	} catch (rina::Exception &e) {
+		LOG_ERR("Problems adding object to the RIB : %s", e.what());
+	}
 
 	thread_attrs.setJoinable();
 	thread_attrs.setName("Peer enroller of DIF Allocator");
@@ -927,11 +1028,209 @@ void DynamicDIFAllocator::n1_flow_accepted(const char * incoming_apn, int fd)
 	sdu_readers[fd] = reader;
 }
 
+void DynamicDIFAllocator::enrollment_completed(const rina::cdap_rib::con_handle_t &con)
+{
+	LOG_DBG("Enrollment to peer DA %s %s completed",
+			con.dest_.ap_name_.c_str(),
+			con.dest_.ap_inst_.c_str());
+
+	//TODO Notify peer DA bout current App to DIF mappings I know
+}
+
 da_res_t DynamicDIFAllocator::lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
 			       	   	   	        rina::ApplicationProcessNamingInformation& result,
 							const std::list<std::string>& supported_difs)
 {
 	//TODO
+}
+
+
+bool DynamicDIFAllocator::contains_entry(int candidate, const std::list<int>& elements)
+{
+	std::list<int>::const_iterator it;
+	for (it = elements.begin(); it != elements.end(); ++it) {
+		if (candidate == *it)
+			return true;
+	}
+
+	return false;
+}
+
+void DynamicDIFAllocator::register_app(const std::list<AppToDIFMapping> & mappings,
+		  	  	       bool notify_neighs,
+				       std::list<int>& neighs_to_exclude)
+{
+	std::list<AppToDIFMapping>::const_iterator litr;
+	std::map<std::string, AppToDIFMapping *>::iterator itr;
+	std::map<int, SDUReader *>::iterator ritr;
+	AppToDIFMapping * mapping;
+	rina::rib::RIBObj * nrobj;
+	std::string dif_name;
+	rina::cdap_rib::obj_info_t obj;
+	rina::cdap_rib::flags_t flags;
+	rina::cdap_rib::filt_info_t filt;
+	rina::cdap_rib::con_handle_t con;
+
+	lock.lock();
+
+	// Iterate through entries, add them to the table and create RIB objects
+	for(litr = mappings.begin();
+			litr != mappings.end(); litr++) {
+		itr = app_dif_mappings.find(litr->app_name.getEncodedString());
+		if (itr == app_dif_mappings.end()) {
+			mapping = new AppToDIFMapping();
+			mapping->app_name = litr->app_name;
+			app_dif_mappings[litr->app_name.getEncodedString()] = mapping;
+		} else {
+			mapping = itr->second;
+		}
+
+		dif_name = litr->dif_names.front();
+		mapping->dif_names.push_back(dif_name);
+
+		LOG_DBG("Added app to DIF mapping: %s to %s",
+			 litr->app_name.getEncodedString().c_str(),
+			 dif_name.c_str());
+
+		try {
+			std::stringstream ss;
+			ss << AppToDIFEntryRIBObject::object_name
+			   << litr->app_name.getEncodedString() << "#"
+			   << litr->dif_names.front();
+
+			nrobj = new AppToDIFEntryRIBObject(this, litr->app_name, dif_name);
+			ribd->addObjRIB(ss.str(), &nrobj);
+		} catch (rina::Exception &e) {
+			LOG_ERR("Problems creating RIB object: %s",
+					e.what());
+		}
+	}
+
+	if (!notify_neighs) {
+		lock.unlock();
+		return;
+	}
+
+	//Notify neighbors
+	obj.class_ = AppToDIFEntriesRIBObject::class_name;
+	obj.name_ = AppToDIFEntriesRIBObject::object_name;
+	//TODO encode object value
+
+	for (ritr = sdu_readers.begin();
+			ritr != sdu_readers.end(); ritr++) {
+		if (contains_entry(ritr->first,
+				   neighs_to_exclude))
+			continue;
+
+		try {
+			con.port_id = ritr->first;
+			ribd->getProxy()->remote_create(con, obj, flags,
+					     	        filt, NULL);
+		} catch (rina::Exception &e) {
+			LOG_WARN("Problems sending delete CDAP message: %s",
+					e.what());
+		}
+	}
+
+	lock.unlock();
+}
+
+void DynamicDIFAllocator::app_registered(const rina::ApplicationProcessNamingInformation & app_name,
+			    	    	 const std::string& dif_name)
+{
+	std::list<AppToDIFMapping> mappings;
+	AppToDIFMapping map;
+	std::list<int> neighs_to_exclude;
+
+	map.app_name = app_name;
+	map.dif_names.push_back(dif_name);
+	mappings.push_back(map);
+
+	register_app(mappings, true, neighs_to_exclude);
+}
+
+void DynamicDIFAllocator::unregister_app(const rina::ApplicationProcessNamingInformation& app_name,
+		  	  	         const std::string& dif_name,
+				         bool notify_neighs,
+				         std::list<int>& neighs_to_exclude)
+{
+	std::map<std::string, AppToDIFMapping *> ::iterator itr;
+	std::list<std::string>::iterator ditr;
+	std::map<int, SDUReader *>::iterator ritr;
+	AppToDIFMapping * mapping;
+	rina::cdap_rib::obj_info_t obj;
+	rina::cdap_rib::flags_t flags;
+	rina::cdap_rib::filt_info_t filt;
+	rina::cdap_rib::con_handle_t con;
+	std::stringstream ss;
+
+	lock.lock();
+	itr = app_dif_mappings.find(app_name.getEncodedString());
+	if (itr == app_dif_mappings.end()) {
+		lock.unlock();
+		return;
+	}
+
+	mapping = itr->second;
+	for (ditr = mapping->dif_names.begin(); ditr != mapping->dif_names.end(); ++ditr) {
+		if (*ditr == dif_name) {
+			mapping->dif_names.erase(ditr);
+			break;
+		}
+	}
+
+	if (mapping->dif_names.size() == 0) {
+		app_dif_mappings.erase(itr);
+		delete mapping;
+	}
+
+	LOG_DBG("Removed app to DIF mapping: %s to %s",
+		 app_name.getEncodedString().c_str(),
+		 dif_name.c_str());
+
+	ss << AppToDIFEntryRIBObject::object_name << app_name.getEncodedString()
+			<< "#" << dif_name;
+	obj.class_ = AppToDIFEntryRIBObject::class_name;
+	obj.name_ = ss.str();
+
+	try {
+		ribd->removeObjRIB(obj.name_);
+	} catch (rina::Exception &e){
+		LOG_ERR("Error removing object from RIB %s",
+			 e.what());
+	}
+
+	if (!notify_neighs) {
+		lock.unlock();
+		return;
+	}
+
+	for (ritr = sdu_readers.begin();
+			ritr != sdu_readers.end(); ritr++) {
+		if (contains_entry(ritr->first,
+				   neighs_to_exclude))
+			continue;
+
+		try {
+			con.port_id = ritr->first;
+			ribd->getProxy()->remote_delete(con, obj, flags,
+							filt, NULL);
+		} catch (rina::Exception &e) {
+			LOG_WARN("Problems sending delete CDAP message: %s",
+					e.what());
+		}
+	}
+
+	lock.unlock();
+}
+
+void DynamicDIFAllocator::app_unregistered(const rina::ApplicationProcessNamingInformation & app_name,
+					   const std::string& dif_name)
+{
+	std::list<int> excluded_neighs;
+
+	unregister_app(app_name, dif_name,
+		       true, excluded_neighs);
 }
 
 void DynamicDIFAllocator::update_directory_contents()

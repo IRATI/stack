@@ -42,6 +42,10 @@ public:
 	da_res_t lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
         			       	   rina::ApplicationProcessNamingInformation& result,
 					   const std::list<std::string>& supported_difs);
+	void app_registered(const rina::ApplicationProcessNamingInformation & app_name,
+				    const std::string& dif_name);
+	void app_unregistered(const rina::ApplicationProcessNamingInformation & app_name,
+				      const std::string& dif_name);
         void update_directory_contents();
         void assigned_to_dif(const std::string& dif_name);
 
@@ -63,6 +67,11 @@ class DDAEnrollerWorker;
 class DDAFlowAcceptor;
 class SDUReader;
 
+struct AppToDIFMapping {
+	rina::ApplicationProcessNamingInformation app_name;
+	std::list<std::string> dif_names;
+};
+
 class DynamicDIFAllocator : public DIFAllocator, public rina::ApplicationProcess {
 public:
 	static const std::string TYPE;
@@ -74,11 +83,26 @@ public:
 	da_res_t lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
         			       	   rina::ApplicationProcessNamingInformation& result,
 					   const std::list<std::string>& supported_difs);
+	void app_registered(const rina::ApplicationProcessNamingInformation & app_name,
+			    const std::string& dif_name);
+	void app_unregistered(const rina::ApplicationProcessNamingInformation & app_name,
+			      const std::string& dif_name);
         void update_directory_contents();
         void assigned_to_dif(const std::string& dif_name);
         void n1_flow_allocated(const rina::Neighbor& neighbor, int fd);
         void n1_flow_accepted(const char * incomingapn, int fd);
+        void disconnect_from_peer(int fd);
+        void enrollment_completed(const rina::cdap_rib::con_handle_t &con);
         unsigned int get_address() const;
+
+        void unregister_app(const rina::ApplicationProcessNamingInformation& app_name,
+			    const std::string& dif_name,
+			    bool notify_neighs,
+			    std::list<int>& neighs_to_exclude);
+
+        void register_app(const std::list<AppToDIFMapping> & mappings,
+        		  bool notify_neighs,
+			  std::list<int>& neights_to_exclude);
 
 	/// The name of the DIF Allocator DAP instance
 	rina::ApplicationProcessNamingInformation dap_name;
@@ -99,7 +123,11 @@ private:
 	/// Readers of N-1 flows
 	rina::Lockable lock;
 	std::map<int, SDUReader *> sdu_readers;
+
 	std::map<int, DDAFlowAcceptor *> flow_acceptors;
+	std::map<std::string, AppToDIFMapping *> app_dif_mappings;
+
+	bool contains_entry(int candidate, const std::list<int>& elements);
 };
 
 } //namespace rinad

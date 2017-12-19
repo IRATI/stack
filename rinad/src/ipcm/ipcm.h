@@ -984,6 +984,13 @@ public:
 	virtual da_res_t lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
         			       	     	   rina::ApplicationProcessNamingInformation& result,
 						   const std::list<std::string>& supported_difs) = 0;
+
+	virtual void app_registered(const rina::ApplicationProcessNamingInformation & app_name,
+				    const std::string& dif_name) = 0;
+
+	virtual void app_unregistered(const rina::ApplicationProcessNamingInformation & app_name,
+				      const std::string& dif_name) = 0;
+
         virtual void update_directory_contents() = 0;
 
 private:
