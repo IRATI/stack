@@ -28,6 +28,7 @@
 #include <librina/ipc-process.h>
 #include <librina/cdap_v2.h>
 #include "configuration.h"
+#include "rina-configuration.h"
 
 #include <list>
 
@@ -61,6 +62,20 @@ public:
                     rina::ser_obj_t& serobj);
         void decode(const rina::ser_obj_t &serobj,
                     std::list<rina::DirectoryForwardingTableEntry> &des_obj);
+};
+
+/// Encoder of AppDIFMapping object
+class AppDIFMappingEncoder : public rina::Encoder<AppToDIFMapping> {
+public:
+        void encode(const AppToDIFMapping &obj, rina::ser_obj_t& serobj);
+        void decode(const rina::ser_obj_t &serobj, AppToDIFMapping &des_obj);
+};
+
+/// Encoder of AppDIFMappingList object
+class AppDIFMappingListEncoder : public rina::Encoder<std::list<AppToDIFMapping> > {
+public:
+        void encode(const std::list<AppToDIFMapping> &obj, rina::ser_obj_t& serobj);
+        void decode(const rina::ser_obj_t &serobj, std::list<AppToDIFMapping> &des_obj);
 };
 
 /// Encoder of QoSCube object

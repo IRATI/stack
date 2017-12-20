@@ -35,6 +35,12 @@
 
 namespace rinad {
 
+/// Represent an application name to DIF name mapping
+struct AppToDIFMapping {
+	rina::ApplicationProcessNamingInformation app_name;
+	std::list<std::string> dif_names;
+};
+
 /*
  * Assigns an address prefix to a certain substring (the organization)
  * that is part of the application process name

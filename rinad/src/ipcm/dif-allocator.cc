@@ -26,12 +26,14 @@
 #include <sstream>
 
 #define RINA_PREFIX     "ipcm.dif-allocator"
+
 #include <librina/logs.h>
 #include <librina/json/json.h>
 #include <librina/rib_v2.h>
 #include <librina/security-manager.h>
 #include <rina/api.h>
 
+#include "common/encoder.h"
 #include "configuration.h"
 #include "dif-allocator.h"
 
@@ -316,10 +318,11 @@ void AppToDIFEntriesRIBObject::create(const rina::cdap_rib::con_handle_t &con,
 {
 	std::list<AppToDIFMapping> mappings;
 	std::list<int> neighs_to_exclude;
+	encoders::AppDIFMappingListEncoder encoder;
 
 	neighs_to_exclude.push_back(con.port_id);
 
-	//TODO decode mappings from CDAP object value
+	encoder.decode(obj_req, mappings);
 
 	dda->register_app(mappings, true, neighs_to_exclude);
 }
@@ -1030,20 +1033,66 @@ void DynamicDIFAllocator::n1_flow_accepted(const char * incoming_apn, int fd)
 
 void DynamicDIFAllocator::enrollment_completed(const rina::cdap_rib::con_handle_t &con)
 {
+	std::map<std::string, AppToDIFMapping *>::iterator itr;
+	std::list<std::string>::iterator sitr;
+	std::list<AppToDIFMapping> mappings;
+	rina::cdap_rib::obj_info_t obj;
+	rina::cdap_rib::flags_t flags;
+	rina::cdap_rib::filt_info_t filt;
+	encoders::AppDIFMappingListEncoder encoder;
+
 	LOG_DBG("Enrollment to peer DA %s %s completed",
 			con.dest_.ap_name_.c_str(),
 			con.dest_.ap_inst_.c_str());
 
-	//TODO Notify peer DA bout current App to DIF mappings I know
+	rina::ScopedLock g(lock);
+
+	//Notify peer DA bout current App to DIF mappings I know
+	for(itr = app_dif_mappings.begin();
+			itr != app_dif_mappings.end(); ++itr) {
+		for(sitr = itr->second->dif_names.begin();
+				sitr != itr->second->dif_names.end(); ++sitr) {
+			AppToDIFMapping mapping;
+
+			mapping.app_name = itr->second->app_name;
+			mapping.dif_names.push_back(*sitr);
+		}
+	}
+
+	obj.class_ = AppToDIFEntriesRIBObject::class_name;
+	obj.name_ = AppToDIFEntriesRIBObject::object_name;
+	encoder.encode(mappings, obj.value_);
+
+	try {
+		ribd->getProxy()->remote_create(con, obj, flags,
+						filt, NULL);
+	} catch (rina::Exception &e) {
+		LOG_WARN("Problems sending create CDAP message: %s",
+				e.what());
+	}
 }
 
 da_res_t DynamicDIFAllocator::lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
 			       	   	   	        rina::ApplicationProcessNamingInformation& result,
 							const std::list<std::string>& supported_difs)
 {
-	//TODO
-}
+	std::map<std::string, AppToDIFMapping *>::iterator itr;
+	std::string dif_name;
 
+	rina::ScopedLock g(lock);
+
+	for(itr = app_dif_mappings.begin();
+			itr != app_dif_mappings.end(); ++itr) {
+		if (itr->second->app_name.processName == app_name.processName &&
+				itr->second->app_name.processInstance == app_name.processInstance) {
+			dif_name = itr->second->dif_names.front();
+			result.processName = dif_name;
+			return DA_SUCCESS;
+		}
+	}
+
+	return DA_FAILURE;
+}
 
 bool DynamicDIFAllocator::contains_entry(int candidate, const std::list<int>& elements)
 {
@@ -1070,6 +1119,7 @@ void DynamicDIFAllocator::register_app(const std::list<AppToDIFMapping> & mappin
 	rina::cdap_rib::flags_t flags;
 	rina::cdap_rib::filt_info_t filt;
 	rina::cdap_rib::con_handle_t con;
+	encoders::AppDIFMappingListEncoder encoder;
 
 	lock.lock();
 
@@ -1114,7 +1164,7 @@ void DynamicDIFAllocator::register_app(const std::list<AppToDIFMapping> & mappin
 	//Notify neighbors
 	obj.class_ = AppToDIFEntriesRIBObject::class_name;
 	obj.name_ = AppToDIFEntriesRIBObject::object_name;
-	//TODO encode object value
+	encoder.encode(mappings, obj.value_);
 
 	for (ritr = sdu_readers.begin();
 			ritr != sdu_readers.end(); ritr++) {

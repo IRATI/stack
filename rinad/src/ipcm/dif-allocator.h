@@ -67,11 +67,6 @@ class DDAEnrollerWorker;
 class DDAFlowAcceptor;
 class SDUReader;
 
-struct AppToDIFMapping {
-	rina::ApplicationProcessNamingInformation app_name;
-	std::list<std::string> dif_names;
-};
-
 class DynamicDIFAllocator : public DIFAllocator, public rina::ApplicationProcess {
 public:
 	static const std::string TYPE;

@@ -50,6 +50,7 @@ encodersheaders_HEADERS =					\
 	encoders/DataTransferConstantsMessage.pb.h		\
 	encoders/DirectoryForwardingTableEntryArrayMessage.pb.h	\
 	encoders/DirectoryForwardingTableEntryMessage.pb.h	\
+	encoders/DIFAllocatorMessages.pb.h	\
 	encoders/EnrollmentInformationMessage.pb.h		\
 	encoders/FlowMessage.pb.h				\
 	encoders/FlowStateGroupMessage.pb.h			\
