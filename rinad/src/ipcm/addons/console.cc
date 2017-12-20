@@ -105,6 +105,18 @@ public:
 	}
 };
 
+class ListDIFAllocatorMapCmd: public rina::ConsoleCmdInfo {
+public:
+	ListDIFAllocatorMapCmd(IPCMConsole * console) :
+		rina::ConsoleCmdInfo("USAGE: list-da-map", console) {};
+
+	int execute(std::vector<string>& args) {
+		IPCManager->list_da_mappings(console->outstream);
+
+		return rina::UNIXConsole::CMDRETCONT;
+	}
+};
+
 class ListIPCPTypesConsoleCmd: public rina::ConsoleCmdInfo {
 public:
 	ListIPCPTypesConsoleCmd(IPCMConsole * console) :
@@ -713,6 +725,7 @@ IPCMConsole::IPCMConsole(const string& socket_path_) :
 	commands_map["show-catalog"] = new ShowCatalogueConsoleCmd(this);
 	commands_map["update-catalog"] = new UpdateCatalogueConsoleCmd(this);
 	commands_map["query-ma-rib"] = new QueryMARIBConsoleCmd(this);
+	commands_map["list-da-map"] = new ListDIFAllocatorMapCmd(this);
 }
 
 int IPCMConsole::plugin_load_unload(vector<string>& args, bool load)

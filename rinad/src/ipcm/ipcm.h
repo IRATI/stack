@@ -285,6 +285,11 @@ public:
 	void list_ipcps(std::ostream& os);
 
 	//
+	// List the DIF Allocator mappings
+	//
+	void list_da_mappings(std::ostream& os);
+
+	//
 	// List the objects in the MA RIB
 	//
 	std::string query_ma_rib();
@@ -990,6 +995,8 @@ public:
 
 	virtual void app_unregistered(const rina::ApplicationProcessNamingInformation & app_name,
 				      const std::string& dif_name) = 0;
+
+	virtual void list_da_mappings(std::ostream& os) = 0;
 
         virtual void update_directory_contents() = 0;
 

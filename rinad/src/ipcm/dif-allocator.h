@@ -48,6 +48,7 @@ public:
 				      const std::string& dif_name);
         void update_directory_contents();
         void assigned_to_dif(const std::string& dif_name);
+        void list_da_mappings(std::ostream& os);
 
 private:
         void print_directory_contents();
@@ -98,6 +99,8 @@ public:
         void register_app(const std::list<AppToDIFMapping> & mappings,
         		  bool notify_neighs,
 			  std::list<int>& neights_to_exclude);
+
+        void list_da_mappings(std::ostream& os);
 
 	/// The name of the DIF Allocator DAP instance
 	rina::ApplicationProcessNamingInformation dap_name;

@@ -261,6 +261,18 @@ void StaticDIFAllocator::update_directory_contents()
         }
 }
 
+void StaticDIFAllocator::list_da_mappings(std::ostream& os)
+{
+	std::list< std::pair<std::string, std::string> >::iterator it;
+
+	rina::ReadScopedLock g(directory_lock);
+
+	for (it = dif_directory.begin(); it != dif_directory.end(); ++it) {
+		os << "Application name: " << it->first
+		   << "; DIF name: " << it->second << std::endl;
+	}
+}
+
 void StaticDIFAllocator::print_directory_contents()
 {
 	std::list< std::pair<std::string, std::string> >::iterator it;
@@ -1101,6 +1113,27 @@ da_res_t DynamicDIFAllocator::lookup_dif_by_application(const rina::ApplicationP
 	}
 
 	return DA_FAILURE;
+}
+
+void DynamicDIFAllocator::list_da_mappings(std::ostream& os)
+{
+	std::map<std::string, AppToDIFMapping *>::iterator itr;
+	std::list<std::string>::iterator sitr;
+
+	rina::ScopedLock g(lock);
+
+	for(itr = app_dif_mappings.begin();
+			itr != app_dif_mappings.end(); ++itr) {
+		os << "Application " << itr->second->app_name.getEncodedString()
+		   << " available through DIFs: ";
+
+		for (sitr = itr->second->dif_names.begin();
+				sitr != itr->second->dif_names.end(); sitr++) {
+			os << *sitr << ", ";
+		}
+
+		os << std::endl;
+	}
 }
 
 bool DynamicDIFAllocator::contains_entry(int candidate, const std::list<int>& elements)

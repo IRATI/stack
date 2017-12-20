@@ -364,6 +364,11 @@ void IPCManager_::list_ipcps(std::ostream& os)
     }
 }
 
+void IPCManager_::list_da_mappings(std::ostream& os)
+{
+	dif_allocator->list_da_mappings(os);
+}
+
 std::string IPCManager_::query_ma_rib()
 {
 	std::stringstream ss;
