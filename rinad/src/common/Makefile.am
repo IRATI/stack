@@ -38,7 +38,8 @@ librinad_la_SOURCES  =					\
 commonheadersdir = $(includedir)/rinad/common
 commonheaders_HEADERS = \
 	encoder.h	\
-	configuration.h
+	configuration.h \
+	rina-configuration.h
 
 encodersheadersdir = $(includedir)/rinad/common/encoders
 # Here 'make' has entered the build/rinad/src/common directory,

@@ -324,6 +324,11 @@ void AppToDIFEntriesRIBObject::create(const rina::cdap_rib::con_handle_t &con,
 
 	encoder.decode(obj_req, mappings);
 
+	if (mappings.size() == 0) {
+		LOG_DBG("No new mappings to add");
+		return;
+	}
+
 	dda->register_app(mappings, true, neighs_to_exclude);
 }
 
@@ -1056,8 +1061,12 @@ void DynamicDIFAllocator::enrollment_completed(const rina::cdap_rib::con_handle_
 
 			mapping.app_name = itr->second->app_name;
 			mapping.dif_names.push_back(*sitr);
+			mappings.push_back(mapping);
 		}
 	}
+
+	if (mappings.size() == 0)
+		return;
 
 	obj.class_ = AppToDIFEntriesRIBObject::class_name;
 	obj.name_ = AppToDIFEntriesRIBObject::object_name;
