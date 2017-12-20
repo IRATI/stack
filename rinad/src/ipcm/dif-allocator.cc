@@ -618,10 +618,10 @@ void DDAEnrollmentTask::connect(const rina::cdap::CDAPMessage& message,
 	//Send M_CONNECT_R
 	try{
 		res.code_ = rina::cdap_rib::CDAP_SUCCESS;
-		rina::cdap::getProvider()->send_open_connection_result(peer->con,
+		rina::cdap::getProvider()->send_open_connection_result(con,
 								       res,
-								       peer->con.auth_,
-								       peer->invoke_id);
+								       con.auth_,
+								       message.invoke_id_);
 	}catch(rina::Exception &e){
 		lock.unlock();
 		LOG_ERR("Problems sending CDAP message: %s", e.what());
