@@ -116,8 +116,6 @@ static int kfa_flow_destroy(struct kfa       *instance,
 			    port_id_t	      id)
 {
 	int retval = 0;
-	struct rwq_work_item *item;
-	struct flowdel_data  *wqdata;
 
 	ASSERT(flow);
 
@@ -150,19 +148,6 @@ static int kfa_flow_destroy(struct kfa       *instance,
 	}
 
 	rkfree(flow);
-
-	//the net device can not be unregistered in atomic, postpone it...
-	wqdata	       = rkzalloc(sizeof(*wqdata), GFP_ATOMIC);
-	wqdata->kfa    = NULL;
-	wqdata->id     = 0;
-
-	item = rwq_work_create_ni(kfa_flow_deallocate_worker, (void *) wqdata);
-	if (!item) {
-		rkfree(wqdata);
-		return -1;
-	}
-
-	rwq_work_post(instance->flowdelq, item);
 
 	return retval;
 }
