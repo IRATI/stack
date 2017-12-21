@@ -38,10 +38,12 @@ public:
 
 	StaticDIFAllocator();
 	virtual ~StaticDIFAllocator(void);
+
+	//DIF Allocator API
 	int set_config(const DIFAllocatorConfig& da_config);
 	da_res_t lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
         			       	   rina::ApplicationProcessNamingInformation& result,
-					   const std::list<std::string>& supported_difs);
+					   std::list<std::string>& supported_difs);
 	void app_registered(const rina::ApplicationProcessNamingInformation & app_name,
 				    const std::string& dif_name);
 	void app_unregistered(const rina::ApplicationProcessNamingInformation & app_name,
@@ -49,17 +51,23 @@ public:
         void update_directory_contents();
         void assigned_to_dif(const std::string& dif_name);
         void list_da_mappings(std::ostream& os);
+        void get_ipcp_name_for_dif(rina::ApplicationProcessNamingInformation& ipcp_name,
+        			   const std::string& dif_name);
 
 private:
-        void print_directory_contents();
-
         std::string folder_name;
         std::string fq_file_name;
 
 	//The current DIF Directory
 	std::list< std::pair<std::string, std::string> > dif_directory;
 
+	std::list<NeighborData> joinable_difs;
+
 	rina::ReadWriteLockable directory_lock;
+
+        void print_directory_contents();
+        void find_supporting_difs(std::list<std::string>& supported_difs,
+        				  const std::string& dif_name);
 };
 
 class DDARIBDaemon;
@@ -75,21 +83,28 @@ public:
 	DynamicDIFAllocator(const rina::ApplicationProcessNamingInformation& ap_name,
 			    IPCManager_ * ipcm);
 	virtual ~DynamicDIFAllocator(void);
+
+	// DIF Allocator API
 	int set_config(const DIFAllocatorConfig& da_config);
 	da_res_t lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
         			       	   rina::ApplicationProcessNamingInformation& result,
-					   const std::list<std::string>& supported_difs);
+					   std::list<std::string>& supporting_difs);
 	void app_registered(const rina::ApplicationProcessNamingInformation & app_name,
 			    const std::string& dif_name);
 	void app_unregistered(const rina::ApplicationProcessNamingInformation & app_name,
 			      const std::string& dif_name);
         void update_directory_contents();
         void assigned_to_dif(const std::string& dif_name);
+        void list_da_mappings(std::ostream& os);
+        unsigned int get_address() const;
+        void get_ipcp_name_for_dif(rina::ApplicationProcessNamingInformation& ipcp_name,
+        			   const std::string& dif_name);
+
+        // Dynamic DIF Allocator specific operations
         void n1_flow_allocated(const rina::Neighbor& neighbor, int fd);
         void n1_flow_accepted(const char * incomingapn, int fd);
         void disconnect_from_peer(int fd);
         void enrollment_completed(const rina::cdap_rib::con_handle_t &con);
-        unsigned int get_address() const;
 
         void unregister_app(const rina::ApplicationProcessNamingInformation& app_name,
 			    const std::string& dif_name,
@@ -99,8 +114,6 @@ public:
         void register_app(const std::list<AppToDIFMapping> & mappings,
         		  bool notify_neighs,
 			  std::list<int>& neights_to_exclude);
-
-        void list_da_mappings(std::ostream& os);
 
 	/// The name of the DIF Allocator DAP instance
 	rina::ApplicationProcessNamingInformation dap_name;
@@ -118,6 +131,9 @@ private:
 	/// Peer DA instances to enroll to
 	std::list<rina::Neighbor> enrollments;
 
+	/// Potential DIFs to join, with IPCP names
+	std::list<NeighborData> joinable_difs;
+
 	/// Readers of N-1 flows
 	rina::Lockable lock;
 	std::map<int, SDUReader *> sdu_readers;
@@ -126,6 +142,8 @@ private:
 	std::map<std::string, AppToDIFMapping *> app_dif_mappings;
 
 	bool contains_entry(int candidate, const std::list<int>& elements);
+	void find_supporting_difs(std::list<std::string>& supported_difs,
+				  const std::string& dif_name);
 };
 
 } //namespace rinad

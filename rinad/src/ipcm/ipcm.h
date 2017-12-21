@@ -35,6 +35,7 @@
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
 #include <librina/patterns.h>
+#include <librina/timer.h>
 
 #include "dif-template-manager.h"
 #include "catalog.h"
@@ -599,6 +600,10 @@ public:
 
 	ipcm_res_t flow_allocation_requested_event_handler(Promise * promise, rina::FlowRequestEvent* event);
 
+	void join_dif_continue_flow_alloc(Promise * promise, rina::FlowRequestEvent& event,
+					  const std::string& dif_name,
+					  const std::list<std::string>& sup_dif_names);
+
         //Generator of opaque identifiers
         rina::ConsecutiveUnsignedIntegerGenerator __tid_gen;
 
@@ -896,6 +901,8 @@ private:
 	IPCManager_();
 	virtual ~IPCManager_();
 
+	rina::Timer timer;
+
 	rina::Lockable req_lock;
 	std::map<unsigned int, unsigned short> pending_cipcp_req;
 	std::map<unsigned int, unsigned short> pending_dipcp_req;
@@ -928,6 +935,23 @@ private:
 	std::map<int, delegated_stored_t*> forwarded_calls;
 };
 
+class JoinDIFAndAllocateFlowTask: public rina::TimerTask {
+public:
+	JoinDIFAndAllocateFlowTask(IPCManager_ * ipcmgr, Promise * pro,
+				   const rina::FlowRequestEvent& event,
+				   const std::string& dname,
+				   const std::list<std::string>& sdnames);
+	~JoinDIFAndAllocateFlowTask() throw() {};
+	void run();
+
+private:
+	IPCManager_ * ipcm;
+	Promise * promise;
+	rina::FlowRequestEvent fevent;
+	std::string dif_name;
+	std::list<std::string> sup_dif_names;
+};
+
 /// The DIF Allocator configuration
 class DIFAllocatorConfig {
 public:
@@ -945,6 +969,9 @@ public:
 
 	/// Enrollments to peer DIF Allocators
 	std::list<rina::Neighbor> enrollments;
+
+	/// IPCP name for joining a certain DIF
+	std::list<NeighborData> joinable_difs;
 
 	/// Other configuration parameters as name/value pairs
 	std::list<rina::Parameter> parameters;
@@ -974,6 +1001,10 @@ public:
 	static DIFAllocator * create_instance(const rinad::RINAConfiguration& config,
 					      IPCManager_ * ipcm);
 
+	static void get_ipcp_name(rina::ApplicationProcessNamingInformation& ipcp_name,
+   	   	   		  const std::string& dif_name,
+				  const std::list<NeighborData> joinable_difs);
+
 	/// Parse the DIF Allocator configuration information from the main config file
 	static void parse_config(DIFAllocatorConfig& da_config,
 				 const rinad::RINAConfiguration& config);
@@ -988,7 +1019,7 @@ public:
 	/// if the operation is still in progress
 	virtual da_res_t lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
         			       	     	   rina::ApplicationProcessNamingInformation& result,
-						   const std::list<std::string>& supported_difs) = 0;
+						   std::list<std::string>& supporting_difs) = 0;
 
 	virtual void app_registered(const rina::ApplicationProcessNamingInformation & app_name,
 				    const std::string& dif_name) = 0;
@@ -997,6 +1028,9 @@ public:
 				      const std::string& dif_name) = 0;
 
 	virtual void list_da_mappings(std::ostream& os) = 0;
+
+	virtual void get_ipcp_name_for_dif(rina::ApplicationProcessNamingInformation& ipcp_name,
+			                   const std::string& dif_name) = 0;
 
         virtual void update_directory_contents() = 0;
 

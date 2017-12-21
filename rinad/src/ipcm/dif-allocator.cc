@@ -112,6 +112,21 @@ void DIFAllocator::parse_config(DIFAllocatorConfig& da_config,
         	}
         }
 
+        Json::Value joinableDIFs = da_json_conf["joinableDIFs"];
+        if (joinableDIFs != 0) {
+        	for (unsigned i = 0; i< joinableDIFs.size(); i++) {
+        		NeighborData neigh;
+
+        		neigh.difName.processName = joinableDIFs[i].get("difName",
+        							        neigh.difName.processName).asString();
+        		neigh.apName.processName = joinableDIFs[i].get("ipcpPn",
+        							       neigh.apName.processName).asString();
+        		neigh.apName.processInstance = joinableDIFs[i].get("ipcpPi",
+        								   neigh.apName.processInstance).asString();
+        		da_config.joinable_difs.push_back(neigh);
+        	}
+        }
+
         Json::Value parameters = da_json_conf["parameters"];
         if (parameters != 0) {
         	for (unsigned i = 0; i< parameters.size(); i++) {
@@ -163,6 +178,23 @@ DIFAllocator * DIFAllocator::create_instance(const rinad::RINAConfiguration& con
 	return result;
 }
 
+void DIFAllocator::get_ipcp_name(rina::ApplicationProcessNamingInformation& ipcp_name,
+	   	   	   	 const std::string& dif_name,
+				 const std::list<NeighborData> joinable_difs)
+{
+	std::list<NeighborData>::const_iterator itr;
+
+	for (itr = joinable_difs.begin();
+			itr != joinable_difs.end(); ++itr) {
+		if (itr->difName.processName == dif_name) {
+			ipcp_name.processName = itr->apName.processName;
+			ipcp_name.processInstance = itr->apName.processInstance;
+
+			return;
+		}
+	}
+}
+
 const std::string StaticDIFAllocator::TYPE = "static-dif-allocator";
 
 StaticDIFAllocator::StaticDIFAllocator() : DIFAllocator()
@@ -198,6 +230,8 @@ int StaticDIFAllocator::set_config(const DIFAllocatorConfig& da_config)
 
 	LOG_INFO("DIF Directory file: %s", fq_file_name.c_str());
 
+	joinable_difs = da_config.joinable_difs;
+
 	//load current mappings
 	if (!parse_app_to_dif_mappings(fq_file_name, dif_directory)) {
 		LOG_ERR("Problems loading initial directory");
@@ -211,7 +245,7 @@ int StaticDIFAllocator::set_config(const DIFAllocatorConfig& da_config)
 
 da_res_t StaticDIFAllocator::lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
                 			     	       rina::ApplicationProcessNamingInformation& result,
-						       const std::list<std::string>& supported_difs)
+						       std::list<std::string>& supporting_difs)
 {
 	rina::ReadScopedLock g(directory_lock);
         string encoded_name = app_name.getEncodedString();
@@ -220,16 +254,24 @@ da_res_t StaticDIFAllocator::lookup_dif_by_application(const rina::ApplicationPr
 
         for (it = dif_directory.begin(); it != dif_directory.end(); ++it) {
         	if (it->first == encoded_name) {
-        		for (jt = supported_difs.begin(); jt != supported_difs.end(); ++jt) {
-        			if (it->second == *jt) {
-        				result.processName = it->second;
-        				return DA_SUCCESS;
-        			}
-        		}
+        		result.processName = it->second;
+        		find_supporting_difs(supporting_difs, it->second);
+        		return DA_SUCCESS;
         	}
         }
 
         return DA_FAILURE;
+}
+
+void StaticDIFAllocator::find_supporting_difs(std::list<std::string>& supporting_difs,
+        				      const std::string& dif_name)
+{
+	std::list< std::pair<std::string, std::string> >::iterator it;
+
+	for (it = dif_directory.begin(); it != dif_directory.end(); ++it) {
+		if (it->first.compare(0, dif_name.size(), dif_name) == 0)
+			supporting_difs.push_back(it->second);
+	}
 }
 
 void StaticDIFAllocator::app_registered(const rina::ApplicationProcessNamingInformation & app_name,
@@ -271,6 +313,12 @@ void StaticDIFAllocator::list_da_mappings(std::ostream& os)
 		os << "Application name: " << it->first
 		   << "; DIF name: " << it->second << std::endl;
 	}
+}
+
+void StaticDIFAllocator::get_ipcp_name_for_dif(rina::ApplicationProcessNamingInformation& ipcp_name,
+			   	   	       const std::string& dif_name)
+{
+	get_ipcp_name(ipcp_name, dif_name, joinable_difs);
 }
 
 void StaticDIFAllocator::print_directory_contents()
@@ -957,6 +1005,7 @@ int DynamicDIFAllocator::set_config(const DIFAllocatorConfig& da_config)
 	daf_name = da_config.daf_name;
 	dap_name = da_config.dap_name;
 	enrollments = da_config.enrollments;
+	joinable_difs = da_config.joinable_difs;
 
 	et = new DDAEnrollmentTask();
 	ribd = new DDARIBDaemon(et);
@@ -1095,7 +1144,7 @@ void DynamicDIFAllocator::enrollment_completed(const rina::cdap_rib::con_handle_
 
 da_res_t DynamicDIFAllocator::lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
 			       	   	   	        rina::ApplicationProcessNamingInformation& result,
-							const std::list<std::string>& supported_difs)
+							std::list<std::string>& supporting_difs)
 {
 	std::map<std::string, AppToDIFMapping *>::iterator itr;
 	std::string dif_name;
@@ -1108,11 +1157,31 @@ da_res_t DynamicDIFAllocator::lookup_dif_by_application(const rina::ApplicationP
 				itr->second->app_name.processInstance == app_name.processInstance) {
 			dif_name = itr->second->dif_names.front();
 			result.processName = dif_name;
+			find_supporting_difs(supporting_difs, dif_name);
 			return DA_SUCCESS;
 		}
 	}
 
 	return DA_FAILURE;
+}
+
+void DynamicDIFAllocator::find_supporting_difs(std::list<std::string>& supporting_difs,
+			  	  	       const std::string& dif_name)
+{
+	std::map<std::string, AppToDIFMapping *>::iterator itr;
+	std::list<std::string>::iterator sitr;
+
+	for(itr = app_dif_mappings.begin();
+				itr != app_dif_mappings.end(); ++itr) {
+		if (itr->second->app_name.processName == dif_name) {
+			for (sitr = itr->second->dif_names.begin();
+					sitr != itr->second->dif_names.end(); ++sitr) {
+				supporting_difs.push_back(*sitr);
+			}
+
+			return;
+		}
+	}
 }
 
 void DynamicDIFAllocator::list_da_mappings(std::ostream& os)
@@ -1134,6 +1203,12 @@ void DynamicDIFAllocator::list_da_mappings(std::ostream& os)
 
 		os << std::endl;
 	}
+}
+
+void DynamicDIFAllocator::get_ipcp_name_for_dif(rina::ApplicationProcessNamingInformation& ipcp_name,
+			   	   	   	const std::string& dif_name)
+{
+	get_ipcp_name(ipcp_name, dif_name, joinable_difs);
 }
 
 bool DynamicDIFAllocator::contains_entry(int candidate, const std::list<int>& elements)
