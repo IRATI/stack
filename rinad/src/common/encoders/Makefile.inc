@@ -693,4 +693,36 @@ EXTRA_DIST +=                                   \
 
 protoSOURCES += WhatevercastNameMessage.pb.cc WhatevercastNameMessage.pb.h
 
+DIFAllocatorMessages.stamp: DIFAllocatorMessages.proto
+	rm -f DIFAllocatorMessages.tmp
+	touch DIFAllocatorMessages.tmp
+	$(PROTOC) -I$(builddir) -I$(srcdir)	\
+		--cpp_out=$(builddir)		\
+		$(srcdir)/DIFAllocatorMessages.proto
+	mv -f DIFAllocatorMessages.tmp $@
+
+DIFAllocatorMessages.pb.h DIFAllocatorMessages.pb.cc: DIFAllocatorMessages.stamp
+	if test -f $@; then :; else \
+	  trap 'rm -rf DIFAllocatorMessages.lock DIFAllocatorMessages.stamp' 1 2 13 15; \
+	  if mkdir DIFAllocatorMessages.lock 2>/dev/null; then \
+	    rm -f DIFAllocatorMessages.stamp; \
+	    $(MAKE) $(AM_MAKEFLAGS) DIFAllocatorMessages.stamp; \
+	    result=$$?; rm -rf DIFAllocatorMessages.lock; exit $$result; \
+	  else \
+	    while test -d DIFAllocatorMessages.lock; do sleep 1; done; \
+	    test -f DIFAllocatorMessages.stamp; \
+	  fi; \
+	fi
+
+DISTCLEANFILES +=                               \
+	DIFAllocatorMessages.pb.h DIFAllocatorMessages.pb.cc DIFAllocatorMessages.stamp
+
+MOSTLYCLEANFILES +=                             \
+	DIFAllocatorMessages.tmp
+
+EXTRA_DIST +=                                   \
+	DIFAllocatorMessages.proto
+
+protoSOURCES += DIFAllocatorMessages.pb.cc DIFAllocatorMessages.pb.h
+
 

@@ -33,7 +33,6 @@
 
 #include "rina-configuration.h"
 #include "app-handlers.h"
-#include "ip-vpn-manager.h"
 
 using namespace std;
 
@@ -239,9 +238,7 @@ IPCManager_::ipcm_register_response_common(rina::IpcmRegisterApplicationResponse
                 FLUSH_LOG(ERR, ss);
         }
 
-        //Notify the DIF Allocator
         if (success)
-        	dif_allocator->local_app_registered(app_name, slave_dif_name);
 
         return success;
 }
@@ -261,16 +258,12 @@ IPCManager_::ipcm_register_response_app(rina::IpcmRegisterApplicationResponseEve
 	success = ipcm_register_response_common(event, app_name, slave_ipcp,
 			slave_dif_name);
 
-	if  (app_name.entityName == RINA_IP_FLOW_ENT_NAME) {
-		ip_vpn_manager->add_registered_ip_prefix(app_name.processName);
+        //Inform DIF allocator
+        if (event->result == 0)
+        	dif_allocator->app_registered(req_event.applicationRegistrationInformation.appName,
+        			              slave_ipcp->dif_name_.processName);
 
-		LOG_INFO("IP prefix %s registered to DIF %s",
-			 app_name.processName.c_str(),
-			 slave_dif_name.processName.c_str());
-	} else {
-		// Notify the application about the (un)successful registration.
-		notify_app_reg(req_event, app_name, slave_dif_name, success);
-	}
+	notify_app_reg(req_event, app_name, slave_dif_name, success);
 
 	return success;
 }
@@ -421,10 +414,6 @@ bool IPCManager_::ipcm_unregister_response_common(
                 FLUSH_LOG(ERR, ss);
         }
 
-        //Notify the DIF Allocator
-        if (success)
-        	dif_allocator->local_app_unregistered(app_name, slave_ipcp->dif_name_);
-
         return success;
 }
 
@@ -437,17 +426,13 @@ int IPCManager_::ipcm_unregister_response_app(
         ipcm_unregister_response_common(event, ipcp,
                                         req.applicationName);
 
-        if (req.applicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
-        	ip_vpn_manager->remove_registered_ip_prefix(req.applicationName.processName);
+        //Inform DIF allocator
+        if (event->result == 0)
+        	dif_allocator->app_unregistered(req.applicationName,
+        					ipcp->dif_name_.processName);
 
-        	LOG_INFO("IP prefix %s unregistered from DIF %s",
-        		 req.applicationName.processName.c_str(),
-        		 ipcp->dif_name_.processName.c_str());
-        } else {
-        	// Inform the application
-        	application_manager_app_unregistered(req,
-        			event->result);
-        }
+        // Inform the application
+        application_manager_app_unregistered(req, event->result);
 
         return 0;
 }
