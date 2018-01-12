@@ -808,7 +808,8 @@ struct irati_ctrldev_ctldata {
 };
 
 #define IRATI_FLOW_BIND _IOW(0xAF, 0x00, struct irati_iodev_ctldata)
-#define IRATI_CTRL_FLOW_BIND _IOW(0xAF, 0x00, struct irati_ctrldev_ctldata)
+#define IRATI_CTRL_FLOW_BIND _IOW(0xAF, 0x01, struct irati_ctrldev_ctldata)
+#define IRATI_IOCTL_MSS_GET _IOR(0xAF, 0x02, struct irati_iodev_ctldata)
 
 #ifdef __cplusplus
 }
