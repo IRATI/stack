@@ -1300,3 +1300,22 @@ bool kfa_flow_exists(struct kfa *kfa, port_id_t port_id)
         return flow != NULL;
 }
 EXPORT_SYMBOL(kfa_flow_exists);
+
+size_t kfa_flow_max_sdu_size(struct kfa * kfa, port_id_t port_id)
+{
+	size_t result;
+	struct ipcp_flow *flow;
+
+        spin_lock_bh(&kfa->lock);
+        flow = kfa_pmap_find(kfa->flows, port_id);
+        if (!flow) {
+        	result = 0;
+        } else {
+        	result = flow->ipc_process->
+        			ops->max_sdu_size(flow->ipc_process->data);
+        }
+        spin_unlock_bh(&kfa->lock);
+
+        return result;
+}
+EXPORT_SYMBOL(kfa_flow_max_sdu_size);

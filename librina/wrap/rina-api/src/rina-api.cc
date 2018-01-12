@@ -23,8 +23,10 @@
 #include <string>
 #include <cassert>
 #include <stdlib.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/ioctl.h>
 #include <librina/librina.h>
 #include <rina/api.h>
 #include "ctrl.h"
@@ -614,8 +616,15 @@ rina_flow_spec_default(struct rina_flow_spec *spec)
 unsigned int
 rina_flow_mss_get(int fd)
 {
-	errno = ENOSYS;
-	return 0;
+	struct irati_iodev_ctldata data;
+
+	data.port_id = 0;
+
+	if (ioctl(fd, IRATI_IOCTL_MSS_GET, &data)) {
+		data.port_id = 0;
+	}
+
+	return data.port_id;
 }
 
 }
