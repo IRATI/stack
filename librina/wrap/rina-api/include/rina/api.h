@@ -31,9 +31,10 @@ extern "C" {
 /*
  * The rina_flow_spec struct specifies the flow QoS parameters asked
  * by an application that issue a flow allocation request.
- * Some spare space is reserved to allow future ABI-compatible extensions.
  */
 struct rina_flow_spec {
+    uint32_t version; /* version number to allow for extensions */
+#define RINA_FLOW_SPEC_VERSION 1
     uint64_t max_sdu_gap;      /* in SDUs */
     uint64_t avg_bandwidth;    /* in bits per second */
     uint32_t max_delay;        /* in microseconds */
@@ -41,11 +42,6 @@ struct rina_flow_spec {
     uint32_t max_jitter;       /* in microseconds */
     uint8_t in_order_delivery; /* boolean */
     uint8_t msg_boundaries;    /* boolean */
-
-    /* for future use */
-    uint32_t spare1;
-    uint32_t spare2;
-    uint32_t spare3;
 };
 
 #define RINA_F_NOWAIT (1 << 0)

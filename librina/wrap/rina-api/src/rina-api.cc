@@ -372,6 +372,11 @@ rina_flow_alloc(const char *dif_name, const char *local_appl,
 	struct irati_kmsg_ipcm_allocate_flow * req;
 	int wfd, ret;
 
+	if (flowspec && flowspec->version != RINA_FLOW_SPEC_VERSION) {
+		errno = EINVAL;
+		return -1;
+	}
+
 	if (flags & ~(RINA_F_NOWAIT)) {
 		errno = EINVAL;
 		return -1;
@@ -467,6 +472,10 @@ rina_flow_accept(int fd, char **remote_appl, struct rina_flow_spec *spec,
 	}
 
 	if (spec) {
+		if (spec->version != RINA_FLOW_SPEC_VERSION) {
+			errno = EINVAL;
+			return -1;
+		}
 		memset(spec, 0, sizeof(*spec));
 	}
 
@@ -605,6 +614,7 @@ void
 rina_flow_spec_default(struct rina_flow_spec *spec)
 {
         memset(spec, 0, sizeof(*spec));
+        spec->version = RINA_FLOW_SPEC_VERSION;
         spec->max_sdu_gap = -1;
         spec->avg_bandwidth = 0;
         spec->max_delay = 0;
