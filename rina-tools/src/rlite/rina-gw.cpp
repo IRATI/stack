@@ -282,13 +282,12 @@ parse_conf(const char *confname)
 static int
 accept_rina_flow(int fd, const InetName &inet)
 {
-    struct rina_flow_spec spec;
     int cfd;
     int rfd;
     int ret;
 
     /* Accept the incoming flow request. */
-    rfd = rina_flow_accept(fd, /* source name */ NULL, &spec, 0);
+    rfd = rina_flow_accept(fd, /* source name */ NULL, NULL, 0);
     if (rfd < 0) {
         perror("rina_flow_accept()");
         return 0;

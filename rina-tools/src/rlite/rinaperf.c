@@ -57,7 +57,7 @@
 
 #define CLI_FA_TIMEOUT_MSECS 5000
 #define CLI_RESULT_TIMEOUT_MSECS 5000
-#define RP_DATA_WAIT_MSECS 2000
+#define RP_DATA_WAIT_MSECS 10000
 
 struct rinaperf;
 struct worker;
@@ -556,10 +556,10 @@ perf_server(struct worker *w)
          (t_end.tv_nsec - t_start.tv_nsec);
     if (timeout) {
         /* There was a timeout, adjust the time measurement. */
-        if (ns <= RP_DATA_WAIT_MSECS * 1000000) {
+        if (ns <= RP_DATA_WAIT_MSECS * 1000000ULL) {
             ns = 1;
         } else {
-            ns -= RP_DATA_WAIT_MSECS * 1000000;
+            ns -= RP_DATA_WAIT_MSECS * 1000000ULL;
         }
     }
 
