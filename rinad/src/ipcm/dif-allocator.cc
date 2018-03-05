@@ -872,6 +872,7 @@ int DDAFlowAcceptor::run()
 	}
 
 	while (true) {
+		fspec.version = RINA_FLOW_SPEC_VERSION;
 		ret = rina_flow_accept(cfd, &incomingapn, &fspec, 0);
 		if (ret < 0)
 			break;

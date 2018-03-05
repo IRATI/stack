@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/ioctl.h>
+#include <time.h>
 
 #define RINA_PREFIX "librina.ctrldev"
 
@@ -39,6 +40,11 @@
 #include "irati/kernel-msg.h"
 
 #define IRATI_MAX_CTRL_MSG_SIZE 1000000
+
+void irati_init_ctrl()
+{
+	srand(time(NULL));
+}
 
 struct irati_msg_base * irati_read_next_msg(int cfd)
 {
@@ -136,7 +142,7 @@ int close_port(int cfd)
 
 irati_msg_port_t get_app_ctrl_port_from_cfd(int cfd)
 {
-	return getpid()*1000 + cfd;
+	return getpid()*1000 + cfd + rand();
 }
 
 int irati_open_ctrl_port(irati_msg_port_t port_id)

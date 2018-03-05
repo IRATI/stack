@@ -59,6 +59,8 @@ IRATICtrlManager::IRATICtrlManager()
 
 void IRATICtrlManager::initialize()
 {
+	irati_init_ctrl();
+
 	// Open a control device
 	cfd = irati_open_ctrl_port(ctrl_port);
 	if (ctrl_port == 0)
