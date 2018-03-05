@@ -540,7 +540,7 @@ ctrldev_release(struct inode *inode, struct file *f)
         struct rfifo * pmsgs;
 
         mutex_lock(&irati_ctrl_dm.general_lock);
-        LOG_INFO("Releasing file descriptor associated to port-id %d", priv->port_id);
+        LOG_DBG("Releasing file descriptor associated to port-id %d", priv->port_id);
         list_del_init(&priv->node);
         mutex_unlock(&irati_ctrl_dm.general_lock);
 
@@ -621,7 +621,7 @@ ctrldev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 
         priv->port_id = data.port_id;
 
-        LOG_INFO("Control device instance bound to port id %d", data.port_id);
+        LOG_DBG("Control device instance bound to port id %d", data.port_id);
 
         return 0;
 }

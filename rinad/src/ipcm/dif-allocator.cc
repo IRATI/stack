@@ -858,7 +858,7 @@ int DDARegistrar::run()
 	int ret;
 	rina::Sleep sleep;
 
-	//sleep.sleepForMili(1000);
+	sleep.sleepForMili(500);
 
 	LOG_DBG("Registering DIF Allocator at DIF %s", dif_name.c_str());
 	ret = rina_register(cfd, dif_name.c_str(), app_name.c_str(), 0);
