@@ -969,12 +969,22 @@ DynamicDIFAllocator::DynamicDIFAllocator(const rina::ApplicationProcessNamingInf
 		                         IPCManager_ * ipc_manager) :
 		DIFAllocator(), rina::ApplicationProcess(app_name.processName, app_name.processInstance)
 {
+	rina::ThreadAttributes thread_attrs;
 	ribd = NULL;
 	et = NULL;
 	ipcm = ipc_manager;
 	dda_enroller = NULL;
-	cfd = 0;
-	facc = 0;
+
+	cfd = rina_open();
+	if (cfd < 0) {
+		LOG_ERR("DIF Allocator: could not open file descriptor");
+		return;
+	}
+
+	thread_attrs.setJoinable();
+	thread_attrs.setName("Flow acceptor of DIF Allocator");
+	facc = new DDAFlowAcceptor(&thread_attrs, this, cfd);
+	facc->start();
 }
 
 DynamicDIFAllocator::~DynamicDIFAllocator()
@@ -1060,7 +1070,6 @@ int DynamicDIFAllocator::set_config(const DIFAllocatorConfig& da_config)
 void DynamicDIFAllocator::assigned_to_dif(const std::string& dif_name)
 {
 	std::stringstream ss;
-	int ret;
 	rina::ThreadAttributes thread_attrs;
 	DDARegistrar * ddar;
 
@@ -1068,25 +1077,10 @@ void DynamicDIFAllocator::assigned_to_dif(const std::string& dif_name)
 
 	ss << dap_name.processName << ":" << dap_name.processInstance << "::";
 
-	if (cfd == 0) {
-		cfd = rina_open();
-		if (cfd < 0) {
-			LOG_ERR("DIF Allocator: could not open file descriptor");
-			return;
-		}
-	}
-
 	thread_attrs.setJoinable();
 	thread_attrs.setName("Registrar of DIF Allocator");
 	ddar = new DDARegistrar(&thread_attrs, cfd, dif_name, ss.str());
 	ddar->start();
-
-	if (facc == NULL) {
-		thread_attrs.setJoinable();
-		thread_attrs.setName("Flow acceptor of DIF Allocator");
-		facc = new DDAFlowAcceptor(&thread_attrs, this, cfd);
-		facc->start();
-	}
 }
 
 void DynamicDIFAllocator::n1_flow_allocated(const rina::Neighbor& neighbor, int fd)
