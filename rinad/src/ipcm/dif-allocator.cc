@@ -829,7 +829,45 @@ int DDAEnrollerWorker::run()
 	return 0;
 }
 
-//Class SDUReader
+//Class DDARegistrar
+class DDARegistrar : public rina::SimpleThread
+{
+public:
+	DDARegistrar(rina::ThreadAttributes * threadAttributes, int fd,
+		     const std::string& dif_name, const std::string& app_name);
+	~DDARegistrar() throw() {};
+	int run();
+
+private:
+	std::string dif_name;
+	std::string app_name;
+	int cfd;
+};
+
+DDARegistrar::DDARegistrar(rina::ThreadAttributes * threadAttributes, int fd,
+	     const std::string& dn, const std::string& an)
+		: SimpleThread(threadAttributes)
+{
+	cfd = fd;
+	dif_name = dn;
+	app_name = an;
+}
+
+int DDARegistrar::run()
+{
+	int ret;
+
+	ret = rina_register(cfd, dif_name.c_str(), app_name.c_str(), 0);
+	if (ret < 0) {
+		LOG_ERR("Error registering DIF allocator to DIF %s",
+			dif_name.c_str());
+		return -1;
+	}
+
+	return 0;
+}
+
+//Class DDAFlowAcceptor
 class DDAFlowAcceptor : public rina::SimpleThread
 {
 public:
@@ -1024,7 +1062,7 @@ void DynamicDIFAllocator::assigned_to_dif(const std::string& dif_name)
 	std::stringstream ss;
 	int ret;
 	rina::ThreadAttributes thread_attrs;
-	DDAFlowAcceptor * facc;
+	DDARegistrar * ddar;
 
 	rina::ScopedLock g(lock);
 
@@ -1038,12 +1076,10 @@ void DynamicDIFAllocator::assigned_to_dif(const std::string& dif_name)
 		}
 	}
 
-	ret = rina_register(cfd, dif_name.c_str(), ss.str().c_str(), 0);
-	if (ret < 0) {
-		LOG_ERR("Error registering DIF allocator to DIF %s",
-			dif_name.c_str());
-		return;
-	}
+	thread_attrs.setJoinable();
+	thread_attrs.setName("Registrar of DIF Allocator");
+	ddar = new DDARegistrar(&thread_attrs, cfd, dif_name, ss.str());
+	ddar->start();
 
 	if (facc == NULL) {
 		thread_attrs.setJoinable();
