@@ -856,13 +856,18 @@ DDARegistrar::DDARegistrar(rina::ThreadAttributes * threadAttributes, int fd,
 int DDARegistrar::run()
 {
 	int ret;
+	rina::Sleep sleep;
 
+	sleep.sleepForMili(1000);
+
+	LOG_DBG("Registering DIF Allocator at DIF %s", dif_name.c_str());
 	ret = rina_register(cfd, dif_name.c_str(), app_name.c_str(), 0);
 	if (ret < 0) {
 		LOG_ERR("Error registering DIF allocator to DIF %s",
 			dif_name.c_str());
 		return -1;
 	}
+	LOG_DBG("DIF Allocator registered at DIF %s", dif_name.c_str());
 
 	return 0;
 }
