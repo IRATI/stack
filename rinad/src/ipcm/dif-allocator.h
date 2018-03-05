@@ -138,12 +138,14 @@ private:
 	rina::Lockable lock;
 	std::map<int, SDUReader *> sdu_readers;
 
-	std::map<int, DDAFlowAcceptor *> flow_acceptors;
+	DDAFlowAcceptor * facc;
 	std::map<std::string, AppToDIFMapping *> app_dif_mappings;
 
 	bool contains_entry(int candidate, const std::list<int>& elements);
 	void find_supporting_difs(std::list<std::string>& supported_difs,
 				  const std::string& dif_name);
+
+	int cfd;
 };
 
 } //namespace rinad
