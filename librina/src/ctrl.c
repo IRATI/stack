@@ -40,10 +40,6 @@
 
 #define IRATI_MAX_CTRL_MSG_SIZE 1000000
 
-void irati_init_ctrl()
-{
-}
-
 struct irati_msg_base * irati_read_next_msg(int cfd)
 {
 	struct irati_msg_base *resp;

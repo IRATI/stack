@@ -31,7 +31,6 @@
 extern "C" {
 #endif
 
-void irati_init_ctrl(void);
 struct irati_msg_base * irati_read_next_msg(int cfd);
 int irati_write_msg(int cfd, struct irati_msg_base *msg);
 int irati_open_ctrl_port(irati_msg_port_t port_id);
