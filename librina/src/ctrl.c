@@ -29,7 +29,6 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/ioctl.h>
-#include <time.h>
 
 #define RINA_PREFIX "librina.ctrldev"
 
@@ -43,7 +42,6 @@
 
 void irati_init_ctrl()
 {
-	srand(time(NULL));
 }
 
 struct irati_msg_base * irati_read_next_msg(int cfd)
@@ -142,7 +140,7 @@ int close_port(int cfd)
 
 irati_msg_port_t get_app_ctrl_port_from_cfd(int cfd)
 {
-	return getpid()*1000 + cfd + rand();
+	return getpid()*1000 + cfd;
 }
 
 int irati_open_ctrl_port(irati_msg_port_t port_id)
@@ -163,6 +161,7 @@ int irati_open_ctrl_port(irati_msg_port_t port_id)
 	else
 		info.port_id = port_id;
 
+	LOG_DBG("Calling IOCTL with fd %d and port %u", fd, info.port_id);
 	ret = ioctl(fd, IRATI_CTRL_FLOW_BIND, &info);
 	if (ret) {
 		fprintf(stderr, "ioctl(%s) failed: %s\n", IRATI_CTRLDEV_NAME,
