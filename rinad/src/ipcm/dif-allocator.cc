@@ -942,14 +942,14 @@ int SDUReader::run()
 	LOG_DBG("SDU reader of port-id %d starting", portid);
 
 	while(true) {
-		LOG_INFO("Going to read from file descriptor %d", fd);
+		LOG_DBG("Going to read from file descriptor %d", fd);
 		bytes_read = read(fd, message.message_, 5000);
 		if (bytes_read <= 0) {
 			LOG_ERR("Read error or EOF: %d", bytes_read);
 			break;
 		}
 
-		LOG_INFO("Read %d bytes", bytes_read);
+		LOG_DBG("Read %d bytes", bytes_read);
 		message.size_ = bytes_read;
 
 		//Instruct CDAP provider to process the CACEP message
@@ -1134,9 +1134,7 @@ void DynamicDIFAllocator::n1_flow_accepted(const char * incoming_apn, int fd)
 
 void DynamicDIFAllocator::enrollment_completed(const rina::cdap_rib::con_handle_t &con)
 {
-	std::map<std::string, AppToDIFMapping *>::iterator itr;
-	std::list<std::string>::iterator sitr;
-	std::list<AppToDIFMapping> mappings;
+	std::list< std::list<AppToDIFMapping> > atdmap;
 	rina::cdap_rib::obj_info_t obj;
 	rina::cdap_rib::flags_t flags;
 	rina::cdap_rib::filt_info_t filt;
@@ -1149,31 +1147,22 @@ void DynamicDIFAllocator::enrollment_completed(const rina::cdap_rib::con_handle_
 	rina::ScopedLock g(lock);
 
 	//Notify peer DA bout current App to DIF mappings I know
-	for(itr = app_dif_mappings.begin();
-			itr != app_dif_mappings.end(); ++itr) {
-		for(sitr = itr->second->dif_names.begin();
-				sitr != itr->second->dif_names.end(); ++sitr) {
-			AppToDIFMapping mapping;
-
-			mapping.app_name = itr->second->app_name;
-			mapping.dif_names.push_back(*sitr);
-			mappings.push_back(mapping);
-		}
-	}
-
-	if (mappings.size() == 0)
+	getAllMappingsForPropagation(atdmap);
+	if (atdmap.size() == 0)
 		return;
 
 	obj.class_ = AppToDIFEntriesRIBObject::class_name;
 	obj.name_ = AppToDIFEntriesRIBObject::object_name;
-	encoder.encode(mappings, obj.value_);
-
-	try {
-		ribd->getProxy()->remote_create(con, obj, flags,
-						filt, NULL);
-	} catch (rina::Exception &e) {
-		LOG_WARN("Problems sending create CDAP message: %s",
-				e.what());
+	for (std::list< std::list<AppToDIFMapping> >::iterator it = atdmap.begin();
+			it != atdmap.end(); ++it) {
+		encoder.encode(*it, obj.value_);
+		try {
+			ribd->getProxy()->remote_create(con, obj, flags,
+							filt, NULL);
+		} catch (rina::Exception &e) {
+			LOG_WARN("Problems sending create CDAP message: %s",
+					e.what());
+		}
 	}
 }
 
@@ -1216,6 +1205,30 @@ void DynamicDIFAllocator::find_supporting_difs(std::list<std::string>& supportin
 
 			return;
 		}
+	}
+}
+
+void DynamicDIFAllocator::getAllMappingsForPropagation(std::list< std::list<AppToDIFMapping> >& atdmap)
+{
+	rina::ScopedLock g(lock);
+	std::list<AppToDIFMapping> atdlist;
+
+	if (app_dif_mappings.empty())
+		return;
+
+	for (std::map<std::string, AppToDIFMapping*>::iterator it
+			= app_dif_mappings.begin(); it != app_dif_mappings.end();++it)
+	{
+		if (atdlist.size() == MAX_OBJECTS_PER_UPDATE_DEFAULT) {
+			atdmap.push_back(atdlist);
+			atdlist.clear();
+		}
+
+		atdlist.push_back(*(it->second));
+	}
+
+	if (atdlist.size() != 0) {
+		atdmap.push_back(atdlist);
 	}
 }
 

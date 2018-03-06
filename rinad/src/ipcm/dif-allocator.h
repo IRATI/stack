@@ -79,6 +79,7 @@ class SDUReader;
 class DynamicDIFAllocator : public DIFAllocator, public rina::ApplicationProcess {
 public:
 	static const std::string TYPE;
+	static const unsigned int MAX_OBJECTS_PER_UPDATE_DEFAULT = 15;
 
 	DynamicDIFAllocator(const rina::ApplicationProcessNamingInformation& ap_name,
 			    IPCManager_ * ipcm);
@@ -144,6 +145,7 @@ private:
 	bool contains_entry(int candidate, const std::list<int>& elements);
 	void find_supporting_difs(std::list<std::string>& supported_difs,
 				  const std::string& dif_name);
+	void getAllMappingsForPropagation(std::list< std::list<AppToDIFMapping> >& atdmap);
 
 	int cfd;
 };
