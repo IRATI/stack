@@ -64,15 +64,8 @@ void MobilityManager::parse_configuration(const rinad::RINAConfiguration& config
 
 	fin.close();
 
-	if (config.ipcProcessesToCreate.size() == 5) {
-		hand_state.hand_type = 4;
-	} else if (config.ipcProcessesToCreate.size() == 4) {
-		hand_state.hand_type = 2;
-	} else if (config.ipcProcessesToCreate.size() == 3) {
-		hand_state.hand_type = 1;
-	} else {
-		hand_state.hand_type = 0;
-	}
+	//TODO: Set a default and enable override via configuration
+	hand_state.hand_type = 4;
 
 	mobman_conf = root["addons"]["mobman"];
         if (mobman_conf != 0) {
@@ -808,7 +801,6 @@ void MobilityManager::execute_handover4(const rina::MediaReport& report)
 	rina::BaseStationInfo bs_info;
 	NeighborData neigh_data, mob_neigh_data, int_neigh_data, slice_neigh_data;
 	IPCMIPCProcess * wifi1_ipcp, * wifi2_ipcp, * mobi1_ipcp;
-	IPCMIPCProcess * slice_ipcp, * inet_ipcp;
 	IPCMIPCProcess * ipcp_enroll, * ipcp_disc;
 	Promise promise;
 	std::string next_dif, disc_dif;
@@ -852,28 +844,6 @@ void MobilityManager::execute_handover4(const rina::MediaReport& report)
 		return;
 	}
 
-	inet_ipcp = factory->getIPCProcess(4);
-	if (inet_ipcp == NULL) {
-		LOG_ERR("Could not find IPCP with ID 4");
-		return;
-	}
-
-	if (inet_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
-		LOG_ERR("Wrong IPCP type: %s", inet_ipcp->get_type().c_str());
-		return;
-	}
-
-	slice_ipcp = factory->getIPCProcess(5);
-	if (slice_ipcp == NULL) {
-		LOG_ERR("Could not find IPCP with ID 5");
-		return;
-	}
-
-	if (slice_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
-		LOG_ERR("Wrong IPCP type: %s", slice_ipcp->get_type().c_str());
-		return;
-	}
-
 	// 2. See if it has been initialized before, otherwise do it
 	if (hand_state.dif == "") {
 		//Not enrolled anywhere yet, enroll for first time
@@ -906,34 +876,6 @@ void MobilityManager::execute_handover4(const rina::MediaReport& report)
 					mobi1_ipcp->get_id(),
 					mob_neigh_data.difName.processName.c_str(),
 					mob_neigh_data.supportingDifName.processName.c_str());
-			return;
-		}
-
-		sleep.sleepForMili(1000);
-
-		//Enroll to the internet DIF
-		int_neigh_data.supportingDifName.processName = "mobile.DIF";
-		int_neigh_data.difName.processName = "internet.DIF";
-		if(IPCManager->enroll_to_dif(this, &promise, inet_ipcp->get_id(), int_neigh_data) == IPCM_FAILURE ||
-				promise.wait() != IPCM_SUCCESS) {
-			LOG_WARN("Problems enrolling IPCP %u to DIF %s via supporting DIF %s",
-					inet_ipcp->get_id(),
-					int_neigh_data.difName.processName.c_str(),
-					int_neigh_data.supportingDifName.processName.c_str());
-			return;
-		}
-
-		sleep.sleepForMili(1000);
-
-		//Enroll to the slice DIF
-		slice_neigh_data.supportingDifName.processName = "mobile.DIF";
-		slice_neigh_data.difName.processName = "slice1.DIF";
-		if(IPCManager->enroll_to_dif(this, &promise, slice_ipcp->get_id(), slice_neigh_data) == IPCM_FAILURE ||
-				promise.wait() != IPCM_SUCCESS) {
-			LOG_WARN("Problems enrolling IPCP %u to DIF %s via supporting DIF %s",
-					slice_ipcp->get_id(),
-					slice_neigh_data.difName.processName.c_str(),
-					slice_neigh_data.supportingDifName.processName.c_str());
 			return;
 		}
 
