@@ -1148,8 +1148,10 @@ void DynamicDIFAllocator::enrollment_completed(const rina::cdap_rib::con_handle_
 
 	//Notify peer DA bout current App to DIF mappings I know
 	getAllMappingsForPropagation(atdmap);
-	if (atdmap.size() == 0)
+	if (atdmap.size() == 0) {
+		LOG_DBG("Map size is 0!!");
 		return;
+	}
 
 	obj.class_ = AppToDIFEntriesRIBObject::class_name;
 	obj.name_ = AppToDIFEntriesRIBObject::object_name;
@@ -1221,13 +1223,16 @@ void DynamicDIFAllocator::getAllMappingsForPropagation(std::list< std::list<AppT
 	{
 		if (atdlist.size() == MAX_OBJECTS_PER_UPDATE_DEFAULT) {
 			atdmap.push_back(atdlist);
+			LOG_DBG("List added! #IN");
 			atdlist.clear();
 		}
 
 		atdlist.push_back(*(it->second));
+		LOG_DBG("Mapping pushed back");
 	}
 
 	if (atdlist.size() != 0) {
+		LOG_DBG("List added! #OUT");
 		atdmap.push_back(atdlist);
 	}
 }
