@@ -67,6 +67,10 @@ void MobilityManager::parse_configuration(const rinad::RINAConfiguration& config
 	//TODO: Set a default and enable override via configuration
 	hand_state.hand_type = 4;
 
+	if (config.ipcProcessesToCreate.size() == 5) {
+		hand_state.hand_type = 3;
+	}
+
 	mobman_conf = root["addons"]["mobman"];
         if (mobman_conf != 0) {
         	Json::Value wireless_difs = mobman_conf["wirelessDIFs"];
