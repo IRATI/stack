@@ -851,9 +851,9 @@ void MobilityManager::execute_handover4(const rina::MediaReport& report)
 	// 2. See if it has been initialized before, otherwise do it
 	if (hand_state.dif == "") {
 		//Not enrolled anywhere yet, enroll for first time
-		difs_it = report.available_difs.find("irati");
+		difs_it = report.available_difs.find("pristine");
 		if (difs_it == report.available_difs.end()) {
-			LOG_WARN("No members of DIF 'irati' are within range");
+			LOG_WARN("No members of DIF 'pristine' are within range");
 			return;
 		}
 
@@ -861,7 +861,7 @@ void MobilityManager::execute_handover4(const rina::MediaReport& report)
 
 		//Enroll the shim to the new DIF/AP
 		neigh_data.apName.processName = bs_info.ipcp_address;
-		neigh_data.difName.processName = "irati";
+		neigh_data.difName.processName = "pristine";
 		if(IPCManager->enroll_to_dif(this, &promise, wifi1_ipcp->get_id(), neigh_data) == IPCM_FAILURE ||
 				promise.wait() != IPCM_SUCCESS) {
 			LOG_WARN("Problems enrolling IPCP %u to DIF %s via neighbor %s",
@@ -872,7 +872,7 @@ void MobilityManager::execute_handover4(const rina::MediaReport& report)
 		}
 
 		//Enroll to the mobile DIF
-		mob_neigh_data.supportingDifName.processName = "irati";
+		mob_neigh_data.supportingDifName.processName = "pristine";
 		mob_neigh_data.difName.processName = "mobile.DIF";
 		if(IPCManager->enroll_to_dif(this, &promise, mobi1_ipcp->get_id(), mob_neigh_data) == IPCM_FAILURE ||
 				promise.wait() != IPCM_SUCCESS) {
@@ -883,7 +883,7 @@ void MobilityManager::execute_handover4(const rina::MediaReport& report)
 			return;
 		}
 
-		hand_state.dif = "irati";
+		hand_state.dif = "pristine";
 		hand_state.ipcp = wifi1_ipcp;
 
 		LOG_DBG("Initialized");
@@ -912,7 +912,7 @@ void MobilityManager::execute_handover4(const rina::MediaReport& report)
 		neighbor.processName = "ar2.mobile";
 		neighbor.processInstance = "1";
 	} else if (hand_state.dif == "arcfire"){
-		next_dif = "irina";
+		next_dif = "rinaisense";
 		neighbor.processName = "ar3.mobile";
 		neighbor.processInstance = "1";
 	} else if (hand_state.dif == "irina"){
@@ -924,7 +924,7 @@ void MobilityManager::execute_handover4(const rina::MediaReport& report)
 		neighbor.processName = "ar5.mobile";
 		neighbor.processInstance = "1";
 	} else {
-		next_dif = "irati";
+		next_dif = "pristine";
 		neighbor.processName = "ar6.mobile";
 		neighbor.processInstance = "1";
 	}
