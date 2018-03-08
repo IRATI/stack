@@ -38,6 +38,8 @@ namespace rinad {
 
 //Class Mobility Manager
 const std::string MobilityManager::NAME = "mobman";
+const int MobilityManager::DEFAULT_HANDOVER_TYPE = 4;
+const unsigned int MobilityManager::DEFAULT_DISC_WAIT_TIME_MS = 5000;
 
 void MobilityManager::parse_configuration(const rinad::RINAConfiguration& config)
 {
@@ -65,11 +67,11 @@ void MobilityManager::parse_configuration(const rinad::RINAConfiguration& config
 	fin.close();
 
 	//TODO: Set a default and enable override via configuration
-	hand_state.hand_type = 4;
-
+	hand_state.hand_type = DEFAULT_HANDOVER_TYPE;
 	if (config.ipcProcessesToCreate.size() == 5) {
 		hand_state.hand_type = 3;
 	}
+	hand_state.disc_wait_time_ms = DEFAULT_DISC_WAIT_TIME_MS;
 
 	mobman_conf = root["addons"]["mobman"];
         if (mobman_conf != 0) {
@@ -90,6 +92,14 @@ void MobilityManager::parse_configuration(const rinad::RINAConfiguration& config
         			info.bs_address = bs_address;
         			wireless_dif_info.push_back(info);
         		}
+        	}
+
+        	Json::Value general_conf = mobman_conf["generalConf"];
+        	if (general_conf != 0) {
+        		hand_state.hand_type = general_conf.get("handType",
+        				hand_state.hand_type).asInt();
+        		hand_state.disc_wait_time_ms = general_conf.get("discWaitTime",
+        				hand_state.disc_wait_time_ms).asInt();
         	}
 
                 LOG_INFO("Mobility Manager configuration parsed, found %d wireless DIFs",
@@ -181,6 +191,8 @@ void MobilityManager::execute_handover(const rina::MediaReport& report)
 		execute_handover3(report);
 	} else if (hand_state.hand_type == 4) {
 		execute_handover4(report);
+	} else if (hand_state.hand_type == 5) {
+		execute_handover5(report);
 	}else {
 		LOG_ERR("Unknown handover type: %d", hand_state.hand_type);
 	}
@@ -481,8 +493,8 @@ void MobilityManager::execute_handover2(const rina::MediaReport& report)
 		return;
 	}
 
-	//4 Now it is multihomed, wait 5 seconds and break connectivity through former N-1 DIF
-	sleep.sleepForMili(5000);
+	//4 Now it is multihomed, wait a specified time and break connectivity through former N-1 DIF
+	sleep.sleepForMili(hand_state.disc_wait_time_ms);
 
 	hand_state.dif = next_dif;
 	hand_state.ipcp = ipcp_enroll;
@@ -514,6 +526,7 @@ void MobilityManager::execute_handover2(const rina::MediaReport& report)
 	LOG_DBG("Handover done!");
 }
 
+//Roaming UE, two provider scenario with static DIF Allocator
 void MobilityManager::execute_handover3(const rina::MediaReport& report)
 {
 	std::map<std::string, rina::MediaDIFInfo>::const_iterator difs_it;
@@ -758,7 +771,7 @@ void MobilityManager::execute_handover3(const rina::MediaReport& report)
 	}
 
 	//4 Now it is multihomed, wait 5 seconds and break connectivity through former N-1 DIF
-	sleep.sleepForMili(5000);
+	sleep.sleepForMili(hand_state.disc_wait_time_ms);
 
 	hand_state.dif = next_dif;
 	hand_state.ipcp = ipcp_enroll;
@@ -799,6 +812,7 @@ void MobilityManager::execute_handover3(const rina::MediaReport& report)
 	LOG_DBG("Handover done!");
 }
 
+//Roaming UE, single provider with DC scenario (MEC), with dynamic DIF allocator
 void MobilityManager::execute_handover4(const rina::MediaReport& report)
 {
 	std::map<std::string, rina::MediaDIFInfo>::const_iterator difs_it;
@@ -964,7 +978,7 @@ void MobilityManager::execute_handover4(const rina::MediaReport& report)
 	}
 
 	//4 Now it is multihomed, wait 5 seconds and break connectivity through former N-1 DIF
-	sleep.sleepForMili(5000);
+	sleep.sleepForMili(hand_state.disc_wait_time_ms);
 
 	hand_state.dif = next_dif;
 	hand_state.ipcp = ipcp_enroll;
@@ -994,6 +1008,86 @@ void MobilityManager::execute_handover4(const rina::MediaReport& report)
 	}
 
 	LOG_DBG("Handover done!");
+}
+
+//Static UE
+void MobilityManager::execute_handover5(const rina::MediaReport& report)
+{
+	std::map<std::string, rina::MediaDIFInfo>::const_iterator difs_it;
+	rina::BaseStationInfo bs_info;
+	NeighborData neigh_data, mob_neigh_data;
+	IPCMIPCProcess * wifi1_ipcp, * mobi1_ipcp;
+	Promise promise;
+	rina::ApplicationProcessNamingInformation neighbor, int_neighbor;
+
+	// Prevent any insertion or deletion of IPC Processes to happen
+	rina::ReadScopedLock readlock(factory->rwlock);
+
+	// 1. Get all IPCPS
+	wifi1_ipcp = factory->getIPCProcess(1);
+	if (wifi1_ipcp == NULL) {
+		LOG_ERR("Could not find IPCP with ID 1");
+		return;
+	}
+
+	if (wifi1_ipcp->get_type () != rina::SHIM_WIFI_IPC_PROCESS_STA) {
+		LOG_ERR("Wrong IPCP type: %s", wifi1_ipcp->get_type().c_str());
+		return;
+	}
+
+	mobi1_ipcp = factory->getIPCProcess(2);
+	if (mobi1_ipcp == NULL) {
+		LOG_ERR("Could not find IPCP with ID 2");
+		return;
+	}
+
+	if (mobi1_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
+		LOG_ERR("Wrong IPCP type: %s", mobi1_ipcp->get_type().c_str());
+		return;
+	}
+
+	// 2. See if it has been initialized before, otherwise do it
+	if (hand_state.dif == "") {
+		//Not enrolled anywhere yet, enroll for first time
+		difs_it = report.available_difs.find("pristine");
+		if (difs_it == report.available_difs.end()) {
+			LOG_WARN("No members of DIF 'pristine' are within range");
+			return;
+		}
+
+		bs_info = difs_it->second.available_bs_ipcps.front();
+
+		//Enroll the shim to the new DIF/AP
+		neigh_data.apName.processName = bs_info.ipcp_address;
+		neigh_data.difName.processName = "pristine";
+		if(IPCManager->enroll_to_dif(this, &promise, wifi1_ipcp->get_id(), neigh_data) == IPCM_FAILURE ||
+				promise.wait() != IPCM_SUCCESS) {
+			LOG_WARN("Problems enrolling IPCP %u to DIF %s via neighbor %s",
+				 wifi1_ipcp->get_id(),
+				 neigh_data.difName.processName.c_str(),
+				 bs_info.ipcp_address.c_str());
+			return;
+		}
+
+		//Enroll to the mobile DIF
+		mob_neigh_data.supportingDifName.processName = "pristine";
+		mob_neigh_data.difName.processName = "mobile.DIF";
+		if(IPCManager->enroll_to_dif(this, &promise, mobi1_ipcp->get_id(), mob_neigh_data) == IPCM_FAILURE ||
+				promise.wait() != IPCM_SUCCESS) {
+			LOG_WARN("Problems enrolling IPCP %u to DIF %s via supporting DIF %s",
+					mobi1_ipcp->get_id(),
+					mob_neigh_data.difName.processName.c_str(),
+					mob_neigh_data.supportingDifName.processName.c_str());
+			return;
+		}
+
+		hand_state.dif = "pristine";
+		hand_state.ipcp = wifi1_ipcp;
+
+		LOG_DBG("Initialized");
+
+		return;
+	}
 }
 
 void HandoverTimerTask::run()

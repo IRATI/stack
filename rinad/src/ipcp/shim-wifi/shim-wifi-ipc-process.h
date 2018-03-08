@@ -128,6 +128,9 @@ public:
 
 class ShimWifiStaIPCProcessImpl: public ShimWifiIPCProcessImpl {
 public:
+	static const int DEFAULT_SCAN_PERIOD_MS;
+	static const long DEFAULT_ENROLLMENT_TIMEOUT_MS;
+
 	ShimWifiStaIPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
 			          unsigned short id,
 			          unsigned int ipc_manager_port,
@@ -150,8 +153,8 @@ private:
 	StaEnrollmentSM sta_enr_sm;
 	CancelEnrollmentTimerTask * timer_task;
 	long enrollment_timeout;
+	int scan_period_ms;
 
-	long get_scan_period(void);
 	void trigger_scan();
 	void abort_enrollment();
 	void notify_cancel_enrollment();

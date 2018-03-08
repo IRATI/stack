@@ -43,6 +43,7 @@ struct HandoverState {
 	bool do_it_now;
 	int hand_type;
 	bool change_mob_dif;
+	int disc_wait_time_ms;
 };
 
 //
@@ -53,6 +54,8 @@ struct HandoverState {
 class MobilityManager: public AppAddon {
 public:
 	static const std::string NAME;
+	static const int DEFAULT_HANDOVER_TYPE;
+	static const unsigned int DEFAULT_DISC_WAIT_TIME_MS;
 
 	MobilityManager(const rinad::RINAConfiguration& config);
 	virtual ~MobilityManager(void) {
@@ -65,6 +68,7 @@ protected:
 	void execute_handover2(const rina::MediaReport& report);
 	void execute_handover3(const rina::MediaReport& report);
 	void execute_handover4(const rina::MediaReport& report);
+	void execute_handover5(const rina::MediaReport& report);
 
 	//Process flow event
 	void process_librina_event(rina::IPCEvent** event);
