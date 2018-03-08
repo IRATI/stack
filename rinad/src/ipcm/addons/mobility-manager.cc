@@ -150,13 +150,19 @@ void MobilityManager::media_reports_handler(rina::MediaReportEvent * event)
 
 void MobilityManager::boostrap()
 {
+	int result;
+
 	rina::ScopedLock g(lock);
 	LOG_DBG("Boostrapping Mobility Manager");
 
-	boostrap_exp5();
+	result = boostrap_exp5();
+	if (result != 0) {
+	        BoostrapTimerTask * task = new BoostrapTimerTask(this);
+	        timer.scheduleTask(task, DEFAULT_BOOTSTRAP_WAIT_TIME_MS);
+	}
 }
 
-void MobilityManager::boostrap_exp5()
+int MobilityManager::boostrap_exp5()
 {
 	IPCMIPCProcess * wifi_ipcp;
 
@@ -167,33 +173,42 @@ void MobilityManager::boostrap_exp5()
 	wifi_ipcp = factory->getIPCProcess(1);
 	if (wifi_ipcp == NULL) {
 		LOG_ERR("Could not find IPCP with ID 1");
-		return;
+		return -1;
 	}
 
 	if (wifi_ipcp->get_type () != rina::SHIM_WIFI_IPC_PROCESS_STA) {
 		LOG_ERR("Wrong IPCP type: %s", wifi_ipcp->get_type().c_str());
-		return;
+		return -1;
 	}
 
 	// 2. Trigger first scan
 	wifi_ipcp->proxy_->scan_media();
+
+	return 0;
 }
 
 void MobilityManager::initialize()
 {
+	int result;
+
 	rina::ScopedLock g(lock);
 	LOG_DBG("Initializing Mobility Manager");
 
 	if (hand_state.hand_type == ARCFIRE_EXP5_OMEC_ROAMING) {
-		initialize_arcfire_exp5_omec(true);
+		result = initialize_arcfire_exp5_omec(true);
 	}else if (hand_state.hand_type == ARCFIRE_EXP5_OMEC_STATIC) {
-		initialize_arcfire_exp5_omec(false);
+		result = initialize_arcfire_exp5_omec(false);
 	} else if (hand_state.hand_type == ARCFIRE_EXP5_2OPERATOR_DMM) {
-		initialize_arcfire_exp5_2operator_dmm();
+		result = initialize_arcfire_exp5_2operator_dmm();
+	}
+
+	if (result != 0) {
+	        InitializeTimerTask * task = new InitializeTimerTask(this);
+	        timer.scheduleTask(task, 1000);
 	}
 }
 
-void MobilityManager::initialize_arcfire_exp5_omec(bool roaming)
+int MobilityManager::initialize_arcfire_exp5_omec(bool roaming)
 {
 	std::map<std::string, rina::MediaDIFInfo>::const_iterator difs_it;
 	rina::BaseStationInfo bs_info;
@@ -208,31 +223,31 @@ void MobilityManager::initialize_arcfire_exp5_omec(bool roaming)
 	wifi1_ipcp = factory->getIPCProcess(1);
 	if (wifi1_ipcp == NULL) {
 		LOG_ERR("Could not find IPCP with ID 1");
-		return;
+		return -1;
 	}
 
 	if (wifi1_ipcp->get_type () != rina::SHIM_WIFI_IPC_PROCESS_STA) {
 		LOG_ERR("Wrong IPCP type: %s", wifi1_ipcp->get_type().c_str());
-		return;
+		return -1;
 	}
 
 	if (roaming) {
 		mobi1_ipcp = factory->getIPCProcess(3);
 		if (mobi1_ipcp == NULL) {
 			LOG_ERR("Could not find IPCP with ID 3");
-			return;
+			return -1;
 		}
 	} else {
 		mobi1_ipcp = factory->getIPCProcess(2);
 		if (mobi1_ipcp == NULL) {
 			LOG_ERR("Could not find IPCP with ID 2");
-			return;
+			return -1;
 		}
 	}
 
 	if (mobi1_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
 		LOG_ERR("Wrong IPCP type: %s", mobi1_ipcp->get_type().c_str());
-		return;
+		return -1;
 	}
 
 	// 2. See if it has been initialized before, otherwise do it
@@ -241,7 +256,7 @@ void MobilityManager::initialize_arcfire_exp5_omec(bool roaming)
 		difs_it = last_media_report.available_difs.find("pristine");
 		if (difs_it == last_media_report.available_difs.end()) {
 			LOG_WARN("No members of DIF 'pristine' are within range");
-			return;
+			return -1;
 		}
 
 		bs_info = difs_it->second.available_bs_ipcps.front();
@@ -255,7 +270,7 @@ void MobilityManager::initialize_arcfire_exp5_omec(bool roaming)
 				 wifi1_ipcp->get_id(),
 				 neigh_data.difName.processName.c_str(),
 				 bs_info.ipcp_address.c_str());
-			return;
+			return -1;
 		}
 
 		//Enroll to the mobile DIF
@@ -267,7 +282,7 @@ void MobilityManager::initialize_arcfire_exp5_omec(bool roaming)
 					mobi1_ipcp->get_id(),
 					mob_neigh_data.difName.processName.c_str(),
 					mob_neigh_data.supportingDifName.processName.c_str());
-			return;
+			return -1;
 		}
 
 		hand_state.dif = "pristine";
@@ -280,9 +295,11 @@ void MobilityManager::initialize_arcfire_exp5_omec(bool roaming)
 		HandoverTimerTask * task = new HandoverTimerTask(this);
 		timer.scheduleTask(task, hand_state.hand_period_ms);
 	}
+
+	return 0;
 }
 
-void MobilityManager::initialize_arcfire_exp5_2operator_dmm()
+int MobilityManager::initialize_arcfire_exp5_2operator_dmm()
 {
 	std::map<std::string, rina::MediaDIFInfo>::const_iterator difs_it;
 	rina::BaseStationInfo bs_info;
@@ -300,56 +317,56 @@ void MobilityManager::initialize_arcfire_exp5_2operator_dmm()
 	wifi1_ipcp = factory->getIPCProcess(1);
 	if (wifi1_ipcp == NULL) {
 		LOG_ERR("Could not find IPCP with ID 1");
-		return;
+		return -1;
 	}
 
 	if (wifi1_ipcp->get_type () != rina::SHIM_WIFI_IPC_PROCESS_STA) {
 		LOG_ERR("Wrong IPCP type: %s", wifi1_ipcp->get_type().c_str());
-		return;
+		return -1;
 	}
 
 	wifi2_ipcp = factory->getIPCProcess(2);
 	if (wifi2_ipcp == NULL) {
 		LOG_ERR("Could not find IPCP with ID 2");
-		return;
+		return -1;
 	}
 
 	if (wifi2_ipcp->get_type() != rina::SHIM_WIFI_IPC_PROCESS_STA) {
 		LOG_ERR("Wrong IPCP type: %s", wifi2_ipcp->get_type().c_str());
-		return;
+		return -1;
 	}
 
 	mobi1_ipcp = factory->getIPCProcess(3);
 	if (mobi1_ipcp == NULL) {
 		LOG_ERR("Could not find IPCP with ID 3");
-		return;
+		return -1;
 	}
 
 	if (mobi1_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
 		LOG_ERR("Wrong IPCP type: %s", mobi1_ipcp->get_type().c_str());
-		return;
+		return -1;
 	}
 
 	mobi2_ipcp = factory->getIPCProcess(4);
 	if (mobi2_ipcp == NULL) {
 		LOG_ERR("Could not find IPCP with ID 4");
-		return;
+		return -1;
 	}
 
 	if (mobi2_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
 		LOG_ERR("Wrong IPCP type: %s", mobi2_ipcp->get_type().c_str());
-		return;
+		return -1;
 	}
 
 	inet_ipcp = factory->getIPCProcess(5);
 	if (inet_ipcp == NULL) {
 		LOG_ERR("Could not find IPCP with ID 5");
-		return;
+		return -1;
 	}
 
 	if (inet_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
 		LOG_ERR("Wrong IPCP type: %s", inet_ipcp->get_type().c_str());
-		return;
+		return -1;
 	}
 
 	// 2. See if it has been initialized before, otherwise do it
@@ -358,7 +375,7 @@ void MobilityManager::initialize_arcfire_exp5_2operator_dmm()
 		difs_it = last_media_report.available_difs.find("irati");
 		if (difs_it == last_media_report.available_difs.end()) {
 			LOG_WARN("No members of DIF 'irati' are within range");
-			return;
+			return -1;
 		}
 
 		bs_info = difs_it->second.available_bs_ipcps.front();
@@ -372,7 +389,7 @@ void MobilityManager::initialize_arcfire_exp5_2operator_dmm()
 				 wifi1_ipcp->get_id(),
 				 neigh_data.difName.processName.c_str(),
 				 bs_info.ipcp_address.c_str());
-			return;
+			return -1;
 		}
 
 		//Enroll to the mobile DIF
@@ -384,7 +401,7 @@ void MobilityManager::initialize_arcfire_exp5_2operator_dmm()
 					mobi1_ipcp->get_id(),
 					mob_neigh_data.difName.processName.c_str(),
 					mob_neigh_data.supportingDifName.processName.c_str());
-			return;
+			return -1;
 		}
 
 		sleep.sleepForMili(1000);
@@ -398,7 +415,7 @@ void MobilityManager::initialize_arcfire_exp5_2operator_dmm()
 					inet_ipcp->get_id(),
 					int_neigh_data.difName.processName.c_str(),
 					int_neigh_data.supportingDifName.processName.c_str());
-			return;
+			return -1;
 		}
 
 		hand_state.dif = "irati";
@@ -409,24 +426,34 @@ void MobilityManager::initialize_arcfire_exp5_2operator_dmm()
 
 	HandoverTimerTask * task = new HandoverTimerTask(this);
 	timer.scheduleTask(task, hand_state.hand_period_ms);
+
+	return 0;
 }
 
 void MobilityManager::execute_handover()
 {
+	int result;
+
 	rina::ScopedLock g(lock);
 	LOG_DBG("Executing handover");
 
 	if (hand_state.hand_type == ARCFIRE_EXP5_OMEC_ROAMING) {
-		execute_handover_arcfire_exp5_omec();
+		result = execute_handover_arcfire_exp5_omec();
 	}else if (hand_state.hand_type == ARCFIRE_EXP5_OMEC_STATIC) {
 		LOG_WARN("Static UE, not executing handover");
+		result = 0;
 	} else if (hand_state.hand_type == ARCFIRE_EXP5_2OPERATOR_DMM) {
-		excecute_handover_arcfire_exp5_2operator_dmm();
+		result = excecute_handover_arcfire_exp5_2operator_dmm();
+	}
+
+	if (result != 0) {
+	        HandoverTimerTask * task = new HandoverTimerTask(this);
+	        timer.scheduleTask(task, 5000);
 	}
 }
 
 //Roaming UE, two provider scenario with static DIF Allocator
-void MobilityManager::excecute_handover_arcfire_exp5_2operator_dmm()
+int MobilityManager::excecute_handover_arcfire_exp5_2operator_dmm()
 {
 	std::map<std::string, rina::MediaDIFInfo>::const_iterator difs_it;
 	rina::BaseStationInfo bs_info;
@@ -446,56 +473,56 @@ void MobilityManager::excecute_handover_arcfire_exp5_2operator_dmm()
 	wifi1_ipcp = factory->getIPCProcess(1);
 	if (wifi1_ipcp == NULL) {
 		LOG_ERR("Could not find IPCP with ID 1");
-		return;
+		return -1;
 	}
 
 	if (wifi1_ipcp->get_type () != rina::SHIM_WIFI_IPC_PROCESS_STA) {
 		LOG_ERR("Wrong IPCP type: %s", wifi1_ipcp->get_type().c_str());
-		return;
+		return -1;
 	}
 
 	wifi2_ipcp = factory->getIPCProcess(2);
 	if (wifi2_ipcp == NULL) {
 		LOG_ERR("Could not find IPCP with ID 2");
-		return;
+		return -1;
 	}
 
 	if (wifi2_ipcp->get_type() != rina::SHIM_WIFI_IPC_PROCESS_STA) {
 		LOG_ERR("Wrong IPCP type: %s", wifi2_ipcp->get_type().c_str());
-		return;
+		return -1;
 	}
 
 	mobi1_ipcp = factory->getIPCProcess(3);
 	if (mobi1_ipcp == NULL) {
 		LOG_ERR("Could not find IPCP with ID 3");
-		return;
+		return -1;
 	}
 
 	if (mobi1_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
 		LOG_ERR("Wrong IPCP type: %s", mobi1_ipcp->get_type().c_str());
-		return;
+		return -1;
 	}
 
 	mobi2_ipcp = factory->getIPCProcess(4);
 	if (mobi2_ipcp == NULL) {
 		LOG_ERR("Could not find IPCP with ID 4");
-		return;
+		return -1;
 	}
 
 	if (mobi2_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
 		LOG_ERR("Wrong IPCP type: %s", mobi2_ipcp->get_type().c_str());
-		return;
+		return -1;
 	}
 
 	inet_ipcp = factory->getIPCProcess(5);
 	if (inet_ipcp == NULL) {
 		LOG_ERR("Could not find IPCP with ID 5");
-		return;
+		return -1;
 	}
 
 	if (inet_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
 		LOG_ERR("Wrong IPCP type: %s", inet_ipcp->get_type().c_str());
-		return;
+		return -1;
 	}
 
 	//3 Update wifi IPCPs to use
@@ -568,7 +595,7 @@ void MobilityManager::excecute_handover_arcfire_exp5_2operator_dmm()
 	difs_it = last_media_report.available_difs.find(next_dif);
 	if (difs_it == last_media_report.available_difs.end()) {
 		LOG_WARN("No members of DIF '%s' are within range", next_dif.c_str());
-		return;
+		return -1;
 	}
 
 	bs_info = difs_it->second.available_bs_ipcps.front();
@@ -582,7 +609,7 @@ void MobilityManager::excecute_handover_arcfire_exp5_2operator_dmm()
 			  ipcp_enroll->get_id(),
 			 neigh_data.difName.processName.c_str(),
 			 bs_info.ipcp_address.c_str());
-		return;
+		return -1;
 	}
 
 	//Enroll to mobile DIF
@@ -595,7 +622,7 @@ void MobilityManager::excecute_handover_arcfire_exp5_2operator_dmm()
 				mob_ipcp_enroll->get_id(),
 				mob_neigh_data.difName.processName.c_str(),
 				mob_neigh_data.supportingDifName.processName.c_str());
-		return;
+		return -1;
 	}
 
 	if (hand_state.change_mob_dif) {
@@ -608,7 +635,7 @@ void MobilityManager::excecute_handover_arcfire_exp5_2operator_dmm()
 					inet_ipcp->get_id(),
 					int_neigh_data.difName.processName.c_str(),
 					int_neigh_data.supportingDifName.processName.c_str());
-			return;
+			return -1;
 		}
 	}
 
@@ -623,7 +650,7 @@ void MobilityManager::excecute_handover_arcfire_exp5_2operator_dmm()
 				promise.wait() != IPCM_SUCCESS) {
 			LOG_WARN("Problems invoking disconnect from neighbor on IPCP %u",
 					inet_ipcp->get_id());
-			return;
+			return -1;
 		}
 	}
 
@@ -631,7 +658,7 @@ void MobilityManager::excecute_handover_arcfire_exp5_2operator_dmm()
 			promise.wait() != IPCM_SUCCESS) {
 		LOG_WARN("Problems invoking disconnect from neighbor on IPCP %u",
 				mob_ipcp_disc->get_id());
-		return;
+		return -1;
 	}
 
 	difs_it = last_media_report.available_difs.find(disc_dif);
@@ -648,7 +675,7 @@ void MobilityManager::excecute_handover_arcfire_exp5_2operator_dmm()
 			promise.wait() != IPCM_SUCCESS) {
 		LOG_WARN("Problems invoking disconnect from neighbor on IPCP %u",
 				ipcp_disc->get_id());
-		return;
+		return -1;
 	}
 
 	LOG_DBG("Handover done!");
@@ -659,10 +686,12 @@ void MobilityManager::excecute_handover_arcfire_exp5_2operator_dmm()
 	//Re-schedule handover task
 	HandoverTimerTask * task = new HandoverTimerTask(this);
 	timer.scheduleTask(task, hand_state.hand_period_ms);
+
+	return 0;
 }
 
 //Roaming UE, single provider with DC scenario (MEC), with dynamic DIF allocator
-void MobilityManager::execute_handover_arcfire_exp5_omec()
+int MobilityManager::execute_handover_arcfire_exp5_omec()
 {
 	std::map<std::string, rina::MediaDIFInfo>::const_iterator difs_it;
 	rina::BaseStationInfo bs_info;
@@ -681,34 +710,34 @@ void MobilityManager::execute_handover_arcfire_exp5_omec()
 	wifi1_ipcp = factory->getIPCProcess(1);
 	if (wifi1_ipcp == NULL) {
 		LOG_ERR("Could not find IPCP with ID 1");
-		return;
+		return -1;
 	}
 
 	if (wifi1_ipcp->get_type () != rina::SHIM_WIFI_IPC_PROCESS_STA) {
 		LOG_ERR("Wrong IPCP type: %s", wifi1_ipcp->get_type().c_str());
-		return;
+		return -1;
 	}
 
 	wifi2_ipcp = factory->getIPCProcess(2);
 	if (wifi2_ipcp == NULL) {
 		LOG_ERR("Could not find IPCP with ID 2");
-		return;
+		return -1;
 	}
 
 	if (wifi2_ipcp->get_type() != rina::SHIM_WIFI_IPC_PROCESS_STA) {
 		LOG_ERR("Wrong IPCP type: %s", wifi2_ipcp->get_type().c_str());
-		return;
+		return -1;
 	}
 
 	mobi1_ipcp = factory->getIPCProcess(3);
 	if (mobi1_ipcp == NULL) {
 		LOG_ERR("Could not find IPCP with ID 3");
-		return;
+		return -1;
 	}
 
 	if (mobi1_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
 		LOG_ERR("Wrong IPCP type: %s", mobi1_ipcp->get_type().c_str());
-		return;
+		return -1;
 	}
 
 	//3 Update wifi IPCPs to use
@@ -753,7 +782,7 @@ void MobilityManager::execute_handover_arcfire_exp5_omec()
 	difs_it = last_media_report.available_difs.find(next_dif);
 	if (difs_it == last_media_report.available_difs.end()) {
 		LOG_WARN("No members of DIF '%s' are within range", next_dif.c_str());
-		return;
+		return -1;
 	}
 
 	bs_info = difs_it->second.available_bs_ipcps.front();
@@ -767,7 +796,7 @@ void MobilityManager::execute_handover_arcfire_exp5_omec()
 			  ipcp_enroll->get_id(),
 			 neigh_data.difName.processName.c_str(),
 			 bs_info.ipcp_address.c_str());
-		return;
+		return -1;
 	}
 
 	//Enroll to mobile DIF
@@ -780,7 +809,7 @@ void MobilityManager::execute_handover_arcfire_exp5_omec()
 				mobi1_ipcp->get_id(),
 				mob_neigh_data.difName.processName.c_str(),
 				mob_neigh_data.supportingDifName.processName.c_str());
-		return;
+		return -1;
 	}
 
 	//4 Now it is multihomed, wait 5 seconds and break connectivity through former N-1 DIF
@@ -793,7 +822,7 @@ void MobilityManager::execute_handover_arcfire_exp5_omec()
 			promise.wait() != IPCM_SUCCESS) {
 		LOG_WARN("Problems invoking disconnect from neighbor on IPCP %u",
 				mobi1_ipcp->get_id());
-		return;
+		return -1;
 	}
 
 	difs_it = last_media_report.available_difs.find(disc_dif);
@@ -810,7 +839,7 @@ void MobilityManager::execute_handover_arcfire_exp5_omec()
 			promise.wait() != IPCM_SUCCESS) {
 		LOG_WARN("Problems invoking disconnect from neighbor on IPCP %u",
 				ipcp_disc->get_id());
-		return;
+		return -1;
 	}
 
 	LOG_DBG("Handover done!");
@@ -821,6 +850,8 @@ void MobilityManager::execute_handover_arcfire_exp5_omec()
 	//Re-schedule handover task
 	HandoverTimerTask * task = new HandoverTimerTask(this);
 	timer.scheduleTask(task, hand_state.hand_period_ms);
+
+	return 0;
 }
 
 void HandoverTimerTask::run()

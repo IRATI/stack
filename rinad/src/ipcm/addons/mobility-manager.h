@@ -71,11 +71,11 @@ public:
 	void execute_handover(void);
 
 protected:
-	void boostrap_exp5(void);
-	void initialize_arcfire_exp5_omec(bool roaming);
-	void initialize_arcfire_exp5_2operator_dmm(void);
-	void execute_handover_arcfire_exp5_omec(void);
-	void excecute_handover_arcfire_exp5_2operator_dmm(void);
+	int boostrap_exp5(void);
+	int initialize_arcfire_exp5_omec(bool roaming);
+	int initialize_arcfire_exp5_2operator_dmm(void);
+	int execute_handover_arcfire_exp5_omec(void);
+	int excecute_handover_arcfire_exp5_2operator_dmm(void);
 
 	//Process flow event
 	void process_librina_event(rina::IPCEvent** event);
