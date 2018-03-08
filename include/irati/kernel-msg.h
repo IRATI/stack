@@ -251,7 +251,10 @@ typedef enum {
 	/* 72, IPC Process -> Kernel */
 	RINA_C_IPCP_CONN_MODIFY_REQUEST,
 
-	/* 73 */
+	/* 73, IPC Manager -> IPC Process */
+	RINA_C_IPCM_SCAN_MEDIA_REQUEST,
+
+	/* 74 */
         RINA_C_MAX,
 } msg_type_t;
 

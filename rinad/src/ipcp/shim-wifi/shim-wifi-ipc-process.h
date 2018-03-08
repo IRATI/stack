@@ -83,6 +83,7 @@ public:
         virtual void allocate_flow_response_handler(const rina::AllocateFlowResponseEvent& event);
         virtual void flow_deallocation_requested_handler(const rina::FlowDeallocateRequestEvent& event);
         virtual void enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event);
+        virtual void ipcp_scan_media_request_event_handler(rina::ScanMediaRequestEvent& event);
 
 protected:
 	friend class rinad::ShimWifiScanTask;
@@ -128,7 +129,6 @@ public:
 
 class ShimWifiStaIPCProcessImpl: public ShimWifiIPCProcessImpl {
 public:
-	static const int DEFAULT_SCAN_PERIOD_MS;
 	static const long DEFAULT_ENROLLMENT_TIMEOUT_MS;
 
 	ShimWifiStaIPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
@@ -142,9 +142,9 @@ public:
 	void assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event);
 	void enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event);
 	void disconnet_neighbor_handler(const rina::DisconnectNeighborRequestEvent& event);
+	void ipcp_scan_media_request_event_handler(rina::ScanMediaRequestEvent& event);
 
 private:
-	friend class rinad::ShimWifiScanTask;
 	friend class rinad::CancelEnrollmentTimerTask;
 	friend class rinad::WpaController;
 

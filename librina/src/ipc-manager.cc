@@ -620,6 +620,27 @@ void IPCProcessProxy::forwardCDAPResponseMessage(const ser_obj_t& sermsg,
 #endif
 }
 
+void IPCProcessProxy::scan_media(void)
+{
+#if STUB_API
+#else
+        struct irati_msg_base * msg;
+
+        msg = new irati_msg_base();
+        msg->msg_type = RINA_C_IPCM_SCAN_MEDIA_REQUEST;
+        msg->dest_ipcp_id = id;
+        msg->dest_port = portId;
+        msg->event_id = 0;
+
+        if (irati_ctrl_mgr->send_msg(msg, false) != 0) {
+        	irati_ctrl_msg_free(msg);
+        	throw IPCException("Problems sending CTRL message");
+        }
+
+        irati_ctrl_msg_free(msg);
+#endif
+}
+
 
 /** CLASS IPC PROCESS FACTORY */
 const std::string IPCProcessFactory::unknown_ipc_process_error =

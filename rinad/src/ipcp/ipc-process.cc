@@ -531,6 +531,11 @@ void LazyIPCProcessImpl::ipcp_read_mgmt_sdu_notif_event_handler(rina::ReadMgmtSD
 	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
 }
 
+void LazyIPCProcessImpl::ipcp_scan_media_request_event_handler(rina::ScanMediaRequestEvent& event)
+{
+	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
+}
+
 void LazyIPCProcessImpl::sync_with_kernel(void)
 {
 	LOG_IPCP_WARN("Ignoring call to sync_with_kernel");
