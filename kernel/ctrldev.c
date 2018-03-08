@@ -540,6 +540,7 @@ ctrldev_release(struct inode *inode, struct file *f)
         struct rfifo * pmsgs;
 
         mutex_lock(&irati_ctrl_dm.general_lock);
+        LOG_DBG("Releasing file descriptor associated to port-id %d", priv->port_id);
         list_del_init(&priv->node);
         mutex_unlock(&irati_ctrl_dm.general_lock);
 
