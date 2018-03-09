@@ -680,9 +680,6 @@ int MobilityManager::excecute_handover_arcfire_exp5_2operator_dmm()
 
 	LOG_DBG("Handover done!");
 
-	//Ask the disconnected WiFi interface to scan the media
-	ipcp_disc->proxy_->scan_media();
-
 	//Re-schedule handover task
 	HandoverTimerTask * task = new HandoverTimerTask(this);
 	timer.scheduleTask(task, hand_state.hand_period_ms);
@@ -843,9 +840,6 @@ int MobilityManager::execute_handover_arcfire_exp5_omec()
 	}
 
 	LOG_DBG("Handover done!");
-
-	//Ask the disconnected WiFi interface to scan the media
-	ipcp_disc->proxy_->scan_media();
 
 	//Re-schedule handover task
 	HandoverTimerTask * task = new HandoverTimerTask(this);
