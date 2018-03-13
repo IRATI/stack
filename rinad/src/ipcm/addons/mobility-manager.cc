@@ -83,29 +83,29 @@ void MobilityManager::parse_configuration(const rinad::RINAConfiguration& config
         				hand_state.hand_period_ms).asInt();
         	}
 
-                LOG_INFO("Mobility Manager configuration parsed");
-                LOG_INFO("Handover type: %s", hand_state.hand_type.c_str());
-                LOG_INFO("Handover period (ms): %d", hand_state.hand_period_ms);
-                LOG_INFO("Disconnect time (ms): %d", hand_state.disc_wait_time_ms);
+                LOG_DBG("Mobility Manager configuration parsed");
         }
-
-        BoostrapTimerTask * task = new BoostrapTimerTask(this);
-        timer.scheduleTask(task, DEFAULT_BOOTSTRAP_WAIT_TIME_MS);
 }
 
 MobilityManager::MobilityManager(const rinad::RINAConfiguration& config) :
 		AppAddon(MobilityManager::NAME)
 {
+	hand_state.hand_period_ms = DEFAULT_HANDOVER_PERIOD_MS;
+	hand_state.disc_wait_time_ms = DEFAULT_DISC_WAIT_TIME_MS;
+	hand_state.hand_type = ARCFIRE_EXP5_OMEC_ROAMING;
 	parse_configuration(config);
 	factory = IPCManager->get_ipcp_factory();
 	hand_state.first_report = true;
 	hand_state.dif = "";
 	hand_state.ipcp = 0;
-	hand_state.hand_period_ms = DEFAULT_HANDOVER_PERIOD_MS;
-	hand_state.disc_wait_time_ms = DEFAULT_DISC_WAIT_TIME_MS;
-	hand_state.hand_type = ARCFIRE_EXP5_OMEC_ROAMING;
 
-	LOG_INFO("Mobility Manager instance created");
+	LOG_INFO("Mobility Manager instance created, scheduling bootstrap task in 20s");
+        LOG_INFO("Handover type: %s", hand_state.hand_type.c_str());
+        LOG_INFO("Handover period (ms): %d", hand_state.hand_period_ms);
+        LOG_INFO("Disconnect time (ms): %d", hand_state.disc_wait_time_ms);
+
+	BoostrapTimerTask * task = new BoostrapTimerTask(this);
+	timer.scheduleTask(task, DEFAULT_BOOTSTRAP_WAIT_TIME_MS);
 }
 
 void MobilityManager::process_librina_event(rina::IPCEvent** event_)
