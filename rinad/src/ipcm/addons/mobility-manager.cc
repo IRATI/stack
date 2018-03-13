@@ -761,7 +761,7 @@ int MobilityManager::execute_handover_arcfire_exp5_omec()
 		neighbor.processName = "ar2.mobile";
 		neighbor.processInstance = "1";
 	} else if (hand_state.dif == "arcfire"){
-		next_dif = "irina";
+		next_dif = "rinaisense";
 		neighbor.processName = "ar3.mobile";
 		neighbor.processInstance = "1";
 	} else if (hand_state.dif == "irina"){
@@ -773,7 +773,7 @@ int MobilityManager::execute_handover_arcfire_exp5_omec()
 		neighbor.processName = "ar5.mobile";
 		neighbor.processInstance = "1";
 	} else {
-		next_dif = "irati";
+		next_dif = "pristine";
 		neighbor.processName = "ar6.mobile";
 		neighbor.processInstance = "1";
 	}
