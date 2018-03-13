@@ -84,6 +84,9 @@ void MobilityManager::parse_configuration(const rinad::RINAConfiguration& config
         	}
 
                 LOG_INFO("Mobility Manager configuration parsed");
+                LOG_INFO("Handover type: %s", hand_state.hand_type.c_str());
+                LOG_INFO("Handover period (ms): %d", hand_state.hand_period_ms);
+                LOG_INFO("Disconnect time (ms): %d", hand_state.disc_wait_time_ms);
         }
 
         BoostrapTimerTask * task = new BoostrapTimerTask(this);
@@ -758,7 +761,7 @@ int MobilityManager::execute_handover_arcfire_exp5_omec()
 		neighbor.processName = "ar2.mobile";
 		neighbor.processInstance = "1";
 	} else if (hand_state.dif == "arcfire"){
-		next_dif = "rinaisense";
+		next_dif = "irina";
 		neighbor.processName = "ar3.mobile";
 		neighbor.processInstance = "1";
 	} else if (hand_state.dif == "irina"){
@@ -770,7 +773,7 @@ int MobilityManager::execute_handover_arcfire_exp5_omec()
 		neighbor.processName = "ar5.mobile";
 		neighbor.processInstance = "1";
 	} else {
-		next_dif = "pristine";
+		next_dif = "irati";
 		neighbor.processName = "ar6.mobile";
 		neighbor.processInstance = "1";
 	}
