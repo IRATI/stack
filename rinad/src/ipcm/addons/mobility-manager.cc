@@ -39,7 +39,6 @@ namespace rinad {
 //Class Mobility Manager
 const std::string MobilityManager::NAME = "mobman";
 const std::string MobilityManager::ARCFIRE_EXP5_OMEC_ROAMING = "arcfire-exp5-omec-roaming";
-const std::string MobilityManager::ARCFIRE_EXP5_OMEC_STATIC = "arcfire-exp5-omec-static";
 const std::string MobilityManager::ARCFIRE_EXP5_2OPERATOR_DMM = "arcfire-exp5-2operator-dmm";
 
 const int MobilityManager::DEFAULT_DISC_WAIT_TIME_MS = 5000;
@@ -198,9 +197,7 @@ void MobilityManager::initialize()
 	LOG_DBG("Initializing Mobility Manager");
 
 	if (hand_state.hand_type == ARCFIRE_EXP5_OMEC_ROAMING) {
-		result = initialize_arcfire_exp5_omec(true);
-	}else if (hand_state.hand_type == ARCFIRE_EXP5_OMEC_STATIC) {
-		result = initialize_arcfire_exp5_omec(false);
+		result = initialize_arcfire_exp5_omec();
 	} else if (hand_state.hand_type == ARCFIRE_EXP5_2OPERATOR_DMM) {
 		result = initialize_arcfire_exp5_2operator_dmm();
 	}
@@ -211,7 +208,7 @@ void MobilityManager::initialize()
 	}
 }
 
-int MobilityManager::initialize_arcfire_exp5_omec(bool roaming)
+int MobilityManager::initialize_arcfire_exp5_omec()
 {
 	std::map<std::string, rina::MediaDIFInfo>::const_iterator difs_it;
 	rina::BaseStationInfo bs_info;
@@ -234,18 +231,10 @@ int MobilityManager::initialize_arcfire_exp5_omec(bool roaming)
 		return -1;
 	}
 
-	if (roaming) {
-		mobi1_ipcp = factory->getIPCProcess(3);
-		if (mobi1_ipcp == NULL) {
-			LOG_ERR("Could not find IPCP with ID 3");
-			return -1;
-		}
-	} else {
-		mobi1_ipcp = factory->getIPCProcess(2);
-		if (mobi1_ipcp == NULL) {
-			LOG_ERR("Could not find IPCP with ID 2");
-			return -1;
-		}
+	mobi1_ipcp = factory->getIPCProcess(3);
+	if (mobi1_ipcp == NULL) {
+		LOG_ERR("Could not find IPCP with ID 3");
+		return -1;
 	}
 
 	if (mobi1_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
@@ -294,7 +283,7 @@ int MobilityManager::initialize_arcfire_exp5_omec(bool roaming)
 		LOG_DBG("Initialized");
 	}
 
-	if (roaming) {
+	if (hand_state.hand_period_ms != 0) {
 		HandoverTimerTask * task = new HandoverTimerTask(this);
 		timer.scheduleTask(task, hand_state.hand_period_ms);
 	}
@@ -427,8 +416,10 @@ int MobilityManager::initialize_arcfire_exp5_2operator_dmm()
 		LOG_DBG("Initialized");
 	}
 
-	HandoverTimerTask * task = new HandoverTimerTask(this);
-	timer.scheduleTask(task, hand_state.hand_period_ms);
+	if (hand_state.hand_period_ms != 0) {
+		HandoverTimerTask * task = new HandoverTimerTask(this);
+		timer.scheduleTask(task, hand_state.hand_period_ms);
+	}
 
 	return 0;
 }
@@ -442,9 +433,6 @@ void MobilityManager::execute_handover()
 
 	if (hand_state.hand_type == ARCFIRE_EXP5_OMEC_ROAMING) {
 		result = execute_handover_arcfire_exp5_omec();
-	}else if (hand_state.hand_type == ARCFIRE_EXP5_OMEC_STATIC) {
-		LOG_WARN("Static UE, not executing handover");
-		result = 0;
 	} else if (hand_state.hand_type == ARCFIRE_EXP5_2OPERATOR_DMM) {
 		result = excecute_handover_arcfire_exp5_2operator_dmm();
 	}
@@ -684,8 +672,10 @@ int MobilityManager::excecute_handover_arcfire_exp5_2operator_dmm()
 	LOG_DBG("Handover done!");
 
 	//Re-schedule handover task
-	HandoverTimerTask * task = new HandoverTimerTask(this);
-	timer.scheduleTask(task, hand_state.hand_period_ms);
+	if (hand_state.hand_period_ms != 0) {
+		HandoverTimerTask * task = new HandoverTimerTask(this);
+		timer.scheduleTask(task, hand_state.hand_period_ms);
+	}
 
 	return 0;
 }
@@ -845,8 +835,10 @@ int MobilityManager::execute_handover_arcfire_exp5_omec()
 	LOG_DBG("Handover done!");
 
 	//Re-schedule handover task
-	HandoverTimerTask * task = new HandoverTimerTask(this);
-	timer.scheduleTask(task, hand_state.hand_period_ms);
+	if (hand_state.hand_period_ms != 0) {
+		HandoverTimerTask * task = new HandoverTimerTask(this);
+		timer.scheduleTask(task, hand_state.hand_period_ms);
+	}
 
 	return 0;
 }
