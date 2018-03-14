@@ -375,7 +375,7 @@ int MobilityManager::initialize_arcfire_exp5_2operator_dmm()
 	// 2. See if it has been initialized before, otherwise do it
 	if (hand_state.dif == "") {
 		//Not enrolled anywhere yet, enroll for first time
-		difs_it = last_media_report.available_difs.find("irati");
+		difs_it = last_media_report.available_difs.find("pristine");
 		if (difs_it == last_media_report.available_difs.end()) {
 			LOG_WARN("No members of DIF 'irati' are within range");
 			return -1;
@@ -385,7 +385,7 @@ int MobilityManager::initialize_arcfire_exp5_2operator_dmm()
 
 		//Enroll the shim to the new DIF/AP
 		neigh_data.apName.processName = bs_info.ipcp_address;
-		neigh_data.difName.processName = "irati";
+		neigh_data.difName.processName = "pristine";
 		if(IPCManager->enroll_to_dif(this, &promise, wifi1_ipcp->get_id(), neigh_data) == IPCM_FAILURE ||
 				promise.wait() != IPCM_SUCCESS) {
 			LOG_WARN("Problems enrolling IPCP %u to DIF %s via neighbor %s",
@@ -396,7 +396,7 @@ int MobilityManager::initialize_arcfire_exp5_2operator_dmm()
 		}
 
 		//Enroll to the mobile DIF
-		mob_neigh_data.supportingDifName.processName = "irati";
+		mob_neigh_data.supportingDifName.processName = "pristine";
 		mob_neigh_data.difName.processName = "mobile.DIF";
 		if(IPCManager->enroll_to_dif(this, &promise, mobi1_ipcp->get_id(), mob_neigh_data) == IPCM_FAILURE ||
 				promise.wait() != IPCM_SUCCESS) {
@@ -421,7 +421,7 @@ int MobilityManager::initialize_arcfire_exp5_2operator_dmm()
 			return -1;
 		}
 
-		hand_state.dif = "irati";
+		hand_state.dif = "pristine";
 		hand_state.ipcp = wifi1_ipcp;
 
 		LOG_DBG("Initialized");
@@ -557,7 +557,7 @@ int MobilityManager::excecute_handover_arcfire_exp5_2operator_dmm()
 		mob_ipcp_enroll = mobi1_ipcp;
 		mob_ipcp_disc = mobi1_ipcp;
 	} else if (hand_state.dif == "arcfire"){
-		next_dif = "irina";
+		next_dif = "rinaisense";
 		next_mob_dif = "mobile2.DIF";
 		neighbor.processName = "ap3.mobile";
 		neighbor.processInstance = "1";
@@ -583,7 +583,7 @@ int MobilityManager::excecute_handover_arcfire_exp5_2operator_dmm()
 		mob_ipcp_enroll = mobi2_ipcp;
 		mob_ipcp_disc = mobi2_ipcp;
 	} else {
-		next_dif = "irati";
+		next_dif = "pristine";
 		next_mob_dif = "mobile.DIF";
 		neighbor.processName = "ap6.mobile2";
 		neighbor.processInstance = "1";
