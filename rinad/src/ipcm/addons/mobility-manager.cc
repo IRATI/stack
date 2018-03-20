@@ -1367,7 +1367,7 @@ int MobilityManager::execute_handover_arcfire_exp5_mac_fixed_wifi()
 		return -1;
 	}
 
-	slee.sleepForMili(500);
+	sleep.sleepForMili(500);
 
 	if (IPCManager->destroy_ipcp(this, 7) == IPCM_FAILURE) {
 		LOG_WARN("Problems destroying IPCP 7");
