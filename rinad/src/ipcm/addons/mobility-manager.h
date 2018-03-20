@@ -57,6 +57,7 @@ public:
 	static const std::string NAME;
 	static const std::string ARCFIRE_EXP5_OMEC_ROAMING;
 	static const std::string ARCFIRE_EXP5_2OPERATOR_DMM;
+	static const std::string ARCFIRE_EXP5_MAC;
 	static const int DEFAULT_DISC_WAIT_TIME_MS;
 	static const int DEFAULT_HANDOVER_PERIOD_MS;
 	static const int DEFAULT_BOOTSTRAP_WAIT_TIME_MS;
@@ -73,8 +74,13 @@ protected:
 	int boostrap_exp5(void);
 	int initialize_arcfire_exp5_omec(void);
 	int initialize_arcfire_exp5_2operator_dmm(void);
+	int initialize_arcfire_exp5_mac(void);
 	int execute_handover_arcfire_exp5_omec(void);
 	int excecute_handover_arcfire_exp5_2operator_dmm(void);
+	int execute_handover_arcfire_exp5_mac(void);
+	int execute_handover_arcfire_exp5_mac_wifi_hand(void);
+	int execute_handover_arcfire_exp5_mac_wifi_fixed(void);
+	int execute_handover_arcfire_exp5_mac_fixed_wifi(void);
 
 	//Process flow event
 	void process_librina_event(rina::IPCEvent** event);
