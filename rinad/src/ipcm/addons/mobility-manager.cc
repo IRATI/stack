@@ -1284,7 +1284,7 @@ int MobilityManager::execute_handover_arcfire_exp5_mac_wifi_fixed()
 	//Enroll to the fixed DIF
         fixed_neigh_data.supportingDifName.processName = "40";
         fixed_neigh_data.difName.processName = "fixed.DIF";
-	if(IPCManager->enroll_to_dif(this, &promise, c_promise.ipcp_id, int_neigh_data) == IPCM_FAILURE ||
+	if(IPCManager->enroll_to_dif(this, &promise, c_promise.ipcp_id, fixed_neigh_data) == IPCM_FAILURE ||
 			promise.wait() != IPCM_SUCCESS) {
 		LOG_WARN("Problems enrolling IPCP %u to DIF %s via supporting DIF %s",
 				c_promise.ipcp_id,
