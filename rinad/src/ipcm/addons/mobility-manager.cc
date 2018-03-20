@@ -1358,6 +1358,15 @@ int MobilityManager::execute_handover_arcfire_exp5_mac_fixed_wifi()
 		return -1;
 	}
 
+	neighbor.processName = "cpe1.fixed";
+	neighbor.processInstance = "1";
+
+	if(IPCManager->disconnect_neighbor(this, &promise, 7, neighbor) == IPCM_FAILURE ||
+			promise.wait() != IPCM_SUCCESS) {
+		LOG_WARN("Problems invoking disconnect from neighbor on IPCP 7");
+		return -1;
+	}
+
 	if (IPCManager->destroy_ipcp(this, 7) == IPCM_FAILURE) {
 		LOG_WARN("Problems destroying IPCP 7");
 	}
