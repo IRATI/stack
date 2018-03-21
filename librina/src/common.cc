@@ -592,8 +592,11 @@ const std::string IPCEvent::eventTypeToString(IPCEventType eventType) {
 	case IPCM_FINALIZATION_REQUEST_EVENT:
 		result = "51_IPCM_FINALIZATION_REQUEST_EVENT";
 		break;
+	case IPCP_SCAN_MEDIA_REQUEST_EVENT:
+		result = "52_IPCP_SCAN_MEDIA_REQUEST_EVENT";
+		break;
 	case NO_EVENT:
-		result = "52_NO_EVENT";
+		result = "53_NO_EVENT";
 		break;
 	default:
 		result = "Unknown event";

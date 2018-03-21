@@ -40,10 +40,11 @@ struct WirelessDIFInfo {
 struct HandoverState {
 	std::string dif;
 	IPCMIPCProcess * ipcp;
-	bool do_it_now;
-	int hand_type;
+	bool first_report;
+	std::string hand_type;
 	bool change_mob_dif;
 	int disc_wait_time_ms;
+	int hand_period_ms;
 };
 
 //
@@ -54,21 +55,32 @@ struct HandoverState {
 class MobilityManager: public AppAddon {
 public:
 	static const std::string NAME;
-	static const int DEFAULT_HANDOVER_TYPE;
-	static const unsigned int DEFAULT_DISC_WAIT_TIME_MS;
+	static const std::string ARCFIRE_EXP5_OMEC_ROAMING;
+	static const std::string ARCFIRE_EXP5_2OPERATOR_DMM;
+	static const std::string ARCFIRE_EXP5_MAC;
+	static const int DEFAULT_DISC_WAIT_TIME_MS;
+	static const int DEFAULT_HANDOVER_PERIOD_MS;
+	static const int DEFAULT_BOOTSTRAP_WAIT_TIME_MS;
 
 	MobilityManager(const rinad::RINAConfiguration& config);
 	virtual ~MobilityManager(void) {
 	};
 
-	void execute_handover(const rina::MediaReport& report);
+	void boostrap(void);
+	void initialize(void);
+	void execute_handover(void);
 
 protected:
-	void execute_handover1(const rina::MediaReport& report);
-	void execute_handover2(const rina::MediaReport& report);
-	void execute_handover3(const rina::MediaReport& report);
-	void execute_handover4(const rina::MediaReport& report);
-	void execute_handover5(const rina::MediaReport& report);
+	int boostrap_exp5(void);
+	int initialize_arcfire_exp5_omec(void);
+	int initialize_arcfire_exp5_2operator_dmm(void);
+	int initialize_arcfire_exp5_mac(void);
+	int execute_handover_arcfire_exp5_omec(void);
+	int excecute_handover_arcfire_exp5_2operator_dmm(void);
+	int execute_handover_arcfire_exp5_mac(void);
+	int execute_handover_arcfire_exp5_mac_wifi_hand(void);
+	int execute_handover_arcfire_exp5_mac_wifi_fixed(void);
+	int execute_handover_arcfire_exp5_mac_fixed_wifi(void);
 
 	//Process flow event
 	void process_librina_event(rina::IPCEvent** event);
@@ -79,7 +91,7 @@ protected:
 private:
 	IPCMIPCProcessFactory * factory;
 	rina::Timer timer;
-	std::list<WirelessDIFInfo> wireless_dif_info;
+	rina::MediaReport last_media_report;
 	HandoverState hand_state;
 	rina::Lockable lock;
 
@@ -91,14 +103,32 @@ private:
 
 class HandoverTimerTask: public rina::TimerTask {
 public:
-	HandoverTimerTask(MobilityManager * mm,
-			  const rina::MediaReport& mr): mobman(mm), report(mr) {};
+	HandoverTimerTask(MobilityManager * mm): mobman(mm){};
 	~HandoverTimerTask() throw() {};
 	void run();
 
 private:
 	MobilityManager * mobman;
-	rina::MediaReport report;
+};
+
+class BoostrapTimerTask: public rina::TimerTask {
+public:
+	BoostrapTimerTask(MobilityManager * mm): mobman(mm){};
+	~BoostrapTimerTask() throw() {};
+	void run();
+
+private:
+	MobilityManager * mobman;
+};
+
+class InitializeTimerTask: public rina::TimerTask {
+public:
+	InitializeTimerTask(MobilityManager * mm): mobman(mm){};
+	~InitializeTimerTask() throw() {};
+	void run();
+
+private:
+	MobilityManager * mobman;
 };
 
 }//rinad namespace

@@ -4457,6 +4457,7 @@ static void * allocate_irati_msg(irati_msg_t msg_t)
 		result = COMMON_ALLOC(sizeof(struct irati_kmsg_ipcm_query_rib_resp), 1);
 		return result;
 	}
+	case RINA_C_IPCM_SCAN_MEDIA_REQUEST:
 	case RINA_C_IPCM_FINALIZE_REQUEST:
 	case RINA_C_RMT_DUMP_FT_REQUEST: {
 		struct irati_msg_base * result;

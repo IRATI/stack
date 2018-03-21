@@ -551,8 +551,9 @@ void IEnrollmentStateMachine::sendNeighbors()
 	std::list<rina::ApplicationProcessNamingInformation>::const_iterator it2;
 
 	try {
-		for (it = neighbors.begin(); it != neighbors.end(); ++it)
-			neighbors_to_send.push_back(*it);
+		//Commented, just send myself as a neighbor (can produce bugs in DIFs over WiFi)
+		/*for (it = neighbors.begin(); it != neighbors.end(); ++it)
+			neighbors_to_send.push_back(*it);*/
 
 		myself.address_ = ipcp_->get_address();
 		myself.name_.processName = ipcp_->get_name();

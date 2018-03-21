@@ -611,6 +611,11 @@ public:
          */
         void forwardCDAPResponseMessage(const ser_obj_t& sermsg,
                                 unsigned int opaque);
+
+        /**
+         * Tell the IPCP to scan the physical media
+         */
+        void scan_media(void);
 };
 
 /**

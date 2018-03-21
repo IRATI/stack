@@ -322,6 +322,12 @@ void AbstractIPCProcessImpl::event_loop(void)
 			ipcp_read_mgmt_sdu_notif_event_handler(*event);
 		}
 		break;
+		case rina::IPCP_SCAN_MEDIA_REQUEST_EVENT:
+		{
+			DOWNCAST_DECL(e, rina::ScanMediaRequestEvent, event);
+			ipcp_scan_media_request_event_handler(*event);
+		}
+		break;
 
 		//Unsupported events (they belong to the IPC Manager)
 		case rina::APPLICATION_REGISTRATION_CANCELED_EVENT:
@@ -527,6 +533,11 @@ void LazyIPCProcessImpl::ipcp_write_mgmt_sdu_response_event_handler(const rina::
 }
 
 void LazyIPCProcessImpl::ipcp_read_mgmt_sdu_notif_event_handler(rina::ReadMgmtSDUResponseEvent& event)
+{
+	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
+}
+
+void LazyIPCProcessImpl::ipcp_scan_media_request_event_handler(rina::ScanMediaRequestEvent& event)
 {
 	LOG_IPCP_WARN("Ignoring event of type %d", event.eventType);
 }
