@@ -30,6 +30,8 @@ namespace rinad {
 
 class StaticRoutingPs: public IRoutingPs, public rina::InternalEventListener {
 public:
+	static const std::string DEFAULT_NEXT_HOP;
+
 	StaticRoutingPs(IRoutingComponent * dm);
 	virtual ~StaticRoutingPs() {};
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
@@ -51,6 +53,8 @@ private:
 	std::map<std::string, rina::RoutingTableEntry *> rt_entries;
 	rina::Lockable lock;
 };
+
+const std::string StaticRoutingPs::DEFAULT_NEXT_HOP = "defaultNextHop";
 
 StaticRoutingPs::StaticRoutingPs(IRoutingComponent * dm) {
 	rc = dm;
@@ -124,7 +128,7 @@ void StaticRoutingPs::parse_policy_param(rina::PolicyParameter pm,
 	std::vector<std::string> result;
 	rina::NHopAltList nhop_alt;
 	rina::IPCPNameAddresses ipcpna;
-	bool default_gw = false;
+	bool default_next_hop = false;
 	std::list<rina::StaticIPCProcessAddress> addresses;
 	std::list<rina::StaticIPCProcessAddress>::iterator it;
 
@@ -135,8 +139,8 @@ void StaticRoutingPs::parse_policy_param(rina::PolicyParameter pm,
 				pm.value_.c_str());
 	}
 
-	if (pm.name_.c_str() == "*") {
-		default_gw = true;
+	if (pm.name_.c_str() == DEFAULT_NEXT_HOP) {
+		default_next_hop = true;
 	}
 
 	//Parse qos_id
@@ -169,7 +173,7 @@ void StaticRoutingPs::parse_policy_param(rina::PolicyParameter pm,
 	nhop_alt.alts.push_back(ipcpna);
 
 
-	if (!default_gw) {
+	if (!default_next_hop) {
 		//Parse destination address
 		entry = new rina::RoutingTableEntry();
 		aux = strtoul(pm.name_.c_str(), &dummy, 10);
