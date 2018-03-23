@@ -282,13 +282,12 @@ parse_conf(const char *confname)
 static int
 accept_rina_flow(int fd, const InetName &inet)
 {
-    struct rina_flow_spec spec;
     int cfd;
     int rfd;
     int ret;
 
     /* Accept the incoming flow request. */
-    rfd = rina_flow_accept(fd, /* source name */ NULL, &spec, 0);
+    rfd = rina_flow_accept(fd, /* source name */ NULL, NULL, 0);
     if (rfd < 0) {
         perror("rina_flow_accept()");
         return 0;
@@ -313,7 +312,7 @@ accept_rina_flow(int fd, const InetName &inet)
     }
 
     if (ret == 0) {
-        gw->workers[0]->submit(cfd, rfd);
+        gw->workers[0]->submit(0, cfd, rfd);
         return 0;
     }
 
@@ -388,7 +387,7 @@ complete_flow_alloc(int wfd, int cfd)
     }
 
     set_nonblocking(rfd);
-    gw->workers[0]->submit(cfd, rfd);
+    gw->workers[0]->submit(0, cfd, rfd);
 
     return 0;
 }
@@ -619,7 +618,7 @@ main(int argc, char **argv)
              mit != gw->pending_conns.end(); mit++, n++) {
             if (pfd[n].revents & POLLOUT) {
                 /* TCP connection handshake completed. */
-                gw->workers[0]->submit(mit->first, mit->second);
+                gw->workers[0]->submit(0, mit->first, mit->second);
                 completed_conns.push_back(mit->first);
             }
         }

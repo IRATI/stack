@@ -105,31 +105,248 @@ void IPCManager_::application_flow_allocation_failed_notify(rina::FlowRequestEve
 	}
 }
 
+JoinDIFAndAllocateFlowTask::JoinDIFAndAllocateFlowTask(IPCManager_ * ipcmgr, Promise * pro,
+						       const rina::FlowRequestEvent& event,
+						       const std::string& dname,
+						       const std::list<std::string>& sdnames)
+{
+	ipcm = ipcmgr;
+	promise = pro;
+	fevent = event;
+	dif_name = dname;
+	sup_dif_names = sdnames;
+}
+
+void JoinDIFAndAllocateFlowTask::run()
+{
+	ipcm->join_dif_continue_flow_alloc(promise, fevent, dif_name, sup_dif_names);
+}
+
+void IPCManager_::join_dif_continue_flow_alloc(Promise * promise, rina::FlowRequestEvent& event,
+				  	       const std::string& dif_name,
+					       const std::list<std::string>& sup_dif_names)
+{
+	rina::ApplicationProcessNamingInformation sdif_name, dapp_name, ipcp_name;
+	std::list<std::string>::const_iterator sitr;
+	IPCMIPCProcess * ipcp;
+	FlowAllocTransState* trans;
+	std::stringstream ss;
+	rinad::DIFTemplateMapping template_mapping;
+	rinad::DIFTemplate dif_template;
+        ipcm_res_t result;
+        CreateIPCPPromise c_promise;
+        Promise ipcp_promise;
+        NeighborData neighbor;
+        bool dif_found = false;
+        rina::Sleep sleep;
+
+	LOG_DBG("Trying to find supporting DIF and to create an IPCP");
+	for (sitr = sup_dif_names.begin(); sitr != sup_dif_names.end(); ++sitr) {
+		sdif_name.processName  = *sitr;
+		if (is_any_ipcp_assigned_to_dif(sdif_name)) {
+			LOG_DBG("Found IPCP belonging to supporting DIF %s", sitr->c_str());
+			dif_found = true;
+			break;
+		}
+	}
+
+	if (!dif_found) {
+		ss  << " Error: Cannot find an IPC process to "
+			"serve flow allocation request (local-app = " <<
+			event.localApplicationName.toString() << ", " <<
+			"remote-app = " << event.remoteApplicationName.
+			toString() << endl;
+		FLUSH_LOG(ERR, ss);
+
+		if (!promise)
+			application_flow_allocation_failed_notify(&event);
+		return;
+	}
+
+	// Create IPC Process of dif_name, join DIF name via supporting DIF
+	// & register IPCP to supporting DIF
+	dapp_name.processName = dif_name;
+	if (!config.lookup_dif_template_mappings(dapp_name, template_mapping)) {
+		ss << "Could not find DIF template for dif name "
+				<< dif_name<< std::endl;
+		FLUSH_LOG(ERR, ss);
+
+		if (!promise)
+			application_flow_allocation_failed_notify(&event);
+		return;
+	}
+
+        if (dif_template_manager->get_dif_template(template_mapping.template_name,
+	    	    	        		   dif_template) != 0) {
+        	ss << "Cannot find template called "
+        			<< template_mapping.template_name;
+        	FLUSH_LOG(ERR, ss);
+
+        	if (!promise)
+        		application_flow_allocation_failed_notify(&event);
+        	return;
+        }
+
+        neighbor.difName.processName = dif_name;
+        neighbor.supportingDifName = sdif_name;
+        neighbor.apName.processName = dif_name;
+        dif_allocator->get_ipcp_name_for_dif(ipcp_name, dif_name);
+        try {
+        	if (create_ipcp(NULL, &c_promise, ipcp_name,
+        			dif_template.difType) == IPCM_FAILURE
+        			|| c_promise.wait() != IPCM_SUCCESS) {
+        		LOG_ERR("Problems creating IPCP");
+
+        		if (!promise)
+        			application_flow_allocation_failed_notify(&event);
+        		return;
+        	}
+
+        	if (assign_to_dif(NULL, &ipcp_promise, c_promise.ipcp_id,
+        			dif_template, dapp_name) == IPCM_FAILURE
+        			|| ipcp_promise.wait() != IPCM_SUCCESS) {
+        		ss << "Problems assigning IPCP " << c_promise.ipcp_id
+        				<< " to DIF " << dif_name << std::endl;
+        		FLUSH_LOG(ERR, ss);
+
+        		if (!promise)
+        			application_flow_allocation_failed_notify(&event);
+        		return;
+        	}
+
+        	if (register_at_dif(NULL, &ipcp_promise, c_promise.ipcp_id, sdif_name)
+        			== IPCM_FAILURE || ipcp_promise.wait() != IPCM_SUCCESS) {
+        		ss << "Problems registering IPCP " << c_promise.ipcp_id
+        				<< " to DIF " << sdif_name.processName << std::endl;
+        		FLUSH_LOG(ERR, ss);
+
+        		if (!promise)
+        			application_flow_allocation_failed_notify(&event);
+        		return;
+        	}
+
+                if (enroll_to_dif(NULL, &ipcp_promise, c_promise.ipcp_id, neighbor)
+                         == IPCM_FAILURE || ipcp_promise.wait() != IPCM_SUCCESS) {
+                     ss << ": Unknown error while enrolling IPCP " << c_promise.ipcp_id
+                             << " to neighbour " << neighbor.apName.getEncodedString()
+			     << std::endl;
+                     FLUSH_LOG(ERR, ss);
+
+                     if (!promise)
+                	     application_flow_allocation_failed_notify(&event);
+                     return;
+                 }
+        } catch (rina::Exception &e) {
+        	LOG_ERR("Exception while creating IPCP and joining DIF: %s", e.what());
+
+		if (!promise)
+			application_flow_allocation_failed_notify(&event);
+		return;
+        }
+
+        LOG_DBG("New IPCP created and joined DIF, allocating flow");
+        ipcp = select_ipcp_by_dif(dapp_name);
+	if (!ipcp) {
+		ss  << " Error: Cannot find an IPC process to "
+			"serve flow allocation request (local-app = " <<
+			event.localApplicationName.toString() << ", " <<
+			"remote-app = " << event.remoteApplicationName.
+			toString() << endl;
+		FLUSH_LOG(ERR, ss);
+
+		if (!promise)
+			application_flow_allocation_failed_notify(&event);
+
+		return;
+	}
+
+	//Wait for routing to converge before requesting flow allocation
+	// (the IPCP has just joined the DIF)
+	sleep.sleepForMili(1000);
+
+	//Auto release the read lock
+	rina::ReadScopedLock readlock(ipcp->rwlock, false);
+	try {
+		// Ask the IPC process to allocate a flow
+		trans = new FlowAllocTransState(NULL, promise, ipcp->get_id(),
+						event, true);
+		if(!trans){
+			ss << "Unable to allocate memory for the transaction object. Out of memory! ";
+			if (!promise)
+				application_flow_allocation_failed_notify(&event);
+
+			return;
+		}
+
+		//Store transaction
+		if(add_transaction_state(trans) < 0){
+			ss << "Unable to add transaction; out of memory? ";
+			if (!promise)
+				application_flow_allocation_failed_notify(&event);
+
+			return;
+		}
+
+		ipcp->allocateFlow(event, trans->tid);
+		ss << "IPC process " << ipcp->get_name().toString() <<
+				" requested to allocate flow between " <<
+				event.localApplicationName.toString()
+				<< " and " << event.remoteApplicationName.toString()
+				<< endl;
+		FLUSH_LOG(INFO, ss);
+	} catch (rina::AllocateFlowException& e) {
+		ss  << ": Error while requesting IPC process "
+				<< ipcp->get_name().toString() << " to allocate a flow "
+				"between " << event.localApplicationName.toString()
+				<< " and " << event.remoteApplicationName.toString()
+				<< endl;
+		FLUSH_LOG(ERR, ss);
+
+		if (!promise)
+			application_flow_allocation_failed_notify(&event);
+
+		return;
+	}
+}
+
 ipcm_res_t IPCManager_::flow_allocation_requested_local(Promise * promise,
 						        rina::FlowRequestEvent *event)
 {
 	rina::ApplicationProcessNamingInformation dif_name;
-	IPCMIPCProcess *ipcp;
-	bool dif_specified;
+	IPCMIPCProcess * ipcp;
+	da_res_t dif_specified;
 	FlowAllocTransState* trans;
 	ostringstream ss;
+	JoinDIFAndAllocateFlowTask * join_task;
+	std::list<std::string> dif_names;
 
 	// Find the name of the DIF that will provide the flow
 	if (event->DIFName != rina::ApplicationProcessNamingInformation()) {
 		// The requestor specified a DIF name
 		dif_name = event->DIFName;
-		dif_specified = true;
+		dif_specified = DA_SUCCESS;
 	} else {
 		// Ask the DIF allocator
-		dif_specified = lookup_dif_by_application(event->remoteApplicationName,
-							  dif_name);
+		dif_specified =  dif_allocator->lookup_dif_by_application(event->remoteApplicationName,
+									  dif_name, dif_names);
+		if (dif_specified == DA_PENDING)
+			return IPCM_PENDING;
 	}
 
 	// Select an IPC process to serve the flow request
-	if (!dif_specified)
-		ipcp = select_ipcp();
-	else
+	if (dif_specified == DA_SUCCESS) {
 		ipcp = select_ipcp_by_dif(dif_name);
+
+		if (!ipcp && dif_names.size() > 0) {
+			join_task = new JoinDIFAndAllocateFlowTask(this, promise, *event,
+								   dif_name.processName, dif_names);
+			timer.scheduleTask(join_task, 0);
+			return IPCM_PENDING;
+		}
+	} else {
+		ipcp = select_ipcp();
+	}
+
 	if (!ipcp) {
 		ss  << " Error: Cannot find an IPC process to "
 			"serve flow allocation request (local-app = " <<
@@ -210,12 +427,6 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 			"remote flow allocation request" << endl;
 		FLUSH_LOG(ERR, ss);
 		return IPCM_FAILURE;
-	}
-
-	if (event->localApplicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
-		ipcp->rwlock.unlock();
-		ip_vpn_manager->iporina_flow_allocation_requested(*event);
-		return IPCM_PENDING;
 	}
 
 	ctrl_port = ipcp->get_fa_ctrl_port(event->localApplicationName);
@@ -365,28 +576,21 @@ void IPCManager_::ipcm_allocate_flow_request_result_handler(rina::IpcmAllocateFl
 		ret = IPCM_FAILURE;
 	}
 
-	if (req_event.localApplicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
-		if (success) {
-			req_event.ipcProcessId = slave_ipcp->get_id();
-			ip_vpn_manager->iporina_flow_allocated(req_event);
-		}
-	} else {
-		// Inform the Application Manager about the flow allocation
-		// result
-		try {
-			rina::applicationManager->flowAllocated(req_event);
-			ss << "Applications " <<
-					req_event.localApplicationName.toString() << " and "
-					<< req_event.remoteApplicationName.toString()
-					<< " informed about flow allocation result" << endl;
-			FLUSH_LOG(INFO, ss);
-		} catch (rina::NotifyFlowAllocatedException& e) {
-			ss  << ": Error while notifying the "
-					"Application Manager about flow allocation result"
-					<< endl;
-			FLUSH_LOG(ERR, ss);
-			//ret = IPCM_FAILURE; <= should this be marked as error?
-		}
+	// Inform the Application Manager about the flow allocation
+	// result
+	try {
+		rina::applicationManager->flowAllocated(req_event);
+		ss << "Applications " <<
+				req_event.localApplicationName.toString() << " and "
+				<< req_event.remoteApplicationName.toString()
+				<< " informed about flow allocation result" << endl;
+		FLUSH_LOG(INFO, ss);
+	} catch (rina::NotifyFlowAllocatedException& e) {
+		ss  << ": Error while notifying the "
+				"Application Manager about flow allocation result"
+				<< endl;
+		FLUSH_LOG(ERR, ss);
+		//ret = IPCM_FAILURE; <= should this be marked as error?
 	}
 
 	trans->completed(ret);
@@ -482,7 +686,6 @@ void IPCManager_::flow_deallocated_event_handler(rina::FlowDeallocatedEvent* eve
 {
 	IPCMIPCProcess * ipcp, * user_ipcp;
 	rina::FlowInformation info;
-	int ret = 0;
 	ostringstream ss;
 
 	ipcp = lookup_ipcp_by_port(event->portId);
@@ -501,12 +704,6 @@ void IPCManager_::flow_deallocated_event_handler(rina::FlowDeallocatedEvent* eve
 		// Inform the IPC process that the flow corresponding to
 		// the specified port-id has been deallocated
 		info = ipcp->flowDeallocated(event->portId);
-
-		// Check if the registered app is an IP endpoint
-		ret = ip_vpn_manager->iporina_flow_deallocated(event->portId,
-				     ipcp->get_id());
-		if (ret == 0)
-			return;
 
 		// Only notify app about deallocated flow if it is an IPCP
 		// Otherwise app will find out because the I/O fd will close

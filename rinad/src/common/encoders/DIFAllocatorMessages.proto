@@ -1,0 +1,14 @@
+syntax="proto2";
+package rina.messages;
+option optimize_for = LITE_RUNTIME;
+import "ApplicationProcessNamingInfoMessage.proto";
+
+message app_name_to_dif_mapping_t{ 			//information about a directoryforwardingtable entry
+    required applicationProcessNamingInfo_t applicationName = 1;
+    required string difname = 2;
+    optional uint64 seqnum  = 3;
+}
+
+message app_name_to_dif_mapping_set_t{   //carries information about directoryforwardingtable entries
+    repeated app_name_to_dif_mapping_t appdifmapping = 1;
+}

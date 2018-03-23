@@ -101,7 +101,7 @@ iodev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
 
         LOG_DBG("SDU read returned %zd", retval);
 
-        if (retval < 0) {
+        if (retval <= 0) {
                 return retval;
         }
 
@@ -109,7 +109,7 @@ iodev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
                 return -EIO;
         }
 
-        retsize = du_len(tmp);
+        retsize = retval;
         partial_read = retsize > size;
         data = du_buffer(tmp);
         if (partial_read) {
@@ -213,36 +213,59 @@ iodev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
         struct iodev_priv *priv = f->private_data;
         void __user *p = (void __user *)arg;
         struct irati_iodev_ctldata data;
+        size_t max_sdu_size;
 
-        if (cmd != IRATI_FLOW_BIND) {
-                LOG_ERR("Invalid cmd %u", cmd);
-                return -EINVAL;
+        switch(cmd) {
+
+        case IRATI_FLOW_BIND: {
+        	if (copy_from_user(&data, p, sizeof(data))) {
+        		return -EFAULT;
+        	}
+
+        	if (!is_port_id_ok(data.port_id)) {
+        		LOG_ERR("Bad port id %d", data.port_id);
+        		return -EINVAL;
+        	}
+
+        	if (is_port_id_ok(priv->port_id)) {
+        		LOG_ERR("Cannot bind to port %d, "
+        				"already bound to port id %d",
+					data.port_id, priv->port_id);
+        		return -EBUSY;
+        	}
+
+        	if (kfa_flow_set_iowqs(kfa, priv->wqs, data.port_id) != 0) {
+        		LOG_ERR("Error binding to port-id %d", data.port_id);
+        		return -ENXIO;
+        	}
+
+        	priv->port_id = data.port_id;
+
+        	LOG_DBG("Bound to port id %d", data.port_id);
+        	break;
         }
 
-        if (copy_from_user(&data, p, sizeof(data))) {
-                return -EFAULT;
+        case IRATI_IOCTL_MSS_GET: {
+        	struct irati_iodev_ctldata __user * mss_data =
+        			(struct irati_iodev_ctldata __user *) p;
+
+                max_sdu_size = kfa_flow_max_sdu_size(kfa, priv->port_id);
+                if (max_sdu_size == 0) {
+                	return -EFAULT;
+                }
+
+                data.port_id = max_sdu_size;
+                if (put_user(data, mss_data)) {
+                    return -EFAULT;
+                }
+
+        	break;
         }
 
-        if (!is_port_id_ok(data.port_id)) {
-                LOG_ERR("Bad port id %d", data.port_id);
-                return -EINVAL;
+        default:
+        	LOG_ERR("Invalid cmd %u", cmd);
+        	return -EINVAL;
         }
-
-        if (is_port_id_ok(priv->port_id)) {
-                LOG_ERR("Cannot bind to port %d, "
-                        "already bound to port id %d",
-                        data.port_id, priv->port_id);
-                return -EBUSY;
-        }
-
-        if (kfa_flow_set_iowqs(kfa, priv->wqs, data.port_id) != 0) {
-        	LOG_ERR("Error binding to port-id %d", data.port_id);
-        	return -ENXIO;
-        }
-
-        priv->port_id = data.port_id;
-
-        LOG_DBG("Bound to port id %d", data.port_id);
 
         return 0;
 }

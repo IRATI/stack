@@ -31,29 +31,8 @@
 
 #define IPCP_MODULE "shim-wifi-ipcp"
 #include "ipcp-logging.h"
-#define DEFAULT_SCAN_INTERVAL 60000
 
 namespace rinad {
-
-class ShimWifiScanTask: public rina::TimerTask {
-public:
-	ShimWifiScanTask(ShimWifiStaIPCProcessImpl * ipcp_): ipcp(ipcp_) {};
-	~ShimWifiScanTask() throw() {};
-	void run();
-
-private:
-	ShimWifiStaIPCProcessImpl * ipcp;
-};
-
-void ShimWifiScanTask::run() {
-	std::string out;
-	LOG_IPCP_DBG("Scanner task triggered...");
-	ipcp->trigger_scan();
-
-	//Reschedule
-	ShimWifiScanTask * task = new ShimWifiScanTask(ipcp);
-	ipcp->timer.scheduleTask(task, ipcp->get_scan_period());
-}
 
 //Class ShimWifiIPCPProxy
 ShimWifiIPCPProxy::ShimWifiIPCPProxy(unsigned short id,
@@ -548,6 +527,11 @@ void ShimWifiIPCProcessImpl::enroll_to_dif_handler(const rina::EnrollToDAFReques
 	return;
 }
 
+void ShimWifiIPCProcessImpl::ipcp_scan_media_request_event_handler(rina::ScanMediaRequestEvent& event)
+{
+	//Ignore
+}
+
 //Class StaEnrollmentSM
 StaEnrollmentSM::StaEnrollmentSM(const std::string& dif_name,
 				 const std::string neighbor)
@@ -621,6 +605,8 @@ void CancelEnrollmentTimerTask::run()
 }
 
 //Class ShimWifiStaIPCProcessImpl
+const long ShimWifiStaIPCProcessImpl::DEFAULT_ENROLLMENT_TIMEOUT_MS = 10000;
+
 ShimWifiStaIPCProcessImpl::ShimWifiStaIPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
 		          	  	  	     unsigned short id,
 						     unsigned int ipc_manager_port,
@@ -641,7 +627,7 @@ ShimWifiStaIPCProcessImpl::ShimWifiStaIPCProcessImpl(const rina::ApplicationProc
 
 	wpa_conn = new WpaController(this, type, folder_name);
 	timer_task = 0;
-	enrollment_timeout = 10000;
+	enrollment_timeout = DEFAULT_ENROLLMENT_TIMEOUT_MS;
 }
 
 ShimWifiStaIPCProcessImpl::~ShimWifiStaIPCProcessImpl()
@@ -761,10 +747,6 @@ void ShimWifiStaIPCProcessImpl::assign_to_dif_response_handler(const rina::Assig
 
 		return;
 	}
-
-	//Create scan timer
-	ShimWifiScanTask * task = new ShimWifiScanTask(this);
-	timer.scheduleTask(task, get_scan_period());
 
 	state = ASSIGNED_TO_DIF;
 
@@ -920,27 +902,9 @@ void ShimWifiStaIPCProcessImpl::disconnet_neighbor_handler(const rina::Disconnec
 	return;
 }
 
-long ShimWifiStaIPCProcessImpl::get_scan_period()
+void ShimWifiStaIPCProcessImpl::ipcp_scan_media_request_event_handler(rina::ScanMediaRequestEvent& event)
 {
-	std::list<rina::PolicyParameter> params;
-	std::list<rina::PolicyParameter>::iterator it;
-	std::string value;
-	long result;
-	char *dummy;
-
-	params = dif_information_.dif_configuration_.get_parameters();
-	for (it = params.begin(); it != params.end(); ++it) {
-		if (it->name_ == "scanPeriod") {
-			result = strtol(it->value_.c_str(), &dummy, 10);
-			if (!it->value_.size() || *dummy != '\0') {
-				return DEFAULT_SCAN_INTERVAL;
-			}
-
-			return result;
-		}
-	}
-
-	return DEFAULT_SCAN_INTERVAL;
+	trigger_scan();
 }
 
 void ShimWifiStaIPCProcessImpl::trigger_scan()

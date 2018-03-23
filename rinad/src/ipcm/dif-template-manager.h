@@ -28,11 +28,11 @@
 #include <librina/concurrency.h>
 
 #include "rina-configuration.h"
-#include "dif-allocator.h"
 
 namespace rinad {
 
 class DIFTemplateManager;
+class DIFAllocator;
 
 /// Monitors the folder of the DIF templates
 class DIFConfigFolderMonitor: public rina::SimpleThread {

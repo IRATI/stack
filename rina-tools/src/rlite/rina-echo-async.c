@@ -170,6 +170,7 @@ client(struct echo_async *rea)
                     if (fsms[i].fd < 0) {
                         PRINTF("rina_flow_alloc_wait(): flow %d denied\n", i);
                         shutdown_flow(fsms + i);
+                        return -1;
                     } else {
                         fsms[i].state = SELFD_S_WRITE;
                         PRINTF("Flow %d allocated\n", i);
@@ -210,6 +211,7 @@ client(struct echo_async *rea)
             if (time(NULL) - fsms[i].last_activity >= TIMEOUT_SECS) {
                 PRINTF("Flow %d timed out\n", i);
                 shutdown_flow(fsms + i);
+                return -1;
             }
         }
     }

@@ -83,6 +83,7 @@ public:
         virtual void allocate_flow_response_handler(const rina::AllocateFlowResponseEvent& event);
         virtual void flow_deallocation_requested_handler(const rina::FlowDeallocateRequestEvent& event);
         virtual void enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event);
+        virtual void ipcp_scan_media_request_event_handler(rina::ScanMediaRequestEvent& event);
 
 protected:
 	friend class rinad::ShimWifiScanTask;
@@ -128,6 +129,8 @@ public:
 
 class ShimWifiStaIPCProcessImpl: public ShimWifiIPCProcessImpl {
 public:
+	static const long DEFAULT_ENROLLMENT_TIMEOUT_MS;
+
 	ShimWifiStaIPCProcessImpl(const rina::ApplicationProcessNamingInformation& name,
 			          unsigned short id,
 			          unsigned int ipc_manager_port,
@@ -139,9 +142,9 @@ public:
 	void assign_to_dif_response_handler(const rina::AssignToDIFResponseEvent& event);
 	void enroll_to_dif_handler(const rina::EnrollToDAFRequestEvent& event);
 	void disconnet_neighbor_handler(const rina::DisconnectNeighborRequestEvent& event);
+	void ipcp_scan_media_request_event_handler(rina::ScanMediaRequestEvent& event);
 
 private:
-	friend class rinad::ShimWifiScanTask;
 	friend class rinad::CancelEnrollmentTimerTask;
 	friend class rinad::WpaController;
 
@@ -150,8 +153,8 @@ private:
 	StaEnrollmentSM sta_enr_sm;
 	CancelEnrollmentTimerTask * timer_task;
 	long enrollment_timeout;
+	int scan_period_ms;
 
-	long get_scan_period(void);
 	void trigger_scan();
 	void abort_enrollment();
 	void notify_cancel_enrollment();

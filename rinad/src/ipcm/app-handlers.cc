@@ -33,7 +33,6 @@
 
 #include "rina-configuration.h"
 #include "app-handlers.h"
-#include "ip-vpn-manager.h"
 
 using namespace std;
 
@@ -129,13 +128,20 @@ void IPCManager_::app_reg_req_handler(rina::ApplicationRegistrationRequestEvent 
 	rina::ApplicationProcessNamingInformation dif_name;
 	rina::ApplicationProcessNamingInformation daf_name;
 	APPregTransState* trans;
+	da_res_t dif_specified;
+	std::list<std::string> dif_names;
 
 	//Prepare the registration information
 	if (info.applicationRegistrationType ==
 			rina::APPLICATION_REGISTRATION_ANY_DIF) {
 		// See if the configuration specifies a mapping between
 		// the registering application and a DIF.
-		if (lookup_dif_by_application(app_name, dif_name)){
+		// Ask the DIF allocator
+		ipcp_factory_.get_local_dif_names(dif_names);
+		dif_specified =  dif_allocator->lookup_dif_by_application(app_name,
+								dif_name,
+								dif_names);
+		if (dif_specified == DA_SUCCESS){
 			// If a mapping exists, select an IPC process
 			// from the specified DIF.
 			slave_ipcp = select_ipcp_by_dif(dif_name);
@@ -232,6 +238,8 @@ IPCManager_::ipcm_register_response_common(rina::IpcmRegisterApplicationResponse
                 FLUSH_LOG(ERR, ss);
         }
 
+        if (success)
+
         return success;
 }
 
@@ -250,16 +258,12 @@ IPCManager_::ipcm_register_response_app(rina::IpcmRegisterApplicationResponseEve
 	success = ipcm_register_response_common(event, app_name, slave_ipcp,
 			slave_dif_name);
 
-	if  (app_name.entityName == RINA_IP_FLOW_ENT_NAME) {
-		ip_vpn_manager->add_registered_ip_prefix(app_name.processName);
+        //Inform DIF allocator
+        if (event->result == 0)
+        	dif_allocator->app_registered(req_event.applicationRegistrationInformation.appName,
+        			              slave_ipcp->dif_name_.processName);
 
-		LOG_INFO("IP prefix %s registered to DIF %s",
-			 app_name.processName.c_str(),
-			 slave_dif_name.processName.c_str());
-	} else {
-		// Notify the application about the (un)successful registration.
-		notify_app_reg(req_event, app_name, slave_dif_name, success);
-	}
+	notify_app_reg(req_event, app_name, slave_dif_name, success);
 
 	return success;
 }
@@ -422,17 +426,13 @@ int IPCManager_::ipcm_unregister_response_app(
         ipcm_unregister_response_common(event, ipcp,
                                         req.applicationName);
 
-        if (req.applicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
-        	ip_vpn_manager->remove_registered_ip_prefix(req.applicationName.processName);
+        //Inform DIF allocator
+        if (event->result == 0)
+        	dif_allocator->app_unregistered(req.applicationName,
+        					ipcp->dif_name_.processName);
 
-        	LOG_INFO("IP prefix %s unregistered from DIF %s",
-        		 req.applicationName.processName.c_str(),
-        		 ipcp->dif_name_.processName.c_str());
-        } else {
-        	// Inform the application
-        	application_manager_app_unregistered(req,
-        			event->result);
-        }
+        // Inform the application
+        application_manager_app_unregistered(req, event->result);
 
         return 0;
 }

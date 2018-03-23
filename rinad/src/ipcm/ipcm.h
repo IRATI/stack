@@ -35,11 +35,10 @@
 #include <librina/common.h>
 #include <librina/ipc-manager.h>
 #include <librina/patterns.h>
+#include <librina/timer.h>
 
 #include "dif-template-manager.h"
-#include "dif-allocator.h"
 #include "catalog.h"
-#include "ip-vpn-manager.h"
 #include "process-event-listener.h"
 
 //Addons
@@ -256,6 +255,8 @@ typedef struct DelegatedStored{
 	rina::rib::DelegationObj* obj;
 }delegated_stored_t;
 
+class DIFAllocator;
+
 class IPCManager_ {
 
 public:
@@ -283,6 +284,11 @@ public:
 	// TODO: deprecate this console only stuff
 	//
 	void list_ipcps(std::ostream& os);
+
+	//
+	// List the DIF Allocator mappings
+	//
+	void list_da_mappings(std::ostream& os);
 
 	//
 	// List the objects in the MA RIB
@@ -322,16 +328,6 @@ public:
 	// List the available IPCP types
 	//
 	void list_ipcp_types(std::list<std::string>& types);
-
-
-	//
-	// Get the IPCP identifier where the application is registered
-	// FIXME: return id instead?
-	//
-	bool lookup_dif_by_application(
-		const rina::ApplicationProcessNamingInformation& apName,
-		rina::ApplicationProcessNamingInformation& difName);
-
 
 	//
 	// Creates an IPCP process
@@ -546,35 +542,6 @@ public:
 					int scope,
 					int invoke_id,
 					int port);
-	//
-	// Register an IP range to a DIF
-	//
-	// @param promise Promise object containing the future result of the
-	// operation. The promise shall always be accessible until the
-	// operation has been finished, so promise->ret value is different than
-	// IPCM_PENDING.
-	//
-	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
-	ipcm_res_t register_ip_prefix_to_dif(Promise* promise,
-					     const std::string& ip_range,
-					     const rina::ApplicationProcessNamingInformation& difName);
-
-	ipcm_res_t unregister_ip_prefix_from_dif(Promise* promise,
-					         const std::string& ip_range,
-						 const rina::ApplicationProcessNamingInformation& difName);
-
-	ipcm_res_t allocate_iporina_flow(Promise* promise,
-					 const std::string& src_ip_range,
-					 const std::string& dst_ip_range,
-					 const std::string& dif_name,
-					 const rina::FlowSpecification flow_spec);
-
-	void allocate_iporina_flow_response(const rina::FlowRequestEvent& event,
-					    int result,
-					    bool notify_source);
-
-	ipcm_res_t deallocate_iporina_flow(Promise* promise,
-					   int port_id);
 
 	//
 	// Update policy-set catalog, with the plugins stored in
@@ -631,6 +598,12 @@ public:
 
 	void os_process_finalized_handler(pid_t pid);
 
+	ipcm_res_t flow_allocation_requested_event_handler(Promise * promise, rina::FlowRequestEvent* event);
+
+	void join_dif_continue_flow_alloc(Promise * promise, rina::FlowRequestEvent& event,
+					  const std::string& dif_name,
+					  const std::list<std::string>& sup_dif_names);
+
         //Generator of opaque identifiers
         rina::ConsecutiveUnsignedIntegerGenerator __tid_gen;
 
@@ -639,9 +612,6 @@ public:
 
         //The DIF Allocator
         DIFAllocator * dif_allocator;
-
-        //The IP VPN Manager
-        IPVPNManager * ip_vpn_manager;
 
         //The OS process Monitor
         OSProcessMonitor * osp_monitor;
@@ -719,7 +689,6 @@ protected:
 	//
 
 	//Flow mgmt
-	ipcm_res_t flow_allocation_requested_event_handler(Promise * promise, rina::FlowRequestEvent* event);
 	void allocate_flow_response_event_handler( rina::AllocateFlowResponseEvent *event);
 	ipcm_res_t flow_deallocation_requested_event_handler(Promise * promise,
 						             rina::FlowDeallocateRequestEvent* event);
@@ -932,6 +901,8 @@ private:
 	IPCManager_();
 	virtual ~IPCManager_();
 
+	rina::Timer timer;
+
 	rina::Lockable req_lock;
 	std::map<unsigned int, unsigned short> pending_cipcp_req;
 	std::map<unsigned int, unsigned short> pending_dipcp_req;
@@ -962,6 +933,110 @@ private:
 
 	rina::Lockable forwarded_calls_lock;
 	std::map<int, delegated_stored_t*> forwarded_calls;
+};
+
+class JoinDIFAndAllocateFlowTask: public rina::TimerTask {
+public:
+	JoinDIFAndAllocateFlowTask(IPCManager_ * ipcmgr, Promise * pro,
+				   const rina::FlowRequestEvent& event,
+				   const std::string& dname,
+				   const std::list<std::string>& sdnames);
+	~JoinDIFAndAllocateFlowTask() throw() {};
+	void run();
+
+private:
+	IPCManager_ * ipcm;
+	Promise * promise;
+	rina::FlowRequestEvent fevent;
+	std::string dif_name;
+	std::list<std::string> sup_dif_names;
+};
+
+/// The DIF Allocator configuration
+class DIFAllocatorConfig {
+public:
+	/// The type of DIF Allocator
+	std::string type;
+
+	/// The name of the DIF Allocator DAP instance
+	rina::ApplicationProcessNamingInformation dap_name;
+
+	/// The name of the DIF Allocator DAF
+	rina::ApplicationProcessNamingInformation daf_name;
+
+	/// The security manager configuration (Authentication & SDU Protection)
+	rina::SecurityManagerConfiguration sec_config;
+
+	/// Enrollments to peer DIF Allocators
+	std::list<rina::Neighbor> enrollments;
+
+	/// IPCP name for joining a certain DIF
+	std::list<NeighborData> joinable_difs;
+
+	/// Other configuration parameters as name/value pairs
+	std::list<rina::Parameter> parameters;
+};
+
+typedef enum da_res{
+	//Success
+	DA_SUCCESS = 0,
+
+	//Return value will be deferred
+	DA_PENDING = 1,
+
+	//Generic failure
+	DA_FAILURE = -1,
+} da_res_t;
+
+/// Abstract class that must be extended by DIF Allocator implementations
+class DIFAllocator {
+public:
+	static const std::string STATIC_DIF_ALLOCATOR_FILE_NAME;
+
+	DIFAllocator(){};
+	virtual ~DIFAllocator(void){};
+
+	/// Create a new instance and configure it, returning the DIF Allocator
+	/// name to register to all normal DIFs if any
+	static DIFAllocator * create_instance(const rinad::RINAConfiguration& config,
+					      IPCManager_ * ipcm);
+
+	static void get_ipcp_name(rina::ApplicationProcessNamingInformation& ipcp_name,
+   	   	   		  const std::string& dif_name,
+				  const std::list<NeighborData> joinable_difs);
+
+	/// Parse the DIF Allocator configuration information from the main config file
+	static void parse_config(DIFAllocatorConfig& da_config,
+				 const rinad::RINAConfiguration& config);
+
+	/// Returns 0 is configuration is correclty applied, -1 otherwise
+	virtual int set_config(const DIFAllocatorConfig& da_config) = 0;
+
+	/// Inform the DIF Allocator that the IPCP has been assigned to the DIF
+	virtual void assigned_to_dif(const std::string& dif_name) = 0;
+
+	/// Returns IPCM_SUCCESS on success, IPCM_ERROR on error and IPCM_ONGOING
+	/// if the operation is still in progress
+	virtual da_res_t lookup_dif_by_application(const rina::ApplicationProcessNamingInformation& app_name,
+        			       	     	   rina::ApplicationProcessNamingInformation& result,
+						   std::list<std::string>& supporting_difs) = 0;
+
+	virtual void app_registered(const rina::ApplicationProcessNamingInformation & app_name,
+				    const std::string& dif_name) = 0;
+
+	virtual void app_unregistered(const rina::ApplicationProcessNamingInformation & app_name,
+				      const std::string& dif_name) = 0;
+
+	virtual void list_da_mappings(std::ostream& os) = 0;
+
+	virtual void get_ipcp_name_for_dif(rina::ApplicationProcessNamingInformation& ipcp_name,
+			                   const std::string& dif_name) = 0;
+
+        virtual void update_directory_contents() = 0;
+
+private:
+        static void populate_with_default_conf(DIFAllocatorConfig& da_config,
+        				       const std::string& config_file);
 };
 
 

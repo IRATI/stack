@@ -586,7 +586,7 @@ int CatServer()
 		char *incomingapn = NULL;
 		struct rina_flow_spec fspec;
 		
-		
+		fspec.version = RINA_FLOW_SPEC_VERSION;
 		incomingfd = rina_flow_accept(cfd, &incomingapn, &fspec, RINA_F_NORESP);
 		if (incomingfd < 0) {
 			PRINTERRORMSG("WARNING: Unexpected flow accept failure, ignoring.  Error: %s\n", strerror(errno));

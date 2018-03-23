@@ -495,7 +495,7 @@ int InternalFlowSDUReader::run()
 				bytes_read,
 				portid);
 
-		if (bytes_read < 0) {
+		if (bytes_read <= 0) {
 			break;
 		}
 
