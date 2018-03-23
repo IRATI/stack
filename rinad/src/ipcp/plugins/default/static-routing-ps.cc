@@ -39,7 +39,8 @@ public:
 
 private:
 	void subscribeToEvents(void);
-	void parse_policy_param(rina::PolicyParameter pm);
+	void parse_policy_param(rina::PolicyParameter pm,
+				const rina::DIFConfiguration& dif_configuration);
 	void split(std::vector<std::string> & result,
 	           const char *str, char c);
 	void get_rt_entries_as_list(std::list<rina::RoutingTableEntry *> & result);
@@ -105,7 +106,7 @@ void StaticRoutingPs::set_dif_configuration(const rina::DIFConfiguration& dif_co
 	psconf = dif_configuration.routing_configuration_.policy_set_;
 	for (it = psconf.parameters_.begin();
 			it != psconf.parameters_.end(); ++it) {
-		parse_policy_param(*it);
+		parse_policy_param(*it, dif_configuration);
 	}
 
 	update_forwarding_table();
@@ -113,7 +114,8 @@ void StaticRoutingPs::set_dif_configuration(const rina::DIFConfiguration& dif_co
 
 //Parameter name is the destination address,
 //Parameter value is <qos_id>-<cost>-<nhop_address>
-void StaticRoutingPs::parse_policy_param(rina::PolicyParameter pm)
+void StaticRoutingPs::parse_policy_param(rina::PolicyParameter pm,
+					 const rina::DIFConfiguration& dif_configuration)
 {
 	rina::RoutingTableEntry * entry;
 	std::stringstream ss;
@@ -122,6 +124,9 @@ void StaticRoutingPs::parse_policy_param(rina::PolicyParameter pm)
 	std::vector<std::string> result;
 	rina::NHopAltList nhop_alt;
 	rina::IPCPNameAddresses ipcpna;
+	bool default_gw = false;
+	std::list<rina::StaticIPCProcessAddress> addresses;
+	std::list<rina::StaticIPCProcessAddress>::iterator it;
 
 	//Tokenize parameter value
 	split(result, pm.value_.c_str(), '-');
@@ -130,16 +135,9 @@ void StaticRoutingPs::parse_policy_param(rina::PolicyParameter pm)
 				pm.value_.c_str());
 	}
 
-	//Parse destination address
-	entry = new rina::RoutingTableEntry();
-	aux = strtoul(pm.name_.c_str(), &dummy, 10);
-	if (!pm.name_.size() || *dummy != '\0') {
-		LOG_ERR("Error converting dest. address to ulong: %s",
-				pm.name_.c_str());
-		delete entry;
-		return;
+	if (pm.name_.c_str() == "*") {
+		default_gw = true;
 	}
-	entry->destination.addresses.push_back(aux);
 
 	//Parse qos_id
 	entry->qosId = strtoul(result[0].c_str(), &dummy, 10);
@@ -169,10 +167,34 @@ void StaticRoutingPs::parse_policy_param(rina::PolicyParameter pm)
 	}
 	ipcpna.addresses.push_back(aux);
 	nhop_alt.alts.push_back(ipcpna);
-	entry->nextHopNames.push_back(nhop_alt);
 
-	ss << pm.name_ << "-" << pm.value_;
-	rt_entries[ss.str()] = entry;
+
+	if (!default_gw) {
+		//Parse destination address
+		entry = new rina::RoutingTableEntry();
+		aux = strtoul(pm.name_.c_str(), &dummy, 10);
+		if (!pm.name_.size() || *dummy != '\0') {
+			LOG_ERR("Error converting dest. address to ulong: %s",
+					pm.name_.c_str());
+			delete entry;
+			return;
+		}
+		entry->destination.addresses.push_back(aux);
+		entry->nextHopNames.push_back(nhop_alt);
+		ss << pm.name_ << "-" << pm.value_;
+		rt_entries[ss.str()] = entry;
+		return;
+	}
+
+	//Default gw, add an entry for each destination address (except myself)
+	addresses = dif_configuration.nsm_configuration_.addressing_configuration_.static_address_;
+	for (it = addresses.begin(); it != addresses.end(); ++it) {
+		entry = new rina::RoutingTableEntry();
+		entry->destination.addresses.push_back(it->address_);
+		entry->nextHopNames.push_back(nhop_alt);
+		ss << it->address_ << "-" << pm.value_;
+		rt_entries[ss.str()] = entry;
+	}
 }
 
 void StaticRoutingPs::split(std::vector<std::string> & result,
