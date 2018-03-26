@@ -138,7 +138,7 @@ void StaticRoutingPs::parse_policy_param(rina::PolicyParameter pm,
 	if (pm.name_.c_str() == DEFAULT_NEXT_HOP) {
 		param_type = DEFAULT;
 	} else {
-		split(range, pm.name_.c_str(), '-');
+		split(range, pm.name_.c_str(), 'o');
 		if (range.size() == 2) {
 			param_type = RANGE;
 		} else {
@@ -181,7 +181,6 @@ void StaticRoutingPs::parse_policy_param(rina::PolicyParameter pm,
 
 	switch (param_type) {
 	case SINGLE:
-
 		address = strtoul(pm.name_.c_str(), &dummy, 10);
 		if (!pm.name_.size() || *dummy != '\0') {
 			LOG_ERR("Error converting dest. address to ulong: %s",
