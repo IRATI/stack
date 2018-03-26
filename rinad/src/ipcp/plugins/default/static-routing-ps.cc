@@ -138,7 +138,7 @@ void StaticRoutingPs::parse_policy_param(rina::PolicyParameter pm,
 	if (pm.name_.c_str() == DEFAULT_NEXT_HOP) {
 		param_type = DEFAULT;
 	} else {
-		split(range, pm.name_.c_str(), 'o');
+		split(range, pm.name_.c_str(), '-');
 		if (range.size() == 2) {
 			param_type = RANGE;
 		} else {
