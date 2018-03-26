@@ -31,6 +31,7 @@ namespace rinad {
 class StaticRoutingPs: public IRoutingPs, public rina::InternalEventListener {
 public:
 	static const std::string DEFAULT_NEXT_HOP;
+	enum ParamType {DEFAULT, RANGE, SINGLE};
 
 	StaticRoutingPs(IRoutingComponent * dm);
 	virtual ~StaticRoutingPs() {};
@@ -123,18 +124,26 @@ void StaticRoutingPs::parse_policy_param(rina::PolicyParameter pm,
 {
 	rina::RoutingTableEntry * entry;
 	std::stringstream ss;
-	unsigned int qos_id, cost, address;
+	unsigned int qos_id, cost, address, range_start, range_end;
 	char *dummy;
 	std::vector<std::string> result;
+	std::vector<std::string> range;
 	rina::NHopAltList nhop_alt;
 	rina::IPCPNameAddresses ipcpna;
-	bool default_next_hop = false;
+	ParamType param_type;
 	std::list<rina::StaticIPCProcessAddress> addresses;
 	std::list<rina::StaticIPCProcessAddress>::iterator it;
+	unsigned int counter;
 
 	if (pm.name_.c_str() == DEFAULT_NEXT_HOP) {
-		default_next_hop = true;
-		LOG_INFO("Default next hop is true");
+		param_type = DEFAULT;
+	} else {
+		split(range, pm.name_.c_str(), '-');
+		if (range.size() == 2) {
+			param_type = RANGE;
+		} else {
+			param_type = SINGLE;
+		}
 	}
 
 	//Tokenize parameter value
@@ -170,38 +179,66 @@ void StaticRoutingPs::parse_policy_param(rina::PolicyParameter pm,
 	ipcpna.addresses.push_back(address);
 	nhop_alt.alts.push_back(ipcpna);
 
-	if (!default_next_hop) {
-		//Parse destination address
-		entry = new rina::RoutingTableEntry();
-		entry->qosId = qos_id;
-		entry->cost = cost;
+	switch (param_type) {
+	case SINGLE:
+
 		address = strtoul(pm.name_.c_str(), &dummy, 10);
 		if (!pm.name_.size() || *dummy != '\0') {
 			LOG_ERR("Error converting dest. address to ulong: %s",
 					pm.name_.c_str());
-			delete entry;
 			return;
 		}
+		entry = new rina::RoutingTableEntry();
+		entry->qosId = qos_id;
+		entry->cost = cost;
 		entry->destination.addresses.push_back(address);
 		entry->nextHopNames.push_back(nhop_alt);
 		ss << pm.name_ << "-" << pm.value_;
 		rt_entries[ss.str()] = entry;
-		return;
-	}
+		break;
+	case RANGE:
+		range_start = strtoul(range[0].c_str(), &dummy, 10);
+		if (!range[0].size() || *dummy != '\0') {
+			LOG_ERR("Error converting range start to ulong: %s",
+					pm.name_.c_str());
+			return;
+		}
 
-	//Default gw, add an entry for each destination address (except myself)
-	addresses = dif_configuration.nsm_configuration_.addressing_configuration_.static_address_;
-	for (it = addresses.begin(); it != addresses.end(); ++it) {
-		if (it->address_ == dif_configuration.address_)
-			continue;
+		range_end = strtoul(range[1].c_str(), &dummy, 10);
+		if (!range[1].size() || *dummy != '\0') {
+			LOG_ERR("Error converting range end to ulong: %s",
+					pm.name_.c_str());
+			return;
+		}
 
-		entry = new rina::RoutingTableEntry();
-		entry->qosId = qos_id;
-		entry->cost = cost;
-		entry->destination.addresses.push_back(it->address_);
-		entry->nextHopNames.push_back(nhop_alt);
-		ss << it->address_ << "-" << pm.value_;
-		rt_entries[ss.str()] = entry;
+		for(counter = range_start; counter <= range_end; counter ++ ) {
+			entry = new rina::RoutingTableEntry();
+			entry->qosId = qos_id;
+			entry->cost = cost;
+			entry->destination.addresses.push_back(counter);
+			entry->nextHopNames.push_back(nhop_alt);
+			ss << counter << "-" << pm.value_;
+			rt_entries[ss.str()] = entry;
+		}
+		break;
+	case DEFAULT:
+		addresses = dif_configuration.nsm_configuration_.addressing_configuration_.static_address_;
+		for (it = addresses.begin(); it != addresses.end(); ++it) {
+			if (it->address_ == dif_configuration.address_)
+				continue;
+
+			entry = new rina::RoutingTableEntry();
+			entry->qosId = qos_id;
+			entry->cost = cost;
+			entry->destination.addresses.push_back(it->address_);
+			entry->nextHopNames.push_back(nhop_alt);
+			ss << it->address_ << "-" << pm.value_;
+			rt_entries[ss.str()] = entry;
+		}
+		break;
+	default:
+		LOG_ERR("Wrong state, cannot parse param");
+
 	}
 }
 
