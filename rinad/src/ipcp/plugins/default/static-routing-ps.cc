@@ -123,7 +123,7 @@ void StaticRoutingPs::parse_policy_param(rina::PolicyParameter pm,
 {
 	rina::RoutingTableEntry * entry;
 	std::stringstream ss;
-	unsigned int aux;
+	unsigned int qos_id, cost, address;
 	char *dummy;
 	std::vector<std::string> result;
 	rina::NHopAltList nhop_alt;
@@ -132,6 +132,11 @@ void StaticRoutingPs::parse_policy_param(rina::PolicyParameter pm,
 	std::list<rina::StaticIPCProcessAddress> addresses;
 	std::list<rina::StaticIPCProcessAddress>::iterator it;
 
+	if (pm.name_.c_str() == DEFAULT_NEXT_HOP) {
+		default_next_hop = true;
+		LOG_INFO("Default next hop is true");
+	}
+
 	//Tokenize parameter value
 	split(result, pm.value_.c_str(), '-');
 	if (result.size() != 3) {
@@ -139,51 +144,45 @@ void StaticRoutingPs::parse_policy_param(rina::PolicyParameter pm,
 				pm.value_.c_str());
 	}
 
-	if (pm.name_.c_str() == DEFAULT_NEXT_HOP) {
-		default_next_hop = true;
-	}
-
 	//Parse qos_id
-	entry->qosId = strtoul(result[0].c_str(), &dummy, 10);
+	qos_id = strtoul(result[0].c_str(), &dummy, 10);
 	if (!result[0].c_str() || *dummy != '\0') {
 		LOG_ERR("Error converting qos-id to ulong: %s",
 				result[0].c_str());
-		delete entry;
 		return;
 	}
 
 	//Parse cost
-	entry->cost = strtoul(result[1].c_str(), &dummy, 10);
+	cost = strtoul(result[1].c_str(), &dummy, 10);
 	if (!result[1].c_str() || *dummy != '\0') {
 		LOG_ERR("Error converting cost to ulong: %s",
 				result[1].c_str());
-		delete entry;
 		return;
 	}
 
 	//Parse nhop address
-	aux = strtoul(result[2].c_str(), &dummy, 10);
+	address = strtoul(result[2].c_str(), &dummy, 10);
 	if (!result[1].c_str() || *dummy != '\0') {
 		LOG_ERR("Error converting nhop address to ulong: %s",
 				result[2].c_str());
-		delete entry;
 		return;
 	}
-	ipcpna.addresses.push_back(aux);
+	ipcpna.addresses.push_back(address);
 	nhop_alt.alts.push_back(ipcpna);
-
 
 	if (!default_next_hop) {
 		//Parse destination address
 		entry = new rina::RoutingTableEntry();
-		aux = strtoul(pm.name_.c_str(), &dummy, 10);
+		entry->qosId = qos_id;
+		entry->cost = cost;
+		address = strtoul(pm.name_.c_str(), &dummy, 10);
 		if (!pm.name_.size() || *dummy != '\0') {
 			LOG_ERR("Error converting dest. address to ulong: %s",
 					pm.name_.c_str());
 			delete entry;
 			return;
 		}
-		entry->destination.addresses.push_back(aux);
+		entry->destination.addresses.push_back(address);
 		entry->nextHopNames.push_back(nhop_alt);
 		ss << pm.name_ << "-" << pm.value_;
 		rt_entries[ss.str()] = entry;
@@ -193,7 +192,12 @@ void StaticRoutingPs::parse_policy_param(rina::PolicyParameter pm,
 	//Default gw, add an entry for each destination address (except myself)
 	addresses = dif_configuration.nsm_configuration_.addressing_configuration_.static_address_;
 	for (it = addresses.begin(); it != addresses.end(); ++it) {
+		if (it->address_ == dif_configuration.address_)
+			continue;
+
 		entry = new rina::RoutingTableEntry();
+		entry->qosId = qos_id;
+		entry->cost = cost;
 		entry->destination.addresses.push_back(it->address_);
 		entry->nextHopNames.push_back(nhop_alt);
 		ss << it->address_ << "-" << pm.value_;
