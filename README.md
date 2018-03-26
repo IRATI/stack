@@ -206,10 +206,37 @@ folder as the main configuration files (.conf) that use the templates.
 For exmples of different JSON configuration files, you can take a look at 
 https://github.com/IRATI/stack/tree/master/tests/conf.
 
-##### 3.2.2.1 QoS Cubes
-Bla
+##### 3.2.2.1 Data Transfer Constants
+TODO
 
-##### 3.2.2.2
+##### 3.2.2.2 QoS Cubes
+TODO
+
+##### 3.2.2.3 Known IPC Process addresses
+TODO
+
+##### 3.2.2.3 Relaying and Multiplexing Task
+TODO
+
+##### 3.2.2.4 Enrollment Task
+TODO
+
+##### 3.2.2.5 Flow Allocator
+TODO
+
+##### 3.2.2.6 Namespace Manager
+TODO
+
+##### 3.2.2.7 Resource Allocator
+TODO
+
+##### 3.2.2.8 Routing
+TODO
+
+##### 3.2.2.9 Security Manager
+TODO
+
+
 
 #### 3.2.3 Application to DIF mappings
 The da.map file contains the preferences for which DIFs should be used to register and to allocate 
