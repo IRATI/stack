@@ -206,6 +206,11 @@ folder as the main configuration files (.conf) that use the templates.
 For exmples of different JSON configuration files, you can take a look at 
 https://github.com/IRATI/stack/tree/master/tests/conf.
 
+##### 3.2.2.1 QoS Cubes
+Bla
+
+##### 3.2.2.2
+
 #### 3.2.3 Application to DIF mappings
 The da.map file contains the preferences for which DIFs should be used to register and to allocate 
 flows to/from specific applications. If no mapping is provided by a certain application, it will try 
