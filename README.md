@@ -279,9 +279,54 @@ and DTCP policy set (data transfer policy set).
    * **maxClosedWindowQueueLength**: maximum length of the closed window queue
    * **initialCredit**: initial credit of the window (only if window-based flow control is used)
 
-The following DTP/DTCP policies are available in IRATI
+The following DTCP policy sets are available in IRATI
 
 ###### 3.2.2.2.1 Default policy
+Very simple DTCP policies that implement retransmission control and a sliding window 
+flow control policy with a fixed size window (configurable via the **initialCredit** parameter).
+The DTCP flow control policy does not react to congestion, packet loss or RTT delay variation.
+
+   * **Policy name**: default.
+   * **Policy version**: 0.
+
+###### 3.2.2.2.2 DECNET binary feedback congestion control
+Extends the default DTCP policies by reacting to congestion and adapting the window size, based 
+on Raj Jain's binary feedback congestion control (additive increase, multiplicative decrease).
+Since the policy relies on Explicit Congestion Notification (ECN), it must be used in conjunction 
+with its companion RMT policy.
+
+   * **Policy name**: cas-ps.
+   * **Policy version**: 1.
+
+Example configuration:
+
+    "dtcpPolicySet" : {
+        "name" : "cas-ps",
+        "version" : "1",
+        "parameters" : [{
+           "name"  : "w_inc_a_p",
+           "value" : "1"
+        }]
+    }
+
+   * **w_inc_a_p**: Number of units by which the window size will be increased under "additive
+increase" state.
+
+###### 3.2.2.2.2 TCP ECN congestion control 
+Extends the default DTCP policies by reacting to congestion and adapting the window size, based
+on Raj Jain's binary feedback congestion control (additive increase, multiplicative decrease).
+Since the policy relies on Explicit Congestion Notification (ECN), it must be used in conjunction
+with its companion RMT policy.
+
+   * **Policy name**: cas-ps.
+   * **Policy version**: 1.
+
+Example configuration:
+
+    "dtcpPolicySet" : {
+                     "name" : "default",
+                     "version" : "0"
+                   },
 
 ##### 3.2.2.3 Known IPC Process addresses
 TODO
