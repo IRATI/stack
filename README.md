@@ -279,6 +279,10 @@ and DTCP policy set (data transfer policy set).
    * **maxClosedWindowQueueLength**: maximum length of the closed window queue
    * **initialCredit**: initial credit of the window (only if window-based flow control is used)
 
+The following DTP/DTCP policies are available in IRATI
+
+###### 3.2.2.2.1 Default policy
+
 ##### 3.2.2.3 Known IPC Process addresses
 TODO
 
