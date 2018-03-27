@@ -519,7 +519,8 @@ Example configuration:
 
 ###### 3.2.2.4.5 RMT policy: Random Early Detection (RED)
 This policy extends the RMT default policy by marking queued PDUs with the ECN flag according 
-to the Random Early Detection (RED) algorithm.
+to the Random Early Detection (RED) algorithm. This policy marks probabilistically PDUs with 
+the ECN flag according to the configured thresholds.
 
    * **Policy name**: red-ps.
    * **Policy version**: 1.
@@ -535,13 +536,88 @@ Example configuration:
           "name" : "red-ps",
           "version" : "1",
           "parameters" : [{
-             "name"  : "q_max",
-             "value" : "1000"
+             "name"  : "q_max_p",
+             "value" : "600"
+             }, {
+             "name"  : "qth_min_p",
+             "value" : "17"
+             }, {
+             "name"  : "qth_max_p",
+             "value" : "179"
+             }, {
+             "name"  : "Wlog_p",
+             "value" : "7"
+             }, {
+             "name"  : "Plog_p",
+             "value" : "12"
           }]
         }
      }
 
-   * **q_max**: The size of the FIFO queue (in PDUs). The default value is **1000** PDUs.
+   * **q_max_p**: The size of the FIFO queue (in PDUs). 
+   * **qth_min_p**: The size of the FIFO queue where probabilistic marking starts (if the size is smaller, no marking)
+   * **qth_max_p**: The size of the FIFO queue where probabilistic marking ends (if the size is larger, always marking)
+   * **Wlog_p**: the filter constant, controls intertia of the algorithm (decrease W to allow larger bursts)
+   * **Plog_p**: related to the marking probability
+
+###### 3.2.2.4.6 RMT policy: Data Center TCP (DCTCP)
+The DCTCP policy for RMT is simple. It is possible to configure a queue size and a threshold. If queue size exceedes 
+the threshold, the RMT starts to mark PDUs with explicit congestion flag (ECN).
+
+   * **Policy name**: dctcp-ps.
+   * **Policy version**: 1.
+   
+Example configuration:
+
+     "rmtConfiguration" : {
+        "pftConfiguration" : {
+            ....
+            }
+        },  
+        "policySet" : {
+          "name" : "dctcp-ps",
+          "version" : "1",
+          "parameters" : [{
+             "name"  : "q_threshold",
+             "value" : "20"
+             }, {
+             "name"  : "q_max",
+             "value" : "500"
+          }] 
+        } 
+     }  
+
+   * **q_max**: The maximum size of the queue
+   * **q_threshold**: Sets the queue threshold. If the queue size is exceeded, PDUs will be marked with ECN flag.
+
+###### 3.2.2.4.7 RMT policy: QTAMux
+TODO
+ 
+   * **Policy name**: qta-mux-ps.
+   * **Policy version**: 1.
+
+Example configuration:
+
+     "rmtConfiguration" : {
+        "pftConfiguration" : {
+            ....
+            }
+        },
+        "policySet" : {
+          "name" : "qta-mux-ps",
+          "version" : "1",
+          "parameters" : [{
+             "name"  : "q_threshold",
+             "value" : "20"
+             }, {
+             "name"  : "q_max",
+             "value" : "500"
+          }]
+        }
+     }
+
+   * **q_max**: The maximum size of the queue
+   * **q_threshold**: Sets the queue threshold. If the queue size is exceeded, PDUs will be marked with ECN flag.
 
 ##### 3.2.2.5 Enrollment Task
 TODO
