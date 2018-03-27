@@ -387,25 +387,98 @@ Example configuration:
          "organization" : "IRATI"
       } ]
 
-##### 3.2.2.3 Relaying and Multiplexing Task
+##### 3.2.2.4 Relaying and Multiplexing Task
+The Relaying and Multiplexing Task (RMT) configuration. The behaviour of the RMT is controlled by 
+two policies: the forwarding function policy (which specifies how PDUs are forwarded), and the 
+RMT policy (which controls the number of queues at the RMT, its monitoring and how PDUs are scheduled).
+
+     "rmtConfiguration" : {
+        "pftConfiguration" : {
+          "policySet" : {
+            "name" : "default",
+            "version" : "0"
+          }
+        },
+        "policySet" : {
+          "name" : "default",
+          "version" : "1"
+        }
+     }
+
+IRATI supports the following Forwarding and RMT policies
+
+###### 3.2.2.4.1 Forwarding policy: default
+The default forwarding policy is based on a forwarding table that maps the *destination address* and 
+*qos_id* fields of PDUs to an N-1 port. The table lookup is based on a exact match of the destination 
+address and qos_id fields (except if the qos_id value in the forwarding table is 0, then the qos_id 
+value is ignored).
+
+   * **Policy name**: default.
+   * **Policy version**: 1.
+
+Example configuration:
+    
+    "pftConfiguration" : {
+        "policySet" : {
+            "name" : "default",
+            "version" : "0"
+         } 
+     }
+
+###### 3.2.2.4.2 Forwarding policy: multi-path
+This policy extends the default forwarding policy with multi-path capabilities. If multiple N-1 flows 
+are assigned to the same destination address and qos_id, this policy applies a hash-threshold algorithm 
+(the one defined in the ECMP specification) to load-balance PDUs amongst the multiple N-1 flows. The 
+algorithm preserves PDU packet ordering by forwarding PDUs belonging to the same flow through the same 
+N-1 port.
+
+   * **Policy name**: multipath.
+   * **Policy version**: 1.
+   
+Example configuration:
+    
+    "pftConfiguration" : {
+        "policySet" : {
+            "name" : "multipath",
+            "version" : "1"
+         }  
+     }
+
+###### 3.2.2.4.3 Forwarding policy: LFA
+This policy extends the default forwarding policy with reliability capabilities. The routing algorithm 
+populates the forwarding table computing multiple N-1 port-ids per each destination address, using the 
+Loop-Free Alternates (LFA) algorithm. One port-id is the active one, and the other ones are the backup 
+ones. If an N-1 port becames unusable, the forwarding algorithm switches to the backup port-ids for all 
+destination addresses where the failing port-id was the active one. 
+            
+   * **Policy name**: lfa.
+   * **Policy version**: 1.
+
+Example configuration:
+     
+    "pftConfiguration" : {
+        "policySet" : { 
+            "name" : "lfa",
+            "version" : "1"
+         }
+     }
+
+##### 3.2.2.5 Enrollment Task
 TODO
 
-##### 3.2.2.4 Enrollment Task
+##### 3.2.2.6 Flow Allocator
 TODO
 
-##### 3.2.2.5 Flow Allocator
+##### 3.2.2.7 Namespace Manager
 TODO
 
-##### 3.2.2.6 Namespace Manager
+##### 3.2.2.8 Resource Allocator
 TODO
 
-##### 3.2.2.7 Resource Allocator
+##### 3.2.2.9 Routing
 TODO
 
-##### 3.2.2.8 Routing
-TODO
-
-##### 3.2.2.9 Security Manager
+##### 3.2.2.10 Security Manager
 TODO
 
 
