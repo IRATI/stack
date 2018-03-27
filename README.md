@@ -447,7 +447,7 @@ Example configuration:
 ###### 3.2.2.4.3 Forwarding policy: LFA
 This policy extends the default forwarding policy with reliability capabilities. The routing algorithm 
 populates the forwarding table computing multiple N-1 port-ids per each destination address, using the 
-Loop-Free Alternates (LFA) algorithm. One port-id is the active one, and the other ones are the backup 
+Loop-Free Alternates (LFA) algorithm. One port-id is the active one, and the other port-ids are the backup 
 ones. If an N-1 port becames unusable, the forwarding algorithm switches to the backup port-ids for all 
 destination addresses where the failing port-id was the active one. 
             
@@ -462,6 +462,86 @@ Example configuration:
             "version" : "1"
          }
      }
+
+###### 3.2.2.4.4 RMT policy: default
+The default RMT policy set implements a simple FIFO queue per N-1 port. All the EFCP data transfer and control 
+PDUs that need to be forwarded through the N-1 port are put in the FIFO queue. Layer management PDUs are put 
+in a separate queue (per N-1 port) that has strict priority over the data transfer FIFO queue. When the queue is 
+full, the PDUs that try to be enqueued are dropped. 
+
+   * **Policy name**: default.
+   * **Policy version**: 1.
+
+Example configuration:
+
+     "rmtConfiguration" : {
+        "pftConfiguration" : {
+            ....
+	    }
+        },
+        "policySet" : {
+          "name" : "default",
+          "version" : "1",
+          "parameters" : [{
+             "name"  : "q_max",
+             "value" : "1000"
+          }]
+        }
+     }
+
+   * **q_max**: The size of the FIFO queue (in PDUs). The default value is **1000** PDUs.
+
+###### 3.2.2.4.5 RMT policy: DECNET's binary feedback congestion control
+This policy extends the RMT default policy by marking queued PDUs with the ECN flag when 
+the average queue size is greater than 1 PDU.
+
+   * **Policy name**: cas-ps.
+   * **Policy version**: 1.
+
+Example configuration:
+
+     "rmtConfiguration" : {
+        "pftConfiguration" : {
+            ....
+            }
+        },
+        "policySet" : {
+          "name" : "cas-ps",
+          "version" : "1",
+          "parameters" : [{
+             "name"  : "q_max",
+             "value" : "1000"
+          }]
+        }
+     }
+
+   * **q_max**: The size of the FIFO queue (in PDUs). The default value is **1000** PDUs.
+
+###### 3.2.2.4.5 RMT policy: Random Early Detection (RED)
+This policy extends the RMT default policy by marking queued PDUs with the ECN flag according 
+to the Random Early Detection (RED) algorithm.
+
+   * **Policy name**: red-ps.
+   * **Policy version**: 1.
+
+Example configuration:
+
+     "rmtConfiguration" : {
+        "pftConfiguration" : {
+            ....
+            }
+        },
+        "policySet" : {
+          "name" : "red-ps",
+          "version" : "1",
+          "parameters" : [{
+             "name"  : "q_max",
+             "value" : "1000"
+          }]
+        }
+     }
+
+   * **q_max**: The size of the FIFO queue (in PDUs). The default value is **1000** PDUs.
 
 ##### 3.2.2.5 Enrollment Task
 TODO
