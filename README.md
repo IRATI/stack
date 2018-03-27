@@ -620,7 +620,38 @@ Example configuration:
    * **q_threshold**: Sets the queue threshold. If the queue size is exceeded, PDUs will be marked with ECN flag.
 
 ##### 3.2.2.5 Enrollment Task
-TODO
+Configuration of the enrollment task, which carries out the procedures by which an IPC Process joins a DIF. Currently 
+only the default policy is supported by IRATI.
+
+     "enrollmentTaskConfiguration" : {
+        "policySet" : {
+           "name" : "default",
+           "version" : "1",
+           "parameters" : [{
+               "name"  : "enrollTimeoutInMs",
+               "value" : "10000"
+             },{
+               "name"  : "watchdogPeriodInMs",
+               "value" : "30000"
+             },{
+               "name"  : "declaredDeadIntervalInMs",
+               "value" : "120000"
+             },{
+               "name"  : "useReliableNFlow",
+               "value" : "false"
+             },{
+               "name"  : "maxEnrollmentRetries",
+               "value" : "3"
+             }]
+        }
+     }
+
+   * **enrollTimeoutInMs**: timeout to wait for response messages during enrollment procedures
+   * **watchdogPeriodInMs**: period of the watchdog mechanism, to detect if the application connection with a peer IPC Process is still alive
+   * **declaredDeadIntervalInMs**: if no watchdog message has been sent or received from a neighbor IPCP during this period, the 
+application connection is closed and the N-1 flow deallocated
+   * **useReliableNFlow**: true if a realible N-flow is to be used to communicate with the neighbor IPCP (layer management)
+   * **maxEnrollmentRetries**: how many times enrollment should be retried in case of failure
 
 ##### 3.2.2.6 Flow Allocator
 TODO
