@@ -207,9 +207,9 @@ For exmples of different JSON configuration files, you can take a look at
 https://github.com/IRATI/stack/tree/master/tests/conf.
 
 ##### 3.2.2.1 Data Transfer Constants
-Customize the length of the header fields in EFCP data transfer (*address*, *cep-id*, *length*, *port-id*, 
-, *sequence number*, *qos-id*) and control (*rate*, *frame*, *control seq. number*) PDUs. Set the 
-*maximum PDU size* and *maximum PDU lifetime* for the DIF.
+Customize the length of the header fields in EFCP data transfer (**address**, **cep-id**, **length**, 
+**port-id**, **sequence number**, **qos-id**) and control (**rate**, **frame**, **control seq. number**) 
+PDUs. Set the **maximum PDU size** and **maximum PDU lifetime** for the DIF.
 
     "dataTransferConstants" : {
     	"addressLength" : 2,
@@ -226,7 +226,58 @@ Customize the length of the header fields in EFCP data transfer (*address*, *cep
     },
 
 ##### 3.2.2.2 QoS Cubes
-TODO
+Define what are the characteristics of the different QoS cube supported by the DIF,
+as well as their associated EFCP policies: DTP policy set (data transfer policy set) 
+and DTCP policy set (data transfer policy set).
+
+    "qosCubes" : [ {
+	 "name" : "unreliablewithflowcontrol",
+         "id" : 1,
+         "partialDelivery" : false,
+         "orderedDelivery" : true,
+         "efcpPolicies" : {
+              "dtpPolicySet" : {
+                "name" : "default",
+                "version" : "0"
+              },
+              "initialATimer" : 300,
+              "dtcpPresent" : true,
+              "dtcpConfiguration" : {
+                   "dtcpPolicySet" : {
+                     "name" : "default",
+                     "version" : "0"
+                   },
+                   "rtxControl" : false,
+                   "flowControl" : true,
+                   "flowControlConfig" : {
+                       "rateBased" : false,
+                       "windowBased" : true,
+                       "windowBasedConfig" : {
+                         "maxClosedWindowQueueLength" : 50,
+                         "initialCredit" : 50
+                        }
+                   }
+              }
+          }
+       }, {
+       "name" : "reliablewithflowcontrol",
+       ...
+       } ]
+
+   * **Name**: the name of the qos cube (a string)
+   * **id**: the id of the qos cube (an unsigned integer)
+   * **partialDelivery**: true/false depending if delivery of partial SDUs is supported
+   * **orderedDelivery**: true/false depending if in order delivery of SDUs is required
+   * **initialATimer**: initial value of the A timer, in ms
+   * **dtpPolicySet**: name and version of the DTP policy set associated to this QoS cube
+   * **dtcpPresent**: true if a DTCP instance is required for every DTP instance, false otherwise
+   * **dtcpPolicySet**: name and verison of the DTCP policy set associated to this QoS cube
+   * **rtxControl**: true if DTCP performs rtx control, false otherwise
+   * **flowControl**: true if DTCP performs flow control, false otherwise
+   * **rateBased**: true if DTCP performs rate-based flow control, false otherwise
+   * **windowBased**: true if DTCP performs window-based flow control, false otherwise
+   * **maxClosedWindowQueueLength**: maximum length of the closed window queue
+   * **initialCredit**: initial credit of the window (only if window-based flow control is used)
 
 ##### 3.2.2.3 Known IPC Process addresses
 TODO
