@@ -289,11 +289,18 @@ The DTCP flow control policy does not react to congestion, packet loss or RTT de
    * **Policy name**: default.
    * **Policy version**: 0.
 
+Example configuration:
+
+    "dtcpPolicySet" : {
+        "name" : "default",
+        "version" : "0"
+    }
+
 ###### 3.2.2.2.2 DECNET binary feedback congestion control
 Extends the default DTCP policies by reacting to congestion and adapting the window size, based 
 on Raj Jain's binary feedback congestion control (additive increase, multiplicative decrease).
 Since the policy relies on Explicit Congestion Notification (ECN), it must be used in conjunction 
-with its companion RMT policy.
+with its companion RMT policy (cas-ps).
 
    * **Policy name**: cas-ps.
    * **Policy version**: 1.
@@ -310,23 +317,49 @@ Example configuration:
     }
 
    * **w_inc_a_p**: Number of units by which the window size will be increased under "additive
-increase" state.
+increase" state (the default value is **1**)
 
-###### 3.2.2.2.2 TCP ECN congestion control 
+###### 3.2.2.2.3 TCP ECN congestion control 
 Extends the default DTCP policies by reacting to congestion and adapting the window size, based
-on Raj Jain's binary feedback congestion control (additive increase, multiplicative decrease).
-Since the policy relies on Explicit Congestion Notification (ECN), it must be used in conjunction
-with its companion RMT policy.
+on TCP Reno's congestion control strategy (but using Explicit Congestion Notification instead 
+of packet loss as a sign of congestion). Since the policy relies on Explicit Congestion 
+Notification (ECN), it must be used in conjunction with an ECN-marking RMT policy (such as 
+cas-ps or red-ps).
 
-   * **Policy name**: cas-ps.
+   * **Policy name**: red-ps.
    * **Policy version**: 1.
 
 Example configuration:
 
     "dtcpPolicySet" : {
-                     "name" : "default",
-                     "version" : "0"
-                   },
+        "name" : "red-ps",
+        "version" : "1"
+    }
+
+###### 3.2.2.2.4 Data Center TCP congestion control
+Extends the default DTCP policies by reacting to congestion and adapting the window size, based
+on the Data Center TCP (DCTCP) scheme. The goal of DCTCP is to achieve high burst tolerance, 
+low latency, and high throughput, with commodity shallow buffered switches. DCTCP achieves these 
+goals primarily by reacting to congestion in proportion to the extent of congestion. Since the 
+policy relies on Explicit Congestion Notification, it must be used with its companion ECN-marking 
+RMT policy (dctcp-ps).
+
+   * **Policy name**: dctcp-ps.
+   * **Policy version**: 1.
+        
+Example configuration: 
+           
+    "dtcpPolicySet" : {
+        "name" : "dctcp-ps",
+        "version" : "1",
+        "parameters" : [{
+           "name"  : "shift_g",
+           "value" : "4"
+        }]
+    }
+
+   * **shift_g**: According the DCTCP paper, the g value should be small enough and all experiments 
+in the paper use `g = 0.0625 (1/16)`. Thus, the `shift_g = 4` is `2^4 = 16` (the default value is **4**)
 
 ##### 3.2.2.3 Known IPC Process addresses
 TODO
