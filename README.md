@@ -362,7 +362,30 @@ Example configuration:
 in the paper use `g = 0.0625 (1/16)`. Thus, the `shift_g = 4` is `2^4 = 16` (the default value is **4**)
 
 ##### 3.2.2.3 Known IPC Process addresses
-TODO
+IRATI only supports a very simple static address allocation policy right now. The configuration file 
+defines a mapping betwenn the IPC Process application names and its address. It assumes that the 
+IPC Process name is of the form *<name.Organization>*, so that if a specific entry for a name is not 
+found but the configuration file defines what prefix is assgined to the *Organization*, then an address 
+of the *Organization* range can still be assigned.
+
+Example configuration:
+
+     "knownIPCProcessAddresses" : [ {
+         "apName" : "C.IRATI",
+         "apInstance" : "1",
+         "address" : 3
+          }, {
+         "apName" : "D.IRATI",
+         "apInstance" : "1",
+         "address" : 4
+        } ],
+        "addressPrefixes" : [ {
+         "addressPrefix" : 0,
+         "organization" : "N.Bourbaki"
+          }, {
+         "addressPrefix" : 16,
+         "organization" : "IRATI"
+      } ]
 
 ##### 3.2.2.3 Relaying and Multiplexing Task
 TODO
