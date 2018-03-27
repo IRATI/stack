@@ -207,7 +207,23 @@ For exmples of different JSON configuration files, you can take a look at
 https://github.com/IRATI/stack/tree/master/tests/conf.
 
 ##### 3.2.2.1 Data Transfer Constants
-TODO
+Customize the length of the header fields in EFCP data transfer (*address*, *cep-id*, *length*, *port-id*, 
+, *sequence number*, *qos-id*) and control (*rate*, *frame*, *control seq. number*) PDUs. Set the 
+*maximum PDU size* and *maximum PDU lifetime* for the DIF.
+
+    "dataTransferConstants" : {
+    	"addressLength" : 2,
+    	"cepIdLength" : 2,
+    	"lengthLength" : 2,
+    	"portIdLength" : 2,
+    	"qosIdLength" : 2,
+    	"rateLength" : 4,
+    	"frameLength" : 4,
+    	"sequenceNumberLength" : 4,
+    	"ctrlSequenceNumberLength" : 4,
+    	"maxPduSize" : 1470,
+    	"maxPduLifetime" : 60000
+    },
 
 ##### 3.2.2.2 QoS Cubes
 TODO
