@@ -3,6 +3,9 @@
 
 1. Introduction
 2. Build instructions
+    2.1 Building on Ubuntu 16.04, Debian 8 and Debian 9
+    2.2 Building on Arch Linux
+    2.3 Building on Raspbian
 3. Running and configuring IRATI
     3.1 Loading the kernel modules
     3.2 The configuration files
@@ -848,7 +851,7 @@ Format of configuration:
         }  
      } 
 
-Each parameter is an entry (or multiple) of the next-hop table. The value of the parameter can refer to a 
+Each parameter is an entry (or multiple) of the next-hop table. The name of the parameter can refer to a 
    * Single destination address: "19"
    * A range of destination addresses: "20-31"
    * All destination addresses: "defaultNextHop"
