@@ -288,6 +288,7 @@ The DTCP flow control policy does not react to congestion, packet loss or RTT de
 
    * **Policy name**: default.
    * **Policy version**: 0.
+   * **Dependencies**: None.
 
 Example configuration:
 
@@ -304,6 +305,8 @@ with its companion RMT policy (cas-ps).
 
    * **Policy name**: cas-ps.
    * **Policy version**: 1.
+   * **Dependencies**:
+   ** **RMT policy**: cas-ps.
 
 Example configuration:
 
