@@ -331,6 +331,8 @@ cas-ps or red-ps).
 
    * **Policy name**: red-ps.
    * **Policy version**: 1.
+   * **Dependencies**:
+      * **RMT policy**: red-ps or cas-ps.
 
 Example configuration:
 
@@ -349,6 +351,8 @@ RMT policy (dctcp-ps).
 
    * **Policy name**: dctcp-ps.
    * **Policy version**: 1.
+   * **Dependencies**:
+      * **RMT policy**: dctcp-ps.
         
 Example configuration: 
            
@@ -418,6 +422,7 @@ value is ignored).
 
    * **Policy name**: default.
    * **Policy version**: 1.
+   * **Dependencies**: none.
 
 Example configuration:
     
@@ -437,6 +442,7 @@ N-1 port.
 
    * **Policy name**: multipath.
    * **Policy version**: 1.
+   * **Dependencies**: none.
    
 Example configuration:
     
@@ -456,6 +462,7 @@ destination addresses where the failing port-id was the active one.
             
    * **Policy name**: lfa.
    * **Policy version**: 1.
+   * **Dependencies**: none.
 
 Example configuration:
      
@@ -474,6 +481,7 @@ full, the PDUs that try to be enqueued are dropped.
 
    * **Policy name**: default.
    * **Policy version**: 1.
+   * **Dependencies**: none.
 
 Example configuration:
 
@@ -500,6 +508,8 @@ the average queue size is greater than 1 PDU.
 
    * **Policy name**: cas-ps.
    * **Policy version**: 1.
+   * **Dependencies**:
+      * **DTCP policy**: cas-ps.
 
 Example configuration:
 
@@ -527,6 +537,8 @@ the ECN flag according to the configured thresholds.
 
    * **Policy name**: red-ps.
    * **Policy version**: 1.
+   * **Dependencies**:
+      * **DTCP policy**: red-ps.
 
 Example configuration:
 
@@ -569,6 +581,8 @@ the threshold, the RMT starts to mark PDUs with explicit congestion flag (ECN).
 
    * **Policy name**: dctcp-ps.
    * **Policy version**: 1.
+   * **Dependencies**:
+      * **DTCP policy**: dctcp-ps.
    
 Example configuration:
 
@@ -687,6 +701,7 @@ approach. The address assignment policy is static and uses the information from 
 
    * **Policy name**: default.
    * **Policy version**: 1.
+   * **Dependencies**: none.
 
 Example configuration:
 
@@ -707,6 +722,8 @@ the initial value once it reaches the end of the "range". This policy must be us
 
    * **Policy name**: address-change.
    * **Policy version**: 1.
+   * **Dependencies**:
+      * **routing policy**: link-state.
 
 Example configuration:
 
@@ -753,6 +770,120 @@ policy is supported in IRATI.
 ##### 3.2.2.9 Routing
 The routing policy is in charge of generating and maintaining the next-hop table, and passing this information to the Resource 
 Allocator's PDU Forwarding Table generator policy.
+
+###### 3.2.2.9.1 Link-state routing policy
+Implements a link-state routing policy, equivalent to the behaviour of routing protocols such as IS-IS (with a single area).
+ 
+   * **Policy name**: link-state.
+   * **Policy version**: 1.
+   * **Dependencies**: none.
+        
+Example configuration:
+          
+     "routingConfiguration" : {
+        "policySet" : {
+          "name" : "link-state",
+          "version" : "1",
+          "parameters" : [{
+             "name"  : "objectMaximumAge",
+             "value" : "10000"
+           },{
+             "name"  : "waitUntilReadCDAP",
+             "value" : "5001"
+           },{
+             "name"  : "waitUntilError",
+             "value" : "5001"
+           },{
+             "name"  : "waitUntilPDUFTComputation",
+             "value" : "103"
+           },{
+             "name"  : "waitUntilFSODBPropagation",
+             "value" : "101"
+           },{
+             "name"  : "waitUntilAgeIncrement",
+             "value" : "997" 
+           }, {
+             "name" : "waitUntilDeprecateAddress",
+             "value" : "20001"
+           },{
+             "name"  : "routingAlgorithm",
+             "value" : "ECMPDijkstra"
+           }]       
+	} 
+     }
+
+   * **objectMaximumAge**: maximum age that an object can reach before being deprecated
+   * **waitUntilPDUFTComputation**: Period (in ms) to check if the PDU Forwarding Table needs to be recomputed
+   * **waitUntilFSODBPropagation**: Period (in ms) to check if the link-state objects in the RIB need to be propagated
+   * **waitUntilAgeIncrement**: Period (in ms) to check if the age of an object in the RIB needs to be increased
+   * **waitUntilDeprecateAddress**: Time to wait (in ms) before deprecating an address in a link-state routing object after 
+an address change event (only useful if there is renumbering going on in the DIF. Must be the same as the **deprecateOldTimeout** 
+parameter in the address-change namespacemanager policy)
+   * **routingAlgorithm**: The routing algorithm to generate the next-hop table. Available algorithms:
+      * **Dijkstra**: Computes the least-cost next hop to all destination addresses in the DIF (single next-hop per destination address)
+      * **ECMPDijkstra**: Computes all the equal-cost next hops to all destination addresses in the DIF (multiple next-hops per destination address)
+
+###### 3.2.2.9.2 Static routing policy
+Implements a static routing policy, in which all entries of the next-hop table are provided at IPC Process configuration time.
+
+   * **Policy name**: static.
+   * **Policy version**: 1.
+   * **Dependencies**: none.
+
+Format of configuration:
+
+     "routingConfiguration" : {
+        "policySet" : {
+          "name" : "static",
+          "version" : "1",
+          "parameters" : [{
+             "name"  : "<dest-address (single/range/all)>",
+             "value" : "<qos_id>-<cost>-<next_hop_addresss>"
+           },{
+             "name"  : "<dest-address (single/range/all)>",
+             "value" : "<qos_id>-<cost>-<next_hop_addresss>"
+           },{
+               ....
+           }]        
+        }  
+     } 
+
+Each parameter is an entry (or multiple) of the next-hop table. The value of the parameter can refer to a 
+   * Single destination address: "19"
+   * A range of destination addresses: "20-31"
+   * All destination addresses: "defaultNextHop"
+
+While the value of the parameter is the next hop address for a given cost and qos_id.
+
+Example configurations:
+
+     "routingConfiguration" : {
+        "policySet" : {
+          "name" : "static",
+          "version" : "1",
+          "parameters" : [{
+             "name"  : "defaultNextHop",
+             "value" : "0-1-18"
+           }]
+        }
+     }
+
+     "routingConfiguration" : {
+        "policySet" : { 
+          "name" : "static",
+          "version" : "1",
+          "parameters" : [{
+             "name"  : "1-16",
+             "value" : "0-1-18"
+           }, {
+             "name"  : "15-30",
+             "value" : "0-1-19"
+           }, {
+             "name"  : "32",
+             "value" : "0-1-20"
+           }]
+        }
+     }
 
 ##### 3.2.2.10 Security Manager
 TODO
