@@ -889,9 +889,160 @@ Example configurations:
      }
 
 ##### 3.2.2.10 Security Manager
-TODO
+The security manager configuration contains the security manager policy and zero or more configuration 
+items for "authentication and SDU protection profiles" (authSDUProfiles). Each authSDUProfile contains 
+a consistent set of authentication and SDU protection that need to be used to communicate with all 
+neighbor IPC Processes, or only with neighbor IPC Processes over specific N-1 DIFs.
 
+Example format:
 
+    "securityManager" : {
+        "policySet" : {
+          "name" : "default",
+          "version" : "0"
+        },
+        "authSDUProtProfiles" : {
+           "default" : {
+              "authPolicy" : {
+              	"name" : "PSOC_authentication-sshrsa",
+          	"version" : "1",
+          	"parameters" : [ {
+          	   "name" : "keyExchangeAlg",
+          	   "value" : "EDH"
+          	}, {
+                   "name" : "keystore",
+                   "value" : "/usr/local/irati/etc/private_key.pem"
+                }, {
+                   "name" : "keystorePass",
+                   "value" : "test"
+                } ]
+
+              },
+              "encryptPolicy" : {
+                 "name" : "default",
+                 "version" : "1",
+                 "parameters" : [ {
+          	   "name" : "encryptAlg",
+          	   "value" : "AES128"
+          	}, {
+          	   "name" : "macAlg",
+          	   "value" : "SHA1"
+          	}, {
+          	   "name" : "compressAlg",
+          	   "value" : "default"
+                } ]
+              },
+              "TTLPolicy" : {
+                 "name" : "default",
+                 "version" : "1",
+                 "parameters" : [ {
+                    "name" : "initialValue",
+                    "value" : "50"
+                  } ]
+                },
+                "ErrorCheckPolicy" : {
+                   "name" : "CRC32",
+                   "version" : "1"
+                }
+           },
+           "specific" : [ {
+               "underlyingDIF" : "100",
+               "authPolicy" : {
+               	  "name" : "PSOC_authentication-none",
+           	  "version" : "1"
+                }
+           }, {
+               "underlyingDIF" : "110",
+               "authPolicy" : {
+               	  "name" : "PSOC_authentication-password",
+           	  "version" : "1",
+           	  "parameters" : [ {
+           	     "name" : "password",
+           	     "value" : "kf05j.a1234.af0k"
+           	  } ]
+                },
+                "TTLPolicy" : {
+                   "name" : "default",
+                   "version" : "1",
+                   "parameters" : [ {
+                      "name" : "initialValue",
+                      "value" : "50"
+                   } ]
+                },
+                "ErrorCheckPolicy" : {
+                   "name" : "CRC32",
+                   "version" : "1"
+                }
+           } ]
+        }
+    }
+ }
+
+###### 3.2.2.10.1 Authentication policy: NULL authentication policy
+The policy performs no authentication, just checks policy names and versions and returns success.
+
+   * **Policy name**: PSOC_authentication-none.
+   * **Policy version**: 1.
+   * **Dependencies**: none.
+
+Example configuration:
+
+    "authPolicy" : {
+        "name" : "PSOC_authentication-none",
+        "version" : "1"
+    }
+
+###### 3.2.2.10.2 Authentication policy: password-based
+Authentication is carried out by hashing a random string with a shared secret (the password).
+
+   * **Policy name**: PSOC_authentication-password.
+   * **Policy version**: 1.
+   * **Dependencies**: none.
+            
+Example configuration:
+               
+    "authPolicy" : {
+        "name" : "PSOC_authentication-password",
+        "version" : "1",
+        "parameters" : [ {
+             "name" : "password",
+              "value" : "kf05j.a1234.af0k"
+         } ]
+    }
+
+    * **password**: the shared secret
+
+###### 3.2.2.10.3 Authentication policy: SSH2-based
+Authentication policy that mimics the behaviour of the SSH2 protocol authentication mechanism.
+
+   * **Policy name**: PSOC_authentication-ssh2.
+   * **Policy version**: 1.
+   * **Dependencies**:
+      * **SDU Protection: encrypt policy**: default
+            
+Example configuration:
+               
+    "authPolicy" : {
+        "name" : "PSOC_authentication-ssh2",
+        "version" : "1",
+        "parameters" : [ {
+            "name" : "keyExchangeAlg",
+            "value" : "EDH"
+        }, {
+            "name" : "keystore",
+            "value" : "/usr/local/irati/etc/creds"
+        }, {
+            "name" : "keystorePass",
+            "value" : "test"
+        } ]
+    }
+
+    * **keyExchangeAlg**: The key exchange algorithm. Only **EDH** is available right now (Elliptic-Curve Diffie-Hellman.
+    * **keyStore**: A folder containing the credentials. The contents of the folder should be the following files:
+       * **key**: The RSA private key of the IPCP in PEM format (generated for example with openssl genrsa -out key 2048)
+       * **public_key**: The RSA public key of the IPCP in PEM format (extracted from the private key file, for example with openssl rsa -in key -pubout > mykey.pub)
+       * For each IPCP whose public key is known, a file containing his public key in PEM format. The file must be named with the IPC Process application process name. For example, imagine the IPCP has 3 neighbours, then there would be 3 files: B.IRATI, C.IRATI and D.IRATI.
+    * **keystorePass**: Password to decrypt information in the keystore (if needed)
 
 #### 3.2.3 Application to DIF mappings
 The da.map file contains the preferences for which DIFs should be used to register and to allocate 
