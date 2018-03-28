@@ -976,7 +976,6 @@ Example format:
            } ]
         }
     }
- }
 
 ###### 3.2.2.10.1 Authentication policy: NULL authentication policy
 The policy performs no authentication, just checks policy names and versions and returns success.
@@ -1010,7 +1009,7 @@ Example configuration:
          } ]
     }
 
-    * **password**: the shared secret
+   * **password**: the shared secret
 
 ###### 3.2.2.10.3 Authentication policy: SSH2-based
 Authentication policy that mimics the behaviour of the SSH2 protocol authentication mechanism.
@@ -1018,7 +1017,7 @@ Authentication policy that mimics the behaviour of the SSH2 protocol authenticat
    * **Policy name**: PSOC_authentication-ssh2.
    * **Policy version**: 1.
    * **Dependencies**:
-      * **SDU Protection: encrypt policy**: default
+      * **SDU Protection, crypto policy**: default
             
 Example configuration:
                
@@ -1037,12 +1036,106 @@ Example configuration:
         } ]
     }
 
-    * **keyExchangeAlg**: The key exchange algorithm. Only **EDH** is available right now (Elliptic-Curve Diffie-Hellman.
-    * **keyStore**: A folder containing the credentials. The contents of the folder should be the following files:
-       * **key**: The RSA private key of the IPCP in PEM format (generated for example with openssl genrsa -out key 2048)
-       * **public_key**: The RSA public key of the IPCP in PEM format (extracted from the private key file, for example with openssl rsa -in key -pubout > mykey.pub)
-       * For each IPCP whose public key is known, a file containing his public key in PEM format. The file must be named with the IPC Process application process name. For example, imagine the IPCP has 3 neighbours, then there would be 3 files: B.IRATI, C.IRATI and D.IRATI.
-    * **keystorePass**: Password to decrypt information in the keystore (if needed)
+   * **keyExchangeAlg**: The key exchange algorithm. Only **EDH** is available right now (Elliptic-Curve Diffie-Hellman.
+   * **keyStore**: A folder containing the credentials. The contents of the folder should be the following files:
+      * **key**: The RSA private key of the IPCP in PEM format (generated for example with openssl genrsa -out key 2048)
+      * **public_key**: The RSA public key of the IPCP in PEM format (extracted from the private key file, for example with openssl rsa -in key -pubout > mykey.pub)
+      * For each IPCP whose public key is known, a file containing his public key in PEM format. The file must be named with the IPC Process application process name. For example, imagine the IPCP has 3 neighbours, then there would be 3 files: B.IRATI, C.IRATI and D.IRATI.
+   * **keystorePass**: Password to decrypt information in the keystore (if needed)
+
+###### 3.2.2.10.4 Authentication policy: TLS-Handhsake based
+Authentication policy that mimics the behaviour of the TLS handshake protocol.
+
+   * **Policy name**: PSOC_authentication-tlshandshake
+   * **Policy version**: 1.
+   * **Dependencies**:
+      * **SDU Protection, crypto policy**: default
+            
+Example configuration:
+               
+    "authPolicy" : {
+        "name" : "PSOC_authentication-tlshandshake",
+        "version" : "1",
+        "parameters" : [ {
+            "name" : "keystore",
+            "value" : "/usr/local/irati/etc/creds"
+        }, {
+            "name" : "keystorePass",
+            "value" : "test"
+        } ] 
+    }   
+
+   * **keyStore**: A folder containing the credentials. The contents of the folder should be the following files:
+      * **key**: contains the RSA private key of the IPCP, in PEM format.
+      * **cert.pem**: contains the certificate of the IPCP, in PEM format.
+      * **<cert_name>.pem**: one PEM file for every certificate required to reach the (or one of the) root of trust of the DIF (root CA).
+   * **keystorePass**: Password to decrypt information in the keystore (if needed)
+
+###### 3.2.2.10.5 SDU Protection, crypto policy: default
+The default SDU protection policies carries out cryptographic manipulations of the PDU before being trasmitted through 
+an N-1 flow, in order to provide confidentiality and message integrity services. The policy performs the following operations:
+encryption, padding, generating message auhentication (MAC) codes and compression; as well as their counterpart operations.
+
+   * **Policy name**: default                  
+   * **Policy version**: 1.
+   * **Dependencies**:
+      * **Authentication policy**: PSOC_authentication-tlshandshake or PSOC_authentication-ssh2
+
+Example configuration:
+
+    "encryptPolicy" : {
+        "name" : "default",
+        "version" : "1",
+        "parameters" : [ {
+            "name" : "encryptAlg",
+            "value" : "AES128"
+         }, {
+            "name" : "macAlg",
+            "value" : "SHA256"
+         }, {
+            "name" : "compressAlg",
+            "value" : "deflate"
+         } ]
+    }
+
+   * **encryptAlg**: The encryption algorithm to be used. Currently two are supported: AES128 and AES256.
+   * **macAlg**: The algorithm to generate a MAC code. Supported algorithms are: MD5, SHA1 and SHA256.
+   * **compressAlg**: The algorithm to compress/decompress PDUs. Only the "deflate" algorithm is supported.
+
+###### 3.2.2.10.6 SDU Protection, PDU lifetime enforcement: default
+The default PDU lifetime enforcement policy is a hopcount that starts on a configured initial value and 
+is decremented at each hop. When it reaches 0, the PDU is dropeed.
+
+   * **Policy name**: default
+   * **Policy version**: 1
+   * **Dependencies**: none
+      
+Example configuration:
+
+    "TTLPolicy" : {
+        "name" : "default",
+        "version" : "1",
+        "parameters" : [ {
+           "name" : "initialValue",
+           "value" : "50"
+        } ]
+    }
+   
+   * **initialValue**: Initial value of the hopcount.
+
+###### 3.2.2.10.7 SDU Protection, error protection: CRC32
+This policy protects the PDU against random errors on its bytes by appending a CRC32 field to it.
+
+   * **Policy name**: CRC32
+   * **Policy version**: 1
+   * **Dependencies**: none
+
+Example configuration:
+
+    "ErrorCheckPolicy" : {
+        "name" : "CRC32",
+        "version" : "1"
+    }
 
 #### 3.2.3 Application to DIF mappings
 The da.map file contains the preferences for which DIFs should be used to register and to allocate 
