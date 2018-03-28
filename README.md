@@ -654,16 +654,102 @@ application connection is closed and the N-1 flow deallocated
    * **maxEnrollmentRetries**: how many times enrollment should be retried in case of failure
 
 ##### 3.2.2.6 Flow Allocator
-TODO
+Flow allocator maps allocate flow requests to a specific QoS cube, and chooses any policies/parameters 
+that the QoS cube definition has not already fixed. The default policy just distinguishes between 
+reliable (with rtx control and in order-delivery) and unreliable flow requests.
+
+     "flowAllocatorConfiguration" : {
+         "policySet" : {
+           "name" : "default",
+           "version" : "1"
+          }
+     }
 
 ##### 3.2.2.7 Namespace Manager
-TODO
+The namespace manager maintains the distributted mapping of application process name to IPC Process address 
+within a DIF, and is also responsible for IPCP address assignment. 
+
+     "namespaceManagerConfiguration" : {
+         "policySet" : {
+           "name" : "default",
+           "version" : "1"
+           }
+     }
+
+###### 3.2.2.7.1 Default policy
+The default policy keeps a fully replicated database of application names to IPCP addresses. When an application 
+registers to the IPCP a new mapping is added to the RIB and disseminated to peer IPCPs via a controlled flooding 
+approach. The address assignment policy is static and uses the information from the "known IPC Processes" and 
+"address prefixes" configuration items.
+
+   * **Policy name**: default.
+   * **Policy version**: 1.
+
+Example configuration:
+
+    "namespaceManagerConfiguration" : {
+        "policySet" : {
+            "name" : "default",
+            "version" : "1"
+         }
+     }
+
+###### 3.2.2.7.2 Address change policy
+This policy extends the default policy with an address assignment policy that periodically changes the address 
+of the IPC Process. It assigns and initial address based on the information form the "known IPC Processes" and 
+"address prefixes" configuration items, but it multiplies it for the "range" parameter. Then, it periodically 
+changes the address (randomly within a time interval), walking all the values within the "range" and starting from 
+the initial value once it reaches the end of the "range". This policy must be used in conjunction with the 
+**link-state** routing policy.
+
+   * **Policy name**: address-change.
+   * **Policy version**: 1.
+
+Example configuration:
+
+     "namespaceManagerConfiguration" : {
+        "policySet" : {
+          "name" : "address-change",
+          "version" : "1",
+          "parameters" : [{
+               "name"  : "useNewTimeout",
+               "value" : "10001"
+             },{
+               "name"  : "deprecateOldTimeout",
+               "value" : "20001"
+             },{
+               "name"  : "changePeriod",
+               "value" : "30001"
+             },{
+               "name"  : "addressRange",
+               "value" : "100"
+          }]
+       } 
+     }
+
+   * **useNewTimeout**: Time ellapsed (in ms) after the address change event upon which the new address can be used as source 
+address in the header of EFCP PDUs.
+   * **deprecateOldTimeout**: Time ellapsed (in ms) after the address change event upon which the old address can be discarded.
+Must have the same value as the **waitUntilDeprecateAddress** parameter of the **link-state** routing policy configuration.
+   * **changePeriod**: Time interval between address change events (in ms).
+   * **addressRange**: Range of addresses available to a single IPC Process.
 
 ##### 3.2.2.8 Resource Allocator
-TODO
+Generates the PDU forwarding table based on input from the routing policy (next-hop table). Right now only the default 
+policy is supported in IRATI.
+
+     "resourceAllocatorConfiguration" : {
+         "pduftgConfiguration" : {    
+           "policySet" : {
+             "name" : "default",
+             "version" : "0"
+           }
+         }
+     } 
 
 ##### 3.2.2.9 Routing
-TODO
+The routing policy is in charge of generating and maintaining the next-hop table, and passing this information to the Resource 
+Allocator's PDU Forwarding Table generator policy.
 
 ##### 3.2.2.10 Security Manager
 TODO
