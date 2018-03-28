@@ -87,6 +87,7 @@ public:
         virtual void ipcp_deallocate_port_response_event_handler(const rina::DeallocatePortResponseEvent& event) = 0;
         virtual void ipcp_write_mgmt_sdu_response_event_handler(const rina::WriteMgmtSDUResponseEvent& event) = 0;
         virtual void ipcp_read_mgmt_sdu_notif_event_handler(rina::ReadMgmtSDUResponseEvent& event) = 0;
+        virtual void ipcp_scan_media_request_event_handler(rina::ScanMediaRequestEvent& event) = 0;
         // Cause relevant IPCP components to sync with information
         // exported by the kernel via sysfs
         virtual void sync_with_kernel() = 0;
@@ -154,6 +155,7 @@ public:
         virtual void ipcp_deallocate_port_response_event_handler(const rina::DeallocatePortResponseEvent& event);
         virtual void ipcp_write_mgmt_sdu_response_event_handler(const rina::WriteMgmtSDUResponseEvent& event);
         virtual void ipcp_read_mgmt_sdu_notif_event_handler(rina::ReadMgmtSDUResponseEvent& event);
+        virtual void ipcp_scan_media_request_event_handler(rina::ScanMediaRequestEvent& event);
 	virtual void sync_with_kernel(void);
 };
 

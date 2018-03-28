@@ -71,6 +71,7 @@ public:
 #endif
 };
 
+
 /**
  * Supporting class for IPC Process DIF Registration events
  */
@@ -1270,6 +1271,16 @@ public:
 
 	/// The rule to select one or more members from the set
 	std::string rule_;
+};
+
+/**
+ * The IPC Manager requests the IPC Process to update the configuration
+ * of the DIF he is currently a member of
+ */
+class ScanMediaRequestEvent: public IPCEvent {
+public:
+	ScanMediaRequestEvent(unsigned int sequenceNumber, unsigned int ctrl_p,
+			      unsigned short ipcp_id);
 };
 
 }

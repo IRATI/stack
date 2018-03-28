@@ -30,6 +30,7 @@
 #include "encoder.h"
 #include "encoders/DataTransferConstantsMessage.pb.h"
 #include "encoders/DirectoryForwardingTableEntryArrayMessage.pb.h"
+#include "encoders/DIFAllocatorMessages.pb.h"
 #include "encoders/QoSCubeArrayMessage.pb.h"
 #include "encoders/WhatevercastNameArrayMessage.pb.h"
 #include "encoders/NeighborArrayMessage.pb.h"
@@ -263,6 +264,75 @@ void DFTEListEncoder::decode(const rina::ser_obj_t &serobj,
 		rina::DirectoryForwardingTableEntry dfte;
 		dft_helpers::toModel(gpb.directoryforwardingtableentry(i), dfte);
 		des_obj.push_back(dfte);
+	}
+}
+
+namespace dif_alloc_helpers {
+void toGPB(const AppToDIFMapping &obj,
+           rina::messages::app_name_to_dif_mapping_t &gpb)
+{
+        gpb.set_allocated_applicationname(
+                        helpers::get_applicationProcessNamingInfo_t(
+                                        obj.app_name));
+        gpb.set_difname(obj.dif_names.front());
+}
+
+void toModel(const rina::messages::app_name_to_dif_mapping_t &gpb,
+             AppToDIFMapping &des_obj)
+{
+        helpers::get_ApplicationProcessNamingInformation(gpb.applicationname(),
+                                                         des_obj.app_name);
+        des_obj.dif_names.push_back(gpb.difname());
+}
+}  // namespace dft_helpers
+
+//CLASS AppDIFMapping
+void AppDIFMappingEncoder::encode(const AppToDIFMapping &obj, rina::ser_obj_t& serobj)
+{
+        rina::messages::app_name_to_dif_mapping_t gpb;
+
+        dif_alloc_helpers::toGPB(obj, gpb);
+
+        serobj.size_ = gpb.ByteSize();
+        serobj.message_ = new unsigned char[serobj.size_];
+        gpb.SerializeToArray(serobj.message_, serobj.size_);
+}
+
+void AppDIFMappingEncoder::decode(const rina::ser_obj_t &serobj, AppToDIFMapping &des_obj)
+{
+        rina::messages::app_name_to_dif_mapping_t gpb;
+        gpb.ParseFromArray(serobj.message_, serobj.size_);
+        dif_alloc_helpers::toModel(gpb, des_obj);
+}
+
+void AppDIFMappingListEncoder::encode(const std::list<AppToDIFMapping> &obj,
+				      rina::ser_obj_t& serobj)
+{
+	rina::messages::app_name_to_dif_mapping_set_t gpb;
+
+	for (std::list<AppToDIFMapping>::const_iterator it = obj.begin();
+			it != obj.end(); ++it) {
+		rina::messages::app_name_to_dif_mapping_t *gpb_dft;
+		gpb_dft = gpb.add_appdifmapping();
+		dif_alloc_helpers::toGPB((*it), *gpb_dft);
+	}
+
+	serobj.size_ = gpb.ByteSize();
+	serobj.message_ = new unsigned char[serobj.size_];
+	gpb.SerializeToArray(serobj.message_, serobj.size_);
+}
+
+void AppDIFMappingListEncoder::decode(const rina::ser_obj_t &serobj,
+				      std::list<AppToDIFMapping> &des_obj)
+{
+	rina::messages::app_name_to_dif_mapping_set_t gpb;
+	gpb.ParseFromArray(serobj.message_, serobj.size_);
+
+	for (int i = 0; i < gpb.appdifmapping_size(); i++)
+	{
+		AppToDIFMapping admap;
+		dif_alloc_helpers::toModel(gpb.appdifmapping(i), admap);
+		des_obj.push_back(admap);
 	}
 }
 

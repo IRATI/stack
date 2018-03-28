@@ -90,7 +90,6 @@ IPCManager_::IPCManager_()
           io_thread(NULL),
           dif_template_manager(NULL),
           dif_allocator(NULL),
-	  ip_vpn_manager(NULL),
 	  osp_monitor(NULL)
 {}
 
@@ -102,10 +101,6 @@ IPCManager_::~IPCManager_()
 
 	if (dif_allocator) {
 		delete dif_allocator;
-	}
-
-	if (ip_vpn_manager) {
-		delete ip_vpn_manager;
 	}
 
 	forwarded_calls.clear();
@@ -141,19 +136,11 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
         io_thread->start();
 
         // Initialize DIF Allocator
-        DIFAllocatorConfig da_config;
-        rina::Parameter param;
-        param.value = config_file;
-        da_config.parameters.push_back(param);
-        da_config.type = StaticDIFAllocator::TYPE;
-        dif_allocator = DIFAllocator::create_instance(da_config);
+        dif_allocator = DIFAllocator::create_instance(config, this);
 
         // Initialize DIF Templates Manager (with its monitor thread)
         dif_template_manager = new DIFTemplateManager(config_file,
                                                       dif_allocator);
-
-        // Initialize IP VPN Manager
-        ip_vpn_manager = new IPVPNManager();
 
         // Initialize OS Process Monitor
 	rina::ThreadAttributes thread_attrs;
@@ -375,6 +362,11 @@ void IPCManager_::list_ipcps(std::ostream& os)
     {
         ipcps[i]->get_description(os);
     }
+}
+
+void IPCManager_::list_da_mappings(std::ostream& os)
+{
+	dif_allocator->list_da_mappings(os);
 }
 
 std::string IPCManager_::query_ma_rib()

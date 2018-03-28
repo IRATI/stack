@@ -120,6 +120,12 @@ PKG_CHECK_MODULES([LIBRINA], [librina],, [
 # FIXME: A cleaner solution would be better
 AC_SUBST([LIBRINA_VERSION],`pkg-config --modversion librina`)
 
+PKG_CHECK_MODULES([LIBRINA_API], [librina-api],, [
+    AC_MSG_ERROR([Your system lacks of librina-api support])
+])
+# FIXME: A cleaner solution would be better
+AC_SUBST([LIBRINA_API_VERSION],`pkg-config --modversion librina-api`)
+
 AC_PATH_PROG([PROTOC], [protoc], [no])
 AS_IF([test "x$PROTOC" = "xno"],[
     AC_MSG_ERROR([Your system lacks of protoc support])

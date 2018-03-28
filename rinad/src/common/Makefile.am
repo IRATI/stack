@@ -38,7 +38,8 @@ librinad_la_SOURCES  =					\
 commonheadersdir = $(includedir)/rinad/common
 commonheaders_HEADERS = \
 	encoder.h	\
-	configuration.h
+	configuration.h \
+	rina-configuration.h
 
 encodersheadersdir = $(includedir)/rinad/common/encoders
 # Here 'make' has entered the build/rinad/src/common directory,
@@ -50,6 +51,7 @@ encodersheaders_HEADERS =					\
 	encoders/DataTransferConstantsMessage.pb.h		\
 	encoders/DirectoryForwardingTableEntryArrayMessage.pb.h	\
 	encoders/DirectoryForwardingTableEntryMessage.pb.h	\
+	encoders/DIFAllocatorMessages.pb.h	\
 	encoders/EnrollmentInformationMessage.pb.h		\
 	encoders/FlowMessage.pb.h				\
 	encoders/FlowStateGroupMessage.pb.h			\

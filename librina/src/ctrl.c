@@ -27,7 +27,6 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <stdint.h>
 #include <errno.h>
 #include <sys/ioctl.h>
 
@@ -158,6 +157,7 @@ int irati_open_ctrl_port(irati_msg_port_t port_id)
 	else
 		info.port_id = port_id;
 
+	LOG_DBG("Calling IOCTL with fd %d and port %u", fd, info.port_id);
 	ret = ioctl(fd, IRATI_CTRL_FLOW_BIND, &info);
 	if (ret) {
 		fprintf(stderr, "ioctl(%s) failed: %s\n", IRATI_CTRLDEV_NAME,

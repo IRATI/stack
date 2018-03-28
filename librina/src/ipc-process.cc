@@ -1728,4 +1728,10 @@ std::string WhatevercastName::toString() {
 	return result;
 }
 
+ScanMediaRequestEvent::ScanMediaRequestEvent(unsigned int sequenceNumber,
+					     unsigned int ctrl_p,
+					     unsigned short ipcp_id) :
+		IPCEvent(IPCP_SCAN_MEDIA_REQUEST_EVENT, sequenceNumber, ctrl_p, ipcp_id)
+{}
+
 }
