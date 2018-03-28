@@ -306,7 +306,7 @@ with its companion RMT policy (cas-ps).
    * **Policy name**: cas-ps.
    * **Policy version**: 1.
    * **Dependencies**:
-   ** **RMT policy**: cas-ps.
+      * **RMT policy**: cas-ps.
 
 Example configuration:
 
