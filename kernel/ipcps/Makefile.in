@@ -17,7 +17,7 @@ EXTRA_CFLAGS := -I$(PWD)/../include
 obj-m  += normal-ipcp.o
 obj-m  += shim-eth-vlan.o
 shim-eth-vlan-y :=				\
-	shim-eth-vlan-core.o shim-eth-utils.o
+	shim-eth-vlan-core.o
 obj-m   += shim-tcp-udp.o
 
 ifeq ($(HAVE_VMPI),y)
