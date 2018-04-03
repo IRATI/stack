@@ -1140,6 +1140,7 @@ QoSCube::QoSCube(){
         max_allowable_gap_ = -1;
         jitter_ = 0;
         delay_ = 0;
+        loss = 10000;
 }
 
 QoSCube::QoSCube(const std::string& name, int id) {
@@ -1155,6 +1156,7 @@ QoSCube::QoSCube(const std::string& name, int id) {
 	max_allowable_gap_ = -1;
 	jitter_ = 0;
 	delay_ = 0;
+	loss = 10000;
 }
 
 void QoSCube::from_c_qos_cube(QoSCube & qo,
@@ -1176,6 +1178,7 @@ void QoSCube::from_c_qos_cube(QoSCube & qo,
 	qo.max_allowable_gap_ = qos->max_allowed_gap;
 	qo.jitter_ = qos->jitter;
 	qo.delay_ = qos->delay;
+	qo.loss = qos->loss;
 	DTPConfig::from_c_dtp_config(qo.dtp_config_, qos->dtpc);
 	DTCPConfig::from_c_dtcp_config(qo.dtcp_config_, qos->dtcpc);
 }
@@ -1196,6 +1199,7 @@ struct qos_cube * QoSCube::to_c_qos_cube() const
 	result->max_allowed_gap = max_allowable_gap_;
 	result->jitter = jitter_;
 	result->delay = delay_;
+	result->loss = loss;
 	result->dtpc = dtp_config_.to_c_dtp_config();
 	result->dtcpc = dtcp_config_.to_c_dtcp_config();
 
@@ -1325,7 +1329,8 @@ void QoSCube::set_undetected_bit_error_rate(double undetected_bit_error_rate) {
 const std::string QoSCube::toString() {
         std::stringstream ss;
         ss<<"Name: "<<name_<<"; Id: "<<id_;
-        ss<<"; Jitter: "<<jitter_<<"; Delay: "<<delay_<<std::endl;
+        ss<<"; Jitter: "<<jitter_<<"; Delay: "<<delay_
+          <<"; Loss probability: "<< loss/10000 <<std::endl;
         ss<<"In oder delivery: "<<ordered_delivery_;
         ss<<"; Partial delivery allowed: "<<partial_delivery_<<std::endl;
         ss<<"Max allowed gap between SDUs: "<<max_allowable_gap_;

@@ -264,6 +264,7 @@ FlowSpecification::FlowSpecification() {
 	maxAllowableGap = -1;
 	jitter = 0;
 	delay = 0;
+	loss = 10000;
 	maxSDUsize = 0;
 	msg_boundaries = false;
 }
@@ -280,13 +281,15 @@ FlowSpecification::FlowSpecification(struct flow_spec * fspec)
 	maxAllowableGap = fspec->max_allowable_gap;
 	jitter = fspec->jitter;
 	delay = fspec->delay;
+	loss = fspec->loss;
 	maxSDUsize = fspec->max_sdu_size;
 	msg_boundaries = fspec->msg_boundaries;
 }
 
 const std::string FlowSpecification::toString() {
         std::stringstream ss;
-        ss<<"Jitter: "<<jitter<<"; Delay: "<<delay<<std::endl;
+        ss<<"Jitter: "<<jitter<<"; Delay: "<<delay
+          <<"; Max loss probability: "<< loss/10000 <<std::endl;
         ss<<"In oder delivery: "<<orderedDelivery;
         ss<<"; Partial delivery allowed: "<<partialDelivery;
         ss<<"; Preserve message boundaries: "<<msg_boundaries<<std::endl;
@@ -308,6 +311,7 @@ struct flow_spec * FlowSpecification::to_c_flowspec() const
 	fspec->average_sdu_bandwidth = averageSDUBandwidth;
 	fspec->delay = delay;
 	fspec->jitter = jitter;
+	fspec->loss = loss;
 	fspec->max_allowable_gap = maxAllowableGap;
 	fspec->max_sdu_size = maxSDUsize;
 	fspec->ordered_delivery = orderedDelivery;
@@ -354,6 +358,10 @@ bool FlowSpecification::operator==(const FlowSpecification &other) const {
 	}
 
 	if (delay != other.delay) {
+		return false;
+	}
+
+	if (loss != other.loss) {
 		return false;
 	}
 

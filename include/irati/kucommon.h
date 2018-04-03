@@ -197,11 +197,17 @@ struct flow_spec {
         uint32_t jitter;
 
         /*
+         * Indicates the maximum packet loss (loss/10000) allowed in this
+         * flow. A value of loss >=10000 indicates 'do not care'
+         */
+        uint16_t loss;
+
+        /*
          * Indicates the maximum gap allowed among SDUs, a gap of N
          * SDUs is considered the same as all SDUs delivered.
          * A value of -1 indicates 'Any'
          */
-        int32_t    max_allowable_gap;
+        int32_t max_allowable_gap;
 
         /*
          * The maximum SDU size for the flow. May influence the choice
@@ -388,6 +394,7 @@ struct qos_cube {
 	int32_t max_allowed_gap;
 	uint32_t delay;
 	uint32_t jitter;
+	uint16_t loss;
 	struct dtp_config * dtpc;
 	struct dtcp_config * dtcpc;
 };
