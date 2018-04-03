@@ -263,16 +263,37 @@ FlowAllocatorQTAPs::newFlowRequest(IPCProcess * ipc_process,
         const rina::FlowSpecification& flowSpec = event.flowSpecification;
         rina::Lockable lock;
         rina::ScopedLock g(lock);
+        unsigned short qos_cube_delay = 0;
+        unsigned short iterator_delay = 0;
+        unsigned short flow_spec_delay = 0;
 
         if (*(qosCubes.begin())==NULL)
 	    throw rina::Exception("No QoSCubes defined.");
 
+        // A value of 0 means user does not care about delay
+        if (flowSpec.delay == 0)
+        	flow_spec_delay = USHRT_MAX;
+        else
+        	flow_spec_delay = flowSpec.delay;
+
         for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
-        	if ((flowSpec.delay == 0 || flowSpec.delay >= (*iterator)->delay_) &&
-        			flowSpec.loss >= (*iterator)->loss) {
+        	// A value of 0 means the QoS cube does not guarantee max delay
+        	if ((*iterator)->delay_ == 0) {
+        		iterator_delay = USHRT_MAX;
+        	} else {
+        		iterator_delay = (*iterator)->delay_;
+        	}
+
+        	if (flow_spec_delay >= iterator_delay && flowSpec.loss >= (*iterator)->loss) {
+        		if (qos_cube && qos_cube->delay_ == 0) {
+        			qos_cube_delay = USHRT_MAX;
+        		} else if (qos_cube) {
+        			qos_cube_delay = qos_cube->delay_;
+        		}
+
         		if (!qos_cube) {
         			qos_cube = *iterator;
-        		} else if (qos_cube->delay_ < (*iterator)->delay_) {
+        		} else if (qos_cube_delay < iterator_delay) {
         			qos_cube = *iterator;
         		} else if (qos_cube->loss < (*iterator)->loss) {
         			qos_cube = *iterator;
