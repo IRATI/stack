@@ -1223,6 +1223,9 @@ usage(void)
         "server\n"
         "   -p NUM : clients run NUM parallel instances, using NUM threads\n"
         "   -w : server runs in background\n"
+        "   -D : test duration (in ms)\n"
+        "   -L : maximum loss probability introduced by the flow (value/10000)\n"
+        "   -E : maximum delay introduced by the flow (ms)\n"
         "   -v : be verbose\n");
 }
 
@@ -1237,6 +1240,8 @@ main(int argc, char **argv)
     int listen             = 0;
     int cnt                = 0;
     int size               = sizeof(uint16_t);
+    int max_delay 	   = 0;
+    int max_loss  	   = 10000;
     int interval           = 0;
     int burst              = 1;
     int background         = 0;
@@ -1266,7 +1271,7 @@ main(int argc, char **argv)
     /* Start with a default flow configuration (unreliable flow). */
     rina_flow_spec_unreliable(&rp->flowspec);
 
-    while ((opt = getopt(argc, argv, "hlt:d:c:s:i:B:g:b:a:z:p:D:wv")) != -1) {
+    while ((opt = getopt(argc, argv, "hlt:d:c:s:i:B:g:b:a:z:p:D:L:E:wv")) != -1) {
         switch (opt) {
         case 'h':
             usage();
@@ -1359,12 +1364,32 @@ main(int argc, char **argv)
             rp->verbose = 1;
             break;
 
+        case 'L':
+            max_loss = atoi(optarg);
+            if (max_loss <= 0) {
+        	    PRINTF("    Invalid 'max loss' %d\n", max_loss);
+                    return -1;
+            }
+            break;
+
+        case 'E':
+            max_delay = atoi(optarg);
+            if (max_delay <= 0) {
+        	    PRINTF("    Invalid 'max delay' %d\n", max_delay);
+                    return -1;
+            }
+            break;
+
         default:
             PRINTF("    Unrecognized option %c\n", opt);
             usage();
             return -1;
         }
     }
+
+    /* Update flow spec */
+    rp->flowspec.max_delay = max_delay;
+    rp->flowspec.max_loss = max_loss;
 
     /*
      * Fixups:

@@ -88,7 +88,8 @@ public:
                int dw,
                unsigned int lw,
                int rt,
-               int delay);
+               unsigned int delay,
+	       unsigned int loss);
        void run();
        int readTimeout(void * sdu, int maxBytes, unsigned int timout);
        void map_push(unsigned long sn, timespec tp);
@@ -118,7 +119,8 @@ private:
         int dealloc_wait;
         unsigned int lost_wait;
         int rate;
-        int delay;
+        unsigned int delay;
+        unsigned int loss;
         rina::Sleep sleep_wrapper;
         Sender * startSender();
         rina::Lockable lock;

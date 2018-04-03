@@ -268,7 +268,8 @@ FlowAllocatorQTAPs::newFlowRequest(IPCProcess * ipc_process,
 	    throw rina::Exception("No QoSCubes defined.");
 
         for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
-        	if (flowSpec.delay >= (*iterator)->delay_ && flowSpec.loss >= (*iterator)->loss) {
+        	if ((flowSpec.delay == 0 || flowSpec.delay >= (*iterator)->delay_) &&
+        			flowSpec.loss >= (*iterator)->loss) {
         		if (!qos_cube) {
         			qos_cube = *iterator;
         		} else if (qos_cube->delay_ < (*iterator)->delay_) {
