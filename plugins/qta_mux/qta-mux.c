@@ -37,6 +37,67 @@
 
 #define TIMER_T  100
 
+struct pdu_entry {
+	struct list_head next;
+	struct du *      pdu;
+	uint_t           pdu_length;
+	uint_t           urgency_level;
+	uint_t           cherish_threshold;
+};
+
+struct urgency_queue {
+	struct list_head next;
+	struct list_head queued_pdus;
+	uint_t           urgency_level;
+	uint_t           length;
+};
+
+struct cu_mux_conf {
+	uint_t   urgency_levels;
+	uint_t   cherish_levels;
+	uint_t * cherish_thresholds;
+};
+
+struct cu_mux {
+	struct cu_mux_conf conf;
+	struct list_head   urgency_queues;
+};
+
+struct stream_queue {
+	struct list_head next;
+	struct list_head queued_pdus;
+	qos_id_t         qos_id;
+	uint_t		 urgency_level;
+	uint_t           cherish_threshold;
+	uint_t           max_bytes;
+	uint_t           current_bytes;
+	uint_t           max_rate;
+};
+
+struct qta_mux {
+	struct list_head stream_queues;
+	struct cu_mux    cu_mux;
+	port_id_t        port_id;
+	uint_t           occupation;
+	struct robject   robj;
+};
+
+struct stream_queue_conf {
+	struct list_head next;
+	qos_id_t qos_id;
+	uint_t   urgency_level;
+	uint_t   cherish_level;
+	uint_t   max_burst_size;
+	uint_t   max_rate;
+};
+
+struct qta_mux_conf {
+	struct cu_mux_conf cu_mux_conf;
+	struct list_head stream_queues_conf;
+};
+
+/** OLD TYPES **/
+
 struct q_entry {
 	struct list_head next;
 	struct du * data;
