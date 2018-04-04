@@ -469,10 +469,10 @@ static struct du * dequeue_entry(struct q_entry * entry,
 	struct q_qos * qqos = entry->qqos;
 
 	list_del(&entry->next);
-	rkfree(entry);
 	qset->occupation--;
 	qqos->ps.length--;
 	qqos->ps.backlog -= entry->w;
+	rkfree(entry);
 
 	return ret_pdu;
 }
@@ -493,7 +493,8 @@ struct du * qta_rmt_dequeue_policy(struct rmt_ps	  *ps,
 	struct qta_queue *     entry;
 	struct du *            ret_pdu;
 	struct qta_queue_set * qset;
-	struct q_entry *pos;
+	struct q_entry * pos;
+	struct q_qos * qqos;
 
 	if (!ps || !n1_port || !n1_port->rmt_ps_queues) {
 		LOG_ERR("Wrong input parameters for "
@@ -505,9 +506,15 @@ struct du * qta_rmt_dequeue_policy(struct rmt_ps	  *ps,
 	if (!qset)
 		return NULL;
 
+	/* Go through the QTA queue set in urgency level: the queues */
+	/* with a higher urgency level are checked first */
 	list_for_each_entry(entry, &qset->queues, list) {
+
+		/* If this urgency level contains one or more QoS ids */
 		if (!list_empty(&entry->list_q_entry)) {
-			struct q_qos * qqos;
+
+			/* Decide to check a C/U mux queue of this urgency */
+			/* level with probability */
 			uint_t i;
 			get_random_bytes(&i, sizeof(i));
 			i = i % NORM_PROB;
@@ -541,34 +548,37 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 		return RMT_PS_ENQ_ERR;
 	}
 
+	/* Retrieve q_qos for the PDU's qos-id */
 	qos_id = pci_qos_id(&du->pci);
 	qset   = n1_port->rmt_ps_queues;
 	q      = qta_q_qos_find(qset, qos_id);
-	LOG_DBG("Enqueueing for QoS id %u", qos_id);
-
-	LOG_DBG("First of all, Policer/Shaper");
 	if (!q) {
 		LOG_ERR("No queue for QoS id %u, dropping PDU", qos_id);
 		du_destroy(du);
 		return RMT_PS_ENQ_ERR;
 	}
 
+	LOG_DBG("Enqueueing for QoS id %u", qos_id);
+
+	/* Go through policer-shaper (P/S) */
 	mlength  = q->ps.config.abs_max_length;
 	mbacklog = q->ps.config.max_backlog * q->ps.config.rate;
 	q->ps.length++;
 
+	/* Drop PDU if too many packets queued at P/S */
 	if (mlength && q->ps.length > mlength) {
-		LOG_INFO("Length exceeded for QoS id %u, dropping PDU", qos_id);
+		LOG_WARN("Length exceeded for QoS id %u, dropping PDU", qos_id);
 		du_destroy(du);
 		q->ps.length--;
 		q->dropped++;
 		return RMT_PS_ENQ_DROP;
 	}
 
+	/* Drop PDU if maximum rate for QoS id exceeded */
 	w = (int) du_len(du);
 	q->ps.backlog += w;
 	if (mbacklog && q->ps.backlog > mbacklog) {
-		LOG_INFO("Backlog exceeded for QoS id %u, dropping PDU", qos_id);
+		LOG_WARN("Backlog exceeded for QoS id %u, dropping PDU", qos_id);
 		q->dropped++;
 		q->ps.length--;
 		q->ps.backlog -= w;
@@ -576,19 +586,24 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 		return RMT_PS_ENQ_DROP;
 	}
 
+	/* P/S processing ended, entering C/U mux */
 	q->handled++;
+
+	/* Drop PDU if C/U mux queue length > absolute threshold */
 	if (q->abs_th < (qset->occupation + 1)) {
-		LOG_DBG("Dropped PDU: abs_th exceeded %u", qset->occupation);
+		LOG_WARN("Dropped PDU: abs_th exceeded %u", qset->occupation);
 		q->dropped++;
 		q->ps.length--;
 		q->ps.backlog -= w;
 		du_destroy(du);
 		return RMT_PS_ENQ_DROP;
 	}
+
+	/* Drop PDU probabilistically if C/U mux queue length > threshold */
 	get_random_bytes(&i, sizeof(i));
 	i = i % NORM_PROB;
 	if ((q->th < (qset->occupation + 1)) && (q->drop_prob > i)) {
-		LOG_DBG("Dropped PDU: th exceeded %u", qset->occupation);
+		LOG_WARN("Dropped PDU: th exceeded %u", qset->occupation);
 		q->dropped++;
 		q->ps.length--;
 		q->ps.backlog -= w;
@@ -596,6 +611,7 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 		return RMT_PS_ENQ_DROP;
 	}
 
+	/* Enqueue PDU in C/U mux queue */
 	entry = rkzalloc(sizeof(*entry), GFP_ATOMIC);
 	if (!entry) {
 		LOG_ERR("Failed to enqueue");
@@ -625,18 +641,6 @@ static void qset_add_qta_queue(struct qta_queue *     queue,
 	if (list_empty(&qset->queues)) {
 		list_add(&queue->list, &qset->queues);
 		return;
-	}
-
-	/* Debug only */
-	list_for_each_entry(pos, &qset->queues, list) {
-		struct q_qos * qqos;
-
-		LOG_INFO("Urgency class: %u", pos->key);
-		list_for_each_entry(qqos, &pos->list_q_qos, list) {
-			LOG_INFO("Qos id: %u, Drop prob: %u",
-					qqos->qos_id,
-					qqos->drop_prob);
-		}
 	}
 
 	list_for_each_entry(pos, &qset->queues, list) {
@@ -675,6 +679,7 @@ void * qta_rmt_q_create_policy(struct rmt_ps      *ps,
 	list_add(&tmp->list, &data->list_queues);
 	config = data->config;
 
+	/* Create one qta_queue per urgency level, add it to the qta_queue_set */
 	list_for_each_entry(pos, &config->list_queues, list) {
 		queue = qta_queue_find_key(tmp, pos->key);
 		if (!queue) {
@@ -687,6 +692,9 @@ void * qta_rmt_q_create_policy(struct rmt_ps      *ps,
 			}
 			qset_add_qta_queue(queue, tmp);
 		}
+
+		/* Create one q_qos per qos_id within the urgency level */
+		/* Add it to the qta_queue of its urgency level */
 		q_qos = q_qos_create(pos->qos_id,
 				     pos->abs_th,
 				     pos->th,
@@ -769,7 +777,7 @@ static int qta_mux_ps_set_policy_set_param_priv(struct qta_mux_data * data,
 			return -1;
 
 		list_add(&conf_qos->list, &data->config->list_queues);
-		LOG_INFO("Created queue for QoS id %u", qos_id);
+		LOG_INFO("Parsed configuration for QoS id %u", qos_id);
 	}
 
 	if (strcmp(name + offset, "urgency-class") == 0) {
