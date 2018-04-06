@@ -23,6 +23,7 @@
 #include <linux/module.h>
 #include <linux/string.h>
 #include <linux/random.h>
+#include <linux/hrtimer.h>
 
 #define RINA_PREFIX "qta-mux-plugin"
 
@@ -52,6 +53,7 @@ struct urgency_queue {
 	uint_t           urgency_level;
 	uint_t           length;
 	struct robject   robj;
+	spinlock_t	 lock;
 };
 
 struct cu_mux {
@@ -68,6 +70,10 @@ struct stream_queue {
 	uint_t           max_bytes;
 	uint_t           current_bytes;
 	uint_t           max_rate;
+	struct hrtimer   timer;
+	struct ktime_t   timer_period;
+	struct u64	 tokens;
+	spinlock_t	 lock;
 };
 
 struct stream_queue_conf {
@@ -103,82 +109,6 @@ struct qta_mux_set {
 	struct list_head      qta_muxes;
 	struct qta_mux_conf * qta_mux_conf;
 };
-
-/** OLD TYPES **/
-
-struct q_entry {
-	struct list_head next;
-	struct du * data;
-	struct q_qos * qqos;
-	int w;
-};
-
-struct qta_queue {
-	struct list_head list;
-	struct list_head list_q_entry;
-	struct list_head list_q_qos;
-	uint_t key;
-	struct rfifo * queue;
-};
-
-struct config_pshaper {
-	uint_t rate;
-	uint_t prb_max_length;
-	uint_t abs_max_length;
-	uint_t max_backlog;
-};
-
-struct config_q_qos {
-	uint_t           abs_th;
-	uint_t           th;
-	uint_t           drop_prob;
-	qos_id_t         qos_id;
-	uint_t           key;
-	uint_t           rate;
-	uint_t           prb_max_length;
-	uint_t           abs_max_length;
-	uint_t           max_backlog;
-	struct list_head list;
-};
-
-struct qta_config {
-	struct list_head list_queues;
-};
-
-struct pshaper {
-	struct config_pshaper config;
-	uint_t length;
-	uint_t backlog;
-};
-
-struct q_qos {
-	uint_t           abs_th;
-	uint_t           th;
-	uint_t           drop_prob;
-	qos_id_t         qos_id;
-	struct list_head list;
-	uint_t           dropped;
-	uint_t           handled;
-	uint_t           key;
-	struct qta_queue * qta_q;
-	struct pshaper   ps;
-	struct robject robj;
-};
-
-struct qta_queue_set {
-	struct list_head queues;
-	struct list_head list;
-	port_id_t        port_id;
-	unsigned int     occupation;
-	struct robject robj;
-};
-
-struct qta_mux_data {
-	struct list_head    list_queues;
-	struct qta_config * config;
-};
-
-/** End OLD types **/
 
 static ssize_t qta_mux_attr_show(struct robject * robj,
 				 struct robj_attribute * attr,
@@ -358,6 +288,8 @@ static void stream_queue_destroy(struct stream_queue * sq)
 		pdu_entry_destroy(pos, true);
 	}
 
+	hrtimer_cancel(&sq->timer);
+
 	rkfree(sq);
 }
 
@@ -419,6 +351,19 @@ static struct qta_mux * qta_mux_create(port_id_t port_id,
 	return tmp;
 }
 
+static enum hrtimer_restart stream_queue_timer_func(struct hrtimer *hrtimer)
+{
+	struct stream_queue * stream_queue;
+
+	stream_queue = container_of(timer, struct stream_queue, hrtimer);
+
+	/* Do stuff: add more tokens */
+
+	hrtimer_forward_now(hrtimer, stream_queue->timer_period);
+
+	return HRTIMER_RESTART;
+}
+
 static struct stream_queue * stream_queue_create(struct cu_mux_conf * cu_mux_conf,
 						 struct stream_queue_conf * sq_conf)
 {
@@ -438,8 +383,18 @@ static struct stream_queue * stream_queue_create(struct cu_mux_conf * cu_mux_con
 	tmp->cherish_threshold =
 			cu_mux_conf->cherish_thresholds[sq_conf->cherish_level -1];
 	tmp->current_bytes = 0;
-	/* TODO get max queue size from max rate and max burst size */
+	/* TODO get max queue
+	 * size from max rate and max burst size */
 	tmp->max_bytes = 0;
+	tmp->tokens = 0;
+
+	spin_lock_init(&tmp->lock);
+
+	/* TODO compute timer period from max rate */
+	tmp->timer_period = ns_to_ktime(10000);
+	rtimer_init(&tmp->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	tmp->timer.function = stream_queue_timer_func;
+	hrtimer_start(&tmp->hrtimer, tmp->timer_period, HRTIMER_MODE_REL);
 
 	return tmp;
 }
@@ -465,6 +420,8 @@ static struct urgency_queue * urgency_queue_create(uint_t urgency_level,
 		urgency_queue_destroy(tmp);
 		return NULL;
 	}
+
+	spin_lock_init(&tmp->lock);
 
 	return tmp;
 }
