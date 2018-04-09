@@ -80,6 +80,7 @@ struct token_bucket_filter {
 	uint_t		 dropped_bytes;
 	uint_t		 tx_pdus;
 	uint_t		 tx_bytes;
+	struct robject   robj;
 };
 
 struct token_bucket_conf {
@@ -115,6 +116,7 @@ struct qta_mux {
 	port_id_t        port_id;
 	uint_t           occupation;
 	struct robject   robj;
+	struct rset *    rset;
 };
 
 struct qta_mux_set {
@@ -190,6 +192,56 @@ static ssize_t urgency_queue_attr_show(struct robject * robj,
 	return 0;
 }
 
+static ssize_t token_bucket_filter_attr_show(struct robject * robj,
+				       	     struct robj_attribute * attr,
+					     char * buf)
+{
+	struct token_bucket_filter * tbf;
+
+	tbf = container_of(robj, struct token_bucket_filter, robj);
+	if (!tbf)
+		return 0;
+
+	if (strcmp(robject_attr_name(attr), "abs_cherish_th") == 0) {
+		return sprintf(buf, "%u\n", tbf->abs_cherish_threshold);
+	}
+	if (strcmp(robject_attr_name(attr), "prob_cherish_th") == 0) {
+		return sprintf(buf, "%u\n", tbf->prob_cherish_threshold);
+	}
+	if (strcmp(robject_attr_name(attr), "drop_prob") == 0) {
+		return sprintf(buf, "%u\n", tbf->drop_probability);
+	}
+	if (strcmp(robject_attr_name(attr), "bucket_capacity") == 0) {
+		return sprintf(buf, "%lld\n", tbf->bucket_capacity);
+	}
+	if (strcmp(robject_attr_name(attr), "last_pdu_time") == 0) {
+		return sprintf(buf, "%lld\n", tbf->last_pdu_time);
+	}
+	if (strcmp(robject_attr_name(attr), "max_rate") == 0) {
+		return sprintf(buf, "%u\n", tbf->max_rate);
+	}
+	if (strcmp(robject_attr_name(attr), "urgency_level") == 0) {
+		return sprintf(buf, "%u\n", tbf->urgency_level);
+	}
+	if (strcmp(robject_attr_name(attr), "tokens") == 0) {
+		return sprintf(buf, "%lld\n", tbf->tokens);
+	}
+	if (strcmp(robject_attr_name(attr), "tbf_drop_bytes") == 0) {
+		return sprintf(buf, "%u\n", tbf->dropped_bytes);
+	}
+	if (strcmp(robject_attr_name(attr), "tbf_drop_pdus") == 0) {
+		return sprintf(buf, "%u\n", tbf->dropped_pdus);
+	}
+	if (strcmp(robject_attr_name(attr), "tbf_tx_bytes") == 0) {
+		return sprintf(buf, "%u\n", tbf->tx_bytes);
+	}
+	if (strcmp(robject_attr_name(attr), "tbf_tx_pdus") == 0) {
+		return sprintf(buf, "%u\n", tbf->tx_pdus);
+	}
+
+	return 0;
+}
+
 RINA_SYSFS_OPS(qta_mux);
 RINA_ATTRS(qta_mux, port_id, occupation);
 RINA_KTYPE(qta_mux);
@@ -199,6 +251,11 @@ RINA_KTYPE(cu_mux);
 RINA_SYSFS_OPS(urgency_queue);
 RINA_ATTRS(urgency_queue, urgency, queued_pdus, dropped_pdus, tx_pdus);
 RINA_KTYPE(urgency_queue);
+RINA_SYSFS_OPS(token_bucket_filter);
+RINA_ATTRS(token_bucket_filter, abs_cherish_th, prob_cherish_th, drop_prob,
+	   bucket_capacity, last_pdu_time, max_rate, urgency_level, tokens,
+	   tbf_drop_bytes, tbf_drop_pdus, tbf_tx_bytes, tbf_tx_pdus);
+RINA_KTYPE(token_bucket_filter);
 
 static struct token_bucket_conf * token_bucket_conf_create(void)
 {
@@ -323,6 +380,8 @@ static void token_bucket_filter_destroy(struct token_bucket_filter * sq)
 
 	list_del(&sq->list);
 
+	robject_del(&sq->robj);
+
 	rkfree(sq);
 }
 
@@ -355,13 +414,16 @@ static void qta_mux_destroy(struct qta_mux * qta_mux)
 	robject_del(&qta_mux->cu_mux.robj);
 	if (qta_mux->cu_mux.rset)
 		rset_unregister(qta_mux->cu_mux.rset);
+	if (qta_mux->rset)
+		rset_unregister(qta_mux->rset);
 	robject_del(&qta_mux->robj);
 
 	rkfree(qta_mux);
 }
 
 static struct qta_mux * qta_mux_create(port_id_t port_id,
-		   	   	       struct robject *parent)
+		   	   	       struct robject *parent,
+				       struct qta_mux_conf * conf)
 {
 	struct qta_mux * tmp;
 
@@ -377,6 +439,8 @@ static struct qta_mux * qta_mux_create(port_id_t port_id,
 	INIT_LIST_HEAD(&tmp->cu_mux.mgmt_queue);
 	tmp->port_id = port_id;
 	tmp->occupation = 0;
+	tmp->cu_mux.urgency_levels = conf->cu_mux_conf.urgency_levels;
+	tmp->cu_mux.cherish_levels = conf->cu_mux_conf.cherish_levels;
 
 	if (robject_init_and_add(&tmp->robj, &qta_mux_rtype, parent, "qta_mux")) {
 		LOG_ERR("Failed to create QTA MUX sysfs object");
@@ -390,9 +454,16 @@ static struct qta_mux * qta_mux_create(port_id_t port_id,
 		return NULL;
 	}
 
-	tmp->cu_mux.rset = rset_create_and_add("urgency_queues", parent);
+	tmp->cu_mux.rset = rset_create_and_add("urgency_queues", &tmp->cu_mux.robj);
 	if (!tmp->cu_mux.rset) {
 		LOG_ERR("Failed to create urgency_queues sysfs set");
+		qta_mux_destroy(tmp);
+		return NULL;
+	}
+
+	tmp->rset = rset_create_and_add("token_bucket_filters", &tmp->robj);
+	if (!tmp->rset) {
+		LOG_ERR("Failed to create token bucket filters sysfs set");
 		qta_mux_destroy(tmp);
 		return NULL;
 	}
@@ -401,7 +472,8 @@ static struct qta_mux * qta_mux_create(port_id_t port_id,
 }
 
 static struct token_bucket_filter * token_bucket_filter_create(struct cu_mux_conf * cu_mux_conf,
-						 	       struct token_bucket_conf * sq_conf)
+						 	       struct token_bucket_conf * sq_conf,
+							       struct rset * parent)
 {
 	struct token_bucket_filter * tmp;
 	struct cherish_thres_t cherish_thres;
@@ -430,6 +502,13 @@ static struct token_bucket_filter * token_bucket_filter_create(struct cu_mux_con
 	tmp->dropped_pdus = 0;
 	tmp->tx_bytes = 0;
 	tmp->tx_pdus = 0;
+
+	robject_init(&tmp->robj, &token_bucket_filter_rtype);
+	if (robject_rset_add(&tmp->robj, parent, "%d", tmp->qos_id)) {
+		LOG_ERR("Failed to token bucket filter sysfs entry");
+		token_bucket_filter_destroy(tmp);
+		return NULL;
+	}
 
 	return tmp;
 }
@@ -716,18 +795,19 @@ void * qta_rmt_q_create_policy(struct rmt_ps      *ps,
 	}
 
 	/* Create the qta_mux and add it to the n1_port */
-	qta_mux = qta_mux_create(n1_port->port_id, &n1_port->robj);
+	config = qta_mux_set->qta_mux_conf;
+	qta_mux = qta_mux_create(n1_port->port_id, &n1_port->robj, config);
 	if (!qta_mux) {
 		LOG_ERR("No scheduling policy created for port-id %d",
 				n1_port->port_id);
 		return NULL;
 	}
 	list_add(&qta_mux->list, &qta_mux_set->qta_muxes);
-	config = qta_mux_set->qta_mux_conf;
 
 	/* Create one token bucket filter per QoS level */
 	list_for_each_entry(pos, &config->token_buckets_conf, list) {
-		tbf = token_bucket_filter_create(&config->cu_mux_conf, pos);
+		tbf = token_bucket_filter_create(&config->cu_mux_conf,
+						 pos, qta_mux->rset);
 		if (!tbf) {
 			LOG_ERR("Problems creating token bucket filter");
 			qta_mux_destroy(qta_mux);
