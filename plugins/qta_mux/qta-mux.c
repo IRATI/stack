@@ -50,7 +50,6 @@ struct urgency_queue {
 	uint_t           urgency_level;
 	uint_t           length;
 	struct robject   robj;
-	spinlock_t	 lock;
 	uint_t		 dropped_pdus;
 	uint_t		 dropped_bytes;
 	uint_t		 tx_pdus;
@@ -60,6 +59,10 @@ struct urgency_queue {
 struct cu_mux {
 	struct list_head   urgency_queues;
 	struct list_head   mgmt_queue;
+	struct robject	   robj;
+	struct rset *      rset;
+	uint_t             urgency_levels;
+	uint_t             cherish_levels;
 };
 
 struct token_bucket_filter {
@@ -140,6 +143,27 @@ static ssize_t qta_mux_attr_show(struct robject * robj,
 	return 0;
 }
 
+static ssize_t cu_mux_attr_show(struct robject * robj,
+				struct robj_attribute * attr,
+				char * buf)
+{
+	struct cu_mux * cu_mux;
+
+	cu_mux = container_of(robj, struct cu_mux, robj);
+	if (!cu_mux)
+		return 0;
+
+	if (strcmp(robject_attr_name(attr), "urgency_levels") == 0) {
+		return sprintf(buf, "%u\n", cu_mux->urgency_levels);
+	}
+
+	if (strcmp(robject_attr_name(attr), "cherish_levels") == 0) {
+		return sprintf(buf, "%u\n", cu_mux->cherish_levels);
+	}
+
+	return 0;
+}
+
 static ssize_t urgency_queue_attr_show(struct robject * robj,
 				       struct robj_attribute * attr,
 				       char * buf)
@@ -169,6 +193,9 @@ static ssize_t urgency_queue_attr_show(struct robject * robj,
 RINA_SYSFS_OPS(qta_mux);
 RINA_ATTRS(qta_mux, port_id, occupation);
 RINA_KTYPE(qta_mux);
+RINA_SYSFS_OPS(cu_mux);
+RINA_ATTRS(cu_mux, urgency_levels, cherish_levels);
+RINA_KTYPE(cu_mux);
 RINA_SYSFS_OPS(urgency_queue);
 RINA_ATTRS(urgency_queue, urgency, queued_pdus, dropped_pdus, tx_pdus);
 RINA_KTYPE(urgency_queue);
@@ -325,6 +352,9 @@ static void qta_mux_destroy(struct qta_mux * qta_mux)
 		pdu_entry_destroy(pos3, true);
 	}
 
+	robject_del(&qta_mux->cu_mux.robj);
+	if (qta_mux->cu_mux.rset)
+		rset_unregister(qta_mux->cu_mux.rset);
 	robject_del(&qta_mux->robj);
 
 	rkfree(qta_mux);
@@ -349,7 +379,20 @@ static struct qta_mux * qta_mux_create(port_id_t port_id,
 	tmp->occupation = 0;
 
 	if (robject_init_and_add(&tmp->robj, &qta_mux_rtype, parent, "qta_mux")) {
-		LOG_ERR("Failed to create QTA MUX sysfs entry");
+		LOG_ERR("Failed to create QTA MUX sysfs object");
+		qta_mux_destroy(tmp);
+		return NULL;
+	}
+
+	if (robject_init_and_add(&tmp->cu_mux.robj, &cu_mux_rtype, &tmp->robj, "cumux")) {
+		LOG_ERR("Failed to create CU MUX sysfs object");
+		qta_mux_destroy(tmp);
+		return NULL;
+	}
+
+	tmp->cu_mux.rset = rset_create_and_add("urgency_queues", parent);
+	if (!tmp->cu_mux.rset) {
+		LOG_ERR("Failed to create urgency_queues sysfs set");
 		qta_mux_destroy(tmp);
 		return NULL;
 	}
@@ -392,7 +435,7 @@ static struct token_bucket_filter * token_bucket_filter_create(struct cu_mux_con
 }
 
 static struct urgency_queue * urgency_queue_create(uint_t urgency_level,
-						   struct robject *parent)
+						   struct rset *parent)
 {
 	struct urgency_queue * tmp;
 
@@ -411,13 +454,12 @@ static struct urgency_queue * urgency_queue_create(uint_t urgency_level,
 	tmp->tx_bytes = 0;
 	tmp->tx_pdus = 0;
 
-	if (robject_init_and_add(&tmp->robj, &urgency_queue_rtype, parent, "urgency_queue")) {
+	robject_init(&tmp->robj, &urgency_queue_rtype);
+	if (robject_rset_add(&tmp->robj, parent, "%d", tmp->urgency_level)) {
 		LOG_ERR("Failed to create Urgency queue sysfs entry");
 		urgency_queue_destroy(tmp);
 		return NULL;
 	}
-
-	spin_lock_init(&tmp->lock);
 
 	return tmp;
 }
@@ -698,7 +740,7 @@ void * qta_rmt_q_create_policy(struct rmt_ps      *ps,
 
 	/* Create one urgency_queue per urgency level, add it to the qta_mux */
 	for (i=0; i<config->cu_mux_conf.urgency_levels; i++) {
-		urgency_queue = urgency_queue_create(i+1, &qta_mux->robj);
+		urgency_queue = urgency_queue_create(i+1, qta_mux->cu_mux.rset);
 		if (!urgency_queue) {
 			LOG_ERR("Problems creating urgency queue");
 			qta_mux_destroy(qta_mux);
