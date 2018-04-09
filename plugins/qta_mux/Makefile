@@ -14,7 +14,7 @@ ifndef IRATI_KSDIR
 IRATI_KSDIR=${PWD}/../../kernel
 endif
 
-ccflags-y = -Wtype-limits -I${src}/../../kernel -I${src}/../../include
+ccflags-y = -Wtype-limits -I${src}/../../kernel -I${src}/../../include -static-libgcc -lgcc
 
 obj-m := qta-mux-plugin.o
 qta-mux-plugin-y := qta-mux.o
