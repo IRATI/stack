@@ -592,7 +592,9 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 
 	/* Update num tokens and see if PDU can go through */
 	now = ktime_get_ns();
-	delta_tokens = (now - tbf->last_pdu_time) * tbf->max_rate / 8000000000;
+	delta_tokens = (now - tbf->last_pdu_time) * tbf->max_rate;
+	do_div(delta_tokens, 1000000000);
+	do_div(delta_tokens, 8);
 	tbf->tokens += delta_tokens;
 	if (tbf->tokens > tbf->bucket_capacity)
 		tbf->tokens = tbf->bucket_capacity;
