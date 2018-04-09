@@ -66,7 +66,9 @@ struct token_bucket_filter {
 	struct list_head list;
 	qos_id_t         qos_id;
 	uint_t		 urgency_level;
-	uint_t           cherish_threshold;
+	uint_t           abs_cherish_threshold; /* in PDUs */
+	uint_t		 prob_cherish_threshold; /* in PDUs */
+	uint_t		 drop_probability; /* 1- 100*/
 	s64              bucket_capacity;  /* in bytes */
 	s64              tokens; /* in bytes */
 	uint_t           max_rate; /* in bps */
@@ -86,10 +88,16 @@ struct token_bucket_conf {
 	uint_t   max_rate; /* in bps */
 };
 
+struct cherish_thres_t {
+	uint_t abs_trheshold;    /* number of PDUs */
+	uint_t prob_threshold;   /* number of PDUs */
+	uint_t drop_probability; /* 0 - 100 */
+};
+
 struct cu_mux_conf {
-	uint_t   urgency_levels;
-	uint_t   cherish_levels;
-	uint_t * cherish_thresholds;
+	uint_t   	  urgency_levels;
+	uint_t   	  cherish_levels;
+	struct cherish_thres_t * cherish_thresholds;
 };
 
 struct qta_mux_conf {
@@ -353,6 +361,7 @@ static struct token_bucket_filter * token_bucket_filter_create(struct cu_mux_con
 						 	       struct token_bucket_conf * sq_conf)
 {
 	struct token_bucket_filter * tmp;
+	struct cherish_thres_t cherish_thres;
 
 	tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
 	if (!tmp) {
@@ -360,12 +369,15 @@ static struct token_bucket_filter * token_bucket_filter_create(struct cu_mux_con
 		return NULL;
 	}
 
+	cherish_thres = cu_mux_conf->cherish_thresholds[sq_conf->cherish_level -1];
+
 	INIT_LIST_HEAD(&tmp->list);
 	tmp->max_rate = sq_conf->max_rate;
 	tmp->qos_id = sq_conf->qos_id;
 	tmp->urgency_level = sq_conf->urgency_level;
-	tmp->cherish_threshold =
-			cu_mux_conf->cherish_thresholds[sq_conf->cherish_level -1];
+	tmp->abs_cherish_threshold = cherish_thres.abs_trheshold;
+	tmp->prob_cherish_threshold = cherish_thres.prob_threshold;
+	tmp->drop_probability = cherish_thres.drop_probability;
 	tmp->last_pdu_time = ktime_get_ns();
 	tmp->tokens = sq_conf->max_burst_size;
 	tmp->bucket_capacity = sq_conf->max_burst_size;
@@ -541,6 +553,7 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 	s64			     now;
 	s64			     delta_tokens;
 	ssize_t			     pdu_length;
+	uint_t			     random_bytes;
 
 	if (!ps || !n1_port || !du) {
 		LOG_ERR("Wrong input parameters for "
@@ -608,11 +621,23 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 	}
 
 	/* queue length is larger than cherish threshold, drop PDU */
-	if (urgency_queue->length > tbf->cherish_threshold) {
+	if (urgency_queue->length > tbf->abs_cherish_threshold) {
 		urgency_queue->dropped_bytes += pdu_length;
 		urgency_queue->dropped_pdus++;
 		du_destroy(du);
 		return RMT_PS_ENQ_DROP;
+	}
+
+	/* queue length is larger than probabilistic ch. threshold */
+	if (urgency_queue->length > tbf->prob_cherish_threshold) {
+		get_random_bytes(&random_bytes, sizeof(random_bytes));
+		random_bytes = random_bytes % NORM_PROB;
+		if (tbf->drop_probability > random_bytes) {
+			urgency_queue->dropped_bytes += pdu_length;
+			urgency_queue->dropped_pdus++;
+			du_destroy(du);
+			return RMT_PS_ENQ_DROP;
+		}
 	}
 
 	pdu_entry = pdu_entry_create(du);
@@ -740,7 +765,7 @@ static int qta_mux_ps_set_policy_set_param_priv(struct qta_mux_set * data,
 	uint_t urgency_level, cherish_level, max_burst_size, max_rate;
 	char *dot, *mux;
 	int i, c;
-	uint_t * cherish_levels;
+	struct cherish_thres_t * cherish_levels;
 	struct token_bucket_conf * token_bucket_conf;
 
 	if (!name) {
@@ -812,7 +837,8 @@ static int qta_mux_ps_set_policy_set_param_priv(struct qta_mux_set * data,
 
 	/*
 	 * Parse entry of type name = cumux
-	 * value = <urgency_levels>:<cherish_levels>:<cherish_thres1>:...
+	 * value = <urgency_levels>:<cherish_levels>:
+	 * <abs_cherish_thres1>,<prob_cherish_thres1>,<drop_prob1>:...
 	 *
 	 */
 	if (mux) {
@@ -828,7 +854,7 @@ static int qta_mux_ps_set_policy_set_param_priv(struct qta_mux_set * data,
 				    (int *) &cherish_level, &delta_offset))
 			return -1;
 
-		cherish_levels = rkzalloc(cherish_level * sizeof(uint_t),
+		cherish_levels = rkzalloc(cherish_level * sizeof(struct cherish_thres_t),
 					  GFP_ATOMIC);
 		if (!cherish_levels) {
 			LOG_ERR("Problems allocating memory, exiting");
@@ -846,15 +872,33 @@ static int qta_mux_ps_set_policy_set_param_priv(struct qta_mux_set * data,
 			}
 
 			offset += delta_offset;
-			if (parse_int_value(value + offset, c,
-					    (int *) &cherish_levels[i],
+			if (parse_int_value(value + offset, ',',
+					    (int *) &cherish_levels[i].abs_trheshold,
 					    &delta_offset)) {
 				rkfree(cherish_levels);
 				return -1;
 			}
 
-			LOG_INFO("Parsed cherish_level[%d]: %u", i,
-				 cherish_levels[i]);
+			offset += delta_offset;
+			if (parse_int_value(value + offset, ',',
+					    (int *) &cherish_levels[i].prob_threshold,
+					    &delta_offset)) {
+				rkfree(cherish_levels);
+				return -1;
+			}
+
+			offset += delta_offset;
+			if (parse_int_value(value + offset, c,
+					    (int *) &cherish_levels[i].drop_probability,
+					    &delta_offset)) {
+				rkfree(cherish_levels);
+				return -1;
+			}
+
+			LOG_INFO("Parsed cherish_level[%d]: %u, %u, %u", i,
+				 cherish_levels[i].abs_trheshold,
+				 cherish_levels[i].prob_threshold,
+				 cherish_levels[i].drop_probability);
 
 		}
 
