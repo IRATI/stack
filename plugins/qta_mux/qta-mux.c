@@ -114,7 +114,6 @@ struct qta_mux {
 	struct list_head token_bucket_filters;
 	struct cu_mux    cu_mux;
 	port_id_t        port_id;
-	uint_t           occupation;
 	struct robject   robj;
 	struct rset *    rset;
 };
@@ -136,10 +135,6 @@ static ssize_t qta_mux_attr_show(struct robject * robj,
 
 	if (strcmp(robject_attr_name(attr), "port_id") == 0) {
 		return sprintf(buf, "%u\n", qta_mux->port_id);
-	}
-
-	if (strcmp(robject_attr_name(attr), "occupation") == 0) {
-		return sprintf(buf, "%u\n", qta_mux->occupation);
 	}
 
 	return 0;
@@ -243,7 +238,7 @@ static ssize_t token_bucket_filter_attr_show(struct robject * robj,
 }
 
 RINA_SYSFS_OPS(qta_mux);
-RINA_ATTRS(qta_mux, port_id, occupation);
+RINA_ATTRS(qta_mux, port_id);
 RINA_KTYPE(qta_mux);
 RINA_SYSFS_OPS(cu_mux);
 RINA_ATTRS(cu_mux, urgency_levels, cherish_levels);
@@ -438,7 +433,6 @@ static struct qta_mux * qta_mux_create(port_id_t port_id,
 	INIT_LIST_HEAD(&tmp->cu_mux.urgency_queues);
 	INIT_LIST_HEAD(&tmp->cu_mux.mgmt_queue);
 	tmp->port_id = port_id;
-	tmp->occupation = 0;
 	tmp->cu_mux.urgency_levels = conf->cu_mux_conf.urgency_levels;
 	tmp->cu_mux.cherish_levels = conf->cu_mux_conf.cherish_levels;
 
@@ -663,7 +657,8 @@ struct du * qta_rmt_dequeue_policy(struct rmt_ps	  *ps,
 
 int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 			   struct rmt_n1_port *n1_port,
-			   struct du	  *du)
+			   struct du	  *du,
+			   bool must_enqueue)
 {
 	struct qta_mux * 	     qta_mux;
 	struct token_bucket_filter * tbf;
@@ -691,6 +686,9 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 	 */
 	pdu_type = pci_type(&du->pci);
 	if (pdu_type == PDU_TYPE_MGMT) {
+		if (!must_enqueue && list_empty(&qta_mux->cu_mux.mgmt_queue))
+			return RMT_PS_ENQ_SEND;
+
 		pdu_entry = pdu_entry_create(du);
 		if (!pdu_entry) {
 			LOG_ERR("Problems allocating memory for PDU entry");
@@ -730,11 +728,12 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 		return RMT_PS_ENQ_DROP;
 	}
 
-	/* PDU can be transmitted, put it in the right urgency queue */
+	/* PDU can be transmitted, update TBF tokens and stats */
 	tbf->tokens -= pdu_length;
 	tbf->tx_bytes += pdu_length;
 	tbf->tx_pdus++;
 
+	/* Put PDU put it in the right urgency queue */
 	urgency_queue = urgency_queue_find(qta_mux, tbf->urgency_level);
 	if (!urgency_queue) {
 		LOG_ERR("No urgency queue for level %u, dropping PDU",
@@ -763,6 +762,9 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 		}
 	}
 
+	if (!must_enqueue)
+		return RMT_PS_ENQ_SEND;
+
 	pdu_entry = pdu_entry_create(du);
 	if (!pdu_entry) {
 		LOG_ERR("Problems allocating memory for PDU entry");
@@ -772,7 +774,6 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 
 	list_add_tail(&pdu_entry->list, &urgency_queue->queued_pdus);
 	urgency_queue->length++;
-	qta_mux->occupation++;
 
 	return RMT_PS_ENQ_SCHED;
 }

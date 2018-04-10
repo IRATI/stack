@@ -863,6 +863,7 @@ int rmt_send_port_id(struct rmt *instance,
 	struct rmt_n1_port *n1_port;
 	struct rmt_ps *ps;
 	int ret;
+	bool must_enqueue;
 
 	rcu_read_lock();
 	ps = container_of(rcu_dereference(instance->base.ps),
@@ -884,45 +885,61 @@ int rmt_send_port_id(struct rmt *instance,
 	}
 
 	n1_port_lock(n1_port);
+
+	must_enqueue = false;
 	if (n1_port->stats.plen 				||
 		n1_port->wbusy 					||
 		n1_port->state == N1_PORT_STATE_DISABLED) {
-		ret = ps->rmt_enqueue_policy(ps, n1_port, du);
-		rcu_read_unlock();
-		switch (ret) {
-		case RMT_PS_ENQ_SCHED:
-			n1_port->stats.plen++;
-			tasklet_hi_schedule(&instance->egress_tasklet);
-			break;
-		case RMT_PS_ENQ_DROP:
-			n1_port->stats.drop_pdus++;
-			LOG_DBG("PDU dropped while enqueing");
-			break;
-		case RMT_PS_ENQ_ERR:
+		must_enqueue = true;
+	}
+
+	ret = ps->rmt_enqueue_policy(ps, n1_port, du, must_enqueue);
+	rcu_read_unlock();
+	switch (ret) {
+	case RMT_PS_ENQ_SCHED:
+		n1_port->stats.plen++;
+		tasklet_hi_schedule(&instance->egress_tasklet);
+		ret = 0;
+		break;
+	case RMT_PS_ENQ_DROP:
+		n1_port->stats.drop_pdus++;
+		LOG_DBG("PDU dropped while enqueing");
+		ret = 0;
+		break;
+	case RMT_PS_ENQ_ERR:
+		n1_port->stats.err_pdus++;
+		LOG_DBG("Some error occurred while enqueuing PDU");
+		ret = 0;
+		break;
+	case RMT_PS_ENQ_SEND:
+		if (must_enqueue) {
+			/* Wrong behaviour of the policy */
+			du_destroy(du);
 			n1_port->stats.err_pdus++;
-			LOG_DBG("Some error occurred while enqueuing PDU");
-			break;
-		default:
-			LOG_ERR("rmt_enqueu_policy returned wrong value");
+			LOG_DBG("Policy should have enqueue, returned SEND");
+			ret = -1;
 			break;
 		}
+
+		n1_port->wbusy = true;
 		n1_port_unlock(n1_port);
-		n1pmap_release(instance, n1_port);
-		return 0;
+		LOG_DBG("PDU ready to be sent, no need to enqueue");
+		ret = n1_port_write(instance, n1_port, du);
+		/*FIXME LB: This is just horrible, needs to be rethinked */
+		n1_port_lock(n1_port);
+		n1_port->wbusy = false;
+		if (ret >= 0) {
+			stats_inc(tx, n1_port, ret);
+			ret = 0;
+		} else if (ret == -EAGAIN)
+			ret = 0;
+		break;
+	default:
+		LOG_ERR("rmt_enqueu_policy returned wrong value");
+		break;
+		ret = 0;
 	}
-	rcu_read_unlock();
-	n1_port->wbusy = true;
-	n1_port_unlock(n1_port);
-	LOG_DBG("PDU ready to be sent, no need to enqueue");
-	ret = n1_port_write(instance, n1_port, du);
-	/*FIXME LB: This is just horrible, needs to be rethinked */
-	n1_port_lock(n1_port);
-	n1_port->wbusy = false;
-	if (ret >= 0) {
-		stats_inc(tx, n1_port, ret);
-		ret = 0;
-	} else if (ret == -EAGAIN)
-		ret = 0;
+
 	n1_port_unlock(n1_port);
 	n1pmap_release(instance, n1_port);
 	return ret;
