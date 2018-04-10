@@ -609,14 +609,15 @@ void FlowAllocator::submitAllocateResponse(const rina::AllocateFlowResponseEvent
 		     event.sequenceNumber,
 		     event.result);
 
-	rina::ScopedLock g(fai_lock);
-
+	fai_lock.lock();
 	for (it = fa_instances.begin(); it != fa_instances.end(); ++it) {
 		if (it->second->get_allocate_response_message_handle() == event.sequenceNumber) {
+			fai_lock.unlock();
 			it->second->submitAllocateResponse(event);
 			return;
 		}
 	}
+	fai_lock.unlock();
 
 	LOG_IPCP_ERR("Could not find FAI with handle %ud", event.sequenceNumber);
 }
@@ -667,9 +668,9 @@ void FlowAllocator::submitDeallocate(const rina::FlowDeallocateRequestEvent& eve
 
 	LOG_IPCP_DBG("Requested deallocation of flow %d", event.portId);
 
-	rina::ScopedLock g(fai_lock);
-
+	fai_lock.lock();
 	it = fa_instances.find(event.portId);
+	fai_lock.unlock();
 	if (it == fa_instances.end()) {
 		LOG_IPCP_ERR("Problems looking for FAI at portId %d", event.portId);
 		try {
@@ -920,6 +921,7 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::Cre
 
 	LOG_IPCP_DBG("Created connection with cep-id %d", event.getCepId());
 	flow_->getActiveConnection()->setSourceCepId(event.getCepId());
+	state = MESSAGE_TO_PEER_FAI_SENT;
 	lock_.unlock();
 
 	if (flow_->remote_address != flow_->local_address) {
@@ -957,16 +959,13 @@ void FlowAllocatorInstance::processCreateConnectionResponseEvent(const rina::Cre
 			release_remove();
 			return;
 		}
+
 	} else {
 		//Destination application is registered at this IPC Process
 		//Bypass RIB Daemon and call Flow Allocator directly
 		configs::Flow * dest_flow = new configs::Flow(*flow_);
 		flow_allocator_->createFlowRequestMessageReceived(dest_flow, object_name_, 0);
 	}
-
-	lock_.lock();
-	state = MESSAGE_TO_PEER_FAI_SENT;
-	lock_.unlock();
 }
 
 void FlowAllocatorInstance::createFlowRequestMessageReceived(configs::Flow * flow,
