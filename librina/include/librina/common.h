@@ -168,6 +168,12 @@ public:
 	unsigned int jitter;
 
 	/**
+	 * In 1/10000, indicates the maximum loss probability allowed in this
+	 * flow. A value >= 10000 indicates 'do not care'
+	 */
+	unsigned short loss;
+
+	/**
 	 * The maximum SDU size for the flow. May influence the choice
 	 * of the DIF where the flow will be created.
 	 */

@@ -633,6 +633,7 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 							.asInt();
 			cube.delay_ = cubes[j].get("delay", cube.delay_).asUInt();
 			cube.jitter_ = cubes[j].get("jitter", cube.jitter_).asUInt();
+			cube.loss = cubes[j].get("loss", cube.loss).asUInt();
 
 			dif_template->qosCubes.push_back(cube);
 		}

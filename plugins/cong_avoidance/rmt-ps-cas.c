@@ -151,7 +151,8 @@ static int mark_pdu(struct du * ret_pdu)
 
 static int cas_rmt_enqueue_policy(struct rmt_ps      *ps,
 				  struct rmt_n1_port *port,
-				  struct du	     *du)
+				  struct du	     *du,
+				  bool                must_enqueue)
 {
         struct cas_rmt_queue *   q;
         struct cas_rmt_ps_data * data;
@@ -187,6 +188,9 @@ static int cas_rmt_enqueue_policy(struct rmt_ps      *ps,
         if (cur_cycle->avg_len >= 1)
 		if (mark_pdu(du))
 			return RMT_PS_ENQ_ERR;
+
+	if (!must_enqueue && rfifo_is_empty(q->queue))
+		return RMT_PS_ENQ_SEND;
 
 	rfifo_push_ni(q->queue, du);
         return RMT_PS_ENQ_SCHED;

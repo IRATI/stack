@@ -27,10 +27,10 @@ extern "C" void
 destroyFlowAllocatorRoundRobinPs(rina::IPolicySet * instance);
 
 extern "C" rina::IPolicySet *
-createFlowAllocatorDelayBasedPs(rina::ApplicationEntity * context);
+createFlowAllocatorQTAPs(rina::ApplicationEntity * context);
 
 extern "C" void
-destroyFlowAllocatorDelayBasedPs(rina::IPolicySet * instance);
+destroyFlowAllocatorQTAPs(rina::IPolicySet * instance);
 
 extern "C" rina::IPolicySet *
 createNamespaceManagerPs(rina::ApplicationEntity * context);
@@ -99,10 +99,10 @@ get_factories(std::vector<struct rina::PsFactory>& factories)
         farr_factory.destroy = destroyFlowAllocatorRoundRobinPs;
         factories.push_back(farr_factory);
 
-        farr_factory.info.name = "DelayBased";
+        farr_factory.info.name = "qta-ps";
         farr_factory.info.app_entity = IFlowAllocator::FLOW_ALLOCATOR_AE_NAME;
-        farr_factory.create = createFlowAllocatorDelayBasedPs;
-        farr_factory.destroy = destroyFlowAllocatorDelayBasedPs;
+        farr_factory.create = createFlowAllocatorQTAPs;
+        farr_factory.destroy = destroyFlowAllocatorQTAPs;
         factories.push_back(farr_factory);
 
         nsm_factory.info.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;

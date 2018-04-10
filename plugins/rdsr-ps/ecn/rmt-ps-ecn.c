@@ -331,11 +331,11 @@ static int ecn_destroy_q(
 	return 0;
 }
 
-int ecn_enqueue(
-	struct rmt_ps * ps,
-	struct rmt_n1_port * n1_port,
-	struct du * du) {
-
+int ecn_enqueue(struct rmt_ps * ps,
+		struct rmt_n1_port * n1_port,
+		struct du * du,
+		bool must_enqueue)
+{
 	struct rmt_queue *q;
 	struct rmt_ps_data * data = ps->priv;
 
@@ -359,8 +359,10 @@ int ecn_enqueue(
 
 	/* NOTE: This is a workaround... */
 	if(pci_type(&du->pci) == PDU_TYPE_MGMT) {
-		rfifo_push_ni(q->mgmt, du);
+		if (!must_enqueue && rfifo_is_empty(q->mgmt))
+			return RMT_PS_ENQ_SEND;
 
+		rfifo_push_ni(q->mgmt, du);
 		return RMT_PS_ENQ_SCHED;
 	}
 
@@ -378,8 +380,10 @@ int ecn_enqueue(
 				PDU_FLAGS_EXPLICIT_CONGESTION);
 	}
 
-	rfifo_push_ni(q->queue, du);
+	if (!must_enqueue && rfifo_is_empty(q->queue))
+		return RMT_PS_ENQ_SEND;
 
+	rfifo_push_ni(q->queue, du);
 	return RMT_PS_ENQ_SCHED;
 }
 

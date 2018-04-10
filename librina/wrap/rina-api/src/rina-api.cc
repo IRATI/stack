@@ -312,6 +312,7 @@ irati_fa_req_fill(struct irati_kmsg_ipcm_allocate_flow *req, const char *dif_nam
 		req->fspec->average_sdu_bandwidth = 0;
 		req->fspec->delay = flowspec->max_delay;
 		req->fspec->jitter = flowspec->max_jitter;
+		req->fspec->loss = flowspec->max_loss;
 		req->fspec->max_allowable_gap = flowspec->max_sdu_gap;
 		req->fspec->undetected_bit_error_rate = flowspec->max_loss;
 		req->fspec->ordered_delivery = flowspec->in_order_delivery;
@@ -321,6 +322,7 @@ irati_fa_req_fill(struct irati_kmsg_ipcm_allocate_flow *req, const char *dif_nam
 		req->fspec->average_sdu_bandwidth = 0;
 		req->fspec->delay = 0;
 		req->fspec->jitter = 0;
+		req->fspec->loss = 10000;
 		req->fspec->max_allowable_gap = 10;
 		req->fspec->ordered_delivery = false;
 		req->fspec->undetected_bit_error_rate = 0;
@@ -517,7 +519,7 @@ rina_flow_accept(int fd, char **remote_appl, struct rina_flow_spec *spec,
 		spec->in_order_delivery = req->fspec->ordered_delivery;
 		spec->max_delay = req->fspec->delay;
 		spec->max_jitter = req->fspec->jitter;
-		spec->max_loss = req->fspec->undetected_bit_error_rate;
+		spec->max_loss = req->fspec->loss;
 		spec->max_sdu_gap = req->fspec->max_allowable_gap;
 	}
 
@@ -619,6 +621,7 @@ rina_flow_spec_default(struct rina_flow_spec *spec)
         spec->avg_bandwidth = 0;
         spec->max_delay = 0;
         spec->max_jitter = 0;
+        spec->max_loss = 10000;
         spec->in_order_delivery = 0;
         spec->msg_boundaries = 1;
 }
