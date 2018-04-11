@@ -1266,28 +1266,29 @@ usage(void)
     PRINTF(
         "rinaperf [OPTIONS]\n"
         "   -h : show this help\n"
-        "   -l : run in server mode (listen)\n"
+        "   -l : run in server mode (listen) instead of client mode\n"
         "   -t TEST : specify the type of the test to be performed "
         "(ping, perf, rr)\n"
+        "   -D NUM : test duration in seconds (default 10, except for ping)\n"
         "   -d DIF : name of DIF to which register or ask to allocate a flow\n"
         "   -c NUM : number of SDUs to send during the test\n"
-        "   -s NUM : size of the SDUs that are sent during the test\n"
+        "   -s NUM : size in bytes of the SDUs that are sent during the test\n"
         "   -i NUM : number of microseconds to wait after each SDUs is sent\n"
         "   -g NUM : max SDU gap to use for the data flow\n"
         "   -B NUM : average bandwidth for the data flow, in bits per second\n"
-        "   -f : enable flow control\n"
-        "   -b NUM : How many SDUs to send before waiting as "
+        "   -b NUM : how many SDUs to send before waiting as "
         "specified by -i option (default b=1)\n"
         "   -a APNAME : application process name and instance of the rinaperf "
         "client\n"
         "   -z APNAME : application process name and instance of the rinaperf "
         "server\n"
-        "   -p NUM : clients run NUM parallel instances, using NUM threads\n"
+        "   -p NUM : client runs NUM parallel instances, using NUM threads\n"
         "   -w : server runs in background\n"
-        "   -D : test duration (in ms)\n"
-        "   -L : maximum loss probability introduced by the flow (value/10000)\n"
-        "   -E : maximum delay introduced by the flow (ms)\n"
-        "   -v : be verbose\n");
+        "   -L NUM : maximum loss probability introduced by the flow "
+        "(NUM/%u)\n"
+        "   -E NUM : maximum delay introduced by the flow (microseconds)\n"
+        "   -v : be verbose\n",
+        RINA_FLOW_SPEC_LOSS_MAX);
 }
 
 int
@@ -1301,8 +1302,6 @@ main(int argc, char **argv)
     int listen             = 0;
     int cnt                = 0;
     int size               = sizeof(uint16_t);
-    int max_delay 	   = 0;
-    int max_loss  	   = 10000;
     int interval           = 0;
     int burst              = 1;
     struct worker wt; /* template */
@@ -1428,18 +1427,18 @@ main(int argc, char **argv)
             break;
 
         case 'L':
-            max_loss = atoi(optarg);
-            if (max_loss <= 0) {
-        	    PRINTF("    Invalid 'max loss' %d\n", max_loss);
-                    return -1;
+            rp->flowspec.max_loss = atoi(optarg);
+            if (rp->flowspec.max_loss > RINA_FLOW_SPEC_LOSS_MAX) {
+                PRINTF("    Invalid 'max loss' %d\n", rp->flowspec.max_loss);
+                return -1;
             }
             break;
 
         case 'E':
-            max_delay = atoi(optarg);
-            if (max_delay <= 0) {
-        	    PRINTF("    Invalid 'max delay' %d\n", max_delay);
-                    return -1;
+            rp->flowspec.max_delay = atoi(optarg);
+            if (rp->flowspec.max_delay > 5000000) {
+                PRINTF("    Invalid 'max delay' %d\n", rp->flowspec.max_delay);
+                return -1;
             }
             break;
 
@@ -1449,10 +1448,6 @@ main(int argc, char **argv)
             return -1;
         }
     }
-
-    /* Update flow spec */
-    rp->flowspec.max_delay = max_delay;
-    rp->flowspec.max_loss = max_loss;
 
     /*
      * Fixups:
