@@ -1,8 +1,0 @@
-syntax="proto2";
-package rina.messages;
-//option optimize_for = LITE_RUNTIME;
-import "DirectoryForwardingTableEntryMessage.proto";
-
-message directoryForwardingTableEntrySet_t{   //carries information about directoryforwardingtable entries
-    repeated directoryForwardingTableEntry_t directoryForwardingTableEntry= 1;
-}

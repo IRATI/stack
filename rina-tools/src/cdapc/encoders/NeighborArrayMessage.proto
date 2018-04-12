@@ -1,8 +1,0 @@
-syntax="proto2";
-package rina.messages;
-//option optimize_for = LITE_RUNTIME;
-import "NeighborMessage.proto";
-
-message neighbors_t{   //carries information about all the neighbors
-	repeated neighbor_t neighbor = 1;
-}

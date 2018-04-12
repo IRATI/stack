@@ -1,8 +1,0 @@
-syntax="proto2";
-package rina.messages;
-//option optimize_for = LITE_RUNTIME;
-import "WhatevercastNameMessage.proto";
-
-message whatevercastNames_t{   //carries information about all the whatevercast names
-	repeated whatevercastName_t whatevercastName = 1;
-}
