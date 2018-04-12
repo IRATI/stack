@@ -22,8 +22,8 @@
 
 #include "common.h"
 
-#define UQUEUE_DEBUG_SIZE 30000
-#define QTA_MUX_DEBUG 1
+#define UQUEUE_DEBUG_SIZE 100000
+#define QTA_MUX_DEBUG 0
 
 struct urgency_queue_debug_info {
 	s64	 	 q_log[UQUEUE_DEBUG_SIZE][2]; /*stores length & time*/

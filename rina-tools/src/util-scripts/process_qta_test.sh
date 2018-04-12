@@ -1,5 +1,5 @@
 #!/bin/bash
-if [ "$#" -ne 1]; then
+if [ "$#" -ne 1 ]; then
     echo "ERROR: Illegal number of parameters" 
     echo "USAGE: ./process_qta_test.sh <input_file>"
     exit 1
