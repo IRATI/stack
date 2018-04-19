@@ -29,6 +29,22 @@ extern "C" {
 #endif
 
 /*
+ * A POSIX-like RINA API for applications.
+ *
+ * The API functions typically return 0 or a positive value on success.
+ * On error, -1 is returned with the errno variable set accordingly to
+ * the specific error.
+ *
+ * Each application name is specified using a C string, where the name’s
+ * components (Application Process Name, Application Process Instance,
+ * Application Entity Name and Applicatiion Entity Instance) are separated
+ * by the | separator (pipe). The separator can be omitted if it is only
+ * used to separate empty strings or a non-empty string from an empty
+ * string. Valid strings are for instance "aa|bb|cc|dd", "aa|bb||",
+ * "aa|bb", "aa".
+ */
+
+/*
  * The rina_flow_spec struct specifies the flow QoS parameters asked
  * by an application that issue a flow allocation request.
  */
