@@ -1253,7 +1253,7 @@ usage(void)
     cout << "iporinad [OPTIONS]" << endl
          << "   -h : show this help" << endl
          << "   -c CONF_FILE: path to config file "
-            "(default /etc/rina/iporinad.conf)"
+            "(default /etc/rina/iporinad.conf)" << endl
          << "   -L NUM : maximum loss probability introduced by the flow "
             "(NUM/"
          << RINA_FLOW_SPEC_LOSS_MAX << ")" << endl
