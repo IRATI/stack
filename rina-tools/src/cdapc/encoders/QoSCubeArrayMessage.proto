@@ -1,8 +1,0 @@
-syntax="proto2";
-package rina.messages;
-//option optimize_for = LITE_RUNTIME;
-import "QoSCubeMessage.proto";
-
-message qosCubes_t{   //carries information about all the QoS cubes supported by a DIF
-	repeated qosCube_t qosCube = 1;
-}
