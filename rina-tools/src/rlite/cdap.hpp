@@ -88,19 +88,23 @@ public:
     }
 };
 
+struct CDAPMessage;
+
 class CDAPConn {
     InvokeIdMgr invoke_id_mgr;
     unsigned int discard_secs;
 
+#ifndef SWIG
     enum class ConnState {
         NONE = 1,
         AWAITCON,
         CONNECTED,
         AWAITCLOSE,
     } state;
+#endif /* SWIG */
 
     const char *conn_state_repr(ConnState st);
-    int conn_fsm_run(struct CDAPMessage *m, bool sender);
+    int conn_fsm_run(CDAPMessage *m, bool sender);
 
     CDAPConn(const CDAPConn &o);
 
@@ -110,11 +114,11 @@ public:
     ~CDAPConn();
 
     /* @invoke_id is not meaningful for request messages. */
-    int msg_send(struct CDAPMessage *m, int invoke_id);
-    int msg_ser(struct CDAPMessage *m, int invoke_id, char **buf, size_t *len);
+    int msg_send(CDAPMessage *m, int invoke_id);
+    int msg_ser(CDAPMessage *m, int invoke_id, char **buf, size_t *len);
 
-    struct CDAPMessage *msg_recv();
-    struct CDAPMessage *msg_deser(const char *serbuf, size_t serlen);
+    std::unique_ptr<CDAPMessage> msg_recv();
+    std::unique_ptr<CDAPMessage> msg_deser(const char *serbuf, size_t serlen);
 
     void reset();
     bool connected() const { return state == ConnState::CONNECTED; }
@@ -124,12 +128,12 @@ public:
     /* Helper function to send M_CONNECT and wait for the M_CONNECT_R
      * response. */
     int connect(const std::string &src, const std::string &dst,
-                gpb::authTypes_t auth_mech,
+                gpb::AuthType auth_mech,
                 const struct CDAPAuthValue *auth_value);
 
     /* Helper function to wait for M_CONNECT and send the M_CONNECT_R
      * response. */
-    CDAPMessage *accept();
+    std::unique_ptr<CDAPMessage> accept();
 
     std::string local_appl;
     std::string remote_appl;
@@ -137,43 +141,33 @@ public:
     long version;
 };
 
-struct CDAPMessage *msg_deser_stateless(const char *serbuf, size_t serlen);
+std::unique_ptr<CDAPMessage> msg_deser_stateless(const char *serbuf,
+                                                 size_t serlen);
 
-int msg_ser_stateless(struct CDAPMessage *m, char **buf, size_t *len);
+int msg_ser_stateless(CDAPMessage *m, char **buf, size_t *len);
 
 /* Internal representation of a CDAP message. */
 struct CDAPMessage {
-    int abs_syntax;
-    gpb::authTypes_t auth_mech;
+    int abs_syntax          = 0;
+    gpb::AuthType auth_mech = gpb::AUTH_NONE;
     CDAPAuthValue auth_value;
     std::string src_appl;
     std::string dst_appl;
     std::string filter;
-    gpb::flagValues_t flags;
-    int invoke_id;
+    gpb::CDAPFlags flags = gpb::F_NO_FLAGS;
+    int invoke_id        = 0;
     std::string obj_class;
-    long obj_inst;
+    long obj_inst = 0;
     std::string obj_name;
-    gpb::opCode_t op_code;
-    int result;
+    gpb::OpCode op_code = gpb::M_CONNECT;
+    int result          = 0;
     std::string result_reason;
-    int scope;
-    long version;
+    int scope    = 0;
+    long version = 0;
 
-    enum class ObjValType {
-        NONE,
-        I32,
-        I64,
-        BYTES,
-        FLOAT,
-        DOUBLE,
-        BOOL,
-        STRING,
-    };
-
-    bool is_type(ObjValType tt) const;
     bool is_request() const { return !is_response(); }
     bool is_response() const { return op_code & 0x1; }
+    bool invoke_id_valid() const { return invoke_id != 0; }
 
     void dump() const;
 
@@ -201,89 +195,107 @@ struct CDAPMessage {
     void set_obj_value(const std::string &v);
     void set_obj_value(const char *v);
     void get_obj_value(const char *&p, size_t &l) const;
-    void set_obj_value(const char *buf, size_t len);
+    void set_obj_value(const char *buf, size_t len); /* borrow */
+#ifndef SWIG
+    void set_obj_value(std::unique_ptr<char[]> buf, size_t len); /* ownership */
+#endif
 
-    int m_connect(gpb::authTypes_t auth_mech,
+    int m_connect(gpb::AuthType auth_mech,
                   const struct CDAPAuthValue *auth_value,
                   const std::string &local_appl,
                   const std::string &remote_appl);
 
-    int m_connect_r(const struct CDAPMessage *req, int result,
-                    const std::string &result_reason);
+    int m_connect_r(const CDAPMessage *req, int result = 0,
+                    const std::string &result_reason = std::string());
 
-    int m_release(gpb::flagValues_t flags);
+    int m_release();
 
-    int m_release_r(gpb::flagValues_t flags, int result,
-                    const std::string &result_reason);
+    int m_release_r(int result                       = 0,
+                    const std::string &result_reason = std::string());
 
-    int m_create(gpb::flagValues_t flags, const std::string &obj_class,
-                 const std::string &obj_name, long obj_inst, int scope,
-                 const std::string &filter);
+    int m_create(const std::string &obj_class, const std::string &obj_name,
+                 long obj_inst = 0, int scope = 0,
+                 const std::string &filter = std::string());
 
-    int m_create_r(gpb::flagValues_t flags, const std::string &obj_class,
-                   const std::string &obj_name, long obj_inst, int result,
-                   const std::string &result_reason);
+    int m_create_r(const std::string &obj_class, const std::string &obj_name,
+                   long obj_inst = 0, int result = 0,
+                   const std::string &result_reason = std::string());
 
-    int m_delete(gpb::flagValues_t flags, const std::string &obj_class,
-                 const std::string &obj_name, long obj_inst, int scope,
-                 const std::string &filter);
+    int m_delete(const std::string &obj_class, const std::string &obj_name,
+                 long obj_inst = 0, int scope = 0,
+                 const std::string &filter = std::string());
 
-    int m_delete_r(gpb::flagValues_t flags, const std::string &obj_class,
-                   const std::string &obj_name, long obj_inst, int result,
-                   const std::string &result_reason);
+    int m_delete_r(const std::string &obj_class, const std::string &obj_name,
+                   long obj_inst = 0, int result = 0,
+                   const std::string &result_reason = std::string());
 
-    int m_read(gpb::flagValues_t flags, const std::string &obj_class,
-               const std::string &obj_name, long obj_inst, int scope,
-               const std::string &filter);
+    int m_read(const std::string &obj_class, const std::string &obj_name,
+               long obj_inst = 0, int scope = 0,
+               const std::string &filter = std::string());
 
-    int m_read_r(gpb::flagValues_t flags, const std::string &obj_class,
-                 const std::string &obj_name, long obj_inst, int result,
-                 const std::string &result_reason);
+    int m_read_r(const std::string &obj_class, const std::string &obj_name,
+                 long obj_inst = 0, int result = 0,
+                 const std::string &result_reason = std::string());
 
-    int m_write(gpb::flagValues_t flags, const std::string &obj_class,
-                const std::string &obj_name, long obj_inst, int scope,
-                const std::string &filter);
+    int m_write(const std::string &obj_class, const std::string &obj_name,
+                long obj_inst = 0, int scope = 0,
+                const std::string &filter = std::string());
 
-    int m_write_r(gpb::flagValues_t flags, int result,
-                  const std::string &result_reason);
+    int m_write_r(int result                       = 0,
+                  const std::string &result_reason = std::string());
 
-    int m_cancelread(gpb::flagValues_t flags);
+    int m_cancelread();
 
-    int m_cancelread_r(gpb::flagValues_t flags, int result,
-                       const std::string &result_reason);
+    int m_cancelread_r(int result                       = 0,
+                       const std::string &result_reason = std::string());
 
-    int m_start(gpb::flagValues_t flags, const std::string &obj_class,
-                const std::string &obj_name, long obj_inst, int scope,
-                const std::string &filter);
+    int m_start(const std::string &obj_class, const std::string &obj_name,
+                long obj_inst = 0, int scope = 0,
+                const std::string &filter = std::string());
 
-    int m_start_r(gpb::flagValues_t flags, int result,
-                  const std::string &result_reason);
+    int m_start_r(int result                       = 0,
+                  const std::string &result_reason = std::string());
 
-    int m_stop(gpb::flagValues_t flags, const std::string &obj_class,
-               const std::string &obj_name, long obj_inst, int scope,
-               const std::string &filter);
+    int m_stop(const std::string &obj_class, const std::string &obj_name,
+               long obj_inst = 0, int scope = 0,
+               const std::string &filter = std::string());
 
-    int m_stop_r(gpb::flagValues_t flags, int result,
-                 const std::string &result_reason);
+    int m_stop_r(int result                       = 0,
+                 const std::string &result_reason = std::string());
 
     void clear() { *this = CDAPMessage(); }
 
+    static std::string opcode_repr(gpb::OpCode);
+
 private:
-    int m_common(gpb::flagValues_t flags, const std::string &obj_class,
-                 const std::string &obj_name, long obj_inst, int scope,
-                 const std::string &filter, gpb::opCode_t op_code);
+    int m_common(const std::string &obj_class, const std::string &obj_name,
+                 long obj_inst, int scope, const std::string &filter,
+                 gpb::OpCode op_code);
 
-    int m_common_r(gpb::flagValues_t flags, const std::string &obj_class,
-                   const std::string &obj_name, long obj_inst, int result,
-                   const std::string &result_reason, gpb::opCode_t op_code);
+    int m_common_r(const std::string &obj_class, const std::string &obj_name,
+                   long obj_inst, int result, const std::string &result_reason,
+                   gpb::OpCode op_code);
 
-    int __m_write(gpb::flagValues_t flags, const std::string &obj_class,
-                  const std::string &obj_name, long obj_inst, int scope,
-                  const std::string &filter);
+    int __m_write(const std::string &obj_class, const std::string &obj_name,
+                  long obj_inst, int scope, const std::string &filter);
 
     void copy(const CDAPMessage &o);
     void destroy();
 
+#ifndef SWIG
+    enum class ObjValType {
+        NONE,
+        I32,
+        I64,
+        BYTES,
+        FLOAT,
+        DOUBLE,
+        BOOL,
+        STRING,
+    };
+#endif /* SWIG */
+
+    bool is_type(ObjValType tt) const;
     /* Representation of the object value. */
     struct {
         ObjValType ty;

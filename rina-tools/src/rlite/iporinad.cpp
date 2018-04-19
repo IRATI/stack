@@ -156,6 +156,10 @@ public:
     /* Enable verbose mode */
     int verbose = 0;
 
+    /* QoS parameters */
+    int max_delay = 0;
+    int max_loss  = RINA_FLOW_SPEC_LOSS_MAX;
+
     void start_workers();
     int setup();
     int main_loop();
@@ -283,7 +287,7 @@ RouteObj::serialize(char *buf, unsigned int size) const
 static int
 cdap_obj_send(CDAPConn *conn, CDAPMessage *m, int invoke_id, const Obj *obj)
 {
-    char objbuf[4096];
+    char objbuf[4096]; /* Don't change the scope of this buffer. */
     int objlen;
 
     if (obj) {
@@ -294,7 +298,7 @@ cdap_obj_send(CDAPConn *conn, CDAPMessage *m, int invoke_id, const Obj *obj)
             return objlen;
         }
 
-        m->set_obj_value(objbuf, objlen);
+        m->set_obj_value(objbuf, objlen); /* no ownership passing */
     }
 
     return conn->msg_send(m, invoke_id);
@@ -960,7 +964,7 @@ IPoRINA::main_loop()
         }
 
         CDAPConn conn(cfd);
-        CDAPMessage *rm;
+        std::unique_ptr<CDAPMessage> rm;
         CDAPMessage m;
         const char *objbuf;
         size_t objlen;
@@ -974,8 +978,6 @@ IPoRINA::main_loop()
             goto abor;
         }
         remote_name = rm->src_appl;
-        delete rm;
-        rm = NULL;
 
         /* Receive Hello or Data message. */
         rm = conn.msg_recv();
@@ -986,7 +988,6 @@ IPoRINA::main_loop()
 
         if (rm->obj_class == "data") {
             /* This is a data flow. */
-            delete rm;
             rm = NULL;
             if (remotes.count(remote_name) == 0) {
                 cerr << "M_START(data) for unknown remote" << endl;
@@ -1010,8 +1011,6 @@ IPoRINA::main_loop()
             goto abor;
         }
         hello = Hello(objbuf, objlen);
-        delete rm;
-        rm = NULL;
 
         if (remotes.count(remote_name) == 0) {
             remotes[remote_name] = Remote();
@@ -1055,8 +1054,6 @@ IPoRINA::main_loop()
                 goto abor;
             }
             robj = RouteObj(objbuf, objlen);
-            delete rm;
-            rm = NULL;
 
             /* Add the route in the set. */
             prevlen = remotes[remote_name].routes.size();
@@ -1105,7 +1102,9 @@ IPoRINA::connect_to_remotes()
                     spec.in_order_delivery = 1;
                     spec.msg_boundaries    = 1;
                 }
-                wfd = rina_flow_alloc(
+                spec.max_loss  = (uint16_t)g->max_loss;
+                spec.max_delay = (uint32_t)g->max_delay;
+                wfd            = rina_flow_alloc(
                     kv.second.dif_name.c_str(), myname.c_str(),
                     kv.second.app_name.c_str(), &spec, RINA_F_NOWAIT);
                 if (wfd < 0) {
@@ -1148,7 +1147,8 @@ IPoRINA::connect_to_remotes()
                 }
 
                 CDAPConn conn(rfd);
-                CDAPMessage m, *rm = NULL;
+                CDAPMessage m;
+                std::unique_ptr<CDAPMessage> rm;
                 Hello hello;
 
                 /* CDAP connection setup. */
@@ -1161,7 +1161,7 @@ IPoRINA::connect_to_remotes()
                 if (i == IPOR_DATA) {
                     /* This is a data connection, send an empty CDAP start
                      * message to inform the remote peer. */
-                    m.m_start(gpb::F_NO_FLAGS, "data", "/data", 0, 0, string());
+                    m.m_start("data", "/data");
                     if (cdap_obj_send(&conn, &m, 0, NULL) < 0) {
                         cerr << "Failed to send M_START(data)" << endl;
                         goto abor;
@@ -1185,8 +1185,7 @@ IPoRINA::connect_to_remotes()
                     }
 
                     /* Exchange routes. */
-                    m.m_start(gpb::F_NO_FLAGS, "hello", "/hello", 0, 0,
-                              string());
+                    m.m_start("hello", "/hello");
                     hello.num_routes   = local_routes.size();
                     hello.tun_subnet   = kv.second.tun_subnet;
                     hello.tun_src_addr = kv.second.tun_local_addr;
@@ -1199,8 +1198,7 @@ IPoRINA::connect_to_remotes()
                     for (const auto &route : local_routes) {
                         RouteObj robj(route.subnet);
 
-                        m.m_write(gpb::F_NO_FLAGS, "route", "/routes", 0, 0,
-                                  string());
+                        m.m_write("route", "/routes");
                         if (cdap_obj_send(&conn, &m, 0, &robj) < 0) {
                             cerr << "Failed to send M_WRITE" << endl;
                             goto abor;
@@ -1211,10 +1209,6 @@ IPoRINA::connect_to_remotes()
 
                 kv.second.flow_alloc_needed[i] = false;
             abor:
-                if (rm) {
-                    delete rm;
-                }
-
                 /* Don't close a data file descriptor which is going
                  * to be used. */
                 if (i == IPOR_CTRL) {
@@ -1227,6 +1221,32 @@ IPoRINA::connect_to_remotes()
     }
 }
 
+/* Turn this program into a daemon process. */
+static void
+daemonize(void)
+{
+    pid_t pid = fork();
+    pid_t sid;
+
+    if (pid < 0) {
+        perror("fork(daemonize)");
+        exit(EXIT_FAILURE);
+    }
+
+    if (pid > 0) {
+        /* This is the parent. We can terminate it. */
+        exit(0);
+    }
+
+    /* Execution continues only in the child's context. */
+    sid = setsid();
+    if (sid < 0) {
+        exit(EXIT_FAILURE);
+    }
+
+    chdir("/");
+}
+
 static void
 usage(void)
 {
@@ -1234,16 +1254,22 @@ usage(void)
          << "   -h : show this help" << endl
          << "   -c CONF_FILE: path to config file "
             "(default /etc/rina/iporinad.conf)"
-         << endl;
+         << "   -L NUM : maximum loss probability introduced by the flow "
+            "(NUM/"
+         << RINA_FLOW_SPEC_LOSS_MAX << ")" << endl
+         << "   -E NUM : maximum delay introduced by the flow (microseconds)"
+         << endl
+         << "   -v : be verbose" << endl;
 }
 
 int
 main(int argc, char **argv)
 {
     const char *confpath = "/etc/rina/iporinad.conf";
+    int background       = 0;
     int opt;
 
-    while ((opt = getopt(argc, argv, "hc:v")) != -1) {
+    while ((opt = getopt(argc, argv, "hc:vL:E:w")) != -1) {
         switch (opt) {
         case 'h':
             usage();
@@ -1255,6 +1281,26 @@ main(int argc, char **argv)
 
         case 'v':
             g->verbose++;
+            break;
+
+        case 'L':
+            g->max_loss = atoi(optarg);
+            if (g->max_loss < 0 || g->max_loss > RINA_FLOW_SPEC_LOSS_MAX) {
+                cout << "    Invalid 'max loss' " << g->max_loss << endl;
+                return -1;
+            }
+            break;
+
+        case 'E':
+            g->max_delay = atoi(optarg);
+            if (g->max_delay < 0 || g->max_delay > 5000000) {
+                cout << "    Invalid 'max delay' " << g->max_delay << endl;
+                return -1;
+            }
+            break;
+
+        case 'w':
+            background = 1;
             break;
 
         default:
@@ -1286,6 +1332,10 @@ main(int argc, char **argv)
     /* Name registration and creation of TUN devices. */
     if (g->setup()) {
         return -1;
+    }
+
+    if (background) {
+        daemonize();
     }
 
     /* Start the threads that will carry out the forwarding work. */
