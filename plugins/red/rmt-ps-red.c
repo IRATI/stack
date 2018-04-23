@@ -149,7 +149,8 @@ red_rmt_dequeue_policy(struct rmt_ps *      ps,
 
 static int red_rmt_enqueue_policy(struct rmt_ps *      ps,
                                   struct rmt_n1_port * port,
-                                  struct du *          du)
+                                  struct du *          du,
+				  bool                 must_enqueue)
 {
         struct red_rmt_queue *   q;
         struct red_rmt_ps_data * data = ps->priv;
@@ -214,6 +215,9 @@ static int red_rmt_enqueue_policy(struct rmt_ps *      ps,
                 		|= PDU_FLAGS_EXPLICIT_CONGESTION);
 		break;
 	}
+
+	if (!must_enqueue && rfifo_is_empty(q->queue))
+		return RMT_PS_ENQ_SEND;
 
 	rfifo_push_ni(q->queue, du);
 	ret = RMT_PS_ENQ_SCHED;

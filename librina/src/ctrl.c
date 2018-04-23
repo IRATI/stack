@@ -53,8 +53,6 @@ struct irati_msg_base * irati_read_next_msg(int cfd)
 		return NULL;
 	}
 
-	LOG_DBG("Trying to read ctrl msg of %u bytes", size);
-
 	serbuf = malloc(size);
 	if (!serbuf) {
 		LOG_ERR("Cannot allocate memory");
@@ -68,8 +66,6 @@ struct irati_msg_base * irati_read_next_msg(int cfd)
 		free(serbuf);
 		return NULL;
 	}
-
-	LOG_DBG("Read ctrl msg of %d bytes from cfd %d", ret, cfd);
 
 	/* Here we can malloc the maximum kernel message size. */
 	resp = (struct irati_msg_base *) deserialize_irati_msg(irati_ker_numtables,
@@ -124,8 +120,6 @@ int irati_write_msg(int cfd, struct irati_msg_base *msg)
 		ret = 0;
 	}
 
-	LOG_DBG("Wrote ctrl msg of %d bytes to cfd %d", serlen, cfd);
-
 	return ret;
 }
 
@@ -157,7 +151,6 @@ int irati_open_ctrl_port(irati_msg_port_t port_id)
 	else
 		info.port_id = port_id;
 
-	LOG_DBG("Calling IOCTL with fd %d and port %u", fd, info.port_id);
 	ret = ioctl(fd, IRATI_CTRL_FLOW_BIND, &info);
 	if (ret) {
 		fprintf(stderr, "ioctl(%s) failed: %s\n", IRATI_CTRLDEV_NAME,

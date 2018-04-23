@@ -30,6 +30,7 @@
 #include "ps-factory.h"
 
 /* rmt_enqueue_policy return values */
+#define RMT_PS_ENQ_SEND  0	/* PDU can be transmitted by the RMT */
 #define RMT_PS_ENQ_SCHED 1	/* PDU enqueued and RMT needs to schedule */
 #define RMT_PS_ENQ_ERR   2	/* Error */
 #define RMT_PS_ENQ_DROP  3	/* PDU dropped due to queue full occupation */
@@ -40,9 +41,14 @@ struct rmt_ps {
 	/* Behavioural policies. */
 	struct du *(*rmt_dequeue_policy)(struct rmt_ps *,
 					  struct rmt_n1_port *);
+	/*
+	 * If must_enqueue is true the policy must either enqueue or drop
+	 * the PDU, otherwise it may also return RMT_PS_ENQ_SEND
+	 */
 	int (*rmt_enqueue_policy)(struct rmt_ps *,
 				  struct rmt_n1_port *,
-				  struct du *);
+				  struct du *,
+				  bool must_enqueue);
 	void* (*rmt_q_create_policy)(struct rmt_ps *,
 				   struct rmt_n1_port *);
 	int (*rmt_q_destroy_policy)(struct rmt_ps *,

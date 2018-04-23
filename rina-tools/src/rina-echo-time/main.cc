@@ -55,7 +55,8 @@ int wrapped_main(int argc, char** argv)
         int perf_interval;
         int dw;
         int rate;
-        int delay;
+        unsigned int delay;
+        unsigned int loss;
         unsigned int lost_wait;
         unsigned int partial_read;
         string test_type;
@@ -163,12 +164,18 @@ int wrapped_main(int argc, char** argv)
                                              false,
                                              1000,
                                              "integer");
-                TCLAP::ValueArg<int> delay_arg("",
+                TCLAP::ValueArg<unsigned int> delay_arg("",
                                              "delay",
-                                             "It should be a value greater than zero",
+                                             "Maximum delay. It should be a value greater than zero",
                                              false,
-                                             1,
-                                             "integer");
+                                             0,
+                                             "unsigned integer");
+                TCLAP::ValueArg<unsigned int> loss_arg("",
+                                             "loss",
+                                             "Maximum loss probability (1/10000). It should be a value greater than zero",
+                                             false,
+                                             10000,
+                                             "unsigned integer");
                 TCLAP::ValueArg<unsigned int> partial_read_arg("",
                                             	  	       "partial-read",
 							       "Server reads SDUs byte per byte (only in ping tests)",
@@ -194,6 +201,7 @@ int wrapped_main(int argc, char** argv)
                 cmd.add(lost_wait_arg);
                 cmd.add(rate_arg);
                 cmd.add(delay_arg);
+                cmd.add(loss_arg);
                 cmd.add(partial_read_arg);
 
                 cmd.parse(argc, argv);
@@ -216,6 +224,8 @@ int wrapped_main(int argc, char** argv)
                 lost_wait = lost_wait_arg.getValue();
                 rate = rate_arg.getValue();
                 delay = delay_arg.getValue();
+                loss = loss_arg.getValue();
+
                 partial_read = partial_read_arg.getValue();
 
                 if (size > Application::max_buffer_size) {
@@ -242,7 +252,7 @@ int wrapped_main(int argc, char** argv)
                 // Client mode
                 Client c(test_type, dif_names, client_apn, client_api,
                          server_apn, server_api, quiet, count,
-                         registration, size, wait, gap, dw, lost_wait, rate, delay);
+                         registration, size, wait, gap, dw, lost_wait, rate, delay, loss);
 
                 c.run();
         }

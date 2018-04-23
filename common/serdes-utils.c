@@ -343,19 +343,19 @@ __rina_name_to_string(const struct name *name, int maysleep)
 	memcpy(cur, name->process_name, apn_len);
 	cur += apn_len;
 
-	*cur = ':';
+	*cur = '|';
 	cur++;
 
 	memcpy(cur, name->process_instance, api_len);
 	cur += api_len;
 
-	*cur = ':';
+	*cur = '|';
 	cur++;
 
 	memcpy(cur, name->entity_name, aen_len);
 	cur += aen_len;
 
-	*cur = ':';
+	*cur = '|';
 	cur++;
 
 	memcpy(cur, name->entity_instance, aei_len);
@@ -425,10 +425,10 @@ __rina_name_from_string(const char *str, struct name *name, int maysleep)
 		return -1;
 	}
 
-	apn = strsep(strp, ":");
-	api = strsep(strp, ":");
-	aen = strsep(strp, ":");
-	aei = strsep(strp, ":");
+	apn = strsep(strp, "|");
+	api = strsep(strp, "|");
+	aen = strsep(strp, "|");
+	aei = strsep(strp, "|");
 
 	if (!apn) {
 		/* The ':' are not necessary if some of the api, aen, aei
@@ -521,7 +521,8 @@ int flow_spec_serlen(const struct flow_spec * fspec)
 {
 	if (!fspec) return 0;
 
-	return 8 * sizeof(uint32_t) + sizeof(int32_t) + 3* sizeof(bool);
+	return 8 * sizeof(uint32_t) + sizeof(int32_t)
+		+ sizeof(uint16_t) + 3* sizeof(bool);
 }
 
 void serialize_flow_spec(void **pptr, const struct flow_spec *fspec)
@@ -532,6 +533,7 @@ void serialize_flow_spec(void **pptr, const struct flow_spec *fspec)
 	serialize_obj(*pptr, uint32_t, fspec->average_sdu_bandwidth);
 	serialize_obj(*pptr, uint32_t, fspec->delay);
 	serialize_obj(*pptr, uint32_t, fspec->jitter);
+	serialize_obj(*pptr, uint16_t, fspec->loss);
 	serialize_obj(*pptr, int32_t, fspec->max_allowable_gap);
 	serialize_obj(*pptr, uint32_t, fspec->max_sdu_size);
 	serialize_obj(*pptr, bool, fspec->ordered_delivery);
@@ -552,6 +554,7 @@ int deserialize_flow_spec(const void **pptr, struct flow_spec ** fspec)
 	deserialize_obj(*pptr, uint32_t, &(*fspec)->average_sdu_bandwidth);
 	deserialize_obj(*pptr, uint32_t, &(*fspec)->delay);
 	deserialize_obj(*pptr, uint32_t, &(*fspec)->jitter);
+	deserialize_obj(*pptr, uint16_t, &(*fspec)->loss);
 	deserialize_obj(*pptr, int32_t, &(*fspec)->max_allowable_gap);
 	deserialize_obj(*pptr, uint32_t, &(*fspec)->max_sdu_size);
 	deserialize_obj(*pptr, bool, &(*fspec)->ordered_delivery);
@@ -1665,7 +1668,7 @@ int qos_cube_serlen(const struct qos_cube * qos)
 	if (!qos) return 0;
 
 	ret = 6 * sizeof (uint32_t) + 2 * sizeof(bool) + sizeof(int32_t)
-			+ 2*sizeof(uint16_t) + string_prlen(qos->name)
+			+ 3*sizeof(uint16_t) + string_prlen(qos->name)
 			+ dtp_config_serlen(qos->dtpc)
 			+ dtcp_config_serlen(qos->dtcpc);
 
@@ -1686,6 +1689,7 @@ void serialize_qos_cube(void **pptr, const struct qos_cube *qos)
 	serialize_obj(*pptr, int32_t, qos->max_allowed_gap);
 	serialize_obj(*pptr, uint32_t, qos->delay);
 	serialize_obj(*pptr, uint32_t, qos->jitter);
+	serialize_obj(*pptr, uint16_t, qos->loss);
 	serialize_string(pptr, qos->name);
 	serialize_dtp_config(pptr, qos->dtpc);
 	serialize_dtcp_config(pptr, qos->dtcpc);
@@ -1705,6 +1709,7 @@ int deserialize_qos_cube(const void **pptr, struct qos_cube *qos)
 	deserialize_obj(*pptr, int32_t, &qos->max_allowed_gap);
 	deserialize_obj(*pptr, uint32_t, &qos->delay);
 	deserialize_obj(*pptr, uint32_t, &qos->jitter);
+	deserialize_obj(*pptr, uint16_t, &qos->loss);
 
 	ret = deserialize_string(pptr, &qos->name);
 	if (ret)

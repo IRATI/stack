@@ -109,14 +109,15 @@ struct rinaperf {
     const char *cli_appl_name;
     const char *srv_appl_name;
     const char *dif_name;
-    int cfd;          /* Control file descriptor */
-    int parallel;     /* num of parallel clients */
-    int duration;     /* duration of client test (secs) */
-    int use_mss_size; /* use flow MSS as packet size */
-    int verbose;
+    int cfd;                /* control file descriptor */
+    int parallel;           /* num of parallel clients */
+    int duration;           /* duration of client test (secs) */
+    int use_mss_size;       /* use flow MSS as packet size */
+    int verbose;            /* be verbose */
     int stop_pipe[2];       /* to stop client threads */
     int cli_stop;           /* another way to stop client threads */
     int cli_flow_allocated; /* client flows allocated ? */
+    int background;         /* server runs as a daemon process */
 
     /* Synchronization between client threads and main thread. */
     sem_t cli_barrier;
@@ -138,6 +139,12 @@ struct rinaperf {
     } while (0)
 
 static struct rinaperf _rp;
+
+static int
+is_reliable_spec(const struct rina_flow_spec *spec)
+{
+    return spec->max_sdu_gap == 0 && spec->in_order_delivery == 1;
+}
 
 static void
 worker_init(struct worker *w, struct rinaperf *rp)
@@ -178,6 +185,8 @@ stoppable_usleep(struct rinaperf *rp, unsigned int usecs)
         perror("select()");
     }
 }
+
+static int config_msg_read(int cfd, struct rp_config_msg *cfg);
 
 /* Used for both ping and rr tests. */
 static int
@@ -279,6 +288,8 @@ ping_client(struct worker *w)
     w->result.pps /= ns;
     w->result.bps     = w->result.pps * 8 * size;
     w->result.latency = i ? ((ns / i) - interval * 1000) : 0;
+
+    w->test_config.cnt = i; /* write back packet count */
 
     return 0;
 }
@@ -423,6 +434,8 @@ perf_client(struct worker *w)
         w->result.bps = w->result.pps * 8 * size;
     }
 
+    w->test_config.cnt = i; /* write back packet count */
+
     return 0;
 }
 
@@ -512,7 +525,7 @@ perf_server(struct worker *w)
             n = poll(pfd, 2, RP_DATA_WAIT_MSECS);
             if (n < 0) {
                 perror("poll(flow)");
-
+                return -1;
             } else if (n == 0) {
                 /* Timeout */
                 timeout = 1;
@@ -522,16 +535,43 @@ perf_server(struct worker *w)
                 break;
             }
 
-            if (pfd[1].revents & POLLIN) {
-                /* Stop signal received. */
+            if (pfd[0].revents & POLLIN) {
+                /* Ready to read. Adjust 'i' and retry. */
+                i--;
+                continue;
+            } else {
+                struct rp_config_msg stop;
+                int ret;
+
+                /* Nothing to read and stop signal received. */
+                assert(pfd[1].revents & POLLIN);
                 if (verb) {
                     PRINTF("Stopped remotely\n");
                 }
-                break;
-            }
+                pfd[1].events = 0; /* Not interested anymore. */
 
-            /* Ready to read. */
-            n = read(w->dfd, buf, sizeof(buf));
+                ret = config_msg_read(w->cfd, &stop);
+                if (ret) {
+                    return ret;
+                }
+
+                if (!stop.cnt) {
+                    /* Just stop the loop. */
+                    break;
+                }
+
+                /* The stop.cnt field contains the number of expected
+                 * packets. We reset 'limit' to the expected count,
+                 * adjust 'i' and keep going. */
+                limit = stop.cnt;
+                if (i != stop.cnt) {
+                    PRINTF(
+                        "%llu packets still expected, stop delayed\n",
+                        (long long unsigned)stop.cnt - (long long unsigned)i);
+                }
+                i--;
+                continue;
+            }
         }
         if (n < 0) {
             perror("read(flow)");
@@ -787,10 +827,15 @@ client_worker_function(void *opaque)
         usleep(100000);
     }
 
-    /* Send the stop opcode on the control file descriptor. */
+    /* Send the stop opcode on the control file descriptor. With reliable
+     * flows we also send the expected packet count, so that the receiver
+     * can try to receive more from the data file descriptor. */
     memset(&cfg, 0, sizeof(cfg));
     cfg.opcode = htole32(RP_OPCODE_STOP);
-    ret        = write(w->cfd, &cfg, sizeof(cfg));
+    if (is_reliable_spec(&rp->flowspec)) {
+        cfg.cnt = htole64(w->test_config.cnt);
+    }
+    ret = write(w->cfd, &cfg, sizeof(cfg));
     if (ret != sizeof(cfg)) {
         if (ret < 0) {
             perror("write(stop)");
@@ -844,6 +889,30 @@ out:
     return NULL;
 }
 
+static int
+config_msg_read(int cfd, struct rp_config_msg *cfg)
+{
+    int ret = read(cfd, cfg, sizeof(*cfg));
+
+    if (ret != sizeof(*cfg)) {
+        if (ret < 0) {
+            perror("read(cfg)");
+        } else {
+            PRINTF("Error reading test configuration: wrong length %d "
+                   "(should be %lu)\n",
+                   ret, (unsigned long int)sizeof(*cfg));
+        }
+        return -1;
+    }
+
+    cfg->opcode = le32toh(cfg->opcode);
+    cfg->ticket = le32toh(cfg->ticket);
+    cfg->cnt    = le64toh(cfg->cnt);
+    cfg->size   = le32toh(cfg->size);
+
+    return 0;
+}
+
 static void *
 server_worker_function(void *opaque)
 {
@@ -871,22 +940,10 @@ server_worker_function(void *opaque)
         goto out;
     }
 
-    ret = read(w->cfd, &cfg, sizeof(cfg));
-    if (ret != sizeof(cfg)) {
-        if (ret < 0) {
-            perror("read(cfg)");
-        } else {
-            PRINTF("Error reading test configuration: wrong length %d "
-                   "(should be %lu)\n",
-                   ret, (unsigned long int)sizeof(cfg));
-        }
+    ret = config_msg_read(w->cfd, &cfg);
+    if (ret) {
         goto out;
     }
-
-    cfg.opcode = le32toh(cfg.opcode);
-    cfg.ticket = le32toh(cfg.ticket);
-    cfg.cnt    = le64toh(cfg.cnt);
-    cfg.size   = le32toh(cfg.size);
 
     if (cfg.opcode >= RP_OPCODE_STOP) {
         PRINTF("Invalid test configuration: test type %u is invalid\n",
@@ -1012,6 +1069,32 @@ out:
     return NULL;
 }
 
+/* Turn this program into a daemon process. */
+static void
+daemonize(void)
+{
+    pid_t pid = fork();
+    pid_t sid;
+
+    if (pid < 0) {
+        perror("fork(daemonize)");
+        exit(EXIT_FAILURE);
+    }
+
+    if (pid > 0) {
+        /* This is the parent. We can terminate it. */
+        exit(0);
+    }
+
+    /* Execution continues only in the child's context. */
+    sid = setsid();
+    if (sid < 0) {
+        exit(EXIT_FAILURE);
+    }
+
+    chdir("/");
+}
+
 static int
 server(struct rinaperf *rp)
 {
@@ -1023,6 +1106,10 @@ server(struct rinaperf *rp)
     if (ret) {
         perror("rina_register()");
         return ret;
+    }
+
+    if (rp->background) {
+        daemonize();
     }
 
     for (;;) {
@@ -1109,32 +1196,6 @@ server(struct rinaperf *rp)
     return 0;
 }
 
-/* Turn this program into a daemon process. */
-static void
-daemonize(void)
-{
-    pid_t pid = fork();
-    pid_t sid;
-
-    if (pid < 0) {
-        perror("fork(daemonize)");
-        exit(EXIT_FAILURE);
-    }
-
-    if (pid > 0) {
-        /* This is the parent. We can terminate it. */
-        exit(0);
-    }
-
-    /* Execution continues only in the child's context. */
-    sid = setsid();
-    if (sid < 0) {
-        exit(EXIT_FAILURE);
-    }
-
-    chdir("/");
-}
-
 static void
 stop_clients(struct rinaperf *rp)
 {
@@ -1205,25 +1266,29 @@ usage(void)
     PRINTF(
         "rinaperf [OPTIONS]\n"
         "   -h : show this help\n"
-        "   -l : run in server mode (listen)\n"
+        "   -l : run in server mode (listen) instead of client mode\n"
         "   -t TEST : specify the type of the test to be performed "
         "(ping, perf, rr)\n"
+        "   -D NUM : test duration in seconds (default 10, except for ping)\n"
         "   -d DIF : name of DIF to which register or ask to allocate a flow\n"
         "   -c NUM : number of SDUs to send during the test\n"
-        "   -s NUM : size of the SDUs that are sent during the test\n"
+        "   -s NUM : size in bytes of the SDUs that are sent during the test\n"
         "   -i NUM : number of microseconds to wait after each SDUs is sent\n"
         "   -g NUM : max SDU gap to use for the data flow\n"
         "   -B NUM : average bandwidth for the data flow, in bits per second\n"
-        "   -f : enable flow control\n"
-        "   -b NUM : How many SDUs to send before waiting as "
+        "   -b NUM : how many SDUs to send before waiting as "
         "specified by -i option (default b=1)\n"
         "   -a APNAME : application process name and instance of the rinaperf "
         "client\n"
         "   -z APNAME : application process name and instance of the rinaperf "
         "server\n"
-        "   -p NUM : clients run NUM parallel instances, using NUM threads\n"
+        "   -p NUM : client runs NUM parallel instances, using NUM threads\n"
         "   -w : server runs in background\n"
-        "   -v : be verbose\n");
+        "   -L NUM : maximum loss probability introduced by the flow "
+        "(NUM/%u)\n"
+        "   -E NUM : maximum delay introduced by the flow (microseconds)\n"
+        "   -v : be verbose\n",
+        RINA_FLOW_SPEC_LOSS_MAX);
 }
 
 int
@@ -1239,7 +1304,6 @@ main(int argc, char **argv)
     int size               = sizeof(uint16_t);
     int interval           = 0;
     int burst              = 1;
-    int background         = 0;
     struct worker wt; /* template */
     int ret;
     int opt;
@@ -1262,11 +1326,13 @@ main(int argc, char **argv)
     sem_init(&rp->workers_free, 0, RP_MAX_WORKERS);
     sem_init(&rp->cli_barrier, 0, 0);
     pthread_mutex_init(&rp->ticket_lock, NULL);
+    rp->background = 0;
 
     /* Start with a default flow configuration (unreliable flow). */
     rina_flow_spec_unreliable(&rp->flowspec);
 
-    while ((opt = getopt(argc, argv, "hlt:d:c:s:i:B:g:b:a:z:p:D:wv")) != -1) {
+    while ((opt = getopt(argc, argv, "hlt:d:c:s:i:B:g:b:a:z:p:D:L:E:wv")) !=
+           -1) {
         switch (opt) {
         case 'h':
             usage();
@@ -1312,7 +1378,8 @@ main(int argc, char **argv)
             break;
 
         case 'g': /* Set max_sdu_gap flow specification parameter. */
-            rp->flowspec.max_sdu_gap = atoll(optarg);
+            rp->flowspec.max_sdu_gap       = atoll(optarg);
+            rp->flowspec.in_order_delivery = 1;
             break;
 
         case 'B': /* Set the average bandwidth parameter. */
@@ -1352,11 +1419,27 @@ main(int argc, char **argv)
             break;
 
         case 'w':
-            background = 1;
+            rp->background = 1;
             break;
 
         case 'v':
             rp->verbose = 1;
+            break;
+
+        case 'L':
+            rp->flowspec.max_loss = atoi(optarg);
+            if (rp->flowspec.max_loss > RINA_FLOW_SPEC_LOSS_MAX) {
+                PRINTF("    Invalid 'max loss' %d\n", rp->flowspec.max_loss);
+                return -1;
+            }
+            break;
+
+        case 'E':
+            rp->flowspec.max_delay = atoi(optarg);
+            if (rp->flowspec.max_delay > 5000000) {
+                PRINTF("    Invalid 'max delay' %d\n", rp->flowspec.max_delay);
+                return -1;
+            }
             break;
 
         default:
@@ -1513,9 +1596,5 @@ main(int argc, char **argv)
     }
 
     /* Server mode. */
-    if (background) {
-        daemonize();
-    }
-
     return server(rp);
 }

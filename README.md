@@ -3,6 +3,9 @@
 
 1. Introduction
 2. Build instructions
+    2.1 Building on Ubuntu 16.04, Debian 8 and Debian 9
+    2.2 Building on Arch Linux
+    2.3 Building on Raspbian
 3. Running and configuring IRATI
     3.1 Loading the kernel modules
     3.2 The configuration files
@@ -205,6 +208,934 @@ folder as the main configuration files (.conf) that use the templates.
 
 For exmples of different JSON configuration files, you can take a look at 
 https://github.com/IRATI/stack/tree/master/tests/conf.
+
+##### 3.2.2.1 Data Transfer Constants
+Customize the length of the header fields in EFCP data transfer (**address**, **cep-id**, **length**, 
+**port-id**, **sequence number**, **qos-id**) and control (**rate**, **frame**, **control seq. number**) 
+PDUs. Set the **maximum PDU size** and **maximum PDU lifetime** for the DIF.
+
+    "dataTransferConstants" : {
+    	"addressLength" : 2,
+    	"cepIdLength" : 2,
+    	"lengthLength" : 2,
+    	"portIdLength" : 2,
+    	"qosIdLength" : 2,
+    	"rateLength" : 4,
+    	"frameLength" : 4,
+    	"sequenceNumberLength" : 4,
+    	"ctrlSequenceNumberLength" : 4,
+    	"maxPduSize" : 1470,
+    	"maxPduLifetime" : 60000
+    },
+
+##### 3.2.2.2 QoS Cubes
+Define what are the characteristics of the different QoS cube supported by the DIF,
+as well as their associated EFCP policies: DTP policy set (data transfer policy set) 
+and DTCP policy set (data transfer policy set).
+
+    "qosCubes" : [ {
+	 "name" : "unreliablewithflowcontrol",
+         "id" : 1,
+         "partialDelivery" : false,
+         "orderedDelivery" : true,
+         "efcpPolicies" : {
+              "dtpPolicySet" : {
+                "name" : "default",
+                "version" : "0"
+              },
+              "initialATimer" : 300,
+              "dtcpPresent" : true,
+              "dtcpConfiguration" : {
+                   "dtcpPolicySet" : {
+                     "name" : "default",
+                     "version" : "0"
+                   },
+                   "rtxControl" : false,
+                   "flowControl" : true,
+                   "flowControlConfig" : {
+                       "rateBased" : false,
+                       "windowBased" : true,
+                       "windowBasedConfig" : {
+                         "maxClosedWindowQueueLength" : 50,
+                         "initialCredit" : 50
+                        }
+                   }
+              }
+          }
+       }, {
+       "name" : "reliablewithflowcontrol",
+       ...
+       } ]
+
+   * **Name**: the name of the qos cube (a string)
+   * **id**: the id of the qos cube (an unsigned integer)
+   * **partialDelivery**: true/false depending if delivery of partial SDUs is supported
+   * **orderedDelivery**: true/false depending if in order delivery of SDUs is required
+   * **initialATimer**: initial value of the A timer, in ms
+   * **dtpPolicySet**: name and version of the DTP policy set associated to this QoS cube
+   * **dtcpPresent**: true if a DTCP instance is required for every DTP instance, false otherwise
+   * **dtcpPolicySet**: name and verison of the DTCP policy set associated to this QoS cube
+   * **rtxControl**: true if DTCP performs rtx control, false otherwise
+   * **flowControl**: true if DTCP performs flow control, false otherwise
+   * **rateBased**: true if DTCP performs rate-based flow control, false otherwise
+   * **windowBased**: true if DTCP performs window-based flow control, false otherwise
+   * **maxClosedWindowQueueLength**: maximum length of the closed window queue
+   * **initialCredit**: initial credit of the window (only if window-based flow control is used)
+
+The following DTCP policy sets are available in IRATI
+
+###### 3.2.2.2.1 Default policy
+Very simple DTCP policies that implement retransmission control and a sliding window 
+flow control policy with a fixed size window (configurable via the **initialCredit** parameter).
+The DTCP flow control policy does not react to congestion, packet loss or RTT delay variation.
+
+   * **Policy name**: default.
+   * **Policy version**: 0.
+   * **Dependencies**: None.
+
+Example configuration:
+
+    "dtcpPolicySet" : {
+        "name" : "default",
+        "version" : "0"
+    }
+
+###### 3.2.2.2.2 DECNET binary feedback congestion control
+Extends the default DTCP policies by reacting to congestion and adapting the window size, based 
+on Raj Jain's binary feedback congestion control (additive increase, multiplicative decrease).
+Since the policy relies on Explicit Congestion Notification (ECN), it must be used in conjunction 
+with its companion RMT policy (cas-ps).
+
+   * **Policy name**: cas-ps.
+   * **Policy version**: 1.
+   * **Dependencies**:
+      * **RMT policy**: cas-ps.
+
+Example configuration:
+
+    "dtcpPolicySet" : {
+        "name" : "cas-ps",
+        "version" : "1",
+        "parameters" : [{
+           "name"  : "w_inc_a_p",
+           "value" : "1"
+        }]
+    }
+
+   * **w_inc_a_p**: Number of units by which the window size will be increased under "additive
+increase" state (the default value is **1**)
+
+###### 3.2.2.2.3 TCP ECN congestion control 
+Extends the default DTCP policies by reacting to congestion and adapting the window size, based
+on TCP Reno's congestion control strategy (but using Explicit Congestion Notification instead 
+of packet loss as a sign of congestion). Since the policy relies on Explicit Congestion 
+Notification (ECN), it must be used in conjunction with an ECN-marking RMT policy (such as 
+cas-ps or red-ps).
+
+   * **Policy name**: red-ps.
+   * **Policy version**: 1.
+   * **Dependencies**:
+      * **RMT policy**: red-ps or cas-ps.
+
+Example configuration:
+
+    "dtcpPolicySet" : {
+        "name" : "red-ps",
+        "version" : "1"
+    }
+
+###### 3.2.2.2.4 Data Center TCP congestion control
+Extends the default DTCP policies by reacting to congestion and adapting the window size, based
+on the Data Center TCP (DCTCP) scheme. The goal of DCTCP is to achieve high burst tolerance, 
+low latency, and high throughput, with commodity shallow buffered switches. DCTCP achieves these 
+goals primarily by reacting to congestion in proportion to the extent of congestion. Since the 
+policy relies on Explicit Congestion Notification, it must be used with its companion ECN-marking 
+RMT policy (dctcp-ps).
+
+   * **Policy name**: dctcp-ps.
+   * **Policy version**: 1.
+   * **Dependencies**:
+      * **RMT policy**: dctcp-ps.
+        
+Example configuration: 
+           
+    "dtcpPolicySet" : {
+        "name" : "dctcp-ps",
+        "version" : "1",
+        "parameters" : [{
+           "name"  : "shift_g",
+           "value" : "4"
+        }]
+    }
+
+   * **shift_g**: According the DCTCP paper, the g value should be small enough and all experiments 
+in the paper use `g = 0.0625 (1/16)`. Thus, the `shift_g = 4` is `2^4 = 16` (the default value is **4**)
+
+##### 3.2.2.3 Known IPC Process addresses
+IRATI only supports a very simple static address allocation policy right now. The configuration file 
+defines a mapping betwenn the IPC Process application names and its address. It assumes that the 
+IPC Process name is of the form *<name.Organization>*, so that if a specific entry for a name is not 
+found but the configuration file defines what prefix is assgined to the *Organization*, then an address 
+of the *Organization* range can still be assigned.
+
+Example configuration:
+
+     "knownIPCProcessAddresses" : [ {
+         "apName" : "C.IRATI",
+         "apInstance" : "1",
+         "address" : 3
+          }, {
+         "apName" : "D.IRATI",
+         "apInstance" : "1",
+         "address" : 4
+        } ],
+        "addressPrefixes" : [ {
+         "addressPrefix" : 0,
+         "organization" : "N.Bourbaki"
+          }, {
+         "addressPrefix" : 16,
+         "organization" : "IRATI"
+      } ]
+
+##### 3.2.2.4 Relaying and Multiplexing Task
+The Relaying and Multiplexing Task (RMT) configuration. The behaviour of the RMT is controlled by 
+two policies: the forwarding function policy (which specifies how PDUs are forwarded), and the 
+RMT policy (which controls the number of queues at the RMT, its monitoring and how PDUs are scheduled).
+
+     "rmtConfiguration" : {
+        "pftConfiguration" : {
+          "policySet" : {
+            "name" : "default",
+            "version" : "0"
+          }
+        },
+        "policySet" : {
+          "name" : "default",
+          "version" : "1"
+        }
+     }
+
+IRATI supports the following Forwarding and RMT policies
+
+###### 3.2.2.4.1 Forwarding policy: default
+The default forwarding policy is based on a forwarding table that maps the *destination address* and 
+*qos_id* fields of PDUs to an N-1 port. The table lookup is based on a exact match of the destination 
+address and qos_id fields (except if the qos_id value in the forwarding table is 0, then the qos_id 
+value is ignored).
+
+   * **Policy name**: default.
+   * **Policy version**: 1.
+   * **Dependencies**: none.
+
+Example configuration:
+    
+    "pftConfiguration" : {
+        "policySet" : {
+            "name" : "default",
+            "version" : "0"
+         } 
+     }
+
+###### 3.2.2.4.2 Forwarding policy: multi-path
+This policy extends the default forwarding policy with multi-path capabilities. If multiple N-1 flows 
+are assigned to the same destination address and qos_id, this policy applies a hash-threshold algorithm 
+(the one defined in the ECMP specification) to load-balance PDUs amongst the multiple N-1 flows. The 
+algorithm preserves PDU packet ordering by forwarding PDUs belonging to the same flow through the same 
+N-1 port.
+
+   * **Policy name**: multipath.
+   * **Policy version**: 1.
+   * **Dependencies**: none.
+   
+Example configuration:
+    
+    "pftConfiguration" : {
+        "policySet" : {
+            "name" : "multipath",
+            "version" : "1"
+         }  
+     }
+
+###### 3.2.2.4.3 Forwarding policy: LFA
+This policy extends the default forwarding policy with reliability capabilities. The routing algorithm 
+populates the forwarding table computing multiple N-1 port-ids per each destination address, using the 
+Loop-Free Alternates (LFA) algorithm. One port-id is the active one, and the other port-ids are the backup 
+ones. If an N-1 port becames unusable, the forwarding algorithm switches to the backup port-ids for all 
+destination addresses where the failing port-id was the active one. 
+            
+   * **Policy name**: lfa.
+   * **Policy version**: 1.
+   * **Dependencies**: none.
+
+Example configuration:
+     
+    "pftConfiguration" : {
+        "policySet" : { 
+            "name" : "lfa",
+            "version" : "1"
+         }
+     }
+
+###### 3.2.2.4.4 RMT policy: default
+The default RMT policy set implements a simple FIFO queue per N-1 port. All the EFCP data transfer and control 
+PDUs that need to be forwarded through the N-1 port are put in the FIFO queue. Layer management PDUs are put 
+in a separate queue (per N-1 port) that has strict priority over the data transfer FIFO queue. When the queue is 
+full, the PDUs that try to be enqueued are dropped. 
+
+   * **Policy name**: default.
+   * **Policy version**: 1.
+   * **Dependencies**: none.
+
+Example configuration:
+
+     "rmtConfiguration" : {
+        "pftConfiguration" : {
+            ....
+	    }
+        },
+        "policySet" : {
+          "name" : "default",
+          "version" : "1",
+          "parameters" : [{
+             "name"  : "q_max",
+             "value" : "1000"
+          }]
+        }
+     }
+
+   * **q_max**: The size of the FIFO queue (in PDUs). The default value is **1000** PDUs.
+
+###### 3.2.2.4.5 RMT policy: DECNET's binary feedback congestion control
+This policy extends the RMT default policy by marking queued PDUs with the ECN flag when 
+the average queue size is greater than 1 PDU.
+
+   * **Policy name**: cas-ps.
+   * **Policy version**: 1.
+   * **Dependencies**:
+      * **DTCP policy**: cas-ps.
+
+Example configuration:
+
+     "rmtConfiguration" : {
+        "pftConfiguration" : {
+            ....
+            }
+        },
+        "policySet" : {
+          "name" : "cas-ps",
+          "version" : "1",
+          "parameters" : [{
+             "name"  : "q_max",
+             "value" : "1000"
+          }]
+        }
+     }
+
+   * **q_max**: The size of the FIFO queue (in PDUs). The default value is **1000** PDUs.
+
+###### 3.2.2.4.5 RMT policy: Random Early Detection (RED)
+This policy extends the RMT default policy by marking queued PDUs with the ECN flag according 
+to the Random Early Detection (RED) algorithm. This policy marks probabilistically PDUs with 
+the ECN flag according to the configured thresholds.
+
+   * **Policy name**: red-ps.
+   * **Policy version**: 1.
+   * **Dependencies**:
+      * **DTCP policy**: red-ps.
+
+Example configuration:
+
+     "rmtConfiguration" : {
+        "pftConfiguration" : {
+            ....
+            }
+        },
+        "policySet" : {
+          "name" : "red-ps",
+          "version" : "1",
+          "parameters" : [{
+             "name"  : "q_max_p",
+             "value" : "600"
+             }, {
+             "name"  : "qth_min_p",
+             "value" : "17"
+             }, {
+             "name"  : "qth_max_p",
+             "value" : "179"
+             }, {
+             "name"  : "Wlog_p",
+             "value" : "7"
+             }, {
+             "name"  : "Plog_p",
+             "value" : "12"
+          }]
+        }
+     }
+
+   * **q_max_p**: The size of the FIFO queue (in PDUs). 
+   * **qth_min_p**: The size of the FIFO queue where probabilistic marking starts (if the size is smaller, no marking)
+   * **qth_max_p**: The size of the FIFO queue where probabilistic marking ends (if the size is larger, always marking)
+   * **Wlog_p**: the filter constant, controls intertia of the algorithm (decrease W to allow larger bursts)
+   * **Plog_p**: related to the marking probability
+
+###### 3.2.2.4.6 RMT policy: Data Center TCP (DCTCP)
+The DCTCP policy for RMT is simple. It is possible to configure a queue size and a threshold. If queue size exceedes 
+the threshold, the RMT starts to mark PDUs with explicit congestion flag (ECN).
+
+   * **Policy name**: dctcp-ps.
+   * **Policy version**: 1.
+   * **Dependencies**:
+      * **DTCP policy**: dctcp-ps.
+   
+Example configuration:
+
+     "rmtConfiguration" : {
+        "pftConfiguration" : {
+            ....
+            }
+        },  
+        "policySet" : {
+          "name" : "dctcp-ps",
+          "version" : "1",
+          "parameters" : [{
+             "name"  : "q_threshold",
+             "value" : "20"
+             }, {
+             "name"  : "q_max",
+             "value" : "500"
+          }] 
+        } 
+     }  
+
+   * **q_max**: The maximum size of the queue
+   * **q_threshold**: Sets the queue threshold. If the queue size is exceeded, PDUs will be marked with ECN flag.
+
+###### 3.2.2.4.7 RMT policy: QTAMux
+TODO
+ 
+   * **Policy name**: qta-mux-ps.
+   * **Policy version**: 1.
+
+Example configuration:
+
+     "rmtConfiguration" : {
+        "pftConfiguration" : {
+            ....
+            }
+        },
+        "policySet" : {
+          "name" : "qta-mux-ps",
+          "version" : "1",
+          "parameters" : [{
+             "name"  : "q_threshold",
+             "value" : "20"
+             }, {
+             "name"  : "q_max",
+             "value" : "500"
+          }]
+        }
+     }
+
+   * **q_max**: The maximum size of the queue
+   * **q_threshold**: Sets the queue threshold. If the queue size is exceeded, PDUs will be marked with ECN flag.
+
+##### 3.2.2.5 Enrollment Task
+Configuration of the enrollment task, which carries out the procedures by which an IPC Process joins a DIF. Currently 
+only the default policy is supported by IRATI.
+
+     "enrollmentTaskConfiguration" : {
+        "policySet" : {
+           "name" : "default",
+           "version" : "1",
+           "parameters" : [{
+               "name"  : "enrollTimeoutInMs",
+               "value" : "10000"
+             },{
+               "name"  : "watchdogPeriodInMs",
+               "value" : "30000"
+             },{
+               "name"  : "declaredDeadIntervalInMs",
+               "value" : "120000"
+             },{
+               "name"  : "useReliableNFlow",
+               "value" : "false"
+             },{
+               "name"  : "maxEnrollmentRetries",
+               "value" : "3"
+             }]
+        }
+     }
+
+   * **enrollTimeoutInMs**: timeout to wait for response messages during enrollment procedures
+   * **watchdogPeriodInMs**: period of the watchdog mechanism, to detect if the application connection with a peer IPC Process is still alive
+   * **declaredDeadIntervalInMs**: if no watchdog message has been sent or received from a neighbor IPCP during this period, the 
+application connection is closed and the N-1 flow deallocated
+   * **useReliableNFlow**: true if a realible N-flow is to be used to communicate with the neighbor IPCP (layer management)
+   * **maxEnrollmentRetries**: how many times enrollment should be retried in case of failure
+
+##### 3.2.2.6 Flow Allocator
+Flow allocator maps allocate flow requests to a specific QoS cube, and chooses any policies/parameters 
+that the QoS cube definition has not already fixed. The default policy just distinguishes between 
+reliable (with rtx control and in order-delivery) and unreliable flow requests.
+
+     "flowAllocatorConfiguration" : {
+         "policySet" : {
+           "name" : "default",
+           "version" : "1"
+          }
+     }
+
+##### 3.2.2.7 Namespace Manager
+The namespace manager maintains the distributted mapping of application process name to IPC Process address 
+within a DIF, and is also responsible for IPCP address assignment. 
+
+     "namespaceManagerConfiguration" : {
+         "policySet" : {
+           "name" : "default",
+           "version" : "1"
+           }
+     }
+
+###### 3.2.2.7.1 Default policy
+The default policy keeps a fully replicated database of application names to IPCP addresses. When an application 
+registers to the IPCP a new mapping is added to the RIB and disseminated to peer IPCPs via a controlled flooding 
+approach. The address assignment policy is static and uses the information from the "known IPC Processes" and 
+"address prefixes" configuration items.
+
+   * **Policy name**: default.
+   * **Policy version**: 1.
+   * **Dependencies**: none.
+
+Example configuration:
+
+    "namespaceManagerConfiguration" : {
+        "policySet" : {
+            "name" : "default",
+            "version" : "1"
+         }
+     }
+
+###### 3.2.2.7.2 Address change policy
+This policy extends the default policy with an address assignment policy that periodically changes the address 
+of the IPC Process. It assigns and initial address based on the information form the "known IPC Processes" and 
+"address prefixes" configuration items, but it multiplies it for the "range" parameter. Then, it periodically 
+changes the address (randomly within a time interval), walking all the values within the "range" and starting from 
+the initial value once it reaches the end of the "range". This policy must be used in conjunction with the 
+**link-state** routing policy.
+
+   * **Policy name**: address-change.
+   * **Policy version**: 1.
+   * **Dependencies**:
+      * **routing policy**: link-state.
+
+Example configuration:
+
+     "namespaceManagerConfiguration" : {
+        "policySet" : {
+          "name" : "address-change",
+          "version" : "1",
+          "parameters" : [{
+               "name"  : "useNewTimeout",
+               "value" : "10001"
+             },{
+               "name"  : "deprecateOldTimeout",
+               "value" : "20001"
+             },{
+               "name"  : "changePeriod",
+               "value" : "30001"
+             },{
+               "name"  : "addressRange",
+               "value" : "100"
+          }]
+       } 
+     }
+
+   * **useNewTimeout**: Time ellapsed (in ms) after the address change event upon which the new address can be used as source 
+address in the header of EFCP PDUs.
+   * **deprecateOldTimeout**: Time ellapsed (in ms) after the address change event upon which the old address can be discarded.
+Must have the same value as the **waitUntilDeprecateAddress** parameter of the **link-state** routing policy configuration.
+   * **changePeriod**: Time interval between address change events (in ms).
+   * **addressRange**: Range of addresses available to a single IPC Process.
+
+##### 3.2.2.8 Resource Allocator
+Generates the PDU forwarding table based on input from the routing policy (next-hop table). Right now only the default 
+policy is supported in IRATI.
+
+     "resourceAllocatorConfiguration" : {
+         "pduftgConfiguration" : {    
+           "policySet" : {
+             "name" : "default",
+             "version" : "0"
+           }
+         }
+     } 
+
+##### 3.2.2.9 Routing
+The routing policy is in charge of generating and maintaining the next-hop table, and passing this information to the Resource 
+Allocator's PDU Forwarding Table generator policy.
+
+###### 3.2.2.9.1 Link-state routing policy
+Implements a link-state routing policy, equivalent to the behaviour of routing protocols such as IS-IS (with a single area).
+ 
+   * **Policy name**: link-state.
+   * **Policy version**: 1.
+   * **Dependencies**: none.
+        
+Example configuration:
+          
+     "routingConfiguration" : {
+        "policySet" : {
+          "name" : "link-state",
+          "version" : "1",
+          "parameters" : [{
+             "name"  : "objectMaximumAge",
+             "value" : "10000"
+           },{
+             "name"  : "waitUntilReadCDAP",
+             "value" : "5001"
+           },{
+             "name"  : "waitUntilError",
+             "value" : "5001"
+           },{
+             "name"  : "waitUntilPDUFTComputation",
+             "value" : "103"
+           },{
+             "name"  : "waitUntilFSODBPropagation",
+             "value" : "101"
+           },{
+             "name"  : "waitUntilAgeIncrement",
+             "value" : "997" 
+           }, {
+             "name" : "waitUntilDeprecateAddress",
+             "value" : "20001"
+           },{
+             "name"  : "routingAlgorithm",
+             "value" : "ECMPDijkstra"
+           }]       
+	} 
+     }
+
+   * **objectMaximumAge**: maximum age that an object can reach before being deprecated
+   * **waitUntilPDUFTComputation**: Period (in ms) to check if the PDU Forwarding Table needs to be recomputed
+   * **waitUntilFSODBPropagation**: Period (in ms) to check if the link-state objects in the RIB need to be propagated
+   * **waitUntilAgeIncrement**: Period (in ms) to check if the age of an object in the RIB needs to be increased
+   * **waitUntilDeprecateAddress**: Time to wait (in ms) before deprecating an address in a link-state routing object after 
+an address change event (only useful if there is renumbering going on in the DIF. Must be the same as the **deprecateOldTimeout** 
+parameter in the address-change namespacemanager policy)
+   * **routingAlgorithm**: The routing algorithm to generate the next-hop table. Available algorithms:
+      * **Dijkstra**: Computes the least-cost next hop to all destination addresses in the DIF (single next-hop per destination address)
+      * **ECMPDijkstra**: Computes all the equal-cost next hops to all destination addresses in the DIF (multiple next-hops per destination address)
+
+###### 3.2.2.9.2 Static routing policy
+Implements a static routing policy, in which all entries of the next-hop table are provided at IPC Process configuration time.
+
+   * **Policy name**: static.
+   * **Policy version**: 1.
+   * **Dependencies**: none.
+
+Format of configuration:
+
+     "routingConfiguration" : {
+        "policySet" : {
+          "name" : "static",
+          "version" : "1",
+          "parameters" : [{
+             "name"  : "<dest-address (single/range/all)>",
+             "value" : "<qos_id>-<cost>-<next_hop_addresss>"
+           },{
+             "name"  : "<dest-address (single/range/all)>",
+             "value" : "<qos_id>-<cost>-<next_hop_addresss>"
+           },{
+               ....
+           }]        
+        }  
+     } 
+
+Each parameter is an entry (or multiple) of the next-hop table. The name of the parameter can refer to a 
+   * Single destination address: "19"
+   * A range of destination addresses: "20-31"
+   * All destination addresses: "defaultNextHop"
+
+While the value of the parameter is the next hop address for a given cost and qos_id.
+
+Example configurations:
+
+     "routingConfiguration" : {
+        "policySet" : {
+          "name" : "static",
+          "version" : "1",
+          "parameters" : [{
+             "name"  : "defaultNextHop",
+             "value" : "0-1-18"
+           }]
+        }
+     }
+
+     "routingConfiguration" : {
+        "policySet" : { 
+          "name" : "static",
+          "version" : "1",
+          "parameters" : [{
+             "name"  : "1-16",
+             "value" : "0-1-18"
+           }, {
+             "name"  : "15-30",
+             "value" : "0-1-19"
+           }, {
+             "name"  : "32",
+             "value" : "0-1-20"
+           }]
+        }
+     }
+
+##### 3.2.2.10 Security Manager
+The security manager configuration contains the security manager policy and zero or more configuration 
+items for "authentication and SDU protection profiles" (authSDUProfiles). Each authSDUProfile contains 
+a consistent set of authentication and SDU protection that need to be used to communicate with all 
+neighbor IPC Processes, or only with neighbor IPC Processes over specific N-1 DIFs.
+
+Example format:
+
+    "securityManager" : {
+        "policySet" : {
+          "name" : "default",
+          "version" : "0"
+        },
+        "authSDUProtProfiles" : {
+           "default" : {
+              "authPolicy" : {
+              	"name" : "PSOC_authentication-sshrsa",
+          	"version" : "1",
+          	"parameters" : [ {
+          	   "name" : "keyExchangeAlg",
+          	   "value" : "EDH"
+          	}, {
+                   "name" : "keystore",
+                   "value" : "/usr/local/irati/etc/private_key.pem"
+                }, {
+                   "name" : "keystorePass",
+                   "value" : "test"
+                } ]
+
+              },
+              "encryptPolicy" : {
+                 "name" : "default",
+                 "version" : "1",
+                 "parameters" : [ {
+          	   "name" : "encryptAlg",
+          	   "value" : "AES128"
+          	}, {
+          	   "name" : "macAlg",
+          	   "value" : "SHA1"
+          	}, {
+          	   "name" : "compressAlg",
+          	   "value" : "default"
+                } ]
+              },
+              "TTLPolicy" : {
+                 "name" : "default",
+                 "version" : "1",
+                 "parameters" : [ {
+                    "name" : "initialValue",
+                    "value" : "50"
+                  } ]
+                },
+                "ErrorCheckPolicy" : {
+                   "name" : "CRC32",
+                   "version" : "1"
+                }
+           },
+           "specific" : [ {
+               "underlyingDIF" : "100",
+               "authPolicy" : {
+               	  "name" : "PSOC_authentication-none",
+           	  "version" : "1"
+                }
+           }, {
+               "underlyingDIF" : "110",
+               "authPolicy" : {
+               	  "name" : "PSOC_authentication-password",
+           	  "version" : "1",
+           	  "parameters" : [ {
+           	     "name" : "password",
+           	     "value" : "kf05j.a1234.af0k"
+           	  } ]
+                },
+                "TTLPolicy" : {
+                   "name" : "default",
+                   "version" : "1",
+                   "parameters" : [ {
+                      "name" : "initialValue",
+                      "value" : "50"
+                   } ]
+                },
+                "ErrorCheckPolicy" : {
+                   "name" : "CRC32",
+                   "version" : "1"
+                }
+           } ]
+        }
+    }
+
+###### 3.2.2.10.1 Authentication policy: NULL authentication policy
+The policy performs no authentication, just checks policy names and versions and returns success.
+
+   * **Policy name**: PSOC_authentication-none.
+   * **Policy version**: 1.
+   * **Dependencies**: none.
+
+Example configuration:
+
+    "authPolicy" : {
+        "name" : "PSOC_authentication-none",
+        "version" : "1"
+    }
+
+###### 3.2.2.10.2 Authentication policy: password-based
+Authentication is carried out by hashing a random string with a shared secret (the password).
+
+   * **Policy name**: PSOC_authentication-password.
+   * **Policy version**: 1.
+   * **Dependencies**: none.
+            
+Example configuration:
+               
+    "authPolicy" : {
+        "name" : "PSOC_authentication-password",
+        "version" : "1",
+        "parameters" : [ {
+             "name" : "password",
+              "value" : "kf05j.a1234.af0k"
+         } ]
+    }
+
+   * **password**: the shared secret
+
+###### 3.2.2.10.3 Authentication policy: SSH2-based
+Authentication policy that mimics the behaviour of the SSH2 protocol authentication mechanism.
+
+   * **Policy name**: PSOC_authentication-ssh2.
+   * **Policy version**: 1.
+   * **Dependencies**:
+      * **SDU Protection, crypto policy**: default
+            
+Example configuration:
+               
+    "authPolicy" : {
+        "name" : "PSOC_authentication-ssh2",
+        "version" : "1",
+        "parameters" : [ {
+            "name" : "keyExchangeAlg",
+            "value" : "EDH"
+        }, {
+            "name" : "keystore",
+            "value" : "/usr/local/irati/etc/creds"
+        }, {
+            "name" : "keystorePass",
+            "value" : "test"
+        } ]
+    }
+
+   * **keyExchangeAlg**: The key exchange algorithm. Only **EDH** is available right now (Elliptic-Curve Diffie-Hellman.
+   * **keyStore**: A folder containing the credentials. The contents of the folder should be the following files:
+      * **key**: The RSA private key of the IPCP in PEM format (generated for example with openssl genrsa -out key 2048)
+      * **public_key**: The RSA public key of the IPCP in PEM format (extracted from the private key file, for example with openssl rsa -in key -pubout > mykey.pub)
+      * For each IPCP whose public key is known, a file containing his public key in PEM format. The file must be named with the IPC Process application process name. For example, imagine the IPCP has 3 neighbours, then there would be 3 files: B.IRATI, C.IRATI and D.IRATI.
+   * **keystorePass**: Password to decrypt information in the keystore (if needed)
+
+###### 3.2.2.10.4 Authentication policy: TLS-Handhsake based
+Authentication policy that mimics the behaviour of the TLS handshake protocol.
+
+   * **Policy name**: PSOC_authentication-tlshandshake
+   * **Policy version**: 1.
+   * **Dependencies**:
+      * **SDU Protection, crypto policy**: default
+            
+Example configuration:
+               
+    "authPolicy" : {
+        "name" : "PSOC_authentication-tlshandshake",
+        "version" : "1",
+        "parameters" : [ {
+            "name" : "keystore",
+            "value" : "/usr/local/irati/etc/creds"
+        }, {
+            "name" : "keystorePass",
+            "value" : "test"
+        } ] 
+    }   
+
+   * **keyStore**: A folder containing the credentials. The contents of the folder should be the following files:
+      * **key**: contains the RSA private key of the IPCP, in PEM format.
+      * **cert.pem**: contains the certificate of the IPCP, in PEM format.
+      * **<cert_name>.pem**: one PEM file for every certificate required to reach the (or one of the) root of trust of the DIF (root CA).
+   * **keystorePass**: Password to decrypt information in the keystore (if needed)
+
+###### 3.2.2.10.5 SDU Protection, crypto policy: default
+The default SDU protection policies carries out cryptographic manipulations of the PDU before being trasmitted through 
+an N-1 flow, in order to provide confidentiality and message integrity services. The policy performs the following operations:
+encryption, padding, generating message auhentication (MAC) codes and compression; as well as their counterpart operations.
+
+   * **Policy name**: default                  
+   * **Policy version**: 1.
+   * **Dependencies**:
+      * **Authentication policy**: PSOC_authentication-tlshandshake or PSOC_authentication-ssh2
+
+Example configuration:
+
+    "encryptPolicy" : {
+        "name" : "default",
+        "version" : "1",
+        "parameters" : [ {
+            "name" : "encryptAlg",
+            "value" : "AES128"
+         }, {
+            "name" : "macAlg",
+            "value" : "SHA256"
+         }, {
+            "name" : "compressAlg",
+            "value" : "deflate"
+         } ]
+    }
+
+   * **encryptAlg**: The encryption algorithm to be used. Currently two are supported: AES128 and AES256.
+   * **macAlg**: The algorithm to generate a MAC code. Supported algorithms are: MD5, SHA1 and SHA256.
+   * **compressAlg**: The algorithm to compress/decompress PDUs. Only the "deflate" algorithm is supported.
+
+###### 3.2.2.10.6 SDU Protection, PDU lifetime enforcement: default
+The default PDU lifetime enforcement policy is a hopcount that starts on a configured initial value and 
+is decremented at each hop. When it reaches 0, the PDU is dropeed.
+
+   * **Policy name**: default
+   * **Policy version**: 1
+   * **Dependencies**: none
+      
+Example configuration:
+
+    "TTLPolicy" : {
+        "name" : "default",
+        "version" : "1",
+        "parameters" : [ {
+           "name" : "initialValue",
+           "value" : "50"
+        } ]
+    }
+   
+   * **initialValue**: Initial value of the hopcount.
+
+###### 3.2.2.10.7 SDU Protection, error protection: CRC32
+This policy protects the PDU against random errors on its bytes by appending a CRC32 field to it.
+
+   * **Policy name**: CRC32
+   * **Policy version**: 1
+   * **Dependencies**: none
+
+Example configuration:
+
+    "ErrorCheckPolicy" : {
+        "name" : "CRC32",
+        "version" : "1"
+    }
 
 #### 3.2.3 Application to DIF mappings
 The da.map file contains the preferences for which DIFs should be used to register and to allocate 

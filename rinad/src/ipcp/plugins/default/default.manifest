@@ -18,7 +18,7 @@
                         "Version" : "1"
                 },
 				{
-						"Name": "DelayBased",
+						"Name": "qta-ps",
                         "Component": "flow-allocator",
                         "Version" : "1"
                 },
