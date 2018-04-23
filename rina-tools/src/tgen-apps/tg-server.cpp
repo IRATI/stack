@@ -324,7 +324,7 @@ int main(int argc, char ** argv) {
 	bool verb;
 
 	try {
-		TCLAP::CmdLine cmd("LogServer", ' ', "2.0");
+		TCLAP::CmdLine cmd("TgServer", ' ', "2.0");
 
 		TCLAP::ValueArg<std::string> Name_a("n","name","Application process name, default = TgServer", false, "TgServer", "string");
 		TCLAP::ValueArg<std::string> Instance_a("i","instance","Application process instance, default = 1", false, "1", "string");
