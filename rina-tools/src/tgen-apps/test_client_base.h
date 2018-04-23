@@ -13,11 +13,9 @@ class TestClientBase : public ra::BaseClient {
 public:
 	TestClientBase(const std::string Name, const std::string Instance, const std::string Servername,
 		       const std::string ServerInstance, const std::string DIF,
-		       int FlowIdent, int QosIdent, int TestDuration, bool verbose,
+		       int TestDuration, bool verbose,
 		       size_t mpdus, unsigned int loss, unsigned int delay) :
 		BaseClient(Name, Instance, Servername, ServerInstance, DIF, verbose, loss, delay) {
-		_FlowIdent = FlowIdent;
-		_QosIdent = QosIdent;
 		_TestDuration = TestDuration;
 		AllocTimeoutMs = 1000;
 
@@ -42,8 +40,6 @@ protected:
 		Data->Flags = SDU_FLAG_INIT;
 		Data->SeqId = 0;
 		Data->SendTime = 0;
-		InitData->QoSId = _QosIdent;
-		InitData->FlowId = _FlowIdent;
 
 		if (SendData(sizeof(initSDU), 1000) != sizeof(initSDU)) {
 			std::cerr << "No data sent during the first second of lifetime" << std::endl;
@@ -91,7 +87,7 @@ protected:
 	virtual int RunFlow() { return 0;  };
 
 private:
-	int _FlowIdent, _QosIdent, _TestDuration;
+	int _TestDuration;
 	int _Fd;
 	ra::byte_t Buffer[BUFF_SIZE];
 	size_t max_sdu_size;
