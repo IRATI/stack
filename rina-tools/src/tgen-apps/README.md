@@ -166,9 +166,3 @@ Arguments specific to the *voice* client:
 
       -f <int>,  --vOff <int>
         Variation of duration of Off interval in ms, default 1000 ms
-
-Arguments specific to the *voice* client:
-
-
-
-
