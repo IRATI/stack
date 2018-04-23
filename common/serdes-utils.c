@@ -343,19 +343,19 @@ __rina_name_to_string(const struct name *name, int maysleep)
 	memcpy(cur, name->process_name, apn_len);
 	cur += apn_len;
 
-	*cur = ':';
+	*cur = '|';
 	cur++;
 
 	memcpy(cur, name->process_instance, api_len);
 	cur += api_len;
 
-	*cur = ':';
+	*cur = '|';
 	cur++;
 
 	memcpy(cur, name->entity_name, aen_len);
 	cur += aen_len;
 
-	*cur = ':';
+	*cur = '|';
 	cur++;
 
 	memcpy(cur, name->entity_instance, aei_len);
@@ -425,10 +425,10 @@ __rina_name_from_string(const char *str, struct name *name, int maysleep)
 		return -1;
 	}
 
-	apn = strsep(strp, ":");
-	api = strsep(strp, ":");
-	aen = strsep(strp, ":");
-	aei = strsep(strp, ":");
+	apn = strsep(strp, "|");
+	api = strsep(strp, "|");
+	aen = strsep(strp, "|");
+	aei = strsep(strp, "|");
 
 	if (!apn) {
 		/* The ':' are not necessary if some of the api, aen, aei
