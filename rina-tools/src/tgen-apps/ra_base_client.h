@@ -18,8 +18,6 @@ namespace ra {
 
 		int Run();
 
-		bool ReadQoSFile(const std::string QoSFile);
-
 	protected:
 		int AllocTimeoutMs;
 
@@ -73,12 +71,4 @@ namespace ra {
 		close(Fd);
 		return AfterEndFlow(ReturnCode);
 	}
-
-	bool BaseClient::ReadQoSFile(const std::string QoSFile) {
-		if (QoSFile != "") {
-			return false;
-		}
-		return ParseQoSRequirementsFile(&FlowSpec, QoSFile.c_str());
-	}
-
 }
