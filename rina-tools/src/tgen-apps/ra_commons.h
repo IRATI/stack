@@ -10,6 +10,8 @@
 
 #include <rina/api.h>
 
+#define TIMEOUT_MS 5000
+
 namespace ra {
 
 	typedef uint8_t	byte_t;

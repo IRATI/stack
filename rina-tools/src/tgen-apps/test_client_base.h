@@ -8,8 +8,6 @@
 #include "ra_base_client.h"
 #include "test_commons.h"
 
-#define TIMEOUT_MS 5000
-
 class TestClientBase : public ra::BaseClient {
 public:
 	TestClientBase(const std::string Name, const std::string Instance, const std::string Servername,
