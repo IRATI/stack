@@ -165,9 +165,10 @@ int default_rmt_q_destroy_policy(struct rmt_ps      *ps,
 }
 EXPORT_SYMBOL(default_rmt_q_destroy_policy);
 
-int default_rmt_enqueue_policy(struct rmt_ps	  *ps,
-			       struct rmt_n1_port *n1_port,
-			       struct du	  *du)
+int default_rmt_enqueue_policy(struct rmt_ps *      ps,
+			       struct rmt_n1_port * n1_port,
+			       struct du *          du,
+			       bool 		    must_enqueue)
 {
 	struct rmt_queue *q;
 	struct rmt_ps_default_data *data = ps->priv;
@@ -188,9 +189,16 @@ int default_rmt_enqueue_policy(struct rmt_ps	  *ps,
 
 	pdu_type = pci_type(&du->pci);
 	if (pdu_type == PDU_TYPE_MGMT) {
+		if (!must_enqueue && rfifo_is_empty(q->mgt_queue)){
+			return RMT_PS_ENQ_SEND;
+		}
+
 		rfifo_push_ni(q->mgt_queue, du);
 		return RMT_PS_ENQ_SCHED;
 	}
+
+	if (!must_enqueue && rfifo_is_empty(q->dt_queue))
+		return RMT_PS_ENQ_SEND;
 
 	if (rfifo_length(q->dt_queue) >= data->q_max) {
 		du_destroy(du);

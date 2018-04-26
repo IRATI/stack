@@ -66,9 +66,7 @@ FwdWorker::FwdWorker(int idx_, int verb) : idx(idx_), nfds(0), verbose(verb)
         exit(EXIT_FAILURE);
     }
 
-    auto worker_function = [](FwdWorker *w) { w->run(); };
-
-    th = std::thread(worker_function, this);
+    th = std::thread(&FwdWorker::run, this);
 }
 
 FwdWorker::~FwdWorker()

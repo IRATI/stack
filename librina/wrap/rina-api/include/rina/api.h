@@ -29,16 +29,33 @@ extern "C" {
 #endif
 
 /*
+ * A POSIX-like RINA API for applications.
+ *
+ * The API functions typically return 0 or a positive value on success.
+ * On error, -1 is returned with the errno variable set accordingly to
+ * the specific error.
+ *
+ * Each application name is specified using a C string, where the name’s
+ * components (Application Process Name, Application Process Instance,
+ * Application Entity Name and Applicatiion Entity Instance) are separated
+ * by the | separator (pipe). The separator can be omitted if it is only
+ * used to separate empty strings or a non-empty string from an empty
+ * string. Valid strings are for instance "aa|bb|cc|dd", "aa|bb||",
+ * "aa|bb", "aa".
+ */
+
+/*
  * The rina_flow_spec struct specifies the flow QoS parameters asked
  * by an application that issue a flow allocation request.
  */
 struct rina_flow_spec {
     uint32_t version; /* version number to allow for extensions */
 #define RINA_FLOW_SPEC_VERSION 1
-    uint64_t max_sdu_gap;      /* in SDUs */
-    uint64_t avg_bandwidth;    /* in bits per second */
-    uint32_t max_delay;        /* in microseconds */
-    uint16_t max_loss;         /* percentage */
+    uint64_t max_sdu_gap;   /* in SDUs */
+    uint64_t avg_bandwidth; /* in bits per second */
+    uint32_t max_delay;     /* in microseconds */
+#define RINA_FLOW_SPEC_LOSS_MAX 10000
+    uint16_t max_loss;         /* from 0 (0%) to 10000 (100%) */
     uint32_t max_jitter;       /* in microseconds */
     uint8_t in_order_delivery; /* boolean */
     uint8_t msg_boundaries;    /* boolean */

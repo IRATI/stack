@@ -1,9 +1,0 @@
-syntax="proto2";
-package rina.messages;
-//option optimize_for = LITE_RUNTIME;
-
-message enrollmentInformation_t {	 // carries information about a member that requests enrollment to a DIF
-	optional uint64	address = 1;
-	repeated string supportingDifs = 2;
-	optional bool startEarly = 3;
-}

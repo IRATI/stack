@@ -35,7 +35,8 @@ int default_rmt_q_destroy_policy(struct rmt_ps      *ps,
 				 struct rmt_n1_port *n1_port);
 int default_rmt_enqueue_policy(struct rmt_ps	 *ps,
 			       struct rmt_n1_port *n1_port,
-			       struct du	 *du);
+			       struct du	 *du,
+			       bool               must_enqueue);
 struct du *default_rmt_dequeue_policy(struct rmt_ps	 *ps,
 				      struct rmt_n1_port *n1_port);
 #endif

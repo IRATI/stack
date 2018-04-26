@@ -566,6 +566,10 @@ public:
 	/// In milliseconds, indicates the maximum jitter allowed in this
 	/// flow. A value of 0 indicates 'do not care'
 	unsigned int jitter_;
+
+	/// In 1/10000, indicates the maximum loss probability allowed in
+	/// htis flow. A value >= 10000 indicates 'do not care'
+	unsigned short loss;
 };
 
 /// Contains the values of the constants for the Error and Flow Control

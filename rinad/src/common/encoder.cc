@@ -626,6 +626,7 @@ void toGPB(const rina::QoSCube &obj, rina::messages::qosCube_t &gpb)
         gpb.set_averagesdubandwidth(obj.average_sdu_bandwidth_);
         gpb.set_delay(obj.delay_);
         gpb.set_jitter(obj.jitter_);
+        gpb.set_loss(obj.loss);
         gpb.set_maxallowablegapsdu(obj.max_allowable_gap_);
         gpb.set_name(obj.name_);
         gpb.set_order(obj.ordered_delivery_);
@@ -648,6 +649,7 @@ void toModel(const rina::messages::qosCube_t &gpb, rina::QoSCube &des_obj)
         des_obj.average_sdu_bandwidth_ = gpb.averagesdubandwidth();
         des_obj.delay_ = gpb.delay();
         des_obj.jitter_ = gpb.jitter();
+        des_obj.loss = gpb.loss();
         des_obj.max_allowable_gap_ = gpb.maxallowablegapsdu();
         des_obj.name_ = gpb.name();
         des_obj.ordered_delivery_ = gpb.order();
@@ -987,6 +989,7 @@ rina::messages::qosSpecification_t* get_qosSpecification_t(
 	gpf_flow_spec->set_maxallowablegapsdu(flow_spec.maxAllowableGap);
 	gpf_flow_spec->set_delay(flow_spec.delay);
 	gpf_flow_spec->set_jitter(flow_spec.jitter);
+	gpf_flow_spec->set_loss(flow_spec.loss);
 	gpf_flow_spec->set_msg_boundaries(flow_spec.msg_boundaries);
 
 	return gpf_flow_spec;
@@ -1013,6 +1016,7 @@ void get_FlowSpecification(const rina::messages::qosSpecification_t &gpf_qos,
         qos.maxAllowableGap = gpf_qos.maxallowablegapsdu();
         qos.delay = gpf_qos.delay();
         qos.jitter = gpf_qos.jitter();
+        qos.loss = gpf_qos.loss();
         qos.msg_boundaries = gpf_qos.msg_boundaries();
 }
 }  // namespace flow_helpers

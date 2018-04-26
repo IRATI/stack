@@ -18,4 +18,5 @@ message qosSpecification_t{									//The QoS parameters requested by an applica
 	optional uint32 jitter = 12;					//in milliseconds, indicates indicates the maximum jitter allowed in this flow. A value of 0 indicates don't care
 	repeated property_t extraParameters = 13; 		//the extra parameters specified by the application process that requested this flow
 	optional bool msg_boundaries = 14;			    //preserve message boundaries if true, don't do it otherwise
+	optional uint32 loss = 15;                      //the max loss probability (1/10000) for this connection 
 }

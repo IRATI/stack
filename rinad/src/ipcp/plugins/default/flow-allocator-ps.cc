@@ -234,59 +234,80 @@ int FlowAllocatorRoundRobinPs::set_policy_set_param(const std::string& name,
         return -1;
 }
 
-class FlowAllocatorDelayBasedPs: public IFlowAllocatorPs {
+class FlowAllocatorQTAPs: public IFlowAllocatorPs {
 public:
-	FlowAllocatorDelayBasedPs(IFlowAllocator * dm_) :
+	FlowAllocatorQTAPs(IFlowAllocator * dm_) :
 		dm(dm_) {};
 	configs::Flow *newFlowRequest(IPCProcess * ipc_process,
 			const rina::FlowRequestEvent& event);
 	int set_policy_set_param(const std::string& name,
 			const std::string& value);
-	virtual ~FlowAllocatorDelayBasedPs() {}
+	virtual ~FlowAllocatorQTAPs() {}
 
 private:
         // Data model of the security manager component.
         IFlowAllocator * dm;
 };
 
+// TODO: improve. Loss and delay CDF approximated by a single value only
+// (maximum value)
 configs::Flow *
-FlowAllocatorDelayBasedPs::newFlowRequest(IPCProcess * ipc_process,
-					  const rina::FlowRequestEvent& event)
+FlowAllocatorQTAPs::newFlowRequest(IPCProcess * ipc_process,
+				   const rina::FlowRequestEvent& event)
 {
 	configs::Flow* flow;
-	rina::QoSCube * qosCube = NULL;
+	rina::QoSCube * qos_cube = NULL;
 	std::list<rina::Connection*> connections;
         std::list<rina::QoSCube*> qosCubes = dm->ipcp->resource_allocator_->getQoSCubes();
         std::list<rina::QoSCube*>::const_iterator iterator;
         const rina::FlowSpecification& flowSpec = event.flowSpecification;
-	rina::QoSCube * cube = NULL;
         rina::Lockable lock;
         rina::ScopedLock g(lock);
+        unsigned short qos_cube_delay = 0;
+        unsigned short iterator_delay = 0;
+        unsigned short flow_spec_delay = 0;
 
         if (*(qosCubes.begin())==NULL)
 	    throw rina::Exception("No QoSCubes defined.");
 
-	if (qosCubes.size() == 1) {
-		LOG_IPCP_INFO("There is only ONE QoS cube");
-		qosCube = qosCubes.front();
-	} else {
-		for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
-			if (!cube) {
-				cube = *iterator;
-				qosCube = *iterator;
-			}
+        // A value of 0 means user does not care about delay
+        if (flowSpec.delay == 0)
+        	flow_spec_delay = USHRT_MAX;
+        else
+        	flow_spec_delay = flowSpec.delay;
 
-			if (flowSpec.delay >= (*iterator)->get_delay()) {
-				if (qosCube->get_delay() < (*iterator)->get_delay())
-					qosCube = *iterator;
-			}
-		}
-	}
-	if (!qosCube) {
-		qosCube = cube;
+        for (iterator = qosCubes.begin(); iterator != qosCubes.end(); ++iterator) {
+        	// A value of 0 means the QoS cube does not guarantee max delay
+        	if ((*iterator)->delay_ == 0) {
+        		iterator_delay = USHRT_MAX;
+        	} else {
+        		iterator_delay = (*iterator)->delay_;
+        	}
+
+        	if (flow_spec_delay >= iterator_delay && flowSpec.loss >= (*iterator)->loss) {
+        		if (qos_cube && qos_cube->delay_ == 0) {
+        			qos_cube_delay = USHRT_MAX;
+        		} else if (qos_cube) {
+        			qos_cube_delay = qos_cube->delay_;
+        		}
+
+        		if (!qos_cube) {
+        			qos_cube = *iterator;
+        		} else if (qos_cube_delay < iterator_delay) {
+        			qos_cube = *iterator;
+        		} else if (qos_cube->loss < (*iterator)->loss) {
+        			qos_cube = *iterator;
+        		}
+        	}
+        }
+
+	if (!qos_cube) {
+		LOG_ERR("Could not find any QoS cube with max delay < %u ms and max loss < %u/10000",
+				flowSpec.delay, flowSpec.loss);
+		throw rina::Exception("No matching QoS found");
 	}
 
-	LOG_IPCP_INFO("Selected qos cube with name %s", qosCube->get_name().c_str());
+	LOG_IPCP_INFO("Selected QoS cube with name %s", qos_cube->get_name().c_str());
 
 	flow = dm->createFlow();
 	flow->remote_naming_info = event.remoteApplicationName;
@@ -299,18 +320,16 @@ FlowAllocatorDelayBasedPs::newFlowRequest(IPCProcess * ipc_process,
 	rina::Connection * connection = new rina::Connection();
 	connection->portId = event.portId;
 	connection->sourceAddress = ipc_process->get_address();
-	connection->setQosId(qosCube->id_);
+	connection->setQosId(qos_cube->id_);
 	connection->setFlowUserIpcProcessId(event.flowRequestorIpcProcessId);
-        rina::DTPConfig dtpConfig = rina::DTPConfig(
-                        qosCube->get_dtp_config());
+        rina::DTPConfig dtpConfig = rina::DTPConfig(qos_cube->dtp_config_);
 	if (event.flowSpecification.maxAllowableGap < 0) {
 		dtpConfig.set_max_sdu_gap(INT_MAX);
 	} else {
-		dtpConfig.set_max_sdu_gap(qosCube->get_max_allowable_gap());
+		dtpConfig.set_max_sdu_gap(qos_cube->max_allowable_gap_);
 	}
 	connection->setDTPConfig(dtpConfig);
-        rina::DTCPConfig dtcpConfig = rina::DTCPConfig(
-                        qosCube->get_dtcp_config());
+        rina::DTCPConfig dtcpConfig = rina::DTCPConfig(qos_cube->dtcp_config_);
 	connection->setDTCPConfig(dtcpConfig);
 	connections.push_back(connection);
 
@@ -321,8 +340,8 @@ FlowAllocatorDelayBasedPs::newFlowRequest(IPCProcess * ipc_process,
 	return flow;
 }
 
-int FlowAllocatorDelayBasedPs::set_policy_set_param(const std::string& name,
-		const std::string& value)
+int FlowAllocatorQTAPs::set_policy_set_param(const std::string& name,
+					     const std::string& value)
 {
         LOG_IPCP_DBG("No policy-set-specific parameters to set (%s, %s)",
                         name.c_str(), value.c_str());
@@ -370,7 +389,7 @@ destroyFlowAllocatorRoundRobinPs(rina::IPolicySet * ps)
 }
 
 extern "C" rina::IPolicySet *
-createFlowAllocatorDelayBasedPs(rina::ApplicationEntity * ctx)
+createFlowAllocatorQTAPs(rina::ApplicationEntity * ctx)
 {
         IFlowAllocator * fa = dynamic_cast<IFlowAllocator *>(ctx);
 
@@ -378,11 +397,11 @@ createFlowAllocatorDelayBasedPs(rina::ApplicationEntity * ctx)
                 return NULL;
         }
 
-        return new FlowAllocatorDelayBasedPs(fa);
+        return new FlowAllocatorQTAPs(fa);
 }
 
 extern "C" void
-destroyFlowAllocatorDelayBasedPs(rina::IPolicySet * ps)
+destroyFlowAllocatorQTAPs(rina::IPolicySet * ps)
 {
         if (ps) {
                 delete ps;

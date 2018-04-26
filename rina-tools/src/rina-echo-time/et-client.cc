@@ -123,14 +123,15 @@ Client::Client(const string& t_type,
                const string& server_apn, const string& server_api,
                bool q, unsigned long count,
                bool registration, unsigned int size,
-               int w, int g, int dw, unsigned int lw, int rt, int delay) :
+               int w, int g, int dw, unsigned int lw, int rt,
+	       unsigned int delay_, unsigned int loss_) :
         Application(dif_nms, apn, api), test_type(t_type), dif_name(dif_nms.front()),
         server_name(server_apn), server_instance(server_api),
         quiet(q), echo_times(count),
         client_app_reg(registration), data_size(size), wait(w), gap(g),
-        dealloc_wait(dw), lost_wait(lw), rate(rt),  snd(0), nsdus(0), m2(0),
-        sdus_received(0), min_rtt(LONG_MAX), max_rtt(0), average_rtt(0),
-        port_id(-1), fd(-1)
+        dealloc_wait(dw), lost_wait(lw), rate(rt),  delay(delay_), loss(loss_),
+	snd(0), nsdus(0), m2(0), sdus_received(0), min_rtt(LONG_MAX), max_rtt(0),
+	average_rtt(0), port_id(-1), fd(-1)
 {
 }
 
@@ -183,6 +184,7 @@ int Client::createFlow()
 
         qosspec.msg_boundaries = true;
         qosspec.delay = delay;
+        qosspec.loss = loss;
 
         get_current_time(begintp);
 

@@ -355,9 +355,9 @@ pdu_flags_t pci_flags_get(const struct pci *pci)
 { PCI_GETTER_NO_DTC(pci, PCI_BASE_FLAGS, FLAGS_SIZE, pdu_flags_t); }
 EXPORT_SYMBOL(pci_flags_get);
 
-ssize_t pci_len(const struct pci *pci)
+ssize_t pci_length(const struct pci *pci)
 { PCI_GETTER(pci, PCI_BASE_LEN, length_length, ssize_t); }
-EXPORT_SYMBOL(pci_len);
+EXPORT_SYMBOL(pci_length);
 
 /* Base setters */
 int pci_sequence_number_set(struct pci *pci, seq_num_t sn)
@@ -403,6 +403,7 @@ int pci_format(struct pci *pci,
 	       address_t dst_address,
 	       seq_num_t sequence_number,
 	       qos_id_t  qos_id,
+	       ssize_t   length,
 	       pdu_type_t type)
 {
 	if (pci_type_set(pci, type)                       ||
@@ -411,7 +412,8 @@ int pci_format(struct pci *pci,
 	    pci_destination_set(pci, dst_address)         ||
 	    pci_source_set(pci, src_address)              ||
 	    pci_sequence_number_set(pci, sequence_number) ||
-	    pci_qos_id_set(pci, qos_id)) {
+	    pci_qos_id_set(pci, qos_id)			  ||
+	    pci_len_set(pci, length)) {
 		return -1;
 	}
 	return 0;

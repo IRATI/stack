@@ -87,46 +87,33 @@ struct pci {
 	size_t len;
 };
 
-ssize_t		*pci_offset_table_create(struct dt_cons *dt_cons);
-
-bool		pci_is_ok(const struct pci *pci);
-ssize_t		pci_calculate_size(struct efcp_config *cfg,
-					   pdu_type_t type);
-int		pci_cep_source_set(struct pci *pci,
-					   cep_id_t src_cep_id);
-int		pci_cep_destination_set(struct pci *pci,
-						cep_id_t dst_cep_id);
-int		pci_destination_set(struct pci *pci,
-					    address_t dst_address);
-int		pci_source_set(struct pci *pci,
-				       address_t src_address);
-int		pci_sequence_number_set(struct pci *pci,
-						seq_num_t sequence_number);
-
-int		pci_qos_id_set(struct pci *pci,
-				       qos_id_t qos_id);
-int		pci_type_set(struct pci	*pci,
-				     pdu_type_t	type);
-int		pci_flags_set(struct pci *pci,
-				      pdu_flags_t flags);
-int		pci_format(struct pci *pci,
-				   cep_id_t src_cep_id,
-				   cep_id_t dst_cep_id,
-				   address_t src_address,
-				   address_t dst_address,
-				   seq_num_t sequence_number,
-				   qos_id_t qos_id,
-				   pdu_type_t type);
+ssize_t	* pci_offset_table_create(struct dt_cons *dt_cons);
+bool pci_is_ok(const struct pci *pci);
+ssize_t	pci_calculate_size(struct efcp_config *cfg,pdu_type_t type);
+int pci_cep_source_set(struct pci *pci, cep_id_t src_cep_id);
+int pci_cep_destination_set(struct pci *pci, cep_id_t dst_cep_id);
+int pci_destination_set(struct pci *pci, address_t dst_address);
+int pci_source_set(struct pci *pci, address_t src_address);
+int pci_sequence_number_set(struct pci *pci, seq_num_t sequence_number);
+int pci_qos_id_set(struct pci *pci, qos_id_t qos_id);
+int pci_type_set(struct pci *pci, pdu_type_t	type);
+int pci_flags_set(struct pci *pci,pdu_flags_t flags);
+int pci_len_set(struct pci *pci, ssize_t len);
+int pci_format(struct pci *pci, cep_id_t src_cep_id, cep_id_t dst_cep_id,
+	       address_t src_address, address_t dst_address,
+	       seq_num_t sequence_number, qos_id_t qos_id,
+	       ssize_t length, pdu_type_t type);
 
 /* FIXME: remove _get from the API name */
-seq_num_t	pci_sequence_number_get(const struct pci *pci);
-pdu_type_t	pci_type(const struct pci *pci);
-address_t	pci_source(const struct pci *pci);
-address_t	pci_destination(const struct pci *pci);
-cep_id_t		pci_cep_source(const struct pci *pci);
-cep_id_t		pci_cep_destination(const struct pci *pci);
-qos_id_t		pci_qos_id(const struct pci *pci);
-pdu_flags_t	pci_flags_get(const struct pci *pci);
+seq_num_t pci_sequence_number_get(const struct pci *pci);
+pdu_type_t pci_type(const struct pci *pci);
+address_t pci_source(const struct pci *pci);
+address_t pci_destination(const struct pci *pci);
+cep_id_t pci_cep_source(const struct pci *pci);
+cep_id_t pci_cep_destination(const struct pci *pci);
+qos_id_t pci_qos_id(const struct pci *pci);
+pdu_flags_t pci_flags_get(const struct pci *pci);
+ssize_t pci_length(const struct pci *pci);
 
 /* For Control PDUs */
 int		pci_control_ack_seq_num_set(struct pci *pci,

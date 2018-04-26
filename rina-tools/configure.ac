@@ -170,13 +170,12 @@ AC_CONFIG_FILES([
     src/rina-echo-time/Makefile
     src/rina-cdap-echo/Makefile
     src/manager/Makefile
-    src/cdapc/Makefile
-    src/cdapc/encoders/Makefile
     src/common/tclap/Makefile
     src/mac2ifname/Makefile
     src/rlite/Makefile
     src/key-managers/Makefile
     src/rinacat/Makefile
+    src/tgen-apps/Makefile
 
     doc/Makefile
 ])
