@@ -168,13 +168,20 @@ int du_decap(struct du * du)
 	}
 
 	pci_len = pci_calculate_size(du->cfg, type);
-	if (pci_len > 0) {
-		skb_pull(du->skb, pci_len);
-		du->pci.len = pci_len;
-		return 0;
+	if (pci_len <= 0) {
+		LOG_ERR("Could not decap DU. PCI len is < 0");
+		return -1;
 	}
-	LOG_ERR("Could not decap DU. PCI len is < 0");
-	return -1;
+
+	skb_pull(du->skb, pci_len);
+	du->pci.len = pci_len;
+
+	/* Make up for tail padding introduced at lower layers. */
+	if (du->skb->len > pci_length(&du->pci)) {
+		du_tail_shrink(du, du->skb->len - pci_length(&du->pci));
+	}
+
+	return 0;
 }
 EXPORT_SYMBOL(du_decap);
 

@@ -734,6 +734,8 @@ static int normal_mgmt_du_write(struct ipcp_instance_data * data,
                                 port_id_t                   port_id,
                                 struct du *                 du)
 {
+	ssize_t sbytes;
+
         LOG_DBG("Passing SDU to be written to N-1 port %d "
                 "from IPC Process %d", port_id, data->id);
 
@@ -743,6 +745,7 @@ static int normal_mgmt_du_write(struct ipcp_instance_data * data,
         }
 
         du->cfg = data->efcpc->config;
+        sbytes = du_len(du);
 
 	if (du_encap(du, PDU_TYPE_MGMT)){
 		LOG_ERR("Could not encap Mgmt PDU");
@@ -758,6 +761,7 @@ static int normal_mgmt_du_write(struct ipcp_instance_data * data,
                        0,
                        0,
                        1,
+		       du->pci.len + sbytes,
                        PDU_TYPE_MGMT)) {
         	LOG_ERR("Problems formatting PCI");
                 du_destroy(du);
