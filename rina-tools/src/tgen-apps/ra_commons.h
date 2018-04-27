@@ -95,17 +95,14 @@ namespace ra {
 		ssize_t Ret = read(Fd, Buffer, Rem);
 		if (Ret <= 0) {
 			if (Ret == 0) {
-				std::cerr << "ReadData () failed: return 0" << std::endl;
+				std::cout << "ReadData () failed: return 0" << std::endl;
 			}
 			else {
-				std::cerr << "ReadData () failed: " << strerror(errno) << std::endl;
+				std::cout << "ReadData () failed: " << strerror(errno) << std::endl;
 			}
 
 			return Ret;
 		}
-
-		std::cout << "After first read data, Rem = " << Rem
-			  << ", Ret = " << Ret << std::endl;
 
 		return ReadData(Fd, Buffer + Rem, (*(size_t *)Buffer) - Rem) + Rem;
 	}
@@ -114,14 +111,16 @@ namespace ra {
 		int DataSize;
 		size_t  Rem = Size;
 		ssize_t Ret;
+
+		std::cout << "Trying to read " << Size << " bytes" << std::endl;
 		do {
 			Ret = read(Fd, Buffer, Rem);
 			if (Ret <= 0) {
 				if (Ret == 0) {
-					std::cerr << "ReadData () failed: return 0" << std::endl;
+					std::cout << "ReadData () failed: return 0" << std::endl;
 				}
 				else {
-					std::cerr << "ReadData () failed: " << strerror(errno) << std::endl;
+					std::cout << "ReadData () failed: " << strerror(errno) << std::endl;
 				}
 
 				return Ret;
@@ -207,7 +206,7 @@ namespace ra {
 		      const char * DIFName) {
 		int Fd = rina_flow_alloc(DIFName, MyName, AppName, FlowSpec, 0);
 		if (Fd < 0) {
-			std::cerr << "rina_flow_alloc () failed: " << strerror(errno) << std::endl;
+			std::cout << "rina_flow_alloc () failed: " << strerror(errno) << std::endl;
 		}
 
 		return Fd;
@@ -221,19 +220,19 @@ namespace ra {
 
 		int Fd = rina_flow_alloc(DIFName, MyName, AppName, FlowSpec, RINA_F_NOWAIT);
 		if (Fd < 0) {
-			std::cerr << "rina_flow_alloc () failed: " << strerror(errno) << std::endl;
+			std::cout << "rina_flow_alloc () failed: " << strerror(errno) << std::endl;
 		}
 
 		struct pollfd Fds = { .fd = Fd,.events = POLLIN };
 		int PollRet = poll(&Fds, 1, mSec);
 
 		if (PollRet != 1 || Fds.revents & POLLIN == 0) {
-			std::cerr << "rina_flow_alloc () failed: timeout | "<< mSec << " milliseconds"  << std::endl;
+			std::cout << "rina_flow_alloc () failed: timeout | "<< mSec << " milliseconds"  << std::endl;
 			return -1;
 		}
 		Fd = rina_flow_alloc_wait(Fd);
 		if (Fd < 0) {
-			std::cerr << "rina_flow_alloc_wait () failed: " << strerror(errno) << std::endl;
+			std::cout << "rina_flow_alloc_wait () failed: " << strerror(errno) << std::endl;
 		}
 
 		return Fd;
@@ -243,13 +242,13 @@ namespace ra {
 		if (Cfd < 0) {
 			Cfd = rina_open();
 			if (Cfd < 0) {
-				std::cerr << "rina_open () failed: return " << Cfd << std::endl;
+				std::cout << "rina_open () failed: return " << Cfd << std::endl;
 				return false;
 			}
 		}
 
 		if (rina_register(Cfd, DIFName, MyName, 0) < 0) {
-			std::cerr << "rina_register () failed: " << strerror(errno) << std::endl;
+			std::cout << "rina_register () failed: " << strerror(errno) << std::endl;
 			return false;
 		}
 
@@ -264,7 +263,7 @@ namespace ra {
 		if (Cfd < 0) {
 			Cfd = rina_open();
 			if (Cfd < 0) {
-				std::cerr << "rina_open () failed: return " << Cfd << std::endl;
+				std::cout << "rina_open () failed: return " << Cfd << std::endl;
 				return false;
 			}
 		}
@@ -279,12 +278,12 @@ namespace ra {
 		int PollRet = poll(&Fds, 1, mSec);
 
 		if (PollRet != 1 || Fds.revents & POLLIN == 0) {
-			std::cerr << "rina_register () failed: timeout" << std::endl;
+			std::cout << "rina_register () failed: timeout" << std::endl;
 			return false;
 		}
 
 		if (rina_register_wait(Cfd, Fd) < 0) {
-			std::cerr << "rina_register_wait () failed: " << strerror(errno) << std::endl;
+			std::cout << "rina_register_wait () failed: " << strerror(errno) << std::endl;
 			return false;
 		}
 
@@ -294,7 +293,7 @@ namespace ra {
 	int ListenFlow(const int Cfd, char **RemoteApp, struct rina_flow_spec * FlowSpec) {
 		int Fd = rina_flow_accept(Cfd, RemoteApp, FlowSpec, 0);
 		if (Fd < 0) {
-			std::cerr << "rina_flow_accept () failed: " << strerror(errno) << std::endl;
+			std::cout << "rina_flow_accept () failed: " << strerror(errno) << std::endl;
 		}
 
 		return Fd;
@@ -305,22 +304,21 @@ namespace ra {
 			return ListenFlow(Cfd, RemoteApp, FlowSpec);
 		}
 
-
 		struct pollfd Fds = { .fd = Cfd,.events = POLLIN };
 		int PollRet = poll(&Fds, 1, mSec);
 		if (PollRet <= 1 || Fds.revents & POLLIN == 0) {
-			std::cerr << "ListenFlow () failed: timeout" << std::endl;
+			std::cout << "ListenFlow () failed: timeout" << std::endl;
 			return 0;
 		}
 
 		int Fd = rina_flow_accept(Cfd, RemoteApp, FlowSpec, RINA_F_NORESP);
 		if (Fd < 0) {
-			std::cerr << "rina_flow_accept () failed: " << strerror(errno) << std::endl;
+			std::cout << "rina_flow_accept () failed: " << strerror(errno) << std::endl;
 		}
 
 		Fd = rina_flow_respond(Cfd, Fd, 0);
 		if (Fd < 0) {
-			std::cerr << "rina_flow_respond () failed: " << strerror(errno) << std::endl;
+			std::cout << "rina_flow_respond () failed: " << strerror(errno) << std::endl;
 		}
 
 		return Fd;
