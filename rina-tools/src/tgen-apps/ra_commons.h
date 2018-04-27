@@ -10,7 +10,7 @@
 
 #include <rina/api.h>
 
-#define TIMEOUT_MS 5000
+#define TIMEOUT_MS 10000
 
 namespace ra {
 
@@ -134,12 +134,13 @@ namespace ra {
 		struct pollfd Fds = { .fd = Fd,.events = POLLIN };
 		int PollRet = poll(&Fds, 1, mSec);
 
-		std::cout << "poll returned" << PollRet;
+		std::cout << "poll returned" << PollRet << std::endl;
 
 		if (PollRet != 1) {
 			return PollRet;
 		}
 		if (Fds.revents & POLLIN == 0) {
+			std::cout << "No POLLIN" << std::endl;
 			return -1;
 		}
 
