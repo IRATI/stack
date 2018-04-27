@@ -173,22 +173,13 @@ int du_decap(struct du * du)
 		return -1;
 	}
 
-	LOG_INFO("PDU length %u, PCI PDU length %zd",
-			du->skb->len,
-			pci_length(&du->pci));
-
 	/* Make up for tail padding introduced at lower layers. */
 	if (du->skb->len > pci_length(&du->pci)) {
 		du_tail_shrink(du, du->skb->len - pci_length(&du->pci));
 	}
 
-	LOG_INFO("PDU length %u, PCI PDU length %zd",
-			du->skb->len, pci_length(&du->pci));
-
 	skb_pull(du->skb, pci_len);
 	du->pci.len = pci_len;
-
-	LOG_INFO("Payload length %u", du->skb->len);
 
 	return 0;
 }
