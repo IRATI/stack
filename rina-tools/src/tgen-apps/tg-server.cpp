@@ -50,7 +50,7 @@ struct qos_log {
 	}
 	void process(flow_log * f) {
 		count += f->count;
-		total += f->seq_id + 1;
+		total += f->seq_id;
 		data += f->data;
 		if (f->maxLat > maxLat) maxLat = f->maxLat;
 		if (f->minLat < minLat) minLat = f->minLat;
@@ -174,7 +174,7 @@ private:
 	}
 
 	int process_first_sdu(const int Fd) {
-		if (ra::ReadDataTimeout(Fd, Buffer, 1000) <= 0) {
+		if (ra::ReadDataTimeout(Fd, Buffer, TIMEOUT_MS) <= 0) {
 			std::cerr << "No data received during the first second of lifetime" << std::endl;
 			return -1;
 		}

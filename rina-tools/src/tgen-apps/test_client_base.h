@@ -8,7 +8,6 @@
 #include "ra_base_client.h"
 #include "test_commons.h"
 
-
 class TestClientBase : public ra::BaseClient {
 public:
 	TestClientBase(const std::string Name, const std::string Instance, const std::string Servername,
@@ -17,7 +16,7 @@ public:
 		       size_t mpdus, unsigned int loss, unsigned int delay) :
 		BaseClient(Name, Instance, Servername, ServerInstance, DIF, verbose, loss, delay) {
 		_TestDuration = TestDuration;
-		AllocTimeoutMs = 1000;
+		AllocTimeoutMs = TIMEOUT_MS;
 
 		Data = (dataSDU*) Buffer;
 		max_sdu_size = mpdus;
@@ -41,12 +40,12 @@ protected:
 		Data->SeqId = 0;
 		Data->SendTime = 0;
 
-		if (SendData(sizeof(initSDU), 1000) != sizeof(initSDU)) {
+		if (SendData(sizeof(initSDU), TIMEOUT_MS) != sizeof(initSDU)) {
 			std::cerr << "No data sent during the first second of lifetime" << std::endl;
 			return -1;
 		}
 
-		if (ra::ReadDataTimeout(Fd, Buffer, 1000) <= 0) {
+		if (ra::ReadDataTimeout(Fd, Buffer, TIMEOUT_MS) <= 0) {
 			std::cerr << "No data echo received during the first second of lifetime" << std::endl;
 			return -1;
 		}
@@ -58,12 +57,12 @@ protected:
 		int ReturnCode = RunFlow();
 
 		Data->Flags = SDU_FLAG_FIN;
-		if (SendData(sizeof(dataSDU), 1000) != sizeof(dataSDU)) {
+		if (SendData(sizeof(dataSDU), TIMEOUT_MS) != sizeof(dataSDU)) {
 			std::cerr << "failure sending fin SDU" << std::endl;
 			return -1;
 		}
 
-		if (ra::ReadDataTimeout(Fd, Buffer, 10000) <= 0) {
+		if (ra::ReadDataTimeout(Fd, Buffer, TIMEOUT_MS) <= 0) {
 			std::cerr << "No data echo received for the fin SDU" << std::endl;
 			return -1;
 		}

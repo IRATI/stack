@@ -1225,6 +1225,7 @@ int dtp_write(struct dtp * instance,
                        efcp->connection->destination_address,
                        csn,
                        efcp->connection->qos_id,
+		       sbytes + du->pci.len,
                        PDU_TYPE_DT)) {
 		LOG_ERR("Could not format PCI");
 		goto pdu_err_exit;
