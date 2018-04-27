@@ -104,6 +104,9 @@ namespace ra {
 			return Ret;
 		}
 
+		std::cout << "After first read data, Rem = " << Rem
+			  << ", Ret = " << Ret << std::endl;
+
 		return ReadData(Fd, Buffer + Rem, (*(size_t *)Buffer) - Rem) + Rem;
 	}
 
@@ -134,7 +137,7 @@ namespace ra {
 		struct pollfd Fds = { .fd = Fd,.events = POLLIN };
 		int PollRet = poll(&Fds, 1, mSec);
 
-		std::cout << "poll returned" << PollRet << std::endl;
+		std::cout << "poll returned " << PollRet << std::endl;
 
 		if (PollRet != 1) {
 			return PollRet;
