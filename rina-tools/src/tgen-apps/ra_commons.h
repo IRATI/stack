@@ -108,11 +108,10 @@ namespace ra {
 	}
 
 	int ReadData(const int Fd, byte_t * Buffer, const size_t Size) {
-		int DataSize;
+		int DataSize = 0;
 		size_t  Rem = Size;
 		ssize_t Ret;
 
-		std::cout << "Trying to read " << Size << " bytes" << std::endl;
 		do {
 			Ret = read(Fd, Buffer, Rem);
 			if (Ret <= 0) {
@@ -129,6 +128,7 @@ namespace ra {
 			Buffer += Ret;
 			DataSize += Ret;
 		} while (Rem > 0);
+
 		return DataSize;
 	}
 
@@ -136,13 +136,11 @@ namespace ra {
 		struct pollfd Fds = { .fd = Fd,.events = POLLIN };
 		int PollRet = poll(&Fds, 1, mSec);
 
-		std::cout << "poll returned " << PollRet << std::endl;
-
 		if (PollRet != 1) {
 			return PollRet;
 		}
+
 		if (Fds.revents & POLLIN == 0) {
-			std::cout << "No POLLIN" << std::endl;
 			return -1;
 		}
 
