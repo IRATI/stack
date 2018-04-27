@@ -50,7 +50,7 @@ struct qos_log {
 	}
 	void process(flow_log * f) {
 		count += f->count;
-		total += f->seq_id + 1;
+		total += f->seq_id;
 		data += f->data;
 		if (f->maxLat > maxLat) maxLat = f->maxLat;
 		if (f->minLat < minLat) minLat = f->minLat;

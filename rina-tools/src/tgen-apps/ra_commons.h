@@ -134,6 +134,8 @@ namespace ra {
 		struct pollfd Fds = { .fd = Fd,.events = POLLIN };
 		int PollRet = poll(&Fds, 1, mSec);
 
+		std::cout << "poll returned" << PollRet;
+
 		if (PollRet != 1) {
 			return PollRet;
 		}
