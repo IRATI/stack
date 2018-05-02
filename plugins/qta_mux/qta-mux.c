@@ -783,8 +783,8 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 		}
 	}
 
-	if (!must_enqueue)
-		return RMT_PS_ENQ_SEND;
+/*	if (!must_enqueue)
+		return RMT_PS_ENQ_SEND;*/
 
 	pdu_entry = pdu_entry_create(du);
 	if (!pdu_entry) {
