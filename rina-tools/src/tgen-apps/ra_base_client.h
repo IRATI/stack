@@ -39,6 +39,7 @@ namespace ra {
 		DstName = ServerName + "|" + ServerInstance;
 		rina_flow_spec_unreliable(&FlowSpec);
 		verbose = verb;
+		DIFName = DIF;
 
 		FlowSpec.max_delay = delay;
 		FlowSpec.max_loss = loss;
