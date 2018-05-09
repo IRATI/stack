@@ -42,7 +42,7 @@
 #include "rds/robjects.h"
 #include "efcp-str.h"
 
-#define TO_POST_LENGTH 100
+#define TO_POST_LENGTH 1000
 #define TO_SEND_LENGTH 16
 
 static struct policy_set_list policy_sets = {
