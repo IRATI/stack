@@ -17,7 +17,7 @@ endif
 ccflags-y = -Wtype-limits -I${src}/../../kernel -I${src}/../../include
 
 obj-m := qta-mux-plugin.o
-qta-mux-plugin-y := qta-mux.o
+qta-mux-plugin-y := qta-mux-debug.o qta-mux.o
 
 all:
 	$(MAKE) -C $(KDIR) KBUILD_EXTRA_SYMBOLS=${IRATI_KSDIR}/Module.symvers M=$$PWD
