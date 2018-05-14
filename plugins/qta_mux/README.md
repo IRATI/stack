@@ -129,7 +129,7 @@ The example below illustrates a configuration of a QTAMux with a 2 by 2 C/U matr
           "version" : "1",
            "parameters" : [{
                "name"  : "1.cumux",
-               "value" : "2:1:120,120,0:100,90,10"
+               "value" : "2:0:120,120,0:100,90,10"
              }, {
                "name"  : "2.cumux",
                "value" : "2:1:60,60,0:50,40,30"
