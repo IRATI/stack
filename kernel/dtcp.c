@@ -261,6 +261,7 @@ static int populate_ctrl_pci(struct pci *  pci,
                         return -1;
                 }
                 return 0;
+        case PDU_TYPE_RENDEZVOUS:
         case PDU_TYPE_CACK:
         	if (pci_control_last_seq_num_rcvd_set(pci, last_rcv_ctl_seq)) {
 			LOG_ERR("Could not set last ctrl sn rcvd");
@@ -419,11 +420,12 @@ static int rcv_ack(struct dtcp * dtcp,
         return ret;
 }
 
-static int rcv_flow_ctl(struct dtcp * dtcp,
-                        struct du *   du)
+static int update_window_and_rate(struct dtcp * dtcp,
+                		  struct du *   du)
 {
         uint_t 	     rt;
         uint_t       tf;
+        bool         cancel_rv_timer;
 
         rt = pci_control_sndr_rate(&du->pci);
         tf = pci_control_time_frame(&du->pci);
@@ -431,7 +433,7 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
         spin_lock_bh(&dtcp->parent->sv_lock);
         if(dtcp_window_based_fctrl(dtcp->cfg)) {
         	dtcp->sv->snd_rt_wind_edge =
-        			pci_control_new_rt_wind_edge(&du->pci);
+        		pci_control_new_rt_wind_edge(&du->pci);
         }
 
         if(dtcp_rate_based_fctrl(dtcp->cfg)) {
@@ -444,11 +446,20 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
 				rt, tf);
 		}
         }
+
+        /* Check if rendezvous timer is active */
+        cancel_rv_timer = false;
+        if (dtcp->sv->rendezvous_sndr) {
+        	dtcp->sv->rendezvous_sndr = false;
+        	cancel_rv_timer = true;
+        }
         spin_unlock_bh(&dtcp->parent->sv_lock);
+
+        if (cancel_rv_timer)
+        	rtimer_stop(dtcp->parent->timers.rendezvous);
 
         push_pdus_rmt(dtcp);
 
-        LOG_DBG("DTCP received FC (CPU: %d)", smp_processor_id());
         dump_we(dtcp, &du->pci);
 
         du_destroy(du);
@@ -456,13 +467,18 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
         return 0;
 }
 
+static int rcv_flow_ctl(struct dtcp * dtcp,
+                        struct du *   du)
+{
+	LOG_DBG("DTCP received FC (CPU: %d)", smp_processor_id());
+	return update_window_and_rate(dtcp, du);
+}
+
 static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
                                 struct du *   du)
 {
         struct dtcp_ps * ps;
         seq_num_t        seq;
-        uint_t		 rt;
-        uint_t           tf;
 
         seq = pci_control_ack_seq_num(&du->pci);
 
@@ -476,37 +492,32 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
                 LOG_ERR("Could not update RTXQ and LWE");
         rcu_read_unlock();
 
-        spin_lock_bh(&dtcp->parent->sv_lock);
-	if(dtcp_window_based_fctrl(dtcp->cfg)) {
-		dtcp->sv->snd_rt_wind_edge =
-				pci_control_new_rt_wind_edge(&du->pci);
-		LOG_DBG("Right Window Edge: %u", dtcp->sv->snd_rt_wind_edge);
-	}
-
-	if(dtcp_rate_based_fctrl(dtcp->cfg)) {
-	        rt = pci_control_sndr_rate(&du->pci);
-	        tf = pci_control_time_frame(&du->pci);
-
-	        if(tf && rt) {
-	        	dtcp->sv->sndr_rate = rt;
-	        	dtcp->sv->time_unit = tf;
-			LOG_DBG("Rate based fields sets on flow ctl and "
-				"ack, rate: %u, time: %u",
-				rt, tf);
-	        }
-	}
-	spin_unlock_bh(&dtcp->parent->sv_lock);
-
-        LOG_DBG("Calling CWQ_deliver for DTCP: %pK", dtcp);
-        push_pdus_rmt(dtcp);
-
-        /* FIXME: Verify values for the receiver side */
         LOG_DBG("DTCP received ACK-FC (CPU: %d)", smp_processor_id());
+
+        return update_window_and_rate(dtcp, du);
+}
+
+static int rcvr_rendezvous(struct dtcp * dtcp,
+                           struct du *   du)
+{
+        struct dtcp_ps * ps;
+        int              ret;
+
+        rcu_read_lock();
+        ps = container_of(rcu_dereference(dtcp->base.ps),
+                          struct dtcp_ps, base);
+	if (ps->rcvr_rendezvous)
+        	ret = ps->rcvr_rendezvous(ps, &du->pci);
+	else
+		ret = 0;
+        rcu_read_unlock();
+
+        LOG_INFO("DTCP received Rendezvous (CPU: %d)", smp_processor_id());
         dump_we(dtcp, &du->pci);
 
         du_destroy(du);
 
-        return 0;
+        return ret;
 }
 
 int dtcp_common_rcv_control(struct dtcp * dtcp, struct du * du)
@@ -587,6 +598,9 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct du * du)
         case PDU_TYPE_ACK_AND_FC:
                 ret = rcv_ack_and_flow_ctl(dtcp, du);
                 break;
+        case PDU_TYPE_RENDEZVOUS:
+        	ret = rcvr_rendezvous(dtcp, du);
+        	break;
         default:
                 ret = -1;
                 break;
@@ -687,12 +701,34 @@ pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
 }
 EXPORT_SYMBOL(pdu_ctrl_type_get);
 
-int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
+static int ctrl_pdu_send(struct dtcp * dtcp, pdu_type_t type)
 {
         struct du *   du;
-        pdu_type_t    type;
-
         seq_num_t      dbg_seq_num;
+
+        du  = pdu_ctrl_generate(dtcp, type);
+        if (!du) {
+        	atomic_dec(&dtcp->cpdus_in_transit);
+        	return -1;
+        }
+
+        dbg_seq_num = pci_sequence_number_get(&du->pci);
+
+        if (dtcp_pdu_send(dtcp, du)){
+        	atomic_dec(&dtcp->cpdus_in_transit);
+        	return -1;
+        }
+
+        dump_we(dtcp, &du->pci);
+
+        atomic_dec(&dtcp->cpdus_in_transit);
+
+        return 0;
+}
+
+int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
+{
+        pdu_type_t    type;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -707,27 +743,19 @@ int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
                 return 0;
         }
 
-        du  = pdu_ctrl_generate(dtcp, type);
-        if (!du) {
-                atomic_dec(&dtcp->cpdus_in_transit);
-                return -1;
-        }
+        LOG_DBG("DTCP Sending ACK (CPU: %d)", smp_processor_id());
 
-        dbg_seq_num = pci_sequence_number_get(&du->pci);
-
-        LOG_DBG("DTCP Sending ACK %u (CPU: %d)", dbg_seq_num, smp_processor_id());
-        dump_we(dtcp, &du->pci);
-
-        if (dtcp_pdu_send(dtcp, du)){
-                atomic_dec(&dtcp->cpdus_in_transit);
-                return -1;
-        }
-
-        atomic_dec(&dtcp->cpdus_in_transit);
-
-        return 0;
+        return ctrl_pdu_send(dtcp, type);
 }
 EXPORT_SYMBOL(dtcp_ack_flow_control_pdu_send);
+
+int dtcp_rendezvous_pdu_send(struct dtcp * dtcp)
+{
+	atomic_inc(&dtcp->cpdus_in_transit);
+	LOG_DBG("DTCP Sending Rendezvous (CPU: %d)", smp_processor_id());
+	return ctrl_pdu_send(dtcp, PDU_TYPE_RENDEZVOUS);
+}
+EXPORT_SYMBOL(dtcp_rendezvous_pdu_send);
 
 static struct dtcp_sv default_sv = {
         .pdus_per_time_unit     = 0,
@@ -750,6 +778,8 @@ static struct dtcp_sv default_sv = {
         .flow_ctl               = 0,
         .rtt                    = 0,
         .srtt                   = 0,
+	.rendezvous_sndr        = false,
+	.rendezvous_rcvr        = false,
 };
 
 /* FIXME: this should be completed with other parameters from the config */
@@ -913,6 +943,9 @@ int dtcp_select_policy_set(struct dtcp * dtcp,
                 }
                 if (!ps->rtt_estimator) {
                         ps->rtt_estimator = default_rtt_estimator;
+                }
+                if (!ps->rcvr_rendezvous) {
+                	ps->rcvr_rendezvous = default_rcvr_rendezvous;
                 }
         }
 

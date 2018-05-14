@@ -299,6 +299,35 @@ int default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
         return 0;
 }
 
+int default_rcvr_rendezvous(struct dtcp_ps * ps, const struct pci * pci)
+{
+        struct dtcp *       dtcp;
+
+        if (!ps)
+                return -1;
+        dtcp = ps->dm;
+        if (!dtcp)
+                return -1;
+
+        LOG_DBG("Receiver rendezvous...");
+
+        /* TODO implement */
+        /* Check Consistency of the Receiving Window values with the
+         * values in the PDU.
+         */
+
+        /* Send a ControlAck PDU to confirm reception of RendezvousPDU via
+         * lastControlPDU value or send any other control PDU with Flow Control
+         * information opening the window.
+         */
+
+        /* Receiver is in the Rendezvous-at-the-receiver state. The next PDU is
+         * expected to have DRF bit set to true
+         */
+
+        return 0;
+}
+
 struct ps_base * dtcp_ps_default_create(struct rina_component * component)
 {
         struct dtcp * dtcp = dtcp_from_component(component);
@@ -333,6 +362,7 @@ struct ps_base * dtcp_ps_default_create(struct rina_component * component)
         ps->rcvr_control_ack            = NULL;
         ps->no_rate_slow_down           = NULL;
         ps->no_override_default_peak    = NULL;
+        ps->rcvr_rendezvous             = default_rcvr_rendezvous;
 
         return &ps->base;
 }

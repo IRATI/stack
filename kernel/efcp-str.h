@@ -168,6 +168,7 @@ struct dtp {
                 struct rtimer * receiver_inactivity;
                 struct rtimer * a;
                 struct rtimer * rate_window;
+                struct rtimer * rendezvous;
         } timers;
 	struct robject		  robj;
 
@@ -280,6 +281,18 @@ struct dtcp_sv {
         uint_t       rtt;
         uint_t       srtt;
         uint_t       rttvar;
+
+        /* Rendezvous */
+
+        /* This Boolean indicates whether there is a zero-length window and a
+         * Rendezvous PDU has been sent.
+         */
+        bool         rendezvous_sndr;
+
+        /* This Boolean indicates whether a Rendezvous PDU was received. The
+         * next DT-PDU is expected to have a DRF bit set to true.
+         */
+        bool         rendezvous_rcvr;
 };
 
 struct dtcp {

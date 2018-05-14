@@ -476,6 +476,39 @@ static void tf_receiver_inactivity(void * data)
         return;
 }
 
+/* Runs the Rendezvous timer */
+static void tf_rendezvous(void * data)
+{
+        struct dtp * dtp;
+        bool         start_rv_timer;
+        timeout_t    rv;
+
+        LOG_DBG("Running rendezvous timer...");
+        dtp = (struct dtp *) data;
+        if (!dtp) {
+                LOG_ERR("No dtp to work with");
+                return;
+        }
+
+	/* Check if rendezvous PDU needs to be send*/
+	start_rv_timer = false;
+	spin_lock_bh(&dtp->sv_lock);
+	if (dtp->dtcp->sv->rendezvous_sndr) {
+		/* Start rendezvous timer, wait for 2*RTT to fire */
+		start_rv_timer = true;
+		rv = 2*dtp->dtcp->sv->rtt;
+	}
+	spin_unlock_bh(&dtp->sv_lock);
+
+	if (start_rv_timer) {
+		/* Send rendezvous PDU and start timer */
+		dtcp_rendezvous_pdu_send(dtp->dtcp);
+		rtimer_start(dtp->timers.rendezvous, rv);
+	}
+
+        return;
+}
+
 /*
  * NOTE:
  *   AF is the factor to which A is divided in order to obtain the
@@ -1001,10 +1034,12 @@ struct dtp * dtp_create(struct efcp *       efcp,
         		rtimer_create(tf_receiver_inactivity, dtp);
         dtp->timers.a = rtimer_create(tf_a, dtp);
         dtp->timers.rate_window = rtimer_create(tf_rate_window, dtp);
+        dtp->timers.rendezvous = rtimer_create(tf_rendezvous, dtp);
         if (!dtp->timers.sender_inactivity   ||
             !dtp->timers.receiver_inactivity ||
             !dtp->timers.a                   ||
-            !dtp->timers.rate_window) {
+            !dtp->timers.rate_window	     ||
+	    !dtp->timers.rendezvous) {
                 dtp_destroy(dtp);
                 return NULL;
         }
@@ -1109,6 +1144,8 @@ int dtp_destroy(struct dtp * instance)
                 rtimer_destroy(instance->timers.receiver_inactivity);
         if (instance->timers.rate_window)
                 rtimer_destroy(instance->timers.rate_window);
+        if (instance->timers.rendezvous)
+        	rtimer_destroy(instance->timers.rendezvous);
         if (instance->to_post) ringq_destroy(instance->to_post,
                                (void (*)(void *)) du_destroy);
         if (instance->to_send) ringq_destroy(instance->to_send,
@@ -1179,7 +1216,8 @@ int dtp_write(struct dtp * instance,
         struct efcp *     efcp;
         int		  sbytes;
         uint_t            sc;
-        timeout_t         mpl, r, a;
+        timeout_t         mpl, r, a, rv;
+        bool		  start_rv_timer;
 
         efcp = instance->efcp;
         dtcp = instance->dtcp;
@@ -1265,6 +1303,25 @@ int dtp_write(struct dtp * instance,
 					goto stats_err_exit;
 				}
 				rcu_read_unlock();
+
+				/* Check if rendezvous PDU needs to be send*/
+				start_rv_timer = false;
+				spin_lock_bh(&instance->sv_lock);
+				if (!instance->dtcp->sv->rendezvous_sndr) {
+					instance->dtcp->sv->rendezvous_sndr = true;
+
+					/* Start rendezvous timer, wait for 2*RTT to fire */
+					start_rv_timer = true;
+					rv = 2*instance->dtcp->sv->rtt;
+				}
+				spin_unlock_bh(&instance->sv_lock);
+
+				if (start_rv_timer) {
+					/* Send rendezvous PDU and start time */
+					dtcp_rendezvous_pdu_send(instance->dtcp);
+					rtimer_start(instance->timers.rendezvous, rv);
+				}
+
 				return 0;
 			}
 			if(instance->sv->rate_based) {

@@ -37,7 +37,6 @@
 #define FLAGS_SIZE 1
 #define TYPE_SIZE 1
 
-
 enum pci_field_index {
 	PCI_BASE_VERSION = 0,
 	PCI_BASE_DST_ADD,
@@ -82,6 +81,8 @@ enum pci_field_index {
 	PCI_ACK_FC_SNDR_RATE,
 	PCI_ACK_FC_TIME_FRAME,
 	PCI_ACK_FC_SIZE,
+	/* pci_rvous */
+	PCI_RVOUS_SIZE,
 	/* number of fields */
 	PCI_FIELD_INDEX_MAX,
 };
@@ -193,6 +194,7 @@ ssize_t *pci_offset_table_create(struct dt_cons *dt_cons)
 		case PCI_FC_SIZE:
 		case PCI_CACK_SIZE:
 		case PCI_ACK_SIZE:
+		case PCI_RVOUS_SIZE:
 		case PCI_ACK_FC_SIZE:
 			offset = base_offset;
 			break;
@@ -236,6 +238,7 @@ ssize_t *pci_offset_table_create(struct dt_cons *dt_cons)
 	LOG_DBG("pci_offsets[PCI_ACK_FC_MY_RWE] = %zu", pci_offsets[PCI_ACK_FC_MY_RWE]);
 	LOG_DBG("pci_offsets[PCI_ACK_FC_SNDR_RATE] = %zu", pci_offsets[PCI_ACK_FC_SNDR_RATE]);
 	LOG_DBG("pci_offsets[PCI_ACK_FC_TIME_FRAME] = %zu", pci_offsets[PCI_ACK_FC_TIME_FRAME]);
+	LOG_DBG("pci_offsets[PCI_RVOUS_SIZE] = %zu", pci_offsets[PCI_RVOUS_SIZE]);
 	LOG_DBG("pci_offsets[PCI_ACK_FC_SIZE] = %zu",pci_offsets[PCI_ACK_FC_SIZE]);
 	return pci_offsets;
 }
@@ -450,6 +453,8 @@ ssize_t pci_calculate_size(struct efcp_config *cfg, pdu_type_t type)
 			return cfg->pci_offset_table[PCI_ACK_FC_SIZE];
 		case PDU_TYPE_CACK:
 			return cfg->pci_offset_table[PCI_CACK_SIZE];
+		case PDU_TYPE_RENDEZVOUS:
+			return cfg->pci_offset_table[PCI_RVOUS_SIZE];
 		default:
 			return -1;
 	}
@@ -490,6 +495,7 @@ seq_num_t pci_control_new_rt_wind_edge(const struct pci *pci)
 	switch (pci_type(pci)) {
 	case PDU_TYPE_FC:
 		PCI_GETTER(pci, PCI_FC_NEW_RWE, seq_num_length, seq_num_t);
+	case PDU_TYPE_RENDEZVOUS:
 	case PDU_TYPE_CACK:
 		PCI_GETTER(pci, PCI_CACK_NEW_RWE, seq_num_length, seq_num_t);
 	case PDU_TYPE_ACK_AND_FC:
@@ -503,6 +509,7 @@ EXPORT_SYMBOL(pci_control_new_rt_wind_edge);
 seq_num_t pci_control_new_left_wind_edge(const struct pci *pci)
 {
 	switch (pci_type(pci)) {
+	case PDU_TYPE_RENDEZVOUS:
 	case PDU_TYPE_CACK:
 		PCI_GETTER(pci, PCI_CACK_NEW_LWE, seq_num_length, seq_num_t);
 	case PDU_TYPE_ACK_AND_FC:
@@ -518,6 +525,7 @@ seq_num_t pci_control_my_rt_wind_edge(const struct pci *pci)
 	switch (pci_type(pci)) {
 	case PDU_TYPE_FC:
 		PCI_GETTER(pci, PCI_FC_MY_RWE, seq_num_length, seq_num_t);
+	case PDU_TYPE_RENDEZVOUS:
 	case PDU_TYPE_CACK:
 		PCI_GETTER(pci, PCI_CACK_MY_RWE, seq_num_length, seq_num_t);
 	case PDU_TYPE_ACK_AND_FC:
@@ -533,6 +541,7 @@ seq_num_t pci_control_my_left_wind_edge(const struct pci *pci)
 	switch (pci_type(pci)) {
 	case PDU_TYPE_FC:
 		PCI_GETTER(pci, PCI_FC_MY_LWE, seq_num_length, seq_num_t);
+	case PDU_TYPE_RENDEZVOUS:
 	case PDU_TYPE_CACK:
 		PCI_GETTER(pci, PCI_CACK_MY_LWE, seq_num_length, seq_num_t);
 	case PDU_TYPE_ACK_AND_FC:
@@ -546,6 +555,7 @@ EXPORT_SYMBOL(pci_control_my_left_wind_edge);
 seq_num_t pci_control_last_seq_num_rcvd(const struct pci *pci)
 {
 	switch (pci_type(pci)) {
+	case PDU_TYPE_RENDEZVOUS:
 	case PDU_TYPE_CACK:
 		PCI_GETTER(pci, PCI_CACK_LAST_CSN_RCVD, seq_num_length, seq_num_t);
 	case PDU_TYPE_ACK_AND_FC:
@@ -561,6 +571,7 @@ u_int32_t pci_control_sndr_rate(const struct pci *pci)
 	switch (pci_type(pci)) {
 	case PDU_TYPE_FC:
 		PCI_GETTER(pci, PCI_FC_SNDR_RATE, rate_length, u_int32_t);
+	case PDU_TYPE_RENDEZVOUS:
 	case PDU_TYPE_CACK:
 		PCI_GETTER(pci, PCI_CACK_SNDR_RATE, rate_length, u_int32_t);
 	case PDU_TYPE_ACK_AND_FC:
@@ -605,6 +616,7 @@ int pci_control_new_rt_wind_edge_set(struct pci *pci, seq_num_t seq)
 	switch (pci_type(pci)) {
 	case PDU_TYPE_FC:
 		PCI_SETTER(pci, PCI_FC_NEW_RWE, seq_num_length, seq);
+	case PDU_TYPE_RENDEZVOUS:
 	case PDU_TYPE_CACK:
 		PCI_SETTER(pci, PCI_CACK_NEW_RWE, seq_num_length, seq);
 	case PDU_TYPE_ACK_AND_FC:
@@ -618,6 +630,7 @@ EXPORT_SYMBOL(pci_control_new_rt_wind_edge_set);
 int pci_control_new_left_wind_edge_set(struct pci *pci, seq_num_t seq)
 {
 	switch (pci_type(pci)) {
+	case PDU_TYPE_RENDEZVOUS:
 	case PDU_TYPE_CACK:
 		PCI_SETTER(pci, PCI_CACK_NEW_LWE, seq_num_length, seq);
 	case PDU_TYPE_ACK_AND_FC:
@@ -633,6 +646,7 @@ int pci_control_my_rt_wind_edge_set(struct pci *pci, seq_num_t seq)
 	switch (pci_type(pci)) {
 	case PDU_TYPE_FC:
 		PCI_SETTER(pci, PCI_FC_MY_RWE, seq_num_length, seq);
+	case PDU_TYPE_RENDEZVOUS:
 	case PDU_TYPE_CACK:
 		PCI_SETTER(pci, PCI_CACK_MY_RWE, seq_num_length, seq);
 	case PDU_TYPE_ACK_AND_FC:
@@ -648,6 +662,7 @@ int pci_control_my_left_wind_edge_set(struct pci *pci, seq_num_t seq)
 	switch (pci_type(pci)) {
 	case PDU_TYPE_FC:
 		PCI_SETTER(pci, PCI_FC_MY_LWE, seq_num_length, seq);
+	case PDU_TYPE_RENDEZVOUS:
 	case PDU_TYPE_CACK:
 		PCI_SETTER(pci, PCI_CACK_MY_LWE, seq_num_length, seq);
 	case PDU_TYPE_ACK_AND_FC:
@@ -661,6 +676,7 @@ EXPORT_SYMBOL(pci_control_my_left_wind_edge_set);
 int pci_control_last_seq_num_rcvd_set(struct pci *pci, seq_num_t seq)
 {
 	switch (pci_type(pci)) {
+	case PDU_TYPE_RENDEZVOUS:
 	case PDU_TYPE_CACK:
 		PCI_SETTER(pci, PCI_CACK_LAST_CSN_RCVD, seq_num_length, seq);
 	case PDU_TYPE_ACK_AND_FC:
@@ -676,6 +692,7 @@ int pci_control_sndr_rate_set(struct pci *pci, u_int32_t rate)
 	switch (pci_type(pci)) {
 	case PDU_TYPE_FC:
 		PCI_SETTER(pci, PCI_FC_SNDR_RATE, rate_length, rate);
+	case PDU_TYPE_RENDEZVOUS:
 	case PDU_TYPE_CACK:
 		PCI_SETTER(pci, PCI_CACK_SNDR_RATE, rate_length, rate);
 	case PDU_TYPE_ACK_AND_FC:

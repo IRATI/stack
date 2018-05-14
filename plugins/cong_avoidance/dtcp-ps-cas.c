@@ -250,6 +250,7 @@ dtcp_ps_cas_create(struct rina_component * component)
         ps->rcvr_control_ack            = NULL;
         ps->no_rate_slow_down           = NULL;
         ps->no_override_default_peak    = NULL;
+        ps->rcvr_rendezvous             = NULL;
 
         return &ps->base;
 }
