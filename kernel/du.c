@@ -173,13 +173,13 @@ int du_decap(struct du * du)
 		return -1;
 	}
 
-	skb_pull(du->skb, pci_len);
-	du->pci.len = pci_len;
-
 	/* Make up for tail padding introduced at lower layers. */
 	if (du->skb->len > pci_length(&du->pci)) {
 		du_tail_shrink(du, du->skb->len - pci_length(&du->pci));
 	}
+
+	skb_pull(du->skb, pci_len);
+	du->pci.len = pci_len;
 
 	return 0;
 }
