@@ -1347,6 +1347,7 @@ int rmt_receive(struct rmt *rmt,
 		case PDU_TYPE_FC:
 		case PDU_TYPE_ACK:
 		case PDU_TYPE_ACK_AND_FC:
+		case PDU_TYPE_RENDEZVOUS:
 		case PDU_TYPE_DT:
 			/*
 			 * (FUTURE)
