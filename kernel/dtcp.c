@@ -702,10 +702,9 @@ pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
 }
 EXPORT_SYMBOL(pdu_ctrl_type_get);
 
-static int ctrl_pdu_send(struct dtcp * dtcp, pdu_type_t type)
+static int ctrl_pdu_send(struct dtcp * dtcp, pdu_type_t type, bool direct)
 {
         struct du *   du;
-        seq_num_t      dbg_seq_num;
 
         du  = pdu_ctrl_generate(dtcp, type);
         if (!du) {
@@ -713,11 +712,18 @@ static int ctrl_pdu_send(struct dtcp * dtcp, pdu_type_t type)
         	return -1;
         }
 
-        dbg_seq_num = pci_sequence_number_get(&du->pci);
-
-        if (dtcp_pdu_send(dtcp, du)){
-        	atomic_dec(&dtcp->cpdus_in_transit);
-        	return -1;
+        if (direct) {
+        	if (dtp_pdu_send(dtcp->parent, dtcp->rmt, du)){
+        		atomic_dec(&dtcp->cpdus_in_transit);
+        		du_destroy(du);
+        		return -1;
+        	}
+        } else {
+                if (dtcp_pdu_send(dtcp, du)){
+                	atomic_dec(&dtcp->cpdus_in_transit);
+                	du_destroy(du);
+                	return -1;
+                }
         }
 
         dump_we(dtcp, &du->pci);
@@ -746,7 +752,7 @@ int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
 
         LOG_DBG("DTCP Sending ACK (CPU: %d)", smp_processor_id());
 
-        return ctrl_pdu_send(dtcp, type);
+        return ctrl_pdu_send(dtcp, type, false);
 }
 EXPORT_SYMBOL(dtcp_ack_flow_control_pdu_send);
 
@@ -754,7 +760,7 @@ int dtcp_rendezvous_pdu_send(struct dtcp * dtcp)
 {
 	atomic_inc(&dtcp->cpdus_in_transit);
 	LOG_INFO("DTCP Sending Rendezvous (CPU: %d)", smp_processor_id());
-	return ctrl_pdu_send(dtcp, PDU_TYPE_RENDEZVOUS);
+	return ctrl_pdu_send(dtcp, PDU_TYPE_RENDEZVOUS, true);
 }
 EXPORT_SYMBOL(dtcp_rendezvous_pdu_send);
 

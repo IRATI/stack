@@ -43,7 +43,7 @@
 #include "efcp-str.h"
 
 #define TO_POST_LENGTH 1000
-#define TO_SEND_LENGTH 16
+#define TO_SEND_LENGTH 50
 
 static struct policy_set_list policy_sets = {
         .head = LIST_HEAD_INIT(policy_sets.head)
@@ -494,9 +494,9 @@ static void tf_rendezvous(void * data)
 	start_rv_timer = false;
 	spin_lock_bh(&dtp->sv_lock);
 	if (dtp->dtcp->sv->rendezvous_sndr) {
-		/* Start rendezvous timer, wait for 2*RTT to fire */
+		/* Start rendezvous timer, wait for Tr to fire */
 		start_rv_timer = true;
-		rv = 2*dtp->dtcp->sv->rtt;
+		rv = dtp->sv->tr;
 	}
 	spin_unlock_bh(&dtp->sv_lock);
 
@@ -1310,9 +1310,9 @@ int dtp_write(struct dtp * instance,
 				if (!instance->dtcp->sv->rendezvous_sndr) {
 					instance->dtcp->sv->rendezvous_sndr = true;
 
-					/* Start rendezvous timer, wait for 2*RTT to fire */
+					/* Start rendezvous timer, wait for Tr to fire */
 					start_rv_timer = true;
-					rv = 2*instance->dtcp->sv->rtt;
+					rv = instance->sv->tr;
 				}
 				spin_unlock_bh(&instance->sv_lock);
 
