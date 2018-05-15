@@ -496,7 +496,7 @@ static void tf_rendezvous(void * data)
 	if (dtp->dtcp->sv->rendezvous_sndr) {
 		/* Start rendezvous timer, wait for Tr to fire */
 		start_rv_timer = true;
-		rv = dtp->sv->tr;
+		rv = jiffies_to_msecs(dtp->sv->tr);
 	}
 	spin_unlock_bh(&dtp->sv_lock);
 
@@ -663,13 +663,8 @@ static void tf_a(void * o)
                         LOG_ERR("sending_ack failed");
                         rtimer_start(dtp->timers.a, a/AF);
                 }
-                while (!ringq_is_empty(dtp->to_send)) {
-                        struct du * pdu_ctrl;
-                        pdu_ctrl = ringq_pop(dtp->to_send);
-                        if (pdu_ctrl) {
-                               dtp_pdu_send(dtp, dtp->rmt, pdu_ctrl);
-                         }
-                 }
+
+                dtp_send_pending_ctrl_pdus(dtp);
         } else {
                 pci = process_A_expiration(dtp, dtcp);
                 if (pci) pci_release(pci);
@@ -1205,6 +1200,20 @@ static bool window_is_closed(struct dtp *    dtp,
         return retval;
 }
 
+void dtp_send_pending_ctrl_pdus(struct dtp * dtp)
+{
+	struct du * du_ctrl;
+
+	while (!ringq_is_empty(dtp->to_send)) {
+		du_ctrl = ringq_pop(dtp->to_send);
+		if (du_ctrl && dtp_pdu_send(dtp, dtp->rmt, du_ctrl)) {
+			LOG_ERR("Problems sending DTCP Ctrl PDU");
+			du_destroy(du_ctrl);
+		}
+	}
+}
+EXPORT_SYMBOL(dtp_send_pending_ctrl_pdus);
+
 int dtp_write(struct dtp * instance,
               struct du * du)
 {
@@ -1312,7 +1321,7 @@ int dtp_write(struct dtp * instance,
 
 					/* Start rendezvous timer, wait for Tr to fire */
 					start_rv_timer = true;
-					rv = instance->sv->tr;
+					rv = jiffies_to_msecs(instance->sv->tr);
 				}
 				spin_unlock_bh(&instance->sv_lock);
 
@@ -1518,12 +1527,8 @@ int dtp_receive(struct dtp * instance,
                                         return -1;
                                 }
                         }
-                        while (!ringq_is_empty(instance->to_send)) {
-                                struct du * du_ctrl = ringq_pop(instance->to_send);
-                                if (du_ctrl) {
-                                       dtp_pdu_send(instance, instance->rmt, du_ctrl);
-                                }
-                        }
+
+                        dtp_send_pending_ctrl_pdus(instance);
                         pdu_post(instance, du);
 			stats_inc_bytes(rx, instance->sv, sbytes);
                         LOG_DBG("Data run flag DRF");
@@ -1599,13 +1604,7 @@ int dtp_receive(struct dtp * instance,
                                 LOG_ERR("Failed to update dtcp sv");
                                 goto fail;
                         }
-                        while (!ringq_is_empty(instance->to_send)) {
-                                struct du * du_ctrl;
-                                du_ctrl = ringq_pop(instance->to_send);
-                                if (du_ctrl) {
-                                       dtp_pdu_send(instance, instance->rmt, du_ctrl);
-                                }
-                        }
+                        dtp_send_pending_ctrl_pdus(instance);
                         if (!set_lft_win_edge) {
                                 du_destroy(du);
                                 return 0;
@@ -1652,12 +1651,7 @@ int dtp_receive(struct dtp * instance,
                 }
         }
 
-        while (!ringq_is_empty(instance->to_send)) {
-        	struct du * du_ctrl = ringq_pop(instance->to_send);
-                if (du_ctrl) {
-                	dtp_pdu_send(instance, instance->rmt, du_ctrl);
-                }
-        }
+        dtp_send_pending_ctrl_pdus(instance);
 
         if (list_empty(&instance->seqq->queue->head))
                 rtimer_stop(instance->timers.a);

@@ -314,12 +314,6 @@ int default_rcvr_rendezvous(struct dtcp_ps * ps, const struct pci * pci)
         LOG_INFO("Receiver rendezvous...");
 
         spin_lock_bh(&dtcp->parent->sv_lock);
-        if (!dtcp->sv->flow_ctl) {
-        	LOG_WARN("Received Rendezvous PDU with flow control disabled");
-        	spin_unlock_bh(&dtcp->parent->sv_lock);
-        	return 0;
-        }
-
         /* TODO: check if retransmission control enabled */
 
         if (dtcp->parent->sv->window_based) {

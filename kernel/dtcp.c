@@ -608,6 +608,9 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct du * du)
         }
 
         atomic_dec(&dtcp->cpdus_in_transit);
+
+        dtp_send_pending_ctrl_pdus(dtcp->parent);
+
         return ret;
 }
 
