@@ -452,6 +452,7 @@ static int update_window_and_rate(struct dtcp * dtcp,
         if (dtcp->sv->rendezvous_sndr) {
         	dtcp->sv->rendezvous_sndr = false;
         	cancel_rv_timer = true;
+        	LOG_INFO("Stopping rendezvous timer");
         }
         spin_unlock_bh(&dtcp->parent->sv_lock);
 
@@ -752,7 +753,7 @@ EXPORT_SYMBOL(dtcp_ack_flow_control_pdu_send);
 int dtcp_rendezvous_pdu_send(struct dtcp * dtcp)
 {
 	atomic_inc(&dtcp->cpdus_in_transit);
-	LOG_DBG("DTCP Sending Rendezvous (CPU: %d)", smp_processor_id());
+	LOG_INFO("DTCP Sending Rendezvous (CPU: %d)", smp_processor_id());
 	return ctrl_pdu_send(dtcp, PDU_TYPE_RENDEZVOUS);
 }
 EXPORT_SYMBOL(dtcp_rendezvous_pdu_send);

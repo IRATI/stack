@@ -483,7 +483,7 @@ static void tf_rendezvous(void * data)
         bool         start_rv_timer;
         timeout_t    rv;
 
-        LOG_DBG("Running rendezvous timer...");
+        LOG_INFO("Running rendezvous timer...");
         dtp = (struct dtp *) data;
         if (!dtp) {
                 LOG_ERR("No dtp to work with");
@@ -1318,7 +1318,6 @@ int dtp_write(struct dtp * instance,
 
 				if (start_rv_timer) {
 					/* Send rendezvous PDU and start time */
-					dtcp_rendezvous_pdu_send(instance->dtcp);
 					rtimer_start(instance->timers.rendezvous, rv);
 				}
 
