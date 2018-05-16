@@ -683,7 +683,6 @@ struct du * qta_rmt_dequeue_policy(struct rmt_ps	  *ps,
 	/* Go through the urgency queues in urgency level: the queues */
 	/* with a higher urgency level are checked first */
 	list_for_each_entry(pos, &qta_mux->cu_mux.urgency_queues, list) {
-		/* If this urgency level contains one or more QoS ids */
 		if (!list_empty(&pos->queued_pdus)) {
 			ret_pdu = dequeue_pdu(&pos->queued_pdus);
 			pos->length--;
@@ -888,7 +887,8 @@ static void qta_mux_add_uqueue(struct qta_mux *     qta_mux,
 			return;
 		}
 	}
-	list_add(&uq->list, &pos->list);
+
+	list_add_tail(&uq->list, &qta_mux->cu_mux.urgency_queues);
 }
 
 void * qta_rmt_q_create_policy(struct rmt_ps      *ps,
