@@ -65,14 +65,13 @@ struct cu_mux {
 	struct list_head      mgmt_queue;
 	struct robject	      robj;
 	struct rset *         rset;
-	uint_t                urgency_levels;
-	uint_t                cherish_levels;
 };
 
 struct token_bucket_filter {
 	struct list_head list;
 	qos_id_t         qos_id;
 	uint_t		 urgency_level;
+	uint_t		 cherish_level;
 	uint_t           abs_cherish_threshold; /* in PDUs */
 	uint_t		 prob_cherish_threshold; /* in PDUs */
 	uint_t		 drop_probability; /* 1- 100*/
@@ -80,6 +79,7 @@ struct token_bucket_filter {
 	s64              tokens; /* in bytes */
 	uint_t           max_rate; /* in bps */
 	s64		 last_pdu_time; /* in ns */
+	bool		 drop; /* true to drop the packets, false to set ECN flag */
 	uint_t		 dropped_pdus;
 	uint_t		 dropped_bytes;
 	uint_t		 tx_pdus;
@@ -100,16 +100,17 @@ struct cherish_thres_t {
 	uint_t abs_trheshold;    /* number of PDUs */
 	uint_t prob_threshold;   /* number of PDUs */
 	uint_t drop_probability; /* 0 - 100 */
+	bool drop; /* true to drop the packets, false to set ECN flag */
 };
 
-struct cu_mux_conf {
-	uint_t   	  urgency_levels;
-	uint_t   	  cherish_levels;
+struct urgency_queue_conf {
+	struct list_head         list;
+	uint_t   	         urgency_level;
 	struct cherish_thres_t * cherish_thresholds;
 };
 
 struct qta_mux_conf {
-	struct cu_mux_conf cu_mux_conf;
+	struct list_head urgency_queue_conf;
 	struct list_head token_buckets_conf;
 };
 
@@ -144,27 +145,6 @@ static ssize_t qta_mux_attr_show(struct robject * robj,
 	return 0;
 }
 
-static ssize_t cu_mux_attr_show(struct robject * robj,
-				struct robj_attribute * attr,
-				char * buf)
-{
-	struct cu_mux * cu_mux;
-
-	cu_mux = container_of(robj, struct cu_mux, robj);
-	if (!cu_mux)
-		return 0;
-
-	if (strcmp(robject_attr_name(attr), "urgency_levels") == 0) {
-		return sprintf(buf, "%u\n", cu_mux->urgency_levels);
-	}
-
-	if (strcmp(robject_attr_name(attr), "cherish_levels") == 0) {
-		return sprintf(buf, "%u\n", cu_mux->cherish_levels);
-	}
-
-	return 0;
-}
-
 static ssize_t urgency_queue_attr_show(struct robject * robj,
 				       struct robj_attribute * attr,
 				       char * buf)
@@ -186,6 +166,27 @@ static ssize_t urgency_queue_attr_show(struct robject * robj,
 	}
 	if (strcmp(robject_attr_name(attr), "tx_pdus") == 0) {
 		return sprintf(buf, "%u\n", q->tx_pdus);
+	}
+
+	return 0;
+}
+
+static ssize_t cu_mux_attr_show(struct robject * robj,
+				struct robj_attribute * attr,
+				char * buf)
+{
+	struct cu_mux * cu_mux;
+
+	cu_mux = container_of(robj, struct cu_mux, robj);
+	if (!cu_mux)
+		return 0;
+
+	if (strcmp(robject_attr_name(attr), "urgency_levels") == 0) {
+		return sprintf(buf, "%u\n", 0);
+	}
+
+	if (strcmp(robject_attr_name(attr), "cherish_levels") == 0) {
+		return sprintf(buf, "%u\n", 0);
 	}
 
 	return 0;
@@ -262,7 +263,7 @@ static struct token_bucket_conf * token_bucket_conf_create(void)
 
 	tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
 	if (!tmp) {
-		LOG_ERR("Problems creating stream queue configuration");
+		LOG_ERR("Problems creating TBF configuration");
 		return NULL;
 	}
 
@@ -285,6 +286,34 @@ static void token_bucket_conf_destroy(struct token_bucket_conf * conf)
 	rkfree(conf);
 }
 
+static struct urgency_queue_conf * urgency_queue_conf_create(void)
+{
+	struct urgency_queue_conf * tmp;
+
+	tmp = rkzalloc(sizeof(*tmp), GFP_ATOMIC);
+	if (!tmp) {
+		LOG_ERR("Problems creating urgency_queue_conf configuration");
+		return NULL;
+	}
+
+	INIT_LIST_HEAD(&tmp->list);
+	tmp->urgency_level = 0;
+	tmp->cherish_thresholds = NULL;
+
+	return tmp;
+}
+
+static void urgency_queue_conf_destroy(struct urgency_queue_conf * conf)
+{
+	if (!conf)
+		return;
+
+	list_del(&conf->list);
+
+	rkfree(conf->cherish_thresholds);
+	rkfree(conf);
+}
+
 static struct qta_mux_conf * qta_mux_conf_create(void)
 {
 	struct qta_mux_conf * tmp;
@@ -296,9 +325,7 @@ static struct qta_mux_conf * qta_mux_conf_create(void)
 	}
 
 	INIT_LIST_HEAD(&tmp->token_buckets_conf);
-	tmp->cu_mux_conf.cherish_levels = 0;
-	tmp->cu_mux_conf.urgency_levels = 0;
-	tmp->cu_mux_conf.cherish_thresholds = NULL;
+	INIT_LIST_HEAD(&tmp->urgency_queue_conf);
 
 	return tmp;
 }
@@ -306,16 +333,19 @@ static struct qta_mux_conf * qta_mux_conf_create(void)
 static void qta_mux_conf_destroy(struct qta_mux_conf * qta_mux_conf)
 {
 	struct token_bucket_conf *pos, *next;
+	struct urgency_queue_conf *pos2, *next2;
 
 	if (!qta_mux_conf)
 		return;
 
-	if (qta_mux_conf->cu_mux_conf.cherish_thresholds)
-		rkfree(qta_mux_conf->cu_mux_conf.cherish_thresholds);
-
 	list_for_each_entry_safe(pos, next,
 			&qta_mux_conf->token_buckets_conf, list) {
 		token_bucket_conf_destroy(pos);
+	}
+
+	list_for_each_entry_safe(pos2, next2,
+			&qta_mux_conf->urgency_queue_conf, list) {
+		urgency_queue_conf_destroy(pos2);
 	}
 
 	rkfree(qta_mux_conf);
@@ -441,8 +471,6 @@ static struct qta_mux * qta_mux_create(port_id_t port_id,
 	INIT_LIST_HEAD(&tmp->cu_mux.urgency_queues);
 	INIT_LIST_HEAD(&tmp->cu_mux.mgmt_queue);
 	tmp->port_id = port_id;
-	tmp->cu_mux.urgency_levels = conf->cu_mux_conf.urgency_levels;
-	tmp->cu_mux.cherish_levels = conf->cu_mux_conf.cherish_levels;
 
 	if (robject_init_and_add(&tmp->robj, &qta_mux_rtype, parent, "qta_mux")) {
 		LOG_ERR("Failed to create QTA MUX sysfs object");
@@ -473,7 +501,7 @@ static struct qta_mux * qta_mux_create(port_id_t port_id,
 	return tmp;
 }
 
-static struct token_bucket_filter * token_bucket_filter_create(struct cu_mux_conf * cu_mux_conf,
+static struct token_bucket_filter * token_bucket_filter_create(struct urgency_queue_conf * uq_conf,
 						 	       struct token_bucket_conf * sq_conf,
 							       struct rset * parent)
 {
@@ -486,12 +514,13 @@ static struct token_bucket_filter * token_bucket_filter_create(struct cu_mux_con
 		return NULL;
 	}
 
-	cherish_thres = cu_mux_conf->cherish_thresholds[sq_conf->cherish_level -1];
+	cherish_thres = uq_conf->cherish_thresholds[sq_conf->cherish_level -1];
 
 	INIT_LIST_HEAD(&tmp->list);
 	tmp->max_rate = sq_conf->max_rate;
 	tmp->qos_id = sq_conf->qos_id;
 	tmp->urgency_level = sq_conf->urgency_level;
+	tmp->cherish_level = sq_conf->cherish_level;
 	tmp->abs_cherish_threshold = cherish_thres.abs_trheshold;
 	tmp->prob_cherish_threshold = cherish_thres.prob_threshold;
 	tmp->drop_probability = cherish_thres.drop_probability;
@@ -499,6 +528,7 @@ static struct token_bucket_filter * token_bucket_filter_create(struct cu_mux_con
 	tmp->tokens = sq_conf->max_burst_size;
 	tmp->bucket_capacity = sq_conf->max_burst_size;
 	tmp->max_rate = sq_conf->max_rate;
+	tmp->drop = cherish_thres.drop;
 
 	tmp->dropped_bytes = 0;
 	tmp->dropped_pdus = 0;
@@ -691,6 +721,8 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 	s64			     delta_tokens;
 	ssize_t			     pdu_length;
 	uint_t			     random_bytes;
+	bool 			     ecn_mark;
+	pdu_flags_t     	     pci_flags;
 
 	if (!ps || !n1_port || !du) {
 		LOG_ERR("Wrong input parameters for "
@@ -772,14 +804,19 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 	}
 
 	/* queue length is larger than probabilistic ch. threshold */
+	ecn_mark = false;
 	if (urgency_queue->length > tbf->prob_cherish_threshold) {
 		get_random_bytes(&random_bytes, sizeof(random_bytes));
 		random_bytes = random_bytes % NORM_PROB;
 		if (tbf->drop_probability > random_bytes) {
-			urgency_queue->dropped_bytes += pdu_length;
-			urgency_queue->dropped_pdus++;
-			du_destroy(du);
-			return RMT_PS_ENQ_DROP;
+			if (tbf->drop) {
+				urgency_queue->dropped_bytes += pdu_length;
+				urgency_queue->dropped_pdus++;
+				du_destroy(du);
+				return RMT_PS_ENQ_DROP;
+			} else {
+				ecn_mark = true;
+			}
 		}
 	}
 
@@ -790,6 +827,11 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 		return RMT_PS_ENQ_ERR;
 	}
 
+	if (ecn_mark) {
+		pci_flags = pci_flags_get(&du->pci);
+		pci_flags_set(&du->pci,
+			      pci_flags |= PDU_FLAGS_EXPLICIT_CONGESTION);
+	}
 	list_add_tail(&pdu_entry->list, &urgency_queue->queued_pdus);
 	urgency_queue->length++;
 
@@ -804,6 +846,51 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 	return RMT_PS_ENQ_SCHED;
 }
 
+static struct urgency_queue_conf * uqc_find(struct qta_mux_conf * conf,
+					    uint_t urgency_level)
+{
+	struct urgency_queue_conf * pos;
+
+	list_for_each_entry(pos, &conf->urgency_queue_conf, list) {
+		if (pos->urgency_level == urgency_level)
+			return pos;
+	}
+
+	return NULL;
+}
+
+static struct token_bucket_conf * tbc_find(struct qta_mux_conf * conf,
+					   qos_id_t qos_id)
+{
+	struct token_bucket_conf * pos;
+
+	list_for_each_entry(pos, &conf->token_buckets_conf, list) {
+		if (pos->qos_id == qos_id)
+			return pos;
+	}
+
+	return NULL;
+}
+
+static void qta_mux_add_uqueue(struct qta_mux *     qta_mux,
+			       struct urgency_queue * uq)
+{
+	struct urgency_queue * pos;
+
+	if (list_empty(&qta_mux->cu_mux.urgency_queues)) {
+		list_add(&uq->list, &qta_mux->cu_mux.urgency_queues);
+		return;
+	}
+
+	list_for_each_entry(pos, &qta_mux->cu_mux.urgency_queues, list) {
+		if (pos->urgency_level > uq->urgency_level) {
+			list_add_tail(&uq->list, &pos->list);
+			return;
+		}
+	}
+	list_add(&uq->list, &pos->list);
+}
+
 void * qta_rmt_q_create_policy(struct rmt_ps      *ps,
 			       struct rmt_n1_port *n1_port)
 {
@@ -813,7 +900,7 @@ void * qta_rmt_q_create_policy(struct rmt_ps      *ps,
 	struct token_bucket_conf * pos;
 	struct token_bucket_filter * tbf;
 	struct urgency_queue * urgency_queue;
-	int i;
+	struct urgency_queue_conf * uq_conf;
 
 	if (!ps || !n1_port || !qta_mux_set) {
 		LOG_ERR("Wrong input parameters for "
@@ -833,8 +920,14 @@ void * qta_rmt_q_create_policy(struct rmt_ps      *ps,
 
 	/* Create one token bucket filter per QoS level */
 	list_for_each_entry(pos, &config->token_buckets_conf, list) {
-		tbf = token_bucket_filter_create(&config->cu_mux_conf,
-						 pos, qta_mux->rset);
+		uq_conf = uqc_find(config, pos->urgency_level);
+		if (!uq_conf) {
+			LOG_ERR("Could not find conf for urgency level %u",
+				pos->urgency_level);
+			qta_mux_destroy(qta_mux);
+			return NULL;
+		}
+		tbf = token_bucket_filter_create(uq_conf, pos, qta_mux->rset);
 		if (!tbf) {
 			LOG_ERR("Problems creating token bucket filter");
 			qta_mux_destroy(qta_mux);
@@ -846,8 +939,9 @@ void * qta_rmt_q_create_policy(struct rmt_ps      *ps,
 	}
 
 	/* Create one urgency_queue per urgency level, add it to the qta_mux */
-	for (i=0; i<config->cu_mux_conf.urgency_levels; i++) {
-		urgency_queue = urgency_queue_create(i+1, n1_port->port_id,
+	list_for_each_entry(uq_conf, &config->urgency_queue_conf, list) {
+		urgency_queue = urgency_queue_create(uq_conf->urgency_level,
+						     n1_port->port_id,
 						     qta_mux->cu_mux.rset);
 		if (!urgency_queue) {
 			LOG_ERR("Problems creating urgency queue");
@@ -855,8 +949,9 @@ void * qta_rmt_q_create_policy(struct rmt_ps      *ps,
 			return NULL;
 		}
 
-		list_add_tail(&urgency_queue->list, &qta_mux->cu_mux.urgency_queues);
-		LOG_INFO("Added urgency queue for urgency level %d", i);
+		qta_mux_add_uqueue(qta_mux, urgency_queue);
+		LOG_INFO("Added urgency queue for urgency level %d",
+			 uq_conf->urgency_level);
 	}
 
 	return qta_mux;
@@ -914,11 +1009,16 @@ static int qta_mux_ps_set_policy_set_param_priv(struct qta_mux_set * data,
 {
 	int offset, delta_offset;
 	qos_id_t qos_id;
-	uint_t urgency_level, cherish_level, max_burst_size, max_rate;
-	char *dot, *mux;
+	uint_t urgency_level, cherish_level, max_burst_size, max_rate, drop;
+	char *qos, *mux;
 	int i, c;
 	struct cherish_thres_t * cherish_levels;
 	struct token_bucket_conf * token_bucket_conf;
+	struct urgency_queue_conf * urgency_queue_conf;
+	struct qta_mux * qta_mux;
+	struct token_bucket_filter * tbf;
+	bool append;
+	struct cherish_thres_t cherish_thres;
 
 	if (!name) {
 		LOG_ERR("Null parameter name");
@@ -930,14 +1030,14 @@ static int qta_mux_ps_set_policy_set_param_priv(struct qta_mux_set * data,
 		return -1;
 	}
 
-	dot = strchr(name, '.');
+	qos = strchr(name, 'q');
 	mux = strchr(name, 'x');
 
 	/*
 	 * Parse entry of type name = qosid.<qos_id>
-	 * value = <urgengcy_level>:<cherish_level>:<max_burst_size>:<rate>
+	 * value = <urgency_level>:<cherish_level>:<max_burst_size>:<rate>
 	 */
-	if (dot) {
+	if (qos) {
 		/* Parse qos-id from the parameter name */
 		if (parse_int_value(name, '.', (int *) &qos_id, &offset))
 			return -1;
@@ -970,40 +1070,67 @@ static int qta_mux_ps_set_policy_set_param_priv(struct qta_mux_set * data,
 			 qos_id, urgency_level, cherish_level,
 			 max_burst_size, max_rate);
 
-		token_bucket_conf = token_bucket_conf_create();
-		if (!token_bucket_conf) {
-			LOG_ERR("Could not allocate memory");
-			return -1;
+		token_bucket_conf = tbc_find(data->qta_mux_conf, qos_id);
+		if (token_bucket_conf) {
+			LOG_INFO("Overriding token bucket conf config for qos_id %d",
+				 qos_id);
+			append = false;
+		} else {
+			append = true;
+			token_bucket_conf = token_bucket_conf_create();
+			if (!token_bucket_conf) {
+				LOG_ERR("Could not allocate memory");
+				return -1;
+			}
+			token_bucket_conf->qos_id = qos_id;
 		}
 
-		token_bucket_conf->qos_id = qos_id;
 		token_bucket_conf->urgency_level = urgency_level;
 		token_bucket_conf->cherish_level = cherish_level;
 		token_bucket_conf->max_burst_size = max_burst_size;
 		token_bucket_conf->max_rate = max_rate;
-		list_add_tail(&token_bucket_conf->list,
-			      &data->qta_mux_conf->token_buckets_conf);
+
+		if (append) {
+			list_add_tail(&token_bucket_conf->list,
+				      &data->qta_mux_conf->token_buckets_conf);
+		} else {
+			list_for_each_entry(qta_mux, &data->qta_muxes, list) {
+				//FIXME add lock to qta_mux and take it
+				list_for_each_entry(tbf, &qta_mux->token_bucket_filters, list) {
+					if (tbf->qos_id == qos_id) {
+						tbf->max_rate = max_rate;
+						tbf->urgency_level = urgency_level;
+						tbf->cherish_level = cherish_level;
+						tbf->bucket_capacity = max_burst_size;
+					}
+				}
+			}
+		}
 
 		return 0;
 	}
 
 	/*
-	 * Parse entry of type name = cumux
-	 * value = <urgency_levels>:<cherish_levels>:
+	 * Parse entry of type name = cumux.<urgency_level>
+	 * value = <cherish_levels>:<drop>:
 	 * <abs_cherish_thres1>,<prob_cherish_thres1>,<drop_prob1>:...
 	 *
 	 */
 	if (mux) {
+		/* Parse urgency-level from the parameter name */
+		if (parse_int_value(name, '.', (int *) &urgency_level, &offset))
+			return -1;
+
 		/* Parse urgency levels from the parameter value */
 		offset = 0;
-		if (parse_int_value(value, ':', (int *) &urgency_level,
+		if (parse_int_value(value, ':', (int *) &cherish_level,
 				    &delta_offset))
 			return -1;
 
 		/* Parse cherish levels from the parameter value */
 		offset += delta_offset;
 		if (parse_int_value(value + offset, ':',
-				    (int *) &cherish_level, &delta_offset))
+				    (int *) &drop, &delta_offset))
 			return -1;
 
 		cherish_levels = rkzalloc(cherish_level * sizeof(struct cherish_thres_t),
@@ -1013,8 +1140,7 @@ static int qta_mux_ps_set_policy_set_param_priv(struct qta_mux_set * data,
 			return -1;
 		}
 
-		LOG_INFO("Urgency levels: %u, cherish levels: %u",
-			 urgency_level, cherish_level);
+		LOG_INFO("Urgency level: %u, Drop: %u", urgency_level, drop);
 
 		for (i=0; i< cherish_level; i++) {
 			if (i < cherish_level -1) {
@@ -1047,17 +1173,51 @@ static int qta_mux_ps_set_policy_set_param_priv(struct qta_mux_set * data,
 				return -1;
 			}
 
+			cherish_levels[i].drop = drop;
+
 			LOG_INFO("Parsed cherish_level[%d]: %u, %u, %u", i,
 				 cherish_levels[i].abs_trheshold,
 				 cherish_levels[i].prob_threshold,
 				 cherish_levels[i].drop_probability);
-
 		}
 
-		data->qta_mux_conf->cu_mux_conf.cherish_levels = cherish_level;
-		data->qta_mux_conf->cu_mux_conf.urgency_levels = urgency_level;
-		data->qta_mux_conf->cu_mux_conf.cherish_thresholds =
-				cherish_levels;
+		urgency_queue_conf = uqc_find(data->qta_mux_conf, urgency_level);
+		if (urgency_queue_conf) {
+			LOG_INFO("Overriding urgency queue conf config for urgency %u",
+				 urgency_level);
+			append = false;
+			if (urgency_queue_conf->cherish_thresholds) {
+				rkfree(urgency_queue_conf->cherish_thresholds);
+				urgency_queue_conf->cherish_thresholds = NULL;
+			}
+		} else {
+			urgency_queue_conf = urgency_queue_conf_create();
+			if (!urgency_queue_conf) {
+				LOG_ERR("Could not allocate memory");
+				return -1;
+			}
+			urgency_queue_conf->urgency_level = urgency_level;
+			append = true;
+		}
+
+		urgency_queue_conf->cherish_thresholds = cherish_levels;
+		if (append) {
+			list_add_tail(&urgency_queue_conf->list,
+				      &data->qta_mux_conf->urgency_queue_conf);
+		} else {
+			list_for_each_entry(qta_mux, &data->qta_muxes, list) {
+				//FIXME add lock to qta_mux and take it
+				list_for_each_entry(tbf, &qta_mux->token_bucket_filters, list) {
+					if (tbf->urgency_level == urgency_level) {
+						cherish_thres = cherish_levels[tbf->cherish_level -1];
+						tbf->abs_cherish_threshold = cherish_thres.abs_trheshold;
+						tbf->drop = cherish_thres.drop;
+						tbf->prob_cherish_threshold = cherish_thres.prob_threshold;
+						tbf->drop_probability = cherish_thres.drop_probability;
+					}
+				}
+			}
+		}
 
 		return 0;
 	}
