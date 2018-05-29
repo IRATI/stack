@@ -138,7 +138,9 @@ rset_create_and_add(const char *name, struct robject *parent)
 }
 EXPORT_SYMBOL(rset_create_and_add);
 
-void
-rset_unregister(struct rset * set)
-{ return kset_unregister(to_kset(set)); }
+void rset_unregister(struct rset * set)
+{
+	kset_unregister(to_kset(set));
+	rkfree(set);
+}
 EXPORT_SYMBOL(rset_unregister);
