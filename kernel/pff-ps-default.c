@@ -701,6 +701,7 @@ pff_ps_default_create(struct rina_component * component)
         struct pff * pff = pff_from_component(component);
         ipc_process_id_t ipc_process_id;
         struct ipcp_instance * ipcp;
+        string_t * wq_name;
 
         priv = rkzalloc(sizeof(*priv), GFP_KERNEL);
         if (!priv) {
@@ -713,8 +714,10 @@ pff_ps_default_create(struct rina_component * component)
 
         ipcp = pff_ipcp_get(pff);
         ipc_process_id = ipcp->ops->ipcp_id(ipcp->data);
-        priv->sysfs_wq = alloc_workqueue(create_pff_wq_name(ipc_process_id),
-                        	WQ_MEM_RECLAIM | WQ_HIGHPRI | WQ_UNBOUND, 1);
+        wq_name = create_pff_wq_name(ipc_process_id);
+        priv->sysfs_wq = alloc_workqueue(wq_name,
+        		WQ_MEM_RECLAIM | WQ_HIGHPRI | WQ_UNBOUND, 1);
+        rkfree(wq_name);
 
         ps = rkzalloc(sizeof(*ps), GFP_KERNEL);
         if (!ps) {
