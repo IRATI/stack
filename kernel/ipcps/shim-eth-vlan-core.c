@@ -987,7 +987,6 @@ static int eth_vlan_du_write(struct ipcp_instance_data * data,
 
 	if (data->lwe == data->rwe) {
 		/* Flow control window is closed. */
-		du_destroy(du);
 		spin_unlock_bh(&data->lock);
 		LOG_DBG("shim-eth cannot transmit now, try later");
 		return -EAGAIN;
