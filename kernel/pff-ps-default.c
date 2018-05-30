@@ -193,8 +193,6 @@ static int pff_sysfs_worker(void * o)
                 rkfree(&data->entry);
         }
 
-        rkfree(data);
-
         return 0;
 }
 
