@@ -54,7 +54,8 @@
 #include "rinarp/arp826-utils.h"
 #include "rds/robjects.h"
 
-#define DEFAULT_FC_WIN_SIZE	512
+#define DEFAULT_MAX_SKBS 50
+#define DEFAULT_MAX_NOTS 30
 
 /* FIXME: To be solved properly */
 static struct workqueue_struct * rcv_wq;
@@ -72,7 +73,6 @@ extern struct kipcm * default_kipcm;
 struct eth_vlan_info {
         uint16_t vlan_id;
         char *   interface_name;
-	uint16_t flow_control_win_size;
 };
 
 static struct ipcp_factory_data {
@@ -138,8 +138,10 @@ struct ipcp_instance_data {
 	struct notifier_block ntfy;
 
 	/* Flow control between this IPCP and the associated netdev. */
-	unsigned lwe;
-	unsigned rwe;
+	unsigned short pending_nots;
+	unsigned short max_nots;
+	unsigned short max_skbs;
+	unsigned short current_skbs;
 };
 
 /* Needed for eth_vlan_rcv function */
@@ -930,8 +932,15 @@ static void eth_vlan_skb_destructor(struct sk_buff *skb)
 	bool notify;
 
 	spin_lock_bh(&data->lock);
-	notify = data->lwe == data->rwe; /* window was closed */
-	data->rwe++;
+	if (data->current_skbs >= data->max_skbs)
+		data->pending_nots = data->max_nots;
+	data->current_skbs--;
+	if (data->pending_nots > 0) {
+		data->pending_nots --;
+		notify = true;
+	} else {
+		notify = false;
+	}
 	spin_unlock_bh(&data->lock);
 
 	if (notify) {
@@ -985,13 +994,13 @@ static int eth_vlan_du_write(struct ipcp_instance_data * data,
                 return -1;
         }
 
-	if (data->lwe == data->rwe) {
+	if (data->current_skbs >= data->max_skbs) {
 		/* Flow control window is closed. */
 		spin_unlock_bh(&data->lock);
 		LOG_DBG("shim-eth cannot transmit now, try later");
 		return -EAGAIN;
 	}
-	data->lwe++;
+	data->current_skbs++;
 
         spin_unlock_bh(&data->lock);
 
@@ -1489,8 +1498,7 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
 				}
 				return -1;
 			}
-			info->flow_control_win_size = (uint16_t) temp;
-			data->rwe = data->lwe + info->flow_control_win_size;
+			data->max_skbs = (uint16_t) temp;
                 } else
                 	LOG_WARN("Unknown config param for eth shim");
         }
@@ -1622,8 +1630,7 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
 				LOG_ERR("Can't convert flow-control-win-size to uint");
 				return -1;
 			}
-			info->flow_control_win_size = (uint16_t) temp;
-			data->rwe = data->lwe + info->flow_control_win_size;
+			data->max_skbs = (uint16_t) temp;
                 } else
                 	LOG_WARN("Unknown config param for eth shim");
         }
@@ -1975,10 +1982,10 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
                 inst_cleanup(inst);
                 return NULL;
         }
-	inst->data->info->flow_control_win_size = DEFAULT_FC_WIN_SIZE;
-	inst->data->lwe = 0;
-	inst->data->rwe = inst->data->lwe +
-				inst->data->info->flow_control_win_size;
+	inst->data->max_nots = DEFAULT_MAX_NOTS;
+	inst->data->max_skbs = DEFAULT_MAX_SKBS;
+	inst->data->current_skbs = 0;
+	inst->data->pending_nots = 0;
 
         inst->data->fspec = rkzalloc(sizeof(*inst->data->fspec), GFP_KERNEL);
         if (!inst->data->fspec) {
