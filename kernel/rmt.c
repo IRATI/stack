@@ -781,11 +781,18 @@ static void send_worker(unsigned long o)
 		}
 
 		if (n1_port->state == N1_PORT_STATE_DISABLED	||
-		    !n1_port->stats.plen			||
-		    n1_port->wbusy) {
+		    !n1_port->stats.plen) {
 			spin_unlock(&n1_port->lock);
 			spin_lock(&rmt->n1_ports->lock);
 			LOG_DBG("Port state is DISABLED or no PDUs to send");
+			continue;
+		}
+
+		if (n1_port->wbusy) {
+			reschedule++;
+			spin_unlock(&n1_port->lock);
+			spin_lock(&rmt->n1_ports->lock);
+			LOG_DBG("Port is sending a PDU, check afterwards");
 			continue;
 		}
 
