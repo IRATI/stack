@@ -33,6 +33,7 @@
 #include "policies.h"
 #include "debug.h"
 #include "du.h"
+#include "qta-mux-debug.h"
 
 #define RINA_QTA_MUX_PS_NAME "qta-mux-ps"
 #define NORM_PROB                100
@@ -45,24 +46,27 @@ struct pdu_entry {
 };
 
 struct urgency_queue {
-	struct list_head list;
-	struct list_head queued_pdus;
-	uint_t           urgency_level;
-	uint_t           length;
-	struct robject   robj;
-	uint_t		 dropped_pdus;
-	uint_t		 dropped_bytes;
-	uint_t		 tx_pdus;
-	uint_t		 tx_bytes;
+	struct list_head 	   list;
+	struct list_head 	   queued_pdus;
+	uint_t           	   urgency_level;
+	uint_t           	   length;
+	struct robject   	   robj;
+	uint_t			   dropped_pdus;
+	uint_t		 	   dropped_bytes;
+	uint_t		 	   tx_pdus;
+	uint_t		 	   tx_bytes;
+#if QTA_MUX_DEBUG
+	struct urgency_queue_debug_info * debug_info;
+#endif
 };
 
 struct cu_mux {
-	struct list_head   urgency_queues;
-	struct list_head   mgmt_queue;
-	struct robject	   robj;
-	struct rset *      rset;
-	uint_t             urgency_levels;
-	uint_t             cherish_levels;
+	struct list_head      urgency_queues;
+	struct list_head      mgmt_queue;
+	struct robject	      robj;
+	struct rset *         rset;
+	uint_t                urgency_levels;
+	uint_t                cherish_levels;
 };
 
 struct token_bucket_filter {
@@ -365,6 +369,10 @@ static void urgency_queue_destroy(struct urgency_queue * uq)
 		pdu_entry_destroy(pos, true);
 	}
 
+#if QTA_MUX_DEBUG
+	udebug_info_destroy(uq->debug_info);
+#endif
+
 	rkfree(uq);
 }
 
@@ -508,6 +516,7 @@ static struct token_bucket_filter * token_bucket_filter_create(struct cu_mux_con
 }
 
 static struct urgency_queue * urgency_queue_create(uint_t urgency_level,
+						   port_id_t port_id,
 						   struct rset *parent)
 {
 	struct urgency_queue * tmp;
@@ -533,6 +542,10 @@ static struct urgency_queue * urgency_queue_create(uint_t urgency_level,
 		urgency_queue_destroy(tmp);
 		return NULL;
 	}
+
+#if QTA_MUX_DEBUG
+	tmp->debug_info = uqueue_debug_info_create(port_id, urgency_level);
+#endif
 
 	return tmp;
 }
@@ -646,6 +659,14 @@ struct du * qta_rmt_dequeue_policy(struct rmt_ps	  *ps,
 			pos->length--;
 			pos->tx_pdus++;
 			pos->tx_bytes += du_len(ret_pdu);
+
+#if QTA_MUX_DEBUG
+	if (pos->debug_info->q_index < UQUEUE_DEBUG_SIZE) {
+		pos->debug_info->q_log[pos->debug_info->q_index][0] = pos->length;
+		pos->debug_info->q_log[pos->debug_info->q_index][1] = ktime_get_ns();
+		pos->debug_info->q_index++;
+	}
+#endif
 
 			return ret_pdu;
 		}
@@ -762,9 +783,6 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 		}
 	}
 
-	if (!must_enqueue)
-		return RMT_PS_ENQ_SEND;
-
 	pdu_entry = pdu_entry_create(du);
 	if (!pdu_entry) {
 		LOG_ERR("Problems allocating memory for PDU entry");
@@ -774,6 +792,14 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 
 	list_add_tail(&pdu_entry->list, &urgency_queue->queued_pdus);
 	urgency_queue->length++;
+
+#if QTA_MUX_DEBUG
+	if (urgency_queue->debug_info->q_index < UQUEUE_DEBUG_SIZE) {
+		urgency_queue->debug_info->q_log[urgency_queue->debug_info->q_index][0] = urgency_queue->length;
+		urgency_queue->debug_info->q_log[urgency_queue->debug_info->q_index][1] = now;
+		urgency_queue->debug_info->q_index++;
+	}
+#endif
 
 	return RMT_PS_ENQ_SCHED;
 }
@@ -821,7 +847,8 @@ void * qta_rmt_q_create_policy(struct rmt_ps      *ps,
 
 	/* Create one urgency_queue per urgency level, add it to the qta_mux */
 	for (i=0; i<config->cu_mux_conf.urgency_levels; i++) {
-		urgency_queue = urgency_queue_create(i+1, qta_mux->cu_mux.rset);
+		urgency_queue = urgency_queue_create(i+1, n1_port->port_id,
+						     qta_mux->cu_mux.rset);
 		if (!urgency_queue) {
 			LOG_ERR("Problems creating urgency queue");
 			qta_mux_destroy(qta_mux);
@@ -1132,6 +1159,10 @@ static int __init mod_init(void)
 		return -1;
 	}
 
+#if QTA_MUX_DEBUG
+	qta_mux_debug_proc_init();
+#endif
+
 	LOG_INFO("RMT QTA MUX policy set loaded successfully");
 
 	return 0;
@@ -1145,6 +1176,10 @@ static void __exit mod_exit(void)
 		LOG_ERR("Failed to unpublish policy set factory");
 		return;
 	}
+
+#if QTA_MUX_DEBUG
+	qta_mux_debug_proc_exit();
+#endif
 
 	LOG_INFO("RMT QTA MUX policy set unloaded successfully");
 }

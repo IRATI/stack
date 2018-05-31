@@ -42,7 +42,7 @@
 #include "rds/robjects.h"
 #include "efcp-str.h"
 
-#define TO_POST_LENGTH 100
+#define TO_POST_LENGTH 1000
 #define TO_SEND_LENGTH 16
 
 static struct policy_set_list policy_sets = {
@@ -1225,6 +1225,7 @@ int dtp_write(struct dtp * instance,
                        efcp->connection->destination_address,
                        csn,
                        efcp->connection->qos_id,
+		       sbytes + du->pci.len,
                        PDU_TYPE_DT)) {
 		LOG_ERR("Could not format PCI");
 		goto pdu_err_exit;

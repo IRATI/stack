@@ -567,6 +567,8 @@ ctrldev_release(struct inode *inode, struct file *f)
         wake_up_interruptible_poll(&priv->read_wqueue,
         			   POLLIN | POLLRDNORM | POLLRDBAND);
 
+        rkfree(priv);
+
         return 0;
 }
 

@@ -18,8 +18,6 @@ namespace ra {
 
 		int Run();
 
-		bool ReadQoSFile(const std::string QoSFile);
-
 	protected:
 		int AllocTimeoutMs;
 
@@ -41,6 +39,7 @@ namespace ra {
 		DstName = ServerName + "|" + ServerInstance;
 		rina_flow_spec_unreliable(&FlowSpec);
 		verbose = verb;
+		DIFName = DIF;
 
 		FlowSpec.max_delay = delay;
 		FlowSpec.max_loss = loss;
@@ -73,12 +72,4 @@ namespace ra {
 		close(Fd);
 		return AfterEndFlow(ReturnCode);
 	}
-
-	bool BaseClient::ReadQoSFile(const std::string QoSFile) {
-		if (QoSFile != "") {
-			return false;
-		}
-		return ParseQoSRequirementsFile(&FlowSpec, QoSFile.c_str());
-	}
-
 }

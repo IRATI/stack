@@ -50,7 +50,7 @@ struct qos_log {
 	}
 	void process(flow_log * f) {
 		count += f->count;
-		total += f->seq_id + 1;
+		total += f->seq_id;
 		data += f->data;
 		if (f->maxLat > maxLat) maxLat = f->maxLat;
 		if (f->minLat < minLat) minLat = f->minLat;
@@ -174,7 +174,7 @@ private:
 	}
 
 	int process_first_sdu(const int Fd) {
-		if (ra::ReadDataTimeout(Fd, Buffer, 1000) <= 0) {
+		if (ra::ReadDataTimeout(Fd, Buffer, TIMEOUT_MS) <= 0) {
 			std::cerr << "No data received during the first second of lifetime" << std::endl;
 			return -1;
 		}
@@ -324,7 +324,7 @@ int main(int argc, char ** argv) {
 	bool verb;
 
 	try {
-		TCLAP::CmdLine cmd("LogServer", ' ', "2.0");
+		TCLAP::CmdLine cmd("TgServer", ' ', "2.0");
 
 		TCLAP::ValueArg<std::string> Name_a("n","name","Application process name, default = TgServer", false, "TgServer", "string");
 		TCLAP::ValueArg<std::string> Instance_a("i","instance","Application process instance, default = 1", false, "1", "string");
