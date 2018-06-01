@@ -40,6 +40,7 @@
 #define SHIM_NAME   	    "shim-eth-vlan"
 #define SHIM_WIFI_STA_NAME  "shim-wifi-sta"
 #define SHIM_WIFI_AP_NAME   "shim-wifi-ap"
+#define ENABLE_PORT_NOTIFS 20
 
 #define RINA_PREFIX SHIM_NAME
 
@@ -927,7 +928,7 @@ static void eth_vlan_skb_destructor(struct sk_buff *skb)
 
 	spin_lock_bh(&data->lock);
 	notify = data->tx_busy;
-	data->tx_busy = 0;
+	data->tx_busy--;
 	spin_unlock_bh(&data->lock);
 
 	if (notify) {
@@ -1039,7 +1040,7 @@ static int eth_vlan_du_write(struct ipcp_instance_data * data,
         if (retval != NET_XMIT_SUCCESS) {
         	spin_lock_bh(&data->lock);
         	LOG_DBG("qdisc cannot enqueue now (%d), try later", retval);
-        	data->tx_busy = 1;
+        	data->tx_busy = ENABLE_PORT_NOTIFS;
         	spin_unlock_bh(&data->lock);
         	return -EAGAIN;
         }
