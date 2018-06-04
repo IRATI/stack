@@ -143,9 +143,6 @@ Arguments specific to the *onoff* client:
 
 Arguments specific to the *voice* client:
 
-      -M <float>,  --Mbps <float>
-        Average Rate in Mbps, default = 10.0
-
       -S <unsigned int>,  --pSize <unsigned int>
         Packet size in B, default 1000B
 

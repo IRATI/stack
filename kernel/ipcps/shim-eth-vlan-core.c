@@ -54,8 +54,6 @@
 #include "rinarp/arp826-utils.h"
 #include "rds/robjects.h"
 
-#define DEFAULT_FC_WIN_SIZE	512
-
 /* FIXME: To be solved properly */
 static struct workqueue_struct * rcv_wq;
 
@@ -72,7 +70,6 @@ extern struct kipcm * default_kipcm;
 struct eth_vlan_info {
         uint16_t vlan_id;
         char *   interface_name;
-	uint16_t flow_control_win_size;
 };
 
 static struct ipcp_factory_data {
@@ -138,8 +135,7 @@ struct ipcp_instance_data {
 	struct notifier_block ntfy;
 
 	/* Flow control between this IPCP and the associated netdev. */
-	unsigned lwe;
-	unsigned rwe;
+	unsigned int tx_busy;
 };
 
 /* Needed for eth_vlan_rcv function */
@@ -930,8 +926,8 @@ static void eth_vlan_skb_destructor(struct sk_buff *skb)
 	bool notify;
 
 	spin_lock_bh(&data->lock);
-	notify = data->lwe == data->rwe; /* window was closed */
-	data->rwe++;
+	notify = data->tx_busy;
+	data->tx_busy = 0;
 	spin_unlock_bh(&data->lock);
 
 	if (notify) {
@@ -984,16 +980,6 @@ static int eth_vlan_du_write(struct ipcp_instance_data * data,
                 spin_unlock_bh(&data->lock);
                 return -1;
         }
-
-	if (data->lwe == data->rwe) {
-		/* Flow control window is closed. */
-		du_destroy(du);
-		spin_unlock_bh(&data->lock);
-		LOG_DBG("shim-eth cannot transmit now, try later");
-		return -EAGAIN;
-	}
-	data->lwe++;
-
         spin_unlock_bh(&data->lock);
 
         src_hw = data->dev->dev_addr;
@@ -1051,7 +1037,10 @@ static int eth_vlan_du_write(struct ipcp_instance_data * data,
         	return -1;
         }
         if (retval != NET_XMIT_SUCCESS) {
+        	spin_lock_bh(&data->lock);
         	LOG_DBG("qdisc cannot enqueue now (%d), try later", retval);
+        	data->tx_busy = 1;
+        	spin_unlock_bh(&data->lock);
         	return -EAGAIN;
         }
 
@@ -1476,24 +1465,8 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
 				data->dif_name = NULL;
 				return -1;
 			}
-		} else if (!strcmp(entry->name, "flow-control-win-size")) {
-			ASSERT(entry->value);
-
-			result = kstrtouint(entry->value, 10, &temp);
-			if (result) {
-				LOG_ERR("Can't convert flow-control-win-size to uint");
-				name_destroy(data->dif_name);
-				data->dif_name = NULL;
-				if (info->interface_name) {
-					rkfree(info->interface_name);
-					info->interface_name = NULL;
-				}
-				return -1;
-			}
-			info->flow_control_win_size = (uint16_t) temp;
-			data->rwe = data->lwe + info->flow_control_win_size;
-                } else
-                	LOG_WARN("Unknown config param for eth shim");
+		} else
+                	LOG_DBG("Unknown config param for eth shim, ignoring");
         }
 
         /* Fail here if we didn't get an interface */
@@ -1585,8 +1558,6 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         string_t *                      old_interface_name;
         string_t *                      complete_interface;
         struct interface_data_mapping * mapping;
-        int				result;
-        unsigned int			temp;
 
 	if (!data) {
 		LOG_ERR("Bogus data passed, bailing out");
@@ -1615,18 +1586,8 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
                 		LOG_ERR("Cannot copy interface name");
                 		return -1;
                 	}
-		} else if (!strcmp(entry->name, "flow-control-win-size")) {
- 			ASSERT(entry->value);
-
-			result = kstrtouint(entry->value, 10, &temp);
-			if (result) {
-				LOG_ERR("Can't convert flow-control-win-size to uint");
-				return -1;
-			}
-			info->flow_control_win_size = (uint16_t) temp;
-			data->rwe = data->lwe + info->flow_control_win_size;
-                } else
-                	LOG_WARN("Unknown config param for eth shim");
+		} else
+                	LOG_DBG("Unknown config param for eth shim, ignoring");
         }
 
 	dev_remove_pack(data->eth_vlan_packet_type);
@@ -1976,10 +1937,7 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
                 inst_cleanup(inst);
                 return NULL;
         }
-	inst->data->info->flow_control_win_size = DEFAULT_FC_WIN_SIZE;
-	inst->data->lwe = 0;
-	inst->data->rwe = inst->data->lwe +
-				inst->data->info->flow_control_win_size;
+	inst->data->tx_busy = 0;
 
         inst->data->fspec = rkzalloc(sizeof(*inst->data->fspec), GFP_KERNEL);
         if (!inst->data->fspec) {
