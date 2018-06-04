@@ -808,6 +808,10 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 	tbf->tx_bytes += pdu_length;
 	tbf->tx_pdus++;
 
+	/* If we don't need to enqueue it means there are 0 queued PDUs, tx */
+	if (!must_enqueue)
+		return RMT_PS_ENQ_SEND;
+
 	/* Put PDU put it in the right urgency queue */
 	urgency_queue = urgency_queue_find(qta_mux, tbf->urgency_level);
 	if (!urgency_queue) {
