@@ -40,7 +40,6 @@
 #define SHIM_NAME   	    "shim-eth-vlan"
 #define SHIM_WIFI_STA_NAME  "shim-wifi-sta"
 #define SHIM_WIFI_AP_NAME   "shim-wifi-ap"
-#define ENABLE_PORT_NOTIFS 20
 
 #define RINA_PREFIX SHIM_NAME
 
@@ -179,11 +178,13 @@ static ssize_t eth_vlan_ipcp_attr_show(struct robject *        robj,
 	if (strcmp(robject_attr_name(attr), "iface") == 0)
 		return sprintf(buf, "%s\n",
 			instance->data->info->interface_name);
+	if (strcmp(robject_attr_name(attr), "tx_busy") == 0)
+		return sprintf(buf, "%u\n", instance->data->tx_busy);
 
 	return 0;
 }
 RINA_SYSFS_OPS(eth_vlan_ipcp);
-RINA_ATTRS(eth_vlan_ipcp, name, type, dif, address, vlan_id, iface);
+RINA_ATTRS(eth_vlan_ipcp, name, type, dif, address, vlan_id, iface, tx_busy);
 RINA_KTYPE(eth_vlan_ipcp);
 
 static DEFINE_SPINLOCK(data_instances_lock);
@@ -928,11 +929,11 @@ static void eth_vlan_skb_destructor(struct sk_buff *skb)
 
 	spin_lock_bh(&data->lock);
 	notify = data->tx_busy;
-	data->tx_busy--;
+	data->tx_busy = 0;
 	spin_unlock_bh(&data->lock);
 
 	if (notify) {
-		enable_write_all(data->dev);
+		enable_write_all(data->phy_dev);
 	}
 }
 
@@ -1040,7 +1041,7 @@ static int eth_vlan_du_write(struct ipcp_instance_data * data,
         if (retval != NET_XMIT_SUCCESS) {
         	spin_lock_bh(&data->lock);
         	LOG_DBG("qdisc cannot enqueue now (%d), try later", retval);
-        	data->tx_busy = ENABLE_PORT_NOTIFS;
+        	data->tx_busy = 1;
         	spin_unlock_bh(&data->lock);
         	return -EAGAIN;
         }
