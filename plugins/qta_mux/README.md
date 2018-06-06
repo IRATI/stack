@@ -97,13 +97,15 @@ must contain one parameter describing the C/U mux configuration, and then one pa
 QoS id to a cherish-urgency level and also describe the configuration of its associated Policer/Shaper.
 
 The format of the **cumux** configuration is the following:
-* parameter name: "**cumux**"
-* parameter vaue: "<cherish_levels>**:**<urgency_levels>**:**<abs_thres_cherish_level1>**,**<prob_thres_cherish_level1>**,**<drop_prob_cherish_level1>**:**...
-   * <urgency_levels> : The number of urgency levels
+* parameter name: "<urgency_level>.**cumux**"
+   * <urgency_level> : The urgency level being configured
+* parameter vaue: "<cherish_levels>**:**<drop>**:**<dequeue_prob>**:**<abs_thres_cherish_level1>**,**<prob_thres_cherish_level1>**,**<drop_prob_cherish_level1>**:**...
    * <cherish_levels> : The number of cherish levels
+   * <drop> : If 0, probabilistically mark packets with ECN flag (within the probabilistic threshold), otherwise probabilistically drop them
+   * <dequeue_prob> : If there is a PDU in this queue, the probability to dequeue it in case queues with lower urgency levels also have queued PDUs [0-100]
    * <abs_thres_cherish_level1> : The absolute threshold for the first cherish level
    * <prob_thres_cherish_level1> : The probabilistic threshold for the first cherish level
-   * <drop_prob_cherish_level1> : The drop probability for the first cherish level
+   * <drop_prob_cherish_level1> : The drop probability for the first cherish level [0-100]
    * ...
    * <abs_thres_cherish_levelN> : The absolute threshold for the Nth cherish level
    * ...
@@ -127,8 +129,11 @@ The example below illustrates a configuration of a QTAMux with a 2 by 2 C/U matr
           "name" : "qta-mux-ps",
           "version" : "1",
            "parameters" : [{
-               "name"  : "cumux",
-               "value" : "2:2:120,120,0:100,90,10"
+               "name"  : "1.cumux",
+               "value" : "2:1:90:120,120,0:100,90,10"
+             }, {
+               "name"  : "2.cumux",
+               "value" : "2:1:100:60,60,0:50,40,30"
              }, {
                "name"  : "1.qosid",
                "value" : "1:1:25000:10000000"
@@ -145,15 +150,29 @@ The example below illustrates a configuration of a QTAMux with a 2 by 2 C/U matr
         }
      },
 
-The **cumux** parameter value (2:2:120,120,0:100,90,10) describes a 2x2 C/U mux, with the following thresholds for each cherish level:
-* Cherish level 1
-   * Absolute threshold: 120 PDUs
-   * Probabilistic threshold: 120 PDUs
-   * Drop probability: 0%
-* Cherish level 2
-   * Absolute threshold: 100 PDUs
-   * Probabilistic threshold: 90 PDUs
-   * Drop probability: 10%
+The **cumux** parameter values describes a 2x2 C/U mux, with the following thresholds for each urgency/cherish level:
+* Urgency level 1
+   * Drop / set ECN flag: set ECN flag
+   * Dequeue probability: 90%
+   * Cherish level 1
+      * Absolute threshold: 120 PDUs
+      * Probabilistic threshold: 120 PDUs
+      * Drop / ECN probability: 0%
+   * Cherish level 2
+      * Absolute threshold: 100 PDUs
+      * Probabilistic threshold: 90 PDUs
+      * Drop / ECN probability: 10%
+* Urgency level 2
+   * Drop / set ECN flag: Drop
+   * Dequeue probability: 100%
+   * Cherish level 1
+      * Absolute threshold: 60 PDUs
+      * Probabilistic threshold: 60 PDUs
+      * Drop / ECN probability: 0%
+   * Cherish level 2
+      * Absolute threshold: 50 PDUs
+      * Probabilistic threshold: 40 PDUs
+      * Drop / ECN probability: 30%
 
 The **qosid** parameter values describe 4 QoS classes, with the following configuration:
 * QoS id 1

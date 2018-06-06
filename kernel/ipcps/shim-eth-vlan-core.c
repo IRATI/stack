@@ -178,11 +178,13 @@ static ssize_t eth_vlan_ipcp_attr_show(struct robject *        robj,
 	if (strcmp(robject_attr_name(attr), "iface") == 0)
 		return sprintf(buf, "%s\n",
 			instance->data->info->interface_name);
+	if (strcmp(robject_attr_name(attr), "tx_busy") == 0)
+		return sprintf(buf, "%u\n", instance->data->tx_busy);
 
 	return 0;
 }
 RINA_SYSFS_OPS(eth_vlan_ipcp);
-RINA_ATTRS(eth_vlan_ipcp, name, type, dif, address, vlan_id, iface);
+RINA_ATTRS(eth_vlan_ipcp, name, type, dif, address, vlan_id, iface, tx_busy);
 RINA_KTYPE(eth_vlan_ipcp);
 
 static DEFINE_SPINLOCK(data_instances_lock);
@@ -931,7 +933,7 @@ static void eth_vlan_skb_destructor(struct sk_buff *skb)
 	spin_unlock_bh(&data->lock);
 
 	if (notify) {
-		enable_write_all(data->dev);
+		enable_write_all(data->phy_dev);
 	}
 }
 
