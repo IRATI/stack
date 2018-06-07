@@ -161,7 +161,7 @@ static ssize_t urgency_queue_attr_show(struct robject * robj,
 		return sprintf(buf, "%u\n", q->urgency_level);
 	}
 	if (strcmp(robject_attr_name(attr), "dequeue_prob") == 0) {
-			return sprintf(buf, "%u\n", q->urgency_level);
+			return sprintf(buf, "%u\n", q->dequeue_prob);
 		}
 	if (strcmp(robject_attr_name(attr), "queued_pdus") == 0) {
 		return sprintf(buf, "%u\n", q->length);
