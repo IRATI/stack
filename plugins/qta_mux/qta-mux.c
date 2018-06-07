@@ -56,6 +56,7 @@ struct urgency_queue {
 	uint_t		 	   tx_pdus;
 	uint_t		 	   tx_bytes;
 	uint_t			   dequeue_prob;
+	uint_t			   max_occupation;
 #if QTA_MUX_DEBUG
 	struct urgency_queue_debug_info * debug_info;
 #endif
@@ -172,6 +173,9 @@ static ssize_t urgency_queue_attr_show(struct robject * robj,
 	if (strcmp(robject_attr_name(attr), "tx_pdus") == 0) {
 		return sprintf(buf, "%u\n", q->tx_pdus);
 	}
+	if (strcmp(robject_attr_name(attr), "max_occupation") == 0) {
+		return sprintf(buf, "%u\n", q->max_occupation);
+	}
 
 	return 0;
 }
@@ -254,7 +258,7 @@ RINA_SYSFS_OPS(cu_mux);
 RINA_ATTRS(cu_mux, urgency_levels, cherish_levels);
 RINA_KTYPE(cu_mux);
 RINA_SYSFS_OPS(urgency_queue);
-RINA_ATTRS(urgency_queue, urgency, dequeue_prob, queued_pdus, dropped_pdus, tx_pdus);
+RINA_ATTRS(urgency_queue, urgency, dequeue_prob, queued_pdus, dropped_pdus, tx_pdus, max_occupation);
 RINA_KTYPE(urgency_queue);
 RINA_SYSFS_OPS(token_bucket_filter);
 RINA_ATTRS(token_bucket_filter, abs_cherish_th, prob_cherish_th, drop_prob,
@@ -573,6 +577,7 @@ static struct urgency_queue * urgency_queue_create(uint_t urgency_level,
 	tmp->dropped_pdus = 0;
 	tmp->tx_bytes = 0;
 	tmp->tx_pdus = 0;
+	tmp->max_occupation = 0;
 
 	robject_init(&tmp->robj, &urgency_queue_rtype);
 	if (robject_rset_add(&tmp->robj, parent, "%d", tmp->urgency_level)) {
@@ -860,6 +865,8 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 	}
 	list_add_tail(&pdu_entry->list, &urgency_queue->queued_pdus);
 	urgency_queue->length++;
+	if (urgency_queue->length > urgency_queue->max_occupation)
+		urgency_queue->max_occupation = urgency_queue->length;
 
 #if QTA_MUX_DEBUG
 	if (urgency_queue->debug_info->q_index < UQUEUE_DEBUG_SIZE) {
