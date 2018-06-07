@@ -40,6 +40,7 @@ protected:
 		while (t < Endtime) {
 			if (SendData(sdu_size) != sdu_size) return -1;
 			t = std::chrono::system_clock::now() + interval;
+			if (t > Endtime) t = Endtime;
 			std::this_thread::sleep_until(t);
 		};
 
@@ -62,8 +63,8 @@ public:
 			sdu_size = BUFF_SIZE;
 		}
 
-		avg_iat = 8000000000.0; //ns
-		avg_iat *= sdu_size;
+		avg_iat = 1000000000.0; //ns
+		avg_iat *= (sdu_size*8L);
 		avg_iat /= avg_flow_rate_bps;
 	}
 
@@ -78,18 +79,11 @@ protected:
 		std::default_random_engine generator(t.time_since_epoch().count());
 		std::exponential_distribution<double> iat_distribution(1.0 / avg_iat); //nanoseconds
 
-		auto NextCreate = t;
-
-		while (t < Endtime) {
-			while(NextCreate <= t){
-				if (SendData(sdu_size) != sdu_size) return -1;
-				NextCreate += std::chrono::nanoseconds((long long int)iat_distribution(generator));
-			}
-			if(NextCreate > Endtime){
-				break;
-			}
+		while (std::chrono::system_clock::now() < Endtime) {
+			if (SendData(sdu_size) != sdu_size) return -1;
+			t += std::chrono::nanoseconds((long long int)iat_distribution(generator));
+			if(t > Endtime) t = Endtime;
 			std::this_thread::sleep_until(t);
-			t = std::chrono::system_clock::now();
 		};
 
 		return 0;
@@ -220,29 +214,33 @@ protected:
 		if (startOff) {
 			phase_duration = (long int)off_distribution(generator);
 			t += std::chrono::milliseconds(phase_duration);
+			if (t > Endtime) t = Endtime;
 			std::this_thread::sleep_until(t);
 		}
 
-		int i = 1;
 		while (t < Endtime) {
 			phase_duration = (long int)on_distribution(generator);
 			auto change = t + std::chrono::milliseconds(phase_duration);
-			if (change > Endtime) {
-				change = Endtime;
-			}
+			if (change > Endtime) change = Endtime;
 
 			long int sent = 0;
-			while (t < change) {
+			while (std::chrono::system_clock::now() < change ) {
 				if (SendData(sdu_size) != sdu_size) return -1;
 				sent++;
 				t += interval;
+				if (t > Endtime) t = Endtime;
 				std::this_thread::sleep_until(t);
 			}
-			phase_duration = (long int)off_distribution(generator);
-			t += std::chrono::milliseconds(phase_duration);
-			std::this_thread::sleep_until(t);
-		};
 
+			t = std::chrono::system_clock::now();
+			if (change != Endtime) {
+				phase_duration = (long int)off_distribution(generator);
+				t += std::chrono::milliseconds(phase_duration);
+				if (t > Endtime) t = Endtime;
+
+				std::this_thread::sleep_until(t);
+			}
+		};
 		return 0;
 	}
 };
@@ -277,9 +275,10 @@ protected:
 		std::chrono::time_point<std::chrono::system_clock> t =
 			std::chrono::system_clock::now();
 
-		while (t < Endtime) {
+		while (std::chrono::system_clock::now() < Endtime) {
 			if (SendData(sdu_size) != sdu_size) return -1;
 			t += interval;
+			if (t > Endtime) t = Endtime;
 			std::this_thread::sleep_until(t);
 		};
 
@@ -368,7 +367,7 @@ protected:
 			change += std::chrono::milliseconds(rand() % min_ms_off);
 		}
 
-		while (t < Endtime) {
+		while (std::chrono::system_clock::now() < Endtime) {
 			if (t > change) {
 				if (isOn) {
 					isOn = false;
