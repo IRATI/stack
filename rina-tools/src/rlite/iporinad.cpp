@@ -1285,7 +1285,7 @@ main(int argc, char **argv)
     int background       = 0;
     int opt;
 
-    while ((opt = getopt(argc, argv, "hc:vL:Et:w")) != -1) {
+    while ((opt = getopt(argc, argv, "hc:vL:E:t:w")) != -1) {
         switch (opt) {
         case 'h':
             usage();
