@@ -55,6 +55,8 @@ struct urgency_queue {
 	uint_t		 	   dropped_bytes;
 	uint_t		 	   tx_pdus;
 	uint_t		 	   tx_bytes;
+	uint_t			   dequeue_prob;
+	uint_t			   max_occupation;
 #if QTA_MUX_DEBUG
 	struct urgency_queue_debug_info * debug_info;
 #endif
@@ -106,6 +108,7 @@ struct cherish_thres_t {
 struct urgency_queue_conf {
 	struct list_head         list;
 	uint_t   	         urgency_level;
+	uint_t			 dequeue_prob;
 	struct cherish_thres_t * cherish_thresholds;
 };
 
@@ -158,6 +161,9 @@ static ssize_t urgency_queue_attr_show(struct robject * robj,
 	if (strcmp(robject_attr_name(attr), "urgency") == 0) {
 		return sprintf(buf, "%u\n", q->urgency_level);
 	}
+	if (strcmp(robject_attr_name(attr), "dequeue_prob") == 0) {
+			return sprintf(buf, "%u\n", q->dequeue_prob);
+		}
 	if (strcmp(robject_attr_name(attr), "queued_pdus") == 0) {
 		return sprintf(buf, "%u\n", q->length);
 	}
@@ -166,6 +172,9 @@ static ssize_t urgency_queue_attr_show(struct robject * robj,
 	}
 	if (strcmp(robject_attr_name(attr), "tx_pdus") == 0) {
 		return sprintf(buf, "%u\n", q->tx_pdus);
+	}
+	if (strcmp(robject_attr_name(attr), "max_occupation") == 0) {
+		return sprintf(buf, "%u\n", q->max_occupation);
 	}
 
 	return 0;
@@ -249,7 +258,7 @@ RINA_SYSFS_OPS(cu_mux);
 RINA_ATTRS(cu_mux, urgency_levels, cherish_levels);
 RINA_KTYPE(cu_mux);
 RINA_SYSFS_OPS(urgency_queue);
-RINA_ATTRS(urgency_queue, urgency, queued_pdus, dropped_pdus, tx_pdus);
+RINA_ATTRS(urgency_queue, urgency, dequeue_prob, queued_pdus, dropped_pdus, tx_pdus, max_occupation);
 RINA_KTYPE(urgency_queue);
 RINA_SYSFS_OPS(token_bucket_filter);
 RINA_ATTRS(token_bucket_filter, abs_cherish_th, prob_cherish_th, drop_prob,
@@ -298,6 +307,7 @@ static struct urgency_queue_conf * urgency_queue_conf_create(void)
 
 	INIT_LIST_HEAD(&tmp->list);
 	tmp->urgency_level = 0;
+	tmp->dequeue_prob = 100;
 	tmp->cherish_thresholds = NULL;
 
 	return tmp;
@@ -546,6 +556,7 @@ static struct token_bucket_filter * token_bucket_filter_create(struct urgency_qu
 }
 
 static struct urgency_queue * urgency_queue_create(uint_t urgency_level,
+						   uint_t dequeue_prob,
 						   port_id_t port_id,
 						   struct rset *parent)
 {
@@ -561,10 +572,12 @@ static struct urgency_queue * urgency_queue_create(uint_t urgency_level,
 	INIT_LIST_HEAD(&tmp->queued_pdus);
 	tmp->length = 0;
 	tmp->urgency_level = urgency_level;
+	tmp->dequeue_prob = dequeue_prob;
 	tmp->dropped_bytes = 0;
 	tmp->dropped_pdus = 0;
 	tmp->tx_bytes = 0;
 	tmp->tx_pdus = 0;
+	tmp->max_occupation = 0;
 
 	robject_init(&tmp->robj, &urgency_queue_rtype);
 	if (robject_rset_add(&tmp->robj, parent, "%d", tmp->urgency_level)) {
@@ -665,6 +678,8 @@ struct du * qta_rmt_dequeue_policy(struct rmt_ps	  *ps,
 	struct du *            ret_pdu;
 	struct qta_mux *       qta_mux;
 	struct urgency_queue * pos;
+	uint_t		       random_bytes;
+	struct urgency_queue * candidate;
 
 	if (!ps || !n1_port || !n1_port->rmt_ps_queues) {
 		LOG_ERR("Wrong input parameters for "
@@ -682,28 +697,40 @@ struct du * qta_rmt_dequeue_policy(struct rmt_ps	  *ps,
 
 	/* Go through the urgency queues in urgency level: the queues */
 	/* with a higher urgency level are checked first */
+	candidate = NULL;
 	list_for_each_entry(pos, &qta_mux->cu_mux.urgency_queues, list) {
-		/* If this urgency level contains one or more QoS ids */
 		if (!list_empty(&pos->queued_pdus)) {
-			ret_pdu = dequeue_pdu(&pos->queued_pdus);
-			pos->length--;
-			pos->tx_pdus++;
-			pos->tx_bytes += du_len(ret_pdu);
-
-#if QTA_MUX_DEBUG
-	if (pos->debug_info->q_index < UQUEUE_DEBUG_SIZE) {
-		pos->debug_info->q_log[pos->debug_info->q_index][0] = pos->length;
-		pos->debug_info->q_log[pos->debug_info->q_index][1] = ktime_get_ns();
-		pos->debug_info->q_index++;
-	}
-#endif
-
-			return ret_pdu;
+			/* This queue is not empty, can be a candidate */
+			get_random_bytes(&random_bytes, sizeof(random_bytes));
+			random_bytes = random_bytes % NORM_PROB;
+			if (pos->dequeue_prob > random_bytes) {
+				/* We can dequeue from this urgency queue */
+				candidate = pos;
+				goto exit;
+			} else if (!candidate) {
+				candidate = pos;
+			}
 		}
 	}
 
-	/* Nothing to dequeue */
-	return NULL;
+exit:
+	if (!candidate)
+		return NULL;
+
+	ret_pdu = dequeue_pdu(&candidate->queued_pdus);
+	candidate->length--;
+	candidate->tx_pdus++;
+	candidate->tx_bytes += du_len(ret_pdu);
+
+#if QTA_MUX_DEBUG
+if (candidate->debug_info->q_index < UQUEUE_DEBUG_SIZE) {
+	candidate->debug_info->q_log[candidate->debug_info->q_index][0] = candidate->length;
+	candidate->debug_info->q_log[candidate->debug_info->q_index][1] = ktime_get_ns();
+	candidate->debug_info->q_index++;
+}
+#endif
+
+	return ret_pdu;
 }
 
 int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
@@ -786,6 +813,10 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 	tbf->tx_bytes += pdu_length;
 	tbf->tx_pdus++;
 
+	/* If we don't need to enqueue it means there are 0 queued PDUs, tx */
+	if (!must_enqueue)
+		return RMT_PS_ENQ_SEND;
+
 	/* Put PDU put it in the right urgency queue */
 	urgency_queue = urgency_queue_find(qta_mux, tbf->urgency_level);
 	if (!urgency_queue) {
@@ -834,6 +865,8 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 	}
 	list_add_tail(&pdu_entry->list, &urgency_queue->queued_pdus);
 	urgency_queue->length++;
+	if (urgency_queue->length > urgency_queue->max_occupation)
+		urgency_queue->max_occupation = urgency_queue->length;
 
 #if QTA_MUX_DEBUG
 	if (urgency_queue->debug_info->q_index < UQUEUE_DEBUG_SIZE) {
@@ -888,7 +921,8 @@ static void qta_mux_add_uqueue(struct qta_mux *     qta_mux,
 			return;
 		}
 	}
-	list_add(&uq->list, &pos->list);
+
+	list_add_tail(&uq->list, &qta_mux->cu_mux.urgency_queues);
 }
 
 void * qta_rmt_q_create_policy(struct rmt_ps      *ps,
@@ -941,6 +975,7 @@ void * qta_rmt_q_create_policy(struct rmt_ps      *ps,
 	/* Create one urgency_queue per urgency level, add it to the qta_mux */
 	list_for_each_entry(uq_conf, &config->urgency_queue_conf, list) {
 		urgency_queue = urgency_queue_create(uq_conf->urgency_level,
+						     uq_conf->dequeue_prob,
 						     n1_port->port_id,
 						     qta_mux->cu_mux.rset);
 		if (!urgency_queue) {
@@ -1009,7 +1044,8 @@ static int qta_mux_ps_set_policy_set_param_priv(struct qta_mux_set * data,
 {
 	int offset, delta_offset;
 	qos_id_t qos_id;
-	uint_t urgency_level, cherish_level, max_burst_size, max_rate, drop;
+	uint_t urgency_level, cherish_level, max_burst_size, max_rate,
+	       drop, dequeue_prob;
 	char *qos, *mux;
 	int i, c;
 	struct cherish_thres_t * cherish_levels;
@@ -1111,28 +1147,37 @@ static int qta_mux_ps_set_policy_set_param_priv(struct qta_mux_set * data,
 	}
 
 	/*
-	 * Parse entry of type name = cumux.<urgency_level>
-	 * value = <cherish_levels>:<drop>:
+	 * Parse entry of type name = <urgency_level>.cumux
+	 * value = <cherish_levels>:<drop>:<dequeue_prob>:
 	 * <abs_cherish_thres1>,<prob_cherish_thres1>,<drop_prob1>:...
 	 *
 	 */
 	if (mux) {
 		/* Parse urgency-level from the parameter name */
-		if (parse_int_value(name, '.', (int *) &urgency_level, &offset))
+		offset = 0;
+		if (parse_int_value(name, '.', (int *) &urgency_level,
+				    &delta_offset))
 			return -1;
 
-		/* Parse urgency levels from the parameter value */
+		/* Parse # of cherish levels from the parameter value */
 		offset = 0;
 		if (parse_int_value(value, ':', (int *) &cherish_level,
 				    &delta_offset))
 			return -1;
 
-		/* Parse cherish levels from the parameter value */
+		/* Parse drop from the parameter value */
 		offset += delta_offset;
 		if (parse_int_value(value + offset, ':',
 				    (int *) &drop, &delta_offset))
 			return -1;
 
+		/* Parse dequeue prob from the parameter value */
+		offset += delta_offset;
+		if (parse_int_value(value + offset, ':', (int*) &dequeue_prob,
+				    &delta_offset))
+			return -1;
+
+		/* Parse info of each cherish level from the parameter value */
 		cherish_levels = rkzalloc(cherish_level * sizeof(struct cherish_thres_t),
 					  GFP_ATOMIC);
 		if (!cherish_levels) {
@@ -1140,7 +1185,8 @@ static int qta_mux_ps_set_policy_set_param_priv(struct qta_mux_set * data,
 			return -1;
 		}
 
-		LOG_INFO("Urgency level: %u, Drop: %u", urgency_level, drop);
+		LOG_INFO("Urgency level: %u, Drop: %u, Dequeue prob: %u",
+				urgency_level, drop, dequeue_prob);
 
 		for (i=0; i< cherish_level; i++) {
 			if (i < cherish_level -1) {
@@ -1201,6 +1247,7 @@ static int qta_mux_ps_set_policy_set_param_priv(struct qta_mux_set * data,
 		}
 
 		urgency_queue_conf->cherish_thresholds = cherish_levels;
+		urgency_queue_conf->dequeue_prob = dequeue_prob;
 		if (append) {
 			list_add_tail(&urgency_queue_conf->list,
 				      &data->qta_mux_conf->urgency_queue_conf);
