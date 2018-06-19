@@ -19,7 +19,7 @@ struct flow_log {
 	}
 
 	void process(long long t, dataSDU * sdu) {
-		seq_id = sdu->SeqId;
+		if (seq_id < sdu->SeqId)  seq_id = sdu->SeqId;
 		count++;
 		data += sdu->Size;
 		long long lat = t - sdu->SendTime;
@@ -109,10 +109,10 @@ private:
 
 	void logger_t() {
 		int fCount;
-		std::chrono::seconds s5(5);
+		std::chrono::seconds s1(1);
 
 		do {
-			std::this_thread::sleep_for(s5);
+			std::this_thread::sleep_for(s1);
 			Mt.lock();
 			fCount = Count;
 			Mt.unlock();
@@ -142,7 +142,7 @@ private:
 			long double l = t - c;
 
 			std::cout << "\t" << f->flowId << " (" << (int)f->QoSId << ") | "
-				<< c << " / " << t << " (" << (l*100.0 / c) << " %) | " << f->data << " B"
+				<< c << " | " << t << " (" << (l*100.0 / t) << " %) | " << f->data << " B"
 				<< " ||" << (f->minLat / 1000.0)
 				<< " -- " << (f->latCount / (1000.0*c))
 				<< " -- " << (f->maxLat / 1000.0)
@@ -156,11 +156,9 @@ private:
 			long long l = q.total - q.count;
 
 			std::cout << "\t(" << QoSId << ") | "
-				<< q.count << " | " << l << " | " << q.total << "  || "
-				<< (q.minLat / 1000.0) << "  -- " << (q.latCount / (1000 * q.count))<< "  -- " << (q.maxLat / 1000.0);
-			std::cout << "\t(" << QoSId << ")\t"
-				<< (100.0*l / q.total) << " % || "
-				<< (q.latCount / (1000 * q.count)) << " -- " << (q.maxLat / 1000.0) << std::endl;
+				<< q.count << " | " << l << " | " << q.total << "  || " << (100.0*l / q.total) << " % || "
+				<< (q.minLat / 1000.0) << "  -- " << (q.latCount / (1000 * q.count))<< "  -- " << (q.maxLat / 1000.0)
+				<< std::endl;
 
 		}
 
