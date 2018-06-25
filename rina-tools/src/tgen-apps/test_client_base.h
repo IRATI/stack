@@ -13,12 +13,14 @@ public:
 	TestClientBase(const std::string Name, const std::string Instance, const std::string Servername,
 		       const std::string ServerInstance, const std::string DIF,
 		       int TestDuration, bool verbose,
-		       size_t mpdus, unsigned int loss, unsigned int delay) :
+		       size_t mpdus, unsigned int loss, unsigned int delay, int FlowIdent, int QoSIdent) :
 		BaseClient(Name, Instance, Servername, ServerInstance, DIF, verbose, loss, delay) {
 		_TestDuration = TestDuration;
+        _FlowIdent = FlowIdent;
+        _QoSIdent = QoSIdent;
+
 		AllocTimeoutMs = TIMEOUT_MS;
 
-		Data = (dataSDU*) Buffer;
 		max_sdu_size = mpdus;
 		_Fd = 0;
 	}
@@ -26,43 +28,42 @@ public:
 	virtual ~TestClientBase(){};
 
 protected:
-	dataSDU * Data;
 	std::chrono::time_point<std::chrono::system_clock> Endtime;
 
 	virtual int HandleFlow(const int Fd) {
 		_Fd = Fd;
 		srand(time(0));
+		int reties = 2;
 
-		initSDU * InitData = (initSDU*)Buffer;
+		InitData.QoSId = _QoSIdent;
+		InitData.FlowId = _FlowIdent;
 
-		Data->Size = sizeof(initSDU);
-		Data->Flags = SDU_FLAG_INIT;
-		Data->SeqId = 0;
-		Data->SendTime = 0;
+		InitData.Size = sizeof(initSDU);
+		InitData.Flags = SDU_FLAG_INIT;
+		InitData.SeqId = 0;
+		InitData.SendTime = 0;
 
-		if (SendData(sizeof(initSDU), TIMEOUT_MS) != sizeof(initSDU)) {
-			std::cerr << "No data sent during the first second of lifetime" << std::endl;
+		int res = SendSpecialSDU(Fd,sizeof(initSDU),reties);
+		if (res == -1){
+			std::cerr << "Failure sending initial SDU" << std::endl;
+			return -1;
+		}else if (res == -2){
+			std::cerr << "No data echo received for the initial SDU" << std::endl;
 			return -1;
 		}
 
-		if (ra::ReadDataTimeout(Fd, Buffer, TIMEOUT_MS) <= 0) {
-			std::cerr << "No data echo received during the first second of lifetime" << std::endl;
-			return -1;
-		}
-
-		Data->Flags = 0;
-		Data->SeqId = 0;
+		Data.Flags = 0;
+		Data.SeqId = 0;
 
 		Endtime = std::chrono::system_clock::now() + std::chrono::seconds(_TestDuration);
 		int ReturnCode = RunFlow();
 
-		Data->Flags = SDU_FLAG_FIN;
-		if (SendData(sizeof(dataSDU), TIMEOUT_MS) != sizeof(dataSDU)) {
-			std::cerr << "failure sending fin SDU" << std::endl;
+		Data.Flags = SDU_FLAG_FIN;
+		res = SendSpecialSDU(Fd,sizeof(dataSDU), reties);
+		if (res == -1){
+			std::cerr << "Failure sending fin SDU" << std::endl;
 			return -1;
-		}
-
-		if (ra::ReadDataTimeout(Fd, Buffer, TIMEOUT_MS) <= 0) {
+		}else if (res == -2){
 			std::cerr << "No data echo received for the fin SDU" << std::endl;
 			return -1;
 		}
@@ -70,16 +71,35 @@ protected:
 		return ReturnCode;
 	}
 
+	int SendSpecialSDU(const int Fd,size_t size, int retries) {
+		retries --;
+		if (SendData(size, TIMEOUT_MS) != size) {
+			std::cerr << "Failure sending control SDU" << std::endl;
+			return -1;
+		}
+
+		if (ra::ReadDataTimeout(Fd, readBuffer, TIMEOUT_MS) <= 0) {
+			if  (retries > 0){
+				std::cerr << "Trying to send again SDU" << std::endl;
+				return SendSpecialSDU(Fd, size, retries);
+			}else{
+				std::cerr << "No data echo received for the fin SDU" << std::endl;
+				return -2;
+			}
+		}
+		return 0;
+	}
+
 	int SendData(size_t Size, int mSec = -1) {
-		Data->Size = Size;
-		Data->SeqId++;
-		Data->SendTime =
+		Data.Size = Size;
+		Data.SeqId++;
+		Data.SendTime =
 			std::chrono::duration_cast<std::chrono::milliseconds>(
 				std::chrono::system_clock::now().time_since_epoch()).count();
 		if (mSec < 0) {
-			return ra::WriteData(_Fd, (ra::byte_t*) Data, Size, max_sdu_size);
+			return ra::WriteData(_Fd, Buffer, Size, max_sdu_size);
 		} else {
-			return ra::WriteDataTimeout(_Fd, (ra::byte_t*) Data, Size, max_sdu_size, mSec);
+			return ra::WriteDataTimeout(_Fd, Buffer, Size, max_sdu_size, mSec);
 		}
 	}
 
@@ -87,7 +107,14 @@ protected:
 
 private:
 	int _TestDuration;
+    int _FlowIdent;
+    int _QoSIdent;
 	int _Fd;
-	ra::byte_t Buffer[BUFF_SIZE];
+	union {
+		ra::byte_t Buffer[BUFF_SIZE];
+		dataSDU Data;
+		initSDU InitData;
+	};
+	ra::byte_t readBuffer[BUFF_SIZE];
 	size_t max_sdu_size;
 };
