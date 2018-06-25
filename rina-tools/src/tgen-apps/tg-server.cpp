@@ -19,7 +19,7 @@ struct flow_log {
 	}
 
 	void process(long long t, dataSDU * sdu) {
-		if (seq_id < sdu->SeqId)  seq_id = sdu->SeqId;
+		//seq_id = sdu->SeqId;
 		count++;
 		data += sdu->Size;
 		long long lat = t - sdu->SendTime;
@@ -134,21 +134,24 @@ private:
 			qos_logs[f->QoSId].process(f);
 		}
 
-		std::cout << "Total :: " << tCount << " | " << (tData / 125000.0) << " Mb" << std::endl;
-
+		std::cout << "Total :: " << tCount << " Packets | " << (tData / 125000.0) << " Mb" << std::endl;
+		std::cout << "# Statistics per flow:" <<std::endl;
+		std::cout << "#\tFlowID (QoSID) | Rcv Packets | Snd Packets | % Lost Packets | Rcv Bytes | Min Latency | Avg Latency | Max Latency" << std::endl;
 		for (flow_log * f : flow_logs) {
 			long long c = f->count;
 			long long t = f->seq_id;
 			long double l = t - c;
 
 			std::cout << "\t" << f->flowId << " (" << (int)f->QoSId << ") | "
-				<< c << " | " << t << " (" << (l*100.0 / t) << " %) | " << f->data << " B"
-				<< " ||" << (f->minLat / 1000.0)
-				<< " -- " << (f->latCount / (1000.0*c))
-				<< " -- " << (f->maxLat / 1000.0)
+				<< c << " | " << t << " | " << (l*100.0 / t) << " % | " << f->data << " B"
+				<< " |" << (f->minLat / 1000.0)
+				<< " | " << (f->latCount / (1000.0*c))
+				<< " | " << (f->maxLat / 1000.0)
 				<< std::endl;
 		}
 
+		std::cout << "# Statistics per QoS ID:" <<std::endl;
+		std::cout << "#\t(QoSID) | Rcv Packets | Snd Packets | % Lost Packets | Min Latency | Avg Latency | Max Latency" << std::endl;
 		for (auto qd : qos_logs) {
 			int QoSId = qd.first;
 			qos_log & q = qd.second;
@@ -156,8 +159,8 @@ private:
 			long long l = q.total - q.count;
 
 			std::cout << "\t(" << QoSId << ") | "
-				<< q.count << " | " << l << " | " << q.total << "  || " << (100.0*l / q.total) << " % || "
-				<< (q.minLat / 1000.0) << "  -- " << (q.latCount / (1000 * q.count))<< "  -- " << (q.maxLat / 1000.0)
+				<< q.count << " | " << q.total << "  | " << (100.0*l / q.total) << " % | "
+				<< (q.minLat / 1000.0) << "  | " << (q.latCount / (1000 * q.count))<< "  | " << (q.maxLat / 1000.0)
 				<< std::endl;
 
 		}
@@ -168,54 +171,47 @@ private:
 
 		Count = 0;
 		flow_logs.clear();
+		qos_logs.clear();
 		Mt.unlock();
 	}
 
-	int process_first_sdu(const int Fd) {
+	flow_log * process_first_sdu(const int Fd) {
 		if (ra::ReadDataTimeout(Fd, Buffer, TIMEOUT_MS) <= 0) {
 			std::cerr << "No data received during the first second of lifetime" << std::endl;
-			return -1;
+			return NULL;
 		}
 
-		if (InitData.Flags & SDU_FLAG_INIT == 0) {
+		if ((int)InitData.Flags & SDU_FLAG_INIT == 0) {
 			std::cerr << "First received packet not with INIT flag" << std::endl;
-			return -1;
+			return NULL;
 		}
 
-		if (InitData.Flags & SDU_FLAG_NAME) {
-			if (verbose)
-				std::cout << "Started Flow " << Fd << " -> "
-				<< (Buffer + sizeof(initSDU)) << std::endl;
-		} else {
-			if (verbose)
-				std::cout << "Started Flow " << Fd << std::endl;
-		}
+		if (verbose)
+			std::cout << "Started Flow " << Fd << std::endl;
 
 		if (write(Fd, Buffer, InitData.Size) != (int)InitData.Size) {
 			std::cerr << "First packet ECHO failed" << std::endl;
-			return -1;
+			return NULL;
 		}
-
-		return 0;
-	}
-
-	int HandleFlow_log(const int Fd) {
-		int result, ReadSize;
-		bool start_logger;
-
-		result = process_first_sdu(Fd);
-		if (result != 0)
-			return result;
 
 		flow_log * Flow = new flow_log();
 		Flow->QoSId = InitData.QoSId;
 		Flow->flowId = InitData.FlowId;
-		Flow->seq_id = Data.SeqId;
+
+		return (Flow);
+	}
+
+	int HandleFlow_log(const int Fd) {
+		int ReadSize;
+		bool start_logger;
+
+		flow_log * Flow = process_first_sdu(Fd);
+		if (Flow == NULL)
+			return -1;
 
 		Mt.lock();
 		start_logger = (Count <= 0);
 		Count++;
-		flow_logs.push_back(Flow);
 		Mt.unlock();
 
 		if (start_logger) {
@@ -230,12 +226,15 @@ private:
 
 			if (ReadSize <= 0) {
 				Count--;
+				std::cout << "Not received last SDU. Discarding flow" << std::endl;
 				Mt.unlock();
 				return -1;
 			}
 
-			if (Data.Flags & SDU_FLAG_FIN) {
+			if ((int)Data.Flags & SDU_FLAG_FIN) {
 				Count--;
+				flow_logs.push_back(Flow);
+				Flow->seq_id = Data.SeqId - 1;
 				Mt.unlock();
 				break;
 			}
@@ -255,26 +254,20 @@ private:
 	}
 
 	int HandleFlow_drop(const int Fd) {
-		int result, ReadSize;
+		int ReadSize;
 
-		result = process_first_sdu(Fd);
-		if (result != 0)
-			return result;
+		flow_log * Flow = process_first_sdu(Fd);
+		if (Flow == NULL)
+			return -1;
 
 		for (;;) {
 			ReadSize = ra::ReadData(Fd, Buffer);
 			if (ReadSize <= 0) {
 				return -1;
 			}
-			if (Data.Flags & SDU_FLAG_FIN) {
-				if (Data.Flags & SDU_FLAG_NAME) {
-					if (verbose)
-						std::cout << "Ended Flow " << Fd << " -> "
-							  << (Buffer + sizeof(dataSDU)) << std::endl;
-				} else {
-					if (verbose)
-						std::cout << "Ended Flow " << Fd << std::endl;
-				}
+			if ((int)Data.Flags & SDU_FLAG_FIN) {
+				if (verbose)
+					std::cout << "Ended Flow " << Fd << std::endl;
 				break;
 			}
 		}
@@ -289,16 +282,16 @@ private:
 
 	int HandleFlow_dump(const int Fd) {
 		long long InitTime;
-		int result, ReadSize;
+		int ReadSize;
 
-		result = process_first_sdu(Fd);
-		if (result != 0)
-			return result;
+		flow_log * Flow = process_first_sdu(Fd);
+		if (Flow == NULL)
+			return -1;
 
 		for (;;) {
 			if(ra::ReadData(Fd, Buffer) <= 0) { return -1;}
 
-			if (Data.Flags & SDU_FLAG_FIN) {
+			if ((int)Data.Flags & SDU_FLAG_FIN) {
 				break;
 			}
 

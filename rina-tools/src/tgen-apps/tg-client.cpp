@@ -10,9 +10,10 @@ class DataClient : public TestClientBase {
 public:
 	DataClient(const std::string Name, const std::string Instance, const std::string Servername, const std::string ServerInstance,
 		   const std::string DIF, int TestDuration, unsigned int _packet_size,
-		   const unsigned long long _ratebps, bool verbose, size_t max_sdu_size, unsigned int loss, unsigned int delay) :
+		   const unsigned long long _ratebps, bool verbose, size_t max_sdu_size, unsigned int loss, unsigned int delay,
+		   int FlowIdent, int QoSIdent) :
 		TestClientBase(Name, Instance, Servername, ServerInstance, DIF,
-			TestDuration, verbose, max_sdu_size, loss, delay) {
+			TestDuration, verbose, max_sdu_size, loss, delay, FlowIdent, QoSIdent) {
 		if (_packet_size < sizeof(dataSDU)) {
 			sdu_size = sizeof(dataSDU);
 		} else if (_packet_size > BUFF_SIZE) {
@@ -52,9 +53,10 @@ class Exponential : public TestClientBase {
 public:
 	Exponential(const std::string Name, const std::string Instance, const std::string Servername, const std::string ServerInstance,
 		    const std::string DIF, int TestDuration, unsigned int packet_size,
-		    const unsigned long long avg_flow_rate_bps, bool verbose, size_t max_sdu_size, unsigned int loss, unsigned int delay) :
+		    const unsigned long long avg_flow_rate_bps, bool verbose, size_t max_sdu_size, unsigned int loss, unsigned int delay,
+			int FlowIdent, int QoSIdent) :
 		TestClientBase(Name, Instance, Servername, ServerInstance, DIF,
-			TestDuration, verbose, max_sdu_size, loss, delay) {
+			TestDuration, verbose, max_sdu_size, loss, delay, FlowIdent, QoSIdent) {
 
 		sdu_size = packet_size;
 		if (sdu_size < 0 || sdu_size < sizeof(dataSDU)) {
@@ -95,9 +97,9 @@ public:
 	PoissonClient(const std::string Name, const std::string Instance, const std::string Servername, const std::string ServerInstance,
 		      const std::string DIF, int TestDuration, unsigned int avg_pdu_size,
 		      const unsigned long long max_flow_rate_bps, const double load,  bool verbose, size_t max_sdu_size,
-		      unsigned int loss, unsigned int delay) :
+		      unsigned int loss, unsigned int delay, int FlowIdent, int QoSIdent) :
 		TestClientBase(Name, Instance, Servername, ServerInstance, DIF,
-			       TestDuration, verbose, max_sdu_size, loss, delay) {
+			       TestDuration, verbose, max_sdu_size, loss, delay, FlowIdent, QoSIdent) {
 
 		avg_iat = 8000000000.0; //ns
 		avg_iat *= avg_pdu_size;
@@ -174,9 +176,10 @@ class OnOffClient : public TestClientBase {
 public:
 	OnOffClient(const std::string Name, const std::string Instance, const std::string Servername, const std::string ServerInstance,
 		    const std::string DIF, int TestDuration, unsigned int _packet_size, const unsigned long long _ratebps,
-		    const int _avg_ms_on, const int _avg_ms_off, bool verbose, size_t max_sdu_size, unsigned int loss, unsigned int delay) :
+		    const int _avg_ms_on, const int _avg_ms_off, bool verbose, size_t max_sdu_size, unsigned int loss, unsigned int delay,
+			int FlowIdent, int QoSIdent) :
 		TestClientBase(Name, Instance, Servername, ServerInstance, DIF, TestDuration,
-				verbose, max_sdu_size, loss, delay) {
+				verbose, max_sdu_size, loss, delay, FlowIdent, QoSIdent) {
 
 		if (_packet_size < sizeof(dataSDU)) {
 			sdu_size = sizeof(dataSDU);
@@ -249,8 +252,10 @@ class VideoClient : public TestClientBase {
 public:
 	VideoClient(const std::string Name, const std::string Instance, const std::string Servername, const std::string ServerInstance,
 			const std::string DIF, int TestDuration, unsigned int _packet_size,
-			const unsigned long long _ratebps, bool verbose, size_t max_sdu_size, unsigned int loss, unsigned int delay) :
-		TestClientBase(Name, Instance, Servername, ServerInstance, DIF, TestDuration, verbose, max_sdu_size, loss, delay) {
+			const unsigned long long _ratebps, bool verbose, size_t max_sdu_size, unsigned int loss, unsigned int delay,
+			int FlowIdent, int QoSIdent) :
+		TestClientBase(Name, Instance, Servername, ServerInstance, DIF, TestDuration, verbose, max_sdu_size, loss, delay,
+				FlowIdent, QoSIdent) {
 
 		if (_packet_size < sizeof(dataSDU)) {
 			sdu_size = sizeof(dataSDU);
@@ -290,9 +295,9 @@ class VoiceClient : public TestClientBase {
 public:
 	VoiceClient(const std::string Name, const std::string Instance, const std::string Servername, const std::string ServerInstance,
 		    const std::string DIF, int TestDuration, float HZ, bool verbose, size_t max_sdu_size,
-		    unsigned int loss, unsigned int delay) :
+		    unsigned int loss, unsigned int delay, int FlowIdent, int QoSIdent) :
 		TestClientBase(Name, Instance, Servername, ServerInstance, DIF,
-			TestDuration, verbose, max_sdu_size, loss, delay) {
+			TestDuration, verbose, max_sdu_size, loss, delay, FlowIdent, QoSIdent) {
 
 		setON(320, 3000, 1000);
 		setOFF(20, 6000, 2000);
@@ -394,7 +399,7 @@ int main(int argc, char ** argv) {
 	std::string Name, Instance;
 	std::string ServerName, ServerInstance;
 	std::string DIF;
-	int TestDuration;
+	int FlowIdent, QoSIdent, TestDuration;
 	unsigned int PacketSize;
 	unsigned long long RateBPS;
 	int AVG_ms_ON, AVG_ms_OFF;
@@ -430,6 +435,9 @@ int main(int argc, char ** argv) {
 		TCLAP::ValueArg<int> PacketSizeOff_a("u", "fSize", "Packet size in B when OFF, default 1000B", false, 20, "unsigned int");
 		TCLAP::ValueArg<int> VAR_ms_OFF_a("f", "vOff", "Variation of duration of Off interval in ms, default 1000 ms", false, 6000, "int");
 		TCLAP::ValueArg<float> HZ_a("z", "hz", "Frame Rate flow, default = 50.0Hz", false, 50.0f, "float");
+        TCLAP::ValueArg<int> FlowIdent_a("I", "flowid", "Unique flow identifier, default = 0",false, 0, "int");
+        TCLAP::ValueArg<int> QoSIdent_a("q", "qosid", "QoS identifier, default = 0",false, 0, "int");
+
 
 		cmd.add(Name_a);
 		cmd.add(Instance_a);
@@ -451,6 +459,8 @@ int main(int argc, char ** argv) {
 		cmd.add(VAR_ms_ON_a);
 		cmd.add(PacketSizeOff_a);
 		cmd.add(VAR_ms_OFF_a);
+		cmd.add(FlowIdent_a);
+		cmd.add(QoSIdent_a);
 
 		cmd.parse(argc, argv);
 
@@ -476,6 +486,8 @@ int main(int argc, char ** argv) {
 		VAR_ms_ON = VAR_ms_ON_a.getValue();
 		PacketSizeOff = PacketSizeOff_a.getValue();
 		VAR_ms_OFF = VAR_ms_OFF_a.getValue();
+		FlowIdent = FlowIdent_a.getValue();
+		QoSIdent = QoSIdent_a.getValue();
 	}
 	catch (TCLAP::ArgException &e) {
 		std::cerr << e.error() << " for arg " << e.argId() << std::endl;
@@ -485,35 +497,35 @@ int main(int argc, char ** argv) {
 
 	if (type == "data") {
 		DataClient App(Name, Instance, ServerName, ServerInstance, DIF,
-			TestDuration, PacketSize, RateBPS, verb, max_ssize, loss, delay);
+			TestDuration, PacketSize, RateBPS, verb, max_ssize, loss, delay, FlowIdent, QoSIdent);
 		return App.Run();
 	}
 
 	if (type == "exp") {
 		Exponential App(Name, Instance, ServerName, ServerInstance, DIF,
 			TestDuration, PacketSize, RateBPS,
-			verb, max_ssize, loss, delay);
+			verb, max_ssize, loss, delay, FlowIdent, QoSIdent);
 		return App.Run();
 	}
 
 	if (type == "video") {
 		VideoClient App(Name, Instance, ServerName, ServerInstance, DIF,
 				TestDuration, PacketSize, RateBPS, verb, max_ssize,
-				loss, delay);
+				loss, delay, FlowIdent, QoSIdent);
 			return App.Run();
 	}
 
 	if (type == "poisson") {
 		PoissonClient App(Name, Instance, ServerName, ServerInstance, DIF,
 				TestDuration, PacketSize, RateBPS, Load, verb, max_ssize,
-				loss, delay);
+				loss, delay, FlowIdent, QoSIdent);
 		return App.Run();
 	}
 
 	if (type == "voice") {
 		VoiceClient App(Name, Instance, ServerName, ServerInstance, DIF,
 			        TestDuration, Hz, verb,
-				max_ssize, loss, delay);
+				max_ssize, loss, delay, FlowIdent, QoSIdent);
 		App.setON(PacketSize, AVG_ms_ON, VAR_ms_ON);
 		App.setOFF(PacketSizeOff, AVG_ms_OFF, VAR_ms_OFF);
 		return App.Run();
@@ -522,7 +534,7 @@ int main(int argc, char ** argv) {
 	if (type == "onoff") {
 		OnOffClient App(Name, Instance, ServerName, ServerInstance, DIF,
 				TestDuration, PacketSize, RateBPS, AVG_ms_ON, AVG_ms_OFF,
-				verb, max_ssize, loss, delay);
+				verb, max_ssize, loss, delay, FlowIdent, QoSIdent);
 		return App.Run();
 	}
 
