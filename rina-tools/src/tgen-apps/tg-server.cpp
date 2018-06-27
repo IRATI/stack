@@ -144,9 +144,9 @@ private:
 
 			std::cout << "\t" << f->flowId << " (" << (int)f->QoSId << ") | "
 				<< c << " | " << t << " | " << (l*100.0 / t) << " % | " << f->data << " B"
-				<< " |" << (f->minLat / 1000.0)
-				<< " | " << (f->latCount / (1000.0*c))
-				<< " | " << (f->maxLat / 1000.0)
+				<< " |" << (f->minLat / 1000000.0)
+				<< " | " << (f->latCount / (1000000.0*c))
+				<< " | " << (f->maxLat / 1000000.0)
 				<< std::endl;
 		}
 
@@ -160,7 +160,7 @@ private:
 
 			std::cout << "\t(" << QoSId << ") | "
 				<< q.count << " | " << q.total << "  | " << (100.0*l / q.total) << " % | "
-				<< (q.minLat / 1000.0) << "  | " << (q.latCount / (1000 * q.count))<< "  | " << (q.maxLat / 1000.0)
+				<< (q.minLat / 1000000.0) << "  | " << (q.latCount / (1000000 * q.count))<< "  | " << (q.maxLat / 1000000.0)
 				<< std::endl;
 
 		}
@@ -239,8 +239,8 @@ private:
 				break;
 			}
 
-			Flow->process(std::chrono::duration_cast<std::chrono::milliseconds>(
-							std::chrono::system_clock::now().time_since_epoch()).count(),
+			Flow->process(std::chrono::duration_cast<std::chrono::microseconds>(
+							std::chrono::high_resolution_clock::now().time_since_epoch()).count(),
 							&Data);
 			Mt.unlock();
 
@@ -281,9 +281,8 @@ private:
 	}
 
 	int HandleFlow_dump(const int Fd) {
-		long long InitTime;
 		int ReadSize;
-
+		long long latency;
 		flow_log * Flow = process_first_sdu(Fd);
 		if (Flow == NULL)
 			return -1;
@@ -291,12 +290,20 @@ private:
 		for (;;) {
 			if(ra::ReadData(Fd, Buffer) <= 0) { return -1;}
 
+			auto now = std::chrono::high_resolution_clock::now();
+			long long current_time = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
+
+			latency = (long long)(current_time - (Data.SendTime));
+
 			if ((int)Data.Flags & SDU_FLAG_FIN) {
+				std::cout << Fd<< " |  " << Data.SeqId  << " | " << Data.Size
+								  << "B | " << latency <<" | END"<< std::endl;
 				break;
 			}
 
+
 			std::cout << Fd<< " | " << Data.SeqId  << " | " << Data.Size
-				  << "B | " << (Data.SendTime - InitTime) << std::endl;
+				  << "B | " << latency << std::endl;
 		}
 
 		if (write(Fd, Buffer, Data.Size) != (int) Data.Size) {

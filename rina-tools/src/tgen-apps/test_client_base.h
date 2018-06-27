@@ -94,8 +94,8 @@ protected:
 		Data.Size = Size;
 		Data.SeqId++;
 		Data.SendTime =
-			std::chrono::duration_cast<std::chrono::milliseconds>(
-				std::chrono::system_clock::now().time_since_epoch()).count();
+			std::chrono::duration_cast<std::chrono::microseconds>(
+				std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 		if (mSec < 0) {
 			return ra::WriteData(_Fd, Buffer, Size, max_sdu_size);
 		} else {
