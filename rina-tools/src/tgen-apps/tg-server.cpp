@@ -1,6 +1,6 @@
 #include <chrono>
 #include <map>
-
+#include <sstream>
 #include <tclap/CmdLine.h>
 
 #include "ra_base_server.h"
@@ -101,11 +101,6 @@ private:
 	std::vector<flow_log*> flow_logs;
 	std::map<int, qos_log> qos_logs;
 	std::mutex Mt;
-	union {
-		ra::byte_t Buffer[BUFF_SIZE];
-		dataSDU Data;
-		initSDU InitData;
-	};
 
 	void logger_t() {
 		int fCount;
@@ -176,6 +171,12 @@ private:
 	}
 
 	flow_log * process_first_sdu(const int Fd) {
+		union {
+			ra::byte_t Buffer[BUFF_SIZE];
+			dataSDU Data;
+			initSDU InitData;
+		};
+
 		if (ra::ReadDataTimeout(Fd, Buffer, TIMEOUT_MS) <= 0) {
 			std::cerr << "No data received during the first second of lifetime" << std::endl;
 			return NULL;
@@ -204,6 +205,11 @@ private:
 	int HandleFlow_log(const int Fd) {
 		int ReadSize;
 		bool start_logger;
+		union {
+			ra::byte_t Buffer[BUFF_SIZE];
+			dataSDU Data;
+			initSDU InitData;
+		};
 
 		flow_log * Flow = process_first_sdu(Fd);
 		if (Flow == NULL)
@@ -255,6 +261,11 @@ private:
 
 	int HandleFlow_drop(const int Fd) {
 		int ReadSize;
+		union {
+			ra::byte_t Buffer[BUFF_SIZE];
+			dataSDU Data;
+			initSDU InitData;
+		};
 
 		flow_log * Flow = process_first_sdu(Fd);
 		if (Flow == NULL)
@@ -282,13 +293,22 @@ private:
 
 	int HandleFlow_dump(const int Fd) {
 		int ReadSize;
+		union {
+			ra::byte_t Buffer[BUFF_SIZE];
+			dataSDU Data;
+			initSDU InitData;
+		};
 		long long latency;
+		bool start_logger;
 		flow_log * Flow = process_first_sdu(Fd);
 		if (Flow == NULL)
 			return -1;
 
+
 		for (;;) {
-			if(ra::ReadData(Fd, Buffer) <= 0) { return -1;}
+			if(ra::ReadData(Fd, Buffer) <= 0) {
+				return -1;
+			}
 
 			auto now = std::chrono::high_resolution_clock::now();
 			long long current_time = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
@@ -296,14 +316,21 @@ private:
 			latency = (long long)(current_time - (Data.SendTime));
 
 			if ((int)Data.Flags & SDU_FLAG_FIN) {
-				std::cout << Fd<< " |  " << Data.SeqId  << " | " << Data.Size
+				Mt.lock();
+				std::stringstream stream;
+				stream << Flow->flowId << " |  " << Data.SeqId  << " | " << Data.Size
 								  << "B | " << latency <<" | END"<< std::endl;
+				std::cout << stream.str()<<std::flush;
+				Mt.unlock();
 				break;
 			}
 
-
-			std::cout << Fd<< " | " << Data.SeqId  << " | " << Data.Size
-				  << "B | " << latency << std::endl;
+			Mt.lock();
+			std::stringstream stream;
+			stream << Flow->flowId << " |  " << Data.SeqId  << " | " << Data.Size
+					<< "B | " << latency << std::endl;
+			std::cout << stream.str()<<std::flush;
+			Mt.unlock();
 		}
 
 		if (write(Fd, Buffer, Data.Size) != (int) Data.Size) {
