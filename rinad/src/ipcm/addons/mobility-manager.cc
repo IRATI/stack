@@ -41,6 +41,8 @@ const std::string MobilityManager::NAME = "mobman";
 const std::string MobilityManager::ARCFIRE_EXP5_OMEC_ROAMING = "arcfire-exp5-omec-roaming";
 const std::string MobilityManager::ARCFIRE_EXP5_2OPERATOR_DMM = "arcfire-exp5-2operator-dmm";
 const std::string MobilityManager::ARCFIRE_EXP5_MAC = "arcfire-exp5-mac";
+const std::string MobilityManager::ARCFIRE_EXP5_TIP_UE1 = "arcfire-exp5-tip-ue1";
+const std::string MobilityManager::ARCFIRE_EXP5_TIP_UE2 = "arcfire-exp5-tip-ue2";
 
 const int MobilityManager::DEFAULT_DISC_WAIT_TIME_MS = 5000;
 const int MobilityManager::DEFAULT_HANDOVER_PERIOD_MS = 60000;
@@ -203,6 +205,10 @@ void MobilityManager::initialize()
 		result = initialize_arcfire_exp5_2operator_dmm();
 	} else if (hand_state.hand_type == ARCFIRE_EXP5_MAC) {
 		result = initialize_arcfire_exp5_mac();
+	} else if (hand_state.hand_type == ARCFIRE_EXP5_TIP_UE1) {
+		result = initialize_arcfire_exp5_tip(true);
+	} else if (hand_state.hand_type == ARCFIRE_EXP5_TIP_UE2) {
+		result = initialize_arcfire_exp5_tip(false);
 	}
 
 	if (result != 0) {
@@ -414,6 +420,166 @@ int MobilityManager::initialize_arcfire_exp5_2operator_dmm()
 		}
 
 		hand_state.dif = "pristine";
+		hand_state.ipcp = wifi1_ipcp;
+
+		LOG_DBG("Initialized");
+	}
+
+	if (hand_state.hand_period_ms != 0) {
+		HandoverTimerTask * task = new HandoverTimerTask(this);
+		timer.scheduleTask(task, hand_state.hand_period_ms);
+	}
+
+	return 0;
+}
+
+int MobilityManager::initialize_arcfire_exp5_tip(bool ue1)
+{
+	std::map<std::string, rina::MediaDIFInfo>::const_iterator difs_it;
+	rina::BaseStationInfo bs_info;
+	NeighborData neigh_data, mob_neigh_data, int_neigh_data;
+	IPCMIPCProcess * wifi1_ipcp, * wifi2_ipcp, * prov_ipcp;
+	IPCMIPCProcess * slice1_ipcp, *slice2_ipcp, *ipcp_enroll;
+	IPCMIPCProcess * ipcp_disc, * mob_ipcp_enroll, * mob_ipcp_disc;
+	std::string ssid, prov_dif_name;
+	Promise promise;
+	rina::Sleep sleep;
+
+	// Prevent any insertion or deletion of IPC Processes to happen
+	rina::ReadScopedLock readlock(factory->rwlock);
+
+	// 1. Get all IPCPS
+	wifi1_ipcp = factory->getIPCProcess(1);
+	if (wifi1_ipcp == NULL) {
+		LOG_ERR("Could not find IPCP with ID 1");
+		return -1;
+	}
+
+	if (wifi1_ipcp->get_type () != rina::SHIM_WIFI_IPC_PROCESS_STA) {
+		LOG_ERR("Wrong IPCP type: %s", wifi1_ipcp->get_type().c_str());
+		return -1;
+	}
+
+	wifi2_ipcp = factory->getIPCProcess(2);
+	if (wifi2_ipcp == NULL) {
+		LOG_ERR("Could not find IPCP with ID 2");
+		return -1;
+	}
+
+	if (wifi2_ipcp->get_type() != rina::SHIM_WIFI_IPC_PROCESS_STA) {
+		LOG_ERR("Wrong IPCP type: %s", wifi2_ipcp->get_type().c_str());
+		return -1;
+	}
+
+	prov_ipcp = factory->getIPCProcess(3);
+	if (prov_ipcp == NULL) {
+		LOG_ERR("Could not find IPCP with ID 3");
+		return -1;
+	}
+
+	if (prov_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
+		LOG_ERR("Wrong IPCP type: %s", prov_ipcp->get_type().c_str());
+		return -1;
+	}
+
+	if (ue1)
+		slice1_ipcp = factory->getIPCProcess(5);
+	else
+		slice1_ipcp = factory->getIPCProcess(4);
+	if (slice1_ipcp == NULL) {
+		LOG_ERR("Could not find IPCP for slice1 DIF");
+		return -1;
+	}
+
+	if (slice1_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
+		LOG_ERR("Wrong IPCP type: %s", slice1_ipcp->get_type().c_str());
+		return -1;
+	}
+
+	if (ue1)
+		slice2_ipcp = factory->getIPCProcess(6);
+	else
+		slice2_ipcp = factory->getIPCProcess(5);
+	if (slice2_ipcp == NULL) {
+		LOG_ERR("Could not find IPCP for slice2 DIF");
+		return -1;
+	}
+
+	if (slice2_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
+		LOG_ERR("Wrong IPCP type: %s", slice2_ipcp->get_type().c_str());
+		return -1;
+	}
+
+	// 2. See if it has been initialized before, otherwise do it
+	if (hand_state.dif == "") {
+		if (ue1) {
+			ssid = "irati";
+			prov_dif_name = "provider1.DIF";
+		} else {
+			ssid = "rinaisense";
+			prov_dif_name = "provider3.DIF";
+		}
+
+		//Not enrolled anywhere yet, enroll for first time
+		difs_it = last_media_report.available_difs.find(ssid);
+		if (difs_it == last_media_report.available_difs.end()) {
+			LOG_WARN("No members of DIF '%s' are within range", ssid.c_str());
+			return -1;
+		}
+
+		bs_info = difs_it->second.available_bs_ipcps.front();
+
+		//Enroll the shim to the new DIF/AP
+		neigh_data.apName.processName = bs_info.ipcp_address;
+		neigh_data.difName.processName = ssid;
+		if(IPCManager->enroll_to_dif(this, &promise, wifi1_ipcp->get_id(), neigh_data) == IPCM_FAILURE ||
+				promise.wait() != IPCM_SUCCESS) {
+			LOG_WARN("Problems enrolling IPCP %u to DIF %s via neighbor %s",
+				 wifi1_ipcp->get_id(),
+				 neigh_data.difName.processName.c_str(),
+				 bs_info.ipcp_address.c_str());
+			return -1;
+		}
+
+		//Enroll to the provider1 DIF
+		mob_neigh_data.supportingDifName.processName = ssid;
+		mob_neigh_data.difName.processName = prov_dif_name;
+		if(IPCManager->enroll_to_dif(this, &promise, prov_ipcp->get_id(), mob_neigh_data) == IPCM_FAILURE ||
+				promise.wait() != IPCM_SUCCESS) {
+			LOG_WARN("Problems enrolling IPCP %u to DIF %s via supporting DIF %s",
+					prov_ipcp->get_id(),
+					mob_neigh_data.difName.processName.c_str(),
+					mob_neigh_data.supportingDifName.processName.c_str());
+			return -1;
+		}
+
+		sleep.sleepForMili(1000);
+
+		//Enroll to the slice1 DIF
+		int_neigh_data.supportingDifName.processName = prov_dif_name;
+		int_neigh_data.difName.processName = "slice1.DIF";
+		if(IPCManager->enroll_to_dif(this, &promise, slice1_ipcp->get_id(), int_neigh_data) == IPCM_FAILURE ||
+				promise.wait() != IPCM_SUCCESS) {
+			LOG_WARN("Problems enrolling IPCP %u to DIF %s via supporting DIF %s",
+					slice1_ipcp->get_id(),
+					int_neigh_data.difName.processName.c_str(),
+					int_neigh_data.supportingDifName.processName.c_str());
+			return -1;
+		}
+
+		//Enroll to the slice2 DIF
+		int_neigh_data.supportingDifName.processName = prov_dif_name;
+		int_neigh_data.difName.processName = "slice2.DIF";
+		if(IPCManager->enroll_to_dif(this, &promise, slice2_ipcp->get_id(), int_neigh_data) == IPCM_FAILURE ||
+				promise.wait() != IPCM_SUCCESS) {
+			LOG_WARN("Problems enrolling IPCP %u to DIF %s via supporting DIF %s",
+					slice2_ipcp->get_id(),
+					int_neigh_data.difName.processName.c_str(),
+					int_neigh_data.supportingDifName.processName.c_str());
+			return -1;
+		}
+
+		hand_state.dif = ssid;
 		hand_state.ipcp = wifi1_ipcp;
 
 		LOG_DBG("Initialized");
@@ -639,12 +805,291 @@ void MobilityManager::execute_handover()
 		result = excecute_handover_arcfire_exp5_2operator_dmm();
 	} else if (hand_state.hand_type == ARCFIRE_EXP5_MAC) {
 		result = execute_handover_arcfire_exp5_mac();
+	} else if (hand_state.hand_type == ARCFIRE_EXP5_TIP_UE1) {
+		result = execute_handover_arcfire_exp5_tip(true);
+	} else if (hand_state.hand_type == ARCFIRE_EXP5_TIP_UE2) {
+		result = execute_handover_arcfire_exp5_tip(false);
 	}
 
 	if (result != 0) {
 	        HandoverTimerTask * task = new HandoverTimerTask(this);
 	        timer.scheduleTask(task, 5000);
 	}
+}
+
+int MobilityManager::execute_handover_arcfire_exp5_tip(bool ue1)
+{
+	std::map<std::string, rina::MediaDIFInfo>::const_iterator difs_it;
+	rina::BaseStationInfo bs_info;
+	NeighborData neigh_data, mob_neigh_data, slice1_neigh_data, slice2_neigh_data;
+	IPCMIPCProcess * wifi1_ipcp, * wifi2_ipcp, * prov1_ipcp;
+	IPCMIPCProcess * prov2_ipcp, * slice1_ipcp, * slice2_ipcp, *ipcp_enroll;
+	IPCMIPCProcess * ipcp_disc, * prov_ipcp_enroll, * prov_ipcp_disc;
+	Promise promise;
+	std::string next_dif, disc_dif, next_prov_dif, dic_prov_dif;
+	rina::Sleep sleep;
+	rina::ApplicationProcessNamingInformation neighbor, slice1_neighbor, slice2_neighbor;
+
+	// Prevent any insertion or deletion of IPC Processes to happen
+	rina::ReadScopedLock readlock(factory->rwlock);
+
+	// 1. Get all IPCPS
+	wifi1_ipcp = factory->getIPCProcess(1);
+	if (wifi1_ipcp == NULL) {
+		LOG_ERR("Could not find IPCP with ID 1");
+		return -1;
+	}
+
+	if (wifi1_ipcp->get_type () != rina::SHIM_WIFI_IPC_PROCESS_STA) {
+		LOG_ERR("Wrong IPCP type: %s", wifi1_ipcp->get_type().c_str());
+		return -1;
+	}
+
+	wifi2_ipcp = factory->getIPCProcess(2);
+	if (wifi2_ipcp == NULL) {
+		LOG_ERR("Could not find IPCP with ID 2");
+		return -1;
+	}
+
+	if (wifi2_ipcp->get_type() != rina::SHIM_WIFI_IPC_PROCESS_STA) {
+		LOG_ERR("Wrong IPCP type: %s", wifi2_ipcp->get_type().c_str());
+		return -1;
+	}
+
+	prov1_ipcp = factory->getIPCProcess(3);
+	if (prov1_ipcp == NULL) {
+		LOG_ERR("Could not find IPCP with ID 3");
+		return -1;
+	}
+
+	if (prov1_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
+		LOG_ERR("Wrong IPCP type: %s", prov1_ipcp->get_type().c_str());
+		return -1;
+	}
+
+	if (ue1) {
+		prov2_ipcp = factory->getIPCProcess(4);
+		if (prov2_ipcp == NULL) {
+			LOG_ERR("Could not find IPCP with ID 4");
+			return -1;
+		}
+
+		if (prov2_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
+			LOG_ERR("Wrong IPCP type: %s", prov2_ipcp->get_type().c_str());
+			return -1;
+		}
+
+		slice1_ipcp = factory->getIPCProcess(5);
+		if (slice1_ipcp == NULL) {
+			LOG_ERR("Could not find IPCP from slice1.DIF");
+			return -1;
+		}
+
+		if (slice1_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
+			LOG_ERR("Wrong IPCP type: %s", slice1_ipcp->get_type().c_str());
+			return -1;
+		}
+
+		slice2_ipcp = factory->getIPCProcess(6);
+		if (slice2_ipcp == NULL) {
+			LOG_ERR("Could not find IPCP from slice2.DIF");
+			return -1;
+		}
+
+		if (slice2_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
+			LOG_ERR("Wrong IPCP type: %s", slice2_ipcp->get_type().c_str());
+			return -1;
+		}
+	}
+
+	//3 Update wifi IPCPs to use
+	if (hand_state.ipcp == wifi1_ipcp) {
+		ipcp_enroll = wifi2_ipcp;
+		ipcp_disc = wifi1_ipcp;
+	} else {
+		ipcp_enroll = wifi1_ipcp;
+		ipcp_disc = wifi2_ipcp;
+	}
+
+	//4 Update DIF name (irati -> pristine -> arcfire -> irina and start again for UE1)
+	// (rinaisense -> ocarina and start again for UE2)
+	disc_dif = hand_state.dif;
+	if (ue1) {
+		if (hand_state.dif == "irati") {
+			next_dif = "pristine";
+			next_prov_dif = "provider1.DIF";
+			neighbor.processName = "ar1.provider1";
+			neighbor.processInstance = "1";
+			hand_state.change_mob_dif = false;
+			prov_ipcp_enroll = prov1_ipcp;
+			prov_ipcp_disc = prov1_ipcp;
+		} else if (hand_state.dif == "pristine") {
+			next_dif = "arcfire";
+			next_prov_dif = "provider2.DIF";
+			neighbor.processName = "ar2.provider1";
+			neighbor.processInstance = "1";
+			hand_state.change_mob_dif = true;
+			prov_ipcp_enroll = prov2_ipcp;
+			prov_ipcp_disc = prov1_ipcp;
+			slice1_neighbor.processName = "core1.slice1";
+			slice1_neighbor.processInstance = "1";
+			slice2_neighbor.processName = "core1.slice2";
+			slice2_neighbor.processInstance = "1";
+		} else if (hand_state.dif == "arcfire"){
+			next_dif = "irina";
+			next_prov_dif = "provider2.DIF";
+			neighbor.processName = "ar3.provider2";
+			neighbor.processInstance = "1";
+			hand_state.change_mob_dif = false;
+			prov_ipcp_enroll = prov2_ipcp;
+			prov_ipcp_disc = prov2_ipcp;
+		} else if (hand_state.dif == "irina"){
+			next_dif = "irati";
+			next_prov_dif = "provider1.DIF";
+			neighbor.processName = "ar4.provider2";
+			neighbor.processInstance = "1";
+			hand_state.change_mob_dif = true;
+			prov_ipcp_enroll = prov1_ipcp;
+			prov_ipcp_disc = prov2_ipcp;
+			slice1_neighbor.processName = "core2.slice1";
+			slice1_neighbor.processInstance = "1";
+			slice2_neighbor.processName = "core2.slice2";
+			slice2_neighbor.processInstance = "1";
+		}
+	} else {
+		if (hand_state.dif == "rinaisense") {
+			next_dif = "ocarina";
+			next_prov_dif = "provider3.DIF";
+			neighbor.processName = "ar5.provider3";
+			neighbor.processInstance = "1";
+			hand_state.change_mob_dif = false;
+			prov_ipcp_enroll = prov1_ipcp;
+			prov_ipcp_disc = prov1_ipcp;
+		} else if (hand_state.dif == "ocarina") {
+			next_dif = "rinaisense";
+			next_prov_dif = "provider3.DIF";
+			neighbor.processName = "ar6.provider3";
+			neighbor.processInstance = "1";
+			hand_state.change_mob_dif = false;
+			prov_ipcp_enroll = prov1_ipcp;
+			prov_ipcp_disc = prov1_ipcp;
+		}
+	}
+
+	// 3. Enroll to next DIF (become multihomed)
+	difs_it = last_media_report.available_difs.find(next_dif);
+	if (difs_it == last_media_report.available_difs.end()) {
+		LOG_WARN("No members of DIF '%s' are within range", next_dif.c_str());
+		return -1;
+	}
+
+	bs_info = difs_it->second.available_bs_ipcps.front();
+
+	//Enroll the shim to the new DIF/AP
+	neigh_data.apName.processName = bs_info.ipcp_address;
+	neigh_data.difName.processName = next_dif;
+	if(IPCManager->enroll_to_dif(this, &promise, ipcp_enroll->get_id(), neigh_data) == IPCM_FAILURE ||
+			promise.wait() != IPCM_SUCCESS) {
+		LOG_WARN("Problems enrolling IPCP %u to DIF %s via neighbor %s",
+			  ipcp_enroll->get_id(),
+			 neigh_data.difName.processName.c_str(),
+			 bs_info.ipcp_address.c_str());
+		return -1;
+	}
+
+	//Enroll to mobile DIF
+	mob_neigh_data.supportingDifName.processName = next_dif;
+	mob_neigh_data.difName.processName = next_prov_dif;
+
+	if(IPCManager->enroll_to_dif(this, &promise, prov_ipcp_enroll->get_id(), mob_neigh_data, true, neighbor) == IPCM_FAILURE ||
+			promise.wait() != IPCM_SUCCESS) {
+		LOG_WARN("Problems enrolling IPCP %u to DIF %s via supporting DIF %s",
+				prov_ipcp_enroll->get_id(),
+				mob_neigh_data.difName.processName.c_str(),
+				mob_neigh_data.supportingDifName.processName.c_str());
+		return -1;
+	}
+
+	if (hand_state.change_mob_dif) {
+		sleep.sleepForMili(1000);
+		slice1_neigh_data.supportingDifName.processName = next_prov_dif;
+		slice1_neigh_data.difName.processName = "slice1.DIF";
+		if(IPCManager->enroll_to_dif(this, &promise, slice1_ipcp->get_id(), slice1_neigh_data,
+				true, slice1_neighbor) == IPCM_FAILURE || promise.wait() != IPCM_SUCCESS) {
+			LOG_WARN("Problems enrolling IPCP %u to DIF %s via supporting DIF %s",
+					slice1_ipcp->get_id(),
+					slice1_neigh_data.difName.processName.c_str(),
+					slice1_neigh_data.supportingDifName.processName.c_str());
+			return -1;
+		}
+
+		slice2_neigh_data.supportingDifName.processName = next_prov_dif;
+		slice2_neigh_data.difName.processName = "slice2.DIF";
+		if(IPCManager->enroll_to_dif(this, &promise, slice2_ipcp->get_id(), slice2_neigh_data,
+				true, slice2_neighbor) == IPCM_FAILURE || promise.wait() != IPCM_SUCCESS) {
+			LOG_WARN("Problems enrolling IPCP %u to DIF %s via supporting DIF %s",
+					slice2_ipcp->get_id(),
+					slice2_neigh_data.difName.processName.c_str(),
+					slice2_neigh_data.supportingDifName.processName.c_str());
+			return -1;
+		}
+	}
+
+	//4 Now it is multihomed, wait 5 seconds and break connectivity through former N-1 DIF
+	sleep.sleepForMili(hand_state.disc_wait_time_ms);
+
+	hand_state.dif = next_dif;
+	hand_state.ipcp = ipcp_enroll;
+
+	if (hand_state.change_mob_dif) {
+		if(IPCManager->disconnect_neighbor(this, &promise, slice1_ipcp->get_id(), slice1_neighbor) == IPCM_FAILURE ||
+				promise.wait() != IPCM_SUCCESS) {
+			LOG_WARN("Problems invoking disconnect from neighbor on IPCP %u",
+					slice1_ipcp->get_id());
+			return -1;
+		}
+
+		if(IPCManager->disconnect_neighbor(this, &promise, slice2_ipcp->get_id(), slice2_neighbor) == IPCM_FAILURE ||
+				promise.wait() != IPCM_SUCCESS) {
+			LOG_WARN("Problems invoking disconnect from neighbor on IPCP %u",
+					slice2_ipcp->get_id());
+			return -1;
+		}
+	}
+
+	if(IPCManager->disconnect_neighbor(this, &promise, prov_ipcp_disc->get_id(), neighbor) == IPCM_FAILURE ||
+			promise.wait() != IPCM_SUCCESS) {
+		LOG_WARN("Problems invoking disconnect from neighbor on IPCP %u",
+				prov_ipcp_disc->get_id());
+		return -1;
+	}
+
+	difs_it = last_media_report.available_difs.find(disc_dif);
+	if (difs_it == last_media_report.available_difs.end()) {
+		LOG_WARN("No members of DIF '%s' are within range", disc_dif.c_str());
+	} else {
+		bs_info = difs_it->second.available_bs_ipcps.front();
+	}
+
+	neighbor.processName = bs_info.ipcp_address;
+	neighbor.processInstance = "";
+
+	if(IPCManager->disconnect_neighbor(this, &promise, ipcp_disc->get_id(), neighbor) == IPCM_FAILURE ||
+			promise.wait() != IPCM_SUCCESS) {
+		LOG_WARN("Problems invoking disconnect from neighbor on IPCP %u",
+				ipcp_disc->get_id());
+		return -1;
+	}
+
+	LOG_DBG("Handover done!");
+
+	//Re-schedule handover task
+	if (hand_state.hand_period_ms != 0) {
+		HandoverTimerTask * task = new HandoverTimerTask(this);
+		timer.scheduleTask(task, hand_state.hand_period_ms);
+	}
+
+	return 0;
 }
 
 //Roaming UE, two provider scenario with static DIF Allocator
