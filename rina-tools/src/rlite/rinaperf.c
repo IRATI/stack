@@ -114,6 +114,7 @@ struct rinaperf {
     int duration;           /* duration of client test (secs) */
     int use_mss_size;       /* use flow MSS as packet size */
     int verbose;            /* be verbose */
+    int timestamp;          /* print timestamp during ping test */
     int stop_pipe[2];       /* to stop client threads */
     int cli_stop;           /* another way to stop client threads */
     int cli_flow_allocated; /* client flows allocated ? */
@@ -260,6 +261,14 @@ ping_client(struct worker *w)
                     clock_gettime(CLOCK_MONOTONIC, &t2);
                     ns = 1000000000 * (t2.tv_sec - t1.tv_sec) +
                          (t2.tv_nsec - t1.tv_nsec);
+                    if (w->rp->timestamp) {
+                        struct timeval recv_time;
+                        gettimeofday(&recv_time, NULL);
+                        PRINTF("[%lu.%06lu] ",
+                           (unsigned long)recv_time.tv_sec,
+                           (unsigned long)recv_time.tv_usec
+                        );
+                    }
                     PRINTF("%d bytes from server: rtt = %.3f ms\n", ret,
                            ((float)ns) / 1000000.0);
                 } else {
@@ -1287,6 +1296,8 @@ usage(void)
         "   -L NUM : maximum loss probability introduced by the flow "
         "(NUM/%u)\n"
         "   -E NUM : maximum delay introduced by the flow (microseconds)\n"
+        "   -T : print timestamp (unix time + microseconds as in gettimeofday) "
+        "before each line in ping test\n"
         "   -v : be verbose\n",
         RINA_FLOW_SPEC_LOSS_MAX);
 }
@@ -1320,6 +1331,7 @@ main(int argc, char **argv)
     rp->duration      = 0;
     rp->use_mss_size  = 1;
     rp->verbose       = 0;
+    rp->timestamp     = 0;
     rp->cfd           = -1;
     rp->stop_pipe[0] = rp->stop_pipe[1] = -1;
     rp->cli_stop = rp->cli_flow_allocated = 0;
@@ -1331,7 +1343,7 @@ main(int argc, char **argv)
     /* Start with a default flow configuration (unreliable flow). */
     rina_flow_spec_unreliable(&rp->flowspec);
 
-    while ((opt = getopt(argc, argv, "hlt:d:c:s:i:B:g:b:a:z:p:D:L:E:wv")) !=
+    while ((opt = getopt(argc, argv, "hlt:d:c:s:i:B:g:b:a:z:p:D:L:E:Twv")) !=
            -1) {
         switch (opt) {
         case 'h':
@@ -1424,6 +1436,10 @@ main(int argc, char **argv)
 
         case 'v':
             rp->verbose = 1;
+            break;
+
+        case 'T':
+            rp->timestamp = 1;
             break;
 
         case 'L':
