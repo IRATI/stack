@@ -497,9 +497,9 @@ int MobilityManager::initialize_arcfire_exp5_tip(bool ue1)
 	}
 
 	if (ue1)
-		slice1_ipcp = factory->getIPCProcess(6);
+		slice2_ipcp = factory->getIPCProcess(6);
 	else
-		slice1_ipcp = factory->getIPCProcess(5);
+		slice2_ipcp = factory->getIPCProcess(5);
 	if (slice2_ipcp == NULL) {
 		LOG_ERR("Could not find IPCP for slice2 DIF");
 		return -1;
