@@ -1,6 +1,6 @@
 #include <chrono>
 #include <map>
-
+#include <sstream>
 #include <tclap/CmdLine.h>
 
 #include "ra_base_server.h"
@@ -101,11 +101,6 @@ private:
 	std::vector<flow_log*> flow_logs;
 	std::map<int, qos_log> qos_logs;
 	std::mutex Mt;
-	union {
-		ra::byte_t Buffer[BUFF_SIZE];
-		dataSDU Data;
-		initSDU InitData;
-	};
 
 	void logger_t() {
 		int fCount;
@@ -144,9 +139,9 @@ private:
 
 			std::cout << "\t" << f->flowId << " (" << (int)f->QoSId << ") | "
 				<< c << " | " << t << " | " << (l*100.0 / t) << " % | " << f->data << " B"
-				<< " |" << (f->minLat / 1000.0)
-				<< " | " << (f->latCount / (1000.0*c))
-				<< " | " << (f->maxLat / 1000.0)
+				<< " |" << (f->minLat / 1000000.0)
+				<< " | " << (f->latCount / (1000000.0*c))
+				<< " | " << (f->maxLat / 1000000.0)
 				<< std::endl;
 		}
 
@@ -160,7 +155,7 @@ private:
 
 			std::cout << "\t(" << QoSId << ") | "
 				<< q.count << " | " << q.total << "  | " << (100.0*l / q.total) << " % | "
-				<< (q.minLat / 1000.0) << "  | " << (q.latCount / (1000 * q.count))<< "  | " << (q.maxLat / 1000.0)
+				<< (q.minLat / 1000000.0) << "  | " << (q.latCount / (1000000 * q.count))<< "  | " << (q.maxLat / 1000000.0)
 				<< std::endl;
 
 		}
@@ -176,6 +171,12 @@ private:
 	}
 
 	flow_log * process_first_sdu(const int Fd) {
+		union {
+			ra::byte_t Buffer[BUFF_SIZE];
+			dataSDU Data;
+			initSDU InitData;
+		};
+
 		if (ra::ReadDataTimeout(Fd, Buffer, TIMEOUT_MS) <= 0) {
 			std::cerr << "No data received during the first second of lifetime" << std::endl;
 			return NULL;
@@ -204,6 +205,11 @@ private:
 	int HandleFlow_log(const int Fd) {
 		int ReadSize;
 		bool start_logger;
+		union {
+			ra::byte_t Buffer[BUFF_SIZE];
+			dataSDU Data;
+			initSDU InitData;
+		};
 
 		flow_log * Flow = process_first_sdu(Fd);
 		if (Flow == NULL)
@@ -239,8 +245,8 @@ private:
 				break;
 			}
 
-			Flow->process(std::chrono::duration_cast<std::chrono::milliseconds>(
-							std::chrono::system_clock::now().time_since_epoch()).count(),
+			Flow->process(std::chrono::duration_cast<std::chrono::microseconds>(
+							std::chrono::high_resolution_clock::now().time_since_epoch()).count(),
 							&Data);
 			Mt.unlock();
 
@@ -255,6 +261,11 @@ private:
 
 	int HandleFlow_drop(const int Fd) {
 		int ReadSize;
+		union {
+			ra::byte_t Buffer[BUFF_SIZE];
+			dataSDU Data;
+			initSDU InitData;
+		};
 
 		flow_log * Flow = process_first_sdu(Fd);
 		if (Flow == NULL)
@@ -281,22 +292,45 @@ private:
 	}
 
 	int HandleFlow_dump(const int Fd) {
-		long long InitTime;
 		int ReadSize;
-
+		union {
+			ra::byte_t Buffer[BUFF_SIZE];
+			dataSDU Data;
+			initSDU InitData;
+		};
+		long long latency;
+		bool start_logger;
 		flow_log * Flow = process_first_sdu(Fd);
 		if (Flow == NULL)
 			return -1;
 
+
 		for (;;) {
-			if(ra::ReadData(Fd, Buffer) <= 0) { return -1;}
+			if(ra::ReadData(Fd, Buffer) <= 0) {
+				return -1;
+			}
+
+			auto now = std::chrono::high_resolution_clock::now();
+			long long current_time = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
+
+			latency = (long long)(current_time - (Data.SendTime));
 
 			if ((int)Data.Flags & SDU_FLAG_FIN) {
+				Mt.lock();
+				std::stringstream stream;
+				stream << Flow->flowId << " |  " << Data.SeqId  << " | " << Data.Size
+								  << "B | " << latency <<" | END"<< std::endl;
+				std::cout << stream.str()<<std::flush;
+				Mt.unlock();
 				break;
 			}
 
-			std::cout << Fd<< " | " << Data.SeqId  << " | " << Data.Size
-				  << "B | " << (Data.SendTime - InitTime) << std::endl;
+			Mt.lock();
+			std::stringstream stream;
+			stream << Flow->flowId << " |  " << Data.SeqId  << " | " << Data.Size
+					<< "B | " << latency << std::endl;
+			std::cout << stream.str()<<std::flush;
+			Mt.unlock();
 		}
 
 		if (write(Fd, Buffer, Data.Size) != (int) Data.Size) {
