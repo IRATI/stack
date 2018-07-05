@@ -8,7 +8,6 @@
 
 #define SDU_FLAG_INIT	1
 #define SDU_FLAG_FIN	2
-#define SDU_FLAG_NAME	4
 
 #pragma pack(push, 1)
 struct dataSDU {

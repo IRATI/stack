@@ -10,7 +10,7 @@
 
 #include <rina/api.h>
 
-#define TIMEOUT_MS 10000
+#define TIMEOUT_MS 5000
 
 namespace ra {
 
