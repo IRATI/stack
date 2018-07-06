@@ -340,6 +340,21 @@ int NMinusOneFlowManager::getManagementFlowToNeighbour(const std::string& name) 
 	return -1;
 }
 
+int NMinusOneFlowManager::get_n1flow_to_neighbor(const rina::FlowSpecification& fspec,
+					         const std::string& name)
+{
+	std::vector<rina::FlowInformation> flows = rina::extendedIPCManager->getAllocatedFlows();
+	for (unsigned int i=0; i<flows.size(); i++) {
+		if (flows[i].remoteAppName.processName == name &&
+				flows[i].flowSpecification.delay == fspec.delay &&
+				flows[i].flowSpecification.loss == fspec.loss) {
+			return flows[i].portId;
+		}
+	}
+
+	return -1;
+}
+
 int NMinusOneFlowManager::getManagementFlowToNeighbour(unsigned int address)
 {
 	const std::list<rina::Neighbor> neighbors =
@@ -550,6 +565,10 @@ void ResourceAllocator::set_dif_configuration(const rina::DIFConfiguration& dif_
 
 	if (n_minus_one_flow_manager_) {
 		n_minus_one_flow_manager_->set_dif_configuration(dif_configuration);
+	}
+
+	if (pduft_gen_ps) {
+		pduft_gen_ps->set_dif_configuration(dif_configuration);
 	}
 
 	//Create QoS cubes RIB objects

@@ -187,7 +187,8 @@ static int pff_sysfs_worker(void * o)
 
         if (data->add) {
         	robject_rset_add(&data->entry->robj, data->rset,
-        			 "%u", data->entry->destination);
+        			 "%u-%d", data->entry->destination,
+				 data->entry->qos_id);
         } else {
         	robject_del(&data->entry->robj);
                 rkfree(&data->entry);

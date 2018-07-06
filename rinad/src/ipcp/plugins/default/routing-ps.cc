@@ -1948,6 +1948,9 @@ void LinkStateRoutingPolicy::processFlowDeallocatedEvent(
 {
 	LOG_IPCP_DBG("N-1 Flow with neighbor lost");
 	//TODO update cost
+
+	//Force a routing table update
+	db_->force_table_update();
 }
 
 void LinkStateRoutingPolicy::processNeighborLostEvent(rina::ConnectiviyToNeighborLostEvent* event)
@@ -1965,6 +1968,9 @@ void LinkStateRoutingPolicy::processFlowAllocatedEvent(rina::NMinusOneFlowAlloca
 
 	//TODO, if we are already neighbors, check if cost has to be updated or
 	//new FSOs have to be added for different (paralel) N-1 flows to neighbor
+
+	//Force a routing table update
+	db_->force_table_update();
 }
 
 void LinkStateRoutingPolicy::processNeighborAddedEvent(rina::NeighborAddedEvent * event)

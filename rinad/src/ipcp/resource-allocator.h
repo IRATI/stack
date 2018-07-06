@@ -181,6 +181,8 @@ public:
 	std::list<int> getManagementFlowsToAllNeighbors(void);
 	int getManagementFlowToNeighbour(const std::string& name);
 	int getManagementFlowToNeighbour(unsigned int address);
+	int get_n1flow_to_neighbor(const rina::FlowSpecification& fspec,
+				   const std::string& name);
 	unsigned int numberOfFlowsToNeighbour(const std::string& apn,
 			const std::string& api);
 

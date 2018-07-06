@@ -362,6 +362,9 @@ public:
 
 	virtual int getManagementFlowToNeighbour(unsigned int address) = 0;
 
+	virtual int get_n1flow_to_neighbor(const rina::FlowSpecification& fspec,
+					   const std::string& name) = 0;
+
 	virtual std::list<int> getManagementFlowsToAllNeighbors(void) = 0;
 
 	virtual unsigned int numberOfFlowsToNeighbour(const std::string& apn,
@@ -376,6 +379,7 @@ public:
 	/// the PDU Forwarding Table has to be updated and do it
 	///	@return true if valid, false otherwise
 	virtual void routingTableUpdated(const std::list<rina::RoutingTableEntry*>& routing_table) = 0;
+	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
 
 	virtual ~IPDUFTGeneratorPs() {}
 };
