@@ -611,33 +611,7 @@ Example configuration:
    * **q_threshold**: Sets the queue threshold. If the queue size is exceeded, PDUs will be marked with ECN flag.
 
 ###### 3.2.2.4.7 RMT policy: QTAMux
-TODO
- 
-   * **Policy name**: qta-mux-ps.
-   * **Policy version**: 1.
-
-Example configuration:
-
-     "rmtConfiguration" : {
-        "pftConfiguration" : {
-            ....
-            }
-        },
-        "policySet" : {
-          "name" : "qta-mux-ps",
-          "version" : "1",
-          "parameters" : [{
-             "name"  : "q_threshold",
-             "value" : "20"
-             }, {
-             "name"  : "q_max",
-             "value" : "500"
-          }]
-        }
-     }
-
-   * **q_max**: The maximum size of the queue
-   * **q_threshold**: Sets the queue threshold. If the queue size is exceeded, PDUs will be marked with ECN flag.
+Documented in plugins/qtamux
 
 ##### 3.2.2.5 Enrollment Task
 Configuration of the enrollment task, which carries out the procedures by which an IPC Process joins a DIF. Currently 
@@ -662,6 +636,9 @@ only the default policy is supported by IRATI.
              },{
                "name"  : "maxEnrollmentRetries",
                "value" : "3"
+             },{
+               "name"  : "n1flows",
+               "value" : "2:10/200:0/10000"
              }]
         }
      }
@@ -672,6 +649,7 @@ only the default policy is supported by IRATI.
 application connection is closed and the N-1 flow deallocated
    * **useReliableNFlow**: true if a realible N-flow is to be used to communicate with the neighbor IPCP (layer management)
    * **maxEnrollmentRetries**: how many times enrollment should be retried in case of failure
+   * **n1flows** (optional): how many flows will be allocated between peer IPCPs, and what are the delay/loss characteristics of each one. The first flow will be used for layer management and data transfer, the others just for data transfer. In the example configuration, two N-1 flows will be requested: one with a maximum delay of 10 ms and a maximum loss probability of 200/10000 SDUs, while the other without loss and delay guarantees.
 
 ##### 3.2.2.6 Flow Allocator
 Flow allocator maps allocate flow requests to a specific QoS cube, and chooses any policies/parameters 
@@ -765,10 +743,29 @@ policy is supported in IRATI.
          "pduftgConfiguration" : {    
            "policySet" : {
              "name" : "default",
-             "version" : "0"
+             "version" : "0",             
+             "parameters" : [{
+                "name"  : "1.qosid",
+                "value" : "10/200"
+             },{
+                "name"  : "2.qosid",
+                "value" : "10/200"
+             },{
+                "name"  : "3.qosid",
+                "value" : "0/10000"
+             },{
+                "name"  : "4.qosid",
+                "value" : "0/10000"
+             }]
            }
          }
      } 
+
+The optional parameters are used to map the qos id of the flows at this DIF to characteristics of the N-1 DIFs 
+through which the flow should be forwarded (only delay/loss right now). For instance the configuration above will 
+add entries to the PDU forwarding table so that entries belonging to QoS ids 1 and 2 are forwarded via an N-1 flow 
+that has a maximum delay of 10 ms and a maximum loss probability of 200/10000 SDUs. Entries belonging to QoS ids 
+3 and 4 will be forwarded via an N-1 flow that does not provide any guarantees on loss and delay.
 
 ##### 3.2.2.9 Routing
 The routing policy is in charge of generating and maintaining the next-hop table, and passing this information to the Resource 

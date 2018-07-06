@@ -327,6 +327,21 @@ std::list<int> NMinusOneFlowManager::getNMinusOneFlowsToNeighbour(unsigned int a
 	return result;
 }
 
+std::list<int> NMinusOneFlowManager::getNMinusOneFlowsToNeighbour(const std::string& name)
+{
+	std::vector<rina::FlowInformation> flows;
+	std::list<int> result;
+
+	flows = rina::extendedIPCManager->getAllocatedFlows();
+	for (unsigned int i=0; i<flows.size(); i++) {
+		if (flows[i].remoteAppName.processName == name) {
+			result.push_back(flows[i].portId);
+		}
+	}
+
+	return result;
+}
+
 int NMinusOneFlowManager::getManagementFlowToNeighbour(const std::string& name) {
 	const std::list<rina::Neighbor> neighbors =
 			ipc_process_->enrollment_task_->get_neighbors();

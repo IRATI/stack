@@ -1637,6 +1637,9 @@ void EnrollmentTask::add_enrollment_state_machine(int portId, IEnrollmentStateMa
 
 void EnrollmentTask::neighborDeclaredDead(rina::NeighborDeclaredDeadEvent * deadEvent)
 {
+	std::list<int> flows;
+	std::list<int>::iterator it;
+
 	try{
 		irm_->getNMinus1FlowInformation(deadEvent->neighbor_.underlying_port_id_);
 	} catch(rina::Exception &e){
@@ -1645,8 +1648,12 @@ void EnrollmentTask::neighborDeclaredDead(rina::NeighborDeclaredDeadEvent * dead
 	}
 
 	try{
-		LOG_IPCP_INFO("Requesting the deallocation of the N-1 flow with the dead neighbor");
-		irm_->deallocateNMinus1Flow(deadEvent->neighbor_.underlying_port_id_);
+		LOG_IPCP_INFO("Requesting the deallocation of the N-1 flows with the dead neighbor");
+		flows = ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
+				getNMinusOneFlowsToNeighbour(deadEvent->neighbor_.name_.processName);
+		for (it = flows.begin(); it != flows.end(); ++it) {
+			deallocateFlow(*it);
+		}
 	} catch (rina::Exception &e){
 		LOG_IPCP_ERR("Problems requesting the deallocation of a N-1 flow: %s", e.what());
 	}
@@ -1910,6 +1917,8 @@ void EnrollmentTask::deallocate_flows_and_destroy_esm(IEnrollmentStateMachine * 
 	IPCPEnrollmentTaskPS * ipcp_ps = 0;
 	rina::ConnectiviyToNeighborLostEvent * cnl_event = 0;
 	rina::Sleep sleep;
+	std::list<int> flows;
+	std::list<int>::iterator it;
 
 	//In the case of the enrollee state machine, reply to the IPC Manager
 	if (call_ps) {
@@ -1934,9 +1943,13 @@ void EnrollmentTask::deallocate_flows_and_destroy_esm(IEnrollmentStateMachine * 
 		ipcp->resource_allocator_->remove_temp_pduft_entry(esm->remote_peer_.address_);
 	}
 
-	//Deallocate N-1 flow, sleep for 20 ms first (TODO Fix this)
+	//Deallocate N-1 flows, sleep for 20 ms first (TODO Fix this)
 	sleep.sleepForMili(20);
-	deallocateFlow(port_id);
+	flows = ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
+			getNMinusOneFlowsToNeighbour(esm->remote_peer_.name_.processName);
+	for (it = flows.begin(); it != flows.end(); ++it) {
+		deallocateFlow(*it);
+	}
 
 	//Inform about connectivity to neighbor lost
 	cnl_event = new rina::ConnectiviyToNeighborLostEvent(esm->remote_peer_);
