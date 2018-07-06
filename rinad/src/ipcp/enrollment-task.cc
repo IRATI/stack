@@ -1819,23 +1819,25 @@ void EnrollmentTask::enrollmentCompleted(const rina::Neighbor& neighbor, bool en
 	event_manager_->deliverEvent(event);
 
 	//Request allocation of data transfer N-1 flows if needed
-	flowInformation.remoteAppName.processName = neighbor.name_.processName;
-	flowInformation.remoteAppName.processInstance = neighbor.name_.processInstance;
-	flowInformation.localAppName.processName = ipcp->get_name();
-	flowInformation.localAppName.processInstance = ipcp->get_instance();
-	flowInformation.difName = neighbor.supporting_dif_name_;
-	for (it = n1_flows_to_create.begin();
-			it != n1_flows_to_create.end(); ++it) {
-		if (it == n1_flows_to_create.begin())
-			continue;
+	if (enrollee) {
+		flowInformation.remoteAppName.processName = neighbor.name_.processName;
+		flowInformation.remoteAppName.processInstance = neighbor.name_.processInstance;
+		flowInformation.localAppName.processName = ipcp->get_name();
+		flowInformation.localAppName.processInstance = ipcp->get_instance();
+		flowInformation.difName = neighbor.supporting_dif_name_;
+		for (it = n1_flows_to_create.begin();
+				it != n1_flows_to_create.end(); ++it) {
+			if (it == n1_flows_to_create.begin())
+				continue;
 
-		flowInformation.flowSpecification.delay = it->delay;
-		flowInformation.flowSpecification.loss = it->loss;
+			flowInformation.flowSpecification.delay = it->delay;
+			flowInformation.flowSpecification.loss = it->loss;
 
-		try {
-			irm_->allocateNMinus1Flow(flowInformation);
-		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Problems allocating N-1 flow: %s", e.what());
+			try {
+				irm_->allocateNMinus1Flow(flowInformation);
+			} catch (rina::Exception &e) {
+				LOG_IPCP_ERR("Problems allocating N-1 flow: %s", e.what());
+			}
 		}
 	}
 }
