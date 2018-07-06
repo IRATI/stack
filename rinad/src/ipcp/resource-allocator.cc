@@ -371,21 +371,36 @@ unsigned int NMinusOneFlowManager::numberOfFlowsToNeighbour(const std::string& a
 //Class IPCP Flow Acceptor
 bool IPCPFlowAcceptor::accept_flow(const rina::FlowRequestEvent& event)
 {
+	bool have_flow_with_remote_app;
+
 	if (ipcp_->get_operational_state() != ASSIGNED_TO_DIF) {
 		return false;
 	}
 
-	//TODO deal with the different AEs (Management vs. Data transfer), right now assuming the flow
-	//is both used for data transfer and management purposes
 	try {
 		rina::extendedIPCManager->getPortIdToRemoteApp(event.remoteApplicationName);
-		LOG_IPCP_INFO("Rejecting flow request since we already have a flow to the remote IPC Process: %s-%s",
-				event.remoteApplicationName.processName.c_str(),
-				event.remoteApplicationName.processInstance.c_str());
-		return false;
+		have_flow_with_remote_app = true;
 	} catch(rina::Exception & ex) {
-		return true;
+		have_flow_with_remote_app = false;
 	}
+
+	//Deal with the different AEs (Management vs. Data transfer), right now assuming the flow
+	//is both used for data transfer and management purposes
+	if (event.localApplicationName.entityName == IPCProcess::MANAGEMENT_AE
+			&& have_flow_with_remote_app) {
+		LOG_IPCP_INFO("Rejecting flow request since we already have a flow to the remote IPC Process: %s-%s",
+							event.remoteApplicationName.processName.c_str(),
+							event.remoteApplicationName.processInstance.c_str());
+		return false;
+	} else if (event.localApplicationName.entityName == IPCProcess::DATA_TRANSFER_AE
+			&& !have_flow_with_remote_app) {
+		LOG_IPCP_INFO("Rejecting flow request since we don't have a flow to the remote IPC Process: %s-%s",
+							event.remoteApplicationName.processName.c_str(),
+							event.remoteApplicationName.processInstance.c_str());
+		return false;
+	}
+
+	return true;
 }
 
 //CLASS Resource Allocator

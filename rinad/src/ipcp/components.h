@@ -133,6 +133,10 @@ public:
 
 	/// True if a reliable_n_flow is to be used, false otherwise
 	bool use_reliable_n_flow;
+
+	/// List of N-1 flows to create when enrolling to a neighbor,
+	/// with their QoS characteristics
+	std::list<rina::FlowSpecification> n1_flows_to_create;
 };
 
 /// Policy set of the IPCP enrollment task

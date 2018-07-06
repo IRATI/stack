@@ -317,6 +317,7 @@ public:
 	static const std::string DECLARED_DEAD_INTERVAL_IN_MS;
 	static const std::string MAX_ENROLLMENT_RETRIES;
 	static const std::string USE_RELIABLE_N_FLOW;
+	static const std::string N1_FLOWS;
 
 	EnrollmentTask();
 	~EnrollmentTask();
@@ -371,6 +372,8 @@ public:
 	void clean_state(unsigned int port_id);
 
 private:
+	void parse_n1flows(void);
+
 	void _add_neighbor(const rina::Neighbor& neighbor);
 
 	void subscribeToEvents();
@@ -425,6 +428,7 @@ private:
 	rina::ReadWriteLockable neigh_lock;
 
 	IPCPEnrollmentTaskPS * ipcp_ps;
+	std::string encoded_n1_flows;
 };
 
 /// Handles the operations related to the "daf.management.operationalStatus" object

@@ -662,6 +662,7 @@ const std::string EnrollmentTask::WATCHDOG_PERIOD_IN_MS = "watchdogPeriodInMs";
 const std::string EnrollmentTask::DECLARED_DEAD_INTERVAL_IN_MS = "declaredDeadIntervalInMs";
 const std::string EnrollmentTask::MAX_ENROLLMENT_RETRIES = "maxEnrollmentRetries";
 const std::string EnrollmentTask::USE_RELIABLE_N_FLOW = "useReliableNFlow";
+const std::string EnrollmentTask::N1_FLOWS = "n1flows";
 
 EnrollmentTask::EnrollmentTask() : IPCPEnrollmentTask()
 {
@@ -675,6 +676,8 @@ EnrollmentTask::EnrollmentTask() : IPCPEnrollmentTask()
 	declared_dead_int_ms_ = 120000;
 	ipcp_ps = 0;
 	use_reliable_n_flow = false;
+	// Create 1 N-1 flow, delay = don't care, loss = don't care
+	encoded_n1_flows = "1:0/10000";
 }
 
 EnrollmentTask::~EnrollmentTask()
@@ -1072,6 +1075,59 @@ void EnrollmentTask::watchdog_read_result(const std::string& remote_app_name,
 	}
 }
 
+void EnrollmentTask::parse_n1flows()
+{
+	std::vector<std::string> result;
+	const char * str;
+	int num_flows;
+	int loss;
+	int delay;
+	rina::FlowSpecification fspec;
+	std::string efspec, eloss, edelay;
+
+	str = &encoded_n1_flows[0];
+
+	do
+	{
+		const char *begin = str;
+
+		while(*str != ':' && *str)
+			str++;
+
+		result.push_back(std::string(begin, str));
+	} while (0 != *str++);
+
+	if (rina::string2int(result[0], num_flows)) {
+		LOG_WARN("Could not parse number of flows %s, using 1",
+			 result[0].c_str());
+		num_flows = 1;
+	}
+
+	for (int i=0; i<num_flows; i++) {
+		efspec = result[i+1];
+
+		edelay = efspec.substr(0, efspec.find("/"));
+		if (rina::string2int(edelay, delay)) {
+			LOG_WARN("Could not parse delay %s, using 0",
+				 edelay.c_str());
+			fspec.delay = 0;
+		} else {
+			fspec.delay = delay;
+		}
+
+		eloss = efspec.substr(efspec.find("/") + 1);
+		if (rina::string2int(eloss, loss)) {
+			LOG_WARN("Could not parse delay %s, using 10000",
+				 edelay.c_str());
+			fspec.loss = 10000;
+		} else {
+			fspec.loss = loss;
+		}
+
+		n1_flows_to_create.push_back(fspec);
+	}
+}
+
 void EnrollmentTask::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
 {
 	rina::PolicyConfig psconf = dif_configuration.et_configuration_.policy_set_;
@@ -1113,6 +1169,14 @@ void EnrollmentTask::set_dif_configuration(const rina::DIFConfiguration& dif_con
 		LOG_IPCP_INFO("Could not parse use_reliable_n_flow, using default value: %d",
 			      use_reliable_n_flow);
 	}
+
+	try {
+		encoded_n1_flows = psconf.get_param_value_as_string(N1_FLOWS);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_INFO("Could not parse n1flows, using default value: %s",
+			      encoded_n1_flows.c_str());
+	}
+	parse_n1flows();
 
 	//Add Watchdog RIB object to RIB
 	try{
@@ -1231,6 +1295,8 @@ void EnrollmentTask::processDisconnectNeighborRequestEvent(const rina::Disconnec
 
 void EnrollmentTask::initiateEnrollment(const rina::EnrollmentRequest& request)
 {
+	rina::FlowSpecification fspec;
+
 	if (isEnrolledTo(request.neighbor_.name_.processName)) {
 		LOG_IPCP_ERR("Already enrolled to IPC Process %s",
 			     request.neighbor_.name_.processName.c_str());
@@ -1241,13 +1307,18 @@ void EnrollmentTask::initiateEnrollment(const rina::EnrollmentRequest& request)
 	//dedicated to layer management
 	//FIXME not providing FlowSpec information
 	//FIXME not distinguishing between AEs
+	fspec = n1_flows_to_create.front();
 	rina::FlowInformation flowInformation;
 	flowInformation.remoteAppName = request.neighbor_.name_;
+	flowInformation.remoteAppName.entityName = IPCProcess::MANAGEMENT_AE;
 	flowInformation.localAppName.processName = ipcp->get_name();
 	flowInformation.localAppName.processInstance = ipcp->get_instance();
+	flowInformation.localAppName.entityName = IPCProcess::MANAGEMENT_AE;
 	flowInformation.difName = request.neighbor_.supporting_dif_name_;
 	flowInformation.flowSpecification.msg_boundaries = true;
 	flowInformation.flowSpecification.orderedDelivery = true;
+	flowInformation.flowSpecification.delay = fspec.delay;
+	flowInformation.flowSpecification.loss = fspec.loss;
 	unsigned int handle = -1;
 	try {
 		handle = irm_->allocateNMinus1Flow(flowInformation);
@@ -1742,9 +1813,35 @@ void EnrollmentTask::enrollmentCompleted(const rina::Neighbor& neighbor, bool en
 			 	 	 bool prepare_handover,
 					 const rina::ApplicationProcessNamingInformation& disc_neigh_name)
 {
+	std::list<rina::FlowSpecification>::iterator it;
+	rina::FlowInformation flowInformation;
+
 	rina::NeighborAddedEvent * event = new rina::NeighborAddedEvent(neighbor, enrollee,
 									prepare_handover, disc_neigh_name);
 	event_manager_->deliverEvent(event);
+
+	//Request allocation of data transfer N-1 flows if needed
+	flowInformation.remoteAppName.processName = neighbor.name_.processName;
+	flowInformation.remoteAppName.processInstance = neighbor.name_.processInstance;
+	flowInformation.remoteAppName.entityName = IPCProcess::DATA_TRANSFER_AE;
+	flowInformation.localAppName.processName = ipcp->get_name();
+	flowInformation.localAppName.processInstance = ipcp->get_instance();
+	flowInformation.localAppName.entityName = IPCProcess::DATA_TRANSFER_AE;
+	flowInformation.difName = neighbor.supporting_dif_name_;
+	for (it = n1_flows_to_create.begin();
+			it != n1_flows_to_create.end(); ++it) {
+		if (it == n1_flows_to_create.begin())
+			continue;
+
+		flowInformation.flowSpecification.delay = it->delay;
+		flowInformation.flowSpecification.loss = it->loss;
+
+		try {
+			irm_->allocateNMinus1Flow(flowInformation);
+		} catch (rina::Exception &e) {
+			LOG_IPCP_ERR("Problems allocating N-1 flow: %s", e.what());
+		}
+	}
 }
 
 void EnrollmentTask::release(int invoke_id,
