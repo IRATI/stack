@@ -2031,14 +2031,14 @@ void LinkStateRoutingPolicy::propagateFSDB()
 	rina::ScopedLock g(lock_);
 
 	//1 Get the active N-1 flows
-	std::list<rina::FlowInformation> nMinusOneFlows =
-			ipc_process_->resource_allocator_->get_n_minus_one_flow_manager()->getAllNMinusOneFlowInformation();
+	std::list<int> n1_ports =
+			ipc_process_->resource_allocator_->get_n_minus_one_flow_manager()->getManagementFlowsToAllNeighbors();
 	//2 Initialize the map
 	std::map <int, std::list< std::list<FlowStateObject> > > objectsToSend;
-	for(std::list<rina::FlowInformation>::iterator it = nMinusOneFlows.begin();
-		it != nMinusOneFlows.end(); ++it) 
+	for(std::list<int>::iterator it = n1_ports.begin();
+		it != n1_ports.end(); ++it)
 	{
-		objectsToSend[it->portId] = std::list< std::list<FlowStateObject> >();
+		objectsToSend[*it] = std::list< std::list<FlowStateObject> >();
 	}
 
 	//3 Get the objects to send

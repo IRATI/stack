@@ -362,6 +362,8 @@ public:
 
 	virtual int getManagementFlowToNeighbour(unsigned int address) = 0;
 
+	virtual std::list<int> getManagementFlowsToAllNeighbors(void) = 0;
+
 	virtual unsigned int numberOfFlowsToNeighbour(const std::string& apn,
 			const std::string& api) = 0;
 };
