@@ -377,28 +377,10 @@ bool IPCPFlowAcceptor::accept_flow(const rina::FlowRequestEvent& event)
 		return false;
 	}
 
-	try {
-		rina::extendedIPCManager->getPortIdToRemoteApp(event.remoteApplicationName);
-		have_flow_with_remote_app = true;
-	} catch(rina::Exception & ex) {
-		have_flow_with_remote_app = false;
-	}
-
-	//Deal with the different AEs (Management vs. Data transfer), right now assuming the flow
-	//is both used for data transfer and management purposes
-	if (event.localApplicationName.entityName == IPCProcess::MANAGEMENT_AE
-			&& have_flow_with_remote_app) {
-		LOG_IPCP_INFO("Rejecting flow request since we already have a flow to the remote IPC Process: %s-%s",
-							event.remoteApplicationName.processName.c_str(),
-							event.remoteApplicationName.processInstance.c_str());
-		return false;
-	} else if (event.localApplicationName.entityName == IPCProcess::DATA_TRANSFER_AE
-			&& !have_flow_with_remote_app) {
-		LOG_IPCP_INFO("Rejecting flow request since we don't have a flow to the remote IPC Process: %s-%s",
-							event.remoteApplicationName.processName.c_str(),
-							event.remoteApplicationName.processInstance.c_str());
-		return false;
-	}
+	// TODO Deal with the different AEs (Management vs. Data transfer), right now assuming the flow
+	//is both used for data transfer and management purposes. Right now accepting all flows
+	//this is an obvious problem for (D)DoS. Implement a better policy here (max. number of flows
+	//per peer, for instance)
 
 	return true;
 }

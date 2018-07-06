@@ -1310,10 +1310,8 @@ void EnrollmentTask::initiateEnrollment(const rina::EnrollmentRequest& request)
 	fspec = n1_flows_to_create.front();
 	rina::FlowInformation flowInformation;
 	flowInformation.remoteAppName = request.neighbor_.name_;
-	flowInformation.remoteAppName.entityName = IPCProcess::MANAGEMENT_AE;
 	flowInformation.localAppName.processName = ipcp->get_name();
 	flowInformation.localAppName.processInstance = ipcp->get_instance();
-	flowInformation.localAppName.entityName = IPCProcess::MANAGEMENT_AE;
 	flowInformation.difName = request.neighbor_.supporting_dif_name_;
 	flowInformation.flowSpecification.msg_boundaries = true;
 	flowInformation.flowSpecification.orderedDelivery = true;
@@ -1823,10 +1821,8 @@ void EnrollmentTask::enrollmentCompleted(const rina::Neighbor& neighbor, bool en
 	//Request allocation of data transfer N-1 flows if needed
 	flowInformation.remoteAppName.processName = neighbor.name_.processName;
 	flowInformation.remoteAppName.processInstance = neighbor.name_.processInstance;
-	flowInformation.remoteAppName.entityName = IPCProcess::DATA_TRANSFER_AE;
 	flowInformation.localAppName.processName = ipcp->get_name();
 	flowInformation.localAppName.processInstance = ipcp->get_instance();
-	flowInformation.localAppName.entityName = IPCProcess::DATA_TRANSFER_AE;
 	flowInformation.difName = neighbor.supporting_dif_name_;
 	for (it = n1_flows_to_create.begin();
 			it != n1_flows_to_create.end(); ++it) {
