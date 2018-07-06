@@ -160,6 +160,9 @@ public:
     int max_delay = 0;
     int max_loss  = RINA_FLOW_SPEC_LOSS_MAX;
 
+    /* Tun device tx queue length */
+    int tx_q_len = 0;
+
     void start_workers();
     int setup();
     int main_loop();
@@ -641,6 +644,17 @@ Remote::ip_configure() const
             cerr << "Failed to disable TSO and GSO for " << tun_name << endl;
             return -1;
         }
+    }
+
+    if (g->tx_q_len) {
+	    /* Set tx queue length */
+	    stringstream cmdss;
+
+	    cmdss << "ip link set " << tun_name << " txqueuelen " << g->tx_q_len;
+	    if (execute_command(cmdss)) {
+		    cerr << "Failed to set txqueuelen" << endl;
+		    return -1;
+	    }
     }
 
     {
@@ -1259,6 +1273,8 @@ usage(void)
          << RINA_FLOW_SPEC_LOSS_MAX << ")" << endl
          << "   -E NUM : maximum delay introduced by the flow (microseconds)"
          << endl
+	 << "   -t NUM : tunnel TUN device tx queue length (packets)"
+	 << endl
          << "   -v : be verbose" << endl;
 }
 
@@ -1269,7 +1285,7 @@ main(int argc, char **argv)
     int background       = 0;
     int opt;
 
-    while ((opt = getopt(argc, argv, "hc:vL:E:w")) != -1) {
+    while ((opt = getopt(argc, argv, "hc:vL:E:t:w")) != -1) {
         switch (opt) {
         case 'h':
             usage();
@@ -1295,6 +1311,14 @@ main(int argc, char **argv)
             g->max_delay = atoi(optarg);
             if (g->max_delay < 0 || g->max_delay > 5000000) {
                 cout << "    Invalid 'max delay' " << g->max_delay << endl;
+                return -1;
+            }
+            break;
+
+        case 't':
+            g->tx_q_len = atoi(optarg);
+            if (g->tx_q_len < 0 || g->tx_q_len > 10000) {
+                cout << "    Invalid 'tx_q_len' " << g->tx_q_len << endl;
                 return -1;
             }
             break;
