@@ -272,63 +272,65 @@ void Client::pingFlow()
 {
 	Ping ping;
 	deque<Ping> sent;
-        unsigned char *buffer = new unsigned char[data_size];
-        unsigned int sdus_sent = 0;
-        unsigned int sdus_received = 0;
+	unsigned char *buffer = new unsigned char[data_size];
+	unsigned int sdus_sent = 0;
+	unsigned int sdus_received = 0;
 	timespec endtp;
-        //unsigned char counter = 0;
-        double min_rtt = LONG_MAX;
-        double max_rtt = 0;
-        double average_rtt = 0;
-        double m2 = 0;
-        double delta = 0;
-        double variance = 0;
-        double stdev = 0;
-        double current_rtt = 0;
+	//unsigned char counter = 0;
+	double min_rtt = LONG_MAX;
+	double max_rtt = 0;
+	double average_rtt = 0;
+	double m2 = 0;
+	double delta = 0;
+	double variance = 0;
+	double stdev = 0;
+	double current_rtt = 0;
 
 	for (ping.seq = 0; ping.seq < echo_times; ping.seq++) {
 		bool bad_response;
-        	int bytes_read = 0;
-                int ret;
+		int bytes_read = 0;
+		Ping ping_aux;
+		unsigned int index;
+		int ret;
 
 		ping.fill(buffer, data_size);
 		get_current_time(ping.begintp);
-		sent.push_back(ping);
+		sent.push_front(ping);
 
-        	ret = write(fd, buffer, data_size);
-                if (ret != (int)data_size) {
-                        if (errno == EAGAIN) {
-                                continue;
-                        }
-                        ostringstream oss;
+		ret = write(fd, buffer, data_size);
+		if (ret != (int)data_size) {
+			if (errno == EAGAIN) {
+				continue;
+			}
+			ostringstream oss;
 
-                        oss << "write() error: ";
-                        if (ret < 0) {
-                                oss << strerror(errno);
-                        } else {
-                                oss << "partial write " << ret <<
-                                        "/" << data_size;
-                        }
-                        LOG_ERR("%s", oss.str().c_str());
-                        break;
-                }
+			oss << "write() error: ";
+			if (ret < 0) {
+				oss << strerror(errno);
+			} else {
+				oss << "partial write " << ret <<
+						"/" << data_size;
+			}
+			LOG_ERR("%s", oss.str().c_str());
+			break;
+		}
 
-        	sdus_sent ++;
+		sdus_sent ++;
 
 		bool read_late = false;
-	read:
-                bytes_read = readTimeout(buffer, data_size,
-                        read_late ? wait : lost_wait);
+read:
+		bytes_read = readTimeout(buffer, data_size,
+				read_late ? wait : lost_wait);
 
-		if (bytes_read < 0 && errno == EAGAIN) {
+		if (bytes_read <= 0 && errno == EAGAIN) {
 			if (!read_late) {
 				LOG_WARN("Timeout waiting for reply, SDU maybe lost");
 			}
-        		continue;
-        	}
+			continue;
+		}
 
-        	sdus_received ++;
-        	get_current_time(endtp);
+
+		get_current_time(endtp);
 
 		/* In case that SDUs are late (i.e. not lost), we kept track
 		 * of all unanswered pings. This is important because the
@@ -337,48 +339,63 @@ void Client::pingFlow()
 		 * However, in order not to complicate things too much, we
 		 * assume replies are always ordered.
 		 */
-		while ((bad_response = !sent.front().test(buffer, data_size))
-		       && sent.size() > 1) {
-			sent.pop_front();
+		index = 0;
+		do{
+			ping_aux = sent[index];
+			if (!(bad_response = !ping_aux.test(buffer, data_size))){
+				break;
+			}
+			++index;
+		}while (sent.size() > index);
+
+		if (bad_response){
+			cout << "SDU [bad response]" << endl;
+			if (ping.seq == echo_times - 1)
+				break;
+			read_late = true;
+			goto read;
 		}
+
+		sdus_received ++;
+
 		current_rtt = time_difference_in_ms(
-			sent.front().begintp, endtp);
+				ping_aux.begintp, endtp);
 
-        	if (current_rtt < min_rtt) {
-        		min_rtt = current_rtt;
-        	}
-        	if (current_rtt > max_rtt) {
-        		max_rtt = current_rtt;
-        	}
+		if (current_rtt < min_rtt) {
+			min_rtt = current_rtt;
+		}
+		if (current_rtt > max_rtt) {
+			max_rtt = current_rtt;
+		}
 
-        	delta = current_rtt - average_rtt;
-        	average_rtt = average_rtt + delta/(double)sdus_received;
-        	m2 = m2 + delta*(current_rtt - average_rtt);
+		delta = current_rtt - average_rtt;
+		average_rtt = average_rtt + delta/(double)sdus_received;
+		m2 = m2 + delta*(current_rtt - average_rtt);
 
 		cout << "SDU size = " << data_size << ", seq = "
-		     << sent.front().seq << ", RTT = " << current_rtt << " ms";
-		if (bad_response)
-        		cout << " [bad response]";
-        	cout << endl;
+				<< ping_aux.seq << ", RTT = " << current_rtt << " ms";
+		if (index != 0)
+			cout << " [REORDERED] "  << index << "   " << sent.size();
+		cout << endl;
 
 		if (ping.seq == echo_times - 1)
 			break;
 
-		sent.pop_front();
+		sent.erase(sent.begin()+index);
 		read_late = true;
 		goto read;
-        }
+	}
 
-        variance = m2/((double)sdus_received -1);
-        stdev = sqrt(variance);
+	variance = m2/((double)sdus_received -1);
+	stdev = sqrt(variance);
 
-        cout << "SDUs sent: "<< sdus_sent << "; SDUs received: " << sdus_received
-             << "; " << ((sdus_sent - sdus_received)*100/sdus_sent) << "% SDU loss"
-             << "; Minimum RTT: " << min_rtt << " ms; Maximum RTT: " << max_rtt
-             << " ms; Average RTT:" << average_rtt
-             << " ms; Standard deviation: " << stdev<<" ms"<<endl;
+	cout << "SDUs sent: "<< sdus_sent << "; SDUs received: " << sdus_received
+			<< "; " << ((sdus_sent - sdus_received)*100/sdus_sent) << "% SDU loss"
+			<< "; Minimum RTT: " << min_rtt << " ms; Maximum RTT: " << max_rtt
+			<< " ms; Average RTT:" << average_rtt
+			<< " ms; Standard deviation: " << stdev<<" ms"<<endl;
 
-        delete [] buffer;
+	delete [] buffer;
 }
 
 void Client::floodFlow()
