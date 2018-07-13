@@ -136,7 +136,7 @@ public:
 
 	/// List of N-1 flows to create when enrolling to a neighbor,
 	/// with their QoS characteristics
-	std::list<rina::FlowSpecification> n1_flows_to_create;
+	std::map< std::string, std::list<rina::FlowSpecification> > n1_flows_to_create;
 };
 
 /// Policy set of the IPCP enrollment task

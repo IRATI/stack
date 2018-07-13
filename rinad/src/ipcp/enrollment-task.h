@@ -372,7 +372,8 @@ public:
 	void clean_state(unsigned int port_id);
 
 private:
-	void parse_n1flows(void);
+	void parse_n1flows(const std::string& name,
+			   const std::string& value);
 
 	void _add_neighbor(const rina::Neighbor& neighbor);
 
@@ -428,7 +429,6 @@ private:
 	rina::ReadWriteLockable neigh_lock;
 
 	IPCPEnrollmentTaskPS * ipcp_ps;
-	std::string encoded_n1_flows;
 };
 
 /// Handles the operations related to the "daf.management.operationalStatus" object

@@ -676,8 +676,6 @@ EnrollmentTask::EnrollmentTask() : IPCPEnrollmentTask()
 	declared_dead_int_ms_ = 120000;
 	ipcp_ps = 0;
 	use_reliable_n_flow = false;
-	// Create 1 N-1 flow, delay = don't care, loss = don't care
-	encoded_n1_flows = "1:0/10000";
 }
 
 EnrollmentTask::~EnrollmentTask()
@@ -1075,17 +1073,34 @@ void EnrollmentTask::watchdog_read_result(const std::string& remote_app_name,
 	}
 }
 
-void EnrollmentTask::parse_n1flows()
+void EnrollmentTask::parse_n1flows(const std::string& name,
+		                   const std::string& value)
 {
 	std::vector<std::string> result;
+	std::list<rina::FlowSpecification> fspecs;
 	const char * str;
 	int num_flows;
 	int loss;
 	int delay;
 	rina::FlowSpecification fspec;
-	std::string efspec, eloss, edelay;
+	std::string n1_dif, efspec, eloss, edelay;
 
-	str = &encoded_n1_flows[0];
+	str = &name[0];
+
+	do
+	{
+		const char *begin = str;
+
+		while(*str != ':' && *str)
+			str++;
+
+		result.push_back(std::string(begin, str));
+	} while (0 != *str++);
+
+	n1_dif = result[1];
+
+	result.clear();
+	str = &value[0];
 
 	do
 	{
@@ -1124,12 +1139,16 @@ void EnrollmentTask::parse_n1flows()
 			fspec.loss = loss;
 		}
 
-		n1_flows_to_create.push_back(fspec);
+		fspecs.push_back(fspec);
 	}
+
+	n1_flows_to_create[n1_dif] = fspecs;
 }
 
 void EnrollmentTask::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
 {
+	std::list<rina::PolicyParameter>::const_iterator it;
+
 	rina::PolicyConfig psconf = dif_configuration.et_configuration_.policy_set_;
 	if (select_policy_set(std::string(), psconf.name_) != 0) {
 		throw rina::Exception("Cannot create enrollment task policy-set");
@@ -1170,13 +1189,11 @@ void EnrollmentTask::set_dif_configuration(const rina::DIFConfiguration& dif_con
 			      use_reliable_n_flow);
 	}
 
-	try {
-		encoded_n1_flows = psconf.get_param_value_as_string(N1_FLOWS);
-	} catch (rina::Exception &e) {
-		LOG_IPCP_INFO("Could not parse n1flows, using default value: %s",
-			      encoded_n1_flows.c_str());
+	for(it = psconf.parameters_.begin(); it != psconf.parameters_.end(); ++it) {
+		if (it->name_.find(N1_FLOWS) != std::string::npos) {
+			parse_n1flows(it->name_, it->value_);
+		}
 	}
-	parse_n1flows();
 
 	//Add Watchdog RIB object to RIB
 	try{
@@ -1296,6 +1313,7 @@ void EnrollmentTask::processDisconnectNeighborRequestEvent(const rina::Disconnec
 void EnrollmentTask::initiateEnrollment(const rina::EnrollmentRequest& request)
 {
 	rina::FlowSpecification fspec;
+	std::map< std::string , std::list<rina::FlowSpecification> >::iterator it;
 
 	if (isEnrolledTo(request.neighbor_.name_.processName)) {
 		LOG_IPCP_ERR("Already enrolled to IPC Process %s",
@@ -1307,7 +1325,10 @@ void EnrollmentTask::initiateEnrollment(const rina::EnrollmentRequest& request)
 	//dedicated to layer management
 	//FIXME not providing FlowSpec information
 	//FIXME not distinguishing between AEs
-	fspec = n1_flows_to_create.front();
+	it = n1_flows_to_create.find(request.neighbor_.supporting_dif_name_.processName);
+	if (it != n1_flows_to_create.end()) {
+		fspec = it->second.front();
+	}
 	rina::FlowInformation flowInformation;
 	flowInformation.remoteAppName = request.neighbor_.name_;
 	flowInformation.localAppName.processName = ipcp->get_name();
@@ -1819,6 +1840,8 @@ void EnrollmentTask::enrollmentCompleted(const rina::Neighbor& neighbor, bool en
 					 const rina::ApplicationProcessNamingInformation& disc_neigh_name)
 {
 	std::list<rina::FlowSpecification>::iterator it;
+	std::list<rina::FlowSpecification> fspecs;
+	std::map< std::string, std::list<rina::FlowSpecification> >::iterator fit;
 	rina::FlowInformation flowInformation;
 
 	rina::NeighborAddedEvent * event = new rina::NeighborAddedEvent(neighbor, enrollee,
@@ -1832,9 +1855,14 @@ void EnrollmentTask::enrollmentCompleted(const rina::Neighbor& neighbor, bool en
 		flowInformation.localAppName.processName = ipcp->get_name();
 		flowInformation.localAppName.processInstance = ipcp->get_instance();
 		flowInformation.difName = neighbor.supporting_dif_name_;
-		for (it = n1_flows_to_create.begin();
-				it != n1_flows_to_create.end(); ++it) {
-			if (it == n1_flows_to_create.begin())
+
+		fit = n1_flows_to_create.find(neighbor.supporting_dif_name_.processName);
+		if (fit == n1_flows_to_create.end())
+			return;
+		fspecs = fit->second;
+
+		for (it = fspecs.begin(); it != fspecs.end(); ++it) {
+			if (it == fspecs.begin())
 				continue;
 
 			flowInformation.flowSpecification.delay = it->delay;
