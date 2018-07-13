@@ -649,7 +649,7 @@ only the default policy is supported by IRATI.
 application connection is closed and the N-1 flow deallocated
    * **useReliableNFlow**: true if a realible N-flow is to be used to communicate with the neighbor IPCP (layer management)
    * **maxEnrollmentRetries**: how many times enrollment should be retried in case of failure
-   * **n1flows::<DIF name>** (optional): how many flows will be allocated between peer IPCPs (when the N-1 DIF is <DIF name>), and what are the delay/loss characteristics of each one. The first flow will be used for layer management and data transfer, the others just for data transfer. In the example configuration, two N-1 flows will be requested: one with a maximum delay of 10 ms and a maximum loss probability of 200/10000 SDUs, while the other without loss and delay guarantees.
+   * **n1flows::difname>** (optional): how many flows will be allocated between peer IPCPs (when the N-1 DIF is difname), and what are the delay/loss characteristics of each one. The first flow will be used for layer management and data transfer, the others just for data transfer. In the example configuration, two N-1 flows will be requested: one with a maximum delay of 10 ms and a maximum loss probability of 200/10000 SDUs, while the other without loss and delay guarantees.
 
 ##### 3.2.2.6 Flow Allocator
 Flow allocator maps allocate flow requests to a specific QoS cube, and chooses any policies/parameters 
