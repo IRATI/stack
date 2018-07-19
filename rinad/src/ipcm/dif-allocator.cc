@@ -1080,7 +1080,7 @@ void DynamicDIFAllocator::assigned_to_dif(const std::string& dif_name)
 
 	rina::ScopedLock g(lock);
 
-	ss << dap_name.processName << ":" << dap_name.processInstance << "::";
+	ss << dap_name.processName << "|" << dap_name.processInstance << "||";
 
 	thread_attrs.setJoinable();
 	thread_attrs.setName("Registrar of DIF Allocator");
