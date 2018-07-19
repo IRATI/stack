@@ -1645,7 +1645,7 @@ void EnrollmentTask::deallocateFlow(int portId)
 	try {
 		irm_->deallocateNMinus1Flow(portId);
 	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems deallocating N-1 flow: %s", e.what());
+		LOG_IPCP_ERR("Problems deallocating N-1 flow %d: %s", portId, e.what());
 	}
 }
 
