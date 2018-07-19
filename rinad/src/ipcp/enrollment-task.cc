@@ -1642,6 +1642,8 @@ std::list<std::string> EnrollmentTask::get_enrolled_app_names()
 
 void EnrollmentTask::deallocateFlow(int portId)
 {
+	LOG_DBG("Trying to deallocate flow %d", portId);
+
 	try {
 		irm_->deallocateNMinus1Flow(portId);
 	} catch (rina::Exception &e) {
