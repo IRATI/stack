@@ -1672,10 +1672,13 @@ void EnrollmentTask::neighborDeclaredDead(rina::NeighborDeclaredDeadEvent * dead
 
 	try{
 		LOG_IPCP_INFO("Requesting the deallocation of the N-1 flows with the dead neighbor");
-		flows = ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
-				getNMinusOneFlowsToNeighbour(deadEvent->neighbor_.name_.processName);
-		for (it = flows.begin(); it != flows.end(); ++it) {
-			deallocateFlow(*it);
+		deallocateFlow(deadEvent->neighbor_.underlying_port_id_);
+		if (n1_flows_to_create.size() > 0) {
+			flows = ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
+					getNMinusOneFlowsToNeighbour(deadEvent->neighbor_.name_.processName);
+			for (it = flows.begin(); it != flows.end(); ++it) {
+				deallocateFlow(*it);
+			}
 		}
 	} catch (rina::Exception &e){
 		LOG_IPCP_ERR("Problems requesting the deallocation of a N-1 flow: %s", e.what());
@@ -1975,10 +1978,13 @@ void EnrollmentTask::deallocate_flows_and_destroy_esm(IEnrollmentStateMachine * 
 
 	//Deallocate N-1 flows, sleep for 20 ms first (TODO Fix this)
 	sleep.sleepForMili(20);
-	flows = ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
-			getNMinusOneFlowsToNeighbour(esm->remote_peer_.name_.processName);
-	for (it = flows.begin(); it != flows.end(); ++it) {
-		deallocateFlow(*it);
+	deallocateFlow(port_id);
+	if (n1_flows_to_create.size() > 0) {
+		flows = ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
+				getNMinusOneFlowsToNeighbour(esm->remote_peer_.name_.processName);
+		for (it = flows.begin(); it != flows.end(); ++it) {
+			deallocateFlow(*it);
+		}
 	}
 
 	//Inform about connectivity to neighbor lost
