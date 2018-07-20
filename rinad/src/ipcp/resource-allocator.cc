@@ -327,6 +327,21 @@ std::list<int> NMinusOneFlowManager::getNMinusOneFlowsToNeighbour(unsigned int a
 	return result;
 }
 
+std::list<int> NMinusOneFlowManager::getNMinusOneFlowsToNeighbour(const std::string& name)
+{
+	std::vector<rina::FlowInformation> flows;
+	std::list<int> result;
+
+	flows = rina::extendedIPCManager->getAllocatedFlows();
+	for (unsigned int i=0; i<flows.size(); i++) {
+		if (flows[i].remoteAppName.processName == name) {
+			result.push_back(flows[i].portId);
+		}
+	}
+
+	return result;
+}
+
 int NMinusOneFlowManager::getManagementFlowToNeighbour(const std::string& name) {
 	const std::list<rina::Neighbor> neighbors =
 			ipc_process_->enrollment_task_->get_neighbors();
@@ -334,6 +349,21 @@ int NMinusOneFlowManager::getManagementFlowToNeighbour(const std::string& name) 
 			it != neighbors.end(); ++it) {
 		if (it->name_.processName == name) {
 			return it->underlying_port_id_;
+		}
+	}
+
+	return -1;
+}
+
+int NMinusOneFlowManager::get_n1flow_to_neighbor(const rina::FlowSpecification& fspec,
+					         const std::string& name)
+{
+	std::vector<rina::FlowInformation> flows = rina::extendedIPCManager->getAllocatedFlows();
+	for (unsigned int i=0; i<flows.size(); i++) {
+		if (flows[i].remoteAppName.processName == name &&
+				flows[i].flowSpecification.delay == fspec.delay &&
+				flows[i].flowSpecification.loss == fspec.loss) {
+			return flows[i].portId;
 		}
 	}
 
@@ -354,6 +384,20 @@ int NMinusOneFlowManager::getManagementFlowToNeighbour(unsigned int address)
 	return -1;
 }
 
+std::list<int> NMinusOneFlowManager::getManagementFlowsToAllNeighbors(void)
+{
+	std::list<int> result;
+
+	const std::list<rina::Neighbor> neighbors =
+			ipc_process_->enrollment_task_->get_neighbors();
+	for (std::list<rina::Neighbor>::const_iterator it = neighbors.begin();
+			it != neighbors.end(); ++it) {
+		result.push_back(it->underlying_port_id_);
+	}
+
+	return result;
+}
+
 unsigned int NMinusOneFlowManager::numberOfFlowsToNeighbour(const std::string& apn,
 		const std::string& api) {
 	std::vector<rina::FlowInformation> flows = rina::extendedIPCManager->getAllocatedFlows();
@@ -371,21 +415,18 @@ unsigned int NMinusOneFlowManager::numberOfFlowsToNeighbour(const std::string& a
 //Class IPCP Flow Acceptor
 bool IPCPFlowAcceptor::accept_flow(const rina::FlowRequestEvent& event)
 {
+	bool have_flow_with_remote_app;
+
 	if (ipcp_->get_operational_state() != ASSIGNED_TO_DIF) {
 		return false;
 	}
 
-	//TODO deal with the different AEs (Management vs. Data transfer), right now assuming the flow
-	//is both used for data transfer and management purposes
-	try {
-		rina::extendedIPCManager->getPortIdToRemoteApp(event.remoteApplicationName);
-		LOG_IPCP_INFO("Rejecting flow request since we already have a flow to the remote IPC Process: %s-%s",
-				event.remoteApplicationName.processName.c_str(),
-				event.remoteApplicationName.processInstance.c_str());
-		return false;
-	} catch(rina::Exception & ex) {
-		return true;
-	}
+	// TODO Deal with the different AEs (Management vs. Data transfer), right now assuming the flow
+	//is both used for data transfer and management purposes. Right now accepting all flows
+	//this is an obvious problem for (D)DoS. Implement a better policy here (max. number of flows
+	//per peer, for instance)
+
+	return true;
 }
 
 //CLASS Resource Allocator
@@ -539,6 +580,10 @@ void ResourceAllocator::set_dif_configuration(const rina::DIFConfiguration& dif_
 
 	if (n_minus_one_flow_manager_) {
 		n_minus_one_flow_manager_->set_dif_configuration(dif_configuration);
+	}
+
+	if (pduft_gen_ps) {
+		pduft_gen_ps->set_dif_configuration(dif_configuration);
 	}
 
 	//Create QoS cubes RIB objects
