@@ -178,8 +178,12 @@ public:
 	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
 	void processRegistrationNotification(const rina::IPCProcessDIFRegistrationEvent& event);;
 	std::list<int> getNMinusOneFlowsToNeighbour(unsigned int address);
+	std::list<int> getNMinusOneFlowsToNeighbour(const std::string& name);
+	std::list<int> getManagementFlowsToAllNeighbors(void);
 	int getManagementFlowToNeighbour(const std::string& name);
 	int getManagementFlowToNeighbour(unsigned int address);
+	int get_n1flow_to_neighbor(const rina::FlowSpecification& fspec,
+				   const std::string& name);
 	unsigned int numberOfFlowsToNeighbour(const std::string& apn,
 			const std::string& api);
 

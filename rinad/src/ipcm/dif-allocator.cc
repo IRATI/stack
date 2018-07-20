@@ -771,13 +771,13 @@ int DDAEnrollerWorker::allocate_flow(const rina::FlowRequestEvent& alloc_event)
 	std::string remote_app_name;
 	std::string dif_name;
 
-	ss << alloc_event.localApplicationName.processName << ":"
-	   << alloc_event.localApplicationName.processInstance << ":::";
+	ss << alloc_event.localApplicationName.processName << "|"
+	   << alloc_event.localApplicationName.processInstance << "||";
 	local_app_name = ss.str();
 	ss.str("");
 
-	ss << alloc_event.remoteApplicationName.processName << ":"
-	   << alloc_event.remoteApplicationName.processInstance << ":::";
+	ss << alloc_event.remoteApplicationName.processName << "|"
+	   << alloc_event.remoteApplicationName.processInstance << "||";
 	remote_app_name = ss.str();
 	ss.str("");
 
@@ -1080,7 +1080,7 @@ void DynamicDIFAllocator::assigned_to_dif(const std::string& dif_name)
 
 	rina::ScopedLock g(lock);
 
-	ss << dap_name.processName << ":" << dap_name.processInstance << "::";
+	ss << dap_name.processName << "|" << dap_name.processInstance << "||";
 
 	thread_attrs.setJoinable();
 	thread_attrs.setName("Registrar of DIF Allocator");
