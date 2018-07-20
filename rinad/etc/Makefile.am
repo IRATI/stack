@@ -27,7 +27,7 @@ BUILT_SOURCES =
 EXTRA_DIST    =
 sysconf_DATA  =
 
-ipcmanager.conf: ipcmanager.conf.in \
+ipcmanager.conf.orig: ipcmanager.conf.orig.in \
 	Makefile
 	rm -f $@ $@.tmp
 	srcdir=''; \
@@ -36,7 +36,7 @@ ipcmanager.conf: ipcmanager.conf.in \
 	chmod a-w $@.tmp
 	mv $@.tmp $@
 
-wpa_supplicant.conf: wpa_supplicant.conf.in \
+wpa_supplicant.conf.orig: wpa_supplicant.conf.orig.in \
 	Makefile
 	rm -f $@ $@.tmp
 	srcdir=''; \
@@ -45,7 +45,19 @@ wpa_supplicant.conf: wpa_supplicant.conf.in \
 	chmod a-w $@.tmp
 	mv $@.tmp $@
 
-CLEANFILES    += ipcmanager.conf wpa_supplicant.conf
-BUILT_SOURCES += ipcmanager.conf wpa_supplicant.conf
-EXTRA_DIST    += ipcmanager.conf.in default.dif shim-eth-vlan.dif da.map wpa_supplicant.conf.in
-sysconf_DATA  += ipcmanager.conf default.dif shim-eth-vlan.dif da.map wpa_supplicant.conf
+CLEANFILES    += ipcmanager.conf.orig wpa_supplicant.conf.orig
+BUILT_SOURCES += ipcmanager.conf.orig wpa_supplicant.conf.orig
+EXTRA_DIST    += ipcmanager.conf.orig.in default.dif.orig shim-eth-vlan.dif.orig da.map.orig wpa_supplicant.conf.orig.in
+sysconf_DATA  += ipcmanager.conf.orig default.dif.orig shim-eth-vlan.dif.orig da.map.orig wpa_supplicant.conf.orig
+
+install-data-local: install-sysconfDATA
+       @FILES="ipcmanager.conf default.dif shim-eth-vlan.dif da.map wpa_supplicant.conf";\
+       for FILE in $$FILES ;\
+       do \  
+               if test -f $(DESTDIR)$(sysconfdir)/$$FILE ; then \
+                       echo "$@ will not overwrite existing $(DESTDIR)$(sysconfdir)/$$FILE" ; \
+               else \
+                       echo "$(INSTALL_DATA) $(DESTDIR)$(sysconfdir)/$$FILE.orig $(DESTDIR)$(sysconfdir)/$$FILE"; \
+                       $(INSTALL_DATA) $(DESTDIR)$(sysconfdir)/$$FILE.orig $(DESTDIR)$(sysconfdir)/$$FILE; \
+               fi ;\
+       done
