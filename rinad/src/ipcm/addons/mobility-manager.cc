@@ -439,9 +439,9 @@ int MobilityManager::initialize_arcfire_exp5_tip(bool ue1)
 	rina::BaseStationInfo bs_info;
 	NeighborData neigh_data, mob_neigh_data, int_neigh_data;
 	IPCMIPCProcess * wifi1_ipcp, * wifi2_ipcp, * prov_ipcp;
-	IPCMIPCProcess * slice1_ipcp, *slice2_ipcp, *ipcp_enroll;
+	IPCMIPCProcess *slice_ipcp, *ipcp_enroll;
 	IPCMIPCProcess * ipcp_disc, * mob_ipcp_enroll, * mob_ipcp_disc;
-	std::string ssid, prov_dif_name;
+	std::string ssid, prov_dif_name, slice_dif_name;
 	Promise promise;
 	rina::Sleep sleep;
 
@@ -471,9 +471,12 @@ int MobilityManager::initialize_arcfire_exp5_tip(bool ue1)
 		return -1;
 	}
 
-	prov_ipcp = factory->getIPCProcess(3);
+	if (ue1)
+		prov_ipcp = factory->getIPCProcess(3);
+	else
+		prov_ipcp = factory->getIPCProcess(4);
 	if (prov_ipcp == NULL) {
-		LOG_ERR("Could not find IPCP with ID 3");
+		LOG_ERR("Could not find IPCP for the provider DIF");
 		return -1;
 	}
 
@@ -482,31 +485,14 @@ int MobilityManager::initialize_arcfire_exp5_tip(bool ue1)
 		return -1;
 	}
 
-	if (ue1)
-		slice1_ipcp = factory->getIPCProcess(5);
-	else
-		slice1_ipcp = factory->getIPCProcess(4);
-	if (slice1_ipcp == NULL) {
-		LOG_ERR("Could not find IPCP for slice1 DIF");
+	slice_ipcp = factory->getIPCProcess(5);
+	if (slice_ipcp == NULL) {
+		LOG_ERR("Could not find IPCP with ID 5");
 		return -1;
 	}
 
-	if (slice1_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
-		LOG_ERR("Wrong IPCP type: %s", slice1_ipcp->get_type().c_str());
-		return -1;
-	}
-
-	if (ue1)
-		slice2_ipcp = factory->getIPCProcess(6);
-	else
-		slice2_ipcp = factory->getIPCProcess(5);
-	if (slice2_ipcp == NULL) {
-		LOG_ERR("Could not find IPCP for slice2 DIF");
-		return -1;
-	}
-
-	if (slice2_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
-		LOG_ERR("Wrong IPCP type: %s", slice2_ipcp->get_type().c_str());
+	if (slice_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
+		LOG_ERR("Wrong IPCP type: %s", slice_ipcp->get_type().c_str());
 		return -1;
 	}
 
@@ -514,10 +500,12 @@ int MobilityManager::initialize_arcfire_exp5_tip(bool ue1)
 	if (hand_state.dif == "") {
 		if (ue1) {
 			ssid = "irati";
-			prov_dif_name = "provider1.DIF";
+			prov_dif_name = "accprov1.DIF";
+			slice_dif_name = "slice1.DIF";
 		} else {
 			ssid = "rinaisense";
-			prov_dif_name = "provider3.DIF";
+			prov_dif_name = "accprov2.DIF";
+			slice_dif_name = "slice2.DIF";
 		}
 
 		//Not enrolled anywhere yet, enroll for first time
@@ -541,7 +529,7 @@ int MobilityManager::initialize_arcfire_exp5_tip(bool ue1)
 			return -1;
 		}
 
-		//Enroll to the provider1 DIF
+		//Enroll to the provider DIF
 		mob_neigh_data.supportingDifName.processName = ssid;
 		mob_neigh_data.difName.processName = prov_dif_name;
 		if(IPCManager->enroll_to_dif(this, &promise, prov_ipcp->get_id(), mob_neigh_data) == IPCM_FAILURE ||
@@ -555,25 +543,13 @@ int MobilityManager::initialize_arcfire_exp5_tip(bool ue1)
 
 		sleep.sleepForMili(1000);
 
-		//Enroll to the slice1 DIF
+		//Enroll to the slice DIF
 		int_neigh_data.supportingDifName.processName = prov_dif_name;
-		int_neigh_data.difName.processName = "slice1.DIF";
-		if(IPCManager->enroll_to_dif(this, &promise, slice1_ipcp->get_id(), int_neigh_data) == IPCM_FAILURE ||
+		int_neigh_data.difName.processName = slice_dif_name;
+		if(IPCManager->enroll_to_dif(this, &promise, slice_ipcp->get_id(), int_neigh_data) == IPCM_FAILURE ||
 				promise.wait() != IPCM_SUCCESS) {
 			LOG_WARN("Problems enrolling IPCP %u to DIF %s via supporting DIF %s",
-					slice1_ipcp->get_id(),
-					int_neigh_data.difName.processName.c_str(),
-					int_neigh_data.supportingDifName.processName.c_str());
-			return -1;
-		}
-
-		//Enroll to the slice2 DIF
-		int_neigh_data.supportingDifName.processName = prov_dif_name;
-		int_neigh_data.difName.processName = "slice2.DIF";
-		if(IPCManager->enroll_to_dif(this, &promise, slice2_ipcp->get_id(), int_neigh_data) == IPCM_FAILURE ||
-				promise.wait() != IPCM_SUCCESS) {
-			LOG_WARN("Problems enrolling IPCP %u to DIF %s via supporting DIF %s",
-					slice2_ipcp->get_id(),
+					slice_ipcp->get_id(),
 					int_neigh_data.difName.processName.c_str(),
 					int_neigh_data.supportingDifName.processName.c_str());
 			return -1;
@@ -821,14 +797,14 @@ int MobilityManager::execute_handover_arcfire_exp5_tip(bool ue1)
 {
 	std::map<std::string, rina::MediaDIFInfo>::const_iterator difs_it;
 	rina::BaseStationInfo bs_info;
-	NeighborData neigh_data, mob_neigh_data, slice1_neigh_data, slice2_neigh_data;
+	NeighborData neigh_data, mob_neigh_data, slice_neigh_data;
 	IPCMIPCProcess * wifi1_ipcp, * wifi2_ipcp, * prov1_ipcp;
-	IPCMIPCProcess * prov2_ipcp, * slice1_ipcp, * slice2_ipcp, *ipcp_enroll;
+	IPCMIPCProcess * prov2_ipcp, * slice_ipcp, *ipcp_enroll;
 	IPCMIPCProcess * ipcp_disc, * prov_ipcp_enroll, * prov_ipcp_disc;
 	Promise promise;
 	std::string next_dif, disc_dif, next_prov_dif, dic_prov_dif;
 	rina::Sleep sleep;
-	rina::ApplicationProcessNamingInformation neighbor, slice1_neighbor, slice2_neighbor;
+	rina::ApplicationProcessNamingInformation neighbor, slice_neighbor;
 
 	// Prevent any insertion or deletion of IPC Processes to happen
 	rina::ReadScopedLock readlock(factory->rwlock);
@@ -867,39 +843,26 @@ int MobilityManager::execute_handover_arcfire_exp5_tip(bool ue1)
 		return -1;
 	}
 
-	if (ue1) {
-		prov2_ipcp = factory->getIPCProcess(4);
-		if (prov2_ipcp == NULL) {
-			LOG_ERR("Could not find IPCP with ID 4");
-			return -1;
-		}
+	prov2_ipcp = factory->getIPCProcess(4);
+	if (prov2_ipcp == NULL) {
+		LOG_ERR("Could not find IPCP with ID 4");
+		return -1;
+	}
 
-		if (prov2_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
-			LOG_ERR("Wrong IPCP type: %s", prov2_ipcp->get_type().c_str());
-			return -1;
-		}
+	if (prov2_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
+		LOG_ERR("Wrong IPCP type: %s", prov2_ipcp->get_type().c_str());
+		return -1;
+	}
 
-		slice1_ipcp = factory->getIPCProcess(5);
-		if (slice1_ipcp == NULL) {
+	slice_ipcp = factory->getIPCProcess(5);
+	if (slice_ipcp == NULL) {
 			LOG_ERR("Could not find IPCP from slice1.DIF");
 			return -1;
-		}
+	}
 
-		if (slice1_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
-			LOG_ERR("Wrong IPCP type: %s", slice1_ipcp->get_type().c_str());
-			return -1;
-		}
-
-		slice2_ipcp = factory->getIPCProcess(6);
-		if (slice2_ipcp == NULL) {
-			LOG_ERR("Could not find IPCP from slice2.DIF");
-			return -1;
-		}
-
-		if (slice2_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
-			LOG_ERR("Wrong IPCP type: %s", slice2_ipcp->get_type().c_str());
-			return -1;
-		}
+	if (slice_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
+		LOG_ERR("Wrong IPCP type: %s", slice_ipcp->get_type().c_str());
+		return -1;
 	}
 
 	//3 Update wifi IPCPs to use
@@ -914,66 +877,64 @@ int MobilityManager::execute_handover_arcfire_exp5_tip(bool ue1)
 	//4 Update DIF name (irati -> pristine -> arcfire -> irina and start again for UE1)
 	// (rinaisense -> ocarina and start again for UE2)
 	disc_dif = hand_state.dif;
-	if (ue1) {
-		if (hand_state.dif == "irati") {
-			next_dif = "pristine";
-			next_prov_dif = "provider1.DIF";
-			neighbor.processName = "ar1.provider1";
-			neighbor.processInstance = "1";
-			hand_state.change_mob_dif = false;
-			prov_ipcp_enroll = prov1_ipcp;
-			prov_ipcp_disc = prov1_ipcp;
-		} else if (hand_state.dif == "pristine") {
-			next_dif = "arcfire";
-			next_prov_dif = "provider2.DIF";
-			neighbor.processName = "ar2.provider1";
-			neighbor.processInstance = "1";
-			hand_state.change_mob_dif = true;
-			prov_ipcp_enroll = prov2_ipcp;
-			prov_ipcp_disc = prov1_ipcp;
-			slice1_neighbor.processName = "core1.slice1";
-			slice1_neighbor.processInstance = "1";
-			slice2_neighbor.processName = "core1.slice2";
-			slice2_neighbor.processInstance = "1";
-		} else if (hand_state.dif == "arcfire"){
-			next_dif = "irina";
-			next_prov_dif = "provider2.DIF";
-			neighbor.processName = "ar3.provider2";
-			neighbor.processInstance = "1";
-			hand_state.change_mob_dif = false;
-			prov_ipcp_enroll = prov2_ipcp;
-			prov_ipcp_disc = prov2_ipcp;
-		} else if (hand_state.dif == "irina"){
-			next_dif = "irati";
-			next_prov_dif = "provider1.DIF";
-			neighbor.processName = "ar4.provider2";
-			neighbor.processInstance = "1";
-			hand_state.change_mob_dif = true;
-			prov_ipcp_enroll = prov1_ipcp;
-			prov_ipcp_disc = prov2_ipcp;
-			slice1_neighbor.processName = "core2.slice1";
-			slice1_neighbor.processInstance = "1";
-			slice2_neighbor.processName = "core2.slice2";
-			slice2_neighbor.processInstance = "1";
-		}
-	} else {
-		if (hand_state.dif == "rinaisense") {
-			next_dif = "ocarina";
-			next_prov_dif = "provider3.DIF";
-			neighbor.processName = "ar5.provider3";
-			neighbor.processInstance = "1";
-			hand_state.change_mob_dif = false;
-			prov_ipcp_enroll = prov1_ipcp;
-			prov_ipcp_disc = prov1_ipcp;
-		} else if (hand_state.dif == "ocarina") {
-			next_dif = "rinaisense";
-			next_prov_dif = "provider3.DIF";
-			neighbor.processName = "ar6.provider3";
-			neighbor.processInstance = "1";
-			hand_state.change_mob_dif = false;
-			prov_ipcp_enroll = prov1_ipcp;
-			prov_ipcp_disc = prov1_ipcp;
-		}
+	if (hand_state.dif == "irati") {
+		next_dif = "pristine";
+		next_prov_dif = "accprov1.DIF";
+		neighbor.processName = "ar1.accprov1";
+		neighbor.processInstance = "1";
+		hand_state.change_mob_dif = false;
+		prov_ipcp_enroll = prov1_ipcp;
+		prov_ipcp_disc = prov1_ipcp;
+	} else if (hand_state.dif == "pristine") {
+		next_dif = "arcfire";
+		next_prov_dif = "accprov1.DIF";
+		neighbor.processName = "ar2.accprov1";
+		neighbor.processInstance = "1";
+		hand_state.change_mob_dif = false;
+		prov_ipcp_enroll = prov1_ipcp;
+		prov_ipcp_disc = prov1_ipcp;
+	} else if (hand_state.dif == "arcfire"){
+		next_dif = "irina";
+		next_prov_dif = "accprov1.DIF";
+		neighbor.processName = "ar3.accprov1";
+		neighbor.processInstance = "1";
+		hand_state.change_mob_dif = false;
+		prov_ipcp_enroll = prov1_ipcp;
+		prov_ipcp_disc = prov1_ipcp;
+	} else if (hand_state.dif == "irina"){
+		next_dif = "rinaisense";
+		next_prov_dif = "accprov2.DIF";
+		neighbor.processName = "ar4.accprov2";
+		neighbor.processInstance = "1";
+		hand_state.change_mob_dif = true;
+		prov_ipcp_enroll = prov2_ipcp;
+		prov_ipcp_disc = prov1_ipcp;
+		if (ue1)
+			slice_neighbor.processName = "isp1.slice1";
+		else
+			slice_neighbor.processName = "isp1.slice2";
+		slice_neighbor.processInstance = "1";
+	} else if (hand_state.dif == "rinaisense") {
+		next_dif = "ocarina";
+		next_prov_dif = "accprov2.DIF";
+		neighbor.processName = "ar5.accprov2";
+		neighbor.processInstance = "1";
+		hand_state.change_mob_dif = false;
+		prov_ipcp_enroll = prov2_ipcp;
+		prov_ipcp_disc = prov2_ipcp;
+	} else if (hand_state.dif == "ocarina") {
+		next_dif = "irati";
+		next_prov_dif = "accprov1.DIF";
+		neighbor.processName = "ar6.accprov2";
+		neighbor.processInstance = "1";
+		hand_state.change_mob_dif = true;
+		prov_ipcp_enroll = prov1_ipcp;
+		prov_ipcp_disc = prov2_ipcp;
+		if (ue1)
+			slice_neighbor.processName = "isp2.slice1";
+		else
+			slice_neighbor.processName = "isp2.slice2";
+		slice_neighbor.processInstance = "1";
 	}
 
 	// 3. Enroll to next DIF (become multihomed)
@@ -997,7 +958,7 @@ int MobilityManager::execute_handover_arcfire_exp5_tip(bool ue1)
 		return -1;
 	}
 
-	//Enroll to mobile DIF
+	//Enroll to provider DIF
 	mob_neigh_data.supportingDifName.processName = next_dif;
 	mob_neigh_data.difName.processName = next_prov_dif;
 
@@ -1012,25 +973,17 @@ int MobilityManager::execute_handover_arcfire_exp5_tip(bool ue1)
 
 	if (hand_state.change_mob_dif) {
 		sleep.sleepForMili(1000);
-		slice1_neigh_data.supportingDifName.processName = next_prov_dif;
-		slice1_neigh_data.difName.processName = "slice1.DIF";
-		if(IPCManager->enroll_to_dif(this, &promise, slice1_ipcp->get_id(), slice1_neigh_data,
-				true, slice1_neighbor) == IPCM_FAILURE || promise.wait() != IPCM_SUCCESS) {
+		slice_neigh_data.supportingDifName.processName = next_prov_dif;
+		if (ue1)
+			slice_neigh_data.difName.processName = "slice1.DIF";
+		else
+			slice_neigh_data.difName.processName = "slice2.DIF";
+		if(IPCManager->enroll_to_dif(this, &promise, slice_ipcp->get_id(), slice_neigh_data,
+				true, slice_neighbor) == IPCM_FAILURE || promise.wait() != IPCM_SUCCESS) {
 			LOG_WARN("Problems enrolling IPCP %u to DIF %s via supporting DIF %s",
-					slice1_ipcp->get_id(),
-					slice1_neigh_data.difName.processName.c_str(),
-					slice1_neigh_data.supportingDifName.processName.c_str());
-			return -1;
-		}
-
-		slice2_neigh_data.supportingDifName.processName = next_prov_dif;
-		slice2_neigh_data.difName.processName = "slice2.DIF";
-		if(IPCManager->enroll_to_dif(this, &promise, slice2_ipcp->get_id(), slice2_neigh_data,
-				true, slice2_neighbor) == IPCM_FAILURE || promise.wait() != IPCM_SUCCESS) {
-			LOG_WARN("Problems enrolling IPCP %u to DIF %s via supporting DIF %s",
-					slice2_ipcp->get_id(),
-					slice2_neigh_data.difName.processName.c_str(),
-					slice2_neigh_data.supportingDifName.processName.c_str());
+					slice_ipcp->get_id(),
+					slice_neigh_data.difName.processName.c_str(),
+					slice_neigh_data.supportingDifName.processName.c_str());
 			return -1;
 		}
 	}
@@ -1042,17 +995,10 @@ int MobilityManager::execute_handover_arcfire_exp5_tip(bool ue1)
 	hand_state.ipcp = ipcp_enroll;
 
 	if (hand_state.change_mob_dif) {
-		if(IPCManager->disconnect_neighbor(this, &promise, slice1_ipcp->get_id(), slice1_neighbor) == IPCM_FAILURE ||
+		if(IPCManager->disconnect_neighbor(this, &promise, slice_ipcp->get_id(), slice_neighbor) == IPCM_FAILURE ||
 				promise.wait() != IPCM_SUCCESS) {
 			LOG_WARN("Problems invoking disconnect from neighbor on IPCP %u",
-					slice1_ipcp->get_id());
-			return -1;
-		}
-
-		if(IPCManager->disconnect_neighbor(this, &promise, slice2_ipcp->get_id(), slice2_neighbor) == IPCM_FAILURE ||
-				promise.wait() != IPCM_SUCCESS) {
-			LOG_WARN("Problems invoking disconnect from neighbor on IPCP %u",
-					slice2_ipcp->get_id());
+					slice_ipcp->get_id());
 			return -1;
 		}
 	}
