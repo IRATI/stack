@@ -902,7 +902,7 @@ int MobilityManager::execute_handover_arcfire_exp5_tip(bool ue1)
 		prov_ipcp_enroll = prov1_ipcp;
 		prov_ipcp_disc = prov1_ipcp;
 	} else if (hand_state.dif == "irina"){
-		next_dif = "irati";
+		next_dif = "rinaisense";
 		next_prov_dif = "accprov2.DIF";
 		neighbor.processName = "ar4.accprov2";
 		neighbor.processInstance = "1";
@@ -923,7 +923,7 @@ int MobilityManager::execute_handover_arcfire_exp5_tip(bool ue1)
 		prov_ipcp_enroll = prov2_ipcp;
 		prov_ipcp_disc = prov2_ipcp;
 	} else if (hand_state.dif == "ocarina") {
-		next_dif = "rinaisense";
+		next_dif = "irati";
 		next_prov_dif = "accprov1.DIF";
 		neighbor.processName = "ar6.accprov2";
 		neighbor.processInstance = "1";
