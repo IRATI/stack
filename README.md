@@ -248,7 +248,64 @@ and if there is none it will fail.
         }
     ],
 
-**Dynamic DIF Allocator**. TODO
+**Dynamic DIF Allocator**. The Dynamic DIF Allocator implementation is capable of dynamically discovering 
+application to DIF mappings across any set of DIFs, and to collaborate with the local _IPC Manager Daemon_ to 
+create new IPC Processes and make them join a DIF through one of the N-1 DIFs available at the system. You can 
+read ARCFIRE's D3.2 pages 12-20 for a full description of the implementation (http://ict-arcfire.eu/index.php/research/deliverables/), 
+and an example of its usage is provided in the IRATI tutorial 9 (https://github.com/IRATI/stack/wiki/Tutorial-9:-DMM-app-discovery-ARCFIRE-2018).
+The Dynamic DIF Allocator is configured in the following way (in the main IPCM configuration file):
+
+    "difallocator" : {
+       "type" : "dynamic-dif-allocator",
+       "dafName" : {
+          "processName" : "name of the DIF Allocator DAF"
+       },
+       "dapName" : {
+          "processName" : "process name of the DIF Allocator instance",
+          "processInstance" : "process instance of the DIF Allocator instance"
+       },
+       "joinableDIFs" : [ {
+          "difName" : "Name of the DIF that can be joined",
+          "ipcpPn" : "Process name of the IPCP to be created",
+          "ipcpPi" : "Process instance of the IPCP to be created"
+       }, {
+          ...  
+       }],
+       "enrollments" : [ {
+          "processName" : "neighbor DA instance process name",
+          "processInstance" : "neighbor DA instance process instance",
+          "difName" : "supporting DIF name"
+       },{
+          ... 
+       }]
+    }
+
+Below there is an example of such configuration. The DIF allocator daf name is called _da.default_, the the 
+process name/instance of the instantiation of the DIF Allocator process are _da-text1.system_ and _1_ respectively.
+The DIF Allocator instance can create an IPC Process that belongs to the _vpn.DIF_, and such IPCP (when created) 
+will have an application name/instance _test1.vpn_ and _1_ respectively. Last but not least, the DIF Allocator instance 
+will try to enroll to another DIF Allocator instance called _dat-test2.system_ over the _normal.DIF_
+
+    "difallocator" : {
+       "type" : "dynamic-dif-allocator",
+       "dafName" : {
+          "processName" : "da.default"
+       },
+       "dapName" : {
+          "processName" : "da-test1.system",
+          "processInstance" : "1"
+       },
+       "joinableDIFs" : [ {
+          "difName" : "vpn.DIF",
+          "ipcpPn" : "test1.vpn",
+          "ipcpPi" : "1"
+       } ],
+       "enrollments" : [ {
+          "processName" : "da-test2.system",
+          "processInstance" : "1",
+          "difName" : "normal.DIF"
+       } ]
+    }
 
 ##### 3.2.1.2 Management Agent
 Documentation coming soon.
