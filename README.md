@@ -199,6 +199,23 @@ of the DIF, including its policies.
         "template" : "default.dif"
     } ]
 
+**Addons**. The IPC Manager Daemon functionality can be augmented through the "addons" framework. 
+Addons can get access to the events processed by the main _IPC Manager_ control loop, and react 
+accordingly. Right now there are three addons avaiable: i) the IPC Manager console, ii) the initial 
+scripting engine (which bootstraps the system based on the IPCM configuration file), iii) the 
+Management Agent, iv) the DIF Allocator and v) the Mobility Manager. The first two do not require 
+any special configuraiton, while the other three can be configured via the main configuration file,
+as explained in the following subsections.
+
+##### 3.3.1.1 DIF Allocator
+TODO
+
+##### 3.3.1.2 Management Agent
+TODO
+
+##### 3.3.1.3 Mobility Manager
+TODO
+
 #### 3.2.2 DIF Template configuration files
 DIF template files contain the configuration of the components of a DIF. There is a mandatory DIF 
 template called "default.dif" (which gets installed during the IRATI installation procedure), all 
