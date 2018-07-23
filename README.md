@@ -201,20 +201,60 @@ of the DIF, including its policies.
 
 **Addons**. The IPC Manager Daemon functionality can be augmented through the "addons" framework. 
 Addons can get access to the events processed by the main _IPC Manager_ control loop, and react 
-accordingly. Right now there are three addons avaiable: i) the IPC Manager console, ii) the initial 
+accordingly. Right now there are five addons avaiable: i) the IPC Manager console, ii) the initial 
 scripting engine (which bootstraps the system based on the IPCM configuration file), iii) the 
 Management Agent, iv) the DIF Allocator and v) the Mobility Manager. The first two do not require 
 any special configuraiton, while the other three can be configured via the main configuration file,
 as explained in the following subsections.
 
-##### 3.3.1.1 DIF Allocator
-TODO
+##### 3.2.1.1 DIF Allocator
+Applications deployed on a RINA network can be accessed through any layer that provides enough QoS 
+and scope. This is different from current networks, in which applications are only reachable through the 
+topmost IP layer. RINA incorporates infrastructure for application registration and discovery within a 
+layer (distributed application directories that map registered application names to IPC Process addresses 
+are part of all layers) as well as across layers. The _DIF Allocator_ is the component that enables 
+application discovery across layers. It has two main functions: i) maintaining a distributed mapping of 
+registered application names to the names of the DIFs where they are registered and ii) collaborating 
+with management systems to dynamically create or extend layers as part of flow allocation requests. 
+Right now IRATI is equipped with two DIF Allocator implementations: a _static_ one, that only selects which 
+DIF to use for a certain destination application name (DIFs must exist before) and a more _dynamic_ one.
 
-##### 3.3.1.2 Management Agent
-TODO
+**Static DIF Allocator**. This is the default DIF Allocator implementation, only used to select a specific 
+DIF to register an application name or to allocate a flow to a destination application name. The DIF 
+must already exist, the static DIF Allocator is not able to trigger instantiation of new DIFs. Since this is 
+the default DIF Allocator implementation used, no configuration needs to be specified in the main IPCM 
+configuration file. The application name to DIF mappings are specified in the _da.map_ file, located at 
+the _IRATI installation path/etc_ folder. The file can be updated while _IPC Manager Daemon_ is running, 
+and the static DIF Allocator implementation will update its internal mappings. If no mapping is provided by a certain 
+application, it will try to randomly select a _normal DIF_ first; if there is non available a _shim DIF_ 
+and if there is none it will fail. 
 
-##### 3.3.1.3 Mobility Manager
-TODO
+    "applicationToDIFMappings": [
+        {
+            "encodedAppName": "rina.apps.echotime.server-1--",
+            "difName": "dcfabric.DIF"
+        },
+        {
+            "encodedAppName": "rina.apps.echotime.client-1--",
+            "difName": "dcfabric.DIF"
+        },
+        {
+            "encodedAppName": "rina.apps.echotime-2--",
+            "difName": "vpn1.DIF"
+        },
+        {
+            "encodedAppName": "rina.apps.echotime.client-2--",
+            "difName": "vpn1.DIF"
+        }
+    ],
+
+**Dynamic DIF Allocator**. TODO
+
+##### 3.2.1.2 Management Agent
+Documentation coming soon.
+
+##### 3.2.1.3 Mobility Manager
+Documentation coming soon.
 
 #### 3.2.2 DIF Template configuration files
 DIF template files contain the configuration of the components of a DIF. There is a mandatory DIF 
@@ -1150,31 +1190,6 @@ Example configuration:
         "name" : "CRC32",
         "version" : "1"
     }
-
-#### 3.2.3 Application to DIF mappings
-The da.map file contains the preferences for which DIFs should be used to register and to allocate 
-flows to/from specific applications. If no mapping is provided by a certain application, it will try 
-to randomly select a _normal DIF_ first; if there is non available a _shim DIF_ and if there is none 
-it will fail. The contents of the da.map file can be modified while the IPC Manager Daemon is running.
-
-    "applicationToDIFMappings": [
-        {
-            "encodedAppName": "rina.apps.echotime.server-1--",
-            "difName": "dcfabric.DIF"
-        },
-        {
-            "encodedAppName": "rina.apps.echotime.client-1--",
-            "difName": "dcfabric.DIF"
-        },
-        {
-            "encodedAppName": "rina.apps.echotime-2--",
-            "difName": "vpn1.DIF"
-        },
-        {
-            "encodedAppName": "rina.apps.echotime.client-2--",
-            "difName": "vpn1.DIF"
-        }
-    ],
 
 ### 3.3 Running the IPC Manager Daemon
 Once the configuration file is ready you can un the IPC Manager Daemon. To do so go to the 
