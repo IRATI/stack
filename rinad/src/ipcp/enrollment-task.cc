@@ -1677,7 +1677,8 @@ void EnrollmentTask::neighborDeclaredDead(rina::NeighborDeclaredDeadEvent * dead
 			flows = ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
 					getNMinusOneFlowsToNeighbour(deadEvent->neighbor_.name_.processName);
 			for (it = flows.begin(); it != flows.end(); ++it) {
-				deallocateFlow(*it);
+				if (*it != 0)
+					deallocateFlow(*it);
 			}
 		}
 	} catch (rina::Exception &e){
@@ -1983,7 +1984,8 @@ void EnrollmentTask::deallocate_flows_and_destroy_esm(IEnrollmentStateMachine * 
 		flows = ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
 				getNMinusOneFlowsToNeighbour(esm->remote_peer_.name_.processName);
 		for (it = flows.begin(); it != flows.end(); ++it) {
-			deallocateFlow(*it);
+			if (*it != 0)
+				deallocateFlow(*it);
 		}
 	}
 
