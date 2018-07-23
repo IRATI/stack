@@ -558,11 +558,10 @@ eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
 		return -1;
 	}
 
-
-        if (!data->app_name || !name_is_equal(source, data->app_name)) {
+        /* if (!data->app_name || !name_is_equal(source, data->app_name)) {
                 LOG_ERR("Wrong request, app is not registered");
                 return -1;
-        }
+        } */
 
         flow = find_flow(data, id);
         if (!flow) {

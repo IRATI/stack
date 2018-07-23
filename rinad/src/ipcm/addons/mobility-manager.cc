@@ -904,7 +904,7 @@ int MobilityManager::execute_handover_arcfire_exp5_tip(bool ue1)
 	} else if (hand_state.dif == "irina"){
 		next_dif = "rinaisense";
 		next_prov_dif = "accprov2.DIF";
-		neighbor.processName = "ar4.accprov2";
+		neighbor.processName = "ar4.accprov1";
 		neighbor.processInstance = "1";
 		hand_state.change_mob_dif = true;
 		prov_ipcp_enroll = prov2_ipcp;
