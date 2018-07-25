@@ -340,8 +340,9 @@ public:
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_PENDING
 	//
 	ipcm_res_t create_ipcp(Addon* callee, CreateIPCPPromise* promise,
-			const rina::ApplicationProcessNamingInformation& name,
-			const std::string& type);
+			       rina::ApplicationProcessNamingInformation& name,
+			       const std::string& type,
+			       const std::string& dif_name);
 
 	//
 	// Destroys an IPCP process
@@ -1001,13 +1002,17 @@ public:
 	static DIFAllocator * create_instance(const rinad::RINAConfiguration& config,
 					      IPCManager_ * ipcm);
 
+	/// Parse the DIF Allocator configuration information from the main config file
+	static void parse_config(DIFAllocatorConfig& da_config,
+				 const rinad::RINAConfiguration& config);
+
 	static void get_ipcp_name(rina::ApplicationProcessNamingInformation& ipcp_name,
    	   	   		  const std::string& dif_name,
 				  const std::list<NeighborData> joinable_difs);
 
-	/// Parse the DIF Allocator configuration information from the main config file
-	static void parse_config(DIFAllocatorConfig& da_config,
-				 const rinad::RINAConfiguration& config);
+	/// Generate the IPCP name for the DIF dif_name
+	virtual int generate_ipcp_name(rina::ApplicationProcessNamingInformation& ipcp_name,
+			               const std::string& dif_name);
 
 	/// Returns 0 is configuration is correclty applied, -1 otherwise
 	virtual int set_config(const DIFAllocatorConfig& da_config) = 0;
@@ -1033,6 +1038,8 @@ public:
 			                   const std::string& dif_name) = 0;
 
         virtual void update_directory_contents() = 0;
+
+        rina::ApplicationProcessNamingInformation sys_name;
 
 private:
         static void populate_with_default_conf(DIFAllocatorConfig& da_config,

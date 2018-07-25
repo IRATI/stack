@@ -227,7 +227,8 @@ int IPCPObj::createIPCP(configs::ipcp_config_t &object)
                         object.name.processName, object.name.processInstance);
 
         if (IPCManager->create_ipcp(ManagementAgent::inst, &ipcp_promise,
-                                    ipcp_name, object.dif_to_assign.dif_type_)
+                                    ipcp_name, object.dif_to_assign.dif_type_,
+				    object.dif_to_assign.dif_name_.processName)
                         == IPCM_FAILURE || ipcp_promise.wait() != IPCM_SUCCESS)
         {
                 LOG_ERR("Error while creating IPC process");

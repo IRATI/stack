@@ -448,6 +448,15 @@ void parse_local_conf(const Json::Value &         root,
 					plugins_paths[j].asString());
 		}
 	}
+
+	local.system_name.processName = local_conf.get("system-name",
+						       local.system_name.processName).asString();
+	if (local.system_name.processName.empty()) {
+		local.system_name.processName = "";
+		local.system_name.processInstance = "";
+	} else {
+		local.system_name.processInstance = "1";
+	}
 }
 
 void parse_dif_configs(const Json::Value   & root,
