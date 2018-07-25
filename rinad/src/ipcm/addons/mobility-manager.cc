@@ -669,7 +669,7 @@ int MobilityManager::initialize_arcfire_exp5_mac()
 		//Create IPCP for the Internet DIF
 		ipcp_name.processName = "ue.internet";
 		ipcp_name.processInstance = "1";
-                if (IPCManager->create_ipcp(this, &c_promise, ipcp_name, rina::NORMAL_IPC_PROCESS) == IPCM_FAILURE
+                if (IPCManager->create_ipcp(this, &c_promise, ipcp_name, rina::NORMAL_IPC_PROCESS, "internet.DIF") == IPCM_FAILURE
                 		|| c_promise.wait() != IPCM_SUCCESS) {
                 	LOG_WARN("Problems creating IPCP %s of type %s",
                 			ipcp_name.toString().c_str(),
@@ -714,7 +714,7 @@ int MobilityManager::initialize_arcfire_exp5_mac()
 		//Create IPCP for the Slice1 DIF
 		ipcp_name.processName = "ue.slice1";
 		ipcp_name.processInstance = "1";
-                if (IPCManager->create_ipcp(this, &c_promise, ipcp_name, rina::NORMAL_IPC_PROCESS) == IPCM_FAILURE
+                if (IPCManager->create_ipcp(this, &c_promise, ipcp_name, rina::NORMAL_IPC_PROCESS, "slice1.DIF") == IPCM_FAILURE
                 		|| c_promise.wait() != IPCM_SUCCESS) {
                 	LOG_WARN("Problems creating IPCP %s of type %s",
                 			ipcp_name.toString().c_str(),
@@ -1642,7 +1642,7 @@ int MobilityManager::execute_handover_arcfire_exp5_mac_wifi_fixed()
 	//Create IPCP for the fixed DIF
 	ipcp_name.processName = "ue.fixed";
 	ipcp_name.processInstance = "1";
-        if (IPCManager->create_ipcp(this, &c_promise, ipcp_name, rina::NORMAL_IPC_PROCESS) == IPCM_FAILURE
+        if (IPCManager->create_ipcp(this, &c_promise, ipcp_name, rina::NORMAL_IPC_PROCESS, "fixed.DIF") == IPCM_FAILURE
         		|| c_promise.wait() != IPCM_SUCCESS) {
         	LOG_WARN("Problems creating IPCP %s of type %s",
         			ipcp_name.toString().c_str(),
