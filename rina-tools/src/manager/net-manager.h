@@ -35,6 +35,91 @@
 #include <librina/rib_v2.h>
 #include <librina/security-manager.h>
 
+//Class SDUReader
+class SDUReader : public rina::SimpleThread
+{
+public:
+	SDUReader(rina::ThreadAttributes * threadAttributes, int port_id, int fd_);
+	~SDUReader() throw() {};
+	int run();
+
+private:
+	int portid;
+	int fd;
+};
+
+class NetworkManager;
+
+typedef enum nm_res{
+	//Success
+	NM_SUCCESS = 0,
+
+	//Return value will be deferred
+	NM_PENDING = 1,
+
+	//Generic failure
+	NM_FAILURE = -1,
+} da_res_t;
+
+struct ManagedSystem
+{
+	rina::cdap_rib::con_handle_t con;
+	rina::IAuthPolicySet * auth_ps_;
+	int invoke_id;
+	nm_res status;
+};
+
+// Class NMEnrollmentTask
+class NMEnrollmentTask: public rina::cacep::AppConHandlerInterface,
+			 public rina::ApplicationEntity
+{
+public:
+	NMEnrollmentTask();
+	~NMEnrollmentTask();
+
+	void set_application_process(rina::ApplicationProcess * ap);
+	void connect(const rina::cdap::CDAPMessage& message,
+		     rina::cdap_rib::con_handle_t &con);
+	void connectResult(const rina::cdap::CDAPMessage& message,
+			   rina::cdap_rib::con_handle_t &con);
+	void release(int invoke_id,
+		     const rina::cdap_rib::con_handle_t &con);
+	void releaseResult(const rina::cdap_rib::res_info_t &res,
+			   const rina::cdap_rib::con_handle_t &con);
+	void process_authentication_message(const rina::cdap::CDAPMessage& message,
+				            const rina::cdap_rib::con_handle_t &con);
+
+	void initiateEnrollment(const rina::ApplicationProcessNamingInformation& peer_name,
+				const std::string& dif_name, int port_id);
+
+private:
+	rina::Lockable lock;
+	NetworkManager * nm;
+	std::map<std::string, ManagedSystem *> enrolled_systems;
+};
+
+// Class NM RIB Daemon
+class NMRIBDaemon : public rina::rib::RIBDaemonAE
+{
+public:
+	NMRIBDaemon(rina::cacep::AppConHandlerInterface *app_con_callback);
+	~NMRIBDaemon();
+
+	rina::rib::RIBDaemonProxy * getProxy();
+        const rina::rib::rib_handle_t & get_rib_handle();
+        int64_t addObjRIB(const std::string& fqn, rina::rib::RIBObj** obj);
+        void removeObjRIB(const std::string& fqn);
+
+private:
+	//Handle to the RIB
+	rina::rib::rib_handle_t rib;
+	rina::rib::RIBDaemonProxy* ribd;
+};
+
+// Uses one thread per connected Management Agent (it is
+// ok for demonstration purposes, consider changing to
+// non-blocking I/O and a state machine approach to improve
+// scalability if needed in the future)
 class NetworkManager: public rina::ApplicationProcess
 {
 public:
@@ -44,10 +129,21 @@ public:
 
         void event_loop(std::list<std::string>& dif_names);
         unsigned int get_address() const;
+        void disconnect_from_system(int fd);
+        void enrollment_completed(const rina::cdap_rib::con_handle_t &con);
 
 private:
+        void n1_flow_accepted(const char * incoming_apn, int fd);
+
         int cfd;
         std::string complete_name;
+
+        NMEnrollmentTask * et;
+        NMRIBDaemon * rd;
+
+	/// Readers of N-1 flows
+	rina::Lockable lock;
+	std::map<int, SDUReader *> sdu_readers;
 };
 
 
