@@ -56,7 +56,6 @@ void parse_dif_names(std::list<std::string> & dif_names, const std::string& arg)
 
 int wrapped_main(int argc, char** argv)
 {
-        bool verbose;
         string manager_apn;
         string manager_api;
         list<string> dif_names;
@@ -64,10 +63,6 @@ int wrapped_main(int argc, char** argv)
 
         try {
                 TCLAP::CmdLine cmd("network-manager", ' ', PACKAGE_VERSION);
-                TCLAP::SwitchArg verb_arg("v",
-                                          "verbose",
-                                          "Show more debug output",
-                                          false);
                 TCLAP::ValueArg<string> manager_apn_arg("",
                                                         "manager-apn",
                                                         "Application process name for the Network Manager process",
@@ -87,20 +82,19 @@ int wrapped_main(int argc, char** argv)
                                                 "",
                                                 "string");
 
-                cmd.add(verb_arg);
                 cmd.add(manager_apn_arg);
                 cmd.add(manager_api_arg);
                 cmd.add(dif_arg);
 
                 cmd.parse(argc, argv);
 
-                verbose = verb_arg.getValue();
                 manager_apn = manager_apn_arg.getValue();
                 manager_api = manager_api_arg.getValue();
-                parse_dif_names(dif_names, dif_arg.getValue());
+                if (dif_arg.getValue() != "")
+                	parse_dif_names(dif_names, dif_arg.getValue());
 
-                LOG_DBG("Configuration: verbose=%d, manager_apn=%s, manager_api=%s",
-                	verbose, manager_apn.c_str(), manager_api.c_str());
+                LOG_DBG("Configuration: manager_apn=%s, manager_api=%s",
+                	manager_apn.c_str(), manager_api.c_str());
 
         } catch (TCLAP::ArgException &e) {
                 LOG_ERR("Error: %s for arg %d",
@@ -111,26 +105,9 @@ int wrapped_main(int argc, char** argv)
 
         rina::initialize("DEBUG", "");
 
-        nm_instance = new NetworkManager(dif_names, manager_apn,
-        				 manager_api, verbose);
+        nm_instance = new NetworkManager(manager_apn, manager_api);
 
-        /*
-        if (!km_instance) {
-        	LOG_ERR("Problems creating KM instance, exiting...");
-        	return EXIT_SUCCESS;
-        }
-
-	try {
-		km_instance->event_loop();
-	} catch (rina::Exception &e) {
-		LOG_ERR("Problems running event loop: %s", e.what());
-	} catch (std::exception &e1) {
-		LOG_ERR("Problems running event loop: %s", e1.what());
-	} catch (...) {
-		LOG_ERR("Unhandled exception!!!");
-	} */
-
-	delete nm_instance;
+        nm_instance->event_loop(dif_names);
 
 	LOG_INFO("Exited event loop");
 	return EXIT_SUCCESS;

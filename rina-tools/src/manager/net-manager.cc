@@ -26,16 +26,21 @@
 // SUCH DAMAGE.
 //
 
+#define RINA_PREFIX "net-manager"
+#include <librina/logs.h>
 #include "net-manager.h"
 
-NetworkManager::NetworkManager(const std::list<std::string>& dif_names,
-		       	       const std::string& app_name,
-			       const std::string& app_instance,
-			       bool v) :
+#include <rina/api.h>
+
+NetworkManager::NetworkManager(const std::string& app_name,
+			       const std::string& app_instance) :
 			       	       rina::ApplicationProcess(app_name, app_instance)
 {
-	verbose = v;
-	//TODO register to dif_names
+	std::stringstream ss;
+
+	cfd = 0;
+	ss << app_name << "|" << app_instance << "||";
+	complete_name = ss.str();
 }
 
 NetworkManager::~NetworkManager()
@@ -46,4 +51,45 @@ NetworkManager::~NetworkManager()
 unsigned int NetworkManager::get_address() const
 {
 	return 0;
+}
+
+void NetworkManager::event_loop(std::list<std::string>& dif_names)
+{
+	std::list<std::string>::iterator it;
+	int nfd;
+
+	// 1 Open RINA descriptor
+	cfd = rina_open();
+	if (cfd < 0) {
+		LOG_DBG("rina_open() failed");
+		return;
+	}
+
+	// 2 Register to one or more DIFs
+	for (it = dif_names.begin(); it != dif_names.end(); ++it) {
+		if (rina_register(cfd, it->c_str(), complete_name.c_str(), 0) < 0) {
+			LOG_WARN("Failed to register to DIF %s", it->c_str());
+		} else {
+			LOG_INFO("Registered to DIF %s", it->c_str());
+		}
+	}
+
+	if (dif_names.size() == 0) {
+		if (rina_register(cfd, NULL, complete_name.c_str(), 0) < 0) {
+			LOG_WARN("Failed to register at DIF %s", it->c_str());
+		} else {
+			LOG_INFO("Registered at DIF");
+		}
+	}
+
+	// Main event loop
+	for (;;) {
+		// Accept new flow
+		nfd = rina_flow_accept(cfd, NULL, NULL, 0);
+		LOG_DBG("Accepted flow from remote application, fd = %d", nfd);
+
+		// TODO give it to a new worker, which will proceed with enrollment
+	}
+
+	return;
 }

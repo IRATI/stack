@@ -38,15 +38,16 @@
 class NetworkManager: public rina::ApplicationProcess
 {
 public:
-	NetworkManager(const std::list<std::string>& dif_names,
-		       const std::string& app_name,
-		       const std::string& app_instance,
-		       bool v);
+	NetworkManager(const std::string& app_name,
+		       const std::string& app_instance);
         ~NetworkManager();
+
+        void event_loop(std::list<std::string>& dif_names);
         unsigned int get_address() const;
 
 private:
-        bool verbose;
+        int cfd;
+        std::string complete_name;
 };
 
 
