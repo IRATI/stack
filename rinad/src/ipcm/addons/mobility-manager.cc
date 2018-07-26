@@ -897,6 +897,7 @@ int MobilityManager::execute_handover_arcfire_exp5_tip(bool ue1)
 			slice_neighbor.processName = "isp1.slice1";
 		else
 			slice_neighbor.processName = "isp1.slice2";
+		slice_neighbor.processInstance = "1";
 	} else if (hand_state.dif == "arcfire"){
 		next_dif = "irina";
 		next_prov_dif = "accprov2.DIF";
