@@ -503,7 +503,7 @@ int MobilityManager::initialize_arcfire_exp5_tip(bool ue1)
 			prov_dif_name = "accprov1.DIF";
 			slice_dif_name = "slice1.DIF";
 		} else {
-			ssid = "rinaisense";
+			ssid = "arcfire";
 			prov_dif_name = "accprov2.DIF";
 			slice_dif_name = "slice2.DIF";
 		}
@@ -887,24 +887,8 @@ int MobilityManager::execute_handover_arcfire_exp5_tip(bool ue1)
 		prov_ipcp_disc = prov1_ipcp;
 	} else if (hand_state.dif == "pristine") {
 		next_dif = "arcfire";
-		next_prov_dif = "accprov1.DIF";
-		neighbor.processName = "ar2.accprov1";
-		neighbor.processInstance = "1";
-		hand_state.change_mob_dif = false;
-		prov_ipcp_enroll = prov1_ipcp;
-		prov_ipcp_disc = prov1_ipcp;
-	} else if (hand_state.dif == "arcfire"){
-		next_dif = "irina";
-		next_prov_dif = "accprov1.DIF";
-		neighbor.processName = "ar3.accprov1";
-		neighbor.processInstance = "1";
-		hand_state.change_mob_dif = false;
-		prov_ipcp_enroll = prov1_ipcp;
-		prov_ipcp_disc = prov1_ipcp;
-	} else if (hand_state.dif == "irina"){
-		next_dif = "rinaisense";
 		next_prov_dif = "accprov2.DIF";
-		neighbor.processName = "ar4.accprov1";
+		neighbor.processName = "ar2.accprov1";
 		neighbor.processInstance = "1";
 		hand_state.change_mob_dif = true;
 		prov_ipcp_enroll = prov2_ipcp;
@@ -914,18 +898,18 @@ int MobilityManager::execute_handover_arcfire_exp5_tip(bool ue1)
 		else
 			slice_neighbor.processName = "isp1.slice2";
 		slice_neighbor.processInstance = "1";
-	} else if (hand_state.dif == "rinaisense") {
-		next_dif = "ocarina";
+	} else if (hand_state.dif == "arcfire"){
+		next_dif = "irina";
 		next_prov_dif = "accprov2.DIF";
-		neighbor.processName = "ar5.accprov2";
+		neighbor.processName = "ar3.accprov2";
 		neighbor.processInstance = "1";
 		hand_state.change_mob_dif = false;
 		prov_ipcp_enroll = prov2_ipcp;
 		prov_ipcp_disc = prov2_ipcp;
-	} else if (hand_state.dif == "ocarina") {
+	} else if (hand_state.dif == "irina"){
 		next_dif = "irati";
 		next_prov_dif = "accprov1.DIF";
-		neighbor.processName = "ar6.accprov2";
+		neighbor.processName = "ar4.accprov2";
 		neighbor.processInstance = "1";
 		hand_state.change_mob_dif = true;
 		prov_ipcp_enroll = prov1_ipcp;
