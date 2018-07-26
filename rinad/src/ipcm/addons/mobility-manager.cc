@@ -903,8 +903,8 @@ int MobilityManager::execute_handover_arcfire_exp5_tip(bool ue1)
 		neighbor.processName = "ar3.accprov2";
 		neighbor.processInstance = "1";
 		hand_state.change_mob_dif = false;
-		prov_ipcp_enroll = prov1_ipcp;
-		prov_ipcp_disc = prov1_ipcp;
+		prov_ipcp_enroll = prov2_ipcp;
+		prov_ipcp_disc = prov2_ipcp;
 	} else if (hand_state.dif == "irina"){
 		next_dif = "irati";
 		next_prov_dif = "accprov1.DIF";
