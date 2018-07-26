@@ -31,9 +31,22 @@
 #include <string>
 #include <librina/cdap_v2.h>
 #include <librina/concurrency.h>
+#include <librina/console.h>
 #include <librina/irm.h>
 #include <librina/rib_v2.h>
 #include <librina/security-manager.h>
+
+class NetworkManager;
+
+//Class NMConsole
+class NMConsole : public rina::UNIXConsole {
+public:
+	NMConsole(const std::string& socket_path, NetworkManager * nm);
+	virtual ~NMConsole() throw() {};
+
+private:
+	NetworkManager * netman;
+};
 
 //Class SDUReader
 class SDUReader : public rina::SimpleThread
@@ -47,8 +60,6 @@ private:
 	int portid;
 	int fd;
 };
-
-class NetworkManager;
 
 typedef enum nm_res{
 	//Success
@@ -124,7 +135,8 @@ class NetworkManager: public rina::ApplicationProcess
 {
 public:
 	NetworkManager(const std::string& app_name,
-		       const std::string& app_instance);
+		       const std::string& app_instance,
+		       const std::string& console_path);
         ~NetworkManager();
 
         void event_loop(std::list<std::string>& dif_names);
@@ -140,6 +152,7 @@ private:
 
         NMEnrollmentTask * et;
         NMRIBDaemon * rd;
+        NMConsole * console;
 
 	/// Readers of N-1 flows
 	rina::Lockable lock;

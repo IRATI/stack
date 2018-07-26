@@ -59,6 +59,7 @@ int wrapped_main(int argc, char** argv)
         string manager_apn;
         string manager_api;
         list<string> dif_names;
+        std::string console_path;
         NetworkManager * nm_instance = 0;
 
         try {
@@ -82,9 +83,17 @@ int wrapped_main(int argc, char** argv)
                                                 "",
                                                 "string");
 
+                TCLAP::ValueArg<string> console_path_arg("c",
+                                                         "console-path",
+							 "The path to the Network Management console UNIX socket",
+							 false,
+							 "/var/run/nmconsole.sock",
+							 "string");
+
                 cmd.add(manager_apn_arg);
                 cmd.add(manager_api_arg);
                 cmd.add(dif_arg);
+                cmd.add(console_path_arg);
 
                 cmd.parse(argc, argv);
 
@@ -92,10 +101,10 @@ int wrapped_main(int argc, char** argv)
                 manager_api = manager_api_arg.getValue();
                 if (dif_arg.getValue() != "")
                 	parse_dif_names(dif_names, dif_arg.getValue());
+                console_path = console_path_arg.getValue();
 
-                LOG_DBG("Configuration: manager_apn=%s, manager_api=%s",
-                	manager_apn.c_str(), manager_api.c_str());
-
+                LOG_DBG("Configuration: manager_apn=%s, manager_api=%s, console_path=%s",
+                	manager_apn.c_str(), manager_api.c_str(), console_path.c_str());
         } catch (TCLAP::ArgException &e) {
                 LOG_ERR("Error: %s for arg %d",
                         e.error().c_str(),
@@ -105,7 +114,7 @@ int wrapped_main(int argc, char** argv)
 
         rina::initialize("DEBUG", "");
 
-        nm_instance = new NetworkManager(manager_apn, manager_api);
+        nm_instance = new NetworkManager(manager_apn, manager_api, console_path);
 
         nm_instance->event_loop(dif_names);
 

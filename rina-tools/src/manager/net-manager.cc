@@ -32,6 +32,32 @@
 
 #include <rina/api.h>
 
+//Class NMConsole
+class ListSystemsConsoleCmd: public rina::ConsoleCmdInfo {
+public:
+	ListSystemsConsoleCmd(NMConsole * console, NetworkManager * nm) :
+		rina::ConsoleCmdInfo("USAGE: list-systems", console) {
+		netman = nm;
+	};
+
+	int execute(std::vector<std::string>& args) {
+		//TODO do stuff
+		console->outstream << "Systems listed" << std::endl;
+
+		return rina::UNIXConsole::CMDRETCONT;
+	}
+
+private:
+	NetworkManager * netman;
+};
+
+NMConsole::NMConsole(const std::string& socket_path, NetworkManager * nm) :
+			rina::UNIXConsole(socket_path)
+{
+	netman = nm;
+	commands_map["list-systems"] = new ListSystemsConsoleCmd(this, netman);
+}
+
 //Class SDUReader
 SDUReader::SDUReader(rina::ThreadAttributes * threadAttributes, int port_id, int fd_)
 				: SimpleThread(threadAttributes)
@@ -243,7 +269,8 @@ void NMRIBDaemon::removeObjRIB(const std::string& fqn)
 
 //Class NetworkManager
 NetworkManager::NetworkManager(const std::string& app_name,
-			       const std::string& app_instance) :
+			       const std::string& app_instance,
+			       const std::string& console_path) :
 			       	       rina::ApplicationProcess(app_name, app_instance)
 {
 	std::stringstream ss;
@@ -251,6 +278,8 @@ NetworkManager::NetworkManager(const std::string& app_name,
 	cfd = 0;
 	ss << app_name << "|" << app_instance << "||";
 	complete_name = ss.str();
+
+	console = new NMConsole(console_path, this);
 
 	et = new NMEnrollmentTask();
 	et->set_application_process(this);
@@ -266,6 +295,9 @@ NetworkManager::~NetworkManager()
 	void * status;
 	std::map<int, SDUReader *>::iterator itr;
 	SDUReader * reader;
+
+	if (console)
+		delete console;
 
 	if (et)
 		delete et;
