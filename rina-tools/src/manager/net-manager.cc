@@ -43,7 +43,6 @@ public:
 	int execute(std::vector<std::string>& args) {
 		//TODO do stuff
 		console->outstream << "Systems listed" << std::endl;
-
 		return rina::UNIXConsole::CMDRETCONT;
 	}
 
@@ -51,11 +50,29 @@ private:
 	NetworkManager * netman;
 };
 
+class QueryRIBConsoleCmd: public rina::ConsoleCmdInfo {
+public:
+	QueryRIBConsoleCmd(NMConsole * console, NetworkManager * nm) :
+		rina::ConsoleCmdInfo("USAGE: query-rib", console) {
+		netman = nm;
+	};
+
+	int execute(std::vector<std::string>& args) {
+		console->outstream << netman->query_manager_rib() << std::endl;
+		return rina::UNIXConsole::CMDRETCONT;
+	}
+
+private:
+	NetworkManager * netman;
+};
+
+
 NMConsole::NMConsole(const std::string& socket_path, NetworkManager * nm) :
 			rina::UNIXConsole(socket_path)
 {
 	netman = nm;
 	commands_map["list-systems"] = new ListSystemsConsoleCmd(this, netman);
+	commands_map["query-rib"] = new QueryRIBConsoleCmd(this, netman);
 }
 
 //Class SDUReader
@@ -267,6 +284,11 @@ void NMRIBDaemon::removeObjRIB(const std::string& fqn)
 	ribd->removeObjRIB(rib, fqn);
 }
 
+std::list<rina::rib::RIBObjectData> NMRIBDaemon::get_rib_objects_data(void)
+{
+	return ribd->get_rib_objects_data(rib);
+}
+
 //Class NetworkManager
 NetworkManager::NetworkManager(const std::string& app_name,
 			       const std::string& app_instance,
@@ -274,6 +296,7 @@ NetworkManager::NetworkManager(const std::string& app_name,
 			       	       rina::ApplicationProcess(app_name, app_instance)
 {
 	std::stringstream ss;
+	rina::rib::RIBObj * tmp;
 
 	cfd = 0;
 	ss << app_name << "|" << app_instance << "||";
@@ -287,7 +310,14 @@ NetworkManager::NetworkManager(const std::string& app_name,
 	rd = new NMRIBDaemon(et);
 	rd->set_application_process(this);
 
-	//TODO add required RIB objects to RIB
+	//Add required RIB objects to RIB
+	try {
+		tmp = new rina::rib::RIBObj("ComputingSystems");
+		rd->addObjRIB("/computingSystems", &tmp);
+	} catch (rina::Exception &e1) {
+		LOG_ERR("RIB basic objects were not created because %s",
+			e1.what());
+	}
 }
 
 NetworkManager::~NetworkManager()
@@ -412,10 +442,55 @@ void NetworkManager::disconnect_from_system(int fd)
 
 void NetworkManager::enrollment_completed(const rina::cdap_rib::con_handle_t &con)
 {
+	rina::cdap_rib::res_info_t res;
+	rina::cdap_rib::obj_info_t obj_info;
+        rina::cdap_rib::flags_t flags;
+        rina::cdap_rib::filt_info_t filt;
+
 	LOG_DBG("Enrollment to Management Agent %s %s completed",
 			con.dest_.ap_name_.c_str(),
 			con.dest_.ap_inst_.c_str());
 
-	//TODO query MA and get relevant system information
+	//TODO 1 Add RIB objects for the managed system
 
+	//TODO 2 query MA and get relevant system information
+
+	obj_info.class_ = RIB_ROOT_CN;
+	obj_info.name_ = "/";
+	filt.scope_ = 100;
+	try{
+		rd->getProxy()->remote_read(con, obj_info, flags, filt, this);
+	}catch(rina::Exception &e){
+		lock.unlock();
+		LOG_ERR("Problems sending CDAP message: %s", e.what());
+		disconnect_from_system(con.port_id);
+		return;
+	}
+
+}
+
+void NetworkManager::remoteReadResult(const rina::cdap_rib::con_handle_t &con,
+		      	      	      const rina::cdap_rib::obj_info_t &obj,
+				      const rina::cdap_rib::res_info_t &res)
+{
+	LOG_INFO("Got read result. Class: %s Name: %s",
+		  obj.class_.c_str(), obj.name_.c_str());
+}
+
+std::string NetworkManager::query_manager_rib()
+{
+	std::stringstream ss;
+	std::list<rina::rib::RIBObjectData> objects;
+	std::list<rina::rib::RIBObjectData>::iterator it;
+
+	objects = rd->get_rib_objects_data();
+	for (it = objects.begin(); it != objects.end(); ++it) {
+		ss << "Name: " << it->name_ <<
+			"; Class: "<< it->class_;
+		ss << "; Instance: "<< it->instance_ << std::endl;
+		ss << "Value: " << it->displayable_value_ << std::endl;
+		ss << "" << std::endl;
+	}
+
+	return ss.str();
 }

@@ -54,13 +54,14 @@ void parse_dif_names(std::list<std::string> & dif_names, const std::string& arg)
 		dif_names.push_back(arg.substr(s, arg.length()));
 }
 
+NetworkManager * nm_instance;
+
 int wrapped_main(int argc, char** argv)
 {
         string manager_apn;
         string manager_api;
         list<string> dif_names;
         std::string console_path;
-        NetworkManager * nm_instance = 0;
 
         try {
                 TCLAP::CmdLine cmd("network-manager", ' ', PACKAGE_VERSION);

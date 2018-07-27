@@ -120,6 +120,7 @@ public:
         const rina::rib::rib_handle_t & get_rib_handle();
         int64_t addObjRIB(const std::string& fqn, rina::rib::RIBObj** obj);
         void removeObjRIB(const std::string& fqn);
+        std::list<rina::rib::RIBObjectData> get_rib_objects_data(void);
 
 private:
 	//Handle to the RIB
@@ -131,7 +132,7 @@ private:
 // ok for demonstration purposes, consider changing to
 // non-blocking I/O and a state machine approach to improve
 // scalability if needed in the future)
-class NetworkManager: public rina::ApplicationProcess
+class NetworkManager: public rina::ApplicationProcess, public rina::rib::RIBOpsRespHandler
 {
 public:
 	NetworkManager(const std::string& app_name,
@@ -143,6 +144,12 @@ public:
         unsigned int get_address() const;
         void disconnect_from_system(int fd);
         void enrollment_completed(const rina::cdap_rib::con_handle_t &con);
+
+	void remoteReadResult(const rina::cdap_rib::con_handle_t &con,
+			      const rina::cdap_rib::obj_info_t &obj,
+			      const rina::cdap_rib::res_info_t &res);
+
+	std::string query_manager_rib(void);
 
 private:
         void n1_flow_accepted(const char * incoming_apn, int fd);
