@@ -41,8 +41,7 @@ public:
 	};
 
 	int execute(std::vector<std::string>& args) {
-		//TODO do stuff
-		console->outstream << "Systems listed" << std::endl;
+		console->outstream << netman->list_systems() << std::endl;
 		return rina::UNIXConsole::CMDRETCONT;
 	}
 
@@ -76,11 +75,12 @@ NMConsole::NMConsole(const std::string& socket_path, NetworkManager * nm) :
 }
 
 //Class SDUReader
-SDUReader::SDUReader(rina::ThreadAttributes * threadAttributes, int port_id, int fd_)
-				: SimpleThread(threadAttributes)
+SDUReader::SDUReader(rina::ThreadAttributes * threadAttributes, int port_id, int fd_,
+		     NetworkManager * nm) : SimpleThread(threadAttributes)
 {
 	portid = port_id;
 	fd = fd_;
+	netman = nm;
 }
 
 int SDUReader::run()
@@ -113,6 +113,7 @@ int SDUReader::run()
 	}
 
 	LOG_DBG("SDU Reader of port-id %d terminating", portid);
+	netman->disconnect_from_system_async(fd);
 
 	return 0;
 }
@@ -218,13 +219,13 @@ void NMEnrollmentTask::connect(const rina::cdap::CDAPMessage& message,
 
 	mgd_system = new ManagedSystem();
 	mgd_system->con = con;
-	mgd_system->invoke_id = message.invoke_id_;
+	mgd_system->system_id = 0;
 	mgd_system->status = NM_SUCCESS;
 	enrolled_systems[con.dest_.ap_name_] = mgd_system;
 
 	lock.unlock();
 
-	nm->enrollment_completed(con);
+	nm->enrollment_completed(mgd_system);
 }
 
 void NMEnrollmentTask::connectResult(const rina::cdap::CDAPMessage& message,
@@ -287,6 +288,11 @@ void NMRIBDaemon::removeObjRIB(const std::string& fqn)
 std::list<rina::rib::RIBObjectData> NMRIBDaemon::get_rib_objects_data(void)
 {
 	return ribd->get_rib_objects_data(rib);
+}
+
+void DisconnectFromSystemTimerTask::run()
+{
+	netman->disconnect_from_system(fildesc);
 }
 
 //Class NetworkManager
@@ -412,7 +418,7 @@ void NetworkManager::n1_flow_accepted(const char * incoming_apn, int fd)
 	ss << "SDU Reader of fd " << fd;
 	thread_attrs.setName(ss.str());
 	// Use fd as port-id
-	reader = new SDUReader(&thread_attrs, fd, fd);
+	reader = new SDUReader(&thread_attrs, fd, fd, this);
 	reader->start();
 
 	sdu_readers[fd] = reader;
@@ -420,12 +426,74 @@ void NetworkManager::n1_flow_accepted(const char * incoming_apn, int fd)
 	rina::cdap::add_fd_to_port_id_mapping(fd, fd);
 }
 
+int NetworkManager::assign_system_id(void)
+{
+	rina::ScopedLock(et->lock);
+	int candidate = 1;
+	std::map<std::string, ManagedSystem *>::iterator it;
+	bool assigned;
+
+	for (candidate = 1; candidate < 2000; candidate ++) {
+		assigned = false;
+		for (it = et->enrolled_systems.begin();
+				it != et->enrolled_systems.end(); ++it) {
+			if (it->second->system_id == candidate) {
+				assigned = true;
+				break;
+			}
+		}
+
+		if (!assigned)
+			break;
+	}
+
+	return candidate;
+}
+
+void NetworkManager::disconnect_from_system_async(int fd)
+{
+	DisconnectFromSystemTimerTask * ttask;
+
+	ttask = new DisconnectFromSystemTimerTask(this, fd);
+	timer.scheduleTask(ttask, 0);
+}
+
 void NetworkManager::disconnect_from_system(int fd)
 {
 	void * status;
 	std::map<int, SDUReader *>::iterator itr;
+	std::map<std::string, ManagedSystem *>::iterator it;
+	std::stringstream ss;
+	ManagedSystem * ms;
 	SDUReader * reader;
 
+	// Remove Managed System
+	ms = NULL;
+	et->lock.lock();
+	for (it = et->enrolled_systems.begin();
+			it != et->enrolled_systems.end(); ++it) {
+		if (it->second->con.port_id == (unsigned int) fd) {
+			ms = it->second;
+			et->enrolled_systems.erase(it);
+			break;
+		}
+	}
+	et->lock.unlock();
+
+	// Remove objects from RIB
+	if (ms) {
+		try {
+			ss << "/computingSystems/computingSystemID=" << ms->system_id;
+			rd->removeObjRIB(ss.str());
+		} catch (rina::Exception &e1) {
+			LOG_ERR("RIB basic objects were not created because %s",
+					e1.what());
+		}
+
+		delete ms;
+	}
+
+	// Remove SDU Reader
 	rina::ScopedLock g(lock);
 
 	itr = sdu_readers.find(fd);
@@ -440,30 +508,41 @@ void NetworkManager::disconnect_from_system(int fd)
 	delete reader;
 }
 
-void NetworkManager::enrollment_completed(const rina::cdap_rib::con_handle_t &con)
+void NetworkManager::enrollment_completed(struct ManagedSystem * system)
 {
 	rina::cdap_rib::res_info_t res;
 	rina::cdap_rib::obj_info_t obj_info;
         rina::cdap_rib::flags_t flags;
         rina::cdap_rib::filt_info_t filt;
+        rina::rib::RIBObj * csobj;
+        std::stringstream ss;
 
 	LOG_DBG("Enrollment to Management Agent %s %s completed",
-			con.dest_.ap_name_.c_str(),
-			con.dest_.ap_inst_.c_str());
+			system->con.dest_.ap_name_.c_str(),
+			system->con.dest_.ap_inst_.c_str());
 
-	//TODO 1 Add RIB objects for the managed system
+	system->system_id = assign_system_id();
 
-	//TODO 2 query MA and get relevant system information
+	//Add RIB objects for the managed system
+	try {
+		ss << "/computingSystems/computingSystemID=" << system->system_id;
+		csobj = new rina::rib::RIBObj("ComputingSystem");
+		rd->addObjRIB(ss.str(), &csobj);
+	} catch (rina::Exception &e1) {
+		LOG_ERR("RIB basic objects were not created because %s",
+			e1.what());
+	}
 
+	//2 query MA and get relevant system information
 	obj_info.class_ = RIB_ROOT_CN;
 	obj_info.name_ = "/";
 	filt.scope_ = 100;
 	try{
-		rd->getProxy()->remote_read(con, obj_info, flags, filt, this);
+		rd->getProxy()->remote_read(system->con, obj_info, flags, filt, this);
 	}catch(rina::Exception &e){
 		lock.unlock();
 		LOG_ERR("Problems sending CDAP message: %s", e.what());
-		disconnect_from_system(con.port_id);
+		disconnect_from_system(system->con.port_id);
 		return;
 	}
 
@@ -490,6 +569,27 @@ std::string NetworkManager::query_manager_rib()
 		ss << "; Instance: "<< it->instance_ << std::endl;
 		ss << "Value: " << it->displayable_value_ << std::endl;
 		ss << "" << std::endl;
+	}
+
+	return ss.str();
+}
+
+std::string NetworkManager::list_systems(void)
+{
+	std::map<std::string, ManagedSystem *>::iterator it;
+	std::stringstream ss;
+
+	ss << "        Managed Systems       " << std::endl;
+	ss << "    system id    |   MA name   |  port-id  " << std::endl;
+
+	rina::ScopedLock(et->lock);
+
+	for (it = et->enrolled_systems.begin();
+			it != et->enrolled_systems.end(); ++it) {
+		ss << "       " << it->second->system_id << "   |   ";
+		ss << it->second->con.dest_.ap_name_ << "-"
+		   << it->second->con.dest_.ap_inst_ << "   |   ";
+		ss << "       " << it->second->con.port_id << std::endl;
 	}
 
 	return ss.str();

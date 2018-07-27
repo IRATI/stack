@@ -52,13 +52,15 @@ private:
 class SDUReader : public rina::SimpleThread
 {
 public:
-	SDUReader(rina::ThreadAttributes * threadAttributes, int port_id, int fd_);
+	SDUReader(rina::ThreadAttributes * threadAttributes, int port_id, int fd_,
+		  NetworkManager * nm);
 	~SDUReader() throw() {};
 	int run();
 
 private:
 	int portid;
 	int fd;
+	NetworkManager * netman;
 };
 
 typedef enum nm_res{
@@ -76,7 +78,7 @@ struct ManagedSystem
 {
 	rina::cdap_rib::con_handle_t con;
 	rina::IAuthPolicySet * auth_ps_;
-	int invoke_id;
+	int system_id;
 	nm_res status;
 };
 
@@ -103,10 +105,11 @@ public:
 	void initiateEnrollment(const rina::ApplicationProcessNamingInformation& peer_name,
 				const std::string& dif_name, int port_id);
 
-private:
 	rina::Lockable lock;
-	NetworkManager * nm;
 	std::map<std::string, ManagedSystem *> enrolled_systems;
+
+private:
+	NetworkManager * nm;
 };
 
 // Class NM RIB Daemon
@@ -128,6 +131,17 @@ private:
 	rina::rib::RIBDaemonProxy* ribd;
 };
 
+class DisconnectFromSystemTimerTask: public rina::TimerTask {
+public:
+	DisconnectFromSystemTimerTask(NetworkManager * nm, int fd) :
+		netman(nm), fildesc(fd) {};
+	~DisconnectFromSystemTimerTask() throw() {};
+	void run();
+
+	NetworkManager * netman;
+	int fildesc;
+};
+
 // Uses one thread per connected Management Agent (it is
 // ok for demonstration purposes, consider changing to
 // non-blocking I/O and a state machine approach to improve
@@ -143,16 +157,20 @@ public:
         void event_loop(std::list<std::string>& dif_names);
         unsigned int get_address() const;
         void disconnect_from_system(int fd);
-        void enrollment_completed(const rina::cdap_rib::con_handle_t &con);
+        void disconnect_from_system_async(int fd);
+        void enrollment_completed(struct ManagedSystem * system);
 
 	void remoteReadResult(const rina::cdap_rib::con_handle_t &con,
 			      const rina::cdap_rib::obj_info_t &obj,
 			      const rina::cdap_rib::res_info_t &res);
 
+	// Operations to process console commands
 	std::string query_manager_rib(void);
+	std::string list_systems(void);
 
 private:
         void n1_flow_accepted(const char * incoming_apn, int fd);
+        int assign_system_id(void);
 
         int cfd;
         std::string complete_name;
@@ -160,6 +178,8 @@ private:
         NMEnrollmentTask * et;
         NMRIBDaemon * rd;
         NMConsole * console;
+
+        rina::Timer timer;
 
 	/// Readers of N-1 flows
 	rina::Lockable lock;

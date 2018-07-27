@@ -798,11 +798,12 @@ AbstractKM * KMFactory::get_instance()
 }
 
 // Class SDUReader
-SDUReader::SDUReader(rina::ThreadAttributes * threadAttributes, int port_id, int fd_)
-				: SimpleThread(threadAttributes)
+SDUReader::SDUReader(rina::ThreadAttributes * threadAttributes, int port_id, int fd_,
+		     NetworkManager * nm) : SimpleThread(threadAttributes)
 {
 	portid = port_id;
 	fd = fd_;
+	netman = nm;
 }
 
 int SDUReader::run()
@@ -835,6 +836,7 @@ int SDUReader::run()
 		}
 	}
 
+	netman->disconnect_from_system(fd);
 	LOG_DBG("SDU Reader of port-id %d terminating", portid);
 
 	return 0;
