@@ -134,7 +134,7 @@ FlowsRIBObject::FlowsRIBObject(IPCProcess * ipc_process,
 
 //Class Connections RIB Object
 const std::string ConnectionsRIBObj::class_name = "Connections";
-const std::string ConnectionsRIBObj::object_name = "/dt/connections";
+const std::string ConnectionsRIBObj::object_name = "/dt/conns";
 
 ConnectionsRIBObj::ConnectionsRIBObj(IPCProcess * ipc_process,
 			       	     IFlowAllocator * flow_allocator)
@@ -145,7 +145,7 @@ ConnectionsRIBObj::ConnectionsRIBObj(IPCProcess * ipc_process,
 
 //Class Connection RIB Object
 const std::string ConnectionRIBObject::class_name = "Connection";
-const std::string ConnectionRIBObject::object_name_prefix = "/dt/connections/srcCepId=";
+const std::string ConnectionRIBObject::object_name_prefix = "/dt/conns/scepid=";
 
 ConnectionRIBObject::ConnectionRIBObject(IPCProcess * ipc_process,
 					 IFlowAllocatorInstance * fai_)

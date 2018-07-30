@@ -18,13 +18,17 @@ net_manager_SOURCES  =				\
     net-manager.h    net-manager.cc \
 	main.cc \
 	$(protoSOURCES)
-net_manager_LDADD    = $(LIBRINA_LIBS) $(LIBRINA_API_LIBS) -ldl
+net_manager_LDADD    =          \
+    $(LIBRINA_LIBS)             \
+    $(LIBRINA_API_LIBS) -ldl    \
+    $(builddir)/../../../rinad/src/common/librinad.la
 net_manager_CPPFLAGS =			\
 	$(LIBRINA_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)			\
     $(LIBPROTOBUF_CFLAGS)  		\
     $(LIBRINA_API_CFLAGS)       \
-	-I$(srcdir)/../common
+	-I$(srcdir)/../common       \
+	-I$(srcdir)/../../../rinad/src/common
 net_manager_CXXFLAGS =			\
 	$(CPPFLAGS_EXTRA)
 

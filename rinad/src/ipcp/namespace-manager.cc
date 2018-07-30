@@ -33,7 +33,7 @@ namespace rinad {
 
 // Class WhateverCastNameRIBObj
 const std::string WhateverCastNameRIBObj::class_name = "Neighbor";
-const std::string WhateverCastNameRIBObj::object_name_prefix = "/difmanagement/nsm/whatnames/name=";
+const std::string WhateverCastNameRIBObj::object_name_prefix = "/difm/nsm/whatnms/name=";
 
 WhateverCastNameRIBObj::WhateverCastNameRIBObj(rina::WhatevercastName* name_) :
 		rina::rib::RIBObj(class_name), name(name_)
@@ -69,7 +69,7 @@ void WhateverCastNameRIBObj::read(const rina::cdap_rib::con_handle_t &con,
 
 // Class WhateverCastNamesRIBObj
 const std::string WhateverCastNamesRIBObj::class_name = "Neighbor";
-const std::string WhateverCastNamesRIBObj::object_name = "/difManagement/nsm/whatnames";
+const std::string WhateverCastNamesRIBObj::object_name = "/difm/nsm/whatnms";
 
 WhateverCastNamesRIBObj::WhateverCastNamesRIBObj(IPCProcess * ipc_process) :
 	IPCPRIBObj(ipc_process, class_name)
@@ -105,7 +105,7 @@ void WhateverCastNamesRIBObj::create(const rina::cdap_rib::con_handle_t &con,
 
 // Class DFTEntryRIBObj
 const std::string DFTEntryRIBObj::class_name = "DirectoryForwardingTableEntry";
-const std::string DFTEntryRIBObj::object_name_prefix = "/difManagement/nsm/dft/key=";
+const std::string DFTEntryRIBObj::object_name_prefix = "/difm/nsm/dft/key=";
 
 DFTEntryRIBObj::DFTEntryRIBObj(IPCProcess * ipcp,
 			       rina::DirectoryForwardingTableEntry* entry_) :
@@ -158,7 +158,7 @@ void DFTEntryRIBObj::read(const rina::cdap_rib::con_handle_t &con,
 
 // Class DirectoryForwardingTableEntry Set RIB Object
 const std::string DFTRIBObj::class_name = "DirectoryForwardingTable";
-const std::string DFTRIBObj::object_name = "/difManagement/nsm/dft";
+const std::string DFTRIBObj::object_name = "/difm/nsm/dft";
 
 DFTRIBObj::DFTRIBObj(IPCProcess * ipc_process):
 		IPCPRIBObj(ipc_process, class_name)
@@ -335,7 +335,7 @@ void NamespaceManager::populateRIB()
 
 	try {
 		tmp = new rina::rib::RIBObj("NamespaceManager");
-		rib_daemon_->addObjRIB("/difManagement/nsm", &tmp);
+		rib_daemon_->addObjRIB("/difm/nsm", &tmp);
 
 		tmp = new WhateverCastNamesRIBObj(ipcp);
 		rib_daemon_->addObjRIB(WhateverCastNamesRIBObj::object_name, &tmp);

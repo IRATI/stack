@@ -34,7 +34,7 @@ namespace rinad {
 
 // Class QoSCube RIB object
 const std::string QoSCubeRIBObject::class_name = "QoSCube";
-const std::string QoSCubeRIBObject::object_name_prefix = "/resalloc/qoscubes/id=";
+const std::string QoSCubeRIBObject::object_name_prefix = "/ra/qoscubes/id=";
 
 QoSCubeRIBObject::QoSCubeRIBObject(rina::QoSCube* cube)
 	: rina::rib::RIBObj(class_name), qos_cube(cube)
@@ -85,7 +85,7 @@ void QoSCubeRIBObject::read(const rina::cdap_rib::con_handle_t &con,
 
 //Class QoS Cube Set RIB Object
 const std::string QoSCubesRIBObject::class_name = "QoSCubes";
-const std::string QoSCubesRIBObject::object_name = "/resalloc/qoscubes";
+const std::string QoSCubesRIBObject::object_name = "/ra/qoscubes";
 
 QoSCubesRIBObject::QoSCubesRIBObject(IPCProcess * ipc_process)
 	: IPCPRIBObj(ipc_process, class_name)
@@ -119,7 +119,7 @@ void RMTN1Flow::sync_with_kernel()
 
 // Class RMTN1Flow RIB object
 const std::string RMTN1FlowRIBObj::class_name = "RMTN1Flow";
-const std::string RMTN1FlowRIBObj::object_name_prefix = "/rmt/n1flows/port_id=";
+const std::string RMTN1FlowRIBObj::object_name_prefix = "/rmt/n1flows/pid=";
 
 RMTN1FlowRIBObj::RMTN1FlowRIBObj(RMTN1Flow * flow)
 	: rina::rib::RIBObj(class_name)
@@ -152,9 +152,9 @@ void RMTN1FlowRIBObj::read(const rina::cdap_rib::con_handle_t &con,
 
 // Class NextHopTEntryRIBObj
 const std::string NextHopTEntryRIBObj::parent_class_name = "NextHopTable";
-const std::string NextHopTEntryRIBObj::parent_object_name = "/resalloc/nhopt";
+const std::string NextHopTEntryRIBObj::parent_object_name = "/ra/nhopt";
 const std::string NextHopTEntryRIBObj::class_name = "NextHopTableEntry";
-const std::string NextHopTEntryRIBObj::object_name_prefix = "/resalloc/nhopt/key=";
+const std::string NextHopTEntryRIBObj::object_name_prefix = "/ra/nhopt/key=";
 
 NextHopTEntryRIBObj::NextHopTEntryRIBObj(rina::RoutingTableEntry* entry)
 	: rina::rib::RIBObj(class_name), rt_entry(entry)
@@ -196,9 +196,9 @@ void NextHopTEntryRIBObj::read(const rina::cdap_rib::con_handle_t &con,
 
 // Class PDUFTEntryRIBObj
 const std::string PDUFTEntryRIBObj::parent_class_name = "PDUForwardingTable";
-const std::string PDUFTEntryRIBObj::parent_object_name = "/resalloc/pduft";
+const std::string PDUFTEntryRIBObj::parent_object_name = "/ra/pduft";
 const std::string PDUFTEntryRIBObj::class_name = "PDUForwardingTableEntry";
-const std::string PDUFTEntryRIBObj::object_name_prefix = "/resalloc/pduft/key=";
+const std::string PDUFTEntryRIBObj::object_name_prefix = "/ra/pduft/key=";
 
 PDUFTEntryRIBObj::PDUFTEntryRIBObj(rina::PDUForwardingTableEntry* entry)
 	: rina::rib::RIBObj(class_name), ft_entry(entry)
@@ -470,7 +470,7 @@ void ResourceAllocator::populateRIB()
 
 	try {
 		tmp = new rina::rib::RIBObj("ResourceAllocator");
-		rib_daemon_->addObjRIB("/resalloc", &tmp);
+		rib_daemon_->addObjRIB("/ra", &tmp);
 
 		tmp = new QoSCubesRIBObject(ipcp);
 		rib_daemon_->addObjRIB(QoSCubesRIBObject::object_name, &tmp);
