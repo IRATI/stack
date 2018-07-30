@@ -5,17 +5,14 @@
     "libraryPath" : "@libdir@",
     "logPath" : "@localstatedir@/log",
     "consoleSocket" : "@runstatedir@/ipcm-console.sock",
+    "system-name" : "pe1",
     "pluginsPaths" : ["@libdir@/rinad/ipcp"]
   },
   "ipcProcessesToCreate" : [ {
     "type" : "shim-eth-vlan",
-    "apName" : "test-eth-vlan",
-    "apInstance" : "1",
     "difName" : "110"
    }, {
     "type" : "normal-ipc",
-    "apName" : "test1.IRATI",
-    "apInstance" : "1",
     "difName" : "normal.DIF",
     "difsToRegisterAt" : ["110"]
    } ],

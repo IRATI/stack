@@ -21,6 +21,7 @@
 #include <linux/export.h>
 #include <linux/types.h>
 #include <linux/timer.h>
+#include <linux/version.h>
 
 #define RINA_PREFIX "rtimer"
 
@@ -53,7 +54,11 @@ static struct rtimer * rtimer_create_gfp(gfp_t   flags,
         tmp->function = function;
         tmp->data     = data;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         init_timer(&tmp->tl);
+#else
+        timer_setup(&tmp->tl, function, data);
+#endif
 
         LOG_DBG("Timer %pK created", tmp);
 
@@ -88,16 +93,19 @@ static int __rtimer_start(struct rtimer * timer,
                           unsigned int    millisecs)
 {
         int status;
+        unsigned long expires;
 
         ASSERT(timer);
 
+        expires = jiffies + (millisecs * HZ) / 1000;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         /* FIXME: Crappy, rearrange */
         timer->tl.function = (void (*)(unsigned long)) timer->function;
         timer->tl.data     = (unsigned long)           timer->data;
         timer->tl.expires  = jiffies + (millisecs * HZ) / 1000;
+#endif
 
-        status = mod_timer(&timer->tl, timer->tl.expires);
-
+        status = mod_timer(&timer->tl, expires);
 
         LOG_DBG("Previously %s Timer %pK restarted (function = %pK, data = %pK, "
                 "expires = %ld (%u)",
@@ -105,7 +113,7 @@ static int __rtimer_start(struct rtimer * timer,
                 timer,
                 (void *) timer->tl.function,
                 (void *) timer->tl.data,
-                timer->tl.expires,
+                expires,
                 millisecs);
 
         return 0;

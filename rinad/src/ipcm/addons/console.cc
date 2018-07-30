@@ -38,20 +38,19 @@ const string IPCMConsole::NAME = "console";
 class CreateIPCPConsoleCmd: public rina::ConsoleCmdInfo {
 public:
 	CreateIPCPConsoleCmd(IPCMConsole * console) :
-		rina::ConsoleCmdInfo("USAGE: create-ipcp <process-name> "
-				"<process-instance> <ipcp-type>", console) {};
+		rina::ConsoleCmdInfo("USAGE: create-ipcp <ipcp-type> <dif-name>", console) {};
 
 	int execute(std::vector<string>& args) {
 		CreateIPCPPromise promise;
 
-		if (args.size() < 4) {
+		if (args.size() < 3) {
 			console->outstream << console->commands_map[args[0]]->usage << endl;
 			return rina::UNIXConsole::CMDRETCONT;
 		}
 
-		rina::ApplicationProcessNamingInformation ipcp_name(args[1], args[2]);
+		rina::ApplicationProcessNamingInformation ipcp_name;
 
-		if(IPCManager->create_ipcp((IPCMConsole*) console, &promise, ipcp_name, args[3]) == IPCM_FAILURE ||
+		if(IPCManager->create_ipcp((IPCMConsole*) console, &promise, ipcp_name, args[2], args[3]) == IPCM_FAILURE ||
 				promise.wait() != IPCM_SUCCESS){
 			console->outstream << "Error while creating IPC process" << endl;
 			return rina::UNIXConsole::CMDRETCONT;

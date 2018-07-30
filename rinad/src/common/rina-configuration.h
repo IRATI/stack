@@ -167,6 +167,9 @@ struct LocalConfiguration {
 	/* The paths where to look for policy plugins. */
 	std::list<std::string> pluginsPaths;
 
+	/* The system name */
+	rina::ApplicationProcessNamingInformation system_name;
+
         std::string toString() const;
 
         LocalConfiguration() { }

@@ -193,7 +193,7 @@ void IPCManager_::join_dif_continue_flow_alloc(Promise * promise, rina::FlowRequ
         dif_allocator->get_ipcp_name_for_dif(ipcp_name, dif_name);
         try {
         	if (create_ipcp(NULL, &c_promise, ipcp_name,
-        			dif_template.difType) == IPCM_FAILURE
+        			dif_template.difType, dapp_name.processName) == IPCM_FAILURE
         			|| c_promise.wait() != IPCM_SUCCESS) {
         		LOG_ERR("Problems creating IPCP");
 

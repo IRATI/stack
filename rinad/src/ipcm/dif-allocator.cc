@@ -195,6 +195,24 @@ void DIFAllocator::get_ipcp_name(rina::ApplicationProcessNamingInformation& ipcp
 	}
 }
 
+int DIFAllocator::generate_ipcp_name(rina::ApplicationProcessNamingInformation& ipcp_name,
+		                     const std::string& dif_name)
+{
+	std::stringstream ss;
+
+	if (sys_name.processName == "") {
+		LOG_DBG("No system name provided, cannot generate IPCP name");
+		return -1;
+	}
+
+	ss << sys_name.processName << "." << dif_name;
+
+	ipcp_name.processName = ss.str();
+	ipcp_name.processInstance = "1";
+
+	return 0;
+}
+
 const std::string StaticDIFAllocator::TYPE = "static-dif-allocator";
 
 StaticDIFAllocator::StaticDIFAllocator() : DIFAllocator()

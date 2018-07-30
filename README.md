@@ -155,7 +155,8 @@ Daemon starts its execution.
 
 **Local configuration**. The first part of the configuration file contains the settings for IRATI, 
 such as the paths to the  UNIX socket for the local console or the paths where to search for 
-user-space or kernel plugins.
+user-space or kernel plugins. It also specifies the system name, which is later used to auto-generate 
+the names of the IPC Processes instantiated in this system.
 
       "configFileVersion" : "1.4.1",
       "localConfiguration" : {
@@ -163,24 +164,21 @@ user-space or kernel plugins.
         "libraryPath" : "/usr/lib",
         "logPath" : "/var/log",
         "consoleSocket" : "/var/run/ipcm-console.sock",
+        "system-name" : "pe1",
         "pluginsPaths" : ["/usr/lib/rinad/ipcp"]
       },
 
 **IPC Processes to create**. The next section specifies which IPC processes should be created. 
 It requires for each IPC process the type, which can be either a normal IPC process, or a certain 
-shim IPC process. The names of the IPC process and the DIF then have to be specified. The name of 
+shim IPC process. The names of the IPCPs will be generated from the system name and the DIF name. The name of 
 the DIF the IPC process should register with is also supplied. Enrollment however, will have to be 
 done manually from the local management console.
 
     "ipcProcessesToCreate" : [ {
       "type" : "shim-eth-vlan",
-      "apName" : "test-eth-vlan",
-      "apInstance" : "1",
       "difName" : "110"
      }, {
       "type" : "normal-ipc",
-      "apName" : "test1.IRATI",
-      "apInstance" : "1",
       "difName" : "normal.DIF",
       "difsToRegisterAt" : ["110"]
      } ],

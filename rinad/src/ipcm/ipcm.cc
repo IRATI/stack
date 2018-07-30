@@ -193,117 +193,121 @@ void IPCManager_::load_addons(const std::string& addon_list)
  *
  */
 
-ipcm_res_t IPCManager_::create_ipcp(
-        Addon* callee, CreateIPCPPromise* promise,
-        const rina::ApplicationProcessNamingInformation& name,
-        const std::string& type)
+ipcm_res_t IPCManager_::create_ipcp(Addon* callee, CreateIPCPPromise* promise,
+				    rina::ApplicationProcessNamingInformation& name,
+				    const std::string& type, const std::string& dif_name)
 {
-    IPCMIPCProcess *ipcp;
-    std::ostringstream ss;
-    rina::IPCProcessFactory fact;
-    std::list < std::string > ipcp_types;
-    bool difCorrect = false;
-    std::string s;
-    SyscallTransState* trans;
-    int ipcp_id = -1;
+	IPCMIPCProcess *ipcp;
+	std::ostringstream ss;
+	rina::IPCProcessFactory fact;
+	std::list < std::string > ipcp_types;
+	bool difCorrect = false;
+	std::string s;
+	SyscallTransState* trans;
+	int ipcp_id = -1;
 
-    try
-    {
-        // Check that the AP name is not empty
-        if (name.processName == std::string(""))
-        {
-            ss << "Cannot create IPC process with an "
-                    "empty AP name" << std::endl;
-            FLUSH_LOG(ERR, ss);
-            throw rina::CreateIPCProcessException();
-        }
+	// Let the DIF Allocator generate the IPCP name
+	// If sysname is not set we assume the old configuration
+	// method is used (IPCP name is explicitly set)
+	dif_allocator->generate_ipcp_name(name, dif_name);
 
-        //Check if dif type exists
-        list_ipcp_types (ipcp_types);
-        if (std::find(ipcp_types.begin(), ipcp_types.end(), type)
-                == ipcp_types.end())
-        {
-            const char* const separator = ", ";
-            ss << "IPCP type parameter " << type.c_str()
-                    << " is wrong, options are: [" << s;
-            // actually list the optons
-            std::copy(ipcp_types.begin(),
-        	      ipcp_types.end(),
-		      std::ostream_iterator<std::string>(ss, separator));
-            ss << "]";
-            FLUSH_LOG(ERR, ss);
-            throw rina::CreateIPCProcessException();
-        }
+	try
+	{
+		// Check that the AP name is not empty
+		if (name.processName == std::string(""))
+		{
+			ss << "Cannot create IPC process with an "
+					"empty AP name" << std::endl;
+			FLUSH_LOG(ERR, ss);
+			throw rina::CreateIPCProcessException();
+		}
 
-        rina::ScopedLock g(req_lock);
+		//Check if dif type exists
+		list_ipcp_types (ipcp_types);
+		if (std::find(ipcp_types.begin(), ipcp_types.end(), type)
+		== ipcp_types.end())
+		{
+			const char* const separator = ", ";
+			ss << "IPCP type parameter " << type.c_str()
+                		    << " is wrong, options are: [" << s;
+			// actually list the optons
+			std::copy(ipcp_types.begin(),
+					ipcp_types.end(),
+					std::ostream_iterator<std::string>(ss, separator));
+			ss << "]";
+			FLUSH_LOG(ERR, ss);
+			throw rina::CreateIPCProcessException();
+		}
 
-        //Call the factory
-        ipcp = ipcp_factory_.create(name, type);
-        ipcp_id = ipcp->get_id();
-        pending_cipcp_req[ipcp->proxy_->seq_num] = ipcp_id;
+		rina::ScopedLock g(req_lock);
 
-        //Set the promise
-        if (promise)
-            promise->ipcp_id = ipcp_id;
+		//Call the factory
+		ipcp = ipcp_factory_.create(name, type);
+		ipcp_id = ipcp->get_id();
+		pending_cipcp_req[ipcp->proxy_->seq_num] = ipcp_id;
 
-        //TODO: this should be moved to the factory
-        //Moreover the API should be homgenized such that the
-        if (type != rina::NORMAL_IPC_PROCESS &&
-        		type != rina::SHIM_WIFI_IPC_PROCESS_AP &&
-			type != rina::SHIM_WIFI_IPC_PROCESS_STA)
-        {
-            // Shim IPC processes are set as initialized
-            // immediately.
-            ipcp->setInitialized();
-        }
+		//Set the promise
+		if (promise)
+			promise->ipcp_id = ipcp_id;
 
-        //Release the lock asap
-        ipcp->rwlock.unlock();
+		//TODO: this should be moved to the factory
+		//Moreover the API should be homgenized such that the
+		if (type != rina::NORMAL_IPC_PROCESS &&
+				type != rina::SHIM_WIFI_IPC_PROCESS_AP &&
+				type != rina::SHIM_WIFI_IPC_PROCESS_STA)
+		{
+			// Shim IPC processes are set as initialized
+			// immediately.
+			ipcp->setInitialized();
+		}
 
-        // Normal IPC processes can be set as
-        // initialized only when the corresponding
-        // IPC process daemon is initialized, so we
-        // defer the operation.
+		//Release the lock asap
+		ipcp->rwlock.unlock();
 
-        //Add transaction state
-        trans = new SyscallTransState(callee, promise, ipcp_id);
-        if (!trans)
-        {
-        	assert(0);
-        	ss << "Failed to create IPC process '" << name.toString()
-                        		<< "' of type '" << type << "'. Out of memory!"
-					<< std::endl;
-        	FLUSH_LOG(ERR, ss);
-        	FLUSH_LOG(ERR, ss);
-        	throw rina::CreateIPCProcessException();
-        }
+		// Normal IPC processes can be set as
+		// initialized only when the corresponding
+		// IPC process daemon is initialized, so we
+		// defer the operation.
 
-        if (add_syscall_transaction_state(trans) < 0)
-        {
-        	assert(0);
-        	throw rina::CreateIPCProcessException();
-        }
-        //Show a nice trace
-        ss << "IPC process " << name.toString()
-                		    << " created and waiting for initialization"
-				    "[id = " << ipcp_id << "]" << std::endl;
-        FLUSH_LOG(INFO, ss);
-    } catch (rina::ConcurrentException& e)
-    {
-        ss << "Failed to create IPC process '" << name.toString()
-                << "' of type '" << type << "'. Transaction timed out"
-                << std::endl;
-        FLUSH_LOG(ERR, ss);
-        return IPCM_FAILURE;
-    } catch (...)
-    {
-        ss << "Failed to create IPC process '" << name.toString()
-                << "' of type '" << type << "'" << std::endl;
-        FLUSH_LOG(ERR, ss);
-        return IPCM_FAILURE;
-    }
+		//Add transaction state
+		trans = new SyscallTransState(callee, promise, ipcp_id);
+		if (!trans)
+		{
+			assert(0);
+			ss << "Failed to create IPC process '" << name.toString()
+                        				<< "' of type '" << type << "'. Out of memory!"
+							<< std::endl;
+			FLUSH_LOG(ERR, ss);
+			FLUSH_LOG(ERR, ss);
+			throw rina::CreateIPCProcessException();
+		}
 
-    return IPCM_PENDING;
+		if (add_syscall_transaction_state(trans) < 0)
+		{
+			assert(0);
+			throw rina::CreateIPCProcessException();
+		}
+		//Show a nice trace
+		ss << "IPC process " << name.toString()
+                				    << " created and waiting for initialization"
+						    "[id = " << ipcp_id << "]" << std::endl;
+		FLUSH_LOG(INFO, ss);
+	} catch (rina::ConcurrentException& e)
+	{
+		ss << "Failed to create IPC process '" << name.toString()
+                		<< "' of type '" << type << "'. Transaction timed out"
+				<< std::endl;
+		FLUSH_LOG(ERR, ss);
+		return IPCM_FAILURE;
+	} catch (...)
+	{
+		ss << "Failed to create IPC process '" << name.toString()
+                		<< "' of type '" << type << "'" << std::endl;
+		FLUSH_LOG(ERR, ss);
+		return IPCM_FAILURE;
+	}
+
+	return IPCM_PENDING;
 }
 
 ipcm_res_t IPCManager_::destroy_ipcp(Addon* callee, unsigned short ipcp_id)
@@ -1062,6 +1066,9 @@ ipcm_res_t IPCManager_::apply_configuration()
         //It is not clear which exceptions can be thrown and what to do
         //if this happens. Just protecting to prevent dead-locks.
 
+	//Set system name
+	dif_allocator->sys_name = config.local.system_name;
+
         // Examine all the IPCProcesses that are going to be created
         // according to the configuration file.
         ipcm_res_t result;
@@ -1099,7 +1106,7 @@ ipcm_res_t IPCManager_::apply_configuration()
             try
             {
                 if (create_ipcp(NULL, &c_promise, cit->name,
-                                dif_template.difType) == IPCM_FAILURE
+                                dif_template.difType, cit->difName.processName) == IPCM_FAILURE
                         || c_promise.wait() != IPCM_SUCCESS)
                 {
                     continue;
