@@ -21,6 +21,7 @@
 #include <linux/export.h>
 #include <linux/types.h>
 #include <linux/timer.h>
+#include <linux/version.h>
 
 #define RINA_PREFIX "rtimer"
 
@@ -50,10 +51,13 @@ static struct rtimer * rtimer_create_gfp(gfp_t   flags,
         if (!tmp)
                 return NULL;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         tmp->function = function;
         tmp->data     = data;
-
         init_timer(&tmp->tl);
+#else
+        timer_setup(&tmp->tl, function, data);
+#endif
 
         LOG_DBG("Timer %pK created", tmp);
 
