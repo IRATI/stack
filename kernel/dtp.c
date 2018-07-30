@@ -436,7 +436,7 @@ static void tf_sender_inactivity(struct timer_list * tl)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         dtp = (struct dtp *) data;
 #else
-        dtp = from_timer(inst_data, tl, timer);
+        dtp = from_timer(inst_data, tl, timers.sender_inactivity);
 #endif
         if (!dtp) {
                 LOG_ERR("No dtp to work with");
@@ -472,7 +472,7 @@ static void tf_receiver_inactivity(struct timer_list * tl)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         dtp = (struct dtp *) data;
 #else
-        dtp = from_timer(dtp, tl, timer);
+        dtp = from_timer(dtp, tl, timers.receiver_inactivity);
 #endif
         if (!dtp) {
                 LOG_ERR("No dtp to work with");
@@ -635,7 +635,7 @@ static void tf_a(struct timer_list * tl)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         dtp = (struct dtp *) o;
 #else
-        dtp = from_timer(dtp, tl, timer);
+        dtp = from_timer(dtp, tl, timers.a);
 #endif
         if (!dtp) {
                 LOG_ERR("No instance passed to A-timer handler !!!");
@@ -762,7 +762,7 @@ static void tf_rate_window(struct timer_list * tl)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         dtp = (struct dtp *) o;
 #else
-        dtp = from_timer(dtp, tl, timer);
+        dtp = from_timer(dtp, tl, timers.rate_window);
 #endif
         if (!dtp) {
                 LOG_ERR("No DTP found. Cannot run rate window timer");
