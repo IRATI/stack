@@ -23,6 +23,7 @@
 #include <linux/module.h>
 #include <linux/list.h>
 #include <linux/string.h>
+#include <linux/version.h>
 
 #define IPCP_NAME   "normal-ipc"
 
@@ -1169,11 +1170,19 @@ int normal_address_change(struct ipcp_instance_data * data,
 }
 
 /* Runs the New Address Timer function */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
 static void tf_use_naddress(void * data)
+#else
+static void tf_use_naddress(struct timer_list * tl)
+#endif
 {
         struct ipcp_instance_data * inst_data;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         inst_data = (struct ipcp_instance_data *) data;
+#else
+        inst_data = from_timer(inst_data, tl, timer);
+#endif
         if (!inst_data) {
                 LOG_ERR("No IPCP instance data to work with");
                 return;
@@ -1186,12 +1195,20 @@ static void tf_use_naddress(void * data)
 }
 
 /* Runs the Kill old address Timer function */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
 static void tf_kill_oaddress(void * data)
+#else
+static void tf_kill_oaddress(struct timer_list * tl)
+#endif
 {
         struct ipcp_instance_data * inst_data;
 
         LOG_INFO("Running Kill Old Address Timer...");
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         inst_data = (struct ipcp_instance_data *) data;
+#else
+        inst_data = from_timer(inst_data, tl, timer);
+#endif
         if (!inst_data) {
                 LOG_ERR("No IPCP instance data to work with");
                 return;

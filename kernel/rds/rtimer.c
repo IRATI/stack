@@ -21,7 +21,6 @@
 #include <linux/export.h>
 #include <linux/types.h>
 #include <linux/timer.h>
-#include <linux/version.h>
 
 #define RINA_PREFIX "rtimer"
 
@@ -37,7 +36,11 @@ struct rtimer {
 };
 
 static struct rtimer * rtimer_create_gfp(gfp_t   flags,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
                                          void (* function)(void * data),
+#else
+					 void (*function)(struct timer_list * tl),
+#endif
                                          void *  data)
 {
         struct rtimer * tmp;
@@ -67,11 +70,19 @@ static struct rtimer * rtimer_create_gfp(gfp_t   flags,
         return tmp;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
 struct rtimer * rtimer_create(void (* function)(void * data), void * data)
+#else
+struct rtimer * rtimer_create(void (*function)(struct timer_list * tl), void * data)
+#endif
 { return rtimer_create_gfp(GFP_KERNEL, function, data); }
 EXPORT_SYMBOL(rtimer_create);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
 struct rtimer * rtimer_create_ni(void (* function)(void * data), void * data)
+#else
+struct rtimer * rtimer_create_ni(void (* function)(struct timer_list * tl), void * data)
+#endif
 { return rtimer_create_gfp(GFP_ATOMIC, function, data); }
 EXPORT_SYMBOL(rtimer_create_ni);
 

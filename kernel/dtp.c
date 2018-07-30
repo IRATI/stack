@@ -22,6 +22,7 @@
  */
 
 #include <linux/random.h>
+#include <linux/version.h>
 
 #define RINA_PREFIX "dtp"
 
@@ -422,13 +423,21 @@ static inline int pdu_post(struct dtp * instance,
 }
 
 /* Runs the SenderInactivityTimerPolicy */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
 static void tf_sender_inactivity(void * data)
+#else
+static void tf_sender_inactivity(struct timer_list * tl)
+#endif
 {
         struct dtp * dtp;
         struct dtp_ps * ps;
 
         LOG_DBG("Running Stimer...");
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         dtp = (struct dtp *) data;
+#else
+        dtp = from_timer(inst_data, tl, timer);
+#endif
         if (!dtp) {
                 LOG_ERR("No dtp to work with");
                 return;
@@ -450,13 +459,21 @@ static void tf_sender_inactivity(void * data)
 }
 
 /* Runs the ReceiverInactivityTimerPolicy */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
 static void tf_receiver_inactivity(void * data)
+#else
+static void tf_receiver_inactivity(struct timer_list * tl)
+#endif
 {
         struct dtp * dtp;
         struct dtp_ps * ps;
 
         LOG_DBG("Running Rtimer...");
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         dtp = (struct dtp *) data;
+#else
+        dtp = from_timer(dtp, tl, timer);
+#endif
         if (!dtp) {
                 LOG_ERR("No dtp to work with");
                 return;
@@ -600,7 +617,11 @@ static bool seqq_is_empty(struct squeue * queue)
         return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
 static void tf_a(void * o)
+#else
+static void tf_a(struct timer_list * tl)
+#endif
 {
         struct dtp *  dtp;
         struct dtcp * dtcp;
@@ -611,7 +632,11 @@ static void tf_a(void * o)
 
         LOG_DBG("A-timer handler started...");
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         dtp = (struct dtp *) o;
+#else
+        dtp = from_timer(dtp, tl, timer);
+#endif
         if (!dtp) {
                 LOG_ERR("No instance passed to A-timer handler !!!");
                 return;
@@ -724,13 +749,21 @@ void dtp_start_rate_timer(struct dtp * dtp, struct dtcp * dtcp)
 	rtimer_start(dtp->timers.rate_window, tf);
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
 static void tf_rate_window(void * o)
+#else
+static void tf_rate_window(struct timer_list * tl)
+#endif
 {
         struct dtp *  dtp;
         struct dtcp * dtcp;
         struct timespec now  = {0, 0};
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         dtp = (struct dtp *) o;
+#else
+        dtp = from_timer(dtp, tl, timer);
+#endif
         if (!dtp) {
                 LOG_ERR("No DTP found. Cannot run rate window timer");
                 return;
