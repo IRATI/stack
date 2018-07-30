@@ -118,6 +118,23 @@ int SDUReader::run()
 	return 0;
 }
 
+//Struct ManagedSystem
+ManagedSystem::ManagedSystem() {
+	auth_ps_ = NULL;
+	system_id = 0;
+	status = NM_PENDING;
+}
+
+ManagedSystem::~ManagedSystem()
+{
+	std::map<std::string, rina::rib::RIBObj*>::iterator it;
+
+	for (it = objs_to_create.begin(); it != objs_to_create.end() /* not hoisted */; /* no increment */) {
+		delete it->second;
+	        objs_to_create.erase(it++);
+	}
+}
+
 //Class NMEnrollmentTask
 NMEnrollmentTask::NMEnrollmentTask() :
 		ApplicationEntity(ApplicationEntity::ENROLLMENT_TASK_AE_NAME)
@@ -550,10 +567,37 @@ void NetworkManager::enrollment_completed(struct ManagedSystem * system)
 
 void NetworkManager::remoteReadResult(const rina::cdap_rib::con_handle_t &con,
 		      	      	      const rina::cdap_rib::obj_info_t &obj,
-				      const rina::cdap_rib::res_info_t &res)
+				      const rina::cdap_rib::res_info_t &res,
+				      const rina::cdap_rib::flags_t & flags)
 {
+	rina::rib::RIBObj * rib_obj;
+
 	LOG_INFO("Got read result. Class: %s Name: %s",
 		  obj.class_.c_str(), obj.name_.c_str());
+
+	switch(RIBObjectClasses::hash_it(obj.class_)) {
+	case RIBObjectClasses::CL_DAF :
+	case RIBObjectClasses::CL_PROCESSING_SYSTEM :
+	case RIBObjectClasses::CL_SOFTWARE :
+	case RIBObjectClasses::CL_HARDWARE :
+	case RIBObjectClasses::CL_KERNEL_AP :
+	case RIBObjectClasses::CL_OS_AP :
+	case RIBObjectClasses::CL_IPCPS :
+	case RIBObjectClasses::CL_MGMT_AGENTS :
+		rib_obj = new rina::rib::RIBObj(obj.class_);
+		objs_to_create[obj.name_] = rib_obj;
+		break;
+	case RIBObjectClasses::CL_UNKNOWN :
+		//Ignore for now
+		break;
+	default:
+		LOG_ERR("Ignoring object class");
+	}
+
+	if (flags.flags_ == rina::cdap_rib::flags::F_RD_INCOMPLETE)
+		return;
+	else
+		LOG_INFO("Final read!");
 }
 
 std::string NetworkManager::query_manager_rib()
@@ -593,4 +637,28 @@ std::string NetworkManager::list_systems(void)
 	}
 
 	return ss.str();
+}
+
+//Class RIBObjectClasses
+const std::string RIBObjectClasses::DAF = "DAF";
+const std::string RIBObjectClasses::PROCESSING_SYSTEM = "ProcessingSystem";
+const std::string RIBObjectClasses::SOFTWARE = "Software";
+const std::string RIBObjectClasses::HARDWARE = "Hardware";
+const std::string RIBObjectClasses::KERNEL_AP = "KernelApplicationProcess";
+const std::string RIBObjectClasses::OS_AP = "OSApplicationProcess";
+const std::string RIBObjectClasses::IPCPS = "IPCProcesses";
+const std::string RIBObjectClasses::MGMT_AGENTS = "ManagementAgents";
+
+RIBObjectClasses::class_name_code RIBObjectClasses::hash_it(const std::string& class_name)
+{
+	if (class_name == DAF) return CL_DAF;
+	if (class_name == PROCESSING_SYSTEM) return CL_PROCESSING_SYSTEM;
+	if (class_name == SOFTWARE) return CL_SOFTWARE;
+	if (class_name == HARDWARE) return CL_HARDWARE;
+	if (class_name == KERNEL_AP) return CL_KERNEL_AP;
+	if (class_name == OS_AP) return CL_OS_AP;
+	if (class_name == IPCPS) return CL_IPCPS;
+	if (class_name == MGMT_AGENTS) return CL_MGMT_AGENTS;
+
+	return CL_UNKNOWN;
 }

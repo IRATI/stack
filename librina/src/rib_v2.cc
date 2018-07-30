@@ -2917,7 +2917,8 @@ void RIBDaemon::remote_read_result(const cdap_rib::con_handle_t &con,
 		try {
 			handler->remoteReadResult(con,
 						  obj,
-						  res);
+						  res,
+						  flags);
 		} catch (Exception &e) {
 			LOG_ERR("Unable to process the response");
 		}
@@ -3692,7 +3693,8 @@ void RIBOpsRespHandler::remoteDeleteResult(const cdap_rib::con_handle_t &con,
 
 void RIBOpsRespHandler::remoteReadResult(const cdap_rib::con_handle_t &con,
 			      	      	  const cdap_rib::obj_info_t &obj,
-			      	      	  const cdap_rib::res_info_t &res)
+			      	      	  const cdap_rib::res_info_t &res,
+					  const cdap_rib::flags_t & flags)
 {
 	operation_not_supported();
 }

@@ -76,10 +76,14 @@ typedef enum nm_res{
 
 struct ManagedSystem
 {
+	ManagedSystem();
+	~ManagedSystem();
+
 	rina::cdap_rib::con_handle_t con;
 	rina::IAuthPolicySet * auth_ps_;
 	int system_id;
 	nm_res status;
+	std::map<std::string, rina::rib::RIBObj*> objs_to_create;
 };
 
 // Class NMEnrollmentTask
@@ -162,7 +166,8 @@ public:
 
 	void remoteReadResult(const rina::cdap_rib::con_handle_t &con,
 			      const rina::cdap_rib::obj_info_t &obj,
-			      const rina::cdap_rib::res_info_t &res);
+			      const rina::cdap_rib::res_info_t &res,
+			      const rina::cdap_rib::flags_t & flags);
 
 	// Operations to process console commands
 	std::string query_manager_rib(void);
@@ -186,5 +191,22 @@ private:
 	std::map<int, SDUReader *> sdu_readers;
 };
 
+struct RIBObjectClasses {
+	enum class_name_code {
+		CL_DAF, CL_PROCESSING_SYSTEM, CL_SOFTWARE, CL_HARDWARE,
+		CL_KERNEL_AP, CL_OS_AP, CL_IPCPS, CL_MGMT_AGENTS, CL_UNKNOWN
+	};
+
+	static const std::string DAF;
+	static const std::string PROCESSING_SYSTEM;
+	static const std::string SOFTWARE;
+	static const std::string HARDWARE;
+	static const std::string KERNEL_AP;
+	static const std::string OS_AP;
+	static const std::string IPCPS;
+	static const std::string MGMT_AGENTS;
+
+	static class_name_code hash_it(const std::string& class_name);
+};
 
 #endif//NET_MANAGER_HPP
