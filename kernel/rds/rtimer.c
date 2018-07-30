@@ -54,10 +54,9 @@ static struct rtimer * rtimer_create_gfp(gfp_t   flags,
         if (!tmp)
                 return NULL;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         tmp->function = function;
         tmp->data     = data;
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         init_timer(&tmp->tl);
         tmp->tl.function = (void (*)(unsigned long)) tmp->function;
         tmp->tl.data     = (unsigned long)           tmp->data;
