@@ -723,7 +723,11 @@ struct rtxt_data {
 	cep_id_t	cep_id;
 };
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
 static void rtx_timer_func(void * data)
+#else
+static void rtx_timer_func(struct timer_list * tl)
+#endif
 {
         struct rtxq *        q;
         struct efcp * 	     efcp;
@@ -733,7 +737,11 @@ static void rtx_timer_func(void * data)
 
         LOG_DBG("RTX timer triggered...");
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         rtxtd = (struct rtxt_data *) data;
+#else
+        rtxtd = from_timer(rtxtd, tl, timer);
+#endif
         if (!rtxtd) {
                 LOG_ERR("No RTX data to work with");
                 return;
