@@ -56,6 +56,8 @@ static struct rtimer * rtimer_create_gfp(gfp_t   flags,
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         init_timer(&tmp->tl);
+        tmp->tl.function = (void (*)(unsigned long)) tmp->function;
+        tmp->tl.data     = (unsigned long)           tmp->data;
 #else
         timer_setup(&tmp->tl, function, data);
 #endif
@@ -100,19 +102,15 @@ static int __rtimer_start(struct rtimer * timer,
         expires = jiffies + (millisecs * HZ) / 1000;
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         /* FIXME: Crappy, rearrange */
-        timer->tl.function = (void (*)(unsigned long)) timer->function;
-        timer->tl.data     = (unsigned long)           timer->data;
-        timer->tl.expires  = jiffies + (millisecs * HZ) / 1000;
+        timer->tl.expires  = expires;
 #endif
 
         status = mod_timer(&timer->tl, expires);
 
-        LOG_DBG("Previously %s Timer %pK restarted (function = %pK, data = %pK, "
+        LOG_DBG("Previously %s Timer %pK restarted "
                 "expires = %ld (%u)",
                 status ? "active" : "inactive",
                 timer,
-                (void *) timer->tl.function,
-                (void *) timer->tl.data,
                 expires,
                 millisecs);
 
