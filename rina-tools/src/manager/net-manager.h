@@ -195,7 +195,7 @@ struct RIBObjectClasses {
 	enum class_name_code {
 		CL_DAF, CL_PROCESSING_SYSTEM, CL_SOFTWARE, CL_HARDWARE,
 		CL_KERNEL_AP, CL_OS_AP, CL_IPCPS, CL_MGMT_AGENTS, CL_UNKNOWN,
-		CL_COMPUTING_SYSTEM
+		CL_COMPUTING_SYSTEM, CL_IPCP
 	};
 
 	static const std::string DAF;
@@ -207,6 +207,7 @@ struct RIBObjectClasses {
 	static const std::string OS_AP;
 	static const std::string IPCPS;
 	static const std::string MGMT_AGENTS;
+	static const std::string IPCP;
 
 	static class_name_code hash_it(const std::string& class_name);
 };

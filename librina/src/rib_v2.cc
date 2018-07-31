@@ -970,7 +970,7 @@ void RIB::read_request(const cdap_rib::con_handle_t &con,
 			}
 		} else
 		{
-				delegated_objs.push_back((DelegationObj*) rib_obj);
+			delegated_objs.push_back((DelegationObj*) rib_obj);
 		}
 	}
 }

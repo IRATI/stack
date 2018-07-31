@@ -606,6 +606,7 @@ void NetworkManager::remoteReadResult(const rina::cdap_rib::con_handle_t &con,
 	case RIBObjectClasses::CL_OS_AP :
 	case RIBObjectClasses::CL_IPCPS :
 	case RIBObjectClasses::CL_MGMT_AGENTS :
+	case RIBObjectClasses::CL_IPCP :
 		rib_obj = new rina::rib::RIBObj(obj.class_);
 		ss << "/systems/msid=" << system->system_id << obj.name_;
 		system->objs_to_create[ss.str()] = rib_obj;
@@ -677,6 +678,7 @@ const std::string RIBObjectClasses::KERNEL_AP = "KernelApplicationProcess";
 const std::string RIBObjectClasses::OS_AP = "OSApplicationProcess";
 const std::string RIBObjectClasses::IPCPS = "IPCProcesses";
 const std::string RIBObjectClasses::MGMT_AGENTS = "ManagementAgents";
+const std::string RIBObjectClasses::IPCP = "IPCProcess";
 
 RIBObjectClasses::class_name_code RIBObjectClasses::hash_it(const std::string& class_name)
 {
@@ -689,6 +691,7 @@ RIBObjectClasses::class_name_code RIBObjectClasses::hash_it(const std::string& c
 	if (class_name == OS_AP) return CL_OS_AP;
 	if (class_name == IPCPS) return CL_IPCPS;
 	if (class_name == MGMT_AGENTS) return CL_MGMT_AGENTS;
+	if (class_name == IPCP) return CL_IPCP;
 
 	return CL_UNKNOWN;
 }
