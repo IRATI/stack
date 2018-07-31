@@ -558,11 +558,10 @@ eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
 		return -1;
 	}
 
-
-        if (!data->app_name || !name_is_equal(source, data->app_name)) {
+        /* if (!data->app_name || !name_is_equal(source, data->app_name)) {
                 LOG_ERR("Wrong request, app is not registered");
                 return -1;
-        }
+        } */
 
         flow = find_flow(data, id);
         if (!flow) {
@@ -950,7 +949,6 @@ static int eth_vlan_du_write(struct ipcp_instance_data * data,
         int                      hlen, tlen, length;
         int                      retval;
 
-
         LOG_DBG("Entered the sdu-write");
 
 	if (unlikely(!data)) {
@@ -981,6 +979,11 @@ static int eth_vlan_du_write(struct ipcp_instance_data * data,
                 du_destroy(du);
                 spin_unlock_bh(&data->lock);
                 return -1;
+        }
+
+        if (data->tx_busy) {
+        	spin_unlock_bh(&data->lock);
+        	return -EAGAIN;
         }
         spin_unlock_bh(&data->lock);
 

@@ -133,6 +133,10 @@ public:
 
 	/// True if a reliable_n_flow is to be used, false otherwise
 	bool use_reliable_n_flow;
+
+	/// List of N-1 flows to create when enrolling to a neighbor,
+	/// with their QoS characteristics
+	std::map< std::string, std::list<rina::FlowSpecification> > n1_flows_to_create;
 };
 
 /// Policy set of the IPCP enrollment task
@@ -354,9 +358,16 @@ public:
 
 	virtual std::list<int> getNMinusOneFlowsToNeighbour(unsigned int address) = 0;
 
+	virtual std::list<int> getNMinusOneFlowsToNeighbour(const std::string& name) = 0;
+
 	virtual int getManagementFlowToNeighbour(const std::string& name) = 0;
 
 	virtual int getManagementFlowToNeighbour(unsigned int address) = 0;
+
+	virtual int get_n1flow_to_neighbor(const rina::FlowSpecification& fspec,
+					   const std::string& name) = 0;
+
+	virtual std::list<int> getManagementFlowsToAllNeighbors(void) = 0;
 
 	virtual unsigned int numberOfFlowsToNeighbour(const std::string& apn,
 			const std::string& api) = 0;
@@ -370,6 +381,7 @@ public:
 	/// the PDU Forwarding Table has to be updated and do it
 	///	@return true if valid, false otherwise
 	virtual void routingTableUpdated(const std::list<rina::RoutingTableEntry*>& routing_table) = 0;
+	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
 
 	virtual ~IPDUFTGeneratorPs() {}
 };

@@ -83,6 +83,7 @@ struct token_bucket_filter {
 	s64		 last_pdu_time; /* in ns */
 	bool		 drop; /* true to drop the packets, false to set ECN flag */
 	uint_t		 dropped_pdus;
+	uint_t		 dropped_pdus_cu_mux;
 	uint_t		 dropped_bytes;
 	uint_t		 tx_pdus;
 	uint_t		 tx_bytes;
@@ -241,6 +242,9 @@ static ssize_t token_bucket_filter_attr_show(struct robject * robj,
 	if (strcmp(robject_attr_name(attr), "tbf_drop_pdus") == 0) {
 		return sprintf(buf, "%u\n", tbf->dropped_pdus);
 	}
+	if (strcmp(robject_attr_name(attr), "dropped_pdus_cu_mux") == 0) {
+		return sprintf(buf, "%u\n", tbf->dropped_pdus_cu_mux);
+	}
 	if (strcmp(robject_attr_name(attr), "tbf_tx_bytes") == 0) {
 		return sprintf(buf, "%u\n", tbf->tx_bytes);
 	}
@@ -263,7 +267,7 @@ RINA_KTYPE(urgency_queue);
 RINA_SYSFS_OPS(token_bucket_filter);
 RINA_ATTRS(token_bucket_filter, abs_cherish_th, prob_cherish_th, drop_prob,
 	   bucket_capacity, last_pdu_time, max_rate, urgency_level, tokens,
-	   tbf_drop_bytes, tbf_drop_pdus, tbf_tx_bytes, tbf_tx_pdus);
+	   tbf_drop_bytes, tbf_drop_pdus, dropped_pdus_cu_mux, tbf_tx_bytes, tbf_tx_pdus);
 RINA_KTYPE(token_bucket_filter);
 
 static struct token_bucket_conf * token_bucket_conf_create(void)
@@ -542,6 +546,7 @@ static struct token_bucket_filter * token_bucket_filter_create(struct urgency_qu
 
 	tmp->dropped_bytes = 0;
 	tmp->dropped_pdus = 0;
+	tmp->dropped_pdus_cu_mux = 0;
 	tmp->tx_bytes = 0;
 	tmp->tx_pdus = 0;
 
@@ -830,6 +835,7 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 	if (urgency_queue->length > tbf->abs_cherish_threshold) {
 		urgency_queue->dropped_bytes += pdu_length;
 		urgency_queue->dropped_pdus++;
+		tbf->dropped_pdus_cu_mux++;
 		du_destroy(du);
 		return RMT_PS_ENQ_DROP;
 	}
@@ -843,6 +849,7 @@ int qta_rmt_enqueue_policy(struct rmt_ps	  *ps,
 			if (tbf->drop) {
 				urgency_queue->dropped_bytes += pdu_length;
 				urgency_queue->dropped_pdus++;
+				tbf->dropped_pdus_cu_mux++;
 				du_destroy(du);
 				return RMT_PS_ENQ_DROP;
 			} else {

@@ -155,7 +155,8 @@ Daemon starts its execution.
 
 **Local configuration**. The first part of the configuration file contains the settings for IRATI, 
 such as the paths to the  UNIX socket for the local console or the paths where to search for 
-user-space or kernel plugins.
+user-space or kernel plugins. It also specifies the system name, which is later used to auto-generate 
+the names of the IPC Processes instantiated in this system.
 
       "configFileVersion" : "1.4.1",
       "localConfiguration" : {
@@ -163,24 +164,21 @@ user-space or kernel plugins.
         "libraryPath" : "/usr/lib",
         "logPath" : "/var/log",
         "consoleSocket" : "/var/run/ipcm-console.sock",
+        "system-name" : "pe1",
         "pluginsPaths" : ["/usr/lib/rinad/ipcp"]
       },
 
 **IPC Processes to create**. The next section specifies which IPC processes should be created. 
 It requires for each IPC process the type, which can be either a normal IPC process, or a certain 
-shim IPC process. The names of the IPC process and the DIF then have to be specified. The name of 
+shim IPC process. The names of the IPCPs will be generated from the system name and the DIF name. The name of 
 the DIF the IPC process should register with is also supplied. Enrollment however, will have to be 
 done manually from the local management console.
 
     "ipcProcessesToCreate" : [ {
       "type" : "shim-eth-vlan",
-      "apName" : "test-eth-vlan",
-      "apInstance" : "1",
       "difName" : "110"
      }, {
       "type" : "normal-ipc",
-      "apName" : "test1.IRATI",
-      "apInstance" : "1",
       "difName" : "normal.DIF",
       "difsToRegisterAt" : ["110"]
      } ],
@@ -198,6 +196,120 @@ of the DIF, including its policies.
         "name" : "normal.DIF",
         "template" : "default.dif"
     } ]
+
+**Addons**. The IPC Manager Daemon functionality can be augmented through the "addons" framework. 
+Addons can get access to the events processed by the main _IPC Manager_ control loop, and react 
+accordingly. Right now there are five addons avaiable: i) the IPC Manager console, ii) the initial 
+scripting engine (which bootstraps the system based on the IPCM configuration file), iii) the 
+Management Agent, iv) the DIF Allocator and v) the Mobility Manager. The first two do not require 
+any special configuraiton, while the other three can be configured via the main configuration file,
+as explained in the following subsections.
+
+##### 3.2.1.1 DIF Allocator
+Applications deployed on a RINA network can be accessed through any layer that provides enough QoS 
+and scope. This is different from current networks, in which applications are only reachable through the 
+topmost IP layer. RINA incorporates infrastructure for application registration and discovery within a 
+layer (distributed application directories that map registered application names to IPC Process addresses 
+are part of all layers) as well as across layers. The _DIF Allocator_ is the component that enables 
+application discovery across layers. It has two main functions: i) maintaining a distributed mapping of 
+registered application names to the names of the DIFs where they are registered and ii) collaborating 
+with management systems to dynamically create or extend layers as part of flow allocation requests. 
+Right now IRATI is equipped with two DIF Allocator implementations: a _static_ one, that only selects which 
+DIF to use for a certain destination application name (DIFs must exist before) and a more _dynamic_ one.
+
+**Static DIF Allocator**. This is the default DIF Allocator implementation, only used to select a specific 
+DIF to register an application name or to allocate a flow to a destination application name. The DIF 
+must already exist, the static DIF Allocator is not able to trigger instantiation of new DIFs. Since this is 
+the default DIF Allocator implementation used, no configuration needs to be specified in the main IPCM 
+configuration file. The application name to DIF mappings are specified in the _da.map_ file, located at 
+the _IRATI installation path/etc_ folder. The file can be updated while _IPC Manager Daemon_ is running, 
+and the static DIF Allocator implementation will update its internal mappings. If no mapping is provided by a certain 
+application, it will try to randomly select a _normal DIF_ first; if there is non available a _shim DIF_ 
+and if there is none it will fail. 
+
+    "applicationToDIFMappings": [
+        {
+            "encodedAppName": "rina.apps.echotime.server-1--",
+            "difName": "dcfabric.DIF"
+        },
+        {
+            "encodedAppName": "rina.apps.echotime.client-1--",
+            "difName": "dcfabric.DIF"
+        },
+        {
+            "encodedAppName": "rina.apps.echotime-2--",
+            "difName": "vpn1.DIF"
+        },
+        {
+            "encodedAppName": "rina.apps.echotime.client-2--",
+            "difName": "vpn1.DIF"
+        }
+    ],
+
+**Dynamic DIF Allocator**. The Dynamic DIF Allocator implementation is capable of dynamically discovering 
+application to DIF mappings across any set of DIFs, and to collaborate with the local _IPC Manager Daemon_ to 
+create new IPC Processes and make them join a DIF through one of the N-1 DIFs available at the system. You can 
+read ARCFIRE's D3.2 pages 12-20 for a full description of the implementation (http://ict-arcfire.eu/index.php/research/deliverables/), 
+and an example of its usage is provided in the IRATI tutorial 9 (https://github.com/IRATI/stack/wiki/Tutorial-9:-DMM-app-discovery-ARCFIRE-2018).
+The Dynamic DIF Allocator is configured in the following way (in the main IPCM configuration file):
+
+    "difallocator" : {
+       "type" : "dynamic-dif-allocator",
+       "dafName" : {
+          "processName" : "name of the DIF Allocator DAF"
+       },
+       "dapName" : {
+          "processName" : "process name of the DIF Allocator instance",
+          "processInstance" : "process instance of the DIF Allocator instance"
+       },
+       "joinableDIFs" : [ {
+          "difName" : "Name of the DIF that can be joined",
+          "ipcpPn" : "Process name of the IPCP to be created",
+          "ipcpPi" : "Process instance of the IPCP to be created"
+       }, {
+          ...  
+       }],
+       "enrollments" : [ {
+          "processName" : "neighbor DA instance process name",
+          "processInstance" : "neighbor DA instance process instance",
+          "difName" : "supporting DIF name"
+       },{
+          ... 
+       }]
+    }
+
+Below there is an example of such configuration. The DIF allocator daf name is called _da.default_, the the 
+process name/instance of the instantiation of the DIF Allocator process are _da-text1.system_ and _1_ respectively.
+The DIF Allocator instance can create an IPC Process that belongs to the _vpn.DIF_, and such IPCP (when created) 
+will have an application name/instance _test1.vpn_ and _1_ respectively. Last but not least, the DIF Allocator instance 
+will try to enroll to another DIF Allocator instance called _dat-test2.system_ over the _normal.DIF_
+
+    "difallocator" : {
+       "type" : "dynamic-dif-allocator",
+       "dafName" : {
+          "processName" : "da.default"
+       },
+       "dapName" : {
+          "processName" : "da-test1.system",
+          "processInstance" : "1"
+       },
+       "joinableDIFs" : [ {
+          "difName" : "vpn.DIF",
+          "ipcpPn" : "test1.vpn",
+          "ipcpPi" : "1"
+       } ],
+       "enrollments" : [ {
+          "processName" : "da-test2.system",
+          "processInstance" : "1",
+          "difName" : "normal.DIF"
+       } ]
+    }
+
+##### 3.2.1.2 Management Agent
+Documentation coming soon.
+
+##### 3.2.1.3 Mobility Manager
+Documentation coming soon.
 
 #### 3.2.2 DIF Template configuration files
 DIF template files contain the configuration of the components of a DIF. There is a mandatory DIF 
@@ -611,33 +723,7 @@ Example configuration:
    * **q_threshold**: Sets the queue threshold. If the queue size is exceeded, PDUs will be marked with ECN flag.
 
 ###### 3.2.2.4.7 RMT policy: QTAMux
-TODO
- 
-   * **Policy name**: qta-mux-ps.
-   * **Policy version**: 1.
-
-Example configuration:
-
-     "rmtConfiguration" : {
-        "pftConfiguration" : {
-            ....
-            }
-        },
-        "policySet" : {
-          "name" : "qta-mux-ps",
-          "version" : "1",
-          "parameters" : [{
-             "name"  : "q_threshold",
-             "value" : "20"
-             }, {
-             "name"  : "q_max",
-             "value" : "500"
-          }]
-        }
-     }
-
-   * **q_max**: The maximum size of the queue
-   * **q_threshold**: Sets the queue threshold. If the queue size is exceeded, PDUs will be marked with ECN flag.
+Documented in plugins/qtamux
 
 ##### 3.2.2.5 Enrollment Task
 Configuration of the enrollment task, which carries out the procedures by which an IPC Process joins a DIF. Currently 
@@ -662,6 +748,9 @@ only the default policy is supported by IRATI.
              },{
                "name"  : "maxEnrollmentRetries",
                "value" : "3"
+             },{
+               "name"  : "n1flows:normal.DIF",
+               "value" : "2:10/200:0/10000"
              }]
         }
      }
@@ -672,6 +761,7 @@ only the default policy is supported by IRATI.
 application connection is closed and the N-1 flow deallocated
    * **useReliableNFlow**: true if a realible N-flow is to be used to communicate with the neighbor IPCP (layer management)
    * **maxEnrollmentRetries**: how many times enrollment should be retried in case of failure
+   * **n1flows::difname** (optional): how many flows will be allocated between peer IPCPs (when the N-1 DIF is difname), and what are the delay/loss characteristics of each one. The first flow will be used for layer management and data transfer, the others just for data transfer. In the example configuration, two N-1 flows will be requested: one with a maximum delay of 10 ms and a maximum loss probability of 200/10000 SDUs, while the other without loss and delay guarantees.
 
 ##### 3.2.2.6 Flow Allocator
 Flow allocator maps allocate flow requests to a specific QoS cube, and chooses any policies/parameters 
@@ -765,10 +855,29 @@ policy is supported in IRATI.
          "pduftgConfiguration" : {    
            "policySet" : {
              "name" : "default",
-             "version" : "0"
+             "version" : "0",             
+             "parameters" : [{
+                "name"  : "1.qosid",
+                "value" : "10/200"
+             },{
+                "name"  : "2.qosid",
+                "value" : "10/200"
+             },{
+                "name"  : "3.qosid",
+                "value" : "0/10000"
+             },{
+                "name"  : "4.qosid",
+                "value" : "0/10000"
+             }]
            }
          }
      } 
+
+The optional parameters are used to map the qos id of the flows at this DIF to characteristics of the N-1 DIFs 
+through which the flow should be forwarded (only delay/loss right now). For instance the configuration above will 
+add entries to the PDU forwarding table so that entries belonging to QoS ids 1 and 2 are forwarded via an N-1 flow 
+that has a maximum delay of 10 ms and a maximum loss probability of 200/10000 SDUs. Entries belonging to QoS ids 
+3 and 4 will be forwarded via an N-1 flow that does not provide any guarantees on loss and delay.
 
 ##### 3.2.2.9 Routing
 The routing policy is in charge of generating and maintaining the next-hop table, and passing this information to the Resource 
@@ -1136,31 +1245,6 @@ Example configuration:
         "name" : "CRC32",
         "version" : "1"
     }
-
-#### 3.2.3 Application to DIF mappings
-The da.map file contains the preferences for which DIFs should be used to register and to allocate 
-flows to/from specific applications. If no mapping is provided by a certain application, it will try 
-to randomly select a _normal DIF_ first; if there is non available a _shim DIF_ and if there is none 
-it will fail. The contents of the da.map file can be modified while the IPC Manager Daemon is running.
-
-    "applicationToDIFMappings": [
-        {
-            "encodedAppName": "rina.apps.echotime.server-1--",
-            "difName": "dcfabric.DIF"
-        },
-        {
-            "encodedAppName": "rina.apps.echotime.client-1--",
-            "difName": "dcfabric.DIF"
-        },
-        {
-            "encodedAppName": "rina.apps.echotime-2--",
-            "difName": "vpn1.DIF"
-        },
-        {
-            "encodedAppName": "rina.apps.echotime.client-2--",
-            "difName": "vpn1.DIF"
-        }
-    ],
 
 ### 3.3 Running the IPC Manager Daemon
 Once the configuration file is ready you can un the IPC Manager Daemon. To do so go to the 

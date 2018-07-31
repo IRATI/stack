@@ -662,6 +662,7 @@ const std::string EnrollmentTask::WATCHDOG_PERIOD_IN_MS = "watchdogPeriodInMs";
 const std::string EnrollmentTask::DECLARED_DEAD_INTERVAL_IN_MS = "declaredDeadIntervalInMs";
 const std::string EnrollmentTask::MAX_ENROLLMENT_RETRIES = "maxEnrollmentRetries";
 const std::string EnrollmentTask::USE_RELIABLE_N_FLOW = "useReliableNFlow";
+const std::string EnrollmentTask::N1_FLOWS = "n1flows";
 
 EnrollmentTask::EnrollmentTask() : IPCPEnrollmentTask()
 {
@@ -1072,8 +1073,82 @@ void EnrollmentTask::watchdog_read_result(const std::string& remote_app_name,
 	}
 }
 
+void EnrollmentTask::parse_n1flows(const std::string& name,
+		                   const std::string& value)
+{
+	std::vector<std::string> result;
+	std::list<rina::FlowSpecification> fspecs;
+	const char * str;
+	int num_flows;
+	int loss;
+	int delay;
+	rina::FlowSpecification fspec;
+	std::string n1_dif, efspec, eloss, edelay;
+
+	str = &name[0];
+
+	do
+	{
+		const char *begin = str;
+
+		while(*str != ':' && *str)
+			str++;
+
+		result.push_back(std::string(begin, str));
+	} while (0 != *str++);
+
+	n1_dif = result[1];
+
+	result.clear();
+	str = &value[0];
+
+	do
+	{
+		const char *begin = str;
+
+		while(*str != ':' && *str)
+			str++;
+
+		result.push_back(std::string(begin, str));
+	} while (0 != *str++);
+
+	if (rina::string2int(result[0], num_flows)) {
+		LOG_WARN("Could not parse number of flows %s, using 1",
+			 result[0].c_str());
+		num_flows = 1;
+	}
+
+	for (int i=0; i<num_flows; i++) {
+		efspec = result[i+1];
+
+		edelay = efspec.substr(0, efspec.find("/"));
+		if (rina::string2int(edelay, delay)) {
+			LOG_WARN("Could not parse delay %s, using 0",
+				 edelay.c_str());
+			fspec.delay = 0;
+		} else {
+			fspec.delay = delay;
+		}
+
+		eloss = efspec.substr(efspec.find("/") + 1);
+		if (rina::string2int(eloss, loss)) {
+			LOG_WARN("Could not parse delay %s, using 10000",
+				 edelay.c_str());
+			fspec.loss = 10000;
+		} else {
+			fspec.loss = loss;
+		}
+
+		fspecs.push_back(fspec);
+	}
+
+	n1_flows_to_create[n1_dif] = fspecs;
+}
+
 void EnrollmentTask::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
 {
+	std::list<rina::PolicyParameter>::const_iterator it;
+
 	rina::PolicyConfig psconf = dif_configuration.et_configuration_.policy_set_;
 	if (select_policy_set(std::string(), psconf.name_) != 0) {
 		throw rina::Exception("Cannot create enrollment task policy-set");
@@ -1112,6 +1187,12 @@ void EnrollmentTask::set_dif_configuration(const rina::DIFConfiguration& dif_con
 	} catch (rina::Exception &e) {
 		LOG_IPCP_INFO("Could not parse use_reliable_n_flow, using default value: %d",
 			      use_reliable_n_flow);
+	}
+
+	for(it = psconf.parameters_.begin(); it != psconf.parameters_.end(); ++it) {
+		if (it->name_.find(N1_FLOWS) != std::string::npos) {
+			parse_n1flows(it->name_, it->value_);
+		}
 	}
 
 	//Add Watchdog RIB object to RIB
@@ -1231,6 +1312,9 @@ void EnrollmentTask::processDisconnectNeighborRequestEvent(const rina::Disconnec
 
 void EnrollmentTask::initiateEnrollment(const rina::EnrollmentRequest& request)
 {
+	rina::FlowSpecification fspec;
+	std::map< std::string , std::list<rina::FlowSpecification> >::iterator it;
+
 	if (isEnrolledTo(request.neighbor_.name_.processName)) {
 		LOG_IPCP_ERR("Already enrolled to IPC Process %s",
 			     request.neighbor_.name_.processName.c_str());
@@ -1241,6 +1325,10 @@ void EnrollmentTask::initiateEnrollment(const rina::EnrollmentRequest& request)
 	//dedicated to layer management
 	//FIXME not providing FlowSpec information
 	//FIXME not distinguishing between AEs
+	it = n1_flows_to_create.find(request.neighbor_.supporting_dif_name_.processName);
+	if (it != n1_flows_to_create.end()) {
+		fspec = it->second.front();
+	}
 	rina::FlowInformation flowInformation;
 	flowInformation.remoteAppName = request.neighbor_.name_;
 	flowInformation.localAppName.processName = ipcp->get_name();
@@ -1248,6 +1336,8 @@ void EnrollmentTask::initiateEnrollment(const rina::EnrollmentRequest& request)
 	flowInformation.difName = request.neighbor_.supporting_dif_name_;
 	flowInformation.flowSpecification.msg_boundaries = true;
 	flowInformation.flowSpecification.orderedDelivery = true;
+	flowInformation.flowSpecification.delay = fspec.delay;
+	flowInformation.flowSpecification.loss = fspec.loss;
 	unsigned int handle = -1;
 	try {
 		handle = irm_->allocateNMinus1Flow(flowInformation);
@@ -1552,10 +1642,12 @@ std::list<std::string> EnrollmentTask::get_enrolled_app_names()
 
 void EnrollmentTask::deallocateFlow(int portId)
 {
+	LOG_DBG("Trying to deallocate flow %d", portId);
+
 	try {
 		irm_->deallocateNMinus1Flow(portId);
 	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems deallocating N-1 flow: %s", e.what());
+		LOG_IPCP_ERR("Problems deallocating N-1 flow %d: %s", portId, e.what());
 	}
 }
 
@@ -1568,6 +1660,9 @@ void EnrollmentTask::add_enrollment_state_machine(int portId, IEnrollmentStateMa
 
 void EnrollmentTask::neighborDeclaredDead(rina::NeighborDeclaredDeadEvent * deadEvent)
 {
+	std::list<int> flows;
+	std::list<int>::iterator it;
+
 	try{
 		irm_->getNMinus1FlowInformation(deadEvent->neighbor_.underlying_port_id_);
 	} catch(rina::Exception &e){
@@ -1576,8 +1671,16 @@ void EnrollmentTask::neighborDeclaredDead(rina::NeighborDeclaredDeadEvent * dead
 	}
 
 	try{
-		LOG_IPCP_INFO("Requesting the deallocation of the N-1 flow with the dead neighbor");
-		irm_->deallocateNMinus1Flow(deadEvent->neighbor_.underlying_port_id_);
+		LOG_IPCP_INFO("Requesting the deallocation of the N-1 flows with the dead neighbor");
+		deallocateFlow(deadEvent->neighbor_.underlying_port_id_);
+		if (n1_flows_to_create.size() > 0) {
+			flows = ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
+					getNMinusOneFlowsToNeighbour(deadEvent->neighbor_.name_.processName);
+			for (it = flows.begin(); it != flows.end(); ++it) {
+				if (*it != 0)
+					deallocateFlow(*it);
+			}
+		}
 	} catch (rina::Exception &e){
 		LOG_IPCP_ERR("Problems requesting the deallocation of a N-1 flow: %s", e.what());
 	}
@@ -1742,9 +1845,42 @@ void EnrollmentTask::enrollmentCompleted(const rina::Neighbor& neighbor, bool en
 			 	 	 bool prepare_handover,
 					 const rina::ApplicationProcessNamingInformation& disc_neigh_name)
 {
+	std::list<rina::FlowSpecification>::iterator it;
+	std::list<rina::FlowSpecification> fspecs;
+	std::map< std::string, std::list<rina::FlowSpecification> >::iterator fit;
+	rina::FlowInformation flowInformation;
+
 	rina::NeighborAddedEvent * event = new rina::NeighborAddedEvent(neighbor, enrollee,
 									prepare_handover, disc_neigh_name);
 	event_manager_->deliverEvent(event);
+
+	//Request allocation of data transfer N-1 flows if needed
+	if (enrollee) {
+		flowInformation.remoteAppName.processName = neighbor.name_.processName;
+		flowInformation.remoteAppName.processInstance = neighbor.name_.processInstance;
+		flowInformation.localAppName.processName = ipcp->get_name();
+		flowInformation.localAppName.processInstance = ipcp->get_instance();
+		flowInformation.difName = neighbor.supporting_dif_name_;
+
+		fit = n1_flows_to_create.find(neighbor.supporting_dif_name_.processName);
+		if (fit == n1_flows_to_create.end())
+			return;
+		fspecs = fit->second;
+
+		for (it = fspecs.begin(); it != fspecs.end(); ++it) {
+			if (it == fspecs.begin())
+				continue;
+
+			flowInformation.flowSpecification.delay = it->delay;
+			flowInformation.flowSpecification.loss = it->loss;
+
+			try {
+				irm_->allocateNMinus1Flow(flowInformation);
+			} catch (rina::Exception &e) {
+				LOG_IPCP_ERR("Problems allocating N-1 flow: %s", e.what());
+			}
+		}
+	}
 }
 
 void EnrollmentTask::release(int invoke_id,
@@ -1815,6 +1951,8 @@ void EnrollmentTask::deallocate_flows_and_destroy_esm(IEnrollmentStateMachine * 
 	IPCPEnrollmentTaskPS * ipcp_ps = 0;
 	rina::ConnectiviyToNeighborLostEvent * cnl_event = 0;
 	rina::Sleep sleep;
+	std::list<int> flows;
+	std::list<int>::iterator it;
 
 	//In the case of the enrollee state machine, reply to the IPC Manager
 	if (call_ps) {
@@ -1839,9 +1977,17 @@ void EnrollmentTask::deallocate_flows_and_destroy_esm(IEnrollmentStateMachine * 
 		ipcp->resource_allocator_->remove_temp_pduft_entry(esm->remote_peer_.address_);
 	}
 
-	//Deallocate N-1 flow, sleep for 20 ms first (TODO Fix this)
+	//Deallocate N-1 flows, sleep for 20 ms first (TODO Fix this)
 	sleep.sleepForMili(20);
 	deallocateFlow(port_id);
+	if (n1_flows_to_create.size() > 0) {
+		flows = ipcp->resource_allocator_->get_n_minus_one_flow_manager()->
+				getNMinusOneFlowsToNeighbour(esm->remote_peer_.name_.processName);
+		for (it = flows.begin(); it != flows.end(); ++it) {
+			if (*it != 0)
+				deallocateFlow(*it);
+		}
+	}
 
 	//Inform about connectivity to neighbor lost
 	cnl_event = new rina::ConnectiviyToNeighborLostEvent(esm->remote_peer_);

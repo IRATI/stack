@@ -195,6 +195,24 @@ void DIFAllocator::get_ipcp_name(rina::ApplicationProcessNamingInformation& ipcp
 	}
 }
 
+int DIFAllocator::generate_ipcp_name(rina::ApplicationProcessNamingInformation& ipcp_name,
+		                     const std::string& dif_name)
+{
+	std::stringstream ss;
+
+	if (sys_name.processName == "") {
+		LOG_DBG("No system name provided, cannot generate IPCP name");
+		return -1;
+	}
+
+	ss << sys_name.processName << "." << dif_name;
+
+	ipcp_name.processName = ss.str();
+	ipcp_name.processInstance = "1";
+
+	return 0;
+}
+
 const std::string StaticDIFAllocator::TYPE = "static-dif-allocator";
 
 StaticDIFAllocator::StaticDIFAllocator() : DIFAllocator()
@@ -771,13 +789,13 @@ int DDAEnrollerWorker::allocate_flow(const rina::FlowRequestEvent& alloc_event)
 	std::string remote_app_name;
 	std::string dif_name;
 
-	ss << alloc_event.localApplicationName.processName << ":"
-	   << alloc_event.localApplicationName.processInstance << ":::";
+	ss << alloc_event.localApplicationName.processName << "|"
+	   << alloc_event.localApplicationName.processInstance << "||";
 	local_app_name = ss.str();
 	ss.str("");
 
-	ss << alloc_event.remoteApplicationName.processName << ":"
-	   << alloc_event.remoteApplicationName.processInstance << ":::";
+	ss << alloc_event.remoteApplicationName.processName << "|"
+	   << alloc_event.remoteApplicationName.processInstance << "||";
 	remote_app_name = ss.str();
 	ss.str("");
 
@@ -1080,7 +1098,7 @@ void DynamicDIFAllocator::assigned_to_dif(const std::string& dif_name)
 
 	rina::ScopedLock g(lock);
 
-	ss << dap_name.processName << ":" << dap_name.processInstance << "::";
+	ss << dap_name.processName << "|" << dap_name.processInstance << "||";
 
 	thread_attrs.setJoinable();
 	thread_attrs.setName("Registrar of DIF Allocator");
