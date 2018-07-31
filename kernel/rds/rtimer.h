@@ -21,11 +21,21 @@
 #ifndef RINA_RTIMER_H
 #define RINA_RTIMER_H
 
+#include <linux/version.h>
+
 struct rtimer;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
 struct rtimer * rtimer_create(void (* function)(void * data),
+#else
+struct rtimer * rtimer_create(void (*function)(struct timer_list * tl),
+#endif
                               void *  data);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
 struct rtimer * rtimer_create_ni(void (* function)(void * data),
+#else
+struct rtimer * rtimer_create_ni(void (*function)(struct timer_list * tl),
+#endif
                                  void *  data);
 int             rtimer_destroy(struct rtimer * timer);
 

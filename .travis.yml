@@ -17,6 +17,8 @@ env:
   - KERNEL_VERSION=4.11
   - KERNEL_VERSION=4.12
   - KERNEL_VERSION=4.13
+  - KERNEL_VERSION=4.14
+  - KERNEL_VERSION=4.15
 
 before_install:
   # Install Dependencies

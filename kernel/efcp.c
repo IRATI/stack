@@ -267,33 +267,6 @@ struct efcp * efcp_container_find(struct efcp_container * container,
 }
 EXPORT_SYMBOL(efcp_container_find);
 
-struct efcp * efcp_container_find_rtxlock(struct efcp_container * container,
-				          cep_id_t id)
-{
-        struct efcp * efcp = NULL;
-
-        if (!container) {
-                LOG_ERR("Bogus container passed, bailing out");
-                return NULL;
-        }
-        if (!is_cep_id_ok(id)) {
-                LOG_ERR("Bad cep-id, cannot find instance");
-                return NULL;
-        }
-
-        spin_lock_bh(&container->lock);
-        efcp = efcp_imap_find(container->instances, id);
-        if (efcp) {
-        	if (efcp->dtp->rtxq)
-        		spin_lock(&efcp->dtp->rtxq->lock);
-
-        }
-        spin_unlock_bh(&container->lock);
-
-        return efcp;
-}
-EXPORT_SYMBOL(efcp_container_find_rtxlock);
-
 int efcp_container_config_set(struct efcp_container * container,
 			      struct efcp_config *    efcp_cfg)
 {

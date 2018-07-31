@@ -36,7 +36,11 @@ struct rtimer {
 };
 
 static struct rtimer * rtimer_create_gfp(gfp_t   flags,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
                                          void (* function)(void * data),
+#else
+					 void (*function)(struct timer_list * tl),
+#endif
                                          void *  data)
 {
         struct rtimer * tmp;
@@ -50,21 +54,34 @@ static struct rtimer * rtimer_create_gfp(gfp_t   flags,
         if (!tmp)
                 return NULL;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         tmp->function = function;
         tmp->data     = data;
-
         init_timer(&tmp->tl);
+        tmp->tl.function = (void (*)(unsigned long)) tmp->function;
+        tmp->tl.data     = (unsigned long)           tmp->data;
+#else
+        timer_setup(&tmp->tl, function, data);
+#endif
 
         LOG_DBG("Timer %pK created", tmp);
 
         return tmp;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
 struct rtimer * rtimer_create(void (* function)(void * data), void * data)
+#else
+struct rtimer * rtimer_create(void (*function)(struct timer_list * tl), void * data)
+#endif
 { return rtimer_create_gfp(GFP_KERNEL, function, data); }
 EXPORT_SYMBOL(rtimer_create);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
 struct rtimer * rtimer_create_ni(void (* function)(void * data), void * data)
+#else
+struct rtimer * rtimer_create_ni(void (* function)(struct timer_list * tl), void * data)
+#endif
 { return rtimer_create_gfp(GFP_ATOMIC, function, data); }
 EXPORT_SYMBOL(rtimer_create_ni);
 
@@ -88,24 +105,23 @@ static int __rtimer_start(struct rtimer * timer,
                           unsigned int    millisecs)
 {
         int status;
+        unsigned long expires;
 
         ASSERT(timer);
 
+        expires = jiffies + (millisecs * HZ) / 1000;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         /* FIXME: Crappy, rearrange */
-        timer->tl.function = (void (*)(unsigned long)) timer->function;
-        timer->tl.data     = (unsigned long)           timer->data;
-        timer->tl.expires  = jiffies + (millisecs * HZ) / 1000;
+        timer->tl.expires  = expires;
+#endif
 
-        status = mod_timer(&timer->tl, timer->tl.expires);
+        status = mod_timer(&timer->tl, expires);
 
-
-        LOG_DBG("Previously %s Timer %pK restarted (function = %pK, data = %pK, "
+        LOG_DBG("Previously %s Timer %pK restarted "
                 "expires = %ld (%u)",
                 status ? "active" : "inactive",
                 timer,
-                (void *) timer->tl.function,
-                (void *) timer->tl.data,
-                timer->tl.expires,
+                expires,
                 millisecs);
 
         return 0;
