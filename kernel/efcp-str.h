@@ -104,7 +104,6 @@ struct rtxqueue {
 
 struct rtxq {
         spinlock_t                lock;
-        struct rtimer *           r_timer;
         struct dtp *              parent;
         struct rmt *              rmt;
         struct rtxqueue *         queue;
@@ -168,6 +167,7 @@ struct dtp {
                 struct rtimer * receiver_inactivity;
                 struct rtimer * a;
                 struct rtimer * rate_window;
+                struct rtimer * rtx;
         } timers;
 	struct robject		  robj;
 
