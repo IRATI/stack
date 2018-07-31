@@ -772,13 +772,16 @@ public:
         ///
         /// @param handle The handle of the RIB
         /// @param inst_id The object instance ID
+        /// @param force if true remove objects and all subobjects
         ///
         /// @throws eRIBNotFound, eObjDoesNotExist
         ///
         void removeObjRIB(const rib_handle_t& handle,
-                          const int64_t inst_id);
+                          const int64_t inst_id,
+			  bool force = false);
         void removeObjRIB(const rib_handle_t& handle,
-                          const std::string fqdn);
+                          const std::string fqdn,
+			  bool force = false);
 
         ///
         /// Check if an object is already in the RIB

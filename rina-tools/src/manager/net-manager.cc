@@ -297,9 +297,9 @@ int64_t NMRIBDaemon::addObjRIB(const std::string& fqn,
 	return ribd->addObjRIB(rib, fqn, obj);
 }
 
-void NMRIBDaemon::removeObjRIB(const std::string& fqn)
+void NMRIBDaemon::removeObjRIB(const std::string& fqn, bool force)
 {
-	ribd->removeObjRIB(rib, fqn);
+	ribd->removeObjRIB(rib, fqn, force);
 }
 
 std::list<rina::rib::RIBObjectData> NMRIBDaemon::get_rib_objects_data(void)
@@ -335,8 +335,8 @@ NetworkManager::NetworkManager(const std::string& app_name,
 
 	//Add required RIB objects to RIB
 	try {
-		tmp = new rina::rib::RIBObj("ComputingSystems");
-		rd->addObjRIB("/computingSystems", &tmp);
+		tmp = new rina::rib::RIBObj("ManagedSystems");
+		rd->addObjRIB("/systems", &tmp);
 	} catch (rina::Exception &e1) {
 		LOG_ERR("RIB basic objects were not created because %s",
 			e1.what());
@@ -500,8 +500,8 @@ void NetworkManager::disconnect_from_system(int fd)
 	// Remove objects from RIB
 	if (ms) {
 		try {
-			ss << "/computingSystems/computingSystemID=" << ms->system_id;
-			rd->removeObjRIB(ss.str());
+			ss << "/systems/msid=" << ms->system_id;
+			rd->removeObjRIB(ss.str(), true);
 		} catch (rina::Exception &e1) {
 			LOG_ERR("RIB basic objects were not created because %s",
 					e1.what());
@@ -542,7 +542,7 @@ void NetworkManager::enrollment_completed(struct ManagedSystem * system)
 
 	//Add RIB objects for the managed system
 	try {
-		ss << "/computingSystems/computingSystemID=" << system->system_id;
+		ss << "/systems/msid=" << system->system_id;
 		csobj = new rina::rib::RIBObj("ComputingSystem");
 		rd->addObjRIB(ss.str(), &csobj);
 	} catch (rina::Exception &e1) {
@@ -571,12 +571,34 @@ void NetworkManager::remoteReadResult(const rina::cdap_rib::con_handle_t &con,
 				      const rina::cdap_rib::flags_t & flags)
 {
 	rina::rib::RIBObj * rib_obj;
+	std::map<std::string, ManagedSystem *>::iterator it;
+	ManagedSystem * system;
+	std::map<std::string, rina::rib::RIBObj*>::iterator rit;
+	std::stringstream ss;
 
 	LOG_INFO("Got read result. Class: %s Name: %s",
 		  obj.class_.c_str(), obj.name_.c_str());
 
+	rina::ScopedLock (et->lock);
+
+	system = NULL;
+	for (it = et->enrolled_systems.begin();
+			it != et->enrolled_systems.end(); ++it) {
+		if (it->second->con.port_id == con.port_id) {
+			system = it->second;
+			break;
+		}
+	}
+
+	if (!system) {
+		LOG_WARN("Got read response for an unknown port-id: %u",
+			 con.port_id);
+		return;
+	}
+
 	switch(RIBObjectClasses::hash_it(obj.class_)) {
 	case RIBObjectClasses::CL_DAF :
+	case RIBObjectClasses::CL_COMPUTING_SYSTEM :
 	case RIBObjectClasses::CL_PROCESSING_SYSTEM :
 	case RIBObjectClasses::CL_SOFTWARE :
 	case RIBObjectClasses::CL_HARDWARE :
@@ -585,7 +607,8 @@ void NetworkManager::remoteReadResult(const rina::cdap_rib::con_handle_t &con,
 	case RIBObjectClasses::CL_IPCPS :
 	case RIBObjectClasses::CL_MGMT_AGENTS :
 		rib_obj = new rina::rib::RIBObj(obj.class_);
-		objs_to_create[obj.name_] = rib_obj;
+		ss << "/systems/msid=" << system->system_id << obj.name_;
+		system->objs_to_create[ss.str()] = rib_obj;
 		break;
 	case RIBObjectClasses::CL_UNKNOWN :
 		//Ignore for now
@@ -596,8 +619,13 @@ void NetworkManager::remoteReadResult(const rina::cdap_rib::con_handle_t &con,
 
 	if (flags.flags_ == rina::cdap_rib::flags::F_RD_INCOMPLETE)
 		return;
-	else
-		LOG_INFO("Final read!");
+
+	for (rit = system->objs_to_create.begin();
+			rit != system->objs_to_create.end(); ++rit) {
+		rd->addObjRIB(rit->first, &rit->second);
+	}
+
+	system->objs_to_create.clear();
 }
 
 std::string NetworkManager::query_manager_rib()
@@ -641,6 +669,7 @@ std::string NetworkManager::list_systems(void)
 
 //Class RIBObjectClasses
 const std::string RIBObjectClasses::DAF = "DAF";
+const std::string RIBObjectClasses::COMPUTING_SYSTEM = "ComputingSystem";
 const std::string RIBObjectClasses::PROCESSING_SYSTEM = "ProcessingSystem";
 const std::string RIBObjectClasses::SOFTWARE = "Software";
 const std::string RIBObjectClasses::HARDWARE = "Hardware";
@@ -652,6 +681,7 @@ const std::string RIBObjectClasses::MGMT_AGENTS = "ManagementAgents";
 RIBObjectClasses::class_name_code RIBObjectClasses::hash_it(const std::string& class_name)
 {
 	if (class_name == DAF) return CL_DAF;
+	if (class_name == COMPUTING_SYSTEM) return CL_COMPUTING_SYSTEM;
 	if (class_name == PROCESSING_SYSTEM) return CL_PROCESSING_SYSTEM;
 	if (class_name == SOFTWARE) return CL_SOFTWARE;
 	if (class_name == HARDWARE) return CL_HARDWARE;

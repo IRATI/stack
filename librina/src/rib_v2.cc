@@ -348,8 +348,8 @@ public:
 	///
 	/// @ret On success 0, otherwise -1
 	///
-	inline void remove_obj(int64_t instance_id){
-		__remove_obj(instance_id);
+	inline void remove_obj(int64_t instance_id, bool force = false) {
+		__remove_obj(instance_id, force);
 	}
 
 	///
@@ -357,8 +357,8 @@ public:
 	///
 	/// @ret On success 0, otherwise -1
 	///
-	void remove_obj(const std::string& fqn) {
-		__remove_obj(get_obj_inst_id(fqn));
+	void remove_obj(const std::string& fqn, bool force = false) {
+		__remove_obj(get_obj_inst_id(fqn), force);
 	}
 
 	///
@@ -470,7 +470,7 @@ private:
 	RIBObj* get_obj(int64_t inst_id);
 
 	//@internal: must be called with the rwlock acquired
-	void __remove_obj(int64_t inst_id);
+	void __remove_obj(int64_t inst_id, bool force = false);
 
 	//@internal: must be called with the rwlock acquired
 	int64_t __get_obj_inst_id(const std::string& fqn);
@@ -1544,30 +1544,32 @@ int64_t RIB::add_obj(const std::string& fqn, RIBObj** obj_) {
 	return id;
 }
 
-void RIB::__remove_obj(int64_t inst_id) {
+void RIB::__remove_obj(int64_t inst_id, bool force)
+{
 
 	RIBObj* obj;
 	std::list<int64_t> *child_list = NULL, *parent_child_list = NULL;
+	std::list<int64_t> children;
 	std::list<int64_t>::iterator it;
 	int64_t parent_inst_id;
 
 	//Mutual exclusion
-	WriteScopedLock wlock(rwlock);
+	rwlock.writelock();
 
 	obj = get_obj(inst_id);
 	if(!obj){
 		LOG_ERR("Unable to remove with instance id '%" PRId64  "'. Object does not exist!",
 								inst_id);
+		rwlock.unlock();
 		throw eObjDoesNotExist();
 	}
 
 	if(inst_id == RIB_ROOT_INST_ID){
 		LOG_ERR("Unable to remove object with instance id '%" PRId64  "'; root can never be removed!",
 								inst_id);
+		rwlock.unlock();
 		throw eObjInvalid();
 	}
-
-
 
 	parent_inst_id = obj->parent_inst_id;
 
@@ -1582,14 +1584,31 @@ void RIB::__remove_obj(int64_t inst_id) {
 	}catch(...){
 		LOG_ERR("Unable to recover the children list/parent children list for object '" PRId64  "'; corrupted internal state!",
 							inst_id);
+		rwlock.unlock();
 		assert(0);
 		throw Exception("Corrupted internal state");
 	}
 
-	if(child_list->size() > 0){
+	if(child_list->size() > 0 && !force){
 		LOG_ERR("Unable to remove object '" PRId64  "'; the object has children",
 							inst_id);
+		rwlock.unlock();
 		throw eObjHasChildren();
+	} else if (child_list->size() > 0) {
+		//Make a copy of the list of children
+		for(it=child_list->begin(); it != child_list->end(); ++it) {
+			children.push_back(*it);
+		}
+
+		//Remove each children recursively
+		for (it = children.begin(); it != children.end(); ++it) {
+			rwlock.unlock();
+			try {
+				__remove_obj(*it, true);
+			} catch (...) {
+			}
+			rwlock.writelock();
+		}
 	}
 
 	//Check if we are in the parent's child list
@@ -1598,6 +1617,7 @@ void RIB::__remove_obj(int64_t inst_id) {
 	if(it == parent_child_list->end()){
 		LOG_ERR("Parent's children list does not contain object '" PRId64  "'; corrupted internal state!",
 							inst_id);
+		rwlock.unlock();
 		throw Exception("Corrupted internal state");
 	}
 
@@ -1629,6 +1649,7 @@ void RIB::__remove_obj(int64_t inst_id) {
 							obj->get_class().c_str(),
 							inst_id);
 
+	rwlock.unlock();
 
 	//Delete object
 	delete obj;
@@ -1898,10 +1919,13 @@ public:
 	///
 	/// @param handle The handle of the RIB
 	/// @param inst_id The object instance ID
+	/// @param force if true, remove object and all children objects
 	///
 	/// @throws eRIBNotFound, eObjDoesNotExist
 	///
-	void removeObjRIB(const rib_handle_t& handle, const int64_t);
+	void removeObjRIB(const rib_handle_t& handle,
+			  const int64_t,
+			  bool force = false);
 
 	//@internal: for testing purposes only)
 	void __set_cdap_provider(cdap::CDAPProviderInterface* p){
@@ -2686,7 +2710,9 @@ std::string RIBDaemon::getObjClass(const rib_handle_t& handle,
 }
 
 void RIBDaemon::removeObjRIB(const rib_handle_t& handle,
-							const int64_t inst_id){
+			     const int64_t inst_id,
+			     bool force)
+{
 	//Mutual exclusion
 	ReadScopedLock rlock(rwlock);
 
@@ -2700,7 +2726,7 @@ void RIBDaemon::removeObjRIB(const rib_handle_t& handle,
 		throw eRIBNotFound();
 	}
 
-	rib->remove_obj(inst_id);
+	rib->remove_obj(inst_id, force);
 }
 
 std::list<RIBObjectData> RIBDaemon::get_rib_objects_data(
@@ -3453,14 +3479,18 @@ std::string RIBDaemonProxy::getObjClass(const rib_handle_t& h,
 	return ribd->getObjClass(h, id);
 }
 
-void RIBDaemonProxy::removeObjRIB(const rib_handle_t& h, const int64_t id){
-	return ribd->removeObjRIB(h, id);
+void RIBDaemonProxy::removeObjRIB(const rib_handle_t& h,
+				  const int64_t id,
+				  bool force)
+{
+	return ribd->removeObjRIB(h, id, force);
 }
 
 void RIBDaemonProxy::removeObjRIB(const rib_handle_t& handle,
-				  const std::string fqdn)
+				  const std::string fqdn,
+				  bool force)
 {
-	removeObjRIB(handle, getObjInstId(handle, fqdn));
+	removeObjRIB(handle, getObjInstId(handle, fqdn), force);
 }
 
 bool RIBDaemonProxy::containsObj(const rib_handle_t& handle,

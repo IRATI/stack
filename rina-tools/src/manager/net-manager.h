@@ -126,7 +126,7 @@ public:
 	rina::rib::RIBDaemonProxy * getProxy();
         const rina::rib::rib_handle_t & get_rib_handle();
         int64_t addObjRIB(const std::string& fqn, rina::rib::RIBObj** obj);
-        void removeObjRIB(const std::string& fqn);
+        void removeObjRIB(const std::string& fqn, bool force = false);
         std::list<rina::rib::RIBObjectData> get_rib_objects_data(void);
 
 private:
@@ -194,10 +194,12 @@ private:
 struct RIBObjectClasses {
 	enum class_name_code {
 		CL_DAF, CL_PROCESSING_SYSTEM, CL_SOFTWARE, CL_HARDWARE,
-		CL_KERNEL_AP, CL_OS_AP, CL_IPCPS, CL_MGMT_AGENTS, CL_UNKNOWN
+		CL_KERNEL_AP, CL_OS_AP, CL_IPCPS, CL_MGMT_AGENTS, CL_UNKNOWN,
+		CL_COMPUTING_SYSTEM
 	};
 
 	static const std::string DAF;
+	static const std::string COMPUTING_SYSTEM;
 	static const std::string PROCESSING_SYSTEM;
 	static const std::string SOFTWARE;
 	static const std::string HARDWARE;
