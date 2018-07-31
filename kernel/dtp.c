@@ -436,7 +436,7 @@ static void tf_sender_inactivity(struct timer_list * tl)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         dtp = (struct dtp *) data;
 #else
-        dtp = from_timer(inst_data, tl, timers.sender_inactivity);
+        dtp = from_timer(dtp, tl, timers.sender_inactivity);
 #endif
         if (!dtp) {
                 LOG_ERR("No dtp to work with");
@@ -1041,6 +1041,7 @@ struct dtp * dtp_create(struct efcp *       efcp,
                 dtp_destroy(dtp);
                 return NULL;
         }
+        dtp->timers.rtx = NULL;
 
         dtp->to_post = ringq_create(TO_POST_LENGTH);
         if (!dtp->to_post) {
@@ -1142,6 +1143,8 @@ int dtp_destroy(struct dtp * instance)
                 rtimer_destroy(instance->timers.receiver_inactivity);
         if (instance->timers.rate_window)
                 rtimer_destroy(instance->timers.rate_window);
+        if (instance->timers.rtx)
+        	rtimer_destroy(instance->timers.rtx);
         if (instance->to_post) ringq_destroy(instance->to_post,
                                (void (*)(void *)) du_destroy);
         if (instance->to_send) ringq_destroy(instance->to_send,
