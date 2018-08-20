@@ -1004,7 +1004,7 @@ GetDIFPropertiesRequestEvent::GetDIFPropertiesRequestEvent(
 		const ApplicationProcessNamingInformation& appName,
 		const ApplicationProcessNamingInformation& DIFName,
 		unsigned int sequenceNumber,
-		unsigned int ctrl_p, unsigned short ipcp_id):
+		unsigned int ctrl_port, unsigned short ipcp_id):
         IPCEvent(GET_DIF_PROPERTIES, sequenceNumber,
         		ctrl_port, ipcp_id)
 {
@@ -1023,28 +1023,28 @@ const ApplicationProcessNamingInformation&
 /* CLASS IPCM REGISTER APPLICATION RESPONSE EVENT */
 IpcmRegisterApplicationResponseEvent::IpcmRegisterApplicationResponseEvent(
                 int result, unsigned int sequenceNumber,
-		unsigned int ctrl_p, unsigned short ipcp_id):
+		unsigned int ctrl_port, unsigned short ipcp_id):
                         BaseResponseEvent(result,
                                         IPCM_REGISTER_APP_RESPONSE_EVENT,
-                                        sequenceNumber, ctrl_p, ipcp_id)
+                                        sequenceNumber, ctrl_port, ipcp_id)
 { }
 
 /* CLASS IPCM UNREGISTER APPLICATION RESPONSE EVENT */
 IpcmUnregisterApplicationResponseEvent::IpcmUnregisterApplicationResponseEvent(
                 int result, unsigned int sequenceNumber,
-		unsigned int ctrl_p, unsigned short ipcp_id):
+		unsigned int ctrl_port, unsigned short ipcp_id):
                         BaseResponseEvent(result,
                                         IPCM_UNREGISTER_APP_RESPONSE_EVENT,
-                                        sequenceNumber, ctrl_p, ipcp_id)
+                                        sequenceNumber, ctrl_port, ipcp_id)
 { }
 
 /* CLASS IPCM ALLOCATE FLOW REQUEST RESULT EVENT */
 IpcmAllocateFlowRequestResultEvent::IpcmAllocateFlowRequestResultEvent(
                 int result, int portId, unsigned int sequenceNumber,
-		unsigned int ctrl_p, unsigned short ipcp_id):
+		unsigned int ctrl_port, unsigned short ipcp_id):
                         BaseResponseEvent(result,
                                         IPCM_ALLOCATE_FLOW_REQUEST_RESULT,
-                                        sequenceNumber, ctrl_p, ipcp_id)
+                                        sequenceNumber, ctrl_port, ipcp_id)
 { this->portId = portId; }
 
 int IpcmAllocateFlowRequestResultEvent::getPortId() const
@@ -1055,10 +1055,10 @@ QueryRIBResponseEvent::QueryRIBResponseEvent(
                 const std::list<rib::RIBObjectData>& ribObjects,
                 int result,
                 unsigned int sequenceNumber,
-		unsigned int ctrl_p, unsigned short ipcp_id) :
+		unsigned int ctrl_port, unsigned short ipcp_id) :
         BaseResponseEvent(result,
                           QUERY_RIB_RESPONSE_EVENT,
-                          sequenceNumber, ctrl_p, ipcp_id)
+                          sequenceNumber, ctrl_port, ipcp_id)
 { this->ribObjects = ribObjects; }
 
 const std::list<rib::RIBObjectData>& QueryRIBResponseEvent::getRIBObject() const
@@ -1067,10 +1067,10 @@ const std::list<rib::RIBObjectData>& QueryRIBResponseEvent::getRIBObject() const
 /* CLASS UPDATE DIF CONFIGURATION RESPONSE EVENT */
 UpdateDIFConfigurationResponseEvent::UpdateDIFConfigurationResponseEvent(
                 int result, unsigned int sequenceNumber,
-		unsigned int ctrl_p, unsigned short ipcp_id):
+		unsigned int ctrl_port, unsigned short ipcp_id):
                         BaseResponseEvent(result,
                                         UPDATE_DIF_CONFIG_RESPONSE_EVENT,
-                                        sequenceNumber, ctrl_p, ipcp_id)
+                                        sequenceNumber, ctrl_port, ipcp_id)
 { }
 
 /* CLASS ENROLL TO DIF RESPONSE EVENT */
@@ -1078,11 +1078,11 @@ EnrollToDIFResponseEvent::EnrollToDIFResponseEvent(
                 const std::list<Neighbor>& neighbors,
                 const DIFInformation& difInformation,
                 int result, unsigned int sequenceNumber,
-		unsigned int ctrl_p, unsigned short ipcp_id):
+		unsigned int ctrl_port, unsigned short ipcp_id):
                         BaseResponseEvent(result,
                                         ENROLL_TO_DIF_RESPONSE_EVENT,
                                         sequenceNumber,
-					ctrl_p, ipcp_id)
+					ctrl_port, ipcp_id)
 {
         this->neighbors = neighbors;
         this->difInformation = difInformation;
@@ -1101,9 +1101,9 @@ IPCProcessDaemonInitializedEvent::IPCProcessDaemonInitializedEvent(
                 unsigned short ipcProcessId,
                 const ApplicationProcessNamingInformation&  name,
                 unsigned int sequenceNumber,
-		unsigned int ctrl_p, unsigned short ipcp_id):
+		unsigned int ctrl_port, unsigned short ipcp_id):
                         IPCEvent(IPC_PROCESS_DAEMON_INITIALIZED_EVENT,
-                                        sequenceNumber, ctrl_p, ipcp_id)
+                                        sequenceNumber, ctrl_port, ipcp_id)
 {
         this->ipcProcessId = ipcProcessId;
         this->name = name;
@@ -1118,35 +1118,35 @@ IPCProcessDaemonInitializedEvent::getName() const
 
 /* CLASS TIMER EXPIRED EVENT */
 TimerExpiredEvent::TimerExpiredEvent(unsigned int sequenceNumber,
-		unsigned int ctrl_p, unsigned short ipcp_id) :
+		unsigned int ctrl_port, unsigned short ipcp_id) :
                 IPCEvent(TIMER_EXPIRED_EVENT, sequenceNumber,
-                		ctrl_p, ipcp_id)
+                		ctrl_port, ipcp_id)
 { }
 
 /* Class Media Report Event */
 MediaReportEvent::MediaReportEvent(const MediaReport& report,
 		 	 	   unsigned int sequenceNumber,
-				   unsigned int ctrl_p, unsigned short ipcp_id) :
+				   unsigned int ctrl_port, unsigned short ipcp_id) :
 			 IPCEvent(IPCM_MEDIA_REPORT_EVENT, sequenceNumber,
-					 ctrl_p, ipcp_id)
+					 ctrl_port, ipcp_id)
 {
 	media_report = report;
 }
 
 CreateIPCPResponseEvent::CreateIPCPResponseEvent(int res,
 						 unsigned int sequenceNumber,
-						 unsigned int ctrl_p, unsigned short ipcp_id):
+						 unsigned int ctrl_port, unsigned short ipcp_id):
 		IPCEvent(IPCM_CREATE_IPCP_RESPONSE,
-			 sequenceNumber, ctrl_p, ipcp_id)
+			 sequenceNumber, ctrl_port, ipcp_id)
 {
 	result = res;
 }
 
 DestroyIPCPResponseEvent::DestroyIPCPResponseEvent(int res,
 						   unsigned int sequenceNumber,
-						   unsigned int ctrl_p, unsigned short ipcp_id):
+						   unsigned int ctrl_port, unsigned short ipcp_id):
 		IPCEvent(IPCM_DESTROY_IPCP_RESPONSE,
-			 sequenceNumber, ctrl_p, ipcp_id)
+			 sequenceNumber, ctrl_port, ipcp_id)
 {
 	result = res;
 }

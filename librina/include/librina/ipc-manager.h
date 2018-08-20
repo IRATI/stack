@@ -834,7 +834,7 @@ class DisconnectNeighborResponseEvent: public BaseResponseEvent {
 public:
 	DisconnectNeighborResponseEvent(int result,
 					unsigned int sequenceNumber,
-					unsigned int ctrl_p, unsigned short ipcp_id)
+					unsigned int ctrl_port, unsigned short ipcp_id)
 			: BaseResponseEvent(result,
                                             DISCONNECT_NEIGHBOR_RESPONSE_EVENT,
 					    sequenceNumber, ctrl_port, ipcp_id) {}
