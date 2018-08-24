@@ -747,7 +747,7 @@ ApplicationUnregisteredEvent::ApplicationUnregisteredEvent(
 		const ApplicationProcessNamingInformation& appName,
 		const ApplicationProcessNamingInformation& DIFName,
 		unsigned int sequenceNumber,
-		unsigned int ctrl_p, unsigned short ipcp_id) :
+		unsigned int ctrl_port, unsigned short ipcp_id) :
 				IPCEvent(APPLICATION_UNREGISTERED_EVENT,
 					 sequenceNumber, ctrl_port, ipcp_id)
 {
@@ -760,7 +760,7 @@ AppRegistrationCanceledEvent::AppRegistrationCanceledEvent(int code,
                 const std::string& reason,
                 const ApplicationProcessNamingInformation& difName,
                 unsigned int sequenceNumber,
-		unsigned int ctrl_p, unsigned short ipcp_id):
+		unsigned int ctrl_port, unsigned short ipcp_id):
 			IPCEvent(APPLICATION_REGISTRATION_CANCELED_EVENT,
 				 sequenceNumber, ctrl_port, ipcp_id)
 {
@@ -775,7 +775,7 @@ AllocateFlowRequestResultEvent::AllocateFlowRequestResultEvent(
                         const ApplicationProcessNamingInformation& difName,
                         int portId,
                         unsigned int sequenceNumber,
-			unsigned int ctrl_p, unsigned short ipcp_id):
+			unsigned int ctrl_port, unsigned short ipcp_id):
                                 IPCEvent(ALLOCATE_FLOW_REQUEST_RESULT_EVENT,
                                          sequenceNumber, ctrl_port, ipcp_id)
 {
@@ -790,7 +790,7 @@ GetDIFPropertiesResponseEvent::GetDIFPropertiesResponseEvent(
                         const std::list<DIFProperties>& difProperties,
                         int result,
                         unsigned int sequenceNumber,
-			unsigned int ctrl_p, unsigned short ipcp_id):
+			unsigned int ctrl_port, unsigned short ipcp_id):
                                 BaseResponseEvent(result,
                                          GET_DIF_PROPERTIES_RESPONSE_EVENT,
                                          sequenceNumber, ctrl_port, ipcp_id)
