@@ -6,7 +6,7 @@ bin_PROGRAMS                       =
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT =
 
 rinaperf_SOURCES = rinaperf.c
-rinaperf_LDADD = $(LIBRINA_API_LIBS)
+rinaperf_LDADD = $(LIBRINA_API_LIBS) -lm
 rinaperf_CPPFLAGS = $(LIBRINA_API_CFLAGS)
 
 rina_echo_async_SOURCES = rina-echo-async.c
