@@ -61,7 +61,8 @@ static struct rtimer * rtimer_create_gfp(gfp_t   flags,
         tmp->tl.function = (void (*)(unsigned long)) tmp->function;
         tmp->tl.data     = (unsigned long)           tmp->data;
 #else
-        timer_setup(&tmp->tl, function, data);
+        timer_setup(&tmp->tl, function, 0);
+        tmp->data = data;
 #endif
 
         LOG_DBG("Timer %pK created", tmp);
