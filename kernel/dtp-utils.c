@@ -752,7 +752,7 @@ static void rtx_timer_func(struct timer_list * tl)
 
 #if RTIMER_ENABLED
         if (!rtxqueue_empty(q->queue))
-                rtimer_restart(dtp->timers.rtx, tr);
+                rtimer_restart(&dtp->timers.rtx, tr);
         LOG_DBG("RTX timer ending...");
 #endif
 
@@ -859,7 +859,7 @@ int rtxq_push_ni(struct rtxq * q,
         spin_lock_bh(&q->lock);
 #if RTIMER_ENABLED
         /* is the first transmitted PDU */
-        rtimer_start(q->parent->timers.rtx, q->parent->sv->tr);
+        rtimer_start(&q->parent->timers.rtx, q->parent->sv->tr);
 #endif
         rtxqueue_push_ni(q->queue, du);
         spin_unlock_bh(&q->lock);
@@ -872,7 +872,7 @@ int rtxq_flush(struct rtxq * q)
                 return -1;
 
 #if RTIMER_ENABLED
-        rtimer_stop(q->parent->timers.rtx);
+        rtimer_stop(&q->parent->timers.rtx);
 #endif
         spin_lock(&q->lock);
         rtxqueue_flush(q->queue);
@@ -892,7 +892,7 @@ int rtxq_ack(struct rtxq * q,
         spin_lock_bh(&q->lock);
         rtxqueue_entries_ack(q->queue, seq_num);
 #if RTIMER_ENABLED
-        rtimer_restart(q->parent->timers.rtx, tr);
+        rtimer_restart(&q->parent->timers.rtx, tr);
 #endif
         spin_unlock_bh(&q->lock);
 
@@ -926,7 +926,7 @@ int rtxq_nack(struct rtxq * q,
                               seq_num,
                               data_retransmit_max);
 #if RTIMER_ENABLED
-        if (rtimer_restart(q->parent->timers.rtx, tr)) {
+        if (rtimer_restart(&q->parent->timers.rtx, tr)) {
                 spin_unlock(&q->lock);
                 return -1;
         }
