@@ -43,8 +43,66 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <fcntl.h>
+#include <math.h>
 
 #include <rina/api.h>
+
+/*
+ * rinaperf: a tool to measure bandwidth and latency of RINA networks.
+ *
+ * The rinaperf program uses two separate flows between the client and the
+ * server for each test. The first one is a control flow, and it is used to
+ * negotiate the test configuration with the server, to terminate the test
+ * and to receive results. The second one is the data flow, where the test
+ * data is transported.
+ *
+ * The application protocol on the client side works as follows:
+ *   - The client allocates the control flow and sends a 20 bytes
+ *     configuration message containing the number of SDUs or transactions,
+ *     the SDU size and the test type.
+ *   - The clients waits for a 4 bytes ticket message from the server (on
+ *     the control flow), containing an integer number that identifies the
+ *     test.
+ *   - The client allocates the data flow and sends on this flow a 20 bytes
+ *     configuration message containing the ticket received from the control
+ *     flow, so that the server knows to which control flow this data flow
+ *     needs to be associated.
+ *   - The client runs the client-side test function (e.g., perf, ping or rr)
+ *     sending and/or receiving data to/from the data flow only.
+ *   - When the client-side test function ends, the client sends a 20 bytes
+ *     stop message on the control flow to ask the server-side test function
+ *     to stop (this may be useful to avoid that server times out, so that the
+ *     test session can end immediately).
+ *   - For tests different from "ping", the client waits for a 32 bytes result
+ *     message, containing various statistics as measured by the server-side
+ *     test function (e.g. SDU count, pps, bps, latency, ...).
+ *   - The client prints the results and closes both control and data flow.
+ *
+ * The application protocol on the server side works as follows:
+ *   - The server accepts the next flow and allocates a worker thread to handle
+ *     the request.
+ *   - The worker waits to receive a 20 bytes configuration message from the
+ *     flow. Looking at the message opcode, the worker decides if this is a
+ *     control flow or a data flow.
+ *   - In case of control flow, the worker allocates a ticket for the client
+ *     and sends it with a 4 bytes message. The worker then waits (on a
+ *     semaphore) to be notified by a future worker that is expected to
+ *     receive the same ticket on a data flow.
+ *   - In case the opcode indicates a data flow, the worker looks up in its
+ *     table the ticket specified in the message. If the ticket is valid, the
+ *     waiting worker (see above) is notified and informed about the data flow
+ *     file descriptor. The current worker can now terminate, as the rest of
+ *     the test will be carried out by the notified worker.
+ *   - Once woken up, the first worker deallocates the ticket and runs the
+ *     server-side test function, using the test configuration contained in the
+ *     20 bytes message previously read from the control flow.
+ *     The server-side function uses the data flow to send/receive PDUs.
+ *     However, it also monitors the control flow to check if a 20 bytes stop
+ *     message comes; if one is received, the test function can return early.
+ *   - When the server-side test function returns, the worker sends a 32 bytes
+ *     message on the control flow, to inform the client about the test
+ *     results. Finally, both control and data flows are closed.
+ */
 
 #define SDU_SIZE_MAX 65535
 #define RP_MAX_WORKERS 1023
@@ -84,7 +142,7 @@ struct rp_result_msg {
 } __attribute__((packed));
 
 typedef int (*perf_fn_t)(struct worker *);
-typedef void (*report_fn_t)(struct rp_result_msg *snd,
+typedef void (*report_fn_t)(struct worker *w, struct rp_result_msg *snd,
                             struct rp_result_msg *rcv);
 
 struct worker {
@@ -97,11 +155,17 @@ struct worker {
     sem_t data_flow_ready; /* to wait for dfd */
     unsigned int interval;
     unsigned int burst;
-    int ping;
+    int ping; /* is this a ping test? */
     struct rp_test_desc *desc;
-    int cfd; /* control file descriptor */
-    int dfd; /* data file descriptor */
-    int retcode;
+    int cfd;     /* control file descriptor */
+    int dfd;     /* data file descriptor */
+    int retcode; /* for the client to report success/failure */
+    unsigned int real_duration_ms; /* measured by the client */
+
+    /* A window of RTT samples to compute ping statistics. */
+#define RTT_WINSIZE 4096
+    unsigned int rtt_win_idx;
+    uint32_t rtt_win[RTT_WINSIZE];
 };
 
 struct rinaperf {
@@ -119,6 +183,7 @@ struct rinaperf {
     int cli_stop;           /* another way to stop client threads */
     int cli_flow_allocated; /* client flows allocated ? */
     int background;         /* server runs as a daemon process */
+    int cdf;                /* report CDF percentiles */
 
     /* Synchronization between client threads and main thread. */
     sem_t cli_barrier;
@@ -152,6 +217,7 @@ worker_init(struct worker *w, struct rinaperf *rp)
 {
     w->rp  = rp;
     w->cfd = w->dfd = -1;
+    w->rtt_win_idx  = 0;
 }
 
 static void
@@ -264,11 +330,11 @@ ping_client(struct worker *w)
                     if (w->rp->timestamp) {
                         struct timeval recv_time;
                         gettimeofday(&recv_time, NULL);
-                        PRINTF("[%lu.%06lu] ",
-                           (unsigned long)recv_time.tv_sec,
-                           (unsigned long)recv_time.tv_usec
-                        );
+                        PRINTF("[%lu.%06lu] ", (unsigned long)recv_time.tv_sec,
+                               (unsigned long)recv_time.tv_usec);
                     }
+                    w->rtt_win[w->rtt_win_idx] = ns;
+                    w->rtt_win_idx = (w->rtt_win_idx + 1) % RTT_WINSIZE;
                     PRINTF("%d bytes from server: rtt = %.3f ms\n", ret,
                            ((float)ns) / 1000000.0);
                 } else {
@@ -290,6 +356,7 @@ ping_client(struct worker *w)
     clock_gettime(CLOCK_MONOTONIC, &t_end);
     ns = 1000000000 * (t_end.tv_sec - t_start.tv_sec) +
          (t_end.tv_nsec - t_start.tv_nsec);
+    w->real_duration_ms = ns / 1000000;
 
     w->result.cnt = i;
     w->result.pps = 1000000000ULL;
@@ -368,18 +435,95 @@ ping_server(struct worker *w)
 }
 
 static void
-ping_report(struct rp_result_msg *snd, struct rp_result_msg *rcv)
+rr_report(struct worker *w, struct rp_result_msg *snd,
+          struct rp_result_msg *rcv)
 {
     PRINTF("%10s %15s %10s %10s %15s\n", "", "Transactions", "Kpps", "Mbps",
            "Latency (ns)");
-    PRINTF("%-10s %15lu %10.3f %10.3f %15lu\n", "Sender", snd->cnt,
-           (double)snd->pps / 1000.0, (double)snd->bps / 1000000.0,
-           snd->latency);
+    PRINTF("%-10s %15llu %10.3f %10.3f %15llu\n", "Sender",
+           (long long unsigned)snd->cnt, (double)snd->pps / 1000.0,
+           (double)snd->bps / 1000000.0, (long long unsigned)snd->latency);
 #if 0
     PRINTF("%-10s %15lu %10.3f %10.3f %15lu\n",
             "Receiver", rcv->cnt, (double)rcv->pps/1000.0,
                 (double)rcv->bps/1000000.0, rcv->latency);
 #endif
+}
+
+static int
+qsort_uint32_cmp(const void *left, const void *right)
+{
+    const uint32_t *a = (const uint32_t *)left;
+    const uint32_t *b = (const uint32_t *)right;
+    return *a > *b ? 1 : -1;
+}
+
+static void
+ping_report(struct worker *w, struct rp_result_msg *snd,
+            struct rp_result_msg *rcv)
+{
+    unsigned num_samples =
+        (snd->cnt > RTT_WINSIZE) ? RTT_WINSIZE : w->rtt_win_idx;
+    double stddev;
+    double avg;
+    double sum;
+    double min = 10e8;
+    double max = 0.0;
+    int i;
+
+    if (num_samples == 0) {
+        return;
+    }
+
+    /* Compute and report RTT statistics. */
+    qsort(w->rtt_win, num_samples, sizeof(uint32_t), qsort_uint32_cmp);
+    min = (double)w->rtt_win[0];
+    max = (double)w->rtt_win[num_samples - 1];
+
+    for (sum = 0.0, i = 0; i < num_samples; i++) {
+        double sample = w->rtt_win[i];
+        sum += sample;
+    }
+    avg = sum / num_samples;
+    for (sum = 0.0, i = 0; i < num_samples; i++) {
+        double sample = w->rtt_win[i];
+        sum += (sample - avg) * (sample - avg);
+    }
+    stddev = sqrt(sum / num_samples);
+
+    /* Convert to milliseconds. */
+    min /= 1000000.0;
+    avg /= 1000000.0;
+    max /= 1000000.0;
+    stddev /= 1000000.0;
+
+    if (!w->rp->cdf || num_samples < 110) {
+        if (num_samples < 110 && w->rp->cdf) {
+            printf("WARNING: at least 110 samples are needed to compute CDF\n");
+        }
+        printf("--- %s ping statistics ---\n", w->rp->srv_appl_name);
+        printf("%lu packets transmitted, %lu received, 0%% packet loss, "
+               "time %lums\n",
+               (long unsigned)snd->cnt, (long unsigned)rcv->cnt,
+               (long unsigned)w->real_duration_ms);
+        printf("rtt min/avg/max/mdev = %.3f/%.3f/%.3f/%.3f ms\n", min, avg, max,
+               stddev);
+    } else {
+#if RTT_WINSIZE < 100
+#error "RTT_WINSIZE must be >= 100"
+#endif
+        int i;
+        printf("p0=%.3f us\n", (double)w->rtt_win[0] / 1000.0);
+        for (i = 1; i < 100; i++) {
+            int pos = (i * num_samples) / 100;
+            printf("p%d=%.3f us\n", i, (double)w->rtt_win[pos] / 1000.0);
+        }
+        for (i = 991; i < 1000; i++) {
+            printf("p%.1f=%.3f us\n", (float)i / 10.0,
+                   (double)w->rtt_win[i * num_samples / 1000] / 1000.0);
+        }
+        printf("p100=%.3f us\n", (double)w->rtt_win[num_samples - 1] / 1000.0);
+    }
 }
 
 static int
@@ -434,6 +578,7 @@ perf_client(struct worker *w)
     clock_gettime(CLOCK_MONOTONIC, &t_end);
     ns = 1000000000ULL * (t_end.tv_sec - t_start.tv_sec) +
          (t_end.tv_nsec - t_start.tv_nsec);
+    w->real_duration_ms = ns / 1000000;
 
     if (ns) {
         w->result.cnt = i;
@@ -574,9 +719,16 @@ perf_server(struct worker *w)
                  * adjust 'i' and keep going. */
                 limit = stop.cnt;
                 if (i != stop.cnt) {
-                    PRINTF(
-                        "%llu packets still expected, stop delayed\n",
-                        (long long unsigned)stop.cnt - (long long unsigned)i);
+                    if (i < stop.cnt) {
+                        PRINTF("%llu packets still expected, stop delayed\n",
+                               (long long unsigned)stop.cnt -
+                                   (long long unsigned)i);
+                    } else {
+                        PRINTF("WRN: sender count (%llu) lower than our count "
+                               "(%llu)\n",
+                               (long long unsigned)stop.cnt,
+                               (long long unsigned)i);
+                    }
                 }
                 i--;
                 continue;
@@ -626,13 +778,16 @@ perf_server(struct worker *w)
 }
 
 static void
-perf_report(struct rp_result_msg *snd, struct rp_result_msg *rcv)
+perf_report(struct worker *w, struct rp_result_msg *snd,
+            struct rp_result_msg *rcv)
 {
     PRINTF("%10s %12s %10s %10s\n", "", "Packets", "Kpps", "Mbps");
-    PRINTF("%-10s %12lu %10.3f %10.3f\n", "Sender", snd->cnt,
-           (double)snd->pps / 1000.0, (double)snd->bps / 1000000.0);
-    PRINTF("%-10s %12lu %10.3f %10.3f\n", "Receiver", rcv->cnt,
-           (double)rcv->pps / 1000.0, (double)rcv->bps / 1000000.0);
+    PRINTF("%-10s %12llu %10.3f %10.3f\n", "Sender",
+           (long long unsigned)snd->cnt, (double)snd->pps / 1000.0,
+           (double)snd->bps / 1000000.0);
+    PRINTF("%-10s %12llu %10.3f %10.3f\n", "Receiver",
+           (long long unsigned)rcv->cnt, (double)rcv->pps / 1000.0,
+           (double)rcv->bps / 1000000.0);
 }
 
 struct rp_test_desc {
@@ -658,7 +813,7 @@ static struct rp_test_desc descs[] = {
         .opcode      = RP_OPCODE_RR,
         .client_fn   = ping_client,
         .server_fn   = ping_server,
-        .report_fn   = ping_report,
+        .report_fn   = rr_report,
     },
     {
         .name        = "perf",
@@ -810,7 +965,8 @@ client_worker_function(void *opaque)
         char durbuf[64];
 
         if (w->test_config.cnt) {
-            snprintf(countbuf, sizeof(countbuf), "%lu", w->test_config.cnt);
+            snprintf(countbuf, sizeof(countbuf), "%llu",
+                     (long long unsigned)w->test_config.cnt);
         } else {
             strncpy(countbuf, "inf", sizeof(countbuf));
         }
@@ -855,39 +1011,37 @@ client_worker_function(void *opaque)
         goto out;
     }
 
-    if (!w->ping) {
-        /* Wait for the result message from the server and read it. */
-        pfd.fd     = w->cfd;
-        pfd.events = POLLIN;
-        ret        = poll(&pfd, 1, CLI_RESULT_TIMEOUT_MSECS);
-        if (ret <= 0) {
-            if (ret < 0) {
-                perror("poll(result)");
-            } else {
-                PRINTF("Timeout while waiting for result message\n");
-            }
-            goto out;
+    /* Wait for the result message from the server and read it. */
+    pfd.fd     = w->cfd;
+    pfd.events = POLLIN;
+    ret        = poll(&pfd, 1, CLI_RESULT_TIMEOUT_MSECS);
+    if (ret <= 0) {
+        if (ret < 0) {
+            perror("poll(result)");
+        } else {
+            PRINTF("Timeout while waiting for result message\n");
         }
-
-        ret = read(w->cfd, &rmsg, sizeof(rmsg));
-        if (ret != sizeof(rmsg)) {
-            if (ret < 0) {
-                perror("read(result)");
-            } else {
-                PRINTF("Error reading result message: wrong length %d "
-                       "(should be %lu)\n",
-                       ret, (unsigned long int)sizeof(rmsg));
-            }
-            goto out;
-        }
-
-        rmsg.cnt     = le64toh(rmsg.cnt);
-        rmsg.pps     = le64toh(rmsg.pps);
-        rmsg.bps     = le64toh(rmsg.bps);
-        rmsg.latency = le64toh(rmsg.latency);
-
-        w->desc->report_fn(&w->result, &rmsg);
+        goto out;
     }
+
+    ret = read(w->cfd, &rmsg, sizeof(rmsg));
+    if (ret != sizeof(rmsg)) {
+        if (ret < 0) {
+            perror("read(result)");
+        } else {
+            PRINTF("Error reading result message: wrong length %d "
+                   "(should be %lu)\n",
+                   ret, (unsigned long int)sizeof(rmsg));
+        }
+        goto out;
+    }
+
+    rmsg.cnt     = le64toh(rmsg.cnt);
+    rmsg.pps     = le64toh(rmsg.pps);
+    rmsg.bps     = le64toh(rmsg.bps);
+    rmsg.latency = le64toh(rmsg.latency);
+
+    w->desc->report_fn(w, &w->result, &rmsg);
 
     w->retcode = 0;
 out:
@@ -1019,9 +1173,9 @@ server_worker_function(void *opaque)
         }
 
         if (rp->verbose) {
-            PRINTF("Configuring test type %u, SDU count %lu, SDU size %u, "
+            PRINTF("Configuring test type %u, SDU count %llu, SDU size %u, "
                    "ticket %u\n",
-                   cfg.opcode, cfg.cnt, cfg.size, ticket);
+                   cfg.opcode, (long long unsigned)cfg.cnt, cfg.size, ticket);
         }
 
         /* Wait for the client to allocate a data flow and come back to us. */
@@ -1101,7 +1255,9 @@ daemonize(void)
         exit(EXIT_FAILURE);
     }
 
-    chdir("/");
+    if (chdir("/")) {
+        exit(EXIT_FAILURE);
+    }
 }
 
 static int
@@ -1298,6 +1454,7 @@ usage(void)
         "   -E NUM : maximum delay introduced by the flow (microseconds)\n"
         "   -T : print timestamp (unix time + microseconds as in gettimeofday) "
         "before each line in ping test\n"
+        "   -C : client prints cumulative density function in ping mode\n"
         "   -v : be verbose\n",
         RINA_FLOW_SPEC_LOSS_MAX);
 }
@@ -1339,11 +1496,12 @@ main(int argc, char **argv)
     sem_init(&rp->cli_barrier, 0, 0);
     pthread_mutex_init(&rp->ticket_lock, NULL);
     rp->background = 0;
+    rp->cdf        = 0; /* Don't report CDF percentiles. */
 
     /* Start with a default flow configuration (unreliable flow). */
     rina_flow_spec_unreliable(&rp->flowspec);
 
-    while ((opt = getopt(argc, argv, "hlt:d:c:s:i:B:g:b:a:z:p:D:L:E:Twv")) !=
+    while ((opt = getopt(argc, argv, "hlt:d:c:s:i:B:g:b:a:z:p:D:L:E:TwvC")) !=
            -1) {
         switch (opt) {
         case 'h':
@@ -1456,6 +1614,10 @@ main(int argc, char **argv)
                 PRINTF("    Invalid 'max delay' %d\n", rp->flowspec.max_delay);
                 return -1;
             }
+            break;
+
+        case 'C':
+            rp->cdf = 1;
             break;
 
         default:
