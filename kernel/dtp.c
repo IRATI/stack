@@ -666,7 +666,7 @@ static void tf_a(struct timer_list * tl)
                 pci = process_A_expiration(dtp, dtcp);
                 if (pci) pci_release(pci);
 #if DTP_INACTIVITY_TIMERS_ENABLE
-                if (rtimer_restart(dtp->timers.sender_inactivity,
+                if (rtimer_restart(&dtp->timers.sender_inactivity,
                                    3 * (mpl + r + a))) {
                         LOG_ERR("Failed to start sender_inactiviy timer");
                         rtimer_start(&dtp->timers.a, a/AF);
