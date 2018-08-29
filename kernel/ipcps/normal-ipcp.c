@@ -84,8 +84,8 @@ struct ipcp_instance_data {
         struct list_head        list;
         /* Timers required for the address change procedure */
         struct {
-        	struct rtimer * use_naddress;
-                struct rtimer * kill_oaddress;
+        	struct timer_list use_naddress;
+                struct timer_list kill_oaddress;
         } timers;
 };
 
@@ -1357,10 +1357,12 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
 
         instance->data->efcpc->rmt = instance->data->rmt;
 
-        instance->data->timers.use_naddress = rtimer_create(tf_use_naddress,
-                               				    instance->data);
-        instance->data->timers.kill_oaddress = rtimer_create(tf_kill_oaddress,
-        						     instance->data);
+        rtimer_init(tf_use_naddress,
+        	    &instance->data->timers.use_naddress,
+		    instance->data);
+        rtimer_init(tf_kill_oaddress,
+        	    &instance->data->timers.kill_oaddress,
+		    instance->data);
 
         INIT_LIST_HEAD(&instance->data->flows);
         INIT_LIST_HEAD(&instance->data->list);

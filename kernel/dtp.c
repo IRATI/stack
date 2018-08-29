@@ -1028,20 +1028,10 @@ struct dtp * dtp_create(struct efcp *       efcp,
                 return NULL;
         }
 
-        dtp->timers.sender_inactivity =
-        		rtimer_create(tf_sender_inactivity, dtp);
-        dtp->timers.receiver_inactivity =
-        		rtimer_create(tf_receiver_inactivity, dtp);
-        dtp->timers.a = rtimer_create(tf_a, dtp);
-        dtp->timers.rate_window = rtimer_create(tf_rate_window, dtp);
-        if (!dtp->timers.sender_inactivity   ||
-            !dtp->timers.receiver_inactivity ||
-            !dtp->timers.a                   ||
-            !dtp->timers.rate_window) {
-                dtp_destroy(dtp);
-                return NULL;
-        }
-        dtp->timers.rtx = NULL;
+        rtimer_init(tf_sender_inactivity, &dtp->timers.sender_inactivity, dtp);
+        rtimer_init(tf_receiver_inactivity, &dtp->timers.receiver_inactivity, dtp);
+        rtimer_init(tf_a, &dtp->timers.a, dtp);
+        rtimer_init(tf_rate_window, &dtp->timers.rate_window, dtp);
 
         dtp->to_post = ringq_create(TO_POST_LENGTH);
         if (!dtp->to_post) {

@@ -732,7 +732,7 @@ static void rtx_timer_func(struct timer_list * tl)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         dtp = (struct dtp *) data;
 #else
-        dtp = from_timer(dtp, tl, timers.rtx->tl);
+        dtp = from_timer(dtp, tl, timers.rtx);
 #endif
         if (!dtp) {
                 LOG_ERR("No DTP data to work with");
@@ -793,12 +793,7 @@ struct rtxq * rtxq_create(struct dtp * dtp,
 
 #if RTIMER_ENABLED
         //data->data_retransmit_max = dtcp_cfg->rxctrl_cfg->data_retransmit_max;
-        dtp->timers.rtx = rtimer_create(rtx_timer_func, dtp);
-        if (!dtp->timers.rtx) {
-                LOG_ERR("Failed to create retransmission queue");
-                rtxq_destroy(tmp);
-                return NULL;
-        }
+        rtimer_init(rtx_timer_func, &dtp->timers.rtx, dtp);
 #endif
 
         tmp->queue = rtxqueue_create();

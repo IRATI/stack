@@ -163,11 +163,11 @@ struct dtp {
         struct ringq *            to_post;
         struct ringq *            to_send;
         struct {
-                struct rtimer * sender_inactivity;
-                struct rtimer * receiver_inactivity;
-                struct rtimer * a;
-                struct rtimer * rate_window;
-                struct rtimer * rtx;
+                struct timer_list sender_inactivity;
+                struct timer_list receiver_inactivity;
+                struct timer_list a;
+                struct timer_list rate_window;
+                struct timer_list rtx;
         } timers;
 	struct robject		  robj;
 
