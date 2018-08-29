@@ -732,7 +732,7 @@ static void rtx_timer_func(struct timer_list * tl)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         dtp = (struct dtp *) data;
 #else
-        dtp = from_timer(dtp, tl, timers.rtx);
+        //dtp = from_timer(dtp, tl, timers.rtx);
 #endif
         if (!dtp) {
                 LOG_ERR("No DTP data to work with");
