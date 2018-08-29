@@ -23,7 +23,11 @@
 
 #include <linux/version.h>
 
-struct rtimer;
+struct rtimer {
+        struct timer_list tl;
+        void (* function)(void * data);
+        void * data;
+};
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
 struct rtimer * rtimer_create(void (* function)(void * data),

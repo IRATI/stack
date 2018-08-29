@@ -29,12 +29,6 @@
 #include "rmem.h"
 #include "rtimer.h"
 
-struct rtimer {
-        struct timer_list tl;
-        void (* function)(void * data);
-        void * data;
-};
-
 static struct rtimer * rtimer_create_gfp(gfp_t   flags,
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
                                          void (* function)(void * data),
