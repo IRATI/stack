@@ -52,7 +52,7 @@ int rtimer_init(
 
         return 0;
 }
-EXPORT_SYMBOL(rtimer_create);
+EXPORT_SYMBOL(rtimer_init);
 
 bool rtimer_is_pending(struct timer_list * tl)
 {
