@@ -1066,9 +1066,6 @@ struct dtp * dtp_create(struct efcp *       efcp,
 
         spin_lock_init(&dtp->lock);
 
-        LOG_DBG("Instance %pK with STimer %pK created successfully", dtp,
-        		dtp->timers.sender_inactivity);
-
         return dtp;
 }
 
