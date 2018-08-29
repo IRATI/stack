@@ -32,6 +32,9 @@
 
 #include <rina/api.h>
 
+TODO Add cache with managed system names - system id
+TODO Add DIF template manager
+
 //Class NMConsole
 class ListSystemsConsoleCmd: public rina::ConsoleCmdInfo {
 public:
