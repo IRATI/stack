@@ -1162,9 +1162,9 @@ int normal_address_change(struct ipcp_instance_data * data,
 
 	/* Set timer to start advertising new address in EFCP connections
 	and MGMT PDUs (give time to routing updates to converge) */;
-	rtimer_restart(data->timers.use_naddress, use_new_address_t);
+	rtimer_restart(&data->timers.use_naddress, use_new_address_t);
 	/* Set timer to stop accepting old address in RMT */
-	rtimer_restart(data->timers.kill_oaddress, deprecate_old_address_t);
+	rtimer_restart(&data->timers.kill_oaddress, deprecate_old_address_t);
 
 	return 0;
 }
@@ -1420,10 +1420,8 @@ static int normal_destroy(struct ipcp_factory_data * data,
         name_fini(&tmp->name);
         name_fini(&tmp->dif_name);
 
-        if (tmp->timers.use_naddress)
-                rtimer_destroy(tmp->timers.use_naddress);
-        if (tmp->timers.kill_oaddress)
-                rtimer_destroy(tmp->timers.kill_oaddress);
+        rtimer_destroy(&tmp->timers.use_naddress);
+        rtimer_destroy(&tmp->timers.kill_oaddress);
 
         rkfree(tmp);
         rkfree(instance);

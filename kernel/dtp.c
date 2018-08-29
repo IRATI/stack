@@ -1122,19 +1122,14 @@ int dtp_destroy(struct dtp * instance)
                 }
         }
 
-        if (instance->timers.a)
-                rtimer_destroy(&instance->timers.a);
+        rtimer_destroy(&instance->timers.a);
         /* tf_a posts workers that restart sender_inactivity timer, so the wq
          * must be flushed before destroying the timer */
 
-        if (instance->timers.sender_inactivity)
-                rtimer_destroy(&instance->timers.sender_inactivity);
-        if (instance->timers.receiver_inactivity)
-                rtimer_destroy(&instance->timers.receiver_inactivity);
-        if (instance->timers.rate_window)
-                rtimer_destroy(&instance->timers.rate_window);
-        if (instance->timers.rtx)
-        	rtimer_destroy(&instance->timers.rtx);
+        rtimer_destroy(&instance->timers.sender_inactivity);
+        rtimer_destroy(&instance->timers.receiver_inactivity);
+        rtimer_destroy(&instance->timers.rate_window);
+        rtimer_destroy(&instance->timers.rtx);
         if (instance->to_post) ringq_destroy(instance->to_post,
                                (void (*)(void *)) du_destroy);
         if (instance->to_send) ringq_destroy(instance->to_send,
