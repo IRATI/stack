@@ -653,7 +653,7 @@ static void tf_a(struct timer_list * tl)
         if (dtcp) {
                 if (dtcp_sending_ack_policy(dtcp)){
                         LOG_ERR("sending_ack failed");
-                        rtimer_start(dtp->timers.a, a/AF);
+                        rtimer_start(&dtp->timers.a, a/AF);
                 }
                 while (!ringq_is_empty(dtp->to_send)) {
                         struct du * pdu_ctrl;
@@ -666,10 +666,10 @@ static void tf_a(struct timer_list * tl)
                 pci = process_A_expiration(dtp, dtcp);
                 if (pci) pci_release(pci);
 #if DTP_INACTIVITY_TIMERS_ENABLE
-                if (rtimer_restart(dtp->timers.sender_inactivity,
+                if (rtimer_restart(&dtp->timers.sender_inactivity,
                                    3 * (mpl + r + a))) {
                         LOG_ERR("Failed to start sender_inactiviy timer");
-                        rtimer_start(dtp->timers.a, a/AF);
+                        rtimer_start(&dtp->timers.a, a/AF);
                         return;
                 }
 #endif
@@ -678,7 +678,7 @@ static void tf_a(struct timer_list * tl)
         if (!seqq_is_empty(dtp->seqq)) {
                 LOG_DBG("Going to restart A timer with a = %d and a/AF = %d",
                         a, a/AF);
-                rtimer_start(dtp->timers.a, a/AF);
+                rtimer_start(&dtp->timers.a, a/AF);
         }
 
         return;
@@ -730,7 +730,7 @@ void dtp_start_rate_timer(struct dtp * dtp, struct dtcp * dtcp)
 
 	tf = 0;
 
-	if(rtimer_is_pending(dtp->timers.rate_window)) {
+	if(rtimer_is_pending(&dtp->timers.rate_window)) {
 		LOG_DBG("rbfc Rate based timer is still pending...");
 		return;
 	}
@@ -746,7 +746,7 @@ void dtp_start_rate_timer(struct dtp * dtp, struct dtcp * dtcp)
 	LOG_DBG("Rate based timer start, time %u msec, "
 		"last: %lu:%lu", tf, t.tv_sec, t.tv_nsec);
 
-	rtimer_start(dtp->timers.rate_window, tf);
+	rtimer_start(&dtp->timers.rate_window, tf);
 }
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
@@ -1028,20 +1028,10 @@ struct dtp * dtp_create(struct efcp *       efcp,
                 return NULL;
         }
 
-        dtp->timers.sender_inactivity =
-        		rtimer_create(tf_sender_inactivity, dtp);
-        dtp->timers.receiver_inactivity =
-        		rtimer_create(tf_receiver_inactivity, dtp);
-        dtp->timers.a = rtimer_create(tf_a, dtp);
-        dtp->timers.rate_window = rtimer_create(tf_rate_window, dtp);
-        if (!dtp->timers.sender_inactivity   ||
-            !dtp->timers.receiver_inactivity ||
-            !dtp->timers.a                   ||
-            !dtp->timers.rate_window) {
-                dtp_destroy(dtp);
-                return NULL;
-        }
-        dtp->timers.rtx = NULL;
+        rtimer_init(tf_sender_inactivity, &dtp->timers.sender_inactivity, dtp);
+        rtimer_init(tf_receiver_inactivity, &dtp->timers.receiver_inactivity, dtp);
+        rtimer_init(tf_a, &dtp->timers.a, dtp);
+        rtimer_init(tf_rate_window, &dtp->timers.rate_window, dtp);
 
         dtp->to_post = ringq_create(TO_POST_LENGTH);
         if (!dtp->to_post) {
@@ -1075,9 +1065,6 @@ struct dtp * dtp_create(struct efcp *       efcp,
         }
 
         spin_lock_init(&dtp->lock);
-
-        LOG_DBG("Instance %pK with STimer %pK created successfully", dtp,
-        		dtp->timers.sender_inactivity);
 
         return dtp;
 }
@@ -1132,19 +1119,14 @@ int dtp_destroy(struct dtp * instance)
                 }
         }
 
-        if (instance->timers.a)
-                rtimer_destroy(instance->timers.a);
+        rtimer_destroy(&instance->timers.a);
         /* tf_a posts workers that restart sender_inactivity timer, so the wq
          * must be flushed before destroying the timer */
 
-        if (instance->timers.sender_inactivity)
-                rtimer_destroy(instance->timers.sender_inactivity);
-        if (instance->timers.receiver_inactivity)
-                rtimer_destroy(instance->timers.receiver_inactivity);
-        if (instance->timers.rate_window)
-                rtimer_destroy(instance->timers.rate_window);
-        if (instance->timers.rtx)
-        	rtimer_destroy(instance->timers.rtx);
+        rtimer_destroy(&instance->timers.sender_inactivity);
+        rtimer_destroy(&instance->timers.receiver_inactivity);
+        rtimer_destroy(&instance->timers.rate_window);
+        rtimer_destroy(&instance->timers.rtx);
         if (instance->to_post) ringq_destroy(instance->to_post,
                                (void (*)(void *)) du_destroy);
         if (instance->to_send) ringq_destroy(instance->to_send,
@@ -1222,7 +1204,7 @@ int dtp_write(struct dtp * instance,
 
 #if DTP_INACTIVITY_TIMERS_ENABLE
         /* Stop SenderInactivityTimer */
-        if (rtimer_stop(instance->timers.sender_inactivity)) {
+        if (rtimer_stop(&instance->timers.sender_inactivity)) {
                 LOG_ERR("Failed to stop timer");
         }
 #endif
@@ -1344,7 +1326,7 @@ int dtp_write(struct dtp * instance,
 		spin_unlock_bh(&instance->sv_lock);
 #if DTP_INACTIVITY_TIMERS_ENABLE
                 /* Start SenderInactivityTimer */
-                if (rtimer_restart(instance->timers.sender_inactivity,
+                if (rtimer_restart(&instance->timers.sender_inactivity,
                                    3 * (mpl + r + a ))) {
                         LOG_ERR("Failed to start sender_inactiviy timer");
 			goto stats_nounlock_err_exit;
@@ -1479,7 +1461,7 @@ int dtp_receive(struct dtp * instance,
         if (instance->sv->drf_required) {
 #if DTP_INACTIVITY_TIMERS_ENABLE
                 /* Start ReceiverInactivityTimer */
-                if (rtimer_restart(instance->timers.receiver_inactivity,
+                if (rtimer_restart(&instance->timers.receiver_inactivity,
                                    2 * (mpl + r + a))) {
                         LOG_ERR("Failed to start Receiver Inactivity timer");
                         spin_unlock_bh(&instance->sv_lock);
@@ -1545,7 +1527,7 @@ int dtp_receive(struct dtp * instance,
 
 #if DTP_INACTIVITY_TIMERS_ENABLE
         /* Start ReceiverInactivityTimer */
-        if (rtimer_restart(instance->timers.receiver_inactivity,
+        if (rtimer_restart(&instance->timers.receiver_inactivity,
                            2 * (mpl + r + a ))) {
         	spin_unlock_bh(&instance->sv_lock);
                 LOG_ERR("Failed to start Receiver Inactivity timer");
@@ -1640,9 +1622,9 @@ int dtp_receive(struct dtp * instance,
         }
 
         if (list_empty(&instance->seqq->queue->head))
-                rtimer_stop(instance->timers.a);
+                rtimer_stop(&instance->timers.a);
         else
-                rtimer_start(instance->timers.a, a/AF);
+                rtimer_start(&instance->timers.a, a/AF);
 
         while (!ringq_is_empty(instance->to_post)) {
                 du = (struct du *) ringq_pop(instance->to_post);
