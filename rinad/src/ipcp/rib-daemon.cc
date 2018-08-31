@@ -564,16 +564,16 @@ void IPCPRIBDaemonImpl::initialize_rib_daemon(rina::cacep::AppConHandlerInterfac
 	//TODO populate RIB with some objects
 	try {
 		robj = new rina::rib::RIBObj("DIFManagement");
-		ribd->addObjRIB(rib, "/difManagement", &robj);
+		ribd->addObjRIB(rib, "/difm", &robj);
 
 		robj = new rina::rib::RIBObj("IPCManagement");
-		ribd->addObjRIB(rib, "/ipcManagement", &robj);
+		ribd->addObjRIB(rib, "/ipcm", &robj);
 
 		robj = new RIBDaemonRO(rib);
-		ribd->addObjRIB(rib, "/ribDaemon", &robj);
+		ribd->addObjRIB(rib, "/ribd", &robj);
 
 		robj = new rina::rib::RIBObj("SDUDelimiting");
-		ribd->addObjRIB(rib, "/sduDel", &robj);
+		ribd->addObjRIB(rib, "/sdudel", &robj);
 	} catch (rina::Exception &e1) {
 		LOG_ERR("RIB basic objects were not created because %s",
 				e1.what());

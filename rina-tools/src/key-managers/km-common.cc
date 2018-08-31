@@ -799,7 +799,7 @@ AbstractKM * KMFactory::get_instance()
 
 // Class SDUReader
 SDUReader::SDUReader(rina::ThreadAttributes * threadAttributes, int port_id, int fd_)
-				: SimpleThread(threadAttributes)
+			: SimpleThread(threadAttributes)
 {
 	portid = port_id;
 	fd = fd_;

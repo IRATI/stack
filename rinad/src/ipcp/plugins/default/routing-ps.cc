@@ -993,7 +993,7 @@ const std::string FlowStateObject::getKey() const
 
 // CLASS FlowStateRIBObject
 const std::string FlowStateRIBObject::clazz_name = "FlowStateObject";
-const std::string FlowStateRIBObject::object_name_prefix = "/resalloc/fsos/key=";
+const std::string FlowStateRIBObject::object_name_prefix = "/ra/fsos/key=";
 
 FlowStateRIBObject::FlowStateRIBObject(FlowStateObject* new_obj):
 rina::rib::RIBObj(clazz_name)
@@ -1363,7 +1363,7 @@ bool FlowStateObjects::is_modified() const
 
 //Class FlowStateRIBObjects
 const std::string FlowStateRIBObjects::clazz_name = "FlowStateObjects";
-const std::string FlowStateRIBObjects::object_name= "/resalloc/fsos";
+const std::string FlowStateRIBObjects::object_name= "/ra/fsos";
 
 FlowStateRIBObjects::FlowStateRIBObjects(FlowStateObjects* new_objs,
 					 LinkStateRoutingPolicy* ps) :

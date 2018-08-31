@@ -44,7 +44,7 @@ namespace rinad {
 
 // Class Neighbor RIB object
 const std::string NeighborRIBObj::class_name = "Neighbor";
-const std::string NeighborRIBObj::object_name_prefix = "/difManagement/enrollment/neighbors/processName=";
+const std::string NeighborRIBObj::object_name_prefix = "/difm/enr/neighs/pn=";
 
 NeighborRIBObj::NeighborRIBObj(const std::string& neigh_key) :
 		rina::rib::RIBObj(class_name), neighbor_key(neigh_key)
@@ -158,7 +158,7 @@ bool NeighborRIBObj::createNeighbor(rina::Neighbor &object)
 
 // Class Neighbor RIB object
 const std::string NeighborsRIBObj::class_name = "Neighbors";
-const std::string NeighborsRIBObj::object_name = "/difManagement/enrollment/neighbors";
+const std::string NeighborsRIBObj::object_name = "/difm/enr/neighs";
 
 NeighborsRIBObj::NeighborsRIBObj(IPCProcess * ipcp) :
 		IPCPRIBObj(ipcp, class_name)
@@ -266,7 +266,7 @@ void WatchdogTimerTask::run() {
 
 // CLASS WatchdogRIBObject
 const std::string WatchdogRIBObject::class_name = "watchdog_timer";
-const std::string WatchdogRIBObject::object_name = "/difManagement/enrollment/watchdog";
+const std::string WatchdogRIBObject::object_name = "/difm/enr/wd";
 
 WatchdogRIBObject::WatchdogRIBObject(IPCProcess * ipc_process,
 				     int wdog_period_ms,
@@ -385,7 +385,7 @@ void WatchdogRIBObject::remoteReadResult(const rina::cdap_rib::con_handle_t &con
 
 //Class AddressRIBObject
 const std::string AddressRIBObject::class_name = "address";
-const std::string AddressRIBObject::object_name = "/difManagement/naming/address";
+const std::string AddressRIBObject::object_name = "/difm/nam/addr";
 
 AddressRIBObject::AddressRIBObject(IPCProcess * ipc_process):
 	IPCPRIBObj(ipc_process, class_name)
@@ -2001,7 +2001,7 @@ void EnrollmentTask::deallocate_flows_and_destroy_esm(IEnrollmentStateMachine * 
 
 // Class Operational Status RIB Object
 const std::string OperationalStatusRIBObject::class_name = "OperationalStatus";
-const std::string OperationalStatusRIBObject::object_name = "/difManagement/opstatus";
+const std::string OperationalStatusRIBObject::object_name = "/difm/ops";
 
 OperationalStatusRIBObject::OperationalStatusRIBObject(IPCProcess * ipc_process) :
 		IPCPRIBObj(ipc_process, class_name)
