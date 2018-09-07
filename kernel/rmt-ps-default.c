@@ -312,7 +312,7 @@ struct ps_base *rmt_ps_default_create(struct rina_component *component)
 	}
 
 	if (!parm) {
-		LOG_WARN("No PS param q_max");
+		LOG_WARN("No PS param q_max, setting default");
 		data->q_max = DEFAULT_Q_MAX;
 	} else {
 		rmt_ps_default_set_policy_set_param(&ps->base,
