@@ -300,7 +300,7 @@ struct ps_base *rmt_ps_default_create(struct rina_component *component)
 		return NULL;
 	}
 
-	ps->base.set_policy_set_param = NULL; /* default */
+	ps->base.set_policy_set_param = rmt_ps_default_set_policy_set_param;
 	ps->dm = rmt;
 	ps->priv = data;
 
