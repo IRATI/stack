@@ -185,8 +185,7 @@ int default_sender_inactivity_timer(struct dtp_ps * ps)
 
         if (!dtp) return 0;
 
-        LOG_DBG("DTP %pK, STimer %pK launched", dtp,
-        		dtp->timers.sender_inactivity);
+        LOG_DBG("DTP %pK, STime launched", dtp);
 
         dtcp = dtp->dtcp;
         if (!dtcp) {
