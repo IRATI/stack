@@ -30,6 +30,8 @@
 #include "debug.h"
 #include "policies.h"
 
+#define DEFAULT_TTL_VALUE 64
+
 struct sdup_ttl_ps_default_data {
 	__u8  	initial_ttl_value;
 };
@@ -112,15 +114,46 @@ int default_sdup_dec_check_lifetime_limit_policy(struct sdup_ttl_ps * ps,
 }
 EXPORT_SYMBOL(default_sdup_dec_check_lifetime_limit_policy);
 
+static int sdu_ttl_ps_default_set_policy_set_param(struct ps_base *bps,
+					           const char *name,
+					           const char *value)
+{
+	struct sdup_ttl_ps *ps = container_of(bps, struct sdup_ttl_ps, base);
+	struct sdup_ttl_ps_default_data * data = ps->priv;
+	int int_value;
+	int ret;
+
+	(void) ps;
+
+	if (!name) {
+		LOG_ERR("Null parameter name");
+		return -1;
+	}
+
+	if (!value) {
+		LOG_ERR("Null parameter value");
+		return -1;
+	}
+
+	if (strcmp(name, "initialValue") == 0) {
+		ret = kstrtoint(value, 10, &int_value);
+		if (!ret)
+			data->initial_ttl_value = int_value;
+
+		LOG_DBG("Initial TTL value is %u", data->initial_ttl_value);
+	}
+
+	return 0;
+}
+
 struct ps_base * sdup_ttl_ps_default_create(struct rina_component * component)
 {
 	struct auth_sdup_profile * conf;
 	struct sdup_comp * sdup_comp;
 	struct sdup_ttl_ps * ps;
 	struct sdup_port * sdup_port;
+	struct policy_parm * param;
 	struct sdup_ttl_ps_default_data * data;
-	struct policy_parm * parameter;
-	unsigned int aux = 0;
 
 	sdup_comp = sdup_comp_from_component(component);
 	if (!sdup_comp)
@@ -146,31 +179,24 @@ struct ps_base * sdup_ttl_ps_default_create(struct rina_component * component)
 
 	ps->dm          = sdup_port;
         ps->priv        = data;
+        ps->base.set_policy_set_param = sdu_ttl_ps_default_set_policy_set_param;
 
         /* Parse parameters from config */
-	if (conf->ttl) {
-		parameter = policy_param_find(conf->ttl, "initialValue");
-		if (!parameter) {
-			LOG_ERR("Could not find 'initialValue' in TTL policy");
-			rkfree(ps);
-			rkfree(data);
-			return NULL;
-		}
-
-		if (kstrtouint(policy_param_value(parameter), 10, &aux)) {
-			LOG_ERR("Failed to convert TTL string to int");
-			rkfree(ps);
-			rkfree(data);
-			return NULL;
-		}
-		data->initial_ttl_value = aux;
-
-		LOG_DBG("Initial TTL value is %u", data->initial_ttl_value);
-	} else {
+        if (!conf->ttl) {
 		LOG_ERR("TTL policy is NULL");
 		rkfree(ps);
 		rkfree(data);
 		return NULL;
+        }
+
+        param = policy_param_find(conf->ttl, "initialValue");
+	if (!param) {
+		LOG_WARN("No PS param initialValue, setting default");
+		data->initial_ttl_value = DEFAULT_TTL_VALUE;
+	} else {
+		sdu_ttl_ps_default_set_policy_set_param(&ps->base,
+						        policy_param_name(param),
+						        policy_param_value(param));
 	}
 
 	/* SDUP policy functions*/

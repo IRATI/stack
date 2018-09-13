@@ -717,49 +717,42 @@ static bool rtxqueue_empty(struct rtxqueue * q)
         return list_empty(&q->head);
 }
 
-struct rtxt_data {
-	struct efcp_container * efcpc;
-	unsigned int data_retransmit_max;
-	cep_id_t	cep_id;
-};
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
 static void rtx_timer_func(void * data)
+#else
+static void rtx_timer_func(struct timer_list * tl)
+#endif
 {
         struct rtxq *        q;
-        struct efcp * 	     efcp;
-        struct rtxt_data *   rtxtd;
         unsigned int         tr;
 	struct dtp *         dtp;
 
         LOG_DBG("RTX timer triggered...");
 
-        rtxtd = (struct rtxt_data *) data;
-        if (!rtxtd) {
-                LOG_ERR("No RTX data to work with");
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
+        dtp = (struct dtp *) data;
+#else
+        dtp = from_timer(dtp, tl, timers.rtx);
+#endif
+        if (!dtp) {
+                LOG_ERR("No DTP data to work with");
                 return;
         }
 
-        efcp = efcp_container_find_rtxlock(rtxtd->efcpc, rtxtd->cep_id);
-        if (!efcp) {
-        	LOG_DBG("EFCP instance with cep-id %d destroyed",
-        		rtxtd->cep_id);
-        	return;
-        }
-
-	dtp = efcp->dtp;
         q = dtp->rtxq;
         tr = dtp->sv->tr;
 
+        spin_lock(&q->lock);
         if (rtxqueue_rtx(q->queue,
                          tr,
                          dtp,
                          q->rmt,
-                         rtxtd->data_retransmit_max))
+			 dtp->dtcp->cfg->rxctrl_cfg->data_retransmit_max))
                 LOG_ERR("RTX failed");
 
 #if RTIMER_ENABLED
         if (!rtxqueue_empty(q->queue))
-                rtimer_restart(q->r_timer, tr);
+                rtimer_restart(&dtp->timers.rtx, tr);
         LOG_DBG("RTX timer ending...");
 #endif
 
@@ -776,10 +769,6 @@ int rtxq_destroy(struct rtxq * q)
                 return -1;
 
         spin_lock_irqsave(&q->lock, flags);
-#if RTIMER_ENABLED
-        if (q->r_timer && rtimer_destroy(q->r_timer))
-                LOG_ERR("Problems destroying timer for RTXQ %pK", q->r_timer);
-#endif
         if (q->queue && rtxqueue_destroy(q->queue))
                 LOG_ERR("Problems destroying queue for RTXQ %pK", q->queue);
 
@@ -797,28 +786,14 @@ struct rtxq * rtxq_create(struct dtp * dtp,
 			  cep_id_t cep_id)
 {
         struct rtxq * tmp;
-        struct rtxt_data * data;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
                 return NULL;
 
 #if RTIMER_ENABLED
-        data = rkzalloc(sizeof(*data), GFP_KERNEL);
-        if (!data) {
-        	rkfree(tmp);
-                return NULL;
-        }
-
-        data->efcpc = container;
-        data->cep_id = cep_id;
-        data->data_retransmit_max = dtcp_cfg->rxctrl_cfg->data_retransmit_max;
-        tmp->r_timer = rtimer_create(rtx_timer_func, data);
-        if (!tmp->r_timer) {
-                LOG_ERR("Failed to create retransmission queue");
-                rtxq_destroy(tmp);
-                return NULL;
-        }
+        //data->data_retransmit_max = dtcp_cfg->rxctrl_cfg->data_retransmit_max;
+        rtimer_init(rtx_timer_func, &dtp->timers.rtx, dtp);
 #endif
 
         tmp->queue = rtxqueue_create();
@@ -884,7 +859,7 @@ int rtxq_push_ni(struct rtxq * q,
         spin_lock_bh(&q->lock);
 #if RTIMER_ENABLED
         /* is the first transmitted PDU */
-        rtimer_start(q->r_timer, q->parent->sv->tr);
+        rtimer_start(&q->parent->timers.rtx, q->parent->sv->tr);
 #endif
         rtxqueue_push_ni(q->queue, du);
         spin_unlock_bh(&q->lock);
@@ -897,7 +872,7 @@ int rtxq_flush(struct rtxq * q)
                 return -1;
 
 #if RTIMER_ENABLED
-        rtimer_stop(q->r_timer);
+        rtimer_stop(&q->parent->timers.rtx);
 #endif
         spin_lock(&q->lock);
         rtxqueue_flush(q->queue);
@@ -917,7 +892,7 @@ int rtxq_ack(struct rtxq * q,
         spin_lock_bh(&q->lock);
         rtxqueue_entries_ack(q->queue, seq_num);
 #if RTIMER_ENABLED
-        rtimer_restart(q->r_timer, tr);
+        rtimer_restart(&q->parent->timers.rtx, tr);
 #endif
         spin_unlock_bh(&q->lock);
 
@@ -951,7 +926,7 @@ int rtxq_nack(struct rtxq * q,
                               seq_num,
                               data_retransmit_max);
 #if RTIMER_ENABLED
-        if (rtimer_restart(q->r_timer, tr)) {
+        if (rtimer_restart(&q->parent->timers.rtx, tr)) {
                 spin_unlock(&q->lock);
                 return -1;
         }

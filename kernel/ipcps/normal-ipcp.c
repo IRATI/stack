@@ -23,6 +23,7 @@
 #include <linux/module.h>
 #include <linux/list.h>
 #include <linux/string.h>
+#include <linux/version.h>
 
 #define IPCP_NAME   "normal-ipc"
 
@@ -83,8 +84,8 @@ struct ipcp_instance_data {
         struct list_head        list;
         /* Timers required for the address change procedure */
         struct {
-        	struct rtimer * use_naddress;
-                struct rtimer * kill_oaddress;
+        	struct timer_list use_naddress;
+                struct timer_list kill_oaddress;
         } timers;
 };
 
@@ -1161,19 +1162,27 @@ int normal_address_change(struct ipcp_instance_data * data,
 
 	/* Set timer to start advertising new address in EFCP connections
 	and MGMT PDUs (give time to routing updates to converge) */;
-	rtimer_restart(data->timers.use_naddress, use_new_address_t);
+	rtimer_restart(&data->timers.use_naddress, use_new_address_t);
 	/* Set timer to stop accepting old address in RMT */
-	rtimer_restart(data->timers.kill_oaddress, deprecate_old_address_t);
+	rtimer_restart(&data->timers.kill_oaddress, deprecate_old_address_t);
 
 	return 0;
 }
 
 /* Runs the New Address Timer function */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
 static void tf_use_naddress(void * data)
+#else
+static void tf_use_naddress(struct timer_list * tl)
+#endif
 {
         struct ipcp_instance_data * inst_data;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         inst_data = (struct ipcp_instance_data *) data;
+#else
+        inst_data = from_timer(inst_data, tl, timers.kill_oaddress);
+#endif
         if (!inst_data) {
                 LOG_ERR("No IPCP instance data to work with");
                 return;
@@ -1186,12 +1195,20 @@ static void tf_use_naddress(void * data)
 }
 
 /* Runs the Kill old address Timer function */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
 static void tf_kill_oaddress(void * data)
+#else
+static void tf_kill_oaddress(struct timer_list * tl)
+#endif
 {
         struct ipcp_instance_data * inst_data;
 
         LOG_INFO("Running Kill Old Address Timer...");
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         inst_data = (struct ipcp_instance_data *) data;
+#else
+        inst_data = from_timer(inst_data, tl, timers.use_naddress);
+#endif
         if (!inst_data) {
                 LOG_ERR("No IPCP instance data to work with");
                 return;
@@ -1340,10 +1357,12 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
 
         instance->data->efcpc->rmt = instance->data->rmt;
 
-        instance->data->timers.use_naddress = rtimer_create(tf_use_naddress,
-                               				    instance->data);
-        instance->data->timers.kill_oaddress = rtimer_create(tf_kill_oaddress,
-        						     instance->data);
+        rtimer_init(tf_use_naddress,
+        	    &instance->data->timers.use_naddress,
+		    instance->data);
+        rtimer_init(tf_kill_oaddress,
+        	    &instance->data->timers.kill_oaddress,
+		    instance->data);
 
         INIT_LIST_HEAD(&instance->data->flows);
         INIT_LIST_HEAD(&instance->data->list);
@@ -1401,10 +1420,8 @@ static int normal_destroy(struct ipcp_factory_data * data,
         name_fini(&tmp->name);
         name_fini(&tmp->dif_name);
 
-        if (tmp->timers.use_naddress)
-                rtimer_destroy(tmp->timers.use_naddress);
-        if (tmp->timers.kill_oaddress)
-                rtimer_destroy(tmp->timers.kill_oaddress);
+        rtimer_destroy(&tmp->timers.use_naddress);
+        rtimer_destroy(&tmp->timers.kill_oaddress);
 
         rkfree(tmp);
         rkfree(instance);

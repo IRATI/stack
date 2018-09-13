@@ -17,6 +17,8 @@ env:
   - KERNEL_VERSION=4.11
   - KERNEL_VERSION=4.12
   - KERNEL_VERSION=4.13
+  - KERNEL_VERSION=4.14
+  - KERNEL_VERSION=4.15
 
 before_install:
   # Install Dependencies
@@ -33,6 +35,7 @@ before_install:
   - sudo apt-get install hostapd
   - sudo apt-get install wpasupplicant
   - sudo apt-get install linux-headers-$(uname -r)
+  - sudo apt-get install libelf-dev
 
 script:
   - "[ ${KERNEL_VERSION} != local ] || ./ci/build-all"

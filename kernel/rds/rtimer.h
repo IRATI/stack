@@ -21,19 +21,21 @@
 #ifndef RINA_RTIMER_H
 #define RINA_RTIMER_H
 
-struct rtimer;
+#include <linux/version.h>
 
-struct rtimer * rtimer_create(void (* function)(void * data),
-                              void *  data);
-struct rtimer * rtimer_create_ni(void (* function)(void * data),
-                                 void *  data);
-int             rtimer_destroy(struct rtimer * timer);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
+int rtimer_init(void (* function)(void * data),
+#else
+int rtimer_init(void (*function)(struct timer_list * tl),
+#endif
+		struct timer_list * tl, void *  data);
+int             rtimer_destroy(struct timer_list * tl);
 
-int             rtimer_start(struct rtimer * timer,
+int             rtimer_start(struct timer_list * tl,
                              unsigned int    millisecs);
-bool            rtimer_is_pending(struct rtimer * timer);
-int             rtimer_stop(struct rtimer * timer);
-int             rtimer_restart(struct rtimer * timer,
+bool            rtimer_is_pending(struct timer_list * tl);
+int             rtimer_stop(struct timer_list * tl);
+int             rtimer_restart(struct timer_list * tl,
                                unsigned int    millisecs);
 
 #endif

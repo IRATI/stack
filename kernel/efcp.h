@@ -71,8 +71,6 @@ struct efcp;
 
 struct efcp *           efcp_container_find(struct efcp_container * container,
                                             cep_id_t                id);
-struct efcp *           efcp_container_find_rtxlock(struct efcp_container * container,
-                                            	    cep_id_t                id);
 
 int                     efcp_enqueue(struct efcp * efcp,
                                      port_id_t     port,
