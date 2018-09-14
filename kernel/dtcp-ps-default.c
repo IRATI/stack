@@ -299,6 +299,75 @@ int default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
         return 0;
 }
 
+int default_rcvr_rendezvous(struct dtcp_ps * ps, const struct pci * pci)
+{
+        struct dtcp *       dtcp;
+        struct du *         du;
+        seq_num_t rcv_lft, rcv_rt, snd_lft, snd_rt;
+
+        if (!ps)
+                return -1;
+        dtcp = ps->dm;
+        if (!dtcp)
+                return -1;
+
+        LOG_INFO("Receiver rendezvous...");
+
+        spin_lock_bh(&dtcp->parent->sv_lock);
+        /* TODO: check if retransmission control enabled */
+
+        if (dtcp->parent->sv->window_based) {
+        	rcv_lft = pci_control_new_left_wind_edge(pci);
+        	rcv_rt = pci_control_new_rt_wind_edge(pci);
+        	snd_lft = pci_control_my_left_wind_edge(pci);
+        	snd_rt = pci_control_my_rt_wind_edge(pci);
+
+        	/* Check Consistency of the Receiving Window values with the
+        	 * values in the PDU.
+        	 */
+        	if (dtcp->sv->snd_lft_win != rcv_lft) {
+        		/* TODO what to do? */
+        	}
+
+        	if (dtcp->sv->snd_rt_wind_edge != rcv_rt) {
+        		/* TODO what to do? */
+        	}
+
+        	if (dtcp->parent->sv->rcv_left_window_edge != snd_lft) {
+        		LOG_INFO("Credit difference is %d",
+        			 snd_lft - dtcp->parent->sv->rcv_left_window_edge);
+        		dtcp->parent->sv->rcv_left_window_edge = snd_lft;
+        		dtcp->sv->rcvr_rt_wind_edge = snd_lft + dtcp->sv->rcvr_credit;
+        	}
+        }
+
+        if (dtcp->sv->flow_ctl && dtcp->parent->sv->rate_based) {
+        	/* TODO implement */
+        }
+
+        /* TODO Receiver is in the Rendezvous-at-the-receiver state. The next PDU is
+         * expected to have DRF bit set to true
+         */
+
+        spin_unlock_bh(&dtcp->parent->sv_lock);
+
+        /* Send a ControlAck PDU to confirm reception of RendezvousPDU via
+         * lastControlPDU value or send any other control PDU with Flow Control
+         * information opening the window.
+         */
+        du = pdu_ctrl_generate(dtcp, PDU_TYPE_FC);
+        if (!du)
+                return -1;
+
+        LOG_INFO("DTCP Sending FC (CPU: %d)", smp_processor_id());
+        dump_we(dtcp, &du->pci);
+
+        if (dtcp_pdu_send(dtcp, du))
+               return -1;
+
+        return 0;
+}
+
 struct ps_base * dtcp_ps_default_create(struct rina_component * component)
 {
         struct dtcp * dtcp = dtcp_from_component(component);
@@ -333,6 +402,7 @@ struct ps_base * dtcp_ps_default_create(struct rina_component * component)
         ps->rcvr_control_ack            = NULL;
         ps->no_rate_slow_down           = NULL;
         ps->no_override_default_peak    = NULL;
+        ps->rcvr_rendezvous             = default_rcvr_rendezvous;
 
         return &ps->base;
 }

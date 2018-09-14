@@ -164,6 +164,7 @@ static struct ps_base * dtcp_ps_dctcp_create(struct rina_component * component)
     ps->rcvr_control_ack            = NULL;
     ps->no_rate_slow_down           = NULL;
     ps->no_override_default_peak    = NULL;
+    ps->rcvr_rendezvous             = NULL;
 
     LOG_INFO("DCTCP DTCP policy created, shift_g value is %d", data->shift_g);
 

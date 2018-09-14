@@ -54,6 +54,7 @@ int                  dtcp_common_rcv_control(struct dtcp * dtcp,
 /* Used by DTP to have an ack-control PDU sent by DTCP */
 int                  dtcp_ack_flow_control_pdu_send(struct dtcp * instance,
                                                     seq_num_t     seq);
+int		     dtcp_rendezvous_pdu_send(struct dtcp * instance);
 
 /* begin SDK */
 int          dtcp_select_policy_set(struct dtcp * dtcp, const string_t *path,
