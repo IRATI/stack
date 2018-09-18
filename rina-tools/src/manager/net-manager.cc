@@ -32,8 +32,8 @@
 
 #include <rina/api.h>
 
-TODO Add cache with managed system names - system id
-TODO Add DIF template manager
+//TODO Add cache with managed system names - system id
+//TODO Add DIF template manager
 
 //Class NMConsole
 class ListSystemsConsoleCmd: public rina::ConsoleCmdInfo {
@@ -318,7 +318,8 @@ void DisconnectFromSystemTimerTask::run()
 //Class NetworkManager
 NetworkManager::NetworkManager(const std::string& app_name,
 			       const std::string& app_instance,
-			       const std::string& console_path) :
+			       const std::string& console_path,
+			       const std::string& dif_templates_path) :
 			       	       rina::ApplicationProcess(app_name, app_instance)
 {
 	std::stringstream ss;
@@ -335,6 +336,9 @@ NetworkManager::NetworkManager(const std::string& app_name,
 
 	rd = new NMRIBDaemon(et);
 	rd->set_application_process(this);
+
+	// Initialize DIF Templates Manager (with its monitor thread)
+	dtm = new DIFTemplateManager(dif_templates_path);
 
 	//Add required RIB objects to RIB
 	try {
@@ -360,6 +364,9 @@ NetworkManager::~NetworkManager()
 
 	if (rd)
 		delete rd;
+
+	if (dtm)
+		delete dtm;
 
 	itr = sdu_readers.begin();
 	while (itr != sdu_readers.end()) {

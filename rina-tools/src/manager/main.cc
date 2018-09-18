@@ -62,6 +62,7 @@ int wrapped_main(int argc, char** argv)
         string manager_api;
         list<string> dif_names;
         std::string console_path;
+        std::string dif_templates_path;
 
         try {
                 TCLAP::CmdLine cmd("network-manager", ' ', PACKAGE_VERSION);
@@ -91,10 +92,18 @@ int wrapped_main(int argc, char** argv)
 							 "/var/run/nmconsole.sock",
 							 "string");
 
+                TCLAP::ValueArg<string> dif_templates_path_arg("t",
+                                                               "dif-templates-path",
+							       "The path to the DIF Templates folder",
+							       false,
+							       "/usr/local/irati/etc",
+							       "string");
+
                 cmd.add(manager_apn_arg);
                 cmd.add(manager_api_arg);
                 cmd.add(dif_arg);
                 cmd.add(console_path_arg);
+                cmd.add(dif_templates_path_arg);
 
                 cmd.parse(argc, argv);
 
@@ -103,9 +112,11 @@ int wrapped_main(int argc, char** argv)
                 if (dif_arg.getValue() != "")
                 	parse_dif_names(dif_names, dif_arg.getValue());
                 console_path = console_path_arg.getValue();
+                dif_templates_path = dif_templates_path_arg.getValue();
 
-                LOG_DBG("Configuration: manager_apn=%s, manager_api=%s, console_path=%s",
-                	manager_apn.c_str(), manager_api.c_str(), console_path.c_str());
+                LOG_DBG("Configuration: manager_apn=%s, manager_api=%s, console_path=%s, dif_templates_path=%s",
+                	manager_apn.c_str(), manager_api.c_str(), console_path.c_str(),
+			dif_templates_path.c_str());
         } catch (TCLAP::ArgException &e) {
                 LOG_ERR("Error: %s for arg %d",
                         e.error().c_str(),
@@ -115,7 +126,8 @@ int wrapped_main(int argc, char** argv)
 
         rina::initialize("DEBUG", "");
 
-        nm_instance = new NetworkManager(manager_apn, manager_api, console_path);
+        nm_instance = new NetworkManager(manager_apn, manager_api, console_path,
+        				 dif_templates_path);
 
         nm_instance->event_loop(dif_names);
 

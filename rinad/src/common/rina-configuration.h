@@ -227,6 +227,11 @@ class RINAConfiguration {
         std::string toString() const;
 };
 
+DIFTemplate * parse_dif_template(const std::string& file_name,
+				 const std::string& template_name);
+bool parse_app_to_dif_mappings(const std::string& file_name,
+			       std::list< std::pair<std::string, std::string> >& mappings);
+
 }
 
 #endif

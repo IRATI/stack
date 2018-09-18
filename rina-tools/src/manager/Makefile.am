@@ -15,6 +15,7 @@ include $(srcdir)/Makefile.inc
 BUILT_SOURCES = $(protoSOURCES)
 
 net_manager_SOURCES  =				\
+    dif-template-manager.h  dif-template-manager.cc \
     net-manager.h    net-manager.cc \
 	main.cc \
 	$(protoSOURCES)

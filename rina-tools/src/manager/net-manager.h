@@ -36,6 +36,8 @@
 #include <librina/rib_v2.h>
 #include <librina/security-manager.h>
 
+#include "dif-template-manager.h"
+
 class NetworkManager;
 
 //Class NMConsole
@@ -155,7 +157,8 @@ class NetworkManager: public rina::ApplicationProcess, public rina::rib::RIBOpsR
 public:
 	NetworkManager(const std::string& app_name,
 		       const std::string& app_instance,
-		       const std::string& console_path);
+		       const std::string& console_path,
+		       const std::string& dif_templates_path);
         ~NetworkManager();
 
         void event_loop(std::list<std::string>& dif_names);
@@ -183,6 +186,7 @@ private:
         NMEnrollmentTask * et;
         NMRIBDaemon * rd;
         NMConsole * console;
+        DIFTemplateManager * dtm;
 
         rina::Timer timer;
 
