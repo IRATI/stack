@@ -300,7 +300,7 @@ struct ps_base *rmt_ps_default_create(struct rina_component *component)
 		return NULL;
 	}
 
-	ps->base.set_policy_set_param = NULL; /* default */
+	ps->base.set_policy_set_param = rmt_ps_default_set_policy_set_param;
 	ps->dm = rmt;
 	ps->priv = data;
 
@@ -312,7 +312,7 @@ struct ps_base *rmt_ps_default_create(struct rina_component *component)
 	}
 
 	if (!parm) {
-		LOG_WARN("No PS param q_max");
+		LOG_WARN("No PS param q_max, setting default");
 		data->q_max = DEFAULT_Q_MAX;
 	} else {
 		rmt_ps_default_set_policy_set_param(&ps->base,
