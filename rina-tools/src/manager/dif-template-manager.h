@@ -20,14 +20,14 @@
  * MA  02110-1301  USA
  */
 
-#ifndef __RINAD_DIF_TEMPLATE_MANAGER_H__
-#define __RINAD_DIF_TEMPLATE_MANAGER_H__
+#ifndef __NETMAN_DIF_TEMPLATE_MANAGER_H__
+#define __NETMAN_DIF_TEMPLATE_MANAGER_H__
 
 #include <map>
 
 #include <librina/concurrency.h>
-
-#include "rina-configuration.h"
+#include <configuration.h>
+#include <rina-configuration.h>
 
 class DIFTemplateManager;
 
@@ -51,6 +51,13 @@ private:
 	rina::Lockable lock;
 };
 
+struct IPCPDescriptor {
+	std::string dif_name;
+	std::string ipcp_type;
+	std::string dif_template_name;
+	std::list<std::string> difs_to_register_at;
+};
+
 class DIFTemplateManager {
 public:
 	static const std::string DEFAULT_TEMPLATE_NAME;
@@ -61,11 +68,16 @@ public:
 	void add_dif_template(const std::string& name, rinad::DIFTemplate * dif_template);
 	void remove_dif_template(const std::string& name);
 	void get_all_dif_templates(std::list<rinad::DIFTemplate>& dif_templates);
+	int get_ipcp_config_from_desc(rinad::configs::ipcp_config_t & ipcp_config,
+				      const std::string& system_name,
+				      const std::string& desc_file);
 
 private:
 	int load_initial_dif_templates();
 	void internal_remove_dif_template(const std::string& name);
 	void augment_dif_template(rinad::DIFTemplate * dif_template);
+	int parse_ipcp_descriptor(const std::string& desc_file,
+				  IPCPDescriptor & ipcp_desc);
 
 	//The folder containing the DIF templates to monitor
 	std::string folder_name;
@@ -78,4 +90,4 @@ private:
 	rinad::DIFTemplate * default_template;
 };
 
-#endif  /* __DIF_TEMPLATE_MANAGER_H__ */
+#endif  /* __NETMAN_DIF_TEMPLATE_MANAGER_H__ */

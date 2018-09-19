@@ -28,6 +28,8 @@
 
 #define RINA_PREFIX "net-manager"
 #include <librina/logs.h>
+#include <configuration.h>
+#include <encoder.h>
 #include "net-manager.h"
 
 #include <rina/api.h>
@@ -36,6 +38,42 @@
 //TODO Add DIF template manager
 
 //Class NMConsole
+class CreateIPCPConsoleCmd: public rina::ConsoleCmdInfo {
+public:
+	CreateIPCPConsoleCmd(NMConsole * console, NetworkManager * nm) :
+		rina::ConsoleCmdInfo("USAGE: create-ipcp <system-id> <path to IPCP descriptor file>", console) {
+		netman = nm;
+	};
+
+	int execute(std::vector<std::string>& args) {
+		CreateIPCPPromise promise;
+		int system_id;
+
+		if (args.size() < 3) {
+			console->outstream << console->commands_map[args[0]]->usage << std::endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		if(rina::string2int(args[1], system_id)){
+			console->outstream << "Invalid system id" << std::endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		if(netman->create_ipcp(&promise, system_id, args[2]) == NETMAN_FAILURE ||
+				promise.wait() != NETMAN_SUCCESS){
+			console->outstream << "Error while creating IPC process" << std::endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		console->outstream << "IPC process created successfully [id = "
+		      << promise.ipcp_id << ", name="<<args[1]<<"]" << std::endl;
+		return rina::UNIXConsole::CMDRETCONT;
+	}
+
+private:
+	NetworkManager * netman;
+};
+
 class ListSystemsConsoleCmd: public rina::ConsoleCmdInfo {
 public:
 	ListSystemsConsoleCmd(NMConsole * console, NetworkManager * nm) :
@@ -73,6 +111,7 @@ NMConsole::NMConsole(const std::string& socket_path, NetworkManager * nm) :
 			rina::UNIXConsole(socket_path)
 {
 	netman = nm;
+	commands_map["create-ipcp"] = new CreateIPCPConsoleCmd(this, netman);
 	commands_map["list-systems"] = new ListSystemsConsoleCmd(this, netman);
 	commands_map["query-rib"] = new QueryRIBConsoleCmd(this, netman);
 }
@@ -354,6 +393,7 @@ NetworkManager::~NetworkManager()
 {
 	void * status;
 	std::map<int, SDUReader *>::iterator itr;
+	std::map<std::string, TransactionState*>::iterator t_itr;
 	SDUReader * reader;
 
 	if (console)
@@ -367,6 +407,10 @@ NetworkManager::~NetworkManager()
 
 	if (dtm)
 		delete dtm;
+
+	for (t_itr = pend_transactions.begin(); t_itr != pend_transactions.end(); ++t_itr) {
+		delete t_itr->second;
+	}
 
 	itr = sdu_readers.begin();
 	while (itr != sdu_readers.end()) {
@@ -676,6 +720,98 @@ std::string NetworkManager::list_systems(void)
 	}
 
 	return ss.str();
+}
+
+netman_res_t NetworkManager::create_ipcp(CreateIPCPPromise * promise, int system_id,
+			 	 	 const std::string& ipcp_desc)
+{
+	MASystemTransState * trans;
+	std::map<std::string, ManagedSystem *>::iterator it;
+	ManagedSystem * mas;
+	rinad::configs::ipcp_config_t ipcp_config;
+	rina::cdap_rib::res_info_t res;
+	rina::cdap_rib::obj_info_t obj_info;
+        rina::cdap_rib::flags_t flags;
+        rina::cdap_rib::filt_info_t filt;
+        rinad::encoders::IPCPConfigEncoder encoder;
+        std::stringstream ss;
+
+	//1 Retrieve system from system-id, if it doesn't exist, return error
+	rina::ScopedLock g(et->lock);
+	mas = NULL;
+	for (it = et->enrolled_systems.begin();
+			it != et->enrolled_systems.end(); ++it) {
+		if (it->second->system_id == system_id) {
+			mas = it->second;
+		}
+	}
+
+	if (!mas) {
+		LOG_ERR("Could not find Managed System with id %d", system_id);
+		return NETMAN_FAILURE;
+	}
+
+	//2 Read and parse IPCP descriptor
+	if (dtm->get_ipcp_config_from_desc(ipcp_config, mas->con.dest_.ap_name_, ipcp_desc)) {
+		LOG_ERR("Problems getting IPCP configuration from IPCP descriptor");
+		return NETMAN_FAILURE;
+	}
+
+	obj_info.name_ = "/csid=1/psid=1/kernelap/osap/ipcps/ipcpid=x";
+	obj_info.class_ = "IPCProcess";
+	encoder.encode(ipcp_config, obj_info.value_);
+
+	ss << mas->con.port_id << "-" << obj_info.name_;
+	//3 Store transaction
+	trans = new MASystemTransState(this, promise, system_id, ss.str());
+	if (!trans) {
+		LOG_ERR("Unable to allocate memory for the transaction object. Out of memory!");
+		return NETMAN_FAILURE;
+	}
+
+	if (add_transaction_state(trans) < 0)
+	{
+		LOG_ERR("Unable to add transaction; out of memory?");
+		return NETMAN_FAILURE;
+	}
+
+	//4 Send CDAP message
+	try{
+		rd->getProxy()->remote_create(mas->con, obj_info, flags, filt, this);
+	}catch(rina::Exception &e){
+		LOG_ERR("Problems sending CDAP message: %s", e.what());
+		remove_transaction_state(trans->tid);
+		return NETMAN_FAILURE;
+	}
+
+	return NETMAN_PENDING;
+}
+
+void NetworkManager::remoteCreateResult(const rina::cdap_rib::con_handle_t &con,
+					const rina::cdap_rib::obj_info_t &obj,
+					const rina::cdap_rib::res_info_t &res)
+{
+	std::stringstream ss;
+	MASystemTransState* trans;
+
+	ss << con.port_id << "-" << obj.name_;
+
+	LOG_INFO("Received object reply for object name %s", obj.name_.c_str());
+
+	// Retrieve transaction
+	trans = dynamic_cast<MASystemTransState*>(get_transaction_state(ss.str()));
+	if(!trans){
+		LOG_ERR("Could not retrieve transaction with id %s", ss.str().c_str());
+		return;
+	}
+
+	// Mark transaction as completed
+	if (res.code_ == rina::cdap_rib::CDAP_SUCCESS) {
+		trans->completed(NETMAN_SUCCESS);
+	} else {
+		trans->completed(NETMAN_FAILURE);
+	}
+	remove_transaction_state(trans->tid);
 }
 
 //Class RIBObjectClasses

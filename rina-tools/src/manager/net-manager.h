@@ -38,7 +38,187 @@
 
 #include "dif-template-manager.h"
 
+//Constants
+#define PROMISE_TIMEOUT_S 8
+#define PROMISE_RETRY_NSEC 10000000 //10ms
+#define _PROMISE_1_SEC_NSEC 1000000000
+
 class NetworkManager;
+
+//
+// Return codes
+//
+typedef enum netman_res{
+	//Success
+	NETMAN_SUCCESS = 0,
+
+	//Return value will be deferred
+	NETMAN_PENDING = 1,
+
+	//Generic failure
+	NETMAN_FAILURE = -1,
+
+	//TODO: add more codes here...
+}netman_res_t;
+
+
+//fwd decl
+class TransactionState;
+
+//
+// Promise base class
+//
+class Promise {
+
+public:
+
+	virtual ~Promise(){};
+
+	//
+	// Wait (blocking)
+	//
+	netman_res_t wait(void);
+
+	//
+	// Signal the condition
+	//
+	inline void signal(void){
+		wait_cond.signal();
+	}
+
+	//
+	// Timed wait (blocking)
+	//
+	// Return SUCCESS or NETMAN_PENDING if the operation did not finally
+	// succeed
+	//
+	netman_res_t timed_wait(const unsigned int seconds);
+
+	//
+	// Return code
+	//
+	netman_res_t ret;
+
+protected:
+	//Protect setting of trans
+	friend class TransactionState;
+
+	//Transaction back reference
+	TransactionState* trans;
+
+	//Condition variable
+	rina::ConditionVariable wait_cond;
+};
+
+//
+// Create IPCP promise
+//
+class CreateIPCPPromise : public Promise {
+public:
+	int ipcp_id;
+};
+
+//
+// This base class encapsulates the generics of any two-step
+//
+class TransactionState {
+public:
+	TransactionState(NetworkManager* callee_, Promise* promise_,
+			const std::string& tid_):
+				promise(promise_),
+				tid(tid_),
+				callee(callee_),
+				finalised(false){
+		if(promise){
+			promise->ret = NETMAN_PENDING;
+			promise->trans = this;
+		}
+	}
+	virtual ~TransactionState(){};
+
+	//
+	// Used to recover the promise from the transaction
+	//
+	// @arg Template T: type of the promise
+	//
+	template<typename T>
+	T* get_promise(){
+		try{
+			T* t = dynamic_cast<T*>(promise);
+			return t;
+		}catch(...){
+			return NULL;
+		}
+	}
+
+	//
+	// This method and signals any existing set complete flag
+	//
+	void completed(netman_res_t _ret){
+		rina::ScopedLock slock(mutex);
+
+		if(finalised)
+			return;
+
+		if(!promise)
+			return;
+
+		promise->ret = _ret;
+		promise->signal();
+	}
+
+	//Promise
+	Promise* promise;
+
+	//Transaction id
+	const std::string tid;
+
+	//Callee that generated the transaction
+	NetworkManager* callee;
+
+protected:
+	//Protect abort call
+	friend class Promise;
+
+	//
+	// @brief Abort the transaction (hard timeout)
+	//
+	// This particular method aborts the transaction due to a wait in the
+	// promise that has timedout
+	//
+	// @ret On success, the transaction has been aborted. On failure, a
+	// completed() call has successfully finished the transaction
+	//
+	bool abort(void){
+		rina::ScopedLock slock(mutex);
+
+		if(finalised)
+			return false;
+
+		return finalised = true;
+	}
+
+	//Completed flag
+	bool finalised;
+
+	// Mutex
+	rina::Lockable mutex;
+};
+
+/**
+* Standard System related transaction state
+*/
+class MASystemTransState: public TransactionState {
+public:
+	MASystemTransState(NetworkManager* callee, Promise* promise, int sys_id,
+			   const std::string& tid)
+					: TransactionState(callee, promise, tid),
+						system_id(sys_id){}
+	virtual ~MASystemTransState(){};
+
+	//System identifier
+	int system_id;
+};
 
 //Class NMConsole
 class NMConsole : public rina::UNIXConsole {
@@ -148,6 +328,25 @@ public:
 	int fildesc;
 };
 
+class ConsecutiveUnsignedIntegerGenerator {
+public:
+	ConsecutiveUnsignedIntegerGenerator() : counter_(0) {}
+	unsigned int next() {
+		rina::ScopedLock g(lock_);
+
+		if (counter_ == UINT_MAX) {
+			counter_ = 0;
+		}
+		counter_++;
+
+		return counter_;
+	}
+
+private:
+	unsigned int counter_;
+	rina::Lockable lock_;
+};
+
 // Uses one thread per connected Management Agent (it is
 // ok for demonstration purposes, consider changing to
 // non-blocking I/O and a state machine approach to improve
@@ -172,9 +371,21 @@ public:
 			      const rina::cdap_rib::res_info_t &res,
 			      const rina::cdap_rib::flags_t & flags);
 
+	void remoteCreateResult(const rina::cdap_rib::con_handle_t &con,
+				const rina::cdap_rib::obj_info_t &obj,
+				const rina::cdap_rib::res_info_t &res);
+
+	// Operations to manage transactions
+	unsigned int get_next_tid();
+	int add_transaction_state(TransactionState* t);
+	int remove_transaction_state(const std::string& tid);
+	TransactionState * get_transaction_state(const std::string& tid);
+
 	// Operations to process console commands
 	std::string query_manager_rib(void);
 	std::string list_systems(void);
+	netman_res_t create_ipcp(CreateIPCPPromise * promise, int system_id,
+				 const std::string& ipcp_desc);
 
 private:
         void n1_flow_accepted(const char * incoming_apn, int fd);
@@ -193,6 +404,11 @@ private:
 	/// Readers of N-1 flows
 	rina::Lockable lock;
 	std::map<int, SDUReader *> sdu_readers;
+
+	// Variables for handling transactions
+	rina::ReadWriteLockable trans_rwlock;
+	std::map<std::string, TransactionState*> pend_transactions;
+	ConsecutiveUnsignedIntegerGenerator tid_gen;
 };
 
 struct RIBObjectClasses {

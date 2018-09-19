@@ -300,95 +300,91 @@ void* ActiveWorker::run(void* param)
 		//Allocate the flow
 		allocateFlow();
 
-		try {
-			if(flow_.portId < 0) {
-				usleep(FM_FALLOC_ALLOC_RETRY_US);
-				continue;
-			}
+		if(flow_.portId < 0) {
+			usleep(FM_FALLOC_ALLOC_RETRY_US);
+			continue;
+		}
 
-			//Recheck after flow alloc (prevents race)
-			if(!keep_running){
+		//Recheck after flow alloc (prevents race)
+		if(!keep_running){
+			break;
+		}
+
+		//Set port id so that we can print traces even if the
+		//flow is gone
+		port_id = flow_.portId;
+		fd = flow_.fd;
+
+		//Fill source parameters
+		src.ap_name_ = flow_.localAppName.processName;
+		src.ae_name_ = "v1";
+		src.ap_inst_ = flow_.localAppName.processInstance;
+		src.ae_inst_ = flow_.localAppName.entityInstance;
+
+		//Fill destination parameters
+		dest.ap_name_ = flow_.remoteAppName.processName;
+		dest.ae_name_ = flow_.remoteAppName.entityName;
+		dest.ap_inst_ = flow_.remoteAppName.processInstance;
+		dest.ae_inst_ = flow_.remoteAppName.entityInstance;
+		rina::cdap_rib::auth_policy_t auth;
+
+		auth_ps_ = rib_factory_->getSecurityManager()->get_auth_policy_set(con.auth_policy_name);
+		if (!auth_ps_) {
+			LOG_ERR("Could not %s authentication policy set, aborting",
+					rib_factory_->getSecurityManager()->get_sec_profile(con.auth_policy_name).authPolicy.name_.c_str());
+			return NULL;
+		}
+
+		auth = auth_ps_->get_auth_policy(port_id,
+				dest,
+				rib_factory_->getSecurityManager()->get_sec_profile(con.auth_policy_name));
+
+		//Version
+		rina::cdap_rib::vers_info_t vers;
+		vers.version_ = 0x1; //TODO: do not hardcode this
+
+		//TODO: remove this. The API should NOT require a RIB
+		//instance for calling the remote API
+		rib_factory_->getProxy()->remote_open_connection(vers,
+				src,
+				dest,
+				auth,
+				port_id);
+
+		//Recover the response
+		//TODO: add support for other
+		bool authentication_ongoing = true;
+		rina::ser_obj_t message;
+		message.message_ = new unsigned char[max_sdu_size_in_bytes];
+
+		//I/O loop
+		while(true) {
+			bytes_read = read(fd, message.message_,
+					max_sdu_size_in_bytes);
+			if (bytes_read <= 0) {
+				LOG_ERR("read() error or EOF on port id %u [%s]",
+						port_id, strerror(errno));
+				rina::ipcManager->deallocate_flow(port_id);
 				break;
 			}
+			message.size_ = bytes_read;
 
-			//Set port id so that we can print traces even if the
-			//flow is gone
-			port_id = flow_.portId;
-                        fd = flow_.fd;
-
-			//Fill source parameters
-			src.ap_name_ = flow_.localAppName.processName;
-			src.ae_name_ = "v1";
-			src.ap_inst_ = flow_.localAppName.processInstance;
-			src.ae_inst_ = flow_.localAppName.entityInstance;
-
-			//Fill destination parameters
-			dest.ap_name_ = flow_.remoteAppName.processName;
-			dest.ae_name_ = flow_.remoteAppName.entityName;
-			dest.ap_inst_ = flow_.remoteAppName.processInstance;
-			dest.ae_inst_ = flow_.remoteAppName.entityInstance;
-			rina::cdap_rib::auth_policy_t auth;
-
-			auth_ps_ = rib_factory_->getSecurityManager()->get_auth_policy_set(con.auth_policy_name);
-			if (!auth_ps_) {
-				LOG_ERR("Could not %s authentication policy set, aborting",
-					rib_factory_->getSecurityManager()->get_sec_profile(con.auth_policy_name).authPolicy.name_.c_str());
-				return NULL;
+			//Instruct CDAP provider to process the RIB operation message
+			try{
+				rina::cdap::getProvider()->process_message(
+						message,
+						port_id);
+			}catch(rina::WriteSDUException &e){
+				LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
+				rina::ipcManager->deallocate_flow(port_id);
+				break;
+			}catch(rina::FlowNotAllocatedException &e) {
+				break;
+			}catch(rina::cdap::CDAPException &e){
+				LOG_ERR("Error processing message: %s", e.what());
+			}catch(...){
+				LOG_CRIT("Unknown error during operation with port id: %u. This is a bug, please report it", port_id);
 			}
-
-			auth = auth_ps_->get_auth_policy(port_id,
-	  	  	  	  	  	 	 dest,
-							 rib_factory_->getSecurityManager()->get_sec_profile(con.auth_policy_name));
-
-			//Version
-			rina::cdap_rib::vers_info_t vers;
-			vers.version_ = 0x1; //TODO: do not hardcode this
-
-			//TODO: remove this. The API should NOT require a RIB
-			//instance for calling the remote API
-			rib_factory_->getProxy()->remote_open_connection(vers,
-							src,
-							dest,
-							auth,
-							port_id);
-
-			//Recover the response
-			//TODO: add support for other
-			bool authentication_ongoing = true;
-			rina::ser_obj_t message;
-			message.message_ = new unsigned char[max_sdu_size_in_bytes];
-
-			//I/O loop
-			while(true) {
-                                bytes_read = read(fd, message.message_,
-                                                max_sdu_size_in_bytes);
-                                if (bytes_read <= 0) {
-                                        LOG_ERR("read() error or EOF on port id %u [%s]",
-                                                port_id, strerror(errno));
-					rina::ipcManager->deallocate_flow(port_id);
-                                        break;
-                                }
-                                message.size_ = bytes_read;
-
-				//Instruct CDAP provider to process the RIB operation message
-				try{
-					rina::cdap::getProvider()->process_message(
-									message,
-									port_id);
-				}catch(rina::WriteSDUException &e){
-					LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
-					rina::ipcManager->deallocate_flow(port_id);
-					break;
-				}catch(rina::FlowNotAllocatedException &e) {
-					break;
-				}catch(rina::cdap::CDAPException &e){
-					LOG_ERR("Error processing message: %s", e.what());
-				}
-
-			}
-		}
-		catch(...){
-			LOG_CRIT("Unknown error during operation with port id: %u. This is a bug, please report it", port_id);
 		}
 	}
 

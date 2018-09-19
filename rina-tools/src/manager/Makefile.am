@@ -16,13 +16,14 @@ BUILT_SOURCES = $(protoSOURCES)
 
 net_manager_SOURCES  =				\
     dif-template-manager.h  dif-template-manager.cc \
-    net-manager.h    net-manager.cc \
+    net-manager.h    net-manager.cc  promise.cc \
 	main.cc \
 	$(protoSOURCES)
 net_manager_LDADD    =          \
     $(LIBRINA_LIBS)             \
     $(LIBRINA_API_LIBS) -ldl    \
-    $(builddir)/../../../rinad/src/common/librinad.la
+    $(builddir)/../../../rinad/src/common/librinad.la \
+    $(builddir)/../../../librina/src/librinajsoncpp.la
 net_manager_CPPFLAGS =			\
 	$(LIBRINA_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)			\

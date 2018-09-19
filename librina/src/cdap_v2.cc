@@ -3805,8 +3805,9 @@ void AppCDAPIOHandler::send(const cdap_m_t & m_sent,
 		throw e;
 	}
 
-	LOG_DBG("Sent CDAP message through port %d\n %s",
+	LOG_DBG("Sent CDAP message through port %d of %d bytes:\n %s",
 		con.port_id,
+		ser_sent_m.size_,
 		m_sent.to_string().c_str());
 }
 

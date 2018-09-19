@@ -19,6 +19,8 @@
  * MA  02110-1301  USA
  */
 
+#include <iostream>
+#include <fstream>
 #include <dirent.h>
 #include <errno.h>
 #include <poll.h>
@@ -26,6 +28,7 @@
 
 #define RINA_PREFIX     "dif-template-manager"
 #include <librina/logs.h>
+#include <librina/json/json.h>
 
 #include "dif-template-manager.h"
 
@@ -409,4 +412,138 @@ void DIFTemplateManager::get_all_dif_templates(std::list<rinad::DIFTemplate>& ou
 	for (it = dif_templates.begin(); it != dif_templates.end(); ++it) {
 		out_templates.push_back(*(it->second));
 	}
+}
+
+int DIFTemplateManager::parse_ipcp_descriptor(const std::string& desc_file,
+			  	  	      IPCPDescriptor & ipcp_desc)
+{
+        // Parse config file with jsoncpp
+        Json::Value  root, ipcp_data, difs;
+        Json::Reader reader;
+        ifstream     file;
+
+        file.open(desc_file.c_str(), std::ifstream::in);
+        if (file.fail()) {
+                LOG_ERR("Failed to open config file");
+                return -1;
+        }
+
+        if (!reader.parse(file, root, false)) {
+        	LOG_ERR("Failed to parse JSON: %s",
+        		 reader.getFormatedErrorMessages().c_str());
+
+        	return -1;
+        }
+
+        file.close();
+
+        ipcp_data = root["ipcpData"];
+        if (ipcp_data == 0) {
+        	LOG_ERR("IPCP Descriptor does not contain ipcpData element");
+        	return -1;
+        }
+
+	ipcp_desc.dif_name = ipcp_data.get("difName", string()).asString();
+	ipcp_desc.ipcp_type = ipcp_data.get("type", string()).asString();
+	ipcp_desc.dif_template_name = ipcp_data.get("template", string()).asString();
+	difs = ipcp_data["difsToRegisterAt"];
+	if (difs != 0) {
+		for (unsigned int j = 0; j < difs.size(); j++) {
+			ipcp_desc.difs_to_register_at.push_back(difs[j].asString());
+		}
+	}
+
+        return 0;
+}
+
+int DIFTemplateManager::get_ipcp_config_from_desc(rinad::configs::ipcp_config_t & ipcp_config,
+						  const std::string& system_name,
+			     	     	     	  const std::string& desc_file)
+{
+	IPCPDescriptor ipcp_desc;
+	rinad::DIFTemplate dift;
+	std::stringstream ss;
+
+	if (parse_ipcp_descriptor(desc_file, ipcp_desc)) {
+		return -1;
+	}
+
+	if (get_dif_template(ipcp_desc.dif_template_name, dift)) {
+		return -1;
+	}
+
+	ss << system_name << "." << ipcp_desc.dif_name;
+	ipcp_config.name.processName = ss.str();
+	ipcp_config.name.processInstance = "1";
+	ipcp_config.dif_to_assign.dif_type_ = ipcp_desc.ipcp_type;
+	ipcp_config.dif_to_assign.dif_name_.processName = ipcp_desc.dif_name;
+
+	if (ipcp_desc.ipcp_type == rina::NORMAL_IPC_PROCESS) {
+		unsigned int address;
+
+		ipcp_config.dif_to_assign.dif_configuration_.efcp_configuration_.data_transfer_constants_
+			= dift.dataTransferConstants;
+
+		rina::QoSCube * qosCube = 0;
+		for (std::list<rina::QoSCube>::iterator qit = dift.qosCubes
+				.begin(); qit != dift.qosCubes.end(); qit++)
+		{
+			qosCube = new rina::QoSCube(*qit);
+			if (!qosCube)
+			{
+				LOG_ERR("Unable to allocate memory for the QoSCube object. Out of memory! %s",
+					ipcp_desc.dif_name.c_str());
+				return -1;
+			}
+			ipcp_config.dif_to_assign.dif_configuration_.efcp_configuration_.add_qos_cube(qosCube);
+		}
+
+		for (std::list<rinad::AddressPrefixConfiguration>::iterator ait =
+				dift.addressPrefixes.begin();
+				ait != dift.addressPrefixes.end(); ait++)
+		{
+			rina::AddressPrefixConfiguration prefix;
+			prefix.address_prefix_ = ait->addressPrefix;
+			prefix.organization_ = ait->organization;
+			ipcp_config.dif_to_assign.dif_configuration_.nsm_configuration_.
+				addressing_configuration_.address_prefixes_.push_back(prefix);
+		}
+
+		for (std::list<rinad::KnownIPCProcessAddress>::iterator kit =
+				dift.knownIPCProcessAddresses.begin();
+				kit != dift.knownIPCProcessAddresses.end(); kit++)
+		{
+			rina::StaticIPCProcessAddress static_address;
+			static_address.ap_name_ = kit->name.processName;
+			static_address.ap_instance_ = kit->name.processInstance;
+			static_address.address_ = kit->address;
+			ipcp_config.dif_to_assign.dif_configuration_.nsm_configuration_.
+				addressing_configuration_.static_address_.push_back(static_address);
+		}
+		ipcp_config.dif_to_assign.dif_configuration_.nsm_configuration_.policy_set_ = dift.nsmConfiguration.policy_set_;
+
+		bool found = dift.lookup_ipcp_address(ipcp_config.name, address);
+		if (!found)
+		{
+			LOG_ERR("No address for IPC process %s ",
+				ipcp_config.name.toString().c_str());
+			return -1;
+		}
+		ipcp_config.dif_to_assign.dif_configuration_.rmt_configuration_ = dift.rmtConfiguration;
+		ipcp_config.dif_to_assign.dif_configuration_.fa_configuration_ = dift.faConfiguration;
+		ipcp_config.dif_to_assign.dif_configuration_.ra_configuration_ = dift.raConfiguration;
+		ipcp_config.dif_to_assign.dif_configuration_.routing_configuration_ = dift.routingConfiguration;
+		ipcp_config.dif_to_assign.dif_configuration_.sm_configuration_ = dift.secManConfiguration;
+		ipcp_config.dif_to_assign.dif_configuration_.et_configuration_ = dift.etConfiguration;
+		ipcp_config.dif_to_assign.dif_configuration_.set_address(address);
+	}
+
+	for (std::map<std::string, std::string>::const_iterator pit =
+			dift.configParameters.begin();
+			pit != dift.configParameters.end(); pit++) {
+		ipcp_config.dif_to_assign.dif_configuration_.add_parameter(
+				rina::PolicyParameter(pit->first, pit->second));
+	}
+
+	return 0;
 }
