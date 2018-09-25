@@ -79,10 +79,6 @@ int Main::wrapped_main(int argc, char * argv[])
 
 	try {
 		ipcp->event_loop();
-	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems running event loop: %s", e.what());
-	} catch (std::exception &e1) {
-		LOG_IPCP_ERR("Problems running event loop: %s", e1.what());
 	} catch (...) {
 		LOG_IPCP_ERR("Unhandled exception!!!");
 	}
