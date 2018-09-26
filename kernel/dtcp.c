@@ -457,7 +457,7 @@ static int update_window_and_rate(struct dtcp * dtcp,
         spin_unlock_bh(&dtcp->parent->sv_lock);
 
         if (cancel_rv_timer)
-        	rtimer_stop(dtcp->parent->timers.rendezvous);
+        	rtimer_stop(&dtcp->parent->timers.rendezvous);
 
         push_pdus_rmt(dtcp);
 
