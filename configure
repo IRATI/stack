@@ -5,8 +5,7 @@ SRCDIR=`pwd`
 FLAGS="--enable-debug"
 TCP_UDP_BUFFER_SIZE=1500
 INSTALL_PREFIX="/"
-# KERNBUILDDIR="/lib/modules/`uname -r`/build"
-KERNBUILDDIR="/lib/modules/4.4.0-43-Microsoft/build"
+KERNBUILDDIR="/lib/modules/`uname -r`/build"
 
 BUILD_USER="y"
 
