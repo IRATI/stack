@@ -347,10 +347,10 @@ void AbstractIPCProcessImpl::event_loop(void)
 			}
 			delete e;
 
-		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Problems running event loop: %s", e.what());
-		} catch (std::exception &e1) {
-			LOG_IPCP_ERR("Problems running event loop: %s", e1.what());
+		} catch (rina::Exception &ex) {
+			LOG_IPCP_ERR("Problems running event loop: %s", ex.what());
+		} catch (std::exception &ex1) {
+			LOG_IPCP_ERR("Problems running event loop: %s", ex1.what());
 		} catch (...) {
 			LOG_IPCP_ERR("Unhandled exception!!!");
 		}
