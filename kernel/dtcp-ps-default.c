@@ -311,7 +311,7 @@ int default_rcvr_rendezvous(struct dtcp_ps * ps, const struct pci * pci)
         if (!dtcp)
                 return -1;
 
-        LOG_INFO("Receiver rendezvous...");
+        //LOG_INFO("Receiver rendezvous...");
 
         spin_lock_bh(&dtcp->parent->sv_lock);
         /* TODO: check if retransmission control enabled */
@@ -332,13 +332,12 @@ int default_rcvr_rendezvous(struct dtcp_ps * ps, const struct pci * pci)
         	if (dtcp->sv->snd_rt_wind_edge != rcv_rt) {
         		/* TODO what to do? */
         	}
-
-        	if (dtcp->parent->sv->rcv_left_window_edge != snd_lft) {
-        		LOG_INFO("Credit difference is %d",
-        			 snd_lft - dtcp->parent->sv->rcv_left_window_edge);
-        		dtcp->parent->sv->rcv_left_window_edge = snd_lft;
-        		dtcp->sv->rcvr_rt_wind_edge = snd_lft + dtcp->sv->rcvr_credit;
-        	}
+    		LOG_INFO("RCVR rendezvous. RCV LWE: %d | RCV RWE: %d || SND LWE: %d | SND RWE: %d",
+					dtcp->parent->sv->rcv_left_window_edge, dtcp->sv->rcvr_rt_wind_edge,
+					snd_lft, snd_rt);
+    		if (dtcp->sv->rcvr_credit > 0) {
+    			dtcp->sv->rcvr_rt_wind_edge = snd_rt + dtcp->sv->rcvr_credit;
+    		}
         }
 
         if (dtcp->sv->flow_ctl && dtcp->parent->sv->rate_based) {

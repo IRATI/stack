@@ -72,7 +72,7 @@ static struct dtp_sv default_sv = {
         .MPL                  = 1000,
         .R                    = 100,
         .A                    = 0,
-        .tr                   = 0,
+        .tr                   = 100,
         .rcv_left_window_edge = 0,
         .window_closed        = false,
         .drf_flag             = true,
@@ -1351,6 +1351,9 @@ int dtp_write(struct dtp * instance,
 				spin_unlock_bh(&instance->sv_lock);
 
 				if (start_rv_timer) {
+					LOG_INFO("Window is closed. SND LWE: %d | SND RWE: %d",
+							instance->dtcp->sv->snd_lft_win,
+							instance->dtcp->sv->snd_rt_wind_edge);
 					/* Send rendezvous PDU and start time */
 					rtimer_start(&instance->timers.rendezvous, rv);
 				}
