@@ -276,7 +276,8 @@ WatchdogRIBObject::WatchdogRIBObject(IPCProcess * ipc_process,
 	wathchdog_period_ = wdog_period_ms;
 	declared_dead_interval_ = declared_dead_int_ms;
 	lock_ = new rina::Lockable();
-	timer_ = new rina::Timer();
+	timer_ = new rina::Timer(std::string("WatchdogRIBObject"));
+	timer_->start();
 	timer_->scheduleTask(new WatchdogTimerTask(this,
 						   timer_,
 						   wathchdog_period_),
@@ -424,12 +425,14 @@ const std::string IEnrollmentStateMachine::STATE_TERMINATED = "TERMINATED";
 IEnrollmentStateMachine::IEnrollmentStateMachine(IPCProcess * ipcp,
 						 const rina::ApplicationProcessNamingInformation& remote_naming_info,
 						 int timeout,
-						 const rina::ApplicationProcessNamingInformation& supporting_dif_name)
+						 const rina::ApplicationProcessNamingInformation& supporting_dif_name) :
+								 timer_(std::string("IEnrollmentStateMachine"))
 {
 	if (!ipcp) {
 		throw rina::Exception("Bogus Application Process instance passed");
 	}
 
+	timer_.start();
 	ipcp_ = ipcp;
 	rib_daemon_ = ipcp_->rib_daemon_;
 	enrollment_task_ = ipcp_->enrollment_task_;
@@ -664,8 +667,10 @@ const std::string EnrollmentTask::MAX_ENROLLMENT_RETRIES = "maxEnrollmentRetries
 const std::string EnrollmentTask::USE_RELIABLE_N_FLOW = "useReliableNFlow";
 const std::string EnrollmentTask::N1_FLOWS = "n1flows";
 
-EnrollmentTask::EnrollmentTask() : IPCPEnrollmentTask()
+EnrollmentTask::EnrollmentTask() : IPCPEnrollmentTask(),
+		timer(std::string("EnrollmentTask"))
 {
+	timer.start();
 	namespace_manager_ = 0;
 	rib_daemon_ = 0;
 	irm_ = 0;

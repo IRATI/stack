@@ -73,20 +73,23 @@ void* doWorkTask(void *arg) {
 }
 
 TaskScheduler::TaskScheduler() :
-		Lockable() {
+		Lockable() {}
+
+TaskScheduler::~TaskScheduler() throw ()
+{
+	for (std::map<Time, std::list<TimerTask*>* >::iterator iter_map = tasks_.begin();
+			iter_map != tasks_.end(); ++iter_map) {
+		for (std::list<TimerTask*>::iterator iter_list = iter_map->second->begin();
+				iter_list != iter_map->second->end(); ++iter_list){
+			delete *iter_list;
+		}
+		iter_map->second->empty();
+		delete iter_map->second;
+	}
+
+	tasks_.empty();
 }
-TaskScheduler::~TaskScheduler() throw () {
-  for (std::map<Time, std::list<TimerTask*>* >::iterator iter_map = tasks_.begin();
-      iter_map != tasks_.end(); ++iter_map) {
-    for (std::list<TimerTask*>::iterator iter_list = iter_map->second->begin();
-        iter_list != iter_map->second->end(); ++iter_list){
-      delete *iter_list;
-    }
-    iter_map->second->empty();
-    delete iter_map->second;
-  }
-  tasks_.empty();
-}
+
 void TaskScheduler::insert(Time time, TimerTask* timer_task) {
 	lock();
 
@@ -103,7 +106,8 @@ void TaskScheduler::insert(Time time, TimerTask* timer_task) {
 	unlock();
 }
 
-void TaskScheduler::runTasks() {
+void TaskScheduler::runTasks()
+{
 	lock();
 	Time now;
 	std::map<Time, std::list<TimerTask*>* >::iterator first = tasks_.begin();
@@ -133,7 +137,8 @@ void TaskScheduler::runTasks() {
 	unlock();
 }
 
-void TaskScheduler::cancelTask(TimerTask *task) {
+void TaskScheduler::cancelTask(TimerTask *task)
+{
 	lock();
 	std::map<Time, std::list<TimerTask*>* >::iterator iter_map =
 	            tasks_.begin();
@@ -156,31 +161,36 @@ void TaskScheduler::cancelTask(TimerTask *task) {
 		else
 		    ++iter_map;
 	}
-unlock();
+	unlock();
 }
 
 // CLASS Timer
-void* doWorkTimer(void *arg) {
+void* doWorkTimer(void *arg)
+{
 	Timer *timer = (Timer*) arg;
 	Sleep sleep;
+
 	while (timer->execute_tasks()) {
                 sleep.sleepForMili(100);
 	}
+
 	return (void *) 0;
 }
 
-Timer::Timer() {
-	ThreadAttributes threadAttributes;
-	threadAttributes.setJoinable();
-	continue_lock_.lock();
+Timer::Timer(const std::string & caller_name)
+{
+	std::stringstream ss;
+
+	thread_ = 0;
+	task_scheduler = 0;
 	continue_ = true;
-	continue_lock_.unlock();
-	task_scheduler = new TaskScheduler();
-	thread_ = new Thread(&doWorkTimer, (void *) this, &threadAttributes);
-	thread_->start();
-	LOG_DBG("Timer with ID %d started", thread_);
+	ss << "Timer of "<< caller_name;
+	caller = ss.str();
+	started = false;
 }
-Timer::~Timer() {
+
+Timer::~Timer()
+{
 	cancel();
 
 	if (task_scheduler) {
@@ -194,41 +204,93 @@ Timer::~Timer() {
 	}
 }
 
+int Timer::start()
+{
+	ScopedLock g(lock);
+
+	if (started)
+		return -1;
+
+	return internal_start();
+}
+
+int Timer::internal_start()
+{
+	task_scheduler = new TaskScheduler();
+	if (!task_scheduler)
+		return -1;
+
+	ThreadAttributes threadAttributes;
+	threadAttributes.setJoinable();
+	threadAttributes.setName(caller);
+	thread_ = new Thread(&doWorkTimer, (void *) this, &threadAttributes);
+	if (!thread_)
+		return -1;
+
+	thread_->start();
+	LOG_DBG("Timer with ID %d started", thread_);
+	started = true;
+
+	return 0;
+}
+
 void Timer::scheduleTask(TimerTask* task, long delay_ms) {
 	Time executeTime;
 	timeval t;
-	int milisecondsNotNorm = executeTime.get_only_milliseconds() + (delay_ms % 1000);
-	int miliseconds = milisecondsNotNorm % 1000;
-	int seconds = executeTime.get_time_seconds() + (delay_ms / 1000) + (milisecondsNotNorm / 1000);
+	int milisecondsNotNorm, miliseconds, seconds;
+
+	rina::ScopedLock g(lock);
+	if (!started && internal_start() != 0)
+		return;
+
+	milisecondsNotNorm = executeTime.get_only_milliseconds() + (delay_ms % 1000);
+	miliseconds = milisecondsNotNorm % 1000;
+	seconds = executeTime.get_time_seconds() + (delay_ms / 1000) + (milisecondsNotNorm / 1000);
 	t.tv_sec = seconds;
 	t.tv_usec = miliseconds * 1000;
 	executeTime.set_timeval(t);
 	task_scheduler->insert(executeTime, task);
 }
-void Timer::cancelTask(TimerTask* task) {
+
+void Timer::cancelTask(TimerTask* task)
+{
+	rina::ScopedLock g(lock);
+	if (!started && internal_start() != 0)
+		return;
+
 	task_scheduler->cancelTask(task);
 }
-void Timer::cancel() {
-	continue_lock_.lock();
+
+void Timer::cancel()
+{
+	void * r;
+
+	if (!started)
+		return;
+
+	lock.lock();
 	continue_ = false;
-	continue_lock_.unlock();
-	void *r;
+	lock.unlock();
+
 	LOG_DBG("Waiting for the timer %d to join", thread_);
 	thread_->join(&r);
 	LOG_DBG("Timer with ID %d ended", thread_);
 }
+
 TaskScheduler* Timer::get_task_scheduler() const {
 	return task_scheduler;
 }
-bool Timer::execute_tasks() {
-	continue_lock_.lock();
-        bool result = continue_;
-	if (result)
-	{
+
+bool Timer::execute_tasks()
+{
+	ScopedLock g(lock);
+
+	if (continue_) {
 	        get_task_scheduler()->runTasks();
 	}
-	continue_lock_.unlock();
-	return result;
+
+	return continue_;
 }
+
 }
 

@@ -301,30 +301,49 @@ Thread::Thread(void *(*startFunction)(void *), void * arg,
 {
 	start_function = startFunction;
 	start_arg = arg;
-	thread_attrs = threadAttributes;
-}
-
-Thread::Thread(pthread_t thread_id_)
-{
-	this->thread_id_ = thread_id_;
-	start_arg = 0;
-	thread_attrs = 0;
-	start_function = 0;
+	if (threadAttributes != NULL) {
+		if (threadAttributes->isDettached())
+			thread_attrs.setDettached();
+		if (threadAttributes->isExplicitScheduling())
+			thread_attrs.setExplicitScheduling();
+		if (threadAttributes->isFifoSchedulingPolicy())
+			thread_attrs.setFifoSchedulingPolicy();
+		if (threadAttributes->isInheritedScheduling())
+			thread_attrs.setInheritedScheduling();
+		if (threadAttributes->isJoinable())
+			thread_attrs.setJoinable();
+		if (threadAttributes->isOtherSchedulingPolicy())
+			thread_attrs.setOtherSchedulingPolicy();
+		if (threadAttributes->isProcessScope())
+			thread_attrs.setProcessScope();
+		if (threadAttributes->isRRSchedulingPolicy())
+			thread_attrs.setRRSchedulingPolicy();
+		if (threadAttributes->isSystemScope())
+			thread_attrs.setSystemScope();
+		thread_attrs.setName(threadAttributes->getName());
+	}
 }
 
 Thread::~Thread() throw ()
 {
 }
 
+Thread::Thread(pthread_t tid)
+{
+	thread_id_ = tid;
+	start_arg = 0;
+	start_function = 0;
+}
+
 void Thread::start()
 {
-	if (pthread_create(&thread_id_, thread_attrs->getThreadAttributes(),
+	if (pthread_create(&thread_id_, thread_attrs.getThreadAttributes(),
 			start_function, start_arg)) {
 		LOG_CRIT("%s", ConcurrentException::error_create_thread.c_str());
 		throw ConcurrentException(ConcurrentException::error_create_thread);
 	}
 
-	if (thread_attrs->getName() != "") { }
+	if (thread_attrs.getName() != "") { }
 		//pthread_setname_np(thread_id_, thread_attrs->getName().c_str());
 }
 

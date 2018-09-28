@@ -43,7 +43,8 @@ ManagementSDUReaderData::ManagementSDUReaderData(unsigned int max_sdu_size)
 class IPCPCDAPIOHandler : public rina::cdap::CDAPIOHandler
 {
  public:
-	IPCPCDAPIOHandler(IPCPRIBDaemonImpl * ribd) : rib_daemon(ribd) {};
+	IPCPCDAPIOHandler(IPCPRIBDaemonImpl * ribd) : rib_daemon(ribd),
+		timer(std::string("IPCPCDAPIOHandler")) { timer.start(); };
 	void send(const rina::cdap::cdap_m_t &m_sent,
 		  const rina::cdap_rib::con_handle_t& con_handle);
 
@@ -522,7 +523,9 @@ int InternalFlowSDUReader::run()
 
 //Class IPCPRIBDaemonImpl
 IPCPRIBDaemonImpl::IPCPRIBDaemonImpl(rina::cacep::AppConHandlerInterface *app_con_callback)
+		: timer(std::string("IPCPRIBDaemonImpl"))
 {
+	timer.start();
 	n_minus_one_flow_manager_ = 0;
 	initialize_rib_daemon(app_con_callback);
 }

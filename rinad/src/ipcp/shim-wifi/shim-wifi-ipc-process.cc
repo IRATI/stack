@@ -615,9 +615,11 @@ ShimWifiStaIPCProcessImpl::ShimWifiStaIPCProcessImpl(const rina::ApplicationProc
 						     std::string& folder) :
 		ShimWifiIPCProcessImpl(rina::SHIM_WIFI_IPC_PROCESS_STA,
 				       name, id, ipc_manager_port,
-				       log_level, log_file, folder)
+				       log_level, log_file, folder),
+		timer(std::string("ShimWifiStaIPCProcessImpl"))
 {
 	std::string folder_name;
+
 	std::string::size_type pos = folder.rfind("/bin");
 	if (pos == std::string::npos) {
 		folder_name = ".";
@@ -625,6 +627,8 @@ ShimWifiStaIPCProcessImpl::ShimWifiStaIPCProcessImpl(const rina::ApplicationProc
 		folder_name = folder.substr(0, pos);
 	}
 
+	timer.start();
+	scan_period_ms = 0;
 	wpa_conn = new WpaController(this, type, folder_name);
 	timer_task = 0;
 	enrollment_timeout = DEFAULT_ENROLLMENT_TIMEOUT_MS;

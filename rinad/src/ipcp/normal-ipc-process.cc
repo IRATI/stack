@@ -98,8 +98,10 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 			       unsigned int ipc_manager_port,
 			       std::string log_level,
 			       std::string log_file) : IPCProcess(nm.processName, nm.processInstance),
-					       	       LazyIPCProcessImpl(nm, id, ipc_manager_port, log_level, log_file)
+					       	       LazyIPCProcessImpl(nm, id, ipc_manager_port, log_level, log_file),
+					       	       timer(std::string("IPCProcessImpl"))
 {
+	timer.start();
 	old_address = 0;
 	address_change_period = false;
 	use_new_address = false;

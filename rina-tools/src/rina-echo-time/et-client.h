@@ -133,9 +133,9 @@ private:
         double max_rtt;
         double average_rtt;
         timespec maxtp;
-        rina::Timer timer;
         CFloodCancelFlowTimerTask * cflood_task;
         int port_id;
         int fd;
+        rina::Timer timer;
 };
 #endif//ET_CLIENT_HPP
