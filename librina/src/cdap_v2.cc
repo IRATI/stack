@@ -971,7 +971,10 @@ bool CDAPOperationState::is_sender() const
 
 // CLASS ConnectionStateMachine
 ConnectionStateMachine::ConnectionStateMachine(CDAPSessionManagerInterface * sm_)
+	: timer(std::string("CDAP ConnectionStateMachine"))
 {
+
+	timer.start();
 	last_timer_task = 0;
 	connection_state_ = NONE;
 	timeout_ = 0;
@@ -2220,13 +2223,16 @@ void CDAPSession::populate_con_handle(const cdap_m_t &cdap_message,
 
 // CLASS CDAPSessionManager
 CDAPSessionManager::CDAPSessionManager()
+	: timer(std::string("CDAPSessionManager"))
 {
 	throw CDAPException(
 			"Not allowed default constructor of CDAPSessionManager has been called.");
 }
 
 CDAPSessionManager::CDAPSessionManager(cdap_rib::concrete_syntax_t& syntax)
+	: timer(std::string("CDAPSessionManager"))
 {
+	timer.start();
 	timeout_ = DEFAULT_TIMEOUT_IN_MS;
 	encoder = new CDAPMessageEncoder(syntax);
 	invoke_id_manager_ = new CDAPInvokeIdManagerImpl();
@@ -2234,7 +2240,9 @@ CDAPSessionManager::CDAPSessionManager(cdap_rib::concrete_syntax_t& syntax)
 
 CDAPSessionManager::CDAPSessionManager(cdap_rib::concrete_syntax_t& syntax,
 				       long timeout)
+	: timer(std::string("CDAPSessionManager"))
 {
+	timer.start();
 	timeout_ = timeout;
 	encoder = new CDAPMessageEncoder(syntax);
 	invoke_id_manager_ = new CDAPInvokeIdManagerImpl();

@@ -151,8 +151,9 @@ const std::string AuthPasswordPolicySet::CHALLENGE_REPLY = "challenge reply";
 const int AuthPasswordPolicySet::DEFAULT_TIMEOUT = 10000;
 
 AuthPasswordPolicySet::AuthPasswordPolicySet(rib::RIBDaemonProxy * ribd, ISecurityManager * sm) :
-		IAuthPolicySet(IAuthPolicySet::AUTH_PASSWORD)
+		IAuthPolicySet(IAuthPolicySet::AUTH_PASSWORD), timer(std::string("AuthPasswordPolicySet"))
 {
+	timer.start();
 	rib_daemon = ribd;
 	sec_man = sm;
 	timeout = DEFAULT_TIMEOUT;
@@ -902,8 +903,9 @@ const std::string AuthSSH2PolicySet::CLIENT_CHALLENGE_REPLY = "Client challenge 
 const std::string AuthSSH2PolicySet::SERVER_CHALLENGE_REPLY = "Server challenge reply";
 
 AuthSSH2PolicySet::AuthSSH2PolicySet(rib::RIBDaemonProxy * ribd, ISecurityManager * sm) :
-		IAuthPolicySet(IAuthPolicySet::AUTH_SSH2)
+		IAuthPolicySet(IAuthPolicySet::AUTH_SSH2), timer(std::string("AuthSSH2PolicySet"))
 {
+	timer.start();
 	rib_daemon = ribd;
 	sec_man = sm;
 	timeout = DEFAULT_TIMEOUT;

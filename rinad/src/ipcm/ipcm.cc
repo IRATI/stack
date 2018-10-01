@@ -90,8 +90,11 @@ IPCManager_::IPCManager_()
           io_thread(NULL),
           dif_template_manager(NULL),
           dif_allocator(NULL),
-	  osp_monitor(NULL)
-{}
+	  osp_monitor(NULL),
+	  timer(std::string("IPCManager"))
+{
+	timer.start();
+}
 
 IPCManager_::~IPCManager_()
 {

@@ -53,8 +53,10 @@ EchoTimeServerWorker::EchoTimeServerWorker(ThreadAttributes * threadAttributes,
                                                 test_type(test_type), port_id(port_id), fd(fd),
                                                 dw(deallocate_wait), interval(interval),
                                                 max_buffer_size(max_buffer_size), partial_read(pr),
+                                                timer(std::string("EchoTimeServerWorker")),
 						last_task(0)
 {
+	timer.start();
 }
 
 int EchoTimeServerWorker::internal_run()

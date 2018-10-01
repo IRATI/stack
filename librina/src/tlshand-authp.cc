@@ -464,8 +464,10 @@ const std::string AuthTLSHandPolicySet::SERVER_FINISH = "Server finish";
 
 AuthTLSHandPolicySet::AuthTLSHandPolicySet(rib::RIBDaemonProxy * ribd,
 		ISecurityManager * sm) :
-				IAuthPolicySet(IAuthPolicySet::AUTH_TLSHAND)
+				IAuthPolicySet(IAuthPolicySet::AUTH_TLSHAND),
+				timer(std::string("AuthTLSHandPolicySet"))
 {
+	timer.start();
 	rib_daemon = ribd;
 	sec_man = sm;
 	timeout = DEFAULT_TIMEOUT;

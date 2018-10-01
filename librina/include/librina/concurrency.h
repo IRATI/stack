@@ -142,7 +142,7 @@ private:
         pthread_t thread_id_;
         void *(*start_function)(void *);
         void * start_arg;
-        ThreadAttributes * thread_attrs;
+        ThreadAttributes thread_attrs;
 };
 
 /// A Simple thread that performs all its work in the run method
