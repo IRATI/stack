@@ -335,9 +335,8 @@ int default_rcvr_rendezvous(struct dtcp_ps * ps, const struct pci * pci)
     		LOG_INFO("RCVR rendezvous. RCV LWE: %d | RCV RWE: %d || SND LWE: %d | SND RWE: %d",
 					dtcp->parent->sv->rcv_left_window_edge, dtcp->sv->rcvr_rt_wind_edge,
 					snd_lft, snd_rt);
-    		if (dtcp->sv->rcvr_credit > 0) {
-    			dtcp->sv->rcvr_rt_wind_edge = snd_rt + dtcp->sv->rcvr_credit;
-    		}
+
+    		dtcp->sv->rcvr_rt_wind_edge = snd_lft + dtcp->sv->rcvr_credit;
         }
 
         if (dtcp->sv->flow_ctl && dtcp->parent->sv->rate_based) {
