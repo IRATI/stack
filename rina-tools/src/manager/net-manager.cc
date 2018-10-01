@@ -359,7 +359,8 @@ NetworkManager::NetworkManager(const std::string& app_name,
 			       const std::string& app_instance,
 			       const std::string& console_path,
 			       const std::string& dif_templates_path) :
-			       	       rina::ApplicationProcess(app_name, app_instance)
+			       	       rina::ApplicationProcess(app_name, app_instance),
+			       	       timer(std::string("NetworkManager"))
 {
 	std::stringstream ss;
 	rina::rib::RIBObj * tmp;
@@ -367,6 +368,8 @@ NetworkManager::NetworkManager(const std::string& app_name,
 	cfd = 0;
 	ss << app_name << "|" << app_instance << "||";
 	complete_name = ss.str();
+
+	timer.start();
 
 	console = new NMConsole(console_path, this);
 
