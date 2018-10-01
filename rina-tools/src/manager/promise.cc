@@ -94,7 +94,8 @@ int NetworkManager::add_transaction_state(TransactionState * t)
 	try {
 		pend_transactions[t->tid] = t;
 	} catch (...) {
-		LOG_DBG("Could not add transaction %u. Out of memory?", t->tid);
+		LOG_DBG("Could not add transaction %s. Out of memory?",
+			t->tid.c_str());
 		return -1;
 	}
 
