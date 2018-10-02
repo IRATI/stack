@@ -1356,7 +1356,7 @@ int dtp_write(struct dtp * instance,
 							instance->dtcp->sv->snd_rt_wind_edge,
 							instance->sv->tr);
 					/* Send rendezvous PDU and start time */
-					rtimer_start(&instance->timers.rendezvous, rv);
+					rtimer_start(&instance->timers.rendezvous, rv + 10);
 				}
 
 				return 0;

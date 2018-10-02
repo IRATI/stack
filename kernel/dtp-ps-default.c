@@ -41,6 +41,7 @@
 int default_transmission_control(struct dtp_ps * ps, struct du * du)
 {
         struct dtp *  dtp;
+        struct dtcp * dtcp;
 
         dtp = ps->dm;
         if (!dtp) {
@@ -48,12 +49,14 @@ int default_transmission_control(struct dtp_ps * ps, struct du * du)
                 du_destroy(du);
                 return -1;
         }
+        dtcp = dtp->dtcp;
 
         /* Post SDU to RMT */
         LOG_DBG("defaultTxPolicy - sending to rmt");
 
         spin_lock_bh(&dtp->sv_lock);
         dtp->sv->max_seq_nr_sent = pci_sequence_number_get(&du->pci);
+        dtcp->sv->snd_lft_win = pci_sequence_number_get(&du->pci);
         spin_unlock_bh(&dtp->sv_lock);
 
         LOG_DBG("local_soft_irq_pending: %d", local_softirq_pending());
