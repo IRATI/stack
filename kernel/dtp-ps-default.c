@@ -56,7 +56,8 @@ int default_transmission_control(struct dtp_ps * ps, struct du * du)
 
         spin_lock_bh(&dtp->sv_lock);
         dtp->sv->max_seq_nr_sent = pci_sequence_number_get(&du->pci);
-        dtcp->sv->snd_lft_win = pci_sequence_number_get(&du->pci);
+        dtcp->sv->snd_lft_win = dtp->sv->max_seq_nr_sent;
+        LOG_INFO("Default TX, SND LWE: %d", dtcp->sv->snd_lft_win);
         spin_unlock_bh(&dtp->sv_lock);
 
         LOG_DBG("local_soft_irq_pending: %d", local_softirq_pending());
