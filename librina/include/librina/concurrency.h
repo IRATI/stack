@@ -85,7 +85,6 @@ public:
         ThreadAttributes();
         virtual ~ThreadAttributes() throw();
 
-        pthread_attr_t * getThreadAttributes();
         bool isJoinable();
         void setJoinable();
         bool isDettached();
@@ -107,13 +106,17 @@ public:
         void setName(const std::string& name);
         std::string getName(void);
 private:
-        pthread_attr_t thread_attr_;
+
         std::string name_;
-        void setDetachState(int detachState);
-        void setScope(int scope);
-        void setInheritedScheduling(int inheritedScheduling);
-        void getSchedulingPolicy(int * schedulingPolicy);
-        void setSchedulingPolicy(int schedulingPolicy);
+        bool joinable;
+        bool dettached;
+        bool system_scope;
+        bool process_scope;
+        bool inherited_scheduling;
+        bool explicit_scheduling;
+        bool fifo_scheduling_policy;
+        bool rr_scheduling_policy;
+        bool other_scheduling_policy;
 };
 
 /**
@@ -139,10 +142,12 @@ public:
 
 private:
         Thread(pthread_t thread_id_);
+        void populate_thread_attrs(ThreadAttributes * threadAttributes);
+
         pthread_t thread_id_;
+        pthread_attr_t thread_attr_;
         void *(*start_function)(void *);
         void * start_arg;
-        ThreadAttributes thread_attrs;
 };
 
 /// A Simple thread that performs all its work in the run method
