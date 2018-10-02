@@ -122,8 +122,9 @@ std::string ManagementAgent::console_command(enum console_command command,
 	}
 }
 
-//Process event
-void ManagementAgent::process_librina_event(rina::IPCEvent** event){
+//Process event, do nothing
+void ManagementAgent::process_librina_event(rina::IPCEvent** event)
+{
 	flow_manager->process_librina_event(event);
 }
 

@@ -760,7 +760,7 @@ netman_res_t NetworkManager::create_ipcp(CreateIPCPPromise * promise, int system
 		return NETMAN_FAILURE;
 	}
 
-	obj_info.name_ = "/csid=1/psid=1/kernelap/osap/ipcps/ipcpid=x";
+	obj_info.name_ = "/csid=1/psid=1/kernelap/osap/ipcps/ipcpid=1";
 	obj_info.class_ = "IPCProcess";
 	encoder.encode(ipcp_config, obj_info.value_);
 

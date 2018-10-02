@@ -3033,6 +3033,7 @@ class CDAPProvider : public CDAPProviderInterface
 	CDAPIOHandler * get_cdap_io_handler();
 
 	CDAPSessionManagerInterface * get_session_manager();
+	void destroy_session(int port);
 
  protected:
 	CDAPSessionManager *manager_;
@@ -3519,6 +3520,11 @@ CDAPSessionManagerInterface * CDAPProvider::get_session_manager()
 	return manager_;
 }
 
+void CDAPProvider::destroy_session(int port)
+{
+	manager_->removeCDAPSession(port);
+}
+
 CDAPIOHandler::CDAPIOHandler()
 {
 	manager_ = 0;
@@ -3777,6 +3783,7 @@ void AppCDAPIOHandler::send(const cdap_m_t & m_sent,
 			    const cdap_rib::con_handle_t &con)
 {
 	ser_obj_t ser_sent_m;
+	ssize_t written;
 	int fd = 0;
 
 	manager_->encodeNextMessageToBeSent(m_sent,
@@ -3789,29 +3796,33 @@ void AppCDAPIOHandler::send(const cdap_m_t & m_sent,
 	}
 
 	rina::ScopedLock slock(atomic_send_lock_);
-	try{
-		ssize_t written;
 
-		sdup_->protect_sdu(ser_sent_m, con.port_id);
-		written = write(fd,
-		      ser_sent_m.message_,
-		      ser_sent_m.size_);
-		if (written != ser_sent_m.size_) {
-			LOG_ERR("Write failed to send entire message %d/%d\n", (int)written, (int)ser_sent_m.size_);
-		}
-		manager_->messageSent(m_sent, con.port_id);
-	} catch (rina::Exception &e)
-	{
+	sdup_->protect_sdu(ser_sent_m, con.port_id);
+
+	written = write(fd, ser_sent_m.message_, ser_sent_m.size_);
+	if (written == -1) {
+		LOG_ERR("Failed to write CDAP message. Errno (%d): %s",
+			 errno, strerror(errno));
+
 		if (m_sent.invoke_id_ != 0 && m_sent.is_request_message())
 			manager_->get_invoke_id_manager()->freeInvokeId(m_sent.invoke_id_,
 								       false);
 
-                if (errno != EAGAIN && errno != EINTR) {
+                if (errno != EAGAIN && errno != EINTR && errno != EMSGSIZE) {
                         manager_->removeCDAPSession(con.port_id);
                 }
 
-		throw e;
+                throw IPCException("Failed to write CDAP message");
 	}
+
+	if (written != ser_sent_m.size_) {
+		LOG_ERR("Write failed to send entire message, partial write: %d/%d\n",
+				(int)written, (int)ser_sent_m.size_);
+
+		//TODO, write missing bytes?
+	}
+
+	manager_->messageSent(m_sent, con.port_id);
 
 	LOG_DBG("Sent CDAP message through port %d of %d bytes:\n %s",
 		con.port_id,

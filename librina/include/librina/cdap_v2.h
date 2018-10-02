@@ -428,7 +428,7 @@ public:
 
 	virtual CDAPSessionManagerInterface * get_session_manager() = 0;
 
-	virtual void destroy_session(int port){ (void)port; /*FIXME*/ };
+	virtual void destroy_session(int port) = 0;
 };
 
 class CDAPInvokeIdManager
