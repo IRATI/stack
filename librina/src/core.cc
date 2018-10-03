@@ -20,6 +20,7 @@
 // MA  02110-1301  USA
 //
 
+#include <errno.h>
 #include <sstream>
 #include <unistd.h>
 
