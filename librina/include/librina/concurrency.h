@@ -81,10 +81,10 @@ ConcurrentException(const std::string & s) : Exception(s.c_str()) { }
 
 struct ThreadAttributes {
 public:
-	ThreadAttributes() : joinable(false), dettached(false),
-		system_scope(false), process_scope(false),
-		in_sched(false), exp_sched(false), fifo_sched(false),
-		rr_sched(false), other_sched(false), name(std::string()) {}
+	ThreadAttributes() : joinable(true), dettached(false),
+		system_scope(true), process_scope(false),
+		in_sched(true), exp_sched(false), fifo_sched(false),
+		rr_sched(false), other_sched(true), name(std::string()) {}
 
         bool joinable;
         bool dettached;
@@ -137,8 +137,10 @@ public:
 
 private:
         Thread(pthread_t thread_id_);
-        void populate_thread_attrs(const ThreadAttributes & attrs);
+        void populate_thread_attrs(void);
+        bool has_default_attrs(void);
 
+        ThreadAttributes tattrs;
         pthread_t thread_id_;
         pthread_attr_t thread_attr_;
         void *(*start_function)(void *);

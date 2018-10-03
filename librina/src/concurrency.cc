@@ -107,64 +107,75 @@ Thread::Thread(void *(*startFunction)(void *), void * arg,
 {
 	start_function = startFunction;
 	start_arg = arg;
+	tattrs = attrs;
+}
+
+bool Thread::has_default_attrs()
+{
+	if (tattrs.dettached || !tattrs.joinable ||
+		tattrs.process_scope || !tattrs.system_scope ||
+		tattrs.exp_sched || !tattrs.in_sched ||
+		tattrs.fifo_sched || tattrs.rr_sched || !tattrs.other_sched)
+		return false;
+
+	return true;
+}
+
+void Thread::populate_thread_attrs()
+{
 	if (pthread_attr_init(&thread_attr_)) {
 		LOG_WARN("Problems initializing thread attributes");
 	}
 
-	populate_thread_attrs(attrs);
-}
-
-void Thread::populate_thread_attrs(const ThreadAttributes & attrs)
-{
-	if (attrs.dettached) {
+	if (tattrs.dettached) {
 		if (pthread_attr_setdetachstate(&thread_attr_, PTHREAD_CREATE_DETACHED)) {
 			LOG_WARN("Problems setting thread as dettached");
 		}
 	}
 
-	if (attrs.joinable) {
+	if (tattrs.joinable) {
 		if (pthread_attr_setdetachstate(&thread_attr_, PTHREAD_CREATE_JOINABLE)) {
 			LOG_WARN("Problems setting thread as joinable");
 		}
 	}
 
-	if (attrs.system_scope) {
+	if (tattrs.system_scope) {
 		if (pthread_attr_setscope(&thread_attr_, PTHREAD_SCOPE_SYSTEM)) {
 			LOG_WARN("Problems setting thread system scope");
 		}
 	}
 
-	if (attrs.process_scope) {
+	if (tattrs.process_scope) {
 		if (pthread_attr_setscope(&thread_attr_, PTHREAD_SCOPE_PROCESS)) {
 			LOG_WARN("Problems setting thread process scope");
 		}
 	}
 
-	if (attrs.in_sched) {
+	if (tattrs.in_sched) {
 		if (pthread_attr_setinheritsched(&thread_attr_, PTHREAD_INHERIT_SCHED)) {
 			LOG_WARN("Problems setting thread inherited scheduling");
 		}
 	}
 
-	if (attrs.exp_sched) {
+	if (tattrs.exp_sched) {
 		if (pthread_attr_setinheritsched(&thread_attr_, PTHREAD_EXPLICIT_SCHED)) {
 			LOG_WARN("Problems setting thread explicit scheduling");
 		}
 	}
 
-	if (attrs.fifo_sched) {
+	if (tattrs.fifo_sched) {
 		if (pthread_attr_setschedpolicy(&thread_attr_, SCHED_FIFO)) {
 			LOG_WARN("Problems setting thread FIFO scheduling policy");
 		}
 	}
 
-	if (attrs.rr_sched) {
+	if (tattrs.rr_sched) {
 		if (pthread_attr_setschedpolicy(&thread_attr_, SCHED_RR)) {
 			LOG_WARN("Problems setting thread RR scheduling policy");
 		}
 	}
 
-	if (attrs.other_sched) {
+	if (tattrs.other_sched) {
 		if (pthread_attr_setschedpolicy(&thread_attr_, SCHED_OTHER)) {
 			LOG_WARN("Problems setting thread other scheduling policy");
 		}
@@ -190,8 +201,17 @@ Thread::Thread(pthread_t tid)
 
 void Thread::start()
 {
-	if (pthread_create(&thread_id_, &thread_attr_,
-			start_function, start_arg)) {
+	pthread_attr_t * attr_p;
+
+	//Check for standard arguments
+	if (has_default_attrs()) {
+		attr_p = NULL;
+	} else {
+		populate_thread_attrs();
+		attr_p = &thread_attr_;
+	}
+
+	if (pthread_create(&thread_id_, attr_p, start_function, start_arg)) {
 		LOG_CRIT("%s", ConcurrentException::error_create_thread.c_str());
 		throw ConcurrentException(ConcurrentException::error_create_thread);
 	}
