@@ -300,6 +300,7 @@ void cwq_deliver(struct cwq * queue,
 			}
                 }
                 dtp->sv->max_seq_nr_sent = pci_sequence_number_get(&du->pci);
+                dtcp->sv->snd_lft_win = dtp->sv->max_seq_nr_sent;
 
                 dtp_pdu_send(dtp, rmt, du);
         }
