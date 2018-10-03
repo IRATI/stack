@@ -67,22 +67,18 @@ private:
 /// Class that implements a timer which contains a thread
 class Timer {
 public:
-	Timer(const std::string & caller_name);
+	Timer();
 	~Timer();
-	int start();
 	void scheduleTask(TimerTask* task, long delay_ms);
 	void cancelTask(TimerTask *task);
 	TaskScheduler* get_task_scheduler() const;
 	bool execute_tasks();
 private:
 	void cancel();
-	int internal_start();
 	Thread *thread_;
 	TaskScheduler *task_scheduler;
-	std::string caller;
 	bool continue_;
-	bool started;
-	Lockable lock;
+	Lockable continue_lock_;
 };
 
 }

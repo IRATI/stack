@@ -32,7 +32,7 @@
 
 class EchoTimeServerWorker : public ServerWorker {
 public:
-	EchoTimeServerWorker(const rina::ThreadAttributes & threadAttributes,
+	EchoTimeServerWorker(rina::ThreadAttributes * threadAttributes,
 			     const std::string& test_type,
 			     int port_id, int fd,
 			     int deallocate_wait,

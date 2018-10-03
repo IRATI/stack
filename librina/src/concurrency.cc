@@ -101,120 +101,234 @@ const std::string ConcurrentException::error_wait_cond =
 const std::string ConcurrentException::error_timeout =
 		"Timeout";
 
+/* CLASS THREAD ATTRIBUTES */
+ThreadAttributes::ThreadAttributes() {
+	if (pthread_attr_init(&thread_attr_)) {
+		LOG_CRIT("%s", ConcurrentException::error_initialize_thread_attributes.c_str());
+		throw ConcurrentException(
+				ConcurrentException::error_initialize_thread_attributes);
+	}
+
+	name_ = "";
+}
+
+ThreadAttributes::~ThreadAttributes() throw () {
+	if (pthread_attr_destroy(&thread_attr_)) {
+		LOG_CRIT("%s", ConcurrentException::error_destroy_thread_attributes.c_str());
+	}
+}
+
+pthread_attr_t * ThreadAttributes::getThreadAttributes(){
+	return &thread_attr_;
+}
+
+bool ThreadAttributes::isJoinable() {
+	int dettachState = 0;
+	if (pthread_attr_getdetachstate(&thread_attr_, &dettachState)) {
+		LOG_CRIT("%s", ConcurrentException::error_get_thread_attributes.c_str());
+		throw ConcurrentException(
+				ConcurrentException::error_get_thread_attributes);
+	}
+
+	if (dettachState == PTHREAD_CREATE_JOINABLE) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+void ThreadAttributes::setDetachState(int detachState) {
+	if (pthread_attr_setdetachstate(&thread_attr_, detachState)) {
+		LOG_CRIT("%s", ConcurrentException::error_set_thread_attributes.c_str());
+		throw ConcurrentException(
+				ConcurrentException::error_set_thread_attributes);
+	}
+}
+
+void ThreadAttributes::setJoinable() {
+	this->setDetachState(PTHREAD_CREATE_JOINABLE);
+}
+
+bool ThreadAttributes::isDettached() {
+	return !(this->isJoinable());
+}
+
+void ThreadAttributes::setDettached() {
+	this->setDetachState(PTHREAD_CREATE_DETACHED);
+}
+
+bool ThreadAttributes::isSystemScope() {
+	int scope = 0;
+	if (pthread_attr_getscope(&thread_attr_, &scope)) {
+		LOG_CRIT("%s", ConcurrentException::error_get_thread_attributes.c_str());
+		throw ConcurrentException(
+				ConcurrentException::error_get_thread_attributes);
+	}
+
+	if (scope == PTHREAD_SCOPE_SYSTEM) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+void ThreadAttributes::setScope(int scope) {
+	if (pthread_attr_setscope(&thread_attr_, scope)) {
+		LOG_CRIT("%s", ConcurrentException::error_set_thread_attributes.c_str());
+		throw ConcurrentException(
+				ConcurrentException::error_set_thread_attributes);
+	}
+}
+
+void ThreadAttributes::setSystemScope() {
+	this->setScope(PTHREAD_SCOPE_SYSTEM);
+}
+
+bool ThreadAttributes::isProcessScope() {
+	return (!this->isSystemScope());
+}
+
+void ThreadAttributes::setProcessScope() {
+	this->setScope(PTHREAD_SCOPE_PROCESS);
+}
+
+bool ThreadAttributes::isInheritedScheduling() {
+	int inheritedScheduling = 0;
+	if (pthread_attr_getinheritsched(&thread_attr_, &inheritedScheduling)) {
+		LOG_CRIT("%s", ConcurrentException::error_get_thread_attributes.c_str());
+		throw ConcurrentException(
+				ConcurrentException::error_get_thread_attributes);
+	}
+
+	if (inheritedScheduling == PTHREAD_INHERIT_SCHED) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+void ThreadAttributes::setInheritedScheduling(int inheritedScheduling) {
+	if (pthread_attr_setinheritsched(&thread_attr_, inheritedScheduling)) {
+		LOG_CRIT("%s", ConcurrentException::error_set_thread_attributes.c_str());
+		throw ConcurrentException(
+				ConcurrentException::error_set_thread_attributes);
+	}
+}
+
+void ThreadAttributes::setInheritedScheduling() {
+	this->setInheritedScheduling(PTHREAD_INHERIT_SCHED);
+}
+
+bool ThreadAttributes::isExplicitScheduling() {
+	return (!this->isInheritedScheduling());
+}
+
+void ThreadAttributes::setExplicitScheduling() {
+	this->setInheritedScheduling(PTHREAD_EXPLICIT_SCHED);
+}
+
+void ThreadAttributes::getSchedulingPolicy(int * schedulingPolicy) {
+	if (pthread_attr_getschedpolicy(&thread_attr_, schedulingPolicy)) {
+		LOG_CRIT("%s", ConcurrentException::error_get_thread_attributes.c_str());
+		throw ConcurrentException(
+				ConcurrentException::error_get_thread_attributes);
+	}
+}
+
+bool ThreadAttributes::isFifoSchedulingPolicy() {
+	int schedulingPolicy = 0;
+	this->getSchedulingPolicy(&schedulingPolicy);
+	if (schedulingPolicy == SCHED_FIFO) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+void ThreadAttributes::setSchedulingPolicy(int schedulingPolicy) {
+	if (pthread_attr_setschedpolicy(&thread_attr_, schedulingPolicy)) {
+		LOG_CRIT("%s", ConcurrentException::error_set_thread_attributes.c_str());
+		throw ConcurrentException(
+				ConcurrentException::error_set_thread_attributes);
+	}
+}
+
+void ThreadAttributes::setFifoSchedulingPolicy() {
+	this->setSchedulingPolicy(SCHED_FIFO);
+}
+
+bool ThreadAttributes::isRRSchedulingPolicy() {
+	int schedulingPolicy = 0;
+	this->getSchedulingPolicy(&schedulingPolicy);
+	if (schedulingPolicy == SCHED_RR) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+void ThreadAttributes::setRRSchedulingPolicy() {
+	this->setSchedulingPolicy(SCHED_RR);
+}
+
+bool ThreadAttributes::isOtherSchedulingPolicy() {
+	int schedulingPolicy = 0;
+	this->getSchedulingPolicy(&schedulingPolicy);
+	if (schedulingPolicy == SCHED_OTHER) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+void ThreadAttributes::setOtherSchedulingPolicy() {
+	this->setSchedulingPolicy(SCHED_OTHER);
+}
+
+void ThreadAttributes::setName(const std::string& name)
+{
+	name_ = name;
+}
+
+std::string ThreadAttributes::getName(void)
+{
+	return name_;
+}
+
 /* CLASS THREAD */
 Thread::Thread(void *(*startFunction)(void *), void * arg,
-	       const ThreadAttributes & attrs)
+	       ThreadAttributes * threadAttributes)
 {
 	start_function = startFunction;
 	start_arg = arg;
-	tattrs = attrs;
+	thread_attrs = threadAttributes;
 }
 
-bool Thread::has_default_attrs()
+Thread::Thread(pthread_t thread_id_)
 {
-	if (tattrs.dettached || !tattrs.joinable ||
-		tattrs.process_scope || !tattrs.system_scope ||
-		tattrs.exp_sched || !tattrs.in_sched ||
-		tattrs.fifo_sched || tattrs.rr_sched || !tattrs.other_sched)
-		return false;
-
-	return true;
+	this->thread_id_ = thread_id_;
+	start_arg = 0;
+	thread_attrs = 0;
+	start_function = 0;
 }
-
-void Thread::populate_thread_attrs()
-{
-	if (pthread_attr_init(&thread_attr_)) {
-		LOG_WARN("Problems initializing thread attributes");
-	}
-
-	if (tattrs.dettached) {
-		if (pthread_attr_setdetachstate(&thread_attr_, PTHREAD_CREATE_DETACHED)) {
-			LOG_WARN("Problems setting thread as dettached");
-		}
-	}
-
-	if (tattrs.joinable) {
-		if (pthread_attr_setdetachstate(&thread_attr_, PTHREAD_CREATE_JOINABLE)) {
-			LOG_WARN("Problems setting thread as joinable");
-		}
-	}
-
-	if (tattrs.system_scope) {
-		if (pthread_attr_setscope(&thread_attr_, PTHREAD_SCOPE_SYSTEM)) {
-			LOG_WARN("Problems setting thread system scope");
-		}
-	}
-
-	if (tattrs.process_scope) {
-		if (pthread_attr_setscope(&thread_attr_, PTHREAD_SCOPE_PROCESS)) {
-			LOG_WARN("Problems setting thread process scope");
-		}
-	}
-
-	if (tattrs.in_sched) {
-		if (pthread_attr_setinheritsched(&thread_attr_, PTHREAD_INHERIT_SCHED)) {
-			LOG_WARN("Problems setting thread inherited scheduling");
-		}
-	}
-
-	if (tattrs.exp_sched) {
-		if (pthread_attr_setinheritsched(&thread_attr_, PTHREAD_EXPLICIT_SCHED)) {
-			LOG_WARN("Problems setting thread explicit scheduling");
-		}
-	}
-
-	if (tattrs.fifo_sched) {
-		if (pthread_attr_setschedpolicy(&thread_attr_, SCHED_FIFO)) {
-			LOG_WARN("Problems setting thread FIFO scheduling policy");
-		}
-	}
-
-	if (tattrs.rr_sched) {
-		if (pthread_attr_setschedpolicy(&thread_attr_, SCHED_RR)) {
-			LOG_WARN("Problems setting thread RR scheduling policy");
-		}
-	}
-
-	if (tattrs.other_sched) {
-		if (pthread_attr_setschedpolicy(&thread_attr_, SCHED_OTHER)) {
-			LOG_WARN("Problems setting thread other scheduling policy");
-		}
-	}
-
-	//TODO set thread name
-}
-
 
 Thread::~Thread() throw ()
 {
-	if (pthread_attr_destroy(&thread_attr_)) {
-		LOG_WARN("Problems destroying thread attributes");
-	}
-}
-
-Thread::Thread(pthread_t tid)
-{
-	thread_id_ = tid;
-	start_arg = 0;
-	start_function = 0;
 }
 
 void Thread::start()
 {
-	pthread_attr_t * attr_p;
-
-	//Check for standard arguments
-	if (has_default_attrs()) {
-		attr_p = NULL;
-	} else {
-		populate_thread_attrs();
-		attr_p = &thread_attr_;
-	}
-
-	if (pthread_create(&thread_id_, attr_p, start_function, start_arg)) {
-		LOG_CRIT("%s", ConcurrentException::error_create_thread.c_str());
+	if (pthread_create(&thread_id_, thread_attrs->getThreadAttributes(),
+			start_function, start_arg)) {
+		LOG_CRIT("%s (%s). Errno: %d, %s:",
+				ConcurrentException::error_create_thread.c_str(),
+				thread_attrs->getName().c_str(),
+				errno, strerror(errno));
 		throw ConcurrentException(ConcurrentException::error_create_thread);
 	}
+
+	if (thread_attrs->getName() != "") { }
+		//pthread_setname_np(thread_id_, thread_attrs->getName().c_str());
 }
 
 pthread_t Thread::getThreadType() const{
@@ -280,8 +394,8 @@ void * do_simple_thread_work(void * arg)
 	return reinterpret_cast<void *>(simple_thread->run());
 }
 
-SimpleThread::SimpleThread(const ThreadAttributes & attrs) :
-		Thread(do_simple_thread_work, (void *) this, attrs)
+SimpleThread::SimpleThread(ThreadAttributes * threadAttributes) :
+		Thread(do_simple_thread_work, (void *) this, threadAttributes)
 {
 }
 
@@ -552,4 +666,3 @@ bool Sleep::sleepForSec(int sec) {
 }
 
 }
-

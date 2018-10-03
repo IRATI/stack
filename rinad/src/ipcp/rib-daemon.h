@@ -60,7 +60,7 @@ private:
 class InternalFlowSDUReader : public rina::SimpleThread
 {
 public:
-	InternalFlowSDUReader(const rina::ThreadAttributes & attrs,
+	InternalFlowSDUReader(rina::ThreadAttributes * attrs,
 			      int port_id,
 			      int fd_,
 			      int cdap_session);

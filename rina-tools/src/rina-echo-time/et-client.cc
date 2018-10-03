@@ -131,9 +131,8 @@ Client::Client(const string& t_type,
         client_app_reg(registration), data_size(size), wait(w), gap(g),
         dealloc_wait(dw), lost_wait(lw), rate(rt),  delay(delay_), loss(loss_),
 	snd(0), nsdus(0), m2(0), sdus_received(0), min_rtt(LONG_MAX), max_rtt(0),
-	average_rtt(0), port_id(-1), fd(-1), timer(std::string("ETClient"))
+	average_rtt(0), port_id(-1), fd(-1)
 {
-	timer.start();
 }
 
 void Client::run()
@@ -576,7 +575,7 @@ int Client::readTimeout(void * sdu, int maxBytes, unsigned int timeout)
 Sender * Client::startSender()
 {
         rina::ThreadAttributes threadAttributes;
-        Sender * sender = new Sender(threadAttributes,
+        Sender * sender = new Sender(&threadAttributes,
                                      echo_times,
                                      data_size,
                                      dealloc_wait,
@@ -641,7 +640,7 @@ void CFloodCancelFlowTimerTask::run()
 	client->cancelFloodFlow();
 }
 
-Sender::Sender(const rina::ThreadAttributes & threadAttributes,
+Sender::Sender(rina::ThreadAttributes * threadAttributes,
                    unsigned long echo_times,
                    unsigned int data_size,
                    int dealloc_wait,

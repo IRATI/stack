@@ -50,7 +50,7 @@ private:
 
 class ServerWorker : public rina::SimpleThread {
 public:
-	ServerWorker(const rina::ThreadAttributes & threadAttributes,
+	ServerWorker(rina::ThreadAttributes * threadAttributes,
 		     Server * serv);
 	virtual ~ServerWorker() throw() { };
 	void destroyFlow(int port_id);
@@ -63,7 +63,7 @@ protected:
 
 class ServerWorkerCleaner : public rina::SimpleThread {
 public:
-	ServerWorkerCleaner(const rina::ThreadAttributes & threadAttributes,
+	ServerWorkerCleaner(rina::ThreadAttributes * threadAttributes,
 			    Server * server);
 	~ServerWorkerCleaner() throw() { };
 	void do_stop();

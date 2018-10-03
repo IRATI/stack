@@ -52,7 +52,7 @@ private:
 
 class Sender: public rina::SimpleThread {
 public:
-        Sender(const rina::ThreadAttributes & threadAttributes,
+        Sender(rina::ThreadAttributes * threadAttributes,
                  unsigned long echo_times,
                  unsigned int data_size,
                  int dealloc_wait,

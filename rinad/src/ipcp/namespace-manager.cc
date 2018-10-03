@@ -161,10 +161,8 @@ const std::string DFTRIBObj::class_name = "DirectoryForwardingTable";
 const std::string DFTRIBObj::object_name = "/difm/nsm/dft";
 
 DFTRIBObj::DFTRIBObj(IPCProcess * ipc_process):
-		IPCPRIBObj(ipc_process, class_name),
-		timer(std::string("DFTRIBObj"))
+		IPCPRIBObj(ipc_process, class_name)
 {
-	timer.start();
 	namespace_manager_ = ipc_process_->namespace_manager_;
 	ipc_process->internal_event_manager_->subscribeToEvent(rina::InternalEvent::APP_CONNECTIVITY_TO_NEIGHBOR_LOST,
 							       this);
@@ -289,10 +287,8 @@ void AddressChangeTimerTask::run()
 }
 
 //Class Namespace Manager
-NamespaceManager::NamespaceManager() : INamespaceManager(),
-		timer(std::string("NamespaceManager"))
+NamespaceManager::NamespaceManager() : INamespaceManager()
 {
-	timer.start();
 	rib_daemon_ = 0;
 	event_manager_ = 0;
 }

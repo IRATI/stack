@@ -43,8 +43,7 @@ ManagementSDUReaderData::ManagementSDUReaderData(unsigned int max_sdu_size)
 class IPCPCDAPIOHandler : public rina::cdap::CDAPIOHandler
 {
  public:
-	IPCPCDAPIOHandler(IPCPRIBDaemonImpl * ribd) : rib_daemon(ribd),
-		timer(std::string("IPCPCDAPIOHandler")) { timer.start(); };
+	IPCPCDAPIOHandler(IPCPRIBDaemonImpl * ribd) : rib_daemon(ribd) {};
 	void send(const rina::cdap::cdap_m_t &m_sent,
 		  const rina::cdap_rib::con_handle_t& con_handle);
 
@@ -465,7 +464,7 @@ void RIBDaemonRO::read(const rina::cdap_rib::con_handle_t &con,
 }
 
 // Class InternalFlowSDUReader
-InternalFlowSDUReader::InternalFlowSDUReader(const rina::ThreadAttributes & attrs,
+InternalFlowSDUReader::InternalFlowSDUReader(rina::ThreadAttributes * attrs,
 					     int port_id,
 					     int fd_,
 					     int cdaps)
@@ -523,9 +522,7 @@ int InternalFlowSDUReader::run()
 
 //Class IPCPRIBDaemonImpl
 IPCPRIBDaemonImpl::IPCPRIBDaemonImpl(rina::cacep::AppConHandlerInterface *app_con_callback)
-		: timer(std::string("IPCPRIBDaemonImpl"))
 {
-	timer.start();
 	n_minus_one_flow_manager_ = 0;
 	initialize_rib_daemon(app_con_callback);
 }
@@ -681,10 +678,10 @@ void IPCPRIBDaemonImpl::start_internal_flow_sdu_reader(int port_id,
 
 	fds[cdap_session] = fd;
 
-	attrs.joinable = true;
+	attrs.setJoinable();
 	ss << "Internal Flow SDU Reader of port-id " << port_id;
-	attrs.name = std::string(ss.str());
-	reader = new InternalFlowSDUReader(attrs, port_id, fd, cdap_session);
+	attrs.setName(ss.str());
+	reader = new InternalFlowSDUReader(&attrs, port_id, fd, cdap_session);
 	reader->start();
 
 	iflow_sdu_readers[port_id] = reader;

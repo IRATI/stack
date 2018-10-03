@@ -42,7 +42,7 @@
 using namespace std;
 using namespace rina;
 
-EchoTimeServerWorker::EchoTimeServerWorker(const ThreadAttributes & threadAttributes,
+EchoTimeServerWorker::EchoTimeServerWorker(ThreadAttributes * threadAttributes,
 					   const std::string& test_type,
 			   	   	   int port_id, int fd,
 			   	   	   int deallocate_wait,
@@ -53,10 +53,8 @@ EchoTimeServerWorker::EchoTimeServerWorker(const ThreadAttributes & threadAttrib
                                                 test_type(test_type), port_id(port_id), fd(fd),
                                                 dw(deallocate_wait), interval(interval),
                                                 max_buffer_size(max_buffer_size), partial_read(pr),
-                                                timer(std::string("EchoTimeServerWorker")),
 						last_task(0)
 {
-	timer.start();
 }
 
 int EchoTimeServerWorker::internal_run()
@@ -302,7 +300,7 @@ EchoTimeServer::EchoTimeServer(const string& t_type,
 ServerWorker * EchoTimeServer::internal_start_worker(rina::FlowInformation flow)
 {
 	ThreadAttributes threadAttributes;
-        EchoTimeServerWorker * worker = new EchoTimeServerWorker(threadAttributes,
+        EchoTimeServerWorker * worker = new EchoTimeServerWorker(&threadAttributes,
         		    	    	         	 	 test_type,
         		    	    	         	 	 flow.portId,
                                                                  flow.fd,

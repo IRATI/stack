@@ -267,10 +267,8 @@ KeyManagementAgent::KeyManagementAgent(const std::string& creds_folder,
 		   const std::string& api,
 		   const std::string& ckm_apn,
 		   const std::string& ckm_api,
-		   bool  q) : AbstractKM(apn, api),
-				   timer(std::string("KeyManagementAgent"))
+		   bool  q) : AbstractKM(apn, api)
 {
-	timer.start();
 	creds_location = creds_folder;
 	dif_name = dif_names.front();
 	ckm_name = ckm_apn;

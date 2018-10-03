@@ -108,8 +108,8 @@ UNIXConsole::UNIXConsole(const std::string& socket_path_) :
 
 	keep_on_running = true;
 	rina::ThreadAttributes ta;
-	ta.name = std::string("unix-console");
-	worker = new rina::Thread(console_function, this, ta);
+	ta.setName("unix-console");
+	worker = new rina::Thread(console_function, this, &ta);
 	worker->start();
 }
 

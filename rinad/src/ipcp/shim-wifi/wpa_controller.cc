@@ -374,10 +374,10 @@ int WpaController::create_ctrl_connection(const std::string& if_name) {
 							prog_name.c_str());
 
 	//Launch monitoring thread to receive unsolicited events
-	mon_thread_attrs.joinable = true;
-	mon_thread_attrs.name = prog_name.append("-monitoring_thread");
+	mon_thread_attrs.setJoinable();
+	mon_thread_attrs.setName(prog_name.append("-monitoring_thread"));
 	mon_thread = new rina::Thread(__mon_trampoline, this,
-							mon_thread_attrs);
+							&mon_thread_attrs);
         mon_thread->start();
 	state = WPA_CTRL_CONNECTED;
 	return 0;

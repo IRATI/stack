@@ -81,7 +81,7 @@ void ConnectionCallback::close_connection(const rina::cdap_rib::con_handle_t &co
 	*keep_serving_ = false;
 }
 
-CDAPEchoWorker::CDAPEchoWorker(const rina::ThreadAttributes & threadAttributes,
+CDAPEchoWorker::CDAPEchoWorker(rina::ThreadAttributes * threadAttributes,
 		     	       int port_id, int fd,
 		     	       unsigned int max_sdu_size,
 		     	       Server * serv) : ServerWorker(threadAttributes, serv),
@@ -149,7 +149,7 @@ CDAPEchoServer::CDAPEchoServer(const list<string>& dif_names,
 ServerWorker * CDAPEchoServer::internal_start_worker(rina::FlowInformation flow)
 {
 	ThreadAttributes threadAttributes;
-	CDAPEchoWorker * worker = new CDAPEchoWorker(threadAttributes,
+	CDAPEchoWorker * worker = new CDAPEchoWorker(&threadAttributes,
 						     flow.portId, flow.fd,
 						     max_sdu_size_in_bytes,
 						     this);

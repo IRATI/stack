@@ -117,7 +117,7 @@ NMConsole::NMConsole(const std::string& socket_path, NetworkManager * nm) :
 }
 
 //Class SDUReader
-SDUReader::SDUReader(const rina::ThreadAttributes & threadAttributes, int port_id, int fd_,
+SDUReader::SDUReader(rina::ThreadAttributes * threadAttributes, int port_id, int fd_,
 		     NetworkManager * nm) : SimpleThread(threadAttributes)
 {
 	portid = port_id;
@@ -359,8 +359,7 @@ NetworkManager::NetworkManager(const std::string& app_name,
 			       const std::string& app_instance,
 			       const std::string& console_path,
 			       const std::string& dif_templates_path) :
-			       	       rina::ApplicationProcess(app_name, app_instance),
-			       	       timer(std::string("NetworkManager"))
+			       	       rina::ApplicationProcess(app_name, app_instance)
 {
 	std::stringstream ss;
 	rina::rib::RIBObj * tmp;
@@ -368,8 +367,6 @@ NetworkManager::NetworkManager(const std::string& app_name,
 	cfd = 0;
 	ss << app_name << "|" << app_instance << "||";
 	complete_name = ss.str();
-
-	timer.start();
 
 	console = new NMConsole(console_path, this);
 
@@ -488,11 +485,11 @@ void NetworkManager::n1_flow_accepted(const char * incoming_apn, int fd)
 
 	rina::ScopedLock g(lock);
 
-	thread_attrs.joinable = true;
+	thread_attrs.setJoinable();
 	ss << "SDU Reader of fd " << fd;
-	thread_attrs.name = ss.str();
+	thread_attrs.setName(ss.str());
 	// Use fd as port-id
-	reader = new SDUReader(thread_attrs, fd, fd, this);
+	reader = new SDUReader(&thread_attrs, fd, fd, this);
 	reader->start();
 
 	sdu_readers[fd] = reader;

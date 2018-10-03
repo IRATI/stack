@@ -90,10 +90,8 @@ void MobilityManager::parse_configuration(const rinad::RINAConfiguration& config
 }
 
 MobilityManager::MobilityManager(const rinad::RINAConfiguration& config) :
-		AppAddon(MobilityManager::NAME),
-		timer(std::string("MobilityManager"))
+		AppAddon(MobilityManager::NAME)
 {
-	timer.start();
 	hand_state.hand_period_ms = DEFAULT_HANDOVER_PERIOD_MS;
 	hand_state.disc_wait_time_ms = DEFAULT_DISC_WAIT_TIME_MS;
 	hand_state.hand_type = ARCFIRE_EXP5_OMEC_ROAMING;

@@ -97,10 +97,8 @@ const std::string AddressChangeNamespaceManagerPs::POLICY_PARAM_CHANGE_PERIOD = 
 const std::string AddressChangeNamespaceManagerPs::POLICY_PARAM_ADDRESS_RANGE = "addressRange";
 const std::string AddressChangeNamespaceManagerPs::POLICY_PARAM_START_DELAY = "startDelay";
 
-AddressChangeNamespaceManagerPs::AddressChangeNamespaceManagerPs(INamespaceManager * nsm_) : nsm(nsm_),
-		timer(std::string("AddressChangeNamespaceManagerPs"))
+AddressChangeNamespaceManagerPs::AddressChangeNamespaceManagerPs(INamespaceManager * nsm_) : nsm(nsm_)
 {
-	timer.start();
 	use_new_timeout = 0;
 	deprecate_old_timeout = 0;
 	change_period = 0;

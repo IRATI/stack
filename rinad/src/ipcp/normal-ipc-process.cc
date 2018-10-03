@@ -104,10 +104,8 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 			       unsigned int ipc_manager_port,
 			       std::string log_level,
 			       std::string log_file) : IPCProcess(nm.processName, nm.processInstance),
-					       	       LazyIPCProcessImpl(nm, id, ipc_manager_port, log_level, log_file),
-					       	       timer(std::string("IPCProcessImpl"))
+					       	       LazyIPCProcessImpl(nm, id, ipc_manager_port, log_level, log_file)
 {
-	timer.start();
 	old_address = 0;
 	address_change_period = false;
 	use_new_address = false;
@@ -455,9 +453,9 @@ void IPCProcessImpl::assign_to_dif_response_handler(const rina::AssignToDIFRespo
 
 	state = ASSIGNED_TO_DIF;
 	rina::ThreadAttributes attrs;
-	attrs.joinable = true;
-	attrs.name = std::string("sysfs-sync");
-	kernel_sync = new KernelSyncTrigger(attrs, this, 4000);
+	attrs.setJoinable();
+	attrs.setName("sysfs-sync");
+	kernel_sync = new KernelSyncTrigger(&attrs, this, 4000);
 	kernel_sync->start();
 }
 

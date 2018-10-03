@@ -1752,8 +1752,7 @@ LinkStateRoutingPolicy::LinkStateRoutingPolicy(IPCProcess * ipcp)
 	max_objects_per_rupdate_ = MAX_OBJECTS_PER_ROUTING_UPDATE_DEFAULT;
 
 	subscribeToEvents();
-	timer_ = new rina::Timer(std::string("LinkStateRoutingPolicy"));
-	timer_->start();
+	timer_ = new rina::Timer();
 	db_ = new FlowStateManager(timer_, UINT_MAX, this);
 }
 

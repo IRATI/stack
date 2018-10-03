@@ -45,7 +45,7 @@ using namespace std;
 namespace rinad {
 
 //Class DIFConfigFolderMonitor
-OSProcessMonitor::OSProcessMonitor(const rina::ThreadAttributes & thread_attrs)
+OSProcessMonitor::OSProcessMonitor(rina::ThreadAttributes * thread_attrs)
 		: rina::SimpleThread(thread_attrs)
 {
 	stop = false;

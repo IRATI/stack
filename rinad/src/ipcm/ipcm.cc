@@ -90,10 +90,8 @@ IPCManager_::IPCManager_()
           io_thread(NULL),
           dif_template_manager(NULL),
           dif_allocator(NULL),
-	  osp_monitor(NULL),
-	  timer(std::string("IPCManager"))
+	  osp_monitor(NULL)
 {
-	timer.start();
 }
 
 IPCManager_::~IPCManager_()
@@ -135,7 +133,7 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
 
         // Initialize the I/O thread
         io_thread = new rina::Thread(io_loop_trampoline, NULL,
-                                     io_thread_attrs);
+                                     &io_thread_attrs);
         io_thread->start();
 
         // Initialize DIF Allocator
@@ -147,9 +145,9 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
 
         // Initialize OS Process Monitor
 	rina::ThreadAttributes thread_attrs;
-	thread_attrs.joinable = true;
-	thread_attrs.name = std::string("os-process-monitor");
-        osp_monitor = new OSProcessMonitor(thread_attrs);
+	thread_attrs.setJoinable();
+	thread_attrs.setName("os-process-monitor");
+        osp_monitor = new OSProcessMonitor(&thread_attrs);
         osp_monitor->start();
     } catch (rina::InitializationException& e)
     {

@@ -216,10 +216,8 @@ const std::string DTCPRIBObject::get_displayable_value() const
 }
 
 //Class Flow Allocator
-FlowAllocator::FlowAllocator() : IFlowAllocator(),
-		timer(std::string("FlowAllocator"))
+FlowAllocator::FlowAllocator() : IFlowAllocator()
 {
-	timer.start();
 	ipcp = 0;
 	rib_daemon_ = 0;
 	namespace_manager_ = 0;
@@ -723,8 +721,7 @@ FlowAllocatorInstance::FlowAllocatorInstance(IPCProcess * ipc_process,
 					     int port_id,
 					     bool loc,
 					     const std::string& instance_id)
-	: IFlowAllocatorInstance(instance_id),
-	  timer(std::string("FlowAllocatorInstance"))
+	: IFlowAllocatorInstance(instance_id)
 {
 	initialize(ipc_process, flow_allocator, port_id, loc);
 	LOG_IPCP_DBG("Created flow allocator instance to manage the flow identified by portId %d ",
@@ -742,7 +739,6 @@ void FlowAllocatorInstance::initialize(IPCProcess * ipc_process,
 				       IFlowAllocator * flow_allocator,
 				       int port_id, bool loc)
 {
-	timer.start();
 	flow_allocator_ = flow_allocator;
 	ipc_process_ = ipc_process;
 	port_id_ = port_id;

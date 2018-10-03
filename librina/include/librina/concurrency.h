@@ -29,7 +29,6 @@
 
 #include <list>
 #include <map>
-#include <sstream>
 #include <string>
 #include <stdexcept>
 
@@ -78,40 +77,43 @@ ConcurrentException(const std::string & s) : Exception(s.c_str()) { }
         static const std::string error_timeout;
 };
 
-
-struct ThreadAttributes {
+/**
+ * Wraps pthread_attr_t
+ */
+class ThreadAttributes : public NonCopyable {
 public:
-	ThreadAttributes() : joinable(true), dettached(false),
-		system_scope(true), process_scope(false),
-		in_sched(true), exp_sched(false), fifo_sched(false),
-		rr_sched(false), other_sched(true), name(std::string()) {}
+        ThreadAttributes();
+        virtual ~ThreadAttributes() throw();
 
-        bool joinable;
-        bool dettached;
-        bool system_scope;
-        bool process_scope;
-        bool in_sched;
-        bool exp_sched;
-        bool fifo_sched;
-        bool rr_sched;
-        bool other_sched;
-        std::string name;
-
-        std::string to_string() const {
-        	std::stringstream ss;
-
-        	ss << "Joinable: " << joinable
-        	   << "; Dettached: " << dettached
-        	   << "; System_scope: " << system_scope
-        	   << "; Process_scope: " << process_scope
-        	   << "\nInherited sched: " << in_sched
-        	   << "; Exp sched: " << exp_sched
-        	   << "; FIFO sched: " << fifo_sched
-        	   << "; Other sched: " << other_sched
-        	   << "; Name: " << name;
-
-        	return ss.str();
-        }
+        pthread_attr_t * getThreadAttributes();
+        bool isJoinable();
+        void setJoinable();
+        bool isDettached();
+        void setDettached();
+        bool isSystemScope();
+        void setSystemScope();
+        bool isProcessScope();
+        void setProcessScope();
+        bool isInheritedScheduling();
+        void setInheritedScheduling();
+        bool isExplicitScheduling();
+        void setExplicitScheduling();
+        bool isFifoSchedulingPolicy();
+        void setFifoSchedulingPolicy();
+        bool isRRSchedulingPolicy();
+        void setRRSchedulingPolicy();
+        bool isOtherSchedulingPolicy();
+        void setOtherSchedulingPolicy();
+        void setName(const std::string& name);
+        std::string getName(void);
+private:
+        pthread_attr_t thread_attr_;
+        std::string name_;
+        void setDetachState(int detachState);
+        void setScope(int scope);
+        void setInheritedScheduling(int inheritedScheduling);
+        void getSchedulingPolicy(int * schedulingPolicy);
+        void setSchedulingPolicy(int schedulingPolicy);
 };
 
 /**
@@ -121,7 +123,7 @@ class Thread : public NonCopyable {
 public:
         /** Calls pthreads.create to create a new thread */
         Thread(void *(* startFunction)(void *), void * arg,
-               const ThreadAttributes & attrs);
+               ThreadAttributes * threadAttributes);
         virtual ~Thread() throw();
 
         void start();
@@ -137,20 +139,16 @@ public:
 
 private:
         Thread(pthread_t thread_id_);
-        void populate_thread_attrs(void);
-        bool has_default_attrs(void);
-
-        ThreadAttributes tattrs;
         pthread_t thread_id_;
-        pthread_attr_t thread_attr_;
         void *(*start_function)(void *);
         void * start_arg;
+        ThreadAttributes * thread_attrs;
 };
 
 /// A Simple thread that performs all its work in the run method
 class SimpleThread : public Thread {
 public:
-	SimpleThread(const ThreadAttributes & attrs);
+	SimpleThread(ThreadAttributes * threadAttributes);
 	virtual ~SimpleThread() throw();
 	///Subclasses must override this method in order for the
 	///to do something useful
