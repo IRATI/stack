@@ -60,7 +60,7 @@ private:
 class InternalFlowSDUReader : public rina::SimpleThread
 {
 public:
-	InternalFlowSDUReader(rina::ThreadAttributes * threadAttributes,
+	InternalFlowSDUReader(const rina::ThreadAttributes & attrs,
 			      int port_id,
 			      int fd_,
 			      int cdap_session);
@@ -133,6 +133,9 @@ class StopInternalFlowReaderTimerTask: public rina::TimerTask {
 public:
 	StopInternalFlowReaderTimerTask(IPCPRIBDaemonImpl * ribd, int pid);
 	void run();
+	std::string name() const {
+		return "stop-internal-flow-reader";
+	}
 
 private:
 	IPCPRIBDaemonImpl * rib_daemon;
@@ -143,6 +146,9 @@ class ETCleanStateTimerTask: public rina::TimerTask {
 public:
 	ETCleanStateTimerTask(unsigned int port_id) : pid(port_id) {};
 	void run();
+	std::string name() const {
+		return "et-clean-state";
+	}
 
 private:
 	unsigned int pid;

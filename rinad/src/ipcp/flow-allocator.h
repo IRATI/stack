@@ -337,6 +337,9 @@ public:
 			       unsigned int oaddr);
 	~FAAddressChangeTimerTask() throw() {};
 	void run();
+	std::string name() const {
+		return "fa-address-change";
+	}
 
 	FlowAllocator * fall;
 	unsigned int new_address;
@@ -460,6 +463,9 @@ public:
 	}
 
 	void run();
+	std::string name() const {
+		return "tear-down-flow";
+	}
 
 private:
 	FlowAllocatorInstance * flow_allocator_instance_;

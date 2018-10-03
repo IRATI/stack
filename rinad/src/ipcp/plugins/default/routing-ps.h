@@ -355,6 +355,9 @@ public:
 	KillFlowStateObjectTimerTask(LinkStateRoutingPolicy *ps, std::string fqn);
 	~KillFlowStateObjectTimerTask() throw(){};
 	void run();
+	std::string name() const {
+		return "kill-flow-state-object";
+	}
 
 private:
 	std::string fqn_;
@@ -510,10 +513,13 @@ private:
 
 class ComputeRoutingTimerTask : public rina::TimerTask {
 public:
-    ComputeRoutingTimerTask(LinkStateRoutingPolicy * lsr_policy,
-            long delay);
-    ~ComputeRoutingTimerTask() throw(){};
-    void run();
+	ComputeRoutingTimerTask(LinkStateRoutingPolicy * lsr_policy,
+			long delay);
+	~ComputeRoutingTimerTask() throw(){};
+	void run();
+	std::string name() const {
+		return "compute-routing";
+	}
 
 private:
 	LinkStateRoutingPolicy* lsr_policy_;
@@ -522,26 +528,32 @@ private:
 
 class PropagateFSODBTimerTask : public rina::TimerTask {
 public:
-    PropagateFSODBTimerTask(LinkStateRoutingPolicy * lsr_policy,
-            long delay);
-    ~PropagateFSODBTimerTask() throw(){};
-    void run();
+	PropagateFSODBTimerTask(LinkStateRoutingPolicy * lsr_policy,
+			long delay);
+	~PropagateFSODBTimerTask() throw(){};
+	void run();
+	std::string name() const {
+		return "propagate-fso-db";
+	}
 
 private:
-    LinkStateRoutingPolicy * lsr_policy_;
-    long delay_;
+	LinkStateRoutingPolicy * lsr_policy_;
+	long delay_;
 };
 
 class UpdateAgeTimerTask : public rina::TimerTask {
 public:
-    UpdateAgeTimerTask(LinkStateRoutingPolicy * lsr_policy,
-            long delay);
-    ~UpdateAgeTimerTask() throw(){};
-    void run();
+	UpdateAgeTimerTask(LinkStateRoutingPolicy * lsr_policy,
+			long delay);
+	~UpdateAgeTimerTask() throw(){};
+	void run();
+	std::string name() const {
+		return "update-age";
+	}
 
 private:
-    LinkStateRoutingPolicy * lsr_policy_;
-    long delay_;
+	LinkStateRoutingPolicy * lsr_policy_;
+	long delay_;
 };
 
 class ExpireOldAddressTimerTask : public rina::TimerTask {
@@ -552,11 +564,14 @@ public:
 				  bool neighbor);
 	~ExpireOldAddressTimerTask() throw(){};
 	void run();
+	std::string name() const {
+		return "expire-old-address";
+	}
 
 private:
 	LinkStateRoutingPolicy * lsr_policy_;
 	unsigned int address;
-	std::string name;
+	std::string name_;
 	bool neighbor;
 };
 

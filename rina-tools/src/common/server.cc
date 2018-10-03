@@ -50,7 +50,7 @@ void CancelFlowTimerTask::run()
 	worker->destroyFlow(port_id);
 }
 
-ServerWorker::ServerWorker(ThreadAttributes * threadAttributes,
+ServerWorker::ServerWorker(const ThreadAttributes & threadAttributes,
 			   Server * serv) : SimpleThread(threadAttributes)
 {
 	server = serv;
@@ -75,7 +75,7 @@ void ServerWorker::destroyFlow(int port_id)
         }
 }
 
-ServerWorkerCleaner::ServerWorkerCleaner(rina::ThreadAttributes * threadAttributes,
+ServerWorkerCleaner::ServerWorkerCleaner(const rina::ThreadAttributes & threadAttributes,
 		    	    	         Server * s) : SimpleThread(threadAttributes)
 {
 	stop = false;
@@ -111,8 +111,8 @@ Server::Server(const std::list<std::string>& dif_names,
         Application(dif_names, app_name, app_instance)
 {
 	ThreadAttributes threadAttrs;
-	threadAttrs.setJoinable();
-	cleaner = new ServerWorkerCleaner(&threadAttrs, this);
+	threadAttrs.joinable = true;
+	cleaner = new ServerWorkerCleaner(threadAttrs, this);
 	cleaner->start();
 }
 

@@ -1710,19 +1710,19 @@ void UpdateAgeTimerTask::run()
 }
 
 ExpireOldAddressTimerTask::ExpireOldAddressTimerTask(LinkStateRoutingPolicy * lsr_policy,
-						     const std::string& name_,
+						     const std::string& name__,
 						     unsigned int addr,
 						     bool neigh)
 {
 	lsr_policy_ = lsr_policy;
-	name = name_;
+	name_ = name__;
 	address = addr;
 	neighbor = neigh;
 }
 
 void ExpireOldAddressTimerTask::run()
 {
-	lsr_policy_->expireOldAddress(name, address, neighbor);
+	lsr_policy_->expireOldAddress(name_, address, neighbor);
 }
 
 // CLASS LinkStateRoutingPolicy

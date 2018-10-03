@@ -760,7 +760,7 @@ void DDAEnrollmentTask::connectResult(const rina::cdap::CDAPMessage& message,
 class DDAEnrollerWorker : public rina::SimpleThread
 {
 public:
-	DDAEnrollerWorker(rina::ThreadAttributes * threadAttributes,
+	DDAEnrollerWorker(const rina::ThreadAttributes & threadAttributes,
 			    DynamicDIFAllocator * dda,
 			    const std::list<rina::Neighbor>& enrollments);
 	~DDAEnrollerWorker() throw() {};
@@ -773,7 +773,7 @@ private:
 	int allocate_flow(const rina::FlowRequestEvent& alloc_event);
 };
 
-DDAEnrollerWorker::DDAEnrollerWorker(rina::ThreadAttributes * threadAttributes,
+DDAEnrollerWorker::DDAEnrollerWorker(const rina::ThreadAttributes & threadAttributes,
 					 DynamicDIFAllocator * dda_,
 					 const std::list<rina::Neighbor>& enrollments)
 			: SimpleThread(threadAttributes)
@@ -851,7 +851,7 @@ int DDAEnrollerWorker::run()
 class DDARegistrar : public rina::SimpleThread
 {
 public:
-	DDARegistrar(rina::ThreadAttributes * threadAttributes, int fd,
+	DDARegistrar(const rina::ThreadAttributes & threadAttributes, int fd,
 		     const std::string& dif_name, const std::string& app_name);
 	~DDARegistrar() throw() {};
 	int run();
@@ -862,7 +862,7 @@ private:
 	int cfd;
 };
 
-DDARegistrar::DDARegistrar(rina::ThreadAttributes * threadAttributes, int fd,
+DDARegistrar::DDARegistrar(const rina::ThreadAttributes & threadAttributes, int fd,
 	     const std::string& dn, const std::string& an)
 		: SimpleThread(threadAttributes)
 {
@@ -894,7 +894,7 @@ int DDARegistrar::run()
 class DDAFlowAcceptor : public rina::SimpleThread
 {
 public:
-	DDAFlowAcceptor(rina::ThreadAttributes * threadAttributes,
+	DDAFlowAcceptor(const rina::ThreadAttributes & threadAttributes,
 		        DynamicDIFAllocator * dda_, int cfd);
 	~DDAFlowAcceptor() throw() {};
 	int run();
@@ -904,7 +904,7 @@ private:
 	int cfd;
 };
 
-DDAFlowAcceptor::DDAFlowAcceptor(rina::ThreadAttributes * threadAttributes,
+DDAFlowAcceptor::DDAFlowAcceptor(const rina::ThreadAttributes & threadAttributes,
 				DynamicDIFAllocator * dda_, int cfd_)
 					: SimpleThread(threadAttributes)
 {
@@ -935,7 +935,8 @@ int DDAFlowAcceptor::run()
 class SDUReader : public rina::SimpleThread
 {
 public:
-	SDUReader(rina::ThreadAttributes * threadAttributes, int port_id, int fd_);
+	SDUReader(const rina::ThreadAttributes & threadAttributes,
+		  int port_id, int fd_);
 	~SDUReader() throw() {};
 	int run();
 
@@ -944,7 +945,8 @@ private:
 	int fd;
 };
 
-SDUReader::SDUReader(rina::ThreadAttributes * threadAttributes, int port_id, int fd_)
+SDUReader::SDUReader(const rina::ThreadAttributes & threadAttributes,
+		     int port_id, int fd_)
 				: SimpleThread(threadAttributes)
 {
 	portid = port_id;
@@ -1004,9 +1006,9 @@ DynamicDIFAllocator::DynamicDIFAllocator(const rina::ApplicationProcessNamingInf
 		return;
 	}
 
-	thread_attrs.setJoinable();
-	thread_attrs.setName("Flow acceptor of DIF Allocator");
-	facc = new DDAFlowAcceptor(&thread_attrs, this, cfd);
+	thread_attrs.joinable = true;
+	thread_attrs.name = std::string("Flow acceptor of DIF Allocator");
+	facc = new DDAFlowAcceptor(thread_attrs, this, cfd);
 	facc->start();
 }
 
@@ -1082,9 +1084,9 @@ int DynamicDIFAllocator::set_config(const DIFAllocatorConfig& da_config)
 		LOG_ERR("Problems adding object to the RIB : %s", e.what());
 	}
 
-	thread_attrs.setJoinable();
-	thread_attrs.setName("Peer enroller of DIF Allocator");
-	dda_enroller = new DDAEnrollerWorker(&thread_attrs, this, enrollments);
+	thread_attrs.joinable = true;
+	thread_attrs.name = std::string("Peer enroller of DIF Allocator");
+	dda_enroller = new DDAEnrollerWorker(thread_attrs, this, enrollments);
 	dda_enroller->start();
 
 	return 0;
@@ -1100,9 +1102,9 @@ void DynamicDIFAllocator::assigned_to_dif(const std::string& dif_name)
 
 	ss << dap_name.processName << "|" << dap_name.processInstance << "||";
 
-	thread_attrs.setJoinable();
-	thread_attrs.setName("Registrar of DIF Allocator");
-	ddar = new DDARegistrar(&thread_attrs, cfd, dif_name, ss.str());
+	thread_attrs.joinable = true;
+	thread_attrs.name = std::string("Registrar of DIF Allocator");
+	ddar = new DDARegistrar(thread_attrs, cfd, dif_name, ss.str());
 	ddar->start();
 }
 
@@ -1114,11 +1116,11 @@ void DynamicDIFAllocator::n1_flow_allocated(const rina::Neighbor& neighbor, int 
 
 	rina::ScopedLock g(lock);
 
-	thread_attrs.setJoinable();
+	thread_attrs.joinable = true;
 	ss << "SDU Reader of fd " << fd;
-	thread_attrs.setName(ss.str());
+	thread_attrs.name = ss.str();
 	// Use fd as port-id
-	reader = new SDUReader(&thread_attrs, fd, fd);
+	reader = new SDUReader(thread_attrs, fd, fd);
 	reader->start();
 
 	sdu_readers[fd] = reader;
@@ -1140,11 +1142,11 @@ void DynamicDIFAllocator::n1_flow_accepted(const char * incoming_apn, int fd)
 
 	rina::cdap::add_fd_to_port_id_mapping(fd, fd);
 
-	thread_attrs.setJoinable();
+	thread_attrs.joinable = true;
 	ss << "SDU Reader of fd " << fd;
-	thread_attrs.setName(ss.str());
+	thread_attrs.name = ss.str();
 	// Use fd as port-id
-	reader = new SDUReader(&thread_attrs, fd, fd);
+	reader = new SDUReader(thread_attrs, fd, fd);
 	reader->start();
 
 	sdu_readers[fd] = reader;

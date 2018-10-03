@@ -234,7 +234,7 @@ private:
 class SDUReader : public rina::SimpleThread
 {
 public:
-	SDUReader(rina::ThreadAttributes * threadAttributes, int port_id, int fd_,
+	SDUReader(const rina::ThreadAttributes & threadAttributes, int port_id, int fd_,
 		  NetworkManager * nm);
 	~SDUReader() throw() {};
 	int run();
@@ -323,6 +323,9 @@ public:
 		netman(nm), fildesc(fd) {};
 	~DisconnectFromSystemTimerTask() throw() {};
 	void run();
+	std::string name() const {
+		return "disc-from-system";
+	}
 
 	NetworkManager * netman;
 	int fildesc;

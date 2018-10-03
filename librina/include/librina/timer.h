@@ -36,6 +36,7 @@ class TimerTask{
 public:
 	virtual ~TimerTask() throw() {};
 	virtual void run() = 0;
+	virtual std::string name() const = 0;
 };
 
 /// Class to wrap timeval

@@ -848,16 +848,16 @@ unsigned int NamespaceManager::getAdressByname(const rina::ApplicationProcessNam
 //Class checkDFTEntriesToRemoveTimerTask
 CheckDFTEntriesToRemoveTimerTask::CheckDFTEntriesToRemoveTimerTask(DFTRIBObj * dft_,
 				 	 	   	   	   unsigned int address_,
-								   const std::string name_)
+								   const std::string name__)
 {
 	dft = dft_;
 	address = address_;
-	name = name_;
+	name_ = name__;
 }
 
 void CheckDFTEntriesToRemoveTimerTask::run()
 {
-	dft->checkDFTEntriesToRemove(address, name);
+	dft->checkDFTEntriesToRemove(address, name_);
 }
 
 } //namespace rinad

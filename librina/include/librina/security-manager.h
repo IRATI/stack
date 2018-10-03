@@ -147,6 +147,9 @@ public:
 			session_id(session_id_) { };
 	~CancelAuthTimerTask() throw() { };
 	void run();
+	std::string name() const {
+		return "cancel-auth";
+	}
 
 	ISecurityManager * sec_man;
 	int session_id;

@@ -29,6 +29,7 @@
 
 #include <list>
 #include <map>
+#include <sstream>
 #include <string>
 #include <stdexcept>
 
@@ -77,46 +78,40 @@ ConcurrentException(const std::string & s) : Exception(s.c_str()) { }
         static const std::string error_timeout;
 };
 
-/**
- * Wraps pthread_attr_t
- */
-class ThreadAttributes : public NonCopyable {
+
+struct ThreadAttributes {
 public:
-        ThreadAttributes();
-        virtual ~ThreadAttributes() throw();
+	ThreadAttributes() : joinable(false), dettached(false),
+		system_scope(false), process_scope(false),
+		in_sched(false), exp_sched(false), fifo_sched(false),
+		rr_sched(false), other_sched(false), name(std::string()) {}
 
-        bool isJoinable();
-        void setJoinable();
-        bool isDettached();
-        void setDettached();
-        bool isSystemScope();
-        void setSystemScope();
-        bool isProcessScope();
-        void setProcessScope();
-        bool isInheritedScheduling();
-        void setInheritedScheduling();
-        bool isExplicitScheduling();
-        void setExplicitScheduling();
-        bool isFifoSchedulingPolicy();
-        void setFifoSchedulingPolicy();
-        bool isRRSchedulingPolicy();
-        void setRRSchedulingPolicy();
-        bool isOtherSchedulingPolicy();
-        void setOtherSchedulingPolicy();
-        void setName(const std::string& name);
-        std::string getName(void);
-private:
-
-        std::string name_;
         bool joinable;
         bool dettached;
         bool system_scope;
         bool process_scope;
-        bool inherited_scheduling;
-        bool explicit_scheduling;
-        bool fifo_scheduling_policy;
-        bool rr_scheduling_policy;
-        bool other_scheduling_policy;
+        bool in_sched;
+        bool exp_sched;
+        bool fifo_sched;
+        bool rr_sched;
+        bool other_sched;
+        std::string name;
+
+        std::string to_string() const {
+        	std::stringstream ss;
+
+        	ss << "Joinable: " << joinable
+        	   << "; Dettached: " << dettached
+        	   << "; System_scope: " << system_scope
+        	   << "; Process_scope: " << process_scope
+        	   << "\nInherited sched: " << in_sched
+        	   << "; Exp sched: " << exp_sched
+        	   << "; FIFO sched: " << fifo_sched
+        	   << "; Other sched: " << other_sched
+        	   << "; Name: " << name;
+
+        	return ss.str();
+        }
 };
 
 /**
@@ -126,7 +121,7 @@ class Thread : public NonCopyable {
 public:
         /** Calls pthreads.create to create a new thread */
         Thread(void *(* startFunction)(void *), void * arg,
-               ThreadAttributes * threadAttributes);
+               const ThreadAttributes & attrs);
         virtual ~Thread() throw();
 
         void start();
@@ -142,7 +137,7 @@ public:
 
 private:
         Thread(pthread_t thread_id_);
-        void populate_thread_attrs(ThreadAttributes * threadAttributes);
+        void populate_thread_attrs(const ThreadAttributes & attrs);
 
         pthread_t thread_id_;
         pthread_attr_t thread_attr_;
@@ -153,7 +148,7 @@ private:
 /// A Simple thread that performs all its work in the run method
 class SimpleThread : public Thread {
 public:
-	SimpleThread(ThreadAttributes * threadAttributes);
+	SimpleThread(const ThreadAttributes & attrs);
 	virtual ~SimpleThread() throw();
 	///Subclasses must override this method in order for the
 	///to do something useful

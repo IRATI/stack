@@ -334,6 +334,9 @@ class ResetStablishmentTimerTask : public rina::TimerTask
  public:
 	ResetStablishmentTimerTask(ConnectionStateMachine *con_state_machine);
 	void run();
+	std::string name() const {
+		return "reset-stablishment";
+	}
  private:
 	ConnectionStateMachine *con_state_machine_;
 };
@@ -344,6 +347,9 @@ class ReleaseConnectionTimerTask : public rina::TimerTask
 	ReleaseConnectionTimerTask(int port_id,
 				   CDAPSessionManagerInterface * sm);
 	void run();
+	std::string name() const {
+		return "release-connection";
+	}
  private:
 	int pid;
 	CDAPSessionManagerInterface * sm;
@@ -354,6 +360,9 @@ class CDAPSessionDestroyerTimerTask : public rina::TimerTask
  public:
 	CDAPSessionDestroyerTimerTask(CDAPSession * cdaps);
 	void run();
+	std::string name() const {
+		return "cdap-session-destroyer";
+	}
  private:
 	CDAPSession * cdap_session;
 };

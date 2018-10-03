@@ -944,6 +944,9 @@ public:
 				   const std::list<std::string>& sdnames);
 	~JoinDIFAndAllocateFlowTask() throw() {};
 	void run();
+	std::string name() const {
+		return "join-dif-and-allocate-flow";
+	}
 
 private:
 	IPCManager_ * ipcm;

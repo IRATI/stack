@@ -173,6 +173,7 @@ class ActiveWorker : public Worker {
 		con = _con;
 		auth_ps_ = 0;
 		key_manager_ = key_manager;
+		LOG_DBG("ActiveWorker ready");
 	}
 
 	/**

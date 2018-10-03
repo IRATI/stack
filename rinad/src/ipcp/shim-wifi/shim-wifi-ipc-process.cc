@@ -594,6 +594,9 @@ public:
 	CancelEnrollmentTimerTask(ShimWifiStaIPCProcessImpl * ipcp_): ipcp(ipcp_) {};
 	~CancelEnrollmentTimerTask() throw() {};
 	void run();
+	std::string name() const {
+		return "cancel-enrollment";
+	}
 
 private:
 	ShimWifiStaIPCProcessImpl * ipcp;

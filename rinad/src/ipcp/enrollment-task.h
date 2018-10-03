@@ -105,6 +105,9 @@ class WatchdogTimerTask: public rina::TimerTask {
 public:
 	WatchdogTimerTask(WatchdogRIBObject * watchdog, rina::Timer * timer, int delay);
 	void run();
+	std::string name() const {
+		return "watchdog";
+	}
 
 private:
 	WatchdogRIBObject * watchdog_;
@@ -264,6 +267,9 @@ public:
 				 bool sendReleaseMessage);
 	~AbortEnrollmentTimerTask() throw() {};
 	void run();
+	std::string name() const {
+		return "abort-enrollment";
+	}
 
 private:
 	rina::IEnrollmentTask * etask;
@@ -279,6 +285,9 @@ public:
 	DestroyESMTimerTask(IEnrollmentStateMachine * sm);
 	~DestroyESMTimerTask() throw() {};
 	void run();
+	std::string name() const {
+		return "destroy-esm";
+	}
 
 private:
 	IEnrollmentStateMachine * state_machine;
@@ -291,6 +300,9 @@ public:
 				bool internal);
 	~DeallocateFlowTimerTask() throw() {};
 	void run();
+	std::string name() const {
+		return "deallocate-flow";
+	}
 
 private:
 	IPCProcess * ipcp;
@@ -304,6 +316,9 @@ public:
 				 const rina::EnrollmentRequest& request);
 	~RetryEnrollmentTimerTask() throw() {};
 	void run();
+	std::string name() const {
+		return "retry-enrollment";
+	}
 
 private:
 	rina::IEnrollmentTask * etask;

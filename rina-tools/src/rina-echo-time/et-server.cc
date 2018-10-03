@@ -42,7 +42,7 @@
 using namespace std;
 using namespace rina;
 
-EchoTimeServerWorker::EchoTimeServerWorker(ThreadAttributes * threadAttributes,
+EchoTimeServerWorker::EchoTimeServerWorker(const ThreadAttributes & threadAttributes,
 					   const std::string& test_type,
 			   	   	   int port_id, int fd,
 			   	   	   int deallocate_wait,
@@ -302,7 +302,7 @@ EchoTimeServer::EchoTimeServer(const string& t_type,
 ServerWorker * EchoTimeServer::internal_start_worker(rina::FlowInformation flow)
 {
 	ThreadAttributes threadAttributes;
-        EchoTimeServerWorker * worker = new EchoTimeServerWorker(&threadAttributes,
+        EchoTimeServerWorker * worker = new EchoTimeServerWorker(threadAttributes,
         		    	    	         	 	 test_type,
         		    	    	         	 	 flow.portId,
                                                                  flow.fd,

@@ -39,6 +39,9 @@ class CancelFlowTimerTask : public rina::TimerTask {
 public:
 	CancelFlowTimerTask(int port_id, ServerWorker * sw);
 	void run();
+	std::string name() const {
+		return "cancel-flow";
+	}
 
 private:
 	int port_id;
@@ -47,7 +50,7 @@ private:
 
 class ServerWorker : public rina::SimpleThread {
 public:
-	ServerWorker(rina::ThreadAttributes * threadAttributes,
+	ServerWorker(const rina::ThreadAttributes & threadAttributes,
 		     Server * serv);
 	virtual ~ServerWorker() throw() { };
 	void destroyFlow(int port_id);
@@ -60,7 +63,7 @@ protected:
 
 class ServerWorkerCleaner : public rina::SimpleThread {
 public:
-	ServerWorkerCleaner(rina::ThreadAttributes * threadAttributes,
+	ServerWorkerCleaner(const rina::ThreadAttributes & threadAttributes,
 			    Server * server);
 	~ServerWorkerCleaner() throw() { };
 	void do_stop();

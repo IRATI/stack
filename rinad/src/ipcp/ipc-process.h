@@ -163,7 +163,7 @@ public:
 /// with the kernel
 class KernelSyncTrigger : public rina::SimpleThread {
 public:
-	KernelSyncTrigger(rina::ThreadAttributes * threadAttributes,
+	KernelSyncTrigger(const rina::ThreadAttributes & attrs,
 			  AbstractIPCProcessImpl * ipcp,
 			  unsigned int sync_period);
 	~KernelSyncTrigger() throw() {};

@@ -655,10 +655,10 @@ void KMIPCResourceManager::start_flow_reader(int port_id, int fd)
 
 	rina::ScopedLock g(lock);
 
-	thread_attrs.setJoinable();
+	thread_attrs.joinable = true;
 	ss << "SDU Reader of port-id " << port_id;
-	thread_attrs.setName(ss.str());
-	reader = new SDUReader(&thread_attrs, port_id, fd);
+	thread_attrs.name = ss.str();
+	reader = new SDUReader(thread_attrs, port_id, fd);
 	reader->start();
 
 	sdu_readers[port_id] = reader;
@@ -798,7 +798,7 @@ AbstractKM * KMFactory::get_instance()
 }
 
 // Class SDUReader
-SDUReader::SDUReader(rina::ThreadAttributes * threadAttributes, int port_id, int fd_)
+SDUReader::SDUReader(const rina::ThreadAttributes & threadAttributes, int port_id, int fd_)
 			: SimpleThread(threadAttributes)
 {
 	portid = port_id;

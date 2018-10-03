@@ -108,6 +108,8 @@ void TaskScheduler::insert(Time time, TimerTask* timer_task) {
 
 void TaskScheduler::runTasks()
 {
+	std::stringstream ss;
+
 	lock();
 	Time now;
 	std::map<Time, std::list<TimerTask*>* >::iterator first = tasks_.begin();
@@ -118,12 +120,13 @@ void TaskScheduler::runTasks()
 		for (std::list<TimerTask*>::iterator iter_list = iter_map->second->begin();
 				iter_list != iter_map->second->end(); ++iter_list){
 			try {
-				ThreadAttributes threadAttributes;
-				threadAttributes.setDettached();
-				threadAttributes.setName("timer_task");
+				ThreadAttributes attrs;
+				attrs.dettached = true;
+				ss << "timer_task: " << (*iter_list)->name();
+				attrs.name = ss.str();
 				Thread *t = new Thread(&doWorkTask,
 						       (void *) (*iter_list),
-						       &threadAttributes);
+						       attrs);
 				t->start();
 				delete t;
 				t = 0;
@@ -220,10 +223,10 @@ int Timer::internal_start()
 	if (!task_scheduler)
 		return -1;
 
-	ThreadAttributes threadAttributes;
-	threadAttributes.setJoinable();
-	threadAttributes.setName(caller);
-	thread_ = new Thread(&doWorkTimer, (void *) this, &threadAttributes);
+	ThreadAttributes attrs;
+	attrs.joinable = true;
+	attrs.name = caller;
+	thread_ = new Thread(&doWorkTimer, (void *) this, attrs);
 	if (!thread_)
 		return -1;
 
