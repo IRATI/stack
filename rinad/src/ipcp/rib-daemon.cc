@@ -464,11 +464,10 @@ void RIBDaemonRO::read(const rina::cdap_rib::con_handle_t &con,
 }
 
 // Class InternalFlowSDUReader
-InternalFlowSDUReader::InternalFlowSDUReader(rina::ThreadAttributes * attrs,
-					     int port_id,
+InternalFlowSDUReader::InternalFlowSDUReader(int port_id,
 					     int fd_,
 					     int cdaps)
-		: rina::SimpleThread(attrs)
+		: rina::SimpleThread(std::string("internal-flow-sdu-reader"), false)
 {
 	portid = port_id;
 	fd = fd_;
@@ -670,18 +669,13 @@ void IPCPRIBDaemonImpl::start_internal_flow_sdu_reader(int port_id,
 						       int fd,
 						       int cdap_session)
 {
-	rina::ThreadAttributes attrs;
-	std::stringstream ss;
 	InternalFlowSDUReader * reader = 0;
 
 	rina::ScopedLock g(iflow_readers_lock);
 
 	fds[cdap_session] = fd;
 
-	attrs.setJoinable();
-	ss << "Internal Flow SDU Reader of port-id " << port_id;
-	attrs.setName(ss.str());
-	reader = new InternalFlowSDUReader(&attrs, port_id, fd, cdap_session);
+	reader = new InternalFlowSDUReader(port_id, fd, cdap_session);
 	reader->start();
 
 	iflow_sdu_readers[port_id] = reader;

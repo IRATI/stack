@@ -171,8 +171,15 @@ void ConnectionRIBObject::read(const rina::cdap_rib::con_handle_t &con,
 
 const std::string ConnectionRIBObject::get_displayable_value() const
 {
-	rina::Connection * con = fai->get_flow()->getActiveConnection();
 	std::stringstream ss;
+
+	if (!fai || !fai->get_flow())
+		return "";
+
+	rina::Connection * con = fai->get_flow()->getActiveConnection();
+	if (!con)
+		return "";
+
 	ss << "CEP-ids: src = " << con->sourceCepId << ", dest = " << con->destCepId
 	   << "; Addresses: src = " << con->sourceAddress << ", dest = " << con->destAddress
 	   << "; Qos-id: " << con->qosId << "; Port-id: " << con->portId << std::endl;

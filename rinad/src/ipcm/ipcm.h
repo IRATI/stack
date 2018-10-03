@@ -910,7 +910,6 @@ private:
 
 	//I/O loop main thread
 	rina::Thread* io_thread;
-	rina::ThreadAttributes io_thread_attrs;
 
 	//Stop condition
 	rina::ConditionVariable stop_cond;

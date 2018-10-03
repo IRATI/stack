@@ -37,8 +37,7 @@ class DIFAllocator;
 /// Monitors the folder of the DIF templates
 class DIFConfigFolderMonitor: public rina::SimpleThread {
 public:
-	DIFConfigFolderMonitor(rina::ThreadAttributes * thread_attrs,
-			       const std::string& folder,
+	DIFConfigFolderMonitor(const std::string& folder,
 			       DIFTemplateManager * dtm,
 			       DIFAllocator * da);
 	~DIFConfigFolderMonitor() throw();

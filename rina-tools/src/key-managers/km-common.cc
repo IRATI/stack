@@ -649,16 +649,12 @@ void KMIPCResourceManager::deallocate_flow(int port_id)
 
 void KMIPCResourceManager::start_flow_reader(int port_id, int fd)
 {
-	ThreadAttributes thread_attrs;
 	std::stringstream ss;
 	SDUReader * reader = 0;
 
 	rina::ScopedLock g(lock);
 
-	thread_attrs.setJoinable();
-	ss << "SDU Reader of port-id " << port_id;
-	thread_attrs.setName(ss.str());
-	reader = new SDUReader(&thread_attrs, port_id, fd);
+	reader = new SDUReader(port_id, fd);
 	reader->start();
 
 	sdu_readers[port_id] = reader;
@@ -798,8 +794,8 @@ AbstractKM * KMFactory::get_instance()
 }
 
 // Class SDUReader
-SDUReader::SDUReader(rina::ThreadAttributes * threadAttributes, int port_id, int fd_)
-			: SimpleThread(threadAttributes)
+SDUReader::SDUReader(int port_id, int fd_)
+			: SimpleThread(std::string("sdu-reader"), false)
 {
 	portid = port_id;
 	fd = fd_;

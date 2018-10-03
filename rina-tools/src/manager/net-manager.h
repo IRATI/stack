@@ -234,8 +234,7 @@ private:
 class SDUReader : public rina::SimpleThread
 {
 public:
-	SDUReader(rina::ThreadAttributes * threadAttributes, int port_id, int fd_,
-		  NetworkManager * nm);
+	SDUReader(int port_id, int fd_, NetworkManager * nm);
 	~SDUReader() throw() {};
 	int run();
 

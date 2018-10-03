@@ -452,10 +452,7 @@ void IPCProcessImpl::assign_to_dif_response_handler(const rina::AssignToDIFRespo
 	}
 
 	state = ASSIGNED_TO_DIF;
-	rina::ThreadAttributes attrs;
-	attrs.setJoinable();
-	attrs.setName("sysfs-sync");
-	kernel_sync = new KernelSyncTrigger(&attrs, this, 4000);
+	kernel_sync = new KernelSyncTrigger(this, 4000);
 	kernel_sync->start();
 }
 

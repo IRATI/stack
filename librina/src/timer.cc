@@ -116,13 +116,9 @@ void TaskScheduler::runTasks() {
 		for (std::list<TimerTask*>::iterator iter_list = iter_map->second->begin();
 				iter_list != iter_map->second->end(); ++iter_list){
 			try {
-				ThreadAttributes threadAttributes;
-				threadAttributes.setDettached();
-				ss << "timer_task: " << (*iter_list)->name();
-				threadAttributes.setName(ss.str());
 				Thread *t = new Thread(&doWorkTask,
 						       (void *) (*iter_list),
-						       &threadAttributes);
+						       ss.str(), true);
 				t->start();
 				delete t;
 				t = 0;
@@ -173,13 +169,12 @@ void* doWorkTimer(void *arg) {
 }
 
 Timer::Timer() {
-	ThreadAttributes threadAttributes;
-	threadAttributes.setJoinable();
 	continue_lock_.lock();
 	continue_ = true;
 	continue_lock_.unlock();
 	task_scheduler = new TaskScheduler();
-	thread_ = new Thread(&doWorkTimer, (void *) this, &threadAttributes);
+	thread_ = new Thread(&doWorkTimer, (void *) this,
+			     std::string("Timer"), false);
 	thread_->start();
 	LOG_DBG("Timer with ID %d started", thread_);
 }

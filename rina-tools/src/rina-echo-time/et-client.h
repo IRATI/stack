@@ -52,8 +52,7 @@ private:
 
 class Sender: public rina::SimpleThread {
 public:
-        Sender(rina::ThreadAttributes * threadAttributes,
-                 unsigned long echo_times,
+        Sender(unsigned long echo_times,
                  unsigned int data_size,
                  int dealloc_wait,
                  unsigned int lost_wait,

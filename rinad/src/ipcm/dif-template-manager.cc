@@ -37,11 +37,10 @@ using namespace std;
 namespace rinad {
 
 //Class DIFConfigFolderMonitor
-DIFConfigFolderMonitor::DIFConfigFolderMonitor(rina::ThreadAttributes * thread_attrs,
-		   	   	       	       const std::string& folder,
+DIFConfigFolderMonitor::DIFConfigFolderMonitor(const std::string& folder,
 		   	   	       	       DIFTemplateManager * dtm,
 		   	   	       	       DIFAllocator * da) :
-		   	   			       rina::SimpleThread(thread_attrs)
+		rina::SimpleThread(std::string("dif-config-folder-monitor"), false)
 {
 	folder_name = folder;
 	stop = false;
@@ -207,11 +206,7 @@ DIFTemplateManager::DIFTemplateManager(const std::string& folder,
 	}
 
 	//Create a thread that monitors the DIF template folder when required
-	rina::ThreadAttributes thread_attrs;
-	thread_attrs.setJoinable();
-	thread_attrs.setName("dif-config-folder-monitor");
-	monitor = new DIFConfigFolderMonitor(&thread_attrs,
-					     folder_name,
+	monitor = new DIFConfigFolderMonitor(folder_name,
 					     this,
 					     dif_allocator);
 	monitor->start();

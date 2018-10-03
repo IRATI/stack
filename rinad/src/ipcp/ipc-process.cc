@@ -612,10 +612,9 @@ IPCProcessImpl* IPCPFactory::getIPCP()
 }
 
 //Class KernelSyncTrigger
-KernelSyncTrigger::KernelSyncTrigger(rina::ThreadAttributes * attrs,
-		  	  	     AbstractIPCProcessImpl * ipc_process,
+KernelSyncTrigger::KernelSyncTrigger(AbstractIPCProcessImpl * ipc_process,
 		  	  	     unsigned int sync_period)
-	: rina::SimpleThread(attrs)
+	: rina::SimpleThread(std::string("Kernel-sync-trigger"), false)
 {
 	end = false;
 	ipcp = ipc_process;
