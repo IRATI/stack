@@ -277,10 +277,11 @@ WatchdogRIBObject::WatchdogRIBObject(IPCProcess * ipc_process,
 	declared_dead_interval_ = declared_dead_int_ms;
 	lock_ = new rina::Lockable();
 	timer_ = new rina::Timer();
-	timer_->scheduleTask(new WatchdogTimerTask(this,
-						   timer_,
-						   wathchdog_period_),
-			     wathchdog_period_);
+	//FIXME: Disabling watchdog timer, implementation has to be revised
+	//timer_->scheduleTask(new WatchdogTimerTask(this,
+	//					   timer_,
+	//					   wathchdog_period_),
+	//		     wathchdog_period_);
 }
 
 WatchdogRIBObject::~WatchdogRIBObject()
