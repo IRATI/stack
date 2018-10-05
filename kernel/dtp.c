@@ -1068,7 +1068,7 @@ struct dtp * dtp_create(struct efcp *       efcp,
         rtimer_init(tf_receiver_inactivity, &dtp->timers.receiver_inactivity, dtp);
         rtimer_init(tf_a, &dtp->timers.a, dtp);
         rtimer_init(tf_rate_window, &dtp->timers.rate_window, dtp);
-	rtimer_init(tf_rendezvous, &dtp->timers.rendezvous, dtp);
+        rtimer_init(tf_rendezvous, &dtp->timers.rendezvous, dtp);
 
         dtp->to_post = ringq_create(TO_POST_LENGTH);
         if (!dtp->to_post) {
@@ -1338,7 +1338,7 @@ int dtp_write(struct dtp * instance,
 				}
 				rcu_read_unlock();
 
-				/* Check if rendezvous PDU needs to be send*/
+				/* Check if rendezvous PDU needs to be sent*/
 				start_rv_timer = false;
 				spin_lock_bh(&instance->sv_lock);
 				if (!instance->dtcp->sv->rendezvous_sndr) {
@@ -1509,7 +1509,7 @@ int dtp_receive(struct dtp * instance,
         LOG_DBG("DTP receive started...");
 
         dtcp = instance->dtcp;
-	efcp = instance->efcp;
+        efcp = instance->efcp;
 
         spin_lock_bh(&instance->sv_lock);
         a           = instance->sv->A;
@@ -1607,6 +1607,11 @@ int dtp_receive(struct dtp * instance,
                 return -1;
         }
 #endif
+        /* This is an acceptable data PDU, stop reliable ACK timer */
+        if (dtcp->sv->rendezvous_rcvr) {
+        	dtcp->sv->rendezvous_rcvr = false;
+        	rtimer_stop(&dtcp->rendezvous_rcv);
+        }
         if (!a) {
                 bool set_lft_win_edge;
 

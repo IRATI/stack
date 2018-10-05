@@ -153,7 +153,7 @@ struct dtp {
          * NOTE: The DTP State Vector is discarded only after and explicit
          *       release by the AP or by the system (if the AP crashes).
          */
-        struct dtp_sv *           sv; /* The state-vector */
+        struct dtp_sv * 	sv; /* The state-vector */
         spinlock_t          sv_lock; /* The state vector lock (DTP & DTCP) */
 
         struct rina_component     base;
@@ -168,11 +168,11 @@ struct dtp {
                 struct timer_list a;
                 struct timer_list rate_window;
                 struct timer_list rtx;
-		struct timer_list rendezvous;
+                struct timer_list rendezvous;
         } timers;
-	struct robject		  robj;
+        struct robject	robj;
 
-	spinlock_t          lock;
+        spinlock_t		lock;
 };
 
 /* This is the DT-SV part maintained by DTCP */
@@ -266,10 +266,10 @@ struct dtcp_sv {
 
         /* Rate based both in and out-bound */
 
-	/* Last time-instant when the credit check has been done.
-	 * This is used by rate-based flow control mechanism.
-	 */
-	struct timespec last_time;
+		/* Last time-instant when the credit check has been done.
+		 * This is used by rate-based flow control mechanism.
+		 */
+		struct timespec last_time;
 
         /*
          * Control of duplicated control PDUs
@@ -306,9 +306,10 @@ struct dtcp {
         struct rina_component  base;
         struct dtcp_config *   cfg;
         struct rmt *           rmt;
+        struct timer_list 	   rendezvous_rcv;
 
         atomic_t               cpdus_in_transit;
-	struct robject         robj;
+        struct robject         robj;
 };
 
 

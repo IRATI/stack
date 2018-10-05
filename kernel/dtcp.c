@@ -171,6 +171,81 @@ RINA_SYSFS_OPS(dtcp);
 RINA_ATTRS(dtcp, rtt, srtt, rttvar, ps_name);
 RINA_KTYPE(dtcp);
 
+static int ctrl_pdu_send(struct dtcp * dtcp, pdu_type_t type, bool direct)
+{
+        struct du *   du;
+
+        du  = pdu_ctrl_generate(dtcp, type);
+        if (!du) {
+        	atomic_dec(&dtcp->cpdus_in_transit);
+        	return -1;
+        }
+
+        if (direct) {
+        	if (dtp_pdu_send(dtcp->parent, dtcp->rmt, du)){
+        		atomic_dec(&dtcp->cpdus_in_transit);
+        		du_destroy(du);
+        		return -1;
+        	}
+        } else {
+                if (dtcp_pdu_send(dtcp, du)){
+                	atomic_dec(&dtcp->cpdus_in_transit);
+                	du_destroy(du);
+                	return -1;
+                }
+        }
+
+        dump_we(dtcp, &du->pci);
+
+        atomic_dec(&dtcp->cpdus_in_transit);
+
+        return 0;
+}
+
+/* Runs the Rendezvous-at-receiver timer */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
+static void tf_rendezvous_rcv(void * data)
+#else
+static void tf_rendezvous_rcv(struct timer_list * tl)
+#endif
+{
+        struct dtcp * dtcp;
+        struct dtp *  dtp;
+        bool         start_rv_rcv_timer;
+        timeout_t    rv;
+
+        LOG_INFO("Running rendezvous-at-receiver timer...");
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
+        dtcp = (struct dtcp *) data;
+#else
+	dtcp = from_timer(dtcp, tl, rendezvous_rcv);
+#endif
+        if (!dtcp) {
+                LOG_ERR("No dtcp to work with");
+                return;
+        }
+        dtp = dtcp->parent;
+
+	/* Check if the reliable ACK PDU needs to be sent*/
+	start_rv_rcv_timer = false;
+	spin_lock_bh(&dtp->sv_lock);
+	if (dtcp->sv->rendezvous_rcvr) {
+		/* Start rendezvous-at-receiver timer, wait for Tr to fire */
+		start_rv_rcv_timer = true;
+		rv = jiffies_to_msecs(dtp->sv->tr);
+	}
+	spin_unlock_bh(&dtp->sv_lock);
+
+	if (start_rv_rcv_timer) {
+		LOG_INFO("DTCP Sending FC (CPU: %d)", smp_processor_id());
+		/* Send rendezvous PDU and start timer */
+		ctrl_pdu_send(dtcp, PDU_TYPE_FC, true);
+		rtimer_start(&dtcp->rendezvous_rcv, rv);
+	}
+
+        return;
+}
+
 static int push_pdus_rmt(struct dtcp * dtcp)
 {
         ASSERT(dtcp);
@@ -705,37 +780,6 @@ pdu_type_t pdu_ctrl_type_get(struct dtcp * dtcp, seq_num_t seq)
 }
 EXPORT_SYMBOL(pdu_ctrl_type_get);
 
-static int ctrl_pdu_send(struct dtcp * dtcp, pdu_type_t type, bool direct)
-{
-        struct du *   du;
-
-        du  = pdu_ctrl_generate(dtcp, type);
-        if (!du) {
-        	atomic_dec(&dtcp->cpdus_in_transit);
-        	return -1;
-        }
-
-        if (direct) {
-        	if (dtp_pdu_send(dtcp->parent, dtcp->rmt, du)){
-        		atomic_dec(&dtcp->cpdus_in_transit);
-        		du_destroy(du);
-        		return -1;
-        	}
-        } else {
-                if (dtcp_pdu_send(dtcp, du)){
-                	atomic_dec(&dtcp->cpdus_in_transit);
-                	du_destroy(du);
-                	return -1;
-                }
-        }
-
-        dump_we(dtcp, &du->pci);
-
-        atomic_dec(&dtcp->cpdus_in_transit);
-
-        return 0;
-}
-
 int dtcp_ack_flow_control_pdu_send(struct dtcp * dtcp, seq_num_t seq)
 {
         pdu_type_t    type;
@@ -1069,7 +1113,7 @@ EXPORT_SYMBOL(dtcp_set_policy_set_param);
 struct dtcp * dtcp_create(struct dtp *         dtp,
                           struct rmt *         rmt,
                           struct dtcp_config * dtcp_cfg,
-			  struct robject *     parent)
+						  struct robject *     parent)
 {
         struct dtcp * tmp;
         string_t *    ps_name;
@@ -1114,6 +1158,7 @@ struct dtcp * dtcp_create(struct dtp *         dtp,
         tmp->cfg  = dtcp_cfg;
         tmp->rmt  = rmt;
         atomic_set(&tmp->cpdus_in_transit, 0);
+        rtimer_init(tf_rendezvous_rcv, &tmp->rendezvous_rcv, tmp);
 
         rina_component_init(&tmp->base);
 

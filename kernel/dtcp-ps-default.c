@@ -34,6 +34,7 @@
 #include "dtp-utils.h"
 #include "du.h"
 #include "logs.h"
+#include "rds/rtimer.h"
 
 int default_lost_control_pdu(struct dtcp_ps * ps)
 {
@@ -304,14 +305,13 @@ int default_rcvr_rendezvous(struct dtcp_ps * ps, const struct pci * pci)
         struct dtcp *       dtcp;
         struct du *         du;
         seq_num_t rcv_lft, rcv_rt, snd_lft, snd_rt;
+        timeout_t rv;
 
         if (!ps)
                 return -1;
         dtcp = ps->dm;
         if (!dtcp)
                 return -1;
-
-        //LOG_INFO("Receiver rendezvous...");
 
         spin_lock_bh(&dtcp->parent->sv_lock);
         /* TODO: check if retransmission control enabled */
@@ -337,6 +337,8 @@ int default_rcvr_rendezvous(struct dtcp_ps * ps, const struct pci * pci)
 					snd_lft, snd_rt);
 
     		dtcp->sv->rcvr_rt_wind_edge = snd_lft + dtcp->sv->rcvr_credit;
+    		//this would be enough as a normal ACK to the RV packet, however, we need something specific for the reliable ACK
+    		//that is, a timer :(
         }
 
         if (dtcp->sv->flow_ctl && dtcp->parent->sv->rate_based) {
@@ -347,12 +349,18 @@ int default_rcvr_rendezvous(struct dtcp_ps * ps, const struct pci * pci)
          * expected to have DRF bit set to true
          */
 
+    	dtcp->sv->rendezvous_rcvr = true;
+
         spin_unlock_bh(&dtcp->parent->sv_lock);
 
         /* Send a ControlAck PDU to confirm reception of RendezvousPDU via
          * lastControlPDU value or send any other control PDU with Flow Control
          * information opening the window.
          */
+        if (dtcp->sv->rcvr_credit != 0) {
+    		rv = jiffies_to_msecs(dtcp->parent->sv->tr);
+        	rtimer_start(&dtcp->rendezvous_rcv, rv);
+        }
         du = pdu_ctrl_generate(dtcp, PDU_TYPE_FC);
         if (!du)
                 return -1;
