@@ -187,7 +187,8 @@ public:
 	IEnrollmentStateMachine(IPCProcess * ipcp,
 				const rina::ApplicationProcessNamingInformation& remote_naming_info,
 				int timeout,
-				const rina::ApplicationProcessNamingInformation& supporting_dif_name);
+				const rina::ApplicationProcessNamingInformation& supporting_dif_name,
+				rina::Timer * timer);
 	virtual ~IEnrollmentStateMachine();
 
 	/// Called by the EnrollmentTask when it got an M_RELEASE message
@@ -251,7 +252,7 @@ protected:
 	IPCPEnrollmentTask * enrollment_task_;
 	rina::IAuthPolicySet * auth_ps_;
 	int timeout_;
-	rina::Timer timer_;
+	rina::Timer * timer;
 	rina::Lockable lock_;
 	rina::TimerTask * last_scheduled_task_;
 	std::string state_;

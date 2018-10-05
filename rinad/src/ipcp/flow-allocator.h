@@ -365,7 +365,8 @@ public:
 			      IFlowAllocator * flow_allocator,
 			      int port_id,
 			      bool loc,
-			      const std::string& instance_id);
+			      const std::string& instance_id,
+			      rina::Timer * timer);
 	~FlowAllocatorInstance();
 	void set_application_entity(rina::ApplicationEntity * ae);
 	int get_port_id() const;
@@ -418,7 +419,8 @@ private:
 
 	void initialize(IPCProcess * ipc_process,
 			IFlowAllocator * flow_allocator,
-			int port_id, bool local);
+			int port_id, bool local,
+			rina::Timer * timer);
 	void replyToIPCManager(int result);
 	void releasePortId();
 	void complete_flow_allocation(bool success);
@@ -433,7 +435,7 @@ private:
 	IPCPSecurityManager * security_manager_;
 	FAIState state;
 
-	rina::Timer timer;
+	rina::Timer * timer;
 
 	/// The portId associated to this Flow Allocator instance
 	int port_id_;

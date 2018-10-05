@@ -443,7 +443,8 @@ void FlowAllocator::__createFlowRequestMessageReceived(configs::Flow * flow,
 					this,
 					port_id,
 					false,
-					ss.str());
+					ss.str(),
+					&timer);
 	fa_instances[port_id] = fai;
 
 	fai->createFlowRequestMessageReceived(flow,
@@ -556,7 +557,8 @@ void FlowAllocator::__submitAllocateRequest(const rina::FlowRequestEvent& event,
 					this,
 					port_id,
 					true,
-					ss.str());
+					ss.str(),
+					&timer);
 	fa_instances[port_id] = fai;
 
 	try {
@@ -727,10 +729,11 @@ FlowAllocatorInstance::FlowAllocatorInstance(IPCProcess * ipc_process,
 					     IFlowAllocator * flow_allocator,
 					     int port_id,
 					     bool loc,
-					     const std::string& instance_id)
+					     const std::string& instance_id,
+					     rina::Timer * timer_)
 	: IFlowAllocatorInstance(instance_id)
 {
-	initialize(ipc_process, flow_allocator, port_id, loc);
+	initialize(ipc_process, flow_allocator, port_id, loc, timer_);
 	LOG_IPCP_DBG("Created flow allocator instance to manage the flow identified by portId %d ",
 		     port_id);
 }
@@ -744,8 +747,10 @@ FlowAllocatorInstance::~FlowAllocatorInstance()
 
 void FlowAllocatorInstance::initialize(IPCProcess * ipc_process,
 				       IFlowAllocator * flow_allocator,
-				       int port_id, bool loc)
+				       int port_id, bool loc,
+				       rina::Timer * timer_)
 {
+	timer = timer_;
 	flow_allocator_ = flow_allocator;
 	ipc_process_ = ipc_process;
 	port_id_ = port_id;
@@ -1444,7 +1449,7 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 		TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(this,
 									      object_name_,
 									      true);
-		timer.scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
+		timer->scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
 		return;
 	}
 
@@ -1501,7 +1506,7 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 	TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(this,
 								      object_name_,
 								      true);
-	timer.scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
+	timer->scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
 }
 
 void FlowAllocatorInstance::deleteFlowRequestMessageReceived()
@@ -1528,7 +1533,7 @@ void FlowAllocatorInstance::deleteFlowRequestMessageReceived()
 								      object_name_,
 								      true);
 
-	timer.scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
+	timer->scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
 
 	if (flow_->internal) {
 		event = new rina::IPCPInternalFlowDeallocatedEvent(flow_->local_port_id);

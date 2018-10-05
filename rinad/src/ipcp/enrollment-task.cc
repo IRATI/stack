@@ -425,7 +425,8 @@ const std::string IEnrollmentStateMachine::STATE_TERMINATED = "TERMINATED";
 IEnrollmentStateMachine::IEnrollmentStateMachine(IPCProcess * ipcp,
 						 const rina::ApplicationProcessNamingInformation& remote_naming_info,
 						 int timeout,
-						 const rina::ApplicationProcessNamingInformation& supporting_dif_name)
+						 const rina::ApplicationProcessNamingInformation& supporting_dif_name,
+						 rina::Timer * timer_)
 {
 	if (!ipcp) {
 		throw rina::Exception("Bogus Application Process instance passed");
@@ -442,6 +443,7 @@ IEnrollmentStateMachine::IEnrollmentStateMachine(IPCProcess * ipcp,
 	auth_ps_ = 0;
 	enroller_ = false;
 	being_destroyed = false;
+	timer = timer_;
 }
 
 IEnrollmentStateMachine::~IEnrollmentStateMachine() {
@@ -494,7 +496,7 @@ std::string IEnrollmentStateMachine::get_state()
 void IEnrollmentStateMachine::reset_state()
 {
 	if (last_scheduled_task_)
-		timer_.cancelTask(last_scheduled_task_);
+		timer->cancelTask(last_scheduled_task_);
 
 	createOrUpdateNeighborInformation(false);
 	state_ = STATE_TERMINATED;
@@ -524,7 +526,7 @@ void IEnrollmentStateMachine::abortEnrollment(const std::string& reason,
 								       remote_peer_.internal_port_id,
 								       reason,
 								       sendReleaseMessage);
-	timer_.scheduleTask(task, 0);
+	timer->scheduleTask(task, 0);
 }
 
 void IEnrollmentStateMachine::createOrUpdateNeighborInformation(bool enrolled)

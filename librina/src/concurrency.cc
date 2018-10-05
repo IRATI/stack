@@ -109,11 +109,12 @@ Thread::Thread(void *(*startFunction)(void *), void * arg,
 	start_arg = arg;
 	tname = name;
 	is_detach = detached;
+	thread_id_ = 0;
 }
 
-Thread::Thread(pthread_t thread_id_)
+Thread::Thread(pthread_t tid)
 {
-	this->thread_id_ = thread_id_;
+	thread_id_ = tid;
 	start_arg = 0;
 	is_detach = false;
 	start_function = 0;
