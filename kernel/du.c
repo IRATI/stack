@@ -404,3 +404,84 @@ int du_shrink(struct du * du, size_t bytes)
 	return 0;
 }
 EXPORT_SYMBOL(du_shrink);
+
+struct du_list_item * du_list_item_create_gfp(struct du * du, gfp_t flags)
+{
+	struct du_list_item * item;
+
+	item = rkzalloc(sizeof(*item), flags);
+	if (unlikely(!item))
+		return NULL;
+
+	INIT_LIST_HEAD(&item->next);
+	item->du = du;
+
+	return item;
+}
+
+struct du_list_item * du_list_item_create(struct du * du)
+{
+	return du_list_item_create_gfp(du, GFP_KERNEL);
+}
+EXPORT_SYMBOL(du_list_item_create);
+
+struct du_list_item * du_list_item_create_ni(struct du * du)
+{
+	return du_list_item_create_gfp(du, GFP_ATOMIC);
+}
+EXPORT_SYMBOL(du_list_item_create_ni);
+
+int add_du_to_list_gfp(struct du_list * du_list, struct du * du, gfp_t flags)
+{
+	struct du_list_item * item;
+
+	item = du_list_item_create_gfp(du, flags);
+	if (!item)
+		return -1;
+
+	list_add_tail(&du_list->dus, &item->next);
+
+	return 0;
+}
+
+int add_du_to_list(struct du_list * du_list, struct du * du)
+{
+	return add_du_to_list_gfp(du_list, du, GFP_KERNEL);
+}
+EXPORT_SYMBOL(add_du_to_list);
+
+int add_du_to_list_ni(struct du_list * du_list, struct du * du)
+{
+	return add_du_to_list_gfp(du_list, du, GFP_ATOMIC);
+}
+EXPORT_SYMBOL(add_du_to_list_ni);
+
+int du_list_item_destroy(struct du_list_item * item)
+{
+	if (!item)
+		return -1;
+
+	du_destroy(item->du);
+
+	rkfree(item);
+
+	return 0;
+}
+EXPORT_SYMBOL(du_list_item_destroy);
+
+int du_list_destroy(struct du_list * du_list)
+{
+	struct du_list_item * pos, * next;
+
+	if (!du_list)
+		return -1;
+
+	list_for_each_entry_safe(pos, next, &du_list->dus, next) {
+		du_list_item_destroy(pos);
+	}
+
+	rkfree(du_list);
+
+	return  0;
+}
+EXPORT_SYMBOL(du_list_destroy);
