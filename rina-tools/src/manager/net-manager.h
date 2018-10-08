@@ -377,6 +377,10 @@ public:
 				const rina::cdap_rib::obj_info_t &obj,
 				const rina::cdap_rib::res_info_t &res);
 
+	void remoteDeleteResult(const rina::cdap_rib::con_handle_t &con,
+				const rina::cdap_rib::obj_info_t &obj,
+				const rina::cdap_rib::res_info_t &res);
+
 	// Operations to manage transactions
 	unsigned int get_next_tid();
 	int add_transaction_state(TransactionState* t);
@@ -388,6 +392,7 @@ public:
 	std::string list_systems(void);
 	netman_res_t create_ipcp(CreateIPCPPromise * promise, int system_id,
 				 const std::string& ipcp_desc);
+	netman_res_t destroy_ipcp(Promise * promise, int system_id, int ipcp_id);
 
 private:
         void n1_flow_accepted(const char * incoming_apn, int fd);

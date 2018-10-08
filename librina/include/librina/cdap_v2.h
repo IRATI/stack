@@ -177,6 +177,7 @@ class CDAPCallbackInterface
 					  const cdap_rib::res_info_t &res,
 					  const int invoke_id);
 	virtual void remote_delete_result(const cdap_rib::con_handle_t &con,
+					  const cdap_rib::obj_info_t &obj,
 					  const cdap_rib::res_info_t &res,
 					  const int invoke_id);
 	virtual void remote_read_result(const cdap_rib::con_handle_t &con,

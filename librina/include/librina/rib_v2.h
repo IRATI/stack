@@ -177,6 +177,7 @@ public:
 					const cdap_rib::obj_info_t &obj,
 					const cdap_rib::res_info_t &res);
 	virtual void remoteDeleteResult(const cdap_rib::con_handle_t &con,
+					const cdap_rib::obj_info_t &obj,
 					const cdap_rib::res_info_t &res);
 	virtual void remoteReadResult(const cdap_rib::con_handle_t &con,
 				      const cdap_rib::obj_info_t &obj,

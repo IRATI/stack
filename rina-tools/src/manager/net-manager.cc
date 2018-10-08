@@ -74,6 +74,47 @@ private:
 	NetworkManager * netman;
 };
 
+class DestroyIPCPConsoleCmd: public rina::ConsoleCmdInfo {
+public:
+	DestroyIPCPConsoleCmd(NMConsole * console, NetworkManager * nm) :
+		rina::ConsoleCmdInfo("USAGE: destroy-ipcp <system-id> <ipcp-id>", console) {
+		netman = nm;
+	};
+
+	int execute(std::vector<std::string>& args) {
+		Promise promise;
+		int system_id, ipcp_id;
+
+		if (args.size() < 3) {
+			console->outstream << console->commands_map[args[0]]->usage << std::endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		if(rina::string2int(args[1], system_id)){
+			console->outstream << "Invalid system id" << std::endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		if(rina::string2int(args[2], ipcp_id)){
+			console->outstream << "Invalid IPCP id" << std::endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		if(netman->destroy_ipcp(&promise, system_id, ipcp_id) == NETMAN_FAILURE ||
+				promise.wait() != NETMAN_SUCCESS){
+			console->outstream << "Error while destroying IPC process" << std::endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		console->outstream << "IPC process destroyed successfully [id = "
+		      << ipcp_id <<"]" << std::endl;
+		return rina::UNIXConsole::CMDRETCONT;
+	}
+
+private:
+	NetworkManager * netman;
+};
+
 class ListSystemsConsoleCmd: public rina::ConsoleCmdInfo {
 public:
 	ListSystemsConsoleCmd(NMConsole * console, NetworkManager * nm) :
@@ -112,6 +153,7 @@ NMConsole::NMConsole(const std::string& socket_path, NetworkManager * nm) :
 {
 	netman = nm;
 	commands_map["create-ipcp"] = new CreateIPCPConsoleCmd(this, netman);
+	commands_map["destroy-ipcp"] = new DestroyIPCPConsoleCmd(this, netman);
 	commands_map["list-systems"] = new ListSystemsConsoleCmd(this, netman);
 	commands_map["query-rib"] = new QueryRIBConsoleCmd(this, netman);
 }
@@ -752,7 +794,7 @@ netman_res_t NetworkManager::create_ipcp(CreateIPCPPromise * promise, int system
 		return NETMAN_FAILURE;
 	}
 
-	obj_info.name_ = "/csid=1/psid=1/kernelap/osap/ipcps/ipcpid=1";
+	obj_info.name_ = "/csid=1/psid=1/kernelap/osap/ipcps/ipcpid";
 	obj_info.class_ = "IPCProcess";
 	encoder.encode(ipcp_config, obj_info.value_);
 
@@ -787,7 +829,103 @@ void NetworkManager::remoteCreateResult(const rina::cdap_rib::con_handle_t &con,
 					const rina::cdap_rib::res_info_t &res)
 {
 	std::stringstream ss;
-	MASystemTransState* trans;
+	MASystemTransState * trans;
+	CreateIPCPPromise * promise;
+	int ipcp_id;
+
+	ss << con.port_id << "-" << obj.name_.substr(0, obj.name_.find("ipcpid") + 6);
+
+	LOG_INFO("Received object reply for object name %s", obj.name_.c_str());
+
+	// Retrieve transaction
+	trans = dynamic_cast<MASystemTransState*>(get_transaction_state(ss.str()));
+	if(!trans){
+		LOG_ERR("Could not retrieve transaction with id %s", ss.str().c_str());
+		return;
+	}
+
+	promise = dynamic_cast<CreateIPCPPromise*>(trans->promise);
+	if (!promise) {
+		LOG_ERR("Could not retrieve promise from transaction");
+	}
+
+	ipcp_id = 0;
+	rina::string2int(obj.name_.substr(obj.name_.find("ipcpid") + 7), ipcp_id);
+
+	promise->ipcp_id = ipcp_id;
+
+	// Mark transaction as completed
+	if (res.code_ == rina::cdap_rib::CDAP_SUCCESS) {
+		trans->completed(NETMAN_SUCCESS);
+	} else {
+		trans->completed(NETMAN_FAILURE);
+	}
+	remove_transaction_state(trans->tid);
+}
+
+netman_res_t NetworkManager::destroy_ipcp(Promise * promise, int system_id, int ipcp_id)
+{
+	MASystemTransState * trans;
+	std::map<std::string, ManagedSystem *>::iterator it;
+	ManagedSystem * mas;
+	rina::cdap_rib::res_info_t res;
+	rina::cdap_rib::obj_info_t obj_info;
+        rina::cdap_rib::flags_t flags;
+        rina::cdap_rib::filt_info_t filt;
+        std::stringstream ss;
+
+	//1 Retrieve system from system-id, if it doesn't exist, return error
+	rina::ScopedLock g(et->lock);
+	mas = NULL;
+	for (it = et->enrolled_systems.begin();
+			it != et->enrolled_systems.end(); ++it) {
+		if (it->second->system_id == system_id) {
+			mas = it->second;
+		}
+	}
+
+	if (!mas) {
+		LOG_ERR("Could not find Managed System with id %d", system_id);
+		return NETMAN_FAILURE;
+	}
+
+	ss << "/csid=1/psid=1/kernelap/osap/ipcps/ipcpid=" << ipcp_id;
+	obj_info.name_ = ss.str();;
+	obj_info.class_ = "IPCProcess";
+	ss.str(std::string());
+
+	ss << mas->con.port_id << "-" << obj_info.name_;
+	//3 Store transaction
+	trans = new MASystemTransState(this, promise, system_id, ss.str());
+	if (!trans) {
+		LOG_ERR("Unable to allocate memory for the transaction object. Out of memory!");
+		return NETMAN_FAILURE;
+	}
+
+	if (add_transaction_state(trans) < 0)
+	{
+		LOG_ERR("Unable to add transaction; out of memory?");
+		return NETMAN_FAILURE;
+	}
+
+	//4 Send CDAP message
+	try{
+		rd->getProxy()->remote_delete(mas->con, obj_info, flags, filt, this);
+	}catch(rina::Exception &e){
+		LOG_ERR("Problems sending CDAP message: %s", e.what());
+		remove_transaction_state(trans->tid);
+		return NETMAN_FAILURE;
+	}
+
+	return NETMAN_PENDING;
+}
+
+void NetworkManager::remoteDeleteResult(const rina::cdap_rib::con_handle_t &con,
+					const rina::cdap_rib::obj_info_t &obj,
+					const rina::cdap_rib::res_info_t &res)
+{
+	std::stringstream ss;
+	MASystemTransState * trans;
 
 	ss << con.port_id << "-" << obj.name_;
 

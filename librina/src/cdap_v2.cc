@@ -3711,6 +3711,7 @@ void AppCDAPIOHandler::invoke_callback(rina::cdap_rib::con_handle_t& con,
 			break;
 		case cdap_m_t::M_DELETE_R:
 			callback_->remote_delete_result(con,
+							obj,
 							res,
 							invoke_id);
 			break;
@@ -3869,6 +3870,7 @@ void CDAPCallbackInterface::remote_create_result(const cdap_rib::con_handle_t &c
 }
 
 void CDAPCallbackInterface::remote_delete_result(const cdap_rib::con_handle_t &con,
+						 const cdap_rib::obj_info_t &obj,
 						 const cdap_rib::res_info_t &res,
 						 const int invoke_id)
 {

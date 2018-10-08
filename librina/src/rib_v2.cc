@@ -1967,6 +1967,7 @@ protected:
 				  const cdap_rib::res_info_t &res,
 				  const int invoke_id);
 	void remote_delete_result(const cdap_rib::con_handle_t &con,
+				  const cdap_rib::obj_info_t &obj,
 				  const cdap_rib::res_info_t &res,
 				  const int invoke_id);
 	void remote_read_result(const cdap_rib::con_handle_t &con,
@@ -2906,6 +2907,7 @@ void RIBDaemon::remote_create_result(const cdap_rib::con_handle_t &con,
 }
 
 void RIBDaemon::remote_delete_result(const cdap_rib::con_handle_t &con,
+				     const cdap_rib::obj_info_t &obj,
 				     const cdap_rib::res_info_t &res,
 				     const int invoke_id)
 {
@@ -2917,6 +2919,7 @@ void RIBDaemon::remote_delete_result(const cdap_rib::con_handle_t &con,
 	if (handler) {
 		try {
 			handler->remoteDeleteResult(con,
+						    obj,
 						    res);
 		} catch (Exception &e) {
 			LOG_ERR("Unable to process the response");
@@ -3716,7 +3719,8 @@ void RIBOpsRespHandler::remoteCreateResult(const cdap_rib::con_handle_t &con,
 }
 
 void RIBOpsRespHandler::remoteDeleteResult(const cdap_rib::con_handle_t &con,
-					    const cdap_rib::res_info_t &res)
+					   const cdap_rib::obj_info_t &obj,
+					   const cdap_rib::res_info_t &res)
 {
 	operation_not_supported();
 }

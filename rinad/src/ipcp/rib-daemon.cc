@@ -399,6 +399,7 @@ void IPCPCDAPIOHandler::invoke_callback(rina::cdap_rib::con_handle_t& con_handle
 			break;
 		case rina::cdap::cdap_m_t::M_DELETE_R:
 			callback_->remote_delete_result(con_handle,
+							obj,
 							res,
 							invoke_id);
 			break;
