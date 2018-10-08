@@ -570,6 +570,9 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 		dt.dif_integrity_ = dt_const
 				.get("difIntegrity", false)
 				.asBool();
+		dt.dif_fragmentation_ = dt_const
+				.get("difFragmentation", false)
+				.asBool();
 		dt.length_length_ = static_cast<unsigned short>
 		(dt_const
 				.get("lengthLength", 0)
@@ -587,6 +590,9 @@ rinad::DIFTemplate * parse_dif_template_config(const Json::Value & root,
 				.asUInt();
 		dt.max_pdu_size_ = dt_const
 				.get("maxPduSize", 0)
+				.asUInt();
+		dt.max_sdu_size_ = dt_const
+				.get("maxSduSize", 0)
 				.asUInt();
 		dt.port_id_length_ =
 				static_cast<unsigned short>

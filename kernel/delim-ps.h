@@ -32,7 +32,10 @@ struct delim_ps {
 
 	/* Behavioural policies. */
 	int (* delim_fragment)(struct delim_ps *, struct du *,
-			       struct du_list * du_list);
+			       struct du_list *);
+
+	/* Reference used to access the Delimiting data model. */
+	struct delim * dm;
 
 	/* Data private to the policy-set implementation. */
 	void *       priv;

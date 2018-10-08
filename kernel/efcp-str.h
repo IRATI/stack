@@ -24,6 +24,7 @@
 #include <linux/list.h>
 
 #include "common.h"
+#include "delim.h"
 #include "kfa.h"
 #include "rmt.h"
 #include "ps-factory.h"
@@ -78,6 +79,7 @@ struct efcp {
         struct connection *     connection;
         struct ipcp_instance *  user_ipcp;
         struct dtp *            dtp;
+        struct delim *		delim;
         struct efcp_container * container;
         enum efcp_state         state;
         atomic_t                pending_ops;

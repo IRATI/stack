@@ -128,14 +128,14 @@ SDUReader::SDUReader(int port_id, int fd_, NetworkManager * nm)
 int SDUReader::run()
 {
 	rina::ser_obj_t message;
-	message.message_ = new unsigned char[5000];
+	message.message_ = new unsigned char[10000];
 	int bytes_read = 0;
 
 	LOG_DBG("SDU reader of port-id %d starting", portid);
 
 	while(true) {
 		LOG_DBG("Going to read from file descriptor %d", fd);
-		bytes_read = read(fd, message.message_, 5000);
+		bytes_read = read(fd, message.message_, 10000);
 		if (bytes_read <= 0) {
 			LOG_ERR("Read error or EOF: %d", bytes_read);
 			break;

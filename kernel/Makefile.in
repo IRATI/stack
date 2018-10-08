@@ -45,7 +45,7 @@ rina-irati-core-y:=						\
 	dtp-conf-utils.o dtcp-conf-utils.o      		\
 	ipcp-factories.o ipcp-instances.o			\
 	cidm.o dtp-utils.o dtcp.o dtp.o efcp-utils.o efcp.o	\
-	pff.o rmt.o						\
+	delim.o pff.o rmt.o						\
 	pim.o pidm.o kfa-utils.o kfa.o		\
 	kipcm-utils.o kipcm.o					\
 	sdup.o							\
@@ -53,6 +53,7 @@ rina-irati-core-y:=						\
     rmt-ps-default.o                                        \
     dtp-ps-default.o                                        \
     dtcp-ps-default.o                                       \
+    delim-ps-default.o										\
     pff-ps-default.o                                        \
     sdup-crypto-ps-default.o                                \
     sdup-errc-ps-default.o                                  \

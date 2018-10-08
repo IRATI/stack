@@ -33,6 +33,9 @@ struct delim {
 	/* The parent EFCP object instance */
 	struct efcp * efcp;
 
+	/* The maximum fragment size for the DIF */
+	uint32_t max_fragment_size;
+
 	struct robject robj;
 };
 

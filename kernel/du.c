@@ -456,12 +456,13 @@ int add_du_to_list_ni(struct du_list * du_list, struct du * du)
 }
 EXPORT_SYMBOL(add_du_to_list_ni);
 
-int du_list_item_destroy(struct du_list_item * item)
+int du_list_item_destroy(struct du_list_item * item, bool destroy_du)
 {
 	if (!item)
 		return -1;
 
-	du_destroy(item->du);
+	if (destroy_du)
+		du_destroy(item->du);
 
 	rkfree(item);
 
@@ -469,7 +470,32 @@ int du_list_item_destroy(struct du_list_item * item)
 }
 EXPORT_SYMBOL(du_list_item_destroy);
 
-int du_list_destroy(struct du_list * du_list)
+struct du_list * du_list_create_gfp(gfp_t flags)
+{
+	struct du_list * du_list = NULL;
+
+	du_list = rkzalloc(sizeof(*du_list), flags);
+	if (unlikely(!du_list))
+		return NULL;
+
+	INIT_LIST_HEAD(&du_list->dus);
+
+	return du_list;
+}
+
+struct du_list * du_list_create()
+{
+	return du_list_create_gfp(GFP_KERNEL);
+}
+EXPORT_SYMBOL(du_list_create);
+
+struct du_list * du_list_create_ni()
+{
+	return du_list_create_gfp(GFP_ATOMIC);
+}
+EXPORT_SYMBOL(du_list_create_ni);
+
+int du_list_destroy(struct du_list * du_list, bool destroy_dus)
 {
 	struct du_list_item * pos, * next;
 
@@ -477,7 +503,7 @@ int du_list_destroy(struct du_list * du_list)
 		return -1;
 
 	list_for_each_entry_safe(pos, next, &du_list->dus, next) {
-		du_list_item_destroy(pos);
+		du_list_item_destroy(pos, destroy_dus);
 	}
 
 	rkfree(du_list);

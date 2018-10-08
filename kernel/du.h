@@ -72,7 +72,9 @@ struct du_list_item * du_list_item_create(struct du * du);
 struct du_list_item * du_list_item_create_ni(struct du * du);
 int add_du_to_list(struct du_list * du_list, struct du * du);
 int add_du_to_list_ni(struct du_list * du_list, struct du * du);
-int du_list_destroy(struct du_list * du_list);
-int du_list_item_destroy(struct du_list_item * item);
+int du_list_item_destroy(struct du_list_item * item, bool destroy_du);
+struct du_list * du_list_create(void);
+struct du_list * du_list_create_ni(void);
+int du_list_destroy(struct du_list * du_list, bool destroy_dus);
 
 #endif

@@ -55,11 +55,15 @@ static ssize_t delim_attr_show(struct robject *        robj,
 		return sprintf(buf, "%s\n", delim->base.ps_factory->name);
 	}
 
+	if (strcmp(robject_attr_name(attr), "max_fragment") == 0) {
+		return sprintf(buf, "%u\n", delim->max_fragment_size);
+	}
+
 	return 0;
 }
 
 RINA_SYSFS_OPS(delim);
-RINA_ATTRS(delim, ps_name);
+RINA_ATTRS(delim, ps_name, max_fragment);
 RINA_KTYPE(delim);
 
 struct delim * delim_create(struct efcp * efcp, struct robject * parent)
@@ -76,6 +80,7 @@ struct delim * delim_create(struct efcp * efcp, struct robject * parent)
 		return NULL;
 
 	delim->efcp = efcp;
+	delim->max_fragment_size = 0;
 	rina_component_init(&delim->base);
 
 	if (robject_init_and_add(&delim->robj, &delim_rtype, parent, "delim")) {
