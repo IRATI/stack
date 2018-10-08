@@ -31,6 +31,7 @@
 #include "sdup.h"
 #include "delim-ps.h"
 #include "irati/kucommon.h"
+#include "rds/rmem.h"
 
 static struct policy_set_list delim_policy_sets = {
 	.head = LIST_HEAD_INIT(delim_policy_sets.head)
@@ -40,7 +41,26 @@ struct delim * delim_from_component(struct rina_component *component)
 { return container_of(component, struct delim, base); }
 EXPORT_SYMBOL(delim_from_component);
 
-struct rmt *tmp;
+static ssize_t delim_attr_show(struct robject *        robj,
+                               struct robj_attribute * attr,
+                               char *                  buf)
+{
+	struct delim * delim;
+
+	delim = container_of(robj, struct delim, robj);
+	if (!delim || !delim->base.ps)
+		return 0;
+
+	if (strcmp(robject_attr_name(attr), "ps_name") == 0) {
+		return sprintf(buf, "%s\n", delim->base.ps_factory->name);
+	}
+
+	return 0;
+}
+
+RINA_SYSFS_OPS(delim);
+RINA_ATTRS(delim, ps_name);
+RINA_KTYPE(delim);
 
 struct delim * delim_create(struct efcp * efcp, struct robject * parent)
 {
@@ -51,19 +71,41 @@ struct delim * delim_create(struct efcp * efcp, struct robject * parent)
 		return NULL;
 	}
 
-	delim = rkzalloc(sizeof(*tmp), GFP_KERNEL);
+	delim = rkzalloc(sizeof(*delim), GFP_KERNEL);
 	if (!delim)
 		return NULL;
 
 	delim->efcp = efcp;
 	rina_component_init(&delim->base);
 
-	if (robject_init_and_add(&tmp->robj, &rmt_rtype, parent, "delim")) {
+	if (robject_init_and_add(&delim->robj, &delim_rtype, parent, "delim")) {
                 LOG_ERR("Failed to create Delimiting sysfs entry");
-                rmt_destroy(tmp);
+                delim_destroy(delim);
                 return NULL;
 	}
+
+	return delim;
 }
+EXPORT_SYMBOL(delim_create);
+
+int delim_destroy(struct delim * delim)
+{
+	if (!delim) {
+		LOG_ERR("Bogus instance passed, bailing out");
+		return -1;
+	}
+
+	robject_del(&delim->robj);
+
+	rina_component_fini(&delim->base);
+
+	rkfree(delim);
+
+	LOG_DBG("Instance %pK finalized successfully", delim);
+
+	return 0;
+}
+EXPORT_SYMBOL(delim_destroy);
 
 int delim_select_policy_set(struct delim * delim,
                             const string_t *  path,
@@ -90,7 +132,7 @@ int delim_select_policy_set(struct delim * delim,
                 if (!ps->delim_fragment) {
                         LOG_ERR("Delimiting policy set is invalid, policies are "
                                 "missing:\n"
-                                "       fragment=%p\n"
+                                "       fragment=%p\n",
                                 ps->delim_fragment);
                         trans.state = PS_SEL_TRANS_ABORTED;
                 }
@@ -107,7 +149,7 @@ int delim_set_policy_set_param(struct delim * delim,
 			       const char * name,
 			       const char * value)
 {
-        struct sdup_crypto_ps * ps;
+        struct delim_ps * ps;
         int ret = -1;
 
         if (!delim || !path || !name || !value) {
@@ -122,7 +164,7 @@ int delim_set_policy_set_param(struct delim * delim,
                 rcu_read_lock();
 
                 ps = container_of(rcu_dereference(delim->base.ps),
-                                  struct sdup_crypto_ps, base);
+                                  struct delim_ps, base);
                 if (!ps) {
                         LOG_ERR("No policy-set selected for this Delimiting component");
                 } else {
