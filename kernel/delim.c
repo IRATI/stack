@@ -134,11 +134,13 @@ int delim_select_policy_set(struct delim * delim,
                 struct delim_ps *ps;
 
                 ps = container_of(trans.candidate_ps, struct delim_ps, base);
-                if (!ps->delim_fragment) {
+                if (!ps->delim_fragment  || !ps->delim_process_udf) {
                         LOG_ERR("Delimiting policy set is invalid, policies are "
                                 "missing:\n"
-                                "       fragment=%p\n",
-                                ps->delim_fragment);
+                                "       fragment=%p\n"
+                                "       process_udf=%p\n",
+                                ps->delim_fragment,
+                                ps->delim_process_udf);
                         trans.state = PS_SEL_TRANS_ABORTED;
                 }
         }

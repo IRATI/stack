@@ -1,5 +1,6 @@
 /*
- * Default policy set for delimiting
+ * Default policy set for delimiting, partially implements the general
+ * delimiting module spec
  *
  *    Eduard Grasa <eduard.grasa@i2cat.net>
  *
@@ -28,5 +29,7 @@ struct ps_base * delim_ps_default_create(struct rina_component *component);
 void delim_ps_default_destroy(struct ps_base *bps);
 int default_delim_fragment(struct delim_ps * ps, struct du * du,
 			   struct du_list * du_list);
+int default_delim_process_udf(struct delim_ps * ps, struct du * du,
+			      struct du_list * du_list);
 
 #endif /* DELIMITING_PS_DEFAULT_H */

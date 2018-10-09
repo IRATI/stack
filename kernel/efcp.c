@@ -883,10 +883,43 @@ int efcp_enqueue(struct efcp * efcp,
                  port_id_t     port,
                  struct du *   du)
 {
+	struct delim_ps * delim_ps = NULL;
+	struct du_list * du_list = NULL;
+	struct du_list_item * next_du = NULL;
+
         if (!efcp->user_ipcp) {
         	LOG_ERR("Flow is being deallocated, dropping SDU");
         	du_destroy(du);
         	return -1;
+        }
+
+        /* Reassembly goes here */
+        if (efcp->delim) {
+		delim_ps = container_of(rcu_dereference(efcp->delim->base.ps),
+						        struct delim_ps,
+						        base);
+
+		du_list = du_list_create();
+		if (!du_list)
+			return -1;
+
+		if (delim_ps->delim_process_udf(delim_ps, du, du_list)) {
+			LOG_ERR("Error processing EFCP UDF by delimiting");
+			return -1;
+		}
+
+	        list_for_each_entry(next_du, &(du_list->dus), next) {
+	                if (efcp->user_ipcp->ops->du_enqueue(efcp->user_ipcp->data,
+	                                                     port,
+	                                                     next_du->du)) {
+	                        LOG_ERR("Upper ipcp could not enqueue sdu to port: %d", port);
+	                        return -1;
+	                }
+	        }
+
+	        du_list_destroy(du_list, false);
+
+		return 0;
         }
 
         if (efcp->user_ipcp->ops->du_enqueue(efcp->user_ipcp->data,
@@ -895,6 +928,7 @@ int efcp_enqueue(struct efcp * efcp,
                 LOG_ERR("Upper ipcp could not enqueue sdu to port: %d", port);
                 return -1;
         }
+
         return 0;
 }
 

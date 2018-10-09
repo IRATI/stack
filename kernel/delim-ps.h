@@ -34,6 +34,11 @@ struct delim_ps {
 	int (* delim_fragment)(struct delim_ps *, struct du *,
 			       struct du_list *);
 
+	/* Process an EFCP User-Data-Field as delivered by EFCP,
+	 * perform reassembly and/or separation of SDUs */
+	int (* delim_process_udf)(struct delim_ps *, struct du *,
+				  struct du_list *);
+
 	/* Reference used to access the Delimiting data model. */
 	struct delim * dm;
 

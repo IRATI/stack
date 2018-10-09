@@ -32,7 +32,39 @@
 #include "du.h"
 #include "logs.h"
 
-/* FIXME: Trivial implementation, does nothing */
+/* Easy case, the PDU will contain a single, complete SDU.
+ * Hence the syntax is <SDUDelimiterFlags> <SDUData>
+ */
+static int fragment_single_full_sdu(struct du * du,
+		   	   	    struct du_list * du_list)
+{
+	char flags;
+
+	/* Grow DU with 1 byte, to add the SDU Flags */
+	if (du_head_grow(du,1)) {
+		LOG_ERR("Problems growing du");
+		du_destroy(du);
+		return -1;
+	}
+
+	/* The second byte is 0 (no seqnum) 1 (nolenth) 11 (full SDU) */
+	flags = 0x07;
+
+	memcpy(du_buffer(du), &flags, 1);
+
+	if (add_du_to_list(du_list, du)) {
+		LOG_ERR("Problems adding DU to list");
+		du_destroy(du);
+		return -1;
+	}
+
+	return 0;
+}
+
+/* Does not use SDU sequence numbers, assumes that max SDU gap
+ * for the flow is either 0 or -1 (don't care). It relies on PDU
+ * sequence numbers for in-order delivery.
+ */
 int default_delim_fragment(struct delim_ps * ps, struct du * du,
 			   struct du_list * du_list)
 {
@@ -41,15 +73,83 @@ int default_delim_fragment(struct delim_ps * ps, struct du * du,
 	delim = ps->dm;
 	if (!delim) {
 		LOG_ERR("No instance passed, cannot run policy");
+		du_destroy(du);
 		return -1;
 	}
 
 	if (du_len(du) > delim->max_fragment_size) {
+		/* TODO deal with this more difficult case */
 		LOG_WARN("SDU is too large %d", du_len(du));
+		/*du_destroy(du);
+		return -1;*/
+	}
+
+	return fragment_single_full_sdu(du, du_list);
+}
+
+/* Easy case, the UDF contains a single, complete SDU.
+ * Hence the syntax is <SDUDelimiterFlags> <SDUData>
+ */
+static int process_single_full_sdu(struct du * du,
+		   	   	   struct du_list * du_list)
+{
+	if (du_head_shrink(du, 1)) {
+		LOG_ERR("Error shrinking DU (User Data Field)");
+		du_destroy(du);
+		return -1;
 	}
 
 	if (add_du_to_list(du_list, du)) {
 		LOG_ERR("Problems adding DU to list");
+		du_destroy(du);
+		return -1;
+	}
+
+	return 0;
+}
+
+/* Does not use SDU sequence numbers, assumes that max SDU gap
+ * for the flow is either 0 or -1 (don't care). It relies on PDU
+ * sequence numbers for in-order delivery.
+ */
+int default_delim_process_udf(struct delim_ps * ps, struct du * du,
+			      struct du_list * du_list)
+{
+	struct delim * delim;
+	char flags;
+
+	delim = ps->dm;
+	if (!delim) {
+		LOG_ERR("No instance passed, cannot run policy");
+		du_destroy(du);
+		return -1;
+	}
+
+	memcpy(&flags, du_buffer(du), 1);
+
+	if (flags & 0x08) {
+		LOG_ERR("SDU sequence number not supported by this policy");
+		du_destroy(du);
+		return -1;
+	}
+
+	if (flags & 0x04) {
+		/* No length flag, the User Data Field contains a single
+		 * SDU or fragment
+		 */
+		if ((flags & 0x02) && (flags & 0x01)) {
+			/*UDF contains a full SDU*/
+			return process_single_full_sdu(du, du_list);
+		} else {
+			/* TODO handle this */
+			LOG_ERR("Cannot handle this  yet");
+			du_destroy(du);
+			return -1;
+		}
+	} else {
+		/* TODO handle this */
+		LOG_ERR("Cannot handle multiple fragments yet");
+		du_destroy(du);
 		return -1;
 	}
 
@@ -69,6 +169,7 @@ struct ps_base * delim_ps_default_create(struct rina_component * component)
         ps->dm                          = delim;
         ps->priv                        = NULL;
         ps->delim_fragment		= default_delim_fragment;
+        ps->delim_process_udf		= default_delim_process_udf;
 
         return &ps->base;
 }
