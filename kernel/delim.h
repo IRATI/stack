@@ -36,6 +36,10 @@ struct delim {
 	/* The maximum fragment size for the DIF */
 	uint32_t max_fragment_size;
 
+	/* Lists to facilitate interacting with the policy */
+	struct du_list * tx_dus;
+	struct du_list * rx_dus;
+
 	struct robject robj;
 };
 

@@ -439,7 +439,7 @@ int add_du_to_list_gfp(struct du_list * du_list, struct du * du, gfp_t flags)
 	if (!item)
 		return -1;
 
-	list_add_tail(&du_list->dus, &item->next);
+	list_add_tail(&item->next, &du_list->dus);
 
 	return 0;
 }
@@ -497,6 +497,17 @@ EXPORT_SYMBOL(du_list_create_ni);
 
 int du_list_destroy(struct du_list * du_list, bool destroy_dus)
 {
+	if (du_list_clear(du_list, destroy_dus))
+		return -1;
+
+	rkfree(du_list);
+
+	return  0;
+}
+EXPORT_SYMBOL(du_list_destroy);
+
+int du_list_clear(struct du_list * du_list, bool destroy_dus)
+{
 	struct du_list_item * pos, * next;
 
 	if (!du_list)
@@ -506,8 +517,8 @@ int du_list_destroy(struct du_list * du_list, bool destroy_dus)
 		du_list_item_destroy(pos, destroy_dus);
 	}
 
-	rkfree(du_list);
+	INIT_LIST_HEAD(&du_list->dus);
 
-	return  0;
+	return 0;
 }
-EXPORT_SYMBOL(du_list_destroy);
+EXPORT_SYMBOL(du_list_clear);

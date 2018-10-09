@@ -82,11 +82,27 @@ struct delim * delim_create(struct efcp * efcp, struct robject * parent)
 	delim->efcp = efcp;
 	delim->max_fragment_size = 0;
 	rina_component_init(&delim->base);
+	delim->tx_dus = NULL;
+	delim->rx_dus = NULL;
 
 	if (robject_init_and_add(&delim->robj, &delim_rtype, parent, "delim")) {
                 LOG_ERR("Failed to create Delimiting sysfs entry");
                 delim_destroy(delim);
                 return NULL;
+	}
+
+	delim->tx_dus = du_list_create();
+	if (!delim->tx_dus) {
+		LOG_ERR("Failed to create list of DUs to tx");
+		delim_destroy(delim);
+		return NULL;
+	}
+
+	delim->rx_dus = du_list_create();
+	if (!delim->rx_dus) {
+		LOG_ERR("Failed to create list of DUs to rx");
+		delim_destroy(delim);
+		return NULL;
 	}
 
 	return delim;
@@ -103,6 +119,14 @@ int delim_destroy(struct delim * delim)
 	robject_del(&delim->robj);
 
 	rina_component_fini(&delim->base);
+
+	if (delim->tx_dus) {
+		du_list_destroy(delim->tx_dus, true);
+	}
+
+	if (delim->rx_dus) {
+		du_list_destroy(delim->rx_dus, true);
+	}
 
 	rkfree(delim);
 

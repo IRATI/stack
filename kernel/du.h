@@ -76,5 +76,6 @@ int du_list_item_destroy(struct du_list_item * item, bool destroy_du);
 struct du_list * du_list_create(void);
 struct du_list * du_list_create_ni(void);
 int du_list_destroy(struct du_list * du_list, bool destroy_dus);
+int du_list_clear(struct du_list * du_list, bool destroy_dus);
 
 #endif

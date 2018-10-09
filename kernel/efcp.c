@@ -299,7 +299,6 @@ static int efcp_write(struct efcp * efcp,
                       struct du *  du)
 {
 	struct delim_ps * delim_ps = NULL;
-	struct du_list * du_list = NULL;
 	struct du_list_item * next_du = NULL;
 
 	/* Handle fragmentation here */
@@ -308,23 +307,22 @@ static int efcp_write(struct efcp * efcp,
 						        struct delim_ps,
 						        base);
 
-		du_list = du_list_create();
-		if (!du_list)
-			return -1;
-
-		if (delim_ps->delim_fragment(delim_ps, du, du_list)) {
+		if (delim_ps->delim_fragment(delim_ps, du,
+					     efcp->delim->tx_dus)) {
 			LOG_ERR("Error performing SDU fragmentation");
+			du_list_clear(efcp->delim->tx_dus, true);
 			return -1;
 		}
 
-	        list_for_each_entry(next_du, &(du_list->dus), next) {
+	        list_for_each_entry(next_du, &(efcp->delim->tx_dus->dus),
+	        		    next) {
 	                if (dtp_write(efcp->dtp, next_du->du)) {
 	                	LOG_ERR("Could not write SDU fragment to DTP");
 	                	/* TODO, what to do here? */
 	                }
 	        }
 
-	        du_list_destroy(du_list, false);
+	        du_list_clear(efcp->delim->tx_dus, false);
 
 		return 0;
 	}
@@ -611,7 +609,8 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
 
         	delim->max_fragment_size =
         			container->config->dt_cons->max_pdu_size -
-        			pci_calculate_size(container->config, PDU_TYPE_DT);
+        			pci_calculate_size(container->config, PDU_TYPE_DT)
+        			- 1;
 
         	/* TODO, allow selection of delimiting policy set name */
                 if (delim_select_policy_set(delim, "", RINA_PS_DEFAULT_NAME)) {
@@ -884,7 +883,6 @@ int efcp_enqueue(struct efcp * efcp,
                  struct du *   du)
 {
 	struct delim_ps * delim_ps = NULL;
-	struct du_list * du_list = NULL;
 	struct du_list_item * next_du = NULL;
 
         if (!efcp->user_ipcp) {
@@ -899,16 +897,15 @@ int efcp_enqueue(struct efcp * efcp,
 						        struct delim_ps,
 						        base);
 
-		du_list = du_list_create();
-		if (!du_list)
-			return -1;
-
-		if (delim_ps->delim_process_udf(delim_ps, du, du_list)) {
+		if (delim_ps->delim_process_udf(delim_ps, du,
+						efcp->delim->rx_dus)) {
 			LOG_ERR("Error processing EFCP UDF by delimiting");
+			du_list_clear(efcp->delim->rx_dus, true);
 			return -1;
 		}
 
-	        list_for_each_entry(next_du, &(du_list->dus), next) {
+	        list_for_each_entry(next_du, &(efcp->delim->rx_dus->dus),
+	        		    next) {
 	                if (efcp->user_ipcp->ops->du_enqueue(efcp->user_ipcp->data,
 	                                                     port,
 	                                                     next_du->du)) {
@@ -917,7 +914,7 @@ int efcp_enqueue(struct efcp * efcp,
 	                }
 	        }
 
-	        du_list_destroy(du_list, false);
+	        du_list_clear(efcp->delim->rx_dus, false);
 
 		return 0;
         }
