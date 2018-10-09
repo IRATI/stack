@@ -85,7 +85,7 @@ class MATerminationThread: public rina::SimpleThread {
 public:
 	MATerminationThread(FlowManager * fm, BGTaskManager * bg,
 			    ConfManager * cm, RIBFactory * rf);
-	~MATerminationThread(void) {};
+	~MATerminationThread(void) throw() {};
 
 	int run(void);
 
