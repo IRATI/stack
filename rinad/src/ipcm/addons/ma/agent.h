@@ -81,6 +81,21 @@ enum console_command {
 	QUERY_MAD_RIB
 };
 
+class MATerminationThread: public rina::SimpleThread {
+public:
+	MATerminationThread(FlowManager * fm, BGTaskManager * bg,
+			    ConfManager * cm, RIBFactory * rf);
+	~MATerminationThread(void) {};
+
+	int run(void);
+
+private:
+	FlowManager * flowman;
+	BGTaskManager * bgman;
+	ConfManager * cman;
+	RIBFactory * rfac;
+};
+
 /**
 * @brief Management Agent singleton class
 */

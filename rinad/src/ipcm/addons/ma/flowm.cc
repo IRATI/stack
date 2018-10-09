@@ -108,9 +108,9 @@ class Worker {
 		//Must be set strictly before deallocation of the thread
 		keep_running = false;
 
-		try{
-			rina::ipcManager->deallocate_flow(port_id);
-		}catch(...){}
+		if (flow_.fd > 0) {
+			close(flow_.fd);
+		}
 	}
 
 	inline pthread_t* getPthreadContext() {
@@ -147,12 +147,6 @@ class Worker {
 
 	//Flow being used
 	rina::FlowInformation flow_;
-
-	//Port-id of the flow in use
-	int port_id;
-
-	//fd of the flow in use
-	int fd;
 };
 
 /**
@@ -238,6 +232,7 @@ void ActiveWorker::allocateFlow()
 		LOG_ERR("Problems allocating flow: %d, %d, %s",
 			flowfd, errno, strerror(errno));
 		flow_.portId = -1;
+		flow_.fd = -1;
 		return;
 	}
 
@@ -275,11 +270,6 @@ void* ActiveWorker::run(void* param)
 			break;
 		}
 
-		//Set port id so that we can print traces even if the
-		//flow is gone
-		port_id = flow_.portId;
-		fd = flow_.fd;
-
 		//Fill source parameters
 		src.ap_name_ = flow_.localAppName.processName;
 		src.ae_name_ = "v1";
@@ -300,7 +290,7 @@ void* ActiveWorker::run(void* param)
 			return NULL;
 		}
 
-		auth = auth_ps_->get_auth_policy(port_id,
+		auth = auth_ps_->get_auth_policy(flow_.portId,
 				dest,
 				rib_factory_->getSecurityManager()->get_sec_profile(con.auth_policy_name));
 
@@ -314,7 +304,7 @@ void* ActiveWorker::run(void* param)
 				src,
 				dest,
 				auth,
-				port_id);
+				flow_.portId);
 
 		//Recover the response
 		//TODO: add support for other
@@ -323,15 +313,16 @@ void* ActiveWorker::run(void* param)
 		message.message_ = new unsigned char[max_sdu_size_in_bytes];
 
 		//I/O loop
-		while(true) {
-			bytes_read = read(fd, message.message_,
+		while(keep_running) {
+			bytes_read = read(flow_.fd, message.message_,
 					max_sdu_size_in_bytes);
 			if (bytes_read <= 0) {
 				LOG_ERR("read() error or EOF on port id %u [%s]",
-						port_id, strerror(errno));
-				rina::cdap::getProvider()->destroy_session(port_id);
-				rina::cdap::remove_fd_to_port_id_mapping(port_id);
-				close(fd);
+						flow_.portId, strerror(errno));
+				rina::cdap::getProvider()->destroy_session(flow_.portId);
+				rina::cdap::remove_fd_to_port_id_mapping(flow_.portId);
+				close(flow_.fd);
+				flow_.fd = -1;
 				break;
 			}
 			message.size_ = bytes_read;
@@ -340,22 +331,25 @@ void* ActiveWorker::run(void* param)
 			try{
 				rina::cdap::getProvider()->process_message(
 						message,
-						port_id);
+						flow_.portId);
 			}catch(rina::WriteSDUException &e){
-				LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
-				rina::cdap::getProvider()->destroy_session(port_id);
-				rina::cdap::remove_fd_to_port_id_mapping(port_id);
-				close(fd);
+				LOG_ERR("Cannot read from flow with port id: %u anymore", flow_.portId);
+				rina::cdap::getProvider()->destroy_session(flow_.portId);
+				rina::cdap::remove_fd_to_port_id_mapping(flow_.portId);
+				close(flow_.fd);
+				flow_.fd = -1;
 				break;
 			}catch(rina::FlowNotAllocatedException &e) {
-				rina::cdap::getProvider()->destroy_session(port_id);
-				rina::cdap::remove_fd_to_port_id_mapping(port_id);
-				close(fd);
+				rina::cdap::getProvider()->destroy_session(flow_.portId);
+				rina::cdap::remove_fd_to_port_id_mapping(flow_.portId);
+				close(flow_.fd);
+				flow_.fd = -1;
 				break;
 			}catch(rina::cdap::CDAPException &e){
 				LOG_ERR("Error processing message: %s", e.what());
 			}catch(...){
-				LOG_CRIT("Unknown error during operation with port id: %u. This is a bug, please report it", port_id);
+				LOG_CRIT("Unknown error during operation with port id: %u. This is a bug, please report it",
+						flow_.portId);
 			}
 		}
 	}
@@ -455,6 +449,9 @@ FlowManager::~FlowManager()
 		//Keep next
 		next = it;
 		next++;
+
+		//Tell worker to stop
+		it->second->stop();
 
 		//Join
 		joinWorker(it->first);
