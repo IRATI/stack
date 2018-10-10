@@ -263,15 +263,12 @@ int main()
 
 	/* Test Thread creation and joining */
 	Thread * threads[NUM_THREADS];
-	ThreadAttributes * threadAttributes = new ThreadAttributes();
-	threadAttributes->setJoinable();
 	for (intptr_t i = 0; i < NUM_THREADS; i++) {
-		threads[i] = new Thread(&doWork, (void *) i, threadAttributes);
+		threads[i] = new Thread(&doWork, (void *) i, "Test", false);
 		threads[i]->start();
 		std::cout << "Created thread " << i << " with id "
                           << threads[i]->getThreadType() << "\n";
 	}
-	delete threadAttributes;
 
 	void * status;
 	for (int i = 0; i < NUM_THREADS; i++) {
@@ -282,17 +279,14 @@ int main()
 	}
 
 	/* Test mutex */
-	threadAttributes = new ThreadAttributes();
-	threadAttributes->setJoinable();
 	LockableCounter * counter = new LockableCounter();
 	for (int i = 0; i < NUM_THREADS; i++) {
 		threads[i] = new Thread(&doWorkMutex, (void *) counter,
-		                        threadAttributes);
+		                        "test", false);
 		threads[i]->start();
 		std::cout << "Created thread " << i << " with id "
                           << threads[i]->getThreadType() << "\n";
 	}
-	delete threadAttributes;
 
 	for (int i = 0; i < NUM_THREADS; i++) {
 		threads[i]->join(&status);
@@ -308,17 +302,14 @@ int main()
 	delete counter;
 
 	/* Test read-write lock */
-	threadAttributes = new ThreadAttributes();
-	threadAttributes->setJoinable();
 	ReadWriteLockableCounter * counter2 = new ReadWriteLockableCounter();
 	for (int i = 0; i < NUM_THREADS; i++) {
 		threads[i] = new Thread( &doWorkReadWriteLock,
-		                         (void *) counter2, threadAttributes);
+		                         (void *) counter2, "Test", false);
 		threads[i]->start();
 		std::cout << "Created thread " << i << " with id "
                           << threads[i]->getThreadType() << "\n";
 	}
-	delete threadAttributes;
 
 	for (int i = 0; i < NUM_THREADS; i++) {
 		threads[i]->join(&status);
@@ -336,22 +327,19 @@ int main()
 	delete counter2;
 
 	/* Test condition variable */
-	threadAttributes = new ThreadAttributes();
-	threadAttributes->setJoinable();
 	ConditionVariableCounter * counter3 = new ConditionVariableCounter();
 	threads[0] = new Thread(&doWorkWaitForTrigger,
-                                (void *) counter3, threadAttributes);
+                                (void *) counter3, "Test", false);
 	threads[0]->start();
 	std::cout << "Created thread 0 with id "
                   << threads[0]->getThreadType() << "\n";
 	for (int i = 1; i < NUM_THREADS; i++) {
 		threads[i] = new Thread(&doWorkConditionVariable,
-                                        (void *) counter3, threadAttributes);
+                                        (void *) counter3, "Test", false);
 		threads[i]->start();
 		std::cout << "Created thread " << i << " with id "
                           << threads[i]->getThreadType() << "\n";
 	}
-	delete threadAttributes;
 
 	for (int i = 0; i < NUM_THREADS; i++) {
 		threads[i]->join(&status);
@@ -366,22 +354,19 @@ int main()
 	/* Test blocking FIFO queue */
 	BlockingFIFOQueue<Person> * personQueue = new BlockingFIFOQueue<Person>();
 	counter2 = new ReadWriteLockableCounter();
-	QueueWithCounter * queueWithCounter = new QueueWithCounter(personQueue, counter2);
-	threadAttributes = new ThreadAttributes();
-	threadAttributes->setJoinable();
+	QueueWithCounter * queueWithCounter = new QueueWithCounter(personQueue, counter2);;
 	threads[0] = new Thread(&doWorkProduce,
-			(void *) personQueue, threadAttributes);
+			(void *) personQueue, "Test", false);
 	threads[0]->start();
 	std::cout << "Created producer thread with id "
 			<< threads[0]->getThreadType() << "\n";
 	for (int i = 1; i < NUM_THREADS; i++) {
 		threads[i] = new Thread( &doWorkConsume,
-				(void *) queueWithCounter, threadAttributes);
+				(void *) queueWithCounter, "Test", false);
 		threads[i]->start();
 		std::cout << "Created consumer thread " << i-1 << " with id "
 				<< threads[i]->getThreadType() << "\n";
 	}
-	delete threadAttributes;
 
 	for (int i = 0; i < NUM_THREADS; i++) {
 		threads[i]->join(&status);
