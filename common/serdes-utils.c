@@ -1591,7 +1591,7 @@ int dt_cons_serlen(const struct dt_cons * dtc)
 {
 	if (!dtc) return 0;
 
-	return 9 * sizeof(uint16_t) + 5 * sizeof(uint32_t) + 3 * sizeof(bool);
+	return 9 * sizeof(uint16_t) + 6 * sizeof(uint32_t) + 3 * sizeof(bool);
 }
 
 void serialize_dt_cons(void **pptr, const struct dt_cons *dtc)
@@ -1606,6 +1606,7 @@ void serialize_dt_cons(void **pptr, const struct dt_cons *dtc)
 	serialize_obj(*pptr, uint16_t, dtc->length_length);
 	serialize_obj(*pptr, uint32_t, dtc->max_pdu_life);
 	serialize_obj(*pptr, uint32_t, dtc->max_pdu_size);
+	serialize_obj(*pptr, uint32_t, dtc->max_sdu_size);
 	serialize_obj(*pptr, uint16_t, dtc->port_id_length);
 	serialize_obj(*pptr, uint16_t, dtc->qos_id_length);
 	serialize_obj(*pptr, uint16_t, dtc->rate_length);
@@ -1627,6 +1628,7 @@ int deserialize_dt_cons(const void **pptr, struct dt_cons *dtc)
 	deserialize_obj(*pptr, uint16_t, &dtc->length_length);
 	deserialize_obj(*pptr, uint32_t, &dtc->max_pdu_life);
 	deserialize_obj(*pptr, uint32_t, &dtc->max_pdu_size);
+	deserialize_obj(*pptr, uint32_t, &dtc->max_sdu_size);
 	deserialize_obj(*pptr, uint16_t, &dtc->port_id_length);
 	deserialize_obj(*pptr, uint16_t, &dtc->qos_id_length);
 	deserialize_obj(*pptr, uint16_t, &dtc->rate_length);

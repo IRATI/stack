@@ -42,6 +42,10 @@
 #include <librina/security-manager.h>
 #include "../../ipcm.h"
 
+#include <irati/kucommon.h>
+#include <irati/serdes-utils.h>
+#include <rina/api.h>
+
 namespace rinad {
 namespace mad {
 
@@ -90,37 +94,6 @@ class Worker {
 	}
 
 	/**
-	 * Notify an event
-	 */
-	void notify(rina::IPCEvent** event){
-
-		//Do this in mutual exclusion
-		rina::ScopedLock lock(mutex);
-
-		//Check if this event is for this worker
-		if (std::find(pend_events.begin(), pend_events.end(),
-			      (*event)->sequenceNumber) == pend_events.end())
-			return;
-
-		//Store and signal
-		events.push_back(*event);
-		cond.signal();
-		*event = NULL;
-	}
-
-	/**
-	 * Wait for an event
-	 */
-	rina::IPCEvent* waitForEvent(long seconds = 0, long nanoseconds = 0) {
-
-		cond.timedwait(seconds, nanoseconds);
-		rina::ScopedLock lock(mutex);
-		rina::IPCEvent* ev = *events.begin();
-		pend_events.pop_front();
-		return ev;
-	}
-
-	/**
 	 * Set the id
 	 */
 	void setId(unsigned int _id){
@@ -135,9 +108,9 @@ class Worker {
 		//Must be set strictly before deallocation of the thread
 		keep_running = false;
 
-		try{
-			rina::ipcManager->deallocate_flow(port_id);
-		}catch(...){}
+		if (flow_.fd > 0) {
+			close(flow_.fd);
+		}
 	}
 
 	inline pthread_t* getPthreadContext() {
@@ -153,9 +126,6 @@ class Worker {
 
 	//Mutex
 	rina::Lockable mutex;
-
-	//Pending events
-	std::list<rina::IPCEvent*> events;
 
 	//Pending transactions (sequence numbers)
 	std::list<unsigned int> pend_events;
@@ -177,12 +147,6 @@ class Worker {
 
 	//Flow being used
 	rina::FlowInformation flow_;
-
-	//Port-id of the flow in use
-	int port_id;
-
-	//fd of the flow in use
-	int fd;
 };
 
 /**
@@ -203,6 +167,7 @@ class ActiveWorker : public Worker {
 		con = _con;
 		auth_ps_ = 0;
 		key_manager_ = key_manager;
+		LOG_DBG("ActiveWorker ready");
 	}
 
 	/**
@@ -229,61 +194,56 @@ class ActiveWorker : public Worker {
 //Allocate a flow
 void ActiveWorker::allocateFlow()
 {
+	struct rina_flow_spec fspec;
+	int flowfd;
+	char * this_apn, * remote_apn;
+	struct name * this_name, * remote_name;
+	rina::ApplicationProcessNamingInformation my_apn;
 
-	unsigned int seqnum;
-	rina::IPCEvent* event;
-	rina::AllocateFlowRequestResultEvent* rrevent;
+	// Preserve SDU boundaries
+	// Reliable and in-order delivery required
+	rina_flow_spec_default(&fspec);
+	fspec.msg_boundaries = true;
+	fspec.in_order_delivery = true;
+	fspec.max_sdu_gap = 0;
 
-	//Setup necessary QoS
-	//TODO Quality of Service specification
-	//FIXME: Move to connection
-	rina::FlowSpecification qos;
-	qos.maxAllowableGap = 0;
+	remote_name = rina_name_create();
+	remote_name->process_name = strdup(con.flow_info.remoteAppName.processName.c_str());
+	remote_name->process_instance = strdup(con.flow_info.remoteAppName.processInstance.c_str());
+	remote_name->entity_name = strdup(con.flow_info.remoteAppName.entityName.c_str());
+	remote_name->entity_instance = strdup(con.flow_info.remoteAppName.entityInstance.c_str());
+	remote_apn = rina_name_to_string(remote_name);
+	rina_name_free(remote_name);
 
-	//Perform the flow allocation
-	seqnum = rina::ipcManager->requestFlowAllocationInDIF(
-			flow_manager->getAPInfo(), con.flow_info.remoteAppName,
-			con.flow_info.difName, qos);
+	my_apn = flow_manager->getAPInfo();
+	this_name = rina_name_create();
+	this_name->process_name = strdup(my_apn.processName.c_str());
+	this_name->process_instance = strdup(my_apn.processInstance.c_str());
+	this_name->entity_name = strdup(my_apn.entityName.c_str());
+	this_name->entity_instance = strdup(my_apn.entityInstance.c_str());
+	this_apn = rina_name_to_string(this_name);
+	rina_name_free(this_name);
 
-	LOG_DBG("[w:%u] Waiting for event %u", id, seqnum);
-	pend_events.push_back(seqnum);
-
-	//Wait for the event
-	try {
-		event = flow_manager->wait_event(seqnum);
-	} catch (rina::Exception& e) {
-		//No reply... no flow
-		LOG_ERR("[w:%u] Failed to allocate a flow. Operation timed-out",
-			id);
-		rina::ipcManager->withdrawPendingFlow(seqnum);
+	LOG_DBG("Trying to allocate flow between %s and %s", this_apn, remote_apn);
+	flowfd = rina_flow_alloc(NULL, this_apn, remote_apn, &fspec, 0);
+	free(remote_apn);
+	free(this_apn);
+	if (flowfd < 0) {
+		LOG_ERR("Problems allocating flow: %d, %d, %s",
+			flowfd, errno, strerror(errno));
 		flow_.portId = -1;
+		flow_.fd = -1;
 		return;
 	}
-	if (!event) {
-		LOG_ERR("[w:%u] Failed to allocate a flow. Unknown error", id);
-		rina::ipcManager->withdrawPendingFlow(seqnum);
-		flow_.portId = -1;
-		return;
-	}
-	LOG_DBG("[w:%u] Got event %u, waiting for %u", id,
-		event->sequenceNumber, seqnum);
 
-	//Check if it is the right event for us
-	rrevent = dynamic_cast<rina::AllocateFlowRequestResultEvent*>(event);
-	if (!rrevent || rrevent->portId < 0) {
-		rina::ipcManager->withdrawPendingFlow(seqnum);
-		flow_.portId = -1;
-	}else{
-		//Recover the flow
-		flow_ = rina::ipcManager->commitPendingFlow(rrevent->sequenceNumber,
-							   rrevent->portId,
-							   rrevent->difName);
-		rina::cdap::add_fd_to_port_id_mapping(flow_.fd, flow_.portId);
-		LOG_INFO("[w:%u] Flow allocated, port id = %d", id, flow_.portId);
-	}
+	LOG_DBG("Flow allocated, got file descriptor %d", flowfd);
 
-	// Delete the event
-	delete event;
+	flow_.portId = flowfd;
+	flow_.fd = flowfd;
+	flow_.localAppName = my_apn;
+	flow_.remoteAppName = con.flow_info.remoteAppName;
+
+	rina::cdap::add_fd_to_port_id_mapping(flowfd, flowfd);
 }
 
 // Flow active worker
@@ -300,95 +260,97 @@ void* ActiveWorker::run(void* param)
 		//Allocate the flow
 		allocateFlow();
 
-		try {
-			if(flow_.portId < 0) {
-				usleep(FM_FALLOC_ALLOC_RETRY_US);
-				continue;
-			}
+		if(flow_.portId < 0) {
+			usleep(FM_FALLOC_ALLOC_RETRY_US);
+			continue;
+		}
 
-			//Recheck after flow alloc (prevents race)
-			if(!keep_running){
+		//Recheck after flow alloc (prevents race)
+		if(!keep_running){
+			break;
+		}
+
+		//Fill source parameters
+		src.ap_name_ = flow_.localAppName.processName;
+		src.ae_name_ = "v1";
+		src.ap_inst_ = flow_.localAppName.processInstance;
+		src.ae_inst_ = flow_.localAppName.entityInstance;
+
+		//Fill destination parameters
+		dest.ap_name_ = flow_.remoteAppName.processName;
+		dest.ae_name_ = flow_.remoteAppName.entityName;
+		dest.ap_inst_ = flow_.remoteAppName.processInstance;
+		dest.ae_inst_ = flow_.remoteAppName.entityInstance;
+		rina::cdap_rib::auth_policy_t auth;
+
+		auth_ps_ = rib_factory_->getSecurityManager()->get_auth_policy_set(con.auth_policy_name);
+		if (!auth_ps_) {
+			LOG_ERR("Could not %s authentication policy set, aborting",
+					rib_factory_->getSecurityManager()->get_sec_profile(con.auth_policy_name).authPolicy.name_.c_str());
+			return NULL;
+		}
+
+		auth = auth_ps_->get_auth_policy(flow_.portId,
+				dest,
+				rib_factory_->getSecurityManager()->get_sec_profile(con.auth_policy_name));
+
+		//Version
+		rina::cdap_rib::vers_info_t vers;
+		vers.version_ = 0x1; //TODO: do not hardcode this
+
+		//TODO: remove this. The API should NOT require a RIB
+		//instance for calling the remote API
+		rib_factory_->getProxy()->remote_open_connection(vers,
+				src,
+				dest,
+				auth,
+				flow_.portId);
+
+		//Recover the response
+		//TODO: add support for other
+		bool authentication_ongoing = true;
+		rina::ser_obj_t message;
+		message.message_ = new unsigned char[max_sdu_size_in_bytes];
+
+		//I/O loop
+		while(keep_running) {
+			bytes_read = read(flow_.fd, message.message_,
+					max_sdu_size_in_bytes);
+			if (bytes_read <= 0) {
+				LOG_ERR("read() error or EOF on port id %u [%s]",
+						flow_.portId, strerror(errno));
+				rina::cdap::getProvider()->destroy_session(flow_.portId);
+				rina::cdap::remove_fd_to_port_id_mapping(flow_.portId);
+				close(flow_.fd);
+				flow_.fd = -1;
 				break;
 			}
+			message.size_ = bytes_read;
 
-			//Set port id so that we can print traces even if the
-			//flow is gone
-			port_id = flow_.portId;
-                        fd = flow_.fd;
-
-			//Fill source parameters
-			src.ap_name_ = flow_.localAppName.processName;
-			src.ae_name_ = "v1";
-			src.ap_inst_ = flow_.localAppName.processInstance;
-			src.ae_inst_ = flow_.localAppName.entityInstance;
-
-			//Fill destination parameters
-			dest.ap_name_ = flow_.remoteAppName.processName;
-			dest.ae_name_ = flow_.remoteAppName.entityName;
-			dest.ap_inst_ = flow_.remoteAppName.processInstance;
-			dest.ae_inst_ = flow_.remoteAppName.entityInstance;
-			rina::cdap_rib::auth_policy_t auth;
-
-			auth_ps_ = rib_factory_->getSecurityManager()->get_auth_policy_set(con.auth_policy_name);
-			if (!auth_ps_) {
-				LOG_ERR("Could not %s authentication policy set, aborting",
-					rib_factory_->getSecurityManager()->get_sec_profile(con.auth_policy_name).authPolicy.name_.c_str());
-				return NULL;
+			//Instruct CDAP provider to process the RIB operation message
+			try{
+				rina::cdap::getProvider()->process_message(
+						message,
+						flow_.portId);
+			}catch(rina::WriteSDUException &e){
+				LOG_ERR("Cannot read from flow with port id: %u anymore", flow_.portId);
+				rina::cdap::getProvider()->destroy_session(flow_.portId);
+				rina::cdap::remove_fd_to_port_id_mapping(flow_.portId);
+				close(flow_.fd);
+				flow_.fd = -1;
+				break;
+			}catch(rina::FlowNotAllocatedException &e) {
+				rina::cdap::getProvider()->destroy_session(flow_.portId);
+				rina::cdap::remove_fd_to_port_id_mapping(flow_.portId);
+				close(flow_.fd);
+				flow_.fd = -1;
+				break;
+			}catch(rina::cdap::CDAPException &e){
+				LOG_ERR("Error processing message: %s", e.what());
+			}catch(...){
+				LOG_CRIT("Unknown error during operation with port id: %u. This is a bug, please report it",
+						flow_.portId);
 			}
-
-			auth = auth_ps_->get_auth_policy(port_id,
-	  	  	  	  	  	 	 dest,
-							 rib_factory_->getSecurityManager()->get_sec_profile(con.auth_policy_name));
-
-			//Version
-			rina::cdap_rib::vers_info_t vers;
-			vers.version_ = 0x1; //TODO: do not hardcode this
-
-			//TODO: remove this. The API should NOT require a RIB
-			//instance for calling the remote API
-			rib_factory_->getProxy()->remote_open_connection(vers,
-							src,
-							dest,
-							auth,
-							port_id);
-
-			//Recover the response
-			//TODO: add support for other
-			bool authentication_ongoing = true;
-			rina::ser_obj_t message;
-			message.message_ = new unsigned char[max_sdu_size_in_bytes];
-
-			//I/O loop
-			while(true) {
-                                bytes_read = read(fd, message.message_,
-                                                max_sdu_size_in_bytes);
-                                if (bytes_read <= 0) {
-                                        LOG_ERR("read() error or EOF on port id %u [%s]",
-                                                port_id, strerror(errno));
-					rina::ipcManager->deallocate_flow(port_id);
-                                        break;
-                                }
-                                message.size_ = bytes_read;
-
-				//Instruct CDAP provider to process the RIB operation message
-				try{
-					rina::cdap::getProvider()->process_message(
-									message,
-									port_id);
-				}catch(rina::WriteSDUException &e){
-					LOG_ERR("Cannot read from flow with port id: %u anymore", port_id);
-					rina::ipcManager->deallocate_flow(port_id);
-					break;
-				}catch(rina::FlowNotAllocatedException &e) {
-					break;
-				}catch(rina::cdap::CDAPException &e){
-					LOG_ERR("Error processing message: %s", e.what());
-				}
-
-			}
-		}
-		catch(...){
-			LOG_CRIT("Unknown error during operation with port id: %u. This is a bug, please report it", port_id);
 		}
 	}
 
@@ -438,7 +400,6 @@ void FlowManager::process_fwd_cdap_msg_response(rina::FwdCDAPMsgResponseEvent*
 //Process an event coming from librina
 void FlowManager::process_librina_event(rina::IPCEvent** event_)
 {
-
 	rina::FlowInformation flow;
 	unsigned int port_id;
 
@@ -449,47 +410,6 @@ void FlowManager::process_librina_event(rina::IPCEvent** event_)
 		return;
 
 	switch (event->eventType) {
-		case rina::REGISTER_APPLICATION_RESPONSE_EVENT:
-			rina::ipcManager->commitPendingRegistration(
-					event->sequenceNumber,
-					dynamic_cast<rina::RegisterApplicationResponseEvent*>(event)
-							->DIFName);
-			break;
-
-		case rina::UNREGISTER_APPLICATION_RESPONSE_EVENT:
-			rina::ipcManager->appUnregistrationResult(
-					event->sequenceNumber,
-					dynamic_cast<rina::UnregisterApplicationResponseEvent*>(event)
-							->result == 0);
-			break;
-
-		case rina::ALLOCATE_FLOW_REQUEST_RESULT_EVENT:
-			//The event could not be distributed at first
-			//This is likely because the event arrived before the
-			//callee has invoked wait()
-			//Store and continue
-			store_event(event);
-			*event_ = NULL;
-			return;  //Do not delete
-		case rina::FLOW_ALLOCATION_REQUESTED_EVENT:
-			//TODO: add pasive worker
-			flow = rina::ipcManager->allocateFlowResponse(
-					*dynamic_cast<rina::FlowRequestEvent*>(event),
-					0, true);
-			LOG_INFO("New flow allocated [port-id = %d]",
-				 flow.portId);
-			break;
-
-		case rina::FLOW_DEALLOCATED_EVENT:
-			port_id = dynamic_cast<rina::FlowDeallocatedEvent*>(event)
-							->portId;
-			rina::ipcManager->flowDeallocated(port_id);
-			LOG_INFO("Flow torn down remotely [port-id = %d]",
-				 port_id);
-			//TODO: add pasive worker
-			//joinWorker(port_id);
-			break;
-
 		case rina::IPC_PROCESS_FWD_CDAP_RESPONSE_MSG:
 		{
 			process_fwd_cdap_msg_response(
@@ -517,7 +437,6 @@ FlowManager::FlowManager(ManagementAgent* agent)
 
 FlowManager::~FlowManager()
 {
-
 	keep_running = false;
 
 	//Join all workers
@@ -531,19 +450,15 @@ FlowManager::~FlowManager()
 		next = it;
 		next++;
 
+		//Tell worker to stop
+		it->second->stop();
+
 		//Join
 		joinWorker(it->first);
 
 		//Remove
 		it = next;
 	}
-
-	// Delete pending elements
-	for (std::map<unsigned int, rina::IPCEvent*>::const_iterator it = pending_events.begin();
-			it != pending_events.end(); it++){
-		delete it->second;
-	}
-
 }
 
 //Connect manager
@@ -569,143 +484,6 @@ void FlowManager::disconnectFrom(unsigned int worker_id)
 	joinWorker(worker_id);
 }
 
-//Stores and notifies an event
-void FlowManager::store_event(rina::IPCEvent* event)
-{
-
-	unsigned int seqnum = event->sequenceNumber;
-
-	//Lock to access the map
-	//NOTE: this is confusing and ugly as hell. wait_cond is also Lockable
-	//(mutex).
-	//Blame the author who made ConditionVariable inherit from
-	//Lockable(mutex) instead of mutex being a member.
-	wait_cond.lock();
-
-	try {
-		//Check if already exists
-		if (pending_events.find(seqnum) != pending_events.end()) {
-			LOG_WARN("Duplicated seqnum '%u' for event of type '%s. Overwritting previous event...",
-				 seqnum,
-				 rina::IPCEvent::eventTypeToString(
-						 event->eventType).c_str());
-			assert(0);
-		}
-		pending_events[seqnum] = event;
-	} catch (...) {
-		wait_cond.unlock();
-		LOG_WARN("Unable to store event of type %s and sequence number %u. Destroying...",
-			 rina::IPCEvent::eventTypeToString(event->eventType)
-					 .c_str(),
-			 seqnum);
-		delete event;
-		return;
-	}
-
-	wait_cond.unlock();
-}
-
-// Checks whether an operation has already finalised
-rina::IPCEvent* FlowManager::get_event(unsigned int seqnum)
-{
-
-	rina::IPCEvent* event = NULL;
-
-	//Lock to access the map
-	//NOTE: this is confusing and ugly as hell. wait_cond is also Lockable
-	//(mutex).
-	//Blame the author who made ConditionVariable inherit from
-	//Lockable(mutex) instead of mutex being a member.
-	rina::ScopedLock lock(wait_cond);
-
-	if (pending_events.find(seqnum) != pending_events.end()) {
-		event = pending_events[seqnum];
-		pending_events.erase(seqnum);
-	}
-
-	return event;
-}
-
-//Blocks until the operation has finalised, or hard timeout is reached
-rina::IPCEvent* FlowManager::wait_event(unsigned int seqnum)
-{
-
-	int i;
-	rina::IPCEvent* event = NULL;
-
-	//Lock to access the map
-	//NOTE: this is confusing and ugly as hell. wait_cond is also Lockable
-	//(mutex).
-	//Blame the author who made ConditionVariable inherit from
-	//Lockable(mutex) instead of mutex being a member.
-	wait_cond.lock();
-
-	//This is here in purpose. The event could have arrived BEFORE
-	//we actually are waiting for it
-	if (pending_events.find(seqnum) != pending_events.end()) {
-		event = pending_events[seqnum];
-		pending_events.erase(seqnum);
-		wait_cond.unlock();
-		return event;
-	}
-
-	for (i = 0; i < FM_TIMEOUT_S * (_FM_1_SEC_NSEC / FM_RETRY_NSEC); ++i) {
-		try {
-			if (unlikely(keep_running == false))
-				break;
-			if (pending_events.find(seqnum)
-					!= pending_events.end()) {
-				event = pending_events[seqnum];
-				pending_events.erase(seqnum);
-				break;
-			}
-			//Just wait
-			wait_cond.timedwait(0, FM_RETRY_NSEC);
-		} catch (...) {
-		}
-	}
-
-	wait_cond.unlock();
-
-	return event;
-}
-
-// Blocks until the operation has finalised, or timeout is reached
-rina::IPCEvent* FlowManager::timed_wait_event(unsigned int seqnum,
-					      unsigned int sec,
-					      unsigned int nsec)
-{
-
-	rina::IPCEvent* event = NULL;
-
-	//Lock to access the map
-	//NOTE: this is confusing and ugly as hell. wait_cond is also Lockable
-	//(mutex).
-	//Blame the author who made ConditionVariable inherit from
-	//Lockable(mutex) instead of mutex being a member.
-	wait_cond.lock();
-
-	//This is here in purpose. The event could have arrived BEFORE
-	//we actually are waiting for it
-	if (pending_events.find(seqnum) != pending_events.end()) {
-		event = pending_events[seqnum];
-		pending_events.erase(seqnum);
-		wait_cond.unlock();
-		return event;
-	}
-
-	//Perform wait
-	wait_cond.timedwait(sec, nsec);
-
-	if (pending_events.find(seqnum) != pending_events.end()) {
-		event = get_event(seqnum);
-		pending_events.erase(seqnum);
-	}
-
-	wait_cond.unlock();
-
-	return event;
-}
 //
 // FIXME: spawning a thread per flow is a waste of resources in general
 // but currently there is no functionality like select/poll/epoll to wait for

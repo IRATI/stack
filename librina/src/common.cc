@@ -514,61 +514,64 @@ const std::string IPCEvent::eventTypeToString(IPCEventType eventType) {
 		result = "21_GET_DIF_PROPERTIES_RESPONSE";
 		break;
 	case IPCM_REGISTER_APP_RESPONSE_EVENT:
-		result = "23_IPCM_REGISTER_APP_RESPONSE";
+		result = "22_IPCM_REGISTER_APP_RESPONSE";
 		break;
 	case IPCM_UNREGISTER_APP_RESPONSE_EVENT:
-		result = "24_IPCM_UNREGISTER_APP_RESPONSE";
+		result = "23_IPCM_UNREGISTER_APP_RESPONSE";
 		break;
 	case IPCM_ALLOCATE_FLOW_REQUEST_RESULT:
-		result = "25_IPCM_ALLOCATE_FLOW_RESULT";
+		result = "24_IPCM_ALLOCATE_FLOW_RESULT";
 		break;
 	case QUERY_RIB_RESPONSE_EVENT:
-		result = "26_QUERY_RIB_RESPONSE";
+		result = "25_QUERY_RIB_RESPONSE";
 		break;
 	case IPC_PROCESS_DAEMON_INITIALIZED_EVENT:
-		result = "27_IPC_PROCESS_DAEMON_INITIALIZED";
+		result = "26_IPC_PROCESS_DAEMON_INITIALIZED";
 		break;
 	case TIMER_EXPIRED_EVENT:
-		result = "28_TIMER_EXPIRED";
+		result = "27_TIMER_EXPIRED";
 		break;
 	case IPC_PROCESS_CREATE_CONNECTION_RESPONSE:
-		result = "29_CREATE_EFCP_CONN_RESPONSE";
+		result = "28_CREATE_EFCP_CONN_RESPONSE";
 		break;
 	case IPC_PROCESS_UPDATE_CONNECTION_RESPONSE:
-		result = "30_UPDATE_EFCP_CONN_RESPONSE";
+		result = "29_UPDATE_EFCP_CONN_RESPONSE";
 		break;
 	case IPC_PROCESS_CREATE_CONNECTION_RESULT:
-		result = "31_CREATE_EFCP_CONN_RESULT";
+		result = "30_CREATE_EFCP_CONN_RESULT";
 		break;
 	case IPC_PROCESS_DESTROY_CONNECTION_RESULT:
-		result = "32_DESTROY_EFCP_CONN_RESULT";
+		result = "31_DESTROY_EFCP_CONN_RESULT";
 		break;
 	case IPC_PROCESS_DUMP_FT_RESPONSE:
-		result = "33_DUMP_FT_RESPONSE";
+		result = "32_DUMP_FT_RESPONSE";
 		break;
         case IPC_PROCESS_SET_POLICY_SET_PARAM:
-                result = "34_SET_POLICY_SET_PARAM";
+                result = "33_SET_POLICY_SET_PARAM";
                 break;
         case IPC_PROCESS_SET_POLICY_SET_PARAM_RESPONSE:
-                result = "35_SET_POLICY_SET_PARAM_RESPONSE";
+                result = "34_SET_POLICY_SET_PARAM_RESPONSE";
                 break;
         case IPC_PROCESS_SELECT_POLICY_SET:
-                result = "36_SELECT_POLICY_SET";
+                result = "35_SELECT_POLICY_SET";
                 break;
         case IPC_PROCESS_SELECT_POLICY_SET_RESPONSE:
-                result = "37_SELECT_POLICY_SET_RESPONSE";
+                result = "36_SELECT_POLICY_SET_RESPONSE";
                 break;
         case IPC_PROCESS_PLUGIN_LOAD:
-                result = "38_PLUGIN_LOAD";
+                result = "37_PLUGIN_LOAD";
                 break;
         case IPC_PROCESS_PLUGIN_LOAD_RESPONSE:
-                result = "39_PLUGIN_LOAD_RESPONSE";
+                result = "38_PLUGIN_LOAD_RESPONSE";
                 break;
         case IPC_PROCESS_UPDATE_CRYPTO_STATE_RESPONSE:
-                result = "40_UPDATE_CRYPTO_STATE_RESPONSE";
+                result = "39_UPDATE_CRYPTO_STATE_RESPONSE";
                 break;
 	case IPC_PROCESS_FWD_CDAP_MSG:
-		result = "41_IPC_PROCESS_FWD_CDAP_MSG";
+		result = "40_IPC_PROCESS_FWD_CDAP_MSG";
+		break;
+	case IPC_PROCESS_FWD_CDAP_RESPONSE_MSG:
+		result = "41_IPC_PROCESS_FWD_CDAP_RESPONSE_MSG";
 		break;
 	case DISCONNECT_NEIGHBOR_REQUEST_EVENT:
 		result = "42_DISCONNECT_NEIGHBOR_REQUEST_EVENT";

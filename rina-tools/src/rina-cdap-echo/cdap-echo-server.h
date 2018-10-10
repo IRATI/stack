@@ -62,8 +62,7 @@ private:
 
 class CDAPEchoWorker : public ServerWorker {
 public:
-	CDAPEchoWorker(rina::ThreadAttributes * threadAttributes,
-			     int port, int fd,
+	CDAPEchoWorker(int port, int fd,
 			     unsigned int max_sdu_size,
 			     Server * serv);
 	~CDAPEchoWorker() throw() { };

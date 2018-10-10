@@ -68,7 +68,6 @@ private:
 
 	//Monitoring thread
 	rina::Thread * mon_thread;
-	rina::ThreadAttributes mon_thread_attrs;
 	bool mon_keep_running;
 
 	std::string prog_name;

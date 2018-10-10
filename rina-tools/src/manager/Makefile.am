@@ -1,22 +1,38 @@
 #
 # Makefile.am
 #
-# Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
+# Written by: Eduard Grasa <eduard DOT grasa AT i2cat DOT net>
 #
 
-EXTRA_DIST   =
-CLEANFILES   =
+CLEANFILES       =
+MOSTLYCLEANFILES =
+EXTRA_DIST       =
+bin_PROGRAMS                       =
+AM_INSTALLCHECK_STD_OPTIONS_EXEMPT =
 
-bin_PROGRAMS = manager	
+include $(srcdir)/Makefile.inc
 
-manager_CPPFLAGS =					\
+BUILT_SOURCES = $(protoSOURCES)
+
+net_manager_SOURCES  =				\
+    dif-template-manager.h  dif-template-manager.cc \
+    net-manager.h    net-manager.cc  promise.cc \
+	main.cc \
+	$(protoSOURCES)
+net_manager_LDADD    =          \
+    $(LIBRINA_LIBS)             \
+    $(LIBRINA_API_LIBS) -ldl    \
+    $(builddir)/../../../rinad/src/common/librinad.la \
+    $(builddir)/../../../librina/src/librinajsoncpp.la
+net_manager_CPPFLAGS =			\
+	$(LIBRINA_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)			\
-	$(LIBRINA_CFLAGS)		 \
-	-I$(srcdir)/../common	
-	
-manager_LDADD    = 	$(LIBRINA_LIBS) -ldl -lrinad \
-		../common/librinaapp.la	
-	
-manager_SOURCES  =						\
-	main.cc						\
-	manager.cc		manager.h		
+    $(LIBPROTOBUF_CFLAGS)  		\
+    $(LIBRINA_API_CFLAGS)       \
+	-I$(srcdir)/../common       \
+	-I$(srcdir)/../../../rinad/src/common
+net_manager_CXXFLAGS =			\
+	$(CPPFLAGS_EXTRA)
+
+bin_PROGRAMS            += net_manager
+AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += net_manager

@@ -78,52 +78,13 @@ ConcurrentException(const std::string & s) : Exception(s.c_str()) { }
 };
 
 /**
- * Wraps pthread_attr_t
- */
-class ThreadAttributes : public NonCopyable {
-public:
-        ThreadAttributes();
-        virtual ~ThreadAttributes() throw();
-
-        pthread_attr_t * getThreadAttributes();
-        bool isJoinable();
-        void setJoinable();
-        bool isDettached();
-        void setDettached();
-        bool isSystemScope();
-        void setSystemScope();
-        bool isProcessScope();
-        void setProcessScope();
-        bool isInheritedScheduling();
-        void setInheritedScheduling();
-        bool isExplicitScheduling();
-        void setExplicitScheduling();
-        bool isFifoSchedulingPolicy();
-        void setFifoSchedulingPolicy();
-        bool isRRSchedulingPolicy();
-        void setRRSchedulingPolicy();
-        bool isOtherSchedulingPolicy();
-        void setOtherSchedulingPolicy();
-        void setName(const std::string& name);
-        std::string getName(void);
-private:
-        pthread_attr_t thread_attr_;
-        std::string name_;
-        void setDetachState(int detachState);
-        void setScope(int scope);
-        void setInheritedScheduling(int inheritedScheduling);
-        void getSchedulingPolicy(int * schedulingPolicy);
-        void setSchedulingPolicy(int schedulingPolicy);
-};
-
-/**
  * Wraps a Thread as provided by the pthreads library
  */
 class Thread : public NonCopyable {
 public:
         /** Calls pthreads.create to create a new thread */
         Thread(void *(* startFunction)(void *), void * arg,
-               ThreadAttributes * threadAttributes);
+               const std::string & name, bool detached);
         virtual ~Thread() throw();
 
         void start();
@@ -142,13 +103,14 @@ private:
         pthread_t thread_id_;
         void *(*start_function)(void *);
         void * start_arg;
-        ThreadAttributes * thread_attrs;
+        std::string tname;
+        bool is_detach;
 };
 
 /// A Simple thread that performs all its work in the run method
 class SimpleThread : public Thread {
 public:
-	SimpleThread(ThreadAttributes * threadAttributes);
+	SimpleThread(const std::string& name, bool detached);
 	virtual ~SimpleThread() throw();
 	///Subclasses must override this method in order for the
 	///to do something useful

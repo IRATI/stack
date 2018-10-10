@@ -993,7 +993,7 @@ const std::string FlowStateObject::getKey() const
 
 // CLASS FlowStateRIBObject
 const std::string FlowStateRIBObject::clazz_name = "FlowStateObject";
-const std::string FlowStateRIBObject::object_name_prefix = "/resalloc/fsos/key=";
+const std::string FlowStateRIBObject::object_name_prefix = "/ra/fsos/key=";
 
 FlowStateRIBObject::FlowStateRIBObject(FlowStateObject* new_obj):
 rina::rib::RIBObj(clazz_name)
@@ -1363,7 +1363,7 @@ bool FlowStateObjects::is_modified() const
 
 //Class FlowStateRIBObjects
 const std::string FlowStateRIBObjects::clazz_name = "FlowStateObjects";
-const std::string FlowStateRIBObjects::object_name= "/resalloc/fsos";
+const std::string FlowStateRIBObjects::object_name= "/ra/fsos";
 
 FlowStateRIBObjects::FlowStateRIBObjects(FlowStateObjects* new_objs,
 					 LinkStateRoutingPolicy* ps) :
@@ -1710,19 +1710,19 @@ void UpdateAgeTimerTask::run()
 }
 
 ExpireOldAddressTimerTask::ExpireOldAddressTimerTask(LinkStateRoutingPolicy * lsr_policy,
-						     const std::string& name_,
+						     const std::string& name__,
 						     unsigned int addr,
 						     bool neigh)
 {
 	lsr_policy_ = lsr_policy;
-	name = name_;
+	name_ = name__;
 	address = addr;
 	neighbor = neigh;
 }
 
 void ExpireOldAddressTimerTask::run()
 {
-	lsr_policy_->expireOldAddress(name, address, neighbor);
+	lsr_policy_->expireOldAddress(name_, address, neighbor);
 }
 
 // CLASS LinkStateRoutingPolicy

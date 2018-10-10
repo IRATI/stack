@@ -351,6 +351,9 @@ struct dt_cons {
         /* The maximum length allowed for a PDU in this DIF, in bytes */
         uint32_t max_pdu_size;
 
+        /* The maximum size allowed for a SDU in this DIF, in bytes */
+        uint32_t max_sdu_size;
+
         /*
          * The maximum PDU lifetime in this DIF, in milliseconds. This is MPL
          * in delta-T

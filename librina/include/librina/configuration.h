@@ -627,6 +627,8 @@ public:
 	unsigned short length_length_;
 	/// The maximum length allowed for a PDU in this DIF, in bytes
 	unsigned int max_pdu_size_;
+	/// The maximum length of an SDU accepted by this DIF, in bytes
+	unsigned int max_sdu_size_;
 	/// The length of the rate field in the DTP PCI, in bytes
 	unsigned short rate_length_;
 	/// The length of the frame field in the DTP PCI, in bytes

@@ -930,8 +930,7 @@ static size_t normal_max_sdu_size(struct ipcp_instance_data * data)
         if (!data->efcpc || !data->efcpc->config)
         	return 0;
 
-        return data->efcpc->config->dt_cons->max_pdu_size -
-        		pci_calculate_size(data->efcpc->config, PDU_TYPE_DT);
+        return data->efcpc->config->dt_cons->max_sdu_size;
 }
 
 ipc_process_id_t normal_ipcp_id(struct ipcp_instance_data * data)
