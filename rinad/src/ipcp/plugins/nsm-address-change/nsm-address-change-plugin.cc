@@ -73,6 +73,9 @@ public:
 	NSMChangeAddressTimerTask(AddressChangeNamespaceManagerPs *ps);
 	~NSMChangeAddressTimerTask() throw(){};
 	void run();
+	std::string name() const {
+		return "nsm-change-address";
+	}
 
 private:
 	AddressChangeNamespaceManagerPs* nsm_ps;

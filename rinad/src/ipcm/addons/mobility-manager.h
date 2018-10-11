@@ -110,6 +110,9 @@ public:
 	HandoverTimerTask(MobilityManager * mm): mobman(mm){};
 	~HandoverTimerTask() throw() {};
 	void run();
+	std::string name() const {
+		return "mobman-handover";
+	}
 
 private:
 	MobilityManager * mobman;
@@ -120,6 +123,9 @@ public:
 	BoostrapTimerTask(MobilityManager * mm): mobman(mm){};
 	~BoostrapTimerTask() throw() {};
 	void run();
+	std::string name() const {
+		return "mobman-bootstrap";
+	}
 
 private:
 	MobilityManager * mobman;
@@ -130,6 +136,9 @@ public:
 	InitializeTimerTask(MobilityManager * mm): mobman(mm){};
 	~InitializeTimerTask() throw() {};
 	void run();
+	std::string name() const {
+		return "mobman-initialize";
+	}
 
 private:
 	MobilityManager * mobman;

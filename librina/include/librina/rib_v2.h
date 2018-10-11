@@ -177,10 +177,12 @@ public:
 					const cdap_rib::obj_info_t &obj,
 					const cdap_rib::res_info_t &res);
 	virtual void remoteDeleteResult(const cdap_rib::con_handle_t &con,
+					const cdap_rib::obj_info_t &obj,
 					const cdap_rib::res_info_t &res);
 	virtual void remoteReadResult(const cdap_rib::con_handle_t &con,
 				      const cdap_rib::obj_info_t &obj,
-				      const cdap_rib::res_info_t &res);
+				      const cdap_rib::res_info_t &res,
+				      const cdap_rib::flags_t & flags);
 	virtual void remoteCancelReadResult(const cdap_rib::con_handle_t &con,
 					    const cdap_rib::res_info_t &res);
 	virtual void remoteWriteResult(const cdap_rib::con_handle_t &con,
@@ -771,13 +773,16 @@ public:
         ///
         /// @param handle The handle of the RIB
         /// @param inst_id The object instance ID
+        /// @param force if true remove objects and all subobjects
         ///
         /// @throws eRIBNotFound, eObjDoesNotExist
         ///
         void removeObjRIB(const rib_handle_t& handle,
-                          const int64_t inst_id);
+                          const int64_t inst_id,
+			  bool force = false);
         void removeObjRIB(const rib_handle_t& handle,
-                          const std::string fqdn);
+                          const std::string fqdn,
+			  bool force = false);
 
         ///
         /// Check if an object is already in the RIB

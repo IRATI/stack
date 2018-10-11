@@ -135,6 +135,7 @@ typedef struct {
         rina::DIFInformation dif_to_assign;
         std::list<rina::ApplicationProcessNamingInformation> difs_to_register;
         std::list<neighbor_config_t> neighbors;
+        std::string dif_template;
         void addRegister(rina::ApplicationProcessNamingInformation &dif)
         {
                 difs_to_register.push_back(dif);

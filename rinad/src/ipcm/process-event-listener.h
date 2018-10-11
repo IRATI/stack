@@ -29,7 +29,7 @@ namespace rinad {
 /// Monitors events on OS processes
 class OSProcessMonitor: public rina::SimpleThread {
 public:
-	OSProcessMonitor(rina::ThreadAttributes * thread_attrs);
+	OSProcessMonitor();
 	~OSProcessMonitor() throw();
 	void do_stop();
 	int run();

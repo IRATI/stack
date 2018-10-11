@@ -1354,6 +1354,7 @@ DataTransferConstants::DataTransferConstants()
 	address_length_ = 0;
 	length_length_ = 0;
 	max_pdu_size_ = 0;
+	max_sdu_size_ = 0;
 	dif_integrity_ = false;
 	max_pdu_lifetime_ = 0;
 	rate_length_ = 0;
@@ -1378,6 +1379,7 @@ bool DataTransferConstants::operator==(const DataTransferConstants &other) const
 			other.length_length_ == length_length_ &&
 			other.max_pdu_lifetime_ == max_pdu_lifetime_ &&
 			other.max_pdu_size_ == max_pdu_size_ &&
+			other.max_sdu_size_ == max_sdu_size_ &&
 			other.max_time_to_ack_ == max_time_to_ack_ &&
 			other.max_time_to_keep_ret_ == max_time_to_keep_ret_ &&
 			other.port_id_length_ == port_id_length_ &&
@@ -1405,6 +1407,7 @@ void DataTransferConstants::from_c_dt_cons(DataTransferConstants & dt,
 	dt.address_length_ = dtc->address_length;
 	dt.length_length_ = dtc->length_length;
 	dt.max_pdu_size_ = dtc->max_pdu_size;
+	dt.max_sdu_size_ = dtc->max_sdu_size;
 	dt.dif_integrity_ = dtc->dif_integrity;
 	dt.max_pdu_lifetime_ = dtc->max_pdu_life;
 	dt.rate_length_ = dtc->rate_length;
@@ -1429,6 +1432,7 @@ struct dt_cons * DataTransferConstants::to_c_dt_cons() const
 	result->address_length = address_length_;
 	result->length_length = length_length_;
 	result->max_pdu_size = max_pdu_size_;
+	result->max_sdu_size = max_sdu_size_;
 	result->dif_integrity = dif_integrity_;
 	result->max_pdu_life = max_pdu_lifetime_;
 	result->rate_length = rate_length_;
@@ -1559,6 +1563,7 @@ const std::string DataTransferConstants::toString(){
 	ss<<"; Seq number length(bytes): "<<sequence_number_length_<<std::endl;
 	ss<<"Max PDU lifetime: "<<max_pdu_lifetime_;
 	ss<<"; Max PDU size: "<<max_pdu_size_;
+	ss<<"; Max SDU size: "<<max_sdu_size_;
 	ss<<"; Integrity?: "<<dif_integrity_;
 	ss<<"; Initialized?: "<<isInitialized();
 

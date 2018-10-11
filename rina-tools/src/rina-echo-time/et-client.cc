@@ -574,9 +574,7 @@ int Client::readTimeout(void * sdu, int maxBytes, unsigned int timeout)
 
 Sender * Client::startSender()
 {
-        rina::ThreadAttributes threadAttributes;
-        Sender * sender = new Sender(&threadAttributes,
-                                     echo_times,
+        Sender * sender = new Sender(echo_times,
                                      data_size,
                                      dealloc_wait,
                                      lost_wait,
@@ -640,14 +638,13 @@ void CFloodCancelFlowTimerTask::run()
 	client->cancelFloodFlow();
 }
 
-Sender::Sender(rina::ThreadAttributes * threadAttributes,
-                   unsigned long echo_times,
+Sender::Sender(unsigned long echo_times,
                    unsigned int data_size,
                    int dealloc_wait,
                    unsigned int lost_wait,
                    int rt, int port_id,
                    int fd,
-                   Client * client) : SimpleThread(threadAttributes),
+                   Client * client) : SimpleThread(std::string("sender"), false),
            echo_times(echo_times), data_size(data_size),
            dealloc_wait(dealloc_wait), lost_wait(lost_wait), rate(rt),
            port_id(port_id), fd(fd), client(client)

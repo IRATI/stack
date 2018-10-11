@@ -399,6 +399,7 @@ void IPCPCDAPIOHandler::invoke_callback(rina::cdap_rib::con_handle_t& con_handle
 			break;
 		case rina::cdap::cdap_m_t::M_DELETE_R:
 			callback_->remote_delete_result(con_handle,
+							obj,
 							res,
 							invoke_id);
 			break;
@@ -464,11 +465,10 @@ void RIBDaemonRO::read(const rina::cdap_rib::con_handle_t &con,
 }
 
 // Class InternalFlowSDUReader
-InternalFlowSDUReader::InternalFlowSDUReader(rina::ThreadAttributes * threadAttributes,
-					     int port_id,
+InternalFlowSDUReader::InternalFlowSDUReader(int port_id,
 					     int fd_,
 					     int cdaps)
-		: rina::SimpleThread(threadAttributes)
+		: rina::SimpleThread(std::string("internal-flow-sdu-reader"), false)
 {
 	portid = port_id;
 	fd = fd_;
@@ -564,16 +564,16 @@ void IPCPRIBDaemonImpl::initialize_rib_daemon(rina::cacep::AppConHandlerInterfac
 	//TODO populate RIB with some objects
 	try {
 		robj = new rina::rib::RIBObj("DIFManagement");
-		ribd->addObjRIB(rib, "/difManagement", &robj);
+		ribd->addObjRIB(rib, "/difm", &robj);
 
 		robj = new rina::rib::RIBObj("IPCManagement");
-		ribd->addObjRIB(rib, "/ipcManagement", &robj);
+		ribd->addObjRIB(rib, "/ipcm", &robj);
 
 		robj = new RIBDaemonRO(rib);
-		ribd->addObjRIB(rib, "/ribDaemon", &robj);
+		ribd->addObjRIB(rib, "/ribd", &robj);
 
 		robj = new rina::rib::RIBObj("SDUDelimiting");
-		ribd->addObjRIB(rib, "/sduDel", &robj);
+		ribd->addObjRIB(rib, "/sdudel", &robj);
 	} catch (rina::Exception &e1) {
 		LOG_ERR("RIB basic objects were not created because %s",
 				e1.what());
@@ -670,18 +670,13 @@ void IPCPRIBDaemonImpl::start_internal_flow_sdu_reader(int port_id,
 						       int fd,
 						       int cdap_session)
 {
-	rina::ThreadAttributes thread_attrs;
-	std::stringstream ss;
 	InternalFlowSDUReader * reader = 0;
 
 	rina::ScopedLock g(iflow_readers_lock);
 
 	fds[cdap_session] = fd;
 
-	thread_attrs.setJoinable();
-	ss << "Internal Flow SDU Reader of port-id " << port_id;
-	thread_attrs.setName(ss.str());
-	reader = new InternalFlowSDUReader(&thread_attrs, port_id, fd, cdap_session);
+	reader = new InternalFlowSDUReader(port_id, fd, cdap_session);
 	reader->start();
 
 	iflow_sdu_readers[port_id] = reader;

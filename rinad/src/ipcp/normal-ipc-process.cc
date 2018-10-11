@@ -56,6 +56,9 @@ public:
 	ExpireOldIPCPAddressTimerTask(IPCProcessImpl * ipcp);
 	~ExpireOldIPCPAddressTimerTask() throw() {};
 	void run();
+	std::string name() const {
+		return "expire-old-ipcp-address";
+	}
 
 private:
 	IPCProcessImpl * ipcp;
@@ -77,6 +80,9 @@ public:
 	UseNewIPCPAddressTimerTask(IPCProcessImpl * ipcp);
 	~UseNewIPCPAddressTimerTask() throw() {};
 	void run();
+	std::string name() const {
+		return "use-new-ipcp-address";
+	}
 
 private:
 	IPCProcessImpl * ipcp;
@@ -446,10 +452,7 @@ void IPCProcessImpl::assign_to_dif_response_handler(const rina::AssignToDIFRespo
 	}
 
 	state = ASSIGNED_TO_DIF;
-	rina::ThreadAttributes threadAttributes;
-	threadAttributes.setJoinable();
-	threadAttributes.setName("sysfs-sync");
-	kernel_sync = new KernelSyncTrigger(&threadAttributes, this, 4000);
+	kernel_sync = new KernelSyncTrigger(this, 4000);
 	kernel_sync->start();
 }
 

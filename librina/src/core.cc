@@ -20,6 +20,7 @@
 // MA  02110-1301  USA
 //
 
+#include <errno.h>
 #include <sstream>
 #include <unistd.h>
 
@@ -665,14 +666,15 @@ IPCEvent * IRATICtrlManager::get_next_ctrl_msg()
 
 	msg = irati_read_next_msg(cfd);
 	if (!msg) {
-		LOG_ERR("Could not retrieve next ctrl message for fd %d", cfd);
-		//TODO read errno
+		LOG_ERR("Could not retrieve next ctrl message for fd %d. Errno (%d): %s",
+			cfd, errno, strerror(errno));
 		return 0;
 	}
 
 	event = IRATICtrlManager::irati_ctrl_msg_to_ipc_event(msg);
 	if (event) {
-		LOG_DBG("Added event of type %s and sequence number %u to events queue",
+		LOG_DBG("Added event of type(%d) %s and sequence number %u to events queue",
+				event->eventType,
 				IPCEvent::eventTypeToString(event->eventType).c_str(),
 				event->sequenceNumber);
 	} else

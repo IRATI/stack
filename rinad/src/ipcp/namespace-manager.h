@@ -156,6 +156,9 @@ public:
 			       unsigned int oaddr);
 	~AddressChangeTimerTask() throw() {};
 	void run();
+	std::string name() const {
+		return "address-change";
+	}
 
 	INamespaceManager * namespace_manager;
 	unsigned int new_address;
@@ -230,11 +233,14 @@ public:
 					 const std::string name);
 	~CheckDFTEntriesToRemoveTimerTask() throw(){};
 	void run();
+	std::string name() const {
+		return "check-dft-entries-to-remove";
+	}
 
 private:
 	unsigned int address;
 	DFTRIBObj* dft;
-	std::string name;
+	std::string name_;
 };
 
 } //namespace rinad

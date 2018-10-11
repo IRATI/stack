@@ -1,9 +1,7 @@
 //
-// RINA manager main
+// Network Manager main
 //
-// Addy Bombeke <addy.bombeke@ugent.be>
-// Vincenzo Maffione <v.maffione@nextworks.it>
-// Bernat Gastón <bernat.gaston@i2cat.net>
+// Eduard Grasa <eduard.grasa@i2cat.net>
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions
@@ -32,51 +30,93 @@
 
 #include <librina/librina.h>
 
-#define RINA_PREFIX     "rina-cdap-echo"
+#define RINA_PREFIX     "net-manager"
 #include <librina/logs.h>
 
 #include "tclap/CmdLine.h"
-
-#include "config.h"
-#include "manager.h"
-#include "utils.h"
+#include "net-manager.h"
 
 using namespace std;
+
+void parse_dif_names(std::list<std::string> & dif_names, const std::string& arg)
+{
+	const char c = ',';
+	std::string::size_type s = 0;
+	std::string::size_type e = arg.find(c);
+
+	while (e != std::string::npos) {
+		dif_names.push_back(arg.substr(s, e-s));
+		s = ++e;
+		e = arg.find(c, e);
+	}
+	// Grab the remaining
+	if (e == std::string::npos)
+		dif_names.push_back(arg.substr(s, arg.length()));
+}
+
+NetworkManager * nm_instance;
 
 int wrapped_main(int argc, char** argv)
 {
         string manager_apn;
         string manager_api;
         list<string> dif_names;
+        std::string console_path;
+        std::string dif_templates_path;
 
         try {
-                TCLAP::CmdLine cmd("manager", ' ', PACKAGE_VERSION);
+                TCLAP::CmdLine cmd("network-manager", ' ', PACKAGE_VERSION);
                 TCLAP::ValueArg<string> manager_apn_arg("",
-                                                       "manager-apn",
-                                                       "Application process name for the manager",
-                                                       false,
-                                                       "rina.apps.manager",
-                                                       "string");
+                                                        "manager-apn",
+                                                        "Application process name for the Network Manager process",
+                                                        false,
+                                                        "arcfire.network.manager",
+                                                        "string");
                 TCLAP::ValueArg<string> manager_api_arg("",
-                                                       "manager-api",
-                                                       "Application process instance for the manager",
-                                                       false,
-                                                       "1",
-                                                       "string");
+                                                        "manager-api",
+                                                        "Application process instance for the Network Manager process",
+                                                        false,
+                                                        "1",
+                                                        "string");
                 TCLAP::ValueArg<string> dif_arg("d",
-                                		"difs-to-register-at",
-						"The names of the DIFs to register at, separated by ',' (empty means 'any DIF')",
+                                                "difs-to-register-at",
+                                                "The names of the DIFs to register at, separated by ',' (empty means 'any DIF')",
                                                 false,
                                                 "",
                                                 "string");
+
+                TCLAP::ValueArg<string> console_path_arg("c",
+                                                         "console-path",
+							 "The path to the Network Management console UNIX socket",
+							 false,
+							 "/var/run/nmconsole.sock",
+							 "string");
+
+                TCLAP::ValueArg<string> dif_templates_path_arg("t",
+                                                               "dif-templates-path",
+							       "The path to the DIF Templates folder",
+							       false,
+							       "/usr/local/irati/etc",
+							       "string");
+
+                cmd.add(manager_apn_arg);
+                cmd.add(manager_api_arg);
                 cmd.add(dif_arg);
+                cmd.add(console_path_arg);
+                cmd.add(dif_templates_path_arg);
 
                 cmd.parse(argc, argv);
 
                 manager_apn = manager_apn_arg.getValue();
                 manager_api = manager_api_arg.getValue();
-                parse_dif_names(dif_names, dif_arg.getValue());
+                if (dif_arg.getValue() != "")
+                	parse_dif_names(dif_names, dif_arg.getValue());
+                console_path = console_path_arg.getValue();
+                dif_templates_path = dif_templates_path_arg.getValue();
 
+                LOG_DBG("Configuration: manager_apn=%s, manager_api=%s, console_path=%s, dif_templates_path=%s",
+                	manager_apn.c_str(), manager_api.c_str(), console_path.c_str(),
+			dif_templates_path.c_str());
         } catch (TCLAP::ArgException &e) {
                 LOG_ERR("Error: %s for arg %d",
                         e.error().c_str(),
@@ -84,20 +124,24 @@ int wrapped_main(int argc, char** argv)
                 return EXIT_FAILURE;
         }
 
-        rina::initialize("INFO", "");
-        Manager m(dif_names, manager_apn, manager_api);
-        m.run();
+        rina::initialize("DEBUG", "");
 
-        return EXIT_SUCCESS;
+        nm_instance = new NetworkManager(manager_apn, manager_api, console_path,
+        				 dif_templates_path);
+
+        nm_instance->event_loop(dif_names);
+
+	LOG_INFO("Exited event loop");
+	return EXIT_SUCCESS;
 }
 
 int main(int argc, char * argv[])
 {
         int retval;
 
-        //try {
+        try {
                 retval = wrapped_main(argc, argv);
-       /* } catch (rina::Exception& e) {
+        } catch (rina::Exception& e) {
                 LOG_ERR("%s", e.what());
                 return EXIT_FAILURE;
 
@@ -105,7 +149,6 @@ int main(int argc, char * argv[])
                 LOG_ERR("Uncaught exception");
                 return EXIT_FAILURE;
         }
-        */
 
         return retval;
 }
