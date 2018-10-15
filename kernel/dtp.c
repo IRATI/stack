@@ -72,7 +72,7 @@ static struct dtp_sv default_sv = {
         .MPL                  = 1000,
         .R                    = 100,
         .A                    = 0,
-        .tr                   = 100,
+        .tr                   = 0,
         .rcv_left_window_edge = 0,
         .window_closed        = false,
         .drf_flag             = true,
@@ -1111,6 +1111,7 @@ int dtp_destroy(struct dtp * instance)
 	struct dtcp * dtcp = NULL;
 	struct cwq * cwq = NULL;
 	struct rtxq * rtxq = NULL;
+	struct rttq * rttq = NULL;
 	int ret = 0;
 
         if (!instance)
@@ -1131,6 +1132,11 @@ int dtp_destroy(struct dtp * instance)
         if (instance->rtxq) {
         	rtxq = instance->rtxq;
         	instance->rtxq = NULL; /* Useful */
+        }
+
+        if (instance->rttq) {
+        		rttq = instance->rttq;
+        		instance->rttq = NULL;
         }
 
         spin_unlock_bh(&instance->lock);
@@ -1156,6 +1162,13 @@ int dtp_destroy(struct dtp * instance)
                 }
         }
 
+        if (rttq) {
+                if (rttq_destroy(rttq)) {
+                        LOG_ERR("Failed to destroy rexmsn queue");
+                        ret = -1;
+                }
+        }
+
         rtimer_destroy(&instance->timers.a);
         /* tf_a posts workers that restart sender_inactivity timer, so the wq
          * must be flushed before destroying the timer */
@@ -1164,7 +1177,7 @@ int dtp_destroy(struct dtp * instance)
         rtimer_destroy(&instance->timers.receiver_inactivity);
         rtimer_destroy(&instance->timers.rate_window);
         rtimer_destroy(&instance->timers.rtx);
-	rtimer_destroy(&instance->timers.rendezvous);
+        rtimer_destroy(&instance->timers.rendezvous);
 
         if (instance->to_post) ringq_destroy(instance->to_post,
                                (void (*)(void *)) du_destroy);

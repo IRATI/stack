@@ -235,12 +235,65 @@ int default_rate_reduction(struct dtcp_ps * ps, const struct pci * pci)
 	return 0;
 }
 
+static int rtt_calculation(struct dtcp_ps * ps, timeout_t start_time)
+{
+    	struct dtcp *       dtcp;
+    	uint_t              rtt, new_sample, srtt, rttvar, trmsecs;
+    	timeout_t           a;
+    	int                 abs;
+
+        if (!ps)
+                return -1;
+        dtcp = ps->dm;
+        if (!dtcp)
+                return -1;
+
+    	new_sample = jiffies_to_msecs(jiffies - start_time);
+
+    	spin_lock_bh(&dtcp->parent->sv_lock);
+
+    	rtt    = dtcp->sv->rtt;
+    	srtt   = dtcp->sv->srtt;
+    	rttvar = dtcp->sv->rttvar;
+    	a 	   = dtcp->parent->sv->A;
+
+    	if (!rtt) {
+    			rtt    = new_sample;
+    			rttvar = new_sample >> 1;
+    			srtt   = new_sample;
+    	} else {
+    			/* RTT <== RTT * (112/128) + SAMPLE * (16/128)*/
+    			rtt = (rtt * 112 + (new_sample << 4)) >> 7;
+    			abs = srtt - new_sample;
+    			abs = abs < 0 ? -abs : abs;
+    			rttvar = ((3 * rttvar) >> 2) + (((uint_t)abs) >> 2);
+    	}
+
+    	/*FIXME: k, G, alpha and betha should be parameters passed to the policy
+    	 * set. Probably moving them to ps->priv */
+
+    	/* k * rttvar = 4 * rttvar */
+    	trmsecs  = rttvar << 2;
+    	/* G is 0.1s according to RFC6298, then 100ms */
+    	trmsecs  = 100 > trmsecs ? 100 : trmsecs;
+    	trmsecs += srtt + jiffies_to_msecs(a);
+    	/* RTO (tr) less than 1s? (not for the common policy) */
+    	/*trmsecs  = trmsecs < 1000 ? 1000 : trmsecs;*/
+
+    	dtcp->sv->rtt = rtt;
+    	dtcp->sv->rttvar = rttvar;
+    	dtcp->sv->srtt = srtt;
+    	dtcp->parent->sv->tr = msecs_to_jiffies(trmsecs);
+
+    	spin_unlock_bh(&dtcp->parent->sv_lock);
+
+    	return 0;
+}
+
 int default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
 {
         struct dtcp *       dtcp;
-        uint_t              rtt, new_sample, srtt, rttvar, trmsecs;
-        timeout_t           start_time, a;
-        int                 abs;
+        timeout_t           start_time;
 
         if (!ps)
                 return -1;
@@ -252,52 +305,37 @@ int default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
 
         start_time = rtxq_entry_timestamp(dtcp->parent->rtxq, sn);
         if (start_time == 0) {
-        	LOG_DBG("RTTestimator: PDU %u has been retransmitted", sn);
+        		LOG_DBG("RTTestimator: PDU %u has been retransmitted", sn);
                 return 0;
         }
 
-        new_sample = jiffies_to_msecs(jiffies - start_time);
-
-        spin_lock_bh(&dtcp->parent->sv_lock);
-
-        rtt        = dtcp->sv->rtt;
-        srtt       = dtcp->sv->srtt;
-        rttvar     = dtcp->sv->rttvar;
-        a 	   = dtcp->parent->sv->A;
-
-        if (!rtt) {
-        	rtt = new_sample;
-                rttvar = new_sample >> 1;
-                srtt   = new_sample;
-        } else {
-        	/* RTT <== RTT * (112/128) + SAMPLE * (16/128)*/
-        	rtt = (rtt * 112 + (new_sample << 4)) >> 7;
-                abs = srtt - new_sample;
-                abs = abs < 0 ? -abs : abs;
-                rttvar = ((3 * rttvar) >> 2) + (((uint_t)abs) >> 2);
-        }
-
-        /*FIXME: k, G, alpha and betha should be parameters passed to the policy
-         * set. Probably moving them to ps->priv */
-
-        /* k * rttvar = 4 * rttvar */
-        trmsecs  = rttvar << 2;
-        /* G is 0.1s according to RFC6298, then 100ms */
-        trmsecs  = 100 > trmsecs ? 100 : trmsecs;
-        trmsecs += srtt + jiffies_to_msecs(a);
-        /* RTO (tr) less than 1s? (not for the common policy) */
-        /*trmsecs  = trmsecs < 1000 ? 1000 : trmsecs;*/
-
-        dtcp->sv->rtt = rtt;
-        dtcp->sv->rttvar = rttvar;
-        dtcp->sv->srtt = srtt;
-        dtcp->parent->sv->tr = msecs_to_jiffies(trmsecs);
-
-        spin_unlock_bh(&dtcp->parent->sv_lock);
-
-	LOG_DBG("New RTT %u; New Tr: %u ms", rtt, trmsecs);
+        rtt_calculation(ps, start_time);
 
         return 0;
+}
+
+int default_rtt_estimator_nortx(struct dtcp_ps * ps, seq_num_t sn)
+{
+		struct dtcp *       dtcp;
+		timeout_t           start_time;
+
+		if (!ps)
+				return -1;
+		dtcp = ps->dm;
+		if (!dtcp)
+				return -1;
+
+		LOG_DBG("RTT Estimator with only flow control...");
+
+		start_time = rttq_entry_timestamp(dtcp->parent->rttq, sn);
+		if (start_time == 0) {
+				LOG_DBG("RTTestimator: PDU %u has been retransmitted", sn);
+				return 0;
+		}
+
+		rtt_calculation(ps, start_time);
+
+		return 0;
 }
 
 int default_rcvr_rendezvous(struct dtcp_ps * ps, const struct pci * pci)
@@ -388,7 +426,11 @@ struct ps_base * dtcp_ps_default_create(struct rina_component * component)
         ps->priv                        = NULL;
         ps->flow_init                   = NULL;
         ps->lost_control_pdu            = default_lost_control_pdu;
-        ps->rtt_estimator               = default_rtt_estimator;
+		if (ps->rtx_ctrl) {
+				ps->rtt_estimator = default_rtt_estimator;
+		} else {
+				ps->rtt_estimator = default_rtt_estimator_nortx;
+		}
         ps->retransmission_timer_expiry = NULL;
         ps->received_retransmission     = NULL;
         ps->sender_ack                  = default_sender_ack;

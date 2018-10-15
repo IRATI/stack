@@ -546,8 +546,27 @@ static int update_window_and_rate(struct dtcp * dtcp,
 static int rcv_flow_ctl(struct dtcp * dtcp,
                         struct du *   du)
 {
-	LOG_DBG("DTCP received FC (CPU: %d)", smp_processor_id());
-	return update_window_and_rate(dtcp, du);
+    	struct dtcp_ps * ps;
+    	seq_num_t        seq;
+    	uint_t 			 credit;
+
+    	credit = dtcp->sv->sndr_credit;
+
+    	seq = pci_control_new_rt_wind_edge(&du->pci);
+
+    	rcu_read_lock();
+    	ps = container_of(rcu_dereference(dtcp->base.ps),
+                      	  struct dtcp_ps, base);
+
+    	LOG_DBG("DTCP received FC (CPU: %d)", smp_processor_id());
+    	if (!ps->rtx_ctrl && ps->rtt_estimator)
+    			ps->rtt_estimator(ps, seq - credit);
+
+    	rcu_read_unlock();
+
+    	rttq_drop(dtcp->parent->rttq, seq);
+
+    	return update_window_and_rate(dtcp, du);
 }
 
 static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
@@ -562,8 +581,8 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         ps = container_of(rcu_dereference(dtcp->base.ps),
                           struct dtcp_ps, base);
         /* This updates sender LWE */
-	if (ps->rtx_ctrl && ps->rtt_estimator)
-        	ps->rtt_estimator(ps, pci_control_ack_seq_num(&du->pci));
+        if (ps->rtx_ctrl && ps->rtt_estimator)
+        		ps->rtt_estimator(ps, seq);
         if (ps->sender_ack(ps, seq))
                 LOG_ERR("Could not update RTXQ and LWE");
         rcu_read_unlock();
@@ -996,7 +1015,11 @@ int dtcp_select_policy_set(struct dtcp * dtcp,
                         ps->rate_reduction = default_rate_reduction;
                 }
                 if (!ps->rtt_estimator) {
-                        ps->rtt_estimator = default_rtt_estimator;
+                		if (ps->rtx_ctrl) {
+                				ps->rtt_estimator = default_rtt_estimator;
+                		} else {
+                				ps->rtt_estimator = default_rtt_estimator_nortx;
+                		}
                 }
                 if (!ps->rcvr_rendezvous) {
                 	ps->rcvr_rendezvous = default_rcvr_rendezvous;
@@ -1218,8 +1241,9 @@ int dtcp_destroy(struct dtcp * instance)
 
         if (instance->sv)       rkfree(instance->sv);
         if (instance->cfg)      dtcp_config_destroy(instance->cfg);
+        rtimer_destroy(&instance->rendezvous_rcv);
         rina_component_fini(&instance->base);
-	robject_del(&instance->robj);
+        robject_del(&instance->robj);
         rkfree(instance);
 
         LOG_DBG("Instance %pK destroyed successfully", instance);
