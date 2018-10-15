@@ -393,10 +393,14 @@ public:
 	netman_res_t create_ipcp(CreateIPCPPromise * promise, int system_id,
 				 const std::string& ipcp_desc);
 	netman_res_t destroy_ipcp(Promise * promise, int system_id, int ipcp_id);
+	netman_res_t create_dif(std::map<std::string, int>& result,
+				const std::string& dif_desc);
 
 private:
         void n1_flow_accepted(const char * incoming_apn, int fd);
         int assign_system_id(void);
+        netman_res_t create_ipcp(CreateIPCPPromise * promise, ManagedSystem * mas,
+        			 rinad::configs::ipcp_config_t& ipcp_config);
 
         int cfd;
         std::string complete_name;

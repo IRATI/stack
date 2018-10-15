@@ -35,9 +35,43 @@
 #include <rina/api.h>
 
 //TODO Add cache with managed system names - system id
-//TODO Add DIF template manager
 
 //Class NMConsole
+class CreateDIFConsoleCmd: public rina::ConsoleCmdInfo {
+public:
+	CreateDIFConsoleCmd(NMConsole * console, NetworkManager * nm) :
+		rina::ConsoleCmdInfo("USAGE: create-dif <path to DIF descriptor file>", console) {
+		netman = nm;
+	};
+
+	int execute(std::vector<std::string>& args) {
+		std::map<std::string, int> ipcp_ids;
+		std::map<std::string, int>::iterator it;
+
+		if (args.size() < 2) {
+			console->outstream << console->commands_map[args[0]]->usage << std::endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		if(netman->create_dif(ipcp_ids, args[1]) == NETMAN_FAILURE){
+			console->outstream << "Error while creating IPC process" << std::endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		console->outstream << "DIF created ";
+		console->outstream << ". IPCPs created at the following systems: " << std::endl;
+		for (it = ipcp_ids.begin(); it != ipcp_ids.end(); ++it) {
+			console->outstream << "System " << it->first
+					   << ", id " << it->second << std::endl;
+		}
+
+		return rina::UNIXConsole::CMDRETCONT;
+	}
+
+private:
+	NetworkManager * netman;
+};
+
 class CreateIPCPConsoleCmd: public rina::ConsoleCmdInfo {
 public:
 	CreateIPCPConsoleCmd(NMConsole * console, NetworkManager * nm) :
@@ -152,6 +186,7 @@ NMConsole::NMConsole(const std::string& socket_path, NetworkManager * nm) :
 			rina::UNIXConsole(socket_path)
 {
 	netman = nm;
+	commands_map["create-dif"] = new CreateDIFConsoleCmd(this, netman);
 	commands_map["create-ipcp"] = new CreateIPCPConsoleCmd(this, netman);
 	commands_map["destroy-ipcp"] = new DestroyIPCPConsoleCmd(this, netman);
 	commands_map["list-systems"] = new ListSystemsConsoleCmd(this, netman);
@@ -762,16 +797,9 @@ std::string NetworkManager::list_systems(void)
 netman_res_t NetworkManager::create_ipcp(CreateIPCPPromise * promise, int system_id,
 			 	 	 const std::string& ipcp_desc)
 {
-	MASystemTransState * trans;
 	std::map<std::string, ManagedSystem *>::iterator it;
 	ManagedSystem * mas;
 	rinad::configs::ipcp_config_t ipcp_config;
-	rina::cdap_rib::res_info_t res;
-	rina::cdap_rib::obj_info_t obj_info;
-        rina::cdap_rib::flags_t flags;
-        rina::cdap_rib::filt_info_t filt;
-        rinad::encoders::IPCPConfigEncoder encoder;
-        std::stringstream ss;
 
 	//1 Retrieve system from system-id, if it doesn't exist, return error
 	rina::ScopedLock g(et->lock);
@@ -780,6 +808,7 @@ netman_res_t NetworkManager::create_ipcp(CreateIPCPPromise * promise, int system
 			it != et->enrolled_systems.end(); ++it) {
 		if (it->second->system_id == system_id) {
 			mas = it->second;
+			break;
 		}
 	}
 
@@ -794,13 +823,27 @@ netman_res_t NetworkManager::create_ipcp(CreateIPCPPromise * promise, int system
 		return NETMAN_FAILURE;
 	}
 
+	return create_ipcp(promise, mas, ipcp_config);
+}
+
+netman_res_t NetworkManager::create_ipcp(CreateIPCPPromise * promise,
+					 ManagedSystem * mas,
+					 rinad::configs::ipcp_config_t& ipcp_config)
+{
+	MASystemTransState * trans;
+	rina::cdap_rib::obj_info_t obj_info;
+        rina::cdap_rib::flags_t flags;
+        rina::cdap_rib::filt_info_t filt;
+        rinad::encoders::IPCPConfigEncoder encoder;
+        std::stringstream ss;
+
 	obj_info.name_ = "/csid=1/psid=1/kernelap/osap/ipcps/ipcpid";
 	obj_info.class_ = "IPCProcess";
 	encoder.encode(ipcp_config, obj_info.value_);
 
 	ss << mas->con.port_id << "-" << obj_info.name_;
 	//3 Store transaction
-	trans = new MASystemTransState(this, promise, system_id, ss.str());
+	trans = new MASystemTransState(this, promise, mas->system_id, ss.str());
 	if (!trans) {
 		LOG_ERR("Unable to allocate memory for the transaction object. Out of memory!");
 		return NETMAN_FAILURE;
@@ -808,7 +851,8 @@ netman_res_t NetworkManager::create_ipcp(CreateIPCPPromise * promise, int system
 
 	if (add_transaction_state(trans) < 0)
 	{
-		LOG_ERR("Unable to add transaction; out of memory?");
+		LOG_ERR("Unable to add transaction; repeated transaction?");
+		remove_transaction_state(trans->tid);
 		return NETMAN_FAILURE;
 	}
 
@@ -861,6 +905,62 @@ void NetworkManager::remoteCreateResult(const rina::cdap_rib::con_handle_t &con,
 		trans->completed(NETMAN_FAILURE);
 	}
 	remove_transaction_state(trans->tid);
+}
+
+netman_res_t NetworkManager::create_dif(std::map<std::string, int>& result,
+					const std::string& dif_desc)
+{
+	DIFDescriptor ddesc;
+	std::list<IPCPDescriptor>::iterator it;
+	CreateIPCPPromise promise;
+	std::map<std::string, ManagedSystem *>::iterator mit;
+	ManagedSystem * mas;
+
+	if (dtm->parse_dif_descriptor(dif_desc, ddesc)) {
+		LOG_ERR("Problems parsing DIF descriptor");
+		return NETMAN_FAILURE;
+	}
+
+	for ( it = ddesc.ipcps.begin(); it != ddesc.ipcps.end(); ++it) {
+		rinad::configs::ipcp_config_t ipcp_config;
+
+		//1 Retrieve system from system-name, if it doesn't exist, continue
+		rina::ScopedLock g(et->lock);
+		mas = NULL;
+		for (mit = et->enrolled_systems.begin();
+				mit != et->enrolled_systems.end(); ++mit) {
+			if (mit->second->con.dest_.ap_name_ == it->system_name) {
+				mas = mit->second;
+				break;
+			}
+		}
+
+		if (!mas) {
+			LOG_ERR("Could not find Managed System with name %s",
+				it->system_name.c_str());
+			result[it->system_name] = -1;
+			continue;
+		}
+
+		//2 Get IPCP configuration from IPCP descriptor
+		if (dtm->__get_ipcp_config_from_desc(ipcp_config,
+						     it->system_name, *it)) {
+			LOG_ERR("Error getting IPCP configuration");
+			result[it->system_name] = -1;
+			continue;
+		}
+
+		//3 Create IPCP process and wait for result
+		if(create_ipcp(&promise, mas, ipcp_config) == NETMAN_FAILURE ||
+				promise.wait() != NETMAN_SUCCESS){
+			LOG_ERR("Error while creating IPC process");
+			result[it->system_name] = -1;
+		} else {
+			result[it->system_name] = promise.ipcp_id;
+		}
+	}
+
+	return NETMAN_SUCCESS;
 }
 
 netman_res_t NetworkManager::destroy_ipcp(Promise * promise, int system_id, int ipcp_id)

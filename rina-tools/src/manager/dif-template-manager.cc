@@ -409,6 +409,72 @@ void DIFTemplateManager::get_all_dif_templates(std::list<rinad::DIFTemplate>& ou
 	}
 }
 
+int DIFTemplateManager::parse_dif_descriptor(const std::string& desc_file,
+			 	 	     DIFDescriptor & dif_desc)
+{
+	Json::Value    root, ipcps, regs, neighbors;
+	Json::Reader   reader;
+	rina::Neighbor neigh;
+	unsigned int   i, j;
+	ifstream       file;
+	IPCPDescriptor ipcp_desc;
+	std::string    dif_type;
+
+        file.open(desc_file.c_str(), std::ifstream::in);
+        if (file.fail()) {
+                LOG_ERR("Failed to open config file");
+                return -1;
+        }
+
+        if (!reader.parse(file, root, false)) {
+        	LOG_ERR("Failed to parse JSON: %s",
+        		 reader.getFormatedErrorMessages().c_str());
+
+        	return -1;
+        }
+
+        file.close();
+
+        dif_desc.dif_name = root.get("dif_name", string()).asString();
+        dif_type = root.get("dif_type", string()).asString();
+        ipcps = root["ipcps"];
+        if (ipcps == 0) {
+        	LOG_ERR("DIF descriptor does not contain IPCP configs");
+        	return -1;
+        }
+
+        for (i = 0; i < ipcps.size(); i++) {
+        	ipcp_desc.dif_template_name = ipcps[i].get("dif_template", string()).asString();
+        	ipcp_desc.system_name = ipcps[i].get("system_name", string()).asString();
+        	ipcp_desc.ipcp_type = dif_type;
+        	ipcp_desc.dif_name = dif_desc.dif_name;
+
+        	regs = ipcps[i]["registrations"];
+        	if (regs != 0) {
+        		for (j = 0; j < regs.size(); j++) {
+        			ipcp_desc.difs_to_register_at.push_back(regs[j].asString());
+        		}
+        	}
+
+        	neighbors = ipcps[i]["neighbors"];
+        	if (neighbors != 0) {
+        		for (j = 0; j < neighbors.size(); j++) {
+        			neigh.name_.processName = neighbors[j].get("ipcp_name", string()).asString();
+        			neigh.name_.processInstance = "1";
+        			neigh.supporting_dif_name_.processName = neighbors[j].get("under_dif", string()).asString();
+
+        			ipcp_desc.neighbors.push_back(neigh);
+        		}
+        	}
+
+        	dif_desc.ipcps.push_back(ipcp_desc);
+        	ipcp_desc.difs_to_register_at.clear();
+        	ipcp_desc.neighbors.clear();
+        }
+
+        return 0;
+}
+
 int DIFTemplateManager::parse_ipcp_descriptor(const std::string& desc_file,
 			  	  	      IPCPDescriptor & ipcp_desc)
 {
@@ -432,16 +498,16 @@ int DIFTemplateManager::parse_ipcp_descriptor(const std::string& desc_file,
 
         file.close();
 
-        ipcp_data = root["ipcpData"];
+        ipcp_data = root["ipcp_data"];
         if (ipcp_data == 0) {
         	LOG_ERR("IPCP Descriptor does not contain ipcpData element");
         	return -1;
         }
 
-	ipcp_desc.dif_name = ipcp_data.get("difName", string()).asString();
+	ipcp_desc.dif_name = ipcp_data.get("dif_name", string()).asString();
 	ipcp_desc.ipcp_type = ipcp_data.get("type", string()).asString();
 	ipcp_desc.dif_template_name = ipcp_data.get("template", string()).asString();
-	difs = ipcp_data["difsToRegisterAt"];
+	difs = ipcp_data["registrations"];
 	if (difs != 0) {
 		for (unsigned int j = 0; j < difs.size(); j++) {
 			ipcp_desc.difs_to_register_at.push_back(difs[j].asString());
@@ -456,12 +522,24 @@ int DIFTemplateManager::get_ipcp_config_from_desc(rinad::configs::ipcp_config_t 
 			     	     	     	  const std::string& desc_file)
 {
 	IPCPDescriptor ipcp_desc;
-	rinad::DIFTemplate dift;
-	std::stringstream ss;
 
 	if (parse_ipcp_descriptor(desc_file, ipcp_desc)) {
 		return -1;
 	}
+
+	return __get_ipcp_config_from_desc(ipcp_config, system_name, ipcp_desc);
+}
+
+int DIFTemplateManager::__get_ipcp_config_from_desc(rinad::configs::ipcp_config_t & ipcp_config,
+			      	      	      	  const std::string& system_name,
+			      	      	      	  const IPCPDescriptor& ipcp_desc)
+{
+	rinad::DIFTemplate dift;
+	std::stringstream ss;
+	std::list<std::string>::const_iterator reg_it;
+	std::list<rina::Neighbor>::const_iterator nei_it;
+	rina::ApplicationProcessNamingInformation aux_name;
+	rinad::configs::neighbor_config_t nei_conf;
 
 	if (get_dif_template(ipcp_desc.dif_template_name, dift)) {
 		return -1;
@@ -538,6 +616,22 @@ int DIFTemplateManager::get_ipcp_config_from_desc(rinad::configs::ipcp_config_t 
 			pit != dift.configParameters.end(); pit++) {
 		ipcp_config.dif_to_assign.dif_configuration_.add_parameter(
 				rina::PolicyParameter(pit->first, pit->second));
+	}
+
+	// Registrations to N-1 DIFs
+	for (reg_it = ipcp_desc.difs_to_register_at.begin();
+			reg_it != ipcp_desc.difs_to_register_at.end(); ++reg_it) {
+		aux_name.processName = *reg_it;
+		ipcp_config.difs_to_register.push_back(aux_name);
+	}
+
+	// Enrollments to neighbors in the N-DIF
+	for (nei_it = ipcp_desc.neighbors.begin();
+			nei_it != ipcp_desc.neighbors.end(); ++nei_it) {
+		nei_conf.neighbor_name = nei_it->name_;
+		nei_conf.under_dif = nei_it->supporting_dif_name_;
+		nei_conf.dif.processName = ipcp_desc.dif_name;
+		ipcp_config.neighbors.push_back(nei_conf);
 	}
 
 	return 0;
