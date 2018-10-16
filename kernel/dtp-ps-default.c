@@ -136,7 +136,7 @@ static void initial_seq_num(struct dtp * dtp)
         dtp->sv->seq_nr_to_send = seq_num;
         spin_unlock_bh(&dtp->sv_lock);
 
-        LOG_DBG("initial_seq_number reset");
+        LOG_INFO("initial_seq_number reset");
 }
 
 int default_initial_sequence_number(struct dtp_ps * ps)
@@ -158,7 +158,7 @@ int default_receiver_inactivity_timer(struct dtp_ps * ps)
         struct dtp * dtp = ps->dm;
         struct dtcp *        dtcp;
 
-        LOG_DBG("default_receiver_inactivity launched");
+        LOG_INFO("default_receiver_inactivity launched");
 
         if (!dtp) return 0;
 
@@ -185,7 +185,7 @@ int default_sender_inactivity_timer(struct dtp_ps * ps)
 
         if (!dtp) return 0;
 
-        LOG_DBG("DTP %pK, STime launched", dtp);
+        LOG_INFO("DTP %pK, STime launched", dtp);
 
         dtcp = dtp->dtcp;
         if (!dtcp) {

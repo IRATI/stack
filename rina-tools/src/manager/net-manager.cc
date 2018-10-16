@@ -912,7 +912,6 @@ netman_res_t NetworkManager::create_dif(std::map<std::string, int>& result,
 {
 	DIFDescriptor ddesc;
 	std::list<IPCPDescriptor>::iterator it;
-	CreateIPCPPromise promise;
 	std::map<std::string, ManagedSystem *>::iterator mit;
 	ManagedSystem * mas;
 
@@ -923,6 +922,7 @@ netman_res_t NetworkManager::create_dif(std::map<std::string, int>& result,
 
 	for ( it = ddesc.ipcps.begin(); it != ddesc.ipcps.end(); ++it) {
 		rinad::configs::ipcp_config_t ipcp_config;
+		CreateIPCPPromise promise;
 
 		//1 Retrieve system from system-name, if it doesn't exist, continue
 		rina::ScopedLock g(et->lock);
@@ -990,7 +990,7 @@ netman_res_t NetworkManager::destroy_ipcp(Promise * promise, int system_id, int 
 	}
 
 	ss << "/csid=1/psid=1/kernelap/osap/ipcps/ipcpid=" << ipcp_id;
-	obj_info.name_ = ss.str();;
+	obj_info.name_ = ss.str();
 	obj_info.class_ = "IPCProcess";
 	ss.str(std::string());
 
@@ -1005,6 +1005,7 @@ netman_res_t NetworkManager::destroy_ipcp(Promise * promise, int system_id, int 
 	if (add_transaction_state(trans) < 0)
 	{
 		LOG_ERR("Unable to add transaction; out of memory?");
+		remove_transaction_state(trans->tid);
 		return NETMAN_FAILURE;
 	}
 
