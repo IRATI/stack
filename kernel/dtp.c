@@ -567,7 +567,6 @@ struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         }
 
                 	dtp->sv->rcv_left_window_edge = seq_num;
-                	LOG_INFO("EIEI(570): RCV_LWE %u", dtp->sv->rcv_left_window_edge);
                         pos->du = NULL;
                         list_del(&pos->next);
                         seq_queue_entry_destroy(pos);
@@ -1237,7 +1236,6 @@ int dtp_write(struct dtp * instance,
 	spin_lock_bh(&instance->sv_lock);
 
         csn = ++instance->sv->seq_nr_to_send;
-        LOG_INFO("Sequence number to send: %u", csn);
         if (pci_format(&du->pci,
                        efcp->connection->source_cep_id,
                        efcp->connection->destination_cep_id,
@@ -1455,10 +1453,6 @@ int dtp_receive(struct dtp * instance,
 
         seq_num = pci_sequence_number_get(&du->pci);
 	sbytes = du_data_len(du);
-	LOG_INFO("DTP receive, seqnum is %u", seq_num);
-	if ((pci_flags_get(&du->pci) & PDU_FLAGS_DATA_RUN)) {
-		LOG_INFO("Received PDU with DRF flag");
-	}
 
         LOG_DBG("local_soft_irq_pending: %d", local_softirq_pending());
         LOG_DBG("DTP Received PDU %u (CPU: %d)",
@@ -1478,7 +1472,6 @@ int dtp_receive(struct dtp * instance,
                 if ((pci_flags_get(&du->pci) & PDU_FLAGS_DATA_RUN)) {
                         instance->sv->drf_required = false;
                         instance->sv->rcv_left_window_edge = seq_num;
-                        LOG_INFO("EIEI (1476): RCV_LWE %u", instance->sv->rcv_left_window_edge);
                         dtp_squeue_flush(instance);
                         spin_unlock_bh(&instance->sv_lock);
                         if (dtcp) {
@@ -1561,7 +1554,6 @@ int dtp_receive(struct dtp * instance,
                                      ((seq_num -LWE) > (max_sdu_gap + 1)));
                 if (set_lft_win_edge) {
                 	instance->sv->rcv_left_window_edge = seq_num;
-                	LOG_INFO("EIEI (1559): RCV_LWE %u", instance->sv->rcv_left_window_edge);
                 }
 
                 spin_unlock_bh(&instance->sv_lock);
@@ -1601,7 +1593,6 @@ int dtp_receive(struct dtp * instance,
         LOG_DBG("DTP receive LWE: %u", LWE);
         if (seq_num == LWE + 1) {
         	instance->sv->rcv_left_window_edge = seq_num;
-        	LOG_INFO("EIEI(1599): RCV_LWE %u", instance->sv->rcv_left_window_edge);
                 ringq_push(instance->to_post, du);
                 LWE = seq_num;
         } else {
@@ -1615,7 +1606,6 @@ int dtp_receive(struct dtp * instance,
                 seq_num = pci_sequence_number_get(&du->pci);
                 LWE     = seq_num;
                 instance->sv->rcv_left_window_edge = seq_num;
-                LOG_INFO("EIEI(1613): RCV_LWE %u", instance->sv->rcv_left_window_edge);
                 ringq_push(instance->to_post, du);
         }
         spin_unlock_bh(&instance->sv_lock);
