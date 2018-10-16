@@ -1254,8 +1254,8 @@ int dtp_write(struct dtp * instance,
 	}
 
         sn = dtcp->sv->snd_lft_win;
-        if (instance->sv->drf_flag || (sn == (csn - 1)) ||
-            ! instance->sv->rexmsn_ctrl) {
+        if (instance->sv->drf_flag ||
+        	( (sn == (csn - 1)) && instance->sv->rexmsn_ctrl) ) {
 		pdu_flags_t pci_flags;
 		pci_flags = pci_flags_get(&du->pci);
 		pci_flags |= PDU_FLAGS_DATA_RUN;
@@ -1508,6 +1508,8 @@ int dtp_receive(struct dtp * instance,
         if ((seq_num <= LWE) || (is_fc_overrun(instance, dtcp, seq_num, sbytes)))
         {
         	/* Duplicate PDU or flow control overrun */
+        	LOG_ERR("Duplicate PDU or flow control overrun. SN: %u, LWE:%u",
+        		 seq_num, LWE);
                 stats_inc(drop, instance->sv);
                 spin_unlock_bh(&instance->sv_lock);
                 du_destroy(du);
@@ -1538,7 +1540,6 @@ int dtp_receive(struct dtp * instance,
         if (!a) {
                 bool set_lft_win_edge;
 
-                /* FIXME: delimiting goes here */
                 if (!in_order && !dtcp) {
                 	spin_unlock_bh(&instance->sv_lock);
                         LOG_DBG("DTP Receive deliver, seq_num: %d, LWE: %d",
@@ -1551,8 +1552,9 @@ int dtp_receive(struct dtp * instance,
 
                 set_lft_win_edge = !(dtcp_rtx_ctrl(dtcp->cfg) &&
                                      ((seq_num -LWE) > (max_sdu_gap + 1)));
-                if (set_lft_win_edge)
+                if (set_lft_win_edge) {
                 	instance->sv->rcv_left_window_edge = seq_num;
+                }
 
                 spin_unlock_bh(&instance->sv_lock);
 
