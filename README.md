@@ -1369,7 +1369,120 @@ Once registered at the DIF(s), the Manager will wait for remote application requ
 Network Management DAF (NM-DAF). The Manager features a local console available via a UNIX socket, that allows a local 
 admin to interact with it. It can be reached by typing
 
-    socat - UNIX:/var/run/nmconsole.sock
+    root@irativm3:/home/irati/stack# socat - UNIX:/var/run/nmconsole.sock 
+    IPCM >>> help
+    Available commands:
+        create-dif
+        create-ipcp
+        destroy-dif
+        destroy-ipcp
+        exit
+        help
+        list-systems
+        query-rib
+        quit
+
+The **list-systems** commands displays information about the MAs that are enrolled to the NM-DAF.
+
+    IPCM >>> list-systems
+            Managed Systems       
+        system id      MA name   |  port-id  
+           2   |   host1-1   |          8
+           1   |   manager-1   |          7
+
+### 4.2 Creating a single IPCP in a system
+The **create-ipcp** command triggers the creation of an IPCP in a system. The syntax of the command is
+
+    IPCM >>> create-ipcp
+    USAGE: create-ipcp <system-id> <path to IPCP descriptor file>
+
+The IPCP descriptor file contains information on the IPCP to be created. An example descriptor file 
+is the following:
+
+    {
+      "ipcp_data" : {
+          "type" : "normal-ipc",
+          "dif_name" : "slice1",
+          "template" : "normal.dif",
+          "registrations" : ["normal.DIF"]
+       }
+    }
+
+The **type** attribute is the type of the IPCP (normal or one of the shims). The **dif_name** attribute
+is the name of the DIF where the IPC Process will enroll. The **template** attribute is the name of a 
+DIF template configuration file with the configuration of the IPC Process (the file must be within the
+<IRATI_INSTALLTION>/etc folder. Finally, the **registrations** attribute contains a list of N-1 DIFs 
+where the IPCP needs to register. An example of the usage of this command is the following:
+
+    IPCM >>> create-ipcp 1 /usr/local/irati/etc/ipcp.desc
+    IPC process created successfully [ipcp_id = 3, system_id=1]
+
+### 4.3 Destroying a single IPCP in a system
+The **destroy-ipcp** command triggers the destruction of an IPCP in a system. The syntax of the command is
+
+    IPCM >>> destroy-ipcp
+    USAGE: destroy-ipcp <system-id> <ipcp-id>
+
+An example of the usage of this command is the following:
+
+    IPCM >>> destroy-ipcp 1 3
+    IPC process destroyed successfully [id = 3]
+
+### 4.4 Creating a DIF
+The **create-dif** command triggers the creation of a DIF, which basically creates one or more IPCPs in 
+multiple systems, registers them on N-1 DIFs and triggers enrollments. The syntax of the command is
+
+    IPCM >>> create-dif
+    USAGE: create-dif <path to DIF descriptor file>
+
+The DIF descriptor file contains information on the DIF to be created. An example descriptor file is the 
+following:
+
+    {
+      "dif_name" : "slice1",
+      "dif_type" : "normal-ipc",
+      "ipcps" : [ {
+        "system_name" : "manager",
+        "dif_template" : "normal.dif",
+        "registrations" : ["normal.DIF"]
+      }, {
+        "system_name" : "host1",
+        "dif_template" : "normal.dif",
+        "registrations" : ["normal.DIF"],
+        "neighbors" : [ {
+           "ipcp_name" : "manager.slice1",
+           "under_dif" : "normal.DIF"
+        } ]
+      } ]
+    }
+
+The **dif_name** attribute is the name of the DIF. The **dif_type** attribute is the type of IPCPs that 
+will be created on this DIF. The **ipcps** element contains a list of IPCP configurations, one per each 
+IPCP to be created. The **system_name** attribute is the name of the system where the IPCP will be created. 
+The **dif_template** argument is the name of the DIF template with the configuration of the IPCP (the DIF 
+template file needs to be in the <IRATI_INSTALLATION>/etc folder). The **registrations** element contains 
+an array of N-1 DIF names where the new IPCP will register. The **neighbors** element contains a list of 
+neighbor IPCPs that the new IPCP will enroll to (those neighbor IPCPs need to be created before the new IPCP).
+An example of the usage of this command is the following:
+
+    IPCM >>> create-dif /usr/local/irati/etc/slice1e.ddesc
+    DIF created.IPCPs created at the following systems: 
+    System host1, id 4
+    System manager, id 3
+
+### 4.5 Destroying a DIF
+The **destroy-dif** command triggers the destruction of a DIF, which destroys one or more IPCPs in 
+multiple systems. The syntax of the command is
+
+    IPCM >>> destroy-dif 
+    USAGE: destroy-dif <dif-name>
+
+An example of the usage of this command is the following:
+
+    IPCM >>> destroy-dif slice1
+    DIF slice1 destroyed.IPCPs destroyed at the following systems: 
+    System 1, id 3
+    System 2, id 4
 
 ## 5. Tutorials
 Several tutorials are available at https://github.com/IRATI/stack/wiki/Tutorials

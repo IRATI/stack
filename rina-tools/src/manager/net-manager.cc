@@ -99,8 +99,8 @@ public:
 			return rina::UNIXConsole::CMDRETCONT;
 		}
 
-		console->outstream << "IPC process created successfully [id = "
-		      << promise.ipcp_id << ", name="<<args[1]<<"]" << std::endl;
+		console->outstream << "IPC process created successfully [ipcp_id = "
+		      << promise.ipcp_id << ", system_id="<<args[1]<<"]" << std::endl;
 		return rina::UNIXConsole::CMDRETCONT;
 	}
 
