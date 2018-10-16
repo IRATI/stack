@@ -389,6 +389,10 @@ void FlowManager::process_fwd_cdap_msg_response(rina::FwdCDAPMsgResponseEvent*
             LOG_DBG("Delegated CDAP response:\n%s, value %p",
                     rmsg->to_string().c_str(),
                     rmsg->obj_value_.message_);
+
+            if (rmsg->obj_class_ == "Root") {
+        	    rmsg->obj_class_ = "IPCProcess";
+            }
             LOG_DBG("Recovered delegated object: %s", del_sto->obj->fqn.c_str());
             del_sto->obj->forwarded_object_response(del_sto->port,
             		del_sto->invoke_id, rmsg);

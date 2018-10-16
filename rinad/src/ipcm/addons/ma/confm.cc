@@ -45,25 +45,18 @@ ConfManager::ConfManager(const rinad::RINAConfiguration& config){
 	fin.close();
 
         // Set default values for MAD configuration variables
-        app_name = rina::ApplicationProcessNamingInformation("rina.apps.mad",
-                                                             "1");
+        app_name = config.local.system_name;
+        app_name.processInstance = "1";
 
         // Parse MAD configuration from JSON, overwriting default configuration
         // variables
         mad_conf = root["addons"]["mad"];
         if (mad_conf != 0) {
-                Json::Value nms_difs_conf = mad_conf["NMSDIFs"];
                 Json::Value mad_conns_conf = mad_conf["managerConnections"];
                 Json::Value key_mgr_conf = mad_conf["keyMgrConnection"];
                 std::string app_name_enc;
                 std::string dif;
                 std::string auth_pol_name;
-
-                app_name_enc = mad_conf.get("managerAppName",
-                                        app_name_enc).asString();
-                if (app_name_enc != std::string()) {
-                        app_name = rina::decode_apnameinfo(app_name_enc);
-                }
 
                 if (mad_conns_conf != 0) {
                         for (unsigned i = 0; i< mad_conns_conf.size(); i++) {
@@ -105,11 +98,6 @@ ConfManager::ConfManager(const rinad::RINAConfiguration& config){
 
         LOG_INFO("MAD application name will be %s",
                  app_name.toString().c_str());
-
-        for (std::list<std::string>::iterator it = nms_difs.begin();
-                                        it != nms_difs.end(); it++) {
-                LOG_INFO("MAD NMS DIF %s", it->c_str());
-        }
 
         for (std::list<ManagerConnInfo>::iterator
                         it = manager_connections.begin();

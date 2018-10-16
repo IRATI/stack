@@ -58,8 +58,8 @@ public:
 			return rina::UNIXConsole::CMDRETCONT;
 		}
 
-		console->outstream << "DIF created ";
-		console->outstream << ". IPCPs created at the following systems: " << std::endl;
+		console->outstream << "DIF created.";
+		console->outstream << "IPCPs created at the following systems: " << std::endl;
 		for (it = ipcp_ids.begin(); it != ipcp_ids.end(); ++it) {
 			console->outstream << "System " << it->first
 					   << ", id " << it->second << std::endl;
@@ -149,6 +149,41 @@ private:
 	NetworkManager * netman;
 };
 
+class DestroyDIFConsoleCmd: public rina::ConsoleCmdInfo {
+public:
+	DestroyDIFConsoleCmd(NMConsole * console, NetworkManager * nm) :
+		rina::ConsoleCmdInfo("USAGE: destroy-dif <dif-name>", console) {
+		netman = nm;
+	};
+
+	int execute(std::vector<std::string>& args) {
+		std::map<int, int> ipcp_ids;
+		std::map<int, int>::iterator it;
+
+		if (args.size() < 2) {
+			console->outstream << console->commands_map[args[0]]->usage << std::endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		if(netman->destroy_dif(ipcp_ids, args[1]) == NETMAN_FAILURE){
+			console->outstream << "Error while destroying DIF" << std::endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		console->outstream << "DIF " << args[1] << " destroyed.";
+		console->outstream << "IPCPs destroyed at the following systems: " << std::endl;
+		for (it = ipcp_ids.begin(); it != ipcp_ids.end(); ++it) {
+			console->outstream << "System " << it->first
+					   << ", id " << it->second << std::endl;
+		}
+
+		return rina::UNIXConsole::CMDRETCONT;
+	}
+
+private:
+	NetworkManager * netman;
+};
+
 class ListSystemsConsoleCmd: public rina::ConsoleCmdInfo {
 public:
 	ListSystemsConsoleCmd(NMConsole * console, NetworkManager * nm) :
@@ -188,6 +223,7 @@ NMConsole::NMConsole(const std::string& socket_path, NetworkManager * nm) :
 	netman = nm;
 	commands_map["create-dif"] = new CreateDIFConsoleCmd(this, netman);
 	commands_map["create-ipcp"] = new CreateIPCPConsoleCmd(this, netman);
+	commands_map["destroy-dif"] = new DestroyDIFConsoleCmd(this, netman);
 	commands_map["destroy-ipcp"] = new DestroyIPCPConsoleCmd(this, netman);
 	commands_map["list-systems"] = new ListSystemsConsoleCmd(this, netman);
 	commands_map["query-rib"] = new QueryRIBConsoleCmd(this, netman);
@@ -247,10 +283,16 @@ ManagedSystem::ManagedSystem() {
 ManagedSystem::~ManagedSystem()
 {
 	std::map<std::string, rina::rib::RIBObj*>::iterator it;
+	std::map<int, IPCPDescriptor*>::iterator cit;
 
 	for (it = objs_to_create.begin(); it != objs_to_create.end() /* not hoisted */; /* no increment */) {
 		delete it->second;
 	        objs_to_create.erase(it++);
+	}
+
+	for (cit = ipcps.begin(); cit != ipcps.end() /* not hoisted */; /* no increment */) {
+		delete cit->second;
+	        ipcps.erase(cit++);
 	}
 }
 
@@ -802,8 +844,8 @@ netman_res_t NetworkManager::create_ipcp(CreateIPCPPromise * promise, int system
 	rinad::configs::ipcp_config_t ipcp_config;
 
 	//1 Retrieve system from system-id, if it doesn't exist, return error
-	rina::ScopedLock g(et->lock);
 	mas = NULL;
+	et->lock.lock();
 	for (it = et->enrolled_systems.begin();
 			it != et->enrolled_systems.end(); ++it) {
 		if (it->second->system_id == system_id) {
@@ -811,6 +853,7 @@ netman_res_t NetworkManager::create_ipcp(CreateIPCPPromise * promise, int system
 			break;
 		}
 	}
+	et->lock.unlock();
 
 	if (!mas) {
 		LOG_ERR("Could not find Managed System with id %d", system_id);
@@ -826,6 +869,19 @@ netman_res_t NetworkManager::create_ipcp(CreateIPCPPromise * promise, int system
 	return create_ipcp(promise, mas, ipcp_config);
 }
 
+IPCPDescriptor * NetworkManager::ipcp_desc_from_config(const std::string system_name,
+		       	       	       	       	       const rinad::configs::ipcp_config_t& ipcp_config)
+{
+	IPCPDescriptor * result;
+
+	result = new IPCPDescriptor();
+	result->system_name = system_name;
+	result->dif_name = ipcp_config.dif_to_assign.dif_name_.processName;
+	result->dif_template_name = ipcp_config.dif_template;
+
+	return result;
+}
+
 netman_res_t NetworkManager::create_ipcp(CreateIPCPPromise * promise,
 					 ManagedSystem * mas,
 					 rinad::configs::ipcp_config_t& ipcp_config)
@@ -836,14 +892,18 @@ netman_res_t NetworkManager::create_ipcp(CreateIPCPPromise * promise,
         rina::cdap_rib::filt_info_t filt;
         rinad::encoders::IPCPConfigEncoder encoder;
         std::stringstream ss;
+        IPCPDescriptor * ipcp_desc;
 
 	obj_info.name_ = "/csid=1/psid=1/kernelap/osap/ipcps/ipcpid";
 	obj_info.class_ = "IPCProcess";
 	encoder.encode(ipcp_config, obj_info.value_);
 
+	ipcp_desc = ipcp_desc_from_config(mas->con.src_.ap_name_, ipcp_config);
+
 	ss << mas->con.port_id << "-" << obj_info.name_;
 	//3 Store transaction
-	trans = new MASystemTransState(this, promise, mas->system_id, ss.str());
+	trans = new MASystemTransState(this, promise, mas->system_id,
+				       ipcp_desc, ss.str());
 	if (!trans) {
 		LOG_ERR("Unable to allocate memory for the transaction object. Out of memory!");
 		return NETMAN_FAILURE;
@@ -876,6 +936,9 @@ void NetworkManager::remoteCreateResult(const rina::cdap_rib::con_handle_t &con,
 	MASystemTransState * trans;
 	CreateIPCPPromise * promise;
 	int ipcp_id;
+	rina::rib::RIBObj * rib_obj;
+	ManagedSystem * mas;
+	std::map<std::string, ManagedSystem *>::iterator it;
 
 	ss << con.port_id << "-" << obj.name_.substr(0, obj.name_.find("ipcpid") + 6);
 
@@ -900,6 +963,32 @@ void NetworkManager::remoteCreateResult(const rina::cdap_rib::con_handle_t &con,
 
 	// Mark transaction as completed
 	if (res.code_ == rina::cdap_rib::CDAP_SUCCESS) {
+		mas = NULL;
+		et->lock.lock();
+		for (it = et->enrolled_systems.begin();
+				it != et->enrolled_systems.end(); ++it) {
+			if (it->second->system_id == trans->system_id) {
+				mas = it->second;
+				break;
+			}
+		}
+		et->lock.unlock();
+
+		if (!mas) {
+			LOG_WARN("Could not find Managed System with id %d", trans->system_id);
+			if (trans->ipcp_desc)
+				delete trans->ipcp_desc;
+		} else if (trans->ipcp_desc){
+			mas->ipcps[ipcp_id] = trans->ipcp_desc;
+		}
+
+		ss.str(std::string());
+		rib_obj = new rina::rib::RIBObj(obj.class_);
+		ss << "/systems/msid=" << trans->system_id
+		   << "/csid=1/psid=1/kernelap/osap/ipcps/ipcpid="
+		   << promise->ipcp_id;
+		rd->addObjRIB(ss.str(), &rib_obj);
+
 		trans->completed(NETMAN_SUCCESS);
 	} else {
 		trans->completed(NETMAN_FAILURE);
@@ -925,8 +1014,8 @@ netman_res_t NetworkManager::create_dif(std::map<std::string, int>& result,
 		CreateIPCPPromise promise;
 
 		//1 Retrieve system from system-name, if it doesn't exist, continue
-		rina::ScopedLock g(et->lock);
 		mas = NULL;
+		et->lock.lock();
 		for (mit = et->enrolled_systems.begin();
 				mit != et->enrolled_systems.end(); ++mit) {
 			if (mit->second->con.dest_.ap_name_ == it->system_name) {
@@ -934,6 +1023,7 @@ netman_res_t NetworkManager::create_dif(std::map<std::string, int>& result,
 				break;
 			}
 		}
+		et->lock.unlock();
 
 		if (!mas) {
 			LOG_ERR("Could not find Managed System with name %s",
@@ -963,6 +1053,55 @@ netman_res_t NetworkManager::create_dif(std::map<std::string, int>& result,
 	return NETMAN_SUCCESS;
 }
 
+netman_res_t NetworkManager::destroy_dif(std::map<int, int>& result,
+			 	 	 const std::string& dif_name)
+{
+	std::map<std::string, ManagedSystem *>::iterator it;
+	std::map<int, IPCPDescriptor *>::iterator cit;
+	std::map<int, int>::iterator ipcpit;
+	ManagedSystem * mas;
+	Promise promise;
+	int ipcp_id;
+
+	// 1 Get systems and IPCPs in DIFs
+	mas = NULL;
+	et->lock.lock();
+	for (it = et->enrolled_systems.begin();
+			it != et->enrolled_systems.end(); ++it) {
+		mas = it->second;
+		ipcp_id = 0;
+
+		for (cit = mas->ipcps.begin(); cit != mas->ipcps.end(); ++cit) {
+			if (cit->second->dif_name == dif_name) {
+				ipcp_id = cit->first;
+				break;
+			}
+		}
+
+		if (ipcp_id != 0)
+			result[mas->system_id] = ipcp_id;
+	}
+	et->lock.unlock();
+
+	if (result.size() == 0) {
+		LOG_ERR("Could not find any IPC Process belonging to DIF %s",
+			dif_name.c_str());
+		return NETMAN_FAILURE;
+	}
+
+	// 2 Request destruction of IPCPs
+	for (ipcpit = result.begin(); ipcpit != result.end(); ipcpit++) {
+		if(destroy_ipcp(&promise, ipcpit->first, ipcpit->second) == NETMAN_FAILURE ||
+				promise.wait() != NETMAN_SUCCESS){
+			LOG_WARN("Error destroying IPCP %d at system %d",
+					ipcpit->second, ipcpit->first);
+			result[ipcpit->first] = -1;
+		}
+	}
+
+	return NETMAN_SUCCESS;
+}
+
 netman_res_t NetworkManager::destroy_ipcp(Promise * promise, int system_id, int ipcp_id)
 {
 	MASystemTransState * trans;
@@ -975,14 +1114,15 @@ netman_res_t NetworkManager::destroy_ipcp(Promise * promise, int system_id, int 
         std::stringstream ss;
 
 	//1 Retrieve system from system-id, if it doesn't exist, return error
-	rina::ScopedLock g(et->lock);
-	mas = NULL;
+        mas = NULL;
+	et->lock.lock();
 	for (it = et->enrolled_systems.begin();
 			it != et->enrolled_systems.end(); ++it) {
 		if (it->second->system_id == system_id) {
 			mas = it->second;
 		}
 	}
+	et->lock.unlock();
 
 	if (!mas) {
 		LOG_ERR("Could not find Managed System with id %d", system_id);
@@ -996,7 +1136,7 @@ netman_res_t NetworkManager::destroy_ipcp(Promise * promise, int system_id, int 
 
 	ss << mas->con.port_id << "-" << obj_info.name_;
 	//3 Store transaction
-	trans = new MASystemTransState(this, promise, system_id, ss.str());
+	trans = new MASystemTransState(this, promise, system_id, NULL, ss.str());
 	if (!trans) {
 		LOG_ERR("Unable to allocate memory for the transaction object. Out of memory!");
 		return NETMAN_FAILURE;
@@ -1027,6 +1167,10 @@ void NetworkManager::remoteDeleteResult(const rina::cdap_rib::con_handle_t &con,
 {
 	std::stringstream ss;
 	MASystemTransState * trans;
+	ManagedSystem * mas;
+	std::map<std::string, ManagedSystem *>::iterator it;
+	std::map<int, IPCPDescriptor *>::iterator cit;
+	int ipcp_id;
 
 	ss << con.port_id << "-" << obj.name_;
 
@@ -1039,8 +1183,40 @@ void NetworkManager::remoteDeleteResult(const rina::cdap_rib::con_handle_t &con,
 		return;
 	}
 
+	ipcp_id = 0;
+	rina::string2int(obj.name_.substr(obj.name_.find("ipcpid") + 7), ipcp_id);
+
 	// Mark transaction as completed
 	if (res.code_ == rina::cdap_rib::CDAP_SUCCESS) {
+		//1 Retrieve system from system-name, if it doesn't exist, continue
+		mas = NULL;
+		et->lock.lock();
+		for (it = et->enrolled_systems.begin();
+				it != et->enrolled_systems.end(); ++it) {
+			if (it->second->system_id == trans->system_id) {
+				mas = it->second;
+				break;
+			}
+		}
+		et->lock.unlock();
+
+		if (!mas) {
+			LOG_WARN("Could not find Managed System with id %d", trans->system_id);
+		} else {
+			cit = mas->ipcps.find(ipcp_id);
+			if (cit != mas->ipcps.end()) {
+				delete cit->second;
+				mas->ipcps.erase(cit);
+			} else {
+				LOG_WARN("Could not find IPCP descriptor with id %d in system %d",
+					  ipcp_id, mas->system_id);
+			}
+		}
+
+		ss.str(std::string());
+		ss << "/systems/msid=" << trans->system_id
+		   << obj.name_;
+		rd->removeObjRIB(ss.str(), true);
 		trans->completed(NETMAN_SUCCESS);
 	} else {
 		trans->completed(NETMAN_FAILURE);
