@@ -1162,9 +1162,16 @@ int rttq_drop(struct rttq * q, seq_num_t sn)
 {
 		struct rtt_entry * cur, * n;
 
+		if (list_empty(&q->head)) {
+			LOG_INFO("RTTQ empty");
+			return 0;
+		}
+		cur = list_last_entry(&q->head, struct rtt_entry, next);
+		LOG_INFO("LAST ENTRY seq num: %u", cur->sn);
+		cur = NULL;
 		list_for_each_entry_safe(cur, n, &q->head, next) {
             if (cur->sn <= sn) {
-                    LOG_DBG("Seq num removed: %u", cur->sn);
+                    LOG_INFO("Seq num removed: %u", cur->sn);
                     rtt_entry_destroy(cur);
             } else
                     return 0;

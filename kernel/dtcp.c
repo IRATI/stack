@@ -559,12 +559,14 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
                       	  struct dtcp_ps, base);
 
     	LOG_DBG("DTCP received FC (CPU: %d)", smp_processor_id());
+    	LOG_INFO("New RWE: %u, Credit: %u, Seq Num RTT: %u", seq, credit, seq-credit);
     	if (!ps->rtx_ctrl && ps->rtt_estimator)
     			ps->rtt_estimator(ps, seq - credit);
 
     	rcu_read_unlock();
 
-    	rttq_drop(dtcp->parent->rttq, seq);
+    	rttq_drop(dtcp->parent->rttq, seq-credit);
+    	LOG_INFO("New RTT estimation: %u", dtcp->parent->sv->tr);
 
     	return update_window_and_rate(dtcp, du);
 }
