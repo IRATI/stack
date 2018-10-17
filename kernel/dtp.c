@@ -504,7 +504,7 @@ static void tf_rendezvous(struct timer_list * tl)
         bool         start_rv_timer;
         timeout_t    rv;
 
-        LOG_INFO("Running rendezvous timer...");
+        LOG_DBG("Running rendezvous timer...");
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         dtp = (struct dtp *) data;
 #else
@@ -1321,8 +1321,8 @@ int dtp_write(struct dtp * instance,
 	}
 
         sn = dtcp->sv->snd_lft_win;
-        if (instance->sv->drf_flag || (sn == (csn - 1)) ||
-            ! instance->sv->rexmsn_ctrl) {
+        if (instance->sv->drf_flag ||
+        		((sn == (csn - 1)) && instance->sv->rexmsn_ctrl)) {
 		pdu_flags_t pci_flags;
 		pci_flags = pci_flags_get(&du->pci);
 		pci_flags |= PDU_FLAGS_DATA_RUN;
