@@ -26,8 +26,8 @@
 #include <map>
 
 #include <librina/concurrency.h>
-#include <configuration.h>
-#include <rina-configuration.h>
+#include <rinad/common/configuration.h>
+#include <rinad/common/rina-configuration.h>
 
 class DIFTemplateManager;
 

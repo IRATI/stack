@@ -167,12 +167,12 @@ test_linking_LDADD    =				\
 check-local: test-linking
 
 EXTRA_DIST +=					\
-	librina.pc.in
+	librina.pc.in				\
+	librinajsoncpp.pc.in
 
 edit = $(SED)								\
         -e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'			\
         -e 's|@PACKAGE_URL[@]|$(PACKAGE_URL)|g'				\
-	-e 's|@LIBNL_MIN_VERSION[@]|$(LIBNL_MIN_VERSION)|g'		\
 	-e 's|@LIBPROTOBUF_MIN_VERSION[@]|$(LIBPROTOBUF_MIN_VERSION)|g'	\
 	-e 's|@LIBPROTOBUF_CFLAGS[@]|$(LIBPROTOBUF_CFLAGS)|g'		\
 	-e 's|@LIBPROTOBUF_LIBS[@]|$(LIBPROTOBUF_LIBS)|g'		\
@@ -189,8 +189,16 @@ librina.pc: Makefile librina.pc.in
 	  $(edit) $${srcdir}$@.in >$@.tmp
 	chmod a-w $@.tmp
 	mv $@.tmp $@
+	
+librinajsoncpp.pc: Makefile librinajsoncpp.pc.in
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.in >$@.tmp
+	chmod a-w $@.tmp
+	mv $@.tmp $@
 
-CLEANFILES += librina.pc
+CLEANFILES += librina.pc librinajsoncpp.pc
 
 pkgconfigdir   = $(libdir)/pkgconfig
-pkgconfig_DATA = librina.pc
+pkgconfig_DATA = librina.pc librinajsoncpp.pc

@@ -28,8 +28,8 @@
 
 #define RINA_PREFIX "net-manager"
 #include <librina/logs.h>
-#include <configuration.h>
-#include <encoder.h>
+#include <rinad/common/configuration.h>
+#include <rinad/common/encoder.h>
 #include "net-manager.h"
 
 #include <rina/api.h>
