@@ -1369,7 +1369,7 @@ int dtp_write(struct dtp * instance,
 							instance->dtcp->sv->snd_rt_wind_edge,
 							instance->sv->tr);
 					/* Send rendezvous PDU and start time */
-					rtimer_start(&instance->timers.rendezvous, rv + 10);
+					rtimer_start(&instance->timers.rendezvous, rv);
 				}
 
 				return 0;
@@ -1395,30 +1395,34 @@ int dtp_write(struct dtp * instance,
                         if (!cdu) {
                                 LOG_ERR("Failed to copy PDU");
                                 LOG_ERR("PDU type: %d", pci_type(&du->pci));
-				goto pdu_stats_err_exit;
+                                goto pdu_stats_err_exit;
                         }
 
                         if (rtxq_push_ni(rtxq, cdu)) {
                                 LOG_ERR("Couldn't push to rtxq");
-				goto pdu_stats_err_exit;
+                                goto pdu_stats_err_exit;
                         }
+                } else {
+                		if (rttq_push(instance->rttq, csn)) {
+                				LOG_ERR("Failed to push SN");
+                		}
                 }
 
                 if (ps->transmission_control(ps, du)) {
                         LOG_ERR("Problems with transmission control");
-			goto stats_err_exit;
+                        goto stats_err_exit;
                 }
 
                 rcu_read_unlock();
                 spin_lock_bh(&instance->sv_lock);
                 stats_inc_bytes(tx, instance->sv, sbytes);
-		spin_unlock_bh(&instance->sv_lock);
+                spin_unlock_bh(&instance->sv_lock);
 #if DTP_INACTIVITY_TIMERS_ENABLE
                 /* Start SenderInactivityTimer */
                 if (rtimer_restart(&instance->timers.sender_inactivity,
                                    3 * (mpl + r + a ))) {
                         LOG_ERR("Failed to start sender_inactiviy timer");
-			goto stats_nounlock_err_exit;
+                        goto stats_nounlock_err_exit;
                         return -1;
                 }
 #endif

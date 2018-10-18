@@ -1157,6 +1157,7 @@ int rttq_push(struct rttq * q, seq_num_t sn)
 
 		return to_return;
 }
+EXPORT_SYMBOL(rttq_push);
 
 int rttq_drop(struct rttq * q, seq_num_t sn)
 {
