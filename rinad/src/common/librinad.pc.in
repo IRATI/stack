@@ -1,0 +1,11 @@
+prefix=@prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: RINAD
+Description: RINAD common utilities
+Version: @PACKAGE_VERSION@
+URL: @PACKAGE_URL@
+Requires: librina protobuf >= @LIBPROTOBUF_MIN_VERSION@
+Libs: -L${libdir} -lrinad
+Cflags: -I${includedir} @LIBPROTOBUF_CFLAGS@
