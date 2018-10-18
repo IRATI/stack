@@ -35,6 +35,10 @@ public:
 		std::cout << "Hello world" <<std::endl;
 		check_ = true;
 	};
+
+	std::string name() const {
+		return "Hello world";
+	}
 bool check_;
 };
 class GoodbyeWorldTimerTask: public TimerTask {
@@ -46,6 +50,11 @@ public:
 		std::cout << "Goodbye world" <<std::endl;
 		check_ = true;
 	};
+
+	std::string name() const {
+		return "Goodbye world";
+	}
+
 	bool check_;
 };
 

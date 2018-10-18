@@ -1,0 +1,10 @@
+syntax="proto2";
+package rina.messages;
+option optimize_for = LITE_RUNTIME;
+
+message key_container_t {
+	optional string id = 1;				// The Key container ID
+	optional string state = 2;			// The Key container state
+	optional bytes private_key = 3;	    // The private key (encoded)
+	optional bytes public_key = 4;      // The public key (encoded)
+}

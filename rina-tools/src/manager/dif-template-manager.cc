@@ -19,33 +19,29 @@
  * MA  02110-1301  USA
  */
 
+#include <iostream>
+#include <fstream>
 #include <dirent.h>
 #include <errno.h>
 #include <poll.h>
 #include <sys/inotify.h>
 
-#define RINA_PREFIX     "ipcm.dif-template-manager"
+#define RINA_PREFIX     "dif-template-manager"
 #include <librina/logs.h>
+#include <librina/json/json.h>
 
-#include "configuration.h"
 #include "dif-template-manager.h"
-#include "ipcm.h"
 
 using namespace std;
 
-
-namespace rinad {
-
 //Class DIFConfigFolderMonitor
 DIFConfigFolderMonitor::DIFConfigFolderMonitor(const std::string& folder,
-		   	   	       	       DIFTemplateManager * dtm,
-		   	   	       	       DIFAllocator * da) :
+		   	   	       	       DIFTemplateManager * dtm) :
 		rina::SimpleThread(std::string("dif-config-folder-monitor"), false)
 {
 	folder_name = folder;
 	stop = false;
 	dif_template_manager = dtm;
-	dif_allocator = da;
 }
 
 DIFConfigFolderMonitor::~DIFConfigFolderMonitor() throw()
@@ -78,11 +74,10 @@ void DIFConfigFolderMonitor::process_events(int fd)
         char buf[4096]
             __attribute__ ((aligned(__alignof__(struct inotify_event))));
         const struct inotify_event *event;
-        int i;
         ssize_t len;
         char *ptr;
         std::stringstream ss;
-        DIFTemplate * dif_template;
+        rinad::DIFTemplate * dif_template;
 
         for (;;) {
                 len = read(fd, buf, sizeof buf);
@@ -99,11 +94,6 @@ void DIFConfigFolderMonitor::process_events(int fd)
                 	event = (const struct inotify_event *) ptr;
                 	std::string file_name = std::string(event->name);
 
-                	if (file_name == DIFAllocator::STATIC_DIF_ALLOCATOR_FILE_NAME) {
-                		dif_allocator->update_directory_contents();
-                		continue;
-                	}
-
 			if (! str_ends_with(file_name, ".dif")) {
 				continue;
 			}
@@ -113,7 +103,7 @@ void DIFConfigFolderMonitor::process_events(int fd)
                 				event->name);
 
                 		ss << folder_name << "/" << file_name;
-                		dif_template = parse_dif_template(ss.str(), file_name);
+                		dif_template = rinad::parse_dif_template(ss.str(), file_name);
                 		ss.str(std::string());
                 		if (dif_template != 0) {
                 			//TODO augment dif_template with the defaults
@@ -186,18 +176,10 @@ int DIFConfigFolderMonitor::run()
 //Class DIF Template Manager
 const std::string DIFTemplateManager::DEFAULT_TEMPLATE_NAME = "default.dif";
 
-DIFTemplateManager::DIFTemplateManager(const std::string& folder,
-				       DIFAllocator * dif_allocator)
+DIFTemplateManager::DIFTemplateManager(const std::string& folder)
 {
-	stringstream ss;
-	std::string::size_type pos = folder.rfind("/");
-	if (pos == std::string::npos) {
-		ss << ".";
-	} else {
-		ss << folder.substr(0, pos);
-	}
-	folder_name = ss.str();
-	LOG_INFO("Template folder: %s", folder_name.c_str());
+	folder_name = folder;
+	LOG_INFO("DIF Template folder: %s", folder_name.c_str());
 	default_template = 0;
 
 	//load current templates from template folder
@@ -207,8 +189,7 @@ DIFTemplateManager::DIFTemplateManager(const std::string& folder,
 
 	//Create a thread that monitors the DIF template folder when required
 	monitor = new DIFConfigFolderMonitor(folder_name,
-					     this,
-					     dif_allocator);
+					     this);
 	monitor->start();
 }
 
@@ -234,7 +215,7 @@ int DIFTemplateManager::load_initial_dif_templates()
 {
 	DIR *dirp;
 	struct dirent *dp;
-	DIFTemplate * dif_template;
+	rinad::DIFTemplate * dif_template;
 	std::string file_name;
 	std::stringstream ss;
 	std::list<rinad::DIFTemplate *> templates;
@@ -254,7 +235,7 @@ int DIFTemplateManager::load_initial_dif_templates()
 			LOG_DBG("Found DIF template file called: %s", dp->d_name);
 			file_name = std::string(dp->d_name);
 			ss << folder_name << "/" << file_name;
-			dif_template = parse_dif_template(ss.str(), file_name);
+			dif_template = rinad::parse_dif_template(ss.str(), file_name);
 			ss.str(std::string());
 
 			if (strcmp(dp->d_name, DEFAULT_TEMPLATE_NAME.c_str()) == 0) {
@@ -428,4 +409,136 @@ void DIFTemplateManager::get_all_dif_templates(std::list<rinad::DIFTemplate>& ou
 	}
 }
 
-} //namespace rinad
+int DIFTemplateManager::parse_ipcp_descriptor(const std::string& desc_file,
+			  	  	      IPCPDescriptor & ipcp_desc)
+{
+        // Parse config file with jsoncpp
+        Json::Value  root, ipcp_data, difs;
+        Json::Reader reader;
+        ifstream     file;
+
+        file.open(desc_file.c_str(), std::ifstream::in);
+        if (file.fail()) {
+                LOG_ERR("Failed to open config file");
+                return -1;
+        }
+
+        if (!reader.parse(file, root, false)) {
+        	LOG_ERR("Failed to parse JSON: %s",
+        		 reader.getFormatedErrorMessages().c_str());
+
+        	return -1;
+        }
+
+        file.close();
+
+        ipcp_data = root["ipcpData"];
+        if (ipcp_data == 0) {
+        	LOG_ERR("IPCP Descriptor does not contain ipcpData element");
+        	return -1;
+        }
+
+	ipcp_desc.dif_name = ipcp_data.get("difName", string()).asString();
+	ipcp_desc.ipcp_type = ipcp_data.get("type", string()).asString();
+	ipcp_desc.dif_template_name = ipcp_data.get("template", string()).asString();
+	difs = ipcp_data["difsToRegisterAt"];
+	if (difs != 0) {
+		for (unsigned int j = 0; j < difs.size(); j++) {
+			ipcp_desc.difs_to_register_at.push_back(difs[j].asString());
+		}
+	}
+
+        return 0;
+}
+
+int DIFTemplateManager::get_ipcp_config_from_desc(rinad::configs::ipcp_config_t & ipcp_config,
+						  const std::string& system_name,
+			     	     	     	  const std::string& desc_file)
+{
+	IPCPDescriptor ipcp_desc;
+	rinad::DIFTemplate dift;
+	std::stringstream ss;
+
+	if (parse_ipcp_descriptor(desc_file, ipcp_desc)) {
+		return -1;
+	}
+
+	if (get_dif_template(ipcp_desc.dif_template_name, dift)) {
+		return -1;
+	}
+
+	ss << system_name << "." << ipcp_desc.dif_name;
+	ipcp_config.name.processName = ss.str();
+	ipcp_config.name.processInstance = "1";
+	ipcp_config.dif_to_assign.dif_type_ = ipcp_desc.ipcp_type;
+	ipcp_config.dif_to_assign.dif_name_.processName = ipcp_desc.dif_name;
+
+	if (ipcp_desc.ipcp_type == rina::NORMAL_IPC_PROCESS) {
+		unsigned int address;
+
+		ipcp_config.dif_to_assign.dif_configuration_.efcp_configuration_.data_transfer_constants_
+			= dift.dataTransferConstants;
+
+		rina::QoSCube * qosCube = 0;
+		for (std::list<rina::QoSCube>::iterator qit = dift.qosCubes
+				.begin(); qit != dift.qosCubes.end(); qit++)
+		{
+			qosCube = new rina::QoSCube(*qit);
+			if (!qosCube)
+			{
+				LOG_ERR("Unable to allocate memory for the QoSCube object. Out of memory! %s",
+					ipcp_desc.dif_name.c_str());
+				return -1;
+			}
+			ipcp_config.dif_to_assign.dif_configuration_.efcp_configuration_.add_qos_cube(qosCube);
+		}
+
+		for (std::list<rinad::AddressPrefixConfiguration>::iterator ait =
+				dift.addressPrefixes.begin();
+				ait != dift.addressPrefixes.end(); ait++)
+		{
+			rina::AddressPrefixConfiguration prefix;
+			prefix.address_prefix_ = ait->addressPrefix;
+			prefix.organization_ = ait->organization;
+			ipcp_config.dif_to_assign.dif_configuration_.nsm_configuration_.
+				addressing_configuration_.address_prefixes_.push_back(prefix);
+		}
+
+		for (std::list<rinad::KnownIPCProcessAddress>::iterator kit =
+				dift.knownIPCProcessAddresses.begin();
+				kit != dift.knownIPCProcessAddresses.end(); kit++)
+		{
+			rina::StaticIPCProcessAddress static_address;
+			static_address.ap_name_ = kit->name.processName;
+			static_address.ap_instance_ = kit->name.processInstance;
+			static_address.address_ = kit->address;
+			ipcp_config.dif_to_assign.dif_configuration_.nsm_configuration_.
+				addressing_configuration_.static_address_.push_back(static_address);
+		}
+		ipcp_config.dif_to_assign.dif_configuration_.nsm_configuration_.policy_set_ = dift.nsmConfiguration.policy_set_;
+
+		bool found = dift.lookup_ipcp_address(ipcp_config.name, address);
+		if (!found)
+		{
+			LOG_ERR("No address for IPC process %s ",
+				ipcp_config.name.toString().c_str());
+			return -1;
+		}
+		ipcp_config.dif_to_assign.dif_configuration_.rmt_configuration_ = dift.rmtConfiguration;
+		ipcp_config.dif_to_assign.dif_configuration_.fa_configuration_ = dift.faConfiguration;
+		ipcp_config.dif_to_assign.dif_configuration_.ra_configuration_ = dift.raConfiguration;
+		ipcp_config.dif_to_assign.dif_configuration_.routing_configuration_ = dift.routingConfiguration;
+		ipcp_config.dif_to_assign.dif_configuration_.sm_configuration_ = dift.secManConfiguration;
+		ipcp_config.dif_to_assign.dif_configuration_.et_configuration_ = dift.etConfiguration;
+		ipcp_config.dif_to_assign.dif_configuration_.set_address(address);
+	}
+
+	for (std::map<std::string, std::string>::const_iterator pit =
+			dift.configParameters.begin();
+			pit != dift.configParameters.end(); pit++) {
+		ipcp_config.dif_to_assign.dif_configuration_.add_parameter(
+				rina::PolicyParameter(pit->first, pit->second));
+	}
+
+	return 0;
+}

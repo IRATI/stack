@@ -1,5 +1,5 @@
 /*
- * DIF template monitor (monitors DIF templates)
+ * DIF template Manager (manages DIF templates)
  *
  *    Vincenzo Maffione     <v.maffione@nextworks.it>
  *    Marc Sune             <marc.sune (at) bisdn.de>
@@ -20,57 +20,63 @@
  * MA  02110-1301  USA
  */
 
-#ifndef __DIF_TEMPLATE_MONITOR_H__
-#define __DIF_TEMPLATE_MONITOR_H__
+#ifndef __NETMAN_DIF_TEMPLATE_MANAGER_H__
+#define __NETMAN_DIF_TEMPLATE_MANAGER_H__
 
 #include <map>
 
 #include <librina/concurrency.h>
-
-#include "rina-configuration.h"
-
-namespace rinad {
+#include <configuration.h>
+#include <rina-configuration.h>
 
 class DIFTemplateManager;
-class DIFAllocator;
 
 /// Monitors the folder of the DIF templates
 class DIFConfigFolderMonitor: public rina::SimpleThread {
 public:
 	DIFConfigFolderMonitor(const std::string& folder,
-			       DIFTemplateManager * dtm,
-			       DIFAllocator * da);
+			       DIFTemplateManager * dtm);
 	~DIFConfigFolderMonitor() throw();
 	void do_stop();
 	int run();
+	virtual void process_events(int fd);
 
 private:
 	bool has_to_stop();
-	void process_events(int fd);
 
 	DIFTemplateManager * dif_template_manager;
-	DIFAllocator * dif_allocator;
 	std::string folder_name;
 	bool stop;
 	rina::Lockable lock;
+};
+
+struct IPCPDescriptor {
+	std::string dif_name;
+	std::string ipcp_type;
+	std::string dif_template_name;
+	std::list<std::string> difs_to_register_at;
 };
 
 class DIFTemplateManager {
 public:
 	static const std::string DEFAULT_TEMPLATE_NAME;
 
-	DIFTemplateManager(const std::string& folder,
-			   DIFAllocator * dif_allocator);
+	DIFTemplateManager(const std::string& folder);
 	virtual ~DIFTemplateManager(void);
 	int get_dif_template(const std::string& name, rinad::DIFTemplate& dif_template);
 	void add_dif_template(const std::string& name, rinad::DIFTemplate * dif_template);
 	void remove_dif_template(const std::string& name);
 	void get_all_dif_templates(std::list<rinad::DIFTemplate>& dif_templates);
+	int get_ipcp_config_from_desc(rinad::configs::ipcp_config_t & ipcp_config,
+				      const std::string& system_name,
+				      const std::string& desc_file);
 
 private:
 	int load_initial_dif_templates();
 	void internal_remove_dif_template(const std::string& name);
 	void augment_dif_template(rinad::DIFTemplate * dif_template);
+	int parse_ipcp_descriptor(const std::string& desc_file,
+				  IPCPDescriptor & ipcp_desc);
 
 	//The folder containing the DIF templates to monitor
 	std::string folder_name;
@@ -83,6 +89,4 @@ private:
 	rinad::DIFTemplate * default_template;
 };
 
-} //namespace rinad
-
-#endif  /* __DIF_TEMPLATE_MONITOR_H__ */
+#endif  /* __NETMAN_DIF_TEMPLATE_MANAGER_H__ */

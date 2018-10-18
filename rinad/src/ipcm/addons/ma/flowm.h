@@ -88,62 +88,17 @@ public:
 	*/
 	void disconnectFrom(unsigned int worker_id);
 
-
 	/**
-	* Distribute the flow event to the active workers.
-	*
-	* Shall only be called by the ManagementAgent
-	*/
+	 * Distribute the flow event to the active workers.
+	 *
+	 * Shall only be called by the ManagementAgent
+	 */
 	void process_librina_event(rina::IPCEvent** event);
-
-	/**
-	* Checks whether an operation has already finalised
-	*
-	* @param seqnum Sequence number of the operation
-	*
-	* @ret The event or NULL. The callee is responible to free the returned
-	* event
-	*
-	* TODO: deprecate when librina-application is improved
-	*/
-	rina::IPCEvent* get_event(unsigned int seqnum);
-
-	/**
-	* Blocks until the operation has finalised, or hard timeout is reached
-	*
-	* @param seqnum Sequence number of the operation
-	*
-	* @ret The event or NULL if the operation has (hard timeout).
-	* The callee is responible to free the returned event
-	*
-	* TODO: deprecate when librina-application is improved
-	*/
-	rina::IPCEvent* wait_event(unsigned int seqnum);
-
-	/**
-	* Blocks until the operation has finalised, or timeout is reached
-	*
-	* @param seqnum Sequence number of the operation
-	*
-	* @ret The event or NULL if the operation has (hard timeout).
-	* The callee is responible to free the returned event
-	*
-	* TODO: deprecate when librina-application is improved
-	*/
-	rina::IPCEvent* timed_wait_event(unsigned int seqnum,
-							unsigned int sec,
-							unsigned int nsec);
 
 private:
 
-	//Stores and notifies the event
-	void store_event(rina::IPCEvent* event);
-
 	// Manage a CDAP response delegated to an IPC process
 	void process_fwd_cdap_msg_response(rina::FwdCDAPMsgResponseEvent* fwdevent);
-
-	// Pending events  seqnum <-> event
-	std::map<unsigned int, rina::IPCEvent*> pending_events;
 
 	//hashmap worker handler <-> Worker association
 	std::map<unsigned int, Worker*> workers;

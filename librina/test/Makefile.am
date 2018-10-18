@@ -90,28 +90,20 @@ test_timer_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_timer_CXXFLAGS = $(COMMONCXXFLAGS)
 test_timer_LDFLAGS  = $(FUNCTIONALLDFLAGS)
 
-test_rib_v2_SOURCES  = test-rib_v2.cc
-test_rib_v2_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
-test_rib_v2_CXXFLAGS = $(COMMONCXXFLAGS) -Wno-unused-variable -Wno-unused-parameter
-test_rib_v2_LDFLAGS  = $(FUNCTIONALLDFLAGS) -lcppunit
-
-
 check_PROGRAMS =				\
 	test-01					\
 	test-02					\
 	test-03					\
 	test-parsers			\
 	test-concurrency			\
-	test-timer				\
-	test-rib_v2
+	test-timer				
 
 XFAIL_TESTS =				\
 	test-03
 
 PASS_TESTS =					\
 	test-01					\
-	test-02					\
-	test-rib_v2
+	test-02					
 
 TESTS = $(PASS_TESTS) $(XFAIL_TESTS)			
 	

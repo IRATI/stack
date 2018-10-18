@@ -1717,6 +1717,8 @@ void IPCPConfigEncoder::encode(const configs::ipcp_config_t &obj,
                 ipcp_conf_helpers::get_neighbor_config_t(*it, *neigh_gpb);
         }
 
+        gpb.set_dif_template(obj.dif_template);
+
         //Allocate memory
         ser_obj.size_ = gpb.ByteSize();
         ser_obj.message_ = new unsigned char[ser_obj.size_];
@@ -1753,6 +1755,8 @@ void IPCPConfigEncoder::decode(const rina::ser_obj_t& ser_obj,
                 ipcp_conf_helpers::get_Neighbors(gpb.neighbors(i), nei);
                 obj.neighbors.push_back(nei);
         }
+
+        obj.dif_template = gpb.dif_template();
 }
 
 //IPCP encoder

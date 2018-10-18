@@ -110,4 +110,5 @@ message ipcp_config_t{
 	optional dif_info_t dif_to_assign = 2;  		//the DIF to assign the IPCP
 	repeated applicationProcessNamingInfo_t difs_to_register = 3;  		//the DIF to register the IPCP
 	repeated neighbor_config_t neighbors = 4;							//neighbor information
+	optional string dif_template = 5;									//DIF template
 }

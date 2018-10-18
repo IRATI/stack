@@ -33,6 +33,7 @@
 #include "utils.h"
 #include "connection.h"
 #include "debug.h"
+#include "delim-ps.h"
 #include "efcp-str.h"
 #include "efcp.h"
 #include "efcp-utils.h"
@@ -108,6 +109,7 @@ static struct efcp * efcp_create(void)
 
         instance->state = EFCP_ALLOCATED;
         atomic_set(&instance->pending_ops, 0);
+        instance->delim = NULL;
 
         LOG_DBG("Instance %pK initialized successfully", instance);
 
@@ -177,6 +179,10 @@ static int efcp_destroy(struct efcp * instance)
                  * the destination cep id? */
 
                 connection_destroy(instance->connection);
+        }
+
+        if (instance->delim) {
+        	delim_destroy(instance->delim);
         }
 
 	robject_del(&instance->robj);
@@ -277,6 +283,12 @@ int efcp_container_config_set(struct efcp_container * container,
 
 	efcp_cfg->pci_offset_table = pci_offset_table_create(efcp_cfg->dt_cons);
         container->config = efcp_cfg;
+        if (container->config->dt_cons->max_sdu_size == 0) {
+        	container->config->dt_cons->max_sdu_size =
+        			container->config->dt_cons->max_pdu_size -
+        			pci_calculate_size(container->config, PDU_TYPE_DT);
+        }
+
         LOG_DBG("Succesfully set EFCP config to EFCP container");
 
         return 0;
@@ -286,7 +298,36 @@ EXPORT_SYMBOL(efcp_container_config_set);
 static int efcp_write(struct efcp * efcp,
                       struct du *  du)
 {
+	struct delim_ps * delim_ps = NULL;
+	struct du_list_item * next_du = NULL;
 
+	/* Handle fragmentation here */
+	if (efcp->delim) {
+		delim_ps = container_of(rcu_dereference(efcp->delim->base.ps),
+						        struct delim_ps,
+						        base);
+
+		if (delim_ps->delim_fragment(delim_ps, du,
+					     efcp->delim->tx_dus)) {
+			LOG_ERR("Error performing SDU fragmentation");
+			du_list_clear(efcp->delim->tx_dus, true);
+			return -1;
+		}
+
+	        list_for_each_entry(next_du, &(efcp->delim->tx_dus->dus),
+	        		    next) {
+	                if (dtp_write(efcp->dtp, next_du->du)) {
+	                	LOG_ERR("Could not write SDU fragment to DTP");
+	                	/* TODO, what to do here? */
+	                }
+	        }
+
+	        du_list_clear(efcp->delim->tx_dus, false);
+
+		return 0;
+	}
+
+	/* No fragmentation */
         if (dtp_write(efcp->dtp, du)) {
                 LOG_ERR("Could not write SDU to DTP");
                 return -1;
@@ -503,6 +544,7 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
         struct dtp_ps       * dtp_ps;
         bool                dtcp_present;
         struct rttq *       rttq;
+        struct delim * delim;
 
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
@@ -558,6 +600,30 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                 return cep_id_bad();
 	}
 
+        if (container->config->dt_cons->dif_frag) {
+        	delim = delim_create(efcp, &efcp->robj);
+        	if (!delim){
+        		LOG_ERR("Problems creating delimiting module");
+                        efcp_destroy(efcp);
+                        return cep_id_bad();
+        	}
+
+        	delim->max_fragment_size =
+        			container->config->dt_cons->max_pdu_size -
+        			pci_calculate_size(container->config, PDU_TYPE_DT)
+        			- 1;
+
+        	/* TODO, allow selection of delimiting policy set name */
+                if (delim_select_policy_set(delim, "", RINA_PS_DEFAULT_NAME)) {
+                        LOG_ERR("Could not load delimiting PS %s",
+                        	RINA_PS_DEFAULT_NAME);
+                        delim_destroy(delim);
+                        efcp_destroy(efcp);
+                        return cep_id_bad();
+                }
+
+        	efcp->delim = delim;
+        }
 
         /* FIXME: dtp_create() takes ownership of the connection parameter */
 	efcp->dtp = dtp_create(efcp, container->rmt, dtp_cfg, &efcp->robj);
@@ -825,10 +891,41 @@ int efcp_enqueue(struct efcp * efcp,
                  port_id_t     port,
                  struct du *   du)
 {
+	struct delim_ps * delim_ps = NULL;
+	struct du_list_item * next_du = NULL;
+
         if (!efcp->user_ipcp) {
         	LOG_ERR("Flow is being deallocated, dropping SDU");
         	du_destroy(du);
         	return -1;
+        }
+
+        /* Reassembly goes here */
+        if (efcp->delim) {
+		delim_ps = container_of(rcu_dereference(efcp->delim->base.ps),
+						        struct delim_ps,
+						        base);
+
+		if (delim_ps->delim_process_udf(delim_ps, du,
+						efcp->delim->rx_dus)) {
+			LOG_ERR("Error processing EFCP UDF by delimiting");
+			du_list_clear(efcp->delim->rx_dus, true);
+			return -1;
+		}
+
+	        list_for_each_entry(next_du, &(efcp->delim->rx_dus->dus),
+	        		    next) {
+	                if (efcp->user_ipcp->ops->du_enqueue(efcp->user_ipcp->data,
+	                                                     port,
+	                                                     next_du->du)) {
+	                        LOG_ERR("Upper ipcp could not enqueue sdu to port: %d", port);
+	                        return -1;
+	                }
+	        }
+
+	        du_list_clear(efcp->delim->rx_dus, false);
+
+		return 0;
         }
 
         if (efcp->user_ipcp->ops->du_enqueue(efcp->user_ipcp->data,
@@ -837,6 +934,7 @@ int efcp_enqueue(struct efcp * efcp,
                 LOG_ERR("Upper ipcp could not enqueue sdu to port: %d", port);
                 return -1;
         }
+
         return 0;
 }
 

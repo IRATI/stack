@@ -122,8 +122,9 @@ std::string ManagementAgent::console_command(enum console_command command,
 	}
 }
 
-//Process event
-void ManagementAgent::process_librina_event(rina::IPCEvent** event){
+//Process event, do nothing
+void ManagementAgent::process_librina_event(rina::IPCEvent** event)
+{
 	flow_manager->process_librina_event(event);
 }
 
@@ -220,28 +221,37 @@ ManagementAgent::ManagementAgent(const rinad::RINAConfiguration& config) :
 	connect();
 }
 
-ManagementAgent::~ManagementAgent(){
+ManagementAgent::~ManagementAgent()
+{
 	/*
-	* Destroy all subsystems
+	* Destroy all subsystems in a separate thread
+	* Otherwise there may be a deadlock
 	*/
 
-	//TODO
-
-	//FlowManager
-	delete flow_manager;
-
-	//Bg
-	delete bg_task_manager;
-
-	//Conf Manager
-	delete conf_manager;
-
-	//RIB Factory
-	delete rib_factory;
+	MATerminationThread * mat = new MATerminationThread(flow_manager,
+			bg_task_manager, conf_manager, rib_factory);
+	mat->start();
 
 	LOG_INFO("Goodbye!");
 }
 
+MATerminationThread::MATerminationThread(FlowManager * fm, BGTaskManager * bg,
+					 ConfManager * cm, RIBFactory * rf)
+	: rina::SimpleThread(std::string("MATermination"), true)
+{
+	flowman = fm;
+	bgman = bg;
+	cman = cm;
+	rfac = rf;
+}
+
+int MATerminationThread::run()
+{
+	delete flowman;
+	delete bgman;
+	delete cman;
+	delete rfac;
+}
 
 }; //namespace mad
 }; //namespace rinad

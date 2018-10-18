@@ -104,6 +104,8 @@ void TaskScheduler::insert(Time time, TimerTask* timer_task) {
 }
 
 void TaskScheduler::runTasks() {
+	std::stringstream ss;
+
 	lock();
 	Time now;
 	std::map<Time, std::list<TimerTask*>* >::iterator first = tasks_.begin();
@@ -114,12 +116,9 @@ void TaskScheduler::runTasks() {
 		for (std::list<TimerTask*>::iterator iter_list = iter_map->second->begin();
 				iter_list != iter_map->second->end(); ++iter_list){
 			try {
-				ThreadAttributes threadAttributes;
-				threadAttributes.setDettached();
-				threadAttributes.setName("timer_task");
 				Thread *t = new Thread(&doWorkTask,
 						       (void *) (*iter_list),
-						       &threadAttributes);
+						       ss.str(), true);
 				t->start();
 				delete t;
 				t = 0;
@@ -170,13 +169,12 @@ void* doWorkTimer(void *arg) {
 }
 
 Timer::Timer() {
-	ThreadAttributes threadAttributes;
-	threadAttributes.setJoinable();
 	continue_lock_.lock();
 	continue_ = true;
 	continue_lock_.unlock();
 	task_scheduler = new TaskScheduler();
-	thread_ = new Thread(&doWorkTimer, (void *) this, &threadAttributes);
+	thread_ = new Thread(&doWorkTimer, (void *) this,
+			     std::string("Timer"), false);
 	thread_->start();
 	LOG_DBG("Timer with ID %d started", thread_);
 }
@@ -231,4 +229,3 @@ bool Timer::execute_tasks() {
 	return result;
 }
 }
-

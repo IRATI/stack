@@ -41,6 +41,9 @@ class CFloodCancelFlowTimerTask : public rina::TimerTask {
 public:
 	CFloodCancelFlowTimerTask(int port_id, Client * client);
 	void run();
+	std::string name() const {
+		return "cflood-cancel-flow";
+	}
 
 private:
 	int port_id;
@@ -49,8 +52,7 @@ private:
 
 class Sender: public rina::SimpleThread {
 public:
-        Sender(rina::ThreadAttributes * threadAttributes,
-                 unsigned long echo_times,
+        Sender(unsigned long echo_times,
                  unsigned int data_size,
                  int dealloc_wait,
                  unsigned int lost_wait,
@@ -133,9 +135,9 @@ private:
         double max_rtt;
         double average_rtt;
         timespec maxtp;
-        rina::Timer timer;
         CFloodCancelFlowTimerTask * cflood_task;
         int port_id;
         int fd;
+        rina::Timer timer;
 };
 #endif//ET_CLIENT_HPP

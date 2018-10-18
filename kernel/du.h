@@ -21,6 +21,7 @@
 #ifndef RINA_DU_H
 #define RINA_DU_H
 
+#include <linux/list.h>
 #include <linux/skbuff.h>
 
 #include "pci.h"
@@ -31,6 +32,15 @@ struct du {
 	void *sdup_head; /* opaque used by SDU protection policy (TTL)*/
 	void *sdup_tail; /* opaque used by SDU protection policy (error check) */
 	struct sk_buff *skb;
+};
+
+struct du_list {
+	struct list_head dus;
+};
+
+struct du_list_item {
+	struct list_head next;
+	struct du * du;
 };
 
 struct pci * du_pci(struct du * du);
@@ -58,5 +68,14 @@ int du_head_shrink(struct du * du, size_t bytes);
 void * du_sdup_head(struct du *du);
 int du_sdup_head_set(struct du *pdu, void *header);
 int du_shrink(struct du * du, size_t bytes);
+struct du_list_item * du_list_item_create(struct du * du);
+struct du_list_item * du_list_item_create_ni(struct du * du);
+int add_du_to_list(struct du_list * du_list, struct du * du);
+int add_du_to_list_ni(struct du_list * du_list, struct du * du);
+int du_list_item_destroy(struct du_list_item * item, bool destroy_du);
+struct du_list * du_list_create(void);
+struct du_list * du_list_create_ni(void);
+int du_list_destroy(struct du_list * du_list, bool destroy_dus);
+int du_list_clear(struct du_list * du_list, bool destroy_dus);
 
 #endif

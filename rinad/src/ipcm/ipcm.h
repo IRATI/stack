@@ -910,7 +910,6 @@ private:
 
 	//I/O loop main thread
 	rina::Thread* io_thread;
-	rina::ThreadAttributes io_thread_attrs;
 
 	//Stop condition
 	rina::ConditionVariable stop_cond;
@@ -944,6 +943,9 @@ public:
 				   const std::list<std::string>& sdnames);
 	~JoinDIFAndAllocateFlowTask() throw() {};
 	void run();
+	std::string name() const {
+		return "join-dif-and-allocate-flow";
+	}
 
 private:
 	IPCManager_ * ipcm;
