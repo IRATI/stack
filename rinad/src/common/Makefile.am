@@ -66,3 +66,28 @@ encodersheaders_HEADERS =					\
 	encoders/WhatevercastNameArrayMessage.pb.h		\
 	encoders/WhatevercastNameMessage.pb.h		\
 	encoders/RIBObjectData.pb.h
+	
+EXTRA_DIST =					\
+	librinad.pc.in
+        
+edit = $(SED)								\
+        -e 's|@PACKAGE_VERSION[@]|$(PACKAGE_VERSION)|g'			\
+        -e 's|@LIBPROTOBUF_MIN_VERSION[@]|$(LIBPROTOBUF_MIN_VERSION)|g'	\
+		-e 's|@LIBPROTOBUF_CFLAGS[@]|$(LIBPROTOBUF_CFLAGS)|g'		\
+        -e 's|@PACKAGE_URL[@]|$(PACKAGE_URL)|g'				\
+        -e 's|@prefix[@]|$(prefix)|g'					\
+        -e 's|@includedir[@]|$(includedir)|g'				\
+        -e 's|@libdir[@]|$(libdir)|g'
+
+librinad.pc: Makefile librinad.pc.in
+	rm -f $@ $@.tmp
+	srcdir=''; \
+	  test -f ./$@.in || srcdir=$(srcdir)/; \
+	  $(edit) $${srcdir}$@.in >$@.tmp
+	chmod a-w $@.tmp
+	mv $@.tmp $@
+
+CLEANFILES = librinad.pc
+
+pkgconfigdir   = $(libdir)/pkgconfig
+pkgconfig_DATA = librinad.pc

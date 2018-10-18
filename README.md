@@ -10,8 +10,9 @@
     3.1 Loading the kernel modules
     3.2 The configuration files
     3.3 Running the IPC Manager Daemon
-4. Tutorials
-5. Overview of the software components
+4. The simple Manager application
+5. Tutorials
+6. Overview of the software components
 ````
 
 ## 1. Introduction
@@ -284,29 +285,46 @@ The DIF Allocator instance can create an IPC Process that belongs to the _vpn.DI
 will have an application name/instance _test1.vpn_ and _1_ respectively. Last but not least, the DIF Allocator instance 
 will try to enroll to another DIF Allocator instance called _dat-test2.system_ over the _normal.DIF_
 
-    "difallocator" : {
-       "type" : "dynamic-dif-allocator",
-       "dafName" : {
-          "processName" : "da.default"
-       },
-       "dapName" : {
-          "processName" : "da-test1.system",
-          "processInstance" : "1"
-       },
-       "joinableDIFs" : [ {
-          "difName" : "vpn.DIF",
-          "ipcpPn" : "test1.vpn",
-          "ipcpPi" : "1"
-       } ],
-       "enrollments" : [ {
-          "processName" : "da-test2.system",
-          "processInstance" : "1",
-          "difName" : "normal.DIF"
-       } ]
-    }
+    "addons" : {
+      "difallocator" : {
+         "type" : "dynamic-dif-allocator",
+         "dafName" : {
+            "processName" : "da.default"
+         },
+         "dapName" : {
+            "processName" : "da-test1.system",
+            "processInstance" : "1"
+         },
+         "joinableDIFs" : [ {
+            "difName" : "vpn.DIF",
+            "ipcpPn" : "test1.vpn",
+            "ipcpPi" : "1"
+         } ],
+         "enrollments" : [ {
+            "processName" : "da-test2.system",
+            "processInstance" : "1",
+            "difName" : "normal.DIF"
+         } ]
+       }
+    } 
 
 ##### 3.2.1.2 Management Agent
-Documentation coming soon.
+The Management Agent enables remote management of IPC within a system. The Management Agent is designed to enroll 
+to a Manager Process in the Network Management DAF (NM-DAF), which will trigger the creation/destruction/re-configuration 
+of IPCPs remotely. The Management Agent can be configured the following way:
+
+    "addons" : {
+       "mad" : {
+          "managerConnections" : [ {
+              "managerAppName" : "arcfire.network.manager-1--",
+              "DIF" : "normal.DIF"
+          } ]
+       }
+    }
+
+The MA is an add-on that needs to be configured with one or more "managerConnections" (one for each application connection 
+that the MA will create to a Manager, typically only one). For each "managerConnection", the MA needs to be configured 
+with the Manager application name and with a DIF that can be used to reach the Manager process.
 
 ##### 3.2.1.3 Mobility Manager
 Documentation coming soon.
@@ -1300,10 +1318,176 @@ Example of IPCM console output:
 Now applications can be run that use the IPC API. Look at the Tutorials section for some step-by-step 
 examples on how to use the rina-echo-time test application to experiment with IRATI.
 
-## 4. Tutorials
+## 4. Simple Manager
+The simple Manager application is part of the rina-tools package and distributed with the IRATI source code. It is a simple Manager for 
+the Network Management DAF (NM-DAF), that accepts remote application connections from one or more Management Agents (MAs, see section 
+3.2.1) and enables the remote creation/destruction/configuration of IPCPs at the systems managed by those MAs.
+
+### 4.1 Running the Manager
+The Manager application can be launched by running net_manager from the bin folder of the IRATI installation. As any application, 
+it requires that at least one DIF is locally created in order to register to it. The user running the Manager can specify the 
+DIF(s) it wants the Manager to register, using command line arguments. The following listing provides information on all usage 
+of the net_manager command.
+
+    root@irativm3:/usr/local/irati/bin# ./net_manager -h
+
+    USAGE: 
+
+       ./net_manager  [-t <string>] [-c <string>] [-d <string>] [--manager-api
+                  <string>] [--manager-apn <string>] [--] [--version] [-h]
+
+
+    Where: 
+
+       -t <string>,  --dif-templates-path <string>
+         The path to the DIF Templates folder
+
+       -c <string>,  --console-path <string>
+         The path to the Network Management console UNIX socket
+
+       -d <string>,  --difs-to-register-at <string>
+         The names of the DIFs to register at, separated by ',' (empty means
+         'any DIF')
+
+       --manager-api <string>
+         Application process instance for the Network Manager process
+
+       --manager-apn <string>
+         Application process name for the Network Manager process
+
+       --,  --ignore_rest
+         Ignores the rest of the labeled arguments following this flag.
+
+       --version
+         Displays version information and exits.
+
+       -h,  --help
+         Displays usage information and exits.
+
+
+Once registered at the DIF(s), the Manager will wait for remote application requests from MAs, and enroll them into the 
+Network Management DAF (NM-DAF). The Manager features a local console available via a UNIX socket, that allows a local 
+admin to interact with it. It can be reached by typing
+
+    root@irativm3:/home/irati/stack# socat - UNIX:/var/run/nmconsole.sock 
+    IPCM >>> help
+    Available commands:
+        create-dif
+        create-ipcp
+        destroy-dif
+        destroy-ipcp
+        exit
+        help
+        list-systems
+        query-rib
+        quit
+
+The **list-systems** commands displays information about the MAs that are enrolled to the NM-DAF.
+
+    IPCM >>> list-systems
+            Managed Systems       
+        system id      MA name   |  port-id  
+           2   |   host1-1   |          8
+           1   |   manager-1   |          7
+
+### 4.2 Creating a single IPCP in a system
+The **create-ipcp** command triggers the creation of an IPCP in a system. The syntax of the command is
+
+    IPCM >>> create-ipcp
+    USAGE: create-ipcp <system-id> <path to IPCP descriptor file>
+
+The IPCP descriptor file contains information on the IPCP to be created. An example descriptor file 
+is the following:
+
+    {
+      "ipcp_data" : {
+          "type" : "normal-ipc",
+          "dif_name" : "slice1",
+          "template" : "normal.dif",
+          "registrations" : ["normal.DIF"]
+       }
+    }
+
+The **type** attribute is the type of the IPCP (normal or one of the shims). The **dif_name** attribute
+is the name of the DIF where the IPC Process will enroll. The **template** attribute is the name of a 
+DIF template configuration file with the configuration of the IPC Process (the file must be within the
+<IRATI_INSTALLTION>/etc folder. Finally, the **registrations** attribute contains a list of N-1 DIFs 
+where the IPCP needs to register. An example of the usage of this command is the following:
+
+    IPCM >>> create-ipcp 1 /usr/local/irati/etc/ipcp.desc
+    IPC process created successfully [ipcp_id = 3, system_id=1]
+
+### 4.3 Destroying a single IPCP in a system
+The **destroy-ipcp** command triggers the destruction of an IPCP in a system. The syntax of the command is
+
+    IPCM >>> destroy-ipcp
+    USAGE: destroy-ipcp <system-id> <ipcp-id>
+
+An example of the usage of this command is the following:
+
+    IPCM >>> destroy-ipcp 1 3
+    IPC process destroyed successfully [id = 3]
+
+### 4.4 Creating a DIF
+The **create-dif** command triggers the creation of a DIF, which basically creates one or more IPCPs in 
+multiple systems, registers them on N-1 DIFs and triggers enrollments. The syntax of the command is
+
+    IPCM >>> create-dif
+    USAGE: create-dif <path to DIF descriptor file>
+
+The DIF descriptor file contains information on the DIF to be created. An example descriptor file is the 
+following:
+
+    {
+      "dif_name" : "slice1",
+      "dif_type" : "normal-ipc",
+      "ipcps" : [ {
+        "system_name" : "manager",
+        "dif_template" : "normal.dif",
+        "registrations" : ["normal.DIF"]
+      }, {
+        "system_name" : "host1",
+        "dif_template" : "normal.dif",
+        "registrations" : ["normal.DIF"],
+        "neighbors" : [ {
+           "ipcp_name" : "manager.slice1",
+           "under_dif" : "normal.DIF"
+        } ]
+      } ]
+    }
+
+The **dif_name** attribute is the name of the DIF. The **dif_type** attribute is the type of IPCPs that 
+will be created on this DIF. The **ipcps** element contains a list of IPCP configurations, one per each 
+IPCP to be created. The **system_name** attribute is the name of the system where the IPCP will be created. 
+The **dif_template** argument is the name of the DIF template with the configuration of the IPCP (the DIF 
+template file needs to be in the <IRATI_INSTALLATION>/etc folder). The **registrations** element contains 
+an array of N-1 DIF names where the new IPCP will register. The **neighbors** element contains a list of 
+neighbor IPCPs that the new IPCP will enroll to (those neighbor IPCPs need to be created before the new IPCP).
+An example of the usage of this command is the following:
+
+    IPCM >>> create-dif /usr/local/irati/etc/slice1e.ddesc
+    DIF created.IPCPs created at the following systems: 
+    System host1, id 4
+    System manager, id 3
+
+### 4.5 Destroying a DIF
+The **destroy-dif** command triggers the destruction of a DIF, which destroys one or more IPCPs in 
+multiple systems. The syntax of the command is
+
+    IPCM >>> destroy-dif 
+    USAGE: destroy-dif <dif-name>
+
+An example of the usage of this command is the following:
+
+    IPCM >>> destroy-dif slice1
+    DIF slice1 destroyed.IPCPs destroyed at the following systems: 
+    System 1, id 3
+    System 2, id 4
+
+## 5. Tutorials
 Several tutorials are available at https://github.com/IRATI/stack/wiki/Tutorials
 
-## 5. Overview of the software components
+## 6. Overview of the software components
 This section provides an overview of the software architecture and components of IRATI. For a more detailed 
 explanation we direct the reader to FP7-IRATI's at http://irati.eu:
  

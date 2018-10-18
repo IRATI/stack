@@ -26,8 +26,8 @@
 #include <map>
 
 #include <librina/concurrency.h>
-#include <configuration.h>
-#include <rina-configuration.h>
+#include <rinad/common/configuration.h>
+#include <rinad/common/rina-configuration.h>
 
 class DIFTemplateManager;
 
@@ -51,10 +51,17 @@ private:
 };
 
 struct IPCPDescriptor {
+	std::string system_name;
 	std::string dif_name;
 	std::string ipcp_type;
 	std::string dif_template_name;
 	std::list<std::string> difs_to_register_at;
+	std::list<rina::Neighbor> neighbors;
+};
+
+struct DIFDescriptor {
+	std::string dif_name;
+	std::list<IPCPDescriptor> ipcps;
 };
 
 class DIFTemplateManager {
@@ -70,6 +77,11 @@ public:
 	int get_ipcp_config_from_desc(rinad::configs::ipcp_config_t & ipcp_config,
 				      const std::string& system_name,
 				      const std::string& desc_file);
+	int __get_ipcp_config_from_desc(rinad::configs::ipcp_config_t & ipcp_config,
+				        const std::string& system_name,
+				        const IPCPDescriptor& descriptor);
+	int parse_dif_descriptor(const std::string& desc_file,
+				 DIFDescriptor & dif_desc);
 
 private:
 	int load_initial_dif_templates();

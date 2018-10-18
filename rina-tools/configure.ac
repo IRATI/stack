@@ -150,6 +150,18 @@ PKG_CHECK_MODULES([LIBRINA_API], [librina-api],, [
 # FIXME: A cleaner solution would be better
 AC_SUBST([LIBRINA_API_VERSION],`pkg-config --modversion librina-api`)
 
+PKG_CHECK_MODULES([LIBRINAJSONCPP], [librinajsoncpp],, [
+    AC_MSG_ERROR([Your system lacks of librinajsoncpp support])
+])
+# FIXME: A cleaner solution would be better
+AC_SUBST([LIBRINAJSONCPP_VERSION],`pkg-config --modversion librinajsoncpp`)
+
+PKG_CHECK_MODULES([LIBRINAD], [librinad],, [
+    AC_MSG_ERROR([Your system lacks of librinad support])
+])
+# FIXME: A cleaner solution would be better
+AC_SUBST([LIBRINAD_VERSION],`pkg-config --modversion librinad`)
+
 AC_PATH_PROG([PROTOC], [protoc], [no])
 AS_IF([test "x$PROTOC" = "xno"],[
     AC_MSG_ERROR([Your system lacks of protoc support])

@@ -78,7 +78,6 @@ private:
         * Internal variables containing MAD configuration
         */
         rina::ApplicationProcessNamingInformation app_name;
-        std::list<std::string> nms_difs;
         std::list<ManagerConnInfo> manager_connections;
         ManagerConnInfo key_manager_connection;
 };

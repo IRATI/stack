@@ -211,13 +211,16 @@ protected:
 class MASystemTransState: public TransactionState {
 public:
 	MASystemTransState(NetworkManager* callee, Promise* promise, int sys_id,
-			   const std::string& tid)
+			   struct IPCPDescriptor * desc, const std::string& tid)
 					: TransactionState(callee, promise, tid),
-						system_id(sys_id){}
+						system_id(sys_id), ipcp_desc(desc){}
 	virtual ~MASystemTransState(){};
 
 	//System identifier
 	int system_id;
+
+	// IPCP descriptor
+	struct IPCPDescriptor * ipcp_desc;
 };
 
 //Class NMConsole
@@ -265,6 +268,9 @@ struct ManagedSystem
 	int system_id;
 	nm_res status;
 	std::map<std::string, rina::rib::RIBObj*> objs_to_create;
+
+	/* Map of IPC Processes, indexed by IPCP id */
+	std::map<int, IPCPDescriptor*> ipcps;
 };
 
 // Class NMEnrollmentTask
@@ -393,10 +399,19 @@ public:
 	netman_res_t create_ipcp(CreateIPCPPromise * promise, int system_id,
 				 const std::string& ipcp_desc);
 	netman_res_t destroy_ipcp(Promise * promise, int system_id, int ipcp_id);
+	netman_res_t create_dif(std::map<std::string, int>& result,
+				const std::string& dif_desc);
+	netman_res_t destroy_dif(std::map<int, int>& result,
+				 const std::string& dif_name);
 
 private:
         void n1_flow_accepted(const char * incoming_apn, int fd);
         int assign_system_id(void);
+        netman_res_t create_ipcp(CreateIPCPPromise * promise, ManagedSystem * mas,
+        			 rinad::configs::ipcp_config_t& ipcp_config);
+
+        IPCPDescriptor * ipcp_desc_from_config(const std::string system_name,
+        				       const rinad::configs::ipcp_config_t& ipcp_config);
 
         int cfd;
         std::string complete_name;

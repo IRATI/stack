@@ -1,0 +1,10 @@
+prefix=@prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: LibRINA JSON CPP
+Description: JSON parser for C++
+Version: @PACKAGE_VERSION@
+URL: @PACKAGE_URL@
+Libs: -L${libdir} -lrinajsoncpp
+Cflags: -I${includedir}

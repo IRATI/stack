@@ -22,15 +22,15 @@ net_manager_SOURCES  =				\
 net_manager_LDADD    =          \
     $(LIBRINA_LIBS)             \
     $(LIBRINA_API_LIBS) -ldl    \
-    $(builddir)/../../../rinad/src/common/librinad.la \
-    $(builddir)/../../../librina/src/librinajsoncpp.la
+    $(LIBRINAJSONCPP_LIBS) -ldl    \
+    $(LIBRINAD_LIBS)
 net_manager_CPPFLAGS =			\
 	$(LIBRINA_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)			\
     $(LIBPROTOBUF_CFLAGS)  		\
     $(LIBRINA_API_CFLAGS)       \
 	-I$(srcdir)/../common       \
-	-I$(srcdir)/../../../rinad/src/common
+	$(LIBRINAD_CFLAGS)
 net_manager_CXXFLAGS =			\
 	$(CPPFLAGS_EXTRA)
 
