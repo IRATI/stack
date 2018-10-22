@@ -162,6 +162,24 @@ IPCManager_::application_is_registered_to_ipcp(rina::ApplicationProcessNamingInf
 	return false;
 }
 
+void
+IPCManager_::application_has_flow_by_ipcp(rina::ApplicationProcessNamingInformation & app_name,
+				          pid_t pid, IPCMIPCProcess *slave_ipcp,
+				          std::list<int>& port_ids)
+{
+	std::list<rina::FlowInformation>::iterator it;
+
+	//Prevent any insertion/deletion to happen
+	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
+
+	for (it = slave_ipcp->allocatedFlows.begin();
+				it != slave_ipcp->allocatedFlows.end(); it++) {
+		if (it->pid == pid) {
+			port_ids.push_back(it->portId);
+		}
+	}
+}
+
 IPCMIPCProcess *
 IPCManager_::lookup_ipcp_by_port(unsigned int port_id, bool write_lock)
 {
