@@ -75,7 +75,7 @@ static struct dtp_sv default_sv = {
         .tr                   = 0,
         .rcv_left_window_edge = 0,
         .window_closed        = false,
-        .drf_flag             = true,
+        .drf_flag             = false,
 };
 
 #define stats_get(name, sv, retval)				\
