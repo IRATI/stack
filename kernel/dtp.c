@@ -65,7 +65,7 @@ static struct dtp_sv default_sv = {
         .rexmsn_ctrl                   = false,
         .rate_based                    = false,
         .window_based                  = false,
-        .drf_required                  = false,
+        .drf_required                  = true,
         .rate_fulfiled                 = false,
         .max_flow_pdu_size    = UINT_MAX,
         .max_flow_sdu_size    = UINT_MAX,
@@ -75,7 +75,7 @@ static struct dtp_sv default_sv = {
         .tr                   = 0,
         .rcv_left_window_edge = 0,
         .window_closed        = false,
-        .drf_flag             = false,
+        .drf_flag             = true,
 };
 
 #define stats_get(name, sv, retval)				\
