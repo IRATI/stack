@@ -173,6 +173,7 @@ int default_receiver_inactivity_timer(struct dtp_ps * ps)
         dtcp->sv->rcvr_rt_wind_edge = 0;
         dtp->sv->rcv_left_window_edge = 0;
         dtp_squeue_flush(dtp);
+        dtcp->sv->rendezvous_rcvr = false;
         dtp->sv->drf_required = true;
         spin_unlock_bh(&dtp->sv_lock);
 
@@ -211,6 +212,8 @@ int default_sender_inactivity_timer(struct dtp_ps * ps)
         snd_rt_win  = dtcp->sv->snd_rt_wind_edge;
         next_send   = dtp->sv->seq_nr_to_send;
         dtcp->sv->snd_rt_wind_edge = next_send + init_credit;
+        dtcp->sv->rendezvous_sndr = false;
+        rttq_flush(dtp->rttq);
 
         LOG_DBG("Current values:\n\tinit_credit: %u "
                 "max_sent: %u snd_rt_win: %u next_send: %u",

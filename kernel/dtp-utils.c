@@ -992,7 +992,7 @@ static struct rtt_entry * rtt_entry_create_gfp(seq_num_t sn, gfp_t flag)
 static struct rtt_entry * rtt_entry_create(seq_num_t sn)
 { return rtt_entry_create_gfp(sn, GFP_ATOMIC); }
 
-int rtt_entry_destroy(struct rtt_entry * entry)
+static int rtt_entry_destroy(struct rtt_entry * entry)
 {
         if (!entry)
                 return -1;
@@ -1002,7 +1002,6 @@ int rtt_entry_destroy(struct rtt_entry * entry)
 
         return 0;
 }
-EXPORT_SYMBOL(rtt_entry_destroy);
 
 static struct rttq * rttq_create_gfp(gfp_t flags)
 {
@@ -1019,6 +1018,7 @@ static struct rttq * rttq_create_gfp(gfp_t flags)
 
 struct rttq * rttq_create(void)
 { return rttq_create_gfp(GFP_KERNEL); }
+EXPORT_SYMBOL(rttq_create);
 
 static int rttq_entry_destroy(struct rtt_entry * entry)
 {
@@ -1027,7 +1027,8 @@ static int rttq_entry_destroy(struct rtt_entry * entry)
 		return 0;
 }
 
-static int rttq_flush(struct rttq * q)
+/* No locking required, it's always called with DTP-SV lock taken */
+int rttq_flush(struct rttq * q)
 {
         struct rtt_entry * cur, * n;
 
@@ -1039,24 +1040,25 @@ static int rttq_flush(struct rttq * q)
 
         return 0;
 }
+EXPORT_SYMBOL(rttq_flush);
 
 int rttq_destroy(struct rttq * q)
 {
-		unsigned long flags;
 
         if (!q)
                 return -1;
 
-        spin_lock_irqsave(&q->lock, flags);
+        spin_lock(&q->lock);
         rttq_flush(q);
-        spin_unlock_irqrestore(&q->lock, flags);
+        spin_unlock(&q->lock);
 
         rkfree(q);
 
         return 0;
 }
+EXPORT_SYMBOL(rttq_destroy);
 
-unsigned long rttqueue_entry_timestamp(struct rttq * q, seq_num_t sn)
+static unsigned long rttqueue_entry_timestamp(struct rttq * q, seq_num_t sn)
 {
         struct rtt_entry * cur;
         seq_num_t           csn;
@@ -1163,8 +1165,10 @@ int rttq_drop(struct rttq * q, seq_num_t sn)
 {
 		struct rtt_entry * cur, * n;
 
+		spin_lock_bh(&q->lock);
 		if (list_empty(&q->head)) {
 			LOG_INFO("RTTQ empty");
+			spin_unlock_bh(&q->lock);
 			return 0;
 		}
 		cur = list_last_entry(&q->head, struct rtt_entry, next);
@@ -1174,8 +1178,12 @@ int rttq_drop(struct rttq * q, seq_num_t sn)
             if (cur->sn <= sn) {
                     LOG_INFO("Seq num removed: %u", cur->sn);
                     rtt_entry_destroy(cur);
-            } else
+            } else {
+        			spin_unlock_bh(&q->lock);
                     return 0;
-    }
+            }
+		}
+		spin_unlock_bh(&q->lock);
 		return 0;
 }
+EXPORT_SYMBOL(rttq_drop);

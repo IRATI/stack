@@ -83,4 +83,5 @@ int rttq_destroy(struct rttq * q);
 unsigned long rttq_entry_timestamp(struct rttq * q, seq_num_t sn);
 int rttq_drop(struct rttq * q, seq_num_t sn);
 int rttq_push(struct rttq * q, seq_num_t sn);
+int rttq_flush(struct rttq * q);
 #endif
