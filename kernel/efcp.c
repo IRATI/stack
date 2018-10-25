@@ -671,8 +671,9 @@ cep_id_t efcp_connection_create(struct efcp_container * container,
                         return cep_id_bad();
                 }
                 efcp->dtp->rtxq = rtxq;
+                efcp->dtp->rttq = NULL;
         } else {
-        		rttq = rttq_create();
+                rttq = rttq_create();
         		if (!rttq) {
         			LOG_ERR("Failed to create RTT queue");
         			efcp_destroy(efcp);

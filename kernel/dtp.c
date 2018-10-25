@@ -1566,7 +1566,9 @@ int dtp_receive(struct dtp * instance,
                         instance->sv->drf_required = false;
                         instance->sv->rcv_left_window_edge = seq_num;
                         dtp_squeue_flush(instance);
-                        rttq_flush(instance->rttq);
+                        if (instance->rttq) {
+                                rttq_flush(instance->rttq);
+                        }
                         spin_unlock_bh(&instance->sv_lock);
                         if (dtcp) {
                                 if (dtcp_sv_update(dtcp, &du->pci)) {
