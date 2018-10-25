@@ -370,13 +370,11 @@ int default_rcvr_rendezvous(struct dtcp_ps * ps, const struct pci * pci)
         	if (dtcp->sv->snd_rt_wind_edge != rcv_rt) {
         		/* TODO what to do? */
         	}
-    		LOG_DBG("RCVR rendezvous. RCV LWE: %d | RCV RWE: %d || SND LWE: %d | SND RWE: %d",
+    		LOG_DBG("RCVR rendezvous. RCV LWE: %u | RCV RWE: %u || SND LWE: %u | SND RWE: %u",
 					dtcp->parent->sv->rcv_left_window_edge, dtcp->sv->rcvr_rt_wind_edge,
 					snd_lft, snd_rt);
 
     		dtcp->sv->rcvr_rt_wind_edge = snd_lft + dtcp->sv->rcvr_credit;
-    		//this would be enough as a normal ACK to the RV packet, however, we need something specific for the reliable ACK
-    		//that is, a timer :(
         }
 
         if (dtcp->sv->flow_ctl && dtcp->parent->sv->rate_based) {
@@ -403,7 +401,6 @@ int default_rcvr_rendezvous(struct dtcp_ps * ps, const struct pci * pci)
         if (!du)
                 return -1;
 
-        LOG_INFO("DTCP Sending FC (CPU: %d)", smp_processor_id());
         dump_we(dtcp, &du->pci);
 
         if (dtcp_pdu_send(dtcp, du))

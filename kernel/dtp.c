@@ -1563,6 +1563,7 @@ int dtp_receive(struct dtp * instance,
                 }
 #endif
                 if ((pci_flags_get(&du->pci) & PDU_FLAGS_DATA_RUN)) {
+                	    LOG_INFO("Data Run Flag");
                         instance->sv->drf_required = false;
                         instance->sv->rcv_left_window_edge = seq_num;
                         dtp_squeue_flush(instance);

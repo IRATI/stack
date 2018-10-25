@@ -237,7 +237,8 @@ static void tf_rendezvous_rcv(struct timer_list * tl)
 	spin_unlock_bh(&dtp->sv_lock);
 
 	if (start_rv_rcv_timer) {
-		LOG_INFO("DTCP Sending FC (CPU: %d)", smp_processor_id());
+		LOG_INFO("DTCP Sending FC: RCV LWE: %u | RCV RWE: %u",
+					dtp->sv->rcv_left_window_edge, dtcp->sv->rcvr_rt_wind_edge);
 		/* Send rendezvous PDU and start timer */
 		ctrl_pdu_send(dtcp, PDU_TYPE_FC, true);
 		rtimer_start(&dtcp->rendezvous_rcv, rv);
