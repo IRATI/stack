@@ -341,35 +341,6 @@ void cwq_deliver(struct cwq * queue,
         return;
 }
 
-/* NOTE: used only by dump_we */
-seq_num_t cwq_peek(struct cwq * queue)
-{
-        seq_num_t          ret;
-        struct du *        du;
-
-        spin_lock_bh(&queue->lock);
-        if (rqueue_is_empty(queue->q)){
-                spin_unlock_bh(&queue->lock);
-                return 0;
-        }
-
-        du = (struct du *) rqueue_head_pop(queue->q);
-        if (!du) {
-                spin_unlock_bh(&queue->lock);
-                return -1;
-        }
-
-        ret = pci_sequence_number_get(&du->pci);
-        if (rqueue_head_push_ni(queue->q, du)) {
-                spin_unlock_bh(&queue->lock);
-                du_destroy(du);
-                return ret;
-        }
-        spin_unlock_bh(&queue->lock);
-
-        return ret;
-}
-
 static struct rtxq_entry * rtxq_entry_create_gfp(struct du * du, gfp_t flag)
 {
         struct rtxq_entry * tmp;

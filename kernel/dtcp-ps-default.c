@@ -167,7 +167,6 @@ int default_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
                 return -1;
 
         LOG_DBG("DTCP Sending FC (CPU: %d)", smp_processor_id());
-        dump_we(dtcp, &du->pci);
 
         if (dtcp_pdu_send(dtcp, du))
                return -1;
@@ -400,8 +399,6 @@ int default_rcvr_rendezvous(struct dtcp_ps * ps, const struct pci * pci)
         du = pdu_ctrl_generate(dtcp, PDU_TYPE_FC);
         if (!du)
                 return -1;
-
-        dump_we(dtcp, &du->pci);
 
         if (dtcp_pdu_send(dtcp, du))
                return -1;

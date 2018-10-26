@@ -69,7 +69,6 @@ struct dtcp	*dtcp_from_component(struct rina_component *component);
 struct dtcp_ps	*dtcp_ps_get(struct dtcp *dtcp);
 pdu_type_t	pdu_ctrl_type_get(struct dtcp *dtcp, seq_num_t seq);
 struct du	*pdu_ctrl_create_ni(struct dtcp *dtcp, pdu_type_t type);
-void		dump_we(struct dtcp *dtcp, struct pci *pci);
 int		dtcp_pdu_send(struct dtcp *dtcp, struct du *du);
 struct du	*pdu_ctrl_ack_create(struct dtcp *dtcp,
 				     seq_num_t last_ctrl_seq_rcvd,

@@ -195,8 +195,6 @@ static int ctrl_pdu_send(struct dtcp * dtcp, pdu_type_t type, bool direct)
                 }
         }
 
-        dump_we(dtcp, &du->pci);
-
         atomic_dec(&dtcp->cpdus_in_transit);
 
         return 0;
@@ -387,51 +385,6 @@ struct du * pdu_ctrl_generate(struct dtcp * dtcp, pdu_type_t type)
 }
 EXPORT_SYMBOL(pdu_ctrl_generate);
 
-void dump_we(struct dtcp * dtcp, struct pci *  pci)
-{
-        seq_num_t    snd_rt_we;
-        seq_num_t    snd_lf_we;
-        seq_num_t    rcv_rt_we;
-        seq_num_t    rcv_lf_we;
-        seq_num_t    new_rt_we;
-        seq_num_t    new_lf_we;
-        seq_num_t    pci_seqn;
-        seq_num_t    my_rt_we;
-        seq_num_t    my_lf_we;
-        seq_num_t    ack;
-        uint_t	     rate;
-        uint_t	     tframe;
-
-        ASSERT(dtcp);
-        ASSERT(pci);
-
-        spin_lock_bh(&dtcp->parent->sv_lock);
-        snd_rt_we = dtcp->sv->snd_rt_wind_edge;
-        snd_lf_we = dtcp->sv->snd_lft_win;
-        rcv_rt_we = dtcp->sv->rcvr_rt_wind_edge;
-        rcv_lf_we = dtcp->parent->sv->rcv_left_window_edge;
-        spin_unlock_bh(&dtcp->parent->sv_lock);
-
-        new_rt_we = pci_control_new_rt_wind_edge(pci);
-        new_lf_we = pci_control_new_left_wind_edge(pci);
-        my_lf_we  = pci_control_my_left_wind_edge(pci);
-        my_rt_we  = pci_control_my_rt_wind_edge(pci);
-        pci_seqn  = pci_sequence_number_get(pci);
-        ack       = pci_control_ack_seq_num(pci);
-        rate	  = pci_control_sndr_rate(pci);
-        tframe	  = pci_control_time_frame(pci);
-
-        LOG_DBG("SEQN: %u N/Ack: %u SndRWE: %u SndLWE: %u "
-                "RcvRWE: %u RcvLWE: %u "
-                "newRWE: %u newLWE: %u "
-                "myRWE: %u myLWE: %u "
-                "rate: %u tframe: %u",
-                pci_seqn, ack, snd_rt_we, snd_lf_we, rcv_rt_we, rcv_lf_we,
-                new_rt_we, new_lf_we, my_rt_we, my_lf_we,
-                rate, tframe);
-}
-EXPORT_SYMBOL(dump_we);
-
 /* not a policy according to specs */
 static int rcv_nack_ctl(struct dtcp * dtcp,
                         struct du *  du)
@@ -463,7 +416,6 @@ static int rcv_nack_ctl(struct dtcp * dtcp,
         rcu_read_unlock();
 
         LOG_DBG("DTCP received NACK (CPU: %d)", smp_processor_id());
-        dump_we(dtcp, &du->pci);
 
         du_destroy(du);
 
@@ -489,7 +441,6 @@ static int rcv_ack(struct dtcp * dtcp,
 
 
         LOG_DBG("DTCP received ACK (CPU: %d)", smp_processor_id());
-        dump_we(dtcp, &du->pci);
 
         du_destroy(du);
 
@@ -536,8 +487,6 @@ static int update_window_and_rate(struct dtcp * dtcp,
         	rtimer_stop(&dtcp->parent->timers.rendezvous);
 
         push_pdus_rmt(dtcp);
-
-        dump_we(dtcp, &du->pci);
 
         du_destroy(du);
 
@@ -619,7 +568,6 @@ static int rcvr_rendezvous(struct dtcp * dtcp,
         rcu_read_unlock();
 
         LOG_INFO("DTCP received Rendezvous (CPU: %d)", smp_processor_id());
-        dump_we(dtcp, &du->pci);
 
         du_destroy(du);
 
