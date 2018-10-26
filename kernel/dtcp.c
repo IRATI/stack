@@ -171,7 +171,7 @@ RINA_SYSFS_OPS(dtcp);
 RINA_ATTRS(dtcp, rtt, srtt, rttvar, ps_name);
 RINA_KTYPE(dtcp);
 
-static int ctrl_pdu_send(struct dtcp * dtcp, pdu_type_t type, bool direct)
+int ctrl_pdu_send(struct dtcp * dtcp, pdu_type_t type, bool direct)
 {
         struct du *   du;
 
@@ -238,6 +238,7 @@ static void tf_rendezvous_rcv(struct timer_list * tl)
 		LOG_INFO("DTCP Sending FC: RCV LWE: %u | RCV RWE: %u",
 					dtp->sv->rcv_left_window_edge, dtcp->sv->rcvr_rt_wind_edge);
 		/* Send rendezvous PDU and start timer */
+    	atomic_inc(&dtcp->cpdus_in_transit);
 		ctrl_pdu_send(dtcp, PDU_TYPE_FC, true);
 		rtimer_start(&dtcp->rendezvous_rcv, rv);
 	}

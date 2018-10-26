@@ -82,7 +82,7 @@ bool		dtcp_rate_exceeded(struct dtcp *dtcp, int send);
 /* end SDK */
 
 int		pdus_sent_in_t_unit_set(struct dtcp *dtcp, uint_t s);
-
+int ctrl_pdu_send(struct dtcp * dtcp, pdu_type_t type, bool direct);
 /*FIXME: wrapper to be called by dtp in the post_worker */
 int			dtcp_sending_ack_policy(struct dtcp *dtcp);
 #endif

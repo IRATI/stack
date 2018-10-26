@@ -340,7 +340,6 @@ int default_rtt_estimator_nortx(struct dtcp_ps * ps, seq_num_t sn)
 int default_rcvr_rendezvous(struct dtcp_ps * ps, const struct pci * pci)
 {
         struct dtcp *       dtcp;
-        struct du *         du;
         seq_num_t rcv_lft, rcv_rt, snd_lft, snd_rt;
         timeout_t rv;
 
@@ -396,14 +395,11 @@ int default_rcvr_rendezvous(struct dtcp_ps * ps, const struct pci * pci)
     		rv = jiffies_to_msecs(dtcp->parent->sv->tr);
         	rtimer_start(&dtcp->rendezvous_rcv, rv);
         }
-        du = pdu_ctrl_generate(dtcp, PDU_TYPE_FC);
-        if (!du)
-                return -1;
 
-        if (dtcp_pdu_send(dtcp, du))
-               return -1;
+    	atomic_inc(&dtcp->cpdus_in_transit);
+    	LOG_INFO("DTCP Sending Rendezvous (CPU: %d)", smp_processor_id());
 
-        return 0;
+    	return ctrl_pdu_send(dtcp, PDU_TYPE_FC, true);
 }
 
 struct ps_base * dtcp_ps_default_create(struct rina_component * component)
