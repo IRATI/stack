@@ -397,7 +397,7 @@ int default_rcvr_rendezvous(struct dtcp_ps * ps, const struct pci * pci)
         }
 
     	atomic_inc(&dtcp->cpdus_in_transit);
-    	LOG_INFO("DTCP Sending Rendezvous (CPU: %d)", smp_processor_id());
+    	LOG_INFO("DTCP 1st Sending FC to stop Rendezvous (CPU: %d)", smp_processor_id());
 
     	return ctrl_pdu_send(dtcp, PDU_TYPE_FC, true);
 }

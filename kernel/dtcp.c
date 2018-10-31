@@ -175,10 +175,17 @@ int ctrl_pdu_send(struct dtcp * dtcp, pdu_type_t type, bool direct)
 {
         struct du *   du;
 
+        if (dtcp->sv->rendezvous_rcvr) {
+        	LOG_INFO("Generating FC PDU in RV at RCVR");
+        }
+
         du  = pdu_ctrl_generate(dtcp, type);
         if (!du) {
         	atomic_dec(&dtcp->cpdus_in_transit);
         	return -1;
+        }
+        if (dtcp->sv->rendezvous_rcvr) {
+        	LOG_INFO("Generated FC PDU in RV at RCVR");
         }
 
         if (direct) {
