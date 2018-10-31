@@ -177,6 +177,11 @@ ssize_t *pci_offset_table_create(struct dt_cons *dt_cons)
 		case PCI_ACK_FC_NEW_RWE:
 		case PCI_ACK_FC_MY_LWE:
 		case PCI_ACK_FC_MY_RWE:
+		case PCI_RVOUS_LAST_CSN_RCVD:
+		case PCI_RVOUS_NEW_LWE:
+		case PCI_RVOUS_NEW_RWE:
+		case PCI_RVOUS_MY_LWE:
+		case PCI_RVOUS_MY_RWE:
 			offset += dt_cons->seq_num_length;
 			break;
 		case PCI_CTRL_SN:
@@ -190,11 +195,13 @@ ssize_t *pci_offset_table_create(struct dt_cons *dt_cons)
 		case PCI_FC_SNDR_RATE:
 		case PCI_CACK_SNDR_RATE:
 		case PCI_ACK_FC_SNDR_RATE:
+		case PCI_RVOUS_SNDR_RATE:
 			offset += dt_cons->rate_length;
 			break;
 		case PCI_FC_TIME_FRAME:
 		case PCI_CACK_TIME_FRAME:
 		case PCI_ACK_FC_TIME_FRAME:
+		case PCI_RVOUS_TIME_FRAME:
 			offset += dt_cons->frame_length;
 			break;
 		case PCI_DT_MGMT_SIZE:
