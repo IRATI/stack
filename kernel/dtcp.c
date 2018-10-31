@@ -337,13 +337,6 @@ static int populate_ctrl_pci(struct pci *  pci,
                 }
                 return 0;
         case PDU_TYPE_RENDEZVOUS:
-        {
-        	LOG_INFO("sndLWE: %u, sndRWE: %u, rcvLWE: %u, rcvRWE: %u",
-        			pci_control_my_left_wind_edge(pci),
-					pci_control_my_rt_wind_edge(pci),
-					pci_control_new_left_wind_edge(pci),
-					pci_control_new_rt_wind_edge(pci));
-        }
         case PDU_TYPE_CACK:
         	if (pci_control_last_seq_num_rcvd_set(pci, last_rcv_ctl_seq)) {
 			LOG_ERR("Could not set last ctrl sn rcvd");
