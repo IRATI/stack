@@ -517,7 +517,7 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
                       	  struct dtcp_ps, base);
 
     	LOG_DBG("DTCP received FC (CPU: %d)", smp_processor_id());
-    	LOG_INFO("New RWE: %u, Credit: %u, Seq Num RTT: %u", seq, credit, seq-credit);
+    	LOG_DBG("New RWE: %u, Credit: %u, Seq Num RTT: %u", seq, credit, seq-credit);
     	if (!ps->rtx_ctrl && ps->rtt_estimator)
     			ps->rtt_estimator(ps, seq - credit);
 
