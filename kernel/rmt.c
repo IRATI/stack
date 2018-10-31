@@ -910,17 +910,18 @@ int rmt_send_port_id(struct rmt *instance,
 		break;
 	case RMT_PS_ENQ_DROP:
 		n1_port->stats.drop_pdus++;
-		LOG_DBG("PDU dropped while enqueing");
+		LOG_ERR("PDU dropped while enqueing");
 		ret = 0;
 		break;
 	case RMT_PS_ENQ_ERR:
 		n1_port->stats.err_pdus++;
-		LOG_DBG("Some error occurred while enqueuing PDU");
+		LOG_ERR("Some error occurred while enqueuing PDU");
 		ret = 0;
 		break;
 	case RMT_PS_ENQ_SEND:
 		if (must_enqueue) {
 			/* Wrong behaviour of the policy */
+			LOG_ERR("Wrong behaviour of the policy");
 			du_destroy(du);
 			n1_port->stats.err_pdus++;
 			LOG_DBG("Policy should have enqueue, returned SEND");
