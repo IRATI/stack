@@ -481,6 +481,7 @@ static int update_window_and_rate(struct dtcp * dtcp,
 				rt, tf);
 		}
         }
+        LOG_INFO("New SND RWE: %u, New LWE: %u", dtcp->sv->snd_rt_wind_edge, dtcp->sv->snd_lft_win);
 
         /* Check if rendezvous timer is active */
         cancel_rv_timer = false;
@@ -516,8 +517,7 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
     	ps = container_of(rcu_dereference(dtcp->base.ps),
                       	  struct dtcp_ps, base);
 
-    	LOG_DBG("DTCP received FC (CPU: %d)", smp_processor_id());
-    	LOG_DBG("New RWE: %u, Credit: %u, Seq Num RTT: %u", seq, credit, seq-credit);
+    	LOG_DBG("DTCP received FC: New RWE: %u, Credit: %u, Seq Num to drop: %u", seq, credit, seq-credit);
     	if (!ps->rtx_ctrl && ps->rtt_estimator)
     			ps->rtt_estimator(ps, seq - credit);
 

@@ -1144,7 +1144,6 @@ int rttq_drop(struct rttq * q, seq_num_t sn)
 			spin_unlock_bh(&q->lock);
 			return 0;
 		}
-		cur = list_last_entry(&q->head, struct rtt_entry, next);
 		cur = NULL;
 		list_for_each_entry_safe(cur, n, &q->head, next) {
             if (cur->sn <= sn) {
