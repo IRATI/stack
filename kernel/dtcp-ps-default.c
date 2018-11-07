@@ -179,6 +179,8 @@ int default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         struct dtcp * dtcp = ps->dm;
         seq_num_t LWE;
         seq_num_t RWE;
+        seq_num_t lwe_p;
+        seq_num_t rwe_p;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -188,6 +190,8 @@ int default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
                 LOG_ERR("No PCI passed, cannot run policy");
                 return -1;
         }
+        lwe_p = pci_control_new_left_wind_edge(pci);
+        rwe_p = pci_control_new_rt_wind_edge(pci);
 
         spin_lock_bh(&dtcp->parent->sv_lock);
         LWE = dtcp->parent->sv->rcv_left_window_edge;
@@ -195,8 +199,7 @@ int default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         RWE = dtcp->sv->rcvr_rt_wind_edge;
         spin_unlock_bh(&dtcp->parent->sv_lock);
 
-        LOG_DBG("DTCP: %pK", dtcp);
-        LOG_DBG("LWE: %u  RWE: %u", LWE, RWE);
+        LOG_INFO("DTCP: LWE: %u  RWE: %u -- PCI: lwe: %u, rwe: %u", LWE, RWE, lwe_p, rwe_p);
 
         return 0;
 }

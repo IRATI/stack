@@ -523,12 +523,6 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
 
     	rcu_read_unlock();
 
-    	spin_lock_bh(&dtcp->parent->sv_lock);
-    	if (dtcp->sv->rendezvous_sndr) {
-    		dtcp->sv->rendezvous_sndr = false;
-        	rtimer_stop(&dtcp->parent->timers.rendezvous);
-    	}
-    	spin_unlock_bh(&dtcp->parent->sv_lock);
     	if (dtcp->parent->rttq) {
     		rttq_drop(dtcp->parent->rttq, seq-credit);
     	}
