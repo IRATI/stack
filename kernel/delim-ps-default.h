@@ -29,6 +29,7 @@ struct ps_base * delim_ps_default_create(struct rina_component *component);
 void delim_ps_default_destroy(struct ps_base *bps);
 int default_delim_fragment(struct delim_ps * ps, struct du * du,
 			   struct du_list * du_list);
+int default_delim_num_udfs(struct delim_ps * ps, struct du * du);
 int default_delim_process_udf(struct delim_ps * ps, struct du * du,
 			      struct du_list * du_list);
 

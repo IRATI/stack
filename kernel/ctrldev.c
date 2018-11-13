@@ -224,6 +224,15 @@ static int ctrl_dev_data_post(struct msg_queue_entry * entry, irati_msg_port_t p
         return retval;
 }
 
+void msg_queue_entry_destroy(struct msg_queue_entry * entry)
+{
+	if (!entry)
+		return;
+ 	if (entry->sermsg)
+		rkfree(entry->sermsg);
+ 	rkfree(entry);
+}
+
 int irati_ctrl_dev_snd_resp_msg(irati_msg_port_t port,
 				struct irati_msg_base *bmsg)
 {
@@ -256,8 +265,7 @@ int irati_ctrl_dev_snd_resp_msg(irati_msg_port_t port,
         entry->serlen = ret;
 
         if (ctrl_dev_data_post(entry, port)) {
-		rkfree(entry->sermsg);
-		rkfree(entry);
+        	msg_queue_entry_destroy(entry);
 		return -1;
         }
 
@@ -472,8 +480,7 @@ ctrldev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
 
 	LOG_DBG("Read on port %u finishing, read %zd bytes",
 		priv->port_id, ret);
-	rkfree(entry->sermsg);
-	rkfree(entry);
+	msg_queue_entry_destroy(entry);
 
 finish:
         return ret;
@@ -550,7 +557,7 @@ ctrldev_release(struct inode *inode, struct file *f)
         spin_unlock(&priv->pending_msgs_lock);
 
         /* Drain queue of pending messages */
-        if (rfifo_destroy(pmsgs, (void (*) (void *)) rkfree)) {
+        if (rfifo_destroy(pmsgs, (void (*) (void *)) msg_queue_entry_destroy)) {
         	LOG_ERR("Ctrl-dev %u FIFO has not been destroyed",
         		priv->port_id);
         }
