@@ -1798,6 +1798,10 @@ static int eth_vlan_netdev_notify(struct notifier_block *nb,
 		case NETDEV_UP:
 			LOG_INFO("Device %s goes up", dev->name);
 			ntfy_user_ipcp_on_if_state_change(pos, true);
+			spin_lock_bh(&pos->lock);
+			pos->tx_busy = 0;
+			spin_unlock_bh(&pos->lock);
+			enable_write_all(pos->phy_dev);
 			break;
 
 		case NETDEV_DOWN:

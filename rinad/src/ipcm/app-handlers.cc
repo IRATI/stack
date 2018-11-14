@@ -45,15 +45,18 @@ void IPCManager_::os_process_finalized_handler(pid_t pid)
 	rina::ApplicationProcessNamingInformation app_name;
 	unsigned short ipcp_id = 0;
 	ostringstream ss;
+	std::list<int>::iterator pid_it;
 
 	{
 		//Prevent any insertion/deletion to happen
 		rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
 
-		// Look if the terminating application has pending registrations
-		// with some IPC processes
+		// Look if the terminating application had registrations or flows
+		// provided by some N-1 IPC processes
 		ipcp_factory_.listIPCProcesses(ipcps);
 		for (unsigned int i = 0; i < ipcps.size(); i++) {
+			std::list<int> port_ids;
+
 			if (application_is_registered_to_ipcp(app_name, pid, ipcps[i])) {
 				// Build a structure that will be used during
 				// the unregistration process. The last argument
@@ -67,8 +70,18 @@ void IPCManager_::os_process_finalized_handler(pid_t pid)
 				IPCManager->unregister_app_from_ipcp(NULL, NULL,
 								     req_event,
 								     ipcps[i]->get_id());
-				LOG_INFO("OS process %d terminated, unregistering name %s",
-						pid, app_name.toString().c_str());
+				LOG_INFO("OS process %d terminated, unregistered name %s from DIF %s",
+						pid, app_name.toString().c_str(),
+						ipcps[i]->dif_name_.processName.c_str());
+			}
+
+			application_has_flow_by_ipcp(app_name, pid, ipcps[i], port_ids);
+			for(pid_it = port_ids.begin(); pid_it != port_ids.end(); ++pid_it) {
+				rina::FlowDeallocateRequestEvent fevent;
+				fevent.portId = *pid_it;
+				IPCManager->deallocate_flow(NULL, ipcps[i]->proxy_->id, fevent);
+				LOG_INFO("OS process %d terminated, deallocated flow with port-id %d",
+					  pid, fevent.portId);
 			}
 		}
 	}
