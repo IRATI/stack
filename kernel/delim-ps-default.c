@@ -192,6 +192,28 @@ int default_delim_fragment(struct delim_ps * ps, struct du * du,
 	return 0;
 }
 
+int default_delim_num_udfs(struct delim_ps * ps, struct du * du)
+{
+	struct delim * delim;
+	int dulen;
+	int num_fragments = 0;
+
+ 	delim = ps->dm;
+	if (!delim) {
+		LOG_ERR("No instance passed, cannot run policy");
+		du_destroy(du);
+		return -1;
+	}
+
+ 	dulen = du_len(du);
+	while (dulen > 0) {
+		num_fragments ++;
+		dulen = dulen - delim->max_fragment_size;
+	}
+
+ 	return num_fragments;
+}
+
 /* Easy case, the UDF contains a single, complete SDU.
  * Hence the syntax is <SDUDelimiterFlags> <SDUData>
  */
@@ -377,6 +399,7 @@ struct ps_base * delim_ps_default_create(struct rina_component * component)
         }
 
         ps->delim_fragment		= default_delim_fragment;
+        ps->delim_num_udfs	        = default_delim_num_udfs;
         ps->delim_process_udf		= default_delim_process_udf;
 
         return &ps->base;

@@ -129,9 +129,8 @@ static int dtcp_fctrl_config_destroy(struct dtcp_fctrl_config * cfg)
 
         if (cfg->closed_window)
                 policy_destroy(cfg->closed_window);
-        /*FIXME this goes to DTP */
-        /*if (cfg->flow_control_overrun)
-                policy_destroy(cfg->flow_control_overrun);*/
+        if (cfg->flow_control_overrun)
+                policy_destroy(cfg->flow_control_overrun);
         if (cfg->reconcile_flow_conflict)
                 policy_destroy(cfg->reconcile_flow_conflict);
         if (cfg->receiving_flow_control)

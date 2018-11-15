@@ -304,7 +304,7 @@ void cwq_deliver(struct cwq * queue,
                 dtp_pdu_send(dtp, rmt, du);
         }
 
-        if (!can_deliver(dtp, dtcp)) {
+        if (!rqueue_is_empty(queue->q)) {
         	if(dtcp_window_based_fctrl(dtcp->cfg)) {
 			dtp->sv->window_closed = true;
         	}
@@ -313,12 +313,8 @@ void cwq_deliver(struct cwq * queue,
                 	LOG_DBG("rbfc Cannot deliver anymore, closing...");
                 	dtp->sv->rate_fulfiled = true;
                 	dtp_start_rate_timer(dtp, dtcp);
-
-                	// Cannot use anymore that port.
-                	//efcp_disable_write(dt_efcp(dtp));
                 }
 
-                enable_write(queue, dtp);
                 spin_unlock(&queue->lock);
                 return;
         }

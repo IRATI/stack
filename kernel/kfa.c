@@ -430,86 +430,6 @@ static int enable_write(struct ipcp_instance_data *data, port_id_t id)
 	return 0;
 }
 
-int kfa_flow_du_write(struct kfa  *kfa,
-		      port_id_t   id,
-		      struct du   * du)
-{
-	struct ipcp_flow     *flow;
-	struct ipcp_instance *ipcp;
-	int		      retval = 0;
-	size_t max_sdu_size = 0;
-	ssize_t length = du_len(du);
-
-	LOG_DBG("Trying to write SDU of length %zd to port-id %d",
-		length, id);
-
-	spin_lock_bh(&kfa->lock);
-
-	flow = kfa_pmap_find(kfa->flows, id);
-	if (!flow) {
-		spin_unlock_bh(&kfa->lock);
-		du_destroy(du);
-		LOG_ERR("There is no flow bound to port-id %d", id);
-		return -EBADF;
-	}
-	if (flow->state == PORT_STATE_DEALLOCATED) {
-		spin_unlock_bh(&kfa->lock);
-		du_destroy(du);
-		LOG_ERR("Flow with port-id %d is already deallocated", id);
-		return -ESHUTDOWN;
-	}
-
-	ipcp = flow->ipc_process;
-	max_sdu_size = ipcp->ops->max_sdu_size(ipcp->data);
-	if (length > max_sdu_size) {
-		spin_unlock_bh(&kfa->lock);
-		LOG_ERR("SDU is larger than the max SDU handled by "
-				"the IPCP: %zd, %zd", max_sdu_size, length);
-		du_destroy(du);
-	        return -EMSGSIZE;
-	}
-
-	atomic_inc(&flow->writers);
-
-	if (flow->state == PORT_STATE_PENDING
-			|| flow->state == PORT_STATE_DISABLED) {
-		LOG_DBG("Flow %d is not ready for writing", id);
-		du_destroy(du);
-		retval = -EAGAIN;
-		goto finish;
-	}
-
-	if (flow->state == PORT_STATE_DEALLOCATED) {
-		LOG_ERR("Flow %d has been deallocated", id);
-		du_destroy(du);
-		retval = -ESHUTDOWN;
-		goto finish;
-	}
-
-	spin_unlock_bh(&kfa->lock);
-	if (ipcp->ops->du_write(ipcp->data, id, du, false)) {
-		LOG_ERR("Couldn't write SDU on port-id %d", id);
-		retval = -EIO;
-	} else {
-		retval = length;
-	}
-	spin_lock_bh(&kfa->lock);
-
- finish:
-	LOG_DBG("Finishing (write)");
-
-	if (atomic_dec_and_test(&flow->writers) &&
-	    (atomic_read(&flow->readers) == 0)	&&
-	    (atomic_read(&flow->posters) == 0)	&&
-	    (flow->state == PORT_STATE_DEALLOCATED))
-		if (kfa_flow_destroy(kfa, flow, id))
-			LOG_ERR("Could not destroy the flow correctly");
-
-	spin_unlock_bh(&kfa->lock);
-
-	return retval;
-}
-
 int kfa_flow_ub_write(struct kfa * instance,
 		      port_id_t		  id,
 		      const char __user * buffer,
@@ -1214,6 +1134,19 @@ static struct ipcp_instance_ops kfa_instance_ops = {
 	.disable_write		   = disable_write
 };
 
+int kfa_ipcp_instance_destroy(struct ipcp_instance * instance)
+{
+	if (!instance) {
+		LOG_ERR("Bogus instance passed");
+		return -1;
+	}
+ 	if (instance->data) {
+		rkfree(instance->data);
+	}
+ 	rkfree(instance);
+ 	return 0;
+}
+
 struct kfa *kfa_create(void)
 {
 	struct kfa *instance;
@@ -1250,6 +1183,7 @@ struct kfa *kfa_create(void)
 		LOG_ERR("Could not allocate memory for kfa ipcp internal data");
 		pidm_destroy(instance->pidm);
 		kfa_pmap_destroy(instance->flows);
+		rkfree(instance->ipcp);
 		rkfree(instance);
 		return NULL;
 	}
@@ -1260,6 +1194,7 @@ struct kfa *kfa_create(void)
 		LOG_ERR("Could not allocate memory for kfa ipcp internal data");
 		pidm_destroy(instance->pidm);
 		kfa_pmap_destroy(instance->flows);
+		kfa_ipcp_instance_destroy(instance->ipcp);
 		rkfree(instance);
 		return NULL;
 	}
@@ -1281,6 +1216,7 @@ int kfa_destroy(struct kfa *instance)
 	kfa_pmap_destroy(instance->flows);
 
 	pidm_destroy(instance->pidm);
+	kfa_ipcp_instance_destroy(instance->ipcp);
 	rwq_destroy(instance->flowdelq);
 
 	rkfree(instance);
