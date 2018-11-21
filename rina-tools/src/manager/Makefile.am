@@ -8,6 +8,7 @@ CLEANFILES       =
 MOSTLYCLEANFILES =
 EXTRA_DIST       =
 bin_PROGRAMS                       =
+bin_SCRIPTS                        =
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT =
 
 include $(srcdir)/Makefile.inc
@@ -36,3 +37,6 @@ net_manager_CXXFLAGS =			\
 
 bin_PROGRAMS            += net_manager
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += net_manager
+
+bin_SCRIPTS    += mgr-ctl
+EXTRA_DIST     += mgr-ctl

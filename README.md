@@ -69,9 +69,9 @@ Once this is done, please install user-space dependencies
     $ apt-get install hostapd (if the system will be configured as an access point)
     $ apt-get install wpasupplicant (if the system will be configured as a mobile host)
 
-Download the IRATI repo (arcfire branch) and enter the root directory
+Download the IRATI repo and enter the root directory
 
-    $ git clone -b arcfire https://github.com/IRATI/stack.git
+    $ git clone https://github.com/IRATI/stack.git
     $ cd stack
 
 Build and install both kernel-space and user-space software
@@ -90,9 +90,9 @@ Install user-space dependencies
     $ pacman -S hostapd (if the system will be configured as an access point)
     $ pacman -S wpa_supplicant (if the system will be configured as a mobile host)
 
-Download the IRATI repo (arcfire branch) and enter the root directory
+Download the IRATI repo and enter the root directory
 
-    $ git clone -b arcfire https://github.com/IRATI/stack.git
+    $ git clone https://github.com/IRATI/stack.git
     $ cd stack
 
 Build and install both kernel-space and user-space software
@@ -123,9 +123,9 @@ Install dependencies
     $ apt-get install wpa-supplicant (if the system will be configured as a mobile host)
     $ apt-get install autoconf libtool git libssl-dev protobuf-compiler libprotobuf-dev
 
-Download the IRATI repo (arcfire branch) and enter the root directory
+Download the IRATI repo and enter the root directory
 
-    $ git clone -b arcfire https://github.com/IRATI/stack.git
+    $ git clone https://github.com/IRATI/stack.git
     $ cd stack
 
 Build and install both kernel-space and user-space software
