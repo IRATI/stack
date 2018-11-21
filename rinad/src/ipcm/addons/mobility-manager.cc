@@ -500,12 +500,12 @@ int MobilityManager::initialize_arcfire_exp5_tip(bool ue1)
 	if (hand_state.dif == "") {
 		if (ue1) {
 			ssid = "irati";
-			prov_dif_name = "accprov1.DIF";
-			slice_dif_name = "slice1.DIF";
+			prov_dif_name = "accprov1";
+			slice_dif_name = "slice1";
 		} else {
 			ssid = "arcfire";
-			prov_dif_name = "accprov2.DIF";
-			slice_dif_name = "slice2.DIF";
+			prov_dif_name = "accprov2";
+			slice_dif_name = "slice2";
 		}
 
 		//Not enrolled anywhere yet, enroll for first time
@@ -879,7 +879,7 @@ int MobilityManager::execute_handover_arcfire_exp5_tip(bool ue1)
 	disc_dif = hand_state.dif;
 	if (hand_state.dif == "irati") {
 		next_dif = "pristine";
-		next_prov_dif = "accprov1.DIF";
+		next_prov_dif = "accprov1";
 		neighbor.processName = "ar1.accprov1";
 		neighbor.processInstance = "1";
 		hand_state.change_mob_dif = false;
@@ -887,7 +887,7 @@ int MobilityManager::execute_handover_arcfire_exp5_tip(bool ue1)
 		prov_ipcp_disc = prov1_ipcp;
 	} else if (hand_state.dif == "pristine") {
 		next_dif = "arcfire";
-		next_prov_dif = "accprov2.DIF";
+		next_prov_dif = "accprov2";
 		neighbor.processName = "ar2.accprov1";
 		neighbor.processInstance = "1";
 		hand_state.change_mob_dif = true;
@@ -900,7 +900,7 @@ int MobilityManager::execute_handover_arcfire_exp5_tip(bool ue1)
 		slice_neighbor.processInstance = "1";
 	} else if (hand_state.dif == "arcfire"){
 		next_dif = "irina";
-		next_prov_dif = "accprov2.DIF";
+		next_prov_dif = "accprov2";
 		neighbor.processName = "ar3.accprov2";
 		neighbor.processInstance = "1";
 		hand_state.change_mob_dif = false;
@@ -908,7 +908,7 @@ int MobilityManager::execute_handover_arcfire_exp5_tip(bool ue1)
 		prov_ipcp_disc = prov2_ipcp;
 	} else if (hand_state.dif == "irina"){
 		next_dif = "irati";
-		next_prov_dif = "accprov1.DIF";
+		next_prov_dif = "accprov1";
 		neighbor.processName = "ar4.accprov2";
 		neighbor.processInstance = "1";
 		hand_state.change_mob_dif = true;
@@ -959,9 +959,9 @@ int MobilityManager::execute_handover_arcfire_exp5_tip(bool ue1)
 		sleep.sleepForMili(1000);
 		slice_neigh_data.supportingDifName.processName = next_prov_dif;
 		if (ue1)
-			slice_neigh_data.difName.processName = "slice1.DIF";
+			slice_neigh_data.difName.processName = "slice1";
 		else
-			slice_neigh_data.difName.processName = "slice2.DIF";
+			slice_neigh_data.difName.processName = "slice2";
 		if(IPCManager->enroll_to_dif(this, &promise, slice_ipcp->get_id(), slice_neigh_data,
 				true, slice_neighbor) == IPCM_FAILURE || promise.wait() != IPCM_SUCCESS) {
 			LOG_WARN("Problems enrolling IPCP %u to DIF %s via supporting DIF %s",
