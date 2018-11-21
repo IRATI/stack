@@ -700,7 +700,7 @@ public:
 };
 
 IPCMConsole::IPCMConsole(const string& socket_path_) :
-		rina::UNIXConsole(socket_path_),
+		rina::UNIXConsole(socket_path_, "IPCM"),
 		Addon(IPCMConsole::NAME)
 {
 	commands_map["create-ipcp"] = new CreateIPCPConsoleCmd(this);
