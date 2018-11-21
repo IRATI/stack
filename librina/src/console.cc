@@ -99,8 +99,9 @@ console_function(void *opaque)
 	return NULL;
 }
 
-UNIXConsole::UNIXConsole(const std::string& socket_path_) :
-		socket_path(socket_path_)
+UNIXConsole::UNIXConsole(const std::string& socket_path_,
+			 const std::string& prompt_) :
+		socket_path(socket_path_), prompt(prompt_)
 {
 	commands_map["help"] = new HelpConsoleCmd(this);
 	commands_map["quit"] = new QuitConsoleCmd(this);
@@ -192,8 +193,15 @@ struct UNIXConsole::Connection {
 	char *cmdbuf;
 	unsigned tail, size;
 	int fd;
+	std::string prompt_str;
 
-	Connection() : cmdbuf(0), tail(0), size(0), fd(-1) {}
+	Connection(const std::string prompt_) :
+		cmdbuf(0), tail(0), size(0), fd(-1) {
+		std::stringstream ss;
+
+		ss << prompt_ << " >>> ";
+		prompt_str = ss.str();
+	}
 
 	~Connection() {
 		free(cmdbuf);
@@ -214,8 +222,7 @@ struct UNIXConsole::Connection {
 	}
 
 	bool prompt() {
-		static const string s("IPCM >>> ");
-		return write(s);
+		return write(prompt_str);
 	}
 
 	bool accept(int sfd) {
@@ -306,7 +313,7 @@ void UNIXConsole::body()
 		}
 
 		if (FD_ISSET(sfd, &readset)) {
-			conns.push_back(Connection());
+			conns.push_back(Connection(prompt));
 			if (!conns.back().accept(sfd)) {
 				conns.pop_back();
 			}

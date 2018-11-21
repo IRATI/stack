@@ -62,6 +62,7 @@ class UNIXConsole {
 
 	rina::Thread *worker;
 	std::string socket_path;
+	std::string prompt;
 
 	int init(void);
 	int process_command(Connection *conn, char *cmdbuf, int size);
@@ -70,7 +71,8 @@ class UNIXConsole {
 	bool cleanup_filesystem_socket();
 
 public:
-	UNIXConsole(const std::string& socket_path);
+	UNIXConsole(const std::string& socket_path,
+		    const std::string& prompt);
 	void body();
 	virtual ~UNIXConsole() throw();
 	bool keep_on_running;

@@ -318,7 +318,7 @@ private:
 
 
 NMConsole::NMConsole(const std::string& socket_path, NetworkManager * nm) :
-			rina::UNIXConsole(socket_path)
+			rina::UNIXConsole(socket_path, "Manager")
 {
 	netman = nm;
 	commands_map["create-dif"] = new CreateDIFConsoleCmd(this, netman);
