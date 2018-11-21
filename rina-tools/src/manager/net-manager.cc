@@ -292,7 +292,7 @@ public:
 	};
 
 	int execute(std::vector<std::string>& args) {
-		console->outstream << netman->list_systems() << std::endl;
+		netman->list_systems(console->outstream);
 		return rina::UNIXConsole::CMDRETCONT;
 	}
 
@@ -318,7 +318,7 @@ private:
 
 
 NMConsole::NMConsole(const std::string& socket_path, NetworkManager * nm) :
-			rina::UNIXConsole(socket_path, "Manager")
+			rina::UNIXConsole(socket_path, "Mgr")
 {
 	netman = nm;
 	commands_map["create-dif"] = new CreateDIFConsoleCmd(this, netman);
@@ -917,25 +917,22 @@ std::string NetworkManager::query_manager_rib()
 	return ss.str();
 }
 
-std::string NetworkManager::list_systems(void)
+void NetworkManager::list_systems(std::ostream& os)
 {
 	std::map<std::string, ManagedSystem *>::iterator it;
-	std::stringstream ss;
 
-	ss << "        Managed Systems       " << std::endl;
-	ss << "    system id    |   MA name   |  port-id  " << std::endl;
+	os << "        Managed Systems       " << std::endl;
+	os << "    system id    |   MA name   |  port-id  " << std::endl;
 
 	rina::ScopedLock(et->lock);
 
 	for (it = et->enrolled_systems.begin();
 			it != et->enrolled_systems.end(); ++it) {
-		ss << "       " << it->second->system_id << "   |   ";
-		ss << it->second->con.dest_.ap_name_ << "-"
+		os << "       " << it->second->system_id << "   |   ";
+		os << it->second->con.dest_.ap_name_ << "-"
 		   << it->second->con.dest_.ap_inst_ << "   |   ";
-		ss << "       " << it->second->con.port_id << std::endl;
+		os << "       " << it->second->con.port_id << std::endl;
 	}
-
-	return ss.str();
 }
 
 netman_res_t NetworkManager::create_ipcp(CreateIPCPPromise * promise, int system_id,
