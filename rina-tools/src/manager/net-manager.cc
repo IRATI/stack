@@ -48,7 +48,6 @@ public:
 	int execute(std::vector<std::string>& args) {
 		std::map<std::string, int> ipcp_ids;
 		std::map<std::string, int>::iterator it;
-		rina::Time time;
 		int start_time;
 		int end_time;
 		std::stringstream ss;
@@ -61,12 +60,12 @@ public:
 		for (unsigned int i = 2; i < args.size(); i++) {
 			ss << args[1] << args[i];
 
-			start_time = time.get_current_time_in_ms();
+			start_time = rina::Time::get_time_in_ms();
 			if(netman->create_dif(ipcp_ids, ss.str()) == NETMAN_FAILURE){
 				console->outstream << "Error while creating IPC process" << std::endl;
 				return rina::UNIXConsole::CMDRETCONT;
 			}
-			end_time = time.get_current_time_in_ms();
+			end_time = rina::Time::get_time_in_ms();
 
 			console->outstream << "DIF created in " << end_time - start_time << " ms. ";
 			console->outstream << "IPCPs created at the following systems: " << std::endl;
@@ -97,7 +96,6 @@ public:
 	int execute(std::vector<std::string>& args) {
 		std::map<std::string, int> ipcp_ids;
 		std::map<std::string, int>::iterator it;
-		rina::Time time;
 		int start_time;
 		int end_time;
 
@@ -106,12 +104,12 @@ public:
 			return rina::UNIXConsole::CMDRETCONT;
 		}
 
-		start_time = time.get_current_time_in_ms();
+		start_time = rina::Time::get_time_in_ms();
 		if(netman->create_dif(ipcp_ids, args[1]) == NETMAN_FAILURE){
 			console->outstream << "Error while creating IPC process" << std::endl;
 			return rina::UNIXConsole::CMDRETCONT;
 		}
-		end_time = time.get_current_time_in_ms();
+		end_time = rina::Time::get_time_in_ms();
 
 		console->outstream << "DIF created in " << end_time - start_time << " ms. ";
 		console->outstream << "IPCPs created at the following systems: " << std::endl;
@@ -214,7 +212,6 @@ public:
 	int execute(std::vector<std::string>& args) {
 		std::map<int, int> ipcp_ids;
 		std::map<int, int>::iterator it;
-		rina::Time time;
 		int start_time;
 		int end_time;
 
@@ -223,12 +220,12 @@ public:
 			return rina::UNIXConsole::CMDRETCONT;
 		}
 
-		start_time = time.get_current_time_in_ms();
+		start_time = rina::Time::get_time_in_ms();
 		if(netman->destroy_dif(ipcp_ids, args[1]) == NETMAN_FAILURE){
 			console->outstream << "Error while destroying DIF" << std::endl;
 			return rina::UNIXConsole::CMDRETCONT;
 		}
-		end_time = time.get_current_time_in_ms();
+		end_time = rina::Time::get_time_in_ms();
 
 		console->outstream << "DIF " << args[1] << " destroyed in " << end_time - start_time;
 		console->outstream << " ms. IPCPs destroyed at the following systems: " << std::endl;
@@ -254,7 +251,6 @@ public:
 	int execute(std::vector<std::string>& args) {
 		std::map<int, int> ipcp_ids;
 		std::map<int, int>::iterator it;
-		rina::Time time;
 		int start_time;
 		int end_time;
 
@@ -264,12 +260,12 @@ public:
 		}
 
 		for (unsigned int i = 1; i < args.size(); i++) {
-			start_time = time.get_current_time_in_ms();
+			start_time = rina::Time::get_time_in_ms();
 			if(netman->destroy_dif(ipcp_ids, args[i]) == NETMAN_FAILURE){
 				console->outstream << "Error while destroying DIF" << std::endl;
 				return rina::UNIXConsole::CMDRETCONT;
 			}
-			end_time = time.get_current_time_in_ms();
+			end_time = rina::Time::get_time_in_ms();
 
 			console->outstream << "DIF " << args[i] << " destroyed in " << end_time - start_time;
 			console->outstream << " ms. IPCPs destroyed at the following systems: " << std::endl;
