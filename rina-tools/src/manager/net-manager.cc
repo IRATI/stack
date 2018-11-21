@@ -67,11 +67,12 @@ public:
 			}
 			end_time = rina::Time::get_time_in_ms();
 
-			console->outstream << "DIF created in " << end_time - start_time << " ms. ";
+			console->outstream << "DIF described in " << args[i]
+			                   << " created in " << end_time - start_time << " ms. ";
 			console->outstream << "IPCPs created at the following systems: " << std::endl;
 			for (it = ipcp_ids.begin(); it != ipcp_ids.end(); ++it) {
 				console->outstream << "System " << it->first
-						<< ", id " << it->second << std::endl;
+						<< ", IPCP id " << it->second << std::endl;
 			}
 
 			ipcp_ids.clear();
@@ -115,7 +116,7 @@ public:
 		console->outstream << "IPCPs created at the following systems: " << std::endl;
 		for (it = ipcp_ids.begin(); it != ipcp_ids.end(); ++it) {
 			console->outstream << "System " << it->first
-					   << ", id " << it->second << std::endl;
+					   << ", IPCP id " << it->second << std::endl;
 		}
 
 		return rina::UNIXConsole::CMDRETCONT;
@@ -231,7 +232,7 @@ public:
 		console->outstream << " ms. IPCPs destroyed at the following systems: " << std::endl;
 		for (it = ipcp_ids.begin(); it != ipcp_ids.end(); ++it) {
 			console->outstream << "System " << it->first
-					   << ", id " << it->second << std::endl;
+					   << ", IPCP id " << it->second << std::endl;
 		}
 
 		return rina::UNIXConsole::CMDRETCONT;
@@ -271,7 +272,7 @@ public:
 			console->outstream << " ms. IPCPs destroyed at the following systems: " << std::endl;
 			for (it = ipcp_ids.begin(); it != ipcp_ids.end(); ++it) {
 				console->outstream << "System " << it->first
-						<< ", id " << it->second << std::endl;
+						<< ", IPCP id " << it->second << std::endl;
 			}
 
 			ipcp_ids.clear();
@@ -921,8 +922,7 @@ void NetworkManager::list_systems(std::ostream& os)
 {
 	std::map<std::string, ManagedSystem *>::iterator it;
 
-	os << "        Managed Systems       " << std::endl;
-	os << "    system id    |   MA name   |  port-id  " << std::endl;
+	os << "Current Managed Systems (system id | MA name | port-id)" << std::endl;
 
 	rina::ScopedLock(et->lock);
 
