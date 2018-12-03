@@ -920,7 +920,6 @@ int rmt_send_port_id(struct rmt *instance,
 		break;
 	case RMT_PS_ENQ_SEND:
 		if (must_enqueue) {
-			/* Wrong behaviour of the policy */
 			LOG_ERR("Wrong behaviour of the policy");
 			du_destroy(du);
 			n1_port->stats.err_pdus++;

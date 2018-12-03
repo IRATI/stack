@@ -395,7 +395,7 @@ public:
 
 	// Operations to process console commands
 	std::string query_manager_rib(void);
-	std::string list_systems(void);
+	void list_systems(std::ostream& os);
 	netman_res_t create_ipcp(CreateIPCPPromise * promise, int system_id,
 				 const std::string& ipcp_desc);
 	netman_res_t destroy_ipcp(Promise * promise, int system_id, int ipcp_id);

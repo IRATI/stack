@@ -28,6 +28,7 @@
 
 #define RINA_PREFIX "net-manager"
 #include <librina/logs.h>
+#include <librina/timer.h>
 #include <rinad/common/configuration.h>
 #include <rinad/common/encoder.h>
 #include "net-manager.h"
@@ -35,6 +36,55 @@
 #include <rina/api.h>
 
 //TODO Add cache with managed system names - system id
+
+//Class NMConsole
+class CreateDIFsConsoleCmd: public rina::ConsoleCmdInfo {
+public:
+	CreateDIFsConsoleCmd(NMConsole * console, NetworkManager * nm) :
+		rina::ConsoleCmdInfo("USAGE: create-difs <path to DIF descriptor folder> ddesc1 ddesc2 ...", console) {
+		netman = nm;
+	};
+
+	int execute(std::vector<std::string>& args) {
+		std::map<std::string, int> ipcp_ids;
+		std::map<std::string, int>::iterator it;
+		int start_time;
+		int end_time;
+		std::stringstream ss;
+
+		if (args.size() < 3) {
+			console->outstream << console->commands_map[args[0]]->usage << std::endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		for (unsigned int i = 2; i < args.size(); i++) {
+			ss << args[1] << args[i];
+
+			start_time = rina::Time::get_time_in_ms();
+			if(netman->create_dif(ipcp_ids, ss.str()) == NETMAN_FAILURE){
+				console->outstream << "Error while creating IPC process" << std::endl;
+				return rina::UNIXConsole::CMDRETCONT;
+			}
+			end_time = rina::Time::get_time_in_ms();
+
+			console->outstream << "DIF described in " << args[i]
+			                   << " created in " << end_time - start_time << " ms. ";
+			console->outstream << "IPCPs created at the following systems: " << std::endl;
+			for (it = ipcp_ids.begin(); it != ipcp_ids.end(); ++it) {
+				console->outstream << "System " << it->first
+						<< ", IPCP id " << it->second << std::endl;
+			}
+
+			ipcp_ids.clear();
+			ss.str(std::string());
+		}
+
+		return rina::UNIXConsole::CMDRETCONT;
+	}
+
+private:
+	NetworkManager * netman;
+};
 
 //Class NMConsole
 class CreateDIFConsoleCmd: public rina::ConsoleCmdInfo {
@@ -47,22 +97,26 @@ public:
 	int execute(std::vector<std::string>& args) {
 		std::map<std::string, int> ipcp_ids;
 		std::map<std::string, int>::iterator it;
+		int start_time;
+		int end_time;
 
 		if (args.size() < 2) {
 			console->outstream << console->commands_map[args[0]]->usage << std::endl;
 			return rina::UNIXConsole::CMDRETCONT;
 		}
 
+		start_time = rina::Time::get_time_in_ms();
 		if(netman->create_dif(ipcp_ids, args[1]) == NETMAN_FAILURE){
 			console->outstream << "Error while creating IPC process" << std::endl;
 			return rina::UNIXConsole::CMDRETCONT;
 		}
+		end_time = rina::Time::get_time_in_ms();
 
-		console->outstream << "DIF created.";
+		console->outstream << "DIF created in " << end_time - start_time << " ms. ";
 		console->outstream << "IPCPs created at the following systems: " << std::endl;
 		for (it = ipcp_ids.begin(); it != ipcp_ids.end(); ++it) {
 			console->outstream << "System " << it->first
-					   << ", id " << it->second << std::endl;
+					   << ", IPCP id " << it->second << std::endl;
 		}
 
 		return rina::UNIXConsole::CMDRETCONT;
@@ -159,22 +213,69 @@ public:
 	int execute(std::vector<std::string>& args) {
 		std::map<int, int> ipcp_ids;
 		std::map<int, int>::iterator it;
+		int start_time;
+		int end_time;
 
 		if (args.size() < 2) {
 			console->outstream << console->commands_map[args[0]]->usage << std::endl;
 			return rina::UNIXConsole::CMDRETCONT;
 		}
 
+		start_time = rina::Time::get_time_in_ms();
 		if(netman->destroy_dif(ipcp_ids, args[1]) == NETMAN_FAILURE){
 			console->outstream << "Error while destroying DIF" << std::endl;
 			return rina::UNIXConsole::CMDRETCONT;
 		}
+		end_time = rina::Time::get_time_in_ms();
 
-		console->outstream << "DIF " << args[1] << " destroyed.";
-		console->outstream << "IPCPs destroyed at the following systems: " << std::endl;
+		console->outstream << "DIF " << args[1] << " destroyed in " << end_time - start_time;
+		console->outstream << " ms. IPCPs destroyed at the following systems: " << std::endl;
 		for (it = ipcp_ids.begin(); it != ipcp_ids.end(); ++it) {
 			console->outstream << "System " << it->first
-					   << ", id " << it->second << std::endl;
+					   << ", IPCP id " << it->second << std::endl;
+		}
+
+		return rina::UNIXConsole::CMDRETCONT;
+	}
+
+private:
+	NetworkManager * netman;
+};
+
+class DestroyDIFsConsoleCmd: public rina::ConsoleCmdInfo {
+public:
+	DestroyDIFsConsoleCmd(NMConsole * console, NetworkManager * nm) :
+		rina::ConsoleCmdInfo("USAGE: destroy-difs <dif-name> <dif_name> ...", console) {
+		netman = nm;
+	};
+
+	int execute(std::vector<std::string>& args) {
+		std::map<int, int> ipcp_ids;
+		std::map<int, int>::iterator it;
+		int start_time;
+		int end_time;
+
+		if (args.size() < 2) {
+			console->outstream << console->commands_map[args[0]]->usage << std::endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		for (unsigned int i = 1; i < args.size(); i++) {
+			start_time = rina::Time::get_time_in_ms();
+			if(netman->destroy_dif(ipcp_ids, args[i]) == NETMAN_FAILURE){
+				console->outstream << "Error while destroying DIF" << std::endl;
+				return rina::UNIXConsole::CMDRETCONT;
+			}
+			end_time = rina::Time::get_time_in_ms();
+
+			console->outstream << "DIF " << args[i] << " destroyed in " << end_time - start_time;
+			console->outstream << " ms. IPCPs destroyed at the following systems: " << std::endl;
+			for (it = ipcp_ids.begin(); it != ipcp_ids.end(); ++it) {
+				console->outstream << "System " << it->first
+						<< ", IPCP id " << it->second << std::endl;
+			}
+
+			ipcp_ids.clear();
 		}
 
 		return rina::UNIXConsole::CMDRETCONT;
@@ -192,7 +293,7 @@ public:
 	};
 
 	int execute(std::vector<std::string>& args) {
-		console->outstream << netman->list_systems() << std::endl;
+		netman->list_systems(console->outstream);
 		return rina::UNIXConsole::CMDRETCONT;
 	}
 
@@ -218,12 +319,14 @@ private:
 
 
 NMConsole::NMConsole(const std::string& socket_path, NetworkManager * nm) :
-			rina::UNIXConsole(socket_path)
+			rina::UNIXConsole(socket_path, "Mgr")
 {
 	netman = nm;
 	commands_map["create-dif"] = new CreateDIFConsoleCmd(this, netman);
+	commands_map["create-difs"] = new CreateDIFsConsoleCmd(this, netman);
 	commands_map["create-ipcp"] = new CreateIPCPConsoleCmd(this, netman);
 	commands_map["destroy-dif"] = new DestroyDIFConsoleCmd(this, netman);
+	commands_map["destroy-difs"] = new DestroyDIFsConsoleCmd(this, netman);
 	commands_map["destroy-ipcp"] = new DestroyIPCPConsoleCmd(this, netman);
 	commands_map["list-systems"] = new ListSystemsConsoleCmd(this, netman);
 	commands_map["query-rib"] = new QueryRIBConsoleCmd(this, netman);
@@ -815,25 +918,21 @@ std::string NetworkManager::query_manager_rib()
 	return ss.str();
 }
 
-std::string NetworkManager::list_systems(void)
+void NetworkManager::list_systems(std::ostream& os)
 {
 	std::map<std::string, ManagedSystem *>::iterator it;
-	std::stringstream ss;
 
-	ss << "        Managed Systems       " << std::endl;
-	ss << "    system id    |   MA name   |  port-id  " << std::endl;
+	os << "Current Managed Systems (system id | MA name | port-id)" << std::endl;
 
 	rina::ScopedLock(et->lock);
 
 	for (it = et->enrolled_systems.begin();
 			it != et->enrolled_systems.end(); ++it) {
-		ss << "       " << it->second->system_id << "   |   ";
-		ss << it->second->con.dest_.ap_name_ << "-"
+		os << "       " << it->second->system_id << "   |   ";
+		os << it->second->con.dest_.ap_name_ << "-"
 		   << it->second->con.dest_.ap_inst_ << "   |   ";
-		ss << "       " << it->second->con.port_id << std::endl;
+		os << "       " << it->second->con.port_id << std::endl;
 	}
-
-	return ss.str();
 }
 
 netman_res_t NetworkManager::create_ipcp(CreateIPCPPromise * promise, int system_id,

@@ -1,0 +1,81 @@
+#!/usr/bin/env python
+
+#
+# Author: Vincenzo Maffione <v.maffione@nextworks.it>
+#
+
+import argparse
+import socket
+import time
+import re
+import sys
+import string
+
+def printalo(byt):
+    print(repr(byt).replace('\\n', '\n'))
+
+
+def get_response(s):
+    data = bytes()
+    while 1:
+        data += s.recv(4096)
+        if (sys.version_info > (3, 0)):
+            lines = str(data, 'ascii').replace('\\n', '\n').split('\n')
+        else:
+            lines = string.replace(data, '\\n', '\n').split('\n')
+        #print(lines)
+        if lines[-1].find("Mgr >>>") != -1:
+            return lines[:len(lines)-1]
+
+
+def issue_command(s, cmd):
+    cmd += '\n'
+    if (sys.version_info > (3, 0)):
+        s.sendall(bytes(cmd, 'ascii'))
+    else:
+        s.sendall(cmd)
+    return get_response(s)
+
+
+description = "Python tool to interact with the rina-tools Manager"
+epilog = "2016 Vincenzo Maffione <v.maffione@nextworks.it>"
+
+argparser = argparse.ArgumentParser(description = description,
+                                    epilog = epilog)
+argparser.add_argument('--unix-socket', help = "Path to Manager unix socket",
+                       type = str, default = "/var/run/nmconsole.sock")
+argparser.add_argument('commands', metavar='CMD', type=str, nargs='*',
+                       help='a positional argument for the Manager console (e.g. "help")')
+argparser.add_argument('--version', help = "Show the version and exit",
+                       action = 'store_true')
+args = argparser.parse_args()
+
+if args.version:
+    print('mgr-ctl 1.0.0')
+    quit(0)
+
+if len(args.commands) == 0:
+    # assume help
+    args.commands = ['help']
+
+s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+
+try:
+    s.connect(args.unix_socket)
+except Exception as e:
+    print('Failed to connect to %s: %s' % (args.unix_socket, e))
+    quit(1)
+
+try:
+    # Receive the banner
+    get_response(s)
+
+    # Send the command and get the response
+    lines = issue_command(s, ' '.join(args.commands));
+
+    for l in lines:
+        print(l)
+except:
+    pass
+
+s.close()
