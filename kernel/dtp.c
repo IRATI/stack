@@ -1357,6 +1357,8 @@ int dtp_write(struct dtp * instance,
 				if (!instance->dtcp->sv->rendezvous_sndr) {
 					instance->dtcp->sv->rendezvous_sndr = true;
 
+                                        LOG_INFO("RV at the sender %u (CPU: %d)", csn, smp_processor_id());
+
 					/* Start rendezvous timer, wait for Tr to fire */
 					start_rv_timer = true;
 					rv = jiffies_to_msecs(instance->sv->tr);

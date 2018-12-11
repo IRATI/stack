@@ -199,7 +199,9 @@ int default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         RWE = dtcp->sv->rcvr_rt_wind_edge;
         spin_unlock_bh(&dtcp->parent->sv_lock);
 
-        LOG_INFO("DTCP: LWE: %u  RWE: %u -- PCI: lwe: %u, rwe: %u", LWE, RWE, lwe_p, rwe_p);
+        if (dtcp->sv->rendezvous_rcvr) {
+                LOG_INFO("DTCP: LWE: %u  RWE: %u -- PCI: lwe: %u, rwe: %u", LWE, RWE, lwe_p, rwe_p);
+        }
 
         return 0;
 }
