@@ -481,7 +481,7 @@ static int update_window_and_rate(struct dtcp * dtcp,
 				rt, tf);
 		}
         }
-        LOG_INFO("New SND RWE: %u, New LWE: %u", dtcp->sv->snd_rt_wind_edge, dtcp->sv->snd_lft_win);
+        LOG_INFO("New SND RWE: %u, New LWE: %u, DTCP: %pK", dtcp->sv->snd_rt_wind_edge, dtcp->sv->snd_lft_win, dtcp);
 
         /* Check if rendezvous timer is active */
         cancel_rv_timer = false;
