@@ -1,3 +1,6 @@
 SUBDIRS = 			\
 	src			\
-	include
+	include                 
+
+EXTRA_DIST =			\
+	  rinapi.i

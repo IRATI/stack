@@ -205,11 +205,11 @@ AC_CONFIG_FILES([
     src/Makefile
 
     wrap/Makefile
-    wrap/java/Makefile
     wrap/rina-api/Makefile
     wrap/rina-api/src/Makefile
     wrap/rina-api/include/Makefile
     wrap/rina-api/include/rina/Makefile
+    wrap/rina-api/java/Makefile
 
     test/Makefile
 
