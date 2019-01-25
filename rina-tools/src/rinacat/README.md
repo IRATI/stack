@@ -81,6 +81,13 @@ _Client:_
 
 *(NOTE: The raspivid program does not read from its stdin file, but the mplayer program outputs status information about the video stream, so directly connecting the two by using _rinacat -c "command"_ at both ends to bidirectionally connect mplayer with raspivid will NOT work -- the unread mplayer output will build up until something breaks.  So a sink must be provided for mplayer's output.  In this example, that is provided by the rinacat client instance, whose stdout is not redirected by the shell when setting up the pipe and therefore will print the status information from the player at the client end.  That output could instead be redirected, e.g., to /dev/null, as could the mplayer stdout as is shown for stderr.)*
 
+***Stream a video from one computer and display it in another one (stream to stdout, redirect to rinacat in one end | make video player read from stdin in the other end):***
+
+_Sever:_
+       # rinacat -l -A display | mplayer -fps 30 -cache 64 -vo x11 -
+
+_Client:_
+       # avconv -re -i <video_file_name> -codec copy -movflags frag_keyframe+empty_moov -f mp4 - | rinacat -a display
 
 ***Commands executed by rinacat have access via environment variables to information about the rinacat instance that ran them.  In particular (experimental, details subject to change):***  
   * RINACAT_A		Name of this rinacat instance (-A argument)

@@ -3209,7 +3209,7 @@ void serialize_port_id_altlist(void **pptr, const struct port_id_altlist *pia)
 	serialize_obj(*pptr, uint16_t, pia->num_ports);
 	plength = pia->num_ports * sizeof(port_id_t);
 
-	if (pia->ports > 0) {
+	if (plength > 0) {
 		memcpy(*pptr, pia->ports, plength);
 		*pptr += plength;
 	}
@@ -3222,7 +3222,7 @@ int deserialize_port_id_altlist(const void **pptr, struct port_id_altlist *pia)
 	deserialize_obj(*pptr, uint16_t, &pia->num_ports);
 	plength = pia->num_ports * sizeof(port_id_t);
 
-	if (pia->num_ports > 0) {
+	if (plength > 0) {
 		pia->ports = COMMON_ALLOC(plength, 1);
 		memcpy(pia->ports, *pptr, plength);
 		*pptr += plength;
@@ -3236,7 +3236,7 @@ void port_id_altlist_free(struct port_id_altlist * pia)
 	if (!pia)
 		return;
 
-	if (pia->ports) {
+	if (pia->num_ports > 0) {
 		COMMON_FREE(pia->ports);
 		pia->ports = 0;
 	}

@@ -1096,6 +1096,8 @@ struct dtcp * dtcp_create(struct dtp *         dtp,
                 if (dtcp_window_based_fctrl(dtcp_cfg)) {
 			RINA_DECLARE_AND_ADD_ATTRS(&tmp->robj, dtcp, sndr_credit, rcvr_credit,
 				snd_rt_win_edge, rcv_rt_win_edge);
+			/* Set closed window queue length to 1 always */
+			tmp->cfg->fctrl_cfg->wfctrl_cfg->max_closed_winq_length = 1;
 		}
                 if (dtcp_rate_based_fctrl(dtcp_cfg)) {
 			RINA_DECLARE_AND_ADD_ATTRS(&tmp->robj, dtcp, pdu_per_time_unit, time_unit,

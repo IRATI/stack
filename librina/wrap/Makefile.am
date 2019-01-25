@@ -5,7 +5,6 @@
 #
 
 SUBDIRS = 			\
-	java			\
 	rina-api
 
 EXTRA_DIST =			\

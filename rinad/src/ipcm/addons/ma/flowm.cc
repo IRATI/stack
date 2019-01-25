@@ -202,10 +202,10 @@ void ActiveWorker::allocateFlow()
 
 	// Preserve SDU boundaries
 	// Reliable and in-order delivery required
-	rina_flow_spec_default(&fspec);
+	rina_flow_spec_unreliable(&fspec);
 	fspec.msg_boundaries = true;
-	fspec.in_order_delivery = true;
-	fspec.max_sdu_gap = 0;
+	//fspec.in_order_delivery = true;
+	//fspec.max_sdu_gap = 0;
 
 	remote_name = rina_name_create();
 	remote_name->process_name = strdup(con.flow_info.remoteAppName.processName.c_str());
@@ -389,6 +389,10 @@ void FlowManager::process_fwd_cdap_msg_response(rina::FwdCDAPMsgResponseEvent*
             LOG_DBG("Delegated CDAP response:\n%s, value %p",
                     rmsg->to_string().c_str(),
                     rmsg->obj_value_.message_);
+
+            if (rmsg->obj_class_ == "Root") {
+        	    rmsg->obj_class_ = "IPCProcess";
+            }
             LOG_DBG("Recovered delegated object: %s", del_sto->obj->fqn.c_str());
             del_sto->obj->forwarded_object_response(del_sto->port,
             		del_sto->invoke_id, rmsg);
