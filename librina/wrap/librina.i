@@ -414,7 +414,8 @@ SWIG_JAVABODY_TYPEWRAPPER(public, public, public, SWIGTYPE)
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
-    } else if ($1->eventType == rina::DEALLOCATE_FLOW_RESPONSE_EVENT) {
+    } 
+    /*else if ($1->eventType == rina::DEALLOCATE_FLOW_RESPONSE_EVENT) {
     	rina::DeallocateFlowResponseEvent *flowReqEvent = dynamic_cast<rina::DeallocateFlowResponseEvent *>($1);
         jclass clazz = jenv->FindClass("eu/irati/librina/DeallocateFlowResponseEvent");
         if (clazz) {
@@ -425,7 +426,8 @@ SWIG_JAVABODY_TYPEWRAPPER(public, public, public, SWIGTYPE)
                 $result = jenv->NewObject(clazz, mid, cptr, false);
             }
         }
-    } else if ($1->eventType == rina::GET_DIF_PROPERTIES_RESPONSE_EVENT) {
+    }*/ 
+    else if ($1->eventType == rina::GET_DIF_PROPERTIES_RESPONSE_EVENT) {
     	rina::GetDIFPropertiesResponseEvent *flowReqEvent = dynamic_cast<rina::GetDIFPropertiesResponseEvent *>($1);
         jclass clazz = jenv->FindClass("eu/irati/librina/GetDIFPropertiesResponseEvent");
         if (clazz) {
@@ -503,6 +505,50 @@ DOWNCAST_IPC_EVENT_CONSUMER(eventTimedWait);
 %rename(equals) rina::QoSCube::operator==(const QoSCube &other) const;
 %rename(differs) rina::QoSCube::operator!=(const QoSCube &other) const;
 %rename(assign) rina::EFCPConfiguration::operator=(const EFCPConfiguration &other);
+%rename(equals) rina::DTCPWindowBasedFlowControlConfig::operator==(const DTCPWindowBasedFlowControlConfig &other) const;
+%rename(differs) rina::DTCPWindowBasedFlowControlConfig::operator!=(const DTCPWindowBasedFlowControlConfig &other) const;
+%rename(equals) rina::DTCPRateBasedFlowControlConfig::operator==(const DTCPRateBasedFlowControlConfig &other) const;
+%rename(differs) rina::DTCPRateBasedFlowControlConfig::operator!=(const DTCPRateBasedFlowControlConfig &other) const;
+%rename(equals) rina::DTCPFlowControlConfig::operator==(const DTCPFlowControlConfig &other) const;
+%rename(differs) rina::DTCPFlowControlConfig::operator!=(const DTCPFlowControlConfig &other) const;
+%rename(equals) rina::DTCPRtxControlConfig::operator==(const DTCPRtxControlConfig &other) const;
+%rename(differs) rina::DTCPRtxControlConfig::operator!=(const DTCPRtxControlConfig &other) const;
+%rename(equals) rina::DTCPConfig::operator==(const DTCPConfig &other) const;
+%rename(differs) rina::DTCPConfig::operator!=(const DTCPConfig &other) const;
+%rename(equals) rina::DTPConfig::operator==(const DTPConfig &other) const;
+%rename(differs) rina::DTPConfig::operator!=(const DTPConfig &other) const;
+%rename(equals) rina::QoSCube::operator==(const QoSCube &other) const;
+%rename(differs) rina::QoSCube::operator!=(const QoSCube &other) const;
+%rename(equals) rina::DataTransferConstants::operator==(const DataTransferConstants &other) const;
+%rename(differs) rina::DataTransferConstants::operator!=(const DataTransferConstants &other) const;
+%rename(equals) rina::EFCPConfiguration::operator==(const EFCPConfiguration &other) const;
+%rename(differs) rina::EFCPConfiguration::operator!=(const EFCPConfiguration &other) const;
+%rename(equals) rina::FlowAllocatorConfiguration::operator==(const FlowAllocatorConfiguration &other) const;
+%rename(differs) rina::FlowAllocatorConfiguration::operator!=(const FlowAllocatorConfiguration &other) const;
+%rename(equals) rina::PDUFTGConfiguration::operator==(const PDUFTGConfiguration &other) const;
+%rename(differs) rina::PDUFTGConfiguration::operator!=(const PDUFTGConfiguration &other) const;
+%rename(equals) rina::ResourceAllocatorConfiguration::operator==(const ResourceAllocatorConfiguration &other) const;
+%rename(differs) rina::ResourceAllocatorConfiguration::operator!=(const ResourceAllocatorConfiguration &other) const;
+%rename(equals) rina::PFTConfiguration::operator==(const PFTConfiguration &other) const;
+%rename(differs) rina::PFTConfiguration::operator!=(const PFTConfiguration &other) const;
+%rename(equals) rina::RMTConfiguration::operator==(const RMTConfiguration &other) const;
+%rename(differs) rina::RMTConfiguration::operator!=(const RMTConfiguration &other) const;
+%rename(equals) rina::EnrollmentTaskConfiguration::operator==(const EnrollmentTaskConfiguration &other) const;
+%rename(differs) rina::EnrollmentTaskConfiguration::operator!=(const EnrollmentTaskConfiguration &other) const;
+%rename(equals) rina::AddressingConfiguration::operator==(const AddressingConfiguration &other) const;
+%rename(differs) rina::AddressingConfiguration::operator!=(const AddressingConfiguration &other) const;
+%rename(equals) rina::NamespaceManagerConfiguration::operator==(const NamespaceManagerConfiguration &other) const;
+%rename(differs) rina::NamespaceManagerConfiguration::operator!=(const NamespaceManagerConfiguration &other) const;
+%rename(equals) rina::AuthSDUProtectionProfile::operator==(const AuthSDUProtectionProfile &other) const;
+%rename(differs) rina::AuthSDUProtectionProfile::operator!=(const AuthSDUProtectionProfile &other) const;
+%rename(equals) rina::SecurityManagerConfiguration::operator==(const SecurityManagerConfiguration &other) const;
+%rename(differs) rina::SecurityManagerConfiguration::operator!=(const SecurityManagerConfiguration &other) const;
+%rename(equals) rina::RoutingConfiguration::operator==(const RoutingConfiguration &other) const;
+%rename(differs) rina::RoutingConfiguration::operator!=(const RoutingConfiguration &other) const;
+%rename(equals) rina::DIFConfiguration::operator==(const DIFConfiguration &other) const;
+%rename(differs) rina::DIFConfiguration::operator!=(const DIFConfiguration &other) const;
+
+
 
 /* This is for separating rib::init and rib::fini from cdap::init and cdap::fini */
 %rename(cdap_init) rina::cdap::init(cdap::CDAPCallbackInterface *callback, cdap_rib::concrete_syntax_t& syntax, int fd);

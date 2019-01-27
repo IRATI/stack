@@ -39,6 +39,13 @@ import eu.irati.librina.DTCPConfig;
 import eu.irati.librina.DIFInformation;
 import eu.irati.librina.QoSCube;
 import eu.irati.librina.RIBObjectData;
+import eu.irati.librina.RMTConfiguration;
+import eu.irati.librina.EnrollmentTaskConfiguration;
+import eu.irati.librina.SecurityManagerConfiguration;
+import eu.irati.librina.FlowAllocatorConfiguration;
+import eu.irati.librina.NamespaceManagerConfiguration;
+import eu.irati.librina.ResourceAllocatorConfiguration;
+import eu.irati.librina.RoutingConfiguration;
 %}
 
 /**
@@ -84,6 +91,14 @@ import eu.irati.librina.DTCPConfig;
 import eu.irati.librina.DIFInformation;
 import eu.irati.librina.QoSCube;
 import eu.irati.librina.RIBObjectData;
+import eu.irati.librina.RMTConfiguration;
+import eu.irati.librina.EnrollmentTaskConfiguration;
+import eu.irati.librina.SecurityManagerConfiguration;
+import eu.irati.librina.FlowAllocatorConfiguration;
+import eu.irati.librina.NamespaceManagerConfiguration;
+import eu.irati.librina.ResourceAllocatorConfiguration;
+import eu.irati.librina.RoutingConfiguration;
+import eu.irati.librina.FlowInformation;
 %}
 
 %{
@@ -91,11 +106,13 @@ import eu.irati.librina.RIBObjectData;
 #include "configuration.h"
 #include "librina/cdap_rib_structures.h"
 #include "encoder.h"
+#include "rina-configuration.h"
 #include <string>
 %}
 
 
 %include "configuration.h"
+%include "rina-configuration.h"
 
 namespace rina{
 %template(TempDTEncoder) Encoder< rina::DataTransferConstants >;
@@ -116,7 +133,10 @@ namespace rina{
 %template(TempPDUFTEncoder) Encoder<rina::PDUForwardingTableEntry >;
 %template(TempDTPIEncoder) Encoder<rina::DTPInformation >;
 %template(TempDTCPCEncoder) Encoder<rina::DTCPConfig >;
-%template(TempRIBObjectDataListEncoder) rina::Encoder< std::list< rina::rib::RIBObjectData > >;
+%template(TempRIBObjectDataListEncoder) Encoder< std::list< rina::rib::RIBObjectData > >;
+%template(TempAppDIFMappingEncoder) Encoder< rinad::AppToDIFMapping >;
+%template(TempAppDIFMappingListEncoder) Encoder<std::list<rinad::AppToDIFMapping> >;
+
 }
 
 %include "encoder.h"
