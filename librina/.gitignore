@@ -7,6 +7,9 @@
 .libs
 .dirstamp
 .directory
+.autotools
+.fuse*
+.settings/
 
 Makefile
 Makefile.in
@@ -34,6 +37,10 @@ TAGS
 /*.tar.gz
 
 /wrap/java
+/wrap/rina-api/rina-api.o
+/src/irati
+/src/ker-numtables.c
+/src/serdes-utils.c
 
 /.project
 /.cproject
