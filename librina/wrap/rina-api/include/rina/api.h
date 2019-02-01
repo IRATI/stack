@@ -28,6 +28,8 @@
 extern "C" {
 #endif
 
+#include <stdint.h>
+
 /*
  * A POSIX-like RINA API for applications.
  *

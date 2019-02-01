@@ -9,6 +9,11 @@ TAGS
 .libs
 .dirstamp
 .directory
+.autotools
+.cproject
+.fuse*
+.project
+.settings/
 
 Makefile
 Makefile.in
