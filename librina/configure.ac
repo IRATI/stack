@@ -199,22 +199,21 @@ DX_INIT_DOXYGEN($PACKAGE_NAME,[doxygen.cfg],[doxygen])
 AC_CONFIG_FILES([
 		     Makefile
 
-		         include/Makefile
-			     include/librina/Makefile
+		     include/Makefile
+		     include/librina/Makefile
 
-			         src/Makefile
+	             src/Makefile
 
-				     wrap/Makefile
-				         wrap/java/Makefile
-					     wrap/rina-api/Makefile
-					         wrap/rina-api/src/Makefile
-						     wrap/rina-api/include/Makefile
-						         wrap/rina-api/include/rina/Makefile
+		     wrap/Makefile
+	             wrap/rina-api/Makefile
+                     wrap/rina-api/src/Makefile
+	             wrap/rina-api/include/Makefile
+                     wrap/rina-api/include/rina/Makefile
 
-							     test/Makefile
+	             test/Makefile
 
-							         doc/Makefile
-								 ])
+	             doc/Makefile
+		])
 
 AC_OUTPUT
 
