@@ -7,6 +7,7 @@ TCP_UDP_BUFFER_SIZE=1500
 INSTALL_PREFIX="/"
 KERNBUILDDIR="/lib/modules/`uname -r`/build"
 BUILD_USER="y"
+JAVA_BINDINGS_OPTION="--disable-java-bindings"
 
 # Option parsing
 while [[ $# > 0 ]]
@@ -45,6 +46,10 @@ do
 
         "--no-user")
         BUILD_USER="n"
+        ;;
+
+        "--enable-java-bindings")
+        JAVA_BINDINGS_OPTION="$1"
         ;;
 
         *)
@@ -100,7 +105,7 @@ echo "Starting librina phase"
     echo "Cannot bootstrap"
     exit 1
 }
-(mkdir -p $BUILDDIR/librina && cd $BUILDDIR/librina && $SRCDIR/librina/configure --enable-java-bindings $FLAGS --prefix=$INSTALL_PREFIX && make clean install) || {
+(mkdir -p $BUILDDIR/librina && cd $BUILDDIR/librina && $SRCDIR/librina/configure $JAVA_BINDINGS_OPTION $FLAGS --prefix=$INSTALL_PREFIX && make clean install) || {
     echo "Cannot complete librina phase"
     exit 1
 }
@@ -110,7 +115,7 @@ echo "Starting rinad phase"
     echo "Cannot bootstrap"
     exit 1
 }
-(mkdir -p $BUILDDIR/rinad && cd $BUILDDIR/rinad && PKG_CONFIG_PATH=$INSTALL_PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$INSTALL_PREFIX/lib:$LD_LIBRARY_PATH $SRCDIR/rinad/configure --prefix=$INSTALL_PREFIX --enable-java-bindings $FLAGS  && make clean install) || {
+(mkdir -p $BUILDDIR/rinad && cd $BUILDDIR/rinad && PKG_CONFIG_PATH=$INSTALL_PREFIX/lib/pkgconfig LD_LIBRARY_PATH=$INSTALL_PREFIX/lib:$LD_LIBRARY_PATH $SRCDIR/rinad/configure --prefix=$INSTALL_PREFIX $JAVA_BINDINGS_OPTION $FLAGS  && make clean install) || {
     echo "Cannot complete rinad phase"
     echo "LIBRINA Version ="
     pkg-config --modversion librina
