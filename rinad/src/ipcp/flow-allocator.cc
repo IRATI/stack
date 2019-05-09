@@ -1449,7 +1449,7 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 		TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(this,
 									      object_name_,
 									      true);
-		timer->scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
+		timer->scheduleTask(timerTask, 0);
 		return;
 	}
 
@@ -1502,11 +1502,14 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 		}
 	}
 
-	//3 Wait 2*MPL before tearing down the flow
+	// 3 Tear down the flow (don't need to wait for 2*MPL at the side that
+	// requested the flow deallocation). The spec says that the binding between
+	// app and EFCP needs to be removed right away (that is, the port), and EFCP
+	// state will be removed automatically after 2 or 3 delta-t.
 	TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(this,
 								      object_name_,
 								      true);
-	timer->scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
+	timer->scheduleTask(timerTask, 0);
 }
 
 void FlowAllocatorInstance::deleteFlowRequestMessageReceived()
@@ -1528,12 +1531,15 @@ void FlowAllocatorInstance::deleteFlowRequestMessageReceived()
 	state = WAITING_2_MPL_BEFORE_TEARING_DOWN;
 	lock_.unlock();
 
-	//3 Wait 2*MPL before tearing down the flow
+	//Don't wait for 2*MPL anymore before tearing down the flow.
+	//The spec says that the binding between app and EFCP needs to
+	//be removed right away (that is, the port), and EFCP state will
+	//be removed automatically after 2 or 3 delta-t.
 	TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(this,
 								      object_name_,
 								      true);
 
-	timer->scheduleTask(timerTask, TearDownFlowTimerTask::DELAY);
+	timer->scheduleTask(timerTask, 0);
 
 	if (flow_->internal) {
 		event = new rina::IPCPInternalFlowDeallocatedEvent(flow_->local_port_id);
@@ -1748,8 +1754,6 @@ void FlowAllocatorInstance::address_changed(unsigned int new_address,
 }
 
 //CLASS TEARDOWNFLOW TIMERTASK
-const long TearDownFlowTimerTask::DELAY = 5000;
-
 TearDownFlowTimerTask::TearDownFlowTimerTask(
 		FlowAllocatorInstance * flow_allocator_instance,
 		const std::string& flow_object_name, bool requestor)
