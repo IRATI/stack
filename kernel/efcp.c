@@ -740,6 +740,8 @@ int efcp_connection_destroy(struct efcp_container * container,
 
         LOG_DBG("EFCP connection destroy called");
 
+        /* FIXME: should wait 3*delta-t before destroying the connection */
+
         if (!container) {
                 LOG_ERR("Bogus container passed, bailing out");
                 return -1;

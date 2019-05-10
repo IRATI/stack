@@ -2,3 +2,13 @@
 /inst
 tags
 Makefile
+
+/include/.autotools
+/include/.cproject
+/include/.project
+/include/.settings/
+
+/plugins/.autotools
+/plugins/.cproject
+/plugins/.project
+/plugins/.settings/

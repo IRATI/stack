@@ -596,7 +596,7 @@ perf_client(struct worker *w)
 static void
 rate_print(unsigned long long *bytes, unsigned long long *cnt,
            unsigned long long *bytes_limit, struct timespec *ts,
-           struct rp_result_msg *rmsg)
+           struct rp_result_msg *rmsg, int * fd)
 {
     struct timespec now;
     unsigned long long elapsed_ns;
@@ -613,7 +613,7 @@ rate_print(unsigned long long *bytes, unsigned long long *cnt,
 
     /* We don't want to prints which are too close. */
     if (elapsed_ns > 500000000U) {
-        PRINTF("rate: %f Kpss, %f Mbps\n", kpps, mbps);
+        PRINTF("rate(%d): %f Kpss, %f Mbps\n", *fd, kpps, mbps);
     }
 
     rmsg->pps = (1000000000ULL * *cnt) / elapsed_ns;
@@ -748,7 +748,7 @@ perf_server(struct worker *w)
 
         if (rate_bytes >= rate_bytes_limit && verb) {
             rate_print(&rate_bytes, &rate_cnt, &rate_bytes_limit, &rate_ts,
-                       &w->result);
+                       &w->result, &w->dfd);
         }
     }
 
