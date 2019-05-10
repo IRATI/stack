@@ -29,33 +29,46 @@
 #include "cidm.h"
 #include "common.h"
 
-#define BITS_IN_BITMAP ((2 << BITS_PER_BYTE) * sizeof(cep_id_t))
+#define MAX_CEP_ID (((2 << BITS_PER_BYTE) * sizeof(cep_id_t)) - 1)
 
 struct cidm {
-        DECLARE_BITMAP(bitmap, BITS_IN_BITMAP);
+	struct list_head allocated_cep_ids;
+	cep_id_t last_allocated;
+};
+
+struct alloc_cepid {
+        struct list_head       list;
+        cep_id_t cep_id;
 };
 
 struct cidm * cidm_create(void)
 {
-        struct cidm * instance;
+	struct cidm * instance;
 
-        instance = rkmalloc(sizeof(*instance), GFP_KERNEL);
-        if (!instance)
-                return NULL;
+	instance = rkmalloc(sizeof(*instance), GFP_KERNEL);
+	if (!instance)
+		return NULL;
 
-        bitmap_zero(instance->bitmap, BITS_IN_BITMAP);
+	INIT_LIST_HEAD(&(instance->allocated_cep_ids));
+	instance->last_allocated = 0;
 
-        LOG_DBG("Instance initialized successfully (%zd bits)",
-                BITS_IN_BITMAP);
+	LOG_INFO("Instance initialized successfully (%zd cep-ids)",
+			MAX_CEP_ID);
 
-        return instance;
+	return instance;
 }
 
 int cidm_destroy(struct cidm * instance)
 {
+	struct alloc_cepid * pos, * next;
+
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
+        }
+
+        list_for_each_entry_safe(pos, next, &instance->allocated_cep_ids, list) {
+                rkfree(pos);
         }
 
         rkfree(instance);
@@ -63,51 +76,88 @@ int cidm_destroy(struct cidm * instance)
         return 0;
 }
 
-cep_id_t cidm_allocate(struct cidm * instance)
+int cidm_allocated(struct cidm * instance, cep_id_t cep_id)
 {
-        cep_id_t id;
+	struct alloc_cepid * pos, * next;
 
         if (!instance) {
                 LOG_ERR("Bogus instance passed, bailing out");
-                return cep_id_bad();
+                return -1;
         }
 
-        id = (cep_id_t) bitmap_find_next_zero_area(instance->bitmap,
-                                                   BITS_IN_BITMAP,
-                                                   0, 1, 0);
-        LOG_DBG("The cidm bitmap find returned id %d (bad = %d)",
-                id, cep_id_bad());
-
-        LOG_DBG("Bits in bitmap %zd", BITS_IN_BITMAP);
-
-        if (!is_cep_id_ok(id)) {
-                LOG_WARN("Got an out-of-range cep-id (%d) from "
-                         "the bitmap allocator, the bitmap is full ...", id);
-                return cep_id_bad();
+        list_for_each_entry_safe(pos, next, &instance->allocated_cep_ids, list) {
+                if (pos->cep_id == cep_id) {
+                	return 1;
+                }
         }
 
-        bitmap_set(instance->bitmap, id, 1);
+        return 0;
+}
 
-        LOG_DBG("Bitmap allocation completed successfully (id = %d)", id);
+cep_id_t cidm_allocate(struct cidm * instance)
+{
+	struct alloc_cepid * new_cep_id;
+        cep_id_t cep_id;
 
-        return id;
+        if (!instance) {
+                LOG_ERR("Bogus instance passed, bailing out");
+                return port_id_bad();
+        }
+
+        if (instance->last_allocated == MAX_CEP_ID) {
+        	cep_id = 1;
+        } else {
+        	cep_id = instance->last_allocated + 1;
+        }
+
+        while (cidm_allocated(instance, cep_id)) {
+        	if (cep_id == MAX_CEP_ID) {
+        		cep_id = 1;
+        	} else {
+        		cep_id ++;
+        	}
+        }
+
+        new_cep_id = rkmalloc(sizeof(*new_cep_id), GFP_ATOMIC);
+        if (!new_cep_id)
+        	return cep_id_bad();
+
+        INIT_LIST_HEAD(&(new_cep_id->list));
+        new_cep_id->cep_id = cep_id;
+        list_add(&(new_cep_id->list), &(instance->allocated_cep_ids));
+
+        instance->last_allocated = cep_id;
+
+        LOG_DBG("Cep-id allocation completed successfully (id = %d)", cep_id);
+
+        return cep_id;
 }
 
 int cidm_release(struct cidm * instance,
                  cep_id_t      id)
 {
-        if (!is_cep_id_ok(id)) {
-                LOG_ERR("Bad cep-id passed, bailing out");
-                return -1;
-        }
-        if (!instance) {
-                LOG_ERR("Bogus instance passed, bailing out");
-                return -1;
-        }
+	struct alloc_cepid * pos, * next;
 
-        bitmap_clear(instance->bitmap, id, 1);
+       if (!is_port_id_ok(id)) {
+               LOG_ERR("Bad cep-id passed, bailing out");
+               return -1;
+       }
+       if (!instance) {
+               LOG_ERR("Bogus instance passed, bailing out");
+               return -1;
+       }
 
-        LOG_DBG("Bitmap release completed successfully");
+       list_for_each_entry_safe(pos, next, &instance->allocated_cep_ids, list) {
+               if (pos->cep_id == id) {
+               	list_del(&pos->list);
+               	rkfree(pos);
+               	LOG_DBG("Cep-id release completed successfully (cep_id: %d)", id);
 
-        return 0;
+               	return 0;
+               }
+       }
+
+       LOG_ERR("Didn't find cep-id %d, returning error", id);
+
+       return 0;
 }
