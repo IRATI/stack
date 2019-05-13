@@ -5,10 +5,10 @@
 #
 
 AC_INIT([RINA Libraries],
-	        m4_esyscmd([build-aux/git-version-gen .tarball-version]),
-		        [f.salvestrini@nextworks.it],
-			        [librina],
-				        [http://irati.eu])
+	m4_esyscmd([build-aux/git-version-gen .tarball-version]),
+	[f.salvestrini@nextworks.it],
+	[librina],
+	[http://irati.eu])
 
 AC_PREREQ([2.68])
 
