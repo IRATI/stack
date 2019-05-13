@@ -124,7 +124,6 @@ static int mark_pdu(struct du * ret_pdu)
 	pci_flags = pci_flags_get(&ret_pdu->pci);
 	pci_flags_set(&ret_pdu->pci,
 		      pci_flags |= PDU_FLAGS_EXPLICIT_CONGESTION);
-	LOG_DBG("ECN bit marked");
 	return 0;
 }
 
@@ -138,24 +137,27 @@ static int dctcp_rmt_enqueue_policy(struct rmt_ps *ps,
 	unsigned int qlen;
 
 	if (!ps || !port || !du || !data) {
-		LOG_ERR("DCTCP RMT: Wrong input parameters for dctcp_enqueu_scheduling_policy_tx");
+		LOG_ERR("DCTCP RMT: Wrong input parameters"
+				" for dctcp_enqueu_scheduling_policy_tx");
 		return RMT_PS_ENQ_ERR;
 	}
 
 	q = port->rmt_ps_queues;
 	if (!q) {
-		LOG_ERR("DCTCP RMT: Could not find queue for n1_port %u", port->port_id);
+		LOG_ERR("DCTCP RMT: Could not find queue for n1_port %u",
+			port->port_id);
 		du_destroy(du);
 		return RMT_PS_ENQ_ERR;
 	}
 
 	qlen = rfifo_length(q->queue);
-	if (qlen >= data->q_threshold)
+	if (qlen >= data->q_threshold && qlen < data->q_max) {
 		mark_pdu(du);
-	if (qlen >= data->q_max) {
+		LOG_INFO("Queue length is %u, marked PDU with ECN", qlen);
+	} else if (qlen >= data->q_max) {
 		if (pci_type(&du->pci) != PDU_TYPE_MGMT) {
 			du_destroy(du);
-			LOG_DBG("DCTCP RMT: PDU dropped, q_max reached...");
+			LOG_INFO("DCTCP RMT: PDU dropped, q_max reached...");
 			return RMT_PS_ENQ_DROP;
 		}
 	}
@@ -186,7 +188,7 @@ static struct du * dctcp_rmt_dequeue_policy(struct rmt_ps *ps,
 	}
 
 	ret_pdu = rfifo_pop(q->queue);
-	LOG_DBG("DCTCP RMT: PDU dequed...");
+	LOG_DBG("DCTCP RMT: PDU dequeued...");
 
 	if (!ret_pdu) {
 		LOG_ERR("Could not dequeue scheduled pdu");
@@ -219,6 +221,7 @@ static int dctcp_rmt_ps_set_policy_set_param(struct ps_base *bps,
 		ret = kstrtoint(value, 10, &ival);
 		if (!ret) {
 			data->q_threshold = ival;
+			LOG_INFO("Queue marking threshold is %d", ival);
 		}
 	}
 
@@ -226,6 +229,7 @@ static int dctcp_rmt_ps_set_policy_set_param(struct ps_base *bps,
 		ret = kstrtoint(value, 10, &ival);
 		if (!ret) {
 			data->q_max = ival;
+			LOG_INFO("Queue max occupancy is %d", ival);
 		}
 	}
 
