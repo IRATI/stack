@@ -98,6 +98,7 @@ static int dctcp_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 
 	/* set the new credit */
 	update_credit_and_rt_wind_edge(dtcp, new_credit);
+	LOG_INFO("New credit is %u, Alpha is %u", new_credit, data->dctcp_alpha);
 
 	return 0;
 }
