@@ -14,6 +14,7 @@ SUBDIRS =					\
 	src					\
 	doc					\
 	tools					\
+	etc					\
 	wrap
 
 EXTRA_DIST =					\
