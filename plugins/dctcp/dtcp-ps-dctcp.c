@@ -45,6 +45,7 @@ struct dctcp_dtcp_ps_data {
 	uint_t        sent_total;
 	uint_t        ecn_total;
 	uint_t        dctcp_alpha;
+	uint_t	      window_pdus; /* used to approximate one RTT */
 };
 
 static void update_credit_and_rt_wind_edge(struct dtcp * dtcp, uint_t credit)
@@ -68,37 +69,57 @@ static int dctcp_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 
 	spin_lock_bh(&dtcp->parent->sv_lock);
 	new_credit = dtcp->sv->rcvr_credit;
-	if (data->state == SLOW_START) {
+
+	// Check if we must abandon Slow Start state
+	if (new_credit >= data->sshtresh) {
+		data->state = CONG_AVOID;
+	}
+
+	// Update congestion window
+	if ((pci_flags_get(pci) & PDU_FLAGS_EXPLICIT_CONGESTION)) {
+		// PDU is ECN-marked, decrease cwnd value
+		data->ecn_total++;
+		new_credit = max(new_credit -
+			  ((new_credit * data->dctcp_alpha) >> 11U), 2U);
+
+		// TODO check if this is ok
+		data->sshtresh = new_credit;
+		data->state = CONG_AVOID;
+	} else if (data->state == SLOW_START) {
+		// Increase credit by one
 		new_credit++;
-		if (new_credit >= data->sshtresh) {
-			data->state = CONG_AVOID;
-		}
 	} else {
+		// CA state, increase by 1/cwnd
 		data->dec_credit += DEC_PRECISION/new_credit;
 		if (data->dec_credit >= DEC_PRECISION) {
 			new_credit++;
 			data->dec_credit -= DEC_PRECISION;
 		}
 	}
-	spin_unlock_bh(&dtcp->parent->sv_lock);
+
 	data->sent_total++;
-	alpha_old = data->dctcp_alpha;
 	if ((pci_flags_get(pci) & PDU_FLAGS_EXPLICIT_CONGESTION)) {
 		data->ecn_total++;
+	}
+
+	/* Update alpha once every RTT. Since we don't have an RTT timeout */
+	/* we update RTT every credit packets received */
+	if (data->sent_total >= data->window_pdus) {
 		/* alpha = (1-g) * alpha + g * F according DCTCP kernel patch */
+		alpha_old = data->dctcp_alpha;
 		data->dctcp_alpha = alpha_old - (alpha_old >> data->shift_g) +
 				(data->ecn_total << (10 - data->shift_g)) / data->sent_total;
-		new_credit = max(new_credit -
-				((new_credit * data->dctcp_alpha) >> 11U), 2U);
-		data->sshtresh = new_credit;
-		data->state = CONG_AVOID;
-		LOG_DBG("DCTCP DTCP: dctcp_alpha: %d, new_credit %d",
-			data->dctcp_alpha, new_credit);
+
+		data->sent_total = 0;
+		data->ecn_total = 0;
+		data->window_pdus = new_credit;
 	}
+	spin_unlock_bh(&dtcp->parent->sv_lock);
 
 	/* set the new credit */
 	update_credit_and_rt_wind_edge(dtcp, new_credit);
-	LOG_INFO("New credit is %u, Alpha is %u", new_credit, data->dctcp_alpha);
+	LOG_INFO("New credit is %u, Alpha is %u",
+		  new_credit, data->dctcp_alpha);
 
 	return 0;
 }
@@ -149,6 +170,7 @@ static struct ps_base * dtcp_ps_dctcp_create(struct rina_component * component)
 	data->shift_g = 4;
 	data->sent_total = 0;
 	data->ecn_total = 0;
+	data->window_pdus = data->init_credit;
 	dtcp->sv->rcvr_credit = data->init_credit;
 
 	ps->base.set_policy_set_param   = dtcp_ps_set_policy_set_param;
