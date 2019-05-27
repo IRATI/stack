@@ -105,6 +105,8 @@ static int dctcp_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 	/* Update alpha once every RTT. Since we don't have an RTT timeout */
 	/* we update RTT every credit packets received */
 	if (data->sent_total >= data->window_pdus) {
+		LOG_INFO("Received a window of %u PDUs, with %u marked PDUs",
+				data->sent_total, data->ecn_total);
 		/* alpha = (1-g) * alpha + g * F according DCTCP kernel patch */
 		alpha_old = data->dctcp_alpha;
 		data->dctcp_alpha = alpha_old - (alpha_old >> data->shift_g) +
