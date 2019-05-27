@@ -965,3 +965,213 @@ int dtp_pdu_send(struct dtp *  dtp,
 	return 0;
 }
 EXPORT_SYMBOL(dtp_pdu_send);
+
+/* Here begins the RTT estimator when there is not RTX*/
+static struct rtt_entry * rtt_entry_create_gfp(seq_num_t sn, gfp_t flag)
+{
+        struct rtt_entry * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), flag);
+        if (!tmp)
+                return NULL;
+
+        tmp->sn = sn;
+        tmp->time_stamp = jiffies;
+
+        INIT_LIST_HEAD(&tmp->next);
+
+        return tmp;
+}
+
+static struct rtt_entry * rtt_entry_create(seq_num_t sn)
+{ return rtt_entry_create_gfp(sn, GFP_ATOMIC); }
+
+static int rtt_entry_destroy(struct rtt_entry * entry)
+{
+        if (!entry)
+                return -1;
+
+        list_del(&entry->next);
+        rkfree(entry);
+
+        return 0;
+}
+
+static struct rttq * rttq_create_gfp(gfp_t flags)
+{
+        struct rttq * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        INIT_LIST_HEAD(&tmp->head);
+
+        return tmp;
+}
+
+struct rttq * rttq_create(void)
+{ return rttq_create_gfp(GFP_KERNEL); }
+EXPORT_SYMBOL(rttq_create);
+
+static int rttq_entry_destroy(struct rtt_entry * entry)
+{
+	list_del(&entry->next);
+	rkfree(entry);
+	return 0;
+}
+
+/* No locking required, it's always called with DTP-SV lock taken */
+int rttq_flush(struct rttq * q)
+{
+        struct rtt_entry * cur, * n;
+
+        ASSERT(q);
+
+        list_for_each_entry_safe(cur, n, &q->head, next) {
+                rttq_entry_destroy(cur);
+        }
+
+        return 0;
+}
+EXPORT_SYMBOL(rttq_flush);
+
+int rttq_destroy(struct rttq * q)
+{
+        if (!q)
+                return -1;
+
+        spin_lock(&q->lock);
+        rttq_flush(q);
+        spin_unlock(&q->lock);
+
+        rkfree(q);
+
+        return 0;
+}
+EXPORT_SYMBOL(rttq_destroy);
+
+static unsigned long rttqueue_entry_timestamp(struct rttq * q, seq_num_t sn)
+{
+        struct rtt_entry * cur;
+        seq_num_t           csn;
+
+        list_for_each_entry(cur, &q->head, next) {
+                csn = cur->sn;
+                if (csn > sn) {
+                        LOG_WARN("PDU not in RTTQ (duplicate ACK). Received "
+                        		"SN: %u, RTTQ SN: %u", sn, csn);
+                        return 0;
+                }
+                if (csn == sn) {
+                        return cur->time_stamp;
+                }
+        }
+
+        return 0;
+}
+
+unsigned long rttq_entry_timestamp(struct rttq * q, seq_num_t sn)
+{
+        unsigned long timestamp;
+
+        if (!q)
+                return 0;
+
+        spin_lock_bh(&q->lock);
+        timestamp = rttqueue_entry_timestamp(q, sn);
+        spin_unlock_bh(&q->lock);
+
+        return timestamp;
+}
+EXPORT_SYMBOL(rttq_entry_timestamp);
+
+static int rttq_push_ni(struct rttq * q, seq_num_t sn)
+{
+	struct rtt_entry * new, * cur, * last = NULL;
+	seq_num_t          psn;
+
+	new = rtt_entry_create(sn);
+	if (!new) {
+		LOG_ERR("Could not create an rtt queue entry");
+		return -1;
+	}
+
+	if (list_empty(&q->head)) {
+		list_add(&new->next, &q->head);
+		LOG_DBG("First PDU with seqnum: %u push to RTTq at: %pk",
+				sn, q);
+		return 0;
+	}
+
+    	last = list_last_entry(&q->head, struct rtt_entry, next);
+    	if (!last)
+            	return -1;
+
+    	psn = last->sn;
+    	if (sn == psn) {
+            	LOG_ERR("Another PDU with the same seq_num %u, is in "
+            			"the RTT queue!", sn);
+            	return 0;
+    	}
+    	if (sn > psn) {
+            	list_add_tail(&new->next, &q->head);
+            	LOG_DBG("Last PDU with seqnum: %u push to RTTq at: %pk",
+                    sn, q);
+            	return 0;
+    	}
+
+    	list_for_each_entry(cur, &q->head, next) {
+            	psn = cur->sn;
+            	if (sn == psn) {
+                    LOG_ERR("Another PDU with the same seq_num is in "
+                            "the RTT queue!");
+                    return 0;
+            }
+            if (sn > psn) {
+                    list_add(&new->next, &cur->next);
+                    LOG_DBG("Middle PDU with seqnum: %u push to "
+                            "rtxq at: %pk", sn, q);
+                    return 0;
+            }
+    	}
+
+    	LOG_DBG("SN not pushed!");
+
+	return 0;
+}
+
+int rttq_push(struct rttq * q, seq_num_t sn)
+{
+	int to_return;
+
+	spin_lock_bh(&q->lock);
+	to_return = rttq_push_ni(q, sn);
+	spin_unlock_bh(&q->lock);
+
+	return to_return;
+}
+EXPORT_SYMBOL(rttq_push);
+
+int rttq_drop(struct rttq * q, seq_num_t sn)
+{
+	struct rtt_entry * cur, * n;
+
+	spin_lock_bh(&q->lock);
+	if (list_empty(&q->head)) {
+		spin_unlock_bh(&q->lock);
+		return 0;
+	}
+	cur = NULL;
+	list_for_each_entry_safe(cur, n, &q->head, next) {
+		if (cur->sn <= sn) {
+			rtt_entry_destroy(cur);
+		} else {
+			spin_unlock_bh(&q->lock);
+			return 0;
+		}
+	}
+	spin_unlock_bh(&q->lock);
+	return 0;
+}
+EXPORT_SYMBOL(rttq_drop);

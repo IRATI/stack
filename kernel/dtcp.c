@@ -419,22 +419,21 @@ static int rcv_ack(struct dtcp * dtcp,
         return ret;
 }
 
-static int rcv_flow_ctl(struct dtcp * dtcp,
-                        struct du *   du)
+static int update_window_and_rate(struct dtcp * dtcp,
+                		  struct du *   du)
 {
         uint_t 	     rt;
         uint_t       tf;
 
-        rt = pci_control_sndr_rate(&du->pci);
-        tf = pci_control_time_frame(&du->pci);
-
         spin_lock_bh(&dtcp->parent->sv_lock);
         if(dtcp_window_based_fctrl(dtcp->cfg)) {
         	dtcp->sv->snd_rt_wind_edge =
-        			pci_control_new_rt_wind_edge(&du->pci);
+        		pci_control_new_rt_wind_edge(&du->pci);
         }
 
         if(dtcp_rate_based_fctrl(dtcp->cfg)) {
+                rt = pci_control_sndr_rate(&du->pci);
+                tf = pci_control_time_frame(&du->pci);
 		if(tf && rt) {
 			dtcp->sv->sndr_rate = rt;
 			dtcp->sv->time_unit = tf;
@@ -444,16 +443,45 @@ static int rcv_flow_ctl(struct dtcp * dtcp,
 				rt, tf);
 		}
         }
+
+        LOG_INFO("New SND RWE: %u, New LWE: %u, DTCP: %pK",
+        	 dtcp->sv->snd_rt_wind_edge, dtcp->sv->snd_lft_win, dtcp);
         spin_unlock_bh(&dtcp->parent->sv_lock);
 
         push_pdus_rmt(dtcp);
 
-        LOG_DBG("DTCP received FC (CPU: %d)", smp_processor_id());
-        dump_we(dtcp, &du->pci);
-
         du_destroy(du);
 
         return 0;
+}
+
+static int rcv_flow_ctl(struct dtcp * dtcp,
+                        struct du *   du)
+{
+	struct dtcp_ps * ps;
+	seq_num_t    seq;
+	uint_t	     credit;
+
+	/* Update RTT estimation */
+	credit = dtcp->sv->sndr_credit;
+	seq = pci_control_new_rt_wind_edge(&du->pci);
+
+	rcu_read_lock();
+	ps = container_of(rcu_dereference(dtcp->base.ps),
+			  struct dtcp_ps, base);
+
+	LOG_DBG("DTCP received FC: New RWE: %u, Credit: %u, SN to drop: %u",
+		seq, credit, seq-credit);
+	if (!ps->rtx_ctrl && ps->rtt_estimator)
+		ps->rtt_estimator(ps, seq - credit);
+
+	rcu_read_unlock();
+
+    	if (dtcp->parent->rttq) {
+    		rttq_drop(dtcp->parent->rttq, seq-credit);
+    	}
+
+    	return update_window_and_rate(dtcp, du);
 }
 
 static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
@@ -461,8 +489,6 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
 {
         struct dtcp_ps * ps;
         seq_num_t        seq;
-        uint_t		 rt;
-        uint_t           tf;
 
         seq = pci_control_ack_seq_num(&du->pci);
 
@@ -476,37 +502,9 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
                 LOG_ERR("Could not update RTXQ and LWE");
         rcu_read_unlock();
 
-        spin_lock_bh(&dtcp->parent->sv_lock);
-	if(dtcp_window_based_fctrl(dtcp->cfg)) {
-		dtcp->sv->snd_rt_wind_edge =
-				pci_control_new_rt_wind_edge(&du->pci);
-		LOG_DBG("Right Window Edge: %u", dtcp->sv->snd_rt_wind_edge);
-	}
-
-	if(dtcp_rate_based_fctrl(dtcp->cfg)) {
-	        rt = pci_control_sndr_rate(&du->pci);
-	        tf = pci_control_time_frame(&du->pci);
-
-	        if(tf && rt) {
-	        	dtcp->sv->sndr_rate = rt;
-	        	dtcp->sv->time_unit = tf;
-			LOG_DBG("Rate based fields sets on flow ctl and "
-				"ack, rate: %u, time: %u",
-				rt, tf);
-	        }
-	}
-	spin_unlock_bh(&dtcp->parent->sv_lock);
-
-        LOG_DBG("Calling CWQ_deliver for DTCP: %pK", dtcp);
-        push_pdus_rmt(dtcp);
-
-        /* FIXME: Verify values for the receiver side */
         LOG_DBG("DTCP received ACK-FC (CPU: %d)", smp_processor_id());
-        dump_we(dtcp, &du->pci);
 
-        du_destroy(du);
-
-        return 0;
+        return update_window_and_rate(dtcp, du);
 }
 
 int dtcp_common_rcv_control(struct dtcp * dtcp, struct du * du)
@@ -912,7 +910,11 @@ int dtcp_select_policy_set(struct dtcp * dtcp,
                         ps->rate_reduction = default_rate_reduction;
                 }
                 if (!ps->rtt_estimator) {
-                        ps->rtt_estimator = default_rtt_estimator;
+                	if (ps->rtx_ctrl) {
+                		ps->rtt_estimator = default_rtt_estimator;
+                	} else {
+                		ps->rtt_estimator = default_rtt_estimator_nortx;
+                	}
                 }
         }
 

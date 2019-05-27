@@ -55,4 +55,6 @@ int default_rate_reduction(struct dtcp_ps * ps, const struct pci * pci);
 
 int default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn);
 
+int default_rtt_estimator_nortx(struct dtcp_ps * ps, seq_num_t sn);
+
 #endif /* RINA_DTCP_PS_COMMON_H */
