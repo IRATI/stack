@@ -444,7 +444,7 @@ static int update_window_and_rate(struct dtcp * dtcp,
 		}
         }
 
-        LOG_INFO("New SND RWE: %u, New LWE: %u, DTCP: %pK",
+        LOG_DBG("New SND RWE: %u, New LWE: %u, DTCP: %pK",
         	 dtcp->sv->snd_rt_wind_edge, dtcp->sv->snd_lft_win, dtcp);
         spin_unlock_bh(&dtcp->parent->sv_lock);
 

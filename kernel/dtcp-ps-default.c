@@ -254,7 +254,7 @@ static int rtt_calculation(struct dtcp_ps * ps, timeout_t start_time)
 	rtt    = dtcp->sv->rtt;
 	srtt   = dtcp->sv->srtt;
 	rttvar = dtcp->sv->rttvar;
-	a 	   = dtcp->parent->sv->A;
+	a      = dtcp->parent->sv->A;
 
 	if (!rtt) {
 		rtt    = new_sample;
@@ -262,7 +262,7 @@ static int rtt_calculation(struct dtcp_ps * ps, timeout_t start_time)
 		srtt   = new_sample;
 	} else {
 		/* RTT <== RTT * (112/128) + SAMPLE * (16/128)*/
-				rtt = (rtt * 112 + (new_sample << 4)) >> 7;
+		rtt = (rtt * 112 + (new_sample << 4)) >> 7;
 		abs = srtt - new_sample;
 		abs = abs < 0 ? -abs : abs;
 		rttvar = ((3 * rttvar) >> 2) + (((uint_t)abs) >> 2);
@@ -283,6 +283,8 @@ static int rtt_calculation(struct dtcp_ps * ps, timeout_t start_time)
 	dtcp->sv->rttvar = rttvar;
 	dtcp->sv->srtt = srtt;
 	dtcp->parent->sv->tr = msecs_to_jiffies(trmsecs);
+
+	LOG_DBG("RTT estimated at %u", rtt);
 
 	spin_unlock_bh(&dtcp->parent->sv_lock);
 
