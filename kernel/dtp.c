@@ -1021,6 +1021,8 @@ struct dtp * dtp_create(struct efcp *       efcp,
 
         dtp->cfg   = dtp_cfg;
         dtp->rmt  = rmt;
+        dtp->rttq = NULL;
+        dtp->rtxq = NULL;
         dtp->seqq = squeue_create(dtp);
         if (!dtp->seqq) {
                 LOG_ERR("Could not create Sequencing queue");
@@ -1326,9 +1328,9 @@ int dtp_write(struct dtp * instance,
                                 LOG_ERR("Couldn't push to rtxq");
 				goto pdu_stats_err_exit;
                         }
-                } else {
+                } else if (instance->rttq) {
                 	if (rttq_push(instance->rttq, csn)) {
-                		LOG_ERR("Failed to push SN");
+                		LOG_ERR("Failed to push SN to RTT queue");
                 	}
                 }
 

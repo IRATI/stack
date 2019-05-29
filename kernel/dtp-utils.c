@@ -283,6 +283,11 @@ void cwq_deliver(struct cwq * queue,
                                 return;
                         }
                         rtxq_push_ni(rtxq, tmp);
+                } else if (dtp->rttq) {
+                	if (rttq_push(dtp->rttq,
+                		      pci_sequence_number_get(du_pci(du)))) {
+                		LOG_ERR("Failed to push SN to RTT Queue");
+                	}
                 }
                 if(rate_ctrl) {
                 	sz = du_data_len(du);
