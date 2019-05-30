@@ -188,23 +188,6 @@ ssize_t cwq_size(struct cwq * queue)
 }
 EXPORT_SYMBOL(cwq_size);
 
-static void enable_write(struct cwq * cwq,
-                         struct dtp *  dtp)
-{
-        struct dtcp_config * cfg;
-        uint_t               max_len;
-
-        cfg = dtp->dtcp->cfg;
-        if (!cfg)
-                return;
-
-        max_len = dtcp_max_closed_winq_length(cfg);
-        if (rqueue_length(cwq->q) < max_len)
-                efcp_enable_write(dtp->efcp);
-
-        return;
-}
-
 static bool can_deliver(struct dtp * dtp, struct dtcp * dtcp)
 {
         bool to_ret = false, w_ret = false, r_ret = false;
@@ -240,15 +223,16 @@ void cwq_deliver(struct cwq * queue,
                  struct dtp * dtp,
                  struct rmt * rmt)
 {
-        struct rtxq *           rtxq;
-        struct dtcp *           dtcp;
-        struct du  *            tmp;
-        bool                    rtx_ctrl;
-        bool                    flow_ctrl;
+        struct rtxq *  rtxq;
+        struct dtcp *  dtcp;
+        struct du  *   tmp;
+        bool           rtx_ctrl;
+        bool           flow_ctrl;
 
-        bool			rate_ctrl = false;
-        int 			sz = 0;
-	uint_t 			sc = 0;
+        bool	       rate_ctrl = false;
+        int 	       sz = 0;
+	uint_t 	       sc = 0;
+	ssize_t	       cwq_length = 0;
 
 	dtcp = dtp->dtcp;
 
@@ -306,7 +290,9 @@ void cwq_deliver(struct cwq * queue,
                 }
                 dtp->sv->max_seq_nr_sent = pci_sequence_number_get(&du->pci);
 
+                spin_unlock(&queue->lock);
                 dtp_pdu_send(dtp, rmt, du);
+                spin_lock(&queue->lock);
         }
 
         if (!rqueue_is_empty(queue->q)) {
@@ -329,15 +315,18 @@ void cwq_deliver(struct cwq * queue,
         }
 
         if(dtcp_rate_based_fctrl(dtcp->cfg)) {
-        	//LOG_DBG("rbfc Re-opening the rate mechanism");
                 dtp->sv->rate_fulfiled = true;
         }
 
-        enable_write(queue, dtp);
+        cwq_length = rqueue_length(queue->q);
 
         spin_unlock(&queue->lock);
 
+        if (cwq_length < dtcp_max_closed_winq_length(dtp->dtcp->cfg))
+                efcp_enable_write(dtp->efcp);
+
         LOG_DBG("CWQ has delivered until %u", dtp->sv->max_seq_nr_sent);
+
         return;
 }
 
@@ -1064,7 +1053,7 @@ static unsigned long rttqueue_entry_timestamp(struct rttq * q, seq_num_t sn)
         list_for_each_entry(cur, &q->head, next) {
                 csn = cur->sn;
                 if (csn > sn) {
-                        LOG_WARN("PDU not in RTTQ (duplicate ACK). Received "
+                        LOG_WARN("PDU not in RTTQ. Received "
                         		"SN: %u, RTTQ SN: %u", sn, csn);
                         return 0;
                 }
@@ -1104,8 +1093,6 @@ static int rttq_push_ni(struct rttq * q, seq_num_t sn)
 
 	if (list_empty(&q->head)) {
 		list_add(&new->next, &q->head);
-		LOG_DBG("First PDU with seqnum: %u push to RTTq at: %pk",
-				sn, q);
 		return 0;
 	}
 
@@ -1121,8 +1108,6 @@ static int rttq_push_ni(struct rttq * q, seq_num_t sn)
     	}
     	if (sn > psn) {
             	list_add_tail(&new->next, &q->head);
-            	LOG_DBG("Last PDU with seqnum: %u push to RTTq at: %pk",
-                    sn, q);
             	return 0;
     	}
 
@@ -1135,13 +1120,11 @@ static int rttq_push_ni(struct rttq * q, seq_num_t sn)
             }
             if (sn > psn) {
                     list_add(&new->next, &cur->next);
-                    LOG_DBG("Middle PDU with seqnum: %u push to "
-                            "rtxq at: %pk", sn, q);
                     return 0;
             }
     	}
 
-    	LOG_DBG("SN not pushed!");
+    	LOG_ERR("SN not pushed!");
 
 	return 0;
 }
