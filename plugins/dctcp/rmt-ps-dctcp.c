@@ -117,24 +117,15 @@ static int dctcp_rmt_q_destroy_policy(struct rmt_ps *ps, struct rmt_n1_port *por
 	return -1;
 }
 
-static int mark_pdu(struct du * ret_pdu)
-{
-	pdu_flags_t     pci_flags;
-
-	pci_flags = pci_flags_get(&ret_pdu->pci);
-	pci_flags_set(&ret_pdu->pci,
-		      pci_flags |= PDU_FLAGS_EXPLICIT_CONGESTION);
-	return 0;
-}
-
 static int dctcp_rmt_enqueue_policy(struct rmt_ps *ps,
-		struct rmt_n1_port *port,
-		struct du * du,
-		bool must_enqueue)
+				    struct rmt_n1_port *port,
+				    struct du * du,
+				    bool must_enqueue)
 {
-	struct dctcp_rmt_queue    *q;
-	struct dctcp_rmt_ps_data  *data = ps->priv;
-	unsigned int qlen;
+	struct dctcp_rmt_queue   * q;
+	struct dctcp_rmt_ps_data * data = ps->priv;
+	unsigned int 		   qlen;
+	pdu_flags_t     	   pci_flags;
 
 	if (!ps || !port || !du || !data) {
 		LOG_ERR("DCTCP RMT: Wrong input parameters"
@@ -152,8 +143,11 @@ static int dctcp_rmt_enqueue_policy(struct rmt_ps *ps,
 
 	qlen = rfifo_length(q->queue);
 	if (qlen >= data->q_threshold && qlen < data->q_max) {
-		mark_pdu(du);
+		pci_flags = pci_flags_get(&du->pci);
+		LOG_INFO("Flags are: %u", pci_flags);
+		pci_flags_set(&du->pci, pci_flags |= PDU_FLAGS_EXPLICIT_CONGESTION);
 		LOG_INFO("Queue length is %u, marked PDU with ECN", qlen);
+		LOG_INFO("Flags are: %u", pci_flags_get(&du->pci));
 	} else if (qlen >= data->q_max) {
 		if (pci_type(&du->pci) != PDU_TYPE_MGMT) {
 			du_destroy(du);
