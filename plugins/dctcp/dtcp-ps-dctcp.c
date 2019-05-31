@@ -71,7 +71,7 @@ static int dctcp_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 		/* PDU is ECN-marked, decrease cwnd value */
 		data->ecn_total++;
 		new_credit = max(new_credit -
-			  ((new_credit * data->dctcp_alpha) >> 11U), 2U);
+			  ((new_credit * data->dctcp_alpha) >> 1U), 2U);
 
 		/* TODO check if this is ok */
 		data->sshtresh = new_credit;
