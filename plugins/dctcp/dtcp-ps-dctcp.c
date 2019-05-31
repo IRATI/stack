@@ -45,8 +45,7 @@ struct dctcp_dtcp_ps_data {
 	uint_t        sent_total;
 	uint_t        ecn_total;
 	uint_t        dctcp_alpha;
-	uint_t	      cycle_start_jiffies;
-	uint_t	      current_rtt;
+	uint_t	      obs_window_size;
 };
 
 static int dctcp_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
@@ -55,7 +54,6 @@ static int dctcp_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 	struct dctcp_dtcp_ps_data * data = ps->priv;
 	seq_num_t new_credit;
 	uint_t alpha_old = 0;
-	uint_t elapsed_time = 0;
 
 	spin_lock_bh(&dtcp->parent->sv_lock);
 	new_credit = dtcp->sv->rcvr_credit;
@@ -97,11 +95,10 @@ static int dctcp_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 		dtcp->sv->rcvr_rt_wind_edge =
 			dtcp->parent->sv->rcv_left_window_edge + new_credit;
 
-	/* Update alpha once every RTT */
-	elapsed_time = jiffies_to_msecs(jiffies - data->cycle_start_jiffies);
-	if (elapsed_time >= data->current_rtt) {
-		LOG_DBG("Received %u PDUs, with %u marked PDUs in %u ms",
-			data->sent_total, data->ecn_total, elapsed_time);
+	/* Update alpha once every observation window */
+	if (data->sent_total >= data->obs_window_size) {
+		LOG_INFO("Received %u PDUs, with %u marked PDUs in this window",
+			data->sent_total, data->ecn_total);
 		/* alpha = (1-g) * alpha + g * F according DCTCP kernel patch */
 		alpha_old = data->dctcp_alpha;
 		data->dctcp_alpha = alpha_old - (alpha_old >> data->shift_g) +
@@ -109,11 +106,10 @@ static int dctcp_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 
 		data->sent_total = 0;
 		data->ecn_total = 0;
-		data->cycle_start_jiffies = jiffies;
-		data->current_rtt = dtcp->sv->rtt;
+		data->obs_window_size = new_credit;
 	}
 
-	LOG_DBG("New credit is %u, Alpha is %u",
+	LOG_INFO("New credit is %u, Alpha is %u",
 		new_credit, data->dctcp_alpha);
 
 	spin_unlock_bh(&dtcp->parent->sv_lock);
@@ -167,8 +163,7 @@ static struct ps_base * dtcp_ps_dctcp_create(struct rina_component * component)
 	data->shift_g = 4;
 	data->sent_total = 0;
 	data->ecn_total = 0;
-	data->current_rtt = dtcp->sv->rtt;
-	data->cycle_start_jiffies = jiffies;
+	data->obs_window_size = data->init_credit;
 	dtcp->sv->rcvr_credit = data->init_credit;
 
 	ps->base.set_policy_set_param   = dtcp_ps_set_policy_set_param;
