@@ -60,26 +60,27 @@ static int dctcp_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 	spin_lock_bh(&dtcp->parent->sv_lock);
 	new_credit = dtcp->sv->rcvr_credit;
 
-	// Check if we must abandon Slow Start state
+	/* Check if we must abandon Slow Start state */
 	if (new_credit >= data->sshtresh) {
 		data->state = CONG_AVOID;
 	}
 
-	// Update congestion window
+	/* Update congestion window */
+	data->sent_total++;
 	if ((pci_flags_get(pci) & PDU_FLAGS_EXPLICIT_CONGESTION)) {
-		// PDU is ECN-marked, decrease cwnd value
+		/* PDU is ECN-marked, decrease cwnd value */
 		data->ecn_total++;
 		new_credit = max(new_credit -
 			  ((new_credit * data->dctcp_alpha) >> 11U), 2U);
 
-		// TODO check if this is ok
+		/* TODO check if this is ok */
 		data->sshtresh = new_credit;
 		data->state = CONG_AVOID;
 	} else if (data->state == SLOW_START) {
-		// Increase credit by one
+		/* Increase credit by one */
 		new_credit++;
 	} else {
-		// CA state, increase by 1/cwnd
+		/* CA state, increase by 1/cwnd */
 		data->dec_credit += DEC_PRECISION/new_credit;
 		if (data->dec_credit >= DEC_PRECISION) {
 			new_credit++;
@@ -87,13 +88,16 @@ static int dctcp_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 		}
 	}
 
-	data->sent_total++;
-	if ((pci_flags_get(pci) & PDU_FLAGS_EXPLICIT_CONGESTION)) {
-		data->ecn_total++;
-	}
+	/* Update credit and right window edge */
+	dtcp->sv->rcvr_credit = new_credit;
 
-	/* Update alpha once every RTT. Since we don't have an RTT timeout */
-	/* we update RTT every credit packets received */
+	/* applying the TCP rule of not shrinking the window */
+	if (dtcp->parent->sv->rcv_left_window_edge + new_credit >
+		dtcp->sv->rcvr_rt_wind_edge)
+		dtcp->sv->rcvr_rt_wind_edge =
+			dtcp->parent->sv->rcv_left_window_edge + new_credit;
+
+	/* Update alpha once every RTT */
 	elapsed_time = jiffies_to_msecs(jiffies - data->cycle_start_jiffies);
 	if (elapsed_time >= data->current_rtt) {
 		LOG_DBG("Received %u PDUs, with %u marked PDUs in %u ms",
@@ -108,15 +112,6 @@ static int dctcp_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 		data->cycle_start_jiffies = jiffies;
 		data->current_rtt = dtcp->sv->rtt;
 	}
-
-	/* Update credit and right window edge */
-	dtcp->sv->rcvr_credit = new_credit;
-
-	/* applying the TCP rule of not shrinking the window */
-	if (dtcp->parent->sv->rcv_left_window_edge + new_credit >
-		dtcp->sv->rcvr_rt_wind_edge)
-		dtcp->sv->rcvr_rt_wind_edge =
-			dtcp->parent->sv->rcv_left_window_edge + new_credit;
 
 	LOG_DBG("New credit is %u, Alpha is %u",
 		new_credit, data->dctcp_alpha);

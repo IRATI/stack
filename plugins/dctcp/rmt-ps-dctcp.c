@@ -153,7 +153,7 @@ static int dctcp_rmt_enqueue_policy(struct rmt_ps *ps,
 	qlen = rfifo_length(q->queue);
 	if (qlen >= data->q_threshold && qlen < data->q_max) {
 		mark_pdu(du);
-		LOG_INFO("Queue length is %u, marked PDU with ECN", qlen);
+		LOG_DBG("Queue length is %u, marked PDU with ECN", qlen);
 	} else if (qlen >= data->q_max) {
 		if (pci_type(&du->pci) != PDU_TYPE_MGMT) {
 			du_destroy(du);
