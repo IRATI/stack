@@ -144,12 +144,8 @@ static int dctcp_rmt_enqueue_policy(struct rmt_ps *ps,
 	qlen = rfifo_length(q->queue);
 	if (qlen >= data->q_threshold && qlen < data->q_max) {
 		pci_flags = pci_flags_get(&du->pci);
-		LOG_INFO("Flags are: %u", pci_flags);
 		pci_flags_set(&du->pci, pci_flags |= PDU_FLAGS_EXPLICIT_CONGESTION);
-		LOG_INFO("Queue length is %u, marked PDU with ECN", qlen);
-		LOG_INFO("Flags are: %u (SN %u)",
-			  pci_flags_get(&du->pci),
-			  pci_sequence_number_get(&du->pci));
+		LOG_DBG("Queue length is %u, marked PDU with ECN", qlen);
 	} else if (qlen >= data->q_max) {
 		if (pci_type(&du->pci) != PDU_TYPE_MGMT) {
 			du_destroy(du);
