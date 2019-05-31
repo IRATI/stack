@@ -65,10 +65,11 @@ static int dctcp_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 
 	/* Update congestion window */
 	data->sent_total++;
-	LOG_INFO("Flags are: %u", pci_flags_get(pci));
+	LOG_INFO("Flags are: %u (SN %u)",
+		  pci_flags_get(pci),
+		  pci_sequence_number_get(pci));
 	if ((pci_flags_get(pci) & PDU_FLAGS_EXPLICIT_CONGESTION)) {
 		/* PDU is ECN-marked, decrease cwnd value */
-		LOG_INFO("PDU is ECN-marked");
 		data->ecn_total++;
 		new_credit = max(new_credit -
 			  ((new_credit * data->dctcp_alpha) >> 1U), 2U);
