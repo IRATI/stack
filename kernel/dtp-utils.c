@@ -1053,8 +1053,6 @@ static unsigned long rttqueue_entry_timestamp(struct rttq * q, seq_num_t sn)
         list_for_each_entry(cur, &q->head, next) {
                 csn = cur->sn;
                 if (csn > sn) {
-                        LOG_WARN("PDU not in RTTQ. Received "
-                        		"SN: %u, RTTQ SN: %u", sn, csn);
                         return 0;
                 }
                 if (csn == sn) {

@@ -330,7 +330,6 @@ int default_rtt_estimator_nortx(struct dtcp_ps * ps, seq_num_t sn)
 
 	start_time = rttq_entry_timestamp(dtcp->parent->rttq, sn);
 	if (start_time == 0) {
-		LOG_DBG("RTTestimator: PDU %u has been retransmitted", sn);
 		return 0;
 	}
 
