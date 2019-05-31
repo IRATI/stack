@@ -49,18 +49,6 @@ struct dctcp_dtcp_ps_data {
 	uint_t	      current_rtt;
 };
 
-static void update_credit_and_rt_wind_edge(struct dtcp * dtcp, uint_t credit)
-{
-	spin_lock_bh(&dtcp->parent->sv_lock);
-	dtcp->sv->rcvr_credit = credit;
-	/* applying the TCP rule of not shrinking the window */
-	if (dtcp->parent->sv->rcv_left_window_edge + credit >
-		dtcp->sv->rcvr_rt_wind_edge)
-		dtcp->sv->rcvr_rt_wind_edge =
-				dtcp->parent->sv->rcv_left_window_edge + credit;
-	spin_unlock_bh(&dtcp->parent->sv_lock);
-}
-
 static int dctcp_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 {
 	struct dtcp * dtcp = ps->dm;
@@ -120,12 +108,20 @@ static int dctcp_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 		data->cycle_start_jiffies = jiffies;
 		data->current_rtt = dtcp->sv->rtt;
 	}
-	spin_unlock_bh(&dtcp->parent->sv_lock);
 
-	/* set the new credit */
-	update_credit_and_rt_wind_edge(dtcp, new_credit);
+	/* Update credit and right window edge */
+	dtcp->sv->rcvr_credit = new_credit;
+
+	/* applying the TCP rule of not shrinking the window */
+	if (dtcp->parent->sv->rcv_left_window_edge + new_credit >
+		dtcp->sv->rcvr_rt_wind_edge)
+		dtcp->sv->rcvr_rt_wind_edge =
+			dtcp->parent->sv->rcv_left_window_edge + new_credit;
+
 	LOG_DBG("New credit is %u, Alpha is %u",
-		  new_credit, data->dctcp_alpha);
+		new_credit, data->dctcp_alpha);
+
+	spin_unlock_bh(&dtcp->parent->sv_lock);
 
 	return 0;
 }
