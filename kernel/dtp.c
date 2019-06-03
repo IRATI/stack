@@ -1021,6 +1021,8 @@ struct dtp * dtp_create(struct efcp *       efcp,
 
         dtp->cfg   = dtp_cfg;
         dtp->rmt  = rmt;
+        dtp->rttq = NULL;
+        dtp->rtxq = NULL;
         dtp->seqq = squeue_create(dtp);
         if (!dtp->seqq) {
                 LOG_ERR("Could not create Sequencing queue");
@@ -1074,6 +1076,7 @@ int dtp_destroy(struct dtp * instance)
 	struct dtcp * dtcp = NULL;
 	struct cwq * cwq = NULL;
 	struct rtxq * rtxq = NULL;
+	struct rttq * rttq = NULL;
 	int ret = 0;
 
         if (!instance)
@@ -1094,6 +1097,11 @@ int dtp_destroy(struct dtp * instance)
         if (instance->rtxq) {
         	rtxq = instance->rtxq;
         	instance->rtxq = NULL; /* Useful */
+        }
+
+        if (instance->rttq) {
+        	rttq = instance->rttq;
+        	instance->rttq = NULL;
         }
 
         spin_unlock_bh(&instance->lock);
@@ -1117,6 +1125,13 @@ int dtp_destroy(struct dtp * instance)
                         LOG_ERR("Failed to destroy rexmsn queue");
                         ret = -1;
                 }
+        }
+
+        if (rttq) {
+        	if (rttq_destroy(rttq)) {
+        		LOG_ERR("Failed to destroy rexmsn queue");
+        		ret = -1;
+        	}
         }
 
         rtimer_destroy(&instance->timers.a);
@@ -1313,6 +1328,10 @@ int dtp_write(struct dtp * instance,
                                 LOG_ERR("Couldn't push to rtxq");
 				goto pdu_stats_err_exit;
                         }
+                } else if (instance->rttq) {
+                	if (rttq_push(instance->rttq, csn)) {
+                		LOG_ERR("Failed to push SN to RTT queue");
+                	}
                 }
 
                 if (ps->transmission_control(ps, du)) {
@@ -1473,6 +1492,9 @@ int dtp_receive(struct dtp * instance,
                         instance->sv->drf_required = false;
                         instance->sv->rcv_left_window_edge = seq_num;
                         dtp_squeue_flush(instance);
+                        if (instance->rttq) {
+                        	rttq_flush(instance->rttq);
+                        }
                         spin_unlock_bh(&instance->sv_lock);
                         if (dtcp) {
                                 if (dtcp_sv_update(dtcp, &du->pci)) {

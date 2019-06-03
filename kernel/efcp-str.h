@@ -111,6 +111,18 @@ struct rtxq {
         struct rtxqueue *         queue;
 };
 
+struct rtt_entry {
+	unsigned long time_stamp;
+	seq_num_t sn;
+        struct list_head next;
+};
+
+struct rttq {
+	spinlock_t lock;
+	struct dtp * parent;
+        struct list_head head;
+};
+
 /* This is the DT-SV part maintained by DTP */
 struct dtp_sv {
         uint_t       max_flow_pdu_size;
@@ -150,6 +162,7 @@ struct dtp {
 
         struct cwq *        cwq;
         struct rtxq *       rtxq;
+        struct rttq * 	    rttq;
 
         /*
          * NOTE: The DTP State Vector is discarded only after and explicit

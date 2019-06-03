@@ -208,6 +208,9 @@ int default_sender_inactivity_timer(struct dtp_ps * ps)
         snd_rt_win  = dtcp->sv->snd_rt_wind_edge;
         next_send   = dtp->sv->seq_nr_to_send;
         dtcp->sv->snd_rt_wind_edge = next_send + init_credit;
+        if (dtp->rttq) {
+        	rttq_flush(dtp->rttq);
+        }
 
         LOG_DBG("Current values:\n\tinit_credit: %u "
                 "max_sent: %u snd_rt_win: %u next_send: %u",
