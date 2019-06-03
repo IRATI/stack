@@ -51,6 +51,8 @@ typedef uint8_t pdu_flags_t;
 #define PDU_TYPE_SNACK         0xCA /* Selective NACK */
 #define PDU_TYPE_SACK_AND_FC   0xCD /* Selective ACK and Flow Control */
 #define PDU_TYPE_SNACK_AND_FC  0xCE /* Selective NACK and Flow Control */
+/* Rendezvous PDU */
+#define PDU_TYPE_RENDEZVOUS    0xCF /* Rendezvous */
 /* Management PDUs */
 #define PDU_TYPE_MGMT          0x40 /* Management */
 /* Number of different PDU types */
@@ -58,29 +60,31 @@ typedef uint8_t pdu_flags_t;
 
 typedef uint8_t pdu_type_t;
 
-#define pdu_type_is_ok(X)                               \
-	((X == PDU_TYPE_DT)         ? true :            \
-	 ((X == PDU_TYPE_CACK)       ? true :           \
-	  ((X == PDU_TYPE_SACK)       ? true :          \
-	   ((X == PDU_TYPE_NACK)       ? true :         \
-	    ((X == PDU_TYPE_FC)         ? true :        \
-	     ((X == PDU_TYPE_ACK)        ? true :       \
-	      ((X == PDU_TYPE_ACK_AND_FC) ? true :      \
-	       ((X == PDU_TYPE_SACK_AND_FC) ? true :    \
-		((X == PDU_TYPE_SNACK_AND_FC) ? true :  \
-		 ((X == PDU_TYPE_MGMT)         ? true : \
-		  false))))))))))
+#define pdu_type_is_ok(X)                                \
+	((X == PDU_TYPE_DT)         ? true :             \
+	 ((X == PDU_TYPE_CACK)       ? true :            \
+	  ((X == PDU_TYPE_SACK)       ? true :           \
+	   ((X == PDU_TYPE_NACK)       ? true :          \
+	    ((X == PDU_TYPE_FC)         ? true :         \
+	     ((X == PDU_TYPE_ACK)        ? true :        \
+	      ((X == PDU_TYPE_ACK_AND_FC) ? true :       \
+	       ((X == PDU_TYPE_SACK_AND_FC) ? true :     \
+		((X == PDU_TYPE_SNACK_AND_FC) ? true :   \
+		 ((X == PDU_TYPE_RENDEZVOUS)   ? true :  \
+		  ((X == PDU_TYPE_MGMT)         ? true : \
+		   false)))))))))))
 
-#define pdu_type_is_control(X)                          \
-	((X == PDU_TYPE_CACK)       ? true :            \
-	 ((X == PDU_TYPE_SACK)       ? true :           \
-	  ((X == PDU_TYPE_NACK)       ? true :          \
-	   ((X == PDU_TYPE_FC)         ? true :         \
-	    ((X == PDU_TYPE_ACK)        ? true :        \
-	     ((X == PDU_TYPE_ACK_AND_FC) ? true :       \
-	      ((X == PDU_TYPE_SACK_AND_FC) ? true :     \
-	       ((X == PDU_TYPE_SNACK_AND_FC) ? true :   \
-		false))))))))
+#define pdu_type_is_control(X)                           \
+	((X == PDU_TYPE_CACK)       ? true :             \
+	 ((X == PDU_TYPE_SACK)       ? true :            \
+	  ((X == PDU_TYPE_NACK)       ? true :           \
+	   ((X == PDU_TYPE_FC)         ? true :          \
+	    ((X == PDU_TYPE_ACK)        ? true :         \
+	     ((X == PDU_TYPE_ACK_AND_FC) ? true :        \
+	      ((X == PDU_TYPE_SACK_AND_FC) ? true :      \
+	       ((X == PDU_TYPE_RENDEZVOUS)  ? true :     \
+	        ((X == PDU_TYPE_SNACK_AND_FC) ? true :   \
+		 false)))))))))
 
 struct pci {
 	unsigned char *h; /* do not move from 1st position */

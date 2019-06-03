@@ -44,7 +44,6 @@ ssize_t             cwq_size(struct cwq * q);
 void                cwq_deliver(struct cwq * queue,
                                 struct dtp * dtp,
                                 struct rmt * rmt);
-seq_num_t            cwq_peek(struct cwq * queue);
 
 struct rtxq;
 

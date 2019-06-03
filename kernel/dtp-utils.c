@@ -289,6 +289,7 @@ void cwq_deliver(struct cwq * queue,
 			}
                 }
                 dtp->sv->max_seq_nr_sent = pci_sequence_number_get(&du->pci);
+                dtcp->sv->snd_lft_win = dtp->sv->max_seq_nr_sent;
 
                 spin_unlock(&queue->lock);
                 dtp_pdu_send(dtp, rmt, du);
@@ -328,35 +329,6 @@ void cwq_deliver(struct cwq * queue,
         LOG_DBG("CWQ has delivered until %u", dtp->sv->max_seq_nr_sent);
 
         return;
-}
-
-/* NOTE: used only by dump_we */
-seq_num_t cwq_peek(struct cwq * queue)
-{
-        seq_num_t          ret;
-        struct du *        du;
-
-        spin_lock_bh(&queue->lock);
-        if (rqueue_is_empty(queue->q)){
-                spin_unlock_bh(&queue->lock);
-                return 0;
-        }
-
-        du = (struct du *) rqueue_head_pop(queue->q);
-        if (!du) {
-                spin_unlock_bh(&queue->lock);
-                return -1;
-        }
-
-        ret = pci_sequence_number_get(&du->pci);
-        if (rqueue_head_push_ni(queue->q, du)) {
-                spin_unlock_bh(&queue->lock);
-                du_destroy(du);
-                return ret;
-        }
-        spin_unlock_bh(&queue->lock);
-
-        return ret;
 }
 
 static struct rtxq_entry * rtxq_entry_create_gfp(struct du * du, gfp_t flag)
@@ -935,6 +907,9 @@ int dtp_pdu_send(struct dtp *  dtp,
 
 	/* Remote flow case */
 	if (pci_source(&du->pci) != pci_destination(&du->pci)) {
+        if (dtp->dtcp->sv->rendezvous_rcvr) {
+        	LOG_INFO("Sending to RMT in RV at RCVR");
+        }
 	        if (rmt_send(rmt, du)) {
 	                LOG_ERR("Problems sending PDU to RMT");
 	                return -1;
