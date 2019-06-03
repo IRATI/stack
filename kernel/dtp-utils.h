@@ -75,4 +75,13 @@ int                 rtxq_flush(struct rtxq * q);
 int 		    dtp_pdu_send(struct dtp *  dtp,
 				 struct rmt * rmt,
                                  struct du * du);
+
+struct rttq;
+
+struct rttq * 	    rttq_create(void);
+int 		    rttq_destroy(struct rttq * q);
+unsigned long 	    rttq_entry_timestamp(struct rttq * q, seq_num_t sn);
+int 		    rttq_drop(struct rttq * q, seq_num_t sn);
+int 		    rttq_push(struct rttq * q, seq_num_t sn);
+int 		    rttq_flush(struct rttq * q);
 #endif

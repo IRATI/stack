@@ -40,8 +40,8 @@ struct dctcp_rmt_ps_data {
 };
 
 struct dctcp_rmt_queue {
-        struct rfifo*  queue;
-        port_id_t      port_id;
+	struct rfifo*  queue;
+	port_id_t      port_id;
 };
 
 static struct dctcp_rmt_queue* dctcp_queue_create(port_id_t port_id)
@@ -77,7 +77,7 @@ static int dctcp_rmt_queue_destroy(struct dctcp_rmt_queue *q)
 }
 
 static void * dctcp_rmt_q_create_policy(struct rmt_ps *ps,
-					struct rmt_n1_port *port)
+		struct rmt_n1_port *port)
 {
 	struct dctcp_rmt_queue     *q;
 	struct dctcp_rmt_ps_data   *data;
@@ -92,7 +92,7 @@ static void * dctcp_rmt_q_create_policy(struct rmt_ps *ps,
 	q = dctcp_queue_create(port->port_id);
 	if (!q) {
 		LOG_ERR("DCTCP RMT: Could not create queue for n1_port %u",
-			port->port_id);
+				port->port_id);
 		return NULL;
 	}
 
@@ -122,27 +122,35 @@ static int dctcp_rmt_enqueue_policy(struct rmt_ps *ps,
 				    struct du * du,
 				    bool must_enqueue)
 {
-	struct dctcp_rmt_queue    *q;
-	struct dctcp_rmt_ps_data  *data = ps->priv;
-	unsigned int qlen;
+	struct dctcp_rmt_queue   * q;
+	struct dctcp_rmt_ps_data * data = ps->priv;
+	unsigned int 		   qlen;
+	pdu_flags_t     	   pci_flags;
 
 	if (!ps || !port || !du || !data) {
-		LOG_ERR("DCTCP RMT: Wrong input parameters for dctcp_enqueu_scheduling_policy_tx");
+		LOG_ERR("DCTCP RMT: Wrong input parameters"
+				" for dctcp_enqueu_scheduling_policy_tx");
 		return RMT_PS_ENQ_ERR;
 	}
 
 	q = port->rmt_ps_queues;
 	if (!q) {
-		LOG_ERR("DCTCP RMT: Could not find queue for n1_port %u", port->port_id);
+		LOG_ERR("DCTCP RMT: Could not find queue for n1_port %u",
+			port->port_id);
 		du_destroy(du);
 		return RMT_PS_ENQ_ERR;
 	}
 
 	qlen = rfifo_length(q->queue);
-	if(qlen >= data->q_max) {
-		if(pci_type(&du->pci) != PDU_TYPE_MGMT) {
+	if (qlen >= data->q_threshold && qlen < data->q_max) {
+		pci_flags = pci_flags_get(&du->pci);
+		pci_flags_set(&du->pci, pci_flags |= PDU_FLAGS_EXPLICIT_CONGESTION);
+		LOG_DBG("Queue length is %u, marked PDU with ECN", qlen);
+	} else if (qlen >= data->q_max) {
+		if (pci_type(&du->pci) != PDU_TYPE_MGMT) {
 			du_destroy(du);
-			LOG_DBG("DCTCP RMT: PDU dropped, q_max reached...");
+			LOG_INFO("DCTCP RMT: PDU dropped, q_max (%u) reached...",
+					data->q_max);
 			return RMT_PS_ENQ_DROP;
 		}
 	}
@@ -160,8 +168,6 @@ static struct du * dctcp_rmt_dequeue_policy(struct rmt_ps *ps,
 	struct dctcp_rmt_queue    *q;
 	struct dctcp_rmt_ps_data  *data = ps->priv;
 	struct du *ret_pdu;
-	unsigned long pci_flags;
-	unsigned int qlen;
 
 	if (!ps || !port || !data) {
 		LOG_ERR("Wrong input parameters for red_rmt_dequeue_policy");
@@ -174,28 +180,19 @@ static struct du * dctcp_rmt_dequeue_policy(struct rmt_ps *ps,
 		return NULL;
 	}
 
-	qlen = rfifo_length(q->queue);
 	ret_pdu = rfifo_pop(q->queue);
-	LOG_DBG("DCTCP RMT: PDU dequed...");
+	LOG_DBG("DCTCP RMT: PDU dequeued...");
 
 	if (!ret_pdu) {
 		LOG_ERR("Could not dequeue scheduled pdu");
-	}
-
-	if (qlen >= data->q_threshold) {
-		LOG_DBG("DCTCP RMT: Marking");
-		/* mark ECN bit */
-		pci_flags = pci_flags_get(&ret_pdu->pci);
-		pci_flags_set(&ret_pdu->pci,
-				pci_flags |= PDU_FLAGS_EXPLICIT_CONGESTION);
 	}
 
 	return ret_pdu;
 }
 
 static int dctcp_rmt_ps_set_policy_set_param(struct ps_base *bps,
-					     const char *name,
-					     const char *value)
+		const char *name,
+		const char *value)
 {
 	struct rmt_ps *ps = container_of(bps, struct rmt_ps, base);
 	struct dctcp_rmt_ps_data *data = ps->priv;
@@ -217,6 +214,7 @@ static int dctcp_rmt_ps_set_policy_set_param(struct ps_base *bps,
 		ret = kstrtoint(value, 10, &ival);
 		if (!ret) {
 			data->q_threshold = ival;
+			LOG_INFO("Queue marking threshold is %d", ival);
 		}
 	}
 
@@ -224,6 +222,7 @@ static int dctcp_rmt_ps_set_policy_set_param(struct ps_base *bps,
 		ret = kstrtoint(value, 10, &ival);
 		if (!ret) {
 			data->q_max = ival;
+			LOG_INFO("Queue max occupancy is %d", ival);
 		}
 	}
 
@@ -247,8 +246,8 @@ static int rmt_ps_load_param(struct rmt_ps *ps, const char *param_name)
 		LOG_WARN("DCTCP RMT: No PS param %s specified", param_name);
 	} else {
 		dctcp_rmt_ps_set_policy_set_param(&ps->base,
-						  policy_param_name(ps_param),
-						  policy_param_value(ps_param));
+				policy_param_name(ps_param),
+				policy_param_value(ps_param));
 	}
 
 	return 0;
@@ -286,7 +285,7 @@ static struct ps_base * rmt_ps_dctcp_create(struct rina_component *component)
 	ps->rmt_dequeue_policy = dctcp_rmt_dequeue_policy;
 
 	LOG_INFO("DCTCP RMT: PS loaded, q_max = %d, q_threshold = %d",
-		 data->q_max, data->q_threshold);
+			data->q_max, data->q_threshold);
 
 	return &ps->base;
 }
@@ -301,7 +300,7 @@ static void rmt_ps_dctcp_destroy(struct ps_base *bps)
 }
 
 struct ps_factory rmt_factory = {
-	.owner     = THIS_MODULE,
-	.create  = rmt_ps_dctcp_create,
-	.destroy = rmt_ps_dctcp_destroy,
+		.owner     = THIS_MODULE,
+		.create  = rmt_ps_dctcp_create,
+		.destroy = rmt_ps_dctcp_destroy,
 };

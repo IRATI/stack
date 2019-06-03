@@ -188,23 +188,6 @@ ssize_t cwq_size(struct cwq * queue)
 }
 EXPORT_SYMBOL(cwq_size);
 
-static void enable_write(struct cwq * cwq,
-                         struct dtp *  dtp)
-{
-        struct dtcp_config * cfg;
-        uint_t               max_len;
-
-        cfg = dtp->dtcp->cfg;
-        if (!cfg)
-                return;
-
-        max_len = dtcp_max_closed_winq_length(cfg);
-        if (rqueue_length(cwq->q) < max_len)
-                efcp_enable_write(dtp->efcp);
-
-        return;
-}
-
 static bool can_deliver(struct dtp * dtp, struct dtcp * dtcp)
 {
         bool to_ret = false, w_ret = false, r_ret = false;
@@ -240,15 +223,16 @@ void cwq_deliver(struct cwq * queue,
                  struct dtp * dtp,
                  struct rmt * rmt)
 {
-        struct rtxq *           rtxq;
-        struct dtcp *           dtcp;
-        struct du  *            tmp;
-        bool                    rtx_ctrl;
-        bool                    flow_ctrl;
+        struct rtxq *  rtxq;
+        struct dtcp *  dtcp;
+        struct du  *   tmp;
+        bool           rtx_ctrl;
+        bool           flow_ctrl;
 
-        bool			rate_ctrl = false;
-        int 			sz = 0;
-	uint_t 			sc = 0;
+        bool	       rate_ctrl = false;
+        int 	       sz = 0;
+	uint_t 	       sc = 0;
+	ssize_t	       cwq_length = 0;
 
 	dtcp = dtp->dtcp;
 
@@ -283,6 +267,11 @@ void cwq_deliver(struct cwq * queue,
                                 return;
                         }
                         rtxq_push_ni(rtxq, tmp);
+                } else if (dtp->rttq) {
+                	if (rttq_push(dtp->rttq,
+                		      pci_sequence_number_get(du_pci(du)))) {
+                		LOG_ERR("Failed to push SN to RTT Queue");
+                	}
                 }
                 if(rate_ctrl) {
                 	sz = du_data_len(du);
@@ -301,7 +290,9 @@ void cwq_deliver(struct cwq * queue,
                 }
                 dtp->sv->max_seq_nr_sent = pci_sequence_number_get(&du->pci);
 
+                spin_unlock(&queue->lock);
                 dtp_pdu_send(dtp, rmt, du);
+                spin_lock(&queue->lock);
         }
 
         if (!rqueue_is_empty(queue->q)) {
@@ -324,15 +315,18 @@ void cwq_deliver(struct cwq * queue,
         }
 
         if(dtcp_rate_based_fctrl(dtcp->cfg)) {
-        	//LOG_DBG("rbfc Re-opening the rate mechanism");
                 dtp->sv->rate_fulfiled = true;
         }
 
-        enable_write(queue, dtp);
+        cwq_length = rqueue_length(queue->q);
 
         spin_unlock(&queue->lock);
 
+        if (cwq_length < dtcp_max_closed_winq_length(dtp->dtcp->cfg))
+                efcp_enable_write(dtp->efcp);
+
         LOG_DBG("CWQ has delivered until %u", dtp->sv->max_seq_nr_sent);
+
         return;
 }
 
@@ -965,3 +959,205 @@ int dtp_pdu_send(struct dtp *  dtp,
 	return 0;
 }
 EXPORT_SYMBOL(dtp_pdu_send);
+
+/* Here begins the RTT estimator when there is not RTX*/
+static struct rtt_entry * rtt_entry_create_gfp(seq_num_t sn, gfp_t flag)
+{
+        struct rtt_entry * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), flag);
+        if (!tmp)
+                return NULL;
+
+        tmp->sn = sn;
+        tmp->time_stamp = jiffies;
+
+        INIT_LIST_HEAD(&tmp->next);
+
+        return tmp;
+}
+
+static struct rtt_entry * rtt_entry_create(seq_num_t sn)
+{ return rtt_entry_create_gfp(sn, GFP_ATOMIC); }
+
+static int rtt_entry_destroy(struct rtt_entry * entry)
+{
+        if (!entry)
+                return -1;
+
+        list_del(&entry->next);
+        rkfree(entry);
+
+        return 0;
+}
+
+static struct rttq * rttq_create_gfp(gfp_t flags)
+{
+        struct rttq * tmp;
+
+        tmp = rkzalloc(sizeof(*tmp), flags);
+        if (!tmp)
+                return NULL;
+
+        INIT_LIST_HEAD(&tmp->head);
+
+        return tmp;
+}
+
+struct rttq * rttq_create(void)
+{ return rttq_create_gfp(GFP_KERNEL); }
+EXPORT_SYMBOL(rttq_create);
+
+static int rttq_entry_destroy(struct rtt_entry * entry)
+{
+	list_del(&entry->next);
+	rkfree(entry);
+	return 0;
+}
+
+/* No locking required, it's always called with DTP-SV lock taken */
+int rttq_flush(struct rttq * q)
+{
+        struct rtt_entry * cur, * n;
+
+        ASSERT(q);
+
+        list_for_each_entry_safe(cur, n, &q->head, next) {
+                rttq_entry_destroy(cur);
+        }
+
+        return 0;
+}
+EXPORT_SYMBOL(rttq_flush);
+
+int rttq_destroy(struct rttq * q)
+{
+        if (!q)
+                return -1;
+
+        spin_lock(&q->lock);
+        rttq_flush(q);
+        spin_unlock(&q->lock);
+
+        rkfree(q);
+
+        return 0;
+}
+EXPORT_SYMBOL(rttq_destroy);
+
+static unsigned long rttqueue_entry_timestamp(struct rttq * q, seq_num_t sn)
+{
+        struct rtt_entry * cur;
+        seq_num_t           csn;
+
+        list_for_each_entry(cur, &q->head, next) {
+                csn = cur->sn;
+                if (csn > sn) {
+                        return 0;
+                }
+                if (csn == sn) {
+                        return cur->time_stamp;
+                }
+        }
+
+        return 0;
+}
+
+unsigned long rttq_entry_timestamp(struct rttq * q, seq_num_t sn)
+{
+        unsigned long timestamp;
+
+        if (!q)
+                return 0;
+
+        spin_lock_bh(&q->lock);
+        timestamp = rttqueue_entry_timestamp(q, sn);
+        spin_unlock_bh(&q->lock);
+
+        return timestamp;
+}
+EXPORT_SYMBOL(rttq_entry_timestamp);
+
+static int rttq_push_ni(struct rttq * q, seq_num_t sn)
+{
+	struct rtt_entry * new, * cur, * last = NULL;
+	seq_num_t          psn;
+
+	new = rtt_entry_create(sn);
+	if (!new) {
+		LOG_ERR("Could not create an rtt queue entry");
+		return -1;
+	}
+
+	if (list_empty(&q->head)) {
+		list_add(&new->next, &q->head);
+		return 0;
+	}
+
+    	last = list_last_entry(&q->head, struct rtt_entry, next);
+    	if (!last)
+            	return -1;
+
+    	psn = last->sn;
+    	if (sn == psn) {
+            	LOG_ERR("Another PDU with the same seq_num %u, is in "
+            			"the RTT queue!", sn);
+            	return 0;
+    	}
+    	if (sn > psn) {
+            	list_add_tail(&new->next, &q->head);
+            	return 0;
+    	}
+
+    	list_for_each_entry(cur, &q->head, next) {
+            	psn = cur->sn;
+            	if (sn == psn) {
+                    LOG_ERR("Another PDU with the same seq_num is in "
+                            "the RTT queue!");
+                    return 0;
+            }
+            if (sn > psn) {
+                    list_add(&new->next, &cur->next);
+                    return 0;
+            }
+    	}
+
+    	LOG_ERR("SN not pushed!");
+
+	return 0;
+}
+
+int rttq_push(struct rttq * q, seq_num_t sn)
+{
+	int to_return;
+
+	spin_lock_bh(&q->lock);
+	to_return = rttq_push_ni(q, sn);
+	spin_unlock_bh(&q->lock);
+
+	return to_return;
+}
+EXPORT_SYMBOL(rttq_push);
+
+int rttq_drop(struct rttq * q, seq_num_t sn)
+{
+	struct rtt_entry * cur, * n;
+
+	spin_lock_bh(&q->lock);
+	if (list_empty(&q->head)) {
+		spin_unlock_bh(&q->lock);
+		return 0;
+	}
+	cur = NULL;
+	list_for_each_entry_safe(cur, n, &q->head, next) {
+		if (cur->sn <= sn) {
+			rtt_entry_destroy(cur);
+		} else {
+			spin_unlock_bh(&q->lock);
+			return 0;
+		}
+	}
+	spin_unlock_bh(&q->lock);
+	return 0;
+}
+EXPORT_SYMBOL(rttq_drop);
