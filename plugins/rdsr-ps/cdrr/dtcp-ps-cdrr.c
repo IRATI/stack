@@ -483,6 +483,7 @@ static struct ps_base * cdrr_create(struct rina_component * component) {
         ps->rcvr_control_ack            = NULL;
         ps->no_rate_slow_down           = NULL;
         ps->no_override_default_peak    = NULL;
+        ps->rcvr_rendezvous             = NULL;
 
         ri = rkzalloc(sizeof(struct cdrr_rate_info), GFP_KERNEL);
 

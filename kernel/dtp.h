@@ -51,6 +51,8 @@ int          dtp_sv_init(struct dtp * dtp,
 int          dtp_write(struct dtp * instance,
                        struct du * du);
 
+void dtp_send_pending_ctrl_pdus(struct dtp * dtp);
+
 /* DTP receives a PDU from RMT */
 int          dtp_receive(struct dtp * instance,
                          struct du * du);

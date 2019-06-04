@@ -81,6 +81,8 @@ struct dtcp_ps {
         int (* rcvr_control_ack)(struct dtcp_ps * instance);
         int (* no_rate_slow_down)(struct dtcp_ps * instance);
         int (* no_override_default_peak)(struct dtcp_ps * instance);
+        int (* rcvr_rendezvous)(struct dtcp_ps * instance,
+        		        const struct pci * pci);
 
         /* Parametric policies. */
         bool flow_ctrl;
