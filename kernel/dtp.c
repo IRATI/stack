@@ -700,15 +700,16 @@ static void tf_a(struct timer_list * tl)
                 dtp_send_pending_ctrl_pdus(dtp);
         } else {
                 pci = process_A_expiration(dtp, dtcp);
-                if (pci) pci_release(pci);
-#if DTP_INACTIVITY_TIMERS_ENABLE
+
+                if (pci)
+                	pci_release(pci);
+
                 if (rtimer_restart(&dtp->timers.sender_inactivity,
                                    3 * (mpl + r + a))) {
                         LOG_ERR("Failed to start sender_inactiviy timer");
                         rtimer_start(&dtp->timers.a, a/AF);
                         return;
                 }
-#endif
         }
 
         if (!seqq_is_empty(dtp->seqq)) {
@@ -1270,13 +1271,10 @@ int dtp_write(struct dtp * instance,
         efcp = instance->efcp;
         dtcp = instance->dtcp;
 
-#if DTP_INACTIVITY_TIMERS_ENABLE
         /* Stop SenderInactivityTimer */
         if (rtimer_stop(&instance->timers.sender_inactivity)) {
                 LOG_ERR("Failed to stop timer");
         }
-#endif
-        /* Step 1: Delimiting (fragmentation/reassembly) + Protection */
 
         /*
          * FIXME: The two ways of carrying out flow control
@@ -1432,7 +1430,7 @@ int dtp_write(struct dtp * instance,
                 spin_lock_bh(&instance->sv_lock);
                 stats_inc_bytes(tx, instance->sv, sbytes);
                 spin_unlock_bh(&instance->sv_lock);
-#if DTP_INACTIVITY_TIMERS_ENABLE
+
                 /* Start SenderInactivityTimer */
                 if (rtimer_restart(&instance->timers.sender_inactivity,
                                    3 * (mpl + r + a ))) {
@@ -1440,7 +1438,7 @@ int dtp_write(struct dtp * instance,
                         goto stats_nounlock_err_exit;
                         return -1;
                 }
-#endif
+
                 return 0;
         }
 
@@ -1544,10 +1542,12 @@ int dtp_receive(struct dtp * instance,
         efcp = instance->efcp;
 
         spin_lock_bh(&instance->sv_lock);
+
         a           = instance->sv->A;
         r 	    = instance->sv->R;
         mpl	    = instance->sv->MPL;
         LWE         = instance->sv->rcv_left_window_edge;
+
         rcu_read_lock();
         ps = container_of(rcu_dereference(instance->base.ps),
                           struct dtp_ps, base);
@@ -1567,7 +1567,6 @@ int dtp_receive(struct dtp * instance,
                 seq_num, smp_processor_id());
 
         if (instance->sv->drf_required) {
-#if DTP_INACTIVITY_TIMERS_ENABLE
                 /* Start ReceiverInactivityTimer */
                 if (rtimer_restart(&instance->timers.receiver_inactivity,
                                    2 * (mpl + r + a))) {
@@ -1576,16 +1575,19 @@ int dtp_receive(struct dtp * instance,
                         du_destroy(du);
                         return -1;
                 }
-#endif
+
                 if ((pci_flags_get(&du->pci) & PDU_FLAGS_DATA_RUN)) {
                 	LOG_DBG("Data Run Flag");
-                        instance->sv->drf_required = false;
+
+                	instance->sv->drf_required = false;
                         instance->sv->rcv_left_window_edge = seq_num;
                         dtp_squeue_flush(instance);
                         if (instance->rttq) {
                         	rttq_flush(instance->rttq);
                         }
+
                         spin_unlock_bh(&instance->sv_lock);
+
                         if (dtcp) {
                                 if (dtcp_sv_update(dtcp, &du->pci)) {
                                         LOG_ERR("Failed to update dtcp sv");
@@ -1596,13 +1598,16 @@ int dtp_receive(struct dtp * instance,
                         dtp_send_pending_ctrl_pdus(instance);
                         pdu_post(instance, du);
 			stats_inc_bytes(rx, instance->sv, sbytes);
-                        LOG_DBG("Data run flag DRF");
+
                         return 0;
                 }
+
                 LOG_ERR("Expecting DRF but not present, dropping PDU %d...",
                         seq_num);
+
 		stats_inc(drop, instance->sv);
 		spin_unlock_bh(&instance->sv_lock);
+
                 du_destroy(du);
                 return 0;
         }
@@ -1612,14 +1617,15 @@ int dtp_receive(struct dtp * instance,
          *   no need to check presence of in_order or dtcp because in case
          *   they are not, LWE is not updated and always 0
          */
-
-        if ((seq_num <= LWE) || (is_fc_overrun(instance, dtcp, seq_num, sbytes)))
-        {
+        if ((seq_num <= LWE) ||
+        		(is_fc_overrun(instance, dtcp, seq_num, sbytes))) {
         	/* Duplicate PDU or flow control overrun */
-        	LOG_ERR("Duplicate PDU or flow control overrun. SN: %u, LWE:%u",
+        	LOG_ERR("Duplicate PDU or flow control overrun.SN: %u, LWE:%u",
         		 seq_num, LWE);
                 stats_inc(drop, instance->sv);
+
                 spin_unlock_bh(&instance->sv_lock);
+
                 du_destroy(du);
 
                 if (dtcp) {
@@ -1635,7 +1641,6 @@ int dtp_receive(struct dtp * instance,
                 return 0;
         }
 
-#if DTP_INACTIVITY_TIMERS_ENABLE
         /* Start ReceiverInactivityTimer */
         if (rtimer_restart(&instance->timers.receiver_inactivity,
                            2 * (mpl + r + a ))) {
@@ -1644,7 +1649,7 @@ int dtp_receive(struct dtp * instance,
                 du_destroy(du);
                 return -1;
         }
-#endif
+
         /* This is an acceptable data PDU, stop reliable ACK timer */
         if (dtcp->sv->rendezvous_rcvr) {
         	LOG_DBG("RV at receiver put to false");
@@ -1716,6 +1721,7 @@ int dtp_receive(struct dtp * instance,
                 instance->sv->rcv_left_window_edge = seq_num;
                 ringq_push(instance->to_post, du);
         }
+
         spin_unlock_bh(&instance->sv_lock);
 
         if (dtcp) {
