@@ -111,9 +111,15 @@ int default_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
                 }
 
                 spin_lock_bh(&dtcp->parent->sv_lock);
+
                 tr = dtcp->parent->sv->tr;
-                spin_unlock_bh(&dtcp->parent->sv_lock);
+
                 rtxq_ack(dtcp->parent->rtxq, seq_num, tr);
+
+                /* Update LWE */
+                dtcp->sv->snd_lft_win = seq_num + 1;
+
+                spin_unlock_bh(&dtcp->parent->sv_lock);
         }
 
         return 0;
@@ -200,7 +206,8 @@ int default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         spin_unlock_bh(&dtcp->parent->sv_lock);
 
         if (dtcp->sv->rendezvous_rcvr) {
-                LOG_INFO("DTCP: LWE: %u  RWE: %u -- PCI: lwe: %u, rwe: %u", LWE, RWE, lwe_p, rwe_p);
+                LOG_DBG("DTCP: LWE: %u  RWE: %u -- PCI: lwe: %u, rwe: %u",
+                	LWE, RWE, lwe_p, rwe_p);
         }
 
         return 0;
@@ -313,6 +320,9 @@ int default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
 	if (start_time == 0) {
 		LOG_DBG("RTTestimator: PDU %u has been retransmitted", sn);
 		return 0;
+	} else if (start_time == -1) {
+		/* The PDU being ACKed is no longer in the RTX queue */
+		return -1;
 	}
 
 	rtt_calculation(ps, start_time);
@@ -404,7 +414,8 @@ int default_rcvr_rendezvous(struct dtcp_ps * ps, const struct pci * pci)
 	}
 
 	atomic_inc(&dtcp->cpdus_in_transit);
-	LOG_INFO("DTCP 1st Sending FC to stop Rendezvous (CPU: %d)", smp_processor_id());
+	LOG_DBG("DTCP 1st Sending FC to stop Rendezvous (CPU: %d)",
+		smp_processor_id());
 
 	return ctrl_pdu_send(dtcp, PDU_TYPE_FC, true);
 }

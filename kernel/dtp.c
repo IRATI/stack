@@ -1258,7 +1258,6 @@ int dtp_write(struct dtp * instance,
               struct du * du)
 {
         struct dtcp *     dtcp;
-        struct rtxq *     rtxq;
         struct du *       cdu;
         struct dtp_ps *   ps;
         seq_num_t         sn, csn;
@@ -1356,10 +1355,24 @@ int dtp_write(struct dtp * instance,
 				/* Check if rendezvous PDU needs to be sent*/
 				start_rv_timer = false;
 				spin_lock_bh(&instance->sv_lock);
+
+				/* If there is rtx control and PDUs at the rtxQ
+				 * don't enter the rendezvous state (DTCP will keep
+				 * retransmitting the PDUs until acked or the
+				 * retransmission timeout fires)
+				 */
+				if (instance->sv->rexmsn_ctrl &&
+						rtxq_size(instance->rtxq) > 0) {
+					LOG_DBG("Window is closed but there are PDUs at the RTXQ");
+					spin_unlock_bh(&instance->sv_lock);
+					return 0;
+				}
+
+				/* Else, check if rendezvous PDU needs to be sent */
 				if (!instance->dtcp->sv->rendezvous_sndr) {
 					instance->dtcp->sv->rendezvous_sndr = true;
 
-                                        LOG_INFO("RV at the sender %u (CPU: %d)", csn, smp_processor_id());
+					LOG_DBG("RV at the sender %u (CPU: %d)", csn, smp_processor_id());
 
 					/* Start rendezvous timer, wait for Tr to fire */
 					start_rv_timer = true;
@@ -1368,7 +1381,7 @@ int dtp_write(struct dtp * instance,
 				spin_unlock_bh(&instance->sv_lock);
 
 				if (start_rv_timer) {
-					LOG_INFO("Window is closed. SND LWE: %u | SND RWE: %u | TR: %u",
+					LOG_DBG("Window is closed. SND LWE: %u | SND RWE: %u | TR: %u",
 							instance->dtcp->sv->snd_lft_win,
 							instance->dtcp->sv->snd_rt_wind_edge,
 							instance->sv->tr);
@@ -1393,16 +1406,14 @@ int dtp_write(struct dtp * instance,
 			}
                 }
                 if (instance->sv->rexmsn_ctrl) {
-                        /* FIXME: Add timer for PDU */
-                        rtxq = instance->rtxq;
                         cdu = du_dup_ni(du);
                         if (!cdu) {
-                                LOG_ERR("Failed to copy PDU");
-                                LOG_ERR("PDU type: %d", pci_type(&du->pci));
+                                LOG_ERR("Failed to copy PDU. PDU type: %d",
+                                	 pci_type(&du->pci));
                                 goto pdu_stats_err_exit;
                         }
 
-                        if (rtxq_push_ni(rtxq, cdu)) {
+                        if (rtxq_push_ni(instance->rtxq, cdu)) {
                                 LOG_ERR("Couldn't push to rtxq");
                                 goto pdu_stats_err_exit;
                         }
@@ -1567,7 +1578,7 @@ int dtp_receive(struct dtp * instance,
                 }
 #endif
                 if ((pci_flags_get(&du->pci) & PDU_FLAGS_DATA_RUN)) {
-                	    LOG_INFO("Data Run Flag");
+                	LOG_DBG("Data Run Flag");
                         instance->sv->drf_required = false;
                         instance->sv->rcv_left_window_edge = seq_num;
                         dtp_squeue_flush(instance);
@@ -1636,7 +1647,7 @@ int dtp_receive(struct dtp * instance,
 #endif
         /* This is an acceptable data PDU, stop reliable ACK timer */
         if (dtcp->sv->rendezvous_rcvr) {
-        	LOG_INFO("RV at receiver put to false");
+        	LOG_DBG("RV at receiver put to false");
         	dtcp->sv->rendezvous_rcvr = false;
         	rtimer_stop(&dtcp->rendezvous_rcv);
         }

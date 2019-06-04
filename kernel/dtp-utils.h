@@ -59,8 +59,6 @@ int		    rtxq_drop_pdus(struct rtxq * q);
 unsigned long       rtxq_entry_timestamp(struct rtxq * q,
                                          seq_num_t sn);
 int                 rtxq_entry_destroy(struct rtxq_entry * entry);
-int                 rtxq_push_sn(struct rtxq * q,
-                                 seq_num_t sn);
 int                 rtxq_push_ni(struct rtxq * q,
                                  struct du *  du);
 int                 rtxq_ack(struct rtxq * q,

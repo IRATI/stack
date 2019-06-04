@@ -176,7 +176,7 @@ int ctrl_pdu_send(struct dtcp * dtcp, pdu_type_t type, bool direct)
         struct du *   du;
 
         if (dtcp->sv->rendezvous_rcvr) {
-        	LOG_INFO("Generating FC PDU in RV at RCVR");
+        	LOG_DBG("Generating FC PDU in RV at RCVR");
         }
 
         du  = pdu_ctrl_generate(dtcp, type);
@@ -185,7 +185,7 @@ int ctrl_pdu_send(struct dtcp * dtcp, pdu_type_t type, bool direct)
         	return -1;
         }
         if (dtcp->sv->rendezvous_rcvr) {
-        	LOG_INFO("Generated FC PDU in RV at RCVR");
+        	LOG_DBG("Generated FC PDU in RV at RCVR");
         }
 
         if (direct) {
@@ -219,7 +219,7 @@ static void tf_rendezvous_rcv(struct timer_list * tl)
         bool         start_rv_rcv_timer;
         timeout_t    rv;
 
-        LOG_INFO("Running rendezvous-at-receiver timer...");
+        LOG_DBG("Running rendezvous-at-receiver timer...");
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         dtcp = (struct dtcp *) data;
 #else
@@ -242,11 +242,14 @@ static void tf_rendezvous_rcv(struct timer_list * tl)
 	spin_unlock_bh(&dtp->sv_lock);
 
 	if (start_rv_rcv_timer) {
-		LOG_INFO("DTCP Sending FC: RCV LWE: %u | RCV RWE: %u",
-					dtp->sv->rcv_left_window_edge, dtcp->sv->rcvr_rt_wind_edge);
+		LOG_DBG("DTCP Sending FC: RCV LWE: %u | RCV RWE: %u",
+			 dtp->sv->rcv_left_window_edge,
+			 dtcp->sv->rcvr_rt_wind_edge);
+
 		/* Send rendezvous PDU and start timer */
-    	atomic_inc(&dtcp->cpdus_in_transit);
-		ctrl_pdu_send(dtcp, PDU_TYPE_FC, true);
+		atomic_inc(&dtcp->cpdus_in_transit);
+			   ctrl_pdu_send(dtcp, PDU_TYPE_FC, true);
+
 		rtimer_start(&dtcp->rendezvous_rcv, rv);
 	}
 
@@ -442,11 +445,20 @@ static int rcv_ack(struct dtcp * dtcp,
         rcu_read_lock();
         ps = container_of(rcu_dereference(dtcp->base.ps),
                           struct dtcp_ps, base);
-	if (ps->rtx_ctrl && ps->rtt_estimator)
-        	ps->rtt_estimator(ps, pci_control_ack_seq_num(&du->pci));
+	if (ps->rtx_ctrl && ps->rtt_estimator) {
+        	if (ps->rtt_estimator(ps,
+        			      pci_control_ack_seq_num(&du->pci)) == -1) {
+        		/* Don't process this PDU anymore, it is ACKing a
+        		 * DT PDU that is not in the RTX queue (was already
+        		 * discarded)
+        		 */
+        		rcu_read_unlock();
+        		return 0;
+        	}
+	}
+
 	ret = ps->sender_ack(ps, seq);
         rcu_read_unlock();
-
 
         LOG_DBG("DTCP received ACK (CPU: %d)", smp_processor_id());
 
@@ -489,7 +501,7 @@ static int update_window_and_rate(struct dtcp * dtcp,
         if (dtcp->sv->rendezvous_sndr) {
         	dtcp->sv->rendezvous_sndr = false;
         	cancel_rv_timer = true;
-        	LOG_INFO("Stopping rendezvous timer");
+        	LOG_DBG("Stopping rendezvous timer");
         }
         spin_unlock_bh(&dtcp->parent->sv_lock);
 
@@ -543,11 +555,22 @@ static int rcv_ack_and_flow_ctl(struct dtcp * dtcp,
         rcu_read_lock();
         ps = container_of(rcu_dereference(dtcp->base.ps),
                           struct dtcp_ps, base);
+
+        if (ps->rtx_ctrl && ps->rtt_estimator) {
+        	if (ps->rtt_estimator(ps, seq) == -1) {
+        		/* Don't process this PDU anymore, it is ACKing a
+        		 * DT PDU that is not in the RTX queue (was already
+        		 * discarded)
+        		 */
+        		rcu_read_unlock();
+        		return 0;
+        	}
+        }
+
         /* This updates sender LWE */
-        if (ps->rtx_ctrl && ps->rtt_estimator)
-        		ps->rtt_estimator(ps, seq);
         if (ps->sender_ack(ps, seq))
                 LOG_ERR("Could not update RTXQ and LWE");
+
         rcu_read_unlock();
 
         LOG_DBG("DTCP received ACK-FC (CPU: %d)", smp_processor_id());
@@ -570,7 +593,7 @@ static int rcvr_rendezvous(struct dtcp * dtcp,
 		ret = 0;
         rcu_read_unlock();
 
-        LOG_INFO("DTCP received Rendezvous (CPU: %d)", smp_processor_id());
+        LOG_DBG("DTCP received Rendezvous (CPU: %d)", smp_processor_id());
 
         du_destroy(du);
 
@@ -787,7 +810,7 @@ EXPORT_SYMBOL(dtcp_ack_flow_control_pdu_send);
 int dtcp_rendezvous_pdu_send(struct dtcp * dtcp)
 {
 	atomic_inc(&dtcp->cpdus_in_transit);
-	LOG_INFO("DTCP Sending Rendezvous (CPU: %d)", smp_processor_id());
+	LOG_DBG("DTCP Sending Rendezvous (CPU: %d)", smp_processor_id());
 	return ctrl_pdu_send(dtcp, PDU_TYPE_RENDEZVOUS, true);
 }
 EXPORT_SYMBOL(dtcp_rendezvous_pdu_send);
