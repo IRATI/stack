@@ -28,8 +28,6 @@
 #include "ps-factory.h"
 #include "rds/robjects.h"
 
-#define DTP_INACTIVITY_TIMERS_ENABLE 1
-
 struct dtp * dtp_create(struct efcp *       efcp,
                         struct rmt *        rmt,
                         struct dtp_config * dtp_cfg,
@@ -50,6 +48,8 @@ int          dtp_sv_init(struct dtp * dtp,
 /* Sends a SDU to the DTP (DTP takes the ownership of the passed SDU) */
 int          dtp_write(struct dtp * instance,
                        struct du * du);
+
+void dtp_send_pending_ctrl_pdus(struct dtp * dtp);
 
 /* DTP receives a PDU from RMT */
 int          dtp_receive(struct dtp * instance,

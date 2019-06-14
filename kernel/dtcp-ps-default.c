@@ -34,6 +34,7 @@
 #include "dtp-utils.h"
 #include "du.h"
 #include "logs.h"
+#include "rds/rtimer.h"
 
 int default_lost_control_pdu(struct dtcp_ps * ps)
 {
@@ -110,9 +111,15 @@ int default_sender_ack(struct dtcp_ps * ps, seq_num_t seq_num)
                 }
 
                 spin_lock_bh(&dtcp->parent->sv_lock);
+
                 tr = dtcp->parent->sv->tr;
-                spin_unlock_bh(&dtcp->parent->sv_lock);
+
                 rtxq_ack(dtcp->parent->rtxq, seq_num, tr);
+
+                /* Update LWE */
+                dtcp->sv->snd_lft_win = seq_num + 1;
+
+                spin_unlock_bh(&dtcp->parent->sv_lock);
         }
 
         return 0;
@@ -166,7 +173,6 @@ int default_receiving_flow_control(struct dtcp_ps * ps, const struct pci * pci)
                 return -1;
 
         LOG_DBG("DTCP Sending FC (CPU: %d)", smp_processor_id());
-        dump_we(dtcp, &du->pci);
 
         if (dtcp_pdu_send(dtcp, du))
                return -1;
@@ -179,6 +185,8 @@ int default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         struct dtcp * dtcp = ps->dm;
         seq_num_t LWE;
         seq_num_t RWE;
+        seq_num_t lwe_p;
+        seq_num_t rwe_p;
 
         if (!dtcp) {
                 LOG_ERR("No instance passed, cannot run policy");
@@ -188,6 +196,8 @@ int default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
                 LOG_ERR("No PCI passed, cannot run policy");
                 return -1;
         }
+        lwe_p = pci_control_new_left_wind_edge(pci);
+        rwe_p = pci_control_new_rt_wind_edge(pci);
 
         spin_lock_bh(&dtcp->parent->sv_lock);
         LWE = dtcp->parent->sv->rcv_left_window_edge;
@@ -195,8 +205,10 @@ int default_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
         RWE = dtcp->sv->rcvr_rt_wind_edge;
         spin_unlock_bh(&dtcp->parent->sv_lock);
 
-        LOG_DBG("DTCP: %pK", dtcp);
-        LOG_DBG("LWE: %u  RWE: %u", LWE, RWE);
+        if (dtcp->sv->rendezvous_rcvr) {
+                LOG_DBG("DTCP: LWE: %u  RWE: %u -- PCI: lwe: %u, rwe: %u",
+                	LWE, RWE, lwe_p, rwe_p);
+        }
 
         return 0;
 }
@@ -308,6 +320,9 @@ int default_rtt_estimator(struct dtcp_ps * ps, seq_num_t sn)
 	if (start_time == 0) {
 		LOG_DBG("RTTestimator: PDU %u has been retransmitted", sn);
 		return 0;
+	} else if (start_time == -1) {
+		/* The PDU being ACKed is no longer in the RTX queue */
+		return -1;
 	}
 
 	rtt_calculation(ps, start_time);
@@ -338,6 +353,73 @@ int default_rtt_estimator_nortx(struct dtcp_ps * ps, seq_num_t sn)
 	return 0;
 }
 
+int default_rcvr_rendezvous(struct dtcp_ps * ps, const struct pci * pci)
+{
+	struct dtcp *       dtcp;
+	seq_num_t rcv_lft, rcv_rt, snd_lft, snd_rt;
+	timeout_t rv;
+
+	if (!ps)
+		return -1;
+	dtcp = ps->dm;
+	if (!dtcp)
+		return -1;
+
+	spin_lock_bh(&dtcp->parent->sv_lock);
+	/* TODO: check if retransmission control enabled */
+
+	if (dtcp->parent->sv->window_based) {
+		rcv_lft = pci_control_new_left_wind_edge(pci);
+		rcv_rt = pci_control_new_rt_wind_edge(pci);
+		snd_lft = pci_control_my_left_wind_edge(pci);
+		snd_rt = pci_control_my_rt_wind_edge(pci);
+
+		/* Check Consistency of the Receiving Window values with the
+		 * values in the PDU.
+		 */
+		if (dtcp->sv->snd_lft_win != rcv_lft) {
+			/* TODO what to do? */
+		}
+
+		if (dtcp->sv->snd_rt_wind_edge != rcv_rt) {
+			/* TODO what to do? */
+		}
+		LOG_DBG("RCVR rendezvous. RCV LWE: %u | RCV RWE: %u || "
+				"SND LWE: %u | SND RWE: %u",
+			dtcp->parent->sv->rcv_left_window_edge,
+			dtcp->sv->rcvr_rt_wind_edge, snd_lft, snd_rt);
+
+		dtcp->sv->rcvr_rt_wind_edge = snd_lft + dtcp->sv->rcvr_credit;
+	}
+
+	if (dtcp->sv->flow_ctl && dtcp->parent->sv->rate_based) {
+		/* TODO implement */
+	}
+
+	/* TODO Receiver is in the Rendezvous-at-the-receiver state. The next PDU is
+	 * expected to have DRF bit set to true
+	 */
+
+	dtcp->sv->rendezvous_rcvr = true;
+
+	spin_unlock_bh(&dtcp->parent->sv_lock);
+
+	/* Send a ControlAck PDU to confirm reception of RendezvousPDU via
+	 * lastControlPDU value or send any other control PDU with Flow Control
+	 * information opening the window.
+	 */
+	if (dtcp->sv->rcvr_credit != 0) {
+		rv = jiffies_to_msecs(dtcp->parent->sv->tr);
+		rtimer_start(&dtcp->rendezvous_rcv, rv);
+	}
+
+	atomic_inc(&dtcp->cpdus_in_transit);
+	LOG_DBG("DTCP 1st Sending FC to stop Rendezvous (CPU: %d)",
+		smp_processor_id());
+
+	return ctrl_pdu_send(dtcp, PDU_TYPE_FC, true);
+}
+
 struct ps_base * dtcp_ps_default_create(struct rina_component * component)
 {
         struct dtcp * dtcp = dtcp_from_component(component);
@@ -354,7 +436,7 @@ struct ps_base * dtcp_ps_default_create(struct rina_component * component)
         ps->lost_control_pdu            = default_lost_control_pdu;
         if (ps->rtx_ctrl) {
         	ps->rtt_estimator = default_rtt_estimator;
-        } else {
+        } else if (ps->flow_ctrl) {
         	ps->rtt_estimator = default_rtt_estimator_nortx;
         }
         ps->retransmission_timer_expiry = NULL;
@@ -376,6 +458,7 @@ struct ps_base * dtcp_ps_default_create(struct rina_component * component)
         ps->rcvr_control_ack            = NULL;
         ps->no_rate_slow_down           = NULL;
         ps->no_override_default_peak    = NULL;
+        ps->rcvr_rendezvous             = default_rcvr_rendezvous;
 
         return &ps->base;
 }

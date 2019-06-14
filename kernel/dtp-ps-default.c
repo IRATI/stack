@@ -41,6 +41,7 @@
 int default_transmission_control(struct dtp_ps * ps, struct du * du)
 {
         struct dtp *  dtp;
+        struct dtcp * dtcp;
 
         dtp = ps->dm;
         if (!dtp) {
@@ -48,12 +49,14 @@ int default_transmission_control(struct dtp_ps * ps, struct du * du)
                 du_destroy(du);
                 return -1;
         }
+        dtcp = dtp->dtcp;
 
         /* Post SDU to RMT */
         LOG_DBG("defaultTxPolicy - sending to rmt");
 
         spin_lock_bh(&dtp->sv_lock);
         dtp->sv->max_seq_nr_sent = pci_sequence_number_get(&du->pci);
+        dtcp->sv->snd_lft_win = dtp->sv->max_seq_nr_sent;
         spin_unlock_bh(&dtp->sv_lock);
 
         LOG_DBG("local_soft_irq_pending: %d", local_softirq_pending());
@@ -170,6 +173,7 @@ int default_receiver_inactivity_timer(struct dtp_ps * ps)
         dtcp->sv->rcvr_rt_wind_edge = 0;
         dtp->sv->rcv_left_window_edge = 0;
         dtp_squeue_flush(dtp);
+        dtcp->sv->rendezvous_rcvr = false;
         dtp->sv->drf_required = true;
         spin_unlock_bh(&dtp->sv_lock);
 
@@ -208,6 +212,7 @@ int default_sender_inactivity_timer(struct dtp_ps * ps)
         snd_rt_win  = dtcp->sv->snd_rt_wind_edge;
         next_send   = dtp->sv->seq_nr_to_send;
         dtcp->sv->snd_rt_wind_edge = next_send + init_credit;
+        dtcp->sv->rendezvous_sndr = false;
         if (dtp->rttq) {
         	rttq_flush(dtp->rttq);
         }

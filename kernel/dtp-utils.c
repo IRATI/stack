@@ -37,8 +37,6 @@
 #include "rmt.h"
 #include "dtp-ps.h"
 
-#define RTIMER_ENABLED 1
-
 /* Maximum retransmission time is 60 seconds */
 #define MAX_RTX_WAIT_TIME msecs_to_jiffies(60000)
 
@@ -223,7 +221,6 @@ void cwq_deliver(struct cwq * queue,
                  struct dtp * dtp,
                  struct rmt * rmt)
 {
-        struct rtxq *  rtxq;
         struct dtcp *  dtcp;
         struct du  *   tmp;
         bool           rtx_ctrl;
@@ -255,8 +252,7 @@ void cwq_deliver(struct cwq * queue,
                         return;
                 }
                 if (rtx_ctrl) {
-                        rtxq = dtp->rtxq;
-                        if (!rtxq) {
+                        if (!dtp->rtxq) {
                                 spin_unlock(&queue->lock);
                                 LOG_ERR("Couldn't find the RTX queue");
                                 return;
@@ -266,7 +262,7 @@ void cwq_deliver(struct cwq * queue,
                                 spin_unlock(&queue->lock);
                                 return;
                         }
-                        rtxq_push_ni(rtxq, tmp);
+                        rtxq_push_ni(dtp->rtxq, tmp);
                 } else if (dtp->rttq) {
                 	if (rttq_push(dtp->rttq,
                 		      pci_sequence_number_get(du_pci(du)))) {
@@ -289,6 +285,7 @@ void cwq_deliver(struct cwq * queue,
 			}
                 }
                 dtp->sv->max_seq_nr_sent = pci_sequence_number_get(&du->pci);
+                dtcp->sv->snd_lft_win = dtp->sv->max_seq_nr_sent;
 
                 spin_unlock(&queue->lock);
                 dtp_pdu_send(dtp, rmt, du);
@@ -328,35 +325,6 @@ void cwq_deliver(struct cwq * queue,
         LOG_DBG("CWQ has delivered until %u", dtp->sv->max_seq_nr_sent);
 
         return;
-}
-
-/* NOTE: used only by dump_we */
-seq_num_t cwq_peek(struct cwq * queue)
-{
-        seq_num_t          ret;
-        struct du *        du;
-
-        spin_lock_bh(&queue->lock);
-        if (rqueue_is_empty(queue->q)){
-                spin_unlock_bh(&queue->lock);
-                return 0;
-        }
-
-        du = (struct du *) rqueue_head_pop(queue->q);
-        if (!du) {
-                spin_unlock_bh(&queue->lock);
-                return -1;
-        }
-
-        ret = pci_sequence_number_get(&du->pci);
-        if (rqueue_head_push_ni(queue->q, du)) {
-                spin_unlock_bh(&queue->lock);
-                du_destroy(du);
-                return ret;
-        }
-        spin_unlock_bh(&queue->lock);
-
-        return ret;
 }
 
 static struct rtxq_entry * rtxq_entry_create_gfp(struct du * du, gfp_t flag)
@@ -415,7 +383,7 @@ static struct rtxqueue * rtxqueue_create_gfp(gfp_t flags)
 static struct rtxqueue * rtxqueue_create(void)
 { return rtxqueue_create_gfp(GFP_KERNEL); }
 
-static int rtxqueue_flush(struct rtxqueue * q)
+static void rtxqueue_flush(struct rtxqueue * q)
 {
         struct rtxq_entry * cur, * n;
 
@@ -425,8 +393,6 @@ static int rtxqueue_flush(struct rtxqueue * q)
                 rtxq_entry_destroy(cur);
 		q->len --;
         }
-
-        return 0;
 }
 
 static int rtxqueue_destroy(struct rtxqueue * q)
@@ -453,7 +419,7 @@ static int rtxqueue_entries_ack(struct rtxqueue * q,
 
                 seq = pci_sequence_number_get(&cur->du->pci);
                 if (seq <= seq_num) {
-                        LOG_DBG("Seq num acked: %u", seq);
+                        LOG_DBG("Seq num acked: %u. Size %d", seq, q->len);
                         rtxq_entry_destroy(cur);
 			q->len--;
                 } else
@@ -537,19 +503,21 @@ unsigned long rtxqueue_entry_timestamp(struct rtxqueue * q, seq_num_t sn)
         list_for_each_entry(cur, &q->head, next) {
                 csn = pci_sequence_number_get(&cur->du->pci);
                 if (csn > sn) {
-                        LOG_WARN("PDU not in rtxq (duplicate ACK). Received "
-                        		"SN: %u, RtxQ SN: %u", sn, csn);
-                        return 0;
+                        LOG_WARN("PDU not in rtxq. Received "
+                        		"SN: %u, RtxQ SN: %u. Size: %u",
+					sn, csn, q->len);
+                        return -1;
                 }
                 if (csn == sn) {
                 	/* Ignore time_stamps from retransmitted PDUs */
                         if (cur->retries != 0)
                         	return 0;
+
                         return cur->time_stamp;
                 }
         }
 
-        return 0;
+        return -1;
 }
 
 /* push in seq_num order */
@@ -580,12 +548,12 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct du * du)
         if (csn == psn) {
                 LOG_ERR("Another PDU with the same seq_num %u, is in "
                         "the rtx queue!", csn);
-                return 0;
+                return -1;
         }
         if (csn > psn) {
                 list_add_tail(&tmp->next, &q->head);
 		q->len++;
-                LOG_DBG("Last PDU with seqnum: %u push to rtxq at: %pk",
+		LOG_DBG("Last PDU with seqnum: %u push to rtxq at: %pk",
                         csn, q);
                 return 0;
         }
@@ -595,20 +563,20 @@ static int rtxqueue_push_ni(struct rtxqueue * q, struct du * du)
                 if (csn == psn) {
                         LOG_ERR("Another PDU with the same seq_num is in "
                                 "the rtx queue!");
-                        return 0;
+                        return -1;
                 }
                 if (csn > psn) {
                         list_add(&tmp->next, &cur->next);
 			q->len++;
-                        LOG_DBG("Middle PDU with seqnum: %u push to "
+			LOG_DBG("Middle PDU with seqnum: %u push to "
                                 "rtxq at: %pk", csn, q);
                         return 0;
                 }
         }
 
-        LOG_DBG("PDU not pushed!");
+        LOG_ERR("PDU not pushed!");
 
-        return 0;
+        return -1;
 }
 
 /* Exponential backoff after each retransmission */
@@ -623,46 +591,53 @@ static unsigned long time_to_rtx(struct rtxq_entry * cur, unsigned int tr)
 	return cur->time_stamp + rtx_wtime;
 }
 
-static int rtxqueue_rtx(struct rtxqueue * q,
-                        unsigned int      tr,
-                        struct dtp *      dtp,
-                        struct rmt *      rmt,
-                        uint_t            data_rtx_max)
+/* Called while holding the rtx queueu lock */
+static int rtxqueue_rtx(struct rtxq * q,
+                        unsigned int tr,
+                        struct dtp * dtp,
+                        uint_t       data_rtx_max)
 {
         struct rtxq_entry * cur, * n;
         struct du *        tmp;
         seq_num_t           seq = 0;
         // Used by rbfc.
         struct dtcp *	    dtcp;
-        int sz;
-        uint_t sc;
+        int sz, res;
+        uint_t sc, dropped_sn, dropped_pdus, cwq_max_size;
+        bool start_rv_timer;
+        timeout_t rv;
 
         ASSERT(q);
         ASSERT(dt);
         ASSERT(rmt);
 
         dtcp = dtp->dtcp;
+        dropped_pdus = 0;
+        dropped_sn = 0;
 
-        list_for_each_entry_safe(cur, n, &q->head, next) {
+        list_for_each_entry_safe(cur, n, &q->queue->head, next) {
                 seq = pci_sequence_number_get(&cur->du->pci);
+
                 LOG_DBG("Checking RTX PDU %u, now: %lu >?< %lu + %u",
                         seq, jiffies, cur->time_stamp, tr);
+
                 if (time_before_eq(time_to_rtx(cur, tr), jiffies)) {
                         cur->retries++;
-                        cur->time_stamp = jiffies;
                         if (cur->retries >= data_rtx_max) {
-                                LOG_ERR("Maximum number of rtx has been "
-                                        "achieved for SeqN %u. Can't "
-                                        "maintain QoS", seq);
+                                LOG_WARN("Maximum number of rtx has been "
+                                        "achieved for SeqN %u. Dropping "
+                                        "PDU, data is lost", seq);
                                 rtxq_entry_destroy(cur);
-				q->len--;
-				q->drop_pdus++;
+				q->queue->len--;
+				q->queue->drop_pdus++;
+				dropped_pdus++;
+				if (seq > dropped_sn)
+					dropped_sn = seq;
                                 continue;
                         }
-                        if(dtp &&
-				dtcp &&
-				dtcp_rate_based_fctrl(dtcp->cfg)) {
 
+                        if (dtp && dtcp &&
+                            dtcp_rate_based_fctrl(dtcp->cfg)) {
                         	sz = du_data_len(cur->du);
 				sc = dtcp->sv->pdus_sent_in_time_unit;
 
@@ -681,11 +656,15 @@ static int rtxqueue_rtx(struct rtxqueue * q,
 					break;
 				}
                         }
+
                         tmp = du_dup_ni(cur->du);
-                        if (dtp_pdu_send(dtp,
-                                         rmt,
-                                         tmp))
-                                continue;
+
+                        spin_unlock(&q->lock);
+                        res = dtp_pdu_send(dtp, q->rmt, tmp);
+                        spin_lock(&q->lock);
+
+                        if (res) continue;
+
                         LOG_DBG("Retransmitted PDU with seqN %u", seq);
                 } else {
                         LOG_DBG("RTX timer: from here PDUs still have time,"
@@ -695,6 +674,46 @@ static int rtxqueue_rtx(struct rtxqueue * q,
         }
 
         LOG_DBG("RTXQ %pK has delivered until %u", q, seq);
+
+        start_rv_timer = false;
+        if (dropped_pdus) {
+        	spin_lock_bh(&dtcp->parent->sv_lock);
+
+        	/* Move LWE */
+        	if (dtcp->sv->snd_lft_win < dropped_sn)
+        		dtcp->sv->snd_lft_win = dropped_sn;
+
+        	/* TODO, check if we need to move RWE? */
+
+        	/* If RTXQ is empty and CWQ is full, activate rendezvous */
+        	cwq_max_size = dtcp_max_closed_winq_length(dtcp->cfg);
+        	if (q->queue->len == 0 &&
+        			cwq_size(dtcp->parent->cwq) == cwq_max_size) {
+        		/* Check if rendezvous PDU needs to be sent*/
+        		if (!dtcp->sv->rendezvous_sndr) {
+        			dtcp->sv->rendezvous_sndr = true;
+
+        			LOG_DBG("RV at the sender (CPU: %d)",
+        				  smp_processor_id());
+
+        			/* Start rendezvous timer, wait for Tr to fire */
+        			start_rv_timer = true;
+        			rv = jiffies_to_msecs(dtcp->parent->sv->tr);
+        		}
+        	}
+
+        	spin_unlock_bh(&dtcp->parent->sv_lock);
+        }
+
+	if (start_rv_timer) {
+		LOG_DBG("Window is closed. SND LWE: %u | SND RWE: %u | TR: %u",
+				dtcp->sv->snd_lft_win,
+				dtcp->sv->snd_rt_wind_edge,
+				dtcp->parent->sv->tr);
+
+		/* Send rendezvous PDU and start time */
+		rtimer_start(&dtcp->parent->timers.rendezvous, rv);
+	}
 
         return 0;
 }
@@ -733,22 +752,14 @@ static void rtx_timer_func(struct timer_list * tl)
         tr = dtp->sv->tr;
 
         spin_lock(&q->lock);
-        if (rtxqueue_rtx(q->queue,
-                         tr,
-                         dtp,
-                         q->rmt,
+        if (rtxqueue_rtx(q, tr, dtp,
 			 dtp->dtcp->cfg->rxctrl_cfg->data_retransmit_max))
                 LOG_ERR("RTX failed");
 
-#if RTIMER_ENABLED
         if (!rtxqueue_empty(q->queue))
                 rtimer_restart(&dtp->timers.rtx, tr);
-        LOG_DBG("RTX timer ending...");
-#endif
 
         spin_unlock(&q->lock);
-
-        return;
 }
 
 int rtxq_destroy(struct rtxq * q)
@@ -781,10 +792,7 @@ struct rtxq * rtxq_create(struct dtp * dtp,
         if (!tmp)
                 return NULL;
 
-#if RTIMER_ENABLED
-        //data->data_retransmit_max = dtcp_cfg->rxctrl_cfg->data_retransmit_max;
         rtimer_init(rtx_timer_func, &dtp->timers.rtx, dtp);
-#endif
 
         tmp->queue = rtxqueue_create();
         if (!tmp->queue) {
@@ -846,27 +854,32 @@ EXPORT_SYMBOL(rtxq_entry_timestamp);
 int rtxq_push_ni(struct rtxq * q,
                  struct du *  du)
 {
+	int res;
+
         spin_lock_bh(&q->lock);
-#if RTIMER_ENABLED
+
         /* is the first transmitted PDU */
         rtimer_start(&q->parent->timers.rtx, q->parent->sv->tr);
-#endif
-        rtxqueue_push_ni(q->queue, du);
+
+        res = rtxqueue_push_ni(q->queue, du);
+
         spin_unlock_bh(&q->lock);
-        return 0;
+
+        return res;
 }
+EXPORT_SYMBOL(rtxq_push_ni);
 
 int rtxq_flush(struct rtxq * q)
 {
         if (!q || !q->queue)
                 return -1;
 
-#if RTIMER_ENABLED
         rtimer_stop(&q->parent->timers.rtx);
-#endif
+
         spin_lock(&q->lock);
         rtxqueue_flush(q->queue);
         spin_unlock(&q->lock);
+
         return 0;
 
 }
@@ -876,17 +889,20 @@ int rtxq_ack(struct rtxq * q,
              seq_num_t     seq_num,
              unsigned int  tr)
 {
+	int res;
+
         if (!q)
                 return -1;
 
         spin_lock_bh(&q->lock);
-        rtxqueue_entries_ack(q->queue, seq_num);
-#if RTIMER_ENABLED
+
+        res = rtxqueue_entries_ack(q->queue, seq_num);
+
         rtimer_restart(&q->parent->timers.rtx, tr);
-#endif
+
         spin_unlock_bh(&q->lock);
 
-        return 0;
+        return res;
 }
 EXPORT_SYMBOL(rtxq_ack);
 
@@ -915,12 +931,11 @@ int rtxq_nack(struct rtxq * q,
                               q->rmt,
                               seq_num,
                               data_retransmit_max);
-#if RTIMER_ENABLED
         if (rtimer_restart(&q->parent->timers.rtx, tr)) {
                 spin_unlock(&q->lock);
                 return -1;
         }
-#endif
+
         spin_unlock(&q->lock);
 
         return 0;
@@ -935,11 +950,16 @@ int dtp_pdu_send(struct dtp *  dtp,
 
 	/* Remote flow case */
 	if (pci_source(&du->pci) != pci_destination(&du->pci)) {
-	        if (rmt_send(rmt, du)) {
-	                LOG_ERR("Problems sending PDU to RMT");
-	                return -1;
-	        }
-	        return 0;
+		if (dtp->dtcp->sv->rendezvous_rcvr) {
+			LOG_INFO("Sending to RMT in RV at RCVR");
+		}
+
+		if (rmt_send(rmt, du)) {
+			LOG_ERR("Problems sending PDU to RMT");
+			return -1;
+		}
+
+		return 0;
 	}
 
 	/* Local flow case */
