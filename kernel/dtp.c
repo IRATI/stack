@@ -22,6 +22,7 @@
  */
 
 #include <linux/random.h>
+#include <linux/uaccess.h>
 #include <linux/version.h>
 
 #define RINA_PREFIX "dtp"
