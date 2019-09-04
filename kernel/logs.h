@@ -25,6 +25,7 @@
 #error You must define RINA_PREFIX before including this file
 #endif
 
+#include <linux/interrupt.h>
 #include <linux/kernel.h>
 
 #define LOG_VERB_EMERG   1
