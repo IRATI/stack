@@ -2212,8 +2212,9 @@ EXPORT_SYMBOL(kipcm_find_ipcp);
 /* ONLY USED BY APPS */
 int kipcm_du_write(struct kipcm * kipcm,
                    port_id_t      port_id,
-		   const char __user *buffer,
-		   size_t size,
+		   const char __user * buffer,
+		   struct iov_iter * iov,
+		   ssize_t size,
                    bool blocking)
 {
         IRQ_BARRIER;
@@ -2223,7 +2224,8 @@ int kipcm_du_write(struct kipcm * kipcm,
                 return -EINVAL;
         }
 
-        return kfa_flow_ub_write(kipcm->kfa, port_id, buffer, size, blocking);
+        return kfa_flow_ub_write(kipcm->kfa, port_id, buffer, iov, 
+				 size, blocking);
 }
 
 int kipcm_du_read(struct kipcm * kipcm,

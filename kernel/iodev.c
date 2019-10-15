@@ -52,9 +52,8 @@ struct iodev_priv {
         struct iowaitqs * wqs;
 };
 
-static ssize_t
-iodev_write(struct file *f, const char __user *buffer, size_t size,
-            loff_t *ppos)
+static ssize_t iodev_write(struct file *f, const char __user *buffer, 
+			   size_t size, loff_t *ppos)
 {
         struct iodev_priv *priv = f->private_data;
         bool blocking = !(f->f_flags & O_NONBLOCK);
@@ -69,14 +68,37 @@ iodev_write(struct file *f, const char __user *buffer, size_t size,
 
         ASSERT(default_kipcm);
         retval = kipcm_du_write(default_kipcm, priv->port_id, buffer,
-        			size, blocking);
+        			NULL, size, blocking);
         LOG_DBG("SDU write returned %zd", retval);
 
         return retval;
 }
 
-static ssize_t
-iodev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
+static ssize_t iodev_write_iter(struct kiocb * kcb, struct iov_iter * iov) 
+{
+	struct file * f = kcb->ki_filp;
+	struct iodev_priv * priv = f->private_data;
+	bool blocking = !(f->f_flags & O_NONBLOCK);
+	size_t size = iov_iter_count(iov);
+	ssize_t retval;
+
+	LOG_INFO("Syscall writev SDU, port-id = %d", priv->port_id);
+
+	if (!kcb || !iov) {
+		return -EINVAL;
+	}
+
+	ASSERT(default_kipcm);
+	retval = kipcm_du_write(default_kipcm, priv->port_id, NULL,
+				iov, size, blocking);
+
+	LOG_INFO("SDU write returned %zd", retval);
+
+	return retval;
+}
+
+static ssize_t iodev_read(struct file *f, char __user *buffer, 
+			  size_t size, loff_t *ppos)
 {
         struct iodev_priv *priv = f->private_data;
         bool blocking = !(f->f_flags & O_NONBLOCK);
@@ -131,11 +153,16 @@ iodev_read(struct file *f, char __user *buffer, size_t size, loff_t *ppos)
         return retsize;
 }
 
+static ssize_t iodev_read_iter(struct kiocb * kio, struct iov_iter * iov)
+{
+	LOG_INFO("iov_read_iter called: %p, %p", kio, iov);
+	return 0;
+}	
+
 /* Conservative implementation: we always pretend to be ready.
  * This needs to be implemented properly once it is possible to
  * ask lower layers for the status of receive/send queues. */
-static unsigned int
-iodev_poll(struct file *f, poll_table *wait)
+static unsigned int iodev_poll(struct file *f, poll_table *wait)
 {
         struct kfa *kfa = kipcm_kfa(default_kipcm);
         struct iodev_priv *priv = f->private_data;
@@ -158,8 +185,7 @@ iodev_poll(struct file *f, poll_table *wait)
         return mask;
 }
 
-static int
-iodev_open(struct inode *inode, struct file *f)
+static int iodev_open(struct inode *inode, struct file *f)
 {
         struct iodev_priv *priv;
 
@@ -183,8 +209,7 @@ iodev_open(struct inode *inode, struct file *f)
         return 0;
 }
 
-static int
-iodev_release(struct inode *inode, struct file *f)
+static int iodev_release(struct inode *inode, struct file *f)
 {
 	struct kfa *kfa = kipcm_kfa(default_kipcm);
         struct iodev_priv *priv = f->private_data;
@@ -206,8 +231,7 @@ iodev_release(struct inode *inode, struct file *f)
         return 0;
 }
 
-static long
-iodev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
+static long iodev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 {
         struct kfa *kfa = kipcm_kfa(default_kipcm);
         struct iodev_priv *priv = f->private_data;
@@ -271,8 +295,8 @@ iodev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 }
 
 #ifdef CONFIG_COMPAT
-static long
-iodev_compat_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
+static long iodev_compat_ioctl(struct file *f, unsigned int cmd, 
+			       unsigned long arg)
 {
 	return iodev_ioctl(f, cmd, (unsigned long) compat_ptr(arg));
 }
@@ -284,6 +308,8 @@ static const struct file_operations irati_fops = {
         .open           = iodev_open,
         .write          = iodev_write,
         .read           = iodev_read,
+	.write_iter	= iodev_write_iter,
+	.read_iter	= iodev_read_iter,
         .poll           = iodev_poll,
         .unlocked_ioctl = iodev_ioctl,
 #ifdef CONFIG_COMPAT
@@ -298,8 +324,7 @@ static struct miscdevice irati_misc = {
         .fops = &irati_fops,
 };
 
-int
-iodev_init(void)
+int iodev_init(void)
 {
         int ret;
 
@@ -312,11 +337,11 @@ iodev_init(void)
         return ret;
 }
 
-void
-iodev_fini(void)
+void iodev_fini(void)
 {
         misc_deregister(&irati_misc);
 }
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Vincenzo Maffione <v.maffione@nextworks.it>");
+MODULE_AUTHOR("Eduard Grasa <eduard.grasa@i2cat.net>");

@@ -44,6 +44,7 @@ int	    kfa_port_id_release(struct kfa *instance,
 int	    kfa_flow_ub_write(struct kfa * kfa,
 			      port_id_t   id,
 			      const char __user *buffer,
+			      struct iov_iter * iov,
 			      size_t size,
                               bool blocking);
 

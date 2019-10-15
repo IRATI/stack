@@ -431,14 +431,15 @@ static int enable_write(struct ipcp_instance_data *data, port_id_t id)
 }
 
 int kfa_flow_ub_write(struct kfa * instance,
-		      port_id_t		  id,
+		      port_id_t    id,
 		      const char __user * buffer,
+		      struct iov_iter * iov,
 		      size_t size,
-                      bool                blocking)
+                      bool   blocking)
 {
 	struct ipcp_flow     *flow;
 	struct ipcp_instance *ipcp;
-	int		      retval = 0;
+	int    retval = 0;
 	struct iowaitqs * wqs = 0;
 	struct du * du = 0;
 	size_t left = size;
@@ -485,7 +486,18 @@ int kfa_flow_ub_write(struct kfa * instance,
 		}
 
 		/* NOTE: We don't handle partial copies */
-		if (copy_from_user(du_buffer(du), buffer + data_written, copylen)) {
+		retval = 0;
+		if (buffer) {
+			retval = copy_from_user(du_buffer(du), 
+						buffer + data_written, 
+						copylen);
+		} else {
+			if (copy_from_iter(du_buffer(du), 
+					   copylen, 
+					   iov) != copylen) retval = 1;
+		}
+
+		if (retval) {
 			du_destroy(du);
 			retval = -EIO;
 			goto finish;
