@@ -82,7 +82,7 @@ static ssize_t iodev_write_iter(struct kiocb * kcb, struct iov_iter * iov)
 	size_t size = iov_iter_count(iov);
 	ssize_t retval;
 
-	LOG_INFO("Syscall writev SDU, port-id = %d", priv->port_id);
+	LOG_DBG("Syscall writev SDU, port-id = %d", priv->port_id);
 
 	if (!kcb || !iov) {
 		return -EINVAL;
@@ -92,9 +92,69 @@ static ssize_t iodev_write_iter(struct kiocb * kcb, struct iov_iter * iov)
 	retval = kipcm_du_write(default_kipcm, priv->port_id, NULL,
 				iov, size, blocking);
 
-	LOG_INFO("SDU write returned %zd", retval);
+	LOG_DBG("SDU write returned %zd", retval);
 
 	return retval;
+}
+
+static ssize_t common_read(size_t size, bool blocking, port_id_t port_id, 
+			   char __user * buffer, struct iov_iter * iov)
+{
+	struct du * tmp;
+	ssize_t retval;
+	bool partial_read;
+	size_t retsize;
+	unsigned char * data;
+
+	tmp = NULL;
+
+	ASSERT(default_kipcm);
+	retval = kipcm_du_read(default_kipcm, 
+			       port_id,
+			       &tmp,
+			       size,
+			       blocking);
+
+	/* Taking ownership from the internal layers */
+
+	LOG_DBG("SDU read returned %zd", retval);
+
+	if (retval <= 0) {
+		return retval;
+	}
+
+	if (!is_du_ok(tmp)) {
+		return -EIO;
+	}
+
+	retsize = retval;
+	partial_read = retsize > size;
+	data = du_buffer(tmp);
+	if (partial_read) {
+		retsize = size;
+	}
+
+	if (buffer) {
+		if (copy_to_user(buffer, data, retsize)) {
+			LOG_ERR("Error copying data to user space");
+			du_destroy(tmp);
+			return -EIO;
+		}
+	} else {
+		if (copy_to_iter(data, retsize, iov) != retsize) {
+			LOG_ERR("Error copying data to user space");
+			du_destroy(tmp);
+			return -EIO;
+		}
+	}
+
+	if (partial_read) {
+		du_consume_data(tmp, size);
+	} else {
+		du_destroy(tmp);
+	}
+
+	return retsize;
 }
 
 static ssize_t iodev_read(struct file *f, char __user *buffer, 
@@ -102,61 +162,23 @@ static ssize_t iodev_read(struct file *f, char __user *buffer,
 {
         struct iodev_priv *priv = f->private_data;
         bool blocking = !(f->f_flags & O_NONBLOCK);
-        bool partial_read;
-        ssize_t retval;
-        struct du *tmp;
-        unsigned char * data;
-        size_t retsize;
 
         LOG_DBG("Syscall read SDU (size = %zd, port-id = %d)",
                 size, priv->port_id);
-
-        tmp = NULL;
-
-        ASSERT(default_kipcm);
-        retval = kipcm_du_read(default_kipcm,
-        		       priv->port_id,
-			       &tmp,
-			       size,
-			       blocking);
-        /* Taking ownership from the internal layers */
-
-        LOG_DBG("SDU read returned %zd", retval);
-
-        if (retval <= 0) {
-                return retval;
-        }
-
-        if (!is_du_ok(tmp)) {
-                return -EIO;
-        }
-
-        retsize = retval;
-        partial_read = retsize > size;
-        data = du_buffer(tmp);
-        if (partial_read) {
-        	retsize = size;
-        }
-
-        if (copy_to_user(buffer, data, retsize)) {
-                LOG_ERR("Error copying data to user-space");
-                du_destroy(tmp);
-                return -EIO;
-        }
-
-        if (partial_read) {
-        	du_consume_data(tmp, size);
-        }else{
-        	du_destroy(tmp);
-        }
-
-        return retsize;
+	
+	return common_read(size, blocking, priv->port_id, buffer, NULL);
 }
 
 static ssize_t iodev_read_iter(struct kiocb * kio, struct iov_iter * iov)
 {
-	LOG_INFO("iov_read_iter called: %p, %p", kio, iov);
-	return 0;
+	struct file * f = kio->ki_filp;
+	struct iodev_priv * priv = f->private_data;
+	size_t size = iov_iter_count(iov);
+	bool blocking = !(f->f_flags & O_NONBLOCK);
+
+	LOG_DBG("iov_read_iter called: %p, %p", kio, iov);
+
+	return common_read(size, blocking, priv->port_id, NULL, iov);
 }	
 
 /* Conservative implementation: we always pretend to be ready.
