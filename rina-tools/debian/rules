@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+
+DIST = $(shell lsb_release -sc)
+
+debian/changelog:
+	[ ! -e $@ ] || rm $@
+	date=`git log -1 --date=short --format=%cd` && \
+	dver=`git describe --dirty` && \
+	dver=`echo $$dver |sed -r 's/-(dirty)$$/+\1/; s/^v(.+)-/\1./'` && \
+	dch -pv "$$dver" --package rina-tools --create --force-distribution \
+		-D $(DIST) "New snapshot $$date."
+
+%:
+	dh $@ --with autoreconf
+
+.PHONY: debian/changelog

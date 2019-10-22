@@ -1,0 +1,4 @@
+usr/lib/*/*.so.*
+usr/lib/*/rinad/ipcp/*.so
+usr/lib/*/rinad/ipcp/*.so.*
+usr/lib/*/rinad/ipcp/*.manifest

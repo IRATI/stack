@@ -1,0 +1,8 @@
+#!/bin/sh -e
+eval `git log -1 --date=short --format='hash=%h date=%cd'`
+kver=`make kernelversion`
+makefile_hash=`git log -1 --format=%H Makefile`
+kver=$kver+rina`git rev-list --count $makefile_hash..`.g$hash-1
+version=`git describe --dirty`
+
+exec dch --release-heuristic log -pv $kver "$@" "New snapshot $version ($date)."

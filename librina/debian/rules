@@ -1,0 +1,23 @@
+#!/usr/bin/make -f
+
+DIST = $(shell lsb_release -sc)
+
+debian/changelog:
+	[ ! -e $@ ] || rm $@
+	date=`git log -1 --date=short --format=%cd` && \
+	dver=`git describe --dirty` && \
+	dver=`echo $$dver |sed -r 's/-(dirty)$$/+\1/; s/^v(.+)-/\1./'` && \
+	dch -pv "$$dver" --package librina --create --force-distribution \
+		-D $(DIST) "New snapshot $$date."
+
+%:
+	dh $@ --with autoreconf
+
+override_dh_auto_build-indep:
+	cd doc && make doxygen-doc
+
+# TODO: librina-java package for Java bindings.
+#override_dh_auto_configure:
+#	dh_auto_configure -- --enable-java-bindings
+
+.PHONY: debian/changelog
