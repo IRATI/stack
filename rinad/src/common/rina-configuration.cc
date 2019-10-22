@@ -30,6 +30,10 @@
 #include <list>
 #include <map>
 
+#include <cstddef>
+#include <stdint.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
 using namespace std;
 
@@ -176,6 +180,47 @@ bool DIFTemplate::lookup_ipcp_address(
         }
 
         return false;
+}
+
+unsigned int KnownIPCProcessAddress::resolve(
+        const rina::ApplicationProcessNamingInformation &dif_name,
+        const std::string& process_name,
+        const std::string& process_instance)
+{
+#define RESOLVE_SOCK_PATH "rina.resolve_ipcp_address"
+        static const struct sockaddr_un sa_un = {
+                AF_UNIX,
+                "\0" RESOLVE_SOCK_PATH
+        };
+        static int fd = -1;
+
+        uint32_t address;
+        std::string req = dif_name.processName + '\n'
+                        + process_name + '\n'
+                        + process_instance;
+
+        for (int attempt = 0; attempt < 2; attempt++) {
+                if (fd < 0) {
+                        fd = socket(sa_un.sun_family, SOCK_STREAM, 0);
+                        if (fd < 0)
+                                break;
+                        if (connect(fd, reinterpret_cast
+                                        <const struct sockaddr *>(&sa_un),
+                                    offsetof(struct sockaddr_un, sun_path)
+                                    + sizeof RESOLVE_SOCK_PATH)) {
+                                close(fd);
+                                fd = -1;
+                                break;
+                        }
+                }
+                if (send(fd, req.data(), req.size(), 0) == req.size() &&
+                    recv(fd, &address, sizeof address, 0) == sizeof address)
+                        return address;
+                close(fd);
+                fd = -1;
+        }
+        return 0;
+#undef RESOLVE_SOCK_PATH
 }
 
 std::string DIFTemplate::toString()

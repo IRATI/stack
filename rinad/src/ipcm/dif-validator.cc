@@ -223,7 +223,7 @@ bool DIFConfigValidator::knownIPCProcessAddresses()
 	std::list<rina::StaticIPCProcessAddress> staticAddress =
 			dif_info_.dif_configuration_.nsm_configuration_.
 			addressing_configuration_.static_address_;
-	bool result = staticAddress.begin() != staticAddress.end();
+	bool result = true;
 	for (std::list<rina::StaticIPCProcessAddress>::iterator it =
 			staticAddress.begin();
 	     it != staticAddress.end();
