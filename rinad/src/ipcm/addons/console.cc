@@ -867,8 +867,8 @@ IPCMConsole::IPCMConsole(const string& socket_path_) :
 	commands_map["list-da-map"] = new ListDIFAllocatorMapCmd(this);
 	commands_map["register-ip-prefix"] = new RegisterIPPrefixConsoleCmd(this);
 	commands_map["unregister-ip-prefix"] = new UnegisterIPPrefixConsoleCmd(this);
-	//commands_map["allocate-iporina-flow"] = new AllocateIPoRINAFlowConsoleCmd(this);
-	//commands_map["deallocate-iporina-flow"] = new DeallocateIPoRINAFlowConsoleCmd(this);
+	commands_map["allocate-iporina-flow"] = new AllocateIPoRINAFlowConsoleCmd(this);
+	commands_map["deallocate-iporina-flow"] = new DeallocateIPoRINAFlowConsoleCmd(this);
 }
 
 int IPCMConsole::plugin_load_unload(vector<string>& args, bool load)
