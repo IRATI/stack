@@ -40,6 +40,7 @@
 #include "dif-template-manager.h"
 #include "catalog.h"
 #include "process-event-listener.h"
+#include "ip-vpn-manager.h"
 
 //Addons
 #include "addon.h"
@@ -551,6 +552,27 @@ public:
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_SUCCESS
 	ipcm_res_t update_catalog(Addon* callee);
 
+	ipcm_res_t register_ip_prefix_to_dif(Promise* promise,
+					     const std::string& ip_range,
+					     const rina::ApplicationProcessNamingInformation& difName);
+
+	ipcm_res_t unregister_ip_prefix_from_dif(Promise* promise,
+					         const std::string& ip_range,
+						 const rina::ApplicationProcessNamingInformation& difName);
+
+	ipcm_res_t allocate_iporina_flow(Promise* promise,
+					 const std::string& src_ip_range,
+					 const std::string& dst_ip_range,
+					 const std::string& dif_name,
+					 const rina::FlowSpecification flow_spec);
+
+	void allocate_iporina_flow_response(const rina::FlowRequestEvent& event,
+					    int result,
+					    bool notify_source);
+
+	ipcm_res_t deallocate_iporina_flow(Promise* promise,
+					   int port_id);
+
 	//
 	// Get the current logging debug level
 	//
@@ -619,6 +641,9 @@ public:
 
         //Catalog of policies
         Catalog catalog;
+
+        //The IP VPN Manager
+        IPVPNManager * ip_vpn_manager;
 
 protected:
 
