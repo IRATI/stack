@@ -45,7 +45,7 @@ struct rina_device {
 
 static int rina_dev_open(struct net_device *dev)
 {
-	netif_tx_start_all_queues(dev);
+	/*netif_tx_start_all_queues(dev);*/
 	LOG_DBG("RINA IP device %s opened...", dev->name);
 
 	return 0;
@@ -53,7 +53,7 @@ static int rina_dev_open(struct net_device *dev)
 
 static int rina_dev_close(struct net_device *dev)
 {
-	netif_tx_stop_all_queues(dev);
+	/*netif_tx_stop_all_queues(dev);*/
 	LOG_DBG("RINA IP device %s closed...", dev->name);
 
 	return 0;
@@ -61,10 +61,11 @@ static int rina_dev_close(struct net_device *dev)
 
 static struct net_device_stats *rina_dev_get_stats(struct net_device *dev)
 {
-    struct rina_device* rina_dev = netdev_priv(dev);
-    if(!rina_dev)
-	    return NULL;
-    return &rina_dev->stats;
+	struct rina_device* rina_dev = netdev_priv(dev);
+	if(!rina_dev)
+		return NULL;
+	
+	return &rina_dev->stats;
 }
 
 int rina_dev_rcv(struct sk_buff *skb, struct rina_device *rina_dev)
@@ -120,7 +121,7 @@ static int rina_dev_start_xmit(struct sk_buff * skb, struct net_device *dev)
 	rina_dev->stats.tx_packets++;
 	rina_dev->stats.tx_bytes += len;
 
-	LOG_INFO("RINA IP device %s sent a packet...", dev->name);
+	LOG_INFO("RINA IP device %s sent a packet", dev->name);
 
 	return NETDEV_TX_OK;
 }
@@ -137,6 +138,8 @@ static const struct net_device_ops rina_dev_ops = {
 
 static void rina_dev_setup(struct net_device *dev)
 {
+	LOG_INFO("In RINA dev setup");
+
 	/* This should be set according to the N-1 DIF properties,
          * for the moment an upper bound is provided */
 	dev->needed_headroom += RINA_EXTRA_HEADER_LENGTH;
@@ -158,6 +161,8 @@ static void rina_dev_setup(struct net_device *dev)
 	dev->priv_destructor = rina_dev_free;
 #endif
 	dev->netdev_ops	= &rina_dev_ops;
+
+	LOG_INFO("Finish RINA dev setup");
 
 	return;
 }
