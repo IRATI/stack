@@ -45,7 +45,7 @@ struct rina_device {
 
 static int rina_dev_open(struct net_device *dev)
 {
-	/*netif_tx_start_all_queues(dev);*/
+	netif_tx_start_all_queues(dev);
 	LOG_DBG("RINA IP device %s opened...", dev->name);
 
 	return 0;
@@ -53,7 +53,7 @@ static int rina_dev_open(struct net_device *dev)
 
 static int rina_dev_close(struct net_device *dev)
 {
-	/*netif_tx_stop_all_queues(dev);*/
+	netif_tx_stop_all_queues(dev);
 	LOG_DBG("RINA IP device %s closed...", dev->name);
 
 	return 0;
@@ -111,6 +111,8 @@ static int rina_dev_start_xmit(struct sk_buff * skb, struct net_device *dev)
 	ASSERT(iph);
 
 	len = skb->len;
+	LOG_INFO("About to send a packet of length %zd via port %d", len, 
+			 rina_dev->port);
         if (kfa_flow_skb_write(rina_dev->kfa_ipcp->data, rina_dev->port,
         		       skb, len, false)) {
 		rina_dev->stats.tx_dropped++;
