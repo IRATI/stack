@@ -155,9 +155,9 @@ static void rina_dev_setup(struct net_device *dev)
 	dev->priv_flags	|= IFF_LIVE_ADDR_CHANGE | IFF_NO_QUEUE
 		| IFF_DONT_BRIDGE
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0)
-		| IFF_DONT_BRIDGE | IFF_PHONY_HEADROOM;
-#else
 		| IFF_DONT_BRIDGE;
+#else
+		| IFF_DONT_BRIDGE | IFF_PHONY_HEADROOM;
 #endif
 	netif_keep_dst(dev);
 	dev->features = NETIF_F_HW_CSUM;
