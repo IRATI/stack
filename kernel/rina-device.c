@@ -91,8 +91,8 @@ int rina_dev_rcv(struct sk_buff *skb, struct rina_device *rina_dev)
 		rina_dev->stats.rx_dropped++;
 	}
 
-	LOG_INFO("RINA IP device %s rcv a IP packet...",
-		 rina_dev->dev->name);
+	LOG_DBG("RINA IP device %s rcv a IP packet...",
+		rina_dev->dev->name);
 
 	return 0;
 }
@@ -101,7 +101,7 @@ static int rina_dev_start_xmit(struct sk_buff * skb, struct net_device *dev)
 {
 	struct iphdr* iph = NULL;
 	struct rina_device* rina_dev = netdev_priv(dev);
-	ssize_t len;
+	ssize_t data_sent;
 	ASSERT(rina_dev);
 
 	skb_orphan(skb);
@@ -110,20 +110,22 @@ static int rina_dev_start_xmit(struct sk_buff * skb, struct net_device *dev)
 	iph = ip_hdr(skb);
 	ASSERT(iph);
 
-	len = skb->len;
-	LOG_INFO("About to send a packet of length %zd via port %d", len, 
-			 rina_dev->port);
-        if (kfa_flow_skb_write(rina_dev->kfa_ipcp->data, rina_dev->port,
-        		       skb, len, false)) {
+	LOG_DBG("Device %s about to send a packet of length %zd via port %d",
+		dev->name, skb->len, rina_dev->port);
+
+	data_sent = kfa_flow_skb_write(rina_dev->kfa_ipcp->data,
+				       rina_dev->port, skb, skb->len, false);
+	if (data_sent < 0) {
 		rina_dev->stats.tx_dropped++;
 		LOG_ERR("Could not xmit IP packet, unable to send to KFA...");
 		return NET_XMIT_DROP;
 	}
 
 	rina_dev->stats.tx_packets++;
-	rina_dev->stats.tx_bytes += len;
+	rina_dev->stats.tx_bytes += data_sent;
 
-	LOG_INFO("RINA IP device %s sent a packet", dev->name);
+	LOG_DBG("RINA IP device %s sent a packet of %zd bytes via port %d",
+		dev->name, data_sent, rina_dev->port);
 
 	return NETDEV_TX_OK;
 }
@@ -140,8 +142,6 @@ static const struct net_device_ops rina_dev_ops = {
 
 static void rina_dev_setup(struct net_device *dev)
 {
-	LOG_INFO("In RINA dev setup");
-
 	/* This should be set according to the N-1 DIF properties,
          * for the moment an upper bound is provided */
 	dev->needed_headroom += RINA_EXTRA_HEADER_LENGTH;
@@ -163,8 +163,6 @@ static void rina_dev_setup(struct net_device *dev)
 	dev->priv_destructor = rina_dev_free;
 #endif
 	dev->netdev_ops	= &rina_dev_ops;
-
-	LOG_INFO("Finish RINA dev setup");
 
 	return;
 }
@@ -206,8 +204,8 @@ struct rina_device* rina_dev_create(string_t* name,
 		return NULL;
 	}
 
-	LOG_INFO("RINA IP device %s (%pk) created with dev %p",
-		 name, rina_dev, dev);
+	LOG_DBG("RINA IP device %s (%pk) created with dev %p",
+		name, rina_dev, dev);
 
 	return rina_dev;
 }

@@ -499,11 +499,13 @@ int kfa_flow_ub_write(struct kfa * instance,
 	if (!flow) {
 		spin_unlock_bh(&instance->lock);
 		LOG_ERR("There is no flow bound to port-id %d", id);
+		if (skb) kfree_skb(skb);
 		return -EBADF;
 	}
 	if (flow->state == PORT_STATE_DEALLOCATED) {
 		spin_unlock_bh(&instance->lock);
 		LOG_ERR("Flow with port-id %d is already deallocated", id);
+		if (skb) kfree_skb(skb);
 		return -ESHUTDOWN;
 	}
 
@@ -513,6 +515,7 @@ int kfa_flow_ub_write(struct kfa * instance,
 		spin_unlock_bh(&instance->lock);
 		LOG_ERR("SDU is larger than the max SDU handled by "
 				"the IPCP: %zd, %zd", max_sdu_size, left);
+		if (skb) kfree_skb(skb);
 	        return -EMSGSIZE;
 	}
 
