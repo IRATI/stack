@@ -67,6 +67,10 @@ IPCManager_::deallocate_flow(Promise * promise, const int ipcp_id,
 		// specified by the port-id
 		ipcp->deallocateFlow(event.portId, 0);
 
+		// Check in case it is an IP VPN Flow
+		ip_vpn_manager->iporina_flow_deallocated(event.portId,
+							 ipcp->get_id());
+
 		ss << "IPC process " << ipcp->get_name().toString() <<
 			" requested to deallocate flow [port-id = " << event.portId <<
 			"]" << endl;
@@ -429,6 +433,12 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 		return IPCM_FAILURE;
 	}
 
+	if (event->localApplicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
+		ipcp->rwlock.unlock();
+		ip_vpn_manager->iporina_flow_allocation_requested(*event);
+		return IPCM_PENDING;
+	}
+
 	ctrl_port = ipcp->get_fa_ctrl_port(event->localApplicationName);
 	if (ctrl_port == 0) {
 		ipcp->rwlock.unlock();
@@ -576,21 +586,28 @@ void IPCManager_::ipcm_allocate_flow_request_result_handler(rina::IpcmAllocateFl
 		ret = IPCM_FAILURE;
 	}
 
-	// Inform the Application Manager about the flow allocation
-	// result
-	try {
-		rina::applicationManager->flowAllocated(req_event);
-		ss << "Applications " <<
-				req_event.localApplicationName.toString() << " and "
-				<< req_event.remoteApplicationName.toString()
-				<< " informed about flow allocation result" << endl;
-		FLUSH_LOG(INFO, ss);
-	} catch (rina::NotifyFlowAllocatedException& e) {
-		ss  << ": Error while notifying the "
-				"Application Manager about flow allocation result"
-				<< endl;
-		FLUSH_LOG(ERR, ss);
-		//ret = IPCM_FAILURE; <= should this be marked as error?
+	if (req_event.localApplicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
+		if (success) {
+			req_event.ipcProcessId = slave_ipcp->get_id();
+			ip_vpn_manager->iporina_flow_allocated(req_event);
+		}
+	} else {
+		// Inform the Application Manager about the flow allocation
+		// result
+		try {
+			rina::applicationManager->flowAllocated(req_event);
+			ss << "Applications " <<
+					req_event.localApplicationName.toString() << " and "
+					<< req_event.remoteApplicationName.toString()
+					<< " informed about flow allocation result" << endl;
+			FLUSH_LOG(INFO, ss);
+		} catch (rina::NotifyFlowAllocatedException& e) {
+			ss  << ": Error while notifying the "
+					"Application Manager about flow allocation result"
+					<< endl;
+			FLUSH_LOG(ERR, ss);
+			//ret = IPCM_FAILURE; <= should this be marked as error?
+		}
 	}
 
 	trans->completed(ret);
@@ -711,6 +728,10 @@ void IPCManager_::flow_deallocated_event_handler(rina::FlowDeallocatedEvent* eve
 		if (user_ipcp) {
 			rina::applicationManager->flowDeallocatedRemotely(event->portId, event->code,
 									  user_ipcp->proxy_->portId);
+		} else {
+			//Check in case it is an IP VPN
+			ip_vpn_manager->iporina_flow_deallocated(event->portId,
+							         ipcp->get_id());
 		}
 
 		ss << "IPC process " << ipcp->get_name().toString() <<

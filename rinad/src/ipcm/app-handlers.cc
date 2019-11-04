@@ -276,7 +276,16 @@ IPCManager_::ipcm_register_response_app(rina::IpcmRegisterApplicationResponseEve
         	dif_allocator->app_registered(req_event.applicationRegistrationInformation.appName,
         			              slave_ipcp->dif_name_.processName);
 
-	notify_app_reg(req_event, app_name, slave_dif_name, success);
+        if  (app_name.entityName == RINA_IP_FLOW_ENT_NAME) {
+        	ip_vpn_manager->add_registered_ip_prefix(app_name.processName);
+
+        	LOG_INFO("IP prefix %s registered to DIF %s",
+        			app_name.processName.c_str(),
+				slave_dif_name.processName.c_str());
+        } else {
+        	// Notify the application about the (un)successful registration.
+        	notify_app_reg(req_event, app_name, slave_dif_name, success);
+        }
 
 	return success;
 }
@@ -435,19 +444,30 @@ int IPCManager_::ipcm_unregister_response_app(
                         IPCMIPCProcess * ipcp,
                         rina::ApplicationUnregistrationRequestEvent& req)
 {
-        // Inform the supporting IPC process
-        ipcm_unregister_response_common(event, ipcp,
-                                        req.applicationName);
+	// Inform the supporting IPC process
+	ipcm_unregister_response_common(event, ipcp,
+			req.applicationName);
 
-        //Inform DIF allocator
-        if (event->result == 0)
-        	dif_allocator->app_unregistered(req.applicationName,
-        					ipcp->dif_name_.processName);
+	//Inform DIF allocator
+	if (event->result == 0)
+		dif_allocator->app_unregistered(req.applicationName,
+				ipcp->dif_name_.processName);
 
-        // Inform the application
-        application_manager_app_unregistered(req, event->result);
+	if (req.applicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
+		ip_vpn_manager->remove_registered_ip_prefix(req.applicationName.processName);
 
-        return 0;
+		LOG_INFO("IP prefix %s unregistered from DIF %s",
+				req.applicationName.processName.c_str(),
+				ipcp->dif_name_.processName.c_str());
+
+	} else {
+		// Inform the application
+		application_manager_app_unregistered(req,
+				event->result);
+	}
+
+
+	return 0;
 }
 
 void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResponseEvent *e)

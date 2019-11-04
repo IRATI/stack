@@ -2224,7 +2224,7 @@ int kipcm_du_write(struct kipcm * kipcm,
                 return -EINVAL;
         }
 
-        return kfa_flow_ub_write(kipcm->kfa, port_id, buffer, iov, 
+        return kfa_flow_ub_write(kipcm->kfa, port_id, buffer, iov, NULL,
 				 size, blocking);
 }
 

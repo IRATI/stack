@@ -483,16 +483,16 @@ public:
         /** PID of the process that registered */
         pid_t pid;
 
-	/** The type of registration requested */
-	ApplicationRegistrationType applicationRegistrationType;
+        /** The type of registration requested */
+        ApplicationRegistrationType applicationRegistrationType;
 
-	/** Optional DIF name where the application wants to register */
-	ApplicationProcessNamingInformation difName;
+        /** Optional DIF name where the application wants to register */
+        ApplicationProcessNamingInformation difName;
 
-	ApplicationRegistrationInformation();
-	ApplicationRegistrationInformation(
-		ApplicationRegistrationType applicationRegistrationType);
-	const std::string toString();
+        ApplicationRegistrationInformation();
+        ApplicationRegistrationInformation(
+        		ApplicationRegistrationType applicationRegistrationType);
+        const std::string toString();
 };
 
 /**
