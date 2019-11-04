@@ -110,7 +110,7 @@ static int rina_dev_start_xmit(struct sk_buff * skb, struct net_device *dev)
 	iph = ip_hdr(skb);
 	ASSERT(iph);
 
-	LOG_DBG("Device %s about to send a packet of length %zd via port %d",
+	LOG_DBG("Device %s about to send a packet of length %u via port %d",
 		dev->name, skb->len, rina_dev->port);
 
 	data_sent = kfa_flow_skb_write(rina_dev->kfa_ipcp->data,
@@ -152,8 +152,11 @@ static void rina_dev_setup(struct net_device *dev)
 	dev->addr_len = 0;
 	dev->type = ARPHRD_NONE;
 	dev->flags = IFF_POINTOPOINT | IFF_NOARP | IFF_MULTICAST;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
+	dev->priv_flags |= IFF_LIVE_ADDR_CHANGE
+#else
 	dev->priv_flags	|= IFF_LIVE_ADDR_CHANGE | IFF_NO_QUEUE
-		| IFF_DONT_BRIDGE
+#endif
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,6,0)
 		| IFF_DONT_BRIDGE;
 #else
