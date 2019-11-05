@@ -53,52 +53,52 @@ IPVPNManager::~IPVPNManager()
 	}
 }
 
-int IPVPNManager::add_registered_ip_prefix(const std::string& ip_prefix)
+int IPVPNManager::add_registered_ip_vpn(const std::string& ip_vpn)
 {
 	rina::ScopedLock g(lock);
 
-	if (__ip_prefix_registered(ip_prefix)) {
-		LOG_ERR("IP prefix %s is already registered",
-			ip_prefix.c_str());
+	if (__ip_vpn_registered(ip_vpn)) {
+		LOG_ERR("IP VPN %s is already registered",
+				ip_vpn.c_str());
 		return -1;
 	}
 
-	reg_ip_prefixes.push_back(ip_prefix);
+	reg_ip_vpns.push_back(ip_vpn);
 
 	return 0;
 }
 
-int IPVPNManager::remove_registered_ip_prefix(const std::string& ip_prefix)
+int IPVPNManager::remove_registered_ip_vpn(const std::string& ip_vpn)
 {
 	std::list<std::string>::iterator it;
 
 	rina::ScopedLock g(lock);
 
-	for (it = reg_ip_prefixes.begin(); it != reg_ip_prefixes.end(); ++it) {
-		if ((*it) == ip_prefix) {
-			reg_ip_prefixes.erase(it);
+	for (it = reg_ip_vpns.begin(); it != reg_ip_vpns.end(); ++it) {
+		if ((*it) == ip_vpn) {
+			reg_ip_vpns.erase(it);
 			return 0;
 		}
 	}
 
-	LOG_ERR("IP prefix %s is not registered", ip_prefix.c_str());
+	LOG_ERR("IP VPN %s is not registered", ip_vpn.c_str());
 
 	return -1;
 }
 
-bool IPVPNManager::ip_prefix_registered(const std::string& ip_prefix)
+bool IPVPNManager::ip_vpn_registered(const std::string& ip_vpn)
 {
 	rina::ScopedLock g(lock);
 
-	return __ip_prefix_registered(ip_prefix);
+	return __ip_vpn_registered(ip_vpn);
 }
 
-bool IPVPNManager::__ip_prefix_registered(const std::string& ip_prefix)
+bool IPVPNManager::__ip_vpn_registered(const std::string& ip_vpn)
 {
 	std::list<std::string>::iterator it;
 
-	for (it = reg_ip_prefixes.begin(); it != reg_ip_prefixes.end(); ++it) {
-		if ((*it) == ip_prefix) {
+	for (it = reg_ip_vpns.begin(); it != reg_ip_vpns.end(); ++it) {
+		if ((*it) == ip_vpn) {
 			return true;
 		}
 	}
@@ -133,24 +133,24 @@ int IPVPNManager::iporina_flow_allocated(const rina::FlowRequestEvent& event)
 }
 
 void IPVPNManager::
-iporina_flow_allocation_requested(const rina::FlowRequestEvent& event)
+ip_vpn_flow_allocation_requested(const rina::FlowRequestEvent& event)
 {
 	int res = 0;
 
 	rina::ScopedLock g(lock);
 
-	if (!__ip_prefix_registered(event.localApplicationName.processName)) {
-		LOG_INFO("Rejected IP over RINA flow between %s and %s",
+	if (!__ip_vpn_registered(event.localApplicationName.processName)) {
+		LOG_INFO("Rejected IP VPN flow between %s and %s",
 			  event.localApplicationName.processName.c_str(),
 			  event.remoteApplicationName.processName.c_str());
-		IPCManager->allocate_iporina_flow_response(event, -1, true);
+		IPCManager->allocate_ip_vpn_flow_response(event, -1, true);
 		return;
 	}
 
 	res = add_flow(event);
 	if (res != 0) {
 		LOG_ERR("Flow with port-id %d already exists", event.portId);
-		IPCManager->allocate_iporina_flow_response(event, -1, true);
+		IPCManager->allocate_ip_vpn_flow_response(event, -1, true);
 		return;
 	}
 
@@ -161,16 +161,16 @@ iporina_flow_allocation_requested(const rina::FlowRequestEvent& event)
 		LOG_ERR("Problems adding route to IP routing table");
 	}
 
-	LOG_INFO("Accepted IP over RINA flow between %s and %s; port-id: %d",
+	LOG_INFO("Accepted IP VPN flow between %s and %s; port-id: %d",
 			event.localApplicationName.processName.c_str(),
 			event.remoteApplicationName.processName.c_str(),
 			event.portId);
 
-	IPCManager->allocate_iporina_flow_response(event, 0, true);
+	IPCManager->allocate_ip_vpn_flow_response(event, 0, true);
 }
 
-int IPVPNManager::get_iporina_flow_info(int port_id,
-					rina::FlowRequestEvent& event)
+int IPVPNManager::get_ip_vpn_flow_info(int port_id,
+				       rina::FlowRequestEvent& event)
 {
 	int res = 0;
 	std::map<int, rina::FlowRequestEvent>::iterator it;
@@ -179,7 +179,8 @@ int IPVPNManager::get_iporina_flow_info(int port_id,
 
 	it = iporina_flows.find(port_id);
 	if (it == iporina_flows.end()) {
-		LOG_ERR("Could not find IP over RINA flow with port-id %d", port_id);
+		LOG_ERR("Could not find IP over RINA flow with port-id %d",
+			port_id);
 		return -1;
 	}
 
@@ -188,7 +189,7 @@ int IPVPNManager::get_iporina_flow_info(int port_id,
 	return 0;
 }
 
-int IPVPNManager::iporina_flow_deallocated(int port_id, const int ipcp_id)
+int IPVPNManager::ip_vpn_flow_deallocated(int port_id, const int ipcp_id)
 {
 	int res = 0;
 	rina::FlowRequestEvent event;
@@ -325,12 +326,12 @@ int IPVPNManager::add_or_remove_ip_route(const std::string ip_prefix,
 	if (add) {
 		result = exec_shell_command(ifconfig_command);
 		//TODO parse result
-		result = exec_shell_command(iproute_command);
+		//result = exec_shell_command(iproute_command);
 		//TODO parse result
 	} else {
 		result = exec_shell_command(iproute_command);
 		//TODO parse result
-		result = exec_shell_command(ifconfig_command);
+		//result = exec_shell_command(ifconfig_command);
 		//TODO parse result
 	}
 
@@ -338,9 +339,9 @@ int IPVPNManager::add_or_remove_ip_route(const std::string ip_prefix,
 }
 
 // Class IPCManager
-ipcm_res_t IPCManager_::register_ip_prefix_to_dif(Promise* promise,
-						  const std::string& ip_range,
-						  const rina::ApplicationProcessNamingInformation& dif_name)
+ipcm_res_t IPCManager_::register_ip_vpn_to_dif(Promise* promise,
+					       const std::string& vpn_name,
+					       const rina::ApplicationProcessNamingInformation& dif_name)
 {
 	IPCMIPCProcess *slave_ipcp = NULL;
 	APPregTransState* trans = NULL;
@@ -352,13 +353,13 @@ ipcm_res_t IPCManager_::register_ip_prefix_to_dif(Promise* promise,
 	slave_ipcp = select_ipcp_by_dif(dif_name);
 	if (!slave_ipcp) {
 		LOG_ERR("Cannot find a suitable DIF to "
-			"register IP range %s ", ip_range.c_str());
+			"register IP VPN %s ", vpn_name.c_str());
 		return IPCM_FAILURE;
 	}
 
 	//Populate application name
-	event.applicationRegistrationInformation.appName.processName = ip_range;
-	event.applicationRegistrationInformation.appName.entityName = RINA_IP_FLOW_ENT_NAME;
+	dif_allocator->generate_vpn_name(event.applicationRegistrationInformation.appName,
+					 vpn_name);
 
 	//Auto release the read lock
 	rina::ReadScopedLock readlock(slave_ipcp->rwlock, false);
@@ -387,15 +388,15 @@ ipcm_res_t IPCManager_::register_ip_prefix_to_dif(Promise* promise,
 		slave_ipcp->registerApplication(ari,
 						trans->tid);
 
-		LOG_INFO("Requested registration of IP prefix %s"
+		LOG_INFO("Requested registration of IP VPN %s"
 				" to IPC process %s ",
-				ip_range.c_str(),
+				vpn_name.c_str(),
 				slave_ipcp->get_name().toString().c_str());
 	} catch (rina::IpcmRegisterApplicationException& e) {
 		//Remove the transaction and return
 		remove_transaction_state(trans->tid);
 
-		LOG_ERR("Error while registering IP prefix %s",
+		LOG_ERR("Error while registering IP VPN %s",
 			event.applicationRegistrationInformation.appName.toString().c_str());
 		return IPCM_FAILURE;
 	}
@@ -403,9 +404,9 @@ ipcm_res_t IPCManager_::register_ip_prefix_to_dif(Promise* promise,
 	return IPCM_PENDING;
 }
 
-ipcm_res_t IPCManager_::unregister_ip_prefix_from_dif(Promise* promise,
-						      const std::string& ip_range,
-						      const rina::ApplicationProcessNamingInformation& dif_name)
+ipcm_res_t IPCManager_::unregister_ip_vpn_from_dif(Promise* promise,
+						   const std::string& vpn_name,
+						   const rina::ApplicationProcessNamingInformation& dif_name)
 {
 	IPCMIPCProcess *slave_ipcp;
 	APPUnregTransState* trans;
@@ -425,8 +426,7 @@ ipcm_res_t IPCManager_::unregister_ip_prefix_from_dif(Promise* promise,
 		rina::WriteScopedLock swritelock(slave_ipcp->rwlock, false);
 
 		//Create a transaction
-		req_event.applicationName.processName = ip_range;
-		req_event.applicationName.entityName = RINA_IP_FLOW_ENT_NAME;
+		dif_allocator->generate_vpn_name(req_event.applicationName, vpn_name);
 		trans = new APPUnregTransState(NULL, promise, slave_ipcp->get_id(), req_event);
 		if (!trans)
 		{
@@ -445,23 +445,23 @@ ipcm_res_t IPCManager_::unregister_ip_prefix_from_dif(Promise* promise,
 		// that the client IPC process is registered to
 		slave_ipcp->unregisterApplication(req_event.applicationName, trans->tid);
 
-		LOG_INFO("Requested unregistration of IP prefix %s"
+		LOG_INFO("Requested unregistration of IP VPN %s"
 				" from IPC process %s",
-				ip_range.c_str(),
+				vpn_name.c_str(),
 				slave_ipcp->get_name().toString().c_str());
 	} catch (rina::ConcurrentException& e)
 	{
-		LOG_ERR("Error while unregistering IP prefix %s"
+		LOG_ERR("Error while unregistering IP VPN %s"
 				" from IPC process %s, The operation timed out.",
-				ip_range.c_str(),
+				vpn_name.c_str(),
 				slave_ipcp->get_name().toString().c_str());
 		remove_transaction_state(trans->tid);
 		return IPCM_FAILURE;
 	} catch (rina::IpcmUnregisterApplicationException& e)
 	{
-		LOG_ERR("Error while unregistering IP prefix %s"
+		LOG_ERR("Error while unregistering IP VPN %s"
 				" from IPC process %s",
-				ip_range.c_str(),
+				vpn_name.c_str(),
 				slave_ipcp->get_name().toString().c_str());
 		remove_transaction_state(trans->tid);
 		return IPCM_FAILURE;
@@ -475,18 +475,19 @@ ipcm_res_t IPCManager_::unregister_ip_prefix_from_dif(Promise* promise,
 	return IPCM_PENDING;
 }
 
-ipcm_res_t IPCManager_::allocate_iporina_flow(Promise* promise,
-				 	      const std::string& src_ip_range,
-					      const std::string& dst_ip_range,
-					      const std::string& dif_name,
-					      const rina::FlowSpecification flow_spec)
+ipcm_res_t IPCManager_::allocate_ipvpn_flow(Promise* promise,
+				 	    const std::string& vpn_name,
+					    const std::string& dest_system_name,
+					    const std::string& dif_name,
+					    const rina::FlowSpecification flow_spec)
 {
 	rina::FlowRequestEvent event;
+	std::stringstream ss;
 
 	event.localRequest = true;
-	event.localApplicationName.processName = src_ip_range;
-	event.localApplicationName.entityName = RINA_IP_FLOW_ENT_NAME;
-	event.remoteApplicationName.processName = dst_ip_range;
+	dif_allocator->generate_vpn_name(event.localApplicationName, vpn_name);
+	ss << dest_system_name << "." << vpn_name;
+	event.remoteApplicationName.processName = ss.str();
 	event.remoteApplicationName.entityName = RINA_IP_FLOW_ENT_NAME;
 	event.flowSpecification = flow_spec;
 	event.DIFName.processName = dif_name;
@@ -495,9 +496,9 @@ ipcm_res_t IPCManager_::allocate_iporina_flow(Promise* promise,
 	return flow_allocation_requested_event_handler(promise, &event);
 }
 
-void IPCManager_::allocate_iporina_flow_response(const rina::FlowRequestEvent& event,
-				    	    	 int result,
-						 bool notify_source)
+void IPCManager_::allocate_ip_vpn_flow_response(const rina::FlowRequestEvent& event,
+				    	    	int result,
+						bool notify_source)
 {
 	IPCMIPCProcess * ipcp;
 
@@ -528,13 +529,12 @@ void IPCManager_::allocate_iporina_flow_response(const rina::FlowRequestEvent& e
 	}
 }
 
-ipcm_res_t IPCManager_::deallocate_iporina_flow(Promise* promise,
-				   	   	int port_id)
+ipcm_res_t IPCManager_::deallocate_ipvpn_flow(Promise* promise, int port_id)
 {
 	rina::FlowRequestEvent req_event;
 	rina::FlowDeallocateRequestEvent event;
 
-	if (ip_vpn_manager->get_iporina_flow_info(port_id, req_event)) {
+	if (ip_vpn_manager->get_ip_vpn_flow_info(port_id, req_event)) {
 		return IPCM_FAILURE;
 	}
 

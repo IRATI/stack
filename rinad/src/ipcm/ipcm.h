@@ -552,26 +552,25 @@ public:
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_SUCCESS
 	ipcm_res_t update_catalog(Addon* callee);
 
-	ipcm_res_t register_ip_prefix_to_dif(Promise* promise,
-					     const std::string& ip_range,
+	ipcm_res_t register_ip_vpn_to_dif(Promise* promise,
+					     const std::string& vpn_name,
 					     const rina::ApplicationProcessNamingInformation& difName);
 
-	ipcm_res_t unregister_ip_prefix_from_dif(Promise* promise,
-					         const std::string& ip_range,
-						 const rina::ApplicationProcessNamingInformation& difName);
+	ipcm_res_t unregister_ip_vpn_from_dif(Promise* promise,
+					      const std::string& vpn_name,
+					      const rina::ApplicationProcessNamingInformation& difName);
 
-	ipcm_res_t allocate_iporina_flow(Promise* promise,
-					 const std::string& src_ip_range,
-					 const std::string& dst_ip_range,
-					 const std::string& dif_name,
-					 const rina::FlowSpecification flow_spec);
+	ipcm_res_t allocate_ipvpn_flow(Promise* promise,
+				       const std::string& vpn_name,
+				       const std::string& dst_system_name,
+				       const std::string& dif_name,
+				       const rina::FlowSpecification flow_spec);
 
-	void allocate_iporina_flow_response(const rina::FlowRequestEvent& event,
-					    int result,
-					    bool notify_source);
+	void allocate_ip_vpn_flow_response(const rina::FlowRequestEvent& event,
+					   int result,
+					   bool notify_source);
 
-	ipcm_res_t deallocate_iporina_flow(Promise* promise,
-					   int port_id);
+	ipcm_res_t deallocate_ipvpn_flow(Promise* promise, int port_id);
 
 	//
 	// Get the current logging debug level
@@ -1047,6 +1046,10 @@ public:
 	/// Generate the IPCP name for the DIF dif_name
 	virtual int generate_ipcp_name(rina::ApplicationProcessNamingInformation& ipcp_name,
 			               const std::string& dif_name);
+
+	/// Generate the IP VPN app name for the vpn_name
+	virtual int generate_vpn_name(rina::ApplicationProcessNamingInformation& app_name,
+			              const std::string& vpn_name);
 
 	/// Returns 0 is configuration is correclty applied, -1 otherwise
 	virtual int set_config(const DIFAllocatorConfig& da_config) = 0;

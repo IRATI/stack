@@ -35,16 +35,16 @@ class IPVPNManager {
 public:
 	IPVPNManager();
 	~IPVPNManager();
-	int add_registered_ip_prefix(const std::string& ip_prefix);
-	int remove_registered_ip_prefix(const std::string& ip_prefix);
-	bool ip_prefix_registered(const std::string& ip_prefix);
+	int add_registered_ip_vpn(const std::string& ip_vpn);
+	int remove_registered_ip_vpn(const std::string& ip_vpn);
+	bool ip_vpn_registered(const std::string& ip_vpn);
 	int iporina_flow_allocated(const rina::FlowRequestEvent& event);
-	void iporina_flow_allocation_requested(const rina::FlowRequestEvent& event);
-	int get_iporina_flow_info(int port_id, rina::FlowRequestEvent& event);
-	int iporina_flow_deallocated(int port_id, const int ipcp_id);
+	void ip_vpn_flow_allocation_requested(const rina::FlowRequestEvent& event);
+	int get_ip_vpn_flow_info(int port_id, rina::FlowRequestEvent& event);
+	int ip_vpn_flow_deallocated(int port_id, const int ipcp_id);
 
 private:
-	bool __ip_prefix_registered(const std::string& ip_prefix);
+	bool __ip_vpn_registered(const std::string& ip_vpn);
 	int add_flow(const rina::FlowRequestEvent& event);
 	int remove_flow(rina::FlowRequestEvent& event);
 	int add_or_remove_ip_route(const std::string ip_prefix,
@@ -55,7 +55,7 @@ private:
 	std::string get_rina_dev_name(const int ipcp_id, int port_id);
 	std::string get_ip_prefix_string(const std::string& input);
 
-	std::list<std::string> reg_ip_prefixes;
+	std::list<std::string> reg_ip_vpns;
 	rina::Lockable lock;
 	std::map<int, rina::FlowRequestEvent> iporina_flows;
 };
