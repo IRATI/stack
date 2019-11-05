@@ -572,6 +572,8 @@ public:
 
 	ipcm_res_t deallocate_ipvpn_flow(Promise* promise, int port_id);
 
+	ipcm_res_t map_ip_prefix_to_flow(const std::string& prefix, int port_id);
+
 	//
 	// Get the current logging debug level
 	//

@@ -117,9 +117,8 @@ int IPVPNManager::iporina_flow_allocated(const rina::FlowRequestEvent& event)
 		return res;
 	}
 
-	//Add entry to the IP forwarding table
-	res = add_or_remove_ip_route(event.remoteApplicationName.processName,
-			             event.ipcProcessId, event.portId, true);
+	//Activate RINA device
+	res = activate_device(event.ipcProcessId, event.portId, true);
 	if (res != 0) {
 		LOG_ERR("Problems adding route to IP routing table");
 	}
@@ -154,9 +153,8 @@ ip_vpn_flow_allocation_requested(const rina::FlowRequestEvent& event)
 		return;
 	}
 
-	//Add entry to the IP forwarding table
-	res = add_or_remove_ip_route(event.remoteApplicationName.processName,
-			             event.ipcProcessId, event.portId, true);
+	//Activate RINA device
+	res = activate_device(event.ipcProcessId, event.portId, true);
 	if (res != 0) {
 		LOG_ERR("Problems adding route to IP routing table");
 	}
@@ -189,6 +187,24 @@ int IPVPNManager::get_ip_vpn_flow_info(int port_id,
 	return 0;
 }
 
+int IPVPNManager::map_ip_prefix_to_flow(const std::string& prefix, int port_id)
+{
+	int res = 0;
+	std::map<int, rina::FlowRequestEvent>::iterator it;
+
+	rina::ScopedLock g(lock);
+
+	it = iporina_flows.find(port_id);
+	if (it == iporina_flows.end()) {
+		LOG_ERR("Could not find IP VNP flow with port-id %d",
+			port_id);
+		return -1;
+	}
+
+	return add_or_remove_ip_route(prefix, it->second.ipcProcessId, port_id,
+				      true);
+}
+
 int IPVPNManager::ip_vpn_flow_deallocated(int port_id, const int ipcp_id)
 {
 	int res = 0;
@@ -202,9 +218,8 @@ int IPVPNManager::ip_vpn_flow_deallocated(int port_id, const int ipcp_id)
 		return res;
 	}
 
-	//Remove entry from the IP forwarding table
-	res = add_or_remove_ip_route(event.remoteApplicationName.processName,
-			             ipcp_id, event.portId, false);
+	//Deactivate RINA device
+	res = activate_device(ipcp_id, event.portId, false);
 	if (res != 0) {
 		LOG_ERR("Problems removing entry from IP routing table");
 	}
@@ -298,41 +313,55 @@ int IPVPNManager::add_or_remove_ip_route(const std::string ip_prefix,
 {
 	std::stringstream ss;
 	std::string prefix;
-	std::string suffix;
 	std::string result;
 	std::string dev_name;
-	std::string ifconfig_command;
 	std::string iproute_command;
 
 	dev_name = get_rina_dev_name(ipcp_id, port_id);
 
 	if (add) {
 		prefix = "add ";
-		suffix = " up";
 	} else {
 		prefix = "delete ";
-		suffix = " down";
 	}
 
-	ss << "ifconfig " << dev_name << suffix;
-	ifconfig_command = ss.str();
-
-	ss.str("");
 	ss << "ip route " << prefix
 	   << get_ip_prefix_string(ip_prefix) << " dev "
 	   << dev_name;
 	iproute_command = ss.str();
 
 	if (add) {
-		result = exec_shell_command(ifconfig_command);
-		//TODO parse result
-		//result = exec_shell_command(iproute_command);
-		//TODO parse result
+		result = exec_shell_command(iproute_command);
 	} else {
 		result = exec_shell_command(iproute_command);
-		//TODO parse result
-		//result = exec_shell_command(ifconfig_command);
-		//TODO parse result
+	}
+
+	return 0;
+}
+
+int IPVPNManager::activate_device(const int ipcp_id, int port_id, bool activate)
+{
+	std::stringstream ss;
+	std::string suffix;
+	std::string result;
+	std::string dev_name;
+	std::string ifconfig_command;
+
+	dev_name = get_rina_dev_name(ipcp_id, port_id);
+
+	if (activate) {
+		suffix = " up";
+	} else {
+		suffix = " down";
+	}
+
+	ss << "ifconfig " << dev_name << suffix;
+	ifconfig_command = ss.str();
+
+	if (activate) {
+		result = exec_shell_command(ifconfig_command);
+	} else {
+		result = exec_shell_command(ifconfig_command);
 	}
 
 	return 0;
@@ -542,6 +571,16 @@ ipcm_res_t IPCManager_::deallocate_ipvpn_flow(Promise* promise, int port_id)
 	event.portId = port_id;
 
 	return flow_deallocation_requested_event_handler(promise, &event);
+}
+
+ipcm_res_t IPCManager_::map_ip_prefix_to_flow(const std::string& prefix,
+					      int port_id)
+{
+	if (ip_vpn_manager->map_ip_prefix_to_flow(prefix, port_id)) {
+		return IPCM_FAILURE;
+	}
+
+	return IPCM_SUCCESS;
 }
 
 } //namespace rinad

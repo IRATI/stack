@@ -42,15 +42,15 @@ public:
 	void ip_vpn_flow_allocation_requested(const rina::FlowRequestEvent& event);
 	int get_ip_vpn_flow_info(int port_id, rina::FlowRequestEvent& event);
 	int ip_vpn_flow_deallocated(int port_id, const int ipcp_id);
+	int map_ip_prefix_to_flow(const std::string& prefix, int port_id);
 
 private:
 	bool __ip_vpn_registered(const std::string& ip_vpn);
 	int add_flow(const rina::FlowRequestEvent& event);
 	int remove_flow(rina::FlowRequestEvent& event);
 	int add_or_remove_ip_route(const std::string ip_prefix,
-			const int ipcp_id,
-			int port_id,
-			bool add);
+			           const int ipcp_id, int port_id, bool add);
+	int activate_device(const int ipcp_id, int port_id, bool activate);
 	std::string exec_shell_command(std::string result);
 	std::string get_rina_dev_name(const int ipcp_id, int port_id);
 	std::string get_ip_prefix_string(const std::string& input);

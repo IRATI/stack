@@ -782,10 +782,10 @@ public:
 		if(IPCManager->allocate_ipvpn_flow(&promise, args[1], args[2],
 						   dif_name, flow_spec) == IPCM_FAILURE ||
 				promise.wait() != IPCM_SUCCESS) {
-			console->outstream << "IP over RINA flow allocation failed" << endl;
+			console->outstream << "IP VPN flow allocation failed" << endl;
 			return rina::UNIXConsole::CMDRETCONT;
 		}
-		console->outstream << "IP over RINA flow allocated successfully" << endl;
+		console->outstream << "IP VPN flow allocated successfully" << endl;
 
 		return rina::UNIXConsole::CMDRETCONT;
 	}
@@ -812,11 +812,41 @@ public:
 
 		if(IPCManager->deallocate_ipvpn_flow(&promise, port_id) == IPCM_FAILURE ||
 				promise.wait() != IPCM_SUCCESS) {
-			console->outstream << "IP over RINA flow deallocation failed" << endl;
+			console->outstream << "IP VPN flow deallocation failed" << endl;
 			return rina::UNIXConsole::CMDRETCONT;
 		}
 
-		console->outstream << "IP over RINA flow deallocated successfully" << endl;
+		console->outstream << "IP VPN flow deallocated successfully" << endl;
+
+		return rina::UNIXConsole::CMDRETCONT;
+	}
+};
+
+class MapIPPrefixToFlowConsoleCmd: public rina::ConsoleCmdInfo {
+public:
+	MapIPPrefixToFlowConsoleCmd(IPCMConsole * console) :
+		rina::ConsoleCmdInfo("USAGE: map-ip-prefix-to-flow <ip_prefix> "
+				     "<port_id>", console) {};
+
+	int execute(vector<string>& args) {
+		int port_id;
+
+		if (args.size() != 3) {
+			console->outstream << console->commands_map[args[0]]->usage << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		if (rina::string2int(args[2], port_id)){
+			console->outstream << "Invalid IPC port id" << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		if(IPCManager->map_ip_prefix_to_flow(args[1], port_id) != IPCM_SUCCESS) {
+			console->outstream << "Mapping IP prefix to flow failed" << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		console->outstream << "IP Prefix mapped to flow successfully" << endl;
 
 		return rina::UNIXConsole::CMDRETCONT;
 	}
@@ -852,6 +882,7 @@ IPCMConsole::IPCMConsole(const string& socket_path_) :
 	commands_map["unregister-ip-vpn"] = new UnegisterIPVPNConsoleCmd(this);
 	commands_map["allocate-ip-vpn-flow"] = new AllocateIPVPNFlowConsoleCmd(this);
 	commands_map["deallocate-ip-vpn-flow"] = new DeallocateIPVPNFlowConsoleCmd(this);
+	commands_map["map-ip-prefix-to-flow"] = new MapIPPrefixToFlowConsoleCmd(this);
 }
 
 int IPCMConsole::plugin_load_unload(vector<string>& args, bool load)
