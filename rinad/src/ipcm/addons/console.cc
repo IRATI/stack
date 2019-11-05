@@ -798,7 +798,6 @@ public:
 
 	int execute(vector<string>& args) {
 		int port_id;
-		Promise promise;
 
 		if (args.size() != 2) {
 			console->outstream << console->commands_map[args[0]]->usage << endl;
@@ -810,8 +809,7 @@ public:
 			return rina::UNIXConsole::CMDRETCONT;
 		}
 
-		if(IPCManager->deallocate_ipvpn_flow(&promise, port_id) == IPCM_FAILURE ||
-				promise.wait() != IPCM_SUCCESS) {
+		if(IPCManager->deallocate_ipvpn_flow(port_id) != IPCM_SUCCESS) {
 			console->outstream << "IP VPN flow deallocation failed" << endl;
 			return rina::UNIXConsole::CMDRETCONT;
 		}

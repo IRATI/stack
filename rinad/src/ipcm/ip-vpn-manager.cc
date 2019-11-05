@@ -558,7 +558,7 @@ void IPCManager_::allocate_ip_vpn_flow_response(const rina::FlowRequestEvent& ev
 	}
 }
 
-ipcm_res_t IPCManager_::deallocate_ipvpn_flow(Promise* promise, int port_id)
+ipcm_res_t IPCManager_::deallocate_ipvpn_flow(int port_id)
 {
 	rina::FlowRequestEvent req_event;
 	rina::FlowDeallocateRequestEvent event;
@@ -570,7 +570,7 @@ ipcm_res_t IPCManager_::deallocate_ipvpn_flow(Promise* promise, int port_id)
 	event.sequenceNumber = 0;
 	event.portId = port_id;
 
-	return flow_deallocation_requested_event_handler(promise, &event);
+	return flow_deallocation_requested_event_handler(NULL, &event);
 }
 
 ipcm_res_t IPCManager_::map_ip_prefix_to_flow(const std::string& prefix,
