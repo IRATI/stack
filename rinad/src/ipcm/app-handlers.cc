@@ -277,9 +277,9 @@ IPCManager_::ipcm_register_response_app(rina::IpcmRegisterApplicationResponseEve
         			              slave_ipcp->dif_name_.processName);
 
         if  (app_name.entityName == RINA_IP_FLOW_ENT_NAME) {
-        	ip_vpn_manager->add_registered_ip_prefix(app_name.processName);
+        	ip_vpn_manager->add_registered_ip_vpn(app_name.processName);
 
-        	LOG_INFO("IP prefix %s registered to DIF %s",
+        	LOG_INFO("IP VPN %s registered to DIF %s",
         			app_name.processName.c_str(),
 				slave_dif_name.processName.c_str());
         } else {
@@ -454,9 +454,9 @@ int IPCManager_::ipcm_unregister_response_app(
 				ipcp->dif_name_.processName);
 
 	if (req.applicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
-		ip_vpn_manager->remove_registered_ip_prefix(req.applicationName.processName);
+		ip_vpn_manager->remove_registered_ip_vpn(req.applicationName.processName);
 
-		LOG_INFO("IP prefix %s unregistered from DIF %s",
+		LOG_INFO("IP VPN %s unregistered from DIF %s",
 				req.applicationName.processName.c_str(),
 				ipcp->dif_name_.processName.c_str());
 

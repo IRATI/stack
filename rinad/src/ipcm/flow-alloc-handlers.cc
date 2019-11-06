@@ -68,8 +68,8 @@ IPCManager_::deallocate_flow(Promise * promise, const int ipcp_id,
 		ipcp->deallocateFlow(event.portId, 0);
 
 		// Check in case it is an IP VPN Flow
-		ip_vpn_manager->iporina_flow_deallocated(event.portId,
-							 ipcp->get_id());
+		ip_vpn_manager->ip_vpn_flow_deallocated(event.portId,
+							ipcp->get_id());
 
 		ss << "IPC process " << ipcp->get_name().toString() <<
 			" requested to deallocate flow [port-id = " << event.portId <<
@@ -435,7 +435,7 @@ IPCManager_::flow_allocation_requested_remote(rina::FlowRequestEvent *event)
 
 	if (event->localApplicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
 		ipcp->rwlock.unlock();
-		ip_vpn_manager->iporina_flow_allocation_requested(*event);
+		ip_vpn_manager->ip_vpn_flow_allocation_requested(*event);
 		return IPCM_PENDING;
 	}
 
@@ -730,8 +730,8 @@ void IPCManager_::flow_deallocated_event_handler(rina::FlowDeallocatedEvent* eve
 									  user_ipcp->proxy_->portId);
 		} else {
 			//Check in case it is an IP VPN
-			ip_vpn_manager->iporina_flow_deallocated(event->portId,
-							         ipcp->get_id());
+			ip_vpn_manager->ip_vpn_flow_deallocated(event->portId,
+							        ipcp->get_id());
 		}
 
 		ss << "IPC process " << ipcp->get_name().toString() <<
