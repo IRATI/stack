@@ -245,7 +245,7 @@ static int iodev_release(struct inode *inode, struct file *f)
         msg.port_id = priv->port_id;
         irati_ctrl_dev_snd_resp_msg(IPCM_CTRLDEV_PORT, IRATI_MB(&msg));
 
-        LOG_DBG("Released I/O fdesc assciated to port %d", priv->port_id);
+        LOG_DEBUG("Released I/O fdesc associated to port %d", priv->port_id);
 
         rkfree(priv->wqs);
         rkfree(priv);

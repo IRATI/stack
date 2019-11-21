@@ -223,6 +223,9 @@ const std::string DTCPRIBObject::get_displayable_value() const
 }
 
 //Class Flow Allocator
+const int FlowAllocator::DEALLOCATE_PORT_DELAY = 0;
+const int FlowAllocator::TEARDOWN_FLOW_DELAY = 0;
+
 FlowAllocator::FlowAllocator() : IFlowAllocator()
 {
 	ipcp = 0;
@@ -711,6 +714,9 @@ void FlowAllocator::removeFlowAllocatorInstance(int portId)
 	if (fai) {
 		delete fai;
 	}
+
+	DeallocatePortTimerTask * timerTask = new DeallocatePortTimerTask(portId);
+	timer.scheduleTask(timerTask, DEALLOCATE_PORT_DELAY);
 }
 
 void FlowAllocator::sync_with_kernel()
@@ -894,18 +900,17 @@ void FlowAllocatorInstance::replyToIPCManager(int result)
 	}
 }
 
-void FlowAllocatorInstance::releasePortId()
+void DeallocatePortTimerTask::run()
 {
 	try {
-		rina::extendedIPCManager->deallocatePortId(port_id_);
+		rina::extendedIPCManager->deallocatePortId(port_id);
 	} catch (rina::Exception &e) {
-		LOG_IPCP_ERR("Problems releasing port-id %d", port_id_);
+		LOG_IPCP_ERR("Problems releasing port-id %d", port_id);
 	}
 }
 
 void FlowAllocatorInstance::release_remove()
 {
-	releasePortId();
 	flow_allocator_->removeFlowAllocatorInstance(port_id_);
 }
 
@@ -1449,7 +1454,7 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 		TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(this,
 									      object_name_,
 									      true);
-		timer->scheduleTask(timerTask, 0);
+		timer->scheduleTask(timerTask, FlowAllocator::TEARDOWN_FLOW_DELAY);
 		return;
 	}
 
@@ -1509,7 +1514,7 @@ void FlowAllocatorInstance::submitDeallocate(const rina::FlowDeallocateRequestEv
 	TearDownFlowTimerTask * timerTask = new TearDownFlowTimerTask(this,
 								      object_name_,
 								      true);
-	timer->scheduleTask(timerTask, 0);
+	timer->scheduleTask(timerTask, FlowAllocator::TEARDOWN_FLOW_DELAY);
 }
 
 void FlowAllocatorInstance::deleteFlowRequestMessageReceived()
@@ -1539,7 +1544,7 @@ void FlowAllocatorInstance::deleteFlowRequestMessageReceived()
 								      object_name_,
 								      true);
 
-	timer->scheduleTask(timerTask, 0);
+	timer->scheduleTask(timerTask, FlowAllocator::TEARDOWN_FLOW_DELAY);
 
 	if (flow_->internal) {
 		event = new rina::IPCPInternalFlowDeallocatedEvent(flow_->local_port_id);
