@@ -140,10 +140,11 @@ IPCManager_::select_ipcp(bool write_lock)
 }
 
 bool
-IPCManager_::application_is_registered_to_ipcp(rina::ApplicationProcessNamingInformation & app_name,
+IPCManager_::application_is_registered_to_ipcp(std::list<rina::ApplicationProcessNamingInformation> & reg_names,
 		       	       	       	       pid_t pid, IPCMIPCProcess *slave_ipcp)
 {
 	list<rina::ApplicationRegistrationInformation>::iterator it;
+	rina::ApplicationProcessNamingInformation reg_name;
 
 	//Prevent any insertion/deletion to happen
 	rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
@@ -151,20 +152,19 @@ IPCManager_::application_is_registered_to_ipcp(rina::ApplicationProcessNamingInf
 	for (it = slave_ipcp->registeredApplications.begin();
 				it != slave_ipcp->registeredApplications.end(); it++) {
 		if (it->pid == pid) {
-			app_name.processName = it->appName.processName;
-			app_name.processInstance = it->appName.processInstance;
-			app_name.entityName = it->appName.entityName;
-			app_name.entityInstance = it->appName.entityInstance;
-			return true;
+			reg_name.processName = it->appName.processName;
+			reg_name.processInstance = it->appName.processInstance;
+			reg_name.entityName = it->appName.entityName;
+			reg_name.entityInstance = it->appName.entityInstance;
+			reg_names.push_back(reg_name);
 		}
 	}
 
-	return false;
+	return reg_names.size() > 0;
 }
 
 void
-IPCManager_::application_has_flow_by_ipcp(rina::ApplicationProcessNamingInformation & app_name,
-				          pid_t pid, IPCMIPCProcess *slave_ipcp,
+IPCManager_::application_has_flow_by_ipcp(pid_t pid, IPCMIPCProcess *slave_ipcp,
 				          std::list<int>& port_ids)
 {
 	std::list<rina::FlowInformation>::iterator it;
