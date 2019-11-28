@@ -680,14 +680,13 @@ protected:
 	/**
 	* Check application registration
 	*/
-	bool application_is_registered_to_ipcp(rina::ApplicationProcessNamingInformation & app_name,
+	bool application_is_registered_to_ipcp(std::list<rina::ApplicationProcessNamingInformation> & reg_names,
 					       pid_t pid, IPCMIPCProcess *slave_ipcp);
 
 	/**
 	* Check if application is provided a flow by the IPCP
 	*/
-	void application_has_flow_by_ipcp(rina::ApplicationProcessNamingInformation & app_name,
-					  pid_t pid, IPCMIPCProcess *slave_ipcp, std::list<int>& port_ids);
+	void application_has_flow_by_ipcp(pid_t pid, IPCMIPCProcess *slave_ipcp, std::list<int>& port_ids);
 
 	/**
 	* Get the IPCP by port id

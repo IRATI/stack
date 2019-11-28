@@ -42,7 +42,8 @@ void IPCManager_::os_process_finalized_handler(pid_t pid)
 {
 	list<rina::FlowInformation> involved_flows;
 	vector<IPCMIPCProcess *> ipcps;
-	rina::ApplicationProcessNamingInformation app_name;
+	std::list<rina::ApplicationProcessNamingInformation> reg_names;
+	std::list<rina::ApplicationProcessNamingInformation>::iterator regn_iter;
 	unsigned short ipcp_id = 0;
 	ostringstream ss;
 	std::list<int>::iterator pid_it;
@@ -56,26 +57,30 @@ void IPCManager_::os_process_finalized_handler(pid_t pid)
 		ipcp_factory_.listIPCProcesses(ipcps);
 		for (unsigned int i = 0; i < ipcps.size(); i++) {
 			std::list<int> port_ids;
+			reg_names.clear();
 
-			if (application_is_registered_to_ipcp(app_name, pid, ipcps[i])) {
-				// Build a structure that will be used during
-				// the unregistration process. The last argument
-				// is the request sequence number: 0 means that
-				// the unregistration response does not match
-				// an application request - this is indeed an
-				// unregistration forced by the IPCM.
-				rina::ApplicationUnregistrationRequestEvent req_event(app_name,
-										      ipcps[i]->dif_name_,
-										      0, 0, 0);
-				IPCManager->unregister_app_from_ipcp(NULL, NULL,
-								     req_event,
-								     ipcps[i]->get_id());
-				LOG_INFO("OS process %d terminated, unregistered name %s from DIF %s",
-						pid, app_name.toString().c_str(),
-						ipcps[i]->dif_name_.processName.c_str());
+			if (application_is_registered_to_ipcp(reg_names, pid, ipcps[i])) {
+				for (regn_iter = reg_names.begin(); regn_iter != reg_names.end();
+						++regn_iter) {
+					// Build a structure that will be used during
+					// the unregistration process. The last argument
+					// is the request sequence number: 0 means that
+					// the unregistration response does not match
+					// an application request - this is indeed an
+					// unregistration forced by the IPCM.
+					rina::ApplicationUnregistrationRequestEvent req_event(*regn_iter,
+							ipcps[i]->dif_name_,
+							0, 0, 0);
+					IPCManager->unregister_app_from_ipcp(NULL, NULL,
+							req_event,
+							ipcps[i]->get_id());
+					LOG_INFO("OS process %d terminated, unregistered name %s from DIF %s",
+							pid, (*regn_iter).toString().c_str(),
+							ipcps[i]->dif_name_.processName.c_str());
+				}
 			}
 
-			application_has_flow_by_ipcp(app_name, pid, ipcps[i], port_ids);
+			application_has_flow_by_ipcp(pid, ipcps[i], port_ids);
 			for(pid_it = port_ids.begin(); pid_it != port_ids.end(); ++pid_it) {
 				rina::FlowDeallocateRequestEvent fevent;
 				fevent.portId = *pid_it;
