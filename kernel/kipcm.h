@@ -54,10 +54,11 @@ int            kipcm_ipc_destroy(struct kipcm *   kipcm,
 
 /* If successful: takes the ownership of the DU */
 int            kipcm_du_write(struct kipcm * kipcm,
-                               port_id_t      id,
-			       const char __user *buffer,
-			       size_t size,
-                               bool blocking);
+                              port_id_t      id,
+			      const char __user * buffer,
+			      struct iov_iter * iov,
+			      ssize_t size,
+                              bool blocking);
 
 /* If the flow is deallocated it returns 0 (EOF), otherwise
  * it may report an error with a negative value or return

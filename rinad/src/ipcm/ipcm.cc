@@ -90,7 +90,8 @@ IPCManager_::IPCManager_()
           io_thread(NULL),
           dif_template_manager(NULL),
           dif_allocator(NULL),
-	  osp_monitor(NULL)
+	  osp_monitor(NULL),
+	  ip_vpn_manager(NULL)
 {
 }
 
@@ -102,6 +103,10 @@ IPCManager_::~IPCManager_()
 
 	if (dif_allocator) {
 		delete dif_allocator;
+	}
+
+	if (ip_vpn_manager) {
+	        delete ip_vpn_manager;
 	}
 
 	forwarded_calls.clear();
@@ -146,6 +151,9 @@ void IPCManager_::init(const std::string& loglevel, std::string& config_file)
         // Initialize OS Process Monitor
         osp_monitor = new OSProcessMonitor();
         osp_monitor->start();
+
+        // Initialize IP VPN Manager
+        ip_vpn_manager = new IPVPNManager();
     } catch (rina::InitializationException& e)
     {
         LOG_ERR("Error while initializing librina-ipc-manager");

@@ -304,6 +304,10 @@ public:
         configs::Flow* createFlow() { return new configs::Flow(); }
         void destroyFlow(configs::Flow* flow) { if (flow) delete flow; }
 
+        // Constants
+        const static int DEALLOCATE_PORT_DELAY;
+        const static int TEARDOWN_FLOW_DELAY;
+
 private:
 	IPCPRIBDaemon * rib_daemon_;
 	INamespaceManager * namespace_manager_;
@@ -422,7 +426,6 @@ private:
 			int port_id, bool local,
 			rina::Timer * timer);
 	void replyToIPCManager(int result);
-	void releasePortId();
 	void complete_flow_allocation(bool success);
 
 	/// Release the port-id, unlock and remove the FAI from the FA
@@ -472,6 +475,20 @@ private:
 	FlowAllocatorInstance * flow_allocator_instance_;
 	std::string flow_object_name_;
 	bool requestor_;
+};
+
+class DeallocatePortTimerTask: public rina::TimerTask {
+public:
+	DeallocatePortTimerTask(int port_id_): port_id(port_id_){};
+	~DeallocatePortTimerTask() throw () {}
+
+	void run();
+	std::string name() const {
+		return "deallocate-port";
+	}
+
+private:
+	int port_id;
 };
 
 class DataTransferRIBObj: public IPCPRIBObj {

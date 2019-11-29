@@ -42,7 +42,8 @@ void IPCManager_::os_process_finalized_handler(pid_t pid)
 {
 	list<rina::FlowInformation> involved_flows;
 	vector<IPCMIPCProcess *> ipcps;
-	rina::ApplicationProcessNamingInformation app_name;
+	std::list<rina::ApplicationProcessNamingInformation> reg_names;
+	std::list<rina::ApplicationProcessNamingInformation>::iterator regn_iter;
 	unsigned short ipcp_id = 0;
 	ostringstream ss;
 	std::list<int>::iterator pid_it;
@@ -56,26 +57,30 @@ void IPCManager_::os_process_finalized_handler(pid_t pid)
 		ipcp_factory_.listIPCProcesses(ipcps);
 		for (unsigned int i = 0; i < ipcps.size(); i++) {
 			std::list<int> port_ids;
+			reg_names.clear();
 
-			if (application_is_registered_to_ipcp(app_name, pid, ipcps[i])) {
-				// Build a structure that will be used during
-				// the unregistration process. The last argument
-				// is the request sequence number: 0 means that
-				// the unregistration response does not match
-				// an application request - this is indeed an
-				// unregistration forced by the IPCM.
-				rina::ApplicationUnregistrationRequestEvent req_event(app_name,
-										      ipcps[i]->dif_name_,
-										      0, 0, 0);
-				IPCManager->unregister_app_from_ipcp(NULL, NULL,
-								     req_event,
-								     ipcps[i]->get_id());
-				LOG_INFO("OS process %d terminated, unregistered name %s from DIF %s",
-						pid, app_name.toString().c_str(),
-						ipcps[i]->dif_name_.processName.c_str());
+			if (application_is_registered_to_ipcp(reg_names, pid, ipcps[i])) {
+				for (regn_iter = reg_names.begin(); regn_iter != reg_names.end();
+						++regn_iter) {
+					// Build a structure that will be used during
+					// the unregistration process. The last argument
+					// is the request sequence number: 0 means that
+					// the unregistration response does not match
+					// an application request - this is indeed an
+					// unregistration forced by the IPCM.
+					rina::ApplicationUnregistrationRequestEvent req_event(*regn_iter,
+							ipcps[i]->dif_name_,
+							0, 0, 0);
+					IPCManager->unregister_app_from_ipcp(NULL, NULL,
+							req_event,
+							ipcps[i]->get_id());
+					LOG_INFO("OS process %d terminated, unregistered name %s from DIF %s",
+							pid, (*regn_iter).toString().c_str(),
+							ipcps[i]->dif_name_.processName.c_str());
+				}
 			}
 
-			application_has_flow_by_ipcp(app_name, pid, ipcps[i], port_ids);
+			application_has_flow_by_ipcp(pid, ipcps[i], port_ids);
 			for(pid_it = port_ids.begin(); pid_it != port_ids.end(); ++pid_it) {
 				rina::FlowDeallocateRequestEvent fevent;
 				fevent.portId = *pid_it;
@@ -276,7 +281,16 @@ IPCManager_::ipcm_register_response_app(rina::IpcmRegisterApplicationResponseEve
         	dif_allocator->app_registered(req_event.applicationRegistrationInformation.appName,
         			              slave_ipcp->dif_name_.processName);
 
-	notify_app_reg(req_event, app_name, slave_dif_name, success);
+        if  (app_name.entityName == RINA_IP_FLOW_ENT_NAME) {
+        	ip_vpn_manager->add_registered_ip_vpn(app_name.processName);
+
+        	LOG_INFO("IP VPN %s registered to DIF %s",
+        			app_name.processName.c_str(),
+				slave_dif_name.processName.c_str());
+        } else {
+        	// Notify the application about the (un)successful registration.
+        	notify_app_reg(req_event, app_name, slave_dif_name, success);
+        }
 
 	return success;
 }
@@ -435,19 +449,30 @@ int IPCManager_::ipcm_unregister_response_app(
                         IPCMIPCProcess * ipcp,
                         rina::ApplicationUnregistrationRequestEvent& req)
 {
-        // Inform the supporting IPC process
-        ipcm_unregister_response_common(event, ipcp,
-                                        req.applicationName);
+	// Inform the supporting IPC process
+	ipcm_unregister_response_common(event, ipcp,
+			req.applicationName);
 
-        //Inform DIF allocator
-        if (event->result == 0)
-        	dif_allocator->app_unregistered(req.applicationName,
-        					ipcp->dif_name_.processName);
+	//Inform DIF allocator
+	if (event->result == 0)
+		dif_allocator->app_unregistered(req.applicationName,
+				ipcp->dif_name_.processName);
 
-        // Inform the application
-        application_manager_app_unregistered(req, event->result);
+	if (req.applicationName.entityName == RINA_IP_FLOW_ENT_NAME) {
+		ip_vpn_manager->remove_registered_ip_vpn(req.applicationName.processName);
 
-        return 0;
+		LOG_INFO("IP VPN %s unregistered from DIF %s",
+				req.applicationName.processName.c_str(),
+				ipcp->dif_name_.processName.c_str());
+
+	} else {
+		// Inform the application
+		application_manager_app_unregistered(req,
+				event->result);
+	}
+
+
+	return 0;
 }
 
 void IPCManager_::unreg_app_response_handler(rina::IpcmUnregisterApplicationResponseEvent *e)

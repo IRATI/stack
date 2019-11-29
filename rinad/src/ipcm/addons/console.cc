@@ -699,6 +699,157 @@ public:
 	}
 };
 
+class RegisterIPVPNConsoleCmd: public rina::ConsoleCmdInfo {
+public:
+	RegisterIPVPNConsoleCmd(IPCMConsole * console) :
+		rina::ConsoleCmdInfo("USAGE: register-ip-vpn <vpn-name> "
+				"<dif-name>", console) {};
+
+	int execute(vector<string>& args) {
+		stringstream ss;
+		Promise promise;
+
+		if (args.size() < 3) {
+			console->outstream << console->commands_map[args[0]]->usage << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		rina::ApplicationProcessNamingInformation dif_name(args[2], string());
+
+		if(IPCManager->register_ip_vpn_to_dif(&promise, args[1], dif_name) == IPCM_FAILURE ||
+				promise.wait() != IPCM_SUCCESS) {
+			console->outstream << "IP VPN registration failed" << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		console->outstream << "IP VPN registration completed successfully" << endl;
+
+		return rina::UNIXConsole::CMDRETCONT;
+	}
+};
+
+class UnegisterIPVPNConsoleCmd: public rina::ConsoleCmdInfo {
+public:
+	UnegisterIPVPNConsoleCmd(IPCMConsole * console) :
+		rina::ConsoleCmdInfo("USAGE: unregister-ip-vpn <vpn-name> "
+				"<dif-name>", console) {};
+
+	int execute(vector<string>& args) {
+		stringstream ss;
+		Promise promise;
+
+		if (args.size() < 3) {
+			console->outstream << console->commands_map[args[0]]->usage << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		rina::ApplicationProcessNamingInformation dif_name(args[2], string());
+
+		if(IPCManager->unregister_ip_vpn_from_dif(&promise, args[1], dif_name) == IPCM_FAILURE ||
+				promise.wait() != IPCM_SUCCESS) {
+			console->outstream << "IP VPN unregistration failed" << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		console->outstream << "IP VPN unregistration completed successfully" << endl;
+
+		return rina::UNIXConsole::CMDRETCONT;
+	}
+};
+
+class AllocateIPVPNFlowConsoleCmd: public rina::ConsoleCmdInfo {
+public:
+	AllocateIPVPNFlowConsoleCmd(IPCMConsole * console) :
+		rina::ConsoleCmdInfo("USAGE: allocate-ip-vpn-flow <vpn_name> "
+				     "<dst-system-name> [<dif-name>]", console) {};
+
+	int execute(vector<string>& args) {
+		Promise promise;
+		std::string dif_name;
+		rina::FlowSpecification flow_spec;
+
+		if (args.size() != 3 && args.size() != 4) {
+			console->outstream << console->commands_map[args[0]]->usage << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		if (args.size() == 4) {
+			dif_name = args[3];
+		} else {
+			dif_name = "";
+		}
+
+		if(IPCManager->allocate_ipvpn_flow(&promise, args[1], args[2],
+						   dif_name, flow_spec) == IPCM_FAILURE ||
+				promise.wait() != IPCM_SUCCESS) {
+			console->outstream << "IP VPN flow allocation failed" << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+		console->outstream << "IP VPN flow allocated successfully" << endl;
+
+		return rina::UNIXConsole::CMDRETCONT;
+	}
+};
+
+class DeallocateIPVPNFlowConsoleCmd: public rina::ConsoleCmdInfo {
+public:
+	DeallocateIPVPNFlowConsoleCmd(IPCMConsole * console) :
+		rina::ConsoleCmdInfo("USAGE: deallocate-ip-vpn-flow <port_id>]", console) {};
+
+	int execute(vector<string>& args) {
+		int port_id;
+
+		if (args.size() != 2) {
+			console->outstream << console->commands_map[args[0]]->usage << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		if (rina::string2int(args[1], port_id)){
+			console->outstream << "Invalid IPC port id" << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		if(IPCManager->deallocate_ipvpn_flow(port_id) != IPCM_SUCCESS) {
+			console->outstream << "IP VPN flow deallocation failed" << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		console->outstream << "IP VPN flow deallocated successfully" << endl;
+
+		return rina::UNIXConsole::CMDRETCONT;
+	}
+};
+
+class MapIPPrefixToFlowConsoleCmd: public rina::ConsoleCmdInfo {
+public:
+	MapIPPrefixToFlowConsoleCmd(IPCMConsole * console) :
+		rina::ConsoleCmdInfo("USAGE: map-ip-prefix-to-flow <ip_prefix> "
+				     "<port_id>", console) {};
+
+	int execute(vector<string>& args) {
+		int port_id;
+
+		if (args.size() != 3) {
+			console->outstream << console->commands_map[args[0]]->usage << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		if (rina::string2int(args[2], port_id)){
+			console->outstream << "Invalid IPC port id" << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		if(IPCManager->map_ip_prefix_to_flow(args[1], port_id) != IPCM_SUCCESS) {
+			console->outstream << "Mapping IP prefix to flow failed" << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		console->outstream << "IP Prefix mapped to flow successfully" << endl;
+
+		return rina::UNIXConsole::CMDRETCONT;
+	}
+};
+
 IPCMConsole::IPCMConsole(const string& socket_path_) :
 		rina::UNIXConsole(socket_path_, "IPCM"),
 		Addon(IPCMConsole::NAME)
@@ -725,6 +876,11 @@ IPCMConsole::IPCMConsole(const string& socket_path_) :
 	commands_map["update-catalog"] = new UpdateCatalogueConsoleCmd(this);
 	commands_map["query-ma-rib"] = new QueryMARIBConsoleCmd(this);
 	commands_map["list-da-map"] = new ListDIFAllocatorMapCmd(this);
+	commands_map["register-ip-vpn"] = new RegisterIPVPNConsoleCmd(this);
+	commands_map["unregister-ip-vpn"] = new UnegisterIPVPNConsoleCmd(this);
+	commands_map["allocate-ip-vpn-flow"] = new AllocateIPVPNFlowConsoleCmd(this);
+	commands_map["deallocate-ip-vpn-flow"] = new DeallocateIPVPNFlowConsoleCmd(this);
+	commands_map["map-ip-prefix-to-flow"] = new MapIPPrefixToFlowConsoleCmd(this);
 }
 
 int IPCMConsole::plugin_load_unload(vector<string>& args, bool load)

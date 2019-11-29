@@ -41,9 +41,17 @@ port_id_t   kfa_port_id_reserve(struct kfa      *instance,
 int	    kfa_port_id_release(struct kfa *instance,
 				port_id_t   port_id);
 
+int	    kfa_flow_skb_write(struct ipcp_instance_data * data,
+			       port_id_t   id,
+			       struct sk_buff * skb,
+			       size_t size,
+                               bool blocking);
+
 int	    kfa_flow_ub_write(struct kfa * kfa,
 			      port_id_t   id,
 			      const char __user *buffer,
+			      struct iov_iter * iov,
+			      struct sk_buff * skb,
 			      size_t size,
                               bool blocking);
 
@@ -51,17 +59,17 @@ int	    kfa_flow_ub_write(struct kfa * kfa,
  * it may report an error with a negative value or return
  * the number of bytes read (positive value)
  */
-int	    kfa_flow_du_read(struct kfa  * instance,
-			      port_id_t    id,
-			      struct du ** du,
-			      size_t       size,
-                              bool blocking);
+int kfa_flow_du_read(struct kfa  * instance,
+		     port_id_t    id,
+		     struct du ** du,
+		     size_t       size,
+                     bool blocking);
 
-int    kfa_flow_readable(struct kfa       *instance,
-                          port_id_t        id,
-                          unsigned int     *mask,
-                          struct file      *f,
-                          poll_table       *wait);
+int kfa_flow_readable(struct kfa       *instance,
+                      port_id_t        id,
+                      unsigned int     *mask,
+                      struct file      *f,
+                      poll_table       *wait);
 
 int kfa_flow_set_iowqs(struct kfa      * instance,
 		       struct iowaitqs * wqs,
@@ -78,12 +86,12 @@ struct ipcp_flow *kfa_flow_find_by_pid(struct kfa *instance,
 struct rmt;
 
 /* structure automatically freed when there are no more readers or writers */
-int	    kfa_flow_create(struct kfa           *instance,
-			    port_id_t		  pid,
-			    struct ipcp_instance *ipcp,
-			    ipc_process_id_t	 ipc_id,
-		    	    struct name          *user_ipcp_name,
-			    bool		  msg_boundaries);
+int kfa_flow_create(struct kfa           *instance,
+		    port_id_t		  pid,
+		    struct ipcp_instance *ipcp,
+		    ipc_process_id_t	 ipc_id,
+		    struct name          *user_ipcp_name,
+		    bool		  msg_boundaries);
 
 struct ipcp_instance *kfa_ipcp_instance(struct kfa *instance);
 

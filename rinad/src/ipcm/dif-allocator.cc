@@ -213,6 +213,24 @@ int DIFAllocator::generate_ipcp_name(rina::ApplicationProcessNamingInformation& 
 	return 0;
 }
 
+int DIFAllocator::generate_vpn_name(rina::ApplicationProcessNamingInformation& app_name,
+		                    const std::string& vpn_name)
+{
+	std::stringstream ss;
+
+	if (sys_name.processName == "") {
+		LOG_DBG("No system name provided, cannot generate VPN app name");
+		return -1;
+	}
+
+	ss << sys_name.processName << "." << vpn_name;
+
+	app_name.processName = ss.str();
+	app_name.entityName = RINA_IP_FLOW_ENT_NAME;
+
+	return 0;
+}
+
 const std::string StaticDIFAllocator::TYPE = "static-dif-allocator";
 
 StaticDIFAllocator::StaticDIFAllocator() : DIFAllocator()

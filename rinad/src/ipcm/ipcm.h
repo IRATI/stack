@@ -40,6 +40,7 @@
 #include "dif-template-manager.h"
 #include "catalog.h"
 #include "process-event-listener.h"
+#include "ip-vpn-manager.h"
 
 //Addons
 #include "addon.h"
@@ -551,6 +552,28 @@ public:
 	// @ret IPCM_FAILURE on failure, otherwise the IPCM_SUCCESS
 	ipcm_res_t update_catalog(Addon* callee);
 
+	ipcm_res_t register_ip_vpn_to_dif(Promise* promise,
+					     const std::string& vpn_name,
+					     const rina::ApplicationProcessNamingInformation& difName);
+
+	ipcm_res_t unregister_ip_vpn_from_dif(Promise* promise,
+					      const std::string& vpn_name,
+					      const rina::ApplicationProcessNamingInformation& difName);
+
+	ipcm_res_t allocate_ipvpn_flow(Promise* promise,
+				       const std::string& vpn_name,
+				       const std::string& dst_system_name,
+				       const std::string& dif_name,
+				       const rina::FlowSpecification flow_spec);
+
+	void allocate_ip_vpn_flow_response(const rina::FlowRequestEvent& event,
+					   int result,
+					   bool notify_source);
+
+	ipcm_res_t deallocate_ipvpn_flow(int port_id);
+
+	ipcm_res_t map_ip_prefix_to_flow(const std::string& prefix, int port_id);
+
 	//
 	// Get the current logging debug level
 	//
@@ -620,6 +643,9 @@ public:
         //Catalog of policies
         Catalog catalog;
 
+        //The IP VPN Manager
+        IPVPNManager * ip_vpn_manager;
+
 protected:
 
 	//
@@ -654,14 +680,13 @@ protected:
 	/**
 	* Check application registration
 	*/
-	bool application_is_registered_to_ipcp(rina::ApplicationProcessNamingInformation & app_name,
+	bool application_is_registered_to_ipcp(std::list<rina::ApplicationProcessNamingInformation> & reg_names,
 					       pid_t pid, IPCMIPCProcess *slave_ipcp);
 
 	/**
 	* Check if application is provided a flow by the IPCP
 	*/
-	void application_has_flow_by_ipcp(rina::ApplicationProcessNamingInformation & app_name,
-					  pid_t pid, IPCMIPCProcess *slave_ipcp, std::list<int>& port_ids);
+	void application_has_flow_by_ipcp(pid_t pid, IPCMIPCProcess *slave_ipcp, std::list<int>& port_ids);
 
 	/**
 	* Get the IPCP by port id
@@ -1022,6 +1047,10 @@ public:
 	/// Generate the IPCP name for the DIF dif_name
 	virtual int generate_ipcp_name(rina::ApplicationProcessNamingInformation& ipcp_name,
 			               const std::string& dif_name);
+
+	/// Generate the IP VPN app name for the vpn_name
+	virtual int generate_vpn_name(rina::ApplicationProcessNamingInformation& app_name,
+			              const std::string& vpn_name);
 
 	/// Returns 0 is configuration is correclty applied, -1 otherwise
 	virtual int set_config(const DIFAllocatorConfig& da_config) = 0;
