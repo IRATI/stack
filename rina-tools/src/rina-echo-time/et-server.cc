@@ -210,6 +210,9 @@ void EchoTimeServerWorker::servePerfFlow()
         int delay = 0;
         unsigned long dt;
 
+	memset(&init_ts, 0, sizeof(struct timespec));
+	memset(&fini_ts, 0, sizeof(struct timespec));
+
         // Setup a timer if dealloc_wait option is set */
         if (dw > 0) {
         	last_task = new CancelFlowTimerTask(port_id, this);
