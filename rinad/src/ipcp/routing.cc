@@ -43,16 +43,16 @@ void RoutingComponent::set_application_process(rina::ApplicationProcess * ap)
 	}
 }
 
-void RoutingComponent::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
+void RoutingComponent::set_dif_configuration(const rina::DIFInformation& dif_information)
 {
-	std::string ps_name = dif_configuration.routing_configuration_.policy_set_.name_;
+	std::string ps_name = dif_information.dif_configuration_.routing_configuration_.policy_set_.name_;
 	if (select_policy_set(std::string(), ps_name) != 0) {
 		throw rina::Exception("Cannot create Routing policy-set");
 	}
 
 	IRoutingPs *rps = dynamic_cast<IRoutingPs *> (ps);
 	assert(rps);
-	rps->set_dif_configuration(dif_configuration);
+	rps->set_dif_configuration(dif_information.dif_configuration_);
 }
 
 RoutingComponent::~RoutingComponent()

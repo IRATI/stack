@@ -43,9 +43,9 @@ void IPCPSecurityManager::set_application_process(rina::ApplicationProcess * ap)
 	ipcp->rib_daemon_->set_security_manager(this);
 }
 
-void IPCPSecurityManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
+void IPCPSecurityManager::set_dif_configuration(const rina::DIFInformation& dif_information)
 {
-	config = dif_configuration.sm_configuration_;
+	config = dif_information.dif_configuration_.sm_configuration_;
 
         // If no policy set is specified, use default
 	if (config.policy_set_.name_ == std::string()) {
@@ -60,7 +60,7 @@ void IPCPSecurityManager::set_dif_configuration(const rina::DIFConfiguration& di
 		config.default_auth_profile.authPolicy.version_ = RINA_DEFAULT_POLICY_VERSION;
 	}
 
-	std::string ps_name = dif_configuration.sm_configuration_.policy_set_.name_;
+	std::string ps_name = dif_information.dif_configuration_.sm_configuration_.policy_set_.name_;
 	if (select_policy_set(std::string(), ps_name) != 0) {
 		throw rina::Exception("Cannot create Security Manager policy-set");
 	}

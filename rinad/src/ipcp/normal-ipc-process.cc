@@ -432,13 +432,13 @@ void IPCProcessImpl::assign_to_dif_response_handler(const rina::AssignToDIFRespo
 	}
 
 	try{
-		rib_daemon_->set_dif_configuration(dif_information_.dif_configuration_);
-		resource_allocator_->set_dif_configuration(dif_information_.dif_configuration_);
-		routing_component_->set_dif_configuration(dif_information_.dif_configuration_);
-		namespace_manager_->set_dif_configuration(dif_information_.dif_configuration_);
-		security_manager_->set_dif_configuration(dif_information_.dif_configuration_);
-		flow_allocator_->set_dif_configuration(dif_information_.dif_configuration_);
-		enrollment_task_->set_dif_configuration(dif_information_.dif_configuration_);
+		rib_daemon_->set_dif_configuration(dif_information_);
+		resource_allocator_->set_dif_configuration(dif_information_);
+		routing_component_->set_dif_configuration(dif_information_);
+		namespace_manager_->set_dif_configuration(dif_information_);
+		security_manager_->set_dif_configuration(dif_information_);
+		flow_allocator_->set_dif_configuration(dif_information_);
+		enrollment_task_->set_dif_configuration(dif_information_);
 	} catch(rina::Exception &e) {
 		state = INITIALIZED;
 		LOG_IPCP_ERR("Bad configuration error: %s", e.what());

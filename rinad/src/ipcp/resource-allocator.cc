@@ -261,8 +261,8 @@ void NMinusOneFlowManager::set_ipc_process(IPCProcess * ipc_process)
 	populateRIB();
 }
 
-void NMinusOneFlowManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
-	LOG_IPCP_DBG("DIF configuration set %u", dif_configuration.address_);
+void NMinusOneFlowManager::set_dif_configuration(const rina::DIFInformation& dif_information) {
+	LOG_IPCP_DBG("DIF configuration set %u", dif_information.dif_configuration_.address_);
 }
 
 void NMinusOneFlowManager::processRegistrationNotification(const rina::IPCProcessDIFRegistrationEvent& event) {
@@ -571,25 +571,25 @@ void ResourceAllocator::subscribeToEvents()
 					 	 	this);
 }
 
-void ResourceAllocator::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
+void ResourceAllocator::set_dif_configuration(const rina::DIFInformation& dif_information)
 {
-	std::string ps_name = dif_configuration.ra_configuration_.pduftg_conf_.policy_set_.name_;
+	std::string ps_name = dif_information.dif_configuration_.ra_configuration_.pduftg_conf_.policy_set_.name_;
 	if (set_pduft_gen_policy_set(ps_name) != 0) {
 		throw rina::Exception("Cannot create PDU Forwarding Table Generator policy-set");
 	}
 
 	if (n_minus_one_flow_manager_) {
-		n_minus_one_flow_manager_->set_dif_configuration(dif_configuration);
+		n_minus_one_flow_manager_->set_dif_configuration(dif_information);
 	}
 
 	if (pduft_gen_ps) {
-		pduft_gen_ps->set_dif_configuration(dif_configuration);
+		pduft_gen_ps->set_dif_configuration(dif_information.dif_configuration_);
 	}
 
 	//Create QoS cubes RIB objects
 	std::list<rina::QoSCube*>::const_iterator it;
 	std::stringstream ss;
-	const std::list<rina::QoSCube*>& cubes = dif_configuration
+	const std::list<rina::QoSCube*>& cubes = dif_information.dif_configuration_
 		.efcp_configuration_.qos_cubes_;
 	for (it = cubes.begin(); it != cubes.end(); ++it) {
 		try {

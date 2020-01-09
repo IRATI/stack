@@ -175,7 +175,7 @@ public:
 	NMinusOneFlowManager();
 	~NMinusOneFlowManager();
 	void set_ipc_process(IPCProcess * ipc_process);
-	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+	void set_dif_configuration(const rina::DIFInformation& dif_information);
 	void processRegistrationNotification(const rina::IPCProcessDIFRegistrationEvent& event);;
 	std::list<int> getNMinusOneFlowsToNeighbour(unsigned int address);
 	std::list<int> getNMinusOneFlowsToNeighbour(const std::string& name);
@@ -206,7 +206,7 @@ public:
 	ResourceAllocator();
 	~ResourceAllocator();
 	void set_application_process(rina::ApplicationProcess * ap);
-	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+	void set_dif_configuration(const rina::DIFInformation& dif_information);
 	INMinusOneFlowManager * get_n_minus_one_flow_manager() const;
 	std::list<rina::QoSCube*> getQoSCubes();
 	void addQoSCube(const rina::QoSCube& cube);

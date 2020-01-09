@@ -103,16 +103,16 @@ class EnrollmentRequest
 {
 public:
 	EnrollmentRequest() : ipcm_initiated_(false),
-	                      enrollment_attempts(std::numeric_limits<unsigned int>::max()),
+	                      enrollment_attempts(0),
 			      abort_timer_task(0) {};
 	EnrollmentRequest(const rina::Neighbor& neighbor) : neighbor_(neighbor),
 		ipcm_initiated_(false),
-		enrollment_attempts(std::numeric_limits<unsigned int>::max()),
+		enrollment_attempts(0),
 		 abort_timer_task(0) { };
 	EnrollmentRequest(const rina::Neighbor& neighbor,
                           const EnrollToDAFRequestEvent & event) : neighbor_(neighbor),
                  event_(event), ipcm_initiated_(true),
-		 enrollment_attempts(std::numeric_limits<unsigned int>::max()),
+		 enrollment_attempts(0),
 		 abort_timer_task(0) { };
 
 	/// The neighbor to enroll to
