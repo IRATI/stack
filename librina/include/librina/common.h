@@ -65,6 +65,17 @@ static std::string SHIM_TCP_UDP_IPC_PROCESS = "shim-tcp-udp";
  */
 std::string getVersion();
 
+/*
+ * Creates a directory in the file system
+ */
+int createdir(const std::string& dir);
+
+/*
+ * Removes a directory from the file system, and all the files and subfolders
+ * recursively
+ */
+int removedir_all(const std::string& dir);
+
 extern int string2int(const std::string& s, int& ret);
 
 /**

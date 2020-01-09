@@ -1273,6 +1273,7 @@ void EnrollmentTask::processDisconnectNeighborRequestEvent(const rina::Disconnec
 {
 	IEnrollmentStateMachine * esm = 0;
 	std::map<int, IEnrollmentStateMachine *>::iterator it;
+	std::stringstream ss;
 
 	sm_lock.writelock();
 	for (it = state_machines_.begin(); it != state_machines_.end(); ++it) {
@@ -1304,6 +1305,9 @@ void EnrollmentTask::processDisconnectNeighborRequestEvent(const rina::Disconnec
 	}
 
 	deallocate_flows_and_destroy_esm(esm, esm->con.port_id, false);
+
+	// Remove RIB object
+	remove_neighbor(event.neighborName.getProcessNamePlusInstance());
 
 	// Reply to IPC Manager
 	try {
@@ -1687,6 +1691,8 @@ void EnrollmentTask::neighborDeclaredDead(rina::NeighborDeclaredDeadEvent * dead
 	} catch (rina::Exception &e){
 		LOG_IPCP_ERR("Problems requesting the deallocation of a N-1 flow: %s", e.what());
 	}
+
+	remove_neighbor(deadEvent->neighbor_.name_.getProcessNamePlusInstance());
 }
 
 void EnrollmentTask::nMinusOneFlowDeallocated(rina::NMinusOneFlowDeallocatedEvent * event)

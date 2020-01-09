@@ -25,6 +25,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <stdio.h>
 
 #include <algorithm>
 #include <map>
@@ -280,7 +281,8 @@ public:
 	RIB(const rib_handle_t& handle_,
 	    RIBSchema *const schema,
 	    cdap::CDAPProviderInterface *cdap_provider,
-	    ISecurityManager * sec_man);
+	    ISecurityManager * sec_man,
+	    const std::string& file_path = "");
 
 	/// Destroy RIB instance
 	~RIB();
@@ -495,12 +497,16 @@ private:
 
 	//Instance of the security manager
 	ISecurityManager * security_m;
+
+	// The base path to export the RIB at the filesystem
+	std::string base_file_path;
 };
 
 RIB::RIB(const rib_handle_t& handle_,
 	 RIBSchema *const schema_,
 	 cdap::CDAPProviderInterface *cdap_provider_,
-	 ISecurityManager * sec_man) :
+	 ISecurityManager * sec_man,
+	 const std::string& file_path) :
 						schema(schema_),
 						next_inst_id(1),
 						num_of_deleg(0),
@@ -508,6 +514,7 @@ RIB::RIB(const rib_handle_t& handle_,
 						handle(handle_){
 
 	std::stringstream root_fqn;
+	std::stringstream ss;
 
 	//Create root object
 	RIBObj* root = new RootObj();
@@ -523,6 +530,11 @@ RIB::RIB(const rib_handle_t& handle_,
 	std::list<int64_t>* child_list = new std::list<int64_t>();
 	obj_inst_child_map[RIB_ROOT_INST_ID] = child_list;
 	security_m = sec_man;
+
+	base_file_path = file_path;
+	if (base_file_path != "") {
+		createdir(base_file_path);
+	}
 }
 
 RIB::~RIB() {
@@ -530,6 +542,7 @@ RIB::~RIB() {
 	int64_t inst_id;
 	RIBObj* obj;
 	std::map<int64_t, RIBObj*>::iterator it;
+	std::stringstream ss;
 
 	//Mutual exclusion
 	WriteScopedLock wlock(rwlock);
@@ -559,6 +572,10 @@ RIB::~RIB() {
 		delete obj;
 	}
 
+	//Remove temp file system with exported RIB if it exists
+	if (base_file_path != "") {
+		removedir_all(base_file_path);
+	}
 
 	//TODO: remove schema if allocated by us?
 }
@@ -1454,6 +1471,7 @@ void RIB::__validate_fqn(const std::string& fqn){
 int64_t RIB::add_obj(const std::string& fqn, RIBObj** obj_) {
 	int64_t id, parent_id;
 	std::string parent_fqn = get_parent_fqn(fqn);
+	std::stringstream ss;
 
 	//Note that obj_ cannot be NULL (checked by RIBDaemon)
 	RIBObj* obj = *obj_;
@@ -1538,6 +1556,11 @@ int64_t RIB::add_obj(const std::string& fqn, RIBObj** obj_) {
 								fqn.c_str(),
 								id);
 
+	ss << base_file_path << fqn;
+	if (base_file_path != "") {
+		createdir(ss.str());
+	}
+
 	//Mark pointer as acquired and return
 	*obj_ = NULL;
 
@@ -1552,6 +1575,7 @@ void RIB::__remove_obj(int64_t inst_id, bool force)
 	std::list<int64_t> children;
 	std::list<int64_t>::iterator it;
 	int64_t parent_inst_id;
+	std::stringstream ss;
 
 	//Mutual exclusion
 	rwlock.writelock();
@@ -1648,6 +1672,11 @@ void RIB::__remove_obj(int64_t inst_id, bool force)
 							fqn.c_str(),
 							obj->get_class().c_str(),
 							inst_id);
+
+	if (base_file_path != "") {
+		ss << base_file_path << fqn;
+		removedir_all(ss.str());
+	}
 
 	rwlock.unlock();
 
@@ -1794,8 +1823,8 @@ public:
 	/// @ret The RIB handle
 	/// @throws Exception on failure
 	///
-	rib_handle_t createRIB(const cdap_rib::vers_info_t& version);
-
+	rib_handle_t createRIB(const cdap_rib::vers_info_t& version,
+			       const std::string& base_file_path = "");
 
 	///
 	/// Destroy a RIB instance
@@ -2253,7 +2282,8 @@ void RIBDaemon::destroySchema(const cdap_rib::vers_info_t& version){
 }
 
 
-rib_handle_t RIBDaemon::createRIB(const cdap_rib::vers_info_t& version){
+rib_handle_t RIBDaemon::createRIB(const cdap_rib::vers_info_t& version,
+				  const std::string& base_file_path){
 
 	rib_handle_t handle;
 	uint64_t ver = version.version_;
@@ -2281,7 +2311,7 @@ rib_handle_t RIBDaemon::createRIB(const cdap_rib::vers_info_t& version){
 	}
 
 	//Store&inc schema count ref
-	RIB* rib = new RIB(handle, it->second, cdap_provider, security_m);
+	RIB* rib = new RIB(handle, it->second, cdap_provider, security_m, base_file_path);
 	handle_rib_map[handle] = rib;
 	it->second->inc_ref_count();
 
@@ -3426,8 +3456,9 @@ void RIBDaemonProxy::destroySchema(const cdap_rib::vers_info_t& v)
 	ribd->destroySchema(v);
 }
 
-rib_handle_t RIBDaemonProxy::createRIB(const cdap_rib::vers_info_t& v){
-	return ribd->createRIB(v);
+rib_handle_t RIBDaemonProxy::createRIB(const cdap_rib::vers_info_t& v,
+		        	       const std::string& base_file_path){
+	return ribd->createRIB(v, base_file_path);
 }
 
 void RIBDaemonProxy::destroyRIB(const rib_handle_t& h){
