@@ -103,6 +103,7 @@ private:
         INMinusOneFlowManager * n_minus_one_flow_manager_;
         rina::Thread * management_sdu_reader_;
         IPCPCDAPIOHandler * io_handler;
+        rina::cacep::AppConHandlerInterface * aconcback;
 
         /// Lock to control that when sending a message requiring a reply the
         /// CDAP Session manager has been updated before receiving the response message

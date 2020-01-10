@@ -264,6 +264,8 @@ public:
 						  std::string install_dir);
 
 	static IPCProcessImpl* getIPCP();
+
+	static void destroyIPCP(const std::string& type);
 };
 
 

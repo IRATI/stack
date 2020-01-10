@@ -159,13 +159,14 @@ IPCProcessImpl::~IPCProcessImpl()
 	if (delimiter_) {
 		delete delimiter_;
 	}
-	delete flow_allocator_;
-	delete security_manager_;
-	delete namespace_manager_;
-	delete routing_component_;
-	delete resource_allocator_;
-	delete rib_daemon_;
-	delete enrollment_task_;
+
+	delete dynamic_cast<FlowAllocator*>(flow_allocator_);
+	delete dynamic_cast<IPCPSecurityManager*>(security_manager_);
+	delete dynamic_cast<NamespaceManager*>(namespace_manager_);
+	delete dynamic_cast<RoutingComponent*>(routing_component_);
+	delete dynamic_cast<ResourceAllocator*>(resource_allocator_);
+	delete dynamic_cast<IPCPRIBDaemonImpl*>(rib_daemon_);
+	delete dynamic_cast<EnrollmentTask*>(enrollment_task_);
 }
 
 void IPCProcessImpl::subscribeToEvents()
@@ -452,8 +453,10 @@ void IPCProcessImpl::assign_to_dif_response_handler(const rina::AssignToDIFRespo
 	}
 
 	state = ASSIGNED_TO_DIF;
-	kernel_sync = new KernelSyncTrigger(this, 4000);
-	kernel_sync->start();
+
+	//TODO Avoid starting kernel sync trigger thread for the moment
+	//kernel_sync = new KernelSyncTrigger(this, 4000);
+	//kernel_sync->start();
 }
 
 void IPCProcessImpl::allocate_flow_request_result_handler(const rina::AllocateFlowRequestResultEvent& event)

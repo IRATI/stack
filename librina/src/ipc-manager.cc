@@ -798,7 +798,7 @@ unsigned int IPCProcessFactory::destroy(IPCProcessProxy* ipcp)
 		//      a new process).
 		resultUserSpace = kill(ipcp->getPid(), SIGINT);
 		// TODO: Change magic number
-		usleep(1000000);
+		usleep(2000000);
 		resultUserSpace = kill(ipcp->getPid(), SIGKILL);
 	}
 #endif
