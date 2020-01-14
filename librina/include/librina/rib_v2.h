@@ -635,7 +635,8 @@ public:
         /// @ret The RIB handle
         /// @throws Exception on failure
         ///
-        rib_handle_t createRIB(const cdap_rib::vers_info_t& version);
+        rib_handle_t createRIB(const cdap_rib::vers_info_t& version,
+        		       const std::string& base_file_path = "");
 
         ///
         /// Destroy a RIB instance

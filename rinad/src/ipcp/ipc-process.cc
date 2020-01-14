@@ -77,6 +77,8 @@ AbstractIPCProcessImpl::AbstractIPCProcessImpl(const rina::ApplicationProcessNam
 
 AbstractIPCProcessImpl::~AbstractIPCProcessImpl() {
 
+	LOG_IPCP_INFO("Abstract IPCP Destuctor called");
+
 	if (lock_) {
 		delete lock_;
 	}
@@ -597,6 +599,30 @@ AbstractIPCProcessImpl* IPCPFactory::createIPCP(const std::string& type,
 		LOG_IPCP_WARN("Unsupported IPCP type: %s", type.c_str());
 		return 0;
 	}
+}
+
+void IPCPFactory::destroyIPCP(const std::string& type)
+{
+	if (!ipcp)
+		return;
+
+	if (type == rina::NORMAL_IPC_PROCESS) {
+		IPCProcessImpl * normal_ipcp;
+		normal_ipcp = dynamic_cast<IPCProcessImpl*>(ipcp);
+		delete normal_ipcp;
+	} else if(type == rina::SHIM_WIFI_IPC_PROCESS_STA) {
+		ShimWifiStaIPCProcessImpl * shim_wifi_sta_ipcp;
+		shim_wifi_sta_ipcp = dynamic_cast<ShimWifiStaIPCProcessImpl*>(ipcp);
+		delete shim_wifi_sta_ipcp;
+	} else if (type == rina::SHIM_WIFI_IPC_PROCESS_AP) {
+		ShimWifiAPIPCProcessImpl * shim_wifi_ap_ipcp;
+		shim_wifi_ap_ipcp = dynamic_cast<ShimWifiAPIPCProcessImpl*>(ipcp);
+		delete shim_wifi_ap_ipcp;
+	} else {
+		LOG_IPCP_WARN("Unsupported IPCP type: %s", type.c_str());
+	}
+
+	ipcp = 0;
 }
 
 IPCProcessImpl* IPCPFactory::getIPCP()

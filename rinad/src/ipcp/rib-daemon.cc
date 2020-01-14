@@ -524,7 +524,7 @@ int InternalFlowSDUReader::run()
 IPCPRIBDaemonImpl::IPCPRIBDaemonImpl(rina::cacep::AppConHandlerInterface *app_con_callback)
 {
 	n_minus_one_flow_manager_ = 0;
-	initialize_rib_daemon(app_con_callback);
+	aconcback = app_con_callback;
 }
 
 IPCPRIBDaemonImpl::~IPCPRIBDaemonImpl()
@@ -545,6 +545,7 @@ void IPCPRIBDaemonImpl::initialize_rib_daemon(rina::cacep::AppConHandlerInterfac
 	rina::cdap_rib::cdap_params params;
 	rina::cdap_rib::vers_info_t vers;
 	rina::rib::RIBObj* robj;
+	std::stringstream ss;
 
 	//Initialize the RIB library and cdap
 	params.ipcp = true;
@@ -558,7 +559,8 @@ void IPCPRIBDaemonImpl::initialize_rib_daemon(rina::cacep::AppConHandlerInterfac
 	ribd->createSchema(vers);
 
 	//Create RIB
-	rib = ribd->createRIB(vers);
+	ss << "/tmp/rina/ipcps/" << this->ipcp->get_id();
+	rib = ribd->createRIB(vers, ss.str());
 	ribd->associateRIBtoAE(rib, IPCProcess::MANAGEMENT_AE);
 
 	//TODO populate RIB with some objects
@@ -592,6 +594,8 @@ void IPCPRIBDaemonImpl::set_application_process(rina::ApplicationProcess * ap)
 	}
 
         n_minus_one_flow_manager_ = ipcp->resource_allocator_->get_n_minus_one_flow_manager();
+
+        initialize_rib_daemon(aconcback);
 
         subscribeToEvents();
 }

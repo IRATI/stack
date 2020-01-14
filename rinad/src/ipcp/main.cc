@@ -85,7 +85,7 @@ int Main::wrapped_main(int argc, char * argv[])
 
 	LOG_IPCP_DBG("Exited event loop");
 
-	delete ipcp;
+	rinad::IPCPFactory::destroyIPCP(ipcp_type);
 
 	return EXIT_SUCCESS;
 }

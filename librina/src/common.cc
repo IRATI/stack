@@ -23,6 +23,7 @@
 #include <climits>
 #include <ostream>
 #include <sstream>
+#include <cstdlib>
 
 #define RINA_PREFIX "librina.common"
 
@@ -35,6 +36,24 @@ namespace rina {
 
 std::string getVersion() {
 	return VERSION;
+}
+
+// FIXME: not portable, but does the job for now
+int createdir(const std::string& dir) {
+	std::stringstream ss;
+
+	ss << "mkdir " << dir;
+
+	return system(ss.str().c_str());
+}
+
+// FIXME: not portable, but does the job for now
+int removedir_all(const std::string& dir) {
+	std::stringstream ss;
+
+	ss << "rm -rf " << dir;
+
+	return system(ss.str().c_str());
 }
 
 int string2int(const std::string& s, int& ret)

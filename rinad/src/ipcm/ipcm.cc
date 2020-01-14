@@ -93,6 +93,9 @@ IPCManager_::IPCManager_()
 	  osp_monitor(NULL),
 	  ip_vpn_manager(NULL)
 {
+	rina::removedir_all("/tmp/rina");
+	rina::createdir("/tmp/rina");
+	rina::createdir("/tmp/rina/ipcps");
 }
 
 IPCManager_::~IPCManager_()
@@ -115,6 +118,8 @@ IPCManager_::~IPCManager_()
 			it = pend_transactions.begin(); it != pend_transactions.end(); ++it) {
 		delete it->second;
 	}
+
+	rina::removedir_all("/tmp/rina");
 }
 
 void IPCManager_::init(const std::string& loglevel, std::string& config_file)
