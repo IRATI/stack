@@ -1248,7 +1248,8 @@ void EnrollmentTask::set_dif_configuration(const rina::DIFInformation& dif_infor
 	for (it2 = n1_difs_peer_discovery.begin(); it2 != n1_difs_peer_discovery.end(); ++it2) {
 		enr_request.neighbor_.supporting_dif_name_.processName = *it2;
 		timer_task = new RetryEnrollmentTimerTask(this, enr_request);
-		timer.scheduleTask(timer_task, peer_discovery_period_ms);
+		timer.scheduleTask(timer_task,
+				peer_discovery_period_ms + (rand() % static_cast<int>(5001)));
 	}
 }
 
@@ -1816,6 +1817,11 @@ void EnrollmentTask::nMinusOneFlowAllocationFailed(rina::NMinusOneFlowAllocation
 		} catch(rina::Exception &e) {
 			LOG_IPCP_ERR("Could not send a message to the IPC Manager: %s", e.what());
 		}
+	}
+
+	if (peer_discovery_period_ms != 0) {
+		RetryEnrollmentTimerTask * timer_task = new RetryEnrollmentTimerTask(this, *request);
+		timer.scheduleTask(timer_task, peer_discovery_period_ms);
 	}
 
 	delete request;

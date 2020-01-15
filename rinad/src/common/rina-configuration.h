@@ -131,11 +131,13 @@ struct NeighborData {
 
 /* The configuration required to create an IPC Process */
 struct IPCProcessToCreate {
+	static std::string ALL_SHIM_DIFS;
 
         rina::ApplicationProcessNamingInformation name;
         rina::ApplicationProcessNamingInformation difName;
         std::list<NeighborData> neighbors;
         std::list<rina::ApplicationProcessNamingInformation> difsToRegisterAt;
+        std::list<std::string> n1difsPeerDiscovery;
         std::string hostname;
         /*
          * Specifies what SDU Protection Module should be used for each possible
