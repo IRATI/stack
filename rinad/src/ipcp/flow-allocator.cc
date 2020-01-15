@@ -315,9 +315,9 @@ void FAAddressChangeTimerTask::run()
 	fall->address_changed(new_address, old_address);
 }
 
-void FlowAllocator::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
+void FlowAllocator::set_dif_configuration(const rina::DIFInformation& dif_information)
 {
-	std::string ps_name = dif_configuration.fa_configuration_.policy_set_.name_;
+	std::string ps_name = dif_information.dif_configuration_.fa_configuration_.policy_set_.name_;
 	if (select_policy_set(std::string(), ps_name) != 0) {
 		throw rina::Exception("Cannot create Flow Allocator policy-set");
 	}

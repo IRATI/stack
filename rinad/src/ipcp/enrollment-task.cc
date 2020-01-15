@@ -23,6 +23,7 @@
 #include <sstream>
 #include <vector>
 #include <assert.h>
+#include <climits>
 
 //FIXME: Remove include
 #include <iostream>
@@ -39,6 +40,7 @@
 #include "common/encoder.h"
 #include "common/rina-configuration.h"
 #include "rib-daemon.h"
+
 
 namespace rinad {
 
@@ -666,6 +668,9 @@ const std::string EnrollmentTask::DECLARED_DEAD_INTERVAL_IN_MS = "declaredDeadIn
 const std::string EnrollmentTask::MAX_ENROLLMENT_RETRIES = "maxEnrollmentRetries";
 const std::string EnrollmentTask::USE_RELIABLE_N_FLOW = "useReliableNFlow";
 const std::string EnrollmentTask::N1_FLOWS = "n1flows";
+const std::string EnrollmentTask::N1_DIFS_PEER_DISCOVERY = "n1difsPeerDiscovery";
+const std::string EnrollmentTask::PEER_DISCOVERY_PERIOD_IN_MS = "peerDiscoveryPeriodMs";
+const std::string EnrollmentTask::MAX_PEER_DISCOVERY_ATTEMPTS = "maxPeerDiscoveryAttempts";
 
 EnrollmentTask::EnrollmentTask() : IPCPEnrollmentTask()
 {
@@ -679,6 +684,8 @@ EnrollmentTask::EnrollmentTask() : IPCPEnrollmentTask()
 	declared_dead_int_ms_ = 120000;
 	ipcp_ps = 0;
 	use_reliable_n_flow = false;
+	max_peer_discovery_attempts = INT_MAX;
+	peer_discovery_period_ms = 0;
 }
 
 EnrollmentTask::~EnrollmentTask()
@@ -1148,11 +1155,14 @@ void EnrollmentTask::parse_n1flows(const std::string& name,
 	n1_flows_to_create[n1_dif] = fspecs;
 }
 
-void EnrollmentTask::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
+void EnrollmentTask::set_dif_configuration(const rina::DIFInformation& dif_information)
 {
 	std::list<rina::PolicyParameter>::const_iterator it;
+	std::list<std::string>::iterator it2;
+	RetryEnrollmentTimerTask * timer_task = 0;
+	rina::EnrollmentRequest enr_request;
 
-	rina::PolicyConfig psconf = dif_configuration.et_configuration_.policy_set_;
+	rina::PolicyConfig psconf = dif_information.dif_configuration_.et_configuration_.policy_set_;
 	if (select_policy_set(std::string(), psconf.name_) != 0) {
 		throw rina::Exception("Cannot create enrollment task policy-set");
 	}
@@ -1195,7 +1205,23 @@ void EnrollmentTask::set_dif_configuration(const rina::DIFConfiguration& dif_con
 	for(it = psconf.parameters_.begin(); it != psconf.parameters_.end(); ++it) {
 		if (it->name_.find(N1_FLOWS) != std::string::npos) {
 			parse_n1flows(it->name_, it->value_);
+		} else if (it->name_ == N1_DIFS_PEER_DISCOVERY) {
+			n1_difs_peer_discovery.push_back(it->value_);
 		}
+	}
+
+	try {
+		peer_discovery_period_ms = psconf.get_param_value_as_int(PEER_DISCOVERY_PERIOD_IN_MS);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_INFO("Could not parse peer_discovery_period_ms, using default value: %d",
+			       peer_discovery_period_ms);
+	}
+
+	try {
+		max_peer_discovery_attempts = psconf.get_param_value_as_int(MAX_PEER_DISCOVERY_ATTEMPTS);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_INFO("Could not parse max_peer_discovery_attempts, using default value: %d",
+			       max_peer_discovery_attempts);
 	}
 
 	//Add Watchdog RIB object to RIB
@@ -1212,7 +1238,19 @@ void EnrollmentTask::set_dif_configuration(const rina::DIFConfiguration& dif_con
 	//Apply configuration to policy set
 	IPCPEnrollmentTaskPS * ipcp_ps = dynamic_cast<IPCPEnrollmentTaskPS *>(ps);
 	assert(ipcp_ps);
-	ipcp_ps->set_dif_configuration(dif_configuration);
+	ipcp_ps->set_dif_configuration(dif_information.dif_configuration_);
+
+	//Start enrollment with peers over specified N-1 DIFs
+	if (peer_discovery_period_ms == 0)
+		return;
+
+	enr_request.neighbor_.name_ = dif_information.dif_name_;
+	for (it2 = n1_difs_peer_discovery.begin(); it2 != n1_difs_peer_discovery.end(); ++it2) {
+		enr_request.neighbor_.supporting_dif_name_.processName = *it2;
+		timer_task = new RetryEnrollmentTimerTask(this, enr_request);
+		timer.scheduleTask(timer_task,
+				peer_discovery_period_ms + (rand() % static_cast<int>(5001)));
+	}
 }
 
 void EnrollmentTask::processEnrollmentRequestEvent(const rina::EnrollToDAFRequestEvent& event)
@@ -1781,6 +1819,11 @@ void EnrollmentTask::nMinusOneFlowAllocationFailed(rina::NMinusOneFlowAllocation
 		}
 	}
 
+	if (peer_discovery_period_ms != 0) {
+		RetryEnrollmentTimerTask * timer_task = new RetryEnrollmentTimerTask(this, *request);
+		timer.scheduleTask(timer_task, peer_discovery_period_ms);
+	}
+
 	delete request;
 }
 
@@ -1838,6 +1881,9 @@ void EnrollmentTask::enrollmentFailed(const rina::ApplicationProcessNamingInform
 	if (enr_request.enrollment_attempts < max_num_enroll_attempts_) {
 		timer_task = new RetryEnrollmentTimerTask(this, enr_request);
 		timer.scheduleTask(timer_task, 10);
+	} else if (peer_discovery_period_ms != 0) {
+		timer_task = new RetryEnrollmentTimerTask(this, enr_request);
+		timer.scheduleTask(timer_task, peer_discovery_period_ms);
 	} else if (enr_request.ipcm_initiated_) {
 		try {
 			rina::extendedIPCManager->enrollToDIFResponse(enr_request.event_,

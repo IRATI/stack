@@ -279,7 +279,6 @@ public:
 	//
 	ipcm_res_t apply_configuration();
 
-
 	//
 	// List the existing IPCPs in the system
 	// TODO: deprecate this console only stuff
@@ -892,6 +891,11 @@ protected:
 
 		return NULL;
 	};
+
+	//If peer discovery is setup, modify enrollment task
+	//configuration accordingly
+	void check_peer_discovery_config(rinad::DIFTemplate& dif_template,
+					 const rinad::IPCProcessToCreate& ipcp_to_create);
 
 	/**
 	* Add syscall transaction state (waiting for a notification)

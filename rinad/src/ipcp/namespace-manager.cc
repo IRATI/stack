@@ -317,16 +317,16 @@ void NamespaceManager::set_application_process(rina::ApplicationProcess * ap)
 	populateRIB();
 }
 
-void NamespaceManager::set_dif_configuration(const rina::DIFConfiguration& dif_configuration)
+void NamespaceManager::set_dif_configuration(const rina::DIFInformation& dif_information)
 {
-	std::string ps_name = dif_configuration.nsm_configuration_.policy_set_.name_;
+	std::string ps_name = dif_information.dif_configuration_.nsm_configuration_.policy_set_.name_;
 	if (select_policy_set(std::string(), ps_name) != 0) {
 		throw rina::Exception("Cannot create namespace manager policy-set");
 	}
 
 	INamespaceManagerPs *nsmps = dynamic_cast<INamespaceManagerPs *> (ps);
 	assert(nsmps);
-	nsmps->set_dif_configuration(dif_configuration);
+	nsmps->set_dif_configuration(dif_information.dif_configuration_);
 }
 
 void NamespaceManager::populateRIB()

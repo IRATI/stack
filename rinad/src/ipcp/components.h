@@ -55,7 +55,7 @@ class IPCProcessComponent {
 public:
         IPCProcessComponent() : ipcp(NULL) { };
         virtual ~IPCProcessComponent() { };
-        virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
+        virtual void set_dif_configuration(const rina::DIFInformation& dif_information) = 0;
 
         // Periodically read the kernel information exported via sysfs relevant
         // to this IPCP component, by default do nothing
@@ -137,6 +137,15 @@ public:
 	/// List of N-1 flows to create when enrolling to a neighbor,
 	/// with their QoS characteristics
 	std::map< std::string, std::list<rina::FlowSpecification> > n1_flows_to_create;
+
+	/// List of N-1 DIFs for automatic peer discovery
+	std::list<std::string> n1_difs_peer_discovery;
+
+	/// The peer discovery period in ms
+	int peer_discovery_period_ms;
+
+	/// The maximum number of peer discovery attempts
+	int max_peer_discovery_attempts;
 };
 
 /// Policy set of the IPCP enrollment task
@@ -250,9 +259,9 @@ public:
 class RoutingComponent: public IRoutingComponent {
 public:
 	RoutingComponent() : IRoutingComponent() { };
-    ~RoutingComponent();
+	~RoutingComponent();
 	void set_application_process(rina::ApplicationProcess * ap);
-	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+	void set_dif_configuration(const rina::DIFInformation& dif_information);
 };
 
 /// Namespace Manager Interface
@@ -349,7 +358,7 @@ public:
 
 	virtual void set_ipc_process(IPCProcess * ipc_process) = 0;
 
-	virtual void set_dif_configuration(const rina::DIFConfiguration& dif_configuration) = 0;
+	virtual void set_dif_configuration(const rina::DIFInformation& dif_information) = 0;
 
 	/// The IPC Process has been unregistered from or registered to an N-1 DIF
 	/// @param evet
@@ -453,7 +462,7 @@ class IPCPSecurityManager: public rina::ISecurityManager, public IPCProcessCompo
 public:
 	IPCPSecurityManager(){ };
 	void set_application_process(rina::ApplicationProcess * ap);
-	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+	void set_dif_configuration(const rina::DIFInformation& dif_information);
 	~IPCPSecurityManager();
 	rina::AuthSDUProtectionProfile get_auth_sdup_profile(const std::string& under_dif_name);
         rina::IAuthPolicySet::AuthStatus update_crypto_state(const rina::CryptoState& state,

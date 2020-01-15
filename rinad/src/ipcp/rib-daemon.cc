@@ -600,8 +600,8 @@ void IPCPRIBDaemonImpl::set_application_process(rina::ApplicationProcess * ap)
         subscribeToEvents();
 }
 
-void IPCPRIBDaemonImpl::set_dif_configuration(const rina::DIFConfiguration& dif_configuration) {
-	LOG_IPCP_DBG("Configuration set: %u", dif_configuration.address_);
+void IPCPRIBDaemonImpl::set_dif_configuration(const rina::DIFInformation& dif_information) {
+	LOG_IPCP_DBG("Configuration set: %u", dif_information.dif_configuration_.address_);
 }
 
 void IPCPRIBDaemonImpl::subscribeToEvents()

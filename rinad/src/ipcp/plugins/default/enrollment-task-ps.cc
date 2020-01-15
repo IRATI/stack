@@ -761,17 +761,19 @@ void EnrolleeStateMachine::enrollmentCompleted()
 	}
 
 	//Notify the IPC Manager
-	if (enr_request.ipcm_initiated_){
-		try {
-			std::list<rina::Neighbor> neighbors;
-			neighbors.push_back(remote_peer_);
-			rina::extendedIPCManager->enrollToDIFResponse(enr_request.event_,
-								      0,
-								      neighbors,
-								      ipc_process_->get_dif_information());
-		} catch (rina::Exception &e) {
-			LOG_IPCP_ERR("Problems sending message to IPC Manager: %s", e.what());
-		}
+	std::list<rina::Neighbor> neighbors;
+	neighbors.push_back(remote_peer_);
+	if (!enr_request.ipcm_initiated_){
+		enr_request.event_.sequenceNumber = 0;
+	}
+
+	try {
+		rina::extendedIPCManager->enrollToDIFResponse(enr_request.event_,
+				0,
+				neighbors,
+				ipc_process_->get_dif_information());
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems sending message to IPC Manager: %s", e.what());
 	}
 }
 

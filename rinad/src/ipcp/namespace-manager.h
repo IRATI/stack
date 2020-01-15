@@ -171,7 +171,7 @@ public:
 	~NamespaceManager();
 	void eventHappened(rina::InternalEvent * event);
 	void set_application_process(rina::ApplicationProcess * ap);
-	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+	void set_dif_configuration(const rina::DIFInformation& dif_information);
 	unsigned int getDFTNextHop(rina::ApplicationProcessNamingInformation& apNamingInfo);
 	void addDFTEntries(const std::list<rina::DirectoryForwardingTableEntry>& entries,
 			   bool notify_neighs,

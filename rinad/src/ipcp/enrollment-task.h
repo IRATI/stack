@@ -334,11 +334,14 @@ public:
 	static const std::string MAX_ENROLLMENT_RETRIES;
 	static const std::string USE_RELIABLE_N_FLOW;
 	static const std::string N1_FLOWS;
+	static const std::string N1_DIFS_PEER_DISCOVERY;
+	static const std::string PEER_DISCOVERY_PERIOD_IN_MS;
+	static const std::string MAX_PEER_DISCOVERY_ATTEMPTS;
 
 	EnrollmentTask();
 	~EnrollmentTask();
 	void set_application_process(rina::ApplicationProcess * ap);
-	void set_dif_configuration(const rina::DIFConfiguration& dif_configuration);
+	void set_dif_configuration(const rina::DIFInformation& dif_information);
 	void eventHappened(rina::InternalEvent * event);
 	std::list<rina::Neighbor> get_neighbors();
 	void add_neighbor(const rina::Neighbor& neighbor);

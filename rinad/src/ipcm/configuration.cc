@@ -42,6 +42,8 @@ using namespace std;
 
 namespace rinad {
 
+string IPCProcessToCreate::ALL_SHIM_DIFS = "all-shims";
+
 void parse_name(const Json::Value &root,
                 rina::ApplicationProcessNamingInformation &name)
 {
@@ -109,6 +111,14 @@ void parse_ipc_to_create(const Json::Value          root,
 
                 ipc.hostname = ipc_processes[i].get
                         ("hostName", string()).asString();
+
+                // Peer discovery
+                Json::Value peer_disc = ipc_processes[i]["n1difPeerDiscovery"];
+                if (peer_disc != 0) {
+                	for (unsigned int j = 0; j < peer_disc.size(); j++) {
+                		ipc.n1difsPeerDiscovery.push_back(peer_disc[j].asString());
+                	}
+                }
 
                 // parameters
                 Json::Value params = ipc_processes[i]["parameters"];

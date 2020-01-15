@@ -1062,6 +1062,28 @@ ipcm_res_t IPCManager_::disconnect_neighbor(Addon* callee,
 	return IPCM_PENDING;
 }
 
+void IPCManager_::check_peer_discovery_config(rinad::DIFTemplate& dif_template,
+					      const rinad::IPCProcessToCreate& ipcp_to_create)
+{
+	std::list<std::string>::const_iterator it;
+	rina::PolicyParameter param;
+
+	if (ipcp_to_create.n1difsPeerDiscovery.size() == 0) {
+		return;
+	}
+
+	param.name_ = "peerDiscoveryPeriodMs";
+	param.value_ = "10000";
+	dif_template.etConfiguration.policy_set_.add_parameter(param);
+
+	param.name_ = "n1difsPeerDiscovery";
+	for (it = ipcp_to_create.n1difsPeerDiscovery.begin();
+			it != ipcp_to_create.n1difsPeerDiscovery.end(); it++) {
+		param.value_ = *it;
+		dif_template.etConfiguration.policy_set_.add_parameter(param);
+	}
+}
+
 ipcm_res_t IPCManager_::apply_configuration()
 {
     std::ostringstream ss;
@@ -1123,6 +1145,8 @@ ipcm_res_t IPCManager_::apply_configuration()
                     continue;
                 }
                 ipcps.push_back(c_promise.ipcp_id);
+
+                check_peer_discovery_config(dif_template, *cit);
 
                 if (assign_to_dif(NULL, &promise, c_promise.ipcp_id,
                                   dif_template, cit->difName) == IPCM_FAILURE

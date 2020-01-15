@@ -172,7 +172,9 @@ the names of the IPC Processes instantiated in this system.
 **IPC Processes to create**. The next section specifies which IPC processes should be created. 
 It requires for each IPC process the type, which can be either a normal IPC process, or a certain 
 shim IPC process. The names of the IPCPs will be generated from the system name and the DIF name. The name of 
-the DIF the IPC process should register with is also supplied. Enrollment however, will have to be 
+the DIF(s) where the IPC process should register with is also supplied. If peer discovery is 
+configured, the IPCP will try to enroll to the DIF it has been assigned to via the N-1 DIF whose 
+name has been specified at the "n1difPeerDiscovery" parameter. Otherwise enrollment will have to be
 done manually from the local management console.
 
     "ipcProcessesToCreate" : [ {
@@ -181,7 +183,8 @@ done manually from the local management console.
      }, {
       "type" : "normal-ipc",
       "difName" : "normal.DIF",
-      "difsToRegisterAt" : ["110"]
+      "difsToRegisterAt" : ["110"],
+      "n1difPeerDiscovery" : ["110"]
      } ],
 
 **DIF Configurations**. This only specifies what DIFs to create, but it does not yet explain how 
