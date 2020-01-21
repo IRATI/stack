@@ -50,7 +50,7 @@ public:
 
 		rina::ApplicationProcessNamingInformation ipcp_name;
 
-		if(IPCManager->create_ipcp((IPCMConsole*) console, &promise, ipcp_name, args[2], args[3]) == IPCM_FAILURE ||
+		if(IPCManager->create_ipcp((IPCMConsole*) console, &promise, ipcp_name, args[1], args[2]) == IPCM_FAILURE ||
 				promise.wait() != IPCM_SUCCESS){
 			console->outstream << "Error while creating IPC process" << endl;
 			return rina::UNIXConsole::CMDRETCONT;
