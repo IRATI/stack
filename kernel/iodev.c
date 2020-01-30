@@ -50,6 +50,7 @@ extern struct kipcm *default_kipcm;
 struct iodev_priv {
         port_id_t       port_id;
         struct iowaitqs * wqs;
+        int		flow_dealloc;
 };
 
 static ssize_t iodev_write(struct file *f, const char __user *buffer, 
@@ -217,6 +218,7 @@ static int iodev_open(struct inode *inode, struct file *f)
         }
 
         priv->port_id = port_id_bad();
+        priv->flow_dealloc = 0;
         priv->wqs = rkzalloc(sizeof(struct iowaitqs), GFP_KERNEL);
         if (!priv->wqs) {
         	rkfree(priv);
@@ -231,26 +233,50 @@ static int iodev_open(struct inode *inode, struct file *f)
         return 0;
 }
 
-static int iodev_release(struct inode *inode, struct file *f)
+static void deallocate_flow(struct iodev_priv * priv)
 {
 	struct kfa *kfa = kipcm_kfa(default_kipcm);
+	struct irati_msg_app_dealloc_flow msg;
+
+	if (priv->flow_dealloc) {
+		return;
+	}
+
+	priv->flow_dealloc = 1;
+
+	/* Unbind waitqueues from flow */
+	if (kfa_flow_cancel_iowqs(kfa, priv->port_id) == 0) {
+		/* Request flow deallocation */
+		msg.msg_type = RINA_C_APP_DEALLOCATE_FLOW_REQUEST;
+		msg.port_id = priv->port_id;
+		irati_ctrl_dev_snd_resp_msg(IPCM_CTRLDEV_PORT, IRATI_MB(&msg));
+
+		LOG_DBG("Requested deallocation of flow with port-id %d", priv->port_id);
+	}
+}
+
+static int iodev_release(struct inode *inode, struct file *f)
+{
         struct iodev_priv *priv = f->private_data;
-        struct irati_msg_app_dealloc_flow msg;
 
-        /* Unbind waitqueues from flow */
-        kfa_flow_cancel_iowqs(kfa, priv->port_id);
+        LOG_DBG("I/O dev release called for port-id %d", priv->port_id);
 
-        /* Request flow deallocation */
-        msg.msg_type = RINA_C_APP_DEALLOCATE_FLOW_REQUEST;
-        msg.port_id = priv->port_id;
-        irati_ctrl_dev_snd_resp_msg(IPCM_CTRLDEV_PORT, IRATI_MB(&msg));
-
-        LOG_DBG("Released I/O fdesc associated to port %d", priv->port_id);
+        deallocate_flow(priv);
 
         rkfree(priv->wqs);
         rkfree(priv);
 
         return 0;
+}
+
+static int iodev_flush(struct file * f, fl_owner_t id) {
+	/*struct iodev_priv *priv = f->private_data;
+
+	LOG_INFO("I/O dev flush called for port-id");
+
+	deallocate_flow(priv);*/
+
+	return 0;
 }
 
 static long iodev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
@@ -334,6 +360,7 @@ static const struct file_operations irati_fops = {
 	.read_iter	= iodev_read_iter,
         .poll           = iodev_poll,
         .unlocked_ioctl = iodev_ioctl,
+	.flush		= iodev_flush,
 #ifdef CONFIG_COMPAT
 	.compat_ioctl   = iodev_compat_ioctl,
 #endif

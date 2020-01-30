@@ -795,24 +795,24 @@ int kfa_flow_set_iowqs(struct kfa * instance,
 	return 0;
 }
 
-void kfa_flow_cancel_iowqs(struct kfa      * instance,
+int kfa_flow_cancel_iowqs(struct kfa      * instance,
 			   port_id_t pid)
 {
         struct ipcp_flow *flow;
         struct iowaitqs * wqs;
 
 	if (!instance)
-		return;
+		return -1;
 
 	if (!is_port_id_ok(pid))
-		return;
+		return -1;
 
 	spin_lock_bh(&instance->lock);
 
 	flow = kfa_pmap_find(instance->flows, pid);
 	if (!flow) {
 		spin_unlock_bh(&instance->lock);
-		return;
+		return -1;
 	}
 
 	wqs = flow->wqs;
@@ -823,7 +823,10 @@ void kfa_flow_cancel_iowqs(struct kfa      * instance,
 	if (wqs) {
 		wake_up_interruptible_all(&wqs->read_wqueue);
 		wake_up_interruptible_all(&wqs->write_wqueue);
+		return 0;
 	}
+
+	return -1;
 }
 
 struct du * get_du_to_read(struct ipcp_flow * flow, size_t size)
@@ -869,12 +872,12 @@ int kfa_flow_du_read(struct kfa  *instance,
 	if (!flow) {
 		LOG_ERR("There is no flow bound to port-id %d", id);
 		spin_unlock_bh(&instance->lock);
-		return 0;
+		return -EBADF;
 	}
 	if (flow->state == PORT_STATE_DEALLOCATED) {
 		LOG_ERR("Flow with port-id %d is already deallocated", id);
 		spin_unlock_bh(&instance->lock);
-		return 0;
+		return -ESHUTDOWN;
 	}
 
 	atomic_inc(&flow->readers);

@@ -75,7 +75,7 @@ int kfa_flow_set_iowqs(struct kfa      * instance,
 		       struct iowaitqs * wqs,
 		       port_id_t pid);
 
-void kfa_flow_cancel_iowqs(struct kfa      * instance,
+int kfa_flow_cancel_iowqs(struct kfa      * instance,
 			   port_id_t pid);
 
 #if 0
