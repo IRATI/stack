@@ -51,6 +51,7 @@ extern struct kipcm *default_kipcm;
 /* Private data to an ctrldev file instance. */
 struct ctrldev_priv {
 	irati_msg_port_t   port_id;
+	int		   flushed;
 	struct rfifo      *pending_msgs;
 	spinlock_t 	   pending_msgs_lock;
 	struct list_head   node;        /* queue of ctrl device file descriptors */
@@ -530,6 +531,7 @@ ctrldev_open(struct inode *inode, struct file *f)
 	init_waitqueue_head(&priv->read_wqueue);
 
         priv->port_id = port_id_bad();
+        priv->flushed = 0;
         priv->file = f;
         f->private_data = priv;
 
@@ -540,14 +542,13 @@ ctrldev_open(struct inode *inode, struct file *f)
         return 0;
 }
 
-static int
-ctrldev_release(struct inode *inode, struct file *f)
+static int ctrldev_release(struct inode *inode, struct file *f)
 {
         struct ctrldev_priv *priv = (struct ctrldev_priv *) f->private_data;
         struct rfifo * pmsgs;
 
         mutex_lock(&irati_ctrl_dm.general_lock);
-        LOG_DBG("Releasing file descriptor associated to port-id %d", priv->port_id);
+        LOG_DBG("Releasing ctrl file descriptor associated to port-id %d", priv->port_id);
         list_del_init(&priv->node);
         mutex_unlock(&irati_ctrl_dm.general_lock);
 
@@ -579,13 +580,27 @@ ctrldev_release(struct inode *inode, struct file *f)
         return 0;
 }
 
+static int ctrldev_flush(struct file * f, fl_owner_t id) {
+	struct ctrldev_priv *priv = (struct ctrldev_priv *) f->private_data;
+
+	mutex_lock(&irati_ctrl_dm.general_lock);
+
+	LOG_DBG("Ctrl dev flush called for port-id %d", priv->port_id);
+	priv->flushed = 1;
+
+	mutex_unlock(&irati_ctrl_dm.general_lock);
+
+
+	return 0;
+}
+
 static bool ctrl_port_in_use(irati_msg_port_t port_id)
 {
 	struct ctrldev_priv * pos;
 
         mutex_lock(&irati_ctrl_dm.general_lock);
         list_for_each_entry(pos, &(irati_ctrl_dm.ctrl_devs), node) {
-                if (port_id == pos->port_id) {
+                if (port_id == pos->port_id && !pos->flushed) {
                 	mutex_unlock(&irati_ctrl_dm.general_lock);
                 	return true;
                 }
@@ -595,8 +610,7 @@ static bool ctrl_port_in_use(irati_msg_port_t port_id)
         return false;
 }
 
-static long
-ctrldev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
+static long ctrldev_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
 {
         struct ctrldev_priv *priv = (struct ctrldev_priv *) f->private_data;
         void __user *p = (void __user *)arg;
@@ -651,6 +665,7 @@ static const struct file_operations irati_ctrl_fops = {
         .read           = ctrldev_read,
         .poll           = ctrldev_poll,
         .unlocked_ioctl = ctrldev_ioctl,
+	.flush		= ctrldev_flush,
 #ifdef CONFIG_COMPAT
 	.compat_ioctl   = ctrldev_compat_ioctl,
 #endif
