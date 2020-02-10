@@ -50,6 +50,7 @@ extern struct kipcm *default_kipcm;
 struct iodev_priv {
         port_id_t       port_id;
         struct iowaitqs * wqs;
+        spinlock_t 	flow_dealloc_lock;
         int		flow_dealloc;
 };
 
@@ -219,6 +220,7 @@ static int iodev_open(struct inode *inode, struct file *f)
 
         priv->port_id = port_id_bad();
         priv->flow_dealloc = 0;
+        spin_lock_init(&priv->flow_dealloc_lock);
         priv->wqs = rkzalloc(sizeof(struct iowaitqs), GFP_KERNEL);
         if (!priv->wqs) {
         	rkfree(priv);
@@ -238,11 +240,14 @@ static void deallocate_flow(struct iodev_priv * priv)
 	struct kfa *kfa = kipcm_kfa(default_kipcm);
 	struct irati_msg_app_dealloc_flow msg;
 
+	spin_lock(&priv->flow_dealloc_lock);
 	if (priv->flow_dealloc) {
+		spin_unlock(&priv->flow_dealloc_lock);
 		return;
 	}
 
 	priv->flow_dealloc = 1;
+	spin_unlock(&priv->flow_dealloc_lock);
 
 	/* Unbind waitqueues from flow */
 	if (kfa_flow_cancel_iowqs(kfa, priv->port_id) == 0) {
@@ -270,11 +275,11 @@ static int iodev_release(struct inode *inode, struct file *f)
 }
 
 static int iodev_flush(struct file * f, fl_owner_t id) {
-	/*struct iodev_priv *priv = f->private_data;
+	struct iodev_priv *priv = f->private_data;
 
-	LOG_INFO("I/O dev flush called for port-id");
+	LOG_DBG("I/O dev flush called for port-id %d", priv->port_id);
 
-	deallocate_flow(priv);*/
+	deallocate_flow(priv);
 
 	return 0;
 }
