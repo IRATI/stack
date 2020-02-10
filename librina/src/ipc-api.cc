@@ -593,12 +593,6 @@ FlowInformation IPCManager::commitPendingFlow(unsigned int sequenceNumber,
         if (flow == 0) {
                 throw FlowAllocationException(IPCManager::unknown_flow_error);
         }
-#if STUB_API
-#else
-        if (flow->user_ipcp_id == 0) {
-        	initIodev(flow, portId);
-        }
-#endif
 
         pendingFlows.erase(sequenceNumber);
 
