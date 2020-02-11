@@ -279,7 +279,7 @@ static int iodev_flush(struct file * f, fl_owner_t id) {
 
 	LOG_DBG("I/O dev flush called for port-id %d", priv->port_id);
 
-	deallocate_flow(priv);
+	/*deallocate_flow(priv);*/
 
 	return 0;
 }
