@@ -185,8 +185,8 @@ ssize_t *pci_offset_table_create(struct dt_cons *dt_cons)
 			offset += dt_cons->seq_num_length;
 			break;
 		case PCI_CTRL_SN:
-			offset += dt_cons->rate_length;
-			base_offset += dt_cons->rate_length;
+			offset += dt_cons->ctrl_seq_num_length;
+			base_offset += dt_cons->ctrl_seq_num_length;
 			break;
 		case PCI_CACK_LAST_CSN_RCVD:
 		case PCI_ACK_FC_LAST_CSN_RCVD:
