@@ -76,7 +76,7 @@ static int dctcp_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 		data->state = CONG_AVOID;
 	} else if (data->state == SLOW_START) {
 		/* Increase credit by one */
-		cwnd++;
+		cwnd = cwnd << 1;
 	} else {
 		/* CA state, increase by 1/cwnd */
 		data->dec_credit += DEC_PRECISION/cwnd;
