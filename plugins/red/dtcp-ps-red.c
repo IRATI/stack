@@ -63,7 +63,7 @@ red_rcvr_flow_control(struct dtcp_ps * ps, const struct pci * pci)
 	spin_lock_bh(&dtcp->parent->sv_lock);
         new_credit = dtcp->sv->rcvr_credit;
 	if (data->state == SLOW_START) {
-		new_credit++;
+		new_credit = new_credit << 1;
 		if (new_credit >= data->sshtresh) {
 			data->state = CONG_AVOID;
 		}
