@@ -238,6 +238,7 @@ struct du * du_create_from_skb(struct sk_buff* skb)
 
 	tmp->skb = skb;
 	tmp->pci.h = NULL;
+	tmp->pci.len = 0;
 	tmp->cfg = NULL;
 	tmp->sdup_head = NULL;
 	tmp->sdup_tail = NULL;
