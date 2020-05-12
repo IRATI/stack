@@ -29,6 +29,8 @@
 #include "common.h"
 #include "ipcp-instances.h"
 
+typedef uint8_t version_t;
+
 #define PDU_FLAGS_EXPLICIT_CONGESTION 0x01
 #define PDU_FLAGS_DATA_RUN            0x80
 /* To be truely defined; internal to stack, needs to be discussed */
@@ -106,6 +108,7 @@ int pci_len_set(struct pci *pci, ssize_t len);
 int pci_format(struct pci *pci, cep_id_t src_cep_id, cep_id_t dst_cep_id,
 	       address_t src_address, address_t dst_address,
 	       seq_num_t sequence_number, qos_id_t qos_id,
+	       pdu_flags_t flags,
 	       ssize_t length, pdu_type_t type);
 
 /* FIXME: remove _get from the API name */

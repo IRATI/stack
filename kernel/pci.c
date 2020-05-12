@@ -37,6 +37,8 @@
 #define FLAGS_SIZE 1
 #define TYPE_SIZE 1
 
+#define VERSION 1
+
 enum pci_field_index {
 	PCI_BASE_VERSION = 0,
 	PCI_BASE_DST_ADD,
@@ -344,6 +346,10 @@ static struct efcp_config *__pci_efcp_config_get(const struct pci *pci)
 	return 0;}
 
 /* Base getters */
+cep_id_t pci_version(const struct pci *pci)
+{ PCI_GETTER_NO_DTC(pci, PCI_BASE_VERSION, VERSION_SIZE, version_t); }
+EXPORT_SYMBOL(pci_version);
+
 cep_id_t pci_cep_source(const struct pci *pci)
 { PCI_GETTER(pci, PCI_BASE_SRC_CEP, cep_id_length, cep_id_t); }
 EXPORT_SYMBOL(pci_cep_source);
@@ -377,6 +383,10 @@ ssize_t pci_length(const struct pci *pci)
 EXPORT_SYMBOL(pci_length);
 
 /* Base setters */
+int pci_version_set(struct pci *pci, version_t version)
+{ PCI_SETTER_NO_DTC(pci, PCI_BASE_VERSION, VERSION_SIZE, version); }
+EXPORT_SYMBOL(pci_version_set);
+
 int pci_sequence_number_set(struct pci *pci, seq_num_t sn)
 { PCI_SETTER(pci, PCI_DT_MGMT_SN, seq_num_length, sn); }
 EXPORT_SYMBOL(pci_sequence_number_set);
@@ -420,16 +430,19 @@ int pci_format(struct pci *pci,
 	       address_t dst_address,
 	       seq_num_t sequence_number,
 	       qos_id_t  qos_id,
+	       pdu_flags_t flags,
 	       ssize_t   length,
 	       pdu_type_t type)
 {
-	if (pci_type_set(pci, type)                       ||
+	if (pci_version_set(pci, VERSION)                 ||
+	    pci_type_set(pci, type)                       ||
 	    pci_cep_destination_set(pci, dst_cep_id)      ||
 	    pci_cep_source_set(pci, src_cep_id)           ||
 	    pci_destination_set(pci, dst_address)         ||
 	    pci_source_set(pci, src_address)              ||
 	    pci_sequence_number_set(pci, sequence_number) ||
 	    pci_qos_id_set(pci, qos_id)			  ||
+	    pci_flags_set(pci, flags)			  ||
 	    pci_len_set(pci, length)) {
 		return -1;
 	}

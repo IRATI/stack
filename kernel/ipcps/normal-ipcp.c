@@ -762,6 +762,7 @@ static int normal_mgmt_du_write(struct ipcp_instance_data * data,
                        0,
                        0,
                        1,
+                       0,
 		       du->pci.len + sbytes,
                        PDU_TYPE_MGMT)) {
         	LOG_ERR("Problems formatting PCI");

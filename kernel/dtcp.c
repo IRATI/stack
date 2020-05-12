@@ -379,6 +379,7 @@ struct du * pdu_ctrl_generate(struct dtcp * dtcp, pdu_type_t type)
 		       dtcp->parent->efcp->connection->destination_address,
                        seq,
 		       dtcp->parent->efcp->connection->qos_id,
+                       0,
 		       du->pci.len,
                        type)) {
 		LOG_ERR("Could not format recently created PCI");
