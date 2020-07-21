@@ -96,13 +96,18 @@ static int cas_rmt_queue_destroy(struct cas_rmt_queue * q)
         return 0;
 }
 
+static s64 timespec_sub_ns (struct timespec a, struct timespec b)
+{
+	return (int)(a.tv_sec - b.tv_sec) * 1000000000L
+		+ ((int) a.tv_nsec - (int)b.tv_nsec);
+}
+
 static int update_cycles(struct reg_cycle_t * prev_cycle,
 		  	 struct reg_cycle_t * cur_cycle,
 			 ssize_t cur_qlen,
 			 bool enqueue)
 {
 	ssize_t		end_len;
-        struct timespec	t_sub;
         s64		t_sub_ns;
 
 	end_len = 0;
@@ -115,19 +120,18 @@ static int update_cycles(struct reg_cycle_t * prev_cycle,
         else if (cur_qlen == end_len) {
                 /* end cycle */
 		getnstimeofday(&cur_cycle->t_end);
-		t_sub = timespec_sub(cur_cycle->t_end, cur_cycle->t_last_start);
-		cur_cycle->sum_area += (ulong) cur_qlen * timespec_to_ns(&t_sub);
+		t_sub_ns = timespec_sub_ns(cur_cycle->t_end, cur_cycle->t_last_start);
+		cur_cycle->sum_area += (ulong) cur_qlen * t_sub_ns;
 		cur_cycle->t_last_start = cur_cycle->t_end;
         } else {
                 /* middle cycle */
                 cur_cycle->t_last_start = cur_cycle->t_end;
                 getnstimeofday(&cur_cycle->t_end);
-                t_sub = timespec_sub(cur_cycle->t_end, cur_cycle->t_last_start);
-                cur_cycle->sum_area +=(ulong) cur_qlen * timespec_to_ns(&t_sub);
+		t_sub_ns = timespec_sub_ns(cur_cycle->t_end, cur_cycle->t_last_start);
+                cur_cycle->sum_area +=(ulong) cur_qlen * t_sub_ns;
         }
 
-        t_sub = timespec_sub(cur_cycle->t_end, prev_cycle->t_start);
-	t_sub_ns = timespec_to_ns(&t_sub);
+	t_sub_ns = timespec_sub_ns(cur_cycle->t_end, prev_cycle->t_start);
         cur_cycle->avg_len = (cur_cycle->sum_area + prev_cycle->sum_area);
 
 	if (t_sub_ns <= 0) {
