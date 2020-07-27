@@ -27,6 +27,8 @@ env:
   - KERNEL_VERSION=5.0
   - KERNEL_VERSION=5.1
   - KERNEL_VERSION=5.2
+  - KERNEL_VERSION=5.3
+  - KERNEL_VERSION=5.4
 
 before_install:
   # Install Dependencies
