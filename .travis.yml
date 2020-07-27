@@ -1,5 +1,5 @@
 sudo: enabled
-dist: bionic
+dist: xenial
 language: cpp
 
 env:
