@@ -26,6 +26,7 @@
 #include <linux/crypto.h>
 #include <linux/scatterlist.h>
 #include <linux/random.h>
+#include <linux/version.h>
 #include <crypto/hash.h>
 
 #define RINA_PREFIX "sdup-crypto-ps-default"
@@ -406,7 +407,10 @@ static int add_hmac(struct sdup_crypto_ps_default_data * priv_data,
 		return -1;
 	}
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,2,0)
 	shash->flags = 0;
+#else
+#endif
 	shash->tfm = state->shash;
 
 	if (crypto_shash_digest(shash, data, buffer_size, data+buffer_size)) {
@@ -448,7 +452,10 @@ static int check_hmac(struct sdup_crypto_ps_default_data * priv_data,
 		return -1;
 	}
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,2,0)
 	shash->flags = 0;
+#else
+#endif
 	shash->tfm = state->shash;
 
 	if (crypto_shash_digest(shash, data, buffer_size-digest_size, verify_digest)) {
