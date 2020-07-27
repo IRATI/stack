@@ -1,5 +1,5 @@
 sudo: enabled
-dist: trusty
+dist: bionic
 language: cpp
 
 env:
@@ -36,7 +36,7 @@ before_install:
   - sudo apt-get install libtool
   - sudo apt-get install pkg-config
   - sudo apt-get install git
-  - sudo apt-get install gcc-5
+  - sudo apt-get install g++
   - sudo apt-get install libssl-dev
   #- sudo apt-get install protobuf-compiler
   #- sudo apt-get install libprotobuf-dev
