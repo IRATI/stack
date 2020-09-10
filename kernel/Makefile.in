@@ -29,7 +29,7 @@ ifeq ($(CONFIG_RINA_DTCP_RCVR_ACK_ATIMER),y)
 ccflags-y += -DCONFIG_RINA_DTCP_RCVR_ACK_ATIMER
 endif
 
-EXTRA_CFLAGS := -I$(PWD)/../include
+EXTRA_CFLAGS := -I$(PWD)/../include -fno-pie
 
 obj-m += rina-irati-core.o
 rina-irati-core-y:=						\

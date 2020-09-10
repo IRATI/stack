@@ -1325,27 +1325,24 @@ int dtcp_ps_unpublish(const char * name)
 { return ps_unpublish(&policy_sets, name); }
 EXPORT_SYMBOL(dtcp_ps_unpublish);
 
-/* Returns the ms represented by the timespec given. */
+/* Returns the ms represented by the timespec given.
+   DEPRECATED, left for reference to show previous non-rounding behavior
 unsigned long dtcp_ms(struct timespec * ts) {
 	return (ts->tv_sec * 1000) + (ts->tv_nsec / 1000000);
-}
+} */
 
 /* Is the given rate exceeded? Reset if the time frame given elapses. */
 bool dtcp_rate_exceeded(struct dtcp * dtcp, int send) {
 	struct timespec now  = {0, 0};
-	struct timespec last = {0, 0};
-	struct timespec sub  = {0, 0};
+	uint_t timedif_ms;
 	uint_t rate = 0;
 	uint_t lim = 0;
 
 	getnstimeofday(&now);
 
-	last.tv_sec = dtcp->sv->last_time.tv_sec;
-	last.tv_nsec = dtcp->sv->last_time.tv_nsec;
-
-	sub = timespec_sub(now, last);
-
-	if (dtcp_ms(&sub) >= dtcp->sv->time_unit)
+	timedif_ms = (int)(now.tv_sec - dtcp->sv->last_time.tv_sec) * 1000 +
+		((int)now.tv_nsec - (int)dtcp->sv->last_time.tv_nsec) / 1000000;
+	if (timedif_ms >= dtcp->sv->time_unit)
 	{
 		dtcp->sv->pdus_sent_in_time_unit = 0;
 		dtcp->sv->pdus_rcvd_in_time_unit = 0;

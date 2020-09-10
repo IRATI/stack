@@ -725,37 +725,23 @@ static void tf_a(struct timer_list * tl)
 static unsigned int msec_to_next_rate(uint time_frame, struct timespec * last)
 {
 	struct timespec now = {0,0};
-	struct timespec next = {0,0};
-	struct timespec diff = {0,0};
-	unsigned int ret = 0;
 
 	if(!last) {
 		LOG_ERR("%s arg invalid, last: 0x%pK", __func__, last);
 		return -1;
 	}
 
-	next.tv_sec = last->tv_sec;
-	next.tv_nsec = last->tv_nsec;
-
-	while(time_frame >= 1000) {
-		next.tv_sec += 1;
-		time_frame -= 1000;
-	}
-
-	next.tv_nsec += time_frame * 1000000;
-
-	if(next.tv_nsec > 1000000000L) {
-		next.tv_sec += 1;
-		next.tv_nsec -= 1000000000L;
-	}
-
+// Algorithm:
+// next = last + timeframe
+// ret = next - now
+// (ASSUMPTION: ret is >= 0)
+// Reordering and adjusting units:
+// ret = convert_to_ms_units(last - now) + timeframe
+// (Being sure to avoid overflow/underflow)
 	getnstimeofday(&now);
-
-	diff = timespec_sub(next, now);
-	ret = (diff.tv_sec * 1000) +
-		(diff.tv_nsec / 1000000);
-
-	return ret;
+	return ((int)last->tv_sec - (int)now.tv_sec) * 1000
+		+ ((int)last->tv_nsec - (int)now.tv_nsec) / 1000000
+		+ time_frame;
 }
 
 /* Does not start the timer(return false) if it's not necessary and work can be
