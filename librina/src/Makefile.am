@@ -198,7 +198,7 @@ librinajsoncpp.pc: Makefile librinajsoncpp.pc.in
 	chmod a-w $@.tmp
 	mv $@.tmp $@
 
-CLEANFILES += librina.pc librinajsoncpp.pc
+CLEANFILES += librina.pc librinajsoncpp.pc CDAP.pb.h CDAP.pb.cc CDAP.stamp *.pb.h *.pb.cc *.stamp
 
 pkgconfigdir   = $(libdir)/pkgconfig
 pkgconfig_DATA = librina.pc librinajsoncpp.pc
