@@ -346,7 +346,7 @@ int default_delim_process_udf(struct delim_ps * ps, struct du * du,
 
 	flags = (char *) du_buffer(du);
 
-	LOG_DBG("Received UDF with length %d and flags %d",
+	LOG_DBG("Received UDF with length %ld and flags %d",
 		du_len(du) - 1, *flags);
 
 	if (*flags & 0x08) {
