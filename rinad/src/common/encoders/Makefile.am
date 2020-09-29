@@ -4,7 +4,7 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-CLEANFILES       =
+CLEANFILES       = *.pb.h *.pb.c *.stamp
 MOSTLYCLEANFILES =
 EXTRA_DIST       =
 

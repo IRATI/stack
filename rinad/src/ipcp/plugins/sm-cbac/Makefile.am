@@ -7,7 +7,7 @@
 include Makefile.inc
 
 # EXTRA_DIST   =
-# CLEANFILES   =
+CLEANFILES = *.pb.h *.pb.cc sm-cbac.stamp
 # MOSTLYCLEANFILES = 
 # DISTCLEANFILES = 
 # protoSOURCES = 

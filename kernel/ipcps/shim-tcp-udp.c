@@ -1699,7 +1699,8 @@ static int tcp_udp_rcv_process_msg(struct sock * sk)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,17,0)
         if (kernel_getsockname(sock, &own.sa, &len)) {
 #else
-	if (kernel_getsockname(sock, &own.sa)) {
+	len = kernel_getsockname(sock, &own.sa);
+	if (len < 0) {
 #endif
                 LOG_ERR("Couldn't retrieve hostname");
                 return -1;
