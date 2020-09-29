@@ -1381,6 +1381,7 @@ void EnrollmentTask::initiateEnrollment(const rina::EnrollmentRequest& request)
 	flowInformation.difName = request.neighbor_.supporting_dif_name_;
 	flowInformation.flowSpecification.msg_boundaries = true;
 	flowInformation.flowSpecification.orderedDelivery = true;
+	flowInformation.flowSpecification.maxAllowableGap = 0;
 	flowInformation.flowSpecification.delay = fspec.delay;
 	flowInformation.flowSpecification.loss = fspec.loss;
 	unsigned int handle = -1;
