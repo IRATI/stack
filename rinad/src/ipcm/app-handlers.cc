@@ -256,8 +256,6 @@ IPCManager_::ipcm_register_response_common(rina::IpcmRegisterApplicationResponse
                 FLUSH_LOG(ERR, ss);
         }
 
-        if (success)
-
         return success;
 }
 
