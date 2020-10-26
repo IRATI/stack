@@ -303,6 +303,11 @@ public:
 	void list_ipcps(std::list<int>& list);
 
 	//
+	// Return the physical interface attached to a certain DIF, if any
+	//
+	std::string get_interface_for_dif(const std::string & dif_name);
+
+	//
 	// Get the IPCP name
 	//
 	std::string get_ipcp_name(int ipcp_id);

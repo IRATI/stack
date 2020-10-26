@@ -850,6 +850,31 @@ public:
 	}
 };
 
+class GetInterfaceForDIFConsoleCMd: public rina::ConsoleCmdInfo {
+public:
+	GetInterfaceForDIFConsoleCMd(IPCMConsole * console) :
+		rina::ConsoleCmdInfo("USAGE: get-iface-for-dif <dif_name>",
+							  console) {};
+
+	int execute(vector<string>& args) {
+		std::string iface_name;
+
+		if (args.size() != 2) {
+			console->outstream << console->commands_map[args[0]]->usage << endl;
+			return rina::UNIXConsole::CMDRETCONT;
+		}
+
+		iface_name = IPCManager->get_interface_for_dif(args[1]);
+		if (iface_name != "") {
+			console->outstream << iface_name << endl;
+		} else {
+			console->outstream << "DIF " << args[1] << " is not attached to any interface" << endl;
+		}
+
+		return rina::UNIXConsole::CMDRETCONT;
+	}
+};
+
 IPCMConsole::IPCMConsole(const string& socket_path_) :
 		rina::UNIXConsole(socket_path_, "IPCM"),
 		Addon(IPCMConsole::NAME)
@@ -881,6 +906,7 @@ IPCMConsole::IPCMConsole(const string& socket_path_) :
 	commands_map["allocate-ip-vpn-flow"] = new AllocateIPVPNFlowConsoleCmd(this);
 	commands_map["deallocate-ip-vpn-flow"] = new DeallocateIPVPNFlowConsoleCmd(this);
 	commands_map["map-ip-prefix-to-flow"] = new MapIPPrefixToFlowConsoleCmd(this);
+	commands_map["get-iface-for-dif"] = new GetInterfaceForDIFConsoleCMd(this);
 }
 
 int IPCMConsole::plugin_load_unload(vector<string>& args, bool load)
