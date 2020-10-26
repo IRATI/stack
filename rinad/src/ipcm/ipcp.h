@@ -73,6 +73,9 @@ public:
 
 	bool kernel_ready;
 
+	//If this DIF is a shim DIF, the name of the interface it is attached to
+	std::string interface_name;
+
 	//Constructors and destructurs
 
 	IPCMIPCProcess();

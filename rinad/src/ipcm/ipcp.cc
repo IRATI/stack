@@ -61,6 +61,7 @@ IPCMIPCProcess::IPCMIPCProcess(rina::IPCProcessProxy* ipcp_proxy)
 	state_ = IPCM_IPCP_CREATED;
 	proxy_ = ipcp_proxy;
 	kernel_ready = false;
+	interface_name = "";
 }
 
 /** Return the information of a registration request */
@@ -198,6 +199,9 @@ unsigned int IPCMIPCProcess::get_fa_ctrl_port(const rina::ApplicationProcessNami
 void IPCMIPCProcess::assignToDIF(const rina::DIFInformation& difInformation,
 		unsigned int opaque)
 {
+	std::list<rina::PolicyParameter> params;
+	std::list<rina::PolicyParameter>::const_iterator it;
+
 	if (state_ != IPCM_IPCP_INITIALIZED) {
 		throw rina::AssignToDIFException(
 				"IPC Process not yet initialized");
@@ -213,6 +217,15 @@ void IPCMIPCProcess::assignToDIF(const rina::DIFInformation& difInformation,
 		state_ = IPCM_IPCP_INITIALIZED;
 		throw e;
 	}
+
+	// In case this is a shim DIF, store physical interface
+	params = difInformation.get_dif_configuration().get_parameters();
+	for (it = params.begin(); it != params.end(); ++it) {
+		if (it->get_name() == "interface-name") {
+			interface_name = it->get_value();
+		}
+	}
+
 }
 
 void IPCMIPCProcess::assignToDIFResult(bool success)
@@ -220,10 +233,12 @@ void IPCMIPCProcess::assignToDIFResult(bool success)
 	if (state_ != IPCM_IPCP_ASSIGN_TO_DIF_IN_PROGRESS)
 		throw rina::AssignToDIFException("IPC Process in bad state");
 
-	if (!success)
+	if (!success) {
 		state_ = IPCM_IPCP_INITIALIZED;
-	else
+		interface_name = "";
+	} else {
 		state_ = IPCM_IPCP_ASSIGNED_TO_DIF;
+	}
 }
 
 void
