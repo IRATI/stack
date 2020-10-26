@@ -1438,9 +1438,9 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         if (result) {
                 ASSERT(dif_name->process_name);
 
-                LOG_ERR("Error converting DIF Name to VLAN ID: %s",
+                LOG_WARN("DIF name not a VLAN number, using full Ethernet interface: %s",
                         dif_name->process_name);
-                return -1;
+                temp = 0;
         }
         info->vlan_id = (uint16_t) temp;
 

@@ -435,6 +435,26 @@ void IPCManager_::list_ipcps(std::list<int>& list)
         list.push_back((*it)->get_id());
 }
 
+std::string IPCManager_::get_interface_for_dif(const std::string & dif_name)
+{
+    std::vector<IPCMIPCProcess*>::const_iterator it;
+
+    //Prevent any insertion/deletion to happen
+    rina::ReadScopedLock readlock(ipcp_factory_.rwlock);
+
+    //Call the factory
+    std::vector<IPCMIPCProcess*> ipcps;
+    ipcp_factory_.listIPCProcesses(ipcps);
+
+    for (it = ipcps.begin(); it != ipcps.end(); ++it) {
+    	if ((*it)->dif_name_.processName == dif_name) {
+    		return (*it)->interface_name;
+    	}
+    }
+
+    return "";
+}
+
 bool IPCManager_::ipcp_exists(const unsigned short ipcp_id)
 {
 	return ipcp_factory_.exists(ipcp_id);
