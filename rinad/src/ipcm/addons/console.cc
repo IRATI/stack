@@ -57,7 +57,7 @@ public:
 		}
 
 		console->outstream << "IPC process created successfully [id = "
-		      << promise.ipcp_id << ", name="<<args[1]<<"]" << endl;
+		      << promise.ipcp_id << ", name = "<<ipcp_name.processName<<"]" << endl;
 
 		return rina::UNIXConsole::CMDRETCONT;
 	}
