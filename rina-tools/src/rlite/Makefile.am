@@ -27,14 +27,13 @@ noinst_LTLIBRARIES =				\
 BUILT_SOURCES = $(protoSOURCES)
 
 libiporina_la_SOURCES =			\
-	$(protoSOURCES)
+	$(protoSOURCES)				\
 libiporina_la_CPPFLAGS =			\
 	-I$(builddir)/..			\
-	-I$(srcdir)/..				\
-	$(CPPFLAGS_EXTRA)
+	-I$(srcdir)/..
 
 iporinad_SOURCES = iporinad.cpp fdfwd.cpp cdap.cpp
-iporinad_LDADD = $(LIBRINA_API_LIBS) -liporina
+iporinad_LDADD = $(LIBRINA_API_LIBS) libiporina.la
 iporinad_CPPFLAGS = $(LIBRINA_API_CFLAGS) -std=c++11
 
 bin_PROGRAMS += rinaperf rina-echo-async rina-gw iporinad
