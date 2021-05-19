@@ -23,6 +23,7 @@
 #define RINA_PREFIX "dtcp"
 
 #include <linux/delay.h>
+#include <linux/ktime.h>
 
 #include "logs.h"
 #include "utils.h"
@@ -50,7 +51,7 @@ int dtcp_pdu_send(struct dtcp * dtcp, struct du * du)
 }
 EXPORT_SYMBOL(dtcp_pdu_send);
 
-int dtcp_last_time_set(struct dtcp * dtcp, struct timespec * s)
+int dtcp_last_time_set(struct dtcp * dtcp, struct timespec64 * s)
 {
 	ASSERT(dtcp);
 	ASSERT(dtcp->sv);
@@ -136,7 +137,7 @@ static ssize_t dtcp_attr_show(struct robject *		     robj,
 		return sprintf(buf, "%u\n", instance->sv->pdus_rcvd_in_time_unit);
 	}
 	if (strcmp(robject_attr_name(attr), "last_time") == 0) {
-		struct timespec s;
+		struct timespec64 s;
 		s.tv_sec = instance->sv->last_time.tv_sec;
 		s.tv_nsec = instance->sv->last_time.tv_nsec;
 		return sprintf(buf, "%lld.%.9ld\n",
@@ -1333,12 +1334,12 @@ unsigned long dtcp_ms(struct timespec * ts) {
 
 /* Is the given rate exceeded? Reset if the time frame given elapses. */
 bool dtcp_rate_exceeded(struct dtcp * dtcp, int send) {
-	struct timespec now  = {0, 0};
+	struct timespec64 now  = {0, 0};
 	uint_t timedif_ms;
 	uint_t rate = 0;
 	uint_t lim = 0;
 
-	getnstimeofday(&now);
+	ktime_get_real_ts64(&now);
 
 	timedif_ms = (int)(now.tv_sec - dtcp->sv->last_time.tv_sec) * 1000 +
 		((int)now.tv_nsec - (int)dtcp->sv->last_time.tv_nsec) / 1000000;

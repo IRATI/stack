@@ -722,9 +722,9 @@ static void tf_a(struct timer_list * tl)
         return;
 }
 
-static unsigned int msec_to_next_rate(uint time_frame, struct timespec * last)
+static unsigned int msec_to_next_rate(uint time_frame, struct timespec64 * last)
 {
-	struct timespec now = {0,0};
+	struct timespec64 now = {0,0};
 
 	if(!last) {
 		LOG_ERR("%s arg invalid, last: 0x%pK", __func__, last);
@@ -738,7 +738,7 @@ static unsigned int msec_to_next_rate(uint time_frame, struct timespec * last)
 // Reordering and adjusting units:
 // ret = convert_to_ms_units(last - now) + timeframe
 // (Being sure to avoid overflow/underflow)
-	getnstimeofday(&now);
+	ktime_get_real_ts64(&now);
 	return ((int)last->tv_sec - (int)now.tv_sec) * 1000
 		+ ((int)last->tv_nsec - (int)now.tv_nsec) / 1000000
 		+ time_frame;
@@ -750,7 +750,7 @@ static unsigned int msec_to_next_rate(uint time_frame, struct timespec * last)
 void dtp_start_rate_timer(struct dtp * dtp, struct dtcp * dtcp)
 {
 	uint rtf, tf;
-	struct timespec t = {0,0};
+	struct timespec64 t = {0,0};
 
 	tf = 0;
 
@@ -767,8 +767,8 @@ void dtp_start_rate_timer(struct dtp * dtp, struct dtcp * dtcp)
 
 	tf = msec_to_next_rate(rtf, &t);
 
-	LOG_DBG("Rate based timer start, time %u msec, "
-		"last: %lu:%lu", tf, t.tv_sec, t.tv_nsec);
+	LOG_DBG("Rate based timer start, time %llu msec, "
+		"last: %llu:%llu", tf, t.tv_sec, t.tv_nsec);
 
 	rtimer_start(&dtp->timers.rate_window, tf);
 }
@@ -781,7 +781,7 @@ static void tf_rate_window(struct timer_list * tl)
 {
         struct dtp *  dtp;
         struct dtcp * dtcp;
-        struct timespec now  = {0, 0};
+        struct timespec64 now  = {0, 0};
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         dtp = (struct dtp *) o;
@@ -798,7 +798,7 @@ static void tf_rate_window(struct timer_list * tl)
         LOG_DBG("rbfc Timer job start...");
         LOG_DBG("rbfc Re-opening the rate mechanism");
 
-        getnstimeofday(&now);
+        ktime_get_real_ts64(&now);
 
         spin_lock_bh(&dtp->sv_lock);
 	dtcp->sv->pdus_sent_in_time_unit = 0;

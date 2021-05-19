@@ -76,7 +76,7 @@ struct du	*pdu_ctrl_ack_create(struct dtcp *dtcp,
 				     seq_num_t snd_rt_wind_edge);
 struct du	*pdu_ctrl_generate(struct dtcp *dtcp, pdu_type_t type);
 int		dtcp_last_time_set(struct dtcp *dtcp,
-					   struct timespec *s);
+					   struct timespec64 *s);
 bool		dtcp_rate_exceeded(struct dtcp *dtcp, int send);
 
 /* end SDK */

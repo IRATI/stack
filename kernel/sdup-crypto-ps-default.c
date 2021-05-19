@@ -27,6 +27,7 @@
 #include <linux/scatterlist.h>
 #include <linux/random.h>
 #include <linux/version.h>
+#include <crypto/skcipher.h>
 #include <crypto/hash.h>
 
 #define RINA_PREFIX "sdup-crypto-ps-default"
@@ -39,7 +40,7 @@
 
 
 struct sdup_crypto_ps_default_crypto_state {
-	struct crypto_blkcipher * blkcipher;
+	struct crypto_skcipher * cipher;
 
 	struct crypto_shash * shash;
 
@@ -74,7 +75,7 @@ static struct sdup_crypto_ps_default_crypto_state * crypto_state_create(void)
 	struct sdup_crypto_ps_default_crypto_state * state =
 		rkmalloc(sizeof(*state), GFP_KERNEL);
 
-	state->blkcipher = NULL;
+	state->cipher = NULL;
 
 	state->shash = NULL;
 
@@ -91,8 +92,8 @@ static struct sdup_crypto_ps_default_crypto_state * crypto_state_create(void)
 
 static void crypto_state_destroy(struct sdup_crypto_ps_default_crypto_state * state)
 {
-	if (state->blkcipher)
-		crypto_free_blkcipher(state->blkcipher);
+	if (state->cipher)
+		crypto_free_skcipher(state->cipher);
 
 	if (state->shash)
 		crypto_free_shash(state->shash);
@@ -206,12 +207,12 @@ static int add_padding(struct sdup_crypto_ps_default_data * priv_data,
 	state = priv_data->current_tx_state;
 
 	/* encryption and therefore padding is disabled */
-	if (!state->blkcipher)
+	if (!state->cipher)
 		return 0;
 
 	LOG_DBG("PADDING!");
 
-	blk_size = crypto_blkcipher_blocksize(state->blkcipher);
+	blk_size = crypto_skcipher_blocksize(state->cipher);
 	buffer_size = du_len(du);
 	padded_size = (buffer_size/blk_size + 1) * blk_size;
 
@@ -246,7 +247,7 @@ static int remove_padding(struct sdup_crypto_ps_default_data * priv_data,
 	state = priv_data->current_rx_state;
 
 	/* decryption and therefore padding is disabled */
-	if (!state->blkcipher)
+	if (!state->cipher)
 		return 0;
 
 	LOG_DBG("UNPADDING!");
@@ -275,7 +276,7 @@ static int encrypt(struct sdup_crypto_ps_default_data * priv_data,
 		   struct du * du)
 {
 	struct sdup_crypto_ps_default_crypto_state * state;
-	struct blkcipher_desc	desc;
+    struct skcipher_request request;
 	struct scatterlist	sg;
 	ssize_t			buffer_size;
 	void *			data;
@@ -290,16 +291,14 @@ static int encrypt(struct sdup_crypto_ps_default_data * priv_data,
 	state = priv_data->current_tx_state;
 
 	/* encryption is disabled */
-	if (state->blkcipher == NULL)
+	if (state->cipher == NULL)
 		return 0;
 
-	desc.flags = 0;
-	desc.tfm = state->blkcipher;
 	buffer_size = du_len(du);
 	data = du_buffer(du);
 
 	iv = NULL;
-	ivsize = crypto_blkcipher_ivsize(state->blkcipher);
+	ivsize = crypto_skcipher_ivsize(state->cipher);
 	if (ivsize) {
 		if(du_head_grow(du, ivsize)){
 			LOG_ERR("IV allocation failed!");
@@ -310,10 +309,9 @@ static int encrypt(struct sdup_crypto_ps_default_data * priv_data,
 
 	sg_init_one(&sg, data, buffer_size);
 
-	if (iv)
-		crypto_blkcipher_set_iv(state->blkcipher, iv, ivsize);
+    skcipher_request_set_crypt(&request, &sg, &sg, buffer_size, iv);
 
-	if (crypto_blkcipher_encrypt(&desc, &sg, &sg, buffer_size)) {
+    if (crypto_skcipher_encrypt(&request)) {
 		LOG_ERR("Encryption failed!");
 		if (iv)
 			du_head_shrink(du, ivsize);
@@ -327,7 +325,7 @@ static int decrypt(struct sdup_crypto_ps_default_data * priv_data,
 		   struct du * du)
 {
 	struct sdup_crypto_ps_default_crypto_state * state;
-	struct blkcipher_desc	desc;
+    struct skcipher_request request;
 	struct scatterlist	sg;
 	unsigned int		buffer_size;
 	void *			data;
@@ -342,7 +340,7 @@ static int decrypt(struct sdup_crypto_ps_default_data * priv_data,
 	state = priv_data->current_rx_state;
 
 	/* decryption is disabled */
-	if (state->blkcipher == NULL)
+	if (state->cipher == NULL)
 		return 0;
 
 	buffer_size = du_len(du);
@@ -351,7 +349,7 @@ static int decrypt(struct sdup_crypto_ps_default_data * priv_data,
 	LOG_DBG("DECRYPT original buffer_size %d", buffer_size);
 
 	iv = NULL;
-	ivsize = crypto_blkcipher_ivsize(state->blkcipher);
+	ivsize = crypto_skcipher_ivsize(state->cipher);
 	if (ivsize) {
 		iv = data;
 		if(du_head_shrink(du, ivsize)){
@@ -362,15 +360,11 @@ static int decrypt(struct sdup_crypto_ps_default_data * priv_data,
 		buffer_size = du_len(du);
 	}
 
-	desc.flags = 0;
-	desc.tfm = state->blkcipher;
-
 	sg_init_one(&sg, data, buffer_size);
 
-	if (iv)
-		crypto_blkcipher_set_iv(state->blkcipher, iv, ivsize);
+    skcipher_request_set_crypt(&request, &sg, &sg, buffer_size, iv);
 
-	if (crypto_blkcipher_decrypt(&desc, &sg, &sg, buffer_size)) {
+	if (crypto_skcipher_decrypt(&request)) {
 		LOG_ERR("Decryption failed!");
 		return -1;
 	}
@@ -624,7 +618,7 @@ static int add_seq_num(struct sdup_crypto_ps_default_data * priv_data,
 	state = priv_data->current_tx_state;
 
 	/* encryption and therefore sequence numbers are disabled */
-	if (!state->blkcipher)
+	if (!state->cipher)
 		return 0;
 
 	if (du_head_grow(du, sizeof(priv_data->tx_seq_num))){
@@ -661,7 +655,7 @@ static int del_seq_num(struct sdup_crypto_ps_default_data * priv_data,
 	state = priv_data->current_rx_state;
 
 	/* decryption and therefore sequence numbers are disabled */
-	if (!state->blkcipher)
+	if (!state->cipher)
 		return 0;
 
 	data = du_buffer(du);
@@ -820,16 +814,16 @@ int default_sdup_update_crypto_state(struct sdup_crypto_ps * ps,
 			return -1;
 		}
 
-		next_tx_state->blkcipher = crypto_alloc_blkcipher(next_tx_state->enc_alg,
+		next_tx_state->cipher = crypto_alloc_skcipher(next_tx_state->enc_alg,
 								  0,0);
-		next_rx_state->blkcipher = crypto_alloc_blkcipher(next_rx_state->enc_alg,
+		next_rx_state->cipher = crypto_alloc_skcipher(next_rx_state->enc_alg,
 								  0,0);
-		if (IS_ERR(next_tx_state->blkcipher)) {
+		if (IS_ERR(next_tx_state->cipher)) {
 			LOG_ERR("could not allocate tx blkcipher handle for %s\n",
 				next_tx_state->enc_alg);
 			return -1;
 		}
-		if (IS_ERR(next_rx_state->blkcipher)) {
+		if (IS_ERR(next_rx_state->cipher)) {
 			LOG_ERR("could not allocate rx blkcipher handle for %s\n",
 				next_rx_state->enc_alg);
 			return -1;
@@ -837,18 +831,18 @@ int default_sdup_update_crypto_state(struct sdup_crypto_ps * ps,
 	}
 
 	if (state->encrypt_key_tx) {
-		if (crypto_blkcipher_setkey(next_tx_state->blkcipher,
-					    buffer_data_ro(state->encrypt_key_tx),
-					    buffer_length(state->encrypt_key_tx))) {
+		if (crypto_skcipher_setkey(next_tx_state->cipher,
+                                   buffer_data_ro(state->encrypt_key_tx),
+                                   buffer_length(state->encrypt_key_tx))) {
 			LOG_ERR("Could not set tx encryption key for N-1 port %d",
 				ps->dm->port_id);
 			return -1;
 		}
 	}
 	if (state->encrypt_key_rx) {
-		if (crypto_blkcipher_setkey(next_rx_state->blkcipher,
-					    buffer_data_ro(state->encrypt_key_rx),
-					    buffer_length(state->encrypt_key_rx))) {
+		if (crypto_skcipher_setkey(next_rx_state->cipher,
+                                   buffer_data_ro(state->encrypt_key_rx),
+                                   buffer_length(state->encrypt_key_rx))) {
 			LOG_ERR("Could not set rx encryption key for N-1 port %d",
 				ps->dm->port_id);
 			return -1;
