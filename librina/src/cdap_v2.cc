@@ -2915,7 +2915,7 @@ void GPBSerializer::serializeMessage(const cdap_m_t &cdapMessage,
 	// VERSION
 	gpfCDAPMessage.set_version(cdapMessage.version_);
 
-	int size = gpfCDAPMessage.ByteSize();
+	int size = gpfCDAPMessage.ByteSizeLong();
 	result.message_ = new unsigned char[size];
 	result.size_ = size;
 	gpfCDAPMessage.SerializeToArray(result.message_, size);
@@ -4141,7 +4141,7 @@ void StringEncoder::encode(const std::string& obj, ser_obj_t& serobj)
 	s.set_value(obj);
 
 	//Allocate memory
-	serobj.size_ = s.ByteSize();
+	serobj.size_ = s.ByteSizeLong();
 	serobj.message_ = new unsigned char[serobj.size_];
 
 	if (!serobj.message_)
@@ -4165,7 +4165,7 @@ void IntEncoder::encode(const int &obj, ser_obj_t& serobj)
 
 	gpb.set_value(obj);
 
-	serobj.size_ = gpb.ByteSize();
+	serobj.size_ = gpb.ByteSizeLong();
 	serobj.message_ = new unsigned char[serobj.size_];
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
