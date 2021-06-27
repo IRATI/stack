@@ -21,6 +21,8 @@
 #ifndef RINA_DTCP_H
 #define RINA_DTCP_H
 
+#include <linux/version.h>
+
 #include "common.h"
 #include "du.h"
 #include "efcp-str.h"
@@ -76,7 +78,11 @@ struct du	*pdu_ctrl_ack_create(struct dtcp *dtcp,
 				     seq_num_t snd_rt_wind_edge);
 struct du	*pdu_ctrl_generate(struct dtcp *dtcp, pdu_type_t type);
 int		dtcp_last_time_set(struct dtcp *dtcp,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 					   struct timespec *s);
+#else
+					   struct timespec64 *s);
+#endif
 bool		dtcp_rate_exceeded(struct dtcp *dtcp, int send);
 
 /* end SDK */

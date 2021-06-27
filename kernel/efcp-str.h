@@ -22,6 +22,7 @@
 #define RINA_EFCP_STR_H
 
 #include <linux/list.h>
+#include <linux/version.h>
 
 #include "common.h"
 #include "delim.h"
@@ -284,7 +285,11 @@ struct dtcp_sv {
 		/* Last time-instant when the credit check has been done.
 		 * This is used by rate-based flow control mechanism.
 		 */
-		struct timespec last_time;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)	
+	struct timespec last_time;
+#else
+	struct timespec64 last_time;
+#endif
 
         /*
          * Control of duplicated control PDUs
