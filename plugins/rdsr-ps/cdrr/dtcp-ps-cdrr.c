@@ -23,6 +23,7 @@
 #include <linux/string.h>
 #include <linux/random.h>
 #include <linux/spinlock.h>
+#include <linux/version.h>
 
 #define CDRR_NAME	"cdrr"
 #define RINA_PREFIX 	"dtcp-ps-cdrr"
@@ -67,7 +68,11 @@ struct cdrr_rate_info {
 	unsigned int reset_rate;
 
 	/* When we check the last time? */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	struct timespec last;
+#else
+	struct timespec64 last;
+#endif
 
 	/* The volume of congested bytes/pdu received. */
 	unsigned int congested;
@@ -299,8 +304,11 @@ static struct kobj_type cdrr_dtcp_ktype = {
 /*
  * Utilities:
  */
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 static inline unsigned long cdrr_to_ms(struct timespec * t) {
+#else
+static inline unsigned long cdrr_to_ms(struct timespec64 * t) {
+#endif
 	return (t->tv_sec * 1000) + (t->tv_nsec / 1000000);
 }
 
@@ -504,7 +512,11 @@ static struct ps_base * cdrr_create(struct rina_component * component) {
         ri->mgb  	= dtcp_sending_rate(dtcp->cfg);
         ri->time_frame	= dtcp_time_period(dtcp->cfg);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
         getnstimeofday(&ri->last);
+#else
+	ktime_get_real_ts64(&ri->last);
+#endif
 
         if(kobject_init_and_add(
 		&ri->robj, &cdrr_dtcp_ktype, &cdrr_kobj, "%pK", dtcp)) {
