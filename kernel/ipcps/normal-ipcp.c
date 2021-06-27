@@ -24,6 +24,7 @@
 #include <linux/list.h>
 #include <linux/string.h>
 #include <linux/version.h>
+#include <linux/time.h>
 
 #define IPCP_NAME   "normal-ipc"
 
