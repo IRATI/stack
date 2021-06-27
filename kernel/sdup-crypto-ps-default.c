@@ -28,6 +28,11 @@
 #include <linux/random.h>
 #include <linux/version.h>
 #include <crypto/hash.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
+#else
+#include <crypto/skcipher.h>
+#endif
+
 
 #define RINA_PREFIX "sdup-crypto-ps-default"
 
@@ -39,7 +44,11 @@
 
 
 struct sdup_crypto_ps_default_crypto_state {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	struct crypto_blkcipher * blkcipher;
+#else
+	struct crypto_skcipher * cipher;
+#endif
 
 	struct crypto_shash * shash;
 
@@ -74,7 +83,11 @@ static struct sdup_crypto_ps_default_crypto_state * crypto_state_create(void)
 	struct sdup_crypto_ps_default_crypto_state * state =
 		rkmalloc(sizeof(*state), GFP_KERNEL);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	state->blkcipher = NULL;
+#else
+	state->cipher = NULL;
+#endif
 
 	state->shash = NULL;
 
@@ -91,8 +104,13 @@ static struct sdup_crypto_ps_default_crypto_state * crypto_state_create(void)
 
 static void crypto_state_destroy(struct sdup_crypto_ps_default_crypto_state * state)
 {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	if (state->blkcipher)
 		crypto_free_blkcipher(state->blkcipher);
+#else
+	if (state->cipher)
+		crypto_free_skcipher(state->cipher);
+#endif
 
 	if (state->shash)
 		crypto_free_shash(state->shash);
@@ -206,12 +224,20 @@ static int add_padding(struct sdup_crypto_ps_default_data * priv_data,
 	state = priv_data->current_tx_state;
 
 	/* encryption and therefore padding is disabled */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	if (!state->blkcipher)
+#else
+	if (!state->cipher)
+#endif
 		return 0;
 
 	LOG_DBG("PADDING!");
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	blk_size = crypto_blkcipher_blocksize(state->blkcipher);
+#else
+	blk_size = crypto_skcipher_blocksize(state->cipher);
+#endif
 	buffer_size = du_len(du);
 	padded_size = (buffer_size/blk_size + 1) * blk_size;
 
@@ -246,7 +272,11 @@ static int remove_padding(struct sdup_crypto_ps_default_data * priv_data,
 	state = priv_data->current_rx_state;
 
 	/* decryption and therefore padding is disabled */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	if (!state->blkcipher)
+#else
+	if (!state->cipher)
+#endif
 		return 0;
 
 	LOG_DBG("UNPADDING!");
@@ -275,7 +305,11 @@ static int encrypt(struct sdup_crypto_ps_default_data * priv_data,
 		   struct du * du)
 {
 	struct sdup_crypto_ps_default_crypto_state * state;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	struct blkcipher_desc	desc;
+#else
+	struct skcipher_request request;
+#endif
 	struct scatterlist	sg;
 	ssize_t			buffer_size;
 	void *			data;
@@ -290,16 +324,27 @@ static int encrypt(struct sdup_crypto_ps_default_data * priv_data,
 	state = priv_data->current_tx_state;
 
 	/* encryption is disabled */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	if (state->blkcipher == NULL)
+#else
+	if (state->cipher == NULL)
+#endif
 		return 0;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	desc.flags = 0;
 	desc.tfm = state->blkcipher;
+#else
+#endif
 	buffer_size = du_len(du);
 	data = du_buffer(du);
 
 	iv = NULL;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	ivsize = crypto_blkcipher_ivsize(state->blkcipher);
+#else
+	ivsize = crypto_skcipher_ivsize(state->cipher);
+#endif
 	if (ivsize) {
 		if(du_head_grow(du, ivsize)){
 			LOG_ERR("IV allocation failed!");
@@ -310,10 +355,18 @@ static int encrypt(struct sdup_crypto_ps_default_data * priv_data,
 
 	sg_init_one(&sg, data, buffer_size);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	if (iv)
 		crypto_blkcipher_set_iv(state->blkcipher, iv, ivsize);
+#else
+	skcipher_request_set_crypt(&request, &sg, &sg, buffer_size, iv);
+#endif
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	if (crypto_blkcipher_encrypt(&desc, &sg, &sg, buffer_size)) {
+#else
+	if (crypto_skcipher_encrypt(&request)) {
+#endif
 		LOG_ERR("Encryption failed!");
 		if (iv)
 			du_head_shrink(du, ivsize);
@@ -327,7 +380,11 @@ static int decrypt(struct sdup_crypto_ps_default_data * priv_data,
 		   struct du * du)
 {
 	struct sdup_crypto_ps_default_crypto_state * state;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	struct blkcipher_desc	desc;
+#else
+	struct skcipher_request request;
+#endif
 	struct scatterlist	sg;
 	unsigned int		buffer_size;
 	void *			data;
@@ -342,7 +399,11 @@ static int decrypt(struct sdup_crypto_ps_default_data * priv_data,
 	state = priv_data->current_rx_state;
 
 	/* decryption is disabled */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	if (state->blkcipher == NULL)
+#else
+	if (state->cipher == NULL)
+#endif
 		return 0;
 
 	buffer_size = du_len(du);
@@ -351,7 +412,11 @@ static int decrypt(struct sdup_crypto_ps_default_data * priv_data,
 	LOG_DBG("DECRYPT original buffer_size %d", buffer_size);
 
 	iv = NULL;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	ivsize = crypto_blkcipher_ivsize(state->blkcipher);
+#else
+	ivsize = crypto_skcipher_ivsize(state->cipher);
+#endif
 	if (ivsize) {
 		iv = data;
 		if(du_head_shrink(du, ivsize)){
@@ -362,15 +427,24 @@ static int decrypt(struct sdup_crypto_ps_default_data * priv_data,
 		buffer_size = du_len(du);
 	}
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	desc.flags = 0;
 	desc.tfm = state->blkcipher;
+#else
+#endif
 
 	sg_init_one(&sg, data, buffer_size);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	if (iv)
 		crypto_blkcipher_set_iv(state->blkcipher, iv, ivsize);
 
 	if (crypto_blkcipher_decrypt(&desc, &sg, &sg, buffer_size)) {
+#else
+	skcipher_request_set_crypt(&request, &sg, &sg, buffer_size, iv);
+
+	if (crypto_skcipher_decrypt(&request)) {
+#endif
 		LOG_ERR("Decryption failed!");
 		return -1;
 	}
@@ -624,7 +698,11 @@ static int add_seq_num(struct sdup_crypto_ps_default_data * priv_data,
 	state = priv_data->current_tx_state;
 
 	/* encryption and therefore sequence numbers are disabled */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	if (!state->blkcipher)
+#else
+	if (!state->cipher)
+#endif
 		return 0;
 
 	if (du_head_grow(du, sizeof(priv_data->tx_seq_num))){
@@ -661,7 +739,11 @@ static int del_seq_num(struct sdup_crypto_ps_default_data * priv_data,
 	state = priv_data->current_rx_state;
 
 	/* decryption and therefore sequence numbers are disabled */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	if (!state->blkcipher)
+#else
+	if (!state->cipher)
+#endif
 		return 0;
 
 	data = du_buffer(du);
@@ -820,16 +902,29 @@ int default_sdup_update_crypto_state(struct sdup_crypto_ps * ps,
 			return -1;
 		}
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 		next_tx_state->blkcipher = crypto_alloc_blkcipher(next_tx_state->enc_alg,
 								  0,0);
 		next_rx_state->blkcipher = crypto_alloc_blkcipher(next_rx_state->enc_alg,
 								  0,0);
 		if (IS_ERR(next_tx_state->blkcipher)) {
+#else
+		next_tx_state->cipher = crypto_alloc_skcipher(next_tx_state->enc_alg,
+								  0,0);
+		next_rx_state->cipher = crypto_alloc_skcipher(next_rx_state->enc_alg,
+								  0,0);
+		
+		if (IS_ERR(next_tx_state->cipher)) {
+#endif
 			LOG_ERR("could not allocate tx blkcipher handle for %s\n",
 				next_tx_state->enc_alg);
 			return -1;
 		}
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 		if (IS_ERR(next_rx_state->blkcipher)) {
+#else
+		if (IS_ERR(next_rx_state->cipher)) {
+#endif
 			LOG_ERR("could not allocate rx blkcipher handle for %s\n",
 				next_rx_state->enc_alg);
 			return -1;
@@ -837,7 +932,11 @@ int default_sdup_update_crypto_state(struct sdup_crypto_ps * ps,
 	}
 
 	if (state->encrypt_key_tx) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 		if (crypto_blkcipher_setkey(next_tx_state->blkcipher,
+#else
+		if (crypto_skcipher_setkey(next_tx_state->cipher,
+#endif
 					    buffer_data_ro(state->encrypt_key_tx),
 					    buffer_length(state->encrypt_key_tx))) {
 			LOG_ERR("Could not set tx encryption key for N-1 port %d",
@@ -846,7 +945,11 @@ int default_sdup_update_crypto_state(struct sdup_crypto_ps * ps,
 		}
 	}
 	if (state->encrypt_key_rx) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 		if (crypto_blkcipher_setkey(next_rx_state->blkcipher,
+#else
+		if (crypto_skcipher_setkey(next_rx_state->cipher,
+#endif
 					    buffer_data_ro(state->encrypt_key_rx),
 					    buffer_length(state->encrypt_key_rx))) {
 			LOG_ERR("Could not set rx encryption key for N-1 port %d",
