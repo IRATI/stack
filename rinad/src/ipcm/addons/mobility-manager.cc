@@ -112,6 +112,8 @@ MobilityManager::MobilityManager(const rinad::RINAConfiguration& config) :
         LOG_INFO("Handover type: %s", hand_state.hand_type.c_str());
         LOG_INFO("Handover period (ms): %d", hand_state.hand_period_ms);
         LOG_INFO("Disconnect time (ms): %d", hand_state.disc_wait_time_ms);
+	LOG_INFO("Wireless DIF Name: %s", hand_state.wireless_dif_name.c_str());
+	LOG_INFO("Upper DIF Name: %s", hand_state.upper_dif_name.c_str());
 
 	BoostrapTimerTask * task = new BoostrapTimerTask(this);
 	timer.scheduleTask(task, DEFAULT_BOOTSTRAP_WAIT_TIME_MS);
