@@ -82,7 +82,6 @@ static struct file_operations q_len_file_ops = {
 };
 #else
 static struct proc_ops q_len_file_ops = {
-	.owner   = THIS_MODULE,
 	.proc_open    = q_len_open,
 	.proc_read    = seq_read,
 	.proc_lseek  = seq_lseek,
