@@ -21,6 +21,7 @@
 #include <linux/fs.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
+#include <linux/version.h>
 #include "dtcp-ps-debug.h"
 #include "rds/rmem.h"
 
@@ -66,6 +67,7 @@ static int
 credit_open(struct inode *inode, struct file *file)
 { return seq_open(file, &credit_seq_ops); }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 static struct file_operations credit_file_ops = {
 	.owner   = THIS_MODULE,
 	.open    = credit_open,
@@ -73,6 +75,14 @@ static struct file_operations credit_file_ops = {
 	.llseek  = seq_lseek,
 	.release = seq_release
 };
+#else
+static struct proc_ops credit_file_ops = {
+	.proc_open = credit_open,
+	.proc_read = seq_read,
+	.proc_lseek = seq_lseek,
+	.proc_release = seq_release
+};
+#endif
 
 struct red_dtcp_debug *
 red_dtcp_debug_create(void)

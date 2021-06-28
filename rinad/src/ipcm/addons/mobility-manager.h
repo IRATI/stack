@@ -45,6 +45,8 @@ struct HandoverState {
 	bool change_mob_dif;
 	int disc_wait_time_ms;
 	int hand_period_ms;
+	std::string wireless_dif_name;
+	std::string upper_dif_name;
 };
 
 //
@@ -60,6 +62,7 @@ public:
 	static const std::string ARCFIRE_EXP5_MAC;
 	static const std::string ARCFIRE_EXP5_TIP_UE1;
 	static const std::string ARCFIRE_EXP5_TIP_UE2;
+	static const std::string TERMINET_STATIC;
 	static const int DEFAULT_DISC_WAIT_TIME_MS;
 	static const int DEFAULT_HANDOVER_PERIOD_MS;
 	static const int DEFAULT_BOOTSTRAP_WAIT_TIME_MS;
@@ -78,6 +81,7 @@ protected:
 	int initialize_arcfire_exp5_2operator_dmm(void);
 	int initialize_arcfire_exp5_mac(void);
 	int initialize_arcfire_exp5_tip(bool ue1);
+	int initialize_terminet_static();
 	int execute_handover_arcfire_exp5_omec(void);
 	int excecute_handover_arcfire_exp5_2operator_dmm(void);
 	int execute_handover_arcfire_exp5_mac(void);

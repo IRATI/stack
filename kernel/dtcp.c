@@ -23,6 +23,11 @@
 #define RINA_PREFIX "dtcp"
 
 #include <linux/delay.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE > KERNEL_VERSION(5,4,0)
+#include <linux/ktime.h>
+#else
+#endif
 
 #include "logs.h"
 #include "utils.h"
@@ -50,7 +55,11 @@ int dtcp_pdu_send(struct dtcp * dtcp, struct du * du)
 }
 EXPORT_SYMBOL(dtcp_pdu_send);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 int dtcp_last_time_set(struct dtcp * dtcp, struct timespec * s)
+#else
+int dtcp_last_time_set(struct dtcp * dtcp, struct timespec64 *s)
+#endif
 {
 	ASSERT(dtcp);
 	ASSERT(dtcp->sv);
@@ -136,7 +145,11 @@ static ssize_t dtcp_attr_show(struct robject *		     robj,
 		return sprintf(buf, "%u\n", instance->sv->pdus_rcvd_in_time_unit);
 	}
 	if (strcmp(robject_attr_name(attr), "last_time") == 0) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 		struct timespec s;
+#else
+		struct timespec64 s;
+#endif
 		s.tv_sec = instance->sv->last_time.tv_sec;
 		s.tv_nsec = instance->sv->last_time.tv_nsec;
 		return sprintf(buf, "%lld.%.9ld\n",
@@ -1333,12 +1346,20 @@ unsigned long dtcp_ms(struct timespec * ts) {
 
 /* Is the given rate exceeded? Reset if the time frame given elapses. */
 bool dtcp_rate_exceeded(struct dtcp * dtcp, int send) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	struct timespec now  = {0, 0};
+#else
+	struct timespec64 now = {0,0};
+#endif
 	uint_t timedif_ms;
 	uint_t rate = 0;
 	uint_t lim = 0;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	getnstimeofday(&now);
+#else
+	ktime_get_real_ts64(&now);
+#endif
 
 	timedif_ms = (int)(now.tv_sec - dtcp->sv->last_time.tv_sec) * 1000 +
 		((int)now.tv_nsec - (int)dtcp->sv->last_time.tv_nsec) / 1000000;

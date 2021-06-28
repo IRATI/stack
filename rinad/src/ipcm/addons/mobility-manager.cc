@@ -43,6 +43,7 @@ const std::string MobilityManager::ARCFIRE_EXP5_2OPERATOR_DMM = "arcfire-exp5-2o
 const std::string MobilityManager::ARCFIRE_EXP5_MAC = "arcfire-exp5-mac";
 const std::string MobilityManager::ARCFIRE_EXP5_TIP_UE1 = "arcfire-exp5-tip-ue1";
 const std::string MobilityManager::ARCFIRE_EXP5_TIP_UE2 = "arcfire-exp5-tip-ue2";
+const std::string MobilityManager::TERMINET_STATIC = "terminet-static";
 
 const int MobilityManager::DEFAULT_DISC_WAIT_TIME_MS = 5000;
 const int MobilityManager::DEFAULT_HANDOVER_PERIOD_MS = 60000;
@@ -83,6 +84,10 @@ void MobilityManager::parse_configuration(const rinad::RINAConfiguration& config
         				hand_state.disc_wait_time_ms).asInt();
         		hand_state.hand_period_ms = general_conf.get("handPeriodMs",
         				hand_state.hand_period_ms).asInt();
+			hand_state.wireless_dif_name = general_conf.get("wirelessDIFName",
+					hand_state.wireless_dif_name).asString();
+			hand_state.upper_dif_name = general_conf.get("upperDIFName",
+					hand_state.upper_dif_name).asString();
         	}
 
                 LOG_DBG("Mobility Manager configuration parsed");
@@ -95,6 +100,8 @@ MobilityManager::MobilityManager(const rinad::RINAConfiguration& config) :
 	hand_state.hand_period_ms = DEFAULT_HANDOVER_PERIOD_MS;
 	hand_state.disc_wait_time_ms = DEFAULT_DISC_WAIT_TIME_MS;
 	hand_state.hand_type = ARCFIRE_EXP5_OMEC_ROAMING;
+	hand_state.wireless_dif_name = "irati";
+	hand_state.upper_dif_name = "mobile.DIF";
 	parse_configuration(config);
 	factory = IPCManager->get_ipcp_factory();
 	hand_state.first_report = true;
@@ -105,6 +112,8 @@ MobilityManager::MobilityManager(const rinad::RINAConfiguration& config) :
         LOG_INFO("Handover type: %s", hand_state.hand_type.c_str());
         LOG_INFO("Handover period (ms): %d", hand_state.hand_period_ms);
         LOG_INFO("Disconnect time (ms): %d", hand_state.disc_wait_time_ms);
+	LOG_INFO("Wireless DIF Name: %s", hand_state.wireless_dif_name.c_str());
+	LOG_INFO("Upper DIF Name: %s", hand_state.upper_dif_name.c_str());
 
 	BoostrapTimerTask * task = new BoostrapTimerTask(this);
 	timer.scheduleTask(task, DEFAULT_BOOTSTRAP_WAIT_TIME_MS);
@@ -209,6 +218,8 @@ void MobilityManager::initialize()
 		result = initialize_arcfire_exp5_tip(true);
 	} else if (hand_state.hand_type == ARCFIRE_EXP5_TIP_UE2) {
 		result = initialize_arcfire_exp5_tip(false);
+	} else if (hand_state.hand_type == TERMINET_STATIC) {
+		result = initialize_terminet_static();
 	}
 
 	if (result != 0) {
@@ -764,6 +775,81 @@ int MobilityManager::initialize_arcfire_exp5_mac()
 
 	HandoverTimerTask * task = new HandoverTimerTask(this);
 	timer.scheduleTask(task, 20000);
+
+	return 0;
+}
+
+int MobilityManager::initialize_terminet_static() 
+{
+	std::map<std::string, rina::MediaDIFInfo>::const_iterator difs_it;
+	rina::BaseStationInfo bs_info;
+	NeighborData neigh_data, mob_neigh_data;
+	IPCMIPCProcess * wifi1_ipcp, * mobi1_ipcp;
+	Promise promise;
+
+	// 1. Get all IPCPS
+	wifi1_ipcp = factory->getIPCProcess(1);
+	if (wifi1_ipcp == NULL) {
+		LOG_ERR("Could not find IPCP with ID 1");
+		return -1;
+	}
+
+	if (wifi1_ipcp->get_type () != rina::SHIM_WIFI_IPC_PROCESS_STA) {
+		LOG_ERR("Wrong IPCP type: %s", wifi1_ipcp->get_type().c_str());
+		return -1;
+	}
+
+	mobi1_ipcp = factory->getIPCProcess(2);
+	if (mobi1_ipcp == NULL) {
+		LOG_ERR("Could not find IPCP with ID 2");
+		return -1;
+	}
+
+	if (mobi1_ipcp->get_type() != rina::NORMAL_IPC_PROCESS) {
+		LOG_ERR("Wrong IPCP type: %s", mobi1_ipcp->get_type().c_str());
+		return -1;
+	}
+
+	// 2. See if it has been initialized before, otherwise do it
+	if (hand_state.dif == "") {
+		//Not enrolled anywhere yet, enroll for first time
+		difs_it = last_media_report.available_difs.find(hand_state.wireless_dif_name);
+		if (difs_it == last_media_report.available_difs.end()) {
+			LOG_WARN("No members of DIF wireless DIF are within range");
+			return -1;
+		}
+
+		bs_info = difs_it->second.available_bs_ipcps.front();
+
+		//Enroll the shim to the new DIF/AP
+		neigh_data.apName.processName = bs_info.ipcp_address;
+		neigh_data.difName.processName = hand_state.wireless_dif_name;
+		if(IPCManager->enroll_to_dif(this, &promise, wifi1_ipcp->get_id(), neigh_data) == IPCM_FAILURE ||
+				promise.wait() != IPCM_SUCCESS) {
+			LOG_WARN("Problems enrolling IPCP %u to DIF %s via neighbor %s",
+				 wifi1_ipcp->get_id(),
+				 neigh_data.difName.processName.c_str(),
+				 bs_info.ipcp_address.c_str());
+			return -1;
+		}
+
+		//Enroll to the upper DIF
+		mob_neigh_data.supportingDifName.processName = hand_state.wireless_dif_name;
+		mob_neigh_data.difName.processName = hand_state.upper_dif_name;
+		if(IPCManager->enroll_to_dif(this, &promise, mobi1_ipcp->get_id(), mob_neigh_data) == IPCM_FAILURE ||
+				promise.wait() != IPCM_SUCCESS) {
+			LOG_WARN("Problems enrolling IPCP %u to DIF %s via supporting DIF %s",
+					mobi1_ipcp->get_id(),
+					mob_neigh_data.difName.processName.c_str(),
+					mob_neigh_data.supportingDifName.processName.c_str());
+			return -1;
+		}
+
+		hand_state.dif = hand_state.wireless_dif_name;
+		hand_state.ipcp = wifi1_ipcp;
+
+		LOG_DBG("Initialized");
+	}
 
 	return 0;
 }

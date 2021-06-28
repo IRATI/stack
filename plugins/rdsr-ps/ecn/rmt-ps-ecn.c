@@ -28,6 +28,7 @@
 #include <linux/random.h>
 #include <linux/string.h>
 #include <linux/spinlock.h>
+#include <linux/version.h>
 
 #define RINA_PREFIX "rmt-ps-ecn"
 
@@ -42,7 +43,11 @@
 #define ECN_PS_NAME "ecn"
 
 /* Timespec to ms. */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 static inline unsigned long ecn_to_ms(struct timespec * t) {
+#else
+static inline unsigned long ecn_to_ms(struct timespec64 *t) {
+#endif
 	return (t->tv_sec * 1000) + (t->tv_nsec / 1000000);
 }
 
