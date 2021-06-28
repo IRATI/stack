@@ -22,6 +22,7 @@
 #include <linux/module.h>
 #include <linux/string.h>
 #include <linux/time.h>
+#include <linux/version.h>
 
 #define RINA_PREFIX "cas-rmt-ps"
 
@@ -34,9 +35,15 @@
 #define  N1_CYCLE_DURATION 100
 
 struct reg_cycle_t {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
         struct timespec t_start;
         struct timespec t_last_start;
         struct timespec t_end;
+#else
+	struct timespec64 t_start;
+	struct timespec64 t_last_start;
+	struct timespec64 t_end;
+#endif
         ulong           sum_area;
         ulong           avg_len;
 };
@@ -96,7 +103,11 @@ static int cas_rmt_queue_destroy(struct cas_rmt_queue * q)
         return 0;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 static s64 timespec_sub_ns (struct timespec a, struct timespec b)
+#else
+static s64 timespec_sub_ns (struct timespec64 a, struct timespec64 b)
+#endif
 {
 	return (int)(a.tv_sec - b.tv_sec) * 1000000000L
 		+ ((int) a.tv_nsec - (int)b.tv_nsec);
@@ -119,14 +130,22 @@ static int update_cycles(struct reg_cycle_t * prev_cycle,
 
         else if (cur_qlen == end_len) {
                 /* end cycle */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 		getnstimeofday(&cur_cycle->t_end);
+#else
+		ktime_get_real_ts64(&cur_cycle->t_end);
+#endif
 		t_sub_ns = timespec_sub_ns(cur_cycle->t_end, cur_cycle->t_last_start);
 		cur_cycle->sum_area += (ulong) cur_qlen * t_sub_ns;
 		cur_cycle->t_last_start = cur_cycle->t_end;
         } else {
                 /* middle cycle */
                 cur_cycle->t_last_start = cur_cycle->t_end;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
                 getnstimeofday(&cur_cycle->t_end);
+#else
+		ktime_get_real_ts64(&cur_cycle->t_end);
+#endif
 		t_sub_ns = timespec_sub_ns(cur_cycle->t_end, cur_cycle->t_last_start);
                 cur_cycle->sum_area +=(ulong) cur_qlen * t_sub_ns;
         }
@@ -259,9 +278,15 @@ static void * cas_rmt_q_create_policy(struct rmt_ps      *ps,
                 return NULL;
         }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)	
         getnstimeofday(&q->reg_cycles.prev_cycle.t_start);
         getnstimeofday(&q->reg_cycles.prev_cycle.t_last_start);
         getnstimeofday(&q->reg_cycles.prev_cycle.t_end);
+#else
+	ktime_get_real_ts64(&q->reg_cycles.prev_cycle.t_start);
+	ktime_get_real_ts64(&q->reg_cycles.prev_cycle.t_last_start);
+	ktime_get_real_ts64(&q->reg_cycles.prev_cycle.t_end);
+#endif
         q->reg_cycles.prev_cycle.sum_area = 0;
         q->reg_cycles.prev_cycle.avg_len = 0;
         q->reg_cycles.cur_cycle = q->reg_cycles.prev_cycle;

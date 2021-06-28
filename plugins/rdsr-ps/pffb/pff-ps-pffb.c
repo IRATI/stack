@@ -28,6 +28,7 @@
 #include <linux/list.h>
 #include <linux/types.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 
 #define RINA_PREFIX 	"pff-ps-pffb"
 
@@ -65,7 +66,11 @@ struct connection_id {
 /* Flow info. */
 struct flow_info {
 	struct list_head next;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	struct timespec la;
+#else
+	struct timespec64 la;
+#endif
 	unsigned short key;
 	unsigned int rate;
 	port_id_t port_id;
@@ -108,7 +113,11 @@ static unsigned int pffb_full_renew = 0;
 /* Flow distribution strategy? */
 static int pffb_distr = PFFB_RAND_DIST;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 static struct timespec pffb_load = {0};
+#else
+static struct timespec64 pffb_load = {0};
+#endif
 
 #define PFFB_NOP 64
 
@@ -218,7 +227,11 @@ static struct kobj_type pffb_ktype = {
  */
 
 /* Timespec to ms. */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 static inline unsigned long pffb_to_ms(struct timespec * t) {
+#else
+static inline unsigned long pffb_to_ms(struct timespec64 * t) {
+#endif
 	return (t->tv_sec * 1000) + (t->tv_nsec / 1000000);
 }
 
@@ -255,13 +268,21 @@ static struct pft_port_entry * pffb_find_key(
 	struct pft_port_entry * p = 0;
 	struct flow_info * f = 0;
 	struct flow_info * t = 0;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	struct timespec now;
+#else
+	struct timespec64 now;
+#endif
 
 	port_id_t pid = -1;
 
 	switch(pffb_distr) {
 	default:
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 		getnstimeofday(&now); /* Only once! */
+#else
+		ktime_get_real_ts64(&now);
+#endif
 
 		list_for_each_entry_safe(f, t, &pffb_flows_info, next) {
 			if(pffb_to_ms(&now) -
@@ -305,7 +326,11 @@ static struct pft_port_entry * pffb_add_key(
 	struct flow_info * f = 0;
 	struct pft_port_entry * p = 0;
 	struct pft_port_entry * r = 0;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	struct timespec now;
+#else
+	struct timespec64 now;
+#endif
 
 	unsigned int rnd = 0;
 	int t = INT_MAX;
@@ -319,8 +344,11 @@ static struct pft_port_entry * pffb_add_key(
 			LOG_ERR("No more memory!");
 			return 0;
 		}
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 		getnstimeofday(&now);
+#else
+		ktime_get_real_ts64(&now);
+#endif
 
 		INIT_LIST_HEAD(&f->next);
 		f->key = key;
@@ -381,7 +409,11 @@ static struct pft_port_entry * pffb_add_key(
 			return 0;
 		}
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 		getnstimeofday(&now);
+#else
+		ktime_get_real_ts64(&now);
+#endif
 
 		INIT_LIST_HEAD(&f->next);
 		f->key = key;
@@ -1007,7 +1039,11 @@ static struct ps_base * pffb_create(struct rina_component * component) {
         struct pff_ps * ps;
         struct pff_ps_priv * priv;
         struct pff * pff = pff_from_component(component);
-        struct timespec n;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
+	struct timespec n;
+#else
+	struct timespec64 n;
+#endif
 
         priv = rkzalloc(sizeof(*priv), GFP_KERNEL);
 
@@ -1027,7 +1063,11 @@ static struct ps_base * pffb_create(struct rina_component * component) {
                 return NULL;
         }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
         getnstimeofday(&n);
+#else
+	ktime_get_real_ts64(&n);
+#endif
         pffb_load.tv_sec  = n.tv_sec;
         pffb_load.tv_nsec = n.tv_nsec;
 

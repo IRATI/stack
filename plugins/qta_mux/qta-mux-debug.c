@@ -22,6 +22,7 @@
 #include <linux/fs.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
+#include <linux/version.h>
 #include "rds/rmem.h"
 #include "qta-mux-debug.h"
 
@@ -71,13 +72,22 @@ static int
 q_len_open(struct inode *inode, struct file *file)
 { return seq_open(file, &q_len_seq_ops); }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 static struct file_operations q_len_file_ops = {
-	.owner   = THIS_MODULE,
-	.open    = q_len_open,
-	.read    = seq_read,
-	.llseek  = seq_lseek,
+	.owner = THIS_MODULE,
+	.open = q_len_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
 	.release = seq_release
 };
+#else
+static struct proc_ops q_len_file_ops = {
+	.proc_open    = q_len_open,
+	.proc_read    = seq_read,
+	.proc_lseek  = seq_lseek,
+	.proc_release = seq_release
+};
+#endif
 
 struct urgency_queue_debug_info * uqueue_debug_info_create(port_id_t port,
 							   uint_t urgency_lev)
