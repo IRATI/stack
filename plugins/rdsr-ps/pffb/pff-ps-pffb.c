@@ -66,7 +66,11 @@ struct connection_id {
 /* Flow info. */
 struct flow_info {
 	struct list_head next;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	struct timespec la;
+#else
+	struct timespec64 la;
+#endif
 	unsigned short key;
 	unsigned int rate;
 	port_id_t port_id;
@@ -325,7 +329,7 @@ static struct pft_port_entry * pffb_add_key(
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 	struct timespec now;
 #else
-	struct timespec64 now
+	struct timespec64 now;
 #endif
 
 	unsigned int rnd = 0;
