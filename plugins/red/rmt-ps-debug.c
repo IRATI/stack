@@ -21,6 +21,7 @@
 #include <linux/fs.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
+#include <linux/version.h>
 #include "rmt-ps-debug.h"
 #include "rds/rmem.h"
 
@@ -76,6 +77,7 @@ static int
 q_len_open(struct inode *inode, struct file *file)
 { return seq_open(file, &q_len_seq_ops); }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,5,0)
 static struct file_operations q_len_file_ops = {
 	.owner   = THIS_MODULE,
 	.open    = q_len_open,
@@ -83,6 +85,14 @@ static struct file_operations q_len_file_ops = {
 	.llseek  = seq_lseek,
 	.release = seq_release
 };
+#else
+static struct proc_ops q_len_file_ops = {
+	.proc_open = q_len_open,
+	.proc_read = seq_read,
+	.proc_lseek = seq_lseek,
+	.proc_release = seq_release
+};
+#endif
 
 struct red_rmt_debug *
 red_rmt_debug_create(port_id_t port)
