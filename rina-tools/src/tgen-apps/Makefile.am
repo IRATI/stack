@@ -6,7 +6,7 @@ bin_PROGRAMS                       =
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT =
 
 tg_server_SOURCES = tg-server.cpp
-tg_server_LDADD = $(LIBRINA_API_LIBS)
+tg_server_LDADD = $(LIBRINA_API_LIBS) -lpthread
 tg_server_CPPFLAGS = $(LIBRINA_API_CFLAGS) -I$(srcdir)/../common -lpthread -std=c++11
 
 tg_client_SOURCES = tg-client.cpp

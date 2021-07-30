@@ -6,7 +6,7 @@ bin_PROGRAMS                       =
 AM_INSTALLCHECK_STD_OPTIONS_EXEMPT =
 
 rinaperf_SOURCES = rinaperf.c
-rinaperf_LDADD = $(LIBRINA_API_LIBS) -lm
+rinaperf_LDADD = $(LIBRINA_API_LIBS) -lm -lpthread
 rinaperf_CPPFLAGS = $(LIBRINA_API_CFLAGS)
 
 rina_echo_async_SOURCES = rina-echo-async.c
@@ -14,7 +14,7 @@ rina_echo_async_LDADD = $(LIBRINA_API_LIBS)
 rina_echo_async_CPPFLAGS = $(LIBRINA_API_CFLAGS)
 
 rina_gw_SOURCES = rina-gw.cpp fdfwd.cpp
-rina_gw_LDADD = $(LIBRINA_API_LIBS)
+rina_gw_LDADD = $(LIBRINA_API_LIBS) -lpthread
 rina_gw_CPPFLAGS = $(LIBRINA_API_CFLAGS) -std=c++11
 
 MOSTLYCLEANFILES =
@@ -33,7 +33,7 @@ libiporina_la_CPPFLAGS =			\
 	-I$(srcdir)/..
 
 iporinad_SOURCES = iporinad.cpp fdfwd.cpp cdap.cpp
-iporinad_LDADD = $(LIBRINA_API_LIBS) libiporina.la
+iporinad_LDADD = $(LIBRINA_API_LIBS) libiporina.la -lpthread
 iporinad_CPPFLAGS = $(LIBRINA_API_CFLAGS) -std=c++11
 
 bin_PROGRAMS += rinaperf rina-echo-async rina-gw iporinad
