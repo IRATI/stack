@@ -492,7 +492,7 @@ void encode_ssh2_auth_options(const SSH2AuthOptions& options,
 					      options.dh_public_key.length);
 	}
 
-	int size = gpb_options.ByteSize();
+	int size = gpb_options.ByteSizeLong();
 	result.message_ = new unsigned char[size];
 	result.size_ = size;
 	gpb_options.SerializeToArray(result.message_, size);
@@ -515,7 +515,7 @@ void encode_client_chall_reply_ssh2(const UcharArray& client_chall_reply,
 					       server_chall.length);
 	}
 
-	int size = gpb_chall.ByteSize();
+	int size = gpb_chall.ByteSizeLong();
 	result.message_ = new unsigned char[size];
 	result.size_ = size;
 	gpb_chall.SerializeToArray(result.message_ , size);

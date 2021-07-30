@@ -2283,7 +2283,7 @@ void FlowStateObjectEncoder::encode(const FlowStateObject &obj,
 
 	fso_helpers::toGPB(obj, gpb);
 
-	serobj.size_ = gpb.ByteSize();
+	serobj.size_ = gpb.ByteSizeLong();
 	serobj.message_ = new unsigned char[serobj.size_];
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
@@ -2310,7 +2310,7 @@ void FlowStateObjectListEncoder::encode(const std::list<FlowStateObject> &obj,
 		fso_helpers::toGPB(*it, *gpb_fso);
 	}
 
-	serobj.size_ = gpb.ByteSize();
+	serobj.size_ = gpb.ByteSizeLong();
 	serobj.message_ = new unsigned char[serobj.size_];
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }

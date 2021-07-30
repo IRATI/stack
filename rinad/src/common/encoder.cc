@@ -176,7 +176,7 @@ void DataTransferConstantsEncoder::encode(
         rina::messages::dataTransferConstants_t gpb;
 
         dt_const_helpers::toGPB(obj, gpb);
-        serobj.size_ = gpb.ByteSize();
+        serobj.size_ = gpb.ByteSizeLong();
         serobj.message_ = new unsigned char[serobj.size_];
         gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
@@ -222,7 +222,7 @@ void DFTEEncoder::encode(const rina::DirectoryForwardingTableEntry &obj,
 
         dft_helpers::toGPB(obj, gpb);
 
-        serobj.size_ = gpb.ByteSize();
+        serobj.size_ = gpb.ByteSizeLong();
         serobj.message_ = new unsigned char[serobj.size_];
         gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
@@ -249,7 +249,7 @@ void DFTEListEncoder::encode(
 			dft_helpers::toGPB((*it), *gpb_dft);
 	}
 
-	serobj.size_ = gpb.ByteSize();
+	serobj.size_ = gpb.ByteSizeLong();
 	serobj.message_ = new unsigned char[serobj.size_];
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
@@ -293,7 +293,7 @@ void AppDIFMappingEncoder::encode(const AppToDIFMapping &obj, rina::ser_obj_t& s
 
         dif_alloc_helpers::toGPB(obj, gpb);
 
-        serobj.size_ = gpb.ByteSize();
+        serobj.size_ = gpb.ByteSizeLong();
         serobj.message_ = new unsigned char[serobj.size_];
         gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
@@ -317,7 +317,7 @@ void AppDIFMappingListEncoder::encode(const std::list<AppToDIFMapping> &obj,
 		dif_alloc_helpers::toGPB((*it), *gpb_dft);
 	}
 
-	serobj.size_ = gpb.ByteSize();
+	serobj.size_ = gpb.ByteSizeLong();
 	serobj.message_ = new unsigned char[serobj.size_];
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
@@ -667,7 +667,7 @@ void QoSCubeEncoder::encode(const rina::QoSCube &obj, rina::ser_obj_t &serobj)
 
         cube_helpers::toGPB(obj, gpb);
 
-        serobj.size_ = gpb.ByteSize();
+        serobj.size_ = gpb.ByteSizeLong();
         serobj.message_ = new unsigned char[serobj.size_];
         gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
@@ -695,7 +695,7 @@ void QoSCubeListEncoder::encodePointers(const std::list<rina::QoSCube*> &obj,
                 cube_helpers::toGPB(*(*it), *gpb_cube);
         }
 
-        serobj.size_ = gpb.ByteSize();
+        serobj.size_ = gpb.ByteSizeLong();
         serobj.message_ = new unsigned char[serobj.size_];
         gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
@@ -713,7 +713,7 @@ void QoSCubeListEncoder::encode(const std::list<rina::QoSCube> &obj,
 		cube_helpers::toGPB((*it), *gpb_cube);
 	}
 
-	serobj.size_ = gpb.ByteSize();
+	serobj.size_ = gpb.ByteSizeLong();
 	serobj.message_ = new unsigned char[serobj.size_];
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 
@@ -766,7 +766,7 @@ void WhatevercastNameEncoder::encode(const rina::WhatevercastName &obj,
 
         whatever_helpers::toGPB(obj, gpb);
 
-        serobj.size_ = gpb.ByteSize();
+        serobj.size_ = gpb.ByteSizeLong();
         serobj.message_ = new unsigned char[serobj.size_];
         gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
@@ -794,7 +794,7 @@ void WhatevercastNameListEncoder::encode(
 			whatever_helpers::toGPB((*it), *gpb_name);
 	}
 
-	serobj.size_ = gpb.ByteSize();
+	serobj.size_ = gpb.ByteSizeLong();
 	serobj.message_ = new unsigned char[serobj.size_];
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
@@ -850,7 +850,7 @@ void NeighborEncoder::encode(const rina::Neighbor &obj, rina::ser_obj_t& serobj)
 
         neighbor_helpers::toGPB(obj, gpb);
 
-        serobj.size_ = gpb.ByteSize();
+        serobj.size_ = gpb.ByteSizeLong();
         serobj.message_ = new unsigned char[serobj.size_];
         gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
@@ -876,7 +876,7 @@ void NeighborListEncoder::encode(const std::list<rina::Neighbor> &obj,
 			neighbor_helpers::toGPB((*it), *gpb_neigh);
 	}
 
-	serobj.size_ = gpb.ByteSize();
+	serobj.size_ = gpb.ByteSizeLong();
 	serobj.message_ = new unsigned char[serobj.size_];
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
@@ -905,7 +905,7 @@ void ADataObjectEncoder::encode(const rina::cdap::ADataObject &obj,
         gpb.set_cdapmessage(obj.encoded_cdap_message_.message_,
                             obj.encoded_cdap_message_.size_);
 
-        serobj.size_ = gpb.ByteSize();
+        serobj.size_ = gpb.ByteSizeLong();
         serobj.message_ = new unsigned char[serobj.size_];
         gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
@@ -944,7 +944,7 @@ void EnrollmentInformationRequestEncoder::encode(
                 gpb.add_supportingdifs(it->processName);
         }
 
-        serobj.size_ = gpb.ByteSize();
+        serobj.size_ = gpb.ByteSizeLong();
         serobj.message_ = new unsigned char[serobj.size_];
         gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
@@ -1080,7 +1080,7 @@ void FlowEncoder::encode(const configs::Flow &obj, rina::ser_obj_t& serobj)
         //hopCount
         gpb.set_hopcount(obj.hop_count);
 
-        serobj.size_ = gpb.ByteSize();
+        serobj.size_ = gpb.ByteSizeLong();
         serobj.message_ = new unsigned char[serobj.size_];
         gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
@@ -1156,7 +1156,7 @@ void RoutingTableEntryEncoder::encode(const rina::RoutingTableEntry &obj,
                 }
         }
 
-        serobj.size_ = gpb.ByteSize();
+        serobj.size_ = gpb.ByteSizeLong();
         serobj.message_ = new unsigned char[serobj.size_];
         gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
@@ -1210,7 +1210,7 @@ void PDUForwardingTableEntryEncoder::encode(
                 }
         }
 
-        serobj.size_ = gpb.ByteSize();
+        serobj.size_ = gpb.ByteSizeLong();
         serobj.message_ = new unsigned char[serobj.size_];
         gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
@@ -1258,7 +1258,7 @@ void DTPInformationEncoder::encode(const rina::DTPInformation &obj,
 	gpb.set_bytes_tx(obj.stats.tx_bytes);
 	gpb.set_bytes_rx(obj.stats.rx_bytes);
 
-	serobj.size_ = gpb.ByteSize();
+	serobj.size_ = gpb.ByteSizeLong();
 	serobj.message_ = new unsigned char[serobj.size_];
 	gpb.SerializeToArray(serobj.message_, serobj.size_);
 }
@@ -1289,7 +1289,7 @@ void DTCPInformationEncoder::encode(const rina::DTCPConfig &obj,
 
         gpb = cube_helpers::get_dtcpConfig_t(obj);
 
-        serobj.size_ = gpb->ByteSize();
+        serobj.size_ = gpb->ByteSizeLong();
         serobj.message_ = new unsigned char[serobj.size_];
         gpb->SerializeToArray(serobj.message_, serobj.size_);
 
@@ -1720,7 +1720,7 @@ void IPCPConfigEncoder::encode(const configs::ipcp_config_t &obj,
         gpb.set_dif_template(obj.dif_template);
 
         //Allocate memory
-        ser_obj.size_ = gpb.ByteSize();
+        ser_obj.size_ = gpb.ByteSizeLong();
         ser_obj.message_ = new unsigned char[ser_obj.size_];
 
         if (!ser_obj.message_)
@@ -1772,7 +1772,7 @@ void IPCPEncoder::encode(const configs::ipcp_t& obj, rina::ser_obj_t& serobj)
         //TODO add name
 
         //Allocate memory
-        serobj.size_ = gpb_ap_name.ByteSize();
+        serobj.size_ = gpb_ap_name.ByteSizeLong();
         serobj.message_ = new unsigned char[serobj.size_];
 
         if (!serobj.message_)
@@ -1813,7 +1813,7 @@ void RIBObjectDataListEncoder::encode(
         }
 
         //Allocate memory
-        serobj.size_ = gpb.ByteSize();
+        serobj.size_ = gpb.ByteSizeLong();
         serobj.message_ = new unsigned char[serobj.size_];
 
         if (!serobj.message_)

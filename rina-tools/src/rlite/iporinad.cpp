@@ -184,14 +184,14 @@ struct Obj {
 static int
 ser_common(::google::protobuf::MessageLite &gm, char *buf, int size)
 {
-    if (gm.ByteSize() > size) {
-        fprintf(stderr, "User buffer too small [%u/%u]\n", gm.ByteSize(), size);
+    if (gm.ByteSizeLong() > size) {
+        fprintf(stderr, "User buffer too small [%u/%u]\n", gm.ByteSizeLong(), size);
         return -1;
     }
 
     gm.SerializeToArray(buf, size);
 
-    return gm.ByteSize();
+    return gm.ByteSizeLong();
 }
 
 struct Hello : public Obj {

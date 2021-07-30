@@ -338,7 +338,7 @@ void serializeToken(const Token_t &token,
         }
         
         // serializing
-        int size = gpbToken.ByteSize();
+        int size = gpbToken.ByteSizeLong();
         result.message_ = new unsigned char[size];
         result.size_ = size;
         gpbToken.SerializeToArray(result.message_, size);
@@ -394,7 +394,7 @@ void serializeTokenPlusSignature(const TokenPlusSignature_t &tokenSign,
         gpbTokenSign.set_token_sign(tokenSign.token_sign.data, tokenSign.token_sign.length);
 
         //serializing
-        int size = gpbTokenSign.ByteSize();
+        int size = gpbTokenSign.ByteSizeLong();
         result.message_ = new unsigned char[size];
         result.size_ = size;
         gpbTokenSign.SerializeToArray(result.message_, size);
