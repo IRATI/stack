@@ -1137,6 +1137,19 @@ int dtp_destroy(struct dtp * instance)
 
 	spin_lock_bh(&instance->lock);
 
+        /* Stop all the timer so they do not happen while we're freeing
+           the object. */
+
+        rtimer_destroy(&instance->timers.a);
+        /* tf_a posts workers that restart sender_inactivity timer, so the wq
+         * must be flushed before destroying the timer */
+
+        rtimer_stop(&instance->timers.sender_inactivity);
+        rtimer_stop(&instance->timers.receiver_inactivity);
+        rtimer_stop(&instance->timers.rate_window);
+        rtimer_stop(&instance->timers.rtx);
+        rtimer_stop(&instance->timers.rendezvous);
+
         if (instance->dtcp) {
                 dtcp = instance->dtcp;
                 instance->dtcp = NULL; /* Useful */
