@@ -751,6 +751,8 @@ static void rtx_timer_func(struct timer_list * tl)
         q = dtp->rtxq;
         tr = dtp->sv->tr;
 
+        BUG_ON(q == NULL);
+
         spin_lock(&q->lock);
         if (rtxqueue_rtx(q, tr, dtp,
 			 dtp->dtcp->cfg->rxctrl_cfg->data_retransmit_max))
