@@ -34,6 +34,7 @@
 struct cidm {
 	struct list_head allocated_cep_ids;
 	cep_id_t last_allocated;
+    spinlock_t lock;
 };
 
 struct alloc_cepid {
@@ -49,8 +50,12 @@ struct cidm * cidm_create(void)
 	if (!instance)
 		return NULL;
 
+    spin_lock_init(&instance->lock);
+
+    spin_lock(&instance->lock);
 	INIT_LIST_HEAD(&(instance->allocated_cep_ids));
 	instance->last_allocated = 0;
+    spin_unlock(&instance->lock);
 
 	LOG_INFO("Instance initialized successfully (%zd cep-ids)",
 			MAX_CEP_ID);
@@ -67,9 +72,11 @@ int cidm_destroy(struct cidm * instance)
                 return -1;
         }
 
+        spin_lock(&instance->lock);
         list_for_each_entry_safe(pos, next, &instance->allocated_cep_ids, list) {
                 rkfree(pos);
         }
+        spin_unlock(&instance->lock);
 
         rkfree(instance);
 
@@ -85,11 +92,13 @@ int cidm_allocated(struct cidm * instance, cep_id_t cep_id)
                 return -1;
         }
 
+        spin_lock(&instance->lock);
         list_for_each_entry_safe(pos, next, &instance->allocated_cep_ids, list) {
                 if (pos->cep_id == cep_id) {
                 	return 1;
                 }
         }
+        spin_unlock(&instance->lock);
 
         return 0;
 }
@@ -122,9 +131,11 @@ cep_id_t cidm_allocate(struct cidm * instance)
         if (!new_cep_id)
         	return cep_id_bad();
 
+        spin_lock(&instance->lock);
         INIT_LIST_HEAD(&(new_cep_id->list));
         new_cep_id->cep_id = cep_id;
         list_add(&(new_cep_id->list), &(instance->allocated_cep_ids));
+        spin_unlock(&instance->lock);
 
         instance->last_allocated = cep_id;
 
@@ -137,6 +148,7 @@ int cidm_release(struct cidm * instance,
                  cep_id_t      id)
 {
 	struct alloc_cepid * pos, * next;
+    int found = 0;
 
        if (!is_port_id_ok(id)) {
                LOG_ERR("Bad cep-id passed, bailing out");
@@ -147,17 +159,21 @@ int cidm_release(struct cidm * instance,
                return -1;
        }
 
+       spin_lock(&instance->lock);
        list_for_each_entry_safe(pos, next, &instance->allocated_cep_ids, list) {
                if (pos->cep_id == id) {
                	list_del(&pos->list);
                	rkfree(pos);
-               	LOG_DBG("Cep-id release completed successfully (cep_id: %d)", id);
-
-               	return 0;
+                found = 1;
                }
        }
+       spin_unlock(&instance->lock);
 
-       LOG_ERR("Didn't find cep-id %d, returning error", id);
+       if (!found) {
+           LOG_ERR("Didn't find cep-id %d, returning error", id);
+       } else {
+           LOG_DBG("Cep-id release completed successfully (cep_id: %d)", id);
+       }
 
        return 0;
 }
