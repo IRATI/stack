@@ -309,6 +309,8 @@ int Catalog::plugin_loaded(const string& plugin_name, unsigned int ipcp_id,
 	} else {
 		plugins[plugin_name]->loaded.erase(ipcp_id);
 	}
+
+	return 0;
 }
 
 CatalogResource *
