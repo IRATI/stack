@@ -95,6 +95,7 @@ int cidm_allocated(struct cidm * instance, cep_id_t cep_id)
         spin_lock(&instance->lock);
         list_for_each_entry_safe(pos, next, &instance->allocated_cep_ids, list) {
                 if (pos->cep_id == cep_id) {
+                    spin_unlock(&instance->lock);
                 	return 1;
                 }
         }
