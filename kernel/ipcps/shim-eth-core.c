@@ -1,5 +1,5 @@
 /*
- * Shim IPC Process over Ethernet (using VLANs)
+ * Shim IPC Process over Ethernet (using VLANs.. or not)
  *
  *   Francesco Salvestrini <f.salvestrini@nextworks.it>
  *   Sander Vrijders       <sander.vrijders@intec.ugent.be>
@@ -37,7 +37,8 @@
 #include <net/pkt_sched.h>
 #include <net/sch_generic.h>
 
-#define SHIM_NAME   	    "shim-eth-vlan"
+#define SHIM_NAME           "shim-eth"
+#define SHIM_VLAN_NAME      "shim-eth-vlan"
 #define SHIM_WIFI_STA_NAME  "shim-wifi-sta"
 #define SHIM_WIFI_AP_NAME   "shim-wifi-ap"
 
@@ -67,7 +68,7 @@ struct rcv_work_data {
 extern struct kipcm * default_kipcm;
 
 /* Holds the configuration of one shim instance */
-struct eth_vlan_info {
+struct eth_info {
         uint16_t vlan_id;
         char *   interface_name;
 };
@@ -75,7 +76,7 @@ struct eth_vlan_info {
 static struct ipcp_factory_data {
         struct list_head instances;
 	struct notifier_block ntfy;
-} eth_vlan_data;
+} eth_data;
 
 enum port_id_state {
         PORT_STATE_NULL = 1,
@@ -99,6 +100,18 @@ struct shim_eth_flow {
         struct ipcp_instance * user_ipcp;
 };
 
+enum vlan_mode {
+        /* This is the traditional shim-eth-vlan behaviour. The IPC
+         * name will be the VLAN ID, or the interface will be used */
+        VLAN_MODE_COMPAT = 1,
+
+        /* This will not assume that the VLAN is specified as the
+         * process name. It uses the interface name as-is then figure
+         * out if it's a VLAN interface or not. Plain ethernet
+         * interfaces are used as-is. */
+        VLAN_MODE_AUTO = 2
+};
+
 /*
  * Contains all the information associated to an instance of a
  * shim Ethernet IPC Process
@@ -110,13 +123,16 @@ struct ipcp_instance_data {
         /* IPC Process name */
         struct name *          name;
         struct name *          dif_name;
-        struct eth_vlan_info * info;
-        struct packet_type *   eth_vlan_packet_type;
+        struct eth_info *      info;
+        struct packet_type *   eth_packet_type;
         struct net_device *    dev;
         struct net_device *    phy_dev;
         struct flow_spec *     fspec;
 
-        /* The IPC Process using the shim-eth-vlan */
+        /* Uses VLANs or not? */
+        enum vlan_mode         vlan_mode;
+
+        /* The IPC Process using shim-eth */
         struct name *          app_name;
         struct name *          daf_name;
 
@@ -138,7 +154,7 @@ struct ipcp_instance_data {
 	unsigned int tx_busy;
 };
 
-/* Needed for eth_vlan_rcv function */
+/* Needed for eth_rcv function */
 struct interface_data_mapping {
         struct list_head            list;
 
@@ -146,7 +162,7 @@ struct interface_data_mapping {
         struct ipcp_instance_data * data;
 };
 
-static ssize_t eth_vlan_ipcp_attr_show(struct robject *        robj,
+static ssize_t eth_ipcp_attr_show(struct robject *        robj,
                          	       struct robj_attribute * attr,
                                        char *                  buf)
 {
@@ -172,7 +188,7 @@ static ssize_t eth_vlan_ipcp_attr_show(struct robject *        robj,
                                instance->data->dev->dev_addr[1],
                                instance->data->dev->dev_addr[0]);
 	if (strcmp(robject_attr_name(attr), "type") == 0)
-		return sprintf(buf, "shim-eth-vlan\n");
+                return sprintf(buf, "shim-eth\n");
 	if (strcmp(robject_attr_name(attr), "vlan_id") == 0)
 		return sprintf(buf, "%u\n", instance->data->info->vlan_id);
 	if (strcmp(robject_attr_name(attr), "iface") == 0)
@@ -183,9 +199,9 @@ static ssize_t eth_vlan_ipcp_attr_show(struct robject *        robj,
 
 	return 0;
 }
-RINA_SYSFS_OPS(eth_vlan_ipcp);
-RINA_ATTRS(eth_vlan_ipcp, name, type, dif, address, vlan_id, iface, tx_busy);
-RINA_KTYPE(eth_vlan_ipcp);
+RINA_SYSFS_OPS(eth_ipcp);
+RINA_ATTRS(eth_ipcp, name, type, dif, address, vlan_id, iface, tx_busy);
+RINA_KTYPE(eth_ipcp);
 
 static DEFINE_SPINLOCK(data_instances_lock);
 static struct list_head data_instances_list;
@@ -401,16 +417,16 @@ static int unbind_and_destroy_flow(struct ipcp_instance_data * data,
                         flow_unbinding_ipcp(flow->user_ipcp->data,
                                             flow->port_id);
         }
-        LOG_DBG("Shim ethe vlan unbinded port: %u", flow->port_id);
+        LOG_DBG("Ethernet Shim unbinded port: %u", flow->port_id);
         if (flow_destroy(data, flow)) {
-                LOG_ERR("Failed to destroy shim-eth-vlan flow");
+                LOG_ERR("Failed to destroy shim-eth flow");
                 return -1;
         }
 
         return 0;
 }
 
-static int eth_vlan_unbind_user_ipcp(struct ipcp_instance_data * data,
+static int eth_unbind_user_ipcp(struct ipcp_instance_data * data,
                                      port_id_t                   id)
 {
         struct shim_eth_flow * flow;
@@ -450,7 +466,7 @@ static void rinarp_resolve_handler(void *             opaque,
         struct ipcp_instance *      ipcp;
         struct shim_eth_flow *      flow;
 
-        LOG_DBG("Entered the ARP resolve handler of the shim-eth");
+        LOG_DBG("Entered the ARP resolve handler of the Ethernet shim");
 
 	ASSERT(opaque);
 	ASSERT(dest_pa);
@@ -529,7 +545,7 @@ static void rinarp_resolve_handler(void *             opaque,
 }
 
 static int
-eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
+eth_flow_allocate_request(struct ipcp_instance_data * data,
                                struct ipcp_instance *      user_ipcp,
                                const struct name *         source,
                                const struct name *         dest,
@@ -615,7 +631,7 @@ eth_vlan_flow_allocate_request(struct ipcp_instance_data * data,
 }
 
 static int
-eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
+eth_flow_allocate_response(struct ipcp_instance_data * data,
                                 struct ipcp_instance *      user_ipcp,
                                 port_id_t                   port_id,
                                 int                         result)
@@ -721,7 +737,7 @@ eth_vlan_flow_allocate_response(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
+static int eth_flow_deallocate(struct ipcp_instance_data * data,
                                     port_id_t                   id)
 {
         struct shim_eth_flow * flow;
@@ -745,9 +761,9 @@ static int eth_vlan_flow_deallocate(struct ipcp_instance_data * data,
         return unbind_and_destroy_flow(data, flow);
 }
 
-static int eth_vlan_application_register(struct ipcp_instance_data * data,
-                                         const struct name *         name,
-					 const struct name *         daf_name)
+static int eth_application_register(struct ipcp_instance_data* data,
+                                    const struct name*         name,
+                                    const struct name*         daf_name)
 {
         struct gpa * pa;
         struct gha * ha;
@@ -846,7 +862,7 @@ static int eth_vlan_application_register(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
+static int eth_application_unregister(struct ipcp_instance_data * data,
                                            const struct name *         name)
 {
       	if (!data) {
@@ -860,7 +876,7 @@ static int eth_vlan_application_unregister(struct ipcp_instance_data * data,
 	}
 
         if (!data->app_name) {
-                LOG_ERR("Shim-eth-vlan has no application registered");
+                LOG_ERR("Ethernet shim has no application registered");
                 return -1;
         }
 
@@ -914,13 +930,13 @@ static void enable_write_all(struct net_device * dev)
 
 	ASSERT(dev);
 
-        list_for_each_entry(pos, &(eth_vlan_data.instances), list) {
+        list_for_each_entry(pos, &(eth_data.instances), list) {
                 if (pos->phy_dev == dev)
                 	enable_all_port_ids(pos);
         }
 }
 
-static void eth_vlan_skb_destructor(struct sk_buff *skb)
+static void eth_skb_destructor(struct sk_buff *skb)
 {
 	struct ipcp_instance_data *data =
 		(struct ipcp_instance_data *)(skb_shinfo(skb)->destructor_arg);
@@ -936,7 +952,7 @@ static void eth_vlan_skb_destructor(struct sk_buff *skb)
 	}
 }
 
-static int eth_vlan_du_write(struct ipcp_instance_data * data,
+static int eth_du_write(struct ipcp_instance_data * data,
                              port_id_t                   id,
                              struct du *                 du,
                              bool                        blocking)
@@ -1032,7 +1048,7 @@ static int eth_vlan_du_write(struct ipcp_instance_data * data,
         }
 
         bup_skb->dev = data->dev;
-	bup_skb->destructor = &eth_vlan_skb_destructor;
+        bup_skb->destructor = &eth_skb_destructor;
 	skb_shinfo(bup_skb)->destructor_arg = (void *)data;
         retval = dev_queue_xmit(bup_skb);
 
@@ -1054,7 +1070,7 @@ static int eth_vlan_du_write(struct ipcp_instance_data * data,
         return 0;
 }
 
-static int eth_vlan_rcv_worker(void * o)
+static int eth_rcv_worker(void * o)
 {
         struct ipcp_instance_data *     data;
         const struct gpa *              gpaddr;
@@ -1092,7 +1108,7 @@ static int eth_vlan_rcv_worker(void * o)
         if (!user_ipcp || !ipcp) {
                 LOG_ERR("Could not find required ipcps");
                 if (flow_destroy(data, flow))
-                        LOG_ERR("Problems destroying shim-eth-vlan "
+                        LOG_ERR("Problems destroying shim-eth "
                                 "flow");
                 return -1;
         }
@@ -1104,7 +1120,7 @@ static int eth_vlan_rcv_worker(void * o)
         if (!is_port_id_ok(flow->port_id)) {
                 LOG_DBG("Port id is not ok");
                 if (flow_destroy(data, flow))
-                        LOG_ERR("Problems destroying shim-eth-vlan "
+                        LOG_ERR("Problems destroying shim-eth "
                                 "flow");
                 return -1;
         }
@@ -1116,7 +1132,7 @@ static int eth_vlan_rcv_worker(void * o)
                         LOG_ERR("Could not create flow in KFA");
                         kfa_port_id_release(data->kfa, flow->port_id);
                         if (flow_destroy(data, flow))
-                                LOG_ERR("Problems destroying shim-eth-vlan "
+                                LOG_ERR("Problems destroying shim-eth "
                                         "flow");
                         return -1;
                 }
@@ -1193,7 +1209,7 @@ static int eth_vlan_rcv_worker(void * o)
         return 0;
 }
 
-static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
+static int eth_recv_process_packet(struct sk_buff *    skb,
 					struct net_device * dev)
 {
         struct ethhdr *                 mh;
@@ -1327,11 +1343,11 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                 wdata->dev  = dev;
                 wdata->flow = flow;
                 wdata->data = data;
-                item  = rwq_work_create_ni(eth_vlan_rcv_worker, wdata);
+                item  = rwq_work_create_ni(eth_rcv_worker, wdata);
 
                 rwq_work_post(rcv_wq, item);
 
-                LOG_DBG("eth_vlan_recv_process_packet added work");
+                LOG_DBG("eth_recv_process_packet added work");
         } else {
                 gha_destroy(ghaddr);
                 LOG_DBG("Flow exists, queueing or delivering or dropping");
@@ -1373,13 +1389,13 @@ static int eth_vlan_recv_process_packet(struct sk_buff *    skb,
                         du_destroy(du);
                 }
 
-                LOG_DBG("eth_vlan_recv_process_packet ends ...");
+                LOG_DBG("eth_recv_process_packet ends ...");
         }
 
         return 0;
 }
 
-static int eth_vlan_rcv(struct sk_buff *     skb,
+static int eth_rcv(struct sk_buff *     skb,
                         struct net_device *  dev,
                         struct packet_type * pt,       /* not used */
                         struct net_device *  orig_dev) /* not used */
@@ -1387,31 +1403,123 @@ static int eth_vlan_rcv(struct sk_buff *     skb,
 	ASSERT(skb);
 	ASSERT(dev);
 
-	LOG_DBG("eth_vlan_rcv started, skb received");
+        LOG_DBG("eth_rcv started, skb received");
         skb = skb_share_check(skb, GFP_ATOMIC);
         if (!skb) {
                 LOG_ERR("Couldn't obtain ownership of the skb");
                 return 0;
         }
 
-        if (eth_vlan_recv_process_packet(skb, dev))
+        if (eth_recv_process_packet(skb, dev))
                 LOG_DBG("Failed to process packet");
 
-        LOG_DBG("eth_vlan_rcv ends");
+        LOG_DBG("eth_rcv ends");
         return 0;
 };
 
-static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
+static int eth_set_net_devs_compat(struct ipcp_instance_data* data,
+                                   const struct name *dif_name) {
+        string_t *complete_interface;
+        int vlan_id_provided;
+        struct eth_info *info;
+        int failed = 0;
+
+        info = data->info;
+
+        if (kstrtouint(dif_name->process_name, 10, &vlan_id_provided)) {
+                ASSERT(dif_name->process_name);
+
+                LOG_WARN("DIF name not a VLAN number, using full Ethernet interface: %s",
+                        dif_name->process_name);
+                vlan_id_provided = 0;
+        }
+
+        info->vlan_id = vlan_id_provided;
+
+        if (info->vlan_id != 0 && !vlan_id_is_ok(info->vlan_id)) {
+                LOG_ERR("Bad VLAN id specified: %d", info->vlan_id);
+                return -1;
+        }
+
+        if (info->vlan_id != 0) {
+                complete_interface =
+                        create_vlan_interface_name(info->interface_name,
+                                                   info->vlan_id);
+        } else {
+                complete_interface = rkstrdup(info->interface_name);
+        }
+
+        if (!complete_interface) return -1;
+
+        read_lock(&dev_base_lock);
+        data->dev = __dev_get_by_name(&init_net, complete_interface);
+
+        if (!data->dev) {
+                LOG_ERR("Can't get VLAN ethernet device '%s'",
+                        complete_interface);
+                failed = -1;
+        }
+
+        if (info->vlan_id != 0) {
+                data->phy_dev = __dev_get_by_name(&init_net,
+                                                  info->interface_name);
+                if (!data->phy_dev) {
+                        LOG_ERR("Can't get ethernet device '%s'",
+                                info->interface_name);
+                        failed = -1;
+                }
+        }
+        // In case there was no VLAN ID provided.
+        else data->phy_dev = data->dev;
+
+        read_unlock(&dev_base_lock);
+
+        return failed;
+}
+
+static int eth_set_net_devs_auto(struct ipcp_instance_data* data) {
+        struct eth_info *info;
+
+        info = data->info;
+
+        read_lock(&dev_base_lock);
+        data->dev = __dev_get_by_name(&init_net, info->interface_name);
+
+        if (is_vlan_dev(data->dev)) {
+                data->phy_dev = vlan_dev_real_dev(data->dev);
+                info->vlan_id = vlan_dev_vlan_id(data->dev);
+
+                if (!vlan_id_is_ok(info->vlan_id)) {
+                        if (info->vlan_id != 0) {
+                                LOG_ERR("Bad VLAN ID specified: %d", info->vlan_id);
+                                read_unlock(&dev_base_lock);
+                                return -1;
+                        }
+                }
+
+                LOG_DBG("Using pseudo-interface %s, VLAN ID: %d",
+                        info->interface_name, info->vlan_id);
+        } else {
+                /* Here we just try to use the device as-is. */
+                data->phy_dev = data->dev;
+
+                LOG_DBG("Using physical interface %s", info->interface_name);
+        }
+        read_unlock(&dev_base_lock);
+
+        return 0;
+}
+
+static int eth_assign_to_dif(struct ipcp_instance_data * data,
                 		  const struct name * dif_name,
 				  const string_t * type,
 				  struct dif_config * config)
 {
-        struct eth_vlan_info *          info;
+        struct eth_info *               info;
         struct ipcp_config *            tmp;
         string_t *                      complete_interface;
         struct interface_data_mapping * mapping;
         int                             result;
-        unsigned int                    temp;
 
 	if (!data) {
 		LOG_ERR("Bogus data passed, bailing out");
@@ -1431,24 +1539,6 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                 LOG_ERR("IPCP already assigned to DIF %s, can be assigned only once",
                         data->dif_name->process_name);
                 return -1;
-        }
-
-        /* Get vlan id */
-        result = kstrtouint(dif_name->process_name, 10, &temp);
-        if (result) {
-                ASSERT(dif_name->process_name);
-
-                LOG_WARN("DIF name not a VLAN number, using full Ethernet interface: %s",
-                        dif_name->process_name);
-                temp = 0;
-        }
-        info->vlan_id = (uint16_t) temp;
-
-        if (!vlan_id_is_ok(info->vlan_id)) {
-                if (info->vlan_id != 0) {
-                      LOG_ERR("Bad vlan id specified: %d", info->vlan_id);
-                      return -1;
-                }
         }
 
         data->dif_name = name_dup(dif_name);
@@ -1482,50 +1572,26 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
                 return -1;
         }
 
-        data->eth_vlan_packet_type->type = cpu_to_be16(ETH_P_RINA);
-        data->eth_vlan_packet_type->func = eth_vlan_rcv;
-
-        if (info->vlan_id != 0) {
-                complete_interface =
-                        create_vlan_interface_name(info->interface_name,
-                                                   info->vlan_id);
-        } else {
-                complete_interface = rkstrdup(info->interface_name);
-        }
-
-        if (!complete_interface) {
+        result = data->vlan_mode == VLAN_MODE_COMPAT ?
+                eth_set_net_devs_compat(data, data->dif_name) :
+                eth_set_net_devs_auto(data);
+        if (result) {
                 name_destroy(data->dif_name);
-                data->dif_name = NULL;
                 rkfree(info->interface_name);
-                info->interface_name = NULL;
-                return -1;
-        }
-
-        ASSERT(complete_interface);
-
-        /* Add the handler */
-        read_lock(&dev_base_lock);
-        data->dev = __dev_get_by_name(&init_net, complete_interface);
-        if (info->vlan_id != 0)
-        	data->phy_dev = __dev_get_by_name(&init_net,
-        					  info->interface_name);
-        else
-        	data->phy_dev = data->dev;
-	read_unlock(&dev_base_lock);
-        if (!data->dev || !data->phy_dev) {
-                LOG_ERR("Can't get device '%s'", complete_interface);
-                name_destroy(data->dif_name);
-                data->dif_name = NULL;
-                rkfree(info->interface_name);
-                info->interface_name = NULL;
                 rkfree(complete_interface);
+
+                data->dif_name = NULL;
+                info->interface_name = NULL;
+
                 data->dev = NULL;
                 data->phy_dev = NULL;
+
                 return -1;
         }
 
-        LOG_DBG("Got device '%s', trying to register handler",
-                complete_interface);
+        /* Add the packet handler for RINA. */
+        data->eth_packet_type->type = cpu_to_be16(ETH_P_RINA);
+        data->eth_packet_type->func = eth_rcv;
 
         /* Store in list for retrieval later on */
         mapping = rkmalloc(sizeof(*mapping), GFP_ATOMIC);
@@ -1546,23 +1612,24 @@ static int eth_vlan_assign_to_dif(struct ipcp_instance_data * data,
         list_add(&mapping->list, &data_instances_list);
         spin_unlock(&data_instances_lock);
 
-        data->eth_vlan_packet_type->dev = data->dev;
-        dev_add_pack(data->eth_vlan_packet_type);
+        data->eth_packet_type->dev = data->dev;
+        dev_add_pack(data->eth_packet_type);
         rkfree(complete_interface);
 
-        LOG_DBG("Configured shim eth vlan IPC Process");
+        LOG_DBG("Configured Ethernet shim IPC Process");
 
         return 0;
 }
 
-static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
+static int eth_update_dif_config(struct ipcp_instance_data * data,
                                       const struct dif_config *   new_config)
 {
-        struct eth_vlan_info *          info;
+        struct eth_info *               info;
         struct ipcp_config *            tmp;
         string_t *                      old_interface_name;
         string_t *                      complete_interface;
         struct interface_data_mapping * mapping;
+        int                             result;
 
 	if (!data) {
 		LOG_ERR("Bogus data passed, bailing out");
@@ -1592,10 +1659,10 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
                 		return -1;
                 	}
 		} else
-                	LOG_DBG("Unknown config param for eth shim, ignoring");
+                        LOG_DBG("Unknown config param for Ethernet shim, ignoring");
         }
 
-	dev_remove_pack(data->eth_vlan_packet_type);
+        dev_remove_pack(data->eth_packet_type);
 
 	if (data->dev) {
 		/* Remove from list */
@@ -1608,34 +1675,16 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
 		}
 	}
 
-        data->eth_vlan_packet_type->type = cpu_to_be16(ETH_P_RINA);
-        data->eth_vlan_packet_type->func = eth_vlan_rcv;
+        /* Add the packet handler. */
+        data->eth_packet_type->type = cpu_to_be16(ETH_P_RINA);
+        data->eth_packet_type->func = eth_rcv;
 
-        if (info->vlan_id != 0) {
-                complete_interface =
-                        create_vlan_interface_name(info->interface_name,
-                                                   info->vlan_id);
-        } else {
-                complete_interface = rkstrdup(info->interface_name);
-        }
-
-        if (!complete_interface)
+        /* Update the network device we use for this IPCP instance. */
+        result = data->vlan_mode == VLAN_MODE_COMPAT ?
+                eth_set_net_devs_compat(data, data->dif_name) :
+                eth_set_net_devs_auto(data);
+        if (result)
                 return -1;
-
-        /* Add the handler */
-        read_lock(&dev_base_lock);
-        data->dev = __dev_get_by_name(&init_net, complete_interface);
-        if (info->vlan_id != 0) {
-        	data->phy_dev = __dev_get_by_name(&init_net,
-        					  info->interface_name);
-        } else {
-        	data->phy_dev = data->dev;
-        }
-	read_unlock(&dev_base_lock);
-        if (!data->dev) {
-                LOG_ERR("Invalid device to configure: %s", complete_interface);
-                return -1;
-        }
 
         /* Store in list for retrieval later on */
         mapping = rkmalloc(sizeof(*mapping), GFP_KERNEL);
@@ -1650,16 +1699,16 @@ static int eth_vlan_update_dif_config(struct ipcp_instance_data * data,
         list_add(&mapping->list, &data_instances_list);
         spin_unlock(&data_instances_lock);
 
-        data->eth_vlan_packet_type->dev = data->dev;
-        dev_add_pack(data->eth_vlan_packet_type);
+        data->eth_packet_type->dev = data->dev;
+        dev_add_pack(data->eth_packet_type);
         rkfree(complete_interface);
 
-        LOG_DBG("Configured shim eth vlan IPC Process");
+        LOG_DBG("Configured Ethernet shim IPC Process");
 
         return 0;
 }
 
-static const struct name * eth_vlan_ipcp_name(struct ipcp_instance_data * data)
+static const struct name * eth_ipcp_name(struct ipcp_instance_data * data)
 {
         ASSERT(data);
         ASSERT(name_is_ok(data->name));
@@ -1667,7 +1716,7 @@ static const struct name * eth_vlan_ipcp_name(struct ipcp_instance_data * data)
         return data->name;
 }
 
-static const struct name * eth_vlan_dif_name(struct ipcp_instance_data * data)
+static const struct name * eth_dif_name(struct ipcp_instance_data * data)
 {
 	if (!data) {
 		LOG_ERR("Bogus data passed, bailing out");
@@ -1677,7 +1726,7 @@ static const struct name * eth_vlan_dif_name(struct ipcp_instance_data * data)
         return data->dif_name;
 }
 
-static size_t eth_vlan_max_sdu_size(struct ipcp_instance_data * data)
+static size_t eth_max_sdu_size(struct ipcp_instance_data * data)
 {
 	if (!data) {
 		LOG_ERR("Bogus data passed, bailing out");
@@ -1687,13 +1736,13 @@ static size_t eth_vlan_max_sdu_size(struct ipcp_instance_data * data)
         return data->dev->mtu - sizeof(struct ethhdr);
 }
 
-ipc_process_id_t eth_vlan_ipcp_id(struct ipcp_instance_data * data)
+ipc_process_id_t eth_ipcp_id(struct ipcp_instance_data * data)
 {
 	ASSERT(data);
 	return data->id;
 }
 
-static int eth_vlan_query_rib(struct ipcp_instance_data * data,
+static int eth_query_rib(struct ipcp_instance_data * data,
                               struct list_head *          entries,
                               const string_t *            object_class,
                               const string_t *            object_name,
@@ -1705,21 +1754,21 @@ static int eth_vlan_query_rib(struct ipcp_instance_data * data,
 	return -1;
 }
 
-static struct ipcp_instance_ops eth_vlan_instance_ops = {
-        .flow_allocate_request     = eth_vlan_flow_allocate_request,
-        .flow_allocate_response    = eth_vlan_flow_allocate_response,
-        .flow_deallocate           = eth_vlan_flow_deallocate,
+static struct ipcp_instance_ops eth_instance_ops = {
+        .flow_allocate_request     = eth_flow_allocate_request,
+        .flow_allocate_response    = eth_flow_allocate_response,
+        .flow_deallocate           = eth_flow_deallocate,
         .flow_prebind              = NULL,
         .flow_binding_ipcp         = NULL,
         .flow_unbinding_ipcp       = NULL,
-        .flow_unbinding_user_ipcp  = eth_vlan_unbind_user_ipcp,
+        .flow_unbinding_user_ipcp  = eth_unbind_user_ipcp,
 	.nm1_flow_state_change	   = NULL,
 
-        .application_register      = eth_vlan_application_register,
-        .application_unregister    = eth_vlan_application_unregister,
+        .application_register      = eth_application_register,
+        .application_unregister    = eth_application_unregister,
 
-        .assign_to_dif             = eth_vlan_assign_to_dif,
-        .update_dif_config         = eth_vlan_update_dif_config,
+        .assign_to_dif             = eth_assign_to_dif,
+        .update_dif_config         = eth_update_dif_config,
 
         .connection_create         = NULL,
         .connection_update         = NULL,
@@ -1728,7 +1777,7 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
 	.connection_modify 	   = NULL,
 
         .du_enqueue               = NULL,
-        .du_write                 = eth_vlan_du_write,
+        .du_write                  = eth_du_write,
 
         .mgmt_du_write            = NULL,
         .mgmt_du_post             = NULL,
@@ -1739,18 +1788,18 @@ static struct ipcp_instance_ops eth_vlan_instance_ops = {
         .pff_flush                 = NULL,
 	.pff_modify		   = NULL,
 
-        .query_rib		   = eth_vlan_query_rib,
+        .query_rib		   = eth_query_rib,
 
-        .ipcp_name                 = eth_vlan_ipcp_name,
-        .dif_name                  = eth_vlan_dif_name,
-	.ipcp_id		   = eth_vlan_ipcp_id,
+        .ipcp_name                 = eth_ipcp_name,
+        .dif_name                  = eth_dif_name,
+        .ipcp_id		   = eth_ipcp_id,
 
         .set_policy_set_param      = NULL,
         .select_policy_set         = NULL,
         .update_crypto_state	   = NULL,
 	.address_change            = NULL,
-        .dif_name		   = eth_vlan_dif_name,
-	.max_sdu_size		   = eth_vlan_max_sdu_size
+        .dif_name		   = eth_dif_name,
+        .max_sdu_size		   = eth_max_sdu_size
 };
 
 static int ntfy_user_ipcp_on_if_state_change(struct ipcp_instance_data * data,
@@ -1775,7 +1824,7 @@ static int ntfy_user_ipcp_on_if_state_change(struct ipcp_instance_data * data,
 	return 0;
 }
 
-static int eth_vlan_netdev_notify(struct notifier_block *nb,
+static int eth_netdev_notify(struct notifier_block *nb,
 				  unsigned long event,
 				  void *opaque)
 {
@@ -1787,7 +1836,7 @@ static int eth_vlan_netdev_notify(struct notifier_block *nb,
 
 	dev = netdev_notifier_info_to_dev(opaque);
 
-        list_for_each_entry(pos, &eth_vlan_data.instances, list) {
+        list_for_each_entry(pos, &eth_data.instances, list) {
 		if (pos->dev != dev) {
 			/* We don't care about this network interface. */
 			continue;
@@ -1819,48 +1868,57 @@ static int eth_vlan_netdev_notify(struct notifier_block *nb,
 	return 0;
 }
 
-static int eth_vlan_init(struct ipcp_factory_data * data)
+static int eth_init(struct ipcp_factory_data *fdata)
 {
-	ASSERT(data == &eth_vlan_data);
+        ASSERT(fdata == &eth_data);
 
-	bzero(data, sizeof(*data));
-	INIT_LIST_HEAD(&(data->instances));
+        bzero(fdata, sizeof(*fdata));
 
+        INIT_LIST_HEAD(&(fdata->instances));
 	INIT_LIST_HEAD(&data_instances_list);
 
-	memset(&data->ntfy, 0, sizeof(data->ntfy));
-	data->ntfy.notifier_call = eth_vlan_netdev_notify;
-	register_netdevice_notifier(&data->ntfy);
+        /* Register to receive messages about the network
+         * interfaces. */
+        memset(&fdata->ntfy, 0, sizeof(fdata->ntfy));
+        fdata->ntfy.notifier_call = eth_netdev_notify;
+        register_netdevice_notifier(&fdata->ntfy);
 
         LOG_INFO("%s initialized", SHIM_NAME);
 
         return 0;
 }
 
-static int eth_vlan_init2(struct ipcp_factory_data * data)
+/* Initialization for a Ethernet shim VLAN instance. */
+static int eth_init_vlan(struct ipcp_factory_data* fdata)
 {
-	ASSERT(data == &eth_vlan_data);
+        LOG_INFO("%s initialized", SHIM_VLAN_NAME);
+
+        return 0;
+}
+
+static int eth_init2(struct ipcp_factory_data * data)
+{
+        ASSERT(data == &eth_data);
 
         LOG_INFO("Shim Wifi AP/STA initialized");
 
         return 0;
 }
 
-static int eth_vlan_fini(struct ipcp_factory_data * data)
+static int eth_fini(struct ipcp_factory_data * data)
 {
 
-	ASSERT(data == &eth_vlan_data);
-
+        ASSERT(data == &eth_data);
 	ASSERT(list_empty(&(data->instances)));
+
 	unregister_netdevice_notifier(&data->ntfy);
 
 	return 0;
 }
 
-static int eth_vlan_fini2(struct ipcp_factory_data * data)
+static int eth_fini2(struct ipcp_factory_data * data)
 {
-
-	ASSERT(data == &eth_vlan_data);
+        ASSERT(data == &eth_data);
 	return 0;
 }
 
@@ -1875,8 +1933,8 @@ static void inst_cleanup(struct ipcp_instance * inst)
                         rkfree(inst->data->info);
                 if (inst->data->name)
                         name_destroy(inst->data->name);
-                if (inst->data->eth_vlan_packet_type)
-                        rkfree(inst->data->eth_vlan_packet_type);
+                if (inst->data->eth_packet_type)
+                        rkfree(inst->data->eth_packet_type);
 
                 rkfree(inst->data);
         }
@@ -1884,8 +1942,8 @@ static void inst_cleanup(struct ipcp_instance * inst)
         rkfree(inst);
 }
 
-static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
-                                              const struct name *        name,
+static struct ipcp_instance* eth_create(struct ipcp_factory_data*  data,
+                                        const struct name*         name,
                                               ipc_process_id_t           id,
 					      uint_t			 us_nl_port)
 {
@@ -1906,10 +1964,10 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
                 return NULL;
 
         /* fill it properly */
-        inst->ops  = &eth_vlan_instance_ops;
+        inst->ops  = &eth_instance_ops;
 
 	if (robject_rset_init_and_add(&inst->robj,
-				      &eth_vlan_ipcp_rtype,
+                                      &eth_ipcp_rtype,
 				      kipcm_rset(default_kipcm),
 				      "%u",
 				      id)) {
@@ -1923,15 +1981,16 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
                 return NULL;
         }
 
-        inst->data->eth_vlan_packet_type =
+        inst->data->eth_packet_type =
                 rkzalloc(sizeof(struct packet_type), GFP_KERNEL);
-        if (!inst->data->eth_vlan_packet_type) {
+        if (!inst->data->eth_packet_type) {
                 LOG_ERR("Instance creation failed (#1)");
                 inst_cleanup(inst);
                 return NULL;
         }
 
         inst->data->id = id;
+        inst->data->vlan_mode = VLAN_MODE_AUTO;
 
         inst->data->name = name_dup(name);
         if (!inst->data->name) {
@@ -1988,7 +2047,25 @@ static struct ipcp_instance * eth_vlan_create(struct ipcp_factory_data * data,
         return inst;
 }
 
-static int eth_vlan_destroy(struct ipcp_factory_data * data,
+static struct ipcp_instance* eth_create_vlan(struct ipcp_factory_data*  data,
+                                             const struct name*         name,
+                                             ipc_process_id_t           id,
+                                             uint_t                     us_nl_port) {
+        struct ipcp_instance *inst;
+
+        inst = eth_create(data, name, id, us_nl_port);
+
+        /* Set this IPCP VLAN behavior to compability mode. */
+        if (inst && inst->data) {
+                inst->data->vlan_mode = VLAN_MODE_COMPAT;
+
+                LOG_DBG("Ethernet shim will operate in shim-eth-vlan compatibility mode.");
+        }
+
+        return inst;
+}
+
+static int eth_destroy(struct ipcp_factory_data * data,
                             struct ipcp_instance *     instance)
 {
         struct interface_data_mapping * mapping;
@@ -1998,7 +2075,7 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
         ASSERT(data);
         ASSERT(instance);
 
-        LOG_DBG("Looking for the eth-vlan-instance to destroy");
+        LOG_DBG("Looking for the Ethernet shim instance to destroy");
 
         /* Retrieve the instance */
         list_for_each_entry_safe(pos, next, &data->instances, list) {
@@ -2010,8 +2087,8 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                         }
 
                         /* Remove packet handler if there is one */
-                        if (pos->eth_vlan_packet_type->dev)
-                                __dev_remove_pack(pos->eth_vlan_packet_type);
+                        if (pos->eth_packet_type->dev)
+                                __dev_remove_pack(pos->eth_packet_type);
 
                         /* Unbind from the instances set */
                         list_del(&pos->list);
@@ -2073,13 +2150,13 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
                          * and must not be freed until after all
                          * the CPU's have gone through a quiescent state.
                          */
-                        if (pos->eth_vlan_packet_type)
-                                rkfree(pos->eth_vlan_packet_type);
+                        if (pos->eth_packet_type)
+                                rkfree(pos->eth_packet_type);
 
                         rkfree(pos);
                         rkfree(instance);
 
-                        LOG_DBG("Eth-vlan instance destroyed, returning");
+                        LOG_DBG("Ethernet shim instance destroyed, returning");
 
                         return 0;
                 }
@@ -2091,19 +2168,27 @@ static int eth_vlan_destroy(struct ipcp_factory_data * data,
 }
 
 static struct ipcp_factory_ops eth_vlan_ops = {
-        .init      = eth_vlan_init,
-        .fini      = eth_vlan_fini,
-        .create    = eth_vlan_create,
-        .destroy   = eth_vlan_destroy,
+        .init      = eth_init_vlan,
+        .fini      = eth_fini,
+        .create    = eth_create_vlan,
+        .destroy   = eth_destroy,
 };
 
-static struct ipcp_factory_ops eth_vlan_ops2 = {
-        .init      = eth_vlan_init2,
-        .fini      = eth_vlan_fini2,
-        .create    = eth_vlan_create,
-        .destroy   = eth_vlan_destroy,
+static struct ipcp_factory_ops eth_ops = {
+        .init      = eth_init,
+        .fini      = eth_fini,
+        .create    = eth_create,
+        .destroy   = eth_destroy,
 };
 
+static struct ipcp_factory_ops eth_ops2 = {
+        .init      = eth_init2,
+        .fini      = eth_fini2,
+        .create    = eth_create,
+        .destroy   = eth_destroy,
+};
+
+static struct ipcp_factory * shim_eth = NULL;
 static struct ipcp_factory * shim_eth_vlan = NULL;
 static struct ipcp_factory * shim_wifi_sta = NULL;
 static struct ipcp_factory * shim_wifi_ap = NULL;
@@ -2223,39 +2308,46 @@ static int __init mod_init(void)
                 return -1;
         }
 
-        shim_eth_vlan = kipcm_ipcp_factory_register(default_kipcm,
+        shim_eth = kipcm_ipcp_factory_register(default_kipcm,
                                            	    SHIM_NAME,
-                                          	    &eth_vlan_data,
+                                               &eth_data,
+                                               &eth_ops);
+        shim_eth_vlan = kipcm_ipcp_factory_register(default_kipcm,
+                                                    SHIM_VLAN_NAME,
+                                                    &eth_data,
 						    &eth_vlan_ops);
-        if (!shim_eth_vlan)
-                return -1;
-
         shim_wifi_ap = kipcm_ipcp_factory_register(default_kipcm,
                                            	   SHIM_WIFI_AP_NAME,
-                                          	   &eth_vlan_data,
-						   &eth_vlan_ops2);
-        if (!shim_wifi_ap) {
-        	kipcm_ipcp_factory_unregister(default_kipcm, shim_eth_vlan);
-                return -1;
-        }
-
+                                                   &eth_data,
+                                                   &eth_ops2);
         shim_wifi_sta = kipcm_ipcp_factory_register(default_kipcm,
                                            	    SHIM_WIFI_STA_NAME,
-                                          	    &eth_vlan_data,
-						    &eth_vlan_ops2);
-        if (!shim_wifi_sta) {
-        	kipcm_ipcp_factory_unregister(default_kipcm, shim_wifi_ap);
-        	kipcm_ipcp_factory_unregister(default_kipcm, shim_eth_vlan);
-                return -1;
-        }
+                                                    &eth_data,
+                                                    &eth_ops2);
+
+        if (!shim_eth || !shim_eth_vlan || !shim_wifi_ap || !shim_wifi_sta)
+                goto fail;
 
         spin_lock_init(&data_instances_lock);
 
         return 0;
+
+        fail:
+        if (!shim_eth)
+                kipcm_ipcp_factory_unregister(default_kipcm, shim_eth);
+        if (!shim_eth_vlan)
+                kipcm_ipcp_factory_unregister(default_kipcm, shim_eth_vlan);
+        if (!shim_wifi_ap)
+                kipcm_ipcp_factory_unregister(default_kipcm, shim_wifi_ap);
+        if (!shim_wifi_sta)
+                kipcm_ipcp_factory_unregister(default_kipcm, shim_wifi_sta);
+
+        return -1;
 }
 
 static void __exit mod_exit(void)
 {
+        ASSERT(shim_eth);
         ASSERT(shim_eth_vlan);
         ASSERT(shim_wifi_ap);
         ASSERT(shim_wifi_sta);
@@ -2263,6 +2355,7 @@ static void __exit mod_exit(void)
         flush_workqueue(rcv_wq);
         destroy_workqueue(rcv_wq);
 
+        kipcm_ipcp_factory_unregister(default_kipcm, shim_eth);
         kipcm_ipcp_factory_unregister(default_kipcm, shim_eth_vlan);
         kipcm_ipcp_factory_unregister(default_kipcm, shim_wifi_ap);
         kipcm_ipcp_factory_unregister(default_kipcm, shim_wifi_sta);
