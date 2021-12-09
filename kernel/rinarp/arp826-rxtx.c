@@ -202,7 +202,10 @@ int arp_send_reply(struct net_device * dev,
                 return -1;
         }
 
-        dev_queue_xmit(skb);
+        if (dev_queue_xmit(skb)) {
+                LOG_ERR("Failed to send RINARP reply");
+                return -1;
+        }
 
         LOG_DBG("ARP packet sent successfully");
 
@@ -271,7 +274,10 @@ int arp_send_request(struct net_device * dev,
                 return -1;
         }
 
-        dev_queue_xmit(skb);
+        if (dev_queue_xmit(skb)) {
+                LOG_ERR("Failed to send RINARP request");
+                return -1;
+        }
 
         LOG_DBG("ARP packet sent successfully");
 
