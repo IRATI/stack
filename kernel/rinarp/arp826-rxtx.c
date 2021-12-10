@@ -161,6 +161,7 @@ int arp_send_reply(struct net_device * dev,
         size_t              max_len;
 #endif
         struct sk_buff *    skb;
+        int n;
 
         LOG_DBG("Sending ARP reply");
 
@@ -202,8 +203,8 @@ int arp_send_reply(struct net_device * dev,
                 return -1;
         }
 
-        if (dev_queue_xmit(skb)) {
-                LOG_ERR("Failed to send RINARP reply");
+        if ((n = dev_queue_xmit(skb))) {
+                LOG_ERR("Failed to send RINARP reply, dev_queue_xmit ret: %d", n);
                 return -1;
         }
 
@@ -226,6 +227,7 @@ int arp_send_request(struct net_device * dev,
 #endif
         struct sk_buff *    skb;
         struct gha *        tha;
+        int n;
 
         LOG_DBG("Sending ARP request");
 
@@ -274,8 +276,8 @@ int arp_send_request(struct net_device * dev,
                 return -1;
         }
 
-        if (dev_queue_xmit(skb)) {
-                LOG_ERR("Failed to send RINARP request");
+        if ((n = dev_queue_xmit(skb))) {
+                LOG_ERR("Failed to send RINARP reply, dev_queue_xmit ret: %d", n);
                 gha_destroy(tha);
                 return -1;
         }
