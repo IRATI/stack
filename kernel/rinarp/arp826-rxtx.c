@@ -276,6 +276,7 @@ int arp_send_request(struct net_device * dev,
 
         if (dev_queue_xmit(skb)) {
                 LOG_ERR("Failed to send RINARP request");
+                gha_destroy(tha);
                 return -1;
         }
 
