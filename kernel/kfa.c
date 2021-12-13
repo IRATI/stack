@@ -38,6 +38,7 @@
 #include "kfa.h"
 #include "kfa-utils.h"
 #include "rina-device.h"
+#include "ipcp-utils.h"
 
 #define RINA_IP_FLOW_ENT_NAME "RINA_IP"
 
@@ -86,11 +87,14 @@ struct ipcp_instance_data {
 };
 
 #ifdef CONFIG_DEBUG_FS
+
 static void kfa_flows_dbg_flow_show(struct ipcp_flow *flow, struct seq_file *s) {
-    const char *fs;
+    char *fs, *ns;
+    const struct name *n;
 
     if (!flow) return;
 
+    seq_printf(s, "Flow addr: %p\n", flow);
     seq_printf(s, "Port Id: %d\n", flow->port_id);
 
     switch (flow->state) {
@@ -108,6 +112,29 @@ static void kfa_flows_dbg_flow_show(struct ipcp_flow *flow, struct seq_file *s) 
 
     seq_printf(s, "State: %s\n", fs);
 
+    if (flow->ipc_process->ops->dif_name) {
+        n = flow->ipc_process->ops->dif_name(flow->ipc_process->data);
+        ns = name_tostring(n);
+        if (ns) {
+            seq_printf(s, "IPCP DIF name: %s\n", ns);
+            rkfree(ns);
+        } else
+            seq_printf(s, "IPCP DIF name: Can't convert name to string\n");
+    } else
+        seq_printf(s, "IPCP DIF name: Unknown\n");
+
+    if (flow->ipc_process->ops->ipcp_name) {
+        n = flow->ipc_process->ops->ipcp_name(flow->ipc_process->data);
+        ns = name_tostring(n);
+        if (ns) {
+            seq_printf(s, "IPCP Name: %s\n", ns);
+            rkfree(ns);
+        } else
+            seq_printf(s, "IPCP Name: Can't convert name to string\n");
+    } else
+        seq_printf(s, "IPCP Name: Unknown\n");
+
+    seq_printf(s, "\n");
 }
 
 static int kfa_flows_dbg_show(struct seq_file *s, void *v) {
