@@ -25,7 +25,7 @@
 
 struct pidm;
 
-struct pidm * pidm_create(void);
+struct pidm * pidm_create(struct dentry* dbg_dir);
 int           pidm_destroy(struct pidm * instance);
 
 port_id_t     pidm_allocate(struct pidm * instance);
