@@ -91,6 +91,7 @@ struct ipcp_instance_data {
 static void kfa_flows_dbg_flow_show(struct ipcp_flow *flow, struct seq_file *s) {
     char *fs, *ns;
     const struct name *n;
+    ipc_process_id_t pid;
 
     if (!flow) return;
 
@@ -111,6 +112,12 @@ static void kfa_flows_dbg_flow_show(struct ipcp_flow *flow, struct seq_file *s) 
     }
 
     seq_printf(s, "State: %s\n", fs);
+
+    if (flow->ipc_process->ops->ipcp_id) {
+        pid = flow->ipc_process->ops->ipcp_id(flow->ipc_process->data);
+        seq_printf(s, "IPCP process ID: %d\n", pid);
+    } else
+        seq_printf(s, "IPCP process ID: Unknown\n");
 
     if (flow->ipc_process->ops->dif_name) {
         n = flow->ipc_process->ops->dif_name(flow->ipc_process->data);
