@@ -26,6 +26,8 @@
 #include <linux/sched.h>
 #include <linux/poll.h>
 #include <linux/version.h>
+#include <linux/debugfs.h>
+#include <linux/hashtable.h>
 
 #define RINA_PREFIX "kfa"
 
@@ -46,6 +48,10 @@ struct kfa {
 	struct ipcp_instance    *ipcp;
 	struct list_head	 list;
 	struct workqueue_struct *flowdelq;
+
+#ifdef CONFIG_DEBUG_FS
+    struct dentry *flows_dbg_file;
+#endif
 };
 
 enum flow_state {
@@ -78,6 +84,51 @@ struct flowdel_data {
 struct ipcp_instance_data {
 	struct kfa *kfa;
 };
+
+#ifdef CONFIG_DEBUG_FS
+static void kfa_flows_dbg_flow_show(struct ipcp_flow *flow, struct seq_file *s) {
+    const char *fs;
+
+    if (!flow) return;
+
+    seq_printf(s, "Port Id: %d\n", flow->port_id);
+
+    switch (flow->state) {
+    case PORT_STATE_NULL:
+        fs = "PORT_STATE_NULL"; break;
+    case PORT_STATE_PENDING:
+        fs = "PORT_STATE_PENDING"; break;
+    case PORT_STATE_ALLOCATED:
+        fs = "PORT_STATE_ALLOCATED"; break;
+    case PORT_STATE_DEALLOCATED:
+        fs = "PORT_STATE_DEALLOCATED"; break;
+    case PORT_STATE_DISABLED:
+        fs = "PORT_STATE_DISABLED"; break;
+    }
+
+    seq_printf(s, "State: %s\n", fs);
+
+}
+
+static int kfa_flows_dbg_show(struct seq_file *s, void *v) {
+    struct kfa_pmap *flows;
+
+    flows = (struct kfa_pmap *)s->private;
+    return kfa_pmap_debugfs_show(flows, s, &kfa_flows_dbg_flow_show);
+}
+
+static int kfa_flows_dbg_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, kfa_flows_dbg_show, inode->i_private);
+}
+
+static const struct file_operations kfa_flows_dbg_fops = {
+	.open		= kfa_flows_dbg_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+#endif
 
 //Fwd dec
 static int kfa_flow_deallocate_worker(void *data);
@@ -1271,6 +1322,13 @@ struct kfa *kfa_create(struct dentry* dbg_dir)
 		return NULL;
 	}
 
+#ifdef CONFIG_DEBUG_FS
+    if (dbg_dir)
+        instance->flows_dbg_file = debugfs_create_file("kfa_flows", 0400, dbg_dir,
+                                                       instance->flows,
+                                                       &kfa_flows_dbg_fops);
+#endif
+
 	instance->ipcp = rkzalloc(sizeof(struct ipcp_instance), GFP_KERNEL);
 	if (!instance->ipcp) {
 		pidm_destroy(instance->pidm);
@@ -1312,6 +1370,9 @@ int kfa_destroy(struct kfa *instance)
 		LOG_ERR("Bogus instance passed, bailing out");
 		return -1;
 	}
+
+    if (instance->flows_dbg_file)
+        debugfs_remove(instance->flows_dbg_file);
 
 	/* FIXME: Destroy all the committed flows */
 	ASSERT(kfa_pmap_empty(instance->flows));
