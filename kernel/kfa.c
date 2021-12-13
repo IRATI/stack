@@ -1249,7 +1249,7 @@ int kfa_ipcp_instance_destroy(struct ipcp_instance * instance)
  	return 0;
 }
 
-struct kfa *kfa_create(void)
+struct kfa *kfa_create(struct dentry* dbg_dir)
 {
 	struct kfa *instance;
 
@@ -1257,7 +1257,7 @@ struct kfa *kfa_create(void)
 	if (!instance)
 		return NULL;
 
-	instance->pidm = pidm_create();
+	instance->pidm = pidm_create(dbg_dir);
 	if (!instance->pidm) {
 		rkfree(instance);
 		return NULL;
