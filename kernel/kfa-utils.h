@@ -21,6 +21,8 @@
 #ifndef RINA_KFA_UTILS_H
 #define RINA_KFA_UTILS_H
 
+#include <linux/seq_file.h>
+
 #include "common.h"
 #include "kfa.h"
 
@@ -46,5 +48,10 @@ int                kfa_pmap_update(struct kfa_pmap *  map,
                                    struct ipcp_flow * value_flow);
 int                kfa_pmap_remove(struct kfa_pmap * map,
                                    port_id_t         key);
+
+#ifdef CONFIG_DEBUG_FS
+int kfa_pmap_debugfs_show(struct kfa_pmap *map, struct seq_file *s,
+                          void (* flow_show_func)(struct ipcp_flow *, struct seq_file *));
+#endif
 
 #endif
