@@ -30,7 +30,7 @@
 
 struct kfa;
 
-struct kfa *kfa_create(void);
+struct kfa *kfa_create(struct dentry *dbg_dir);
 int	    kfa_destroy(struct kfa *instance);
 
 /* Only requests the pidm to reserve a valid port-id */
