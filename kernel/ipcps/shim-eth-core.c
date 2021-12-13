@@ -34,6 +34,8 @@
 #include <linux/if_packet.h>
 #include <linux/workqueue.h>
 #include <linux/notifier.h>
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
 #include <net/pkt_sched.h>
 #include <net/sch_generic.h>
 
@@ -67,16 +69,27 @@ struct rcv_work_data {
 /* FIXME: To be removed ABSOLUTELY */
 extern struct kipcm * default_kipcm;
 
+struct dentry *dbg_root;
+
 /* Holds the configuration of one shim instance */
 struct eth_info {
         uint16_t vlan_id;
         char *   interface_name;
 };
 
-static struct ipcp_factory_data {
+struct ipcp_factory_data {
         struct list_head instances;
         struct notifier_block ntfy;
-} eth_data;
+
+#ifdef CONFIG_DEBUG_FS
+        struct dentry *dbg;
+#endif
+};
+
+struct ipcp_factory_data eth_data;
+struct ipcp_factory_data eth_vlan_data;
+struct ipcp_factory_data wifi_ap_data;
+struct ipcp_factory_data wifi_sta_data;
 
 enum port_id_state {
         PORT_STATE_NULL = 1,
@@ -152,6 +165,17 @@ struct ipcp_instance_data {
 
         /* Flow control between this IPCP and the associated netdev. */
         unsigned int tx_busy;
+
+#ifdef CONFIG_DEBUG_FS
+        // Base directory
+        struct dentry *dbg;
+
+        // Instance information
+        struct dentry *dbg_info;
+
+        // Flows information
+        struct dentry *dbg_flows;
+#endif
 };
 
 /* Needed for eth_rcv function */
@@ -161,6 +185,130 @@ struct interface_data_mapping {
         struct net_device *         dev;
         struct ipcp_instance_data * data;
 };
+
+#ifdef CONFIG_DEBUG_FS
+static int eth_shim_dbg_inst_info_show(struct seq_file *s, void *v)
+{
+        char *ns;
+        struct ipcp_instance_data *data;
+
+        data = (struct ipcp_instance_data *)s->private;
+
+        seq_printf(s, "IPCP Id: %d\n", data->id);
+
+        ns = name_tostring(data->name);
+        if (ns) {
+                seq_printf(s, "IPCP Name: %s\n", ns);
+                rkfree(ns);
+        } else
+                seq_printf(s, "IPCP Name: Unknown\n");
+
+        ns = name_tostring(data->dif_name);
+        if (ns) {
+                seq_printf(s, "IPCP DIF Name: %s\n", ns);
+                rkfree(ns);
+        } else
+                seq_printf(s, "IPCP Dif Name: Unknown\n");
+
+        if (data->vlan_mode == VLAN_MODE_COMPAT)
+                seq_printf(s, "Working in eth-vlan compatibility mode.\n");
+        else
+                seq_printf(s, "Working in automatic interface mode.\n");
+
+        ns = name_tostring(data->app_name);
+        if (ns) {
+                seq_printf(s, "App Name: %s\n", ns);
+                rkfree(ns);
+        } else
+                seq_printf(s, "App Name: Unknown\n");
+
+        ns = name_tostring(data->daf_name);
+        if (ns) {
+                seq_printf(s, "DAF Name: %s\n", ns);
+                rkfree(ns);
+        } else
+                seq_printf(s, "DAF Name: Unknown\n");
+
+        seq_printf(s, "VLAN ID: %d\n", data->info->vlan_id);
+        seq_printf(s, "Ethernet interface: %s\n", data->info->interface_name);
+
+        if (data->info->use_spoof_mac) {
+                seq_printf(s, "Spoof MAC %u:%u:%u:%u:%u:%u\n",
+                           data->info->spoof_mac[0], data->info->spoof_mac[1],
+                           data->info->spoof_mac[2], data->info->spoof_mac[3],
+                           data->info->spoof_mac[4], data->info->spoof_mac[5]);
+        }
+
+        return 0;
+}
+
+static int eth_shim_dbg_inst_flows_show(struct seq_file *s, void *v)
+{
+        struct shim_eth_flow *flow;
+        struct ipcp_instance_data *data;
+        const uint8_t *ha;
+        char *ns;
+
+        data = (struct ipcp_instance_data *)s->private;
+
+        spin_lock_bh(&data->lock);
+
+        list_for_each_entry(flow, &data->flows, list) {
+                seq_printf(s, "Port Id: %d\n", flow->port_id);
+
+                ha = gha_address(flow->dest_ha);
+                if (gha_is_ok(ha)) {
+                        seq_printf(s, "Dest Hardware Address: %u:%u:%u:%u:%u:%u\n",
+                                   ha[0], ha[1],  ha[2], ha[3], ha[4], ha[5]);
+                } else
+                        seq_printf(s, "Dest Hardware Address: Invalid\n");
+
+                ns = gpa_address_to_string_gfp(GFP_KERNEL, flow->dest_pa);
+                if (ns) {
+                        seq_printf(s, "Dest Protocol Address: %s\n", ns);
+                        rkfree(ns);
+                } else
+                        seq_printf(s, "Dest Protocol Address: Unknown\n");
+
+                if (flow->port_id_state == PORT_STATE_PENDING)
+                        seq_printf(s, "Port state: PENDING\n");
+                else if (flow->port_id_state == PORT_STATE_ALLOCATED)
+                        seq_printf(s, "Port state: ALLOCATED\n");
+                else
+                        seq_printf(s, "Port state: UNKNOWN\n");
+        }
+
+        spin_unlock_bh(&data->lock);
+
+        seq_printf(s, "\n");
+
+        return 0;
+}
+
+static int eth_shim_dbg_inst_info_open(struct inode *inode, struct file *file)
+{
+        return single_open(file, eth_shim_dbg_inst_info_show, inode->i_private);
+}
+
+static int eth_shim_dbg_inst_flows_open(struct inode *inode, struct file *file)
+{
+        return single_open(file, eth_shim_dbg_inst_flows_show, inode->i_private);
+}
+
+static const struct file_operations eth_shim_dbg_inst_info_ops = {
+        .open		= eth_shim_dbg_inst_info_open,
+        .read		= seq_read,
+        .llseek		= seq_lseek,
+        .release	= single_release,
+};
+
+static const struct file_operations eth_shim_dbg_inst_flows_ops = {
+        .open		= eth_shim_dbg_inst_flows_open,
+        .read		= seq_read,
+        .llseek		= seq_lseek,
+        .release	= single_release,
+};
+#endif
 
 static ssize_t eth_ipcp_attr_show(struct robject *        robj,
                                   struct robj_attribute * attr,
@@ -1948,6 +2096,9 @@ static struct ipcp_instance* eth_create(struct ipcp_factory_data*  data,
                                         uint_t		           us_nl_port)
 {
         struct ipcp_instance * inst;
+#ifdef CONFIG_DEBUG_FS
+        char buf[6]; // name of the DebugFS dir.
+#endif
 
         ASSERT(data);
         ASSERT(name);
@@ -2044,6 +2195,24 @@ static struct ipcp_instance* eth_create(struct ipcp_factory_data*  data,
         INIT_LIST_HEAD(&(inst->data->list));
         list_add(&(inst->data->list), &(data->instances));
 
+#ifdef CONFIG_DEBUG_FS
+        if (data->dbg) {
+                struct dentry *d;
+
+                snprintf(buf, sizeof(buf), "%d", id);
+                inst->data->dbg = debugfs_create_dir(buf, data->dbg);
+
+                if (inst->data->dbg) {
+                        d = debugfs_create_file("info", 0400, inst->data->dbg,
+                                                inst->data, &eth_shim_dbg_inst_info_ops);
+                        inst->data->dbg_info = d;
+                        d = debugfs_create_file("flows", 0400, inst->data->dbg,
+                                                inst->data, &eth_shim_dbg_inst_flows_ops);
+                        inst->data->dbg_flows = d;
+                }
+        }
+#endif
+
         return inst;
 }
 
@@ -2080,6 +2249,15 @@ static int eth_destroy(struct ipcp_factory_data * data,
         /* Retrieve the instance */
         list_for_each_entry_safe(pos, next, &data->instances, list) {
                 if (pos->id == instance->data->id) {
+
+#ifdef CONFIG_DEBUG_FS
+                        if (instance->data->dbg_info)
+                                debugfs_remove(instance->data->dbg_info);
+                        if (instance->data->dbg_flows)
+                                debugfs_remove(instance->data->dbg_flows);
+                        if (instance->data->dbg)
+                                debugfs_remove(instance->data->dbg);
+#endif
 
                         /* Destroy existing flows */
                         list_for_each_entry_safe(flow, nflow, &pos->flows, list) {
@@ -2314,19 +2492,30 @@ static int __init mod_init(void)
                                                &eth_ops);
         shim_eth_vlan = kipcm_ipcp_factory_register(default_kipcm,
                                                     SHIM_VLAN_NAME,
-                                                    &eth_data,
+                                                    &eth_vlan_data,
                                                     &eth_vlan_ops);
         shim_wifi_ap = kipcm_ipcp_factory_register(default_kipcm,
                                                    SHIM_WIFI_AP_NAME,
-                                                   &eth_data,
+                                                   &wifi_ap_data,
                                                    &eth_ops2);
         shim_wifi_sta = kipcm_ipcp_factory_register(default_kipcm,
                                                     SHIM_WIFI_STA_NAME,
-                                                    &eth_data,
+                                                    &wifi_sta_data,
                                                     &eth_ops2);
 
         if (!shim_eth || !shim_eth_vlan || !shim_wifi_ap || !shim_wifi_sta)
                 goto fail;
+
+#ifdef CONFIG_DEBUG_FS
+        dbg_root = debugfs_create_dir("shim-eth", NULL);
+
+        if (dbg_root) {
+                eth_data.dbg = debugfs_create_dir(SHIM_NAME, dbg_root);
+                eth_vlan_data.dbg = debugfs_create_dir(SHIM_VLAN_NAME, dbg_root);
+                wifi_ap_data.dbg = debugfs_create_dir(SHIM_WIFI_AP_NAME, dbg_root);
+                wifi_sta_data.dbg = debugfs_create_dir(SHIM_WIFI_STA_NAME, dbg_root);
+        }
+#endif
 
         spin_lock_init(&data_instances_lock);
 
@@ -2354,6 +2543,19 @@ static void __exit mod_exit(void)
 
         flush_workqueue(rcv_wq);
         destroy_workqueue(rcv_wq);
+
+#ifdef CONFIG_DEBUG_FS
+        if (eth_data.dbg)
+                debugfs_remove(eth_data.dbg);
+        if (eth_vlan_data.dbg)
+                debugfs_remove(eth_vlan_data.dbg);
+        if (wifi_ap_data.dbg)
+                debugfs_remove(wifi_ap_data.dbg);
+        if (wifi_sta_data.dbg)
+                debugfs_remove(wifi_sta_data.dbg);
+        if (dbg_root)
+                debugfs_remove(dbg_root);
+#endif
 
         kipcm_ipcp_factory_unregister(default_kipcm, shim_eth);
         kipcm_ipcp_factory_unregister(default_kipcm, shim_eth_vlan);
