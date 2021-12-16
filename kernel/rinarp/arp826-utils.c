@@ -176,29 +176,22 @@ size_t gpa_address_length(const struct gpa * gpa)
 }
 EXPORT_SYMBOL(gpa_address_length);
 
-/* FIXME: Crappy ... we should avoid rkmalloc and rkfree as much as possible */
-void gpa_dump(const struct gpa * gpa)
-{
-        string_t * tmp;
+void gpa_log_dbg(const char *s, const struct gpa *gpa) {
+        char *sgpa, buf[256];
 
-        if (!gpa) {
-                LOG_DBG("GPA %pK: <null>", gpa);
-                return;
+        if (irati_verbosity >= LOG_VERB_DBG) {
+                sgpa = gpa_address_to_string_gfp(GFP_KERNEL, gpa);
+
+                if (s) {
+                        snprintf(buf, sizeof(buf), "%s: %s", s, sgpa);
+                        LOG_DBG("%s", buf);
+                        rkfree(sgpa);
+                } else {
+                        LOG_DBG("%s: <out of memory>", s);
+                }
         }
-        if (gpa->length == 0) {
-                LOG_DBG("GPA %pK: <empty>", gpa);
-                return;
-        }
-
-        tmp = gpa_address_to_string_gfp(GFP_ATOMIC, gpa);
-        if (!tmp)
-        	return;
-
-        LOG_DBG("GPA %pK (%zd): 0x%s", gpa, gpa->length, tmp);
-
-        rkfree(tmp);
 }
-EXPORT_SYMBOL(gpa_dump);
+EXPORT_SYMBOL(gpa_log_dbg);
 
 int gpa_address_shrink_gfp(gfp_t        flags,
                            struct gpa * gpa,
@@ -212,8 +205,6 @@ int gpa_address_shrink_gfp(gfp_t        flags,
                 LOG_ERR("Bad input parameter, cannot shrink the GPA");
                 return -1;
         }
-
-        gpa_dump(gpa);
 
         LOG_DBG("Looking for filler 0x%02X in GPA (length = %zd)",
                 filler, gpa->length);
@@ -237,8 +228,6 @@ int gpa_address_shrink_gfp(gfp_t        flags,
         rkfree(gpa->address);
         gpa->address = new_address;
         gpa->length  = length;
-
-        gpa_dump(gpa);
 
         return 0;
 }
@@ -264,8 +253,6 @@ int gpa_address_grow_gfp(gfp_t        flags,
                 return -1;
         }
 
-        gpa_dump(gpa);
-
         if (length == 0 || length < gpa->length) {
                 LOG_ERR("Can't grow the GPA, bad length");
                 return -1;
@@ -290,8 +277,6 @@ int gpa_address_grow_gfp(gfp_t        flags,
         gpa->length  = length;
 
         LOG_DBG("GPA is now %zd characters long", gpa->length);
-
-        gpa_dump(gpa);
 
         return 0;
 }
@@ -338,27 +323,21 @@ struct gha {
         } data;
 };
 
-void gha_dump(const struct gha * gha)
+void gha_log_dbg(const char *s, const struct gha *gha)
 {
-        if (!gha) {
-                LOG_DBG("GHA %pK: <null>", gha);
-                return;
-        }
+        char buf[256];
 
-        if (gha->type == MAC_ADDR_802_3) {
-                LOG_DBG("GHA %pK: %02X:%02X:%02X:%02X:%02X:%02X",
-                        gha,
-                        gha->data.mac_802_3[5],
-                        gha->data.mac_802_3[4],
-                        gha->data.mac_802_3[3],
-                        gha->data.mac_802_3[2],
-                        gha->data.mac_802_3[1],
-                        gha->data.mac_802_3[0]);
+        if (irati_verbosity >= LOG_VERB_DBG && gha->type == MAC_ADDR_802_3) {
+                snprintf(buf, sizeof(buf), "%s: %02X:%02X:%02X:%02X:%02X:%02X", s,
+                         gha->data.mac_802_3[5], gha->data.mac_802_3[4],
+                         gha->data.mac_802_3[3], gha->data.mac_802_3[2],
+                         gha->data.mac_802_3[1], gha->data.mac_802_3[0]);
+                LOG_DBG("%s", buf);
         } else {
-                LOG_DBG("GHA %pK: <unknown format>", gha);
+                LOG_DBG("%s: <unknown format>", s);
         }
 }
-EXPORT_SYMBOL(gha_dump);
+EXPORT_SYMBOL(gha_log_dbg);
 
 bool gha_is_ok(const struct gha * gha)
 {
