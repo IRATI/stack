@@ -720,6 +720,11 @@ static void rinarp_resolve_handler(void *             opaque,
                 else {
                         spin_unlock_bh(&data->lock);
                         LOG_DBG("Flow creation ARP request has timed out.");
+                        kfa_port_id_release(data->kfa, flow->port_id);
+
+                        rfifo_destroy(flow->sdu_queue, (void (*)(void *)) du_destroy);
+                        flow->sdu_queue = NULL;
+
                         unbind_and_destroy_flow(data, flow);
                 }
 
