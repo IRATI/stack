@@ -613,6 +613,7 @@ static int eth_unbind_user_ipcp(struct ipcp_instance_data * data,
 }
 
 static void rinarp_resolve_handler(void *             opaque,
+                                   bool               timed_out,
                                    const struct gpa * dest_pa,
                                    const struct gha * dest_ha)
 {
@@ -622,10 +623,26 @@ static void rinarp_resolve_handler(void *             opaque,
         struct shim_eth_flow *      flow;
 
         LOG_DBG("Entered the ARP resolve handler of the Ethernet shim");
+        if (irati_verbosity >= LOG_VERB_DBG) {
+                char *s;
+                const uint8_t *ha;
+
+                LOG_DBG("Resolving with: ");
+                if (timed_out)
+                        LOG_DBG("\tResolution timed out!");
+
+                s = gpa_address_to_string_gfp(GFP_KERNEL, dest_pa);
+                LOG_DBG("\tdest_pa: %s", s);
+                rkfree(s);
+                if (!timed_out) {
+                        ha = gha_address(flow->dest_ha);
+                        LOG_DBG("\tdest_ha: %u:%u:%u:%u:%u:%u",
+                                ha[0], ha[1],  ha[2], ha[3], ha[4], ha[5]);
+                } else
+                        LOG_DBG("\tdest_ha: Timed out!");
+        }
 
         ASSERT(opaque);
-        ASSERT(dest_pa);
-        ASSERT(dest_ha);
 
         data = (struct ipcp_instance_data *) opaque;
 
@@ -638,65 +655,76 @@ static void rinarp_resolve_handler(void *             opaque,
         }
 
         if (flow->port_id_state == PORT_STATE_PENDING) {
-                flow->port_id_state = PORT_STATE_ALLOCATED;
-                spin_unlock_bh(&data->lock);
+                if (!timed_out) {
+                        flow->port_id_state = PORT_STATE_ALLOCATED;
+                        spin_unlock_bh(&data->lock);
 
-                flow->dest_ha = gha_dup_ni(dest_ha);
+                        flow->dest_ha = gha_dup_ni(dest_ha);
+                        user_ipcp = flow->user_ipcp;
+                        ASSERT(user_ipcp);
 
-                user_ipcp = flow->user_ipcp;
-                ASSERT(user_ipcp);
+                        ipcp = kipcm_find_ipcp(default_kipcm, data->id);
+                        if (!ipcp) {
+                                LOG_ERR("KIPCM could not retrieve this IPCP");
+                                unbind_and_destroy_flow(data, flow);
+                                return;
+                        }
 
-                ipcp = kipcm_find_ipcp(default_kipcm, data->id);
-                if (!ipcp) {
-                        LOG_ERR("KIPCM could not retrieve this IPCP");
-                        unbind_and_destroy_flow(data, flow);
-                        return;
-                }
+                        ASSERT(user_ipcp);
+                        ASSERT(user_ipcp->ops);
+                        ASSERT(user_ipcp->ops->flow_binding_ipcp);
+                        if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
+                                                              flow->port_id,
+                                                              ipcp)) {
+                                LOG_ERR("Could not bind flow with user_ipcp");
+                                unbind_and_destroy_flow(data, flow);
+                                return;
+                        }
 
-                ASSERT(user_ipcp);
-                ASSERT(user_ipcp->ops);
-                ASSERT(user_ipcp->ops->flow_binding_ipcp);
-                if (user_ipcp->ops->flow_binding_ipcp(user_ipcp->data,
-                                                      flow->port_id,
-                                                      ipcp)) {
-                        LOG_ERR("Could not bind flow with user_ipcp");
-                        unbind_and_destroy_flow(data, flow);
-                        return;
-                }
+                        ASSERT(flow->sdu_queue);
 
-                ASSERT(flow->sdu_queue);
+                        while (!rfifo_is_empty(flow->sdu_queue)) {
+                                struct du * tmp = NULL;
 
-                while (!rfifo_is_empty(flow->sdu_queue)) {
-                        struct du * tmp = NULL;
+                                tmp = rfifo_pop(flow->sdu_queue);
+                                ASSERT(tmp);
 
-                        tmp = rfifo_pop(flow->sdu_queue);
-                        ASSERT(tmp);
+                                LOG_DBG("Got a new element from the fifo");
 
-                        LOG_DBG("Got a new element from the fifo");
+                                ASSERT(user_ipcp->ops->sdu_enqueue);
+                                if (user_ipcp->ops->du_enqueue(user_ipcp->data,
+                                                               flow->port_id,
+                                                               tmp)) {
+                                        LOG_ERR("Couldn't enqueue SDU to KFA ...");
+                                        return;
+                                }
+                        }
 
-                        ASSERT(user_ipcp->ops->sdu_enqueue);
-                        if (user_ipcp->ops->du_enqueue(user_ipcp->data,
-                                                        flow->port_id,
-                                                        tmp)) {
-                                LOG_ERR("Couldn't enqueue SDU to KFA ...");
+                        rfifo_destroy(flow->sdu_queue, (void (*)(void *)) du_destroy);
+                        flow->sdu_queue = NULL;
+
+                        if (kipcm_notify_flow_alloc_req_result(default_kipcm,
+                                                               data->id,
+                                                               flow->port_id,
+                                                               0)) {
+                                LOG_ERR("Couldn't tell flow is allocated to KIPCM");
+                                unbind_and_destroy_flow(data, flow);
                                 return;
                         }
                 }
-
-                rfifo_destroy(flow->sdu_queue, (void (*)(void *)) du_destroy);
-                flow->sdu_queue = NULL;
-
-                if (kipcm_notify_flow_alloc_req_result(default_kipcm,
-                                                       data->id,
-                                                       flow->port_id,
-                                                       0)) {
-                        LOG_ERR("Couldn't tell flow is allocated to KIPCM");
+                /*
+                 * In case an ARP request went unanswered, it is
+                 * unless to notify the kipcm since it nobody to
+                 * inform. Just unbind and destroy the flow.
+                 */
+                else {
+                        spin_unlock_bh(&data->lock);
+                        LOG_DBG("Flow creation ARP request has timed out.");
                         unbind_and_destroy_flow(data, flow);
-                        return;
                 }
-        } else {
-                spin_unlock_bh(&data->lock);
+
         }
+        else spin_unlock_bh(&data->lock);
 }
 
 static int

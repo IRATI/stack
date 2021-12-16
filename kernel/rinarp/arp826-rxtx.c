@@ -119,6 +119,12 @@ static struct sk_buff * arp_create(struct net_device * dev,
                 return NULL;
         }
 
+        LOG_DBG("ARP packet:");
+        gha_log_dbg("\tSource HW Addr", sha);
+        gpa_log_dbg("\tSource Proto Addr", spa);
+        gha_log_dbg("\tTarget HW Addr", tha);
+        gpa_log_dbg("\tTarget Proto Addr", tpa);
+
         /* Fill out the packet, finally */
 
         arp->htype = htons(dev->type);
@@ -474,8 +480,7 @@ static int process(const struct sk_buff * skb,
                         return -1;
                 }
 
-                LOG_DBG("Showing the target ha");
-                gha_dump(target_ha);
+                gha_log_dbg("Target Hardware Address: ", target_ha);
 
                 if (arp_send_reply(dev,
                                    ptype,

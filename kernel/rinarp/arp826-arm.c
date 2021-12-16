@@ -41,6 +41,8 @@ struct resolution {
         arp826_notify_t       notify;
         void *                opaque;
 
+        struct timer_list     timer;
+
         struct list_head      next;
 };
 
@@ -54,7 +56,13 @@ struct resolve_data {
         struct gha *        sha;
         struct gpa *        tpa;
         struct gha *        tha;
+
+        // If this is true it means the request as timed out and that
+        // the 'tha' data is not going to be filled.
+        bool                 timed_out;
 };
+
+static struct workqueue_struct *arm_wq = NULL;
 
 static bool is_resolve_data_matching(struct resolve_data * a,
                                      struct resolve_data * b)
@@ -68,16 +76,12 @@ static bool is_resolve_data_matching(struct resolve_data * a,
         ASSERT(a);
         ASSERT(b);
 
-        LOG_DBG("Dumping a->sha");
-        gha_dump(a->sha);
-        gha_dump(b->tha);
-        LOG_DBG("Dumping a->tpa");
-        gpa_dump(a->tpa);
-        gpa_dump(b->spa);
-        LOG_DBG("Dumping a->spa");
-        gpa_dump(a->spa);
-        gpa_dump(b->tpa);
-        LOG_DBG("Dumping ptype");
+        gha_log_dbg("A Source HW Addr (a->sha)", a->sha);
+        gha_log_dbg("B Target HW Addr (b->tha)", b->tha);
+        gpa_log_dbg("A Target Proto Addr (a->tpa)", b->tpa);
+        gpa_log_dbg("B Source Proto Addr (b->spa)", b->spa);
+        gpa_log_dbg("A Source Proto Addr (a->spa)", a->spa);
+        gpa_log_dbg("B Target Proto Addr (b->tpa)", b->tpa);
 
         if (a->dev != b->dev)
                 return false;
@@ -106,6 +110,7 @@ static void resolve_data_destroy(struct resolve_data * data)
         if (data->sha) gha_destroy(data->sha);
         if (data->tpa) gpa_destroy(data->tpa);
         if (data->tha) gha_destroy(data->tha);
+
         rkfree(data);
 }
 
@@ -141,46 +146,81 @@ static struct resolve_data * resolve_data_create(struct net_device * dev,
                                                  struct gha *        tha)
 { return resolve_data_create_gfp(GFP_KERNEL, dev, ptype, spa, sha, tpa, tha); }
 
-static int resolver(void * o)
+static void resolution_destroy(struct resolution *res) {
+        /* Remove the resolution in the list of pending
+         * resolutions. */
+        spin_lock(&resolutions_lock);
+        list_del(&res->next);
+        spin_unlock(&resolutions_lock);
+
+        /* Destroy the pending resolution object data and stop the
+           timeout timer. */
+        resolve_data_destroy(res->data);
+        rtimer_stop(&res->timer);
+        rkfree(res);
+}
+
+static int timeout_resolver(void *o) {
+        struct resolution *res;
+
+        LOG_DBG("In the ARP timeout resolver, calling the timed out notifier");
+
+        res = (struct resolution *)o;
+        if (!res) return -1;
+
+        /* If the request timed out, we have to use the target address
+         * in the resolve_data object since this is what is used by
+         * the notifier object to find the ARP request corresponding
+         * to an ARP reply. */
+        res->notify(res->opaque,
+                    res->data->timed_out,
+                    res->data->tpa,
+                    res->data->tha);
+
+        resolution_destroy(res);
+
+        return 0;
+}
+
+/*
+ * ARP reply resolver. Make sure this function is passed a
+ * "resolve_data" struct that it can free.
+ */
+static int reply_resolver(void *o)
 {
-        struct resolve_data * tmp;
-        struct resolution *   pos, * nxt;
+        struct resolve_data *tmp;
+        struct resolution *pos, *nxt;
 
-        LOG_DBG("In the resolver, looking for handler");
+        LOG_DBG("In the ARP resolver, looking for the right handler");
 
-        tmp = (struct resolve_data *) o;
-        if (!tmp)
+        tmp = (struct resolve_data *)o;
+        if (!tmp) return -1;
+
+        if (tmp->timed_out) {
+                LOG_CRIT("ARP resolver called on timed out request");
+                resolve_data_destroy(tmp);
                 return -1;
+        }
 
         if (!is_resolve_data_complete(tmp)) {
                 LOG_ERR("Wrong data passed to resolver ...");
                 resolve_data_destroy(tmp);
-                /* FIXME: A missing free seems to be missing here ... */
                 return -1;
         }
 
         spin_lock(&resolutions_lock);
 
-        LOG_DBG("Gonna browse the list of resolutions now");
-
+        /* Find the resolution that matches this reply. */
         list_for_each_entry_safe(pos, nxt, &resolutions_ongoing, next) {
-                LOG_DBG("Next entry of the resolutions list");
                 if (is_resolve_data_matching(pos->data, tmp)) {
-                        LOG_DBG("Found an equal resolution");
-
-                        ASSERT(pos->notify);
                         spin_unlock(&resolutions_lock);
 
-                        LOG_DBG("Calling the notifier hook");
                         pos->notify(pos->opaque,
+                                    tmp->timed_out,
                                     tmp->spa,
                                     tmp->sha);
 
-                        LOG_DBG("Notifier called, disposing the leftovers");
-                        spin_lock(&resolutions_lock);
-                        list_del(&pos->next);
-                        resolve_data_destroy(pos->data);
-                        rkfree(pos);
+                        resolution_destroy(pos);
                 }
         }
 
@@ -188,14 +228,40 @@ static int resolver(void * o)
 
         /* Finally destroy the data */
         resolve_data_destroy(tmp);
-        /* FIXME: A missing free seems to be missing here ... */
-
-        LOG_DBG("Leaving this resolver function");
 
         return 0;
 }
 
-static struct workqueue_struct * arm_wq = NULL;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
+static void resolution_timeout(void *data)
+#else
+static void resolution_timeout(struct timer_list *tl)
+#endif
+{
+        struct resolution *res;
+        struct rwq_work_item *r;
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
+        res = (struct resolution *)data;
+#else
+        res = from_timer(res, tl, timer);
+#endif
+
+        LOG_DBG("Entering rinarp timeout handler.");
+
+        ASSERT(arm_wq);
+
+        res->data->timed_out = 1;
+
+        r = rwq_work_create_ni(timeout_resolver, res);
+        if (!r) {
+                LOG_CRIT("Cannot create work item for ARP timeout");
+                return;
+        }
+
+        /* Takes the ownership ... and disposes everything */
+        rwq_work_post(arm_wq, r);
+}
 
 /* FIXME: We should have a wq-alike job posting approach ... */
 int arm_resolve(struct net_device * dev,
@@ -220,7 +286,7 @@ int arm_resolve(struct net_device * dev,
 
         ASSERT(arm_wq);
 
-        r = rwq_work_create_ni(resolver, tmp);
+        r = rwq_work_create_ni(reply_resolver, tmp);
         if (!r) {
                 resolve_data_destroy(tmp);
                 return -1;
@@ -258,7 +324,7 @@ int arp826_resolve_gpa(struct net_device * dev,
                 return -1;
         }
         if (!gpa_is_ok(tpa)) {
-                LOG_ERR("Cannot resolve, bad input parameters (TPA)");
+                LOG_ERR("Cannot resolve, bad input parameters pt (TPA)");
                 return -1;
         }
 
@@ -298,6 +364,8 @@ int arp826_resolve_gpa(struct net_device * dev,
 
         resolution->notify = notify;
         resolution->opaque = opaque;
+        rtimer_init(resolution_timeout, &resolution->timer, resolution);
+
         INIT_LIST_HEAD(&resolution->next);
 
         LOG_DBG("Adding new resolution to the ongoing list");
@@ -305,16 +373,11 @@ int arp826_resolve_gpa(struct net_device * dev,
         list_add(&resolution->next, &resolutions_ongoing);
         spin_unlock(&resolutions_lock);
 
+        rtimer_start(&resolution->timer, 2000);
+
         if (arp_send_request(dev, ptype, spa, sha, tpa)) {
                 LOG_ERR("Cannot send request, cannot resolve GPA");
-
-                spin_lock(&resolutions_lock);
-                list_del(&resolution->next);
-                spin_unlock(&resolutions_lock);
-
-                resolve_data_destroy(resolution->data);
-                rkfree(resolution);
-
+                resolution_destroy(resolution);
                 return -1;
         }
 
@@ -342,8 +405,7 @@ int arm_fini(void)
         int                 ret;
 
         list_for_each_entry_safe(pos, nxt, &resolutions_ongoing, next) {
-                resolve_data_destroy(pos->data);
-                rkfree(pos);
+                resolution_destroy(pos);
         }
 
         ret = rwq_destroy(arm_wq);

@@ -40,6 +40,7 @@ int                arp826_remove(struct net_device * dev,
                                  const struct gha *  ha);
 
 typedef void (* arp826_notify_t)(void *             opaque,
+                                 bool               timed_out,
                                  const struct gpa * tpa,
                                  const struct gha * tha);
 
