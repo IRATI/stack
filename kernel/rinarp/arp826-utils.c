@@ -164,6 +164,21 @@ string_t * gpa_address_to_string_gfp(gfp_t              flags,
 }
 EXPORT_SYMBOL(gpa_address_to_string_gfp);
 
+string_t *gpa_address_to_string(const struct gpa *gpa, string_t *buf, size_t n)
+{
+        size_t max;
+
+        max = gpa->length;
+        if (max - 1 > n)
+                max = n;
+
+        memcpy(buf, gpa->address, max - 1);
+        buf[max] = '\0';
+
+        return buf;
+}
+EXPORT_SYMBOL(gpa_address_to_string);
+
 size_t gpa_address_length(const struct gpa * gpa)
 {
         if (!gpa_is_ok(gpa)) {
@@ -322,6 +337,26 @@ struct gha {
                 uint8_t mac_802_3[6];
         } data;
 };
+
+string_t *gha_address_to_string(const struct gha *gha, string_t *buf, size_t n)
+{
+        size_t max;
+
+        max = 17 + 1; // Size of a MAC address string + null terminator.
+        if (max > n)
+                max = n;
+
+        if (gha->type == MAC_ADDR_802_3)
+                snprintf(buf, max, "%02X:%02X:%02X:%02X:%02X:%02X",
+                         gha->data.mac_802_3[5], gha->data.mac_802_3[4],
+                         gha->data.mac_802_3[3], gha->data.mac_802_3[2],
+                         gha->data.mac_802_3[1], gha->data.mac_802_3[0]);
+        else
+                snprintf(buf, max, "<unknown format>");
+
+        return buf;
+}
+EXPORT_SYMBOL(gha_address_to_string);
 
 void gha_log_dbg(const char *s, const struct gha *gha)
 {

@@ -46,6 +46,9 @@
 
 #define RINA_PREFIX SHIM_NAME
 
+// FIXME: This should really be defined at compile time.
+#define DEFAULT_ARP_REQ_TIMEOUT_MS 5000
+
 #include "logs.h"
 #include "kipcm.h"
 #include "debug.h"
@@ -82,6 +85,9 @@ struct eth_info {
 
         // This is set to 1 if we're to use the spoofed MAC.
         bool use_spoof_mac;
+
+        /* ARP request timeout */
+        uint32_t arp_timeout_ms;
 };
 
 struct ipcp_factory_data {
@@ -182,6 +188,9 @@ struct ipcp_instance_data {
 
         // Flows information
         struct dentry *dbg_flows;
+
+        // ARP timeout
+        struct dentry *dbg_timeout;
 #endif
 };
 
@@ -215,7 +224,7 @@ static int eth_shim_dbg_inst_info_show(struct seq_file *s, void *v)
                 seq_printf(s, "IPCP DIF Name: %s\n", ns);
                 rkfree(ns);
         } else
-                seq_printf(s, "IPCP Dif Name: Unknown\n");
+                seq_printf(s, "IPCP DIF Name: Unknown\n");
 
         if (data->vlan_mode == VLAN_MODE_COMPAT)
                 seq_printf(s, "Working in eth-vlan compatibility mode.\n");
@@ -801,10 +810,12 @@ eth_flow_allocate_request(struct ipcp_instance_data * data,
                 if (rinarp_resolve_gpa(data->app_handle,
                                        flow->dest_pa,
                                        rinarp_resolve_handler,
+                                       data->info->arp_timeout_ms,
                                        data) &&
                     rinarp_resolve_gpa(data->daf_handle,
                                        flow->dest_pa,
                                        rinarp_resolve_handler,
+                                       data->info->arp_timeout_ms,
                                        data)) {
                         LOG_ERR("Failed to lookup ARP entry");
                         unbind_and_destroy_flow(data, flow);
@@ -1712,6 +1723,58 @@ static int eth_set_net_devs_auto(struct ipcp_instance_data* data) {
         return 0;
 }
 
+static void eth_handle_config_entry(struct eth_info *info,
+                                    const struct ipcp_config_entry *entry)
+{
+        string_t *s;
+        long res;
+
+        if (!strcmp(entry->name, "interface-name")) {
+                s = rkstrdup(entry->value);
+
+                if (!s) {
+                        LOG_ERR("Cannot copy interface name");
+                        goto oops;
+                }
+
+                info->interface_name = s;
+        }
+        else if (!strcmp(entry->name, "spoof-mac")) {
+                s = rkstrdup(entry->value);
+
+                if (!s) {
+                        LOG_ERR("Cannot copy 'spoof-mac' value");
+                        goto oops;
+                }
+
+                /* Convert the string MAC address to it's address
+                   representation. */
+                if (!mac_pton(s, info->spoof_mac)) {
+                        LOG_ERR("Invalid spoof MAC: %s", s);
+                        goto oops;
+                }
+
+                LOG_INFO("Ethernet shim will pretend its MAC address is: %s", s);
+                info->use_spoof_mac = 1;
+        }
+        else if (!strcmp(entry->name, "arp-timeout")) {
+                s = rkstrdup(entry->value);
+
+                if (kstrtol(s, 10, &res)) {
+                        LOG_ERR("Invalid value for ARP timeout: %s", s);
+                        goto oops;
+                }
+
+                info->arp_timeout_ms = res;
+        }
+        else LOG_DBG("Ignoring unknown config param: %s", entry->name);
+
+        return;
+
+        oops:
+        if (s) rkfree(s);
+}
+
 static int eth_assign_to_dif(struct ipcp_instance_data * data,
                              const struct name * dif_name,
                              const string_t * type,
@@ -1722,7 +1785,6 @@ static int eth_assign_to_dif(struct ipcp_instance_data * data,
         string_t *                      complete_interface;
         struct interface_data_mapping * mapping;
         int                             result;
-        string_t *                      spoof_mac;
 
         if (!data) {
                 LOG_ERR("Bogus data passed, bailing out");
@@ -1752,41 +1814,8 @@ static int eth_assign_to_dif(struct ipcp_instance_data * data,
 
         /* Retrieve configuration of IPC process from params */
         list_for_each_entry(tmp, &(config->ipcp_config_entries), next) {
-                const struct ipcp_config_entry * entry = tmp->entry;
-
-                if (!strcmp(entry->name, "interface-name")) {
-                        ASSERT(entry->value);
-
-                        info->interface_name = rkstrdup(entry->value);
-                        if (!info->interface_name) {
-                                LOG_ERR("Cannot copy interface name");
-                                name_destroy(data->dif_name);
-                                data->dif_name = NULL;
-                                return -1;
-                        }
-                }
-                else if (!strcmp(entry->name, "spoof-mac")) {
-                        spoof_mac = rkstrdup(entry->value);
-                        if (!spoof_mac) {
-                                LOG_ERR("Cannot copy 'spoof-mac' value");
-                                return -1;
-                        }
-
-                        // Convert the string MAC address to it's
-                        // address representation.
-                        if (!mac_pton(spoof_mac, info->spoof_mac)) {
-                                LOG_ERR("Invalid spoof MAC: %s", spoof_mac);
-                                rkfree(spoof_mac);
-                                return -1;
-                        }
-
-                        LOG_INFO("Ethernet shim will pretend its MAC address is: %s",
-                                 spoof_mac);
-
-                        info->use_spoof_mac = 1;
-                        rkfree(spoof_mac);
-                }
-                else LOG_DBG("Ignoring unknown config param: %s", entry->name);
+                const struct ipcp_config_entry *entry = tmp->entry;
+                eth_handle_config_entry(info, entry);
         }
 
         /* Fail here if we didn't get an interface */
@@ -1855,7 +1884,6 @@ static int eth_update_dif_config(struct ipcp_instance_data * data,
         string_t *                      complete_interface;
         struct interface_data_mapping * mapping;
         int                             result;
-        string_t *                      spoof_mac;
 
         if (!data) {
                 LOG_ERR("Bogus data passed, bailing out");
@@ -1874,37 +1902,7 @@ static int eth_update_dif_config(struct ipcp_instance_data * data,
         /* Retrieve configuration of IPC process from params */
         list_for_each_entry(tmp, &(new_config->ipcp_config_entries), next) {
                 const struct ipcp_config_entry * entry;
-
-                entry = tmp->entry;
-                if (!strcmp(entry->name, "interface-name")) {
-                        info->interface_name = rkstrdup(entry->value);
-                        if (!info->interface_name) {
-                                LOG_ERR("Cannot copy 'interface-name' value");
-                                return -1;
-                        }
-                }
-                else if (!strcmp(entry->name, "spoof-mac")) {
-                        spoof_mac = rkstrdup(entry->value);
-                        if (!spoof_mac) {
-                                LOG_ERR("Cannot copy 'spoof-mac' value");
-                                return -1;
-                        }
-
-                        // Convert the string MAC address to it's
-                        // address representation.
-                        if (!mac_pton(spoof_mac, info->spoof_mac)) {
-                                LOG_ERR("Invalid spoof MAC: %s", spoof_mac);
-                                rkfree(spoof_mac);
-                                return -1;
-                        }
-
-                        LOG_INFO("Ethernet shim will pretend its MAC address is: %s",
-                                 spoof_mac);
-
-                        info->use_spoof_mac = 1;
-                        rkfree(spoof_mac);
-                }
-                else LOG_DBG("Ignoring unknown config param: %s", entry->name);
+                eth_handle_config_entry(info, entry);
         }
 
         dev_remove_pack(data->eth_packet_type);
@@ -2253,6 +2251,7 @@ static struct ipcp_instance* eth_create(struct ipcp_factory_data*  data,
                 inst_cleanup(inst);
                 return NULL;
         }
+        inst->data->info->arp_timeout_ms = DEFAULT_ARP_REQ_TIMEOUT_MS;
         inst->data->tx_busy = 0;
 
         inst->data->fspec = rkzalloc(sizeof(*inst->data->fspec), GFP_KERNEL);
@@ -2300,12 +2299,23 @@ static struct ipcp_instance* eth_create(struct ipcp_factory_data*  data,
                 inst->data->dbg = debugfs_create_dir(buf, data->dbg);
 
                 if (inst->data->dbg) {
-                        d = debugfs_create_file("info", 0400, inst->data->dbg,
-                                                inst->data, &eth_shim_dbg_inst_info_ops);
+                        d = debugfs_create_file("info",
+                                                S_IRUSR,
+                                                inst->data->dbg,
+                                                inst->data,
+                                                &eth_shim_dbg_inst_info_ops);
                         inst->data->dbg_info = d;
-                        d = debugfs_create_file("flows", 0400, inst->data->dbg,
-                                                inst->data, &eth_shim_dbg_inst_flows_ops);
+                        d = debugfs_create_file("flows",
+                                                S_IRUSR,
+                                                inst->data->dbg,
+                                                inst->data,
+                                                &eth_shim_dbg_inst_flows_ops);
                         inst->data->dbg_flows = d;
+                        d = debugfs_create_u32("arp_timeout_ms",
+                                               S_IRUSR | S_IWUSR,
+                                               inst->data->dbg,
+                                               &inst->data->info->arp_timeout_ms);
+                        inst->data->dbg_timeout = d;
                 }
         }
 #endif
@@ -2352,6 +2362,8 @@ static int eth_destroy(struct ipcp_factory_data * data,
                                 debugfs_remove(instance->data->dbg_info);
                         if (instance->data->dbg_flows)
                                 debugfs_remove(instance->data->dbg_flows);
+                        if (instance->data->dbg_timeout)
+                                debugfs_remove(instance->data->dbg_timeout);
                         if (instance->data->dbg)
                                 debugfs_remove(instance->data->dbg);
 #endif
