@@ -193,12 +193,15 @@ static bool is_resolve_data_matching(struct resolve_data * a,
         ASSERT(a);
         ASSERT(b);
 
+        // This is fairly verbose and confusing in the logs.
+#if 0
         gha_log_dbg("A Source HW Addr (a->sha)", a->sha);
         gha_log_dbg("B Target HW Addr (b->tha)", b->tha);
         gpa_log_dbg("A Target Proto Addr (a->tpa)", b->tpa);
         gpa_log_dbg("B Source Proto Addr (b->spa)", b->spa);
         gpa_log_dbg("A Source Proto Addr (a->spa)", a->spa);
         gpa_log_dbg("B Target Proto Addr (b->tpa)", b->tpa);
+#endif
 
         if (a->dev != b->dev)
                 return false;
@@ -285,6 +288,11 @@ static int timeout_resolver(void *o) {
         res = (struct resolution *)o;
         if (!res) return -1;
 
+        ASSERT(res);
+        ASSERT(res->data);
+        ASSERT(res->tpa);
+        ASSERT(res->tha);
+
         /* If the request timed out, we have to use the target address
          * in the resolve_data object since this is what is used by
          * the notifier object to find the ARP request corresponding
@@ -338,6 +346,7 @@ static int reply_resolver(void *o)
                                     tmp->sha);
 
                         resolution_destroy(pos);
+                        break;
                 }
         }
 
