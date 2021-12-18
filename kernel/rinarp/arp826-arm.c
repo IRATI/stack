@@ -18,6 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
 #include <linux/list.h>
 #include <linux/netdevice.h>
 
@@ -44,6 +46,9 @@ struct resolution {
         struct timer_list     timer;
 
         struct list_head      next;
+
+        // rtimer uses 'unsigned int' *shrug*
+        unsigned int          timeout;
 };
 
 static DEFINE_SPINLOCK(resolutions_lock);
@@ -63,6 +68,118 @@ struct resolve_data {
 };
 
 static struct workqueue_struct *arm_wq = NULL;
+
+static struct dentry *dbg = NULL;
+static struct dentry *dbg_resolutions = NULL;
+static struct dentry *dbg_force_timeout = NULL;
+
+#ifdef CONFIG_DEBUG_FS
+static int arp826_resolutions_dbg_show(struct seq_file *s, void *v)
+{
+        struct resolution *res, *nxt;
+        string_t buf[256];
+
+        spin_lock_bh(&resolutions_lock);
+
+        list_for_each_entry_safe(res, nxt, &resolutions_ongoing, next) {
+                if (!res->data) {
+                        seq_printf(s, "Invalid resolution data in resolution list\n");
+                        continue;
+                }
+                else {
+                        seq_printf(s, "Timeout: %u\n", res->timeout);
+                        seq_printf(s, "Device: %s\n", res->data->dev->name);
+                        seq_printf(s, "Ptype: 0x%04X\n", res->data->ptype);
+
+                        if (res->data->spa && gpa_is_ok(res->data->spa))
+                                seq_printf(s, "Source Proto Addr: %s\n",
+                                           gpa_address_to_string(res->data->spa,
+                                                                 buf, sizeof(buf)));
+                        else
+                                seq_printf(s, "Source Proto Addr: N/A\n");
+
+                        if (res->data->sha && gha_is_ok(res->data->sha))
+                                seq_printf(s, "Source HW Addr: %s\n",
+                                           gha_address_to_string(res->data->sha,
+                                                                 buf, sizeof(buf)));
+                        else
+                                seq_printf(s, "Source HW Addr: N/A\n");
+
+                        if (res->data->tpa && gpa_is_ok(res->data->tpa))
+                            seq_printf(s, "Target Proto Addr: %s\n",
+                                       gpa_address_to_string(res->data->tpa,
+                                                             buf, sizeof(buf)));
+                        else
+                                seq_printf(s, "Target Proto Addr: N/A\n");
+
+                        if (res->data->tha && gha_is_ok(res->data->tha))
+                                seq_printf(s, "Target HW Addr: %s\n",
+                                           gha_address_to_string(res->data->tha,
+                                                                 buf, sizeof(buf)));
+                        else
+                                seq_printf(s, "Target HW Addr: N/A\n");
+                }
+
+                seq_printf(s, "\n");
+        }
+
+        spin_unlock_bh(&resolutions_lock);
+
+        return 0;
+}
+
+static int arp826_resolutions_dbg_open(struct inode *inode, struct file *file)
+{
+        return single_open(file, arp826_resolutions_dbg_show, inode->i_private);
+}
+
+static const struct file_operations arp826_dbg_resolutions_fops = {
+	.open	 = arp826_resolutions_dbg_open,
+	.read	 = seq_read,
+	.llseek	 = seq_lseek,
+	.release = single_release,
+};
+
+// This one is defined below.
+static int timeout_resolver(void *);
+
+static ssize_t arp826_force_timeout_write(struct file *file,
+                                          const char __user *user_buf,
+                                          size_t count, loff_t *pos) {
+        struct resolution *res, *nxt;
+        struct rwq_work_item *r;
+
+        LOG_DBG("Forcing timeout of all pending RINA ARP requests");
+
+        /* We really don't care what's written in this. Writing
+         * anything here triggers going through the list and timeout
+         * out all pending requests. */
+
+        spin_lock_bh(&resolutions_lock);
+
+        list_for_each_entry_safe(res, nxt, &resolutions_ongoing, next) {
+                res->data->timed_out = 1;
+                r = rwq_work_create_ni(timeout_resolver, res);
+                if (!r) {
+                        LOG_CRIT("Cannot create work item for ARP timeout");
+                        return -1;
+                }
+
+                /* Takes the ownership ... and disposes everything */
+                rwq_work_post(arm_wq, r);
+        }
+
+        spin_unlock_bh(&resolutions_lock);
+
+        return count;
+}
+
+static const struct file_operations arp826_dbg_force_timeout_fops = {
+        .open  = simple_open,
+        .write = arp826_force_timeout_write
+};
+#endif
+
 
 static bool is_resolve_data_matching(struct resolve_data * a,
                                      struct resolve_data * b)
@@ -303,6 +420,7 @@ int arp826_resolve_gpa(struct net_device * dev,
                        const struct gha *  sha,
                        const struct gpa *  tpa,
                        arp826_notify_t     notify,
+                       uint32_t            timeout_ms,
                        void *              opaque)
 {
         struct resolution * resolution;
@@ -373,7 +491,8 @@ int arp826_resolve_gpa(struct net_device * dev,
         list_add(&resolution->next, &resolutions_ongoing);
         spin_unlock(&resolutions_lock);
 
-        rtimer_start(&resolution->timer, 2000);
+        resolution->timeout = timeout_ms;
+        rtimer_start(&resolution->timer, resolution->timeout);
 
         if (arp_send_request(dev, ptype, spa, sha, tpa)) {
                 LOG_ERR("Cannot send request, cannot resolve GPA");
@@ -394,6 +513,21 @@ int arm_init(void)
         spin_lock_init(&resolutions_lock);
         INIT_LIST_HEAD(&resolutions_ongoing);
 
+#ifdef CONFIG_DEBUG_FS
+        dbg = debugfs_create_dir("arp826", NULL);
+
+        if (dbg) {
+                dbg_resolutions = debugfs_create_file("resolutions",
+                                                      S_IRUSR,
+                                                      dbg, NULL,
+                                                      &arp826_dbg_resolutions_fops);
+                dbg_force_timeout = debugfs_create_file("force_timeout",
+                                                        S_IWUSR,
+                                                        dbg, NULL,
+                                                        &arp826_dbg_force_timeout_fops);
+        }
+#endif
+
         LOG_INFO("ARM initialized successfully");
 
         return 0;
@@ -407,6 +541,15 @@ int arm_fini(void)
         list_for_each_entry_safe(pos, nxt, &resolutions_ongoing, next) {
                 resolution_destroy(pos);
         }
+
+#ifdef CONFIG_DEBUG_FS
+        if (dbg_force_timeout)
+                debugfs_remove(dbg_force_timeout);
+        if (dbg_resolutions)
+                debugfs_remove(dbg_resolutions);
+        if (dbg)
+                debugfs_remove(dbg);
+#endif
 
         ret = rwq_destroy(arm_wq);
 

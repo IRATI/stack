@@ -47,6 +47,7 @@ bool            gpa_is_equal(const struct gpa * a,
 const uint8_t * gpa_address_value(const struct gpa * gpa);
 string_t * 	gpa_address_to_string_gfp(gfp_t              flags,
 				          const struct gpa * gpa);
+string_t *      gpa_address_to_string(const struct gpa *gpa, string_t *buf, size_t n);
 size_t          gpa_address_length(const struct gpa * gpa);
 
 /* Grows a GPA adding the filler symbols up to length (if needed) */
@@ -107,6 +108,7 @@ size_t              gha_address_length(const struct gha * gha);
 gha_type_t          gha_type(const struct gha * gha);
 bool                gha_is_equal(const struct gha * a,
                                  const struct gha * b);
+string_t *          gha_address_to_string(const struct gha *gha, string_t *buf, size_t n);
 
 void                gha_log_dbg(const char *fmt, const struct gha *gha);
 

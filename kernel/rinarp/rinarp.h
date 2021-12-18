@@ -44,6 +44,7 @@ typedef void (* rinarp_notification_t)(void *             opaque,
 int                    rinarp_resolve_gpa(struct rinarp_handle * handle,
                                           const struct gpa *     tpa,
                                           rinarp_notification_t  notify,
+                                          uint32_t               timeout_ms,
                                           void *                 opaque);
 
 /* FIXME: Should return a copy */
