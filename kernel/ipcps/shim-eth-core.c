@@ -632,24 +632,6 @@ static void rinarp_resolve_handler(void *             opaque,
         struct shim_eth_flow *      flow;
 
         LOG_DBG("Entered the ARP resolve handler of the Ethernet shim");
-        if (irati_verbosity >= LOG_VERB_DBG) {
-                char *s;
-                const uint8_t *ha;
-
-                LOG_DBG("Resolving with: ");
-                if (timed_out)
-                        LOG_DBG("\tResolution timed out!");
-
-                s = gpa_address_to_string_gfp(GFP_KERNEL, dest_pa);
-                LOG_DBG("\tdest_pa: %s", s);
-                rkfree(s);
-                if (!timed_out) {
-                        ha = gha_address(flow->dest_ha);
-                        LOG_DBG("\tdest_ha: %u:%u:%u:%u:%u:%u",
-                                ha[0], ha[1],  ha[2], ha[3], ha[4], ha[5]);
-                } else
-                        LOG_DBG("\tdest_ha: Timed out!");
-        }
 
         ASSERT(opaque);
 
