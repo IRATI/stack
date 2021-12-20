@@ -263,8 +263,8 @@ static int eth_shim_dbg_inst_flows_show(struct seq_file *s, void *v)
         list_for_each_entry(flow, &data->flows, list) {
                 seq_printf(s, "Port Id: %d\n", flow->port_id);
 
-                ha = gha_address(flow->dest_ha);
-                if (gha_is_ok(ha)) {
+                if (gha_is_ok(flow->dest_ha)) {
+                        ha = gha_address(flow->dest_ha);
                         seq_printf(s, "Dest Hardware Address: %u:%u:%u:%u:%u:%u\n",
                                    ha[0], ha[1],  ha[2], ha[3], ha[4], ha[5]);
                 } else
