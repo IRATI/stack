@@ -32,6 +32,7 @@
 struct pidm {
 	struct list_head allocated_ports;
 	port_id_t last_allocated;
+        spinlock_t lock;
 };
 
 struct alloc_pid {
@@ -47,8 +48,12 @@ struct pidm * pidm_create(void)
         if (!instance)
                 return NULL;
 
+        spin_lock_init(&instance->lock);
+
+        spin_lock(&instance->lock);
         INIT_LIST_HEAD(&(instance->allocated_ports));
         instance->last_allocated = 0;
+        spin_unlock(&instance->lock);
 
         LOG_INFO("Instance initialized successfully (%zd port-ids)",
         	MAX_PORT_ID);
@@ -65,9 +70,11 @@ int pidm_destroy(struct pidm * instance)
                 return -1;
         }
 
+        spin_lock(&instance->lock);
         list_for_each_entry_safe(pos, next, &instance->allocated_ports, list) {
                 rkfree(pos);
         }
+        spin_unlock(&instance->lock);
 
         rkfree(instance);
 
@@ -83,11 +90,13 @@ int pidm_allocated(struct pidm * instance, port_id_t port_id)
                 return -1;
         }
 
+        spin_lock(&instance->lock);
         list_for_each_entry_safe(pos, next, &instance->allocated_ports, list) {
                 if (pos->pid == port_id) {
                 	return 1;
                 }
         }
+        spin_unlock(&instance->lock);
 
         return 0;
 }
@@ -120,9 +129,11 @@ port_id_t pidm_allocate(struct pidm * instance)
         if (!new_port_id)
         	return port_id_bad();
 
+        spin_lock(&instance->lock);
         INIT_LIST_HEAD(&(new_port_id->list));
         new_port_id->pid = pid;
         list_add(&(new_port_id->list), &(instance->allocated_ports));
+        spin_unlock(&instance->lock);
 
         instance->last_allocated = pid;
 
@@ -134,7 +145,8 @@ port_id_t pidm_allocate(struct pidm * instance)
 int pidm_release(struct pidm * instance,
                  port_id_t     id)
 {
-	 struct alloc_pid * pos, * next;
+	struct alloc_pid * pos, * next;
+        int found = 0;
 
         if (!is_port_id_ok(id)) {
                 LOG_ERR("Bad flow-id passed, bailing out");
@@ -145,17 +157,22 @@ int pidm_release(struct pidm * instance,
                 return -1;
         }
 
+        spin_lock(&instance->lock);
         list_for_each_entry_safe(pos, next, &instance->allocated_ports, list) {
                 if (pos->pid == id) {
                 	list_del(&pos->list);
                 	rkfree(pos);
-                	LOG_DBG("Port-id release completed successfully (port_id: %d)", id);
-
-                	return 0;
+                        found = 1;
                 }
         }
+        spin_unlock(&instance->lock);
 
-        LOG_ERR("Didn't find port-id %d, returning error", id);
+        if (!found) {
+                LOG_ERR("Didn't find port-id %d, returning error", id);
+        } else {
+                LOG_DBG("Port-id release completed successfully (port_id: %d)", id);
+        }
 
         return 0;
 }
+
