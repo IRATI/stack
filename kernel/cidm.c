@@ -34,7 +34,7 @@
 struct cidm {
 	struct list_head allocated_cep_ids;
 	cep_id_t last_allocated;
-    spinlock_t lock;
+    	spinlock_t lock;
 };
 
 struct alloc_cepid {
@@ -50,12 +50,12 @@ struct cidm * cidm_create(void)
 	if (!instance)
 		return NULL;
 
-    spin_lock_init(&instance->lock);
+    	spin_lock_init(&instance->lock);
 
-    spin_lock(&instance->lock);
+    	spin_lock(&instance->lock);
 	INIT_LIST_HEAD(&(instance->allocated_cep_ids));
 	instance->last_allocated = 0;
-    spin_unlock(&instance->lock);
+    	spin_unlock(&instance->lock);
 
 	LOG_INFO("Instance initialized successfully (%zd cep-ids)",
 			MAX_CEP_ID);
@@ -87,19 +87,12 @@ int cidm_allocated(struct cidm * instance, cep_id_t cep_id)
 {
 	struct alloc_cepid * pos, * next;
 
-        if (!instance) {
-                LOG_ERR("Bogus instance passed, bailing out");
-                return -1;
-        }
-
-        spin_lock(&instance->lock);
         list_for_each_entry_safe(pos, next, &instance->allocated_cep_ids, list) {
                 if (pos->cep_id == cep_id) {
                     spin_unlock(&instance->lock);
                 	return 1;
                 }
         }
-        spin_unlock(&instance->lock);
 
         return 0;
 }
@@ -114,6 +107,7 @@ cep_id_t cidm_allocate(struct cidm * instance)
                 return port_id_bad();
         }
 
+	spin_lock(&instance->lock);
         if (instance->last_allocated == MAX_CEP_ID) {
         	cep_id = 1;
         } else {
@@ -129,16 +123,18 @@ cep_id_t cidm_allocate(struct cidm * instance)
         }
 
         new_cep_id = rkmalloc(sizeof(*new_cep_id), GFP_ATOMIC);
-        if (!new_cep_id)
+        if (!new_cep_id) {
+		spin_unlock(&instance->lock);
+		LOG_ERR("Not enough memory to allocate cep-id %d", cep_id);
         	return cep_id_bad();
+	}
 
-        spin_lock(&instance->lock);
         INIT_LIST_HEAD(&(new_cep_id->list));
         new_cep_id->cep_id = cep_id;
         list_add(&(new_cep_id->list), &(instance->allocated_cep_ids));
-        spin_unlock(&instance->lock);
 
         instance->last_allocated = cep_id;
+	spin_unlock(&instance->lock);
 
         LOG_DBG("Cep-id allocation completed successfully (id = %d)", cep_id);
 
@@ -149,32 +145,29 @@ int cidm_release(struct cidm * instance,
                  cep_id_t      id)
 {
 	struct alloc_cepid * pos, * next;
-    int found = 0;
 
-       if (!is_port_id_ok(id)) {
+	if (!is_port_id_ok(id)) {
                LOG_ERR("Bad cep-id passed, bailing out");
                return -1;
-       }
-       if (!instance) {
+	}
+	if (!instance) {
                LOG_ERR("Bogus instance passed, bailing out");
                return -1;
-       }
+	}
 
-       spin_lock(&instance->lock);
-       list_for_each_entry_safe(pos, next, &instance->allocated_cep_ids, list) {
+       	spin_lock(&instance->lock);
+	list_for_each_entry_safe(pos, next, &instance->allocated_cep_ids, list) {
                if (pos->cep_id == id) {
-               	list_del(&pos->list);
-               	rkfree(pos);
-                found = 1;
+		       list_del(&pos->list);
+		       spin_unlock(&instance->lock);
+		       rkfree(pos);
+		       LOG_DBG("Cep-id %d released successfully", id);
+		       return 0;
                }
-       }
-       spin_unlock(&instance->lock);
-
-       if (!found) {
-           LOG_ERR("Didn't find cep-id %d, returning error", id);
-       } else {
-           LOG_DBG("Cep-id release completed successfully (cep_id: %d)", id);
-       }
-
-       return 0;
+	}
+	spin_unlock(&instance->lock);
+	
+	LOG_ERR("Didn't find cep-id %d, returning error", id);
+	
+	return -1;
 }
