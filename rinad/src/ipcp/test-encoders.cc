@@ -728,6 +728,8 @@ int main()
 	if (!result) {
 		LOG_IPCP_ERR("Problems testing Data Transfer Constants Encoder");
 		return -1;
+	} else {
+		std::cout << "Data transfer constants encoder tested ok" << std::endl;
 	}
 
 	result = test_directory_forwarding_table_entry();

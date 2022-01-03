@@ -596,7 +596,7 @@ void get_DTCPRtxControlConfig(
         conf.set_initial_rtx_time(gpf_conf.initialrtxtime());
 }
 
-rina::DTCPConfig* get_DTCPConfig(const rina::messages::dtcpConfig_t &gpf_conf,
+void get_DTCPConfig(const rina::messages::dtcpConfig_t &gpf_conf,
                                  rina::DTCPConfig &conf)
 {
         conf.flow_control_ = gpf_conf.flowcontrol();
