@@ -6,7 +6,7 @@
 #
 
 rmmod shim-tcp-udp
-rmmod shim-eth-vlan
+rmmod shim-eth
 rmmod rinarp
 rmmod arp826
 rmmod normal-ipcp
