@@ -1244,6 +1244,7 @@ static int eth_recv_process_packet(struct sk_buff *    skb,
 
         data = mapping->data;
         if (!data) {
+		LOG_ERR("Failed to get data from mapping");
                 kfree_skb(skb);
                 return -1;
         }
@@ -1256,6 +1257,7 @@ static int eth_recv_process_packet(struct sk_buff *    skb,
 
         if (skb->pkt_type == PACKET_OTHERHOST ||
             skb->pkt_type == PACKET_LOOPBACK) {
+		LOG_ERR("Pkt type is OTHERHOST or LOOPBACK");
                 kfree_skb(skb);
                 return -1;
         }
@@ -1271,6 +1273,7 @@ static int eth_recv_process_packet(struct sk_buff *    skb,
         /* Get correct flow based on hwaddr */
         ghaddr = gha_create_ni(MAC_ADDR_802_3, saddr);
         if (!ghaddr) {
+		LOG_ERR("Could not create GHAddr");
                 kfree_skb(skb);
                 return -1;
         }
@@ -1304,6 +1307,7 @@ static int eth_recv_process_packet(struct sk_buff *    skb,
                 /* Create flow and its queue to handle next packets */
                 flow = rkzalloc(sizeof(*flow), GFP_ATOMIC);
                 if (!flow) {
+			LOG_ERR("Could not create flow struct");
                         du_destroy(du);
                         gha_destroy(ghaddr);
                         return -1;
