@@ -129,6 +129,7 @@ static struct resolve_data * resolve_data_create_gfp(gfp_t               flags,
         tmp->sha   = sha;
         tmp->tpa   = tpa;
         tmp->tha   = tha;
+        tmp->timed_out = 0;
 
         return tmp;
 }
