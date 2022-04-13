@@ -2293,11 +2293,10 @@ static struct ipcp_instance* eth_create(struct ipcp_factory_data*  data,
                                                 inst->data,
                                                 &eth_shim_dbg_inst_flows_ops);
                         inst->data->dbg_flows = d;
-                        d = debugfs_create_u32("arp_timeout_ms",
-                                               S_IRUSR | S_IWUSR,
-                                               inst->data->dbg,
-                                               &inst->data->info->arp_timeout_ms);
-                        inst->data->dbg_timeout = d;
+                        debugfs_create_u32("arp_timeout_ms",
+                                           S_IRUSR | S_IWUSR,
+                                           inst->data->dbg,
+                                           &inst->data->info->arp_timeout_ms);
                 }
         }
 #endif
