@@ -163,6 +163,7 @@ void parse_local_conf(const Json::Value &         root,
 {
         Json::Value local_conf = root["localConfiguration"];
 	Json::Value plugins_paths;
+    std::string system_name;
 
 	if (local_conf == 0) {
 		return;
@@ -200,14 +201,30 @@ void parse_local_conf(const Json::Value &         root,
 		}
 	}
 
-	local.system_name.processName = local_conf.get("system-name",
-						       local.system_name.processName).asString();
-	if (local.system_name.processName.empty()) {
-		local.system_name.processName = "";
-		local.system_name.processInstance = "";
-	} else {
-		local.system_name.processInstance = "1";
-	}
+    system_name = local_conf.get("system-name", "").asString();
+
+    if (system_name == "$hostname") {
+        char hostname[256];
+
+        hostname[sizeof(hostname) - 1] = '\0';
+
+        if (gethostname(hostname, sizeof(hostname)) < 0) {
+            LOG_ERR("Unable to get local hostname for 'system-name'");
+        } else {
+            local.system_name.processName = hostname;
+        }
+    }
+    else {
+        local.system_name.processName = local_conf.get("system-name",
+                                                       local.system_name.processName).asString();
+        if (local.system_name.processName.empty()) {
+            local.system_name.processName = "";
+            local.system_name.processInstance = "";
+        }
+        else {
+            local.system_name.processInstance = "1";
+        }
+    }
 }
 
 void parse_dif_configs(const Json::Value   & root,
