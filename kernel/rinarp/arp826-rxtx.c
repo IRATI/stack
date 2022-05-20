@@ -119,6 +119,12 @@ static struct sk_buff * arp_create(struct net_device * dev,
                 return NULL;
         }
 
+        LOG_DBG("ARP packet:");
+        gha_log_dbg("\tSource HW Addr", sha);
+        gpa_log_dbg("\tSource Proto Addr", spa);
+        gha_log_dbg("\tTarget HW Addr", tha);
+        gpa_log_dbg("\tTarget Proto Addr", tpa);
+
         /* Fill out the packet, finally */
 
         arp->htype = htons(dev->type);
@@ -161,6 +167,7 @@ int arp_send_reply(struct net_device * dev,
         size_t              max_len;
 #endif
         struct sk_buff *    skb;
+        int n;
 
         LOG_DBG("Sending ARP reply");
 
@@ -202,8 +209,8 @@ int arp_send_reply(struct net_device * dev,
                 return -1;
         }
 
-        if (dev_queue_xmit(skb)) {
-                LOG_ERR("Failed to send RINARP reply");
+        if ((n = dev_queue_xmit(skb))) {
+                LOG_ERR("Failed to send RINARP reply, dev_queue_xmit ret: %d", n);
                 return -1;
         }
 
@@ -226,6 +233,7 @@ int arp_send_request(struct net_device * dev,
 #endif
         struct sk_buff *    skb;
         struct gha *        tha;
+        int n;
 
         LOG_DBG("Sending ARP request");
 
@@ -274,8 +282,8 @@ int arp_send_request(struct net_device * dev,
                 return -1;
         }
 
-        if (dev_queue_xmit(skb)) {
-                LOG_ERR("Failed to send RINARP request");
+        if ((n = dev_queue_xmit(skb))) {
+                LOG_ERR("Failed to send RINARP reply, dev_queue_xmit ret: %d", n);
                 gha_destroy(tha);
                 return -1;
         }
@@ -472,8 +480,7 @@ static int process(const struct sk_buff * skb,
                         return -1;
                 }
 
-                LOG_DBG("Showing the target ha");
-                gha_dump(target_ha);
+                gha_log_dbg("Target Hardware Address: ", target_ha);
 
                 if (arp_send_reply(dev,
                                    ptype,

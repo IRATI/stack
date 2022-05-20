@@ -26,6 +26,8 @@
 #include <linux/sched.h>
 #include <linux/poll.h>
 #include <linux/version.h>
+#include <linux/debugfs.h>
+#include <linux/hashtable.h>
 
 #define RINA_PREFIX "kfa"
 
@@ -36,6 +38,7 @@
 #include "kfa.h"
 #include "kfa-utils.h"
 #include "rina-device.h"
+#include "ipcp-utils.h"
 
 #define RINA_IP_FLOW_ENT_NAME "RINA_IP"
 
@@ -46,6 +49,10 @@ struct kfa {
 	struct ipcp_instance    *ipcp;
 	struct list_head	 list;
 	struct workqueue_struct *flowdelq;
+
+#ifdef CONFIG_DEBUG_FS
+    struct dentry *flows_dbg_file;
+#endif
 };
 
 enum flow_state {
@@ -78,6 +85,84 @@ struct flowdel_data {
 struct ipcp_instance_data {
 	struct kfa *kfa;
 };
+
+#ifdef CONFIG_DEBUG_FS
+
+static void kfa_flows_dbg_flow_show(struct ipcp_flow *flow, struct seq_file *s) {
+    char *fs, *ns;
+    const struct name *n;
+    ipc_process_id_t pid;
+
+    if (!flow) return;
+
+    seq_printf(s, "Flow addr: %p\n", flow);
+    seq_printf(s, "Port Id: %d\n", flow->port_id);
+
+    switch (flow->state) {
+    case PORT_STATE_NULL:
+        fs = "PORT_STATE_NULL"; break;
+    case PORT_STATE_PENDING:
+        fs = "PORT_STATE_PENDING"; break;
+    case PORT_STATE_ALLOCATED:
+        fs = "PORT_STATE_ALLOCATED"; break;
+    case PORT_STATE_DEALLOCATED:
+        fs = "PORT_STATE_DEALLOCATED"; break;
+    case PORT_STATE_DISABLED:
+        fs = "PORT_STATE_DISABLED"; break;
+    }
+
+    seq_printf(s, "State: %s\n", fs);
+
+    if (flow->ipc_process->ops->ipcp_id) {
+        pid = flow->ipc_process->ops->ipcp_id(flow->ipc_process->data);
+        seq_printf(s, "IPCP process ID: %d\n", pid);
+    } else
+        seq_printf(s, "IPCP process ID: Unknown\n");
+
+    if (flow->ipc_process->ops->dif_name) {
+        n = flow->ipc_process->ops->dif_name(flow->ipc_process->data);
+        ns = name_tostring(n);
+        if (ns) {
+            seq_printf(s, "IPCP DIF name: %s\n", ns);
+            rkfree(ns);
+        } else
+            seq_printf(s, "IPCP DIF name: Can't convert name to string\n");
+    } else
+        seq_printf(s, "IPCP DIF name: Unknown\n");
+
+    if (flow->ipc_process->ops->ipcp_name) {
+        n = flow->ipc_process->ops->ipcp_name(flow->ipc_process->data);
+        ns = name_tostring(n);
+        if (ns) {
+            seq_printf(s, "IPCP Name: %s\n", ns);
+            rkfree(ns);
+        } else
+            seq_printf(s, "IPCP Name: Can't convert name to string\n");
+    } else
+        seq_printf(s, "IPCP Name: Unknown\n");
+
+    seq_printf(s, "\n");
+}
+
+static int kfa_flows_dbg_show(struct seq_file *s, void *v) {
+    struct kfa_pmap *flows;
+
+    flows = (struct kfa_pmap *)s->private;
+    return kfa_pmap_debugfs_show(flows, s, &kfa_flows_dbg_flow_show);
+}
+
+static int kfa_flows_dbg_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, kfa_flows_dbg_show, inode->i_private);
+}
+
+static const struct file_operations kfa_flows_dbg_fops = {
+	.open		= kfa_flows_dbg_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+#endif
 
 //Fwd dec
 static int kfa_flow_deallocate_worker(void *data);
@@ -1249,7 +1334,7 @@ int kfa_ipcp_instance_destroy(struct ipcp_instance * instance)
  	return 0;
 }
 
-struct kfa *kfa_create(void)
+struct kfa *kfa_create(struct dentry* dbg_dir)
 {
 	struct kfa *instance;
 
@@ -1257,7 +1342,7 @@ struct kfa *kfa_create(void)
 	if (!instance)
 		return NULL;
 
-	instance->pidm = pidm_create();
+	instance->pidm = pidm_create(dbg_dir);
 	if (!instance->pidm) {
 		rkfree(instance);
 		return NULL;
@@ -1270,6 +1355,13 @@ struct kfa *kfa_create(void)
 		rkfree(instance);
 		return NULL;
 	}
+
+#ifdef CONFIG_DEBUG_FS
+    if (dbg_dir)
+        instance->flows_dbg_file = debugfs_create_file("kfa_flows", 0400, dbg_dir,
+                                                       instance->flows,
+                                                       &kfa_flows_dbg_fops);
+#endif
 
 	instance->ipcp = rkzalloc(sizeof(struct ipcp_instance), GFP_KERNEL);
 	if (!instance->ipcp) {
@@ -1312,6 +1404,9 @@ int kfa_destroy(struct kfa *instance)
 		LOG_ERR("Bogus instance passed, bailing out");
 		return -1;
 	}
+
+    if (instance->flows_dbg_file)
+        debugfs_remove(instance->flows_dbg_file);
 
 	/* FIXME: Destroy all the committed flows */
 	ASSERT(kfa_pmap_empty(instance->flows));

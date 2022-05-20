@@ -127,6 +127,7 @@ EXPORT_SYMBOL(rinarp_remove);
 int rinarp_resolve_gpa(struct rinarp_handle * handle,
                        const struct gpa *     tpa,
                        rinarp_notification_t  notify,
+                       uint32_t               timeout_ms,
                        void *                 opaque)
 {
         if (!handle_is_ok(handle) ||
@@ -139,7 +140,8 @@ int rinarp_resolve_gpa(struct rinarp_handle * handle,
 
         return arp826_resolve_gpa(handle->dev, ETH_P_RINA,
                                   handle->pa, handle->ha, tpa,
-                                  (arp826_notify_t) notify, opaque);
+                                  (arp826_notify_t) notify, timeout_ms,
+                                  opaque);
 }
 EXPORT_SYMBOL(rinarp_resolve_gpa);
 

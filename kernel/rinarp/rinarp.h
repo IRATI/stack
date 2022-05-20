@@ -37,12 +37,14 @@ struct rinarp_handle * rinarp_add(struct net_device * dev,
 int                    rinarp_remove(struct rinarp_handle * handle);
 
 typedef void (* rinarp_notification_t)(void *             opaque,
+                                       bool               timed_out,
                                        const struct gpa * tpa,
                                        const struct gha * tha);
 
 int                    rinarp_resolve_gpa(struct rinarp_handle * handle,
                                           const struct gpa *     tpa,
                                           rinarp_notification_t  notify,
+                                          uint32_t               timeout_ms,
                                           void *                 opaque);
 
 /* FIXME: Should return a copy */
