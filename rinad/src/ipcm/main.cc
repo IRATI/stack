@@ -50,6 +50,35 @@
 using namespace std;
 using namespace TCLAP;
 
+// Override the local configuration with things passed as command line
+// argument.
+void override_config(vector<std::string> &opts) {
+    rinad::RINAConfiguration &config = rinad::IPCManager->getConfig();
+
+    for (std::vector<std::string>::iterator i = opts.begin(); i != opts.end(); ++i) {
+        std::string k, v, s = *i;
+        int eq = s.find("=");
+
+        LOG_ERR("%s", s.c_str());
+
+        if (eq == -1)
+            LOG_ERR("Wrong format, discarding override value: %s", s);
+
+        k = s.substr(0, eq);
+        v = s.substr(eq + 1, s.length());
+
+        if (k == "consoleSocket")
+            config.local.consoleSocket = v;
+        else if (k == "logPath")
+            config.local.logPath = v;
+        else if (k == "installationPath")
+            config.local.installationPath = v;
+        else if (k == "libraryPath")
+            config.local.logPath = v;
+        else
+            LOG_WARN("Unknown local configuration value: %s", k.c_str());
+    }
+}
 
 void handler(int signum)
 {
@@ -89,6 +118,7 @@ int wrapped_main(int argc, char * argv[])
 	std::string conf;
 	std::string logfile;
 	std::string loglevel;
+    std::vector<std::string> override_values;
 	bool dump;
 
 	// Wrap everything in a try block.  Do this every time,
@@ -128,11 +158,18 @@ int wrapped_main(int argc, char * argv[])
 				     "dump",
 				     "Dump configuration on startup",
 				     false);
+        TCLAP::MultiArg<std::string>
+            override_arg("o",
+                         "option",
+                         "Set a 'localConfiguration' option",
+                         false,
+                         "key=value to replace in the 'localConfiguration' block");
 
 		cmd.add(addons_arg);
 		cmd.add(conf_arg);
 		cmd.add(loglevel_arg);
 		cmd.add(dump_arg);
+        cmd.add(override_arg);
 
 		// Parse the args.
 		cmd.parse(argc, argv);
@@ -142,6 +179,7 @@ int wrapped_main(int argc, char * argv[])
 		conf     = conf_arg.getValue();
 		loglevel = loglevel_arg.getValue();
 		dump = dump_arg.getValue();
+        override_values = override_arg.getValue();
 
 		LOG_DBG("Config file is: %s", conf.c_str());
 
@@ -158,12 +196,15 @@ int wrapped_main(int argc, char * argv[])
 		return EXIT_FAILURE;
 	}
 
-	//Initialize IPCM
-	rinad::IPCManager->init(loglevel, conf);
+    // Override the configuration file with command line statements.
+    override_config(override_values);
 
 	//Dump the config
 	if(dump)
 		rinad::IPCManager->dumpConfig();
+
+    //Initialize IPCM
+	rinad::IPCManager->init(loglevel, conf);
 
 	//Load addons
 	rinad::IPCManager->load_addons(addons);
