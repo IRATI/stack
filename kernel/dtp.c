@@ -600,7 +600,7 @@ struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                 a_timer_expired = time_before_eq(pos->time_stamp + a, jiffies);
 
                 if (a_timer_expired || (seq_num - LWE - 1 <= max_sdu_gap)) {
-                        if (a_timer_expired &&
+                        if (a_timer_expired && dtcp &&
                         		dtcp_rtx_ctrl(dtcp->cfg)) {
                                 LOG_DBG("Retransmissions will be required");
                                 list_del(&pos->next);
@@ -1073,6 +1073,7 @@ struct dtp * dtp_create(struct efcp *       efcp,
 
         dtp->cfg   = dtp_cfg;
         dtp->rmt  = rmt;
+	dtp->dtcp = NULL;
         dtp->rttq = NULL;
         dtp->rtxq = NULL;
         dtp->seqq = squeue_create(dtp);
@@ -1234,6 +1235,10 @@ static bool window_is_closed(struct dtp *    dtp,
                              struct dtp_ps * ps)
 {
         bool retval = false, w_ret = false, r_ret = false;
+	
+	if (!dtcp) {
+		return false;
+	}
 
         ASSERT(dtp);
         ASSERT(dtcp);
