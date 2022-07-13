@@ -360,6 +360,8 @@ void FlowAllocator::createFlowRequestMessageReceived(configs::Flow * flow,
 	rina::ApplicationProcessNamingInformation remote_info, app_info;
 	OngoingFlowAllocState flow_state;
 	unsigned int seq_num;
+	rina::cdap_rib::con_handle_t con_handle;
+	int rv;
 
 	//Check if the flow is to the layer management tasks of this IPCP
 	if (flow->remote_naming_info.processName == ipcp->get_name() &&
@@ -428,7 +430,50 @@ void FlowAllocator::createFlowRequestMessageReceived(configs::Flow * flow,
 		LOG_IPCP_ERR("Missing code");
 	}
 
-	LOG_IPCP_ERR("Missing code");
+	flow->remote_address = namespace_manager_->getDFTNextHop(flow->remote_naming_info);
+	
+	LOG_IPCP_DBG("The directory forwarding table returned address %u", flow->remote_address);
+
+	if (flow->remote_address == 0) {
+		LOG_IPCP_ERR("Could not find entry in DFT for application");
+		return;
+	}
+
+	flow->getActiveConnection()->destAddress = flow->remote_address;
+	flow->local_address= ipc_process_->get_active_address();
+	
+	rv = ipc_process_->enrollment_task_->get_con_handle_to_ipcp(flow->remote_address,
+								    con_handle);
+	if (rv != 0) {
+		LOG_IPCP_ERR("Could not find con_handle to next hop for destination address %u",
+			flow->remote_address);
+			return;
+	}
+
+	con_handle.address = flow->remote_address;
+	con_handle.cdap_dest = rina::cdap_rib::CDAP_DEST_ADATA;
+
+	try {
+		//5 Send to destination address
+		rina::cdap_rib::flags_t flags;
+		rina::cdap_rib::filt_info_t filt;
+		rina::cdap_rib::obj_info_t obj;
+		encoders::FlowEncoder encoder;
+		obj.class_ = FlowRIBObject::class_name;
+		obj.name_ = object_name;
+		encoder.encode(*flow_, obj.value_);
+
+		rib_daemon_->getProxy()->remote_create(con_handle,
+						       obj,
+						       flags,
+						       filt,
+						       this, 
+						       invoke_id);
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Problems sending M_CREATE <Flow> CDAP message to neighbor: %s",
+				e.what());
+		return;
+	}
 }
 
 void FlowAllocator::__createFlowRequestMessageReceived(configs::Flow * flow,

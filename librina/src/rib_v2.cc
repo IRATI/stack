@@ -1977,7 +1977,8 @@ public:
 			     const cdap_rib::obj_info_t &obj,
 			     const cdap_rib::flags_t &flags,
 			     const cdap_rib::filt_info_t &filt,
-			     RIBOpsRespHandler * resp_handler);
+			     RIBOpsRespHandler * resp_handler, 
+			     int invoke_id);
 
 	void destroy_cdap_connection(int port_id);
 
@@ -2805,16 +2806,19 @@ int RIBDaemon::remote_operation(const cdap_rib::con_handle_t& con,
                                 const cdap_rib::obj_info_t &obj,
                                 const cdap_rib::flags_t &flags,
                                 const cdap_rib::filt_info_t &filt,
-                                RIBOpsRespHandler * resp_handler)
+                                RIBOpsRespHandler * resp_handler, 
+			        int invokeid)
 {
 	cdap_rib::auth_policy_t auth;
 	int result = 0;
-	int invoke_id = 0;
+	int invoke_id = invokeid;
 
 	// If the operation expects a response, store response handler in table
 	if (resp_handler) {
-		invoke_id = cdap_provider->get_session_manager()->
-				get_invoke_id_manager()->newInvokeId(true);
+		if (invoke_id == 0) {
+			invoke_id = cdap_provider->get_session_manager()->
+					get_invoke_id_manager()->newInvokeId(true);
+		}
 		response_handlers.put(invoke_id, resp_handler);
 	}
 
@@ -3591,14 +3595,16 @@ int RIBDaemonProxy::remote_create(const cdap_rib::con_handle_t& con,
 				  const cdap_rib::obj_info_t &obj,
 				  const cdap_rib::flags_t &flags,
 				  const cdap_rib::filt_info_t &filt,
-				  RIBOpsRespHandler * resp_handler)
+				  RIBOpsRespHandler * resp_handler,
+				  int invoke_id)
 {
 	return ribd->remote_operation(con,
 				      cdap::CDAPMessage::M_CREATE,
 				      obj,
 				      flags,
 				      filt,
-				      resp_handler);
+				      resp_handler,
+				      invoke_id);
 }
 
 // Perform a delete operation over an object of the remote RIB
@@ -3606,14 +3612,16 @@ int RIBDaemonProxy::remote_delete(const cdap_rib::con_handle_t& con,
 			  	  const cdap_rib::obj_info_t &obj,
 			  	  const cdap_rib::flags_t &flags,
 			  	  const cdap_rib::filt_info_t &filt,
-			  	  RIBOpsRespHandler * resp_handler)
+			  	  RIBOpsRespHandler * resp_handler, 
+				  int invoke_id)
 {
 	return ribd->remote_operation(con,
 				      cdap::CDAPMessage::M_DELETE,
 				      obj,
 				      flags,
 				      filt,
-				      resp_handler);
+				      resp_handler,
+				      invoke_id);
 }
 
 // Perform a read operation over an object of the remote RIB
@@ -3621,14 +3629,16 @@ int RIBDaemonProxy::remote_read(const cdap_rib::con_handle_t& con,
 				const cdap_rib::obj_info_t &obj,
 				const cdap_rib::flags_t &flags,
 				const cdap_rib::filt_info_t &filt,
-				RIBOpsRespHandler * resp_handler)
+				RIBOpsRespHandler * resp_handler, 
+				int invoke_id)
 {
 	return ribd->remote_operation(con,
 				      cdap::CDAPMessage::M_READ,
 				      obj,
 				      flags,
 				      filt,
-				      resp_handler);
+				      resp_handler,
+				      invoke_id);
 }
 
 // Perform a cancel read operation over an object of the remote RIB
@@ -3645,7 +3655,8 @@ int RIBDaemonProxy::remote_cancel_read(const cdap_rib::con_handle_t& con,
                               obj,
                               flags,
                               filt,
-                              resp_handler);
+                              resp_handler, 
+			      invoke_id);
 }
 
 // Perform a write operation over an object of the remote RIB
@@ -3653,14 +3664,16 @@ int RIBDaemonProxy::remote_write(const cdap_rib::con_handle_t& con,
 			 	 const cdap_rib::obj_info_t &obj,
 			 	 const cdap_rib::flags_t &flags,
 			 	 const cdap_rib::filt_info_t &filt,
-			 	 RIBOpsRespHandler * resp_handler)
+			 	 RIBOpsRespHandler * resp_handler, 
+				 int invoke_id)
 {
 	return ribd->remote_operation(con,
                               cdap::CDAPMessage::M_WRITE,
                               obj,
                               flags,
                               filt,
-                              resp_handler);
+                              resp_handler, 
+			      invoke_id);
 }
 
 // Perform a start operation over an object of the remote RIB
@@ -3668,14 +3681,16 @@ int RIBDaemonProxy::remote_start(const cdap_rib::con_handle_t& con,
 			 	 const cdap_rib::obj_info_t &obj,
 			 	 const cdap_rib::flags_t &flags,
 			 	 const cdap_rib::filt_info_t &filt,
-			 	 RIBOpsRespHandler * resp_handler)
+			 	 RIBOpsRespHandler * resp_handler, 
+				 int invoke_id)
 {
 	return ribd->remote_operation(con,
                               cdap::CDAPMessage::M_START,
                               obj,
                               flags,
                               filt,
-                              resp_handler);
+                              resp_handler, 
+			      invoke_id);
 }
 
 // Perform a stop operation over an object of the remote RIB
@@ -3683,14 +3698,16 @@ int RIBDaemonProxy::remote_stop(const cdap_rib::con_handle_t& con,
 				const cdap_rib::obj_info_t &obj,
 				const cdap_rib::flags_t &flags,
 				const cdap_rib::filt_info_t &filt,
-				RIBOpsRespHandler * resp_handler)
+				RIBOpsRespHandler * resp_handler, 
+				int invoke_id)
 {
 	return ribd->remote_operation(con,
                                 cdap::CDAPMessage::M_STOP,
                                 obj,
                                 flags,
                                 filt,
-                                resp_handler);
+                                resp_handler, 
+				invoke_id);
 }
 
 // Class RIBDaemonAE
