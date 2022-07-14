@@ -467,7 +467,7 @@ void FlowAllocator::createFlowRequestMessageReceived(configs::Flow * flow,
 						       obj,
 						       flags,
 						       filt,
-						       this, 
+						       NULL, 
 						       invoke_id);
 	} catch (rina::Exception &e) {
 		LOG_IPCP_ERR("Problems sending M_CREATE <Flow> CDAP message to neighbor: %s",
