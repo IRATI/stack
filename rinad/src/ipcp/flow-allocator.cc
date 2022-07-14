@@ -440,9 +440,9 @@ void FlowAllocator::createFlowRequestMessageReceived(configs::Flow * flow,
 	}
 
 	flow->getActiveConnection()->destAddress = flow->remote_address;
-	flow->local_address= ipc_process_->get_active_address();
+	flow->local_address= ipcp->get_active_address();
 	
-	rv = ipc_process_->enrollment_task_->get_con_handle_to_ipcp(flow->remote_address,
+	rv = ipcp->enrollment_task_->get_con_handle_to_ipcp(flow->remote_address,
 								    con_handle);
 	if (rv != 0) {
 		LOG_IPCP_ERR("Could not find con_handle to next hop for destination address %u",
@@ -461,7 +461,7 @@ void FlowAllocator::createFlowRequestMessageReceived(configs::Flow * flow,
 		encoders::FlowEncoder encoder;
 		obj.class_ = FlowRIBObject::class_name;
 		obj.name_ = object_name;
-		encoder.encode(*flow_, obj.value_);
+		encoder.encode(*flow, obj.value_);
 
 		rib_daemon_->getProxy()->remote_create(con_handle,
 						       obj,
