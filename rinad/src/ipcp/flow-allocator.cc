@@ -440,7 +440,6 @@ void FlowAllocator::createFlowRequestMessageReceived(configs::Flow * flow,
 	}
 
 	flow->getActiveConnection()->destAddress = flow->remote_address;
-	flow->local_address= ipcp->get_active_address();
 	
 	rv = ipcp->enrollment_task_->get_con_handle_to_ipcp(flow->remote_address,
 								    con_handle);
