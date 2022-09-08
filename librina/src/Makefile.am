@@ -113,7 +113,8 @@ librina_la_CPPFLAGS =				\
 	$(CXX_SYSINCLUDES)			\
 	-DSTUB_API=0				\
 	-I$(top_srcdir)/include			\
-    -I$(srcdir)/jsoncpp             \
+        -I$(srcdir)/jsoncpp                     \
+	-pthread                                \
 	$(LIBPROTOBUF_CFLAGS)			\
 	$(OPENSSL_CFLAGS)			\
 	$(CPPFLAGS_EXTRA)
