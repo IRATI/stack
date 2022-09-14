@@ -4,7 +4,7 @@
 # Written by: Francesco Salvestrini <f DOT salvestrini AT nextworks DOT it>
 #
 
-SUBDIRS                            = common manager mac2ifname key-managers rinacat tgen-apps
+SUBDIRS                            = common manager mac2ifname key-managers rinacat
 EXTRA_DIST                         =
 DISTCLEANFILES                     =
 bin_PROGRAMS                       =
