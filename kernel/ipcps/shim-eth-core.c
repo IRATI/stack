@@ -2056,8 +2056,12 @@ static struct ipcp_instance* eth_create_vlan(struct ipcp_factory_data*  data,
                                              ipc_process_id_t           id,
                                              uint_t                     us_nl_port) {
         struct ipcp_instance *inst;
+	
+	LOG_INFO("Creating new Shim IPCP Eth vlan instance with id %d", id);
 
         inst = eth_create(data, name, id, us_nl_port);
+	
+	LOG_INFO("New Shim IPCP Eth VLAN instance created, %pK", inst);
 
         /* Set this IPCP VLAN behavior to compability mode. */
         if (inst && inst->data) {
