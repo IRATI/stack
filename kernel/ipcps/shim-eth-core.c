@@ -1955,6 +1955,8 @@ static struct ipcp_instance* eth_create(struct ipcp_factory_data*  data,
 
         ASSERT(data);
 	ASSERT(name);
+	
+	LOG_DBG("Data (%pK) and name (%pK) pointers are OK", data, name);
 
         /* Check if there already is an instance with that id */
         if (find_instance(data,id)) {
@@ -1969,6 +1971,8 @@ static struct ipcp_instance* eth_create(struct ipcp_factory_data*  data,
 
         /* fill it properly */
         inst->ops  = &eth_instance_ops;
+	
+	LOG_DBG("Eth instance ops (%pK) OK", &eth_instance_ops);
 
 	if (robject_rset_init_and_add(&inst->robj,
                                       &eth_ipcp_rtype,
@@ -2057,7 +2061,7 @@ static struct ipcp_instance* eth_create_vlan(struct ipcp_factory_data*  data,
                                              uint_t                     us_nl_port) {
         struct ipcp_instance *inst;
 	
-	LOG_INFO("Creating new Shim IPCP Eth vlan instance with id %d", id);
+	LOG_DBG("Creating new Shim IPCP Eth vlan instance with id %d", id);
 
         inst = eth_create(data, name, id, us_nl_port);
 	
