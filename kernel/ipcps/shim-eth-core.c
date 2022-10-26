@@ -767,6 +767,7 @@ static int eth_application_register(struct ipcp_instance_data* data,
 {
         struct gpa * pa;
         struct gha * ha;
+	bool multiple = false;
 
 	if (!data) {
 		LOG_ERR("Bogus data passed, bailing out");
@@ -779,18 +780,22 @@ static int eth_application_register(struct ipcp_instance_data* data,
 	}
 
         if (data->app_name) {
-                char * tmp = name_tostring(data->app_name);
+		multiple = true;
+		/* TODO remove this. Allowing multiple IPCPs to register, for TERMINET's use cases */
+                /* char * tmp = name_tostring(data->app_name);
                 LOG_ERR("Application %s is already registered", tmp);
                 if (tmp) rkfree(tmp);
-                return -1;
+                return -1; */
         }
 
-        data->app_name = name_dup(name);
-        if (!data->app_name) {
-                char * tmp = name_tostring(name);
-                LOG_ERR("Application %s registration has failed", tmp);
-                if (tmp) rkfree(tmp);
-                return -1;
+        if (!multiple) {
+		data->app_name = name_dup(name);
+        	if (!data->app_name) {
+                	char * tmp = name_tostring(name);
+                	LOG_ERR("Application %s registration has failed", tmp);
+                	if (tmp) rkfree(tmp);
+                	return -1;
+		}
         }
 
         pa = name_to_gpa(name);
@@ -875,7 +880,8 @@ static int eth_application_unregister(struct ipcp_instance_data * data,
 		return -1;
 	}
 
-        if (!data->app_name) {
+	/* TODO: Remove. Allow multiple unregistrations as per TERMINET use cases */
+        /*if (!data->app_name) {
                 LOG_ERR("Ethernet shim has no application registered");
                 return -1;
         }
@@ -883,7 +889,7 @@ static int eth_application_unregister(struct ipcp_instance_data * data,
         if (!name_is_equal(data->app_name, name)) {
                 LOG_ERR("Application registered != application specified");
                 return -1;
-        }
+        }*/
 
         /* Remove from ARP cache */
         if (data->app_handle) {
@@ -902,10 +908,16 @@ static int eth_application_unregister(struct ipcp_instance_data * data,
                 data->daf_handle = NULL;
         }
 
-        name_destroy(data->app_name);
-        data->app_name = NULL;
-        name_destroy(data->daf_name);
-        data->daf_name = NULL;
+        if (data->app_name) {
+		name_destroy(data->app_name);
+        	data->app_name = NULL;
+	}
+	
+	if (data->daf_name) {
+        	name_destroy(data->daf_name);
+        	data->daf_name = NULL;
+	}
+	
         return 0;
 }
 
