@@ -959,8 +959,7 @@ void ShimWifiStaIPCProcessImpl::notify_cancel_enrollment()
 	abort_enrollment();
 }
 
-void ShimWifiStaIPCProcessImpl::notify_trying_to_associate(const std::string& dif_name,
-							   const std::string& neigh_name)
+void ShimWifiStaIPCProcessImpl::notify_trying_to_associate(const std::string& dif_name)
 {
 	rina::ScopedLock g(*lock_);
 
@@ -973,10 +972,9 @@ void ShimWifiStaIPCProcessImpl::notify_trying_to_associate(const std::string& di
 		//TODO abort enrollment?
 	}
 
-	if (sta_enr_sm.dif_name != dif_name || sta_enr_sm.neighbor != neigh_name) {
-		LOG_IPCP_ERR("WPA Supplicant is trying to associate to the wrong SSID (%s) or BSSID (%s)",
-			      dif_name.c_str(),
-			      neigh_name.c_str());
+	if (sta_enr_sm.dif_name != dif_name) {
+		LOG_IPCP_ERR("WPA Supplicant is trying to associate to the wrong SSID (%s)",
+			      dif_name.c_str());
 		abort_enrollment();
 	}
 
@@ -1046,8 +1044,8 @@ void ShimWifiStaIPCProcessImpl::notify_connected(const std::string& neigh_name)
 	rina::ScopedLock g(*lock_);
 
 	timer.cancelTask(timer_task);
-	if (sta_enr_sm.state != StaEnrollmentSM::KEY_NEGOTIATION_COMPLETED) {
-		LOG_IPCP_WARN("Received key negotiated message in wrong state: %s",
+	if (sta_enr_sm.state != StaEnrollmentSM::ASSOCIATED) {
+		LOG_IPCP_WARN("Received associated message in wrong state: %s",
 			      sta_enr_sm.state_to_string().c_str());
 
 		return;

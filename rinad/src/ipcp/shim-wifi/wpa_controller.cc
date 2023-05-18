@@ -224,24 +224,17 @@ void WpaController::__process_msg(const std::string& msg)
 
 void WpaController::__process_try_association_message(const std::string& msg)
 {
-	std::string delimiter1 = "Trying to associate with ";
-	std::string delimiter2 = "SSID='";
-	std::string neigh_name;
+	std::string delimiter1 = "SSID '";
 	std::string dif_name;
 
 	std::string token1 = msg.substr(msg.find(delimiter1) + delimiter1.length(),
 				        msg.length() - 1);
-	neigh_name = token1.substr(0, token1.find(" "));
+	dif_name = token1.substr(0, token1.find(" "));
 
-	std::string token2 = msg.substr(msg.find(delimiter2) + delimiter2.length(),
-				        msg.length() - 1);
-	dif_name = token2.substr(0, token2.find("'"));
+	LOG_IPCP_DBG("DIF name: %s",
+		     dif_name.c_str());
 
-	LOG_IPCP_DBG("DIF name: %s, neighbor name: %s",
-		     dif_name.c_str(),
-		     neigh_name.c_str());
-
-	ipcp->notify_trying_to_associate(dif_name, neigh_name);
+	ipcp->notify_trying_to_associate(dif_name);
 }
 
 void WpaController::__process_association_message(const std::string& msg)
