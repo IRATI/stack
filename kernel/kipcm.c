@@ -24,6 +24,7 @@
 #include <linux/export.h>
 #include <linux/mutex.h>
 #include <linux/hardirq.h>
+#include <linux/debugfs.h>
 
 #define RINA_PREFIX "kipcm"
 
@@ -57,6 +58,8 @@ struct kipcm {
         struct ipcp_imap *      instances;
         struct flow_messages *  messages;
         struct kfa *            kfa;
+
+        struct dentry* dbg_dir;
 };
 
 struct kipcm * default_kipcm;
@@ -1780,7 +1783,7 @@ static int ctrldev_handlers_register(struct kipcm * kipcm)
 
 int kipcm_init(struct robject * parent)
 {
-        struct kipcm * tmp;
+        struct kipcm* tmp;
 
         tmp = rkzalloc(sizeof(*tmp), GFP_KERNEL);
         if (!tmp)
@@ -1832,7 +1835,16 @@ int kipcm_init(struct robject * parent)
                 return -1;
         }
 
-        tmp->kfa = kfa_create();
+#ifdef CONFIG_DEBUG_FS
+        tmp->dbg_dir = debugfs_create_dir("kipcm", NULL);
+        if (!tmp->dbg_dir) {
+            LOG_DBG("Failed to create DebugFS directory for kernel IPCM");
+        } else {
+            LOG_DBG("Created DebugFS directory for kernel IPCM");
+        }
+#endif
+
+        tmp->kfa = kfa_create(tmp->dbg_dir);
         if (!tmp->kfa) {
                 if (kipcm_pmap_destroy(tmp->messages->ingress)) {
                         /* FIXME: What could we do here ? */
@@ -1915,6 +1927,10 @@ int kipcm_fini(struct kipcm * kipcm)
         if (kfa_destroy(kipcm->kfa)) {
                 /* FIXME: What could we do here ? */
         }
+
+#ifdef CONFIG_DEBUG_FS
+        debugfs_remove(kipcm->dbg_dir);
+#endif
 
         /* FIXME: Destroy all the instances */
         ASSERT(ipcp_imap_empty(kipcm->instances));

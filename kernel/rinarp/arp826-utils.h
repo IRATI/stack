@@ -47,6 +47,7 @@ bool            gpa_is_equal(const struct gpa * a,
 const uint8_t * gpa_address_value(const struct gpa * gpa);
 string_t * 	gpa_address_to_string_gfp(gfp_t              flags,
 				          const struct gpa * gpa);
+string_t *      gpa_address_to_string(const struct gpa *gpa, string_t *buf, size_t n);
 size_t          gpa_address_length(const struct gpa * gpa);
 
 /* Grows a GPA adding the filler symbols up to length (if needed) */
@@ -69,8 +70,7 @@ int             gpa_address_shrink_ni(struct gpa * gpa,
 int             gpa_address_shrink_gfp(gfp_t        flags,
                                        struct gpa * gpa,
                                        uint8_t      filler);
-
-void            gpa_dump(const struct gpa * gpa);
+void            gpa_log_dbg(const char *fmt, const struct gpa *gpa);
 
 typedef enum {
         MAC_ADDR_802_3
@@ -108,8 +108,9 @@ size_t              gha_address_length(const struct gha * gha);
 gha_type_t          gha_type(const struct gha * gha);
 bool                gha_is_equal(const struct gha * a,
                                  const struct gha * b);
-void                gha_dump(const struct gha * gha);
+string_t *          gha_address_to_string(const struct gha *gha, string_t *buf, size_t n);
 
+void                gha_log_dbg(const char *fmt, const struct gha *gha);
 
 /*
  * Miscellaneous

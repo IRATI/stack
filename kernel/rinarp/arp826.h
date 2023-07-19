@@ -40,6 +40,7 @@ int                arp826_remove(struct net_device * dev,
                                  const struct gha *  ha);
 
 typedef void (* arp826_notify_t)(void *             opaque,
+                                 bool               timed_out,
                                  const struct gpa * tpa,
                                  const struct gha * tha);
 
@@ -49,6 +50,7 @@ int                arp826_resolve_gpa(struct net_device * dev,
                                       const struct gha *  sha,
                                       const struct gpa *  tpa,
                                       arp826_notify_t     notify,
+                                      uint32_t            timeout_ms,
                                       void *              opaque);
 const struct gpa * arp826_find_gpa(struct net_device * dev,
                                    uint16_t            ptype,

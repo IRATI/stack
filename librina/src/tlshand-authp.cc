@@ -100,7 +100,7 @@ void encode_tls_hand_auth_options(const TLSHandAuthOptions& options,
 					     options.random.random_bytes.length);
 	}
 
-	int size = gpb_options.ByteSize();
+	int size = gpb_options.ByteSizeLong();
 	result.message_ = new unsigned char[size];
 	result.size_ = size;
 	gpb_options.SerializeToArray(result.message_, size);
@@ -121,7 +121,7 @@ void encode_server_hello_tls_hand(const TLSHandRandom& random,
 	gpb_hello.set_mac_alg(mac_alg);
 	gpb_hello.set_compress_method(compress_method);
 
-	int size = gpb_hello.ByteSize();
+	int size = gpb_hello.ByteSizeLong();
 	result.message_ = new unsigned char[size];
 	result.size_ = size;
 	gpb_hello.SerializeToArray(result.message_ , size);
@@ -161,7 +161,7 @@ void encode_certificate_tls_hand(const UcharArray& certificate_chain,
 
 	gpb_certificate.set_certificate_chain(certificate_chain.data, certificate_chain.length);
 
-	int size = gpb_certificate.ByteSize();
+	int size = gpb_certificate.ByteSizeLong();
 	result.message_ = new unsigned char[size];
 	result.size_ = size;
 	gpb_certificate.SerializeToArray(result.message_ , size);
@@ -191,7 +191,7 @@ void encode_client_key_exchange_tls_hand(const UcharArray& enc_pmaster_secret,
 
 	gpb_key_exchange.set_enc_pmaster_secret(enc_pmaster_secret.data, enc_pmaster_secret.length);
 
-	int size = gpb_key_exchange.ByteSize();
+	int size = gpb_key_exchange.ByteSizeLong();
 	result.message_ = new unsigned char[size];
 	result.size_ = size;
 	gpb_key_exchange.SerializeToArray(result.message_ , size);
@@ -221,7 +221,7 @@ void encode_client_certificate_verify_tls_hand(const UcharArray& enc_verify_hash
 
 	gpb_cert_verify.set_enc_verify_hash(enc_verify_hash.data, enc_verify_hash.length);
 
-	int size = gpb_cert_verify.ByteSize();
+	int size = gpb_cert_verify.ByteSizeLong();
 	result.message_ = new unsigned char[size];
 	result.size_ = size;
 	gpb_cert_verify.SerializeToArray(result.message_ , size);
@@ -251,7 +251,7 @@ void encode_finish_message_tls_hand(const UcharArray& opaque_verify_data,
 
 	gpb_finish.set_opaque_verify_data(opaque_verify_data.data, opaque_verify_data.length);
 
-	int size = gpb_finish.ByteSize();
+	int size = gpb_finish.ByteSizeLong();
 	result.message_ = new unsigned char[size];
 	result.size_ = size;
 	gpb_finish.SerializeToArray(result.message_ , size);

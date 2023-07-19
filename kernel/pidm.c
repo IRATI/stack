@@ -18,6 +18,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 #include <linux/list.h>
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
 
 #define RINA_PREFIX "pidm"
 
@@ -32,6 +34,12 @@
 struct pidm {
 	struct list_head allocated_ports;
 	port_id_t last_allocated;
+        spinlock_t lock;
+
+#ifdef CONFIG_DEBUG_FS
+        struct dentry* dbg_file;
+        int dbg_file_data;
+#endif
 };
 
 struct alloc_pid {
@@ -39,16 +47,54 @@ struct alloc_pid {
         port_id_t pid;
 };
 
-struct pidm * pidm_create(void)
-{
-        struct pidm * instance;
+#ifdef CONFIG_DEBUG_FS
+static int pidm_dbg_show(struct seq_file *s, void *v) {
+        struct pidm *instance;
+	struct alloc_pid * pos, * next;
 
-        instance = rkmalloc(sizeof(*instance), GFP_KERNEL);
-        if (!instance)
-                return NULL;
+        instance = (struct pidm *)s->private;
+        seq_printf(s, "Last allocated: %u\n", instance->last_allocated);
+        seq_printf(s, "Allocated ports:\n");
+
+        spin_lock(&instance->lock);
+        list_for_each_entry_safe(pos, next, &instance->allocated_ports, list) {
+                seq_printf(s, "%d ", pos->pid);
+        }
+        spin_unlock(&instance->lock);
+
+        seq_printf(s, "\n");
+
+        return 0;
+}
+
+static int pidm_dbg_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, pidm_dbg_show, inode->i_private);
+}
+
+static const struct file_operations pidm_dbg_fops = {
+	.open		= pidm_dbg_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+#endif
+
+struct pidm * pidm_create(struct dentry *dbg_dir)
+{
+        struct pidm *instance;
+
+        instance = rkmalloc(sizeof(struct pidm), GFP_KERNEL);
+        if (!instance) return NULL;
 
         INIT_LIST_HEAD(&(instance->allocated_ports));
         instance->last_allocated = 0;
+
+#ifdef CONFIG_DEBUG_FS
+        if (dbg_dir)
+                instance->dbg_file = debugfs_create_file("pidm", 0400, dbg_dir,
+                                                         instance, &pidm_dbg_fops);
+#endif
 
         LOG_INFO("Instance initialized successfully (%zd port-ids)",
         	MAX_PORT_ID);
@@ -64,6 +110,13 @@ int pidm_destroy(struct pidm * instance)
                 LOG_ERR("Bogus instance passed, bailing out");
                 return -1;
         }
+
+#ifdef CONFIG_DEBUG_FS
+        if (instance->dbg_file)
+                debugfs_remove(instance->dbg_file);
+#endif
+
+        spin_lock(&instance->lock);
 
         list_for_each_entry_safe(pos, next, &instance->allocated_ports, list) {
                 rkfree(pos);

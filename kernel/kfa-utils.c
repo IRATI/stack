@@ -20,6 +20,8 @@
 
 #include <linux/hashtable.h>
 #include <linux/list.h>
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
 
 #define RINA_PREFIX "kfa-utils"
 
@@ -181,3 +183,23 @@ int kfa_pmap_remove(struct kfa_pmap * map,
 
         return 0;
 }
+
+#ifdef CONFIG_DEBUG_FS
+int kfa_pmap_debugfs_show(struct kfa_pmap *map, struct seq_file * s,
+                          void (* flow_show_func)(struct ipcp_flow *, struct seq_file *))
+{
+        struct kfa_pmap_entry *entry;
+        struct hlist_node *tmp;
+        int bucket;
+
+        ASSERT(map);
+        ASSERT(flow_show_func);
+
+        seq_printf(s, "Current flows:\n");
+        hash_for_each_safe(map->table, bucket, tmp, entry, hlist) {
+                flow_show_func(entry->value_flow, s);
+        }
+
+        return 0;
+}
+#endif
