@@ -853,7 +853,8 @@ public:
                           const cdap_rib::obj_info_t &obj,
                           const cdap_rib::flags_t &flags,
                           const cdap_rib::filt_info_t &filt,
-                          RIBOpsRespHandler * resp_handler);
+                          RIBOpsRespHandler * resp_handler,
+			  int invoke_id = 0);
 
         ///
         /// Perform a delete operation over an object of the remote RIB
@@ -864,7 +865,8 @@ public:
                           const cdap_rib::obj_info_t &obj,
                           const cdap_rib::flags_t &flags,
                           const cdap_rib::filt_info_t &filt,
-                          RIBOpsRespHandler * resp_handler);
+                          RIBOpsRespHandler * resp_handler, 
+			  int invoke_id = 0);
 
         ///
         /// Perform a read operation over an object of the remote RIB
@@ -875,7 +877,8 @@ public:
                         const cdap_rib::obj_info_t &obj,
                         const cdap_rib::flags_t &flags,
                         const cdap_rib::filt_info_t &filt,
-                        RIBOpsRespHandler * resp_handler);
+                        RIBOpsRespHandler * resp_handler,
+			int invoke_id = 0);
 
         ///
         /// Perform a cancel read operation over an object of the remote RIB
@@ -896,7 +899,8 @@ public:
                          const cdap_rib::obj_info_t &obj,
                          const cdap_rib::flags_t &flags,
                          const cdap_rib::filt_info_t &filt,
-                         RIBOpsRespHandler * resp_handler);
+                         RIBOpsRespHandler * resp_handler, 
+			 int invoke_id = 0);
 
         ///
         /// Perform a start operation over an object of the remote RIB
@@ -907,7 +911,8 @@ public:
                          const cdap_rib::obj_info_t &obj,
                          const cdap_rib::flags_t &flags,
                          const cdap_rib::filt_info_t &filt,
-                         RIBOpsRespHandler * resp_handler);
+                         RIBOpsRespHandler * resp_handler, 
+			 int invoke_id = 0);
 
         ///
         /// Perform a stop operation over an object of the remote RIB
@@ -918,7 +923,8 @@ public:
                         const cdap_rib::obj_info_t &obj,
                         const cdap_rib::flags_t &flags,
                         const cdap_rib::filt_info_t &filt,
-                        RIBOpsRespHandler * resp_handler);
+                        RIBOpsRespHandler * resp_handler, 
+			int invoke_id = 0);
 
 private:
         ///@internal

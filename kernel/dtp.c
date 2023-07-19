@@ -600,7 +600,7 @@ struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                 a_timer_expired = time_before_eq(pos->time_stamp + a, jiffies);
 
                 if (a_timer_expired || (seq_num - LWE - 1 <= max_sdu_gap)) {
-                        if (a_timer_expired &&
+                        if (a_timer_expired && dtcp &&
                         		dtcp_rtx_ctrl(dtcp->cfg)) {
                                 LOG_DBG("Retransmissions will be required");
                                 list_del(&pos->next);
@@ -1073,6 +1073,7 @@ struct dtp * dtp_create(struct efcp *       efcp,
 
         dtp->cfg   = dtp_cfg;
         dtp->rmt  = rmt;
+	dtp->dtcp = NULL;
         dtp->rttq = NULL;
         dtp->rtxq = NULL;
         dtp->seqq = squeue_create(dtp);
@@ -1234,6 +1235,10 @@ static bool window_is_closed(struct dtp *    dtp,
                              struct dtp_ps * ps)
 {
         bool retval = false, w_ret = false, r_ret = false;
+	
+	if (!dtcp) {
+		return false;
+	}
 
         ASSERT(dtp);
         ASSERT(dtcp);
@@ -1347,14 +1352,16 @@ int dtp_write(struct dtp * instance,
 		LOG_ERR("PCI is not ok");
 		goto pdu_err_exit;
 	}
-
-        sn = dtcp->sv->snd_lft_win;
-        if (instance->sv->drf_flag ||
-        		((sn == (csn - 1)) && instance->sv->rexmsn_ctrl)) {
-		pdu_flags_t pci_flags;
-		pci_flags = pci_flags_get(&du->pci);
-		pci_flags |= PDU_FLAGS_DATA_RUN;
-                pci_flags_set(&du->pci, pci_flags);
+	
+	if (dtcp) {
+        	sn = dtcp->sv->snd_lft_win;
+        	if (instance->sv->drf_flag ||
+        			((sn == (csn - 1)) && instance->sv->rexmsn_ctrl)) {
+			pdu_flags_t pci_flags;
+			pci_flags = pci_flags_get(&du->pci);
+			pci_flags |= PDU_FLAGS_DATA_RUN;
+                	pci_flags_set(&du->pci, pci_flags);
+		}
 	}
 
         LOG_DBG("DTP Sending PDU %u (CPU: %d)", csn, smp_processor_id());
@@ -1646,29 +1653,31 @@ int dtp_receive(struct dtp * instance,
          *   no need to check presence of in_order or dtcp because in case
          *   they are not, LWE is not updated and always 0
          */
-        if ((seq_num <= LWE) ||
-        		(is_fc_overrun(instance, dtcp, seq_num, sbytes))) {
-        	/* Duplicate PDU or flow control overrun */
-        	LOG_ERR("Duplicate PDU or flow control overrun.SN: %u, LWE:%u",
+	if (dtcp) {
+        	if ((seq_num <= LWE) ||
+        			(is_fc_overrun(instance, dtcp, seq_num, sbytes))) {
+        		/* Duplicate PDU or flow control overrun */
+        		LOG_ERR("Duplicate PDU or flow control overrun.SN: %u, LWE:%u",
         		 seq_num, LWE);
-                stats_inc(drop, instance->sv);
+                	stats_inc(drop, instance->sv);
 
-                spin_unlock_bh(&instance->sv_lock);
+                	spin_unlock_bh(&instance->sv_lock);
 
-                du_destroy(du);
+                	du_destroy(du);
 
-                if (dtcp) {
-                	/* Send an ACK/Flow Control PDU with current window values */
-                	/* FIXME: we have to send a Control ACK PDU, not an
-                	 * ack flow control one
-                	 */
-                        /*if (dtcp_ack_flow_control_pdu_send(dtcp, LWE)) {
+                	if (dtcp) {
+                		/* Send an ACK/Flow Control PDU with current window values */
+                		/* FIXME: we have to send a Control ACK PDU, not an
+                	 	* ack flow control one
+                	 	*/
+                        	/*if (dtcp_ack_flow_control_pdu_send(dtcp, LWE)) {
                                 LOG_ERR("Failed to send ack/flow control pdu");
                                 return -1;
-                        }*/
-                }
-                return 0;
-        }
+                        	}*/
+                	}
+                	return 0;
+        	}
+	}
 
         /* Start ReceiverInactivityTimer */
         if (rtimer_restart(&instance->timers.receiver_inactivity,
@@ -1680,12 +1689,12 @@ int dtp_receive(struct dtp * instance,
         }
 
         /* This is an acceptable data PDU, stop reliable ACK timer */
-        if (dtcp->sv->rendezvous_rcvr) {
+        if (dtcp && dtcp->sv->rendezvous_rcvr) {
         	LOG_DBG("RV at receiver put to false");
         	dtcp->sv->rendezvous_rcvr = false;
         	rtimer_stop(&dtcp->rendezvous_rcv);
         }
-        if (!a) {
+        if (!a && dtcp) {
                 bool set_lft_win_edge;
 
                 if (!in_order && !dtcp) {

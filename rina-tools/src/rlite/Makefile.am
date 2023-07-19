@@ -7,7 +7,7 @@ AM_INSTALLCHECK_STD_OPTIONS_EXEMPT =
 
 rinaperf_SOURCES = rinaperf.c
 rinaperf_LDADD = $(LIBRINA_API_LIBS) -lm
-rinaperf_CPPFLAGS = $(LIBRINA_API_CFLAGS)
+rinaperf_CPPFLAGS = $(LIBRINA_API_CFLAGS) -pthread
 
 rina_echo_async_SOURCES = rina-echo-async.c
 rina_echo_async_LDADD = $(LIBRINA_API_LIBS)

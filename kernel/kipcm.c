@@ -2091,6 +2091,8 @@ int kipcm_ipc_create(struct kipcm *      kipcm,
                 KIPCM_UNLOCK(kipcm);
                 return -1;
         }
+	
+	LOG_DBG("Here");
 
         factory = ipcpf_find(kipcm->factories, factory_name);
         if (!factory) {
@@ -2098,9 +2100,12 @@ int kipcm_ipc_create(struct kipcm *      kipcm,
                 KIPCM_UNLOCK(kipcm);
                 return -1;
         }
+	
+	LOG_DBG("Here2");
 
         instance = factory->ops->create(factory->data, ipcp_name,
         				id, us_nl_port);
+	LOG_DBG("Here3");
         if (!instance) {
                 KIPCM_UNLOCK(kipcm);
                 return -1;
@@ -2114,6 +2119,8 @@ int kipcm_ipc_create(struct kipcm *      kipcm,
                 KIPCM_UNLOCK(kipcm);
                 return -1;
         }
+	
+	LOG_DBG("Here4");
 
         KIPCM_UNLOCK(kipcm);
 

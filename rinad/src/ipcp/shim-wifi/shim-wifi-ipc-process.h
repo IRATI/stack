@@ -158,8 +158,7 @@ private:
 	void trigger_scan();
 	void abort_enrollment();
 	void notify_cancel_enrollment();
-	void notify_trying_to_associate(const std::string& dif_name,
-					const std::string& neigh_name);
+	void notify_trying_to_associate(const std::string& dif_name);
 	void notify_associated(const std::string& neigh_name);
 	void notify_key_negotiated(const std::string& neigh_name);
 	void notify_connected(const std::string& neigh_name);
