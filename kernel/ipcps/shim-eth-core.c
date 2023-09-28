@@ -397,6 +397,8 @@ find_instance(struct ipcp_factory_data * data,
 {
         struct ipcp_instance_data * pos;
 
+	LOG_INFO("Input data: %pK %d", data, id);
+
         ASSERT(data);
 
         list_for_each_entry(pos, &(data->instances), list) {
@@ -405,8 +407,9 @@ find_instance(struct ipcp_factory_data * data,
                 }
         }
 
-        return NULL;
+	LOG_INFO("No ipc process id with id %d found, returning NULL", id);
 
+        return NULL;
 }
 
 static struct shim_eth_flow * find_flow(struct ipcp_instance_data * data,
