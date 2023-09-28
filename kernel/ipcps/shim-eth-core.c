@@ -2203,10 +2203,14 @@ static struct ipcp_instance* eth_create(struct ipcp_factory_data*  data,
                 return NULL;
         }
 
+	LOG_INFO("No instance found with id %d, creating a new one", id);
+
         /* Create an instance */
         inst = rkzalloc(sizeof(*inst), GFP_KERNEL);
-        if (!inst)
+        if (!inst) {
+		LOG_ERR("Problems creating a new Shim Eth IPCP instance with id %d", id);
                 return NULL;
+	}
 
         /* fill it properly */
         inst->ops  = &eth_instance_ops;
@@ -2218,12 +2222,14 @@ static struct ipcp_instance* eth_create(struct ipcp_factory_data*  data,
                                       kipcm_rset(default_kipcm),
                                       "%u",
                                       id)) {
+		LOG_ERR("Problems initializing robject for Shim Eth IPCP instance wth id %d", id);
                 rkfree(inst);
                 return NULL;
         }
 
         inst->data = rkzalloc(sizeof(struct ipcp_instance_data), GFP_KERNEL);
         if (!inst->data) {
+		LOG_ERR("Problems creating inst->data struct for Shim Eth IPCP instance %d", id);
                 inst_cleanup(inst);
                 return NULL;
         }
