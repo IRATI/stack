@@ -288,6 +288,8 @@ static char * name_tostring_gfp(gfp_t               flags,
         const char * none     = "";
         size_t       none_len = strlen(none);
 
+	LOG_INFO("Function called with params: %pK", n);
+
         if (!n)
                 return NULL;
 
@@ -326,6 +328,8 @@ static char * name_tostring_gfp(gfp_t               flags,
                 rkfree(tmp);
                 return NULL;
         }
+
+	LOG_INFO("Function returning with result %pK", tmp);
 
         return tmp;
 }
