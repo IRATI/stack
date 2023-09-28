@@ -397,7 +397,7 @@ find_instance(struct ipcp_factory_data * data,
 {
         struct ipcp_instance_data * pos;
 
-	LOG_INFO("Input data: %pK %d", data, id);
+	LOG_INFO("Input data: %pK %pK %d", data, &(data->instances), id);
 
         ASSERT(data);
 
