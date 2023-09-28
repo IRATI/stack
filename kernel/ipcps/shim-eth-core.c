@@ -2192,6 +2192,7 @@ static struct ipcp_instance* eth_create(struct ipcp_factory_data*  data,
 #ifdef CONFIG_DEBUG_FS
         char buf[6]; // name of the DebugFS dir.
 #endif
+	LOG_INFO("Eth instance create params: (%pK, %pK) ", data, name);
 
         ASSERT(data);
         ASSERT(name);
