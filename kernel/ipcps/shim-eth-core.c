@@ -401,7 +401,10 @@ find_instance(struct ipcp_factory_data * data,
 
         ASSERT(data);
 
+	LOG_INFO("After assert: %pK", data);
+
         list_for_each_entry(pos, &(data->instances), list) {
+		LOG_INFO("Inside list for each entry safe: %pK", pos);
                 if (pos->id == id) {
                         return pos;
                 }
