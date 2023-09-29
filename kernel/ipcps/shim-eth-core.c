@@ -2138,6 +2138,12 @@ static int eth_init(struct ipcp_factory_data *fdata)
 /* Initialization for a Ethernet shim VLAN instance. */
 static int eth_init_vlan(struct ipcp_factory_data* fdata)
 {
+	ASSERT(fdata == &eth_vlan_data);
+
+        bzero(fdata, sizeof(*fdata));
+
+        INIT_LIST_HEAD(&(fdata->instances));
+	
         LOG_INFO("%s initialized", SHIM_VLAN_NAME);
 
         return 0;
