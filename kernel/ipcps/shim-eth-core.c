@@ -397,20 +397,17 @@ find_instance(struct ipcp_factory_data * data,
 {
         struct ipcp_instance_data * pos;
 
-	LOG_INFO("Input data: %pK %pK %d", data, &(data->instances), id);
+	LOG_DBG("Input data: %pK %pK %d", data, &(data->instances), id);
 
         ASSERT(data);
 
-	LOG_INFO("After assert: %pK", data);
-
         list_for_each_entry(pos, &(data->instances), list) {
-		LOG_INFO("Inside list for each entry safe: %pK", pos);
                 if (pos->id == id) {
                         return pos;
                 }
         }
 
-	LOG_INFO("No ipc process id with id %d found, returning NULL", id);
+	LOG_DBG("No ipc process id with id %d found, returning NULL", id);
 
         return NULL;
 }
@@ -2204,7 +2201,7 @@ static struct ipcp_instance* eth_create(struct ipcp_factory_data*  data,
 #ifdef CONFIG_DEBUG_FS
         char buf[6]; // name of the DebugFS dir.
 #endif
-	LOG_INFO("Eth instance create params: (%pK, %pK) ", data, name);
+	LOG_DBG("Eth instance create params: (%pK, %pK) ", data, name);
 
         ASSERT(data);
         ASSERT(name);
@@ -2215,7 +2212,7 @@ static struct ipcp_instance* eth_create(struct ipcp_factory_data*  data,
                 return NULL;
         }
 
-	LOG_INFO("No instance found with id %d, creating a new one", id);
+	LOG_DBG("No instance found with id %d, creating a new one", id);
 
         /* Create an instance */
         inst = rkzalloc(sizeof(*inst), GFP_KERNEL);
