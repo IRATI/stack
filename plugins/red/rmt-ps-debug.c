@@ -44,11 +44,10 @@ q_len_seq_show(struct seq_file *s, void *v)
 		      "Prob mark:\t%u\n"	\
 		      "Forced drop:\t%u\n"	\
 		      "Forced mark:\t%u\n"	\
-		      "Limit drop:\t%u\n"		\
-		      "Explicit drop:\t%u\n",
+		      "Limit drop:\t%u\n",
 		      debug->stats.prob_drop, debug->stats.prob_mark,
 		      debug->stats.forced_drop, debug->stats.forced_mark,
-		      debug->stats.pdrop, debug->stats.other);
+		      debug->stats.pdrop);
 	seq_printf(s, "Queue occupation:\n");
 	for (i=0; i < debug->q_index; i++)
 		seq_printf(s, "%5u\t%5u\n", debug->q_log[i][0], debug->q_log[i][1]);

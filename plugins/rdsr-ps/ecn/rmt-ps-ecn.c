@@ -191,6 +191,7 @@ static struct attribute * ecn_attrs[] = {
 	&ecn_t_attr.attr,
 	NULL,
 };
+RINA_ATTR_GROUPS(ecn);
 
 static struct attribute * ecn_queue_attrs[] = {
 	&ecn_qs_attr.attr,
@@ -198,6 +199,7 @@ static struct attribute * ecn_queue_attrs[] = {
 	&ecn_ms_attr.attr,
 	NULL,
 };
+RINA_ATTR_GROUPS(ecn_queue);
 
 /* Operations associated with the release of the kobj. */
 static void ecn_release(struct kobject *kobj) {
@@ -208,14 +210,14 @@ static void ecn_release(struct kobject *kobj) {
 static struct kobj_type ecn_ktype = {
 	.sysfs_ops = &ecn_sysfs_ops,
 	.release = ecn_release,
-	.default_attrs = ecn_attrs,
+	RINA_KTYPE_ATTRS(ecn),
 };
 
 /* Queues ECN ktype, different for the type of shown attributes. */
 static struct kobj_type ecn_queue_ktype = {
 	.sysfs_ops = &ecn_sysfs_ops,
 	.release = ecn_release,
-	.default_attrs = ecn_queue_attrs,
+	RINA_KTYPE_ATTRS(ecn_queue),
 };
 
 /*

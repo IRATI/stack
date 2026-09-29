@@ -1656,8 +1656,8 @@ static int eth_set_net_devs_compat(struct ipcp_instance_data* data,
 
         if (!complete_interface) return -1;
 
-        read_lock(&dev_base_lock);
-        data->dev = __dev_get_by_name(&init_net, complete_interface);
+        rcu_read_lock();
+        data->dev = dev_get_by_name_rcu(&init_net, complete_interface);
 
         if (!data->dev) {
                 LOG_ERR("Can't get VLAN ethernet device '%s'",
@@ -1666,7 +1666,7 @@ static int eth_set_net_devs_compat(struct ipcp_instance_data* data,
         }
 
         if (info->vlan_id != 0) {
-                data->phy_dev = __dev_get_by_name(&init_net,
+                data->phy_dev = dev_get_by_name_rcu(&init_net,
                                                   info->interface_name);
                 if (!data->phy_dev) {
                         LOG_ERR("Can't get ethernet device '%s'",
@@ -1677,7 +1677,7 @@ static int eth_set_net_devs_compat(struct ipcp_instance_data* data,
         // In case there was no VLAN ID provided.
         else data->phy_dev = data->dev;
 
-        read_unlock(&dev_base_lock);
+        rcu_read_unlock();
 
         return failed;
 }
@@ -1687,12 +1687,12 @@ static int eth_set_net_devs_auto(struct ipcp_instance_data* data) {
 
         info = data->info;
 
-        read_lock(&dev_base_lock);
-        data->dev = __dev_get_by_name(&init_net, info->interface_name);
+        rcu_read_lock();
+        data->dev = dev_get_by_name_rcu(&init_net, info->interface_name);
 
         if (!data->dev) {
             LOG_ERR("Unknown device: %s", info->interface_name);
-            read_unlock(&dev_base_lock);
+            rcu_read_unlock();
             return -1;
         }
 
@@ -1703,7 +1703,7 @@ static int eth_set_net_devs_auto(struct ipcp_instance_data* data) {
                 if (!vlan_id_is_ok(info->vlan_id)) {
                         if (info->vlan_id != 0) {
                                 LOG_ERR("Bad VLAN ID specified: %d", info->vlan_id);
-                                read_unlock(&dev_base_lock);
+                                rcu_read_unlock();
                                 return -1;
                         }
                 }
@@ -1716,7 +1716,7 @@ static int eth_set_net_devs_auto(struct ipcp_instance_data* data) {
 
                 LOG_DBG("Using physical interface %s", info->interface_name);
         }
-        read_unlock(&dev_base_lock);
+        rcu_read_unlock();
 
         return 0;
 }
