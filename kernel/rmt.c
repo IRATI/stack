@@ -56,11 +56,17 @@ static struct policy_set_list policy_sets = {
 	.head = LIST_HEAD_INIT(policy_sets.head)
 };
 
+/* Next hops returned by pff_nhop() for one PDU. More than this is truncated. */
+#define RMT_MAX_NHOPS 16
+
 struct pff_cache {
 	/* Array of port_id_t */
 	port_id_t *pids;
 	/* Entries in the pids array */
 	size_t count;
+	/* Every CPU sending or relaying through the RMT shares the cache, and pff_nhop()
+	 * may reallocate pids: hold this from the lookup until the results are copied. */
+	spinlock_t lock;
 };
 
 struct rmt_address {
@@ -402,6 +408,7 @@ static int pff_cache_init(struct pff_cache *c)
 
 	c->pids	 = NULL;
 	c->count = 0;
+	spin_lock_init(&c->lock);
 
 	LOG_DBG("PFF cache %pK initialized", c);
 
@@ -956,7 +963,9 @@ EXPORT_SYMBOL(rmt_send_port_id);
 int rmt_send(struct rmt *instance,
 	     struct du * du)
 {
-	int i;
+	port_id_t pids[RMT_MAX_NHOPS];
+	size_t    count;
+	size_t    i;
 
 	if (!instance || !du || !pci_is_ok(&du->pci)) {
 		LOG_ERR("Bogus input parameters passed");
@@ -964,9 +973,11 @@ int rmt_send(struct rmt *instance,
 		return -1;
 	}
 
+	spin_lock_bh(&instance->cache.lock);
 	if (pff_nhop(instance->pff, &du->pci,
 		     &(instance->cache.pids),
 		     &(instance->cache.count))) {
+		spin_unlock_bh(&instance->cache.lock);
 		LOG_ERR("Cannot get the NHOP for this PDU (saddr: %u daddr: %u type: %u)",
 				pci_source(&du->pci), pci_destination(&du->pci),
 				pci_type(&du->pci));
@@ -974,26 +985,32 @@ int rmt_send(struct rmt *instance,
 		du_destroy(du);
 		return -1;
 	}
+	count = instance->cache.count;
+	if (count > RMT_MAX_NHOPS) {
+		LOG_WARN("%zu next hops for this PDU, using the first %d",
+			 count, RMT_MAX_NHOPS);
+		count = RMT_MAX_NHOPS;
+	}
+	if (count)
+		memcpy(pids, instance->cache.pids, count * sizeof(*pids));
+	spin_unlock_bh(&instance->cache.lock);
 
-	if (instance->cache.count == 0) {
+	if (count == 0) {
 		LOG_WARN("No NHOP for this PDU ...");
 		du_destroy(du);
 		return 0;
 	}
 
-	for (i = 0; i < instance->cache.count; i++) {
-		port_id_t   pid;
+	for (i = 0; i < count; i++) {
 		struct du *p;
 
-		pid = instance->cache.pids[i];
-
-		if (i == instance->cache.count-1)
+		if (i == count - 1)
 			p = du;
 		else
 			p = du_dup(du);
 
-		if (rmt_send_port_id(instance, pid, p))
-			LOG_ERR("Failed to send a PDU to port-id %d", pid);
+		if (rmt_send_port_id(instance, pids[i], p))
+			LOG_ERR("Failed to send a PDU to port-id %d", pids[i]);
 	}
 
 	return 0;
