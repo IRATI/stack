@@ -122,6 +122,8 @@ int pidm_destroy(struct pidm * instance)
                 rkfree(pos);
         }
 
+        spin_unlock(&instance->lock);
+
         rkfree(instance);
 
         return 0;
