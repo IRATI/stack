@@ -451,10 +451,8 @@ static int normal_flow_unbinding_user_ipcp(struct ipcp_instance_data * data,
         }
         spin_unlock_bh(&data->lock);
 
-        if (efcp_container_unbind_user_ipcp(data->efcpc, flow->active)){
-                spin_unlock_bh(&data->lock);
+        if (efcp_container_unbind_user_ipcp(data->efcpc, flow->active))
                 return -1;
-        }
 
         return 0;
 }
