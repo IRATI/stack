@@ -1097,6 +1097,10 @@ private:
 //Singleton instance
 extern Singleton<rinad::IPCManager_> IPCManager;
 
+// IPC process daemons the SIGCHLD handler may reap (main.cc). Only those: other
+// children (modprobe for kernel plugins, popen) are waited for by whoever forked them.
+void ipcp_daemon_pid_add(pid_t pid);
+
 }//rinad namespace
 
 #endif  /* __IPCM_H__ */

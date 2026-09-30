@@ -255,6 +255,7 @@ ipcm_res_t IPCManager_::create_ipcp(Addon* callee, CreateIPCPPromise* promise,
 		//Call the factory
 		ipcp = ipcp_factory_.create(name, type);
 		ipcp_id = ipcp->get_id();
+		ipcp_daemon_pid_add(ipcp->proxy_->getPid());
 		pending_cipcp_req[ipcp->proxy_->seq_num] = ipcp_id;
 
 		//Set the promise
