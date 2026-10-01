@@ -140,10 +140,29 @@ static void agg_sysfs_worker(struct work_struct * w)
 	rkfree(sw);
 }
 
+static void agg_entry_free(struct agg_entry * e)
+{
+	struct agg_port * pos, * next;
+
+	list_for_each_entry_safe(pos, next, &e->ports, next) {
+		list_del(&pos->next);
+		rkfree(pos);
+	}
+	rkfree(e);
+}
+
 static void agg_sysfs_post(struct agg_priv * priv, struct agg_entry * entry,
 			   bool add)
 {
 	struct agg_sysfs_work * sw;
+
+	/* A table without a sysfs set (the self-test) frees removed entries
+	 * right away. */
+	if (!priv->rset) {
+		if (!add)
+			agg_entry_free(entry);
+		return;
+	}
 
 	sw = rkzalloc(sizeof(*sw), GFP_ATOMIC);
 	if (!sw) {
@@ -579,8 +598,129 @@ static struct ps_factory agg_factory = {
 	.destroy = agg_destroy,
 };
 
+/*
+ * Self-test (selftest=1): the add, remove, replace and lookup paths on a private table,
+ * printed as "pff-aggregate selftest: N/M passed" whatever IRATI's log level.
+ */
+static bool selftest;
+module_param(selftest, bool, 0444);
+MODULE_PARM_DESC(selftest, "Run the lookup self-test when the module loads");
+
+#define A(r, n, h) ((address_t) (((r) << 24) | ((n) << 12) | (h)))
+
+static int st_entry(struct agg_priv * priv, address_t base, qos_id_t qos,
+		    port_id_t port, bool add)
+{
+	struct mod_pff_entry     m;
+	struct port_id_altlist   alt;
+	port_id_t                ports[1] = { port };
+	struct agg_entry *       e;
+	int                      ret = 0;
+
+	INIT_LIST_HEAD(&m.port_id_altlists);
+	m.fwd_info = base;
+	m.qos_id   = qos;
+	alt.ports     = ports;
+	alt.num_ports = 1;
+	list_add(&alt.next, &m.port_id_altlists);
+
+	spin_lock_bh(&priv->lock);
+	if (add) {
+		ret = __agg_add(priv, &m);
+	} else {
+		e = agg_find_exact(priv, base, qos);
+		if (!e)
+			ret = -1;
+		else {
+			agg_port_remove(e, port);
+			if (list_empty(&e->ports))
+				agg_entry_unlink(priv, e);
+		}
+	}
+	spin_unlock_bh(&priv->lock);
+	return ret;
+}
+
+/* Port the table picks for dst/qos, or -1 for no entry. */
+static int st_lookup(struct agg_priv * priv, address_t dst, qos_id_t qos)
+{
+	struct agg_entry * e;
+	int                port = -1;
+
+	spin_lock_bh(&priv->lock);
+	e = agg_lookup(priv, dst, qos);
+	if (e && !list_empty(&e->ports))
+		port = list_first_entry(&e->ports, struct agg_port, next)->port_id;
+	spin_unlock_bh(&priv->lock);
+	return port;
+}
+
+static void agg_selftest(void)
+{
+	struct agg_priv * priv;
+	int               passed = 0, total = 0;
+
+#define CHECK(desc, cond) do { total++; if (cond) passed++; \
+	else pr_err("pff-aggregate selftest FAILED: %s\n", desc); } while (0)
+
+	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
+	if (!priv) {
+		pr_err("pff-aggregate selftest: out of memory\n");
+		return;
+	}
+	spin_lock_init(&priv->lock);
+	hash_init(priv->table);
+
+	/* prefixLengths: sorted longest first, bad values rejected */
+	CHECK("parse 8,32,20", agg_parse_lengths(priv, "8,32,20") == 0 &&
+	      priv->nlevels == 3 && priv->lengths[0] == 32 &&
+	      priv->lengths[1] == 20 && priv->lengths[2] == 8);
+	CHECK("reject 33", agg_parse_lengths(priv, "33") != 0);
+	CHECK("reject empty", agg_parse_lengths(priv, "") != 0);
+	CHECK("rejected values leave the levels alone", priv->nlevels == 3);
+
+	/* longest prefix first */
+	st_entry(priv, A(2, 1, 2), 0, 1, true);   /* 2.1.2/32   */
+	st_entry(priv, A(2, 1, 0), 0, 2, true);   /* 2.1.0/20   */
+	st_entry(priv, A(2, 0, 0), 0, 3, true);   /* 2.0.0/8    */
+	CHECK("/32 beats /20", st_lookup(priv, A(2, 1, 2), 1) == 1);
+	CHECK("/20 beats /8", st_lookup(priv, A(2, 1, 7), 1) == 2);
+	CHECK("/8 catches the region", st_lookup(priv, A(2, 5, 1), 1) == 3);
+	CHECK("uncovered address misses", st_lookup(priv, A(3, 0, 1), 1) == -1);
+	CHECK("three entries", priv->nentries == 3);
+
+	/* qos: exact qos-id first, then the qos-id 0 wildcard */
+	st_entry(priv, A(1, 1, 1), 2, 4, true);
+	st_entry(priv, A(1, 1, 1), 0, 5, true);
+	CHECK("exact qos-id wins", st_lookup(priv, A(1, 1, 1), 2) == 4);
+	CHECK("wildcard catches other qos-ids", st_lookup(priv, A(1, 1, 1), 1) == 5);
+
+	/* removing the /32 falls back to the /20 */
+	CHECK("remove 2.1.2", st_entry(priv, A(2, 1, 2), 0, 1, false) == 0);
+	CHECK("after removal /20 answers", st_lookup(priv, A(2, 1, 2), 1) == 2);
+	CHECK("removing a missing entry fails", st_entry(priv, A(2, 1, 2), 0, 1, false) != 0);
+
+	/* replace the table (pff_modify path): the old entries are gone */
+	spin_lock_bh(&priv->lock);
+	__agg_flush(priv);
+	spin_unlock_bh(&priv->lock);
+	CHECK("flush empties", priv->nentries == 0 && st_lookup(priv, A(2, 1, 7), 1) == -1);
+	st_entry(priv, A(9, 9, 0), 0, 6, true);
+	CHECK("new table works", st_lookup(priv, A(9, 9, 9), 1) == 6);
+
+	spin_lock_bh(&priv->lock);
+	__agg_flush(priv);
+	spin_unlock_bh(&priv->lock);
+	kfree(priv);
+#undef CHECK
+	pr_info("pff-aggregate selftest: %d/%d passed\n", passed, total);
+}
+
 static int __init mod_init(void)
 {
+	if (selftest)
+		agg_selftest();
+
 	strscpy(agg_factory.name, PFF_AGG_NAME, sizeof(agg_factory.name));
 	if (pff_ps_publish(&agg_factory)) {
 		LOG_ERR("Failed to publish the aggregate PFF policy set");
