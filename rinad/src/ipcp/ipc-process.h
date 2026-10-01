@@ -245,6 +245,7 @@ private:
         KernelSyncTrigger * kernel_sync;
         unsigned int old_address;
         bool address_change_period;
+        bool address_change_prepared;
         bool use_new_address;
         rina::Timer timer;
 };

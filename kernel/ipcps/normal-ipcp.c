@@ -81,6 +81,7 @@ struct ipcp_instance_data {
         struct sdup *           sdup;
         address_t               address;
         address_t		old_address;
+        address_t               active_address;
         spinlock_t              lock;
         struct list_head        list;
         /* Timers required for the address change procedure */
@@ -679,6 +680,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         }
 
         data->address  = config->address;
+        data->active_address = config->address;
 
         efcp_config = config->efcp_config;
         config->efcp_config = 0;
@@ -759,7 +761,7 @@ static int normal_mgmt_du_write(struct ipcp_instance_data * data,
         if (pci_format(&du->pci,
                        0,
                        0,
-                       data->address,
+                       READ_ONCE(data->active_address),
                        0,
                        0,
                        1,
@@ -1161,6 +1163,11 @@ int normal_address_change(struct ipcp_instance_data * data,
 
 	rmt_address_add(data->rmt, new_address);
 
+	/* 0/0 prepares a synonym without switching EFCP or retiring the old
+	 * address. Userspace commits only after every active peer confirms. */
+	if (!use_new_address_t && !deprecate_old_address_t)
+		return 0;
+
 	/* Set timer to start advertising new address in EFCP connections
 	and MGMT PDUs (give time to routing updates to converge) */;
 	rtimer_restart(&data->timers.use_naddress, use_new_address_t);
@@ -1193,6 +1200,7 @@ static void tf_use_naddress(struct timer_list * tl)
         	  inst_data->address);
 
         efcp_address_change(inst_data->efcpc, inst_data->address);
+        WRITE_ONCE(inst_data->active_address, inst_data->address);
 }
 
 /* Runs the Kill old address Timer function */

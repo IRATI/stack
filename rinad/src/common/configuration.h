@@ -115,6 +115,7 @@ class Flow {
         /// While the search rules that generate the forwarding table should allow for a
         /// natural termination condition, it seems wise to have the means to enforce termination.
         unsigned int hop_count;
+        uint64_t address_change_id;
 
         ///True if this IPC process is the source of the flow, false otherwise
         bool source;

@@ -188,6 +188,10 @@ public:
 	virtual void remoteWriteResult(const cdap_rib::con_handle_t &con,
 				       const cdap_rib::obj_info_t &obj,
 				       const cdap_rib::res_info_t &res);
+	virtual void remoteWriteResult(const cdap_rib::con_handle_t &con,
+		const cdap_rib::obj_info_t &obj, const cdap_rib::res_info_t &res, int invoke_id) {
+		remoteWriteResult(con, obj, res);
+	}
 	virtual void remoteStartResult(const cdap_rib::con_handle_t &con,
 				       const cdap_rib::obj_info_t &obj,
 				       const cdap_rib::res_info_t &res);
@@ -901,6 +905,10 @@ public:
                          const cdap_rib::filt_info_t &filt,
                          RIBOpsRespHandler * resp_handler, 
 			 int invoke_id = 0);
+
+        // Discard a timed-out operation's callback; IDs stay reserved until a
+        // late reply arrives, so it cannot consume another operation's handler.
+        void cancel_remote_operation(int invoke_id);
 
         ///
         /// Perform a start operation over an object of the remote RIB
