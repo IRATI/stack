@@ -1273,10 +1273,23 @@ void FlowStateObjects::getAllFSOs(std::list<FlowStateObject>& result)
 void FlowStateObjects::incrementAge(unsigned int max_age, rina::Timer* timer)
 {
 	rina::ScopedLock g(lock);
+	std::string my_name = IPCPFactory::getIPCP()->get_name();
 
 	for (std::map<std::string, FlowStateObject *>::iterator
 		it = objects.begin(); it != objects.end(); ++it) 
 	{
+		// An object's age resets only when it changes, so unchanged
+		// adjacencies, our own included, would expire after max_age pulses
+		// and routing would empty. Re-originate our live objects at half
+		// their lifetime, the way link-state protocols refresh advertisements.
+		if (it->second->name == my_name && !it->second->being_erased &&
+		    it->second->age < max_age && it->second->age + 1 >= max_age / 2) {
+			it->second->age = 0;
+			it->second->seq_num++;
+			it->second->modified = true;
+			continue;
+		}
+
 		if (it->second->age < UINT_MAX)
 			it->second->age = it->second->age + 1;
 
