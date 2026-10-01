@@ -39,6 +39,12 @@ extern "C" void
 destroyNamespaceManagerPs(rina::IPolicySet * instance);
 
 extern "C" rina::IPolicySet *
+createTopologicalNamespaceManagerPs(rina::ApplicationEntity * context);
+
+extern "C" void
+destroyTopologicalNamespaceManagerPs(rina::IPolicySet * instance);
+
+extern "C" rina::IPolicySet *
 createPDUFTGenPs(rina::ApplicationEntity * ctx);
 
 extern "C" void
@@ -109,6 +115,12 @@ get_factories(std::vector<struct rina::PsFactory>& factories)
         nsm_factory.info.app_entity = INamespaceManager::NAMESPACE_MANAGER_AE_NAME;
         nsm_factory.create = createNamespaceManagerPs;
         nsm_factory.destroy = destroyNamespaceManagerPs;
+	factories.push_back(nsm_factory);
+
+        nsm_factory.info.name = "topological";
+        nsm_factory.info.app_entity = INamespaceManager::NAMESPACE_MANAGER_AE_NAME;
+        nsm_factory.create = createTopologicalNamespaceManagerPs;
+        nsm_factory.destroy = destroyTopologicalNamespaceManagerPs;
 	factories.push_back(nsm_factory);
 
         pduft_gen_factory.info.name = rina::IPolicySet::DEFAULT_PS_SET_NAME;

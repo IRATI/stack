@@ -33,6 +33,11 @@
                         "Version" : "1"
                 },
                 {
+                        "Name": "topological",
+                        "Component": "namespace-manager",
+                        "Version" : "1"
+                },
+                {
                         "Name": "default",
                         "Component": "resource-allocator",
                         "Version" : "1"
