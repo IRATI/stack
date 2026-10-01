@@ -21,6 +21,7 @@
 //
 
 #include <sstream>
+#include <algorithm>
 
 #include <librina/internal-events.h>
 
@@ -799,11 +800,40 @@ void ResourceAllocator::set_rt_entries(const std::list<rina::RoutingTableEntry*>
 	}
 }
 
+// With the "aggregate" PFF policy set the routing table holds prefixes as well as
+// addresses: an entry whose address is a prefix's base (lower bits cleared) covers every
+// address under it. Its prefixLengths parameter says which lengths exist; the kernel
+// looks up PDUs the same way.
+static std::vector<unsigned int> aggregate_prefix_lengths(const rina::DIFConfiguration& dc)
+{
+	std::vector<unsigned int> lengths;
+	const rina::PolicyConfig& ps = dc.rmt_configuration_.pft_conf_.policy_set_;
+	std::list<rina::PolicyParameter>::const_iterator p;
+
+	if (ps.name_ != "aggregate")
+		return lengths;
+	for (p = ps.parameters_.begin(); p != ps.parameters_.end(); ++p) {
+		if (p->name_ != "prefixLengths")
+			continue;
+		std::stringstream ss(p->value_);
+		std::string tok;
+		while (std::getline(ss, tok, ',')) {
+			unsigned int len = strtoul(tok.c_str(), NULL, 10);
+			if (len < 32)	// 32 is the exact match, already tried
+				lengths.push_back(len);
+		}
+	}
+	std::sort(lengths.rbegin(), lengths.rend());
+	return lengths;
+}
+
 int ResourceAllocator::get_next_hop_addresses(unsigned int dest_address,
 					      std::list<unsigned int>& addresses)
 {
 	std::map<std::string, rina::RoutingTableEntry *>::iterator it;
 	std::list<unsigned int>::iterator it2;
+	std::vector<unsigned int> lengths;
+	std::vector<unsigned int>::iterator len;
 
 	rina::ReadScopedLock g(rt_lock);
 
@@ -813,6 +843,23 @@ int ResourceAllocator::get_next_hop_addresses(unsigned int dest_address,
 			if (dest_address == *it2) {
 				addresses = it->second->nextHopNames.front().alts.front().addresses;
 				return 0;
+			}
+		}
+	}
+
+	// No exact entry: longest prefix first, as the aggregate PFF does.
+	lengths = aggregate_prefix_lengths(ipcp->get_dif_information().dif_configuration_);
+	for (len = lengths.begin(); len != lengths.end(); ++len) {
+		unsigned int mask = *len ? ~0U << (32 - *len) : 0;
+		unsigned int base = dest_address & mask;
+
+		for (it = rt.begin(); it != rt.end(); ++it) {
+			for (it2 = it->second->destination.addresses.begin();
+					it2 != it->second->destination.addresses.end(); ++it2) {
+				if (*it2 == base) {
+					addresses = it->second->nextHopNames.front().alts.front().addresses;
+					return 0;
+				}
 			}
 		}
 	}
