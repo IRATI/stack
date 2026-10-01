@@ -613,6 +613,17 @@ struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         list_del(&pos->next);
                         seq_queue_entry_destroy(pos);
 
+                        /* Hold the final PCI before publishing the DU to a
+                         * queue another CPU can drain and free. The queue may
+                         * also be empty after retransmission-only expiry. */
+                        if (pci_ret)
+                                pci_release(pci_ret);
+                        pci_ret = &du->pci;
+                        if (pci_get(pci_ret)) {
+                                LOG_ERR("Could not get a reference to PCI");
+                                pci_ret = NULL;
+                        }
+
                         if (ringq_push(dtp->to_post, du)) {
                                 LOG_ERR("Could not post PDU %u while A timer"
                                         "(in-order)", seq_num);
@@ -621,7 +632,6 @@ struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
                         LOG_DBG("Atimer: PDU %u posted", seq_num);
 
                         LWE = seq_num;
-                        pci_ret = &du->pci;
                         continue;
                 }
 
@@ -630,9 +640,6 @@ struct pci * process_A_expiration(struct dtp * dtp, struct dtcp * dtcp)
         }
 
         spin_unlock_bh(&dtp->sv_lock);
-
-        if (pci_get(pci_ret))
-		LOG_ERR("Could not get a reference to PCI");
 
         while (!ringq_is_empty(dtp->to_post)) {
                 du = (struct du *) ringq_pop(dtp->to_post);
