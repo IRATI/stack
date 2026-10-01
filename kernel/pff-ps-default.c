@@ -190,9 +190,13 @@ static int pff_sysfs_worker(void * o)
         			 "%u-%d", data->entry->destination,
 				 data->entry->qos_id);
         } else {
-        	robject_del(&data->entry->robj);
-                rkfree(&data->entry);
+		/* pfte_destroy() already took the entry out of the table and
+		 * freed its ports; the sysfs object and the entry go here. */
+		if (data->entry->robj.kobj.state_in_sysfs)
+			robject_del(&data->entry->robj);
+                rkfree(data->entry);
         }
+        rkfree(data);
 
         return 0;
 }
