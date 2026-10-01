@@ -2339,6 +2339,32 @@ void LinkStateRoutingPolicy::_routingTableUpdate()
 	//Populate addresses (right now there are only names int he RT entries)
 	populateAddresses(rt, flow_state_objects);
 
+	// A boundary must deliver to its enrolled children directly, even while a
+	// handover makes the old link expensive. Sending an old synonym back into
+	// the core would loop: the unchanged aggregate points straight back here.
+	if (aggregate_prefix_len_) {
+		std::list<rina::Neighbor> neighbors = ipc_process_->get_neighbors();
+		for (std::list<rina::Neighbor>::const_iterator neighbor = neighbors.begin();
+		     neighbor != neighbors.end(); ++neighbor) {
+			if (!neighbor->is_enrolled() || neighbor->get_underlying_port_id() <= 0 ||
+			    children_.find(neighbor->name_.processName) == children_.end())
+				continue;
+			for (std::list<rina::RoutingTableEntry *>::iterator entry = rt.begin();
+			     entry != rt.end(); ++entry) {
+				if ((*entry)->destination.name != neighbor->name_.processName)
+					continue;
+				rina::IPCPNameAddresses next_hop;
+				next_hop.name = neighbor->name_.processName;
+				next_hop.addresses.push_back(neighbor->address_);
+				rina::NHopAltList alternatives;
+				alternatives.alts.push_back(next_hop);
+				(*entry)->nextHopNames.clear();
+				(*entry)->nextHopNames.push_back(alternatives);
+				(*entry)->cost = 1;
+			}
+		}
+	}
+
 	LOG_IPCP_DBG("Computed new Next Hop and PDU Forwarding Tables");
 	printNhopTable(rt);
 
