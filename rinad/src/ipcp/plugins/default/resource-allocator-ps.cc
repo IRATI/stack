@@ -170,8 +170,17 @@ void DefaultPDUFTGeneratorPs::routingTableUpdated(const std::list<rina::RoutingT
 						for (kt = jt->alts.begin();
 								kt != jt->alts.end(); kt++) {
 							port_id = n1fm->get_n1flow_to_neighbor(qosmap_it->second, kt->name);
+							// As without a qos-id map: fall back to the management
+							// flow, found by address when the route names no next
+							// hop (static routes), and skip a next hop with no flow.
+							if (port_id == -1) {
+								if (kt->name != "")
+									port_id = n1fm->getManagementFlowToNeighbour(kt->name);
+								else
+									port_id = n1fm->getManagementFlowToNeighbour(kt->addresses.front());
+							}
 							if (port_id == -1)
-								port_id = n1fm->getManagementFlowToNeighbour(kt->name);
+								continue;
 
 							LOG_IPCP_DBG("NHOP %s qos-id %u --> N-1 port-id: %u",
 									kt->name.c_str(), entry->qosId, port_id);
