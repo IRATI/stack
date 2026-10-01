@@ -135,7 +135,7 @@ void StaticRoutingPs::parse_policy_param(rina::PolicyParameter pm,
 	std::list<rina::StaticIPCProcessAddress>::iterator it;
 	unsigned int counter;
 
-	if (pm.name_.c_str() == DEFAULT_NEXT_HOP) {
+	if (pm.name_ == DEFAULT_NEXT_HOP) {
 		param_type = DEFAULT;
 	} else {
 		split(range, pm.name_.c_str(), '-');
