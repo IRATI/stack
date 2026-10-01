@@ -322,6 +322,7 @@ private:
 
 	bool was_dif_member_before_enrollment_;
 	bool had_neighbors_before_enrollment_;
+	rina::ApplicationProcessNamingInformation previous_attachment_;
 	unsigned int pending_address_;
 	bool allowed_to_start_early_;
 	int stop_request_invoke_id_;
@@ -502,7 +503,18 @@ void EnrolleeStateMachine::connectResponse(int result,
 
 		if (ipc_process_->get_address() != 0) {
 			was_dif_member_before_enrollment_ = true;
-			had_neighbors_before_enrollment_ = !ipc_process_->get_neighbors().empty();
+			std::list<rina::Neighbor> neighbors = ipc_process_->get_neighbors();
+			unsigned int enrolled = 0;
+			for (std::list<rina::Neighbor>::const_iterator neighbor = neighbors.begin();
+			     neighbor != neighbors.end(); ++neighbor) {
+				if (neighbor->enrolled_ && neighbor->get_underlying_port_id() > 0) {
+					previous_attachment_ = neighbor->name_;
+					++enrolled;
+				}
+			}
+			had_neighbors_before_enrollment_ = enrolled > 0;
+			if (enrolled != 1)
+				previous_attachment_ = rina::ApplicationProcessNamingInformation();
 			eiRequest.address_ = ipc_process_->get_address();
 		} else {
 			rina::DIFInformation difInformation;
@@ -775,6 +787,23 @@ void EnrolleeStateMachine::enrollmentCompleted()
 
 	//Send DirectoryForwardingTableEntries
 	sendDFTEntries();
+
+	// Reuse link-state's existing prepare-handover hook: move traffic to the
+	// new attachment while retaining the old one as a high-cost backup. Opt in
+	// on a moving endpoint only; do not change infrastructure routing policy.
+	if (pending_address_ && !previous_attachment_.processName.empty()) {
+		const rina::PolicyConfig& config = ipc_process_->get_dif_information().
+			dif_configuration_.et_configuration_.policy_set_;
+		try {
+			if (config.get_param_value_as_string("preferNewAttachment") == "true") {
+				enr_request.event_.prepare_for_handover = true;
+				enr_request.event_.disc_neigh_name = previous_attachment_;
+				LOG_IPCP_INFO("Preparing handover from %s to %s",
+					      previous_attachment_.processName.c_str(),
+					      remote_peer_.name_.processName.c_str());
+			}
+		} catch (rina::Exception &e) { }
+	}
 
 	enrollment_task_->enrollmentCompleted(remote_peer_, true,
 					      enr_request.event_.prepare_for_handover,
