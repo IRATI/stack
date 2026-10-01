@@ -1739,6 +1739,7 @@ const int LinkStateRoutingPolicy::MAXIMUM_BUFFER_SIZE = 4096;
 const std::string LinkStateRoutingPolicy::DIJKSTRA_ALG = "Dijkstra";
 const std::string LinkStateRoutingPolicy::ECMP_DIJKSTRA_ALG = "ECMPDijkstra";
 const std::string LinkStateRoutingPolicy::MAXIMUM_OBJECTS_PER_ROUTING_UPDATE = "maxObjectsPerUpdate";
+const std::string LinkStateRoutingPolicy::AGGREGATE_PREFIX_LENGTH = "aggregatePrefixLength";
 
 LinkStateRoutingPolicy::LinkStateRoutingPolicy(IPCProcess * ipcp)
 {
@@ -1750,6 +1751,7 @@ LinkStateRoutingPolicy::LinkStateRoutingPolicy(IPCProcess * ipcp)
 	db_ = 0;
 	wait_until_deprecate_address_ = 0;
 	max_objects_per_rupdate_ = MAX_OBJECTS_PER_ROUTING_UPDATE_DEFAULT;
+	aggregate_prefix_len_ = 0;
 
 	subscribeToEvents();
 	timer_ = new rina::Timer();
@@ -1808,6 +1810,22 @@ void LinkStateRoutingPolicy::set_dif_configuration(
 #if 0
 	resiliency_algorithm_ = new LoopFreeAlternateAlgorithm(*routing_algorithm_);
 #endif
+
+	// aggregatePrefixLength makes this IPC process an aggregation boundary (a
+	// gNB): the neighbours under its own prefix of that length are its
+	// children. Flow state objects that involve a child go to that child only,
+	// never past this IPC process, and this IPC process advertises the prefix
+	// with its own address instead. The rest of the DIF then holds one route to
+	// the prefix, however many children attach, move or leave.
+	try {
+		aggregate_prefix_len_ = psconf.get_param_value_as_uint(AGGREGATE_PREFIX_LENGTH);
+		if (aggregate_prefix_len_ >= 32)
+			aggregate_prefix_len_ = 0;
+		LOG_IPCP_INFO("Aggregation boundary for prefix length %u",
+			      aggregate_prefix_len_);
+	} catch (rina::Exception &e) {
+		aggregate_prefix_len_ = 0;
+	}
 
 
 	if (!test_) {
@@ -1982,6 +2000,10 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(rina::NeighborAddedEvent 
 	LOG_IPCP_DBG("Adding new FSO to neighbor");
 	try {
 		addresses.push_back(ipc_process_->get_address());
+		// An aggregation boundary also stands for its prefix. Its own
+		// address stays first: next hops resolve to ports by it.
+		if (aggregate_prefix_len_)
+			addresses.push_back(ipc_process_->get_address() & aggregate_mask());
 		neigh_addresses.push_back(
 				ipc_process_->namespace_manager_->getAdressByname(
 						event->neighbor_.get_name()));
@@ -2004,6 +2026,7 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(rina::NeighborAddedEvent 
 	std::list< std::list<FlowStateObject> > all_fsos;
 	FlowStateObjectListEncoder encoder;
 	db_->getAllFSOsForPropagation(all_fsos, max_objects_per_rupdate_);
+	filter_for_port(all_fsos, portId);
 	for (std::list< std::list<FlowStateObject> >::iterator it = all_fsos.begin();
 			it != all_fsos.end(); ++it) {
 		try {
@@ -2049,6 +2072,9 @@ void LinkStateRoutingPolicy::propagateFSDB()
 
 	//3 Get the objects to send
 	db_->prepareForPropagation(objectsToSend, max_objects_per_rupdate_);
+	for (std::map<int, std::list< std::list<FlowStateObject> > >::iterator pit =
+			objectsToSend.begin(); pit != objectsToSend.end(); ++pit)
+		filter_for_port(pit->second, pit->first);
 
 	if (objectsToSend.size() == 0) {
 		return;
@@ -2085,6 +2111,80 @@ void LinkStateRoutingPolicy::propagateFSDB()
 				LOG_IPCP_ERR("Errors sending message: %s", e.what());
 			}
 		}
+	}
+}
+
+unsigned int LinkStateRoutingPolicy::aggregate_mask() const
+{
+	if (aggregate_prefix_len_ == 0)
+		return 0;
+	return ~0U << (32 - aggregate_prefix_len_);
+}
+
+// A child: an address under this boundary's prefix other than its own and the
+// prefix's base (which this IPC process advertises itself).
+bool LinkStateRoutingPolicy::is_child_address(unsigned int address) const
+{
+	unsigned int own;
+
+	if (aggregate_prefix_len_ == 0 || address == 0)
+		return false;
+	own = ipc_process_->get_address();
+	if (address == own || address == (own & aggregate_mask()))
+		return false;
+	return (address & aggregate_mask()) == (own & aggregate_mask());
+}
+
+unsigned int LinkStateRoutingPolicy::neighbor_address_on_port(int port_id) const
+{
+	std::list<rina::Neighbor> neighbors = ipc_process_->get_neighbors();
+	std::list<rina::Neighbor>::const_iterator it;
+
+	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
+		if (it->get_underlying_port_id() == port_id)
+			return it->address_;
+	}
+	return 0;
+}
+
+// An object that involves a child may only go to that child.
+bool LinkStateRoutingPolicy::fso_allowed_on_port(const FlowStateObject& fso,
+						 int port_id) const
+{
+	std::list<unsigned int>::const_iterator a;
+	unsigned int dest;
+
+	if (aggregate_prefix_len_ == 0)
+		return true;
+	dest = neighbor_address_on_port(port_id);
+	for (a = fso.addresses.begin(); a != fso.addresses.end(); ++a)
+		if (is_child_address(*a) && *a != dest)
+			return false;
+	for (a = fso.neighbor_addresses.begin(); a != fso.neighbor_addresses.end(); ++a)
+		if (is_child_address(*a) && *a != dest)
+			return false;
+	return true;
+}
+
+void LinkStateRoutingPolicy::filter_for_port(std::list< std::list<FlowStateObject> >& lists,
+					     int port_id) const
+{
+	std::list< std::list<FlowStateObject> >::iterator l;
+	std::list<FlowStateObject>::iterator f;
+
+	if (aggregate_prefix_len_ == 0)
+		return;
+	for (l = lists.begin(); l != lists.end(); ) {
+		for (f = l->begin(); f != l->end(); ) {
+			if (fso_allowed_on_port(*f, port_id))
+				++f;
+			else
+				f = l->erase(f);
+		}
+		if (l->empty())
+			l = lists.erase(l);
+		else
+			++l;
 	}
 }
 
