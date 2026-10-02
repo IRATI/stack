@@ -51,6 +51,8 @@ struct connection {
         port_id_t              port_id;
         address_t              source_address;
         address_t              destination_address;
+        /* The peer address a flow update last replaced; never re-learnt */
+        address_t              replaced_destination_address;
         cep_id_t               source_cep_id;
         cep_id_t               destination_cep_id;
         qos_id_t               qos_id;

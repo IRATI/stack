@@ -35,6 +35,7 @@
 #include "dtcp.h"
 #include "rmt.h"
 #include "efcp-str.h"
+#include "efcp.h"
 #include "dtp.h"
 #include "dtp-utils.h"
 #include "dtcp-conf-utils.h"
@@ -632,10 +633,6 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct du * du)
                 return -1;
         }
 
-        /* In case EFCP address of peer has changed */
-        dtcp->parent->efcp->connection->destination_address =
-        		pci_source(&du->pci);
-
         sn = pci_sequence_number_get(&du->pci);
         spin_lock_bh(&dtcp->parent->sv_lock);
         last_ctrl = dtcp->sv->last_rcv_ctl_seq;
@@ -676,6 +673,10 @@ int dtcp_common_rcv_control(struct dtcp * dtcp, struct du * du)
         spin_lock_bh(&dtcp->parent->sv_lock);
         dtcp->sv->last_rcv_ctl_seq = sn;
         spin_unlock_bh(&dtcp->parent->sv_lock);
+
+        /* In case EFCP address of peer has changed; a duplicate or reordered
+         * control PDU is older than the last one and must not move it back */
+        efcp_peer_address_seen(dtcp->parent->efcp, pci_source(&du->pci));
 
         LOG_DBG("dtcp_common_rcv_control sending to proper function...");
 

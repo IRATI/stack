@@ -883,6 +883,9 @@ int efcp_connection_modify(struct efcp_container * cont,
 		}
 		return 0;
 	}
+	if (efcp->connection->destination_address != dst)
+		efcp->connection->replaced_destination_address =
+			efcp->connection->destination_address;
 	efcp->connection->source_address = src;
 	efcp->connection->destination_address = dst;
 	spin_unlock_bh(&cont->lock);
@@ -890,6 +893,21 @@ int efcp_connection_modify(struct efcp_container * cont,
 	return 0;
 }
 EXPORT_SYMBOL(efcp_connection_modify);
+
+/*
+ * Follow a peer's address from the source of its fresh control PDUs, but never
+ * back to the address a flow update replaced: until the peer commits, its PDUs
+ * still carry that address, and one delayed past the peer's renumbering would
+ * point this connection at a retired address (RINA RM Part 3-2, 2.4: the
+ * destination expects both sources for a while, then stops accepting the old).
+ */
+void efcp_peer_address_seen(struct efcp * efcp, address_t addr)
+{
+	spin_lock_bh(&efcp->container->lock);
+	if (addr != efcp->connection->replaced_destination_address)
+		efcp->connection->destination_address = addr;
+	spin_unlock_bh(&efcp->container->lock);
+}
 
 int efcp_enqueue(struct efcp * efcp,
                  port_id_t     port,
