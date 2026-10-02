@@ -89,6 +89,7 @@ struct pidm * pidm_create(struct dentry *dbg_dir)
 
         INIT_LIST_HEAD(&(instance->allocated_ports));
         instance->last_allocated = 0;
+        spin_lock_init(&instance->lock);
 
 #ifdef CONFIG_DEBUG_FS
         if (dbg_dir)
