@@ -21,6 +21,7 @@
  */
 #include <algorithm>
 #include <cerrno>
+#include <climits>
 
 #define RINA_PREFIX "cdap"
 
@@ -299,7 +300,9 @@ class ConnectionStateMachine
 	TimerTask * last_timer_task;
 };
 
-/// It will always try to use short invokeIds (as close to 1 as possible)
+/// Hands out invoke ids in turn, wrapping before INT_MAX, and skips ids still in
+/// use. Reusing the smallest free id would give a just-freed id to the next
+/// operation, which could then take a late or duplicate reply to the earlier one.
 class CDAPInvokeIdManagerImpl : public CDAPInvokeIdManager, rina::Lockable
 {
  public:
@@ -311,6 +314,8 @@ class CDAPInvokeIdManagerImpl : public CDAPInvokeIdManager, rina::Lockable
  private:
 	std::list<int> used_invoke_sent_ids_;
 	std::list<int> used_invoke_recv_ids_;
+	int last_sent_id_;
+	int last_recv_id_;
 };
 
 /// Encapsulates an operation state
@@ -915,6 +920,8 @@ void CDAPMessageFactory::getCancelReadResponseMessage(cdap_m_t & msg,
 // CLASS CDAPSessionInvokeIdManagerImpl
 CDAPInvokeIdManagerImpl::CDAPInvokeIdManagerImpl()
 {
+	last_sent_id_ = 0;
+	last_recv_id_ = 0;
 }
 CDAPInvokeIdManagerImpl::~CDAPInvokeIdManagerImpl() throw ()
 {
@@ -933,16 +940,21 @@ void CDAPInvokeIdManagerImpl::freeInvokeId(int invoke_id, bool sent)
 int CDAPInvokeIdManagerImpl::newInvokeId(bool sent)
 {
 	lock();
-	int candidate = 1;
 	std::list<int> * invoke_ids;
-	if (sent)
+	int * last;
+	if (sent) {
 		invoke_ids = &used_invoke_sent_ids_;
-	else
+		last = &last_sent_id_;
+	} else {
 		invoke_ids = &used_invoke_recv_ids_;
-	while (std::find(invoke_ids->begin(), invoke_ids->end(), candidate)
-			!= invoke_ids->end()) {
-		candidate = candidate + 1;
+		last = &last_recv_id_;
 	}
+	int candidate = *last;
+	do {
+		candidate = candidate == INT_MAX - 1 ? 1 : candidate + 1;
+	} while (std::find(invoke_ids->begin(), invoke_ids->end(), candidate)
+			!= invoke_ids->end());
+	*last = candidate;
 	invoke_ids->push_back(candidate);
 	unlock();
 	return candidate;
