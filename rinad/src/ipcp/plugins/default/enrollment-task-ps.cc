@@ -603,6 +603,9 @@ void EnrolleeStateMachine::remoteStartResult(const rina::cdap_rib::con_handle_t 
 				try {
 					rina::kernelIPCProcess->changeAddress(eiResp.address_,
 								      old_address, 0, 1000);
+					// No local flows or FSOs use the placeholder. Join its
+					// timers now so the first move can prepare a new pair.
+					rina::kernelIPCProcess->retireAddress(eiResp.address_, old_address);
 				} catch (rina::Exception &e) {
 					LOG_IPCP_ERR("Could not change the kernel address: %s", e.what());
 				}

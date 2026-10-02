@@ -195,10 +195,11 @@ public:
         unsigned int get_address() const;
         void set_address(unsigned int address);
         void requestPDUFTEDump();
-        void expire_old_address(void);
+        void expire_old_address(uint64_t generation, unsigned int new_address,
+                                unsigned int retiring_address);
         unsigned int get_old_address();
         unsigned int get_active_address();
-        void activate_new_address(void);
+        void activate_new_address(uint64_t generation);
         bool check_address_is_mine(unsigned int address);
         void eventHappened(rina::InternalEvent * event);
         unsigned int getAdressByname(const rina::ApplicationProcessNamingInformation& name);
@@ -246,6 +247,7 @@ private:
         unsigned int old_address;
         bool address_change_period;
         bool address_change_prepared;
+        uint64_t address_change_generation;
         bool use_new_address;
         rina::Timer timer;
 };

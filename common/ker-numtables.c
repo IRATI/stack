@@ -339,6 +339,9 @@ struct irati_msg_layout irati_ker_numtables[] = {
     [RINA_C_IPCM_SCAN_MEDIA_REQUEST] = {
         .copylen = sizeof(struct irati_msg_base),
     },
+    [RINA_C_IPCP_ADDRESS_RETIRE_REQUEST] = {
+        .copylen = sizeof(struct irati_kmsg_ipcp_address_change),
+    },
     [RINA_C_MAX] = {
         .copylen = 0,
         .names = 0,

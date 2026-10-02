@@ -33,6 +33,7 @@ const std::string InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED = "N_MINUS_1_FLO
 const std::string InternalEvent::APP_NEIGHBOR_DECLARED_DEAD = "NEIGHBOR_DECLARED_DEAD";
 const std::string InternalEvent::APP_NEIGHBOR_ADDED = "NEIGHBOR_ADDED";
 const std::string InternalEvent::ADDRESS_CHANGE = "ADDRESS_CHANGE";
+const std::string InternalEvent::ADDRESS_RETIRED = "ADDRESS_RETIRED";
 const std::string InternalEvent::NEIGHBOR_ADDRESS_CHANGE = "NEIGHBOR_ADDRESS_CHANGE";
 const std::string InternalEvent::IPCP_INTERNAL_FLOW_ALLOCATED = "IPCP_INTERNAL_FLOW_ALLOCATED";
 const std::string InternalEvent::IPCP_INTERNAL_FLOW_ALLOCATION_FAILED = "IPCP_INTERNAL_FLOW_ALLOCATION_FAILED";
