@@ -1816,15 +1816,25 @@ void FlowAllocatorInstance::destroyFlowAllocatorInstance(
 bool FlowAllocatorInstance::modify_flow_request(const configs::Flow & flow)
 {
 	rina::ScopedLock g(lock_);
+	const char * reject = 0;
 	if (state != FLOW_ALLOCATED || flow.connections.empty() ||
 	    flow.current_connection_index >= flow.connections.size() || !flow.local_address ||
 	    flow.local_port_id != flow_->remote_port_id || flow.remote_port_id != flow_->local_port_id ||
 	    flow.getActiveConnection()->getSourceCepId() != flow_->getActiveConnection()->getDestCepId() ||
-	    flow.getActiveConnection()->getDestCepId() != flow_->getActiveConnection()->getSourceCepId() ||
-	    flow.address_change_id < peer_change_id_ ||
-	    (peer_change_id_ && flow.address_change_id == peer_change_id_ &&
-	     flow.local_address != flow_->remote_address))
+	    flow.getActiveConnection()->getDestCepId() != flow_->getActiveConnection()->getSourceCepId())
+		reject = "does not match this flow";
+	else if (flow.address_change_id < peer_change_id_)
+		reject = "is older than";
+	else if (peer_change_id_ && flow.address_change_id == peer_change_id_ &&
+		 flow.local_address != flow_->remote_address)
+		reject = "conflicts with";
+	if (reject) {
+		LOG_IPCP_WARN("Rejected flow update for port %d to address %u (change %llu): it %s change %llu",
+			      port_id_, flow.local_address,
+			      (unsigned long long)flow.address_change_id, reject,
+			      (unsigned long long)peer_change_id_);
 		return false;
+	}
 	rina::Connection connection(*flow_->getActiveConnection());
 	connection.setDestAddress(flow.local_address);
 	try {
