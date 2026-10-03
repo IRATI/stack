@@ -3997,6 +3997,7 @@ ADataObject::ADataObject()
 {
 	source_address_ = 0;
 	dest_address_ = 0;
+	hops_left_ = -1;
 }
 
 ADataObject::ADataObject(unsigned int source_address,
@@ -4004,6 +4005,7 @@ ADataObject::ADataObject(unsigned int source_address,
 {
 	source_address_ = source_address;
 	dest_address_ = dest_address;
+	hops_left_ = -1;
 }
 
 ADataObject::~ADataObject()

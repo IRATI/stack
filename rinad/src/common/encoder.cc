@@ -904,6 +904,8 @@ void ADataObjectEncoder::encode(const rina::cdap::ADataObject &obj,
         gpb.set_destaddress(obj.dest_address_);
         gpb.set_cdapmessage(obj.encoded_cdap_message_.message_,
                             obj.encoded_cdap_message_.size_);
+        if (obj.hops_left_ >= 0)
+                gpb.set_hopsleft(obj.hops_left_);
 
         serobj.size_ = gpb.ByteSize();
         serobj.message_ = new unsigned char[serobj.size_];
@@ -918,6 +920,7 @@ void ADataObjectEncoder::decode(const rina::ser_obj_t &serobj,
 
         des_obj.source_address_ = gpb.sourceaddress();
         des_obj.dest_address_ = gpb.destaddress();
+        des_obj.hops_left_ = gpb.has_hopsleft() ? (int) gpb.hopsleft() : -1;
 
         des_obj.encoded_cdap_message_.size_ = gpb.cdapmessage().size();
         des_obj.encoded_cdap_message_.message_ = new unsigned char[des_obj

@@ -158,6 +158,9 @@ public:
 	//The address of the destination AP (or IPCP)
 	unsigned int dest_address_;
 
+	//Relays left before the message is dropped; -1 if the sender set no limit
+	int hops_left_;
+
 	ser_obj_t encoded_cdap_message_;
 };
 
