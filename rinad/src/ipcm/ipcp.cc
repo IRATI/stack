@@ -438,6 +438,8 @@ void IPCMIPCProcess::allocateFlow(const rina::FlowRequestEvent& flowRequest,
 	flowInformation.flowSpecification = flowRequest.flowSpecification;
 	flowInformation.portId = flowRequest.portId;
 	flowInformation.pid = flowRequest.pid;
+	// 0 for an application; an IPCP must hear of the flow's remote deallocation.
+	flowInformation.user_ipcp_id = flowRequest.flowRequestorIpcProcessId;
 	pendingFlowOperations[opaque] = flowInformation;
 }
 
@@ -483,6 +485,7 @@ void IPCMIPCProcess::allocateFlowResponse(const rina::FlowRequestEvent& flowRequ
 		flowInformation.flowSpecification = flowRequest.flowSpecification;
 		flowInformation.portId = flowRequest.portId;
 		flowInformation.pid = pid;
+		flowInformation.user_ipcp_id = flowAcceptorIpcProcessId;
 
 		allocatedFlows.push_back(flowInformation);
 	}
