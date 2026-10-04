@@ -838,6 +838,7 @@ void EnrolleeStateMachine::enrollmentCompleted()
 		} catch (rina::Exception &e) { }
 		rina::AddressChangeEvent * event = new rina::AddressChangeEvent(
 			pending_address_, ipc_process_->get_address(), use_new, deprecate_old, confirmed);
+		event->attachment = remote_peer_.name_.processName;
 		pending_address_ = 0;
 		ipc_process_->internal_event_manager_->deliverEvent(event);
 	}

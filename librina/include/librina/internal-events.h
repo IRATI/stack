@@ -200,6 +200,9 @@ public:
 	unsigned int use_new_timeout;
 	unsigned int deprecate_old_timeout;
 	bool prepare_only;
+	/// Process name of the neighbour whose enrollment assigned new_address,
+	/// empty otherwise. A prepared change needs it until the change commits.
+	std::string attachment;
 };
 
 /// Kernel retirement completed; listeners remove the named local synonym

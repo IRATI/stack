@@ -304,6 +304,7 @@ public:
 	void processDeallocatePortResponse(const rina::DeallocatePortResponseEvent& event);
 	void address_changed(unsigned int new_address, unsigned int old_address);
 	void confirmation_tick(uint64_t id);
+	void attachment_lost(const std::string& neighbor);
 	bool can_allocate();
 	using rina::rib::RIBOpsRespHandler::remoteWriteResult;
 	void remoteWriteResult(const rina::cdap_rib::con_handle_t& con,
@@ -333,6 +334,7 @@ private:
 	unsigned int change_new_, change_old_, change_hold_, change_attempt_, change_max_, change_retry_;
 	std::set<int> confirmed_ports_;
 	std::map<int, int> change_invokes_;
+	std::string change_attachment_;
 
 	/// Create initial RIB objects
 	void populateRIB();

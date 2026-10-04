@@ -284,10 +284,17 @@ void FlowAllocator::subscribeToEvents()
 {
 	ipcp->internal_event_manager_->subscribeToEvent(rina::InternalEvent::ADDRESS_CHANGE,
 					 	 	this);
+	ipcp->internal_event_manager_->subscribeToEvent(
+		rina::InternalEvent::APP_CONNECTIVITY_TO_NEIGHBOR_LOST, this);
 }
 
 void FlowAllocator::eventHappened(rina::InternalEvent * event)
 {
+	if (event->type == rina::InternalEvent::APP_CONNECTIVITY_TO_NEIGHBOR_LOST) {
+		attachment_lost(static_cast<rina::ConnectiviyToNeighborLostEvent *>(event)->
+				neighbor_.name_.processName);
+		return;
+	}
 	if (event->type == rina::InternalEvent::ADDRESS_CHANGE){
 		rina::AddressChangeEvent * addrEvent =
 				(rina::AddressChangeEvent *) event;
@@ -300,6 +307,7 @@ void FlowAllocator::eventHappened(rina::InternalEvent * event)
 			++change_id_;
 			change_new_ = addrEvent->new_address;
 			change_old_ = addrEvent->old_address;
+			change_attachment_ = addrEvent->attachment;
 			change_hold_ = addrEvent->deprecate_old_timeout;
 			change_attempt_ = 0;
 			change_max_ = 5;
@@ -410,6 +418,24 @@ void FlowAllocator::confirmation_tick(uint64_t id)
 		preparing_ = false;
 	}
 	LOG_IPCP_INFO("Confirmed address change committed: %u -> %u", old_address, new_address);
+}
+
+// A prepared change needs the attachment that assigned the new address
+// until it commits: without it the new address can't be reached, even if
+// peers confirm it over the old attachment. Fail the change as when the
+// confirmation retries run out, keeping the old source.
+void FlowAllocator::attachment_lost(const std::string& neighbor)
+{
+	rina::ScopedLock g(fai_lock);
+	if (!preparing_ || confirmation_failed_ || change_attachment_.empty() ||
+	    neighbor != change_attachment_)
+		return;
+	for (std::map<int, int>::iterator i = change_invokes_.begin(); i != change_invokes_.end(); ++i)
+		rib_daemon_->getProxy()->cancel_remote_operation(i->first);
+	change_invokes_.clear();
+	confirmation_failed_ = true;
+	LOG_IPCP_ERR("Address confirmation failed: retaining source %u; new attachment %s lost before commit, %u peers had confirmed; new synonym %u remains accepted",
+		     change_old_, neighbor.c_str(), (unsigned int) confirmed_ports_.size(), change_new_);
 }
 
 void FlowAllocator::remoteWriteResult(const rina::cdap_rib::con_handle_t& con,
