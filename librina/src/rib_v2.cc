@@ -1983,6 +1983,9 @@ public:
 	void destroy_cdap_connection(int port_id);
 	void cancel_remote_operation(int invoke_id) {
 		response_handlers.erase(invoke_id);
+		if (cdap_provider)
+			cdap_provider->get_session_manager()->
+				get_invoke_id_manager()->freeInvokeId(invoke_id, false);
 	}
 
 protected:

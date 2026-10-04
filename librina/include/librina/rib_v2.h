@@ -906,8 +906,9 @@ public:
                          RIBOpsRespHandler * resp_handler, 
 			 int invoke_id = 0);
 
-        // Discard a timed-out operation's callback; IDs stay reserved until a
-        // late reply arrives, so it cannot consume another operation's handler.
+        // Discard a timed-out operation's callback and free its invoke ID. IDs
+        // are handed out in turn, so a late reply finds no handler rather than
+        // another operation's.
         void cancel_remote_operation(int invoke_id);
 
         ///
