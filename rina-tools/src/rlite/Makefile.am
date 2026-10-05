@@ -36,5 +36,9 @@ iporinad_SOURCES = iporinad.cpp fdfwd.cpp cdap.cpp
 iporinad_LDADD = $(LIBRINA_API_LIBS) libiporina.la
 iporinad_CPPFLAGS = $(LIBRINA_API_CFLAGS) -std=c++11
 
-bin_PROGRAMS += rinaperf rina-echo-async rina-gw iporinad
-AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += rinaperf rina-echo-async rina-gw iporinad
+rupa_gw_SOURCES = rupa-gw.c
+rupa_gw_LDADD = $(LIBRINA_API_LIBS)
+rupa_gw_CPPFLAGS = $(LIBRINA_API_CFLAGS)
+
+bin_PROGRAMS += rinaperf rina-echo-async rina-gw iporinad rupa-gw
+AM_INSTALLCHECK_STD_OPTIONS_EXEMPT += rinaperf rina-echo-async rina-gw iporinad rupa-gw
