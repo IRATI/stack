@@ -2885,11 +2885,8 @@ void GPBSerializer::serializeMessage(const cdap_m_t &cdapMessage,
 	// OBJ_VALUE
 	if (cdapMessage.obj_value_.size_ > 0) {
 		messages::objVal_t *gpb_obj_val = new messages::objVal_t();
-		char * gpb_val = new char[cdapMessage.obj_value_.size_];
-		memcpy(gpb_val,
-		       cdapMessage.obj_value_.message_,
-		       cdapMessage.obj_value_.size_);
-		gpb_obj_val->set_byteval(gpb_val,
+		// set_byteval copies the bytes; an intermediate copy here was never freed
+		gpb_obj_val->set_byteval(cdapMessage.obj_value_.message_,
 					 cdapMessage.obj_value_.size_);
 		gpfCDAPMessage.set_allocated_objvalue(gpb_obj_val);
 	}
