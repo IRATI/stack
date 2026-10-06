@@ -314,8 +314,12 @@ DijkstraAlgorithm::DijkstraAlgorithm()
 
 void DijkstraAlgorithm::clear()
 {
+	std::map<std::string, PredecessorInfo *>::iterator it;
+
 	unsettled_nodes_.clear();
 	settled_nodes_.clear();
+	for (it = predecessors_.begin(); it != predecessors_.end(); ++it)
+		delete it->second;
 	predecessors_.clear();
 	distances_.clear();
 }
@@ -422,6 +426,7 @@ void DijkstraAlgorithm::findMinimalDistances(const Graph& graph,
 			shortestDistance = getShortestDistance(node) + (*edgeIt)->weight_;
 			if (getShortestDistance(target) > shortestDistance) {
 				distances_[target] = shortestDistance;
+				delete predecessors_[target];
 				predecessors_[target] = new PredecessorInfo(node);
 				unsettled_nodes_.insert(target);
 			}
