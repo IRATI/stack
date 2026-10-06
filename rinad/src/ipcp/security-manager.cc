@@ -41,6 +41,12 @@ void IPCPSecurityManager::set_application_process(rina::ApplicationProcess * ap)
 	}
 
 	ipcp->rib_daemon_->set_security_manager(this);
+
+	// ISecurityManager::eventHappened deletes the security context of a
+	// deallocated N-1 flow, but nothing subscribed it, so every enrollment
+	// left its context behind.
+	ipcp->internal_event_manager_->subscribeToEvent(
+			rina::InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED, this);
 }
 
 void IPCPSecurityManager::set_dif_configuration(const rina::DIFInformation& dif_information)
