@@ -202,9 +202,11 @@ int ctrl_pdu_send(struct dtcp * dtcp, pdu_type_t type, bool direct)
         }
 
         if (direct) {
+		/* dtp_pdu_send() consumes du on failure (rmt_send() frees
+		 * it, e.g. when there is no next hop), unlike the ring push
+		 * of dtcp_pdu_send() below */
         	if (dtp_pdu_send(dtcp->parent, dtcp->rmt, du)){
         		atomic_dec(&dtcp->cpdus_in_transit);
-        		du_destroy(du);
         		return -1;
         	}
         } else {
