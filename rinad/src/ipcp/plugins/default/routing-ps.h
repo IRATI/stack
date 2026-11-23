@@ -605,6 +605,7 @@ public:
 	static const std::string WAIT_UNTIL_DEPRECATE_OLD_ADDRESS;
 	static const std::string ROUTING_ALGORITHM;
 	static const std::string MAXIMUM_OBJECTS_PER_ROUTING_UPDATE;
+	static const std::string AGGREGATE_PREFIX_LENGTH;
 
         static const int PULSES_UNTIL_FSO_EXPIRATION_DEFAULT = 100000;
         static const int WAIT_UNTIL_READ_CDAP_DEFAULT = 5001;
@@ -673,11 +674,19 @@ private:
 	unsigned int wait_until_deprecate_address_;
 	unsigned int maximum_age_;
 	unsigned int max_objects_per_rupdate_;
+	// Aggregation boundary (0: none). See aggregatePrefixLength in routing-ps.cc.
+	unsigned int aggregate_prefix_len_;
 	bool test_;
 	FlowStateManager *db_;
 	rina::Lockable lock_;
 
 	void subscribeToEvents();
+	unsigned int aggregate_mask() const;
+	bool is_child_address(unsigned int address) const;
+	unsigned int neighbor_address_on_port(int port_id) const;
+	bool fso_allowed_on_port(const FlowStateObject& fso, int port_id) const;
+	void filter_for_port(std::list< std::list<FlowStateObject> >& lists,
+			     int port_id) const;
 
 	/// The Resource Allocator has deallocated an existing N-1 flow dedicated to data
 	/// transfer. If there is a pending flow allocation over this N-1 flow, it has to
