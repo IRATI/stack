@@ -278,14 +278,17 @@ void rina_component_fini(struct rina_component * comp)
 {
         struct ps_base *ps;
 
+        /* ps_lock serialises writers. Unpublish the policy set and wait for the
+         * readers to leave before destroying it: destroy() may sleep (the default
+         * PFF flushes a workqueue), which is not allowed inside rcu_read_lock(). */
         mutex_lock(&comp->ps_lock);
-        rcu_read_lock();
-        ps = rcu_dereference(comp->ps);
+        ps = rcu_dereference_protected(comp->ps, lockdep_is_held(&comp->ps_lock));
         if (ps) {
+                RCU_INIT_POINTER(comp->ps, NULL);
+                synchronize_rcu();
                 comp->ps_factory->destroy(ps);
                 module_put(comp->ps_factory->owner);
         }
-        rcu_read_unlock();
         mutex_unlock(&comp->ps_lock);
 }
 
