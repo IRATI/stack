@@ -31,6 +31,7 @@ struct rmt;
 
 /* The container holding all the EFCP instances for an IPC Process */
 struct efcp_container;
+struct efcp;
 
 struct efcp_container * efcp_container_create(struct kfa * kfa,
 					      struct robject * parent);
@@ -64,6 +65,8 @@ int                     efcp_connection_modify(struct efcp_container * cont,
 					       cep_id_t		       cep_id,
                                                address_t               src,
                                                address_t               dst);
+void                    efcp_peer_address_seen(struct efcp * efcp,
+                                               address_t     addr);
 int                     efcp_container_unbind_user_ipcp(struct efcp_container * cont,
                                                        cep_id_t cep_id);
 
