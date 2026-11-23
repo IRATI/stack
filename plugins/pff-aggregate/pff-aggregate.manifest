@@ -1,0 +1,11 @@
+{
+        "PluginName": "pff-aggregate",
+        "PluginVersion": "1",
+        "PolicySets" : [
+                {
+                        "Name": "aggregate",
+                        "Component": "pff",
+                        "Version" : "1"
+                }
+        ]
+}
