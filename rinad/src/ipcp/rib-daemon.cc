@@ -253,16 +253,22 @@ void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
 			if (inner_m.is_request_message()){
 				manager_->get_invoke_id_manager()->reserveInvokeId(inner_m.invoke_id_,
 						false);
-			} else {
-				manager_->get_invoke_id_manager()->freeInvokeId(inner_m.invoke_id_,
-						false);
 			}
 		}
 
 		LOG_IPCP_DBG("Received A-Data CDAP message from address %u through port %u \n%s",
 			     a_data_obj.source_address_, handle, inner_m.to_string().c_str());
 
-		invoke_callback(manager_->get_con_handle(handle), inner_m, false);
+		// Inner operations came from the A-Data source, not our adjacent
+		// relay. Automatic RIB responses must route back to that source.
+		rina::cdap_rib::con_handle_t origin = manager_->get_con_handle(handle);
+		origin.address = a_data_obj.source_address_;
+		origin.cdap_dest = rina::cdap_rib::CDAP_DEST_ADATA;
+		invoke_callback(origin, inner_m, false);
+		// Keep the ID reserved while the callback runs: a concurrent retry
+		// must not reuse it before its previous confirmation is consumed.
+		if (inner_m.invoke_id_ != 0 && !inner_m.is_request_message())
+			manager_->get_invoke_id_manager()->freeInvokeId(inner_m.invoke_id_, false);
 		return;
 	}
 

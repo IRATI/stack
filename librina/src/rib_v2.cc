@@ -1981,6 +1981,9 @@ public:
 			     int invoke_id);
 
 	void destroy_cdap_connection(int port_id);
+	void cancel_remote_operation(int invoke_id) {
+		response_handlers.erase(invoke_id);
+	}
 
 protected:
 	//
@@ -3021,7 +3024,7 @@ void RIBDaemon::remote_write_result(const cdap_rib::con_handle_t &con,
 		try {
 			handler->remoteWriteResult(con,
 						   obj,
-						   res);
+						   res, invoke_id);
 		} catch (Exception &e) {
 			LOG_ERR("Unable to process the response");
 		}
@@ -3674,6 +3677,11 @@ int RIBDaemonProxy::remote_write(const cdap_rib::con_handle_t& con,
                               filt,
                               resp_handler, 
 			      invoke_id);
+}
+
+void RIBDaemonProxy::cancel_remote_operation(int invoke_id)
+{
+	ribd->cancel_remote_operation(invoke_id);
 }
 
 // Perform a start operation over an object of the remote RIB

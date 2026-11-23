@@ -1927,6 +1927,8 @@ void LinkStateRoutingPolicy::processAddressChangeEvent(rina::AddressChangeEvent 
 	db_->addAddressToFSOs(name,
 			      event->new_address,
 			      false);
+	if (event->prepare_only)
+		return;
 
 	//Schedule task to remove all objects with old address
 	ExpireOldAddressTimerTask * task = new ExpireOldAddressTimerTask(this,
