@@ -25,6 +25,8 @@
 #include <errno.h>
 #include <iostream>
 #include <signal.h>
+#include <stdio.h>
+#include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -764,6 +766,38 @@ IPCProcessProxy * IPCProcessFactory::create(
 	return ipcProcess;
 }
 
+#if !STUB_API
+// True once a process runs no more threads: reaped (ESRCH) or a zombie.
+static bool process_stopped(pid_t pid, unsigned int timeout_ms)
+{
+	char path[32];
+	char buf[512];
+	char * end;
+	bool zombie;
+	FILE * f;
+
+	snprintf(path, sizeof(path), "/proc/%d/stat", (int)pid);
+	for (unsigned int waited = 0;; waited += 50) {
+		if (kill(pid, 0) && errno == ESRCH)
+			return true;
+		zombie = false;
+		f = fopen(path, "r");
+		if (f) {
+			// The state follows the parenthesised command name.
+			if (fgets(buf, sizeof(buf), f) &&
+			    (end = strrchr(buf, ')')) && end[1] == ' ')
+				zombie = end[2] == 'Z';
+			fclose(f);
+		}
+		if (zombie)
+			return true;
+		if (waited >= timeout_ms)
+			return false;
+		usleep(50000);
+	}
+}
+#endif
+
 unsigned int IPCProcessFactory::destroy(IPCProcessProxy* ipcp)
 {
 	int resultUserSpace = 0;
@@ -773,6 +807,28 @@ unsigned int IPCProcessFactory::destroy(IPCProcessProxy* ipcp)
 	//Do nothing
 #else
         struct irati_kmsg_ipcm_destroy_ipcp * msg;
+
+	if (ipcp->getType() == NORMAL_IPC_PROCESS ||
+			ipcp->getType() == SHIM_WIFI_IPC_PROCESS_AP ||
+			ipcp->getType() == SHIM_WIFI_IPC_PROCESS_STA)
+	{
+		// Stop the daemon before its kernel instance goes: its threads
+		// still tear flows and connections down through the control
+		// device, and the kernel frees the same flows, EFCP instances
+		// and CEP-id manager without serialising against them. SIGKILL
+		// only a daemon that SIGINT did not stop: one the SIGCHLD
+		// handler already reaped may have had its pid reused.
+		pid_t pid = ipcp->getPid();
+
+		if (kill(pid, SIGINT) == 0 && !process_stopped(pid, 2000)) {
+			kill(pid, SIGKILL);
+			if (!process_stopped(pid, 2000)) {
+				LOG_WARN("IPCP daemon %d still runs; destroying its kernel instance anyway",
+					 (int)pid);
+				resultUserSpace = -1;
+			}
+		}
+	}
 
         msg = new irati_kmsg_ipcm_destroy_ipcp();
         msg->msg_type = RINA_C_IPCM_DESTROY_IPCP_REQUEST;
@@ -787,20 +843,6 @@ unsigned int IPCProcessFactory::destroy(IPCProcessProxy* ipcp)
 
         seq_num = msg->event_id;
         irati_ctrl_msg_free((struct irati_msg_base *) msg);
-
-	if (ipcp->getType() == NORMAL_IPC_PROCESS ||
-			ipcp->getType() == SHIM_WIFI_IPC_PROCESS_AP ||
-			ipcp->getType() == SHIM_WIFI_IPC_PROCESS_STA)
-	{
-		// BUG: Zombie processes are automatically reaped using a
-		//      SIGCHLD handler, so the following lines often result
-		//      in ESRCH (or worse if the IPCP pid was reallocated to
-		//      a new process).
-		resultUserSpace = kill(ipcp->getPid(), SIGINT);
-		// TODO: Change magic number
-		usleep(2000000);
-		resultUserSpace = kill(ipcp->getPid(), SIGKILL);
-	}
 #endif
 
 	delete ipcp;
