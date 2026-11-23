@@ -676,6 +676,7 @@ private:
 	unsigned int max_objects_per_rupdate_;
 	// Aggregation boundary (0: none). See aggregatePrefixLength in routing-ps.cc.
 	unsigned int aggregate_prefix_len_;
+	std::set<std::string> children_;
 	bool test_;
 	FlowStateManager *db_;
 	rina::Lockable lock_;
@@ -684,6 +685,9 @@ private:
 	unsigned int aggregate_mask() const;
 	bool is_child_address(unsigned int address) const;
 	unsigned int neighbor_address_on_port(int port_id) const;
+	std::string neighbor_name_on_port(int port_id) const;
+	bool involves_child(const FlowStateObject& fso,
+			    const std::string& child) const;
 	bool fso_allowed_on_port(const FlowStateObject& fso, int port_id) const;
 	void filter_for_port(std::list< std::list<FlowStateObject> >& lists,
 			     int port_id) const;

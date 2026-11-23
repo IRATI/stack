@@ -1973,6 +1973,8 @@ void LinkStateRoutingPolicy::processFlowDeallocatedEvent(
 
 void LinkStateRoutingPolicy::processNeighborLostEvent(rina::ConnectiviyToNeighborLostEvent* event)
 {
+	// Keep the child's name while its FSOs (including withdrawal tombstones)
+	// remain in the database, so departing children cannot leak into the core.
 	db_->deprecateObjectsNeighbor(event->neighbor_.name_.processName,
 				      ipc_process_->get_name(),
 				      true);
@@ -1999,6 +2001,8 @@ void LinkStateRoutingPolicy::processNeighborAddedEvent(rina::NeighborAddedEvent 
 
 	LOG_IPCP_DBG("Adding new FSO to neighbor");
 	try {
+		if (aggregate_prefix_len_ && is_child_address(event->neighbor_.address_))
+			children_.insert(event->neighbor_.name_.processName);
 		addresses.push_back(ipc_process_->get_address());
 		// An aggregation boundary also stands for its prefix. Its own
 		// address stays first: next hops resolve to ports by it.
@@ -2147,15 +2151,48 @@ unsigned int LinkStateRoutingPolicy::neighbor_address_on_port(int port_id) const
 	return 0;
 }
 
+std::string LinkStateRoutingPolicy::neighbor_name_on_port(int port_id) const
+{
+	std::list<rina::Neighbor> neighbors = ipc_process_->get_neighbors();
+	std::list<rina::Neighbor>::const_iterator it;
+
+	for (it = neighbors.begin(); it != neighbors.end(); ++it) {
+		if (it->get_underlying_port_id() == port_id)
+			return it->name_.processName;
+	}
+	return std::string();
+}
+
+bool LinkStateRoutingPolicy::involves_child(const FlowStateObject& fso,
+					    const std::string& child) const
+{
+	return fso.name == child || fso.neighbor_name == child;
+}
+
 // An object that involves a child may only go to that child.
 bool LinkStateRoutingPolicy::fso_allowed_on_port(const FlowStateObject& fso,
 						 int port_id) const
 {
+	std::set<std::string>::const_iterator child;
 	std::list<unsigned int>::const_iterator a;
+	std::string dest_name;
 	unsigned int dest;
 
 	if (aggregate_prefix_len_ == 0)
 		return true;
+	dest_name = neighbor_name_on_port(port_id);
+	bool known_child = false;
+	for (child = children_.begin(); child != children_.end(); ++child)
+		if (involves_child(fso, *child)) {
+			if (*child != dest_name)
+				return false;
+			known_child = true;
+		}
+	if (known_child)
+		return true;
+
+	// Keep the address check for an FSO received before its neighbor-added
+	// event, when the child name has not been remembered yet.
 	dest = neighbor_address_on_port(port_id);
 	for (a = fso.addresses.begin(); a != fso.addresses.end(); ++a)
 		if (is_child_address(*a) && *a != dest)
@@ -2329,6 +2366,22 @@ void LinkStateRoutingPolicy::removeFlowStateObject(const std::string& fqn)
 {
 	rina::ScopedLock g(lock_);
 	db_->removeObject(fqn);
+	std::list<FlowStateObject> fsos;
+	db_->getAllFSOs(fsos);
+	for (std::set<std::string>::iterator child = children_.begin();
+	     child != children_.end(); ) {
+		bool present = false;
+		for (std::list<FlowStateObject>::const_iterator fso = fsos.begin();
+		     fso != fsos.end(); ++fso)
+			if (involves_child(*fso, *child)) {
+				present = true;
+				break;
+			}
+		if (present)
+			++child;
+		else
+			children_.erase(child++);
+	}
 }
 
 // CLASS FlowStateObjectEncoder
