@@ -4558,6 +4558,11 @@ static void * allocate_irati_msg(irati_msg_t msg_t)
 		result = COMMON_ALLOC(sizeof(struct irati_msg_app_alloc_flow_response), 1);
 		return result;
 	}
+	case RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION: {
+		struct irati_msg_app_dealloc_flow * result;
+		result = COMMON_ALLOC(sizeof(struct irati_msg_app_dealloc_flow), 1);
+		return result;
+	}
 	case RINA_C_APP_DEALLOCATE_FLOW_REQUEST:
 	case RINA_C_APP_REGISTER_APPLICATION_REQUEST: {
 		struct irati_msg_app_reg_app * result;
