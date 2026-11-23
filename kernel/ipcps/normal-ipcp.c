@@ -1180,7 +1180,7 @@ static void tf_use_naddress(struct timer_list * tl)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         inst_data = (struct ipcp_instance_data *) data;
 #else
-        inst_data = from_timer(inst_data, tl, timers.kill_oaddress);
+        inst_data = from_timer(inst_data, tl, timers.use_naddress);
 #endif
         if (!inst_data) {
                 LOG_ERR("No IPCP instance data to work with");
@@ -1206,7 +1206,7 @@ static void tf_kill_oaddress(struct timer_list * tl)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,15,0)
         inst_data = (struct ipcp_instance_data *) data;
 #else
-        inst_data = from_timer(inst_data, tl, timers.use_naddress);
+        inst_data = from_timer(inst_data, tl, timers.kill_oaddress);
 #endif
         if (!inst_data) {
                 LOG_ERR("No IPCP instance data to work with");
