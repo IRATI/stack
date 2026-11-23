@@ -88,10 +88,8 @@ int cidm_allocated(struct cidm * instance, cep_id_t cep_id)
 	struct alloc_cepid * pos, * next;
 
         list_for_each_entry_safe(pos, next, &instance->allocated_cep_ids, list) {
-                if (pos->cep_id == cep_id) {
-                    spin_unlock(&instance->lock);
+                if (pos->cep_id == cep_id)
                 	return 1;
-                }
         }
 
         return 0;
