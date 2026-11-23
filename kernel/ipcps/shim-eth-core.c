@@ -99,10 +99,12 @@ struct ipcp_factory_data {
 #endif
 };
 
+/*
+ * Shared by all the factories registered by this module (shim-eth, shim-eth-vlan,
+ * shim-wifi-ap, shim-wifi-sta): eth_init() initialises it, and the netdev notifier and
+ * enable_write_all() walk eth_data.instances for every instance.
+ */
 struct ipcp_factory_data eth_data;
-struct ipcp_factory_data eth_vlan_data;
-struct ipcp_factory_data wifi_ap_data;
-struct ipcp_factory_data wifi_sta_data;
 
 enum port_id_state {
         PORT_STATE_NULL = 1,
@@ -2604,15 +2606,15 @@ static int __init mod_init(void)
                                                &eth_ops);
         shim_eth_vlan = kipcm_ipcp_factory_register(default_kipcm,
                                                     SHIM_VLAN_NAME,
-                                                    &eth_vlan_data,
+                                                    &eth_data,
                                                     &eth_vlan_ops);
         shim_wifi_ap = kipcm_ipcp_factory_register(default_kipcm,
                                                    SHIM_WIFI_AP_NAME,
-                                                   &wifi_ap_data,
+                                                   &eth_data,
                                                    &eth_ops2);
         shim_wifi_sta = kipcm_ipcp_factory_register(default_kipcm,
                                                     SHIM_WIFI_STA_NAME,
-                                                    &wifi_sta_data,
+                                                    &eth_data,
                                                     &eth_ops2);
 
         if (!shim_eth || !shim_eth_vlan || !shim_wifi_ap || !shim_wifi_sta)
@@ -2621,12 +2623,8 @@ static int __init mod_init(void)
 #ifdef CONFIG_DEBUG_FS
         dbg_root = debugfs_create_dir("shim-eth", NULL);
 
-        if (dbg_root) {
+        if (dbg_root)
                 eth_data.dbg = debugfs_create_dir(SHIM_NAME, dbg_root);
-                eth_vlan_data.dbg = debugfs_create_dir(SHIM_VLAN_NAME, dbg_root);
-                wifi_ap_data.dbg = debugfs_create_dir(SHIM_WIFI_AP_NAME, dbg_root);
-                wifi_sta_data.dbg = debugfs_create_dir(SHIM_WIFI_STA_NAME, dbg_root);
-        }
 #endif
 
         spin_lock_init(&data_instances_lock);
@@ -2659,12 +2657,6 @@ static void __exit mod_exit(void)
 #ifdef CONFIG_DEBUG_FS
         if (eth_data.dbg)
                 debugfs_remove(eth_data.dbg);
-        if (eth_vlan_data.dbg)
-                debugfs_remove(eth_vlan_data.dbg);
-        if (wifi_ap_data.dbg)
-                debugfs_remove(wifi_ap_data.dbg);
-        if (wifi_sta_data.dbg)
-                debugfs_remove(wifi_sta_data.dbg);
         if (dbg_root)
                 debugfs_remove(dbg_root);
 #endif
