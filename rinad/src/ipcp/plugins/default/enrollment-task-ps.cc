@@ -464,6 +464,10 @@ void EnrolleeStateMachine::connectResponse(int result,
 		abortEnrollment(result_reason, true);
 		return;
 	}
+	if (ipc_process_->get_old_address() != 0) {
+		abortEnrollment("Previous address transition is still active", true);
+		return;
+	}
 
 	if (remote_peer_.name_.processName != con.dest_.ap_name_) {
 		//Application connection was to the DAF in general, now update
@@ -825,8 +829,12 @@ void EnrolleeStateMachine::enrollmentCompleted()
 			use_new = 1000;
 			deprecate_old = 5000;
 		}
+		bool confirmed = false;
+		try {
+			confirmed = config.get_param_value_as_string("confirmAddressChange") == "true";
+		} catch (rina::Exception &e) { }
 		rina::AddressChangeEvent * event = new rina::AddressChangeEvent(
-			pending_address_, ipc_process_->get_address(), use_new, deprecate_old);
+			pending_address_, ipc_process_->get_address(), use_new, deprecate_old, confirmed);
 		pending_address_ = 0;
 		ipc_process_->internal_event_manager_->deliverEvent(event);
 	}

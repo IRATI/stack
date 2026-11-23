@@ -12,6 +12,7 @@ message connectionId_t {  //information to identify a connection
 }
 
 message Flow{  //Contains the information to setup a new flow
+    optional uint64 addressChangeId = 18; // Correlates confirmed renumbering retries.
 	required applicationProcessNamingInfo_t sourceNamingInfo = 1;  			//The naming information of the source application process
 	required applicationProcessNamingInfo_t destinationNamingInfo = 2; 		//The naming information of the destination application process
 	required uint64 sourcePortId = 3; 										//The port id allocated to this flow by the source IPC process

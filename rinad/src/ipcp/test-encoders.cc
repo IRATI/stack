@@ -81,6 +81,14 @@ bool test_flow () {
 	connection_list.push_front(pconnection_to_encode);
 	flow_to_encode.connections = connection_list;
 	flow_to_encode.current_connection_index = 0;
+	// The fields a peer validates in a confirmed address change's flow update
+	flow_to_encode.local_port_id = 12;
+	flow_to_encode.remote_port_id = 21;
+	flow_to_encode.local_address = 33562626;
+	flow_to_encode.remote_address = 16781313;
+	flow_to_encode.address_change_id = 0x123456789aULL; // wider than 32 bits
+	pconnection_to_encode->setSourceCepId(5);
+	pconnection_to_encode->setDestCepId(7);
 
 	// Encode
 	encoder.encode(flow_to_encode, encoded_obj);
@@ -94,8 +102,18 @@ bool test_flow () {
 		return false;
 	if (flow_to_encode.local_naming_info.processInstance != flow_decoded.local_naming_info.processInstance)
 		return false;
+	if (flow_to_encode.local_port_id != flow_decoded.local_port_id ||
+	    flow_to_encode.remote_port_id != flow_decoded.remote_port_id ||
+	    flow_to_encode.local_address != flow_decoded.local_address ||
+	    flow_to_encode.remote_address != flow_decoded.remote_address ||
+	    flow_to_encode.address_change_id != flow_decoded.address_change_id)
+		return false;
 
 	rina::Connection *pconnection_decoded = flow_decoded.connections.front();
+	if (pconnection_decoded->getSourceCepId() != 5 ||
+	    pconnection_decoded->getDestCepId() != 7 ||
+	    pconnection_decoded->getSourceAddress() != flow_to_encode.local_address)
+		return false;
 	rina::DTPConfig dtp_config_decoded = pconnection_decoded->getDTPConfig();
 	if ( dtp_config_to_encode.get_seq_num_rollover_threshold() != dtp_config_decoded.get_seq_num_rollover_threshold())
 		return false;

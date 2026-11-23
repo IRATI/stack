@@ -34,6 +34,7 @@ Flow::Flow()
         max_create_flow_retries = 0;
         create_flow_retries = 0;
         hop_count = 0;
+        address_change_id = 0;
         source = false;
         state = EMPTY;
         access_control = 0;
@@ -53,6 +54,7 @@ Flow::Flow(const Flow& flow)
         max_create_flow_retries = flow.max_create_flow_retries;
         create_flow_retries = flow.create_flow_retries;
         hop_count = flow.hop_count;
+        address_change_id = flow.address_change_id;
         source = flow.source;
         state = flow.state;
         access_control = 0;
