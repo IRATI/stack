@@ -3344,6 +3344,9 @@ int main()
 	result = test_irati_msg_app_dealloc_flow(RINA_C_APP_DEALLOCATE_FLOW_REQUEST);
 	if (result < 0) return result;
 
+	result = test_irati_msg_app_dealloc_flow(RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION);
+	if (result < 0) return result;
+
 	result = test_irati_msg_app_reg_app();
 	if (result < 0) return result;
 
