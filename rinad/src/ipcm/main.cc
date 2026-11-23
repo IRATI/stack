@@ -80,6 +80,28 @@ void override_config(vector<std::string> &opts) {
     }
 }
 
+// Pids of live IPC process daemons. Written by the thread that creates IPCPs, read and
+// cleared by the SIGCHLD handler, so plain volatile slots and no locks.
+#define MAX_IPCP_DAEMONS 1024
+static volatile pid_t ipcp_daemon_pids[MAX_IPCP_DAEMONS];
+
+void rinad::ipcp_daemon_pid_add(pid_t pid)
+{
+	int i;
+
+	if (pid <= 0)
+		return;
+	for (i = 0; i < MAX_IPCP_DAEMONS; i++) {
+		if (ipcp_daemon_pids[i] == 0) {
+			ipcp_daemon_pids[i] = pid;
+			break;
+		}
+	}
+	// It may already have exited, before its slot existed.
+	if (waitpid(pid, NULL, WNOHANG) == pid && i < MAX_IPCP_DAEMONS)
+		ipcp_daemon_pids[i] = 0;
+}
+
 void handler(int signum)
 {
 	int pid, saved_errno;
@@ -98,10 +120,17 @@ void handler(int signum)
 			rinad::IPCManager->stop();
 			break;
 		case SIGCHLD:
+			// Reap dead IPC process daemons only. waitpid(WAIT_ANY)
+			// here used to steal the exit status of the modprobe
+			// that plugin_load_kernel() waits for, which then took
+			// a failed modprobe for a loaded kernel plugin and never
+			// asked the IPCP daemon to load the userspace plugin.
+			// No logging: it takes locks, and this is a signal handler.
 			saved_errno = errno;
-			while (pid = waitpid(WAIT_ANY, NULL, WNOHANG), pid > 0) {
-				LOG_DBG("Child IPC Process Daemon %d died, removed from process table",
-					pid);
+			for (int i = 0; i < MAX_IPCP_DAEMONS; i++) {
+				pid = ipcp_daemon_pids[i];
+				if (pid > 0 && waitpid(pid, NULL, WNOHANG) == pid)
+					ipcp_daemon_pids[i] = 0;
 			}
 			errno = saved_errno;
 			break;
