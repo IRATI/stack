@@ -564,7 +564,25 @@ void EnrolleeStateMachine::remoteStartResult(const rina::cdap_rib::con_handle_t 
 	configs::EnrollmentInformationRequest eiResp;
 	encoder.decode(obj.value_, eiResp);
 	if (eiResp.address_ != 0) {
+		unsigned int old_address = ipc_process_->get_dif_information().dif_configuration_.address_;
+
 		ipc_process_->get_dif_information().dif_configuration_.address_ = eiResp.address_;
+		// The enroller assigned a different address (the topological namespace
+		// manager hands out one under its own prefix). Only userspace used to
+		// switch: the kernel IPC process, assigned with the old address before
+		// enrollment, kept it, so PDUs for the new one were treated as transit
+		// and dropped. Nothing has used the old address yet; use the new one at
+		// once and accept the old one for another second.
+		if (old_address != 0 && old_address != eiResp.address_) {
+			LOG_IPCP_INFO("Enroller assigned address %u (was %u)",
+				      eiResp.address_, old_address);
+			try {
+				rina::kernelIPCProcess->changeAddress(eiResp.address_,
+								      old_address, 0, 1000);
+			} catch (rina::Exception &e) {
+				LOG_IPCP_ERR("Could not change the kernel address: %s", e.what());
+			}
+		}
 	}
 
 	//Set timer
