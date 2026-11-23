@@ -77,10 +77,13 @@ void FlowRIBObject::write(const rina::cdap_rib::con_handle_t &con,
 	configs::Flow flow;
 	encoder.decode(obj_req, flow);
 
-	flow_allocator_instance_->modify_flow_request(flow);
-
-	//Does not require a response message, return CDAP_PENDING
-	res.code_ = rina::cdap_rib::CDAP_PENDING;
+	if (!flow_allocator_instance_->modify_flow_request(flow)) {
+		res.code_ = rina::cdap_rib::CDAP_ERROR;
+		return;
+	}
+	// The control-device write applies CONN_MODIFY synchronously. Confirm only
+	// after that succeeds; the invoke ID identifies the validated request.
+	res.code_ = rina::cdap_rib::CDAP_SUCCESS;
 }
 
 bool FlowRIBObject::delete_(const rina::cdap_rib::con_handle_t &con,
@@ -110,10 +113,16 @@ void FlowRIBObject::create_cb(const rina::rib::rib_handle_t rib,
 	encoder.decode(obj_req, rcv_flow);
 
 	configs::Flow * flow = new configs::Flow(rcv_flow);
+	try {
 	IPCPFactory::getIPCP()->flow_allocator_->createFlowRequestMessageReceived(flow,
 							  	  	  	  fqn,
 							  	  	  	  invoke_id);
 	res.code_ = rina::cdap_rib::CDAP_PENDING;
+	} catch (rina::Exception &e) {
+		delete flow;
+		res.code_ = rina::cdap_rib::CDAP_ERROR;
+		res.reason_ = e.what();
+	}
 }
 
 const std::string FlowRIBObject::get_displayable_value() const
@@ -231,6 +240,9 @@ FlowAllocator::FlowAllocator() : IFlowAllocator()
 	ipcp = 0;
 	rib_daemon_ = 0;
 	namespace_manager_ = 0;
+	change_id_ = 0;
+	preparing_ = confirmation_failed_ = false;
+	allocation_inflight_ = 0;
 }
 
 FlowAllocator::~FlowAllocator()
@@ -279,11 +291,142 @@ void FlowAllocator::eventHappened(rina::InternalEvent * event)
 	if (event->type == rina::InternalEvent::ADDRESS_CHANGE){
 		rina::AddressChangeEvent * addrEvent =
 				(rina::AddressChangeEvent *) event;
+		if (addrEvent->prepare_only) {
+			rina::ScopedLock g(fai_lock);
+			if (preparing_)
+				throw rina::Exception("Address confirmation already active");
+			preparing_ = true;
+			confirmation_failed_ = false;
+			++change_id_;
+			change_new_ = addrEvent->new_address;
+			change_old_ = addrEvent->old_address;
+			change_hold_ = addrEvent->deprecate_old_timeout;
+			change_attempt_ = 0;
+			change_max_ = 5;
+			change_retry_ = 1000;
+			confirmed_ports_.clear();
+			const rina::PolicyConfig& config = ipcp->get_dif_information().
+				dif_configuration_.et_configuration_.policy_set_;
+			try { change_max_ = config.get_param_value_as_uint("addressChangeRetries"); }
+			catch (rina::Exception &e) { }
+			try { change_retry_ = config.get_param_value_as_uint("addressChangeRetryTimeout"); }
+			catch (rina::Exception &e) { }
+			if (!change_max_ || change_max_ > 60) change_max_ = 5;
+			if (change_retry_ < 100 || change_retry_ > 10000) change_retry_ = 1000;
+			// Start after the configured route-convergence allowance.
+			class ConfirmationTask : public rina::TimerTask {
+				FlowAllocator * fa; uint64_t id;
+			public:
+				ConfirmationTask(FlowAllocator * f, uint64_t n): fa(f), id(n) { }
+				void run() { fa->confirmation_tick(id); }
+				std::string name() const { return "confirm-address-change"; }
+			};
+			timer.scheduleTask(new ConfirmationTask(this, change_id_), addrEvent->use_new_timeout);
+			return;
+		}
+		{
+			rina::ScopedLock g(fai_lock);
+			if (preparing_ && !confirmation_failed_ && addrEvent->new_address == change_new_) {
+				for (std::map<int, FlowAllocatorInstance *>::iterator i = fa_instances.begin();
+				     i != fa_instances.end(); ++i)
+					i->second->commit_address(change_new_);
+				return;
+			}
+		}
 		FAAddressChangeTimerTask * task = new FAAddressChangeTimerTask(this,
 				addrEvent->new_address,
 				addrEvent->old_address);
 		timer.scheduleTask(task, addrEvent->use_new_timeout);
 	}
+}
+
+class ConfirmationRetryTask : public rina::TimerTask {
+	FlowAllocator * fa; uint64_t id;
+public:
+	ConfirmationRetryTask(FlowAllocator * f, uint64_t n): fa(f), id(n) { }
+	void run() { fa->confirmation_tick(id); }
+	std::string name() const { return "retry-address-confirmation"; }
+};
+
+bool FlowAllocator::can_allocate()
+{
+	return !preparing_;
+}
+
+class AllocationGuard {
+	std::atomic<int>& count;
+public:
+	AllocationGuard(std::atomic<int>& c): count(c) { ++count; }
+	~AllocationGuard() { --count; }
+};
+
+void FlowAllocator::confirmation_tick(uint64_t id)
+{
+	bool complete = true;
+	unsigned int new_address, old_address, hold;
+	{
+		rina::ScopedLock ports(port_alloc_lock);
+		if (!pending_port_allocs.empty()) complete = false;
+	}
+	{
+		rina::ScopedLock g(fai_lock);
+		if (!preparing_ || confirmation_failed_ || id != change_id_) return;
+		// Requests that passed the gate just before prepare, and pending port
+		// callbacks, must finish installing their FAI before the barrier closes.
+		if (allocation_inflight_ != 0) complete = false;
+		for (std::map<int, FlowAllocatorInstance *>::iterator i = fa_instances.begin();
+		     i != fa_instances.end(); ++i) {
+			if (i->second->isFinished()) continue;
+			if (!i->second->is_allocated()) { complete = false; continue; }
+			if (confirmed_ports_.find(i->first) == confirmed_ports_.end()) {
+				complete = false;
+				if (change_attempt_ < change_max_) {
+					int invoke = i->second->prepare_address(change_new_, change_id_, this);
+					if (invoke > 0) change_invokes_[invoke] = i->first;
+				}
+			}
+		}
+		if (!complete && change_attempt_++ < change_max_) {
+			timer.scheduleTask(new ConfirmationRetryTask(this, id), change_retry_);
+			return;
+		}
+		for (std::map<int, int>::iterator i = change_invokes_.begin(); i != change_invokes_.end(); ++i)
+			rib_daemon_->getProxy()->cancel_remote_operation(i->first);
+		change_invokes_.clear();
+		if (!complete) {
+			confirmation_failed_ = true;
+			LOG_IPCP_ERR("Address confirmation failed: retaining source %u and both attachments; new synonym %u remains accepted",
+				     change_old_, change_new_);
+			return;
+		}
+		new_address = change_new_; old_address = change_old_; hold = change_hold_;
+	}
+	// Do not deliver events while holding fai_lock: our own commit listener
+	// needs it. Allocation remains gated until every listener has run.
+	ipcp->internal_event_manager_->deliverEvent(new rina::AddressChangeEvent(
+		new_address, old_address, 0, hold));
+	{
+		rina::ScopedLock g(fai_lock);
+		preparing_ = false;
+	}
+	LOG_IPCP_INFO("Confirmed address change committed: %u -> %u", old_address, new_address);
+}
+
+void FlowAllocator::remoteWriteResult(const rina::cdap_rib::con_handle_t& con,
+	const rina::cdap_rib::obj_info_t& obj, const rina::cdap_rib::res_info_t& res, int invoke_id)
+{
+	rina::ScopedLock g(fai_lock);
+	std::map<int, int>::iterator sent = change_invokes_.find(invoke_id);
+	if (!preparing_ || confirmation_failed_ || sent == change_invokes_.end()) return;
+	int port = sent->second;
+	change_invokes_.erase(sent);
+	if (res.code_ != rina::cdap_rib::CDAP_SUCCESS) return;
+	std::map<int, FlowAllocatorInstance *>::iterator i = fa_instances.find(port);
+	if (i == fa_instances.end() || !i->second->is_allocated()) return;
+	if (con.address != i->second->get_flow()->remote_address) return;
+	confirmed_ports_.insert(i->first);
+	LOG_IPCP_INFO("Peer confirmed address %u for port %d (transaction %llu)",
+		      change_new_, i->first, (unsigned long long)change_id_);
 }
 
 void FlowAllocator::address_changed(unsigned int new_address,
@@ -354,6 +497,9 @@ void FlowAllocator::createFlowRequestMessageReceived(configs::Flow * flow,
 						     const std::string& object_name,
 						     int invoke_id)
 {
+	AllocationGuard allocation_guard(allocation_inflight_);
+	if (!can_allocate())
+		throw rina::Exception("Address confirmation in progress; retry allocation later");
 	unsigned int address = 0;
 	int portId = 0;
 	bool process_flow_request = false;
@@ -515,6 +661,7 @@ void FlowAllocator::replyToIPCManager(const rina::FlowRequestEvent& event,
 void FlowAllocator::submitAllocateRequest(const rina::FlowRequestEvent& event,
 					  unsigned int address)
 {
+	AllocationGuard allocation_guard(allocation_inflight_);
 	unsigned int seq_num = 0;
 	OngoingFlowAllocState flow_state;
 	rina::ApplicationProcessNamingInformation app_info;
@@ -528,6 +675,11 @@ void FlowAllocator::submitAllocateRequest(const rina::FlowRequestEvent& event,
 	}
 
 	rina::ScopedLock g(port_alloc_lock);
+	if (!can_allocate()) {
+		if (!event.internal) replyToIPCManager(event, -1);
+		else throw rina::Exception("Address confirmation in progress; retry allocation later");
+		return;
+	}
 
 	try {
 		seq_num = rina::extendedIPCManager->allocatePortId(app_info,
@@ -550,6 +702,7 @@ void FlowAllocator::submitAllocateRequest(const rina::FlowRequestEvent& event,
 
 void FlowAllocator::processAllocatePortResponse(const rina::AllocatePortResponseEvent& event)
 {
+	AllocationGuard allocation_guard(allocation_inflight_);
 	int portId = 0;
 	OngoingFlowAllocState flow_state;
 	IFlowAllocatorInstance * fai;
@@ -811,6 +964,7 @@ void FlowAllocatorInstance::initialize(IPCProcess * ipc_process,
 	allocate_response_message_handle_ = 0;
 	flow_ = 0;
 	local = loc;
+	peer_change_id_ = 0;
 }
 
 void FlowAllocatorInstance::set_application_entity(rina::ApplicationEntity * app_entity)
@@ -1659,19 +1813,83 @@ void FlowAllocatorInstance::destroyFlowAllocatorInstance(
 	release_remove();
 }
 
-void FlowAllocatorInstance::modify_flow_request(const configs::Flow & flow)
+bool FlowAllocatorInstance::modify_flow_request(const configs::Flow & flow)
 {
-	lock_.lock();
+	rina::ScopedLock g(lock_);
+	if (state != FLOW_ALLOCATED || flow.connections.empty() ||
+	    flow.current_connection_index >= flow.connections.size() || !flow.local_address ||
+	    flow.local_port_id != flow_->remote_port_id || flow.remote_port_id != flow_->local_port_id ||
+	    flow.getActiveConnection()->getSourceCepId() != flow_->getActiveConnection()->getDestCepId() ||
+	    flow.getActiveConnection()->getDestCepId() != flow_->getActiveConnection()->getSourceCepId() ||
+	    flow.address_change_id < peer_change_id_ ||
+	    (peer_change_id_ && flow.address_change_id == peer_change_id_ &&
+	     flow.local_address != flow_->remote_address))
+		return false;
+	rina::Connection connection(*flow_->getActiveConnection());
+	connection.setDestAddress(flow.local_address);
+	try {
+		rina::kernelIPCProcess->modify_connection(connection);
+	} catch (rina::IPCException & e) {
+		LOG_ERR("Problems calling modify connection: %s", e.what());
+		return false;
+	}
 	LOG_IPCP_INFO("Modified flow remote address from %u to %u",
 			flow_->remote_address, flow.local_address);
 	flow_->remote_address = flow.local_address;
 	flow_->getActiveConnection()->setDestAddress(flow.local_address);
-	lock_.unlock();
+	peer_change_id_ = flow.address_change_id;
+	return true;
+}
 
+bool FlowAllocatorInstance::is_allocated()
+{
+	rina::ScopedLock g(lock_);
+	return state == FLOW_ALLOCATED;
+}
+
+void FlowAllocatorInstance::commit_address(unsigned int address)
+{
+	rina::ScopedLock g(lock_);
+	if (!flow_) return;
+	flow_->local_address = address;
+	flow_->getActiveConnection()->setSourceAddress(address);
+}
+
+int FlowAllocatorInstance::prepare_address(unsigned int address, uint64_t id,
+					 rina::rib::RIBOpsRespHandler * handler)
+{
+	rina::ScopedLock g(lock_);
+	if (state != FLOW_ALLOCATED) return -1;
 	try {
-		rina::kernelIPCProcess->modify_connection(*(flow_->getActiveConnection()));
-	} catch (rina::IPCException & e) {
-		LOG_ERR("Problems calling modify connection: %s", e.what());
+		rina::cdap_rib::con_handle_t con;
+		if (ipc_process_->enrollment_task_->get_con_handle_to_ipcp(flow_->remote_address, con))
+			return -1;
+		con.address = flow_->remote_address;
+		con.cdap_dest = rina::cdap_rib::CDAP_DEST_ADATA;
+		configs::Flow update(*flow_);
+		update.local_address = address;
+		update.address_change_id = id;
+		update.getActiveConnection()->setSourceAddress(address);
+		rina::cdap_rib::obj_info_t obj;
+		obj.class_ = FlowRIBObject::class_name; obj.name_ = object_name_;
+		encoders::FlowEncoder encoder;
+		encoder.encode(update, obj.value_);
+		rina::cdap_rib::flags_t flags;
+		rina::cdap_rib::filt_info_t filt;
+		int invoke = rina::cdap::getProvider()->get_session_manager()->
+			get_invoke_id_manager()->newInvokeId(true);
+		try {
+			rib_daemon_->getProxy()->remote_write(con, obj, flags, filt, handler, invoke);
+		} catch (...) {
+			rib_daemon_->getProxy()->cancel_remote_operation(invoke);
+			throw;
+		}
+		LOG_IPCP_INFO("Requesting confirmation of address %u for port %d (transaction %llu)",
+			      address, port_id_, (unsigned long long)id);
+		return invoke;
+	} catch (rina::Exception &e) {
+		LOG_IPCP_ERR("Could not send address preparation: %s", e.what());
+		return -1;
 	}
 }
 
