@@ -315,7 +315,7 @@ static int timeout_resolver(void *o) {
 static int reply_resolver(void *o)
 {
         struct resolve_data *tmp;
-        struct resolution *pos, *nxt;
+        struct resolution *pos, *found = NULL;
 
         LOG_DBG("In the ARP resolver, looking for the right handler");
 
@@ -334,24 +334,26 @@ static int reply_resolver(void *o)
                 return -1;
         }
 
+        /* Find the resolution that matches this reply. The lock is released
+         * exactly once, before calling out: resolution_destroy() takes it
+         * again to unlink the entry. */
         spin_lock(&resolutions_lock);
-
-        /* Find the resolution that matches this reply. */
-        list_for_each_entry_safe(pos, nxt, &resolutions_ongoing, next) {
+        list_for_each_entry(pos, &resolutions_ongoing, next) {
                 if (is_resolve_data_matching(pos->data, tmp)) {
-                        spin_unlock(&resolutions_lock);
-
-                        pos->notify(pos->opaque,
-                                    tmp->timed_out,
-                                    tmp->spa,
-                                    tmp->sha);
-
-                        resolution_destroy(pos);
+                        found = pos;
                         break;
                 }
         }
-
         spin_unlock(&resolutions_lock);
+
+        if (found) {
+                found->notify(found->opaque,
+                              tmp->timed_out,
+                              tmp->spa,
+                              tmp->sha);
+
+                resolution_destroy(found);
+        }
 
         /* Finally destroy the data */
         resolve_data_destroy(tmp);
