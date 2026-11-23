@@ -62,6 +62,9 @@ class IPCPCDAPIOHandler : public rina::cdap::CDAPIOHandler
 	void forward_adata_msg(const rina::ser_obj_t &message,
 			       unsigned int address);
 
+	void relay_adata_msg(rina::cdap::ADataObject &adata,
+			     const rina::ser_obj_t &message);
+
         // Lock to control that when sending a message requiring
 	// a reply the CDAP Session manager has been updated before
 	// receiving the response message
@@ -92,6 +95,39 @@ void IPCPCDAPIOHandler::__send_message(const rina::cdap_rib::con_handle_t & con_
 				sdu.size_,
 				con_handle.port_id);
 	}
+}
+
+// A relay forwards A-Data by its own routing. Where routes disagree, as for an
+// address being retired, a message could circle forever: limit the relays.
+static const int A_DATA_MAX_HOPS = 16;
+
+void IPCPCDAPIOHandler::relay_adata_msg(rina::cdap::ADataObject &adata,
+					const rina::ser_obj_t &message)
+{
+	rina::cdap::cdap_m_t a_data_m;
+	rina::cdap_rib::flags_t flags;
+	rina::cdap_rib::filt_info_t filt;
+	rina::cdap_rib::obj_info_t obj;
+	rina::ser_obj_t sdu;
+	encoders::ADataObjectEncoder encoder;
+
+	if (adata.hops_left_ < 0) {
+		// From a sender that sets no limit
+		forward_adata_msg(message, adata.dest_address_);
+		return;
+	}
+	if (adata.hops_left_ == 0) {
+		LOG_IPCP_WARN("Dropped A-Data message from address %u to %u: no relays left",
+			      adata.source_address_, adata.dest_address_);
+		return;
+	}
+	adata.hops_left_--;
+	obj.class_ = rina::cdap::ADataObject::A_DATA_OBJECT_CLASS;
+	obj.name_ = rina::cdap::ADataObject::A_DATA_OBJECT_NAME;
+	encoder.encode(adata, obj.value_);
+	manager_->getWriteObjectRequestMessage(a_data_m, filt, flags, obj, 0);
+	manager_->encodeCDAPMessage(a_data_m, sdu);
+	forward_adata_msg(sdu, adata.dest_address_);
 }
 
 void IPCPCDAPIOHandler::forward_adata_msg(const rina::ser_obj_t &message,
@@ -131,6 +167,7 @@ void IPCPCDAPIOHandler::send(const rina::cdap::cdap_m_t& m_sent,
 
 			adata.source_address_ = IPCPFactory::getIPCP()->get_active_address();
 			adata.dest_address_ = con_handle.address;
+			adata.hops_left_ = A_DATA_MAX_HOPS;
 			manager_->encodeCDAPMessage(m_sent,
 						    adata.encoded_cdap_message_);
 			obj.class_ = rina::cdap::ADataObject::A_DATA_OBJECT_CLASS;
@@ -244,7 +281,7 @@ void IPCPCDAPIOHandler::process_message(rina::ser_obj_t &message,
 
 		encoder.decode(m_rcv.obj_value_, a_data_obj);
 		if (!IPCPFactory::getIPCP()->check_address_is_mine(a_data_obj.dest_address_)) {
-			forward_adata_msg(message, a_data_obj.dest_address_);
+			relay_adata_msg(a_data_obj, message);
 			return;
 		}
 

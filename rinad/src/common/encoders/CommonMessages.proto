@@ -27,4 +27,5 @@ message a_data_t {
       optional int32 sourceAddress = 1;
       optional int32 destAddress = 2;
       optional bytes cdapMessage = 3;
+      optional uint32 hopsLeft = 4;   // relays left before the message is dropped
 }
