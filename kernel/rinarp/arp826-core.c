@@ -389,14 +389,10 @@ static void __exit mod_exit(void)
         dev_remove_pack(&arp826_packet_type);
 
         /* FIXME: Replace with net-devices even-based behavior */
-        read_lock(&dev_base_lock);
-        device = first_net_device(&init_net);
-        while (device) {
+        rcu_read_lock();
+        for_each_netdev_rcu(&init_net, device)
                 protocol_remove(device, ETH_P_RINA);
-
-                device = next_net_device(device);
-        }
-        read_unlock(&dev_base_lock);
+        rcu_read_unlock();
 
         arm_fini();
         tbls_fini();

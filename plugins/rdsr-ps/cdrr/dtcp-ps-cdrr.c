@@ -245,6 +245,7 @@ static struct attribute * cdrr_attrs[] = {
 	&cdrr_m_attr.attr,
 	NULL,
 };
+RINA_ATTR_GROUPS(cdrr);
 
 /*
  * Attributes visible per DTCP instance.
@@ -281,6 +282,7 @@ static struct attribute * cdrr_dtcp_attrs[] = {
 	&cdrr_cc_attr.attr,
 	NULL,
 };
+RINA_ATTR_GROUPS(cdrr_dtcp);
 
 /* Operations associated with the release of the kobj. */
 static void cdrr_release(struct kobject *kobj) {
@@ -291,14 +293,14 @@ static void cdrr_release(struct kobject *kobj) {
 static struct kobj_type cdrr_ktype = {
 	.sysfs_ops = &cdrr_sysfs_ops,
 	.release = cdrr_release,
-	.default_attrs = cdrr_attrs,
+	RINA_KTYPE_ATTRS(cdrr),
 };
 
 /* DTCP CDRR ktype, different for the type of shown attributes. */
 static struct kobj_type cdrr_dtcp_ktype = {
 	.sysfs_ops = &cdrr_sysfs_ops,
 	.release = cdrr_release,
-	.default_attrs = cdrr_dtcp_attrs,
+	RINA_KTYPE_ATTRS(cdrr_dtcp),
 };
 
 /*

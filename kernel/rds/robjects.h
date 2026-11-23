@@ -26,6 +26,7 @@
 #define RINA_SYSFSUTILS_H
 
 #include <linux/kobject.h>
+#include <linux/version.h>
 #include <linux/sysfs.h>
 #include <linux/string.h>
 
@@ -128,6 +129,19 @@ static const struct sysfs_ops COMP_NAME##_sysfs_ops = {			\
 #define _ADD_KTYPE_ATTR(COMP_NAME, ATTR_NAME) 				\
 	&ATTR_NAME##_attr.kattr.attr,
 
+/* kobj_type lost default_attrs in 5.18. Its replacement, default_groups, exists since
+ * 5.2, so use it from there on and keep default_attrs for older kernels.
+ * RINA_ATTR_GROUPS(NAME) turns NAME_attrs into NAME_groups; RINA_KTYPE_ATTRS(NAME)
+ * points a kobj_type at whichever of the two the kernel takes.
+ */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,2,0)
+#define RINA_ATTR_GROUPS(NAME) ATTRIBUTE_GROUPS(NAME)
+#define RINA_KTYPE_ATTRS(NAME) .default_groups = NAME##_groups
+#else
+#define RINA_ATTR_GROUPS(NAME)
+#define RINA_KTYPE_ATTRS(NAME) .default_attrs = NAME##_attrs
+#endif
+
 /* Declares all the attributes for the robject to be exported by sysfs
  * Requires the .show function to be previously declared as
  * <comp_name>_attr_show
@@ -136,14 +150,15 @@ static const struct sysfs_ops COMP_NAME##_sysfs_ops = {			\
 	_CALL_FOR_EACH(_DECLARE_ATTR, COMP_NAME, ##__VA_ARGS__)		\
 	static struct attribute * COMP_NAME##_attrs[] = {		\
 	_CALL_FOR_EACH(_ADD_KTYPE_ATTR, COMP_NAME, ##__VA_ARGS__)	\
-	NULL, };
+	NULL, };							\
+	RINA_ATTR_GROUPS(COMP_NAME)
 
 /* Declares the robj_type object for the component */
 #define RINA_KTYPE(COMP_NAME)						\
 	static struct robj_type COMP_NAME##_rtype = {			\
 		.ktype = {						\
 	        	.sysfs_ops     = &COMP_NAME##_sysfs_ops,	\
-	        	.default_attrs = COMP_NAME##_attrs,		\
+			RINA_KTYPE_ATTRS(COMP_NAME),			\
 	        	.release       = NULL,				\
 		}							\
 	};

@@ -374,6 +374,7 @@ static struct attribute *shim_tcp_udp_ipcp_attrs[] = {
 	_shim_tcp_udp_ipcp_attrs+4,
 	NULL
 };
+RINA_ATTR_GROUPS(shim_tcp_udp_ipcp);
 
 RINA_KTYPE(shim_tcp_udp_ipcp);
 

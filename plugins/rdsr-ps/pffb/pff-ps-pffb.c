@@ -210,6 +210,7 @@ static struct attribute * pffb_attrs[] = {
 	&pffb_ft_attr.attr,
 	NULL,
 };
+RINA_ATTR_GROUPS(pffb);
 
 /* Operations associated with the release of the kobj. */
 static void pffb_release(struct kobject *kobj) {
@@ -220,7 +221,7 @@ static void pffb_release(struct kobject *kobj) {
 static struct kobj_type pffb_ktype = {
 	.sysfs_ops = &pffb_sysfs_ops,
 	.release = pffb_release,
-	.default_attrs = pffb_attrs,
+	RINA_KTYPE_ATTRS(pffb),
 };
 /*
  * Port-status related:
