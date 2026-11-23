@@ -689,6 +689,8 @@ private:
 	bool involves_child(const FlowStateObject& fso,
 			    const std::string& child) const;
 	bool fso_allowed_on_port(const FlowStateObject& fso, int port_id) const;
+	bool from_child_only(const std::list<FlowStateObject>& objects, int port_id,
+			     std::list<FlowStateObject>& kept) const;
 	void filter_for_port(std::list< std::list<FlowStateObject> >& lists,
 			     int port_id) const;
 

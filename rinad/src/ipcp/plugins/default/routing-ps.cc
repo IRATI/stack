@@ -2384,8 +2384,48 @@ void LinkStateRoutingPolicy::updateObjects(const std::list<FlowStateObject>& new
 		   	   	   	   unsigned int avoidPort)
 {
 	rina::ScopedLock g(lock_);
-	db_->updateObjects(newObjects,
-			   avoidPort);
+	std::list<FlowStateObject> kept;
+
+	if (!from_child_only(newObjects, avoidPort, kept)) {
+		db_->updateObjects(newObjects, avoidPort);
+		return;
+	}
+	if (!kept.empty())
+		db_->updateObjects(kept, avoidPort);
+}
+
+// A child knows more of the DIF than its own place in it: a UE that moves between
+// gNBs carries the old branch's objects into the new one. At a boundary, an object
+// received from a child is kept only if it involves that child or this IPC process;
+// anything else is the child's view of the rest of the DIF, which the boundary
+// either has already or must not take in. Returns false when the objects did not
+// come from a child (nothing filtered); otherwise KEPT holds what remains.
+bool LinkStateRoutingPolicy::from_child_only(const std::list<FlowStateObject>& objects,
+					     int port_id,
+					     std::list<FlowStateObject>& kept) const
+{
+	std::list<FlowStateObject>::const_iterator f;
+	std::string child, own;
+	unsigned int dropped = 0;
+
+	if (aggregate_prefix_len_ == 0)
+		return false;
+	child = neighbor_name_on_port(port_id);
+	if (child.empty() ||
+	    (children_.count(child) == 0 &&
+	     !is_child_address(neighbor_address_on_port(port_id))))
+		return false;
+	own = ipc_process_->get_name();
+	for (f = objects.begin(); f != objects.end(); ++f) {
+		if (involves_child(*f, child) || involves_child(*f, own))
+			kept.push_back(*f);
+		else
+			dropped++;
+	}
+	if (dropped)
+		LOG_IPCP_INFO("Ignored %u flow state objects from child %s that involve neither it nor this boundary",
+			      dropped, child.c_str());
+	return true;
 }
 
 void LinkStateRoutingPolicy::removeFlowStateObject(const std::string& fqn)
