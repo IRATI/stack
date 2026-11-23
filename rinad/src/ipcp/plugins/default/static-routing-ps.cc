@@ -73,11 +73,44 @@ void StaticRoutingPs::subscribeToEvents()
 		subscribeToEvent(rina::InternalEvent::APP_CONNECTIVITY_TO_NEIGHBOR_LOST, this);
 }
 
+// Besides the configured routes, a route to every neighbour at the address it holds
+// now, as IP adds connected routes. Configured routes win. Without this a neighbour
+// whose address isn't known in advance (assigned at enrollment, or renumbered) had no
+// forwarding entry: link-state learnt it, static routing never did.
 void StaticRoutingPs::update_forwarding_table(void)
 {
 	std::list<rina::RoutingTableEntry *> current_entries;
+	std::list<rina::RoutingTableEntry *>::const_iterator e;
+	std::list<unsigned int>::const_iterator a;
+	std::list<rina::Neighbor> neighbors = rc->ipcp->get_neighbors();
+	std::list<rina::Neighbor>::const_iterator n;
 
 	get_rt_entries_as_list(current_entries);
+	for (n = neighbors.begin(); n != neighbors.end(); ++n) {
+		bool covered = false;
+
+		if (n->address_ == 0 || !n->is_enrolled())
+			continue;
+		for (e = current_entries.begin(); e != current_entries.end() && !covered; ++e)
+			for (a = (*e)->destination.addresses.begin();
+			     a != (*e)->destination.addresses.end(); ++a)
+				if (*a == n->address_)
+					covered = true;
+		if (covered)
+			continue;
+
+		rina::RoutingTableEntry * rte = new rina::RoutingTableEntry();
+		rina::IPCPNameAddresses nhop;
+		rina::NHopAltList alt;
+
+		rte->qosId = 0;
+		rte->cost = 1;
+		rte->destination.addresses.push_back(n->address_);
+		nhop.addresses.push_back(n->address_);
+		alt.alts.push_back(nhop);
+		rte->nextHopNames.push_back(alt);
+		current_entries.push_back(rte);
+	}
 	rc->ipcp->resource_allocator_->pduft_gen_ps->routingTableUpdated(current_entries);
 }
 
