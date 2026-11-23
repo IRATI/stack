@@ -252,9 +252,11 @@ int base_set_policy_set_param(struct rina_component *comp,
         struct ps_base *ps;
         int ret = -1;
 
+        /* ps_lock keeps the policy set from being replaced; no RCU read
+         * section, since a policy set's setter may sleep (allocate, take
+         * mutexes). */
         mutex_lock(&comp->ps_lock);
-        rcu_read_lock();
-        ps = rcu_dereference(comp->ps);
+        ps = rcu_dereference_protected(comp->ps, lockdep_is_held(&comp->ps_lock));
 
         if (ps && ps->set_policy_set_param) {
                 if (strcmp(path, comp->ps_factory->name) == 0) {
@@ -268,7 +270,6 @@ int base_set_policy_set_param(struct rina_component *comp,
                 LOG_ERRF("No policy set selected");
         }
 
-        rcu_read_unlock();
         mutex_unlock(&comp->ps_lock);
 
         return ret;
