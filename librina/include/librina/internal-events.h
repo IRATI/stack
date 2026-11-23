@@ -42,6 +42,7 @@ public:
 	static const std::string APP_NEIGHBOR_DECLARED_DEAD;
 	static const std::string APP_NEIGHBOR_ADDED;
 	static const std::string ADDRESS_CHANGE;
+	static const std::string ADDRESS_RETIRED;
 	static const std::string NEIGHBOR_ADDRESS_CHANGE;
 	static const std::string IPCP_INTERNAL_FLOW_ALLOCATED;
 	static const std::string IPCP_INTERNAL_FLOW_ALLOCATION_FAILED;
@@ -190,13 +191,29 @@ public:
 	AddressChangeEvent(unsigned int new_address,
 			   unsigned int old_address,
 			   unsigned int use_new_timeout,
-			   unsigned int deprecate_old_timeout);
+			   unsigned int deprecate_old_timeout,
+			   bool prepare_only = false);
 	const std::string toString();
 
 	unsigned int new_address;
 	unsigned int old_address;
 	unsigned int use_new_timeout;
 	unsigned int deprecate_old_timeout;
+	bool prepare_only;
+	/// Process name of the neighbour whose enrollment assigned new_address,
+	/// empty otherwise. A prepared change needs it until the change commits.
+	std::string attachment;
+};
+
+/// Kernel retirement completed; listeners remove the named local synonym
+/// synchronously before the IPCP reopens its enrollment guard.
+class AddressRetiredEvent: public InternalEvent {
+public:
+        AddressRetiredEvent(unsigned int n, unsigned int o):
+                InternalEvent(InternalEvent::ADDRESS_RETIRED),
+                new_address(n), old_address(o) { }
+        unsigned int new_address;
+        unsigned int old_address;
 };
 
 /// The address of a neighbor IPCP has changed

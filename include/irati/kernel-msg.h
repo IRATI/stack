@@ -254,7 +254,10 @@ typedef enum {
 	/* 73, IPC Manager -> IPC Process */
 	RINA_C_IPCM_SCAN_MEDIA_REQUEST,
 
-	/* 74 */
+	/* 74, IPC Process -> Kernel; synchronous old-synonym retirement */
+	RINA_C_IPCP_ADDRESS_RETIRE_REQUEST,
+
+	/* 75 */
         RINA_C_MAX,
 } msg_type_t;
 

@@ -1779,6 +1779,8 @@ void LinkStateRoutingPolicy::subscribeToEvents()
 	ipc_process_->internal_event_manager_->
 		subscribeToEvent(rina::InternalEvent::ADDRESS_CHANGE, this);
 	ipc_process_->internal_event_manager_->
+		subscribeToEvent(rina::InternalEvent::ADDRESS_RETIRED, this);
+	ipc_process_->internal_event_manager_->
 		subscribeToEvent(rina::InternalEvent::NEIGHBOR_ADDRESS_CHANGE, this);
 }
 
@@ -1912,6 +1914,12 @@ void LinkStateRoutingPolicy::eventHappened(rina::InternalEvent * event)
 		rina::AddressChangeEvent * addrEvent =
 			(rina::AddressChangeEvent *) event;
 		processAddressChangeEvent(addrEvent);
+        } else if (event->type == rina::InternalEvent::ADDRESS_RETIRED) {
+                rina::AddressRetiredEvent * retired =
+                        static_cast<rina::AddressRetiredEvent *>(event);
+                db_->removeAddressFromFSOs(ipc_process_->get_name(),
+                                          retired->old_address, false);
+                LOG_IPCP_INFO("Routing retired local address %u", retired->old_address);
 	} else if (event->type == rina::InternalEvent::NEIGHBOR_ADDRESS_CHANGE) {
 		rina::NeighborAddressChangeEvent * addrEvent =
 			(rina::NeighborAddressChangeEvent *) event;
@@ -1921,19 +1929,9 @@ void LinkStateRoutingPolicy::eventHappened(rina::InternalEvent * event)
 
 void LinkStateRoutingPolicy::processAddressChangeEvent(rina::AddressChangeEvent * event)
 {
-	std::list<FlowStateObject> all_fsos;
-	std::string name = ipc_process_->get_name();
-
-	db_->addAddressToFSOs(name,
-			      event->new_address,
-			      false);
-
-	//Schedule task to remove all objects with old address
-	ExpireOldAddressTimerTask * task = new ExpireOldAddressTimerTask(this,
-							           	 name,
-									 event->old_address,
-									 false);
-	timer_->scheduleTask(task, event->deprecate_old_timeout);
+        db_->addAddressToFSOs(ipc_process_->get_name(), event->new_address, false);
+        // Local removal follows synchronous kernel retirement via ADDRESS_RETIRED.
+        // Neighbor-address expiry still uses its own captured name/address task.
 }
 
 void LinkStateRoutingPolicy::processNeighborAddressChangeEvent(rina::NeighborAddressChangeEvent * event)

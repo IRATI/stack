@@ -33,6 +33,7 @@ const std::string InternalEvent::APP_N_MINUS_1_FLOW_DEALLOCATED = "N_MINUS_1_FLO
 const std::string InternalEvent::APP_NEIGHBOR_DECLARED_DEAD = "NEIGHBOR_DECLARED_DEAD";
 const std::string InternalEvent::APP_NEIGHBOR_ADDED = "NEIGHBOR_ADDED";
 const std::string InternalEvent::ADDRESS_CHANGE = "ADDRESS_CHANGE";
+const std::string InternalEvent::ADDRESS_RETIRED = "ADDRESS_RETIRED";
 const std::string InternalEvent::NEIGHBOR_ADDRESS_CHANGE = "NEIGHBOR_ADDRESS_CHANGE";
 const std::string InternalEvent::IPCP_INTERNAL_FLOW_ALLOCATED = "IPCP_INTERNAL_FLOW_ALLOCATED";
 const std::string InternalEvent::IPCP_INTERNAL_FLOW_ALLOCATION_FAILED = "IPCP_INTERNAL_FLOW_ALLOCATION_FAILED";
@@ -233,13 +234,15 @@ const std::string NeighborDeclaredDeadEvent::toString()
 AddressChangeEvent::AddressChangeEvent(unsigned int new_addr,
 		   	   	       unsigned int old_addr,
 				       unsigned int use_new_t,
-				       unsigned int deprecate_old_t):
+				       unsigned int deprecate_old_t,
+				       bool prepare):
 		InternalEvent(InternalEvent::ADDRESS_CHANGE)
 {
 	new_address = new_addr;
 	old_address = old_addr;
 	use_new_timeout = use_new_t;
 	deprecate_old_timeout = deprecate_old_t;
+	prepare_only = prepare;
 }
 
 const std::string AddressChangeEvent::toString()
@@ -326,4 +329,3 @@ const std::string IPCPInternalFlowDeallocatedEvent::toString()
 }
 
 }
-

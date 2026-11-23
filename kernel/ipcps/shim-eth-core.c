@@ -2067,6 +2067,34 @@ static int ntfy_user_ipcp_on_if_state_change(struct ipcp_instance_data * data,
         return 0;
 }
 
+/*
+ * A downed interface cannot carry the flows bound to it. Report each
+ * allocated flow as deallocated, as shim-tcp-udp does when its peer closes
+ * the connection, so the user IPCP loses the neighbour now rather than
+ * after its keepalive timeout. Nobody deallocates the flow from above
+ * after that, so free it here.
+ */
+static void eth_flows_lost(struct ipcp_instance_data * data)
+{
+        struct shim_eth_flow * flow, * next;
+        LIST_HEAD(lost);
+
+        spin_lock_bh(&data->lock);
+        list_for_each_entry_safe(flow, next, &data->flows, list) {
+                if (flow->port_id_state == PORT_STATE_ALLOCATED)
+                        list_move_tail(&flow->list, &lost);
+        }
+        spin_unlock_bh(&data->lock);
+
+        list_for_each_entry_safe(flow, next, &lost, list) {
+                LOG_INFO("Flow %d lost with device %s",
+                         flow->port_id, data->dev->name);
+                kipcm_notify_flow_dealloc(data->id, 0, flow->port_id, 1);
+                kfa_port_id_release(data->kfa, flow->port_id);
+                unbind_and_destroy_flow(data, flow);
+        }
+}
+
 static int eth_netdev_notify(struct notifier_block *nb,
                              unsigned long event,
                              void *opaque)
@@ -2099,6 +2127,7 @@ static int eth_netdev_notify(struct notifier_block *nb,
                 case NETDEV_DOWN:
                         LOG_INFO("Device %s goes down", dev->name);
                         ntfy_user_ipcp_on_if_state_change(pos, false);
+                        eth_flows_lost(pos);
                         break;
 
                 default:

@@ -61,6 +61,11 @@ test_01_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_01_CXXFLAGS = $(COMMONCXXFLAGS)
 test_01_LDFLAGS  = $(REGRESSIONLDFLAGS)
 
+test_invoke_ids_SOURCES  = test-invoke-ids.cc
+test_invoke_ids_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
+test_invoke_ids_CXXFLAGS = $(COMMONCXXFLAGS)
+test_invoke_ids_LDFLAGS  = $(REGRESSIONLDFLAGS)
+
 test_02_SOURCES  = test-02.cc
 test_02_CPPFLAGS = $(COMMONCPPFLAGS) -I$(top_srcdir)/src
 test_02_CXXFLAGS = $(COMMONCXXFLAGS)
@@ -94,6 +99,7 @@ check_PROGRAMS =				\
 	test-01					\
 	test-02					\
 	test-03					\
+	test-invoke-ids				\
 	test-parsers			\
 	test-concurrency			\
 	test-timer				
@@ -103,7 +109,8 @@ XFAIL_TESTS =				\
 
 PASS_TESTS =					\
 	test-01					\
-	test-02					
+	test-02					\
+	test-invoke-ids
 
 TESTS = $(PASS_TESTS) $(XFAIL_TESTS)			
 	

@@ -1364,6 +1364,23 @@ out:
 	return 0;
 }
 
+static int notify_ipcp_address_retire(irati_msg_port_t ctrl_port,
+                                      struct irati_msg_base * bmsg, void * data)
+{
+        struct kipcm * kipcm = data;
+        struct irati_kmsg_ipcp_address_change * msg = (void *) bmsg;
+        struct ipcp_instance * ipcp;
+
+        if (!kipcm || !msg)
+                return -EINVAL;
+        ipcp = ipcp_imap_find(kipcm->instances, msg->dest_ipcp_id);
+        if (!ipcp || !ipcp->ops || !ipcp->ops->address_retire)
+                return -EINVAL;
+        /* ctrldev write returns only after the callback completes. */
+        return ipcp->ops->address_retire(ipcp->data, msg->new_address,
+                                       msg->old_address);
+}
+
 static int notify_ipcp_address_change(irati_msg_port_t ctrl_port,
 				      struct irati_msg_base *bmsg,
                                       void * data)
@@ -1417,7 +1434,7 @@ out:
         if (retval)
         	LOG_ERR("Error processing address change request");
 
-        return 0;
+        return retval;
 }
 
 static int notify_allocate_port(irati_msg_port_t ctrl_port,
@@ -1686,6 +1703,8 @@ static int ctrldev_handlers_unregister(void)
         	retval = -1;
         if (irati_handler_unregister(RINA_C_IPCP_UPDATE_CRYPTO_STATE_REQUEST))
         	retval = -1;
+        if (irati_handler_unregister(RINA_C_IPCP_ADDRESS_RETIRE_REQUEST))
+                retval = -1;
         if (irati_handler_unregister(RINA_C_IPCP_ADDRESS_CHANGE_REQUEST))
         	retval = -1;
         if (irati_handler_unregister(RINA_C_IPCP_ALLOCATE_PORT_REQUEST))
@@ -1747,6 +1766,8 @@ static int ctrldev_handlers_register(struct kipcm * kipcm)
                 notify_ipcp_update_crypto_state;
         kipcm_handlers[RINA_C_IPCP_ADDRESS_CHANGE_REQUEST]    	   =
                 notify_ipcp_address_change;
+        kipcm_handlers[RINA_C_IPCP_ADDRESS_RETIRE_REQUEST] =
+                notify_ipcp_address_retire;
         kipcm_handlers[RINA_C_IPCP_ALLOCATE_PORT_REQUEST]    	   =
                 notify_allocate_port;
         kipcm_handlers[RINA_C_IPCP_DEALLOCATE_PORT_REQUEST]    	   =

@@ -1527,6 +1527,27 @@ unsigned int KernelIPCProcess::updateCryptoState(const CryptoState& state)
         return seqNum;
 }
 
+void KernelIPCProcess::retireAddress(unsigned int new_address,
+                                    unsigned int old_address)
+{
+#if !STUB_API
+        struct irati_kmsg_ipcp_address_change * msg =
+                new irati_kmsg_ipcp_address_change();
+        msg->msg_type = RINA_C_IPCP_ADDRESS_RETIRE_REQUEST;
+        msg->new_address = new_address;
+        msg->old_address = old_address;
+        msg->use_new_timeout = 0;
+        msg->deprecate_old_timeout = 0;
+        msg->src_ipcp_id = ipcProcessId;
+        msg->dest_ipcp_id = ipcProcessId;
+        msg->dest_port = 0;
+        int result = irati_ctrl_mgr->send_msg((struct irati_msg_base *) msg, true);
+        irati_ctrl_msg_free((struct irati_msg_base *) msg);
+        if (result != 0)
+                throw IPCException("Kernel address retirement failed");
+#endif
+}
+
 unsigned int KernelIPCProcess::changeAddress(unsigned int new_address,
 					     unsigned int old_address,
 				             unsigned int use_new_t,

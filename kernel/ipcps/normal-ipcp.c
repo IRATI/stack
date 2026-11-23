@@ -21,6 +21,7 @@
  */
 
 #include <linux/module.h>
+#include <linux/mutex.h>
 #include <linux/list.h>
 #include <linux/string.h>
 #include <linux/version.h>
@@ -81,6 +82,8 @@ struct ipcp_instance_data {
         struct sdup *           sdup;
         address_t               address;
         address_t		old_address;
+        address_t               active_address;
+        struct mutex            address_change_lock;
         spinlock_t              lock;
         struct list_head        list;
         /* Timers required for the address change procedure */
@@ -677,6 +680,7 @@ static int normal_assign_to_dif(struct ipcp_instance_data * data,
         }
 
         data->address  = config->address;
+        data->active_address = config->address;
 
         efcp_config = config->efcp_config;
         config->efcp_config = 0;
@@ -757,7 +761,7 @@ static int normal_mgmt_du_write(struct ipcp_instance_data * data,
         if (pci_format(&du->pci,
                        0,
                        0,
-                       data->address,
+                       READ_ONCE(data->active_address),
                        0,
                        0,
                        1,
@@ -1139,33 +1143,75 @@ int normal_update_crypto_state(struct ipcp_instance_data * data,
 }
 
 int normal_address_change(struct ipcp_instance_data * data,
-			  address_t new_address,
-			  address_t old_address,
-			  timeout_t use_new_address_t,
-			  timeout_t deprecate_old_address_t)
+                          address_t new_address, address_t old_address,
+                          timeout_t use_new_address_t,
+                          timeout_t deprecate_old_address_t)
 {
-	LOG_INFO("Need to change address from %u to %u",
-		 old_address, new_address);
+        int result = 0;
 
-	if (!data) {
-		LOG_ERR("Bogus data passed");
-		return -1;
-	}
+        if (!data || !is_address_ok(new_address) || new_address == old_address)
+                return -EINVAL;
+        mutex_lock(&data->address_change_lock);
+        /* A commit may repeat its prepare pair, but another transition must
+         * wait for synchronous retirement. Never overwrite a live timer's pair. */
+        if ((data->old_address && (data->old_address != old_address ||
+                                  data->address != new_address)) ||
+            (!data->old_address && data->address != old_address)) {
+                result = -EBUSY;
+                goto out;
+        }
+        del_timer_sync(&data->timers.use_naddress);
+        del_timer_sync(&data->timers.kill_oaddress);
+        result = rmt_address_add(data->rmt, new_address);
+        if (result)
+                goto out;
+        data->old_address = old_address;
+        data->address = new_address;
+        LOG_INFO("Address change prepared: %u -> %u", old_address, new_address);
 
-	spin_lock_bh(&data->lock);
-	data->old_address = old_address;
-	data->address = new_address;
-	spin_unlock_bh(&data->lock);
+        /* 0/0 accepts the synonym without changing the active source. */
+        if (!use_new_address_t && !deprecate_old_address_t)
+                goto out;
+        if (use_new_address_t) {
+                rtimer_restart(&data->timers.use_naddress, use_new_address_t);
+        } else {
+                efcp_address_change(data->efcpc, new_address);
+                WRITE_ONCE(data->active_address, new_address);
+        }
+        rtimer_restart(&data->timers.kill_oaddress, deprecate_old_address_t);
+out:
+        mutex_unlock(&data->address_change_lock);
+        return result;
+}
 
-	rmt_address_add(data->rmt, new_address);
+static int normal_address_retire(struct ipcp_instance_data * data,
+                                 address_t new_address, address_t old_address)
+{
+        int result = 0;
 
-	/* Set timer to start advertising new address in EFCP connections
-	and MGMT PDUs (give time to routing updates to converge) */;
-	rtimer_restart(&data->timers.use_naddress, use_new_address_t);
-	/* Set timer to stop accepting old address in RMT */
-	rtimer_restart(&data->timers.kill_oaddress, deprecate_old_address_t);
-
-	return 0;
+        if (!data)
+                return -EINVAL;
+        mutex_lock(&data->address_change_lock);
+        if (data->address != new_address || data->old_address != old_address ||
+            !old_address || old_address == new_address) {
+                result = -EINVAL;
+                goto out;
+        }
+        /* Unconditionally join running callbacks, including a callback whose
+         * timer is no longer pending. No callback may survive the completion. */
+        del_timer_sync(&data->timers.use_naddress);
+        del_timer_sync(&data->timers.kill_oaddress);
+        efcp_address_change(data->efcpc, new_address);
+        WRITE_ONCE(data->active_address, new_address);
+        result = rmt_address_remove(data->rmt, old_address);
+        if (!result) {
+                data->old_address = 0;
+                LOG_INFO("Address retirement complete: %u -> %u",
+                         old_address, new_address);
+        }
+out:
+        mutex_unlock(&data->address_change_lock);
+        return result;
 }
 
 /* Runs the New Address Timer function */
@@ -1191,6 +1237,7 @@ static void tf_use_naddress(struct timer_list * tl)
         	  inst_data->address);
 
         efcp_address_change(inst_data->efcpc, inst_data->address);
+        WRITE_ONCE(inst_data->active_address, inst_data->address);
 }
 
 /* Runs the Kill old address Timer function */
@@ -1263,6 +1310,7 @@ static struct ipcp_instance_ops normal_instance_ops = {
         .disable_write             = disable_write,
         .update_crypto_state       = normal_update_crypto_state,
 	.address_change            = normal_address_change,
+        .address_retire            = normal_address_retire,
         .dif_name		   = normal_dif_name,
 	.max_sdu_size		   = normal_max_sdu_size
 };
@@ -1366,6 +1414,7 @@ static struct ipcp_instance * normal_create(struct ipcp_factory_data * data,
         INIT_LIST_HEAD(&instance->data->flows);
         INIT_LIST_HEAD(&instance->data->list);
         spin_lock_init(&instance->data->lock);
+        mutex_init(&instance->data->address_change_lock);
         list_add(&(instance->data->list), &(data->instances));
 
         LOG_DBG("Normal IPC process instance created and added to the list");
@@ -1406,6 +1455,10 @@ static int normal_destroy(struct ipcp_factory_data * data,
 
         list_del(&tmp->list);
 
+        /* Timer callbacks reference EFCP and RMT: drain them before either is freed. */
+        del_timer_sync(&tmp->timers.use_naddress);
+        del_timer_sync(&tmp->timers.kill_oaddress);
+
         if (normal_deallocate_all(tmp)) {
                 LOG_ERR("Could not deallocate normal ipcp flows");
                 return -1;
@@ -1418,9 +1471,6 @@ static int normal_destroy(struct ipcp_factory_data * data,
         sdup_destroy(tmp->sdup);
         name_fini(&tmp->name);
         name_fini(&tmp->dif_name);
-
-        rtimer_destroy(&tmp->timers.use_naddress);
-        rtimer_destroy(&tmp->timers.kill_oaddress);
 
         rkfree(tmp);
         rkfree(instance);

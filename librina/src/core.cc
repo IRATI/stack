@@ -526,6 +526,13 @@ IPCEvent * IRATICtrlManager::irati_ctrl_msg_to_ipc_event(struct irati_msg_base *
 						       msg->src_port, msg->src_ipcp_id);
 		break;
 	}
+	case RINA_C_APP_FLOW_DEALLOCATED_NOTIFICATION: {
+		struct irati_msg_app_dealloc_flow * sp_msg =
+				(struct irati_msg_app_dealloc_flow *) msg;
+		event = new FlowDeallocatedEvent(sp_msg->port_id, sp_msg->result,
+						 msg->src_port, msg->src_ipcp_id);
+		break;
+	}
 	case RINA_C_APP_REGISTER_APPLICATION_REQUEST: {
 		struct irati_msg_app_reg_app * sp_msg =
 				(struct irati_msg_app_reg_app *) msg;

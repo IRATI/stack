@@ -50,53 +50,28 @@ static void parse_path(const std::string& path, std::string& component,
         }
 }
 
-//Class ExpireOldIPCPAddressTimerTask
+// Tasks retain transition identity, including when an address is reused.
 class ExpireOldIPCPAddressTimerTask: public rina::TimerTask {
+        IPCProcessImpl * ipcp;
+        uint64_t generation;
+        unsigned int new_address, old_address;
 public:
-	ExpireOldIPCPAddressTimerTask(IPCProcessImpl * ipcp);
-	~ExpireOldIPCPAddressTimerTask() throw() {};
-	void run();
-	std::string name() const {
-		return "expire-old-ipcp-address";
-	}
-
-private:
-	IPCProcessImpl * ipcp;
+        ExpireOldIPCPAddressTimerTask(IPCProcessImpl * p, uint64_t g,
+                                     unsigned int n, unsigned int o):
+                ipcp(p), generation(g), new_address(n), old_address(o) { }
+        void run() { ipcp->expire_old_address(generation, new_address, old_address); }
+        std::string name() const { return "expire-old-ipcp-address"; }
 };
 
-ExpireOldIPCPAddressTimerTask::ExpireOldIPCPAddressTimerTask(IPCProcessImpl * ipc_process)
-{
-	ipcp = ipc_process;
-}
-
-void ExpireOldIPCPAddressTimerTask::run()
-{
-	ipcp->expire_old_address();
-}
-
-//Class UseNewIPCPAddressTimerTask
 class UseNewIPCPAddressTimerTask: public rina::TimerTask {
+        IPCProcessImpl * ipcp;
+        uint64_t generation;
 public:
-	UseNewIPCPAddressTimerTask(IPCProcessImpl * ipcp);
-	~UseNewIPCPAddressTimerTask() throw() {};
-	void run();
-	std::string name() const {
-		return "use-new-ipcp-address";
-	}
-
-private:
-	IPCProcessImpl * ipcp;
+        UseNewIPCPAddressTimerTask(IPCProcessImpl * p, uint64_t g):
+                ipcp(p), generation(g) { }
+        void run() { ipcp->activate_new_address(generation); }
+        std::string name() const { return "use-new-ipcp-address"; }
 };
-
-UseNewIPCPAddressTimerTask::UseNewIPCPAddressTimerTask(IPCProcessImpl * ipc_process)
-{
-	ipcp = ipc_process;
-}
-
-void UseNewIPCPAddressTimerTask::run()
-{
-	ipcp->activate_new_address();
-}
 
 //Class IPCProcessImpl
 IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& nm,
@@ -108,6 +83,8 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 {
 	old_address = 0;
 	address_change_period = false;
+	address_change_prepared = false;
+	address_change_generation = 0;
 	use_new_address = false;
 	kernel_sync = NULL;
 
@@ -186,24 +163,36 @@ void IPCProcessImpl::eventHappened(rina::InternalEvent * event)
 
 void IPCProcessImpl::addressChange(rina::AddressChangeEvent * event)
 {
-	rina::TimerTask * task = 0;
+        rina::ScopedLock g(*lock_);
+        bool commit = address_change_prepared && !event->prepare_only &&
+                old_address == event->old_address &&
+                dif_information_.dif_configuration_.address_ == event->new_address;
+        if (address_change_period && !commit)
+                throw rina::Exception("Previous address transition is still active");
 
-	rina::ScopedLock g(*lock_);
-	old_address = event->old_address;
-	dif_information_.dif_configuration_.address_ = event->new_address;
-	address_change_period = true;
-	use_new_address = false;
-
-	task = new UseNewIPCPAddressTimerTask(this);
-	timer.scheduleTask(task, event->use_new_timeout);
-
-	task = new ExpireOldIPCPAddressTimerTask(this);
-	timer.scheduleTask(task, event->deprecate_old_timeout);
-
-	rina::kernelIPCProcess->changeAddress(event->new_address,
-					      event->old_address,
-					      event->use_new_timeout,
-					      event->deprecate_old_timeout);
+        // The control-device write completes the kernel operation before
+        // publishing userspace state or scheduling the retirement barrier.
+        rina::kernelIPCProcess->changeAddress(event->new_address, event->old_address,
+                event->prepare_only ? 0 : event->use_new_timeout,
+                event->prepare_only ? 0 : event->deprecate_old_timeout);
+        if (!commit)
+                ++address_change_generation;
+        old_address = event->old_address;
+        dif_information_.dif_configuration_.address_ = event->new_address;
+        address_change_period = true;
+        address_change_prepared = event->prepare_only;
+        use_new_address = !event->prepare_only && event->use_new_timeout == 0;
+        if (event->prepare_only) {
+                LOG_IPCP_INFO("Prepared address %u; source remains %u until peer confirmation",
+                              event->new_address, event->old_address);
+                return;
+        }
+        if (event->use_new_timeout)
+                timer.scheduleTask(new UseNewIPCPAddressTimerTask(this,
+                        address_change_generation), event->use_new_timeout);
+        timer.scheduleTask(new ExpireOldIPCPAddressTimerTask(this,
+                address_change_generation, event->new_address, event->old_address),
+                event->deprecate_old_timeout);
 }
 
 unsigned short IPCProcessImpl::get_id()
@@ -247,7 +236,7 @@ unsigned int IPCProcessImpl::get_address() const
 		return 0;
 	}
 
-	return dif_information_.dif_configuration_.address_;
+	return address_change_prepared ? old_address : dif_information_.dif_configuration_.address_;
 }
 
 unsigned int IPCProcessImpl::get_active_address()
@@ -269,18 +258,46 @@ void IPCProcessImpl::set_address(unsigned int address)
 	dif_information_.dif_configuration_.address_ = address;
 }
 
-void IPCProcessImpl::expire_old_address()
+void IPCProcessImpl::expire_old_address(uint64_t generation,
+                                        unsigned int new_address,
+                                        unsigned int retiring_address)
 {
-	rina::ScopedLock g(*lock_);
-	address_change_period = false;
-	use_new_address = false;
-	old_address = 0;
+        {
+                rina::ScopedLock g(*lock_);
+                if (!address_change_period || address_change_prepared ||
+                    generation != address_change_generation ||
+                    old_address != retiring_address ||
+                    dif_information_.dif_configuration_.address_ != new_address)
+                        return;
+        }
+        // Keep old_address nonzero throughout: an enrollment cannot pass the
+        // guard until kernel callbacks AND local routing retirement finish.
+        try {
+                rina::kernelIPCProcess->retireAddress(new_address, retiring_address);
+                LOG_IPCP_INFO("Kernel retired address %u (generation %llu)",
+                              retiring_address, (unsigned long long) generation);
+                internal_event_manager_->deliverEvent(
+                        new rina::AddressRetiredEvent(new_address, retiring_address));
+        } catch (rina::Exception &e) {
+                LOG_IPCP_ERR("Address retirement failed; keeping transition guard: %s", e.what());
+                return;
+        }
+        rina::ScopedLock g(*lock_);
+        if (generation != address_change_generation || old_address != retiring_address)
+                return;
+        address_change_period = false;
+        use_new_address = false;
+        old_address = 0;
+        LOG_IPCP_INFO("Address retirement complete: %u -> %u (generation %llu); moves enabled",
+                      retiring_address, new_address, (unsigned long long) generation);
 }
 
-void IPCProcessImpl::activate_new_address(void)
+void IPCProcessImpl::activate_new_address(uint64_t generation)
 {
-	rina::ScopedLock g(*lock_);
-	use_new_address = true;
+        rina::ScopedLock g(*lock_);
+        if (address_change_period && !address_change_prepared &&
+            generation == address_change_generation)
+                use_new_address = true;
 }
 
 bool IPCProcessImpl::check_address_is_mine(unsigned int address)

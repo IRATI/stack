@@ -24,6 +24,9 @@
 #define IPCP_FLOW_ALLOCATOR_HH
 
 #include <librina/timer.h>
+#include <set>
+#include <vector>
+#include <atomic>
 
 #include "common/concurrency.h"
 #include "ipcp/components.h"
@@ -114,7 +117,7 @@ public:
 	/// and sends a Delete_Response indicating the result.
 	virtual void deleteFlowRequestMessageReceived() = 0;
 
-	virtual void modify_flow_request(const configs::Flow & flow) = 0;
+	virtual bool modify_flow_request(const configs::Flow & flow) = 0;
 
 	virtual void destroyFlowAllocatorInstance(const std::string& flowObjectName,
 			bool requestor) = 0;
@@ -273,7 +276,8 @@ struct OngoingFlowAllocState {
 class FlowAllocatorInstance;
 
 /// Implementation of the Flow Allocator component
-class FlowAllocator: public IFlowAllocator, public rina::InternalEventListener {
+class FlowAllocator: public IFlowAllocator, public rina::InternalEventListener,
+    public rina::rib::RIBOpsRespHandler {
 public:
 	FlowAllocator();
 	~FlowAllocator();
@@ -299,6 +303,12 @@ public:
 	void processAllocatePortResponse(const rina::AllocatePortResponseEvent& event);
 	void processDeallocatePortResponse(const rina::DeallocatePortResponseEvent& event);
 	void address_changed(unsigned int new_address, unsigned int old_address);
+	void confirmation_tick(uint64_t id);
+	void attachment_lost(const std::string& neighbor);
+	bool can_allocate();
+	using rina::rib::RIBOpsRespHandler::remoteWriteResult;
+	void remoteWriteResult(const rina::cdap_rib::con_handle_t& con,
+		const rina::cdap_rib::obj_info_t& obj, const rina::cdap_rib::res_info_t& res, int invoke_id);
 
         // Plugin support
         configs::Flow* createFlow() { return new configs::Flow(); }
@@ -317,6 +327,14 @@ private:
 	rina::Lockable port_alloc_lock;
 	std::map<int, FlowAllocatorInstance *> fa_instances;
 	rina::Lockable fai_lock;
+	uint64_t change_id_;
+	std::atomic<bool> preparing_;
+	std::atomic<int> allocation_inflight_;
+	bool confirmation_failed_;
+	unsigned int change_new_, change_old_, change_hold_, change_attempt_, change_max_, change_retry_;
+	std::set<int> confirmed_ports_;
+	std::map<int, int> change_invokes_;
+	std::string change_attachment_;
 
 	/// Create initial RIB objects
 	void populateRIB();
@@ -396,7 +414,11 @@ public:
 	void destroyFlowAllocatorInstance(const std::string& flowObjectName,
 			bool requestor);
 
-	void modify_flow_request(const configs::Flow & flow);
+	bool modify_flow_request(const configs::Flow & flow);
+	bool is_allocated();
+	int prepare_address(unsigned int address, uint64_t id,
+			    rina::rib::RIBOpsRespHandler * handler);
+	void commit_address(unsigned int address);
 
 	/// If the response to the allocate request is negative
 	/// the Allocation invokes the AllocateRetryPolicy. If the AllocateRetryPolicy returns a
@@ -455,6 +477,7 @@ private:
 	unsigned int allocate_response_message_handle_;
 	int invoke_id_;
 	bool local;
+	uint64_t peer_change_id_;
 	rina::Lockable lock_;
 };
 

@@ -464,6 +464,10 @@ void EnrolleeStateMachine::connectResponse(int result,
 		abortEnrollment(result_reason, true);
 		return;
 	}
+	if (ipc_process_->get_old_address() != 0) {
+		abortEnrollment("Previous address transition is still active", true);
+		return;
+	}
 
 	if (remote_peer_.name_.processName != con.dest_.ap_name_) {
 		//Application connection was to the DAF in general, now update
@@ -599,6 +603,9 @@ void EnrolleeStateMachine::remoteStartResult(const rina::cdap_rib::con_handle_t 
 				try {
 					rina::kernelIPCProcess->changeAddress(eiResp.address_,
 								      old_address, 0, 1000);
+					// No local flows or FSOs use the placeholder. Join its
+					// timers now so the first move can prepare a new pair.
+					rina::kernelIPCProcess->retireAddress(eiResp.address_, old_address);
 				} catch (rina::Exception &e) {
 					LOG_IPCP_ERR("Could not change the kernel address: %s", e.what());
 				}
@@ -825,8 +832,13 @@ void EnrolleeStateMachine::enrollmentCompleted()
 			use_new = 1000;
 			deprecate_old = 5000;
 		}
+		bool confirmed = false;
+		try {
+			confirmed = config.get_param_value_as_string("confirmAddressChange") == "true";
+		} catch (rina::Exception &e) { }
 		rina::AddressChangeEvent * event = new rina::AddressChangeEvent(
-			pending_address_, ipc_process_->get_address(), use_new, deprecate_old);
+			pending_address_, ipc_process_->get_address(), use_new, deprecate_old, confirmed);
+		event->attachment = remote_peer_.name_.processName;
 		pending_address_ = 0;
 		ipc_process_->internal_event_manager_->deliverEvent(event);
 	}

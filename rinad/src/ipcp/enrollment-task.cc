@@ -966,6 +966,8 @@ int EnrollmentTask::get_neighbor_info(rina::Neighbor& neigh)
 
 void EnrollmentTask::addressChange(rina::AddressChangeEvent * event)
 {
+	if (event->prepare_only)
+		return;
 	encoders::NeighborListEncoder encoder;
 	std::list<rina::Neighbor> neighbors;
 	std::map<int, IEnrollmentStateMachine*>::iterator it;
