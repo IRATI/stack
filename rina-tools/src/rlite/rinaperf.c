@@ -116,6 +116,11 @@
 #define CLI_FA_TIMEOUT_MSECS 5000
 #define CLI_RESULT_TIMEOUT_MSECS 5000
 #define RP_DATA_WAIT_MSECS 10000
+/* A ping or rr client counts a reply as lost after this long. It must stay
+ * well below RP_DATA_WAIT_MSECS: the server stops waiting that long after its
+ * last reply, so a client waiting as long for one lost reply always lost the
+ * flows first and failed the run. */
+#define RP_ECHO_WAIT_MSECS 2000
 
 struct rinaperf;
 struct worker;
@@ -298,7 +303,7 @@ ping_client(struct worker *w)
             break;
         }
     repoll:
-        ret = poll(pfd, 2, RP_DATA_WAIT_MSECS);
+        ret = poll(pfd, 2, RP_ECHO_WAIT_MSECS);
         if (ret < 0) {
             perror("poll(flow)");
         }
