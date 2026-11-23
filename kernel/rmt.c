@@ -109,6 +109,20 @@ static ssize_t rmt_attr_show(struct robject *        robj,
 	if (!rmt || !rmt->base.ps)
 		return 0;
 
+        if (strcmp(robject_attr_name(attr), "accepted_addresses") == 0) {
+                struct rmt_address * addr;
+                ssize_t len = 0;
+                spin_lock_bh(&rmt->lock);
+                list_for_each_entry(addr, &rmt->addresses, list) {
+                        len += scnprintf(buf + len, PAGE_SIZE - len, "%u\n",
+                                         addr->address);
+                        if (len >= PAGE_SIZE - 1)
+                                break;
+                }
+                spin_unlock_bh(&rmt->lock);
+                return len;
+        }
+
 	if (strcmp(robject_attr_name(attr), "ps_name") == 0) {
 		return sprintf(buf, "%s\n", rmt->base.ps_factory->name);
 	}
@@ -171,7 +185,7 @@ static ssize_t rmt_n1_port_attr_show(struct robject *        robj,
 	return 0;
 }
 RINA_SYSFS_OPS(rmt);
-RINA_ATTRS(rmt, ps_name);
+RINA_ATTRS(rmt, ps_name, accepted_addresses);
 RINA_KTYPE(rmt);
 RINA_SYSFS_OPS(rmt_n1_port);
 RINA_ATTRS(rmt_n1_port, queued_pdus, drop_pdus, err_pdus, tx_pdus,
@@ -536,7 +550,7 @@ EXPORT_SYMBOL(rmt_set_policy_set_param);
 int rmt_address_add(struct rmt *instance,
 		    address_t address)
 {
-	struct rmt_address * rmt_addr;
+	struct rmt_address * rmt_addr, * existing;
 
 	if (!instance) {
 		LOG_ERR("Bogus instance passed");
@@ -550,6 +564,13 @@ int rmt_address_add(struct rmt *instance,
 
 	INIT_LIST_HEAD(&rmt_addr->list);
 	spin_lock_bh(&instance->lock);
+        list_for_each_entry(existing, &instance->addresses, list) {
+                if (existing->address == address) {
+                        spin_unlock_bh(&instance->lock);
+                        rkfree(rmt_addr);
+                        return 0;
+                }
+        }
 	list_add(&rmt_addr->list, &instance->addresses);
 	spin_unlock_bh(&instance->lock);
 
@@ -557,32 +578,22 @@ int rmt_address_add(struct rmt *instance,
 }
 EXPORT_SYMBOL(rmt_address_add);
 
-int rmt_address_remove(struct rmt *instance,
-		       address_t address)
+int rmt_address_remove(struct rmt *instance, address_t address)
 {
-	struct rmt_address * rmt_addr;
+        struct rmt_address * addr, * next;
 
-	if (!instance) {
-		LOG_ERR("Bogus instance passed");
-		return -1;
-	}
-
+        if (!instance)
+                return -EINVAL;
         spin_lock_bh(&instance->lock);
-
-        list_for_each_entry(rmt_addr, &instance->addresses, list) {
-                if (rmt_addr->address == address) {
-                        if (!list_empty(&rmt_addr->list)) {
-                                list_del(&rmt_addr->list);
-                        }
-                        spin_unlock_bh(&instance->lock);
-                        rkfree(rmt_addr);
-                        return 0;
+        list_for_each_entry_safe(addr, next, &instance->addresses, list) {
+                if (addr->address == address) {
+                        list_del(&addr->list);
+                        rkfree(addr);
                 }
         }
-
         spin_unlock_bh(&instance->lock);
-        LOG_ERR("Could not find address to be removed: %u", address);
-        return -1;
+        /* Removing an absent address is a successful, idempotent retirement. */
+        return 0;
 }
 EXPORT_SYMBOL(rmt_address_remove);
 

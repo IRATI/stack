@@ -1174,6 +1174,9 @@ public:
         /// the address change procedure: i) Accept PDUs with new address,
         /// ii) start using it after a timeout and iii) deprecate old address
         /// after another timeout
+        /// Synchronously drain address timers and retire the named synonym.
+        void retireAddress(unsigned int new_address, unsigned int old_address);
+
         unsigned int changeAddress(unsigned int new_address,
                 		   unsigned int old_address,
         			   unsigned int use_new_t,

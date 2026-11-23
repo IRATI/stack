@@ -4506,6 +4506,7 @@ static void * allocate_irati_msg(irati_msg_t msg_t)
 		result = COMMON_ALLOC(sizeof(struct irati_kmsg_ipcp_update_crypto_state), 1);
 		return result;
 	}
+	case RINA_C_IPCP_ADDRESS_RETIRE_REQUEST:
 	case RINA_C_IPCP_ADDRESS_CHANGE_REQUEST: {
 		struct irati_kmsg_ipcp_address_change * result;
 		result = COMMON_ALLOC(sizeof(struct irati_kmsg_ipcp_address_change), 1);

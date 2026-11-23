@@ -187,6 +187,10 @@ struct ipcp_instance_ops {
          * The maximum size of SDUs that this IPCP will accept
          */
         size_t (* max_sdu_size)(struct ipcp_instance_data * data);
+
+        /* Finish the named transition before accepting another one. */
+        int (* address_retire)(struct ipcp_instance_data * data,
+                               address_t new_address, address_t old_address);
 };
 
 /* FIXME: Should work on struct ipcp_instance, not on ipcp_instance_ops */
