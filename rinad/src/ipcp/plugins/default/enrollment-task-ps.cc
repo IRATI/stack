@@ -321,6 +321,8 @@ private:
 	void send_start_result_and_complete();
 
 	bool was_dif_member_before_enrollment_;
+	bool had_neighbors_before_enrollment_;
+	unsigned int pending_address_;
 	bool allowed_to_start_early_;
 	int stop_request_invoke_id_;
 	int start_request_invoke_id;
@@ -336,6 +338,8 @@ EnrolleeStateMachine::EnrolleeStateMachine(IPCProcess * ipc_process,
 					   rina::ApplicationProcessNamingInformation(), timer)
 {
 	was_dif_member_before_enrollment_ = false;
+	had_neighbors_before_enrollment_ = false;
+	pending_address_ = 0;
 	last_scheduled_task_ = 0;
 	allowed_to_start_early_ = false;
 	stop_request_invoke_id_ = 0;
@@ -498,6 +502,7 @@ void EnrolleeStateMachine::connectResponse(int result,
 
 		if (ipc_process_->get_address() != 0) {
 			was_dif_member_before_enrollment_ = true;
+			had_neighbors_before_enrollment_ = !ipc_process_->get_neighbors().empty();
 			eiRequest.address_ = ipc_process_->get_address();
 		} else {
 			rina::DIFInformation difInformation;
@@ -566,22 +571,29 @@ void EnrolleeStateMachine::remoteStartResult(const rina::cdap_rib::con_handle_t 
 	if (eiResp.address_ != 0) {
 		unsigned int old_address = ipc_process_->get_dif_information().dif_configuration_.address_;
 
-		ipc_process_->get_dif_information().dif_configuration_.address_ = eiResp.address_;
-		// The enroller assigned a different address (the topological namespace
-		// manager hands out one under its own prefix). Only userspace used to
-		// switch: the kernel IPC process, assigned with the old address before
-		// enrollment, kept it, so PDUs for the new one were treated as transit
-		// and dropped. Nothing has used the old address yet; use the new one at
-		// once and accept the old one for another second.
 		if (old_address != 0 && old_address != eiResp.address_) {
 			LOG_IPCP_INFO("Enroller assigned address %u (was %u)",
 				      eiResp.address_, old_address);
-			try {
-				rina::kernelIPCProcess->changeAddress(eiResp.address_,
+			if (had_neighbors_before_enrollment_) {
+				// Commit a move only after enrollment succeeds and the new
+				// adjacency is installed. A rejected/aborted enrollment must
+				// leave live flows using the previous address.
+				pending_address_ = eiResp.address_;
+			} else {
+				// On first enrollment no flows use the configured placeholder,
+				// so switch both userspace and the kernel immediately.
+				ipc_process_->get_dif_information().dif_configuration_.address_ =
+					eiResp.address_;
+				try {
+					rina::kernelIPCProcess->changeAddress(eiResp.address_,
 								      old_address, 0, 1000);
-			} catch (rina::Exception &e) {
-				LOG_IPCP_ERR("Could not change the kernel address: %s", e.what());
+				} catch (rina::Exception &e) {
+					LOG_IPCP_ERR("Could not change the kernel address: %s", e.what());
+				}
 			}
+		} else {
+			ipc_process_->get_dif_information().dif_configuration_.address_ =
+				eiResp.address_;
 		}
 	}
 
@@ -767,6 +779,28 @@ void EnrolleeStateMachine::enrollmentCompleted()
 	enrollment_task_->enrollmentCompleted(remote_peer_, true,
 					      enr_request.event_.prepare_for_handover,
 					      enr_request.event_.disc_neigh_name);
+
+	if (pending_address_) {
+		unsigned int use_new = 1000;
+		unsigned int deprecate_old = 5000;
+		const rina::PolicyConfig& config = ipc_process_->get_dif_information().
+			dif_configuration_.et_configuration_.policy_set_;
+		try {
+			use_new = config.get_param_value_as_uint("useNewTimeout");
+		} catch (rina::Exception &e) { }
+		try {
+			deprecate_old = config.get_param_value_as_uint("deprecateOldTimeout");
+		} catch (rina::Exception &e) { }
+		if (deprecate_old <= use_new) {
+			LOG_IPCP_WARN("Invalid enrollment renumbering timers; using 1000/5000 ms");
+			use_new = 1000;
+			deprecate_old = 5000;
+		}
+		rina::AddressChangeEvent * event = new rina::AddressChangeEvent(
+			pending_address_, ipc_process_->get_address(), use_new, deprecate_old);
+		pending_address_ = 0;
+		ipc_process_->internal_event_manager_->deliverEvent(event);
+	}
 
 	//Notify the kernel
 	if (!was_dif_member_before_enrollment_) {
