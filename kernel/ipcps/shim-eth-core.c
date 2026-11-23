@@ -1252,21 +1252,17 @@ static int eth_du_write(struct ipcp_instance_data * data,
         bup_skb->destructor = &eth_skb_destructor;
         skb_shinfo(bup_skb)->destructor_arg = (void *)data;
         retval = dev_queue_xmit(bup_skb);
-
-        if (retval == -ENETDOWN) {
-                LOG_ERR("dev_q_xmit returned device down");
-                du_destroy(du);
+        /* dev_queue_xmit consumes the skb even on a drop or an error. Its
+         * destructor may already have run, so no future completion is promised
+         * to restart a writer. Treat the result as loss, not backpressure.
+         * NET_XMIT_CN can mean the packet was queued; retrying would duplicate it.
+         */
+        du_destroy(du);
+        if (net_xmit_eval(retval) != NET_XMIT_SUCCESS) {
+                LOG_DBG("Transmit consumed the packet with result %d", retval);
                 return -1;
         }
-        if (retval != NET_XMIT_SUCCESS) {
-                spin_lock_bh(&data->lock);
-                LOG_DBG("qdisc cannot enqueue now (%d), try later", retval);
-                data->tx_busy = 1;
-                spin_unlock_bh(&data->lock);
-                return -EAGAIN;
-        }
 
-        du_destroy(du);
         LOG_DBG("Packet sent");
         return 0;
 }
