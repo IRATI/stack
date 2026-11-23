@@ -384,7 +384,10 @@ ping_server(struct worker *w)
     pfd[1].fd     = w->cfd;
     pfd[0].events = pfd[1].events = POLLIN;
 
-    for (i = 0; !limit || i < limit; i++) {
+    /* The client sends STOP after its final echo (and optional interval).
+     * Keep the control flow alive until that handshake: returning at the
+     * configured count closes it before the client can obtain its result. */
+    for (i = 0; ; i++) {
         n = poll(pfd, 2, RP_DATA_WAIT_MSECS);
         if (n < 0) {
             perror("poll(flow)");
@@ -422,6 +425,9 @@ ping_server(struct worker *w)
                 PRINTF("Partial write");
             }
             return -1;
+        }
+        if (limit && i + 1 == limit) {
+            pfd[0].events = 0; /* Only STOP remains after the final echo. */
         }
     }
 
