@@ -673,8 +673,23 @@ int rmt_config_set(struct rmt *instance,
 		LOG_ERR("Could not set policy set %s for RMT", rmt_ps_name);
 
 	LOG_INFO("PFF PS to be selected: %s", pff_ps_name);
-	if (pff_select_policy_set(instance->pff, "", pff_ps_name))
+	if (pff_select_policy_set(instance->pff, "", pff_ps_name)) {
 		LOG_ERR("Could not set policy set %s for PFF", pff_ps_name);
+	} else if (rmt_config->pff_conf->policy_set) {
+		/* The RMT's own policy set reads its parameters from rmt_cfg
+		 * when it's created; the PFF's has no such access, so hand
+		 * them over here. */
+		struct policy_parm * parm;
+
+		list_for_each_entry(parm,
+				    &rmt_config->pff_conf->policy_set->params,
+				    next) {
+			if (pff_set_policy_set_param(instance->pff, "",
+						     parm->name, parm->value))
+				LOG_ERR("PFF policy set %s rejected %s = %s",
+					pff_ps_name, parm->name, parm->value);
+		}
+	}
 
 	rmt_config_free(instance->rmt_cfg);
 	instance->rmt_cfg = NULL;

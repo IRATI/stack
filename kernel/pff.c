@@ -384,7 +384,6 @@ int pff_select_policy_set(struct pff *     pff,
 }
 EXPORT_SYMBOL(pff_select_policy_set);
 
-/* NOTE: Skeleton code, PFF currently does not take params */
 int pff_set_policy_set_param(struct pff * pff,
                              const char * path,
                              const char * name,
@@ -401,18 +400,23 @@ int pff_set_policy_set_param(struct pff * pff,
         LOG_DBG("set-policy-set-param '%s' '%s' '%s'", path, name, value);
 
         if (strcmp(path, "") == 0) {
-                /* The request addresses this PFF instance. */
-                rcu_read_lock();
+                /* The request addresses this PFF instance: hand it to the
+                 * policy set. Under ps_lock rather than rcu_read_lock(),
+                 * since the setter may sleep. */
+                struct ps_base * base;
 
-                ps = container_of(rcu_dereference(pff->base.ps),
-                                  struct pff_ps, base);
-                if (!ps) {
+                mutex_lock(&pff->base.ps_lock);
+                base = rcu_dereference_protected(pff->base.ps,
+                                lockdep_is_held(&pff->base.ps_lock));
+                if (!base) {
                         LOG_ERR("No policy-set selected for this PFF");
+                } else if (!base->set_policy_set_param) {
+                        LOG_ERR("PFF policy set takes no parameter '%s'", name);
                 } else {
-                        LOG_ERR("Unknown PFF parameter policy '%s'", name);
-		}
-
-                rcu_read_unlock();
+                        ps = container_of(base, struct pff_ps, base);
+                        ret = base->set_policy_set_param(&ps->base, name, value);
+                }
+                mutex_unlock(&pff->base.ps_lock);
         } else {
                 ret = base_set_policy_set_param(&pff->base, path, name, value);
 	}
