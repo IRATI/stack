@@ -1079,6 +1079,7 @@ void FlowEncoder::encode(const configs::Flow &obj, rina::ser_obj_t& serobj)
         gpb.set_createflowretries(obj.create_flow_retries);
         //hopCount
         gpb.set_hopcount(obj.hop_count);
+        gpb.set_addresschangeid(obj.address_change_id);
 
         serobj.size_ = gpb.ByteSize();
         serobj.message_ = new unsigned char[serobj.size_];
@@ -1132,6 +1133,7 @@ void FlowEncoder::decode(const rina::ser_obj_t &serobj, configs::Flow &des_obj)
         des_obj.max_create_flow_retries = gpb.maxcreateflowretries();
         des_obj.create_flow_retries = gpb.createflowretries();
         des_obj.hop_count = gpb.hopcount();
+        des_obj.address_change_id = gpb.addresschangeid();
 }
 
 // CLASS RoutingTableEntryEncoder

@@ -108,6 +108,7 @@ IPCProcessImpl::IPCProcessImpl(const rina::ApplicationProcessNamingInformation& 
 {
 	old_address = 0;
 	address_change_period = false;
+	address_change_prepared = false;
 	use_new_address = false;
 	kernel_sync = NULL;
 
@@ -194,6 +195,17 @@ void IPCProcessImpl::addressChange(rina::AddressChangeEvent * event)
 	address_change_period = true;
 	use_new_address = false;
 
+	address_change_prepared = event->prepare_only;
+	if (event->prepare_only) {
+		rina::kernelIPCProcess->changeAddress(event->new_address,
+						      event->old_address, 0, 0);
+		LOG_IPCP_INFO("Prepared address %u; source remains %u until peer confirmation",
+			      event->new_address, event->old_address);
+		return;
+	}
+	if (event->use_new_timeout == 0)
+		use_new_address = true;
+
 	task = new UseNewIPCPAddressTimerTask(this);
 	timer.scheduleTask(task, event->use_new_timeout);
 
@@ -247,7 +259,7 @@ unsigned int IPCProcessImpl::get_address() const
 		return 0;
 	}
 
-	return dif_information_.dif_configuration_.address_;
+	return address_change_prepared ? old_address : dif_information_.dif_configuration_.address_;
 }
 
 unsigned int IPCProcessImpl::get_active_address()
